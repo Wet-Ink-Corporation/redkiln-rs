@@ -911,15 +911,21 @@ async fn probe(claude_bin: &str, args: ProbeArgs) -> Result<()> {
     // file. An Opus arm interrupted by the invisible family sub-limit therefore
     // costs one dispatch, not the arm.
     let already_done = journal::completed_keys(&args.out);
-    if !already_done.is_empty() && args.commit_between {
+    // Scoped to THIS arm. A shared results file holding other arms' records is
+    // normal — E1 writes five arms into one file — and refusing on that basis
+    // stopped arm (b) dead the moment arm (a) had written anything.
+    let this_arm_done = already_done
+        .iter()
+        .any(|k| k.starts_with(&format!("{}/{}/", args.experiment, args.arm)));
+    if this_arm_done && args.commit_between {
         anyhow::bail!(
-            "{} already holds {} completed step(s), and this arm commits between \
+            "arm `{}` already has completed steps in {}, and it commits between \
              dispatches. A cache series cannot be resumed: its premise is one \
              contiguous run against an evolving prefix, and splicing two halves \
              would look like a clean series while measuring something else. \
-             Start a fresh results file.",
-            args.out.display(),
-            already_done.len()
+             Use a fresh arm label or a fresh results file.",
+            args.arm,
+            args.out.display()
         );
     }
     if !already_done.is_empty() {

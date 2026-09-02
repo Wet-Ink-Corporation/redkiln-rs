@@ -571,6 +571,88 @@ was not asked.
 
 ---
 
+## F16 — E1 COMPLETE: commits cost 31% of the prefix, and `--system-prompt` costs nothing
+
+**Established by:** 50 haiku dispatches across five arms, one directory per arm,
+identical prompt, 2026-09-02. Results: `spikes/results/e1-arms.jsonl`.
+Steady state excludes each arm's first dispatch, which pays the initial write.
+
+| arm | configuration | steady share | cache_read | created |
+| --- | --- | --- | --- | --- |
+| **a** | no commits — control | **1.000** | 25,258 | 0 |
+| **b** | commit between each | **0.689** | 17,439 | 7,853 |
+| **c** | b + `--exclude-dynamic-system-prompt-sections` | **0.846** | 21,234 | 3,869 |
+| **e** | b + `--system-prompt` | **1.000** | 18,752 | 0 |
+| **d** | one worktree per dispatch | **0.685** | 17,439 | 8,012 |
+
+Variance within each arm is negligible — the widest range is 0.001.
+
+### H1 vs H0
+
+**H1 holds, and comfortably.** The registered hypothesis was "cache-read share
+stays ≥ 70% across 10 sequential runs with a commit between each, under at
+least one mitigation." Arm c reaches 0.846 and arm e reaches **1.000**.
+
+**H0 — "share collapses to ~0, a cold write every run" — is falsified even
+unmitigated.** Arm b holds 0.689 with no mitigation at all: a commit busts the
+~7.8k per-directory segment while the ~17.4k shared base survives untouched
+(F13). Commit-per-checkpoint costs **31% of the prefix, not 100%**.
+
+### The result that inverts my own prediction
+
+I recorded earlier (PRIOR-ART §9, C3) that RFC R6 and R4 conflict: R6 says pass
+`--system-prompt` explicitly, but that flag makes
+`--exclude-dynamic-system-prompt-sections` a no-op, so the explicit-payload
+discipline was expected to **cost** cache reuse. **The opposite is true.**
+
+`--system-prompt` **replaces** the default system prompt — the thing carrying the
+volatile git snapshot — with static text. There is then nothing volatile left to
+bust, and the cache stays perfect across commits. It does not relocate the
+churn; it deletes it.
+
+**The two RFC mitigations do not conflict. R6's discipline is the better cache
+strategy, and it is free.** `--exclude-dynamic-system-prompt-sections` recovers
+about half the loss (0.690 → 0.846); `--system-prompt` recovers all of it.
+
+Note arm e's *first* dispatch scored 0.000 — a new system prompt is a new
+prefix, so there is a one-time cold write. That cost is paid once per distinct
+system prompt, not once per dispatch.
+
+### RFC §10's pivotal unknown, resolved
+
+RFC §10 could not establish "whether `--exclude-dynamic-system-prompt-sections`
+removes the git **branch/commit** snapshot from the prefix, or only the working
+directory", and called it "the single fact that decides whether inversion is
+cheaper or more expensive for a commit-per-checkpoint workflow."
+
+**Answer: partially.** It recovers 3,984 of the 7,853 tokens a commit
+invalidates — roughly half. The git snapshot is therefore split across the
+sections the flag moves and sections it does not.
+
+### Charter §6.2's worktree conflict, priced
+
+Arm d — one worktree per dispatch, today's Redkiln topology — steady-states at
+**0.685**, statistically indistinguishable from arm b's 0.689. So a worktree
+costs the same as a commit: the per-directory segment, ~31%.
+
+Charter §6.2 calls worktree fragmentation "a direct conflict with Redkiln's
+architecture". Priced, it is a 31% prefix re-write per worktree, and the same
+mitigation applies — under `--system-prompt` it should vanish, though that
+combination was not run.
+
+### Limits
+
+- Haiku, one trivial prompt, one machine, one day. A larger prompt changes the
+  ratio between the shared base and the per-directory segment.
+- Arm d used ten worktrees of one repo with no commits between; it isolates the
+  directory effect rather than reproducing the full commit+worktree topology.
+- `--system-prompt` was a one-line static prompt. A real agent card is larger,
+  which changes the size of the one-time cold write but not its one-time nature.
+- Cost in headroom was unmeasurable throughout (F14); this is a cache-share
+  result, not a spend result.
+
+---
+
 ## Operational — long-lived background jobs are unreliable here
 
 **Established by:** three background runs, 2026-09-02. Cause **not** established.
