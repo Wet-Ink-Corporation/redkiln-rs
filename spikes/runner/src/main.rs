@@ -7,6 +7,7 @@
 //!
 //! Nothing in `crates/` may depend on this.
 
+mod corpus;
 mod event;
 mod fingerprint;
 mod hygiene;
@@ -78,6 +79,23 @@ enum Command {
     /// The only requirement is that nothing else dispatched in that directory
     /// in between, which would have refreshed the entry.
     TtlRead(TtlStepArgs),
+
+    /// S0.3 — extract the fix-lane item manifest. Zero model cost.
+    ///
+    /// Feeds S0.1 (gate false-positive rate) and E3/E6 (seeded-defect
+    /// detection): both revert the same fixes on the same items.
+    CorpusManifest(CorpusArgs),
+}
+
+#[derive(clap::Args)]
+struct CorpusArgs {
+    /// Path to the frozen redkiln repo.
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+    #[arg(long)]
+    out: PathBuf,
+    #[arg(long, default_value = "../corpus/PINNED_SHA")]
+    pin_file: PathBuf,
 }
 
 #[derive(clap::Args)]
@@ -208,7 +226,71 @@ async fn main() -> Result<()> {
         Command::TtlProbe(args) => ttl_probe(&cli.claude_bin, args).await,
         Command::TtlMark(args) => ttl_step(&cli.claude_bin, args, "warm").await,
         Command::TtlRead(args) => ttl_step(&cli.claude_bin, args, "read").await,
+        Command::CorpusManifest(args) => corpus_manifest(args),
     }
+}
+
+fn corpus_manifest(args: CorpusArgs) -> Result<()> {
+    let redkiln = std::fs::canonicalize(&args.redkiln)
+        .with_context(|| format!("--redkiln {} does not exist", args.redkiln.display()))?;
+
+    // The corpus is frozen. If HEAD has moved off the pin, every downstream
+    // record would silently describe a different tree than the one registered.
+    let pinned = journal::read_pinned_sha(&args.pin_file);
+    let head = git_head(&redkiln);
+    match (&pinned, &head) {
+        (Some(p), Some(h)) if p != h => anyhow::bail!(
+            "redkiln HEAD is {h}, but the corpus is pinned at {p}. The corpus is frozen              for the duration; check out the pin or update it deliberately."
+        ),
+        (Some(_), Some(_)) => eprintln!("corpus pin verified"),
+        _ => eprintln!("WARNING: could not verify the corpus pin"),
+    }
+
+    let items = corpus::scan_fix_lane(&redkiln)?;
+    let journal = Journal::open(&args.out, &[])?;
+    journal.append(&serde_json::json!({
+        "record": "header", "experiment": "S0.3",
+        "generated_at": chrono::Utc::now(),
+        "redkiln_head": head, "corpus_pin": pinned,
+        "items_found": items.len(),
+    }))?;
+
+    let eligible: Vec<_> = items.iter().filter(|i| i.eligible).collect();
+    println!("{:<44} {:>4} {:>10} {:>6} eligible", "slug", "ACs", "sha", "files");
+    for i in &items {
+        println!(
+            "{:<44} {:>4} {:>10} {:>6} {}",
+            &i.slug[..i.slug.len().min(44)],
+            i.ac_count,
+            i.checkpoint_sha.as_deref().unwrap_or("-"),
+            i.fix_files.len(),
+            if i.eligible {
+                "yes".to_string()
+            } else {
+                format!("NO - {}", i.ineligible_reason.as_deref().unwrap_or(""))
+            },
+        );
+        journal.append(i)?;
+    }
+
+    println!(
+        "
+{} items scanned, {} eligible for S0.1 / E3.",
+        items.len(),
+        eligible.len()
+    );
+    println!("median ACs among eligible: {}", median_acs(&eligible));
+    println!("wrote {}", journal.path().display());
+    Ok(())
+}
+
+fn median_acs(items: &[&corpus::FixLaneItem]) -> usize {
+    if items.is_empty() {
+        return 0;
+    }
+    let mut counts: Vec<usize> = items.iter().map(|i| i.ac_count).collect();
+    counts.sort_unstable();
+    counts[counts.len() / 2]
 }
 
 /// One TTL dispatch — warm or read — in a short-lived process.
