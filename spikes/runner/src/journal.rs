@@ -134,6 +134,43 @@ pub fn completed_keys(path: impl AsRef<Path>) -> std::collections::HashSet<Strin
     done
 }
 
+/// The most recent `warm` mark in a results file: `(arm, started_at)`.
+///
+/// Exists so a TTL gap does not require a process to stay alive across it. A
+/// 90-minute sleep inside one invocation is fragile — ours was killed ~55
+/// minutes in, for reasons we could not determine — and losing the process lost
+/// the whole measurement. Marking and reading as separate short-lived runs makes
+/// the gap a property of two timestamps instead of one process's lifetime, and
+/// the *measured* elapsed time is what gets reported.
+pub fn last_warm_mark(path: impl AsRef<Path>) -> Option<(String, chrono::DateTime<chrono::Utc>)> {
+    let text = std::fs::read_to_string(path).ok()?;
+    let mut best: Option<(String, chrono::DateTime<chrono::Utc>)> = None;
+    for line in text.lines() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        if v.get("label").and_then(|l| l.as_str()) != Some("warm") {
+            continue;
+        }
+        if v.get("outcome").and_then(|o| o.as_str()) != Some("ok") {
+            continue;
+        }
+        let (Some(arm), Some(ts)) = (
+            v.get("arm").and_then(|a| a.as_str()),
+            v.get("started_at").and_then(|t| t.as_str()),
+        ) else {
+            continue;
+        };
+        let Ok(parsed) = ts.parse::<chrono::DateTime<chrono::Utc>>() else {
+            continue;
+        };
+        if best.as_ref().is_none_or(|(_, b)| parsed > *b) {
+            best = Some((arm.to_string(), parsed));
+        }
+    }
+    best
+}
+
 /// Read the pinned corpus SHA written by the scaffolding.
 pub fn read_pinned_sha(pin_file: impl AsRef<Path>) -> Option<String> {
     let text = std::fs::read_to_string(pin_file).ok()?;
@@ -219,5 +256,31 @@ mod tests {
         std::fs::write(&pin, "# a comment\nREDKILN_REPO=D:/x\nREDKILN_SHA=47faec9f\n").unwrap();
         assert_eq!(read_pinned_sha(&pin).as_deref(), Some("47faec9f"));
         std::fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn finds_the_latest_successful_warm_mark() {
+        let tmp = std::env::temp_dir().join(format!("rk-warm-{}", std::process::id()));
+        std::fs::create_dir_all(&tmp).unwrap();
+        let f = tmp.join("t.jsonl");
+        std::fs::write(&f, [
+            r#"{"record":"header"}"#,
+            r#"{"arm":"ttl-10m","label":"warm","outcome":"ok","started_at":"2026-09-02T16:53:03Z"}"#,
+            r#"{"arm":"ttl-10m","label":"read","outcome":"ok","started_at":"2026-09-02T17:03:07Z"}"#,
+            r#"{"arm":"ttl-90m","label":"warm","outcome":"ok","started_at":"2026-09-02T17:49:11Z"}"#,
+            // A failed warm is not a usable mark: it never wrote a prefix.
+            r#"{"arm":"ttl-x","label":"warm","outcome":"error","started_at":"2026-09-02T18:00:00Z"}"#,
+        ].join("
+")).unwrap();
+
+        let (arm, ts) = last_warm_mark(&f).expect("a mark");
+        assert_eq!(arm, "ttl-90m");
+        assert_eq!(ts.to_rfc3339(), "2026-09-02T17:49:11+00:00");
+        std::fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn no_marks_yields_none() {
+        assert!(last_warm_mark("does/not/exist.jsonl").is_none());
     }
 }

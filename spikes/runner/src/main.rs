@@ -62,6 +62,44 @@ enum Command {
     /// not emit it (FINDINGS F3). So measure the thing itself: warm a prefix,
     /// wait, and see whether the read survives.
     TtlProbe(TtlArgs),
+
+    /// Warm a prefix and exit immediately. Pair with `ttl-read` later.
+    ///
+    /// Splits what `ttl-probe` does in one long-lived process. A 90-minute
+    /// sleep inside one invocation is fragile — ours was killed ~55 minutes in
+    /// for reasons we could not establish, and the process dying lost the
+    /// measurement. Here the gap is the interval between two timestamps, so
+    /// nothing has to survive it.
+    TtlMark(TtlStepArgs),
+
+    /// Read a prefix back and report the MEASURED gap since the last warm mark.
+    ///
+    /// The gap need not be a round number: what is reported is what elapsed.
+    /// The only requirement is that nothing else dispatched in that directory
+    /// in between, which would have refreshed the entry.
+    TtlRead(TtlStepArgs),
+}
+
+#[derive(clap::Args)]
+struct TtlStepArgs {
+    #[arg(long, default_value = "E1")]
+    experiment: String,
+    /// Arm label, e.g. "ttl-90m". On `ttl-read`, defaults to the arm of the
+    /// mark being read back.
+    #[arg(long)]
+    arm: Option<String>,
+    #[arg(long)]
+    cwd: PathBuf,
+    #[arg(long)]
+    out: PathBuf,
+    #[arg(long, default_value = "haiku")]
+    model: String,
+    #[arg(long, default_value = "Reply with the single word: ok")]
+    prompt: String,
+    #[arg(long, default_value_t = 180)]
+    timeout_secs: u64,
+    #[arg(long, default_value = "../corpus/PINNED_SHA")]
+    pin_file: PathBuf,
 }
 
 #[derive(clap::Args)]
@@ -168,7 +206,111 @@ async fn main() -> Result<()> {
         Command::Doctor => doctor(&cli.claude_bin).await,
         Command::Probe(args) => probe(&cli.claude_bin, args).await,
         Command::TtlProbe(args) => ttl_probe(&cli.claude_bin, args).await,
+        Command::TtlMark(args) => ttl_step(&cli.claude_bin, args, "warm").await,
+        Command::TtlRead(args) => ttl_step(&cli.claude_bin, args, "read").await,
     }
+}
+
+/// One TTL dispatch — warm or read — in a short-lived process.
+async fn ttl_step(claude_bin: &str, args: TtlStepArgs, label: &str) -> Result<()> {
+    let env = hygiene::assert_clean(claude_bin).await?;
+    let cwd = std::fs::canonicalize(&args.cwd)
+        .with_context(|| format!("--cwd {} does not exist", args.cwd.display()))?;
+    let journal = Journal::open(&args.out, std::slice::from_ref(&cwd))?;
+
+    let model = match args.model.as_str() {
+        "haiku" => Tier::Haiku,
+        "sonnet" => Tier::Sonnet,
+        "opus" => Tier::Opus,
+        other => anyhow::bail!("unknown model tier `{other}`"),
+    };
+
+    // On a read, locate the mark first: if there is none, the dispatch would
+    // measure nothing and is better refused than recorded as a gap of unknown
+    // length.
+    let mark = journal::last_warm_mark(&args.out);
+    if label == "read" && mark.is_none() {
+        anyhow::bail!(
+            "no successful `warm` mark in {} — run `ttl-mark` first",
+            args.out.display()
+        );
+    }
+
+    let arm = args
+        .arm
+        .clone()
+        .or_else(|| mark.as_ref().map(|(a, _)| a.clone()))
+        .unwrap_or_else(|| "ttl-open".into());
+
+    journal.append(&RunHeader {
+        record: "header",
+        experiment: &args.experiment,
+        arm: &arm,
+        started_at: chrono::Utc::now(),
+        preregistration_sha: git_head(std::path::Path::new(".")),
+        corpus_sha: journal::read_pinned_sha(&args.pin_file),
+        claude_version: env.claude_version.clone(),
+        platform: env.platform.clone(),
+    })?;
+
+    let runner = Runner::new(claude_bin, env);
+    let spec = StepSpec {
+        experiment: args.experiment.clone(),
+        arm: arm.clone(),
+        label: label.into(),
+        phase: "ttl".into(),
+        occurrence: if label == "warm" { 1 } else { 2 },
+        attempt: 1,
+        model,
+        effort: None,
+        agent: None,
+        prompt: args.prompt.clone(),
+        schema: None,
+        allowed_tools: vec![],
+        permission_mode: None,
+        cwd: cwd.clone(),
+        isolate_mcp: true,
+        extra_flags: vec![],
+        timeout: Duration::from_secs(args.timeout_secs),
+    };
+
+    let (record, _) = runner.run(&spec).await;
+    let share = fmt_share(record.cache_read_share);
+    let creation = record
+        .usage
+        .as_ref()
+        .and_then(|u| u.cache_creation_input_tokens)
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "-".into());
+    let started = record.started_at;
+    journal.append(&record)?;
+
+    if label == "warm" {
+        println!("marked {arm} at {}  cache={share}", started.format("%H:%M:%SZ"));
+        println!("take the read with: ttl-read --cwd ... --out {}", args.out.display());
+    } else if let Some((mark_arm, mark_at)) = mark {
+        let elapsed = (started - mark_at).num_seconds() as f64 / 60.0;
+        println!("mark      : {mark_arm} at {}", mark_at.format("%H:%M:%SZ"));
+        println!("read      : {}", started.format("%H:%M:%SZ"));
+        println!("gap       : {elapsed:.1} minutes  (MEASURED, not requested)");
+        println!("cache     : share={share}  creation={creation}");
+        println!(
+            "
+{}",
+            if record.cache_read_share == Some(1.0) {
+                "WARM — full hit, zero re-creation. The prefix survived the gap."
+            } else {
+                "NOT fully warm — some of the prefix was re-created. Compare creation                  against a cold baseline before calling it expiry."
+            }
+        );
+        journal.append(&serde_json::json!({
+            "record": "ttl_pair", "arm": mark_arm,
+            "mark_at": mark_at, "read_at": started,
+            "gap_minutes": elapsed, "share": record.cache_read_share,
+            "cache_creation": record.usage.as_ref().and_then(|u| u.cache_creation_input_tokens),
+        }))?;
+    }
+    Ok(())
 }
 
 /// Warm a prefix, wait, read it back. Repeat per gap.
