@@ -527,6 +527,50 @@ measurements of it.
 
 ---
 
+## F15 — E2 CLOSED: effort IS applied per dispatch. RFC R2 is dead
+
+**Established by:** 15 sonnet dispatches, one fixed prompt, one directory, only
+`--effort` varying, 2026-09-02. Results: `spikes/results/e2-effort.jsonl`.
+
+| effort | thinking tokens (n=5) | mean | output (mean, range) |
+| --- | --- | --- | --- |
+| low | 0, 0, 0, 0, 0 | 0.0 | 121 (113–128) |
+| high | 0, 0, 24, 0, 0 | 4.8 | 130 (109–169) |
+| **xhigh** | **201, 163, 246, 214, 281** | **221.0** | **360 (299–413)** |
+
+**`high` and `xhigh` separate completely** — max high 24 < min xhigh 163, no
+overlap, with output tokens nearly tripling. Reasoning effort is unambiguously
+applied per `claude -p` invocation.
+
+**RFC R2 — "`effort` has no `--agents` equivalent", severity High — is
+falsified.** Combined with F7 (`--agents` carries `model` and `effort`, and
+`--agent` makes the main turn adopt the card), per-dispatch effort pinning is
+available by construction. The defect the tier policy's effort column closed —
+`tiers.mjs`: "the cost and quality profile of a run was a property of the
+CALLER, not of redkiln" — cannot return through this route.
+
+**E2 is closed.** It was already reduced from a half-day experiment to a
+confirmation; this is the confirmation.
+
+### The nuance worth keeping
+
+**`low` and `high` did not separate on this prompt** — both essentially zero
+thinking, overlapping output ranges. Either the task is too easy to provoke
+reasoning at `high`, or the two levels behave alike for sonnet here. So this
+does **not** demonstrate a monotonic low < high < xhigh gradient; it
+demonstrates that the mechanism works and that the *production-relevant*
+distinction separates.
+
+That distinction is the one that matters: `tiers.mjs` pins `verify:` at
+sonnet/high and `review:` at opus/xhigh. high-vs-xhigh is exactly the contrast
+the tier policy depends on, and it is the one that separated.
+
+**Limits.** One prompt, one tier, n=5 per cell, one day. Whether the gradient
+holds for opus, for harder tasks, or between `low` and `medium` is untested and
+was not asked.
+
+---
+
 ## Operational — long-lived background jobs are unreliable here
 
 **Established by:** three background runs, 2026-09-02. Cause **not** established.

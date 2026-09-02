@@ -251,6 +251,12 @@ struct ProbeArgs {
     #[arg(long, default_value = "sonnet")]
     model: String,
 
+    /// Reasoning effort. E2's variable: if `thinking_tokens` does not separate
+    /// across levels, effort is not being applied per dispatch. Ignored on
+    /// haiku, which rejects the parameter.
+    #[arg(long, default_value = "low")]
+    effort: String,
+
     /// The prompt. A one-liner suffices — E1 measures the prefix, not the work.
     #[arg(long, default_value = "Reply with the single word: ok")]
     prompt: String,
@@ -871,6 +877,14 @@ async fn probe(claude_bin: &str, args: ProbeArgs) -> Result<()> {
         "opus" => Tier::Opus,
         other => anyhow::bail!("unknown model tier `{other}`"),
     };
+    let effort = match args.effort.as_str() {
+        "low" => Effort::Low,
+        "medium" => Effort::Medium,
+        "high" => Effort::High,
+        "xhigh" => Effort::Xhigh,
+        "max" => Effort::Max,
+        other => anyhow::bail!("unknown effort `{other}`"),
+    };
 
     journal.append(&RunHeader {
         record: "header",
@@ -966,7 +980,7 @@ async fn probe(claude_bin: &str, args: ProbeArgs) -> Result<()> {
             occurrence: i,
             attempt: 1,
             model,
-            effort: Some(Effort::Low),
+            effort: Some(effort),
             agent: None,
             prompt: args.prompt.clone(),
             schema: None,
@@ -981,7 +995,7 @@ async fn probe(claude_bin: &str, args: ProbeArgs) -> Result<()> {
         let (record, outcome) = runner.run(&spec).await;
 
         eprintln!(
-            "  {i:>3}/{}  {:<8} cache={:<7} in={:<8} out={:<7} 7d={:<7} {}ms",
+            "  {i:>3}/{}  {:<8} cache={:<7} out={:<6} think={:<6} 7d={:<7} {}ms",
             args.repeats,
             record.outcome,
             record
@@ -991,13 +1005,11 @@ async fn probe(claude_bin: &str, args: ProbeArgs) -> Result<()> {
             record
                 .usage
                 .as_ref()
-                .and_then(|u| u.input_tokens)
+                .and_then(|u| u.output_tokens)
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".into()),
             record
-                .usage
-                .as_ref()
-                .and_then(|u| u.output_tokens)
+                .thinking_tokens
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".into()),
             record
