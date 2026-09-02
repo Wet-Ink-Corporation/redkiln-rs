@@ -447,6 +447,86 @@ question rather than a result. Recorded so it is not mistaken for either.
 
 ---
 
+## F13 — The prompt cache has TWO segments, and 69% of it is shared across directories
+
+**Established by:** E0 headroom calibration, 40 haiku dispatches, 2026-09-02.
+20 in one warm directory; 20 in twenty **brand-new** git repos.
+Results: `e0-headroom.jsonl`, `e0-headroom-cold.jsonl`.
+
+A fresh directory is **not** a cold cache. Every one of 19 never-before-used
+directories returned an identical split:
+
+| | cache_read | cache_creation | share |
+| --- | --- | --- | --- |
+| fresh directories (n=19) | **17,439** | ~7,827 | **0.690** |
+| a directory dispatched once before | 25,264 | 0 | 1.000 |
+
+**The prefix is two segments:**
+
+- **~17,439 tokens — shared across directories.** Served from cache in a repo
+  that has never been dispatched in. Almost certainly the system prompt and tool
+  definitions.
+- **~7,827 tokens — per-directory.** Created fresh in each new directory.
+
+**This corroborates F10 from an independent direction.** The 61.6-minute TTL read
+returned *exactly* 17,439 read / 7,822 created — the same split. So the partial
+expiry seen there was the per-directory segment ageing out while the shared base
+survived. Two experiments, two methods, the same two numbers.
+
+### What it changes
+
+Charter §6.2 quotes the documentation: *"two sessions in different directories
+build different prefixes and miss each other's cache. That includes worktrees of
+the same repository"* — and calls this "a direct conflict with Redkiln's
+architecture", which puts every initiative and every fix in its own worktree.
+
+**Measured, that conflict is roughly a third the size claimed.** Two directories
+miss ~31% of the prefix, not 100%. Worktree fragmentation is real and worth
+pricing, but it is not the wholesale cache loss the docs imply — which matters
+for the target design and directly for shipmates L6.1 (executing the project DAG
+in parallel worktrees, "the largest single capability gain available").
+
+**Caveat, and it could matter:** the 20 fixtures were near-identical — same
+one-file structure, same commit shape, differing only in path and one line of
+README text. Directories whose content differs substantially may share less.
+This bounds cross-directory sharing from above for *similar* trees; it does not
+establish it for dissimilar ones.
+
+---
+
+## F14 — Headroom: 40 dispatches and ~1.9M tokens stayed below the instrument
+
+**Established by:** the same 40 dispatches.
+
+| batch | cache_read | cache_creation | output | 7d utilisation |
+| --- | --- | --- | --- | --- |
+| warm (one directory) | 497,398 | 7,822 | 887 | 0.100 → 0.100 |
+| cold (20 fresh dirs) | 356,605 | 148,709 | 817 | 0.110 → 0.110 |
+
+**The cache-cost question is NOT settled, and I am not going to claim it is.**
+METHOD.md §E0 asks whether cache reads draw down the subscription window —
+platform docs say cache hits are not deducted; charter §6.1 says they draw at
+~0.1×. Neither batch moved `seven_day` by a single tick, so **both readings
+remain consistent with the data**: 500k cache-read tokens are either free or
+merely small.
+
+What the batches *do* establish:
+
+- **An upper bound for sizing.** 40 haiku dispatches processing ~1.9M tokens
+  cost at most ~0.01 of the seven-day window — under 1%, and possibly far less.
+  Haiku mechanism arms are effectively free at this scale.
+- **`five_hour` and `seven_day` move independently** (0.200/0.100, later
+  0.210/0.110), confirming they are not mirrors of one another.
+
+**A confound that limits every headroom measurement in this programme:** the
+assistant driving these experiments runs on the *same account and the same
+windows*. Any observed delta includes that traffic. Headroom-per-dispatch
+therefore cannot be cleanly attributed while the session is active, and the
+figures above should be read as upper bounds on the probe's own draw, not as
+measurements of it.
+
+---
+
 ## Operational — long-lived background jobs are unreliable here
 
 **Established by:** three background runs, 2026-09-02. Cause **not** established.
