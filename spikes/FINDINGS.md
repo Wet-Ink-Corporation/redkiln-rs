@@ -237,6 +237,101 @@ much less on a step that runs for minutes.
 
 ---
 
+## F10 — The prompt cache survives a 10-minute idle gap. TTL exceeds 5 minutes
+
+**Established by:** E1-TTL probe, gaps 2 and 10 minutes, `claude` 2.1.258, haiku,
+isolated (`--strict-mcp-config`), one directory, no commits, 2026-09-02.
+Results: `spikes/results/e1-ttl.jsonl`. Pre-registration `45ecf29`; probe design
+committed in `363ab2a` before it ran.
+
+| gap | step | cache_read | cache_creation | share |
+| --- | --- | --- | --- | --- |
+| 2 min | warm | 25,261 | 0 | 1.000 |
+| 2 min | read | 25,261 | 0 | 1.000 |
+| 10 min | warm | 25,261 | 0 | 1.000 |
+| **10 min** | **read** | **25,261** | **0** | **1.000** |
+
+The 10-minute read (16:53:03 → 17:03:07, a 10 m 04 s idle gap) was a **full hit
+with zero re-creation**.
+
+**What this settles.** The effective prompt-cache TTL for `claude -p` on this
+subscription **exceeds 5 minutes**. The pessimistic reading in PRIOR-ART §8 —
+that the platform default 5m applies and the RFC's 1h-vs-5m asymmetry does not
+exist — is **not supported**. The cache half of the inversion cost argument
+survives this test.
+
+**What it does not settle, stated plainly:**
+
+- **n = 1 per gap.** F5 records cache-read share ranging 0.58–1.00 across
+  identical dispatches. A single observation per gap is not a distribution.
+  The zero-creation result is cleaner than a ratio (there is no partial state to
+  be noisy about), but it is still one observation.
+- **The prefix never went cold.** `cache_creation` was 0 on *every* dispatch
+  including the first "warm" one, so this series never observed a cold→warm
+  transition. It measures survival, not creation.
+- **The upper bound is untested.** 45 and 90 minute gaps are running. Survival at
+  45 with decay by 90 would be consistent with a 1h TTL; survival at 90 would
+  mean the TTL is longer than either the docs or the RFC suggest.
+- **`ttl_split` remains `[0, 0]`** on every dispatch, so the platform's own TTL
+  field still cannot corroborate this. The finding rests entirely on behaviour.
+- This says nothing about the *in-session subagent* side of the asymmetry, which
+  the RFC takes from documentation and which we have not measured.
+
+**Method note.** Each gap gets its own warm dispatch precisely because a cache
+read refreshes the entry; probing one warmed prefix at increasing gaps would
+measure a prefix being kept alive rather than one decaying undisturbed.
+
+---
+
+## F9 — E3's answer key is empty. `## Required Changes` contains no blockers
+
+**Established by:** reading all 15 `## Required Changes` sections at the pinned
+SHA, 2026-09-02. **Plan-breaking, same class as C1.**
+
+E3's primary metric is *blocker recall*: "of the findings in the historical
+`## Required Changes`, what fraction does each arm surface?"
+
+**All fifteen sections open with "None".** Every one. Verbatim first lines
+include "None. The verdict is `approved` and nothing in this review blocks the
+project", "None blocking this verdict. The four items below are **carried
+forward**", and "None. The verdict is `approved`."
+
+The numbered items that follow are **carry-forwards to other projects** — work
+for a downstream item, each written as a future check — not blockers against the
+diff under review. Six of the fifteen have no list at all.
+
+So the answer key E3 was going to be scored against does not exist. This is
+charter §8.1's censoring problem, but sharper than §8.1 states: it names
+`## Required Changes` as one of the three places negative signal survives, and
+in fact that section exists precisely to record its *absence*.
+
+**Consequence.** Blocker recall cannot be computed from this corpus. E3 needs a
+different primary metric before it runs, and E6 — which shares the metric and the
+inputs — inherits the same problem.
+
+**Recommended replacement: seed the defects.** Rather than mining an answer key
+that isn't there, construct one: inject known defects into real reviewed diffs
+and measure detection per arm. The defect classes are not arbitrary — the
+`redkiln-review` card enumerates exactly what it claims to hunt, so seed those:
+
+- a double / no-op / injected stub standing in for a real contract
+- a fixture-pinned assertion that pre-sets the answer a substrate should compute
+- a `test.fixme` / skipped / flag-gated-off scenario
+- an unmounted deliverable — built but never wired into the render path
+
+This is the same methodology as S0.1 (mutation testing), applied to a reviewer
+instead of a gate, and it has the property the historical corpus cannot offer:
+**known ground truth**. It also tests the rubric the card actually claims,
+rather than agreement with a past reviewer whose output was censored at the gate.
+
+**Cost of finding this now:** nothing. **Cost of finding it after E3:**
+roughly 40 Opus-heavy review dispatches, and a recall number that would have
+been computed against an empty key and read as "the headless reviewer surfaced
+nothing" — which would have fired the programme's hardest kill criterion on an
+artefact of the corpus.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has
