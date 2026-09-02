@@ -46,15 +46,21 @@ identical material, paired per item.**
 
 ## 4. Inputs
 
-**22 fix-lane items** under `.bklg/support/` that carry all four of: a `spec.md`
+**23 fix-lane items** under `.bklg/support/` that carry all four of: a `spec.md`
 with AC-### criteria, an `implementation-report.md`, an approving `_review.md`,
 and a checkpoint SHA that resolves at the pinned corpus commit.
 
-(23 exist; `issue-75-item-frontmatter-strict-drift` is excluded — its review
-carries no resolving SHA. `reap-leaked-serve-children` has 0 parsed ACs and
-`issue-146-147-boundary-window` has 1; both are retained but flagged, and any
-item whose spec yields no usable AC list is dropped at fixture-build time and
-the drop is reported.)
+**Amended after S0.3 (disclosed):** this section originally said 22, excluding
+`issue-75-item-frontmatter-strict-drift` on my earlier finding that its SHA did
+not resolve. It does (`582a3e9`); the earlier scan could not see it. Two further
+items (`reap-leaked-serve-children`, `issue-146-147-boundary-window`) were
+recorded as having 0–1 ACs because their specs define ACs as table rows rather
+than list items. All three are now in. **The input set grew by corrections to my
+own parsing, not by a change of criteria**, and no data had been seen.
+
+The authoritative list is `spikes/results/s03-fixlane-manifest.jsonl`, which
+records per item the AC ids, the checkpoint SHA, how that SHA was located, and
+the fix commit's file set.
 
 ## 5. Conditions — three per item, paired
 
