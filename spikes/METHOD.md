@@ -104,9 +104,13 @@ Normalise the frozen corpus to JSONL. Not an experiment; a dependency.
 
 - Parse the **three** distinct `_review.md` schemas separately (fix-lane 5-dim,
   project 7-dim, initiative none). Section headings are spelled three ways.
-- Extract the **14** reviews carrying `## Required Changes` — that is E3's
-  answer key and its real n, not 18.
-- Extract the **23** fix-lane triples (spec + report + review + resolving SHA).
+- Extract the **15** reviews carrying `## Required Changes` — **not** as an
+  answer key. F9 established that all fifteen open with "None"; they are
+  extracted only as evidence for that finding.
+- Extract the **23** fix-lane triples (spec + report + review + resolving SHA),
+  and mark the **22** whose checkpoint SHA resolves. These are the E3/E6 inputs
+  under `METHOD-E3.md` and the S0.1 mutation source — one fixture rig serves
+  both.
 - Extract the 124 `workflow_run` records.
 - **Resolve the 923-vs-1,030 dispatch disagreement** between the flat `agents`
   field and the per-phase census, and record which is canonical and why.
