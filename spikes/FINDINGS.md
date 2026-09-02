@@ -339,6 +339,45 @@ artefact of the corpus.
 
 ---
 
+## Operational — long-lived background jobs are unreliable here
+
+**Established by:** three background runs, 2026-09-02. Cause **not** established.
+
+| job | shape | outcome |
+| --- | --- | --- |
+| TTL gaps 2,10 | ~13 min, printed a line every ~2 min | **completed** |
+| TTL gaps 45,90 | ~55 min, long silent sleeps | **stopped** |
+| TTL read | ~35 min, one silent sleep | **stopped** |
+
+Not a fixed cap — 55 and 35 minutes both died, 13 minutes lived. The only
+pattern visible is that the survivor emitted output periodically and both
+casualties were silent for long stretches. **That is a hypothesis, not a
+finding**; the notifications reported `killed` with no cause and there is
+nothing in the output but a `[killed]` marker. It may equally have been the
+operator.
+
+**Why it matters beyond this experiment.** E3 as registered is ~198 Opus
+dispatches and E4/E5 run the full 236-file vitest suite per gate. Both are
+long-running by construction. If a job that runs for tens of minutes can vanish
+without explanation, then **no measurement may depend on a single process
+surviving to the end of it.**
+
+Two mitigations, both already in place:
+
+1. **Resume is on by default.** A killed run costs the dispatches in flight, not
+   the arm; re-running into the same results file skips what already succeeded.
+2. **TTL measurement was restructured** into `ttl-mark` / `ttl-read`, so a gap is
+   the interval between two timestamps rather than one process's lifetime. This
+   paid off immediately: the second kill landed mid-wait and cost nothing,
+   because the 17:49:11Z mark stayed valid and the read simply reports whatever
+   elapsed time it actually measures.
+
+**Rule adopted:** any spike operation expected to exceed ~10 minutes is either
+resumable or split into short invocations. Nothing is written that assumes a
+long process completes.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has
