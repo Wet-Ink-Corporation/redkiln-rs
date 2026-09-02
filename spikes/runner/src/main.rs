@@ -8,6 +8,7 @@
 //! Nothing in `crates/` may depend on this.
 
 mod corpus;
+mod e3;
 mod event;
 mod fingerprint;
 mod gate;
@@ -102,6 +103,47 @@ enum Command {
     /// drift it finds, then measures the RFC's axis-2 claim: how much rejected
     /// work would a `Story:`-trailer-only resume mistake for finished?
     ReconcileReplay(ReconcileArgs),
+
+    /// E3 — seeded-defect detection. The programme's hard gate.
+    ///
+    /// Registered in `spikes/METHOD-E3.md`. Reverts a real historical fix and
+    /// asks the reviewer whether the spec's acceptance criteria are met, against
+    /// clean controls, paired per item.
+    ReviewProbe(ReviewArgs),
+}
+
+#[derive(clap::Args)]
+struct ReviewArgs {
+    #[arg(long, default_value = "../results/s03-fixlane-manifest.jsonl")]
+    manifest: PathBuf,
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+    #[arg(long, default_value = "../fixtures/s01-wt")]
+    worktree: PathBuf,
+    #[arg(long)]
+    out: PathBuf,
+    /// `clean` (ground truth: approved) or `s-silent` (ground truth:
+    /// changes-requested).
+    #[arg(long)]
+    condition: String,
+    /// Arm: `b` = headless direct with the card. Arms `a` and `c` are added
+    /// once `b` is shown to work.
+    #[arg(long, default_value = "b")]
+    arm: String,
+    #[arg(long, default_value = "opus")]
+    model: String,
+    #[arg(long, default_value = "xhigh")]
+    effort: String,
+    /// Repeat index, so the same item can be run more than once for the
+    /// per-item stability that E0's variance pilot needs.
+    #[arg(long, default_value_t = 1)]
+    repeat: u32,
+    #[arg(long)]
+    limit: Option<usize>,
+    #[arg(long)]
+    only: Option<String>,
+    #[arg(long, default_value_t = 900)]
+    timeout_secs: u64,
 }
 
 #[derive(clap::Args)]
@@ -141,6 +183,8 @@ struct GateArgs {
 #[derive(serde::Deserialize)]
 struct ManifestItem {
     slug: String,
+    dir: String,
+    ac_ids: Vec<String>,
     checkpoint_sha: Option<String>,
     fix_files: Vec<String>,
     #[serde(default)]
@@ -295,7 +339,197 @@ async fn main() -> Result<()> {
         Command::CorpusManifest(args) => corpus_manifest(args),
         Command::GateProbe(args) => gate_probe(args),
         Command::ReconcileReplay(args) => reconcile_replay(args),
+        Command::ReviewProbe(args) => review_probe(&cli.claude_bin, args).await,
     }
+}
+
+async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
+    let condition: &'static str = match args.condition.as_str() {
+        "clean" => "clean",
+        "s-silent" => "s-silent",
+        other => anyhow::bail!("unknown condition `{other}` (expected clean or s-silent)"),
+    };
+    let env = hygiene::assert_clean(claude_bin).await?;
+    let redkiln = std::fs::canonicalize(&args.redkiln)?;
+    let worktree = std::fs::canonicalize(&args.worktree)?;
+    let journal = Journal::open(&args.out, &[])?;
+
+    let model = match args.model.as_str() {
+        "haiku" => Tier::Haiku,
+        "sonnet" => Tier::Sonnet,
+        "opus" => Tier::Opus,
+        other => anyhow::bail!("unknown model tier `{other}`"),
+    };
+    let effort = match args.effort.as_str() {
+        "low" => Effort::Low,
+        "medium" => Effort::Medium,
+        "high" => Effort::High,
+        "xhigh" => Effort::Xhigh,
+        "max" => Effort::Max,
+        other => anyhow::bail!("unknown effort `{other}`"),
+    };
+
+    let (description, card_body) = e3::load_card(&redkiln)?;
+    let schema = e3::digest_schema();
+    let runner = Runner::new(claude_bin, env);
+    let done = journal::completed_keys(&args.out);
+    let items = read_manifest(&args.manifest)?;
+    let mut processed = 0usize;
+
+    for item in &items {
+        if let Some(only) = &args.only
+            && &item.slug != only
+        {
+            continue;
+        }
+        if let Some(limit) = args.limit
+            && processed >= limit
+        {
+            break;
+        }
+        let arm_label = format!("{}-{}", args.arm, condition);
+        let resume_key = format!("E3/{arm_label}/{}#r{}", item.slug, args.repeat);
+        if done.contains(&resume_key) {
+            eprintln!("  {:<44} skipped (recorded)", item.slug);
+            continue;
+        }
+        let Some(sha) = item.checkpoint_sha.clone() else {
+            continue;
+        };
+
+        // Build the fixture. F17: for `s-silent` the fix must be UNREACHABLE,
+        // not merely reverted — a reviewer with Bash restored it from the
+        // worktree's object store and reviewed the real code. A shallow fetch
+        // of the parent gives a one-commit history the fix does not exist in.
+        let review_cwd;
+        let reverted: Vec<String>;
+        if condition == "s-silent" {
+            let fixture = worktree
+                .parent()
+                .unwrap_or(&worktree)
+                .join(format!("e3-silent-{}", item.slug));
+            e3::build_silent_fixture(&redkiln, &fixture, &sha)?;
+            e3::assert_fix_unreachable(&fixture, &sha)?;
+            review_cwd = fixture;
+            // Everything the fix touched is at its pre-fix state here.
+            reverted = item
+                .fix_files
+                .iter()
+                .filter(|f| {
+                    matches!(gate::classify(f), gate::FileRole::Code | gate::FileRole::Test)
+                })
+                .cloned()
+                .collect();
+            if reverted.is_empty() {
+                eprintln!("  {:<44} EXCLUDED (no code or tests)", item.slug);
+                continue;
+            }
+        } else {
+            gate::reset_worktree(&worktree, &sha)?;
+            review_cwd = worktree.clone();
+            reverted = Vec::new();
+        }
+
+        let read = |name: &str| {
+            std::fs::read_to_string(redkiln.join(&item.dir).join(name)).unwrap_or_default()
+        };
+        let prompt = e3::build_prompt(
+            &item.slug,
+            &read("spec.md"),
+            &read("implementation-report.md"),
+            &item.ac_ids,
+            &item.fix_files,
+        );
+
+        eprint!("  {:<44} {arm_label} r{} ... ", item.slug, args.repeat);
+        let spec = StepSpec {
+            experiment: "E3".into(),
+            arm: arm_label.clone(),
+            label: item.slug.clone(),
+            phase: "review".into(),
+            occurrence: args.repeat,
+            attempt: 1,
+            model,
+            // Pinned explicitly: the card is `model: inherit` with no effort, so
+            // omitting these would silently inherit the session default.
+            effort: Some(effort),
+            agent: Some(step::AgentCard {
+                name: "redkiln-review".into(),
+                description: description.clone(),
+                prompt: card_body.clone(),
+                tools: Some(vec!["Read".into(), "Bash".into()]),
+                model: Some(args.model.clone()),
+                effort: Some(args.effort.clone()),
+                permission_mode: None,
+            }),
+            prompt,
+            schema: Some(schema.clone()),
+            allowed_tools: vec![],
+            permission_mode: Some("bypassPermissions".into()),
+            cwd: review_cwd.clone(),
+            isolate_mcp: true,
+            extra_flags: vec![],
+            timeout: Duration::from_secs(args.timeout_secs),
+        };
+
+        let (record, outcome) = runner.run(&spec).await;
+
+        // F7: `--agents` alone is inert. If the card did not apply, this record
+        // measures a generic Claude and is VOID, not a miss.
+        // F17: `effective.agent` is NOT populated when the agent is set via
+        // `--agent`, so reading it voided a record whose card had in fact
+        // applied. The durable signal is the tool set: the card declares
+        // [Read, Bash], and adoption restricts the child from 34 tools to
+        // exactly those two.
+        let adopted = record
+            .effective
+            .as_ref()
+            .and_then(|e| e.tools.as_ref())
+            .is_some_and(|t| {
+                t.len() <= 4 && t.iter().any(|x| x == "Read") && t.iter().any(|x| x == "Bash")
+            });
+
+        let scored = record.digest.as_ref().map(|d| e3::score(d, &reverted));
+        match (&scored, outcome.is_ok()) {
+            (Some(s), _) => eprintln!(
+                "pass={} strong={} weak={} cited={} {:.0}s",
+                !s.rejected,
+                s.strong_detection,
+                s.weak_detection,
+                s.matched_files.len(),
+                record.wall_clock_ms as f64 / 1000.0
+            ),
+            (None, _) => eprintln!(
+                "NO DIGEST ({}) {:.0}s",
+                record.error_kind.as_deref().unwrap_or("?"),
+                record.wall_clock_ms as f64 / 1000.0
+            ),
+        }
+
+        journal.append(&serde_json::json!({
+            "experiment": "E3",
+            "resume_key": resume_key,
+            "outcome": if scored.is_some() && adopted { "ok" } else { "void" },
+            "void_reason": if adopted { None } else { Some("agent card not adopted (F7)") },
+            "arm": arm_label,
+            "condition": condition,
+            "slug": item.slug,
+            "repeat": args.repeat,
+            "checkpoint_sha": sha,
+            "reverted": reverted,
+            "review_cwd": review_cwd.to_string_lossy(),
+            "card_adopted": adopted,
+            "ground_truth": if condition == "clean" { "approved" } else { "changes-requested" },
+            "scored": scored,
+            "step": record,
+        }))?;
+
+        gate::reset_worktree(&worktree, &sha)?;
+        processed += 1;
+    }
+
+    println!("\nwrote {}", journal.path().display());
+    Ok(())
 }
 
 fn reconcile_replay(args: ReconcileArgs) -> Result<()> {

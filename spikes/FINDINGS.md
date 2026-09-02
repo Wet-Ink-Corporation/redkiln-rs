@@ -653,6 +653,70 @@ combination was not run.
 
 ---
 
+## F17 — The E3 fixture was defeatable: the reviewer restored the fix and reviewed the real code
+
+**Established by:** the first E3 pilot dispatch, 2026-09-02.
+**No E3 result is claimed. The rig was wrong and is being rebuilt.**
+
+One item (`issues-135-129-declared-boundary-parse`, 13 ACs), condition
+`s-silent` — `src/store/verify.ts` and `test/verify.test.ts` reverted so the
+gate stays green while the ACs go unmet. Opus/xhigh, 42 turns, 22,853 output
+tokens, 11,231 thinking, 526 seconds. It returned `approved`.
+
+**It was right to.** From its own report, verbatim:
+
+> "the `s01-wt` checkout sitting at that SHA holds a *reverted* spike fixture,
+> **which I restored after use**"
+
+and
+
+> "**Mutation proof (the strongest test).** I restored the tree to `d9397179`,
+> then reverted **only** `src/store/verify.ts` to `HEAD~1` while keeping the new
+> tests. 10 of the 14 new tests went RED"
+
+The reviewer had `Bash` in a git worktree whose object store still contained the
+fix commit. It checked the fix out, reviewed the **real** code, and — entirely on
+its own initiative — **ran the same mutation experiment S0.1 runs**, reporting
+which ACs the reverted file breaks.
+
+### Why this matters more than a broken fixture
+
+1. **The mutation was never durable.** METHOD-E3 assumed the reviewer reviews the
+   tree as presented. An agent with `Bash` in a repo that still contains the fix
+   can undo the seed in one command. Every `s-silent` record from this rig would
+   have measured the reviewer against the *fixed* code while being scored against
+   *reverted* ground truth — producing a systematic false "missed the defect"
+   across the whole arm, and firing the programme's hardest kill criterion on a
+   fixture artefact.
+2. **It is evidence the reviewer is strong**, though not the evidence E3 was
+   built to collect. Given a suspicious tree it reconstructed the provenance,
+   restored it, mutation-tested the file, and cited which ACs each mutation
+   broke.
+3. **It restored the fixture afterwards** — considerate, and it means the
+   worktree state was not left corrupted.
+
+### The fix
+
+The fixture must make the fix **unreachable**, not merely absent from the
+working tree. A shallow fetch of the fix commit's **parent** into a fresh repo
+gives a single-commit history containing only the pre-fix state, with no object
+for the reviewer to restore. Spec and report are read from the frozen corpus and
+passed in the prompt, so they are unaffected.
+
+### A second defect found in the same dispatch
+
+The record was marked **void** on "agent card not adopted" — wrongly. The card
+*was* adopted: `system/init` reported `tools: ["Read", "Bash"]`, restricted from
+the 34 otherwise available. But `effective.agent` is **not populated** by
+`system/init` when the agent is set via `--agent`, and that was what the check
+read.
+
+The adoption check now compares the **effective tool set** against the card's
+declared tools. F7's principle stands — verify adoption from the child's own
+view — but the field it reads was the wrong one.
+
+---
+
 ## Operational — long-lived background jobs are unreliable here
 
 **Established by:** three background runs, 2026-09-02. Cause **not** established.
