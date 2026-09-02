@@ -10,6 +10,7 @@
 mod corpus;
 mod event;
 mod fingerprint;
+mod gate;
 mod hygiene;
 mod journal;
 mod result_meta;
@@ -85,6 +86,47 @@ enum Command {
     /// Feeds S0.1 (gate false-positive rate) and E3/E6 (seeded-defect
     /// detection): both revert the same fixes on the same items.
     CorpusManifest(CorpusArgs),
+
+    /// S0.1 — gate false-positive rate. Zero model cost, heavy wall clock.
+    ///
+    /// Reverts each fix's code while keeping its tests, then runs the declared
+    /// affected gate. A mutant the gate passes is a survivor. Resumable per
+    /// (item, condition), because the whole 236-file suite runs every time and
+    /// a stopped job must cost one item rather than the run.
+    GateProbe(GateArgs),
+}
+
+#[derive(clap::Args)]
+struct GateArgs {
+    #[arg(long, default_value = "../results/s03-fixlane-manifest.jsonl")]
+    manifest: PathBuf,
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+    /// One reusable worktree. Per-item worktrees would each need their own
+    /// 125 MB node_modules.
+    #[arg(long, default_value = "../fixtures/s01-wt")]
+    worktree: PathBuf,
+    #[arg(long)]
+    out: PathBuf,
+    /// `s-fail` reverts code and keeps tests (the mutant); `clean` runs the
+    /// shipped fix untouched as a fixture sanity check.
+    #[arg(long, default_value = "s-fail")]
+    condition: String,
+    /// Process at most N items this invocation, so a long run can be chunked.
+    #[arg(long)]
+    limit: Option<usize>,
+    /// Restrict to one slug.
+    #[arg(long)]
+    only: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct ManifestItem {
+    slug: String,
+    checkpoint_sha: Option<String>,
+    fix_files: Vec<String>,
+    #[serde(default)]
+    eligible: bool,
 }
 
 #[derive(clap::Args)]
@@ -227,6 +269,199 @@ async fn main() -> Result<()> {
         Command::TtlMark(args) => ttl_step(&cli.claude_bin, args, "warm").await,
         Command::TtlRead(args) => ttl_step(&cli.claude_bin, args, "read").await,
         Command::CorpusManifest(args) => corpus_manifest(args),
+        Command::GateProbe(args) => gate_probe(args),
+    }
+}
+
+fn gate_probe(args: GateArgs) -> Result<()> {
+    let condition: &'static str = match args.condition.as_str() {
+        "s-fail" => "s-fail",
+        "clean" => "clean",
+        other => anyhow::bail!("unknown condition `{other}` (expected s-fail or clean)"),
+    };
+    let worktree = std::fs::canonicalize(&args.worktree).with_context(|| {
+        format!(
+            "--worktree {} does not exist; create it with `git worktree add`",
+            args.worktree.display()
+        )
+    })?;
+    let journal = Journal::open(&args.out, &[])?;
+
+    // Resume: a stopped run costs the item in flight, never the whole run.
+    let done = journal::completed_keys(&args.out);
+    let items = read_manifest(&args.manifest)?;
+    let mut processed = 0usize;
+
+    for item in &items {
+        if let Some(only) = &args.only
+            && &item.slug != only
+        {
+            continue;
+        }
+        if let Some(limit) = args.limit
+            && processed >= limit
+        {
+            break;
+        }
+        if done.contains(&format!("S0.1/{condition}/{}", item.slug)) {
+            eprintln!("  {:<44} skipped (already recorded)", item.slug);
+            continue;
+        }
+        let Some(sha) = item.checkpoint_sha.clone() else {
+            continue;
+        };
+
+        let pick = |role| -> Vec<String> {
+            item.fix_files
+                .iter()
+                .filter(|f| gate::classify(f) == role)
+                .cloned()
+                .collect()
+        };
+        let code = pick(gate::FileRole::Code);
+        let tests = pick(gate::FileRole::Test);
+
+        // A fix touching no production code cannot be mutated this way. That is
+        // not a gate failure and must not enter the denominator.
+        if condition == "s-fail" && code.is_empty() {
+            eprintln!("  {:<44} EXCLUDED (no production code)", item.slug);
+            journal.append(&gate::GateRecord {
+                experiment: "S0.1",
+                slug: item.slug.clone(),
+                condition,
+                checkpoint_sha: sha,
+                code_files: code,
+                test_files: tests,
+                reverted: vec![],
+                exit_code: None,
+                failed_stage: None,
+                stages_run: vec![],
+                gate_passed: false,
+                survived: false,
+                duration_ms: 0,
+                stdout_tail: String::new(),
+                stderr_tail: String::new(),
+                outcome: "skipped".into(),
+                skipped_reason: Some("fix touches no production code".into()),
+            })?;
+            continue;
+        }
+
+        eprint!("  {:<44} {condition} ... ", item.slug);
+        gate::reset_worktree(&worktree, &sha)?;
+        let reverted = if condition == "s-fail" {
+            gate::apply_mutation(&worktree, &sha, &code)?
+        } else {
+            Vec::new()
+        };
+
+        let run = gate::run_gate(&worktree)?;
+        let passed = run.exit_code == Some(0);
+        // A gate that never spawned cannot have a verdict. Guard added after
+        // a shell-resolution bug made every mutant "die" in 4 seconds without
+        // running, yielding a fake 100% mutation score.
+        anyhow::ensure!(
+            !run.stages_run.is_empty(),
+            "the gate did not run for {} — refusing to record a verdict. stderr: {}",
+            item.slug,
+            run.stderr.trim()
+        );
+        let survived = condition == "s-fail" && passed;
+        eprintln!(
+            "exit={:?} {} at {} {:.0}s",
+            run.exit_code,
+            if survived {
+                "SURVIVED"
+            } else if passed {
+                "pass"
+            } else {
+                "killed"
+            },
+            run.failed_stage.as_deref().unwrap_or("-"),
+            run.duration_ms as f64 / 1000.0
+        );
+        journal.append(&gate::GateRecord {
+            experiment: "S0.1",
+            slug: item.slug.clone(),
+            condition,
+            checkpoint_sha: sha.clone(),
+            code_files: code,
+            test_files: tests,
+            reverted,
+            exit_code: run.exit_code,
+            failed_stage: run.failed_stage.clone(),
+            stages_run: run.stages_run.clone(),
+            gate_passed: passed,
+            survived,
+            duration_ms: run.duration_ms,
+            stdout_tail: run.stdout,
+            stderr_tail: run.stderr,
+            outcome: "ok".into(),
+            skipped_reason: None,
+        })?;
+        gate::reset_worktree(&worktree, &sha)?;
+        processed += 1;
+    }
+
+    summarise(&args.out);
+    println!("wrote {}", journal.path().display());
+    Ok(())
+}
+
+fn read_manifest(path: &std::path::Path) -> Result<Vec<ManifestItem>> {
+    let text = std::fs::read_to_string(path)
+        .with_context(|| format!("reading {} — run `corpus-manifest` first", path.display()))?;
+    Ok(text
+        .lines()
+        .filter_map(|l| serde_json::from_str::<ManifestItem>(l).ok())
+        .filter(|i| i.eligible)
+        .collect())
+}
+
+/// Mutation score, with inapplicable mutants excluded from the denominator
+/// (PRIOR-ART §5 — counting them would inflate the gate's apparent weakness).
+fn summarise(out: &std::path::Path) {
+    let text = std::fs::read_to_string(out).unwrap_or_default();
+    let recs: Vec<serde_json::Value> = text
+        .lines()
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .filter(|v: &serde_json::Value| v.get("experiment").and_then(|e| e.as_str()) == Some("S0.1"))
+        .collect();
+
+    let ran: Vec<_> = recs
+        .iter()
+        .filter(|r| r["condition"] == "s-fail" && r["outcome"] == "ok")
+        .collect();
+    let excluded = recs
+        .iter()
+        .filter(|r| r["condition"] == "s-fail" && r["outcome"] == "skipped")
+        .count();
+    let survived = ran.iter().filter(|r| r["survived"] == true).count();
+    let clean: Vec<_> = recs.iter().filter(|r| r["condition"] == "clean").collect();
+    let clean_pass = clean.iter().filter(|r| r["gate_passed"] == true).count();
+
+    println!("\n--- S0.1: does the gate pass known-bad code? ---");
+    println!("mutants run           : {}", ran.len());
+    println!("excluded (no code)    : {excluded}");
+    if !ran.is_empty() {
+        let n = ran.len() as f64;
+        println!(
+            "SURVIVORS             : {survived}  ({:.1}%)",
+            100.0 * survived as f64 / n
+        );
+        println!(
+            "mutation score        : {:.1}%  killed/run",
+            100.0 * (ran.len() - survived) as f64 / n
+        );
+        for r in ran.iter().filter(|r| r["survived"] == true) {
+            println!("   SURVIVED: {}", r["slug"].as_str().unwrap_or("?"));
+        }
+    }
+    if !clean.is_empty() {
+        println!(
+            "clean controls        : {clean_pass}/{} passed (a failure here is a broken fixture, not a gate finding)",
+            clean.len()
+        );
     }
 }
 
