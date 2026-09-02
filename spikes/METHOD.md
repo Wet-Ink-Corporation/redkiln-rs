@@ -135,16 +135,39 @@ quantised headroom figure.
    excluded from agreement counts.
 2. **Headroom draw per batch**, as `seven_day` and `five_hour` deltas ÷ n, with
    `resolution_limited` reported.
-3. **Does a cache read draw down the subscription window?** The platform docs
-   say cache hits are *not* deducted from rate limits; charter §6.1 says they
-   draw at ~0.1×. These cannot both be true (PRIOR-ART §8). Compare headroom
-   delta across batches with high vs low `cache_read_share` at matched total
-   input. **Nothing is sized until this is settled.**
+3. ~~**Does a cache read draw down the subscription window?**~~
+   **STRUCK 2026-09-02 — amendment, disclosed.** This was registered as a gate:
+   "nothing is sized until this is settled." It is not settleable with the
+   instrument available, and the gate is withdrawn rather than left to block
+   the programme indefinitely.
+
+   **Why.** F14: 40 dispatches processing ~1.9M tokens — 500k as cache reads,
+   149k as cache creation — moved `seven_day` by **less than one 0.01 tick** in
+   either direction. Both the docs' reading ("cache hits are not deducted") and
+   charter §6.1's ("~0.1×") remain fully consistent with that. Resolving it
+   would need roughly an order of magnitude more volume, and even then the
+   assistant driving the experiments shares the same account and windows, so the
+   delta could not be cleanly attributed.
+
+   **What replaces it.** The question was only ever instrumental — sizing needs
+   "what does one Opus review cost in headroom?", not a theory of metering.
+   Charter §3 says as much: "Anthropic does not publish the metering function …
+   consumption must be derived empirically." **The variance pilot's measured
+   per-arm headroom draw becomes the sizing input directly.** No arm is sized
+   from a metering model; each is sized from its own observed draw.
+
+   What F14 did establish stands as a bound: ~40 haiku dispatches cost at most
+   ~1% of the weekly window, so haiku mechanism arms are effectively free.
 4. Confirmation that `--max-budget-usd` behaves as documented on a subscription.
 
 **Kill criterion.** If the flaky subset is large enough that >20 runs/arm are
 needed to detect a 10 pp effect, E4–E6 are unaffordable and we publish mechanism
 findings only.
+
+**Sizing rule (replaces the struck gate).** Every experiment is sized from the
+measured `seven_day` draw of its own arms, taken over a batch large enough to
+span at least two ticks of the 0.01 instrument. A batch that stays
+`resolution_limited` is reported as "below the instrument", never as a cost.
 
 ---
 
