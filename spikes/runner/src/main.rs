@@ -443,22 +443,40 @@ fn summarise(out: &std::path::Path) {
     let clean: Vec<_> = recs.iter().filter(|r| r["condition"] == "clean").collect();
     let clean_pass = clean.iter().filter(|r| r["gate_passed"] == true).count();
 
+    // Stage attribution is not decoration. A mutant killed at `typecheck` never
+    // reached the tests: reverting code while keeping its test can leave a tree
+    // that does not compile, which no real defect would. Counting those as
+    // kills flatters the suite, so they are separated from the denominator that
+    // actually answers "would the tests catch a silent regression?".
+    let stage = |r: &&&serde_json::Value, s: &str| r["failed_stage"] == s;
+    let by_typecheck = ran.iter().filter(|r| stage(r, "typecheck")).count();
+    let by_lint = ran.iter().filter(|r| stage(r, "lint")).count();
+    let by_test = ran.iter().filter(|r| stage(r, "test")).count();
+    let reached_tests = by_test + survived;
+
     println!("\n--- S0.1: does the gate pass known-bad code? ---");
     println!("mutants run           : {}", ran.len());
     println!("excluded (no code)    : {excluded}");
+    println!("killed at typecheck   : {by_typecheck}   (incoherent revert — never reached the tests)");
+    println!("killed at lint        : {by_lint}");
+    println!("killed at test        : {by_test}");
+    println!("SURVIVED              : {survived}");
     if !ran.is_empty() {
-        let n = ran.len() as f64;
         println!(
-            "SURVIVORS             : {survived}  ({:.1}%)",
-            100.0 * survived as f64 / n
+            "\nheadline (all mutants): {:.1}% killed",
+            100.0 * (ran.len() - survived) as f64 / ran.len() as f64
         );
+    }
+    if reached_tests > 0 {
         println!(
-            "mutation score        : {:.1}%  killed/run",
-            100.0 * (ran.len() - survived) as f64 / n
+            "TEST-REACHABLE        : {:.1}% killed, {:.1}% survived  (n={reached_tests})",
+            100.0 * by_test as f64 / reached_tests as f64,
+            100.0 * survived as f64 / reached_tests as f64
         );
-        for r in ran.iter().filter(|r| r["survived"] == true) {
-            println!("   SURVIVED: {}", r["slug"].as_str().unwrap_or("?"));
-        }
+        println!("  ^ this is the oracle figure E4 and E5 rest on.");
+    }
+    for r in ran.iter().filter(|r| r["survived"] == true) {
+        println!("   SURVIVED: {}", r["slug"].as_str().unwrap_or("?"));
     }
     if !clean.is_empty() {
         println!(

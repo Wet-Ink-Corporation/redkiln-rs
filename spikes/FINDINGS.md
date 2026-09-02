@@ -301,6 +301,70 @@ one decay measurement and a matching token count.
 - **Date-stamped.** This is platform behaviour we do not control, and #46829
   documents it changing silently before (charter threat 6).
 
+## F11 — S0.1 RESULT: the gate kills 9 of 10 test-reachable mutants
+
+**Established by:** mutation testing over all 23 fix-lane items, 2026-09-02.
+Instrument: revert each fix's production code, keep its tests, run the declared
+`affected_gate` (`pnpm typecheck && pnpm lint && pnpm test`) with
+`REDKILN_NO_GATE_CACHE=1`. Results: `spikes/results/s01-gate-fpr.jsonl`.
+Pre-registration `45ecf29`.
+
+| | n |
+| --- | --- |
+| items in manifest | 23 |
+| excluded — fix touches no production code | 8 |
+| **mutants run** | **15** |
+| killed at `typecheck` | 5 |
+| killed at `lint` | 0 |
+| **killed at `test`** | **9** |
+| **SURVIVED** | **1** |
+
+**Two figures, and the second is the one that matters.**
+
+- *Headline*, all mutants run: **93.3% killed**.
+- **Test-reachable (n=10): 90.0% killed, 10.0% survived.**
+
+The five `typecheck` kills are excluded from the second figure deliberately.
+Each died in 3–8 seconds, having never reached the suite: reverting production
+code while keeping its test can leave a tree that does not compile, which no
+real defect would. Counting those as kills flatters the suite by measuring the
+compiler. **The test-reachable figure is the oracle number E4 and E5 rest on.**
+
+### The survivor
+
+`issue-75-item-frontmatter-strict-drift` — reverting `src/schema/common.ts`
+passed the **entire** gate: all three stages ran, exit 0, 272 seconds. The
+retained test did not catch its own bug's reintroduction.
+
+That is one confirmed case of the gate waving through a known-bad change, and it
+is exactly the class E4's decision rule depends on not being common.
+
+### What this means for E4 and E5
+
+**The oracle is usable.** At ~10% survival among test-reachable mutants, "tests
+green" is a meaningful signal, and E4's decision rule stands. It is not a perfect
+oracle and must not be reported as one: roughly one silent regression in ten
+would pass unnoticed, so an E4 arm scoring within ~10 points of another has not
+been separated by this instrument.
+
+### Limits, stated plainly
+
+- **n = 15 run, 10 test-reachable.** Small, and a single survivor drives the
+  headline rate. The confidence interval on 1/10 is wide.
+- **8 of 23 items were excluded** because their fixes touch no production code
+  (mostly the `plan-*` lane, which fixes workflow scripts under `workflows/`,
+  a path `classify()` treats as `Other`). That is a third of the corpus outside
+  this measurement, and the excluded lane may behave differently.
+- **Regression-shaped defects only.** Reverting a fix re-creates the bug that
+  fix addressed. Novel defects in unfamiliar code are not measured.
+- **One commit's suite per item.** Each mutant runs against the suite as it
+  existed at that fix's checkpoint (92 files / 1,881 tests at the August commit
+  measured), not today's 236-file suite. The gate's power has changed over time
+  and this averages across that.
+- **Wall clock:** ~5–16 minutes per test-reachable mutant, median 323 s.
+
+---
+
 ## Operational — long-lived background jobs are unreliable here
 
 **Established by:** three background runs, 2026-09-02. Cause **not** established.
