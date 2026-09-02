@@ -19,3 +19,10 @@ target
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# Spike fixtures are throwaway git repos; results are raw measurement data.
+spikes/fixtures/
+
+# spikes/results/ is deliberately NOT ignored: charter §14.2 makes the raw
+# records a deliverable, and a results file that has to be force-added is a
+# results file that eventually goes missing.

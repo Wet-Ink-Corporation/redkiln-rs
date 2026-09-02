@@ -1,0 +1,15 @@
+# Frozen redkiln corpus pin — see plan §4 "Repo layout".
+# The TypeScript redkiln repo is frozen for the duration of this programme.
+# Every results file MUST record this SHA.
+
+REDKILN_REPO=D:/repos/redkiln
+REDKILN_SHA=47faec9f46b8d983c2c75f0794164e68415ae706
+REDKILN_DESCRIBE=v0.20.0-173-g47faec9f
+PINNED_AT=2026-09-02
+
+# Working-tree state at pin time (recorded, not corrected):
+#   M .redkiln/telemetry/events/ryan-britton@redkiln.jsonl
+#   ?? references/*.md  (the three RFC/charter/shipmates docs, since copied here)
+#   ?? references/competitor-analyses/
+# The modified telemetry partition is an append-only event log; corpus
+# extraction reads committed state at REDKILN_SHA, not the working tree.
