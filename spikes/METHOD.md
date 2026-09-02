@@ -234,6 +234,13 @@ record it as a permanent architectural limitation and re-price the tier policy.
 
 ---
 
+## E3 / E6 — superseded
+
+The charter's blocker-recall metric is dead (FINDINGS F9: all fifteen
+`## Required Changes` sections open with "None"). E3 and E6 are re-registered in
+**`METHOD-E3.md`** as seeded-defect detection against clean controls, using real
+historical defects re-created by reverting real historical fixes.
+
 ## Judging (applies to E3–E6, registered here because it is a method choice)
 
 Deterministic outcomes are preferred wherever they exist.
