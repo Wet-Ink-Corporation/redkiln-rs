@@ -237,107 +237,69 @@ much less on a step that runs for minutes.
 
 ---
 
-## F10 — The prompt cache survives a 10-minute idle gap. TTL exceeds 5 minutes
+## F10 — The prompt cache TTL is ~1 hour. First decay observed between 45 and 62 minutes
 
-**Established by:** E1-TTL probe, gaps 2 and 10 minutes, `claude` 2.1.258, haiku,
-isolated (`--strict-mcp-config`), one directory, no commits, 2026-09-02.
-Results: `spikes/results/e1-ttl.jsonl`. Pre-registration `45ecf29`; probe design
-committed in `363ab2a` before it ran.
+**Established by:** E1-TTL probe, `claude` 2.1.258, haiku, isolated
+(`--strict-mcp-config`), one directory, no commits, nothing else dispatched in
+the fixture. Results: `spikes/results/e1-ttl.jsonl`. Pre-registration `45ecf29`;
+design committed in `363ab2a` before the first dispatch.
 
-| gap | measured idle | cache_read | cache_creation | share |
-| --- | --- | --- | --- | --- |
-| 2 min | 2.1 min | 25,261 | 0 | 1.000 |
-| 10 min | 10.1 min | 25,261 | 0 | 1.000 |
-| **45 min** | **45.1 min** | **25,261** | **0** | **1.000** |
-| 90 min | — | — | — | **not run** |
+| measured gap | cache_read | cache_creation | share |
+| --- | --- | --- | --- |
+| 2.1 min | 25,261 | 0 | 1.000 |
+| 10.1 min | 25,261 | 0 | 1.000 |
+| 45.1 min | 25,261 | 0 | 1.000 |
+| **61.6 min** | **17,439** | **7,822** | **0.690** |
 
-Every read was a **full hit with zero re-creation**, including after a measured
-**45.1-minute idle gap** (17:04:03 → 17:49:07).
+**The boundary sits between 45.1 and 61.6 minutes — consistent with a 1-hour
+TTL, and flatly inconsistent with the platform-documented 5-minute default.**
 
-The 90-minute pair did not complete: its warm dispatch fired at 17:49:11 and the
-run was stopped during the sleep, so no read was taken. One orphaned `ttl-90m`
-warm record sits in the journal; resume keys on the *read*, so re-running the
-90-minute gap redoes the pair correctly rather than skipping it.
+At 61.6 minutes, 7,822 of 25,261 prefix tokens (31%) had expired and were
+re-created; 17,439 were still served from cache.
 
-**What this settles.** The effective prompt-cache TTL for `claude -p` on this
-subscription **is at least 45 minutes** — nine times the platform's documented
-5-minute default, and consistent with a 1-hour TTL. The pessimistic reading in PRIOR-ART §8 —
-that the platform default 5m applies and the RFC's 1h-vs-5m asymmetry does not
-exist — is **not supported**. The cache half of the inversion cost argument
-survives this test.
+### What this settles
 
-**What it does not settle, stated plainly:**
+**The RFC's premise holds.** RFC §3.1's cost case rests on `claude -p` getting a
+1-hour cache TTL. It does. The pessimistic reading in PRIOR-ART §8 — that the
+platform's 5m default applies, or that Claude Code silently moved to 5m in March
+2026 (claude-code#46829) and the 1h-vs-5m asymmetry no longer exists — is
+**refuted for this configuration on this date**. A 5-minute TTL is incompatible
+with a full hit and zero re-creation at 45.1 minutes.
 
-- **n = 1 per gap.** F5 records cache-read share ranging 0.58–1.00 across
-  identical dispatches. A single observation per gap is not a distribution.
-  The zero-creation result is cleaner than a ratio (there is no partial state to
-  be noisy about), but it is still one observation.
-- **The prefix never went cold.** `cache_creation` was 0 on *every* dispatch
-  including the first "warm" one, so this series never observed a cold→warm
-  transition. It measures survival, not creation.
-- **The upper bound is untested.** Survival at 45 minutes is consistent with a
-  1-hour TTL but does not establish one. Only the 90-minute read separates "~1h,
-  as the RFC assumes" from "longer than either the docs or the RFC suggest", and
-  it was not taken.
-- **`ttl_split` remains `[0, 0]`** on every dispatch, so the platform's own TTL
-  field still cannot corroborate this. The finding rests entirely on behaviour.
-- This says nothing about the *in-session subagent* side of the asymmetry, which
-  the RFC takes from documentation and which we have not measured.
+**The instrument is vindicated over the field.** `usage.cache_creation` reports
+`{ephemeral_1h: 0, ephemeral_5m: 0}` on every dispatch, so the platform's own TTL
+field could not have answered this either way. Only behaviour could.
 
-**Method note.** Each gap gets its own warm dispatch precisely because a cache
-read refreshes the entry; probing one warmed prefix at increasing gaps would
-measure a prefix being kept alive rather than one decaying undisturbed.
+### Observation worth carrying: the prefix is segmented and ages unevenly
 
----
+Expiry was **partial, not total**. A ~17.4k-token segment survived past 62
+minutes while a ~7.8k-token segment expired between 45 and 62. The surviving
+figure (17,439) matches the `cache_read` seen in the very first smoke dispatch
+hours earlier, which suggests a long-lived base segment (system prompt and tool
+definitions) sitting under a shorter-lived tail.
 
-## F9 — E3's answer key is empty. `## Required Changes` contains no blockers
+If that reading is right, cache decay for our workload is **gradual rather than
+cliff-edged**, and the practical cost of a long gap is smaller than a binary
+hit/miss model implies. Stated as an observation, not a conclusion: it rests on
+one decay measurement and a matching token count.
 
-**Established by:** reading all 15 `## Required Changes` sections at the pinned
-SHA, 2026-09-02. **Plan-breaking, same class as C1.**
+### What is still not established
 
-E3's primary metric is *blocker recall*: "of the findings in the historical
-`## Required Changes`, what fraction does each arm surface?"
-
-**All fifteen sections open with "None".** Every one. Verbatim first lines
-include "None. The verdict is `approved` and nothing in this review blocks the
-project", "None blocking this verdict. The four items below are **carried
-forward**", and "None. The verdict is `approved`."
-
-The numbered items that follow are **carry-forwards to other projects** — work
-for a downstream item, each written as a future check — not blockers against the
-diff under review. Six of the fifteen have no list at all.
-
-So the answer key E3 was going to be scored against does not exist. This is
-charter §8.1's censoring problem, but sharper than §8.1 states: it names
-`## Required Changes` as one of the three places negative signal survives, and
-in fact that section exists precisely to record its *absence*.
-
-**Consequence.** Blocker recall cannot be computed from this corpus. E3 needs a
-different primary metric before it runs, and E6 — which shares the metric and the
-inputs — inherits the same problem.
-
-**Recommended replacement: seed the defects.** Rather than mining an answer key
-that isn't there, construct one: inject known defects into real reviewed diffs
-and measure detection per arm. The defect classes are not arbitrary — the
-`redkiln-review` card enumerates exactly what it claims to hunt, so seed those:
-
-- a double / no-op / injected stub standing in for a real contract
-- a fixture-pinned assertion that pre-sets the answer a substrate should compute
-- a `test.fixme` / skipped / flag-gated-off scenario
-- an unmounted deliverable — built but never wired into the render path
-
-This is the same methodology as S0.1 (mutation testing), applied to a reviewer
-instead of a gate, and it has the property the historical corpus cannot offer:
-**known ground truth**. It also tests the rubric the card actually claims,
-rather than agreement with a past reviewer whose output was censored at the gate.
-
-**Cost of finding this now:** nothing. **Cost of finding it after E3:**
-roughly 40 Opus-heavy review dispatches, and a recall number that would have
-been computed against an empty key and read as "the headless reviewer surfaced
-nothing" — which would have fired the programme's hardest kill criterion on an
-artefact of the corpus.
-
----
+- **n = 1 per gap.** Four gaps, one observation each. The zero-creation results
+  are cleaner than a ratio — there is no partial state to be noisy about — but
+  61.6 min is a single observation of the decay itself, and F5 records
+  cache-read share ranging 0.58–1.00 across identical dispatches.
+- **The boundary is bracketed, not located.** It lies in (45.1, 61.6). Nothing
+  here distinguishes 50 from 60 minutes.
+- **This measures survival, not creation.** `cache_creation` was 0 on every warm
+  dispatch, so the series never observed a cold→warm transition.
+- **The in-session subagent side of the asymmetry is unmeasured.** The RFC's
+  claim that subagents get "5 minutes, always" is taken from documentation. E3
+  arm (a) is the first opportunity to observe it.
+- **Haiku only, one prompt, one directory, one day.** Whether TTL varies by tier,
+  prefix size, or account state is untested.
+- **Date-stamped.** This is platform behaviour we do not control, and #46829
+  documents it changing silently before (charter threat 6).
 
 ## Operational — long-lived background jobs are unreliable here
 

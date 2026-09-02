@@ -300,7 +300,7 @@ async fn ttl_step(claude_bin: &str, args: TtlStepArgs, label: &str) -> Result<()
             if record.cache_read_share == Some(1.0) {
                 "WARM — full hit, zero re-creation. The prefix survived the gap."
             } else {
-                "NOT fully warm — some of the prefix was re-created. Compare creation                  against a cold baseline before calling it expiry."
+                "NOT fully warm — part of the prefix expired and was re-created."
             }
         );
         journal.append(&serde_json::json!({
