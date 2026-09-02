@@ -13,6 +13,7 @@ mod fingerprint;
 mod gate;
 mod hygiene;
 mod journal;
+mod reconcile;
 mod result_meta;
 mod runner;
 mod step;
@@ -94,6 +95,23 @@ enum Command {
     /// (item, condition), because the whole 236-file suite runs every time and
     /// a stopped job must cost one item rather than the run.
     GateProbe(GateArgs),
+
+    /// S0.2 — deterministic reconcile replay. Zero model cost.
+    ///
+    /// Folds every resume-relevant commit trailer into state and reports the
+    /// drift it finds, then measures the RFC's axis-2 claim: how much rejected
+    /// work would a `Story:`-trailer-only resume mistake for finished?
+    ReconcileReplay(ReconcileArgs),
+}
+
+#[derive(clap::Args)]
+struct ReconcileArgs {
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+    #[arg(long)]
+    out: PathBuf,
+    #[arg(long, default_value = "../corpus/PINNED_SHA")]
+    pin_file: PathBuf,
 }
 
 #[derive(clap::Args)]
@@ -270,7 +288,77 @@ async fn main() -> Result<()> {
         Command::TtlRead(args) => ttl_step(&cli.claude_bin, args, "read").await,
         Command::CorpusManifest(args) => corpus_manifest(args),
         Command::GateProbe(args) => gate_probe(args),
+        Command::ReconcileReplay(args) => reconcile_replay(args),
     }
+}
+
+fn reconcile_replay(args: ReconcileArgs) -> Result<()> {
+    let redkiln = std::fs::canonicalize(&args.redkiln)?;
+    let journal = Journal::open(&args.out, &[])?;
+
+    let commits = reconcile::read_commits(&redkiln)?;
+    let (state, drift) = reconcile::reconcile(&commits);
+    let axes = reconcile::compare_axes(&state);
+
+    journal.append(&serde_json::json!({
+        "record": "header", "experiment": "S0.2",
+        "generated_at": chrono::Utc::now(),
+        "corpus_pin": journal::read_pinned_sha(&args.pin_file),
+        "redkiln_head": git_head(&redkiln),
+        "commits_with_trailers": commits.len(),
+    }))?;
+
+    println!("commits carrying resume trailers : {}", commits.len());
+    println!("projects reconstructed           : {}", state.projects.len());
+    println!(
+        "stories committed (project form) : {}",
+        state.projects.values().map(|p| p.stories_committed.len()).sum::<usize>()
+    );
+    println!("bare story ids (fix lane)        : {}", state.bare_story_ids.len());
+    println!("Fix: slugs                       : {}", state.fixes.len());
+
+    println!("\n--- axis 1 (Story) vs axis 2 (Slice-Verdict) ---");
+    println!("slices sealed                    : {}", axes.slices_total);
+    println!("  latest verdict approved        : {}", axes.slices_approved);
+    println!("  latest verdict REJECTED        : {}", axes.slices_rejected);
+    println!("  sealed more than once          : {}", axes.slices_resealed);
+    println!("  rejected then later approved   : {}", axes.rejected_then_approved);
+    println!("\n--- what a Story-trailer-only resume would misread as done ---");
+    if axes.slices_total > 0 {
+        let pct = |n: usize| 100.0 * n as f64 / axes.slices_total as f64;
+        println!(
+            "  at the final snapshot      : {:>3}  ({:.1}%)",
+            axes.would_be_misread_as_done,
+            pct(axes.would_be_misread_as_done)
+        );
+        println!(
+            "  MID-FLIGHT (ever rejected) : {:>3}  ({:.1}%)   <- the figure that matters",
+            axes.ever_rejected,
+            pct(axes.ever_rejected)
+        );
+        println!(
+            "\n  Resume runs when a workflow is RE-ENTERED, not at the end of history —\n  \
+             which is exactly when a slice is sitting in a rejected state."
+        );
+    }
+
+    let mut kinds: std::collections::BTreeMap<&str, usize> = Default::default();
+    for d in &drift {
+        *kinds.entry(d.kind).or_default() += 1;
+    }
+    println!("\n--- drift (reported, never silently reconciled) ---");
+    for (k, n) in &kinds {
+        println!("  {k:<28} {n}");
+    }
+
+    journal.append(&serde_json::json!({"record": "axes", "axes": axes}))?;
+    for d in &drift {
+        journal.append(&serde_json::json!({"record": "drift", "drift": d}))?;
+    }
+    journal.append(&serde_json::json!({"record": "state", "state": state}))?;
+
+    println!("\nwrote {}", journal.path().display());
+    Ok(())
 }
 
 fn gate_probe(args: GateArgs) -> Result<()> {

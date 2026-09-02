@@ -365,6 +365,88 @@ been separated by this instrument.
 
 ---
 
+## F12 — S0.2 RESULT: 1 slice in 5 passed through a rejected state. Axis 2 earns its place
+
+**Established by:** deterministic reconcile over all resume trailers across all
+refs at the pinned corpus SHA, 2026-09-02. Zero model cost.
+Results: `spikes/results/s02-reconcile.jsonl`.
+
+### Re-scoped, and disclosed
+
+METHOD.md registered S0.2's primary metric as "agreement with the recorded
+outcome per run" over the 124 `workflow_run` events. **Only 1 of 101 runs
+records `storiesDoneAtStop` / `slicesSealedAtStop`.** At n=1 that metric is not
+computable — the same class of problem as F9. What *is* computable, and is
+closer to the claim the RFC actually makes, is measured instead. No data had
+been seen when the metric changed.
+
+### What the reconcile reconstructed
+
+| | |
+| --- | --- |
+| commits carrying resume trailers | 360 |
+| projects reconstructed | 23 |
+| stories committed (`project/slug`) | 172 |
+| bare story ids (fix lane, `RK-S####`) | 31 |
+| `Fix:` slugs | 28 |
+| slices sealed | 74 |
+
+Deterministic, in-process, no LLM. RFC §3.4 calls this "the single
+highest-value thing to port"; it ports.
+
+### The axis-2 claim, measured
+
+RFC §3.4 argues `Story:` trailers alone are insufficient because "a slice
+REJECTED at review looks identical, in commit history, to one that passed …
+**the state that most needs recovery was precisely the state resume could not
+see**."
+
+| | n | of 74 |
+| --- | --- | --- |
+| latest verdict `approved` | 73 | 98.6% |
+| latest verdict rejected | 1 | 1.4% |
+| sealed more than once | 16 | 21.6% |
+| rejected, then later approved | 14 | 18.9% |
+| **ever rejected** | **15** | **20.3%** |
+
+**The final-snapshot figure (1.4%) badly understates the risk, and the
+mid-flight figure (20.3%) is the honest one.** Resume does not run at the end of
+history — it runs when a workflow is re-entered, which is exactly when some
+slice is sitting rejected. **One slice in five passed through a state where a
+`Story:`-trailer-only resume would have skipped work that still needed doing.**
+
+That is a quantified vindication of a design decision the RFC defended only with
+an anecdote. Axis 2 is not belt-and-braces; it covers a fifth of the slices.
+
+### Drift found
+
+| kind | n |
+| --- | --- |
+| `duplicate-story-trailer` | 29 |
+| `slice-left-rejected` | 1 |
+
+**The 29 duplicates are ambiguous and are not claimed as defects.** A story
+committed, rejected, and re-committed after rework would produce exactly this
+shape, and 14 slices are known to have gone through that cycle. Distinguishing
+"legitimate rework" from "the same story committed twice by accident" needs the
+commit ordering cross-referenced against slice verdicts, which is a further
+question rather than a result. Recorded so it is not mistaken for either.
+
+### Limits
+
+- **The reconcile was not validated against the agent's decisions**, because
+  those decisions were almost never recorded (n=1). What is shown is that a
+  deterministic implementation *can* reconstruct the state from git, and what
+  that state contains — not that it agrees with what the Preflight agent
+  concluded on any given run.
+- Trailer parsing is column-anchored and case-sensitive, matching
+  `src/store/verify.ts`. A trailer written differently would be invisible here
+  and to the product alike.
+- `latest verdict wins` is the rule applied. It matches the intent of sealing
+  but is not independently verified against engine behaviour.
+
+---
+
 ## Operational — long-lived background jobs are unreliable here
 
 **Established by:** three background runs, 2026-09-02. Cause **not** established.
