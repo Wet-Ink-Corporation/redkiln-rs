@@ -244,18 +244,24 @@ isolated (`--strict-mcp-config`), one directory, no commits, 2026-09-02.
 Results: `spikes/results/e1-ttl.jsonl`. Pre-registration `45ecf29`; probe design
 committed in `363ab2a` before it ran.
 
-| gap | step | cache_read | cache_creation | share |
+| gap | measured idle | cache_read | cache_creation | share |
 | --- | --- | --- | --- | --- |
-| 2 min | warm | 25,261 | 0 | 1.000 |
-| 2 min | read | 25,261 | 0 | 1.000 |
-| 10 min | warm | 25,261 | 0 | 1.000 |
-| **10 min** | **read** | **25,261** | **0** | **1.000** |
+| 2 min | 2.1 min | 25,261 | 0 | 1.000 |
+| 10 min | 10.1 min | 25,261 | 0 | 1.000 |
+| **45 min** | **45.1 min** | **25,261** | **0** | **1.000** |
+| 90 min | — | — | — | **not run** |
 
-The 10-minute read (16:53:03 → 17:03:07, a 10 m 04 s idle gap) was a **full hit
-with zero re-creation**.
+Every read was a **full hit with zero re-creation**, including after a measured
+**45.1-minute idle gap** (17:04:03 → 17:49:07).
+
+The 90-minute pair did not complete: its warm dispatch fired at 17:49:11 and the
+run was stopped during the sleep, so no read was taken. One orphaned `ttl-90m`
+warm record sits in the journal; resume keys on the *read*, so re-running the
+90-minute gap redoes the pair correctly rather than skipping it.
 
 **What this settles.** The effective prompt-cache TTL for `claude -p` on this
-subscription **exceeds 5 minutes**. The pessimistic reading in PRIOR-ART §8 —
+subscription **is at least 45 minutes** — nine times the platform's documented
+5-minute default, and consistent with a 1-hour TTL. The pessimistic reading in PRIOR-ART §8 —
 that the platform default 5m applies and the RFC's 1h-vs-5m asymmetry does not
 exist — is **not supported**. The cache half of the inversion cost argument
 survives this test.
@@ -269,9 +275,10 @@ survives this test.
 - **The prefix never went cold.** `cache_creation` was 0 on *every* dispatch
   including the first "warm" one, so this series never observed a cold→warm
   transition. It measures survival, not creation.
-- **The upper bound is untested.** 45 and 90 minute gaps are running. Survival at
-  45 with decay by 90 would be consistent with a 1h TTL; survival at 90 would
-  mean the TTL is longer than either the docs or the RFC suggest.
+- **The upper bound is untested.** Survival at 45 minutes is consistent with a
+  1-hour TTL but does not establish one. Only the 90-minute read separates "~1h,
+  as the RFC assumes" from "longer than either the docs or the RFC suggest", and
+  it was not taken.
 - **`ttl_split` remains `[0, 0]`** on every dispatch, so the platform's own TTL
   field still cannot corroborate this. The finding rests entirely on behaviour.
 - This says nothing about the *in-session subagent* side of the asymmetry, which
