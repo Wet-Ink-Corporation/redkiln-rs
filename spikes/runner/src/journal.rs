@@ -122,6 +122,12 @@ pub fn completed_keys(path: impl AsRef<Path>) -> std::collections::HashSet<Strin
         if v.get("outcome").and_then(|o| o.as_str()) != Some("ok") {
             continue;
         }
+        // A record may carry its own key. Preferred: a writer-emitted key
+        // cannot drift from the reader's reconstruction of it.
+        if let Some(k) = v.get("resume_key").and_then(|x| x.as_str()) {
+            done.insert(k.to_string());
+            continue;
+        }
         let (Some(exp), Some(arm), Some(id)) = (
             v.get("experiment").and_then(|x| x.as_str()),
             v.get("arm").and_then(|x| x.as_str()),
@@ -282,5 +288,28 @@ mod tests {
     #[test]
     fn no_marks_yields_none() {
         assert!(last_warm_mark("does/not/exist.jsonl").is_none());
+    }
+
+    #[test]
+    fn a_writer_emitted_resume_key_is_used_verbatim() {
+        // Records that carry their own key must not be forced through the
+        // experiment/arm/identity reconstruction, which they cannot satisfy.
+        let tmp = std::env::temp_dir().join(format!("rk-rk-{}", std::process::id()));
+        std::fs::create_dir_all(&tmp).unwrap();
+        let f = tmp.join("k.jsonl");
+        std::fs::write(
+            &f,
+            [
+                r#"{"resume_key":"S0.1/s-fail/issue-77","outcome":"ok"}"#,
+                r#"{"resume_key":"S0.1/s-fail/issue-62","outcome":"error"}"#,
+            ]
+            .join("
+"),
+        )
+        .unwrap();
+        let done = completed_keys(&f);
+        assert!(done.contains("S0.1/s-fail/issue-77"));
+        assert!(!done.contains("S0.1/s-fail/issue-62"), "a failed run must re-run");
+        std::fs::remove_dir_all(&tmp).ok();
     }
 }

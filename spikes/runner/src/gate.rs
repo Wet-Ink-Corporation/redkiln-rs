@@ -46,6 +46,15 @@ pub fn classify(path: &str) -> FileRole {
 #[derive(Debug, Clone, Serialize)]
 pub struct GateRecord {
     pub experiment: &'static str,
+    /// The resume key, written into the record rather than reconstructed when
+    /// reading it back.
+    ///
+    /// The first version relied on the generic reader deriving a key from
+    /// `experiment`/`arm`/`identity` — fields a `GateRecord` does not have. It
+    /// silently matched nothing, so every chunk re-ran the previous chunk's
+    /// items. A key the writer emits cannot drift from the key the reader
+    /// looks for.
+    pub resume_key: String,
     pub slug: String,
     pub condition: &'static str,
     pub checkpoint_sha: String,

@@ -303,7 +303,8 @@ fn gate_probe(args: GateArgs) -> Result<()> {
         {
             break;
         }
-        if done.contains(&format!("S0.1/{condition}/{}", item.slug)) {
+        let resume_key = format!("S0.1/{condition}/{}", item.slug);
+        if done.contains(&resume_key) {
             eprintln!("  {:<44} skipped (already recorded)", item.slug);
             continue;
         }
@@ -327,6 +328,7 @@ fn gate_probe(args: GateArgs) -> Result<()> {
             eprintln!("  {:<44} EXCLUDED (no production code)", item.slug);
             journal.append(&gate::GateRecord {
                 experiment: "S0.1",
+                resume_key: resume_key.clone(),
                 slug: item.slug.clone(),
                 condition,
                 checkpoint_sha: sha,
@@ -382,6 +384,7 @@ fn gate_probe(args: GateArgs) -> Result<()> {
         );
         journal.append(&gate::GateRecord {
             experiment: "S0.1",
+            resume_key: resume_key.clone(),
             slug: item.slug.clone(),
             condition,
             checkpoint_sha: sha.clone(),
