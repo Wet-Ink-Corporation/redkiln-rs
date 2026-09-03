@@ -156,7 +156,47 @@ pub fn build_silent_fixture(redkiln: &Path, fixture: &Path, sha: &str) -> Result
     let src = redkiln.to_string_lossy().replace('\\', "/");
     run(&["fetch", "--depth", "1", "--no-tags", "-q", &src, &parent])?;
     run(&["checkout", "-q", "--detach", "FETCH_HEAD"])?;
+    link_node_modules(redkiln, fixture);
     Ok(())
+}
+
+/// Junction `node_modules` in from the source repo.
+///
+/// Without it the reviewer can read code but cannot run the suite, which
+/// silently weakens two of the five rubric dimensions it is scored on —
+/// `gate-greenness` and `test-integrity`. A reviewer that *cannot* run tests
+/// looks like one that *chose not to*, and the difference would be invisible
+/// in the digest.
+///
+/// Windows-only (`mklink /J`); this spike is Windows-only throughout (F8). A
+/// failure here is non-fatal but is announced, because a silent absence is the
+/// exact confound the junction exists to prevent.
+fn link_node_modules(redkiln: &Path, fixture: &Path) {
+    let target = redkiln.join("node_modules");
+    if !target.is_dir() {
+        eprintln!("    note: no node_modules in the source repo; the reviewer cannot run tests");
+        return;
+    }
+    let link = fixture.join("node_modules");
+    let status = std::process::Command::new("cmd")
+        .args([
+            "/c",
+            "mklink",
+            "/J",
+            &link.to_string_lossy(),
+            &target.to_string_lossy(),
+        ])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+    match status {
+        Ok(s) if s.success() && link.join(".bin").exists() => {}
+        _ => eprintln!(
+            "    WARNING: could not link node_modules into {} — the reviewer cannot run \
+             tests, which weakens gate-greenness and test-integrity",
+            fixture.display()
+        ),
+    }
 }
 
 /// Confirm the fix really is unreachable — a fixture that silently kept it
