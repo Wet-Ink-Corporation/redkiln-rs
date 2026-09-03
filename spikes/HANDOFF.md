@@ -125,9 +125,15 @@ seeing the data it would affect:
 2. E3's input set 22 → 23 — my parser, not the criteria (S0.3).
 3. E0's cache-cost gate struck — not settleable with this instrument (F14).
 
-The RFC amendment (charter §14.4) is still to be written. It should record:
-R2 **falsified**; R4/R6 conflict **dissolved**; §10's pivotal unknown
-**resolved** (partial); §6.2's worktree conflict **repriced**; and the
-multi-agent scaling citation **corrected** to 180 configs / 4 benchmarks, where
-the effect range is structured by task type — sequential −39…−70%,
-parallelizable +80.9%.
+**The RFC amendment is written**: `references/2026-09-02-rfc-amendment.md`
+(charter §14.4). It records R2 falsified, the R4/R6 conflict dissolved and
+inverted, §10's pivotal unknown resolved, the cache-TTL premise confirmed,
+§6.2's worktree conflict repriced to ~⅓, the multi-agent citation corrected, and
+three new risks the RFC did not anticipate. Its closing point is the one that
+matters: **every result so far is cost and mechanism; the quality question the
+RFC says is decisive has not been tested.**
+
+Remaining deliverables from charter §14: the dated conformance scorecard (§14.3)
+and the findings note for product changes (§14.5) — four are already expected
+(the worktree/cache interaction, the gate FPR, the absent affected-area test
+selection, and the empty ledger join).
