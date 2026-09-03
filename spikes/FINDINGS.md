@@ -841,12 +841,18 @@ merely delayed.
 | TTL gaps 45,90 | ~55 min, long silent sleeps | **stopped** |
 | TTL read | ~35 min, one silent sleep | **stopped** |
 
-Not a fixed cap — 55 and 35 minutes both died, 13 minutes lived. The only
-pattern visible is that the survivor emitted output periodically and both
-casualties were silent for long stretches. **That is a hypothesis, not a
-finding**; the notifications reported `killed` with no cause and there is
-nothing in the output but a `[killed]` marker. It may equally have been the
-operator.
+**Updated 2026-09-03 — the output-frequency hypothesis is FALSIFIED.** Two more
+kills followed: one at ~65 min into a 65-minute sleep, and one that died after
+roughly **two minutes** without printing its first line, despite being written
+to emit output every minute. Six data points now: ~13 min survived; ~2, ~35,
+~55 and ~65 min did not. There is **no duration pattern and no output pattern**.
+
+The cause remains undetermined. The notifications report `killed` with no
+reason and the output holds nothing but a `[killed]` marker. The kills do appear
+to cluster at conversational turn boundaries, which would suggest the session
+reaps background work when it takes a new turn — but that is a third hypothesis,
+offered with no more evidence than the two it replaces, and it should not be
+recorded as a finding.
 
 **Why it matters beyond this experiment.** E3 as registered is ~198 Opus
 dispatches and E4/E5 run the full 236-file vitest suite per gate. Both are
@@ -864,9 +870,15 @@ Two mitigations, both already in place:
    because the 17:49:11Z mark stayed valid and the read simply reports whatever
    elapsed time it actually measures.
 
-**Rule adopted:** any spike operation expected to exceed ~10 minutes is either
-resumable or split into short invocations. Nothing is written that assumes a
-long process completes.
+**Rule adopted, and strengthened:** no spike operation may depend on a
+background process surviving *at all*. Anything needing a wait is expressed as a
+durable mark plus a later read, so the wait is an interval between two
+timestamps rather than a process lifetime.
+
+This has now paid for itself four times. The H1 decay mark at `04:38:06Z`
+survived a kill that destroyed the job scheduled to read it, and remains valid
+and readable at any later moment — the read simply reports whatever elapsed time
+it measures.
 
 ---
 
