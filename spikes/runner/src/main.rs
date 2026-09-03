@@ -505,18 +505,32 @@ fn human_gate(args: HumanGateArgs) -> Result<()> {
     Ok(())
 }
 
-/// The most recent headroom reading in a results file.
+/// The most recent headroom reading in a results file, **if it still describes
+/// the current window**.
 ///
 /// Read back so a chunked experiment resumes knowing where it stands rather
-/// than rediscovering it by spending a dispatch.
-fn last_headroom(path: &std::path::Path) -> Option<event::Headroom> {
+/// than rediscovering it by spending a dispatch. But a reading is only about
+/// the window it was taken in: a record saying `five_hour 0.86` is worthless
+/// once that window has rolled, and seeding the guard with it halts a run that
+/// in fact has a full window in front of it. `resetsAt` is on the record
+/// precisely so this is decidable without spending anything.
+///
+/// A stale reading is discarded rather than corrected. That leaves the opening
+/// dispatch unguarded, which is `Guard`'s documented behaviour and is safe:
+/// headroom can only be learned *from* a dispatch.
+fn last_headroom(path: &std::path::Path, now: i64) -> Option<event::Headroom> {
     let text = std::fs::read_to_string(path).ok()?;
-    text.lines()
+    let h: event::Headroom = text
+        .lines()
         .rev()
         .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
         .find_map(|v| {
             serde_json::from_value::<event::Headroom>(v.get("step")?.get("headroom")?.clone()).ok()
-        })
+        })?;
+    match h.five_hour_resets_at {
+        Some(at) if at <= now => None,
+        _ => Some(h),
+    }
 }
 
 async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
@@ -554,7 +568,7 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         max_seven_day: args.max_seven_day,
     };
     let mut guard = Guard::default();
-    guard.observe(last_headroom(&args.out).as_ref());
+    guard.observe(last_headroom(&args.out, chrono::Utc::now().timestamp()).as_ref());
     if let Some(h) = guard.last() {
         eprintln!(
             "  resuming at five_hour {:.2} / seven_day {:.2} (margins {:.2}/{:.2})",
@@ -563,6 +577,8 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             margins.max_five_hour,
             margins.max_seven_day
         );
+    } else {
+        eprintln!("  no live headroom reading — the opening dispatch is unguarded");
     }
 
     let (description, card_body) = e3::load_card(&redkiln)?;
@@ -1606,4 +1622,43 @@ fn empty_commit(cwd: &std::path::Path, i: u32) -> Result<()> {
         String::from_utf8_lossy(&out.stderr).trim()
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod last_headroom_tests {
+    use super::*;
+
+    // The repo's own idiom (see journal.rs): a pid-scoped dir under temp_dir,
+    // rather than a new dependency for two tests.
+    fn results_file(tag: &str, resets_at: i64) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("rk-e3-{tag}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        let path = dir.join("e3.jsonl");
+        let line = serde_json::json!({
+            "step": { "headroom": {
+                "five_hour_utilization": 0.86,
+                "seven_day_utilization": 0.21,
+                "five_hour_resets_at": resets_at,
+            }}
+        });
+        std::fs::write(&path, format!("{line}\n")).expect("write");
+        path
+    }
+
+    #[test]
+    fn a_reading_from_the_current_window_seeds_the_guard() {
+        let path = results_file("live", 2_000);
+        let h = last_headroom(&path, 1_000).expect("live reading");
+        assert_eq!(h.five_hour_utilization, Some(0.86));
+        std::fs::remove_dir_all(path.parent().unwrap()).ok();
+    }
+
+    #[test]
+    fn a_reading_from_a_window_that_has_rolled_is_discarded() {
+        // Otherwise a chunk resumed after a reset halts against a margin that
+        // no longer applies, with a full window in front of it.
+        let path = results_file("stale", 500);
+        assert!(last_headroom(&path, 1_000).is_none());
+        std::fs::remove_dir_all(path.parent().unwrap()).ok();
+    }
 }
