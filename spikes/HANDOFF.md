@@ -91,8 +91,11 @@ first chunk **is** the sizing measurement — record `seven_day` before and afte
 3. **The in-session side of the cache asymmetry.** The RFC's claim that
    subagents get "5 minutes, always" is still only documentation. E3 arm (a) is
    the first chance to observe it.
-4. **The human gate** — RFC §7 calls it the unoccupied market gap, and it has no
-   spike. Still the largest untested assumption in the thesis.
+4. **The human gate** — RFC §7 calls it the unoccupied market gap. **Now
+   planned**: `spikes/METHOD-H.md` (pre-registration #3, not approved to run).
+   H2 (resume determinism across a process boundary) and H3 (world drift during
+   a gate) cost nothing in headroom and can run alongside E3; H1 and H4 wait.
+   F18 already establishes the shape: ~half of all gates outlive the cache TTL.
 5. **8 of 23 items sit outside S0.1** because their fixes touch only
    `workflows/`, not `src/`. A third of the corpus is unmeasured by the gate FPR.
 
@@ -117,7 +120,8 @@ first chunk **is** the sizing measurement — record `seven_day` before and afte
 
 ## Pre-registration status
 
-`METHOD.md` covers Stage 0, E0, E1, E2; `METHOD-E3.md` covers E3/E6. Three
+`METHOD.md` covers Stage 0, E0, E1, E2; `METHOD-E3.md` covers E3/E6;
+`METHOD-H.md` covers the human gate (planned, unapproved). Three
 amendments, each disclosed in the document and its commit, none made after
 seeing the data it would affect:
 

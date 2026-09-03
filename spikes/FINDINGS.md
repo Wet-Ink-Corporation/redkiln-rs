@@ -717,6 +717,48 @@ view — but the field it reads was the wrong one.
 
 ---
 
+## F18 — Half of all human gates outlive the cache TTL
+
+**Established by:** 174–191 measurable gate pauses in the frozen telemetry,
+2026-09-02. Zero model cost.
+
+| anchor | n | median | p90 | max | **> 1 h** |
+| --- | --- | --- | --- | --- | --- |
+| `gate_result` → `verdict` | 174 | 10.5 min | — | — | **45%** |
+| `stage_enter` → `verdict` | 191 | 51.6 min | ~9 h | **226 h** | **48%** |
+
+The two anchors bracket the real human latency — the first may include tail
+agent work, the second certainly does — and **the figure the design rests on is
+stable across both: roughly half of all gates exceed one hour.**
+
+**Why it matters.** F10 puts the prompt-cache TTL at ~1 hour (boundary
+45.1–61.6 min). So **the human gate sits precisely on the cache cliff.** About
+half of all suspensions resume onto a cold prefix and pay a full re-write.
+
+The distribution is not "humans are slow". It is **fast, or gone**: a median
+around ten minutes, a p90 near nine hours, and a longest observed pause of
+**9.4 days**.
+
+**Consequences, carried into `METHOD-H.md`:**
+
+- The per-gate cost is bounded and knowable — one cold prefix write, about half
+  the time. What is *not* known is its size at review scale; F10 and F16
+  measured a ~25k trivial prefix, and a real review carries spec, report and
+  diff.
+- `--system-prompt` held 1.000 across commits (F16). If it also blunts the
+  *time* decay, the human gate becomes near-free — a design conclusion, not a
+  detail.
+- At a p90 of ~9 hours, **world drift during a gate stops being hypothetical**,
+  which makes shipmates L2.2 ("recorded state is a cache; git is truth") a
+  requirement of resume rather than good hygiene.
+
+**Limits.** One operator, one project, one tool. A team's distribution would
+differ and probably lengthen. And these gates were answered through a live
+session — a headless gate may change how fast people answer, plausibly for the
+worse, since nothing is waiting in front of them.
+
+---
+
 ## Operational — long-lived background jobs are unreliable here
 
 **Established by:** three background runs, 2026-09-02. Cause **not** established.
