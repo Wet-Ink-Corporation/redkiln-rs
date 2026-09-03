@@ -249,6 +249,9 @@ struct TtlStepArgs {
     model: String,
     #[arg(long, default_value = "Reply with the single word: ok")]
     prompt: String,
+    /// Read the prompt from a file instead (see the note on `probe`).
+    #[arg(long)]
+    prompt_file: Option<PathBuf>,
     #[arg(long, default_value_t = 180)]
     timeout_secs: u64,
     #[arg(long, default_value = "../corpus/PINNED_SHA")]
@@ -335,6 +338,11 @@ struct ProbeArgs {
     /// The prompt. A one-liner suffices — E1 measures the prefix, not the work.
     #[arg(long, default_value = "Reply with the single word: ok")]
     prompt: String,
+
+    /// Read the prompt from a file instead. Required for review-scale payloads:
+    /// Windows caps a command line near 32 KB, and H1's payload is 37 KB.
+    #[arg(long)]
+    prompt_file: Option<PathBuf>,
 
     #[arg(long, default_value_t = 180)]
     timeout_secs: u64,
@@ -1037,6 +1045,11 @@ async fn ttl_step(claude_bin: &str, args: TtlStepArgs, label: &str) -> Result<()
     // On a read, locate the mark first: if there is none, the dispatch would
     // measure nothing and is better refused than recorded as a gap of unknown
     // length.
+    let prompt = match &args.prompt_file {
+        Some(f) => std::fs::read_to_string(f)
+            .with_context(|| format!("reading --prompt-file {}", f.display()))?,
+        None => args.prompt.clone(),
+    };
     let mark = journal::last_warm_mark(&args.out);
     if label == "read" && mark.is_none() {
         anyhow::bail!(
@@ -1073,7 +1086,7 @@ async fn ttl_step(claude_bin: &str, args: TtlStepArgs, label: &str) -> Result<()
         model,
         effort: None,
         agent: None,
-        prompt: args.prompt.clone(),
+        prompt: prompt.clone(),
         schema: None,
         allowed_tools: vec![],
         permission_mode: None,
@@ -1274,6 +1287,11 @@ async fn probe(claude_bin: &str, args: ProbeArgs) -> Result<()> {
         platform: env.platform.clone(),
     })?;
 
+    let prompt = match &args.prompt_file {
+        Some(f) => std::fs::read_to_string(f)
+            .with_context(|| format!("reading --prompt-file {}", f.display()))?,
+        None => args.prompt.clone(),
+    };
     let runner = Runner::new(claude_bin, env);
     let margins = Margins {
         max_five_hour: args.max_five_hour,
@@ -1365,7 +1383,7 @@ async fn probe(claude_bin: &str, args: ProbeArgs) -> Result<()> {
             model,
             effort: Some(effort),
             agent: None,
-            prompt: args.prompt.clone(),
+            prompt: prompt.clone(),
             schema: None,
             allowed_tools: vec![],
             permission_mode: None,
