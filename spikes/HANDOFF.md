@@ -1,12 +1,13 @@
-# Handoff — 2026-09-02
+# Handoff — 2026-09-03
 
-Written to close a session at ~700k context. Everything decided is committed;
-nothing lives only in conversation. A fresh session needs this file,
+Written at the close of the session that first ran E3. Everything decided is
+committed; nothing lives only in conversation. A fresh session needs this file,
 `FINDINGS.md`, `METHOD.md` and `METHOD-E3.md`, and nothing else.
 
 **Branch:** `spike/rust-inversion-layer0` · **Corpus pin:** redkiln @ `47faec9f`
-(frozen) · **Instrument:** `claude` 2.1.258, Windows 11 · 92 tests, 0 clippy
-warnings, working tree clean.
+(frozen) · **Instrument:** `claude` **2.1.259** (was 2.1.258 for every record
+before 2026-09-03 — F20), Windows 11 · 101 tests, 0 clippy warnings, working
+tree clean.
 
 ---
 
@@ -21,8 +22,9 @@ warnings, working tree clean.
 | **E1** incl. TTL | done | TTL **~1 h**; commits cost **31%** of prefix; `--system-prompt` costs **0** |
 | **E2** effort | **closed** | effort pins per dispatch; RFC R2 falsified |
 | **E0** headroom | partial | sizing bound only; cache-cost gate **struck** (disclosed) |
-| **E0** variance | not started | needs the E3 rig, which now exists |
-| **E3** | **rig ready, unrun** | the pilot measured the rig, not the reviewer |
+| **E0** sizing | **measured** | Opus/xhigh: **+0.03** five_hour per S-SILENT dispatch, **~+0.077** per CLEAN |
+| **E0** variance | not started | `--repeat N` on the E3 rig; no item run twice yet |
+| **E3** | **arm (b) started** | **5/5 detection, 0/2 FP** — but arm (a) is unbuilt, so the gate cannot fire |
 | **E4 / E5 / E6** | gated | behind E3 |
 | **H2** suspension | done | **174/174 lossless** across a real process boundary |
 | **H3** world drift | done | 7% overall; **3.6× more likely** on gates > 1 h |
@@ -46,44 +48,44 @@ warnings, working tree clean.
 
 ---
 
-## Next action: run E3
+## Next action: build arm (a), then finish the paired set
 
-The rig is built and validated. Nothing blocks it but headroom.
+E3 arm (b) is producing scored records. **The kill criterion still cannot fire**,
+because METHOD-E3 §9 is a comparison and arm (a) — a headless parent that
+dispatches `Task({subagent_type: "redkiln:redkiln-review"})` — does not exist
+yet. Arm (b) alone cannot pass or fail the thesis.
 
 ```
 cd spikes/runner
 cargo build                       # ALWAYS: cargo test/clippy do NOT rebuild the bin
 
-# validate one item first — this is how F17 was caught
+# what remains of arm (b)'s paired set
 ./target/debug/redkiln-spike-runner review-probe \
-    --out ../results/e3.jsonl --condition s-silent \
-    --only issues-135-129-declared-boundary-parse
-
-# then chunk: ~9 min/dispatch, Opus/xhigh
+    --out ../results/e3.jsonl --condition clean --limit 2
 ./target/debug/redkiln-spike-runner review-probe \
     --out ../results/e3.jsonl --condition s-silent --limit 4
-./target/debug/redkiln-spike-runner review-probe \
-    --out ../results/e3.jsonl --condition clean --limit 4
+
+python results/audit-e3.py results/e3.jsonl
 ```
 
-Resume is on and keyed per `(arm, slug, repeat)`, so a stopped run costs one
-dispatch. `--repeat N` gives the per-item stability E0's variance pilot needs;
-the same records serve both.
+`audit-e3.py` prints the three checks, the void list, both rates and MCC. A
+record failing any check is VOID, not a miss — F7, F17 and F20 are each a
+failure mode that manufactures a kill-criterion result out of an instrument
+fault.
 
-**Before trusting any record, check three things** — each is a failure mode that
-already occurred once:
+**Chunk small.** Two background kills on 2026-09-03 (eight observations now, no
+pattern). Resume is keyed per `(arm, slug, repeat)` and held both times, but a
+kill costs the *longest dispatch in flight* — and CLEAN dispatches run 420–904s
+against S-SILENT's 127–175s. `--limit 2` on CLEAN, `--limit 4` on S-SILENT.
 
-- `card_adopted == true` — F17: the card applies but `effective.agent` is empty;
-  adoption is verified from the **tool set** (`["Read","Bash"]`, down from 34).
-- the `s-silent` fixture printed no `node_modules` warning — a reviewer that
-  *cannot* run tests looks identical to one that *chose not to*.
-- `assert_fix_unreachable` passed — it runs per item and hard-fails.
+**The throttle is now wired in and seeded from the results file.** `review-probe`
+halts before dispatching past `--max-five-hour` (0.90 default), and a halt is a
+pause: re-run to resume. Do not raise the margin to get one more record.
 
-**Sizing:** unknown. No Opus dispatch has a measured headroom draw yet. The
-struck gate was replaced by "size each arm from its own measured draw", so the
-first chunk **is** the sizing measurement — record `seven_day` before and after.
-
----
+**Budget from the CLEAN figure, not the S-SILENT one.** five_hour binds long
+before seven_day, and CLEAN costs ~2.5× S-SILENT (F21). One five-hour window
+holds roughly 13 CLEAN dispatches. Both figures are ceilings — the assistant
+session shares the account.
 
 ## What is genuinely unresolved
 
@@ -91,6 +93,7 @@ first chunk **is** the sizing measurement — record `seven_day` before and afte
    platform's 0.01 resolution: 1.9M tokens moved it by less than one tick, and
    the assistant shares the account. Gate struck, not answered.
 2. **E0's per-item stability** — no reviewer has been run twice on one item.
+   The rig supports it (`--repeat N`) and E3's records serve both purposes.
 3. **The in-session side of the cache asymmetry.** The RFC's claim that
    subagents get "5 minutes, always" is still only documentation. E3 arm (a) is
    the first chance to observe it.
@@ -101,6 +104,11 @@ first chunk **is** the sizing measurement — record `seven_day` before and afte
    F18 already establishes the shape: ~half of all gates outlive the cache TTL.
 5. **8 of 23 items sit outside S0.1** because their fixes touch only
    `workflows/`, not `src/`. A third of the corpus is unmeasured by the gate FPR.
+6. **Arm (a) is unbuilt**, and it is the whole comparison. Everything E3 has
+   produced so far is one arm against ground truth.
+7. **Equivalent-seed triage (METHOD-E3 §10) has not been applied** to the five
+   S-SILENT seeds that ran. S0.1 produces the exclusion list as a by-product;
+   it has not been joined to E3's denominator.
 
 ---
 
@@ -118,19 +126,39 @@ first chunk **is** the sizing measurement — record `seven_day` before and afte
   did not). Nothing may depend on one process surviving; resume everywhere.
 - **Guards need the right scope.** Two guards I wrote to protect data were
   scoped wrong and blocked or voided valid work.
+- **A rig that compiles and passes its unit tests has not been run.** Three E3
+  defects survived "built and validated" (F20, and the abbreviated-SHA fetch):
+  `--json-schema` silently inert under a tool-restricted card, a `\\?\` path
+  handed to `git fetch`, and `git fetch <abbrev-sha>` failing where only the
+  one path that happened to call `rev-parse` first worked. None was reachable
+  from a unit test, because none of them touch the filesystem or the CLI.
+  **Validate one item before every set**, and prefer a haiku probe to an Opus
+  one when the question is "does this flag work at all".
+- **A default was written for the fast condition.** The 900s timeout fitted
+  S-SILENT and cost a CLEAN record. When two conditions differ in shape, check
+  the ceiling against the slow one.
 
 ---
 
 ## Pre-registration status
 
 `METHOD.md` covers Stage 0, E0, E1, E2; `METHOD-E3.md` covers E3/E6;
-`METHOD-H.md` covers the human gate (planned, unapproved). Three
+`METHOD-H.md` covers the human gate (planned, unapproved). Five
 amendments, each disclosed in the document and its commit, none made after
 seeing the data it would affect:
 
 1. E3/E6's primary metric replaced — the answer key did not exist (F9).
 2. E3's input set 22 → 23 — my parser, not the criteria (S0.3).
 3. E0's cache-cost gate struck — not settleable with this instrument (F14).
+4. METHOD-E3 §6 — `StructuredOutput` added to the card's tool set. An
+   **instrument** fix, not a metric change: without it `--json-schema` is
+   silently inert and every record is void (F20). Made when the only E3
+   dispatch in existence was void.
+5. METHOD-E3 §5 — CLEAN and S-SILENT built to the same shape (one-commit
+   shallow repo, one commit apart). Also instrument, not metric: CLEAN's
+   false-positive rate is co-primary with S-SILENT's detection rate and the two
+   are comparable only when measured in the same place. Made before any CLEAN
+   dispatch.
 
 **The RFC amendment is written**: `references/2026-09-02-rfc-amendment.md`
 (charter §14.4). It records R2 falsified, the R4/R6 conflict dissolved and

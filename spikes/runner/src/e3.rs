@@ -147,11 +147,31 @@ pub fn build_fixture_at(redkiln: &Path, fixture: &Path, commit: &str) -> Result<
     run(&["init", "-q"])?;
     run(&["config", "user.email", "spike@local"])?;
     run(&["config", "user.name", "Spike"])?;
-    run(&["fetch", "--depth", "1", "--no-tags", "-q", &git_remote_path(redkiln), commit])?;
+    // A fetch by SHA needs the FULL object name: `git fetch <repo> 5f479b82`
+    // fails with "couldn't find remote ref". The manifest stores abbreviated
+    // SHAs, so every commit is resolved in the source repo first. S-SILENT
+    // never hit this only because `parent_of` resolves as a side effect.
+    let full = rev_parse(redkiln, commit)?;
+    run(&["fetch", "--depth", "1", "--no-tags", "-q", &git_remote_path(redkiln), &full])?;
     run(&["checkout", "-q", "--detach", "FETCH_HEAD"])?;
     // Returned rather than only printed: a missing node_modules silently
     // weakens two of the five rubric dimensions, so it belongs on the record.
     Ok(link_node_modules(redkiln, fixture))
+}
+
+/// Resolve a revision to a full commit SHA in the source repo.
+pub fn rev_parse(redkiln: &Path, rev: &str) -> Result<String> {
+    let out = std::process::Command::new("git")
+        .args(["rev-parse", &format!("{rev}^{{commit}}")])
+        .current_dir(redkiln)
+        .output()?;
+    anyhow::ensure!(
+        out.status.success(),
+        "could not resolve `{rev}` in {}: {}",
+        redkiln.display(),
+        String::from_utf8_lossy(&out.stderr).trim()
+    );
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
 /// Resolve `<sha>^` in the source repo.
@@ -159,16 +179,7 @@ pub fn build_fixture_at(redkiln: &Path, fixture: &Path, commit: &str) -> Result<
 /// `git fetch <repo> <sha>^` is not a valid refspec — the parent must be a
 /// concrete SHA before it can be fetched.
 pub fn parent_of(redkiln: &Path, sha: &str) -> Result<String> {
-    let out = std::process::Command::new("git")
-        .args(["rev-parse", &format!("{sha}^")])
-        .current_dir(redkiln)
-        .output()?;
-    anyhow::ensure!(
-        out.status.success(),
-        "could not resolve the parent of {sha} in {}",
-        redkiln.display()
-    );
-    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    rev_parse(redkiln, &format!("{sha}^"))
 }
 
 /// Build a fixture in which the fix is **unreachable**, not merely reverted.

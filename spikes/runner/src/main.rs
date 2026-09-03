@@ -174,7 +174,17 @@ struct ReviewArgs {
     limit: Option<usize>,
     #[arg(long)]
     only: Option<String>,
-    #[arg(long, default_value_t = 900)]
+    /// Charter §12's declared margins. E3 is the most expensive experiment in
+    /// the programme and was the one command that never honoured them.
+    #[arg(long, default_value_t = 0.90)]
+    max_five_hour: f64,
+    #[arg(long, default_value_t = 0.90)]
+    max_seven_day: f64,
+    /// CLEAN dispatches run far longer than S-SILENT — 420-904s against
+    /// 127-175s — because a present fix has real behaviour to verify and a
+    /// real suite to run, while an absent one is dismissed quickly. The first
+    /// CLEAN chunk lost a record to the old 900s ceiling.
+    #[arg(long, default_value_t = 2400)]
     timeout_secs: u64,
 }
 
@@ -495,6 +505,20 @@ fn human_gate(args: HumanGateArgs) -> Result<()> {
     Ok(())
 }
 
+/// The most recent headroom reading in a results file.
+///
+/// Read back so a chunked experiment resumes knowing where it stands rather
+/// than rediscovering it by spending a dispatch.
+fn last_headroom(path: &std::path::Path) -> Option<event::Headroom> {
+    let text = std::fs::read_to_string(path).ok()?;
+    text.lines()
+        .rev()
+        .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+        .find_map(|v| {
+            serde_json::from_value::<event::Headroom>(v.get("step")?.get("headroom")?.clone()).ok()
+        })
+}
+
 async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
     let condition: &'static str = match args.condition.as_str() {
         "clean" => "clean",
@@ -520,6 +544,26 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         "max" => Effort::Max,
         other => anyhow::bail!("unknown effort `{other}`"),
     };
+
+    // Seeded from the last record in the results file, not from zero. E3 runs
+    // in chunks, so an unseeded guard would leave the FIRST dispatch of every
+    // chunk unguarded — which is precisely the dispatch that resumes a run
+    // already close to a margin.
+    let margins = Margins {
+        max_five_hour: args.max_five_hour,
+        max_seven_day: args.max_seven_day,
+    };
+    let mut guard = Guard::default();
+    guard.observe(last_headroom(&args.out).as_ref());
+    if let Some(h) = guard.last() {
+        eprintln!(
+            "  resuming at five_hour {:.2} / seven_day {:.2} (margins {:.2}/{:.2})",
+            h.five_hour_utilization.unwrap_or(f64::NAN),
+            h.seven_day_utilization.unwrap_or(f64::NAN),
+            margins.max_five_hour,
+            margins.max_seven_day
+        );
+    }
 
     let (description, card_body) = e3::load_card(&redkiln)?;
     let schema = e3::digest_schema();
@@ -548,6 +592,19 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         let Some(sha) = item.checkpoint_sha.clone() else {
             continue;
         };
+
+        // Charter §12: refuse to dispatch below a declared margin. A halt is a
+        // PAUSE, not a failure — resume is keyed per item, so the run picks up
+        // exactly here once the window rolls.
+        match guard.check(margins) {
+            throttle::Verdict::Proceed => {}
+            verdict => {
+                eprintln!("\n  HALT before {}: {}", item.slug, verdict.reason());
+                eprintln!("  {} item(s) not dispatched. Re-run to resume.",
+                    items.len().saturating_sub(processed));
+                break;
+            }
+        }
 
         // Build the fixture. F17: for `s-silent` the fix must be UNREACHABLE,
         // not merely reverted — a reviewer with Bash restored it from the
@@ -672,7 +729,19 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             .and_then(|e| e.tools.as_ref())
             .is_some_and(|t| t.iter().map(|x| x.as_str()).collect::<BTreeSet<_>>() == declared);
 
+        guard.observe(record.headroom.as_ref());
+
         let scored = record.digest.as_ref().map(|d| e3::score(d, &reverted));
+        // Name the actual cause: a timeout and a malformed digest are both
+        // "no digest", but only one of them says anything about the reviewer.
+        let void_reason: Option<String> = match (adopted, scored.is_some()) {
+            (true, true) => None,
+            (false, _) => Some("agent card not adopted (F7)".into()),
+            (true, false) => Some(format!(
+                "no schema-valid digest ({})",
+                record.error_kind.as_deref().unwrap_or("unknown")
+            )),
+        };
         match (&scored, outcome.is_ok()) {
             (Some(s), _) => eprintln!(
                 "pass={} strong={} weak={} cited={} {:.0}s",
@@ -693,11 +762,7 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             "experiment": "E3",
             "resume_key": resume_key,
             "outcome": if scored.is_some() && adopted { "ok" } else { "void" },
-            "void_reason": match (adopted, scored.is_some()) {
-                (true, true) => None,
-                (false, _) => Some("agent card not adopted (F7)"),
-                (true, false) => Some("no schema-valid digest (F20)"),
-            },
+            "void_reason": void_reason,
             "node_modules_linked": node_modules_linked,
             "fix_unreachable": fix_unreachable,
             "arm": arm_label,

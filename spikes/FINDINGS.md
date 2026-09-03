@@ -975,6 +975,114 @@ cross-session comparison now spans two builds of the CLI.
 
 ---
 
+## F21 — E3 INTERIM: arm (b) detects 5/5 seeded defects with 0/2 false positives
+
+**Established by:** 8 scored dispatches against `claude` 2.1.259, 2026-09-03,
+Opus/`xhigh`, corpus pin `47faec9f`. `spikes/results/e3.jsonl`.
+
+**This is not an E3 result and it cannot fire the kill criterion.** METHOD-E3 §9
+is a *comparison*: it fires when arms (b) and (c) detect materially less than
+arm (a) at comparable or worse false-positive rate. **Arm (a) has not been built
+or run.** What follows is one arm measured against ground truth, which is a
+prerequisite for the comparison and not a substitute for it.
+
+### The numbers
+
+| condition | n | result |
+| --- | --- | --- |
+| **S-SILENT** | 5 | **strong detection 5/5**, weak 5/5 |
+| **CLEAN** | 2 | **false positives 0/2** |
+| combined | 7 | MCC **+1.000** (tp=5 fn=0 fp=0 tn=2) |
+
+Every record cleared all three pre-flight checks: `card_adopted` (effective tools
+exactly `[Read, Bash, StructuredOutput]`, down from 34), `node_modules_linked`,
+and — on S-SILENT — `fix_unreachable`, verified by `git cat-file -e` failing to
+find the fix commit in the fixture's object store. One CLEAN record is **void**
+on a 900s timeout, excluded from every rate, and is not counted as an approval.
+
+**The wrong-reason gap is zero.** Weak detection equals strong detection on all
+five: no arm rejected an item while citing something the revert did not touch.
+An always-reject arm scores 5/5 weak too, which is why the gap and the CLEAN
+control are reported first and the detection rate second.
+
+### The qualitative evidence is stronger than the rate
+
+On `issues-135-129-declared-boundary-parse` the reviewer returned `overall: 0`
+with ac-coverage 0/3, test-integrity 0/3 and gate-greenness 0/3, and cited line
+numbers in the two reverted files. It did not stop at "the code is missing" — it
+checked the **implementation report against the tree** and called the report's
+gate results fabricated: `4705 passed / 15 skipped` claimed for a suite whose
+tests do not exist, and `63/63` claimed for `test/verify.test.ts`. That is the
+escape-hatch class in `agents/redkiln-review.md`, found unprompted. The prompt
+says nothing about a defect being present (unit-tested against leakage).
+
+### The effort asymmetry is itself evidence
+
+| condition | wall clock | turns | cost |
+| --- | --- | --- | --- |
+| S-SILENT | 127–175s | 11–19 | $0.45–0.64 |
+| CLEAN | 420–904s | 28–37 | $1.06–1.29 |
+
+**The reviewer works three to five times harder when the fix is actually
+present.** This is the opposite of what a rubber stamp looks like and the
+opposite of what an always-reject arm looks like: both would be flat across
+conditions. A tree with nothing implemented is dismissed quickly because there
+is nothing to verify; a real fix has real behaviour to check and a real suite to
+run. The 900s ceiling was written for the S-SILENT shape and cost one record
+before it was raised to 2400s.
+
+One CLEAN approval scored 2/3 on test-integrity and 2/3 on regression-risk while
+still passing — it is discriminating within `approved`, not stamping.
+
+### Sizing — the first measured Opus draw, and it is condition-dependent
+
+| | five_hour per dispatch | seven_day |
+| --- | --- | --- |
+| S-SILENT | **+0.03** (three consecutive) | ~+0.0075 |
+| CLEAN | **~+0.077** | — |
+
+**five_hour binds long before seven_day**, and CLEAN costs roughly 2.5× S-SILENT.
+Budgeting E3 off the S-SILENT figure alone would have under-estimated the
+paired design by about half. At these rates one five-hour window holds roughly
+33 S-SILENT dispatches or 13 CLEAN ones.
+
+**Confounded upward and stated as such:** this assistant session shares the
+account, so its own traffic sits inside every delta. These are ceilings, not
+point estimates. The Opus family sub-limit remains invisible (F1), so the figure
+that actually binds is still unmeasured.
+
+### What is missing before E3 can be reported
+
+1. **Arm (a) does not exist.** Without it there is no comparison and no gate.
+2. **CLEAN is n=2 against S-SILENT's n=5.** The co-primary rate is the weaker
+   half of the design right now, and MCC +1.000 at n=7 is a small-sample
+   artefact as much as a result — §12.5 pre-committed to reporting near-misses
+   as inconclusive, and this is the same caution in the other direction.
+3. **18 of 23 items unrun**, and equivalent-seed triage (§10) has not been
+   applied to the five that ran.
+
+### Two more background kills
+
+Both CLEAN chunks died: one after three dispatches, one before journaling
+anything. The tally is now eight observations with no duration or output
+pattern. Resume held both times — the killed run cost the dispatch in flight and
+nothing else, which is the whole reason resume is keyed per `(arm, slug,
+repeat)`. The second kill did burn a long CLEAN dispatch without producing a
+record, so the rule is now stronger than "resume everywhere": **prefer the
+shortest chunk that still makes progress**, because a kill costs the longest
+dispatch in flight.
+
+### The throttle was not wired into E3
+
+Charter §12 declares margins of 0.90 and `throttle.rs` implements them, but
+`review-probe` — the most expensive command in the programme — never consulted
+the guard. It does now, and it is **seeded from the last record in the results
+file** rather than from zero: E3 runs in chunks, and an unseeded guard leaves the
+first dispatch of every chunk unguarded, which is exactly the dispatch that
+resumes a run already near a margin.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has
