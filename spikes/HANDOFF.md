@@ -23,8 +23,9 @@ tree clean.
 | **E2** effort | **closed** | effort pins per dispatch; RFC R2 falsified |
 | **E0** headroom | partial | sizing bound only; cache-cost gate **struck** (disclosed) |
 | **E0** sizing | **measured** | Opus/xhigh: **+0.03** five_hour per S-SILENT dispatch, **~+0.077** per CLEAN |
+| **E3** arm (a) | **not built** | the entire comparison; nothing can be concluded without it |
 | **E0** variance | not started | `--repeat N` on the E3 rig; no item run twice yet |
-| **E3** | **arm (b) started** | **5/5 detection, 0/2 FP** — but arm (a) is unbuilt, so the gate cannot fire |
+| **E3** arm (b) | **COMPLETE** | **23/23 detection, 2/23 FP, MCC +0.917** — arm (a) unbuilt, so the gate still cannot fire |
 | **E4 / E5 / E6** | gated | behind E3 |
 | **H2** suspension | done | **174/174 lossless** across a real process boundary |
 | **H3** world drift | done | 7% overall; **3.6× more likely** on gates > 1 h |
@@ -48,44 +49,46 @@ tree clean.
 
 ---
 
-## Next action: build arm (a), then finish the paired set
+## Next action: build arm (a). Nothing else moves the thesis.
 
-E3 arm (b) is producing scored records. **The kill criterion still cannot fire**,
-because METHOD-E3 §9 is a comparison and arm (a) — a headless parent that
-dispatches `Task({subagent_type: "redkiln:redkiln-review"})` — does not exist
-yet. Arm (b) alone cannot pass or fail the thesis.
+Arm (b) is done — every one of the 23 fix-lane items, in both conditions, 46
+scored dispatches, $56.47. **It cannot pass or fail anything on its own.**
+METHOD-E3 §9 fires on a comparison, and arm (a) — a headless parent whose prompt
+dispatches `Task({subagent_type: "redkiln:redkiln-review"})` — does not exist.
+
+Arm (a) needs, on top of what `review-probe` already does:
+
+- a parent prompt that dispatches the card as a **subagent** rather than adopting
+  it, with `--agents` still supplying the card;
+- `subagent_stats.spawned >= 1` asserted, or the record is **void** (METHOD-E3
+  §6). Without it, "the subagent reviewed and disagreed" and "the subagent never
+  spawned" are indistinguishable. `subagents_spawned` is already on the record;
+- the same digest schema. Note the parent, not the child, must carry
+  `StructuredOutput` (F20) — verify which one the schema binds to before
+  spending, on **haiku**, exactly as F20 was caught.
 
 ```
-cd spikes/runner
-cargo build                       # ALWAYS: cargo test/clippy do NOT rebuild the bin
-
-# what remains of arm (b)'s paired set
-./target/debug/redkiln-spike-runner review-probe \
-    --out ../results/e3.jsonl --condition clean --limit 2
-./target/debug/redkiln-spike-runner review-probe \
-    --out ../results/e3.jsonl --condition s-silent --limit 4
-
+cd spikes/runner && cargo build     # cargo test/clippy do NOT rebuild the bin
 python results/audit-e3.py results/e3.jsonl
 ```
 
-`audit-e3.py` prints the three checks, the void list, both rates and MCC. A
-record failing any check is VOID, not a miss — F7, F17 and F20 are each a
-failure mode that manufactures a kill-criterion result out of an instrument
-fault.
+### How to run dispatches, learned the hard way (F22)
 
-**Chunk small.** Two background kills on 2026-09-03 (eight observations now, no
-pattern). Resume is keyed per `(arm, slug, repeat)` and held both times, but a
-kill costs the *longest dispatch in flight* — and CLEAN dispatches run 420–904s
-against S-SILENT's 127–175s. `--limit 2` on CLEAN, `--limit 4` on S-SILENT.
+- **Foreground, under the tool limit: never killed.** All S-SILENT fits.
+- **Anything that reaches the harness background: killed**, at any age —
+  including a foreground command promoted on timeout.
+- **`Start-Process` detached: survives.** One ran 12,000s through ~14 killed
+  watchers and finished the whole CLEAN set. Use it for anything long:
 
-**The throttle is now wired in and seeded from the results file.** `review-probe`
-halts before dispatching past `--max-five-hour` (0.90 default), and a halt is a
-pause: re-run to resume. Do not raise the margin to get one more record.
+```powershell
+Start-Process -FilePath "...edkiln-spike-runner.exe" `
+  -ArgumentList 'review-probe','--out','...\e3.jsonl','--condition','clean','--limit','20' `
+  -WorkingDirectory "...unner" -RedirectStandardError "...\sweep.err" `
+  -WindowStyle Hidden -PassThru
+```
 
-**Budget from the CLEAN figure, not the S-SILENT one.** five_hour binds long
-before seven_day, and CLEAN costs ~2.5× S-SILENT (F21). One five-hour window
-holds roughly 13 CLEAN dispatches. Both figures are ceilings — the assistant
-session shares the account.
+Then wait on the PID from the foreground. Resume is keyed per `(arm, slug,
+repeat)`, so every kill costs the dispatch in flight and never the arm.
 
 ## What is genuinely unresolved
 
@@ -106,9 +109,18 @@ session shares the account.
    `workflows/`, not `src/`. A third of the corpus is unmeasured by the gate FPR.
 6. **Arm (a) is unbuilt**, and it is the whole comparison. Everything E3 has
    produced so far is one arm against ground truth.
-7. **Equivalent-seed triage (METHOD-E3 §10) has not been applied** to the five
-   S-SILENT seeds that ran. S0.1 produces the exclusion list as a by-product;
-   it has not been joined to E3's denominator.
+7. **Equivalent-seed triage (METHOD-E3 §10) has not been applied.** At 23/23 it
+   cannot lower detection, but the exclusion list is still owed.
+8. **The two CLEAN false positives are unadjudicated**, and the co-primary rate
+   depends on how they land. Both are specific and mechanism-level:
+   `fix-advance-write-lock-gate-scope` (two regressions claimed confirmed by
+   differential probe) and `issue-146-147-boundary-window` (AC-015's test is
+   vacuous — its regex passes on pre-existing prose). CLEAN's ground truth is
+   "this shipped and was approved", which is not "this is defect-free". If
+   either finding is real, the FPR is overstated. This needs **Ryan's blind
+   annotation** (§7 κ) — it must not be settled by the model that built the rig.
+9. **No item has been run twice.** E0's per-item stability (`--repeat N`) is
+   still unmeasured, so 23/23 is one sample of a stochastic process.
 
 ---
 
