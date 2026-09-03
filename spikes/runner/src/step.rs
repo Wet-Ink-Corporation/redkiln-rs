@@ -81,6 +81,18 @@ pub struct StepSpec {
     /// headless dispatch that does not set both explicitly silently inherits
     /// the session default — which would confound E3.
     pub agent: Option<AgentCard>,
+    /// Whether the MAIN turn adopts the card (`--agent`), or the card is merely
+    /// DEFINED for the turn to dispatch as a subagent (`--agents` alone).
+    ///
+    /// This is the whole difference between E3's two arms. Arm (b) adopts: the
+    /// headless turn *is* the reviewer. Arm (a) defines only: the headless turn
+    /// is a parent that dispatches the card through `Task`, which is the
+    /// in-session shape the RFC's inversion thesis is argued against.
+    ///
+    /// F7 stands for the adopting case — `--agents` without `--agent` leaves the
+    /// card inert for the main turn — but the card IS registered for `Task`
+    /// dispatch either way (F23).
+    pub adopt_agent: bool,
     pub prompt: String,
     /// JSON Schema for `--json-schema`, already parsed.
     pub schema: Option<serde_json::Value>,
@@ -317,6 +329,7 @@ mod tests {
             model: Tier::Opus,
             effort: Some(Effort::Xhigh),
             agent: None,
+            adopt_agent: true,
             prompt: String::new(),
             schema: None,
             allowed_tools: vec![],

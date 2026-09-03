@@ -117,6 +117,9 @@ pub struct StepRecord {
     /// Without it, "the subagent disagreed" and "the subagent never ran" are
     /// indistinguishable — RK-B0013 one level up.
     pub subagents_spawned: Option<u64>,
+    /// Every tool call on the stream, with parent/subagent attribution.
+    /// Arm (a) is scored on this: see `event::ToolCall`.
+    pub tool_calls: Vec<event::ToolCall>,
 
     /// Spawn + MCP handshake + settings load, separated from model time. RFC
     /// §3.1 lists per-run process overhead as a cost of inversion and calls it
@@ -168,9 +171,13 @@ impl Runner {
             args.push("--agents".into());
             args.push(card.to_agents_json());
             // `--agents` alone only defines an agent; `--agent` is what makes
-            // the MAIN turn adopt it. Without this the card is inert in `-p`.
-            args.push("--agent".into());
-            args.push(card.name.clone());
+            // the MAIN turn adopt it (F7). Arm (a) wants exactly the version
+            // F7 warns about — the card defined but NOT adopted — so the
+            // parent dispatches it through `Task` instead of becoming it.
+            if spec.adopt_agent {
+                args.push("--agent".into());
+                args.push(card.name.clone());
+            }
         }
 
         if let Some(schema) = &spec.schema {
@@ -252,6 +259,7 @@ impl Runner {
             overhead_ms: None,
             thinking_tokens: None,
             subagents_spawned: None,
+            tool_calls: Vec::new(),
             time_to_first_event_ms: None,
             isolation_ok: None,
         };
@@ -325,6 +333,9 @@ impl Runner {
                     EventKind::ApiRetry => {
                         record.api_retries.push(event::api_retry_from(&parsed.raw))
                     }
+                    EventKind::Assistant => record
+                        .tool_calls
+                        .extend(event::tool_calls_from_assistant(&parsed.raw)),
                     // Keep the LAST one: it is the closest reading to the
                     // dispatch's true cost, and the delta between
                     // consecutive steps is what E0 reports.
@@ -593,6 +604,7 @@ mod tests {
             model: Tier::Opus,
             effort: Some(Effort::Xhigh),
             agent: None,
+            adopt_agent: true,
             prompt: "hello".into(),
             schema: None,
             allowed_tools: vec![],
@@ -614,6 +626,51 @@ mod tests {
             !args.iter().any(|a| a.contains("distinctive prompt")),
             "prompt leaked into argv: {args:?}"
         );
+    }
+
+    #[test]
+    fn the_two_e3_arms_differ_by_exactly_one_flag() {
+        // This is the whole experiment. Arm (b) ADOPTS the card, so the
+        // headless turn is the reviewer. Arm (a) only DEFINES it, so the turn
+        // is a parent that dispatches it through `Task`. If `--agent` leaked
+        // into arm (a), the "in-session" arm would silently be a second copy
+        // of arm (b) and the comparison would be with itself.
+        let runner = Runner::new("claude", env());
+        let card = AgentCard {
+            name: "redkiln-review".into(),
+            description: "d".into(),
+            prompt: "p".into(),
+            tools: Some(vec!["Read".into()]),
+            model: None,
+            effort: None,
+            permission_mode: None,
+        };
+
+        let mut b = spec();
+        b.agent = Some(card.clone());
+        b.adopt_agent = true;
+        let b_args = runner.build_args(&b);
+
+        let mut a = spec();
+        a.agent = Some(card);
+        a.adopt_agent = false;
+        let a_args = runner.build_args(&a);
+
+        assert!(b_args.iter().any(|x| x == "--agent"), "arm (b) must adopt");
+        assert!(!a_args.iter().any(|x| x == "--agent"), "arm (a) must NOT adopt");
+        // Both still DEFINE the card: arm (a) cannot dispatch what is not there.
+        assert_eq!(a_args.iter().filter(|x| *x == "--agents").count(), 1);
+        assert_eq!(b_args.iter().filter(|x| *x == "--agents").count(), 1);
+        // And nothing else differs.
+        let stripped: Vec<&String> = b_args
+            .iter()
+            .enumerate()
+            .filter(|(i, x)| {
+                *x != "--agent" && b_args.get(i.wrapping_sub(1)).map(String::as_str) != Some("--agent")
+            })
+            .map(|(_, x)| x)
+            .collect();
+        assert_eq!(stripped, a_args.iter().collect::<Vec<_>>());
     }
 
     #[test]

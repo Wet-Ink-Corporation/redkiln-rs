@@ -534,6 +534,14 @@ fn last_headroom(path: &std::path::Path, now: i64) -> Option<event::Headroom> {
 }
 
 async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
+    // Arm (a) = the in-session shape: a headless PARENT that dispatches the
+    // card through `Task`. Arm (b) = the headless turn IS the reviewer.
+    // The single flipped bit is `--agent`; everything else is held identical.
+    let arm_a = match args.arm.as_str() {
+        "a" => true,
+        "b" | "c" => false,
+        other => anyhow::bail!("unknown arm `{other}` (expected a, b or c)"),
+    };
     let condition: &'static str = match args.condition.as_str() {
         "clean" => "clean",
         "s-silent" => "s-silent",
@@ -687,13 +695,20 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         let read = |name: &str| {
             std::fs::read_to_string(redkiln.join(&item.dir).join(name)).unwrap_or_default()
         };
-        let prompt = e3::build_prompt(
+        let brief = e3::build_prompt(
             &item.slug,
             &read("spec.md"),
             &read("implementation-report.md"),
             &item.ac_ids,
             &item.fix_files,
         );
+        // Arm (a) forwards arm (b)'s brief verbatim inside a dispatch wrapper,
+        // so the two arms review identical material with an identical card.
+        let prompt = if arm_a {
+            e3::build_parent_prompt(&brief)
+        } else {
+            brief
+        };
 
         eprint!("  {:<44} {arm_label} r{} ... ", item.slug, args.repeat);
         let spec = StepSpec {
@@ -707,6 +722,9 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             // Pinned explicitly: the card is `model: inherit` with no effort, so
             // omitting these would silently inherit the session default.
             effort: Some(effort),
+            // Arm (a) DEFINES the card without adopting it, so the parent can
+            // dispatch it as a subagent instead of becoming it (F7 inverted).
+            adopt_agent: !arm_a,
             agent: Some(step::AgentCard {
                 name: "redkiln-review".into(),
                 description: description.clone(),
@@ -747,11 +765,29 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
 
         guard.observe(record.headroom.as_ref());
 
+        // Arm (a)'s validity, computed from the stream rather than assumed.
+        // METHOD-E3 §6 requires `subagent_stats.spawned >= 1`; that alone
+        // cannot tell OUR card from `general-purpose`, so the dispatched
+        // `subagent_type` is checked too, and whether the parent kept to
+        // delegating is recorded rather than trusted.
+        let behaviour = arm_a.then(|| e3::parent_behaviour(&record.tool_calls, "redkiln-review"));
+        let arm_a_ok = !arm_a
+            || behaviour.as_ref().is_some_and(|b| b.dispatched_card)
+                && record.subagents_spawned.unwrap_or(0) >= 1;
+
         let scored = record.digest.as_ref().map(|d| e3::score(d, &reverted));
         // Name the actual cause: a timeout and a malformed digest are both
         // "no digest", but only one of them says anything about the reviewer.
+        // Arm (a) never adopts the card, so the arm (b) adoption check does
+        // not apply to it; its equivalent is `arm_a_ok`.
+        let adopted = if arm_a { arm_a_ok } else { adopted };
         let void_reason: Option<String> = match (adopted, scored.is_some()) {
             (true, true) => None,
+            (false, _) if arm_a => Some(format!(
+                "arm (a) did not dispatch the card: spawned={:?} dispatched_card={:?}",
+                record.subagents_spawned,
+                behaviour.as_ref().map(|b| b.dispatched_card)
+            )),
             (false, _) => Some("agent card not adopted (F7)".into()),
             // A platform 500 is neither a reviewer failure nor a rig fault, and
             // must not be filed as one: `api_error_status` is on the result, so
@@ -799,6 +835,7 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             "reverted": reverted,
             "review_cwd": review_cwd.to_string_lossy(),
             "card_adopted": adopted,
+            "parent_behaviour": behaviour,
             "ground_truth": if condition == "clean" { "approved" } else { "changes-requested" },
             "scored": scored,
             "step": record,
@@ -1215,6 +1252,7 @@ async fn ttl_step(claude_bin: &str, args: TtlStepArgs, label: &str) -> Result<()
         model,
         effort: None,
         agent: None,
+        adopt_agent: true,
         prompt: prompt.clone(),
         schema: None,
         allowed_tools: vec![],
@@ -1317,6 +1355,7 @@ async fn ttl_probe(claude_bin: &str, args: TtlArgs) -> Result<()> {
             model,
             effort: None,
             agent: None,
+            adopt_agent: true,
             prompt: args.prompt.clone(),
             schema: None,
             allowed_tools: vec![],
@@ -1512,6 +1551,7 @@ async fn probe(claude_bin: &str, args: ProbeArgs) -> Result<()> {
             model,
             effort: Some(effort),
             agent: None,
+            adopt_agent: true,
             prompt: prompt.clone(),
             schema: None,
             allowed_tools: vec![],

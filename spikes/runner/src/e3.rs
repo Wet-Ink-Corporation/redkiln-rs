@@ -308,6 +308,78 @@ pub fn build_prompt(
     )
 }
 
+/// Arm (a)'s wrapper: a parent that DISPATCHES the card rather than being it.
+///
+/// The review brief is arm (b)'s prompt, forwarded verbatim. That is deliberate
+/// and is what makes the arms comparable: identical material, identical card,
+/// identical model and effort — the single flipped bit is whether the reviewer
+/// is the headless turn itself or a subagent inside it.
+///
+/// The parent is told not to inspect anything. It cannot be *prevented* from
+/// doing so — `--allowed-tools` does not restrict the main turn's tool set
+/// (measured, F23) — so compliance is VERIFIED after the fact from the tool
+/// calls rather than assumed, and a parent that reviewed for itself is reported
+/// separately instead of being silently pooled.
+pub fn build_parent_prompt(review_brief: &str) -> String {
+    format!(
+        "You are dispatching a review. You are NOT the reviewer.\n\n         Do not inspect the repository yourself: do not read files, do not run          commands, do not search the tree. Your entire job is to delegate and          then report what comes back.\n\n         Dispatch the `redkiln-review` subagent EXACTLY ONCE using the Task          tool with `subagent_type: \"redkiln-review\"`, passing it the review          brief below verbatim as its prompt.\n\n         When it returns, return the structured digest. The digest must report          the SUBAGENT's verdict and the SUBAGENT's findings — including its          `files` — not your own assessment. If it found nothing blocking, say          so; do not add findings of your own.\n\n         ===== review brief — pass this to the subagent verbatim =====\n         {review_brief}"
+    )
+}
+
+/// Tools that constitute reviewing the tree for oneself.
+///
+/// Used only to check arm (a)'s parent kept to dispatching. `Task`/`Agent`,
+/// `StructuredOutput` and the various task-bookkeeping tools are not
+/// inspection and do not count.
+const INSPECTION_TOOLS: [&str; 6] = ["Read", "Bash", "Grep", "Glob", "PowerShell", "WebFetch"];
+
+/// Arm (a)'s validity checks, computed from the stream's tool calls.
+#[derive(Debug, Clone, Serialize)]
+pub struct ParentBehaviour {
+    /// The parent dispatched a subagent naming OUR card. `subagent_stats`
+    /// alone cannot distinguish our card from `general-purpose`.
+    pub dispatched_card: bool,
+    /// How many subagents the parent dispatched. More than one is not invalid
+    /// but is worth seeing: the prompt asks for exactly one.
+    pub dispatches: usize,
+    /// The parent inspected the tree itself instead of only delegating. Not
+    /// void — recorded, and reported separately, because such a record
+    /// measures the parent rather than the subagent.
+    pub parent_inspected: bool,
+    /// Which inspection tools the parent used, if any.
+    pub parent_inspection_tools: Vec<String>,
+    /// Inspection calls made by the subagent — evidence it did real work.
+    pub subagent_inspections: usize,
+}
+
+pub fn parent_behaviour(calls: &[crate::event::ToolCall], card_name: &str) -> ParentBehaviour {
+    let is_dispatch = |c: &crate::event::ToolCall| c.name == "Agent" || c.name == "Task";
+    let parent_calls = calls.iter().filter(|c| c.parent_tool_use_id.is_none());
+
+    let dispatches = parent_calls.clone().filter(|c| is_dispatch(c)).count();
+    let dispatched_card = calls
+        .iter()
+        .filter(|c| is_dispatch(c))
+        .any(|c| c.subagent_type.as_deref() == Some(card_name));
+
+    let parent_inspection_tools: Vec<String> = parent_calls
+        .filter(|c| INSPECTION_TOOLS.contains(&c.name.as_str()))
+        .map(|c| c.name.clone())
+        .collect();
+
+    ParentBehaviour {
+        dispatched_card,
+        dispatches,
+        parent_inspected: !parent_inspection_tools.is_empty(),
+        parent_inspection_tools,
+        subagent_inspections: calls
+            .iter()
+            .filter(|c| c.parent_tool_use_id.is_some())
+            .filter(|c| INSPECTION_TOOLS.contains(&c.name.as_str()))
+            .count(),
+    }
+}
+
 fn truncate(s: &str, n: usize) -> String {
     if s.chars().count() <= n {
         return s.to_string();
@@ -451,6 +523,67 @@ mod tests {
         );
         assert_eq!(git_remote_path(Path::new(r"D:\repos\redkiln")), "D:/repos/redkiln");
         assert!(!git_remote_path(Path::new(r"\\?\D:\repos\redkiln")).starts_with("//?/"));
+    }
+
+    fn call(name: &str, parent: Option<&str>, sub: Option<&str>) -> crate::event::ToolCall {
+        crate::event::ToolCall {
+            name: name.into(),
+            parent_tool_use_id: parent.map(str::to_string),
+            subagent_type: sub.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn a_delegating_parent_is_distinguished_from_one_that_reviewed_for_itself() {
+        // The shape arm (a) wants: parent dispatches OUR card, touches nothing
+        // itself, and the subagent does the inspecting.
+        let good = parent_behaviour(
+            &[
+                call("Agent", None, Some("redkiln-review")),
+                call("Read", Some("toolu_1"), None),
+                call("Bash", Some("toolu_1"), None),
+                call("StructuredOutput", None, None),
+            ],
+            "redkiln-review",
+        );
+        assert!(good.dispatched_card);
+        assert_eq!(good.dispatches, 1);
+        assert!(!good.parent_inspected, "the subagent read, not the parent");
+        assert_eq!(good.subagent_inspections, 2);
+
+        // The shape that would silently measure the PARENT instead.
+        let bad = parent_behaviour(
+            &[
+                call("Agent", None, Some("redkiln-review")),
+                call("Read", None, None),
+                call("StructuredOutput", None, None),
+            ],
+            "redkiln-review",
+        );
+        assert!(bad.parent_inspected);
+        assert_eq!(bad.parent_inspection_tools, vec!["Read".to_string()]);
+    }
+
+    #[test]
+    fn dispatching_a_generic_agent_is_not_dispatching_the_card() {
+        // RK-B0013 one level up: `subagent_stats.spawned` would read 1 here.
+        let b = parent_behaviour(
+            &[call("Agent", None, Some("general-purpose"))],
+            "redkiln-review",
+        );
+        assert!(!b.dispatched_card);
+        assert_eq!(b.dispatches, 1);
+    }
+
+    #[test]
+    fn the_parent_prompt_delegates_and_does_not_leak() {
+        let p = build_parent_prompt("BRIEF-BODY");
+        assert!(p.contains("BRIEF-BODY"), "the brief is forwarded verbatim");
+        assert!(p.contains("redkiln-review"));
+        let low = p.to_lowercase();
+        for leak in ["reverted", "seeded", "defect was", "bug was introduced", "s-silent"] {
+            assert!(!low.contains(leak), "parent prompt leaks `{leak}`");
+        }
     }
 
     #[test]

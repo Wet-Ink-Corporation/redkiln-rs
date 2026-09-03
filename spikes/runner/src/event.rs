@@ -38,6 +38,55 @@ pub enum EventKind {
     Malformed,
 }
 
+/// One tool call seen on the stream.
+///
+/// The attribution field is `parent_tool_use_id`: a call made by the PARENT
+/// carries `null`, and a call made by a subagent carries the id of the `Agent`
+/// tool_use that spawned it. That distinction is what makes E3 arm (a)
+/// checkable — without it, a parent that reviewed the code itself and a parent
+/// that delegated to the card look identical in the digest.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ToolCall {
+    pub name: String,
+    /// `None` = the parent's own call.
+    pub parent_tool_use_id: Option<String>,
+    /// Present on `Agent`/`Task` calls: which card was dispatched. Asserting
+    /// this is how arm (a) proves it dispatched OUR card rather than a generic
+    /// `general-purpose` agent — `subagent_stats.spawned` alone cannot tell
+    /// those apart.
+    pub subagent_type: Option<String>,
+}
+
+/// Extract every `tool_use` block from an `assistant` event.
+pub fn tool_calls_from_assistant(raw: &serde_json::Value) -> Vec<ToolCall> {
+    let parent = raw
+        .get("parent_tool_use_id")
+        .and_then(|v| v.as_str())
+        .map(str::to_string);
+    let Some(content) = raw
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .and_then(|c| c.as_array())
+    else {
+        return Vec::new();
+    };
+    content
+        .iter()
+        .filter(|c| c.get("type").and_then(|t| t.as_str()) == Some("tool_use"))
+        .filter_map(|c| {
+            Some(ToolCall {
+                name: c.get("name")?.as_str()?.to_string(),
+                parent_tool_use_id: parent.clone(),
+                subagent_type: c
+                    .get("input")
+                    .and_then(|i| i.get("subagent_type"))
+                    .and_then(|v| v.as_str())
+                    .map(str::to_string),
+            })
+        })
+        .collect()
+}
+
 /// Token accounting from the final `result` message.
 ///
 /// Every field is optional because the docs mark most of them optional and the

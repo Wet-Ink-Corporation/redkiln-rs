@@ -1,10 +1,10 @@
 # Pre-registration #2 — E3 (and E6) replacement metric
 
 **Status:** new pre-registration, reported as such per charter §8.2.
-**Amendments:** two, both on 2026-09-03, both instrument fixes rather than
-metric changes, and both made before the data they could affect was seen —
-§6 (the card's tool set, FINDINGS F20) and §5 (CLEAN and S-SILENT built to the
-same shape).
+**Amendments:** three, all on 2026-09-03, all instrument rather than metric
+changes, and each made before the data it could affect was seen — §6 (the
+card's tool set, FINDINGS F20), §5 (CLEAN and S-SILENT built to the same
+shape), and §6 again (arm (a)'s construction and its three validity checks).
 **Supersedes:** the E3/E6 primary metric in `references/2026-08-31-rust-inversion-spike-charter.md` §10.
 **Reason:** FINDINGS **F9** — the original answer key does not exist.
 **Baseline:** this document's commit. **Corpus pin:** redkiln @ `47faec9f`.
@@ -128,6 +128,42 @@ confound rather than a hidden one.
 **Arm (a) is verified, not assumed.** `subagent_stats.spawned` must be ≥ 1 or the
 record is void. Without that check, "the subagent reviewed and disagreed" and
 "the subagent never spawned" are indistinguishable — RK-B0013 one level up.
+
+**Amended 2026-09-03, before any arm (a) dispatch was scored (disclosed).**
+Building arm (a) forced three decisions. All are instrument, none touches §7,
+and each is recorded here rather than left to the reader of the code.
+
+1. **`spawned ≥ 1` is necessary but not sufficient.** It counts subagents; it
+   does not say *which*. A parent that dispatched `general-purpose` would score
+   1 exactly like one that dispatched the card. The `Agent` call's
+   `subagent_type` is therefore asserted to equal `redkiln-review`, and a record
+   failing that is void. This strengthens the pre-registered check; it does not
+   relax it.
+
+2. **The parent authors the digest, relaying the subagent's findings.** This is
+   inherent to the shape rather than a choice: a subagent returns prose to its
+   parent, so in arm (a) the structured digest can only be written by the
+   parent. Arm (b)'s digest is written by the reviewer itself. **This is a real
+   asymmetry between the arms and it is stated, not hidden** — if arm (a) scores
+   worse on the strong criterion, relay loss is a live explanation alongside any
+   claim about in-session review, and the write-up must say so. The parent is
+   instructed to report the subagent's verdict and `files`, not its own.
+
+3. **The parent cannot be *prevented* from reviewing, only observed.**
+   `--allowed-tools` does not restrict the main turn's tool set — measured: a
+   parent given `Task,StructuredOutput` still reported all 34 tools at
+   `system/init`. So the prompt forbids inspection and compliance is checked
+   afterwards from `parent_tool_use_id`: a call with `null` is the parent's own,
+   a call carrying the `Agent` tool-use id is the subagent's. Records where the
+   parent inspected the tree itself are **recorded and reported separately**,
+   not voided — voiding them would let the instrument silently discard the
+   records least flattering to arm (a), which is the wrong direction of bias for
+   a kill criterion aimed at arm (b).
+
+Everything else is held identical across the arms: the same card, the same
+model and effort, the same fixture, and arm (b)'s review brief forwarded to the
+subagent **verbatim** inside the dispatch wrapper. A unit test asserts the two
+arms' argv differ by exactly the `--agent` flag and nothing else.
 
 **Arms (b) and (c) must pass both `--agents` and `--agent`.** FINDINGS F7:
 `--agents` alone is inert, and an arm built that way measures a generic Claude.
