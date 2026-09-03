@@ -26,6 +26,23 @@ def load(path):
     return out
 
 
+def defect_shape(r):
+    """Which defect shape this seed re-creates.
+
+    9 of the 23 fix-lane items have fixes that touched no `src/` file at all.
+    Reverting one of those leaves behaviour untouched and removes only the
+    tests, so the unmet ACs are about coverage EXISTING rather than about code
+    being wrong. That is a second defect shape, not a variant of the first, and
+    METHOD-E3 §12.1 already warns against generalising from one shape. Pooling
+    the two without saying so would overstate what E3 measures, so the rates are
+    reported stratified as well as pooled.
+    """
+    reverted = r.get("reverted") or []
+    if any(f.lower().replace("\\", "/").startswith("src/") for f in reverted):
+        return "code"
+    return "tests-only"
+
+
 def checks(r):
     """The three gates, plus the digest. Returns (ok, [failed names])."""
     failed = []
@@ -65,14 +82,21 @@ def main(path):
             f"${step.get('total_cost_usd') or 0:>6.2f}"
         )
         if not ok:
-            voids.append((r["slug"], r["condition"], failed))
+            voids.append((r["slug"], r["condition"], failed, r.get("void_reason")))
         else:
             by_arm[r["arm"].split("-")[0]][r["condition"]].append(s)
 
     if voids:
+        # A void that a later record superseded cost a dispatch but no data, and
+        # must not read like an unresolved gap in the set. Platform 529s in
+        # particular retry clean, so the same item can hold several.
+        succeeded = {(r["slug"], r["condition"]) for r in records if checks(r)[0]}
         print("\nVOID — excluded from every rate, per METHOD-E3 §9:")
-        for slug, cond, failed in voids:
-            print(f"  {slug} [{cond}]: {', '.join(failed)}")
+        for slug, cond, failed, reason in voids:
+            tag = "  (superseded by a later good record)" if (slug, cond) in succeeded else ""
+            # The record's own reason is more specific than the audit's check:
+            # it distinguishes a platform error from a reviewer or rig fault.
+            print(f"  {slug} [{cond}]: {reason or ', '.join(failed)}{tag}")
 
     print("\n--- rates over records that cleared every check ---")
     for arm, conds in sorted(by_arm.items()):
@@ -97,6 +121,18 @@ def main(path):
             den = ((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)) ** 0.5
             mcc = (tp * tn - fp * fn) / den if den else float("nan")
             print(f"  MCC {mcc:+.3f}   (tp={tp} fn={fn} fp={fp} tn={tn})")
+
+    # Stratified — see defect_shape(). Reported alongside the pooled rate,
+    # never instead of it.
+    strata = defaultdict(list)
+    for r in records:
+        if checks(r)[0] and r["condition"] == "s-silent":
+            strata[defect_shape(r)].append(r["scored"])
+    if len(strata) > 1:
+        print("\n--- S-SILENT detection by defect shape ---")
+        for shape, ss in sorted(strata.items()):
+            strong = sum(1 for s in ss if s.get("strong_detection"))
+            print(f"  {shape:<12} n={len(ss):<3} strong detection {strong}/{len(ss)}")
 
     print(f"\nrecords {len(records)}   void {len(voids)}   spend ${cost:.2f}")
 

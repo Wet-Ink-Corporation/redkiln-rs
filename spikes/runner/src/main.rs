@@ -753,10 +753,20 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         let void_reason: Option<String> = match (adopted, scored.is_some()) {
             (true, true) => None,
             (false, _) => Some("agent card not adopted (F7)".into()),
-            (true, false) => Some(format!(
-                "no schema-valid digest ({})",
-                record.error_kind.as_deref().unwrap_or("unknown")
-            )),
+            // A platform 500 is neither a reviewer failure nor a rig fault, and
+            // must not be filed as one: `api_error_status` is on the result, so
+            // the distinction is free. It still voids the record.
+            (true, false) => Some(
+                match record.meta.as_ref().and_then(|m| m.api_error_status.as_ref()) {
+                    Some(code) if !code.is_null() => format!(
+                        "platform error {code} — not a reviewer or rig fault; retry"
+                    ),
+                    _ => format!(
+                        "no schema-valid digest ({})",
+                        record.error_kind.as_deref().unwrap_or("unknown")
+                    ),
+                },
+            ),
         };
         match (&scored, outcome.is_ok()) {
             (Some(s), _) => eprintln!(
