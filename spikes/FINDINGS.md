@@ -759,6 +759,78 @@ worse, since nothing is waiting in front of them.
 
 ---
 
+## F19 — H2/H3 RESULT: suspension is lossless; the world moves, but rarely and predictably
+
+**Established by:** 174 historical gate pauses replayed against the frozen
+corpus, 2026-09-02. Zero model cost. Results: `spikes/results/h2-h3.jsonl`.
+Registered in `METHOD-H.md`.
+
+### H2 — is a suspension lossless across a process boundary?
+
+**174 of 174 lossless. Zero failures.**
+
+Each pause's reconciled state was serialised, re-hydrated by a **separate
+invocation of the binary**, and digested. Every digest matched its in-process
+original. Round-tripping inside one process would have proved nothing; the risk
+was always that a *fresh* process reconstructs something different, and it does
+not.
+
+**METHOD-H's gate is passed.** The registered decision rule was that a
+non-deterministic resume makes the human gate "unsafe at any cost" and would
+falsify the RFC's central enforcement claim. It is deterministic.
+
+**What this does and does not license.** It shows the *state carrier* is
+faithful — what is written is what comes back. It does **not** show that a
+resumed run takes the correct next action, because no FSM was replayed; that
+needs the ported engine and remains open.
+
+### H3 — does the world move while a gate is open?
+
+| gate length | n | drifted | rate |
+| --- | --- | --- | --- |
+| ≤ 1 h | 95 | 3 | **3%** |
+| **> 1 h** | 79 | 9 | **11%** |
+
+**A gate that outlives the cache TTL is 3.6× more likely to have the world move
+underneath it.** The same threshold governs both cost and correctness, which is
+a convenient coincidence for design: *short gates are cheap and safe; long gates
+are expensive and risky, together.*
+
+Overall drift is **12 of 174 (7%)** — lower than the raw activity suggests.
+**1,163 commits landed inside gaps**, but only 12 pauses drifted, because most
+commits carry no resume trailers and so cannot change reconciled state. Median
+commits-in-gap is **0**; the maximum is 209.
+
+The drifting pauses are strongly bimodal: six under two hours, and six clustered
+around **9.4 days** — the same long tail F18 found. Drift is not a steady
+background rate; it is what happens when a gate is *abandoned* rather than
+merely delayed.
+
+### What it means for the design
+
+- **Resume must re-derive from the world, not trust the record** (shipmates
+  L2.4). H2 proves the record is faithful; H3 proves it can be *stale*. A
+  faithful-but-stale record is the more dangerous of the two, because it looks
+  correct.
+- **Drift is rare enough to reconcile eagerly and cheaply.** At 7%, and with a
+  median of zero in-gap commits, a full reconcile on every resume costs almost
+  nothing and catches the 7% — there is no case for an optimisation that skips
+  it.
+- **Gate length is the single design lever.** Under an hour: cache-warm and
+  drift-free. Over: cold prefix and 3.6× drift risk. That argues for prompting
+  humans hard and early rather than for cleverness in the orchestrator.
+
+### Limits
+
+- **The FSM was not replayed.** "Same next action" is stronger than "same state",
+  and only the former fully answers METHOD-H's H2.
+- **Drift is measured on resume-relevant trailers only.** A commit that changes
+  code without touching `Story:` / `Slice-Verdict:` does not register here, yet
+  could still invalidate a paused review. This is a **lower bound** on drift.
+- One operator, one project; replayed verdicts, not live human behaviour.
+
+---
+
 ## Operational — long-lived background jobs are unreliable here
 
 **Established by:** three background runs, 2026-09-02. Cause **not** established.

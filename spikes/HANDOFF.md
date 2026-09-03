@@ -24,6 +24,9 @@ warnings, working tree clean.
 | **E0** variance | not started | needs the E3 rig, which now exists |
 | **E3** | **rig ready, unrun** | the pilot measured the rig, not the reviewer |
 | **E4 / E5 / E6** | gated | behind E3 |
+| **H2** suspension | done | **174/174 lossless** across a real process boundary |
+| **H3** world drift | done | 7% overall; **3.6× more likely** on gates > 1 h |
+| **H1 / H4** | planned | `METHOD-H.md`; H1 cheap, H4 needs E0 |
 
 ### The four results that changed the thesis
 

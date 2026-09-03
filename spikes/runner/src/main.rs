@@ -12,6 +12,7 @@ mod e3;
 mod event;
 mod fingerprint;
 mod gate;
+mod human_gate;
 mod hygiene;
 mod journal;
 mod reconcile;
@@ -110,6 +111,36 @@ enum Command {
     /// asks the reviewer whether the spec's acceptance criteria are met, against
     /// clean controls, paired per item.
     ReviewProbe(ReviewArgs),
+
+    /// H2 + H3 — the human gate. Zero model cost.
+    ///
+    /// H2: is a suspension lossless across a real process boundary?
+    /// H3: does the world move while a gate is open?
+    HumanGate(HumanGateArgs),
+
+    /// Internal: re-hydrate suspended state and print its digest.
+    ///
+    /// Exists so H2 crosses a genuine process boundary. Round-tripping in the
+    /// same process would prove nothing about resume.
+    Rehydrate(RehydrateArgs),
+}
+
+#[derive(clap::Args)]
+struct HumanGateArgs {
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+    #[arg(long)]
+    out: PathBuf,
+    /// Round-trip at most N pauses through a child process. Each spawn costs
+    /// ~30 ms; the default covers every pause in the corpus.
+    #[arg(long, default_value_t = 200)]
+    max_round_trips: usize,
+}
+
+#[derive(clap::Args)]
+struct RehydrateArgs {
+    #[arg(long)]
+    state: PathBuf,
 }
 
 #[derive(clap::Args)]
@@ -340,7 +371,119 @@ async fn main() -> Result<()> {
         Command::GateProbe(args) => gate_probe(args),
         Command::ReconcileReplay(args) => reconcile_replay(args),
         Command::ReviewProbe(args) => review_probe(&cli.claude_bin, args).await,
+        Command::HumanGate(args) => human_gate(args),
+        Command::Rehydrate(args) => {
+            let text = std::fs::read_to_string(&args.state)?;
+            let state: human_gate::SuspendedState = serde_json::from_str(&text)?;
+            println!("{}", state.digest());
+            Ok(())
+        }
     }
+}
+
+fn human_gate(args: HumanGateArgs) -> Result<()> {
+    let redkiln = std::fs::canonicalize(&args.redkiln)?;
+    let journal = Journal::open(&args.out, &[])?;
+    let exe = std::env::current_exe()?;
+    let scratch = std::env::temp_dir().join("rk-h2");
+
+    // Telemetry, unioned across partitions.
+    let mut events = Vec::new();
+    let dir = redkiln.join(".redkiln").join("telemetry").join("events");
+    for entry in std::fs::read_dir(&dir).with_context(|| format!("reading {}", dir.display()))? {
+        let path = entry?.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+            continue;
+        }
+        for line in std::fs::read_to_string(&path)?.lines() {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                events.push(v);
+            }
+        }
+    }
+
+    let pauses = human_gate::gate_pauses(&events);
+    let commits = reconcile::read_commits(&redkiln)?;
+    anyhow::ensure!(!pauses.is_empty(), "no gate pauses found in telemetry");
+
+    journal.append(&serde_json::json!({
+        "record": "header", "experiment": "H2+H3",
+        "generated_at": chrono::Utc::now(),
+        "pauses": pauses.len(), "commits_with_trailers": commits.len(),
+    }))?;
+
+    let (mut lossless, mut lossy) = (0usize, 0usize);
+    let (mut drifted, mut drifted_over_ttl) = (0usize, 0usize);
+    let mut in_gap_total = 0usize;
+    let mut over_ttl = 0usize;
+
+    for (i, p) in pauses.iter().enumerate() {
+        if p.outlived_cache_ttl {
+            over_ttl += 1;
+        }
+
+        // H3: recompute the world at both ends of the gap.
+        let before = human_gate::state_at(&commits, p.opened_at);
+        let after = human_gate::state_at(&commits, p.answered_at);
+        let drift = before != after;
+        let in_gap = human_gate::commits_in_gap(&commits, p);
+        in_gap_total += in_gap.len();
+        if drift {
+            drifted += 1;
+            if p.outlived_cache_ttl {
+                drifted_over_ttl += 1;
+            }
+        }
+
+        // H2: round-trip the suspended state through a separate process.
+        let mut h2 = None;
+        if i < args.max_round_trips {
+            let suspended = human_gate::SuspendedState {
+                item: p.item.clone(),
+                at: p.opened_at,
+                state: before.clone(),
+            };
+            let r = human_gate::round_trip(&exe, &suspended, &scratch)?;
+            if r.lossless {
+                lossless += 1;
+            } else {
+                lossy += 1;
+                eprintln!("  LOSSY suspension: {} {} != {}", r.item, r.in_process, r.rehydrated);
+            }
+            h2 = Some(r);
+        }
+
+        journal.append(&serde_json::json!({
+            "record": "pause", "pause": p,
+            "h3_world_drifted": drift,
+            "h3_commits_in_gap": in_gap.len(),
+            "h3_subjects_in_gap": in_gap.iter().map(|c| c.subject.clone()).collect::<Vec<_>>(),
+            "h2": h2,
+        }))?;
+    }
+
+    let n = pauses.len();
+    let pct = |x: usize| 100.0 * x as f64 / n as f64;
+    println!("gate pauses                 : {n}");
+    println!("  outlived the cache TTL    : {over_ttl}  ({:.0}%)", pct(over_ttl));
+    println!("\n--- H2: is a suspension lossless across a process boundary? ---");
+    println!("  round-tripped             : {}", lossless + lossy);
+    println!("  LOSSLESS                  : {lossless}");
+    println!("  lossy                     : {lossy}");
+    println!("\n--- H3: does the world move while a gate is open? ---");
+    println!("  pauses with world drift   : {drifted}  ({:.0}%)", pct(drifted));
+    println!("  ... of those, gate > 1h   : {drifted_over_ttl}");
+    println!("  commits landing in gaps   : {in_gap_total}");
+
+    journal.append(&serde_json::json!({
+        "record": "summary",
+        "pauses": n, "outlived_ttl": over_ttl,
+        "h2_lossless": lossless, "h2_lossy": lossy,
+        "h3_drifted": drifted, "h3_drifted_over_ttl": drifted_over_ttl,
+        "h3_commits_in_gaps": in_gap_total,
+    }))?;
+    println!("\nwrote {}", journal.path().display());
+    Ok(())
 }
 
 async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
