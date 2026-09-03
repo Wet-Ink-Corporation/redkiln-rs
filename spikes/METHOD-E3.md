@@ -1,6 +1,10 @@
 # Pre-registration #2 — E3 (and E6) replacement metric
 
 **Status:** new pre-registration, reported as such per charter §8.2.
+**Amendments:** two, both on 2026-09-03, both instrument fixes rather than
+metric changes, and both made before the data they could affect was seen —
+§6 (the card's tool set, FINDINGS F20) and §5 (CLEAN and S-SILENT built to the
+same shape).
 **Supersedes:** the E3/E6 primary metric in `references/2026-08-31-rust-inversion-spike-charter.md` §10.
 **Reason:** FINDINGS **F9** — the original answer key does not exist.
 **Baseline:** this document's commit. **Corpus pin:** redkiln @ `47faec9f`.
@@ -80,6 +84,22 @@ adversarially verifying each AC against real, reachable behaviour rather than
 taking a green gate at face value. It is the escape-hatch class the agent exists
 to catch.
 
+**Amended 2026-09-03, before any CLEAN record existed (disclosed).** Both
+conditions are now built the same way: a fresh repo, a depth-1 fetch, a detached
+checkout, `node_modules` junctioned in — CLEAN landing on the fix commit,
+S-SILENT on its parent. The section above says "a fixture worktree is built at
+the fix commit and then modified"; that is what the *first* rig did, and F17
+killed it. The F17 replacement rebuilt S-SILENT as a one-commit shallow repo but
+left CLEAN in the full worktree, which would have made the flipped bit **the
+shape of the repository** as much as the state of the code. A reviewer that
+notices `git log` holds a single entry, or that `git log -p` is unavailable, may
+behave differently for a reason that has nothing to do with a defect — and since
+CLEAN's false-positive rate is *co-primary* with S-SILENT's detection rate, the
+two are only comparable when measured in the same place.
+
+Same shape, same depth, one commit apart. No metric in §7 changes, and no CLEAN
+dispatch had been made when this was decided.
+
 **S-FAIL is a sanity control**, not the measurement. An arm that misses S-FAIL is
 not reading the tests at all. Because it is cheap to pass, it is run on a subset
 (see §8) and reported separately; it must never be pooled with S-SILENT.
@@ -113,6 +133,25 @@ record is void. Without that check, "the subagent reviewed and disagreed" and
 `--agents` alone is inert, and an arm built that way measures a generic Claude.
 `effective.agent` is read back from the child's `system/init` and must equal the
 card name, or the record is void.
+
+**Amended 2026-09-03, before any E3 data was seen (disclosed).** The card is
+dispatched with `tools: [Read, Bash, StructuredOutput]` rather than the
+production card's `[Read, Bash]`. FINDINGS **F20**: a card's `tools` list is an
+allowlist, and structured output is delivered by a tool named
+`StructuredOutput`, so a card omitting it makes `--json-schema` silently inert —
+the reviewer answers in prose, on a success exit, and every record is void for
+want of a digest. The single pilot dispatch did exactly this.
+
+This is an **instrument** change, not a metric change: it does not touch §7, and
+it grants the reviewer no reach it did not have — it cannot read, run or write
+anything new. It restores the channel the digest returns on, and it is applied
+identically to every arm. The one E3 dispatch that preceded it was void, so no
+result informed the decision.
+
+Adoption is checked accordingly: the child's `system/init` tool set must equal
+the declared list **exactly**, not merely be small and contain `Read` and
+`Bash`. An unrestricted child reports 34 tools, so any divergence means the card
+did not apply.
 
 **Model and effort are pinned explicitly** on every arm. The card is
 `model: inherit` with no effort, so a headless dispatch that omits them silently

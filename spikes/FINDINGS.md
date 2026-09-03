@@ -882,6 +882,99 @@ it measures.
 
 ---
 
+## F20 — Two rig defects the E3 pilot could not have revealed, both caught before the set was run
+
+**Established by:** four haiku probes and one zero-cost dispatch failure,
+2026-09-03. **No E3 result is claimed.** The handoff's rule — validate one item
+before spending on the set — paid for itself twice in one sitting.
+
+### Defect 1 — an agent card's `tools` list silently disables `--json-schema`
+
+E3's primary metric is mechanical only because the digest carries a `files`
+array per finding. That digest arrives through `--json-schema`. **No dispatch in
+the whole programme had ever used the flag**: E1, E2, E0 and H1 all ran
+schemaless, where prose *is* the contract. E3's single pilot dispatch was the
+first to demand structure, and it came back `error_kind=schema`, digest `null` —
+which was read at the time as one more consequence of the F17 fixture flaw.
+
+It was not. Three haiku probes isolate it:
+
+| configuration | `stop_reason` | `structured_output` |
+| --- | --- | --- |
+| `--json-schema`, no card | `tool_use` | **present, conforming** |
+| `--json-schema` + card with `tools: [Read, Bash]` | `end_turn` | **absent** |
+| `--json-schema` + card with `tools: [Read, Bash, StructuredOutput]` | `tool_use` | **present, conforming** |
+
+Structured output is delivered by a **tool call** — the tool is named
+`StructuredOutput` and appears in an unrestricted child's 34-tool list. A card's
+`tools:` is an **allowlist**, so a card that does not name it removes the only
+channel the digest can return on. The flag is then inert: no warning, no error,
+exit code 0, `subtype: "success"`.
+
+**What the reviewer does instead is the dangerous part.** It does not refuse. It
+writes a JSON block in prose — and in the haiku probe that block did not even
+match the schema it had never been shown, inventing `file` / `severity` /
+`message` where the schema asked for `issue` / `files`. A rig that scraped JSON
+out of prose rather than requiring `structured_output` would have parsed that
+happily and scored it.
+
+**Consequence for E3, had this run unfixed:** every one of the 46+ dispatches
+would have returned prose, every record would have been void for want of a
+digest, and the entire Opus/xhigh budget would have bought nothing. The pilot
+already showed this and it was misattributed to F17.
+
+**The fix, and the disclosure it requires.** `StructuredOutput` is added to the
+card's declared tools (`e3::CARD_TOOLS`) and to the adoption check, which is now
+set **equality** against the declared list rather than the previous size bound.
+This is an instrument deviation and is disclosed as one in METHOD-E3 §6: it
+grants the reviewer no new reach — it cannot read, run or write anything it
+could not before — it is the channel the digest comes back on, and it is applied
+identically to every arm. **Made before any E3 data was seen**, which is the only
+reason it is legitimate.
+
+**This is a product finding** (charter §14.5, and the fifth to report): a
+tool-restricted `--agent` silently voids `--json-schema`, on a success exit,
+with no diagnostic. Any caller composing a restricted card with structured
+output is affected, and the failure is invisible unless the caller checks for
+`structured_output` specifically rather than parsing the text.
+
+### Defect 2 — `build_silent_fixture` had never once completed
+
+The F17 rebuild — a shallow fetch of the fix's **parent**, so the fix is
+unreachable rather than merely reverted — was written, unit-tested and committed,
+and the handoff records the rig as "built and validated". The first real
+invocation failed instantly:
+
+```text
+fatal: '//?/D:/repos/redkiln' does not appear to be a git repository
+```
+
+`std::fs::canonicalize` returns a Windows extended-length path
+(`\\?\D:\repos\redkiln`); the code slash-flipped it for git, producing
+`//?/D:/…`, which git parses as a URL with host `?`. Every caller passes a
+canonicalised path, so **no code path reached the fetch successfully, ever**. The
+unit tests could not catch it: they test scoring, prompts and schema shape, none
+of which touch the filesystem.
+
+Fixed by stripping the prefix (`e3::git_remote_path`), with a unit test. The
+fixture now builds, and `git cat-file -e <fix-sha>` confirms the fix commit is
+absent from the fixture's object store, which is what F17 demands.
+
+**Cost of both defects: one failed dispatch that spent nothing, plus four haiku
+probes.** Had either reached the set, the loss would have been the whole E3
+budget — and Defect 1 would have produced a uniform "no arm returned a digest"
+that looks nothing like a kill criterion, while Defect 2 would have aborted the
+run outright.
+
+### The instrument moved under the programme
+
+`claude` is now **2.1.259**; every record before today reads 2.1.258. The hygiene
+check is a floor (≥ 2.1.251), so nothing blocked, and the version is on every
+record. Recorded here because RFC R8 predicts exactly this and because a
+cross-session comparison now spans two builds of the CLI.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has

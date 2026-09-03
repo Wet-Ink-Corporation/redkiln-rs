@@ -21,6 +21,7 @@ mod runner;
 mod step;
 mod throttle;
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -554,13 +555,21 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         // of the parent gives a one-commit history the fix does not exist in.
         let review_cwd;
         let reverted: Vec<String>;
+        // Recorded, not merely printed: each of the three pre-flight checks
+        // (card adopted, node_modules present, fix unreachable) must be
+        // auditable from the journal alone, without reading a console log.
+        let node_modules_linked;
+        let fix_unreachable;
         if condition == "s-silent" {
             let fixture = worktree
                 .parent()
                 .unwrap_or(&worktree)
                 .join(format!("e3-silent-{}", item.slug));
-            e3::build_silent_fixture(&redkiln, &fixture, &sha)?;
+            node_modules_linked = e3::build_silent_fixture(&redkiln, &fixture, &sha)?;
+            // Hard-fails: a fixture that kept the fix would reproduce F17 in
+            // silence, scoring the reviewer against code it never saw.
             e3::assert_fix_unreachable(&fixture, &sha)?;
+            fix_unreachable = true;
             review_cwd = fixture;
             // Everything the fix touched is at its pre-fix state here.
             reverted = item
@@ -576,9 +585,30 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
                 continue;
             }
         } else {
-            gate::reset_worktree(&worktree, &sha)?;
-            review_cwd = worktree.clone();
+            // CLEAN is built the same way and to the same depth, landing on the
+            // fix commit instead of its parent. Symmetry is deliberate: were
+            // CLEAN reviewed in the full worktree, the bit flipped between the
+            // conditions would be the shape of the repository as well as the
+            // state of the code, and a reviewer noticing a one-entry `git log`
+            // could treat the two differently for reasons unrelated to any
+            // defect. The co-primary false-positive rate is only comparable to
+            // the detection rate if both are measured in the same place.
+            let fixture = worktree
+                .parent()
+                .unwrap_or(&worktree)
+                .join(format!("e3-clean-{}", item.slug));
+            node_modules_linked = e3::build_fixture_at(&redkiln, &fixture, &sha)?;
+            review_cwd = fixture;
             reverted = Vec::new();
+            // CLEAN reviews the fix as shipped, so the fix is *meant* to be
+            // present; the F17 check does not apply and is recorded as such.
+            fix_unreachable = false;
+        }
+        if !node_modules_linked {
+            // A reviewer that CANNOT run tests is indistinguishable in the
+            // digest from one that CHOSE not to, so this aborts rather than
+            // spending a dispatch on a record nobody could interpret.
+            anyhow::bail!("no node_modules for {} — it could not run tests", item.slug);
         }
 
         let read = |name: &str| {
@@ -608,7 +638,9 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
                 name: "redkiln-review".into(),
                 description: description.clone(),
                 prompt: card_body.clone(),
-                tools: Some(vec!["Read".into(), "Bash".into()]),
+                // e3::CARD_TOOLS — [Read, Bash] from the production card, plus
+                // the StructuredOutput channel the digest comes back on (F20).
+                tools: Some(e3::CARD_TOOLS.iter().map(|t| t.to_string()).collect()),
                 model: Some(args.model.clone()),
                 effort: Some(args.effort.clone()),
                 permission_mode: None,
@@ -629,16 +661,16 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         // measures a generic Claude and is VOID, not a miss.
         // F17: `effective.agent` is NOT populated when the agent is set via
         // `--agent`, so reading it voided a record whose card had in fact
-        // applied. The durable signal is the tool set: the card declares
-        // [Read, Bash], and adoption restricts the child from 34 tools to
-        // exactly those two.
+        // applied. The durable signal is the tool set: the card declares its
+        // tools, and adoption restricts the child from 34 down to exactly
+        // those. Equality, not a size bound — any divergence at all means the
+        // card did not apply and the record measures a generic Claude.
+        let declared: BTreeSet<&str> = e3::CARD_TOOLS.into_iter().collect();
         let adopted = record
             .effective
             .as_ref()
             .and_then(|e| e.tools.as_ref())
-            .is_some_and(|t| {
-                t.len() <= 4 && t.iter().any(|x| x == "Read") && t.iter().any(|x| x == "Bash")
-            });
+            .is_some_and(|t| t.iter().map(|x| x.as_str()).collect::<BTreeSet<_>>() == declared);
 
         let scored = record.digest.as_ref().map(|d| e3::score(d, &reverted));
         match (&scored, outcome.is_ok()) {
@@ -661,7 +693,13 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             "experiment": "E3",
             "resume_key": resume_key,
             "outcome": if scored.is_some() && adopted { "ok" } else { "void" },
-            "void_reason": if adopted { None } else { Some("agent card not adopted (F7)") },
+            "void_reason": match (adopted, scored.is_some()) {
+                (true, true) => None,
+                (false, _) => Some("agent card not adopted (F7)"),
+                (true, false) => Some("no schema-valid digest (F20)"),
+            },
+            "node_modules_linked": node_modules_linked,
+            "fix_unreachable": fix_unreachable,
             "arm": arm_label,
             "condition": condition,
             "slug": item.slug,

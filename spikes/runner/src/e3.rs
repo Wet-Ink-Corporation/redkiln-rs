@@ -43,6 +43,17 @@ pub fn load_card(redkiln: &Path) -> Result<(String, String)> {
     Ok((description, body))
 }
 
+/// The tool set the card is given, and the exact set the child must report
+/// back at `system/init` for the record to count.
+///
+/// `Read` and `Bash` are the production card's own declaration.
+/// **`StructuredOutput` is added by the instrument** (F20): a card's `tools`
+/// list is an allowlist, and with `StructuredOutput` outside it `--json-schema`
+/// is silently inert — the reviewer answers in prose and every record is void
+/// for want of a digest. It is the channel the digest returns on, not new
+/// reach, and it is applied identically to every arm.
+pub const CARD_TOOLS: [&str; 3] = ["Read", "Bash", "StructuredOutput"];
+
 /// E3's digest schema.
 ///
 /// Mirrors `forge-fix.js`'s `REVIEW_DIGEST` — same `pass`, `boundaryRespected`,
@@ -105,18 +116,15 @@ pub fn digest_schema() -> serde_json::Value {
     })
 }
 
-/// Build a fixture in which the fix is **unreachable**, not merely reverted.
+/// Build a one-commit fixture at `commit`.
 ///
-/// F17: the first rig reverted files inside a worktree whose object store still
-/// held the fix commit. The reviewer — which has `Bash` — checked the fix back
-/// out, reviewed the real code, and ran its own mutation experiment. Every
-/// `s-silent` record from that rig would have scored a reviewer that was looking
-/// at the *fixed* source against *reverted* ground truth.
-///
-/// A shallow fetch of the fix's **parent** into a fresh repo gives a
-/// single-commit history containing only the pre-fix state. There is no fix
-/// commit to restore because no such object exists in the fixture.
-pub fn build_silent_fixture(redkiln: &Path, fixture: &Path, sha: &str) -> Result<()> {
+/// Both conditions are built this way, and that symmetry is the point: a
+/// S-SILENT fixture is a shallow single-commit repo, so if CLEAN were reviewed
+/// in the full worktree the flipped bit would be the *shape of the repository*
+/// as much as the state of the code. A reviewer that notices `git log` has one
+/// entry could treat the two conditions differently for a reason that has
+/// nothing to do with the defect. Same shape, same depth, one commit apart.
+pub fn build_fixture_at(redkiln: &Path, fixture: &Path, commit: &str) -> Result<bool> {
     if fixture.exists() {
         // `git clean` cannot remove a .git dir; rebuild from scratch each time.
         std::fs::remove_dir_all(fixture)?;
@@ -136,28 +144,67 @@ pub fn build_silent_fixture(redkiln: &Path, fixture: &Path, sha: &str) -> Result
         Ok(())
     };
 
-    // `git fetch <repo> <sha>^` is not a valid refspec — the parent must be
-    // resolved to a concrete SHA in the source repo first.
-    let parent_out = std::process::Command::new("git")
+    run(&["init", "-q"])?;
+    run(&["config", "user.email", "spike@local"])?;
+    run(&["config", "user.name", "Spike"])?;
+    run(&["fetch", "--depth", "1", "--no-tags", "-q", &git_remote_path(redkiln), commit])?;
+    run(&["checkout", "-q", "--detach", "FETCH_HEAD"])?;
+    // Returned rather than only printed: a missing node_modules silently
+    // weakens two of the five rubric dimensions, so it belongs on the record.
+    Ok(link_node_modules(redkiln, fixture))
+}
+
+/// Resolve `<sha>^` in the source repo.
+///
+/// `git fetch <repo> <sha>^` is not a valid refspec — the parent must be a
+/// concrete SHA before it can be fetched.
+pub fn parent_of(redkiln: &Path, sha: &str) -> Result<String> {
+    let out = std::process::Command::new("git")
         .args(["rev-parse", &format!("{sha}^")])
         .current_dir(redkiln)
         .output()?;
     anyhow::ensure!(
-        parent_out.status.success(),
+        out.status.success(),
         "could not resolve the parent of {sha} in {}",
         redkiln.display()
     );
-    let parent = String::from_utf8_lossy(&parent_out.stdout).trim().to_string();
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
 
-    run(&["init", "-q"])?;
-    run(&["config", "user.email", "spike@local"])?;
-    run(&["config", "user.name", "Spike"])?;
-    // Depth 1 at the PARENT: the fix itself is never transferred.
-    let src = redkiln.to_string_lossy().replace('\\', "/");
-    run(&["fetch", "--depth", "1", "--no-tags", "-q", &src, &parent])?;
-    run(&["checkout", "-q", "--detach", "FETCH_HEAD"])?;
-    link_node_modules(redkiln, fixture);
-    Ok(())
+/// Build a fixture in which the fix is **unreachable**, not merely reverted.
+///
+/// F17: the first rig reverted files inside a worktree whose object store still
+/// held the fix commit. The reviewer — which has `Bash` — checked the fix back
+/// out, reviewed the real code, and ran its own mutation experiment. Every
+/// `s-silent` record from that rig would have scored a reviewer that was looking
+/// at the *fixed* source against *reverted* ground truth.
+///
+/// A shallow fetch of the fix's **parent** into a fresh repo gives a
+/// single-commit history containing only the pre-fix state. There is no fix
+/// commit to restore because no such object exists in the fixture.
+pub fn build_silent_fixture(redkiln: &Path, fixture: &Path, sha: &str) -> Result<bool> {
+    // Depth 1 at the PARENT: the fix itself is never transferred, so there is
+    // no object for a reviewer with Bash to check back out (F17).
+    let parent = parent_of(redkiln, sha)?;
+    build_fixture_at(redkiln, fixture, &parent)
+}
+
+/// Render a local path in the form git will accept as a remote.
+///
+/// `std::fs::canonicalize` returns a Windows extended-length path
+/// (`\\?\D:\repos\redkiln`). Slash-flipping that yields `//?/D:/repos/redkiln`,
+/// which git reads as a URL with host `?` and refuses:
+///
+/// ```text
+/// fatal: '//?/D:/repos/redkiln' does not appear to be a git repository
+/// ```
+///
+/// The prefix must be stripped, not just re-slashed. Caught by the one-item
+/// validation before the set was run — `build_silent_fixture` had never once
+/// completed, because every caller passes a canonicalised path.
+pub fn git_remote_path(p: &Path) -> String {
+    let s = p.to_string_lossy().replace('\\', "/");
+    s.strip_prefix("//?/").unwrap_or(&s).to_string()
 }
 
 /// Junction `node_modules` in from the source repo.
@@ -171,11 +218,11 @@ pub fn build_silent_fixture(redkiln: &Path, fixture: &Path, sha: &str) -> Result
 /// Windows-only (`mklink /J`); this spike is Windows-only throughout (F8). A
 /// failure here is non-fatal but is announced, because a silent absence is the
 /// exact confound the junction exists to prevent.
-fn link_node_modules(redkiln: &Path, fixture: &Path) {
+fn link_node_modules(redkiln: &Path, fixture: &Path) -> bool {
     let target = redkiln.join("node_modules");
     if !target.is_dir() {
         eprintln!("    note: no node_modules in the source repo; the reviewer cannot run tests");
-        return;
+        return false;
     }
     let link = fixture.join("node_modules");
     let status = std::process::Command::new("cmd")
@@ -190,12 +237,15 @@ fn link_node_modules(redkiln: &Path, fixture: &Path) {
         .stderr(std::process::Stdio::null())
         .status();
     match status {
-        Ok(s) if s.success() && link.join(".bin").exists() => {}
-        _ => eprintln!(
-            "    WARNING: could not link node_modules into {} — the reviewer cannot run \
-             tests, which weakens gate-greenness and test-integrity",
-            fixture.display()
-        ),
+        Ok(s) if s.success() && link.join(".bin").exists() => true,
+        _ => {
+            eprintln!(
+                "    WARNING: could not link node_modules into {} — the reviewer cannot run \
+                 tests, which weakens gate-greenness and test-integrity",
+                fixture.display()
+            );
+            false
+        }
     }
 }
 
@@ -378,6 +428,27 @@ mod tests {
         assert!(s.weak_detection, "it did reject");
         assert!(!s.strong_detection, "but cited nothing");
         assert_eq!(s.issue_count, 0);
+    }
+
+    #[test]
+    fn a_canonicalised_windows_path_is_usable_as_a_git_remote() {
+        // The extended-length prefix must be stripped, not merely re-slashed:
+        // git parses `//?/D:/...` as a URL with host `?`.
+        assert_eq!(
+            git_remote_path(Path::new(r"\\?\D:\repos\redkiln")),
+            "D:/repos/redkiln"
+        );
+        assert_eq!(git_remote_path(Path::new(r"D:\repos\redkiln")), "D:/repos/redkiln");
+        assert!(!git_remote_path(Path::new(r"\\?\D:\repos\redkiln")).starts_with("//?/"));
+    }
+
+    #[test]
+    fn the_card_carries_the_structured_output_channel() {
+        // F20: without it the card's own allowlist suppresses `--json-schema`
+        // and every dispatch comes back as prose. The cheapest possible guard
+        // on a failure mode that voided the pilot without announcing itself.
+        assert!(CARD_TOOLS.contains(&"StructuredOutput"));
+        assert!(CARD_TOOLS.contains(&"Read") && CARD_TOOLS.contains(&"Bash"));
     }
 
     #[test]
