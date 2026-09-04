@@ -73,12 +73,29 @@ actually driven.
 
 **4. `issue-63-advance-gate-diagnostic-truncated` [arm a] — AC-001 under-tested**
 
-`severity: BLOCKING`
+`severity: ADVISORY (corrected 2026-09-04 — see below)`
 
-The strongest of the six. The surviving mutation is **the exact regression #63
-was filed to fix** — truncating the diagnostic — and 18/18 still pass. The item
-therefore ships without a test that would catch its own bug recurring, which is
-the precise failure the card's step-2 question is designed to surface.
+**Originally annotated BLOCKING on a claim that was wrong, and corrected here.**
+The first annotation said the surviving mutation was "the exact regression #63
+was filed to fix". It is not. The reviewer's mutation truncates `detail` to the
+first TWO lines (`slice(0, 2)`); the actual #63 bug truncated to ONE
+(`split("\n")[0]`). Verified: restore the real one-line bug and the suite goes
+**RED** — the test does catch the regression it was written for.
+
+What survives is a *near-miss variant*, so AC-001's regression IS pinned and only
+the AC's stated generality ("2+ unticked … names every unticked item") is not,
+because the fixture leaves one item unticked. That is "narrowed", which is
+exactly what the historical reviewer wrote before docking ac-coverage to 2/3 —
+and that judgement now looks defensible rather than negligent.
+
+This is the one finding where I think the reviewer over-blocked, and the
+correction is recorded rather than quietly folded in because it moves a rate:
+arm (a) goes to **FP 1/23**, not 0/23.
+
+*Why the other three test-vacuity findings are not affected: they target
+behaviour the fix NEWLY introduced — a `Path`-header guard, a `=== true`
+strictness check, an ordering instruction — so the mutation hits the AC's own
+claim directly and there is no prior bug it might be pinning instead.*
 
 **5. `issues-135-129-declared-boundary-parse` [arm a] — guard unpinned**
 
@@ -100,19 +117,23 @@ invariant with no discriminating test is untested.
 
 ## Result
 
-**5 BLOCKING, 1 ADVISORY.**
+**4 BLOCKING, 2 ADVISORY** (after the finding-4 correction).
 
-Every CLEAN rejection by both arms rests on at least one BLOCKING finding:
-
-| arm | rejections | all blocking? | false-positive rate |
+| arm | rejections | blocking basis? | false-positive rate |
 | --- | --- | --- | --- |
-| (a) in-session | `fix-advance` (1), `issue-63` (4), `issues-135-129` (5), `issue-74` (6) | yes | **0/23** |
-| (b) headless | `fix-advance` (1), `issue-146-147` (3) | yes | **0/23** |
+| (a) in-session | `fix-advance` (1) ✓, `issues-135-129` (5) ✓, `issue-74` (6) ✓, **`issue-63` (4) ✗** | 3 of 4 | **1/23** |
+| (b) headless | `fix-advance` (1) ✓, `issue-146-147` (3) ✓ | 2 of 2 | **0/23** |
 
-Both arms: **detection 23/23, FP 0/23, MCC +1.000.**
+| | arm (a) in-session | arm (b) headless |
+| --- | --- | --- |
+| detection | 23/23 | 23/23 |
+| false positives | **1/23** | **0/23** |
+| MCC | +0.978 | **+1.000** |
 
-**Quality now discriminates the arms not at all.** The entire measured
-difference between in-session and headless review is the 1.72× cost.
+The direction is unchanged from the unadjudicated result — headless is not
+worse — and the gap is still one item, which McNemar cannot separate from
+chance. **Quality remains unable to discriminate the two arms.** The entire
+reliable difference is the 1.72× cost.
 
 ## The consequence that outlives this adjudication
 
