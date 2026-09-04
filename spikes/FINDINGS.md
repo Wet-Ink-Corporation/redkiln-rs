@@ -1275,6 +1275,100 @@ rather than reviewer over-strictness.
 
 ---
 
+## F24 — ADJUDICATION: all six E3 rejections are factually TRUE. Both false-positive rates may be zero
+
+**Established by:** mechanical replication of every claim, 2026-09-04, in the
+frozen CLEAN fixtures the reviewers themselves saw. **Zero model cost** — every
+check is a mutation plus a local test run.
+
+**What this entry settles and what it does not.** It settles whether the
+reviewers' factual claims are *true*. It does **not** settle whether each
+warranted `changes-requested`, which is a severity judgement and belongs to
+Ryan's κ annotation (METHOD-E3 §7). The model that built the rig must not grade
+it.
+
+### Every claim replicated
+
+| item | arm | claim | replication |
+| --- | --- | --- | --- |
+| `issue-146-147-boundary-window` | b | AC-015's ordering test is vacuous | **CONFIRMED** — 36/36 pass with the ordering inverted |
+| `issue-63-advance-gate-diagnostic-truncated` | a | AC-001 untested under its own precondition | **CONFIRMED** — 18/18 pass with `detail` truncated |
+| `issues-135-129-declared-boundary-parse` | a | the `Path`-header guard is unpinned | **CONFIRMED** — 63/63 pass with the guard disabled |
+| `issue-74-plan-briefs-dead-plan-anchor` | a | the strictness claim is unproven | **CONFIRMED** — 28/28 pass with `=== true` relaxed |
+| `fix-advance-write-lock-gate-scope` | a + b | `basis` flips `evaluated`→`memoized` | **CONFIRMED end-to-end** |
+| `fix-advance-write-lock-gate-scope` | b | a refused entry gate stops rendering `produces` | **CONFIRMED end-to-end** |
+
+**Not one rejection was a hallucination.** Six for six.
+
+### The two behavioural claims, reproduced by running the real thing
+
+A probe test drove a genuine `advance --apply` through a passing memoized verify
+gate and read the recorded event. The only thing varied was the fix's own
+pre-flight line.
+
+| | recorded `gate_result.basis` |
+| --- | --- |
+| with the fix (pre-flight present) | **`memoized`** |
+| pre-flight removed (pre-fix) | **`evaluated`** |
+
+And with a *failing* gate, the item directory after the throw:
+
+| | contents |
+| --- | --- |
+| with the fix | `discover.md, plan.md, spec.md, story.md` |
+| pre-fix | the same **plus `implementation-report.md`** |
+
+Both are real, undocumented behaviour changes shipped by an approved fix. Two
+arms found the first one independently.
+
+### Why the reviewers could see this and the suite could not
+
+Four of the six are **mutation survivors**: the reviewer mutated the code and
+watched the suite stay green. That is S0.1's methodology, applied unprompted, by
+an agent that was only asked to review. It is the same behaviour F17 recorded
+when a reviewer mutation-tested a fixture on its own initiative.
+
+The suite cannot see the `basis` flip for a structural reason worth recording:
+`gateResults()` in `test/advance-lock-scope.test.ts` reduces each event to
+`{stage, pass}` and **never captures `basis`**. The fix's own tests pin the
+"reusing the verified result" *warning* but not the recorded basis it implies.
+
+### What it does to E3's numbers
+
+If every finding is accepted as blocking, both arms' false-positive rates go to
+**0/23**, MCC to **+1.000** for both, and the arms become identical on every
+measured axis — leaving the 1.72× cost difference as the sole discriminator.
+**That is the upper bound, not the result.** The lower bound is the reported
+4/23 and 2/23. The truth is in between and is Ryan's call, because four of the
+six are "the test is vacuous" rather than "the code is broken", and a reviewer
+may legitimately treat those as advisory rather than blocking.
+
+**The consequence for CLEAN's ground truth is the same either way, and it is the
+bigger finding:** five shipped-and-approved items carry defects their own tests
+do not pin. METHOD-E3 §5 defines CLEAN's ground truth as `approved` because the
+item shipped and a historical review passed it. **That definition is now known
+to be wrong for at least five of 23 items (22%).** Any false-positive rate
+measured against it is an upper bound on the true rate, for both arms.
+
+### Limits of this adjudication
+
+1. **Severity is not adjudicated** — only factual truth.
+2. `issue-74`'s **first** issue (the schema-less `safeAgent` dispatch) was not
+   replicated; only its second (the strictness mutation) was. The item's
+   rejection stands on the replicated one.
+3. The replications use the reviewers' own cited mutations. A mutation is
+   evidence a test does not pin a behaviour; it is not evidence the behaviour is
+   wrong.
+4. **Two of my own replication attempts were invalid before they were right.**
+   The first `issue-146-147` run reported a failure that was an artefact of my
+   edit converting LF→CRLF and breaking the extraction regex; the first
+   `issue-63` mutation broke the TypeScript transform through bad escaping.
+   Both were caught by reading the failure rather than the summary line. This is
+   the same line-ending class as F20's `\\?\` path bug and is now the third
+   occurrence in this programme.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has

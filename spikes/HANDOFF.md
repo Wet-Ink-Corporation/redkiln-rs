@@ -56,8 +56,19 @@ E3 is answered and the programme does not stop. **But the result is weaker than
 the headline reads**, and the next steps follow from that rather than from the
 numbers being good.
 
-**1. The κ adjudication (METHOD-E3 §7) — needs Ryan, not the model.**
-Five distinct shipped-and-approved items were rejected by at least one arm:
+**1. The κ adjudication (METHOD-E3 §7) — SEVERITY only; the facts are settled.**
+All six rejection records were replicated mechanically (**F24**): every claim is
+TRUE, six for six, none a hallucination. What remains is whether each warranted
+`changes-requested`, which is a judgement and is Ryan's. Four of the six are
+"the test is vacuous" rather than "the code is broken", and a reviewer may
+legitimately treat those as advisory.
+
+If all are accepted as blocking, both arms go to **0/23 FP and MCC +1.000** —
+that is the upper bound, not the result; the reported 4/23 and 2/23 are the
+lower. **Either way CLEAN's ground truth is wrong for at least 5 of 23 items
+(22%)**, so both measured FP rates are upper bounds on the true rate.
+
+The five items rejected by at least one arm:
 
 | item | (a) | (b) |
 | --- | --- | --- |
