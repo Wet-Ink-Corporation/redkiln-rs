@@ -1143,6 +1143,138 @@ the dispatch in flight and never the arm.
 
 ---
 
+## F23 — E3 RESULT: the kill criterion does not fire. Detection is tied at ceiling; the arms are statistically indistinguishable
+
+**Established by:** 92 scored dispatches — both arms × both conditions × all 23
+items — against `claude` 2.1.259, 2026-09-03/04, Opus/`xhigh`, corpus pin
+`47faec9f`. `spikes/results/e3.jsonl`. **Total spend $153.86.**
+
+### The comparison E3 was built to make
+
+| | arm (a) in-session | arm (b) headless |
+| --- | --- | --- |
+| **S-SILENT detection** | **23/23** | **23/23** |
+| wrong-reason gap | 0 | 0 |
+| **CLEAN false positives** | **4/23** | **2/23** |
+| MCC | +0.839 | +0.917 |
+| verdict agreement on CLEAN | 19/23 (83%) | 19/23 (83%) |
+
+### The kill criterion, stated in METHOD-E3 §9, does NOT fire
+
+> "If arms (b) and (c) both show materially lower S-SILENT detection than arm
+> (a) — a drop the E0-sized test can detect — at comparable or worse
+> false-positive rate, the inversion thesis fails, the RFC recommendation is
+> withdrawn, and the programme stops."
+
+Detection is **identical and at ceiling**: 23/23 in both arms, zero discordant
+pairs. There is no drop to detect, materially or otherwise. The headless arm's
+false-positive rate is *lower*, not worse. **The thesis is not killed.**
+
+### But this is NOT evidence that headless review is better
+
+Two reasons, and both matter more than the headline.
+
+**1. The false-positive difference is not significant.** The design is paired,
+so the test is McNemar's on the discordant pairs: 3 items where (a) rejected and
+(b) approved, 1 the other way. **Exact two-sided p = 0.625.** Four disagreements
+out of 23 is what this design cannot distinguish from chance. Reporting "2/23
+beats 4/23" as a finding would be exactly the over-reading the pre-registration
+exists to prevent.
+
+**2. Detection saturated, so the primary metric has no discriminating power.**
+METHOD-E3 §9 anticipated a *floor* effect — "if every arm, including (a),
+detects near zero, the finding is about the seeds or the rubric" — and made it
+a reason to report E3 inconclusive rather than fire the criterion. **The mirror
+case happened and the same logic applies.** At 23/23 versus 23/23 the primary
+metric cannot separate two arms that differ by any amount smaller than "misses
+a defect it was pointed at". The seeds are real historical defects with the
+whole spec supplied and the fix's file list named; they are, evidently, not
+hard. The comparison therefore rests entirely on the co-primary FPR, which is
+underpowered at n=23.
+
+**The honest summary: on this corpus, at this difficulty, the two arms are
+indistinguishable.** That is a genuine result — it refutes the specific fear
+that headless dispatch degrades review quality — but it is not the same as
+showing headless is superior, and the write-up must not slide between the two.
+
+### What separates them is cost, not quality
+
+| | arm (a) in-session | arm (b) headless |
+| --- | --- | --- |
+| total | **$97.39** | **$56.47** |
+| S-SILENT median wall | 242s | **128s** |
+| CLEAN median wall | 769s | **682s** |
+| median turns | 3 (parent) | 15 / 36 |
+
+**The in-session shape cost 1.72× the headless one for the same detection.**
+That is the RFC's cost argument, measured rather than assumed, and it is the
+first quality-controlled cost comparison in the programme: same card, same
+model, same effort, same fixtures, same material, one flipped flag.
+
+The turn counts show why the comparison is fair rather than an artefact: arm
+(a)'s *parent* takes ~3 turns because the work happens inside the subagent,
+whose 15-odd inspections are recorded separately. The parent is a relay, and
+that is what it was built to be.
+
+### The arm (a) validity checks held on every record
+
+| check | result |
+| --- | --- |
+| `dispatched_card` | **46/46** |
+| `parent_inspected` | **0/46** |
+| `dispatches > 1` | 0/46 |
+| subagent inspections | median 15 |
+
+**Not one parent reviewed the tree for itself.** The confound that would have
+made arm (a) a disguised second copy of arm (b) — a parent doing the review and
+merely nominally delegating — did not occur once in 46 dispatches. This is
+checked, not assumed: a parent's own calls carry `parent_tool_use_id: null`,
+the subagent's carry the `Agent` tool-use id.
+
+### The disclosed asymmetry, and what it did
+
+METHOD-E3 §6 records that arm (a)'s digest is authored by the **parent relaying**
+the subagent's findings, because a subagent returns prose to its parent, while
+arm (b)'s digest is written by the reviewer itself. Relay loss was a live
+explanation for any arm (a) shortfall.
+
+**It did not cost arm (a) any detection** — 23/23 with the wrong-reason gap at
+zero means every relayed rejection still carried a correct file citation. Relay
+therefore cannot explain the FP difference either, which is one more reason to
+treat that difference as noise.
+
+### The four disagreements, all on CLEAN
+
+| item | (a) | (b) |
+| --- | --- | --- |
+| `issue-63-advance-gate-diagnostic-truncated` | REJECT | approve |
+| `issue-74-plan-briefs-dead-plan-anchor` | REJECT | approve |
+| `issues-135-129-declared-boundary-parse` | REJECT | approve |
+| `issue-146-147-boundary-window` | approve | REJECT |
+
+Together with arm (b)'s two, **five distinct shipped-and-approved items were
+rejected by at least one arm.** Every one needs the §7 κ adjudication against
+Ryan's blind annotation before any false-positive rate can be called final —
+CLEAN's ground truth is "this shipped and a review approved it", which is not
+"this is defect-free". `fix-advance-write-lock-gate-scope` is the only item both
+arms rejected, which makes it the strongest candidate for a real missed defect
+rather than reviewer over-strictness.
+
+### Limits, restated because the headline invites over-reading
+
+1. **n=23, one repo, one operator, one domain**, and the FP comparison is
+   underpowered at that n.
+2. **Detection is at ceiling**, so the primary metric discriminates nothing.
+   A harder seed set — novel defects rather than reverted fixes, or specs
+   withheld — is what would give this design power.
+3. **No item was run twice.** 23/23 is one sample of a stochastic process, and
+   E0's per-item stability is still unmeasured.
+4. **Arm (c) was not run**, per §8's pre-declared reduction order.
+5. **The five rejections are unadjudicated**, and the FPR is provisional until
+   they are.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has

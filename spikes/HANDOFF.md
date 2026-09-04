@@ -1,4 +1,4 @@
-# Handoff — 2026-09-03
+# Handoff — 2026-09-04
 
 Written at the close of the session that first ran E3. Everything decided is
 committed; nothing lives only in conversation. A fresh session needs this file,
@@ -23,9 +23,10 @@ tree clean.
 | **E2** effort | **closed** | effort pins per dispatch; RFC R2 falsified |
 | **E0** headroom | partial | sizing bound only; cache-cost gate **struck** (disclosed) |
 | **E0** sizing | **measured** | Opus/xhigh: **+0.03** five_hour per S-SILENT dispatch, **~+0.077** per CLEAN |
-| **E3** arm (a) | **not built** | the entire comparison; nothing can be concluded without it |
+| **E3** arm (a) | complete | 23/23 detection, 4/23 FP; **0/46 records had the parent review for itself** |
+| **E3** cost | measured | in-session costs **1.72×** headless for the same detection ($97.39 vs $56.47) |
 | **E0** variance | not started | `--repeat N` on the E3 rig; no item run twice yet |
-| **E3** arm (b) | **COMPLETE** | **23/23 detection, 2/23 FP, MCC +0.917** — arm (a) unbuilt, so the gate still cannot fire |
+| **E3** | **ANSWERED** | **kill criterion does NOT fire.** Detection tied 23/23; arms statistically indistinguishable (McNemar p=0.625) |
 | **E4 / E5 / E6** | gated | behind E3 |
 | **H2** suspension | done | **174/174 lossless** across a real process boundary |
 | **H3** world drift | done | 7% overall; **3.6× more likely** on gates > 1 h |
@@ -49,46 +50,57 @@ tree clean.
 
 ---
 
-## Next action: build arm (a). Nothing else moves the thesis.
+## Next action: adjudicate the five rejections, then decide what E3 licenses
 
-Arm (b) is done — every one of the 23 fix-lane items, in both conditions, 46
-scored dispatches, $56.47. **It cannot pass or fail anything on its own.**
-METHOD-E3 §9 fires on a comparison, and arm (a) — a headless parent whose prompt
-dispatches `Task({subagent_type: "redkiln:redkiln-review"})` — does not exist.
+E3 is answered and the programme does not stop. **But the result is weaker than
+the headline reads**, and the next steps follow from that rather than from the
+numbers being good.
 
-Arm (a) needs, on top of what `review-probe` already does:
+**1. The κ adjudication (METHOD-E3 §7) — needs Ryan, not the model.**
+Five distinct shipped-and-approved items were rejected by at least one arm:
 
-- a parent prompt that dispatches the card as a **subagent** rather than adopting
-  it, with `--agents` still supplying the card;
-- `subagent_stats.spawned >= 1` asserted, or the record is **void** (METHOD-E3
-  §6). Without it, "the subagent reviewed and disagreed" and "the subagent never
-  spawned" are indistinguishable. `subagents_spawned` is already on the record;
-- the same digest schema. Note the parent, not the child, must carry
-  `StructuredOutput` (F20) — verify which one the schema binds to before
-  spending, on **haiku**, exactly as F20 was caught.
+| item | (a) | (b) |
+| --- | --- | --- |
+| `fix-advance-write-lock-gate-scope` | REJECT | REJECT |
+| `issue-63-advance-gate-diagnostic-truncated` | REJECT | approve |
+| `issue-74-plan-briefs-dead-plan-anchor` | REJECT | approve |
+| `issues-135-129-declared-boundary-parse` | REJECT | approve |
+| `issue-146-147-boundary-window` | approve | REJECT |
+
+CLEAN's ground truth is "this shipped and a review approved it", which is not
+"this is defect-free". Until these are adjudicated **both false-positive rates
+are provisional**, and with them both MCCs. `fix-advance-write-lock-gate-scope`
+is the one both arms rejected, which makes it the best candidate for a real
+missed defect. This must not be settled by the model that built the rig.
+
+**2. Detection is at ceiling, so the primary metric discriminated nothing.**
+23/23 versus 23/23 is not a tie that favours anyone — it is a metric with no
+power at this difficulty. §9 already treats an all-arms *floor* as grounds for
+"inconclusive"; the mirror case deserves the same treatment. A harder seed set
+is the fix: novel defects rather than reverted fixes, or the spec withheld, or
+the fix's file list not named in the prompt. **That is the highest-value next
+experiment**, and it is cheap to specify because the rig exists.
+
+**3. E0 per-item stability is still unmeasured.** `--repeat N` on any item.
+23/23 is one sample of a stochastic process, and a variance estimate is owed
+before anyone quotes the rate.
+
+**4. Arm (c)** — the mitigation arm — was correctly not run: §8's reduction
+order drops it unless (b) loses, and (b) did not lose.
+
+### How to run dispatches (F22), unchanged and still load-bearing
+
+- **Foreground under the tool limit: never killed.** All S-SILENT fits.
+- **Anything reaching the harness background: killed**, at any age.
+- **`Start-Process` detached: survives.** One ran 12,000s through ~14 killed
+  watchers. Use it for CLEAN, and wait on the PID from the foreground.
+- Arm (a) runs **slower** than arm (b) — its CLEAN dispatches hit the 2400s
+  ceiling once. Pass `--timeout-secs 3600` for arm (a) CLEAN.
 
 ```
 cd spikes/runner && cargo build     # cargo test/clippy do NOT rebuild the bin
 python results/audit-e3.py results/e3.jsonl
 ```
-
-### How to run dispatches, learned the hard way (F22)
-
-- **Foreground, under the tool limit: never killed.** All S-SILENT fits.
-- **Anything that reaches the harness background: killed**, at any age —
-  including a foreground command promoted on timeout.
-- **`Start-Process` detached: survives.** One ran 12,000s through ~14 killed
-  watchers and finished the whole CLEAN set. Use it for anything long:
-
-```powershell
-Start-Process -FilePath "...edkiln-spike-runner.exe" `
-  -ArgumentList 'review-probe','--out','...\e3.jsonl','--condition','clean','--limit','20' `
-  -WorkingDirectory "...unner" -RedirectStandardError "...\sweep.err" `
-  -WindowStyle Hidden -PassThru
-```
-
-Then wait on the PID from the foreground. Resume is keyed per `(arm, slug,
-repeat)`, so every kill costs the dispatch in flight and never the arm.
 
 ## What is genuinely unresolved
 
@@ -121,6 +133,11 @@ repeat)`, so every kill costs the dispatch in flight and never the arm.
    annotation** (§7 κ) — it must not be settled by the model that built the rig.
 9. **No item has been run twice.** E0's per-item stability (`--repeat N`) is
    still unmeasured, so 23/23 is one sample of a stochastic process.
+10. **E3's primary metric saturated.** Both arms detect everything, so the
+    design cannot rank them; the whole comparison fell to an underpowered
+    co-primary FPR (McNemar p=0.625). E3 answers "does headless review
+    degrade?" with "not detectably, on defects this easy" — and nothing
+    stronger. E4/E5/E6 inherit that limit.
 
 ---
 
