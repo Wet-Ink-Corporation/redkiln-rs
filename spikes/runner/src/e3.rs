@@ -127,7 +127,28 @@ pub fn digest_schema() -> serde_json::Value {
 pub fn build_fixture_at(redkiln: &Path, fixture: &Path, commit: &str) -> Result<bool> {
     if fixture.exists() {
         // `git clean` cannot remove a .git dir; rebuild from scratch each time.
-        std::fs::remove_dir_all(fixture)?;
+        //
+        // Retried: the REVIEWER runs the suite inside this fixture, so a node
+        // process can still hold a handle when the next item starts, and
+        // Windows fails the removal with os error 32. A transient lock must not
+        // abort a sweep that resume would otherwise carry.
+        let mut last = None;
+        for attempt in 0..10 {
+            match std::fs::remove_dir_all(fixture) {
+                Ok(()) => {
+                    last = None;
+                    break;
+                }
+                Err(e) => {
+                    last = Some(e);
+                    std::thread::sleep(std::time::Duration::from_millis(500 * (attempt + 1)));
+                }
+            }
+        }
+        if let Some(e) = last {
+            return Err(anyhow::Error::new(e)
+                .context(format!("could not clear fixture {}", fixture.display())));
+        }
     }
     std::fs::create_dir_all(fixture)?;
 
@@ -396,6 +417,37 @@ pub fn build_prompt(
             .map(|f| format!("  - {f}"))
             .collect::<Vec<_>>()
             .join("\n"),
+        spec = truncate(spec, 24_000),
+        report = truncate(report, 16_000),
+    )
+}
+
+/// The BLIND prompt (METHOD-E3H §9): no AC enumeration, no file list.
+///
+/// Tier 1 falsified the prediction that a subtler DEFECT would lower detection.
+/// The lever it left untouched is that the prompt still hands over the task:
+/// which criteria to check, and which files the change touched. This drops
+/// both, so the reviewer must locate the relevant source itself.
+///
+/// `spec.md` is still passed and still states the criteria in prose — this
+/// withholds the CHECKLIST and the POINTER, not the criteria, and §9 says so
+/// rather than letting "blind" imply more than it does.
+pub fn build_prompt_blind(slug: &str, spec: &str, report: &str) -> String {
+    format!(
+        "You are reviewing story `{slug}` in this repository.
+
+         Your working directory IS the repository under review. Read the actual          source and tests — do not take the implementation report at face value.
+
+         ===== spec.md =====
+{spec}
+
+         ===== implementation-report.md =====
+{report}
+
+         ===== end of artifacts =====
+
+         Adversarially verify this story against the code that is actually          present. For every blocking finding, populate `files` with the          repo-relative paths it concerns. Return the structured digest.",
+        slug = slug,
         spec = truncate(spec, 24_000),
         report = truncate(report, 16_000),
     )
@@ -695,6 +747,24 @@ mod tests {
             .as_array()
             .unwrap();
         assert!(req.iter().any(|v| v == "files"));
+    }
+
+    #[test]
+    fn the_blind_prompt_withholds_the_checklist_and_the_pointer() {
+        let p = build_prompt_blind("s", "SPEC-BODY AC-001 something", "REPORT-BODY");
+        assert!(p.contains("SPEC-BODY"), "the spec is still supplied");
+        assert!(
+            !p.contains("acceptance criteria to verify"),
+            "the AC enumeration must be gone"
+        );
+        assert!(
+            !p.contains("scoped to touch"),
+            "the fix's file list must be gone"
+        );
+        let low = p.to_lowercase();
+        for leak in ["reverted", "seeded", "defect was", "mutation", "s-subtle"] {
+            assert!(!low.contains(leak), "blind prompt leaks `{leak}`");
+        }
     }
 
     #[test]

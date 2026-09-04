@@ -174,6 +174,11 @@ struct ReviewArgs {
     limit: Option<usize>,
     #[arg(long)]
     only: Option<String>,
+    /// METHOD-E3H §9 tier 2: drop the AC enumeration and the fix's file list
+    /// from the prompt, so the reviewer must locate the relevant source itself.
+    /// Recorded in the arm label, so blind and sighted records never pool.
+    #[arg(long, default_value_t = false)]
+    blind: bool,
     /// E3-H seed definitions (one JSON object per line). Only read for
     /// `--condition s-subtle`.
     #[arg(long, default_value = "../results/e3h-seeds.jsonl")]
@@ -632,7 +637,11 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         {
             break;
         }
-        let arm_label = format!("{}-{}", args.arm, condition);
+        let arm_label = if args.blind {
+            format!("{}-blind-{}", args.arm, condition)
+        } else {
+            format!("{}-{}", args.arm, condition)
+        };
         let resume_key = format!("E3/{arm_label}/{}#r{}", item.slug, args.repeat);
         if done.contains(&resume_key) {
             eprintln!("  {:<44} skipped (recorded)", item.slug);
@@ -741,13 +750,21 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         let read = |name: &str| {
             std::fs::read_to_string(redkiln.join(&item.dir).join(name)).unwrap_or_default()
         };
-        let brief = e3::build_prompt(
-            &item.slug,
-            &read("spec.md"),
-            &read("implementation-report.md"),
-            &item.ac_ids,
-            &item.fix_files,
-        );
+        let brief = if args.blind {
+            e3::build_prompt_blind(
+                &item.slug,
+                &read("spec.md"),
+                &read("implementation-report.md"),
+            )
+        } else {
+            e3::build_prompt(
+                &item.slug,
+                &read("spec.md"),
+                &read("implementation-report.md"),
+                &item.ac_ids,
+                &item.fix_files,
+            )
+        };
         // Arm (a) forwards arm (b)'s brief verbatim inside a dispatch wrapper,
         // so the two arms review identical material with an identical card.
         let prompt = if arm_a {

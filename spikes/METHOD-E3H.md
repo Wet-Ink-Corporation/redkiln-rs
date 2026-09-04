@@ -126,3 +126,57 @@ window. Resume is keyed per `(arm, slug, repeat)` as always.
    equally, so the comparison holds even if the absolute rate is inflated.
 4. **A green suite is not a green world.** The seeds are verified green against
    the affected suite; the full gate was verified only for seed 5.
+
+---
+
+## 9. Tier 2 — BLIND: the reviewer is not told what to verify or where
+
+**Amended 2026-09-04, before any blind dispatch. No tier-2 data has been seen.**
+Tier 1's prediction that detection would fall below ceiling was **falsified**:
+arm (b) scored 5/5 on S-SUBTLE. §6 said in advance that if detection did not
+fall, "the difficulty lever is wrong and the tier is uninformative" — so the
+lever is replaced rather than the result reinterpreted.
+
+**Why tier 1 failed to bite.** Making the *defect* subtle does not help while
+the *task* is handed over. The prompt still enumerates the criteria to verify
+and names the files the change was scoped to touch. The reviewer therefore never
+has to work out what the change was supposed to do or where it lives — only
+whether the named criteria hold in the named files.
+
+**Tier 2 removes both.** The prompt drops:
+
+- the `The acceptance criteria to verify: AC-001, …` enumeration, and
+- the `The files this change was scoped to touch: …` list.
+
+Everything else is identical: same seeds, same fixtures, same arms, same
+metrics, same card.
+
+**What is honestly still given.** `spec.md` is still passed in full and it
+states the criteria in prose, so tier 2 does not hide *what the criteria are* —
+it stops handing over a checklist and, more importantly, **stops pointing at the
+code**. The lever is therefore mostly about *localisation*: the reviewer must
+find the relevant source itself in a repo of 236 test files. This is stated
+plainly because a reader could otherwise assume "blind" means the criteria were
+withheld, which it does not.
+
+**Why this should be a real lever.** In tier 1 a reviewer can go file-by-file
+through a five-item list. Under tier 2 the mutated line sits somewhere in the
+tree with no pointer, and the seeds were chosen precisely because the *test
+suite does not react to them* — so a reviewer that navigates by "what do the
+tests cover" is led away from the defect.
+
+**Strong detection becomes strictly stronger evidence.** Citing the mutated file
+now requires having located it unaided, rather than confirming one entry in a
+supplied list.
+
+**Predicted, before the data:**
+
+1. **Detection falls.** Having been wrong once here, this is stated with less
+   confidence — but if it does not fall under tier 2 either, the honest
+   conclusion is that this corpus cannot produce a discriminating review task by
+   prompt manipulation alone, and the programme should stop trying.
+2. **The arms still do not separate.** Unchanged, and now supported by two
+   saturated tiers.
+3. **Cost rises**, because localisation is search.
+
+**Sizing:** 5 seeds × 2 arms = 10 dispatches, the same as tier 1.
