@@ -20,7 +20,7 @@
 
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::Serialize;
 
 /// The card, loaded from the frozen corpus rather than transcribed.
@@ -258,6 +258,99 @@ fn link_node_modules(redkiln: &Path, fixture: &Path) -> bool {
             false
         }
     }
+}
+
+/// One E3-H seed: a mutation that leaves the affected suite green.
+///
+/// Pre-registered in `spikes/METHOD-E3H.md`. Unlike S-SILENT, the fix is fully
+/// PRESENT and a single line of it is wrong — the reviewer cannot succeed by
+/// noticing that code is absent.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Seed {
+    pub slug: String,
+    /// `line` = replace `find` with `replace`; `revert-file` = restore `file`
+    /// to its pre-fix content.
+    pub kind: String,
+    pub file: String,
+    #[serde(default)]
+    pub find: Option<String>,
+    #[serde(default)]
+    pub replace: Option<String>,
+    pub ac_violated: String,
+}
+
+/// Build an S-SUBTLE fixture: the fix, with one line wrong, and no way back.
+///
+/// F17 generalised. A mutation left in the working tree shows up in `git diff`;
+/// one committed on top of the fix leaves the correct version at `HEAD~1`.
+/// Either hands a reviewer with `Bash` the answer. So the mutation is amended
+/// INTO the single fetched commit and the original is then unreferenced and
+/// pruned, leaving a one-commit history that has never contained the fix as
+/// written.
+pub fn build_subtle_fixture(
+    redkiln: &Path,
+    fixture: &Path,
+    sha: &str,
+    seed: &Seed,
+) -> Result<bool> {
+    let node_modules = build_fixture_at(redkiln, fixture, sha)?;
+
+    let run = |args: &[&str]| -> Result<()> {
+        let out = std::process::Command::new("git")
+            .args(args)
+            .current_dir(fixture)
+            .output()?;
+        anyhow::ensure!(
+            out.status.success(),
+            "git {args:?} failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+        Ok(())
+    };
+
+    let target = fixture.join(&seed.file);
+    match seed.kind.as_str() {
+        "line" => {
+            let find = seed.find.as_deref().unwrap_or_default();
+            let replace = seed.replace.as_deref().unwrap_or_default();
+            let body = std::fs::read_to_string(&target)
+                .with_context(|| format!("reading {}", target.display()))?;
+            // Exactly once: a mutation that matched twice would change more
+            // than the seed claims, and one that matched zero times would ship
+            // an UNMUTATED tree whose ground truth says `changes-requested` —
+            // manufacturing a miss out of a silent no-op.
+            let hits = body.matches(find).count();
+            anyhow::ensure!(
+                hits == 1,
+                "seed `{}`: anchor occurs {hits} times in {} (expected exactly 1)",
+                seed.slug,
+                seed.file
+            );
+            std::fs::write(&target, body.replacen(find, replace, 1))?;
+        }
+        "revert-file" => {
+            let parent = parent_of(redkiln, sha)?;
+            let out = std::process::Command::new("git")
+                .args(["show", &format!("{parent}:{}", seed.file)])
+                .current_dir(redkiln)
+                .output()?;
+            anyhow::ensure!(
+                out.status.success(),
+                "seed `{}`: could not read {} at {parent}",
+                seed.slug,
+                seed.file
+            );
+            std::fs::write(&target, out.stdout)?;
+        }
+        other => anyhow::bail!("seed `{}`: unknown kind `{other}`", seed.slug),
+    }
+
+    // Amend so the mutation IS the commit, then drop the original object.
+    run(&["add", "-A"])?;
+    run(&["commit", "-q", "--amend", "--no-edit"])?;
+    run(&["reflog", "expire", "--expire=now", "--all"])?;
+    run(&["gc", "--prune=now", "-q"])?;
+    Ok(node_modules)
 }
 
 /// Confirm the fix really is unreachable — a fixture that silently kept it

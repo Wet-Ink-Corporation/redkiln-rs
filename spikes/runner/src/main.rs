@@ -174,6 +174,10 @@ struct ReviewArgs {
     limit: Option<usize>,
     #[arg(long)]
     only: Option<String>,
+    /// E3-H seed definitions (one JSON object per line). Only read for
+    /// `--condition s-subtle`.
+    #[arg(long, default_value = "../results/e3h-seeds.jsonl")]
+    seeds: PathBuf,
     /// Charter §12's declared margins. E3 is the most expensive experiment in
     /// the programme and was the one command that never honoured them.
     #[arg(long, default_value_t = 0.90)]
@@ -545,8 +549,29 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
     let condition: &'static str = match args.condition.as_str() {
         "clean" => "clean",
         "s-silent" => "s-silent",
-        other => anyhow::bail!("unknown condition `{other}` (expected clean or s-silent)"),
+        // E3-H (METHOD-E3H): the fix is fully PRESENT and one line of it is
+        // wrong. Harder than s-silent along the axis that matters — the
+        // reviewer cannot succeed by noticing that code is absent.
+        "s-subtle" => "s-subtle",
+        other => {
+            anyhow::bail!("unknown condition `{other}` (expected clean, s-silent or s-subtle)")
+        }
     };
+    let seeds: Vec<e3::Seed> = if condition == "s-subtle" {
+        let text = std::fs::read_to_string(&args.seeds)
+            .with_context(|| format!("reading --seeds {}", args.seeds.display()))?;
+        text.lines()
+            .filter(|l| !l.trim().is_empty())
+            .filter_map(|l| serde_json::from_str::<e3::Seed>(l).ok())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    anyhow::ensure!(
+        condition != "s-subtle" || !seeds.is_empty(),
+        "s-subtle needs seeds; none parsed from {}",
+        args.seeds.display()
+    );
     let env = hygiene::assert_clean(claude_bin).await?;
     let redkiln = std::fs::canonicalize(&args.redkiln)?;
     let worktree = std::fs::canonicalize(&args.worktree)?;
@@ -641,6 +666,9 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         // auditable from the journal alone, without reading a console log.
         let node_modules_linked;
         let fix_unreachable;
+        // E3-H: which criterion this seed violates, so a reviewer's citation
+        // can be read against the AC it was supposed to catch.
+        let mut ac_violated: Option<String> = None;
         if condition == "s-silent" {
             let fixture = worktree
                 .parent()
@@ -665,6 +693,24 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
                 eprintln!("  {:<44} EXCLUDED (no code or tests)", item.slug);
                 continue;
             }
+        } else if condition == "s-subtle" {
+            let Some(seed) = seeds.iter().find(|s| s.slug == item.slug) else {
+                continue; // not an E3-H seed; E3-H runs a 5-item subset
+            };
+            let fixture = worktree
+                .parent()
+                .unwrap_or(&worktree)
+                .join(format!("e3-subtle-{}", item.slug));
+            node_modules_linked = e3::build_subtle_fixture(&redkiln, &fixture, &sha, seed)?;
+            // The mutation is amended INTO the single commit and the original
+            // pruned, so the correct line is not recoverable from the fixture.
+            e3::assert_fix_unreachable(&fixture, &sha)?;
+            fix_unreachable = true;
+            review_cwd = fixture;
+            // Exactly the one file the mutation touched — which makes the
+            // strong-detection file test sharper here than in E3.
+            reverted = vec![seed.file.clone()];
+            ac_violated = Some(seed.ac_violated.clone());
         } else {
             // CLEAN is built the same way and to the same depth, landing on the
             // fix commit instead of its parent. Symmetry is deliberate: were
@@ -826,6 +872,7 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             "outcome": if scored.is_some() && adopted { "ok" } else { "void" },
             "void_reason": void_reason,
             "node_modules_linked": node_modules_linked,
+            "ac_violated": ac_violated,
             "fix_unreachable": fix_unreachable,
             "arm": arm_label,
             "condition": condition,
