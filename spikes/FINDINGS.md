@@ -1369,6 +1369,122 @@ measured against it is an upper bound on the true rate, for both arms.
 
 ---
 
+## F25 — ROOT CAUSE: Red→Green is evidenced at TEST granularity, but an AC is a claim about ONE ASSERTION
+
+**Established by:** the corpus's own review and report artifacts plus targeted
+replication, 2026-09-04. Zero model cost.
+**Question:** why did a process that mandates a failing test per AC ship five
+items whose ACs no test pins?
+
+### What it is not
+
+**Not a detection-technique gap.** 11 of 23 historical reviews used mutation
+testing. Cross-tabulated against the items E3 rejected: 3 of 12 non-mutating
+reviews, 2 of 11 mutating ones. The rates are the same and the hypothesis is
+dead.
+
+**Not uniformly a miss, either.** `issue-63`'s historical reviewer **found the
+exact defect**, wrote it down —
+
+> "the fixture uses 2 required items with only ONE left unticked, while the AC's
+> GIVEN specifies '2+ required items unticked' … This narrows the AC-001 pin
+> without invalidating it"
+
+— docked `ac-coverage` to 2/3, and approved anyway. The other four scored
+`ac-coverage 3/3` and `test-integrity 3/3`. So one case is a graded-rubric
+judgement and four are genuine misses; no single story covers both.
+
+### The mechanism, for the four genuine misses
+
+`forge-fix` mandates **Red → Green: a failing test per AC**. The
+`implementation-report.md` records it in a TDD Evidence table, and the reviewer
+checks that table. Both are honest. Both are satisfied by a test that does not
+pin its AC.
+
+**Because a test is red if ANY of its assertions fails, and an AC is a claim
+about ONE of them.**
+
+`issue-146-147` AC-015 is the clean demonstration. Its test carries two
+assertions:
+
+```js
+expect(flat).toMatch(/redkiln record-links/);        // does the instruction exist?
+expect(flat).toMatch(/after[^.]{0,40}commit/);       // is it ordered after the commit?
+```
+
+| probe | result |
+| --- | --- |
+| remove step 7 entirely (the pre-fix state) | **RED** — on assertion 1 |
+| keep step 7, invert the ordering to "FIRST, before the commit" | **36/36 GREEN** |
+
+So the test genuinely was red before the fix, and the report says so:
+
+> "AC-015 … **RED pre-fix, same static proof (the ordering words did not exist)
+> → GREEN**"
+
+That sentence is literally true and quietly conflates the two assertions: the
+redness came from the instruction being *absent*, not from the ordering being
+*wrong*. **A new feature's test is trivially red pre-fix because the feature
+does not exist.** Red→Green is therefore satisfied for free, and the AC's actual
+claim is never exercised.
+
+This generalises to the other three, all of which pin behaviour their fix newly
+introduced — a `Path`-header guard, a `=== true` strictness check, an ordering
+instruction. Each is red pre-fix because the feature is absent; each survives
+mutation of the specific claim.
+
+### The corpus already knows the answer, and applies it inconsistently
+
+The same `issue-146-147` report marks a *different* criterion:
+
+> "AC-017 … RED pre-fix → GREEN, and **mutation-proven**"
+
+The author mutation-proved AC-017 and not AC-015. Nothing in the process
+requires it per AC, so it is applied where someone thought of it. **Mutation
+against the POST-fix tree is the only evidence that an assertion discriminates;
+redness against the PRE-fix tree is not, and the two are recorded in the same
+column as if they were.**
+
+### Remediation, cheapest first
+
+1. **Make the Red claim assertion-granular.** The TDD Evidence table should name
+   *which assertion* went red and why. AC-015's row could not have been written:
+   its ordering assertion never failed. This is a template change plus a
+   reviewer check, and it costs nothing to run.
+2. **Require post-fix mutation per AC, not per story.** One line per AC: the
+   mutation applied and the test that went red. The corpus already does this for
+   some ACs, so it is a codification rather than an invention.
+3. **Give the review card the operational form of its own question.** It already
+   asks "is there a test that would fail if the behaviour regressed?" — the
+   answer is only knowable by mutating. E3's arms did this unprompted on five
+   items; the card should require it.
+4. **Bind the rubric to the verdict** for the `issue-63` class: today a reviewer
+   can dock `ac-coverage` to 2/3 for an AC whose pin is narrower than the AC and
+   still return `approved`. Either that deduction should block, or the card's
+   "untested → changes-requested" clause should say that a narrowed pin is not
+   "untested". At present the card contains a hard rule and a graded instrument
+   that quietly absorbs findings the hard rule would block on.
+
+### The finding that complicates all of the above
+
+**A CLEAN rejection did not replicate.** `issue-146-147` arm (b), same fixture,
+same prompt, same model and effort:
+
+| repeat | verdict |
+| --- | --- |
+| 1 | `changes-requested` — found the vacuous AC-015 test |
+| 2 | **`approved`** |
+
+The reviewer that catches this catches it *sometimes*. That means the historical
+review and E3's arms may be **two draws from one stochastic process rather than
+two different competences** — "the historical reviewer missed it" and "E3's arm
+found it" are then the same reviewer on different days. It also means every rate
+in F23 and the adjudication is a single draw, and the remediation above is worth
+more than any per-arm number, because it converts a probabilistic catch into a
+required procedure.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has
