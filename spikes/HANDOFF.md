@@ -215,6 +215,15 @@ spike repo because redkiln is frozen; move it to
 amendment, updated 2026-09-04 with the E3 result. §14.5 is
 `references/2026-09-04-findings-for-product.md`.
 
+**Design-implications note, published 2026-09-04:**
+<https://claude.ai/code/artifact/dbe80d02-c642-4b53-98f0-257305c768e0>
+("Bet 1, Measured"). Ties every finding back to the RFC's §2 component table —
+six components, each with a typed state and a citation — plus the three design
+requirements the RFC does not contain. **Private until shared from the page's
+share menu.** It is a rendering of what is already in `FINDINGS.md`, the RFC
+amendment and the Run 3 scorecard; those files remain the source of truth, and
+the artifact must be republished from them if they change.
+
 **Run 3's headline, because it needs acting on:** `forge-fix.js`'s review
 consumer is `if (review && review.pass === false)`, which treats an ABSENT
 verdict as approval — and F20 is a measured mechanism that produces exactly
