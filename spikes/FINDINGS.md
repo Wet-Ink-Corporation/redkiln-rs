@@ -1595,6 +1595,104 @@ and nothing here bounds it.
 
 ---
 
+## F27 — E0 VARIANCE: detection is stable, the verdict is not, and half of E3's arm disagreements were within-arm noise
+
+**Established by:** 33 repeat dispatches, 2026-09-04, Opus/`xhigh`, corpus pin
+`47faec9f`. `spikes/results/e0-stability.jsonl`, held in a **separate file** so
+repeats can never inflate E3's n. Pre-registered in `METHOD.md` (E0), amended
+that day to n=3 breadth-over-depth, disclosed before the data.
+
+### The result splits cleanly along one line
+
+| what varies | n | flaky items |
+| --- | --- | --- |
+| **detection** (`s-silent`, strong detection) | 7 items × 3 draws | **0 / 7** |
+| **verdict** (`clean`, approve vs reject) | 4 items × 2–3 draws | **2 / 4** |
+
+**Detection did not vary once in 21 draws** — exact one-sided 95% lower bound
+**86.7%** on the per-draw detection rate. Every item classified *always-detect*.
+
+**The verdict varied on half the items measured.**
+
+| item | draws |
+| --- | --- |
+| `issue-146-147-boundary-window` | REJECT / approve / REJECT |
+| `issue-63-advance-gate-diagnostic-truncated` | approve / **REJECT** |
+| `fix-advance-write-lock-gate-scope` | REJECT / REJECT |
+| `issue-62-new-stale-pinned-template` | approve / approve |
+
+### The finding that reaches back into E3
+
+E3 recorded **four CLEAN disagreements between the arms**, and they were the
+entire basis for arm (a)'s 4/23 versus arm (b)'s 2/23 false-positive rates. Two
+of those four are now demonstrated to be **within-arm variance, not an arm
+difference**:
+
+| item | E3 read as an arm difference | now known |
+| --- | --- | --- |
+| `issue-63` | a=REJECT, b=approve | **arm (b) flips approve→REJECT on its own** |
+| `issue-146-147` | a=approve, b=REJECT | **arm (b) flips REJECT→approve→REJECT** |
+| `issue-74` | a=REJECT, b=approve | stability unmeasured |
+| `issues-135-129` | a=REJECT, b=approve | stability unmeasured |
+
+**Arm (b), re-run on `issue-63`, produces arm (a)'s E3 verdict.** The "difference
+between the arms" on that item is a difference between two draws of the same
+arm. McNemar already said the FP gap was not separable from chance (p = 0.625);
+this shows *mechanically why*.
+
+**Consequence:** neither arm's false-positive rate is a property of the arm. E3
+(F23) and the adjudication (F24) both report per-arm FP numbers — 1/23 and 0/23
+after adjudication — and **those numbers should now be read as single draws of a
+process that flips on half the items where it was checked.** The conclusion they
+support ("quality does not discriminate the arms") is *strengthened*, because
+the residual difference has been shown to be noise. The numbers themselves are
+weakened.
+
+### Why the split makes sense
+
+The two measurements are not the same kind of judgement.
+
+- **Detection** asks: is this criterion met by the code? On S-SILENT the answer
+  is grossly no — the capability is absent. That is a robust signal and it
+  reproduces.
+- **The verdict** asks: does this finding rise to blocking? On CLEAN the
+  candidate findings are *marginal by construction* — vacuous tests, narrowed
+  pins, an undocumented side effect. That is a judgement at the threshold, and
+  thresholds are where a stochastic process visibly wobbles.
+
+The pattern within CLEAN supports this. The stable-reject item,
+`fix-advance-write-lock-gate-scope`, is the one with a **live behavioural
+regression** reproduced end-to-end (F24). The two flaky items rest on
+**test-quality** findings. **Strength of the underlying defect appears to predict
+verdict stability** — offered as a hypothesis on n=4, not a result.
+
+### What this means for the programme
+
+1. **The 23/23 headline survives, and is now the best-supported number in the
+   spike.** Detection is stable across every item measured.
+2. **Every false-positive rate is provisional**, in both arms and in the
+   adjudication.
+3. **The reliability question §7 of the amendment names as decision-critical is
+   now partly answered, and the answer is uncomfortable:** a review gate that
+   detects reliably but *blocks* unreliably will pass different work on
+   different days. For a gate whose purpose is to stop work advancing, verdict
+   stability is the property that matters, and it is the one that varies.
+4. **This is a finding about the reviewer, not about inversion.** It affects
+   both arms identically and is inherited by any deployment shape.
+
+### Limits
+
+1. **n=3 at best, n=2 on two items.** A "stable" classification here means "did
+   not flip in 2–3 draws" and is compatible with a real flip rate up to ~30%.
+2. **Only arm (b) was repeated.** Arm (a)'s stability is unmeasured; there is no
+   reason to expect it differs, and that is an assumption, not a finding.
+3. **Two of the four E3 disagreements remain unexplained** — `issue-74` and
+   `issues-135-129` have no repeat data, so the within-arm-noise account covers
+   half the disagreements, not all of them.
+4. **`s-subtle` stability is unmeasured.** F26's 20/20 is still 20 single draws.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has
