@@ -1,0 +1,111 @@
+{
+  "_comment": [
+    "S-VAR secondary instrument: the on-target citation check of METHOD-S 1.4.",
+    "GENERATED BEFORE ANY S-VAR RECORD EXISTED. results/s-var.jsonl did not exist",
+    "at the time of writing (asserted by the generator). Derived MECHANICALLY from",
+    "results/e3.jsonl: for each item, the union of scored.cited_files across every",
+    "E3 CLEAN record with outcome=ok and scored.rejected=true, over both arms.",
+    "Those are exactly the rejections F24 replicated and confirmed TRUE, six for",
+    "six. No judgement was applied; no file was added or removed by hand.",
+    "",
+    "WHY THIS FILE EXISTS: review_probe passes reverted=[] for --condition clean,",
+    "so e3::score_files has no targets and scored.matched_files is empty on every",
+    "CLEAN record. audit-s.py's on-target column therefore reads 0/k for all 60",
+    "S-VAR records and measures nothing. scored.cited_files IS recorded, so the",
+    "sub-metric is recoverable -- but only against a target list fixed before the",
+    "data. This is that list.",
+    "",
+    "audit-s.py is NOT modified. This is scored by results/s-var-citations.py and",
+    "reported as a clearly-labelled SECONDARY, never as audit-s.py output."
+  ],
+  "generated_at_head": "c2c3fc85fcfd6f250b43f7b817f1b4604c3d9561",
+  "source": "results/e3.jsonl",
+  "criterion": "a rejection is ON-TARGET if any file it cites suffix-matches any target file for that item, under e3::score_files normalisation (backslash to slash, strip leading ./, lowercase)",
+  "items": {
+    "fix-advance-write-lock-gate-scope": {
+      "evidence_class": "reproduced",
+      "targets": [
+        "src/process/engine.ts",
+        "test/advance-lock-scope.test.ts",
+        "CHANGELOG.md",
+        "src/process/gates.ts",
+        "src/store/verify-cache.ts"
+      ],
+      "derived_from": [
+        {
+          "arm": "b-clean",
+          "repeat": 1,
+          "resume_key": "E3/b-clean/fix-advance-write-lock-gate-scope#r1"
+        },
+        {
+          "arm": "a-clean",
+          "repeat": 1,
+          "resume_key": "E3/a-clean/fix-advance-write-lock-gate-scope#r1"
+        }
+      ]
+    },
+    "issue-146-147-boundary-window": {
+      "evidence_class": "mutation-survived",
+      "targets": [
+        "test/implement-contract.test.ts",
+        "workflows/forge-implement.js",
+        ".bklg/support/issue-146-147-story-gate/issue-146-147-boundary-window/implementation-report.md"
+      ],
+      "derived_from": [
+        {
+          "arm": "b-clean",
+          "repeat": 1,
+          "resume_key": "E3/b-clean/issue-146-147-boundary-window#r1"
+        }
+      ]
+    },
+    "issues-135-129-declared-boundary-parse": {
+      "evidence_class": "mutation-survived",
+      "targets": [
+        "test/verify.test.ts",
+        "src/store/verify.ts"
+      ],
+      "derived_from": [
+        {
+          "arm": "a-clean",
+          "repeat": 1,
+          "resume_key": "E3/a-clean/issues-135-129-declared-boundary-parse#r1"
+        }
+      ]
+    },
+    "issue-74-plan-briefs-dead-plan-anchor": {
+      "evidence_class": "mutation-survived",
+      "targets": [
+        "workflows/forge-plan-prds.js",
+        "test/plan-dag.test.ts"
+      ],
+      "derived_from": [
+        {
+          "arm": "a-clean",
+          "repeat": 1,
+          "resume_key": "E3/a-clean/issue-74-plan-briefs-dead-plan-anchor#r1"
+        }
+      ]
+    },
+    "issue-63-advance-gate-diagnostic-truncated": {
+      "evidence_class": "narrowed-pin",
+      "targets": [
+        "test/engine-gates.test.ts",
+        "src/process/gates.ts"
+      ],
+      "derived_from": [
+        {
+          "arm": "a-clean",
+          "repeat": 1,
+          "resume_key": "E3/a-clean/issue-63-advance-gate-diagnostic-truncated#r1"
+        }
+      ]
+    },
+    "issue-62-new-stale-pinned-template": {
+      "evidence_class": "none",
+      "targets": [],
+      "derived_from": [],
+      "note": "CONTROL. No arm rejected this item in E3 and F24 adjudicated no finding, so the target set is empty BY CONSTRUCTION and every S-VAR rejection of it is off-target. That is the correct reading, not a missing value."
+    }
+  }
+}
