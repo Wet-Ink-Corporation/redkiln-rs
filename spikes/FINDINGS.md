@@ -1717,7 +1717,7 @@ warmed and read back at three gaps:
 | 65.2 min | 0.484 | **18,603** |
 | 2,982 min (**49.7 h**) | 0.484 | **18,603** |
 
-**The 65-minute and the 49.7-hour reads are identical.** The prefix's two
+**The 65-minute and the 49.7-hour reads are identical** — but see the correction below: the mechanism is not what this paragraph originally claimed. The prefix's two
 segments (F13) behave completely differently across time: a volatile ~18.6k
 expires somewhere under an hour — consistent with the ~1h TTL of F10 — and the
 remaining ~17.5k **survives two days untouched**.
@@ -1766,6 +1766,71 @@ which files to change — the digest is sufficient, and the reviewer's prose is
 dead weight in the handover. RFC R1 (context fidelity at the gate boundary) is
 **not** a constraint here, and the gate is free in context as well as nearly free
 in cache.
+
+### Correction and completion, 2026-09-05 — the step was real, but I had the mechanism wrong, and `--system-prompt` makes it worse
+
+**What was wrong.** The entry above read the three H1 gaps as pure time decay.
+The fixture sits **inside the redkiln-rs working tree** and this programme was
+committing continuously, and the default system prompt carries a git snapshot
+(F16) — so a commit inside the gap invalidates the prefix regardless of elapsed
+time. Commits fell inside exactly the gaps that showed re-creation:
+
+| gap | commits inside | creation |
+| --- | --- | --- |
+| 0.9 min | 0 | 0 |
+| 65.2 min | 1 | 18,603 |
+| 49.7 h | many | 18,603 |
+
+Both readings fitted. **The original entry asserted one of them without the
+evidence to separate it from the other.**
+
+**The discriminating run.** Two marks in the same fixture, both read at ~66
+minutes. `--system-prompt` removes the git snapshot entirely, so it cannot be
+invalidated by repository activity — whatever it loses, it lost to time.
+
+| arm | gap | share | creation | prefix |
+| --- | --- | --- | --- | --- |
+| default system prompt | 66.6 min | 0.484 | 18,603 | ~36,160 |
+| **`--system-prompt`** | 66.8 min | **0.000** | **29,680** | ~29,680 |
+
+**Time decay is real.** The `--system-prompt` prefix went *fully* cold in 66
+minutes with no repository activity able to touch it, which is exactly F10's ~1h
+TTL observed on a review-scale payload for the first time.
+
+**And the mechanism behind the "step" was not durability — it was subsidy.** The
+default-prompt prefix retained 48% across both 65 minutes and 49.7 hours because
+that portion is the **shared default system prompt**, which F13 measured as ~69%
+directory-independent, and which this programme's own constant unrelated
+dispatching kept perpetually warm. The surviving ~17.5k was never surviving *on
+its own*. In a quiet system it would decay too.
+
+**So `--system-prompt` does not blunt time decay — it forfeits the shared-prefix
+subsidy and costs more.** F16 measured it holding 1.000 across *commits*, and
+that still stands; the inference that it would therefore help across *time* is
+now falsified. The two mitigations point in opposite directions:
+
+| threat | best mitigation |
+| --- | --- |
+| commits during a gate | **`--system-prompt`** — removes the volatile snapshot |
+| elapsed time during a gate | **the default prompt** — rides the shared segment other work keeps warm |
+
+**What survives of the practical conclusion.** A resume costs between 18.6k and
+29.7k tokens on a ~30–36k review-scale prefix — at worst a full re-write, and
+bounded by prefix size rather than by gate duration. METHOD-H §3's ~25k
+"batch gates freely" threshold sits inside that range rather than clearly above
+it, so the honest statement is weaker than the original entry's: **a gate costs
+at most one prefix re-write, which is cheap in absolute terms and does not grow
+with how long the human takes.** Gate *duration* is still not a cost decision.
+Gate *frequency* now marginally is.
+
+**A second instrument flaw, recorded because it defeated one arm.** A companion
+`nocommit-65m` arm was meant to isolate elapsed time under the default prompt by
+forbidding repository writes during the window. It is **confounded and its
+result is not used**: the runner writes its own journal into
+`spikes/results/` — inside the repository it is snapshotting — so the mark's own
+output file changed `git status` before the read. Measuring a repository from
+inside it requires the journal to live outside it, and `--out` makes that a
+one-flag fix for any re-run.
 
 ### What the two together say about the differentiator
 
