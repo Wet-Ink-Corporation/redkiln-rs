@@ -124,6 +124,29 @@ Normalise the frozen corpus to JSONL. Not an experiment; a dependency.
 because our per-item variance is unknown and the batch also has to move a
 quantised headroom figure.
 
+**Amended 2026-09-04 — n reduced from 10, disclosed, before the data.**
+E0 was registered at 10 repeats when a dispatch was assumed cheap. Measured, a
+CLEAN review costs ~1000s and ~$2, so n=10 is ~3 hours and ~$20 **per item** —
+and the classification E0 actually needs (always / flaky) does not require 10
+draws to detect a flip.
+
+**The reduction trades depth for breadth, deliberately.** PRIOR-ART §6 is the
+reason: variance concentrates in an unstable *subset*, so the decision-relevant
+quantity is **what fraction of items are flaky**, not the precise rate of one
+item. Six items at n=3 bounds that fraction; one item at n=10 does not.
+
+- **Detection stability:** 6 items × 3 repeats on `s-silent` (~130s, ~$0.60
+  each). Cheap enough to run broad, and it underpins the 23/23 headline.
+- **Verdict stability:** the CLEAN item already observed to flip
+  (`issue-146-147`, `changes-requested / approved / changes-requested`) extended,
+  plus a second CLEAN item, to test whether flakiness is item-specific or
+  general.
+
+**A single flip is sufficient to classify an item flaky and no further repeats
+are spent on it** — the classification is what E0 promised, and it is reached.
+Any rate quoted from n=3 is reported with its exact binomial interval, never as
+a point estimate.
+
 **Primary outputs.**
 
 1. **Per-item stability**, not one pooled σ. Each item is classified
