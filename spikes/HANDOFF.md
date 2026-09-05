@@ -208,7 +208,20 @@ three new risks the RFC did not anticipate. Its closing point is the one that
 matters: **every result so far is cost and mechanism; the quality question the
 RFC says is decisive has not been tested.**
 
-Remaining deliverable from charter §14: the dated conformance scorecard (§14.3).
+**Charter §14 deliverables are COMPLETE.** §14.3 is
+`references/conformance-2026-09-04-scorecard.md` (Run 3, measured — filed in the
+spike repo because redkiln is frozen; move it to
+`redkiln/references/conformance/` when the freeze lifts). §14.4 is the RFC
+amendment, updated 2026-09-04 with the E3 result. §14.5 is
+`references/2026-09-04-findings-for-product.md`.
+
+**Run 3's headline, because it needs acting on:** `forge-fix.js`'s review
+consumer is `if (review && review.pass === false)`, which treats an ABSENT
+verdict as approval — and F20 is a measured mechanism that produces exactly
+that (a tool-restricted card plus a demanded schema yields prose, silently, on
+the CLI path). Whether the Workflow runtime shares the defect is UNVERIFIED and
+is one dispatch to settle. Fix the consumer either way:
+`if (!review || review.pass !== true)`.
 
 **§14.5 is DONE** — `references/2026-09-04-findings-for-product.md`. It carries
 the four that were expected plus nine more, split by audience: Part A is Claude
