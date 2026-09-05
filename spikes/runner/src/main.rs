@@ -215,6 +215,12 @@ struct ReviewArgs {
     /// Recorded in the arm label, so blind and sighted records never pool.
     #[arg(long, default_value_t = false)]
     blind: bool,
+    /// METHOD-S §2 (S-TYPED): `prose` = E3's digest with `pass` (default);
+    /// `typed` = findings with an evidence class and NO verdict — the verdict
+    /// is computed by the registered policies and recorded alongside.
+    /// Recorded in the arm label, so typed and prose records never pool.
+    #[arg(long, default_value = "prose")]
+    schema: String,
     /// E3-H seed definitions (one JSON object per line). Only read for
     /// `--condition s-subtle`.
     #[arg(long, default_value = "../results/e3h-seeds.jsonl")]
@@ -814,7 +820,12 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
     }
 
     let (description, card_body) = e3::load_card(&redkiln)?;
-    let schema = e3::digest_schema();
+    let typed = match args.schema.as_str() {
+        "prose" => false,
+        "typed" => true,
+        other => anyhow::bail!("unknown schema `{other}` (expected prose or typed)"),
+    };
+    let schema = if typed { e3::typed_findings_schema() } else { e3::digest_schema() };
     let runner = Runner::new(claude_bin, env);
     let done = journal::completed_keys(&args.out);
     let items = read_manifest(&args.manifest)?;
@@ -831,11 +842,15 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
         {
             break;
         }
-        let arm_label = if args.blind {
-            format!("{}-blind-{}", args.arm, condition)
-        } else {
-            format!("{}-{}", args.arm, condition)
-        };
+        // Every instrument variant is in the label: `b-blind-typed-s-subtle`
+        // and `b-clean` can never be pooled by an audit that keys on `arm`.
+        let arm_label = format!(
+            "{}{}{}-{}",
+            args.arm,
+            if args.blind { "-blind" } else { "" },
+            if typed { "-typed" } else { "" },
+            condition
+        );
         let resume_key = format!("E3/{arm_label}/{}#r{}", item.slug, args.repeat);
         if done.contains(&resume_key) {
             eprintln!("  {:<44} skipped (recorded)", item.slug);
@@ -959,6 +974,9 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
                 &item.fix_files,
             )
         };
+        // S-TYPED: the addendum goes on the BRIEF, so arm (a)'s parent still
+        // forwards it verbatim and both arms carry the same instructions.
+        let brief = if typed { e3::build_prompt_typed(&brief) } else { brief };
         // Arm (a) forwards arm (b)'s brief verbatim inside a dispatch wrapper,
         // so the two arms review identical material with an identical card.
         let prompt = if arm_a {
@@ -1032,7 +1050,21 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             || behaviour.as_ref().is_some_and(|b| b.dispatched_card)
                 && record.subagents_spawned.unwrap_or(0) >= 1;
 
-        let scored = record.digest.as_ref().map(|d| e3::score(d, &reverted));
+        // Typed digests are scored under the STRICT policy (METHOD-S §2.2,
+        // primary); the lenient verdict is recorded beside it, never
+        // substituted. The policy stands in for `pass`; only BLOCKING
+        // findings' files count toward strong detection.
+        let scored = record.digest.as_ref().map(|d| {
+            if typed { e3::score_typed(d, &reverted, e3::STRICT) } else { e3::score(d, &reverted) }
+        });
+        let policy = typed.then(|| {
+            record.digest.as_ref().map(|d| {
+                serde_json::json!({
+                    "strict": e3::policy_verdict(d, e3::STRICT),
+                    "lenient": e3::policy_verdict(d, e3::LENIENT),
+                })
+            })
+        }).flatten();
         // Name the actual cause: a timeout and a malformed digest are both
         // "no digest", but only one of them says anything about the reviewer.
         // Arm (a) never adopts the card, so the arm (b) adoption check does
@@ -1087,6 +1119,8 @@ async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
             "fix_unreachable": fix_unreachable,
             "arm": arm_label,
             "condition": condition,
+            "schema": args.schema,
+            "policy": policy,
             "slug": item.slug,
             "repeat": args.repeat,
             "checkpoint_sha": sha,

@@ -116,6 +116,147 @@ pub fn digest_schema() -> serde_json::Value {
     })
 }
 
+// ---------------------------------------------------------------------------
+// S-TYPED (METHOD-S §2): findings with an evidence class, and NO verdict.
+// ---------------------------------------------------------------------------
+
+/// The four evidence classes, in the order the policy table lists them.
+///
+/// These are the reviewer's own observed behaviours named (F24/F25): it
+/// reproduced a regression end to end, it mutated a behaviour and watched the
+/// suite stay green, it noticed a test pinning a narrower claim than its AC,
+/// or it raised a concern that shows no AC unmet.
+pub const EVIDENCE_CLASSES: [&str; 4] =
+    ["reproduced", "mutation-survived", "narrowed-pin", "advisory"];
+
+/// The typed digest. **No `pass` field** — the verdict is computed by
+/// [`policy_verdict`], never returned by the model (proposal D4).
+///
+/// Closed enum, `additionalProperties: false`, every field required: the
+/// shape §4.4 of the proposal commits Phase 1 to, so a conformance failure
+/// here is a finding about that shape and not about this rig.
+pub fn typed_findings_schema() -> serde_json::Value {
+    let base = digest_schema();
+    serde_json::json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["findings", "boundary_respected", "rubric"],
+        "properties": {
+            "findings": {
+                "type": "array",
+                "description": "Every finding, blocking or not. The verdict is NOT yours to give: it is computed from these.",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["ac", "claim", "evidence", "files", "repro"],
+                    "properties": {
+                        "ac": { "type": "string", "description": "The acceptance criterion this finding is about, e.g. AC-003." },
+                        "claim": { "type": "string" },
+                        "evidence": { "type": "string", "enum": EVIDENCE_CLASSES },
+                        "files": {
+                            "type": "array",
+                            "description": "Repo-relative paths this finding is about. Required.",
+                            "items": { "type": "string" }
+                        },
+                        "repro": { "type": "string", "description": "What you ran or changed to establish the evidence class." }
+                    }
+                }
+            },
+            "boundary_respected": { "type": "boolean" },
+            "rubric": base["properties"]["rubric"].clone()
+        }
+    })
+}
+
+/// The paragraph appended to E3's prompt for the typed arm. A prompt change
+/// confounded with the schema change by design (METHOD-S §2.3): D4/D6 ship
+/// them together, so the spike measures the pair.
+pub const TYPED_ADDENDUM: &str = "\n\nThis review carries NO pass/fail verdict from you. The verdict is computed \
+     afterwards from the findings you report, so report every finding and \
+     classify its evidence honestly:\n\
+     - `reproduced` — you ran the behaviour and observed the criterion violated;\n\
+     - `mutation-survived` — you changed the behaviour the criterion describes and the relevant test stayed green;\n\
+     - `narrowed-pin` — a test exists but pins a narrower claim than the criterion;\n\
+     - `advisory` — a quality concern that does not show a criterion unmet.\n\
+     Name the criterion (`ac`), the files, and what you ran or changed (`repro`) for each. \
+     An empty findings list means you established that every criterion is met.";
+
+/// E3's brief plus the typed addendum. Applied to the BRIEF, so arm (a)'s
+/// parent still forwards it verbatim and both arms see the same instructions.
+pub fn build_prompt_typed(brief: &str) -> String {
+    format!("{brief}{TYPED_ADDENDUM}")
+}
+
+/// Which evidence classes block. Registered in METHOD-S §2.2 before any data.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Policy {
+    pub name: &'static str,
+    pub narrowed_pin_blocks: bool,
+}
+
+pub const STRICT: Policy = Policy { name: "strict", narrowed_pin_blocks: true };
+pub const LENIENT: Policy = Policy { name: "lenient", narrowed_pin_blocks: false };
+
+impl Policy {
+    pub fn blocks(&self, evidence: &str) -> bool {
+        match evidence {
+            "reproduced" | "mutation-survived" => true,
+            "narrowed-pin" => self.narrowed_pin_blocks,
+            _ => false,
+        }
+    }
+}
+
+/// The verdict a policy derives from a typed digest.
+#[derive(Debug, Clone, Serialize)]
+pub struct PolicyVerdict {
+    pub policy: &'static str,
+    /// The policy blocks the change. This is the typed arm's "rejected".
+    pub blocks: bool,
+    /// Files cited by BLOCKING findings only — the set strong detection is
+    /// scored against, so an `advisory` citation cannot manufacture a hit.
+    pub blocking_files: Vec<String>,
+    /// How many findings landed in each class. Zero-filled for every class so
+    /// a missing class reads as 0, not as absent.
+    pub counts: std::collections::BTreeMap<String, usize>,
+}
+
+pub fn policy_verdict(digest: &serde_json::Value, policy: Policy) -> PolicyVerdict {
+    let mut counts: std::collections::BTreeMap<String, usize> = EVIDENCE_CLASSES
+        .iter()
+        .map(|c| (c.to_string(), 0))
+        .collect();
+    let mut blocking_files = Vec::new();
+    let mut blocks = false;
+    if let Some(findings) = digest.get("findings").and_then(|f| f.as_array()) {
+        for f in findings {
+            let evidence = f.get("evidence").and_then(|e| e.as_str()).unwrap_or("");
+            *counts.entry(evidence.to_string()).or_insert(0) += 1;
+            if policy.blocks(evidence) {
+                blocks = true;
+                if let Some(files) = f.get("files").and_then(|x| x.as_array()) {
+                    blocking_files.extend(files.iter().filter_map(|v| v.as_str()).map(str::to_string));
+                }
+            }
+        }
+    }
+    PolicyVerdict { policy: policy.name, blocks, blocking_files, counts }
+}
+
+/// Score a typed digest the way [`score`] scores a prose one, with the policy
+/// standing in for `pass` and only BLOCKING findings' files counted.
+pub fn score_typed(digest: &serde_json::Value, reverted: &[String], policy: Policy) -> Scored {
+    let v = policy_verdict(digest, policy);
+    let issue_count = digest
+        .get("findings")
+        .and_then(|f| f.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+    let mut s = score_files(v.blocks, v.blocking_files, reverted);
+    s.issue_count = issue_count;
+    s
+}
+
 /// Build a one-commit fixture at `commit`.
 ///
 /// Both conditions are built this way, and that symmetry is the point: a
@@ -620,13 +761,6 @@ pub struct Scored {
 /// reviewer may cite `src/cli/advance.ts` or `./src/cli/advance.ts` or an
 /// absolute path. Being strict about the form would fail real detections.
 pub fn score(digest: &serde_json::Value, reverted: &[String]) -> Scored {
-    let norm = |s: &str| s.replace('\\', "/").trim_start_matches("./").to_lowercase();
-    let targets: Vec<String> = reverted
-        .iter()
-        // `apply_mutation` annotates deletions; keep only the path.
-        .map(|f| norm(f.split(" (").next().unwrap_or(f)))
-        .collect();
-
     let mut cited = Vec::new();
     if let Some(issues) = digest.get("issues").and_then(|i| i.as_array()) {
         for issue in issues {
@@ -637,6 +771,23 @@ pub fn score(digest: &serde_json::Value, reverted: &[String]) -> Scored {
             }
         }
     }
+    let rejected = digest.get("pass").and_then(|p| p.as_bool()) == Some(false);
+    let mut s = score_files(rejected, cited, reverted);
+    s.overall = digest.get("overall").and_then(|v| v.as_i64());
+    s
+}
+
+/// The shared core: given a verdict and the files it cited, was the citation
+/// on target? Used by both the prose digest (`pass` + `issues[].files`) and
+/// the typed one (policy + blocking `findings[].files`), so the two arms are
+/// scored by one function and cannot drift apart.
+fn score_files(rejected: bool, cited: Vec<String>, reverted: &[String]) -> Scored {
+    let norm = |s: &str| s.replace('\\', "/").trim_start_matches("./").to_lowercase();
+    let targets: Vec<String> = reverted
+        .iter()
+        // `apply_mutation` annotates deletions; keep only the path.
+        .map(|f| norm(f.split(" (").next().unwrap_or(f)))
+        .collect();
 
     let matched: Vec<String> = cited
         .iter()
@@ -647,7 +798,6 @@ pub fn score(digest: &serde_json::Value, reverted: &[String]) -> Scored {
         .cloned()
         .collect();
 
-    let rejected = digest.get("pass").and_then(|p| p.as_bool()) == Some(false);
     Scored {
         rejected,
         strong_detection: rejected && !matched.is_empty(),
@@ -655,7 +805,7 @@ pub fn score(digest: &serde_json::Value, reverted: &[String]) -> Scored {
         issue_count: cited.len(),
         cited_files: cited,
         matched_files: matched,
-        overall: digest.get("overall").and_then(|v| v.as_i64()),
+        overall: None,
     }
 }
 
@@ -857,6 +1007,112 @@ mod tests {
         for leak in ["reverted", "seeded", "defect was", "mutation", "s-subtle"] {
             assert!(!low.contains(leak), "blind prompt leaks `{leak}`");
         }
+    }
+
+    // ---- S-TYPED (METHOD-S §2) ----
+
+    fn typed(findings: &[(&str, &str)]) -> serde_json::Value {
+        serde_json::json!({
+            "findings": findings.iter().map(|(ev, file)| serde_json::json!({
+                "ac": "AC-001", "claim": "c", "evidence": ev, "files": [file], "repro": "r"
+            })).collect::<Vec<_>>(),
+            "boundary_respected": true,
+            "rubric": []
+        })
+    }
+
+    #[test]
+    fn the_typed_schema_has_no_verdict_field_and_a_closed_evidence_enum() {
+        let s = typed_findings_schema();
+        assert!(s["properties"].get("pass").is_none(), "the verdict is the policy's, not the model's");
+        assert_eq!(s["additionalProperties"], false);
+        let ev = &s["properties"]["findings"]["items"]["properties"]["evidence"]["enum"];
+        assert_eq!(ev.as_array().unwrap().len(), EVIDENCE_CLASSES.len());
+        let req = s["properties"]["findings"]["items"]["required"].as_array().unwrap();
+        for f in ["ac", "claim", "evidence", "files", "repro"] {
+            assert!(req.iter().any(|v| v == f), "`{f}` must be required");
+        }
+    }
+
+    #[test]
+    fn the_policy_table_matches_method_s() {
+        for p in [STRICT, LENIENT] {
+            assert!(p.blocks("reproduced"));
+            assert!(p.blocks("mutation-survived"));
+            assert!(!p.blocks("advisory"));
+            assert!(!p.blocks("something-else"), "an unknown class never blocks");
+        }
+        assert!(STRICT.blocks("narrowed-pin"));
+        assert!(!LENIENT.blocks("narrowed-pin"));
+    }
+
+    #[test]
+    fn an_advisory_citation_cannot_manufacture_a_detection() {
+        let reverted = vec!["src/a.ts".to_string()];
+        // The model cites the right file but classifies it advisory: under
+        // both policies that is an approval, so no detection — the typed
+        // arm's version of "rejected for the wrong reason" is "right file,
+        // did not commit".
+        let d = typed(&[("advisory", "src/a.ts")]);
+        for p in [STRICT, LENIENT] {
+            let s = score_typed(&d, &reverted, p);
+            assert!(!s.rejected && !s.strong_detection, "{}", p.name);
+            assert_eq!(s.issue_count, 1, "the finding is still counted");
+        }
+    }
+
+    #[test]
+    fn narrowed_pin_separates_the_policies() {
+        let reverted = vec!["src/a.ts".to_string()];
+        let d = typed(&[("narrowed-pin", "src/a.ts")]);
+        assert!(score_typed(&d, &reverted, STRICT).strong_detection);
+        assert!(!score_typed(&d, &reverted, LENIENT).rejected);
+    }
+
+    #[test]
+    fn only_blocking_findings_contribute_cited_files() {
+        let reverted = vec!["src/a.ts".to_string()];
+        let d = typed(&[("advisory", "src/a.ts"), ("mutation-survived", "docs/x.md")]);
+        let v = policy_verdict(&d, STRICT);
+        assert!(v.blocks);
+        assert_eq!(v.blocking_files, vec!["docs/x.md".to_string()]);
+        assert_eq!(v.counts["advisory"], 1);
+        assert_eq!(v.counts["mutation-survived"], 1);
+        assert_eq!(v.counts["reproduced"], 0, "absent classes read as zero");
+        // Blocks, but the blocking finding is off-target: weak only.
+        let s = score_typed(&d, &reverted, STRICT);
+        assert!(s.weak_detection && !s.strong_detection);
+    }
+
+    #[test]
+    fn an_empty_findings_list_is_an_approval() {
+        let d = typed(&[]);
+        let s = score_typed(&d, &["src/a.ts".to_string()], STRICT);
+        assert!(!s.rejected && s.issue_count == 0);
+    }
+
+    #[test]
+    fn the_typed_addendum_defines_every_class_and_leaks_nothing() {
+        let p = build_prompt_typed(&build_prompt("s", "spec", "report", &[], &[]));
+        for c in EVIDENCE_CLASSES {
+            assert!(p.contains(&format!("`{c}`")), "class `{c}` must be defined in the prompt");
+        }
+        assert!(p.contains("NO pass/fail verdict"));
+        let low = p.to_lowercase();
+        for leak in ["reverted", "seeded", "defect was", "bug was introduced", "s-silent"] {
+            assert!(!low.contains(leak), "typed prompt leaks `{leak}`");
+        }
+    }
+
+    #[test]
+    fn prose_and_typed_scoring_agree_on_the_file_test() {
+        // Same citation, same target — one rejected via `pass`, the other via
+        // policy — must score identically, or the arms are not comparable.
+        let reverted = vec!["src/process/engine.ts".to_string()];
+        let prose = score(&digest(false, &["src\\process\\engine.ts"]), &reverted);
+        let typed_ = score_typed(&typed(&[("reproduced", "src\\process\\engine.ts")]), &reverted, STRICT);
+        assert_eq!(prose.strong_detection, typed_.strong_detection);
+        assert_eq!(prose.matched_files, typed_.matched_files);
     }
 
     #[test]
