@@ -1485,6 +1485,116 @@ required procedure.
 
 ---
 
+## F26 — E3-H RESULT: 20/20 across two harder tiers. The prediction was falsified twice, and the line is closed
+
+**Established by:** 20 scored dispatches — 5 seeds × 2 arms × 2 difficulty tiers
+— 2026-09-04, Opus/`xhigh`, corpus pin `47faec9f`. `spikes/results/e3h.jsonl`.
+**Spend $36.18.** Pre-registered in `METHOD-E3H.md` (tier 1) and its §9
+amendment (tier 2), each written before the dispatches it governs.
+
+### Every cell is at ceiling
+
+| tier | arm (a) in-session | arm (b) headless |
+| --- | --- | --- |
+| **S-SILENT** (E3, n=23) | 23/23 | 23/23 |
+| **S-SUBTLE sighted** (n=5) | 5/5 | 5/5 |
+| **S-SUBTLE blind** (n=5) | 5/5 | 5/5 |
+
+20/20 records cleared every check. Arm (a): `dispatched_card` 10/10,
+**`parent_inspected` 0/10** — no parent reviewed for itself in either tier.
+
+### Two levers, two falsified predictions
+
+**Tier 1 — subtler defect.** The fix fully present, one line wrong, every seed
+verified to leave the affected suite green. Predicted: "detection will fall
+below 23/23 — probably well below". **It did not move.**
+
+**Tier 2 — withhold the checklist and the pointer.** No AC enumeration, no fix
+file list; the reviewer must locate the code itself in a 236-test-file repo,
+against seeds chosen because the suite does not react to them. Predicted, with
+stated lower confidence after being wrong once: detection falls. **It did not
+move.**
+
+Both predictions were recorded before their data. That is the only reason this
+entry is a result rather than a rationalisation.
+
+### What DID move: cost, and it is the interesting number
+
+| | median wall |
+| --- | --- |
+| sighted | 497s |
+| blind | 585s (**+18%**) |
+
+The median understates it. Per seed, arm (b) sighted → blind:
+
+| seed | change |
+| --- | --- |
+| `issues-135-129` | 358s → 1201s (**+236%**) |
+| `issue-75` | 158s → 353s (+123%) |
+| `issue-63` | 599s → 974s (+63%) |
+| `issue-146-147` | 1359s → 1395s (+3%) |
+| `issue-74` | 614s → 230s (−62%) |
+
+**Removing the pointer made the reviewer search — sometimes three times as hard
+— and it still found the line every time.** Localisation was never the binding
+constraint. That is the substantive finding of this tier, and it is more
+informative than the detection rate it was designed to move.
+
+### The single most striking record
+
+`issue-75` is the one seed not of my construction: S0.1 found it as **the lone
+mutant redkiln's entire affected-area gate failed to kill**. All four arm/tier
+cells caught it — including blind, where nothing pointed at
+`src/schema/common.ts`. **The reviewer found what the test suite could not, four
+times out of four, twice without being told where to look.**
+
+### The pre-registered conclusion, applied rather than avoided
+
+METHOD-E3H §9 committed in advance:
+
+> if detection does not fall under tier 2 either, the honest conclusion is that
+> this corpus cannot produce a discriminating review task by prompt manipulation
+> alone, and the programme should stop trying.
+
+**That condition is met. The difficulty-escalation line is closed.** A tier 3 is
+not proposed. Charter §12 names the failure mode this avoids — building
+instrument instead of reporting findings — and inventing a fourth lever after
+two falsified predictions would be exactly that.
+
+### What this does and does not license
+
+**Does:** the reviewer detects seeded defects at ceiling across every
+construction this corpus supports — absent capability, subtle wrong line, and
+subtle wrong line with no pointer — in **both** dispatch shapes. The RFC's
+fear that headless dispatch degrades review quality has now survived three
+independent attempts to make it visible.
+
+**Does not:** establish that the arms are equal in general. Every tier saturated,
+so none of them could rank the arms even in principle. E3's conclusion is
+unchanged and is the ceiling of what the programme can claim — **quality does not
+discriminate; only cost does** (1.72×).
+
+**And it does not establish that the reviewer is reliable**, which is the live
+threat: F25 records a CLEAN verdict flipping across three identical runs (2 of
+3). Every cell above is a single draw. A 20/20 built from single draws of a
+process known to vary is consistent with a per-item catch rate well below 1.0,
+and nothing here bounds it.
+
+### Threats, restated
+
+1. **n = 5 per cell.** Ceiling results at this n are compatible with a true rate
+   anywhere above roughly 0.55.
+2. **Four of five seeds are ones I chose because reviewers had already found
+   them** in E3's CLEAN condition — circular by construction. Seed 5 is not
+   mine, and it is the one carrying the weight.
+3. **Repetition.** Both arms had seen all five items in E3. Affects both arms
+   equally; inflates the absolute rate, not the comparison.
+4. **"Blind" withholds the checklist and the pointer, not the criteria** —
+   `spec.md` still states them in prose. Stated in §9 before running, and worth
+   repeating because the label overclaims.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has
