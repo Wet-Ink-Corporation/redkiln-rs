@@ -1,6 +1,7 @@
 # Pre-registration #3 — H: the human gate
 
-**Status:** planned, **not approved to run**. Written before any H dispatch.
+**Status:** H2/H3 reported (F19). **H1 and H4 approved and running from
+2026-09-04.** Written before any H dispatch.
 **Corpus pin:** redkiln @ `47faec9f`. **Instrument:** `spikes/runner`.
 **Why it exists:** RFC §7 identifies the mid-run human approval gate as the
 *unoccupied market gap* — the capability that would justify building
@@ -142,6 +143,50 @@ Paired, n from E0's per-item stability once it exists.
 
 **Decision rule.** Not a kill — a constraint on what a step's digest must carry.
 A divergence tells us the digest schema is under-specified, which is fixable.
+
+### Amended 2026-09-04, before any H4 dispatch — the registered comparison is vacuous
+
+**The architecture has no in-process continuity to lose.** Every step under
+inversion is its own `claude -p` process (`runner.rs:267` spawns one per
+dispatch), so a step after a suspension and a step run "contiguously" receive
+*exactly the same thing*: the prompt the orchestrator hands it. Running the
+registered A/B would return "no divergence" for a reason that has nothing to do
+with the gate, and reporting that as evidence the gate is free would be a
+measurement artefact.
+
+**The intent survives and is testable.** §6's stated why is digest sufficiency —
+"all a resumed step receives is the prior step's digest plus reconstructed
+state. If that is insufficient, the gate is not free even when the cache is
+warm." That is the real question, and the suspend/resume mechanics were only ever
+a proxy for it.
+
+**Replacement procedure.** A second step consumes a *real* step-1 review output
+from the E3 corpus, under two conditions:
+
+| arm | what step 2 receives |
+| --- | --- |
+| **DIGEST** | the structured digest alone — `issues[]` with `issue` / `fix` / `files` |
+| **FULL** | the same digest **plus** step 1's full prose response |
+| **CONTROL** | DIGEST again, to measure baseline variance in the same batch |
+
+**The CONTROL arm is required, not optional, and E0 is why.** F27 measured
+verdict outputs flipping on 2 of 4 items across identical runs. Without a
+same-batch baseline, any DIGEST-vs-FULL difference is unattributable — it could
+be ordinary variance. The quantity of interest is whether DIGEST-vs-FULL
+divergence **exceeds** DIGEST-vs-CONTROL divergence.
+
+**Primary metric — mechanical.** File-set agreement between step-2 outputs
+(Jaccard over cited repo-relative paths). Step 1's outputs already exist in
+`results/e3.jsonl`, so step 1 is not re-run: the same recorded digest is
+replayed into every arm, which removes step-1 variance from the comparison
+entirely.
+
+**Decision rule, unchanged in force.** If FULL agrees with itself no better than
+DIGEST does, the digest is a sufficient carrier and the gate costs nothing in
+context fidelity. If FULL systematically differs, the digest schema is
+under-specified and §6's original conclusion stands.
+
+**n.** 5 items × 3 arms = 15 dispatches.
 
 ---
 

@@ -276,6 +276,12 @@ struct TtlStepArgs {
     timeout_secs: u64,
     #[arg(long, default_value = "../corpus/PINNED_SHA")]
     pin_file: PathBuf,
+    /// H1 secondary (METHOD-H §3): replace the default system prompt. F16
+    /// measured this holding cache-read share at 1.000 across COMMITS; whether
+    /// it also blunts decay across TIME is the open question, and if it does
+    /// the human gate is near-free — a design conclusion, not a detail.
+    #[arg(long)]
+    system_prompt: Option<String>,
 }
 
 #[derive(clap::Args)]
@@ -1323,7 +1329,10 @@ async fn ttl_step(claude_bin: &str, args: TtlStepArgs, label: &str) -> Result<()
         permission_mode: None,
         cwd: cwd.clone(),
         isolate_mcp: true,
-        extra_flags: vec![],
+        extra_flags: match &args.system_prompt {
+            Some(p) => vec!["--system-prompt".into(), p.clone()],
+            None => vec![],
+        },
         timeout: Duration::from_secs(args.timeout_secs),
     };
 
