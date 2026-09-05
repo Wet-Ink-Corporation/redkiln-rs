@@ -13,15 +13,27 @@ on `claude` 2.1.258, Windows 11, one machine, one account.
 
 ## 0. The short version
 
-**The RFC's central cost argument survives its first real test, and its
-headline risk register is materially wrong in the direction of pessimism.**
+> **Updated 2026-09-04.** The sections on the quality question (§5) and the
+> recommendation (§7) are rewritten: E3 has since been designed, built and run.
+> Where this document previously said the decisive experiment had not happened,
+> it now reports its result. Superseded text is marked, not deleted.
+
+**The RFC's central cost argument survives its first real test, its headline
+risk register is materially wrong in the direction of pessimism, and its
+decisive quality question has now been answered: inversion does not degrade
+review quality on any construction this corpus supports.**
 
 Three of the RFC's stated risks are dead or smaller than claimed, its one
 "pivotal unknown" is resolved, and the platform behaviour its cost case depends
-on is confirmed. Against that: the corpus turned out to be unable to support two
-of the three gated experiments as designed, and the single most valuable claim —
-that inversion improves review quality, or at least does not harm it — remains
-**entirely untested**.
+on is confirmed. **E3 ran to completion** — 92 dispatches across both arms and
+both conditions, plus 20 more across two harder tiers — and the kill criterion
+did not fire.
+
+Against that, two cautions carry equal weight. The corpus could not support two
+of the three gated experiments as designed. And **every quality metric
+saturated**: both arms detect everything, so the design cannot rank them, and
+the one reliable difference between in-session and headless review is that
+in-session costs **1.72×** as much.
 
 Nothing here bears on Bet 2. The engine port was not touched.
 
@@ -193,23 +205,82 @@ win should be read as expected rather than surprising.
 
 ---
 
-## 5. Untested — and one of these is the whole thesis
+## 5. The quality question — **ANSWERED** (rewritten 2026-09-04)
 
-### The quality question — **NOT TESTED**
+> Superseded: this section previously read "NOT TESTED — No measurement of
+> review quality, headless or in-session, exists." That was true on 2026-09-02
+> and is false now.
 
-**No measurement of review quality, headless or in-session, exists.** E3's rig is
-built and validated; it has not been run. The RFC's §9 kill condition —
-"Experiment 2 shows material verdict divergence. **This alone kills it**" —
-remains entirely open.
+### The kill criterion did not fire
 
-Everything above concerns cost and mechanism. **None of it is evidence that
-inversion preserves agent quality**, which is the claim the RFC itself says
-matters most.
+The RFC's §9 condition — "Experiment 2 shows material verdict divergence. **This
+alone kills it**" — was operationalised as METHOD-E3 §9 and tested at full n.
 
-### The in-session half of the cache asymmetry — **NOT TESTED**
+| | arm (a) in-session | arm (b) headless |
+| --- | --- | --- |
+| seeded-defect detection (n=23) | **23/23** | **23/23** |
+| false positives, adjudicated (n=23) | 1/23 | 0/23 |
+| MCC | +0.978 | +1.000 |
 
-"Subagents get 5 minutes, always" is still taken from documentation. E3 arm (a)
-is the first opportunity to observe it.
+Zero discordant pairs on detection. The false-positive difference is one item,
+McNemar exact p = 0.625 before adjudication. **There is no verdict divergence to
+speak of, material or otherwise.**
+
+Two harder tiers were then built specifically to make a difference visible — a
+subtle wrong line in fully-present code, then the same with the criteria
+checklist and the file pointer withheld. **Both saturated too: 5/5 in every
+arm.** Two pre-registered predictions that detection would fall were falsified.
+
+### What that licenses, and what it does not
+
+**Licensed:** the RFC's fear that headless dispatch degrades review quality has
+survived three independent attempts to make it visible, in a corpus of real
+historical defects, with real ground truth. That is the strongest form of the
+claim the evidence supports.
+
+**Not licensed:** "headless is better". Every metric saturated, so **the design
+could not rank the arms even in principle**. The honest statement is that the
+two are *indistinguishable on quality at every difficulty this corpus supports*,
+and the only reliable difference is cost — **in-session ran 1.72× headless for
+identical detection** ($97.39 vs $56.47 over the full paired set).
+
+**Also not licensed: that the reviewer is reliable.** A CLEAN verdict flipped
+across three identical runs (2 of 3). Every cell above is a single draw of a
+process now known to vary, and nothing in the programme bounds the per-item
+catch rate.
+
+### A finding the RFC did not predict, in its own favour and against it
+
+Adjudication of the rejections found **five of 23 shipped-and-approved items
+carry criteria their own tests do not pin** — verified by mutation. The
+reviewers were not producing false positives; they were finding real defects
+that redkiln's own historical review had passed. One seed (`issue-75`) is the
+single mutant redkiln's entire affected-area gate failed to kill, and every arm
+caught it, twice without being told where to look.
+
+**This argues for agentic review in general far more strongly than it argues for
+inversion specifically** — it is a point about the reviewer, not about where it
+is dispatched.
+
+### The in-session half of the cache asymmetry — **OBSERVED, and it does not hold**
+
+"Subagents get 5 minutes, always" was taken from documentation. Measured across
+56 arm (a) dispatches, in which a headless parent dispatches the card through
+`Task`:
+
+| shape | 5m cache creation | 1h cache creation |
+| --- | --- | --- |
+| arm (a) in-session subagent | **0** | 1,878,032 |
+| arm (b) headless | 0 | 2,476,973 |
+
+**The subagent's cache writes are 1h, not 5m.** So the asymmetry the RFC's cost
+case leans on is not present in this shape — which *weakens* the cost argument
+rather than strengthening it, and is reported here for that reason.
+
+**Important limit:** arm (a)'s parent is itself a headless `-p` dispatch, not a
+live interactive session (METHOD-E3 §6 states this confound). This shows the 5m
+claim does not hold for a subagent inside a headless parent. **It does not close
+the question for a real interactive session**, which remains unmeasured.
 
 ### The human gate — **NOT TESTED, and it is the differentiator**
 
@@ -267,6 +338,30 @@ here argues against inversion, and several findings strengthen its cost case.
    fix lane; invest in parallel DAG execution. That is what the corrected
    literature says, and it reconciles the RFC with the shipmates lessons.
 
-**Unchanged and now more prominent:** the decision still rests on E3. Every
-result in this amendment is about cost and mechanism, and the RFC is right that
-verdict divergence alone kills the thesis. **That experiment has not been run.**
+3. **The quality argument should be dropped as a *differentiator*, and kept as
+   a *precondition*.** E3 shows headless review is not worse. It does not show
+   it is better, and it cannot — every metric saturated. Arguing for inversion
+   on quality grounds would overstate the evidence; arguing that quality is
+   *safe* is exactly what was measured.
+
+**Superseded 2026-09-04.** This section previously closed: "the decision still
+rests on E3 … **That experiment has not been run.**" It has now been run, and
+the decision no longer rests on it.
+
+**What the decision now rests on** — the three things E3 could not settle:
+
+1. **Reliability, not capability.** The reviewer catches defects at ceiling but
+   its verdict is not stable: one CLEAN item returned
+   `changes-requested / approved / changes-requested` across three identical
+   runs. Inversion inherits that variance whichever shape wins, and a gate that
+   is right 2 times in 3 is a different product from one that is right always.
+   **This is the most under-measured thing in the programme.**
+2. **The human gate**, which §7 of the RFC calls the unoccupied market gap and
+   which remains the strongest differentiator on offer. F18/F19 establish its
+   shape (half of all gates outlive the cache TTL; suspension is lossless);
+   H1/H4 are planned and unrun.
+3. **Cost, which is now the whole measured case for inversion.** 1.72× is a real
+   number from a controlled comparison — same card, model, effort, fixtures and
+   material, one flipped flag — but it is one number from one corpus on one
+   machine, and the in-session 5m-cache premise that would have widened it does
+   **not** hold (§5).
