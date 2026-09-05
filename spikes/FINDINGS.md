@@ -1832,6 +1832,40 @@ output file changed `git status` before the read. Measuring a repository from
 inside it requires the journal to live outside it, and `--out` makes that a
 one-flag fix for any re-run.
 
+
+**The `nocommit` arm is CLOSED UNMEASURED after two attempts, and both failures
+are worth recording.**
+
+*Attempt 1* was defeated by the instrument: the runner wrote its journal into
+`spikes/results/` — inside the repository it was snapshotting — so the mark's
+own output file changed `git status` before the read.
+
+*Attempt 2* fixed that (`--out` to a path outside the repo, with the tree's
+`git status` digest captured at mark time and verified after). The mark was
+confirmed to leave the tree byte-identical. It was then defeated by **concurrent
+work landing in the repository 22 minutes into the window** — not by the
+instrument.
+
+Its read is therefore a **third replication of the with-activity condition**, and
+the determinism is the interesting part:
+
+| gap | share | creation |
+| --- | --- | --- |
+| 65.2 min | 0.484 | 18,603 |
+| 66.6 min | 0.484 | 18,603 |
+| 67.3 min | 0.484 | 18,603 |
+
+Three independent marks, three reads, **identical to the token**. Whatever the
+prefix loses across an hour, it loses exactly and reproducibly.
+
+**Not pursued further, for two reasons.** The mechanism question is already
+answered by the `--system-prompt` arm — time decay is real, and the retained 48%
+is the shared-segment subsidy — so a clean `nocommit` read would confirm the
+account rather than change it. And two failures suggest the condition is not
+holdable in a live repository, which makes it the *less* operationally relevant
+of the two: a production human gate sits in a repo where other work continues,
+which is the condition already measured three times.
+
 ### What the two together say about the differentiator
 
 The human gate was the largest untested assumption in the thesis and the RFC's
