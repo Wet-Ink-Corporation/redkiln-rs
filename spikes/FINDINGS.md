@@ -1693,6 +1693,116 @@ verdict stability** — offered as a hypothesis on n=4, not a result.
 
 ---
 
+## F28 — H1/H4 RESULT: a human gate costs a bounded 18.6k tokens however long it lasts, and the digest carries everything the next step uses
+
+**Established by:** 3 TTL reads (haiku) and 15 step-2 dispatches (Opus/`xhigh`),
+2026-09-04/05, corpus pin `47faec9f`. `results/h1-gap.jsonl`, `results/h4.jsonl`.
+**Spend: $18.85.** Pre-registered in `METHOD-H.md` §3 and §6, the latter amended
+before any H4 dispatch.
+
+RFC §7 calls the mid-run human approval gate the **unoccupied market gap** — the
+capability that would justify building Redkiln-RS at all. These are the first
+measurements of what it costs.
+
+---
+
+### H1 — the cost of a suspension is a step, not a curve
+
+A review-scale prefix (~36k tokens: spec, report and diff for a real item),
+warmed and read back at three gaps:
+
+| gap | cache-read share | cache creation on resume |
+| --- | --- | --- |
+| 0.9 min | **1.000** | **0** |
+| 65.2 min | 0.484 | **18,603** |
+| 2,982 min (**49.7 h**) | 0.484 | **18,603** |
+
+**The 65-minute and the 49.7-hour reads are identical.** The prefix's two
+segments (F13) behave completely differently across time: a volatile ~18.6k
+expires somewhere under an hour — consistent with the ~1h TTL of F10 — and the
+remaining ~17.5k **survives two days untouched**.
+
+So the cost of a human gate is not proportional to its length. It is **zero
+below the TTL and a flat 18.6k above it**, and a gate lasting two days costs
+exactly what a gate lasting sixty-six minutes costs.
+
+**METHOD-H §3's decision rule fires cleanly:** "a per-gate cost under ~25k tokens
+is noise; batch gates freely." 18,603 is under it, at a gap beyond the observed
+p90. **Gate placement is not a cost decision.** F18 established that ~half of all
+gates outlive the cache TTL; this establishes that it does not matter that they
+do.
+
+*Not measured: the `--system-prompt` secondary. The flag is now plumbed through
+`ttl-mark`/`ttl-read`, and F16's result across commits makes it plausible that it
+removes even the 18.6k — but that is untested and must not be assumed.*
+
+### H4 — the digest carries everything the next step uses
+
+METHOD-H §6 as amended. **The registered comparison could not have worked:**
+every step under inversion is its own `claude -p` process, so a step "after a
+suspension" and one run "contiguously" receive exactly the same thing. Running it
+would have returned "no divergence" for a reason unrelated to the gate.
+
+What was run instead tests §6's stated intent — is the structured digest a
+sufficient carrier? A real recorded step-1 review is replayed into a second step
+under three arms:
+
+| arm | step 2 receives | mean Jaccard vs DIGEST |
+| --- | --- | --- |
+| **DIGEST** | the structured digest alone | — (reference) |
+| **FULL** | the same digest **+ the reviewer's full prose** | **1.000** |
+| **CONTROL** | the digest again | **1.000** |
+
+**Effect: +0.000.** The handover nearly doubled — 11,560 → 21,958 prompt bytes —
+and the second step named **exactly the same files, on all five items**.
+
+Step 1 was replayed from `results/e3.jsonl` rather than re-run, so step-1
+variance is removed from the comparison entirely, and the CONTROL arm exists
+because F27 showed verdicts flipping across identical runs: without a same-batch
+baseline, a null result would be unattributable.
+
+**Conclusion for the design.** For the decision the next step actually makes —
+which files to change — the digest is sufficient, and the reviewer's prose is
+dead weight in the handover. RFC R1 (context fidelity at the gate boundary) is
+**not** a constraint here, and the gate is free in context as well as nearly free
+in cache.
+
+### What the two together say about the differentiator
+
+The human gate was the largest untested assumption in the thesis and the RFC's
+claimed moat. It is now measured on both axes that could have made it expensive:
+
+- **Cache:** bounded at 18.6k, flat, under the batching threshold.
+- **Context:** the digest carries what is used; adding 10kB of prose changes
+  nothing.
+
+**Neither is a reason not to build it.** That is a genuine result and it lands on
+the side of the RFC's own §7 argument — with the caveat below.
+
+### The caveat, and it is the same one as everywhere else
+
+**CONTROL scored 1.000, meaning the metric has no variance at all.** File
+selection given a digest is deterministic, so the instrument could not have
+detected a small effect — only a large one. "FULL equals CONTROL" is therefore
+"adding prose did not perturb a deterministic output", which is weaker than
+"prose never matters".
+
+And the `plan` prose *does* vary between arms — by up to 5k characters, including
+between DIGEST and its own CONTROL — so there is real variation in the second
+step's output that the file-set metric does not capture. Whether any of it is
+consequential is unmeasured.
+
+**This is the fifth saturated metric in the programme** — S-SILENT detection,
+S-SUBTLE detection, blind detection, and now H4 file agreement all pinned at
+ceiling, alongside E0's detection stability. The pattern is now strong enough to
+state as a finding about the method rather than about any one experiment: **the
+tasks this corpus supports are ones the model does not fail at, so metrics built
+on task success cannot discriminate.** Every discriminating result the programme
+has produced came from *cost*, *stability*, or *mechanism* — never from success
+rates.
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has

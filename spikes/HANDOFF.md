@@ -30,7 +30,8 @@ tree clean.
 | **E4 / E5 / E6** | gated | behind E3 |
 | **H2** suspension | done | **174/174 lossless** across a real process boundary |
 | **H3** world drift | done | 7% overall; **3.6× more likely** on gates > 1 h |
-| **H1 / H4** | planned | `METHOD-H.md`; H1 cheap, H4 needs E0 |
+| **H1** cost of a gate | **done** | **flat 18.6k above the TTL, 0 below** — same at 65 min and 49.7 h |
+| **H4** digest fidelity | **done** | prose adds **nothing**: FULL 1.000 = CONTROL 1.000 vs digest |
 
 ### The four results that changed the thesis
 

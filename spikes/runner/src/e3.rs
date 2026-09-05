@@ -453,6 +453,71 @@ pub fn build_prompt_blind(slug: &str, spec: &str, report: &str) -> String {
     )
 }
 
+/// H4's step-2 prompt (METHOD-H §6, amended): act on a review that already
+/// happened.
+///
+/// `prose` is the whole variable. Under inversion a resumed step receives only
+/// what the orchestrator hands it, and the registered question is whether the
+/// structured digest is a sufficient carrier — so the DIGEST arm passes `None`
+/// and the FULL arm passes step 1's complete prose alongside the same digest.
+pub fn build_step2_prompt(slug: &str, digest: &serde_json::Value, prose: Option<&str>) -> String {
+    let pretty = serde_json::to_string_pretty(digest).unwrap_or_else(|_| digest.to_string());
+    let extra = match prose {
+        Some(p) => format!(
+            "\n===== the reviewer's full report =====\n{}\n",
+            truncate(p, 20_000)
+        ),
+        None => String::new(),
+    };
+    format!(
+        "A review of story `{slug}` in this repository has already been \
+         completed by another agent. You are the next step: your job is to act \
+         on it.\n\n\
+         ===== the review digest =====\n{pretty}\n{extra}\n\
+         ===== end of handover =====\n\n\
+         Working from this handover, decide what you would change to address \
+         the review. List in `files` every repo-relative path you would edit, \
+         and describe the change in `plan`. You may read the repository to \
+         ground your answer. Name only files you would actually edit."
+    )
+}
+
+/// H4's step-2 schema: a file set that can be compared mechanically.
+pub fn step2_schema() -> serde_json::Value {
+    serde_json::json!({
+        "type": "object",
+        "required": ["files", "plan"],
+        "properties": {
+            "files": {
+                "type": "array",
+                "description": "Every repo-relative path you would edit. Required.",
+                "items": { "type": "string" }
+            },
+            "plan": { "type": "string" }
+        }
+    })
+}
+
+/// Jaccard over two cited file sets — H4's primary metric.
+///
+/// Normalised the way `score` normalises, so a path written three different
+/// ways is one file. Returns `None` when both sets are empty: no overlap to
+/// measure is not the same as perfect agreement.
+pub fn jaccard(a: &[String], b: &[String]) -> Option<f64> {
+    let norm = |v: &[String]| -> std::collections::BTreeSet<String> {
+        v.iter()
+            .map(|s| s.replace('\\', "/").trim_start_matches("./").to_lowercase())
+            .collect()
+    };
+    let (a, b) = (norm(a), norm(b));
+    if a.is_empty() && b.is_empty() {
+        return None;
+    }
+    let inter = a.intersection(&b).count() as f64;
+    let union = a.union(&b).count() as f64;
+    Some(inter / union)
+}
+
 /// Arm (a)'s wrapper: a parent that DISPATCHES the card rather than being it.
 ///
 /// The review brief is arm (b)'s prompt, forwarded verbatim. That is deliberate
@@ -747,6 +812,33 @@ mod tests {
             .as_array()
             .unwrap();
         assert!(req.iter().any(|v| v == "files"));
+    }
+
+    #[test]
+    fn the_digest_arm_withholds_the_prose_and_the_full_arm_does_not() {
+        let d = serde_json::json!({"pass": false, "issues": []});
+        let bare = build_step2_prompt("s", &d, None);
+        let full = build_step2_prompt("s", &d, Some("PROSE-BODY"));
+        assert!(!bare.contains("PROSE-BODY"));
+        assert!(!bare.contains("full report"));
+        assert!(full.contains("PROSE-BODY"));
+        // Both carry the same digest — the prose is the only variable.
+        assert!(bare.contains("issues") && full.contains("issues"));
+    }
+
+    #[test]
+    fn jaccard_is_set_based_and_path_form_insensitive() {
+        let a = vec!["src/a.ts".to_string(), "src/b.ts".to_string()];
+        assert_eq!(jaccard(&a, &a), Some(1.0));
+        assert_eq!(
+            jaccard(&a, &["src\\a.ts".to_string(), "./src/b.ts".to_string()]),
+            Some(1.0),
+            "path form must not count as disagreement"
+        );
+        assert_eq!(jaccard(&a, &["src/a.ts".to_string()]), Some(0.5));
+        assert_eq!(jaccard(&a, &["src/z.ts".to_string()]), Some(0.0));
+        // Two empty sets agree about nothing, which is not agreement.
+        assert_eq!(jaccard(&[], &[]), None);
     }
 
     #[test]

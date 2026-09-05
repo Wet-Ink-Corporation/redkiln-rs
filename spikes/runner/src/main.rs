@@ -113,6 +113,15 @@ enum Command {
     /// clean controls, paired per item.
     ReviewProbe(ReviewArgs),
 
+    /// H4 — is the digest a sufficient carrier across a human gate?
+    ///
+    /// METHOD-H §6 as amended. Every step under inversion is already its own
+    /// process, so "contiguous vs resumed" has nothing to compare. What is
+    /// testable is whether the structured digest carries enough: step 2 is
+    /// replayed against a REAL recorded step-1 review, with and without that
+    /// review's prose, plus a same-batch control for baseline variance.
+    DigestProbe(DigestArgs),
+
     /// H2 + H3 — the human gate. Zero model cost.
     ///
     /// H2: is a suspension lossless across a real process boundary?
@@ -124,6 +133,33 @@ enum Command {
     /// Exists so H2 crosses a genuine process boundary. Round-tripping in the
     /// same process would prove nothing about resume.
     Rehydrate(RehydrateArgs),
+}
+
+#[derive(clap::Args)]
+struct DigestArgs {
+    /// Recorded step-1 outputs. Replayed, never re-run: holding step 1 fixed
+    /// removes its variance from the comparison entirely.
+    #[arg(long, default_value = "../results/e3.jsonl")]
+    source: PathBuf,
+    /// Which recorded arm to take step-1 outputs from.
+    #[arg(long, default_value = "b-s-silent")]
+    source_arm: String,
+    #[arg(long)]
+    out: PathBuf,
+    /// `digest` (digest only) · `full` (digest + the reviewer's prose) ·
+    /// `control` (digest only again — the baseline-variance arm E0 requires).
+    #[arg(long)]
+    arm: String,
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+    #[arg(long, default_value = "opus")]
+    model: String,
+    #[arg(long, default_value = "xhigh")]
+    effort: String,
+    #[arg(long, default_value_t = 5)]
+    limit: usize,
+    #[arg(long, default_value_t = 1800)]
+    timeout_secs: u64,
 }
 
 #[derive(clap::Args)]
@@ -405,6 +441,7 @@ async fn main() -> Result<()> {
         Command::GateProbe(args) => gate_probe(args),
         Command::ReconcileReplay(args) => reconcile_replay(args),
         Command::ReviewProbe(args) => review_probe(&cli.claude_bin, args).await,
+        Command::DigestProbe(args) => digest_probe(&cli.claude_bin, args).await,
         Command::HumanGate(args) => human_gate(args),
         Command::Rehydrate(args) => {
             let text = std::fs::read_to_string(&args.state)?;
@@ -546,6 +583,157 @@ fn last_headroom(path: &std::path::Path, now: i64) -> Option<event::Headroom> {
         Some(at) if at <= now => None,
         _ => Some(h),
     }
+}
+
+/// H4 — digest sufficiency across a gate.
+async fn digest_probe(claude_bin: &str, args: DigestArgs) -> Result<()> {
+    let with_prose = match args.arm.as_str() {
+        "full" => true,
+        "digest" | "control" => false,
+        other => anyhow::bail!("unknown arm `{other}` (expected digest, full or control)"),
+    };
+    let env = hygiene::assert_clean(claude_bin).await?;
+    let journal = Journal::open(&args.out, &[])?;
+    let runner = Runner::new(claude_bin, env);
+    let done = journal::completed_keys(&args.out);
+
+    let model = match args.model.as_str() {
+        "haiku" => Tier::Haiku,
+        "sonnet" => Tier::Sonnet,
+        "opus" => Tier::Opus,
+        other => anyhow::bail!("unknown model tier `{other}`"),
+    };
+    let effort = match args.effort.as_str() {
+        "low" => Effort::Low,
+        "medium" => Effort::Medium,
+        "high" => Effort::High,
+        "xhigh" => Effort::Xhigh,
+        "max" => Effort::Max,
+        other => anyhow::bail!("unknown effort `{other}`"),
+    };
+
+    // Richest digests first: a handover with one finding cannot show whether
+    // the prose added anything.
+    let text = std::fs::read_to_string(&args.source)
+        .with_context(|| format!("reading --source {}", args.source.display()))?;
+    let mut sources: Vec<serde_json::Value> = text
+        .lines()
+        .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+        .filter(|v| {
+            v.get("arm").and_then(|a| a.as_str()) == Some(args.source_arm.as_str())
+                && v.get("outcome").and_then(|o| o.as_str()) == Some("ok")
+        })
+        .collect();
+    sources.sort_by_key(|v| {
+        -(v.pointer("/step/digest/issues")
+            .and_then(|i| i.as_array())
+            .map(|a| a.len())
+            .unwrap_or(0) as i64)
+    });
+    anyhow::ensure!(!sources.is_empty(), "no step-1 records in {}", args.source.display());
+
+    let schema = e3::step2_schema();
+    // The DIGEST arm is the reference every other arm is scored against, so
+    // agreement lands on the record itself rather than in a later script.
+    let baseline: std::collections::BTreeMap<String, Vec<String>> =
+        std::fs::read_to_string(&args.out)
+            .unwrap_or_default()
+            .lines()
+            .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+            .filter(|v| v.get("arm").and_then(|a| a.as_str()) == Some("h4-digest"))
+            .filter_map(|v| {
+                Some((
+                    v.get("slug")?.as_str()?.to_string(),
+                    v.get("files")?
+                        .as_array()?
+                        .iter()
+                        .filter_map(|f| f.as_str())
+                        .map(String::from)
+                        .collect(),
+                ))
+            })
+            .collect();
+
+    for src in sources.iter().take(args.limit) {
+        let slug = src["slug"].as_str().unwrap_or("?").to_string();
+        let Some(digest) = src.pointer("/step/digest") else { continue };
+        let prose = src.pointer("/step/response_text").and_then(|v| v.as_str());
+
+        let resume_key = format!("H4/{}/{slug}#r1", args.arm);
+        if done.contains(&resume_key) {
+            eprintln!("  {slug:<46} skipped (recorded)");
+            continue;
+        }
+
+        // The fixture the review was written about, so "which files" is
+        // grounded in a real tree rather than answered from memory.
+        let cwd = std::fs::canonicalize(format!("../fixtures/e3-silent-{slug}"))
+            .unwrap_or_else(|_| args.redkiln.clone());
+
+        let prompt = e3::build_step2_prompt(&slug, digest, if with_prose { prose } else { None });
+        eprint!("  {slug:<46} h4-{} ... ", args.arm);
+
+        let spec = StepSpec {
+            experiment: "H4".into(),
+            arm: format!("h4-{}", args.arm),
+            label: slug.clone(),
+            phase: "step2".into(),
+            occurrence: 1,
+            attempt: 1,
+            model,
+            effort: Some(effort),
+            agent: None,
+            adopt_agent: true,
+            prompt,
+            schema: Some(schema.clone()),
+            allowed_tools: vec![],
+            permission_mode: Some("bypassPermissions".into()),
+            cwd,
+            isolate_mcp: true,
+            extra_flags: vec![],
+            timeout: Duration::from_secs(args.timeout_secs),
+        };
+
+        let (record, _) = runner.run(&spec).await;
+        let files: Vec<String> = record
+            .digest
+            .as_ref()
+            .and_then(|d| d.get("files"))
+            .and_then(|f| f.as_array())
+            .map(|a| a.iter().filter_map(|v| v.as_str()).map(String::from).collect())
+            .unwrap_or_default();
+
+        match record.digest {
+            Some(_) => eprintln!("{} files  {:.0}s", files.len(), record.wall_clock_ms as f64 / 1000.0),
+            None => eprintln!("NO DIGEST ({})", record.error_kind.as_deref().unwrap_or("?")),
+        }
+
+        // Jaccard against the DIGEST arm's file set for the same item.
+        // `full` vs digest is the effect; `control` vs digest is the baseline
+        // the effect has to beat to mean anything (F27).
+        let jaccard_vs_digest = baseline.get(&slug).and_then(|b| e3::jaccard(&files, b));
+        if let Some(j) = jaccard_vs_digest {
+            eprintln!("      jaccard vs digest arm: {j:.2}");
+        }
+
+        journal.append(&serde_json::json!({
+            "experiment": "H4",
+            "resume_key": resume_key,
+            "jaccard_vs_digest": jaccard_vs_digest,
+            "outcome": if files.is_empty() { "void" } else { "ok" },
+            "arm": format!("h4-{}", args.arm),
+            "slug": slug,
+            "with_prose": with_prose,
+            "source_arm": args.source_arm,
+            "step1_issue_count": digest.get("issues").and_then(|i| i.as_array()).map(|a| a.len()),
+            "step1_prose_chars": prose.map(str::len),
+            "files": files.clone(),
+            "step": record,
+        }))?;
+    }
+
+    println!("\nwrote {}", journal.path().display());
+    Ok(())
 }
 
 async fn review_probe(claude_bin: &str, args: ReviewArgs) -> Result<()> {
