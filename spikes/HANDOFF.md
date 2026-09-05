@@ -208,7 +208,16 @@ three new risks the RFC did not anticipate. Its closing point is the one that
 matters: **every result so far is cost and mechanism; the quality question the
 RFC says is decisive has not been tested.**
 
-Remaining deliverables from charter §14: the dated conformance scorecard (§14.3)
-and the findings note for product changes (§14.5) — four are already expected
-(the worktree/cache interaction, the gate FPR, the absent affected-area test
-selection, and the empty ledger join).
+Remaining deliverable from charter §14: the dated conformance scorecard (§14.3).
+
+**§14.5 is DONE** — `references/2026-09-04-findings-for-product.md`. It carries
+the four that were expected plus nine more, split by audience: Part A is Claude
+Code platform behaviour (silent `--json-schema` failure under a tool-restricted
+card; `--allowed-tools` not restricting the main turn; headroom readable only via
+an undocumented event with the binding sub-limit invisible; platform errors
+returning exit 0 / `subtype: success`; in-session subagents on a 1h not 5m cache;
+background-process kills), Part B is redkiln (per-AC mutation evidence, with a
+staged remediation package; a review gate that detects reliably but blocks
+unreliably; no affected-area test selection; the empty ledger join; the S0.1
+survivor the reviewer caught 4/4 times; a test helper that drops the field which
+would have caught a real regression).
