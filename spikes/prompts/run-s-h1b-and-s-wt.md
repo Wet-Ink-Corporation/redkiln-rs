@@ -10,23 +10,23 @@ Read spikes/METHOD-S.md §0, §4a, §4b, §6, and spikes/HANDOFF.md ("How to run
   It must be byte-identical on every dispatch; a changed byte is a new prefix and a new cold write.
 
 1. S-H1b — static system prompt across TIME (§4a)
-Fixture: spikes/fixtures/h1 (already contains payload.txt, the 37 KB review-scale prefix). Use the ttl-mark / ttl-read pair; a mark is durable, so nothing waits in a process.
+Fixture: copy spikes/fixtures/h1 (which contains payload.txt, the 37 KB review-scale prefix) to THREE sibling directories — spikes/fixtures/h1-a, h1-b, h1-c — one per arm. The per-directory cache segment is what is being measured, so a read in one directory must never be able to refresh the prefix another arm's read is meant to find aged (METHOD-S §4a.2). No other dispatch may run in an arm's directory between its mark and its read. Use the ttl-mark / ttl-read pair; a mark is durable, so nothing waits in a process.
 
-Three arms, each with its own mark, all with the same --system-prompt:
+Three arms, each in its own directory with its own mark, all with the same --system-prompt:
 
-  ttl-mark --experiment S --arm h1b-1m  --cwd ../fixtures/h1 --out ../results/s-h1b.jsonl --model haiku --prompt-file ../fixtures/h1/payload.txt --system-prompt "<static text>"
+  ttl-mark --experiment S --arm h1b-1m  --cwd ../fixtures/h1-a --out ../results/s-h1b.jsonl --model haiku --prompt-file ../fixtures/h1-a/payload.txt --system-prompt "<static text>"
   (wait ~1 minute)
-  ttl-read --experiment S --arm h1b-1m  --cwd ../fixtures/h1 --out ../results/s-h1b.jsonl --model haiku --prompt-file ../fixtures/h1/payload.txt --system-prompt "<static text>"
+  ttl-read --experiment S --arm h1b-1m  --cwd ../fixtures/h1-a --out ../results/s-h1b.jsonl --model haiku --prompt-file ../fixtures/h1-a/payload.txt --system-prompt "<static text>"
 
-  ttl-mark --experiment S --arm h1b-65m ... (same flags)
+  ttl-mark --experiment S --arm h1b-65m --cwd ../fixtures/h1-b ... (same flags, h1-b paths)
   (wait 65 minutes — use a durable timestamp and come back; do NOT sleep in a harness background job, F22)
-  ttl-read --experiment S --arm h1b-65m ...
+  ttl-read --experiment S --arm h1b-65m --cwd ../fixtures/h1-b ...
 
-  ttl-mark --experiment S --arm h1b-24h ... (same flags)
+  ttl-mark --experiment S --arm h1b-24h --cwd ../fixtures/h1-c ... (same flags, h1-c paths)
   (read any time after 24 h — the mark stays valid)
-  ttl-read --experiment S --arm h1b-24h ...
+  ttl-read --experiment S --arm h1b-24h --cwd ../fixtures/h1-c ...
 
-Check each read's record: the "ttl_pair" line reports gap_minutes, cache_read, cache_creation and share. Confirm the mark and read used the same system prompt (the resume key and arm must match).
+Check each read's record: the "ttl_pair" line reports gap_minutes, cache_read, cache_creation and share. Confirm the mark and read used the same system prompt and the same directory (the resume key and arm must match). The 1-min arm may be marked and read while the others wait; the three marks can be laid down within minutes of each other since they are in separate directories.
 
 Report per gap: gap_minutes, cache_creation, share, next to H1's values (1 min: 0 / 1.000; 65 min: 18,603 / 0.484; 49.7 h: 18,603 / 0.484). State which §4a.3 branch the 65-min read lands in, and compare to the registered prediction (4k–10k).
 

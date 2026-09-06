@@ -428,11 +428,19 @@ human gate as well as the checkpoint commits.
 
 ### 4a.2 Procedure — haiku, ~free, runs alongside S-VAR
 
-Same instrument as H1 (`ttl-mark` / `ttl-read`, `fixtures/h1`, the 37 KB
-review-scale `payload.txt`), with `--system-prompt <static card text>` on both
+Same instrument as H1 (`ttl-mark` / `ttl-read`, the 37 KB review-scale
+`fixtures/h1/payload.txt`), with `--system-prompt <static card text>` on both
 the mark and the read. Gaps: **1 min** (warm control), **65 min**
 (TTL-crossing, the H1 decay point), **~24 h** (long tail). Each gap gets its
 own mark; a mark is durable, so nothing must survive the wait (F22).
+
+**Each arm runs in its own copy of the fixture directory** (`fixtures/h1-a`,
+`h1-b`, `h1-c`), because the per-directory cache segment is the quantity under
+test: a read in one arm would otherwise refresh the prefix the next arm's read
+is supposed to find aged. H1 was not confounded this way only because both of
+its long reads had already expired the segment; S-H1b's hypothesis is precisely
+the case where a read would *not* expire it. No other dispatch may run in an
+arm's directory between its mark and its read.
 
 ### 4a.3 Metric and decision rule
 
@@ -533,6 +541,8 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
   the original thresholds. Found by the audit script's smoke test on
   synthetic records; no S data existed.
 
+- **2026-09-05, before any S-H1b dispatch:** §4a.2 gains one directory copy
+  per arm, so a read cannot refresh the prefix a later arm measures.
 - **2026-09-05, before any S-H1b or S-WT dispatch:** §4a and §4b added
   (both listed in the proposal §8, neither previously registered here). S-VAR
   was in progress; no S-H1b/S-WT data existed.
