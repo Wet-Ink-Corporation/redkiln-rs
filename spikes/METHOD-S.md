@@ -636,4 +636,33 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
   Recorded for the report, not a change: `claude` is **2.1.263** here, against
   **2.1.261** for every H1 record.
 
+- **2026-09-06, after the `h1b-1m` pair and before any other S-H1b or S-WT
+  dispatch: the note above, item 3, is WRONG on its mechanism and the
+  sequencing is corrected.** It claimed distinct system-prompt texts make S-H1b
+  and S-WT cache-disjoint. The `h1b-1m` mark falsifies that. Four minutes after
+  a smoke dispatch that used a third, unrelated system prompt, the mark read
+  **15,129 tokens warm** and created only 14,490 of a 29,619-token prefix
+  (`results/s-h1b-1m.jsonl`, `label:"warm"`).
+
+  **What that measures.** The prefix has a block of ~15.1k tokens that sits
+  *before* the system prompt — tool definitions and settings — and is shared by
+  any two dispatches whatever their `--system-prompt`. Only the ~14.5k after it
+  is text-dependent. So the split F16 attributed to the system prompt is
+  itself two-part, and no choice of text can isolate one dispatch stream from
+  another; it can only isolate the tail.
+
+  **Consequence.** S-WT's ten dispatches would refresh 51% of the prefix that
+  S-H1b's 65-minute and 24-hour reads exist to find expired, which is the
+  contamination §4a.2 was written to prevent. S-WT therefore runs to
+  completion **before** the `h1b-24h` and `h1b-65m` marks are laid, not during
+  their waits, and each long arm's mark stays the last dispatch of any kind
+  before its read. §5's "S-H1b and S-WT run alongside S-VAR" is unaffected:
+  S-VAR is Opus and shares no prefix with either.
+
+  This note post-dates exactly one record — the `h1b-1m` pair, which it does not
+  touch: that arm was marked and read 1.5 minutes apart with nothing in between,
+  and it returned share 1.000 / creation 0 regardless of what the tool block did.
+  No `h1b-65m`, `h1b-24h` or `wt-sysprompt-*` record existed when this was
+  written.
+
 Any later change is disclosed here with the date and the records it post-dates.
