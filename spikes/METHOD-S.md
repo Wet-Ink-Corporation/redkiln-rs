@@ -582,4 +582,87 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
   fitted to. 3600 s is not a new number: HANDOFF already prescribes it for arm
   (a) CLEAN.
 
+- **2026-09-06, before any S-H1b or S-WT dispatch; no S-H1b or S-WT record
+  exists.** Five instrument disclosures for §4a/§4b. None changes a metric, a
+  threshold or a prediction; each is forced by the rig or by the cache
+  mechanism, and all five were settled before the first dispatch.
+
+  1. **One `--out` file per S-H1b arm.** `ttl-read` finds its mark with
+     `journal::last_warm_mark` (`runner/src/journal.rs:151`), which returns the
+     globally latest `label:"warm"`, `outcome:"ok"` line in the `--out` file —
+     no filter on `arm`, none on `cwd`, and no resume key at all. Three arms
+     sharing one file, with their marks laid down minutes apart as §4a.2's
+     separate directories invite, would pair every read against whichever mark
+     was written last. Each arm therefore writes to
+     `results/s-h1b-{1m,65m,24h}.jsonl`, one mark per file; the three are
+     concatenated into `results/s-h1b.jsonl` after the last read, and the
+     per-arm files are kept as provenance.
+
+  2. **`--flag=--system-prompt`, not `--flag --system-prompt`.** §4b.2 (and
+     `prompts/run-s-h1b-and-s-wt.md`) prescribe the space form. `ProbeArgs.flags`
+     is declared without `allow_hyphen_values` (`runner/src/main.rs:394`), so
+     clap rejects the hyphenated value and the process exits 2 having dispatched
+     nothing. The `=` form is what E1 arm (c) recorded, and is what S-WT uses.
+
+  3. **S-WT keeps E1 arm (e)'s text; S-H1b uses the card text. They must not be
+     the same string.** §4b.2 requires "the same static text as E1 arm (e)",
+     which `results/e1-arms.jsonl` records as `You are a terse assistant. Answer
+     in one word.`; §4a.2's "static card text" is `You are a careful software
+     reviewer. Answer only what is asked.` The system prompt heads the prefix,
+     so two dispatch streams sharing it share the ~69% cross-directory segment
+     (F13): S-WT's ten dispatches would refresh the very segment S-H1b's aged
+     reads exist to find expired, and §4a.2's per-arm directories guard only the
+     per-directory tail. Distinct texts make the two spikes cache-disjoint, so
+     S-WT may run during S-H1b's waits as §5 intends.
+
+  4. **Within S-H1b, the long arms' marks go last.** For the same reason, a
+     read's effective shared-segment age is (read − last dispatch of *any* arm),
+     not its own gap. Dispatch order is therefore: `h1b-1m` mark, `h1b-1m` read,
+     `h1b-24h` mark, `h1b-65m` mark, then the waits. This makes each long arm's
+     mark the last same-prefix dispatch before its read, so `gap_minutes` is the
+     honest age of the whole prefix and not just of its per-directory tail. H1
+     was not run under this discipline — `fixtures/h1` carried other traffic —
+     and the comparison to its 0.484 is qualified accordingly in the report.
+
+  5. **The run is in a git worktree** at `D:\repos\redkiln-rs.swt`, so that
+     `cargo build` cannot relink the binary S-VAR is executing and no fixture or
+     results path can collide with it. Every fixture is a fresh copy taken from
+     the main checkout: `fixtures/h1` → `h1-a`/`h1-b`/`h1-c` (payload verified
+     byte-identical, sha256 `cff4af90…`), and `fixtures/e1-d` → ten detached
+     worktrees under `fixtures/s-wt/`, reproducing arm (d)'s topology and its
+     18-byte tree. The absolute paths differ from H1's and E1's, which is
+     immaterial: §4a.2 already requires directories never dispatched in.
+
+  Recorded for the report, not a change: `claude` is **2.1.263** here, against
+  **2.1.261** for every H1 record.
+
+- **2026-09-06, after the `h1b-1m` pair and before any other S-H1b or S-WT
+  dispatch: the note above, item 3, is WRONG on its mechanism and the
+  sequencing is corrected.** It claimed distinct system-prompt texts make S-H1b
+  and S-WT cache-disjoint. The `h1b-1m` mark falsifies that. Four minutes after
+  a smoke dispatch that used a third, unrelated system prompt, the mark read
+  **15,129 tokens warm** and created only 14,490 of a 29,619-token prefix
+  (`results/s-h1b-1m.jsonl`, `label:"warm"`).
+
+  **What that measures.** The prefix has a block of ~15.1k tokens that sits
+  *before* the system prompt — tool definitions and settings — and is shared by
+  any two dispatches whatever their `--system-prompt`. Only the ~14.5k after it
+  is text-dependent. So the split F16 attributed to the system prompt is
+  itself two-part, and no choice of text can isolate one dispatch stream from
+  another; it can only isolate the tail.
+
+  **Consequence.** S-WT's ten dispatches would refresh 51% of the prefix that
+  S-H1b's 65-minute and 24-hour reads exist to find expired, which is the
+  contamination §4a.2 was written to prevent. S-WT therefore runs to
+  completion **before** the `h1b-24h` and `h1b-65m` marks are laid, not during
+  their waits, and each long arm's mark stays the last dispatch of any kind
+  before its read. §5's "S-H1b and S-WT run alongside S-VAR" is unaffected:
+  S-VAR is Opus and shares no prefix with either.
+
+  This note post-dates exactly one record — the `h1b-1m` pair, which it does not
+  touch: that arm was marked and read 1.5 minutes apart with nothing in between,
+  and it returned share 1.000 / creation 0 regardless of what the tool block did.
+  No `h1b-65m`, `h1b-24h` or `wt-sysprompt-*` record existed when this was
+  written.
+
 Any later change is disclosed here with the date and the records it post-dates.
