@@ -1,0 +1,60 @@
+[2026-09-05T13:13:28] S-VAR-VALIDATE-START pid=73176
+  no live headroom reading ΓÇö the opening dispatch is unguarded
+  issue-62-new-stale-pinned-template           b-clean r1 ... pass=true strong=false weak=false cited=0 862s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T13:27:53] S-VAR-VALIDATE-DONE
+[2026-09-05T13:28:30] S-VAR-LOOP-START pid=86808 repeat-major 10 rounds x 6 items
+[2026-09-05T13:28:30] S-VAR-DISPATCH r1 fix-advance-write-lock-gate-scope
+  resuming at five_hour 0.05 / seven_day 0.25 (margins 0.90/0.90)
+  fix-advance-write-lock-gate-scope            b-clean r1 ... pass=true strong=false weak=false cited=0 1206s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T13:48:39] S-VAR-DISPATCH r1 issue-146-147-boundary-window
+  resuming at five_hour 0.06 / seven_day 0.25 (margins 0.90/0.90)
+  issue-146-147-boundary-window                b-clean r1 ... pass=false strong=false weak=true cited=0 1872s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T14:20:02] S-VAR-DISPATCH r1 issues-135-129-declared-boundary-parse
+  resuming at five_hour 0.08 / seven_day 0.25 (margins 0.90/0.90)
+  issues-135-129-declared-boundary-parse       b-clean r1 ... pass=true strong=false weak=false cited=0 2150s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T14:56:09] S-VAR-DISPATCH r1 issue-74-plan-briefs-dead-plan-anchor
+  resuming at five_hour 0.10 / seven_day 0.26 (margins 0.90/0.90)
+  issue-74-plan-briefs-dead-plan-anchor        b-clean r1 ... pass=true strong=false weak=false cited=0 508s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T15:04:39] S-VAR-DISPATCH r1 issue-63-advance-gate-diagnostic-truncated
+  resuming at five_hour 0.10 / seven_day 0.26 (margins 0.90/0.90)
+  issue-63-advance-gate-diagnostic-truncated   b-clean r1 ... pass=false strong=false weak=true cited=0 633s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T15:15:14] S-VAR-DISPATCH r1 issue-62-new-stale-pinned-template
+  resuming at five_hour 0.11 / seven_day 0.26 (margins 0.90/0.90)
+
+  issue-62-new-stale-pinned-template           skipped (recorded)
+wrote ../results/s-var.jsonl
+[2026-09-05T15:15:14] S-VAR-ROUND-DONE r1
+[2026-09-05T15:15:14] S-VAR-DISPATCH r2 fix-advance-write-lock-gate-scope
+  resuming at five_hour 0.11 / seven_day 0.26 (margins 0.90/0.90)
+  fix-advance-write-lock-gate-scope            b-clean r2 ... pass=true strong=false weak=false cited=0 653s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T15:26:08] S-VAR-DISPATCH r2 issue-146-147-boundary-window
+  resuming at five_hour 0.12 / seven_day 0.26 (margins 0.90/0.90)
+  issue-146-147-boundary-window                b-clean r2 ... pass=false strong=false weak=true cited=0 2240s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T16:03:38] S-VAR-DISPATCH r2 issues-135-129-declared-boundary-parse
+  resuming at five_hour 0.14 / seven_day 0.26 (margins 0.90/0.90)
+  issues-135-129-declared-boundary-parse       b-clean r2 ... NO DIGEST (timeout) 2401s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T16:43:49] S-VAR-DISPATCH r2 issue-74-plan-briefs-dead-plan-anchor
+  resuming at five_hour 0.16 / seven_day 0.26 (margins 0.90/0.90)
+  issue-74-plan-briefs-dead-plan-anchor        b-clean r2 ... pass=true strong=false weak=false cited=0 1380s
+
+wrote ../results/s-var.jsonl
+[2026-09-05T17:06:52] S-VAR-DISPATCH r2 issue-63-advance-gate-diagnostic-truncated
+  resuming at five_hour 0.17 / seven_day 0.27 (margins 0.90/0.90)

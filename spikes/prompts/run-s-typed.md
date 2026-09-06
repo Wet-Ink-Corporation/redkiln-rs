@@ -1,0 +1,34 @@
+Run spike S-TYPED (METHOD-S §2) in D:\repos\redkiln-rs. Start ONLY after S-VAR's 60 records are complete — both draw on the same Opus five-hour window.
+
+Read spikes/METHOD-S.md §0, §2 and §6, and spikes/HANDOFF.md ("How to run dispatches", "Traps") first. Do not edit METHOD-S.md except to append a dated note under §7, and never after a record the change would affect.
+
+1. PRECONDITIONS
+- METHOD-S.md, spikes/results/audit-s.py, spikes/runner/src/e3.rs and spikes/runner/src/main.rs committed. If dirty, stop and tell me. Record HEAD.
+- cd spikes/runner && cargo build; cargo test (118 pass); doctor clean, claude >= 2.1.259.
+
+2. VALIDATE ONE TYPED DRAW BEFORE THE SET — this is the F20 check for the new schema.
+Run one cheap S-SILENT item with the typed schema:
+
+  review-probe --condition s-silent --arm b --schema typed --only issue-62-new-stale-pinned-template --out ../results/s-typed.jsonl --timeout-secs 2400
+
+Inspect the last record: outcome "ok", card_adopted true, fix_unreachable true, schema "typed", arm "b-typed-s-silent", scored present, and a "policy" object with "strict" and "lenient" each carrying blocks/blocking_files/counts. If the record is void with error_kind "schema", STOP: the closed enum did not conform — that is an instrument finding (METHOD-S §2.6 last bullet) and I need to see the raw digest text before anything else is spent.
+
+3. RUN THE SET — 46 typed dispatches, prose comparator is NOT re-run.
+
+  review-probe --condition s-silent --arm b --schema typed --out ../results/s-typed.jsonl --timeout-secs 2400
+  review-probe --condition clean    --arm b --schema typed --out ../results/s-typed.jsonl --timeout-secs 2400
+
+Each command walks the whole 23-item manifest and skips recorded draws; a killed run costs one dispatch. Launch DETACHED (Start-Process, tee to spikes/s-typed.log), poll from the foreground with a waiter that matches "wrote|HALT|error|panicked". Run S-SILENT first (~$0.5 each, ~130 s) then CLEAN (~$1–5 each, up to 2055 s).
+
+4. THROTTLE AND VOIDS
+The runner halts at the 0.90 five_hour margin with "HALT before <slug>" — a pause, not a failure; report utilisation and resetsAt, wait, re-run the same command. Do not lower --max-five-hour.
+Platform-error voids (529/500): re-run the same command. Schema voids: do NOT retry blindly — count them (they are the conformance metric, §2.5), then re-run once so the item also has a scored record if the model conforms on a second draw; both records stay in the file.
+Any other void: stop and report.
+
+5. AUDIT AND REPORT
+
+  python results/audit-s.py typed results/s-typed.jsonl results/e3.jsonl
+
+Give me: schema conformance rate; S-SILENT strong detection typed/strict vs prose (with any discordant items named); CLEAN false positives under strict and lenient vs prose; the F24 re-classification table (were the five known findings re-found, and classified as F24 classified them); the evidence-class distribution per condition; cost and wall-clock delta vs the prose arm; and which §2.6 decision-rule branch applies.
+
+Then draft a FINDINGS.md entry in the house style ("## F31 — S-TYPED RESULT: ...", "Established by:", tables, "What this settles", "Limits") comparing against the §2.7 predictions line by line — a DRAFT for my review, do not commit. Do not interpret beyond what §2.6 licenses; the prose CLEAN comparator is a single draw of a process F27 showed to be flaky, and the write-up must say so wherever a one- or two-item difference appears.

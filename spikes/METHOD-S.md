@@ -411,12 +411,101 @@ how humans will edit under D5.
 
 ---
 
+## 4a. S-H1b — does a static system prompt remove the gate's resume cost?
+
+**Added 2026-09-05, before any S-H1b dispatch; S-VAR was running, no S-H1b
+data existed.** Registered in the proposal §8; not previously in this document.
+
+### 4a.1 Why
+
+F28 (H1): resume after a gate costs 0 below the TTL and a flat 18,603 tokens
+above it — the volatile per-directory segment (F13). F16 showed
+`--system-prompt` deletes the volatile git-status section and holds cache-read
+share at 1.000 across *commits*. Whether it also holds across *time* is
+untested (F28 says so explicitly). If it does, the gate is free rather than
+nearly free, and the design's "one static system prompt per card" rule buys the
+human gate as well as the checkpoint commits.
+
+### 4a.2 Procedure — haiku, ~free, runs alongside S-VAR
+
+Same instrument as H1 (`ttl-mark` / `ttl-read`, `fixtures/h1`, the 37 KB
+review-scale `payload.txt`), with `--system-prompt <static card text>` on both
+the mark and the read. Gaps: **1 min** (warm control), **65 min**
+(TTL-crossing, the H1 decay point), **~24 h** (long tail). Each gap gets its
+own mark; a mark is durable, so nothing must survive the wait (F22).
+
+### 4a.3 Metric and decision rule
+
+**Primary**: `cache_creation` on the read, by gap, against H1's 0 / 18,603 /
+18,603.
+
+- 65-min read ≈ 0 creation: the static system prompt blunts time decay as it
+  does commit churn; the design records "gate cost 0 under the card rule" and
+  D-rule "gate placement is not a cost decision" gains a second leg.
+- 65-min read ≈ 18.6k: the volatile segment is not the system prompt's
+  git section alone; F28's flat cost stands and nothing changes.
+- Something in between: report the number; the segment is partly
+  system-prompt-derived.
+
+**Prediction, before data**: the 65-min read shows creation **between 4k and
+10k** — the git snapshot is deleted (F16) but the per-directory segment also
+carries tool definitions and settings that age independently.
+
+**Sizing**: 3 marks + 3 reads = 6 haiku dispatches. Below instrument resolution
+on headroom (F14). The 24 h read may be taken any time after 24 h.
+
+## 4b. S-WT — does the per-worktree cache cost vanish under a static prompt?
+
+**Added 2026-09-05, before any S-WT dispatch; S-VAR was running, no S-WT data
+existed.**
+
+### 4b.1 Why
+
+F16 arm (d): one worktree per dispatch steady-states at 0.685 cache-read share
+— the same ~31% loss as a commit — and the amendment says the combination with
+`--system-prompt` "should cost nothing … though that combination was not run".
+Phase 2's project-DAG parallelism (one worktree per story) is priced on that
+untested sentence.
+
+### 4b.2 Procedure — haiku, ~free
+
+E1 arm (d)'s topology exactly: ten worktrees of `fixtures/e1-d-wt` (or fresh
+ones under a new fixture dir if those are gone), one `probe --repeats 1` per
+worktree, in sequence, with `--flag --system-prompt --flag "<static text>"` —
+the same static text as E1 arm (e). Arm label `wt-sysprompt-w1..w10`. The
+first dispatch pays the one-time cold write for the new system prompt and is
+excluded from steady state, as in F16.
+
+### 4b.3 Metric and decision rule
+
+**Primary**: steady-state cache-read share across w2..w10, against arm (d)'s
+0.685 and arm (e)'s 1.000.
+
+- ≥ 0.95: worktree fan-out is cache-free under the card rule; Phase 2's DAG
+  parallelism carries no cache penalty and the proposal's "~0 under
+  `--system-prompt`" is measured rather than inferred.
+- ≈ 0.69: the per-directory segment is not the system prompt; a worktree costs
+  31% regardless, and the DAG pricing keeps that number.
+- In between: report it; the segment is split.
+
+**Prediction, before data**: **≥ 0.95**. F13's per-directory segment matched
+F16's commit-invalidated segment token-for-token (7,827 vs 7,853), and
+`--system-prompt` recovered all of the latter.
+
+**Sizing**: 10 haiku dispatches, below headroom resolution.
+
 ## 5. Sequencing
 
 S-MIG first (free, and it settles D6's section list before any type is
 written). S-TYPED and S-VAR next, interleaved across five-hour windows; they
-share fixtures. S-BIN when the UE project is pinned and its seeds verified;
-the seed list is added to this document as a dated amendment before dispatch.
+share fixtures. **S-H1b and S-WT run alongside S-VAR** — haiku, below headroom
+resolution, and S-H1b mostly waits. S-BIN when the UE project is pinned and its
+seeds verified; the seed list is added to this document as a dated amendment
+before dispatch.
+
+*Actual order, recorded:* S-VAR started first (2026-09-05) before S-MIG,
+because the census tool did not exist and the Opus window was free. S-MIG
+remains a Phase 1 gate regardless of order.
 
 ## 6. How to run
 
@@ -443,5 +532,44 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
   0.8/0.2 to 0.55/0.45 on Wilson bounds, because at n=10 no result could reach
   the original thresholds. Found by the audit script's smoke test on
   synthetic records; no S data existed.
+
+- **2026-09-05, before any S-H1b or S-WT dispatch:** §4a and §4b added
+  (both listed in the proposal §8, neither previously registered here). S-VAR
+  was in progress; no S-H1b/S-WT data existed.
+
+- **2026-09-05, after 10 dispatches, all of which are DISCARDED:** §1.3's
+  dispatch ceiling raised from `--timeout-secs 2400` to `3600`, and the ten
+  records taken at 2400 s quarantined to `results/s-var-2400.jsonl` and excluded
+  from every S-VAR metric. The set is re-run from r1 under one ceiling.
+
+  **What forced it.** `issues-135-129-declared-boundary-parse` r2 hit 2401 s and
+  voided on `error_kind: timeout` (`api_error_status: null` — not a platform
+  fault). It is not an outlier: 4 of the 20 arm-b CLEAN draws of these six items
+  on record exceed 2000 s, and two items reach the ceiling —
+  `issue-146-147-boundary-window` (2388 s in F27, 2055 s in E3, 2240 s here) and
+  `issues-135-129` (2150 s, then the timeout). With 50 draws outstanding, ~17 of
+  them belong to those two items.
+
+  **Why it is a metric threat and not housekeeping.** A timeout voids, and a void
+  is excluded from `n`. That is safe only if wall clock is independent of
+  verdict, and it is not: on `issue-146-147` the rejections ran 1872–2240 s while
+  F27's approval ran 893 s. A 2400 s ceiling therefore censors slow draws
+  preferentially, and if slow draws reject more often the measured flip rate is
+  biased **downward on exactly the two `MutationSurvived` items** whose band the
+  §1.5 decision rule turns on. Dropping the voids does not correct that bias; it
+  is the mechanism of it.
+
+  **Why the records are discarded rather than pooled.** Draws at 2400 s and at
+  3600 s are not one instrument. Keeping both would put a censoring ceiling on
+  10 of 60 draws and leave a confound in the primary metric to save ~$26.
+
+  **This note post-dates ten records and no others.** They are
+  `issue-62` r1, `fix-advance` r1–r2, `issue-146-147` r1–r2, `issues-135-129`
+  r1–r2 (r2 void), `issue-74` r1–r2 and `issue-63` r1 — every S-VAR record then
+  in existence. All are retained on disk, unedited, in
+  `results/s-var-2400.jsonl`; none contributes to any reported figure. No item
+  had a readable band at n≤2, so no result was seen that this change could be
+  fitted to. 3600 s is not a new number: HANDOFF already prescribes it for arm
+  (a) CLEAN.
 
 Any later change is disclosed here with the date and the records it post-dates.
