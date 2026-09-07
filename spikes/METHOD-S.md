@@ -805,4 +805,40 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
      F29 showed the resulting bias falls on the slow, rejecting draws.
 
 
+- **2026-09-07, after 42 S-TYPED records; one item retried at a raised ceiling,
+  and a correction to the ceiling rationale above.**
+
+  1. **The retry.** `issues-135-129-declared-boundary-parse` CLEAN voided on
+     `error_kind: timeout` at **3601 s** (`api_error_status: null` — not a
+     platform fault, cost $0.00). It is re-dispatched **once, at
+     `--timeout-secs 5400`**, as a disclosed per-item exception. The other 22
+     CLEAN items stay at 3600 s, so exactly one record in the condition carries
+     a different ceiling and it is named here. The void record is retained,
+     unedited, alongside whatever the retry produces; resume is keyed
+     `(arm, slug, repeat)` and a void does not satisfy it, so no record is
+     replaced.
+
+  2. **Correction to the 2026-09-06 ceiling rationale.** That note justified
+     3600 s on the claim that the typed arm is systematically slower than its
+     prose comparator and would therefore be *preferentially* truncated —
+     extrapolated from S-SILENT, where typed ran **+152%** on wall clock, and
+     from a single validation draw at 3.6× prose. **The CLEAN data does not
+     support that claim.** Over the 13 completed typed CLEAN draws the median is
+     **1071 s against prose's 682 s — 1.6×, not 2.8×** — and **no** completed
+     draw reached even 2400 s, let alone 3600 s. On the two slowest shared items
+     the arms are at parity (1998 s vs prose 2029 s; 1834 s vs 1949 s).
+
+     So the timeout is **one pathological draw, not a censored tail**: prose
+     completed this same item in 1176 s, and the voided typed draw ran >1.8× the
+     next-slowest typed CLEAN draw. Raising the ceiling to 3600 s remains
+     defensible on margin alone (prose's max was 2055 s, leaving 2400 s little
+     room), but the *mechanism* asserted in that note — systematic asymmetric
+     censoring of the typed arm — is not what the data shows, and F31 must say
+     so rather than inherit the earlier reasoning.
+
+  3. **What this does not license.** If the retry also times out at 5400 s, the
+     item is reported as a void and the condition as n=22, with the censoring
+     question left open rather than resolved by raising the ceiling again. No
+     further ceiling change is registered here.
+
 Any later change is disclosed here with the date and the records it post-dates.

@@ -1,0 +1,99 @@
+[2026-09-06T18:23:34] S-TYPED-START pid=109908  s-silent -> s-subtle -> clean, ceiling 3600
+[2026-09-06T18:23:34] S-TYPED-PHASE-START s-silent
+  resuming at five_hour 0.00 / seven_day 0.38 (margins 0.90/0.90)
+  fix-advance-write-lock-gate-scope            b-typed-s-silent r1 ... pass=false strong=true weak=true cited=10 481s
+  issue-62-new-stale-pinned-template           skipped (recorded)
+  issue-63-advance-gate-diagnostic-truncated   b-typed-s-silent r1 ... pass=false strong=true weak=true cited=7 194s
+  issue-66-id-lock-ec001-rmdir                 b-typed-s-silent r1 ... pass=false strong=true weak=true cited=7 175s
+  issue-70-plugin-root-unset                   b-typed-s-silent r1 ... pass=false strong=true weak=true cited=10 346s
+  issue-75-item-frontmatter-strict-drift       b-typed-s-silent r1 ... pass=false strong=true weak=true cited=3 202s
+  issue-77-advance-commit-partial-stage        b-typed-s-silent r1 ... pass=false strong=true weak=true cited=7 716s
+  issue-82-status-terminal-field-collision     b-typed-s-silent r1 ... pass=false strong=true weak=true cited=18 233s
+  fix-doctor-git-config-repair                 b-typed-s-silent r1 ... pass=false strong=true weak=true cited=15 229s
+  issue-122-doctor-foundation-reachability     b-typed-s-silent r1 ... pass=false strong=true weak=true cited=16 466s
+  issue-130-slice-review-story-gate            b-typed-s-silent r1 ... pass=false strong=true weak=true cited=11 239s
+  issue-131-kb-ingest-doctor-scope             b-typed-s-silent r1 ... pass=false strong=true weak=true cited=8 223s
+  issue-137-advance-commit-exit-status         b-typed-s-silent r1 ... pass=false strong=true weak=true cited=20 363s
+  issues-135-129-declared-boundary-parse       b-typed-s-silent r1 ... pass=false strong=true weak=true cited=24 513s
+  issue-72-plan-briefs-readonly-grounding      b-typed-s-silent r1 ... pass=false strong=true weak=true cited=2 424s
+  issue-73-plan-briefs-missing-artifacts-discarded b-typed-s-silent r1 ... pass=false strong=true weak=true cited=3 413s
+  issue-74-plan-briefs-dead-plan-anchor        b-typed-s-silent r1 ... pass=false strong=true weak=true cited=5 382s
+  issue-79-plan-prds-verifier-false-pass       b-typed-s-silent r1 ... pass=false strong=true weak=true cited=7 248s
+  issue-81-plan-discover-spec-gate-mismatch    b-typed-s-silent r1 ... pass=false strong=true weak=true cited=2 377s
+  issue-83-plan-prds-write-timeout             b-typed-s-silent r1 ... pass=false strong=true weak=true cited=3 414s
+  memoize-repo-root                            b-typed-s-silent r1 ... pass=false strong=true weak=true cited=12 162s
+  reap-leaked-serve-children                   b-typed-s-silent r1 ... pass=false strong=true weak=true cited=11 133s
+  issue-146-147-boundary-window                b-typed-s-silent r1 ... pass=false strong=true weak=true cited=6 751s
+
+wrote ../results/s-typed.jsonl
+[2026-09-06T20:33:05] S-TYPED-PHASE-DONE s-silent
+[2026-09-06T20:33:05] S-TYPED-PHASE-START s-subtle
+  resuming at five_hour 0.14 / seven_day 0.40 (margins 0.90/0.90)
+  issue-63-advance-gate-diagnostic-truncated   b-typed-s-subtle r1 ... pass=false strong=true weak=true cited=3 429s
+  issue-75-item-frontmatter-strict-drift       b-typed-s-subtle r1 ... pass=false strong=true weak=true cited=2 317s
+  issues-135-129-declared-boundary-parse       b-typed-s-subtle r1 ... pass=false strong=true weak=true cited=5 534s
+  issue-74-plan-briefs-dead-plan-anchor        b-typed-s-subtle r1 ... pass=false strong=true weak=true cited=2 427s
+  issue-146-147-boundary-window                b-typed-s-subtle r1 ... pass=false strong=true weak=true cited=3 1905s
+
+wrote ../results/s-typed.jsonl
+[2026-09-06T21:33:48] S-TYPED-PHASE-DONE s-subtle
+[2026-09-06T21:33:48] S-TYPED-PHASE-START clean
+  resuming at five_hour 0.18 / seven_day 0.41 (margins 0.90/0.90)
+  fix-advance-write-lock-gate-scope            b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1271s
+  issue-62-new-stale-pinned-template           b-typed-clean r1 ... pass=true strong=false weak=false cited=0 1071s
+  issue-63-advance-gate-diagnostic-truncated   b-typed-clean r1 ... 
+[2026-09-06T22:19:48] S-TYPED-START pid=110164  s-silent -> s-subtle -> clean, ceiling 3600
+[2026-09-06T22:19:48] S-TYPED-PHASE-START s-silent
+  resuming at five_hour 0.21 / seven_day 0.41 (margins 0.90/0.90)
+  fix-advance-write-lock-gate-scope            skipped (recorded)
+  issue-62-new-stale-pinned-template           skipped (recorded)
+  issue-63-advance-gate-diagnostic-truncated   skipped (recorded)
+  issue-66-id-lock-ec001-rmdir                 skipped (recorded)
+  issue-70-plugin-root-unset                   skipped (recorded)
+  issue-75-item-frontmatter-strict-drift       skipped (recorded)
+  issue-77-advance-commit-partial-stage        skipped (recorded)
+  issue-82-status-terminal-field-collision     skipped (recorded)
+  fix-doctor-git-config-repair                 skipped (recorded)
+  issue-122-doctor-foundation-reachability     skipped (recorded)
+  issue-130-slice-review-story-gate            skipped (recorded)
+  issue-131-kb-ingest-doctor-scope             skipped (recorded)
+  issue-137-advance-commit-exit-status         skipped (recorded)
+  issues-135-129-declared-boundary-parse       skipped (recorded)
+  issue-72-plan-briefs-readonly-grounding      skipped (recorded)
+  issue-73-plan-briefs-missing-artifacts-discarded skipped (recorded)
+  issue-74-plan-briefs-dead-plan-anchor        skipped (recorded)
+  issue-79-plan-prds-verifier-false-pass       skipped (recorded)
+  issue-81-plan-discover-spec-gate-mismatch    skipped (recorded)
+  issue-83-plan-prds-write-timeout             skipped (recorded)
+  memoize-repo-root                            skipped (recorded)
+  reap-leaked-serve-children                   skipped (recorded)
+  issue-146-147-boundary-window                skipped (recorded)
+
+wrote ../results/s-typed.jsonl
+[2026-09-06T22:19:49] S-TYPED-PHASE-DONE s-silent
+[2026-09-06T22:19:49] S-TYPED-PHASE-START s-subtle
+  resuming at five_hour 0.21 / seven_day 0.41 (margins 0.90/0.90)
+
+  issue-63-advance-gate-diagnostic-truncated   skipped (recorded)
+  issue-75-item-frontmatter-strict-drift       skipped (recorded)
+wrote ../results/s-typed.jsonl
+  issues-135-129-declared-boundary-parse       skipped (recorded)
+  issue-74-plan-briefs-dead-plan-anchor        skipped (recorded)
+  issue-146-147-boundary-window                skipped (recorded)
+[2026-09-06T22:19:49] S-TYPED-PHASE-DONE s-subtle
+[2026-09-06T22:19:49] S-TYPED-PHASE-START clean
+  resuming at five_hour 0.21 / seven_day 0.41 (margins 0.90/0.90)
+  fix-advance-write-lock-gate-scope            skipped (recorded)
+  issue-62-new-stale-pinned-template           skipped (recorded)
+  issue-63-advance-gate-diagnostic-truncated   b-typed-clean r1 ... pass=false strong=false weak=true cited=0 626s
+  issue-66-id-lock-ec001-rmdir                 b-typed-clean r1 ... pass=true strong=false weak=false cited=0 610s
+  issue-70-plugin-root-unset                   b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1135s
+  issue-75-item-frontmatter-strict-drift       b-typed-clean r1 ... pass=true strong=false weak=false cited=0 475s
+  issue-77-advance-commit-partial-stage        b-typed-clean r1 ... pass=true strong=false weak=false cited=0 779s
+  issue-82-status-terminal-field-collision     b-typed-clean r1 ... pass=false strong=false weak=true cited=0 574s
+  fix-doctor-git-config-repair                 b-typed-clean r1 ... pass=false strong=false weak=true cited=0 698s
+  issue-122-doctor-foundation-reachability     b-typed-clean r1 ... pass=true strong=false weak=false cited=0 1404s
+  issue-130-slice-review-story-gate            b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1534s
+  issue-131-kb-ingest-doctor-scope             b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1834s
+  issue-137-advance-commit-exit-status         b-typed-clean r1 ... pass=true strong=false weak=false cited=0 1998s
+  issues-135-129-declared-boundary-parse       b-typed-clean r1 ... NO DIGEST (timeout) 3601s
