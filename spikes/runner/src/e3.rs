@@ -148,17 +148,35 @@ pub fn typed_findings_schema() -> serde_json::Value {
                 "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["ac", "claim", "evidence", "files", "repro"],
+                    "required": ["ac", "claim", "evidence", "rationale", "files", "repro"],
                     "properties": {
                         "ac": { "type": "string", "description": "The acceptance criterion this finding is about, e.g. AC-003." },
-                        "claim": { "type": "string" },
+                        "claim": { "type": "string", "description": "One sentence: what is not met." },
                         "evidence": { "type": "string", "enum": EVIDENCE_CLASSES },
+                        // Free text beside the enum. "Capacity, Not Format" (arXiv
+                        // 2606.09410): frontier models pay a small penalty when the
+                        // constrained final message must also carry the reasoning;
+                        // a rationale field is where that reasoning goes.
+                        "rationale": { "type": "string", "description": "Why this evidence class and not a weaker one. Free text." },
                         "files": {
                             "type": "array",
                             "description": "Repo-relative paths this finding is about. Required.",
                             "items": { "type": "string" }
                         },
-                        "repro": { "type": "string", "description": "What you ran or changed to establish the evidence class." }
+                        // Structured, so the machine can re-execute it (Phase 1) and
+                        // apply the FLIP criterion: a check must fail now and pass
+                        // when the criterion is met, or it is a note, not a block
+                        // (Agentless: 213/300 reproductions, only 94 flipped).
+                        "repro": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": ["command", "observed", "expected_when_met"],
+                            "properties": {
+                                "command": { "type": "string", "description": "The exact command or code change you ran to establish the evidence. Empty string if none." },
+                                "observed": { "type": "string", "description": "What it produced now." },
+                                "expected_when_met": { "type": "string", "description": "What the same command would produce if the criterion were genuinely met." }
+                            }
+                        }
                     }
                 }
             },
@@ -178,7 +196,10 @@ pub const TYPED_ADDENDUM: &str = "\n\nThis review carries NO pass/fail verdict f
      - `mutation-survived` — you changed the behaviour the criterion describes and the relevant test stayed green;\n\
      - `narrowed-pin` — a test exists but pins a narrower claim than the criterion;\n\
      - `advisory` — a quality concern that does not show a criterion unmet.\n\
-     Name the criterion (`ac`), the files, and what you ran or changed (`repro`) for each. \
+     Name the criterion (`ac`) and the files for each. Give a `rationale` for the class you chose. \
+     In `repro`, record the exact command or change you ran (`command`), what it produced \
+     (`observed`), and what it would produce if the criterion were genuinely met \
+     (`expected_when_met`) — a claim that cannot be re-run is `advisory`. \
      An empty findings list means you established that every criterion is met.";
 
 /// E3's brief plus the typed addendum. Applied to the BRIEF, so arm (a)'s
@@ -1012,13 +1033,13 @@ mod tests {
     // ---- S-TYPED (METHOD-S §2) ----
 
     fn typed(findings: &[(&str, &str)]) -> serde_json::Value {
-        serde_json::json!({
-            "findings": findings.iter().map(|(ev, file)| serde_json::json!({
-                "ac": "AC-001", "claim": "c", "evidence": ev, "files": [file], "repro": "r"
-            })).collect::<Vec<_>>(),
-            "boundary_respected": true,
-            "rubric": []
-        })
+        let items: Vec<serde_json::Value> = findings.iter().map(|(ev, file)| serde_json::json!({
+            "ac": "AC-001", "claim": "c", "evidence": ev, "rationale": "because", "files": [file],
+            "repro": { "command": "npx vitest run x", "observed": "36/36 green", "expected_when_met": "1 red" }
+        })).collect();
+        let rubric: Vec<serde_json::Value> = ["ac-coverage", "boundary-fidelity", "test-integrity", "gate-greenness", "regression-risk"]
+            .iter().map(|d| serde_json::json!({"dimension": d, "score": 2, "rationale": "r"})).collect();
+        serde_json::json!({ "findings": items, "boundary_respected": true, "rubric": rubric })
     }
 
     #[test]
@@ -1029,9 +1050,26 @@ mod tests {
         let ev = &s["properties"]["findings"]["items"]["properties"]["evidence"]["enum"];
         assert_eq!(ev.as_array().unwrap().len(), EVIDENCE_CLASSES.len());
         let req = s["properties"]["findings"]["items"]["required"].as_array().unwrap();
-        for f in ["ac", "claim", "evidence", "files", "repro"] {
+        for f in ["ac", "claim", "evidence", "rationale", "files", "repro"] {
             assert!(req.iter().any(|v| v == f), "`{f}` must be required");
         }
+        // The repro is structured so the flip criterion can be applied by a
+        // machine; every field required, nothing optional (grammar-size limits).
+        let repro = &s["properties"]["findings"]["items"]["properties"]["repro"];
+        assert_eq!(repro["type"], "object");
+        assert_eq!(repro["additionalProperties"], false);
+        for f in ["command", "observed", "expected_when_met"] {
+            assert!(repro["required"].as_array().unwrap().iter().any(|v| v == f), "repro.`{f}` must be required");
+        }
+        // A sample typed digest validates against the schema it will be sent with.
+        let v = jsonschema::validator_for(&s).expect("schema compiles");
+        assert!(v.is_valid(&typed(&[("reproduced", "src/a.ts")])));
+        let mut bad = typed(&[("reproduced", "src/a.ts")]);
+        bad["findings"][0]["evidence"] = serde_json::json!("maybe");
+        assert!(!v.is_valid(&bad), "an unknown evidence class must not validate");
+        let mut extra = typed(&[("reproduced", "src/a.ts")]);
+        extra["findings"][0]["pass"] = serde_json::json!(false);
+        assert!(!v.is_valid(&extra), "a smuggled verdict field must not validate");
     }
 
     #[test]
@@ -1098,6 +1136,9 @@ mod tests {
             assert!(p.contains(&format!("`{c}`")), "class `{c}` must be defined in the prompt");
         }
         assert!(p.contains("NO pass/fail verdict"));
+        for field in ["`rationale`", "`command`", "`observed`", "`expected_when_met`"] {
+            assert!(p.contains(field), "the addendum must explain {field}");
+        }
         let low = p.to_lowercase();
         for leak in ["reverted", "seeded", "defect was", "bug was introduced", "s-silent"] {
             assert!(!low.contains(leak), "typed prompt leaks `{leak}`");

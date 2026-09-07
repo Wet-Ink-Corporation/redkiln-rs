@@ -1,0 +1,16 @@
+[2026-09-06T16:53:19] S-TYPED-SILENT-START pid=17656
+  resuming at five_hour 0.04 / seven_day 0.37 (margins 0.90/0.90)
+  fix-advance-write-lock-gate-scope            b-typed-s-silent r1 ... pass=false strong=true weak=true cited=10 400s
+  issue-62-new-stale-pinned-template           skipped (recorded)
+  issue-63-advance-gate-diagnostic-truncated   b-typed-s-silent r1 ... pass=false strong=true weak=true cited=5 387s
+  issue-66-id-lock-ec001-rmdir                 b-typed-s-silent r1 ... pass=false strong=true weak=true cited=12 213s
+  issue-70-plugin-root-unset                   b-typed-s-silent r1 ... pass=false strong=true weak=true cited=8 375s
+  issue-75-item-frontmatter-strict-drift       b-typed-s-silent r1 ... pass=false strong=true weak=true cited=4 177s
+  issue-77-advance-commit-partial-stage        b-typed-s-silent r1 ... pass=false strong=true weak=true cited=8 182s
+  issue-82-status-terminal-field-collision     b-typed-s-silent r1 ... pass=false strong=true weak=true cited=17 238s
+  fix-doctor-git-config-repair                 b-typed-s-silent r1 ... pass=false strong=true weak=true cited=11 208s
+  issue-122-doctor-foundation-reachability     b-typed-s-silent r1 ... pass=false strong=true weak=true cited=15 280s
+  issue-130-slice-review-story-gate            b-typed-s-silent r1 ... pass=false strong=true weak=true cited=11 222s
+  issue-131-kb-ingest-doctor-scope             b-typed-s-silent r1 ... pass=false strong=true weak=true cited=9 163s
+  issue-137-advance-commit-exit-status         b-typed-s-silent r1 ... pass=false strong=true weak=true cited=15 316s
+  issues-135-129-declared-boundary-parse       b-typed-s-silent r1 ... pass=false strong=true weak=true cited=25 271s

@@ -146,6 +146,10 @@ up as lower detection or a different false-positive profile than E3's.
 
 ### 2.2 The typed schema (the instrument)
 
+> **Amended 2026-09-06, before any S-TYPED dispatch** — see §7: `rationale`
+> added per finding; `repro` is now a structured object; the schema below is
+> the original registration and the amendment records the delta.
+
 ```json
 {
   "type": "object", "additionalProperties": false,
@@ -202,6 +206,10 @@ together, so the spike measures the pair.
 
 ### 2.4 Conditions and arms
 
+> **Amended 2026-09-06, before any S-TYPED dispatch** — a third condition,
+> S-SUBTLE (the five E3-H seeds, typed arm only, comparator E3-H arm b sighted),
+> is added as the negative control S-VAR lacked. See §7.
+
 | condition | n | typed arm | prose comparator |
 | --- | --- | --- | --- |
 | S-SILENT | 23 | new dispatches, `b-typed-s-silent` | E3's `b-s-silent` records, repeat 1 (F23) |
@@ -213,6 +221,9 @@ CLEAN the recorded arm is a single draw of a flaky process, and the comparison
 is stated with that limit rather than paid for twice.
 
 ### 2.5 Metrics
+
+> **Amended 2026-09-06, before any S-TYPED dispatch** — a registered secondary,
+> the *contradiction rate*, is added; see §7.
 
 **Primary — S-SILENT strong detection under the strict policy**: the policy
 blocks **and** a blocking finding names a file the revert touched. Compared with
@@ -502,6 +513,57 @@ F16's commit-invalidated segment token-for-token (7,827 vs 7,853), and
 
 **Sizing**: 10 haiku dispatches, below headroom resolution.
 
+## 4c. S-H1c — does *appending* to the default prompt keep the subsidised head?
+
+**Added 2026-09-06, before any S-H1c dispatch.** Motivated by S-H1b's result
+(the 65-min read re-created the whole 29.6k prefix under a static
+`--system-prompt`) and by the platform docs (`references/research/2026-09-06-grounding-s-results.md`
+Part B): the prefix is `tools → system → messages` with one cache entry per
+breakpoint; the default prompt's static head is refreshed by any session on the
+account, while a replaced prompt's tail is refreshed only by itself.
+
+### 4c.1 Question
+
+If the card is delivered as `--append-system-prompt` on top of the **default**
+system prompt with `--exclude-dynamic-system-prompt-sections`, does a resume
+after the TTL pay only for the appended tail (≈ the card, a few k tokens) rather
+than the whole prefix — and is commit/worktree invariance preserved?
+
+### 4c.2 Procedure — haiku, ~free
+
+Two parts, same instruments as §4a/§4b:
+
+1. **Time:** `ttl-mark`/`ttl-read` in three fresh directory copies (`h1-d/e/f`),
+   gaps 1 min / 65 min / 24 h, flags `--exclude-dynamic-system-prompt-sections
+   --append-system-prompt "<static card text>"` (the S-H1b text). No dispatch of
+   any kind in an arm's directory between mark and read; the 65-min and 24 h
+   marks are laid *after* any other haiku dispatch that day.
+2. **Worktrees:** `probe --repeats 1` in ten worktrees with the same two flags
+   (arm `wt-append-w1..w10`), and `probe --repeats 10 --commit-between` in one
+   directory (arm `commit-append`).
+
+### 4c.3 Metrics and decision rule
+
+- **Primary:** `cache_creation` on the 65-min read. ≤ ~5k (the appended tail
+  only) → the card rule in the proposal is re-specified as *append*, not
+  *replace*, and gate resume is cheap in the way rev. 3 assumed. ≈ 18.6k →
+  same as H1's default prompt; the head survived, the dynamic section did not,
+  and append buys nothing over the default. ≈ 29.6k → the flag does not keep
+  the head warm either; S-H1b's cost stands under both routes.
+- **Co-primary:** steady-state cache-read share across `wt-append-w2..w10` and
+  across `commit-append` draws 2–10, against S-WT's 1.000 and F16 arm c's
+  0.846. < 0.95 on either → append forfeits the invariance the static prompt
+  bought, and the trade-off is cost-per-resume versus cost-per-dispatch, to be
+  priced from the two numbers.
+
+**Prediction, before the data:** the 65-min read creates **4k–8k** (the appended
+card plus the first user message carrying the dynamic sections); worktree share
+**≥ 0.95**; commit share **0.85–0.95** (the dynamic sections moved into the user
+message still change with the commit, but sit after every breakpoint that
+matters).
+
+**Sizing:** 6 + 10 + 10 = 26 haiku dispatches, below headroom resolution.
+
 ## 5. Sequencing
 
 S-MIG first (free, and it settles D6's section list before any type is
@@ -664,5 +726,83 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
   and it returned share 1.000 / creation 0 regardless of what the tool block did.
   No `h1b-65m`, `h1b-24h` or `wt-sysprompt-*` record existed when this was
   written.
+
+- **2026-09-06, before any S-TYPED dispatch; no S-TYPED record exists.** Four
+  changes to §2 and one new registration, all motivated by the grounding pass
+  (`references/research/2026-09-06-grounding-s-results.md`) and disclosed here
+  before the first typed dispatch:
+
+  1. **Schema (§2.2).** Each finding gains a required free-text `rationale`
+     (*Capacity, Not Format*, arXiv 2606.09410: frontier models pay a small
+     penalty when the constrained final message must also carry the reasoning),
+     and `repro` becomes a required object `{command, observed,
+     expected_when_met}` so a finding is an executable claim the machine can
+     later re-run under the **flip** criterion (Agentless: 213/300 reproductions
+     failed on base, only 94 passed under the true fix). Enums unchanged;
+     `additionalProperties: false` throughout; no optional fields. The runner's
+     `typed_findings_schema()` is the registered instrument and a unit test
+     validates a sample digest against it.
+  2. **Third condition (§2.4).** The five E3-H S-SUBTLE seeds, typed arm only
+     (`b-typed-s-subtle`, sighted prompt, `--timeout-secs 3600`), comparator
+     E3-H arm (b) sighted (5/5, F26). This is the negative control S-VAR lacked:
+     a defect the checklist does not name (*Reliability without Validity*,
+     arXiv 2606.19544 — stability is not validity). +5 dispatches.
+  3. **Registered secondary (§2.5) — contradiction rate.** On CLEAN, for each of
+     the five F24 items: does a finding cite the pre-registered F24 target file
+     (`results/s-var-citation-targets.json`, fixed before S-VAR) with a
+     blocking-grade evidence class (`reproduced` or `mutation-survived`)? This is
+     the claim D4 rests on — that the finding is *reported* even where the prose
+     reviewer would have approved — measured mechanically. It replaces the
+     exploratory keyword read of S-VAR's rubric rationales, which is not a
+     metric. Predicted: ≥ 4 of 5.
+  4. **Reporting rule (§2.5).** Any item drawn more than once is reported as
+     `k/n` with a Wilson 95% interval (pass^k), and no arm comparison rests on a
+     one- or two-item difference (*The Coin Flip Judge*, arXiv 2606.13685: hard
+     items need ~15 trials for 90% majority fidelity).
+  5. **Timeout.** S-TYPED CLEAN and S-SUBTLE dispatches use `--timeout-secs
+     3600`, per the S-VAR amendment above (a 2400 s ceiling censors slow draws
+     preferentially).
+  6. **§4c S-H1c registered** — the `--append-system-prompt` route, with
+     predictions. Instrument: `ttl-mark`/`ttl-read` gain the `--flag`
+     passthrough `probe` already had (no behaviour change for existing arms).
+
+  Sizing becomes 23 + 23 + 5 = **51 typed dispatches** (~$90).
+
+- **2026-09-06, before any S-TYPED dispatch under the amended schema; 14
+  superseded records quarantined.** Three things, and the first is a correction.
+
+  1. **Correction to the bullet above.** That note states "no S-TYPED record
+     exists". At the time it was written **14 did**: a validation draw plus 13
+     more `b-typed-s-silent` records, produced earlier the same day by a run
+     started against the schema as registered on 2026-09-05 and stopped as soon
+     as the schema edits appeared in the working tree. They are quarantined,
+     unedited, in `results/s-typed-oldschema.jsonl` (log:
+     `s-typed-oldschema.log`) and contribute to **no** S-TYPED metric. The
+     substance of the preceding bullet stands — every change in it was motivated
+     by the grounding pass and none was chosen after seeing a result under the
+     amended schema — but the pre-registration must say what was on disk, so this
+     records it.
+
+  2. **Why they cannot simply be resumed into.** All 14 carry
+     `arm: b-typed-s-silent`, the same label the amended schema emits, and
+     resume is keyed `(arm, slug, repeat)`. Left in place they would be *skipped*
+     as already-recorded and would silently pool a `repro`-as-string, no-
+     `rationale` digest into the conformance rate and the detection count, with
+     no field an audit keyed on `arm` could separate them by. Quarantine, not
+     resume. (14/14 were schema-conformant under the *old* schema, which says
+     nothing about conformance under the new one — the structured `repro` object
+     is precisely the harder demand.)
+
+  3. **Timeout, restated for all three conditions.** S-TYPED S-SILENT, S-SUBTLE
+     and CLEAN all run at `--timeout-secs 3600`. The preceding bullet set 3600
+     for CLEAN and S-SUBTLE; S-SILENT joins them so a single ceiling covers the
+     spike. The reason is the one given for S-VAR: §2.4 measures the typed arm
+     against E3's *recorded* prose arm, which was **uncensored** (`b-clean`
+     median 682 s, max 2055 s, 0 of 23 at 2400 s), while the typed arm is slower
+     — the quarantined validation draw took **466 s against the same item's
+     131 s in prose, 3.6×**. A ceiling only censors where it binds; holding the
+     *number* equal to the comparator's would make the *conditions* unequal, and
+     F29 showed the resulting bias falls on the slow, rejecting draws.
+
 
 Any later change is disclosed here with the date and the records it post-dates.

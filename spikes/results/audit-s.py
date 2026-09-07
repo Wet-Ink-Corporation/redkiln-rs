@@ -7,7 +7,7 @@ miss (METHOD-S §0 rule 2).
 
 Usage:
     python results/audit-s.py var   results/s-var.jsonl
-    python results/audit-s.py typed results/s-typed.jsonl results/e3.jsonl
+    python results/audit-s.py typed results/s-typed.jsonl results/e3.jsonl [results/e3h.jsonl] [results/s-var-citation-targets.json]
 """
 
 import json
@@ -117,9 +117,34 @@ def audit_var(path):
     print("  control rejects >= 2/10    -> false-positive floor is real; policy needs an advisory sink")
 
 
-def audit_typed(typed_path, e3_path):
+def load_targets(path):
+    """METHOD-S §2.5 contradiction secondary: the F24 file targets per CLEAN item,
+    pre-registered in results/s-var-citation-targets.json before any S data."""
+    try:
+        d = json.load(open(path, encoding="utf-8"))
+        return {slug: v["targets"] for slug, v in d["items"].items()}
+    except (OSError, KeyError, ValueError):
+        return {}
+
+
+def norm_path(s):
+    return s.replace("\\", "/").removeprefix("./").lower()
+
+
+def cites_target(files, targets):
+    c = [norm_path(x) for x in files]
+    t = [norm_path(x) for x in targets]
+    return any(x.endswith(y) or y.endswith(x) for x in c for y in t)
+
+
+def audit_typed(typed_path, e3_path, e3h_path=None, targets_path=None):
     typed = load(typed_path)
     prose = [r for r in load(e3_path) if r.get("repeat", 1) == 1 and r.get("arm") in ("b-s-silent", "b-clean")]
+    if e3h_path:
+        # METHOD-S §2.4 (amended 2026-09-06): the five S-SUBTLE seeds are the negative
+        # control; the prose comparator is E3-H's sighted arm (b).
+        prose += [r for r in load(e3h_path) if r.get("repeat", 1) == 1 and r.get("arm") == "b-s-subtle"]
+    targets = load_targets(targets_path) if targets_path else {}
 
     def valid_map(recs):
         m, voids = {}, []
@@ -141,12 +166,14 @@ def audit_typed(typed_path, e3_path):
     for r, failed in t_void:
         print(f"  void  {r['slug']:<46} {r['condition']:<9} {', '.join(failed)}")
 
-    for cond, label in (("s-silent", "S-SILENT strong detection"), ("clean", "CLEAN false positives")):
+    for cond, label in (("s-silent", "S-SILENT strong detection"), ("s-subtle", "S-SUBTLE strong detection (negative control)"), ("clean", "CLEAN false positives")):
         t = {k: v for k, v in t_map.items() if k[0] == cond}
         p = {k: v for k, v in p_map.items() if k[0] == cond}
         paired = sorted(set(t) & set(p))
+        if not t:
+            continue
         print(f"\n{label} — paired n={len(paired)} (typed n={len(t)}, prose comparator n={len(p)})")
-        if cond == "s-silent":
+        if cond in ("s-silent", "s-subtle"):
             t_hit = sum(1 for k in paired if t[k]["scored"]["strong_detection"])
             p_hit = sum(1 for k in paired if p[k]["scored"]["strong_detection"])
             print(f"  typed/strict {t_hit}/{len(paired)}   prose {p_hit}/{len(paired)}")
@@ -165,6 +192,22 @@ def audit_typed(typed_path, e3_path):
                     continue
                 counts = t[k]["policy"]["strict"]["counts"]
                 print(f"    {slug:<46} known={known:<18} reported={ {c: n for c, n in counts.items() if n} }")
+            # §2.5 registered secondary (added 2026-09-06, before any S-TYPED dispatch):
+            # CONTRADICTION RATE — the F24 file is cited by a finding whose evidence
+            # class is blocking-grade. This is the claim D4 rests on: the finding is
+            # REPORTED even where the prose reviewer would have approved. Mechanical.
+            if targets:
+                print("  contradiction secondary — F24 target cited with blocking-grade evidence (reproduced|mutation-survived):")
+                for slug, tg in targets.items():
+                    k = (cond, slug)
+                    if k not in t:
+                        continue
+                    d = (t[k].get("step") or {}).get("digest") or {}
+                    hits = [f for f in d.get("findings", [])
+                            if f.get("evidence") in ("reproduced", "mutation-survived") and cites_target(f.get("files", []), tg)]
+                    weak = [f for f in d.get("findings", []) if cites_target(f.get("files", []), tg)]
+                    prose_verdict = "reject" if k in p and p[k]["scored"]["rejected"] else ("approve" if k in p else "n/a")
+                    print(f"    {slug:<46} blocking-grade={len(hits)} any-class={len(weak)}  prose-arm verdict={prose_verdict}")
 
         # Evidence-class distribution on this condition.
         agg = defaultdict(int)
@@ -172,6 +215,17 @@ def audit_typed(typed_path, e3_path):
             for c, n in t[k]["policy"]["strict"]["counts"].items():
                 agg[c] += n
         print(f"  evidence classes reported: {dict(agg)}")
+        # repro fill rate: a blocking-grade finding without a command cannot be
+        # re-executed, so the flip criterion (§7 amendment 1) has nothing to run.
+        blocking, with_cmd = 0, 0
+        for k in t:
+            for f in ((t[k].get("step") or {}).get("digest") or {}).get("findings", []):
+                if f.get("evidence") in ("reproduced", "mutation-survived"):
+                    blocking += 1
+                    if (f.get("repro") or {}).get("command", "").strip():
+                        with_cmd += 1
+        if blocking:
+            print(f"  repro.command fill rate on blocking-grade findings: {with_cmd}/{blocking}")
 
         # Cost and wall clock against the prose arm (§2.7 prediction 5: within ±15%).
         def cost(r):
@@ -185,11 +239,32 @@ def audit_typed(typed_path, e3_path):
             print(f"  cost typed ${tc:.2f} vs prose ${pc:.2f} ({100*(tc-pc)/pc:+.0f}%); wall {tw:.0f}s vs {pw:.0f}s")
 
 
+def audit_repeats(path):
+    """pass^k with Wilson intervals for any (condition, slug) with more than one draw
+    (METHOD-S §2.5 as amended: never compare arms on a one-item difference)."""
+    recs = [r for r in load(path) if checks(r)[0]]
+    by = defaultdict(list)
+    for r in recs:
+        by[(r["condition"], r["slug"])].append(r)
+    multi = {k: v for k, v in by.items() if len(v) > 1}
+    if not multi:
+        return
+    print("\nrepeated items — blocks per draw with Wilson 95% (report these, not point estimates)")
+    for (cond, slug), rs in sorted(multi.items()):
+        n = len(rs)
+        k = sum(1 for r in rs if r["scored"]["rejected"])
+        lo, hi = wilson(k, n)
+        print(f"  {cond:<9} {slug:<46} {k}/{n}  [{lo:.2f}, {hi:.2f}]")
+
+
 def main(argv):
     if len(argv) >= 3 and argv[1] == "var":
         audit_var(argv[2])
     elif len(argv) >= 4 and argv[1] == "typed":
-        audit_typed(argv[2], argv[3])
+        e3h = argv[4] if len(argv) >= 5 else None
+        targets = argv[5] if len(argv) >= 6 else None
+        audit_typed(argv[2], argv[3], e3h, targets)
+        audit_repeats(argv[2])
     else:
         print(__doc__)
         sys.exit(2)

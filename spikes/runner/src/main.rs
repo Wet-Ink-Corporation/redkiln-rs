@@ -324,6 +324,11 @@ struct TtlStepArgs {
     /// the human gate is near-free — a design conclusion, not a detail.
     #[arg(long)]
     system_prompt: Option<String>,
+    /// Extra flags passed through to `claude`, one token per `--flag`, as on
+    /// `probe`. S-H1c: `--flag --exclude-dynamic-system-prompt-sections --flag
+    /// --append-system-prompt --flag "<text>"`.
+    #[arg(long = "flag")]
+    flags: Vec<String>,
 }
 
 #[derive(clap::Args)]
@@ -1551,9 +1556,16 @@ async fn ttl_step(claude_bin: &str, args: TtlStepArgs, label: &str) -> Result<()
         permission_mode: None,
         cwd: cwd.clone(),
         isolate_mcp: true,
-        extra_flags: match &args.system_prompt {
-            Some(p) => vec!["--system-prompt".into(), p.clone()],
-            None => vec![],
+        extra_flags: {
+            let mut f = match &args.system_prompt {
+                Some(p) => vec!["--system-prompt".into(), p.clone()],
+                None => vec![],
+            };
+            // S-H1c (METHOD-S §4c): the append route needs
+            // `--exclude-dynamic-system-prompt-sections --append-system-prompt <text>`,
+            // which `probe` already takes via `--flag`; the same passthrough here.
+            f.extend(args.flags.iter().cloned());
+            f
         },
         timeout: Duration::from_secs(args.timeout_secs),
     };
