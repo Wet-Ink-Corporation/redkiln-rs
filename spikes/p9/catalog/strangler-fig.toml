@@ -1,0 +1,92 @@
+# reach: (project, implement, recommended) with size >= high and blast_radius >= high — branch-by-abstraction inapplicable there
+# large-change safety family: direct-change < branch-by-abstraction(40) < strangler-fig(50)
+[activity]
+id           = "strangler-fig"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["Spec", "DesignDoc", "ArchitectureDescription", "RolloutPlan"]
+derived_from = ["DesignDoc", "ArchitectureDescription"]
+tags         = ["kind:project", "kind:tech-debt", "change:text"]
+applicable_if = "size >= high and blast_radius >= high"
+method_rank  = 50
+family       = "large-change"
+min_rigor    = "recommended"
+cost_class   = "XL"
+evidence     = ["GreenAt", "ToolReport", "HumanAnswer"]
+budget       = { attempts_total = 14, tokens = 1_200_000, wall_clock_secs = 28800 }
+deviation_ok = ["downgrade"]
+keywords     = ["strangler fig", "routing", "legacy replacement", "incremental migration"]
+rationale    = "Fowler StranglerFigApplication: route traffic slice by slice from legacy to new behind a facade; each slice is a green, releasable step and a human decides each cutover."
+
+[[step]]
+id      = "facade"
+kind    = "agent"
+role    = "implementer"
+inputs  = { design = "artifact:DesignDoc", arch = "artifact:ArchitectureDescription", last = "${facade-verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "facade-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "facade-green"
+kind    = "check"
+inputs  = { report = "${facade-verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "facade", max = 2 }
+
+[[step]]
+id      = "slice"
+kind    = "agent"
+role    = "implementer"
+for_each = "artifact:RolloutPlan.steps"
+inputs  = { step = "${item}", design = "artifact:DesignDoc", spec = "artifact:Spec" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "slice-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "slice-green"
+kind    = "check"
+inputs  = { report = "${slice-verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = "fail"
+
+[[step]]
+id      = "cutover"
+kind    = "gate"
+question = "seam.cutover"
+inputs  = { report = "${slice-verify.outputs}", slices = "${slice.outputs}" }
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${facade.outputs}" }
+evidence  = ["${facade-verify}", "${slice-verify}", "${cutover}"]

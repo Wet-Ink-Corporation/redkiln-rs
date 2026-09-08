@@ -1,0 +1,17 @@
+family review                   members=4 lowest=checklist-review floor=optional contexts-checked=5184 holes=0
+family sizing                   members=3 lowest=appetite-check floor=optional contexts-checked=7776 holes=0
+family design-evaluation        members=2 lowest=design-review-lightweight floor=recommended contexts-checked=7776 holes=0
+family implement-loop           members=3 lowest=test-after floor=optional contexts-checked=3888 holes=0
+family spec-form                members=4 lowest=user-story-ac floor=optional contexts-checked=10368 holes=0
+family localisation             members=4 lowest=root-cause floor=optional contexts-checked=3888 holes=0
+family deploy-pattern           members=4 lowest=rolling-deploy floor=optional contexts-checked=20736 holes=0
+family large-change             members=2 lowest=branch-by-abstraction floor=optional contexts-checked=864 holes=0
+family architecture-description members=3 lowest=c4-context floor=optional contexts-checked=2592 holes=0
+family prototype                members=2 lowest=prototype-test floor=optional contexts-checked=2592 holes=0
+family test-design              members=3 lowest=unit-tests floor=optional contexts-checked=11664 holes=0
+family mitigation               members=5 lowest=rollback-mitigation floor=optional contexts-checked=1296 holes=0
+family causal                   members=3 lowest=five-whys floor=optional contexts-checked=5184 holes=0
+family implement-loop-ue        members=1 lowest=implement-ue floor=optional contexts-checked=10368 holes=0
+family learning                 members=2 lowest=lightweight-retro floor=optional contexts-checked=15552 holes=0
+validate: no errors
+validate errors=0

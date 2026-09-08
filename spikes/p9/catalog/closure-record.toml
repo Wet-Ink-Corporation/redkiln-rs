@@ -1,0 +1,46 @@
+# reach: (project, closeout, optional) — baseline ClosureRecord in every pack's closeout
+[activity]
+id           = "closure-record"
+version      = 1
+stage        = "closeout"
+provides     = ["ClosureRecord"]
+requires     = ["Spec?", "ReleaseRecord?", "Retrospective?", "Postmortem?", "SpikeReport?"]
+derived_from = ["Spec?", "ReleaseRecord?"]
+tags         = ["kind:initiative", "kind:project", "kind:story", "kind:bug", "kind:incident", "kind:spike", "kind:chore", "kind:tech-debt", "kind:security-vuln", "kind:docs"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "HumanAnswer?"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 1200 }
+deviation_ok = []
+keywords     = ["closure", "AC coverage audit", "tree clean", "links reconciled"]
+rationale    = "The closeout command's audit: every AC covered, tree clean, links reconciled; a human signs at recommended and above."
+
+[[step]]
+id      = "audit"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { spec = "artifact:Spec?", release = "artifact:ReleaseRecord?", retro = "artifact:Retrospective?", postmortem = "artifact:Postmortem?", spike = "artifact:SpikeReport?", backlog = "toolchain:backlog", checklist = "checklist:closure", previous = "${audit.outputs?}" }
+outputs = "value:SelfCheck"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "clean"
+kind    = "check"
+inputs  = { audit = "${audit.outputs}" }
+expr    = "audit.failed == 0"
+on_false = { to = "audit", max = 1 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= recommended"
+question = "closure.signoff"
+inputs  = { audit = "${audit.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ClosureRecord = { ac_coverage = "${audit.outputs.passed}", uncovered = "${audit.outputs.failed}", signed_by = "${signoff.answer?}", summary = "${audit.outputs.notes}" } }   # composing emit (§9c.34)
+evidence  = ["${audit}", "${signoff?}"]

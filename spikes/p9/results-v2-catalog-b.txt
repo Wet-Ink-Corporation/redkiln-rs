@@ -1,0 +1,25 @@
+ERROR api-contract-spec        R3    policy: unknown key 'max'
+ERROR api-contract-spec        R1    policy: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR api-contract-spec        R1    assemble: loop-back target has no feedback ref and memo != false — the loop cannot learn (§9b.13)
+ERROR blameless-postmortem     R3    [activity] unknown key 'spawn'
+ERROR blameless-postmortem     R3    complete: unknown key 'max'
+ERROR blameless-postmortem     R3    reviewed: unknown key 'max'
+ERROR blameless-postmortem     R1    complete: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR blameless-postmortem     R1    reviewed: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR blameless-postmortem     R1    draft: loop-back target has no feedback ref and memo != false — the loop cannot learn (§9b.13)
+ERROR blameless-postmortem     R9    applicable_if: 'security-vuln' must be quoted — not an identifier (§9b.18)
+ERROR blameless-postmortem     R9    applicable_if: identifier 'vuln' is not a facet, input, or builtin
+ERROR blameless-postmortem     R9    applicable_if: identifier 'security' is not a facet, input, or builtin
+ERROR feature-flag-kill        R3    restored: ${observe.escalate} — only '.outputs' exists on tool steps
+ERROR feature-flag-kill        R1    observe: loop-back target has no feedback ref and memo != false — the loop cannot learn (§9b.13)
+ERROR feature-flag-kill        R10   plan.telemetry: toolchain feed 'metrics?' not in registry
+
+== summary ==
+ERROR R1    6
+ERROR R10   1
+ERROR R3    5
+ERROR R9    3
+errors=15 warnings=0
+
+== fragments repeated in >=2 activities ==
+2x ['api-contract-spec', 'blameless-postmortem']: agent/reviewer? -> check↺

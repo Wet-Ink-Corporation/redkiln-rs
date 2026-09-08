@@ -1,11 +1,11 @@
 [activity]
 id           = "mutation-testing"
-version      = 1
+version      = 2   # bumped 2026-09-08 (§9c.42)
 stage        = "verify"
 provides     = ["MutationSummary"]
 requires     = ["Changeset", "Spec"]
 derived_from = ["Changeset"]
-tags         = ["kind:story", "kind:bug", "change:text", "toolchain:node", "toolchain:rust", "toolchain:python"]
+tags         = ["kind:story", "kind:bug", "change:text", "toolchain:node", "toolchain:rust", "toolchain:python", "toolchain:dotnet"]   # run6: Stryker.NET; unreal has no mutation tool (tech-pack gap, reported)
 method_rank  = 50
 min_rigor    = "mandatory"
 cost_class   = "L"

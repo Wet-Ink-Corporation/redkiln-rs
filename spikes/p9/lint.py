@@ -1,10 +1,26 @@
 #!/usr/bin/env python3
-"""P9 lint prototype for the activity-graph schema (references/2026-09-07-activity-graph-schema.md §9).
+"""P9 lint — v3 (schema §9 + §9a + §9b + §9c). v2 is frozen as lint-v2.py so F32/F33/F34 result files replay.
 
-Python stand-in for the Rust implementation. Rules R1-R9 plus FRAG (fragment detector).
-Usage: python3 lint.py [catalog_dir]  -> prints findings, exits 1 on any error.
+v3 (2026-09-08, decisions 1–10): typed verbs (registry.toml [verb], amendments 29/34); artifacts.toml (27/43); composing
+`emit` tables (34); `family` / `max_rigor` keys (26/28); R4b on_false target activity (35); boolean-facet tags rejected
+(30); gate inside for_each rejected (38); null ordering ops rejected (39); balanced-paren quantifier scan (40); empty
+evidence with an agent step rejected (41); gate `.attachments.<Kind>` refs + option tables with `attaches` (33);
+`rigor` in applicable_if warns (36). Family totality and requires-resolution are catalog-level: `lattice.py --validate`.
+
+Rules: R1 graph shape (acyclic, loops bounded, on_false table form, feedback refs, loop-learning)
+       R2 numeric timeouts/budget after substitution
+       R3 refs resolve (step AND path), '?' on conditional targets, emit shape, gate.answer only
+       R4 well-formed at every rigor >= min_rigor
+       R5 evidence promise vs minted evidence (normative table §9a.6)
+       R6 questions in registry; escalate has no inline options
+       R7 for_each list-typed; fan-out outputs consumed via [*] or whole
+       R8 attempts_total >= agent/tool steps on one pass (for_each counts once)
+       R9 predicate vocabulary + grammar (quoted non-identifier values, ordered facets for >=)
+       R10 registries: toolchain verbs/feeds/timeouts, checklist:, kb:
+       FRAG fragment detector (unchanged)
+Usage: python3 lint.py [catalog_dir]  -> exit 1 on any error.
 """
-import re, sys, glob, os, json
+import re, sys, glob, os
 from collections import defaultdict
 try:
     import tomllib
@@ -13,18 +29,25 @@ except ModuleNotFoundError:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RIGOR = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]
-TOOLCHAIN_KEYS = {"test_timeout", "implement_timeout", "review_timeout", "repro_timeout", "mutation_timeout"}
 BUILTINS = {"rigor", "item", "true", "false", "null", "and", "or", "not", "in", "len", "none", "all", "any"}
 REF = re.compile(r"\$\{([^}]+)\}")
+IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 def load(p):
-    with open(p, "rb") as f:
-        return tomllib.load(f)
+    with open(p, "rb") as f: return tomllib.load(f)
 
 facets = load(os.path.join(HERE, "facets.toml"))["facet"]
 questions = load(os.path.join(HERE, "questions.toml"))["question"]
 schemas = load(os.path.join(HERE, "schemas.toml"))["value"]
+registry = load(os.path.join(HERE, "registry.toml"))
+VERBS = registry["verb"]; FEEDS = set(registry["toolchain"]["feeds"]["values"])
+ARTIFACTS = load(os.path.join(HERE, "artifacts.toml"))["artifact"]
+def opt_ids(q): return [o["id"] if isinstance(o, dict) else o for o in questions[q]["options"]]
+def opt_attaches(q): return {o["id"]: o.get("attaches") for o in questions[q]["options"] if isinstance(o, dict) and o.get("attaches")}
+TIMEOUTS = set(registry["toolchain"]["timeouts"]["values"])
+CHECKLISTS = set(registry["checklists"]["values"]); KB = set(registry["kb"]["values"])
 FACET_VALUES = {str(v) for f in facets.values() for v in f["values"]}
+BARE_VALUES = {v for v in FACET_VALUES if IDENT.match(v)}
 
 class Report:
     def __init__(self): self.items = []
@@ -32,25 +55,24 @@ class Report:
     def warn(self, act, rule, msg): self.items.append(("WARN", act, rule, msg))
 
 def parse_ref(r):
-    """'${step.outputs.field?}' -> (step, path, optional). Also '${gate.answer}', '${item}'."""
-    r = r.strip()
-    opt = r.endswith("?")
+    """'${step.outputs[*].field?}' -> (step, path list, optional, projected)."""
+    r = r.strip(); opt = r.endswith("?")
     if opt: r = r[:-1]
-    parts = r.split(".")
-    return parts[0], parts[1:], opt
+    proj = "[*]" in r; r = r.replace("[*]", "")
+    parts = r.split("."); return parts[0], parts[1:], opt, proj
 
 def refs_in(value):
-    if isinstance(value, str):
-        return [parse_ref(m) for m in REF.findall(value)]
-    if isinstance(value, dict):
-        return [x for v in value.values() for x in refs_in(v)]
-    if isinstance(value, list):
-        return [x for v in value for x in refs_in(v)]
+    if isinstance(value, str): return [parse_ref(m) for m in REF.findall(value)]
+    if isinstance(value, dict): return [x for v in value.values() for x in refs_in(v)]
+    if isinstance(value, list): return [x for v in value for x in refs_in(v)]
     return []
 
+def coalesce_groups(value):
+    """For a string like '${a?} ?? ${b}', return [[refA, refB]]; plain refs return singletons."""
+    if not isinstance(value, str): return []
+    return [[parse_ref(m) for m in REF.findall(part)] for part in [value] if "??" in value]
+
 def rigor_eval(when, rigor):
-    """Evaluate only the `rigor` comparisons in `when`; other conjuncts are unknown (treated as True).
-    Returns False only if a rigor conjunct is definitely false."""
     if not when: return True
     for m in re.finditer(r"rigor\s*(>=|<=|<|>|==)\s*(\w+)", when):
         op, lvl = m.groups()
@@ -60,64 +82,110 @@ def rigor_eval(when, rigor):
         if not ok and " or " not in when: return False
     return True
 
-def strip_strings(expr):
-    return re.sub(r"'[^']*'|\"[^\"]*\"", "''", expr)
+def strip_strings(expr): return re.sub(r"'[^']*'|\"[^\"]*\"", "''", expr)
+
+def on_false_of(s):
+    """§9b.14: on_false = { to, max } | 'continue' | 'fail'. Returns (to, max, form_ok)."""
+    of = s.get("on_false")
+    if of is None: return None, None, True
+    if isinstance(of, str): return of, None, of in ("continue", "fail")
+    if isinstance(of, dict): return of.get("to"), of.get("max"), "to" in of and (of["to"] in ("continue", "fail", "deviate") or "max" in of)
+    return None, None, False
 
 def lint_activity(path, rep):
     doc = load(path); act = doc["activity"]; aid = act["id"]
-    steps = doc.get("step", [])
-    ids = [s["id"] for s in steps]
-    by_id = {s["id"]: s for s in steps}
+    steps = doc.get("step", []); ids = [s["id"] for s in steps]; by_id = {s["id"]: s for s in steps}
+    decl = {sid: i for i, sid in enumerate(ids)}
     if len(ids) != len(set(ids)): rep.err(aid, "R3", "duplicate step ids")
+    known_keys = {"id","kind","role","run","when","inputs","outputs","timeout_secs","retry","repeat","on_exhausted","escalate","expr","on_false","deviate","question","artifacts","evidence","for_each","memo"}
+    act_keys = {"id","version","stage","provides","requires","derived_from","tags","applicable_if","method_rank","min_rigor","max_rigor","cost_class","evidence","budget","human_source_ok","deviation_ok","keywords","rationale","family"}
+    # §9c: max_rigor ceiling, artifact kinds registered, typed verbs, gate-in-for_each, empty evidence
+    min_r = act.get("min_rigor", "optional"); max_r = act.get("max_rigor", "mandatory")
+    if max_r not in RIGOR or RIGOR.index(max_r) < RIGOR.index(min_r): rep.err(aid, "R9", f"max_rigor {max_r!r} below min_rigor {min_r!r} (§9c.26)")
+    for k in list(act["provides"]) + [r.rstrip("?") for r in act.get("requires", [])]:
+        if k not in ARTIFACTS: rep.err(aid, "R10", f"artifact kind '{k}' not in artifacts.toml (§9c.27)")
+    for k in act["provides"]:
+        if ARTIFACTS.get(k, {}).get("source") == "human": rep.err(aid, "R10", f"provides '{k}' which artifacts.toml marks source = human (§9c.27)")
+    for s in steps:
+        if s["kind"] == "tool":
+            v = s.get("run", "")[10:]
+            if v in VERBS:
+                want = VERBS[v]["outputs"]; got = s.get("outputs", "value:" + want).replace("value:", "")
+                if got != want: rep.err(aid, "R10", f"{s['id']}: verb '{v}' outputs {want}, step declares {got} (§9c.34)")
+                if VERBS[v].get("live") and s.get("memo", True) is not False: s["memo"] = False   # implied (§9c.29)
+                if not VERBS[v].get("live") and s.get("memo", True) is False: rep.warn(aid, "R10", f"{s['id']}: memo = false on non-live verb '{v}'")
+        if s["kind"] == "gate" and s.get("for_each"): rep.err(aid, "R6", f"{s['id']}: gate inside for_each (§9c.38)")
+    if act.get("evidence", []) == [] and any(s["kind"] == "agent" for s in steps): rep.err(aid, "R5", "empty evidence promise but the activity has an agent step (§9c.41)")
+    if "rigor" in act.get("applicable_if", ""): rep.warn(aid, "R9", "applicable_if references `rigor` — consider max_rigor (§9c.36)")
+    for t in act.get("tags", []):
+        f = t.partition(":")[0]
+        if f in facets and facets[f]["values"] and isinstance(facets[f]["values"][0], bool): rep.err(aid, "R9", f"tag '{t}' on a boolean facet — booleans are applicable_if-only (§9c.30)")
+    for k in set(act) - act_keys: rep.err(aid, "R3", f"[activity] unknown key '{k}'")
+    for s in steps:
+        for k in set(s) - known_keys: rep.err(aid, "R3", f"{s['id']}: unknown key '{k}'")
 
-    # --- collect refs per step
     step_refs = {}
     for s in steps:
         rs = []
         for key in ("inputs", "for_each", "when", "repeat", "artifacts", "evidence", "expr"):
-            if key in s:
-                v = s[key]["until"] if key == "repeat" else s[key]
-                rs += refs_in(v)
+            if key in s: rs += refs_in(s[key]["until"] if key == "repeat" else s[key])
         step_refs[s["id"]] = rs
 
-    # --- R3: refs resolve; '?' on conditional targets; emit shape
+    # --- conditional steps: `when`, or only reachable through on_false
     conditional = {s["id"] for s in steps if s.get("when")}
-    # steps only reachable via on_false are conditional too
-    onfalse_targets = {s.get("on_false") for s in steps if s.get("on_false") not in (None, "continue", "fail")}
-    conditional |= {t for t in onfalse_targets if t in by_id and not any(
-        t in [r[0] for r in step_refs[o]] for o in ids if o != t)}
+    onfalse_targets = {on_false_of(s)[0] for s in steps if on_false_of(s)[0] in by_id}
+
+    # --- R3: refs resolve (step + path), '?' marks, gate.answer, emit shape
+    def out_schema(s):
+        if "outputs" not in s and s.get("kind") == "tool" and s.get("run", "")[10:] in VERBS: return VERBS[s["run"][10:]]["outputs"]   # §9c.34 default
+        return s.get("outputs", "").replace("value:", "")
     for s in steps:
-        for tgt, path_, opt in step_refs[s["id"]]:
-            if tgt in ("item",):
+        for tgt, path_, opt, proj in step_refs[s["id"]]:
+            if tgt == "item":
                 if not s.get("for_each"): rep.err(aid, "R3", f"{s['id']}: ${{item}} used without for_each")
                 continue
-            if tgt not in by_id:
-                rep.err(aid, "R3", f"{s['id']}: unresolved ref ${{{tgt}}}"); continue
-            if tgt in conditional and not opt and s.get("when") != by_id[tgt].get("when"):
+            if tgt not in by_id: rep.err(aid, "R3", f"{s['id']}: unresolved ref ${{{tgt}}}"); continue
+            t = by_id[tgt]
+            if tgt in conditional and not opt and s.get("when") != t.get("when"):
                 rep.err(aid, "R3", f"{s['id']}: ref to conditional step '{tgt}' lacks '?'")
-            if path_ and path_[0] == "answer" and by_id[tgt]["kind"] != "gate":
-                rep.err(aid, "R3", f"{s['id']}: .answer on non-gate '{tgt}'")
-            if path_ and path_[0] == "outputs" and by_id[tgt]["kind"] in ("gate", "emit"):
-                rep.err(aid, "R3", f"{s['id']}: .outputs on {by_id[tgt]['kind']} step '{tgt}'")
+            if t["kind"] == "gate":
+                if path_ and path_ != ["answer"]:
+                    att = opt_attaches(t.get("question", "")) if t.get("question") in questions else {}
+                    if not (len(path_) == 2 and path_[0] == "attachments" and path_[1] in att.values()):
+                        rep.err(aid, "R3", f"{s['id']}: a gate exposes '.answer' and '.attachments.<Kind>' for declared attaches only (got ${{{tgt}.{'.'.join(path_)}}})")
+                continue
+            if t["kind"] in ("check", "emit"):
+                if path_ or s["kind"] != "emit": rep.err(aid, "R3", f"{s['id']}: {t['kind']} step '{tgt}' has no outputs to reference")
+                continue
+            if not path_: continue                       # bare ${step} (evidence lists) is allowed
+            if path_[0] != "outputs": rep.err(aid, "R3", f"{s['id']}: ${{{tgt}.{path_[0]}}} — only '.outputs' exists on {t['kind']} steps"); continue
+            if len(path_) > 1:
+                sch = schemas.get(out_schema(t), {})
+                if path_[1] not in sch.get("fields", []): rep.err(aid, "R3", f"{s['id']}: field '{path_[1]}' not in {out_schema(t)} schema")
     emits = [s for s in steps if s["kind"] == "emit"]
     if len(emits) != 1: rep.err(aid, "R3", f"expected exactly one emit step, found {len(emits)}")
     else:
-        e = emits[0]
-        bound = set(e.get("artifacts", {}))
+        e = emits[0]; bound = set(e.get("artifacts", {}))
         for k in act["provides"]:
             if k not in bound: rep.err(aid, "R3", f"provides '{k}' not bound in emit")
         for k, v in e.get("artifacts", {}).items():
-            for tgt, _, opt in refs_in(v):
-                if opt: rep.err(aid, "R3", f"emit: artifact '{k}' bound to optional ref '{tgt}?' — a provided artifact must be unconditional")
+            if isinstance(v, dict):                                   # composing emit (§9c.34)
+                sch = schemas.get(ARTIFACTS.get(k, {}).get("schema", k), {}).get("fields", [])
+                for fld in v:
+                    if fld not in sch: rep.err(aid, "R3", f"emit: composed field '{fld}' not in schema of {k}")
+                if not any(not opt for _, _, opt, _ in refs_in(v)): rep.err(aid, "R3", f"emit: composed artifact '{k}' has no unconditional field")
+                continue
+            rs = refs_in(v)
+            if all(opt for _, _, opt, _ in rs) and rs:
+                rep.err(aid, "R3", f"emit: artifact '{k}' has no unconditional source (use '??' with an unconditional fallback)")
 
-    # --- R1: acyclic on non-optional refs; feedback refs need a back-edge
+    # --- R1: cycles, loops bounded, on_false form, feedback refs, loop-learning
     edges = defaultdict(set); feedback = []
     for s in steps:
-        for tgt, _, opt in step_refs[s["id"]]:
+        for tgt, _, opt, _ in step_refs[s["id"]]:
             if tgt in by_id and tgt != s["id"]:
                 if opt: feedback.append((tgt, s["id"]))
                 else: edges[tgt].add(s["id"])
-    # cycle check
     state = {}
     def dfs(u, stack):
         state[u] = 1; stack.append(u)
@@ -127,135 +195,150 @@ def lint_activity(path, rep):
         stack.pop(); state[u] = 2
     for u in ids:
         if u not in state: dfs(u, [])
-    # order: topological position
-    order = {}
-    def topo():
-        seen = set(); out = []
-        def visit(u):
-            if u in seen: return
-            seen.add(u)
-            for v in edges[u]: visit(v)
-            out.append(u)
-        for u in ids: visit(u)
-        return {u: i for i, u in enumerate(reversed(out))}
-    order = topo()
-    back_targets = set(onfalse_targets) | {s["id"] for s in steps if s.get("repeat")}
-    decl = {sid: i for i, sid in enumerate(ids)}
+    back_targets = onfalse_targets | {s["id"] for s in steps if s.get("repeat")}
     for tgt, src in feedback:
-        if decl[tgt] > decl[src]:  # ref to a later-declared step = feedback
-            if src not in back_targets:
-                rep.err(aid, "R1", f"{src}: feedback ref to later step '{tgt}' but nothing loops back to '{src}'")
+        if decl[tgt] > decl[src] and src not in back_targets:
+            rep.err(aid, "R1", f"{src}: feedback ref to later step '{tgt}' but no on_false/repeat targets '{src}' (§9b.12)")
     for s in steps:
         if s.get("repeat") and "max" not in s["repeat"]: rep.err(aid, "R1", f"{s['id']}: repeat without max")
-        if s.get("on_false") and s.get("on_false") not in ("continue", "fail") and s["on_false"] not in by_id:
-            rep.err(aid, "R1", f"{s['id']}: on_false target '{s['on_false']}' does not exist")
-        if s.get("on_false") and s["on_false"] in by_id and decl[s["on_false"]] > decl[s["id"]]:
-            rep.warn(aid, "R1", f"{s['id']}: on_false jumps FORWARD to '{s['on_false']}' — a branch, not a loop; schema only defines loop-back semantics")
+        to, mx, ok = on_false_of(s)
+        if s["kind"] == "check":
+            if not ok: rep.err(aid, "R1", f"{s['id']}: on_false must be {{ to = <earlier step>, max = N }} | 'continue' | 'fail' | {{ to = 'deviate', ... }} (§9b.14)")
+            elif to in by_id:
+                if decl[to] > decl[s["id"]]: rep.err(aid, "R1", f"{s['id']}: on_false targets LATER step '{to}' — forward branching is `when` on the downstream step (§9a.1)")
+                if not isinstance(mx, int): rep.err(aid, "R1", f"{s['id']}: on_false loop-back needs a numeric max")
+            elif to == "deviate":
+                d = s.get("deviate") or {}
+                if not {"kind", "target", "claimed"} <= set(d): rep.err(aid, "R1", f"{s['id']}: deviate needs kind/target/claimed (§9b.16)")
+            elif to not in ("continue", "fail", None): rep.err(aid, "R1", f"{s['id']}: on_false target '{to}' does not exist")
+        elif s.get("on_false"): rep.err(aid, "R1", f"{s['id']}: only check steps take on_false")
+        if s["kind"] == "check" and "on_false" not in s: rep.err(aid, "R1", f"{s['id']}: check without on_false")
+    # loop-learning (§9b.13): every loop-back target has a feedback ref or memo=false
+    for t in back_targets:
+        if t not in by_id: continue
+        ts = by_id[t]
+        if ts["kind"] not in ("agent", "tool"): continue
+        has_feedback = any(decl.get(x, -1) >= decl[t] and o for x, _, o, _ in step_refs[t] if x in by_id)
+        if not has_feedback and ts.get("memo", True) is not False:
+            rep.err(aid, "R1", f"{t}: loop-back target has no feedback ref and memo != false — the loop cannot learn (§9b.13)")
 
-    # --- R2: numeric timeouts after substitution
+    # --- R2
+    b = act.get("budget", {})
     for s in steps:
         if s["kind"] in ("agent", "tool"):
             t = s.get("timeout_secs")
             if t is None: rep.err(aid, "R2", f"{s['id']}: missing timeout_secs")
             elif isinstance(t, str):
                 m = re.fullmatch(r"\$\{toolchain\.(\w+)\}", t)
-                if not m or m.group(1) not in TOOLCHAIN_KEYS: rep.err(aid, "R2", f"{s['id']}: timeout '{t}' not numeric after substitution")
+                if not m or m.group(1) not in TIMEOUTS: rep.err(aid, "R2", f"{s['id']}: timeout '{t}' not numeric after substitution")
         elif "timeout_secs" in s: rep.warn(aid, "R2", f"{s['id']}: timeout on a {s['kind']} step is ignored")
-    b = act.get("budget", {})
     for k in ("attempts_total", "tokens", "wall_clock_secs"):
         if not isinstance(b.get(k), int): rep.err(aid, "R2", f"budget.{k} must be a number, got {b.get(k)!r}")
 
-    # --- R4: well-formed at every rigor >= min_rigor
-    min_r = act.get("min_rigor", "optional")
-    for r in RIGOR[RIGOR.index(min_r):]:
+    # --- R4
+    for r in RIGOR[RIGOR.index(min_r):RIGOR.index(max_r) + 1]:
         present = {s["id"] for s in steps if rigor_eval(s.get("when"), r)}
+        for s in steps:                                                # R4b (§9c.35)
+            to, _, _ = on_false_of(s)
+            if s["kind"] == "check" and s["id"] in present and to in by_id and to not in present:
+                rep.err(aid, "R4", f"@{r}: check '{s['id']}' loops to '{to}' which is inactive at this rigor (§9c.35)")
         for s in steps:
             if s["id"] not in present: continue
-            for tgt, _, opt in step_refs[s["id"]]:
-                if tgt in by_id and tgt not in present and not opt:
-                    rep.err(aid, "R4", f"@{r}: {s['id']} needs '{tgt}' which is inactive at this rigor")
+            for tgt, _, opt, _ in step_refs[s["id"]]:
+                if tgt in by_id and tgt not in present and not opt: rep.err(aid, "R4", f"@{r}: {s['id']} needs '{tgt}' which is inactive at this rigor")
         if emits and emits[0]["id"] not in present: rep.err(aid, "R4", f"@{r}: emit inactive")
-        # policy/check steps whose every input is optional and inactive
         for s in steps:
             if s["kind"] == "check" and s["id"] in present:
-                ins = [(t, o) for t, _, o in refs_in(s.get("inputs", {})) if t in by_id]
+                ins = [(t, o) for t, _, o, _ in refs_in(s.get("inputs", {})) if t in by_id]
                 if ins and all(o and t not in present for t, o in ins):
-                    rep.warn(aid, "R4", f"@{r}: check '{s['id']}' has no live inputs — evaluates over absent values")
+                    rep.warn(aid, "R4", f"@{r}: check '{s['id']}' evaluates over null inputs only (vacuous per §9a.2)")
 
-    # --- R5: evidence promise satisfiable
+    # --- R5 evidence (normative minting table §9a.6)
     def evidence_of(s):
-        k = s["kind"]; out = s.get("outputs", "")
+        k = s["kind"]; out = out_schema(s)
         if k == "gate": return {"HumanAnswer"}
-        if k == "tool": return {"ToolReport"} | ({"GreenAt"} if s.get("run") == "toolchain:test" else set()) | ({"Mutation"} if "Mutation" in out else set())
-        if k == "agent":
-            if "Findings" in out: return {"Findings"}
-            if "SelfCheck" in out: return {"SelfCheck"}
+        if k == "tool": return {"ToolReport"} | ({"GreenAt"} if s.get("run") == "toolchain:test" else set()) | ({"Mutation"} if out == "MutationReport" else set())
+        if k == "agent": return {"Findings"} if out == "Findings" else {"SelfCheck"} if out == "SelfCheck" else set()
         return set()
     if emits:
         ev_refs = [parse_ref(m) for e in emits[0].get("evidence", []) for m in REF.findall(e)]
         produced_uncond, produced_any = set(), set()
-        for tgt, _, opt in ev_refs:
+        for tgt, _, opt, _ in ev_refs:
             if tgt not in by_id: rep.err(aid, "R5", f"emit evidence ref '{tgt}' unresolved"); continue
             ev = evidence_of(by_id[tgt])
-            if not ev: rep.err(aid, "R5", f"emit evidence ref '{tgt}' ({by_id[tgt]['kind']}) produces no Evidence variant")
+            if not ev: rep.err(aid, "R5", f"emit evidence ref '{tgt}' ({by_id[tgt]['kind']}) mints no Evidence")
             produced_any |= ev
             if not opt and tgt not in conditional: produced_uncond |= ev
             if tgt in conditional and not opt: rep.err(aid, "R5", f"emit evidence '{tgt}' is conditional but not marked '?'")
         for p in act.get("evidence", []):
             name, opt = (p[:-1], True) if p.endswith("?") else (p, False)
-            if name not in produced_any: rep.err(aid, "R5", f"promised evidence '{p}' produced by no step")
-            elif not opt and name not in produced_uncond: rep.err(aid, "R5", f"promised evidence '{name}' is unconditional but only conditional steps produce it")
+            if name not in produced_any: rep.err(aid, "R5", f"promised evidence '{p}' minted by no step")
+            elif not opt and name not in produced_uncond: rep.err(aid, "R5", f"promised evidence '{name}' is unconditional but only conditional steps mint it")
         for e in produced_any - {p.rstrip("?") for p in act.get("evidence", [])}:
-            rep.warn(aid, "R5", f"evidence '{e}' attached but not promised in activity.evidence")
+            rep.warn(aid, "R5", f"evidence '{e}' attached but not promised")
 
-    # --- R6: questions
+    # --- R6
     for s in steps:
         q = s.get("question") or (s.get("escalate") or {}).get("question")
         if s["kind"] == "gate" or s.get("escalate"):
             if q not in questions: rep.err(aid, "R6", f"{s['id']}: question '{q}' not in registry")
         if s.get("on_exhausted") == "escalate" and not s.get("escalate"): rep.err(aid, "R6", f"{s['id']}: on_exhausted=escalate without escalate block")
-        if s.get("escalate") and "options" in s["escalate"]:
-            rep.warn(aid, "R6", f"{s['id']}: options duplicated on escalate; registry owns them")
+        if s.get("escalate") and "options" in s["escalate"]: rep.err(aid, "R6", f"{s['id']}: options on escalate — the registry owns them (§9a.8)")
+        if q in questions:
+            for oid, kind in opt_attaches(q).items():
+                if ARTIFACTS.get(kind, {}).get("source") != "human": rep.err(aid, "R6", f"{s['id']}: option '{oid}' attaches '{kind}' which is not a human-sourced artifact kind (§9c.33)")
 
-    # --- R7: for_each list-typed
-    for s in steps:
-        fe = s.get("for_each")
-        if not fe: continue
-        m = REF.fullmatch(fe.strip())
-        if m:
-            tgt, path_, _ = parse_ref(m.group(1))
-            if tgt not in by_id: rep.err(aid, "R7", f"{s['id']}: for_each source '{tgt}' is not a step (artifact sources must use 'artifact:Kind.field')"); continue
-            out = by_id[tgt].get("outputs", "").replace("value:", "")
-            fld = path_[1] if len(path_) > 1 else None
-            if fld is None or fld not in schemas.get(out, {}).get("lists", []):
-                rep.err(aid, "R7", f"{s['id']}: for_each source ${{{m.group(1)}}} is not a list field of {out}")
-        elif fe.startswith("artifact:"):
-            kind, _, fld = fe[9:].partition(".")
-            if fld not in schemas.get(kind, {}).get("lists", []): rep.err(aid, "R7", f"{s['id']}: for_each artifact field '{fe}' not a known list")
-        else: rep.err(aid, "R7", f"{s['id']}: for_each must be a ${{ref}} or artifact:Kind.field")
-    # list outputs consumed as scalars
+    # --- R7
     fan = {s["id"] for s in steps if s.get("for_each")}
     for s in steps:
-        for tgt, path_, _ in step_refs[s["id"]]:
-            if tgt in fan and path_ and path_[0] == "outputs" and len(path_) > 1 and not s.get("for_each"):
-                rep.err(aid, "R7", f"{s['id']}: reads field '{'.'.join(path_)}' of fan-out step '{tgt}' whose outputs are a list")
+        fe = s.get("for_each")
+        if fe:
+            m = REF.fullmatch(fe.strip())
+            if m:
+                tgt, path_, _, _ = parse_ref(m.group(1))
+                if tgt not in by_id: rep.err(aid, "R7", f"{s['id']}: for_each source '{tgt}' is not a step (artifact sources use 'artifact:Kind.field')")
+                else:
+                    out = out_schema(by_id[tgt]); fld = path_[1] if len(path_) > 1 else None
+                    if fld is None or fld not in schemas.get(out, {}).get("lists", []): rep.err(aid, "R7", f"{s['id']}: for_each source is not a list field of {out}")
+            elif fe.startswith("artifact:"):
+                kind, _, fld = fe[9:].partition(".")
+                if fld not in schemas.get(kind, {}).get("lists", []): rep.err(aid, "R7", f"{s['id']}: for_each artifact field '{fe}' not a known list")
+            else: rep.err(aid, "R7", f"{s['id']}: for_each must be a ${{ref}} or artifact:Kind.field")
+        for tgt, path_, _, proj in step_refs[s["id"]]:
+            if tgt in fan and len(path_) > 1 and not proj and not s.get("for_each"):
+                rep.err(aid, "R7", f"{s['id']}: reads '{'.'.join(path_)}' of fan-out step '{tgt}' without [*] projection (§9a.5)")
 
-    # --- R8: budget vs attempts
-    need = sum(1 + s.get("retry", {}).get("max", 0) for s in steps if s["kind"] in ("agent", "tool") and not s.get("for_each"))
+    # --- R8 (§9a.7 / §9b.23)
+    need = sum(1 for s in steps if s["kind"] in ("agent", "tool"))
     if isinstance(b.get("attempts_total"), int) and b["attempts_total"] < need:
-        rep.warn(aid, "R8", f"budget.attempts_total={b['attempts_total']} < worst-case single-pass attempts {need}")
+        rep.err(aid, "R8", f"budget.attempts_total={b['attempts_total']} < {need} agent/tool steps on one pass")
 
-    # --- R9: predicate vocabulary
+    # --- R9 grammar + vocabulary
+    def strip_quant(e):
+        out = []; i = 0
+        while i < len(e):
+            m = re.match(r"\.(none|all|any)\(", e[i:])
+            if m:
+                depth = 1; j = i + m.end()
+                while j < len(e) and depth: depth += (e[j] == "(") - (e[j] == ")"); j += 1
+                out.append(".QUANT()"); i = j
+            else: out.append(e[i]); i += 1
+        return "".join(out)
     def check_expr(where, expr, local):
-        e = strip_strings(REF.sub("REF", expr))
-        e = re.sub(r"\.(none|all|any)\([^()]*\)", ".QUANT()", e)   # lambda scope: field names inside quantifiers
-        e = re.sub(r"\.[A-Za-z_][A-Za-z0-9_]*", "", e)              # drop field accesses; keep roots
+        if re.search(r"\$\{[^}]*\?\}\s*(<=|>=|<|>)|(<=|>=|<|>)\s*\$\{[^}]*\?\}", expr): rep.err(aid, "R9", f"{where}: ordering operator on an optional (possibly null) ref (§9c.39)")
+        raw = REF.sub("REF", expr)
+        for m in re.finditer(r"(?<![\w'\"])([a-z]+(?:-[a-z0-9]+)+)(?![\w'\"])", raw):      # bare hyphenated token
+            rep.err(aid, "R9", f"{where}: '{m.group(1)}' must be quoted — not an identifier (§9b.18)")
+        for m in re.finditer(r"\b([a-z_]+)\s*(>=|<=|<|>)", raw):
+            f = m.group(1)
+            if f in facets and not facets[f].get("ordered"): rep.err(aid, "R9", f"{where}: '{f}' compared with {m.group(2)} but facet is not ordered")
+        e = strip_strings(raw)
+        e = strip_quant(e)
+        e = re.sub(r"\.[A-Za-z_][A-Za-z0-9_]*", "", e)
         for ident in set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", e)):
-            if ident == "QUANT": continue
-            if ident in BUILTINS or ident in local or ident in facets or ident in FACET_VALUES or ident == "REF": continue
+            if ident in ("QUANT", "REF") or ident in BUILTINS or ident in local or ident in facets or ident in BARE_VALUES: continue
             rep.err(aid, "R9", f"{where}: identifier '{ident}' is not a facet, input, or builtin")
-    app = act.get("applicable_if")
-    if app: check_expr("applicable_if", app, set())
+    if act.get("applicable_if"): check_expr("applicable_if", act["applicable_if"], set())
     for t in act.get("tags", []):
         f, _, v = t.partition(":")
         if f not in facets or v not in {str(x) for x in facets[f]["values"]}: rep.err(aid, "R9", f"tag '{t}' not in facet registry")
@@ -264,28 +347,43 @@ def lint_activity(path, rep):
         if s.get("when"): check_expr(f"{s['id']}.when", s["when"], local)
         if s.get("expr"): check_expr(f"{s['id']}.expr", s["expr"], local)
         if s.get("repeat"): check_expr(f"{s['id']}.repeat.until", s["repeat"]["until"], local)
+        if s.get("deviate", {}).get("claimed"): check_expr(f"{s['id']}.deviate.claimed", s["deviate"]["claimed"], local)
 
-    # --- misc schema-shape checks
+    # --- R10 registries: verbs, feeds, checklist:, kb:, artifact:
     for s in steps:
-        if s["kind"] == "check" and "on_false" not in s: rep.err(aid, "R1", f"{s['id']}: check without on_false")
+        if s["kind"] == "tool":
+            run = s.get("run", "")
+            if not run.startswith("toolchain:") or run[10:] not in VERBS: rep.err(aid, "R10", f"{s['id']}: tool verb '{run}' not in registry [verb] (§9c.29)")
+        for k, v in (s.get("inputs") or {}).items():
+            if not isinstance(v, str): continue
+            src, _, rest = v.partition(":")
+            if src == "toolchain" and rest.rstrip("?") not in FEEDS: rep.err(aid, "R10", f"{s['id']}.{k}: toolchain feed '{rest}' not in registry")
+            if src == "checklist" and rest not in CHECKLISTS: rep.err(aid, "R10", f"{s['id']}.{k}: checklist '{rest}' not in registry")
+            if src == "kb" and rest not in KB: rep.err(aid, "R10", f"{s['id']}.{k}: kb atom '{rest}' not in registry")
+            if src == "artifact":
+                kind, _, fld = rest.rstrip("?").partition(".")
+                if kind not in ARTIFACTS: rep.err(aid, "R10", f"{s['id']}.{k}: artifact kind '{kind}' not in artifacts.toml (§9c.27)")
+                if fld and fld.split("[")[0].split(".")[0] not in schemas.get(kind, {}).get("fields", []) and kind in schemas:
+                    rep.err(aid, "R10", f"{s['id']}.{k}: '{fld}' not a field of {kind}")
+
+    # --- misc shape
+    for s in steps:
         if s["kind"] == "agent" and "role" not in s: rep.err(aid, "R3", f"{s['id']}: agent without role")
-        if s["kind"] in ("agent", "tool") and "outputs" not in s: rep.err(aid, "R3", f"{s['id']}: no outputs")
+        if s["kind"] == "agent" and s.get("role") not in facets["role"]["values"]: rep.err(aid, "R3", f"{s['id']}: role '{s.get('role')}' not in facet registry")
         if s["kind"] in ("agent", "tool"):
-            out = s["outputs"].replace("value:", "")
-            if out not in schemas: rep.err(aid, "R3", f"{s['id']}: output schema '{out}' unknown")
-        if s["kind"] == "gate" and s.get("on_false"): rep.err(aid, "R1", f"{s['id']}: gate cannot have on_false")
+            if "outputs" not in s and not (s["kind"] == "tool" and s.get("run", "")[10:] in VERBS): rep.err(aid, "R3", f"{s['id']}: no outputs")
+            elif "outputs" not in s: continue
+            elif out_schema(s) not in schemas: rep.err(aid, "R3", f"{s['id']}: output schema '{out_schema(s)}' unknown")
     return doc
 
 def fragments(docs):
-    """Sequences of >=2 consecutive (topologically adjacent by file order) steps with identical shape across activities."""
     def shape(s):
         return (s["kind"], s.get("role"), s.get("run"), bool(s.get("when")), bool(s.get("repeat")), bool(s.get("on_false")), bool(s.get("for_each")))
     seen = defaultdict(set)
     for aid, doc in docs.items():
         st = doc.get("step", [])
         for n in (2, 3):
-            for i in range(len(st) - n + 1):
-                seen[tuple(shape(s) for s in st[i:i+n])].add(aid)
+            for i in range(len(st) - n + 1): seen[tuple(shape(s) for s in st[i:i+n])].add(aid)
     return {k: v for k, v in seen.items() if len(v) >= 2}
 
 def main():
@@ -294,8 +392,7 @@ def main():
     for p in sorted(glob.glob(os.path.join(cat, "*.toml"))):
         try:
             d = lint_activity(p, rep); docs[d["activity"]["id"]] = d
-        except Exception as ex:
-            rep.err(os.path.basename(p), "PARSE", repr(ex))
+        except Exception as ex: rep.err(os.path.basename(p), "PARSE", repr(ex))
     counts = defaultdict(int)
     for lvl, aid, rule, msg in rep.items:
         print(f"{lvl:5} {aid:24} {rule:5} {msg}"); counts[(lvl, rule)] += 1
@@ -307,5 +404,4 @@ def main():
         print(f"{len(v)}x {sorted(v)}: " + " -> ".join(f"{s[0]}{'/'+s[1] if s[1] else ''}{'/'+s[2] if s[2] else ''}{'?' if s[3] else ''}{'↺' if s[4] or s[5] else ''}{'*' if s[6] else ''}" for s in k))
     sys.exit(1 if any(l == "ERROR" for l, *_ in rep.items) else 0)
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()

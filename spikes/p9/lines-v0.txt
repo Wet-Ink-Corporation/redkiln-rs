@@ -1,0 +1,118 @@
+activity                     stage          lines steps adv-block src
+adr-record                   design            50     5         0 P6
+adversarial-review           review            57     6         1 P9
+api-contract-spec            specification     60     6         1 P6
+appetite-check               planning          50     5         0 P6
+architecture-tradeoff-analysis design            51     5         0 P6
+assumption-mapping           discovery         44     4         0 P6
+bdd-outside-in               implement         77     8         0 P6
+bdd-scenarios                specification     74     8         1 P6
+bisect                       analysis          62     6         0 P6
+blameless-postmortem         closeout          63     7         1 P6
+blue-green-deploy            release           67     7         0 P6
+branch-by-abstraction        implement        103    12         0 P6
+build-package                release           43     4         0 P6
+c4-component                 design            54     5         1 P6
+c4-container                 design            53     5         1 P6
+c4-context                   design            53     5         1 P6
+canary-release               release           82     9         0 P9
+change-authorization         review            57     6         0 P6
+change-summary-ue            implement         45     4         0 P6
+change-summary               implement         38     3         0 P6
+checklist-review             review            43     4         1 P6
+closure-record               closeout          49     5         1 P6
+code-review                  review            50     5         1 P6
+competitor-analysis          discovery         40     3         0 P9
+confirmation-test            verify            49     5         0 P6
+data-migration-plan          design            59     6         1 P6
+debt-logging                 closeout          37     3         0 P6
+dependency-update            implement         88    10         0 P6
+design-doc                   design            59     6         1 P6
+design-review-lightweight    design            49     5         1 P6
+design-review                review            49     5         1 P6
+design-sprint                discovery         86    10         0 P6
+differential-debugging       analysis          67     7         1 P6
+discovery-report             discovery         57     6         1 P6
+docs-update                  implement         51     5         0 P6
+equivalence-boundary         verify            67     7         1 P6
+exploitability-analysis      analysis          58     6         1 P6
+failover                     operate           64     6         0 P6
+fault-tree-analysis          analysis          57     6         1 P6
+feature-flag-kill            operate           64     6         0 P6
+feature-flag-wrap            implement         52     5         0 P6
+fishbone-analysis            analysis          44     4         1 P6
+five-whys                    analysis          44     4         1 P6
+fix-design                   design            52     5         1 P6
+fix-spec                     specification     58     6         1 P6
+flag-progressive-rollout     release           69     7         0 P6
+formal-inspection            review            59     6         0 P6
+hotfix                       implement         62     7         0 P6
+incident-command             operate           55     5         0 P6
+instrumented-trace-analysis  analysis          73     8         1 P6
+integration-tests            verify            52     5         0 P6
+knowledge-harvest            closeout          52     5         1 P6
+lightweight-retro            closeout          29     2         0 P6
+migration-dry-run            verify            52     5         1 P6
+migration-expand-execute     release           46     4         0 P6
+minimal-repro-ue             analysis          63     6         0 P6
+minimal-repro                analysis          55     5         0 P9
+mutation-testing             verify            42     4         0 P9
+opportunity-solution-tree    discovery         59     6         1 P6
+outcome-definition           discovery         51     5         1 P6
+problem-framing              discovery         59     6         1 P6
+problem-record               closeout          43     4         0 P6
+production-readiness-review  review            57     6         1 P6
+property-based-testing       verify            52     5         0 P6
+prototype-test               discovery         67     7         0 P6
+rate-limit-shed              operate           64     6         0 P6
+relative-estimation          planning          50     5         1 P6
+risk-register                planning          59     6         1 P6
+rollback-mitigation          operate           63     6         0 P6
+rollback                     release           53     5         0 P6
+rolling-deploy               release           62     6         0 P6
+rolling-restart              operate           63     6         0 P6
+rollout-plan                 planning          50     5         0 P6
+root-cause                   analysis          67     7         1 P9
+sca-scan                     verify            41     4         0 P6
+schema-migration-script      implement         53     5         1 P6
+security-requirements        specification     65     7         1 P6
+security-review              review            50     5         1 P6
+slo-monitoring               operate           42     4         0 P6
+smoke-test                   verify            37     3         0 P6
+spike-decision-review        review            49     5         1 P6
+spike-question-spec          specification     49     5         0 P6
+spike-report                 closeout          65     7         1 P6
+spike-timebox-plan           planning          43     4         0 P6
+strangler-fig                implement         80     9         0 P6
+structured-nl-requirements   specification     72     8         1 P6
+structured-retrospective     closeout          58     6         1 P6
+t-shirt-sizing               planning          39     3         0 P6
+tdd-red-green-refactor       implement        102    11         0 P9
+tech-debt-assessment         analysis          52     5         1 P6
+technical-spike              analysis          52     5         0 P6
+test-after                   implement         51     5         0 P6
+threat-model                 design            50     5         1 P9
+timeline-reconstruction      analysis          53     5         1 P6
+unit-tests-ue                verify            51     5         0 P6
+unit-tests                   verify            70     7         0 P6
+use-case-spec                specification     66     7         1 P6
+user-story-ac                specification     58     6         1 P9
+ux-flow-design               design            60     6         1 P6
+vertical-slicing             planning          71     8         1 P9
+
+== per stage (P6 batch only): median lines / median steps / n ==
+discovery        59.0  6.0 7
+specification    65.0  7.0 7
+design           53.0  5.0 10
+planning         50.0  5.0 6
+closeout         50.5  5.0 8
+analysis         57.0  6.0 11
+implement        53.0  5.0 11
+verify           52.0  5.0 9
+review           50.0  5.0 8
+release          57.5  5.5 6
+operate          63.0  6.0 7
+
+P6 batch n=90: median lines 53.0, mean 56.2, range 29-103, sum 5059; median steps 5.0
+full catalog n=100: median lines 54.5, median steps 5.0, sum 5683
+adversary->policy block (agent/reviewer immediately followed by check) in 42 of 90 new; 47 of 100 total

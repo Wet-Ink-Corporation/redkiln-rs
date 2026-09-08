@@ -1,0 +1,58 @@
+# reach: (bug, design, optional) — require row "kind in [bug, security-vuln, incident]" → FixDesign
+[activity]
+id           = "fix-design"
+version      = 1
+stage        = "design"
+provides     = ["FixDesign"]
+requires     = ["RootCause", "Spec"]
+derived_from = ["RootCause", "Spec"]
+tags         = ["kind:bug", "kind:security-vuln", "kind:incident"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "Findings?"]
+budget       = { attempts_total = 4, tokens = 150_000, wall_clock_secs = 1800 }
+deviation_ok = ["skip"]
+keywords     = ["fix location", "guard against recurrence", "workaround vs fix"]
+rationale    = "Choose where the fix lives and how recurrence is guarded before code; for incidents, decide workaround-now versus fix-now explicitly."
+
+[[step]]
+id      = "design"
+kind    = "agent"
+role    = "architect"
+inputs  = { cause = "artifact:RootCause", spec = "artifact:Spec", findings = "${adversary.outputs?}" }
+outputs = "value:FixDesign"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "architect"
+inputs  = { draft = "${design.outputs}", checklist = "checklist:fix-scope" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${design.outputs}", cause = "artifact:RootCause" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", draft = "${design.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and draft.guard != null and findings.none(severity in ['blocking'])"
+on_false = { to = "design", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { FixDesign = "${design.outputs}" }
+evidence  = ["${self-check}", "${adversary?}"]

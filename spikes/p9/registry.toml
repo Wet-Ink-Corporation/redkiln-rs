@@ -1,0 +1,67 @@
+# Registries the lint checks input sources and tool verbs against (schema §9a.10, §9b P9b §2 items 4–5).
+# 2026-09-08 (schema §9c amendments 29/34): verbs are one table per verb with a typed `outputs`, `live` (⇒ memo = false on
+# every step using it) and a default `timeout` key. `record` is gone — pure compositions are `emit` tables (amendment 34).
+# feeds / timeouts / checklists / kb stay array-valued (no per-value metadata needed yet); additions are dated in place.
+
+[verb]
+test            = { outputs = "TestReport", live = false, timeout = "test_timeout" }
+build           = { outputs = "BuildReport", live = false, timeout = "build_timeout" }
+lint            = { outputs = "LintReport", live = false, timeout = "scan_timeout" }
+change_summary  = { outputs = "ChangeSummary", live = false, timeout = "build_timeout" }
+asset_manifest  = { outputs = "AssetManifest", live = false, timeout = "cook_timeout" }       # added 2026-09-08 (was change_summary→AssetManifest)
+shallow_clone   = { outputs = "Workspace", live = false, timeout = "build_timeout" }
+mutate          = { outputs = "MutationReport", live = false, timeout = "mutation_timeout" }
+deploy          = { outputs = "DeployReport", live = true, timeout = "deploy_timeout" }
+rollback        = { outputs = "RollbackReport", live = true, timeout = "deploy_timeout" }
+canary_metrics  = { outputs = "CanaryReport", live = true, timeout = "deploy_timeout" }
+release_record  = { outputs = "ReleaseRecord", live = false, timeout = "build_timeout" }
+verdict_record  = { outputs = "Verdict", live = false, timeout = "build_timeout" }
+flag_set        = { outputs = "FlagChangeReport", live = true, timeout = "deploy_timeout" }
+flag_register   = { outputs = "FlagRecord", live = false, timeout = "build_timeout" }      # added 2026-09-08 (was flag_set→FlagRecord)
+metrics         = { outputs = "TelemetryReport", live = true, timeout = "deploy_timeout" }
+contract_lint   = { outputs = "LintReport", live = false, timeout = "scan_timeout" }
+# -- P6 additions 2026-09-07, typed 2026-09-08 --
+bisect          = { outputs = "BisectReport", live = false, timeout = "test_timeout" }
+trace_collect   = { outputs = "TraceAnalysis", live = true, timeout = "test_timeout" }
+sca_scan        = { outputs = "ScanReport", live = false, timeout = "scan_timeout" }
+smoke           = { outputs = "SmokeResult", live = true, timeout = "deploy_timeout" }
+migrate         = { outputs = "MigrationLog", live = true, timeout = "migration_timeout" }
+migrate_dry_run = { outputs = "MigrationTestReport", live = true, timeout = "migration_timeout" }
+flag_rollout    = { outputs = "RolloutLog", live = true, timeout = "deploy_timeout" }
+restart         = { outputs = "OpsActionReport", live = true, timeout = "deploy_timeout" }
+failover        = { outputs = "OpsActionReport", live = true, timeout = "deploy_timeout" }
+rate_limit      = { outputs = "OpsActionReport", live = true, timeout = "deploy_timeout" }
+slo_query       = { outputs = "SLOReport", live = true, timeout = "deploy_timeout" }
+cook            = { outputs = "CookReport", live = false, timeout = "cook_timeout" }
+ue_automation   = { outputs = "AutomationReport", live = false, timeout = "ue_test_timeout" }
+package         = { outputs = "BuildArtifact", live = false, timeout = "build_timeout" }
+kb_write        = { outputs = "LintReport", live = false, timeout = "build_timeout" }
+item_create     = { outputs = "ItemRefs", live = false, timeout = "build_timeout" }
+fuzz            = { outputs = "ScanReport", live = false, timeout = "test_timeout" }
+property_test   = { outputs = "TestReport", live = false, timeout = "test_timeout" }
+profile         = { outputs = "ProfileReport", live = false, timeout = "test_timeout" }
+ue_edit         = { outputs = "ImplReport", live = false, timeout = "implement_timeout" } # added 2026-09-08 for implement-ue (decision 5)
+
+[toolchain.feeds]        # read-only inputs: `toolchain:<feed>[?]`
+values = ["logs", "telemetry", "flags",
+          # -- P6 additions 2026-09-07 --
+          "vcs_history", "alerts", "chat_log", "deploy_log", "sbom", "backlog", "kb_index", "history", "usage"]
+
+[toolchain.timeouts]     # `${toolchain.<key>}` substitutions
+values = ["test_timeout", "implement_timeout", "review_timeout", "repro_timeout", "mutation_timeout",
+          # -- P6 additions 2026-09-07 --
+          "build_timeout", "deploy_timeout", "migration_timeout", "cook_timeout", "ue_test_timeout", "scan_timeout"]
+
+[checklists]
+values = ["competitor-analysis", "ac-quality", "ac-coverage", "postmortem-sections",
+          # -- P6 additions 2026-09-07 --
+          "problem-framing", "discovery-report", "ears-requirements", "gherkin-quality", "use-case-quality",
+          "api-contract", "asvs-l1", "spike-charter", "c4", "adr", "design-doc", "migration-safety", "ux-flow",
+          "risk-register", "rollout-plan", "retro", "closure", "kb-atom", "code-review", "prr", "change-authorization",
+          "smoke", "release-readiness", "incident-command", "fix-scope", "docs-diataxis", "flag-hygiene"]
+
+[kb]
+values = ["spec-conventions", "security-baseline", "slicing-heuristics", "refactoring-catalog",
+          # -- P6 additions 2026-09-07 --
+          "discovery-conventions", "architecture-conventions", "migration-playbook", "testing-conventions",
+          "release-playbook", "incident-playbook", "retro-format", "kb-conventions", "estimation-history"]

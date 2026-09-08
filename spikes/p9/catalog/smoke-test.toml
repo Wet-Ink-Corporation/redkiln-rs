@@ -1,0 +1,43 @@
+# reach: (chore, verify, optional) — require row → SmokeResult (baseline in every verify stage)
+# test-design rigor family: smoke-test(10) < unit-tests(20) < equivalence-boundary(30) < property-based-testing(40) < mutation-testing(50)
+#   smoke provides SmokeResult, mutation provides MutationSummary — family spans kinds (F34 ambiguity B3)
+[activity]
+id           = "smoke-test"
+version      = 1
+stage        = "verify"
+provides     = ["SmokeResult"]
+requires     = ["Changeset"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:docs", "kind:project"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 2, tokens = 10_000, wall_clock_secs = 900 }
+deviation_ok = []
+keywords     = ["smoke test", "build verification", "sanity"]
+rationale    = "ISTQB smoke / CD build verification: the cheapest evidence that the change builds and boots; never the only evidence above chore."
+
+[[step]]
+id      = "build"
+kind    = "tool"
+run     = "toolchain:build"
+inputs  = { sha = "artifact:Changeset.sha" }
+outputs = "value:BuildReport"
+timeout_secs = "${toolchain.build_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "smoke"
+kind    = "tool"
+run     = "toolchain:smoke"
+inputs  = { sha = "artifact:Changeset.sha", checklist = "checklist:smoke" }
+outputs = "value:SmokeResult"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { SmokeResult = "${smoke.outputs}" }
+evidence  = ["${build}", "${smoke}"]

@@ -1,0 +1,56 @@
+# v0 pack: bug-expedite. Authored 2026-09-07 for P6 before any lattice run.
+[pack]
+id = "bug-expedite"
+applies = "kind == bug and cos == expedite"
+appetite = { points = 20 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "optional", specification = "optional", design = "forbidden", planning = "optional", implement = "mandatory", verify = "recommended", review = "recommended", release = "mandatory", operate = "forbidden", closeout = "optional" }
+
+[stage.analysis]
+goal = "Reproduce and locate, no more"
+baseline = ["ReproCase", "RootCause"]
+
+[stage.specification]
+goal = "Expected behaviour written"
+baseline = ["Spec"]
+
+[stage.planning]
+goal = "A rollout plan when the blast radius warrants one (run5 pack fix)"
+baseline = []
+[[stage.planning.require]]
+when = "blast_radius >= med"
+artifacts = ["RolloutPlan"]
+
+[stage.implement]
+goal = "The smallest tested change"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+
+[stage.verify]
+
+goal = "Repro passes at the fix sha"
+baseline = ["TestReport", "ConfirmationResult"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+[[stage.verify.require]]
+when = "criticality >= high"
+artifacts = ["TestReport"]
+rigor = "mandatory"
+
+[stage.review]
+
+goal = "One independent look"
+baseline = ["ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+
+[stage.release]
+goal = "Shipped, reversibly"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+
+[stage.closeout]
+goal = "Debt logged"
+baseline = ["DebtRegisterEntry"]
+finally = true

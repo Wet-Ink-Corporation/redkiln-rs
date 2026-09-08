@@ -1,0 +1,86 @@
+# reach: (story, specification, mandatory) with ui — NOT reachable by rank: user-story-ac(10) has no applicable_if and
+#   tags story, so this rank-30 member is selected only via deviation add (F34 ambiguity B1). Written for the family.
+# spec form family: user-story-ac(10) < structured-nl-requirements(20) < bdd-scenarios(30) < use-case-spec(40)
+[activity]
+id           = "bdd-scenarios"
+version      = 3   # bumped 2026-09-08 (§9c.42)
+stage        = "specification"
+provides     = ["Spec", "GherkinScenarios"]
+requires     = ["IntakeRecord", "ProblemStatement?"]   # run5: stories forbid discovery
+derived_from = ["IntakeRecord", "ProblemStatement?"]
+tags         = ["kind:story", "kind:bug"]
+method_rank  = 30
+family       = "spec-form"
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["SelfCheck", "ToolReport", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = ["downgrade"]
+keywords     = ["bdd", "gherkin", "given when then", "executable specification"]
+rationale    = "ISTQB CTFL v4 collaboration-based approaches: executable examples double as the acceptance test; costs a lint step and a reviewer."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { intake = "artifact:IntakeRecord", problem = "artifact:ProblemStatement?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}", lint = "${gherkin-lint.outputs?}" }
+outputs = "value:GherkinScenarios"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "gherkin-lint"
+kind    = "tool"
+run     = "toolchain:lint"
+inputs  = { scenarios = "${draft.outputs.scenarios}" }
+outputs = "value:LintReport"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { draft = "${draft.outputs}", checklist = "checklist:gherkin-quality" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}", intake = "artifact:IntakeRecord" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { lint = "${gherkin-lint.outputs}", check = "${self-check.outputs}", findings = "${adversary.outputs?}" }
+expr    = "lint.errors.len() == 0 and check.failed == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "to-spec"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { scenarios = "${draft.outputs}", kb = "kb:spec-conventions" }
+outputs = "value:Spec"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { spec = "${to-spec.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Spec = "${to-spec.outputs}", GherkinScenarios = "${draft.outputs}" }
+evidence  = ["${gherkin-lint}", "${self-check}", "${adversary?}", "${signoff?}"]

@@ -1,0 +1,160 @@
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | P6 lattice run; catalog=101 activities; packs=['bug-expedite', 'bug-standard', 'chore', 'docs', 'incident', 'initiative', 'project', 'security-vuln', 'spike', 'story-ue', 'story', 'tech-debt']; pack digests: bug-expedite=fb7ea82e17cf bug-standard=0076106d58d4 chore=5a84a5b097a5 docs=972c362491c0 incident=e6e5f8fa996f initiative=cf0b3966485a project=2e56ea1b0fca security-vuln=e9127d10d520 spike=93621ae847b2 story-ue=b72398fea9d2 story=6b9db83d6a32 tech-debt=6dd480e1322b
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | lattice: kinds=10 rigor=['optional', 'recommended', 'mandatory']+pack-default ordinals=['criticality', 'novelty', 'size', 'blast_radius'] bands=2^4=16 toolchains=['node', 'unreal', 'node+unreal', 'dotnet'] bool-covering-rows=7 (pairwise over ['auth', 'data_migration', 'external_dep', 'ui', 'market_facing', 'has_repro', 'flag_exists'])
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == unsatisfiable (stage, ctx) pairs per pack × rigor mode ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | bug-expedite   pack-default  prereg pairs=   784 unsat=     0 (  0.0%) contexts=  112 mean-cost=  28.5 max-cost=  33 appetite-overruns=112 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | bug-standard   pack-default  prereg pairs=  1008 unsat=   128 ( 12.7%) contexts=  112 mean-cost=  45.2 max-cost=  62 appetite-overruns=64 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | chore          pack-default  supp   pairs=   560 unsat=     0 (  0.0%) contexts=  112 mean-cost=   9.0 max-cost=  10 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | docs           pack-default  supp   pairs=   560 unsat=     0 (  0.0%) contexts=  112 mean-cost=   8.0 max-cost=   9 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | incident       pack-default  prereg pairs=   784 unsat=    56 (  7.1%) contexts=  112 mean-cost=  36.0 max-cost=  39 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=112
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | initiative     pack-default  prereg pairs=  1008 unsat=     0 (  0.0%) contexts=  112 mean-cost=  53.6 max-cost=  67 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=112
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | project        pack-default  prereg pairs=  1232 unsat=    28 (  2.3%) contexts=  112 mean-cost=  78.0 max-cost= 104 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=112
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | security-vuln  pack-default  supp   pairs=  1008 unsat=     0 (  0.0%) contexts=  112 mean-cost=  34.1 max-cost=  41 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | spike          pack-default  prereg pairs=   784 unsat=     0 (  0.0%) contexts=  112 mean-cost=  20.2 max-cost=  22 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | story          pack-default  prereg pairs=  1008 unsat=     0 (  0.0%) contexts=  112 mean-cost=  50.9 max-cost=  72 appetite-overruns=26 hard-cycles=0 soft-cycles(optional-edge)=52
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | tech-debt      pack-default  supp   pairs=  1008 unsat=     0 (  0.0%) contexts=  112 mean-cost=  35.4 max-cost=  48 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=56
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | TOTAL prereg-8 optional      unsat=0/0 (0.0%)   all-12 unsat=0/0 (0.0%)
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | TOTAL prereg-8 recommended   unsat=0/0 (0.0%)   all-12 unsat=0/0 (0.0%)
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | TOTAL prereg-8 mandatory     unsat=0/0 (0.0%)   all-12 unsat=0/0 (0.0%)
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | TOTAL prereg-8 pack-default  unsat=212/6608 (3.2%)   all-12 unsat=212/9744 (2.2%)
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == unsatisfiable pairs by rigor mode × toolchain slice (all packs) ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | pack-default  node         unsat=   212/  9744 (  2.2%)
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == unsatisfiable by (pack, stage, kind): count of contexts, then why (first example) ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | bug-standard   implement     DataMigrationPlan      n=   64 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of schema-migration-script' failed=['data-migration-plan:tags@design'] other_stage=[] e.g. [pack-default] kind=bug cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=0 market_facing=1 has_repro=1 flag_exists=0
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | bug-standard   release       MigrationTestReport    n=   64 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of migration-expand-execute' failed=['migration-dry-run:tags@verify'] other_stage=[] e.g. [pack-default] kind=bug cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=0 market_facing=1 has_repro=1 flag_exists=0
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | incident       review        Spec                   n=   56 forbidden-stage=   56 wrong-stage-producer=   56 why='requires of adversarial-review' failed=[] other_stage=['bdd-scenarios@specification', 'fix-spec@specification', 'structured-nl-requirements@specification', 'use-case-spec@specification'] e.g. [pack-default] kind=incident cos=standard criticality=high novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | project        verify        TestReport             n=   28 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['equivalence-boundary:tags', 'property-based-testing:tags', 'unit-tests-ue:tags', "unit-tests:applicable_if='text' in change and criticality < high"] other_stage=[] e.g. [pack-default] kind=project cos=standard criticality=high novelty=low size=high blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == DAG cycles: hard (through unconditional requires) and soft (through `?` requires) — one example per pack ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | soft incident       hotfix -> build-package -> rolling-deploy -> rollback-mitigation -> hotfix
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | soft initiative     adr-record -> design-doc -> adr-record
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | soft project        design-doc -> threat-model -> design-doc
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | soft story          design-doc -> threat-model -> design-doc
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | soft tech-debt      design-doc -> adr-record -> design-doc
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == mixed Node+UE slice: unsatisfiable (stage, kind) counts (METHOD-P §3.4 second kill) ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == mixed Node+UE DIFFERENTIAL: (stage, kind) unsatisfiable at tc=node+unreal but satisfiable at tc=node for the same context ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | mixed contexts=0; with an extra unsatisfiable (stage,kind) vs pure node=0; with an extra unsatisfiable STAGE vs pure node=0 (the kill-criterion reading)
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | none — every unsatisfiable pair in the mixed slice is also unsatisfiable for pure Node
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == binary-only (tc=unreal, change={binary}) contexts lacking an implement-stage producer for the text-realised kinds ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == specificity wins (an equal-rank toolchain-specific producer beat the generic one): pack, activity, toolchain, n ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == rank ties (validation errors) ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | none
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == dead activities (never selected in any pack × context) ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | dead=18/101 (17.8%)  of which deviation-reachable (an admissible higher-rank candidate in some context)=12  never-admissible-or-never-required=6
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | dead, deviation-reachable: bdd-outside-in, bdd-scenarios, bisect, canary-release, design-sprint, failover, feature-flag-kill, flag-progressive-rollout, property-based-testing, rate-limit-shed, rolling-restart, use-case-spec
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | dead, never: change-summary-ue, fault-tree-analysis, instrumented-trace-analysis, minimal-repro-ue, rollback, unit-tests-ue
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | under the eight pre-registered packs only: dead=25/101 (24.8%)
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == kinds with no pack ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | none
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | == per-activity selection count (pack×mode combinations) ==
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | adr-record                     4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | adversarial-review             7 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | api-contract-spec              2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | appetite-check                 3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | architecture-tradeoff-analysis   1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | assumption-mapping             2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | bdd-outside-in                 0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | bdd-scenarios                  0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | bisect                         0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | blameless-postmortem           3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | blue-green-deploy              8 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | branch-by-abstraction          1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | build-package                  9 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | c4-component                   2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | c4-container                   1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | c4-context                     1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | canary-release                 0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | change-authorization           4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | change-summary                 9 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | change-summary-ue              0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | checklist-review               2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | closure-record                10 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | code-review                    7 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | competitor-analysis            3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | confirmation-test              4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | data-migration-plan            3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | debt-logging                   4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | dependency-update              1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | design-doc                     4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | design-review                  2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | design-review-lightweight      1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | design-sprint                  0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | differential-debugging         1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | discovery-report               1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | docs-update                    3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | equivalence-boundary           5 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | exploitability-analysis        1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | failover                       0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | fault-tree-analysis            0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | feature-flag-kill              0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | feature-flag-wrap              1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | fishbone-analysis              1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | five-whys                      2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | fix-design                     2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | fix-spec                       3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | flag-progressive-rollout       0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | formal-inspection              1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | hotfix                         1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | incident-command               1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | instrumented-trace-analysis    0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | integration-tests              2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | knowledge-harvest              4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | lightweight-retro              2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | migration-dry-run              3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | migration-expand-execute       4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | minimal-repro                  4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | minimal-repro-ue               0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | mutation-testing               2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | opportunity-solution-tree      1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | outcome-definition             1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | problem-framing                3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | problem-record                 1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | production-readiness-review    2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | property-based-testing         0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | prototype-test                 2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | rate-limit-shed                0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | relative-estimation            3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | risk-register                  2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | rollback                       0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | rollback-mitigation            1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | rolling-deploy                 9 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | rolling-restart                0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | rollout-plan                   4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | root-cause                     3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | sca-scan                       5 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | schema-migration-script        4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | security-requirements          4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | security-review                4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | slo-monitoring                 3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | smoke-test                     6 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | spike-decision-review          1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | spike-question-spec            1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | spike-report                   1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | spike-timebox-plan             1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | strangler-fig                  1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | structured-nl-requirements     1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | structured-retrospective       2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | t-shirt-sizing                 2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | tdd-red-green-refactor         4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | tech-debt-assessment           1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | technical-spike                1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | test-after                     1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | threat-model                   3 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | timeline-reconstruction        1 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | unit-tests                     6 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | unit-tests-ue                  0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | use-case-spec                  0 DEAD
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | user-story-ac                  4 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | ux-flow-design                 2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | vertical-slicing               2 
+cat:e03691f97fcd fac:5c1d88cff98f pk:b72e2d651233 | walking-skeleton               1 

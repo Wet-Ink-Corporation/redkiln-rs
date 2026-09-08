@@ -1,0 +1,65 @@
+# reach: (incident, operate, optional) — require row "kind == incident" → MitigationRecord
+# mitigation family: rollback-mitigation(10) < feature-flag-kill(20) < rate-limit-shed(30) < failover(40) < rolling-restart(50) < hotfix(60, implement stage)
+#   rank 10 always applies (wanted `last_deploy_age < 24h`, which is not a facet — F34 ambiguity B20), so ranks 20–50 are deviation-only
+[activity]
+id           = "rate-limit-shed"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "operate"
+provides     = ["MitigationRecord"]
+requires     = ["IncidentRecord"]
+derived_from = ["IncidentRecord"]
+tags         = ["kind:incident"]
+applicable_if = "blast_radius >= high"
+method_rank  = 30
+family       = "mitigation"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport?", "HumanAnswer"]
+budget       = { attempts_total = 6, tokens = 60_000, wall_clock_secs = 5400 }
+deviation_ok = ["add"]
+keywords     = ["rate limit", "load shedding", "protect the core"]
+rationale    = "PagerDuty repair actions / SRE ch.21: throttle or shed load to keep the core within SLO while the cause is found."
+
+[[step]]
+id      = "authorize"
+kind    = "gate"
+question = "mitigation.proceed"
+inputs  = { incident = "artifact:IncidentRecord" }
+
+[[step]]
+id      = "apply"
+kind    = "tool"
+run     = "toolchain:rate_limit"
+when    = "${authorize.answer} == 'proceed'"
+inputs  = { incident = "artifact:IncidentRecord" }
+outputs = "value:OpsActionReport"
+timeout_secs = "${toolchain.deploy_timeout}"
+retry   = { max = 2 }
+memo    = false
+
+[[step]]
+id      = "observe"
+kind    = "tool"
+run     = "toolchain:metrics"
+when    = "${authorize.answer} == 'proceed'"
+inputs  = { window_secs = 600, previous = "${observe.outputs?}" }
+outputs = "value:TelemetryReport"
+timeout_secs = 900
+retry   = { max = 1 }
+memo    = false
+repeat  = { until = "${observe.outputs.status} == 'stable'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "mitigation.not-restored" }
+
+[[step]]
+id      = "not-restored"
+kind    = "gate"
+when    = "${authorize.answer} == 'proceed' and ${observe.outputs.status?} != 'stable'"
+question = "mitigation.not-restored"
+inputs  = { telemetry = "${observe.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { MitigationRecord = { mitigation = "${authorize.answer}", summary = "${apply.outputs.status?}", restored_at = "${observe.outputs.status?}", handoff = "${not-restored.answer?}" } }   # composing emit (§9c.34)
+evidence  = ["${authorize}", "${apply?}", "${observe?}", "${not-restored?}"]

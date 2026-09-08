@@ -1,0 +1,71 @@
+# reach: (incident, implement, optional) — the only Changeset producer tagging incident
+# operate mitigation family lists hotfix(60) last; it is an implement-stage activity, so operate cannot select it (F34 ambiguity B2)
+[activity]
+id           = "hotfix"
+version      = 1
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["RootCause", "FixDesign?", "MitigationRecord?"]
+derived_from = ["RootCause", "FixDesign?"]
+tags         = ["kind:incident", "change:text"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["GreenAt", "ToolReport", "HumanAnswer"]
+budget       = { attempts_total = 8, tokens = 400_000, wall_clock_secs = 5400 }
+deviation_ok = []
+keywords     = ["hotfix", "emergency change", "restore service", "debt logged"]
+rationale    = "PagerDuty repair actions / ITIL emergency change: the smallest change that restores service, human-authorised, with the follow-up debt logged by closeout."
+
+[[step]]
+id      = "fix"
+kind    = "agent"
+role    = "implementer"
+inputs  = { cause = "artifact:RootCause", design = "artifact:FixDesign?", mitigation = "artifact:MitigationRecord?", last = "${verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green"
+kind    = "check"
+inputs  = { report = "${verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "fix", max = 2 }
+
+[[step]]
+id      = "authorize"
+kind    = "gate"
+question = "hotfix.authorize"
+inputs  = { impl = "${fix.outputs}", report = "${verify.outputs}" }
+
+[[step]]
+id      = "authorized"
+kind    = "check"
+inputs  = { answer = "${authorize.answer}" }
+expr    = "answer == 'proceed'"
+on_false = "fail"
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${fix.outputs}" }
+evidence  = ["${verify}", "${authorize}"]

@@ -1,0 +1,57 @@
+# reach: (initiative, discovery, recommended) — require row "kind == initiative" → OutcomeStatement
+[activity]
+id           = "outcome-definition"
+version      = 1
+stage        = "discovery"
+provides     = ["OutcomeStatement"]
+requires     = ["ProblemStatement"]
+derived_from = ["ProblemStatement"]
+tags         = ["kind:initiative", "kind:project"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 4, tokens = 100_000, wall_clock_secs = 1200 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["outcome", "metric", "opportunity solution tree root"]
+rationale    = "Torres: the outcome sits at the root of discovery; without a measurable outcome the opportunity map has no ranking key."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "investigator"
+inputs  = { problem = "artifact:ProblemStatement", usage = "toolchain:usage?", findings = "${adversary.outputs?}" }
+outputs = "value:OutcomeStatement"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}", problem = "artifact:ProblemStatement" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { findings = "${adversary.outputs?}", draft = "${draft.outputs}" }
+expr    = "draft.metric != null and findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { draft = "${draft.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { OutcomeStatement = "${draft.outputs}" }
+evidence  = ["${adversary?}", "${signoff?}"]

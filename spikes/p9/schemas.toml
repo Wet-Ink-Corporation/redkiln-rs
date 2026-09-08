@@ -11,6 +11,10 @@ fields = ["status", "passed", "failed", "selection", "sha"]
 fields = ["items"]
 lists  = ["items"]
 
+[value.Finding]
+fields = ["ac", "claim", "evidence", "severity", "files", "repro"]
+lists  = ["files"]
+
 [value.ReproCase]
 fields = ["status", "steps", "command", "expected", "observed", "confidence"]
 lists  = ["steps"]
@@ -54,7 +58,7 @@ fields = ["per_ac", "overall"]
 lists  = ["per_ac"]
 
 [value.ChangeSummary]
-fields = ["kind", "diff", "manifest", "reports"]
+fields = ["kind", "sha", "diff", "manifest", "reports"]
 lists  = ["reports"]
 
 [value.Verdict]
@@ -69,10 +73,10 @@ lists  = ["breached"]
 fields = ["status", "sha", "environment", "percent"]
 
 [value.RollbackReport]
-fields = ["status", "restored_sha"]
+fields = ["status", "restored_sha", "decision"]   # decision added 2026-09-08 (composing emit)
 
 [value.ReleaseRecord]
-fields = ["sha", "version", "environment", "strategy"]
+fields = ["sha", "previous_sha", "version", "environment", "strategy"]
 
 [value.RolloutPlan]
 fields = ["strategy", "steps", "thresholds"]
@@ -146,3 +150,267 @@ lists  = ["endpoints", "uncovered_ac", "breaking_changes"]
 [value.LintReport]
 fields = ["status", "errors", "warnings"]
 lists  = ["errors", "warnings"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): discovery ----
+
+[value.IntakeRecord]
+fields = ["title", "body", "source", "kind_hint", "appetite"]
+
+[value.ProblemStatement]
+fields = ["problem", "who", "why_now", "success", "non_goals", "open_questions"]
+lists  = ["non_goals", "open_questions"]
+
+[value.OutcomeStatement]
+fields = ["outcome", "metric", "baseline", "target", "horizon"]
+
+[value.AssumptionList]
+fields = ["assumptions", "riskiest", "summary"]
+lists  = ["assumptions", "riskiest"]
+
+[value.OpportunityMap]
+fields = ["outcome", "opportunities", "solutions", "tests", "summary"]
+lists  = ["opportunities", "solutions", "tests"]
+
+[value.PrototypeBuild]
+fields = ["status", "path", "scope", "notes"]
+
+[value.PrototypeFindings]
+fields = ["status", "tasks", "observations", "assumptions_tested", "recommendation", "summary"]
+lists  = ["tasks", "observations", "assumptions_tested"]
+
+[value.DecisionRecord]
+fields = ["decision", "options", "rationale", "decided_by", "status"]
+lists  = ["options"]
+
+[value.SketchSet]
+fields = ["sketches", "map", "target"]
+lists  = ["sketches"]
+
+[value.DiscoveryReport]
+fields = ["recommendation", "evidence", "risks", "open_questions", "summary"]
+lists  = ["evidence", "risks", "open_questions"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): specification ----
+
+[value.RequirementsSet]
+fields = ["requirements", "attributes", "uncovered", "conflicts", "summary"]
+lists  = ["requirements", "uncovered", "conflicts"]
+
+[value.GherkinScenarios]
+fields = ["features", "scenarios", "acceptance_criteria", "story", "open_questions"]
+lists  = ["features", "scenarios", "acceptance_criteria", "open_questions"]
+
+[value.UseCaseSpec]
+fields = ["actors", "goal", "main_flow", "extensions", "acceptance_criteria", "story", "open_questions"]
+lists  = ["actors", "main_flow", "extensions", "acceptance_criteria", "open_questions"]
+
+[value.SecurityRequirements]
+fields = ["level", "requirements", "mapped_threats", "uncovered_threats", "summary"]
+lists  = ["requirements", "mapped_threats", "uncovered_threats"]
+
+[value.SpikeCharter]
+fields = ["question", "hypothesis", "timebox_secs", "decision_criteria", "kill_criteria", "out_of_scope"]
+lists  = ["decision_criteria", "kill_criteria", "out_of_scope"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): design ----
+
+[value.ArchitectureDescription]
+fields = ["level", "elements", "relationships", "diagram", "assumptions", "summary"]
+lists  = ["elements", "relationships", "assumptions"]
+
+[value.DesignEvaluation]
+fields = ["scenarios", "risks", "sensitivity_points", "tradeoffs", "blocking", "summary"]
+lists  = ["scenarios", "risks", "sensitivity_points", "tradeoffs", "blocking"]
+
+[value.ADR]
+fields = ["title", "context", "decision", "options", "consequences", "status"]
+lists  = ["options", "consequences"]
+
+[value.DataMigrationPlan]
+fields = ["phases", "backfill", "dual_write", "verification", "rollback", "risks", "reversible"]
+lists  = ["phases", "verification", "risks"]
+
+[value.UXDesign]
+fields = ["flows", "wireframes", "states", "open_questions", "summary"]
+lists  = ["flows", "wireframes", "states", "open_questions"]
+
+[value.FixDesign]
+fields = ["location", "guard", "workaround", "regression_risk", "files", "summary"]
+lists  = ["files"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): planning ----
+
+[value.Estimate]
+fields = ["method", "sizes", "total", "fits_appetite", "confidence", "summary"]
+lists  = ["sizes"]
+
+[value.RiskRegister]
+fields = ["risks", "top", "unowned", "summary"]
+lists  = ["risks", "top", "unowned"]
+
+[value.SpikePlan]
+fields = ["timebox_secs", "checkpoints", "kill_criteria", "environment", "summary"]
+lists  = ["checkpoints", "kill_criteria"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): closeout ----
+
+[value.Retrospective]
+fields = ["went_well", "to_change", "action_items", "unassigned_items", "summary"]
+lists  = ["went_well", "to_change", "action_items", "unassigned_items"]
+
+[value.Postmortem]
+fields = ["summary", "impact", "timeline", "root_causes", "contributing_factors", "went_well", "went_badly", "lucky", "action_items", "unassigned_items", "status"]
+lists  = ["root_causes", "contributing_factors", "went_well", "went_badly", "lucky", "action_items", "unassigned_items"]
+
+[value.KBAtoms]
+fields = ["atoms", "superseded", "links", "invalid", "summary"]
+lists  = ["atoms", "superseded", "links", "invalid"]
+
+[value.DebtRegisterEntry]
+fields = ["items", "interest", "remediation", "summary"]
+lists  = ["items"]
+
+[value.SpikeReport]
+fields = ["answer", "evidence", "recommendation", "kill_hit", "decision", "summary"]
+lists  = ["evidence"]
+
+[value.ClosureRecord]
+fields = ["ac_coverage", "uncovered", "tree_clean", "links_reconciled", "signed_by", "summary"]
+lists  = ["uncovered"]
+
+[value.ItemRefs]
+fields = ["ids", "status"]
+lists  = ["ids"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): analysis ----
+
+[value.BisectReport]
+fields = ["status", "culprit_sha", "good_sha", "bad_sha", "steps", "command"]
+lists  = ["steps"]
+
+[value.TraceAnalysis]
+fields = ["status", "spans", "hotspots", "fault_location", "instrumentation_added", "summary"]
+lists  = ["spans", "hotspots", "instrumentation_added"]
+
+[value.CausalChain]
+fields = ["method", "whys", "categories", "systemic_cause", "confidence", "summary"]
+lists  = ["whys", "categories"]
+
+[value.FaultTree]
+fields = ["top_event", "gates", "minimal_cut_sets", "summary"]
+lists  = ["gates", "minimal_cut_sets"]
+
+[value.VulnAssessment]
+fields = ["cvss", "epss", "reachable", "exploitable", "sla_secs", "summary"]
+
+[value.ExperimentResults]
+fields = ["runs", "measurements", "kill_hit", "timebox_exhausted", "notes"]
+lists  = ["runs", "measurements"]
+
+[value.CookReport]
+fields = ["status", "errors", "warnings", "assets", "log"]
+lists  = ["errors", "warnings", "assets"]
+
+[value.AutomationReport]
+fields = ["status", "passed", "failed", "tests", "log"]
+lists  = ["tests"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): implement ----
+
+[value.MigrationScript]
+fields = ["files", "phase", "reversible", "idempotent", "backfill", "summary"]
+lists  = ["files"]
+
+[value.Docs]
+fields = ["quadrant", "files", "summary", "stale"]
+lists  = ["files", "stale"]
+
+[value.AssetManifest]
+fields = ["assets", "binary_count", "cooked", "summary"]
+lists  = ["assets"]
+
+[value.DependencyChange]
+fields = ["package", "from", "to", "breaking", "advisory", "summary"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): verify ----
+
+[value.SmokeResult]
+fields = ["status", "checks", "failed", "sha"]
+lists  = ["checks", "failed"]
+
+[value.TestDesign]
+fields = ["technique", "conditions", "cases", "uncovered_ac", "summary"]
+lists  = ["conditions", "cases", "uncovered_ac"]
+
+[value.IntegrationReport]
+fields = ["status", "passed", "failed", "services", "sha"]
+lists  = ["services"]
+
+[value.ConfirmationResult]
+fields = ["status", "failed_before", "passes_after", "command", "sha"]
+
+[value.ScanReport]
+fields = ["tool", "findings", "critical", "high", "status"]
+lists  = ["findings"]
+
+[value.MigrationTestReport]
+fields = ["status", "rows", "invariants_ok", "duration_secs", "errors"]
+lists  = ["errors"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): review ----
+
+[value.PRRReport]
+fields = ["status", "gaps", "monitoring", "capacity", "runbooks", "oncall", "summary"]
+lists  = ["gaps"]
+
+[value.ChangeRecord]
+fields = ["type", "authorized_by", "window", "rollback", "status", "summary"]
+
+[value.InspectionRecord]
+fields = ["defects", "major", "minor", "roles", "status"]
+lists  = ["defects", "roles"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): release ----
+
+[value.BuildArtifact]
+fields = ["path", "digest", "sha", "version", "sbom"]
+
+[value.MigrationLog]
+fields = ["status", "phase", "rows", "duration_secs", "sha", "errors", "decision"]   # decision added 2026-09-08 (composing emit)
+lists  = ["errors"]
+
+[value.RolloutLog]
+fields = ["status", "flag", "percent", "cohorts", "breached"]
+lists  = ["cohorts", "breached"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): operate ----
+
+[value.SLOReport]
+fields = ["slis", "burn_rate", "budget_remaining", "breached", "window_secs", "summary"]
+lists  = ["slis", "breached"]
+
+[value.IncidentLog]
+fields = ["status", "roles", "actions", "comms", "ended_at", "summary"]
+lists  = ["roles", "actions", "comms"]
+
+[value.OpsActionReport]
+fields = ["action", "status", "targets", "at", "log"]
+lists  = ["targets"]
+
+# ---- 2026-09-08 decisions (schema §9c): typed verbs, gate attachments, PC7 ----
+
+[value.BuildReport]
+fields = ["status", "sha", "log", "warnings"]
+lists  = ["warnings"]
+
+[value.ProfileReport]
+fields = ["hotspots", "cpu_ms", "mem_bytes", "summary"]
+lists  = ["hotspots"]
+
+[value.SessionNotes]
+fields = ["sessions", "tasks", "observations", "summary"]
+lists  = ["sessions", "tasks", "observations"]
+
+[value.BugReport]
+fields = ["title", "steps", "expected", "observed", "environment"]
+lists  = ["steps"]

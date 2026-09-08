@@ -1,0 +1,77 @@
+# reach: (story, verify, optional) with 'text' in change and criticality >= high — unit-tests inapplicable there
+# test-design rigor family (see smoke-test)
+[activity]
+id           = "equivalence-boundary"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "verify"
+provides     = ["TestReport", "TestDesign"]
+requires     = ["Changeset", "Spec"]
+derived_from = ["Changeset", "Spec"]
+tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:project"]   # P6 run1 fix; 2026-09-08 family totality
+applicable_if = "'text' in change"   # 2026-09-08: rigor-driven
+method_rank  = 30
+family       = "test-design"
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["GreenAt", "ToolReport", "Findings?"]
+budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 5400 }
+deviation_ok = ["downgrade"]
+keywords     = ["equivalence partitioning", "boundary value analysis", "ISTQB black-box", "29119-4"]
+rationale    = "ISTQB / ISO 29119-4 black-box techniques: derived test conditions per AC, so high-criticality changes are tested by design not by whatever the implementer thought of."
+
+[[step]]
+id      = "design"
+kind    = "agent"
+role    = "implementer"
+inputs  = { spec = "artifact:Spec", change = "artifact:Changeset", findings = "${adversary.outputs?}" }
+outputs = "value:TestDesign"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "write"
+kind    = "agent"
+role    = "implementer"
+inputs  = { design = "${design.outputs}", last = "${run.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "run"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green"
+kind    = "check"
+inputs  = { report = "${run.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "write", max = 2 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { design = "${design.outputs}", spec = "artifact:Spec", report = "${run.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { design = "${design.outputs}", findings = "${adversary.outputs?}" }
+expr    = "design.uncovered_ac.len() == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "design", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { TestReport = "${run.outputs}", TestDesign = "${design.outputs}" }
+evidence  = ["${run}", "${adversary?}"]

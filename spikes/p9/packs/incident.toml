@@ -1,0 +1,57 @@
+# v0 pack: incident. Stage ORDER (triage → operate → analysis → implement → release → closeout) is not modelled by the
+# selection function; only per-stage requirement is. Authored 2026-09-07 for P6 before any lattice run.
+[pack]
+id = "incident"
+applies = "kind == incident"
+appetite = { points = 50 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "recommended", specification = "forbidden", design = "forbidden", planning = "forbidden", implement = "recommended", verify = "recommended", review = "mandatory", release = "mandatory", operate = "mandatory", closeout = "mandatory" }
+
+[stage.operate]
+goal = "Service restored first"
+baseline = ["MitigationRecord", "IncidentLog"]
+
+[stage.analysis]
+goal = "Timeline and cause after mitigation"
+baseline = ["IncidentTimeline", "RootCause"]
+[[stage.analysis.require]]
+when = "criticality >= high"
+artifacts = ["CausalChain"]
+
+[stage.implement]
+goal = "A hotfix, human-authorised"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+
+[stage.verify]
+goal = "The incident's repro passes"
+baseline = ["ConfirmationResult", "SmokeResult"]
+
+[stage.review]
+
+goal = "Emergency change authorised and reviewed"
+baseline = ["ChangeRecord", "ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+
+[stage.release]
+goal = "Expedited, reversible"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+# R7 (2026-09-08): a release-stage back-out of a failed hotfix release, distinct from operate's mitigation
+[[stage.release.require]]
+when = "kind == incident"
+artifacts = ["RollbackRecord"]
+
+[stage.closeout]
+goal = "Blameless postmortem and a problem record"
+baseline = ["Postmortem", "ProblemRecord", "ClosureRecord"]
+finally = true
+[[stage.closeout.require]]
+when = "rigor >= recommended"
+artifacts = ["KBAtoms"]
+[[stage.closeout.spawn]]
+when = "exists(ProblemRecord)"
+kind = "initiative"

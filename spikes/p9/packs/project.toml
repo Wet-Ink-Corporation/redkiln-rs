@@ -1,0 +1,126 @@
+# v0 pack: project. Authored 2026-09-07 for P6 before any lattice run.
+[pack]
+id = "project"
+applies = "kind == project"
+appetite = { points = 150 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "optional", analysis = "optional", specification = "mandatory", design = "mandatory", planning = "mandatory", implement = "recommended", verify = "mandatory", review = "mandatory", release = "mandatory", operate = "recommended", closeout = "mandatory" }
+
+[stage.discovery]
+goal = "Problem framed before a solution is committed to"
+baseline = ["ProblemStatement"]
+[[stage.discovery.require]]
+when = "market_facing"
+artifacts = ["CompetitorAnalysis"]
+[[stage.discovery.require]]
+when = "novelty >= high"
+artifacts = ["AssumptionList", "PrototypeFindings"]
+rigor = "mandatory"
+[[stage.discovery.require]]
+when = "rigor >= recommended"
+artifacts = ["OutcomeStatement", "DiscoveryReport"]
+
+[stage.analysis]
+goal = "(feasibility — deferred to extended)"
+baseline = []
+
+[stage.specification]
+goal = "Spec with contracts where interfaces are exposed"
+baseline = ["Spec"]
+[[stage.specification.require]]
+when = "external_dep"
+artifacts = ["APIContract"]
+[[stage.specification.require]]
+when = "auth"
+artifacts = ["SecurityRequirements"]
+
+[stage.design]
+goal = "Architecture and design doc, decisions recorded"
+baseline = ["DesignDoc", "ArchitectureDescription"]
+[[stage.design.require]]
+when = "auth or data_migration or external_dep"
+artifacts = ["ThreatModel"]
+[[stage.design.require]]
+when = "data_migration"
+artifacts = ["DataMigrationPlan"]
+[[stage.design.require]]
+when = "ui"
+artifacts = ["UXDesign"]
+[[stage.design.require]]
+when = "rigor >= recommended"
+artifacts = ["ADR", "DesignEvaluation"]
+
+[stage.planning]
+goal = "Sliced, ordered, sized, de-risked"
+baseline = ["SliceSet", "DependencyDAG", "Estimate"]
+[[stage.planning.require]]
+when = "rigor >= recommended"
+artifacts = ["RiskRegister"]
+[[stage.planning.require]]
+when = "blast_radius >= med"
+artifacts = ["RolloutPlan"]
+
+[stage.implement]
+goal = "Stories carry the change; large projects use a seam"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]   # P6 run1 fix: verify/release need a Changeset at every size
+[[stage.implement.require]]
+when = "rigor >= recommended"
+artifacts = ["Docs"]
+
+[stage.verify]
+
+goal = "Integration proven in the real app"
+baseline = ["SmokeResult", "IntegrationReport"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+[[stage.verify.require]]
+when = "criticality >= high"
+artifacts = ["TestReport"]
+rigor = "mandatory"
+[[stage.verify.require]]
+when = "size >= high"
+artifacts = ["TestReport"]
+[[stage.verify.require]]
+when = "data_migration"
+artifacts = ["MigrationTestReport"]
+[[stage.verify.require]]
+when = "'text' in change"
+artifacts = ["ScanReport"]
+
+[stage.review]
+
+goal = "Design and change verdicts; readiness"
+baseline = ["DesignVerdict", "ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+[[stage.review.require]]
+when = "rigor >= recommended"
+artifacts = ["PRRReport"]
+[[stage.review.require]]
+when = "auth"
+artifacts = ["SecurityReviewVerdict"]
+[[stage.review.require]]
+when = "blast_radius >= high"
+artifacts = ["ChangeRecord"]
+
+[stage.release]
+goal = "In production"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+[[stage.release.require]]
+when = "data_migration"
+artifacts = ["MigrationLog"]
+
+[stage.operate]
+goal = "Within SLO after release"
+baseline = ["SLOReport"]
+
+[stage.closeout]
+goal = "Retro, harvest, close"
+baseline = ["Retrospective", "ClosureRecord"]
+finally = true
+[[stage.closeout.require]]
+when = "rigor >= recommended"
+artifacts = ["KBAtoms"]

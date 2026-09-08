@@ -1,0 +1,66 @@
+# reach: (initiative, analysis, mandatory) with criticality >= high — neither lower member tags initiative
+# causal family: five-whys(10) < fishbone-analysis(20) < fault-tree-analysis(30)
+[activity]
+id           = "fault-tree-analysis"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "analysis"
+provides     = ["CausalChain", "FaultTree"]
+requires     = ["ArchitectureDescription?", "RootCause?", "IncidentTimeline?"]
+derived_from = ["ArchitectureDescription?", "RootCause?"]
+tags         = ["kind:incident", "kind:initiative"]
+applicable_if = "criticality >= high"
+method_rank  = 30
+family       = "causal"
+min_rigor    = "mandatory"
+cost_class   = "M"
+evidence     = ["Findings", "HumanAnswer"]
+budget       = { attempts_total = 5, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = ["downgrade"]
+keywords     = ["fault tree", "FTA", "minimal cut sets", "NUREG-0492"]
+rationale    = "Reliability-engineering FTA: a top-down boolean tree for high-criticality systems; the minimal cut sets are what the design must break."
+
+[[step]]
+id      = "build"
+kind    = "agent"
+role    = "investigator"
+inputs  = { arch = "artifact:ArchitectureDescription?", cause = "artifact:RootCause?", timeline = "artifact:IncidentTimeline?", findings = "${adversary.outputs?}" }
+outputs = "value:FaultTree"
+timeout_secs = 1200
+retry   = { max = 2 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { tree = "${build.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { tree = "${build.outputs}", findings = "${adversary.outputs}" }
+expr    = "tree.minimal_cut_sets.len() > 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "build", max = 2 }
+
+[[step]]
+id      = "chain"
+kind    = "agent"
+role    = "investigator"
+inputs  = { tree = "${build.outputs}" }
+outputs = "value:CausalChain"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+question = "draft.accept"
+inputs  = { tree = "${build.outputs}", findings = "${adversary.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { CausalChain = "${chain.outputs}", FaultTree = "${build.outputs}" }
+evidence  = ["${adversary}", "${signoff}"]

@@ -1,0 +1,75 @@
+# reach: (project, implement, optional) with size < high — the project-level integration change (the implement skill's
+#   Integration phase); branch-by-abstraction / strangler-fig take size >= high. Added after P6 run1 (catalog gap #12).
+[activity]
+id           = "walking-skeleton"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["Spec", "DesignDoc", "SliceSet?"]
+derived_from = ["Spec", "DesignDoc"]
+tags         = ["kind:project", "change:text"]
+applicable_if = "size < high"
+method_rank  = 30
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["GreenAt", "ToolReport"]
+budget       = { attempts_total = 10, tokens = 800_000, wall_clock_secs = 14400 }
+deviation_ok = ["downgrade"]
+keywords     = ["walking skeleton", "thinnest end-to-end", "integration first", "prove architecture early"]
+rationale    = "Cockburn / DA 'Prove Architecture Early': the thinnest end-to-end path through every container, mounted in the real app, before slices are filled in."
+
+[[step]]
+id      = "skeleton"
+kind    = "agent"
+role    = "implementer"
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc", slices = "artifact:SliceSet?", last = "${verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green"
+kind    = "check"
+inputs  = { report = "${verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "skeleton", max = 3 }
+
+[[step]]
+id      = "e2e"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "e2e" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "reachable"
+kind    = "check"
+inputs  = { report = "${e2e.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "skeleton", max = 2 }
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${skeleton.outputs}" }
+evidence  = ["${verify}", "${e2e}"]

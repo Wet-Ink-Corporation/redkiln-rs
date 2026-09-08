@@ -1,0 +1,69 @@
+# SUPPLEMENTARY v0 pack (amendment disclosed in F35).
+[pack]
+id = "security-vuln"
+applies = "kind == 'security-vuln'"
+appetite = { points = 50 }
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "mandatory", specification = "recommended", design = "optional", planning = "optional", implement = "mandatory", verify = "mandatory", review = "mandatory", release = "mandatory", operate = "optional", closeout = "recommended" }
+[stage.analysis]
+goal = "Exploitability and SLA established"
+baseline = ["VulnAssessment"]
+[[stage.analysis.require]]
+when = "has_repro"
+artifacts = ["ReproCase", "RootCause"]
+[stage.specification]
+goal = "Security requirements and fix scope"
+baseline = ["SecurityRequirements", "Spec"]
+[stage.design]
+goal = "Fix design"
+baseline = []
+[[stage.design.require]]
+when = "criticality >= high"
+artifacts = ["FixDesign"]
+[stage.planning]
+goal = "A rollout plan when the blast radius warrants one (run5 pack fix)"
+baseline = []
+[[stage.planning.require]]
+when = "blast_radius >= med"
+artifacts = ["RolloutPlan"]
+
+[stage.implement]
+goal = "Remediated"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+[stage.verify]
+
+goal = "Scan clean, repro passes"
+baseline = ["TestReport"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+[[stage.verify.require]]
+when = "criticality >= high"
+artifacts = ["TestReport"]
+rigor = "mandatory"
+[[stage.verify.require]]
+when = "'text' in change"
+artifacts = ["ScanReport"]
+[[stage.verify.require]]
+when = "has_repro"
+artifacts = ["ConfirmationResult"]
+[stage.review]
+
+goal = "Security sign-off"
+baseline = ["SecurityReviewVerdict", "ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+[stage.release]
+goal = "Expedited"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+[stage.operate]
+goal = "(vuln monitoring — deferred)"
+baseline = []
+[stage.closeout]
+goal = "Closed; postmortem if exploited"
+baseline = ["ClosureRecord", "DebtRegisterEntry"]
+finally = true
+[[stage.closeout.require]]
+when = "criticality >= high"
+artifacts = ["Postmortem"]

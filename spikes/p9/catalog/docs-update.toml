@@ -1,0 +1,66 @@
+# reach: (docs, implement, optional) — require row "kind == docs" → Docs; (story, implement, recommended) as a by-product row
+[activity]
+id           = "docs-update"
+version      = 4   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["Docs", "Changeset"]   # P6 run1 fix: docs release needs a Changeset
+requires     = ["Spec", "Changeset?"]
+derived_from = ["Spec", "Changeset?"]
+tags         = ["kind:docs", "kind:story", "kind:project"]   # run6: docs are text whatever the item's toolchain
+method_rank  = 5    # run4: tie with test-after(10) on Changeset for docs — docs-update is the docs producer
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "ToolReport"]
+budget       = { attempts_total = 5, tokens = 200_000, wall_clock_secs = 2400 }
+deviation_ok = ["skip"]
+keywords     = ["diataxis", "tutorial how-to reference explanation", "docs"]
+rationale    = "Diátaxis: every change lands its docs in the right quadrant; the lint catches broken references, the checklist catches the wrong quadrant."
+
+[[step]]
+id      = "write"
+kind    = "agent"
+role    = "implementer"
+inputs  = { spec = "artifact:Spec", change = "artifact:Changeset?", checklist = "checklist:docs-diataxis", lint = "${lint.outputs?}" }
+outputs = "value:Docs"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "lint"
+kind    = "tool"
+run     = "toolchain:lint"
+inputs  = { files = "${write.outputs.files}" }
+outputs = "value:LintReport"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "implementer"
+inputs  = { docs = "${write.outputs}", checklist = "checklist:docs-diataxis" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { lint = "${lint.outputs}", check = "${self-check.outputs}" }
+expr    = "lint.errors.len() == 0 and check.failed == 0"
+on_false = { to = "write", max = 2 }
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Docs = "${write.outputs}", Changeset = "${summary.outputs}" }
+evidence  = ["${lint}", "${self-check}"]

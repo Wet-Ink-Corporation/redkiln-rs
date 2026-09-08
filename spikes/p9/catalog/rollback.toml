@@ -1,0 +1,51 @@
+# reach: (incident, release, optional) — require row "kind == incident" → RollbackRecord (release-stage rollback; the
+#   operate-stage mitigation is rollback-mitigation, F34 ambiguity B2)
+[activity]
+id           = "rollback"
+version      = 1
+stage        = "release"
+provides     = ["RollbackRecord"]
+requires     = ["ReleaseRecord"]
+derived_from = ["ReleaseRecord"]
+tags         = ["kind:incident", "kind:bug", "kind:story", "kind:project"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport?", "HumanAnswer"]
+budget       = { attempts_total = 4, tokens = 20_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["rollback", "revert release", "bad deployment"]
+rationale    = "PagerDuty 'bad deployment: roll it back': the previous release's sha is in the ReleaseRecord; a human confirms, the tool flips."
+
+[[step]]
+id      = "confirm"
+kind    = "gate"
+question = "rollback.confirm"
+inputs  = { release = "artifact:ReleaseRecord" }
+
+[[step]]
+id      = "roll"
+kind    = "tool"
+run     = "toolchain:rollback"
+when    = "${confirm.answer} == 'proceed'"
+inputs  = { to = "artifact:ReleaseRecord.previous_sha" }
+outputs = "value:RollbackReport"
+timeout_secs = "${toolchain.deploy_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "smoke"
+kind    = "tool"
+run     = "toolchain:smoke"
+when    = "${confirm.answer} == 'proceed'"
+inputs  = { rollback = "${roll.outputs}", checklist = "checklist:smoke" }
+outputs = "value:SmokeResult"
+timeout_secs = 600
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { RollbackRecord = { decision = "${confirm.answer}", status = "${roll.outputs.status?}", restored_sha = "${roll.outputs.restored_sha?}" } }   # composing emit (§9c.34)
+evidence  = ["${confirm}", "${roll?}", "${smoke?}"]

@@ -1,0 +1,121 @@
+WARN  rolling-deploy           R9    applicable_if references `rigor` — consider max_rigor (§9c.36)
+WARN  root-cause               R4    @optional: check 'policy' evaluates over null inputs only (vacuous per §9a.2)
+
+== summary ==
+WARN  R4    1
+WARN  R9    1
+errors=0 warnings=2
+
+== fragments repeated in >=2 activities ==
+35x ['adr-record', 'adversarial-review', 'api-contract-spec', 'appetite-check', 'canary-release', 'closure-record', 'code-review', 'confirmation-test', 'data-migration-plan', 'design-doc', 'design-review', 'design-review-lightweight', 'differential-debugging', 'exploitability-analysis', 'fix-spec', 'flag-progressive-rollout', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'production-readiness-review', 'prototype-test', 'relative-estimation', 'risk-register', 'rollout-plan', 'root-cause', 'sca-scan', 'security-requirements', 'security-review', 'slo-monitoring', 'spike-decision-review', 'structured-nl-requirements', 'structured-retrospective', 'threat-model', 'user-story-ac', 'ux-flow-design']: check↺ -> gate?
+34x ['adr-record', 'api-contract-spec', 'bdd-scenarios', 'bisect', 'closure-record', 'confirmation-test', 'data-migration-plan', 'design-doc', 'differential-debugging', 'exploitability-analysis', 'failover', 'feature-flag-kill', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'production-readiness-review', 'rate-limit-shed', 'relative-estimation', 'risk-register', 'rollback-mitigation', 'rolling-restart', 'rollout-plan', 'root-cause', 'sca-scan', 'security-requirements', 'slo-monitoring', 'structured-nl-requirements', 'structured-retrospective', 'technical-spike', 'threat-model', 'use-case-spec', 'user-story-ac', 'ux-flow-design']: gate? -> emit
+34x ['api-contract-spec', 'bdd-scenarios', 'c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'differential-debugging', 'discovery-report', 'equivalence-boundary', 'exploitability-analysis', 'fishbone-analysis', 'five-whys', 'fix-design', 'fix-spec', 'knowledge-harvest', 'migration-dry-run', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'relative-estimation', 'risk-register', 'root-cause', 'schema-migration-script', 'security-requirements', 'spike-report', 'structured-nl-requirements', 'structured-retrospective', 'tech-debt-assessment', 'timeline-reconstruction', 'use-case-spec', 'user-story-ac', 'ux-flow-design', 'vertical-slicing']: agent/reviewer? -> check↺
+24x ['adr-record', 'api-contract-spec', 'closure-record', 'confirmation-test', 'data-migration-plan', 'design-doc', 'differential-debugging', 'exploitability-analysis', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'production-readiness-review', 'relative-estimation', 'risk-register', 'rollout-plan', 'root-cause', 'sca-scan', 'security-requirements', 'slo-monitoring', 'structured-retrospective', 'threat-model', 'user-story-ac', 'ux-flow-design']: check↺ -> gate? -> emit
+17x ['api-contract-spec', 'data-migration-plan', 'design-doc', 'differential-debugging', 'exploitability-analysis', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'relative-estimation', 'risk-register', 'root-cause', 'security-requirements', 'structured-nl-requirements', 'structured-retrospective', 'user-story-ac', 'ux-flow-design']: agent/reviewer? -> check↺ -> gate?
+17x ['assumption-mapping', 'blameless-postmortem', 'c4-component', 'c4-container', 'c4-context', 'equivalence-boundary', 'fishbone-analysis', 'five-whys', 'fix-design', 'integration-tests', 'knowledge-harvest', 'migration-dry-run', 'mutation-testing', 'schema-migration-script', 'spike-timebox-plan', 'tech-debt-assessment', 'timeline-reconstruction']: check↺ -> emit
+13x ['adversarial-review', 'blameless-postmortem', 'checklist-review', 'closure-record', 'code-review', 'design-review', 'design-review-lightweight', 'fault-tree-analysis', 'instrumented-trace-analysis', 'production-readiness-review', 'security-review', 'spike-decision-review', 'threat-model']: agent/reviewer -> check↺
+13x ['bdd-outside-in', 'branch-by-abstraction', 'confirmation-test', 'dependency-update', 'equivalence-boundary', 'feature-flag-wrap', 'hotfix', 'integration-tests', 'strangler-fig', 'tdd-red-green-refactor', 'test-after', 'unit-tests', 'walking-skeleton']: tool/toolchain:test -> check↺
+12x ['blameless-postmortem', 'blue-green-deploy', 'branch-by-abstraction', 'change-authorization', 'design-sprint', 'discovery-report', 'hotfix', 'instrumented-trace-analysis', 'spike-question-spec', 'spike-report', 'strangler-fig', 'vertical-slicing']: check↺ -> gate
+12x ['c4-component', 'c4-container', 'c4-context', 'equivalence-boundary', 'fishbone-analysis', 'five-whys', 'fix-design', 'knowledge-harvest', 'migration-dry-run', 'schema-migration-script', 'tech-debt-assessment', 'timeline-reconstruction']: agent/reviewer? -> check↺ -> emit
+11x ['discovery-report', 'exploitability-analysis', 'fishbone-analysis', 'five-whys', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'spike-report', 'structured-retrospective', 'tech-debt-assessment', 'timeline-reconstruction']: agent/investigator -> agent/reviewer?
+11x ['discovery-report', 'exploitability-analysis', 'fishbone-analysis', 'five-whys', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'spike-report', 'structured-retrospective', 'tech-debt-assessment', 'timeline-reconstruction']: agent/investigator -> agent/reviewer? -> check↺
+10x ['bdd-outside-in', 'branch-by-abstraction', 'change-summary-ue', 'dependency-update', 'docs-update', 'hotfix', 'strangler-fig', 'tdd-red-green-refactor', 'test-after', 'walking-skeleton']: tool/toolchain:change_summary -> emit
+9x ['adversarial-review', 'closure-record', 'code-review', 'design-review', 'design-review-lightweight', 'production-readiness-review', 'security-review', 'spike-decision-review', 'threat-model']: agent/reviewer -> check↺ -> gate?
+8x ['adr-record', 'c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'fix-design', 'ux-flow-design']: agent/architect -> agent/architect
+8x ['adversarial-review', 'checklist-review', 'code-review', 'design-review', 'design-review-lightweight', 'formal-inspection', 'security-review', 'spike-decision-review']: tool/toolchain:verdict_record -> emit
+8x ['assumption-mapping', 'blameless-postmortem', 'discovery-report', 'opportunity-solution-tree', 'problem-framing', 'spike-report', 'structured-retrospective', 'timeline-reconstruction']: agent/investigator -> agent/investigator
+8x ['branch-by-abstraction', 'equivalence-boundary', 'feature-flag-wrap', 'hotfix', 'integration-tests', 'strangler-fig', 'test-after', 'walking-skeleton']: agent/implementer -> tool/toolchain:test
+8x ['branch-by-abstraction', 'equivalence-boundary', 'feature-flag-wrap', 'hotfix', 'integration-tests', 'strangler-fig', 'test-after', 'walking-skeleton']: agent/implementer -> tool/toolchain:test -> check↺
+7x ['architecture-tradeoff-analysis', 'change-authorization', 'discovery-report', 'fault-tree-analysis', 'instrumented-trace-analysis', 'spike-question-spec', 'vertical-slicing']: gate -> emit
+7x ['c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'fix-design', 'ux-flow-design']: agent/architect -> agent/reviewer?
+7x ['c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'fix-design', 'ux-flow-design']: agent/architect -> agent/architect -> agent/reviewer?
+7x ['c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'fix-design', 'ux-flow-design']: agent/architect -> agent/reviewer? -> check↺
+6x ['adversarial-review', 'code-review', 'design-review', 'design-review-lightweight', 'security-review', 'spike-decision-review']: gate? -> tool/toolchain:verdict_record
+6x ['adversarial-review', 'code-review', 'design-review', 'design-review-lightweight', 'security-review', 'spike-decision-review']: check↺ -> gate? -> tool/toolchain:verdict_record
+6x ['adversarial-review', 'code-review', 'design-review', 'design-review-lightweight', 'security-review', 'spike-decision-review']: gate? -> tool/toolchain:verdict_record -> emit
+6x ['bdd-scenarios', 'fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/reviewer?
+6x ['bdd-scenarios', 'fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/reviewer? -> check↺
+6x ['discovery-report', 'opportunity-solution-tree', 'problem-framing', 'spike-report', 'structured-retrospective', 'timeline-reconstruction']: agent/investigator -> agent/investigator -> agent/reviewer?
+5x ['bdd-outside-in', 'branch-by-abstraction', 'strangler-fig', 'tdd-red-green-refactor', 'technical-spike']: agent/implementer* -> tool/toolchain:test
+5x ['branch-by-abstraction', 'docs-update', 'hotfix', 'test-after', 'walking-skeleton']: check↺ -> tool/toolchain:change_summary
+5x ['branch-by-abstraction', 'docs-update', 'hotfix', 'test-after', 'walking-skeleton']: check↺ -> tool/toolchain:change_summary -> emit
+5x ['change-authorization', 'discovery-report', 'instrumented-trace-analysis', 'spike-question-spec', 'vertical-slicing']: check↺ -> gate -> emit
+5x ['failover', 'feature-flag-kill', 'rate-limit-shed', 'rollback-mitigation', 'rolling-restart']: tool/toolchain:metrics?↺ -> gate?
+5x ['failover', 'feature-flag-kill', 'rate-limit-shed', 'rollback-mitigation', 'rolling-restart']: tool/toolchain:metrics?↺ -> gate? -> emit
+5x ['fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/spec-author
+5x ['fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/spec-author -> agent/reviewer?
+4x ['appetite-check', 'spike-question-spec', 'spike-timebox-plan', 'vertical-slicing']: agent/planner -> check↺
+4x ['bdd-outside-in', 'branch-by-abstraction', 'strangler-fig', 'tdd-red-green-refactor']: agent/implementer* -> tool/toolchain:test -> check↺
+4x ['blue-green-deploy', 'canary-release', 'flag-progressive-rollout', 'rolling-deploy']: tool/toolchain:release_record -> emit
+4x ['risk-register', 'spike-question-spec', 'spike-timebox-plan', 'vertical-slicing']: agent/planner -> agent/planner
+3x ['architecture-tradeoff-analysis', 'formal-inspection', 'threat-model']: agent/architect -> agent/reviewer
+3x ['bdd-outside-in', 'bisect', 'tdd-red-green-refactor']: tool/toolchain:test -> gate?
+3x ['bdd-scenarios', 'structured-nl-requirements', 'use-case-spec']: agent/spec-author -> gate?
+3x ['bdd-scenarios', 'structured-nl-requirements', 'use-case-spec']: agent/spec-author -> gate? -> emit
+3x ['bisect', 'minimal-repro-ue', 'prototype-test']: gate? -> agent/investigator
+3x ['branch-by-abstraction', 'hotfix', 'strangler-fig']: tool/toolchain:test -> check↺ -> gate
+3x ['branch-by-abstraction', 'test-after', 'walking-skeleton']: tool/toolchain:test -> check↺ -> tool/toolchain:change_summary
+3x ['build-package', 'design-sprint', 'prototype-test']: tool/toolchain:build -> check↺
+3x ['differential-debugging', 'minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+3x ['differential-debugging', 'minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+3x ['differential-debugging', 'minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test
+3x ['discovery-report', 'spike-report', 'vertical-slicing']: agent/reviewer? -> check↺ -> gate
+3x ['minimal-repro', 'minimal-repro-ue', 'prototype-test']: agent/investigator -> emit
+3x ['relative-estimation', 'risk-register', 'vertical-slicing']: agent/planner -> agent/reviewer?
+3x ['relative-estimation', 'risk-register', 'vertical-slicing']: agent/planner -> agent/reviewer? -> check↺
+3x ['spike-question-spec', 'spike-timebox-plan', 'vertical-slicing']: agent/planner -> agent/planner -> check↺
+2x ['appetite-check', 't-shirt-sizing']: agent/planner? -> emit
+2x ['architecture-tradeoff-analysis', 'formal-inspection']: agent/reviewer -> agent/architect
+2x ['architecture-tradeoff-analysis', 'design-sprint']: agent/architect -> gate
+2x ['assumption-mapping', 'problem-record']: agent/investigator -> check↺
+2x ['bdd-outside-in', 'tdd-red-green-refactor']: check↺ -> agent/implementer↺
+2x ['bdd-outside-in', 'tdd-red-green-refactor']: agent/implementer↺ -> tool/toolchain:test
+2x ['bdd-outside-in', 'tdd-red-green-refactor']: tool/toolchain:test -> check↺ -> agent/implementer↺
+2x ['bdd-outside-in', 'tdd-red-green-refactor']: check↺ -> agent/implementer↺ -> tool/toolchain:test
+2x ['bdd-outside-in', 'tdd-red-green-refactor']: agent/implementer↺ -> tool/toolchain:test -> gate?
+2x ['bdd-scenarios', 'use-case-spec']: check↺ -> agent/spec-author
+2x ['bdd-scenarios', 'use-case-spec']: agent/reviewer? -> check↺ -> agent/spec-author
+2x ['bdd-scenarios', 'use-case-spec']: check↺ -> agent/spec-author -> gate?
+2x ['bisect', 'instrumented-trace-analysis']: agent/investigator -> tool/toolchain:test
+2x ['blameless-postmortem', 'fault-tree-analysis']: agent/investigator -> agent/reviewer
+2x ['blameless-postmortem', 'hotfix']: gate -> check↺
+2x ['blameless-postmortem', 'fault-tree-analysis']: agent/investigator -> agent/reviewer -> check↺
+2x ['blameless-postmortem', 'instrumented-trace-analysis']: agent/reviewer -> check↺ -> gate
+2x ['blameless-postmortem', 'hotfix']: check↺ -> gate -> check↺
+2x ['blue-green-deploy', 'rolling-deploy']: tool/toolchain:deploy -> tool/toolchain:smoke
+2x ['blue-green-deploy', 'rolling-deploy']: tool/toolchain:smoke -> check↺
+2x ['blue-green-deploy', 'canary-release']: tool/toolchain:deploy? -> tool/toolchain:release_record
+2x ['blue-green-deploy', 'rolling-deploy']: tool/toolchain:deploy -> tool/toolchain:smoke -> check↺
+2x ['blue-green-deploy', 'canary-release']: tool/toolchain:deploy? -> tool/toolchain:release_record -> emit
+2x ['branch-by-abstraction', 'strangler-fig']: check↺ -> agent/implementer*
+2x ['branch-by-abstraction', 'dependency-update']: agent/implementer? -> tool/toolchain:test
+2x ['branch-by-abstraction', 'strangler-fig']: tool/toolchain:test -> check↺ -> agent/implementer*
+2x ['branch-by-abstraction', 'strangler-fig']: check↺ -> agent/implementer* -> tool/toolchain:test
+2x ['branch-by-abstraction', 'dependency-update']: agent/implementer? -> tool/toolchain:test -> check↺
+2x ['change-authorization', 'rollout-plan']: agent/releaser -> agent/releaser
+2x ['change-authorization', 'rollout-plan']: agent/releaser -> check↺
+2x ['change-authorization', 'rollout-plan']: agent/releaser -> agent/releaser -> check↺
+2x ['debt-logging', 'problem-record']: tool/toolchain:item_create -> emit
+2x ['dependency-update', 'tdd-red-green-refactor']: gate? -> agent/implementer?
+2x ['dependency-update', 'sca-scan']: tool/toolchain:sca_scan -> check↺
+2x ['design-sprint', 'prototype-test']: agent/implementer -> tool/toolchain:build
+2x ['design-sprint', 'spike-report']: agent/planner -> emit
+2x ['design-sprint', 'prototype-test']: agent/implementer -> tool/toolchain:build -> check↺
+2x ['differential-debugging', 'root-cause']: tool/toolchain:test -> agent/reviewer?
+2x ['differential-debugging', 'root-cause']: gate? -> tool/toolchain:test -> agent/reviewer?
+2x ['differential-debugging', 'root-cause']: tool/toolchain:test -> agent/reviewer? -> check↺
+2x ['equivalence-boundary', 'lightweight-retro']: agent/implementer -> agent/implementer
+2x ['equivalence-boundary', 'migration-dry-run']: check↺ -> agent/reviewer?
+2x ['equivalence-boundary', 'migration-dry-run']: check↺ -> agent/reviewer? -> check↺
+2x ['implement-ue', 'unit-tests-ue']: tool/toolchain:cook -> check↺
+2x ['implement-ue', 'unit-tests-ue']: check↺ -> tool/toolchain:ue_automation
+2x ['implement-ue', 'minimal-repro-ue']: tool/toolchain:ue_automation -> gate?
+2x ['implement-ue', 'unit-tests-ue']: tool/toolchain:cook -> check↺ -> tool/toolchain:ue_automation
+2x ['minimal-repro-ue', 'prototype-test']: gate? -> agent/investigator -> emit
+2x ['minimal-repro', 'technical-spike']: tool/toolchain:test -> agent/investigator
+2x ['property-based-testing', 'walking-skeleton']: check↺ -> tool/toolchain:test
+2x ['rollback', 'rollback-mitigation']: gate -> tool/toolchain:rollback?
+2x ['security-requirements', 'structured-nl-requirements']: gate? -> agent/spec-author
+2x ['tdd-red-green-refactor', 'unit-tests']: agent/implementer? -> tool/toolchain:test?
+2x ['tdd-red-green-refactor', 'unit-tests']: tool/toolchain:test? -> check?↺
+2x ['tdd-red-green-refactor', 'unit-tests']: agent/implementer? -> tool/toolchain:test? -> check?↺

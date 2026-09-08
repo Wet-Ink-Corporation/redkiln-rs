@@ -1,0 +1,58 @@
+# reach: (tech-debt, analysis, optional) — require row "kind == tech-debt" → DebtRegisterEntry
+[activity]
+id           = "tech-debt-assessment"
+version      = 1
+stage        = "analysis"
+provides     = ["DebtRegisterEntry"]
+requires     = ["IntakeRecord"]
+derived_from = ["IntakeRecord"]
+tags         = ["kind:tech-debt"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport", "Findings?"]
+budget       = { attempts_total = 4, tokens = 200_000, wall_clock_secs = 2400 }
+deviation_ok = ["skip"]
+keywords     = ["tech debt", "interest", "remediation options", "static analysis"]
+rationale    = "DA 'Improve Quality' / SWEBOK ch.7: quantify the debt's interest and the remediation options before a refactor is designed."
+
+[[step]]
+id      = "scan"
+kind    = "tool"
+run     = "toolchain:lint"
+inputs  = { scope = "artifact:IntakeRecord.body" }
+outputs = "value:LintReport"
+timeout_secs = "${toolchain.scan_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "assess"
+kind    = "agent"
+role    = "investigator"
+inputs  = { intake = "artifact:IntakeRecord", scan = "${scan.outputs}", history = "toolchain:vcs_history?", findings = "${adversary.outputs?}" }
+outputs = "value:DebtRegisterEntry"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { assessment = "${assess.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { assessment = "${assess.outputs}", findings = "${adversary.outputs?}" }
+expr    = "assessment.remediation != null and findings.none(severity in ['blocking'])"
+on_false = { to = "assess", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { DebtRegisterEntry = "${assess.outputs}" }
+evidence  = ["${scan}", "${adversary?}"]

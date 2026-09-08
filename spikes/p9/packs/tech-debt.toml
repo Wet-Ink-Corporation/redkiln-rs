@@ -1,0 +1,71 @@
+# SUPPLEMENTARY v0 pack (amendment disclosed in F35).
+[pack]
+id = "tech-debt"
+applies = "kind == 'tech-debt'"
+appetite = { points = 60 }
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "recommended", specification = "optional", design = "recommended", planning = "optional", implement = "mandatory", verify = "mandatory", review = "mandatory", release = "mandatory", operate = "forbidden", closeout = "optional" }
+[stage.analysis]
+goal = "Debt quantified"
+baseline = ["DebtRegisterEntry"]
+[[stage.analysis.require]]
+when = "size >= high"
+artifacts = ["CausalChain"]
+[stage.specification]
+goal = "Scope written"
+baseline = ["Spec"]
+[stage.design]
+goal = "Decision recorded"
+baseline = ["ADR"]
+[[stage.design.require]]
+when = "size >= high"
+artifacts = ["ArchitectureDescription", "DesignDoc"]
+[[stage.design.require]]
+when = "data_migration"
+artifacts = ["DataMigrationPlan"]
+[stage.planning]
+goal = "Sized"
+baseline = ["Estimate"]
+[[stage.planning.require]]
+when = "blast_radius >= med"
+artifacts = ["RolloutPlan"]
+[stage.implement]
+goal = "Refactor, green throughout"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+[[stage.implement.require]]
+when = "data_migration"
+artifacts = ["MigrationScript"]
+[stage.verify]
+
+goal = "No regression"
+baseline = ["TestReport", "SmokeResult"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+[[stage.verify.require]]
+when = "criticality >= high"
+artifacts = ["TestReport"]
+rigor = "mandatory"
+[[stage.verify.require]]
+when = "data_migration"
+artifacts = ["MigrationTestReport"]
+[stage.review]
+
+goal = "Verdict"
+baseline = ["ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+[stage.release]
+goal = "Shipped"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+[[stage.release.require]]
+when = "data_migration"
+artifacts = ["MigrationLog"]
+[stage.closeout]
+goal = "Debt closed"
+baseline = ["ClosureRecord"]
+finally = true
+[[stage.closeout.require]]
+when = "rigor >= recommended"
+artifacts = ["Retrospective"]

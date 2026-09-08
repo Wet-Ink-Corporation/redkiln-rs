@@ -1,0 +1,73 @@
+# reach: (security-vuln, specification, optional); (story, specification, recommended) with auth
+[activity]
+id           = "security-requirements"
+version      = 1
+stage        = "specification"
+provides     = ["SecurityRequirements"]
+requires     = ["Spec", "ThreatModel?"]
+derived_from = ["Spec", "ThreatModel?"]
+tags         = ["kind:initiative", "kind:project", "kind:story", "kind:security-vuln"]
+applicable_if = "auth or kind == 'security-vuln'"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 250_000, wall_clock_secs = 3600 }
+deviation_ok = ["skip"]
+keywords     = ["ASVS", "security requirements", "SAMM", "SSDF PW.1"]
+rationale    = "OWASP ASVS / SSDF PW.1: derive requirements from the verification level and the threat model so verify has something to test against."
+
+[[step]]
+id      = "level"
+kind    = "gate"
+when    = "rigor >= recommended"
+question = "asvs.level"
+inputs  = { spec = "artifact:Spec" }
+
+[[step]]
+id      = "derive"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { spec = "artifact:Spec", threats = "artifact:ThreatModel?", level = "${level.answer?}", kb = "kb:security-baseline", findings = "${adversary.outputs?}" }
+outputs = "value:SecurityRequirements"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { draft = "${derive.outputs}", checklist = "checklist:asvs-l1" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${derive.outputs}", threats = "artifact:ThreatModel?" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", draft = "${derive.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and draft.uncovered_threats.len() == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "derive", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { draft = "${derive.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { SecurityRequirements = "${derive.outputs}" }
+evidence  = ["${self-check}", "${level?}", "${adversary?}", "${signoff?}"]

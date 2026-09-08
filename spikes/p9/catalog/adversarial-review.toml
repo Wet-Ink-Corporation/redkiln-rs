@@ -1,16 +1,17 @@
 [activity]
 id           = "adversarial-review"
-version      = 2
+version      = 3   # bumped 2026-09-08 (§9c.42)
 stage        = "review"
 provides     = ["ReviewVerdict"]
-requires     = ["Spec", "ImplReport", "ChangeSummary"]
-derived_from = ["Spec", "ImplReport", "ChangeSummary"]
-tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt"]
-method_rank  = 20
+requires     = ["ImplReport", "ChangeSummary", "Spec?"]   # P6 run3 gap: incidents forbid specification
+derived_from = ["ImplReport", "ChangeSummary", "Spec?"]
+tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:project", "kind:incident"]   # P6 run1 fix: project/incident ReviewVerdict at criticality high
+method_rank  = 30   # review family: checklist-review(10) < code-review(20) < adversarial-review(30) < formal-inspection(40) — P6 batch edit 2026-09-07, was 20
+family       = "review"
 min_rigor    = "recommended"
 cost_class   = "L"
 evidence     = ["Findings", "HumanAnswer?"]
-budget       = { attempts_total = 3, tokens = 600_000, wall_clock_secs = 7200 }
+budget       = { attempts_total = 4, tokens = 600_000, wall_clock_secs = 7200 }
 deviation_ok = []
 keywords     = ["adversarial review", "findings", "reproduce", "mutation"]
 rationale    = "F23/F26: a reviewer with Bash in a disposable clone beats the suite; F27: the verdict is policy, not the model."
@@ -28,7 +29,7 @@ retry   = { max = 2 }
 id      = "review"
 kind    = "agent"
 role    = "reviewer"
-inputs  = { spec = "artifact:Spec", report = "artifact:ImplReport", change = "artifact:ChangeSummary", workspace = "${clone.outputs}" }
+inputs  = { spec = "artifact:Spec?", report = "artifact:ImplReport", change = "artifact:ChangeSummary", workspace = "${clone.outputs}" }
 outputs = "value:Findings"
 timeout_secs = "${toolchain.review_timeout}"
 retry   = { max = 1 }
@@ -38,17 +39,26 @@ id      = "verdict"
 kind    = "check"
 inputs  = { findings = "${review.outputs}" }
 expr    = "findings.none(evidence in ['Reproduced', 'MutationSurvived']) and (rigor < mandatory or findings.none(evidence in ['NarrowedPin']))"
-on_false = "override"
+on_false = "continue"
 
 [[step]]
 id      = "override"
 kind    = "gate"
-when    = "rigor >= mandatory"
+when    = "rigor >= mandatory and ${review.outputs.items}.len() > 0"
 question = "review.blocking"
 inputs  = { findings = "${review.outputs}" }
 
 [[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { findings = "${review.outputs}", override = "${override.answer?}" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
 id      = "emit"
 kind    = "emit"
-artifacts = { ReviewVerdict = "${verdict.outputs}" }
+artifacts = { ReviewVerdict = "${record.outputs}" }
 evidence  = ["${review}", "${override?}"]

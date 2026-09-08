@@ -1,12 +1,14 @@
 [activity]
 id           = "user-story-ac"
-version      = 1
+version      = 2   # bumped 2026-09-08 (§9c.42)
 stage        = "specification"
 provides     = ["Spec"]
-requires     = ["ProblemStatement"]
-derived_from = ["ProblemStatement", "RootCause?"]
-tags         = ["kind:story", "kind:bug", "kind:project"]
+requires     = ["IntakeRecord", "ProblemStatement?"]   # P6 run1 fix: discovery is forbidden for stories, so ProblemStatement cannot be produced there — the intake is the story's problem
+derived_from = ["IntakeRecord", "ProblemStatement?", "RootCause?"]
+tags         = ["kind:story", "kind:project", "kind:tech-debt", "kind:docs"]   # P6 batch edit 2026-09-07: kind:bug removed — fix-spec provides Spec for bugs (raw §4 row); P6 run1 fix: tech-debt/docs had no Spec producer
 method_rank  = 10
+family       = "spec-form"
+max_rigor    = "recommended"   # §9c.26 ceiling — the family escalates above this
 min_rigor    = "optional"
 cost_class   = "S"
 evidence     = ["SelfCheck?", "Findings?", "HumanAnswer?"]
@@ -19,7 +21,7 @@ rationale    = "Cheapest spec form in the ordered family; ACs are the join key f
 id      = "draft"
 kind    = "agent"
 role    = "spec-author"
-inputs  = { problem = "artifact:ProblemStatement", cause = "artifact:RootCause?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}" }
+inputs  = { intake = "artifact:IntakeRecord", problem = "artifact:ProblemStatement?", cause = "artifact:RootCause?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}" }
 outputs = "value:Spec"
 timeout_secs = 600
 retry   = { max = 2 }
@@ -38,7 +40,7 @@ id      = "adversary"
 kind    = "agent"
 role    = "reviewer"
 when    = "rigor >= recommended"
-inputs  = { spec = "${draft.outputs}", problem = "artifact:ProblemStatement" }
+inputs  = { spec = "${draft.outputs}", intake = "artifact:IntakeRecord" }
 outputs = "value:Findings"
 timeout_secs = 600
 retry   = { max = 1 }
@@ -48,7 +50,7 @@ id      = "policy"
 kind    = "check"
 inputs  = { findings = "${adversary.outputs?}", check = "${self-check.outputs}" }
 expr    = "check.failed == 0 and findings.none(evidence in ['Reproduced'])"
-on_false = "draft"
+on_false = { to = "draft", max = 2 }
 
 [[step]]
 id      = "ambiguity"

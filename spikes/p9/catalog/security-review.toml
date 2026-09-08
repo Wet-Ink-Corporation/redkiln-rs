@@ -1,0 +1,56 @@
+# reach: (security-vuln, review, optional); (story, review, recommended) with auth — require row → SecurityReviewVerdict
+[activity]
+id           = "security-review"
+version      = 1
+stage        = "review"
+provides     = ["SecurityReviewVerdict"]
+requires     = ["ChangeSummary", "ThreatModel?", "SecurityRequirements?", "ScanReport?"]
+derived_from = ["ChangeSummary", "ThreatModel?", "ScanReport?"]
+tags         = ["kind:story", "kind:project", "kind:security-vuln", "kind:bug"]
+applicable_if = "auth or kind == 'security-vuln'"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["Findings", "HumanAnswer?"]
+budget       = { attempts_total = 3, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["security review", "SAMM verification", "residual risk sign-off"]
+rationale    = "SAMM Verification / SSDF PW.7: the change against the threat model, the security requirements and the scans; residual risk is a human's to accept."
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { change = "artifact:ChangeSummary", threats = "artifact:ThreatModel?", requirements = "artifact:SecurityRequirements?", scan = "artifact:ScanReport?", kb = "kb:security-baseline" }
+outputs = "value:Findings"
+timeout_secs = "${toolchain.review_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { findings = "${review.outputs}" }
+expr    = "findings.none(severity in ['blocking'])"
+on_false = "continue"
+
+[[step]]
+id      = "residual"
+kind    = "gate"
+when    = "rigor >= recommended and ${review.outputs.items}.len() > 0"
+question = "threat-model.accept-residual"
+inputs  = { findings = "${review.outputs}" }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { findings = "${review.outputs}", accepted = "${residual.answer?}" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { SecurityReviewVerdict = "${record.outputs}" }
+evidence  = ["${review}", "${residual?}"]

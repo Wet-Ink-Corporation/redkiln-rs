@@ -1,12 +1,13 @@
 [activity]
 id           = "tdd-red-green-refactor"
-version      = 1
+version      = 2   # bumped 2026-09-08 (§9c.42)
 stage        = "implement"
 provides     = ["Changeset", "ImplReport"]
 requires     = ["Spec"]
 derived_from = ["Spec"]
 tags         = ["kind:story", "kind:bug", "kind:tech-debt", "change:text"]
-method_rank  = 10
+method_rank  = 20   # implement loop family: test-after(10) < tdd(20) < bdd-outside-in(30) — P6 batch edit 2026-09-07, was 10
+family       = "implement-loop"
 min_rigor    = "optional"
 cost_class   = "L"
 evidence     = ["GreenAt", "ToolReport", "HumanAnswer?"]
@@ -20,7 +21,7 @@ id      = "red"
 kind    = "agent"
 role    = "implementer"
 for_each = "artifact:Spec.acceptance_criteria"
-inputs  = { ac = "${item}", spec = "artifact:Spec" }
+inputs  = { ac = "${item}", spec = "artifact:Spec", last = "${red-verify.outputs?}" }
 outputs = "value:ImplReport"
 timeout_secs = "${toolchain.implement_timeout}"
 retry   = { max = 1 }
@@ -39,7 +40,7 @@ id      = "red-check"
 kind    = "check"
 inputs  = { report = "${red-verify.outputs}" }
 expr    = "report.failed > 0 and report.passed == 0"
-on_false = "red"
+on_false = { to = "red", max = 2 }
 
 [[step]]
 id      = "green"
@@ -74,7 +75,7 @@ id      = "refactor"
 kind    = "agent"
 role    = "implementer"
 when    = "rigor >= recommended"
-inputs  = { impl = "${green.outputs}", kb = "kb:refactoring-catalog" }
+inputs  = { impl = "${green.outputs}", kb = "kb:refactoring-catalog", last = "${refactor-verify.outputs?}" }
 outputs = "value:ImplReport"
 timeout_secs = "${toolchain.implement_timeout}"
 retry   = { max = 1 }
@@ -95,7 +96,7 @@ kind    = "check"
 when    = "rigor >= recommended"
 inputs  = { report = "${refactor-verify.outputs}" }
 expr    = "report.status == 'passing'"
-on_false = "refactor"
+on_false = { to = "refactor", max = 2 }
 
 [[step]]
 id      = "summary"

@@ -1,0 +1,80 @@
+# reach: (story, release, recommended) with flag_exists and blast_radius == med — canary(30) also applies there, so rank 40
+#   is deviation-only unless canary is downgraded (F34 ambiguity B1)
+# deploy pattern family: rolling-deploy(10) < blue-green-deploy(20) < canary-release(30) < flag-progressive-rollout(40)
+[activity]
+id           = "flag-progressive-rollout"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "release"
+provides     = ["ReleaseRecord"]
+requires     = ["BuildArtifact", "ReviewVerdict", "FlagRecord", "RolloutPlan"]
+derived_from = ["BuildArtifact", "FlagRecord", "RolloutPlan"]
+tags         = ["kind:story", "kind:project"]
+applicable_if = "flag_exists"
+method_rank  = 40
+family       = "deploy-pattern"
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 8, tokens = 60_000, wall_clock_secs = 86400 }
+deviation_ok = ["downgrade"]
+keywords     = ["progressive rollout", "feature flag", "cohort", "percentage"]
+rationale    = "Hodgson release toggles: deploy dark, then ramp the flag by cohort per the rollout plan; each ramp step is a metrics check and, at mandatory, a human."
+
+[[step]]
+id      = "deploy-dark"
+kind    = "tool"
+run     = "toolchain:deploy"
+inputs  = { artifact = "artifact:BuildArtifact", percent = 100 }
+outputs = "value:DeployReport"
+timeout_secs = "${toolchain.deploy_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "ramp"
+kind    = "tool"
+run     = "toolchain:flag_rollout"
+for_each = "artifact:RolloutPlan.steps"
+inputs  = { step = "${item}", flag = "artifact:FlagRecord.flag" }
+outputs = "value:RolloutLog"
+timeout_secs = 3600
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "within"
+kind    = "check"
+inputs  = { logs = "${ramp.outputs}" }
+expr    = "logs.all(status == 'ok')"   # wanted breached.len() == 0 — nested parens in a quantifier body trip lint R9 (F34 L2)
+on_false = "continue"
+
+[[step]]
+id      = "hold"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "rollout.ramp"
+inputs  = { logs = "${ramp.outputs}" }
+
+[[step]]
+id      = "kill"
+kind    = "tool"
+run     = "toolchain:flag_set"
+when    = "${hold.answer?} == 'kill'"
+inputs  = { flag = "artifact:FlagRecord.flag", state = "off" }
+outputs = "value:FlagChangeReport"
+timeout_secs = 60
+retry   = { max = 2 }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:release_record"
+inputs  = { deploy = "${deploy-dark.outputs}", ramps = "${ramp.outputs}", killed = "${kill.outputs?}" }
+outputs = "value:ReleaseRecord"
+timeout_secs = 60
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReleaseRecord = "${record.outputs}" }
+evidence  = ["${deploy-dark}", "${ramp}", "${hold?}", "${kill?}"]

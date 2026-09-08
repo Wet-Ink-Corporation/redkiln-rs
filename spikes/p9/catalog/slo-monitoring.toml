@@ -1,0 +1,47 @@
+# reach: (project, operate, optional) — require row "kind in [initiative, project]" → SLOReport
+[activity]
+id           = "slo-monitoring"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "operate"
+provides     = ["SLOReport"]
+requires     = ["ReleaseRecord?"]   # P6 run1 fix: initiatives have no release baseline
+derived_from = ["ReleaseRecord?"]
+tags         = ["kind:initiative", "kind:project", "kind:chore", "kind:story"]   # P6 run1 fix: story operate row
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 3, tokens = 60_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["SLO", "SLI", "error budget", "burn rate"]
+rationale    = "SRE Workbook ch.2: after a release, the SLIs are read against the SLO and the error budget; a breach is a human decision (feature vs reliability), not an alert."
+
+[[step]]
+id      = "query"
+kind    = "tool"
+run     = "toolchain:slo_query"
+inputs  = { release = "artifact:ReleaseRecord?", window_secs = 86400 }
+outputs = "value:SLOReport"
+timeout_secs = 600
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "within"
+kind    = "check"
+inputs  = { report = "${query.outputs}" }
+expr    = "report.breached.len() == 0"
+on_false = "continue"
+
+[[step]]
+id      = "budget"
+kind    = "gate"
+when    = "${query.outputs.breached}.len() > 0"
+question = "canary.degraded"
+inputs  = { report = "${query.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { SLOReport = "${query.outputs}" }
+evidence  = ["${query}", "${budget?}"]

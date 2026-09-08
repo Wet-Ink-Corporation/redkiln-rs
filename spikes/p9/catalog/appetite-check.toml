@@ -1,0 +1,59 @@
+# reach: (project, planning, optional) — require row "kind in [initiative, project, spike]" → Estimate
+# sizing family: appetite-check(10) < t-shirt-sizing(20) < relative-estimation(30); all provide Estimate;
+#   disjoint by kind / size so rank decides only story-with-size (see t-shirt-sizing)
+[activity]
+id           = "appetite-check"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "planning"
+provides     = ["Estimate"]
+requires     = ["IntakeRecord", "SliceSet?"]   # P6 run1 fix: spikes have no SliceSet
+derived_from = ["SliceSet"]
+tags         = ["kind:initiative", "kind:project", "kind:spike"]
+method_rank  = 10
+family       = "sizing"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["HumanAnswer?"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 1200 }
+deviation_ok = []
+keywords     = ["appetite", "shape up", "fixed time variable scope"]
+rationale    = "Shape Up ch.3: the appetite is fixed at intake; planning checks the slice set fits it and narrows scope when it does not."
+
+[[step]]
+id      = "size"
+kind    = "agent"
+role    = "planner"
+inputs  = { slices = "artifact:SliceSet?", intake = "artifact:IntakeRecord", history = "toolchain:history?" }
+outputs = "value:Estimate"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "fits"
+kind    = "check"
+inputs  = { estimate = "${size.outputs}" }
+expr    = "estimate.fits_appetite == true"
+on_false = "continue"
+
+[[step]]
+id      = "overrun"
+kind    = "gate"
+when    = "${size.outputs.fits_appetite} == false"
+question = "appetite.overrun"
+inputs  = { estimate = "${size.outputs}" }
+
+[[step]]
+id      = "resize"
+kind    = "agent"
+role    = "planner"
+when    = "${overrun.answer?} == 'narrow-scope'"
+inputs  = { estimate = "${size.outputs}", slices = "artifact:SliceSet?", answer = "${overrun.answer?}" }
+outputs = "value:Estimate"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Estimate = "${resize.outputs?} ?? ${size.outputs}" }
+evidence  = ["${overrun?}"]

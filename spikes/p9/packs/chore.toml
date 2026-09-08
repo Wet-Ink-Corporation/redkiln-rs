@@ -1,0 +1,39 @@
+# SUPPLEMENTARY v0 pack (amendment disclosed in F35 — METHOD-P §3.2 pre-registered eight packs for ten kinds).
+[pack]
+id = "chore"
+applies = "kind == chore"
+appetite = { points = 15 }
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "forbidden", specification = "forbidden", design = "forbidden", planning = "optional", implement = "mandatory", verify = "recommended", review = "recommended", release = "mandatory", operate = "forbidden", closeout = "optional" }
+[stage.planning]
+goal = "A rollout plan when the blast radius warrants one (run5 pack fix)"
+baseline = []
+[[stage.planning.require]]
+when = "blast_radius >= med"
+artifacts = ["RolloutPlan"]
+
+[stage.implement]
+goal = "Done, tests green"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+[stage.verify]
+goal = "Builds and boots"
+baseline = ["SmokeResult"]
+[[stage.verify.require]]
+when = "'text' in change"
+artifacts = ["ScanReport"]
+[stage.review]
+
+goal = "Checklist pass"
+baseline = ["ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+[stage.release]
+goal = "Shipped"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+[stage.closeout]
+goal = "Closed"
+baseline = ["ClosureRecord"]
+finally = true

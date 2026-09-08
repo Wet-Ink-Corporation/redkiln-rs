@@ -1,0 +1,45 @@
+ERROR adversarial-review       R3    emit: check step 'verdict' has no outputs to reference
+ERROR adversarial-review       R3    emit: a gate exposes only '.answer' (got ${override.})
+ERROR adversarial-review       R1    verdict: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR adversarial-review       R10   clone.sha: 'sha' not a field of ChangeSummary
+ERROR canary-release           R3    emit: a gate exposes only '.answer' (got ${degraded.})
+ERROR canary-release           R3    emit: a gate exposes only '.answer' (got ${proceed.})
+ERROR canary-release           R1    healthy: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR canary-release           R10   observe.window_secs: 'thresholds.window' not a field of RolloutPlan
+ERROR canary-release           R10   rollback.to: 'previous_sha' not a field of ReleaseRecord
+ERROR minimal-repro            R3    emit: a gate exposes only '.answer' (got ${triage-gate.})
+ERROR root-cause               R3    emit: a gate exposes only '.answer' (got ${signoff.})
+ERROR root-cause               R1    policy: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+WARN  root-cause               R4    @optional: check 'policy' evaluates over null inputs only (vacuous per §9a.2)
+ERROR tdd-red-green-refactor   R3    emit: a gate exposes only '.answer' (got ${green-gate.})
+ERROR tdd-red-green-refactor   R1    red-check: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR tdd-red-green-refactor   R1    still-green: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR tdd-red-green-refactor   R1    red: loop-back target has no feedback ref and memo != false — the loop cannot learn (§9b.13)
+ERROR tdd-red-green-refactor   R1    refactor: loop-back target has no feedback ref and memo != false — the loop cannot learn (§9b.13)
+ERROR threat-model             R3    emit: a gate exposes only '.answer' (got ${residual-gate.})
+ERROR threat-model             R1    policy: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR user-story-ac            R3    emit: a gate exposes only '.answer' (got ${ambiguity.})
+ERROR user-story-ac            R1    policy: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR vertical-slicing         R3    emit: a gate exposes only '.answer' (got ${approve.})
+ERROR vertical-slicing         R1    acyclic: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR vertical-slicing         R1    policy: on_false must be { to = <earlier step>, max = N } | 'continue' | 'fail' | { to = 'deviate', ... } (§9b.14)
+ERROR vertical-slicing         R1    dag: loop-back target has no feedback ref and memo != false — the loop cannot learn (§9b.13)
+
+== summary ==
+ERROR R1    12
+ERROR R10   3
+ERROR R3    10
+WARN  R4    1
+errors=25 warnings=1
+
+== fragments repeated in >=2 activities ==
+5x ['adversarial-review', 'canary-release', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate?
+4x ['adversarial-review', 'root-cause', 'threat-model', 'user-story-ac']: gate? -> emit
+4x ['adversarial-review', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate? -> emit
+3x ['root-cause', 'user-story-ac', 'vertical-slicing']: agent/reviewer? -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺ -> gate?
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+2x ['minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test
+2x ['root-cause', 'user-story-ac']: agent/reviewer? -> check↺ -> gate?

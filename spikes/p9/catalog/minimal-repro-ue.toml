@@ -1,0 +1,71 @@
+# reach: (bug, analysis, optional) with 'unreal' in toolchain — Unreal specialisation of minimal-repro (PC7 ii):
+#   same rank; selector specificity (toolchain facet present) beats the generic text producer
+[activity]
+id           = "minimal-repro-ue"
+version      = 1
+stage        = "analysis"
+provides     = ["ReproCase"]
+requires     = ["BugReport"]
+derived_from = ["BugReport"]
+tags         = ["kind:bug", "kind:security-vuln", "kind:incident", "toolchain:unreal"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 8, tokens = 250_000, wall_clock_secs = 10800 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["unreal", "automation test", "cook", "reproduce in editor"]
+rationale    = "An Unreal repro is a cook plus an automation test or a captured session, not a unit test command; budgeted per F21's 7200 s UE class."
+
+[[step]]
+id      = "attempt"
+kind    = "agent"
+role    = "investigator"
+inputs  = { report = "artifact:BugReport", hint = "${triage-gate.answer?}", cook = "${cook.outputs?}", automation = "${run.outputs?}" }
+outputs = "value:ReproAttempt"
+timeout_secs = "${toolchain.repro_timeout}"
+retry   = { max = 2 }
+repeat  = { until = "${attempt.outputs.status} == 'reproduced'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "repro.cannot-reproduce" }
+
+[[step]]
+id      = "cook"
+kind    = "tool"
+run     = "toolchain:cook"
+inputs  = { command = "${attempt.outputs.command}" }
+outputs = "value:CookReport"
+timeout_secs = "${toolchain.cook_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "run"
+kind    = "tool"
+run     = "toolchain:ue_automation"
+inputs  = { command = "${attempt.outputs.command}", cook = "${cook.outputs}" }
+outputs = "value:AutomationReport"
+timeout_secs = "${toolchain.ue_test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "triage-gate"
+kind    = "gate"
+question = "repro.cannot-reproduce"
+inputs  = { attempts = "${attempt.outputs}", automation = "${run.outputs}" }
+when    = "${attempt.outputs.status} != 'reproduced'"
+
+[[step]]
+id      = "reduce"
+kind    = "agent"
+role    = "investigator"
+inputs  = { attempt = "${attempt.outputs}", automation = "${run.outputs}" }
+outputs = "value:ReproCase"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReproCase = "${reduce.outputs}" }
+evidence  = ["${cook}", "${run}", "${triage-gate?}"]

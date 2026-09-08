@@ -1,0 +1,72 @@
+# reach: (story, release, optional) with blast_radius < med — require row → ReleaseRecord
+# deploy pattern family: rolling-deploy(10) < blue-green-deploy(20) < canary-release(30) < flag-progressive-rollout(40);
+#   `rigor < recommended` keeps ReleaseRecord satisfiable at optional where canary (min recommended) is ineligible (F34 B19)
+[activity]
+id           = "rolling-deploy"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "release"
+provides     = ["ReleaseRecord"]
+requires     = ["BuildArtifact", "ReviewVerdict", "RolloutPlan?"]
+derived_from = ["BuildArtifact"]
+tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:docs", "kind:project", "kind:incident"]
+applicable_if = "blast_radius < med or rigor < recommended or kind == incident"   # P6 run1 fix: incident release at high blast radius
+method_rank  = 10
+family       = "deploy-pattern"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 4, tokens = 20_000, wall_clock_secs = 5400 }
+deviation_ok = ["downgrade"]
+keywords     = ["rolling deploy", "rolling update", "deployment pipeline"]
+rationale    = "Kubernetes-style rolling update for low-blast-radius changes: deploy, smoke, record; rollback is its own activity."
+
+[[step]]
+id      = "deploy"
+kind    = "tool"
+run     = "toolchain:deploy"
+inputs  = { artifact = "artifact:BuildArtifact", percent = 100 }
+outputs = "value:DeployReport"
+timeout_secs = "${toolchain.deploy_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "smoke"
+kind    = "tool"
+run     = "toolchain:smoke"
+inputs  = { deploy = "${deploy.outputs}", checklist = "checklist:smoke" }
+outputs = "value:SmokeResult"
+timeout_secs = 600
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "healthy"
+kind    = "check"
+inputs  = { smoke = "${smoke.outputs}" }
+expr    = "smoke.status == 'passing'"
+on_false = "continue"
+
+[[step]]
+id      = "rollback"
+kind    = "tool"
+run     = "toolchain:rollback"
+when    = "${smoke.outputs.status} != 'passing'"
+inputs  = { to = "artifact:ReleaseRecord.previous_sha" }
+outputs = "value:RollbackReport"
+timeout_secs = "${toolchain.deploy_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:release_record"
+inputs  = { deploy = "${deploy.outputs}", smoke = "${smoke.outputs}", rollback = "${rollback.outputs?}" }
+outputs = "value:ReleaseRecord"
+timeout_secs = 60
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReleaseRecord = "${record.outputs}" }
+evidence  = ["${deploy}", "${smoke}", "${rollback?}"]

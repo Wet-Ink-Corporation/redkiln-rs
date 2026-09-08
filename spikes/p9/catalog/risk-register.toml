@@ -1,0 +1,66 @@
+# reach: (initiative, planning, recommended) — require row "kind in [initiative, project]" → RiskRegister
+[activity]
+id           = "risk-register"
+version      = 1
+stage        = "planning"
+provides     = ["RiskRegister"]
+requires     = ["DesignDoc", "SliceSet?", "ThreatModel?"]
+derived_from = ["DesignDoc", "SliceSet?"]
+tags         = ["kind:initiative", "kind:project"]
+method_rank  = 10
+min_rigor    = "recommended"
+cost_class   = "S"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 200_000, wall_clock_secs = 2400 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["risk register", "likelihood impact", "address risk", "pre-mortem"]
+rationale    = "DA 'Address Risk' / SWEBOK ch.9: enumerate risks with owners and responses; unowned risks block the plan at mandatory."
+
+[[step]]
+id      = "enumerate"
+kind    = "agent"
+role    = "planner"
+inputs  = { design = "artifact:DesignDoc", slices = "artifact:SliceSet?", threats = "artifact:ThreatModel?", findings = "${adversary.outputs?}" }
+outputs = "value:RiskRegister"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "planner"
+inputs  = { draft = "${enumerate.outputs}", checklist = "checklist:risk-register" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { register = "${enumerate.outputs}", design = "artifact:DesignDoc" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", register = "${enumerate.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and (rigor < mandatory or register.unowned.len() == 0) and findings.none(severity in ['blocking'])"
+on_false = { to = "enumerate", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { register = "${enumerate.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { RiskRegister = "${enumerate.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${signoff?}"]

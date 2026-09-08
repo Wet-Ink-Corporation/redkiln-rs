@@ -1,0 +1,48 @@
+# reach: (spike, planning, optional) — require row "kind == spike" → SpikePlan
+[activity]
+id           = "spike-timebox-plan"
+version      = 1
+stage        = "planning"
+provides     = ["SpikePlan"]
+requires     = ["SpikeCharter"]
+derived_from = ["SpikeCharter"]
+tags         = ["kind:spike"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck"]
+budget       = { attempts_total = 3, tokens = 80_000, wall_clock_secs = 900 }
+deviation_ok = []
+keywords     = ["timebox", "checkpoints", "kill criteria", "spike plan"]
+rationale    = "XP / Shape Up appetite: a spike's plan is its time-box, checkpoints and the kill criteria carried over from the charter."
+
+[[step]]
+id      = "plan"
+kind    = "agent"
+role    = "planner"
+inputs  = { charter = "artifact:SpikeCharter", previous = "${plan.outputs?}" }
+outputs = "value:SpikePlan"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "planner"
+inputs  = { draft = "${plan.outputs}", checklist = "checklist:spike-charter" }
+outputs = "value:SelfCheck"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "bounded"
+kind    = "check"
+inputs  = { plan = "${plan.outputs}", check = "${self-check.outputs}" }
+expr    = "plan.timebox_secs > 0 and plan.kill_criteria.len() > 0 and check.failed == 0"
+on_false = { to = "plan", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { SpikePlan = "${plan.outputs}" }
+evidence  = ["${self-check}"]

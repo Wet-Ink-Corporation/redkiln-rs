@@ -57,3 +57,154 @@ options = ["extend-observation", "accept-partial", "choose-other-mitigation"]
 [question."api-contract.accept"]
 text = "Accept this API contract as the interface to implement against?"
 options = ["accept", "changes-requested"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): discovery ----
+# Shared sign-off question used by every `signoff` gate whose only options are accept / changes-requested.
+
+[question."draft.accept"]
+text = "Accept this artifact as the basis for the next stage?"
+options = ["accept", "changes-requested"]
+
+[question."loop.exhausted"]
+text = "The step did not converge within its loop budget. How should we proceed?"
+options = ["provide-hint", "accept-best", "abandon"]
+
+[question."prototype.user-test"]
+text = "Run the prototype with users and attach the session results, or proceed on the agent's evaluation alone?"
+options = [{ id = "results-attached", attaches = "SessionNotes" }, { id = "proceed-without-users" }]   # amendment 33 (2026-09-08)
+
+[question."sprint.decide"]
+text = "Design sprint day 3: which sketch goes to prototype?"
+options = ["sketch-a", "sketch-b", "sketch-c", "none-restart"]
+
+[question."sprint.test-results"]
+text = "Design sprint day 5: attach the user-test results."
+options = [{ id = "results-attached", attaches = "SessionNotes" }, { id = "sprint-abandoned" }]   # amendment 33 (2026-09-08)
+
+[question."discovery.go-no-go"]
+text = "Discovery recommendation: proceed to specification?"
+options = ["go", "no-go", "more-discovery"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): specification ----
+
+[question."asvs.level"]
+text = "Which ASVS verification level applies to this change?"
+options = ["l1", "l2", "l3"]
+
+[question."spec.requirements-conflict"]
+text = "Conflicting requirements remain after negotiation. Resolve now or accept as recorded conflicts?"
+options = ["resolve", "accept-recorded"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): design ----
+
+[question."atam.accept-risks"]
+text = "The trade-off analysis found architectural risks. Accept them as recorded, or send the architecture back?"
+options = ["accept-recorded", "send-back"]
+
+[question."migration.approve"]
+text = "Approve this expand/migrate/contract plan, including its rollback path?"
+options = ["approve", "changes-requested"]
+
+[question."adr.accept"]
+text = "Accept this decision record (status → accepted)?"
+options = ["accept", "changes-requested", "reject"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): planning ----
+
+[question."appetite.overrun"]
+text = "The plan does not fit the appetite. Narrow the scope, extend the appetite, or stop?"
+options = ["narrow-scope", "extend-appetite", "abandon"]
+
+[question."rollout.approve"]
+text = "Approve this rollout plan (strategy, stages, thresholds, rollback)?"
+options = ["approve", "changes-requested"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): closeout ----
+
+[question."closure.signoff"]
+text = "Every acceptance criterion is covered, the tree is clean and links are reconciled. Close this item?"
+options = ["close", "hold"]
+
+[question."spike.decision"]
+text = "Take the spike's recommendation?"
+options = ["adopt", "reject", "extend-timebox"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): analysis ----
+
+[question."bisect.no-culprit"]
+text = "Bisect did not converge on a single culprit commit. Widen the range, accept the last suspect, or abandon?"
+options = ["widen-range", "accept-last", "abandon"]
+
+[question."vuln.accept-sla"]
+text = "Accept this exploitability assessment and its remediation SLA?"
+options = ["accept", "escalate-severity", "downgrade-severity"]
+
+[question."spike.timebox-exhausted"]
+text = "The spike's time-box is exhausted without a decisive result. Extend once, or report what exists?"
+options = ["extend-once", "report-as-is"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): implement ----
+
+[question."dependency.breaking"]
+text = "The dependency bump is a breaking change. Accept the migration work, pin to a patched minor, or abandon?"
+options = ["accept-breaking", "pin-minor", "abandon"]
+
+[question."hotfix.authorize"]
+text = "Deploy this hotfix as an emergency change?"
+options = ["proceed", "choose-other-mitigation", "abort"]
+
+[question."seam.cutover"]
+text = "All consumers are on the new implementation behind the seam. Remove the old path?"
+options = ["remove", "keep-both", "revert"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): verify ----
+
+[question."scan.accept-findings"]
+text = "The scan reports critical or high findings. Accept them with a recorded exception, or send the change back?"
+options = ["accept-exception", "send-back"]
+
+[question."confirmation.not-fixed"]
+text = "The original reproduction still fails after the change. Send back to implement, or reopen the analysis?"
+options = ["send-back", "reopen-analysis"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): review ----
+
+[question."prr.accept-gaps"]
+text = "Production-readiness gaps remain. Accept them as launch risks, or block the launch until closed?"
+options = ["accept-as-risks", "block"]
+
+[question."change.authorize"]
+text = "Authorize this change (standard / normal / emergency) for release?"
+options = ["approve", "defer", "reject"]
+
+[question."inspection.meeting"]
+text = "Inspection meeting: record the defect log and the disposition."
+options = ["accept", "rework", "reinspect"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): release ----
+
+[question."bluegreen.cutover"]
+text = "The green environment is healthy on smoke. Cut traffic over?"
+options = ["cutover", "hold", "abandon"]
+
+[question."rollback.confirm"]
+text = "Roll production back to the previous release?"
+options = ["proceed", "abort"]
+
+[question."migration.execute"]
+text = "Execute the expand-phase migration and backfill in production?"
+options = ["proceed", "hold"]
+
+[question."rollout.ramp"]
+text = "Flag metrics are within thresholds at this percentage. Ramp to the next step?"
+options = ["ramp", "hold", "kill"]
+
+# ---- 2026-09-07 P6 authoring batch (third author): operate ----
+
+[question."mitigation.proceed"]
+text = "Apply this mitigation in production?"
+options = ["proceed", "choose-other-mitigation", "abort"]
+
+[question."incident.end"]
+text = "Service is within SLO after mitigation. Declare the incident resolved?"
+options = ["resolved", "continue"]

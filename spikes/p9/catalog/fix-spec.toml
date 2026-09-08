@@ -1,0 +1,65 @@
+# reach: (bug, specification, optional) — Spec for bugs; user-story-ac no longer tags bug (batch edit)
+[activity]
+id           = "fix-spec"
+version      = 1
+stage        = "specification"
+provides     = ["Spec"]
+requires     = ["RootCause", "ReproCase?"]
+derived_from = ["RootCause"]
+tags         = ["kind:bug", "kind:security-vuln", "kind:incident"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 150_000, wall_clock_secs = 1800 }
+deviation_ok = ["downgrade"]
+keywords     = ["fix spec", "regression test intent", "expected behaviour", "scope of fix"]
+rationale    = "A bug's spec is the expected behaviour plus the regression test that pins it; it is derived from the cause, not from a story."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { cause = "artifact:RootCause", repro = "artifact:ReproCase?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}" }
+outputs = "value:Spec"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { spec = "${draft.outputs}", checklist = "checklist:fix-scope" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { spec = "${draft.outputs}", cause = "artifact:RootCause" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", spec = "${draft.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and spec.acceptance_criteria.len() > 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { spec = "${draft.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Spec = "${draft.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${signoff?}"]

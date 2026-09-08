@@ -1,0 +1,57 @@
+# reach: (project, design, recommended) — require row → DesignEvaluation
+# design evaluation family: design-review-lightweight(10) < architecture-tradeoff-analysis(20); disjoint by kind
+[activity]
+id           = "design-review-lightweight"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "design"
+provides     = ["DesignEvaluation"]
+requires     = ["DesignDoc"]
+derived_from = ["DesignDoc"]
+tags         = ["kind:project", "kind:story", "kind:tech-debt"]
+method_rank  = 10
+family       = "design-evaluation"
+min_rigor    = "recommended"
+cost_class   = "S"
+evidence     = ["Findings", "HumanAnswer?"]
+budget       = { attempts_total = 3, tokens = 150_000, wall_clock_secs = 1800 }
+deviation_ok = ["skip"]
+keywords     = ["design review", "peer review", "SWEBOK design reviews"]
+rationale    = "SWEBOK ch.3 §6.1: a peer pass over the design doc; findings only, the verdict is the policy check (proposal §4.6)."
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { design = "artifact:DesignDoc", checklist = "checklist:design-doc" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { findings = "${review.outputs}" }
+expr    = "findings.none(severity in ['blocking'])"
+on_false = "continue"
+
+[[step]]
+id      = "override"
+kind    = "gate"
+when    = "rigor >= mandatory and ${review.outputs.items}.len() > 0"
+question = "review.blocking"
+inputs  = { findings = "${review.outputs}" }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { findings = "${review.outputs}", override = "${override.answer?}" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { DesignEvaluation = "${record.outputs}" }
+evidence  = ["${review}", "${override?}"]

@@ -1,0 +1,52 @@
+# v0 pack: spike. Authored 2026-09-07 for P6 before any lattice run.
+[pack]
+id = "spike"
+applies = "kind == spike"
+appetite = { points = 30 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "optional", analysis = "mandatory", specification = "mandatory", design = "forbidden", planning = "recommended", implement = "optional", verify = "forbidden", review = "recommended", release = "forbidden", operate = "forbidden", closeout = "mandatory" }
+
+[stage.discovery]
+goal = "The question is framed"
+baseline = ["ProblemStatement"]
+[[stage.discovery.require]]
+when = "market_facing"
+artifacts = ["CompetitorAnalysis"]
+
+[stage.specification]
+goal = "Question, hypothesis, time-box, kill criteria"
+baseline = ["SpikeCharter"]
+
+[stage.planning]
+goal = "Time-box and checkpoints"
+baseline = ["SpikePlan"]
+[[stage.planning.require]]
+when = "size >= high"
+artifacts = ["Estimate"]
+
+[stage.analysis]
+goal = "The experiment ran inside its time-box"
+baseline = ["ExperimentResults"]
+
+[stage.implement]
+goal = "(experiment code lives inside technical-spike)"
+baseline = []
+
+[stage.review]
+
+goal = "Results checked against the pre-registered criteria"
+baseline = ["ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+
+[stage.closeout]
+goal = "Report, decision, knowledge harvested"
+baseline = ["SpikeReport", "DecisionRecord", "ClosureRecord"]
+finally = true
+[[stage.closeout.require]]
+when = "rigor >= recommended"
+artifacts = ["KBAtoms", "Retrospective"]

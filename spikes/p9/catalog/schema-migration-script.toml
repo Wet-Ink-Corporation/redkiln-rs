@@ -1,0 +1,59 @@
+# reach: (story, implement, optional) with data_migration — require row → MigrationScript
+[activity]
+id           = "schema-migration-script"
+version      = 3   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["MigrationScript"]
+requires     = ["DataMigrationPlan"]
+derived_from = ["DataMigrationPlan"]
+tags         = ["kind:story", "kind:project", "kind:tech-debt", "kind:bug"]   # P6 run2 fix; run5: change:text dropped (migration scripts are text whatever the toolchain)
+applicable_if = "data_migration"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["ToolReport", "Findings?"]
+budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 5400 }
+deviation_ok = []
+keywords     = ["migration script", "reversible", "idempotent", "backfill"]
+rationale    = "DORA database change management: a reversible, idempotent migration per plan phase, dry-run on a snapshot before it is called done."
+
+[[step]]
+id      = "write"
+kind    = "agent"
+role    = "implementer"
+inputs  = { plan = "artifact:DataMigrationPlan", kb = "kb:migration-playbook", last = "${dry-run.outputs?}", findings = "${adversary.outputs?}" }
+outputs = "value:MigrationScript"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "dry-run"
+kind    = "tool"
+run     = "toolchain:migrate_dry_run"
+inputs  = { files = "${write.outputs.files}" }
+outputs = "value:MigrationTestReport"
+timeout_secs = "${toolchain.migration_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { script = "${write.outputs}", plan = "artifact:DataMigrationPlan", report = "${dry-run.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { script = "${write.outputs}", report = "${dry-run.outputs}", findings = "${adversary.outputs?}" }
+expr    = "report.status == 'passing' and script.reversible == true and script.idempotent == true and findings.none(severity in ['blocking'])"
+on_false = { to = "write", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { MigrationScript = "${write.outputs}" }
+evidence  = ["${dry-run}", "${adversary?}"]

@@ -1,0 +1,51 @@
+# reach: (tech-debt, analysis, optional) — five-whys does not tag tech-debt, so rank 20 is lowest there; incidents: deviation add
+# causal family: five-whys(10) < fishbone-analysis(20) < fault-tree-analysis(30)
+[activity]
+id           = "fishbone-analysis"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "analysis"
+provides     = ["CausalChain"]
+requires     = ["RootCause?", "IncidentTimeline?", "DebtRegisterEntry?"]
+derived_from = ["RootCause?", "IncidentTimeline?"]
+tags         = ["kind:incident", "kind:tech-debt", "kind:bug"]   # 2026-09-08 family totality
+method_rank  = 20
+family       = "causal"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+budget       = { attempts_total = 3, tokens = 150_000, wall_clock_secs = 1800 }
+deviation_ok = ["add", "downgrade"]
+keywords     = ["ishikawa", "fishbone", "cause categories", "people process tools environment data"]
+rationale    = "Ishikawa: when contributing causes span categories (people, process, tools, environment, data) a linear why-chain misses them."
+
+[[step]]
+id      = "categorise"
+kind    = "agent"
+role    = "investigator"
+inputs  = { cause = "artifact:RootCause?", timeline = "artifact:IncidentTimeline?", debt = "artifact:DebtRegisterEntry?", findings = "${adversary.outputs?}" }
+outputs = "value:CausalChain"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { chain = "${categorise.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { chain = "${categorise.outputs}", findings = "${adversary.outputs?}" }
+expr    = "chain.categories.len() >= 2 and findings.none(severity in ['blocking'])"
+on_false = { to = "categorise", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { CausalChain = "${categorise.outputs}" }
+evidence  = ["${adversary?}"]

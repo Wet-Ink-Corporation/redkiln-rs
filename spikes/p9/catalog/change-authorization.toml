@@ -1,0 +1,55 @@
+# reach: (incident, review, optional) — require row "kind == incident or blast_radius >= high" → ChangeRecord
+[activity]
+id           = "change-authorization"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "review"
+provides     = ["ChangeRecord"]
+requires     = ["ReviewVerdict?", "RolloutPlan?", "ChangeSummary"]
+derived_from = ["ChangeSummary", "RolloutPlan?"]
+tags         = ["kind:incident", "kind:project", "kind:story", "kind:security-vuln", "kind:bug"]   # P6 run1 fix
+applicable_if = "kind == incident or blast_radius >= high"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "HumanAnswer"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 1800 }
+deviation_ok = []
+keywords     = ["change enablement", "ITIL", "emergency change", "change record"]
+rationale    = "ITIL 4 change enablement: a recorded, human-authorised change (standard / normal / emergency) for incidents and high-blast-radius releases."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "releaser"
+inputs  = { verdict = "artifact:ReviewVerdict?", rollout = "artifact:RolloutPlan?", change = "artifact:ChangeSummary", checklist = "checklist:change-authorization", previous = "${draft.outputs?}" }
+outputs = "value:ChangeRecord"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "releaser"
+inputs  = { record = "${draft.outputs}", checklist = "checklist:change-authorization" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "complete"
+kind    = "check"
+inputs  = { record = "${draft.outputs}", check = "${self-check.outputs}" }
+expr    = "record.rollback != null and check.failed == 0"
+on_false = { to = "draft", max = 1 }
+
+[[step]]
+id      = "authorize"
+kind    = "gate"
+question = "change.authorize"
+inputs  = { record = "${draft.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ChangeRecord = { type = "${draft.outputs.type}", authorized_by = "${authorize.answer}", window = "${draft.outputs.window}", rollback = "${draft.outputs.rollback}", status = "${authorize.answer}", summary = "${draft.outputs.summary}" } }   # composing emit (§9c.34)
+evidence  = ["${self-check}", "${authorize}"]

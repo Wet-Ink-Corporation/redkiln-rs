@@ -1,0 +1,77 @@
+# reach: (project, release, recommended) with blast_radius >= high — rank 20 beats canary(30) there
+# deploy pattern family: rolling-deploy(10) < blue-green-deploy(20) < canary-release(30) < flag-progressive-rollout(40)
+[activity]
+id           = "blue-green-deploy"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "release"
+provides     = ["ReleaseRecord"]
+requires     = ["BuildArtifact", "ReviewVerdict", "RolloutPlan?"]   # P6 run1 fix: expedite packs forbid planning
+derived_from = ["BuildArtifact", "RolloutPlan"]
+tags         = ["kind:story", "kind:project", "kind:bug", "kind:security-vuln", "kind:incident", "kind:tech-debt", "kind:chore", "kind:docs"]   # P6 run1 fix: high-blast-radius release for every packed kind
+applicable_if = "blast_radius >= high"
+method_rank  = 20
+family       = "deploy-pattern"
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["ToolReport", "HumanAnswer"]
+budget       = { attempts_total = 6, tokens = 40_000, wall_clock_secs = 10800 }
+deviation_ok = ["downgrade"]
+keywords     = ["blue green", "instant rollback", "cutover"]
+rationale    = "Fowler Blue-Green: deploy to the idle environment, smoke it, a human cuts traffic over; rollback is a route flip, which is why high-blast-radius releases prefer it to a canary ramp."
+
+[[step]]
+id      = "deploy-green"
+kind    = "tool"
+run     = "toolchain:deploy"
+inputs  = { artifact = "artifact:BuildArtifact", percent = 0 }
+outputs = "value:DeployReport"
+timeout_secs = "${toolchain.deploy_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "smoke"
+kind    = "tool"
+run     = "toolchain:smoke"
+inputs  = { deploy = "${deploy-green.outputs}", checklist = "checklist:smoke" }
+outputs = "value:SmokeResult"
+timeout_secs = 600
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "healthy"
+kind    = "check"
+inputs  = { smoke = "${smoke.outputs}" }
+expr    = "smoke.status == 'passing'"
+on_false = "fail"
+
+[[step]]
+id      = "cutover"
+kind    = "gate"
+question = "bluegreen.cutover"
+inputs  = { deploy = "${deploy-green.outputs}", smoke = "${smoke.outputs}" }
+
+[[step]]
+id      = "switch"
+kind    = "tool"
+run     = "toolchain:deploy"
+when    = "${cutover.answer} == 'cutover'"
+inputs  = { artifact = "artifact:BuildArtifact", percent = 100 }
+outputs = "value:DeployReport"
+timeout_secs = "${toolchain.deploy_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:release_record"
+inputs  = { green = "${deploy-green.outputs}", switched = "${switch.outputs?}", answer = "${cutover.answer}" }
+outputs = "value:ReleaseRecord"
+timeout_secs = 60
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReleaseRecord = "${record.outputs}" }
+evidence  = ["${deploy-green}", "${smoke}", "${cutover}", "${switch?}"]

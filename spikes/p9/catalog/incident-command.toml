@@ -1,0 +1,61 @@
+# reach: (incident, operate, optional) — require row "kind == incident" → IncidentLog (baseline for the incident pack's operate stage)
+[activity]
+id           = "incident-command"
+version      = 1
+stage        = "operate"
+provides     = ["IncidentLog"]
+requires     = ["IncidentRecord", "MitigationRecord?"]
+derived_from = ["IncidentRecord"]
+tags         = ["kind:incident"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "HumanAnswer?", "ToolReport"]
+budget       = { attempts_total = 8, tokens = 300_000, wall_clock_secs = 28800 }
+deviation_ok = []
+keywords     = ["incident commander", "scribe", "span of control", "declare end"]
+rationale    = "PagerDuty 'During an Incident' / SRE ch.14: the human is IC; the agent is scribe and analyst, keeps the log, and asks the IC to declare the end when telemetry is stable."
+
+[[step]]
+id      = "scribe"
+kind    = "agent"
+role    = "operator"
+inputs  = { incident = "artifact:IncidentRecord", mitigation = "artifact:MitigationRecord?", chat = "toolchain:chat_log?", alerts = "toolchain:alerts?", checklist = "checklist:incident-command", previous = "${scribe.outputs?}", telemetry = "${observe.outputs?}", answer = "${end.answer?}" }
+outputs = "value:IncidentLog"
+timeout_secs = 900
+retry   = { max = 2 }
+repeat  = { until = "${scribe.outputs.status} == 'resolved'", max = 6 }
+on_exhausted = "escalate"
+escalate = { question = "incident.end" }
+
+[[step]]
+id      = "observe"
+kind    = "tool"
+run     = "toolchain:metrics"
+inputs  = { window_secs = 600 }
+outputs = "value:TelemetryReport"
+timeout_secs = 900
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "end"
+kind    = "gate"
+when    = "${observe.outputs.status} == 'stable'"
+question = "incident.end"
+inputs  = { log = "${scribe.outputs}", telemetry = "${observe.outputs}" }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "operator"
+inputs  = { log = "${scribe.outputs}", checklist = "checklist:incident-command" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { IncidentLog = "${scribe.outputs}" }
+evidence  = ["${self-check}", "${end?}", "${observe}"]

@@ -1,0 +1,117 @@
+# v0 pack: story (Node/.NET/text toolchains). Authored 2026-09-07 for P6 before any lattice run.
+[pack]
+id = "story"
+applies = "kind == story and not ('unreal' in toolchain)"
+appetite = { points = 60 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "optional", specification = "mandatory", design = "recommended", planning = "optional", implement = "mandatory", verify = "mandatory", review = "mandatory", release = "mandatory", operate = "optional", closeout = "optional" }
+
+[stage.specification]
+goal = "Enumerated, testable acceptance criteria"
+baseline = ["Spec"]
+[[stage.specification.require]]
+when = "auth"
+artifacts = ["SecurityRequirements"]
+[[stage.specification.require]]
+when = "external_dep"
+artifacts = ["APIContract"]
+
+[stage.design]
+goal = "Decisions recorded where the change is risky"
+baseline = []
+[[stage.design.require]]
+when = "auth or data_migration or external_dep"
+artifacts = ["ThreatModel"]
+[[stage.design.require]]
+when = "data_migration"
+artifacts = ["DataMigrationPlan"]
+[[stage.design.require]]
+when = "ui"
+artifacts = ["UXDesign"]
+[[stage.design.require]]
+when = "size >= high"
+artifacts = ["ArchitectureDescription", "DesignDoc"]
+[[stage.design.require]]
+when = "novelty >= high"
+artifacts = ["ADR"]
+
+[stage.planning]
+goal = "Sized; rollout chosen when blast radius warrants"
+baseline = ["Estimate"]
+[[stage.planning.require]]
+when = "blast_radius >= med"
+artifacts = ["RolloutPlan"]
+
+[stage.implement]
+goal = "A tested, summarised change"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+[[stage.implement.require]]
+when = "blast_radius >= med"
+artifacts = ["FlagRecord"]
+[[stage.implement.require]]
+when = "data_migration"
+artifacts = ["MigrationScript"]
+[[stage.implement.require]]
+when = "rigor >= recommended"
+artifacts = ["Docs"]
+
+[stage.verify]
+
+goal = "AC demonstrated, nothing regressed"
+baseline = ["TestReport", "SmokeResult"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+[[stage.verify.require]]
+when = "criticality >= high"
+artifacts = ["TestReport"]
+rigor = "mandatory"
+[[stage.verify.require]]
+when = "'text' in change"
+artifacts = ["ScanReport"]
+[[stage.verify.require]]
+when = "data_migration"
+artifacts = ["MigrationTestReport"]
+[[stage.verify.require]]
+when = "external_dep"
+artifacts = ["IntegrationReport"]
+[[stage.verify.require]]
+when = "criticality >= high and rigor >= mandatory"
+artifacts = ["MutationSummary"]
+
+[stage.review]
+
+goal = "Independent verdict"
+baseline = ["ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+[[stage.review.require]]
+when = "auth"
+artifacts = ["SecurityReviewVerdict"]
+[[stage.review.require]]
+when = "blast_radius >= high"
+artifacts = ["ChangeRecord"]
+
+[stage.release]
+goal = "In production, reversibly"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+[[stage.release.require]]
+when = "data_migration"
+artifacts = ["MigrationLog"]
+
+[stage.operate]
+goal = "Watched after release when the blast radius is high"
+baseline = []
+[[stage.operate.require]]
+when = "blast_radius >= high"
+artifacts = ["SLOReport"]
+
+[stage.closeout]
+goal = "Closed, debt logged"
+baseline = ["ClosureRecord", "DebtRegisterEntry"]
+finally = true
+[[stage.closeout.require]]
+when = "rigor >= recommended"
+artifacts = ["Retrospective"]

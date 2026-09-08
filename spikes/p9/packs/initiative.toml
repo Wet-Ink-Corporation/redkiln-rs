@@ -1,0 +1,73 @@
+# v0 pack: initiative. Authored 2026-09-07 for P6 before any lattice run.
+[pack]
+id = "initiative"
+applies = "kind == initiative"
+appetite = { points = 400 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "mandatory", analysis = "optional", specification = "mandatory", design = "mandatory", planning = "mandatory", implement = "forbidden", verify = "forbidden", review = "mandatory", release = "optional", operate = "recommended", closeout = "mandatory" }
+
+[stage.discovery]
+goal = "The problem is framed and evidenced before a solution is committed to"
+baseline = ["ProblemStatement", "OutcomeStatement", "DiscoveryReport"]
+[[stage.discovery.require]]
+when = "market_facing"
+artifacts = ["CompetitorAnalysis"]
+[[stage.discovery.require]]
+when = "rigor >= recommended"
+artifacts = ["OpportunityMap"]
+[[stage.discovery.require]]
+when = "novelty >= high"
+artifacts = ["AssumptionList", "PrototypeFindings"]
+rigor = "mandatory"
+
+[stage.analysis]
+goal = "(feasibility — deferred to extended)"
+baseline = []
+
+[stage.specification]
+goal = "Attributed requirements the projects trace to"
+baseline = ["Spec", "RequirementsSet"]
+[[stage.specification.require]]
+when = "auth"
+artifacts = ["SecurityRequirements"]
+
+[stage.design]
+goal = "Architecture, decisions, evaluation"
+baseline = ["ArchitectureDescription", "DesignDoc", "ADR"]
+[[stage.design.require]]
+when = "criticality >= high"
+artifacts = ["DesignEvaluation"]
+[[stage.design.require]]
+when = "auth or data_migration or external_dep"
+artifacts = ["ThreatModel"]
+
+[stage.planning]
+goal = "Decomposed to projects with a DAG and a risk register"
+baseline = ["SliceSet", "DependencyDAG", "Estimate", "RiskRegister"]
+
+[stage.review]
+
+goal = "Design verdict and production readiness"
+baseline = ["DesignVerdict", "PRRReport"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+
+[stage.release]
+goal = "(launch coordination — optional)"
+baseline = []
+
+[stage.operate]
+goal = "Outcome watched"
+baseline = ["SLOReport"]
+
+[stage.closeout]
+goal = "Retro, harvest, close"
+baseline = ["Retrospective", "KBAtoms", "ClosureRecord"]
+finally = true

@@ -28,7 +28,7 @@ retry   = { max = 2 }
 id      = "dag"
 kind    = "agent"
 role    = "planner"
-inputs  = { slices = "${slice.outputs.slices}" }
+inputs  = { slices = "${slice.outputs.slices}", previous = "${dag.outputs?}" }
 outputs = "value:DependencyDAG"
 timeout_secs = 300
 retry   = { max = 1 }
@@ -38,7 +38,7 @@ id      = "acyclic"
 kind    = "check"
 inputs  = { dag = "${dag.outputs}" }
 expr    = "dag.acyclic == true"
-on_false = "dag"
+on_false = { to = "dag", max = 2 }
 
 [[step]]
 id      = "coverage"
@@ -64,7 +64,7 @@ id      = "policy"
 kind    = "check"
 inputs  = { check = "${coverage.outputs}", findings = "${adversary.outputs?}" }
 expr    = "check.failed == 0 and findings.none(evidence in ['Reproduced'])"
-on_false = "slice"
+on_false = { to = "slice", max = 2 }
 
 [[step]]
 id      = "approve"

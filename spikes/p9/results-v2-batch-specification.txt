@@ -1,0 +1,43 @@
+WARN  root-cause               R4    @optional: check 'policy' evaluates over null inputs only (vacuous per §9a.2)
+
+== summary ==
+WARN  R4    1
+errors=0 warnings=1
+
+== fragments repeated in >=2 activities ==
+13x ['adversarial-review', 'api-contract-spec', 'canary-release', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'prototype-test', 'root-cause', 'security-requirements', 'structured-nl-requirements', 'threat-model', 'user-story-ac']: check↺ -> gate?
+13x ['api-contract-spec', 'bdd-scenarios', 'discovery-report', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'root-cause', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac', 'vertical-slicing']: agent/reviewer? -> check↺
+12x ['api-contract-spec', 'bdd-scenarios', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'root-cause', 'security-requirements', 'structured-nl-requirements', 'threat-model', 'use-case-spec', 'user-story-ac']: gate? -> emit
+9x ['api-contract-spec', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'root-cause', 'security-requirements', 'structured-nl-requirements', 'user-story-ac']: agent/reviewer? -> check↺ -> gate?
+9x ['api-contract-spec', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'root-cause', 'security-requirements', 'threat-model', 'user-story-ac']: check↺ -> gate? -> emit
+6x ['bdd-scenarios', 'fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/reviewer?
+6x ['bdd-scenarios', 'fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/reviewer? -> check↺
+5x ['fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/spec-author
+5x ['fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/spec-author -> agent/reviewer?
+4x ['assumption-mapping', 'discovery-report', 'opportunity-solution-tree', 'problem-framing']: agent/investigator -> agent/investigator
+4x ['design-sprint', 'discovery-report', 'spike-question-spec', 'vertical-slicing']: check↺ -> gate
+4x ['discovery-report', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing']: agent/investigator -> agent/reviewer?
+4x ['discovery-report', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing']: agent/investigator -> agent/reviewer? -> check↺
+3x ['bdd-scenarios', 'structured-nl-requirements', 'use-case-spec']: agent/spec-author -> gate?
+3x ['bdd-scenarios', 'structured-nl-requirements', 'use-case-spec']: agent/spec-author -> gate? -> emit
+3x ['discovery-report', 'spike-question-spec', 'vertical-slicing']: gate -> emit
+3x ['discovery-report', 'opportunity-solution-tree', 'problem-framing']: agent/investigator -> agent/investigator -> agent/reviewer?
+3x ['discovery-report', 'spike-question-spec', 'vertical-slicing']: check↺ -> gate -> emit
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺ -> gate?
+2x ['assumption-mapping', 'mutation-testing']: check↺ -> emit
+2x ['bdd-scenarios', 'use-case-spec']: check↺ -> agent/spec-author
+2x ['bdd-scenarios', 'use-case-spec']: agent/reviewer? -> check↺ -> agent/spec-author
+2x ['bdd-scenarios', 'use-case-spec']: check↺ -> agent/spec-author -> gate?
+2x ['design-sprint', 'prototype-test']: agent/implementer -> tool/toolchain:build
+2x ['design-sprint', 'prototype-test']: tool/toolchain:build -> check↺
+2x ['design-sprint', 'prototype-test']: agent/implementer -> tool/toolchain:build -> check↺
+2x ['discovery-report', 'vertical-slicing']: agent/reviewer? -> check↺ -> gate
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+2x ['minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+2x ['minimal-repro', 'prototype-test']: agent/investigator -> emit
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test
+2x ['security-requirements', 'structured-nl-requirements']: gate? -> agent/spec-author
+2x ['spike-question-spec', 'vertical-slicing']: agent/planner -> agent/planner
+2x ['spike-question-spec', 'vertical-slicing']: agent/planner -> check↺
+2x ['spike-question-spec', 'vertical-slicing']: agent/planner -> agent/planner -> check↺

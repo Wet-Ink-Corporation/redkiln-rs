@@ -1,12 +1,14 @@
 [activity]
 id           = "root-cause"
-version      = 3
+version      = 4   # bumped 2026-09-08 (§9c.42)
 stage        = "analysis"
 provides     = ["RootCause"]
 requires     = ["ReproCase"]
 derived_from = ["ReproCase"]
 tags         = ["kind:bug", "kind:incident", "change:text"]
 method_rank  = 10
+family       = "localisation"
+max_rigor    = "recommended"   # §9c.26 ceiling — the family escalates above this
 min_rigor    = "optional"
 cost_class   = "M"
 evidence     = ["Findings?", "GreenAt", "ToolReport", "HumanAnswer?"]
@@ -58,7 +60,7 @@ id      = "policy"
 kind    = "check"
 inputs  = { findings = "${adversary.outputs?}" }
 expr    = "findings.none(evidence in ['Reproduced', 'MutationSurvived'])"
-on_false = "hypothesise"
+on_false = { to = "hypothesise", max = 2 }
 
 [[step]]
 id      = "signoff"

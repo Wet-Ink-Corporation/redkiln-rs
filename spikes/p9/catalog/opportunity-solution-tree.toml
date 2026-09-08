@@ -1,0 +1,67 @@
+# reach: (initiative, discovery, recommended) — require row "kind == initiative" → OpportunityMap
+# discovery spine family (rank inert, see problem-framing)
+[activity]
+id           = "opportunity-solution-tree"
+version      = 1
+stage        = "discovery"
+provides     = ["OpportunityMap"]
+requires     = ["OutcomeStatement", "ProblemStatement"]
+derived_from = ["OutcomeStatement"]
+tags         = ["kind:initiative", "kind:project"]
+method_rank  = 30
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 250_000, wall_clock_secs = 2400 }
+human_source_ok = true
+deviation_ok = ["skip", "downgrade"]
+keywords     = ["opportunity solution tree", "continuous discovery", "torres"]
+rationale    = "Torres OST: outcome → opportunities → solutions → assumption tests; the map is what the initiative's projects are cut from."
+
+[[step]]
+id      = "map"
+kind    = "agent"
+role    = "investigator"
+inputs  = { outcome = "artifact:OutcomeStatement", problem = "artifact:ProblemStatement", kb = "kb:discovery-conventions", findings = "${adversary.outputs?}" }
+outputs = "value:OpportunityMap"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "investigator"
+inputs  = { draft = "${map.outputs}", checklist = "checklist:discovery-report" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${map.outputs}", outcome = "artifact:OutcomeStatement" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}", draft = "${map.outputs}" }
+expr    = "check.failed == 0 and draft.opportunities.len() > 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "map", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { draft = "${map.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { OpportunityMap = "${map.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${signoff?}"]

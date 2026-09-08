@@ -1,0 +1,17 @@
+WARN  root-cause               R4    @optional: check 'policy' evaluates over null inputs only (vacuous per §9a.2)
+
+== summary ==
+WARN  R4    1
+errors=0 warnings=1
+
+== fragments repeated in >=2 activities ==
+5x ['adversarial-review', 'canary-release', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate?
+3x ['root-cause', 'user-story-ac', 'vertical-slicing']: agent/reviewer? -> check↺
+3x ['root-cause', 'threat-model', 'user-story-ac']: gate? -> emit
+3x ['root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate? -> emit
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺ -> gate?
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+2x ['minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test
+2x ['root-cause', 'user-story-ac']: agent/reviewer? -> check↺ -> gate?

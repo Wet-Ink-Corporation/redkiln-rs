@@ -39,7 +39,7 @@ id      = "policy"
 kind    = "check"
 inputs  = { findings = "${review.outputs}", model = "${model.outputs}" }
 expr    = "findings.none(evidence in ['Reproduced'])"
-on_false = "model"
+on_false = { to = "model", max = 2 }
 
 [[step]]
 id      = "residual-gate"

@@ -1,0 +1,64 @@
+# reach: (initiative, review, recommended) — require row "kind in [initiative, project]" → PRRReport
+[activity]
+id           = "production-readiness-review"
+version      = 1
+stage        = "review"
+provides     = ["PRRReport"]
+requires     = ["DesignDoc", "RolloutPlan?", "RiskRegister?"]
+derived_from = ["DesignDoc", "RolloutPlan?"]
+tags         = ["kind:initiative", "kind:project"]
+method_rank  = 10
+min_rigor    = "recommended"
+cost_class   = "L"
+evidence     = ["SelfCheck", "Findings", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 400_000, wall_clock_secs = 7200 }
+deviation_ok = ["skip"]
+keywords     = ["PRR", "production readiness", "SRE ch.32", "launch checklist"]
+rationale    = "SRE ch.32 PRR + ch.27 launch checklist: monitoring, capacity, on-call, runbooks and rollback checked before anything launches; gaps are launch risks a human owns."
+
+[[step]]
+id      = "audit"
+kind    = "agent"
+role    = "operator"
+inputs  = { design = "artifact:DesignDoc", rollout = "artifact:RolloutPlan?", risks = "artifact:RiskRegister?", checklist = "checklist:prr", findings = "${adversary.outputs?}" }
+outputs = "value:PRRReport"
+timeout_secs = 1800
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "operator"
+inputs  = { report = "${audit.outputs}", checklist = "checklist:prr" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { report = "${audit.outputs}", design = "artifact:DesignDoc" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs}" }
+expr    = "check.failed == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "audit", max = 2 }
+
+[[step]]
+id      = "gaps"
+kind    = "gate"
+when    = "${audit.outputs.gaps}.len() > 0"
+question = "prr.accept-gaps"
+inputs  = { report = "${audit.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { PRRReport = "${audit.outputs}" }
+evidence  = ["${self-check}", "${adversary}", "${gaps?}"]

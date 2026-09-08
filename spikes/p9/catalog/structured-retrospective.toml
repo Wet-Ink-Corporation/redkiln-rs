@@ -1,0 +1,67 @@
+# reach: (project, closeout, recommended) — require row "kind in [initiative, project]" → Retrospective
+# learning family: lightweight-retro(10) < structured-retrospective(20) < blameless-postmortem(30)
+[activity]
+id           = "structured-retrospective"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "closeout"
+provides     = ["Retrospective"]
+requires     = ["ReleaseRecord?", "DiscoveryReport?", "SliceSet?"]
+derived_from = ["ReleaseRecord?", "SliceSet?"]
+tags         = ["kind:initiative", "kind:project", "kind:story", "kind:bug", "kind:spike", "kind:chore", "kind:tech-debt", "kind:docs"]   # 2026-09-08 family totality above lightweight-retro
+method_rank  = 20
+family       = "learning"
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 250_000, wall_clock_secs = 3600 }
+deviation_ok = ["downgrade"]
+keywords     = ["retrospective", "derby larsen", "gather data generate insights decide"]
+rationale    = "Derby & Larsen: set the stage, gather data, generate insights, decide; action items need owners before the retro closes at mandatory."
+
+[[step]]
+id      = "gather"
+kind    = "agent"
+role    = "investigator"
+inputs  = { release = "artifact:ReleaseRecord?", discovery = "artifact:DiscoveryReport?", slices = "artifact:SliceSet?", history = "toolchain:history?", kb = "kb:retro-format", findings = "${adversary.outputs?}" }
+outputs = "value:Retrospective"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "investigator"
+inputs  = { draft = "${gather.outputs}", checklist = "checklist:retro" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${gather.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", draft = "${gather.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and (rigor < mandatory or draft.unassigned_items.len() == 0) and findings.none(severity in ['blocking'])"
+on_false = { to = "gather", max = 2 }
+
+[[step]]
+id      = "review"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { draft = "${gather.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Retrospective = "${gather.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${review?}"]

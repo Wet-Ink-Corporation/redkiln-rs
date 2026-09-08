@@ -1,0 +1,118 @@
+# reach: (project, implement, optional) with size >= high and blast_radius < high — tdd does not tag project
+# large-change safety family: direct-change(= the loop family) < branch-by-abstraction(40) < strangler-fig(50)
+[activity]
+id           = "branch-by-abstraction"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["Spec", "DesignDoc"]
+derived_from = ["Spec", "DesignDoc"]
+tags         = ["kind:project", "kind:tech-debt", "change:text"]
+applicable_if = "size >= high and blast_radius < high"
+method_rank  = 40
+family       = "large-change"
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["GreenAt", "ToolReport", "HumanAnswer"]
+budget       = { attempts_total = 12, tokens = 900_000, wall_clock_secs = 14400 }
+deviation_ok = ["downgrade"]
+keywords     = ["branch by abstraction", "seam", "trunk-based", "incremental replacement"]
+rationale    = "Fowler BranchByAbstraction: introduce a seam, migrate consumers on trunk, swap, remove — every commit green, no long-lived branch."
+
+[[step]]
+id      = "seam"
+kind    = "agent"
+role    = "implementer"
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc", last = "${seam-verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "seam-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "seam-green"
+kind    = "check"
+inputs  = { report = "${seam-verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "seam", max = 2 }
+
+[[step]]
+id      = "migrate"
+kind    = "agent"
+role    = "implementer"
+for_each = "${seam.outputs.files}"
+inputs  = { consumer = "${item}", design = "artifact:DesignDoc" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "migrate-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "migrate-green"
+kind    = "check"
+inputs  = { report = "${migrate-verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = "fail"
+
+[[step]]
+id      = "cutover"
+kind    = "gate"
+question = "seam.cutover"
+inputs  = { report = "${migrate-verify.outputs}" }
+
+[[step]]
+id      = "remove"
+kind    = "agent"
+role    = "implementer"
+when    = "${cutover.answer} == 'remove'"
+inputs  = { design = "artifact:DesignDoc", migrated = "${migrate.outputs}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "final-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "final-green"
+kind    = "check"
+inputs  = { report = "${final-verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = "fail"
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${remove.outputs?} ?? ${seam.outputs}" }
+evidence  = ["${seam-verify}", "${migrate-verify}", "${final-verify}", "${cutover}"]

@@ -1,0 +1,67 @@
+# reach: (story, design, optional) with ui — require row → UXDesign
+[activity]
+id           = "ux-flow-design"
+version      = 1
+stage        = "design"
+provides     = ["UXDesign"]
+requires     = ["Spec"]
+derived_from = ["Spec"]
+tags         = ["kind:project", "kind:story"]
+applicable_if = "ui"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 250_000, wall_clock_secs = 3600 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["user flow", "wireframe", "states", "user-centered design"]
+rationale    = "SWEBOK ch.3 §5.5: flows and wireframes with every state (empty, loading, error) before a UI story is implemented."
+
+[[step]]
+id      = "design"
+kind    = "agent"
+role    = "architect"
+inputs  = { spec = "artifact:Spec", findings = "${adversary.outputs?}" }
+outputs = "value:UXDesign"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "architect"
+inputs  = { draft = "${design.outputs}", checklist = "checklist:ux-flow" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${design.outputs}", spec = "artifact:Spec" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", draft = "${design.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and draft.states.len() > 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "design", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { draft = "${design.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { UXDesign = "${design.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${signoff?}"]

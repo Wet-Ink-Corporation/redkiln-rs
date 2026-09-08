@@ -1,0 +1,60 @@
+WARN  root-cause               R4    @optional: check 'policy' evaluates over null inputs only (vacuous per §9a.2)
+
+== summary ==
+WARN  R4    1
+errors=0 warnings=1
+
+== fragments repeated in >=2 activities ==
+25x ['api-contract-spec', 'bdd-scenarios', 'c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'discovery-report', 'fix-design', 'fix-spec', 'knowledge-harvest', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'relative-estimation', 'risk-register', 'root-cause', 'security-requirements', 'spike-report', 'structured-nl-requirements', 'structured-retrospective', 'use-case-spec', 'user-story-ac', 'ux-flow-design', 'vertical-slicing']: agent/reviewer? -> check↺
+24x ['adr-record', 'adversarial-review', 'api-contract-spec', 'appetite-check', 'canary-release', 'closure-record', 'data-migration-plan', 'design-doc', 'design-review-lightweight', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'prototype-test', 'relative-estimation', 'risk-register', 'rollout-plan', 'root-cause', 'security-requirements', 'structured-nl-requirements', 'structured-retrospective', 'threat-model', 'user-story-ac', 'ux-flow-design']: check↺ -> gate?
+20x ['adr-record', 'api-contract-spec', 'bdd-scenarios', 'data-migration-plan', 'design-doc', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'relative-estimation', 'risk-register', 'rollout-plan', 'root-cause', 'security-requirements', 'structured-nl-requirements', 'structured-retrospective', 'threat-model', 'use-case-spec', 'user-story-ac', 'ux-flow-design']: gate? -> emit
+17x ['adr-record', 'api-contract-spec', 'data-migration-plan', 'design-doc', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'relative-estimation', 'risk-register', 'rollout-plan', 'root-cause', 'security-requirements', 'structured-retrospective', 'threat-model', 'user-story-ac', 'ux-flow-design']: check↺ -> gate? -> emit
+15x ['api-contract-spec', 'data-migration-plan', 'design-doc', 'fix-spec', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'relative-estimation', 'risk-register', 'root-cause', 'security-requirements', 'structured-nl-requirements', 'structured-retrospective', 'user-story-ac', 'ux-flow-design']: agent/reviewer? -> check↺ -> gate?
+9x ['assumption-mapping', 'blameless-postmortem', 'c4-component', 'c4-container', 'c4-context', 'fix-design', 'knowledge-harvest', 'mutation-testing', 'spike-timebox-plan']: check↺ -> emit
+8x ['adr-record', 'c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'fix-design', 'ux-flow-design']: agent/architect -> agent/architect
+7x ['assumption-mapping', 'blameless-postmortem', 'discovery-report', 'opportunity-solution-tree', 'problem-framing', 'spike-report', 'structured-retrospective']: agent/investigator -> agent/investigator
+7x ['c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'fix-design', 'ux-flow-design']: agent/architect -> agent/reviewer?
+7x ['c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'fix-design', 'ux-flow-design']: agent/architect -> agent/architect -> agent/reviewer?
+7x ['c4-component', 'c4-container', 'c4-context', 'data-migration-plan', 'design-doc', 'fix-design', 'ux-flow-design']: agent/architect -> agent/reviewer? -> check↺
+6x ['bdd-scenarios', 'fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/reviewer?
+6x ['bdd-scenarios', 'fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/reviewer? -> check↺
+6x ['blameless-postmortem', 'design-sprint', 'discovery-report', 'spike-question-spec', 'spike-report', 'vertical-slicing']: check↺ -> gate
+6x ['discovery-report', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'spike-report', 'structured-retrospective']: agent/investigator -> agent/reviewer?
+6x ['discovery-report', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'spike-report', 'structured-retrospective']: agent/investigator -> agent/reviewer? -> check↺
+5x ['adversarial-review', 'blameless-postmortem', 'closure-record', 'design-review-lightweight', 'threat-model']: agent/reviewer -> check↺
+5x ['c4-component', 'c4-container', 'c4-context', 'fix-design', 'knowledge-harvest']: agent/reviewer? -> check↺ -> emit
+5x ['discovery-report', 'opportunity-solution-tree', 'problem-framing', 'spike-report', 'structured-retrospective']: agent/investigator -> agent/investigator -> agent/reviewer?
+5x ['fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/spec-author
+5x ['fix-spec', 'security-requirements', 'structured-nl-requirements', 'use-case-spec', 'user-story-ac']: agent/spec-author -> agent/spec-author -> agent/reviewer?
+4x ['adversarial-review', 'closure-record', 'design-review-lightweight', 'threat-model']: agent/reviewer -> check↺ -> gate?
+4x ['appetite-check', 'spike-question-spec', 'spike-timebox-plan', 'vertical-slicing']: agent/planner -> check↺
+4x ['architecture-tradeoff-analysis', 'discovery-report', 'spike-question-spec', 'vertical-slicing']: gate -> emit
+4x ['risk-register', 'spike-question-spec', 'spike-timebox-plan', 'vertical-slicing']: agent/planner -> agent/planner
+3x ['bdd-scenarios', 'structured-nl-requirements', 'use-case-spec']: agent/spec-author -> gate?
+3x ['bdd-scenarios', 'structured-nl-requirements', 'use-case-spec']: agent/spec-author -> gate? -> emit
+3x ['discovery-report', 'spike-report', 'vertical-slicing']: agent/reviewer? -> check↺ -> gate
+3x ['discovery-report', 'spike-question-spec', 'vertical-slicing']: check↺ -> gate -> emit
+3x ['relative-estimation', 'risk-register', 'vertical-slicing']: agent/planner -> agent/reviewer?
+3x ['relative-estimation', 'risk-register', 'vertical-slicing']: agent/planner -> agent/reviewer? -> check↺
+3x ['spike-question-spec', 'spike-timebox-plan', 'vertical-slicing']: agent/planner -> agent/planner -> check↺
+2x ['adversarial-review', 'design-review-lightweight']: gate? -> tool/toolchain:verdict_record
+2x ['adversarial-review', 'design-review-lightweight']: tool/toolchain:verdict_record -> emit
+2x ['adversarial-review', 'design-review-lightweight']: check↺ -> gate? -> tool/toolchain:verdict_record
+2x ['adversarial-review', 'design-review-lightweight']: gate? -> tool/toolchain:verdict_record -> emit
+2x ['appetite-check', 't-shirt-sizing']: agent/planner? -> emit
+2x ['architecture-tradeoff-analysis', 'threat-model']: agent/architect -> agent/reviewer
+2x ['architecture-tradeoff-analysis', 'design-sprint']: agent/architect -> gate
+2x ['assumption-mapping', 'problem-record']: agent/investigator -> check↺
+2x ['bdd-scenarios', 'use-case-spec']: check↺ -> agent/spec-author
+2x ['bdd-scenarios', 'use-case-spec']: agent/reviewer? -> check↺ -> agent/spec-author
+2x ['bdd-scenarios', 'use-case-spec']: check↺ -> agent/spec-author -> gate?
+2x ['debt-logging', 'problem-record']: tool/toolchain:item_create -> emit
+2x ['design-sprint', 'prototype-test']: agent/implementer -> tool/toolchain:build
+2x ['design-sprint', 'prototype-test']: tool/toolchain:build -> check↺
+2x ['design-sprint', 'spike-report']: agent/planner -> emit
+2x ['design-sprint', 'prototype-test']: agent/implementer -> tool/toolchain:build -> check↺
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+2x ['minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+2x ['minimal-repro', 'prototype-test']: agent/investigator -> emit
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test
+2x ['security-requirements', 'structured-nl-requirements']: gate? -> agent/spec-author

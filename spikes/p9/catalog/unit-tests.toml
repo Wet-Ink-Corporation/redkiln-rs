@@ -1,0 +1,81 @@
+# reach: (story, verify, optional) with 'text' in change and criticality < high — require row → TestReport
+# test-design rigor family (see smoke-test); generic text producer, specialised by unit-tests-ue (PC7)
+[activity]
+id           = "unit-tests"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "verify"
+provides     = ["TestReport"]
+requires     = ["Changeset", "Spec"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:project"]
+applicable_if = "'text' in change"   # 2026-09-08: escalation by rigor (max_rigor), not criticality
+method_rank  = 20
+family       = "test-design"
+max_rigor    = "recommended"   # §9c.26 ceiling — the family escalates above this
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["GreenAt", "ToolReport", "SelfCheck?"]
+budget       = { attempts_total = 4, tokens = 150_000, wall_clock_secs = 3600 }
+deviation_ok = ["add"]
+keywords     = ["unit tests", "component tests", "affected selection"]
+rationale    = "ISTQB test levels / L2.5: the affected unit suite green at the change's sha; gaps against AC are filled at recommended."
+
+[[step]]
+id      = "run"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected", sha = "artifact:Changeset.sha" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "base-green"
+kind    = "check"
+inputs  = { report = "${run.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = "fail"
+
+[[step]]
+id      = "gaps"
+kind    = "agent"
+role    = "implementer"
+when    = "rigor >= recommended"
+inputs  = { report = "${run.outputs}", spec = "artifact:Spec", checklist = "checklist:ac-coverage" }
+outputs = "value:SelfCheck"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "fill"
+kind    = "agent"
+role    = "implementer"
+when    = "rigor >= recommended"
+inputs  = { gaps = "${gaps.outputs}", spec = "artifact:Spec", last = "${rerun.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "rerun"
+kind    = "tool"
+run     = "toolchain:test"
+when    = "rigor >= recommended"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green"
+kind    = "check"
+when    = "rigor >= recommended"
+inputs  = { report = "${rerun.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "fill", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { TestReport = "${rerun.outputs?} ?? ${run.outputs}" }
+evidence  = ["${run}", "${gaps?}", "${rerun?}"]

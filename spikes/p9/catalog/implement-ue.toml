@@ -1,0 +1,75 @@
+# reach: (story, implement, optional) with 'unreal' in toolchain — the Unreal implement producer (decision 5, 2026-09-08):
+#   Changeset{unreal} / ImplReport for binary (content) changes; edit → cook → automation → summary.
+[activity]
+id           = "implement-ue"
+version      = 1
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["IntakeRecord", "Spec?", "FixDesign?"]   # run4: incidents forbid specification
+derived_from = ["IntakeRecord", "Spec?"]
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:tech-debt", "kind:project", "kind:chore", "kind:security-vuln", "kind:docs", "toolchain:unreal", "change:binary"]   # run4: mixed chore/sv/docs items
+family       = "implement-loop-ue"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 10, tokens = 600_000, wall_clock_secs = 21600 }
+deviation_ok = ["downgrade"]
+keywords     = ["unreal", "content change", "cook", "automation", "blueprint", "uasset"]
+rationale    = "PC7: a UE content change has no failing unit test to write first; the loop is edit → cook clean → automation green, budgeted at F21's 7200 s class three times over."
+
+[[step]]
+id      = "edit"
+kind    = "agent"
+role    = "implementer"
+inputs  = { intake = "artifact:IntakeRecord", spec = "artifact:Spec?", design = "artifact:FixDesign?", last = "${automation.outputs?}", cook = "${cook.outputs?}", hint = "${stuck.answer?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+repeat  = { until = "${automation.outputs.status?} == 'passing'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "tdd.green-exhausted" }
+
+[[step]]
+id      = "cook"
+kind    = "tool"
+run     = "toolchain:cook"
+inputs  = { files = "${edit.outputs.files}" }
+timeout_secs = "${toolchain.cook_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "cooked"
+kind    = "check"
+inputs  = { cook = "${cook.outputs}" }
+expr    = "cook.status == 'ok' and cook.errors.len() == 0"
+on_false = { to = "edit", max = 2 }
+
+[[step]]
+id      = "automation"
+kind    = "tool"
+run     = "toolchain:ue_automation"
+inputs  = { cook = "${cook.outputs}", selection = "affected" }
+timeout_secs = "${toolchain.ue_test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "stuck"
+kind    = "gate"
+question = "tdd.green-exhausted"
+when    = "${automation.outputs.status} != 'passing'"
+inputs  = { report = "${automation.outputs}", impl = "${edit.outputs}" }
+
+[[step]]
+id      = "manifest"
+kind    = "tool"
+run     = "toolchain:asset_manifest"
+inputs  = { range = "baseline..HEAD", cook = "${cook.outputs}" }
+timeout_secs = "${toolchain.cook_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = { kind = "${manifest.outputs.summary}", manifest = "${manifest.outputs.assets}", reports = "${automation.outputs.tests}" }, ImplReport = "${edit.outputs}" }   # composing emit (§9c.34); Changeset's schema is ChangeSummary
+evidence  = ["${cook}", "${automation}", "${stuck?}"]

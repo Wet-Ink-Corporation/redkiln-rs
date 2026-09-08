@@ -1,0 +1,45 @@
+# reach: (story, closeout, optional) — require row → Retrospective
+# learning family: lightweight-retro(10) < structured-retrospective(20) < blameless-postmortem(30);
+#   blameless provides Postmortem, not Retrospective — the family spans two kinds (F34 ambiguity B3)
+[activity]
+id           = "lightweight-retro"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "closeout"
+provides     = ["Retrospective"]
+requires     = ["ImplReport?", "ReviewVerdict?"]
+derived_from = ["ImplReport?", "ReviewVerdict?"]
+tags         = ["kind:story", "kind:bug", "kind:spike", "kind:chore", "kind:tech-debt", "kind:docs"]
+method_rank  = 10
+family       = "learning"
+max_rigor    = "recommended"   # §9c.26 ceiling — the family escalates above this
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck"]
+budget       = { attempts_total = 3, tokens = 50_000, wall_clock_secs = 600 }
+deviation_ok = ["skip"]
+keywords     = ["retro", "what went well", "what to change"]
+rationale    = "A one-shot note per small item; the structured form is reserved for projects and initiatives."
+
+[[step]]
+id      = "note"
+kind    = "agent"
+role    = "implementer"
+inputs  = { report = "artifact:ImplReport?", verdict = "artifact:ReviewVerdict?", kb = "kb:retro-format" }
+outputs = "value:Retrospective"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "implementer"
+inputs  = { note = "${note.outputs}", checklist = "checklist:retro" }
+outputs = "value:SelfCheck"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Retrospective = "${note.outputs}" }
+evidence  = ["${self-check}"]

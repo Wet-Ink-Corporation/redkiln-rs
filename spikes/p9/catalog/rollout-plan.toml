@@ -1,0 +1,56 @@
+# reach: (story, planning, optional) with blast_radius >= med — require row → RolloutPlan (canary-release requires it)
+[activity]
+id           = "rollout-plan"
+version      = 3   # bumped 2026-09-08 (§9c.42)
+stage        = "planning"
+provides     = ["RolloutPlan"]
+requires     = ["IntakeRecord", "Spec?", "DesignDoc?", "RiskRegister?", "DataMigrationPlan?"]   # run7: chores forbid specification
+derived_from = ["IntakeRecord", "Spec?", "DesignDoc?", "DataMigrationPlan?"]
+tags         = ["kind:project", "kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:docs"]   # run6
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "HumanAnswer?"]
+budget       = { attempts_total = 4, tokens = 150_000, wall_clock_secs = 1800 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["rollout plan", "canary", "blue green", "rollback", "launch checklist"]
+rationale    = "SRE ch.27 / Humble & Farley: choose the deployment pattern, stages, thresholds and rollback before the change exists, so release selects by plan not by mood."
+
+[[step]]
+id      = "plan"
+kind    = "agent"
+role    = "releaser"
+inputs  = { intake = "artifact:IntakeRecord", spec = "artifact:Spec?", design = "artifact:DesignDoc?", risks = "artifact:RiskRegister?", migration = "artifact:DataMigrationPlan?", kb = "kb:release-playbook", previous = "${plan.outputs?}" }
+outputs = "value:RolloutPlan"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "releaser"
+inputs  = { draft = "${plan.outputs}", checklist = "checklist:rollout-plan" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "complete"
+kind    = "check"
+inputs  = { plan = "${plan.outputs}", check = "${self-check.outputs}" }
+expr    = "plan.steps.len() > 0 and plan.thresholds != null and check.failed == 0"
+on_false = { to = "plan", max = 2 }
+
+[[step]]
+id      = "approve"
+kind    = "gate"
+when    = "rigor >= mandatory or blast_radius >= high"
+question = "rollout.approve"
+inputs  = { plan = "${plan.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { RolloutPlan = "${plan.outputs}" }
+evidence  = ["${self-check}", "${approve?}"]

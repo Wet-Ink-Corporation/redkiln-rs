@@ -1,0 +1,30 @@
+WARN  root-cause               R4    @optional: check 'policy' evaluates over null inputs only (vacuous per §9a.2)
+
+== summary ==
+WARN  R4    1
+errors=0 warnings=1
+
+== fragments repeated in >=2 activities ==
+9x ['adversarial-review', 'canary-release', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'prototype-test', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate?
+7x ['discovery-report', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'root-cause', 'user-story-ac', 'vertical-slicing']: agent/reviewer? -> check↺
+6x ['opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'root-cause', 'threat-model', 'user-story-ac']: gate? -> emit
+6x ['opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate? -> emit
+5x ['opportunity-solution-tree', 'outcome-definition', 'problem-framing', 'root-cause', 'user-story-ac']: agent/reviewer? -> check↺ -> gate?
+4x ['assumption-mapping', 'discovery-report', 'opportunity-solution-tree', 'problem-framing']: agent/investigator -> agent/investigator
+4x ['discovery-report', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing']: agent/investigator -> agent/reviewer?
+4x ['discovery-report', 'opportunity-solution-tree', 'outcome-definition', 'problem-framing']: agent/investigator -> agent/reviewer? -> check↺
+3x ['design-sprint', 'discovery-report', 'vertical-slicing']: check↺ -> gate
+3x ['discovery-report', 'opportunity-solution-tree', 'problem-framing']: agent/investigator -> agent/investigator -> agent/reviewer?
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺ -> gate?
+2x ['assumption-mapping', 'mutation-testing']: check↺ -> emit
+2x ['design-sprint', 'prototype-test']: agent/implementer -> tool/toolchain:build
+2x ['design-sprint', 'prototype-test']: tool/toolchain:build -> check↺
+2x ['design-sprint', 'prototype-test']: agent/implementer -> tool/toolchain:build -> check↺
+2x ['discovery-report', 'vertical-slicing']: gate -> emit
+2x ['discovery-report', 'vertical-slicing']: agent/reviewer? -> check↺ -> gate
+2x ['discovery-report', 'vertical-slicing']: check↺ -> gate -> emit
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+2x ['minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+2x ['minimal-repro', 'prototype-test']: agent/investigator -> emit
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test

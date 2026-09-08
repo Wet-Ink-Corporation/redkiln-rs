@@ -1,0 +1,71 @@
+# reach: (bug, analysis, *) — by deviation add from root-cause ("hypothesis exhausted", proposal §3); no context
+#   makes rank 30 the lowest applicable (F34 ambiguity B1)
+# localisation family: root-cause(10) < differential-debugging(20) < bisect(30) < instrumented-trace-analysis(40)
+[activity]
+id           = "bisect"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "analysis"
+provides     = ["RootCause"]
+requires     = ["ReproCase"]
+derived_from = ["ReproCase"]
+tags         = ["kind:bug", "kind:security-vuln", "change:text"]
+applicable_if = "has_repro"
+method_rank  = 30
+family       = "localisation"
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["ToolReport", "GreenAt", "HumanAnswer?"]
+budget       = { attempts_total = 6, tokens = 200_000, wall_clock_secs = 7200 }
+deviation_ok = ["downgrade"]
+keywords     = ["git bisect", "culprit commit", "binary search history"]
+rationale    = "git bisect: with a deterministic repro and history, the introducing commit is a binary search; the cause is read off the culprit diff."
+
+[[step]]
+id      = "bisect"
+kind    = "tool"
+run     = "toolchain:bisect"
+inputs  = { command = "artifact:ReproCase.command", history = "toolchain:vcs_history", range = "${widen.answer?}" }
+outputs = "value:BisectReport"
+timeout_secs = 3600
+retry   = { max = 1 }
+repeat  = { until = "${bisect.outputs.status} == 'found'", max = 2 }
+on_exhausted = "escalate"
+escalate = { question = "bisect.no-culprit" }
+
+[[step]]
+id      = "widen"
+kind    = "gate"
+when    = "${bisect.outputs.status} != 'found'"
+question = "bisect.no-culprit"
+inputs  = { report = "${bisect.outputs}" }
+
+[[step]]
+id      = "explain"
+kind    = "agent"
+role    = "investigator"
+inputs  = { report = "${bisect.outputs}", repro = "artifact:ReproCase", history = "toolchain:vcs_history" }
+outputs = "value:RootCause"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "confirm"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "artifact:ReproCase.command" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "root-cause.accept"
+inputs  = { cause = "${explain.outputs}", report = "${bisect.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { RootCause = "${explain.outputs}" }
+evidence  = ["${bisect}", "${confirm}", "${widen?}", "${signoff?}"]

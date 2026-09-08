@@ -181,10 +181,45 @@ python results/audit-e3.py results/e3.jsonl
 
 ---
 
+## P-series — the process-catalog spikes (added 2026-09-07)
+
+A second spike lineage, independent of the S-series rig except where noted.
+It serves `references/2026-09-07-process-catalog-proposal.md` (decisions
+PC1–PC8) and `references/2026-09-07-activity-graph-schema.md` (§9a/§9b
+amendments), both folded into the architecture proposal as D20–D22.
+
+| spike | state | where |
+| --- | --- | --- |
+| **P9** authoring ergonomics | **run** — median 56.5 lines, 13 real lint catches / 34 false, fragment at threshold | `METHOD-P9.md`, `F32-DRAFT.md`, `p9/catalog/`, `p9/lint.py` (v1, frozen) |
+| **P9b** second-author check | **run** — median 73 lines, 27 ambiguities (20 new), "amendments will fall" falsified at n=3 | `F33-DRAFT.md`, `p9/catalog-b/`, `p9/results-b-*.txt` |
+| **P6 authoring** (third author, 90 activities) | **run** — median 53 lines, 0.11 first-run lint errors/file (author read the lint first), 30 ambiguities (25 new, catalog-level), amendments 26–43 proposed | `F34-DRAFT.md`, `p9/catalog/` (101), `p9/results-v2-batch-*.txt`, `p9/lines-v0.txt` |
+| **P6** catalog completeness | **run** — 23.5% first run → 11.4% (pre-decision, two-band, run3) → **0.3% after decisions 1–10 (three-band, run8)**; mixed = pure Node; dead 7/102; ties 0; all §3.4 criteria clear; pack taggable after Ryan's review | `F35-DRAFT.md`, `p9/lattice.py`, `p9/packs/` (8 + 4 supplementary), `p9/results-p6-run*.txt`, `p9/reach-check.py` |
+| **P1** classification stability / facet derivability | pre-registered; **arm D tooling written, NOT run** (corpus repo `D:/repos/redkiln` was not mounted) — `p1/p1-select-items.py`, `p1/derive-facets.py`, `p1/score-arm-d.py`; label templates `results/p1-arm-{d,l}-labels-BLANK.md` (fill BEFORE running the script, METHOD-P §0 rule 1); arm L needs the rig | `METHOD-P.md` §1 |
+| **P2** short-circuit precision/recall | pre-registered; **tooling written, NOT run** — `p2/p2-select-items.py`, `p2/reconstruct-derived-from.py` (phases reconstruct → cases → engine; the engine phase refuses to run without timestamped labels); template `results/p2-labels-BLANK.md` | `METHOD-P.md` §2 |
+| **P7** encapsulated quality cost vs catch (absorbs P4) | pre-registered; rig, ~90 Opus, halt at $200 | `METHOD-P.md` §4 |
+| **P8** gate inside a graph | pre-registered; rig, haiku, 24 h delay arm | `METHOD-P.md` §5 |
+| P3 | cut (PC1 decided on documented grounds) | proposal §6.1 |
+| P5 | reclassified as Phase 1's acceptance test | proposal §6.1 |
+
+**Rig order once the S-series releases it:** P1 arm L → P7 → P8. P7, P8 and P6
+gate "design final". F30 is not assigned anywhere I can find; F32/F33 were
+taken for P9/P9b to avoid a collision — reconcile if F30 is reserved elsewhere.
+
+**Session 2026-09-08, later (decisions applied — Ryan authorized the METHOD-P / schema edits):** ten decisions in `p9/DECISIONS-2026-09-08.md`; schema §9c (amendments 26–43) and METHOD-P amendments 6–7 applied; registries (`artifacts.toml` new, typed `[verb]`, `recent_deploy`), lint v3 (`lint-v2.py` frozen), 15 `family` keys + `max_rigor` on four families, 12 composing emits (`record` gone), `implement-ue` (102 activities), 46 version bumps, `lattice.py` v2 (`lattice-v1.py` frozen; `--validate`; 3 bands + unknown sweep; keyed instances). P6 run4→run9: **0.3% unsatisfiable (prereg-8, pack-default), 0.2% all-12, text slices 0.0%, mixed = node, dead 6/102 (all deviation-only), ties 0** — every §3.4 criterion clears (F35 §1.6). Ryan reviewed the 59 bumps, the four planning stages and R3/R7 (DECISIONS §Review) — the pack is taggable. Remaining: (1) tag the pack; (3) the `optional`-override mode is not a real reading (21%) — decide whether METHOD-P keeps it; (4) the `quality`/`green` shorthands wait for P7; (5) P1/P2 scripts still unrun. Commit script: `p9/COMMIT-2026-09-08.sh` (updated).
+
+**Session 2026-09-08 (P6 authoring + lattice) — what to do next (superseded by the paragraph above where they overlap):** (1) decide F34 amendments 26 (rank semantics) and 27 (producer scope + roots) before anything else — F35's numbers depend on `lattice.py`'s interpretations I1/I2/I5 and move if those change; (2) the four remaining Node-slice gaps are one tag each (F35 §1.2); the binary-only UE slice needs an implement-stage UE producer that was out of scope; (3) `P6` used four supplementary packs (chore, tech-debt, security-vuln, docs) — accept or strike them in METHOD-P §3.2 (F35 §3.1); (4) smoke-run the P1/P2 scripts against `D:/repos/redkiln` @ `47faec9f` — they are untested; (5) seven one-line edits were made to P9 catalog files for coherence (F34 §0), all commented in place; (6) `catalog-b/` untouched; `lint-v1.py` untouched; `METHOD-P.md` untouched. Commit script: `p9/COMMIT-2026-09-08.sh`.
+
+**Traps specific to P:** `p9/lint-v1.py` is frozen so `results-run*.txt` and
+`results-b-*.txt` replay; `p9/lint.py` is v2 (§9 + §9a + §9b + `registry.toml`).
+`p9/catalog-b/` is the second author's record and fails v2 by design
+(`results-v2-catalog-b.txt`, 15 errors) — do not "fix" it. `p9/catalog/` is the
+seed of the v0 pack and is v2-clean (`results-v2-catalog-run2.txt`). Human labels for P1/P2 are written
+before unblinding (METHOD-P §0 rule 1) — do not run the engine first.
+
 ## Pre-registration status
 
 `METHOD.md` covers Stage 0, E0, E1, E2; `METHOD-E3.md` covers E3/E6;
-`METHOD-H.md` covers the human gate (planned, unapproved). Five
+`METHOD-H.md` covers the human gate (planned, unapproved). Seven
 amendments, each disclosed in the document and its commit, none made after
 seeing the data it would affect:
 
@@ -200,6 +235,10 @@ seeing the data it would affect:
    false-positive rate is co-primary with S-SILENT's detection rate and the two
    are comparable only when measured in the same place. Made before any CLEAN
    dispatch.
+6. METHOD-P §3.2 — packs: one per kind in `facets.toml` (12, not 8). **Post-data**, additive: the eight-pack
+   reading stays primary in F35. Applied 2026-09-08 by Claude on Ryan's authorization.
+7. METHOD-P §3.2 — lattice banded {low, med, high} over the 4 registered axes + an `unknown` sweep. **Post-data**,
+   additive: the two-band run (`results-p6-run3.txt`) stays the pre-registered reading.
 
 **The RFC amendment is written**: `references/2026-09-02-rfc-amendment.md`
 (charter §14.4). It records R2 falsified, the R4/R6 conflict dissolved and

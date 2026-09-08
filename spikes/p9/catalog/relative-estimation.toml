@@ -1,0 +1,58 @@
+# reach: (story, planning, optional) with size >= high — t-shirt-sizing inapplicable there, so rank 30 wins
+# sizing family: appetite-check(10) < t-shirt-sizing(20) < relative-estimation(30)
+[activity]
+id           = "relative-estimation"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "planning"
+provides     = ["Estimate"]
+requires     = ["Spec", "SliceSet?"]
+derived_from = ["Spec"]
+tags         = ["kind:story", "kind:tech-debt", "kind:project", "kind:bug"]   # P6 run1 fix
+method_rank  = 30
+family       = "sizing"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 4, tokens = 150_000, wall_clock_secs = 1800 }
+deviation_ok = ["downgrade"]
+keywords     = ["relative estimation", "story points", "planning poker", "reference class"]
+rationale    = "Cohn relative estimation against reference items from the KB; a reviewer challenges the anchors when rigor asks for it."
+
+[[step]]
+id      = "estimate"
+kind    = "agent"
+role    = "planner"
+inputs  = { spec = "artifact:Spec", slices = "artifact:SliceSet?", history = "kb:estimation-history", findings = "${challenge.outputs?}" }
+outputs = "value:Estimate"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "challenge"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { estimate = "${estimate.outputs}", spec = "artifact:Spec" }
+outputs = "value:Findings"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { estimate = "${estimate.outputs}", findings = "${challenge.outputs?}" }
+expr    = "estimate.confidence != null and findings.none(severity in ['blocking'])"
+on_false = { to = "estimate", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { estimate = "${estimate.outputs}", findings = "${challenge.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Estimate = "${estimate.outputs}" }
+evidence  = ["${challenge?}", "${signoff?}"]

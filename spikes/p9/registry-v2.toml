@@ -1,0 +1,12 @@
+# FROZEN 2026-09-08: the array-valued registry as it stood when lint v2 produced results-v2-*.txt (F34). lint-v2.py reads this
+# file so those results replay; the live registry is registry.toml (typed [verb] tables, schema §9c.29/34).
+[toolchain.verbs]
+values = ["test", "build", "lint", "change_summary", "shallow_clone", "mutate", "deploy", "rollback", "canary_metrics", "release_record", "verdict_record", "flag_set", "metrics", "contract_lint", "bisect", "trace_collect", "sca_scan", "smoke", "migrate", "migrate_dry_run", "flag_rollout", "restart", "failover", "rate_limit", "slo_query", "cook", "ue_automation", "package", "kb_write", "item_create", "record", "fuzz", "property_test", "profile"]
+[toolchain.feeds]
+values = ["logs", "telemetry", "flags", "vcs_history", "alerts", "chat_log", "deploy_log", "sbom", "backlog", "kb_index", "history", "usage"]
+[toolchain.timeouts]
+values = ["test_timeout", "implement_timeout", "review_timeout", "repro_timeout", "mutation_timeout", "build_timeout", "deploy_timeout", "migration_timeout", "cook_timeout", "ue_test_timeout", "scan_timeout"]
+[checklists]
+values = ["competitor-analysis", "ac-quality", "ac-coverage", "postmortem-sections", "problem-framing", "discovery-report", "ears-requirements", "gherkin-quality", "use-case-quality", "api-contract", "asvs-l1", "spike-charter", "c4", "adr", "design-doc", "migration-safety", "ux-flow", "risk-register", "rollout-plan", "retro", "closure", "kb-atom", "code-review", "prr", "change-authorization", "smoke", "release-readiness", "incident-command", "fix-scope", "docs-diataxis", "flag-hygiene"]
+[kb]
+values = ["spec-conventions", "security-baseline", "slicing-heuristics", "refactoring-catalog", "discovery-conventions", "architecture-conventions", "migration-playbook", "testing-conventions", "release-playbook", "incident-playbook", "retro-format", "kb-conventions", "estimation-history"]

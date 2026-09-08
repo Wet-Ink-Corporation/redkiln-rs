@@ -1,0 +1,68 @@
+# reach: (initiative, review, mandatory) with criticality >= high — no lower family member tags initiative
+# review family: checklist-review(10) < code-review(20) < adversarial-review(30) < formal-inspection(40)
+[activity]
+id           = "formal-inspection"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "review"
+provides     = ["ReviewVerdict", "InspectionRecord"]
+requires     = ["DesignDoc", "ArchitectureDescription?", "RequirementsSet?"]
+derived_from = ["DesignDoc"]
+tags         = ["kind:initiative"]
+applicable_if = "criticality >= high"
+method_rank  = 40
+family       = "review"
+min_rigor    = "mandatory"
+cost_class   = "L"
+evidence     = ["Findings", "HumanAnswer"]
+budget       = { attempts_total = 6, tokens = 500_000, wall_clock_secs = 86400 }
+deviation_ok = []
+keywords     = ["fagan inspection", "defect log", "roles moderator reader recorder"]
+rationale    = "Fagan / ISTQB formal inspection: role-based, with a defect log and an inspection meeting; for the compliance-grade initiatives only."
+
+[[step]]
+id      = "reader"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { design = "artifact:DesignDoc", arch = "artifact:ArchitectureDescription?", requirements = "artifact:RequirementsSet?" }
+outputs = "value:Findings"
+timeout_secs = 1800
+retry   = { max = 1 }
+
+[[step]]
+id      = "second-reader"
+kind    = "agent"
+role    = "architect"
+inputs  = { design = "artifact:DesignDoc", first = "${reader.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 1800
+retry   = { max = 1 }
+
+[[step]]
+id      = "log"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { first = "${reader.outputs}", second = "${second-reader.outputs}" }
+outputs = "value:InspectionRecord"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "meeting"
+kind    = "gate"
+question = "inspection.meeting"
+inputs  = { log = "${log.outputs}" }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { log = "${log.outputs}", disposition = "${meeting.answer}" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReviewVerdict = "${record.outputs}", InspectionRecord = "${log.outputs}" }
+evidence  = ["${reader}", "${second-reader}", "${meeting}"]

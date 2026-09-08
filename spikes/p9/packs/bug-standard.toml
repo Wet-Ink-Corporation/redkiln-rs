@@ -1,0 +1,90 @@
+# v0 pack: bug-standard (proposal §2.3 shape; §9b.17 spawn row form). Authored 2026-09-07 for P6 before any lattice run.
+[pack]
+id = "bug-standard"
+applies = "kind == bug and cos != expedite"
+appetite = { points = 40 }          # S=1 M=3 L=8 XL=20 (unit is an F35 ambiguity)
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "recommended", specification = "optional", design = "optional", planning = "optional", implement = "mandatory", verify = "mandatory", review = "mandatory", release = "recommended", operate = "forbidden", closeout = "recommended" }   # P6 run1 fix: Postmortem row needs min_rigor recommended
+
+[stage.analysis]
+goal = "The defect reproduces deterministically and its cause is established"
+baseline = ["ReproCase", "RootCause"]
+[[stage.analysis.require]]
+when = "criticality >= high"
+artifacts = ["CausalChain"]
+
+[stage.specification]
+goal = "Expected behaviour and the regression test intent are written"
+baseline = ["Spec"]
+
+[stage.design]
+goal = "Fix location and recurrence guard chosen"
+baseline = []
+[[stage.design.require]]
+when = "criticality >= high"
+artifacts = ["FixDesign"]
+
+[stage.planning]
+goal = "Rollout and size are known when they matter"
+baseline = []
+[[stage.planning.require]]
+when = "blast_radius >= med"
+artifacts = ["RolloutPlan"]
+[[stage.planning.require]]
+when = "size >= high"
+artifacts = ["Estimate"]
+
+[stage.implement]
+goal = "A tested change exists with a readable summary"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+
+[stage.verify]
+
+goal = "The repro passes at the fix sha and nothing regressed"
+baseline = ["TestReport", "ConfirmationResult", "SmokeResult"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+[[stage.verify.require]]
+when = "criticality >= high"
+artifacts = ["TestReport"]
+rigor = "mandatory"
+[[stage.verify.require]]
+when = "'text' in change"
+artifacts = ["ScanReport"]
+[[stage.verify.require]]
+when = "criticality >= high and rigor >= mandatory"
+artifacts = ["MutationSummary"]
+
+[stage.review]
+
+goal = "An independent verdict on the change"
+baseline = ["ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+[[stage.review.require]]
+when = "auth"
+artifacts = ["SecurityReviewVerdict"]
+[[stage.review.require]]
+when = "blast_radius >= high"
+artifacts = ["ChangeRecord"]
+
+[stage.release]
+goal = "The fix is in production reversibly"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+[[stage.release.require]]
+when = "data_migration"
+artifacts = ["MigrationLog"]
+
+[stage.closeout]
+goal = "Shortcuts logged, item closed"
+baseline = ["DebtRegisterEntry", "ClosureRecord"]
+finally = true
+[[stage.closeout.require]]
+when = "rigor >= recommended"
+artifacts = ["Retrospective"]
+[[stage.closeout.require]]
+when = "criticality >= high"
+artifacts = ["Postmortem"]

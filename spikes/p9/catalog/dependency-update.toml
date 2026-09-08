@@ -1,0 +1,99 @@
+# reach: (security-vuln, implement, optional) — the only Changeset producer tagging security-vuln
+[activity]
+id           = "dependency-update"
+version      = 1
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["VulnAssessment", "Spec?"]
+derived_from = ["VulnAssessment"]
+tags         = ["kind:security-vuln", "change:text"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["GreenAt", "ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 6, tokens = 250_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["dependency bump", "SCA remediation", "SSDF PW.4"]
+rationale    = "SSDF PW.4 / RV.2: remediate a vulnerable dependency by bumping or replacing it; a breaking bump is a human decision."
+
+[[step]]
+id      = "bump"
+kind    = "agent"
+role    = "implementer"
+inputs  = { assessment = "artifact:VulnAssessment", spec = "artifact:Spec?", last = "${verify.outputs?}", answer = "${breaking.answer?}" }
+outputs = "value:DependencyChange"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "breaking"
+kind    = "gate"
+when    = "${bump.outputs.breaking} == true"
+question = "dependency.breaking"
+inputs  = { change = "${bump.outputs}" }
+
+[[step]]
+id      = "adapt"
+kind    = "agent"
+role    = "implementer"
+when    = "${breaking.answer?} == 'accept-breaking'"
+inputs  = { change = "${bump.outputs}", spec = "artifact:Spec?" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green"
+kind    = "check"
+inputs  = { report = "${verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "bump", max = 2 }
+
+[[step]]
+id      = "rescan"
+kind    = "tool"
+run     = "toolchain:sca_scan"
+inputs  = { sbom = "toolchain:sbom?" }
+outputs = "value:ScanReport"
+timeout_secs = "${toolchain.scan_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "clean"
+kind    = "check"
+inputs  = { scan = "${rescan.outputs}" }
+expr    = "scan.critical == 0 and scan.high == 0"
+on_false = { to = "bump", max = 1 }
+
+[[step]]
+id      = "report"
+kind    = "agent"
+role    = "implementer"
+inputs  = { change = "${bump.outputs}", adapted = "${adapt.outputs?}", report = "${verify.outputs}" }
+outputs = "value:ImplReport"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${report.outputs}" }
+evidence  = ["${verify}", "${rescan}", "${breaking?}"]

@@ -1,0 +1,58 @@
+# reach: (story, implement, optional) with blast_radius >= med — require row → FlagRecord (flag-progressive-rollout requires it)
+[activity]
+id           = "feature-flag-wrap"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["FlagRecord"]
+requires     = ["Changeset", "RolloutPlan"]
+derived_from = ["Changeset", "RolloutPlan"]
+tags         = ["kind:story", "kind:project"]   # run5: flags exist in UE config too
+applicable_if = "blast_radius >= med"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["GreenAt", "ToolReport"]
+budget       = { attempts_total = 5, tokens = 200_000, wall_clock_secs = 3600 }
+deviation_ok = ["skip"]
+keywords     = ["feature toggle", "release toggle", "ops toggle", "kill switch"]
+rationale    = "Hodgson Feature Toggles: new behaviour behind a release toggle with a registered owner and default, so release can ramp and operate can kill."
+
+[[step]]
+id      = "wrap"
+kind    = "agent"
+role    = "implementer"
+inputs  = { change = "artifact:Changeset", plan = "artifact:RolloutPlan", last = "${verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green"
+kind    = "check"
+inputs  = { report = "${verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "wrap", max = 2 }
+
+[[step]]
+id      = "register"
+kind    = "tool"
+run     = "toolchain:flag_register"
+inputs  = { impl = "${wrap.outputs}", plan = "artifact:RolloutPlan" }
+outputs = "value:FlagRecord"
+timeout_secs = 60
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { FlagRecord = "${register.outputs}" }
+evidence  = ["${verify}", "${register}"]

@@ -14,22 +14,27 @@ values = ["triage", "discovery", "analysis", "specification", "design", "plannin
 source = "derived"
 
 [facet.rigor]
+ordered = true
 values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]   # ordered
 source = "derived"        # from policy.<class>.stages
 
 [facet.criticality]
+ordered = true
 values = ["low", "med", "high", "unknown"]   # ordered; unknown routes to a human
 source = "llm"
 
 [facet.novelty]
+ordered = true
 values = ["low", "med", "high", "unknown"]
 source = "llm"
 
 [facet.size]
+ordered = true
 values = ["low", "med", "high", "unknown"]
 source = "llm"
 
 [facet.blast_radius]
+ordered = true
 values = ["low", "med", "high", "unknown"]
 source = "llm"
 
@@ -44,10 +49,11 @@ source = "derived"
 set = true
 
 [facet.role]
-values = ["implementer", "reviewer", "investigator", "spec-author", "architect", "planner", "releaser"]
+values = ["implementer", "reviewer", "investigator", "spec-author", "architect", "planner", "releaser", "operator"]
 source = "derived"
 
 [facet.cost]
+ordered = true
 values = ["S", "M", "L", "XL"]
 source = "derived"
 
@@ -73,3 +79,11 @@ source = "llm"
 [facet.flag_exists]
 values = [true, false]
 source = "derived"
+
+# ---- 2026-09-07 P6 authoring batch (third author): value additions only, no new facets ----
+# (none needed for discovery; see F34 for facets that were *wanted* and could not be added)
+
+# ---- 2026-09-08 decision 9 (schema §9c amendment 37): registry owner's addition, not the catalog's ----
+[facet.recent_deploy]
+values = [true, false]
+source = "derived"        # from toolchain:deploy_log — anchor: a deploy touching the item's surface within the last 24 h; P1 arm D measures precision

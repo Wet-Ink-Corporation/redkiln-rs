@@ -1,0 +1,50 @@
+# reach: (initiative, discovery, mandatory) with novelty >= high — require row → AssumptionList
+# discovery spine family (rank inert, see problem-framing)
+[activity]
+id           = "assumption-mapping"
+version      = 1
+stage        = "discovery"
+provides     = ["AssumptionList"]
+requires     = ["ProblemStatement", "OpportunityMap?"]
+derived_from = ["ProblemStatement", "OpportunityMap?"]
+tags         = ["kind:initiative", "kind:project", "kind:spike"]
+method_rank  = 20
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 1200 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["assumption mapping", "riskiest assumption", "desirable viable feasible usable"]
+rationale    = "Torres assumption testing: rank the riskiest assumptions before prototyping so the prototype tests something."
+
+[[step]]
+id      = "map"
+kind    = "agent"
+role    = "investigator"
+inputs  = { problem = "artifact:ProblemStatement", opportunities = "artifact:OpportunityMap?", previous = "${map.outputs?}" }
+outputs = "value:AssumptionList"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "investigator"
+inputs  = { draft = "${map.outputs}", checklist = "checklist:discovery-report" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "ranked"
+kind    = "check"
+inputs  = { draft = "${map.outputs}", check = "${self-check.outputs}" }
+expr    = "draft.riskiest.len() > 0 and check.failed == 0"
+on_false = { to = "map", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { AssumptionList = "${map.outputs}" }
+evidence  = ["${self-check}"]

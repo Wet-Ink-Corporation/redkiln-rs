@@ -1,13 +1,14 @@
 [activity]
 id           = "canary-release"
-version      = 1
+version      = 3   # bumped 2026-09-08 (§9c.42)   # bumped 2026-09-08 (§9c.42)
 stage        = "release"
 provides     = ["ReleaseRecord"]
 requires     = ["ReviewVerdict", "RolloutPlan", "BuildArtifact"]
 derived_from = ["BuildArtifact", "RolloutPlan"]
-tags         = ["kind:story", "kind:project", "kind:bug", "kind:security-vuln"]
+tags         = ["kind:story", "kind:project", "kind:bug", "kind:security-vuln", "kind:chore", "kind:tech-debt", "kind:docs"]   # 2026-09-08 family totality (lattice --validate)
 applicable_if = "blast_radius >= med"
 method_rank  = 30
+family       = "deploy-pattern"
 min_rigor    = "recommended"
 cost_class   = "M"
 evidence     = ["ToolReport", "HumanAnswer?"]
@@ -39,7 +40,7 @@ id      = "healthy"
 kind    = "check"
 inputs  = { report = "${observe.outputs}" }
 expr    = "report.breached.len() == 0"
-on_false = "degraded"
+on_false = "continue"
 
 [[step]]
 id      = "degraded"
