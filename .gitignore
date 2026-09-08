@@ -25,3 +25,7 @@ spikes/fixtures/
 # spikes/results/ is deliberately NOT ignored: charter §14.2 makes the raw
 # records a deliverable, and a results file that has to be force-added is a
 # results file that eventually goes missing.
+
+# Python bytecode from the spike tooling (spikes/p1, p2, p9). The .py sources
+# are tracked; the caches are per-interpreter and rebuild on every run.
+__pycache__/
