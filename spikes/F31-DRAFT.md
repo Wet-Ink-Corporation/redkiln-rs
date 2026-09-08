@@ -1,4 +1,4 @@
-## F31 — S-TYPED RESULT: the typed contract costs no detection, conforms perfectly, and its 12/23 "false positives" contain **zero verified false positives** — every blocking finding replicates
+## F31 — S-TYPED RESULT: the typed contract costs no detection, conforms perfectly, and under the resolved policy blocks 9/23 on CLEAN with **zero verified false positives**
 
 **Established by:** 52 typed dispatches, 2026-09-06/07, arm (b), Opus/`xhigh`,
 corpus pin `47faec9f`, `claude` **2.1.263** on all 52 records.
@@ -81,7 +81,7 @@ about the review gate, inverted: here it is the *suite* that is blind.
 two designated tests are blind to the mutation — but three other tests catch it,
 so nothing would actually escape.
 
-### What that does to the co-primary — and why it is now a severity question
+### What that did to the co-primary, before the severity call
 
 Following F24's own construction exactly: **if every adjudicated finding is
 accepted as blocking, the typed arm's strict false-positive rate is 0/23. If none
@@ -100,22 +100,60 @@ The severity split is clean and the numbers are:
   strict drops toward the `mutation-survived` set and **lenient's 9/23 becomes the
   operative number**.
 
-### §2.6 decision rule — which branch fires depends on that call
+### The severity call, and the resolved result
 
-- **Branch 2 (detection ≤20/23 → the typed contract costs detection): does NOT
-  fire.** 23/23 and 5/5.
-- **Branch 4 (conformance <90% → re-spike the enum): does NOT fire.** 100%.
-- **Branch 1 (detection ≥22/23 AND strict FP ≤2/23 → D4 and D6 stand as written,
-  Phase 1 ships the typed schema): FIRES if the adjudicated findings are accepted
-  as blocking.** Detection qualifies outright; the FP condition is satisfied at
-  the adjudicated end of the range.
-- **Branch 3 (strict FP ≥5/23 → lenient becomes the default stage weight): fires
-  only on the unadjudicated reading**, and its own text sends `mutation-survived`
-  excess to adjudication first — which is now done and returned zero false
-  positives.
+**Decided by Ryan, 2026-09-07, after the adjudication and recorded in
+`results/s-typed-adjudication.jsonl`: `narrowed-pin` ADVISES; it does not
+block.** `reproduced` and `mutation-survived` block. That is exactly the
+**lenient** policy as registered in §2.2 before any data existed — the choice was
+between two pre-registered options, not a threshold fitted to the result.
 
-**So S-TYPED does not fail. It hands one decision to a severity judgement the
-programme has already reserved for Ryan.**
+This closes the 0/23–12/23 range the adjudication left open:
+
+| under the resolved (lenient) policy | |
+| --- | --- |
+| CLEAN items blocking | **9/23** (strict was 12/23) |
+| of those, resting on an adjudicated-CONFIRMED finding | **9 of 9** |
+| **verified false positives** | **0/23** |
+| findings reclassified to advisory | 7 (all adjudicated true, now non-blocking) |
+| S-SILENT detection | **23/23** — unchanged |
+| S-SUBTLE detection | **5/5** — unchanged |
+
+| CLEAN item still blocking | blocking-grade classes | adjudicated |
+| --- | --- | --- |
+| `fix-advance-write-lock-gate-scope` | `reproduced` 2 | F24 CONFIRMED |
+| `issue-146-147-boundary-window` | `mutation-survived` 3 | F24 CONFIRMED |
+| `issues-135-129-declared-boundary-parse` | `mutation-survived` 3 | F24 CONFIRMED |
+| `issue-63-advance-gate-diagnostic-truncated` | `mutation-survived` 1 | F24 CONFIRMED |
+| `issue-130-slice-review-story-gate` | `mutation-survived` 2 | F31 CONFIRMED ×2 |
+| `issue-131-kb-ingest-doctor-scope` | `mutation-survived` 2 | F31 CONFIRMED ×2 |
+| `issue-70-plugin-root-unset` | `mutation-survived` 1 | F31 CONFIRMED |
+| `issue-81-plan-discover-spec-gate-mismatch` | `mutation-survived` 1 | F31 CONFIRMED |
+| `issue-83-plan-prds-write-timeout` | `mutation-survived` 1 | F31 CONFIRMED |
+
+Dropping to advisory: `fix-doctor-git-config-repair`,
+`issue-82-status-terminal-field-collision`, `memoize-repo-root` — the three items
+whose only blocking-grade evidence was `narrowed-pin`. Note `memoize-repo-root`
+is the one finding the whole suite already catches, so the call removes the
+weakest item on independent grounds too.
+
+**The decisive fact is that lenient costs no detection.** S-SILENT stays 23/23
+and S-SUBTLE 5/5 — identical to strict. Every seeded defect is caught by a
+`reproduced` or `mutation-survived` finding, so nothing in the detection case
+ever depended on `narrowed-pin` blocking. The policy relaxation is free.
+
+### §2.6 decision rule — resolved
+
+- **Branch 3's remedy is adopted.** Strict FP ≥5/23 as measured (12/23), and the
+  branch's own instruction — send `mutation-survived` excess to mutation
+  adjudication first — returned **zero false positives**. Its remedy,
+  **"lenient becomes the default stage weight"**, is what the severity call
+  independently chose.
+- **Branch 1's condition is then met and D4 and D6 stand as written.** Detection
+  ≥22/23 (it is 23/23) and false positives ≤2/23 (they are **0/23** verified).
+  **Phase 1 ships the typed schema, with lenient as the registered default.**
+- **Branch 2 (detection ≤20/23) does NOT fire.** 23/23 and 5/5.
+- **Branch 4 (conformance <90%) does NOT fire.** 100%.
 
 ### The §2.7 predictions, line by line
 
@@ -163,12 +201,21 @@ re-found it at blocking grade. The control is clean at 0 of any class.
    adjudicated defects survive a green suite. F29 concluded the review gate cannot
    be a sole blocker; this shows the test gate cannot be one either. **Phase 1
    needs both, and neither is redundant.**
+7. **D4's default stage weight is set: lenient.** `narrowed-pin` advises,
+   `reproduced` and `mutation-survived` block. Under it the typed schema blocks
+   9/23 on CLEAN with **zero verified false positives** and loses **no**
+   detection (23/23, 5/5). Both halves of §2.6's branch 1 are satisfied, so
+   **D4 and D6 stand as written and Phase 1 ships the typed schema.**
 
 ### Limits
 
-1. **Severity is not adjudicated — only factual truth.** Exactly F24's scope. The
-   0/23-to-12/23 range closes only on Ryan's judgement, and the model that built
-   the rig must not make it.
+1. **Severity was decided by a human, after and separately from the mechanical
+   adjudication.** F31 establishes factual truth only — that every blocking claim
+   replicates. The choice that `narrowed-pin` advises is Ryan's, recorded in
+   `results/s-typed-adjudication.jsonl`, and it selected between two policies
+   §2.2 registered before any data. The model that built the rig did not make it.
+   **A different severity call would give a different blocking rate** (12/23
+   under strict) without changing a single measured fact.
 2. **Both detection metrics were already saturated** (E3 23/23, E3-H 5/5). A tie
    at ceiling shows neither arm is stressed by these defects; it is not evidence
    of equivalence.
@@ -201,15 +248,25 @@ re-found it at blocking grade. The control is clean at 0 of any class.
 
 ### For the programme
 
-The open item is no longer measurement, it is **a severity call on 14 adjudicated
-findings** — specifically whether `narrowed-pin` ("the test is weaker than the
-AC") blocks or advises. That single decision sets D4's default stage weight, and
-both readings are now fully costed:
+**The measurement question is closed and the policy question with it.** Phase 1
+ships the typed schema under the lenient stage weight. What that buys, stated
+plainly:
 
-- **`narrowed-pin` blocks** → strict, 12/23 blocked on this corpus, 0 false.
-- **`narrowed-pin` advises** → lenient, 9/23 blocked, and the 7 `narrowed-pin`
-  findings become an advisory sink.
+- Nine real defects caught per 23 shipped-and-approved items, against the prose
+  reviewer's two — on a corpus whose ground truth F24 already showed to be wrong.
+- Zero verified false positives, and a control that never fired in 10 draws
+  (F29).
+- Every blocking finding carrying a re-runnable command, which is what made this
+  adjudication free and is what Phase 1 can automate.
 
-F29's branch-4 finding stands either way: the control never rejected in 10 draws,
-so an `Advisory` sink is not needed to suppress noise — it would exist to carry
-real but non-blocking findings.
+**Two things this does not settle.**
+
+The seven `narrowed-pin` findings are true and now advisory — they need somewhere
+to go. F29's branch 4 did not fire (the control never rejected), so an `Advisory`
+sink is not needed to suppress noise; it is needed to **carry real findings that
+do not block**. Discarding them silently would waste adjudicated-true signal.
+
+And the pairing conclusion stands unchanged and is the most consequential thing
+in either finding: **four adjudicated defects survive a fully green suite, and
+F29 showed the review gate approves a reproduced regression in 3 of 10 draws.**
+Neither gate is sufficient alone. Phase 1 needs both on every required AC.
