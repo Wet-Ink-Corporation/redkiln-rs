@@ -1,0 +1,43 @@
+[activity]
+id           = "competitor-analysis"
+version      = 1
+stage        = "discovery"
+provides     = ["CompetitorAnalysis"]
+requires     = ["ProblemStatement"]
+derived_from = ["ProblemStatement"]
+tags         = ["kind:initiative", "kind:project", "kind:spike"]
+applicable_if = "market_facing"
+method_rank  = 20
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck?"]
+budget       = { attempts_total = 3, tokens = 150_000, wall_clock_secs = 1800 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["competitive analysis", "positioning", "landscape"]
+rationale    = "External-facing work needs a positioning baseline before specification."
+
+[[step]]
+id      = "research"
+kind    = "agent"
+role    = "investigator"
+inputs  = { problem = "artifact:ProblemStatement" }
+outputs = "value:CompetitorAnalysis"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "investigator"
+when    = "rigor >= recommended"
+inputs  = { draft = "${research.outputs}", checklist = "checklist:competitor-analysis" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { CompetitorAnalysis = "${research.outputs}" }
+evidence  = ["${self-check?}"]

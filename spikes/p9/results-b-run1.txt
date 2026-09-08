@@ -1,0 +1,12 @@
+ERROR blameless-postmortem     R3    reviewed: .outputs on gate step 'review-meeting'
+ERROR blameless-postmortem     R9    applicable_if: identifier 'security' is not a facet, input, or builtin
+ERROR blameless-postmortem     R9    applicable_if: identifier 'vuln' is not a facet, input, or builtin
+ERROR feature-flag-kill        R3    authorized: .outputs on gate step 'authorize'
+
+== summary ==
+ERROR R3    2
+ERROR R9    2
+errors=4 warnings=0
+
+== fragments repeated in >=2 activities ==
+2x ['api-contract-spec', 'blameless-postmortem']: agent/reviewer? -> check↺

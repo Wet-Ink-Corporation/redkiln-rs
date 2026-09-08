@@ -1,0 +1,59 @@
+# Question registry (schema open Q2). Every `gate` / `escalate` names one of these. Options are closed.
+
+[question."root-cause.no-hypothesis"]
+text = "No confirmed hypothesis after the loop budget. How should we proceed?"
+options = ["provide-hint", "accept-best", "abandon"]
+
+[question."root-cause.accept"]
+text = "Accept this root cause as established?"
+options = ["accept", "reject-with-note"]
+
+[question."repro.cannot-reproduce"]
+text = "The report could not be reproduced. Close as cannot-reproduce, or supply more information?"
+options = ["supply-info", "close-cannot-reproduce", "proceed-without-repro"]
+
+[question."spec.ambiguity"]
+text = "The spec has unresolved ambiguities. Resolve now or accept as open questions?"
+options = ["resolve", "accept-open"]
+
+[question."threat-model.accept-residual"]
+text = "Residual risks remain after mitigations. Accept them?"
+options = ["accept", "require-mitigation"]
+
+[question."slicing.approve"]
+text = "Approve this slice plan and order?"
+options = ["approve", "changes-requested"]
+
+[question."tdd.green-exhausted"]
+text = "Implementation did not reach green within the loop budget."
+options = ["provide-hint", "reduce-scope", "abandon"]
+
+[question."review.blocking"]
+text = "Blocking findings exist. Override and approve, or send back?"
+options = ["send-back", "override-approve"]
+
+[question."canary.proceed"]
+text = "Canary metrics are within thresholds. Proceed to full rollout?"
+options = ["proceed", "hold", "rollback"]
+
+[question."canary.degraded"]
+text = "Canary metrics breached a threshold. Rollback or hold?"
+options = ["rollback", "hold", "proceed-anyway"]
+
+# ---- P9b additions (second author, catalog-b) ----
+
+[question."postmortem.review"]
+text = "Postmortem review meeting: approve this postmortem and its action items?"
+options = ["approve", "changes-requested"]
+
+[question."mitigation.authorize"]
+text = "Disable this feature flag in production to mitigate the incident?"
+options = ["proceed", "choose-other-mitigation", "abort"]
+
+[question."mitigation.not-restored"]
+text = "Telemetry has not returned to stable after the flag kill. How should we proceed?"
+options = ["extend-observation", "accept-partial", "choose-other-mitigation"]
+
+[question."api-contract.accept"]
+text = "Accept this API contract as the interface to implement against?"
+options = ["accept", "changes-requested"]

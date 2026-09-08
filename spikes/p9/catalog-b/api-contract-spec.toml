@@ -1,0 +1,90 @@
+# catalog-b/api-contract-spec.toml — second author (P9b)
+# Source row: activity-catalog-raw §2.4 (unordered "contracts" family). Interface before implementation.
+
+[activity]
+id            = "api-contract-spec"
+version       = 1
+stage         = "specification"
+provides      = ["APIContract"]
+requires      = ["Spec"]
+derived_from  = ["Spec", "DesignDoc"]
+tags          = ["kind:project", "kind:story"]
+method_rank   = 10
+min_rigor     = "optional"
+cost_class    = "M"
+evidence      = ["ToolReport", "Findings?", "HumanAnswer?"]
+budget        = { attempts_total = 12, tokens = 600_000, wall_clock_secs = 7200 }
+keywords      = ["openapi", "asyncapi", "protobuf", "consumer-driven contract", "interface"]
+
+# Which operations the spec implies, and in what style (rest | async | rpc). DesignDoc is welcome, not required.
+[[step]]
+id      = "enumerate"
+kind    = "agent"
+role    = "architect"
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?" }
+outputs = "value:EndpointList"
+timeout_secs = 600
+retry   = { max = 1 }
+
+# One contract per endpoint, in parallel, each tracing back to the AC ids it serves.
+[[step]]
+id       = "specify"
+kind     = "agent"
+role     = "spec-author"
+for_each = "${enumerate.outputs.endpoints}"
+inputs   = { endpoint = "${item}", style = "${enumerate.outputs.style}", spec = "artifact:Spec" }
+outputs  = "value:EndpointContract"
+timeout_secs = 900
+retry    = { max = 2 }
+
+# Merge into one document; shared schemas, error model, versioning header.
+[[step]]
+id      = "assemble"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { parts = "${specify.outputs}", style = "${enumerate.outputs.style}", spec = "artifact:Spec" }
+outputs = "value:APIContract"
+timeout_secs = 900
+retry   = { max = 1 }
+
+# Structural validity is a toolchain fact (openapi/asyncapi/buf lint), never the model's opinion.
+[[step]]
+id      = "validate"
+kind    = "tool"
+run     = "toolchain:contract_lint"
+inputs  = { document = "${assemble.outputs.document}", format = "${assemble.outputs.format}" }
+outputs = "value:LintReport"
+timeout_secs = 300
+retry   = { max = 1 }
+
+# At recommended rigor an adversary reads the contract against the Spec: uncovered AC, undefined error semantics, breaking changes.
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { contract = "${assemble.outputs}", spec = "artifact:Spec", lint = "${validate.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 1200
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { lint = "${validate.outputs}", findings = "${adversary.outputs?}", c = "${assemble.outputs}" }
+expr    = "lint.status == 'passed' and len(c.uncovered_ac) == 0 and findings.none(severity in [blocking])"
+on_false = "assemble"
+max     = 2
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "api-contract.accept"
+inputs  = { summary = "${assemble.outputs.summary}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { APIContract = "${assemble.outputs}" }
+evidence  = ["${validate}", "${adversary?}", "${signoff?}"]

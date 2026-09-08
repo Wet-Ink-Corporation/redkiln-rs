@@ -1,0 +1,50 @@
+WARN  adversarial-review       R1    verdict: on_false jumps FORWARD to 'override' — a branch, not a loop; schema only defines loop-back semantics
+ERROR adversarial-review       R2    budget.wall_clock_secs must be a number, got '${toolchain.review_timeout}'
+WARN  adversarial-review       R8    budget.attempts_total=3 < worst-case single-pass attempts 5
+ERROR adversarial-review       R3    clone: output schema 'Workspace' unknown
+ERROR canary-release           R3    emit: artifact 'ReleaseRecord' bound to optional ref 'deploy-full?' — a provided artifact must be unconditional
+WARN  canary-release           R1    healthy: on_false jumps FORWARD to 'degraded' — a branch, not a loop; schema only defines loop-back semantics
+ERROR canary-release           R5    promised evidence 'HumanAnswer' is unconditional but only conditional steps produce it
+WARN  canary-release           R8    budget.attempts_total=6 < worst-case single-pass attempts 11
+ERROR competitor-analysis      R5    promised evidence 'SelfCheck' is unconditional but only conditional steps produce it
+WARN  competitor-analysis      R8    budget.attempts_total=3 < worst-case single-pass attempts 4
+ERROR minimal-repro            R3    emit: artifact 'ReproCase' bound to optional ref 'reduce?' — a provided artifact must be unconditional
+WARN  minimal-repro            R5    evidence 'GreenAt' attached but not promised in activity.evidence
+WARN  root-cause               R4    @optional: check 'policy' has no live inputs — evaluates over absent values
+WARN  root-cause               R5    evidence 'ToolReport' attached but not promised in activity.evidence
+ERROR tdd-red-green-refactor   R3    red: unresolved ref ${spec}
+ERROR tdd-red-green-refactor   R7    red: for_each source 'spec' is not a step (artifact sources must use 'artifact:Kind.field')
+ERROR tdd-red-green-refactor   R7    red-verify: reads field 'outputs.tests_added' of fan-out step 'red' whose outputs are a list
+WARN  tdd-red-green-refactor   R8    budget.attempts_total=12 < worst-case single-pass attempts 13
+ERROR threat-model             R1    model: feedback ref to later step 'review' but nothing loops back to 'model'
+WARN  threat-model             R1    policy: on_false jumps FORWARD to 'residual-gate' — a branch, not a loop; schema only defines loop-back semantics
+ERROR user-story-ac            R3    policy: ref to conditional step 'self-check' lacks '?'
+ERROR user-story-ac            R3    emit: ref to conditional step 'self-check' lacks '?'
+ERROR user-story-ac            R5    emit evidence 'self-check' is conditional but not marked '?'
+WARN  user-story-ac            R8    budget.attempts_total=5 < worst-case single-pass attempts 7
+WARN  vertical-slicing         R8    budget.attempts_total=6 < worst-case single-pass attempts 9
+
+== summary ==
+ERROR R1    1
+ERROR R2    1
+ERROR R3    6
+ERROR R5    3
+ERROR R7    2
+WARN  R1    3
+WARN  R4    1
+WARN  R5    2
+WARN  R8    6
+errors=13 warnings=12
+
+== fragments repeated in >=2 activities ==
+5x ['adversarial-review', 'canary-release', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate?
+4x ['adversarial-review', 'root-cause', 'threat-model', 'user-story-ac']: gate? -> emit
+4x ['adversarial-review', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate? -> emit
+3x ['root-cause', 'user-story-ac', 'vertical-slicing']: agent/reviewer? -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺ -> gate?
+2x ['competitor-analysis', 'minimal-repro']: agent/investigator? -> emit
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+2x ['minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test
+2x ['root-cause', 'user-story-ac']: agent/reviewer? -> check↺ -> gate?

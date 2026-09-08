@@ -1,0 +1,148 @@
+# Stand-in for schemars types: value schema name -> fields; list fields flagged. Only what the lint needs.
+
+[value.HypothesisLog]
+fields = ["status", "entries", "discriminating_test", "root_cause", "summary"]
+lists  = ["entries"]
+
+[value.TestReport]
+fields = ["status", "passed", "failed", "selection", "sha"]
+
+[value.Findings]
+fields = ["items"]
+lists  = ["items"]
+
+[value.ReproCase]
+fields = ["status", "steps", "command", "expected", "observed", "confidence"]
+lists  = ["steps"]
+
+[value.ReproAttempt]
+fields = ["status", "command", "observed", "notes"]
+
+[value.CompetitorAnalysis]
+fields = ["competitors", "dimensions", "summary"]
+lists  = ["competitors", "dimensions"]
+
+[value.SelfCheck]
+fields = ["checklist", "passed", "failed", "notes"]
+
+[value.Spec]
+fields = ["story", "acceptance_criteria", "open_questions", "boundary"]
+lists  = ["acceptance_criteria", "open_questions"]
+
+[value.ThreatModel]
+fields = ["assets", "threats", "mitigations", "residual"]
+lists  = ["assets", "threats", "mitigations", "residual"]
+
+[value.SliceSet]
+fields = ["slices", "order", "rationale"]
+lists  = ["slices", "order"]
+
+[value.DependencyDAG]
+fields = ["edges", "acyclic"]
+lists  = ["edges"]
+
+[value.ImplReport]
+fields = ["status", "files", "summary", "tests_added"]
+lists  = ["files", "tests_added"]
+
+[value.MutationReport]
+fields = ["ac", "killed", "survived", "score"]
+lists  = ["survived"]
+
+[value.MutationSummary]
+fields = ["per_ac", "overall"]
+lists  = ["per_ac"]
+
+[value.ChangeSummary]
+fields = ["kind", "diff", "manifest", "reports"]
+lists  = ["reports"]
+
+[value.Verdict]
+fields = ["blocking", "advisory", "basis"]
+lists  = ["blocking", "advisory"]
+
+[value.CanaryReport]
+fields = ["status", "error_rate", "latency_p99", "breached"]
+lists  = ["breached"]
+
+[value.DeployReport]
+fields = ["status", "sha", "environment", "percent"]
+
+[value.RollbackReport]
+fields = ["status", "restored_sha"]
+
+[value.ReleaseRecord]
+fields = ["sha", "version", "environment", "strategy"]
+
+[value.RolloutPlan]
+fields = ["strategy", "steps", "thresholds"]
+lists  = ["steps"]
+
+[value.Workspace]
+fields = ["path", "sha"]
+
+[value.AcList]
+fields = ["items"]
+lists  = ["items"]
+
+# ---- P9b additions (second author, catalog-b) ----
+
+[value.IncidentTimeline]
+fields = ["events", "detected_at", "mitigated_at", "resolved_at"]
+lists  = ["events"]
+
+[value.RootCause]
+fields = ["cause", "contributing_factors", "confidence", "summary"]
+lists  = ["contributing_factors"]
+
+[value.ImpactAssessment]
+fields = ["users_affected", "duration_secs", "revenue", "data", "summary"]
+
+[value.PostmortemDraft]
+fields = ["summary", "impact", "timeline", "root_causes", "contributing_factors", "went_well", "went_badly", "lucky", "action_items", "unassigned_items"]
+lists  = ["root_causes", "contributing_factors", "went_well", "went_badly", "lucky", "action_items", "unassigned_items"]
+
+[value.ProblemRecord]
+fields = ["title", "incidents", "known_errors", "owner", "status"]
+lists  = ["incidents", "known_errors"]
+
+[value.FlagRecord]
+fields = ["flag", "kind", "environments", "owner", "default"]
+lists  = ["environments"]
+
+[value.IncidentRecord]
+fields = ["id", "severity", "status", "symptoms", "started_at"]
+lists  = ["symptoms"]
+
+[value.FlagKillPlan]
+fields = ["flag", "environment", "expected_signal", "rationale"]
+
+[value.FlagChangeReport]
+fields = ["status", "flag", "environment", "previous_state", "new_state", "at"]
+
+[value.TelemetryReport]
+fields = ["status", "error_rate", "latency_p99", "breached", "window_secs"]
+lists  = ["breached"]
+
+[value.MitigationRecord]
+fields = ["mitigation", "flag", "restored_at", "residual_risk", "handoff", "summary"]
+
+[value.DesignDoc]
+fields = ["summary", "components", "interfaces"]
+lists  = ["components", "interfaces"]
+
+[value.EndpointList]
+fields = ["endpoints", "style", "base_path"]
+lists  = ["endpoints"]
+
+[value.EndpointContract]
+fields = ["operation", "path", "request", "responses", "errors", "ac_refs"]
+lists  = ["responses", "errors", "ac_refs"]
+
+[value.APIContract]
+fields = ["format", "document", "endpoints", "uncovered_ac", "breaking_changes", "summary"]
+lists  = ["endpoints", "uncovered_ac", "breaking_changes"]
+
+[value.LintReport]
+fields = ["status", "errors", "warnings"]
+lists  = ["errors", "warnings"]

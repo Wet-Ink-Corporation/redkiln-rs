@@ -1,0 +1,89 @@
+# catalog-b/feature-flag-kill.toml — second author (P9b)
+# Source row: activity-catalog-raw §2.11. Ordered mitigation list (least invasive first):
+#   rollback < feature-flag-kill < rate-limit-shed < failover < rolling-restart < hotfix
+
+[activity]
+id            = "feature-flag-kill"
+version       = 1
+stage         = "operate"
+provides      = ["MitigationRecord"]
+requires      = ["FlagRecord", "IncidentRecord"]
+derived_from  = ["FlagRecord", "IncidentRecord"]
+tags          = ["kind:incident"]
+applicable_if = "flag_exists"
+method_rank   = 20                      # rollback = 10; rate-limit-shed = 30 … (ordered list above)
+min_rigor     = "optional"
+cost_class    = "S"
+evidence      = ["ToolReport", "HumanAnswer?"]
+budget        = { attempts_total = 10, tokens = 100_000, wall_clock_secs = 1800 }
+keywords      = ["ops toggle", "kill switch", "mitigation", "incident"]
+
+# Which flag, in which environment, and what signal should recover when it is off.
+[[step]]
+id      = "plan"
+kind    = "agent"
+role    = "investigator"
+inputs  = { flag = "artifact:FlagRecord", incident = "artifact:IncidentRecord", telemetry = "toolchain:metrics?" }
+outputs = "value:FlagKillPlan"
+timeout_secs = 600
+retry   = { max = 1 }
+
+# A production mutation. The IC authorises at recommended rigor or when blast radius is high; otherwise the kernel proceeds.
+[[step]]
+id      = "authorize"
+kind    = "gate"
+when    = "rigor >= recommended or blast_radius >= high"
+question = "mitigation.authorize"
+inputs  = { plan = "${plan.outputs}" }
+
+[[step]]
+id      = "authorized"
+kind    = "check"
+inputs  = { answer = "${authorize.answer?}" }
+expr    = "answer == null or answer == 'proceed'"
+on_false = "fail"
+
+[[step]]
+id      = "kill"
+kind    = "tool"
+run     = "toolchain:flag_set"
+inputs  = { flag = "${plan.outputs.flag}", environment = "${plan.outputs.environment}", state = "off" }
+outputs = "value:FlagChangeReport"
+timeout_secs = 300
+retry   = { max = 2 }
+
+# Restoration is proved by telemetry, not by the flag API saying "off". Observe up to three windows.
+[[step]]
+id      = "observe"
+kind    = "tool"
+run     = "toolchain:metrics"
+inputs  = { signal = "${plan.outputs.expected_signal}", environment = "${plan.outputs.environment}", window_secs = 300, after = "${kill.outputs.at}" }
+outputs = "value:TelemetryReport"
+timeout_secs = 900
+retry   = { max = 1 }
+repeat  = { until = "${observe.outputs.status} == 'stable'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "mitigation.not-restored" }
+
+[[step]]
+id      = "restored"
+kind    = "check"
+inputs  = { t = "${observe.outputs}", answer = "${observe.escalate.answer?}" }
+expr    = "(t.status == 'stable' and len(t.breached) == 0) or answer == 'accept-partial'"
+on_false = "fail"
+
+# Compose the record that analysis picks up: what was killed, when service recovered, what residual risk the kill leaves.
+[[step]]
+id      = "record"
+kind    = "agent"
+role    = "releaser"
+inputs  = { plan = "${plan.outputs}", change = "${kill.outputs}", telemetry = "${observe.outputs}" }
+outputs = "value:MitigationRecord"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { MitigationRecord = "${record.outputs}" }
+evidence  = ["${kill}", "${observe}", "${authorize?}"]

@@ -1,0 +1,84 @@
+ERROR adversarial-review       R2    budget.wall_clock_secs must be a number, got '${toolchain.review_timeout}'
+WARN  adversarial-review       R8    budget.attempts_total=3 < worst-case single-pass attempts 5
+ERROR adversarial-review       R9    verdict.expr: identifier 'evidence' is not a facet, input, or builtin
+ERROR adversarial-review       R3    clone: output schema 'Workspace' unknown
+ERROR canary-release           R3    emit: artifact 'ReleaseRecord' bound to optional ref 'deploy-full?' — a provided artifact must be unconditional
+ERROR canary-release           R1    rollback: feedback ref to later step 'degraded' but nothing loops back to 'rollback'
+ERROR canary-release           R1    deploy-full: feedback ref to later step 'rollback' but nothing loops back to 'deploy-full'
+ERROR canary-release           R1    deploy-full: feedback ref to later step 'proceed' but nothing loops back to 'deploy-full'
+ERROR canary-release           R1    emit: feedback ref to later step 'proceed' but nothing loops back to 'emit'
+ERROR canary-release           R5    promised evidence 'HumanAnswer' is unconditional but only conditional steps produce it
+WARN  canary-release           R8    budget.attempts_total=6 < worst-case single-pass attempts 11
+ERROR canary-release           R9    healthy.expr: identifier 'breached' is not a facet, input, or builtin
+ERROR competitor-analysis      R5    promised evidence 'SelfCheck' is unconditional but only conditional steps produce it
+WARN  competitor-analysis      R8    budget.attempts_total=3 < worst-case single-pass attempts 4
+ERROR minimal-repro            R3    emit: artifact 'ReproCase' bound to optional ref 'reduce?' — a provided artifact must be unconditional
+ERROR minimal-repro            R1    cycle through attempt -> attempt
+ERROR minimal-repro            R1    emit: feedback ref to later step 'triage-gate' but nothing loops back to 'emit'
+WARN  minimal-repro            R5    evidence 'GreenAt' attached but not promised in activity.evidence
+ERROR mutation-testing         R9    acs.expr: identifier 'acceptance_criteria' is not a facet, input, or builtin
+ERROR mutation-testing         R9    summarise.expr: identifier 'score' is not a facet, input, or builtin
+ERROR root-cause               R1    cycle through hypothesise -> hypothesise
+ERROR root-cause               R1    policy: feedback ref to later step 'adversary' but nothing loops back to 'policy'
+ERROR root-cause               R1    signoff: feedback ref to later step 'adversary' but nothing loops back to 'signoff'
+ERROR root-cause               R1    emit: feedback ref to later step 'adversary' but nothing loops back to 'emit'
+WARN  root-cause               R1    policy: on_false jumps FORWARD to 'hypothesise' — a branch, not a loop; schema only defines loop-back semantics
+WARN  root-cause               R4    @optional: check 'policy' has no live inputs — evaluates over absent values
+WARN  root-cause               R5    evidence 'ToolReport' attached but not promised in activity.evidence
+ERROR root-cause               R9    policy.expr: identifier 'evidence' is not a facet, input, or builtin
+ERROR tdd-red-green-refactor   R3    red: unresolved ref ${spec}
+ERROR tdd-red-green-refactor   R3    still-green: ref to conditional step 'refactor-verify' lacks '?'
+WARN  tdd-red-green-refactor   R1    still-green: on_false jumps FORWARD to 'refactor' — a branch, not a loop; schema only defines loop-back semantics
+ERROR tdd-red-green-refactor   R7    red: for_each source 'spec' is not a step (artifact sources must use 'artifact:Kind.field')
+ERROR tdd-red-green-refactor   R7    red-verify: reads field 'outputs.tests_added' of fan-out step 'red' whose outputs are a list
+WARN  tdd-red-green-refactor   R8    budget.attempts_total=12 < worst-case single-pass attempts 13
+ERROR tdd-red-green-refactor   R9    red-check.expr: identifier 'failed' is not a facet, input, or builtin
+ERROR tdd-red-green-refactor   R9    red-check.expr: identifier 'passed' is not a facet, input, or builtin
+ERROR tdd-red-green-refactor   R9    still-green.expr: identifier 'status' is not a facet, input, or builtin
+ERROR threat-model             R1    model: feedback ref to later step 'review' but nothing loops back to 'model'
+ERROR threat-model             R9    policy.expr: identifier 'residual' is not a facet, input, or builtin
+ERROR threat-model             R9    policy.expr: identifier 'evidence' is not a facet, input, or builtin
+ERROR user-story-ac            R3    policy: ref to conditional step 'self-check' lacks '?'
+ERROR user-story-ac            R3    emit: ref to conditional step 'self-check' lacks '?'
+ERROR user-story-ac            R1    policy: feedback ref to later step 'adversary' but nothing loops back to 'policy'
+ERROR user-story-ac            R1    emit: feedback ref to later step 'adversary' but nothing loops back to 'emit'
+ERROR user-story-ac            R5    emit evidence 'self-check' is conditional but not marked '?'
+WARN  user-story-ac            R8    budget.attempts_total=5 < worst-case single-pass attempts 7
+ERROR user-story-ac            R9    policy.expr: identifier 'failed' is not a facet, input, or builtin
+ERROR user-story-ac            R9    policy.expr: identifier 'evidence' is not a facet, input, or builtin
+ERROR vertical-slicing         R3    emit: ref to conditional step 'approve' lacks '?'
+ERROR vertical-slicing         R1    policy: feedback ref to later step 'adversary' but nothing loops back to 'policy'
+ERROR vertical-slicing         R1    approve: feedback ref to later step 'adversary' but nothing loops back to 'approve'
+ERROR vertical-slicing         R1    emit: feedback ref to later step 'adversary' but nothing loops back to 'emit'
+ERROR vertical-slicing         R5    emit evidence 'approve' is conditional but not marked '?'
+ERROR vertical-slicing         R5    promised evidence 'HumanAnswer' is unconditional but only conditional steps produce it
+WARN  vertical-slicing         R8    budget.attempts_total=6 < worst-case single-pass attempts 9
+ERROR vertical-slicing         R9    acyclic.expr: identifier 'acyclic' is not a facet, input, or builtin
+ERROR vertical-slicing         R9    policy.expr: identifier 'failed' is not a facet, input, or builtin
+ERROR vertical-slicing         R9    policy.expr: identifier 'evidence' is not a facet, input, or builtin
+
+== summary ==
+ERROR R1    16
+ERROR R2    1
+ERROR R3    8
+ERROR R5    5
+ERROR R7    2
+ERROR R9    15
+WARN  R1    2
+WARN  R4    1
+WARN  R5    2
+WARN  R8    6
+errors=47 warnings=11
+
+== fragments repeated in >=2 activities ==
+5x ['adversarial-review', 'canary-release', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate?
+4x ['adversarial-review', 'root-cause', 'threat-model', 'user-story-ac']: gate? -> emit
+4x ['adversarial-review', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate? -> emit
+3x ['root-cause', 'user-story-ac', 'vertical-slicing']: agent/reviewer? -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺ -> gate?
+2x ['competitor-analysis', 'minimal-repro']: agent/investigator? -> emit
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+2x ['minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test
+2x ['root-cause', 'user-story-ac']: agent/reviewer? -> check↺ -> gate?

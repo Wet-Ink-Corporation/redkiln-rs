@@ -294,3 +294,64 @@ Evidence tags: **[doc]** first-party documentation, **[pub]** public issue/paper
 - Stryker incremental: https://stryker-mutator.io/docs/stryker-js/incremental/ ; cargo-mutants: https://mutants.rs/pr-diff.html ; GitLab quarantine: https://docs.gitlab.com/development/testing_guide/quarantining_tests/
 - Scott Logic on Spec Kit: https://blog.scottlogic.com/2025/11/26/putting-spec-kit-through-its-paces-radical-idea-or-reinvented-waterfall.html ; OpenSpec: https://github.com/Fission-AI/openspec ; Agent OS v3: https://github.com/buildermethods/agent-os/discussions/310 ; Ericsson doc-debt: https://arxiv.org/html/2402.11048
 - Nesbitt: https://nesbitt.io/2026/08/20/issues-in-the-repo.html ; Gerrit NoteDb: https://gerrit-review.googlesource.com/Documentation/note-db.html ; jj: https://docs.jj-vcs.dev/latest/technical/concurrency/ ; git-branchless: https://github.com/arxanas/git-branchless/wiki/Architecture ; Beads: https://github.com/steveyegge/beads/blob/main/docs/ADVANCED.md , https://github.com/gastownhall/beads/issues/4074 ; Backlog.md #558
+
+---
+
+# Part D — S-TYPED results against prior art (added 2026-09-07)
+
+(Research pass 4, verbatim. Tags: [peer] · [preprint] · [1P] · [blog].)
+
+## Q1 (R2): Is "≥52% of merged, reviewed fixes carry an unpinned criterion" plausible?
+
+1. **Petrović, Ivanković, Fraser, Just — ICSE 2021** [peer]. ~15M mutants at Google, mutation integrated into code review: median **1 live mutant per changelist at review start, 0 at submit**; 70% of high-priority real bugs were coupled with a mutant that would have been reported during review. The review-start baseline is that a typical change has ≥1 surviving productive mutant even with aggressive filtering.
+2. **Petrović et al. — TSE 2021** [peer]. Surviving mutants surfaced in review for 12.6% of changelists after heavy suppression; 82% rated productive. A floor, not a comparable rate.
+3. **Inozemtseva & Holmes, ICSE 2014** [peer]. Coverage–effectiveness correlation drops to low/moderate once suite size is controlled. A green, well-covered suite says little about discrimination.
+4. **LLM-test weakness (2025–26)**: Zhao, Zhou, Cohen ISSTA 2026 (arXiv 2607.22880) [peer]; misguidance-effect companion (buggy code cuts bug-revealing tests 8.5% → 3.0%); *Beyond Test Presence* (arXiv 2607.12068) [preprint]: 11.6% ambiguous assertions in agent tests vs 1.5% human; Meta ACH [peer].
+
+**vs our result: extends / partially comparable.** No study reports our exact metric; Google's review-start median of one live mutant per changelist is directionally consistent with ~50% of changes carrying a surviving productive mutant. Ours is criterion-directed, so expect it higher than operator-based survival. Treat 52% as plausible-but-local.
+
+## Q2 (R3): Cost/benefit of execution-based vs read-only review; routing
+
+1. **Cloudflare, 2026** [1P]. 131,246 runs / 48,095 MRs / 30 days; mean $1.19, median $0.98, P99 $4.45, median 3 m 39 s; read-only; tiers trivial $0.20 / lite $0.67 / full $1.68.
+2. **Anthropic Code Review, 2026-03** [1P]. Multi-agent with a verification step against actual code behaviour; **$15–25 per review, ~20 min**; no approve/block verdict.
+3. **Google AutoCommenter, FSE-Industry 2024** [peer]. Read-only; usefulness plateaued at 54–60% until suppression lists.
+4. **Are LLMs Reliable Code Reviewers? (arXiv 2603.00539)** [preprint/peer]. 87% of false rejections are unverifiable claims; executing the reviewer's own proposed change is the adjudicator.
+5. **OpenCodeReview (arXiv 2608.09290)** [preprint]. Deterministic dispatch + bounded tools: 1.3–2.2× SEM-F1 at 5–15× fewer tokens than free-form agentic review.
+6. Execution-grounded validation (arXiv 2604.10800) [preprint]: removing execution validation raised unnecessary repairs 131.7%.
+
+**vs our result: agrees / extends.** $3.03 / ~18 min sits between Cloudflare's full tier and Anthropic's verification-heavy review; 147/147 runnable repros is stronger than anything published. Routing by size/risk is well precedented; a cheap-first cascade's recall loss is not measured anywhere.
+
+## Q3 (R4): Label-boundary fuzziness with stable underlying detection
+
+1. **Rating Roulette, EMNLP 2025** [peer]; 2. **C-SSRS 7-level severity, arXiv 2505.13480** [preprint] — misclassifications predominantly between adjacent levels; 3. **When Policies Change Probabilities, arXiv 2608.02677** [preprint] — asking the reviewer to estimate *and* decide shifts reported probability 13.6–16.9 pp; a modular pipeline (model reports evidence, code applies the rule) cuts loss; 4. *Automated Classification of Code Review Comments*, arXiv 2604.23667 [preprint] — evidence-sensitive labels fail without verification signals.
+
+**vs our result: agrees.** Derive the class deterministically from the repro record rather than asking the model to choose.
+
+## Q4 (R1): Do schemas preserve agentic performance?
+
+1. **Anthropic structured-outputs docs** [1P]: grammars apply only to the final output, not tool calls or thinking; ≤24 optional / ≤16 union params; prefer required, flat, small enums; enum casing not guaranteed.
+2. **Constraint Tax, arXiv 2606.25605** [preprint]: on open-weight models under grammar-constrained decoding, tools + JSON schema together → 0% tool invocation; two-pass execution restores it. Hosted Claude unaffected.
+3. *Let Me Speak Freely?* EMNLP-Industry 2024 [peer]; OpenCodeReview and Cloudflare use closed schemas in production without reported loss.
+
+**vs our result: agrees for hosted Claude; not comparable for open-weight** — a real risk if the reviewer is ever ported to a self-hosted stack.
+
+## Design implications (Part D)
+
+- Compute the evidence class in code from the repro record; keep the model's label advisory.
+- Route by risk; measure a cascade's recall loss before adopting it.
+- Retire "reviewed and green" as evidence of pinning; require a discriminating test per AC.
+- Keep the schema flat, required-first, small enums; compare enum values case-insensitively.
+- Two-pass (tools, then schema) if ever self-hosting open-weight models.
+- Report cost against the Cloudflare ($1.68) and Anthropic ($15–25) anchors.
+
+## Sources (Part D)
+
+- Petrović et al., ICSE 2021: https://arxiv.org/abs/2103.07189 ; TSE 2021: https://arxiv.org/pdf/2102.11378
+- Inozemtseva & Holmes, ICSE 2014: https://cs.uwaterloo.ca/~rtholmes/papers/icse_2014_inozemtseva.pdf
+- Zhao, Zhou, Cohen, ISSTA 2026: https://arxiv.org/abs/2607.22880 ; misguidance paper: https://www.eecg.toronto.edu/~shuruiz/forcolab/paper/issta26-b.pdf
+- Beyond Test Presence: https://arxiv.org/html/2607.12068v1 ; Meta ACH: https://arxiv.org/abs/2501.12862
+- Cloudflare: https://blog.cloudflare.com/ai-code-review/ ; Anthropic Code Review: https://claude.com/blog/code-review ; https://code.claude.com/docs/en/code-review
+- AutoCommenter: https://doi.org/10.1145/3664646.3665664 ; Are LLMs Reliable Code Reviewers?: https://arxiv.org/html/2603.00539v1
+- OpenCodeReview: https://arxiv.org/html/2608.09290 ; execution-grounded validation: https://www.arxiv.org/pdf/2604.10800
+- Rating Roulette: https://arxiv.org/abs/2510.27106 ; C-SSRS: https://arxiv.org/abs/2505.13480 ; When Policies Change Probabilities: https://arxiv.org/html/2608.02677v1 ; code-review comment classification: https://arxiv.org/html/2604.23667v1
+- Anthropic structured outputs: https://platform.claude.com/docs/en/build-with-claude/structured-outputs ; Constraint Tax: https://arxiv.org/abs/2606.25605 ; Let Me Speak Freely?: https://aclanthology.org/2024.emnlp-industry.91.pdf

@@ -1,0 +1,10 @@
+competitor-analysis           40  3
+mutation-testing              42  4
+adversarial-review            49  5
+threat-model                  50  5
+minimal-repro                 55  5
+user-story-ac                 58  6
+root-cause                    67  7
+vertical-slicing              71  8
+canary-release                82  9
+tdd-red-green-refactor       102 11

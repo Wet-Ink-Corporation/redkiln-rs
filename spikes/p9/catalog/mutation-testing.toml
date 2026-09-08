@@ -1,0 +1,46 @@
+[activity]
+id           = "mutation-testing"
+version      = 1
+stage        = "verify"
+provides     = ["MutationSummary"]
+requires     = ["Changeset", "Spec"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "change:text", "toolchain:node", "toolchain:rust", "toolchain:python"]
+method_rank  = 50
+min_rigor    = "mandatory"
+cost_class   = "L"
+evidence     = ["Mutation", "ToolReport"]
+budget       = { attempts_total = 4, tokens = 50_000, wall_clock_secs = 7200 }
+deviation_ok = ["skip"]
+keywords     = ["mutation testing", "stryker", "cargo-mutants", "mutmut"]
+rationale    = "Per-AC mutation evidence is what makes 'GREEN' a failing value (proposal §4.6)."
+
+[[step]]
+id      = "acs"
+kind    = "check"
+inputs  = { spec = "artifact:Spec" }
+expr    = "spec.acceptance_criteria.len() > 0"
+on_false = "fail"
+
+[[step]]
+id      = "mutate"
+kind    = "tool"
+run     = "toolchain:mutate"
+for_each = "artifact:Spec.acceptance_criteria"
+inputs  = { ac = "${item}", scope = "artifact:Changeset.files" }
+outputs = "value:MutationReport"
+timeout_secs = "${toolchain.mutation_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "summarise"
+kind    = "check"
+inputs  = { reports = "${mutate.outputs}" }
+expr    = "reports.all(score >= 0.8)"
+on_false = "continue"
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { MutationSummary = "${mutate.outputs}" }
+evidence  = ["${mutate}"]

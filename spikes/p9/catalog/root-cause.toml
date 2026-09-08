@@ -1,0 +1,74 @@
+[activity]
+id           = "root-cause"
+version      = 3
+stage        = "analysis"
+provides     = ["RootCause"]
+requires     = ["ReproCase"]
+derived_from = ["ReproCase"]
+tags         = ["kind:bug", "kind:incident", "change:text"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["Findings?", "GreenAt", "ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 8, tokens = 400_000, wall_clock_secs = 5400 }
+deviation_ok = ["add", "downgrade"]
+keywords     = ["debugging", "sre troubleshooting", "hypothesis"]
+rationale    = "SRE ch.12 hypothetico-deductive loop, confirmed by a discriminating test."
+
+[[step]]
+id      = "hypothesise"
+kind    = "agent"
+role    = "investigator"
+inputs  = { repro = "artifact:ReproCase", telemetry = "toolchain:logs?", hint = "${no-hypothesis.answer?}", findings = "${adversary.outputs?}" }
+outputs = "value:HypothesisLog"
+timeout_secs = 900
+retry   = { max = 2 }
+repeat  = { until = "${hypothesise.outputs.status} == 'confirmed'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "root-cause.no-hypothesis" }
+
+[[step]]
+id      = "no-hypothesis"
+kind    = "gate"
+question = "root-cause.no-hypothesis"
+when    = "${hypothesise.outputs.status} != 'confirmed'"
+inputs  = { log = "${hypothesise.outputs}" }
+
+[[step]]
+id      = "confirm"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${hypothesise.outputs.discriminating_test}" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { log = "${hypothesise.outputs}", report = "${confirm.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 1200
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { findings = "${adversary.outputs?}" }
+expr    = "findings.none(evidence in ['Reproduced', 'MutationSurvived'])"
+on_false = "hypothesise"
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "root-cause.accept"
+inputs  = { summary = "${hypothesise.outputs.summary}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { RootCause = "${hypothesise.outputs.root_cause}" }
+evidence  = ["${confirm}", "${adversary?}", "${signoff?}"]

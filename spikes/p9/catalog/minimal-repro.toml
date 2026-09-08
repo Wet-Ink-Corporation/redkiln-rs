@@ -1,0 +1,60 @@
+[activity]
+id           = "minimal-repro"
+version      = 1
+stage        = "analysis"
+provides     = ["ReproCase"]
+requires     = ["BugReport"]
+derived_from = ["BugReport"]
+tags         = ["kind:bug", "kind:security-vuln", "kind:incident", "change:text"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["ToolReport", "GreenAt", "HumanAnswer?"]
+budget       = { attempts_total = 8, tokens = 250_000, wall_clock_secs = 3600 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["reproduce", "SSCCE", "make it fail"]
+rationale    = "Agans rule 'make it fail': no investigation without a deterministic reproduction."
+
+[[step]]
+id      = "attempt"
+kind    = "agent"
+role    = "investigator"
+inputs  = { report = "artifact:BugReport", hint = "${triage-gate.answer?}" }
+outputs = "value:ReproAttempt"
+timeout_secs = "${toolchain.repro_timeout}"
+retry   = { max = 2 }
+repeat  = { until = "${attempt.outputs.status} == 'reproduced'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "repro.cannot-reproduce" }
+
+[[step]]
+id      = "triage-gate"
+kind    = "gate"
+question = "repro.cannot-reproduce"
+inputs  = { attempts = "${attempt.outputs}" }
+when    = "${attempt.outputs.status} != 'reproduced'"
+
+[[step]]
+id      = "confirm"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${attempt.outputs.command}" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "reduce"
+kind    = "agent"
+role    = "investigator"
+inputs  = { attempt = "${attempt.outputs}", confirm = "${confirm.outputs}" }
+outputs = "value:ReproCase"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReproCase = "${reduce.outputs}" }
+evidence  = ["${confirm}", "${triage-gate?}"]

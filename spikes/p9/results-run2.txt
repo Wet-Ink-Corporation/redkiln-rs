@@ -1,0 +1,27 @@
+WARN  adversarial-review       R1    verdict: on_false jumps FORWARD to 'override' — a branch, not a loop; schema only defines loop-back semantics
+WARN  adversarial-review       R8    budget.attempts_total=3 < worst-case single-pass attempts 5
+WARN  canary-release           R1    healthy: on_false jumps FORWARD to 'degraded' — a branch, not a loop; schema only defines loop-back semantics
+WARN  canary-release           R8    budget.attempts_total=6 < worst-case single-pass attempts 13
+WARN  competitor-analysis      R8    budget.attempts_total=3 < worst-case single-pass attempts 4
+WARN  root-cause               R4    @optional: check 'policy' has no live inputs — evaluates over absent values
+WARN  tdd-red-green-refactor   R8    budget.attempts_total=12 < worst-case single-pass attempts 13
+WARN  user-story-ac            R8    budget.attempts_total=5 < worst-case single-pass attempts 7
+WARN  vertical-slicing         R8    budget.attempts_total=6 < worst-case single-pass attempts 9
+
+== summary ==
+WARN  R1    2
+WARN  R4    1
+WARN  R8    6
+errors=0 warnings=9
+
+== fragments repeated in >=2 activities ==
+5x ['adversarial-review', 'canary-release', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate?
+4x ['adversarial-review', 'root-cause', 'threat-model', 'user-story-ac']: gate? -> emit
+4x ['adversarial-review', 'root-cause', 'threat-model', 'user-story-ac']: check↺ -> gate? -> emit
+3x ['root-cause', 'user-story-ac', 'vertical-slicing']: agent/reviewer? -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺
+2x ['adversarial-review', 'threat-model']: agent/reviewer -> check↺ -> gate?
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate?
+2x ['minimal-repro', 'root-cause']: gate? -> tool/toolchain:test
+2x ['minimal-repro', 'root-cause']: agent/investigator↺ -> gate? -> tool/toolchain:test
+2x ['root-cause', 'user-story-ac']: agent/reviewer? -> check↺ -> gate?

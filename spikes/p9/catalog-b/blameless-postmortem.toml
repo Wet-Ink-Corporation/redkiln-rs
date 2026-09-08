@@ -1,0 +1,80 @@
+# catalog-b/blameless-postmortem.toml — second author (P9b)
+# Source row: activity-catalog-raw §2.12. Ordered ceremony: lightweight-retro < structured-retrospective < blameless-postmortem.
+
+[activity]
+id            = "blameless-postmortem"
+version       = 1
+stage         = "closeout"
+provides      = ["Postmortem", "ActionItems", "ProblemRecord"]
+requires      = ["IncidentTimeline", "RootCause", "ImpactAssessment"]
+derived_from  = ["IncidentTimeline", "RootCause", "ImpactAssessment"]
+tags          = ["kind:incident", "kind:security-vuln"]
+applicable_if = "kind in [incident, security-vuln] or (kind == bug and criticality >= high)"
+method_rank   = 30                      # heaviest of the ordered ceremony list
+min_rigor     = "recommended"
+cost_class    = "M"
+evidence      = ["Findings?", "HumanAnswer"]
+budget        = { attempts_total = 8, tokens = 300_000, wall_clock_secs = 7200 }
+spawn         = ["ProblemRecord"]       # signal: stage's spawn_followup opens the problem-record initiative
+keywords      = ["postmortem", "incident review", "blameless", "action items"]
+
+# Agent drafts every section from the analysis artifacts. Blame is a lint, not a virtue.
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "investigator"
+inputs  = { timeline = "artifact:IncidentTimeline", root_cause = "artifact:RootCause", impact = "artifact:ImpactAssessment", checklist = "checklist:postmortem-sections" }
+outputs = "value:PostmortemDraft"
+timeout_secs = 1800
+retry   = { max = 1 }
+
+# Adversary: blameful language, missing sections, action items without owner/due, causes not traced to the timeline.
+[[step]]
+id      = "blameless-check"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}", timeline = "artifact:IncidentTimeline", checklist = "checklist:postmortem-sections" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+# Completeness is decided in Rust, not by the reviewer: every action item owned and dated, no blocking finding.
+[[step]]
+id      = "complete"
+kind    = "check"
+inputs  = { d = "${draft.outputs}", findings = "${blameless-check.outputs?}" }
+expr    = "len(d.action_items) >= 1 and len(d.unassigned_items) == 0 and findings.none(severity in [blocking])"
+on_false = "draft"
+max     = 2
+
+# The human gate is the review meeting (PagerDuty Draft → In Review → Reviewed). Always live at this activity's rigor.
+[[step]]
+id      = "review-meeting"
+kind    = "gate"
+question = "postmortem.review"
+inputs  = { summary = "${draft.outputs.summary}", action_items = "${draft.outputs.action_items}", findings = "${blameless-check.outputs?}" }
+
+[[step]]
+id      = "reviewed"
+kind    = "check"
+inputs  = { answer = "${review-meeting.answer}" }
+expr    = "answer == 'approve'"
+on_false = "draft"
+max     = 1
+
+# ITIL incident/problem split: the postmortem always leaves a problem record behind for the follow-up initiative.
+[[step]]
+id      = "problem-record"
+kind    = "agent"
+role    = "investigator"
+inputs  = { postmortem = "${draft.outputs}", root_cause = "artifact:RootCause" }
+outputs = "value:ProblemRecord"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Postmortem = "${draft.outputs}", ActionItems = "${draft.outputs.action_items}", ProblemRecord = "${problem-record.outputs}" }
+evidence  = ["${blameless-check?}", "${review-meeting}"]

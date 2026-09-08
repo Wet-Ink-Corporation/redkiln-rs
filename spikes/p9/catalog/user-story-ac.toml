@@ -1,0 +1,64 @@
+[activity]
+id           = "user-story-ac"
+version      = 1
+stage        = "specification"
+provides     = ["Spec"]
+requires     = ["ProblemStatement"]
+derived_from = ["ProblemStatement", "RootCause?"]
+tags         = ["kind:story", "kind:bug", "kind:project"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck?", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 200_000, wall_clock_secs = 2400 }
+deviation_ok = ["downgrade"]
+keywords     = ["user story", "acceptance criteria", "given when then"]
+rationale    = "Cheapest spec form in the ordered family; ACs are the join key for verify and review."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { problem = "artifact:ProblemStatement", cause = "artifact:RootCause?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}" }
+outputs = "value:Spec"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { spec = "${draft.outputs}", checklist = "checklist:ac-quality" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { spec = "${draft.outputs}", problem = "artifact:ProblemStatement" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { findings = "${adversary.outputs?}", check = "${self-check.outputs}" }
+expr    = "check.failed == 0 and findings.none(evidence in ['Reproduced'])"
+on_false = "draft"
+
+[[step]]
+id      = "ambiguity"
+kind    = "gate"
+when    = "rigor >= mandatory and ${draft.outputs.open_questions}.len() > 0"
+question = "spec.ambiguity"
+inputs  = { questions = "${draft.outputs.open_questions}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Spec = "${draft.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${ambiguity?}"]

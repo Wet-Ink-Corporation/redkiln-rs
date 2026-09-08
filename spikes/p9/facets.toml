@@ -1,0 +1,75 @@
+# Facet registry (PC8). Every predicate identifier must be a facet here, a step id, `rigor`, `item`, or a builtin.
+# source: llm = emitted by triage classification; derived = computed by the kernel/Toolchain port; human = label input.
+
+[facet.kind]
+values = ["initiative", "project", "story", "bug", "incident", "spike", "chore", "tech-debt", "security-vuln", "docs"]
+source = "human"          # rk:kind/*
+
+[facet.cos]
+values = ["expedite", "fixed-date", "standard", "intangible"]
+source = "human"          # rk:cos/*
+
+[facet.stage]
+values = ["triage", "discovery", "analysis", "specification", "design", "planning", "implement", "verify", "review", "release", "operate", "closeout"]
+source = "derived"
+
+[facet.rigor]
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]   # ordered
+source = "derived"        # from policy.<class>.stages
+
+[facet.criticality]
+values = ["low", "med", "high", "unknown"]   # ordered; unknown routes to a human
+source = "llm"
+
+[facet.novelty]
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+[facet.size]
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+[facet.blast_radius]
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]   # set-valued per item (PC7); tech packs may extend values
+source = "derived"
+set = true
+
+[facet.change]
+values = ["text", "binary", "generated"]   # set-valued per item
+source = "derived"
+set = true
+
+[facet.role]
+values = ["implementer", "reviewer", "investigator", "spec-author", "architect", "planner", "releaser"]
+source = "derived"
+
+[facet.cost]
+values = ["S", "M", "L", "XL"]
+source = "derived"
+
+# boolean risk facets
+[facet.auth]
+values = [true, false]
+source = "derived"
+[facet.data_migration]
+values = [true, false]
+source = "derived"
+[facet.external_dep]
+values = [true, false]
+source = "llm"
+[facet.ui]
+values = [true, false]
+source = "derived"
+[facet.market_facing]
+values = [true, false]
+source = "llm"
+[facet.has_repro]
+values = [true, false]
+source = "llm"
+[facet.flag_exists]
+values = [true, false]
+source = "derived"
