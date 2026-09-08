@@ -1,6 +1,6 @@
-## P9 — RESULT: the activity-graph schema authors at a median 56 lines, the lint's first run caught 4 design defects the author had not seen, and the `adversary → policy → gate` fragment sits exactly at the kill threshold
+## F32 — P9 RESULT: the activity-graph schema authors at a median 56 lines, the lint's first run caught 4 design defects the author had not seen, and the `adversary → policy → gate` fragment sits exactly at the kill threshold
 
-**Established by:** authoring 10 activities + 3 registries under `spikes/p9/`, one lint prototype (`spikes/p9/lint.py`, 311 lines Python), two lint runs, 2026-09-07 20:32–20:39 UTC. Pre-registered in `METHOD-P9.md`. **Zero model dispatches.** Raw outputs: `spikes/p9/results-run1.txt` (first run, unfixed lint), `results-run1b-lintfixed.txt` (same catalog, lint bugs fixed), `results-run2.txt` (catalog fixed), `lines.txt`. F-number to be assigned on promotion to `FINDINGS.md`.
+**Established by:** authoring 10 activities + 3 registries under `spikes/p9/`, one lint prototype (`spikes/p9/lint.py`, 311 lines Python), two lint runs, 2026-09-07 20:32–20:39 UTC. Pre-registered in `METHOD-P9.md`. **Zero model dispatches.** Raw outputs: `spikes/p9/results-run1.txt` (first run, unfixed lint), `results-run1b-lintfixed.txt` (same catalog, lint bugs fixed), `results-run2.txt` (catalog fixed), `lines.txt`. Assigned F32 on 2026-09-07; promote to `FINDINGS.md` with the S-series drafts.
 
 ### Metrics against the kill criteria
 

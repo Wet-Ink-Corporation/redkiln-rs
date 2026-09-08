@@ -1,4 +1,4 @@
-## P9b — RESULT: a second author lands at a median 73 lines (+29% on P9, still 2× under the kill), the lint caught 1 real mistake in 3 files and silently accepted 5 guesses, and 20 of 27 authoring ambiguities were in neither §9a nor P9
+## F33 — P9b RESULT: a second author lands at a median 73 lines (+29% on P9, still 2× under the kill), the lint caught 1 real mistake in 3 files and silently accepted 5 guesses, and 20 of 27 authoring ambiguities were in neither §9a nor P9
 
 **Established by:** a second author (not the schema's author) writing 3 activities under `spikes/p9/catalog-b/` against `references/2026-09-07-activity-graph-schema.md` §1–§9 as amended by §9a, without reading `P9-DRAFT.md` or `spikes/p9/catalog/` until after the second lint run. Lint unmodified (`spikes/p9/lint.py`, predates §9a). **Zero model dispatches.** Raw outputs: `spikes/p9/results-b-run1.txt`, `results-b-run2.txt`. Registry additions appended under a `P9b additions` header in `spikes/p9/schemas.toml` (16 value schemas, 44 lines) and `questions.toml` (4 questions, 12 lines); `facets.toml` untouched. Nothing under `spikes/p9/catalog/` or the schema note was edited.
 
