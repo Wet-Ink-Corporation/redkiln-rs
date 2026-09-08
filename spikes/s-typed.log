@@ -97,3 +97,37 @@ wrote ../results/s-typed.jsonl
   issue-131-kb-ingest-doctor-scope             b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1834s
   issue-137-advance-commit-exit-status         b-typed-clean r1 ... pass=true strong=false weak=false cited=0 1998s
   issues-135-129-declared-boundary-parse       b-typed-clean r1 ... NO DIGEST (timeout) 3601s
+[2026-09-07T07:29:21] S-TYPED-FINISH-START pid=94888
+[2026-09-07T07:29:21] S-TYPED-RETRY-START issues-135-129-declared-boundary-parse @5400
+  no live headroom reading ΓÇö the opening dispatch is unguarded
+  issues-135-129-declared-boundary-parse       b-typed-clean r1 ... pass=false strong=false weak=true cited=0 4562s
+
+wrote ../results/s-typed.jsonl
+[2026-09-07T08:45:33] S-TYPED-RETRY-DONE
+[2026-09-07T08:45:33] S-TYPED-PHASE-START clean-remainder
+  resuming at five_hour 0.03 / seven_day 0.44 (margins 0.90/0.90)
+  fix-advance-write-lock-gate-scope            skipped (recorded)
+  issue-62-new-stale-pinned-template           skipped (recorded)
+  issue-63-advance-gate-diagnostic-truncated   skipped (recorded)
+  issue-66-id-lock-ec001-rmdir                 skipped (recorded)
+  issue-70-plugin-root-unset                   skipped (recorded)
+  issue-75-item-frontmatter-strict-drift       skipped (recorded)
+  issue-77-advance-commit-partial-stage        skipped (recorded)
+  issue-82-status-terminal-field-collision     skipped (recorded)
+  fix-doctor-git-config-repair                 skipped (recorded)
+  issue-122-doctor-foundation-reachability     skipped (recorded)
+  issue-130-slice-review-story-gate            skipped (recorded)
+  issue-131-kb-ingest-doctor-scope             skipped (recorded)
+  issue-137-advance-commit-exit-status         skipped (recorded)
+  issues-135-129-declared-boundary-parse       skipped (recorded)
+  issue-72-plan-briefs-readonly-grounding      b-typed-clean r1 ... pass=true strong=false weak=false cited=0 585s
+  issue-73-plan-briefs-missing-artifacts-discarded b-typed-clean r1 ... pass=true strong=false weak=false cited=0 554s
+  issue-74-plan-briefs-dead-plan-anchor        b-typed-clean r1 ... pass=true strong=false weak=false cited=0 1032s
+  issue-79-plan-prds-verifier-false-pass       b-typed-clean r1 ... pass=true strong=false weak=false cited=0 1012s
+  issue-81-plan-discover-spec-gate-mismatch    b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1227s
+  issue-83-plan-prds-write-timeout             b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1225s
+  memoize-repo-root                            b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1032s
+  reap-leaked-serve-children                   b-typed-clean r1 ... pass=true strong=false weak=false cited=0 2995s
+  issue-146-147-boundary-window                b-typed-clean r1 ... pass=false strong=false weak=true cited=0 1806s
+
+wrote ../results/s-typed.jsonl
