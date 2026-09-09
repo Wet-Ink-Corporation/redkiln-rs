@@ -1,0 +1,23 @@
+# P1 items — corpus 47faec9f46b8d983c2c75f0794164e68415ae706 — selection by sha256(slug) order, quotas per METHOD-P §1.2. Generated 2026-09-08T04:52:28.656001Z
+# kind	slug	card	sha256(slug)[:12]
+bug	_archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics	.bklg/_archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics/bug.md	22239e0d5666
+bug	_archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre	.bklg/_archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre/bug.md	9773e01584e1
+story	_archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers	.bklg/_archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers/story.md	03b313a02ca3
+story	support/phase-1-total-outcomes/gate-passes-its-known-base	.bklg/support/phase-1-total-outcomes/gate-passes-its-known-base/story.md	05c6a22e7c84
+story	_archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation	.bklg/_archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation/story.md	086bb862993c
+story	_archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire	.bklg/_archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire/story.md	087e8203138a
+story	_archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question	.bklg/_archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question/story.md	0e0d98456f97
+story	support/fix-lane-plumbing/issue-50-fix-story-before-worktree	.bklg/support/fix-lane-plumbing/issue-50-fix-story-before-worktree/story.md	0edb93858267
+project	_archive/docs-site-brand-identity/typography-delivery	.bklg/_archive/docs-site-brand-identity/typography-delivery/project.md	055e9ac6c667
+project	support/fix-gate-honesty-sweep	.bklg/support/fix-gate-honesty-sweep/project.md	0b99076ae9a4
+project	support/fix-json-error-envelope	.bklg/support/fix-json-error-envelope/project.md	0cef543b2046
+project	_archive/docs-site-brand-identity/kb-harvest-and-closeout	.bklg/_archive/docs-site-brand-identity/kb-harvest-and-closeout/project.md	10c6149614b0
+project	support/fix-ci-pinned-pack-drift-guard	.bklg/support/fix-ci-pinned-pack-drift-guard/project.md	124e5e6d3f20
+project	_archive/docs-site-brand-identity/contrast-verification	.bklg/_archive/docs-site-brand-identity/contrast-verification/project.md	132e9ad43d8e
+initiative	_archive/live-views	.bklg/_archive/live-views/initiative.md	194595a9a748
+initiative	_archive/docs-site-brand-identity	.bklg/_archive/docs-site-brand-identity/initiative.md	353d0afb6ba7
+initiative	support	.bklg/support/initiative.md	a18603086e5b
+incident	support/links-hand-edit-denied-with-no-backfill-path	.bklg/support/links-hand-edit-denied-with-no-backfill-path/incident.md	05cef98dfab5
+incident	support/advance-commit-ignored-path	.bklg/support/advance-commit-ignored-path/incident.md	05fe22c59f09
+incident	support/telemetry-gitignored-so-runs-never-travel	.bklg/support/telemetry-gitignored-so-runs-never-travel/incident.md	06fa21b98818
+# SHORTFALL (report in F-draft, do not back-fill): bug: 2/8; initiative: 3/4; spike: 0/3

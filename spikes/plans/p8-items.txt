@@ -1,0 +1,14 @@
+# P8 items - 3 E3 items whose reproduction the graph's triage gate is meant to block on
+# (METHOD-P section 5.2). SELECTION CHANGED 2026-09-08 (DECISIONS-2026-09-09 #35): the original
+# hash-order pick reproduced on the first attempt every time, so the gate never fired and the run
+# measured nothing. These are the three items P7 measured as hardest, by correct-rate over all 6
+# draws (3 optional + 3 recommended), so an honest `not-reproduced` is plausible rather than
+# manufactured. Difficulty is measured, not assumed.
+#   issue-74-plan-briefs-dead-plan-anchor 0/6
+#   issue-79-plan-prds-verifier-false-pass 0/6
+#   issue-81-plan-discover-spec-gate-mismatch 1/6
+# corpus 47faec9f46b8d983c2c75f0794164e68415ae706 - generated 2026-09-09T00:54:35.204679Z
+# kind	slug	card	sha256(slug)[:12]
+bug	issue-74-plan-briefs-dead-plan-anchor	RK-S0225	2c6308b7ddbd
+bug	issue-79-plan-prds-verifier-false-pass	RK-S0226	1c161b1d6532
+bug	issue-81-plan-discover-spec-gate-mismatch	RK-S0227	2f0e6d32db27

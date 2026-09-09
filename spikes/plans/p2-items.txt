@@ -1,0 +1,22 @@
+# P2 items — corpus 47faec9f46b8d983c2c75f0794164e68415ae706 — completed items with >=3 artifacts, sha256(slug) order. Generated 2026-09-08T04:58:29.719343Z
+# slug	card	artifacts	sha256(slug)[:12]
+_archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers	story.md	discover.md,implementation-report.md,plan.md,report.md,spec.md	03b313a02ca3
+_archive/docs-site-brand-identity/typography-delivery	project.md	_intake-brief.md,_integration.md,_review.md,closure.md	055e9ac6c667
+support/advance-commit-ignored-path	incident.md	discover.md,implementation-report.md,report.md	05fe22c59f09
+support/fix-lane-plumbing/issue-50-fix-story-before-worktree	story.md	implementation-report.md,report.md,spec.md	0edb93858267
+_archive/docs-site-brand-identity/kb-harvest-and-closeout	project.md	_intake-brief.md,_integration.md,_review.md,closure.md	10c6149614b0
+support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch	story.md	_review.md,implementation-report.md,report.md,spec.md	13295f706c9b
+_archive/docs-site-brand-identity/contrast-verification	project.md	_intake-brief.md,_integration.md,_review.md,closure.md	132e9ad43d8e
+support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding	story.md	_review.md,implementation-report.md,report.md,spec.md	135ae2e6a54e
+support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass	story.md	_review.md,implementation-report.md,report.md,spec.md	15eefe60e458
+_archive/docs-site-brand-identity/brand-token-substrate/brand-ground-in-both-cuts	story.md	discover.md,implementation-report.md,plan.md,report.md,spec.md	1bfe40873a35
+support/fix-lane-plumbing/issue-47-fix-report-md-unauthored	story.md	implementation-report.md,report.md,spec.md	1f3455cc6cb9
+_archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics	bug.md	discover.md,implementation-report.md,report.md	22239e0d5666
+support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination	story.md	implementation-report.md,report.md,spec.md	230f6f2f5ad6
+_archive/docs-site-brand-identity/contrast-verification/blocking-check-empty-blast-radius	story.md	discover.md,implementation-report.md,plan.md,report.md,spec.md	23f403b595c3
+support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse	story.md	_review.md,implementation-report.md,report.md,spec.md	24d6cc2a3846
+support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard	story.md	implementation-report.md,report.md,spec.md	27a592bbef9e
+_archive/docs-site-brand-identity/contrast-verification/recorded-exception-mechanism	story.md	discover.md,implementation-report.md,plan.md,report.md,spec.md	2b4741e16ef4
+support/fix-serve-child-leak/reap-leaked-serve-children	story.md	_review.md,implementation-report.md,report.md,spec.md	2c2efd92ab1f
+support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write	story.md	implementation-report.md,report.md,spec.md	2f86407bec44
+support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded	story.md	_review.md,implementation-report.md,report.md,spec.md	304340ff95f9

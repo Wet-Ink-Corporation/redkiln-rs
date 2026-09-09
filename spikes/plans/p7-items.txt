@@ -1,0 +1,14 @@
+# P7 items — 10 E3 S-SILENT fixtures by sha256(slug) order (METHOD-P §4.2), written BEFORE the first dispatch.
+# corpus 47faec9f46b8d983c2c75f0794164e68415ae706 — generated 2026-09-08T05:26:45.232771Z
+# candidates with a silent fixture and >=1 code/test file in the answer key: 23
+# slug	item_id	answer_key_files	sha256(slug)[:12]
+issue-77-advance-commit-partial-stage	RK-S0234	src/cli/advance.ts,src/process/engine.ts,test/advance-git-commit.test.ts	013918363947
+fix-advance-write-lock-gate-scope	RK-S0263	src/process/engine.ts,test/advance-lock-scope.test.ts	0383e6c89613
+issue-82-status-terminal-field-collision	RK-S0235	src/index/build.ts,src/index/queries.ts,test/fixtures/status/.bklg/client-foundation/api-platform/project.md,test/fixtures/status/.bklg/client-foundation/web-cutover/project.md,test/index-build.test.ts,test/queries-status.test.ts	12744fb799af
+issue-79-plan-prds-verifier-false-pass	RK-S0226	test/helpers/workflow-harness.ts,test/plan-dag.test.ts	1c161b1d6532
+issue-66-id-lock-ec001-rmdir	RK-S0231	src/store/ids.ts,src/store/lock.ts,test/ids.test.ts,test/lock.test.ts	1c17cce5e549
+issue-146-147-boundary-window	RK-S0273	src/store/verify.ts,test/verify.test.ts	1d8b69722c50
+issue-63-advance-gate-diagnostic-truncated	RK-S0230	src/process/engine.ts,src/process/gates.ts,test/engine-gates.test.ts	205efa1f7057
+issue-74-plan-briefs-dead-plan-anchor	RK-S0225	test/plan-contract.test.ts,test/plan-dag.test.ts	2c6308b7ddbd
+issue-81-plan-discover-spec-gate-mismatch	RK-S0227	test/plan-contract.test.ts	2f0e6d32db27
+issue-70-plugin-root-unset	RK-S0232	src/cli/commands.ts,src/cli/index.ts,src/cli/workflow-root.ts,src/store/paths.ts,test/workflow-root.test.ts	31d944f20992

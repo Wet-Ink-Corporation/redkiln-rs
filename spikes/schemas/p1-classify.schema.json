@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "P1 arm L classification record",
+  "description": "METHOD-P §1.2 arm L. The closed classification record a triage dispatch must return. Four ordinal axes, not five: `dynamism` appears in METHOD-P §1.2 but is not registered in spikes/p9/facets.toml, so it can feed no `require` row and no R(stage, ctx) — DECISIONS-2026-09-09 #2, lattice.py I8, F35-DRAFT.md:60. Anchors for every level live in spikes/prompts/p1-classify.md and are part of the card digest recorded on every arm-L record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "criticality",
+    "novelty",
+    "size",
+    "blast_radius",
+    "market_facing",
+    "external_dep",
+    "has_repro",
+    "evidence",
+    "notes"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "description": "The item's kind. Closed list from facets.toml [facet.kind]. Choose the kind the item IS, not the kind of work it will cause.",
+      "enum": [
+        "initiative",
+        "project",
+        "story",
+        "bug",
+        "incident",
+        "spike",
+        "chore",
+        "tech-debt",
+        "security-vuln",
+        "docs"
+      ]
+    },
+    "criticality": {
+      "type": "string",
+      "description": "How much is at stake if this item is done wrong or not at all. See the anchors in the card; `unknown` when the item does not say.",
+      "enum": ["low", "med", "high", "unknown"]
+    },
+    "novelty": {
+      "type": "string",
+      "description": "How much of this work has no worked precedent in the codebase. See the anchors in the card; `unknown` when the item does not say.",
+      "enum": ["low", "med", "high", "unknown"]
+    },
+    "size": {
+      "type": "string",
+      "description": "How much work the item is, in changed surface. See the anchors in the card; `unknown` when the item does not say.",
+      "enum": ["low", "med", "high", "unknown"]
+    },
+    "blast_radius": {
+      "type": "string",
+      "description": "How far a defect introduced by this work would reach. See the anchors in the card; `unknown` when the item does not say.",
+      "enum": ["low", "med", "high", "unknown"]
+    },
+    "market_facing": {
+      "type": "boolean",
+      "description": "True when a person outside the engineering team would notice this change from the outside — a customer, a user, a buyer. False for changes visible only to contributors or operators."
+    },
+    "external_dep": {
+      "type": "boolean",
+      "description": "True when completing this item requires something the team does not control: a third-party service or API, another team's merge, a vendor, a purchase, a credential someone else issues."
+    },
+    "has_repro": {
+      "type": "boolean",
+      "description": "True when the item text contains steps, a command, a failing test, a stack trace or an input that would let a reader observe the problem themselves. False for a described symptom with no way to reach it. Always false for items that are not defects."
+    },
+    "evidence": {
+      "type": "array",
+      "description": "One entry for every axis and boolean above whose value is not `unknown`. Quote the item; never paraphrase. If an axis has no quotable support, its value is `unknown` (ordinal) or false (boolean) and it takes no evidence entry.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "quote"],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "The record field this evidence is for.",
+            "enum": [
+              "kind",
+              "criticality",
+              "novelty",
+              "size",
+              "blast_radius",
+              "market_facing",
+              "external_dep",
+              "has_repro"
+            ]
+          },
+          "quote": {
+            "type": "string",
+            "description": "A verbatim span from the item that supports the value. Must appear in the item text character for character."
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free text. UNTRUSTED and never a predicate input (process-catalog proposal §2.4): nothing here is read by the selection engine. Use it for what could not be expressed above, including why an axis is `unknown`."
+    }
+  }
+}

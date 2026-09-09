@@ -15,6 +15,9 @@ mod gate;
 mod human_gate;
 mod hygiene;
 mod journal;
+mod p1;
+mod p7;
+mod p8;
 mod reconcile;
 mod result_meta;
 mod runner;
@@ -127,6 +130,28 @@ enum Command {
     /// H2: is a suspension lossless across a real process boundary?
     /// H3: does the world move while a gate is open?
     HumanGate(HumanGateArgs),
+
+    /// P1 arm L — triage classification stability. METHOD-P section 1.2.
+    ///
+    /// One classification dispatch per item x 5 repeats x 2 models, against a
+    /// closed record with written anchors. Measures whether the LLM-emitted
+    /// half of the context vector is stable enough for a deterministic
+    /// selection engine — F27 showed the threshold judgement itself flips.
+    ClassifyProbe(ClassifyArgs),
+
+    /// P7 — encapsulated quality: cost vs catch. METHOD-P section 4.
+    ///
+    /// Drives root-cause.toml's graph over the E3 rig across three rigor arms.
+    /// Whether the internal adversary block earns its cost at `recommended`,
+    /// or only at `mandatory`, decides the pack's default rigor.
+    GraphProbe(GraphArgs),
+
+    /// P8 — a gate inside a graph. METHOD-P section 5.
+    ///
+    /// Drives minimal-repro.toml to its triage gate, blocks holding state so
+    /// an external kill is real, then resumes in a fresh process and compares
+    /// every step-output digest across the boundary.
+    ReproProbe(ReproArgs),
 
     /// Internal: re-hydrate suspended state and print its digest.
     ///
@@ -452,6 +477,9 @@ async fn main() -> Result<()> {
         Command::GateProbe(args) => gate_probe(args),
         Command::ReconcileReplay(args) => reconcile_replay(args),
         Command::ReviewProbe(args) => review_probe(&cli.claude_bin, args).await,
+        Command::ClassifyProbe(args) => classify_probe(&cli.claude_bin, args).await,
+        Command::GraphProbe(args) => graph_probe(&cli.claude_bin, args).await,
+        Command::ReproProbe(args) => repro_probe(&cli.claude_bin, args).await,
         Command::DigestProbe(args) => digest_probe(&cli.claude_bin, args).await,
         Command::HumanGate(args) => human_gate(args),
         Command::Rehydrate(args) => {
@@ -2018,4 +2046,1320 @@ mod last_headroom_tests {
         assert!(last_headroom(&path, 1_000).is_none());
         std::fs::remove_dir_all(path.parent().unwrap()).ok();
     }
+}
+
+#[derive(clap::Args)]
+struct ClassifyArgs {
+    /// The pre-registered item list, written before any dispatch (METHOD-P §1.2).
+    #[arg(long, default_value = "../plans/p1-items.txt")]
+    items: PathBuf,
+
+    /// The frozen corpus repo. Read with `git show` only.
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+
+    /// The corpus pin. Every record carries it (METHOD-P §0 rule 2).
+    #[arg(long, default_value = "47faec9f46b8d983c2c75f0794164e68415ae706")]
+    sha: String,
+
+    /// The classification card. Its digest goes on every record and it is not
+    /// edited during P1 (METHOD-P §1.2).
+    #[arg(long, default_value = "../prompts/p1-classify.md")]
+    card: PathBuf,
+
+    /// Committed schema, asserted equal to the built-in before the set runs.
+    #[arg(long, default_value = "../schemas/p1-classify.schema.json")]
+    schema_file: PathBuf,
+
+    /// Results file. Append-only; resume is keyed per (arm, slug, repeat).
+    #[arg(long)]
+    out: PathBuf,
+
+    /// Model tier for this pass. METHOD-P §1.2 runs haiku 4.5 and sonnet 5.
+    #[arg(long, default_value = "haiku")]
+    model: String,
+
+    /// Instrument-variant tag carried in the arm label. #27: the §1.4
+    /// anchor-rewrite re-run is a DIFFERENT instrument, so it runs as `L2` and
+    /// an audit keyed on `arm` can never pool it with `L`.
+    #[arg(long, default_value = "L")]
+    arm_tag: String,
+
+    /// Which repeat this pass is. Five per item per model = 10 draws per item.
+    #[arg(long, default_value_t = 1)]
+    repeat: u32,
+
+    /// Working directory for the child. The card grants no file tools, so this
+    /// only needs to be a real, inert directory, and never the corpus (rule 6).
+    #[arg(long, default_value = "../fixtures/p1-classify-cwd")]
+    cwd: PathBuf,
+
+    /// Validate exactly one dispatch and stop. F20: validate one before the
+    /// set, so a `void: schema` costs one draw instead of two hundred.
+    #[arg(long)]
+    probe_one: bool,
+
+    /// Stop after this many dispatches.
+    #[arg(long)]
+    limit: Option<usize>,
+
+    /// Halt below this five-hour headroom margin. A halt is a pause.
+    #[arg(long, default_value_t = 0.90)]
+    max_five_hour: f64,
+
+    #[arg(long, default_value_t = 0.90)]
+    max_seven_day: f64,
+
+    /// Cumulative spend cap for the lane, in USD. METHOD-P: P1 arm L is $40.
+    #[arg(long, default_value_t = 40.0)]
+    max_cost_usd: f64,
+
+    #[arg(long, default_value_t = 600)]
+    timeout_secs: u64,
+}
+
+/// P1 arm L — classification stability (METHOD-P §1.2).
+async fn classify_probe(claude_bin: &str, args: ClassifyArgs) -> Result<()> {
+    let env = hygiene::assert_clean(claude_bin).await?;
+    let redkiln = std::fs::canonicalize(&args.redkiln)?;
+    std::fs::create_dir_all(&args.cwd)?;
+    let cwd = std::fs::canonicalize(&args.cwd)?;
+    let journal = Journal::open(&args.out, &[])?;
+
+    let model = match args.model.as_str() {
+        "haiku" => Tier::Haiku,
+        "sonnet" => Tier::Sonnet,
+        "opus" => Tier::Opus,
+        other => anyhow::bail!("unknown model tier `{other}`"),
+    };
+
+    // The card is committed before the first dispatch and not edited during P1.
+    // Its digest goes on every record, so a mid-run edit is detectable rather
+    // than silent.
+    let card_body = std::fs::read_to_string(&args.card)
+        .with_context(|| format!("reading --card {}", args.card.display()))?;
+    let card_sha = fingerprint::sha256_hex(card_body.as_bytes());
+    let schema = p1::classify_schema();
+
+    // The binary must not drift from the committed schema file.
+    let disk: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(&args.schema_file)
+            .with_context(|| format!("reading --schema-file {}", args.schema_file.display()))?,
+    )?;
+    let disk_keys = disk["properties"]
+        .as_object()
+        .map(|o| o.keys().cloned().collect::<Vec<_>>());
+    let built_keys = schema["properties"]
+        .as_object()
+        .map(|o| o.keys().cloned().collect::<Vec<_>>());
+    anyhow::ensure!(
+        disk["required"] == schema["required"] && disk_keys == built_keys,
+        "{} has drifted from the built-in classification schema",
+        args.schema_file.display()
+    );
+    let schema_sha = fingerprint::sha256_hex(schema.to_string().as_bytes());
+
+    let margins = Margins {
+        max_five_hour: args.max_five_hour,
+        max_seven_day: args.max_seven_day,
+    };
+    let mut guard = Guard::default();
+    guard.observe(last_headroom(&args.out, chrono::Utc::now().timestamp()).as_ref());
+
+    let runner = Runner::new(claude_bin, env);
+    let done = journal::completed_keys(&args.out);
+    let items = p1::read_items(&args.items)?;
+    let arm = format!("{}-{}", args.arm_tag, args.model);
+
+    // Spend is cumulative across every pass that wrote to this file, so a cap
+    // cannot be evaded by splitting the run into chunks.
+    let mut spent = spend_so_far(&args.out);
+    eprintln!(
+        "P1 arm L: {} items, model {}, repeat {} | card {} schema {} | spent ${:.2} of ${:.2}",
+        items.len(),
+        args.model,
+        args.repeat,
+        &card_sha[..12],
+        &schema_sha[..12],
+        spent,
+        args.max_cost_usd
+    );
+
+    let mut processed = 0usize;
+    for item in &items {
+        if let Some(limit) = args.limit
+            && processed >= limit
+        {
+            break;
+        }
+        let resume_key = format!("P1/{arm}/{}#r{}", item.slug, args.repeat);
+        if done.contains(&resume_key) {
+            eprintln!("  {:<58} skipped (recorded)", item.slug);
+            continue;
+        }
+        if spent >= args.max_cost_usd {
+            eprintln!(
+                "\n  SPEND HALT before {}: ${:.2} over the ${:.2} cap. {} item(s) not dispatched.",
+                item.slug,
+                spent,
+                args.max_cost_usd,
+                items.len().saturating_sub(processed)
+            );
+            break;
+        }
+        match guard.check(margins) {
+            throttle::Verdict::Proceed => {}
+            verdict => {
+                eprintln!("\n  HALT before {}: {}", item.slug, verdict.reason());
+                break;
+            }
+        }
+
+        let raw = p1::card_text(&redkiln, &args.sha, &item.card)?;
+        let redacted = p1::redact_kind(&raw);
+        let prompt = p1::build_prompt(&item.slug, &redacted);
+
+        eprint!("  {:<58} {arm} r{} ... ", item.slug, args.repeat);
+        let spec = StepSpec {
+            experiment: "P1".into(),
+            arm: arm.clone(),
+            label: item.slug.clone(),
+            phase: "classify".into(),
+            occurrence: args.repeat,
+            attempt: 1,
+            model,
+            // METHOD-P §1.2 pins default temperature and says nothing about
+            // effort; haiku rejects the parameter outright, so it is left unset
+            // for both tiers rather than varied silently between them.
+            effort: None,
+            adopt_agent: true,
+            agent: Some(step::AgentCard {
+                name: "p1-classify".into(),
+                description:
+                    "Triage classification for the Redkiln process-catalog selection engine."
+                        .into(),
+                prompt: card_body.clone(),
+                // F20: StructuredOutput is the digest channel. Nothing else,
+                // because the classification is a judgement about the prompt.
+                tools: Some(p1::CARD_TOOLS.iter().map(|t| t.to_string()).collect()),
+                model: Some(args.model.clone()),
+                effort: None,
+                permission_mode: None,
+            }),
+            prompt,
+            schema: Some(schema.clone()),
+            allowed_tools: vec![],
+            permission_mode: Some("bypassPermissions".into()),
+            cwd: cwd.clone(),
+            isolate_mcp: true,
+            extra_flags: vec![],
+            timeout: Duration::from_secs(args.timeout_secs),
+        };
+
+        let (record, _outcome) = runner.run(&spec).await;
+        guard.observe(record.headroom.as_ref());
+
+        // Tool-set equality, as F17/F20 established: `effective.agent` is not
+        // populated when the card is applied with `--agent`, so adoption is
+        // read off the tool set the child actually reports.
+        let declared: BTreeSet<&str> = p1::CARD_TOOLS.into_iter().collect();
+        let adopted = record
+            .effective
+            .as_ref()
+            .and_then(|e| e.tools.as_ref())
+            .is_some_and(|t| t.iter().map(|x| x.as_str()).collect::<BTreeSet<_>>() == declared);
+
+        let valid = record.digest.as_ref().is_some_and(p1::valid_record);
+        let vector = record
+            .digest
+            .as_ref()
+            .filter(|d| p1::valid_record(d))
+            .map(p1::vector);
+        let void_reason: Option<String> = match (adopted, valid) {
+            (true, true) => None,
+            (false, _) => Some("agent card not adopted (F7/F20)".into()),
+            (true, false) => Some(
+                match record.meta.as_ref().and_then(|m| m.api_error_status.as_ref()) {
+                    Some(code) if !code.is_null() => {
+                        format!("platform error {code}, not a model or rig fault; retry")
+                    }
+                    // The F20 shape exactly: the model spoke, in prose.
+                    _ => format!(
+                        "schema ({})",
+                        record
+                            .error_kind
+                            .as_deref()
+                            .unwrap_or("no schema-valid record")
+                    ),
+                },
+            ),
+        };
+
+        let cost = record.total_cost_usd.unwrap_or(0.0);
+        spent += cost;
+        match &vector {
+            Some(v) => eprintln!(
+                "{}/{}/{}/{} kind={} ${:.4} {:.0}s",
+                v["criticality"].as_str().unwrap_or("?"),
+                v["novelty"].as_str().unwrap_or("?"),
+                v["size"].as_str().unwrap_or("?"),
+                v["blast_radius"].as_str().unwrap_or("?"),
+                v["kind"].as_str().unwrap_or("?"),
+                cost,
+                record.wall_clock_ms as f64 / 1000.0
+            ),
+            None => eprintln!(
+                "VOID ({}) ${:.4} {:.0}s",
+                void_reason.as_deref().unwrap_or("?"),
+                cost,
+                record.wall_clock_ms as f64 / 1000.0
+            ),
+        }
+
+        journal.append(&serde_json::json!({
+            "experiment": "P1",
+            "arm": arm,
+            "resume_key": resume_key,
+            "outcome": if void_reason.is_none() { "ok" } else { "void" },
+            "void_reason": void_reason,
+            "card_adopted": adopted,
+            "item": item.slug,
+            "item_kind_declared": item.kind,
+            "card_path": item.card,
+            "slug_hash": item.hash,
+            "model": args.model,
+            "repeat": args.repeat,
+            "corpus_sha": args.sha,
+            "card_sha256": card_sha,
+            "schema_sha256": schema_sha,
+            "vector": vector,
+            "digest": record.digest,
+            "step": record,
+        }))?;
+
+        processed += 1;
+        if args.probe_one {
+            eprintln!("\n  --probe-one: stopping after one dispatch (F20 pre-flight).");
+            break;
+        }
+    }
+
+    eprintln!(
+        "\n  spend in this file: ${:.2} of ${:.2}",
+        spent, args.max_cost_usd
+    );
+    println!("wrote {}", journal.path().display());
+    Ok(())
+}
+
+/// Cumulative `total_cost_usd` already recorded in a results file.
+///
+/// Read from the file rather than counted in memory, so a cap holds across the
+/// chunked runs these lanes are actually executed in.
+fn spend_so_far(path: &std::path::Path) -> f64 {
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return 0.0;
+    };
+    text.lines()
+        .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+        .filter_map(|r| {
+            r.get("step")
+                .and_then(|s| s.get("total_cost_usd"))
+                .and_then(|c| c.as_f64())
+        })
+        .sum()
+}
+
+#[derive(clap::Args)]
+struct GraphArgs {
+    /// The pre-registered item list, written before the first dispatch
+    /// (METHOD-P §4.2): 10 S-SILENT fixtures by hash order of slug.
+    #[arg(long, default_value = "../plans/p7-items.txt")]
+    items: PathBuf,
+
+    /// The answer key and checkpoint SHAs (METHOD-E3's own manifest).
+    #[arg(long, default_value = "../results/s03-fixlane-manifest.jsonl")]
+    manifest: PathBuf,
+
+    /// The activity graph under test. Its shape is asserted, not assumed.
+    #[arg(long, default_value = "../p9/catalog/root-cause.toml")]
+    graph: PathBuf,
+
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+
+    #[arg(long, default_value = "../fixtures/s01-wt")]
+    worktree: PathBuf,
+
+    #[arg(long)]
+    out: PathBuf,
+
+    /// Rigor arm: optional | recommended | mandatory (METHOD-P §4.2).
+    #[arg(long, default_value = "recommended")]
+    arm: String,
+
+    #[arg(long, default_value_t = 1)]
+    repeat: u32,
+
+    /// Model tier for the investigator and the adversary. METHOD-P §4.5 pins
+    /// Opus for both. The catalog carries no `model` key — dispatch identity is
+    /// `role` — so the tier is the driver's choice, and is recorded.
+    #[arg(long, default_value = "opus")]
+    model: String,
+
+    #[arg(long, default_value = "xhigh")]
+    effort: String,
+
+    /// Run one graph and stop — this lane's F20 pre-flight.
+    #[arg(long)]
+    probe_one: bool,
+
+    #[arg(long)]
+    only: Option<String>,
+
+    #[arg(long)]
+    limit: Option<usize>,
+
+    #[arg(long, default_value_t = 0.90)]
+    max_five_hour: f64,
+
+    #[arg(long, default_value_t = 0.90)]
+    max_seven_day: f64,
+
+    /// Cumulative spend cap. METHOD-P §4.5: P7 halts at $200.
+    #[arg(long, default_value_t = 200.0)]
+    max_cost_usd: f64,
+
+    #[arg(long, default_value_t = 1800)]
+    timeout_secs: u64,
+
+    /// Hard bound on the `confirm` step's test run (#31). The catalog declares
+    /// `timeout_secs = "${toolchain.test_timeout}"` on that step; without a
+    /// bound one run took 28 minutes and stalled the arm.
+    #[arg(long, default_value_t = 420)]
+    confirm_timeout_secs: u64,
+}
+
+/// One line of `p7-items.txt`.
+struct P7Item {
+    slug: String,
+    answer_key: Vec<String>,
+}
+
+fn read_p7_items(path: &std::path::Path) -> Result<Vec<P7Item>> {
+    let text = std::fs::read_to_string(path)
+        .with_context(|| format!("reading --items {}", path.display()))?;
+    let mut out = Vec::new();
+    for line in text.lines() {
+        if line.trim().is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let f: Vec<&str> = line.split('\t').collect();
+        anyhow::ensure!(f.len() >= 4, "malformed p7 items line: {line}");
+        out.push(P7Item {
+            slug: f[0].to_string(),
+            answer_key: f[2].split(',').map(str::to_string).collect(),
+        });
+    }
+    anyhow::ensure!(!out.is_empty(), "no items in {}", path.display());
+    Ok(out)
+}
+
+/// The key every step record carries. A loop-back re-enters `hypothesise`, so
+/// the pass number is part of the key or the second entry would collide with
+/// the first.
+fn step_key(activity: &str, step: &str, item: &str, arm: &str, repeat: u32, pass: u32) -> String {
+    let s = format!("{activity}/{step}/{item}/{arm}/r{repeat}/p{pass}");
+    format!("{}:{}", &fingerprint::sha256_hex(s.as_bytes())[..12], s)
+}
+
+/// P7 — the encapsulated `adversary -> policy -> gate` block, priced against
+/// what it catches (METHOD-P §4).
+async fn graph_probe(claude_bin: &str, args: GraphArgs) -> Result<()> {
+    let arm = p7::Arm::parse(&args.arm)?;
+    let g = p7::guard_graph(&args.graph)?;
+    let env = hygiene::assert_clean(claude_bin).await?;
+    let redkiln = std::fs::canonicalize(&args.redkiln)?;
+    let worktree = std::fs::canonicalize(&args.worktree)?;
+    let journal = Journal::open(&args.out, &[])?;
+
+    let model = match args.model.as_str() {
+        "haiku" => Tier::Haiku,
+        "sonnet" => Tier::Sonnet,
+        "opus" => Tier::Opus,
+        other => anyhow::bail!("unknown model tier `{other}`"),
+    };
+    let effort = match args.effort.as_str() {
+        "low" => Effort::Low,
+        "medium" => Effort::Medium,
+        "high" => Effort::High,
+        "xhigh" => Effort::Xhigh,
+        "max" => Effort::Max,
+        other => anyhow::bail!("unknown effort `{other}`"),
+    };
+
+    let margins = Margins {
+        max_five_hour: args.max_five_hour,
+        max_seven_day: args.max_seven_day,
+    };
+    let mut guard = Guard::default();
+    guard.observe(last_headroom(&args.out, chrono::Utc::now().timestamp()).as_ref());
+
+    let runner = Runner::new(claude_bin, env);
+    let done = journal::completed_keys(&args.out);
+    let items = read_p7_items(&args.items)?;
+    let manifest = read_manifest(&args.manifest)?;
+    let hyp_schema = p7::hypothesis_schema();
+    let adv_schema = e3::typed_findings_schema();
+    // #22 (revised): the adversary card is purpose-built for this step. The
+    // catalog's `adversary` takes `log` and `report` as inputs — it reviews a
+    // CLAIM, not an implementation against acceptance criteria, which is what
+    // the production `redkiln-review` card is written for.
+
+    let mut spent = spend_so_far(&args.out);
+    eprintln!(
+        "P7 — {} items, arm {}, repeat {}, {}/{} | graph {} v{} {} | loopback max {} | spent ${:.2} of ${:.2}",
+        items.len(), arm.as_str(), args.repeat, args.model, args.effort,
+        g.activity_id, g.version, &g.sha256[..12], g.loopback_max, spent, args.max_cost_usd
+    );
+    if arm == p7::Arm::Mandatory && g.max_rigor.as_deref() == Some("recommended") {
+        eprintln!(
+            "  NOTE (#7): max_rigor=recommended, so the engine would never SELECT this activity at \
+             mandatory. This arm prices the block, not a reachable configuration."
+        );
+    }
+
+    let mut processed = 0usize;
+    for item in &items {
+        if let Some(only) = &args.only
+            && &item.slug != only
+        {
+            continue;
+        }
+        if let Some(limit) = args.limit
+            && processed >= limit
+        {
+            break;
+        }
+        let run_key = format!("P7/{}/{}#r{}", arm.as_str(), item.slug, args.repeat);
+        if done.contains(&run_key) {
+            eprintln!("  {:<44} skipped (recorded)", item.slug);
+            continue;
+        }
+        if spent >= args.max_cost_usd {
+            eprintln!(
+                "\n  SPEND HALT before {}: ${:.2} over the ${:.2} cap. {} item(s) not dispatched.",
+                item.slug, spent, args.max_cost_usd,
+                items.len().saturating_sub(processed)
+            );
+            break;
+        }
+        match guard.check(margins) {
+            throttle::Verdict::Proceed => {}
+            verdict => {
+                eprintln!("\n  HALT before {}: {}", item.slug, verdict.reason());
+                break;
+            }
+        }
+
+        let Some(m) = manifest.iter().find(|m| m.slug == item.slug) else {
+            eprintln!("  {:<44} SKIPPED (not in manifest)", item.slug);
+            continue;
+        };
+        let Some(sha) = m.checkpoint_sha.clone() else { continue };
+
+        // F17: the fix must be UNREACHABLE, not merely reverted.
+        let fixture = worktree
+            .parent()
+            .unwrap_or(&worktree)
+            .join(format!("e3-silent-{}", item.slug));
+        let node_modules_linked = e3::build_silent_fixture(&redkiln, &fixture, &sha)?;
+        e3::assert_fix_unreachable(&fixture, &sha)?;
+        if !node_modules_linked {
+            anyhow::bail!("no node_modules for {} — it could not run tests", item.slug);
+        }
+
+        let read = |n: &str| std::fs::read_to_string(redkiln.join(&m.dir).join(n)).unwrap_or_default();
+        let spec_md = read("spec.md");
+        let report_md = read("implementation-report.md");
+        let arm_label = format!("{}-{}", arm.as_str(), args.model);
+
+        eprintln!("  {} [{}] r{}", item.slug, arm.as_str(), args.repeat);
+
+        // ---- graph state --------------------------------------------------
+        let mut hyp_passes = 0u32;      // investigator dispatches ONLY (#25)
+        let mut dispatches = 0u32;      // every model dispatch, against attempts_total
+        let mut gate_arrivals = 0u32;   // `no-hypothesis` fires (#4)
+        let mut loop_backs = 0u32;      // `policy` false -> hypothesise
+        let mut run_cost = 0.0f64;
+        let mut hypothesis: Option<serde_json::Value> = None;
+        let mut findings: Option<serde_json::Value> = None;
+        let mut gate_answer: Option<String> = None;
+        let mut test_run: Option<p7::TestRun> = None;
+        let mut policy_pass = true;
+        let mut policy_verdict: Option<serde_json::Value> = None;
+        let mut void_reason: Option<String> = None;
+        let mut deviation: Option<serde_json::Value> = None;
+
+        // `budget = { attempts_total = 8 }` on the activity is a real ceiling.
+        const ATTEMPTS_TOTAL: u32 = 8;
+
+        'graph: loop {
+            // ---- hypothesise: repeat until confirmed (catalog max 3) -------
+            let mut passes_this_entry = 0i64;
+            loop {
+                if dispatches >= ATTEMPTS_TOTAL {
+                    void_reason = Some("activity budget attempts_total (8) exhausted".into());
+                    break 'graph;
+                }
+                let pass = hyp_passes + 1;
+                let prompt = p7::build_investigator_prompt(
+                    &item.slug, &spec_md, &report_md,
+                    hypothesis.as_ref(), findings.as_ref(), gate_answer.as_deref(),
+                );
+                eprint!("    hypothesise p{pass} ... ");
+                let (rec, _) = runner.run(&StepSpec {
+                    experiment: "P7".into(),
+                    arm: arm_label.clone(),
+                    label: format!("{}#hypothesise", item.slug),
+                    phase: "hypothesise".into(),
+                    occurrence: args.repeat,
+                    attempt: pass,
+                    model,
+                    effort: Some(effort),
+                    adopt_agent: true,
+                    agent: Some(step::AgentCard {
+                        name: "investigator".into(),
+                        description: "Finds where a fault originates and how it could be discriminated.".into(),
+                        prompt: p7::INVESTIGATOR_CARD.into(),
+                        tools: Some(e3::CARD_TOOLS.iter().map(|t| t.to_string()).collect()),
+                        model: Some(args.model.clone()),
+                        effort: Some(args.effort.clone()),
+                        permission_mode: None,
+                    }),
+                    prompt,
+                    schema: Some(hyp_schema.clone()),
+                    allowed_tools: vec![],
+                    permission_mode: Some("bypassPermissions".into()),
+                    cwd: fixture.clone(),
+                    isolate_mcp: true,
+                    extra_flags: vec![],
+                    timeout: Duration::from_secs(args.timeout_secs),
+                }).await;
+                guard.observe(rec.headroom.as_ref());
+                hyp_passes += 1;
+                dispatches += 1;
+                passes_this_entry += 1;
+                let cost = rec.total_cost_usd.unwrap_or(0.0);
+                run_cost += cost;
+                spent += cost;
+
+                let digest = rec.digest.clone();
+                let status = digest.as_ref()
+                    .and_then(|d| d.get("status")).and_then(|v| v.as_str())
+                    .unwrap_or("").to_string();
+                eprintln!("{} ${:.3} {:.0}s",
+                    if status.is_empty() { "NO DIGEST" } else { &status },
+                    cost, rec.wall_clock_ms as f64 / 1000.0);
+
+                if let Some(d) = digest.as_ref()
+                    && let Some(rd) = d.get("request_deviation")
+                    && !rd.is_null()
+                {
+                    deviation = Some(rd.clone());
+                }
+                journal.append(&serde_json::json!({
+                    "experiment": "P7", "phase": "hypothesise",
+                    "step_key": step_key(&g.activity_id, "hypothesise", &item.slug, arm.as_str(), args.repeat, pass),
+                    "run_key": run_key, "item": item.slug, "arm": arm.as_str(),
+                    "arm_label": arm_label, "repeat": args.repeat, "pass": pass,
+                    "model": args.model, "effort": args.effort,
+                    "graph": { "id": g.activity_id, "version": g.version, "sha256": g.sha256 },
+                    "corpus_sha": sha, "digest": digest, "step": rec,
+                }))?;
+
+                if digest.is_none() {
+                    void_reason = Some("hypothesise returned no schema-valid record (F20)".into());
+                    break 'graph;
+                }
+                hypothesis = digest;
+                if status == "confirmed" {
+                    break;
+                }
+                // The `no-hypothesis` gate: `when status != 'confirmed'`. It
+                // fires in EVERY arm (#4) and is auto-answered — P7 measures
+                // catch-per-token, and gate behaviour is P8's question.
+                gate_arrivals += 1;
+                gate_answer = Some(AUTO_GATE_ANSWER.into());
+                journal.append(&serde_json::json!({
+                    "experiment": "P7", "phase": "no-hypothesis",
+                    "step_key": step_key(&g.activity_id, "no-hypothesis", &item.slug, arm.as_str(), args.repeat, pass),
+                    "run_key": run_key, "item": item.slug, "arm": arm.as_str(),
+                    "repeat": args.repeat, "pass": pass, "kind": "gate",
+                    "question": "root-cause.no-hypothesis",
+                    "auto_answered": AUTO_GATE_ANSWER,
+                    "arrival": gate_arrivals,
+                    "graph": { "id": g.activity_id, "version": g.version, "sha256": g.sha256 },
+                }))?;
+                if passes_this_entry >= g.hypothesise_repeat_max {
+                    break; // on_exhausted = escalate; the gate above is it
+                }
+            }
+
+            // ---- confirm: a real test run in the fixture -------------------
+            let selection = hypothesis.as_ref()
+                .and_then(|h| h.get("discriminating_test"))
+                .and_then(|v| v.as_str()).unwrap_or("");
+            eprint!("    confirm ... ");
+            let t = p7::run_selected_test(&fixture, selection, args.confirm_timeout_secs);
+            eprintln!("{} ({} ms)",
+                if !t.spawned { "not run" } else if t.passed { "passed" } else { "failed" },
+                t.duration_ms);
+            journal.append(&serde_json::json!({
+                "experiment": "P7", "phase": "confirm",
+                "step_key": step_key(&g.activity_id, "confirm", &item.slug, arm.as_str(), args.repeat, hyp_passes.max(1)),
+                "run_key": run_key, "item": item.slug, "arm": arm.as_str(),
+                "repeat": args.repeat, "kind": "tool", "run": "toolchain:test",
+                "test": t,
+                "graph": { "id": g.activity_id, "version": g.version, "sha256": g.sha256 },
+            }))?;
+            test_run = Some(t);
+
+            // ---- adversary: when rigor >= recommended ---------------------
+            if arm.runs_adversary() {
+                if dispatches >= ATTEMPTS_TOTAL {
+                    void_reason = Some("activity budget attempts_total (8) exhausted".into());
+                    break 'graph;
+                }
+                let prompt = p7::build_adversary_prompt(
+                    &item.slug,
+                    hypothesis.as_ref().unwrap_or(&serde_json::Value::Null),
+                    test_run.as_ref().unwrap(),
+                );
+                eprint!("    adversary ... ");
+                let (rec, _) = runner.run(&StepSpec {
+                    experiment: "P7".into(),
+                    arm: arm_label.clone(),
+                    label: format!("{}#adversary", item.slug),
+                    phase: "adversary".into(),
+                    occurrence: args.repeat,
+                    attempt: loop_backs + 1,
+                    model,
+                    effort: Some(effort),
+                    adopt_agent: true,
+                    agent: Some(step::AgentCard {
+                        name: "adversary".into(),
+                        description: "Tries to break a proposed root cause, and classifies what it finds by evidence class.".into(),
+                        prompt: p7::ADVERSARY_CARD.into(),
+                        tools: Some(e3::CARD_TOOLS.iter().map(|t| t.to_string()).collect()),
+                        model: Some(args.model.clone()),
+                        effort: Some(args.effort.clone()),
+                        permission_mode: None,
+                    }),
+                    prompt,
+                    schema: Some(adv_schema.clone()),
+                    allowed_tools: vec![],
+                    permission_mode: Some("bypassPermissions".into()),
+                    cwd: fixture.clone(),
+                    isolate_mcp: true,
+                    extra_flags: vec![],
+                    timeout: Duration::from_secs(args.timeout_secs),
+                }).await;
+                guard.observe(rec.headroom.as_ref());
+                // #25: counts against the activity budget, NOT against
+                // `hypothesise_passes` — conflating them made a single-pass
+                // recommended run report `passes=2, gate_arrivals=0`.
+                dispatches += 1;
+                let cost = rec.total_cost_usd.unwrap_or(0.0);
+                run_cost += cost;
+                spent += cost;
+                eprintln!("{} ${:.3} {:.0}s",
+                    rec.digest.as_ref().map_or("NO DIGEST".to_string(), |d| format!(
+                        "{} finding(s)",
+                        d.get("findings").and_then(|f| f.as_array()).map_or(0, |a| a.len()))),
+                    cost, rec.wall_clock_ms as f64 / 1000.0);
+                journal.append(&serde_json::json!({
+                    "experiment": "P7", "phase": "adversary",
+                    "step_key": step_key(&g.activity_id, "adversary", &item.slug, arm.as_str(), args.repeat, loop_backs + 1),
+                    "run_key": run_key, "item": item.slug, "arm": arm.as_str(),
+                    "arm_label": arm_label, "repeat": args.repeat, "model": args.model,
+                    "graph": { "id": g.activity_id, "version": g.version, "sha256": g.sha256 },
+                    "digest": rec.digest, "step": rec,
+                }))?;
+                findings = rec.digest.clone();
+            }
+
+            // ---- policy: findings.none(evidence in [Reproduced, MutationSurvived])
+            // e3::LENIENT blocks on exactly those two classes; STRICT would
+            // also block on `narrowed-pin`, which the catalog's expression does
+            // not name. The classes differ only in casing.
+            let v = findings.as_ref().map(|f| e3::policy_verdict(f, e3::LENIENT));
+            policy_pass = v.as_ref().is_none_or(|v| !v.blocks);
+            policy_verdict = v.as_ref().map(|v| serde_json::to_value(v).unwrap_or_default());
+            eprintln!("    policy   ... {}", if policy_pass { "pass" } else { "FALSE" });
+            journal.append(&serde_json::json!({
+                "experiment": "P7", "phase": "policy",
+                "step_key": step_key(&g.activity_id, "policy", &item.slug, arm.as_str(), args.repeat, loop_backs + 1),
+                "run_key": run_key, "item": item.slug, "arm": arm.as_str(),
+                "repeat": args.repeat, "kind": "check",
+                "expr": "findings.none(evidence in ['Reproduced', 'MutationSurvived'])",
+                "policy_mapping": "e3::LENIENT (blocks on reproduced | mutation-survived)",
+                "pass": policy_pass, "verdict": policy_verdict,
+                "loop_backs_so_far": loop_backs,
+                "graph": { "id": g.activity_id, "version": g.version, "sha256": g.sha256 },
+            }))?;
+
+            if policy_pass || !arm.loops_back() || (loop_backs as i64) >= g.loopback_max {
+                break 'graph;
+            }
+            loop_backs += 1;
+            eprintln!("    loop-back {} of {} (policy false)", loop_backs, g.loopback_max);
+        }
+
+        // ---- signoff: when rigor >= mandatory, auto-answered `accept` ------
+        if arm.runs_signoff() && void_reason.is_none() {
+            journal.append(&serde_json::json!({
+                "experiment": "P7", "phase": "signoff",
+                "step_key": step_key(&g.activity_id, "signoff", &item.slug, arm.as_str(), args.repeat, 1),
+                "run_key": run_key, "item": item.slug, "arm": arm.as_str(),
+                "repeat": args.repeat, "kind": "gate", "question": "root-cause.accept",
+                "auto_answered": "accept",
+                "graph": { "id": g.activity_id, "version": g.version, "sha256": g.sha256 },
+            }))?;
+        }
+
+        // ---- emit: the run's result line ----------------------------------
+        let scored = hypothesis.as_ref().map(|h| p7::score(h, &item.answer_key));
+        if let Some(s) = &scored {
+            eprintln!(
+                "    emit     ... root cause {} | {} pass(es), {} gate arrival(s), {} loop-back(s), ${:.2}",
+                if s.correct { "CORRECT" } else { "missed" },
+                hyp_passes, gate_arrivals, loop_backs, run_cost
+            );
+        }
+        journal.append(&serde_json::json!({
+            "experiment": "P7", "phase": "emit",
+            "resume_key": run_key, "run_key": run_key,
+            "outcome": if void_reason.is_none() && scored.is_some() { "ok" } else { "void" },
+            "void_reason": void_reason,
+            "item": item.slug, "arm": arm.as_str(), "arm_label": arm_label,
+            "repeat": args.repeat, "model": args.model, "effort": args.effort,
+            "graph": { "id": g.activity_id, "version": g.version, "sha256": g.sha256,
+                       "max_rigor": g.max_rigor, "loopback_max": g.loopback_max },
+            "engine_would_select_at_this_rigor":
+                !(arm == p7::Arm::Mandatory && g.max_rigor.as_deref() == Some("recommended")),
+            "answer_key": item.answer_key,
+            "scored": scored,
+            "hypothesis": hypothesis,
+            "request_deviation": deviation,
+            "deviation_ok_declared": ["add", "downgrade"],
+            "test": test_run,
+            "policy_pass": policy_pass,
+            "policy_verdict": policy_verdict,
+            "hypothesise_passes": hyp_passes,
+            "model_dispatches": dispatches,
+            "no_hypothesis_arrivals": gate_arrivals,
+            "loop_backs": loop_backs,
+            "run_cost_usd": run_cost,
+            "corpus_sha": sha,
+            "fix_unreachable": true,
+            "node_modules_linked": node_modules_linked,
+            "review_cwd": fixture.to_string_lossy(),
+        }))?;
+
+        gate::reset_worktree(&worktree, &sha).ok();
+        processed += 1;
+        if args.probe_one {
+            eprintln!("\n  --probe-one: stopping after one graph run (F20 pre-flight).");
+            break;
+        }
+    }
+
+    eprintln!("\n  spend in this file: ${:.2} of ${:.2}", spent, args.max_cost_usd);
+    println!("wrote {}", journal.path().display());
+    Ok(())
+}
+
+/// What the `no-hypothesis` gate is auto-answered with (#4).
+///
+/// Deliberately carries no hint about the fault — an answer that pointed at the
+/// defect would be the leak F17 already cost this programme once.
+const AUTO_GATE_ANSWER: &str = "Continue with the evidence you have. State your best hypothesis and \
+                                mark it `unconfirmed` if that is what it is.";
+
+#[derive(clap::Args)]
+struct ReproArgs {
+    /// Which half of the experiment this invocation is.
+    ///
+    /// `run` drives to the gate mark and then BLOCKS holding its state in
+    /// memory, so an external kill is a real kill. `resume` is a fresh process
+    /// that must rebuild everything from disk — writing state and reading it
+    /// back in-process would prove nothing (F19, `human_gate.rs`).
+    #[arg(long, default_value = "run")]
+    phase: String,
+
+    #[arg(long, default_value = "../plans/p8-items.txt")]
+    items: PathBuf,
+
+    #[arg(long, default_value = "../results/s03-fixlane-manifest.jsonl")]
+    manifest: PathBuf,
+
+    #[arg(long, default_value = "../p9/catalog/minimal-repro.toml")]
+    graph: PathBuf,
+
+    #[arg(long, default_value = "D:/repos/redkiln")]
+    redkiln: PathBuf,
+
+    #[arg(long, default_value = "../fixtures/s01-wt")]
+    worktree: PathBuf,
+
+    /// Where suspended graph state lives between the kill and the resume.
+    #[arg(long, default_value = "../results/p8-state")]
+    state_dir: PathBuf,
+
+    #[arg(long)]
+    out: PathBuf,
+
+    /// The delay arm this run belongs to: `0-delay`, `65-min`, `24-h`, or
+    /// `control` for the no-kill runs (METHOD-P §5.2).
+    #[arg(long, default_value = "0-delay")]
+    arm: String,
+
+    #[arg(long, default_value_t = 1)]
+    repeat: u32,
+
+    /// METHOD-P §5.2 pins haiku for P8.
+    #[arg(long, default_value = "haiku")]
+    model: String,
+
+    #[arg(long)]
+    only: Option<String>,
+
+    /// `answer` phase: the gate answer to record. §9b.15 makes `answer` the
+    /// gate's only output, and free text is forbidden, so this is an option id.
+    #[arg(long, default_value = "provide-repro-steps")]
+    answer: String,
+
+    /// How long `run` blocks at the mark before giving up on being killed.
+    #[arg(long, default_value_t = 900)]
+    block_secs: u64,
+
+    /// Suspend at the triage gate even when `attempt` reported `reproduced`
+    /// (#36). METHOD-P §5.2's fixture — "repro steps removed so the gate fires"
+    /// — does not fire: measured, three redactions and a difficulty-selected
+    /// item set all reproduced on attempt 1. §5.3's questions are about the
+    /// resume MECHANISM, not the gate's firing condition, so the `when`
+    /// predicate is overridden and nothing else is. The state written, killed
+    /// and reloaded is the investigator's real output; every record carries
+    /// `gate_forced`.
+    #[arg(long)]
+    force_gate: bool,
+
+    #[arg(long, default_value_t = 0.90)]
+    max_five_hour: f64,
+
+    #[arg(long, default_value_t = 0.90)]
+    max_seven_day: f64,
+
+    /// Cumulative spend cap. METHOD-P: P8 is $40.
+    #[arg(long, default_value_t = 40.0)]
+    max_cost_usd: f64,
+
+    #[arg(long, default_value_t = 900)]
+    timeout_secs: u64,
+}
+
+fn p8_state_path(dir: &std::path::Path, item: &str, arm: &str, repeat: u32) -> PathBuf {
+    dir.join(format!(
+        "{}--{}--r{}.json",
+        item.replace(['/', '\\'], "_"),
+        arm,
+        repeat
+    ))
+}
+
+fn p8_answer_path(dir: &std::path::Path, item: &str, arm: &str, repeat: u32) -> PathBuf {
+    let mut p = p8_state_path(dir, item, arm, repeat);
+    p.set_extension("answer.json");
+    p
+}
+
+/// P8 — a gate inside a graph (METHOD-P §5).
+async fn repro_probe(claude_bin: &str, args: ReproArgs) -> Result<()> {
+    // `answer` touches no model and needs no environment.
+    if args.phase == "answer" {
+        let items = p1::read_items(&args.items)?;
+        for item in &items {
+            if let Some(only) = &args.only
+                && &item.slug != only
+            {
+                continue;
+            }
+            let path = p8_answer_path(&args.state_dir, &item.slug, &args.arm, args.repeat);
+            let a = p8::GateAnswer {
+                answer: args.answer.clone(),
+                answered_at: chrono::Utc::now(),
+                question: "repro.cannot-reproduce".into(),
+            };
+            if let Some(p) = path.parent() {
+                std::fs::create_dir_all(p)?;
+            }
+            std::fs::write(&path, serde_json::to_string_pretty(&a)?)?;
+            eprintln!("  answered {} [{}] r{} -> {}", item.slug, args.arm, args.repeat, args.answer);
+        }
+        return Ok(());
+    }
+
+    let env = hygiene::assert_clean(claude_bin).await?;
+    let redkiln = std::fs::canonicalize(&args.redkiln)?;
+    let worktree = std::fs::canonicalize(&args.worktree)?;
+    let journal = Journal::open(&args.out, &[])?;
+    let graph_text = std::fs::read_to_string(&args.graph)
+        .with_context(|| format!("reading {}", args.graph.display()))?;
+    let graph_sha = fingerprint::sha256_hex(graph_text.as_bytes());
+
+    let model = match args.model.as_str() {
+        "haiku" => Tier::Haiku,
+        "sonnet" => Tier::Sonnet,
+        "opus" => Tier::Opus,
+        other => anyhow::bail!("unknown model tier `{other}`"),
+    };
+    let margins = Margins {
+        max_five_hour: args.max_five_hour,
+        max_seven_day: args.max_seven_day,
+    };
+    let mut guard = Guard::default();
+    guard.observe(last_headroom(&args.out, chrono::Utc::now().timestamp()).as_ref());
+
+    let runner = Runner::new(claude_bin, env);
+    let items = p1::read_items(&args.items)?;
+    let manifest = read_manifest(&args.manifest)?;
+    let attempt_schema = p8::attempt_schema();
+    let reduce_schema = p8::reduce_schema();
+    let mut spent = spend_so_far(&args.out);
+
+    eprintln!(
+        "P8 [{}] arm {} r{} — {} item(s), model {} | graph {} | spent ${:.2} of ${:.2}",
+        args.phase, args.arm, args.repeat, items.len(), args.model,
+        &graph_sha[..12], spent, args.max_cost_usd
+    );
+
+    for item in &items {
+        if let Some(only) = &args.only
+            && &item.slug != only
+        {
+            continue;
+        }
+        if spent >= args.max_cost_usd {
+            eprintln!("\n  SPEND HALT before {}: ${:.2} over ${:.2}", item.slug, spent, args.max_cost_usd);
+            break;
+        }
+        match guard.check(margins) {
+            throttle::Verdict::Proceed => {}
+            verdict => {
+                eprintln!("\n  HALT before {}: {}", item.slug, verdict.reason());
+                break;
+            }
+        }
+        let Some(m) = manifest.iter().find(|m| m.slug == item.slug) else {
+            eprintln!("  {:<44} SKIPPED (not in manifest)", item.slug);
+            continue;
+        };
+        let Some(sha) = m.checkpoint_sha.clone() else { continue };
+
+        let fixture = worktree
+            .parent()
+            .unwrap_or(&worktree)
+            .join(format!("e3-silent-{}", item.slug));
+        e3::build_silent_fixture(&redkiln, &fixture, &sha)?;
+        e3::assert_fix_unreachable(&fixture, &sha)?;
+
+        let spec_raw = std::fs::read_to_string(redkiln.join(&m.dir).join("spec.md")).unwrap_or_default();
+        // §5.2's fixture: "3 E3 items with the repro steps deliberately
+        // removed so the gate fires". Removed in the PROMPT — the corpus is
+        // frozen and is never written to (AFK brief rule 6).
+        let (spec, removed) = p8::strip_repro(&spec_raw);
+        let state_path = p8_state_path(&args.state_dir, &item.slug, &args.arm, args.repeat);
+        let answer_path = p8_answer_path(&args.state_dir, &item.slug, &args.arm, args.repeat);
+
+        // ---------------------------------------------------------------- run
+        if args.phase == "run" || args.phase == "control" {
+            let mut steps: Vec<p8::StepOutput> = Vec::new();
+            let mut gate_arrivals = 0u32;
+            let mut tokens = 0u64;
+            let mut cost = 0.0f64;
+            let mut pass = 0u32;
+            let mut reproduced = false;
+
+            // `attempt`: repeat until reproduced, max 3 (catalog).
+            while pass < 3 {
+                pass += 1;
+                eprint!("  {} [{}] attempt p{} ... ", item.slug, args.arm, pass);
+                let (rec, _) = runner.run(&StepSpec {
+                    experiment: "P8".into(),
+                    arm: args.arm.clone(),
+                    label: format!("{}#attempt", item.slug),
+                    phase: "attempt".into(),
+                    occurrence: args.repeat,
+                    attempt: pass,
+                    model,
+                    effort: None,
+                    adopt_agent: true,
+                    agent: Some(step::AgentCard {
+                        name: "investigator".into(),
+                        description: "Reproduces a reported fault, then reduces it.".into(),
+                        prompt: p8::REPRO_CARD.into(),
+                        tools: Some(e3::CARD_TOOLS.iter().map(|t| t.to_string()).collect()),
+                        model: Some(args.model.clone()),
+                        effort: None,
+                        permission_mode: None,
+                    }),
+                    prompt: p8::build_attempt_prompt(&item.slug, &spec, None),
+                    schema: Some(attempt_schema.clone()),
+                    allowed_tools: vec![],
+                    permission_mode: Some("bypassPermissions".into()),
+                    cwd: fixture.clone(),
+                    isolate_mcp: true,
+                    extra_flags: vec![],
+                    timeout: Duration::from_secs(args.timeout_secs),
+                }).await;
+                guard.observe(rec.headroom.as_ref());
+                let c = rec.total_cost_usd.unwrap_or(0.0);
+                // Output tokens are the resume-cost unit F28 priced a stage
+                // gate in (~18.6k), so P8's ratio is comparable to it.
+                let t = rec.usage.as_ref().and_then(|u| u.output_tokens).unwrap_or(0);
+                cost += c;
+                spent += c;
+                tokens += t;
+                let status = rec.digest.as_ref()
+                    .and_then(|d| d.get("status")).and_then(|v| v.as_str())
+                    .unwrap_or("").to_string();
+                eprintln!("{} ${:.4} {:.0}s",
+                    if status.is_empty() { "NO DIGEST" } else { &status },
+                    c, rec.wall_clock_ms as f64 / 1000.0);
+                let out = rec.digest.clone().unwrap_or(serde_json::Value::Null);
+                steps.push(p8::StepOutput::new("attempt", pass, out, t, c));
+                journal.append(&serde_json::json!({
+                    "experiment": "P8", "phase": "attempt", "arm": args.arm,
+                    "item": item.slug, "repeat": args.repeat, "pass": pass,
+                    "graph_sha256": graph_sha, "corpus_sha": sha,
+                    "repro_section_removed": removed,
+                    "digest": rec.digest, "step": rec,
+                }))?;
+                if status == "reproduced" {
+                    reproduced = true;
+                    break;
+                }
+            }
+
+            // `triage-gate`: `when = "${attempt.outputs.status} != 'reproduced'"`,
+            // or forced (#36) so the resume mechanism can be measured at all.
+            let forced = reproduced && args.force_gate;
+            if !reproduced || forced {
+                gate_arrivals += 1;
+                let state = p8::GraphState {
+                    item: item.slug.clone(),
+                    arm: args.arm.clone(),
+                    repeat: args.repeat,
+                    activity: "minimal-repro".into(),
+                    graph_sha256: graph_sha.clone(),
+                    corpus_sha: sha.clone(),
+                    fixture: fixture.to_string_lossy().to_string(),
+                    steps: steps.clone(),
+                    gate_arrivals,
+                    gate_forced: forced,
+                    marked_at: chrono::Utc::now(),
+                    tokens_before_gate: tokens,
+                    cost_before_gate: cost,
+                };
+                state.save(&state_path)?;
+                journal.append(&serde_json::json!({
+                    "experiment": "P8", "phase": "triage-gate", "kind": "gate",
+                    "arm": args.arm, "item": item.slug, "repeat": args.repeat,
+                    "question": "repro.cannot-reproduce",
+                    "arrival": gate_arrivals,
+                    "state_path": state_path.to_string_lossy(),
+                    "state_digest": state.digest(),
+                    "manifest": state.manifest(),
+                    // #36: true when the gate's own predicate was NOT met and
+                    // the suspension was the driver's choice. The step outputs
+                    // below are real either way.
+                    "gate_forced": forced,
+                    "attempt_status": if reproduced { "reproduced" } else { "not-reproduced" },
+                    "tokens_before_gate": tokens, "cost_before_gate": cost,
+                    "graph_sha256": graph_sha,
+                }))?;
+                // The marker the supervisor waits for. Printed to stdout so a
+                // waiter can match it without parsing the dispatch chatter.
+                println!("GATE-MARK {} {} r{}", item.slug, args.arm, args.repeat);
+                eprintln!("  gate mark written: {}", state_path.display());
+
+                if args.phase == "run" {
+                    // Block, holding state in memory, so the kill is real.
+                    // A `control` run does not block and is never killed —
+                    // it is the no-kill comparator (§5.2).
+                    eprintln!("  blocking up to {}s for the kill ...", args.block_secs);
+                    let deadline = std::time::Instant::now() + Duration::from_secs(args.block_secs);
+                    while std::time::Instant::now() < deadline {
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                        if answer_path.exists() {
+                            eprintln!("  answered without a kill — this run is a control, not a kill arm.");
+                            break;
+                        }
+                    }
+                    continue;
+                }
+            } else {
+                eprintln!(
+                    "  {} reproduced without the gate — not a P8 fixture (pass --force-gate \
+                     to measure the resume mechanism anyway, #36)",
+                    item.slug
+                );
+            }
+            continue;
+        }
+
+        // ------------------------------------------------------------- resume
+        anyhow::ensure!(args.phase == "resume", "unknown --phase `{}`", args.phase);
+        let before = p8::GraphState::load(&state_path)?;
+        let answer: p8::GateAnswer = serde_json::from_str(
+            &std::fs::read_to_string(&answer_path)
+                .with_context(|| format!("no answer at {} — run --phase answer first", answer_path.display()))?,
+        )?;
+        let gap_min = (chrono::Utc::now() - before.marked_at).num_seconds() as f64 / 60.0;
+        eprintln!(
+            "  {} [{}] resume after {:.1} min, {} step(s) before the kill",
+            item.slug, args.arm, gap_min, before.steps.len()
+        );
+
+        // Rebuild from disk and compare. This is the primary result.
+        let after_reload = p8::GraphState::load(&state_path)?;
+        let check = p8::check_resume(&before, &after_reload);
+        if !check.lossless {
+            eprintln!("  LOST OR CHANGED across the kill: changed={:?} lost={:?}", check.changed, check.lost);
+        }
+
+        let resume_started = chrono::Utc::now();
+        let mut steps = before.steps.clone();
+        let mut gate_arrivals = before.gate_arrivals;
+        let mut resume_tokens = 0u64;
+        let mut resume_cost = 0.0f64;
+        let mut first_dispatch_ms: Option<i64> = None;
+
+        // §3: resume into the SAME step with `${gate.answer}` bound. The loop
+        // back to `attempt` is what lets the gate fire a second time — P9b's A8
+        // says that is a new mark, and §5.3 asks whether it is.
+        let pass = steps.iter().filter(|s| s.step == "attempt").count() as u32 + 1;
+        eprint!("    attempt p{pass} (post-resume) ... ");
+        // #37C: §5.3 asks for the wall clock from the answer to the first
+        // post-resume dispatch. That is the latency to its START; taking it
+        // after `run()` returned measured the dispatch itself (686 s).
+        first_dispatch_ms = Some((chrono::Utc::now() - resume_started).num_milliseconds());
+        let (rec, _) = runner.run(&StepSpec {
+            experiment: "P8".into(),
+            arm: args.arm.clone(),
+            label: format!("{}#attempt", item.slug),
+            phase: "attempt".into(),
+            occurrence: args.repeat,
+            attempt: pass,
+            model,
+            effort: None,
+            adopt_agent: true,
+            agent: Some(step::AgentCard {
+                name: "investigator".into(),
+                description: "Reproduces a reported fault, then reduces it.".into(),
+                prompt: p8::REPRO_CARD.into(),
+                tools: Some(e3::CARD_TOOLS.iter().map(|t| t.to_string()).collect()),
+                model: Some(args.model.clone()),
+                effort: None,
+                permission_mode: None,
+            }),
+            prompt: p8::build_attempt_prompt(&item.slug, &spec, Some(&answer.answer)),
+            schema: Some(attempt_schema.clone()),
+            allowed_tools: vec![],
+            permission_mode: Some("bypassPermissions".into()),
+            cwd: fixture.clone(),
+            isolate_mcp: true,
+            extra_flags: vec![],
+            timeout: Duration::from_secs(args.timeout_secs),
+        }).await;
+        guard.observe(rec.headroom.as_ref());
+        let c = rec.total_cost_usd.unwrap_or(0.0);
+        let t = rec.usage.as_ref().and_then(|u| u.output_tokens).unwrap_or(0);
+        resume_cost += c;
+        resume_tokens += t;
+        spent += c;
+        let status = rec.digest.as_ref().and_then(|d| d.get("status")).and_then(|v| v.as_str()).unwrap_or("").to_string();
+        eprintln!("{} ${:.4} {:.0}s", if status.is_empty() { "NO DIGEST" } else { &status }, c, rec.wall_clock_ms as f64 / 1000.0);
+        steps.push(p8::StepOutput::new("attempt", pass, rec.digest.clone().unwrap_or(serde_json::Value::Null), t, c));
+        journal.append(&serde_json::json!({
+            "experiment": "P8", "phase": "attempt", "post_resume": true,
+            "arm": args.arm, "item": item.slug, "repeat": args.repeat, "pass": pass,
+            "gate_answer_bound": answer.answer,
+            "graph_sha256": graph_sha, "digest": rec.digest, "step": rec,
+        }))?;
+
+        // Second gate arrival. #37A: "the gate's condition was not met" and
+        // "the gate was re-reached and minted nothing" are different findings,
+        // and only the second one bears on §9b's A8. They are reported as
+        // separate fields and the second is NULL when the gate was not reached.
+        let second_reached = status != "reproduced" || (before.gate_forced && args.force_gate);
+        let mut second_mark = false;
+        if second_reached {
+            gate_arrivals += 1;
+            second_mark = true;
+            journal.append(&serde_json::json!({
+                "experiment": "P8", "phase": "triage-gate", "kind": "gate",
+                "arm": args.arm, "item": item.slug, "repeat": args.repeat,
+                "question": "repro.cannot-reproduce",
+                "arrival": gate_arrivals,
+                "second_arrival_minted_a_new_mark": true,
+                "note": "P9b A8 assumes a re-reached gate is a NEW mark (METHOD-P §5.3)",
+                "graph_sha256": graph_sha,
+            }))?;
+        }
+
+        journal.append(&serde_json::json!({
+            "experiment": "P8", "phase": "emit",
+            "resume_key": format!("P8/{}/{}#r{}", args.arm, item.slug, args.repeat),
+            "outcome": if check.lossless { "ok" } else { "void" },
+            "void_reason": if check.lossless { serde_json::Value::Null }
+                           else { serde_json::json!("step output lost or changed across the kill (METHOD-P §5.4)") },
+            "arm": args.arm, "item": item.slug, "repeat": args.repeat, "model": args.model,
+            "graph_sha256": graph_sha, "corpus_sha": before.corpus_sha,
+            // #37B: what the RUN suspended under, read from the state.
+            "gate_forced": before.gate_forced,
+            "force_gate_on_resume": args.force_gate,
+            "resume_check": check,
+            "gap_minutes": gap_min,
+            "gate_arrivals_total": gate_arrivals,
+            // #37A: null when the gate was never re-reached — §5.4's third
+            // criterion is not decidable from a gate that did not fire.
+            "second_arrival_reached": second_reached,
+            "post_resume_attempt_status": status,
+            "second_arrival_minted_a_new_mark":
+                if second_reached { serde_json::json!(second_mark) } else { serde_json::Value::Null },
+            "answered_at": answer.answered_at,
+            "ms_from_answer_to_first_post_resume_dispatch": first_dispatch_ms,
+            "tokens_before_gate": before.tokens_before_gate,
+            "cost_before_gate": before.cost_before_gate,
+            "resume_tokens": resume_tokens,
+            "resume_cost_usd": resume_cost,
+            "f28_stage_gate_tokens": 18600,
+            "resume_vs_f28_ratio": resume_tokens as f64 / 18600.0,
+        }))?;
+        eprintln!(
+            "    emit ... lossless={} second_arrival={} minted={} resume {} tok (F28 ratio {:.2}) ${:.4}",
+            check.lossless,
+            second_reached,
+            if second_reached { second_mark.to_string() } else { "n/a (gate not re-reached)".into() },
+            resume_tokens,
+            resume_tokens as f64 / 18600.0,
+            resume_cost
+        );
+    }
+
+    eprintln!("\n  spend in this file: ${:.2} of ${:.2}", spent, args.max_cost_usd);
+    println!("wrote {}", journal.path().display());
+    Ok(())
 }

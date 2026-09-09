@@ -1,0 +1,145 @@
+P1 arm L — unlabelled half (METHOD-P §1.3)
+cat:f89154d762a7 fac+art:149a74a0d053 pk:6994b61bc64d
+records=200 valid=200 void=0  card=0384080216a9 schema=5fd33472d73e
+corpus=47faec9f46b8d983c2c75f0794164e68415ae706  claude=['2.1.263 (Claude Code)']
+
+items=20  draws/item=Counter({10: 20})
+
+### 1. Per-facet Krippendorff's alpha across the 10 draws per item [measured]
+
+| facet | metric | alpha | kill (<0.6 -> human-supplied) |
+| --- | --- | --- | --- |
+| `criticality` | ordinal | 0.638 | does not fire |
+| `novelty` | ordinal | 0.748 | does not fire |
+| `size` | ordinal | 0.530 | **KILL fires** |
+| `blast_radius` | ordinal | 0.473 | **KILL fires** |
+| `market_facing` | nominal | 0.764 | does not fire |
+| `external_dep` | nominal | n/a | n/a |
+| `has_repro` | nominal | 0.717 | does not fire |
+| `kind` | nominal | 0.846 | does not fire |
+
+An alpha of `n/a` means every draw agreed, so no disagreement was available to
+measure — alpha is undefined there, not 1.0.
+
+### 2. Fraction of draws whose derived R(stage, ctx) equals the modal one [measured]
+
+Per item, with a Wilson 95% interval; never pooled first (F27, METHOD-S §0 rule 1).
+Derived facets are held fixed at a text/node context so that only what the model
+emits varies between draws.
+
+
+**pack `bug-standard`**
+
+| item | n | modal | rate | Wilson 95% |
+| --- | --- | --- | --- | --- |
+| `docs-site-brand-identity` | 10 | 6 act | 7/10 = 0.70 | [0.40, 0.89] |
+| `contrast-verification` | 10 | 15 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `dark-cut-focus-ring-on-pre` | 10 | 21 act | 10/10 = 1.00 | [0.72, 1.00] |
+| `landing-and-component-consumers` | 10 | 17 act | 8/10 = 0.80 | [0.49, 0.94] |
+| `kb-harvest-and-closeout` | 10 | 17 act | 5/10 = 0.50 | [0.24, 0.76] |
+| `kb-and-graph-validation` | 10 | 17 act | 7/10 = 0.70 | [0.40, 0.89] |
+| `resolve-open-question` | 10 | 17 act | 9/10 = 0.90 | [0.60, 0.98] |
+| `typography-delivery` | 10 | 17 act | 9/10 = 0.90 | [0.60, 0.98] |
+| `plex-per-weight-fallback-metrics` | 10 | 18 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `live-views` | 10 | 6 act | 9/10 = 0.90 | [0.60, 0.98] |
+| `fixme-cannot-pass-tripwire` | 10 | 17 act | 6/10 = 0.60 | [0.31, 0.83] |
+| `support` | 10 | 6 act | 10/10 = 1.00 | [0.72, 1.00] |
+| `advance-commit-ignored-path` | 10 | 21 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `fix-ci-pinned-pack-drift-guard` | 10 | 15 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `fix-gate-honesty-sweep` | 10 | 17 act | 8/10 = 0.80 | [0.49, 0.94] |
+| `fix-json-error-envelope` | 10 | 15 act | 5/10 = 0.50 | [0.24, 0.76] |
+| `issue-50-fix-story-before-worktree` | 10 | 15 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `links-hand-edit-denied-with-no-backfill-path` | 10 | 13 act | 2/10 = 0.20 | [0.06, 0.51] |
+| `gate-passes-its-known-base` | 10 | 21 act | 7/10 = 0.70 | [0.40, 0.89] |
+| `telemetry-gitignored-so-runs-never-travel` | 10 | 15 act | 3/10 = 0.30 | [0.11, 0.60] |
+
+Items with an identical modal R across every draw: **2/20 = 10%**. Kill at <80%: **KILL fires**.
+
+**pack `story`**
+
+| item | n | modal | rate | Wilson 95% |
+| --- | --- | --- | --- | --- |
+| `docs-site-brand-identity` | 10 | 8 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `contrast-verification` | 10 | 17 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `dark-cut-focus-ring-on-pre` | 10 | 17 act | 10/10 = 1.00 | [0.72, 1.00] |
+| `landing-and-component-consumers` | 10 | 21 act | 8/10 = 0.80 | [0.49, 0.94] |
+| `kb-harvest-and-closeout` | 10 | 18 act | 5/10 = 0.50 | [0.24, 0.76] |
+| `kb-and-graph-validation` | 10 | 21 act | 7/10 = 0.70 | [0.40, 0.89] |
+| `resolve-open-question` | 10 | 21 act | 9/10 = 0.90 | [0.60, 0.98] |
+| `typography-delivery` | 10 | 19 act | 5/10 = 0.50 | [0.24, 0.76] |
+| `plex-per-weight-fallback-metrics` | 10 | 16 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `live-views` | 10 | 8 act | 5/10 = 0.50 | [0.24, 0.76] |
+| `fixme-cannot-pass-tripwire` | 10 | 21 act | 6/10 = 0.60 | [0.31, 0.83] |
+| `support` | 10 | 8 act | 10/10 = 1.00 | [0.72, 1.00] |
+| `advance-commit-ignored-path` | 10 | 16 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `fix-ci-pinned-pack-drift-guard` | 10 | 18 act | 4/10 = 0.40 | [0.17, 0.69] |
+| `fix-gate-honesty-sweep` | 10 | 19 act | 8/10 = 0.80 | [0.49, 0.94] |
+| `fix-json-error-envelope` | 10 | 18 act | 5/10 = 0.50 | [0.24, 0.76] |
+| `issue-50-fix-story-before-worktree` | 10 | 17 act | 3/10 = 0.30 | [0.11, 0.60] |
+| `links-hand-edit-denied-with-no-backfill-path` | 10 | 15 act | 2/10 = 0.20 | [0.06, 0.51] |
+| `gate-passes-its-known-base` | 10 | 17 act | 7/10 = 0.70 | [0.40, 0.89] |
+| `telemetry-gitignored-so-runs-never-travel` | 10 | 14 act | 3/10 = 0.30 | [0.11, 0.60] |
+
+Items with an identical modal R across every draw: **2/20 = 10%**. Kill at <80%: **KILL fires**.
+
+### 3. `unknown` rate per axis [measured]
+
+An `unknown` routes to a human at triage — a cost, not an error. But at selection
+it is treated as HIGH by position (F34 B14, F35 §1.6), so the rate is also a
+statement about how often the anchors send an item up rather than to a person.
+
+| axis | unknown / draws | rate |
+| --- | --- | --- |
+| `criticality` | 56/200 | 28.0% |
+| `novelty` | 87/200 | 43.5% |
+| `size` | 79/200 | 39.5% |
+| `blast_radius` | 39/200 | 19.5% |
+
+### 4. haiku-vs-sonnet modal disagreement per axis [measured]
+
+Reported, never a kill (METHOD-P §1.4): the cheaper model that meets alpha is the
+triage default.
+
+| axis | items where the modal value differs | rate |
+| --- | --- | --- |
+| `criticality` | 6/20 | 30% **>20%, reported** |
+| `novelty` | 8/20 | 40% **>20%, reported** |
+| `size` | 6/20 | 30% **>20%, reported** |
+| `blast_radius` | 8/20 | 40% **>20%, reported** |
+| `market_facing` | 2/20 | 10% |
+| `external_dep` | 0/20 | 0% |
+| `has_repro` | 2/20 | 10% |
+| `kind` | 2/20 | 10% |
+
+### 5. METHOD-P 1.4 re-run: anchors rewritten, alpha before and after [measured]
+
+Prior instrument: card `9d86e7044490`, 200 valid draws over 20 items.
+This instrument: card `0384080216a9`, 200 valid draws over 20 items.
+
+An axis below 0.6 has "its anchors rewritten first and re-run once; if still
+< 0.6, human-supplied". Axes not in the rewrite are shown for drift only.
+
+| facet | rewritten? | alpha v1 | alpha v2 | delta | verdict |
+| --- | --- | --- | --- | --- | --- |
+| `criticality` | no | 0.806 | 0.638 | -0.168 | **drift -0.168 on an untouched anchor - report, do not credit** |
+| `novelty` | no | 0.745 | 0.748 | +0.003 | unchanged |
+| `size` | no | 0.604 | 0.530 | -0.074 | **drift -0.074 on an untouched anchor - report, do not credit** |
+| `blast_radius` | **yes** | 0.488 | 0.473 | -0.015 | **still < 0.6 -> HUMAN-SUPPLIED at the triage gate** |
+| `market_facing` | no | 0.721 | 0.764 | +0.043 | unchanged |
+| `external_dep` | **yes** | 0.1650752314814824 | None | - | undefined |
+| `has_repro` | no | 0.784 | 0.717 | -0.066 | **drift -0.066 on an untouched anchor - report, do not credit** |
+| `kind` | no | 0.847 | 0.846 | -0.001 | unchanged |
+
+| axis | `unknown` rate v1 | v2 | delta |
+| --- | --- | --- | --- |
+| `criticality` | 27.0% | 28.0% | +1.0% |
+| `novelty` | 46.0% | 43.5% | -2.5% |
+| `size` | 39.5% | 39.5% | +0.0% |
+| `blast_radius` | 31.0% | 19.5% | -11.5% |
+
+### Not computed here
+
+Anything requiring the human agreement panel (METHOD-P §1.2/§0 rule 1): the panel is
+written from the item alone before unblinding, and it is Ryan's. The skeleton is
+`spikes/results/p1-arm-l-labels-RYAN-TODO.md`. Arm D's precision/recall against the
+panel — the criterion that decides whether a facet leaves the model — likewise waits.

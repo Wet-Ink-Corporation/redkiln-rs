@@ -6,7 +6,7 @@ Usage: python3 spikes/p1/score-arm-d.py --engine spikes/results/p1-arm-d.jsonl -
 """
 import argparse, json, re, collections
 def parse_labels(path):
-    t = open(path).read(); m = re.search(r"labelled_at:\s*(\S+)", t)
+    t = open(path, encoding="utf-8").read(); m = re.search(r"labelled_at:\s*(\S+)", t)
     if not m or "FILL-ME" in m.group(1): raise SystemExit(f"{path}: labelled_at missing — labels must be timestamped before unblinding")
     labels = {}
     for row in re.finditer(r"^\|\s*([^|#]+?)\s*\|\s*(toolchain|change|binary_change|auth|data_migration|ui|flag_exists)\s*\|\s*([^|]*?)\s*\|", t, re.M):
@@ -16,7 +16,7 @@ def parse_labels(path):
     return m.group(1), labels
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--engine", required=True); ap.add_argument("--labels", action="append", required=True); a = ap.parse_args()
-    eng = [json.loads(l) for l in open(a.engine)]; first = min(r["at"] for r in eng)
+    eng = [json.loads(l) for l in open(a.engine, encoding="utf-8")]; first = min(r["at"] for r in eng)
     for lp in a.labels:
         ts, labels = parse_labels(lp)
         if ts >= first: raise SystemExit(f"{lp}: labelled_at {ts} is not before engine first output {first} — METHOD-P §0 rule 1")

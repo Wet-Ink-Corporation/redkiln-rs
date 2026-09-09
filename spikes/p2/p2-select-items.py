@@ -7,7 +7,10 @@ Usage: python3 spikes/p2/p2-select-items.py --redkiln D:/repos/redkiln --sha 47f
 NOT YET RUN: corpus repo not mounted when written.
 """
 import argparse, hashlib, re, subprocess, os, datetime
-ARTIFACTS = ["spec.md", "_plan.md", "plan.md", "implementation-report.md", "report.md", "_review.md", "_integration.md", "_retrospective.md", "closure.md"]
+# #18: `_intake-brief.md` (32 in corpus) and `discover.md` (122) were absent, so two whole stage artifacts
+# were invisible to the entire P2 measurement -- and they are the only non-card artifacts that map to
+# artifacts.toml's `source = "human"` roots, i.e. the only possible advisory (PC3) candidates.
+ARTIFACTS = ["_intake-brief.md", "discover.md", "spec.md", "_plan.md", "plan.md", "implementation-report.md", "report.md", "_review.md", "_integration.md", "_retrospective.md", "closure.md"]
 DONE = {"done", "closed", "closeout", "retrospective", "released", "complete", "completed"}
 def git(repo, *a):
     r = subprocess.run(["git", *a], cwd=repo, capture_output=True)
@@ -33,5 +36,5 @@ def main():
     lines = [f"# P2 items — corpus {a.sha} — completed items with >=3 artifacts, sha256(slug) order. Generated {datetime.datetime.utcnow().isoformat()}Z",
              "# slug\tcard\tartifacts\tsha256(slug)[:12]"] + [f"{s}\t{c}\t{','.join(ar)}\t{h[:12]}" for h, s, c, ar in rows[:20]]
     if len(rows) < 20: lines.append(f"# SHORTFALL: only {len(rows)} eligible items (report, do not relax the >=3 rule silently)")
-    os.makedirs(os.path.dirname(a.out), exist_ok=True); open(a.out, "w").write("\n".join(lines) + "\n"); print("\n".join(lines))
+    os.makedirs(os.path.dirname(a.out), exist_ok=True); open(a.out, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n"); print("\n".join(lines))
 if __name__ == "__main__": main()
