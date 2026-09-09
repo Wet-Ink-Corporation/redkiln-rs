@@ -3,6 +3,15 @@
 # then set `labelled_at` to the UTC time you finished. score-arm-d.py refuses labels stamped after the engine ran.
 labelled_at: FILL-ME-ISO8601Z
 labeller: FILL-ME
+# METHOD-P amendment 8 (2026-09-09). The chronology check that normally proves blindness has EXPIRED for this
+# file: the engine output spikes/results/p1-arm-d.jsonl was written 2026-09-08T04:54:07Z, before this template
+# was filled, so any truthful labelled_at is later than the engine's and score-arm-d.py refuses by default.
+# If -- and only if -- you completed these labels without opening that file, fill the line below and score with
+#   python spikes/p1/score-arm-d.py --engine spikes/results/p1-arm-d.jsonl --labels <this file> --attested-blind
+# It must name who attests, what they attest they did not open, and when. Results scored this way are reported
+# as ATTESTED-BLIND, never as timestamp-verified. Do NOT backdate labelled_at. Do NOT re-run derive-facets.py to
+# refresh the engine's timestamps -- it would pass the check while hiding the substitution.
+blind_attestation: FILL-ME (e.g. "<name> attests on <date> that they had not opened spikes/results/p1-arm-d.jsonl before completing these labels")
 corpus_sha: 47faec9f46b8d983c2c75f0794164e68415ae706
 items_file: spikes/plans/p1-items.txt
 

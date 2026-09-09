@@ -1,6 +1,6 @@
 # Pre-registration #7 — P: the process-catalog spikes (P1, P2, P6, P7, P8)
 
-**Status:** pre-registration, per charter §8.2 (amendments 6–7 applied 2026-09-08 by Claude on Ryan's authorization; post-data, additive — see §3.2 and the closing note). **Written before any P1/P2/P6/P7/P8 dispatch or analysis. No P data has been seen.** P9 (`METHOD-P9.md`) and its second-author follow-up P9b are already run and reported (`F32-DRAFT.md`, `F33-DRAFT.md`); their results shaped this document and are cited where they do.
+**Status:** pre-registration, per charter §8.2 (amendments 6–7 applied 2026-09-08 by Claude on Ryan's authorization; post-data, additive — see §3.2 and the closing note. **Amendment 8 applied 2026-09-09**, also on Ryan's authorization: it changes how §0 rule 1 is *verified* for P1 arm D, not what it requires, and changes no kill criterion — see §0 rule 1). **Written before any P1/P2/P6/P7/P8 dispatch or analysis. No P data has been seen.** P9 (`METHOD-P9.md`) and its second-author follow-up P9b are already run and reported (`F32-DRAFT.md`, `F33-DRAFT.md`); their results shaped this document and are cited where they do.
 **Baseline:** this document's commit. **Corpus pin:** redkiln @ `47faec9f` (S-MIG's frozen `.bklg`). **Instrument:** `spikes/runner` (E3 rig) for P7/P8; `spikes/p9/lint.py` v2 for P6; offline analysis for P1's derivability half and P2.
 **Why it exists:** `references/2026-09-07-process-catalog-proposal.md` §6/§6.1 names these spikes; P7 and P8 can overturn PC6 and the schema's escalation model, P6 gates the v0 pack, P1 and P2 fix parameters the selection engine needs before Phase 1 can author `bug-standard` and `story` packs.
 
@@ -19,6 +19,38 @@ Everything in METHOD, METHOD-E3, METHOD-H and METHOD-S §0 applies: isolation wi
 Two rules specific to P:
 
 1. **Human labels are produced before the engine's output is seen.** P1's agreement panel and P2's "should re-run" set are written from the item and the artifacts alone; the classification vectors / freshness verdicts are unblinded afterwards. The label files carry a timestamp that precedes the first engine run.
+
+   *Amendment 8 (2026-09-09):* the rule is unchanged; its **verification mechanism** gains a second, weaker form.
+   As written, the rule is checked by chronology — `score-arm-d.py` refuses unless `labelled_at` precedes the engine
+   output's earliest `at`. For P1 arm D that check can no longer be satisfied honestly: the AFK run of 2026-09-08
+   produced `spikes/results/p1-arm-d.jsonl` (earliest `at` 2026-09-08T04:54:07Z) *before* the label template was
+   filled, because the run deliberately stopped at the label boundary (§0 rule 1, AFK plan lane A5). Any truthful
+   `labelled_at` written now is later than the engine's, and the script refuses permanently.
+
+   The property the rule protects is **blindness**, not chronology; the timestamp was only the mechanically-checkable
+   proxy for it. Where the proxy has expired but blindness holds in fact, the label file may instead carry a
+   `blind_attestation:` line naming who attests, what they attest they did not open, and when — and the scorer must be
+   invoked with an explicit `--attested-blind` flag, so the substitution can never happen silently. The attestation is
+   copied onto every output record.
+
+   **This is strictly weaker evidence.** A timestamp is machine-checkable; an attestation is a claim. It does not make
+   a label blind — it records that someone says it was, and names them. Any result scored this way must be reported as
+   attested-blind, never as timestamp-verified, and a reader is entitled to discount it accordingly.
+
+   **When it was made:** after the engine data existed, and — on Ryan's attestation of 2026-09-09 — before the data it
+   would affect had been seen. That is a weaker guarantee than amendments 1–5 and a different one from 6–7, and it is
+   recorded as such. **It changes no kill criterion**: §1.4's precision ≥ 0.95 rule and the modal-`R` line are untouched.
+
+   *Rejected alternatives, one line each.* Backdate `labelled_at` — falsification, and the AFK charge that "a completed
+   lane with a fabricated label is not a good result" forbids it. Silently re-run `derive-facets.py` to refresh the
+   timestamps — it would pass the check, because arm D is a deterministic zero-cost derivation at a fixed pin, but it
+   hides the issue instead of disclosing it. Recruit a labeller who provably never saw the output — genuinely stronger,
+   but none is available, and F36's decisive modal-`R` criterion needs no panel at all. Abandon arm D — the design
+   already ships the hedge (human-sourced facets, `AC-071` failing closed), but it would leave the one measurement that
+   could *shrink* the LLM's unstable surface untaken.
+
+   **P2 is not affected.** Its engine phase requires only that the labels be timestamped, and its verdicts do not yet
+   exist, so labelling now is blind on the original terms.
 2. **A lint or engine result is reproducible from committed inputs or it is void.** P5's replay-identity rule applied early: every P6 verdict and every P2 freshness verdict is a function of `(catalog digest, facets digest, item digest)` recorded on the result line.
 
 ---
@@ -160,4 +192,8 @@ P6 needs the catalog and lint v2 (no model spend) and gates the pack. P1's arm D
 
 Amendments to this document are disclosed here and in their commit. Amendments 1–5 (`HANDOFF.md` §Pre-registration
 status) were made before the data they affect. Amendments 6 and 7 (§3.2) were made after P6's first run and change
-what is *reported*, not the kill criteria; the pre-registered readings remain primary in F35.
+what is *reported*, not the kill criteria; the pre-registered readings remain primary in F35. **Amendment 8** (§0 rule 1, 2026-09-09) was made after the
+arm-D engine output existed and, on the labeller's own attestation, before it had been seen; it substitutes an
+attestation for an expired chronology check on P1 arm D alone, is strictly weaker than the check it replaces, and
+changes no kill criterion. Every result scored under it is reported as **attested-blind**, never as
+timestamp-verified.
