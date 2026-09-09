@@ -1,0 +1,468 @@
+# Redkiln-RS — how the engine learns what a change touches
+
+**Date:** 2026-09-09 · **Status:** Recommendation. Feeds `facets.toml`, the §3.7 facet-hygiene criteria (AC-069/070/071/072/074/079) and the P1 panel that ADR-0079 is blocked on. **Decides nothing in ADR-0079.** · **Question:** what should compute the context vector's change facts — `auth`, `data_migration`, `ui`, `flag_exists`, `toolchain`, `change` — and how much process should follow from them? · **Inputs:** five commissioned external research briefs (structural analysis, declared ownership, change-risk models, human triage practice, lexical-classifier reliability); the programme's own P1 arm D at corpus pin `47faec9f`; F36, F18, F34, F35; ADR-0012, 0024, 0030, 0032, 0050, 0060, 0061, 0067, 0069, 0072, 0073, 0074, 0079. · **Evidence discipline:** every external claim carries a source tag ([peer] / [preprint] / [1P] / [vendor] / [blog] / [Pr]) and a live URL in §7; every internal claim carries [measured] / [documented] / [inferred]. Where a technique is widely recommended and never measured, this document says so in those words. **A sixth brief was commissioned on LLM and hybrid approaches and did not arrive** — §2F states what that costs this recommendation, and nothing in this document fills that gap from memory.
+
+---
+
+## 0. Verdict
+
+**Stop inferring the facts from text.** The engine should learn what a change touches from four sources in declared precedence — **DECLARED** (a checked-in map of path globs to closed surface names, plus a required directory convention for migrations), **DERIVED** (git's own metadata, and parser-anchored call/import sites — never a substring over prose), **PROPOSED** (a model reads the assembled diff and the card, and its output is a *proposal* that cannot key a `require` row until a human confirms it), and **ASKED** (a triage question answered once and replayed by AC-074's decision memory) — with every value carrying the provenance class that produced it. Three consequences are load-bearing. First, **absence of evidence must stop resolving to `false`**: four of the twenty P1 items changed no code at all, the panel returned `unknown` on all sixteen of their semantic-facet cells, and the script emitted a confident boolean on every one of them [measured, P1 arm D at pin `47faec9f`] — so the boolean facets need the third value the ordinals already have, and AC-079's existing `gate_opened { reason: unknown_facet }` route needs to reach them. Second, **`auth` should stop being a repo-wide boolean at all**: the threshold a threat-model activity needs and the threshold a session-fixation test needs are different thresholds, and one boolean cannot carry both — so the registry should carry a set-valued `surfaces` facet grounded in the declared map (precedented by `toolchain` and `change`, which are already `set = true`), and each activity's own `applicable_if` should own its own evidence question, which ADR-0024 already places on the activity. Third, **do not buy an analysis platform for this**: CodeQL costs $30/committer/month plus a maintained database and has *no published precision or recall as a classifier of anything* [1P/blog], plain Semgrep's measured numbers on adjacent tasks run from 0.57% recall to 23.8% recall [preprint], a call graph is priced and built for continuous dependency triage rather than a per-item boolean [vendor], and every one of them relocates the auth-vocabulary problem into a different DSL rather than solving it. The affordable instrument that the measured literature actually supports is a path-glob boundary map plus git metadata, costing hours to seed and a budgeted drift audit to keep — and it should be built as a *test subject* against the corpus's own adjudicated labels (§6), not adopted on the strength of this document.
+
+---
+
+## 1. Why the current rule fails
+
+The deriver is one unanchored, case-insensitive pattern applied to file paths **and** diff lines:
+
+```
+auth: /auth|login|logout|session|token|jwt|oauth|permission|role|acl|password|credential/i
+```
+
+[documented, `spikes/p1/derive-facets.py` `RULES["auth"]`]
+
+| # | mechanism | instances on the 20-item corpus | failure class | does `\b` anchoring fix it? |
+| --- | --- | --- | --- | --- |
+| 1 | `oauth` is a substring of `coauthor` | 8 hits [measured] | **substring collision** — the Scunthorpe problem [blog]; the standard vendor mitigation is word-boundary anchoring, which Netskope's DLP entity engine implements precisely to stop `cat` matching `catalog` [vendor] | **yes**, free |
+| 2 | `role` matches ARIA `role` attributes | 2 hits [measured] | substring/homograph collision | **yes**, free |
+| 3 | `token` matches design tokens — `brand-token-substrate`, `brand-tokens.test.ts`, `redkiln.tokens.json` | 44 hits [measured] | **lexical polysemy** — a whole word at proper boundaries, meaning a different thing | **no** |
+| 4 | `auth` is the root of the tool's core verb — `authored`, `authoring`, `unauthored`, `author` | 43 hits [measured] | polysemy plus **same-case identifier ambiguity** | **no** |
+| 5 | `session` matches "a concurrent session holds the id" — a work session | 6 hits [measured] | polysemy | **no** |
+
+**Two distinct classes, not one.** Rows 1–2 are substring collisions and cost nothing to fix. Rows 3–5 are the expensive half, and the identifier-splitting literature is unusually direct about the ceiling: across five state-of-the-art splitters measured against a 2,663-identifier human oracle, per-identifier accuracy tops out at Samurai 0.82 / GenTest 0.80 / camelCase-only 0.71, and on **same-case** identifiers — no camelCase or underscore cue — accuracy collapses below 40% for every technique, with 43 identifiers split correctly by *no* technique at all [peer, Hill/Binkley/Lawrie/Pollock/Vijay-Shanker]. `authored` has no internal boundary to find; splitting does not merely perform badly here, it does not apply. The defect is semantic, and no lexical instrument reaches it.
+
+**A third aggravation is local and worth naming.** The corpus is a spec-driven backlog tool whose core verb is *author*, whose design system ships *tokens*, and whose runtime has work *sessions*. The pattern's lexicon collides with the domain's lexicon at close to maximum density. A rule that would be merely imprecise elsewhere is near-useless here.
+
+**What the errors add up to.** `auth = true` on **14 of 20** items [measured]. A human adjudicating the contested cells disagreed with the script on **15 of 32** [measured, P1 arm D adjudication]. Per-facet precision and recall are **not computed** — no scored arm-D record exists, and F36 still stands as "arm D precision/recall NOT COMPUTED" [documented]. Every arm-D figure in this document is **ATTESTED-BLIND, not timestamp-verified**, per METHOD-P amendment 8, and must be reported that way wherever it is reused.
+
+**`data_migration` at 0 of 20 is not a recall failure — it is an unmeasurable facet.** With no positive instance on the corpus, neither precision nor recall can be estimated in either direction. This is the same shape as `external_dep` at 200/200 `false` in F36, which ADR-0079 already refuses to read as reliability ("a constant facet is not a stable facet") and which AC-070 already refuses to let key a `require` row [documented]. The correct reading is not "the migration rule is broken"; it is "this corpus cannot say", and any claim about the migration facet needs a second repository that contains migrations.
+
+**The unit of analysis is also wrong.** The same pattern scans paths and diff lines, so a document that *discusses* auth scores identically to code that *changes* it — and the corpus's auth evidence is dominated by `.bklg/` documentation paths such as `_discovery/research/02-design-token-substrate.md` [measured]. The nearest measured warning: Herzig, Just and Zeller manually re-classified 7,000+ tracker items and found **33.8%** of items labelled "bug" were misclassified, which shifted which files looked defective for an average of **39%** of files flagged buggy [peer] — and a curated tracker type field is a *stronger* signal than free diff text.
+
+**And it answers where there is nothing to answer.** Four of twenty items changed no code; the panel returned `unknown` on all sixteen of their semantic-facet cells; the script emitted `true`/`false` on every one [measured]. `values = [true, false]` in `facets.toml` gives a boolean facet nowhere else to go.
+
+---
+
+## 2. What other teams and systems actually do
+
+### 2A. Declared structure — what everyone with real numbers who is not Meta actually uses
+
+| mechanism | who uses it | measured? | cost |
+| --- | --- | --- | --- |
+| CODEOWNERS / Google-style OWNERS | Kubernetes, Chromium, most large GitHub orgs [1P] | Studied at scale (>844k PRs, 1.9M comments) for **reviewer-routing** quality only — the format has **no domain field to be accurate about** [peer] | One file; documented to fail silently past GitHub's file-size ceiling; path-glob → identity only, no AND-logic, no semantic tag |
+| Nx `enforce-module-boundaries` scope/type tags (`scope:auth`) | Nx monorepo teams [1P] | **No published accuracy number.** Nx's own tracker (nrwl/nx#20922) reports the rule does **not** error on an unsupported/mistyped tag — a declared system failing silently in exactly the way declaration is meant to prevent [1P] | Every library tagged at creation and re-tagged on purpose change; constraint graph maintained by an architecture owner; enforced at library-import granularity, not diff granularity |
+| Backstage `catalog-info.yaml` tags / Domain / System | CNCF-scale service-catalogue standard; Datadog ingests it [1P/vendor] | **No measured accuracy, drift or staleness study found**, and no evidence anyone tags for *risk* domains (auth/PII) rather than generic service metadata | One manifest per service plus discipline through splits and renames; **no built-in staleness detection** |
+| Conventional Commits `type(scope)` — the author declares it | Very wide JS/npm adoption [peer] | **Measured, and the number is sobering:** 360/381 sampled repos contain some conforming commits, but only **198/381 (~52%)** are ≥80% conforming; ~10% of commits in *non-adopting* repos match by accident [peer]. A 2026 preprint exists specifically to train an LLM to correct the field | Near-zero (a commit-lint hook), but `scope` is free text with no controlled vocabulary — aggregation still needs normalisation |
+| ArchUnit / dependency-cruiser fitness functions | ArchUnit (Java), dependency-cruiser (JS/TS); production write-ups at lastminute.com, Xebia [Pr] | **Not classifiers** — exact graph checks, so accuracy is not the applicable metric. No measurement study found; only design/adoption write-ups | Rules authored and kept current by someone with architectural knowledge; **requires a declared boundary as input** — it verifies a boundary, it does not invent one |
+| Required migration directory / explicit flag SDK call-sites | The pattern every production system in the risk brief fell back to | Not measured as a classifier; reported as the field's *practice* | A convention plus a lint; the cost is enforcing the convention |
+
+**The load-bearing observation across this family**, and the honest one: *no source in any of the five briefs measures classification accuracy for any declared-metadata scheme, because none of these formats has a domain field to be accurate about.* Declared ownership is **widely used and never measured for this purpose**. It also relocates the error rather than removing it: every mechanism above is unenforced free text or fails silently when misused, so a declared system trades the lexical failure mode for a staleness/drift failure mode. Budget the drift explicitly; do not assume it is self-policing. And every mechanism found stops at file, module or service granularity — **no source proposes or measures a diff-hunk-level declared-domain scheme at all**.
+
+### 2B. Structural and semantic analysis — measured, and mostly measured on a different task
+
+| tool | what it measures well | the measured numbers | cost |
+| --- | --- | --- | --- |
+| **Semgrep** (AST patterns + intraprocedural taint) | Matching a *call to* a JWT/session API by AST node kind rather than by substring — which kills failure rows 1–4 of §1 outright | **No first-party precision/recall for the registry rules as a class.** Third-party, mixed and workload-specific: **2.43% F1** on BigVul, **0.57% recall** on Devign vs 87.80% F1 for a dataflow comparator; **23.8% recall / F1 0.385** on a 42-case agent-security benchmark vs 95.24% for a purpose-built tool; **59.9% recall** on IDOR for Semgrep's newer *AI-augmented* product (not plain AST matching); **61% precision** in one vendor case study [preprint ×2, vendor ×2] | Free CE tier; rules are YAML, hours per rule; runs in seconds per file with no build; `--baseline-commit` diff-aware mode is near-zero marginal cost. **Does not natively express a diff-level judgement** — you wrap its per-line matches in your own aggregation |
+| **CodeQL** (semantic DB + interprocedural taint) | A genuine reachability question. GitHub's own security team publishes custom Ruby-monolith queries targeting **missing authorisation checks** — direct 1P evidence the technique is used for this class of judgement in production [1P] | **No published precision or recall for CodeQL as a classifier of anything.** Only cost figures: 30+ min full scans historically, **22 min → 4.2 min** with 2026 incremental/overlay analysis; 400+ CVEs on the Security Lab wall of fame [1P/blog/Pr] | **$30/committer/month** for private repos, plus a maintained database recompiled or overlay-cached per commit, plus a QL learning curve, plus **the same source/sink modelling work the regex is failing** — moved into QL |
+| **tree-sitter / GumTree / difftastic** | Aligning an edit to syntax; detecting moves and renames | GumTree: human raters judged output "good" on **137/144 (95.1%)** file pairs — a **diff-quality** metric, not classification accuracy [peer]. The AST-diff literature itself lists "lacking commit-level diff support, lacking refactoring awareness" as open [preprint] | tree-sitter is free and sub-millisecond incremental. **Confirmed negative: none of these has any notion of domain categories.** They are diff-*presentation* tools; difftastic's own manual makes no classification claim. Their value here is as infrastructure *under* a classifier |
+| **Call-graph reachability** (Endor, Snyk, OX) | "Is the changed function reachable from a declared auth entry point" — the closest technical analogue | Endor claims up to **97%** alert-noise reduction [vendor]; the widely repeated "60–80% of dependency CVEs are unreachable" is a **convergent vendor claim with no shared primary study** [vendor]. **No peer-reviewed precision/recall for reachability as a classifier** | Standing infrastructure: static graphs degrade badly on dynamic dispatch and reflection (Endor's own limitations doc); dynamic graphs need execution and coverage. Every source frames it around **third-party dependency CVEs**, never first-party domain tagging |
+| **Bazel/Nx/Turborepo affected-target graph** | "Which targets rebuild" | **No comparative measurement found.** Only practitioner claims that Nx's graph "affected" beats Turborepo's git-diff filtering for **test selection** [Pr] | Free if the graph already exists — but **no source was found using an affected-target graph for domain-semantic classification at all**, despite explicit searching. Reported as an absence, not as an impossibility |
+
+**What the AST family actually buys, measured on the right task.** On code-*change* classification specifically, AST representations beat token/keyword baselines by **+3.45% F1 and +7.81% PR-AUC** — real, modest, and nothing like the order-of-magnitude the axis suggests. The 10–40× swings in the vulnerability-detection benchmarks above are a *different task* and must not be cited as evidence for this one.
+
+**The anti-pattern the brief names explicitly, and this document adopts:** treating an AST or graph tool as a drop-in classifier upgrade. None of Semgrep, CodeQL, GumTree or a build graph answers "does this diff touch auth" out of the box; each requires the same domain-vocabulary work the regex is getting wrong, moved into a different DSL. An AST rule matching a function literally named `authorize` still fires on `authored`.
+
+**Affordability, stated plainly for the engine's own constraint.** This runs on every backlog item. A per-change CodeQL run is **not viable** — the licence is per-committer, the database is a standing commitment, and the tool has no published effectiveness number for this task to justify either. Diff-aware Semgrep is genuinely cheap and is the only member of this family whose *cost* clears the bar; it belongs in §4 as an optional second layer for call-site facts, not as the primary source, and not before the boundary map has been measured.
+
+### 2C. Statistical risk models — measured, and out of reach at n = 20
+
+| system | measured result | why it does not transfer |
+| --- | --- | --- |
+| Mockus & Weiss (Bell Labs, 5ESS) [peer] | Change diffusion and developer experience are the strongest predictors of field failure; established the change as the unit of analysis | Predicts *failure probability*, not category. Requires historical change→failure linkage |
+| Kamei et al. JIT quality assurance [peer] | ~**2×** the bug-detection efficiency of unguided review at fixed effort; defined effort-aware Recall@20% | Needs SZZ-style bug-to-commit linkage and per-project retraining; known not to transfer cross-project without retuning |
+| McIntosh & Kamei, concept drift [peer] | On 37,524 Qt/OpenStack changes, AUC and Brier calibration **degrade considerably within about a year**, and feature importance reorders | A risk model with no retraining cadence is a decaying asset. There is no stable base here to decay *from* |
+| Zeng et al., LApredict (ISSTA'21) [peer] | A **one-feature** (lines-added) logistic model **matches or beats** DeepJIT and CC2Vec on 310K commits | Strong evidence against building anything complex before a simple structured baseline is tried and shown insufficient |
+| **Meta Diff Risk Score / RADAR** [preprint] | The best-evidenced production system found: 535K+ diffs reviewed, 331K+ landed; revert rate **1/3** and production-incident rate **1/50** of non-RADAR diffs; median review wall-time **−35%**; P25→P50 threshold relaxation raised auto-approval to **60.31%** | **Feature set, architecture and labelling pipeline are unpublished — only outcome metrics are.** It is evidence that scored risk routing *can* work at Meta's volume of continuously generated incident labels; it is not a transferable recipe |
+| Microsoft CRANE [1P] | Deployed on Windows for failure prediction and test prioritisation | Built on the internal CODEMINE telemetry platform; no external validation AUC comparable to the academic line |
+| Google Tricorder / Critique, Rosie [peer/1P] | Always-on, low-false-positive static analysis at review time; large-scale changes split along **code-ownership** lines | Google's public answer to "what needs more scrutiny" is **procedural and structural**, not a numeric risk score. Treat "Google has a risk model" as unconfirmed |
+
+**The convergent finding.** Everyone with real numbers either (a) accumulated a large, continuously fed pipeline of labelled production incidents and kept retraining it, or (b) skipped statistics entirely and used deterministic structural signals — ownership/path maps, required migration conventions, explicit flag call-sites — with human review as the catch-all. Option (a) is unavailable to a 20-item corpus with zero migration positives. Option (b) is what §4 recommends.
+
+### 2D. Trained text classifiers on diffs — the best published number for anything like this facet
+
+Sabetta & Bezzi (SAP Security Research, ICSME 2018) [peer] is the closest measured analogue to "is this change auth-relevant": a linear SVM over bag-of-words on commit message **and** camelCase-split source identifiers, 2,715 labelled commits (456 positive) from 220 OSS Java projects. Result: **80% precision at 43% recall**, with 80% stated as their minimum sustainable precision because below it the analyst is overwhelmed. Tightening costs recall brutally — **95% precision only at 20% recall; 90% at 25%**. A Java-trained model transferred to Ruby did *better* (82%/61%), suggesting community and style effects dominate language.
+
+Three things follow. It needed hand-labelled training data from a proprietary vulnerability database. It needed identifier-level tokenisation — not substring matching. And **even the ceiling leaves well over half of true positives unfound**, so any consumer must be built to tolerate false negatives. No keyword-only baseline anywhere near 80% precision on this task has ever been published; in the measured literature raw substring matching is the strawman, never a result.
+
+### 2E. Process tiering by declared category
+
+| scheme | measured | what it warns |
+| --- | --- | --- |
+| **DORA** on external change approval [vendor] | External approval bodies are **negatively** correlated with lead time, deployment frequency and time-to-restore, and have **no correlation with change failure rate**; teams using them were markedly more likely to be low performers | The heavyweight gate adds delay without adding safety. Lightweight peer review plus automated detection wins even on the safety metric the board exists to protect |
+| **ITIL** standard/normal/emergency + CAB [vendor] | No controlled defect study found; ITIL's own material flags routing pre-approved standard changes back through CAB as a recognised anti-pattern | Documented **reclassification gaming** — teams relabel a normal change "emergency" to dodge review. A tier label must be enforced structurally, never self-declared |
+| **Kanban classes of service** (Expedite/Fixed-Date/Standard/Intangible) [1P] | Practice-adoption pattern, **no accuracy measurement found** | The right *shape* for this engine: named classes each with a pre-agreed handling rule, rather than one risk score and a threshold. This is what facets-gate-activities already is |
+| **ISO/IEC/IEEE 29119** risk-based testing [blog] | **No controlled or industrial study found** showing it reduces escaped defects or effort at matched quality; it produced an organised practitioner rejection ("Stop 29119") | Formal compliance is not evidence of effectiveness. Do not adopt a standard for audit theatre |
+
+One honest gap the briefs could not close: the claim that *teams over-classify to skip process* could not be substantiated with any measurement. Multiple targeted searches returned nothing on PR-label mischaracterisation rates or standard-change gaming; the closest evidence is about outright reviewer-bypass exploits, a different mechanism, and it should not be cited as if it answered this. ITIL's documented emergency-reclassification pattern is the strongest available and it is practitioner literature, not a measured rate. **If redkiln adds a self-declared facet, it needs its own audit from day one, because nobody has measured how often such a declaration is wrong.**
+
+### 2F. LLM and hybrid approaches — the brief that did not arrive
+
+The sixth commissioned brief, on LLM and hybrid classification, is **absent**. This document does not substitute for it and does not reason about that axis from memory. What the programme already holds on its own account is F36, and it is negative and specific: 400 dispatches, 0 void, $21.37, and the modal `R(stage, ctx)` identical across ten draws on **5/20, 3/20, 2/20 and 2/20** items against an 80% line; the prescribed anchor-rewrite remedy did not repair it; three axes with **byte-identical anchors** drifted up to **−0.168** [measured, F36]. Two external corroborations are already in the architecture design (five 2026 frontier models; Claude-Sonnet-4 at background temperature 0, so the instability is schema-induced rather than decoding noise) [preprint]. Everything §4 says about the PROPOSED layer is therefore constrained by F36 and by nothing newer: a model may propose, and a human must confirm before the value can key a `require` row. Whether a hybrid arrangement does better than that is **not answered here, and the brief that would have addressed it is missing**.
+
+### 2G. Measured to work, versus widely recommended
+
+| claim | status |
+| --- | --- |
+| A trained text classifier reaches ~80% precision / 43% recall on a security-relevant-change facet | **Measured** [peer, Sabetta & Bezzi] |
+| AST representation beats token baselines on code-change classification by ~3–8 points | **Measured**, modest [peer] |
+| A scored risk model can route review effort safely at very large label volume | **Measured on outcomes only**, mechanism unpublished [preprint, Meta RADAR] |
+| Deep JIT models beat a one-feature baseline | **Measured false** [peer, LApredict] |
+| Heavyweight external change approval improves safety | **Measured false** [vendor, DORA] |
+| Declared ownership/tags/catalogues classify changes accurately | **Never measured.** No format in the family has a domain field to be accurate about |
+| A build/affected-target graph can supply domain-semantic tags | **No source found doing it at all** |
+| Confidence-threshold routing of ambiguous cases to a human buys accuracy | **Widely recommended, never measured.** Every source is vendor or practitioner advocacy [blog] |
+| Selective prediction / reject-option abstention buys N points of precision | Formally sound [peer], but **the literature offers no portable number**, and **no source-code or commit application was found** |
+| Active learning cuts labelling effort 30–70% | Generic industry claims from secondary sources; **no peer-reviewed measurement on commit or diff facet classification** |
+| Anything at all classifies a **data-migration** facet | **Nothing found, positive or negative.** The 0/20 result has no literature to compare against |
+
+---
+
+## 3. What human triagers do that a regex does not
+
+| # | what the human does | evidence | encodable? | how, concretely |
+| --- | --- | --- | --- | --- |
+| 1 | **Grades impact, not surface.** "Does this change who can authenticate", not "does the string appear" | Google SRE and PagerDuty both state the severity number must describe customer/business impact, never how hard the fix looks [1P]. Our own panel seats wrote the behavioural form directly: "none involve identity, credentials, sessions, or permission checks" [measured] | **Partly.** The behavioural question becomes structural only where the behaviour has a declared surface | Declared auth entry points + call/import-site matching, not path text |
+| 2 | **Reads a wider window.** The panel read the assembled diff body *and* the card; the regex read paths and lines through one pattern | METHOD-P amendment 9, in its own words: "a richer reader, not the same reader twice" [documented] | **Partly** | The PROPOSED layer is exactly this reader; it is why it may propose and may not decide |
+| 3 | **Abstains.** Says "no evidence" rather than "no" | 16 of 39 adjudicated cells resolved to `unknown`, all 16 on the 4 items with no code [measured] | **Yes — fully** | A third value plus AC-079's `gate_opened { reason: unknown_facet }` route, extended to booleans (§4) |
+| 4 | **Works from anchored worked examples, positive and negative** | GitLab defines S1–S4 by concrete example bugs, not adjectives, plus an explicit "if between two, take the higher" rule [1P] | **Yes** | The corpus's own false positives become a checked-in fixture set: `brand-tokens.test.ts` is a *negative* auth anchor forever |
+| 5 | **Decomposes one fuzzy judgement into a short sequence of narrow binaries** | ESI walks four sequential yes/no decision points rather than one 1-to-5 scale, reaching kappa **0.75–0.84** in validation; later editions *removed* two sub-questions found to hurt accuracy [1P/peer]. And a controlled scale-length study found a **2-category** scale more reliable (kappa **0.60**) than 3-category (**0.35**) or 4-category (**0.20**) on the same task [peer] | **Yes** | Per-activity predicate chains, not one global boolean, and never a "how auth-related, 1–5" score |
+| 6 | **Escalates to one named decider on doubt** | Mozilla's per-component triage owner and Kubernetes' weekly SIG wrangler are single accountable people, not committees; SRE practice is "declare the higher severity and downgrade later" [1P] | **Yes** | The engine already has this: `Unsatisfiable(kind, failed_predicates)` escalates to a human gate rather than degrading silently [documented, ADR-0079 decision 2] |
+| 7 | **Is calibrated, trained and audited** | MTS reliability is kappa 0.40–0.80 (median ~0.63) in systematic review, and **0.954** in a German validation with dedicated triage-nurse training; ESI meta-analysis spans 0.46–0.98, **higher where regular education and auditing are in place** [peer] | **Yes, at real cost** | Reliability came from the algorithm **plus** enforced calibration, never the flowchart alone. Whatever rubric results here must be re-scored, not written once |
+
+**What is irreducibly judgement.** Whether *this* "session" is a login session or a work session. Whether a change is user-visible in a sense that matters to a release note. Whether an item with an empty diff is auth-relevant because of what it *implies*. And the one that no layering removes: **a semantic change with no lexical marker anywhere is missed by the regex and by the panel alike, and scores as agreement** — METHOD-P amendment 9 discloses this as the method's own weakness, and the single adversarial seat per batch is a mitigation, not a cure [documented].
+
+**Two numbers that should calibrate the target.** Confirmed-duplicate bug reports — the same defect, filed twice — carry inconsistent human severity **28.9% (OpenOffice), 36.6% (Mozilla), 50.8% (Eclipse)** of the time [peer, Tian et al.]. And in a three-rater study of GitHub priority labels, overall Fleiss kappa was 0.681 but agreement was **0.779 on "high" and −0.001 on "medium"** [preprint] — disagreement concentrates in the ambiguous middle, not uniformly. So: the goal is not script-human agreement at 1.0, which humans do not reach with each other; the goal is to move the disagreement out of the *obvious* cells, and to route the genuinely ambiguous middle to a person instead of guessing it. Expect the first draft of any rubric to disagree with a human badly: in software-defect taxonomy studies kappa rose from near 0 to 82%+ and from ~53% to 92% **only after multiple rounds of adjudicated reconciliation** [preprint ×2]. Budget two or three rounds, not one tweak.
+
+---
+
+## 4. The recommendation for redkiln-rs
+
+### 4.1 Four provenance classes, in precedence order
+
+| class | which facts | how computed | what it costs | on failure to compute |
+| --- | --- | --- | --- | --- |
+| **DECLARED** | `surfaces` (see 4.2) — `auth`, `payments`, `migration`, `ui`, `flags`, … ; `data_migration` via a required migrations directory | A checked-in `surfaces.toml`: closed surface names → path globs. A fact is the **intersection of the changeset with a declared boundary** — a structural question, not a lexical one | Hours to seed per repo. Ongoing drift is the real cost and **nobody has published it in comparable units** (§2A) — so it must be audited, not assumed. Requires the repo's directory shape to roughly follow its domains; where it does not, the boundary map is the forcing function | Path not covered by any glob → contributes nothing; it does **not** imply `false` |
+| **DERIVED** | `toolchain`, `change`, `binary_change`; optionally `flag_exists` from declared flag-SDK call/import sites | **Git metadata only** for the mechanical three — extension/manifest table plus `--numstat`'s binary marker. Parser-anchored (tree-sitter or diff-aware Semgrep) call/import-site matching for `flag_exists`, matching an **AST node kind**, never a substring | The mechanical three are already free and already right: METHOD-P amendment 9 measured that **60 of 140 arm-D cells are decided by git's own metadata**, where a human agrees with the script by construction [measured]. The call-site layer is the only place a parser earns its keep, and it is optional | Empty changeset → `null`, not `false`. `recent_deploy` already does exactly this at the pin: value `null`, rule `R-recent-deploy-feed-absent`, because the `toolchain:deploy_log` feed does not exist [measured] |
+| **PROPOSED** | The residual semantic judgement on `surfaces` where the boundary map is silent | A model reads the assembled diff plus the card and emits a proposal with its evidence quotation | Bounded by F36: a proposal **may not key a `require` row until confirmed**. The programme's own panel gives a first local shape for the confirm load — **32 of 140 cells were contested** and went to adjudication, roughly a quarter of the grid [measured]. That is a number about an oracle-construction exercise, **not** a shipped triage gate, and must not be quoted as a gate-load forecast | A proposal is never a value. Unconfirmed → the fact stays `null` |
+| **ASKED** | Anything with no computable fact and no declaration | A triage question, asked once per item, answered by a human | F18 prices a human gate at a median **10.5 min** with **45% exceeding an hour** [measured] — so the gate must ask **per item, not per cell**: on this corpus the sixteen abstaining cells are four items, hence four questions, not sixteen. AC-074 then stores the answer as a decision-memory row replayed on an identical context digest, so it is not a per-run re-ask [documented] | This *is* the failure destination for the other three |
+
+**Precedence and override.** A higher class overrides a lower one for the same fact, and the override is logged. This is a real tension with AC-070 as written — "the emitted value is discarded and the kernel-computed value is used" — which makes the derivation authoritative over a human. That was the right rule when the threat was a model overwriting a sound computation; it is the wrong rule when the computation is a regex that is wrong on 14 of 20 items. **Recommend: AC-070's discard rule survives against a *model-emitted* value and yields to a *human-confirmed* one, which AC-074's decision-memory row already gives a durable, replayable home.**
+
+### 4.2 Should a facet be a global boolean at all? No.
+
+The user's own question, answered directly: **a repo-wide `auth: bool` is the wrong shape, and the engine already owns the machinery to do better.**
+
+- **Replace the boolean with a set-valued `surfaces` facet.** Closed vocabulary, values sourced from `surfaces.toml`, extensible in *values* by a tech pack — which ADR-0030 rule 1 already permits. Set-valued facets are precedented: `toolchain` and `change` are already `set = true` [documented, `facets.toml`]. ADR-0050's "same facet disjoins, distinct facets conjoin" gives exactly the right semantics for `surfaces` ∋ {auth, payments}.
+- **Let each activity's `applicable_if` own its own evidence question.** ADR-0024 already places admissibility on the activity and requirement in the pack. The predicate grammar (ADR-0033) already carries `any`/`all`/`none` over set members with element fields in scope. So a threat-model activity asks a broad question and a session-fixation test asks a narrow one, and neither inherits a threshold set by whoever tuned a regex:
+
+  ```
+  # broad: any declared security-relevant surface was touched
+  applicable_if = 'any(s in surfaces, s in ["auth", "payments", "secrets"])'
+
+  # narrow: a declared auth entry point was touched, and we know it structurally
+  applicable_if = 'any(s in surfaces, s == "auth") and surfaces.provenance != "proposed"'
+  ```
+
+- **Carry provenance on the value, and let a `require` row demand a minimum.** This is the concrete mechanism behind "different activities need different consideration": a cheap activity may run on a DECLARED fact; an expensive or destructive one may demand `provenance in ["declared", "asked"]` and so refuse to fire on an unconfirmed proposal. Without this, every activity shares one trust level and the weakest evidence sets the bar for all of them.
+- **This is a value-set and registry change inside PC8, not a break with it.** Rule 1 (closed vocabulary) holds; rule 2 (every facet maps to a computed fact) holds and is *strengthened*, because the computed fact becomes a declared boundary intersection rather than a lexical scan; rule 3 (admissibility only) is untouched.
+
+### 4.3 Abstention, stated as a mechanism
+
+1. **Booleans become tri-valued at the context-vector level.** `null` means "no evidence", and it is not `false`. The grammar already supports this: ADR-0032 makes absent inputs `null`, ADR-0069 defines `==`/`!=` against `null` while ordering against it is a lint error.
+2. **`null` must never silently coerce.** A `require` row whose predicate cannot be evaluated over a `null` yields `Unsatisfiable(kind, failed_predicates)` and escalates to the existing human gate — the engine's own settled rule, not a new mechanism [documented, ADR-0079 decision 2].
+3. **Extend AC-079's route to booleans.** AC-079 already routes an `unknown` ordinal to the triage gate with `gate_opened { reason: unknown_facet, axis }` — but the boolean facets declare `values = [true, false]`, so a derived boolean that cannot be computed has nowhere to go but `false`. **That single registry line is what turned four empty diffs into sixteen confident booleans.**
+4. **Abstention is reported separately from error, always.** In §6's scoring, a `null` cell is never counted as a false negative. Conflating them is how a silent `false` looks like a correct answer.
+
+### 4.4 Anchors become fixtures, and the deriver becomes a test subject
+
+Every false positive in §1 becomes a checked-in negative anchor, and every panel-adjudicated `true` becomes a positive one — GitLab's worked-example pattern, expressed as a regression corpus. The deriver is then a thing that is *scored against labels on every change to it*, not an oracle that is trusted because it is deterministic. Determinism is not correctness: arm D is a deterministic $0 derivation at a fixed pin, which is precisely why re-running it hides a problem instead of disclosing it [documented, METHOD-P amendment 8].
+
+### 4.5 What not to build
+
+| do not build | why |
+| --- | --- |
+| A per-change CodeQL run | $30/committer/month plus a maintained database, **no published precision or recall as a classifier**, and the same source/sink modelling problem moved into QL [1P] |
+| A call graph of the repo to answer one boolean | Priced and built for continuous whole-dependency-tree triage; degrades on dynamic dispatch and reflection; **no source found using it for first-party domain tagging** [vendor] |
+| A JIT defect / risk model | Needs labelled bug-to-commit history this corpus does not have, and decays within ~1 year without retraining [peer] |
+| An ML classifier trained on 20 items | The nearest measured analogue needed 2,715 hand-labelled commits to reach 80%/43% [peer] |
+| More keywords | Every measured precision/recall curve on this task family moves precision and recall in opposite directions; adding keywords to fix false negatives predictably reintroduces false positives [peer] |
+| A confidence score on the existing regex | More categories reduce agreement, not increase it (binary kappa 0.60 vs 4-category 0.20) [peer]. Abstain-or-answer, never "how auth-related, 1–5" |
+| A temperature or decoding-parameter arm | Already forbidden by ADR-0079 decision 4 [documented] |
+
+---
+
+## 5. What this changes in the existing design
+
+| record | what it says now | what this evidence changes | status |
+| --- | --- | --- | --- |
+| **ADR-0030 / PC8 rule 2** — every facet maps to a computed fact | Holds, and is the rule that **condemns the current deriver**: "a computed fact" was satisfied lexically | Recommend an amendment: the computed fact must **name its evidence source and provenance class**, and a facet whose only computation is a lexical scan of free text does not satisfy rule 2 for `require`-row purposes | Amendment proposed, PC8 otherwise intact |
+| **ADR-0030 / PC8 rule 5** — free text is never a predicate input | The deriver scans **diff lines and prose-declared document paths** — free text — and its output is a predicate input | In tension with rule 5 in spirit, though not in letter (rule 5 names the `keywords` field) [inferred]. Worth adjudicating explicitly rather than leaving implicit | Flag for the panel |
+| **ADR-0030 rule 1 / ADR-0050 / ADR-0060 / ADR-0073** | Closed vocabulary; same facet disjoins; boolean facets are `applicable_if`-only; booleans and ordinals live in separate registries | A set-valued `surfaces` facet is **neither** a boolean nor an ordinal — it is the third shape `toolchain` and `change` already have. No rule breaks; the registry needs the set shape recognised alongside the other two | Compatible |
+| **`facets.toml`** | `auth`, `data_migration`, `ui`, `flag_exists`, `recent_deploy` all declare `source = "derived"` | **`source = "derived"` is currently doing rhetorical work it cannot support.** Four of the five are derived by the pattern this document condemns, and the fifth is **underivable at this pin** (no `toolchain:deploy_log`). Recommend `source` gain a companion `deriver` field naming the instrument, and that no facet declare `derived` without a scored record | Registry edit — the single gating act, per AC-072 |
+| **AC-070** — a derived facet's kernel-computed value discards a triage-supplied one | Right against a model, wrong against a human when the derivation is measured broken | Recommend: discard survives against a **model-emitted** value, yields to a **human-confirmed** one stored per AC-074. Also: AC-070's own facet list names `touches_auth`, which is **not a registered facet** (`facets.toml` has `auth`) — AC-072 forbids an unregistered name feeding a row, so the drift should be corrected [documented] | Amendment proposed |
+| **AC-070's degenerate-distribution clause** | Refuses a `require` row fed by a facet whose measured distribution is degenerate — `external_dep` at 200/200 `false` is the named instance | **`data_migration` at 0/20 is the second instance** and the clause already covers it. Recommend the lint gain an explicit **positive-class** requirement: a boolean facet with no positive instance on the scored corpus may not key a `require` row | Already covered; make it explicit |
+| **AC-079** — `unknown` routes to the triage gate | Fires only for ordinal axes with `unknown` in their domain | The boolean facets have no third value, so the route **cannot fire for them** — and that is the exact defect the four empty-diff items exposed. Extend the domain and the route | Concrete, buildable, small |
+| **AC-071** — the unblocking gate | Fails pack load when any facet declares `source = "llm"` without a scored stability record | **There is no equivalent gate for `source = "derived"` without a scored precision record.** The semantic four are `derived`, therefore outside the block, therefore ungated — while being wrong on 14/20. Recommend a sibling clause or a new criterion | **Gap in the gate. This is the sharpest finding for the AC register** |
+| **AC-074** — a human override replays on an identical context digest | Already decided | This is what makes the ASKED layer affordable rather than a per-run re-ask; it is load-bearing for §4.1 and should be cited as such | Unchanged, promoted in importance |
+| **SM-024** — human-supplied facet load | Exists with no baseline | §6's spike gives it one | Unchanged |
+| **ADR-0067** — `recent_deploy` | Emitted `null` with rule `R-recent-deploy-feed-absent` because the feed is absent at the pin | A **live, already-implemented precedent** for the abstention design of §4.3. Generalise the pattern rather than invent one | Precedent |
+| **ADR-0012** | Open questions become named gating spikes with a named consumer | §6 is that discipline applied here | Followed |
+
+**ADR-0079 — what this evidence contributes, without deciding it.** The record stays `proposed` and is superseded, never amended [documented]. Four contributions, each an input to the human panel:
+
+1. **The derived half now has a measured shape.** Its "Option — derived and human-supplied facets only" turns on how big the derived half is. METHOD-P amendment 9 splits it: **60 of 140 arm-D cells are mechanical** — `toolchain`, `change`, `binary_change`, decided by git's metadata, where a human agrees by construction — and the semantic four are the entire contested surface [measured]. The derived half is not small, and it is not the half that is failing.
+2. **The propose-and-confirm option has a first local load figure, with a caveat.** **32 of 140 cells were contested** and went to a human adjudicator. That is an oracle-construction exercise and **not** a shipped-gate forecast, and it must not be quoted as one — but it is the first number of that shape the programme has, against F18's 10.5-min median.
+3. **Abstention shrinks the feared gate load.** ADR-0079's worry is a mandatory classification form on every item. On this corpus the sixteen abstaining cells cluster on **four items**, so a per-item gate is four questions, not twenty and not sixteen [measured].
+4. **The block does not reach the facets this document is about.** AC-071 gates `source = "llm"`. The semantic four are `source = "derived"` and are therefore unblocked and ungated while measurably wrong. Whatever the panel decides about the ordinal axes, **this gap is separately actionable and should not wait on it.**
+
+Nothing above touches the ordinal axes, the LLM source question, the modal-`R` criterion, or the blinding rule.
+
+---
+
+## 6. What to measure before committing — S-FACET
+
+Per ADR-0012, as a §8-shaped row with a named consumer:
+
+| spike | question | feeds | gates Phase 1? | cost |
+| --- | --- | --- | --- | --- |
+| **S-FACET** | Does a declared boundary map plus git metadata reach precision ≥ 0.95 on the semantic facets against the arm-D adjudicated labels — and what does the map cost to author and to keep? | `facets.toml`'s `source`/`deriver` fields for `auth`/`surfaces`, `data_migration`, `ui`, `flag_exists` (the selection crate, `rk-kernel`); AC-072's registry lint; the proposed derived-facet sibling to AC-071; METHOD-P §1.4's precision ≥ 0.95 rule that decides whether a facet leaves the model; SM-024's missing baseline | **Yes** for any pack row keyed on those facets. **No** for the engine, whose semantics are settled and buildable (ADR-0079 decision 2) | **Zero model dispatches.** Offline scoring at pin `47faec9f`, the same shape as F32/F34/F35 — consistent with F28's method finding that every discriminating result this programme produced came from cost, stability or mechanism, never from success rates. Plus author time to seed `surfaces.toml` on the corpus repo, which is itself a measured output |
+
+**Arms, pre-registered before anything is scored.**
+
+| arm | instrument | what it isolates | registered prediction |
+| --- | --- | --- | --- |
+| **1 — control** | The current regex, scored per source (`docs` / `commits` / `links` / `union`) | The baseline, already computed but never scored | auth precision far below 0.95 |
+| **2 — anchored** | The same pattern with word-boundary anchoring, over **paths only** (no diff lines) | How much of the failure is pure substring collision versus polysemy | Removes the `coauthor` (8) and ARIA `role` (2) hits; **does not remove** the `authored` (43) or design-`token` (44) hits. If arm 2 ≈ arm 1, the cheap fix is confirmed dead and the argument for structure is closed |
+| **3 — declared** | `surfaces.toml` path globs intersected with the changed-file set | Whether a declared boundary is sufficient on its own | The recommendation stands or falls here |
+| **4 — declared + call-site** | Arm 3 plus tree-sitter or diff-aware Semgrep matching on declared entry-point symbols and flag-SDK call sites | Whether a parser layer is needed at all — **run only if arm 3's recall is short** | The measured literature predicts a modest gain (+3–8 points on comparable tasks), not a rescue |
+
+**Scoring rules, pre-registered.**
+
+- Same corpus pin, same panel-adjudicated labels, per-facet precision and recall reported separately per source.
+- **Abstentions are reported as their own rate and never counted as false negatives.** A silent `false` and an honest `null` are different outcomes and must never be summed.
+- Every number is reported **ATTESTED-BLIND**, never as timestamp-verified, per METHOD-P amendment 8.
+- **`data_migration` cannot be scored on this corpus** — zero positives. It is either scored on a second repository containing real migrations, or it stays out of every `require` row under AC-070's degenerate-distribution clause. Saying "the migration rule improved" on a corpus with no migrations would be the same error the α threshold made.
+- The maintenance cost is a **reported output, not an assumption**: how many globs, how long to author, and how many are stale when re-derived at a later pin. No source in any brief has published this in units comparable to the regex, so the programme has to produce its own.
+
+**Kill criterion.** If arm 3 (or 3+4) does not reach precision ≥ 0.95 on `auth`/`surfaces` and on `ui` at an abstention rate the triage gate can absorb, then the declared-boundary route does not clear METHOD-P §1.4's rule either, those facets stay off the model **and** off the derived list, and they route to the ASKED layer with their gate load carried openly by SM-024. That outcome is a legitimate result, not a failure of the spike.
+
+**Second-labeller check, cheap and worth it.** Every triage instrument in §3 that reached high reliability did so through re-scoring, not through first-draft design. Before `surfaces.toml` is trusted, two people should apply it independently to the same 20 items and the disagreement should be measured. Expect the first draft to disagree; the reconciliation rounds *are* the instrument.
+
+---
+
+## 6a. Model-in-the-loop approaches — what the evidence supports
+
+The sixth brief in §2F never arrived. This section is that brief, run after the fact against the same evidence bar as §2. It answers six sub-questions — sound-verifier composition, labeller-then-distil, mandatory citation, ensembles/abstention, what shipping AI-review products actually do, and cost — and closes by weighing the result against §0's PROPOSED tier.
+
+### 6a.1 LLM + sound external verifier — LLM-Modulo
+
+| claim | measured result | task | source |
+| --- | --- | --- | --- |
+| A sound external verifier lifts autonomous LLM planning sharply | Blocksworld backprompted-to-VAL 82% vs 34.6% autonomous zero-shot; Logistics 70% vs autonomous baseline | Planning (Blocksworld/Logistics), **not classification** | [peer, Valmeekam, Marquez, Sreedharan, Kambhampati, NeurIPS 2023] |
+| The same lift collapses when the task has no surface pattern to exploit | Mystery Blocksworld (predicates obfuscated) reaches only 10% correct even with the sound verifier and 7.0 backprompt rounds on average | Planning, obfuscated predicates — the closest structural analogue to a same-case identifier with no lexical marker | [peer, same] |
+| An LLM cannot be its own sound verifier | "LLMs are no better at verifying plans than they are at generating them" — self-verification is explicitly rejected as the loop's disposer | Planning | [peer, same] |
+| The position paper's own framework | LLM proposes; a *sound, external, non-LLM* verifier disposes and drives re-prompting; LLMs may also help build the verifier's model | Position/synthesis paper, no new benchmark of its own | [peer, Kambhampati, Valmeekam, Guan, Verma, Stechly, Bhambri, Saldyt, Murthy, ICML 2024] |
+| A compound-architecture follow-up claims "guaranteed correct" outputs from iterating to verifier acceptance | Abstract claims "significant performance gains" across four scheduling domains; **exact figures could not be extracted from the source** | Planning (scheduling) | [preprint] |
+| An LLM-as-judge acting as the "verifier" for generated code | Verifier-selection method 78.2% vs pool mean Pass@1 76.1%, oracle Pass@3 upper bound 84.4%, on SWE-bench Verified | Code generation, and the "verifier" is another LLM, not a sound checker — only loosely LLM-Modulo | [preprint] |
+
+**No measured application of a sound-external-verifier loop to a classification task was found**, in this domain or any other. Every hard number above is planning or code-generation. The one number that transfers by structure rather than domain is the Mystery-Blocksworld collapse: a sound verifier rescues an LLM when the failure is *surface* pattern-matching gone wrong, and does far less when the failure is that the task has no exploitable surface pattern at all — which is exactly this document's diagnosis of `auth` (§1: "a semantic change with no lexical marker anywhere is missed... and scores as agreement"). The framework's own authors independently supply the reason the PROPOSED tier cannot let an LLM check itself: self-verification is rejected as unreliable in the same paper that argues for the pattern. Read narrowly, redkiln already has the LLM-Modulo shape wherever the "sound external verifier" is instantiated as a human confirming a proposal (§4.1 PROPOSED, §4.3.2) rather than a second model call — there is no sound, non-LLM, automatic verifier available for a semantic domain tag, so the human *is* the verifier this framework calls for, and the evidence does not license replacing that human with another model.
+
+### 6a.2 LLM-as-labeller, then distil to a cheap classifier
+
+| finding | measured result | source |
+| --- | --- | --- |
+| LLM labels can replace human labels at equivalent downstream accuracy | GPT-3-generated labels reach equivalent NLU/NLG performance at **50–96% lower labelling cost** than human annotation | [peer, Wang et al., EMNLP Findings 2021] |
+| A distilled student classifier can match or beat its own LLM teacher's zero-shot accuracy | On 3 of 4 text-classification datasets (AG-News, HuffPost, Amazon Reviews) a fine-tuned BERT-base student **beat** Claude-3/LLaMA-3-8B zero-shot after LLM-guided active learning + hard-negative mining; on the 4th (Yahoo Answers) it matched it | [peer/1P, Di Palo, Singhi, Fadlallah (Amazon), PGKD, EMNLP 2024] |
+| The same student is far cheaper and faster than the teacher | CPU: student $0.0046/60 items vs Claude-3 $0.3867 (~84×); GPU: student 0.46 s vs LLaMA-3-8B 58.05 s (~130×) | [peer/1P, same] |
+| A trained embedding + linear classifier costs orders of magnitude less than an LLM at near-parity quality | Best embedding model 77.2 vs best LLM 77.6 on MTEB(LLM) classification tasks (0.4-point gap); LLM cost up to **1,431×** higher ($154 vs $0.11/benchmark pass); ≈$0.005/1,000 classifications (embedding+logistic) vs ≈$10/1,000 (GPT-4o) | [peer, "The Embedder's Dilemma," COLM 2026] |
+| LLM-as-labeller alone (no distillation step) is measured comparable to human labelling | GPT-4 label agreement with ground truth 88.4% vs human annotators 86.2%, ~20× faster, ~7× cheaper, across Banking77/entity-matching/content-moderation/NER/contract-classification benchmarks | [vendor, Refuel AI] |
+| A first-party vendor documents the labeller half of the pattern in production, but keeps the LLM as the runtime engine rather than distilling | GPT-4 used to build/iterate a moderation "golden set," cutting policy-development time from months to hours; **no distilled downstream classifier described** — the LLM stays in the loop at runtime | [1P, OpenAI, "Using GPT-4 for content moderation"] |
+| Vendor material documents the pattern by name | "LLM distillation" framed explicitly as teacher-labels-then-cheap-student | [vendor, Snorkel AI] |
+
+This is a real, measured pattern, and the numbers are the best in this whole document for "a model helps and a cheap thing ships." It is also a **different role than PROPOSED**: every measured case is a one-time or periodic **offline** labelling pass feeding a **trained** classifier, not a per-item runtime LLM call. **No case study distilling to a code-diff, commit, or change classifier was found** — all the quantitative results above are generic text classification (news categories, forum topics, product reviews, intents). Sabetta & Bezzi (§2D, already in this document) needed 2,715 hand-labelled commits to reach 80%/43% with a linear SVM; the PGKD and Embedder's-Dilemma results distil from comparably large corpora. Redkiln's corpus is 20 items. **The distillation pattern is not available at this scale today** — it is a candidate for a *later* S-FACET-shaped spike (use a model once to help label a larger seeded corpus, or to help author/validate `surfaces.toml`, then score a cheap classifier against panel-adjudicated labels the way §6 already proposes scoring the boundary map) rather than a substitute for §4's four tiers as they stand.
+
+### 6a.3 Structured extraction with mandatory evidence/citation
+
+| finding | measured result | source |
+| --- | --- | --- |
+| Citation and correctness are separable, and citation is frequently decorative | Up to **57%** of citations in a RAG setting are "unfaithful" — attached post-hoc to an answer the citation did not actually produce; moving the true source to an uncited document barely changed citation behaviour (57% vs 55%) | [preprint, "Correctness is not Faithfulness in RAG Attributions"] |
+| A benchmark built specifically to score citation quality still finds it far from solved | Best system tested lacks complete citation support **50% of the time** on ELI5; citation quality and answer correctness are scored as separate, only loosely coupled axes | [peer, ALCE, EMNLP 2023] |
+| Citation *does* raise correctness — but only inside a retrieve-then-edit loop, not from a bare "cite your source" instruction | Retrieving evidence and rewriting the answer to conform to it "significantly improves attribution" while preserving >90% of original content | [peer, RARR, ACL 2023] |
+| Prompt-level grounding alone raises the grounding metric more reliably than it raises accuracy | QUIP grounding score rose consistently (e.g. NQ 32.8%→37.0%); end-task accuracy moved the same direction on most tasks but by less, and **fell** on one (ELI5 ROUGE-L −3.8%) | [peer/preprint, "According to...", 2023] |
+| A demanded rationale need not reflect the true cause of the answer | Chain-of-thought justifications stayed fluent and plausible while never mentioning an injected bias that was driving the answer; accuracy fell up to 36% under that bias despite the stated reasoning looking sound | [peer, Turpin et al., NeurIPS 2023] |
+| Forcing a quote-first step can produce a very large recall gain — on retrieval, not classification | Prepending "Here is the most relevant sentence in the context:" raised Claude 2.1 needle-in-haystack recall from 27% to 98% | [1P, Anthropic, verified] |
+
+**No study measuring whether requiring a cited line raises precision on a code-diff or commit attribute classification was found**, despite a direct search; the one paper that looked purpose-built for this (citation-grounded code comprehension) could not be verified past its abstract and is not relied on here. The honest reading across domains that do have measurements: **requiring evidence reliably improves auditability and groundedness metrics; it does not reliably improve correctness, and citations can be produced without having caused the answer.** That is consistent with, and sharpens, how §4.1 already scopes it — PROPOSED's evidence quotation (§4.1) is correctly treated there as *what a human checks*, not as a signal that raises the proposal's own trust class. The Turpin finding adds a concrete caution the document does not yet state: a plausible-looking quotation is not proof the model's classification was actually driven by that quotation, so a human confirming a PROPOSED value should re-read the cited span against the diff itself, not merely note that a citation exists.
+
+### 6a.4 Ensembles and abstention
+
+| finding | measured result | source |
+| --- | --- | --- |
+| Self-consistency (N-sample majority vote) lifts reasoning tasks substantially on older models | GSM8K +17.9 pp, SVAMP +11.0 pp, AQuA +12.2 pp over greedy single-sample decoding | [peer, Wang et al., ICLR 2023] |
+| The same technique has much smaller, sometimes negative, returns on modern strong models | Up to 20 samples yields +0.4 pp (HotpotQA) to +1.6 pp (MATH-500), plateauing early, occasionally declining, cost scaling linearly with N | [preprint] |
+| Unanimous agreement across a small LLM panel is a materially weaker correctness signal than independent-vote math implies | On NLI/preference classification, 9 LLM judges supplied only **~2.18 effective independent votes** (≈24% of nominal panel size); the paper reports the panel's actual accuracy falling **8–22 percentage points** short of what true-independent voting would predict, and the single best individual judge matched or beat the full 9-judge panel in every condition tested | [preprint, "Nine Judges, Two Effective Votes," verified] |
+| Agreement is a weak-to-moderate, not a reliable, proxy for correctness | Spearman-type correlation between agreement and correctness ≈0.20–0.59; on the most self-consistent frontier model, of the cases with agreement ≥0.8, **48% were still wrong** | [preprint, "When LLMs Agree, Are They Right?"] |
+| Majority voting can actively hurt small models on hard items | Voting *reduced* accuracy on 56.6–65.7% of hard science problems for two 7–8B models (single-model result, unreplicated on a second model) | [preprint] |
+| Selective prediction / reject-option abstention has a formal accuracy-coverage trade-off | Established since 1970 (Chow's rule) and formalised as the risk-coverage curve; the LLM-specific caveat is that token probability correlates only weakly with semantic correctness, breaking the classical assumption | [peer, Chow 1970; peer, El-Yaniv & Wiener, JMLR 2010; peer, Geifman & El-Yaniv, ICML 2019; preprint, LLM-specific adaptation] |
+| No portable coverage/accuracy operating point (e.g. "95% accurate on the 60% it answers") was found for text or code classification | Confirmed absent — the LLM-adapted work reports area-under-curve, not a single illustrative point | — |
+| No self-consistency/voting study on commit or diff classification exists | Confirmed by direct fetch of the one closely adjacent commit-type classification paper — it uses single-pass prediction throughout, no voting | [preprint, checked directly] |
+
+**This is the most directly load-bearing finding on the axis, and it is a caution rather than an endorsement.** The programme's own P1 panel construction accepted unanimous-3-seat cells without a human and escalated only the 32/140 contested ones (§2F, §5 ADR-0079 contribution 2). The "Nine Judges" result is a structurally close analogue — small-panel LLM unanimity on a classification task, not a reasoning task — and it found unanimity driven by correlated rather than independent error, with measured accuracy well short of what naive vote-counting implies at a panel nearly *three times* the size redkiln used. Nothing in that paper says the P1 panel's own labels are wrong; it says the *inference* "3/3 agreement therefore no error-checking needed" is not one the nearest available measurement supports, and if unanimous-N-vote agreement is ever proposed as a *substitute* for human confirmation in the PROPOSED tier — a plausible-sounding cost-saving idea nobody has yet suggested in this document — the evidence says no: agreement is a weak, not a reliable, stand-in for correctness, and it degrades in exactly the small-correlated-panel regime this programme operates in.
+
+### 6a.5 What AI code-review products actually do to classify a change
+
+| product | mechanism disclosed | measured accuracy for the classification/routing step itself | source |
+| --- | --- | --- | --- |
+| **Cloudflare** (internal reviewer) | A static rule, run before any LLM sees the diff: `if (fileCount > 50 \|\| hasSecurityFiles) return 'full'; if (totalLines <= 10 && fileCount <= 20) return 'trivial'; if (totalLines <= 100 && fileCount <= 20) return 'lite'; return 'full'` — `hasSecurityFiles` is a path check on `auth/`, `crypto/`, and similarly named paths | Not published for the tiering rule itself; only an overall 0.6% override rate across 131,246 reviews is reported | [1P, verified] |
+| **Cursor** ("PR Routing & Approval," separate from Bugbot) | A "Use Risk Score" toggle enables "risk classification which can be customized further with prompting," gated by a configurable "Maximum Risk Threshold" | Mechanism (rule vs model) undisclosed; no accuracy number published | [1P, verified] |
+| **Cursor Bugbot** | Effort levels (Low/Default/High/Smart) chosen by the caller; incremental-vs-full-diff review; a large corpus of learned custom rules | No domain-classification mechanism described; only overall fix/resolution rates published (>50% fixed, 70%+ resolved pre-merge) | [1P] |
+| **GitHub Copilot code review** | Two **human-selected** effort tiers (Lite / Balanced); Copilot does not itself detect what the diff touches to choose depth | No classification-step accuracy published; per-review cost is undisclosed because the model used is not fixed | [1P] |
+| **Graphite Reviewer / Diamond** | No mechanism for domain classification or risk-based depth routing found; only an overall <3% false-positive claim across "tens of thousands" of reviews | Not applicable — no classification step is described | [1P] |
+| **Greptile** | A codebase dependency graph (files/functions/imports) improves multi-hop bug-finding context; no domain-classification or depth-routing mechanism described | Not published | [1P] |
+| **CodeRabbit** | Review focus set by human-declared path globs (`path_instructions`/`path_filters`); a separate Security product runs parallel LLM agents on authorization/injection/data-exposure themes with a reachability/impact triage pass | No accuracy/precision/false-positive number published for either the path-rule routing or the security triage step | [1P] |
+
+**None of the six publishes a precision or recall number for a domain-classification step as its own thing** — every accuracy figure found anywhere in this family is for overall bug-finding or an override/false-positive rate, never for "did it correctly decide this touches auth." And the one vendor that discloses its actual gating mechanism in enough detail to audit — Cloudflare, the most AI-forward of the six — uses a **hand-written static rule** (line count, file count, a path check) to decide how much LLM review effort to spend, explicitly to avoid spending model tokens on a decision that doesn't need them, and reserves the LLM for judgement *after* that gate has fired. This corroborates §0's and §4.1's precedence ordering from outside this programme's own corpus: even a team building AI-native review infrastructure reaches for DECLARED/DERIVED-shaped machinery to do the gating, and spends the model downstream of it, not in place of it.
+
+### 6a.6 Cost per change
+
+| item | figure | source |
+| --- | --- | --- |
+| Claude Haiku 4.5 | $1.00 / $5.00 per 1M input/output tokens | [1P] |
+| GPT-4o-mini | $0.15 / $0.60 per 1M tokens | [1P] |
+| GPT-5-nano | $0.05 / $0.40 per 1M tokens | [1P] |
+| A back-of-envelope classification call (~3–10k input tokens of diff, ~100–200 output tokens), computed here, not published by any vendor | Haiku 4.5 ≈ $0.0035–$0.011/call; GPT-4o-mini ≈ $0.0005–$0.0016/call; GPT-5-nano ≈ $0.0002–$0.0006/call | [inferred, from published per-token pricing] |
+| Scaled to 10,000 changes/year | Haiku 4.5 ≈ $35–$110/yr; GPT-4o-mini ≈ $5–$16/yr; GPT-5-nano ≈ $2–$6/yr | [inferred] |
+| A static rule at the same scale | Effectively $0 marginal compute | [inferred] |
+| Full AI code-review products, for scale contrast (not classification alone) | CodeRabbit $24–$48/dev/month plus $0.25/file overage; Greptile $30/seat/month for 50 reviews, $1/credit overage; GitHub Copilot billed in $0.01 "AI credits" with the model used per review undisclosed | [1P/vendor] |
+
+**No vendor or practitioner source publishes a direct cost comparison between LLM classification and a static rule**, at backlog scale or any other — this was searched for directly and not found. The arithmetic above is this document's own, built from published per-token pricing, and it changes the shape of the cost argument the rest of this document makes. §0 and §4.5 correctly reject CodeQL and a call-graph platform on cost ($30/committer/month plus a maintained database) *and* on the absence of a published accuracy number — but a single cheap-model classification call is not in that price class: at Haiku pricing, classifying every item in a 10,000-change/year backlog costs on the order of a hundred dollars a year, and at GPT-5-nano pricing, a few dollars. **Cost is not the reason to keep a model out of the per-item runtime path here.** The reason is the one this document already has and the rest of §6a does not overturn: F36's measured instability (5/20, 3/20, 2/20, 2/20 against an 80% line), the correlated-panel finding in §6a.4, and the citation-is-not-correctness finding in §6a.3. A static rule is not cheaper than a model call by enough to matter at this volume; it is *more reliable*, and that is the argument that should be made for it, not the cost argument this document leans on elsewhere for a different class of tool.
+
+### 6a.7 Net effect on §0's verdict
+
+None of the six sub-questions produces evidence that the PROPOSED tier is a mistake. Two findings **strengthen** it, one **sharpens** its stated mechanism, one **surfaces a risk to name explicitly**, one **adds a candidate not yet in the four-tier taxonomy**, and one **removes a bad reason to avoid the model** without supplying a good one to use it more.
+
+| what the evidence does | which finding | effect on §0/§4 |
+| --- | --- | --- |
+| Confirms self-verification is unreliable, which is the formal reason a model cannot confirm its own proposal | LLM-Modulo, §6a.1 | **Strengthens** PROPOSED requiring an external (here: human) disposer, not a second model call |
+| Confirms AI-native review products themselves gate model spend with a static rule, not a model | Cloudflare, §6a.5 | **Strengthens** DECLARED/DERIVED-before-PROPOSED as the pattern other builders converge on independently |
+| Shows a demanded citation improves auditability, not correctness, and can be produced without having caused the answer | Citation/faithfulness, §6a.3 | **Sharpens** §4.1: the evidence quotation is rightly scoped as what a human checks, and the confirming human must re-verify the citation against the diff rather than trust its presence |
+| Shows small-panel unanimity is a weaker correctness signal than independent-vote arithmetic implies, in a structurally close classification setting | Ensembles, §6a.4 | **Names a risk** the document does not yet state: unanimous-N-vote agreement must never be substituted for the human confirmation the PROPOSED tier requires, including as a future "efficiency" proposal |
+| Shows a one-time LLM labelling pass can seed a cheap, well-measured downstream classifier — but never at 20-item scale, and never yet on code diffs | Labeller-then-distil, §6a.2 | **Adds a candidate**, not a change: a future S-FACET-shaped spike, once a larger corpus exists, could use a model *offline* to help build or validate `surfaces.toml` or train a distilled classifier — a fifth role, distinct from PROPOSED's per-item runtime proposal, and not evidenced here |
+| Shows a cheap model call costs on the order of $2–$110/year at 10,000 changes/year, not CodeQL money | Cost, §6a.6 | **Removes** cost as a defensible reason to keep the model out of the runtime path; the defensible reason remains reliability (F36, §6a.4), and the document should rest on that, not on cost, when this axis comes up again |
+
+The sharpest single addition for the AC register: **§4.1 already says a proposal "may not key a require row until confirmed," and nothing above weakens that.** What this section adds is that the confirmation step itself needs to be robust to two specific, now-measured failure modes that were not previously named — a decorative citation, and a majority vote mistaken for a check — and that the labeller-then-distil pattern is a real option for *later*, once a corpus exists at the scale (thousands, not tens) every measured version of it required.
+
+---
+
+## 7. Sources
+
+**Programme evidence (internal).** `references/2026-09-08-evidence-brief.md` §B, §C implication 9, ledger F18/F28/F32/F34/F35/F36; `references/adr/0012`, `0024`, `0030`, `0032`, `0050`, `0060`, `0061`, `0067`, `0069`, `0072`, `0073`, `0074`, `0079`; `references/2026-09-08-acceptance-criteria.md` §3.7 (AC-069, AC-070, AC-071, AC-072, AC-074, AC-076, AC-079; SM-015, SM-016, SM-024); `spikes/p9/facets.toml`; `spikes/p1/derive-facets.py`; `spikes/results/p1-arm-d-contested.json`, `p1-arm-d-panel-accepted.jsonl`; METHOD-P amendments 8 and 9 (commits `1cf2f0a`, `6736e48`). Corpus pin `47faec9f`.
+
+**Lexical-classifier failure and measured ceilings**
+- Herzig, Just, Zeller, *It's Not a Bug, It's a Feature*, ICSE 2013 — 33.8% tracker mislabelling [peer] · https://www.st.cs.uni-saarland.de/publications/files/herzig-icse-2013.pdf
+- Sabetta & Bezzi, *A practical approach to the automatic classification of security-relevant commits*, ICSME 2018 — 80% precision / 43% recall [peer] · https://arxiv.org/abs/1807.02458
+- Hill, Binkley, Lawrie, Pollock, Vijay-Shanker, identifier-splitting empirical comparison, EMSE — Samurai 0.82, same-case <40% [peer] · https://www.eecis.udel.edu/~pollock/879tainsef13/idsplittjournal.pdf
+- Keyword bug-fix-commit heuristics, MSR practice survey (the 97.6% figure is **secondary-sourced and unverified against the primary PDF**) [peer] · https://link.springer.com/article/10.1007/s10664-021-10051-z
+- The Scunthorpe problem [blog] · https://en.wikipedia.org/wiki/Scunthorpe_problem
+- Hendrickx et al., *Machine Learning with a Reject Option: a survey* — formal, no portable number, **no code/commit application found** [peer] · https://arxiv.org/abs/2107.11277
+- Active learning / uncertainty sampling — **generic industry claims only, no SE-specific measurement** [blog] · https://arxiv.org/pdf/2307.02719
+
+**Structural and semantic analysis**
+- Semgrep rule-writing docs and diff-aware scanning [vendor] · https://semgrep.dev/docs/writing-rules/overview · https://docs.semgrep.dev/kb/semgrep-ci/trigger-diff-scans-env-var
+- Semgrep AI-augmented detection (59.9% IDOR recall; 61% precision case study) [vendor] · https://semgrep.dev/blog/2025/ai-powered-detection-with-semgrep/
+- Agent-security benchmark: Semgrep 23.8% recall / F1 0.385 [preprint] · https://arxiv.org/pdf/2603.22853
+- Dataflow comparator on BigVul/Devign: Semgrep 2.43% F1 / 0.57% recall [preprint] · https://arxiv.org/pdf/2604.13764
+- CodeQL incremental analysis and pricing [1P] · https://docs.github.com/en/code-security/how-tos/find-and-fix-code-vulnerabilities/scan-from-the-command-line/incremental-analysis · https://github.blog/changelog/2025-05-28-incremental-security-analysis-makes-codeql-up-to-20-faster-in-pull-requests/
+- How GitHub uses CodeQL internally, incl. missing-authorisation queries [1P] · https://github.blog/engineering/how-github-uses-codeql-to-secure-github/
+- CodeQL Wall of Fame — 400+ CVEs, an effectiveness signal, not precision/recall [1P] · https://securitylab.github.com/codeql-wall-of-fame/
+- Falleri et al., GumTree, ASE 2014 — 137/144 "good output", a diff-quality metric [peer] · https://www.labri.fr/perso/xblanc/data/papers/ASE14.pdf
+- Refactoring-aware AST diff and benchmark [preprint] · https://arxiv.org/abs/2403.05939
+- difftastic tree diffing — makes no classification claim [Pr] · https://difftastic.wilfred.me.uk/tree_diffing.html
+- SemanticDiff limitations [vendor] · https://semanticdiff.com/docs/limitations/
+- Endor Labs reachability analysis and its own limitations doc [vendor] · https://www.endorlabs.com/learn/reachability-analysis · https://docs.endorlabs.com/scan/sca/reachability-analysis
+- Snyk reachable vulnerabilities [vendor] · https://snyk.io/blog/reachable-vulnerabilities/
+- bazel-diff, target-determinator, Nx vs Turborepo — **build/test selection only** [Pr/1P] · https://github.com/Tinder/bazel-diff · https://github.com/bazel-contrib/target-determinator · https://nx.dev/docs/kb/nx-vs-turborepo
+
+**Declared ownership and metadata**
+- Kubernetes OWNERS [1P] · https://www.kubernetes.dev/docs/guide/owners/
+- GitHub CODEOWNERS [1P] · https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+- Code ownership and software quality (reviewer routing, not domain accuracy) [peer] · https://www.researchgate.net/publication/383310237_Code_Ownership_The_Principles_Differences_and_Their_Associations_with_Software_Quality
+- Nx enforce-module-boundaries [1P] · https://nx.dev/docs/technologies/eslint/eslint-plugin/guides/enforce-module-boundaries — silent-failure bug: https://github.com/nrwl/nx/issues/20922
+- Backstage catalog descriptor format [1P] · https://backstage.io/docs/features/software-catalog/descriptor-format/
+- Conventional Commits compliance study (~52% of adopting repos ≥80% conforming) [peer] · https://arxiv.org/pdf/2408.14431 — LLM correction of the field [preprint] · https://arxiv.org/html/2605.02033v1
+- Architecture fitness functions in production [Pr] · https://technology.lastminute.com/how-we-enforce-architecture-boundaries-at-scale-on-our-app/ · https://xebia.com/blog/taking-frontend-architecture-serious-with-dependency-cruiser/
+
+**Change risk and process selection**
+- Mockus & Weiss, *Predicting risk of software changes*, BLTJ 2000 [peer] · https://onlinelibrary.wiley.com/doi/abs/10.1002/bltj.2229
+- Kamei et al., *A Large-Scale Empirical Study of Just-in-Time Quality Assurance*, TSE 2013 [peer] · https://posl.ait.kyushu-u.ac.jp/~kamei/publications/Kamei_TSE2013.pdf
+- McIntosh & Kamei, *Are Fix-Inducing Changes a Moving Target?*, TSE 2018 [peer] · https://posl.ait.kyushu-u.ac.jp/~kamei/publications/McIntosh_TSE2017.pdf
+- Zeng et al., *Deep Just-in-Time Defect Prediction: How Far Are We?*, ISSTA 2021 [peer] · https://lingming.cs.illinois.edu/publications/issta2021a.pdf
+- Sadowski et al., *Modern Code Review: A Case Study at Google*, ICSE-SEIP 2018 [peer] · https://sback.it/publications/icse2018seip.pdf
+- *Software Engineering at Google*, ch. 22, Large-Scale Changes / Rosie [1P] · https://abseil.io/resources/swe-book/html/ch22.html
+- Meta, *Automating Low-Risk Code Review at Meta: RADAR* [preprint] · https://arxiv.org/abs/2605.30208
+- Meta Getafix / SapFix — the process floor for a machine-proposed change is exactly one human review [1P] · https://engineering.fb.com/2018/11/06/developer-tools/getafix-how-facebook-tools-learn-to-fix-bugs-automatically/
+- Czerwonka et al., *CRANE*, ICST 2011 [1P] · https://www.microsoft.com/en-us/research/wp-content/uploads/2011/03/ICST2011_CRANE_CameraReady.pdf
+- DORA, streamlining change approval [vendor] · https://dora.dev/capabilities/streamlining-change-approval/
+- ITIL change management, incl. the CAB anti-patterns [vendor] · https://wiki.en.it-processmaps.com/index.php/Change_Management
+- *Stop 29119* FAQ [blog] · https://developsense.com/blog/2014/09/frequently-asked-questions-about-the-29119-controversy
+
+**Triage practice and rater agreement**
+- Tian, Ali, Lo, Hassan, *On the Unreliability of Bug Severity Data*, EMSE 2015 [peer] · https://link.springer.com/article/10.1007/s10664-015-9409-1
+- *Prioritising GitHub Priority Labels* — Fleiss kappa 0.681 overall, −0.001 on "medium" [preprint] · https://arxiv.org/html/2405.10891v1
+- Iterative taxonomy-agreement pattern [preprint] · https://arxiv.org/pdf/1906.01388 · https://arxiv.org/pdf/2308.05014
+- Google SRE incident management [1P] · https://sre.google/sre-book/managing-incidents/ — PagerDuty severity levels [1P] · https://response.pagerduty.com/before/severity_levels/
+- GitLab severity labels defined by worked examples [1P] · https://docs.gitlab.com/development/labels/
+- Emergency Severity Index handbook and validation [1P/peer] · https://media.emscimprovement.center/documents/Emergency_Severity_Index_Handbook.pdf · https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3850684/
+- Manchester Triage System reliability [peer] · https://pmc.ncbi.nlm.nih.gov/articles/PMC13512649/ · https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0088995
+- Scale-length versus reliability — binary kappa 0.60 vs 4-category 0.20 [peer] · https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12535228/
+- Kanban classes of service [1P] · https://djaa.com/classes-of-service/
+- Mozilla and Kubernetes named triage owners [1P] · https://firefox-source-docs.mozilla.org/bug-mgmt/policies/triage-bugzilla.html · https://www.kubernetes.dev/docs/guide/issue-triage/
+- Human-in-the-loop confidence-threshold routing — **advocacy, not measured** [blog] · https://toloka.ai/blog/hitl-machine-learning/ · https://zapier.com/blog/human-in-the-loop/
+
+**Model-in-the-loop and hybrid LLM approaches (§6a)**
+- Kambhampati, Valmeekam, Guan, Verma, Stechly, Bhambri, Saldyt, Murthy, *LLMs Can't Plan, But Can Help Planning in LLM-Modulo Frameworks*, ICML 2024 (Position track) — sound-external-verifier framework; self-verification rejected [peer] · https://arxiv.org/abs/2402.01817
+- Valmeekam, Marquez, Sreedharan, Kambhampati, *On the Planning Abilities of Large Language Models: A Critical Investigation*, NeurIPS 2023 Spotlight — measured backprompting-to-a-sound-verifier lift; Mystery Blocksworld collapses to 10% [peer] · https://arxiv.org/abs/2305.15771
+- *Robust Planning with Compound LLM Architectures: An LLM-Modulo Approach* — claims of "guaranteed correct" outputs via iterate-to-verifier-acceptance; figures not independently verified [preprint] · https://arxiv.org/abs/2411.14484
+- *LLM-as-a-Verifier: A General-Purpose Verification Framework* — SWE-bench Verified verifier-selection numbers; the "verifier" is itself an LLM judge, not a sound checker [preprint] · https://arxiv.org/abs/2607.05391
+- Wang et al., *Want To Reduce Labeling Cost? GPT-3 Can Help*, EMNLP Findings 2021 — 50–96% labelling-cost reduction at equivalent downstream accuracy [peer] · https://aclanthology.org/2021.findings-emnlp.354/
+- Di Palo, Singhi, Fadlallah, *Performance-Guided LLM Knowledge Distillation for Efficient Text Classification at Scale* (PGKD), EMNLP 2024 — distilled student beats/matches LLM teacher zero-shot, 25–130× cheaper/faster [peer/1P] · https://arxiv.org/abs/2411.05045
+- *The Embedder's Dilemma: LLMs Are Better, but at What Cost?*, COLM 2026 — 0.4-point quality gap, up to 1,431× cost gap, classification vs LLM [peer] · https://arxiv.org/abs/2608.12875
+- Refuel AI, *LLMs can structure data as well as humans, but 100x faster* — GPT-4 label agreement 88.4% vs human 86.2% [vendor] · https://www.refuel.ai/blog-posts/llm-labeling-technical-report
+- OpenAI, *Using GPT-4 for content moderation* — LLM-as-labeller in production; no distillation step described [1P] · https://openai.com/index/using-gpt-4-for-content-moderation/
+- Snorkel AI, *LLM distillation demystified: a complete guide* [vendor] · https://snorkel.ai/blog/llm-distillation-demystified-a-complete-guide/
+- *Correctness is not Faithfulness in Retrieval Augmented Generation Attributions* — up to 57% of citations are post-hoc/unfaithful [preprint] · https://arxiv.org/abs/2412.18004
+- Gao, Yen, Yih, Chen, *Enabling Large Language Models to Generate Text with Citations* (ALCE), EMNLP 2023 — citation support incomplete 50% of the time on ELI5 even under a citation-scoring benchmark [peer] · https://arxiv.org/abs/2305.14627
+- Gao et al., *RARR: Researching and Revising What Language Models Say, Using Language Models*, ACL 2023 — retrieve-then-edit significantly improves attribution [peer] · https://arxiv.org/abs/2210.08726
+- Weller et al., *"According to ..." Prompting*, 2023 — grounding metric rises more reliably than task accuracy [peer/preprint] · https://arxiv.org/abs/2305.13252
+- Turpin, Michael, Perez, Bowman, *Language Models Don't Always Say What They Think*, NeurIPS 2023 — stated rationale need not reflect the true cause of the answer; accuracy fell up to 36% under injected bias [peer] · https://arxiv.org/abs/2305.04388
+- Anthropic, *Long context prompting for Claude 2.1* — quote-first instruction raised needle-in-haystack recall 27%→98% [1P] · https://claude.com/blog/claude-2-1-prompting
+- Wang et al., *Self-Consistency Improves Chain of Thought Reasoning in Language Models*, ICLR 2023 — N-sample majority vote lift on reasoning benchmarks [peer] · https://arxiv.org/abs/2203.11171
+- *Self-Consistency Is Losing Its Edge: Diminishing Returns and Rising Costs in Modern LLMs* — gains shrink to +0.4–1.6 pp on modern models [preprint] · https://arxiv.org/abs/2511.00751
+- *Nine Judges, Two Effective Votes: Correlated Errors Undermine LLM Evaluation Panels* — 9 LLM judges yield ~2.18 effective independent votes; panel accuracy falls 8–22 pp short of independent-voting predictions on NLI/preference classification [preprint] · https://arxiv.org/abs/2605.29800
+- *When LLMs Agree, Are They Right? Auditing Self-Consistency and Cross-Model Agreement as Confidence Signals* — agreement–correctness correlation ≈0.20–0.59; 48% of high-agreement cases still wrong on the most self-consistent model [preprint] · https://arxiv.org/abs/2607.08065
+- *When Self-Consistency Backfires: Majority Vote Hurts the Majority of Hard Science Problems for Small LLMs* — single-model result, unreplicated on a second model [preprint] · https://arxiv.org/abs/2608.11403
+- Chow, *On Optimum Recognition Error and Reject Tradeoff*, IEEE Trans. Information Theory, 1970 — foundational risk-coverage abstention rule [peer] · https://doi.org/10.1109/TIT.1970.1054406
+- El-Yaniv & Wiener, *On the Foundations of Noise-free Selective Classification*, JMLR 2010 — formal risk-coverage framework [peer] · https://www.jmlr.org/papers/volume11/el-yaniv10a.pdf
+- Geifman & El-Yaniv, *SelectiveNet: A Deep Neural Network with an Integrated Reject Option*, ICML 2019 — jointly trained coverage/accuracy, image classification only [peer] · https://arxiv.org/abs/1901.09192
+- *SelectLLM: Calibrating LLMs for Selective Prediction* — LLM token probability correlates weakly with semantic correctness, breaking Chow's-rule assumptions [preprint] · https://openreview.net/forum?id=JJPAy8mvrQ
+- *Conventional Commit Classification using Large Language Models and Prompt Engineering* — confirms no self-consistency/voting is used in the one closely adjacent commit-classification study [preprint] · https://arxiv.org/abs/2605.02033
+- Cloudflare, *How we built an AI code reviewer* — static rule (line count, file count, security-path check) gates review-tier depth before any LLM runs [1P] · https://blog.cloudflare.com/ai-code-review/
+- Cursor, *PR Routing & Approval* — undisclosed-mechanism risk classification and threshold-based auto-approval [1P] · https://cursor.com/docs/approval-agents
+- Cursor, *Bugbot* — effort levels and learned rules; no domain-classification mechanism disclosed [1P] · https://cursor.com/docs/bugbot
+- GitHub, *Copilot code review* — human-selected Lite/Balanced effort tiers, not automatic content classification [1P] · https://docs.github.com/en/copilot/concepts/code-review/code-review
+- GitHub, *Copilot billing: models and pricing* [1P] · https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing
+- Graphite, *Graphite Reviewer launch* — <3% false-positive claim; no domain-classification mechanism described [1P] · https://graphite.com/blog/graphite-reviewer-launch
+- Greptile, *AI reviews need context* and *How Greptile works* — dependency-graph context for bug-finding, not domain classification [1P] · https://www.greptile.com/blog/ai-reviews-need-context · https://www.greptile.com/docs/how-greptile-works/graph-based-codebase-context
+- CodeRabbit, configuration reference and *Introducing CodeRabbit Security* — path-glob review rules; separate LLM reachability/impact triage for vulnerabilities, no accuracy published for either [1P] · https://docs.coderabbit.ai/reference/configuration · https://www.coderabbit.ai/blog/introducing-coderabbit-security
+- OpenAI API pricing (GPT-4o-mini, GPT-5-mini, GPT-5-nano) [1P] · https://developers.openai.com/api/docs/pricing
+
+**Absences, stated plainly.** No source measures any of these tool classes on the actual task — classifying a whole code change into a coarse domain category on a small corpus. No published regex-versus-AST-versus-graph comparison on "is this diff auth-relevant" exists. No accuracy or staleness measurement exists for CODEOWNERS, Backstage tags or Nx scope tags. No source proposes a diff-hunk-level declared-domain scheme. No study measures selective prediction or active learning on commit or diff classification. Nothing at all, positive or negative, exists for a data-migration facet classifier. The claim that teams over-classify to skip process could not be substantiated by any measurement. And the sixth commissioned brief, on LLM and hybrid approaches, did not arrive — so on that axis this document rests on F36 alone.
