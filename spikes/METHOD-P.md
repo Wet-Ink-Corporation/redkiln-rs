@@ -1,6 +1,6 @@
 # Pre-registration #7 — P: the process-catalog spikes (P1, P2, P6, P7, P8)
 
-**Status:** pre-registration, per charter §8.2 (amendments 6–7 applied 2026-09-08 by Claude on Ryan's authorization; post-data, additive — see §3.2 and the closing note. **Amendment 8 applied 2026-09-09**, also on Ryan's authorization: it changes how §0 rule 1 is *verified* for P1 arm D, not what it requires, and changes no kill criterion — see §0 rule 1). **Written before any P1/P2/P6/P7/P8 dispatch or analysis. No P data has been seen.** P9 (`METHOD-P9.md`) and its second-author follow-up P9b are already run and reported (`F32-DRAFT.md`, `F33-DRAFT.md`); their results shaped this document and are cited where they do.
+**Status:** pre-registration, per charter §8.2 (amendments 6–7 applied 2026-09-08 by Claude on Ryan's authorization; post-data, additive — see §3.2 and the closing note. **Amendments 8 and 9 applied 2026-09-09**, also on Ryan's authorization. 8 changes how §0 rule 1 is *verified* for P1 arm D; 9 changes what arm D's precision is scored *against* — a deterministic oracle on the mechanical facets, an adversarial model panel on the semantic ones, Ryan adjudicating the contested set. Neither changes a kill criterion — see §0 rule 1). **Written before any P1/P2/P6/P7/P8 dispatch or analysis. No P data has been seen.** P9 (`METHOD-P9.md`) and its second-author follow-up P9b are already run and reported (`F32-DRAFT.md`, `F33-DRAFT.md`); their results shaped this document and are cited where they do.
 **Baseline:** this document's commit. **Corpus pin:** redkiln @ `47faec9f` (S-MIG's frozen `.bklg`). **Instrument:** `spikes/runner` (E3 rig) for P7/P8; `spikes/p9/lint.py` v2 for P6; offline analysis for P1's derivability half and P2.
 **Why it exists:** `references/2026-09-07-process-catalog-proposal.md` §6/§6.1 names these spikes; P7 and P8 can overturn PC6 and the schema's escalation model, P6 gates the v0 pack, P1 and P2 fix parameters the selection engine needs before Phase 1 can author `bug-standard` and `story` packs.
 
@@ -51,6 +51,55 @@ Two rules specific to P:
 
    **P2 is not affected.** Its engine phase requires only that the labels be timestamped, and its verdicts do not yet
    exist, so labelling now is blind on the original terms.
+
+   *Amendment 9 (2026-09-09):* for **P1 arm D only**, the oracle §1.3 scores against changes from "the human panel"
+   to **a deterministic oracle on the mechanical facets, an adversarial model panel on the semantic ones, and Ryan
+   adjudicating every contested cell**. The rule that labels are produced blind is unchanged and now binds the panel:
+   no panel member may read `spikes/results/p1-arm-d.jsonl`.
+
+   **Why.** `derive-facets.py` is a regex over file paths and diff lines. That splits the seven scored facets in two.
+   `toolchain`, `change` and `binary_change` are decided by git's own metadata — a human reading the same file list
+   agrees with the regex by construction, so a human label there measures regex coverage, not semantics, and 60 of the
+   140 cells were nearly tautological. `auth`, `data_migration`, `ui` and `flag_exists` ask whether a lexical match on
+   a path or diff line approximates a semantic fact — `authorship.ts` matches an auth regex and is not auth; a session
+   change may be auth and match nothing. Those four are the measurement.
+
+   **What each oracle is.** Mechanical facets: an independently implemented derivation from git metadata, not sharing
+   the script's regexes — `binary_change` in particular tests a real rule, because the script marks binary on git's
+   `--numstat` marker **or** an Unreal-path match, so a text `.uproject` is a live disagreement. Semantic facets: N
+   independent model labellers per cell, each returning a value, the file or line that decided it, and a confidence,
+   plus one adversarial seat whose job is the opposite — find a real auth or UI change carrying no lexical marker,
+   which is the failure a path regex cannot see. Unanimous panel agreeing with the script is accepted and logged with
+   its evidence; every split, and every unanimous panel that contradicts the script, is escalated.
+
+   **The human's role is unchanged in kind and smaller in volume.** Ryan adjudicates the contested set. To keep that
+   judgement independent, the adjudication surface shows the cell, the diff evidence and the question, and reveals
+   which side the script and the panel took only after he answers — the same blind-then-unblind discipline as the E3
+   severity annotation (METHOD-E3 §7).
+
+   **This is weaker than the pre-registered oracle, in one specific way.** A model panel reading a diff and a regex
+   grepping the same diff can share a blind spot: a semantic change with no lexical marker anywhere may be missed by
+   both, and would be scored as agreement. The adversarial seat is the mitigation and is not a cure. It is also
+   weaker in kind — F27 and F36 both measured model judgement to be unstable — which is why unanimity is required
+   before a cell is accepted without a human, and why every accepted cell carries the evidence that decided it so the
+   claim is checkable after the fact.
+
+   **It is stronger in two ways, and both are stated so the trade is visible.** The panel reads the diff *body* and
+   surrounding code; the script reads paths and diff lines through a regex, so the panel is a richer reader rather
+   than the same reader twice. And the human's scarce judgement is spent on the cells where something actually
+   disagrees, with the evidence assembled, instead of on a majority that are obvious.
+
+   **What it does not change.** §1.4's thresholds are untouched: precision ≥ 0.95 still removes a facet from the
+   model, α < 0.6 and the modal-`R` line are unaffected, and `?` is still excluded from scoring rather than counted
+   against the script. Results scored under this amendment are reported as **panel-adjudicated**, never as
+   human-panel, wherever the number is cited.
+
+   *Rejected alternatives.* Keep the pre-registered human oracle — stronger evidence and the honest default, rejected
+   only because the labeller states his own labels would be best-effort rather than definitive, and 60 of the 140
+   cells measure nothing. Let the panel be the final oracle — rejected: it inverts ADR-0074's "reviewer proposes,
+   machine confirms", making a model the authority over whether a deterministic rule is correct. Score the mechanical
+   facets against a human anyway — rejected as measuring the regex against itself.
+
 2. **A lint or engine result is reproducible from committed inputs or it is void.** P5's replay-identity rule applied early: every P6 verdict and every P2 freshness verdict is a function of `(catalog digest, facets digest, item digest)` recorded on the result line.
 
 ---
@@ -196,4 +245,4 @@ what is *reported*, not the kill criteria; the pre-registered readings remain pr
 arm-D engine output existed and, on the labeller's own attestation, before it had been seen; it substitutes an
 attestation for an expired chronology check on P1 arm D alone, is strictly weaker than the check it replaces, and
 changes no kill criterion. Every result scored under it is reported as **attested-blind**, never as
-timestamp-verified.
+timestamp-verified. **Amendment 9** (§0 rule 1, 2026-09-09) replaces arm D's human-panel oracle with a deterministic oracle on the mechanical facets and an adversarially-verified model panel on the semantic ones, with Ryan adjudicating every contested cell. It is weaker than the pre-registered oracle — panel and regex can share a lexical blind spot — and richer in what the panel can read. Results are reported as **panel-adjudicated**, never as human-panel. §1.4's thresholds are untouched.
