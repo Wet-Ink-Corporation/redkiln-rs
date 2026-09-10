@@ -8,9 +8,7 @@ committed; nothing lives only in conversation. A fresh session needs this file,
 (frozen) · **Instrument:** `claude` **2.1.263** (was 2.1.259 through 2026-09-08, and
 2.1.258 before 2026-09-03 — F20; the rig treats 2.1.259 as a floor, see
 DECISIONS-2026-09-09 #1; it moved again to **2.1.265** partway through P7 —
-F37 §7), Windows 11 · **135 tests**, 0 clippy warnings. Working tree is NOT
-clean as of 2026-09-09: the AFK session's output is staged by
-`p9/COMMIT-2026-09-09.sh` and nothing was committed.
+F37 §7), Windows 11 · **135 tests**, 0 clippy warnings. **Corrected 2026-09-09:** the AFK session's output **was** committed, at `e3b0bac`. This paragraph previously read "Working tree is NOT clean as of 2026-09-09: the AFK session's output is staged by `p9/COMMIT-2026-09-09.sh` and nothing was committed" — that was true when written and is now stale. It has since misled three separate pieces of work into planning a commit that had already happened. What actually remains untracked is the raw P1/P7/P8 driver logs, `spikes/results/p8-state/`, and the `spikes/runner/target-dev/` and `target-p8/` build directories, which `.gitignore` does not cover.
 
 ---
 
@@ -201,6 +199,7 @@ amendments), both folded into the architecture proposal as D20–D22.
 | **P2** short-circuit precision/recall | **run to the label boundary**: 77 reconstructed artifacts, **12/20 perturbation + 6/10 advisory** cases, 15/77 (19.5%) `unknown` fine scope and excluded. Needed a crash fix (`%b` is the commit body) and a `human_authored` remap — the old heuristic was False for **every** artifact. The `engine` phase refuses until the labels are timestamped | `METHOD-P.md` §2, `results/p2-cases.jsonl` |
 | **P7** encapsulated quality cost vs catch (absorbs P4) | **COMPLETE** — 61 graph runs, 0 void, $131.62 of $200; `optional` and `recommended` both at 10 items x 3 repeats (`mandatory` dropped, #33). Block costs **2.64x** and changes the root cause on **1 item in 10**; its policy check was **false on 33 of 33** runs where an adversary ran, so the verdict channel is a constant function of the arm. Deviation channel used **0** times. §4.4 criterion 1 fires but has **no power** at n=3 | `F37-DRAFT.md`, `p7/analyse-p7.py` |
 | **P8** gate inside a graph | **PARTIAL** — 3 resume cycles of a pre-registered 27+3, $3.01. Resume is **lossless 3/3** across a real `taskkill /T /F`, and costs **0.45-0.78x** F28, so §5.4's first two criteria do not fire. The third is **not answerable**: the gate never fired on its own, so arrivals were forced (#36). §5.2's fixture design does not work — the investigator reproduces from the symptom. 65-min / 24-h arms and controls **not run** | `F38-DRAFT.md`, `plans/p8-24h-resume.md` |
+| **P1 arm D** scored | **run, 2026-09-09** — panel-adjudicated oracle under METHOD-P amendment 9. **No facet clears §1.4's 0.95 bar.** `auth` **0.00** over 11 positives (every one false: `auth` ⊂ *authored*, `oauth` ⊂ *coauthor*, `token` = a design token); `data_migration` emits 0 positives and is **not measurable**; `ui` 1.00 on 7/7 but CI [0.65,1.00]. `commits` beats `docs` on every facet. 140 truth cells: 60 oracle, 48 unanimous panel, **32 Ryan-adjudicated** (15 of 32 against the script) | `F39-DRAFT.md`, `p1/score-arm-d-panel.py`, `p1/oracle-mechanical.py`, `references/2026-09-09-change-classification.md` |
 | P3 | cut (PC1 decided on documented grounds) | proposal §6.1 |
 | P5 | reclassified as Phase 1's acceptance test | proposal §6.1 |
 
