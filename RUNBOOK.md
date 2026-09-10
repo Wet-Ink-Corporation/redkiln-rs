@@ -6,8 +6,8 @@ file is wrong. · **Scope:** Phase 0 (close the programme) and Phase 1 (kernel, 
 Phases 2–4 are out of scope. · **Inputs:** `references/2026-09-08-architecture-design.md` (§0.1, §5.3, §5.9, §9,
 §10) · `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519 **plus AC-520**, the derived-facet gate
 allocated outside the exhausted selection range, and **its** §12.10) · `references/adr/`
-(**89 records** — ADR-0089 landed 2026-09-09) · `spikes/F39-DRAFT.md` · `spikes/HANDOFF.md` ("What Ryan does
-next", "Traps that cost time here") ·
+(**89 records** — ADR-0089 landed 2026-09-09) · `spikes/F39-DRAFT.md` · `spikes/F40-DRAFT.md` ·
+`spikes/HANDOFF.md` ("What Ryan does next", "Traps that cost time here") ·
 `spikes/DECISIONS-2026-09-09.md` · `references/2026-09-08-evidence-brief.md` §E. · **Tree state:** every path and
 every existing command below was re-verified against both working trees on **2026-09-08**, and the paths this
 revision touches were re-verified again on **2026-09-09**. · **Commands that do not
@@ -117,13 +117,26 @@ These hold for every step below. They are not advice; each one is a measured fai
    scope before you obey it and before you route around it.** The scope is the finding, not the verdict.
 
 10. **A pre-registered bar whose registered n cannot decide it is powerless, and must be reported as powerless.**
-    Three measured instances now, all in the same pre-registration: P1's α rule [F36], P7's criterion 1 — powerless
-    at n=3, every Wilson interval overlapping by construction [F37] — and METHOD-P §1.4's 0.95 precision bar, which
-    **no facet can clear at n=20 however good the method**: `ui` is 7/7 and its 95% lower bound is 0.65, and
-    roughly 60 positives are needed for a lower bound above 0.95 [measured, F39 Limits 1]. **Before you run a
-    criterion, ask what n it needs; after you run one, report saturated as saturated, powerless as powerless and
-    not-measurable as not measurable — never as a pass or a failure.** This is a result *about* the
+    **Four** measured instances now, all in the same pre-registration: P1's α rule [F36], P7's criterion 1 —
+    powerless at n=3, every Wilson interval overlapping by construction [F37] — METHOD-P §1.4's 0.95 precision bar,
+    which **no facet can clear at n=20 however good the method**: `ui` is 7/7 and its 95% lower bound is 0.65, and
+    roughly 60 positives are needed for a lower bound above 0.95 [measured, F39 Limits 1] — and now **P2 §2.4's
+    criteria 1 and 2**, whose recall half has no denominator at all: **0 of 41 rows are "should re-run"**, so recall
+    is **NOT ANSWERABLE** and criterion 2 cannot fire either way [measured, F40]. **Four is a pattern in how this
+    programme writes pre-registrations, not four coincidences** — each fixed a threshold without checking that the
+    registered corpus could produce the denominator the threshold needs. **Before you run a
+    criterion, ask what n it needs; after you run one, report saturated as saturated, powerless as powerless,
+    not-measurable as not measurable and not-answerable as not answerable — never as a pass or a failure.** **Not-measurable and not-answerable are different faults and both are live:** F39's `data_migration` was NOT MEASURABLE (the script emitted no positive, so there was nothing to be precise about); F40's P2 recall is NOT ANSWERABLE (the label set carries no positive, so the denominator does not exist). This is a result *about* the
     pre-registration, reported in the finding; it is **not** a licence to edit METHOD-P after the numbers are in.
+
+11. **A criterion that fires may prescribe a remedy its own measurement contraindicates. Record both halves.**
+    P2's criterion 1 fires on its precision half — coarse `derived_from` precision **0.00** [0.00, 0.26] over 11
+    emitted positives — and the remedy it prescribes, *"fine scope becomes mandatory for `L`-class activities"*, is
+    **contraindicated by the same run**: on the 33 rows both scopes scored, coarse marks **5** `Stale` and fine
+    marks **15**, and **10 rows flip `Present` → `Stale` going coarse to fine while none flips the other way**
+    [measured, F40 §3]. A document that records the criterion as firing without recording that its own remedy is
+    contraindicated has absorbed half the finding. **The design consequence is OPEN, and it needs a decision, not a
+    default.**
 
 **Where each constraint actually bites.** They are restated at these steps because the preamble is not where an
 operator meets them:
@@ -139,7 +152,8 @@ operator meets them:
 | 7 — scripted edits need an anchor assertion | Step 3a, **Step 4a** (the three registry edits), **Step 4.4** (the two ADR edits), Step 1.2 |
 | 8 — instrument version in every record | Step 0.3, Step 1.3, Step 3a, Step 4.1, Halt 2 |
 | 9 — a guard scoped wrong | Step 3b, Step 4.3, Halt 7 |
-| 10 — a bar its own n cannot decide | **Step 4.1 clause B**, Halt 9 |
+| 10 — a bar its own n cannot decide | **Step 4.1 clause B**, **Step 4.2 (P2's criteria 1 and 2)**, Halt 9 |
+| 11 — a fired criterion whose remedy is contraindicated | **Step 4.2 (P2's criterion 1)**, Step 4.5, **Halt 12** |
 
 ---
 
@@ -199,11 +213,13 @@ documents the amendment rewrote (`RUNBOOK.md`, the four `references/2026-09-08-*
 SUPERSEDED and corrected on their pointer lines only, and `spikes/HANDOFF.md`, which gained the F39 ledger
 paragraph. **Count it, do not read it off this sentence** — `git status --porcelain | grep -c '^ M'` is the
 number, and this enumeration has already been wrong once. They are not run noise: **commit them, do not ignore them**, and
-Step 1.3's list below carries them. Second, **two more `??` entries are Ryan's P2 artefacts, not run noise** —
-`spikes/p2/build-p2-worksheet.py` and `spikes/results/p2-labels-ryan.md` (both written 2026-09-09) — so the raw
-`??` count is **twenty**, of which seventeen are the run noise enumerated above, one is ADR-0089 and two are the P2
-pair. **The P2 pair is committed, not ignored**, and Step 1.3 stages both; the seventeen are what Step 1.2
-gitignores. Third, `references/adr/` now holds **89 records + README.md**, so `ls references/adr/*.md | wc -l` is
+Step 1.3's list below carries them. Second, **the P2 artefacts that were `??` here have since been committed and
+are no longer untracked** — `spikes/p2/build-p2-worksheet.py`, `spikes/p2/build-p2-artifact-data.py`,
+`spikes/p2/p2-labels-template.html`, **`spikes/p2/score-p2.py`** (the METHOD-P §2.3 scorer, written 2026-09-10 for
+F40) and `spikes/results/p2-engine.jsonl` are all in the index [measured, `git ls-files spikes/p2`, 2026-09-10], so
+the raw `??` count is **seventeen**, all of it the run noise enumerated above. What P2 now leaves *uncommitted* is
+a single ` M` on **`spikes/results/p2-labels-ryan.md`** — the 41 filled labels — which Step 1.3 already stages.
+**Re-derive both counts; do not read them off this sentence.** Third, `references/adr/` now holds **89 records + README.md**, so `ls references/adr/*.md | wc -l` is
 **90**, not 89 — Checkpoint 1 asserts the new number.
 
 `RUNBOOK.md` is no longer in that list: it is tracked as of `4519edc` (`git ls-files RUNBOOK.md` returns it). The
@@ -681,7 +697,12 @@ the file itself. Do not generalise its looseness to the other three.
 `…-labels-ryan.md` is the **68 KB worksheet** built by `spikes/p1/build-arm-d-worksheet.py` and committed at
 `20775ce`; P2's is the **130 KB worksheet** built by `spikes/p2/build-p2-worksheet.py` on 2026-09-09, carrying all
 twelve upstream diffs inline. Copying the `-RYAN-TODO` blanks over either replaces a worksheet with a bare row
-list — which is the exact defect the worksheets were built to fix, applied in reverse:
+list — which is the exact defect the worksheets were built to fix, applied in reverse. **P2's copy is now worse
+than that: it carries the 41 filled labels of 2026-09-10 and the engine has already been run against them, so
+`cp` over it destroys a measurement, not a template** [measured, F40]. The loop below echoes bytes for exactly
+this reason — filled, it is **135,567** bytes and arm D's unfilled worksheet is **69,842** (measured 2026-09-10),
+so a size in the low tens of thousands after a `cp` is the blank staring back at you. Blindness is destroyed by
+reading and a label set is destroyed by writing; neither comes back:
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -701,16 +722,34 @@ The `-RYAN-TODO` file stays as the blank of record in every case, and the scorer
 adversarially-verified model panel on the semantic ones, and Ryan adjudicating every contested cell — so arm D was
 scored on 2026-09-09 without `p1-arm-d-labels-ryan.md` ever being filled [measured, F39; §3c row (d) records the
 same]. That file is retained **unfilled**, as the worksheet of record and as the artefact amendment 9 departed
-from; it is **not** an outstanding deliverable and it must not be counted as one. What remains outstanding in this
-step is **arm L and P2**.
+from; it is **not** an outstanding deliverable and it must not be counted as one.
+
+**P2's half is now discharged too, and it is the one arm whose blindness is CHECKED rather than attested.**
+`spikes/results/p2-labels-ryan.md` was filled on 2026-09-10 — **41 of 41 rows answered**, `labeller: Ryan Britton`,
+`labelled_at: 2026-09-10T15:58:08Z` — and the engine has since been run against it, its earliest record stamped
+**2026-09-10T16:01:12Z** [measured, F40]. **P2 is unaffected by METHOD-P amendment 8**, so its chronology proxy has
+not expired: the label stamp precedes the first engine record, the scorer's own guard checks that ordering on every
+run, and **P2 is therefore *timestamp-verified*, not *attested-blind*** — the only arm in this programme of which
+that is true. **Do not blur it with arm D**, which is panel-adjudicated and whose amendment-8 attestation route was
+registered and never invoked (§3c row (d)). Do not re-fill, re-stamp or re-copy this file; §4.2 and §4.3 are where
+it is read.
+
+**What remains outstanding in this step is `arm L` alone**, and the discipline below is written for it. **Do not
+read P2's discharge as licence to relax any of it** — the rules are METHOD-P §0 rule 1 and they are what made P2's
+result checkable.
 
 **The rules for filling them, which are METHOD-P §0 rule 1 and are not negotiable:**
 
 - Fill **from the item alone**, before opening any engine output. `spikes/results/p1-arm-d.jsonl` (640 records),
   `p1-arm-l.jsonl`, `p1-arm-l-v2.jsonl` and `p2-cases.jsonl` are all unblinding material. Do not open them.
-- For P2, label **from the diff alone**:
-  `git -C D:/repos/redkiln diff <replaced_with_rev> 47faec9f -- .bklg/<item>/<upstream>`. The advisory cases
-  A01–A06 are labelled *after* the engine, in a separate file (METHOD-P §2.3).
+- For P2 this was done on 2026-09-10 and the rule it was done under is recorded here because the **advisory half
+  still has to obey it**: label **from the diff alone**,
+  `git -C D:/repos/redkiln diff <replaced_with_rev> 47faec9f -- .bklg/<item>/<upstream>`. **P2's perturbation half
+  is scored; its advisory half is not.** The advisory cases **A01–A06** are labelled *after* the engine, in a
+  separate file (METHOD-P §2.3), they are **not** part of this step's three blind files, and **DECISIONS-2026-09-09
+  #15's `human_authored` remap must be settled before they are labelled** [documented, METHOD-P §2.3; §4.2's
+  precondition table]. "P2 is entirely unrun" is false; **"P2 is complete" is also false** — every sentence about
+  P2 has to say which half it means.
 - Leave `?` where the item alone cannot tell. `recent_deploy` is underivable at this pin (no deploy log) — label
   it `?` unless you know otherwise. `binary_change` is measured but **is not in `facets.toml`**, so it can feed no
   `require` row regardless of how you label it (DECISIONS-2026-09-09 #11; verified — `facets.toml` has no
@@ -760,40 +799,65 @@ python -c "import datetime;print(datetime.datetime.now(datetime.timezone.utc).st
 Paste that into `labelled_at:` and set `labeller:`. Verify before moving on:
 
 ```bash
-grep -h "^labelled_at:" spikes/results/p1-arm-d-labels-ryan.md \
-                        spikes/results/p1-arm-l-labels-ryan.md \
+grep -h "^labelled_at:" spikes/results/p1-arm-l-labels-ryan.md \
                         spikes/results/p2-labels-ryan.md
 # every line must end in Z, contain no '+' and no '-' after the 'T', and contain no "FILL"
+# P2's already does: `labelled_at: 2026-09-10T15:58:08Z` [measured, F40]. Arm D's file is NOT in this
+# list and must not be added — it is retained deliberately unfilled at `labelled_at: FILL-ME`
+# (amendment 9), so including it makes this check fail on a file nobody is meant to stamp.
 ```
 
-**Checkpoint 3b.** All four. **The first line is an existence guard and is not optional** — the previous revision
+**Checkpoint 3b, re-scoped: `arm L` is the outstanding half; P2's clauses are DISCHARGED and are kept below as
+regression checks.** **The first line is an existence guard and is not optional** — the previous revision
 opened with `! grep -l "FILL-ME" …`, and a `grep` over files that do not exist exits **2**, which `!` turns into a
 pass. That checkpoint went green when Step 3b had not been done at all.
 
+**The outstanding half — `arm L`. All three, and none of them passes today:**
+
 ```bash
 cd D:/repos/redkiln-rs
-for f in spikes/results/p1-arm-l-labels-ryan.md \
-         spikes/results/p2-labels-ryan.md; do
-  test -f "$f" || echo "MISSING: $f"; done                                                        # → no output
-grep -l "FILL" spikes/results/p1-arm-l-labels-ryan.md \
-               spikes/results/p2-labels-ryan.md | wc -l                                           # → 0
-grep -h "^labelled_at:" spikes/results/p1-arm-l-labels-ryan.md \
-                        spikes/results/p2-labels-ryan.md | grep -cE 'Z$'                          # → 2
-grep -cE '^\| P[0-9]{2} \|.*\| *(yes|no) *\|' spikes/results/p2-labels-ryan.md                     # → 41 of 41 rows answered
+test -f spikes/results/p1-arm-l-labels-ryan.md || echo "MISSING: p1-arm-l-labels-ryan.md"
+                                                    # → no output. Measured 2026-09-10: it PRINTS — the file
+                                                    #   does not exist and arm L is genuinely outstanding.
+grep -l "FILL" spikes/results/p1-arm-l-labels-ryan.md | wc -l                                     # → 0
+grep -h "^labelled_at:" spikes/results/p1-arm-l-labels-ryan.md | grep -cE 'Z$'                    # → 1
 ```
 
-**Two files, not three, and the count is 2.** `p1-arm-d-labels-ryan.md` is deliberately excluded: amendment 9
-replaced its route, arm D is scored, and the file is retained unfilled (above). Including it makes this checkpoint
-unpassable by construction — `grep -l "FILL" … | wc -l` can never reach 0 while it carries `labelled_at: FILL-ME`
-— which is a guard scoped wrong, and golden constraint 9 says to establish a guard's scope before obeying it *and*
-before routing around it. Do not "fix" this by filling that file: its blindness proxy expired (amendment 8) and
-the panel superseded it (amendment 9).
+**The discharged half — P2. All four hold on this tree; run them as a regression check, not as work to do:**
+
+```bash
+cd D:/repos/redkiln-rs
+test -f spikes/results/p2-labels-ryan.md || echo "MISSING: p2-labels-ryan.md"                     # → no output
+grep -l "FILL" spikes/results/p2-labels-ryan.md | wc -l                                           # → 0
+grep -h "^labelled_at:" spikes/results/p2-labels-ryan.md | grep -cE 'Z$'                          # → 1
+grep -cE '^\| P[0-9]{2} \|.*\| *(yes|no) *\|' spikes/results/p2-labels-ryan.md                     # → 41 of 41 rows answered
+grep -h "^labell" spikes/results/p2-labels-ryan.md
+# → labelled_at: 2026-09-10T15:58:08Z   /   labeller: Ryan Britton   [measured, F40]
+```
+
+**Three files named, one outstanding, and the counts are per-file for a reason.** `p1-arm-d-labels-ryan.md` is
+deliberately excluded from both blocks: amendment 9 replaced its route, arm D is scored, and the file is retained
+unfilled (above). Including it makes the check unpassable by construction — `grep -l "FILL" … | wc -l` can never
+reach 0 while it carries `labelled_at: FILL-ME` — which is a guard scoped wrong, and golden constraint 9 says to
+establish a guard's scope before obeying it *and* before routing around it. Do not "fix" this by filling that
+file: its blindness proxy expired (amendment 8) and the panel superseded it (amendment 9). **The two halves are
+split into two blocks, rather than left as one `→ 2` count, because a combined count green on P2 alone would read
+as arm L being done** — the same shape as the `!`-negation defect this checkpoint already carries a paragraph
+about.
+
+**What P2's discharge is, stated exactly.** Its labels are **blind and timestamp-verified**, not attested-blind:
+`labelled_at 2026-09-10T15:58:08Z` precedes the engine's earliest record at **2026-09-10T16:01:12Z**, and P2 is
+unaffected by amendment 8 so that chronology proxy still holds [measured, F40]. **It is the only arm in this
+programme whose blindness is checked rather than attested.** It does **not** mean P2 is complete: the **advisory
+half (A01–A06) is unrun**, is labelled after the engine in its own file, and waits on DECISIONS #15.
 
 `grep -l "FILL"`, not `"FILL-ME"`, and piped to `wc -l` rather than negated: `score-arm-d.py` tests for the
 substring `FILL-ME` but `reconstruct-derived-from.py` tests for `FILL`, so the looser string is the one that
-matches both guards. The blank row counts these are filled from — **20 / 41** for arm L and P2, and **160** for
+matches both guards. **`spikes/p2/score-p2.py` (§4.2) tests for `FILL` too**, and refuses with *"labels are not
+timestamped — refusing to score"* [measured, the script at this pin], so the same looser string covers all three.
+The blank row counts these are filled from — **20 / 41** for arm L and P2, and **160** for
 the arm-D file this checkpoint no longer covers — were re-verified against the
-`-RYAN-TODO` originals on 2026-09-08 and are correct.
+`-RYAN-TODO` originals on 2026-09-08 and are correct; P2's **41 of 41** are now answered.
 
 Empty cells and `?` cells are legitimate answers and are counted as unlabelled by the scorer, not as errors. What
 is not legitimate is a file where `labelled_at` is set and the rows are untouched.
@@ -814,7 +878,7 @@ blind at all and κ is forfeited. Re-verified
 | Exit | What §10.2 requires | State | What you must do |
 | --- | --- | --- | --- |
 | **(c)** | Every §10.5 register row marked "gates Phase 1" has a written finding with an F-number in `spikes/FINDINGS.md`, **or the row is explicitly re-scoped by an ADR** | **S-BIN is "Registered, unrun"** and is marked **YES, gates Phase 1**. It needs a real Unreal project, ~10 Opus dispatches and UE automation runs [documented, design §10.5]. **The fixture now exists**: Ryan has chosen to design S-BIN against the real Unreal project at `D:/repos/BrittonGames` — UE 5.8, headless automation already working via `_workspace/tooling/verify_headless.ps1`, assets in Git LFS per its own `.gitattributes` [measured, paths verified 2026-09-09]. **S-BIN has still not run**, and it still gates Phase 1 for `ChangeSummary` | **Design the spike against the real project.** ADR-0008 already names a real Unreal project as the S-BIN fixture, and that fixture is now identified rather than hypothetical — so exit (c) has a route that ends in a *finding*, not in a narrowing. Cost and schedule are still outside this runbook. **The re-scope branch remains available and is not the current plan**: scoping S-BIN's gate to the `ChangeSummary` type only, which Step 5 already refuses to build (**AC-475**, no synthesised value), is a decision and therefore an ADR — and it would need **its own number when and if it is taken** (`0089` is taken; `0090` and `0091` are claimed by Steps 4.4 and 6.1) |
-| **(d)** | The blind panels are filled: **P1 arm D scored**, and `e3-severity-annotation-BLANK.md` **returned** | **Both halves have returned a result. Only one of them is blind in any sense, and neither is blind on the terms §10.2's wording assumes.** P1 arm D was **scored on 2026-09-09** against 140 truth cells at corpus pin `47faec9f`, at **$0** model cost [measured, F39] — and it is **panel-adjudicated, never human-panel** (amendment 9), and must be reported that way wherever the number is reused. **Amendment 8's attested-blind route does not attach to these figures.** That route requires BOTH a filled `blind_attestation:` line in the label file AND an explicit `--attested-blind` scorer invocation, "so the substitution can never happen silently"; neither happened — the line reads `FILL-ME` and `score-arm-d-panel.py` takes no arguments at all [measured, both files at this pin]. Blindness here rests on amendment 9's own construction (no panel seat may read `p1-arm-d.jsonl`; Ryan adjudicated every contested cell with the panel's and the script's positions revealed only after he answered), which amendment 9 itself records as **weaker** than the pre-registered oracle [documented, METHOD-P §0 amendments 8 and 9]. E3-SEV is recorded **DONE** by the design: `e3-severity-annotation-ryan.md` is filled — **4 BLOCKING, 2 ADVISORY**, including a documented self-correction on finding 4 (originally annotated BLOCKING on a claim that was false) — settling arm (a) FP 1/23, MCC +0.978 and arm (b) FP 0/23, MCC +1.000 [documented, design §10.4, §10.5]. **That sheet is NOT BLIND at all, by its own header**, so the E3 half discharges (d)'s *result*, not (d)'s *blindness*. Step 3b's own P1/P2 label files are the separate, still-outstanding half of Step 3b | Nothing further for (d). **Carry the three limits rather than the two numbers.** (1) **E3-SEV is not blind, and κ is forfeited.** The sheet's own header records *"Filled by the model at Ryan's direction, 2026-09-04. **NOT BLIND.**"* and that κ against an independent human annotation is **forfeited** for this pass, because the same model produced `e3-severity-annotation-model.md` and this sheet, so the two are not independent raters and **no inter-rater statistic may be computed from them**; the header names the residual threat rather than removing it — *"the annotator is still the model that built the rig, and that threat does not go away by being named"* [documented, `spikes/results/e3-severity-annotation-ryan.md` header]. The pristine `e3-severity-annotation-BLANK.md` is preserved and still unfilled; **if Ryan annotates it from scratch without reading either filled sheet, κ becomes available again** — that is the route, and it is not taken. (2) **CLEAN remains unusable as a denominator** — its ground truth is wrong for ≥ 13 of 23 (57%) — so both FP rates are **upper bounds**, the arms differ by one item, and **quality still cannot discriminate them**; the entire reliable difference remains the **1.72× cost** [documented, design §10.4]. (3) F39: `unknown` is excluded from scoring and never counted against the script, and **16 semantic cells are excluded on that basis** — reporting them as agreement would have raised every semantic precision figure [measured, F39 Limits 6] |
+| **(d)** | The blind panels are filled: **P1 arm D scored**, and `e3-severity-annotation-BLANK.md` **returned** | **Both halves have returned a result. Only one of them is blind in any sense, and neither is blind on the terms §10.2's wording assumes.** P1 arm D was **scored on 2026-09-09** against 140 truth cells at corpus pin `47faec9f`, at **$0** model cost [measured, F39] — and it is **panel-adjudicated, never human-panel** (amendment 9), and must be reported that way wherever the number is reused. **Amendment 8's attested-blind route does not attach to these figures.** That route requires BOTH a filled `blind_attestation:` line in the label file AND an explicit `--attested-blind` scorer invocation, "so the substitution can never happen silently"; neither happened — the line reads `FILL-ME` and `score-arm-d-panel.py` takes no arguments at all [measured, both files at this pin]. Blindness here rests on amendment 9's own construction (no panel seat may read `p1-arm-d.jsonl`; Ryan adjudicated every contested cell with the panel's and the script's positions revealed only after he answered), which amendment 9 itself records as **weaker** than the pre-registered oracle [documented, METHOD-P §0 amendments 8 and 9]. E3-SEV is recorded **DONE** by the design: `e3-severity-annotation-ryan.md` is filled — **4 BLOCKING, 2 ADVISORY**, including a documented self-correction on finding 4 (originally annotated BLOCKING on a claim that was false) — settling arm (a) FP 1/23, MCC +0.978 and arm (b) FP 0/23, MCC +1.000 [documented, design §10.4, §10.5]. **That sheet is NOT BLIND at all, by its own header**, so the E3 half discharges (d)'s *result*, not (d)'s *blindness*. **Step 3b's own label files have since split three ways, and P2 is the counter-example to this row's own headline:** P2's 41 labels were filled 2026-09-10 (`labeller` Ryan Britton, `labelled_at 2026-09-10T15:58:08Z`), the engine ran at `16:01:12Z`, and because P2 is unaffected by amendment 8 its chronology proxy still holds — **P2 is blind and TIMESTAMP-VERIFIED, the only arm in the programme of which that is true** [measured, F40]. It is not part of exit (d), which names arm D and the E3 sheet only, and it must never be pooled with arm D's blindness language. `arm L`'s file is the still-outstanding half of Step 3b | Nothing further for (d). **Carry the three limits rather than the two numbers.** (1) **E3-SEV is not blind, and κ is forfeited.** The sheet's own header records *"Filled by the model at Ryan's direction, 2026-09-04. **NOT BLIND.**"* and that κ against an independent human annotation is **forfeited** for this pass, because the same model produced `e3-severity-annotation-model.md` and this sheet, so the two are not independent raters and **no inter-rater statistic may be computed from them**; the header names the residual threat rather than removing it — *"the annotator is still the model that built the rig, and that threat does not go away by being named"* [documented, `spikes/results/e3-severity-annotation-ryan.md` header]. The pristine `e3-severity-annotation-BLANK.md` is preserved and still unfilled; **if Ryan annotates it from scratch without reading either filled sheet, κ becomes available again** — that is the route, and it is not taken. (2) **CLEAN remains unusable as a denominator** — its ground truth is wrong for ≥ 13 of 23 (57%) — so both FP rates are **upper bounds**, the arms differ by one item, and **quality still cannot discriminate them**; the entire reliable difference remains the **1.72× cost** [documented, design §10.4]. (3) F39: `unknown` is excluded from scoring and never counted against the script, and **16 semantic cells are excluded on that basis** — reporting them as agreement would have raised every semantic precision figure [measured, F39 Limits 6] |
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -940,6 +1004,19 @@ rule below is **the rule as pre-registered**; the measured outcome is recorded *
 - **A temperature spike is explicitly not the answer.** The instability is schema-induced, corroborated across five
   2026 frontier models with Claude-Sonnet-4 measured at background temperature 0.
 
+- **P2 IS NOT A FOURTH CLAUSE OF THIS GATE, and its result does not belong in the clause structure above. Say
+  this plainly rather than leaving a reader to infer it from where the numbers sit on the page.** Clauses A, B and
+  C are all about the *context vector* — what may key a `require` row over an LLM-emitted or derived facet
+  (ADR-0079, AC-071). **P2 measures the `derived_from` reconstruction and gates `stale_policy`**: METHOD-P §2.4's
+  own remedies are *"fine scope mandatory for `L`-class"* and *"`stale_policy = gate` for all `L`/`XL`"*, and
+  **neither touches the selection path**. So P2 **sits outside the blocking gate**. It is run at §4.2 and checked
+  at Checkpoint 4 because that is where the scorers live, not because it gates anything Step 4 gates, and it
+  **neither discharges nor tightens** the block on LLM-emitted facets. Equally: **nothing in P2's result settles
+  `stale_policy`** — criterion 1's precision half fires, its prescribed remedy is contraindicated by the same run,
+  and criterion 2 is not answerable, so the design consequence is **OPEN and needs a decision, not a default**
+  [measured, F40 §4]. Whoever takes it takes it in its own record; it is not this step's to take and it is not
+  ADR-0090's subject.
+
 **Source asymmetry is a SEPARATE, UNTAKEN decision. Do not decide it here.** `commits` beats `docs` on every facet
 and `union` is *worse than `commits` alone* on two of them, because unioning a precise source with an imprecise one
 imports the imprecision [measured, F39 §3]:
@@ -988,12 +1065,18 @@ titled *"Decisions Ryan should reverse or confirm first"*, and three of its rows
 
 | # | What it changes | Why it must be settled before you score |
 | --- | --- | --- |
-| **15** | `human_authored` remapped from a commit-authorship heuristic to the `artifacts.toml` registry | It **changes what METHOD-P §2.3's advisory fraction measures**. The old heuristic yields 0 advisory cases; the new one yields 6. The file's own note says *"confirm the mapping before scoring"* |
+| **15** | `human_authored` remapped from a commit-authorship heuristic to the `artifacts.toml` registry | **STILL UNSETTLED, and now correctly scoped: it gates the ADVISORY HALF ONLY.** It **changes what METHOD-P §2.3's advisory fraction measures** — the old heuristic yields 0 advisory cases, the new one yields 6 — so **criterion 3 cannot be run until it is settled**, and criterion 3 is UNRUN [measured, F40]. It does **not** gate the perturbation half, which was **scored on 2026-09-10 without it** and whose figures do not move when #15 is decided. The file's own note still says *"confirm the mapping before scoring"*; that instruction now binds **A01–A06**, not P01–P12 |
 | **18** | `_intake-brief.md` and `discover.md` added to both P2 scripts' artifact lists; `_ledger.md` deliberately not | Reconstruct records go 72 → 77 and the advisory candidates become reachable at all |
 | **27** | §1.4's anchor-rewrite re-run was taken as arm `L2` | If you would rather the axes went straight to human-supplied, **v1 stands alone as the pre-registered reading and `L2` can be discarded without touching it** — which is a different clause-A record set |
 
 Confirm or reverse each in writing before the scorers run. A confirmation after the numbers are read is the same
 defect §4.1 exists to prevent, one level down.
+
+**#15 is still unsettled, and P2's perturbation half was scored on 2026-09-10 regardless. That is correct, not a
+breach, and the reason is the scoping in the row above:** #15 changes the *advisory* fraction's denominator and
+nothing the perturbation cases measure, so it is a precondition for **criterion 3** and for the A01–A06 labelling,
+not for P01–P12 [measured, F40]. **It remains a live Step-4 precondition** — do not read "the P2 engine has run" as
+"#15 is discharged", and do not label the advisory half until it is written down either way.
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -1019,6 +1102,12 @@ python spikes/p1/score-arm-d-panel.py       # 140 truth cells at pin 47faec9f, $
 # reads spikes/results/p1-arm-d.jsonl + -oracle.jsonl + -panel-accepted.jsonl + -contested.json
 #     + -adjudications.json. If any is missing this is a HALT (halt condition 8), not a skip.
 
+# THIS HAS BEEN RUN. 2026-09-10, at corpus pin 47faec9f, $0 model cost — it dispatches nothing.
+# It wrote spikes/results/p2-engine.jsonl: 82 records = 41 (case, downstream) rows x 2 scopes
+# (coarse, fine), every record carrying corpus_sha, at, labels_at, case, item, downstream, scope,
+# verdict, upstream_changed, derived_from and digests. Earliest `at` is 2026-09-10T16:01:12Z,
+# AFTER the labels' 15:58:08Z — which is the blindness check, not a coincidence [measured, F40].
+# Re-run it only to reproduce; the labels are already stamped and must not be re-stamped.
 python spikes/p2/reconstruct-derived-from.py \
     --redkiln D:/repos/redkiln \
     --sha 47faec9f46b8d983c2c75f0794164e68415ae706 \
@@ -1033,6 +1122,109 @@ Pass `--cases` **explicitly**. The engine phase used to derive it from `--out` b
 mangled any path containing `engine` and — if `--out` lacked the substring — re-read the file it was about to
 truncate, silently producing an empty result (DECISIONS-2026-09-09 #17). The script now refuses when `--cases`
 resolves to `--out`, but pass it anyway.
+
+**`reconstruct-derived-from.py` emits verdicts and stops. The scorer is a SECOND script, and the previous revision
+of this runbook did not know it existed.** METHOD-P **§2.3** registered a precision/recall scoring of `Stale`
+against the human "should re-run" labels and **nothing in the repository computed it** until
+`spikes/p2/score-p2.py` was written for F40 on 2026-09-10. It takes the two defaults below, so the `cd` is
+load-bearing:
+
+```bash
+cd D:/repos/redkiln-rs
+python spikes/p2/score-p2.py \
+    --engine spikes/results/p2-engine.jsonl \
+    --labels spikes/results/p2-labels-ryan.md
+# Measured 2026-09-10 at corpus pin 47faec9f, exit 0, $0 model cost — it dispatches nothing, so a
+# re-run is free and there is no instrument-version lineage question here (GC8 does not bite).
+# What it prints, in order:
+#   corpus pin 47faec9f… · labelled_at 2026-09-10T15:58:08Z · labeller Ryan Britton · 82 records, 41 labels
+#   LABEL SET: 0 should re-run, 41 need not, over 41 rows
+#   a specificity table (coarse 0.73 [0.58, 0.84]; fine 0.55 [0.38, 0.70]; precision 0.00 in both)
+#   abstention (fine): 8/41 = 19.5% [0.10, 0.34] — reconstructed scope `unknown`, NEVER a miss
+#   LIKE-FOR-LIKE on the 33 rows both scopes scored: coarse Stale 5, fine Stale 15, agree 23/33,
+#     and it NAMES the 10 flips — all Present -> Stale, none the other way
+#   the three METHOD-P §2.4 criteria, verbatim, with criterion 1 marked FIRES on its precision half
+```
+
+**What it refuses to print, which is why it exists in this form.** Three reporting rules are hard-coded and the
+script will not bend them [measured, `spikes/p2/score-p2.py` at this pin]:
+
+1. **Recall.** With no positive labels `tp + fn = 0`, so recall has **no denominator** and the script prints
+   `NOT COMPUTABLE` in the table and `NOT ANSWERABLE — no positive labels, no denominator` under criterion 1. It
+   **will not print `0.00`, `1.00` or `n/a`**, because each of those is a claim and none of them is true. Same
+   shape as `data_migration` in F39 §4 — **the same shape, never the same numbers; do not mix them.**
+2. **Abstention.** A reconstructed fine scope of `unknown` is an **abstention**, reported as its own rate with its
+   own Wilson interval, and **never summed into false negatives** (DECISIONS #16; the rule F39 §6 states for
+   `unknown`).
+3. **Bare rates.** Every rate carries a Wilson 95% interval, and a rate over zero positives says so.
+
+It also refuses outright, rather than scoring, on three input faults: `labels are not timestamped — refusing to
+score` (a `FILL` still in `labelled_at`), `engine records span several corpus pins`, and `engine was run against
+different labels: … vs …` — the last comparing each record's `labels_at` against the label file's stamp, so a
+re-stamped label file cannot be silently scored against an older engine run.
+
+**Read the result as specificity, not as precision, and do not lead with the precision figure.** With **0 of 41**
+rows labelled "should re-run", every `Stale` is a false positive **by construction**, so `precision = 0.00` is a
+property of the label set and not an independent reading of the engine. The quantity this corpus genuinely
+measures is how often the engine leaves a correctly-unchanged artifact alone [measured, F40 §2]:
+
+| scope | specificity | 95% CI | precision | recall | tp | fp | fn | tn | excl | scored |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **coarse** | **0.73** | [0.58, 0.84] | 0.00 [0.00, 0.26] | **not computable** | 0 | 11 | 0 | 30 | 0 | 41 of 41 |
+| **fine** | **0.55** | [0.38, 0.70] | 0.00 [0.00, 0.20] | **not computable** | 0 | 15 | 0 | 18 | **8** | 33 of 41 |
+
+**The fine scope is the worse of the two, and the aggregate hides it.** The two specificity intervals **overlap**,
+so on the aggregate the difference is **not separated at this n** — say so, and then give the paired comparison,
+which is what separates them. On the **33 rows both scopes actually scored**: coarse marks **5** `Stale`, fine
+marks **15**, and **10 rows flip `Present` → `Stale` going coarse to fine while none flips the other way**
+[measured, F40 §3].
+
+| downstream | coarse | fine |
+| --- | --- | --- |
+| `spec.md` | **11 Stale** | 5 Stale, 6 excluded |
+| `implementation-report.md` | 12 Present | **5 Stale**, 6 Present, 1 excluded |
+| `report.md` | 12 Present | **5 Stale**, 6 Present, 1 excluded |
+| `_review.md` | 6 Present | 6 Present |
+
+**Why, and it is a mechanism this runbook has met before.** Coarse's declared map carries `spec.md ← <card>`, so a
+card write invalidates the spec and nothing else — **11 false alarms from 11 emissions**. Fine *also* fires on
+`implementation-report.md` and `report.md`, which **the declared map does not connect to the card at all**: the
+reconstruction — *"which upstream changed before this artifact was last written"* (§2.2) — picks the card up as a
+derivation edge because the card is rewritten so often that it is nearly always the most recent prior write.
+**That is F39's failure class at the artifact level: an inference over a trace the instrument itself writes
+into.** F39's `auth` regex collided with the vocabulary of a tool whose documents are *authored*; F40's
+`derived_from` reconstruction collides with the writes of a tool that stamps `stage` and `updated` on every
+advance. In both the refinement meant to help imports the noise — F39 §3 measured `union` **worse than `commits`
+alone** on two facets, and this is the same shape one level up.
+
+**And the corpus is why there are no positives to score against.** 11 of the 12 perturbation cases change nothing
+but YAML frontmatter — `stage`, `status`, `updated`, `gate_open`, the keys the redkiln CLI rewrites on every stage
+advance; the twelfth (**P01**, the only non-card perturbation, on `discover.md`) changes **two body lines** of
+wording, *"The next stage (spec) has a clear starting point"* → *"The next stage has a clear starting point"*. The
+labeller wrote *"only frontmatter properties (process/stage status), no new/updated facts of the system"* against
+**36 of the 41 rows** (35 the phrase exactly, one a shorter variant of it; four rows carry no reason at all and one is P01's), before any of this was computed. The mechanism is a recorded decision:
+**DECISIONS-2026-09-09 #19** doubled the case count from 6 to 12 by adding the **card** as a perturbation candidate
+(*"11/20 cards have ≥2 revisions vs 6/20 for any downstream artifact"*), and cards are exactly what the CLI churns
+— the 11 frontmatter-only cases **are** the 11 card (`story.md`) perturbations [measured, F40 §1]. **The
+zero-positive label set is the corpus, not the labeller**, and it is mechanically checkable; a re-run on a corpus
+carrying real content perturbations is what would evaluate detection at all.
+
+**How the three criteria came out, and the sentence that must travel with the first one:**
+
+| criterion (METHOD-P §2.4) | outcome |
+| --- | --- |
+| **1** — coarse: recall < 0.9 **or** precision < 0.7 → fine scope mandatory for `L`-class, `stale_policy = gate` | recall **NOT ANSWERABLE** (no denominator); precision **0.00** [0.00, 0.26] over 11 emitted positives — **the precision half FIRES; the recall half cannot be evaluated** |
+| **2** — fine cannot reach recall ≥ 0.9 either → `stale_policy = gate` for all `L`/`XL` | **NOT ANSWERABLE** — same missing denominator; it **cannot fire either way** |
+| **3** — advisory useful fraction < 0.3 → PC3's advisory demoted to a log line | **STILL UNRUN.** The advisory half (A01–A06) is labelled *after* the engine in its own file (§2.3), and **DECISIONS #15's `human_authored` remap must be settled first** |
+
+**Criterion 1 fires and its own remedy is contraindicated. Record both halves or you have absorbed half the
+finding** (golden constraint 11). The remedy §2.4 prescribes is *"fine scope becomes mandatory for `L`-class
+activities"* — and **the fine scope is the worse of the two on this corpus**, by the paired comparison above. **So
+nothing here settles `stale_policy`**: the design consequence is **OPEN**, it needs a decision taken in its own
+record, and it must not be resolved by defaulting to the prescribed remedy. **Criteria 1 and 2 are the fourth
+undecidable pre-registration in this programme**, after P1's α rule (F36), P7's criterion 1 (F37) and METHOD-P
+§1.4's 0.95 bar (F39) — golden constraint 10, and a result *about* the pre-registration, **not** a licence to edit
+METHOD-P.
 
 Re-read the unlabelled half of arm L for clause A:
 
@@ -1061,7 +1253,7 @@ the ground truth that re-run will be scored against.
 
 ### 4.3 The refusal behaviour — and do not work around it
 
-Both scorers refuse on an unfilled or post-dated label file. The exact messages:
+The scorers refuse on an unfilled or post-dated label file. The exact messages:
 
 | Message | Cause |
 | --- | --- |
@@ -1070,6 +1262,20 @@ Both scorers refuse on an unfilled or post-dated label file. The exact messages:
 | `--labels required for the engine phase (METHOD-P §0 rule 1)` | P2 engine phase run without `--labels` |
 | `labels are not timestamped — do not run the engine` | P2 label file still carries `FILL` |
 | `--cases resolves to --out; pass --cases explicitly (#17)` | the #17 guard firing |
+
+**Two of those five are P2's, and on 2026-09-10 neither fired.** `--labels required for the engine phase` and
+`labels are not timestamped — do not run the engine` both passed cleanly on the P2 engine run: `--labels` was
+given, and `labelled_at: 2026-09-10T15:58:08Z` carried no `FILL` [measured, F40]. **A guard that does not fire is
+evidence only that its precondition held** — it says the labels were stamped before the engine ran, which is
+exactly the blindness claim P2 rests on, and it says nothing whatever about the verdicts. Record the non-firing;
+do not read it as a pass on the result.
+
+**A sixth, seventh and eighth message exist and this table did not carry them**, because `spikes/p2/score-p2.py`
+did not exist when it was written: `labels are not timestamped — refusing to score` (a `FILL` in `labelled_at`),
+`engine records span several corpus pins: {…}`, and `engine was run against different labels: {…} vs {…}`. The
+last is the one worth knowing — it compares every record's `labels_at` against the label file's own stamp, so a
+re-stamped label file **cannot** be quietly scored against an engine run that predates the re-stamp. Same
+instrument, one level further on. Do not disable it to get a number out.
 
 **These refusals are the instrument.** Do not back-date `labelled_at`. Do not edit the `at` field in
 `p1-arm-d.jsonl`. Do not re-run the engine to move `first` past your stamp. If a refusal fires because you labelled
@@ -1142,14 +1348,20 @@ exactly as they are; this step settles one row, not the section. Note the README
 asserts *"exactly three records are not at `accepted`"* — after this step that sentence is still true but names a
 different three, and the same paragraph's file count moves from **89** to **90**.
 
-**Checkpoint 4.** All nine. This is the gate; treat a failure as a stop, not a note.
+**Checkpoint 4.** All ten. This is the gate; treat a failure as a stop, not a note. **Two of the ten are P2's, and
+P2 does not gate anything this step gates** (§4.1's last bullet) — they are here because this is where the scorers
+are run, and a green P2 pair says nothing about the selection path.
 
 ```bash
 cd D:/repos/redkiln-rs
 python spikes/p1/score-arm-d.py --engine spikes/results/p1-arm-d.jsonl \
        --labels spikes/results/p1-arm-d-labels-ryan.md ; echo "exit=$?"   # → exit=0, per-facet table printed
 python spikes/p1/score-arm-d-panel.py ; echo "exit=$?"             # → exit=0, F39's figures reproduce
-test -s spikes/results/p2-engine.jsonl && echo "p2 engine produced output"
+wc -l < spikes/results/p2-engine.jsonl                             # → 82  (41 rows x 2 scopes), NOT `test -s`:
+                                                                   #   a truncated file is non-empty too
+python spikes/p2/score-p2.py ; echo "exit=$?"                      # → exit=0; "0 should re-run, 41 need not",
+                                                                   #   coarse specificity 0.73, fine 0.55,
+                                                                   #   recall NOT COMPUTABLE, criterion 1 FIRES
 ls references/adr/0090-*.md | wc -l                                # → 1  (exactly one file)
 grep -c '^superseded_by: \["0090"\]$' references/adr/0079-*.md     # → 1  back-link present
 grep -c '^status: superseded$'        references/adr/0079-*.md     # → 1  status moved
@@ -1182,6 +1394,13 @@ passing measurement. Those are different states and the difference is the whole 
 token: it partially supersedes ADR-0030 and explicitly does not touch ADR-0079 [documented, ADR-0089]. A reader
 who sees `references/adr/0089-*.md` on disk and concludes the gate is discharged has read the wrong number — which
 is why the token below moved to `0090` and why the Step 7b banner also greps `0079`'s status.
+
+**Nor does P2's result touch it, in either direction.** P2 gates `stale_policy`, not selection (§4.1's last
+bullet). Its criterion 1 fires on precision, its prescribed remedy is contraindicated by the same run, criterion 2
+is not answerable and criterion 3 is unrun [measured, F40] — **so `stale_policy` is an OPEN design consequence
+carried out of Step 4, not a thing Step 4 settles and not a thing ADR-0090 records.** A reader who sees
+`spikes/results/p2-engine.jsonl` on disk and concludes either that the gate moved or that `stale_policy` is
+decided has read a `derived_from` result as a context-vector one.
 
 Concretely, after Checkpoint 4 the following are still true and are still enforced at Steps 5–8:
 
@@ -2099,7 +2318,11 @@ grep -c 'spikes/results/ is deliberately NOT ignored' D:/repos/redkiln-rs/.gitig
 2. **`spikes/runner/target-dev` and `target-p8`** were `rm -rf`'d in Step 1.2. They are build output and
    regenerate from `cargo build`; they do not come back and do not need to.
 3. **The blind panels are one-shot.** See 2b above. Blindness is destroyed by reading, not by deleting, and no
-   revert restores it.
+   revert restores it. **P2's is the sharpest case, because its blindness is a *timestamp* and a revert cannot
+   move one**: `spikes/results/p2-labels-ryan.md` at `labelled_at 2026-09-10T15:58:08Z` precedes
+   `p2-engine.jsonl`'s earliest record at `16:01:12Z`, and re-filling or re-stamping that file after the engine
+   has been read makes the ordering false and the arm sighted [measured, F40]. Keep both files; `score-p2.py`'s
+   `labels_at` cross-check is what would catch the mismatch, and catching it is not the same as repairing it.
 4. **ADR-0079's status, and ADR-0089.** If Step 4 landed and you keep the cherry-pick, `0079` is `superseded` and
    `0090` exists. That is correct and is not rolled back — the decision was taken on evidence that is still true.
    If you *do* want it reverted, that is a new ADR superseding `0090`, never an edit to either file. **ADR-0089 is
@@ -2147,11 +2370,13 @@ Two more that this tree has already produced and that cost time when unrecognise
 
 Two more that this revision added, because the audit that produced it found both live in the previous one:
 
-7. **A guard refuses and you are about to work around it.** The five refusals in §4.3 are the instrument, and
+7. **A guard refuses and you are about to work around it.** The **eight** refusals in §4.3 are the instrument
+   (five in its table, three more that `score-p2.py` added and the table did not carry), and
    §4.3's list of what not to do is not exhaustive — the shape is. **Stop at any refusal and establish the
    guard's scope first** (golden constraint 9): is it too narrow, so the failure is passing through elsewhere, or
    too wide, so it is refusing valid work? Back-dating `labelled_at`, editing an `at` field, re-running an engine
-   to move `first`, widening a facet regex, or deleting a `--cases` guard are all the same act. If the honest
+   to move `first`, widening a facet regex, deleting a `--cases` guard, or disabling `score-p2.py`'s `labels_at`
+   cross-check to score a re-stamped label file are all the same act. If the honest
    answer is that the guard is right and you were wrong, say so in the ADR and take the weaker result.
 
 8. **A checkpoint cannot be run because a path it names does not exist.** That is a halt, not a skip, and it is
@@ -2165,9 +2390,14 @@ Three more that F39 produced, and that this revision added because it met all th
    §1.4's 0.95 precision bar is **not reachable at n=20 for any facet however good** — `ui` is 7/7 with a 95% lower
    bound of 0.65, and roughly **60 positives** are needed for a lower bound above 0.95 [measured, F39 Limits 1] —
    which is the third instance in the same pre-registration after P1's α rule (F36) and P7's criterion 1 (F37).
-   **Report it as powerless, and report a criterion with no positive instance as *not measurable* — never as a pass
-   or a failure.** `data_migration` emits 0 positives on 20 items across all three sources; precision is undefined
-   and a perfect method scores identically [measured, F39 §4]. This is a result *about* the pre-registration and it
+   **P2 §2.4's criteria 1 and 2 are the fourth**: **0 of 41** rows are labelled "should re-run", so recall has no
+   denominator, criterion 1's recall half is **NOT ANSWERABLE** and criterion 2 **cannot fire either way**
+   [measured, F40]. **Report it as powerless, and report a criterion with no positive instance as *not measurable*
+   or *not answerable* — never as a pass or a failure, and never as `0.00`, `1.00` or `n/a`.** `data_migration`
+   emits 0 positives on 20 items across all three sources; precision is undefined
+   and a perfect method scores identically [measured, F39 §4]. **That and P2's recall are the same *shape* — a
+   criterion with no denominator — and their numbers may never be mixed.** This is a result *about* the
+   pre-registration and it
    is written into the finding's Limits. **It is not a licence to edit METHOD-P.** Golden constraint 10.
 
 10. **A deriver's false positives cluster on the vocabulary of the thing being measured.** That is a correlated
@@ -2189,6 +2419,27 @@ Three more that F39 produced, and that this revision added because it met all th
     occurred **three times** in one session's tooling. **A scorer that produces a clean-looking 0.00 is a scorer to
     read, not a result to publish.**
 
+Two more that F40 produced, and that this revision added because the P2 scoring run met both:
+
+12. **A criterion fires and prescribes a remedy the same measurement contraindicates.** Stop; do not apply the
+    remedy, and do not record the firing without the contraindication. P2's criterion 1 fires on precision —
+    coarse `derived_from` **0.00** [0.00, 0.26] over 11 emitted positives — and prescribes *"fine scope becomes
+    mandatory for `L`-class activities"*, while the same run measures the **fine scope as the worse of the two**:
+    on the 33 rows both scopes scored, coarse marks **5** `Stale` and fine **15**, with **10 rows flipping
+    `Present` → `Stale` and none the other way** [measured, F40 §3]. **The design consequence is OPEN and needs a
+    decision in its own record.** Golden constraint 11.
+
+13. **A label set with no positive class, met on a corpus you did not build for the question.** Before you read a
+    precision figure, count the positives. **0 of 41** P2 rows are "should re-run", so every `Stale` is a false
+    positive **by construction** and `precision = 0.00` is a property of the label set, not a reading of the
+    engine — **specificity** (coarse **0.73** [0.58, 0.84], fine **0.55** [0.38, 0.70]) is what the corpus
+    measures. The cause is mechanical and recorded: DECISIONS #19 added the **card** as a perturbation candidate,
+    and **11 of the 12 cases change nothing but the `stage`/`status`/`updated`/`gate_open` frontmatter the CLI
+    rewrites on every advance** [measured, F40 §1]. **Report specificity, say the positives are absent, and do not
+    lead with precision.** This is the artifact-level form of F39's failure class — an inference over a trace the
+    instrument itself writes into (Halt 10) — and it is what makes the fine reconstruction fire on
+    `implementation-report.md` and `report.md`, which the declared map does not connect to the card at all.
+
 ---
 
 ## One-glance checklist
@@ -2199,9 +2450,10 @@ Three more that F39 produced, and that this revision added because it met all th
 - [ ] **0** — branch cut; `rustc`/`cargo` 1.97.1, edition 2024; **`claude --version` written to `spikes/results/instrument-checks/RUNBOOK-instrument.txt`**; rig `doctor` exit 0
 - [ ] **1** — CRLF churn checked with `git diff -w --stat`; `target-dev`/`target-p8` removed; the **14 driver logs** and `p8-state` gitignored; **ADR-0089 + `0030` + `README.md` + `F39-DRAFT.md`** + the instrument file committed (the design pass, the first 88 ADRs and `RUNBOOK.md` landed earlier at **`4519edc`**); `ls references/adr/*.md | wc -l` → **90**; **`git status --porcelain` EMPTY** (Phase-0 exit (a))
 - [ ] **3a** — `forge-fix.js` line **982** fixed; `=== false` count **0** and `!== true` count **2** (line 1019 was already correct — do not read it as your own fix); D-FIXCONSUMER dispatch run **or** its deferral recorded
-- [ ] **3b** — **two** label files (arm L, P2 — **not** arm D, discharged by METHOD-P amendment 9 and retained unfilled) copied to `-ryan.md`, filled **from the item alone**, `labelled_at` stamped **UTC `...Z` by command**, no `FILL` anywhere, **existence guarded before the negation**, count **2 not 3**; `p7-deviation` correctly skipped (no rows); `recent_deploy` understood to be unscored
+- [ ] **3b** — **one** label file outstanding, **arm L**: copied to `-ryan.md`, filled **from the item alone**, `labelled_at` stamped **UTC `...Z` by command**, no `FILL` anywhere, **existence guarded before the negation** (measured 2026-09-10: the file does not exist, so the guard prints). **P2's half is DISCHARGED** — **41 of 41** rows answered, `labeller` Ryan Britton, `labelled_at 2026-09-10T15:58:08Z` preceding the engine's earliest record at `16:01:12Z`, so P2 is **blind and TIMESTAMP-VERIFIED, the only arm in this programme of which that is true, and never to be described as attested-blind or pooled with arm D's panel adjudication** — its four checks kept in **their own block as regression checks**, never merged into arm L's count. **Arm D still excluded** (amendment 9, retained unfilled). `p7-deviation` correctly skipped (no rows); `recent_deploy` understood to be unscored; **P2's advisory half A01–A06 is not part of this step and is UNRUN**
 - [ ] **3c** — Phase-0 exit **(c)** the S-BIN **half is still open**: the fixture exists (`D:/repos/BrittonGames`, UE 5.8, headless automation working) and the spike **has not run**; the re-scope branch remains available, is **not** the current plan, and would need **its own ADR number**. Exit **(d)** has **a result from both halves and full blindness from neither** — P1 arm D scored 2026-09-09 [F39], **amendment 8's attested-blind route registered but NEVER INVOKED** and **panel-adjudicated not human-panel** (METHOD-P amendments 8, 9); E3-SEV **DONE**, 4 BLOCKING / 2 ADVISORY with a documented self-correction on finding 4, but **NOT BLIND by its own header and κ forfeited** — the pristine BLANK is preserved and annotating it from scratch is the open route back to κ; and **carrying its other limit**: CLEAN is unusable as a denominator, both FP rates are upper bounds, quality still cannot discriminate the arms
-- [ ] **4** — DECISIONS #15 / #18 / #27 confirmed or reversed **before** scoring; **decision rule written down BEFORE the numbers were read** — clause B was pre-registered, applied, and returned **no facet clears 0.95**; `score-arm-d.py` exit 0 and `score-arm-d-panel.py` exit 0; P2 engine phase produced output with `--cases` passed explicitly; refusals respected, nothing back-dated
+- [ ] **4** — DECISIONS #18 / #27 confirmed or reversed **before** scoring, and **#15 STILL UNSETTLED — correctly, because it gates the ADVISORY half only** (it moves METHOD-P §2.3's advisory denominator from 0 cases to 6; the perturbation half was scored without it and does not move); **decision rule written down BEFORE the numbers were read** — clause B was pre-registered, applied, and returned **no facet clears 0.95**; `score-arm-d.py` exit 0 and `score-arm-d-panel.py` exit 0; **P2 engine phase RUN** with `--cases` passed explicitly → `spikes/results/p2-engine.jsonl`, **82 records** (41 rows × 2 scopes); **`spikes/p2/score-p2.py` run** — the METHOD-P §2.3 scorer that nothing computed before; refusals respected, nothing back-dated, **two of the five §4.3 refusals are P2's and neither fired**
+- [ ] **4** — **P2's result absorbed in both halves, and NOT read as a gate clause.** P2 gates `stale_policy`, not selection: it is outside Step 4's clause structure. **Label set has NO POSITIVE CLASS — 0 of 41 "should re-run"** (11 of 12 cases are CLI frontmatter churn; DECISIONS #19 added the card), so **report SPECIFICITY — coarse 0.73 [0.58, 0.84], fine 0.55 [0.38, 0.70] — and do not lead with `precision = 0.00`**, which is a property of the label set. **Recall and criterion 2 are NOT ANSWERABLE** — never `0.00`, never `1.00`, never `n/a`. Fine's abstention is **8 of 41 = 19.5%** [0.10, 0.34], **never a miss**. **Criterion 1's precision half FIRES and its own remedy is CONTRAINDICATED**: on the 33 rows both scopes scored, coarse marks 5 `Stale`, fine 15, **10 flips `Present`→`Stale`, none the other way**, and the aggregate intervals **overlap** so the difference is **not separated at this n**. **Criterion 3 UNRUN.** **`stale_policy` is therefore OPEN** — a decision in its own record, not a default. **Fourth undecidable pre-registration** after F36, F37, F39
 - [ ] **4** — **ADR-0090 written** (not 0089 — that number is taken; 11 keys in order, 6 sections, a `**What this forbids**` block); it rests on **clause A** (F36's modal-`R`, 4/4), **not** on F39, which measures a *derived* vector while 0079 asks about an *LLM-emitted* one; `0079` moved `proposed → superseded` with a reciprocal `superseded_by: ["0090"]`, both anchors asserted; README tally → **87/3/0** over **90** records, numbering → `0091`, Supersessions → **ten links from nine records, three full**, Open items rewritten. **The gate is now DISCHARGED — which is not the same as unblocked: the expected decision is human-sourced ordinal axes, and the block on LLM-sourced ones stands on AC-071's FIRST clause (identity 0.25/0.15/0.10/0.10 against 0.80), F39 having discharged the FOURTH only.**
 - [ ] **4a** — **ADR-0089 applied, not decided**: `facets.toml` gains **`deriver`** on every `source = "derived"` facet, anchors asserted by *count* before the write; the repo-wide **`auth` boolean withdrawn** for a set-valued **`surfaces`** facet over a checked-in `surfaces.toml` (`set = true`, recognised **by name**, unscored, may key no `require` row); **booleans tri-valued** — `values = [true, false]` gone, absence of evidence is `null`, routed to **AC-079**'s `gate_opened { reason: unknown_facet }`, ADR-0067's `recent_deploy` the live precedent; **AC-520 fails closed** the way AC-071 does, as a **separate lint with its own fixture set**, four must-fail **plus one that must load**. **No facet leaves the model; source asymmetry not decided; ADR-0079 untouched**
 - [ ] **2** — `redkiln-corpus` created; corpus + results + runner moved **with the three filled panels inside**; **40-hex** SHA in `CORPUS_PIN` matching corpus HEAD; corpus checkout clean; `spikes/{corpus,results,runner}` untracked here; the stale `.gitignore` results paragraph reconciled (AC-464, AC-465)
@@ -2214,5 +2466,5 @@ Three more that F39 produced, and that this revision added because it met all th
 - [ ] **7c** — adapters: `spoke()`, stdin not argv, record-on-failure, `Option` over `0`, `StructuredOutput` checked at configuration time, `--strict-mcp-config` verified from the child's `system/init`, API-key refusal, both TTL vars set, **append flags absent from argv**
 - [ ] **7d** — `rk-cli` composition root, adapters resolved once, refusal before any spawn or write; `answer` the only gate channel; `doctor`'s window `N` **declared as a number**; `redkiln-migrate` v0 with no dual-write key
 - [ ] **8** — all seven exit checks pass: AC-473 self-hosting run id · `doctor --rebuild` same next action · multi-step resume across a real kill · ban list fails the build · `--stay` unrepresentable · `--facet-stability` exit 0 (on the **zero-`llm`-facets** branch, which is the expected outcome, not a shortfall), **and its sibling `--facet-provenance` built and passing — not an eighth criterion, the thing that stops (6) exiting with the derived half ungated** · `resolution_limited` recorded
-- [ ] **8** — every standing prohibition still unviolated, including: **no facet "leaves the model"** · **no `derived` facet without a named `deriver` and a scored record** · **no absence of evidence resolving to `false`, and no `null` counted as a false negative** · **F39 reported as panel-adjudicated, never human-panel** · **source asymmetry not decided** · **nothing anywhere calls this design final**
+- [ ] **8** — every standing prohibition still unviolated, including: **no facet "leaves the model"** · **no `derived` facet without a named `deriver` and a scored record** · **no absence of evidence resolving to `false`, and no `null` counted as a false negative** · **F39 reported as panel-adjudicated, never human-panel** · **P2 reported as blind and timestamp-verified, never as attested-blind and never pooled with arm D** · **no P2 recall or criterion-2 figure anywhere — NOT ANSWERABLE, never `0.00`/`1.00`/`n/a`; F39's `data_migration` and P2's recall are the same shape and their numbers are never mixed** · **nothing claims P2 settles `stale_policy`, and criterion 1's firing never appears without its remedy being contraindicated** · **"P2 is entirely unrun" and "P2 is complete" both false — every sentence says which half** · **source asymmetry not decided** · **nothing anywhere calls this design final**
 - [ ] **9** — rollback rehearsed at least once on paper; **the three filled panels recovered from `redkiln-corpus` BEFORE anything is deleted**; **ADR-0089 (accepted, landed before this branch) and ADR-0090** cherry-picked before any branch delete — reverting `0089` would leave `0030`'s `superseded_by` a one-sided link, which is a defect; **Checkpoint 9 run** — `redkiln` back at `47faec9f…` with a clean `workflows/`, the spike tree restored, the `.gitignore` paragraph back

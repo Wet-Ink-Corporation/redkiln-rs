@@ -1,15 +1,15 @@
 # Redkiln-RS — condensed evidence brief
 
-**Date:** 2026-09-08, **amended 2026-09-09 with an F39 row** (§A, §B, §C.13, §E) — the condensation itself covers F1–F38 as of 2026-09-08; F39 postdates it and was added here from `spikes/F39-DRAFT.md`, so a document that describes this brief as "F1–F38 as condensed 2026-09-08, F39 read from the corpus" is still accurate. · **Status:** Working condensation, promoted into the repository so that the citations in the acceptance-criteria and success-measure registers resolve. **Not a source of truth** — `spikes/FINDINGS.md`, `spikes/F29-DRAFT.md`..`F39-DRAFT.md` and `spikes/DECISIONS-2026-09-09.md` remain authoritative, and where this brief and they disagree, they win. · **Purpose:** one citable digest so a dozen authoring agents cite the same figures instead of each re-deriving them from a 97 kB ledger. · **Evidence discipline:** every figure below is traceable to a named source file; nothing is rounded.
+**Date:** 2026-09-08, **amended 2026-09-09 with an F39 row** (§A, §B, §C.13, §E) and **again 2026-09-10 with an F40 row** (§A, §B, §C.14, §E) — the condensation itself covers F1–F38 as of 2026-09-08; F39 and F40 postdate it and were added here from `spikes/F39-DRAFT.md` and `spikes/F40-DRAFT.md`, so a document that describes this brief as "F1–F38 as condensed 2026-09-08, F39 and F40 read from the corpus" is still accurate. · **Status:** Working condensation, promoted into the repository so that the citations in the acceptance-criteria and success-measure registers resolve. **Not a source of truth** — `spikes/FINDINGS.md`, `spikes/F29-DRAFT.md`..`F40-DRAFT.md` and `spikes/DECISIONS-2026-09-09.md` remain authoritative, and where this brief and they disagree, they win. · **Purpose:** one citable digest so a dozen authoring agents cite the same figures instead of each re-deriving them from a 97 kB ledger. · **Evidence discipline:** every figure below is traceable to a named source file; nothing is rounded.
 
 ---
 
 
-Derived from `spikes/FINDINGS.md`, `spikes/F29-DRAFT.md`..`F39-DRAFT.md`, `spikes/DECISIONS-2026-09-09.md`,
+Derived from `spikes/FINDINGS.md`, `spikes/F29-DRAFT.md`..`F40-DRAFT.md`, `spikes/DECISIONS-2026-09-09.md`,
 `spikes/METHOD*.md`, `spikes/HANDOFF.md`. Every figure below is traceable to those files. **Do not quote a number
 that is not here without reading its source file first.**
 
-## A. Finding ledger (F1–F39; there is no F9 entry, and F30 was reserved for S-H1b/S-WT and never written. F1–F38 were condensed 2026-09-08; the **F39 row was appended 2026-09-09** from `spikes/F39-DRAFT.md`, after the areas were refuted against this brief — no area file was refuted against the F39 row)
+## A. Finding ledger (F1–F40; there is no F9 entry, and F30 was reserved for S-H1b/S-WT and never written. F1–F38 were condensed 2026-09-08; the **F39 row was appended 2026-09-09** from `spikes/F39-DRAFT.md` and the **F40 row 2026-09-10** from `spikes/F40-DRAFT.md`, after the areas were refuted against this brief — no area file was refuted against the F39 or F40 rows)
 
 | id | claim | number | status |
 |---|---|---|---|
@@ -52,6 +52,7 @@ that is not here without reading its source file first.**
 | F37 | **P7: the `adversary → policy` block costs 2.64× and changes the root cause on 1 item in 10; its policy check was false on 33 of 33** | 61 runs, 297 records, 0 void, **$131.62**; block $2.69 vs $1.02/run; adversary $1.68 / 676 s; **188 findings, 78% required running something**; deviation offered **71 times, used 0** | measured, **but the primary criterion is powerless at n=3** — every Wilson interval overlaps by construction |
 | F38 | **P8 PARTIAL: mid-graph resume is lossless across a real process kill and costs less than a stage gate** | 3 of a pre-registered 27+3, $3.01; **0 changed, 0 lost, digests identical** across `taskkill /T /F`; resume **0.45× / 0.55× / 0.78×** of ~18.6k | PARTIAL; 65-min and 24-h arms and all 3 controls **unrun**; the second-arrival question is **not answerable** (arrivals forced, mark minted by the driver that implements the semantics) |
 | F39 | **P1 arm D RESULT: no derived facet clears METHOD-P §1.4's 0.95 bar, and `auth` scores 0.00 over 11 positives** — every positive the lexical rule emits is false, because `auth` is a substring of *authored*, `oauth` of *coauthor*, and `token` matches a design token | 140 truth cells at pin `47faec9f`, **$0**; union source, 20 items, Wilson 95%: `ui` **1.00 [0.65, 1.00]** recall 0.78 · `toolchain` 0.73 [0.48, 0.89] recall 0.79 · `change` 0.72 [0.54, 0.85] recall 0.84 · `binary_change` 0.60 [0.23, 0.88] recall 1.00 · `flag_exists` 0.00 [0.00, 0.66] · **`auth` 0.00 [0.00, 0.26]**, 11 positives and 11 false · `data_migration` **not measurable** (0 positives on 20 items); `commits` is **never less precise than `docs`** and strictly better on `toolchain` (1.00 vs 0.50) and `change` (0.80 vs 0.50), while on `binary_change` `docs` emits **no positive at all** (precision undefined, recall 0.00, 3 missed) against `commits` 0.60 at recall 1.00 and on `ui` the two **tie at 1.00** and only recall separates them (0.67 vs 0.22) — and **`union` is worse than `commits` alone** on `toolchain` (0.73 vs 1.00) and `change` (0.72 vs 0.80) (F39 §3) | measured, **panel-adjudicated** — never human-panel — over 60 deterministic-oracle, 48 unanimous-panel and **32 human-adjudicated** cells (Ryan, blind; **15 of 32 differ from the script**); **the ≥0.95 clause is not reachable at n=20 for any facet however good** (`ui` is 7/7 and its lower bound is 0.65; ~60 positives are needed), and 4 items that changed no code produced **16 confident booleans** the panel marked `unknown` |
+| F40 | **P2 PERTURBATION RESULT: the corpus carries no staleness to detect — 0 of 41 rows are "should re-run" — so criterion 1's recall half and criterion 2 have no denominator, while criterion 1's precision half fires by construction; and on the rows both scopes score, the *fine* `derived_from` is three times worse than the coarse one**, because the reconstruction picks up the card the CLI rewrites on every stage advance (DECISIONS-2026-09-09 **#19** doubled the case count 6 → 12 by adding the card as a perturbation candidate, and cards are exactly what the CLI churns) | 41 `(case, downstream)` rows over 12 perturbation cases at pin `47faec9f`, **$0**; **11 of the 12 cases change nothing but YAML frontmatter** — `stage`, `status`, `updated`, `gate_open`, which the CLI rewrites on every advance — and the 12th (P01, the only non-card perturbation, on `discover.md`) changes **two body lines** of wording; the labeller wrote *"only frontmatter properties (process/stage status), no new/updated facts of the system"* against **36 of the 41 rows** (35 the phrase exactly, one a shorter variant of it; four rows carry no reason at all and one is P01's) before any of this was computed. Wilson 95%: coarse **specificity 0.73 [0.58, 0.84]** (0 tp / 11 fp / 0 fn / 30 tn, 41 of 41 scored) vs fine **0.55 [0.38, 0.70]** (0 tp / 15 fp / 0 fn / 18 tn, 33 of 41 scored, **8 abstentions = 19.5% [0.10, 0.34]** — a reconstructed scope of `unknown`, excluded from scoring and never counted as a miss, DECISIONS #16). **Precision 0.00** (coarse [0.00, 0.26], fine [0.00, 0.20]) is a property of the label set, **not an independent reading of the engine**; **recall is not computable**. The two specificity intervals **overlap — not separated at this n**; what separates them is the paired comparison on the **33 rows both scopes scored**: coarse **5** `Stale`, fine **15**, **10 rows flip `Present` → `Stale` going coarse to fine and none flips the other way**. By downstream: `spec.md` coarse **11 Stale** / fine 5 Stale + 6 excluded · `implementation-report.md` and `report.md` each coarse 12 Present / fine **5 Stale**, 6 Present, 1 excluded · `_review.md` 6 Present under both — and the declared map connects neither report to the card at all | measured, **blind and timestamp-verified** — `labelled_at` 2026-09-10T15:58:08Z precedes the engine's earliest record at 16:01:12Z, checked by the scorer's own guard, and P2 is unaffected by METHOD-P amendment 8, so this is the **only arm in the programme whose blindness is checked rather than attested** (arm D is panel-adjudicated and never invoked amendment 8's attestation route; do not blur the two); **the perturbation half only** — the advisory half (A01–A06, criterion 3) is **unrun**, and nothing here settles `stale_policy`, because criterion 1's precision half fires while the remedy it prescribes is contraindicated by the same measurement |
 
 ## B. Kill criteria — outcome and threshold
 
@@ -63,6 +64,12 @@ post-decision (0.3%). P6 dead activities (>20%) — fires by 0.8 points under th
 under 12 (14.9%) and post-decision (5.9%). S-VAR §1.5 branch 2 and **branch 3 (architecture-changing: a reproduced
 regression approved in ≥2 of 10 — measured 3 of 10)**. S-TYPED §2.6 branch 3, whose own remedy was executed (14/14
 confirmed → lenient default). H1's ~25k threshold sits INSIDE the measured 18.6k–29.7k range.
+**P2 §2.4 criterion 1's precision half** — fires on the coarse map at **0.00 [0.00, 0.26]** over 11 emitted positives, but
+fires **by construction**: 0 of the 41 labelled rows are positive, so every emission is a false positive whatever the engine
+does. Two things must travel with it. The recall half of the same criterion **cannot be evaluated at all** (below), and the
+remedy the criterion prescribes — fine scope mandatory for `L`-class, `stale_policy = gate` — is **contraindicated by the
+same measurement**: the fine scope is the worse of the two on this corpus (F40, §C.14). **P2 therefore does not settle
+`stale_policy`**; the design consequence is open and needs a decision, not a default.
 
 **Did not fire.** E3 §9 (23/23 vs 23/23, p=0.625). E3-H. E1 H1/kill. E2. S0.1. H2 (174/174). H4 (digest sufficient).
 S-VAR branch 4 (control 0/10). S-TYPED branches 1, 2, 4 (conformance 100%). P7 §4.4(4) fixture-too-easy (7/10).
@@ -71,14 +78,23 @@ P8 §5.4(1) lost output (0 lost) and §5.4(2) resume cost (0.45–0.78×, kill w
 **Not answerable / powerless.** E0 arm-sizing (E4–E6 never ran). E0 cache-cost gate (STRUCK at 0.01 resolution).
 P7 §4.4(1) — establishes the criterion's **power, not its verdict**, at n=3. P7 §4.4(2) — n=1, arm dropped.
 P7 §4.4(3) — **empty denominator**, 0 deviation requests in 71 offers. P8 §5.4(3) — **circular by construction**.
-P2 all three criteria — unanswered, the engine phase refuses until Ryan's labels are timestamped.
+P2 §2.4 criterion 1's **recall half** and criterion 2 in full — **empty positive class**: 0 of the 41 labelled rows are
+"should re-run", so recall has no denominator and is reported **NOT ANSWERABLE**, never 0.00, never 1.00, never n/a (F40;
+the precision half of criterion 1 fires and is listed under *Fired* above). P2 §2.4 criterion 3 — **still unrun**: the
+advisory half (A01–A06) is labelled *after* the engine in its own file (METHOD-P §2.3) and DECISIONS-2026-09-09 **#15**'s
+`human_authored` remap must be settled first, so "P2 is entirely unrun" and "P2 is complete" are both false — the
+perturbation half is scored, the advisory half is not (F40).
 P1 §1.4's precision ≥0.95 clause — **not reachable at n=20 for any facet however good the method**: `ui` is 7/7 and its
 lower bound is 0.65, and roughly 60 positives are needed for a lower bound above 0.95 (F39). The same clause on
 `data_migration` — **empty denominator**, 0 positives on 20 items across all three sources, so precision is undefined and a
-perfect method scores identically (F39). **That is the third pre-registered criterion the programme's own registered sample
-size cannot decide** — after P1's alpha rule (listed under *Fired* above, because it fires while being undecidable) and
-P7 §4.4(1) at n=3 — and the pattern, not the individual row, is the finding: the defect is in the registration. It is
-reported in F39's Limits, not patched into METHOD-P.
+perfect method scores identically (F39). **That is the third and fourth pre-registered criteria the programme's own
+registered sample size cannot decide** — P1's alpha rule (F36; listed under *Fired* above, because it fires while being
+undecidable), P7 §4.4(1) at n=3 (F37), METHOD-P §1.4's 0.95 bar (F39) and now P2 §2.4 criteria 1 and 2 (F40) — and the
+pattern, not the individual row, is the finding: **four is a pattern in how this programme writes pre-registrations, not
+four coincidences — each of the four fixed a threshold without checking that the registered corpus could produce the
+denominator the threshold needs.** The defect is in the registration. It is reported in F39's and F40's Limits, not patched
+into METHOD-P. (`data_migration`'s empty denominator in F39 and P2's missing recall denominator in F40 are the same shape;
+their numbers are not interchangeable and must never be mixed.)
 S-BIN and S-H1c — registered and **unrun**.
 
 ## C. Architecture-bearing implications
@@ -124,6 +140,25 @@ S-BIN and S-H1c — registered and **unrun**.
     `docs` emits no positive at all; on `ui` the two **tie** at 1.00 and only recall separates them, 0.67 vs 0.22), and
     `union` is worse than `commits` alone on `toolchain` and `change` (F39 §3; ADR-0089 "What this record does not decide",
     whose own summary of the same rows is looser) — which is an arm of S-FACET.
+14. **A derivation inferred from a trace the instrument itself writes into is unsound, and the refinement imports the noise
+    (F40).** P2's fine scope reconstructs `derived_from` as "which upstream changed before this artifact was last written"
+    (METHOD-P §2.2), so it fires `Stale` on `implementation-report.md` and `report.md`, which **the declared map does not
+    connect to the card at all** — not because the card feeds them, but because the CLI stamps `stage`, `status`, `updated`
+    and `gate_open` on every advance and the card is therefore nearly always the most recent prior write. Measured: on the
+    **33 rows both scopes scored**, coarse marks **5** `Stale` and fine **15**, with **10 rows flipping `Present` → `Stale`
+    and none flipping back**; aggregate specificity is 0.73 [0.58, 0.84] coarse against 0.55 [0.38, 0.70] fine, and those
+    intervals **overlap**, so the aggregate is **not separated at this n** and it is the paired comparison that separates
+    them. This is **F39's failure class at the artifact level**: F39's `auth` regex collided with the vocabulary of a tool
+    whose documents are *authored*, F40's `derived_from` reconstruction collides with the writes of a tool that stamps
+    `stage` and `updated`, and in both the refinement meant to help is worse than the cruder thing it refines (F39 §3,
+    `union` worse than `commits` alone on `toolchain` and `change`; §C.13). Forbids deriving a dependency edge from write
+    order, recency or frequency in a history the tool under test writes into — a `derived_from` that matters must be
+    **recorded**, not reconstructed (the old redkiln never stored it, F40 Limits 3) — and forbids adopting a finer scope on
+    the argument that it is finer: a scope change is a measured claim, and here the finer scope is the worse one. Forbids
+    equally any reading in which P2 settles `stale_policy`: criterion 1's precision half fires, its prescribed remedy (fine
+    scope mandatory for `L`-class) is contraindicated by the same measurement, and the consequence is therefore **open**.
+    What would decide it is a corpus carrying real content perturbations — **no item here carries a substantive upstream
+    change**, so nothing in F40 says whether either scope catches real staleness.
 
 ## D. Cost, token and latency figures
 
@@ -156,8 +191,12 @@ one 5,400 s retry. `confirm` bug: `pnpm test -- --run <file>` ran the WHOLE suit
 
 ## E. Open items that must not disappear
 
-Awaiting Ryan: P2 entirely (labels unwritten; the engine phase refuses) · the E3 severity adjudication (facts settled
-6/6, severity is not, so both FP rates and both MCCs are provisional) · the `bisect` ceiling question ·
+Awaiting Ryan: **P2's advisory half only** — the perturbation half is **scored** (F40: 41 rows at pin `47faec9f`, $0,
+blind and **timestamp-verified**), but A01–A06 are labelled after the engine in their own file (METHOD-P §2.3), criterion 3
+is **unrun**, and DECISIONS-2026-09-09 #15's `human_authored` remap must be settled before it measures anything stable.
+"P2 entirely unrun" is now false and "P2 complete" would also be false; every sentence must say which half ·
+the E3 severity adjudication (facts settled 6/6, severity is not, so both FP rates and both MCCs are provisional) ·
+the `bisect` ceiling question ·
 the DECISIONS-2026-09-09 "reverse or confirm first" table (#15 `human_authored` remap changes what the advisory
 fraction measures; #7 the mandatory arm prices an unreachable configuration; #5 20 items not 30).
 
@@ -171,7 +210,10 @@ facet is removed from the classification record, because none clears §1.4's bar
 
 Pre-registrations found broken: P1's alpha rule (not decidable) · **METHOD-P §1.4's precision ≥0.95 bar** (not reachable
 at n=20 for any facet — `ui` is 7/7 with a lower bound of 0.65, and ~60 positives are needed; F39, reported in its
-Limits) · P7 criteria 1–3 (powerless / n=1 / empty denominator) · P8 §5.2's fixture design ("remove the repro steps so
+Limits) · **P2 §2.4 criteria 1 and 2** (empty positive class — 0 of 41 labelled rows are "should re-run", so recall has no
+denominator and criterion 2 cannot fire either way; criterion 1's precision half fires **by construction** and its own
+prescribed remedy is contraindicated by the measurement; F40, reported in its Limits) · P7 criteria 1–3
+(powerless / n=1 / empty denominator) · P8 §5.2's fixture design ("remove the repro steps so
 the gate fires" does not work against an agent with Read+Bash) · P8 §5.4(3) (circular) · METHOD-H §6 (vacuous, replaced
 before data) · S0.2's registered primary (uncomputable at n=1) · charter E1's TTL-split metric (not in `usage`) ·
 charter E4's oracle (empty ledger join).

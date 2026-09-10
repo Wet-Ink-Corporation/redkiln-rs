@@ -34,7 +34,7 @@
 # or reverse #15 before the advisory half is scored; it does not affect the rows below.
 
 labelled_at: 2026-09-10T15:58:08Z
-labeller: FILL-ME
+labeller: Ryan Britton
 corpus_sha: 47faec9f46b8d983c2c75f0794164e68415ae706
 cases_file: spikes/results/p2-cases.jsonl
 

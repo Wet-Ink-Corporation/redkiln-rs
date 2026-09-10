@@ -78,6 +78,21 @@ def main():
     if stamps != {labelled_at}:
         sys.exit(f"engine was run against different labels: {stamps} vs {labelled_at}")
 
+    # METHOD-P §0 rule 1's blindness proxy, CHECKED rather than asserted. P2 is the one arm whose
+    # chronology proxy has not expired (amendment 8 does not touch it), so the property that makes its
+    # result "timestamp-verified" rather than "attested-blind" is exactly this comparison — and until
+    # 2026-09-10 it was being done by hand in prose while the corpus said the scorer did it. It does now.
+    # Timestamps are compared as STRINGS, which is sound only for UTC `...Z` stamps: a local-offset
+    # stamp mis-compares silently, which is why the format is asserted before the ordering is.
+    earliest = min(r["at"] for r in recs)
+    for name, ts in (("labelled_at", labelled_at), ("engine earliest `at`", earliest)):
+        if not ts.endswith("Z"):
+            sys.exit(f"{name} is not a UTC ...Z stamp ({ts}) — refusing to compare chronology")
+    if not labelled_at < earliest:
+        sys.exit(f"BLINDNESS VIOLATED: labelled_at {labelled_at} does not precede the engine's "
+                 f"earliest record {earliest}. METHOD-P §0 rule 1 requires the labels to be written "
+                 f"before the engine's output exists. Refusing to score.")
+
     print("P2 — short-circuit precision/recall of `Stale` against \"should re-run\"")
     print(f"corpus pin      {list(shas)[0]}")
     print(f"labelled_at     {labelled_at}     labeller: {labeller or '(UNSET)'}")

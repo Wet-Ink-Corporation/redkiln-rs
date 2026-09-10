@@ -1,8 +1,8 @@
 # Redkiln-RS — the acceptance-criteria register
 
-**Date:** 2026-09-08 · **Status:** Register, rev. 1, **amended 2026-09-09** to absorb F39 (P1 arm D scored) and ADR-0089 — §0.1, §0.4, §1.1, §1.2, §3.7 (AC-069, AC-070, AC-071, AC-072, AC-076, AC-079 and the new AC-520), AC-113, AC-148, AC-302, AC-347 and §15. Assembled from thirteen authored-then-adversarially-refuted area files. Binding on the Phase 1 build runbook; it decides nothing new and supersedes no ADR. · **Companion:** the success-measure register (SM-001..SM-154 **plus SM-157**, the derived-facet precision measure this amendment added — the measure bodies live there, not here) and the ADR set at `references/adr/` ·
-**Inputs:** the thirteen area files; the condensed evidence brief of 2026-09-08 — `references/2026-09-08-evidence-brief.md`, a working condensation of findings F1–F38 (F9 struck, F30 unassigned) that every area refuted against — **those findings are in two places**: `spikes/FINDINGS.md` holds **F1–F28**, and **F29 and F31–F38 exist only as `spikes/F<NN>-DRAFT.md`**, never folded back into the running log [measured, `ls spikes/F*-DRAFT.md`, 2026-09-09]; the spike files it condenses remain authoritative where they disagree with it; `references/2026-09-05-architecture-proposal.md` rev. 4; `references/2026-09-07-design-recommendation.md`; the process-catalog proposal; `references/adr/`; `spikes/results/` (including `s-mig-report.md` and `spikes/corpus/PINNED_SHA`); `references/2026-09-01-shipmates-lessons-for-redkiln-rs.md`. **Absorbed after the brief was condensed and therefore read from the corpus, not from the brief:** `spikes/F39-DRAFT.md`, `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`, and `references/2026-09-09-change-classification.md` ·
-**Evidence discipline:** every criterion carries an evidence tag — **[measured]** = a number that is in the evidence brief, or (for the 2026-09-09 amendment only) in `spikes/F39-DRAFT.md`, which postdates the brief · **[documented]** = a platform, ADR or proposal contract with no measurement behind it · **[inferred]** = a design consequence, labelled as such. Two areas add a third tag where it earns its place: **[motivating, not evidential]** (git-reconcile) and **[surface unverified]** (harness). A finding may be tagged `[measured]` against a criterion only when the measurement is about the same quantity the criterion constrains. The refutation pass cut every citation that failed that test and **named the cut inside the criterion that carried it**, so the cut is auditable rather than invisible. Where a result is one draw, one repo or one operator, it says so. Unrun spikes are listed as unrun in §1, never assumed.
+**Date:** 2026-09-08 · **Status:** Register, rev. 1, **amended 2026-09-09** to absorb F39 (P1 arm D scored) and ADR-0089 — §0.1, §0.4, §1.1, §1.2, §3.7 (AC-069, AC-070, AC-071, AC-072, AC-076, AC-079 and the new AC-520), AC-113, AC-148, AC-302, AC-347 and §15; **further amended 2026-09-10** to absorb F40 (P2's *perturbation* half scored; its advisory half unrun) — §1.2 row 2, §3's scope note, AC-068, AC-113, AC-434, the selection area's residual-risk list and §15.1. **The 2026-09-10 amendment adds no criterion and moves no count**: F40 changes *why* AC-068 is provisional, not what it asserts. Assembled from thirteen authored-then-adversarially-refuted area files. Binding on the Phase 1 build runbook; it decides nothing new and supersedes no ADR. · **Companion:** the success-measure register (SM-001..SM-154 **plus SM-157**, the derived-facet precision measure this amendment added — the measure bodies live there, not here) and the ADR set at `references/adr/` ·
+**Inputs:** the thirteen area files; the condensed evidence brief of 2026-09-08 — `references/2026-09-08-evidence-brief.md`, a working condensation of findings F1–F38 (F9 struck, F30 unassigned) that every area refuted against — **those findings are in two places**: `spikes/FINDINGS.md` holds **F1–F28**, and **F29 and F31–F38 exist only as `spikes/F<NN>-DRAFT.md`**, never folded back into the running log [measured, `ls spikes/F*-DRAFT.md`, 2026-09-09]; the spike files it condenses remain authoritative where they disagree with it; `references/2026-09-05-architecture-proposal.md` rev. 4; `references/2026-09-07-design-recommendation.md`; the process-catalog proposal; `references/adr/`; `spikes/results/` (including `s-mig-report.md` and `spikes/corpus/PINNED_SHA`); `references/2026-09-01-shipmates-lessons-for-redkiln-rs.md`. **Absorbed after the brief was condensed and therefore read from the corpus, not from the brief:** `spikes/F39-DRAFT.md`, `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`, `references/2026-09-09-change-classification.md`, and — for the 2026-09-10 amendment — `spikes/F40-DRAFT.md` with the P2 instrument decisions it rests on in `spikes/DECISIONS-2026-09-09.md` (#15, #16, #19) and the pre-registration it reports against, `spikes/METHOD-P.md` §2.2–§2.4 ·
+**Evidence discipline:** every criterion carries an evidence tag — **[measured]** = a number that is in the evidence brief, or (for the 2026-09-09 and 2026-09-10 amendments only) in `spikes/F39-DRAFT.md` and `spikes/F40-DRAFT.md`, both of which postdate the brief · **[documented]** = a platform, ADR or proposal contract with no measurement behind it · **[inferred]** = a design consequence, labelled as such. Two areas add a third tag where it earns its place: **[motivating, not evidential]** (git-reconcile) and **[surface unverified]** (harness). A finding may be tagged `[measured]` against a criterion only when the measurement is about the same quantity the criterion constrains. The refutation pass cut every citation that failed that test and **named the cut inside the criterion that carried it**, so the cut is auditable rather than invisible. Where a result is one draw, one repo or one operator, it says so. Unrun spikes are listed as unrun in §1, never assumed.
 
 ---
 
@@ -41,6 +41,8 @@ All thirteen area files were present and complete; **no area is missing or empty
 **514 criteria in force.** 469 binding, 19 provisional, 20 human-gated, 6 conditional. **135 measure rows** are cross-referenced (134 measures plus SM-098, which the verify-gate pass demoted to a descriptive report and excluded from its own count).
 
 **The selection row gained one criterion and one measure on 2026-09-09**, and they are the only changes to this table since rev. 1: **AC-520**, the derived-facet sibling gate that F39 forced (§3.7), and **SM-157**, the derived-facet precision measure whose scored record AC-520 gates on. Both are counted in the selection area because that is the area they belong to, and both ids sit outside that area's ranges because AC-040..AC-079 and SM-013..SM-024 are exhausted — §0.4 records the criterion-side hazard, and the companion register's §1 numbering paragraph records the measure-side one. The measure total therefore moves 134 → 135, matching the companion register's own count.
+
+**The 2026-09-10 F40 absorption changes no cell of this table.** P2's perturbation half is scored, AC-068 stays PROVISIONAL for a different and now-named reason, and **no criterion was added** — the reasoning for absorbing F40 into AC-068 rather than splitting a sibling out of it is stated in §3's 2026-09-10 scope note, and it is deliberately not the F39/AC-520 shape.
 
 Read that total with four deductions in front of it.
 
@@ -177,7 +179,7 @@ redkiln lint --facet-stability .redkiln/facets.toml \
 | # | what is blocked | unblocked by | executable precondition / what would settle it | criteria and measures affected |
 | --- | --- | --- | --- | --- |
 | 1 | LLM-emitted facet values in selection (see §1.1) | **P1** re-run at n>=20 items x >=10 draws. The arm-D panel clause is **discharged** — F39 scored arm D over 140 truth cells at `47faec9f`, panel-adjudicated, $0 — and the block now rests on the identity clause alone, measured **0.25 / 0.15 / 0.10 / 0.10** against 0.80 [measured, F36, F39] | `redkiln lint --facet-stability` exits 0 (above); one of its five clauses is now satisfied and four are not | AC-071 (the gate), AC-069, AC-070, AC-072, AC-076, AC-079, AC-113, AC-434, **AC-520** (the derived-facet sibling gate); SM-015, SM-016, **SM-157** (the derived-facet precision record — a different quantity from SM-015's stability, and not fused with it) |
-| 2 | The short-circuit policy — which classes get `stale_policy = gate` | **P2**, entirely unrun; all three of its criteria are unanswered and its labels are unwritten | `redkiln lint --stale-policy --p2-record …` exits 0 only when `labels_timestamped == true`, `n_items >= 20` and recall/precision clear P2's pre-registered lines. **Those numeric lines are not citable from the evidence brief** and must be read out of P2's pre-registration first, so today PROVISIONAL(P2) means *unspecified*, not *pending a known bar*. | AC-068; SM-021 |
+| 2 | The short-circuit policy — which classes get `stale_policy = gate` | **P2's perturbation half is scored** — 2026-09-10 at pin `47faec9f`, **41 `(case, downstream)` rows** over 12 perturbation cases, $0 model cost, labels blind and **timestamp-verified** [measured, F40] — and its **advisory half (A01–A06) is unrun**, so §2.4's criterion 3 is untouched. "P2 is entirely unrun" is now false and "P2 is complete" would also be false; every sentence about it must say which half. What blocks the policy is now the corpus, not the absence of a run: **0 of 41 rows are "should re-run"**, so recall has no denominator | **The bar is now known** — it is METHOD-P §2.4, quoted rather than paraphrased: (1) coarse "recall < 0.9 or precision < 0.7 → fine scope becomes mandatory for `L`-class activities and `stale_policy = gate` is the default for them"; (2) "fine scope cannot reach recall ≥ 0.9 either → `stale_policy = gate` for all `L`/`XL` activities; **the memo key is trusted only at `S`/`M`**"; (3) "advisory useful fraction < 0.3 → PC3's advisory is demoted to a log line (no gate text)". **Two of the three cannot be evaluated on the registered corpus** — criterion 1's recall half and criterion 2 in full are **NOT ANSWERABLE** for want of a positive class, never 0.00 and never 1.00 — and the third is **unrun**. Criterion 1's *precision* half fires (**0.00** [0.00, 0.26] over 11 emitted positives), but that figure is a property of a label set with no positives, and **the remedy it prescribes is contraindicated by the same measurement**: fine specificity **0.55** [0.38, 0.70] against coarse **0.73** [0.58, 0.84], and on the 33 rows both scopes scored **10 flip `Present` → `Stale` coarse → fine while none flips back** [measured, F40]. So `redkiln lint --stale-policy --p2-record …` has one clause discharged and two this corpus cannot settle: `labels_timestamped == true` is **satisfied** (`labelled_at` 2026-09-10T15:58:08Z precedes the engine's earliest record at 16:01:12Z); `n_items >= 20` is **not met** (12 cases — eight of the twenty selected items produced no perturbation case at all); and the recall line has no denominator to clear or fail. **PROVISIONAL(P2) no longer means *unspecified*: it means the criteria that would settle it have no denominator on the registered corpus, and the one that fires prescribes a contraindicated remedy.** What would settle it is a **P2 re-run on a corpus carrying substantive upstream changes** — a named spike with a named consumer (ADR-0012), the consumer being AC-068 and SM-021 — not another score of this one. **Nothing here settles `stale_policy`; the design consequence is open and needs a decision, not a default.** | AC-068; SM-021 |
 | 3 | `ChangeSummary`'s field set, and every criterion that renders or migrates one | **S-BIN**, registered and unrun; it **gates Phase 1** | S-BIN runs against the ADR-0008 Unreal fixture and the type is settled. Until then no fixture naming its fields can be written. | AC-154 (unverifiable until then), AC-356, AC-475, AC-497; AC-049 is unfounded on the same ground |
 | 4 | The card-delivery append route | **S-H1c**, registered and unrun; ADR-0016 is conditional on it | S-H1c reports whether `--exclude-dynamic-system-prompt-sections` + `--append-system-prompt` keeps the subsidised head **and** holds >=0.95 across commits. | AC-211 fixes only the default; `cache_profile` (AC-383) gains a third value only if S-H1c runs |
 | 5 | The second harness | **S-CODEX**. It is in proposal §8's spike table (46 Codex dispatches) but **does not appear in the evidence brief at all — not even in its unrun list** | A recorded E3-shaped validation result for the candidate adapter exists in the pinned corpus repo. | AC-239, AC-496; SM-154. AC-502's dialect-parity domain is undefined until then |
@@ -601,6 +603,8 @@ reconciled), but the answer is not.
 
 *Scope note, added 2026-09-09.* Arm D is now scored [measured, F39], and the §3.7 criteria absorb it: AC-071's arm-D clause is discharged and its other four are not, AC-070's discard rule is bounded and its facet names corrected, AC-072 gains the `deriver` field and the set shape, AC-079's abstention route is extended to the boolean facets, and **AC-520** closes the gap where `source = "derived"` was gated by nothing. None of that unblocks the area, and none of it touches ADR-0079, which stays `proposed`: F39 measures a *derived* context vector, and ADR-0079 asks about an *LLM-emitted* one.
 
+*Scope note, added 2026-09-10.* **P2's perturbation half is now scored** [measured, F40] and its **advisory half (A01–A06) is unrun**; §3.6 absorbs it in **AC-068 alone**. The area's counts do not move and **no criterion was added**, which is a deliberate departure from the F39 shape: F39 exposed a *behaviour* nothing in the register gated (`source = "derived"` with no scored record) and therefore forced AC-520; F40 exposes no ungated behaviour. It changes the *warrant* under AC-068 — from "P2 is unrun" to "the criteria that would settle it have no denominator on the registered corpus, and the one that fires prescribes a remedy the measurement contraindicates" — and the residue it leaves, the `stale_policy` default for `L`-class, is an **open decision this register may not take**. Writing that residue as a criterion would be this document deciding it. §1.2 row 2 carries the rewritten executable precondition.
+
 ### 3.1 Purity and replay (the reproducibility contract)
 
 **AC-040** — `rk-select` · evidence: catalog §2.5 reproducibility contract [documented]; F35 for the corpus size only
@@ -916,24 +920,91 @@ AND no advisory can promote itself to `Stale` or to a blocking gate.
 *Verified by:* unit test on the vouched-root path; an event-log assertion that `drift_advisory` never co-occurs with a
 `Stale` classification for the same artifact. NEGATIVE criterion.
 
-**AC-068** — `rk-select` · **PROVISIONAL (P2 — unrun)** · evidence: brief §B and §E — **P2's three criteria are
-unanswered; labels unwritten; the engine phase refuses until Ryan's labels are timestamped** · decisions: ADR-0025,
-ADR-0024
+**AC-068** — `rk-select` · **PROVISIONAL (P2 — the criteria that would settle it have no denominator on the registered
+corpus, and the remedy the fired criterion prescribes is contraindicated by the measurement)** · evidence: **F40** (P2's
+**perturbation** half scored 2026-09-10 at pin `47faec9f` over **41 `(case, downstream)` rows** / 12 perturbation cases,
+$0 model cost, labels blind and **timestamp-verified**: coarse specificity **0.73** [0.58, 0.84], fine **0.55**
+[0.38, 0.70]; precision **0.00** [0.00, 0.26] coarse and 0.00 [0.00, 0.20] fine over 11 and 15 emitted positives;
+**recall not computable** on either scope; fine abstains on **8 of 41 = 19.5%** [0.10, 0.34]; the **advisory** half
+A01–A06 is **unrun**) · decisions: ADR-0025, ADR-0024
 GIVEN an L-class activity's artifact classified `Stale` under a pack declaring `stale_policy = gate`
 WHEN step 3 handles it
 THEN a gate opens showing the digest diff, and the producer is not re-dispatched until the gate resolves.
 PROVISIONAL because the *policy setting* — which classes get `stale_policy = gate` — is P2's output, not a decision this
-file may take. Unblocking precondition, executable:
+file may take. **The reason has changed, and the distinction is the whole point of this amendment.** It is no longer
+"P2 is unrun": P2's perturbation half ran and is scored [measured, F40]. It is that **the criteria that would settle the
+setting have no denominator on the registered corpus, and the one criterion that does fire prescribes a remedy the same
+measurement contraindicates.** Unblocking precondition, executable:
 ```sh
 redkiln lint --stale-policy .redkiln/packs --p2-record spikes/results/p2/shortcircuit.json
 # exit 0 only when rec.labels_timestamped == true AND rec.n_items >= 20
 #   AND rec.recall/rec.precision clear P2's PRE-REGISTERED lines.
-# [not in the brief] The brief records P2's three criteria as unanswered and does NOT state their thresholds.
-# The numeric lines must be read out of P2's pre-registration before this command can be given exit conditions;
-# until then the mechanism below is testable and the threshold half is not.
+# labels_timestamped: SATISFIED [measured, F40]. labelled_at 2026-09-10T15:58:08Z precedes the engine's
+#   earliest record at 16:01:12Z, and every engine record carries the labels' own stamp, which the scorer
+#   refuses to score against any other.
+# n_items >= 20: NOT MET. 12 perturbation cases over 41 (case, downstream) rows; eight of the twenty
+#   selected items produced no perturbation case at all (no artifact with two revisions).
+# recall/precision: THE PRE-REGISTERED LINES ARE NOW CITABLE — METHOD-P §2.4, quoted below — but RECALL
+#   HAS NO DENOMINATOR HERE: 0 of 41 rows are labelled "should re-run", so the recall line can be neither
+#   cleared nor failed, and it is NOT ANSWERABLE, never 0.00 and never 1.00. Coarse precision is 0.00
+#   [0.00, 0.26], which with no positive labels is a property of the label set and not a reading of the
+#   engine.
+# CONSEQUENCE: this command cannot exit 0 against the record that exists, and no re-score of THIS corpus
+#   changes that. It needs a P2 re-run on a corpus carrying substantive upstream changes.
 ```
-*Verified by:* unit test on the gate branch (mechanism, available now); the threshold half is verified only by the P2
-record above, whose lines are not yet citable.
+*The bar, quoted rather than paraphrased, because "pending a known bar" is now the honest description.* *(Criteria 2 and 3 were quoted here without their trailing clauses until 2026-09-10; both are restored, because "quoted rather than paraphrased" is a promise this register makes to itself. **The memo-key clause is the one with an unrecorded consequence:** criterion 2 being NOT ANSWERABLE leaves the trust level of the memo key at `S`/`M` unsettled as well as `stale_policy`, and **P2-B** is what would settle both.)* METHOD-P §2.4:
+(1) coarse `derived_from` — "**recall < 0.9** or **precision < 0.7** → fine scope becomes mandatory for `L`-class
+activities and `stale_policy = gate` is the default for them"; (2) "fine scope cannot reach recall ≥ 0.9 either →
+`stale_policy = gate` for all `L`/`XL` activities; **the memo key is trusted only at `S`/`M`**"; (3) "advisory useful fraction **< 0.3** → PC3's advisory is demoted
+to a log line (no gate text)". **Criterion 1's recall half and criterion 2 in full are NOT ANSWERABLE** on this corpus — the same
+missing-denominator shape as `data_migration` in F39, cited as the same shape and with its numbers never mixed with
+these. **Criterion 3 is STILL UNRUN**: the advisory half is labelled *after* the engine in its own file (§2.3) and
+DECISIONS-2026-09-09 **#15**'s `human_authored` remap must be settled first. So ADR-0025's own
+"[unmeasured] The advisory's actual noise rate is untested" **stands unchanged and true** — that ADR is accepted and is
+not edited here — and nothing in this criterion may be read as having tested it.
+*Why the corpus has no positive class, which is checkable and is not a labelling failure.* **0 of 41 rows are "should
+re-run"; all 41 are "need not."** Classifying every hunk against each artifact's own YAML frontmatter boundary at the
+pin, **11 of the 12 perturbation cases change nothing but frontmatter** — the keys `stage`, `status`, `updated` and
+`gate_open`, which the redkiln CLI rewrites on every stage advance — and the twelfth (P01) changes two body lines of
+wording, *"The next stage (spec) has a clear starting point"* → *"The next stage has a clear starting point"*. The
+labeller wrote *"only frontmatter properties (process/stage status), no new/updated facts of the system"* against **39
+of the 41 rows**, before any of that was computed [measured, F40 §1]. The mechanism is a recorded decision:
+DECISIONS-2026-09-09 **#19** doubled the case count from 6 to 12 by adding the **card** as a perturbation candidate
+("11/20 cards have ≥2 revisions vs 6/20 for any downstream artifact"), and cards are exactly what the CLI churns — the
+11 frontmatter-only cases are the 11 card (`story.md`) perturbations, and P01, the only non-card perturbation, is the
+only one with a body change.
+*The fired criterion's remedy is contraindicated, and that is recorded here rather than acted on.* Criterion 1's
+precision half fires. Its prescribed remedy makes **fine scope mandatory for `L`-class**, and **the fine scope is the
+worse of the two on this corpus**. On the aggregate the two specificity intervals overlap, so the difference is **not
+separated at this n**; what separates them is the paired comparison on the **33 rows both scopes actually scored** —
+coarse marks **5** `Stale`, fine marks **15**, and **10 rows flip `Present` → `Stale` going coarse to fine while none
+flips the other way** [measured, F40 §3]. The mechanism is in the verdict breakdown: coarse's declared map carries
+`spec.md ← <card>`, so a card write invalidates the spec and nothing else — 11 false alarms from 11 emissions; the fine
+reconstruction *also* fires on `implementation-report.md` and `report.md`, which **the declared map does not connect to
+the card at all**, because "which upstream changed before this artifact was last written" (§2.2) picks the card up as a
+derivation edge when the card is rewritten so often that it is nearly always the most recent prior write. A document
+that recorded criterion 1 as firing without recording that its own remedy is contraindicated would have absorbed half
+the finding. **Nothing here settles `stale_policy`**: the design consequence is **open and needs a decision, not a
+default**, and the honest route is the named spike **P2** re-run on a corpus carrying substantive upstream changes
+(ADR-0012), whose named consumers are this criterion and SM-021.
+*Blindness, stated precisely because it is not arm D's.* P2 is unaffected by METHOD-P amendment 8, so its chronology
+proxy has not expired: the labels are **timestamp-verified**, not attested-blind, and **P2 is the only arm in this
+programme of which that is true** [measured, F40]. Arm D (F39) is **panel-adjudicated**, and its amendment-8 attestation
+route was never invoked. The two must not be blurred into "blind".
+*The same failure class as F39, one level up.* F39's `auth` regex collided with the vocabulary of a tool whose documents
+are *authored*; F40's `derived_from` reconstruction collides with the writes of a tool that stamps `stage` and `updated`
+on every advance — in both, an inference over a trace **the instrument itself writes into**, and in both the refinement
+meant to help imports the noise (F39 §3 measured `union` worse than `commits` alone on `toolchain` and `change`; this is
+that shape at the artifact level). And P2 §2.4's criteria 1 and 2 are the **fourth** pre-registration in this programme
+that its own registered sample cannot decide, after P1's α rule (F36), P7's criterion 1 (F37) and METHOD-P §1.4's 0.95
+bar (F39): four is a pattern in how this programme writes pre-registrations, each having fixed a threshold without
+checking that the registered corpus could produce the denominator the threshold needs. That is a result **about** the
+pre-registration, carried in F40's limits — not an edit to METHOD-P, which this register may not make.
+*Verified by:* unit test on the gate branch (mechanism, available now, and untouched by F40 — F40 constrains the
+*setting*, not the behaviour). The threshold half is **not** verified by the P2 record that now exists: that record
+answers **one half of one** of §2.4's three criteria, answers it in a direction whose prescribed remedy it also
+contraindicates, cannot answer criterion 1's other half or criterion 2 at all, and leaves criterion 3 unrun. The fixture that would decide this criterion is a P2 re-run whose corpus carries at
+least one substantive upstream change, so that a positive class exists.
 
 ### 3.7 The context vector: facet hygiene and the P1 block (step 2)
 
@@ -1200,7 +1271,7 @@ but unsupported and struck — so it cannot be used as evidence for anything.
 | SM-018 | Unsatisfiable-gate rate on live items | no baseline |
 | SM-019 | Selection cost | no baseline |
 | SM-020 | Memo hits and unsound evictions | saturating; no baseline |
-| SM-021 | Short-circuit precision and recall | no baseline |
+| SM-021 | Short-circuit specificity, precision and recall | **partial baseline** — the perturbation half only [measured, F40]: specificity coarse **0.73** [0.58, 0.84], fine **0.55** [0.38, 0.70], abstention **19.5%** [0.10, 0.34]. Precision is **0.00** by construction of a label set with no positive class, and recall is **not answerable**; both await **P2-B** |
 | SM-022 | Advisory drift noise on vouched roots | — |
 | SM-023 | Selection explanation completeness | saturating tripwire, not a discriminating measure; saturating; no firing kill |
 | SM-024 | Human-supplied facet load | no baseline |
@@ -1211,7 +1282,7 @@ but unsupported and struck — so it cannot be used as evidence for anything.
 - AC-049 (`keyed_by = toolchain` expansion) has NO evidence-brief support at all after its only citation was found fabricated; it survives on ADR-0073/ADR-0057 authority alone, and S-BIN — which gates the `ChangeSummary` type design it depends on — is unrun. It is the weakest survivor in the area.
 - Most criteria are verified by lint rules and tests that do not yet exist. 'Verified by: the family-totality lint rule' specifies an instrument, not an instrument.
 - The negative criteria (AC-041 'cannot read the environment', AC-054 'no fallback', AC-077 'no forbidden-stage dispatch') are checked by import lints and fixtures that sample the space, not by proofs. AC-047 lost its absence clause for exactly this reason.
-- AC-068 and SM-021 are structurally incomplete: the mechanism is testable now but no citable threshold exists, so 'PROVISIONAL (P2)' currently means *unspecified*, not *pending a known bar*.
+- AC-068 and SM-021 are still structurally incomplete, but **not in the way this line said when it was written**. The mechanism is testable now, as it was; the threshold is **no longer uncitable** — it is METHOD-P §2.4, quoted inside AC-068 — so 'PROVISIONAL (P2)' now means *the criteria that would settle it have no denominator on the registered corpus*, not *unspecified*. Two of the three cannot be evaluated at all (**0 of 41 rows are "should re-run"**), the third is **unrun**, and the one that fires prescribes a remedy the same measurement contraindicates [measured, F40]. SM-021 still has **no target and no baseline**, and cannot get either from this record: a precision of 0.00 over a label set with no positives is not a baseline.
 - AC-071 is the single load-bearing gate for the whole block. If its lint is implemented loosely — reading only `modal_required_set_identity` and skipping `panel_verdict` or `corpus_sha` — the entire PROVISIONAL apparatus silently unblocks. One of its five clauses is now discharged by F39, which makes loose implementation *cheaper* to rationalise, not less costly: four clauses still have to fail.
 - **AC-520 is a new gate with nothing behind it yet.** It demands a scored precision record for every `source = "derived"` facet — **eleven of them at this pin**, of which five (`stage`, `rigor`, `role`, `cost`, `recent_deploy`) carry no F39 figure at all — and exactly one deriver has ever been scored, the one F39 measured and found wrong (AC-520's domain note states the split). Until S-FACET reports, the gate's honest effect is to fail load for the derived facets, and an implementer under delivery pressure will be tempted to weaken it into a warning. It was written as its own criterion, with its own fixtures, precisely so that weakening it is visible.
 - **The area's own facet names were drifted and nobody caught it until F39.** AC-070's GIVEN named `toolchains`, `change_kinds` and `touches_auth`; the registry declares `toolchain`, `change` and `auth`. Three unregistered names sat inside the criterion set that forbids unregistered names, through authoring and a full adversarial pass. Nothing in this register cross-checks a criterion's own facet names against `facets.toml`, and that check does not exist as an instrument anywhere.
@@ -1568,8 +1639,10 @@ required-artifact set `R` was identical on only 5/20, 3/20, 2/20 and 2/20 draws 
 $21.37]. **Arm D precision/recall is now computed and does not lift this block:** no facet clears METHOD-P §1.4's 0.95
 bar, `auth` scores **0.00** [0.00, 0.26] over 11 positives every one of which is false, and `data_migration` is **not
 measurable** at 0 positives on 20 items [measured, F39, 140 truth cells at pin `47faec9f`, panel-adjudicated, $0]. That
-discharges AC-071's arm-D clause only; the identity clause (0.25 / 0.15 / 0.10 / 0.10 against 0.80) still holds. P2
-remains unanswered (labels unwritten; the engine phase refuses). Blocking spikes: **P1** — the identity clause, not arm
+discharges AC-071's arm-D clause only; the identity clause (0.25 / 0.15 / 0.10 / 0.10 against 0.80) still holds. **P2's
+perturbation half is now scored and its advisory half is unrun** [measured, F40]; it answers nothing this criterion
+asks, and two of its own three criteria have **no denominator on its registered corpus**, so it stays a blocking spike
+for the short-circuit policy rather than for the vector. Blocking spikes: **P1** — the identity clause, not arm
 D, which has now run — **P2**, and **S-FACET**, which decides what computes the derived facts and which source the
 engine trusts, and on whose scored record AC-520 gates every `source = "derived"` facet.
 
@@ -5287,8 +5360,10 @@ measured band value.
 *Verified by:* a snapshot test on a fixture vector carrying `unknown` on four axes, failing if any renders as a band value.
 **Scope note (not PROVISIONAL).** F36 ran; P1's modal-`R` kill fired **4 of 4** and the selection engine is BLOCKED. This
 criterion constrains *display* only and is implementable as written. Any criterion asserting that the displayed vector is
-*stable* is not writable until P1's kill is retired and P2's labels are timestamped. Do not extend this to a determinism
-claim.
+*stable* is not writable until P1's kill is retired. **P2's labels are now written and timestamp-verified** [measured,
+F40], so that half of this sentence is discharged — and it never carried a stability claim anyway: P2 measures
+short-circuit classification against a human label, not vector determinism, and its perturbation half is scored while
+its advisory half is unrun. Do not extend this to a determinism claim.
 
 **AC-435** — human gate · evidence: ADR-0024's own consequence note ("understanding why an activity ran requires reading
 two artifacts; `redkiln explain` exists specifically to paper over this cost") **[outside the brief]** ·
@@ -6347,13 +6422,15 @@ Read them with one caveat. The refutation pass cut many citations and **named ea
 | **F37** | P7, 61 runs / 297 records / 0 void / $131.62: deviation offered 71 times, used 0; graph cost $1.02 / $2.69 / $9.86 (n=1); primary criterion powerless at n=3 | AC-061, AC-063, AC-105, AC-139, AC-251, AC-303, AC-314, AC-396 | — |
 | **F38** | P8 PARTIAL, 3 of a pre-registered 27+3: mid-graph resume across a real `taskkill /T /F` — 0 changed, 0 lost, digests identical; 8,408 / 10,314 / 14,579 tokens = 0.45× / 0.55× / 0.78× | AC-013, AC-039, AC-161, AC-185, AC-186, AC-187, AC-241, AC-265, AC-266, AC-270, AC-273, AC-353, AC-401 | AC-246, AC-271, AC-400 |
 | **F39** | P1 arm D scored 2026-09-09 over 140 truth cells at pin `47faec9f`, METHOD-P amendment 9, panel-adjudicated (never human-panel), $0: union-source precision `ui` 1.00 [0.65, 1.00] / `toolchain` 0.73 [0.48, 0.89] / `change` 0.72 [0.54, 0.85] / `binary_change` 0.60 [0.23, 0.88] / `flag_exists` 0.00 [0.00, 0.66] / `auth` 0.00 [0.00, 0.26] over 11 positives all false / `data_migration` **not measurable** (0 positives on 20 items); **no facet clears 0.95 and the bar is unreachable at n=20**; 4 items changed no code and produced 16 confident booleans over 16 panel `unknown`s; 32 of 140 cells human-adjudicated, 15 of 32 differ from the script | AC-070, AC-071, AC-072, AC-076, AC-079, AC-113, AC-520 | AC-069, AC-148, AC-302, AC-347 |
+| **F40** | P2's **perturbation** half scored 2026-09-10 at pin `47faec9f` over 41 `(case, downstream)` rows / 12 cases, labels blind and **timestamp-verified** (`labelled_at` 15:58:08Z precedes the engine's earliest record at 16:01:12Z), $0: **0 of 41 rows are "should re-run"**, so recall is **not computable** and METHOD-P §2.4's criterion 1-recall and criterion 2 are **NOT ANSWERABLE**; coarse specificity 0.73 [0.58, 0.84] against fine 0.55 [0.38, 0.70]; precision 0.00 [0.00, 0.26] coarse over 11 emitted positives — a property of the label set, not a reading of the engine; fine abstains on 8 of 41 = 19.5% [0.10, 0.34], never counted as a miss; 10 of the 33 paired rows flip `Present` → `Stale` coarse → fine and none flips back; 11 of 12 cases change YAML frontmatter only (`stage`, `status`, `updated`, `gate_open`); criterion 1's precision half fires and its prescribed remedy is **contraindicated**; the **advisory half (A01–A06) is unrun** | AC-068 | AC-113, AC-434 |
 
-**Four readings of that table worth carrying forward.**
+**Five readings of that table worth carrying forward.**
 
 - **F31 (S-TYPED) and F19 carry the most weight** — 35 and 31 criteria respectively rest on their evidence lines. Both are one corpus, one operator; F19's own recorded limit is that *the FSM was never replayed*, and F31's CLEAN ground truth is wrong for at least 57% of items. Every rate quoted against either is an upper bound.
 - **F9 appears only as a struck citation** (in AC-076, which had cited it as precedent). There is no F9 entry; that row is the table working as intended.
 - **F30 is an unassigned ledger slot.** S-H1b and S-WT were never written up, so AC-267 and AC-383 rest on numbers that live only in the design recommendation and the proposal. That is also the root of the contested worktree cost cell (§1.2 row 15).
 - **F39 is the first row here read from the corpus rather than from the condensed brief**, which predates it and cannot carry it. That is the discipline §16's closing note argues for: a pass that checks only against a condensation cuts real citations as fabrications. Anything F39 touches — AC-070, AC-071, AC-072, AC-076, AC-079, AC-113, AC-520 — must be re-refuted against `spikes/F39-DRAFT.md` and ADR-0089, not against the brief.
+- **F40 is the second such row, and what it adds is a reading about this programme's own pre-registrations.** P2 §2.4's criteria 1 and 2 join P1's α rule (F36), P7's criterion 1 (F37) and METHOD-P §1.4's 0.95 bar (F39) as **four registered thresholds their own registered samples cannot decide** — each fixed a bar without checking that the registered corpus could produce the denominator the bar needs. Read the four together before writing a fifth. AC-068 is the only criterion resting on F40's evidence line, and it must be re-refuted against `spikes/F40-DRAFT.md`, not against the brief, which predates it.
 
 ### 15.2 Decision to criteria
 
