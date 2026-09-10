@@ -1199,7 +1199,7 @@ alone** on two facets, and this is the same shape one level up.
 
 **And the corpus is why there are no positives to score against.** 11 of the 12 perturbation cases change nothing
 but YAML frontmatter — `stage`, `status`, `updated`, `gate_open`, the keys the redkiln CLI rewrites on every stage
-advance; the twelfth (**P01**, the only non-card perturbation, on `discover.md`) changes **two body lines** of
+advance; the twelfth (**P01**, the only non-card perturbation, on `discover.md`) changes ****one body line— a single rewritten line, which the unified diff shows as a `-`/`+` pair** of
 wording, *"The next stage (spec) has a clear starting point"* → *"The next stage has a clear starting point"*. The
 labeller wrote *"only frontmatter properties (process/stage status), no new/updated facts of the system"* against
 **36 of the 41 rows** (35 the phrase exactly, one a shorter variant of it; four rows carry no reason at all and one is P01's), before any of this was computed. The mechanism is a recorded decision:
@@ -1270,9 +1270,14 @@ evidence only that its precondition held** — it says the labels were stamped b
 exactly the blindness claim P2 rests on, and it says nothing whatever about the verdicts. Record the non-firing;
 do not read it as a pass on the result.
 
-**A sixth, seventh and eighth message exist and this table did not carry them**, because `spikes/p2/score-p2.py`
+**Six more messages exist and this table did not carry them** — eleven refusals in total, five here and six there, because `spikes/p2/score-p2.py`
 did not exist when it was written: `labels are not timestamped — refusing to score` (a `FILL` in `labelled_at`),
-`engine records span several corpus pins: {…}`, and `engine was run against different labels: {…} vs {…}`. The
+`no engine records` (the scorer-side guard for the truncated-file case Checkpoint 4 also covers),
+`engine records span several corpus pins: {…}`, `engine was run against different labels: {…} vs {…}`,
+`<stamp> is not a UTC ...Z stamp`, and **`BLINDNESS VIOLATED: labelled_at <t> does not precede the engine's
+earliest record <t>`** — added 2026-09-10, because until then METHOD-P §0 rule 1's chronology proxy was
+being checked by hand while the corpus said the scorer did it. **Count them off the script, not off this
+sentence.** The
 last is the one worth knowing — it compares every record's `labels_at` against the label file's own stamp, so a
 re-stamped label file **cannot** be quietly scored against an engine run that predates the re-stamp. Same
 instrument, one level further on. Do not disable it to get a number out.

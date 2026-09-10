@@ -20,7 +20,7 @@
 | | cases | changed keys |
 | --- | --- | --- |
 | entirely inside frontmatter | **11 of 12** | `stage`, `status`, `updated`, `gate_open` |
-| touching the body | **1** (P01) | two lines: *"The next stage (spec) has a clear starting point"* → *"The next stage has a clear starting point"* |
+| touching the body | **1** (P01) | one line, rewritten: *"The next stage (spec) has a clear starting point"* → *"The next stage has a clear starting point"* |
 
 Those four keys are what the redkiln CLI rewrites as an item advances. They carry no fact about the system, which is what the labeller wrote against **36 of the 41 rows** (35 the phrase exactly, one a shorter variant of it; four rows carry no reason at all and one is P01's) — *"only frontmatter properties (process/stage status), no new/updated facts of the system"* — before any of this was computed.
 
