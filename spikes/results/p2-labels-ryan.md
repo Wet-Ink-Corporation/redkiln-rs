@@ -33,7 +33,7 @@
 # decision #15 — the `human_authored` remap — changes what that advisory fraction measures. Confirm
 # or reverse #15 before the advisory half is scored; it does not affect the rows below.
 
-labelled_at: FILL-ME-ISO8601Z
+labelled_at: 2026-09-10T15:58:08Z
 labeller: FILL-ME
 corpus_sha: 47faec9f46b8d983c2c75f0794164e68415ae706
 cases_file: spikes/results/p2-cases.jsonl
@@ -124,9 +124,8 @@ Commits matched by the slug leaf in the subject and by `Story:`/`Fix:` trailer (
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P01 | support/advance-commit-ignored-path | discover.md | implementation-report.md |  |  |
-| P01 | support/advance-commit-ignored-path | discover.md | report.md |  |  |
-
+| P01 | support/advance-commit-ignored-path | discover.md | implementation-report.md | no | reduces ambiguity - doesn't move the ground |
+| P01 | support/advance-commit-ignored-path | discover.md | report.md | no |  |
 ---
 
 ## P02 — 2/12 — `support/fix-lane-plumbing/issue-50-fix-story-before-worktree`
@@ -254,10 +253,9 @@ defect's own failure mode reproduced inside its own remedy.
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | spec.md |  |  |
-| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | implementation-report.md |  |  |
-| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | report.md |  |  |
-
+| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | implementation-report.md | no | only frontmatter properties (process/stage status) |
+| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | report.md | no |  |
 ---
 
 ## P03 — 3/12 — `support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch`
@@ -418,11 +416,10 @@ What was delivered, what was learned, and what remains.
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | spec.md |  |  |
-| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | implementation-report.md |  |  |
-| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | report.md |  |  |
-| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | _review.md |  |  |
-
+| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | _review.md | no |  |
 ---
 
 ## P04 — 4/12 — `support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding`
@@ -582,11 +579,10 @@ the phase side, with an anti-vacuity guard against the filter silently matching 
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | spec.md |  |  |
-| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | implementation-report.md |  |  |
-| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | report.md |  |  |
-| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | _review.md |  |  |
-
+| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | _review.md | no |  |
 ---
 
 ## P05 — 5/12 — `support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass`
@@ -746,11 +742,10 @@ What was delivered, what was learned, and what remains.
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | spec.md |  |  |
-| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | implementation-report.md |  |  |
-| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | report.md |  |  |
-| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | _review.md |  |  |
-
+| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | _review.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
 ---
 
 ## P06 — 6/12 — `support/fix-lane-plumbing/issue-47-fix-report-md-unauthored`
@@ -878,10 +873,9 @@ has the sweep branch.
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | spec.md |  |  |
-| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | implementation-report.md |  |  |
-| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | report.md |  |  |
-
+| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
 ---
 
 ## P07 — 7/12 — `support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination`
@@ -1008,10 +1002,9 @@ they are not cited).
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | spec.md |  |  |
-| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | implementation-report.md |  |  |
-| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | report.md |  |  |
-
+| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
 ---
 
 ## P08 — 8/12 — `support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse`
@@ -1167,11 +1160,10 @@ asserted, across all 150 tracked specs with zero adversarial collisions found.
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | spec.md |  |  |
-| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | implementation-report.md |  |  |
-| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | report.md |  |  |
-| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | _review.md |  |  |
-
+| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | _review.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
 ---
 
 ## P09 — 9/12 — `support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard`
@@ -1299,10 +1291,9 @@ not fail. The verifier did not argue any of them; it ran mutations and watched t
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | spec.md |  |  |
-| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | implementation-report.md |  |  |
-| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | report.md |  |  |
-
+| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
 ---
 
 ## P10 — 10/12 — `support/fix-serve-child-leak/reap-leaked-serve-children`
@@ -1450,11 +1441,10 @@ What was delivered, what was learned, and what remains.
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | spec.md |  |  |
-| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | implementation-report.md |  |  |
-| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | report.md |  |  |
-| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | _review.md |  |  |
-
+| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | _review.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
 ---
 
 ## P11 — 11/12 — `support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write`
@@ -1582,10 +1572,9 @@ deletion's own test coverage.
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | spec.md |  |  |
-| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | implementation-report.md |  |  |
-| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | report.md |  |  |
-
+| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
 ---
 
 ## P12 — 12/12 — `support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded`
@@ -1743,8 +1732,7 @@ What was delivered, what was learned, and what remains.
 
 | case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
 | --- | --- | --- | --- | --- | --- |
-| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | spec.md |  |  |
-| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | implementation-report.md |  |  |
-| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | report.md |  |  |
-| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | _review.md |  |  |
-
+| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | spec.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | implementation-report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | report.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
+| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | _review.md | no | only frontmatter properties (process/stage status), no new/updated facts of the system |
