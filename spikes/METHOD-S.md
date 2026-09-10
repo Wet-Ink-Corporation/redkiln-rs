@@ -291,6 +291,14 @@ ships depends on the answer.
 
 ### 3.2 Fixture
 
+> **Amended 2026-09-09, before any S-BIN dispatch** — see §7: the project is
+> named and pinned, the five items are drawn from its real history rather than
+> constructed, and the two seeds are produced by a single `git checkout` of the
+> pre-fix revision rather than by hand-authoring an asset. The registration
+> below is unchanged and the amendment records the delta. **The greenness
+> verification §3.2 requires is still outstanding and is the remaining
+> precondition to dispatch.**
+
 Ryan's UE project (D8), at a pinned commit. Five items are constructed, each
 with a `spec.md` of 3–6 ACs and an implementation report, exactly as the fix
 lane would produce them:
@@ -305,6 +313,16 @@ seed list is committed with this document's amendment once the project is
 pinned, and no seed is changed after a dispatch.
 
 ### 3.3 The `ChangeSummary` under test
+
+> **Amended 2026-09-09, before any S-BIN dispatch** — see §7. The draft below
+> is the original registration and is unchanged. Reading the pinned fixture's
+> own instruments found three places where it does not fit what the project
+> actually emits: `text_diff` cannot be decided by "did git produce a diff"
+> (under LFS it always does, and the diff is a two-line pointer), `tests`
+> has no field for `succeededWithWarnings`, which is **180 of 1029** on the
+> project's own last recorded run, and `captures` does have a producer after
+> all. Those are inputs to the spike, not edits to the type: **`ChangeSummary`
+> stays BLOCKED and its field set is not fixed here.**
 
 ```
 ChangeSummary {
@@ -840,5 +858,177 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
      item is reported as a void and the condition as n=22, with the censoring
      question left open rather than resolved by raising the ceiling again. No
      further ceiling change is registered here.
+
+- **2026-09-09, before any S-BIN dispatch:** §3.2's fixture and §3.3's draft type are bound
+  to a named project. Nothing in §3.1, §3.4, §3.5 or §3.6 changes: the question, the decision
+  rule, the prediction and the sizing stand exactly as registered. **This entry was rewritten
+  the same day after an adversarial pass found three defects in its first form; what the pass
+  found is recorded in full below rather than quietly corrected, because two of the three would
+  have invalidated the seeds.**
+
+  **The project and the pin.** `D:/repos/BrittonGames`, `OurGame/OurGame.uproject`, **Unreal
+  Engine 5.8**, project pin **`041ead2cb284afd3004d07c2826f31d05b2799fd`** (2026-09-05, "fix(E8):
+  stop a routed copy carrying the pack's container into the stash") [measured, `git log -1`]. It
+  satisfies D8. Its automation already runs headless and its assets are in Git LFS
+  [measured, `_workspace/tooling/verify_headless.ps1`; `.gitattributes` lines 4–5].
+
+  **The pin is provenance, NOT the review tree.** Each item is reviewed **at its own commit**.
+  This is the first defect the adversarial pass found and it is the load-bearing one: a seed
+  applied by reverting an asset *at the shared pin* does not restore one defect, because both
+  seeded assets were touched again before the pin. `WBP_LoadoutScreen.uasset` changed in
+  **`b0cff782d`** and **`bf9c499a1`** after `a71265925`, and `WBP_StashPanel.uasset` changed in
+  **`4014db6c8`** after `bf9c499a1` [measured, `git log a71265925..041ead2c -- <path>` and
+  `git log bf9c499a1..041ead2c -- <path>`]. So at the pin, seed 4 would have rewound across three
+  commits — carrying seed 5's own magenta search box, destroying the independence of the two
+  seeded items — and seed 5 would additionally have stripped **8.5.8's sort strip**, whose
+  automation spec `Inventory_StashSortControl.spec.cpp` ships at the pin, so §3.2's "the suite
+  stays green" would have been **false by construction** rather than merely unverified.
+
+  The first form of this amendment claimed the reverts were verified. What was actually checked
+  was `git diff --stat <seed>^ <seed>`, which reports what that **commit changed**, not what
+  reverting to its parent **at the pin** restores. That is the same defect class this programme
+  logged three times in its own tooling — assuming a value's shape instead of checking it — and
+  the check that settles it is a blob-oid comparison, not a file count.
+
+  **Corrected instrument.** Each item's review tree is that item's own commit. A seed is that
+  commit's own asset reverted to its immediate parent, applied in a tree at that commit, so the
+  revert undoes exactly one commit's change to exactly that asset and nothing else:
+
+  ```bash
+  # item 4, in a tree at a71265925
+  git checkout a71265925^ -- OurGame/Content/UI/Inventory/WBP_LoadoutScreen.uasset
+  # item 5, in a tree at bf9c499a1
+  git checkout bf9c499a1^ -- OurGame/Content/UI/Inventory/WBP_LoadoutScreen.uasset \
+                             OurGame/Content/UI/Inventory/WBP_StashPanel.uasset
+  ```
+
+  Parents verified: `a71265925^` = `cc0cf2d01`, `bf9c499a1^` = `b0cff782d` [measured,
+  `git rev-parse`]. **Before dispatch, each seed is confirmed by blob oid** —
+  `git rev-parse <seed>^:<path>` against the seeded tree's own `git rev-parse HEAD:<path>` — and
+  not by a file count.
+
+  **The five items, and their spec.md is CONSTRUCTED.** The first form of this amendment said
+  "they do not need constructing". That was an overclaim and is withdrawn. §3.2 registers items
+  "each with a `spec.md` of 3–6 ACs and an implementation report"; the project's backlog supplies
+  **ACs, in this programme's own voice, with a tier column** — which is more than §3.2 assumed —
+  but two rows fall below three clauses and one of those is unverifiable by a reviewer. Each
+  item's `spec.md` is therefore **built from the story row plus the commit's own stated claim**,
+  and the implementation report is the commit message rendered into the fix lane's shape. That
+  transcription is part of the fixture and is registered here, not left to the builder.
+
+  | # | shape | commit | story | ACs at the pin | the change | ground truth |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | 1 | CLEAN | `cc0cf2d01` | 8.5.5d | 4 sub-clauses — in range | `WBP_StashRow.uasset` — an empty `CanvasPanel` gains a row face: legible rows, `INDEX_NONE` rendered blank not `0`, the equipped chip bound and correctly **absent**, row count matching the viewmodel | approved |
+  | 2 | CLEAN | `fa1ea72f4` | — (see below) | **none — closes no story** | `FTEST_Inventory_Stash.umap` — **a single file, a single asset**, the only genuinely diff-free item in the set | approved |
+  | 3 | CLEAN | `e83463288` | 8.3.9 | 5 clauses — in range | `BP_GamePlayerState.uasset` + `DA_Item_Sword.uasset` — a content-only fix that turns the suite green ("Suite 997 tests, 0 failed") | approved |
+  | 4 | SEEDED | `a71265925` | 8.5.5b | **1 clause, and it is a designer's written verdict** | `WBP_LoadoutScreen.uasset` — the fix set `LoadoutFill`'s alpha to 0.970; the seed reverts to **0.097**, leaving the left column translucent | changes-requested |
+  | 5 | SEEDED | `bf9c499a1` | 8.5.5g | 4 clauses — **but none covers the search box** | `WBP_LoadoutScreen.uasset` + `WBP_StashPanel.uasset` — the fix gave the search box a dark background and cream foreground; the seed reverts to white-on-MAGENTA, rendering "Search stash…" as mud | changes-requested |
+
+  Item defect descriptions are [documented] — they are the project's own commit messages
+  (`a71265925`, `bf9c499a1`) verbatim, not an independent read of the binary assets.
+
+  **Three item-level defects the adversarial pass found, stated rather than papered over.**
+
+  1. **Item 2 closes no story.** `fa1ea72f4` is a map-authoring chore; its own message says
+     "Nothing references this map yet; 8.5.6 is the story that will", and 8.5.6 was closed later
+     by `2b0814f78`. 8.5.6's two ACs are about walking the player in and out of reach, which this
+     commit does not do. Its `spec.md` is therefore constructed **from the commit's own claim**
+     (world settings, physics volume and nav data matching the existing Tier-C harnesses; one
+     `BP_GameStash` at X=800 against `DT_Reachability`'s 500 MaxDistance), and the item is
+     retained because it is **the only diff-free item in the set** and §3.1's question is exactly
+     about that case. It is not paired to 8.5.6.
+  2. **Seed 5 violates no registered AC of 8.5.5g.** That row's clauses cover tab affordance,
+     uncut titles and the empty-state label, and it explicitly hands hue to 8.5.5b. So the
+     "changes-requested" ground truth cannot rest on 8.5.5g as registered. It rests on the
+     constructed `spec.md`, which carries the commit's own claim — "a dark specified background
+     and a cream specified foreground on all three colour slots at 17pt" — as an AC. **That
+     clause is what the seed violates, and it is named here before dispatch.**
+  3. **Item 4's story row hands the reviewer the answer.** 8.5.5b's row states the defect in
+     bold ("`LoadoutFill` alpha is 0.10 where 0.97 was intended"). Its `spec.md` must therefore be
+     constructed from the **commit's claim** ("Now 0.970, verified on both the authoring tree AND
+     the generated class archetype") and must not include the story row's diagnosis. Its single
+     registered clause — a designer's written verdict — is not verifiable by a reviewer holding
+     `Read` and `Bash` and is **not** the clause the seed violates.
+
+  **`text_diff` is scoped per item, and four of five items are not diff-free.** Only `fa1ea72f4`
+  is a single asset. The other four carry `CLAUDE.md`, `STATUS.md` and
+  `game_foundation_backlog.json` changes, and **item 1 adds 55 lines to
+  `UE58_Editor_And_MCP_Gotchas.md` describing the very change under review** [measured,
+  `git show --numstat`]. Registered: **`ChangeSummary.text_diff` carries the item's source and
+  test paths only.** Backlog bookkeeping and the gotchas file are excluded, because leaving them
+  in would decide §3.5's prediction by fixture construction rather than by the reviewer. The
+  register rows that describe S-BIN as "no diff" are qualified accordingly.
+
+  **The author-chosen-seed threat is weakened, not removed** (§3.6, same threat as E3-H §8.2).
+  The seeds are real historical defects, exactly reproducible from git, with ground truth in the
+  project's own subsequent fix commit. What remains is **selection**: two were chosen from 29
+  asset-only commits [measured] because their defects are perceptual, so a reviewer good at
+  perceptual defects and bad at others scores well here on a non-representative sample of two.
+  n = 5 is a type-design sample, not a rate.
+
+  **Still outstanding, and it is a precondition.** §3.2 requires the seeds' greenness verified
+  **before** the spike runs — the suite must still pass with the reverted asset in place, since a
+  seed the suite catches measures nothing about review-without-a-diff. **Not run.** It needs
+  `verify_headless.ps1` with the editor closed. The pass identified a live route for it to fail:
+  `Inventory_StashLoop.cqtest.cpp` loads `WBP_StashPanel` by hard path, so seed 5 must be checked
+  against that spec specifically. If a seed goes red it is replaced from the remaining 27
+  asset-only commits and this amendment is extended, never quietly edited.
+
+  **What the fixture's instruments say about §3.3's draft type.** Inputs to the spike;
+  `ChangeSummary` is BLOCKED on S-BIN's result and its field set is **not** fixed here.
+
+  1. **`text_diff` cannot be decided by asking git.** §3.1 says binary assets "cannot be diffed".
+     Under LFS they can, and the result is worse than no diff: the tracked content is the pointer,
+     so `--numstat` returns a **pointer-line count — `1 1` or `2 2`, the oid line always and the
+     size line when the size changed — and never the `-`/`-` binary marker** [measured,
+     `git show --numstat cc0cf2d01 -- …/WBP_StashRow.uasset` → `2 2`, oids `c6a805c0…` →
+     `33800c41…`, size 23,950 → 110,727; and `… a71265925 -- …/WBP_LoadoutScreen.uasset` →
+     `1 1`, size unchanged at 50,724]. So `assets[].size` must be read **from the pointer**, never
+     inferred from whether the size line moved. **This reaches past S-BIN.**
+     `spikes/p1/derive-facets.py` marks `binary_change` on git's `--numstat` marker **or** an
+     Unreal-path match, so on an LFS repository the marker half is structurally dead for assets
+     and the path shortcut carries it — **for Unreal paths only.** On an LFS repository tracking
+     any other binary kind, and this project's own `.gitattributes` LFS-tracks `.png`, `.psd`,
+     `.zip`, `.wav` and `.dll` among others, **both halves are dead**: `change` gains `text` for a
+     binary file and `binary_change` is emitted as a confident `false` — the
+     absence-of-evidence-as-`false` defect **ADR-0089** was accepted to close [measured,
+     `derive-facets.py` lines 40, 115, 117, 120]. Arm D's corpus is not an LFS repo — `redkiln`
+     has no `.gitattributes` — so F39's `binary_change` 0.60 [0.23, 0.88] could not have measured
+     this. **It is an S-FACET input as much as an S-BIN one**, and it makes no claim about F39's
+     figure, which stands as measured.
+  2. **`tests: { passed, failed, skipped }` loses a state the instrument reports.**
+     `verify_headless.ps1` runs `Automation RunTest` under `-unattended -nopause -nosplash
+     -nullrhi -noensuredialog` with `-ReportExportPath`, exporting `index.json` and
+     `headless.log` [measured, the script]. That report's top level is `succeeded`,
+     **`succeededWithWarnings`**, `failed`, **`notRun`**, `inProcess`, `totalDuration`; on the
+     project's last recorded run — 2026-09-05, 1029 tests — succeeded **849**,
+     succeededWithWarnings **180**, failed **0**, notRun **0** [measured,
+     `_workspace/tooling/TestResults/index.json`]. **17.5% of that suite is in a state the draft
+     type cannot express**, and `notRun` is not `skipped`.
+     **The mapping is registered here, before dispatch, because leaving it free would decide
+     §3.4's second branch by hindsight:** `succeededWithWarnings` and `notRun` are **folded into
+     `passed`**, and the reviewer sees the raw report through `report_ref`. §3.4's branch 2 then
+     fires on the reviewer's own prose naming the missing field, which is what it registered.
+     **Provenance caveat:** `TestResults/` is gitignored (`.gitignore:164`) and untracked, so
+     this report is **not reachable from a clone at the pin**. Before dispatch it is copied into
+     the spike's own results directory with its SHA-256 recorded. The BrittonGames working tree
+     also carries two modified paths (`AnimationGym.umap`, `OurGame.uproject`); the fixture is
+     built from a clean tree at each item's commit, not from that working tree.
+  3. **`captures[]` has two candidate producers, and the draft named neither.** UE's automation
+     screenshot comparison is in the report schema and **has never run** — `comparisonExported`
+     `False`, `comparisonExportDirectory` `''` [measured] — so it is reachable only by
+     [inferred]. The producer the project actually uses is the manual `/ue-verify` route: **17
+     PNGs tracked under `_workspace/runbooks/_captures/` at the pin**, and captures are named in
+     three of the five items' own ACs [measured, `git ls-tree -r 041ead2c`]. Which one S-BIN
+     feeds the reviewer is a fixture decision this amendment does not take.
+
+  **One more thing the fixture buys that §3 did not anticipate, with its limit.** `tests[]` is
+  per-test, carrying `fullTestPath`, `state`, `errors`, `warnings` and `artifacts`, and the
+  project's story ACs name automation specs by dotted path
+  (`OurGame.Inventory.DimensionlessLoss`). So an AC **can** be checked from the report alone —
+  but from a named test's `state` **plus its `warnings`/`errors` counts**, not `state` alone:
+  `state` is uniformly `Success` across all 1029 tests including the 180 warned ones [measured],
+  so it cannot see the degradation finding 2 is about. That is the mechanism ADR-0019's per-AC
+  discriminating-test norm needs, and S-BIN can measure whether a reviewer uses it.
 
 Any later change is disclosed here with the date and the records it post-dates.
