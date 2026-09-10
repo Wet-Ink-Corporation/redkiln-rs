@@ -4,6 +4,15 @@ Date: 2026-09-07. Status: brainstorm → proposal for spikes. Builds on the arch
 
 Evidence tags: [documented] = fetched source; [inferred] = reasoning from sources; [measured] = only after a spike runs. Nothing in this note is measured yet.
 
+**Amended note, 2026-09-09 — read before carrying any claim out of §6.1's P1 row, §2.4's context vector or §7's PC7.** The body below is left as written, as the record of what was proposed on 2026-09-07. Four things have since changed under it, and "nothing in this note is measured yet" is no longer true of the P1 row specifically.
+
+1. **P1 has run.** Arm L is **F36** (400 dispatches, 0 void, $21.37 — the modal-`R` kill fires 4 of 4) and arm D is **F39** (140 truth cells at pin `47faec9f`, $0, panel-adjudicated under METHOD-P amendment 9, never human-panel) [measured].
+2. **The facet names in this note are drifted** — in §2.4's classification record, §6.1's P1 row and §7's PC7 alike. `spikes/p9/facets.toml` declares `toolchain`, `change` and `auth`; it has never declared `toolchains`, `change_kinds` or `touches_auth`. The same drift sat inside AC-070 and was corrected there on 2026-09-09; it is recorded rather than silently repaired here [documented, `references/2026-09-08-acceptance-criteria.md` §AC-070 correction].
+3. **No facet leaves the model, and `auth` itself is withdrawn.** No derived facet clears the ≥ 0.95 precision bar of METHOD-P §1.4 — `auth` scores **0.00** [0.00, 0.26] over eleven positives every one of which is false, and the bar is **not reachable at n = 20 for any facet however good** (`ui` is 7/7 and its 95% lower bound is 0.65; roughly 60 positives are needed) [measured, F39]. **ADR-0089** (accepted 2026-09-09) withdraws the repo-wide `auth` boolean outright and replaces it with a set-valued `surfaces` facet over a checked-in `surfaces.toml`, unscored until S-FACET runs. So the P1 row's "a facet that derives at ≥ 0.95 precision leaves the model" describes a branch that was measured and not taken.
+4. **`data_migration` is not measurable on this corpus.** The deriver emits **0 positives across 20 items** and all three path sources, so the precision criterion has no denominator — reported as *not measurable*, not as a pass or a failure [measured, F39 §4].
+
+Read `references/2026-09-09-change-classification.md` and `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md` before carrying anything out of the P1 row or PC7's facet names. ADR-0079 (the LLM-emitted vector) is untouched by F39 and stays `proposed`.
+
 ## 0. Verdict
 
 The idea is viable and has forty years of prior art, but one part of the framing should change.

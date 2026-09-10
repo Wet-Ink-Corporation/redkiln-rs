@@ -1,8 +1,8 @@
 # Architecture decision records
 
-**Purpose:** the durable, citable record of every architecture decision taken for Redkiln-RS during the design phase — **88 records**: `0001`–`0073` retrofitted from the three proposal documents that originally carried them as inline decision rows (`D1`–`D22`, `PC1`–`PC8`, `SCHEMA-1`–`SCHEMA-43`), and `0074`–`0088` written directly against the 2026-09-08 evidence brief and research pass (`legacy_id: none`). A decision is cited from here, not from the prose that first argued it.
+**Purpose:** the durable, citable record of every architecture decision taken for Redkiln-RS during the design phase — **89 records**: `0001`–`0073` retrofitted from the three proposal documents that originally carried them as inline decision rows (`D1`–`D22`, `PC1`–`PC8`, `SCHEMA-1`–`SCHEMA-43`), and `0074`–`0089` written directly against the 2026-09-08 evidence brief and research pass, and against F39 (`legacy_id: none`, except `0074` and `0075`, which carry revision keys — see **Open items**). A decision is cited from here, not from the prose that first argued it.
 **Format:** MADR-lite — YAML frontmatter with a fixed key list, six mandatory sections, and a required **What this forbids** block inside Consequences. One decision per file, one file per number.
-**Lifecycle:** `proposed → accepted → (rejected | deprecated | superseded)` (`research/2026-09-03-workflow-model.md` §4). The 73 retrofitted records were entered at the status their source gave them; `0074`–`0088` were decided on 2026-09-08. The set now holds 85 `accepted`, 2 `superseded` (0004, 0041) and 1 `proposed` (0079, deliberately undecided — see **Open items**).
+**Lifecycle:** `proposed → accepted → (rejected | deprecated | superseded)` (`research/2026-09-03-workflow-model.md` §4). The 73 retrofitted records were entered at the status their source gave them; `0074`–`0088` were decided on 2026-09-08 and `0089` on 2026-09-09. The set now holds 86 `accepted`, 2 `superseded` (0004, 0041) and 1 `proposed` (0079, deliberately undecided — see **Open items**).
 **Immutability rule:** an accepted ADR is **never edited**. It is superseded by a new record, and **both sides carry the link** — the successor's `supersedes: ["NNNN"]` and the predecessor's `superseded_by: ["NNNN"]`. See `research/2026-09-03-workflow-model.md` §4 ("Accepted ADRs are immutable — supersede, never edit") and `2026-09-05-architecture-proposal.md` §4.8 (".kb: … ADRs immutable (supersede)").
 **Numbering:** monotonic 4-digit, zero-padded, never reused. `0001`–`0022` D-series · `0023`–`0030` PC-series · `0031`–`0073` schema amendments · `0074`+ new decisions.
 
@@ -61,7 +61,7 @@ Every id appearing in `supersedes`, `superseded_by` or `related` must resolve to
 
 `Decision` may be placed before `Considered options` where the options only make sense once the decision is stated; both orders are in use and both are valid. No section may be omitted.
 
-**`What this forbids` is required.** Every record carries a `**What this forbids**` block inside `## Consequences`, stating what the decision makes illegal. It is the half of a decision that is actually enforceable, and a record without it is incomplete. It is present on all 88.
+**`What this forbids` is required.** Every record carries a `**What this forbids**` block inside `## Consequences`, stating what the decision makes illegal. It is the half of a decision that is actually enforceable, and a record without it is incomplete. It is present on all 89.
 
 ## Numbering
 
@@ -70,7 +70,7 @@ Every id appearing in `supersedes`, `superseded_by` or `related` must resolve to
 | D-series | `0001`–`0022` | Architecture decisions D1–D22, from `2026-09-05-architecture-proposal.md` |
 | PC-series | `0023`–`0030` | Process-catalog decisions PC1–PC8, from `2026-09-07-process-catalog-proposal.md` §7 |
 | Schema amendments | `0031`–`0073` | Activity-graph schema amendments 1–43, from `2026-09-07-activity-graph-schema.md` §9a/§9b/§9c |
-| New | `0074`+ | Every decision taken from now on. `0074`–`0088` are allocated; the next free number is `0089`. |
+| New | `0074`+ | Every decision taken from now on. `0074`–`0089` are allocated; the next free number is `0090`. |
 
 Numbers are assigned once and never reused, including for records that are later superseded or rejected.
 
@@ -94,7 +94,7 @@ This table is how `D14` and `PC7` stay citable from the documents written before
 | D12 | [0012](0012-open-questions-become-named-gating-spikes.md) | Open questions become named, gating spikes, not prose | accepted |
 | D13 | [0013](0013-corpus-lives-in-its-own-pinned-repo.md) | Corpus lives in its own pinned repo, not under spikes/ | accepted |
 | D14 | [0014](0014-process-packs-own-structure-tech-packs-bind.md) | Process packs own structure; technology packs bind and contribute at slots | accepted |
-| D15 | [0015](0015-review-tier-selects-execution-grade-or-read-only.md) | Review tier selects execution-grade or read-only, not a uniform policy | accepted |
+| D15 | [0015](0015-review-tier-selects-execution-grade-or-read-only.md) | Review tier selects execution-grade or read-only, not a uniform policy | accepted (partially superseded by 0020) |
 | D16 | [0016](0016-static-system-prompt-carries-the-card.md) | Static system prompt carries the card for Phase 1 | accepted (partially superseded by 0078) |
 | D17 | [0017](0017-gate-record-is-token-tree-hash-deadline.md) | Gate record binds a single-use token to the tree hash, with a deadline and terminal path | accepted |
 | D18 | [0018](0018-rewrite-events-and-common-dir-worktree-ownership.md) | Rewrite events and common-dir worktree ownership | accepted |
@@ -108,8 +108,8 @@ This table is how `D14` and `PC7` stay citable from the documents written before
 | PC4 | [0026](0026-three-level-encapsulated-review.md) | Review is three encapsulated levels, not a stage-visible reviewer | accepted |
 | PC5 | [0027](0027-curated-catalog-with-unshipped-extended-file.md) | Curated ~95-activity catalog at v0, with unshipped extended file | accepted |
 | PC6 | [0028](0028-activity-graph-owns-output-quality.md) | Each activity graph owns the quality of its own output | accepted |
-| PC7 | [0029](0029-technology-pack-contribution-contract.md) | Technology packs add facts, producers and artifact kinds, never rubric rows | accepted |
-| PC8 | [0030](0030-facets-not-tags.md) | Activity classification is closed facets compiling to applicable_if, not free tags | accepted |
+| PC7 | [0029](0029-technology-pack-contribution-contract.md) | Technology packs add facts, producers and artifact kinds, never rubric rows | accepted (partially superseded by 0073) |
+| PC8 | [0030](0030-facets-not-tags.md) | Activity classification is closed facets compiling to applicable_if, not free tags | accepted (partially superseded by 0089) |
 | SCHEMA-1 | [0031](0031-on-false-loop-back-only.md) | on_false targets only earlier-declared steps; forward branching stays in when | accepted |
 | SCHEMA-2 | [0032](0032-absent-inputs-are-null.md) | Absent optional inputs are null, with vacuous-true quantifiers and a lint error elsewhere | accepted |
 | SCHEMA-3 | [0033](0033-normative-predicate-grammar.md) | Predicate grammar is fixed and closed, with no user-defined functions | accepted |
@@ -122,7 +122,7 @@ This table is how `D14` and `PC7` stay citable from the documents written before
 | SCHEMA-10 | [0040](0040-normative-step-input-source-grammar.md) | Normative closed grammar for step input sources | accepted |
 | SCHEMA-11 | [0041](0041-alternative-outcomes-via-final-materialising-step.md) | Alternative outcomes materialise through a final tool/check step, exit set stays three | superseded |
 | SCHEMA-12 | [0042](0042-feedback-refs-are-normative.md) | Feedback refs are normative, not lint folklore | accepted |
-| SCHEMA-13 | [0043](0043-loops-must-learn.md) | Loops must be able to learn — iteration enters the memo key | accepted |
+| SCHEMA-13 | [0043](0043-loops-must-learn.md) | Loops must be able to learn — iteration enters the memo key | accepted (partially superseded by 0059) |
 | SCHEMA-14 | [0044](0044-on-false-table-form.md) | on_false is a bounded table, never a bare scalar target | accepted |
 | SCHEMA-15 | [0045](0045-gate-output-is-answer-only.md) | A gate step's output is answer, never outputs | accepted |
 | SCHEMA-16 | [0046](0046-deviation-is-authorable.md) | Deviation is authorable through on_false, not just declarable | accepted |
@@ -156,7 +156,7 @@ This table is how `D14` and `PC7` stay citable from the documents written before
 
 ## Supersessions
 
-Eight supersession links exist in this set, from seven superseding records — `0075` supersedes two predecessors. Two links are full; six are partial and leave their predecessor `accepted`.
+Nine supersession links exist in this set, from eight superseding records — `0075` supersedes two predecessors. Two links are full; seven are partial and leave their predecessor `accepted`.
 
 | Superseded | By | Full or partial | What changed |
 | --- | --- | --- | --- |
@@ -168,11 +168,13 @@ Eight supersession links exist in this set, from seven superseding records — `
 | [0005](0005-human-edits-prose-free-structure-gated.md) (D5) | [0075](0075-typed-artifacts-revision-4-refinements.md) | Partial | Withdrawn: only the implication that a structured field's shape is fixed independently of what the corpus contains — S-MIG's census (1,312 files / 6,877 sections) forces the AC type permissive (`gwt` and `verification` both optional; 19 of 153 shipped specs carry neither). D5's prose-free/structure-gated rule, its CLI/web/gate-only write path and its locator-not-a-grammar rule all stand, so 0005 stays `accepted`. |
 | [0006](0006-artifact-layout-c-split-fields.md) (D6) | [0075](0075-typed-artifacts-revision-4-refinements.md) | Partial | Withdrawn: `plan.md` leaves the human-facing artifact list (110/110 were the unfilled scaffold), and the companion sidecars are refined into one schema per companion kind. Layout C itself, digest-stamped read-only structured sections, typed drift surfaced not applied, and "nothing parses structure out of prose" all stand, so 0006 stays `accepted`. |
 | [0016](0016-static-system-prompt-carries-the-card.md) (D16) | [0078](0078-cache-rule-is-split-both-ttls-set-scope-corrected.md) | Partial | Withdrawn: the single `CLAUDE_CODE_PROMPT_CACHE_TTL=1h` pin as *the* TTL fix (`CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL=1h` is required too, and no run may be reported as 1h without per-run `ephemeral_*` field evidence), and the "the cache is org-scoped" justification for pinning the CLI version. D16's delivery clause — `--system-prompt` carries the card body, static, for Phase 1, append route retained as a config option pending S-H1c — is untouched, so 0016 stays `accepted`. |
+| [0030](0030-facets-not-tags.md) (PC8) | [0089](0089-facet-provenance-declared-surfaces-and-abstention.md) | Partial | Withdrawn: rule 2's silence on **what kind of computation counts** as "a computed fact", and the repo-wide `auth` boolean named in PC8's initial-facets sentence. A computed fact must now name its evidence source and provenance class, `facets.toml`'s `source` gains a `deriver` companion, `auth` becomes a set-valued `surfaces` facet over a declared path map, and a derived boolean's absence of evidence resolves to `null` rather than `false`. Measured cause: the lexical deriver scores **precision 0.00 over 11 positives** on `auth`, 95% CI [0.00, 0.26] — every positive false, because `auth` is a substring of *authored*, `oauth` of *coauthor* and `token` matches a design token — and `data_migration` emits **zero positives on 20 items** and is not measurable (F39). PC8 rules 1, 3, 4 and 5, rule 2's prohibition itself, and the tags-are-sugar status all stand — so 0030 stays `accepted`. |
 
 Reference relations that are deliberately **not** supersessions:
 
 - `0023` (PC1) and `0020` (D20) are the **same decision recorded in two homes** — the rigor enum as the architecture proposal states it and as the process-catalog proposal states it. They are `related`. Neither withdraws anything from the other.
 - `0028` (PC6), `0029` (PC7) and `0022` (D22) are `related`: encapsulated activity graphs, the technology-pack contribution contract, and the D-series record of both. No withdrawal among them.
+- `0089` **generalises** `0067` (SCHEMA-37) rather than superseding it. `0067` already emits `null` under rule `R-recent-deploy-feed-absent` when the `toolchain:deploy_log` feed is absent; `0089` extends that same abstention from one derived boolean to all of them, so there is one mechanism and not two. Nothing of `0067` is withdrawn — its facet, its 24 h anchor and its `wants_facet` prohibition all stand — so the relation is `related`, recorded one way on `0089` because `0067` is `accepted` and therefore frozen.
 
 ## Where these live eventually
 
@@ -182,13 +184,14 @@ Until then this folder is the canonical location and the legacy-id map above is 
 
 ## Open items
 
-**No gap, duplicate or unresolvable defect remains.** The set is exactly 88 files, `0001`–`0088`, with no gaps and no duplicate numbers; every `legacy_id` in `D1`–`D22`, `PC1`–`PC8`, `SCHEMA-1`–`SCHEMA-43` appears exactly once and `0074`–`0088` carry `legacy_id: none`; every id reference resolves; `consumers` is `[]` everywhere; the supersession graph is acyclic; every record carries all six sections and a `**What this forbids**` block; and exactly three records are not at `accepted` — `0041` and `0004`, the two targets of a full supersession, at `superseded`, and `0079` at **`proposed`**, which is correct because the axis-source question it records is blocked on a human panel that has not been written and 0079 decides nothing in its place.
+**No gap, duplicate or unresolvable defect remains.** The set is exactly 89 files, `0001`–`0089`, with no gaps and no duplicate numbers; every `legacy_id` in `D1`–`D22`, `PC1`–`PC8`, `SCHEMA-1`–`SCHEMA-43` appears exactly once; `0074` and `0075` carry the revision keys `D4 rev.4` and `D5/D6 rev.4` rather than `none`, because each is the revision-4 rewrite of the D-series decision it supersedes, and `0076`–`0089` carry `legacy_id: none`; every id reference resolves; `consumers` is `[]` everywhere; the supersession graph is acyclic; every record carries all six sections and a `**What this forbids**` block; and exactly three records are not at `accepted` — `0041` and `0004`, the two targets of a full supersession, at `superseded`, and `0079` at **`proposed`**, which is correct because the axis-source question it records is not decided by anything measured so far and 0079 decides nothing in its place.
 
-**Open questions carried at `proposed` or explicitly unresolved inside an accepted record.** `0079` is the only `proposed` record: Phase 1 pack authoring over the LLM-emitted facets is blocked and the record forbids being amended into a decision. Four accepted records carry a named open item rather than a resolution: `0078` registers spike **S-TTL1** against the F3-versus-documentation contradiction over the `ephemeral_1h`/`ephemeral_5m` fields; `0077` registers **S-GIX** against gix's undocumented trailer-write support; `0080` leaves the quality shorthand's default explicitly unset pending a re-run at n = 10 per cell and a settled severity vocabulary; `0088` registers an unrun confirmation-bias arm and forbids claiming the gate is guarded against false approval until it runs.
+**Open questions carried at `proposed` or explicitly unresolved inside an accepted record.** `0079` is the only `proposed` record: Phase 1 pack authoring over the LLM-emitted facets is blocked and the record forbids being amended into a decision. **Its blocking condition has moved but has not lifted.** AC-071's five clauses include an arm-D panel scored, and that clause is now discharged — arm D was scored on 2026-09-09 against 140 panel-adjudicated truth cells [measured, F39] — while the clause that actually holds the block is untouched: modal required-set identity was measured at 0.25 / 0.15 / 0.10 / 0.10 against an 0.80 line [measured, F36]. F39 measures a *derived* context vector; 0079 asks about an *LLM-emitted* one, so it contributes to that record without deciding it. Five accepted records carry a named open item rather than a resolution: `0078` registers spike **S-TTL1** against the F3-versus-documentation contradiction over the `ephemeral_1h`/`ephemeral_5m` fields; `0077` registers **S-GIX** against gix's undocumented trailer-write support; `0080` leaves the quality shorthand's default explicitly unset pending a re-run at n = 10 per cell and a settled severity vocabulary; `0088` registers an unrun confirmation-bias arm and forbids claiming the gate is guarded against false approval until it runs; and `0089` registers **S-FACET** against the unscored `surfaces` facet and leaves the source-asymmetry question (`commits` beats `docs`; `union` is worse than `commits` alone on two facets) explicitly undecided.
 
-Two items are recorded as notes rather than defects:
+Three items are recorded as notes rather than defects:
 
 - **Record-granularity supersession is coarser than the sources.** Both `0041`/`0064` and `0043`/`0059` supersede in substance only part of the predecessor, and `0041`'s source scopes its supersession to pure-composition cases. The link is nevertheless recorded whole-record, per the rule above, with the scope written into both bodies. Anyone acting on `0041` must read `0064`'s Decision section for what actually survives.
-- **`related` is directional.** It is not maintained reciprocally across the set (55 of the `related` edges point one way only), and this is convention, not an error — a record names what it drew on. Do not infer from a missing back-link that a relation was dropped.
+- **`related` is directional.** It is not maintained reciprocally across the set (114 of the 166 `related` edges point one way only), and this is convention, not an error — a record names what it drew on. Do not infer from a missing back-link that a relation was dropped.
+- **One clause of `0067`'s Evidence section has been overtaken, and the correction lives here because the record is frozen.** `0067` says of the schema row's "P1 arm D measures it": "a forward reference only. No measurement result is given, and P1 arm D has not been read out (its blind panel is unfilled), so nothing here rests on a measured effect." Arm D **was** read out, on 2026-09-09 [measured, F39], so that clause no longer holds. Everything the sentence was doing still does. The parenthetical remains literally true — the pre-registered blind panel file was never filled; METHOD-P amendment 9 replaced that oracle with a deterministic one on the mechanical facets and an adjudicated model panel on the semantic ones, and the file is retained unfilled [documented, METHOD-P §0 amendment 9]. And `recent_deploy` does **not** appear in F39's precision table: the `toolchain:deploy_log` feed does not exist at the corpus pin, so arm D emitted the facet as `null` under `R-recent-deploy-feed-absent` instead of scoring it [measured, F39; `spikes/p1/derive-facets.py`]. The forward reference is therefore still unfulfilled, and `0067`'s Decision continues to rest on no measured effect — which is what the sentence was disclaiming, not using.
 
-One cosmetic inconsistency was left as-is because fixing it would mean editing accepted records for no normative gain: the required forbids block is punctuated three ways across the set — `**What this forbids**` (59), `**What this forbids**:` (11), `**What this forbids:**` (3). The canonical form for new records is `**What this forbids**`.
+One cosmetic inconsistency was left as-is because fixing it would mean editing accepted records for no normative gain: the required forbids block is punctuated three ways across the set — `**What this forbids**` (75), `**What this forbids**:` (11), `**What this forbids:**` (3), which is all 89. The canonical form for new records is `**What this forbids**`.

@@ -6,7 +6,7 @@ date: 2026-09-07
 legacy_id: PC8
 source: references/2026-09-07-process-catalog-proposal.md §7 PC8
 supersedes: []
-superseded_by: []
+superseded_by: ["0089"]
 related: ["0020"]
 evidence: ["V-Modell XT typed project characteristics", "Provop context model with enumerated value ranges", "C-EPC facts", "competitive §B9, §D lesson 3"]
 consumers: []

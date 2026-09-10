@@ -4,10 +4,13 @@
 `references/2026-09-08-architecture-design.md` §0.1 and §10.2; where the two disagree the design governs and this
 file is wrong. · **Scope:** Phase 0 (close the programme) and Phase 1 (kernel, store, fix and story lanes) only.
 Phases 2–4 are out of scope. · **Inputs:** `references/2026-09-08-architecture-design.md` (§0.1, §5.3, §5.9, §9,
-§10) · `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519, and **its** §12.10) · `references/adr/`
-(88 records) · `spikes/HANDOFF.md` ("What Ryan does next", "Traps that cost time here") ·
+§10) · `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519 **plus AC-520**, the derived-facet gate
+allocated outside the exhausted selection range, and **its** §12.10) · `references/adr/`
+(**89 records** — ADR-0089 landed 2026-09-09) · `spikes/F39-DRAFT.md` · `spikes/HANDOFF.md` ("What Ryan does
+next", "Traps that cost time here") ·
 `spikes/DECISIONS-2026-09-09.md` · `references/2026-09-08-evidence-brief.md` §E. · **Tree state:** every path and
-every existing command below was re-verified against both working trees on **2026-09-08**. · **Commands that do not
+every existing command below was re-verified against both working trees on **2026-09-08**, and the paths this
+revision touches were re-verified again on **2026-09-09**. · **Commands that do not
 exist yet** — because the code is not written — are marked **`[WILL EXIST]`** and are written in the form they will
 take. Nothing else in this file is aspirational.
 
@@ -16,10 +19,16 @@ an ADR, not a runbook line:
 
 | Decision | Where | Record |
 | --- | --- | --- |
-| The context-vector source | **Step 4** — the blocking gate | **ADR-0089**, superseding ADR-0079 in full |
-| Whether S-GIX narrows the git write path | Step 6.1 | a **successor** to ADR-0077, never an edit to it |
+| The context-vector source | **Step 4** — the blocking gate | **ADR-0090**, superseding ADR-0079 in full |
+| Whether S-GIX narrows the git write path | Step 6.1 | a **successor** to ADR-0077, never an edit to it — **ADR-0091** |
 | The minimum `git` executable version the wrapper asserts | Step 6.2 constraint 3 | named in that same successor record |
 | `doctor`'s unread-artifact window `N` | Step 7d | the `doctor` rule table, cited by AC-472/AC-426 |
+
+**`0089` is taken, and the numbers above moved because of it.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
+was accepted on 2026-09-09 and partially supersedes ADR-0030 (PC8) [documented, ADR-0089]. Every ADR number this
+file plans is therefore one higher than the previous revision's: Step 4.4's context-vector record is **0090**, Step
+6.1's S-GIX successor is **0091**. **Step 4a is not a fifth decision** — ADR-0089 is already taken, and Step 4a is
+the execution order for the registry, schema and lint work that record forces.
 
 Everything else this file does is execution order. **Where a step is tempted to decide something else, it stops.**
 
@@ -39,7 +48,7 @@ route. Drive paths (`D:/repos/...`) work unchanged in Git Bash.
 **Tool preflight — checked 2026-09-08, and two are MISSING.** Run this before Step 0 and install what it names:
 
 ```bash
-for t in sed wc grep date python cargo rustc git claude; do
+for t in sed awk wc grep date python cargo rustc git claude; do   # awk: Checkpoint 4a's deriver-count line
   command -v "$t" >/dev/null || echo "MISSING: $t"
 done
 cargo audit --version  >/dev/null 2>&1 || echo "MISSING: cargo-audit  → cargo install cargo-audit --locked"
@@ -60,6 +69,13 @@ These hold for every step below. They are not advice; each one is a measured fai
    `novelty`, `size`, `blast_radius`, `market_facing`, `external_dep` or `has_repro`. `kind` is out of scope of the
    block (human input, ADR-0030 rule 4). The engine's *semantics* are decided and may be built now; its *input* may
    not. [F36: modal `R` identical on 5/20, 3/20, 2/20, 2/20 against an 80% line; 400 dispatches, 0 void, $21.37]
+
+   **F39 does not lift this and moves only one clause of it.** AC-071 has five clauses — identity ≥ 0.80, n ≥ 20
+   items, ≥ 10 draws per item, arm-D panel **scored**, corpus pinned — and P1 arm D's scoring on 2026-09-09
+   **discharges the fourth clause only** [measured, F39]. The block still stands on the **first**: modal
+   required-set identity was measured at **0.25 / 0.15 / 0.10 / 0.10** against the 0.80 line [measured, F36]. F39
+   measures a *derived* context vector; ADR-0079 asks about an *LLM-emitted* one, so F39 narrows 0079's options
+   without deciding among them and **0079 stays `proposed`** until Step 4.4 writes its successor.
 
 2. **Nothing may depend on a process surviving.** Anything long-running is a durable mark plus a later read. F22
    measured ~12 background kills against one 12,000 s survivor under `Start-Process`; `issue-81` was killed three
@@ -100,6 +116,15 @@ These hold for every step below. They are not advice; each one is a measured fai
    second, §4.3 — deliberate and correct, but only because it was *chosen*). **When you meet a guard, establish its
    scope before you obey it and before you route around it.** The scope is the finding, not the verdict.
 
+10. **A pre-registered bar whose registered n cannot decide it is powerless, and must be reported as powerless.**
+    Three measured instances now, all in the same pre-registration: P1's α rule [F36], P7's criterion 1 — powerless
+    at n=3, every Wilson interval overlapping by construction [F37] — and METHOD-P §1.4's 0.95 precision bar, which
+    **no facet can clear at n=20 however good the method**: `ui` is 7/7 and its 95% lower bound is 0.65, and
+    roughly 60 positives are needed for a lower bound above 0.95 [measured, F39 Limits 1]. **Before you run a
+    criterion, ask what n it needs; after you run one, report saturated as saturated, powerless as powerless and
+    not-measurable as not measurable — never as a pass or a failure.** This is a result *about* the
+    pre-registration, reported in the finding; it is **not** a licence to edit METHOD-P after the numbers are in.
+
 **Where each constraint actually bites.** They are restated at these steps because the preamble is not where an
 operator meets them:
 
@@ -111,9 +136,10 @@ operator meets them:
 | 4 — a rig that compiles has not been run | Step 3a, Step 7c |
 | 5 — every waiter needs a failure alternative | Step 3a (the dispatch), Halt 5 |
 | 6 — a default written for the fast condition | Step 3a (the dispatch timeout) |
-| 7 — scripted edits need an anchor assertion | Step 3a, **Step 4.4** (the two ADR edits), Step 1.2 |
+| 7 — scripted edits need an anchor assertion | Step 3a, **Step 4a** (the three registry edits), **Step 4.4** (the two ADR edits), Step 1.2 |
 | 8 — instrument version in every record | Step 0.3, Step 1.3, Step 3a, Step 4.1, Halt 2 |
 | 9 — a guard scoped wrong | Step 3b, Step 4.3, Halt 7 |
+| 10 — a bar its own n cannot decide | **Step 4.1 clause B**, Halt 9 |
 
 ---
 
@@ -122,34 +148,68 @@ operator meets them:
 ### 0.1 What the tree actually is (this differs from what the documents say)
 
 The evidence brief §E and design §10.2 both record "working tree not clean as of 2026-09-09; HEAD is `ab58733` and
-nothing from the AFK session was committed". **That is now stale.** Re-verified 2026-09-08:
+nothing from the AFK session was committed". **That is now stale.** Re-verified 2026-09-09:
 
 ```bash
-git -C D:/repos/redkiln-rs log --oneline -2
-# e3b0bac P1 arm L x2 (400 dispatches, 0 void), P7 complete (61 runs), P8 partial, three rig subcommands
-# ab58733 P6: v0 catalog (102 activities), lattice engine + 12 packs, F34/F35, decisions 1–10 applied, …
+git -C D:/repos/redkiln-rs log --oneline -3
+# ce04058 Continuation prompt for a fresh session: what F39 changed and has not yet reached
+# 767d87d F39 — P1 arm D scored: no facet clears 0.95, and `auth` scores 0.00 over 11 positives
+# e642a5b The auth rule fires on "authored": why the facet source has to change, and what other teams do instead
 ```
 
-`spikes/p9/COMMIT-2026-09-09.sh` **has been run**; HEAD is `e3b0bac`. What remains uncommitted is the 2026-09-08
-design pass and the run noise the commit script deliberately left out:
+`spikes/p9/COMMIT-2026-09-09.sh` **has been run**, and so has much else since. **HEAD is `ce04058`, not `e3b0bac`**
+— the previous revision of this line quoted `e3b0bac` as HEAD and then, in the same paragraph, said `4519edc`
+landed after it, which cannot both be true. `e3b0bac` survives here only as the **pre-design-pass reference point**
+that Step 9's rollback and Step 1.3's fresh-clone branch both name. **`git log --oneline e3b0bac..HEAD` returns seven
+commits** — `1cf2f0a`, `4519edc`, `20775ce`, `6736e48`, `e642a5b`, `767d87d`, `ce04058` [measured, re-verified
+2026-09-09]. Among them, commit **`4519edc`**, *"Design pass: 25 areas decided, 8 blocked — and the selection engine
+is not one of the decided"*, carries `RUNBOOK.md`, all five `references/2026-09-08-*.md` files and the whole of
+`references/adr/`. The previous revision of this section listed all of those as untracked; **that list is now
+stale, and Step 1 is partly discharged.** What remains is the run noise the commit script deliberately left out —
+**exactly seventeen items**, re-verified 2026-09-09:
 
 ```bash
 git -C D:/repos/redkiln-rs status --porcelain
-# ?? RUNBOOK.md                            <-- THIS FILE. It is untracked and Step 1 must commit it.
-# ?? references/2026-09-08-acceptance-criteria.md
-# ?? references/2026-09-08-architecture-design.md
-# ?? references/2026-09-08-evidence-augmentation.md
-# ?? references/2026-09-08-evidence-brief.md
-# ?? references/2026-09-08-success-measures.md
-# ?? references/adr/                       (88 records + README.md; `ls references/adr/*.md | wc -l` = 89)
-# ?? spikes/*.log                          (14 tee'd run logs; 4 older ones are already tracked)
-# ?? spikes/results/p8-state/
-# ?? spikes/runner/target-dev/  target-p8/ (two extra build dirs, NOT gitignored)
+# ?? spikes/p1-arm-l-haiku.log             \
+# ?? spikes/p1-arm-l-sonnet.log             |
+# ?? spikes/p1-arm-l-v2-haiku.log           |
+# ?? spikes/p1-arm-l-v2-sonnet.log          |
+# ?? spikes/p7-mandatory.log                | 14 tee'd driver logs. 4 OLDER ones are already tracked
+# ?? spikes/p7-optional.log                 | (spikes/s-typed.log, s-typed-oldschema.log, s-var.log,
+# ?? spikes/p7-recommended.log              |  s-var-2400.log) and a .gitignore rule will not untrack them.
+# ?? spikes/p8-0-delay-r1-issue-74-plan-briefs-dead-plan-anchor.log
+# ?? spikes/p8-0-delay-r1-issue-79-plan-prds-verifier-false-pass.log
+# ?? spikes/p8-0-delay-r1-issue-81-plan-discover-spec-gate-mismatch.log
+# ?? spikes/p8-0-delay-r1.log               |
+# ?? spikes/p8-0delay.log                   |
+# ?? spikes/p8-resume-issue-79-plan-prds-verifier-false-pass.log
+# ?? spikes/p8-resume-issue-81-plan-discover-spec-gate-mismatch.log
+# ?? spikes/results/p8-state/              <-- suspended graph state
+# ?? spikes/runner/target-dev/             <-- two extra build dirs, NOT gitignored
+# ?? spikes/runner/target-p8/
 ```
 
-`RUNBOOK.md` is in that list because it is this file, and it was the defect that made Checkpoint 1 unpassable:
-`git status --porcelain` cannot go empty while the runbook driving the commit is itself untracked and unlisted.
-Step 1.3 stages it.
+**Three caveats on that listing, all live at the time of writing.** First, the F39 amendment of 2026-09-09 is in
+flight and will appear in `status --porcelain` **above** the seventeen: one `??` for
+`references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`, and **eleven** ` M` lines — the two
+reciprocal ADR edits 0089 forces (`0030`'s `superseded_by` and `README.md`'s tallies), the six already-tracked
+documents the amendment rewrote (`RUNBOOK.md`, the four `references/2026-09-08-*.md` files it touched, and
+`references/2026-09-09-change-classification.md`), **and three more the adversarial pass reached**:
+`references/2026-09-05-architecture-proposal.md` and `references/2026-09-07-process-catalog-proposal.md`, both
+SUPERSEDED and corrected on their pointer lines only, and `spikes/HANDOFF.md`, which gained the F39 ledger
+paragraph. **Count it, do not read it off this sentence** — `git status --porcelain | grep -c '^ M'` is the
+number, and this enumeration has already been wrong once. They are not run noise: **commit them, do not ignore them**, and
+Step 1.3's list below carries them. Second, **two more `??` entries are Ryan's P2 artefacts, not run noise** —
+`spikes/p2/build-p2-worksheet.py` and `spikes/results/p2-labels-ryan.md` (both written 2026-09-09) — so the raw
+`??` count is **twenty**, of which seventeen are the run noise enumerated above, one is ADR-0089 and two are the P2
+pair. **The P2 pair is committed, not ignored**, and Step 1.3 stages both; the seventeen are what Step 1.2
+gitignores. Third, `references/adr/` now holds **89 records + README.md**, so `ls references/adr/*.md | wc -l` is
+**90**, not 89 — Checkpoint 1 asserts the new number.
+
+`RUNBOOK.md` is no longer in that list: it is tracked as of `4519edc` (`git ls-files RUNBOOK.md` returns it). The
+defect it used to cause — `git status --porcelain` cannot go empty while the runbook driving the commit is itself
+untracked and unlisted — is discharged, and Checkpoint 1 keeps the `git ls-files` line as a regression check rather
+than as a thing Step 1.3 has to make true.
 
 Do not re-run `COMMIT-2026-09-09.sh`. Step 1 commits what is left.
 
@@ -281,36 +341,65 @@ git -C D:/repos/redkiln-rs commit -m "chore: ignore waiter logs, p8 state and ex
 `.gitignore` rule has no effect on a tracked path. Leave them tracked; they are already history. If you want them
 gone, that is a separate `git rm --cached`, and it is not part of this step.
 
-### 1.3 Commit the 2026-09-08 design pass
+### 1.3 Commit what is left of the design pass
+
+**Part of this sub-step is already done, and part is not.** Commit `4519edc` landed the **rev.-1 text** of
+`RUNBOOK.md`, all five `references/2026-09-08-*.md` files and `references/adr/0001`–`0088` + `README.md`, and
+`767d87d` landed `spikes/F39-DRAFT.md`. What is left to stage is the **2026-09-09 F39 amendment**, which modified
+six of those already-tracked files, plus the new records and the instrument file. **A file being tracked is not a
+reason to leave it out of `git add`** — that reasoning is what made an earlier revision of this step unpassable,
+and Checkpoint 1 asserts `git status --porcelain` → EMPTY, which no partial staging can satisfy:
 
 ```bash
 cd D:/repos/redkiln-rs
-git add references/2026-09-08-architecture-design.md \
+git add RUNBOOK.md \
+        references/2026-09-08-architecture-design.md \
         references/2026-09-08-acceptance-criteria.md \
         references/2026-09-08-success-measures.md \
         references/2026-09-08-evidence-brief.md \
-        references/2026-09-08-evidence-augmentation.md \
-        references/adr/ \
-        RUNBOOK.md \
+        references/2026-09-09-change-classification.md \
+        references/2026-09-05-architecture-proposal.md \
+        references/2026-09-07-process-catalog-proposal.md \
+        spikes/HANDOFF.md \
+        references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md \
+        references/adr/0030-facets-not-tags.md \
+        references/adr/README.md \
+        spikes/p2/build-p2-worksheet.py \
+        spikes/results/p2-labels-ryan.md \
         spikes/results/instrument-checks/RUNBOOK-instrument.txt
-git commit -m "Architecture design 2026-09-08, AC/SM registers, ADR-0001–0088
+# Re-derive rather than trusting this list — it is a snapshot and the tree is the truth:
+git status --porcelain | grep -v '^??' ; echo "--- untracked, expected to be the 17 run-noise entries:" ; git status --porcelain | grep '^??'
+git commit -m "ADR-0089: facet provenance, declared surfaces, abstention — F39 applied
 
-The design supersedes the 2026-09-05 proposal at rev. 4 in full. It is NOT design
-final: S-BIN, S-H1c and P8's unrun arms gate that label. 88 ADRs — 85 accepted,
-2 superseded, 1 proposed (0079, deliberately undecided).
+ADR-0089 partially supersedes ADR-0030 (PC8): rule 2's silence on what kind of
+computation counts, and the repo-wide auth boolean. 0030 STAYS accepted and gains
+superseded_by: [\"0089\"]. The set is now 89 records — 86 accepted, 2 superseded,
+1 proposed (0079, still deliberately undecided).
+
+It is NOT design final: S-BIN, S-H1c and P8's unrun arms gate that label.
+
+Measured cause (F39, 140 truth cells at corpus pin 47faec9f, panel-adjudicated,
+\$0 model cost): no facet clears METHOD-P 1.4's 0.95 bar; auth scores precision
+0.00 over 11 positives, 95% CI [0.00, 0.26]; data_migration emits 0 positives on
+20 items and is NOT MEASURABLE.
 
 Instrument at time of commit: claude 2.1.266 (HANDOFF pins 2.1.263; P7 straddled
 2.1.265 — F37 §7 lineage break recorded, not repaired)."
 ```
 
-**Checkpoint 1.** All five:
+If you are running this file against a tree where `4519edc` has *not* landed — a fresh clone at `e3b0bac`, or a
+rollback per Step 9 — stage the design pass in the same commit; the file list is `4519edc`'s own
+(`git show --stat 4519edc`), and the checkpoint below does not care which of the two commits carried what.
+
+**Checkpoint 1.** All six:
 
 ```bash
 cd D:/repos/redkiln-rs
 git status --porcelain                                 # → EMPTY (no output at all). Phase-0 exit (a).
-ls references/adr/*.md | wc -l                         # → 89 (88 records + README.md) — verified 2026-09-08
-git ls-files RUNBOOK.md                                # → RUNBOOK.md  (this file is now tracked)
-git log --oneline -1                                   # → the design-pass commit
+ls references/adr/*.md | wc -l                         # → 90 (89 records + README.md) — verified 2026-09-09
+git ls-files references/adr/0089-*.md | wc -l          # → 1  ADR-0089 is tracked, not just on disk
+git ls-files RUNBOOK.md                                # → RUNBOOK.md  (tracked since 4519edc)
+git log --oneline -1                                   # → the commit this step wrote
 git log -1 --format=%B | grep -qE 'claude 2\.1\.[0-9]+' && echo "instrument named in the commit message"
 ```
 
@@ -318,14 +407,24 @@ A non-empty `status --porcelain` here is a failed checkpoint, not a nuisance. De
 condition (a) verbatim. The last line exists because "record the version in the commit message" was previously an
 intention with no check behind it.
 
+**The count moved from 89 to 90 and the reason matters.** The previous revision expected 89 = 88 records + README;
+the tree now holds 90 = **89** records + README, because ADR-0089 landed on 2026-09-09 [documented, ADR-0089].
+Anyone reading 89 here on a tree that has 90 is reading a stale runbook, not a broken tree — and Step 4.4's
+numbering has moved by the same one.
+
 ---
 
 ## Step 2 — Extract `redkiln-corpus` as its own repo, pinned by SHA (Phase 0, part 2)
 
-> ## ⚠ ORDER: RUN THIS **AFTER** STEP 3 AND STEP 4, NOT BEFORE THEM.
+> ## ⚠ ORDER: RUN THIS **AFTER** STEP 3, STEP 4 AND STEP 4a, NOT BEFORE THEM.
 >
-> **The canonical execution order in this file is 0 → 1 → 3 → 4 → 2 → 5 → 6 → 7 → 8.** Step 2 keeps this position
-> in the document because it is Phase 0 part 2, but it is executed fifth.
+> **The canonical execution order in this file is 0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7 → 8.** Step 2 keeps this
+> position in the document because it is Phase 0 part 2, but it is executed **sixth**.
+>
+> **Step 4a is inside the same constraint.** It edits `spikes/p9/facets.toml`, which Step 2 does **not** move —
+> only `corpus/`, `results/` and `runner/` go to `redkiln-corpus` — but AC-520's scored-record clause points at a
+> record that lives under `spikes/results/`, so run 4a while the results are still here and let the record travel
+> into the corpus repo with everything else.
 >
 > The previous revision said "AFTER Step 1 and BEFORE Step 4" and that was **wrong, and would have destroyed
 > work**: Step 2 does `rm -rf spikes/results` and adds `spikes/results/` to `.gitignore`, while **Step 3b writes
@@ -578,14 +677,32 @@ adjudicate; do not wait on it. Note it is also the one file where METHOD-P §0 r
 is **no timestamp guard** — it labels the *request*, which did not exist before the run, and that is disclosed in
 the file itself. Do not generalise its looseness to the other three.
 
-Copy each to a filled name, because the scorers read the filled copy and the `-RYAN-TODO` file stays as the blank
-of record:
+**Two of the three filled names already exist, and `cp` over them is destructive. Guard, do not copy.** Arm D's
+`…-labels-ryan.md` is the **68 KB worksheet** built by `spikes/p1/build-arm-d-worksheet.py` and committed at
+`20775ce`; P2's is the **130 KB worksheet** built by `spikes/p2/build-p2-worksheet.py` on 2026-09-09, carrying all
+twelve upstream diffs inline. Copying the `-RYAN-TODO` blanks over either replaces a worksheet with a bare row
+list — which is the exact defect the worksheets were built to fix, applied in reverse:
 
 ```bash
-cp spikes/results/p1-arm-d-labels-RYAN-TODO.md spikes/results/p1-arm-d-labels-ryan.md
-cp spikes/results/p1-arm-l-labels-RYAN-TODO.md spikes/results/p1-arm-l-labels-ryan.md
-cp spikes/results/p2-labels-RYAN-TODO.md       spikes/results/p2-labels-ryan.md
+cd D:/repos/redkiln-rs
+for f in spikes/results/p1-arm-d-labels-ryan.md \
+         spikes/results/p1-arm-l-labels-ryan.md \
+         spikes/results/p2-labels-ryan.md; do
+  if [ -f "$f" ]; then echo "EXISTS, do not overwrite: $f ($(wc -c <"$f") bytes)"
+  else echo "MISSING — copy its blank: $f"; fi; done
+# Only for a file the loop reports MISSING:
+#   cp spikes/results/p1-arm-l-labels-RYAN-TODO.md spikes/results/p1-arm-l-labels-ryan.md
 ```
+
+The `-RYAN-TODO` file stays as the blank of record in every case, and the scorers read the filled copy.
+
+**Arm D's half of this step is already discharged and its route has changed.** METHOD-P **amendment 9**
+(2026-09-09) replaced arm D's human-panel oracle with a deterministic oracle on the mechanical facets, an
+adversarially-verified model panel on the semantic ones, and Ryan adjudicating every contested cell — so arm D was
+scored on 2026-09-09 without `p1-arm-d-labels-ryan.md` ever being filled [measured, F39; §3c row (d) records the
+same]. That file is retained **unfilled**, as the worksheet of record and as the artefact amendment 9 departed
+from; it is **not** an outstanding deliverable and it must not be counted as one. What remains outstanding in this
+step is **arm L and P2**.
 
 **The rules for filling them, which are METHOD-P §0 rule 1 and are not negotiable:**
 
@@ -649,27 +766,33 @@ grep -h "^labelled_at:" spikes/results/p1-arm-d-labels-ryan.md \
 # every line must end in Z, contain no '+' and no '-' after the 'T', and contain no "FILL"
 ```
 
-**Checkpoint 3b.** All five. **The first line is an existence guard and is not optional** — the previous revision
+**Checkpoint 3b.** All four. **The first line is an existence guard and is not optional** — the previous revision
 opened with `! grep -l "FILL-ME" …`, and a `grep` over files that do not exist exits **2**, which `!` turns into a
 pass. That checkpoint went green when Step 3b had not been done at all.
 
 ```bash
 cd D:/repos/redkiln-rs
-for f in spikes/results/p1-arm-d-labels-ryan.md \
-         spikes/results/p1-arm-l-labels-ryan.md \
+for f in spikes/results/p1-arm-l-labels-ryan.md \
          spikes/results/p2-labels-ryan.md; do
   test -f "$f" || echo "MISSING: $f"; done                                                        # → no output
-grep -l "FILL" spikes/results/p1-arm-d-labels-ryan.md spikes/results/p1-arm-l-labels-ryan.md \
+grep -l "FILL" spikes/results/p1-arm-l-labels-ryan.md \
                spikes/results/p2-labels-ryan.md | wc -l                                           # → 0
-grep -h "^labelled_at:" spikes/results/*-labels-ryan.md | grep -cE 'Z$'                            # → 3
-grep -cE '^\| .+ \| (toolchain|change|binary_change|auth|data_migration|ui|flag_exists|recent_deploy) \| *[^ |]' \
-     spikes/results/p1-arm-d-labels-ryan.md                                                        # → > 0, i.e. rows carry values
+grep -h "^labelled_at:" spikes/results/p1-arm-l-labels-ryan.md \
+                        spikes/results/p2-labels-ryan.md | grep -cE 'Z$'                          # → 2
 grep -cE '^\| P[0-9]{2} \|.*\| *(yes|no) *\|' spikes/results/p2-labels-ryan.md                     # → 41 of 41 rows answered
 ```
 
+**Two files, not three, and the count is 2.** `p1-arm-d-labels-ryan.md` is deliberately excluded: amendment 9
+replaced its route, arm D is scored, and the file is retained unfilled (above). Including it makes this checkpoint
+unpassable by construction — `grep -l "FILL" … | wc -l` can never reach 0 while it carries `labelled_at: FILL-ME`
+— which is a guard scoped wrong, and golden constraint 9 says to establish a guard's scope before obeying it *and*
+before routing around it. Do not "fix" this by filling that file: its blindness proxy expired (amendment 8) and
+the panel superseded it (amendment 9).
+
 `grep -l "FILL"`, not `"FILL-ME"`, and piped to `wc -l` rather than negated: `score-arm-d.py` tests for the
 substring `FILL-ME` but `reconstruct-derived-from.py` tests for `FILL`, so the looser string is the one that
-matches both guards. The blank row counts these are filled from — **160 / 20 / 41** — were re-verified against the
+matches both guards. The blank row counts these are filled from — **20 / 41** for arm L and P2, and **160** for
+the arm-D file this checkpoint no longer covers — were re-verified against the
 `-RYAN-TODO` originals on 2026-09-08 and are correct.
 
 Empty cells and `?` cells are legitimate answers and are counted as unlabelled by the scorer, not as errors. What
@@ -678,32 +801,61 @@ is not legitimate is a file where `labelled_at` is set and the rows are untouche
 ### 3c — Phase-0 exit (c) and (d): what this runbook cannot deliver, said plainly
 
 Design §10.2 gives Phase 0 **four** exit conditions, and Phase 1's "Enter when" is "Phase 0 exit (a)–(d)". Steps 1
-and 2 discharge (a) and (b). **This runbook cannot discharge (c) or (d) as written, and the previous revision did
-not say so** — it went from Step 4 to Step 5 as though Phase 1 entry were unconditional. Two shortfalls, both
-verified 2026-09-08:
+and 2 discharge (a) and (b). **The arm-D half of (d) now has a result, and the previous revision of this table did
+not know it.** One genuine shortfall remains — the S-BIN half of (c) — and it now has a live route that is *not*
+the re-scope. **(d) also carries a caveat the table states rather than glosses: §10.2's wording is "the *blind*
+panels are filled", and neither half is blind on those terms** — arm D is **panel-adjudicated, not human-panel** (amendment 9), and amendment 8's
+attested-blind route was **registered but never invoked** — `blind_attestation:` in
+`spikes/results/p1-arm-d-labels-ryan.md` stands `FILL-ME` and `score-arm-d-panel.py` carries no
+`--attested-blind` flag — so the label may not be applied to these figures either; the E3 sheet is not
+blind at all and κ is forfeited. Re-verified
+2026-09-09:
 
 | Exit | What §10.2 requires | State | What you must do |
 | --- | --- | --- | --- |
-| **(c)** | Every §10.5 register row marked "gates Phase 1" has a written finding with an F-number in `spikes/FINDINGS.md`, **or the row is explicitly re-scoped by an ADR** | **S-BIN is "Registered, unrun"** and is marked **YES, gates Phase 1**. It needs a real Unreal project, ~10 Opus dispatches and UE automation runs — it is the one Phase-0 row this runbook does not cost, schedule or contain | Take the **re-scope branch the design already provides**: record in ADR-0089, or a sibling record, that S-BIN's gate is scoped to the `ChangeSummary` type only, which Step 5 already refuses to build (**AC-475**, no synthesised value). That is a decision, so it is an ADR, not a runbook line |
-| **(d)** | The blind panels are filled: **P1 arm D scored**, and `e3-severity-annotation-BLANK.md` **returned** | Step 3b delivers the P1/P2 half. The E3 half is **not delivered**: `spikes/results/e3-severity-annotation-ryan.md` exists but its own header says *"Filled by the model at Ryan's direction… NOT BLIND"* and that κ is **forfeited**; the pristine `e3-severity-annotation-BLANK.md` is still blank | Either annotate the BLANK from scratch without reading either filled sheet — which restores κ — or record E3-SEV as deferred. **E3-SEV does not gate Phase 1** (§10.5 "Gates Phase 1?" = No), so deferring is legitimate; leaving it unmentioned was not |
+| **(c)** | Every §10.5 register row marked "gates Phase 1" has a written finding with an F-number in `spikes/FINDINGS.md`, **or the row is explicitly re-scoped by an ADR** | **S-BIN is "Registered, unrun"** and is marked **YES, gates Phase 1**. It needs a real Unreal project, ~10 Opus dispatches and UE automation runs [documented, design §10.5]. **The fixture now exists**: Ryan has chosen to design S-BIN against the real Unreal project at `D:/repos/BrittonGames` — UE 5.8, headless automation already working via `_workspace/tooling/verify_headless.ps1`, assets in Git LFS per its own `.gitattributes` [measured, paths verified 2026-09-09]. **S-BIN has still not run**, and it still gates Phase 1 for `ChangeSummary` | **Design the spike against the real project.** ADR-0008 already names a real Unreal project as the S-BIN fixture, and that fixture is now identified rather than hypothetical — so exit (c) has a route that ends in a *finding*, not in a narrowing. Cost and schedule are still outside this runbook. **The re-scope branch remains available and is not the current plan**: scoping S-BIN's gate to the `ChangeSummary` type only, which Step 5 already refuses to build (**AC-475**, no synthesised value), is a decision and therefore an ADR — and it would need **its own number when and if it is taken** (`0089` is taken; `0090` and `0091` are claimed by Steps 4.4 and 6.1) |
+| **(d)** | The blind panels are filled: **P1 arm D scored**, and `e3-severity-annotation-BLANK.md` **returned** | **Both halves have returned a result. Only one of them is blind in any sense, and neither is blind on the terms §10.2's wording assumes.** P1 arm D was **scored on 2026-09-09** against 140 truth cells at corpus pin `47faec9f`, at **$0** model cost [measured, F39] — and it is **panel-adjudicated, never human-panel** (amendment 9), and must be reported that way wherever the number is reused. **Amendment 8's attested-blind route does not attach to these figures.** That route requires BOTH a filled `blind_attestation:` line in the label file AND an explicit `--attested-blind` scorer invocation, "so the substitution can never happen silently"; neither happened — the line reads `FILL-ME` and `score-arm-d-panel.py` takes no arguments at all [measured, both files at this pin]. Blindness here rests on amendment 9's own construction (no panel seat may read `p1-arm-d.jsonl`; Ryan adjudicated every contested cell with the panel's and the script's positions revealed only after he answered), which amendment 9 itself records as **weaker** than the pre-registered oracle [documented, METHOD-P §0 amendments 8 and 9]. E3-SEV is recorded **DONE** by the design: `e3-severity-annotation-ryan.md` is filled — **4 BLOCKING, 2 ADVISORY**, including a documented self-correction on finding 4 (originally annotated BLOCKING on a claim that was false) — settling arm (a) FP 1/23, MCC +0.978 and arm (b) FP 0/23, MCC +1.000 [documented, design §10.4, §10.5]. **That sheet is NOT BLIND at all, by its own header**, so the E3 half discharges (d)'s *result*, not (d)'s *blindness*. Step 3b's own P1/P2 label files are the separate, still-outstanding half of Step 3b | Nothing further for (d). **Carry the three limits rather than the two numbers.** (1) **E3-SEV is not blind, and κ is forfeited.** The sheet's own header records *"Filled by the model at Ryan's direction, 2026-09-04. **NOT BLIND.**"* and that κ against an independent human annotation is **forfeited** for this pass, because the same model produced `e3-severity-annotation-model.md` and this sheet, so the two are not independent raters and **no inter-rater statistic may be computed from them**; the header names the residual threat rather than removing it — *"the annotator is still the model that built the rig, and that threat does not go away by being named"* [documented, `spikes/results/e3-severity-annotation-ryan.md` header]. The pristine `e3-severity-annotation-BLANK.md` is preserved and still unfilled; **if Ryan annotates it from scratch without reading either filled sheet, κ becomes available again** — that is the route, and it is not taken. (2) **CLEAN remains unusable as a denominator** — its ground truth is wrong for ≥ 13 of 23 (57%) — so both FP rates are **upper bounds**, the arms differ by one item, and **quality still cannot discriminate them**; the entire reliable difference remains the **1.72× cost** [documented, design §10.4]. (3) F39: `unknown` is excluded from scoring and never counted against the script, and **16 semantic cells are excluded on that basis** — reporting them as agreement would have raised every semantic precision figure [measured, F39 Limits 6] |
 
 ```bash
 cd D:/repos/redkiln-rs
-grep -n "NOT BLIND" spikes/results/e3-severity-annotation-ryan.md   # → the header's own disclosure
-grep -c "FILL" spikes/results/e3-severity-annotation-BLANK.md       # → > 0: the pristine blank is still blank
+test -d D:/repos/BrittonGames && test -f D:/repos/BrittonGames/_workspace/tooling/verify_headless.ps1 \
+  && echo "S-BIN fixture present"                                   # → the fixture, not the finding
+grep -n "NOT BLIND" spikes/results/e3-severity-annotation-ryan.md   # → the header's own disclosure: the filled
+                                                                    #   sheet is NOT BLIND and κ is FORFEITED
+grep -c 'severity: ______' spikes/results/e3-severity-annotation-BLANK.md   # → 6: the pristine BLANK is still
+                                                                    #   blank, which is now the open route back
+                                                                    #   to κ, not a shortfall — E3-SEV settled
+                                                                    #   from the FILLED, sighted sheet
 ```
+
+**Why that second `grep` is not the one an earlier revision wrote.** It asserted `grep -c "FILL" … BLANK.md` → **>
+0**. That check is **vacuously false and always was**: the E3 blank uses `severity: ______` as its marker, never
+the string `FILL` (that convention belongs to the P1/P2 label templates in Step 3b), so the command returns **0**
+on a pristine blank and would have been read as "the BLANK has been filled" — the opposite of the truth [measured,
+re-verified 2026-09-09]. Golden constraint 9: establish a guard's scope before obeying it.
 
 **Checkpoint 3c.** One of the two, in writing, for each row — a check that a *sentence* exists, because there is
 no command that can check a decision was taken:
 
 ```bash
 cd D:/repos/redkiln-rs
-grep -rn "S-BIN" references/adr/0089-*.md spikes/DECISIONS-2026-09-09.md   # → the re-scope, or the deferral
-grep -rn "E3-SEV" spikes/DECISIONS-2026-09-09.md                           # → returned, or deferred, with a date
+grep -rn "S-BIN" spikes/DECISIONS-2026-09-09.md references/adr/*.md \
+  | grep -viE 'registered,? unrun'                                  # → the design plan, the re-scope, or the deferral
+grep -rn "E3-SEV" references/2026-09-08-architecture-design.md      # → "DONE", 4 BLOCKING / 2 ADVISORY
+test -s spikes/F39-DRAFT.md && echo "arm D's result has an F-number"  # → F39, the source of record
 ```
 
-Silence on either is a failed checkpoint. Design §10.2 also names the price of getting this wrong: *"A Phase-1
-commit that touches `ChangeSummary` or an `llm`-sourced facet before (c) is out of order."*
+**Where §10.2 and this tree disagree about where a finding lives.** Exit (c) says "a written finding with an
+F-number **in `spikes/FINDINGS.md`**". `FINDINGS.md` holds **F1–F28**; **F29–F39 live as `spikes/F<NN>-DRAFT.md`**
+and none has been folded back in [measured, `ls spikes/F3*-DRAFT.md`, 2026-09-09]. That is a convention split, not
+a missing finding — but a checkpoint that greps `FINDINGS.md` for `F39` returns **0** and looks like a shortfall it
+is not. Grep the draft, and record the split rather than papering over it: the design governs, and if it wants one
+file it must say so or the drafts must be merged. That is out of this runbook's scope to decide.
+
+Silence on the first is a failed checkpoint. Design §10.2 also names the price of getting this wrong: *"A Phase-1
+commit that touches `ChangeSummary` or an `llm`-sourced facet before (c) is out of order."* **Do not read the
+fixture as the spike.** S-BIN has not run; nothing here licenses a `ChangeSummary` field set, and Step 5.3 still
+refuses to build the type.
 
 ---
 
@@ -717,10 +869,16 @@ AC-071, not a review convention.
 Write this into the ADR draft first, so the decision is not made post-hoc. Three clauses, each already fixed by a
 pre-registration or by AC-071; nothing here is invented at scoring time.
 
+**This section now carries results as well as rules, and the ordering is deliberate.** Clause B's rule was fixed by
+METHOD-P §1.4 before any arm-D number existed, was applied unchanged on 2026-09-09, and returned an answer. The
+rule below is **the rule as pre-registered**; the measured outcome is recorded **beside** it, tagged and sourced,
+**not substituted for it**. Nothing in §4.1 was re-worded to fit a number, and the one thing no command can check
+(Checkpoint 4's last line) is exactly that.
+
 | Clause | Source | The line | Where it is measured |
 | --- | --- | --- | --- |
 | **A. Modal-`R` identity** | METHOD-P §1.4 | ≥ **80%** of items show an identical modal required set `R(stage, ctx)` across the draws | `p1-arm-l-analysis.txt` / `p1-arm-l-v2-analysis.txt`. **Already measured: 5/20, 3/20, 2/20, 2/20 (0.25/0.15/0.10/0.10). Wilson 95% upper bounds 46.9 / 36.0 / 30.1 / 30.1 — every one sits far below the line.** |
-| **B. Arm-D per-facet precision** | METHOD-P §1.4 / the scorer's own printed verdict | precision ≥ **0.95** → that facet **leaves the model** and becomes `source = "derived"`; below → it stays LLM-emitted, and therefore blocked | `score-arm-d.py`, which prints `LEAVES THE MODEL (>=0.95)` or `stays LLM-emitted` per facet per source |
+| **B. Arm-D per-facet precision** | METHOD-P §1.4 / the scorer's own printed verdict | precision ≥ **0.95** → the facet is removed from the classification record; below → it stays LLM-emitted, and therefore blocked. **This rule was pre-registered, was applied on 2026-09-09, and returned the result in the block below. It is not rewritten here to fit its own answer.** | `score-arm-d.py`; **scored** by `spikes/p1/score-arm-d-panel.py` against 140 truth cells at pin `47faec9f` [measured, F39] |
 | **C. The AC-071 five clauses, in full** | AC-071 | identity ≥ 0.80 **AND** n ≥ 20 items **AND** ≥ 10 draws/item **AND** arm-D panel `scored` **AND** `corpus_sha` equals the catalog corpus pin | the `redkiln lint --facet-stability` check, Phase 1 |
 
 **The decision the rule produces, stated in advance so it is not chosen after the fact:**
@@ -728,15 +886,98 @@ pre-registration or by AC-071; nothing here is invented at scoring time.
 - **If clause A fails** — which, on the records that already exist, it does, 4 times out of 4 — then **every
   ordinal axis is `source = "human"` for Phase 1**, supplied or confirmed at the triage gate. That is not a
   workaround; it is the hedge design §10.3 already ships, and it is what SM-024 measures the operator cost of.
-- **Clause B is scored per facet and per source independently of A.** A *derived* facet (`toolchain`, `change`,
-  `auth`, `data_migration`, `ui`, `flag_exists`) that clears 0.95 precision leaves the model on its own warrant —
-  it is derived from paths and docs, not classified by a dispatch, so ADR-0079's block does not reach it. Record
-  each such facet by name.
+- **Clause B was applied on 2026-09-09 and NO FACET CLEARS THE BAR.** The rule above was written before the
+  numbers were read, was run unchanged, and returned this. Union source, 20 items, 140 truth cells, Wilson 95%
+  intervals [measured, F39 §1]:
+
+  | facet | precision | 95% CI | recall | tp | fp | fn | tn | excl | verdict |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | `ui` | **1.00** | [0.65, 1.00] | 0.78 | 7 | 0 | 2 | 6 | 4 | point clears, **interval does not** |
+  | `toolchain` | 0.73 | [0.48, 0.89] | 0.79 | 11 | 4 | 3 | — | 0 | stays |
+  | `change` | 0.72 | [0.54, 0.85] | 0.84 | 21 | 8 | 4 | — | 0 | stays |
+  | `binary_change` | 0.60 | [0.23, 0.88] | 1.00 | 3 | 2 | 0 | 15 | 0 | stays |
+  | `flag_exists` | 0.00 | [0.00, 0.66] | n/a | 0 | 2 | 0 | 13 | 4 | stays |
+  | **`auth`** | **0.00** | **[0.00, 0.26]** | n/a | **0** | **11** | 0 | 4 | 4 | stays |
+  | `data_migration` | — | — | — | 0 | 0 | 0 | 15 | 4 | **not measurable** |
+
+  **The sub-0.95 clause fires on five facets. The ≥ 0.95 clause fires on none, and cannot.** No facet has enough
+  positives to clear 0.95 with confidence *even in principle at this n*: `ui` is 7/7 and its lower bound is 0.65,
+  and roughly **60 positives** are needed for a lower bound above 0.95, so **METHOD-P §1.4's threshold is not
+  reachable at n=20 for any facet however good the method** — the same class of defect as P1's α rule (F36) and
+  P7's criterion 1 (F37), and the reason golden constraint 10 exists [measured, F39 Limits 1]. `data_migration`
+  emits **0 positives on 20 items across all three sources**: precision is undefined, a perfect method scores
+  identically, and **the criterion has no denominator** — it is reported as *not measurable*, never as a pass or a
+  failure [measured, F39 §4].
+
+- **`auth` is not a threshold miss, and this is the load-bearing result.** Eleven positives, eleven false, upper
+  bound **0.26**: the rule carries **no signal** on this corpus. It is an unanchored case-insensitive regex over
+  paths **and diff lines** and it marks `auth = true` on **14 of 20 items**. Which alternative fired, and the word
+  it fired *inside* [measured, F39 §2]: `token` 44 hits — **36** inside `brand-token-substrate` /
+  `brand-tokens.test.ts` / `redkiln.tokens.json` / `tokens_out`; `auth` 43 hits — **40** inside `authored` /
+  `report-md-unauthored` / `author` / `authors` / `authoring` / `only-the-author-can-advance`; `oauth` 8 hits — **8**
+  inside `coauthor` (the string `oauth` sits inside `c-oauth-or`); `session` 8 hits — **6** are a *work* session;
+  `role` 2 hits — **2** are an ARIA `role` attribute. **The failure is correlated, not random**: the colliding
+  vocabulary is the vocabulary of the instrument under test. Adding word boundaries removes the `coauthor` and
+  ARIA hits and leaves the *authored* and design-`token` hits untouched.
+
+- **Nothing leaves the model. Do not write, and do not read into this table, any sentence saying a facet does.**
+  The previous revision of this bullet promised that a derived facet clearing 0.95 "leaves the model on its own
+  warrant"; **that promotion cannot happen at this n for any facet**, and a document that still offers it is
+  offering a route the measurement closed. Step 4a is what the result actually forces, and ADR-0089 is where it is
+  already recorded.
+
+- **Clause B does not decide ADR-0079, and Step 4.4's supersession does not rest on it.** The previous revision
+  assumed arm D's scoring would decide the context-vector question. It does not: **F39 measures a *derived* vector;
+  ADR-0079 asks about an *LLM-emitted* one.** F39 narrows 0079's options without deciding among them. **Clause A —
+  F36's modal-`R`, failing 4 times out of 4 — is what decides it, and clause A is unchanged.** So Step 4's decision
+  is still due, on exactly the warrant it always had.
+
 - **Clause C is the only thing that unblocks LLM-sourced ordinals**, and it needs a full P1 re-run at n ≥ 20 ×
   ≥ 10 draws in addition to the panel. That re-run is **not** part of Phase 1's critical path. Commission it or
-  don't; Phase 1 proceeds either way, on human-sourced axes.
+  don't; Phase 1 proceeds either way, on human-sourced axes. **F39 discharges the fourth clause of AC-071 —
+  "arm-D panel `scored`" — and only that one.** The block stands on the first: identity 0.25 / 0.15 / 0.10 / 0.10
+  against the 0.80 line [measured, F36].
 - **A temperature spike is explicitly not the answer.** The instability is schema-induced, corroborated across five
   2026 frontier models with Claude-Sonnet-4 measured at background temperature 0.
+
+**Source asymmetry is a SEPARATE, UNTAKEN decision. Do not decide it here.** `commits` beats `docs` on every facet
+and `union` is *worse than `commits` alone* on two of them, because unioning a precise source with an imprecise one
+imports the imprecision [measured, F39 §3]:
+
+| facet | `docs` precision | `commits` precision | `union` |
+| --- | --- | --- | --- |
+| `toolchain` | 0.50 [0.22, 0.78] | **1.00** [0.70, 1.00] | 0.73 |
+| `change` | 0.50 [0.24, 0.76] | **0.80** [0.61, 0.91] | 0.72 |
+| `binary_change` | no positives (recall 0.00, 3 missed) | **0.60**, recall 1.00 | 0.60 |
+| `ui` | 1.00, recall 0.22 | 1.00, recall 0.67 | 1.00, recall **0.78** |
+
+Which source the engine trusts is registered as an arm of **S-FACET** (ADR-0012, ADR-0089), whose named consumer is
+`facets.toml`'s `source`/`deriver` fields. **ADR-0089 explicitly does not decide it and neither does this step.**
+
+**Carry F39's own limits; they do not travel separately from its numbers.** (1) The 0.95 bar is unreachable at
+n=20 — above. (2) **39 of the 140 cells rest on unanimous 3-seat model agreement with no human**; a 9-judge panel
+was measured to supply ~2.18 effective independent votes with accuracy 8–22 points short of independent-vote
+predictions [documented, preprint, arXiv:2605.29800], and small-panel unanimity fails in the correlated direction.
+(3) **The oracle is independent on `toolchain` and on `binary_change`'s Unreal shortcut, and not on the rest** —
+for `change`, git's marker *is* the ground truth for the binary component, so oracle and script agree there by
+construction. (4) **One repo, one operator, one pin**; every number is over `47faec9f`. (5) **A scorer defect was
+found and fixed before this was reported**: the oracle emits `binary_change` as a JSON bool and the first scorer
+compared it to the string `"true"`, scoring the facet 0.00 when it is 0.60. (6) **`unknown` is excluded, never
+counted against the script** — 16 semantic cells are excluded on that basis, and reporting them as agreement would
+have raised every semantic precision figure.
+
+**How the truth set was built, because "panel-adjudicated" is not "human-panel" and the difference is the result.**
+140 cells: **60** deterministic oracle (`spikes/p1/oracle-mechanical.py` — git metadata and a canonical
+extension/manifest table, independently implemented); **39** unanimous panel; **9** unanimous panel where the
+adversarial flag was mechanically moot; **32 human adjudication** — Ryan, blind, with the panel's and the script's
+positions revealed only after he answered. His verdicts: **8 true, 24 false, 0 unknown, and 15 of 32 differ from
+the script**. The panel labelled 80 semantic cells: 39 accepted unanimous (23 decided, **16 honest `unknown`**), 41
+flagged [measured, F39 §5]. **Report this as PANEL-ADJUDICATED, never as human-panel.**
+
+**Absence of evidence, which is what Step 4a exists for.** **4 of the 20 items changed no code whatsoever** —
+every changed file is `.bklg/` bookkeeping or telemetry. The panel returned `unknown` on all **16** of their
+semantic-facet cells; **the script emitted a confident boolean on every one.** That is the `excl = 4` column
+[measured, F39 §4].
 
 ### 4.2 Run the scorers
 
@@ -766,6 +1007,17 @@ python spikes/p1/score-arm-d.py \
     --labels spikes/results/p1-arm-d-labels-ryan.md
 # prints, per source (docs | commits | union) per facet:
 #   precision=… recall=… tp=… fp=… fn=… unlabelled=…   LEAVES THE MODEL (>=0.95) | stays LLM-emitted
+#
+# THAT LITERAL "LEAVES THE MODEL (>=0.95)" IS A STRING IN THE SCRIPT, NOT AN OUTCOME. It was measured on
+# 2026-09-09 and NO FACET PRINTS IT: the >=0.95 branch is unreachable at n=20 for any facet (§4.1 clause B,
+# F39 Limits 1). If you see it, read the label file and the source column before you believe it.
+#
+# The panel-adjudicated scoring is a SECOND script over the same engine records. It takes NO ARGUMENTS —
+# its five input paths are constants inside the file, resolved from the repo root, so the `cd` above is
+# load-bearing here in a way it is not for score-arm-d.py:
+python spikes/p1/score-arm-d-panel.py       # 140 truth cells at pin 47faec9f, $0 model cost, F39's figures
+# reads spikes/results/p1-arm-d.jsonl + -oracle.jsonl + -panel-accepted.jsonl + -contested.json
+#     + -adjudications.json. If any is missing this is a HALT (halt condition 8), not a skip.
 
 python spikes/p2/reconstruct-derived-from.py \
     --redkiln D:/repos/redkiln \
@@ -829,18 +1081,25 @@ stamp in the same second, so it refuses. That is fail-closed, and it is correct.
 
 ### 4.4 Take the decision and record it as a new ADR
 
-The next free ADR number is **0089** (`references/adr/README.md` §Numbering: "`0074`–`0088` are allocated; the next
-free number is `0089`"). Write `references/adr/0089-<slug>.md` carrying all eleven frontmatter keys in order, all
-six mandatory sections, and a `**What this forbids**` block inside Consequences.
+**The next free ADR number is `0090`, not `0089`.** `0089` was taken on 2026-09-09 by the facet-provenance
+amendment Step 4a executes, and `references/adr/README.md` §Numbering now reads, verbatim: "`0074`–`0089` are
+allocated; the next free number is `0090`." Write `references/adr/0090-<slug>.md` carrying all eleven frontmatter
+keys in order, all six mandatory sections, and a `**What this forbids**` block inside Consequences.
+
+**This record decides on clause A, not on clause B.** §4.1 measures a *derived* context vector; ADR-0079 asks about
+an *LLM-emitted* one, so F39 narrows 0079's options without deciding among them [measured, F39 §6]. What decides it
+is F36's modal-`R`, failing 4 times out of 4, which is unchanged. Write the record on that warrant and say in its
+Evidence section that F39 discharges AC-071's fourth clause only.
 
 The supersession is **full** — ADR-0079 decides nothing and forbids being amended, so a successor replaces it
 whole. Both sides carry the link; a one-sided link is a defect, not a shorthand:
 
-- `0089` frontmatter: `supersedes: ["0079"]`, `status: accepted`, `date: 2026-09-09`, `legacy_id: none`,
-  `consumers: []`.
-- `0079` gains `superseded_by: ["0089"]` and its `status` moves `proposed → superseded`. **This is the one edit
+- `0090` frontmatter: `supersedes: ["0079"]`, `status: accepted`, `date: <the day you take it>`,
+  `legacy_id: none`, `consumers: []`.
+- `0079` gains `superseded_by: ["0090"]` and its `status` moves `proposed → superseded`. **This is the one edit
   permitted to 0079**, and it is permitted because 0079 is `proposed`, not `accepted` — the immutability rule binds
-  accepted records. Change nothing else in its body.
+  accepted records. Change nothing else in its body. **Until this step runs, 0079 stays `proposed`**; ADR-0089 does
+  not touch it and says so in terms.
 
 The eleven keys, in order, verified against `references/adr/README.md` §Format: `id`, `title`, `status`, `date`,
 `legacy_id`, `source`, `supersedes`, `superseded_by`, `related`, `evidence`, `consumers`. The six sections:
@@ -859,59 +1118,77 @@ grep -c '^status: proposed$'      "$A"   # → 1  BEFORE. If 0, stop: you are ed
 grep -c '^superseded_by: \[\]$'   "$A"   # → 1  BEFORE.
 # …make the two edits…
 grep -c '^status: superseded$'          "$A"   # → 1  AFTER
-grep -c '^superseded_by: \["0089"\]$'   "$A"   # → 1  AFTER
+grep -c '^superseded_by: \["0090"\]$'   "$A"   # → 1  AFTER
 ```
 
-Then update `references/adr/README.md`, which needs **four** changes and each has its own anchor. The exact
-strings, quoted from the file as it stands on 2026-09-08:
+Then update `references/adr/README.md`, which needs **four** changes and each has its own anchor. **All four
+anchor strings changed on 2026-09-09 when ADR-0089 landed**; the previous revision of this table quoted them as
+they stood on 2026-09-08 and every one of those quotes is now stale. Re-quoted from the file as it stands on
+**2026-09-09** — copy them from the file, not from here, before you write:
 
 | # | Anchor now in README.md | Becomes |
 | --- | --- | --- |
-| 1 | `The set now holds 85 \`accepted\`, 2 \`superseded\` (0004, 0041) and 1 \`proposed\` (0079, deliberately undecided — see **Open items**).` | 86 accepted, 3 superseded (0004, 0041, 0079), **0 proposed** |
-| 2 | `` `0074`–`0088` are allocated; the next free number is `0089`. `` | `0074`–`0089` allocated; next free is `0090` |
-| 3 | The **Supersessions** table (§ at line 157) | gains the `0089 → 0079` row, full supersession |
-| 4 | `` `0079` is the only `proposed` record: Phase 1 pack authoring over the LLM-emitted facets is blocked… `` | rewritten — the block is now discharged by a recorded decision |
+| 1 | `The set now holds 86 \`accepted\`, 2 \`superseded\` (0004, 0041) and 1 \`proposed\` (0079, deliberately undecided — see **Open items**).` | 86 `accepted`, **3** `superseded` (0004, 0041, **0079**), **0** `proposed`. The accepted count does **not** move: `0090` adds one and `0079` leaves the `proposed` column for `superseded`, not for `accepted` — so 86 + 1 accepted, 3 superseded, 0 proposed, i.e. **87 / 3 / 0** over **90** records |
+| 2 | `` `0074`–`0089` are allocated; the next free number is `0090`. `` | `0074`–`0090` allocated; next free is `0091` — **which Step 6.1's S-GIX successor then takes** |
+| 3 | The **Supersessions** table, whose lead sentence now reads `Nine supersession links exist in this set, from eight superseding records — \`0075\` supersedes two predecessors. Two links are full; seven are partial and leave their predecessor \`accepted\`.` | **ten** links from **nine** superseding records; **three** full, seven partial. The table gains the `0079 → 0090` row, full supersession |
+| 4 | `` `0079` is the only `proposed` record: Phase 1 pack authoring over the LLM-emitted facets is blocked and the record forbids being amended into a decision. **Its blocking condition has moved but has not lifted.** `` | rewritten — the block is now discharged by a recorded decision. **Do not delete the "moved but has not lifted" paragraph's substance**: AC-071's fourth clause is discharged by F39 and the first still holds at 0.25 / 0.15 / 0.10 / 0.10 against 0.80 [measured, F36], and `0090` inherits that sentence rather than retiring it |
 
-Leave the four accepted records that carry named open items (0077/S-GIX, 0078/S-TTL1, 0080, 0088) exactly as they
-are; this step settles one row, not the section. Note the README's own Open-items paragraph also asserts *"exactly
-three records are not at `accepted`"* — after this step that sentence is still true but names a different three.
+**Anchor 3 is the one that moved most and is easiest to get wrong.** ADR-0089's partial supersession of ADR-0030
+is already in that table, and `0030` **stays `accepted`** — a partial supersession does not move a predecessor's
+status [documented, README §Supersessions]. Do not "tidy" it while you are in the file.
 
-**Checkpoint 4.** All seven. This is the gate; treat a failure as a stop, not a note.
+Leave the five accepted records that carry named open items (0077/S-GIX, 0078/S-TTL1, 0080, 0088, **0089**/S-FACET)
+exactly as they are; this step settles one row, not the section. Note the README's own Open-items paragraph also
+asserts *"exactly three records are not at `accepted`"* — after this step that sentence is still true but names a
+different three, and the same paragraph's file count moves from **89** to **90**.
+
+**Checkpoint 4.** All nine. This is the gate; treat a failure as a stop, not a note.
 
 ```bash
 cd D:/repos/redkiln-rs
 python spikes/p1/score-arm-d.py --engine spikes/results/p1-arm-d.jsonl \
        --labels spikes/results/p1-arm-d-labels-ryan.md ; echo "exit=$?"   # → exit=0, per-facet table printed
+python spikes/p1/score-arm-d-panel.py ; echo "exit=$?"             # → exit=0, F39's figures reproduce
 test -s spikes/results/p2-engine.jsonl && echo "p2 engine produced output"
-ls references/adr/0089-*.md | wc -l                                # → 1  (exactly one file)
-grep -c '^superseded_by: \["0089"\]$' references/adr/0079-*.md     # → 1  back-link present
+ls references/adr/0090-*.md | wc -l                                # → 1  (exactly one file)
+grep -c '^superseded_by: \["0090"\]$' references/adr/0079-*.md     # → 1  back-link present
 grep -c '^status: superseded$'        references/adr/0079-*.md     # → 1  status moved
 grep -c '0079. is the only .proposed. record' references/adr/README.md   # → 0  the stale claim is GONE
-grep -c 'the next free number is .0090.'       references/adr/README.md   # → 1  numbering advanced
+grep -c 'the next free number is .0091.'       references/adr/README.md   # → 1  numbering advanced
+grep -c 'the next free number is .0090.'       references/adr/README.md   # → 0  the PREVIOUS state is gone
 ```
 
-The last two lines replaced `grep -c 'proposed' references/adr/README.md`, which was **not a check at all**: the
-word `proposed` appears in the lifecycle line, the status enum table and the format table, so the count is nonzero
-whatever you do and the comment beside it ("the Open-items claim must be gone") was an intention wearing a
-command's clothes. These two match the specific sentences that must change, and their expected values differ, so
-neither can be satisfied by accident.
+The `next free number` pair replaced `grep -c 'proposed' references/adr/README.md`, which was **not a check at
+all**: the word `proposed` appears in the lifecycle line, the status enum table and the format table, so the count
+is nonzero whatever you do and the comment beside it ("the Open-items claim must be gone") was an intention wearing
+a command's clothes. **The `0090`/`0091` pair is now given both ways, and that is the point**: the previous
+revision asserted `→ 1` on `the next free number is 0090`, which was already true on this tree before Step 4.4 ran
+a single edit — a checkpoint green when you have done nothing, the exact defect §3a names. Asserting `0091 → 1`
+**and** `0090 → 0` cannot both be satisfied by the starting state.
 
 Plus one that no command can check and that you must not skip: **the decision rule in §4.1 was written down before
-the numbers were read.** If it was not, the ADR says so.
+the numbers were read.** It was — clause B was pre-registered in METHOD-P §1.4, applied on 2026-09-09 and returned
+"no facet clears the bar", and §4.1 records the result **beside** the unchanged rule rather than in place of it. If
+that ever stops being true, the ADR says so.
 
 ### 4.5 What "the gate is discharged" means — and what it does not
 
 Passing Checkpoint 4 does **not** unblock selection over LLM-emitted facets. On the records that already exist,
-clause A fails 4 times out of 4, and the decision ADR-0089 records is therefore expected to be *"every ordinal
+clause A fails 4 times out of 4, and the decision ADR-0090 records is therefore expected to be *"every ordinal
 axis is `source = "human"` for Phase 1"*. The gate is **discharged by a recorded decision**, not cleared by a
 passing measurement. Those are different states and the difference is the whole point of Step 4.
+
+**Nor does ADR-0089 discharge it.** ADR-0089 is accepted, it is about facet *provenance* and it is not the gate
+token: it partially supersedes ADR-0030 and explicitly does not touch ADR-0079 [documented, ADR-0089]. A reader
+who sees `references/adr/0089-*.md` on disk and concludes the gate is discharged has read the wrong number — which
+is why the token below moved to `0090` and why the Step 7b banner also greps `0079`'s status.
 
 Concretely, after Checkpoint 4 the following are still true and are still enforced at Steps 5–8:
 
 ```bash
 cd D:/repos/redkiln-rs
 # The gate token every later step checks. It asserts a DECISION exists, not that the block lifted.
-ls references/adr/0089-*.md >/dev/null 2>&1 && echo "GATE DISCHARGED — ADR-0089 exists" \
+ls references/adr/0090-*.md >/dev/null 2>&1 && echo "GATE DISCHARGED — ADR-0090 exists" \
                                             || echo "GATE OPEN — no selection-path work may start"
 ```
 
@@ -920,16 +1197,184 @@ between a reader who skimmed the preamble and a `require` row keyed on an LLM-em
 
 ---
 
+## Step 4a — Apply ADR-0089: facet provenance, declared surfaces, and abstention
+
+**This step takes no decision.** ADR-0089 is `accepted`, dated 2026-09-09, and partially supersedes ADR-0030 (PC8)
+— ADR-0030 **stays `accepted`** and now carries `superseded_by: ["0089"]` [documented, ADR-0089]. What follows is
+the execution order for the registry, schema and lint work that record forces. **Run it after Step 4 and before
+Step 5**; nothing in it touches the selection path, and all of it is configuration-time.
+
+**Why it exists, in one sentence.** AC-071 gates `source = "llm"` and **nothing gated `source = "derived"`** — so
+the semantic facets sat outside the block and ran **ungated while measurably wrong**, at `auth` precision 0.00 over
+11 positives [measured, F39 §1]. Four parts.
+
+### 4a.1 `facets.toml` gains a `deriver` field, and no `derived` facet may go without one
+
+Every facet declaring `source = "derived"` must name the instrument that computes it, and no facet may declare
+`source = "derived"` without a scored record for that deriver (**AC-072** as amended, **AC-520**). The provenance
+classes, in precedence order, are **DECLARED** > **DERIVED** > **PROPOSED** > **ASKED**; a higher class overrides a
+lower one for the same fact and the override is logged. **A facet whose only computation is a lexical scan of free
+text — file paths and diff lines included — does not satisfy PC8 rule 2 for `require`-row purposes**, whatever its
+record says.
+
+The registry that exists today is `spikes/p9/facets.toml`; Step 7b's pack authoring derives `.redkiln/facets.toml`
+from it, and Step 2 does not move `spikes/p9/`. Edit the file that exists.
+
+**Anchor assertion first (golden constraint 7).** **Eleven** facets carry `source = "derived"` — `stage`, `rigor`,
+`toolchain`, `change`, `role`, `cost`, `auth`, `data_migration`, `ui`, `flag_exists`, `recent_deploy` — and **five**
+of them are the booleans this record re-shapes (`auth`, `data_migration`, `ui`, `flag_exists`, `recent_deploy`;
+`recent_deploy` already abstains under `R-recent-deploy-feed-absent`, which is the precedent, so it needs the
+registry line and not the mechanism). **Count with a prefix match, never an anchored one:** `rigor` and
+`recent_deploy` carry trailing comments, so `'^source = "derived"$'` returns **9** and `'^source = "derived"'`
+returns **11** on the same file. Both forms appear below and in Checkpoint 4a and they must be the same form, or
+the checkpoint compares nine against eleven and fails on a formatting accident rather than on the edit.
+Assert the shape before you write, and assert *counts*, because a `str.replace` that matches nothing and a
+`str.replace` that matches everything look identical afterwards:
+
+```bash
+cd D:/repos/redkiln-rs
+F=spikes/p9/facets.toml
+grep -c '^source = "derived"'  "$F"     # → the derived-facet count BEFORE. If 0, you are in the wrong file.
+grep -c '^deriver = '          "$F"     # → 0 BEFORE. If not 0, this step has already partly run — read it.
+grep -n '^\[facet\.auth\]'     "$F"     # → exactly one line. This is 4a.2's anchor too.
+grep -c '^\[facet\.surfaces\]' "$F"     # → 0 BEFORE, 1 AFTER 4a.2
+# …make the edits…
+grep -c '^deriver = '          "$F"     # → AFTER: equals the BEFORE count of `source = "derived"` lines,
+                                        #   minus any facet whose source this step changes. Reconcile the
+                                        #   difference by NAME; a bare count that "looks right" is not a check.
+```
+
+**Failure mode this step is guarding.** A `deriver` field added to the registry while the lint that reads it is not
+built is a label, not a gate — which is exactly the state `source` was in before F39, and exactly how the semantic
+facets ran ungated. **Build the lint rule with the field, in the same change** (4a.4), or do neither yet.
+
+### 4a.2 The repo-wide `auth` boolean is withdrawn for a set-valued `surfaces` facet
+
+`auth` is **withdrawn**, not tuned. Eleven positives, eleven false, upper bound 0.26 — the rule carries no signal on
+this corpus and adding word boundaries to one alternative does not recover it [measured, F39 §1, §2]. Its
+replacement is a **set-valued `surfaces` facet** (`set = true`, the shape `toolchain` and `change` already carry)
+whose values come from a **checked-in `surfaces.toml` mapping path globs to closed surface names**. A fact is the
+**intersection of the changeset with a declared boundary** — a structural question, not a lexical one — and **a
+path covered by no glob contributes nothing; it does not imply `false`** [documented, ADR-0089 Decision 2].
+
+Each activity's `applicable_if` then owns its own evidence question (ADR-0024, ADR-0033), and **provenance is
+carried on the value** so a `require` row may demand a minimum: a cheap activity may run on a DECLARED fact, an
+expensive or destructive one may demand `provenance in ["declared", "asked"]` and refuse to fire on an unconfirmed
+proposal.
+
+Three constraints that are easy to lose:
+
+1. **`surfaces` is unscored and may key no `require` row on the strength of ADR-0089 alone.** It may be authored
+   and linted. **S-FACET** is the named spike that scores it (ADR-0012); its named consumer is `facets.toml`'s
+   `source`/`deriver` fields.
+2. **The loader must recognise the set shape explicitly, by name rather than by omission** (**AC-072** as
+   amended). It was previously admitted by omission, and ADR-0073 keeps boolean and ordinal registries separate, so
+   a third shape entering by omission is how a loader silently accepts a member predicate it has no semantics for.
+3. **`surfaces.toml` has an unmeasured maintenance cost.** Hours to seed is the easy half; ongoing drift is the
+   real cost and **no source has published it in units comparable to the regex** [documented, ADR-0089
+   Consequences]. It is a **reported output of S-FACET**, not an assumption — do not write a number here.
+
+### 4a.3 Boolean facets become tri-valued, and AC-079's route is extended to them
+
+`null` means "no evidence" and **is not `false`**. The registry line `values = [true, false]` is what turned **four
+empty diffs into sixteen confident booleans** [measured, F39 §4]: the panel returned `unknown` on all 16 semantic
+cells of the 4 items that changed no code, and the script emitted a confident boolean on every one.
+
+**AC-079's existing `gate_opened { reason: unknown_facet, axis }` route is extended to the boolean facets**, which
+today it cannot reach because their declared domain is `[true, false]`. The grammar already supports it: ADR-0032
+makes absent inputs `null`, ADR-0069 defines `==`/`!=` against `null` while ordering against it is a lint error, and
+a `require` row whose predicate cannot be evaluated over a `null` yields `Unsatisfiable(kind, failed_predicates)`
+and escalates to the existing human gate. **ADR-0067's `recent_deploy` is the live precedent** — it already emits
+`null` under rule `R-recent-deploy-feed-absent` because the `toolchain:deploy_log` feed does not exist at this pin.
+**The pattern is generalised, not invented.**
+
+**Abstention is reported separately from error, always, and a `null` cell is never counted as a false negative in
+any scoring of a facet deriver.** A silent `false` and an honest `null` are different outcomes and may never be
+summed.
+
+**The gate load rises, by an amount no document may state.** Four questions on twenty items is a measurement of an
+oracle-construction exercise, **not a forecast for a shipped triage gate**, and must not be quoted as one. SM-024
+has no baseline; S-FACET is what gives it one. F18 prices a human gate at a median **10.5 min** with 45% exceeding
+an hour [measured, n=174, one operator] — that is the price of a question, not a count of questions.
+
+### 4a.4 AC-520 is a new gate and it must fail closed the way AC-071 does
+
+**AC-520** — `redkiln lint --facet-provenance` — is the derived-facet sibling of AC-071, allocated **outside** the
+selection area's exhausted `AC-040..AC-079` range [documented, acceptance-criteria register §0.4]. It is **not** a
+sixth clause on AC-071: AC-071's own residual-risk sentence names a loosely-implemented multi-clause gate as
+precisely the failure mode, and a single gate carrying two subjects, two records and two failure meanings is the
+shape that invites the collapse. **Two criteria, two lint rules, two fixture sets, two things that can fail
+separately.**
+
+It fails pack load unless a `derived` facet declares a named `deriver` **and** a scored precision record exists for
+that deriver over a **pinned** corpus, carrying a **Wilson 95% interval and a positive-instance count**; a facet
+whose record shows **no positive instance is reported as *not measurable* — neither passed nor failed — and may key
+no `require` row**; and a lexical deriver never satisfies PC8 rule 2 for `require`-row purposes.
+
+**AC-520 deliberately re-states no threshold**, and that is the F39 result showing through: METHOD-P §1.4's 0.95
+bar is **not reachable at n=20 for any facet however good** [measured, F39 Limits 1]. The gate requires that a
+scored record **exist, be pinned and be read** — not that it clear a number the registered sample size cannot
+decide (golden constraint 10).
+
+**Fail closed, and prove it with a positive companion.** Like AC-071 it must fail **today, by construction**, which
+is the point. Four must-fail fixture `facets.toml` files, one clause at a time — a `derived` facet with no
+`deriver`; a named `deriver` with no scored record; a record carrying 0 positives whose facet keys a `require` row;
+a `deriver` declared lexical — **plus a positive companion that must load** (a `derived` facet with a named
+`deriver`, a scored record and positives). **Without the positive companion the rule is satisfied by a lint that
+rejects everything**, which is golden constraint 9 arriving from the too-wide direction.
+
+**Checkpoint 4a.** All eight. Six are commands against files that exist today; two are marked **`[WILL EXIST]`**
+because the lint is Phase-1 output and Step 7b builds it.
+
+```bash
+cd D:/repos/redkiln-rs
+F=spikes/p9/facets.toml
+grep -c '^\[facet\.auth\]'      "$F"      # → 0: the repo-wide auth boolean is WITHDRAWN, not retuned
+grep -c '^\[facet\.surfaces\]'  "$F"      # → 1: its replacement exists
+grep -A3 '^\[facet\.surfaces\]' "$F" | grep -c '^set = true'          # → 1: declared as a SET, by name
+test -f surfaces.toml || test -f .redkiln/surfaces.toml               # the declared boundary map is checked in
+awk '/^source = "derived"/{d++} /^deriver = /{v++} END{print d, v}' "$F"
+                                          # → the two numbers are EQUAL, and both are 11. Every derived facet
+                                          #   names its deriver. NOTE the pattern is NOT anchored with `$`:
+                                          #   `rigor` and `recent_deploy` carry trailing comments, so an
+                                          #   anchored match counts 9 and this check would fail on formatting.
+grep -c 'values = \[true, false\]' "$F"   # → 0: no boolean still declares a two-valued domain (4a.3)
+```
+
+```bash
+# [WILL EXIST] — Step 7b builds the lint; these are its acceptance shape, run there and re-run here.
+./target/debug/redkiln lint --facet-provenance .redkiln/facets.toml   # exit != 0 TODAY, by construction (AC-520)
+cargo test -p rk-kernel -- facet_provenance_fixtures ; echo "exit=$?"  # → exit=0: four must-fail + ONE must-load
+```
+
+**What this step may not do, restated because every one of these is a route someone will reach for.**
+
+- It may **not** say any facet "leaves the model". **None does** — no facet clears METHOD-P §1.4's 0.95 bar and
+  the bar is unreachable at n=20 for any facet [measured, F39].
+- It may **not** decide **source asymmetry**. `commits` beats `docs` on every facet and `union` is worse than
+  `commits` alone on `toolchain` and `change` [measured, F39 §3]. ADR-0089 explicitly does not decide it; it is an
+  arm of S-FACET.
+- It may **not** touch **ADR-0079**, which stays `proposed` until Step 4.4 writes ADR-0090. ADR-0089 forbids being
+  read as deciding anything in 0079.
+- It may **not** substitute unanimous N-seat model agreement for a human confirmation, **including as a later
+  efficiency proposal**. Small-panel unanimity is a weaker correctness signal than its arithmetic implies and it
+  fails in the correlated direction [documented, preprint, arXiv:2605.29800].
+- It may **not** treat a `null` as a false negative in any scoring of a facet deriver.
+
+---
+
 ## Step 5 — Workspace, CI, and `rk-types` (Phase 1, part 1)
 
 > ### 🚦 GATE CHECK — run this line before the first `cargo new`
 > ```bash
-> ls D:/repos/redkiln-rs/references/adr/0089-*.md >/dev/null 2>&1 \
+> ls D:/repos/redkiln-rs/references/adr/0090-*.md >/dev/null 2>&1 \
 >   && echo "GATE DISCHARGED — proceed" || echo "GATE OPEN — go back to Step 4"
 > ```
-> Phase 1 entry also needs **Step 3c** answered and **Step 2** landed. Nothing in *this* step touches the
-> selection path, so a discharged gate is a formality here — which is exactly why it is checked here, where it is
-> cheap, rather than first at Step 7b, where it is not.
+> **`0090`, not `0089`.** `0089` is the facet-provenance amendment Step 4a executes; it is accepted, it does not
+> touch ADR-0079, and it is **not** this gate's token.
+> Phase 1 entry also needs **Step 3c** answered, **Step 4a** applied and **Step 2** landed. Nothing in *this* step
+> touches the selection path, so a discharged gate is a formality here — which is exactly why it is checked here,
+> where it is cheap, rather than first at Step 7b, where it is not.
 
 The workspace and CI are **part of this step, not an afterthought**. There is **no `.github/workflows` directory in
 this repository at all** — the single largest of the four measured absences, alongside no `rust-toolchain.toml`, no
@@ -1048,6 +1493,18 @@ set cannot be fixed. The crate ships every other artifact type. Historical chang
 content with a migration-loss marker, and **no `ChangeSummary` value is synthesised** (AC-475). The five
 toolchain-keyed kinds (ADR-0073) are not finalised either.
 
+**The fixture existing does not move this.** Step 3c records that S-BIN's fixture is now identified — the real
+Unreal project at `D:/repos/BrittonGames`, UE 5.8, headless automation working, assets in Git LFS [measured, paths
+verified 2026-09-09]. **S-BIN has not run**, so nothing here changes: the field set stays unfixed, `AC-154` stays
+unverifiable-as-specified, `AC-356`'s evidence standard stays blocked, and the per-AC mutation norm stays in force
+for every class. A fixture is not a finding.
+
+**Nor does `binary_change` become a selection input.** It is measured — precision **0.60**, 95% CI [0.23, 0.88],
+recall **1.00**, 3 tp / 2 fp / 0 fn over 20 items [measured, F39 §1] — and it is **not in `facets.toml`**, so it
+can feed no `require` row regardless (DECISIONS-2026-09-09 #11). Its `docs` source finds **nothing at all**: no
+positives, recall 0.00, 3 missed, because a card names a path but carries no binary marker, so the facet is
+unreachable from prose by construction [measured, F39 §3]. Do not register it here to "unblock" anything.
+
 The closed-output rules are constraints on the **Rust types**, and `schemars` does not enforce them — data-carrying
 enum variants derive to `oneOf` by default, matching serde's externally tagged representation, and
 `#[serde(tag = "kind")]` is what renders a single discriminated object instead. So the rule gets a test:
@@ -1102,9 +1559,10 @@ order-preserving schema export — mark them unverified, do not assume them.
 
 > ### 🚦 GATE CHECK
 > ```bash
-> ls D:/repos/redkiln-rs/references/adr/0089-*.md >/dev/null 2>&1 \
+> ls D:/repos/redkiln-rs/references/adr/0090-*.md >/dev/null 2>&1 \
 >   && echo "GATE DISCHARGED — proceed" || echo "GATE OPEN — go back to Step 4"
 > ```
+> **`0090`, not `0089`** — see Step 5's banner for why the token moved.
 
 ### 6.1 Run S-GIX before a line of `rk-git` worktree code is written
 
@@ -1127,8 +1585,9 @@ cargo test -p rk-git -- --ignored s_gix_b_trailer_roundtrip_matches_interpret_tr
 **Run these before the worktree code, not after.** A **go** on an arm may narrow ADR-0077 and nothing else may, and
 the narrowing is written as a **successor record**, never as an edit to 0077 — ADR-0077 is `accepted`, and the
 immutability rule binds accepted records absolutely. **This is the second of the four decisions this runbook
-takes** (see the header table); it is an ADR, and the next free number after Step 4 is `0090`. A **no-go** costs
-nothing, because the hybrid is what ships either way.
+takes** (see the header table); it is an ADR, and **the next free number after Step 4 is `0091`** — `0089` was
+taken by the facet-provenance amendment on 2026-09-09 and `0090` by Step 4.4. A **no-go** costs nothing, because
+the hybrid is what ships either way.
 
 ### 6.2 Build to the hybrid, whatever S-GIX says
 
@@ -1168,8 +1627,8 @@ grep -c 'gix = "=0.87.1"' crates/rk-git/Cargo.toml                       # → 1
 grep -rn 'std::process::Command' crates/ --include=*.rs \
   | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l                       # → 0: one wrapper, one file
 cargo audit                                                               # exit 0; gix-* clean at the pin
-ls references/adr/0090-*.md | wc -l                                       # → 1: the S-GIX successor record
-grep -cE 'S-GIX/(a|b).*(go|no-go)' references/adr/0090-*.md               # → 2: a verdict for EACH arm
+ls references/adr/0091-*.md | wc -l                                       # → 1: the S-GIX successor record
+grep -cE 'S-GIX/(a|b).*(go|no-go)' references/adr/0091-*.md               # → 2: a verdict for EACH arm
 ```
 
 The last two lines make "a **written S-GIX result**" checkable instead of aspirational. "We built the hybrid so we
@@ -1224,25 +1683,38 @@ Phase 4 is the earliest a second harness ships).
 > # 🛑 STOP. THIS IS THE STEP STEP 4 EXISTS TO GATE.
 >
 > **`rk-kernel` is the crate that contains the selection engine.** Everything before this point could be built
-> with the gate wide open and no harm done. This step cannot. Run both lines and read both answers:
+> with the gate wide open and no harm done. This step cannot. Run all three lines and read all three answers:
 >
 > ```bash
 > cd D:/repos/redkiln-rs
-> ls references/adr/0089-*.md >/dev/null 2>&1 \
->   && echo "OK: ADR-0089 exists — the context-vector decision was TAKEN" \
->   || echo "STOP: no ADR-0089. Go to Step 4. Do not write selection code."
+> ls references/adr/0090-*.md >/dev/null 2>&1 \
+>   && echo "OK: ADR-0090 exists — the context-vector decision was TAKEN" \
+>   || echo "STOP: no ADR-0090. Go to Step 4. Do not write selection code."
 > grep -c '^status: superseded$' references/adr/0079-*.md    # → 1. ADR-0079 is discharged, not amended.
+> ls references/adr/0089-*.md >/dev/null 2>&1 \
+>   && echo "note: ADR-0089 is the FACET-PROVENANCE record. It is NOT this gate's token."
 > ```
 >
-> **A discharged gate is not an unblocked one.** ADR-0089 is expected to record *human-sourced ordinal axes for
+> **`0089` is not the token, and mistaking it for one is the specific failure this third line exists to stop.**
+> ADR-0089 is accepted and it is about facet *provenance* — it partially supersedes ADR-0030, and it explicitly
+> does not touch ADR-0079 [documented, ADR-0089]. Seeing it on disk tells you nothing about whether the
+> context-vector decision was taken.
+>
+> **A discharged gate is not an unblocked one.** ADR-0090 is expected to record *human-sourced ordinal axes for
 > Phase 1* — clause A fails 4/4 on the records that exist. So the thing you may now build is the engine's
 > **semantics**; the thing you still may not build is any `require` row keyed on an LLM-emitted `criticality`,
 > `novelty`, `size`, `blast_radius`, `market_facing`, `external_dep` or `has_repro`. `kind` is out of scope of the
 > block (human input, ADR-0030 rule 4). That is golden constraint 1, ADR-0079, AC-071 and design §10.2's "may not"
 > column, all saying the same sentence.
 >
-> The enforcement is `redkiln lint --facet-stability`, specified below. **Build the lint before the rows it
-> polices**, so there is never a window in which a `require` row exists and nothing checks it.
+> **F39 moved exactly one of AC-071's five clauses.** Arm D was scored on 2026-09-09, discharging the fourth —
+> "arm-D panel `scored`" — and only that one [measured, F39]. The block holds on the **first**: modal required-set
+> identity measured **0.25 / 0.15 / 0.10 / 0.10** against the 0.80 line [measured, F36]. **A discharged clause is
+> not a partial unblocking, and the five-case fixture set stays at five.**
+>
+> The enforcement is `redkiln lint --facet-stability`, specified below — and its sibling **`--facet-provenance`
+> (AC-520)**, which gates `source = "derived"` and which nothing gated before F39. **Build both lints before the
+> rows they police**, so there is never a window in which a `require` row exists and nothing checks it.
 
 Workflow/activity split, policy, memo, gates, budgets, retry, replay. **`tokio`, `async-std`, `futures` and
 `async-trait` are forbidden here** — no dependency edge, direct or transitive, on any `rk-adapter-*` (AC-484), and
@@ -1262,6 +1734,14 @@ Four things this crate must get right, each because a measurement says so:
   **fail closed** on `source = "llm"` without a scored stability record, and it must check **all five clauses** —
   identity, n, draws, `panel_verdict`, `corpus_sha`. A lint that reads identity and skips `panel_verdict` unblocks
   the entire provisional apparatus silently; the five-clause fixture set is the only defence.
+- **Its sibling gate, and the one that did not exist before F39.** `redkiln lint --facet-provenance` (**AC-520**,
+  Step 4a.4) must **fail closed** on `source = "derived"` without a named `deriver` and a scored precision record
+  over a pinned corpus. **AC-071 gates `llm` and nothing gated `derived`** — so the semantic facets sat outside the
+  block and ran **ungated while measurably wrong**, at `auth` precision 0.00 over 11 positives [measured, F39].
+  Build it as **two lint rules with two fixture sets**, never as a sixth clause on AC-071: one gate carrying two
+  subjects, two records and two failure meanings is the shape that invites the collapse AC-071's own residual-risk
+  sentence names. Four must-fail fixtures **plus one that must load**, or the rule is satisfied by a lint that
+  rejects everything.
 
 Also here: the **rigor-monotonicity lint**, failing closed. The ladder is *not* monotone in internal quality today —
 escalating to `mandatory` with `has_repro` selects `bisect`, which has **no adversary and no policy step**, so
@@ -1273,7 +1753,7 @@ powerless at n=3 — every Wilson interval overlaps by construction — and the 
 `findings.none(evidence in [Reproduced, MutationSurvived])` may not be used as a terminal condition. Each quality
 block is authored explicitly, per activity.
 
-**Checkpoint 7b.** All six:
+**Checkpoint 7b.** All nine:
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -1284,16 +1764,24 @@ grep -rnE 'tokio|async-trait|async-std|futures' crates/rk-kernel/Cargo.toml | wc
 cargo metadata --format-version 1 --no-deps >/dev/null && \
   cargo tree -p rk-kernel -e normal 2>/dev/null | grep -c 'rk-adapter-'  # → 0 (AC-484)
 cargo test -p rk-kernel -- facet_stability_five_clause ; echo "exit=$?" # → exit=0: five clauses, four negatives
+cargo test -p rk-kernel -- facet_provenance_fixtures   ; echo "exit=$?" # → exit=0: AC-520, four must-fail
+                                                                       #   fixtures AND one that must LOAD
+grep -rn 'facet_stability\|facet_provenance' crates/rk-kernel/src/ | grep -c 'fn '   # → ≥ 2: TWO rules, not one
 grep -rnE 'require.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b' \
      crates/ --include=*.toml --include=*.rs | wc -l                   # → 0. Golden constraint 1, as a command.
+grep -rniE 'leaves the model' crates/ --include=*.rs --include=*.toml --include=*.md | wc -l
+                                                                       # → 0. NO FACET DOES (§4.1 clause B, F39).
 ```
 
-The last line is the standing prohibition made mechanical. It is coarse and it will occasionally flag a comment;
-that is the right direction for this particular guard, and golden constraint 9 says to establish its scope rather
-than route around it — read each hit, do not silence the grep.
+The LLM-ordinal line is the standing prohibition made mechanical. It is coarse and it will occasionally flag a
+comment; that is the right direction for this particular guard, and golden constraint 9 says to establish its scope
+rather than route around it — read each hit, do not silence the grep. The `leaves the model` line is the same shape
+for the F39 result: **no facet clears METHOD-P §1.4's 0.95 bar and the bar is unreachable at n=20 for any facet**
+[measured, F39 Limits 1], so the phrase has no true instance and any hit is a claim nothing measured supports.
 
 **Acceptance set: AC-001–AC-039** (kernel), **AC-040–AC-079** (selection, minus the P1-blocked rows AC-069,
-AC-070, AC-072, AC-076, AC-079), **AC-080–AC-119** (packs and catalog lint).
+AC-070, AC-072, AC-076, AC-079), **AC-080–AC-119** (packs and catalog lint), and **AC-520** — the derived-facet
+provenance gate, allocated outside the selection range because `AC-040..AC-079` is exhausted.
 
 ### 7c — The adapters
 
@@ -1462,9 +1950,32 @@ must-fail fixture reintroducing a clock read (AC-001–AC-004). The fixture **fa
 # OR a stability record satisfies ALL FIVE clauses:
 #   modal_required_set_identity >= 0.80  AND  n_items >= 20  AND  draws_per_item >= 10
 #   AND panel_verdict == "scored"        AND  corpus_sha == <catalog corpus pin>
+#
+# panel_verdict == "scored" IS NOW SATISFIABLE AND, FOR ARM D, SATISFIED — F39 scored it on 2026-09-09
+# over 140 truth cells at 47faec9f. THE OTHER FOUR ARE UNTOUCHED, and identity measured
+# 0.25 / 0.15 / 0.10 / 0.10 against 0.80 [measured, F36]. A discharged clause is not a partial
+# unblocking: the gate still fails on the second branch, and the fixture set stays at FIVE.
 ```
 
-On today's evidence the first branch is what passes. That is the expected outcome, not a shortfall.
+**(6, second lint) `redkiln lint --facet-provenance` (AC-520) passes** — the derived-facet sibling, new since F39,
+which gates the half of the registry AC-071 never reached. **This is not an eighth exit criterion**: design §10.2
+names seven and this runbook does not add to them. It is stated here because AC-520 is the criterion that makes
+(6)'s neighbouring half checkable, and a Phase 1 that exits on (6) with `--facet-provenance` unbuilt has left the
+measurably-wrong half of the registry ungated — which is the state F39 found:
+
+```bash
+# [WILL EXIST] — Step 4a authors the registry half, Step 7b builds the lint.
+./target/debug/redkiln lint --facet-provenance .redkiln/facets.toml
+# exit 0 only when EVERY facet declared source = "derived" names a `deriver` AND a scored precision
+# record exists for it over a pinned corpus, carrying a Wilson 95% interval and a positive-instance
+# count. A facet with NO positive instance is reported NOT MEASURABLE — neither passed nor failed —
+# and may key no require row. A lexical deriver never satisfies PC8 rule 2 for require-row purposes.
+# NO THRESHOLD is re-stated here on purpose: METHOD-P §1.4's 0.95 bar is not reachable at n=20 for
+# any facet however good [measured, F39 Limits 1]. The gate requires a record that EXISTS, IS PINNED
+# AND IS READ.
+```
+
+On today's evidence (6)'s **first** branch is what passes. That is the expected outcome, not a shortfall.
 
 **(7) Per-activity cost is recorded and carries `resolution_limited`** wherever the 0.01 quantisation binds
 (SM-109). `utilization` is quantised to 0.01, so per-run cost is **not measurable**; batch-delta is the only honest
@@ -1474,12 +1985,32 @@ report, and a run that reports a per-run figure without the flag has laundered a
 
 - No `require` row keyed on an LLM-emitted `criticality`, `novelty`, `size`, `blast_radius`, `market_facing`,
   `external_dep` or `has_repro`.
-- No finalised `ChangeSummary` type; no synthesised `ChangeSummary` value.
+- No finalised `ChangeSummary` type; no synthesised `ChangeSummary` value. **The S-BIN fixture existing at
+  `D:/repos/BrittonGames` does not change this** — the spike has not run.
 - No card append route enabled as anything but an unmeasured config option.
 - No quality-shorthand default; no `findings.none(evidence in [Reproduced, MutationSurvived])` as a terminal
   condition.
 - No run reported as 1 h TTL without per-run `ephemeral_*` field evidence.
 - gix does not own the write path.
+- **No document authored or amended from here on ASSERTS that a facet "leaves the model".** None does: no facet
+  clears METHOD-P §1.4's 0.95 bar and the bar is **not reachable at n=20 for any facet however good**
+  [measured, F39]. **Scope, because the unscoped form of this rule is unsatisfiable:** the phrase lives, correctly
+  and permanently, in `spikes/METHOD-P.md` §1.4 (the registered rule itself), in `references/adr/0079-*.md`, in
+  `spikes/F36-DRAFT.md` and in `spikes/DECISIONS-2026-09-09.md`. Those are frozen sources and quoting a registered
+  rule is not asserting it — editing them to satisfy this line is the one thing the rule must never cause. The
+  mechanical check is scoped to `crates/` for exactly that reason (Checkpoint 8 above).
+- **No facet declares `source = "derived"` without a named `deriver` and a scored precision record** (AC-520,
+  ADR-0089), and **no `require` row is keyed on a facet whose scored record shows no positive instance** — that
+  facet is reported *not measurable*, neither passed nor failed.
+- **No derived boolean resolves an absence of evidence to `false`.** It is `null`, and `null` routes to AC-079's
+  `gate_opened { reason: unknown_facet }`. **No `null` is counted as a false negative** in any scoring of a facet
+  deriver.
+- **No document reports F39's oracle as human-panel.** It is **panel-adjudicated**: 60 deterministic-oracle cells,
+  48 unanimous panel, 32 human adjudication of 140 [measured, F39 §5].
+- **No document quotes "four questions on twenty items" as a triage-gate load forecast.** It is a measurement of an
+  oracle-construction exercise; SM-024 has no baseline and S-FACET is what gives it one.
+- **No section decides source asymmetry.** `commits` beats `docs` and `union` is worse than `commits` alone on
+  `toolchain` and `change` [measured, F39 §3]; the decision is an arm of S-FACET and ADR-0089 does not take it.
 - **No document, section or commit message describes this design as final.** S-BIN, S-H1c and P8's unrun arms gate
   that label, and P8 has no result on its own question.
 
@@ -1494,11 +2025,13 @@ reverses independently and completely.
 
 ```bash
 cd D:/repos/redkiln-rs
-# Step 1's commit carries the design pass, the 88 ADRs and this runbook; Step 4's carries ADR-0089.
+# Step 1's commit carries ADR-0089 and the F39 records; Step 4's carries ADR-0090. The design pass, the
+# first 88 ADRs and this runbook are already on main at 4519edc and are not at risk from this branch.
 git log --oneline main..build/phase-0-to-1
 git checkout main
-git cherry-pick <the Step 1 commit> <the Step 4 commit>
-# Deleting the branch without this rolls back a DECISION along with the code it was taken for.
+git cherry-pick <the Step 1 commit> <the Step 4 commit> <the Step 4a commit>
+# Deleting the branch without this rolls back TWO decisions along with the code they were taken for:
+# ADR-0089 (facet provenance, accepted 2026-09-09) and ADR-0090 (the context vector).
 ```
 
 ```bash
@@ -1543,7 +2076,11 @@ git -C D:/repos/redkiln status --porcelain -- workflows/   # → EMPTY: the wrap
 
 ```bash
 git -C D:/repos/redkiln-rs rev-parse --abbrev-ref HEAD              # → main
-git -C D:/repos/redkiln-rs log --oneline -3                         # → the two cherry-picks on top of e3b0bac
+git -C D:/repos/redkiln-rs log --oneline -4                         # → the THREE salvage cherry-picks (Step 1,
+                                                                    #   Step 4, Step 4a) on top of main's HEAD.
+                                                                    #   Main's HEAD is `ce04058`, not `e3b0bac` —
+                                                                    #   `e3b0bac` is the pre-design-pass point,
+                                                                    #   seven commits back (§0.1)
 ls D:/repos/redkiln-rs/spikes/corpus D:/repos/redkiln-rs/spikes/results \
    D:/repos/redkiln-rs/spikes/runner >/dev/null && echo "spike tree restored"
 ls D:/repos/redkiln-rs/spikes/results/p1-arm-d-labels-ryan.md \
@@ -1563,9 +2100,13 @@ grep -c 'spikes/results/ is deliberately NOT ignored' D:/repos/redkiln-rs/.gitig
    regenerate from `cargo build`; they do not come back and do not need to.
 3. **The blind panels are one-shot.** See 2b above. Blindness is destroyed by reading, not by deleting, and no
    revert restores it.
-4. **ADR-0079's status.** If Step 4 landed and you keep the cherry-pick, `0079` is `superseded` and `0089` exists.
-   That is correct and is not rolled back — the decision was taken on evidence that is still true. If you *do*
-   want it reverted, that is a new ADR superseding `0089`, never an edit to either file.
+4. **ADR-0079's status, and ADR-0089.** If Step 4 landed and you keep the cherry-pick, `0079` is `superseded` and
+   `0090` exists. That is correct and is not rolled back — the decision was taken on evidence that is still true.
+   If you *do* want it reverted, that is a new ADR superseding `0090`, never an edit to either file. **ADR-0089 is
+   in a stronger position still**: it is `accepted`, it landed before this branch, and it is not this build's to
+   revert. Reverting it would also mean reverting ADR-0030's `superseded_by` back-link, and a one-sided
+   supersession link is a defect [documented, README §Supersessions]. If you want it gone, that is a new record
+   superseding `0089` — and it would have to answer `auth` at 0.00 over 11 positives [measured, F39].
 
 ---
 
@@ -1618,29 +2159,60 @@ Two more that this revision added, because the audit that produced it found both
    exits 0. `grep -c` over a missing file exits 2. Both look like a pass in a terminal. **A checkpoint you could
    not run is a failed checkpoint** — record which one and why, and do not advance the step counter.
 
+Three more that F39 produced, and that this revision added because it met all three in one scoring run:
+
+9. **A criterion returns a result its registered n could not have decided.** Stop before you report it. METHOD-P
+   §1.4's 0.95 precision bar is **not reachable at n=20 for any facet however good** — `ui` is 7/7 with a 95% lower
+   bound of 0.65, and roughly **60 positives** are needed for a lower bound above 0.95 [measured, F39 Limits 1] —
+   which is the third instance in the same pre-registration after P1's α rule (F36) and P7's criterion 1 (F37).
+   **Report it as powerless, and report a criterion with no positive instance as *not measurable* — never as a pass
+   or a failure.** `data_migration` emits 0 positives on 20 items across all three sources; precision is undefined
+   and a perfect method scores identically [measured, F39 §4]. This is a result *about* the pre-registration and it
+   is written into the finding's Limits. **It is not a licence to edit METHOD-P.** Golden constraint 10.
+
+10. **A deriver's false positives cluster on the vocabulary of the thing being measured.** That is a correlated
+    failure, not a tuning parameter, and it does not average out with more data. `auth` marks true on 14 of 20
+    items and scores **0.00 over 11 positives**, upper bound **0.26**, because `auth` is a substring of *authored*
+    (40 hits), `oauth` of *coauthor* (8) and `token` matches a design token (36) [measured, F39 §2]. **Stop and
+    read what the rule fired *inside* before you adjust the rule.** Adding word boundaries here removes the
+    `coauthor` (8) and ARIA-`role` (2) hits and leaves the 40 *authored* and 36 design-`token` hits untouched — they
+    are whole words at proper boundaries [measured, F39 §2; the registered prediction of S-FACET arm 2,
+    `references/2026-09-09-change-classification.md` §6]. **Do not state that as a bare remainder**: an earlier
+    revision wrote "removes 10 hits and leaves 76", and 76 is the surviving *authored* + design-`token` subset, not
+    what is left of the 105 hits the table totals. If the collision is with the instrument's own vocabulary, the
+    method is the finding.
+
+11. **A scorer compares a value to the wrong shape and reports a confident number anyway.** The oracle emits
+    `binary_change` as a JSON bool; the first scorer compared it to the string `"true"`, read every oracle positive
+    as false, and scored the facet **0.00** where it is **0.60**. It was found and fixed **before** the result was
+    reported [measured, F39 Limits 5], and the defect class — assuming a value's shape instead of checking it —
+    occurred **three times** in one session's tooling. **A scorer that produces a clean-looking 0.00 is a scorer to
+    read, not a result to publish.**
+
 ---
 
 ## One-glance checklist
 
-**Execution order: 0 → 1 → 3 → 4 → 2 → 5 → 6 → 7 → 8.** Step 2 is fifth, not third — see its ORDER banner.
+**Execution order: 0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7 → 8.** Step 2 is sixth, not third — see its ORDER banner.
 
 - [ ] **preflight** — `cargo install cargo-audit --locked` and `cargo install cargo-insta --locked` (both **MISSING** on this box, measured 2026-09-08); Git Bash open, not PowerShell
 - [ ] **0** — branch cut; `rustc`/`cargo` 1.97.1, edition 2024; **`claude --version` written to `spikes/results/instrument-checks/RUNBOOK-instrument.txt`**; rig `doctor` exit 0
-- [ ] **1** — CRLF churn checked with `git diff -w --stat`; `target-dev`/`target-p8` removed; logs and `p8-state` gitignored; design pass + 88 ADRs + **`RUNBOOK.md`** + the instrument file committed; **`git status --porcelain` EMPTY** (Phase-0 exit (a))
+- [ ] **1** — CRLF churn checked with `git diff -w --stat`; `target-dev`/`target-p8` removed; the **14 driver logs** and `p8-state` gitignored; **ADR-0089 + `0030` + `README.md` + `F39-DRAFT.md`** + the instrument file committed (the design pass, the first 88 ADRs and `RUNBOOK.md` landed earlier at **`4519edc`**); `ls references/adr/*.md | wc -l` → **90**; **`git status --porcelain` EMPTY** (Phase-0 exit (a))
 - [ ] **3a** — `forge-fix.js` line **982** fixed; `=== false` count **0** and `!== true` count **2** (line 1019 was already correct — do not read it as your own fix); D-FIXCONSUMER dispatch run **or** its deferral recorded
-- [ ] **3b** — three label files copied to `-ryan.md`, filled **from the item alone**, `labelled_at` stamped **UTC `...Z` by command**, no `FILL` anywhere, **existence guarded before the negation**; `p7-deviation` correctly skipped (no rows); `recent_deploy` understood to be unscored
-- [ ] **3c** — Phase-0 exit **(c)** S-BIN re-scoped by ADR **or** recorded as blocking; exit **(d)** E3-SEV returned **or** recorded as deferred. Neither may be silent
-- [ ] **4** — DECISIONS #15 / #18 / #27 confirmed or reversed **before** scoring; **decision rule written down BEFORE the numbers were read**; `score-arm-d.py` exit 0; P2 engine phase produced output with `--cases` passed explicitly; refusals respected, nothing back-dated
-- [ ] **4** — **ADR-0089 written** (11 keys in order, 6 sections, a `**What this forbids**` block); `0079` moved `proposed → superseded` with a reciprocal `superseded_by`, both anchors asserted; README tally → 86/3/0, numbering → `0090`, Supersessions row added, Open items rewritten. **The gate is now DISCHARGED — which is not the same as unblocked: the expected decision is human-sourced ordinal axes, and the block on LLM-sourced ones stands.**
+- [ ] **3b** — **two** label files (arm L, P2 — **not** arm D, discharged by METHOD-P amendment 9 and retained unfilled) copied to `-ryan.md`, filled **from the item alone**, `labelled_at` stamped **UTC `...Z` by command**, no `FILL` anywhere, **existence guarded before the negation**, count **2 not 3**; `p7-deviation` correctly skipped (no rows); `recent_deploy` understood to be unscored
+- [ ] **3c** — Phase-0 exit **(c)** the S-BIN **half is still open**: the fixture exists (`D:/repos/BrittonGames`, UE 5.8, headless automation working) and the spike **has not run**; the re-scope branch remains available, is **not** the current plan, and would need **its own ADR number**. Exit **(d)** has **a result from both halves and full blindness from neither** — P1 arm D scored 2026-09-09 [F39], **amendment 8's attested-blind route registered but NEVER INVOKED** and **panel-adjudicated not human-panel** (METHOD-P amendments 8, 9); E3-SEV **DONE**, 4 BLOCKING / 2 ADVISORY with a documented self-correction on finding 4, but **NOT BLIND by its own header and κ forfeited** — the pristine BLANK is preserved and annotating it from scratch is the open route back to κ; and **carrying its other limit**: CLEAN is unusable as a denominator, both FP rates are upper bounds, quality still cannot discriminate the arms
+- [ ] **4** — DECISIONS #15 / #18 / #27 confirmed or reversed **before** scoring; **decision rule written down BEFORE the numbers were read** — clause B was pre-registered, applied, and returned **no facet clears 0.95**; `score-arm-d.py` exit 0 and `score-arm-d-panel.py` exit 0; P2 engine phase produced output with `--cases` passed explicitly; refusals respected, nothing back-dated
+- [ ] **4** — **ADR-0090 written** (not 0089 — that number is taken; 11 keys in order, 6 sections, a `**What this forbids**` block); it rests on **clause A** (F36's modal-`R`, 4/4), **not** on F39, which measures a *derived* vector while 0079 asks about an *LLM-emitted* one; `0079` moved `proposed → superseded` with a reciprocal `superseded_by: ["0090"]`, both anchors asserted; README tally → **87/3/0** over **90** records, numbering → `0091`, Supersessions → **ten links from nine records, three full**, Open items rewritten. **The gate is now DISCHARGED — which is not the same as unblocked: the expected decision is human-sourced ordinal axes, and the block on LLM-sourced ones stands on AC-071's FIRST clause (identity 0.25/0.15/0.10/0.10 against 0.80), F39 having discharged the FOURTH only.**
+- [ ] **4a** — **ADR-0089 applied, not decided**: `facets.toml` gains **`deriver`** on every `source = "derived"` facet, anchors asserted by *count* before the write; the repo-wide **`auth` boolean withdrawn** for a set-valued **`surfaces`** facet over a checked-in `surfaces.toml` (`set = true`, recognised **by name**, unscored, may key no `require` row); **booleans tri-valued** — `values = [true, false]` gone, absence of evidence is `null`, routed to **AC-079**'s `gate_opened { reason: unknown_facet }`, ADR-0067's `recent_deploy` the live precedent; **AC-520 fails closed** the way AC-071 does, as a **separate lint with its own fixture set**, four must-fail **plus one that must load**. **No facet leaves the model; source asymmetry not decided; ADR-0079 untouched**
 - [ ] **2** — `redkiln-corpus` created; corpus + results + runner moved **with the three filled panels inside**; **40-hex** SHA in `CORPUS_PIN` matching corpus HEAD; corpus checkout clean; `spikes/{corpus,results,runner}` untracked here; the stale `.gitignore` results paragraph reconciled (AC-464, AC-465)
 - [ ] **5** — 🚦 gate check run; workspace root `Cargo.toml` carries `exclude = ["spikes/runner"]`; `rust-toolchain.toml` (exact channel) + `[workspace.lints]` + **CI from the first commit** (the YAML in §5.2 is a **gate list, not a file**), four gates green, Windows target; structural assertions AC-362/480/481/483/484 wired
-- [ ] **5** — `rk-types` built; golden schema snapshot passing, **with the snapshot directory's existence asserted** (no `oneOf`, `additionalProperties: false` everywhere); **`ChangeSummary` absent** (S-BIN)
-- [ ] **6** — 🚦 gate check run; **S-GIX/a and S-GIX/b run and written up BEFORE the worktree code**, each arm's go/no-go in **ADR-0090** (a successor, never an edit to 0077); the **minimum `git` version chosen and recorded**; hybrid built; exact `gix = "=0.87.1"`; one git-exec wrapper, one file; `cargo audit` clean
+- [ ] **5** — `rk-types` built; golden schema snapshot passing, **with the snapshot directory's existence asserted** (no `oneOf`, `additionalProperties: false` everywhere); **`ChangeSummary` absent** (S-BIN — the fixture existing does not move this; the spike has not run)
+- [ ] **6** — 🚦 gate check run (token is **`0090`**); **S-GIX/a and S-GIX/b run and written up BEFORE the worktree code**, each arm's go/no-go in **ADR-0091** (a successor, never an edit to 0077); the **minimum `git` version chosen and recorded**; hybrid built; exact `gix = "=0.87.1"`; one git-exec wrapper, one file; `cargo audit` clean
 - [ ] **6** — `rk-store` on the two trailer axes; `reconcile()` at every entry, no skip path
 - [ ] **7a** — 🚦 gate check run; `rk-ports`: five sync traits, `traits.len() == fakes.len()` asserted as a number **and the test seen to pass**, no `async fn`
-- [ ] **7b** — 🛑 **the STOP banner read**: ADR-0089 exists and `0079` is `superseded` before a line of selection code; `rk-kernel`: no async runtime, no adapter edge; `trybuild` must-fail fixtures **fail to compile**; **AC-071 lint fails closed on all five clauses**, built **before** the rows it polices; the LLM-ordinal grep returns 0; rigor-monotonicity lint ships; **no quality-shorthand default**
+- [ ] **7b** — 🛑 **the STOP banner read**: **ADR-0090** exists and `0079` is `superseded` before a line of selection code (**`0089` is the facet-provenance record and is NOT this gate's token**); `rk-kernel`: no async runtime, no adapter edge; `trybuild` must-fail fixtures **fail to compile**; **AC-071 lint fails closed on all five clauses** — a discharged fourth clause is not a partial unblocking and the fixture set stays at five — **AND its sibling AC-520 `--facet-provenance` fails closed on `source = "derived"`, as two rules with two fixture sets**, both built **before** the rows they police; the LLM-ordinal grep returns 0; the **`leaves the model` grep returns 0**; rigor-monotonicity lint ships; **no quality-shorthand default**
 - [ ] **7c** — adapters: `spoke()`, stdin not argv, record-on-failure, `Option` over `0`, `StructuredOutput` checked at configuration time, `--strict-mcp-config` verified from the child's `system/init`, API-key refusal, both TTL vars set, **append flags absent from argv**
 - [ ] **7d** — `rk-cli` composition root, adapters resolved once, refusal before any spawn or write; `answer` the only gate channel; `doctor`'s window `N` **declared as a number**; `redkiln-migrate` v0 with no dual-write key
-- [ ] **8** — all seven exit checks pass: AC-473 self-hosting run id · `doctor --rebuild` same next action · multi-step resume across a real kill · ban list fails the build · `--stay` unrepresentable · `--facet-stability` exit 0 (on the **zero-`llm`-facets** branch, which is the expected outcome, not a shortfall) · `resolution_limited` recorded
-- [ ] **8** — every standing prohibition still unviolated, including: **nothing anywhere calls this design final**
-- [ ] **9** — rollback rehearsed at least once on paper; **the three filled panels recovered from `redkiln-corpus` BEFORE anything is deleted**; ADR-0089 and the design-pass commit cherry-picked before any branch delete; **Checkpoint 9 run** — `redkiln` back at `47faec9f…` with a clean `workflows/`, the spike tree restored, the `.gitignore` paragraph back
+- [ ] **8** — all seven exit checks pass: AC-473 self-hosting run id · `doctor --rebuild` same next action · multi-step resume across a real kill · ban list fails the build · `--stay` unrepresentable · `--facet-stability` exit 0 (on the **zero-`llm`-facets** branch, which is the expected outcome, not a shortfall), **and its sibling `--facet-provenance` built and passing — not an eighth criterion, the thing that stops (6) exiting with the derived half ungated** · `resolution_limited` recorded
+- [ ] **8** — every standing prohibition still unviolated, including: **no facet "leaves the model"** · **no `derived` facet without a named `deriver` and a scored record** · **no absence of evidence resolving to `false`, and no `null` counted as a false negative** · **F39 reported as panel-adjudicated, never human-panel** · **source asymmetry not decided** · **nothing anywhere calls this design final**
+- [ ] **9** — rollback rehearsed at least once on paper; **the three filled panels recovered from `redkiln-corpus` BEFORE anything is deleted**; **ADR-0089 (accepted, landed before this branch) and ADR-0090** cherry-picked before any branch delete — reverting `0089` would leave `0030`'s `superseded_by` a one-sided link, which is a defect; **Checkpoint 9 run** — `redkiln` back at `47faec9f…` with a clean `workflows/`, the spike tree restored, the `.gitignore` paragraph back

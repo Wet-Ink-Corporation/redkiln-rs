@@ -1,8 +1,8 @@
 # Redkiln-RS — the acceptance-criteria register
 
-**Date:** 2026-09-08 · **Status:** Register, rev. 1. Assembled from thirteen authored-then-adversarially-refuted area files. Binding on the Phase 1 build runbook; it decides nothing new and supersedes no ADR. · **Companion:** the success-measure register (SM-001..SM-154 — the measure bodies live there, not here) and the ADR set at `references/adr/` ·
-**Inputs:** the thirteen area files; the condensed evidence brief of 2026-09-08 — `references/2026-09-08-evidence-brief.md`, a working condensation of `spikes/FINDINGS.md` F1–F38 (F9 struck, F30 unassigned) that every area refuted against; the spike files it condenses remain authoritative where they disagree with it; `references/2026-09-05-architecture-proposal.md` rev. 4; `references/2026-09-07-design-recommendation.md`; the process-catalog proposal; `references/adr/`; `spikes/results/` (including `s-mig-report.md` and `spikes/corpus/PINNED_SHA`); `references/2026-09-01-shipmates-lessons-for-redkiln-rs.md` ·
-**Evidence discipline:** every criterion carries an evidence tag — **[measured]** = a number that is in the evidence brief · **[documented]** = a platform, ADR or proposal contract with no measurement behind it · **[inferred]** = a design consequence, labelled as such. Two areas add a third tag where it earns its place: **[motivating, not evidential]** (git-reconcile) and **[surface unverified]** (harness). A finding may be tagged `[measured]` against a criterion only when the measurement is about the same quantity the criterion constrains. The refutation pass cut every citation that failed that test and **named the cut inside the criterion that carried it**, so the cut is auditable rather than invisible. Where a result is one draw, one repo or one operator, it says so. Unrun spikes are listed as unrun in §1, never assumed.
+**Date:** 2026-09-08 · **Status:** Register, rev. 1, **amended 2026-09-09** to absorb F39 (P1 arm D scored) and ADR-0089 — §0.1, §0.4, §1.1, §1.2, §3.7 (AC-069, AC-070, AC-071, AC-072, AC-076, AC-079 and the new AC-520), AC-113, AC-148, AC-302, AC-347 and §15. Assembled from thirteen authored-then-adversarially-refuted area files. Binding on the Phase 1 build runbook; it decides nothing new and supersedes no ADR. · **Companion:** the success-measure register (SM-001..SM-154 **plus SM-157**, the derived-facet precision measure this amendment added — the measure bodies live there, not here) and the ADR set at `references/adr/` ·
+**Inputs:** the thirteen area files; the condensed evidence brief of 2026-09-08 — `references/2026-09-08-evidence-brief.md`, a working condensation of findings F1–F38 (F9 struck, F30 unassigned) that every area refuted against — **those findings are in two places**: `spikes/FINDINGS.md` holds **F1–F28**, and **F29 and F31–F38 exist only as `spikes/F<NN>-DRAFT.md`**, never folded back into the running log [measured, `ls spikes/F*-DRAFT.md`, 2026-09-09]; the spike files it condenses remain authoritative where they disagree with it; `references/2026-09-05-architecture-proposal.md` rev. 4; `references/2026-09-07-design-recommendation.md`; the process-catalog proposal; `references/adr/`; `spikes/results/` (including `s-mig-report.md` and `spikes/corpus/PINNED_SHA`); `references/2026-09-01-shipmates-lessons-for-redkiln-rs.md`. **Absorbed after the brief was condensed and therefore read from the corpus, not from the brief:** `spikes/F39-DRAFT.md`, `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`, and `references/2026-09-09-change-classification.md` ·
+**Evidence discipline:** every criterion carries an evidence tag — **[measured]** = a number that is in the evidence brief, or (for the 2026-09-09 amendment only) in `spikes/F39-DRAFT.md`, which postdates the brief · **[documented]** = a platform, ADR or proposal contract with no measurement behind it · **[inferred]** = a design consequence, labelled as such. Two areas add a third tag where it earns its place: **[motivating, not evidential]** (git-reconcile) and **[surface unverified]** (harness). A finding may be tagged `[measured]` against a criterion only when the measurement is about the same quantity the criterion constrains. The refutation pass cut every citation that failed that test and **named the cut inside the criterion that carried it**, so the cut is auditable rather than invisible. Where a result is one draw, one repo or one operator, it says so. Unrun spikes are listed as unrun in §1, never assumed.
 
 ---
 
@@ -24,7 +24,7 @@ All thirteen area files were present and complete; **no area is missing or empty
 | § | area | criteria | binding | provisional | human-gated | conditional | measures |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | 2 | Kernel | 39 | 36 | 2 | 1 | 0 | SM-001..SM-010 |
-| 3 | Selection engine | 39 | 37 | 1 | 1 | 0 | SM-013..SM-024 |
+| 3 | Selection engine | 40 | 38 | 1 | 1 | 0 | SM-013..SM-024, SM-157 |
 | 4 | Process packs, technology packs, the activity catalog and its lint | 39 | 36 | 1 | 2 | 0 | SM-025..SM-036 |
 | 5 | Typed artifacts and the store | 40 | 36 | 1 | 3 | 0 | SM-037..SM-046 |
 | 6 | Git as truth | 40 | 38 | 1 | 1 | 0 | SM-049..SM-058 |
@@ -36,16 +36,18 @@ All thirteen area files were present and complete; **no area is missing or empty
 | 12 | CLI surface and `doctor` | 40 | 38 | 1 | 1 | 0 | SM-121..SM-130 |
 | 13 | `redkiln-migrate` and the clean break | 40 | 38 | 1 | 1 | 0 | SM-133..SM-141 |
 | 14 | Ports, fakes, plugin generation and distribution | 39 | 30 | 2 | 1 | 6 | SM-145..SM-149, SM-151, SM-153, SM-154 |
-| | **total** | **513** | **468** | **19** | **20** | **6** | **134 rows** |
+| | **total** | **514** | **469** | **19** | **20** | **6** | **135 rows** |
 
-**513 criteria in force.** 468 binding, 19 provisional, 20 human-gated, 6 conditional. **134 measure rows** are cross-referenced (133 measures plus SM-098, which the verify-gate pass demoted to a descriptive report and excluded from its own count).
+**514 criteria in force.** 469 binding, 19 provisional, 20 human-gated, 6 conditional. **135 measure rows** are cross-referenced (134 measures plus SM-098, which the verify-gate pass demoted to a descriptive report and excluded from its own count).
+
+**The selection row gained one criterion and one measure on 2026-09-09**, and they are the only changes to this table since rev. 1: **AC-520**, the derived-facet sibling gate that F39 forced (§3.7), and **SM-157**, the derived-facet precision measure whose scored record AC-520 gates on. Both are counted in the selection area because that is the area they belong to, and both ids sit outside that area's ranges because AC-040..AC-079 and SM-013..SM-024 are exhausted — §0.4 records the criterion-side hazard, and the companion register's §1 numbering paragraph records the measure-side one. The measure total therefore moves 134 → 135, matching the companion register's own count.
 
 Read that total with four deductions in front of it.
 
 1. **Every instrument is prospective.** No criterion in this register has ever been run. The number counts specified checks, not coverage.
-2. **Twenty human gates and six conditionals contribute no machine assurance**, and a further set of criteria are negative guards a system doing nothing also satisfies (the harness area names four of its own; events-cost names six). The count of criteria that can actually catch a regression on day one is materially below 468, and no area was able to state that number for itself.
-3. **The measures are thinner than 134 suggests.** Every area's refutation found measures that saturate at zero by construction, that carry no firing kill, or that have no baseline at all. Where an area labelled a measure a *discovery instrument*, a *tracker*, a *tripwire* or a *descriptive report*, the label is reproduced in the per-area measure table's `note` column and must travel with it.
-4. **Thirty-three of the 88 accepted decisions are cited by no criterion** (§15.3) — including the whole ADR-0074..ADR-0088 block, which contains the review-gate, typed-artifact, advisory-sink, rigor-monotonicity and P1-block decisions this register is largely about. The behaviour is mostly covered; the citation layer is not.
+2. **Twenty human gates and six conditionals contribute no machine assurance**, and a further set of criteria are negative guards a system doing nothing also satisfies (the harness area names four of its own; events-cost names six). The count of criteria that can actually catch a regression on day one is materially below 469, and no area was able to state that number for itself.
+3. **The measures are thinner than 135 suggests.** Every area's refutation found measures that saturate at zero by construction, that carry no firing kill, or that have no baseline at all. Where an area labelled a measure a *discovery instrument*, a *tracker*, a *tripwire* or a *descriptive report*, the label is reproduced in the per-area measure table's `note` column and must travel with it.
+4. **Thirty-three of the 89 decisions are cited by no criterion** (§15.3 — 89 is the record count; 86 are at status `accepted`, 2 `superseded` and 1 `proposed`) — including the whole ADR-0074..ADR-0088 block, which contains the review-gate, typed-artifact, advisory-sink, rigor-monotonicity and P1-block decisions this register is largely about. The behaviour is mostly covered; the citation layer is not.
 
 ### 0.2 What this register is not
 
@@ -78,7 +80,7 @@ The areas were authored independently against one proposal, so the same behaviou
 | Reviewer clone shape; the F17 recovery must fail | **AC-292** | AC-191 | AC-292 names four checkable clone-shape properties and demotes the F17 replay to a probe. |
 | The reviewed worktree's tree hash is unchanged | **AC-291** | AC-192 | AC-291 rests on a structural spawn assertion rather than on the model choosing not to write. |
 | Only a schema-conforming `Findings` payload crosses back | **AC-281 + AC-318** | AC-199, AC-208 | AC-281 is the ingest check, AC-318 the architecture lint; the twins bundle them. |
-| An unregistered facet can feed no row | **AC-072** | AC-108, AC-351, AC-425 | Four areas lint the same registry. AC-072 owns `facets.toml` under ADR-0030/0061. |
+| An unregistered facet can feed no row | **AC-072** | AC-108, AC-351, AC-425 | Four areas lint the same registry. AC-072 owns `facets.toml` under ADR-0030/0061, and under ADR-0089 for the `deriver` field and the set shape. **AC-520 is not a twin:** AC-072 requires the registry *entry*, AC-520 requires the scored *record* behind a `source = "derived"` entry, and collapsing them into one lint rule is the failure ADR-0089 names. |
 | A boolean facet used as a tag is a lint error | **AC-109** | AC-073 | AC-109 adds the positive companion fixture that stops a reject-everything lint from passing. |
 | Rank ties and hard cycles fail the build | **AC-047, AC-059, AC-078** | AC-103 | The selection trio splits load-time lint from the runtime graph assertion; AC-103 bundles ties and cycles into one CI check. |
 | Family totality, and the escalation cap | **AC-104 + AC-116** | AC-048 | AC-048 keeps the fact-driven-family exemption the packs pair does not state. |
@@ -103,7 +105,7 @@ Two further tensions are already flagged inside their own areas and are recorded
 
 ### 0.4 Id hazards — retired ids and reused ids
 
-Ids are fixed and other documents will cite them. Two classes of hazard survive from the refutation pass.
+Ids are fixed and other documents will cite them. Two classes of hazard survive from the refutation pass, and a third was added deliberately on 2026-09-09.
 
 **Retired or unallocated — never reuse:** AC-075 (selection: cut as SM-015 restated as a criterion), AC-119 (packs-catalog: never allocated), AC-207 (harness: cut for fabricated evidence, retired deliberately so no dead anchor points at 'envelope unwrapping'), AC-255 (human-gate: cut as subsumed by AC-244), AC-297 (review-gate: cut as SM-085's baseline restated), AC-513 (ports-dist: cut and retired).
 
@@ -120,6 +122,14 @@ Ids are fixed and other documents will cite them. Two classes of hazard survive 
 
 The git-reconcile pass recommends retiring AC-185 and AC-199 and using AC-200/AC-201 instead; that range is allocated to the harness area, so the recommendation cannot be taken without extending the ranges. **The register keeps the ids as the areas left them and states the hazard rather than renumbering**, because renumbering is the one change that breaks every citation already written.
 
+**Allocated outside its area's range — deliberate, and the reason is recorded:**
+
+| id | area it belongs to | that area's range | why it sits outside |
+| --- | --- | --- | --- |
+| **AC-520** | selection (§3.7) | AC-040..AC-079 — **exhausted** | AC-075 is retired and never reusable; AC-077..AC-079 are already splits. There is no free id in the range, and AC-520 is the next free id in the register as a whole. Added 2026-09-09 as the derived-facet sibling gate F39 forced. |
+
+Two consequences a reader must carry. **AC-520 is a selection criterion**, counted in §0.1's selection row and in §3's area key, however its number reads — the ports-dist range it sits beside (AC-480..AC-519, with AC-513 retired) does not own it. And **an id's numeric neighbourhood is no longer a reliable guide to its area**, which was already only a convention and is now explicitly not a rule. Renumbering the selection area to make room was rejected on the same ground as above.
+
 ---
 
 ## 1. What is blocked
@@ -128,7 +138,17 @@ This section comes first because the rest of the document reads as decided, and 
 
 ### 1.1 The selection engine — P1's kill fired 4 of 4
 
-**P1 is the block that shapes this whole register.** The LLM-emitted context vector produced the identical modal required set on **5/20, 3/20, 2/20 and 2/20** items — two packs (`bug-standard`, `story`) × two runs (v1, and the §1.4 anchor-rewrite re-run v2), each across all 10 draws — against an 80% line; `external_dependency` collapsed to a constant (200/200 false); the pre-registered repair did not move it; and arm D's precision and recall are **not computed** — they await Ryan's blind panel [measured, F36; 400 dispatches, 0 void, $21.37]. Wilson 95% intervals, computed rather than measured: 11.2–46.9%, 5.2–36.0%, 2.8–30.1%, 2.8–30.1% — every upper bound sits far below the line.
+**P1 is the block that shapes this whole register.** The LLM-emitted context vector produced the identical modal required set on **5/20, 3/20, 2/20 and 2/20** items — two packs (`bug-standard`, `story`) × two runs (v1, and the §1.4 anchor-rewrite re-run v2), each across all 10 draws — against an 80% line; `external_dependency` collapsed to a constant (200/200 false); and the pre-registered repair did not move it [measured, F36; 400 dispatches, 0 void, $21.37]. Wilson 95% intervals, computed rather than measured: 11.2–46.9%, 5.2–36.0%, 2.8–30.1%, 2.8–30.1% — every upper bound sits far below the line.
+
+**Arm D is now scored, and it does not unblock the engine.** P1 arm D was scored on 2026-09-09 against **140 truth cells** at corpus pin `47faec9f` under METHOD-P amendment 9, at **$0** model cost, and is reported as **panel-adjudicated**, never as human-panel [measured, F39]. Per-facet precision on the union source over 20 items, with Wilson 95% intervals: `ui` **1.00** [0.65, 1.00], recall 0.78 (tp 7, fp 0, fn 2, tn 6, excl 4) — the point clears 0.95 and **the interval does not**; `toolchain` 0.73 [0.48, 0.89], recall 0.79 (tp 11, fp 4, fn 3, excl 0); `change` 0.72 [0.54, 0.85], recall 0.84 (tp 21, fp 8, fn 4, excl 0); `binary_change` 0.60 [0.23, 0.88], recall 1.00 (tp 3, fp 2, fn 0, tn 15, excl 0); `flag_exists` 0.00 [0.00, 0.66], recall n/a (tp 0, fp 2, fn 0, tn 13, excl 4); `auth` **0.00** [0.00, 0.26], recall n/a (tp 0, **fp 11**, fn 0, tn 4, excl 4); and `data_migration` is **not measurable** — the script emits 0 positives on 20 items across all three sources, so precision is undefined, a perfect method scores identically, and the criterion has **no denominator**. **No facet clears METHOD-P §1.4's 0.95 bar.** The sub-0.95 clause fires on five facets, and the ≥0.95 clause is **not reachable at n=20 for any facet however good** — `ui` is 7/7 and its lower bound is 0.65; roughly 60 positives are needed for a lower bound above 0.95. That is a result *about* the pre-registration, reported in F39's limits and not an edit to it, and it is the same class of defect as P1's alpha rule (F36) and P7's criterion 1 (F37): a pre-registered bar the registered sample size cannot decide.
+
+**Why `auth` scores zero**, because it decides what the repair is. The rule is an unanchored, case-insensitive regex over paths **and** diff lines, and it marks `auth = true` on 14 of 20 items. `token` fired 44 times, 36 of them inside `brand-token-substrate` / `brand-tokens.test.ts` / `redkiln.tokens.json` / `tokens_out`; `auth` fired 43 times, 40 of them inside *authored* / `report-md-unauthored` / *author* / *authors* / *authoring* / `only-the-author-can-advance`; `oauth` fired 8 times, all 8 inside *coauthor* (the string `oauth` sits inside `c-oauth-or`); `session` fired 8 times, 6 of them a *work* session; `role` fired twice, both an ARIA `role` attribute [measured, F39 §2]. **The failure is correlated, not random:** the colliding vocabulary is the vocabulary of the instrument under test. Eleven positives, eleven false, upper bound 0.26 — the rule carries **no signal** on this corpus, which is a finding about the method and not a tuning parameter.
+
+**What F39 discharges, and what still holds the block.** AC-071 has five clauses — identity ≥ 0.80, n ≥ 20 items, ≥ 10 draws per item, arm-D panel scored, corpus pinned — and F39 discharges **the fourth clause only**. The block stands on the **first**: F36 measured modal required-set identity at **0.25 / 0.15 / 0.10 / 0.10** against the 0.80 line. **ADR-0079 stays `proposed`**: F39 measures a *derived* context vector and ADR-0079 asks about an *LLM-emitted* one, so F39 narrows 0079's options without deciding among them [documented, ADR-0089]. Nothing in this register may now say a facet *leaves the model* — none does — and nothing here makes this design *final*: S-BIN, S-H1c and P8's unrun arms gate that word.
+
+**Two further F39 results changed criteria in §3.7.** First, **four of the twenty items changed no code whatsoever** — every changed file is `.bklg/` bookkeeping or telemetry — the panel returned `unknown` on all sixteen of their semantic-facet cells, and the script emitted a confident boolean on every one [measured, F39 §4]. That is the `excl = 4` column, and the registry line `values = [true, false]` is what turned four empty diffs into sixteen confident booleans; AC-079's route is extended to the booleans in consequence. Second, AC-071 gates `source = "llm"` and **nothing gated `source = "derived"`**, so the semantic facets sat outside the block and ran **ungated while measurably wrong** — **AC-520** is the sibling gate that closes it, new in this revision and allocated outside the selection range (§0.4). ADR-0089, accepted 2026-09-09, records the decision behind both: provenance classes with a `deriver` companion field, a set-valued `surfaces` facet replacing the repo-wide `auth` boolean, and tri-valued booleans routed to AC-079's existing `gate_opened { reason: unknown_facet }`. **Source asymmetry is not decided here.** `commits` beats `docs` on every facet — `toolchain` 1.00 [0.70, 1.00] against 0.50 [0.22, 0.78]; `change` 0.80 [0.61, 0.91] against 0.50 [0.24, 0.76]; `binary_change` 0.60 at recall 1.00 against no positives at all from `docs`, 3 missed; `ui` 1.00 at recall 0.67 against 1.00 at recall 0.22, union 1.00 at recall 0.78 — and `union` is *worse than `commits` alone* on `toolchain` (0.73) and `change` (0.72), because unioning a precise source with an imprecise one imports the imprecision [measured, F39 §3]. Which source the engine trusts is registered as an arm of the named spike **S-FACET** (ADR-0012), whose named consumer is `facets.toml`'s `source`/`deriver` fields.
+
+**How much weight F39 carries.** Of the 140 cells, **60** were decided by a deterministic oracle over git metadata (independently implemented), **39** by a unanimous panel, **9** by a unanimous panel where the adversarial flag was mechanically moot, and **32 by human adjudication** — Ryan, blind, with the panel's and the script's positions revealed only after he answered. His verdicts were 8 true, 24 false, 0 unknown, and **15 of 32 differ from the script**. The panel labelled 80 semantic cells: 39 accepted unanimous (23 decided, 16 honest `unknown`) and 41 flagged [measured, F39 §5]. F39's own stated limits travel with every number above and are not dropped here: no facet has enough positives to clear 0.95 with confidence even in principle; **39 of the 140 cells rest on unanimous 3-seat model agreement with no human**, and a 9-judge panel was measured to supply ~2.18 effective independent votes with accuracy 8–22 points short of independent-vote predictions [preprint, arXiv:2605.29800], so small-panel unanimity fails in the correlated direction; the oracle is independent on `toolchain` and on `binary_change`'s Unreal shortcut and **not** on the rest, because for `change` git's marker is the ground truth for the binary component and oracle and script therefore agree there by construction; one repo, one operator, one pin — every number is over `47faec9f`; a scorer defect was found and fixed **before** this was reported (the oracle emits `binary_change` as a JSON bool and the first scorer compared it to the string `"true"`, scoring the facet 0.00 when it is 0.60); and `unknown` is **excluded** from scoring, never counted against the script — 16 semantic cells are excluded on that basis, and reporting them as agreement would have raised every semantic precision figure.
 
 **What survives.** The engine's *semantics* are writable and are written: purity (AC-040, AC-041, AC-044), replay (AC-042), rank and tie-is-an-error (AC-046, AC-047), unsatisfiable-is-a-typed-gate (AC-054, AC-055, AC-056), deviation-never-edits-`R` (AC-061..AC-064), and the lint set. **What does not.** Any criterion presuming a stable LLM-emitted vector. Ten areas state explicitly that nothing in them depends on the vector; the two that touch it (packs-catalog AC-113, cli-doctor AC-434) are scoped to a *fixed* vector and to *display* respectively.
 
@@ -138,12 +158,17 @@ This section comes first because the rest of the document reads as decided, and 
 redkiln lint --facet-stability .redkiln/facets.toml \
              --stability-record spikes/results/p1/stability.json
 # exit 0 only when, for EVERY facet declared source = "llm" in facets.toml:
-#   rec.modal_required_set_identity >= 0.80          # the pre-registered P1 line; F36 measured 0.25/0.15/0.10/0.10
+#   rec.modal_required_set_identity >= 0.80          # THE CLAUSE THAT STILL HOLDS THE BLOCK.
+#                                                    # the pre-registered P1 line; F36 measured 0.25/0.15/0.10/0.10
 #   AND rec.n_items >= 20 AND rec.draws_per_item >= 10
-#   AND rec.panel_verdict == "scored"                # arm D precision AND recall present, non-null
+#   AND rec.panel_verdict == "scored"                # arm D precision AND recall present, non-null.
+#                                                    # SATISFIABLE, and SATISFIED for arm D: F39 scored it over
+#                                                    # 140 truth cells at 47faec9f, panel-adjudicated, $0.
 #   AND rec.corpus_sha == <catalog corpus pin>       # F37's emit.corpus_sha was misnamed; this one is the corpus
 # Until that command exits 0, no facet may be source = "llm"; every ordinal axis is source = "human".
 ```
+
+**Which clause holds the block, now that one of the five is discharged.** The fourth clause was written when no arm-D record existed; F39 supplies one, so `panel_verdict == "scored"` is no longer an unsatisfiable stub and no longer the reason the command exits non-zero. The block rests on the **first** clause: modal required-set identity measured **0.25 / 0.15 / 0.10 / 0.10** against the pre-registered 0.80 line [measured, F36]. Discharging one clause of a five-clause gate is not a partial unblocking, and the arm-D numbers are not a warrant to relax any of the other four.
 
 **The residual risk in one sentence:** if that lint is implemented loosely — reading `modal_required_set_identity` and skipping `panel_verdict` or `corpus_sha` — the entire provisional apparatus unblocks silently, and the five-clause fixture set named in AC-071 is the only defence.
 
@@ -151,7 +176,7 @@ redkiln lint --facet-stability .redkiln/facets.toml \
 
 | # | what is blocked | unblocked by | executable precondition / what would settle it | criteria and measures affected |
 | --- | --- | --- | --- | --- |
-| 1 | LLM-emitted facet values in selection (see §1.1) | **P1** re-run at n>=20 items x >=10 draws, plus Ryan's blind panel for arm D | `redkiln lint --facet-stability` exits 0 (above) | AC-071 (the gate), AC-069, AC-070, AC-072, AC-076, AC-079, AC-113, AC-434; SM-015, SM-016 |
+| 1 | LLM-emitted facet values in selection (see §1.1) | **P1** re-run at n>=20 items x >=10 draws. The arm-D panel clause is **discharged** — F39 scored arm D over 140 truth cells at `47faec9f`, panel-adjudicated, $0 — and the block now rests on the identity clause alone, measured **0.25 / 0.15 / 0.10 / 0.10** against 0.80 [measured, F36, F39] | `redkiln lint --facet-stability` exits 0 (above); one of its five clauses is now satisfied and four are not | AC-071 (the gate), AC-069, AC-070, AC-072, AC-076, AC-079, AC-113, AC-434, **AC-520** (the derived-facet sibling gate); SM-015, SM-016, **SM-157** (the derived-facet precision record — a different quantity from SM-015's stability, and not fused with it) |
 | 2 | The short-circuit policy — which classes get `stale_policy = gate` | **P2**, entirely unrun; all three of its criteria are unanswered and its labels are unwritten | `redkiln lint --stale-policy --p2-record …` exits 0 only when `labels_timestamped == true`, `n_items >= 20` and recall/precision clear P2's pre-registered lines. **Those numeric lines are not citable from the evidence brief** and must be read out of P2's pre-registration first, so today PROVISIONAL(P2) means *unspecified*, not *pending a known bar*. | AC-068; SM-021 |
 | 3 | `ChangeSummary`'s field set, and every criterion that renders or migrates one | **S-BIN**, registered and unrun; it **gates Phase 1** | S-BIN runs against the ADR-0008 Unreal fixture and the type is settled. Until then no fixture naming its fields can be written. | AC-154 (unverifiable until then), AC-356, AC-475, AC-497; AC-049 is unfounded on the same ground |
 | 4 | The card-delivery append route | **S-H1c**, registered and unrun; ADR-0016 is conditional on it | S-H1c reports whether `--exclude-dynamic-system-prompt-sections` + `--append-system-prompt` keeps the subsidised head **and** holds >=0.95 across commits. | AC-211 fixes only the default; `cache_profile` (AC-383) gains a third value only if S-H1c runs |
@@ -568,11 +593,13 @@ reconciled), but the answer is not.
 
 ## 3. Selection engine — the seven-step pure function (BLOCKED on P1)
 
-**Area key:** `selection` · **Criteria:** AC-040..AC-079 (AC-075 cut; AC-077..AC-079 are splits) — **39 in force** · **Measures:** SM-013..SM-024
-**State:** 37 binding · 1 provisional (AC-068) · 1 human-gated (AC-076)
-**Sources:** architecture proposal §4.2; process-catalog proposal §2.5, §2.6; ADR-0020, 0023, 0024, 0025, 0030, 0046, 0056, 0057, 0058, 0059, 0060, 0061, 0069, 0073; evidence brief F19, F27, F35, F36, F37, F38, §C3, §C9, §C12.
+**Area key:** `selection` · **Criteria:** AC-040..AC-079 **plus AC-520** (AC-075 cut; AC-077..AC-079 are splits; the range is exhausted, so AC-520 is allocated outside it — see §0.4) — **40 in force** · **Measures:** SM-013..SM-024 **plus SM-157** (the SM-013..SM-024 allocation is likewise exhausted and SM-155/SM-156 are reserved to ports-dist, so SM-157 sits outside the range for the same reason AC-520 does — see the companion register's §1 numbering paragraph)
+**State:** 38 binding · 1 provisional (AC-068) · 1 human-gated (AC-076)
+**Sources:** architecture proposal §4.2; process-catalog proposal §2.5, §2.6; ADR-0020, 0023, 0024, 0025, 0030, 0046, 0056, 0057, 0058, 0059, 0060, 0061, 0069, 0073, **0089**; evidence brief F19, F27, F35, F36, F37, F38, §C3, §C9, §C12; **F39** and `references/2026-09-09-change-classification.md` §4, both read from the corpus rather than from the brief, which predates them.
 
 *Scope note.* **This area is blocked — read section 1 first.** The engine's *semantics* are writable and are written here: purity, rank, tie-is-an-error, unsatisfiable-is-a-gate, deviation-never-edits-`R`, replay, lint. What is not writable is any criterion presuming a stable LLM-emitted context vector. AC-071 is the machine-checkable statement of the block and is not itself provisional.
+
+*Scope note, added 2026-09-09.* Arm D is now scored [measured, F39], and the §3.7 criteria absorb it: AC-071's arm-D clause is discharged and its other four are not, AC-070's discard rule is bounded and its facet names corrected, AC-072 gains the `deriver` field and the set shape, AC-079's abstention route is extended to the boolean facets, and **AC-520** closes the gap where `source = "derived"` was gated by nothing. None of that unblocks the area, and none of it touches ADR-0079, which stays `proposed`: F39 measures a *derived* context vector, and ADR-0079 asks about an *LLM-emitted* one.
 
 ### 3.1 Purity and replay (the reproducibility contract)
 
@@ -921,34 +948,93 @@ against `low`/`med`/`high`.
 *Verified by:* the null/unknown-ordering lint (ADR-0069's rule extended to `unknown`); a fixture row
 `novelty >= high` over an unknown-capable axis that must fail load. NEGATIVE criterion — the silent unknown→high
 promotion must become impossible. *(Runtime half split to AC-079.)*
+*Scope note (2026-09-09).* This rule is **ordinal-only as written**: its GIVEN names an ordering comparison on an
+ordinal axis, and the `unknown` rates it forecasts are the four ordinals'. Booleans now enter its domain, because
+ADR-0089 makes a derived boolean tri-valued and `null` reaches a predicate the same way `unknown` does. The
+*ordering* half does not extend — ADR-0069 already makes ordering against `null` a lint error, and a boolean has no
+band to order against — so the extension that was needed is the **routing** half, and it is made in AC-079 rather
+than here. Nothing in AC-069 changes; the scope is stated so that a reader does not infer boolean coverage from it.
 
-**AC-079** — `rk-select` · evidence: as AC-069; the `unknown` rates above are this criterion's load forecast (SM-016) ·
-decisions: ADR-0069, ADR-0030
-GIVEN a context in which an axis holds `unknown` and that axis is read by a row that fires
+**AC-079** — `rk-select` · evidence: as AC-069 for the ordinal half; the `unknown` rates above are this criterion's load
+forecast (SM-016). Boolean half: **F39 §4** — 4 of 20 items changed no code whatsoever (every changed file is `.bklg/`
+bookkeeping or telemetry), the panel returned `unknown` on all **16** of their semantic-facet cells, and the script
+emitted a confident boolean on every one; that is the `excl = 4` column [measured, F39] · decisions: ADR-0069,
+ADR-0030, ADR-0089
+GIVEN a context in which an ordinal axis holds `unknown`, **or a boolean facet holds `null` because no evidence for it
+was computable**, and that facet is read by a row that fires
 WHEN step 2 resolves the context vector
-THEN the item routes to the triage human gate with `gate_opened { reason: unknown_facet, axis }` and no band is assigned
-for that axis.
+THEN the item routes to the triage human gate with `gate_opened { reason: unknown_facet, axis }` — for an ordinal axis
+no band is assigned for that axis, and for a boolean facet **no value is assigned: the absence of evidence never
+resolves to `false`**
+AND the abstention is recorded as an abstention, separately from an error, and is never counted as a false negative in
+any scoring of the facet's deriver.
 *Verified by:* a runtime test asserting gate emission and asserting no `require` row resolved against a banded value for
-that axis on that item.
+that axis on that item; for the boolean half, a fixture item whose changeset is empty of code, asserting one
+`gate_opened` per abstaining facet and asserting that **no** `require` row resolved against `false` for it. The negative
+companion — a boolean whose evidence *is* computable and resolves to `false` — must not open a gate, or the rule is
+satisfied by a system that gates everything.
 *(Split from AC-069: a load-time grammar lint and a runtime routing decision are different behaviours with different
 instruments; bundled, the runtime half was carried by the lint's fixture and never separately asserted.)*
+*Extended 2026-09-09 to the boolean facets, under ADR-0089.* As written the criterion was **ordinal-shaped on both
+sides** — "an axis holds `unknown`" and "no band is assigned for that axis" — and could not fire for a boolean at all,
+because `facets.toml` declares the boolean facets `values = [true, false]`, so a derived boolean that cannot be computed
+has nowhere to go but `false`. **That single registry line is what turned four empty diffs into sixteen confident
+booleans** [measured, F39 §4]. ADR-0067's `recent_deploy` already emits `null` under rule
+`R-recent-deploy-feed-absent` because the `toolchain:deploy_log` feed does not exist at this pin, so the pattern is
+generalised here, not invented. The `axis` field carries the facet name in the boolean case; it is **not** renamed here,
+and whether the payload key should change is a registry-schema question this criterion does not take.
 
 **AC-070** — `redkiln lint` + `rk-select` · evidence: **F36** (`external_dependency` became a constant, **200/200
-false** — an LLM-emitted value that carried no information) · decisions: ADR-0030, ADR-0061, ADR-0059
-GIVEN a facet declared `source = "derived"` in `facets.toml` (`toolchains`, `change_kinds`, `touches_auth`,
-`data_migration`)
+false** — an LLM-emitted value that carried no information); **F39** (`auth` precision **0.00**, Wilson 95%
+[0.00, 0.26], over **11 positives of which 11 are false**, union source, 20 items at pin `47faec9f` — a *derived* value
+carrying no signal; `data_migration` emits **0 positives on 20 items across all three sources** and is **not
+measurable**) · decisions: ADR-0030, ADR-0061, ADR-0059, ADR-0089
+GIVEN a facet declared `source = "derived"` in `facets.toml` (`toolchain`, `change`, `auth`, `data_migration`)
 WHEN a triage record arrives carrying a value for that facet
-THEN the emitted value is discarded and the kernel-computed value is used, and the discrepancy is logged
-AND no model-emitted value can reach a `require` row for a derived facet.
+THEN the **model-emitted** value is discarded and the kernel-computed value is used, and the discrepancy is logged
+AND no model-emitted value can reach a `require` row for a derived facet
+AND the discard **yields to a human-confirmed value**: where a human has confirmed the fact at the triage gate, the
+confirmed value wins over the derived one, the precedence is logged, and the confirmation is stored as AC-074's
+decision-memory row and replayed on a byte-identical context digest rather than re-asked
+AND a boolean facet with **no positive instance on the scored corpus may not key a `require` row** — with a zero
+denominator precision is undefined, a perfect method and a broken one score identically, and the facet is reported as
+*not measurable*, never as a pass or a failure.
 *Verified by:* unit test feeding a triage record with a conflicting derived facet; an event assertion on
-`derived_facet_override`. NEGATIVE criterion.
+`derived_facet_override`; a second unit test feeding a **human-confirmed** value against a conflicting derived one,
+asserting the human value wins and that the AC-074 row is written and replayed; a lint fixture declaring a `require` row
+keyed on a boolean facet whose scored record carries 0 positives, which must fail load, with a positive companion (a
+facet with positives) that must load. NEGATIVE criterion, except the human-precedence clause, which is positive and
+carries its own passing fixture.
+*Corrected 2026-09-09, and recorded rather than made silently.* The GIVEN named `toolchains`, `change_kinds` and
+`touches_auth`. **None of the three is a registered facet name:** `facets.toml` declares `toolchain`, `change` and
+`auth` [documented, `facets.toml`]. As written, this criterion's own GIVEN was live drift of exactly the kind AC-072
+forbids — an unregistered name feeding a row — inside the criterion that governs derived facets. The names are
+corrected to the registry's. `auth` is corrected, **not endorsed**: ADR-0089 withdraws the repo-wide `auth` boolean in
+favour of a set-valued `surfaces` facet sourced from a checked-in `surfaces.toml`, so `auth` stands in this list only
+until that registry change lands, and under ADR-0089 it may key no `require` row in the meantime.
+*Why the discard rule needed a bound.* "The emitted value is discarded and the kernel-computed value is used" was the
+right rule when the threat was a model overwriting a sound computation. At `auth` precision **0.00** it prefers a value
+carrying **no signal** over a human's [measured, F39]. ADR-0089's precedence order — DECLARED > DERIVED > PROPOSED >
+ASKED, a higher class overriding a lower one for the same fact, and the override logged — and
+`references/2026-09-09-change-classification.md` §4.1 settle it in one direction only: **the discard survives against a
+model-emitted value and yields to a human-confirmed one.** AC-074's decision-memory row is the durable, replayable home
+that already exists for the confirmation, so this clause builds no new mechanism.
+*The degenerate-distribution clause now has two named instances, and they are not the same shape.* `external_dep` at
+200/200 `false` [measured, F36] was the first — a constant, but a constant **with** a denominator. `data_migration` at
+**0 positives on 20 items** [measured, F39 §4] is the second, and it has **no denominator at all**, which is what forced
+the positive-class requirement above to be stated explicitly rather than left implicit in "degenerate". That is a
+property of the corpus and not proof the rule is broken: no item at pin `47faec9f` carries a migration, and any claim
+about the migration facet needs a second repository that contains one.
 *Struck:* `binary_change` from the derived list. The brief's contested section records `binary_change` as **measured but
 unregistered in `facets.toml`, so it can feed no require row** — it cannot simultaneously be a registered derived facet
-here and an unregistered name in AC-072.
+here and an unregistered name in AC-072. F39 scores it 0.60 [0.23, 0.88] at recall 1.00 (tp 3, fp 2, fn 0, tn 15), which
+measures the deriver and does **not** register the facet; the strike stands.
 
 **AC-071** — `redkiln lint --facet-stability` · **THIS IS THE UNBLOCKING GATE** · evidence: **F36** (modal required set
-identical on 5/20, 3/20, 2/20, 2/20 against an 80% line; the anchor-rewrite repair did not fix it; arm D
-precision/recall **NOT COMPUTED**) · decisions: ADR-0030, ADR-0023
+identical on 5/20, 3/20, 2/20, 2/20 against an 80% line — **0.25 / 0.15 / 0.10 / 0.10** against the 0.80 line; the
+anchor-rewrite repair did not fix it); **F39** (arm D **is now scored** — 140 truth cells at pin `47faec9f` under
+METHOD-P amendment 9, panel-adjudicated and never human-panel, $0 model cost; no facet clears 0.95, and the ≥0.95
+clause is not reachable at n=20 for any facet however good) · decisions: ADR-0030, ADR-0023
 GIVEN a `facets.toml` in which any facet is declared `source = "llm"`
 WHEN a pack is loaded, or CI runs
 THEN load fails unless a scored P1 stability record exists for that facet meeting every clause of the executable
@@ -958,17 +1044,101 @@ the engine refuses an LLM-emitted value for it.
 *Verified by:* the `--facet-stability` lint rule; a fixture `facets.toml` declaring `source = "llm"` with no record,
 which must fail load; a second fixture with a record that fails one clause at a time (5 cases). This criterion is
 **not** provisional: it is the machine-checkable statement of the block.
+*One clause of five is discharged, 2026-09-09; the gate is unchanged.* F39 supplies a scored arm-D record, so the
+**arm-D-panel-scored** clause is satisfiable and, for arm D, satisfied. The other four are untouched and the gate still
+fails: the **identity** clause measured 0.25 / 0.15 / 0.10 / 0.10 against 0.80 [measured, F36]. A discharged clause is
+not a partial unblocking, and the five-case fixture set stays at five.
+*Deliberately not widened.* This criterion's GIVEN stays `source = "llm"`. The sibling gap — `source = "derived"` with
+no scored precision record — is **AC-520**, authored as its own criterion rather than bolted on here, because this
+criterion's own residual-risk sentence (§1.1) names a loosely-implemented multi-clause gate as precisely the failure
+mode: a sixth clause with a different subject would be the first thing an implementer collapsed.
+
+**AC-520** — `redkiln lint --facet-provenance` · **THE DERIVED-FACET SIBLING GATE** · **id allocated outside this
+area's range — see §0.4** · measure: **SM-157** (derived-facet precision, per facet and per source — the scored record
+this gate reads; SM-157's body names AC-520 in return, so the back-link is bidirectional) · evidence: **F39** (arm D
+scored over 140 truth cells at pin `47faec9f`, METHOD-P amendment 9, panel-adjudicated, $0: `auth` **0.00** [0.00, 0.26] over **11 positives, 11 false**; `flag_exists` 0.00 [0.00, 0.66];
+`binary_change` 0.60 [0.23, 0.88]; `change` 0.72 [0.54, 0.85]; `toolchain` 0.73 [0.48, 0.89]; `ui` 1.00 [0.65, 1.00];
+`data_migration` **not measurable**, 0 positives on 20 items — `auth`, `data_migration`, `ui`, `flag_exists`,
+`toolchain` and `change` are all declared `source = "derived"` in `facets.toml`, and are therefore outside AC-071's
+block; `binary_change` is scored here but registered nowhere, which AC-070's strike and AC-072 already handle)
+· decisions: ADR-0089, ADR-0030, ADR-0061, ADR-0012
+GIVEN a `facets.toml` in which any facet is declared `source = "derived"`
+WHEN a pack is loaded, or CI runs
+THEN load fails unless that facet declares a named `deriver` **and** a scored precision record exists for that deriver
+over a pinned corpus, carrying a Wilson 95% interval and a positive-instance count
+AND a facet whose scored record shows **no positive instance** is reported as *not measurable* — neither passed nor
+failed — and may key no `require` row
+AND a facet whose only computation is a lexical scan of free text, file paths and diff lines included, does not satisfy
+PC8 rule 2 for `require`-row purposes whatever its record says.
+*Verified by:* the `--facet-provenance` lint rule; four must-fail fixture `facets.toml` files, one clause at a time — a
+`derived` facet with no `deriver` field; a named `deriver` with no scored record; a record carrying 0 positives whose
+facet keys a `require` row; a `deriver` declared lexical — and a **positive companion** that must load (a `derived`
+facet with a named `deriver`, a scored record and positives), without which the rule is satisfied by a lint that rejects
+everything. This criterion is **not** provisional: like AC-071 it is a machine-checkable statement of a gap, and like
+AC-071 it fails today by construction, which is the point.
+*The domain this GIVEN reaches, stated because the evidence line does not reach it.* At corpus pin `47faec9f`,
+`spikes/p9/facets.toml` declares **eleven** facets `source = "derived"` — `stage`, `rigor`, `toolchain`, `change`,
+`role`, `cost`, `auth`, `data_migration`, `ui`, `flag_exists` and `recent_deploy` [measured, `spikes/p9/facets.toml` at
+pin, 2026-09-09]. F39 scored **six** of them (`ui`, `toolchain`, `change`, `flag_exists`, `auth`, `data_migration`),
+plus `binary_change`, which is scored but registered nowhere. **Five carry no scored record and no F39 figure of any
+kind**: `stage`; `rigor`, which is a lookup over `policy.<class>.stages` rather than a computation over a changeset;
+`role`; `cost`; and `recent_deploy`, which is underivable at this pin — ADR-0067 already has it emitting `null` under
+`R-recent-deploy-feed-absent`. **So this criterion fails load on all eleven, not on the six its evidence line
+enumerates.** That is deliberate, not an oversight of scope: ADR-0089 forbids "a facet declaring `source = "derived"`
+without a named `deriver` and a scored precision record for that deriver" with no carve-out, and this register may not
+narrow an accepted decision. The warrant over the five unscored facets is therefore **[documented, ADR-0089]** and not
+[measured] — no F39 number speaks to them — and the honest routes to discharging them are S-FACET (ADR-0012) or a
+registry change that moves a deterministic projection out of `source = "derived"` altogether, never a quiet narrowing
+of this GIVEN.
+*Why this exists.* AC-071 fails pack load when a facet declares `source = "llm"` without a scored stability record.
+**There has never been an equivalent gate for `source = "derived"` without a scored precision record.** The semantic
+facets are all `source = "derived"` — therefore outside AC-071's block, therefore **ungated while measurably wrong**.
+That is the sharpest thing F39 carries for this register: the gate the whole document is shaped around gates the half of
+the registry that was not the defect, and the half that was ran unchallenged at `auth` 0.00 over 11 positives.
+*Why it is a criterion and not a sixth clause on AC-071.* AC-071's own residual-risk sentence (§1.1) names a
+loosely-implemented multi-clause gate as precisely the failure mode — *"if that lint is implemented loosely … the
+entire provisional apparatus unblocks silently"*. A single gate carrying two different subjects (`llm` stability and
+`derived` precision), two different records and two different failure meanings is the shape that invites that collapse.
+Two criteria, two lint rules, two fixture sets, two things that can fail separately.
+*Id hazard, taken deliberately.* The selection area's range **AC-040..AC-079 is exhausted** — AC-075 is retired and
+never reusable, and AC-077..AC-079 are already splits — so this criterion is allocated at **AC-520**, outside its own
+area's range. §0.4 records the hazard. Renumbering the area was rejected on this register's standing ground: it is the
+one change that breaks every citation already written.
+*Limits carried, not discounted.* The record this gate demands exists today for exactly one deriver, and F39's own
+limits travel with it: 39 of its 140 cells rest on unanimous 3-seat model agreement with no human, and small-panel
+unanimity fails in the correlated direction [documented, preprint, arXiv:2605.29800]; the oracle is independent on
+`toolchain` and on `binary_change`'s Unreal shortcut and **not** on the rest; one repo, one operator, one pin. And
+**METHOD-P §1.4's 0.95 bar is not reachable at n=20 for any facet however good** — `ui` is 7/7 with a lower bound of
+0.65, and roughly 60 positives are needed for a lower bound above 0.95 — so this criterion requires that a scored record
+**exist, be pinned and be read**, and deliberately re-states **no threshold** the registered sample size cannot decide.
+Which deriver eventually clears which bar, and whether the engine should trust `commits` over `docs` or `union`, is the
+named spike **S-FACET** (ADR-0012), whose named consumer is `facets.toml`'s `source`/`deriver` fields.
 
 **AC-072** — `redkiln lint` · evidence: brief contested list (`binary_change` **measured but unregistered in
 facets.toml so it can feed no require row**; `dynamism` **pre-registered with no registry entry**; `recent_deploy`
-**underivable at this pin**) · decisions: ADR-0061, ADR-0059, ADR-0030
+**underivable at this pin**); **ADR-0089** [documented, resting on F39] for the `deriver` companion field and for the
+set shape as a third registry shape · decisions: ADR-0061, ADR-0059, ADR-0030, ADR-0089
 GIVEN a facet name appearing in any `applicable_if`, `require.when`, or `claimed_predicate`
 WHEN lint runs
-THEN load fails unless that name has a live registry entry in `facets.toml` with a declared domain, source and anchor
+THEN load fails unless that name has a live registry entry in `facets.toml` with a declared domain, source, anchor and —
+where `source = "derived"` — a named **`deriver`** identifying the instrument that computes it
+AND the declared domain is one of **three** shapes the loader recognises **explicitly, by name rather than by
+omission**: boolean, ordinal, or **set** (`set = true`) — the shape `toolchain` and `change` already carry and the shape
+the `surfaces` facet takes, whose members disjoin under ADR-0050 while distinct facets conjoin
 AND an unregistered facet can feed no row, so `binary_change`, `dynamism` and `recent_deploy` cannot silently become
 selection inputs.
 *Verified by:* the facet-registry lint; fixture predicates naming `dynamism` and `binary_change` that must fail load
-against the current registry. NEGATIVE criterion.
+against the current registry; a fixture entry declaring `source = "derived"` with no `deriver` field, which must fail
+load; a fixture entry whose declared shape is none of the three, which must fail load; and a positive `set = true`
+fixture that must load and whose member predicate resolves, so the shape is recognised rather than merely tolerated.
+NEGATIVE criterion apart from that last fixture, which is positive and is what stops a reject-everything lint passing.
+*Amended 2026-09-09 under ADR-0089, in two places only.* (1) The registry entry requirement gains the **`deriver`**
+companion to `source`: `source` says what class of thing computed the fact and `deriver` names the instrument, which is
+what makes the requirement checkable at configuration time rather than a label. (2) The set shape is now stated. It was
+previously admitted by omission — `toolchain` and `change` carry `set = true` and no rule mentioned it — and ADR-0073
+keeps boolean and ordinal registries separate, so a third shape entering by omission is how a loader silently accepts a
+member predicate it has no semantics for. This criterion requires the **field**; the **scored record** behind it is
+AC-520's clause, and the two must not be collapsed into one lint rule.
 
 **AC-073** — `redkiln lint` · evidence: catalog §2.4 (booleans vs ordinals) [documented]; F36 shows the failure mode a
 degenerate boolean produces (`external_dependency` 200/200 false) but does not evidence this rule ·
@@ -988,15 +1158,31 @@ AND the replayed selection is identical to the one the operator approved.
 *Verified by:* unit test on the decision-memory replay path; the AC-042 replay assertion must hold across an
 override-replayed run.
 
-**AC-076** — triage classification accuracy · **HUMAN GATE NODE — not machine-decidable** · evidence: **F36** ("arm D
-precision/recall **NOT COMPUTED** — awaits Ryan's blind panel"); brief §E (awaiting Ryan) · decisions: ADR-0030
+**AC-076** — triage classification accuracy · **HUMAN GATE NODE — not machine-decidable** · evidence: **F39** (arm D
+scored 2026-09-09 over **140 truth cells** at pin `47faec9f` under METHOD-P amendment 9, **panel-adjudicated and never
+human-panel**, $0 model cost: 60 cells from a deterministic oracle over git metadata, 39 unanimous panel, 9 unanimous
+panel with the adversarial flag mechanically moot, and **32 human adjudication** — Ryan, blind, the panel's and the
+script's positions revealed only after he answered, verdicts 8 true / 24 false / 0 unknown, **15 of 32 differing from
+the script**); **F36** for the block this gate sits inside · decisions: ADR-0030, ADR-0089
 GIVEN the arm-D classifications over the corpus
 WHEN a blind human panel labels each item
 THEN precision and recall per axis are computed and recorded.
-Recast as a gate node, with the reason: **the answer key does not exist and cannot be synthesised**, so no test may
-assert this and no CI job may pass or fail on it. The gate blocks `source = "llm"` through AC-071 until the panel is
-filled. **No threshold is stated here: the brief records arm D as uncomputed and does not carry a pre-registered
-precision/recall line to cite.**
+Recast as a gate node, with the reason: **no machine can build the answer key**, so no test may assert this and no CI
+job may pass or fail on it; the machine-checkable residue is that the record exists, is pinned and is attributed. **The
+gate is filled for arm D at pin `47faec9f`** — which discharges AC-071's fourth clause and no other. `source = "llm"`
+stays blocked on AC-071's identity clause, 0.25 / 0.15 / 0.10 / 0.10 against 0.80 [measured, F36]. The gate node stays
+open for any other corpus: one repo, one operator, one pin, and 39 of the 140 cells rest on unanimous 3-seat model
+agreement with no human, which is a weaker correctness signal than its arithmetic implies and fails in the correlated
+direction [documented, preprint, arXiv:2605.29800].
+**Still no threshold is stated here, and the reason has changed.** It used to be that arm D was uncomputed and no
+pre-registered precision/recall line was citable. Arm D is now computed and a pre-registered line does exist — METHOD-P
+§1.4's 0.95 — but it **cannot be decided at this n**: `ui` is 7/7 with a Wilson lower bound of 0.65, roughly 60
+positives are needed for a lower bound above 0.95, and no facet on a 20-item corpus can clear the bar however good the
+method [measured, F39, limit 1]. Applying §1.4 as this gate's threshold would report a **powerless criterion as a
+failure**. The results are therefore recorded as measured — five facets fire the sub-0.95 clause, `ui` clears on the
+point and not on the interval, and `data_migration` is **not measurable** for want of a denominator — and the bar is
+recorded as unreachable at this sample size. That is a result *about* the pre-registration, carried in F39's limits; it
+is not an amendment to METHOD-P, which this register may not make.
 *Struck:* the precedent citation to "F9". The brief states plainly that **there is no F9 entry** — it is listed as cited
 but unsupported and struck — so it cannot be used as evidence for anything.
 
@@ -1018,6 +1204,7 @@ but unsupported and struck — so it cannot be used as evidence for anything.
 | SM-022 | Advisory drift noise on vouched roots | — |
 | SM-023 | Selection explanation completeness | saturating tripwire, not a discriminating measure; saturating; no firing kill |
 | SM-024 | Human-supplied facet load | no baseline |
+| SM-157 | Derived-facet precision, per facet and per source | discriminator, and it did discriminate — but **no facet clears 0.95 and the ≥0.95 half of its criterion is powerless at n=20**; `data_migration` is reported **not measurable**, never as a zero; id allocated outside the area range (above) |
 
 #### Residual risk this area could not repair
 
@@ -1025,7 +1212,9 @@ but unsupported and struck — so it cannot be used as evidence for anything.
 - Most criteria are verified by lint rules and tests that do not yet exist. 'Verified by: the family-totality lint rule' specifies an instrument, not an instrument.
 - The negative criteria (AC-041 'cannot read the environment', AC-054 'no fallback', AC-077 'no forbidden-stage dispatch') are checked by import lints and fixtures that sample the space, not by proofs. AC-047 lost its absence clause for exactly this reason.
 - AC-068 and SM-021 are structurally incomplete: the mechanism is testable now but no citable threshold exists, so 'PROVISIONAL (P2)' currently means *unspecified*, not *pending a known bar*.
-- AC-071 is the single load-bearing gate for the whole block. If its lint is implemented loosely — reading only `modal_required_set_identity` and skipping `panel_verdict` or `corpus_sha` — the entire PROVISIONAL apparatus silently unblocks.
+- AC-071 is the single load-bearing gate for the whole block. If its lint is implemented loosely — reading only `modal_required_set_identity` and skipping `panel_verdict` or `corpus_sha` — the entire PROVISIONAL apparatus silently unblocks. One of its five clauses is now discharged by F39, which makes loose implementation *cheaper* to rationalise, not less costly: four clauses still have to fail.
+- **AC-520 is a new gate with nothing behind it yet.** It demands a scored precision record for every `source = "derived"` facet — **eleven of them at this pin**, of which five (`stage`, `rigor`, `role`, `cost`, `recent_deploy`) carry no F39 figure at all — and exactly one deriver has ever been scored, the one F39 measured and found wrong (AC-520's domain note states the split). Until S-FACET reports, the gate's honest effect is to fail load for the derived facets, and an implementer under delivery pressure will be tempted to weaken it into a warning. It was written as its own criterion, with its own fixtures, precisely so that weakening it is visible.
+- **The area's own facet names were drifted and nobody caught it until F39.** AC-070's GIVEN named `toolchains`, `change_kinds` and `touches_auth`; the registry declares `toolchain`, `change` and `auth`. Three unregistered names sat inside the criterion set that forbids unregistered names, through authoring and a full adversarial pass. Nothing in this register cross-checks a criterion's own facet names against `facets.toml`, and that check does not exist as an instrument anywhere.
 - AC-052, AC-053, AC-058, AC-060, AC-062, AC-066 rest on catalog/proposal sections the evidence brief does not cover; only their instrument shape was audited, not their content.
 
 ---
@@ -1364,7 +1553,8 @@ starting coverage against this rule's denominator is unknown until that subset i
 
 ### 4.6 What the selection block does and does not license
 
-**AC-113** — `rk-catalog` selection · evidence: F36 · decisions: ADR-0030, ADR-0024 — **PROVISIONAL**
+**AC-113** — `rk-catalog` selection · evidence: F36; **F39** (arm D scored) · decisions: ADR-0030, ADR-0024 —
+**PROVISIONAL**
 GIVEN a **fixed** facet vector that the catalog admits, and a rigor level
 WHEN the catalog selection runs twice
 THEN it returns the identical **and non-empty** activity set, and the selection is replayable from the recorded vector
@@ -1375,8 +1565,13 @@ non-emptiness (equality alone is satisfied by a selector that always returns ∅
 completeness or coverage **over LLM-emitted vectors** is not writable: P1's kill fired 4 of 4 — the modal
 required-artifact set `R` was identical on only 5/20, 3/20, 2/20 and 2/20 draws against an 80% line, with alpha drift
 −0.168 on byte-identical anchors and `external_dep` constant at 200/200 false [measured, F36, 400 dispatches, 0 void,
-$21.37]. Arm D precision/recall is uncomputed pending Ryan's blind panel; P2 is unanswered (labels unwritten; the
-engine phase refuses). Blocking spikes: **P1 arm D**, **P2**.
+$21.37]. **Arm D precision/recall is now computed and does not lift this block:** no facet clears METHOD-P §1.4's 0.95
+bar, `auth` scores **0.00** [0.00, 0.26] over 11 positives every one of which is false, and `data_migration` is **not
+measurable** at 0 positives on 20 items [measured, F39, 140 truth cells at pin `47faec9f`, panel-adjudicated, $0]. That
+discharges AC-071's arm-D clause only; the identity clause (0.25 / 0.15 / 0.10 / 0.10 against 0.80) still holds. P2
+remains unanswered (labels unwritten; the engine phase refuses). Blocking spikes: **P1** — the identity clause, not arm
+D, which has now run — **P2**, and **S-FACET**, which decides what computes the derived facts and which source the
+engine trusts, and on whose scored record AC-520 gates every `source = "derived"` facet.
 
 **AC-114** — `rk-catalog` curation · evidence: ADR-0027 [documented] · decisions: ADR-0027 — **HUMAN GATE**
 GIVEN a proposed addition to the shipped v0 catalog
@@ -1791,8 +1986,9 @@ better tested than it is.
 
 **AC-148** — `redkiln doctor` · evidence: **F36 — the selection engine is BLOCKED**: modal `R` identical on only 5/20,
 3/20, 2/20, 2/20 draws against an 80% line (the kill fires 4/4), alpha drift **−0.168 on byte-identical anchors**, and
-the brief's own headline states "the prescribed remedy does not repair it" [measured; arm D precision/recall NOT
-computed, awaiting a blind panel] · decisions: ADR-0006, ADR-0012
+the brief's own headline states "the prescribed remedy does not repair it" [measured; arm D precision/recall is now
+computed — F39 scored it at pin `47faec9f` and no facet clears 0.95, which does not lift F36's block] · decisions:
+ADR-0006, ADR-0012
 GIVEN `doctor` has flagged an artifact as produced-but-never-read
 WHEN the next run selects the required artifact set for a comparable item
 THEN the flagged artifact is still produced if the pack requires it — the flag never removes an artifact from a
@@ -3515,7 +3711,8 @@ THEN it derives only from the authored stage rigor weight and authored facets, a
 input.
 *Verified by:* a signature/type test that `resolve_review_tier` takes no model-produced value; an architecture lint on
 the call graph. This is the standing negative for the **BLOCKED selection engine** (P1's kill fired 4/4, F36): review
-tier may not be made to depend on it, and arm D precision/recall is **not computed** — it awaits Ryan's blind panel.
+tier may not be made to depend on it. Arm D precision/recall is now computed [measured, F39], but it measures a
+*derived* vector, not the LLM-emitted one this criterion excludes, so it licenses nothing about the input barred here.
 *(Repaired: ADR-0030 is outside the declared ADR source set and was cut.)*
 
 **AC-303** — `rk-kernel` · evidence: **F37 / brief §C10** (the rigor ladder is not monotone in internal quality:
@@ -4012,8 +4209,11 @@ AND a verify run that emits any harness dispatch fails the activity.
 *Verified by:* an event-log assertion that a verify run emits zero `dispatch` events; a lint that the verify activity's
 step kinds contain no agent step; a fixture pack attempting an agent step at `verify.pre-test` that must fail lint (the
 positive fixture is what keeps this from passing vacuously).
-*Scope note:* F36's arm D precision/recall was **NOT COMPUTED** — it awaits Ryan's blind panel [brief F36] — so the
-licensed claim is that the LLM vector is unstable, not that it is inaccurate.
+*Scope note:* F36's arm D precision/recall was not computed at F36; **F39 computes it** [measured, 140 truth cells at
+pin `47faec9f`]. It measures the *derived* vector, so the licensed claim about the **LLM-emitted** vector is still that
+it is unstable, not that it is inaccurate. What F39 licenses is the separate claim that the *derived* vector is
+inaccurate — `auth` 0.00 [0.00, 0.26] over 11 positives, all false — which is AC-070's and AC-520's subject, not this
+criterion's.
 
 **AC-348** — `rk-kernel-verify` · evidence: brief §C.9 / F36 (per-facet alpha looks healthy on 4 of 8 axes while `R`
 almost never repeats) · decisions: ADR-0019
@@ -6143,15 +6343,17 @@ Read them with one caveat. The refutation pass cut many citations and **named ea
 | **F33** | P9b: the lint accepted 5 guesses silently across 27 ambiguities (20 new); median 73 lines (+29%); 1.3 errors/file | AC-106, AC-107, AC-151, AC-156, AC-410, AC-420 | AC-409 |
 | **F34** | P6 authoring: 90 activities, median 53 lines, sum 5,059; 42/90 carried a quality block; 0.11 errors/file (lint read first) | AC-106, AC-112, AC-156, AC-395, AC-414 | AC-430 |
 | **F35** | P6 lattice, 102 activities / 12 packs, 27 s: unsatisfiability 23.5% → 11.4% → 0.3%; dead activities 20.8% (8 packs) → 14.9% (12) → 5.9% = 6/102; rank ties 0; hard cycles 0 | AC-040, AC-046, AC-047, AC-048, AC-054, AC-056, AC-057, AC-059, AC-100, AC-101, AC-102, AC-103, AC-414, AC-421, AC-424, AC-426, AC-430 | AC-049, AC-052, AC-094, AC-104, AC-433 |
-| **F36** | P1 arm L, 400 dispatches, 0 void, $21.37: modal `R` identical on 5/20, 3/20, 2/20, 2/20 against an 80% line; alpha drift −0.168 on byte-identical anchors; `external_dependency` 200/200 false; arm D precision/recall NOT COMPUTED | AC-009, AC-044, AC-069, AC-070, AC-071, AC-073, AC-076, AC-113, AC-130, AC-148, AC-251, AC-302, AC-347, AC-348, AC-425, AC-432, AC-434, AC-436 | AC-089 |
+| **F36** | P1 arm L, 400 dispatches, 0 void, $21.37: modal `R` identical on 5/20, 3/20, 2/20, 2/20 against an 80% line — 0.25/0.15/0.10/0.10; alpha drift −0.168 on byte-identical anchors; `external_dependency` 200/200 false; arm D precision/recall not computed **at F36** (scored later by F39) | AC-009, AC-044, AC-069, AC-070, AC-071, AC-073, AC-076, AC-113, AC-130, AC-148, AC-251, AC-302, AC-347, AC-348, AC-425, AC-432, AC-434, AC-436 | AC-089 |
 | **F37** | P7, 61 runs / 297 records / 0 void / $131.62: deviation offered 71 times, used 0; graph cost $1.02 / $2.69 / $9.86 (n=1); primary criterion powerless at n=3 | AC-061, AC-063, AC-105, AC-139, AC-251, AC-303, AC-314, AC-396 | — |
 | **F38** | P8 PARTIAL, 3 of a pre-registered 27+3: mid-graph resume across a real `taskkill /T /F` — 0 changed, 0 lost, digests identical; 8,408 / 10,314 / 14,579 tokens = 0.45× / 0.55× / 0.78× | AC-013, AC-039, AC-161, AC-185, AC-186, AC-187, AC-241, AC-265, AC-266, AC-270, AC-273, AC-353, AC-401 | AC-246, AC-271, AC-400 |
+| **F39** | P1 arm D scored 2026-09-09 over 140 truth cells at pin `47faec9f`, METHOD-P amendment 9, panel-adjudicated (never human-panel), $0: union-source precision `ui` 1.00 [0.65, 1.00] / `toolchain` 0.73 [0.48, 0.89] / `change` 0.72 [0.54, 0.85] / `binary_change` 0.60 [0.23, 0.88] / `flag_exists` 0.00 [0.00, 0.66] / `auth` 0.00 [0.00, 0.26] over 11 positives all false / `data_migration` **not measurable** (0 positives on 20 items); **no facet clears 0.95 and the bar is unreachable at n=20**; 4 items changed no code and produced 16 confident booleans over 16 panel `unknown`s; 32 of 140 cells human-adjudicated, 15 of 32 differ from the script | AC-070, AC-071, AC-072, AC-076, AC-079, AC-113, AC-520 | AC-069, AC-148, AC-302, AC-347 |
 
-**Three readings of that table worth carrying forward.**
+**Four readings of that table worth carrying forward.**
 
 - **F31 (S-TYPED) and F19 carry the most weight** — 35 and 31 criteria respectively rest on their evidence lines. Both are one corpus, one operator; F19's own recorded limit is that *the FSM was never replayed*, and F31's CLEAN ground truth is wrong for at least 57% of items. Every rate quoted against either is an upper bound.
 - **F9 appears only as a struck citation** (in AC-076, which had cited it as precedent). There is no F9 entry; that row is the table working as intended.
 - **F30 is an unassigned ledger slot.** S-H1b and S-WT were never written up, so AC-267 and AC-383 rest on numbers that live only in the design recommendation and the proposal. That is also the root of the contested worktree cost cell (§1.2 row 15).
+- **F39 is the first row here read from the corpus rather than from the condensed brief**, which predates it and cannot carry it. That is the discipline §16's closing note argues for: a pass that checks only against a condensation cuts real citations as fabrications. Anything F39 touches — AC-070, AC-071, AC-072, AC-076, AC-079, AC-113, AC-520 — must be re-refuted against `spikes/F39-DRAFT.md` and ADR-0089, not against the brief.
 
 ### 15.2 Decision to criteria
 
@@ -6167,7 +6369,7 @@ Read them with one caveat. The refutation pass cut many citations and **named ea
 | **ADR-0009** | Phase 1 human gates answer from the CLI only | AC-039, AC-153, AC-261, AC-262, AC-263, AC-269, AC-274, AC-405, AC-476 | 9 |
 | **ADR-0010** | Subscription only; never `--bare`; no API-key fallback | AC-027, AC-216, AC-217, AC-422, AC-488, AC-511 | 6 |
 | **ADR-0011** | CLI shape and the Phase 1 exit criterion | AC-400, AC-405, AC-437, AC-473 | 4 |
-| **ADR-0012** | Unknowns are carried as named spikes | AC-006, AC-009, AC-148, AC-435, AC-448, AC-462, AC-463, AC-467, AC-475, AC-479 | 10 |
+| **ADR-0012** | Unknowns are carried as named spikes | AC-006, AC-009, AC-148, AC-435, AC-448, AC-462, AC-463, AC-467, AC-475, AC-479, AC-520 | 11 |
 | **ADR-0013** | The corpus lives in its own pinned repo | AC-006, AC-161, AC-184, AC-312, AC-314, AC-427, AC-463, AC-464, AC-465, AC-519 | 10 |
 | **ADR-0014** | Process packs own structure; technology packs bind | AC-005, AC-036, AC-037, AC-080, AC-081, AC-083, AC-084, AC-085, AC-086, AC-087, AC-089, AC-090, AC-091, AC-092, AC-093, AC-094, AC-095, AC-096, AC-097, AC-098, AC-099, AC-118, AC-327, AC-337, AC-349, AC-350, AC-414, AC-415, AC-416, AC-417, AC-418, AC-419, AC-420, AC-421, AC-430, AC-431, AC-495 | 37 |
 | **ADR-0015** | Review tiering - the stage weight selects the tier | AC-038, AC-287, AC-295, AC-298, AC-299, AC-300, AC-301, AC-302 | 8 |
@@ -6181,29 +6383,29 @@ Read them with one caveat. The refutation pass cut many citations and **named ea
 | **ADR-0023** | Rigor admits comparison, never arithmetic | AC-050, AC-069, AC-071, AC-295, AC-303 | 5 |
 | **ADR-0024** | Admissibility lives in the activity, requirement in the pack | AC-040, AC-041, AC-042, AC-043, AC-044, AC-045, AC-046, AC-054, AC-055, AC-056, AC-057, AC-058, AC-059, AC-060, AC-061, AC-063, AC-064, AC-066, AC-068, AC-078, AC-081, AC-082, AC-101, AC-113, AC-416, AC-430, AC-433, AC-435 | 28 |
 | **ADR-0025** | Human-supplied artifacts are vouched roots with advisory drift | AC-053, AC-066, AC-067, AC-068, AC-074, AC-127, AC-304, AC-305, AC-306, AC-310, AC-311, AC-319 | 12 |
-| **ADR-0026** | The reviewer works in a disposable shallow clone | AC-291, AC-292 | 2 |
+| **ADR-0026** | Review is three encapsulated levels, not a stage-visible reviewer | AC-291, AC-292 | 2 |
 | **ADR-0027** | A curated v0 catalog with an unshipped extended file | AC-094, AC-100, AC-101, AC-102, AC-106, AC-107, AC-110, AC-114, AC-414, AC-421, AC-426, AC-436 | 12 |
 | **ADR-0028** | Each activity graph owns its own output quality | AC-082, AC-105, AC-112, AC-115 | 4 |
 | **ADR-0029** | Technology packs add facts, producers and artifact kinds, never rubric rows | AC-080, AC-082, AC-088, AC-325, AC-327, AC-328, AC-330, AC-337, AC-349, AC-356 | 10 |
-| **ADR-0030** | `facets.toml` is the normative closed vocabulary | AC-044, AC-055, AC-065, AC-069, AC-070, AC-071, AC-072, AC-073, AC-074, AC-076, AC-079, AC-108, AC-109, AC-113, AC-130, AC-347, AC-351, AC-424, AC-425, AC-434, AC-436 | 21 |
-| **ADR-0032** | Facet rendering at the point of use | AC-434 | 1 |
-| **ADR-0033** | Tailoring decisions are recorded with their rationale | AC-065, AC-433 | 2 |
+| **ADR-0030** | `facets.toml` is the normative closed vocabulary — **partially superseded by ADR-0089** (PC8 rule 2's silence on what kind of computation counts, and the `auth` boolean); stays `accepted`, and rules 1, 3, 4, 5 and rule 2's prohibition itself are unchanged | AC-044, AC-055, AC-065, AC-069, AC-070, AC-071, AC-072, AC-073, AC-074, AC-076, AC-079, AC-108, AC-109, AC-113, AC-130, AC-347, AC-351, AC-424, AC-425, AC-434, AC-436, AC-520 | 22 |
+| **ADR-0032** | Absent optional inputs are null, with vacuous-true quantifiers and a lint error elsewhere | AC-434 | 1 |
+| **ADR-0033** | Predicate grammar is fixed and closed, with no user-defined functions | AC-065, AC-433 | 2 |
 | **ADR-0035** | `for_each` projection semantics | AC-022 | 1 |
 | **ADR-0036** | Each step kind mints a fixed, closed set of evidence variants | AC-019, AC-307, AC-432 | 3 |
 | **ADR-0037** | Budget `attempts_total` counts steps per pass | AC-011, AC-020, AC-021, AC-026, AC-390, AC-391 | 6 |
 | **ADR-0038** | Escalation carries only a question id | AC-259, AC-272, AC-409, AC-410 | 4 |
-| **ADR-0042** | Reference resolution and dangling names | AC-420 | 1 |
-| **ADR-0043** | `repeat` / `on_false` loop semantics | AC-017 | 1 |
+| **ADR-0042** | Feedback refs are normative, not lint folklore | AC-420 | 1 |
+| **ADR-0043** | Loops must be able to learn — iteration enters the memo key | AC-017 | 1 |
 | **ADR-0045** | A gate step's answer binds nothing downstream | AC-409 | 1 |
 | **ADR-0046** | Deviation is typed and never edits `R` | AC-061, AC-062, AC-063, AC-064 | 4 |
-| **ADR-0047** | `explain` prints both row families | AC-430 | 1 |
+| **ADR-0047** | Spawning a follow-on initiative is a pack rule, not an activity behaviour | AC-430 | 1 |
 | **ADR-0050** | Tag semantics - the same facet disjoins, distinct facets conjoin | AC-073, AC-109 | 2 |
 | **ADR-0053** | `for_each` charges the attempts budget once | AC-022 | 1 |
-| **ADR-0055** | Loop iteration is part of the step key | AC-017 | 1 |
-| **ADR-0056** | Ranked methods; a tie at equal rank is a load error | AC-046, AC-047, AC-048, AC-054, AC-056, AC-103, AC-104, AC-105, AC-116 | 9 |
+| **ADR-0055** | Self-reference inside a loop binds the previous iteration's output | AC-017 | 1 |
+| **ADR-0056** | Family totality caps rank escalation by rigor | AC-046, AC-047, AC-048, AC-054, AC-056, AC-103, AC-104, AC-105, AC-116 | 9 |
 | **ADR-0057** | Stage scope and forbidden stages | AC-049, AC-051, AC-052, AC-053, AC-067, AC-077, AC-100 | 7 |
-| **ADR-0058** | Family totality and the escalation cap | AC-047, AC-048, AC-103, AC-104, AC-116 | 5 |
-| **ADR-0059** | Derived facets are computed, never emitted | AC-070, AC-072 | 2 |
+| **ADR-0058** | Families are a declared catalog field, lint-checked for sharing and totality | AC-047, AC-048, AC-103, AC-104, AC-116 | 5 |
+| **ADR-0059** | Registries are one table per value; a verb's live flag implies memo = false | AC-070, AC-072, AC-520 | 3 |
 | **ADR-0060** | Boolean facets are `applicable_if`-only | AC-073, AC-109 | 2 |
 | **ADR-0061** | `facets.toml` is the normative source for the toolchain and change facets | AC-070, AC-072, AC-108, AC-351, AC-424, AC-425 | 6 |
 | **ADR-0063** | Gate questions declare their options and attachment types | AC-410 | 1 |
@@ -6212,14 +6414,17 @@ Read them with one caveat. The refutation pass cut many citations and **named ea
 | **ADR-0069** | `unknown` is never ordered against a band | AC-069, AC-079 | 2 |
 | **ADR-0072** | Shipped activity edits bump version | AC-057, AC-107, AC-111, AC-117 | 4 |
 | **ADR-0073** | Toolchain-keyed artifact kinds replace the specificity tie-break | AC-049, AC-088, AC-103, AC-325, AC-349, AC-350 | 6 |
+| **ADR-0089** | A facet's computed fact must name its provenance; `auth` becomes a declared `surfaces` set; absence of evidence is not `false` (accepted 2026-09-09; partially supersedes ADR-0030) | AC-070, AC-072, AC-076, AC-079, AC-520 | 5 |
 
 **How to read the spread.** ADR-0003 (96), ADR-0006 (58), ADR-0004 (57), ADR-0017 (54) and ADR-0018 (47) carry most of the register between them — the five ports, the artifact layout, findings-not-verdicts, the gate record and git-as-truth. That concentration is a risk as much as a fact: **the ADR text itself was outside the refutation pass's evidence set in every area**, so a misquoted or superseded clause in one of those five would propagate into dozens of criteria and nothing in this document would have caught it. Verifying those five ADRs against the criteria that cite them is the second-highest-value audit left; the first is §15.3.
+
+**Partly discharged, 2026-09-09, and what remains is named rather than left as prose.** That audit was begun during the F39 absorption. The `title` column was diffed against every ADR's frontmatter `title`: **ten rows named a decision the id does not record**, including two straight swaps — ADR-0043 and ADR-0055 wore each other's glosses, as did ADR-0056 and ADR-0058 — and all ten are corrected here to the record's own title [measured, parsed from the 89 frontmatters at this pin]. Every other structural claim in this table verified: 56 rows, each per-row `n` equal to its criteria list, no duplicate ids, and 56 + 33 = 89. **What is not discharged** is the citation direction: `ADR-0059` is cited by **AC-070** and **AC-072** for the facet registry, and its own text contains the word "facet" **zero times** — it is the *verb* registry record ("`[verb.bisect] outputs = … live = true`"), so the citation rests on its one-table-per-value *pattern* and not on any facet rule. It is retained rather than struck, because a citation that is loose is not a citation that is fabricated and this programme has already struck eleven real ones by assuming otherwise. **AC-520 dropped it** on authoring, since ADR-0030, ADR-0061 and ADR-0089 carry that rule directly. The remaining question — whether AC-070's and AC-072's `ADR-0059` should be retained, re-pointed or explained in place, and the same for AC-430's `ADR-0047` and AC-434's `ADR-0032` — is a **register audit with a named consumer** (§15.2 itself and the §15.3 count), not a defect to be resolved by silent deletion, and it is recorded here per ADR-0012 rather than left to be rediscovered.
 
 Decisions cited by exactly one criterion — ADR-0032 (AC-434), ADR-0035 (AC-022), ADR-0042 (AC-420), ADR-0043 (AC-017), ADR-0045 (AC-409), ADR-0047 (AC-430), ADR-0053 (AC-022), ADR-0055 (AC-017), ADR-0063 (AC-410), ADR-0064 (AC-018) — are not necessarily under-covered; most are narrow schema amendments whose whole content is one rule. They are listed so a reader can tell the difference between a decision with one criterion and a decision with none.
 
 ### 15.3 Decisions no criterion cites
 
-`references/adr/` holds **88 decisions**. The criteria cite **55**. The remaining **33** are listed below, because a decision no criterion cites is a decision nothing will test — and this is the largest single defect the assembly found.
+`references/adr/` holds **89 decisions** (88 at rev. 1, plus ADR-0089, accepted 2026-09-09). The criteria cite **56**. The remaining **33** are listed below, because a decision no criterion cites is a decision nothing will test — and this is the largest single defect the assembly found.
 
 **Fifteen of the 33 name behaviour this register demonstrably does cover, and simply cite an older ADR for it.** The area files were written against roughly ADR-0001..ADR-0073 and did not pick up the ADR-0074..ADR-0088 block at all — every one of those fifteen is uncited. The right-hand column is a **pointer inferred from the ADR's filename only**: this pass did not read ADR text in any area, so each pointer must be checked before it is relied on.
 
@@ -6249,9 +6454,9 @@ Decisions cited by exactly one criterion — ADR-0032 (AC-434), ADR-0035 (AC-022
 
 **Area files (the direct inputs).** Thirteen files, each authored against the proposal and the evidence brief and then adversarially refuted against the brief line by line: `ac-kernel.md`, `ac-selection.md`, `ac-packs-catalog.md`, `ac-artifacts-store.md`, `ac-git-reconcile.md`, `ac-harness.md`, `ac-human-gate.md`, `ac-review-gate.md`, `ac-verify-gate.md`, `ac-events-cost.md`, `ac-cli-doctor.md`, `ac-migration.md`, `ac-ports-dist.md`. All thirteen were present and complete; each area's own refutation notes record what was cut, what was repaired and what could not be repaired, and the per-area *Residual risk* blocks above are drawn from them.
 
-**Repository.** `spikes/FINDINGS.md` F1–F38 — F9 struck as cited-but-unsupported, F30 unassigned (S-H1b and S-WT never written up) — read through the condensed evidence brief of 2026-09-08, which is the artifact each area was refuted against and which lives outside the repository: **anyone re-running a refutation must go back to `spikes/FINDINGS.md` and `spikes/results/`, not to the brief**; `spikes/METHOD-S.md` and its §7 amendments; `spikes/results/` — `s-var.jsonl`, `s-var-citations.py`, `s-var-citation-targets.json`, `s-var-2400.jsonl` (quarantined), `s-typed.jsonl`, `s-typed-adjudication.jsonl`, `s-h1b-1m.jsonl`, `s-h1b-65m.jsonl`, `s-h1b-24h.jsonl` (mark only — the read was never taken), `s-wt.jsonl`, `s-mig.jsonl`, `census-s-mig.py`, `s-mig-report.md`, `e0-headroom.jsonl`, `e3.jsonl`; `spikes/corpus/PINNED_SHA` (`REDKILN_SHA=47faec9f…`, recorded dirty at pin time).
+**Repository.** Findings F1–F38 — F9 struck as cited-but-unsupported, F30 unassigned (S-H1b and S-WT never written up) — **which live in two places, and a re-runner must go to both**: `spikes/FINDINGS.md` holds **F1–F28** only, and **F29 plus F31–F38 exist solely as `spikes/F<NN>-DRAFT.md`**, none of them folded back into the running log [measured, `ls spikes/F*-DRAFT.md` and a heading scan of `FINDINGS.md`, 2026-09-09] — plus **F39** (`spikes/F39-DRAFT.md`, 2026-09-09, P1 arm D scored at pin `47faec9f` under METHOD-P amendment 9), which postdates the brief and was read from the corpus directly — read through the condensed evidence brief of 2026-09-08, which is the artifact each area was refuted against and which lives outside the repository: **anyone re-running a refutation must go back to `spikes/FINDINGS.md`, the `spikes/F*-DRAFT.md` set and `spikes/results/`, not to the brief**; `spikes/METHOD-S.md` and its §7 amendments; `spikes/results/` — `s-var.jsonl`, `s-var-citations.py`, `s-var-citation-targets.json`, `s-var-2400.jsonl` (quarantined), `s-typed.jsonl`, `s-typed-adjudication.jsonl`, `s-h1b-1m.jsonl`, `s-h1b-65m.jsonl`, `s-h1b-24h.jsonl` (mark only — the read was never taken), `s-wt.jsonl`, `s-mig.jsonl`, `census-s-mig.py`, `s-mig-report.md`, `e0-headroom.jsonl`, `e3.jsonl`; `spikes/corpus/PINNED_SHA` (`REDKILN_SHA=47faec9f…`, recorded dirty at pin time).
 
-**References.** `references/2026-09-05-architecture-proposal.md` rev. 4 (§2, §3, §4.1–§4.9, §5, §6, §7, §8, §9); `references/2026-09-07-design-recommendation.md`; `references/2026-09-07-process-catalog-proposal.md` (§2.1–§2.7, §3, §5) and its PC rows; `references/2026-09-07-activity-graph-schema.md` (§5, §9a, §9b); `references/2026-09-01-shipmates-lessons-for-redkiln-rs.md` (L1.2, L3.1–L3.8, L4.1–L4.4, L5.3, L5.4, L5.7, L5.8); `references/adr/` — 88 decisions, of which 55 are cited by a criterion and 33 are not (§15.3). Every ADR id cited in §15.2 was checked against the directory and exists; **their text was not read by the refutation pass in any area**, and that limit is stated in §15.2.
+**References.** `references/2026-09-05-architecture-proposal.md` rev. 4 (§2, §3, §4.1–§4.9, §5, §6, §7, §8, §9); `references/2026-09-07-design-recommendation.md`; `references/2026-09-07-process-catalog-proposal.md` (§2.1–§2.7, §3, §5) and its PC rows; `references/2026-09-07-activity-graph-schema.md` (§5, §9a, §9b); `references/2026-09-01-shipmates-lessons-for-redkiln-rs.md` (L1.2, L3.1–L3.8, L4.1–L4.4, L5.3, L5.4, L5.7, L5.8); `references/2026-09-09-change-classification.md` (§0, §1, §4.1–§4.5, §5) — the recommendation behind ADR-0089, which reached its conclusion from six research axes without reference to F39's numbers; `references/adr/` — 89 decisions, of which 56 are cited by a criterion and 33 are not (§15.3). Every ADR id cited in §15.2 was checked against the directory and exists; **their text was not read by the refutation pass in any area**, and that limit is stated in §15.2.
 
 **External comparators, quoted for order of magnitude only and never as a threshold.** Cloudflare, *Orchestrating AI Code Review at scale* (read-only median $0.98, full tier $1.68, break-glass 288 of 48,095 MRs = 0.6%) [1P]; Anthropic, *Code Review for Claude Code* ($15–25, ~20 min) [1P]; Agentless ($0.70/instance at 32.00%) and CodeR ($3.34 at 28.33%) [peer]; Anthropic prompt-caching, structured-outputs and Claude Code CLI documentation [1P]; git-branchless `RewriteEvent` and issue #1334, Jujutsu, Beads, Backlog.md #558 [1P]. Comparators that could not be found in the evidence set — GitLab quarantine, Cloudflare "won't fix", Google's ICSE 2021 one-live-mutant-per-changelist figure, SDK issue #571, Agentless' 213/300 reproduction count — were **cut from the criteria that cited them** and are named here only so nobody restores them from memory.
 
