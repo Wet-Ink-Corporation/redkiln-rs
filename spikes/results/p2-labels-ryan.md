@@ -1,0 +1,1750 @@
+# P2 — human "should re-run" labels (Ryan). Worksheet-populated 2026-09-09.
+#
+# METHOD-P §0 rule 1 / §2.2: for every downstream artifact in every perturbation case, label FROM
+# THE DIFF ALONE. Each case's diff is inline below, so there is no lookup step and no shell.
+#
+# THE QUESTION, once per row: the upstream artifact named in the case was replaced by its previous
+# real git revision. Reading that change and nothing else — WOULD IT HAVE REQUIRED THE NAMED
+# DOWNSTREAM ARTIFACT TO BE RE-AUTHORED? Answer `yes` or `no` in the fifth cell and give a one-line
+# reason in the sixth. This is the ground truth the engine's `Stale` verdict is scored against.
+#
+# The engine's answer was NOT read when building this file. `p2-reconstruct.jsonl`'s reconstructed
+# `fine` and `coarse` scopes, and reconstruct-derived-from.py's COARSE table, are deliberately
+# absent: they answer the same question and would prejudice the label. If you think the engine's
+# scope will disagree with you, that is the measurement, not a problem.
+#
+# Blindness: P2 is not affected by METHOD-P amendment 8 — its engine phase requires only that these
+# labels be timestamped, and its verdicts do not exist yet, so labelling now is blind on the
+# original terms. There is no `blind_attestation` key and there must not be one.
+#
+# WHEN DONE: set labelled_at to the UTC time you finished. It MUST end in Z — the guard compares
+# timestamps as strings, so a local-offset stamp mis-compares silently. Produce it with a command:
+#   date -u +%Y-%m-%dT%H:%M:%SZ
+# then run the engine phase, which refuses until the stamp is real:
+#   python spikes/p2/reconstruct-derived-from.py --redkiln D:/repos/redkiln \
+#     --sha 47faec9f46b8d983c2c75f0794164e68415ae706 \
+#     --items spikes/plans/p2-items.txt --phase engine \
+#     --cases spikes/results/p2-cases.jsonl \
+#     --labels spikes/results/p2-labels-ryan.md \
+#     --out spikes/results/p2-engine.jsonl
+# Pass --cases explicitly (decision #17); it does not default correctly from --out.
+#
+# Advisory cases A01–A06 are labelled AFTER the engine, in a separate file (METHOD-P §2.3), and
+# decision #15 — the `human_authored` remap — changes what that advisory fraction measures. Confirm
+# or reverse #15 before the advisory half is scored; it does not affect the rows below.
+
+labelled_at: FILL-ME-ISO8601Z
+labeller: FILL-ME
+corpus_sha: 47faec9f46b8d983c2c75f0794164e68415ae706
+cases_file: spikes/results/p2-cases.jsonl
+
+---
+
+## P01 — 1/12 — `support/advance-commit-ignored-path`
+
+**card:** `incident.md` · **upstream replaced:** `discover.md` · **previous revision:** `bfef739b1ac3` · **digests:** `9917f8dffd04` → `9cceb344a26d`
+
+**Downstream artifacts to label (2):** `implementation-report.md`, `report.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff bfef739b1ac3 47faec9f -- .bklg/support/advance-commit-ignored-path/discover.md`
+
+```diff
+diff --git a/.bklg/support/advance-commit-ignored-path/discover.md b/.bklg/support/advance-commit-ignored-path/discover.md
+index 0f4158bc..cff633b5 100644
+--- a/.bklg/support/advance-commit-ignored-path/discover.md
++++ b/.bklg/support/advance-commit-ignored-path/discover.md
+@@ -56,4 +56,4 @@ path in `writtenPaths` must still commit the item file and return `true`). Ship
+ - [x] The problem is framed in one paragraph.
+ - [x] Prior art and constraints are recorded in the signal ledger.
+ - [x] Open questions are either answered or explicitly deferred.
+-- [x] The next stage (spec) has a clear starting point.
++- [x] The next stage has a clear starting point.
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+Commits matched by the slug leaf in the subject and by `Story:`/`Fix:` trailer (1):
+
+- `f32b4caf chore(support): file the two gate limitations blocking three proof-and-readings stories`
+
+- *(every changed file is `.bklg/` bookkeeping — this item records no code change at the pin)*
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+## TDD Evidence
+
+| AC | Test | Red → Green |
+| -- | ---- | ----------- |
+| A commit with a gitignored `writtenPath` still lands the item file | `test/advance-git-commit.test.ts` › "commits the item even when a written path is gitignored (RK-N0001 regression)" | Red proven at the git level (`git commit -- <item> <ignored>` → exit 1, `pathspec … did not match`, no commit, item left staged); Green after fixing `commit()`. |
+| No regression to scoped staging (unrelated untracked sibling not swept in) | same file › "does not sweep an unrelated untracked sibling…" | stays green |
+
+## Changes
+
+- **`src/git/index.ts` `commit()`** — commit the subset git **actually staged**, not the raw `writtenPaths`.
+  After `git add -- <paths>`, read `git diff --cached --name-only -z -- <paths>` (git's own repo-relative
+  names, NUL-separated) and `git commit -- <that subset>`. Any ignored/untracked path git refused to stage is
+  excluded, so it never reaches `git commit` and can no longer abort the whole commit. Trackable telemetry still
+  commits; a gitignored telemetry partition is simply omitted.
+- **`test/advance-git-commit.test.ts`** — new regression test: repo with `.redkiln/` gitignored before anything
+  under it is tracked → `advance --commit` must still create the commit with the item file in it.
+- **Dogfood-hygiene** (surfaced by running CI in this newly `redkiln init`-ed repo): `.claude/` added to eslint
+  ignores + `.gitignore` (init copies workflow scripts there); `.bklg/` + `.kb/` added to `.prettierignore`
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+## Findings Ledger
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| Regression from `#3` (0.3.0): explicit-file pathspecs surfaced the gitignored `.redkiln/` telemetry partition, which aborts `git commit -- …`. | scratch `ignore-repro` (git exit 1, `pathspec … did not match`) | Fixed in `commit()`. |
+| Not worktree-specific; the reporter's `.git`-file-detection hypothesis is not the cause (no such check exists). | `wt-repro2` passes; `grep src/` finds no `.git`-dir check | Report corrected mechanism back to Inksmith. |
+| Standard `redkiln init` tracks telemetry (only `index/` ignored), so standard targets are unaffected → why tests missed it. | init `.redkiln/.gitignore` | Regression test now covers the gitignored-`.redkiln` case. |
+| Dogfooding-in-source surfaced tooling gaps (`.claude/` copies break eslint; `.bklg/`/`.kb/` fight prettier). | CI runs | `.gitignore`/eslint/prettier ignores added. |
+
+## Acceptance
+
+- **AC-1 — a commit whose `writtenPaths` include a gitignored path still lands the item file.** ✓ Verified by the
+  new regression test (`advance --commit` in a gitignored-`.redkiln` repo creates the commit; item file present).
+- **AC-2 — scoped staging unchanged (no unrelated untracked sibling swept in).** ✓ Existing narrow-staging test
+  still green.
+- **Gate:** `pnpm run ci` green (typecheck, lint, 527 tests, check:workflows, build).
+
+## Knowledge Harvest
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P01 | support/advance-commit-ignored-path | discover.md | implementation-report.md |  |  |
+| P01 | support/advance-commit-ignored-path | discover.md | report.md |  |  |
+
+---
+
+## P02 — 2/12 — `support/fix-lane-plumbing/issue-50-fix-story-before-worktree`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `a07910a86a45` · **digests:** `b77ba662e5fe` → `0af2f9621811`
+
+**Downstream artifacts to label (3):** `spec.md`, `implementation-report.md`, `report.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff a07910a86a45 47faec9f -- .bklg/support/fix-lane-plumbing/issue-50-fix-story-before-worktree/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-lane-plumbing/issue-50-fix-story-before-worktree/story.md b/.bklg/support/fix-lane-plumbing/issue-50-fix-story-before-worktree/story.md
+index bd26488a..b9962311 100644
+--- a/.bklg/support/fix-lane-plumbing/issue-50-fix-story-before-worktree/story.md
++++ b/.bklg/support/fix-lane-plumbing/issue-50-fix-story-before-worktree/story.md
+@@ -7,20 +7,21 @@ title: "Fix #50: fix.md creates story before cutting worktree, stranding it on w
+ parent: RK-P0028
+ initiative: support
+ project: fix-lane-plumbing
+-status: pending
++status: done
+ process: story-lite
+-stage: intake
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-03T22:40:56.536Z
++updated: 2026-08-08T05:14:46.611Z
+ links:
+   pr: null
+   commits: []
+   kb: []
++gate_open: false
+ schema: 1
+ process_rev: fb2938ab
+ ---
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+No commits resolved by slug leaf or trailer at this pin. That is a lookup limit, not a
+statement about the item.
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+> **This spec was written after the fix shipped.** The nineteen bugfixes of the 2026-08 issue sweep
+> were implemented out of lane — deliberately, because the fix lane itself was one of the things being
+> repaired (#47–#51) — and landed on `main` in squash commit `e09892f1` ("Issue sweep Waves 3-7").
+> This document is a retrospective account: the defect as filed, the boundary the shipped change
+> actually took, and acceptance criteria transcribed from the regression tests that exist in the tree
+> today. It is not a pre-implementation design, and the title's "verify: may already be fixed" hedge
+> from scaffolding time is resolved: it was not already fixed, and the fix is the step reordering
+> described below.
+
+## Context pack
+
+**The defect.** `commands/fix.md` — the prompt that drives `/redkiln:fix` — ordered its Stage A steps
+so that the fix's backlog items were created *before* the worktree that is supposed to hold them:
+
+    5. **Create the story (CLI owns frontmatter).** On approval — two `redkiln new` calls, in this order.
+    6. **Cut the worktree + branch (gated, irreversible).**
+       - git worktree add .claude/worktrees/fix-<slug> -b fix/<slug> main
+       - EnterWorktree({ path: ".claude/worktrees/fix-<slug>" })
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+> **Written retrospectively.** The fix shipped before this report existed. The work was done inside the
+> 2026-08 issue sweep's own implement→verify→remediate loop, out of the `/redkiln:fix` lane, because the
+> fix lane was itself the thing under repair (#47–#51). **I did not watch the loop run.** Everything
+> below that is stated as observed, I observed by re-running it against the merged tree in this pass;
+> everything that is stated as unrecorded, I could not establish. The distinction is load-bearing and is
+> kept explicit in the TDD table.
+
+## TDD Evidence
+
+The template asks which tests went red then green. For this story the honest answer has two halves.
+
+**What is not recorded.** No transcript, log or artifact from the sweep captures these four tests in a
+failing state. I make no claim that a red run happened before the green one, and the report should not
+be read as evidence that it did.
+
+**What is establishable, and is stronger than a remembered red.** Each of the four tests is a structural
+assertion over `commands/fix.md`, and the pre-fix text of that file is still in git at `e09892f1^`. So
+the discriminating power of each test can be measured directly rather than asserted: extract the shipped
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+> **Written retrospectively, from the merged tree.** The fix shipped in `e09892f1` before this report
+> existed. The per-wave commits from the sweep branch are *not* reachable from `main` — I checked the
+> wave-4 commit `7cccdcc1` with `git branch -a --contains` and it reports `sweep/issues-w3-7` and
+> `origin/sweep/issues-w3-7` only — so `e09892f1` is the sole SHA cited here. Everything stated as
+> observed below, I observed by running it in this pass; everything stated as unrecorded, I could not
+> establish.
+
+## Findings Ledger
+
+What was delivered, what was learned, and what remains. The middle table is the one that carries the
+weight: **the first adversarial verification pass refuted this fix**, and what it caught was this
+defect's own failure mode reproduced inside its own remedy.
+
+### Delivered
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| Stage A steps 5 and 6 of `commands/fix.md` swap. The worktree is cut and `EnterWorktree`-d **before** the two `redkiln new` calls, so a bare `redkiln new` — which takes its root from `flags.cwd ?? process.cwd()` in `src/cli/new.ts` — already resolves inside the fix worktree. | `e09892f1`, section `fix(fix-lane): repair the reactive fix lane end to end (#48, #50, #49, #47, #51)`: *"Steps 5 and 6 swap."* Pinned by AC-001. | None. |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | spec.md |  |  |
+| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | implementation-report.md |  |  |
+| P02 | support/fix-lane-plumbing/issue-50-fix-story-before-worktree | story.md | report.md |  |  |
+
+---
+
+## P03 — 3/12 — `support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `611db32d95ea` · **digests:** `13a650099467` → `d0274a4517d4`
+
+**Downstream artifacts to label (4):** `spec.md`, `implementation-report.md`, `report.md`, `_review.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff 611db32d95ea 47faec9f -- .bklg/support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch/story.md b/.bklg/support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch/story.md
+index 03885d71..754aedb4 100644
+--- a/.bklg/support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch/story.md
++++ b/.bklg/support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch/story.md
+@@ -7,16 +7,16 @@ title: "Fix #81: plan.md advances discover->spec on a gate the standard pack blo
+ parent: RK-P0025
+ initiative: support
+ project: fix-planning-workflow-reliability
+-status: in-progress
++status: done
+ process: story-lite
+-stage: implement
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-05T06:25:35.333Z
++updated: 2026-08-05T13:03:33.831Z
+ links:
+   pr: null
+   commits:
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+Commits matched by the slug leaf in the subject and by `Story:`/`Fix:` trailer (7):
+
+- `7f8a3599 Merge fix/issue-81-plan-discover-spec-gate-mismatch (closeout frontmatter)`
+- `8ec4c85f chore(fix-issue-81-plan-discover-spec-gate-mismatch): advance to closeout`
+- `968b7765 Merge fix/issue-81-plan-discover-spec-gate-mismatch`
+- `611db32d docs(fix-issue-81-plan-discover-spec-gate-mismatch): review + report artifacts`
+- `2cf1728f fix(issue-81-plan-discover-spec-gate-mismatch): Fix #81: plan.md advances discover->spec on a gate the standard pack blocks`
+- `3b4e2318 chore(fix-issue-81-plan-discover-spec-gate-mismatch): advance to implement`
+- `22617e63 docs(fix-issue-81-plan-discover-spec-gate-mismatch): fix spec`
+
+Files changed outside `.bklg/` (3 of 8 total):
+
+- `CHANGELOG.md`
+- `commands/plan.md`
+- `test/plan-contract.test.ts`
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+**One line.** `commands/plan.md` step 9 tells the orchestrator to advance a **standard-tier** story
+straight `discover -> spec` (`redkiln advance <STORY-ID> --to spec --apply`), but the `story` process
+pack's `discover` stage carries a hard-blocking checklist gate (`gates/discover`) that renders fully
+**unticked**, and nothing in step 9 authors `discover.md` or ticks that checklist first. The literal
+instruction cannot succeed on a standard-tier story.
+
+Source: [GitHub issue #81](https://github.com/Wet-Ink-Corporation/redkiln/issues/81).
+
+## Context pack
+
+- `processes/story.yaml:6-11` — the `story` pack's `discover` stage: `gate: { kind: checklist, ref:
+  gates/discover }`. This is the pack every standard-tier story uses (`--process story-lite` is only
+  passed when `<TIER>` is `small`, per `commands/plan.md:279-282`).
+- `templates/gates/discover.md` / `templates/discover.md:26-34` — the rendered `## Gate: Discover`
+  section: 4 checkboxes, none ticked in a fresh render (problem framed, prior art/constraints in the
+  signal ledger, open questions resolved/deferred, next stage has a starting point).
+- `commands/plan.md:284-292` (step 9, current) — creates the story, then immediately: "advance each
+  story to `spec`... `discover -> spec` on a standard story... `redkiln advance <STORY-ID> --to spec
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+## TDD Evidence
+
+Which tests went red then green, mapped to each AC.
+
+All three ACs are covered inside `test/plan-contract.test.ts` (AC-001, AC-002 — new) and
+`test/e2e-acceptance.test.ts` (AC-003 — pre-existing, cited rather than duplicated per the spec's
+verification note).
+
+**Red.** Stashing only `commands/plan.md` (leaving the new assertions in `test/plan-contract.test.ts`
+in place) and re-running `npx vitest run test/plan-contract.test.ts` fails 5 of the then-33 tests
+against the unfixed doc text — the four AC-001 assertions inside `describe("step 9 authors
+discover.md and ticks gates/discover ...")` (matching `/absent/`, `/adopt --templates/`, the
+`gates/discover` precedes `--to spec --apply` ordering check, and one other) plus a related assertion
+in the same block, e.g.:
+
+```
+FAIL test/plan-contract.test.ts > step 9 authors discover.md and ticks gates/discover before the
+standard-tier discover -> spec advance (fix #81, AC-001) > mirrors commands/initiative.md's fallback
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+## Findings Ledger
+
+What was delivered, what was learned, and what remains.
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| `commands/plan.md` step 9 told the orchestrator to advance a standard-tier story `discover -> spec` (`redkiln advance <STORY-ID> --to spec --apply`) with nothing between story creation and that call authoring `discover.md` or ticking the four `## Gate: Discover` boxes — so the literal instruction failed against the bundled `story` pack's hard-blocking `gates/discover` checklist gate. Fixed by inserting a sub-step, scoped to standard-tier stories only, that edits the rendered `discover.md` body (Signal Ledger / Questions / Decision) from data the orchestrator already holds (the storymap row + `_decomposition.md`) and ticks all four boxes before the existing advance call. | `commands/plan.md:287-304` (the inserted sub-step); `processes/story.yaml:6-11` (the `gates/discover` gate definition it satisfies); `commands/initiative.md:154-162` (the analogous `gates/intake` pattern it mirrors). | None — matches issue #81 exactly. |
+| The story-lite (small-tier) branch of step 9 has no `discover` stage at all, so no authoring/ticking sub-step was attached to it — confirmed unchanged, not merely untouched. | `test/plan-contract.test.ts:273-291` — the lite clause still reads `intake -> spec` and the sliced window around it carries no `gates/discover` text. | None. |
+| A stale-template fallback mirrors `commands/initiative.md`'s handling of a pre-0.10 render with no `## Gate: Discover` section: append the section pre-ticked and run `redkiln adopt --templates` (EC-001). | `commands/plan.md:301-303`; `test/plan-contract.test.ts:259-262` (`/absent/`, `/adopt --templates/`). | None. |
+| The underlying `gates/discover` checklist gate itself is unchanged — a fresh, unticked standard-tier story still fails `discover -> spec`, confirming this is a documentation fix, not a gate-behavior change. | Cited rather than duplicated per the spec's verification note: `test/e2e-acceptance.test.ts:599` — `it("a checklist gate with an unchecked item blocks discover -> spec")`. | None required. |
+| Two new `describe` blocks (88 added lines, additions-only diff) were added to `test/plan-contract.test.ts`, sliced from `"9. **scaffold the stories"` to `"10. **launch stage b-2"` so the assertions cannot accidentally match the unrelated `gates/intake` text earlier in the same file. | `test/plan-contract.test.ts:225-292`. | None. |
+
+## Acceptance
+
+| AC | Status | Evidence |
+| --- | --- | --- |
+| AC-001 | met | `test/plan-contract.test.ts:225-271` — six `it`-blocks asserting step 9 precedes step 10; scopes the new sub-step to standard-tier stories only; edits Signal Ledger/Questions/Decision; ticks all four boxes and names `gates/discover` as hard-blocking; mirrors the stale-template fallback (EC-001); and orders the gate-tick text before `--to spec --apply`. All assertions confirmed red against the pre-fix `commands/plan.md` and green against the post-fix version. |
+| AC-002 | met | `test/plan-contract.test.ts:273-291` — the story-lite branch still reads `intake -> spec` with no `gates/discover` text attached to its clause; green both before and after the fix, as required for an unchanged branch. |
+```
+
+</details>
+
+<details><summary>downstream: <code>_review.md</code> — first lines at the pin</summary>
+
+```markdown
+**Story:** RK-S0227 · **Slug:** `issue-81-plan-discover-spec-gate-mismatch` · **Checkpoint:** `2cf1728f`
+**Verdict:** approved · **Overall:** 3/3
+
+## AC-### coverage map
+
+| AC id | Met? | Evidence path |
+| --- | --- | --- |
+| AC-001 | Yes | `test/plan-contract.test.ts:225-271` — six `it`-blocks under `describe("step 9 authors discover.md and ticks gates/discover before the standard-tier discover -> spec advance (fix #81, AC-001)")`. Their regexes (`/for standard-tier stories only/`, `/edit[^.]*discover\.md/`, `/signal ledger/`, `/tick/`, `/gates\/discover/`, `/hard-blocking checklist gate/`, `/absent/`, `/adopt --templates/`) and the ordering assertion at `:264-271` were replayed against `git show HEAD:commands/plan.md` pre- and post-fix: all fail pre-fix (the ordering check fails because `indexOf('gates/discover') === -1`) and all pass post-fix. |
+| AC-002 | Yes | `test/plan-contract.test.ts:273-291` — the story-lite branch still reads `intake -> spec` and the sliced clause around `"the lite pack has no `discover` stage"` carries no `gates/discover` text; green on both sides of the fix, correct for a "must remain unchanged" AC. |
+| AC-003 | Yes | Cited per the spec's verification note rather than duplicated: `test/e2e-acceptance.test.ts:599` — `it("a checklist gate with an unchecked item blocks discover -> spec")`. Confirmed to exist, be unskipped/unconditional, and assert `expect(code).not.toBe(0)` plus unchanged stage/status on a fresh, unticked `discover.md`. |
+
+## Per-dimension rubric
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| ac-coverage | 3 | AC-001: five it-blocks in `test/plan-contract.test.ts:225-271`. Empirically replayed their exact regexes against `git show HEAD:commands/plan.md` — `/for standard-tier stories only/`, `/edit[^.]*discover\.md/`, `/signal ledger/`, `/tick/`, `/gates\/discover/`, `/hard-blocking checklist gate/`, `/absent/`, `/adopt --templates/` all FAIL pre-fix and PASS post-fix, and the ordering assertion (`:264-271`) fails pre-fix because `indexOf('gates/discover') === -1`. Genuinely red-before/green-after, not tautologies. AC-002: `test/plan-contract.test.ts:273-291` asserts the lite branch still reads `intake -> spec` and carries no `gates/discover` instruction — green both sides, which is correct for a "must remain unchanged" AC. AC-003: the spec's verification explicitly permits citing an existing test; `test/plan-contract.test.ts:294-299` cites `test/e2e-acceptance.test.ts:599` `it("a checklist gate with an unchecked item blocks discover -> spec")`, confirmed to exist, be unskipped/unconditional, and really assert `expect(code).not.toBe(0)` plus unchanged stage/status. One weak sub-assertion noted (`/four/` at `test/plan-contract.test.ts:254` already matched pre-fix prose "Four things the CLI's shape dictates" at `commands/plan.md:320`), but it sits inside an it-block whose three sibling assertions are genuinely red. |
+| boundary-fidelity | 3 | `git status --porcelain` lists exactly ` M CHANGELOG.md`, ` M commands/plan.md`, ` M test/plan-contract.test.ts` and zero untracked entries — precisely the three rows of the spec's Frozen PR boundary table (`spec.md:77-81`). Nothing touched in `processes/story.yaml`, story-lite's pack, `templates/gates/discover.md`, `templates/discover.md`, or `commands/initiative.md`, all of which the boundary forbids (`spec.md:83-84`). No `src/` or `dist/` change, honoring NF-001. The CHANGELOG addition is a single entry under `## [Unreleased]` -> `### Fixed` (`CHANGELOG.md:45-63`), as the boundary specifies. |
+| test-integrity | 3 | The test diff is a single hunk `@@ -209,3 +209,91 @@` with additions only — zero deleted or modified lines. All seven pre-existing describe blocks (`test/plan-contract.test.ts:18,32,48,54,84,117,183`) are untouched. No `.skip` / `.only` / `.todo` / `test.fixme` / env-gated describe introduced anywhere in the diff, and none found in the cited AC-003 file `test/e2e-acceptance.test.ts` either. No production assertion was loosened to reach green: `commands/plan.md`'s change is purely additive prose plus a re-wrap of one existing sentence (no instruction removed), so no existing doc-contract assertion was made vacuous. |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | spec.md |  |  |
+| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | implementation-report.md |  |  |
+| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | report.md |  |  |
+| P03 | support/fix-planning-workflow-reliability/issue-81-plan-discover-spec-gate-mismatch | story.md | _review.md |  |  |
+
+---
+
+## P04 — 4/12 — `support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `1bddbd2c7593` · **digests:** `5a5b49e8b8f7` → `8d53e12de49d`
+
+**Downstream artifacts to label (4):** `spec.md`, `implementation-report.md`, `report.md`, `_review.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff 1bddbd2c7593 47faec9f -- .bklg/support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding/story.md b/.bklg/support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding/story.md
+index 8e08bede..1cd580f3 100644
+--- a/.bklg/support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding/story.md
++++ b/.bklg/support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding/story.md
+@@ -7,16 +7,16 @@ title: "Fix #72: forge-plan-briefs grounding agents spawned read-only, 3/6 _grou
+ parent: RK-P0025
+ initiative: support
+ project: fix-planning-workflow-reliability
+-status: in-progress
++status: done
+ process: story-lite
+-stage: implement
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-05T19:07:41.246Z
++updated: 2026-08-05T19:29:02.059Z
+ links:
+   pr: null
+   commits:
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+Commits matched by the slug leaf in the subject and by `Story:`/`Fix:` trailer (6):
+
+- `2580ae1f Merge fix/issue-72-plan-briefs-readonly-grounding`
+- `b912b70c chore(fix-issue-72-plan-briefs-readonly-grounding): advance to closeout`
+- `1bddbd2c docs(fix-issue-72-plan-briefs-readonly-grounding): review + report artifacts`
+- `cfdfbaa2 fix(issue-72-plan-briefs-readonly-grounding): Fix #72: forge-plan-briefs grounding agents spawned read-only, 3/6 _grounding.md lost`
+- `74b9458a chore(fix-issue-72-plan-briefs-readonly-grounding): advance to implement`
+- `773feccf docs(fix-issue-72-plan-briefs-readonly-grounding): fix spec`
+
+Files changed outside `.bklg/` (3 of 8 total):
+
+- `CHANGELOG.md`
+- `test/workflow-model-tiers.test.ts`
+- `workflows/forge-plan-briefs.js`
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+**One line.** `workflows/forge-plan-briefs.js`'s Stage 2 "grounding" `safeAgent` call
+(`ground:${p.slug}`, line ~749) is dispatched with `agentType: 'Explore'` — Claude Code's built-in
+read-only research agent, which carries every tool except `Agent`/`Artifact`/`ExitPlanMode`/`Edit`/
+`Write`/`NotebookEdit` — yet its prompt instructs it to "WRITE a grounding note YOURSELF to
+`${projectDir(p)}/_grounding.md`" (line 744-745). The agent cannot perform the write it is told to
+do; the issue reports 3 of 6 projects' `_grounding.md` silently missing after a real planning run.
+
+Source: [GitHub issue #72](https://github.com/Wet-Ink-Corporation/redkiln/issues/72). Issue text
+cites this as the same root cause as #68 (`forge-initiative.js`'s discovery subagents, same
+`agentType: 'Explore'` + write-instruction mismatch, in a different workflow file) — Wave 3, out of
+scope here; not touched by this fix (see Out of Scope).
+
+## Context pack
+
+- `workflows/forge-plan-briefs.js:734-756` — Stage 2, the grounding `safeAgent` call. `agentType:
+  'Explore'` at line 753; the prompt at 744-746 says "WRITE a grounding note YOURSELF to
+  `${projectDir(p)}/_grounding.md`" and cites `IDEMPOTENT(...)` (a helper that only makes sense if a
+  prior write may already exist — i.e. this call is expected to be the one creating it).
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+## TDD Evidence
+
+`test/workflow-model-tiers.test.ts` gained one new `describe` block, **"AC-001 (issue #72):
+forge-plan-briefs' ground: dispatch is write-capable"** (lines 647-707), with three assertions.
+It statically scans `workflows/forge-plan-briefs.js` by reusing `scanDispatchOpts` from
+`workflows/_lib/scan-dispatch.mjs` — the same tool this file already imports for
+AC-ROUTE-PHASE/AC-ROUTE-AGENTS — rather than hand-rolling a second parser, per the spec.
+
+| AC | Test | Red → Green |
+| -- | ---- | ----------- |
+| AC-001 | `AC-001 … > finds exactly one ground: dispatch to check (anti-vacuity)` | Anti-vacuity guard: without this the two assertions below would pass trivially over an empty array if the `ground:` label were ever renamed or removed. Green against the fixed source (one `ground:${p.slug}` dispatch found). |
+| AC-001 | `AC-001 … > does not dispatch the grounding stage with a read-only agentType` | **Red** against the pre-fix source (`agentType: 'Explore'` present at `workflows/forge-plan-briefs.js:753`): `ground.agentType` was `'Explore'`, failing both the `.not.toBe('Explore')` and `.toBeNull()` assertions. **Green** after the fix removed the `agentType` option entirely (verified by inspection: the working tree's current `git diff` shows the line deleted and replaced with an explanatory comment, and the live test run below passes). |
+| AC-001 | `AC-001 … > phase Grounding runs only the default (agentType-less) subagent` | Belt-and-suspenders on the same fact from the phase side — no dispatch under `phase: 'Grounding'` pins any `agentType`. Red pre-fix (the one `ground:` dispatch in that phase carried `agentType: 'Explore'`), green post-fix. |
+| AC-002 | Existing `OBSERVED` fixture / `AC-ROUTE-PHASE` and `AC-ROUTE-POLICY` suites (unchanged, re-run against the fixed source) | Green: the `ground:${p.slug}` dispatch still appears in `OBSERVED` with `phase: 'Grounding'`, `model: 'sonnet'`, `effort: 'high'` — none of `AC-ROUTE-POLICY`'s, `AC-ROUTE-PHASE`'s, `AC-ROUTE-NAMESPACE`'s, `AC-ROUTE-EFFORT`'s, `AC-ROUTE-COVERAGE`'s, `AC-ROUTE-AGENTS`'s, or `AC-ROUTE-COMMANDS`'s 50 pre-existing assertions in this file regressed (full file run: 53/53 tests pass, see Gates). |
+| AC-003 | `git diff -- workflows/forge-plan-briefs.js` (manual diff review, not an automated test per the spec's own verification note) | Confirmed: the only hunk in the file is the 6-line change at the Stage 2 `ground:` call (one line removed, five comment lines added explaining why); Stage 3's `brief:${p.slug}:${kind}` calls at lines 797/832 are byte-for-byte unchanged — outside the diff entirely. |
+
+Run evidence (green, current tree): `npx vitest run test/workflow-model-tiers.test.ts` →
+53 passed / 53 total, including all three new AC-001 tests and every pre-existing
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+## Findings Ledger
+
+What was delivered, what was learned, and what remains.
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| Stage 2's grounding `safeAgent` call (`ground:${p.slug}`) pinned `agentType: 'Explore'` — the built-in read-only research agent — while its own prompt instructed it to "WRITE a grounding note YOURSELF" to `_grounding.md`, a companion file the CLI never renders from a template. `Explore` has no `Write` tool, so the write silently never happened on 3 of 6 projects in a real run, and no gate caught it because the stage still returned a schema-valid digest. Fixed by removing `agentType: 'Explore'` entirely so the dispatch falls through to the default write-capable workflow subagent. | `workflows/forge-plan-briefs.js:748-759` (post-fix); spec `Context pack` and `Repro` sections. | None — matches issue #72 exactly. |
+| The fix converges on precedent already established two stages later in the same file: the sibling `brief:${p.slug}:${kind}` calls also author a companion file (`_decomposition.md`'s per-brief sections) and correctly omit `agentType`. That pattern is confirmed untouched by this fix. | `workflows/forge-plan-briefs.js:800-806`, `835-841` — byte-for-byte unchanged; confirmed via `git show cfdfbaa2 -- workflows/forge-plan-briefs.js`, whose only hunk is the 6-line Stage 2 change. | None. |
+| A new regression test reuses the file's existing `scanDispatchOpts` static scanner (not a hand-rolled parser) to pin the fix from two angles: the dispatch itself (`agentType` is neither `'Explore'` nor any other value — `.toBeNull()`) and the phase as a whole (no dispatch under `phase: 'Grounding'` pins any `agentType`), plus an anti-vacuity guard so the filter cannot pass by matching nothing. | `test/workflow-model-tiers.test.ts:648-707`. | None required. |
+| `forge-initiative.js`'s discovery subagents share this exact defect shape (same `agentType: 'Explore'` + write-instruction mismatch) and are explicitly out of scope — issue #68, Wave 3. Flagged in both the spec and the CHANGELOG entry for whoever scopes that fix to reuse this same one-line-removal pattern. | `spec.md` Out of Scope section; `CHANGELOG.md:46-67`. | Tracked separately as #68 (Wave 3), not this story. |
+
+## Acceptance
+
+| AC | Status | Evidence |
+| --- | --- | --- |
+| AC-001 | met | `test/workflow-model-tiers.test.ts:648-707` — reuses `scanDispatchOpts` to find exactly one `ground:${p.slug}` dispatch and assert its `agentType` is neither `'Explore'` nor any other value (`.not.toBe("Explore")` and `.toBeNull()`). Confirmed mutation-sensitive: the scanner reports `agentType: 'Explore'` when run against the pre-fix blob (`git show HEAD:workflows/forge-plan-briefs.js`), so both assertions red pre-fix. |
+| AC-002 | met | `ground` remains a `census`-policy row (`workflows/_lib/tiers.mjs:426`) with no dispatch override; AC-ROUTE-COVERAGE's dead-row test and AC-ROUTE-PHASE's join test (`test/workflow-model-tiers.test.ts:446-458`, `156-170`) both still pass, confirming label/namespace/phase/routing are unchanged by the fix. |
+| AC-003 | met | `git show cfdfbaa2 -- workflows/forge-plan-briefs.js` — the only hunk is the 6-line Stage 2 change; the sibling `brief:${p.slug}:${kind}` calls at lines 800-806 and 835-841 are outside the diff entirely. |
+```
+
+</details>
+
+<details><summary>downstream: <code>_review.md</code> — first lines at the pin</summary>
+
+```markdown
+## Summary
+
+The Stage 2 grounding `safeAgent` call in `workflows/forge-plan-briefs.js` pinned
+`agentType: 'Explore'` — Claude Code's built-in read-only research agent — while its own prompt
+instructed it to "WRITE a grounding note YOURSELF" to `_grounding.md`, a companion file the CLI
+never renders from a template. `Explore` has no `Write` tool, so the write silently never
+happened: 3 of 6 projects lost their grounding note on a real planning run, with no gate catching
+it because the stage still returned a schema-valid digest. The fix removes `agentType: 'Explore'`
+from that one dispatch so it falls through to the default write-capable workflow subagent —
+exactly matching the sibling `brief:${p.slug}:${kind}` stage's existing pattern for its own
+companion-file write, two stages later in the same file. No other option, stage, schema, or file
+changed. One new `describe` block in `test/workflow-model-tiers.test.ts` (reusing the file's
+existing `scanDispatchOpts` static scanner) pins the regression from both the dispatch side and
+the phase side, with an anti-vacuity guard against the filter silently matching nothing.
+
+## AC-### Coverage Map
+
+| AC | Met? | Evidence |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | spec.md |  |  |
+| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | implementation-report.md |  |  |
+| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | report.md |  |  |
+| P04 | support/fix-planning-workflow-reliability/issue-72-plan-briefs-readonly-grounding | story.md | _review.md |  |  |
+
+---
+
+## P05 — 5/12 — `support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `1322cc5a84c1` · **digests:** `066995c710e9` → `c43c14ce56cc`
+
+**Downstream artifacts to label (4):** `spec.md`, `implementation-report.md`, `report.md`, `_review.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff 1322cc5a84c1 47faec9f -- .bklg/support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass/story.md b/.bklg/support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass/story.md
+index c024fc1e..921d9d20 100644
+--- a/.bklg/support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass/story.md
++++ b/.bklg/support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass/story.md
+@@ -7,16 +7,16 @@ title: "Fix #79: forge-plan-prds verifier reports pass:true for unwritten _plan.
+ parent: RK-P0025
+ initiative: support
+ project: fix-planning-workflow-reliability
+-status: in-progress
++status: done
+ process: story-lite
+-stage: implement
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-06T03:34:09.052Z
++updated: 2026-08-06T03:48:58.801Z
+ links:
+   pr: null
+   commits:
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+Commits matched by the slug leaf in the subject and by `Story:`/`Fix:` trailer (6):
+
+- `367b6214 Merge fix/issue-79-plan-prds-verifier-false-pass`
+- `ab37b719 chore(fix-issue-79-plan-prds-verifier-false-pass): advance to closeout`
+- `1322cc5a docs(fix-issue-79-plan-prds-verifier-false-pass): review + report artifacts`
+- `d2f56cf0 fix(issue-79-plan-prds-verifier-false-pass): Fix #79: forge-plan-prds verifier reports pass:true for unwritten _plan.md`
+- `78e0ee0b chore(fix-issue-79-plan-prds-verifier-false-pass): advance to implement`
+- `752b9a82 docs(fix-issue-79-plan-prds-verifier-false-pass): fix spec`
+
+Files changed outside `.bklg/` (4 of 9 total):
+
+- `CHANGELOG.md`
+- `test/helpers/workflow-harness.ts`
+- `test/plan-dag.test.ts`
+- `workflows/forge-plan-prds.js`
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+**One line.** `workflows/forge-plan-prds.js`'s `verify-plan` agent is asked to BOTH write `_plan.md`'s
+body AND judge the plan's correctness in one response (line ~1107-1145). `VERIFY_SCHEMA`'s `planPath`
+field (line 551) is just the agent's own unverified string claim, the manifest's `plan:` field (line
+1245) is a hardcoded constant path reported regardless of outcome, and `verified` (line 1241) never
+checks the filesystem — it trusts `verdict.pass` alone. Nothing anywhere confirms `_plan.md` was
+actually written (vs. left as the unauthored template stub).
+
+Source: [GitHub issue #79](https://github.com/Wet-Ink-Corporation/redkiln/issues/79). Same defect
+family as #73 (this wave, `forge-plan-briefs.js`, already fixed) and #67 (`forge-initiative.js`,
+Wave 3) — a verifier/manifest trusts a declared/self-reported result instead of an independently
+checked one. Per the accepted Wave 2 scope decision, this fix is scoped to `forge-plan-prds.js`
+only; #67 is Wave 3, not touched here (see Out of Scope).
+
+## Context pack
+
+- `workflows/forge-plan-prds.js:546-572` — `VERIFY_SCHEMA`. `planPath: { type: 'string', description:
+  "path of the _plan.md rollup whose body was written" }` — a bare string the agent reports, never
+  checked against the filesystem by anything downstream.
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+## TDD Evidence
+
+Which tests went red then green, mapped to each AC.
+
+| AC | Test | Red → Green |
+| -- | ---- | ----------- |
+| AC-001 | `test/plan-dag.test.ts:292` — `describe("AC-PW: verified requires a confirmed-written _plan.md, not just pass:true (fix #79)")`, `it("AC-001: pass:true with planWritten:false is not verified")`; and `test/plan-dag.test.ts:303` — `it("AC-001: pass:true with planWritten absent is not verified — omission never defaults to true")` | **Red** against the pre-fix `verified` expression (`verdict?.pass === true && DAG.acyclic && dagGaps.length === 0`, no `planWritten` conjunct): both tests patch the `verify-plan` digest to `pass: true, planWritten: false` (first test) or delete the field entirely (second test) on an otherwise clean, acyclic, gap-free DAG seed — pre-fix, neither signal is read anywhere, so `m.verified` would be `true` in both cases, failing the `expect(m.verified).toBe(false)` assertion. This matches the inline mutation notes each test carries ("revert `verified` to `verdict?.pass === true && DAG.acyclic && dagGaps.length === 0`… and this reds"). **Green** now: `workflows/forge-plan-prds.js:1276-1277` reads `verdict?.planWritten === true` explicitly (not `!== false`), so both an explicit `false` and an absent field read as unverified. Verified green: `pnpm vitest run test/plan-dag.test.ts` — 25/25 passed. |
+| AC-002 | `test/plan-dag.test.ts:313` — `it("AC-002: both passes reporting planWritten:true does not make a clean run report false")`; plus the pre-existing happy-path assertion `test/plan-dag.test.ts:257-265` ("is verified and silent when the specs and the story map agree"), unmodified but now exercising the new required field | Not a red→green case on its own turn — this AC's job is to prove the fix does not turn a genuinely clean run false. It stayed green throughout: the happy-path digest is produced by `digestFor()` in `test/helpers/workflow-harness.ts:200-207`, which was updated in the SAME change to set `planWritten: true` for the `verify-plan`/`re-verify:plan` labels (the harness's own definition of a green run), so every existing DAG suite in this file — including the pre-existing happy-path test — continued to assert `verified: true` without any per-test patch. The new `AC-002` test uses the same clean seed with no patch at all, confirming the default is satisfied and `verified` stays `true`. Verified green: `pnpm vitest run test/plan-dag.test.ts` — 25/25 passed. |
+| AC-003 | `test/plan-dag.test.ts:322` — `it("AC-003: a re-verify:plan reporting planWritten:false overrides an earlier planWritten:true")` | **Red** against the pre-fix `verified` expression: the test forces a fix-pass path by making the first `verify-plan` digest report `pass: false` (with a gap) despite `planWritten: true`, driving one fix pass, then has `re-verify:plan` report `pass: true, planWritten: false`. Pre-fix, `verified` never reads `planWritten` at all, so it would read `true` off the re-verify's `pass: true` alone, failing `expect(m.verified).toBe(false)`. This also guards against reading the wrong verdict object: `verdict = reVerdict` (`workflows/forge-plan-prds.js:1261`) is the pre-existing reassignment this fix must not bypass — a version that read the ORIGINAL verdict's `planWritten: true` instead of the reassigned one would also fail this test. **Green** now: the manifest reads the latest (reassigned) `verdict.planWritten`, which is `false`, so `verified` is `false`. Verified green: `pnpm vitest run test/plan-dag.test.ts` — 25/25 passed. |
+
+## Commits
+
+_(none yet — the checkpoint for this fix has not been created; `redkiln record-links --sha` records it once it exists)_
+
+| SHA | Subject |
+| --- | ------- |
+
+## Changes
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+## Findings Ledger
+
+What was delivered, what was learned, and what remains.
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| The `verify-plan`/`re-verify:plan` manifest computed `verified` from `verdict?.pass === true && DAG.acyclic && dagGaps.length === 0` alone, so a verdict could self-report `pass: true` without any confirmation the `_plan.md` rollup was actually written — a truncated or unexecuted write still reported `verified: true`. Fixed by adding a required `planWritten: boolean` field to `VERIFY_SCHEMA`, a named "ROLLUP POSTCONDITION" step in both the `verify-plan` and `re-verify:plan` prompts requiring `test -f` on the rollup path plus opening it before setting the field, and reading `verdict?.planWritten === true` explicitly in the `verified` expression. | `workflows/forge-plan-prds.js:546-566` (schema), `:1146-1157` and `:1240-1249` (prompts), `:1276-1277` (`verified` expression). | None — matches issue #79 exactly. |
+| The fix reads the field with `=== true`, not `!== false`, so an absent field (a claim nobody made) is treated identically to an explicit `false` rather than defaulting to true on omission. | `test/plan-dag.test.ts:303-311` (`delete d.planWritten` case) alongside the explicit-`false` case at `:292-301`. | None. |
+| The manifest reads the LATEST verdict rather than the original one, so a fix pass that reports `planWritten: true` cannot mask a subsequent `re-verify:plan` reporting `planWritten: false` — the pre-existing `verdict = reVerdict` reassignment (`workflows/forge-plan-prds.js:1262`) is exercised, not bypassed. | `test/plan-dag.test.ts:322-344`. | None. |
+| The genuinely-clean-run case (`planWritten: true` on both passes, acyclic DAG, no gaps) still reports `verified: true` — the fix does not turn a real green run false. | `test/plan-dag.test.ts:313-320` (new, patch-free) plus the pre-existing, byte-identical happy-path assertion at `:276-284`, both now exercising the new required field via `test/helpers/workflow-harness.ts:203-209`'s `planWritten: true` default for the `verify-plan`/`re-verify:plan` labels. | None. |
+| `test/helpers/workflow-harness.ts`'s `digestFor()` was updated outside the spec's frozen file table because it is the single shared definition of a "green" run for every `forge-plan-prds.js` consumer suite; without it the new required schema field would silently regress every OTHER suite's happy path (smoke, model-tiers, fanout-cap) to `verified: false` for a reason unrelated to what each suite tests. Disclosed in the implementation report and flagged by review as a table inconsistency (boundary-fidelity 2/3) rather than scope creep, since AC-002's own verification note names the mechanism. | `test/helpers/workflow-harness.ts:203-209`; `test/fanout-cap.test.ts:81` (would red without it); `_review.md` boundary-fidelity rationale. | None required to close; worth folding into the next spec's frozen-file table convention. |
+
+## Acceptance
+
+| AC | Status | Evidence |
+| --- | --- | --- |
+| AC-001 | met | `test/plan-dag.test.ts:292-311` — `pass: true` with `planWritten: false` and `pass: true` with `planWritten` absent both assert `m.verified === false` against the live `workflows/forge-plan-prds.js:1276-1277` gate; the absent-field case is what proves omission is never defaulted to true. |
+| AC-002 | met | `test/plan-dag.test.ts:313-320` (new anti-vacuity case: `planWritten: true` on both passes, acyclic DAG, no gaps -> `verified: true`) plus the pre-existing happy-path assertion at `:276-284`, unmodified and still green now that it exercises the new required field via the harness default. |
+```
+
+</details>
+
+<details><summary>downstream: <code>_review.md</code> — first lines at the pin</summary>
+
+```markdown
+## AC Coverage Map
+
+| AC | Met? | Evidence |
+| --- | --- | --- |
+| AC-001 | yes | `test/plan-dag.test.ts:292-311` — two tests: an explicit `planWritten: false` digest patch and a `delete d.planWritten` (field absent) case. The second is the one that distinguishes `=== true` from `!== false` and cannot be settled by a source grep alone. Both assert `m.verified === false` against the live `forge-plan-prds.js:1276-1277` gate. |
+| AC-002 | yes | `test/plan-dag.test.ts:313-320` (new, patch-free anti-vacuity case: `verified: true`, `dagGaps: []`, `acyclic: true`) plus the pre-existing, byte-identical happy-path assertion at `test/plan-dag.test.ts:257-265`/`:276-284`, which now exercises the new required field via `test/helpers/workflow-harness.ts:203-209`'s `planWritten: true` default. Confirms the fix does not turn a genuinely clean run false. |
+| AC-003 | yes | `test/plan-dag.test.ts:322-344` — drives the fix-pass branch with `verify-plan` reporting `pass: false` plus a gap, then `planWritten: true`, followed by `re-verify:plan` reporting `pass: true, planWritten: false`; asserts `verified: false`. This exercises the `verdict = reVerdict` reassignment at `workflows/forge-plan-prds.js:1262`, proving the fix reads the LATEST verdict, not the original. |
+
+## Rubric
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| ac-coverage | 3 | All three ACs have real, executed, non-tautological tests. AC-001 is covered twice at test/plan-dag.test.ts:292-311 — an explicit `planWritten: false` and a `delete d.planWritten`, the second of which is what distinguishes `=== true` from `!== false` and cannot be answered by a source grep. AC-002 is the anti-vacuity case at :313-320 (verified true, dagGaps [], acyclic true) plus the untouched pre-existing happy-path assertion at :276-284. AC-003 at :322-344 drives the fix-pass branch via `pass:false` + gaps, gives verify-plan `planWritten:true` and re-verify:plan `pass:true, planWritten:false`, and asserts verified false — exercising the `verdict = reVerdict` reassignment at forge-plan-prds.js:1262. I ran all of these (25/25 green) and reproduced every outcome on an independent seed with my own scratch harness. Mutation-sensitivity holds analytically: on this clean seed the DAG conjuncts are true (proved by the AC-002 case) and `pass` is true in all three negative cases, so the pre-fix `verdict?.pass === true && DAG.acyclic && dagGaps.length === 0` evaluates true and each new test reds. I could not execute the pre-fix mutant end-to-end because digestFor keys its overrides on the exact filename and I was refused permission to swap the real workflow file. |
+| boundary-fidelity | 2 | Three of four touched files are in the frozen table (workflows/forge-plan-prds.js, test/plan-dag.test.ts, CHANGELOG.md — the last a single Unreleased/### Fixed entry at CHANGELOG.md:48-72, correctly under the `## [Unreleased]` heading at :23). The fourth, test/helpers/workflow-harness.ts:203-209, is NOT listed. It is however mandated in substance by AC-002's own verification (spec.md:118-120, 'by the harness's digestFor' — the spec misattributes digestFor to test/helpers/workflow-seeds.ts, where it does not live), and omitting it reds test/fanout-cap.test.ts:81 (`expect(m.verified).toBe(true)`), so the gate could not be green without it. The edit is one gated line plus comment, test-only, scoped by `file === "forge-plan-prds.js"`. This is an inconsistency in the spec's own table rather than implementation overreach — hence 2, not 3: the letter of the table was exceeded and the deviation is recorded nowhere. Inside forge-plan-prds.js the frozen no-change list is honoured: `plan: PLAN_PATH` (1281), DAG/dagGaps, reconcile/strayPaths, the #83 PRD stage split and the reassignment at 1262 are all untouched; forge-plan-briefs.js, forge-initiative.js and commands/plan.md are not in the diff. |
+| test-integrity | 3 | Nothing gutted, weakened, skipped or deleted. The only change to existing test code is an additive optional parameter on the local helper (test/plan-dag.test.ts:85-88, `patch?: DigestPatch` forwarded to execute); every pre-existing assertion, including the happy-path `expect(m.verified).toBe(true)` at :282, is byte-identical and still green. No test.skip/fixme/only anywhere in the diff. The harness's `planWritten: true` (workflow-harness.ts:209) is not a fixture pinning the answer the substrate must compute: it models the agent report that the stub agent stands in for, it is the single shared definition of a green run (as the file's own DigestPatch contract at :306-317 requires), and the AC-001 tests deliberately patch it OFF, which is what proves the new gate is live rather than vacuous. |
+| gate-greenness | 3 | Every AC-### is met by real, reachable behaviour on the production dispatch path, tests are intact, and every check I could run without re-running the authoritative gate is green: plan-dag 25/25 and fanout-cap 7/7 pass; prettier --check clean on all three prettier-owned changed files (long lines are inside comments and it()/describe() test calls, matching 20+ pre-existing lines >100 chars in the same file); check-parse and check-prompts report 0 failures, confirming the new escaped-backtick template literals parse under the workflow wrapper and cite no unresolvable asset. No merged escape hatch: the field is REQUIRED in VERIFY_SCHEMA (548), instructed as a mechanical `test -f` + open in both prompts (1149-1154, 1241-1245), and consumed by real manifest code (1276-1277) that fails closed on omission. Deduction none; the sole evidence gap is that the Green step reported no gateCommands (empty implementation report), which the following Verify step will settle. |
+| regression-risk | 3 | Low blast radius. Workflow change is 3 hunks: one added schema property, two prompt paragraphs, one added conjunct — and it fails CLOSED (an omitted or false planWritten yields unverified, never a false clean run). Making planWritten required slightly raises the chance a non-conforming response is rejected, which routes through safeAgent's existing retry to a null verdict and again to `verified: false` — the safe direction, with pre-existing null handling untouched. The harness edit reaches every suite that runs a plan-prds happy run (smoke, model-tiers, fanout-cap, plan-dag, link-persist, command-record-run), but adds one boolean nothing else reads and can only flip verified false->true for that one workflow; I verified fanout-cap and plan-dag directly, and test/workflow-run-event.test.ts's 'completed:unverified' references are schema-vocabulary tests with no workflow execution. No new coupling beyond the harness's documented single-definition-of-green invariant (workflow-harness.ts:6-9). One residual opacity, pre-existing rather than introduced: the manifest never returns verdict.gaps, so a planWritten:false run reports completed:unverified without naming the missing rollup. |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | spec.md |  |  |
+| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | implementation-report.md |  |  |
+| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | report.md |  |  |
+| P05 | support/fix-planning-workflow-reliability/issue-79-plan-prds-verifier-false-pass | story.md | _review.md |  |  |
+
+---
+
+## P06 — 6/12 — `support/fix-lane-plumbing/issue-47-fix-report-md-unauthored`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `a07910a86a45` · **digests:** `98b6c4132ecb` → `ce37f131644b`
+
+**Downstream artifacts to label (3):** `spec.md`, `implementation-report.md`, `report.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff a07910a86a45 47faec9f -- .bklg/support/fix-lane-plumbing/issue-47-fix-report-md-unauthored/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-lane-plumbing/issue-47-fix-report-md-unauthored/story.md b/.bklg/support/fix-lane-plumbing/issue-47-fix-report-md-unauthored/story.md
+index 7a458600..546abad8 100644
+--- a/.bklg/support/fix-lane-plumbing/issue-47-fix-report-md-unauthored/story.md
++++ b/.bklg/support/fix-lane-plumbing/issue-47-fix-report-md-unauthored/story.md
+@@ -7,20 +7,21 @@ title: "Fix #47: /redkiln:fix cannot author report.md, blocking every run at clo
+ parent: RK-P0028
+ initiative: support
+ project: fix-lane-plumbing
+-status: pending
++status: done
+ process: story-lite
+-stage: intake
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-03T22:37:45.279Z
++updated: 2026-08-08T05:14:44.373Z
+ links:
+   pr: null
+   commits: []
+   kb: []
++gate_open: false
+ schema: 1
+ process_rev: fb2938ab
+ ---
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+No commits resolved by slug leaf or trailer at this pin. That is a lookup limit, not a
+statement about the item.
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+> **Written retrospectively.** The fix shipped before this spec existed. It was implemented out of
+> lane — deliberately, because the fix lane is itself what issues #47–#51 were filed against, so the
+> lane could not be used to repair itself — and landed on `main` in squash commit `e09892f1`
+> ("Issue sweep Waves 3–7", PR #85) inside the `fix(fix-lane): repair the reactive fix lane end to
+> end (#48, #50, #49, #47, #51)` commit. This document records what the defect was, what boundary the
+> work actually turned out to have, and the acceptance criteria **as the shipped tests express
+> them** — every AC below is a restatement of an assertion that already exists in
+> `test/fix-lane-paths.test.ts`. It is not a pre-implementation design.
+
+**One line.** `workflows/forge-fix.js` told its `fix-review-doc` agent to author the report-stage
+artifact body "into `${reportPath}` … the file exists with CLI-owned frontmatter". The file does not
+exist at that point in the lane: `report.md` is rendered by `redkiln advance <id> --to report
+--apply`, which `commands/fix.md` runs three steps *after* the workflow returns. The instruction was
+unsatisfiable, the manifest listed `reportPath` under `files` anyway (reporting work nobody did), and
+every `/redkiln:fix` run then dead-ended at the human's closeout, where the engine refuses to leave a
+gated stage whose produced artifact is still the unauthored template.
+
+## Context pack
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+> **Written retrospectively, by an author who did not watch the work.** The fix shipped out of lane
+> during the 2026-08 issue sweep — deliberately, because the fix lane is itself what #47–#51 were
+> filed against — and landed on `main` well before this report existed. Everything below is
+> reconstructed from the shipped diff, the shipped tests, the commit message, and a test run I made
+> myself. Where the template asks for a red→green sequence I did not observe, this report says so
+> rather than narrating one.
+
+## TDD Evidence
+
+Which tests went red then green, mapped to each AC.
+
+**Read this column honestly.** Every row's test exists and passes — I ran the file (see Gates), so
+the green half is first-hand. **The red half was not recorded.** The work was done inside the sweep's
+implement→verify→remediate loop and the ordinary reading is that these tests were written failing
+first, but no transcript of that survives and I will not assert it. What I *can* evidence is that
+each assertion **discriminates** — that some reachable state of the tree reds it. The shipped test
+file carries per-assertion `// MUTATION:` notes naming exactly that state (nineteen such lines across
+the two AC describes at `test/fix-lane-paths.test.ts:733-912`), and those are what the "Red" column
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+## Findings Ledger
+
+The fix shipped as two halves. One deletes a false claim; the other adds the missing behaviour. **The
+first verification pass refuted the fix** — not the code it changed, but the evidence for it: a
+verifier deleted the entire operative half from `commands/fix.md`, ran the suite, and watched it stay
+green. That measurement is the most useful thing this story produced and it is written up in full
+below the table.
+
+Everything cited as landed reached `main` in squash commit `e09892f1` ("Issue sweep Waves 3-7", PR
+#85). The per-wave commit that actually carried this story is **not reachable from `main`** and is
+therefore not cited here; `implementation-report.md` records it as provenance for anyone who still
+has the sweep branch.
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| **DELIVERED — subtractive half.** `workflows/forge-fix.js` stops claiming a file it never wrote: the "ALSO write the report-stage artifact BODY into `${reportPath}` … the file exists with CLI-owned frontmatter" clause is deleted from the `fix-review-doc` prompt, `reportPath` is dropped from the manifest's `files` array, `meta.description` stops naming `report.md`, and the Phase 3 banner is retitled `_review.md ONLY`. | `e09892f1`; AC-002, AC-003, AC-004 green (`test/fix-lane-paths.test.ts`, describe `AC-FIX-REPORT-CLI`). | None. Control flow, phase set, model tiers and halt conditions are unchanged. |
+| **DELIVERED — operative half.** `commands/fix.md` step 11 gains a numbered authoring block sitting **between** `advance --to report --apply` (which renders the file) and `advance --verdict approved --stay --apply` (which seals the gate); step 8 now states positively that the workflow does **not** author `report.md` and that the manifest's `reportPath` is a destination for the command. | `e09892f1`; AC-005, AC-006, AC-007 green (describe `AC-FIX-REPORT-BODY`). | None. This is the half that unblocks the lane. |
+| **DELIVERED — `reportPath` survives as a returned manifest field, deliberately.** It is the one path in the manifest with no agent-digest fallback, because no agent authors it; it now has a documented reader in `commands/fix.md` step 11. | `spec.md` NF-003; the rationale comment shipped at `workflows/forge-fix.js:434-453`. | None. Removing it would have been the simpler subtraction and would have broken the operative half. |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | spec.md |  |  |
+| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | implementation-report.md |  |  |
+| P06 | support/fix-lane-plumbing/issue-47-fix-report-md-unauthored | story.md | report.md |  |  |
+
+---
+
+## P07 — 7/12 — `support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `2d81a81d5e92` · **digests:** `de738921660a` → `0dd9deeb5497`
+
+**Downstream artifacts to label (3):** `spec.md`, `implementation-report.md`, `report.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff 2d81a81d5e92 47faec9f -- .bklg/support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination/story.md b/.bklg/support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination/story.md
+index 3c41d798..61b3aca1 100644
+--- a/.bklg/support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination/story.md
++++ b/.bklg/support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination/story.md
+@@ -7,20 +7,21 @@ title: "Fix #78: initiative.md runs adopt --templates inside the initiative work
+ parent: RK-P0027
+ initiative: support
+ project: fix-initiative-forging-flow
+-status: pending
++status: done
+ process: story-lite
+-stage: intake
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-03T22:36:12.804Z
++updated: 2026-08-08T05:14:43.662Z
+ links:
+   pr: null
+   commits: []
+   kb: []
++gate_open: false
+ schema: 1
+ process_rev: fb2938ab
+ ---
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+No commits resolved by slug leaf or trailer at this pin. That is a lookup limit, not a
+statement about the item.
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+> **Written retrospectively.** The fix for [#78](https://github.com/Wet-Ink-Corporation/redkiln/issues/78)
+> was implemented and merged to `main` in squash commit `e09892f1` — out of the normal fix lane, and
+> before this spec existed, because the fix lane itself was one of the things under repair in the same
+> sweep (#47–#51). This document is therefore a record, not a design: the boundary below is the boundary
+> that turned out to be right, and every acceptance criterion is transcribed from an assertion that
+> already ships in `test/worktree-adopt-contamination.test.ts`. Nothing here was gated on it.
+>
+> **Grounding note.** The issue body could not be re-fetched while authoring (the shell tool was
+> unavailable for the whole session). The account below is grounded in three things that are in the
+> repo and can be checked: the sweep triage entry for #78
+> (`.bklg/support/_triage/2026-08-issue-sweep.md`, Cluster C), the shipped regression test — which
+> quotes the pre-fix sentence verbatim in its header comment and replays it as a control — and the
+> post-fix prose now in `commands/initiative.md` and `commands/plan.md`.
+
+**One line.** Three worktree-scoped command steps told the orchestrator to run
+`redkiln adopt --templates` from inside an initiative's own git worktree, which rewrites
+`.redkiln/templates/**` repo-wide and lands that rewrite on the feature branch as an unreviewed change
+to the contract of every future item — as a remedy that, by the commands' own admission, could not
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+> **Written retrospectively, like the spec.** The fix landed on `main` in squash commit `e09892f1`
+> out of the normal fix lane. I did not run the implementation and **I did not watch a single test go
+> red**. What follows distinguishes, per row, between *"a mutation was executed and the assertion was
+> observed to discriminate"* and *"the assertion exists, is green, and its red state was never
+> recorded"*. Read the Red → Green column as a claim about evidence, not about history.
+>
+> **What I could establish, and how.** `test/worktree-adopt-contamination.test.ts` carries an explicit
+> `// MUTATION:` comment on almost every assertion, naming the edit that reds it. Those comments are
+> the author's claim, not proof. So rather than relay them, I re-ran the guard's own predicates —
+> `occurrences()`, `refused()`, `blockAt()`, `normativeParagraph()`, transcribed verbatim — against
+> the **pre-fix blobs** `git show e09892f1^:commands/initiative.md` and
+> `…^:commands/plan.md`, read-only, outside the repo. That is not a recorded red, but it is the same
+> question a red would have answered: *does this assertion separate the prose that shipped from the
+> prose it replaced?* The measured result is quoted in the rows below and reproduced in full under
+> **Gates**. Where the answer is "no, it was already green pre-fix", the row says so.
+
+## TDD Evidence
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+## Findings Ledger
+
+What was delivered, what was learned, and what remains. Every count below I counted today, in this
+worktree, on `chore/sweep-reconciliation`; every claim about the sweep's own history is read off the
+squash commit message of `e09892f1` (the per-wave commits exist but are not reachable from `main`, so
+they are not cited).
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| **Delivered — the instruction is refused at all three sites, not deleted.** `grep -n "adopt --templates" commands/*.md` returns exactly three lines: `initiative.md:177`, `plan.md:206`, `plan.md:320`. Each sits inside an identical normative paragraph opening `Do **not** run … from here:` and closing `Adopting is a deliberate, repo-wide act for the primary checkout, on its own commit.` | `test/worktree-adopt-contamination.test.ts`, 11 tests, re-run today: 11 passed. AC-001's `unrefused` list is `[]`; its in-suite anti-vacuity control replays the verbatim pre-#78 sentence and asserts `refused(...) === false`. | none |
+| **Delivered — a test that *required* the defect to be present was amended, not left standing.** `test/plan-contract.test.ts` asserted `expect(stepNine).toMatch(/adopt --templates/)`; it now demands the refused form plus `append the section yourself`, and issue #81's sibling `/absent/` assertion is untouched. | Re-run today: 35 tests passed (46 across both files). The squash message states the rationale directly — "a test that requires a known-defective instruction to stay put is worse debt than the instruction". | See "remains": the spec's frozen-boundary table omits this file. |
+| **Delivered — the replacement mechanism is grounded in source, not asserted.** The prose promises `redkiln new`'s render-time drift warning; AC-004/005/006 read the cited symbols off `src/store/items.ts`, `src/cli/new.ts`, `src/process/engine.ts` and `src/migrate/adopt.ts` so the prompt cannot quietly become false. | I re-resolved all five anchor citations by hand today: `engine.ts:538` is still `if (existsSync(dest)) continue;`, `items.ts:166/483` still declare and push `templateDriftWarnings`, `new.ts:153-154` is still the `result.warnings` stderr loop, `adopt.ts:128` is still `const templateDrift = doTemplates ? listTemplateDrift(root) : []`. | none |
+| **Learned — the first adversarial verification pass refuted this fix.** Two load-bearing claims in the replacement prose were false and were corrected before landing. The squash message records it: "Two claims in the replacement were corrected under review before landing: the file count is scenario-dependent (adopt writes what `listTemplateDrift` reports, not all 22 bundled templates), and the source citations are anchored on symbol names rather than line numbers, which rot silently across three shipped prompts." | `e09892f1`, the `docs(commands): stop instructing …(#78)` sub-commit. This is the most valuable thing in the report: the fix as first drafted would have replaced one false instruction with a differently false one. | none — the corrections shipped |
+| **Learned — the refutation was measured, not argued.** The count claim was not debated; it was checked against the code that does the writing. `adopt`'s write set is `listTemplateDrift(root)`, i.e. *whatever has drifted* — one file in a repo with a single stale pin, the whole set in a repo that never adopted. No fixed number can be true of it. Independently, the number itself was already wrong: I count **26** `.md` files under `templates/` today, not 22. | `src/migrate/adopt.ts:128`; `find templates -type f -name "*.md" \| wc -l` → 26. | none |
+| **Learned — what changed as a result.** The prose now states a *scope*: "adopt rewrites `.redkiln/templates/**` REPO-WIDE … however many that turns out to be". Every source citation is a symbol name with a file, and carries **no line number** — the shipped paragraph is read by an orchestrator in a checkout whose line numbers the author cannot see. AC-006 exists for no other reason than to pin the drift derivation, so it is the residue of a real disagreement rather than a decoration. | `commands/initiative.md:174-187` and the two `plan.md` sites; AC-006 in the shipped suite. | none |
+| **Learned — the deleted remedy could never have worked, and said so itself.** `renderArtifacts` skips any artifact already on disk. The pre-fix sentence conceded that in its own parenthetical and issued the instruction anyway, so the branch contamination bought literally nothing. A caveat *inside* an instruction does not neutralise the instruction — an orchestrator executes the imperative and reads the parenthetical as colour. | `src/process/engine.ts:538`; the pre-fix sentence preserved verbatim in the test's header comment. | none |
+| **Learned — deleting the sentence would have passed a naive guard and lost the reason.** A bare absence satisfies `not.toMatch(/adopt --templates/)` while leaving the next author to re-derive the same wrong remedy from an absent gate section. That is why AC-001 is a *proximity* rule and why the anti-vacuity control lives inside the suite instead of in a transcript nobody kept. | AC-001 and its control test. The shipped fix is deliberately narrower than #78 asked for (the issue proposed dropping the clause "entirely"). | none |
+| **Learned — the issue reported one site; there were three.** #78 named `commands/initiative.md` step 6 only; the same unwrapped sentence sat at `commands/plan.md` steps 5 and 9. AC-007 exists because triplicating a long paragraph across two files is a divergence hazard no other assertion in the suite would ever see. | Three occurrences counted above; AC-007 asserts the three normalised extracts dedupe to one, from three *distinct* `file:line` sites, each over 400 characters. | none |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | spec.md |  |  |
+| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | implementation-report.md |  |  |
+| P07 | support/fix-initiative-forging-flow/issue-78-initiative-adopt-templates-contamination | story.md | report.md |  |  |
+
+---
+
+## P08 — 8/12 — `support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `cbdde6f19a0d` · **digests:** `f2c0bc33cb29` → `5bf0d35d6cdc`
+
+**Downstream artifacts to label (4):** `spec.md`, `implementation-report.md`, `report.md`, `_review.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff cbdde6f19a0d 47faec9f -- .bklg/support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse/story.md b/.bklg/support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse/story.md
+index 092ded33..bb893fcb 100644
+--- a/.bklg/support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse/story.md
++++ b/.bklg/support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse/story.md
+@@ -7,16 +7,16 @@ title: "Fix #135/#129: declaredBoundary hijacks on a prose heading and voids tra
+ parent: RK-P0040
+ initiative: support
+ project: fix-gate-honesty-sweep
+-status: in-review
++status: done
+ process: story-lite
+-stage: report
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-18
+-updated: 2026-08-18T23:46:33.711Z
++updated: 2026-08-19T06:35:26.867Z
+ links:
+   pr: null
+   commits:
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+Commits matched by the slug leaf in the subject and by `Story:`/`Fix:` trailer (1):
+
+- `d9397179 fix(issues-135-129-declared-boundary-parse): Fix #135/#129: declaredBoundary hijacks on a prose heading and voids trailing-comment entries`
+
+Files changed outside `.bklg/` (5 of 6 total):
+
+- `CHANGELOG.md`
+- `dist/cli.js`
+- `dist/index.js`
+- `src/store/verify.ts`
+- `test/verify.test.ts`
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+**One line.** `declaredBoundary` (`src/store/verify.ts:354-378`) locks onto the FIRST heading anywhere
+in `spec.md` containing the substring "boundary" (#135) and pushes fence entries carrying a TRAILING
+`#` comment verbatim into `boundaryRegExp` (#129); both defects end in a SILENT PASS, and the whole
+check is dormant repo-wide because it parses a fenced form almost nothing uses.
+
+## Context pack
+
+- **#135 — the hijack.** `:358` is `lines.findIndex((l) => /^#{1,6}\s+.*boundary/i.test(l))`. Any
+  heading whose text merely CONTAINS "boundary" — an H1 title (`# Spec — Accent budget audit and
+  boundary`), a prose subheading (`### Where the chunk boundary comes from`) — wins the scan. `:367`
+  then hits the next heading and returns `undefined`, and `boundaryCheck` (`:401-404`) converts
+  `undefined` into `{ran:false, pass:true, detail:"no boundary declared"}`. The real `## PR boundary`
+  fence is never read and the gate reports a skip it did not earn.
+- **#129 — the voided entry.** `:374-375` is `if (t !== "" && !t.startsWith("#")) patterns.push(t);`.
+  A LEADING `#` comment is skipped; a TRAILING one is not, so `src/foo.ts   # only the CLI` is pushed
+  whole. `boundaryRegExp` (`:328-346`) escapes every metacharacter and anchors `^…$`, yielding a
+  regex no real path can satisfy. The entry is silently voided — it declares nothing while looking
+  like a declaration.
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+## TDD Evidence
+
+Which tests went red then green, mapped to each AC.
+
+All fourteen tests below live in the new `describe("redkiln verify — declaredBoundary
+parse (#135/#129)")` block appended to `test/verify.test.ts`. Each was RED against the
+pre-fix `declaredBoundary` (`string[] | undefined`, first-matching-heading-wins, no table
+form, trailing-`#` pushed verbatim) because the tri-state return, multi-candidate heading
+scan, `| Path | Change |` table parse, and trailing-comment strip they assert on did not
+exist yet; each is GREEN now — confirmed by a targeted `pnpm vitest run test/verify.test.ts`
+run (63/63 passed, 0 failed) after `src/store/verify.ts` was rewritten to match.
+
+| AC | Test | Red → Green |
+| --- | --- | --- |
+| AC-001 | `AC-001 / AC-V-BOUNDARY-HIJACK: a prose heading containing 'boundary' no longer hijacks the scan` | RED: old scan stopped at `### Where the chunk boundary comes from`, found no fence, returned `undefined` → skipped pass; a stray outside the real `## PR boundary` fence went unreported. GREEN: multi-candidate scan skips the empty prose section and reads the real fence; exit 1, `changed outside declared boundary: …stray.txt`, no `no boundary declared`. |
+| AC-002 | `AC-002: an H1 title containing 'boundary' does not hijack the real PR boundary fence below it` | RED: old scan locked onto the H1 title line itself (no fence follows a title line before the next heading) → `undefined` → `ran:false`. GREEN: `boundary.ran === true && boundary.pass === true`, no `no boundary declared` detail. |
+| AC-003 | `AC-003 / AC-V-BOUNDARY-TABLE: a house-style '\| Path \| Change \|' table is a valid boundary declaration` | RED: old parser only read fenced blocks; a table-only section yielded `undefined` → `ran:false`, not the RAN/PASS this AC demands. GREEN: `tablePatterns` reads the `Path`-headed table; `boundary.ran === true && boundary.pass === true`. |
+| AC-004 | `AC-004: a file outside every table path fails, naming it` | RED: same table-blind parser meant `patterns === undefined` → every file was a silent skip, not a failure. GREEN: exit 1, `stray.txt` named in the detail. |
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+## Findings Ledger
+
+What was delivered, what was learned, and what remains.
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| #135: a fuzzy `findIndex` matched the *first* heading anywhere containing "boundary", so a prose heading hijacked the scan and the real fence was never read | `src/store/verify.ts:358` pre-fix; `boundaryCheck` turned the resulting `undefined` into `{ran:false, pass:true}` — a silent pass | Closed by `d9397179` |
+| #129: leading `#` comments were stripped but trailing ones were not, so `path.md   # note` became the pattern and `boundaryRegExp`'s anchoring made it unsatisfiable | `src/store/verify.ts:374-375` pre-fix | Closed by `d9397179` |
+| Both defects shared one failure mode — **failing open silently** — which is why they shipped as one story | The third leg of both issues is the same: a check that cannot parse its input reports a pass | Now a loud advisory (`ran:true, pass:true`, detail names the problem) |
+| The house style is a **markdown table**, not a fence: of 150 tracked specs, only 2 use the fenced form the parser could read | Measured across `.bklg/**/spec.md`; 27 table-form, 100 with nothing parseable | The check was dormant repo-wide; the table form is now parsed |
+| **9 of the 27 table specs carry a *negative* table** (`\| Not here \| Owner \|`, prose in the first column) | Parsing "the first table" would have inverted those boundaries entirely | Parser requires the header's first cell to be `Path` and takes only backticked tokens (AC-005) |
+| Blast radius measured, not asserted: **zero** specs have a non-house boundary heading followed by a fenced block | So "first candidate that yields patterns wins" cannot manufacture a false boundary anywhere in this repo | None |
+| `templates/spec.md` and every pinned pack carry no boundary heading, so scaffolded stories keep the byte-identical skip two existing tests depend on | `test/gate-memo-and-artifacts.test.ts:239`, `test/verify.test.ts:986` — both unmodified and green | None |
+| `provenanceCheck` moved with the parse fix but is **exempt** from the advisory | It shares `declaredBoundary`, so the hijack was silently excusing the sha demand too (AC-011); but with no patterns there is no in-boundary set, so unparseable stays a skip (AC-012) | None |
+| `ledgerBlock` is **exempt** and its doc comment corrected | Its input is a generated single-purpose artifact, and it must *not* strip `#` — those lines go to `parseYaml`, where `#` is comment syntax. Its claim to "mirror declaredBoundary" went false when this landed | Doc-only change, inside the boundary |
+| Review flagged **AC-013 as a weak discriminator** rather than counting it as coverage | A whole-line YAML comment in a ledger fence is a no-op, so that test would pass even if `ledgerBlock` had wrongly adopted comment-stripping | AC met on stronger evidence: `ledgerBlock`'s body is byte-unchanged in the diff |
+| The gate for this story ran longer than every earlier one, exceeding a 10-minute foreground budget | 283 lines of added tests, each driving the real CLI end-to-end against a real git baseline | Expected cost of end-to-end coverage, not a defect |
+```
+
+</details>
+
+<details><summary>downstream: <code>_review.md</code> — first lines at the pin</summary>
+
+```markdown
+**Verdict: APPROVED — overall 3/3.** All 13 spec AC-### have a discriminating test and all 13
+pass; the diff is a strict subset of the frozen boundary; the 283-line test addition is a pure
+append with no softened pre-existing assertion and no skip/only; the affected-area gate
+(`test/verify.test.ts`) is green under a direct rerun; and the blast radius was measured, not
+asserted, across all 150 tracked specs with zero adversarial collisions found.
+
+## AC-### coverage map
+
+| AC | Met? | Evidence path |
+| --- | --- | --- |
+| AC-001 | yes | `test/verify.test.ts:1087` — `AC-001 / AC-V-BOUNDARY-HIJACK: a prose heading containing 'boundary' no longer hijacks the scan` |
+| AC-002 | yes | `test/verify.test.ts:1104` — `AC-002: an H1 title containing 'boundary' does not hijack the real PR boundary fence below it` |
+| AC-003 | yes | `test/verify.test.ts:1121` — `AC-003 / AC-V-BOUNDARY-TABLE: a house-style '\| Path \| Change \|' table is a valid boundary declaration` |
+| AC-004 | yes | `test/verify.test.ts:1138` — `AC-004: a file outside every table path fails, naming it` |
+| AC-005 | yes | `test/verify.test.ts:1153` — `AC-005: a negative '\| Not here \| Owner \|' table is NOT a boundary declaration` |
+| AC-006 | yes | `test/verify.test.ts:1173` (trailing comment stripped) and `test/verify.test.ts:1187` (literal `#` survives) |
+| AC-007 | yes | `test/verify.test.ts:1201` (whole-line `#` skipped) and `test/verify.test.ts:1215` (out-of-boundary still fails, unregressed) |
+| AC-008 | yes | `test/verify.test.ts:1229` — `AC-008 / AC-V-BOUNDARY-ADVISORY: a boundary heading with nothing parseable is a loud, non-blocking advisory` |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | spec.md |  |  |
+| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | implementation-report.md |  |  |
+| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | report.md |  |  |
+| P08 | support/fix-gate-honesty-sweep/issues-135-129-declared-boundary-parse | story.md | _review.md |  |  |
+
+---
+
+## P09 — 9/12 — `support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `3f6a426f3289` · **digests:** `bfaeada1daec` → `7b4097a90eeb`
+
+**Downstream artifacts to label (3):** `spec.md`, `implementation-report.md`, `report.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff 3f6a426f3289 47faec9f -- .bklg/support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard/story.md b/.bklg/support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard/story.md
+index d43715ab..1775e744 100644
+--- a/.bklg/support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard/story.md
++++ b/.bklg/support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard/story.md
+@@ -7,20 +7,21 @@ title: "Fix #80: CI does not fail on this repo's own pinned-pack/template drift"
+ parent: RK-P0032
+ initiative: support
+ project: fix-ci-pinned-pack-drift-guard
+-status: pending
++status: done
+ process: story-lite
+-stage: intake
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-03T22:53:27.054Z
++updated: 2026-08-08T05:14:54.681Z
+ links:
+   pr: null
+   commits: []
+   kb: []
++gate_open: false
+ schema: 1
+ process_rev: fb2938ab
+ ---
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+No commits resolved by slug leaf or trailer at this pin. That is a lookup limit, not a
+statement about the item.
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+> **THIS SPEC WAS WRITTEN AFTER THE FIX SHIPPED.** The work landed on `main` in squash commit
+> `e09892f1` ("Issue sweep Waves 3-7"), in the sub-commit `fix(ci,kb): fail the dogfood build on
+> pin drift, and correct the brand atom (#80, #71)`. It is recorded here retrospectively, from
+> GitHub issue #80 and from the diff and tests that actually shipped, because the fix lane itself
+> was one of the things being repaired in this sweep (issues #47-#51) and could not be used to
+> drive its own repair. Nothing below is a prediction. Every acceptance criterion is a restatement
+> of an assertion that exists today in `test/ci-pin-guard.test.ts`; where a behaviour has no
+> shipped test, this document says so instead of claiming one.
+
+## Context pack
+
+The load-bearing decisions, as settled by the shipped change:
+
+- **`doctor`'s exit code does not change, for anyone.** `.redkiln/processes/` and
+  `.redkiln/templates/` are pinned per-repo at `init` (spec §11). A consumer repo lagging the
+  redkiln it has installed is the pin doing its job; adoption is a deliberate act
+  (`redkiln adopt --packs` / `--templates`). `src/migrate/health.ts` argues this at length and
+  reports drift as an advisory warning that never touches `ok` or the exit code. Failing a
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+> **WRITTEN AFTER THE FACT.** The fix shipped out of lane — the fix lane itself was under repair in
+> this sweep (#47–#51) and could not drive its own repair — and is reconciled onto the backlog here.
+> Everything below was reconstructed from the shipped diff, the shipped test file, GitHub issue #80,
+> the merge commit's message, and the GitHub Actions runs. **I did not watch the implement→verify
+> loop run**, so this report does not narrate one. Where a claim rests on something I read or ran,
+> it says what. Where it rests on the author's own contemporaneous record, it says that instead.
+
+## TDD Evidence
+
+The template asks which tests went red then green. For this story that sequence is not observable
+from here: there is one squash commit on `main`, no intermediate red state was recorded anywhere I
+can read, and no CI run exists from before the tests passed. **So no red→green narrative is claimed
+below.**
+
+What *is* evidenceable is stronger than a timestamp, and it is the reason the suite was written the
+way it was. `test/ci-pin-guard.test.ts` (620 lines; 7 `describe` blocks, 19 `it` cases — counted by
+grep on the shipped file) records a **mutation per `describe` block**, each one an edit to the
+product code that the block's assertions are claimed to red. Its own header states the discipline
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+> Written retrospectively, like this story's spec and implementation report: the fix shipped out of
+> lane because the fix lane itself (#47–#51) was one of the things this sweep was repairing. The
+> work reached `main` in squash commit **`e09892f1`** ("Issue sweep Waves 3-7: all 19 remaining
+> issues, plus a red main (#85)"). The per-wave commit that carries it is not reachable from `main`
+> and is therefore not cited as provenance. Everything below was read off the shipped tree in this
+> worktree or off that commit's message; no gate was re-run in this pass and no `redkiln` command
+> was invoked.
+
+## Findings Ledger
+
+The middle section is the one that matters. **This fix was refuted on its first adversarial
+verification pass** — not on the product code, which was correct, but on the suite that claimed to
+protect it. Four separate assertions were shown to be satisfied by a build in which the guard could
+not fail. The verifier did not argue any of them; it ran mutations and watched the suite stay green.
+
+### Delivered
+
+| Finding | Evidence | Follow-up |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | spec.md |  |  |
+| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | implementation-report.md |  |  |
+| P09 | support/fix-ci-pinned-pack-drift-guard/issue-80-ci-pinned-pack-drift-guard | story.md | report.md |  |  |
+
+---
+
+## P10 — 10/12 — `support/fix-serve-child-leak/reap-leaked-serve-children`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `3853ce409fa2` · **digests:** `d879a65b8e77` → `347448724868`
+
+**Downstream artifacts to label (4):** `spec.md`, `implementation-report.md`, `report.md`, `_review.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff 3853ce409fa2 47faec9f -- .bklg/support/fix-serve-child-leak/reap-leaked-serve-children/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-serve-child-leak/reap-leaked-serve-children/story.md b/.bklg/support/fix-serve-child-leak/reap-leaked-serve-children/story.md
+index 05620ff8..107e6101 100644
+--- a/.bklg/support/fix-serve-child-leak/reap-leaked-serve-children/story.md
++++ b/.bklg/support/fix-serve-child-leak/reap-leaked-serve-children/story.md
+@@ -7,16 +7,16 @@ title: Reap leaked serve children
+ parent: RK-P0041
+ initiative: support
+ project: fix-serve-child-leak
+-status: in-review
++status: done
+ process: story-lite
+-stage: report
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-20
+-updated: 2026-08-22T01:05:37.868Z
++updated: 2026-08-22T01:41:43.349Z
+ links:
+   pr: null
+   commits:
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+No commits resolved by slug leaf or trailer at this pin. That is a lookup limit, not a
+statement about the item.
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+Fixes [#148](https://github.com/Wet-Ink-Corporation/redkiln/issues/148).
+
+## Context pack
+
+**The decision this story honors: a test harness that cannot prove it cleaned up has not cleaned up.**
+Three suites already call `child.dispose()` in teardown, so this is not a missing-hook bug. It is a
+teardown that *reports* success on four paths where it did nothing, and the cost of that dishonesty is
+paid by every later gate on the machine.
+
+Three load-bearing facts, internalized before touching code:
+
+1. **`bin/redkiln.mjs` is a shim, so the server is a grandchild.** `child.kill()` reaps the shim and
+   leaves the server listening. Killing the right process requires resolving the grandchild pid, and
+   every failure to resolve it is a leak.
+2. **This story does not touch `src/`, and does not touch `dist/`.** `scripts/` is not a build entry
+   point (`scripts/build.mjs:56-92` bundles only `src/`), so no rebuild is needed and #144's
+   emit-then-validate trap is not on this path.
+3. **The failure is self-reinforcing.** Leaked servers degrade the machine, which makes `findChildPid`'s
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+## TDD Evidence
+
+Which tests went red then green, mapped to each AC. Every test named here lives in
+`test/serve-child-reaping.test.ts`.
+
+**Each red below was OBSERVED on this machine, not asserted.** The fix landed before its
+report did, so "it went red first" would have been a claim about a run nobody could see.
+Each row therefore names the one-line MUTATION that reproduces the pre-story defect and
+quotes the failure it produced, so a reader can re-run the red as cheaply as the green.
+A green that no mutation can turn red is not evidence, and the reviewer's finding on
+AC-002 — an assertion satisfied by an unrelated warning — is exactly what that gap costs.
+
+| AC | Test | Red → Green |
+| -- | ---- | ----------- |
+| AC-001 | `is non-null right after LISTENING, with no interrupt() ever called` | RED with the spawn-time capture removed (`pidResolution = Promise.resolve(targetPid)` — the pre-story shape in which only `interrupt()` ever resolves a pid): _the harness must already know the real server pid: expected null not to be null_ (3.5 s). GREEN in 3.7 s once `captureServerPid()` starts at spawn and `waitForStdout` awaits it on the shared `pidDeadline`. |
+| AC-002 | `falls back to the child's known listening port, and warns` | RED with the null-pid branch reverted to the pre-story silent skip (`} else if (false) {`): _with no pid, teardown must ask who holds the port it told the child to bind: expected false to be true_ (19.5 s) — and, with the outcome asserted first, the leak itself: _expected [ 46828 ] to have a length of +0 but got 1_, a REAL surviving server. GREEN in 17.1 s: the `Get-NetTCPConnection -LocalPort <port>` probe is issued, `taskkill` is sent at the real server pid, no survivor remains, and `could not resolve the server pid behind cmd shim` is on stderr. **The fault is armed BEFORE `spawnRedkiln`**: armed after `waitForStdout`, AC-001's spawn-time capture has already populated `targetPid` and this branch never executes. |
+| AC-003 | `surfaces the pid it failed to reap` | RED with teardown's reporting silenced (`if (false && problems.length > 0)` — the pre-story bare `catch { /* teardown is best effort */ }`): _swallowed this instead of naming the pid: expected false to be true_ (12.1 s). GREEN in 11.4 s. |
+| AC-004 | `kills and names a serve child abandoned without dispose()` | RED with the sweep made a no-op (`if (row.pid !== 0) continue;`): _the sweep must reap a per-test-teardown-orphaned child: expected [ 12328 ] to have a length of +0 but got 1_ (19.1 s). GREEN in 3.6 s. |
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+Fixes [#148](https://github.com/Wet-Ink-Corporation/redkiln/issues/148).
+**Checkpoint:** `e6081860` — `fix(serve-child-leak): Reap leaked serve children`.
+**Verdict:** approved, 3/3 on all five rubric dimensions, no degraded entries (`_review.md`).
+
+## Findings Ledger
+
+What was delivered, what was learned, and what remains.
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| **Delivered — the pid is captured at spawn, not at teardown.** `captureServerPid()` starts when the child announces itself, so reaping no longer depends on a PowerShell process-tree lookup running correctly at the least reliable moment. | `scripts/serve-child.mjs:335-361`, consumed at `:449-452`. Mutating `pidResolution` to `Promise.resolve(targetPid)` reproduces the RED. | none |
+| **Delivered — the three silent-failure paths in `dispose()` are closed.** The `if (pid !== null)` skip is gone, a listening-port fallback was added, and `killProcess` returns failures instead of swallowing them. | `scripts/serve-child.mjs:527-548`; `listPortOwners` `:171-198`; `scripts/reap-serve-children.mjs:282-293`. | none |
+| **Delivered — the worker-death path is covered by a suite-level sweep.** This is the only remedy for the observed `Tinypool: Worker exited unexpectedly` case, where no per-test hook fires at all. | `vitest.config.ts` mount; proven out of band — a planted orphan was reaped by an unrelated `vitest run test/absolute-url.test.ts`. | none |
+| **Delivered — the sweep cannot kill an author's real board.** The predicate rejects any `--cwd` outside `tmpdir()`, and unparseable command lines are treated as not-a-fixture (under-kill by default). | AC-005: a decoy planted with `--cwd D:\repos\redkiln` survived the real sweep (`ALIVE:21396`). | none |
+| **Learned — the spec's named mount point does not exist in this vitest.** vitest 2.1.9 has no `globalTeardown` key; it accepts a teardown-only `globalSetup` module and calls it in `close()`. The spec's *intent* (a real suite-level hook reachable from an ordinary `pnpm test`) is met by the substitute. | `node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:8698-8709`, called at `:11141`. | Amend the spec's Integration contract if this fix is ever re-derived. |
+| **Learned — `teardownTimeout` is load-bearing, not cosmetic.** vitest hard-`process.exit()`s at that timeout, so the 10s default could have killed the run mid-sweep and reintroduced the leak by a new route. | `cli-api.DqsSTaIi.js:11187`; raised to `120_000` in `vitest.config.ts`. | none |
+| **Learned — the gate's own precondition was undeclared, and cost this lane two full suite runs.** The first `advance` refused with 20 pre-existing reds on a branch that changed **zero** code; all of them needed `cd docs && pnpm install --frozen-lockfile && pnpm build`, which CI runs before `pnpm run ci` but `verify.affected_gate` does not. | 8 suites / 309 tests went green on that command alone, with no other tree change. | Already filed as **#151**; corroborated there with this occurrence. Same root cause as **#112** (false green) — a `verify.prepare` key closes both faces. |
+| **Learned — the failing-spec list can name specs that do not exist.** The same refusal reported `tests/a.spec.ts:3:1 › nope`; no such file is in the tree. | `find . -name 'a.spec.ts' -not -path './node_modules/*'` returns nothing. | **#126 / #141** (gate scrapes fixture strings out of raw stdout). Compounds with #151: the list was simultaneously all-pre-existing and partly fictional. |
+```
+
+</details>
+
+<details><summary>downstream: <code>_review.md</code> — first lines at the pin</summary>
+
+```markdown
+**Story:** RK-S0272 (`reap-leaked-serve-children`, project `fix-serve-child-leak`)
+**Checkpoint:** `e6081860` — `fix(serve-child-leak): Reap leaked serve children`
+**Verdict: APPROVED** — overall 3/3, every rubric dimension at 3/3, no findings block merge.
+
+## AC coverage map
+
+| AC | Met? | Evidence path |
+|---|---|---|
+| AC-001 | yes | `scripts/serve-child.mjs:335-361` (`captureServerPid` started at spawn) feeding `serverPid()`; consumed by the `pidResolution` wait at `scripts/serve-child.mjs:449-452`. Mutating `pidResolution` to `Promise.resolve(targetPid)` reproduces the RED failure the report quotes. |
+| AC-002 | yes | `scripts/serve-child.mjs:527-548` — the pre-story silent skip is removed; port fallback via `listPortOwners` at `scripts/serve-child.mjs:171-198` is asserted by mechanism (the `Get-NetTCPConnection` probe and the `taskkill` pid), not by a coincidental warning string. |
+| AC-003 | yes | `scripts/reap-serve-children.mjs:282-293` — `killProcess` returns the failure instead of swallowing it; `dispose()` names the pid at `scripts/serve-child.mjs:530`. |
+| AC-004 | yes | Out-of-band proof: a planted orphaned fixture-matching process was reaped by an unrelated `vitest run test/absolute-url.test.ts`, printing `redkiln: reaped a leaked serve child (pid 31432, --port 49999, --cwd ...rk-decoy)`. |
+| AC-005 | yes | A decoy planted with `--cwd D:\repos\redkiln` survived the same real sweep (`ALIVE:21396`), confirming the safety predicate. |
+| EC-001/002/003 | yes | Each carried by both a code path and a dedicated test case (see spec.md lines 77-82). |
+
+## Rubric
+
+| Dimension | Score | Rationale |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | spec.md |  |  |
+| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | implementation-report.md |  |  |
+| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | report.md |  |  |
+| P10 | support/fix-serve-child-leak/reap-leaked-serve-children | story.md | _review.md |  |  |
+
+---
+
+## P11 — 11/12 — `support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `2d81a81d5e92` · **digests:** `ebd63205aedb` → `240ad27036fb`
+
+**Downstream artifacts to label (3):** `spec.md`, `implementation-report.md`, `report.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff 2d81a81d5e92 47faec9f -- .bklg/support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write/story.md b/.bklg/support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write/story.md
+index 2ec75ef3..61c39921 100644
+--- a/.bklg/support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write/story.md
++++ b/.bklg/support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write/story.md
+@@ -7,20 +7,21 @@ title: "Fix #68: forge-initiative spawns read-only Explore agents told to write
+ parent: RK-P0027
+ initiative: support
+ project: fix-initiative-forging-flow
+-status: pending
++status: done
+ process: story-lite
+-stage: intake
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-03T22:33:44.308Z
++updated: 2026-08-08T05:14:41.809Z
+ links:
+   pr: null
+   commits: []
+   kb: []
++gate_open: false
+ schema: 1
+ process_rev: fb2938ab
+ ---
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+No commits resolved by slug leaf or trailer at this pin. That is a lookup limit, not a
+statement about the item.
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+**This spec was written AFTER the fix shipped.** The nineteen 2026-08 sweep bugfixes were
+implemented out of lane (the fix lane itself was among the things being repaired, issues #47-#51)
+and merged to `main` in squash commit `e09892f1` — "Issue sweep Waves 3-7: all 19 remaining issues,
+plus a red main (#85)". Nothing below is a design proposal. The **Behavior** section describes code
+that is already on `main`, and every `AC-###` row is a transcription of an assertion that already
+exists in `test/workflow-model-tiers.test.ts` and already passes. Read it as an account of what
+changed and why, not as an instruction to build it.
+
+Source of truth for the defect: [GitHub issue #68](https://github.com/Wet-Ink-Corporation/redkiln/issues/68)
+("Discovery subagents are spawned as read-only 'Explore' but told to write their own artifacts, so
+grounding docs are silently lost").
+
+## Context pack
+
+**The defect as filed.** `workflows/forge-initiative.js` pinned `agentType: 'Explore'` on its
+discovery dispatches. `Explore` is Claude Code's built-in READ-ONLY research agent: it carries every
+tool except `Agent`/`Artifact`/`ExitPlanMode`/`Edit`/`Write`/`NotebookEdit`. Those same agents'
+prompts instruct them to author their own artifact — the Research prompt says "Produce a focused
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+**This report is RETROSPECTIVE.** The fix shipped before this story existed as a lane item: the
+nineteen 2026-08 sweep bugfixes were implemented out of lane (the fix lane itself was under repair,
+issues #47-#51) and merged to `main` in squash commit `e09892f1`. The spec in this folder was
+transcribed off the shipped tests, and so is this report. Everything below is stated from artifacts I
+could open and commands I could run in the reconciliation worktree — the shipped diff, the shipped
+test file, the issue thread, and a re-run of the suite. **I did not watch the work happen**, and the
+TDD section says so wherever that matters.
+
+## TDD Evidence
+
+Which tests went red then green, mapped to each AC.
+
+**Read the third column carefully.** The sweep's own loop was implement → verify → remediate and the
+work was, on the evidence of the artifacts, done test-first; but no red state for this story was
+recorded anywhere I can reach, and I am not going to narrate one. What I can establish is that each
+test *discriminates* — that there is a specific mutation of the shipped source under which it fails.
+Eight of the nine tests carry an explicit `// MUTATION:` comment naming that mutation, written by the
+implementer; one of those mutations is recorded as having actually been executed, and I say which.
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+**Written after the fact, from `main`.** The fix shipped out of lane and merged in squash commit
+`e09892f1`. The spec and implementation-report in this folder were transcribed off the shipped tests;
+so is this. Every number below is one I counted or a command I ran in this reconciliation worktree,
+and where I could not establish something I say so rather than filling the cell.
+
+## Findings Ledger
+
+What was delivered, what was learned, and what remains. The middle block is the one worth reading:
+this story's most useful result is not the deletion, it is what an executed mutation proved about the
+deletion's own test coverage.
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| **Delivered — the fix is two deleted lines.** `agentType: 'Explore',` removed from forge-initiative's research `baseOpts` and from the `` label: `ground:${a.key}` `` opts, so both dispatches fall through to the default write-capable subagent. Each deletion is replaced by a comment stating why the absence is load-bearing. | `git show e09892f1 -- workflows/forge-initiative.js \| grep -c "^-.*agentType: 'Explore'"` → **2** (diff lines `:732`, `:756`; the two differ in indentation). On `main`, `grep -n agentType workflows/forge-initiative.js` → **5 hits**: `:853`, `:858`, `:955` are the explanatory comments; `:1290` and `:1367` are the only live pins and both are verifiers. | None. |
+| **Delivered — the control was kept, deliberately.** `verify-initiative` and `re-verify:initiative` still pin `Explore`. The issue named four call sites; two changed. | The two live pins above, at `:1290` / `:1367`, plus AC-003's assertion that both labels sit in the non-writing partition with `agentType === 'Explore'`. | None. This is a decision, not an omission — see Acceptance AC-003. |
+| **Delivered — a second, unfiled defect fixed in the same blast radius.** `reconcile(groundingAreas, …)` → `reconcile(effectiveGroundingAreas, …)`. On `tier: small` the three grounding areas collapse to one merged agent, so the call zipped a 1-element result array against a 3-element key list. | `workflows/forge-initiative.js:990-996` reads `reconcile(` / `effectiveGroundingAreas,`, and `grep -n "reconcile("` shows no surviving `reconcile(groundingAreas`. The cost is stated in comment at `:986-989`: mislabelling, **precisely one row**, because `reconcile()` walks `results` and not the key list. | The implementation-report cites this call at `:1086`; the real line is `:990`. Minor citation drift, worth correcting if that artifact is ever revised. |
+| **Delivered — the inverse case in forge-kb-ingest.** Its Extract phase correctly *keeps* `agentType: 'Explore'` (`:822`) — its contract is read-and-report — but its prompt licensed a `proposals.md` scratch note the read-only agent had no tool to create. Prompt now reads "Write nothing at all: author no atoms, edit no maps, create no notes." | `workflows/forge-kb-ingest.js:805` carries the replacement sentence. `grep -c "proposals.md"` → **1**, at `:819`, and that hit is inside the comment explaining the removal, not in the prompt. | None. |
+| **Delivered — the invariant is corpus-wide, not two call sites.** Nine assertions in `test/workflow-model-tiers.test.ts:766-1065` hold *every* dispatch of *every* workflow to: if the prompt tells the agent to author its own file, the dispatch pins no built-in agent type. | I counted 9 `it(` blocks in that range and ran the file: `npx vitest run test/workflow-model-tiers.test.ts` → **62 passed / 62**, 1 file, 582ms. | None. |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | spec.md |  |  |
+| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | implementation-report.md |  |  |
+| P11 | support/fix-initiative-forging-flow/issue-68-forge-initiative-readonly-write | story.md | report.md |  |  |
+
+---
+
+## P12 — 12/12 — `support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded`
+
+**card:** `story.md` · **upstream replaced:** `story.md` · **previous revision:** `6afd10051616` · **digests:** `1328bbcebac6` → `3501c2a8a062`
+
+**Downstream artifacts to label (4):** `spec.md`, `implementation-report.md`, `report.md`, `_review.md`
+
+**The upstream change — this is what you label from.** `git -C D:/repos/redkiln diff 6afd10051616 47faec9f -- .bklg/support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded/story.md`
+
+```diff
+diff --git a/.bklg/support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded/story.md b/.bklg/support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded/story.md
+index d66bdd24..fb90a4a7 100644
+--- a/.bklg/support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded/story.md
++++ b/.bklg/support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded/story.md
+@@ -7,16 +7,16 @@ title: "Fix #73: forge-plan-briefs computes missingArtifacts then discards it"
+ parent: RK-P0025
+ initiative: support
+ project: fix-planning-workflow-reliability
+-status: in-progress
++status: done
+ process: story-lite
+-stage: implement
++stage: closeout
+ automation: HITL
+ severity: null
+ blocked_by: []
+ blocks: []
+ owner: ryan-britton
+ created: 2026-08-03
+-updated: 2026-08-05T21:32:08.760Z
++updated: 2026-08-05T21:56:23.280Z
+ links:
+   pr: null
+   commits:
+
+```
+
+<details><summary>secondary context — what this item did in code (NOT the thing you are labelling)</summary>
+
+Commits matched by the slug leaf in the subject and by `Story:`/`Fix:` trailer (6):
+
+- `104104d5 Merge fix/issue-73-plan-briefs-missing-artifacts-discarded`
+- `5c4262c0 chore(fix-issue-73-plan-briefs-missing-artifacts-discarded): advance to closeout`
+- `6afd1005 docs(fix-issue-73-plan-briefs-missing-artifacts-discarded): review + report artifacts`
+- `3f0f2f22 fix(issue-73-plan-briefs-missing-artifacts-discarded): Fix #73: forge-plan-briefs computes missingArtifacts then discards it`
+- `10a93e12 chore(fix-issue-73-plan-briefs-missing-artifacts-discarded): advance to implement`
+- `d9dedc9b docs(fix-issue-73-plan-briefs-missing-artifacts-discarded): fix spec`
+
+Files changed outside `.bklg/` (3 of 8 total):
+
+- `CHANGELOG.md`
+- `test/plan-briefs-degraded-artifacts.test.ts`
+- `workflows/forge-plan-briefs.js`
+
+</details>
+
+<details><summary>downstream: <code>spec.md</code> — first lines at the pin</summary>
+
+```markdown
+**One line.** `workflows/forge-plan-briefs.js`'s per-project verify stage correctly computes
+`missingArtifacts`/`verified` per project (lines 1001-1005) and attaches them to that project's own
+record in the manifest's `projects[]` array — but nothing ever pushes an entry into the manifest's
+top-level `degraded` array when a project's artifacts are missing. `commands/plan.md` step 7
+explicitly tells the operator "**Surface `manifest.degraded`**... a non-empty `degraded` means an
+agent dropped after retries and that project is missing; flag it rather than treating the run as
+complete" — but a project whose verify agent SUCCEEDED (returned a digest) while reporting real
+`missingArtifacts` never reaches `degraded`, so following the command's own instruction misses it.
+
+Source: [GitHub issue #73](https://github.com/Wet-Ink-Corporation/redkiln/issues/73). Same defect
+family as #67 (`forge-initiative.js`, Wave 3) and #79 (`forge-plan-prds.js`, this wave, RK-S0226) —
+a verifier/manifest trusts a declared/computed result instead of propagating it to the ONE field the
+consumer is told to check. Per the accepted Wave 2 scope decision, this fix is scoped to
+`forge-plan-briefs.js` only; #79 is a separate story in a different file, and #67 is Wave 3 — not
+touched here (see Out of Scope).
+
+## Context pack
+```
+
+</details>
+
+<details><summary>downstream: <code>implementation-report.md</code> — first lines at the pin</summary>
+
+```markdown
+## TDD Evidence
+
+Which tests went red then green, mapped to each AC.
+
+All three ACs live in one new file, `test/plan-briefs-degraded-artifacts.test.ts`, using
+`test/helpers/workflow-harness.ts`'s `execute(file, seed, profile, patch)` with a `DigestPatch`
+that rewrites specific agent-call digests (per the spec's mutation-sensitivity requirement).
+
+Red was captured by `git stash push -- workflows/forge-plan-briefs.js` (temporarily reverting
+only the production file to its pre-fix `HEAD` content, leaving the new test file and the
+CHANGELOG entry untouched), running the suite, then `git stash pop` to restore the fix.
+
+| AC | Test | Red → Green |
+| -- | ---- | ----------- |
+| AC-001 | `AC-001 (#73): a reported missingArtifacts reaches the top-level degraded array > pushes a degraded entry for a project whose verify digest reports missingArtifacts, even with pass:true` | Red (pre-fix `forge-plan-briefs.js`): `AssertionError: beta's non-empty missingArtifacts never reached the top-level degraded array: expected [] to deep equally contain { stage: 'verify', item: 'beta', … }`. Green (post-fix): passes — `degraded` contains `{ stage: 'verify', item: 'beta', missingArtifacts: ['_grounding.md'], severity: 'warn' }`. |
+| AC-002 | `AC-002 (#73): a genuinely clean run gains no new degraded entry > keeps degraded free of any 'verify' stage entry when every project verifies clean` | This assertion is an anti-vacuity companion, not a regression test for the bug itself, so it already passed pre-fix (the pre-fix code never adds a `verify`-stage entry to `degraded` at all) and continues to pass post-fix — confirming the fix is additive and does not make a clean run report degraded. |
+| AC-003 | `AC-003 (#73): reconcile / strayPaths / missing-artifacts entries coexist > carries all three producers' entries in one degraded array without collision` | Red (pre-fix): `AssertionError: expected [ { stage: 'projects', … }, { stage: 'storymaps', … } ] to deep equally contain { stage: 'verify', item: 'beta', … }` — only the two pre-existing producers (`reconcile`, `strayPaths`) appeared. Green (post-fix): passes — all three entries (`projects`/alpha, `storymaps`/leaked path, `verify`/beta) coexist in one `degraded` array of length 3. |
+```
+
+</details>
+
+<details><summary>downstream: <code>report.md</code> — first lines at the pin</summary>
+
+```markdown
+## Findings Ledger
+
+What was delivered, what was learned, and what remains.
+
+| Finding | Evidence | Follow-up |
+| ------- | -------- | --------- |
+| `workflows/forge-plan-briefs.js` correctly computed each project's `verified`/`missingArtifacts` fields per project but never propagated a failing project into the manifest's top-level `degraded` array — the ONE field `commands/plan.md` step 7 tells the operator to surface. Fixed by adding a third `degraded` producer, alongside the existing `reconcile()` (dropped agent) and `strayPaths()` (write leak): a loop over `clean` that pushes `{ stage: 'verify', item: <slug>, missingArtifacts: [...], severity: 'warn' }` for every project whose computed `verified` is `false`. | `workflows/forge-plan-briefs.js:991-1000` (the new loop); `workflows/forge-plan-briefs.js:111,156` (the pre-existing `reconcile`/`strayPaths` push shape it matches). | None — matches issue #73 exactly. |
+| A shared `verifiedOf(r)` helper was extracted so the new `degraded` entry and the pre-existing `projects[].verified` row field can never disagree about what "verified" means — a same-behavior refactor (boolean logic unchanged) that removes future-drift risk beyond the letter of the spec. | `workflows/forge-plan-briefs.js:983-984` (helper), `:997` (degraded entry), `:1023` (row field) — all three call the same definition. | None. |
+| No change to `commands/plan.md`, the verify prompt, `VERIFY_DIGEST`'s schema, or `reconcile`/`strayPaths` themselves — confirmed unchanged, matching the frozen boundary and the spec's explicit "no doc change is needed" note now that `degraded` itself is trustworthy. | `git show --stat 3f0f2f22` — only `CHANGELOG.md`, `workflows/forge-plan-briefs.js`, `test/plan-briefs-degraded-artifacts.test.ts`, and this story's own `implementation-report.md` changed. | None required. |
+| One new regression file, `test/plan-briefs-degraded-artifacts.test.ts` (144 lines, additions-only new file), covers all three AC-### with mutation-sensitive assertions driven through `test/helpers/workflow-harness.ts`'s `execute()` + `DigestPatch`, including an AC-003 case that drives all three `degraded` producers in one run to prove array-push coexistence. | `test/plan-briefs-degraded-artifacts.test.ts:51-144`. | None. |
+| Same defect family as #67 (`forge-initiative.js`, Wave 3) and #79 (`forge-plan-prds.js`, RK-S0226) — a verifier/manifest trusts a declared/computed result instead of propagating it to the ONE field the consumer is told to check. Per the accepted Wave 2 scope decision, this fix is scoped to `forge-plan-briefs.js` only. | `spec.md:21-26`, `spec.md:162-170` (Out of Scope). | #67 and #79 are separate stories, tracked independently. |
+
+## Acceptance
+
+| AC | Status | Evidence |
+| --- | --- | --- |
+| AC-001 | met | `test/plan-briefs-degraded-artifacts.test.ts:51-84` — pins the already-correct per-project fields (`beta.verified === false`, `beta.missingArtifacts === ['_grounding.md']`) then asserts the top-level `m.degraded` array `toContainEqual({ stage: 'verify', item: 'beta', missingArtifacts: ['_grounding.md'], severity: 'warn' })` after a `DigestPatch` rewrites `verify:beta` to `pass: true` with non-empty `missingArtifacts`. Confirmed red against the pre-fix `workflows/forge-plan-briefs.js` (via `git stash`) and green against the post-fix version. |
+| AC-002 | met | `test/plan-briefs-degraded-artifacts.test.ts:86-105` — a genuinely clean run (`every project verified === true`, `missingArtifacts` empty) asserts `degraded.filter(d => d.stage === 'verify')` is `[]`, proving the fix is additive and does not manufacture a `degraded` entry on a clean run. |
+```
+
+</details>
+
+<details><summary>downstream: <code>_review.md</code> — first lines at the pin</summary>
+
+```markdown
+**Story:** RK-S0224 · **Slug:** `issue-73-plan-briefs-missing-artifacts-discarded` · **Checkpoint:** `3f0f2f22`
+**Verdict:** approved · **Overall:** 3/3
+
+## AC-### coverage map
+
+| AC id | Met? | Evidence path |
+| --- | --- | --- |
+| AC-001 | Yes | `test/plan-briefs-degraded-artifacts.test.ts:74-82` — after pinning the already-correct per-project fields (`:68-69`, `beta.verified === false`, `beta.missingArtifacts === ['_grounding.md']`), asserts `m.degraded` `toContainEqual({ stage: 'verify', item: 'beta', missingArtifacts: ['_grounding.md'], severity: 'warn' })` following a `DigestPatch` that rewrites `verify:beta` to `pass: true` + non-empty `missingArtifacts`. Mutation-sensitive: `grep -n "degraded.push"` on `workflows/forge-plan-briefs.js` shows only `:111` (reconcile), `:156` (strayPaths), and the new `:994` — nothing but the new loop can emit a `stage: 'verify'` entry, so deleting it reds this assertion. |
+| AC-002 | Yes | `test/plan-briefs-degraded-artifacts.test.ts:100-103` — anti-vacuity companion: first asserts `m.projects.length > 0` and every row `verified === true` with empty `missingArtifacts`, THEN asserts `m.degraded.filter(d => d.stage === 'verify')` is `[]`. Proves the fix is additive, not a change that makes `degraded` non-empty regardless of content. |
+| AC-003 | Yes | `test/plan-briefs-degraded-artifacts.test.ts:107-143` — drives all three `degraded` producers (`project:alpha` returns `null` → reconcile; `storymap:beta` leaks a path → strayPaths; `verify:beta` reports `missingArtifacts` → the new fix) in one run and asserts `m.degraded.length === 3` with all three entries present by shape, proving array-push coexistence rather than one producer overwriting another. |
+
+## Per-dimension rubric
+
+| Dimension | Score | Rationale |
+| --- | --- | --- |
+| ac-coverage | 3 | All three AC-### have real, non-tautological tests in `test/plan-briefs-degraded-artifacts.test.ts`. AC-001 (`:74-82`) asserts `toContainEqual({stage:'verify',item:'beta',missingArtifacts:['_grounding.md'],severity:'warn'})` after a `DigestPatch` rewrites `verify:beta` to `pass:true` + non-empty `missingArtifacts`, and first pins the already-correct row fields (`:68-69`) so the assertion is provably about the top-level array. Mutation sensitivity verified structurally: `grep -n "degraded.push"` on `workflows/forge-plan-briefs.js` returns only `:111` (reconcile), `:156` (strayPaths) — both inside the shared forge-lib block — and `:994` (new), so nothing but the new loop can emit `stage:'verify'`; deleting it reds AC-001. AC-002 (`:100-103`) is genuinely anti-vacuous: it asserts `projects.length>0`, every row `verified===true` and `missingArtifacts` empty BEFORE asserting no `'verify'` entry. AC-003 (`:107-143`) drives all three producers in one run and pins `degraded.length===3`, which is what actually proves push-not-overwrite. |
+| boundary-fidelity | 3 | `git show --stat` on the checkpoint commit shows exactly the frozen-boundary rows: `CHANGELOG.md`, `workflows/forge-plan-briefs.js`, and the new `test/plan-briefs-degraded-artifacts.test.ts` (the spec permits "or a new small test file"), plus the story's own `implementation-report.md`. `commands/plan.md`, `workflows/forge-plan-prds.js` (#79), `workflows/forge-initiative.js` (#67), the verify prompt (`:919-967`) and `VERIFY_DIGEST` (`:598-620`) are untouched. No `.bklg/**` frontmatter touched. CHANGELOG entry lands under `## [Unreleased]` → `### Fixed`, matching repo style. |
+| test-integrity | 3 | Zero existing test files modified or deleted — the checkpoint diff covers only `CHANGELOG.md`, `workflows/forge-plan-briefs.js`, the story's `implementation-report.md`, and the new test file. No `test.fixme`, `.skip`, `.only`, flag-gating, or injected stub: all three tests instantiate the real workflow source via `execute()` and assert on the real returned manifest. The `DigestPatch` is used only to describe a deliberately broken digest, which is the contract documented at `test/helpers/workflow-harness.ts:298-315` ("a patch must never be used to make the happy path pass"). The fixture quirk that makes every storymap a strayPaths leak on the plain happy profile is disclosed honestly in the test header (`:42-49`) rather than silently worked around. |
+```
+
+</details>
+
+| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |
+| --- | --- | --- | --- | --- | --- |
+| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | spec.md |  |  |
+| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | implementation-report.md |  |  |
+| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | report.md |  |  |
+| P12 | support/fix-planning-workflow-reliability/issue-73-plan-briefs-missing-artifacts-discarded | story.md | _review.md |  |  |
+
