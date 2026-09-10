@@ -1,0 +1,662 @@
+<title>P2 Freshness Labels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
+
+<style>
+:root{
+  --paper:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f4;
+  --ink:#14171c; --ink-2:#39414c; --muted:#616b79; --faint:#8b95a3;
+  --rule:#d8dde3; --rule-strong:#bcc4cd;
+  --ember:#b8451a; --ember-soft:#f6e5dd; --ember-ink:#8f3411;
+  --keep:#2c5c68; --keep-soft:#dfeaed; --keep-ink:#234a54;
+  --alarm:#9e1b1b; --alarm-soft:#fbe4e4;
+  --ok:#2f6b4a;
+  --add-bg:#e4f1ea; --add-ink:#1e5940; --add-gutter:#8fc4aa;
+  --del-bg:#fae9e9; --del-ink:#8b2f2f; --del-gutter:#d79b9b;
+  --hunk:#6a7482; --hunk-bg:#eceff3;
+  --shadow:0 1px 2px rgba(20,23,28,.06), 0 6px 18px rgba(20,23,28,.05);
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1216; --surface:#171b21; --surface-2:#1e232b;
+    --ink:#e7eaef; --ink-2:#c3cad3; --muted:#98a3b1; --faint:#6f7a88;
+    --rule:#2a313a; --rule-strong:#3b444f;
+    --ember:#e07543; --ember-soft:#33211a; --ember-ink:#f0a684;
+    --keep:#5ea3b4; --keep-soft:#16262b; --keep-ink:#8fc9d6;
+    --alarm:#ef6a6a; --alarm-soft:#341a1a;
+    --ok:#5fb389;
+    --add-bg:#132a20; --add-ink:#7fcaa4; --add-gutter:#2f6b4d;
+    --del-bg:#301a1a; --del-ink:#e79595; --del-gutter:#7a3838;
+    --hunk:#8b95a3; --hunk-bg:#1c2128;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f1216; --surface:#171b21; --surface-2:#1e232b;
+  --ink:#e7eaef; --ink-2:#c3cad3; --muted:#98a3b1; --faint:#6f7a88;
+  --rule:#2a313a; --rule-strong:#3b444f;
+  --ember:#e07543; --ember-soft:#33211a; --ember-ink:#f0a684;
+  --keep:#5ea3b4; --keep-soft:#16262b; --keep-ink:#8fc9d6;
+  --alarm:#ef6a6a; --alarm-soft:#341a1a;
+  --ok:#5fb389;
+  --add-bg:#132a20; --add-ink:#7fcaa4; --add-gutter:#2f6b4d;
+  --del-bg:#301a1a; --del-ink:#e79595; --del-gutter:#7a3838;
+  --hunk:#8b95a3; --hunk-bg:#1c2128;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{text-wrap:balance; margin:0}
+code,kbd{font-family:var(--mono)}
+:focus-visible{outline:2px solid var(--ember); outline-offset:2px; border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+/* ---------- alarm ---------- */
+#alarm{
+  position:sticky; top:0; z-index:50; display:none;
+  background:var(--alarm); color:#fff; padding:10px 20px;
+  font-weight:600; font-size:14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.25);
+}
+#alarm.on{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+#alarm button{
+  font:inherit; font-size:13px; background:#fff; color:var(--alarm);
+  border:0; border-radius:4px; padding:5px 11px; cursor:pointer; font-weight:700;
+}
+#alarm .sub{font-weight:400; opacity:.92}
+
+/* ---------- shell ---------- */
+.shell{display:grid; grid-template-columns:236px minmax(0,1fr); gap:0; min-height:100vh}
+@media (max-width:900px){ .shell{grid-template-columns:1fr} }
+
+/* ---------- rail ---------- */
+.rail{
+  border-right:1px solid var(--rule); background:var(--surface);
+  padding:20px 0 120px; position:sticky; top:0; align-self:start;
+  max-height:100vh; overflow-y:auto;
+}
+@media (max-width:900px){ .rail{position:static; max-height:none; border-right:0; border-bottom:1px solid var(--rule); padding-bottom:16px} }
+.rail h1{
+  font-size:13px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; padding:0 20px 4px;
+}
+.rail .sha{font-family:var(--mono); font-size:11px; color:var(--faint); padding:0 20px 16px; display:block}
+.caselist{list-style:none; margin:0; padding:0}
+.caselist button{
+  width:100%; text-align:left; background:none; border:0; cursor:pointer;
+  font:inherit; color:var(--ink-2); padding:8px 20px;
+  display:flex; align-items:center; gap:10px;
+  border-left:3px solid transparent;
+}
+.caselist button:hover{background:var(--surface-2)}
+.caselist button[aria-current="true"]{
+  background:var(--surface-2); border-left-color:var(--ember); color:var(--ink); font-weight:600;
+}
+.caselist .cid{font-family:var(--mono); font-size:13px; font-variant-numeric:tabular-nums}
+.pips{display:flex; gap:3px; margin-left:auto}
+.pip{width:7px; height:7px; border-radius:50%; background:var(--rule-strong)}
+.pip.yes{background:var(--ember)}
+.pip.no{background:var(--keep)}
+
+/* ---------- main ---------- */
+.main{padding:26px 28px 150px; max-width:1000px}
+@media (max-width:640px){ .main{padding:18px 16px 160px} }
+
+.crumb{
+  display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+  font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:6px;
+}
+.crumb .case{
+  font-size:15px; font-weight:600; color:var(--ember);
+  letter-spacing:.02em;
+}
+h2.item{font-size:20px; font-weight:600; letter-spacing:-.01em; margin-bottom:12px; word-break:break-word}
+
+.facts{
+  display:flex; flex-wrap:wrap; gap:0 26px; padding:12px 0 18px;
+  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); margin-bottom:22px;
+}
+.fact{display:flex; flex-direction:column; gap:2px; padding-top:4px}
+.fact dt{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); font-weight:600}
+.fact dd{margin:0; font-family:var(--mono); font-size:13px; color:var(--ink-2)}
+
+.evidence-head{
+  display:flex; align-items:baseline; justify-content:space-between; gap:14px;
+  flex-wrap:wrap; margin-bottom:8px;
+}
+.evidence-head h3{font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.evidence-head .cmd{font-family:var(--mono); font-size:11.5px; color:var(--faint); word-break:break-all}
+
+.diff{
+  border:1px solid var(--rule); border-radius:6px; overflow:hidden;
+  background:var(--surface); box-shadow:var(--shadow); margin-bottom:26px;
+}
+.diff-scroll{overflow-x:auto; max-height:460px; overflow-y:auto}
+table.dl{border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; line-height:1.65}
+table.dl td{padding:0 10px; white-space:pre; vertical-align:top}
+table.dl td.g{
+  width:1%; text-align:center; padding:0 8px; user-select:none;
+  color:var(--faint); border-right:1px solid var(--rule);
+  position:sticky; left:0; background:var(--surface);
+}
+tr.add td{background:var(--add-bg); color:var(--add-ink)}
+tr.add td.g{background:var(--add-bg); color:var(--add-gutter)}
+tr.del td{background:var(--del-bg); color:var(--del-ink)}
+tr.del td.g{background:var(--del-bg); color:var(--del-gutter)}
+tr.hunk td{background:var(--hunk-bg); color:var(--hunk); font-weight:500}
+tr.hunk td.g{background:var(--hunk-bg)}
+tr.meta td{color:var(--faint)}
+.clip{padding:8px 12px; border-top:1px solid var(--rule); font-size:12px; color:var(--muted); background:var(--surface-2)}
+
+/* ---------- the question ---------- */
+.ask{
+  font-family:var(--serif); font-size:18.5px; line-height:1.5;
+  color:var(--ink); margin:0 0 4px; max-width:62ch;
+}
+.ask em{color:var(--ember-ink); font-style:italic}
+:root[data-theme="dark"] .ask em{color:var(--ember)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ask em{color:var(--ember)}}
+.ask-note{font-size:13px; color:var(--muted); max-width:62ch; margin:6px 0 20px}
+
+/* ---------- decisions ---------- */
+.rows{display:flex; flex-direction:column; gap:10px; margin-bottom:24px}
+.row{
+  background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+  padding:13px 15px; display:grid; grid-template-columns:minmax(160px,1fr) auto; gap:10px 16px;
+  align-items:center; box-shadow:var(--shadow);
+}
+.row.answered{border-color:var(--rule-strong)}
+.row.unsaved{border-color:var(--alarm); box-shadow:0 0 0 1px var(--alarm)}
+@media (max-width:640px){ .row{grid-template-columns:1fr} }
+.row .name{font-family:var(--mono); font-size:13.5px; font-weight:500; word-break:break-all}
+.row .why-wrap{grid-column:1/-1; display:flex; gap:9px; align-items:center}
+.row .why-wrap label{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); font-weight:600; white-space:nowrap}
+.row input[type=text]{
+  flex:1; font:inherit; font-size:13.5px; padding:7px 9px;
+  border:1px solid var(--rule); border-radius:4px;
+  background:var(--paper); color:var(--ink); min-width:0;
+}
+.row input[type=text]::placeholder{color:var(--faint)}
+
+.seg{display:flex; gap:6px}
+.seg button{
+  font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  padding:7px 13px; border-radius:4px; border:1px solid var(--rule-strong);
+  background:var(--surface); color:var(--muted); white-space:nowrap;
+}
+.seg button:hover{border-color:var(--faint); color:var(--ink-2)}
+.seg button[aria-pressed="true"][data-v="yes"]{background:var(--ember); border-color:var(--ember); color:#fff}
+.seg button[aria-pressed="true"][data-v="no"]{background:var(--keep); border-color:var(--keep); color:#fff}
+.seg .k{opacity:.6; font-weight:400; font-family:var(--mono); font-size:11px; margin-left:5px}
+
+/* ---------- context ---------- */
+details.ctx{
+  border-top:1px solid var(--rule); padding:12px 0 0; margin-bottom:10px;
+}
+details.ctx summary{
+  cursor:pointer; font-size:12px; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; list-style:none;
+}
+details.ctx summary::-webkit-details-marker{display:none}
+details.ctx summary::before{content:"▸ "; color:var(--faint)}
+details.ctx[open] summary::before{content:"▾ "}
+details.ctx .body{padding:12px 0 4px; font-size:13px; color:var(--ink-2)}
+details.ctx pre{
+  font-family:var(--mono); font-size:12px; line-height:1.6; background:var(--surface-2);
+  border:1px solid var(--rule); border-radius:5px; padding:11px 13px; overflow-x:auto; margin:8px 0 0;
+  white-space:pre-wrap; word-break:break-word;
+}
+details.ctx ul{margin:6px 0 0; padding-left:20px}
+details.ctx li{font-family:var(--mono); font-size:12px; margin-bottom:3px; word-break:break-all}
+.warnbox{
+  background:var(--ember-soft); border:1px solid var(--ember); border-radius:5px;
+  padding:10px 13px; font-size:13px; color:var(--ember-ink); margin-bottom:16px;
+}
+:root[data-theme="dark"] .warnbox{color:var(--ember)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warnbox{color:var(--ember)}}
+
+/* ---------- footer ---------- */
+.foot{
+  position:fixed; left:0; right:0; bottom:0; z-index:40;
+  background:var(--surface); border-top:1px solid var(--rule);
+  padding:10px 20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+  box-shadow:0 -2px 14px rgba(20,23,28,.07);
+}
+.foot .grow{flex:1}
+.foot button{
+  font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  padding:7px 14px; border-radius:4px; border:1px solid var(--rule-strong);
+  background:var(--surface); color:var(--ink-2);
+}
+.foot button:hover:not(:disabled){border-color:var(--faint)}
+.foot button:disabled{opacity:.4; cursor:default}
+.foot button.primary{background:var(--ember); border-color:var(--ember); color:#fff}
+.counts{display:flex; gap:18px; align-items:baseline; font-size:13px; flex-wrap:wrap}
+.counts b{font-variant-numeric:tabular-nums; font-size:16px; font-weight:600}
+.counts .lbl{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:600}
+.sync{font-size:12px; font-family:var(--mono); color:var(--muted)}
+.sync .dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--faint); margin-right:6px; vertical-align:1px}
+.sync.ok .dot{background:var(--ok)} .sync.bad .dot{background:var(--alarm)} .sync.local .dot{background:var(--ember)}
+
+/* ---------- export ---------- */
+#export{display:none; padding:26px 28px 150px; max-width:1000px}
+#export.on{display:block}
+#export h2{font-size:20px; margin-bottom:6px}
+#export p{color:var(--muted); font-size:13.5px; max-width:66ch}
+#export .field{display:flex; gap:10px; align-items:center; margin:16px 0}
+#export .field label{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); font-weight:600}
+#export input{font:inherit; font-family:var(--mono); font-size:13px; padding:7px 9px; border:1px solid var(--rule); border-radius:4px; background:var(--surface); color:var(--ink)}
+#export textarea{
+  width:100%; height:400px; font-family:var(--mono); font-size:12px; line-height:1.6;
+  border:1px solid var(--rule); border-radius:6px; padding:13px; background:var(--surface);
+  color:var(--ink); resize:vertical;
+}
+.hidden{display:none!important}
+</style>
+
+<div id="alarm" role="alert" aria-live="assertive">
+  <span id="alarm-text"></span>
+  <span class="sub" id="alarm-sub"></span>
+  <button type="button" id="retry">Retry now</button>
+</div>
+
+<div class="shell">
+  <nav class="rail" aria-label="Perturbation cases">
+    <h1>P2 · should re-run</h1>
+    <span class="sha" id="rail-sha"></span>
+    <ul class="caselist" id="caselist"></ul>
+  </nav>
+
+  <div>
+    <main class="main" id="view"></main>
+    <section id="export" aria-label="Export">
+      <h2>The 41 rows, ready to paste</h2>
+      <p>This is generated from what is in front of you, not from the store — so it is complete even if
+         every save failed. Paste it over the corresponding block in
+         <code>spikes/results/p2-labels-ryan.md</code>, or just tell Claude it is done and it will read
+         the store.</p>
+      <div class="field">
+        <label for="labeller">Labeller</label>
+        <input type="text" id="labeller" placeholder="Ryan Britton" size="24">
+        <label for="stamp">labelled_at</label>
+        <input type="text" id="stamp" readonly size="22">
+        <button type="button" class="primary" id="stampnow" style="font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:7px 14px;border-radius:4px;border:1px solid var(--ember);background:var(--ember);color:#fff">Stamp UTC now</button>
+      </div>
+      <textarea id="out" readonly spellcheck="false"></textarea>
+      <div class="field">
+        <button type="button" id="copy" style="font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:7px 14px;border-radius:4px;border:1px solid var(--rule-strong);background:var(--surface);color:var(--ink-2)">Copy all</button>
+        <span id="copied" class="sync"></span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="foot">
+  <div class="counts">
+    <span><b id="c-done">0</b>/<b id="c-total">41</b> <span class="lbl">answered</span></span>
+    <span><b id="c-saved">0</b> <span class="lbl">saved</span></span>
+  </div>
+  <span class="sync" id="sync"><span class="dot"></span><span id="sync-text">starting…</span></span>
+  <span class="grow"></span>
+  <button type="button" id="prev">← Prev</button>
+  <button type="button" id="next">Next →</button>
+  <button type="button" id="toexport" class="primary">Finish &amp; export</button>
+</div>
+
+<script id="p2data" type="application/json">__DATA__</script>
+
+<script>
+(function(){
+"use strict";
+
+var DATA = JSON.parse(document.getElementById("p2data").textContent);
+var CASES = DATA.cases;
+var LSKEY = "p2-labels-v1";
+var SEG_OK = /^[A-Za-z0-9_\-.~:@+]{1,200}$/;   // the db path-segment grammar, enforced here
+
+/* rowId is also the db document id. The arm-D artifact lost 32 adjudications because an item slug
+   contains "/", which is not a legal path segment, and db.doc() throws SYNCHRONOUSLY on it. So the id
+   is built from case + downstream name only — both already legal — and is asserted before use. */
+function rowId(c, d){ return c.case + "__" + d.name; }
+
+var ROWS = [];
+CASES.forEach(function(c){
+  c.downstream.forEach(function(d){
+    var id = rowId(c, d);
+    if(!SEG_OK.test(id)) throw new Error("illegal db path segment: " + id);
+    ROWS.push({id:id, case:c.case, item:c.item, upstream:c.upstream, name:d.name});
+  });
+});
+
+/* ---------- state ---------- */
+var state = {};      // id -> {v:"yes"|"no", why:string, saved:bool}
+var meta  = {labeller:"", stamp:""};
+var db = null, dbTried = false;
+var idx = 0, showingExport = false;
+
+function loadLocal(){
+  try{
+    var raw = localStorage.getItem(LSKEY);
+    if(raw){ var o = JSON.parse(raw); state = o.state || {}; meta = o.meta || meta; }
+  }catch(e){ /* private window, blocked storage: start empty */ }
+}
+function saveLocal(){
+  try{ localStorage.setItem(LSKEY, JSON.stringify({state:state, meta:meta})); return true; }
+  catch(e){ return false; }
+}
+loadLocal();
+
+/* ---------- db ---------- */
+function pathFor(id){ return "labels/" + id; }
+
+function pushRow(id){
+  var s = state[id];
+  if(!s || !db) return Promise.resolve(false);
+  var r = ROWS.filter(function(x){return x.id===id})[0];
+  var ref;
+  try{ ref = db.doc(pathFor(id)); }
+  catch(e){ return Promise.resolve(false); }        // TypeError on a bad path — never silent
+  return ref.set({
+    case:r.case, item:r.item, upstream:r.upstream, downstream:r.name,
+    shouldRerun:s.v, why:s.why||"", at:new Date().toISOString()
+  }).then(function(){ s.saved = true; saveLocal(); return true; })
+   .catch(function(){ s.saved = false; saveLocal(); return false; });
+}
+
+function pushMeta(){
+  if(!db) return Promise.resolve(false);
+  return db.doc("meta/session").set({
+    labeller: meta.labeller||"", labelledAt: meta.stamp||"",
+    corpusSha: DATA.corpusSha, casesFile: DATA.casesFile,
+    rowCount: ROWS.length, at:new Date().toISOString()
+  }).then(function(){return true}).catch(function(){return false});
+}
+
+function flush(){
+  if(!db) { render(); return Promise.resolve(); }
+  var pending = Object.keys(state).filter(function(k){ return !state[k].saved; });
+  if(!pending.length){ render(); return Promise.resolve(); }
+  return Promise.all(pending.map(pushRow)).then(function(){ render(); });
+}
+
+/* ---------- sync UI: loud, never grey ---------- */
+function syncState(){
+  var entered = Object.keys(state).length;
+  var saved = Object.keys(state).filter(function(k){return state[k].saved}).length;
+  return {entered:entered, saved:saved, unsaved:entered - saved};
+}
+
+function paintSync(){
+  var s = syncState();
+  var el = document.getElementById("sync"), t = document.getElementById("sync-text");
+  var alarm = document.getElementById("alarm");
+  var at = document.getElementById("alarm-text"), as = document.getElementById("alarm-sub");
+  el.className = "sync";
+  if(!dbTried){ t.textContent = "connecting to the store…"; }
+  else if(!db){
+    el.classList.add("local");
+    t.textContent = "saved on this device only";
+  } else if(s.unsaved > 0){
+    el.classList.add("bad");
+    t.textContent = s.unsaved + " NOT SAVED";
+  } else {
+    el.classList.add("ok");
+    t.textContent = s.entered ? "all " + s.saved + " saved" : "store ready";
+  }
+
+  if(dbTried && db && s.unsaved > 0){
+    alarm.classList.add("on");
+    at.textContent = s.unsaved + " answer" + (s.unsaved===1?"":"s") + " did not reach the store.";
+    as.textContent = "They are safe on this device and in Finish & export. Nothing is lost — but do not close this tab assuming they are stored.";
+  } else if(dbTried && !db && s.entered > 0){
+    alarm.classList.add("on");
+    at.textContent = "The shared store is unavailable.";
+    as.textContent = "Your " + s.entered + " answer" + (s.entered===1?"":"s") + " are held on this device only. Use Finish & export before closing the tab.";
+    document.getElementById("retry").classList.add("hidden");
+  } else {
+    alarm.classList.remove("on");
+  }
+
+  document.getElementById("c-done").textContent = s.entered;
+  document.getElementById("c-saved").textContent = s.saved;
+  document.getElementById("c-total").textContent = ROWS.length;
+}
+
+/* ---------- diff rendering ---------- */
+function renderDiff(text){
+  var rows = text.split("\n").map(function(line){
+    var cls = "", g = "";
+    if(/^(diff --git|index |--- |\+\+\+ )/.test(line)) cls = "meta";
+    else if(line.charAt(0) === "@") { cls = "hunk"; g = "⋯"; }
+    else if(line.charAt(0) === "+") { cls = "add"; g = "+"; }
+    else if(line.charAt(0) === "-") { cls = "del"; g = "−"; }
+    var body = (cls==="add"||cls==="del") ? line.slice(1) : line;
+    return "<tr class='"+cls+"'><td class='g'>"+g+"</td><td>"+esc(body||" ")+"</td></tr>";
+  }).join("");
+  return "<table class='dl'><tbody>"+rows+"</tbody></table>";
+}
+function esc(s){ return String(s).replace(/[&<>]/g, function(m){
+  return m==="&"?"&amp;":m==="<"?"&lt;":"&gt;"; }); }
+
+/* ---------- rail ---------- */
+function paintRail(){
+  document.getElementById("rail-sha").textContent = DATA.corpusSha.slice(0,12) + " · " + DATA.caseCount + " cases · " + DATA.rowCount + " rows";
+  var ul = document.getElementById("caselist");
+  ul.innerHTML = CASES.map(function(c,i){
+    var pips = c.downstream.map(function(d){
+      var s = state[rowId(c,d)];
+      return "<span class='pip"+(s?" "+s.v:"")+"'></span>";
+    }).join("");
+    return "<li><button type='button' data-i='"+i+"' aria-current='"+(i===idx && !showingExport)+"'>"+
+           "<span class='cid'>"+c.case+"</span><span class='pips'>"+pips+"</span></button></li>";
+  }).join("");
+  Array.prototype.forEach.call(ul.querySelectorAll("button"), function(b){
+    b.addEventListener("click", function(){ showingExport=false; idx = +b.dataset.i; render(); window.scrollTo(0,0); });
+  });
+}
+
+/* ---------- main view ---------- */
+function render(){
+  paintRail(); paintSync();
+  document.getElementById("export").classList.toggle("on", showingExport);
+  document.getElementById("view").classList.toggle("hidden", showingExport);
+  document.getElementById("prev").disabled = showingExport || idx===0;
+  document.getElementById("next").disabled = showingExport || idx===CASES.length-1;
+  if(showingExport){ buildExport(); return; }
+
+  var c = CASES[idx];
+  var v = document.getElementById("view");
+
+  var facts =
+    "<dl class='facts'>" +
+    (c.card ? fact("card", c.card) : "") +
+    fact("upstream replaced", c.upstream) +
+    fact("previous revision", c.revShort) +
+    (c.prevDigest ? fact("digests", c.prevDigest + " → " + c.curDigest) : "") +
+    fact("downstream to label", String(c.downstream.length)) +
+    "</dl>";
+
+  var warn = c.noCodeChange
+    ? "<div class='warnbox'>Every file this item changed is <code>.bklg/</code> bookkeeping — it records no code change at the pin.</div>"
+    : "";
+
+  var diffBlock =
+    "<div class='evidence-head'><h3>The upstream change</h3>" +
+    "<span class='cmd'>git diff " + esc(c.revShort) + " " + esc(DATA.corpusSha.slice(0,8)) + " -- " + esc(c.path) + "</span></div>" +
+    "<div class='diff'><div class='diff-scroll'>" + renderDiff(c.diff) + "</div>" +
+    (c.diffClipped ? "<div class='clip'>Clipped at " + c.diff.split("\n").length + " of " + c.diffLineCount + " lines.</div>" : "") +
+    "</div>";
+
+  var ask =
+    "<p class='ask'>Reading that change and nothing else — would it have required each artifact below to be " +
+    "<em>re-authored</em>?</p>" +
+    "<p class='ask-note'>Not whether it in fact was rewritten. Whether the change is the kind that invalidates it.</p>";
+
+  var rows = c.downstream.map(function(d){
+    var id = rowId(c,d), s = state[id];
+    var cls = "row" + (s ? " answered" : "") + (s && !s.saved && db ? " unsaved" : "");
+    return "<div class='"+cls+"' data-id='"+esc(id)+"'>" +
+      "<span class='name'>"+esc(d.name)+"</span>" +
+      "<div class='seg' role='group' aria-label='"+esc(d.name)+"'>" +
+        segBtn(id,"yes","Should re-run","Y") + segBtn(id,"no","Need not","N") +
+      "</div>" +
+      "<div class='why-wrap'><label for='why-"+esc(id)+"'>why</label>" +
+      "<input type='text' id='why-"+esc(id)+"' data-why='"+esc(id)+"' placeholder='one line' value='"+
+        esc(s && s.why ? s.why : "")+"'></div>" +
+    "</div>";
+  }).join("");
+
+  var previews = c.downstream.map(function(d){
+    return "<details class='ctx'><summary>downstream: " + esc(d.name) + "</summary><div class='body'>" +
+      (d.readable ? "<pre>"+esc(d.preview)+"</pre>" : "<em>not readable at the pin</em>") +
+      "</div></details>";
+  }).join("");
+
+  var secondary =
+    "<details class='ctx'><summary>secondary context — what this item did in code</summary><div class='body'>" +
+    (c.noCommits
+      ? "<p>No commits resolved by slug leaf or trailer at this pin. That is a lookup limit, not a statement about the item.</p>"
+      : "<p>Commits matched by the slug leaf in the subject and by <code>Story:</code>/<code>Fix:</code> trailer (" + c.commits.length + "):</p><ul>" +
+        c.commits.map(function(x){return "<li>"+esc(x)+"</li>"}).join("") + "</ul>" +
+        (c.codeFiles.length
+          ? "<p>Files changed outside <code>.bklg/</code> (" + c.codeFiles.length + " of " + c.totalFiles + "):</p><ul>" +
+            c.codeFiles.map(function(f){return "<li>"+esc(f.path)+(f.binary?" <strong>[binary]</strong>":"")+"</li>"}).join("") + "</ul>"
+          : "<p><em>Every changed file is .bklg/ bookkeeping.</em></p>")) +
+    "</div></details>";
+
+  v.innerHTML =
+    "<div class='crumb'><span class='case'>"+c.case+"</span><span>"+(idx+1)+" of "+CASES.length+"</span></div>" +
+    "<h2 class='item'>"+esc(c.item)+"</h2>" + facts + warn + diffBlock + ask +
+    "<div class='rows'>"+rows+"</div>" + previews + secondary;
+
+  Array.prototype.forEach.call(v.querySelectorAll(".seg button"), function(b){
+    b.addEventListener("click", function(){ setVal(b.dataset.id, b.dataset.v); });
+  });
+  Array.prototype.forEach.call(v.querySelectorAll("input[data-why]"), function(inp){
+    inp.addEventListener("input", function(){ setWhy(inp.dataset.why, inp.value); });
+    inp.addEventListener("blur", function(){ if(state[inp.dataset.why]) pushRow(inp.dataset.why).then(paintSync); });
+  });
+}
+function fact(k,val){ return "<div class='fact'><dt>"+esc(k)+"</dt><dd>"+esc(val)+"</dd></div>"; }
+function segBtn(id,val,label,key){
+  var s = state[id];
+  return "<button type='button' data-id='"+esc(id)+"' data-v='"+val+"' aria-pressed='"+(!!s && s.v===val)+"'>"+
+         label+"<span class='k'>"+key+"</span></button>";
+}
+
+function setVal(id, v){
+  var prev = state[id] || {why:""};
+  state[id] = {v:v, why:prev.why||"", saved:false};
+  saveLocal();
+  render();
+  pushRow(id).then(paintSync);
+}
+function setWhy(id, why){
+  if(!state[id]) return;          // a reason without a verdict is not an answer
+  state[id].why = why; state[id].saved = false;
+  saveLocal(); paintSync();
+}
+
+/* ---------- export ---------- */
+function buildExport(){
+  document.getElementById("labeller").value = meta.labeller || "";
+  document.getElementById("stamp").value = meta.stamp || "";
+  var lines = [];
+  lines.push("labelled_at: " + (meta.stamp || "FILL-ME-ISO8601Z"));
+  lines.push("labeller: " + (meta.labeller || "FILL-ME"));
+  lines.push("corpus_sha: " + DATA.corpusSha);
+  lines.push("cases_file: " + DATA.casesFile);
+  lines.push("");
+  lines.push("| case | item | upstream replaced | downstream artifact | should re-run (yes/no) | why (one line) |");
+  lines.push("| --- | --- | --- | --- | --- | --- |");
+  ROWS.forEach(function(r){
+    var s = state[r.id];
+    lines.push("| " + r.case + " | " + r.item + " | " + r.upstream + " | " + r.name + " | " +
+               (s ? s.v : "") + " | " + (s && s.why ? s.why.replace(/\|/g,"/") : "") + " |");
+  });
+  var missing = ROWS.filter(function(r){ return !state[r.id]; }).length;
+  if(missing) lines.unshift("# " + missing + " of " + ROWS.length + " rows are still blank.", "");
+  document.getElementById("out").value = lines.join("\n");
+}
+
+document.getElementById("stampnow").addEventListener("click", function(){
+  meta.stamp = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+  saveLocal(); buildExport(); pushMeta();
+});
+document.getElementById("labeller").addEventListener("input", function(e){
+  meta.labeller = e.target.value; saveLocal(); buildExport();
+});
+document.getElementById("labeller").addEventListener("blur", pushMeta);
+document.getElementById("copy").addEventListener("click", function(){
+  var ta = document.getElementById("out");
+  ta.select();
+  var done = function(ok){
+    var el = document.getElementById("copied");
+    el.className = "sync " + (ok?"ok":"bad");
+    el.innerHTML = "<span class='dot'></span>" + (ok ? "copied" : "select the box and press Ctrl+C");
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value).then(function(){done(true)}, function(){done(false)});
+  } else { done(false); }
+});
+
+/* ---------- nav ---------- */
+document.getElementById("prev").addEventListener("click", function(){ if(idx>0){idx--; render(); window.scrollTo(0,0);} });
+document.getElementById("next").addEventListener("click", function(){ if(idx<CASES.length-1){idx++; render(); window.scrollTo(0,0);} });
+document.getElementById("toexport").addEventListener("click", function(){ showingExport = !showingExport; render(); window.scrollTo(0,0); });
+document.getElementById("retry").addEventListener("click", function(){ flush(); });
+
+document.addEventListener("keydown", function(e){
+  var t = e.target;
+  if(t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  var k = e.key.toLowerCase();
+  if(k === "arrowright" || k === "j"){ if(idx<CASES.length-1 && !showingExport){idx++; render(); window.scrollTo(0,0);} }
+  else if(k === "arrowleft" || k === "k"){ if(idx>0 && !showingExport){idx--; render(); window.scrollTo(0,0);} }
+  else if((k === "y" || k === "n") && t && t.dataset && t.dataset.id){
+    setVal(t.dataset.id, k === "y" ? "yes" : "no");
+    var again = document.querySelector("[data-id='"+t.dataset.id+"'][data-v='"+(k==="y"?"yes":"no")+"']");
+    if(again) again.focus();
+  }
+});
+
+/* ---------- boot ---------- */
+render();
+
+if(window.claude && typeof window.claude.use === "function"){
+  window.claude.use("db").then(function(x){
+    db = x; dbTried = true;
+    if(!db){ render(); return; }
+    db.collection("labels").get().then(function(snap){
+      snap.docs.forEach(function(doc){
+        var d = doc.data(); if(!d) return;
+        if(!state[doc.id]){ state[doc.id] = {v:d.shouldRerun, why:d.why||"", saved:true}; }
+      });
+      return db.doc("meta/session").get();
+    }).then(function(m){
+      if(m && m.exists){ var d=m.data()||{};
+        if(!meta.labeller && d.labeller) meta.labeller = d.labeller;
+        if(!meta.stamp && d.labelledAt) meta.stamp = d.labelledAt; }
+      saveLocal();
+      return flush();
+    }).catch(function(){ render(); });
+  }, function(){ dbTried = true; render(); });
+} else {
+  setTimeout(function(){ dbTried = true; render(); }, 1200);
+}
+
+window.addEventListener("beforeunload", function(e){
+  var s = syncState();
+  if(s.unsaved > 0){ e.preventDefault(); e.returnValue = ""; }
+});
+})();
+</script>
