@@ -1,0 +1,4676 @@
+{
+ "artifact": "reconcile.json",
+ "phase": "audit ground truth -- census reconciliation",
+ "generated_by": "scripts/reconcile_step1_inventory.py, reconcile_step2_rerun.py, reconcile_probe_arxiv.py, reconcile_step3_crosscheck.py, reconcile_step4_report.py",
+ "repo": "D:/repos/redkiln-rs",
+ "repo_read_only": true,
+ "repo_git_porcelain_lines_before_and_after_reruns": {
+  "before": 17,
+  "after": 17
+ },
+ "step1_inventory": {
+  "ids": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\ids.json",
+   "exists": true,
+   "bytes": 1106371,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "meta": {
+     "type": "dict",
+     "keys": 6,
+     "sample_keys": [
+      "repo",
+      "generated_by",
+      "scanned_md_files",
+      "excluded",
+      "evidence_tags",
+      "file_list"
+     ]
+    },
+    "namespaces": {
+     "type": "dict",
+     "keys": 7,
+     "sample_keys": [
+      "AC",
+      "SM",
+      "ADR",
+      "F",
+      "SPIKES",
+      "R",
+      "LEGACY"
+     ]
+    },
+    "anchor_assertions": {
+     "type": "dict",
+     "keys": 17,
+     "sample_keys": [
+      "AC_defined_nonzero",
+      "SM_defined_nonzero",
+      "ADR_defined_nonzero",
+      "F_defined_nonzero",
+      "SPIKES_defined_nonzero",
+      "R_reading_defined_nonzero",
+      "R_rfc_defined_nonzero",
+      "R_lint_cited_nonzero",
+      "R_p6_defined_nonzero",
+      "R_selection_symbol_nonzero",
+      "LEGACY_D_proposal_decisions_defined_nonzero",
+      "LEGACY_PC_process_catalog_decisions_defined_nonzero",
+      "LEGACY_SCHEMA_amendments_defined_nonzero",
+      "LEGACY_conformance_rubric_ids_defined_nonzero",
+      "LEGACY_L_shipmates_lessons_defined_nonzero",
+      "LEGACY_A_p9b_ambiguities_defined_nonzero",
+      "LEGACY_A_advisory_cited_nonzero"
+     ]
+    },
+    "anomalies": {
+     "type": "list",
+     "len": 18,
+     "first_type": "dict"
+    }
+   },
+   "leaf_count": 18938,
+   "non_trivial": true
+  },
+  "constants": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\constants.json",
+   "exists": true,
+   "bytes": 4411185,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "meta": {
+     "type": "dict",
+     "keys": 11,
+     "sample_keys": [
+      "generated",
+      "corpus_root",
+      "corpus_git_head",
+      "scope",
+      "script",
+      "context_chars_each_side",
+      "generic_thresholds",
+      "status_semantics",
+      "generic_status_note",
+      "files",
+      "content_sha256_excluding_generated"
+     ]
+    },
+    "counts": {
+     "type": "dict",
+     "keys": 18,
+     "sample_keys": [
+      "files_scanned",
+      "lines_scanned",
+      "seed_constants",
+      "seed_candidate_values",
+      "seed_occurrences",
+      "seed_AGREE",
+      "seed_VARIANT",
+      "seed_RANGE_STATEMENT",
+      "seed_ABSENT",
+      "seed_candidates_with_zero_matches",
+      "seed_not_restated_single_occurrence",
+      "seed_single_file",
+      "seed_slots",
+      "seed_slots_with_other_values",
+      "generic_tokens_kept",
+      "generic_covered_by_seed",
+      "generic_added_beyond_seeds",
+      "generic_occurrences"
+     ]
+    },
+    "seeds": {
+     "type": "list",
+     "len": 166,
+     "first_type": "dict"
+    },
+    "generic": {
+     "type": "list",
+     "len": 569,
+     "first_type": "dict"
+    }
+   },
+   "leaf_count": 69472,
+   "non_trivial": true
+  },
+  "anchors": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\anchors.json",
+   "exists": true,
+   "bytes": 6521586,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "meta": {
+     "type": "dict",
+     "keys": 14,
+     "sample_keys": [
+      "generated_at",
+      "repo",
+      "script",
+      "corpus_rule",
+      "corpus_files",
+      "repo_files_indexed_for_existence",
+      "heading_rule",
+      "label_rule",
+      "section_ref_rule",
+      "section_resolution_rules",
+      "section_status_values",
+      "alias_kinds",
+      "alias_table",
+      "assertions"
+     ]
+    },
+    "heading_index": {
+     "type": "dict",
+     "keys": 194,
+     "sample_keys": [
+      "RUNBOOK.md",
+      "references/2026-08-31-rust-inversion-RFC.md",
+      "references/2026-08-31-rust-inversion-spike-charter.md",
+      "references/2026-09-01-shipmates-lessons-for-redkiln-rs.md",
+      "references/2026-09-02-rfc-amendment.md",
+      "references/2026-09-03-reimagining-brainstorm.md",
+      "references/2026-09-04-findings-for-product.md",
+      "references/2026-09-05-architecture-proposal.md",
+      "references/2026-09-07-activity-graph-schema.md",
+      "references/2026-09-07-design-recommendation.md",
+      "references/2026-09-07-process-catalog-proposal.md",
+      "references/2026-09-08-acceptance-criteria.md",
+      "references/2026-09-08-architecture-design.md",
+      "references/2026-09-08-evidence-augmentation.md",
+      "references/2026-09-08-evidence-brief.md",
+      "references/2026-09-08-success-measures.md",
+      "references/2026-09-09-change-classification.md",
+      "references/conformance-2026-09-04-scorecard.md",
+      "references/adr/0001-inversion-architecture-bet.md",
+      "references/adr/0002-clean-break-self-hosting-switch.md",
+      "references/adr/0003-five-named-ports-no-postgres.md",
+      "references/adr/0004-review-gate-findings-not-verdicts.md",
+      "references/adr/0005-human-edits-prose-free-structure-gated.md",
+      "references/adr/0006-artifact-layout-c-split-fields.md",
+      "references/adr/0007-codex-validation-only-second-harness.md",
+      "references/adr/0008-real-unreal-project-is-s-bin-fixture.md",
+      "references/adr/0009-cli-only-gate-channel-in-phase-1.md",
+      "references/adr/0010-claude-adapter-subscription-only-auth.md",
+      "references/adr/0011-phase-1-ships-fix-and-story-lanes-only.md",
+      "references/adr/0012-open-questions-become-named-gating-spikes.md",
+      "references/adr/0013-corpus-lives-in-its-own-pinned-repo.md",
+      "references/adr/0014-process-packs-own-structure-tech-packs-bind.md",
+      "references/adr/0015-review-tier-selects-execution-grade-or-read-only.md",
+      "references/adr/0016-static-system-prompt-carries-the-card.md",
+      "references/adr/0017-gate-record-is-token-tree-hash-deadline.md",
+      "references/adr/0018-rewrite-events-and-common-dir-worktree-ownership.md",
+      "references/adr/0019-per-ac-discriminating-test-is-the-norm.md",
+      "references/adr/0020-stage-rigor-is-a-deontic-enum.md",
+      "references/adr/0021-loop-aware-memo-key.md",
+      "references/adr/0022-activities-are-encapsulated-graphs.md"
+     ]
+    },
+    "section_refs": {
+     "type": "dict",
+     "keys": 5,
+     "sample_keys": [
+      "counts",
+      "named_doc_lacks_heading",
+      "resolved",
+      "dangling",
+      "external"
+     ]
+    },
+    "c_refs": {
+     "type": "dict",
+     "keys": 7,
+     "sample_keys": [
+      "brief_section_C_items",
+      "brief_section_C_item_count",
+      "correction_note",
+      "counts",
+      "resolved",
+      "dangling",
+      "principle_mentions"
+     ]
+    },
+    "file_paths": {
+     "type": "dict",
+     "keys": 12,
+     "sample_keys": [
+      "counts",
+      "citing_class_rule",
+      "dangling_by_citing_class",
+      "dangling_distinct_planning_and_method_docs",
+      "dangling_distinct",
+      "resolved",
+      "basename_unique",
+      "not_a_path",
+      "dangling",
+      "glob_patterns",
+      "absolute_drive_paths",
+      "relative_md_link_targets"
+     ]
+    },
+    "links": {
+     "type": "dict",
+     "keys": 3,
+     "sample_keys": [
+      "counts",
+      "markdown_links",
+      "urls"
+     ]
+    }
+   },
+   "leaf_count": 163925,
+   "non_trivial": true
+  },
+  "adr-graph": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\adr-graph.json",
+   "exists": true,
+   "bytes": 439800,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "_meta": {
+     "type": "dict",
+     "keys": 8,
+     "sample_keys": [
+      "artifact",
+      "generator",
+      "repo",
+      "adr_dir",
+      "generated_by",
+      "read_only",
+      "python",
+      "tagging"
+     ]
+    },
+    "anchors": {
+     "type": "list",
+     "len": 18,
+     "first_type": "dict"
+    },
+    "anchor_failures": {
+     "type": "list",
+     "len": 0,
+     "first_type": null
+    },
+    "counts": {
+     "type": "dict",
+     "keys": 28,
+     "sample_keys": [
+      "adr_files",
+      "status_distribution",
+      "supersession_edges",
+      "supersession_edges_reciprocal",
+      "supersession_edges_non_reciprocal",
+      "superseding_records",
+      "superseded_records",
+      "partial_supersessions_accepted_predecessor",
+      "full_supersessions_status_superseded",
+      "related_edges",
+      "related_edges_one_way",
+      "related_edges_reciprocal_directed",
+      "records_with_forbids",
+      "records_without_forbids",
+      "forbids_variants",
+      "records_with_nonempty_evidence",
+      "distinct_evidence_tags",
+      "records_with_nonempty_consumers",
+      "dangling_id_references",
+      "duplicate_ids",
+      "numbering_gaps",
+      "records_missing_mandatory_section",
+      "distinct_dates",
+      "readme_diff_claims_checked",
+      "readme_diff_disagreements",
+      "citation_date_violations",
+      "citation_date_violations_unexplained",
+      "citation_docs_scanned"
+     ]
+    },
+    "records": {
+     "type": "list",
+     "len": 89,
+     "first_type": "dict"
+    },
+    "frontmatter_conformance": {
+     "type": "dict",
+     "keys": 10,
+     "sample_keys": [
+      "expected_keys_readme",
+      "observed_key_union",
+      "records_with_parse_error",
+      "missing_keys",
+      "extra_keys",
+      "key_order_deviations",
+      "id_filename_mismatches",
+      "key_presence_counts",
+      "keys_on_every_record",
+      "keys_missing_from_some"
+     ]
+    },
+    "section_conformance": {
+     "type": "dict",
+     "keys": 2,
+     "sample_keys": [
+      "mandatory_sections",
+      "records_missing_a_mandatory_section"
+     ]
+    },
+    "numbering": {
+     "type": "dict",
+     "keys": 5,
+     "sample_keys": [
+      "min",
+      "max",
+      "gaps",
+      "duplicate_ids",
+      "next_free"
+     ]
+    },
+    "legacy_ids": {
+     "type": "dict",
+     "keys": 2,
+     "sample_keys": [
+      "duplicates",
+      "distribution"
+     ]
+    },
+    "status_distribution": {
+     "type": "dict",
+     "keys": 3,
+     "sample_keys": [
+      "accepted",
+      "superseded",
+      "proposed"
+     ]
+    },
+    "supersession": {
+     "type": "dict",
+     "keys": 8,
+     "sample_keys": [
+      "edges",
+      "superseding_records",
+      "superseded_records",
+      "non_reciprocal_edges",
+      "cycles",
+      "acyclic",
+      "partial_supersessions",
+      "full_supersessions"
+     ]
+    },
+    "related_graph": {
+     "type": "dict",
+     "keys": 3,
+     "sample_keys": [
+      "edges",
+      "one_way_edges",
+      "dangling"
+     ]
+    },
+    "dangling_references": {
+     "type": "list",
+     "len": 0,
+     "first_type": null
+    },
+    "forbids_index": {
+     "type": "list",
+     "len": 89,
+     "first_type": "dict"
+    },
+    "records_without_forbids": {
+     "type": "list",
+     "len": 0,
+     "first_type": null
+    },
+    "dates": {
+     "type": "dict",
+     "keys": 3,
+     "sample_keys": [
+      "distribution",
+      "malformed",
+      "by_date"
+     ]
+    },
+    "evidence_tags": {
+     "type": "dict",
+     "keys": 2,
+     "sample_keys": [
+      "counts",
+      "by_record"
+     ]
+    },
+    "consumers": {
+     "type": "dict",
+     "keys": 3,
+     "sample_keys": [
+      "note",
+      "nonempty",
+      "empty_count"
+     ]
+    },
+    "readme_claims": {
+     "type": "dict",
+     "keys": 16,
+     "sample_keys": [
+      "path",
+      "line_count",
+      "claim_total_records",
+      "claim_status_counts",
+      "claim_supersession_counts",
+      "claim_full_partial_split",
+      "claim_forbids_punctuation",
+      "claim_related_edges",
+      "claim_consumers_empty",
+      "claim_new_record_dates",
+      "claim_next_free",
+      "claim_forbids_on_all",
+      "claim_forbids_counts",
+      "supersession_table",
+      "legacy_map",
+      "deliberate_non_supersessions"
+     ]
+    },
+    "readme_vs_frontmatter_diff": {
+     "type": "list",
+     "len": 24,
+     "first_type": "dict"
+    },
+    "citation_date_check": {
+     "type": "dict",
+     "keys": 9,
+     "sample_keys": [
+      "method",
+      "caveat",
+      "docs_scanned",
+      "pattern_hit_counts",
+      "violations",
+      "violations_count",
+      "violations_where_doc_carries_a_later_date_than_the_adr",
+      "violations_unexplained",
+      "per_doc_citations"
+     ]
+    }
+   },
+   "leaf_count": 8011,
+   "non_trivial": true
+  },
+  "slices": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\slices.json",
+   "exists": true,
+   "bytes": 315485,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "artifact": {
+     "type": "str",
+     "value": "slices.json"
+    },
+    "phase": {
+     "type": "str",
+     "value": "audit ground truth -- slice manifest"
+    },
+    "generated_by": {
+     "type": "str",
+     "value": "audit/scripts/census_slices.py"
+    },
+    "repo": {
+     "type": "str",
+     "value": "D:/repos/redkiln-rs"
+    },
+    "read_only": {
+     "type": "bool",
+     "value": true
+    },
+    "source_files": {
+     "type": "dict",
+     "keys": 4,
+     "sample_keys": [
+      "references/2026-09-08-architecture-design.md",
+      "references/2026-09-08-acceptance-criteria.md",
+      "references/2026-09-08-success-measures.md",
+      "RUNBOOK.md"
+     ]
+    },
+    "mapping_rule": {
+     "type": "dict",
+     "keys": 8,
+     "sample_keys": [
+      "ac_sections",
+      "design_sections",
+      "sm_rows",
+      "runbook_steps",
+      "confidence",
+      "est_read_lines",
+      "est_read_lines_narrow",
+      "oversize"
+     ]
+    },
+    "counts": {
+     "type": "dict",
+     "keys": 24,
+     "sample_keys": [
+      "areas",
+      "state_DECIDED",
+      "state_PROVISIONAL",
+      "state_BLOCKED",
+      "groups",
+      "ac_top_level_sections",
+      "ac_area_rows_in_0_1",
+      "design_top_level_sections",
+      "sm_area_subsections",
+      "sm_rows_indexed",
+      "runbook_sections",
+      "areas_with_no_ac_section",
+      "areas_oversize_gt_900_lines",
+      "areas_oversize_gt_900_lines_narrow",
+      "gates_phase_1_yes",
+      "gates_phase_1_no",
+      "gates_phase_1_other",
+      "group_est_lines_narrow_min",
+      "group_est_lines_narrow_max",
+      "group_est_lines_min",
+      "group_est_lines_max",
+      "group_est_lines_mean",
+      "assertions_run",
+      "assertions_failed"
+     ]
+    },
+    "ac_area_table": {
+     "type": "list",
+     "len": 13,
+     "first_type": "dict"
+    },
+    "ac_sections_index": {
+     "type": "list",
+     "len": 17,
+     "first_type": "dict"
+    },
+    "ac_subsections_index": {
+     "type": "list",
+     "len": 101,
+     "first_type": "dict"
+    },
+    "ac_retired_ids_per_0_4": {
+     "type": "list",
+     "len": 5,
+     "first_type": "str"
+    },
+    "ac_anchor_duplicates": {
+     "type": "dict",
+     "keys": 1,
+     "sample_keys": [
+      "AC-428"
+     ]
+    },
+    "ac_anchors_outside_declared_ranges": {
+     "type": "list",
+     "len": 1,
+     "first_type": "str"
+    },
+    "ac_anchor_total": {
+     "type": "int",
+     "value": 514
+    },
+    "ac_declared_ranges": {
+     "type": "dict",
+     "keys": 13,
+     "sample_keys": [
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14"
+     ]
+    },
+    "design_sections_index": {
+     "type": "list",
+     "len": 13,
+     "first_type": "dict"
+    },
+    "sm_subsections_index": {
+     "type": "list",
+     "len": 13,
+     "first_type": "dict"
+    },
+    "runbook_sections_index": {
+     "type": "list",
+     "len": 14,
+     "first_type": "dict"
+    },
+    "slices": {
+     "type": "list",
+     "len": 39,
+     "first_type": "dict"
+    },
+    "groups": {
+     "type": "list",
+     "len": 21,
+     "first_type": "dict"
+    },
+    "assertions": {
+     "type": "list",
+     "len": 429,
+     "first_type": "dict"
+    }
+   },
+   "leaf_count": 6600,
+   "non_trivial": true
+  },
+  "external": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\external.json",
+   "exists": true,
+   "bytes": 988010,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "_meta": {
+     "type": "dict",
+     "keys": 8,
+     "sample_keys": [
+      "generated_by",
+      "repo",
+      "scope",
+      "families",
+      "verify_methods",
+      "load_bearing_rule",
+      "unverified_rule",
+      "claim_text_rule"
+     ]
+    },
+    "counts": {
+     "type": "dict",
+     "keys": 40,
+     "sample_keys": [
+      "claims_total",
+      "anchors_total",
+      "files_scanned",
+      "load_bearing",
+      "self_flagged_unverified",
+      "verify_url_null",
+      "batches",
+      "url_rows_folded_into_curated",
+      "curated_patterns_zero_match",
+      "family:advisories",
+      "family:anthropic_platform",
+      "family:claude_code",
+      "family:competitors",
+      "family:crate_versions",
+      "family:decision_records",
+      "family:durable_execution",
+      "family:gitoxide",
+      "family:no_url",
+      "family:peer_and_standards",
+      "family:preprints",
+      "family:process_literature",
+      "family:sqlite",
+      "family:stated_absences",
+      "family:toolchain",
+      "method:arxiv_abs",
+      "method:crates_io_api",
+      "method:docs_rs",
+      "method:doi_resolve",
+      "method:github_api",
+      "method:rustsec_osv",
+      "method:vendor_docs",
+      "method:web_search",
+      "tag:1P",
+      "tag:peer",
+      "tag:preprint",
+      "tag:vendor",
+      "tag:blog",
+      "tag:Pr",
+      "tag:none",
+      "distinct_arxiv_ids"
+     ]
+    },
+    "assertions": {
+     "type": "list",
+     "len": 202,
+     "first_type": "dict"
+    },
+    "claims": {
+     "type": "list",
+     "len": 860,
+     "first_type": "dict"
+    },
+    "batches": {
+     "type": "list",
+     "len": 23,
+     "first_type": "dict"
+    }
+   },
+   "leaf_count": 16532,
+   "non_trivial": true
+  },
+  "known-issues": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\known-issues.json",
+   "exists": true,
+   "bytes": 1227062,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "artifact": {
+     "type": "str",
+     "value": "known-issues-register"
+    },
+    "phase": {
+     "type": "str",
+     "value": "audit ground truth"
+    },
+    "generated_by": {
+     "type": "str",
+     "value": "scripts/census_known.py"
+    },
+    "repo": {
+     "type": "str",
+     "value": "D:/repos/redkiln-rs"
+    },
+    "read_only": {
+     "type": "bool",
+     "value": true
+    },
+    "method": {
+     "type": "str",
+     "value": "Section-anchored extraction. Every section is located by its verbatim markdown h"
+    },
+    "counts": {
+     "type": "dict",
+     "keys": 7,
+     "sample_keys": [
+      "rows_total",
+      "distinct_source_files",
+      "by_kind",
+      "by_source",
+      "stale_source_rows",
+      "specs_total",
+      "specs_failing_anchor"
+     ]
+    },
+    "anchor_report": {
+     "type": "list",
+     "len": 90,
+     "first_type": "dict"
+    },
+    "invalid_kinds": {
+     "type": "list",
+     "len": 0,
+     "first_type": null
+    },
+    "rows": {
+     "type": "list",
+     "len": 1381,
+     "first_type": "dict"
+    },
+    "search_index": {
+     "type": "list",
+     "len": 1381,
+     "first_type": "dict"
+    }
+   },
+   "leaf_count": 29903,
+   "non_trivial": true
+  },
+  "phase1-deps": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\phase1-deps.json",
+   "exists": true,
+   "bytes": 215313,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "artifact": {
+     "type": "str",
+     "value": "phase1-deps"
+    },
+    "generated_by": {
+     "type": "str",
+     "value": "C:\\Users\\ryanm\\AppData\\Local\\Temp\\claude\\D--repos-redkiln-rs\\953a92ec-7709-4a24-"
+    },
+    "repo": {
+     "type": "str",
+     "value": "D:/repos/redkiln-rs"
+    },
+    "repo_is_read_only": {
+     "type": "bool",
+     "value": true
+    },
+    "status_vocabulary": {
+     "type": "dict",
+     "keys": 8,
+     "sample_keys": [
+      "satisfied",
+      "deferred_by_design",
+      "outstanding_human",
+      "absent_spike_unrun",
+      "will_exist_unwritten",
+      "satisfied_today_but_removed_by_step_2",
+      "absent",
+      "unverifiable_mechanically"
+     ]
+    },
+    "counts": {
+     "type": "dict",
+     "keys": 30,
+     "sample_keys": [
+      "runbook_lines",
+      "steps_and_substeps_emitted",
+      "top_level_steps",
+      "checkpoints_found",
+      "will_exist_marker_lines",
+      "will_exist_markers_attributed_to_a_step",
+      "requirements_total",
+      "requirements_satisfied",
+      "requirements_absent",
+      "requirements_absent_spike_unrun",
+      "requirements_outstanding_human",
+      "requirements_will_exist_unwritten",
+      "requirements_satisfied_today_but_removed_by_step_2",
+      "requirements_role_prerequisite",
+      "requirements_role_own_output",
+      "requirements_role_soft",
+      "critical_path_to_step5_prerequisites_only",
+      "critical_path_to_step8_prerequisites_only",
+      "requirements_deferred_by_design",
+      "requirements_unverifiable_mechanically",
+      "critical_path_to_step5_length",
+      "critical_path_to_step8_length",
+      "ordering_hazards",
+      "ordering_hazards_undisclosed",
+      "runbook_claims_checked",
+      "runbook_claims_confirmed",
+      "runbook_claims_stale",
+      "steps_writing_product_code",
+      "anchor_assertions",
+      "anchor_assertions_failed"
+     ]
+    },
+    "tools": {
+     "type": "dict",
+     "keys": 12,
+     "sample_keys": [
+      "cargo",
+      "rustc",
+      "git",
+      "python",
+      "claude",
+      "cargo-audit",
+      "cargo-insta",
+      "awk",
+      "sed",
+      "grep",
+      "wc",
+      "date"
+     ]
+    },
+    "git": {
+     "type": "dict",
+     "keys": 7,
+     "sample_keys": [
+      "redkiln_rs_branch",
+      "redkiln_rs_head",
+      "redkiln_rs_untracked_count",
+      "redkiln_rs_modified_count",
+      "redkiln_rs_porcelain_total",
+      "predecessor_redkiln_head",
+      "predecessor_workflows_dirty"
+     ]
+    },
+    "anchor_assertions": {
+     "type": "list",
+     "len": 47,
+     "first_type": "dict"
+    },
+    "steps": {
+     "type": "list",
+     "len": 40,
+     "first_type": "dict"
+    },
+    "critical_path": {
+     "type": "dict",
+     "keys": 3,
+     "sample_keys": [
+      "canonical_execution_order",
+      "to_step_5_first_product_code",
+      "to_step_8_exit_criterion"
+     ]
+    },
+    "ordering_hazards": {
+     "type": "dict",
+     "keys": 4,
+     "sample_keys": [
+      "moved_dir_reads_after_step2",
+      "order_banner_line_range",
+      "order_banner_names_steps",
+      "hazards"
+     ]
+    },
+    "runbook_claim_verification": {
+     "type": "list",
+     "len": 18,
+     "first_type": "dict"
+    }
+   },
+   "leaf_count": 4329,
+   "non_trivial": true
+  },
+  "doc-map": {
+   "path": "C:/Users/ryanm/AppData/Local/Temp/claude/D--repos-redkiln-rs/953a92ec-7709-4a24-b01d-8a5e2c5b86c8/scratchpad/audit/census\\doc-map.json",
+   "exists": true,
+   "bytes": 599075,
+   "parses": true,
+   "top_type": "dict",
+   "top_keys": {
+    "schema": {
+     "type": "str",
+     "value": "redkiln-rs/audit/doc-map/1"
+    },
+    "generated_by": {
+     "type": "str",
+     "value": "scripts/census_docmap.py"
+    },
+    "repo": {
+     "type": "str",
+     "value": "D:/repos/redkiln-rs"
+    },
+    "method": {
+     "type": "dict",
+     "keys": 9,
+     "sample_keys": [
+      "est_tokens",
+      "WARNING_token_ratio",
+      "window_cap_est_tokens",
+      "read_plan_threshold_est_tokens",
+      "scope",
+      "reference_scan_scope",
+      "id_match",
+      "fixture_reference_probe",
+      "line_lengths"
+     ]
+    },
+    "counts": {
+     "type": "dict",
+     "keys": 17,
+     "sample_keys": [
+      "md_files_in_scope",
+      "fixture_files_referencing_corpus_by_path",
+      "total_bytes",
+      "total_est_tokens",
+      "files_over_20k_est_tokens",
+      "read_plan_windows_total",
+      "read_plans_coverage_verified",
+      "single_lines_over_18k_est_tokens",
+      "authority_documents",
+      "documents_with_deference_claim",
+      "documents_with_denial_claim",
+      "authority_pairs_with_shared_ids",
+      "orphans",
+      "strict_orphans",
+      "orphans_by_path_but_referenced_by_id",
+      "stale_risk_files",
+      "stale_risk_cited_as_current"
+     ]
+    },
+    "documents": {
+     "type": "list",
+     "len": 194,
+     "first_type": "dict"
+    },
+    "authority_map": {
+     "type": "dict",
+     "keys": 3,
+     "sample_keys": [
+      "documents",
+      "pairwise_id_overlap",
+      "central_precedence_pair"
+     ]
+    },
+    "orphans": {
+     "type": "list",
+     "len": 126,
+     "first_type": "dict"
+    },
+    "stale_risk": {
+     "type": "list",
+     "len": 37,
+     "first_type": "dict"
+    },
+    "global_oversize_lines": {
+     "type": "list",
+     "len": 0,
+     "first_type": null
+    },
+    "read_plan_problems": {
+     "type": "list",
+     "len": 0,
+     "first_type": null
+    }
+   },
+   "leaf_count": 11852,
+   "non_trivial": true
+  },
+  "_extras_in_dir": []
+ },
+ "step2_rerun": {
+  "ids": {
+   "script": "census_ids.py",
+   "subs": [],
+   "rc": 0,
+   "seconds": 1.1,
+   "wrote_artifact": true,
+   "byte_identical_json": true,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 1106371,
+   "rerun_bytes": 1106371,
+   "status": "REPRODUCIBLE"
+  },
+  "constants": {
+   "script": "census_constants.py",
+   "subs": [
+    {
+     "old": "os.path.join(SCRATCH, \"census\", \"constants.json\")",
+     "count": 1
+    }
+   ],
+   "rc": 0,
+   "seconds": 25.8,
+   "wrote_artifact": true,
+   "byte_identical_json": false,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 4411185,
+   "rerun_bytes": 4411191,
+   "status": "REPRODUCIBLE"
+  },
+  "anchors": {
+   "script": "census_anchors.py",
+   "subs": [
+    {
+     "old": "scratchpad/audit/census/anchors.json",
+     "count": 1
+    }
+   ],
+   "rc": 0,
+   "seconds": 26.2,
+   "wrote_artifact": true,
+   "byte_identical_json": false,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 6521586,
+   "rerun_bytes": 6521592,
+   "status": "REPRODUCIBLE"
+  },
+  "adr-graph": {
+   "script": "census_adr.py",
+   "subs": [
+    {
+     "old": "scratchpad/audit/census/adr-graph.json",
+     "count": 1
+    }
+   ],
+   "rc": 0,
+   "seconds": 0.8,
+   "wrote_artifact": true,
+   "byte_identical_json": false,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 439800,
+   "rerun_bytes": 439806,
+   "status": "REPRODUCIBLE"
+  },
+  "slices": {
+   "script": "census_slices.py",
+   "subs": [
+    {
+     "old": "scratchpad/audit/census/slices.json",
+     "count": 1
+    }
+   ],
+   "rc": 0,
+   "seconds": 0.5,
+   "wrote_artifact": true,
+   "byte_identical_json": true,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 315485,
+   "rerun_bytes": 315485,
+   "status": "REPRODUCIBLE"
+  },
+  "external": {
+   "script": "census_external.py",
+   "subs": [
+    {
+     "old": "scratchpad/audit/census/external.json",
+     "count": 1
+    }
+   ],
+   "rc": 0,
+   "seconds": 11.4,
+   "wrote_artifact": true,
+   "byte_identical_json": true,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 988010,
+   "rerun_bytes": 988010,
+   "status": "REPRODUCIBLE"
+  },
+  "known-issues": {
+   "script": "census_known.py",
+   "subs": [
+    {
+     "old": "scratchpad/audit/census/known-issues.json",
+     "count": 1
+    }
+   ],
+   "rc": 0,
+   "seconds": 0.5,
+   "wrote_artifact": true,
+   "byte_identical_json": true,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 1227062,
+   "rerun_bytes": 1227062,
+   "status": "REPRODUCIBLE"
+  },
+  "phase1-deps": {
+   "script": "census_deps.py",
+   "subs": [],
+   "rc": 0,
+   "seconds": 0.6,
+   "wrote_artifact": true,
+   "byte_identical_json": false,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 215313,
+   "rerun_bytes": 215320,
+   "status": "REPRODUCIBLE"
+  },
+  "doc-map": {
+   "script": "census_docmap.py",
+   "subs": [
+    {
+     "old": "OUT / \"census\" / \"doc-map.json\"",
+     "count": 1
+    }
+   ],
+   "rc": 0,
+   "seconds": 187.3,
+   "wrote_artifact": true,
+   "byte_identical_json": true,
+   "identical_after_stripping_volatile": true,
+   "diff_count_capped_200": 0,
+   "diff_sample": [],
+   "committed_bytes": 599075,
+   "rerun_bytes": 599075,
+   "status": "REPRODUCIBLE"
+  }
+ },
+ "reproducible_count": 9,
+ "step3_cross_checks": {
+  "checks": [
+   {
+    "id": "X1a",
+    "title": "ids.ADR defined set == adr-graph record set (89)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "ids_count": 89,
+     "graph_count": 89,
+     "only_ids": [],
+     "only_graph": []
+    }
+   },
+   {
+    "id": "X1b",
+    "title": "doc-map arch id_counts.ADR is 89 (doc-map counts carries no adr_records key although the agent summary reported one)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "doc_map_counts_keys": [
+      "authority_documents",
+      "authority_pairs_with_shared_ids",
+      "documents_with_deference_claim",
+      "documents_with_denial_claim",
+      "files_over_20k_est_tokens",
+      "fixture_files_referencing_corpus_by_path",
+      "md_files_in_scope",
+      "orphans",
+      "orphans_by_path_but_referenced_by_id",
+      "read_plan_windows_total",
+      "read_plans_coverage_verified",
+      "single_lines_over_18k_est_tokens",
+      "stale_risk_cited_as_current",
+      "stale_risk_files",
+      "strict_orphans",
+      "total_bytes",
+      "total_est_tokens"
+     ],
+     "summary_reported_adr_records": 89
+    }
+   },
+   {
+    "id": "X1c",
+    "title": "every ADR cited in slices.json rows is a defined ADR",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "slices_adr_count": 44,
+     "not_defined": []
+    }
+   },
+   {
+    "id": "X1d",
+    "title": "ADR ids named in phase1-deps requires[] resolve, or are the known dangling ADR-0090/0091",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "phase1_adrs": [
+      "ADR-0009",
+      "ADR-0013",
+      "ADR-0024",
+      "ADR-0030",
+      "ADR-0032",
+      "ADR-0033",
+      "ADR-0067",
+      "ADR-0069",
+      "ADR-0073",
+      "ADR-0077",
+      "ADR-0079",
+      "ADR-0083",
+      "ADR-0088",
+      "ADR-0089",
+      "ADR-0090",
+      "ADR-0091"
+     ],
+     "unresolved": [
+      "ADR-0090",
+      "ADR-0091"
+     ],
+     "ids_dangling": [
+      "ADR-0090",
+      "ADR-0091"
+     ],
+     "adr_graph_next_free": "0090"
+    }
+   },
+   {
+    "id": "X1e",
+    "title": "known-issues ADR source files are all real ADR records",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "adr_records_with_rows": 82,
+     "adr_records_without_rows": [
+      "ADR-0018",
+      "ADR-0019",
+      "ADR-0020",
+      "ADR-0037",
+      "ADR-0038",
+      "ADR-0039",
+      "ADR-0040"
+     ],
+     "bad": []
+    }
+   },
+   {
+    "id": "X1f",
+    "title": "constants seed adr.total canonical agrees with 89 (VARIANT 88 is recorded, not a census error)",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "canonical": "89",
+     "alternatives": [
+      "89",
+      "88"
+     ],
+     "status": "VARIANT"
+    }
+   },
+   {
+    "id": "X2a",
+    "title": "ids.AC defined count 514 == doc-map ac_register_defined 514",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "ids": 514,
+     "doc_map": 514
+    }
+   },
+   {
+    "id": "X2b",
+    "title": "doc-map arch AC set is a SUBSET of ids defined set (expected exception AC-513, a later-phase finding)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "arch_ac_count": 482,
+     "arch_not_defined": [
+      "AC-513"
+     ],
+     "doc_map_says": [
+      "AC-513"
+     ],
+     "arch_in_defined": 481
+    }
+   },
+   {
+    "id": "X2c",
+    "title": "ids.AC dangling == doc-map mentioned_not_defined",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "ids": [
+      "AC-075",
+      "AC-119",
+      "AC-207",
+      "AC-255",
+      "AC-297",
+      "AC-513"
+     ],
+     "doc_map": [
+      "AC-075",
+      "AC-119",
+      "AC-207",
+      "AC-255",
+      "AC-297",
+      "AC-513"
+     ]
+    }
+   },
+   {
+    "id": "X2d",
+    "title": "doc-map defined-not-in-arch == ids defined minus arch set (33)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "count": 33,
+     "ids_orphans_24_subset_of_these": false
+    }
+   },
+   {
+    "id": "X2e",
+    "title": "register-mentioned set (520) == ids cited-in-register? (doc-map 520 vs ids cited_distinct 520)",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "doc_map_mentioned": 520,
+     "ids_cited_distinct": 520
+    }
+   },
+   {
+    "id": "X2f",
+    "title": "slices ac_anchor_total 514 == ids defined 514; AC-428 duplicate seen by both",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "slices": 514,
+     "slices_dups": [
+      "AC-428"
+     ],
+     "ids_dups": [
+      "AC-428"
+     ]
+    }
+   },
+   {
+    "id": "X2g",
+    "title": "AC-520 (outside declared ranges per slices) is defined per ids and present in arch per doc-map",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "slices_outside_ranges": [
+      "AC-520"
+     ]
+    }
+   },
+   {
+    "id": "X2h",
+    "title": "every AC cited in slices rows is defined",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "count": 10,
+     "undefined": []
+    }
+   },
+   {
+    "id": "X3a",
+    "title": "slices recount 26 DECIDED / 3 PROVISIONAL / 10 BLOCKED == slices.counts == constants seeds == known-issues ARCH-0.1 rows",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "slices_recount": {
+      "BLOCKED": 10,
+      "PROVISIONAL": 3,
+      "DECIDED": 26
+     },
+     "slices_counts": {
+      "areas": 39,
+      "state_DECIDED": 26,
+      "state_PROVISIONAL": 3,
+      "state_BLOCKED": 10
+     },
+     "constants_seeds": {
+      "areas.total": "39",
+      "areas.decided": "26",
+      "areas.provisional": "3",
+      "areas.blocked": "10"
+     },
+     "known_issues_ARCH_0_1_rows": 39,
+     "known_issues_state_recount": {
+      "BLOCKED": 10,
+      "PROVISIONAL": 3,
+      "DECIDED": 26
+     }
+    }
+   },
+   {
+    "id": "X4a",
+    "title": "every spike named in slices.json is in ids.json spike census (defined)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "slices_spikes": [
+      "E0",
+      "E1",
+      "E3",
+      "P1",
+      "P2",
+      "P7",
+      "P8",
+      "P9",
+      "S-BIN",
+      "S-FACET",
+      "S-GIX",
+      "S-H1b",
+      "S-H1c",
+      "S-MIG",
+      "S-SUBTLE",
+      "S-TTL1",
+      "S-TYPED",
+      "S-VAR",
+      "S-WT"
+     ],
+     "in_defined": [
+      "E0",
+      "E1",
+      "E3",
+      "P1",
+      "P2",
+      "P7",
+      "P8",
+      "P9",
+      "S-BIN",
+      "S-FACET",
+      "S-GIX",
+      "S-H1b",
+      "S-H1c",
+      "S-MIG",
+      "S-SUBTLE",
+      "S-TTL1",
+      "S-TYPED",
+      "S-VAR",
+      "S-WT"
+     ],
+     "cited_only_dangling": [],
+     "absent_from_ids_census": []
+    }
+   },
+   {
+    "id": "X4b",
+    "title": "every spike token in phase1-deps steps is in ids.json spike census (defined or cited)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "phase1_tokens": {
+      "D-FIXCONSUMER": 2,
+      "S-BIN": 11,
+      "E3-SEV": 2,
+      "P2": 1,
+      "S-GIX": 13,
+      "P8": 2,
+      "P7-CEIL": 3,
+      "P7": 1,
+      "S-TTL1": 3,
+      "S-H1c": 3
+     },
+     "in_defined": [
+      "D-FIXCONSUMER",
+      "E3-SEV",
+      "P2",
+      "P7",
+      "P7-CEIL",
+      "P8",
+      "S-BIN",
+      "S-GIX",
+      "S-H1c",
+      "S-TTL1"
+     ],
+     "cited_only_dangling": [],
+     "absent_from_ids_census": []
+    }
+   },
+   {
+    "id": "X4c",
+    "title": "known-issues ARCH-10.5 spike-register rows (35) vs ids register_row_10.5 definition kinds",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "known_issues_rows": 35,
+     "ids_register_row_defs": 35,
+     "ids_register_span": "references/2026-09-08-architecture-design.md:1854 .. references/2026-09-08-architecture-design.md:1902",
+     "note": "informational; a register row may define 0 or 2+ tokens"
+    }
+   },
+   {
+    "id": "X5a",
+    "title": "external.json preprints (99) == independent distinct arXiv id count over the 194 md files",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "independent": 99,
+     "external": 99,
+     "sym_diff": []
+    }
+   },
+   {
+    "id": "X5b",
+    "title": "ids.json does NOT track arXiv ids (0 mentions) -- reported as ABSENCE; constants has 0 arXiv generic tokens",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "ids_arxiv_mentions": 0,
+     "constants_generic_arxiv_tokens": 0
+    }
+   },
+   {
+    "id": "X5c",
+    "title": "seed expectation of ~48 arXiv ids is NOT met: corpus holds 99 distinct ids (measured twice)",
+    "ok": false,
+    "severity_if_fail": "minor",
+    "detail": {
+     "expected_seed": 48,
+     "measured": 99,
+     "top_files": [
+      [
+       "references/2026-09-09-change-classification.md",
+       29
+      ],
+      [
+       "references/research/2026-09-06-grounding-s-results.md",
+       27
+      ],
+      [
+       "references/research/2026-09-07-selection-and-planning.md",
+       20
+      ],
+      [
+       "references/2026-09-08-evidence-augmentation.md",
+       18
+      ],
+      [
+       "references/research/2026-09-07-method-engineering.md",
+       11
+      ],
+      [
+       "spikes/PRIOR-ART.md",
+       9
+      ]
+     ],
+     "interpretation": "[inferred] the ~48 seed probably counted planning docs only or an older snapshot; references/research/*.md and 2026-09-09-change-classification.md carry most ids"
+    }
+   },
+   {
+    "id": "X6a",
+    "title": "known-issues has a BLOCKED row for each of the 10 BLOCKED areas, at the same design-table line",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "rows": [
+      {
+       "slice": "A01",
+       "area": "Selection engine \u2014 the context-vector source",
+       "slices_row_line": 19,
+       "known_issue_ids": [
+        "ARCH-0.1-001"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:19"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A02",
+       "area": "Selection engine \u2014 the DERIVED-facet source",
+       "slices_row_line": 20,
+       "known_issue_ids": [
+        "ARCH-0.1-002"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:20"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A03",
+       "area": "Selection step 3 \u2014 the stale_policy setting",
+       "slices_row_line": 21,
+       "known_issue_ids": [
+        "ARCH-0.1-003"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:21"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A04",
+       "area": "ChangeSummary type design",
+       "slices_row_line": 22,
+       "known_issue_ids": [
+        "ARCH-0.1-004"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:22"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A05",
+       "area": "Card-delivery append route",
+       "slices_row_line": 23,
+       "known_issue_ids": [
+        "ARCH-0.1-005"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:23"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A06",
+       "area": "The quality shorthand default",
+       "slices_row_line": 24,
+       "known_issue_ids": [
+        "ARCH-0.1-006"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:24"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A07",
+       "area": "\"Design final\" as a whole",
+       "slices_row_line": 25,
+       "known_issue_ids": [
+        "ARCH-0.1-007"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:25"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A08",
+       "area": "Git write path \u2014 the common-dir interplay",
+       "slices_row_line": 26,
+       "known_issue_ids": [
+        "ARCH-0.1-008"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:26"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A09",
+       "area": "Git trailer writing",
+       "slices_row_line": 27,
+       "known_issue_ids": [
+        "ARCH-0.1-009"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:27"
+       ],
+       "ok": true
+      },
+      {
+       "slice": "A10",
+       "area": "Cache-TTL verification",
+       "slices_row_line": 28,
+       "known_issue_ids": [
+        "ARCH-0.1-010"
+       ],
+       "kinds": [
+        "blocked_decision"
+       ],
+       "known_issue_lines": [
+        "references/2026-09-08-architecture-design.md:28"
+       ],
+       "ok": true
+      }
+     ]
+    }
+   },
+   {
+    "id": "X7a",
+    "title": "anchors heading_index keys == doc-map documents == ids file_list (194 each)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "anchors": 194,
+     "doc_map": 194,
+     "ids": 194,
+     "anchors_minus_docmap": [],
+     "docmap_minus_anchors": [],
+     "ids_minus_docmap": []
+    }
+   },
+   {
+    "id": "X7b",
+    "title": "files anchored by external / constants / known-issues are all within the 194-file corpus",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "external_files": 96,
+     "constants_files": 133,
+     "known_issues_files": 106,
+     "ext_outside": [],
+     "con_outside": [],
+     "ki_outside": []
+    }
+   },
+   {
+    "id": "X7c",
+    "title": "slices source_files line counts == doc-map lines; RUNBOOK 2475 == phase1-deps runbook_lines",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "slices": {
+      "references/2026-09-08-architecture-design.md": 2052,
+      "references/2026-09-08-acceptance-criteria.md": 6567,
+      "references/2026-09-08-success-measures.md": 1438,
+      "RUNBOOK.md": 2475
+     },
+     "doc_map": {
+      "references/2026-09-08-architecture-design.md": 2052,
+      "references/2026-09-08-acceptance-criteria.md": 6567,
+      "references/2026-09-08-success-measures.md": 1438,
+      "RUNBOOK.md": 2475
+     },
+     "phase1_deps": 2475
+    }
+   },
+   {
+    "id": "X7d",
+    "title": "sum of doc-map lines == constants lines_scanned (42993)",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "doc_map_total_lines": 42993,
+     "constants_lines_scanned": 42993
+    }
+   },
+   {
+    "id": "X7e",
+    "title": "every slices/phase1-deps/doc-map line range starts at an anchors heading with the same text, and end_lines agree with the next same-or-higher-level heading (phase1-deps: next STEP heading; the strict rule differs only at 3b, whose interstitial 'UTC timestamp trap' heading at RUNBOOK.md:774 phase1-deps folds into 3b)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "range_checks": [
+      {
+       "source": "slices.ac_sections_index",
+       "doc": "references/2026-09-08-acceptance-criteria.md",
+       "entries": 17,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "slices.ac_subsections_index",
+       "doc": "references/2026-09-08-acceptance-criteria.md",
+       "entries": 101,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "slices.design_sections_index",
+       "doc": "references/2026-09-08-architecture-design.md",
+       "entries": 13,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "slices.sm_subsections_index",
+       "doc": "references/2026-09-08-success-measures.md",
+       "entries": 13,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "slices.runbook_sections_index",
+       "doc": "RUNBOOK.md",
+       "entries": 14,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "slices.slices[].joined_ranges",
+       "doc": "references/2026-09-08-architecture-design.md",
+       "entries": 57,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "slices.slices[].joined_ranges",
+       "doc": "references/2026-09-08-acceptance-criteria.md",
+       "entries": 37,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "slices.slices[].joined_ranges",
+       "doc": "RUNBOOK.md",
+       "entries": 40,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "phase1-deps.steps",
+       "doc": "RUNBOOK.md",
+       "entries": 40,
+       "disagreements": 0,
+       "sample": []
+      },
+      {
+       "source": "phase1-deps.steps (strict next-heading rule)",
+       "doc": "RUNBOOK.md",
+       "entries": 40,
+       "disagreements": 1,
+       "sample": [
+        {
+         "start_line": 676,
+         "heading": "3b \u2014 Generate and hand over the three blind label files",
+         "end_line": 864,
+         "expected_end_from_anchors": 773,
+         "problem": "end_line differs"
+        }
+       ]
+      },
+      {
+       "source": "doc-map.read_plan.windows",
+       "doc": "(9 files)",
+       "entries": 39,
+       "disagreements": 0,
+       "sample": []
+      }
+     ],
+     "strict_rule_deviations": 1
+    }
+   },
+   {
+    "id": "X7f",
+    "title": "top-level RUNBOOK step ranges agree between slices.json and phase1-deps.json",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "common_keys": [
+      "Step 0",
+      "Step 1",
+      "Step 2",
+      "Step 3",
+      "Step 4",
+      "Step 4a",
+      "Step 5",
+      "Step 6",
+      "Step 7",
+      "Step 8",
+      "Step 9"
+     ],
+     "mismatches": {},
+     "slices_only": [
+      "Halt",
+      "One-glance",
+      "Preamble"
+     ],
+     "phase1_only": []
+    }
+   },
+   {
+    "id": "X7g",
+    "title": "anchors heading texts carry a trailing CR for CRLF files (cosmetic; heading-text matching in this script strips it)",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "headings_with_trailing_CR": 1903,
+     "headings_total": 2236
+    }
+   },
+   {
+    "id": "X8a",
+    "title": "ids.SM defined (135) == doc-map sm_register_defined (135) == slices sm_rows_indexed (135); dangling lists agree",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "ids": 135,
+     "doc_map": 135,
+     "slices": 135,
+     "slices_sm_rows_union": 124,
+     "slices_declared_range_union": 137,
+     "declared_minus_defined": [
+      "SM-150",
+      "SM-152"
+     ],
+     "defined_minus_declared": []
+    }
+   },
+   {
+    "id": "X8b",
+    "title": "doc-map arch SM set minus ids defined == doc-map arch_sm_not_in_defined (3)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "arch_sm_not_defined": [
+      "SM-084",
+      "SM-108",
+      "SM-156"
+     ],
+     "doc_map_says": [
+      "SM-084",
+      "SM-108",
+      "SM-156"
+     ]
+    }
+   },
+   {
+    "id": "X8c",
+    "title": "every SM cited in slices rows is defined",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "count": 1,
+     "undefined": []
+    }
+   },
+   {
+    "id": "X9a",
+    "title": "F ids from known-issues draft files, slices rows and ADR evidence tags all resolve in ids.F (F-dangling F41/F42 style noted)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "ids_F_defined": 38,
+     "ids_F_dangling": [
+      "F30",
+      "F9"
+     ],
+     "known_issues_draft_files": [
+      "F29",
+      "F31",
+      "F32",
+      "F33",
+      "F34",
+      "F35",
+      "F36",
+      "F37",
+      "F38",
+      "F39",
+      "F40"
+     ],
+     "ki_unresolved": [],
+     "slices_findings": [
+      "F1",
+      "F3",
+      "F6",
+      "F7",
+      "F8",
+      "F10",
+      "F11",
+      "F12",
+      "F14",
+      "F15",
+      "F16",
+      "F18",
+      "F19",
+      "F20",
+      "F21",
+      "F22",
+      "F23",
+      "F24",
+      "F25",
+      "F26",
+      "F28",
+      "F29",
+      "F30",
+      "F31",
+      "F32",
+      "F33",
+      "F34",
+      "F35",
+      "F36",
+      "F37",
+      "F38",
+      "F39",
+      "F40"
+     ],
+     "slices_unresolved": [
+      "F30"
+     ],
+     "adr_evidence_F": [
+      "F3",
+      "F10",
+      "F12",
+      "F13",
+      "F16",
+      "F18",
+      "F19",
+      "F20",
+      "F21",
+      "F22",
+      "F23",
+      "F24",
+      "F25",
+      "F26",
+      "F27",
+      "F28",
+      "F29",
+      "F31",
+      "F32",
+      "F34",
+      "F35",
+      "F36",
+      "F37",
+      "F38",
+      "F39"
+     ],
+     "adr_unresolved": []
+    }
+   },
+   {
+    "id": "X10a",
+    "title": "adr-graph status 86/2/1; ADR-0079 proposed matches slices A01 text; superseded records not cited as governing in slices rows",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "superseded": [
+      "0004",
+      "0041"
+     ],
+     "proposed": [
+      "0079"
+     ],
+     "slices_rows_citing_superseded": [
+      "A24"
+     ]
+    }
+   },
+   {
+    "id": "X10b",
+    "title": "adr-graph README disagreements listed (1)",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "disagreements": [
+      {
+       "claim": "README legacy-id map rows match frontmatter",
+       "readme_line": null,
+       "readme_claims": "73 rows",
+       "measured": {
+        "rows_checked": 73,
+        "rows_with_issues": 1,
+        "issues": [
+         {
+          "adr": "0039",
+          "readme_line": 121,
+          "issues": [
+           "title differs"
+          ],
+          "readme_title": "`After=<step>` shorthand deferred pending recurrence at scale",
+          "fm_title": "After=<step> shorthand deferred pending recurrence at scale"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   {
+    "id": "X11a",
+    "title": "phase1-deps absent_spike_unrun requirements (6) name spikes that ids.json knows",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "count": 6,
+     "names": [
+      "spikes/results/d-fixconsumer.jsonl",
+      "S-BIN spike RESULT (registered, unrun)",
+      "S-BIN result (blocks ChangeSummary -- the type must NOT be built witho",
+      "P7-CEIL result (whether bisect is a ceiling activity)",
+      "S-TTL1 result (1h TTL evidence)",
+      "S-H1c result (card append route)"
+     ]
+    }
+   },
+   {
+    "id": "X11b",
+    "title": "slices gates_phase_1 recount 28 yes / 11 no",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "recount": {
+      "yes": 28,
+      "no": 11
+     }
+    }
+   },
+   {
+    "id": "X11c",
+    "title": "known-issues by_kind and by_source both sum to rows_total (1381) and rows have unique ids",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "by_kind_sum": 1381,
+     "by_source_sum": 1381,
+     "rows": 1381,
+     "distinct_ids": 1381
+    }
+   },
+   {
+    "id": "X11d",
+    "title": "external claims family recount == counts.family_*",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "recount": {
+      "gitoxide": 8,
+      "crate_versions": 28,
+      "claude_code": 43,
+      "toolchain": 21,
+      "preprints": 99,
+      "anthropic_platform": 15,
+      "sqlite": 5,
+      "stated_absences": 64,
+      "durable_execution": 28,
+      "advisories": 13,
+      "competitors": 198,
+      "peer_and_standards": 113,
+      "process_literature": 200,
+      "decision_records": 10,
+      "no_url": 15
+     }
+    }
+   },
+   {
+    "id": "X11e",
+    "title": "external claim ids unique; batches partition the claims",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "claims": 860,
+     "in_batches": 860
+    }
+   },
+   {
+    "id": "X11f",
+    "title": "constants seed status recount == counts",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "recount": {
+      "VARIANT": 13,
+      "AGREE": 142,
+      "RANGE-STATEMENT": 11
+     }
+    }
+   },
+   {
+    "id": "X11g",
+    "title": "anchors section_refs resolved list length == counts.resolved (4023) and dangling 7",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "resolved_len": 4023,
+     "counts": {
+      "total": 4078,
+      "sign_form": 4052,
+      "word_form": 9,
+      "heading_text_form": 17,
+      "in_repo": 4030,
+      "resolved": 4023,
+      "dangling": 7,
+      "external": 48,
+      "names_document_true": 2047,
+      "names_document_false": 2031,
+      "named_doc_lacks_heading": 68,
+      "in_code_fence": 36
+     },
+     "dangling": 7
+    }
+   },
+   {
+    "id": "X11h",
+    "title": "self-reported anchor assertions: none failed in phase1-deps (47), slices (429), ids (17), adr-graph (18); external's 5 false assertions are exactly its self-reported curated_patterns_zero_match (5)",
+    "ok": true,
+    "severity_if_fail": "material",
+    "detail": {
+     "phase1": {
+      "true": 47
+     },
+     "slices": {
+      "true": 429
+     },
+     "external": {
+      "true": 197,
+      "false": 5
+     },
+     "external_false_keys": [
+      "toolchain:clippy-group-suspicious",
+      "toolchain:clippy-group-style",
+      "toolchain:clippy-group-complexity",
+      "toolchain:clippy-group-perf",
+      "toolchain:clippy-group-restriction"
+     ],
+     "ids": {
+      "true": 17
+     },
+     "adr_failures": 0,
+     "known_issues_specs_failing": 0
+    }
+   },
+   {
+    "id": "X12a",
+    "title": "phase1-deps recorded git untracked count 17 == git status at reconcile time (17)",
+    "ok": true,
+    "severity_if_fail": "minor",
+    "detail": {
+     "phase1_git": {
+      "redkiln_rs_branch": "main",
+      "redkiln_rs_head": "009a4ec68119896e63a3fb3e405ce1b6616665c3",
+      "redkiln_rs_untracked_count": 17,
+      "redkiln_rs_modified_count": 0,
+      "redkiln_rs_porcelain_total": 17,
+      "predecessor_redkiln_head": "47faec9f46b8d983c2c75f0794164e68415ae706",
+      "predecessor_workflows_dirty": []
+     }
+    }
+   }
+  ],
+  "summary": {
+   "total": 44,
+   "pass": 43,
+   "fail": 1
+  }
+ },
+ "arxiv_probe": {
+  "md_files_scanned": 194,
+  "corpus_distinct_prefix_form": 2,
+  "corpus_distinct_url_form": 99,
+  "corpus_distinct_union": 99,
+  "external_preprint_claims": 99,
+  "external_distinct_ids_in_cited_source_or_verify_url": 99,
+  "in_corpus_not_in_external": [],
+  "in_external_not_in_corpus": [],
+  "per_file_distinct_top": [
+   [
+    "references/2026-09-09-change-classification.md",
+    29
+   ],
+   [
+    "references/research/2026-09-06-grounding-s-results.md",
+    27
+   ],
+   [
+    "references/research/2026-09-07-selection-and-planning.md",
+    20
+   ],
+   [
+    "references/2026-09-08-evidence-augmentation.md",
+    18
+   ],
+   [
+    "references/research/2026-09-07-method-engineering.md",
+    11
+   ],
+   [
+    "spikes/PRIOR-ART.md",
+    9
+   ],
+   [
+    "references/2026-09-07-process-catalog-proposal.md",
+    3
+   ],
+   [
+    "RUNBOOK.md",
+    1
+   ],
+   [
+    "references/2026-09-03-reimagining-brainstorm.md",
+    1
+   ],
+   [
+    "references/2026-09-05-architecture-proposal.md",
+    1
+   ],
+   [
+    "references/2026-09-08-acceptance-criteria.md",
+    1
+   ],
+   [
+    "references/2026-09-08-architecture-design.md",
+    1
+   ]
+  ],
+  "constants_generic_arxiv_tokens": 0
+ },
+ "verdict_per_artifact": {
+  "ids": {
+   "exists": true,
+   "bytes": 1106371,
+   "parses": true,
+   "leaf_count": 18938,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 1.1,
+   "byte_identical": true,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true
+  },
+  "constants": {
+   "exists": true,
+   "bytes": 4411185,
+   "parses": true,
+   "leaf_count": 69472,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 25.8,
+   "byte_identical": false,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true,
+   "note": "REPRODUCIBLE in every data field; meta.script and the path-sensitive content hash moved with the script location (see inconsistencies)"
+  },
+  "anchors": {
+   "exists": true,
+   "bytes": 6521586,
+   "parses": true,
+   "leaf_count": 163925,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 26.2,
+   "byte_identical": false,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true
+  },
+  "adr-graph": {
+   "exists": true,
+   "bytes": 439800,
+   "parses": true,
+   "leaf_count": 8011,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 0.8,
+   "byte_identical": false,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true
+  },
+  "slices": {
+   "exists": true,
+   "bytes": 315485,
+   "parses": true,
+   "leaf_count": 6600,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 0.5,
+   "byte_identical": true,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true
+  },
+  "external": {
+   "exists": true,
+   "bytes": 988010,
+   "parses": true,
+   "leaf_count": 16532,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 11.4,
+   "byte_identical": true,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true
+  },
+  "known-issues": {
+   "exists": true,
+   "bytes": 1227062,
+   "parses": true,
+   "leaf_count": 29903,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 0.5,
+   "byte_identical": true,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true
+  },
+  "phase1-deps": {
+   "exists": true,
+   "bytes": 215313,
+   "parses": true,
+   "leaf_count": 4329,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 0.6,
+   "byte_identical": false,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true
+  },
+  "doc-map": {
+   "exists": true,
+   "bytes": 599075,
+   "parses": true,
+   "leaf_count": 11852,
+   "rerun_status": "REPRODUCIBLE",
+   "rerun_seconds": 187.3,
+   "byte_identical": true,
+   "identical_after_stripping_volatile_meta": true,
+   "usable_for_partition": true,
+   "note": "slowest re-run (153 s, scans 8,416 files for references)"
+  }
+ },
+ "inconsistencies": [
+  {
+   "between": "X5c: seed expectation of ~48 arXiv ids is NOT met: corpus holds 99 distinct ids (measured twice)",
+   "detail": "{\"expected_seed\": 48, \"measured\": 99, \"top_files\": [[\"references/2026-09-09-change-classification.md\", 29], [\"references/research/2026-09-06-grounding-s-results.md\", 27], [\"references/research/2026-09-07-selection-and-planning.md\", 20], [\"references/2026-09-08-evidence-augmentation.md\", 18], [\"references/research/2026-09-07-method-engineering.md\", 11], [\"spikes/PRIOR-ART.md\", 9]], \"interpretation\": \"[inferred] the ~48 seed probably counted planning docs only or an older snapshot; references/research/*.md and 2026-09-09-change-classification.md carry most ids\"}",
+   "severity": "minor"
+  },
+  {
+   "between": "orchestrator summary vs ids.json",
+   "detail": "the ids row reports anomaly_count 13, but ids.json counts.anomalies is 18 and the anomalies list has 18 entries",
+   "severity": "minor"
+  },
+  {
+   "between": "orchestrator summary vs doc-map.json counts",
+   "detail": "summary labels (authority_documents_self_claim, adr_records, ac_register_ids_mentioned ...) are not the artifact's counts keys (authority_documents, orphans_by_path_but_referenced_by_id ...); adr_records is absent from doc-map counts (the 89 lives in documents[].id_counts.ADR). Partition off the artifact, not the summary.",
+   "severity": "minor"
+  },
+  {
+   "between": "orchestrator summary vs external.json counts",
+   "detail": "summary uses family_x / method_x / tag_x and distinct_arxiv_ids_outside_fixtures; the artifact uses family:x / method:x / tag:x and distinct_arxiv_ids",
+   "severity": "minor"
+  },
+  {
+   "between": "eight artifacts vs their reported anomaly_count",
+   "detail": "only ids.json stores a structured anomalies list; constants, anchors, adr-graph, slices, external, known-issues, phase1-deps and doc-map hold no anomaly list, so the anomaly texts the agents counted (69 in total) exist only in their prose returns. The pool below is rebuilt from structured anomaly-equivalent records instead.",
+   "severity": "material"
+  },
+  {
+   "between": "constants.json meta.content_sha256_excluding_generated vs its re-run",
+   "detail": "the hash covers meta.script (the absolute script path), so running the identical script from another directory changes the hash while every data field is byte-identical; the hash is not a pure content hash",
+   "severity": "minor"
+  },
+  {
+   "between": "anchors.json heading_index vs CRLF files",
+   "detail": "1903 of 2236 indexed heading texts retain a trailing CR (the repo files are CRLF); consumers must strip it before text-matching",
+   "severity": "minor"
+  },
+  {
+   "between": "phase1-deps.json step 3b end_line vs anchors heading index",
+   "detail": "3b is given 676-864, folding the interstitial level-3 heading 'The UTC ...Z timestamp trap' (RUNBOOK.md:774) into 3b; the strict next-same-level-heading rule gives 676-773. Interpretive, not wrong; slices.json does not index sub-steps so it cannot be checked against it.",
+   "severity": "minor"
+  },
+  {
+   "between": "external.json arXiv count vs the seed expectation",
+   "detail": "seed expected ~48 distinct arXiv ids; external.json holds 99 and an independent grep of the 194 md files also gives 99 (URL forms abs/pdf/html; the two 'arXiv NNNN.NNNNN' prose forms are among them). The seed was wrong or scoped narrower (references/research/*.md and 2026-09-09-change-classification.md carry 29+27+20 of them).",
+   "severity": "minor"
+  }
+ ],
+ "anomaly_pool_method": "Step 4: assemble reconcile.json from steps 1-3 plus a deduplicated anomaly pool harvested from the artifacts.\n\nAnomaly-pool rule: only ids.json carries a structured `anomalies` list. The other eight artifacts reported an\nanomaly_count in their prose summaries but hold no such list, so their anomalies are HARVESTED here from the\nstructured anomaly-equivalent records each artifact does carry (dangling refs, VARIANT seeds, hazards, stale-risk,\nzero-match patterns, README disagreements, duplicate/out-of-range anchors). The pool therefore is not the same set\nthe agents counted; the per-agent reported count is carried alongside for comparison.",
+ "anomaly_pool_counts": {
+  "raw_harvested": 117,
+  "after_dedupe": 115,
+  "raw_by_source": {
+   "ids": 18,
+   "constants": 16,
+   "anchors": 40,
+   "adr-graph": 2,
+   "slices": 7,
+   "external": 5,
+   "known-issues": 1,
+   "phase1-deps": 11,
+   "doc-map": 17
+  },
+  "pool_membership_by_source": {
+   "ids": 19,
+   "constants": 16,
+   "anchors": 38,
+   "adr-graph": 2,
+   "slices": 7,
+   "external": 5,
+   "known-issues": 1,
+   "phase1-deps": 11,
+   "doc-map": 17
+  },
+  "agent_reported_anomaly_count": {
+   "ids": 13,
+   "constants": 9,
+   "anchors": 11,
+   "adr-graph": 6,
+   "slices": 9,
+   "external": 9,
+   "known-issues": 6,
+   "phase1-deps": 10,
+   "doc-map": 9
+  },
+  "agent_reported_total": 82
+ },
+ "anomaly_pool": [
+  {
+   "subject": "E7",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-08-31-rust-inversion-spike-charter.md:148"
+   ],
+   "notes": [
+    "[ids] spike id E7 is cited 2 times but has no definition anchor under the register/METHOD rules (first citation shown)"
+   ],
+   "confidence": "probable",
+   "extra": null
+  },
+  {
+   "subject": "P3",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-07-process-catalog-proposal.md:186"
+   ],
+   "notes": [
+    "[ids] spike id P3 is cited 13 times but has no definition anchor under the register/METHOD rules (first citation shown)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "P4",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-07-process-catalog-proposal.md:175"
+   ],
+   "notes": [
+    "[ids] spike id P4 is cited 21 times but has no definition anchor under the register/METHOD rules (first citation shown)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "P5",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-07-activity-graph-schema.md:93"
+   ],
+   "notes": [
+    "[ids] spike id P5 is cited 22 times but has no definition anchor under the register/METHOD rules (first citation shown)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "P9b",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-05-architecture-proposal.md:414"
+   ],
+   "notes": [
+    "[ids] spike id P9b is cited 73 times but has no definition anchor under the register/METHOD rules (first citation shown)"
+   ],
+   "confidence": "probable",
+   "extra": null
+  },
+  {
+   "subject": "ADR-0090",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "RUNBOOK.md:22"
+   ],
+   "notes": [
+    "[ids] ADR-0090 is cited 37 times but no such ADR file exists (RUNBOOK names it as a future record)"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "ADR-0091",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "RUNBOOK.md:23"
+   ],
+   "notes": [
+    "[ids] ADR-0091 is cited 9 times but no such ADR file exists (RUNBOOK names it as a future record)"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "SM-157",
+   "family": "id-namespace",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-08-success-measures.md:209"
+   ],
+   "notes": [
+    "[ids] SM-157 sits beyond the last area range (SM-154); the register records this deliberately at line 31/33"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": null,
+   "family": "id-namespace",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "spikes/results/p2-labels-BLANK.md:14"
+   ],
+   "notes": [
+    "[ids] this file says advisory cases A01-A10 while every other file (and results/p2-labels-ryan.md:32) says A01-A06"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "F34",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "spikes/F34-DRAFT.md:75"
+   ],
+   "notes": [
+    "[ids] F34 refers to lint rules R1-R10 but the schema section 9 numbers nine rules (plus R4b); R10 has no definition anchor"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "R-recent-deploy-feed-absent",
+   "family": "id-namespace",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "RUNBOOK.md:1450"
+   ],
+   "notes": [
+    "[ids] R-recent-deploy-feed-absent is used as a facet-abstention rule id (rule `R-...` emitted with null), not a lint rule; it has no line-anchored definition anywhere - only uses"
+   ],
+   "confidence": "probable",
+   "extra": null
+  },
+  {
+   "subject": "D4",
+   "family": "id-namespace",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-05-architecture-proposal.md:406 (proposal decision row)"
+   ],
+   "notes": [
+    "[ids] D4 has two proposal decision rows (rev.3 row and the rev.4 rebuilt row); both are counted as definition anchors"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "D5",
+   "family": "id-namespace",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-05-architecture-proposal.md:407 (proposal decision row)"
+   ],
+   "notes": [
+    "[ids] D5 has two proposal decision rows (rev.3 row and the rev.4 rebuilt row); both are counted as definition anchors"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "D6",
+   "family": "id-namespace",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-05-architecture-proposal.md:407 (proposal decision row, combined cell)"
+   ],
+   "notes": [
+    "[ids] D6 has two proposal decision rows (rev.3 row and the rev.4 rebuilt row); both are counted as definition anchors"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "F9",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-05-architecture-proposal.md:6"
+   ],
+   "notes": [
+    "[ids] F9 is cited 31 times and never defined; the corpus documents this (F9 struck, F30 reserved and never written)"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "F30",
+   "family": "dangling",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:4"
+   ],
+   "notes": [
+    "[ids] F30 is cited 34 times and never defined; the corpus documents this (F9 struck, F30 reserved and never written)"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "DEPTH-01",
+   "family": "id-namespace",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/conformance-2026-09-04-scorecard.md:200"
+   ],
+   "notes": [
+    "[ids] 19 conformance rubric ids (DEPTH-01, DEPTH-02, DEPTH-03, DEPTH-04 ...) are cited but defined nowhere in this repo; the rubric is external"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": null,
+   "family": "id-namespace",
+   "sources": [
+    "ids"
+   ],
+   "anchors": [
+    "references/research/2026-09-06-grounding-s-results.md:330"
+   ],
+   "notes": [
+    "[ids] grounding-s-results Part D headings carry an R-series (Q1 (R2) ...) that is defined nowhere in the repo and is not the RFC risk series"
+   ],
+   "confidence": "probable",
+   "extra": null
+  },
+  {
+   "subject": "adr.total",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "RUNBOOK.md:9"
+   ],
+   "notes": [
+    "[constants] seed adr.total (Number of ADR records in references/adr/) has alternative values ['89', '88']; note: "
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "89",
+      "n_occ": 16,
+      "first_anchor": "RUNBOOK.md:9"
+     },
+     {
+      "value": "88",
+      "n_occ": 7,
+      "first_anchor": "RUNBOOK.md:426"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "adr.accepted",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "RUNBOOK.md:392"
+   ],
+   "notes": [
+    "[constants] seed adr.accepted (ADRs at status accepted) has alternative values ['86', '87 (if 0079 counted superseded)']; note: RUNBOOK.md:1342 itself reconciles 86/2/1 against 87/3/0 (ADR-0079 counted as superseded); the corpus records this."
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "86",
+      "n_occ": 8,
+      "first_anchor": "RUNBOOK.md:392"
+     },
+     {
+      "value": "87 (if 0079 counted superseded)",
+      "n_occ": 1,
+      "first_anchor": "RUNBOOK.md:1342"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "adr.superseded",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "RUNBOOK.md:392"
+   ],
+   "notes": [
+    "[constants] seed adr.superseded (ADRs at status superseded) has alternative values ['2', '3']; note: "
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "2",
+      "n_occ": 8,
+      "first_anchor": "RUNBOOK.md:392"
+     },
+     {
+      "value": "3",
+      "n_occ": 2,
+      "first_anchor": "RUNBOOK.md:1342"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "adr.proposed",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "RUNBOOK.md:393"
+   ],
+   "notes": [
+    "[constants] seed adr.proposed (ADRs at status proposed) has alternative values ['1', '0']; note: "
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "1",
+      "n_occ": 6,
+      "first_anchor": "RUNBOOK.md:393"
+     },
+     {
+      "value": "0",
+      "n_occ": 2,
+      "first_anchor": "RUNBOOK.md:1342"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "crit.total",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:39"
+   ],
+   "notes": [
+    "[constants] seed crit.total (Criteria in force (total)) has alternative values ['514', '513 (rev. 1 snapshot)']; note: 513 appears in the 2026-09-09 handoff (pre AC-520 / rev. 1); 514 is the register's own total. Dated snapshot, not necessarily a defect."
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "514",
+      "n_occ": 2,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:39"
+     },
+     {
+      "value": "513 (rev. 1 snapshot)",
+      "n_occ": 1,
+      "first_anchor": "spikes/plans/HANDOFF-2026-09-09-design-session.md:26"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "measures.total",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:39"
+   ],
+   "notes": [
+    "[constants] seed measures.total (Measure rows cross-referenced (SM register count)) has alternative values ['135', '134']; note: "
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "135",
+      "n_occ": 8,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:39"
+     },
+     {
+      "value": "134",
+      "n_occ": 1,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:41"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "range.ac",
+   "family": "constant-candidate-zero-match",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "(no occurrence)"
+   ],
+   "notes": [
+    "[constants] seed range.ac candidate value(s) ['AC-001..AC-520'] matched nothing"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "range.adr_ids",
+   "family": "constant-candidate-zero-match",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "(no occurrence)"
+   ],
+   "notes": [
+    "[constants] seed range.adr_ids candidate value(s) ['ADR-0001..ADR-0088'] matched nothing"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "p2.stale",
+   "family": "constant-candidate-zero-match",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "(no occurrence)"
+   ],
+   "notes": [
+    "[constants] seed p2.stale candidate value(s) ['15 Stale'] matched nothing"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "p7.cost_ratio",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:3798"
+   ],
+   "notes": [
+    "[constants] seed p7.cost_ratio (Mandatory-arm cost ratio: 3.66x (F37) vs 4.4x (decisions log)) has alternative values ['3.66x', '4.4x']; note: THE COST RATIO DISPUTE. The corpus itself records this as UNRECONCILED; both values are censused. 4.4x also occurs as an unrelated prior-art figure (error amplification), separated out as a component."
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "3.66x",
+      "n_occ": 18,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:3798"
+     },
+     {
+      "value": "4.4x",
+      "n_occ": 17,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:3799"
+     },
+     {
+      "value": "4.4x (homonym: Google error-amplification 17.2x vs 4.4x)",
+      "n_occ": 8,
+      "first_anchor": "references/2026-09-02-rfc-amendment.md:191"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "clean.13of23",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "RUNBOOK.md:881"
+   ],
+   "notes": [
+    "[constants] seed clean.13of23 (CLEAN ground truth wrong for >=13 of 23 (57%)) has alternative values ['>=13 of 23', '>=12 of 23']; note: Two values for the SAME claim (CLEAN ground truth wrong for >= N of 23): >=12/23 (52%) in architecture-proposal, design-recommendation, ADR-0015, ADR-0019; >=13/23 (57%) in later documents. success-me"
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": ">=13 of 23",
+      "n_occ": 50,
+      "first_anchor": "RUNBOOK.md:881"
+     },
+     {
+      "value": ">=12 of 23",
+      "n_occ": 13,
+      "first_anchor": "references/2026-09-05-architecture-proposal.md:42"
+     },
+     {
+      "value": "57%",
+      "n_occ": 25,
+      "first_anchor": "RUNBOOK.md:881"
+     },
+     {
+      "value": "52% (ground-truth-wrong phrasing)",
+      "n_occ": 16,
+      "first_anchor": "references/2026-09-05-architecture-proposal.md:42"
+     },
+     {
+      "value": "12/23 (strict block rate, different quantity)",
+      "n_occ": 39,
+      "first_anchor": "references/2026-09-05-architecture-proposal.md:300"
+     },
+     {
+      "value": "13 of 23 (bare)",
+      "n_occ": 1,
+      "first_anchor": "references/2026-09-07-design-recommendation.md:21"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "f21.five_hour",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:4627"
+   ],
+   "notes": [
+    "[constants] seed f21.five_hour (five_hour per draw 0.0098 (F29) vs 0.077 (F21), 7.8x) has alternative values ['0.0098', '0.077']; note: Corpus records F21's 0.077 as superseded by F29's 0.0098; both censused."
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "0.0098",
+      "n_occ": 25,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:4627"
+     },
+     {
+      "value": "0.077",
+      "n_occ": 20,
+      "first_anchor": "references/2026-09-04-findings-for-product.md:77"
+     },
+     {
+      "value": "7.8x",
+      "n_occ": 15,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:4628"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "swt.tokens",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "references/2026-09-05-architecture-proposal.md:31"
+   ],
+   "notes": [
+    "[constants] seed swt.tokens (tokens 29,680 / 29,619 / 18,603) has alternative values ['29,680', '29,619', '18,603']; note: Three different runs' token counts; VARIANT is expected across runs."
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "29,680",
+      "n_occ": 38,
+      "first_anchor": "references/2026-09-05-architecture-proposal.md:31"
+     },
+     {
+      "value": "29,619",
+      "n_occ": 36,
+      "first_anchor": "references/2026-09-05-architecture-proposal.md:31"
+     },
+     {
+      "value": "18,603",
+      "n_occ": 72,
+      "first_anchor": "references/2026-09-05-architecture-proposal.md:31"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "swt.minutes",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "references/2026-09-07-design-recommendation.md:22"
+   ],
+   "notes": [
+    "[constants] seed swt.minutes (66.8 / 66.1 / 65.2 min) has alternative values ['66.8 min', '66.1 min', '65.2 min']; note: "
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "66.8 min",
+      "n_occ": 15,
+      "first_anchor": "references/2026-09-07-design-recommendation.md:22"
+     },
+     {
+      "value": "66.1 min",
+      "n_occ": 12,
+      "first_anchor": "references/2026-09-07-design-recommendation.md:22"
+     },
+     {
+      "value": "65.2 min",
+      "n_occ": 32,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:3137"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "f32.median",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "references/2026-09-07-process-catalog-proposal.md:212"
+   ],
+   "notes": [
+    "[constants] seed f32.median (median 56.5 / 73 / +29%) has alternative values ['56.5', '73']; note: 56.5 (F32, first author) vs 73 (F33, second author): two authors, legitimately different; flagged, not defective."
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "56.5",
+      "n_occ": 17,
+      "first_anchor": "references/2026-09-07-process-catalog-proposal.md:212"
+     },
+     {
+      "value": "73",
+      "n_occ": 20,
+      "first_anchor": "references/2026-09-07-process-catalog-proposal.md:214"
+     },
+     {
+      "value": "+29%",
+      "n_occ": 13,
+      "first_anchor": "references/2026-09-08-acceptance-criteria.md:1554"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "adr.dir_files",
+   "family": "constant-variant",
+   "sources": [
+    "constants"
+   ],
+   "anchors": [
+    "RUNBOOK.md:415"
+   ],
+   "notes": [
+    "[constants] seed adr.dir_files (ls references/adr/*.md count = 90 (89 records + README)) has alternative values ['90', '89 (old expectation)']; note: "
+   ],
+   "confidence": null,
+   "extra": {
+    "candidates": [
+     {
+      "value": "90",
+      "n_occ": 4,
+      "first_anchor": "RUNBOOK.md:415"
+     },
+     {
+      "value": "89 (old expectation)",
+      "n_occ": 1,
+      "first_anchor": "RUNBOOK.md:426"
+     }
+    ]
+   }
+  },
+  {
+   "subject": "S1c",
+   "family": "dangling-section-ref",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:1333"
+   ],
+   "notes": [
+    "[anchors] section reference S1c resolves to no heading (nearest alias target: references/2026-09-07-process-catalog-proposal.md)"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "S9c.42",
+   "family": "dangling-section-ref",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/F35-DRAFT.md:51",
+    "spikes/plans/AFK-2026-09-09.md:17"
+   ],
+   "notes": [
+    "[anchors] section reference S9c.42 resolves to no heading (nearest alias target: spikes/METHOD-P.md)",
+    "[anchors] section reference S9c.42 resolves to no heading (nearest alias target: references/2026-09-07-process-catalog-proposal.md)"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "S9b.15",
+   "family": "dangling-section-ref",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/plans/p8-24h-resume.md:105"
+   ],
+   "notes": [
+    "[anchors] section reference S9b.15 resolves to no heading (nearest alias target: None)"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "S Body",
+   "family": "dangling-section-ref",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/07-_archive__docs-site-brand-identity__kb-harvest-and-closeout__resolve-open-question.md:122"
+   ],
+   "notes": [
+    "[anchors] section reference S Body resolves to no heading (nearest alias target: None)"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "S Resolution",
+   "family": "dangling-section-ref",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/07-_archive__docs-site-brand-identity__kb-harvest-and-closeout__resolve-open-question.md:123"
+   ],
+   "notes": [
+    "[anchors] section reference S Resolution resolves to no heading (nearest alias target: None)"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "S Consequences",
+   "family": "dangling-section-ref",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/07-_archive__docs-site-brand-identity__kb-harvest-and-closeout__resolve-open-question.md:123"
+   ],
+   "notes": [
+    "[anchors] section reference S Consequences resolves to no heading (nearest alias target: None)"
+   ],
+   "confidence": null,
+   "extra": null
+  },
+  {
+   "subject": "SC.1",
+   "family": "c-ref-keyword-mismatch",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:3077"
+   ],
+   "notes": [
+    "[anchors] C-reference SC.1: cited item title keywords do not match the citing sentence (heuristic)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "C.6",
+   "family": "c-ref-keyword-mismatch",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:3077",
+    "references/2026-09-08-acceptance-criteria.md:4704"
+   ],
+   "notes": [
+    "[anchors] C-reference C.6: cited item title keywords do not match the citing sentence (heuristic)",
+    "[anchors] C-reference C.6: cited item title keywords do not match the citing sentence (heuristic)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "SC.12",
+   "family": "c-ref-keyword-mismatch",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:3077"
+   ],
+   "notes": [
+    "[anchors] C-reference SC.12: cited item title keywords do not match the citing sentence (heuristic)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "C.5",
+   "family": "c-ref-keyword-mismatch",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:203"
+   ],
+   "notes": [
+    "[anchors] C-reference C.5: cited item title keywords do not match the citing sentence (heuristic)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "C.2",
+   "family": "c-ref-keyword-mismatch",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:207"
+   ],
+   "notes": [
+    "[anchors] C-reference C.2: cited item title keywords do not match the citing sentence (heuristic)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "SC.3",
+   "family": "c-ref-keyword-mismatch",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:884"
+   ],
+   "notes": [
+    "[anchors] C-reference SC.3: cited item title keywords do not match the citing sentence (heuristic)"
+   ],
+   "confidence": "possible",
+   "extra": null
+  },
+  {
+   "subject": "../../../../../docs/src/styles/theme.css",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:138"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../../docs/src/styles/theme.css is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:138",
+     "spikes/results/p1-evidence/02-_archive__docs-site-brand-identity__highlight-and-states__dark-cut-focus-ring-on-pre.md:29"
+    ]
+   }
+  },
+  {
+   "subject": "../_decomposition.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:525"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../_decomposition.md is missing (7 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:525",
+     "spikes/results/p1-arm-d-labels-ryan.md:781",
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:65",
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:97",
+     "spikes/results/p1-evidence/12-_archive__docs-site-brand-identity__kb-harvest-and-closeout.md:34",
+     "spikes/results/p1-evidence/12-_archive__docs-site-brand-identity__kb-harvest-and-closeout.md:57",
+     "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:96"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../docs/package.json",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:527"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../docs/package.json is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:527",
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:67"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../docs/astro.config.mjs",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:528"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../docs/astro.config.mjs is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:528",
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:68"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../docs/src/styles/theme.css",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:529"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../docs/src/styles/theme.css is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:529",
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:69"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../.kb/open-questions/brand-unwired-from-pipeline.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:531"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../.kb/open-questions/brand-unwired-from-pipeline.md is missing (3 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:531",
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:71",
+     "spikes/results/p1-evidence/12-_archive__docs-site-brand-identity__kb-harvest-and-closeout.md:47"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../.redkiln/config.yaml",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:786"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../.redkiln/config.yaml is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:786",
+     "spikes/results/p1-evidence/12-_archive__docs-site-brand-identity__kb-harvest-and-closeout.md:39"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../brand/README.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:934"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../brand/README.md is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:934",
+     "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:83"
+    ]
+   }
+  },
+  {
+   "subject": "../initiative.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:940"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../initiative.md is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:940",
+     "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:89"
+    ]
+   }
+  },
+  {
+   "subject": "../../../brand/README.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:1198"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../brand/README.md is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:1198",
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:85"
+    ]
+   }
+  },
+  {
+   "subject": "../../../.kb/decisions/brand-visual-identity-constraints.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-arm-d-labels-ryan.md:1200"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../.kb/decisions/brand-visual-identity-constraints.md is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-arm-d-labels-ryan.md:1200",
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:87"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../../test/docs-brand.test.ts",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/02-_archive__docs-site-brand-identity__highlight-and-states__dark-cut-focus-ring-on-pre.md:59"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../../test/docs-brand.test.ts is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/02-_archive__docs-site-brand-identity__highlight-and-states__dark-cut-focus-ring-on-pre.md:59"
+    ]
+   }
+  },
+  {
+   "subject": "[^\\s]+",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/06-_archive__live-views__proof-and-readings__fixme-cannot-pass-tripwire.md:377"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target [^\\s]+ is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/06-_archive__live-views__proof-and-readings__fixme-cannot-pass-tripwire.md:377"
+    ]
+   }
+  },
+  {
+   "subject": "../_discovery/research/03-astro-font-pipeline.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:77"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../_discovery/research/03-astro-font-pipeline.md is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:77"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../.kb/concepts/brand-mark-rationale.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:83"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../.kb/concepts/brand-mark-rationale.md is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:83"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../brand/showcase.html",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:103"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../brand/showcase.html is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md:103"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../.kb/maps/brand-identity-knowledge-map.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/12-_archive__docs-site-brand-identity__kb-harvest-and-closeout.md:79"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../.kb/maps/brand-identity-knowledge-map.md is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/12-_archive__docs-site-brand-identity__kb-harvest-and-closeout.md:79"
+    ]
+   }
+  },
+  {
+   "subject": "../_discovery/research/05-accent-budget-vs-ui-state.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:104"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../_discovery/research/05-accent-budget-vs-ui-state.md is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:104"
+    ]
+   }
+  },
+  {
+   "subject": "../_discovery/research/07-docs-retokenize-pain-points.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:105"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../_discovery/research/07-docs-retokenize-pain-points.md is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:105"
+    ]
+   }
+  },
+  {
+   "subject": "../../../../package.json",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:127"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../../package.json is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md:127"
+    ]
+   }
+  },
+  {
+   "subject": "../../../docs/src/pages/index.astro",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:93"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../docs/src/pages/index.astro is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:93"
+    ]
+   }
+  },
+  {
+   "subject": "../../../docs/src/layouts/DocsLayout.astro",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:94"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../docs/src/layouts/DocsLayout.astro is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:94"
+    ]
+   }
+  },
+  {
+   "subject": "../../../docs/src/styles/theme.css",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:97"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../docs/src/styles/theme.css is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:97"
+    ]
+   }
+  },
+  {
+   "subject": "../../../.kb/open-questions/brand-unwired-from-pipeline.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:104"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../../../.kb/open-questions/brand-unwired-from-pipeline.md is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:104"
+    ]
+   }
+  },
+  {
+   "subject": "_discovery/research/02-design-token-substrate.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:114"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target _discovery/research/02-design-token-substrate.md is missing (2 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:114",
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:123"
+    ]
+   }
+  },
+  {
+   "subject": "../README.md",
+   "family": "dangling-relative-link",
+   "sources": [
+    "anchors"
+   ],
+   "anchors": [
+    "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:312"
+   ],
+   "notes": [
+    "[anchors] relative markdown link target ../README.md is missing (1 citing line(s))"
+   ],
+   "confidence": null,
+   "extra": {
+    "all_anchors": [
+     "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md:312"
+    ]
+   }
+  },
+  {
+   "subject": "README legacy-id map rows match frontmatter",
+   "family": "readme-disagreement",
+   "sources": [
+    "adr-graph"
+   ],
+   "anchors": [
+    "references/adr/README.md:None"
+   ],
+   "notes": [
+    "[adr-graph] README claims README legacy-id map rows match frontmatter = 73 rows but frontmatter measures {'rows_checked': 73, 'rows_with_issues': 1, 'issues': [{'adr': '0039', 'readme_line': 121, 'issues': ['title differs'], 'readme_title': '`After=<step>` shorthand deferred pending recurrence at scale', 'fm_title': 'After=<step> shorthand deferred pending recurrence at scale'}]}"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": null,
+   "family": "citation-date",
+   "sources": [
+    "adr-graph"
+   ],
+   "anchors": [
+    "(11 doc/ADR pairs)"
+   ],
+   "notes": [
+    "[adr-graph] 11 raw citation-before-ADR-date pairs, all explained by later in-place amendment (unexplained: 0)"
+   ],
+   "confidence": "explained",
+   "extra": null
+  },
+  {
+   "subject": "AC-428",
+   "family": "dup",
+   "sources": [
+    "slices",
+    "ids"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md:5295",
+    "references/2026-09-08-acceptance-criteria.md:5295",
+    "references/2026-09-08-acceptance-criteria.md:5431"
+   ],
+   "notes": [
+    "[slices] AC-428 is defined twice (lines [5295, 5431])",
+    "[ids] duplicate_definition ['references/2026-09-08-acceptance-criteria.md:5295', 'references/2026-09-08-acceptance-criteria.md:5431']"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "AC-520",
+   "family": "anchor-outside-declared-range",
+   "sources": [
+    "slices"
+   ],
+   "anchors": [
+    "references/2026-09-08-acceptance-criteria.md"
+   ],
+   "notes": [
+    "[slices] AC-520 sits outside every declared area range in section 0.1"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "A06",
+   "family": "area-without-ac-section",
+   "sources": [
+    "slices"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:24"
+   ],
+   "notes": [
+    "[slices] area A06 (The quality shorthand default) has no AC register section joined to it"
+   ],
+   "confidence": "mapping",
+   "extra": null
+  },
+  {
+   "subject": "A07",
+   "family": "area-without-ac-section",
+   "sources": [
+    "slices"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:25"
+   ],
+   "notes": [
+    "[slices] area A07 (\"Design final\" as a whole) has no AC register section joined to it"
+   ],
+   "confidence": "mapping",
+   "extra": null
+  },
+  {
+   "subject": "A15",
+   "family": "area-without-ac-section",
+   "sources": [
+    "slices"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:33"
+   ],
+   "notes": [
+    "[slices] area A15 (Architecture shape \u2014 clean-break single binary owning the loop) has no AC register section joined to it"
+   ],
+   "confidence": "mapping",
+   "extra": null
+  },
+  {
+   "subject": "A38",
+   "family": "area-without-ac-section",
+   "sources": [
+    "slices"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:56"
+   ],
+   "notes": [
+    "[slices] area A38 (Rust workspace, toolchain pin, lint policy, dependency policy) has no AC register section joined to it"
+   ],
+   "confidence": "mapping",
+   "extra": null
+  },
+  {
+   "subject": "A39",
+   "family": "area-without-ac-section",
+   "sources": [
+    "slices"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md:57"
+   ],
+   "notes": [
+    "[slices] area A39 (Phase 1 scope \u2014 fix and story lanes, CLI-only gates) has no AC register section joined to it"
+   ],
+   "confidence": "mapping",
+   "extra": null
+  },
+  {
+   "subject": "toolchain:clippy-group-suspicious",
+   "family": "curated-pattern-zero-match",
+   "sources": [
+    "external"
+   ],
+   "anchors": [
+    "(curated pattern)"
+   ],
+   "notes": [
+    "[external] curated claim pattern toolchain:clippy-group-suspicious matched 0 lines in the corpus"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "toolchain:clippy-group-style",
+   "family": "curated-pattern-zero-match",
+   "sources": [
+    "external"
+   ],
+   "anchors": [
+    "(curated pattern)"
+   ],
+   "notes": [
+    "[external] curated claim pattern toolchain:clippy-group-style matched 0 lines in the corpus"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "toolchain:clippy-group-complexity",
+   "family": "curated-pattern-zero-match",
+   "sources": [
+    "external"
+   ],
+   "anchors": [
+    "(curated pattern)"
+   ],
+   "notes": [
+    "[external] curated claim pattern toolchain:clippy-group-complexity matched 0 lines in the corpus"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "toolchain:clippy-group-perf",
+   "family": "curated-pattern-zero-match",
+   "sources": [
+    "external"
+   ],
+   "anchors": [
+    "(curated pattern)"
+   ],
+   "notes": [
+    "[external] curated claim pattern toolchain:clippy-group-perf matched 0 lines in the corpus"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "toolchain:clippy-group-restriction",
+   "family": "curated-pattern-zero-match",
+   "sources": [
+    "external"
+   ],
+   "anchors": [
+    "(curated pattern)"
+   ],
+   "notes": [
+    "[external] curated claim pattern toolchain:clippy-group-restriction matched 0 lines in the corpus"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "spikes/HANDOFF.md",
+   "family": "stale-source-rows",
+   "sources": [
+    "known-issues"
+   ],
+   "anchors": [
+    "spikes/HANDOFF.md"
+   ],
+   "notes": [
+    "[known-issues] 26 rows harvested from a source the corpus marks stale (superseded handoff; counts.stale_source_rows = 26)"
+   ],
+   "confidence": "documented",
+   "extra": null
+  },
+  {
+   "subject": "OH-1",
+   "family": "ordering-hazard",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "Step 2 at RUNBOOK.md:433"
+   ],
+   "notes": [
+    "[phase1-deps] Step 2 sits second in the document and executes sixth: Step 2 does `rm -rf spikes/results` and gitignores it, while Step 3b WRITES the three filled label files there and Step 4 READS them from there."
+   ],
+   "confidence": "disclosed",
+   "extra": null
+  },
+  {
+   "subject": "OH-2",
+   "family": "ordering-hazard",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "delete at RUNBOOK.md:500; read at RUNBOOK.md:2013 and RUNBOOK.md:2019"
+   ],
+   "notes": [
+    "[phase1-deps] Step 7c lifts five source files out of spikes/runner/, which Step 2 has already deleted: Step 2 runs `rm -rf spikes/runner` (RUNBOOK.md:500) at canonical position 6. Step 7c (canonical position 13) says rk-adapter-claude 'lifts runner.rs, event.rs, step.rs, throttle.rs and journal.rs from the spike runner' and that 'nine patterns transfer from spikes/runner by construction'. By then those files live only in D:/repos/redkiln-corpus at the pin, and nothing in Step 2, Step 7c or the ORDER banner says so."
+   ],
+   "confidence": "undisclosed",
+   "extra": null
+  },
+  {
+   "subject": "OH-3",
+   "family": "ordering-hazard",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "RUNBOOK.md:2345"
+   ],
+   "notes": [
+    "[phase1-deps] Halt condition 1 names `cargo build` in spikes/runner, which does not exist after Step 2: Halt 1 applies at EVERY step but its first clause targets a directory Step 2 removes."
+   ],
+   "confidence": "disclosed",
+   "extra": null
+  },
+  {
+   "subject": "OH-4",
+   "family": "ordering-hazard",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "RUNBOOK.md:1550, 1569-1571"
+   ],
+   "notes": [
+    "[phase1-deps] Checkpoint 4a's last two lines need a binary Step 7b has not built yet: Step 4a runs at canonical position 7; its checkpoint invokes `./target/debug/redkiln lint --facet-provenance` and `cargo test -p rk-kernel`, both Phase-1 output from Step 7b at position 12."
+   ],
+   "confidence": "disclosed",
+   "extra": null
+  },
+  {
+   "subject": "OH-5",
+   "family": "ordering-hazard",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "RUNBOOK.md:535"
+   ],
+   "notes": [
+    "[phase1-deps] Checkpoint 2's last line cannot pass until Step 3b's outstanding half is done: Checkpoint 2 lists all three filled label files inside D:/repos/redkiln-corpus/results/. spikes/results/p1-arm-l-labels-ryan.md does not exist on this tree, so Step 2 cannot close until Ryan labels arm L. That IS the intended direction (3 before 2) but it makes Step 2 blocked on a human act the banner describes as merely an ordering preference."
+   ],
+   "confidence": "disclosed",
+   "extra": null
+  },
+  {
+   "subject": "OH-6",
+   "family": "ordering-hazard",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "instruction at RUNBOOK.md:1473; order banner at RUNBOOK.md:433; lint at RUNBOOK.md:1905"
+   ],
+   "notes": [
+    "[phase1-deps] Step 4a.1 says build the lint WITH the deriver field in the same change, or do neither; the canonical order places 4a five positions before the lint exists: RUNBOOK.md:1473: 'A deriver field added to the registry while the lint that reads it is not built is a label, not a gate ... Build the lint rule with the field, in the same change (4a.4), or do neither yet.' But 4a runs at canonical position 7 (after 4, before 2 and 5) and the lint is Step 7b's output at position 12; Checkpoint 4a (RUNBOOK.md:1550) itself concedes two of its eight lines are [WILL EXIST]. Following the order therefore produces exactly the label-not-gate state 4a.1 forbids, for the whole span 4a -> 7b."
+   ],
+   "confidence": "undisclosed",
+   "extra": null
+  },
+  {
+   "subject": null,
+   "family": "runbook-claim-stale",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "RUNBOOK.md:246"
+   ],
+   "notes": [
+    "[phase1-deps] RUNBOOK.md:246 -- instrument measured 2026-09-09 at 2.1.266 (Claude Code) -> STALE -- a FOURTH instrument version is on this box (GC8 lineage)"
+   ],
+   "confidence": "measured",
+   "extra": null
+  },
+  {
+   "subject": null,
+   "family": "runbook-claim-stale",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "RUNBOOK.md:168-171"
+   ],
+   "notes": [
+    "[phase1-deps] RUNBOOK.md:168-171 -- HEAD is ce04058 -> STALE -- HEAD has moved on"
+   ],
+   "confidence": "measured",
+   "extra": null
+  },
+  {
+   "subject": null,
+   "family": "runbook-claim-stale",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "RUNBOOK.md:206-216"
+   ],
+   "notes": [
+    "[phase1-deps] RUNBOOK.md:206-216 -- eleven ' M' lines from the F39 amendment are in flight -> STALE -- the amendment has since been committed; Step 1.3's git add list is discharged"
+   ],
+   "confidence": "measured",
+   "extra": null
+  },
+  {
+   "subject": "cargo-audit",
+   "family": "tool-absent",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "RUNBOOK.md:56"
+   ],
+   "notes": [
+    "[phase1-deps] tool cargo-audit absent on this box"
+   ],
+   "confidence": "measured",
+   "extra": null
+  },
+  {
+   "subject": "cargo-insta",
+   "family": "tool-absent",
+   "sources": [
+    "phase1-deps"
+   ],
+   "anchors": [
+    "RUNBOOK.md:56"
+   ],
+   "notes": [
+    "[phase1-deps] tool cargo-insta absent on this box"
+   ],
+   "confidence": "measured",
+   "extra": null
+  },
+  {
+   "subject": "spikes/FINDINGS.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/FINDINGS.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-02, cited as current by newer docs ['RUNBOOK.md', 'references/2026-09-08-acceptance-criteria.md', 'references/2026-09-08-evidence-brief.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "spikes/HANDOFF.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/HANDOFF.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-04, cited as current by newer docs ['spikes/plans/AFK-2026-09-09.md', 'spikes/plans/HANDOFF-2026-09-10-design-session.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "references/2026-09-05-architecture-proposal.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "references/2026-09-05-architecture-proposal.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-05, cited as current by newer docs ['references/2026-09-08-acceptance-criteria.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "references/2026-09-07-design-recommendation.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "references/2026-09-07-design-recommendation.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-07, cited as current by newer docs ['references/2026-09-08-acceptance-criteria.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "references/2026-09-07-process-catalog-proposal.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "references/2026-09-07-process-catalog-proposal.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-07, cited as current by newer docs ['references/2026-09-08-evidence-brief.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "spikes/F29-DRAFT.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/F29-DRAFT.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-05, cited as current by newer docs ['references/2026-09-08-evidence-brief.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "spikes/F34-DRAFT.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/F34-DRAFT.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-07, cited as current by newer docs ['spikes/plans/AFK-2026-09-09.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "spikes/F35-DRAFT.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/F35-DRAFT.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-08, cited as current by newer docs ['spikes/plans/AFK-2026-09-09.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "spikes/METHOD-E3.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/METHOD-E3.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-03, cited as current by newer docs ['spikes/plans/AFK-2026-09-09.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "spikes/METHOD-P.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/METHOD-P.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-08, cited as current by newer docs ['spikes/plans/AFK-2026-09-09.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "spikes/p9/DECISIONS-2026-09-08.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/p9/DECISIONS-2026-09-08.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-08, cited as current by newer docs ['spikes/plans/AFK-2026-09-09.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "spikes/results/e3-severity-annotation-ryan.md",
+   "family": "stale-risk-cited-as-current",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "spikes/results/e3-severity-annotation-ryan.md"
+   ],
+   "notes": [
+    "[doc-map] declared 2026-09-04, cited as current by newer docs ['RUNBOOK.md']"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "references/2026-09-08-evidence-brief.md",
+   "family": "authority-denial",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "references/2026-09-08-evidence-brief.md"
+   ],
+   "notes": [
+    "[doc-map] document carries a denial-of-authority claim: **Not a source of truth** \u2014 `spikes/FINDINGS.md`, `spikes/F29-DRAFT.md`..`F40-DRAFT.md` and `spikes/DECISIONS-2026-09-09.md` remain authoritative, and where thi"
+   ],
+   "confidence": "heuristic",
+   "extra": null
+  },
+  {
+   "subject": "AC-513",
+   "family": "dangling",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md"
+   ],
+   "notes": [
+    "[doc-map] AC-513 is cited by architecture-design but not defined in the AC register"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "SM-084",
+   "family": "dangling",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md"
+   ],
+   "notes": [
+    "[doc-map] SM-084 is cited by architecture-design but not defined in the SM register"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "SM-108",
+   "family": "dangling",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md"
+   ],
+   "notes": [
+    "[doc-map] SM-108 is cited by architecture-design but not defined in the SM register"
+   ],
+   "confidence": "certain",
+   "extra": null
+  },
+  {
+   "subject": "SM-156",
+   "family": "dangling",
+   "sources": [
+    "doc-map"
+   ],
+   "anchors": [
+    "references/2026-09-08-architecture-design.md"
+   ],
+   "notes": [
+    "[doc-map] SM-156 is cited by architecture-design but not defined in the SM register"
+   ],
+   "confidence": "certain",
+   "extra": null
+  }
+ ],
+ "gaps_carried_forward": {
+  "agent_gaps_are_in_the_orchestrator_message_not_in_artifacts": true,
+  "reconcile_gaps": [
+   "The anomaly pool is a harvest of structured anomaly-equivalent records, not the agents' own anomaly lists (which live only in their prose returns).",
+   "Line-range agreement was checked at heading granularity (start line + heading text + end line derived from the anchors heading index); byte offsets were not compared.",
+   "Spike-id membership for phase1-deps was computed by regex over the steps JSON text; a spike named in prose by another alias would not be caught.",
+   "The re-run harness rewrote each script's output-path constant textually (substitutions recorded per script); no other line was changed.",
+   "Cross-artifact set checks used the sets the artifacts carry; where an artifact carries only a count (doc-map id_counts, slices sm_rows_indexed) only the count was compared."
+  ]
+ }
+}

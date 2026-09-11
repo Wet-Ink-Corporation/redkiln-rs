@@ -1,0 +1,918 @@
+{
+ "artifact": "critic-coverage",
+ "phase": "synthesis / coverage critic",
+ "generated": "2026-09-11",
+ "repo": "D:/repos/redkiln-rs (read-only)",
+ "purpose": "What this audit did not look at. Every row is a LIMIT on the review's confidence, not a concern about the corpus. Absence of a finding in any area listed here is absence of evidence, never a clean bill.",
+ "method": {
+  "sources": [
+   "synthesis/coverage.json (34 finder coverage notes; each entry is truncated to 1,500 characters in that file; the untruncated notes of 1,625-3,383 characters were taken from findings/<finder>.json)",
+   "findings/<finder>.json anchors (file:line) for all 34 finders",
+   "census/slices.json (39 areas, 21 groups, AC/SM/design section indexes)",
+   "census/doc-map.json (194 markdown documents, 4,341,346 bytes)",
+   "census/ids.json (514 AC and 135 SM definition lines; ADR citation sites)",
+   "census/adr-graph.json (89 records)",
+   "census/anchors.json heading_index",
+   "census/phase1-deps.json",
+   "census/external.json _meta and counts",
+   "grounding/GROUNDING-MERGED.json (860 rows)",
+   "census/reconcile.json gaps_carried_forward"
+  ],
+  "rule": "A document, section, criterion, ADR or artefact counts as READ only if a finder's coverage note names it (path, basename, section number or id, including bare ids inside ADR-0021/0022-style lists) or one of that finder's finding anchors sits inside it. Everything else is reported UNREAD. This is a self-report cross-check: the notes were written by the finders themselves, capped by the brief at roughly 2,000 characters, and no refuter checked them, so 'read' here is a ceiling on reading and 'unread' a floor on the unread set.",
+  "tags": "[measured] computed here from the artefacts above or read from the repo on 2026-09-11; [documented] a live source says it (URL + fetch date carried from the grounding row); [inferred] reasoned."
+ },
+ "tallies": {
+  "finders": 34,
+  "finders_with_empty_coverage_note": 1,
+  "md_documents": 194,
+  "md_documents_never_named_by_any_finder_excluding_adrs": 54,
+  "bytes_never_named_excluding_adrs": 908670,
+  "share_of_corpus_bytes_never_named_including_adrs": "23.6% (1,024,260 of 4,341,346 bytes)",
+  "documents_named_at_one_line_only": 4,
+  "adrs_total": 89,
+  "adrs_never_named": 15,
+  "adrs_named_without_a_full_read": 15,
+  "adrs_with_an_explicit_full_or_body_read": 59,
+  "ac_sections_with_no_owning_slice": [
+   "12"
+  ],
+  "ac_criteria_individually_named_or_anchored": "371 of 514",
+  "sm_measures_individually_named_or_anchored": "125 of 135",
+  "census_artifacts_consumed_by_zero_finders": [
+   "doc-map.json"
+  ],
+  "census_artifacts_consumed_by_one_finder": [
+   "slices.json (L03)"
+  ],
+  "external_unverifiable": 16,
+  "external_unverifiable_genuine": 10,
+  "external_unverifiable_misclassified_internal": 6
+ },
+ "limits": [
+  {
+   "id": "LIM-01",
+   "priority_for_confidence": "P0-adjacent (a whole Phase-1 AC area is un-audited before Step 7d)",
+   "limit": "AC section 12 (CLI surface and `doctor`; AC-400..AC-439, SM-121..SM-130) had no owning slice. The census mapped the 39 design section 0.1 rows to 21 groups, and no section 0.1 row owns the CLI, so no group's AC span covers lines 4970-5471 [measured: every group's distinct_spans in slices.json checked against ac_sections_index; section 12 appears in none]. 13 of its 40 criteria and 4 of its 10 measures were named or anchored by any finder, all incidentally (G04, G05, G07, G10, G14 passing through) [measured]. Design section 8.1-8.6 (the command surface, `run`, `answer`, `doctor`, `explain`, projections; lines 1259-1437) was read only by L13's 120-character index scan with three line-level reads; no other finder names it [measured].",
+   "evidence": [
+    {
+     "file": "references/2026-09-08-acceptance-criteria.md",
+     "line": 36,
+     "quote": "| 12 | CLI surface and `doctor` | 40 | 38 | 1 | 1 | 0 | SM-121..SM-130 |",
+     "tag": "measured"
+    },
+    {
+     "file": "references/2026-09-08-acceptance-criteria.md",
+     "line": 4972,
+     "quote": "**Area key:** `cli-doctor` · **Criteria:** AC-400..AC-439 (AC-428 is a reused id — see §0.4) — **40 in force** · **Measures:** SM-121..SM-130 (SM-131, SM-132 unallocated)",
+     "tag": "measured"
+    },
+    {
+     "file": "references/2026-09-08-acceptance-criteria.md",
+     "line": 4974,
+     "quote": "**Sources:** proposal §4.2.1, §4.3, §4.4, §4.5, §4.6, §4.9, §6, §7; process-catalog proposal PC2/PC5/PC8; ADR-00",
+     "tag": "measured",
+     "note": "the declared source is the 2026-09-05 proposal, which no finder read in full either (LIM-06)"
+    },
+    {
+     "file": "RUNBOOK.md",
+     "line": 2079,
+     "quote": "### 7d — `rk-cli`, and `redkiln-migrate` v0",
+     "tag": "measured"
+    },
+    {
+     "file": "references/2026-09-08-architecture-design.md",
+     "line": 1259,
+     "quote": "### 8.1 The command surface",
+     "tag": "measured"
+    },
+    {
+     "file": "references/2026-09-08-architecture-design.md",
+     "line": 1326,
+     "quote": "### 8.4 `doctor` — one rule table, all configuration-time, zero model cost",
+     "tag": "measured"
+    }
+   ],
+   "untouched_criteria": [
+    "AC-401",
+    "AC-402",
+    "AC-403",
+    "AC-404",
+    "AC-406",
+    "AC-408",
+    "AC-409",
+    "AC-410",
+    "AC-412",
+    "AC-413",
+    "AC-414",
+    "AC-415",
+    "AC-416",
+    "AC-417",
+    "AC-419",
+    "AC-421",
+    "AC-424",
+    "AC-426",
+    "AC-429",
+    "AC-430",
+    "AC-431",
+    "AC-432",
+    "AC-433",
+    "AC-434",
+    "AC-435",
+    "AC-436",
+    "AC-438"
+   ],
+   "untouched_measures": [
+    "SM-121",
+    "SM-122",
+    "SM-123",
+    "SM-126",
+    "SM-128",
+    "SM-129"
+   ],
+   "consequence": "Step 7d builds the composition root (`rk-cli`, `doctor`, `answer`, `explain`) against 40 criteria that no finder tested for decidability, ambiguity, ADR agreement, powerless thresholds or two-implementer divergence. The review's silence on this area is not a pass; it is the one Phase-1 AC area for which the audit has produced no evidence either way. The survivors contain L07-01 (`run --resume` vs AC-400) and G05/G10 items that graze the area, which shows defects exist at its edges.",
+   "how_to_close": "Run one slice finder and one refuter with the standard A-F checks over AC 4970-5471, SM section 1.11, design 1259-1437 and RUNBOOK 2079-2125 (about 1,050 lines, under the 1,240-line group mean); add `cli-doctor` as a 40th row to the census mapping so the gap cannot recur. Needed before Step 7d, not before Step 5 — nothing in Steps 5-7c depends on section 12."
+  },
+  {
+   "id": "LIM-02",
+   "priority_for_confidence": "P1 (a decided, buildable subsystem half-audited)",
+   "limit": "AC section 3 (selection engine, 40 criteria) is owned by G01 and G02, but G01 read only section 3.7 plus section 1.1 and G02 read three criteria (AC-066/067/068). Sections 3.1-3.6 (AC-040..AC-064 and AC-077/078: purity and replay, rank and ties, rigor and stage scope, the unsat gate, typed deviation, short-circuit) were named or anchored by no finder — 21 of 40 criteria untouched, and no finder claims a whole-section read [measured].",
+   "evidence": [
+    {
+     "file": "references/2026-09-08-architecture-design.md",
+     "line": 19,
+     "quote": "The engine's **semantics** are decided and buildable now",
+     "tag": "measured"
+    },
+    {
+     "file": "references/2026-09-08-acceptance-criteria.md",
+     "line": 608,
+     "quote": "### 3.1 Purity and replay (the reproducibility contract)",
+     "tag": "measured"
+    },
+    {
+     "file": "references/2026-09-08-acceptance-criteria.md",
+     "line": 772,
+     "quote": "### 3.4 Unsatisfiability is a typed gate, never a guess (steps 4 and 5)",
+     "tag": "measured"
+    },
+    {
+     "file": "references/2026-09-08-acceptance-criteria.md",
+     "line": 847,
+     "quote": "### 3.5 Deviation is typed and never edits `R` (step 7)",
+     "tag": "measured"
+    }
+   ],
+   "untouched_criteria": [
+    "AC-041",
+    "AC-042",
+    "AC-043",
+    "AC-045",
+    "AC-046",
+    "AC-051",
+    "AC-052",
+    "AC-053",
+    "AC-054",
+    "AC-055",
+    "AC-056",
+    "AC-057",
+    "AC-058",
+    "AC-059",
+    "AC-060",
+    "AC-061",
+    "AC-062",
+    "AC-063",
+    "AC-064",
+    "AC-077",
+    "AC-078"
+   ],
+   "consequence": "The BLOCKED label on the two selection rows drew both finders to the facet-source block (P1, S-FACET) and away from the pure function the row itself says is buildable now. The seven-step engine's replay contract and unsat/deviation typing enter Step 7b with only the census's mechanical checks (ids, anchors, modal verbs) behind them.",
+   "how_to_close": "One slice finder + refuter over AC 608-1008 and design section 4.4-4.6 (the seven-step table and binder rules G18 already tested at section 4 level), with check D (two-implementer test) as the primary lens: purity/replay and rank/ties are where two implementers diverge silently."
+  },
+  {
+   "id": "LIM-03",
+   "priority_for_confidence": "P1 (clearances rest on unverified read claims)",
+   "limit": "Four sections are cleared on a finder's whole-section read claim while fewer than 60% of their criteria are individually named or anchored: section 4 (G18 'all 39 criteria'; 22 of 39 named), section 7 (G04 'all 39 harness ACs'; 22 of 39), section 8 (G08 'all 39 ACs'; 19 of 39), section 13 (G20 'all 40 ACs read, 17 in depth'; 27 of 40) [measured]. Within sections that were read, check B (decidability) was a sample by the finders' own account: G19 27 of 40 in section 5, G15 20 of 39 in section 9, G10 20 and G12 24 in section 14, G17 14 in section 11, G07 17 in section 7. The refuters challenged findings only; no 'checked: no defect' statement in any of the 34 notes was re-examined [measured: verdict files carry anchor_check and per-finding verdicts, no clearance check].",
+   "evidence": [
+    {
+     "file": "findings/slice-G08.json",
+     "line": 0,
+     "quote": "AC §8 in full (3073-3541, all 39 ACs incl. 3 provisional, 3 human-gated)",
+     "tag": "measured",
+     "note": "coverage note"
+    },
+    {
+     "file": "findings/slice-G20.json",
+     "line": 0,
+     "quote": "B: all 40 ACs read, 17 in depth.",
+     "tag": "measured",
+     "note": "coverage note"
+    }
+   ],
+   "untouched_criteria_by_section": {
+    "4": [
+     "AC-080",
+     "AC-081",
+     "AC-082",
+     "AC-083",
+     "AC-085",
+     "AC-086",
+     "AC-088",
+     "AC-090",
+     "AC-091",
+     "AC-100",
+     "AC-102",
+     "AC-103",
+     "AC-105",
+     "AC-107",
+     "AC-110",
+     "AC-113",
+     "AC-114"
+    ],
+    "7": [
+     "AC-200",
+     "AC-201",
+     "AC-202",
+     "AC-208",
+     "AC-213",
+     "AC-214",
+     "AC-219",
+     "AC-220",
+     "AC-222",
+     "AC-226",
+     "AC-227",
+     "AC-230",
+     "AC-231",
+     "AC-232",
+     "AC-235",
+     "AC-237",
+     "AC-238"
+    ],
+    "8": [
+     "AC-251",
+     "AC-252",
+     "AC-253",
+     "AC-256",
+     "AC-257",
+     "AC-260",
+     "AC-261",
+     "AC-262",
+     "AC-263",
+     "AC-267",
+     "AC-268",
+     "AC-269",
+     "AC-272",
+     "AC-273",
+     "AC-274",
+     "AC-275",
+     "AC-276",
+     "AC-277",
+     "AC-278",
+     "AC-279"
+    ],
+    "11": [
+     "AC-361",
+     "AC-363",
+     "AC-364",
+     "AC-365",
+     "AC-370",
+     "AC-397",
+     "AC-398"
+    ],
+    "13": [
+     "AC-441",
+     "AC-446",
+     "AC-448",
+     "AC-455",
+     "AC-456",
+     "AC-457",
+     "AC-458",
+     "AC-459",
+     "AC-466",
+     "AC-467",
+     "AC-471",
+     "AC-477",
+     "AC-479"
+    ]
+   },
+   "consequence": "'No defect found' over 86 criteria in sections 4, 7, 8, 11 and 13 is a finder's word. The audit cannot distinguish 'read and clean' from 'skimmed' for those criteria; the deliverable should say so wherever it reports a section as clean.",
+   "how_to_close": "Draw 10 criteria at random (seeded) from each untouched list and run the decidability and two-implementer tests on them with a fresh agent; if any of the 50 fails, re-run that section's slice in full. One agent, under an hour."
+  },
+  {
+   "id": "LIM-04",
+   "priority_for_confidence": "P2",
+   "limit": "L07-testability delivered no coverage note (0 characters in coverage.json and no `coverage` key in findings/L07-testability.json) [measured]. Its eight findings anchor five files (RUNBOOK, AC register, design, F39-DRAFT, spikes/p1/score-arm-d-panel.py). Nothing records what the testability lens read or cleared.",
+   "evidence": [
+    {
+     "file": "synthesis/coverage.json",
+     "line": 0,
+     "quote": "\"L07-testability\": \"\"",
+     "tag": "measured"
+    }
+   ],
+   "consequence": "The testability lens has positive findings and no negative space: the review cannot say any criterion is testable on L07's authority, only that L07 found eight that are not.",
+   "how_to_close": "Re-run L07 with the coverage note mandatory (it is the cheapest lens to re-run: its inputs are the AC Verified-by cells and the RUNBOOK acceptance sets), or state in the deliverable that testability was sampled positively only."
+  },
+  {
+   "id": "LIM-05",
+   "priority_for_confidence": "P2 (method)",
+   "limit": "The coverage record is a capped self-report. coverage.json truncates every note to exactly 1,500 characters (33 of 34 entries are 1,500 long, one is 0) [measured]; the untruncated notes run 1,625-3,383 characters, for briefs whose read spans are 331-2,096 lines. A note that says 'read in full' was never checked against what the agent actually opened. This critic's own 'unread' verdicts inherit that: they are computed from the notes and from finding anchors, so a file an agent opened but did not name counts as unread, and a file an agent named but skimmed counts as read.",
+   "evidence": [
+    {
+     "file": "synthesis/coverage.json",
+     "line": 0,
+     "quote": "internal_coverage",
+     "tag": "measured",
+     "note": "34 entries; lengths 1500 x33, 0 x1"
+    }
+   ],
+   "consequence": "Every number in this file is a floor on the unread set and a ceiling on the read set. The deliverable must not convert 'no finder names X' into 'X was not read' without that caveat, nor 'finder names X' into 'X was audited'.",
+   "how_to_close": "Not closable retrospectively. For any re-run, have the harness log file opens per agent so coverage is measured rather than reported."
+  },
+  {
+   "id": "LIM-06",
+   "priority_for_confidence": "P1 for the proposal, DECISIONS and HANDOFF; P2 for the research briefs and prompts; P3 for fixtures",
+   "limit": "54 of the 166 non-ADR markdown documents (908,670 bytes) were never named by any finder or anchor; four more were touched at a single line [measured]. By group: (a) references/research/ — 11 of 12 briefs unread (only 2026-09-06-grounding-s-results.md appears, as one L06 anchor): 2026-09-07-activity-catalog-raw (76,810 bytes), -method-engineering (48,096), -competitive-workflows (46,896), -selection-and-planning (33,456), and all seven 2026-09-03 briefs (archon, redkiln-lessons-brief, workflow-model, github-platform, landscape-sentiment, verification, shipmates-status; 110,802 bytes together). The grounding phase verified external anchors inside them (method-engineering 153, competitive-workflows 137, activity-catalog-raw 77, selection-and-planning 64, workflow-model 49, landscape-sentiment 37, github-platform 36, archon 30, verification 26, shipmates-status 9), so their citations were checked and their reasoning was not. (b) references/2026-09-05-architecture-proposal.md (60,519 bytes): touched by eight finders at named sections (4.1, 4.2.1, 4.6, 4.9, 6, 7, 9) and never read whole; it is the declared source of AC section 12 (LIM-01) and the design's predecessor. (c) spikes/DECISIONS-2026-09-09.md (56,621 bytes): G07 read lines 14, 30 and 221, G02 checked items #15/#16/#19, L01/L10 anchored one line each; spikes/HANDOFF.md (36,995 bytes): L09 read 248-276, L02 its unresolved list. Neither was read whole. (d) references/2026-09-09-change-classification.md (107,713 bytes): L09 read 233-302, one G01 anchor; it carries 114 grounded anchors and 29 arXiv ids. references/2026-09-08-evidence-augmentation.md (90,089 bytes): G06 rows 30/161/272 and G07 one row; 254 grounded anchors. (e) spikes/prompts/ — p1-classify.md and p1-classify-v2.md (the P1 prompts whose kill criterion fired), run-s-typed.md, run-s-var.md, run-s-h1c.md: unread. (f) spikes/remediation/ (README, implementation-report, redkiln-review, .card-orig, .template-orig; 24,339 bytes): unread — the doc-level grep's README hit was a basename collision with references/adr/README.md. (g) label sheets: spikes/results/p2-labels-ryan.md (135,567 bytes) consumed only through G02's re-run of score-p2.py; p1-arm-d-labels-RYAN-TODO, p1-arm-l-labels-ryan/BLANK, p7-deviation-labels-RYAN-TODO, p2-labels-RYAN-TODO, e3-severity-annotation-model/BLANK: unread. (h) spikes/results/p1-evidence/ — 17 of 20 dossiers (309,131 bytes) unread; L02 opened three (07-*) as old-repo fixture transcripts. (i) singletons: spikes/PRIOR-ART.md (15,493 bytes, 22 grounded anchors), spikes/METHOD-P9.md (4,811 — the only METHOD file no finder opened), spikes/p9/RYAN-TODO-2026-09-08.md, references/2026-09-03-reimagining-brainstorm.md (21,490), spikes/results/instrument-checks/README.md; and at one line only: references/2026-09-02-rfc-amendment.md (G04 cites :138), references/2026-09-04-findings-for-product.md (L02 names it), spikes/plans/AFK-2026-09-09.md (L02 opens :17), references/2026-09-01-shipmates-lessons-for-redkiln-rs.md (G10 reads its section 3 and eight lesson ids).",
+   "evidence": [
+    {
+     "file": "census/doc-map.json",
+     "line": 0,
+     "quote": "\"md_files_in_scope\": 194",
+     "tag": "measured"
+    },
+    {
+     "file": "census/external.json",
+     "line": 0,
+     "quote": "\"files_scanned\": 194",
+     "tag": "measured"
+    }
+   ],
+   "unread_documents": {
+    "references/2026-09-03-reimagining-brainstorm.md": 21490,
+    "references/adr/0006-artifact-layout-c-split-fields.md": 5875,
+    "references/adr/0015-review-tier-selects-execution-grade-or-read-only.md": 4831,
+    "references/adr/0022-activities-are-encapsulated-graphs.md": 7868,
+    "references/adr/0023-rigor-as-deontic-enum.md": 5435,
+    "references/adr/0026-three-level-encapsulated-review.md": 5794,
+    "references/adr/0028-activity-graph-owns-output-quality.md": 5983,
+    "references/adr/0035-for-each-sources-and-projection.md": 3768,
+    "references/adr/0036-evidence-minting-is-normative.md": 4308,
+    "references/adr/0038-escalate-carries-only-a-question-id.md": 3263,
+    "references/adr/0039-after-step-shorthand-deferred.md": 3072,
+    "references/adr/0042-feedback-refs-are-normative.md": 3870,
+    "references/adr/0043-loops-must-learn.md": 4564,
+    "references/adr/0046-deviation-is-authorable.md": 3815,
+    "references/adr/0047-spawn-moves-to-the-pack.md": 4107,
+    "references/adr/0050-tags-same-facet-disjoins-distinct-facets-conjoin.md": 3155,
+    "references/adr/0051-provided-artifacts-unconditional-above-min-rigor.md": 2874,
+    "references/adr/0052-rule-3-resolves-paths-against-output-schema.md": 2768,
+    "references/adr/0053-for-each-step-counts-once-against-budget.md": 3190,
+    "references/adr/0055-self-reference-binds-previous-loop-iteration.md": 3231,
+    "references/adr/0060-boolean-facets-are-applicable-if-only.md": 2744,
+    "references/adr/0061-facets-toml-normative-toolchain-and-change.md": 3404,
+    "references/adr/0062-shared-question-ids-legal.md": 3466,
+    "references/adr/0064-tool-steps-typed-by-verb-composing-emit.md": 5008,
+    "references/adr/0065-lint-r4b-on-false-target-rigor-reachability.md": 3345,
+    "references/adr/0066-rigor-legal-root-in-applicable-if.md": 3632,
+    "references/adr/0068-gate-inside-for-each-is-lint-error.md": 4097,
+    "references/adr/0070-quantifier-bodies-admit-len-and-nesting.md": 3675,
+    "references/adr/0071-empty-evidence-requires-no-agent-step.md": 4448,
+    "references/research/2026-09-03-archon.md": 20848,
+    "references/research/2026-09-03-github-platform.md": 17731,
+    "references/research/2026-09-03-landscape-sentiment.md": 16381,
+    "references/research/2026-09-03-redkiln-lessons-brief.md": 20096,
+    "references/research/2026-09-03-shipmates-status.md": 7319,
+    "references/research/2026-09-03-verification.md": 8689,
+    "references/research/2026-09-03-workflow-model.md": 19813,
+    "references/research/2026-09-07-activity-catalog-raw.md": 76810,
+    "references/research/2026-09-07-competitive-workflows.md": 46896,
+    "references/research/2026-09-07-method-engineering.md": 48096,
+    "references/research/2026-09-07-selection-and-planning.md": 33456,
+    "spikes/METHOD-P9.md": 4811,
+    "spikes/PRIOR-ART.md": 15493,
+    "spikes/p9/RYAN-TODO-2026-09-08.md": 8857,
+    "spikes/prompts/p1-classify-v2.md": 12525,
+    "spikes/prompts/p1-classify.md": 10876,
+    "spikes/prompts/run-s-h1c.md": 3517,
+    "spikes/prompts/run-s-typed.md": 4591,
+    "spikes/prompts/run-s-var.md": 4104,
+    "spikes/remediation/.card-orig.md": 6743,
+    "spikes/remediation/.template-orig.md": 1207,
+    "spikes/remediation/implementation-report.md": 2451,
+    "spikes/remediation/redkiln-review.md": 8030,
+    "spikes/results/e3-severity-annotation-BLANK.md": 4252,
+    "spikes/results/e3-severity-annotation-model.md": 4615,
+    "spikes/results/p1-arm-d-labels-RYAN-TODO.md": 14325,
+    "spikes/results/p1-arm-l-labels-BLANK.md": 990,
+    "spikes/results/p1-arm-l-labels-RYAN-TODO.md": 2858,
+    "spikes/results/p1-evidence/01-_archive__docs-site-brand-identity__typography-delivery__plex-per-weight-fallback-metrics.md": 5373,
+    "spikes/results/p1-evidence/02-_archive__docs-site-brand-identity__highlight-and-states__dark-cut-focus-ring-on-pre.md": 3964,
+    "spikes/results/p1-evidence/03-_archive__docs-site-brand-identity__highlight-and-states__landing-and-component-consumers.md": 24669,
+    "spikes/results/p1-evidence/04-support__phase-1-total-outcomes__gate-passes-its-known-base.md": 2083,
+    "spikes/results/p1-evidence/05-_archive__docs-site-brand-identity__kb-harvest-and-closeout__kb-and-graph-validation.md": 1145,
+    "spikes/results/p1-evidence/06-_archive__live-views__proof-and-readings__fixme-cannot-pass-tripwire.md": 17748,
+    "spikes/results/p1-evidence/07-_archive__docs-site-brand-identity__kb-harvest-and-closeout__resolve-open-question.md": 13533,
+    "spikes/results/p1-evidence/08-support__fix-lane-plumbing__issue-50-fix-story-before-worktree.md": 1022,
+    "spikes/results/p1-evidence/09-_archive__docs-site-brand-identity__typography-delivery.md": 29397,
+    "spikes/results/p1-evidence/10-support__fix-gate-honesty-sweep.md": 23280,
+    "spikes/results/p1-evidence/11-support__fix-json-error-envelope.md": 56162,
+    "spikes/results/p1-evidence/12-_archive__docs-site-brand-identity__kb-harvest-and-closeout.md": 5461,
+    "spikes/results/p1-evidence/13-support__fix-ci-pinned-pack-drift-guard.md": 621,
+    "spikes/results/p1-evidence/14-_archive__docs-site-brand-identity__contrast-verification.md": 27177,
+    "spikes/results/p1-evidence/15-_archive__live-views.md": 28202,
+    "spikes/results/p1-evidence/16-_archive__docs-site-brand-identity.md": 36082,
+    "spikes/results/p1-evidence/17-support.md": 21584,
+    "spikes/results/p1-evidence/18-support__links-hand-edit-denied-with-no-backfill-path.md": 5449,
+    "spikes/results/p1-evidence/19-support__advance-commit-ignored-path.md": 748,
+    "spikes/results/p1-evidence/20-support__telemetry-gitignored-so-runs-never-travel.md": 5431,
+    "spikes/results/p2-labels-RYAN-TODO.md": 5890,
+    "spikes/results/p2-labels-ryan.md": 135567,
+    "spikes/results/p7-deviation-labels-RYAN-TODO.md": 3487,
+    "spikes/remediation/README.md": 5908,
+    "spikes/results/instrument-checks/README.md": 817
+   },
+   "one_line_only": {
+    "references/2026-09-02-rfc-amendment.md": "slice-G04 cites rfc-amendment:138 only",
+    "references/2026-09-04-findings-for-product.md": "L02 names it once as a citation target",
+    "spikes/plans/AFK-2026-09-09.md": "L02 opens AFK:17 only",
+    "references/2026-09-01-shipmates-lessons-for-redkiln-rs.md": "slice-G10 reads sections 3 and L1.1/L1.2/L4.3/L4.4/L5.3/L5.4/L5.7/L5.8"
+   },
+   "consequence": "The audit is an audit of the four live documents, the RUNBOOK, the METHOD/F-draft chain and 59 ADRs, with the rest of the corpus reached only through citations from those. A wrong inference inside a research brief that the design cites as [documented, competitive C-D] would have been caught only if the design misquoted it (L02) or the external source contradicted it (grounding) — not if the brief reasoned badly from a true source. DECISIONS-2026-09-09 and HANDOFF are where the operator's own unresolved list lives; a decision recorded there and never propagated to an ADR would not have been seen. The P1 prompts are the instrument whose failure blocks Phase 1 and were not read.",
+   "how_to_close": "Three targeted reads, none large: (1) DECISIONS-2026-09-09.md and HANDOFF.md whole, diffed against the ADR set and the RUNBOOK's 'four decisions' table (about 94 KB); (2) the proposal's sections 4.2-4.6 against AC section 12 as part of LIM-01; (3) METHOD-P9.md and spikes/prompts/p1-classify*.md against F36/F39 and ADR-0079/0089, since Step 4's replacement for P1 will be authored from them. The research briefs and fixture dossiers can stay unread if the deliverable says the audit did not vouch for their reasoning.",
+   "unread_documents_note": "82 paths: 54 non-ADR documents plus 28 references/adr/ files the path-level grep did not match; the ADR set is refined id-by-id in LIM-07 (bare-number matches reduce the never-named ADRs to 15), so use LIM-07 for ADRs and this list for everything else."
+  },
+  {
+   "id": "LIM-07",
+   "priority_for_confidence": "P1 for ADR-0067/0061/0064/0072/0085; P2 for the rest",
+   "limit": "15 of 89 ADRs were never named by any finder, and 15 more were named only inside an adr-graph forbids list or a pair check with no body read [measured: bare and prefixed ids matched in all 34 notes and anchors]. Never named: ADR-0026, ADR-0035, ADR-0039, ADR-0042, ADR-0047, ADR-0051, ADR-0052, ADR-0055, ADR-0061, ADR-0062, ADR-0064, ADR-0065, ADR-0066, ADR-0068, ADR-0071 — all accepted, all dated 2026-09-07/08, all with a forbids block, all in the activity-graph DSL family (56,884 bytes). Named without a full read: ADR-0007, ADR-0015, ADR-0036, ADR-0037, ADR-0041, ADR-0043, ADR-0045, ADR-0050, ADR-0053, ADR-0054, ADR-0060, ADR-0063, ADR-0067, ADR-0072, ADR-0085 (71,179 bytes). Mechanical passes did touch all 89 (L05 compared titles, frontmatter edges and forbids-block identifiers; L04 counted modal verbs; L01 checked README against frontmatter), so their forbids blocks were screened and their Decision and Consequences sections were not.",
+   "live_citation_counts": {
+    "ADR-0026": {
+     "total": 8,
+     "live": {
+      "acceptance-criteria.md": 3,
+      "architecture-design.md": 2
+     }
+    },
+    "ADR-0035": {
+     "total": 6,
+     "live": {
+      "acceptance-criteria.md": 3,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0039": {
+     "total": 3,
+     "live": {
+      "acceptance-criteria.md": 1,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0042": {
+     "total": 9,
+     "live": {
+      "acceptance-criteria.md": 3,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0047": {
+     "total": 6,
+     "live": {
+      "acceptance-criteria.md": 4,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0051": {
+     "total": 3,
+     "live": {
+      "acceptance-criteria.md": 1,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0052": {
+     "total": 5,
+     "live": {
+      "acceptance-criteria.md": 1,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0055": {
+     "total": 6,
+     "live": {
+      "acceptance-criteria.md": 4,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0061": {
+     "total": 18,
+     "live": {
+      "acceptance-criteria.md": 10,
+      "architecture-design.md": 3
+     }
+    },
+    "ADR-0062": {
+     "total": 5,
+     "live": {
+      "acceptance-criteria.md": 1,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0064": {
+     "total": 14,
+     "live": {
+      "acceptance-criteria.md": 3,
+      "architecture-design.md": 4
+     }
+    },
+    "ADR-0065": {
+     "total": 8,
+     "live": {
+      "acceptance-criteria.md": 2,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0066": {
+     "total": 3,
+     "live": {
+      "acceptance-criteria.md": 1,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0068": {
+     "total": 6,
+     "live": {
+      "acceptance-criteria.md": 2,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0071": {
+     "total": 6,
+     "live": {
+      "acceptance-criteria.md": 2,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0007": {
+     "total": 17,
+     "live": {
+      "acceptance-criteria.md": 6,
+      "architecture-design.md": 6,
+      "success-measures.md": 4
+     }
+    },
+    "ADR-0015": {
+     "total": 23,
+     "live": {
+      "acceptance-criteria.md": 10,
+      "architecture-design.md": 8
+     }
+    },
+    "ADR-0036": {
+     "total": 15,
+     "live": {
+      "acceptance-criteria.md": 4,
+      "architecture-design.md": 4
+     }
+    },
+    "ADR-0037": {
+     "total": 16,
+     "live": {
+      "acceptance-criteria.md": 10,
+      "architecture-design.md": 4,
+      "success-measures.md": 1
+     }
+    },
+    "ADR-0041": {
+     "total": 13,
+     "live": {
+      "acceptance-criteria.md": 1,
+      "architecture-design.md": 3
+     }
+    },
+    "ADR-0043": {
+     "total": 18,
+     "live": {
+      "acceptance-criteria.md": 4,
+      "architecture-design.md": 2
+     }
+    },
+    "ADR-0045": {
+     "total": 6,
+     "live": {
+      "acceptance-criteria.md": 3,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0050": {
+     "total": 14,
+     "live": {
+      "acceptance-criteria.md": 6,
+      "architecture-design.md": 2
+     }
+    },
+    "ADR-0053": {
+     "total": 8,
+     "live": {
+      "acceptance-criteria.md": 3,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0054": {
+     "total": 5,
+     "live": {
+      "acceptance-criteria.md": 1,
+      "architecture-design.md": 1
+     }
+    },
+    "ADR-0060": {
+     "total": 13,
+     "live": {
+      "acceptance-criteria.md": 5,
+      "architecture-design.md": 2
+     }
+    },
+    "ADR-0063": {
+     "total": 14,
+     "live": {
+      "acceptance-criteria.md": 3,
+      "architecture-design.md": 5
+     }
+    },
+    "ADR-0067": {
+     "total": 31,
+     "live": {
+      "RUNBOOK.md": 2,
+      "acceptance-criteria.md": 6,
+      "architecture-design.md": 5,
+      "success-measures.md": 3
+     }
+    },
+    "ADR-0072": {
+     "total": 18,
+     "live": {
+      "acceptance-criteria.md": 9,
+      "architecture-design.md": 4
+     }
+    },
+    "ADR-0085": {
+     "total": 6,
+     "live": {
+      "acceptance-criteria.md": 1,
+      "architecture-design.md": 5
+     }
+    }
+   },
+   "phase1_prerequisite_among_them": [
+    "ADR-0067 — phase1-deps.json names 'ADR-0067 (recent_deploy null precedent)' as a prerequisite"
+   ],
+   "evidence": [
+    {
+     "file": "census/phase1-deps.json",
+     "line": 0,
+     "quote": "\"name\": \"ADR-0067 (recent_deploy null precedent)\", \"kind\": \"adr\", \"role\": \"prerequisite\"",
+     "tag": "measured"
+    },
+    {
+     "file": "census/adr-graph.json",
+     "line": 0,
+     "quote": "consumers is the declared traceability edge to downstream artifacts; README says it is [] on every record in this set",
+     "tag": "measured"
+    }
+   ],
+   "consequence": "Check C (design/AC text against accepted ADRs) ran against forbids blocks for these 30, not against their Decision clauses. ADR-0061 (facets.toml normative for toolchain/change) is cited 10 times in the AC register and 3 in the design; ADR-0072 (coherence edits bump version) 9 and 4; ADR-0064 (tool steps typed by verb, supersedes 0041) 3 and 4; ADR-0085 sets the corpus's own documentation conventions, which this audit enforces (id namespaces, immutability) without having read the record that states them. A Decision-section clause contradicted by an AC in those areas would not have been found.",
+   "how_to_close": "Read the 30 in full against the AC lines ids.json lists as their citation sites (about 128 KB of ADR text); order: 0067, 0061, 0064, 0072, 0085, 0007, 0015, 0037, 0036, 0043, then the DSL family. ADR-0041 is superseded and can be skipped once 0064 is read."
+  },
+  {
+   "id": "LIM-08",
+   "priority_for_confidence": "P2",
+   "limit": "Census artefacts no lens consumed: doc-map.json — zero finders name it [measured]; its 126 orphans (27 strict), 37 stale-risk files of which 12 are cited as current by a newer document, and its read_plan_problems were never adjudicated into findings. slices.json — one finder (L03). anchors.json — two (L08, G14). external.json — two internal finders (L09, L13) besides the grounding phase, which was built on it. reconcile.json's own gaps_carried_forward (anomaly pool rebuilt from structured records rather than the agents' prose lists; line-range agreement checked at heading granularity only; spike-id membership by regex; count-only comparison where an artefact carries only a count) were picked up by no finder [measured: no note names them].",
+   "evidence": [
+    {
+     "file": "census/doc-map.json",
+     "line": 0,
+     "quote": "\"orphans\": 126, \"strict_orphans\": 27, \"orphans_by_path_but_referenced_by_id\": 87, \"stale_risk_files\": 37, \"stale_risk_cited_as_current\": 12",
+     "tag": "measured"
+    },
+    {
+     "file": "census/reconcile.json",
+     "line": 0,
+     "quote": "The anomaly pool is a harvest of structured anomaly-equivalent records, not the agents' own anomaly lists (which live only in their prose returns).",
+     "tag": "measured"
+    }
+   ],
+   "consequence": "The currency signal — a 2026-09-02 FINDINGS.md cited as current by three newer documents, and eleven similar pairs — is computed and unreviewed. Orphan documents (27 strict) may be dead or may be authority the live set forgot to cite; nobody looked.",
+   "how_to_close": "One short lens over doc-map stale_risk (12 rows) and strict_orphans (27 paths): for each, is the citing document right to treat it as current, and is the orphan dead or load-bearing? Half a day."
+  },
+  {
+   "id": "LIM-09",
+   "priority_for_confidence": "P1 for journal.rs and Cargo.lock; P2 for packs and catalog",
+   "limit": "The external-claim census scoped itself to '*.md outside spikes/fixtures/** and spikes/runner/target*/**' [measured, external.json _meta.scope], so no non-markdown artefact carried a verified claim. spikes/runner/Cargo.lock (141 packages) was never named by any finder and was never audited against RUSTSEC/OSV; cargo-audit is absent on this box (L08, L13 measured). Of the five runner files RUNBOOK:2013 lifts into `rk-adapter-claude`, four were read (runner.rs, event.rs, step.rs, throttle.rs by L06/L13/G04/G07/G17) and journal.rs (315 lines) by no finder; gate.rs, human_gate.rs, corpus.rs, p1.rs and p7.rs (2,035 lines) are also unread. The 12 pack TOMLs and 102 catalog TOMLs that Step 7b lifts were counted by script (L03: 72 when-rows, 25 applicable_if) and two headers read (G18); registry.toml, questions.toml and artifacts.toml are named by no finder; lint.py was read by L04 for its on_false handling only.",
+   "evidence": [
+    {
+     "file": "RUNBOOK.md",
+     "line": 2013,
+     "quote": "`rk-adapter-claude` lifts `runner.rs`, `event.rs`, `step.rs`, `throttle.rs` and `journal.rs` from the spike",
+     "tag": "measured"
+    },
+    {
+     "file": "census/external.json",
+     "line": 0,
+     "quote": "\"scope\": \"*.md outside spikes/fixtures/** and spikes/runner/target*/**\"",
+     "tag": "measured"
+    }
+   ],
+   "consequence": "What Step 7b and 7c lift verbatim into product crates is un-reviewed code and configuration. The audit's statements about the packs rest on the design's description of them; a lint error the P9 lint would raise on today's packs, or an advisory against a lockfile dependency that survives the lift, is outside what this review can exclude.",
+   "how_to_close": "Install cargo-audit and run it on spikes/runner/Cargo.lock (minutes; it is also RUNBOOK Checkpoint 5's own instrument). Read journal.rs against AC section 11.1 and the section 7 event ACs. Run spikes/p9/lint.py over the 12 packs and the catalog and read its output rather than its code."
+  },
+  {
+   "id": "LIM-10",
+   "priority_for_confidence": "P3 (none load-bearing)",
+   "limit": "16 external claims ended UNVERIFIABLE after the second-opinion pass. Six are extractor misclassifications with nothing external to verify (EXT-STATEDAB-004, -060, -061, -062, -063, -064: the 'none found' pattern caught internal text in rfc-amendment:327, F31-DRAFT:164, METHOD-S:68, p1-arm-d-labels-ryan.md and p2-labels-ryan.md). Ten are genuine, listed below. None is load-bearing under the census rule (anchored in an accepted ADR, the AC register or a DECIDED design row); three change a citation.",
+   "genuine": [
+    {
+     "claim_id": "EXT-CLAUDECO-031",
+     "anchor": "references/2026-09-08-evidence-augmentation.md:291",
+     "why": "98%-reduction / 132k->2.3k /compact figure: search only, no primary post located; the corpus already refuses to cite it",
+     "impact": "none"
+    },
+    {
+     "claim_id": "EXT-CLAUDECO-042",
+     "anchor": "references/research/2026-09-07-competitive-workflows.md:147, :213",
+     "why": "'plugin marketplaces became stable April 2026' is attributed to https://code.claude.com/docs/en/plugin-marketplaces (fetched 2026-09-10), which does not carry the date",
+     "impact": "changes-a-citation"
+    },
+    {
+     "claim_id": "EXT-CLAUDECO-043",
+     "anchor": "spikes/HANDOFF.md:303",
+     "quote": "<https://claude.ai/code/artifact/dbe80d02-c642-4b53-98f0-257305c768e0>",
+     "why": "private claude.ai artifact link returns not-found/not-shared; HANDOFF says the same content is in references/2026-09-04-findings-for-product.md",
+     "impact": "changes-a-citation"
+    },
+    {
+     "claim_id": "EXT-COMPETIT-026",
+     "anchor": "references/2026-09-07-process-catalog-proposal.md:46; references/2026-09-08-evidence-augmentation.md:125, :377",
+     "why": "'Factory retired its Reliability Droid' is an absence inference; CLI v0.209.0 and the generic-primitives lineup are confirmed at https://docs.factory.ai/changelog/release-notes (2026-09-10) but no first-party retirement notice exists",
+     "impact": "none; mark 'retired' as [inferred]"
+    },
+    {
+     "claim_id": "EXT-COMPETIT-039",
+     "anchor": "references/2026-09-08-evidence-augmentation.md:175, :407",
+     "why": "cloudnuro.ai secondary: the corpus records no URL, so nothing could be fetched",
+     "impact": "none; corpus already labels it UNVERIFIED"
+    },
+    {
+     "claim_id": "EXT-COMPETIT-040",
+     "anchor": "references/2026-09-08-evidence-augmentation.md:175, :277",
+     "why": "603B tokens / 7.6M requests / $1.3M / 40-60% figures: the fetchable secondary (https://www.mintmcp.com/blog/llm-cost-optimization-agent-teams, 2026-09-10) lacks them; the other has no URL",
+     "impact": "none; the corpus's own do-not-quote instruction stands"
+    },
+    {
+     "claim_id": "EXT-COMPETIT-041",
+     "anchor": "references/2026-09-08-evidence-augmentation.md:276",
+     "why": "'deterministic skeleton, AI brain as 2026 consensus' is the corpus's own open question, not a sourced claim",
+     "impact": "none"
+    },
+    {
+     "claim_id": "EXT-COMPETIT-172",
+     "anchor": "references/research/2026-09-07-competitive-workflows.md:96",
+     "why": "Medium article on Kiro skills/powers returns 403; title matches via search index and kiro.dev/docs/skills and /docs/powers exist",
+     "impact": "none; body unread"
+    },
+    {
+     "claim_id": "EXT-PEERANDS-042",
+     "anchor": "references/2026-09-09-change-classification.md:497",
+     "why": "SelectLLM openreview.net URL behind a browser-verification wall on all hosts; existence and title confirmed via https://neurips.cc/virtual/2025/133203 (2026-09-10); the attributed mechanism not checked in full text",
+     "impact": "none; [preprint] tag apt"
+    },
+    {
+     "claim_id": "EXT-PROCESSL-154",
+     "anchor": "references/research/2026-09-07-competitive-workflows.md:124",
+     "why": "knightli.com post on obra/superpowers: search index confirms the URL existed, live fetch 404 twice; the attributed 'fossilised process' complaint cannot be confirmed",
+     "impact": "changes-a-citation"
+    }
+   ],
+   "misclassified_internal": [
+    "EXT-STATEDAB-004 (references/2026-09-02-rfc-amendment.md:327)",
+    "EXT-STATEDAB-060 (spikes/F31-DRAFT.md:164)",
+    "EXT-STATEDAB-061 (spikes/METHOD-S.md:68)",
+    "EXT-STATEDAB-062 (spikes/results/p1-arm-d-labels-ryan.md:207/326/377)",
+    "EXT-STATEDAB-063 (spikes/results/p1-arm-d-labels-ryan.md:283/483/890)",
+    "EXT-STATEDAB-064 (spikes/results/p2-labels-ryan.md:412)"
+   ],
+   "consequence": "The review can say the corpus does not depend on these ten; it cannot say they are true. The six misclassifications mean the stated_absences family's 64-row denominator is inflated by at least six, which the grounding tally does not correct.",
+   "how_to_close": "Re-cite or drop CLAUDECO-042 and PROCESSL-154; mark HANDOFF.md:303 as a convenience pointer or re-share the artifact; mark COMPETIT-026 'retired' as [inferred]; re-fetch openreview from an interactive browser. Correct the stated_absences extractor so the family count is honest."
+  },
+  {
+   "id": "LIM-11",
+   "priority_for_confidence": "P2 (method)",
+   "limit": "Refutation covered findings only. Each of the 357 candidates was challenged on truth and on materiality/novelty; none of the 'checked and found no defect' statements in the 34 coverage notes was challenged, and the 1,381 known-issues rows were used to classify novelty (NEW / SHARPENS-KNOWN / ALREADY-RECORDED) without any row being re-verified against the corpus [measured: verdict files carry anchor_check, per-finding verdicts and a coverage_note; no clearance verdicts].",
+   "evidence": [
+    {
+     "file": "findings/verdict-slice-G01.json",
+     "line": 0,
+     "quote": "All 37 anchors across the nine findings verified verbatim at file:line by script [measured]; none misquoted or mis-anchored.",
+     "tag": "measured"
+    }
+   ],
+   "consequence": "Precision of the 338 survivors is defended; recall is not. A finder that missed a defect and wrote 'no defect' left no trace a refuter would test. The novelty split (174 NEW / 161 SHARPENS-KNOWN / 3 ALREADY-RECORDED) is only as good as the known-issues harvest, which is regex over the corpus's own self-audit prose.",
+   "how_to_close": "Not fully closable. A cheap partial: a second, independent finder on the two highest-stakes sections (LIM-01, LIM-02) whose findings are compared against the first pass's clearances; agreement gives a recall estimate for the rest."
+  },
+  {
+   "id": "LIM-12",
+   "priority_for_confidence": "P3 (recorded by the census; restated so the deliverable does not overclaim)",
+   "limit": "Five of the 39 design areas have no AC section by the census's own mapping (areas_with_no_ac_section = 5): 'Design final' as a whole (A07), architecture shape (A15), Phase-1 scope (A39), the Rust workspace (A38) and the quality shorthand (A06); several more map to an empty AC list with an ABSENCE note (A28 structured output; A08 gix common-dir: 'gix occurs 0 times in the AC register body'). Groups G05 and G21 therefore had no AC span and sampled 16 and 17 criteria from elsewhere [measured, slices.json mapping_note and groups.distinct_spans].",
+   "evidence": [
+    {
+     "file": "census/slices.json",
+     "line": 0,
+     "quote": "\"areas_with_no_ac_section\": 5",
+     "tag": "measured"
+    }
+   ],
+   "consequence": "For those areas the audit's checks B (AC decidability) and E (instrument coverage) were vacuous by construction; the finders' 'E: self-recorded absence' rows say so. The deliverable should not report these areas as AC-clean.",
+   "how_to_close": "None needed for the audit; the corpus records the absences (AC 6519, design 1661 per G21). The remediation belongs to the corpus, not the review."
+  },
+  {
+   "id": "LIM-13",
+   "priority_for_confidence": "P3",
+   "limit": "Snapshot boundary. Every finder measured HEAD 009a4ec with 0 modified and 17 untracked paths (L08). The untracked arm-L logs (spikes/p1-arm-l*.log), P7 and P8 logs, spikes/results/p8-state/ and the two runner target directories were not audited beyond L08-03's arm-L custody finding. Anything committed after 2026-09-10 23:05 (census) or 2026-09-11 06:16 (last synthesis write) is outside this review.",
+   "evidence": [
+    {
+     "file": "findings/L08-sequencing.json",
+     "line": 0,
+     "quote": "Measured: HEAD 009a4ec, 0 ' M', 17 '??'",
+     "tag": "measured",
+     "note": "coverage note"
+    }
+   ],
+   "consequence": "The review describes a tree that will not be the tree Step 5 starts from once the untracked files are committed or discarded.",
+   "how_to_close": "Re-run the census scripts (all nine reproduce; doc-map takes 153 s) after the commit that closes Step 3c, and diff the counts."
+  }
+ ],
+ "thin_areas_summary": [
+  {
+   "area": "AC section 12 CLI surface and doctor (no owning slice)",
+   "named": "13/40 AC, 4/10 SM",
+   "full_read_claim": "none",
+   "see": "LIM-01"
+  },
+  {
+   "area": "AC section 3 selection engine (G01/G02)",
+   "named": "19/40",
+   "full_read_claim": "none",
+   "see": "LIM-02"
+  },
+  {
+   "area": "AC section 8 human gate (G08)",
+   "named": "19/39",
+   "full_read_claim": "G08",
+   "see": "LIM-03"
+  },
+  {
+   "area": "AC section 7 harness (G04/G07)",
+   "named": "22/39",
+   "full_read_claim": "G04",
+   "see": "LIM-03"
+  },
+  {
+   "area": "AC section 4 packs and catalog (G18)",
+   "named": "22/39",
+   "full_read_claim": "G18",
+   "see": "LIM-03"
+  },
+  {
+   "area": "AC section 13 migrate (G20/G03)",
+   "named": "27/40",
+   "full_read_claim": "G20",
+   "see": "LIM-03"
+  },
+  {
+   "area": "AC section 11 event log (G17/G07)",
+   "named": "33/40 (11.1/11.2 partial: AC-361/363/364/365/370/397/398 untouched)",
+   "full_read_claim": "G17 for 11.3-11.4 only",
+   "see": "LIM-03"
+  },
+  {
+   "area": "design 8.1-8.6 CLI/doctor/projections",
+   "named": "3 line reads (L13)",
+   "full_read_claim": "none",
+   "see": "LIM-01"
+  },
+  {
+   "area": "sections 2, 5, 6, 9, 10, 14",
+   "named": "39/39, 40/40, 40/40, 39/39, 40/40, 39/39",
+   "full_read_claim": "G11, G19+G03, G13, G15, G16, G10+G12",
+   "see": "adequate on the self-report"
+  }
+ ],
+ "uncovered_areas": [
+  "AC section 12 (CLI surface and `doctor`, AC-400..AC-439, SM-121..SM-130) and design section 8.1-8.6: no owning slice; 27 of 40 criteria and 6 of 10 measures never named",
+  "AC section 3.1-3.6 (selection engine steps 1, 3-7: purity/replay, rank/ties, rigor/stage scope, unsat gate, typed deviation): 21 of 40 criteria never named",
+  "30 ADRs without a body read (15 never named: 0026, 0035, 0039, 0042, 0047, 0051, 0052, 0055, 0061, 0062, 0064, 0065, 0066, 0068, 0071; 15 named only in forbids lists: 0007, 0015, 0036, 0037, 0041, 0043, 0045, 0050, 0053, 0054, 0060, 0063, 0067, 0072, 0085)",
+  "references/research/ (11 of 12 briefs), the 2026-09-05 proposal, DECISIONS-2026-09-09.md, HANDOFF.md, change-classification and evidence-augmentation: reached by citation only, never read whole",
+  "spikes/prompts/p1-classify*.md, run-s-typed/var/h1c.md; spikes/METHOD-P9.md; spikes/remediation/*; spikes/PRIOR-ART.md; label sheets other than p1-arm-d-labels-ryan.md and p2-labels-ryan.md (the latter via script only); 17 of 20 p1-evidence dossiers",
+  "spikes/runner/Cargo.lock (no advisory scan), journal.rs (lifted at Step 7c, unread), gate.rs, human_gate.rs, corpus.rs, p1.rs, p7.rs; the 12 pack and 102 catalog TOMLs (counted, not read); registry.toml, questions.toml, artifacts.toml",
+  "doc-map.json stale_risk (12 cited-as-current) and strict_orphans (27): computed by the census, adjudicated by nobody",
+  "Every 'checked: no defect' clearance in the 34 coverage notes, and the L07 lens's entire negative space (no coverage note)",
+  "Untracked working-tree files at HEAD 009a4ec (arm-L, P7, P8 logs; p8-state; runner target dirs) beyond L08-03"
+ ],
+ "note_on_house_rules": "These are limits of the review, not concerns about the corpus; they carry no PIA- id and no NEW/SHARPENS-KNOWN tag. Where a limit touches an area the corpus already records as absent (LIM-12), the corpus record is cited so the deliverable does not present it as a discovery."
+}

@@ -1,0 +1,259 @@
+<title>Redkiln-RS Pre-implementation Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F3F5F7; --surface: #FFFFFF; --surface-2: #E9EDF1; --ink: #1B1F24; --ink-2: #4A5561; --ink-3: #7A8592;
+    --rule: #D5DBE2; --rule-2: #C2CAD3; --accent: #A63D2F; --accent-ink: #FFFFFF; --accent-soft: #F4E3DF;
+    --p0: #8E1B1B; --p1: #B45309; --p2: #2F5D8A; --p3: #5B6470;
+    --p0-soft: #F6DCDC; --p1-soft: #FBE9D3; --p2-soft: #DCE8F4; --p3-soft: #E4E7EB;
+    --quote: #F7F8FA; --code: #EEF1F4; --focus: #2F5D8A;
+    --display: 'Newsreader', Georgia, 'Times New Roman', serif;
+    --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14181D; --surface: #1C2128; --surface-2: #232A33; --ink: #E6EAEF; --ink-2: #B4BDC7; --ink-3: #8390A0;
+      --rule: #2C343E; --rule-2: #3A4450; --accent: #D9695A; --accent-ink: #14181D; --accent-soft: #3A2622;
+      --p0: #F08A8A; --p1: #F3B15E; --p2: #8CB8E8; --p3: #A8B1BC;
+      --p0-soft: #3B1F1F; --p1-soft: #3B2D18; --p2-soft: #1E2F42; --p3-soft: #262C34;
+      --quote: #181D23; --code: #262D36; --focus: #8CB8E8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14181D; --surface: #1C2128; --surface-2: #232A33; --ink: #E6EAEF; --ink-2: #B4BDC7; --ink-3: #8390A0;
+    --rule: #2C343E; --rule-2: #3A4450; --accent: #D9695A; --accent-ink: #14181D; --accent-soft: #3A2622;
+    --p0: #F08A8A; --p1: #F3B15E; --p2: #8CB8E8; --p3: #A8B1BC;
+    --p0-soft: #3B1F1F; --p1-soft: #3B2D18; --p2-soft: #1E2F42; --p3-soft: #262C34;
+    --quote: #181D23; --code: #262D36; --focus: #8CB8E8;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; padding-inline: 16px; padding-block: 0 48px; }
+  a { color: var(--p2); }
+  code, .mono { font-family: var(--mono); font-size: 0.86em; }
+  code { background: var(--code); padding: 0.05em 0.3em; border-radius: 3px; }
+  pre { background: var(--code); padding: 12px; overflow-x: auto; border-radius: 4px; }
+  pre code { background: none; padding: 0; }
+  h1, h2, h3, h4 { font-family: var(--display); font-weight: 500; line-height: 1.2; text-wrap: balance; margin: 0; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  /* masthead */
+  .mast { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 32px; padding-block: 28px 18px; border-bottom: 2px solid var(--ink); }
+  .mast h1 { font-size: clamp(28px, 4vw, 42px); }
+  .mast .sub { color: var(--ink-2); margin-top: 6px; font-size: 15px; }
+  .mast .sub b { color: var(--ink); font-weight: 600; }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px 22px; font-variant-numeric: tabular-nums; }
+  .stat { display: grid; gap: 0; }
+  .stat .n { font-family: var(--display); font-size: 26px; line-height: 1.05; }
+  .stat .l { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
+
+  /* tabs */
+  .tabs { display: flex; flex-wrap: wrap; gap: 0 4px; border-bottom: 1px solid var(--rule); margin-bottom: 22px; position: sticky; top: 0; background: var(--paper); z-index: 5; padding-top: 6px; }
+  .tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 12px; font: inherit; font-weight: 500; color: var(--ink-2); cursor: pointer; }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .tab:focus-visible, .chip:focus-visible, .entry summary:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* concerns layout */
+  .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .rail { position: static; } }
+  .rail { position: sticky; top: 52px; display: grid; gap: 18px; }
+  .rail h3 { font-family: var(--body); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 600; margin-bottom: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { appearance: none; border: 1px solid var(--rule-2); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 13.5px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .chip .c { font-variant-numeric: tabular-nums; color: var(--ink-3); }
+  .chip[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: var(--surface-2); }
+  .chip[data-p="P0"][aria-pressed="true"] { background: var(--p0-soft); border-color: var(--p0); color: var(--p0); }
+  .chip[data-p="P1"][aria-pressed="true"] { background: var(--p1-soft); border-color: var(--p1); color: var(--p1); }
+  .chip[data-p="P2"][aria-pressed="true"] { background: var(--p2-soft); border-color: var(--p2); color: var(--p2); }
+  .chip[data-p="P3"][aria-pressed="true"] { background: var(--p3-soft); border-color: var(--p3); color: var(--p3); }
+  .search { width: 100%; padding: 8px 10px; border: 1px solid var(--rule-2); border-radius: 4px; background: var(--surface); color: var(--ink); font: inherit; }
+  .rail .small { font-size: 13px; color: var(--ink-3); }
+  .rail button.link { appearance: none; background: none; border: 0; padding: 0; color: var(--p2); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }
+
+  .listhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; color: var(--ink-2); font-size: 14px; }
+  .listhead b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .entries { display: grid; gap: 10px; }
+  .entry { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--p3); border-radius: 3px; }
+  .entry[data-p="P0"] { border-left-color: var(--p0); } .entry[data-p="P1"] { border-left-color: var(--p1); } .entry[data-p="P2"] { border-left-color: var(--p2); }
+  .entry summary { list-style: none; cursor: pointer; padding: 12px 16px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; }
+  .entry summary::-webkit-details-marker { display: none; }
+  .entry .id { font-family: var(--mono); font-size: 13px; color: var(--ink-2); }
+  .entry .t { font-family: var(--display); font-size: 18px; line-height: 1.3; font-weight: 500; }
+  .entry .meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--ink-3); }
+  .pill { display: inline-block; padding: 0 7px; border-radius: 3px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; line-height: 18px; }
+  .pill.P0 { background: var(--p0-soft); color: var(--p0); } .pill.P1 { background: var(--p1-soft); color: var(--p1); } .pill.P2 { background: var(--p2-soft); color: var(--p2); } .pill.P3 { background: var(--p3-soft); color: var(--p3); }
+  .pill.NEW { border: 1px solid var(--accent); color: var(--accent); background: transparent; }
+  .pill.SK { border: 1px solid var(--rule-2); color: var(--ink-2); background: transparent; }
+  .entry .body { padding: 4px 18px 16px 18px; border-top: 1px solid var(--rule); max-width: 78ch; }
+  .entry .body h3, .entry .body h4 { display: none; }
+  .body p { margin: 10px 0; } .body ul { padding-left: 18px; margin: 8px 0; } .body li { margin: 4px 0; }
+  .body li code:first-child { background: var(--quote); }
+  .body strong { font-weight: 600; }
+  .body blockquote { margin: 8px 0; padding: 6px 12px; border-left: 2px solid var(--rule-2); color: var(--ink-2); }
+  .empty { padding: 32px; text-align: center; color: var(--ink-3); border: 1px dashed var(--rule-2); border-radius: 4px; }
+
+  /* reading pages */
+  .read { max-width: 82ch; }
+  .read h1 { font-size: 30px; margin: 8px 0 12px; }
+  .read h2 { font-size: 24px; margin: 34px 0 10px; padding-top: 14px; border-top: 1px solid var(--rule); }
+  .read h3 { font-size: 19px; margin: 24px 0 8px; }
+  .read h4 { font-size: 16.5px; margin: 18px 0 6px; font-family: var(--body); font-weight: 600; }
+  .read p { margin: 10px 0; } .read li { margin: 4px 0; }
+  .read table { border-collapse: collapse; font-size: 14px; margin: 12px 0; font-variant-numeric: tabular-nums; }
+  .read th, .read td { border: 1px solid var(--rule); padding: 5px 9px; vertical-align: top; text-align: left; }
+  .read th { background: var(--surface-2); font-weight: 600; }
+  .tablewrap { overflow-x: auto; }
+  .read blockquote { margin: 10px 0; padding: 6px 14px; border-left: 3px solid var(--accent); background: var(--quote); }
+  .note { font-size: 13.5px; color: var(--ink-3); margin-top: 26px; border-top: 1px solid var(--rule); padding-top: 10px; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: no-preference) { .entry[open] .body { animation: fade .18s ease-out; } }
+  @keyframes fade { from { opacity: .4 } to { opacity: 1 } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>Redkiln-RS Pre-implementation Audit</h1>
+      <div class="sub">Planning corpus at HEAD <b class="mono" id="head"></b> · external fetches 2026-09-10 · synthesis 2026-09-11 · 110 concerns, every anchor machine-verified · the record is <code>references/2026-09-10-pre-implementation-audit.md</code></div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" aria-selected="true" data-view="concerns" id="tab-concerns">Concerns</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="front" id="tab-front">Verdict</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="grounding" id="tab-grounding">External grounding</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="sota" id="tab-sota">State of the art</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="limits" id="tab-limits">Limits &amp; method</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="sources" id="tab-sources">Sources</button>
+  </nav>
+
+  <section id="view-concerns" class="layout">
+    <aside class="rail">
+      <div><h3>Priority</h3><div class="chips" id="f-priority"></div></div>
+      <div><h3>Classification</h3><div class="chips" id="f-class"></div></div>
+      <div><h3>Category</h3><div class="chips" id="f-group"></div></div>
+      <div><h3>Where it bites</h3><div class="chips" id="f-stage"></div></div>
+      <div><h3>Search</h3><input class="search" id="q" type="search" placeholder="id, AC-, ADR-, file, term…" aria-label="Search concerns"></div>
+      <div class="small"><button class="link" id="expand">Expand all shown</button> · <button class="link" id="collapse">Collapse all</button> · <button class="link" id="reset">Reset filters</button></div>
+      <div class="small">P1 entries open by default. NEW = the corpus does not record it; SHARPENS-KNOWN = it records the area, not this defect.</div>
+    </aside>
+    <div>
+      <div class="listhead"><span>Showing <b id="shown"></b> of <b id="total"></b> concerns, in priority order</span><span id="filterdesc"></span></div>
+      <div class="entries" id="entries"></div>
+    </div>
+  </section>
+
+  <section id="view-front" class="read" hidden></section>
+  <section id="view-grounding" class="read" hidden></section>
+  <section id="view-sota" class="read" hidden></section>
+  <section id="view-limits" class="read" hidden></section>
+  <section id="view-sources" class="read" hidden></section>
+
+  <p class="note">Generated by a four-workflow audit (census · internal audit with adversarial refutation · live external grounding with second opinion · synthesis), ~151 agents, Claude Opus 5. Priorities: P0 blocks pen-to-paper; P1 blocks a Phase-1 workstream; P2 correctness of the record; P3 hygiene. Nothing here edits the corpus; every remediation is a proposal with a named owner.</p>
+</div>
+
+<script type="application/json" id="data">/*__DATA__*/</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('data').textContent);
+  var $ = function (s) { return document.querySelector(s); };
+  document.getElementById('head').textContent = D.head;
+
+  function md(s) { try { return marked.parse(s, { mangle: false, headerIds: false }); } catch (e) { return '<pre>' + s.replace(/</g, '&lt;') + '</pre>'; } }
+  function wrapTables(el) { el.querySelectorAll('table').forEach(function (t) { var w = document.createElement('div'); w.className = 'tablewrap'; t.parentNode.insertBefore(w, t); w.appendChild(t); }); }
+
+  // stats
+  var c = D.counts, bp = D.by_priority;
+  var stats = [[bp.P1 || 0, 'P1'], [bp.P2 || 0, 'P2'], [bp.P3 || 0, 'P3'], [D.by_classification.NEW || 0, 'new'], [c.confirmed + '/' + c.claims, 'claims confirmed live'], [c.anchors, 'anchors verified']];
+  $('#stats').innerHTML = stats.map(function (s) { return '<div class="stat"><div class="n">' + s[0] + '</div><div class="l">' + s[1] + '</div></div>'; }).join('');
+
+  // reading views
+  var views = { front: D.sections.front, grounding: D.sections.grounding, sota: D.sections.sota, limits: D.sections.limits + '\n\n' + D.sections.method, sources: D.sections.sources };
+  Object.keys(views).forEach(function (k) { var el = $('#view-' + k); el.innerHTML = md(views[k]); wrapTables(el); });
+
+  // tabs
+  var tabs = document.querySelectorAll('.tab');
+  function show(view) {
+    tabs.forEach(function (t) { t.setAttribute('aria-selected', String(t.dataset.view === view)); });
+    ['concerns', 'front', 'grounding', 'sota', 'limits', 'sources'].forEach(function (v) { $('#view-' + v).hidden = v !== view; });
+    try { localStorage.setItem('pia-view', view); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.dataset.view); }); });
+
+  // filters
+  var all = D.concerns;
+  var state = { priority: new Set(), cls: new Set(), group: new Set(), stage: new Set(), q: '' };
+  function counts(key) { var m = {}; all.forEach(function (x) { var v = x[key] || '—'; m[v] = (m[v] || 0) + 1; }); return m; }
+  function chips(container, key, setName, order) {
+    var m = counts(key), keys = order || Object.keys(m).sort();
+    container.innerHTML = keys.filter(function (k) { return m[k]; }).map(function (k) {
+      return '<button class="chip" data-p="' + k + '" aria-pressed="false" data-key="' + setName + '" data-val="' + k.replace(/"/g, '&quot;') + '">' + k + ' <span class="c">' + m[k] + '</span></button>';
+    }).join('');
+    container.querySelectorAll('.chip').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var s = state[b.dataset.key], v = b.dataset.val;
+        if (s.has(v)) s.delete(v); else s.add(v);
+        b.setAttribute('aria-pressed', String(s.has(v)));
+        render();
+      });
+    });
+  }
+  chips($('#f-priority'), 'priority', 'priority', ['P0', 'P1', 'P2', 'P3']);
+  chips($('#f-class'), 'classification', 'cls', ['NEW', 'SHARPENS-KNOWN']);
+  chips($('#f-group'), 'group', 'group');
+  chips($('#f-stage'), 'build_stage', 'stage');
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function entry(x, open) {
+    return '<details class="entry" data-p="' + x.priority + '" id="' + x.id + '"' + (open ? ' open' : '') + '>' +
+      '<summary><span class="id">' + x.id + '</span><span class="t">' + esc(x.title) + '</span>' +
+      '<span class="meta"><span class="pill ' + x.priority + '">' + x.priority + '</span>' +
+      '<span class="pill ' + (x.classification === 'NEW' ? 'NEW' : 'SK') + '">' + x.classification + '</span>' +
+      '<span>' + esc(x.group) + '</span><span>bites at ' + esc(x.build_stage || '—') + '</span>' +
+      '<span>' + x.n_anchors + ' anchor' + (x.n_anchors === 1 ? '' : 's') + '</span>' +
+      (x.n_sources ? '<span>' + x.n_sources + ' live source' + (x.n_sources === 1 ? '' : 's') + '</span>' : '') +
+      '<span>folds ' + x.n_folds + '</span><span>owner: ' + esc(x.owner) + '</span></span></summary>' +
+      '<div class="body" data-md="' + x.id + '"></div></details>';
+  }
+  var rendered = {};
+  function render() {
+    var q = state.q.trim().toLowerCase();
+    var shown = all.filter(function (x) {
+      if (state.priority.size && !state.priority.has(x.priority)) return false;
+      if (state.cls.size && !state.cls.has(x.classification)) return false;
+      if (state.group.size && !state.group.has(x.group)) return false;
+      if (state.stage.size && !state.stage.has(x.build_stage || '—')) return false;
+      if (q && (x.id + ' ' + x.title + ' ' + x.md + ' ' + x.owner + ' ' + x.category).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+    $('#shown').textContent = shown.length; $('#total').textContent = all.length;
+    var desc = [];
+    if (state.priority.size) desc.push(Array.from(state.priority).join('/'));
+    if (state.cls.size) desc.push(Array.from(state.cls).join('/'));
+    if (state.group.size) desc.push(Array.from(state.group).join(', '));
+    if (state.stage.size) desc.push('at ' + Array.from(state.stage).join(', '));
+    if (q) desc.push('“' + state.q + '”');
+    $('#filterdesc').textContent = desc.length ? 'filtered: ' + desc.join(' · ') : '';
+    var el = $('#entries');
+    el.innerHTML = shown.length ? shown.map(function (x) { return entry(x, x.priority === 'P0' || x.priority === 'P1' || !!q); }).join('') : '<div class="empty">No concern matches. Reset the filters.</div>';
+    el.querySelectorAll('details').forEach(function (d) {
+      var fill = function () { var b = d.querySelector('.body'); if (!b.dataset.done) { var x = all.find(function (y) { return y.id === b.dataset.md; }); b.innerHTML = md(x.md); b.dataset.done = '1'; } };
+      if (d.open) fill();
+      d.addEventListener('toggle', function () { if (d.open) fill(); });
+    });
+  }
+  $('#q').addEventListener('input', function (e) { state.q = e.target.value; render(); });
+  $('#expand').addEventListener('click', function () { document.querySelectorAll('#entries details').forEach(function (d) { d.open = true; }); });
+  $('#collapse').addEventListener('click', function () { document.querySelectorAll('#entries details').forEach(function (d) { d.open = false; }); });
+  $('#reset').addEventListener('click', function () { ['priority', 'cls', 'group', 'stage'].forEach(function (k) { state[k].clear(); }); state.q = ''; $('#q').value = ''; document.querySelectorAll('.chip').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); }); render(); });
+  render();
+
+  // deep link #PIA-NNN
+  if (location.hash && /^#PIA-\d{3}$/.test(location.hash)) { show('concerns'); var d = document.getElementById(location.hash.slice(1)); if (d) { d.open = true; d.scrollIntoView(); } }
+  else { var v = null; try { v = localStorage.getItem('pia-view'); } catch (e) {} if (v && $('#view-' + v)) show(v); }
+})();
+</script>
