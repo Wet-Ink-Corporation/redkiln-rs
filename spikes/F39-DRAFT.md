@@ -184,6 +184,5 @@ page is not in the repository**, and its answers were **recovered from browser m
 `db.doc()` failure on a path segment (`spikes/plans/HANDOFF-2026-09-09-design-session.md` :79-82), so the
 reveal-after-answer logic is not inspectable from this tree. The adjudication is therefore **attested-blind**
 under METHOD-P amendment 8's own minimum, and the `blind_attestation:` line that carries it (who attests, what was
-not opened, when) — `spikes/results/p1-arm-d-labels-ryan.md` :27 — is Ryan's to write and is still `FILL-ME`.
-Until it is written, §5's "Ryan, blind" is a claim by the session that built the page, not a record. Whether the
+not opened, when) — `spikes/results/p1-arm-d-labels-ryan.md` :27 — is Ryan's to write. **Written 2026-09-11** (later the same day): Ryan attests that before each of the 32 answers he had not opened `p1-arm-d.jsonl`, the panel-accepted or contested files, and that the page revealed positions only after each answer. §5's "Ryan, blind" therefore reads **attested-blind** under amendment 8 — never timestamp-verified, and a reader may discount it accordingly (METHOD-P §0 rule 1). Whether the
 Artifact page still exists and can be exported into `spikes/p1/` is a handoff, not done here.

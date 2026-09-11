@@ -161,5 +161,4 @@ adjudication: 3 items (a) rejected / (b) approved against 1 the other way** (F23
 recorded 4/23 vs 2/23 settles to 1/23 vs 0/23 — one discordant pair, still nothing a test can separate.
 
 This is a decision record; the correction is dated and the original line is left in place with a marker.
-**countersign: PENDING (Ryan)** — written by Claude on 2026-09-11; the operator countersigns by replacing this
-line with `countersign: Ryan Britton, <date>`.
+**countersign: Ryan Britton, 2026-09-11** — the correction was written by Claude on 2026-09-11 and countersigned the same day (via AskUserQuestion; recorded at Ryan's direction).

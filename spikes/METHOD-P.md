@@ -119,7 +119,7 @@ Two rules specific to P:
    attestation. The `blind_attestation:` line in `spikes/results/p1-arm-d-labels-ryan.md` (:27) is where it goes —
    who attests, what was not opened (`spikes/results/p1-arm-d.jsonl`, the panel files, and the page's reveal
    before each answer), and when — and it is **Ryan's to write**; it is `FILL-ME` as of this amendment. Until it is
-   written, F39 §5's "Ryan, blind" is reported as **attested-blind, attestation pending**, never as verified.
+   written, F39 §5's "Ryan, blind" is reported as **attested-blind, attestation pending**, never as verified. *[Written 2026-09-11 — see the line; F39 §5 now reads attested-blind.]*
 
    **When it was made:** after F39 was reported (2026-09-09) and after the audit read it (2026-09-10). It changes
    no kill criterion and no figure.
@@ -260,6 +260,8 @@ Unsatisfiable `(stage, ctx)` pairs, by artifact kind and by which predicate fail
 
 ### 3.4 Kill / decision criteria
 - **> 5 % unsatisfiable pairs** → catalog gaps are filled before any dispatch; the pack is not tagged.
+
+*Amendment 17 (2026-09-11, Ryan):* the threshold is unchanged; this note fixes **which lattice reading it binds**. §3.2 enumerates rigor as three item-override modes plus the pack-default mode; run9 reads `optional` 21.3%, `recommended` 1.1%, `mandatory` 0.3%, `pack-default` 0.3% (`results-p6-run9.txt` :53-56). The override modes ask every non-forbidden stage to run at that rigor, which forces `min_rigor = recommended` producers to run at `optional` — not a reading any real item produces (F35 Limits 3). **The > 5 % kill binds the pack-default line over the enabled pack set; the three override lines stay enumerated and reported beside it, never thresholded** — the reading F35 §1 already used as its headline and AC-101/SM-026 were pinned to on 2026-09-11 (DECISIONS-2026-09-11 #20; audit PIA-046). The summed four-mode figure (5.7 %) is a different quantity and is not a kill reading. **When it was made:** after run9's data; the registered owner's keep/strike call, taken as *keep, scoped* — it changes what the threshold is read against, not the threshold.
 - Any unsatisfiable pair in the **mixed Node+UE** slice → PC7's per-item toolchain facts are wrong in shape (not just the catalog) — reopen PC7.
 - Dead activities > 20 % of the catalog → PC5's "curated ~95" was too many; the dead ones move to `extended`.
 

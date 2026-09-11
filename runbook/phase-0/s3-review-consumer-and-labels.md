@@ -330,9 +330,9 @@ disposition below: S-BIN's gate is scoped by ADR-0093 to the `ChangeSummary` typ
 Phase-1 entry. The S-BIN half of (c) remains a genuine shortfall for `ChangeSummary`, and it has a live route that is
 *not* the re-scope. **(d) also carries a caveat the table states rather than glosses: design §10.2's wording is "the *blind*
 panels are filled", and neither half is blind on those terms** — arm D is **panel-adjudicated, not human-panel** (amendment 9), and amendment 8's
-attested-blind route was **registered but never invoked** — `blind_attestation:` in
-`spikes/results/p1-arm-d-labels-ryan.md` stands `FILL-ME` and `score-arm-d-panel.py` carries no
-`--attested-blind` flag — so the label may not be applied to these figures either; the E3 sheet is not
+attested-blind route was **registered but never invoked by a scorer** — `score-arm-d-panel.py` carries no
+`--attested-blind` flag; the `blind_attestation:` line in `spikes/results/p1-arm-d-labels-ryan.md` was written by Ryan on
+2026-09-11 (later than this table's first revision), so the 32 human-adjudicated cells are **attested-blind** and the 60 oracle + 48 panel cells are not human-labelled at all — the label applies to the 32, not to arm D's figures as a whole; the E3 sheet is not
 blind at all and κ is forfeited. Re-verified
 2026-09-09:
 

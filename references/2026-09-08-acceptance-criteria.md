@@ -1430,8 +1430,8 @@ a deterministic oracle over git metadata, 39 unanimous panel, 9 unanimous panel 
 moot, and **32 human adjudication** — Ryan, the panel's and the script's positions revealed only after he answered,
 verdicts 8 true / 24 false / 0 unknown, **15 of 32 differing from the script**; the adjudication surface was a claude.ai
 Artifact page that is not in the repository, and the `blind_attestation:` line at
-`spikes/results/p1-arm-d-labels-ryan.md:27` is unfilled, so "blind" is Ryan's to attest (decision #13 of 2026-09-11;
-PIA-096) — until then the label here is *revealed-after-answer*, not *attested-blind*); **F36** for the block this gate
+`spikes/results/p1-arm-d-labels-ryan.md:27` was written by Ryan on 2026-09-11 (decision #13 of 2026-09-11;
+PIA-096), so the 32 cells are *attested-blind* under METHOD-P amendment 8 — never timestamp-verified); **F36** for the block this gate
 sits inside · decisions: ADR-0030, ADR-0089, ADR-0093
 GIVEN the arm-D classifications over the corpus
 WHEN a blind human panel labels each item

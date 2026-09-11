@@ -6,7 +6,12 @@ This file is the corpus's own label shape (id · agree / disagree / unsure · no
 are in — report the disagreement count beside the deliverable in `runbook/PROGRESS.md` §5.
 
 labeller: Ryan Britton
-labelled_at: FILL-ME   # UTC, `date -u +%Y-%m-%dT%H:%M:%SZ`, stamped by command
+
+**Split 2026-09-11 (Ryan, via AskUserQuestion):** the 17 P1 rows are labelled first — they are the calls that shaped ADR-0093…0101, so a disagreement matters before Step 4.4 writes ADR-0090; the seeded 30 P2 rows follow later, before Step 5, under their own timestamp. Same seed, same rows, no re-prioritisation after labelling.
+
+## Part 1 — the 17 P1 concerns (label now)
+
+labelled_at_p1: FILL-ME   # UTC, stamped by command
 
 | id | priority | title (abridged) | label (agree / disagree / unsure) | note |
 | --- | --- | --- | --- | --- |
@@ -27,6 +32,13 @@ labelled_at: FILL-ME   # UTC, `date -u +%Y-%m-%dT%H:%M:%SZ`, stamped by command
 | PIA-015 | P1 | AC-212/236/036 require the card to carry model+effort | FILL-ME | |
 | PIA-016 | P1 | Tool set unequal to card allowlist is NotAdopted in AC-204 but NotIsolated in AC-202/AC-386/design 7.4 | FILL-ME | |
 | PIA-017 | P1 | AC-372/376/377 state tick rules in decimal fractions: a naive f64 implementation passes every named vector yet | FILL-ME | |
+
+## Part 2 — the seeded 30 P2 concerns (label before Step 5)
+
+labelled_at_p2: FILL-ME   # UTC, stamped by command
+
+| id | priority | title (abridged) | label (agree / disagree / unsure) | note |
+| --- | --- | --- | --- | --- |
 | PIA-019 | P2 | The corpus's account of its own tree and instrument is stale: RUNBOOK 0.1/1.3 describe HEAD ce04058 and hard-c | FILL-ME | |
 | PIA-021 | P2 | Step 2's pin script leaves the arm-L blind labels in one unpushed copy, stamps a literal PINNED_AT and re-admi | FILL-ME | |
 | PIA-029 | P2 | Register self-description fails verification: seven ADR clauses have no criterion, cargo-deny is unprovisioned | FILL-ME | |
