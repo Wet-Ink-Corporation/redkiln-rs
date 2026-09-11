@@ -85,8 +85,9 @@ representable. The ones that bite hardest:
   schema-budget precondition ADR-0095 states (one output schema per dispatch, no strict user-defined tools).
 
 Cache and TTL: set **both** `CLAUDE_CODE_PROMPT_CACHE_TTL=1h` **and** `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL=1h` in
-the child's environment, and **report no run as 1 h without per-run `ephemeral_*` field evidence** (S-TTL1 is
-unrun; the fields are documented and present in the recorded runs, so the evidence is available per run). The cache
+the child's environment, and **read the TTL per run from `usage.cache_creation`** (ADR-0113: `ephemeral_1h > 0` and
+`ephemeral_5m = 0` is verified 1 h; both zero with creation > 0 is `TTL-unverified`; all zero is `no-write`). The `-p`
+bucket ran at 1 h on every recorded creation (621/621); the subagent bucket is unobserved until S-TTL1. The cache
 is scoped **per machine and per directory** (two worktrees of one repository build different prefixes), not
 account-wide — "shared-prefix subsidy" is the honest name (PIA-103). Constructing the *child's* environment explicitly is required and is
 the opposite of the workspace's own `set_var` ban — `std::env::set_var` / `remove_var` are forbidden **anywhere in
@@ -121,7 +122,7 @@ grep -rnE 'impl Default for (Usage|CacheCreation|Margins)' crates/ --include=*.r
 
 **Spikes owed by this step (PIA-047):** **S-CANCEL-WIN** — one fixture-cancel-rm run on Windows, recorded in its
 design §10.5 row (the handle case Halt 6 names); **S-RETRY** — its question now covers exhaustion-on-result, consumer
-this adapter; **S-SPF** — registered, not run. Run each or record its deferral in the checkpoint commit. **The
+this adapter; **S-TTL1** — narrowed by ADR-0113 to a subagent-card dispatch with both variables set (does the subagent's own creation report `ephemeral_1h > 0`?) and, if a usage-credit state can be produced honestly, the same on usage-credit billing — ≈ $0.03 per dispatch; **S-SPF** — registered, not run. Run each or record its deferral in the checkpoint commit. **The
 AC-511 one-dispatch probe** (PIA-059) runs in this step's preamble dispatch: retain the raw `system/init`, name the
 auth-mode field by name, and assert on it — or drop the conjunct and record a named open item.
 

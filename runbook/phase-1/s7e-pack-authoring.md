@@ -97,11 +97,18 @@ PYTHONIOENCODING=utf-8 python lint.py | tail -3                                 
 PYTHONIOENCODING=utf-8 python grammar-probe.py | grep -E '^predicates parsed|^on_false forms'  # → 287/287 once 7e.2's rewrite lands; all on_false in the closed set
 ```
 
+**Then tag the v0 pack** (ADR-0114, partial successor to ADR-0027; DECISIONS-2026-09-11 #26/#27): the tag rests on the two
+conditions this step has just measured — P6 lint green at pack-default (the dead list reported by id, AC-102) and the F42
+parse at 287/287 after 7e.2's two repairs — and on each activity carrying its `executed: { first, last }` ledger field
+(`executed: never` on every activity but `root-cause`'s P7 members; a doctor row, never a lint failure). The twelve packs
+are the accepted set (METHOD-P amendment 18); the eight-pack reading stays F35's headline and every twelve-pack figure
+carries its pack count. The executed-once condition now gates extended→shipped *promotion*, not the tag.
+
 The new unsatisfiable rate, its pack count (12) and its rigor mode (pack-default) are the baseline the SM register
 records against SM-026/SM-027 and the AC register cites in AC-101/AC-102; the old figures stay in the record as
 "pre-ADR-0089/0093".
 
-**Checkpoint 7e.** All nine:
+**Checkpoint 7e.** All eleven:
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -115,7 +122,9 @@ ls .redkiln/DISPOSITIONS-*.md | wc -l                                           
 grep -rn 'stale_policy' .redkiln/packs/*.toml | grep -c 'rematerialise'              # → one per cost class per Phase-1 pack, each with its warrant comment
 grep -rn 'exists(' .redkiln/packs .redkiln/catalog | wc -l                           # → 0 (F42's incident row rewritten)
 python spikes/p9/grammar-probe.py >/dev/null ; echo "exit=$?"                        # → exit=0 over spikes/p9 once the incident row is fixed there too (or 1 with only catalog-b's four defects listed — record which)
+grep -rn '^executed = ' .redkiln/catalog/*.toml | grep -c never                       # → 102 minus root-cause's P7 members (ADR-0114: a doctor row, never a lint failure)
 git add .redkiln spikes/p9 && git commit -m "Step 7e: pack authoring — .redkiln/ derived, rows dispositioned, stale_policy recorded per class, lattice re-baselined" && git status --porcelain | grep -c '^ M'   # → 0
+git tag -a redkiln-pack-v0 -m "ADR-0114: P6 lint green at pack-default; 287/287 parsed" && git tag -l redkiln-pack-v0   # → the tag exists on the Step 7e commit; its two conditions are the doctor and grammar-probe lines above (no CLI verb — ADR-0107 has none for it)
 ```
 
 **Acceptance set (explicit):** **AC-080–AC-118** (packs and catalog lint — AC-119 unallocated), **AC-068** (PROVISIONAL,

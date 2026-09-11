@@ -254,6 +254,11 @@ Essence Level-3 completeness as CI (catalog §2.6): every stage-exit artifact mu
   *Amendment 6 (2026-09-08):* the four packs after the semicolon were not named in the original; they were written
   before the first lattice run (file timestamps precede `results-p6-run0-engine-v1.txt`) but the list was amended after
   the run. Every P6 metric is reported for the eight named packs first and for all twelve second (F35).
+  *Amendment 18 (2026-09-11, Ryan):* the four packs amendment 6 named after the run — `chore`, `tech-debt`,
+  `security-vuln`, `docs` — are **accepted** into the P6 pack set (one per kind in `facets.toml`, the engine's own
+  precondition; design §10.5 P6-PACKS; audit PIA-088). The eight-pack reading stays the pre-registered headline in F35;
+  every twelve-pack figure carries its pack count (SM-027); Step 7e's re-run baselines over whichever packs are enabled.
+  **When it was made:** after run9; changes which readings are reported, not the kill.
 
 ### 3.3 Metrics
 Unsatisfiable `(stage, ctx)` pairs, by artifact kind and by which predicate failed; dead activities (never selected in any context); rank ties; contexts whose Σ `cost_class` exceeds the pack's appetite.

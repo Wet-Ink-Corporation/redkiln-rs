@@ -3,7 +3,7 @@
 Same shape as `DECISIONS-2026-09-09.md`. Every entry was taken **by the operator** (Ryan Britton) in a walk-through
 of the decisions `references/2026-09-10-pre-implementation-audit.md` assigned to him, one at a time with the
 grounding and the options in front of him, before any register or design edit that depends on it was made. Where the
-decision is an architecture decision it is an ADR (`0092`–`0111`) and this log only points at it; where it is a
+decision is an architecture decision it is an ADR (`0092`–`0114`; `0112`–`0114` were written later the same day, after the register and design passes) and this log only points at it; where it is a
 runbook, catalog, register or spike-record decision it is logged here in full. Grounding is a document section or a
 measured number, never taste.
 
@@ -39,6 +39,12 @@ measured number, never taste.
 | 19 | `cache_profile = default` names a profile with no delivery mechanism, and AC-211's GIVEN makes the `static` route repository-wide (PIA-012) | **A: `default` is F28's measured arm** — the adapter omits `--system-prompt` and prepends the card body to the user message; AC-211's GIVEN narrows to "a card whose profile is `static`"; a golden argv test per profile at 7c; the 18,603-token flat-prefix promise (AC-384, SM-113) is scoped to `static` | F28 (the measured arm); PIA-012; ADR-0016/0078 untouched — neither states the default-profile argv | AC-383 gains the sentence; design §7.1 a dated paragraph | Yes — an argv sentence |
 | 20 | Five selection-area terms two implementers would read differently (PIA-046): selector specificity, cross-pack rule order, the lattice's rigor mode for AC-101/SM-026, the `discouraged` rigor value, AC-070's scope | **A:** specificity = **subsumption over the closed selector key set** (a selector binding a superset of keys wins; an incomparable pair is `AmbiguousRole`, a pack validation error); cross-pack order = the **enabled-pack list order in config, then within-pack declaration order**; AC-101/SM-026 are pinned to the **pack-default** lattice reading over the enabled pack set (overrides enumerated and reported, never thresholded; pack count + rigor mode recorded per SM-027); `discouraged` is **reserved in Phase 1 with a pack lint that refuses it** (defined in Phase 2); AC-070 reads "every facet the registry declares derived — six after ADR-0093" | PIA-046; ADR-0020's enum; ADR-0093 | design §4.3/§4.4 dated amendment; AC-072/070/084/087/101 | Yes — each is one sentence |
 | 21 | Three rk-types shapes Step 5.3 snapshots are stated two ways (PIA-032/033): `ReviewWeight` still numeric 0.2/1.0 in AC-299/300; `Gwt` undefined; the verify-gate ledger shape stated twice | **A:** `ReviewWeight = { ReadOnly, Lenient, Strict }` with the documented projection optional→ReadOnly, recommended→Lenient, mandatory→Strict (a projection of stage rigor, not a second axis — ERRATA note against ADR-0020 in the register); `Gwt { given: Text, when: Text, then: Text, and: Vec<Text> }`, **never populated by migration** (AC-137; AC-454's byte-identical round-trip with both fields absent); the ledger is **one closed enum per AC with `unpinned` reserved for "no evidence"** (AC-335 "remains `mutation-survived`, never `pinned`"; AC-333 schema fixture); `EvidenceClass` (four, from the repro record) is distinct from `ReExecution = Flipped \| Unverifiable { both_fail \| cannot_run \| timeout }` | PIA-032, PIA-033; ADR-0020; ADR-0075 cl. 6; S-MIG 19/153 specs carry neither field | AC §9–10 and SM §1.9–1.11 vocabulary pass; design §5.1/5.2 | Yes — types, snapshotted once |
+| 22 | METHOD-P §3.2's override modes (PIA-046; left with Ryan above) | **A: keep, kill scoped to pack-default** — the three item-override modes stay enumerated and reported, never thresholded; §3.4's > 5 % binds the pack-default line | run9 :53-56 (optional 21.3 %, pack-default 0.3 %); F35 Limits 3; decision 20 | METHOD-P amendment 17 | Yes — a reading rule |
+| 23 | The `blind_attestation:` line for F39's 32 cells (decision 13; left with Ryan above) | **Written by Ryan, 2026-09-11** — before each answer he had not opened the engine, panel-accepted or contested files, and the page revealed positions only after each answer | METHOD-P amendment 8's attestation route | F39 §5, s3 exit (d), AC-071, change-classification §6, design ×3 read *attested-blind*; the Artifact page is not among the 22 published artifacts (not recoverable) | Yes — Ryan's own line |
+| 24 | The e3-severity MCC correction (+0.978 → +0.957; PIA-073) | **Countersigned by Ryan, 2026-09-11** | tp 23 / fn 0 / fp 1 / tn 22 from the sheet's own matrix | `e3-severity-annotation-ryan.md` foot | Yes |
+| 25 | What the F3 recount (621 creations on the 1 h tier, none on 5 m; nested object on 950/955 records) does to ADR-0078 clause (iv) and S-TTL1 (found 2026-09-11, beyond the audit) | **A: successor-in-part — ADR-0113**: a `-p` run with `ephemeral_1h > 0` and `ephemeral_5m = 0` is verified 1 h; S-TTL1 narrows to the subagent bucket and the billing-mode confound, owed by Step 7c | FINDINGS F3 Correction; `event.rs ttl_split()`; F1's `isUsingOverage: false` ×80 | ADR-0078 clause (iv) withdrawn; design §0.1 row 28 / §10.5 S-TTL1 / §10.6 falsifier re-pointed; AC-526 cites it | Yes |
+| 26 | The four supplementary P6 packs (`chore`, `tech-debt`, `security-vuln`, `docs`) METHOD-P §3.2 named after the run (PIA-088) | **A: accept them** by dated amendment; the eight-pack reading stays F35's headline; SM-027 keeps readings separated by pack count | F35 §3.1; `facets.toml` one-per-kind | METHOD-P amendment 18; design §10.5 P6-PACKS DECIDED | Yes — a strike is one more amendment |
+| 27 | ADR-0027's "executed at least once before the pack is tagged" with 101 of 102 activities unrun (PIA-088) | **A: successor-in-part — ADR-0114**: the v0 pack tags on P6 lint + the F42 parse; each activity carries an `executed: { first, last }` ledger the doctor reports (`executed: never` is a warning, never a block); the executed-once condition moves to extended→shipped promotion | F35 §1.6 (6/102 dead); F42 (285/287); F37 (`root-cause` the only executed members) | AC-110/AC-114 cite it; Step 7e tags after its two F42 repairs | Yes |
 
 ## Options rejected, one line each
 
@@ -61,6 +67,10 @@ measured number, never taste.
 | 19 | **B: `cache_profile` is a lint-only label** — strike the "18,603 flat" promise from AC-384 and SM-113; the profile then names nothing the adapter does. |
 | 20 | **B: define `discouraged` now** (baseline runs, `require` rows fire, advisory on the run record) — a fourth live rigor level in the 7e lattice re-run with no measured need. |
 | 21 | **B: `gwt` as a presence flag and a two-field `{ evidence_class, re_execution }` ledger** with SM-100/SM-101 rewritten — less structure to snapshot now, more to add when the story lane authors specs. |
+| 22 | **B: strike the override modes** — deletes measured lines after the fact and loses the one that shows how hostile `optional` is. **C: keep all four thresholded** — the summed 5.7 % fires the kill on a reading no item produces. |
+| 25 | **B: ERRATA entry only, keep `TTL-unverified`** — an erratum may not move a Decision (ADR-0092), and clause (iv)'s forbids is false on 950 records. **C: leave for Step 7c** — the register carries a false forbids line through Phase 0. |
+| 26 | **B: strike the four packs** — Phase 1 ships 8 kinds and the four route to the ASKED layer; loses their rows at Step 7e for no measured reason. |
+| 27 | **B: keep the gate literal** — the pack ships untagged through Phase 1 with 101 never-run activities and no per-activity mark: the rot the gate exists for, unmarked. |
 
 ## Decisions that are ADRs (pointers only)
 
@@ -86,9 +96,13 @@ measured number, never taste.
 | reconcile at every entry; two tiers; three trailer axes (PIA-082) | ADR-0109 |
 | Headroom in ticks; batch delta; visible windows (PIA-082/017/061) | ADR-0110 |
 | S-P7B must change the criterion (PIA-073) | ADR-0111 |
+| TTL read from the nested object; S-TTL1 narrowed (decision 25) | ADR-0113 |
+| Executed-once gate → promotion; v0 tags on lint + parse + ledger (decision 27) | ADR-0114 |
 | `StepError` gains `Platform`, `Unsupported`, `Overage` — eleven variants (register §0.3 row C5, found absorbing ADR-0095) | ADR-0112 |
 
 ## Left with Ryan (not decided here)
 
-- **METHOD-P's override-mode keep/strike** (PIA-046) — the registered owner's call; the lattice re-run at Step 7e uses the pack-default reading until it is taken.
-- **The `blind_attestation:` line** for F39's 32 adjudicated cells (decision 13).
+*Both items below were taken by Ryan later on 2026-09-11 — decisions 22 and 23 above; kept as the record of what this log first left open.*
+
+- **METHOD-P's override-mode keep/strike** (PIA-046) — the registered owner's call; the lattice re-run at Step 7e uses the pack-default reading until it is taken. → decision 22.
+- **The `blind_attestation:` line** for F39's 32 adjudicated cells (decision 13). → decision 23.

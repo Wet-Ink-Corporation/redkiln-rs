@@ -6,7 +6,7 @@ date: 2026-09-07
 legacy_id: PC5
 source: references/2026-09-07-process-catalog-proposal.md §7 PC5
 supersedes: []
-superseded_by: []
+superseded_by: ["0114"]
 related: []
 evidence: ["EPF rot from unexecuted content", "Essence \"start minimal\"", "superpowers' too-many-skills failure"]
 consumers: []
