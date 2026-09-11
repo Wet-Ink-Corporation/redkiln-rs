@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: none
 source: references/2026-09-08-evidence-augmentation.md §1 rows 2 and 8, §3 (dependencies), §4 recs 3, 4 and 6, §5 row 2
 supersedes: []
-superseded_by: []
+superseded_by: ["0098"]
 related: ["0003", "0012", "0018", "0084"]
 evidence: ["F12", "F19"]
 consumers: []

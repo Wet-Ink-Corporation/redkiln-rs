@@ -40,40 +40,40 @@ Decisions the audit assigned to the operator, walked one by one on 2026-09-11. `
 
 | # | Concern | Decision taken | Record | Status |
 | --- | --- | --- | --- | --- |
-| D-A | convention | Errata to frozen ADRs live in `references/adr/ERRATA.md`; the precedence rule; the cut-id re-issue licence | ADR-0092 | to record |
-| D-B | PIA-001 | `stage`/`rigor`/`role`/`cost` → `source = "kernel"`; `surfaces` → `"declared"`; `recent_deploy` stays derived (NOT MEASURABLE); S-BIN gate scoped to the `ChangeSummary` type | ADR-0093 | to record |
-| P7-CEIL | PIA-001 | `bisect` is a ceiling activity: `max_rigor = "recommended"`; lattice re-run | DECISIONS-2026-09-11 #1 | to record |
-| D-C | PIA-003 | `has_repro`/`external_dep`/`market_facing` → `source = "human"` at triage; carried into ADR-0090 at Step 4.4 | s4 §4.1 pre-registration; DECISIONS #2 | to record |
-| D-D | PIA-004/072 | Phase-1 adapters {SQLite, Claude, Node, Rust}; exit = fix lane AND a story-lane run (AC-521; Step 8 check 1b) | ADR-0094 | to record |
-| D-E | PIA-005/014 | No `oneOf`; `anyOf` via post-derive transform; ≤16 union-typed and ≤24 optional per exported schema (vendor per-request scope stated); the StepError table | ADR-0095; S-SCHEMA-CAP | to record |
-| D-F | PIA-006 | Phase-1 companion kinds: `_integration`, `_grounding`, `_decomposition`, `_review`, `_ledger`; the other eight census kinds are Phase 2 | s5 §5.3 decision; DECISIONS #3 | to record |
-| D-G | PIA-007/056 | Typed repro (`kind`, `mutation`, machine-readable `expected`); prose-only rejected; `mutation-survived` needs a reverted-fix mutant or a discriminating assertion | ADR-0096 | to record |
-| D-H | PIA-008 | Memo stays tier 2; AC-161/164 narrow to the stage-level next action; AC-187 scoped; memo key = SHA-256 over a length-prefixed ordered tuple | ADR-0097 | to record |
-| D-I | PIA-009 | S-GIX/a no-go → `git rev-parse --git-common-dir` via the wrapper; the review clone is a retained gix WRITE op | ADR-0098 | to record |
-| D-J | PIA-010/045/059 | Blocking `dispatch` returning `DispatchOutcome`; `CancelToken` owned by the composition root; `Arc<dyn Port + Send + Sync>`; Windows Job Object / POSIX process group; Harness alone carries cancel | ADR-0099; S-PORTS | to record |
-| D-K | PIA-011/044 | New Step 7e Pack authoring; `stale_policy` = `rematerialise`, coarse scope, every class | s7e; DECISIONS #4 | to record |
+| D-A | convention | Errata to frozen ADRs live in `references/adr/ERRATA.md`; the precedence rule; the cut-id re-issue licence | ADR-0092 | recorded |
+| D-B | PIA-001 | `stage`/`rigor`/`role`/`cost` → `source = "kernel"`; `surfaces` → `"declared"`; `recent_deploy` stays derived (NOT MEASURABLE); S-BIN gate scoped to the `ChangeSummary` type | ADR-0093 | recorded |
+| P7-CEIL | PIA-001 | `bisect` is a ceiling activity: `max_rigor = "recommended"`; lattice re-run | DECISIONS-2026-09-11 #1 | recorded |
+| D-C | PIA-003 | `has_repro`/`external_dep`/`market_facing` → `source = "human"` at triage; carried into ADR-0090 at Step 4.4 | s4 §4.1 pre-registration; DECISIONS #2 | DECISIONS recorded; s4 edit in W3 |
+| D-D | PIA-004/072 | Phase-1 adapters {SQLite, Claude, Node, Rust}; exit = fix lane AND a story-lane run (AC-521; Step 8 check 1b) | ADR-0094 | recorded |
+| D-E | PIA-005/014 | No `oneOf`; `anyOf` via post-derive transform; ≤16 union-typed and ≤24 optional per exported schema (vendor per-request scope stated); the StepError table | ADR-0095; S-SCHEMA-CAP | recorded |
+| D-F | PIA-006 | Phase-1 companion kinds: `_integration`, `_grounding`, `_decomposition`, `_review`, `_ledger`; the other eight census kinds are Phase 2 | s5 §5.3 decision; DECISIONS #3 | DECISIONS recorded; s5 edit in W3 |
+| D-G | PIA-007/056 | Typed repro (`kind`, `mutation`, machine-readable `expected`); prose-only rejected; `mutation-survived` needs a reverted-fix mutant or a discriminating assertion | ADR-0096 | recorded |
+| D-H | PIA-008 | Memo stays tier 2; AC-161/164 narrow to the stage-level next action; AC-187 scoped; memo key = SHA-256 over a length-prefixed ordered tuple | ADR-0097 | recorded |
+| D-I | PIA-009 | S-GIX/a no-go → `git rev-parse --git-common-dir` via the wrapper; the review clone is a retained gix WRITE op | ADR-0098 | recorded |
+| D-J | PIA-010/045/059 | Blocking `dispatch` returning `DispatchOutcome`; `CancelToken` owned by the composition root; `Arc<dyn Port + Send + Sync>`; Windows Job Object / POSIX process group; Harness alone carries cancel | ADR-0099; S-PORTS | recorded |
+| D-K | PIA-011/044 | New Step 7e Pack authoring; `stale_policy` = `rematerialise`, coarse scope, every class | s7e; DECISIONS #4 | DECISIONS recorded; s7e in W3 |
 | D-L | PIA-012 | `cache_profile = default` is F28's arm: no `--system-prompt`, the card prepended to the user message | AC-383; design §7.1 | to record |
-| D-M | PIA-016 | Tool-set inequality is `NotIsolated` everywhere; AC-204 amended | DECISIONS #5 | to record |
-| D-N | PIA-002/028/029 | `git bundle --all` of the predecessor into redkiln-corpus; corpus-bound tests a local-only `corpus` feature; the YAML reader named (verified live); cargo-deny + `deny.toml`; the explicit 0.x pin list | s2; ADR-0100 | to record |
-| D-O | PIA-013 | ADR-0088 superseded in full (real title, prior-approval framing arm, measured effect, FN-up/FP-down mechanism); the symmetric arm registered as S-SUBTLE-SYM | ADR-0101; S-SUBTLE-SYM | to record |
-| D-Q | PIA-023/026/027/079 | `rust-version` = the pin; member `[lints]` is `workspace = true` only; `#[expect]`; evidence lines corrected | ADR-0102 | to record |
-| D-R | PIA-048/052/053/100 | Predicate grammar: `not` > comparison/`in` > `and` > `or`, left-associative; literal-vs-field; quoting; null semantics; quantifier null rules; the closed `on_false` set | ADR-0103; S-GRAMMAR | to record |
-| D-S | PIA-049/051 | Author-declared per-AC mutants; the bootstrap clause; a quarantined survivor still blocks | ADR-0104 | to record |
-| D-T | PIA-040/043/050 | The rk-git/rk-store contract (GitOps seam, hooks isolation, trailer plumbing with `--if-exists=add`, write-tree `tree_hash`, the wrapper write set, bare clone, `busy_timeout` 5000 ms, one writer, the event-kind table, retention) | ADR-0105 | to record |
-| D-U | PIA-080 | ADR-0087's "costs less" withdrawn; comparator = `cache_creation_input_tokens` + `total_cost_usd` | ADR-0106 | to record |
-| — | PIA-082 | CLI shape; StructuredOutput configuration-time check; reconcile-at-every-entry + tiers + trailer axes; headroom rules | ADR-0107–0110 | to record |
-| — | PIA-073 | The S-P7B re-run must change the criterion, not only n | ADR-0111 | to record |
+| D-M | PIA-016 | Tool-set inequality is `NotIsolated` everywhere; AC-204 amended | DECISIONS #5 | DECISIONS recorded; AC-204 in W2 |
+| D-N | PIA-002/028/029 | `git bundle --all` of the predecessor into redkiln-corpus; corpus-bound tests a local-only `corpus` feature; the YAML reader named (verified live); cargo-deny + `deny.toml`; the explicit 0.x pin list | s2; ADR-0100 | ADR recorded; s2 in W3 |
+| D-O | PIA-013 | ADR-0088 superseded in full (real title, prior-approval framing arm, measured effect, FN-up/FP-down mechanism); the symmetric arm registered as S-SUBTLE-SYM | ADR-0101; S-SUBTLE-SYM | recorded |
+| D-Q | PIA-023/026/027/079 | `rust-version` = the pin; member `[lints]` is `workspace = true` only; `#[expect]`; evidence lines corrected | ADR-0102 | recorded |
+| D-R | PIA-048/052/053/100 | Predicate grammar: `not` > comparison/`in` > `and` > `or`, left-associative; literal-vs-field; quoting; null semantics; quantifier null rules; the closed `on_false` set | ADR-0103; S-GRAMMAR | recorded |
+| D-S | PIA-049/051 | Author-declared per-AC mutants; the bootstrap clause; a quarantined survivor still blocks | ADR-0104 | recorded |
+| D-T | PIA-040/043/050 | The rk-git/rk-store contract (GitOps seam, hooks isolation, trailer plumbing with `--if-exists=add`, write-tree `tree_hash`, the wrapper write set, bare clone, `busy_timeout` 5000 ms, one writer, the event-kind table, retention) | ADR-0105 | recorded |
+| D-U | PIA-080 | ADR-0087's "costs less" withdrawn; comparator = `cache_creation_input_tokens` + `total_cost_usd` | ADR-0106 | recorded |
+| — | PIA-082 | CLI shape; StructuredOutput configuration-time check; reconcile-at-every-entry + tiers + trailer axes; headroom rules | ADR-0107–0110 | recorded |
+| — | PIA-073 | The S-P7B re-run must change the criterion, not only n | ADR-0111 | recorded |
 | — | PIA-014 | argv cap before spawn; `--system-prompt-file` registered as S-SPF; AC-523 `RateLimited` | AC-523; S-SPF | to record |
 | — | PIA-071 | AC-312 PROVISIONAL on S-SUBTLE-CB; fixtures authored, unrun | AC-312 note | to record |
-| — | PIA-018 | Arm L outstanding; labelled later at a new corpus pin | DECISIONS #6 | to record |
+| — | PIA-018 | Arm L outstanding; labelled later at a new corpus pin | DECISIONS #6 | DECISIONS recorded; s2/s3 in W3 |
 | — | PIA-046 | Specificity = subsumption; cross-pack order = enabled list then declaration; `discouraged` reserved with a lint; AC-101/SM-026 pack-default | design §4.3/4.4 | to record |
 | — | PIA-046 | METHOD-P override-mode keep/strike | — | **awaiting-ryan** |
 | — | PIA-050 | Fresh gate record on re-reach; escalate-to-escalate refused; the write-tree rule | new AC; design §6.3 | to record |
 | — | PIA-038 | The eight crate labels are modules; mapping table in AC §0 | AC §0 | to record |
-| — | PIA-024 | The rustc pin moves to **1.98.1**; the instrument move recorded | s0; DECISIONS #7 | to record |
+| — | PIA-024 | The rustc pin moves to **1.98.1**; the instrument move recorded | s0; DECISIONS #7 | DECISIONS recorded; s0 in W3 |
 | — | PIA-078/084/096 | S-MIG counts 76/87 and 96.0%; the S-FACET kill re-registered (paired FP count); METHOD-P amendment 9 scoped | drafts; change-classification §6; METHOD-P | to record |
 | — | PIA-096 | The `blind_attestation:` line for F39's 32 adjudicated cells | `spikes/results/p1-arm-d-labels-ryan.md:27` | **awaiting-ryan** |
-| — | PIA-106/108 | Namespace prefix `rk-`; κ 0.37 tagged [inferred, unsourced] | DECISIONS #8; PRIOR-ART | to record |
+| — | PIA-106/108 | Namespace prefix `rk-`; κ 0.37 tagged [inferred, unsourced] | DECISIONS #8; PRIOR-ART | DECISIONS recorded; PRIOR-ART in W2 |
 | — | PIA-060 | Child env = inherit minus a committed denylist; the captured map as a value; a `tools:`-less card is a doctor error | AC-217/488/422; design §3.6.1 | to record |
 | — | PIA-032/033 | The `ReviewWeight` projection; structured `Gwt`; the closed ledger enum; `EvidenceClass` vs `ReExecution` | AC §9–10; design §5 | to record |
 

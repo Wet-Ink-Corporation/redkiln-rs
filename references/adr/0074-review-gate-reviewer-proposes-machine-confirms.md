@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: D4 rev.4
 source: references/2026-09-05-architecture-proposal.md §4.6 (row **D4 (rev. 4)** in §9); data and prior art in references/2026-09-07-design-recommendation.md §2
 supersedes: ["0004"]
-superseded_by: []
+superseded_by: ["0096"]
 related: ["0001", "0015", "0019", "0026"]
 evidence: ["F29", "F31", "F27", "F24", "F25", "S-VAR", "S-TYPED"]
 consumers: []

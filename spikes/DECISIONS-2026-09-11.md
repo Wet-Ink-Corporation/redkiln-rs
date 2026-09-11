@@ -1,0 +1,87 @@
+# Decisions taken for the audit remediation, 2026-09-11 (PIA-001…PIA-110)
+
+Same shape as `DECISIONS-2026-09-09.md`. Every entry was taken **by the operator** (Ryan Britton) in a walk-through
+of the decisions `references/2026-09-10-pre-implementation-audit.md` assigned to him, one at a time with the
+grounding and the options in front of him, before any register or design edit that depends on it was made. Where the
+decision is an architecture decision it is an ADR (`0092`–`0111`) and this log only points at it; where it is a
+runbook, catalog, register or spike-record decision it is logged here in full. Grounding is a document section or a
+measured number, never taste.
+
+## Decisions Ryan should reverse or confirm first
+
+| # | why it needs you first |
+| --- | --- |
+| **7** | The rustc pin **moves from 1.97.1 to 1.98.1**. You chose current stable over the spike programme's measured baseline. Every F-record and the spike runner's lockfile were produced on 1.97.1; the build therefore starts one recorded instrument move away from every measurement (golden constraint 8). S-PORTS runs on 1.98.1 and says so. Reversible at Step 0 by editing one line in `rust-toolchain.toml` and the Checkpoint 0/5 greps. |
+| **9** | The symmetric "presented as already rejected" arm is **registered as S-SUBTLE-SYM**, not rejected on cost (ADR-0101 clause 7). It is unpriced beyond a first-order estimate and unscheduled; if you would rather close it by argument, ADR-0101 needs a successor clause, not an edit. |
+
+## Decisions
+
+| # | decision | choice | grounding | consequence | reversible? |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **P7-CEIL** — `bisect` is non-monotone in internal quality (no adversary, no policy step) and ADR-0081's lint rejects the shipped catalog | **A: ceiling** — `bisect.toml` gains `max_rigor = "recommended"`; the lattice is re-run and the new reading recorded as the AC-101/AC-102/SM-026/SM-027 baseline at Step 7e | design §10.5 :1872 prices it at $0 (a 27 s lattice re-run, F35); ADR-0081 :94 keeps `max_rigor` ceilings legal; the alternative is a versioned shipped-activity edit (ADR-0072) | The catalog passes the rigor-monotonicity lint as shipped; a `mandatory`-rigor item with a repro escalates to a full activity and gets no bisection in Phase 1. Recorded in ADR-0093 decision 5 | Yes — a one-line pack edit and a lattice re-run |
+| 2 | The three LLM boolean facets (`has_repro`, `external_dep`, `market_facing`) have no disposition between Step 4.1's pre-registered rule and Checkpoint 4a | **A: human at triage** — `source = "human"`, supplied or confirmed at the triage gate, the same rule as the ordinal axes; pre-registered into s4 §4.1 now and carried into ADR-0090 at Step 4.4 | ADR-0079 :158-165 names the "honest destination"; AC-071 fails closed on any `llm` facet; nineteen catalog/pack rows key on the three, and 7b's rigor-monotonicity paragraph presumes `has_repro` is live | Checkpoint 4a asserts `grep -c 'source = "llm"' spikes/p9/facets.toml` → 0; 4a.3 tri-values all eight booleans; three more triage questions per item | Yes until ADR-0090 is written; after that, by successor |
+| 3 | The Phase-1 companion kind list (three sources disagree: ADR-0075 cl. 3 four kinds, AC-143 five, the S-MIG census eleven + `ledger`) | **A: AC-143's five plus `ledger`** — `_integration`, `_grounding`, `_decomposition`, `_review`, `_ledger` get a registered schema in Phase 1; the other eight census kinds (closure, decomposition-adjacent design/design-review/slices/storymap, implementation, plan, retrospective) are Phase-2 kinds that `redkiln-migrate` lifts as opaque prose per ADR-0075 cl. 6 | `s-mig.jsonl` at 47faec9f: closure 30 · decomposition 30 · design 26 · design-review 22 · grounding 26 · implementation 4 · integration 26 · plan 4 · retrospective 4 · slices 26 · storymap 30 · ledger 220; AC-333 needs `ledger`; ADR-0075's consequence warns companions are the least regular kind | AC-143's registry-completeness fixture enumerates exactly six; "19/45" → "five of eleven" (ERRATA E-0075-2); recorded against ADR-0075 cl. 3 in s5 §5.3 | Yes — adding a kind is a schema, not a supersession |
+| 4 | `stale_policy` has no schema, and F40 fired P2's criterion 1 on precision 0.00 while contraindicating its own remedy ("fine scope mandatory for L-class": fine marks 15 Stale vs coarse 5; 10 flips Present→Stale, none back) | **A: `rematerialise`, coarse scope, every class** — the TOML site is `policy.<cost_class>.stale_policy`, enum `rematerialise \| gate`, default `rematerialise`; the derived_from scope is COARSE for every class in Phase 1; fine scope stays available, never mandatory | F40 §3 (the contraindication); golden constraint 11 / Halt 12 ("a decision, not a default"); PIA-044's schema | New Step 7e records the value per class with its warrant; Checkpoint 8 asserts no value was defaulted from P2; AC-068's pass condition inverts to the decision rule | Yes — a pack value with a recorded warrant |
+| 5 | Tool-set inequality against the card's allowlist is `NotAdopted` in AC-204 and `NotIsolated` in AC-202/AC-386/design §7.4; only `NotIsolated` triggers AC-399 | **B: `NotIsolated` everywhere** — AC-204 amended; AC-386 stays; AC-399 unchanged | tool-set inequality is a failure of isolation; one class for one condition; SM-061's instrument becomes a set digest | AC §0.3 gains contradiction row C4 with its resolution; ADR-0095's StepError table reserves `NotAdopted` for the wrong agent answering | Yes — a register edit |
+| 6 | Step 5's banner waits on Step 3b, whose one outstanding act is the arm-L label file, which no scorer consumes | **B: arm L outstanding** — Checkpoint 2 accepts arm L as unlabelled; it is labelled later in `redkiln-corpus/results/` when a scorer exists and committed at a new pin; Step 5 no longer waits on it | `spikes/p1/score-arm-l.py` does not exist; the file was measured absent 2026-09-10; after Step 2 the results live in redkiln-corpus | s3 §3b's checklist line reworded; PIA-018's commit blocks land in Checkpoints 4 and 4a | Yes — write the scorer and label before Step 2 instead |
+| 7 | The rustc pin: `rust-toolchain.toml` says `1.97.1`, §0.2 says "or later", the Checkpoint 5 grep tests a prefix; stable is 1.98.1 (2026-09-03) | **B: 1.98.1 exact** — `rust-toolchain.toml`, s0 §0.2, Checkpoint 0 and the Checkpoint 5 grep all change; s0 §0.3 records the instrument move 1.97.1 → 1.98.1 | Rust release notes 1.98.0/1.98.1 (fetched 2026-09-10): no dyn-async-trait stabilisation (R-ASYNC discharged negative through 1.98.1); ADR-0102 makes `rust-version` equal the pin | Every checkpoint greps the full string `channel = "1.98.1"`; S-PORTS runs on 1.98.1 | Yes — see the confirm-first table |
+| 8 | AC-506 binds a redkiln namespace prefix the design marks both DECIDED and undecided (`redkiln-`, `rk-`, `redkiln:`, `rk:`) | **A: `rk-`** — the crate prefix and the AC register's label prefix | design :1578/:1634; the eight `rk-*` subject tags (ADR-0099 clause 5) | AC-506 gets the literal and a lint regex; AC-437's clause is re-added as its own criterion; `rk-plugin-gen` is Phase 2 | Yes — one literal |
+| 9 | ADR-0088's rejection of the symmetric "presented as already rejected" arm rested on "FP barely move", which the paper contradicts | **B: register it** — S-SUBTLE-SYM, consumer the review-gate policy table, cost ≈ 2 framings × 5 items × k draws at S-TYPED's median $3.03/review, "Registered, not designed" | ADR-0101 clause 7; arXiv 2603.18740 v2 (FP collapse +46 to +95 pp TN) | A §10.5 row; no claim about the false-rejection direction until it runs | Yes — see the confirm-first table |
+| 10 | The evidence-brief §B files P7 §4.4(1) under *Fired* by one rule and P1's α rule by another | **A: one filing rule** — a criterion is listed under *Fired* when it fires on its pre-registered reading, with a "fires while powerless" note where its n could not decide it (P7 4.4(1) and P1's α rule both carry the note) | ADR-0111; F37 :15; golden constraint 10 | Brief §B preamble states the rule once; the two counts agree | Yes |
+| 11 | The S-MIG per-AC loss counts were cap-truncated (`loss[:6]`) and "census overall 98%" is the spec-section slot only | **A: correct the counts** — 45/46 → 76/87 loss lines; "98%" → 96.0% typed-slot with the denominator stated; `src/store/verify.ts` named as reconcile.rs's origin; AC-445/SM-140 restated over the 237 test files at the pin; 53 → 54; 42 → 43 with `issue-146-147-boundary-window/spec.md` assigned in AC-469 | uncapped re-run of `census-s-mig.py` at the pin (PIA-078); ERRATA E-0075-1 | s-mig-report.md gains a dated correction; eight restatements move; METHOD-S gains a dated amendment noting the cap | Yes |
+| 12 | S-FACET as registered cannot decide its own criterion on this corpus (`auth` 0 positives → NOT ANSWERABLE; `ui` 9/9 → lower bound 0.70, powerless for ≥ 0.95; `surfaces` has no label column) | **A: re-register the kill** — a dated pre-dispatch amendment under change-classification §6: the estimator is the Wilson lower bound; positives per facet are stated; `auth` NOT ANSWERABLE and `surfaces` NOT MEASURABLE on this corpus; the kill is re-registered on a criterion 20 items can decide — arm 3 vs arm 1 false-positive count, paired per item; the ≥ 0.95 bar stays recorded as powerless, never re-thresholded | PIA-084; F39 Limits 1 (73 positives needed, ERRATA E-0089-2); golden constraint 10 | S-FACET's §10.5 row carries the new criterion; ADR-0093 decision 3 scopes what it gates | Yes — a further dated amendment |
+| 13 | F39's `auth` 0.00 rests on an adjudication surface (a claude.ai Artifact page) not in the repository, with `blind_attestation: FILL-ME` unfilled | **A: scope the attestation** — METHOD-P amendment 9 is scoped by dated note to result tables and the first citation per document; F39 §5 names the surface; the Artifact page is exported into `spikes/p1/` if it still exists; the `blind_attestation:` line (who, what was not opened, when) is **yours to write** | PIA-096; METHOD-P amendment 8's own minimum | `spikes/results/p1-arm-d-labels-ryan.md:27` stays FILL-ME until you fill it — tracked in `runbook/PROGRESS.md` as awaiting-ryan | Yes |
+| 14 | PRIOR-ART's "62.5% agreement / κ 0.37" LLM-judge ceiling could not be sourced | **A: tag it** — [inferred, unsourced]; s4's argument rests on the Landis–Koch bands and Judge's Verdict (arXiv 2510.09738); the OSF "template to borrow" sentence reworded to "a proposed direction (Bett et al. 2026, arXiv 2602.09292); no finished template" | PIA-108; targeted search 2026-09-10 found no source; nearest studies report κ 0.43–0.71 | PRIOR-ART :22/:120/:175-176 dated amendments | Yes — supply the source and re-tag |
+| 15 | The eight `rk-*` labels ~95 criteria carry (`rk-select`, `rk-catalog`, `rk-packs`, `rk-policy`, `rk-kernel-verify`, `rk-store-artifacts`, `rk-port-toolchain`, `rk-doctor`) exist in neither §9.1 nor the workspace | **A: modules** — mapped to `rk-kernel` (five), `rk-store`, `rk-ports`, `rk-cli`; a mapping table in AC §0; §9.1 stays the crate authority | ADR-0099 clause 5; ADR-0083's "about a dozen crates" | checkpoints name `cargo test -p rk-kernel -- <module>` | Yes — a crate is a later split |
+| 16 | The Claude adapter's child environment: inherit minus a denylist, or an allowlist | **A: inherit minus a committed denylist** (`rk-adapter-claude/src/env_denylist.rs`); the adapter receives the captured map as a value in `Config`; a card with no `tools:` key is a doctor configuration error | PIA-060; Claude Code reads many undocumented variables (proxy, locale, TERM, editor); AC-217/AC-488's Verified-by as written reads as a forbidden `set_var` | AC-217/AC-488/AC-422 amended; design §3.6.1 states the pre-spawn tool set is the declared list | Yes |
+| 17 | AC-312 sits in 7c's acceptance set while ADR-0074 :89 forbids claiming the gate is guarded against false approval until S-SUBTLE-CB runs | **A: PROVISIONAL** — AC-312 ships in Phase 1 with the framing-variant fixtures authored at 7c and unrun, priced in §10.5; no guarding claim until the arm runs | PIA-071; ADR-0101 clause 5 | 7c's set is written as "AC-320–AC-359 minus AC-356 (PROVISIONAL, S-BIN) and the human-gated halves of AC-357/AC-358"; 7a's set as an explicit Phase-1 subset | Yes — defer it out (§9's state line becomes 36 binding · 1 provisional) |
+| 18 | Large cards and the argv bound: `--system-prompt-file` for cards over the cap, or not | **A: cap argv; register S-SPF; keep `--system-prompt`** — an argv-length assertion before spawn (typed configuration error, fixture at the cap); `--system-prompt-file` is a §10.5 row (S-SPF, consumer rk-adapter-claude: does the file route share the inline route's cache prefix at the pinned CLI) and stays unused in Phase 1 | PIA-014; AC-384/SM-113's 18,603-token flat-prefix promise rests on the inline route | AC-523 (`RateLimited`) lands beside it; S-RETRY's row extends to exhaustion-on-result | Yes |
+
+## Options rejected, one line each
+
+| # | rejected |
+| --- | --- |
+| 1 | **B: add adversary and policy steps to `bisect`** — the right long-term repair; a versioned shipped-activity edit plus a P7 re-run, not $0. Kept as the Phase-2 repair. **C: defer, catalog stays red** — leaves Checkpoint 7b's monotonicity test failing on the shipped catalog. |
+| 2 | **B: drop the three facets** — simpler registry; strands nineteen rows and 7b's `has_repro` rung. **C: keep `llm`, gate on AC-071's stability record** — identity measured 0.25/0.15/0.10/0.10 against 0.80 (F36); no pack keyed on them loads in Phase 1. |
+| 3 | **B: all twelve census kinds** — twelve schemas to keep coherent before a lane exists. **C: decide at Step 7e from the packs** — AC-143 unverifiable through Steps 5–6; rk-types ships without the enum. |
+| 4 | **B: `gate` for L-class** — METHOD-P §2.4's prescribed remedy, contraindicated by the same run (Halt 12). **C: fold into 7b, default at first run** — a code default, the thing golden constraint 11 forbids. |
+| 5 | **A: re-read AC-386 as the MCP-server list; `NotAdopted` for tools; AC-399 gains a second trigger** — more precise, two more edits and a second refusal path to test. |
+| 6 | **A: write `score-arm-l.py` first and label in Phase 0** — keeps the labels blind and in Phase 0; puts a scorer and your labelling time on Step 5's critical path. |
+| 7 | **A: keep 1.97.1 exact** — the measured baseline every spike ran on; no instrument move. Rejected by the operator in favour of current stable. |
+| 8 | **B: `redkiln-`** — two prefixes to lint (crates stay `rk-`). **C: mark AC-506 PROVISIONAL** — matches AC-437's treatment; defers a literal that costs one line. |
+| 9 | **A: reject on cost alone** — the audit's suggested re-argument; rejected by the operator: a question with a consumer is a spike row. |
+| 12 | **B: re-size on a second corpus (~60–73 positives per facet)** — keeps the ≥ 0.95 criterion; costs a new labelled corpus. **C: leave S-FACET as registered** — a fifth powerless pre-registration. |
+| 15 | **B: promote the eight labels to crates** — a 20-crate workspace before any code exists. |
+| 16 | **B: allowlist only** — tightest; every undocumented variable Claude Code reads becomes a support incident. |
+| 17 | **B: defer AC-312 out of Phase 1** — ADR-0074's forbids applies at the first release shipping the fixture family. |
+| 18 | **B: adopt `--system-prompt-file` now** — the flat-prefix promise would rest on an unmeasured cache-share equivalence. |
+
+## Decisions that are ADRs (pointers only)
+
+| Concern | Record |
+| --- | --- |
+| Errata convention; precedence order; cut-id re-issue (PIA-036/039) | ADR-0092 |
+| Facet source classes `kernel` and `declared`; S-BIN scope; P7-CEIL (PIA-001) | ADR-0093 |
+| Rust toolchain adapter; self-hosting = both lanes (PIA-004/072) | ADR-0094 |
+| Closed-output schema rule; StepError table; `RateLimited`; `NotIsolated` (PIA-005/014/016) | ADR-0095 |
+| Typed repro; discriminating mutants; S-CLASS-REPLAY (PIA-007/056/097) | ADR-0096 |
+| Memo key; memo stays tier 2; 0021's `memo = false` withdrawn (PIA-008) | ADR-0097 |
+| S-GIX/a fallback; review clone; S-GIX/c (PIA-009/042) | ADR-0098 |
+| Harness dispatch/cancel/containment; port bounds; crate names (PIA-010/045/059/038) | ADR-0099 |
+| YAML reader; 0.x pins; cargo-deny (PIA-002/028/029/083) | ADR-0100 |
+| Prior-approval framing arm; S-SUBTLE-SYM (PIA-013/095) | ADR-0101 |
+| rust-version; member `[lints]`; `#[expect]`; evidence lines (PIA-023/025/026/027/079) | ADR-0102 |
+| Predicate grammar; null; `on_false` forms (PIA-048/052/053/100) | ADR-0103 |
+| Author-declared mutants; bootstrap; quarantined survivor (PIA-049/051) | ADR-0104 |
+| rk-git/rk-store contract; gate semantics (PIA-040/043/050) | ADR-0105 |
+| Gate cost ordering unmeasured; P8-B's unit (PIA-080) | ADR-0106 |
+| One idempotent `run`; no resume (PIA-082/030) | ADR-0107 |
+| StructuredOutput at configuration time (PIA-082) | ADR-0108 |
+| reconcile at every entry; two tiers; three trailer axes (PIA-082) | ADR-0109 |
+| Headroom in ticks; batch delta; visible windows (PIA-082/017/061) | ADR-0110 |
+| S-P7B must change the criterion (PIA-073) | ADR-0111 |
+
+## Left with Ryan (not decided here)
+
+- **METHOD-P's override-mode keep/strike** (PIA-046) — the registered owner's call; the lattice re-run at Step 7e uses the pack-default reading until it is taken.
+- **The `blind_attestation:` line** for F39's 32 adjudicated cells (decision 13).

@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: none
 source: references/2026-09-08-evidence-augmentation.md §1 row 3, §3 (Rust practice), §4 rec 5, §5 row 1
 supersedes: []
-superseded_by: []
+superseded_by: ["0099"]
 related: ["0003", "0083"]
 evidence: ["F19", "F22", "F38"]
 consumers: []

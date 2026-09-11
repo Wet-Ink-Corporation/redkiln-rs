@@ -1,12 +1,12 @@
 ---
 id: "0088"
 title: Negative-control fixtures gain a confirmation-bias arm
-status: accepted
+status: superseded
 date: 2026-09-08
 legacy_id: none
 source: references/2026-09-08-evidence-augmentation.md §3 (verification) and §4 rec 13; §1 row 9; spikes/F29-DRAFT.md; spikes/F31-DRAFT.md; spikes/F27, F26 (FINDINGS.md)
 supersedes: []
-superseded_by: []
+superseded_by: ["0101"]
 related: ["0004", "0019", "0082"]
 evidence: ["F24", "F26", "F27", "F29", "F31", "S-SUBTLE"]
 consumers: []
@@ -95,3 +95,4 @@ Sanitise the input so the reviewer never learns a candidate was previously appro
 - [documented] Method finding: five metrics saturated across the programme, and every discriminating result came from cost, stability or mechanism rather than success rates. This is the argument for choosing a ceiling metric to measure a drop, and it cuts both ways — a ceiling metric will show nothing if the effect is small.
 - **Corpus vs external, and which is acted on.** The corpus treats negative controls as sufficient because its control never fired (F29 branch 4, 0/10). The external pass names this as a one-sided guard and supplies the missing direction (§4 rec 13, "the mirror-image risk the design does not currently address"). **The external reading is acted on**: the corpus result is retained as true and reinterpreted as uninformative about approval bias, rather than being treated as reassurance.
 - **What this evidence does not license.** It does not license any claim about the size of the confirmation-bias effect on *this* reviewer, this corpus, or this schema — the number is from a different task (security review of CVE patches), a different model set, and a different prompt regime, and its per-condition breakdown has not been read. It does not license claiming the arm will detect the effect: at n=5 with detection at ceiling, only a large drop is observable. It does not license any inference that the existing gate is currently biased toward approval — that is the hypothesis, not a finding. And per the research pass's own discipline, nothing here is confirmed by the absence of a contradicting source: nine agents finding nothing against a claim means no current source contradicts it.
+- [documented] **Superseding note (2026-09-11):** ADR-0101 supersedes this record **in full** — the paper is "Measuring and Exploiting Contextual Bias in LLM-Assisted Security Code Review" (arXiv 2603.18740), the effect is 16–93 percentage points with false positives collapsing rather than "barely moving", the arm is renamed the prior-approval framing arm, and the symmetric arm is registered as S-SUBTLE-SYM rather than rejected. Every operative sentence is restated there.

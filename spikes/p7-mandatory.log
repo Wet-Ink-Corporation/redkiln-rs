@@ -1,0 +1,59 @@
+=== P7 mandatory — started 2026-09-08T05:58:39.7670771-07:00 ===
+--- mandatory repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm mandatory, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $3.70 of $200.00
+  NOTE (#7): max_rigor=recommended, so the engine would never SELECT this activity at mandatory. This arm prices the block, not a reachable configuration.
+  issue-77-advance-commit-partial-stage [mandatory] r1
+    hypothesise p1 ... confirmed $1.036 210s
+    confirm ... failed (1684438 ms)
+=== P7 mandatory — started 2026-09-08T06:31:58.8946391-07:00 ===
+--- mandatory repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm mandatory, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $7.13 of $200.00
+  NOTE (#7): max_rigor=recommended, so the engine would never SELECT this activity at mandatory. This arm prices the block, not a reachable configuration.
+Error: could not clear fixture \\?\D:\repos\redkiln-rs\spikes\fixtures\p7-mandatory\e3-silent-issue-77-advance-commit-partial-stage
+
+Caused by:
+    The process cannot access the file because it is being used by another process. (os error 32)
+--- mandatory repeat 2 of 3 ---
+P7 ΓÇö 10 items, arm mandatory, repeat 2, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $7.13 of $200.00
+  NOTE (#7): max_rigor=recommended, so the engine would never SELECT this activity at mandatory. This arm prices the block, not a reachable configuration.
+Error: could not clear fixture \\?\D:\repos\redkiln-rs\spikes\fixtures\p7-mandatory\e3-silent-issue-77-advance-commit-partial-stage
+
+Caused by:
+    The process cannot access the file because it is being used by another process. (os error 32)
+--- mandatory repeat 3 of 3 ---
+P7 ΓÇö 10 items, arm mandatory, repeat 3, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $7.13 of $200.00
+  NOTE (#7): max_rigor=recommended, so the engine would never SELECT this activity at mandatory. This arm prices the block, not a reachable configuration.
+Error: could not clear fixture \\?\D:\repos\redkiln-rs\spikes\fixtures\p7-mandatory\e3-silent-issue-77-advance-commit-partial-stage
+
+Caused by:
+    The process cannot access the file because it is being used by another process. (os error 32)
+=== P7-DONE mandatory 2026-09-08T06:33:24.6766122-07:00 ===
+=== P7 mandatory — started 2026-09-08T06:35:58.6234955-07:00 ===
+--- mandatory repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm mandatory, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $7.13 of $200.00
+  NOTE (#7): max_rigor=recommended, so the engine would never SELECT this activity at mandatory. This arm prices the block, not a reachable configuration.
+  issue-77-advance-commit-partial-stage [mandatory] r1
+    hypothesise p1 ... confirmed $1.561 1036s
+=== P7 mandatory — started 2026-09-08T07:02:57.0264053-07:00 ===
+--- mandatory repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm mandatory, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $10.59 of $200.00
+  NOTE (#7): max_rigor=recommended, so the engine would never SELECT this activity at mandatory. This arm prices the block, not a reachable configuration.
+  issue-77-advance-commit-partial-stage [mandatory] r1
+    hypothesise p1 ... confirmed $1.060 328s
+    confirm ... failed (421705 ms)
+    adversary ... 5 finding(s) $2.157 621s
+    policy   ... FALSE
+    loop-back 1 of 2 (policy false)
+    hypothesise p2 ... confirmed $1.290 320s
+    confirm ... failed (421200 ms)
+    adversary ... 6 finding(s) $1.694 476s
+    policy   ... FALSE
+    loop-back 2 of 2 (policy false)
+    hypothesise p3 ... confirmed $1.734 545s
+    confirm ... failed (421423 ms)
+    adversary ... 6 finding(s) $1.922 780s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 3 pass(es), 0 gate arrival(s), 2 loop-back(s), $9.86
+  fix-advance-write-lock-gate-scope [mandatory] r1
+    hypothesise p1 ... confirmed $1.687 351s
+    confirm ... failed (421343 ms)

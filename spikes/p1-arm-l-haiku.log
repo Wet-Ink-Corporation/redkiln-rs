@@ -1,0 +1,127 @@
+=== P1 arm L haiku — started 2026-09-07T22:22:02.9164931-07:00 ===
+--- repeat 1 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 1 | card 9d86e7044490 schema 5fd33472d73e | spent $0.11 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L-haiku r1 ... high/low/med/high kind=bug $0.0767 136s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L-haiku r1 ... unknown/unknown/unknown/unknown kind=story $0.0290 40s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L-haiku r1 ... high/low/low/high kind=bug $0.0441 70s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L-haiku r1 ... unknown/unknown/unknown/unknown kind=story $0.0334 50s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L-haiku r1 ... unknown/unknown/unknown/unknown kind=story $0.0425 74s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L-haiku r1 ... unknown/unknown/unknown/unknown kind=story $0.0282 40s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L-haiku r1 ... med/low/low/med kind=story $0.0462 61s
+  _archive/docs-site-brand-identity/typography-delivery      L-haiku r1 ... high/high/high/high kind=project $0.0854 95s
+  support/fix-gate-honesty-sweep                             L-haiku r1 ... high/unknown/high/unknown kind=project $0.0479 84s
+  support/fix-json-error-envelope                            L-haiku r1 ... unknown/unknown/unknown/unknown kind=project $0.0499 90s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L-haiku r1 ... high/low/high/high kind=project $0.0614 85s
+  support/fix-ci-pinned-pack-drift-guard                     L-haiku r1 ... unknown/low/low/unknown kind=project $0.0449 89s
+  _archive/docs-site-brand-identity/contrast-verification    L-haiku r1 ... high/low/med/high kind=project $0.0985 170s
+  _archive/live-views                                        L-haiku r1 ... high/med/high/high kind=initiative $0.1080 117s
+  _archive/docs-site-brand-identity                          L-haiku r1 ... high/med/high/high kind=initiative $0.0980 119s
+  support                                                    L-haiku r1 ... unknown/unknown/unknown/unknown kind=initiative $0.0263 44s
+  support/links-hand-edit-denied-with-no-backfill-path       L-haiku r1 ... low/high/unknown/unknown kind=story $0.0656 131s
+  support/advance-commit-ignored-path                        L-haiku r1 ... high/unknown/unknown/high kind=bug $0.0571 102s
+wrote ..\results\p1-arm-l.jsonl
+  support/telemetry-gitignored-so-runs-never-travel          L-haiku r1 ... high/low/low/high kind=bug $0.0798 79s
+
+  spend in this file: $1.24 of $40.00
+--- repeat 2 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 2 | card 9d86e7044490 schema 5fd33472d73e | spent $3.31 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics L-haiku r2 ... med/low/low/high kind=bug $0.0451 106s
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L-haiku r2 ... high/med/med/high kind=bug $0.0335 82s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L-haiku r2 ... unknown/unknown/unknown/unknown kind=story $0.0310 75s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L-haiku r2 ... high/low/low/high kind=story $0.0749 111s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L-haiku r2 ... unknown/unknown/unknown/unknown kind=story $0.0134 29s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L-haiku r2 ... high/unknown/unknown/high kind=story $0.0488 109s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L-haiku r2 ... unknown/unknown/unknown/unknown kind=story $0.0142 31s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L-haiku r2 ... med/unknown/unknown/med kind=story $0.0300 65s
+  _archive/docs-site-brand-identity/typography-delivery      L-haiku r2 ... high/med/high/high kind=project $0.0683 93s
+  support/fix-gate-honesty-sweep                             L-haiku r2 ... high/unknown/high/high kind=project $0.0270 59s
+  support/fix-json-error-envelope                            L-haiku r2 ... unknown/unknown/low/unknown kind=project $0.0380 84s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L-haiku r2 ... high/low/high/high kind=project $0.0719 162s
+  support/fix-ci-pinned-pack-drift-guard                     L-haiku r2 ... unknown/unknown/unknown/unknown kind=project $0.0277 63s
+  _archive/docs-site-brand-identity/contrast-verification    L-haiku r2 ... high/med/high/high kind=project $0.0593 128s
+  _archive/live-views                                        L-haiku r2 ... high/med/high/high kind=initiative $0.0379 91s
+  _archive/docs-site-brand-identity                          L-haiku r2 ... high/med/high/high kind=initiative $0.0224 49s
+  support                                                    L-haiku r2 ... unknown/unknown/unknown/unknown kind=initiative $0.0147 31s
+  support/links-hand-edit-denied-with-no-backfill-path       L-haiku r2 ... low/high/unknown/unknown kind=story $0.0757 126s
+  support/advance-commit-ignored-path                        L-haiku r2 ... high/unknown/unknown/high kind=bug $0.0338 75s
+  support/telemetry-gitignored-so-runs-never-travel          L-haiku r2 ... high/low/low/med kind=bug $0.0333 80s
+
+  spend in this file: $4.11 of $40.00
+wrote ..\results\p1-arm-l.jsonl
+--- repeat 3 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 3 | card 9d86e7044490 schema 5fd33472d73e | spent $5.80 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics L-haiku r3 ... med/low/med/high kind=bug $0.0446 101s
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L-haiku r3 ... high/med/med/high kind=bug $0.0404 80s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L-haiku r3 ... unknown/unknown/unknown/unknown kind=story $0.0121 26s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L-haiku r3 ... med/med/low/high kind=story $0.0521 85s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L-haiku r3 ... unknown/unknown/unknown/unknown kind=story $0.0272 58s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L-haiku r3 ... high/unknown/unknown/unknown kind=story $0.0615 129s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L-haiku r3 ... unknown/unknown/unknown/unknown kind=story $0.0282 51s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L-haiku r3 ... med/unknown/unknown/unknown kind=story $0.0382 85s
+  _archive/docs-site-brand-identity/typography-delivery      L-haiku r3 ... high/med/high/high kind=project $0.0255 55s
+  support/fix-gate-honesty-sweep                             L-haiku r3 ... unknown/unknown/low/unknown kind=project $0.0390 86s
+  support/fix-json-error-envelope                            L-haiku r3 ... unknown/unknown/unknown/unknown kind=project $0.0303 68s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L-haiku r3 ... high/med/high/high kind=project $0.0545 124s
+  support/fix-ci-pinned-pack-drift-guard                     L-haiku r3 ... unknown/unknown/low/unknown kind=project $0.0320 69s
+  _archive/docs-site-brand-identity/contrast-verification    L-haiku r3 ... high/med/med/high kind=project $0.0361 83s
+  _archive/live-views                                        L-haiku r3 ... high/med/high/high kind=initiative $0.0442 99s
+  _archive/docs-site-brand-identity                          L-haiku r3 ... high/med/high/high kind=initiative $0.0472 115s
+  support                                                    L-haiku r3 ... unknown/unknown/unknown/unknown kind=initiative $0.0170 36s
+  support/links-hand-edit-denied-with-no-backfill-path       L-haiku r3 ... low/med/med/high kind=story $0.0428 95s
+  support/advance-commit-ignored-path                        L-haiku r3 ... high/unknown/unknown/high kind=bug $0.0463 107s
+wrote ..\results\p1-arm-l.jsonl
+  support/telemetry-gitignored-so-runs-never-travel          L-haiku r3 ... high/low/low/high kind=bug $0.0311 65s
+
+  spend in this file: $6.55 of $40.00
+--- repeat 4 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 4 | card 9d86e7044490 schema 5fd33472d73e | spent $8.24 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics L-haiku r4 ... med/med/high/high kind=bug $0.0472 72s
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L-haiku r4 ... high/med/med/med kind=bug $0.0314 69s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L-haiku r4 ... unknown/unknown/unknown/unknown kind=story $0.0212 46s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L-haiku r4 ... high/low/low/high kind=bug $0.0535 114s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L-haiku r4 ... unknown/unknown/unknown/unknown kind=story $0.0175 38s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L-haiku r4 ... high/unknown/unknown/high kind=story $0.0297 64s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L-haiku r4 ... unknown/unknown/unknown/unknown kind=story $0.0253 53s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L-haiku r4 ... high/low/low/med kind=story $0.0423 94s
+  _archive/docs-site-brand-identity/typography-delivery      L-haiku r4 ... high/med/high/high kind=project $0.0499 117s
+  support/fix-gate-honesty-sweep                             L-haiku r4 ... high/unknown/high/high kind=project $0.0461 98s
+  support/fix-json-error-envelope                            L-haiku r4 ... unknown/unknown/unknown/unknown kind=project $0.0348 78s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L-haiku r4 ... high/low/med/low kind=project $0.0452 103s
+  support/fix-ci-pinned-pack-drift-guard                     L-haiku r4 ... unknown/unknown/unknown/unknown kind=bug $0.0319 34s
+  _archive/docs-site-brand-identity/contrast-verification    L-haiku r4 ... high/med/med/high kind=project $0.0732 119s
+  _archive/live-views                                        L-haiku r4 ... med/med/high/high kind=initiative $0.0856 112s
+  _archive/docs-site-brand-identity                          L-haiku r4 ... high/med/high/high kind=initiative $0.0827 84s
+  support                                                    L-haiku r4 ... unknown/unknown/unknown/unknown kind=initiative $0.0269 28s
+  support/links-hand-edit-denied-with-no-backfill-path       L-haiku r4 ... low/med/med/high kind=story $0.0648 114s
+  support/advance-commit-ignored-path                        L-haiku r4 ... high/unknown/unknown/high kind=bug $0.0342 53s
+  support/telemetry-gitignored-so-runs-never-travel          L-haiku r4 ... high/low/low/med kind=bug $0.0442 68s
+wrote ..\results\p1-arm-l.jsonl
+
+  spend in this file: $9.13 of $40.00
+--- repeat 5 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 5 | card 9d86e7044490 schema 5fd33472d73e | spent $9.58 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics L-haiku r5 ... med/low/med/high kind=bug $0.1069 148s
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L-haiku r5 ... high/med/med/high kind=bug $0.0517 81s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L-haiku r5 ... low/low/low/low kind=story $0.0467 79s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L-haiku r5 ... high/low/low/high kind=story $0.0424 66s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L-haiku r5 ... unknown/unknown/unknown/unknown kind=story $0.0276 39s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L-haiku r5 ... unknown/low/unknown/unknown kind=story $0.0351 55s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L-haiku r5 ... unknown/unknown/unknown/unknown kind=story $0.0290 43s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L-haiku r5 ... med/unknown/unknown/unknown kind=story $0.0506 88s
+  _archive/docs-site-brand-identity/typography-delivery      L-haiku r5 ... high/med/med/high kind=project $0.0988 122s
+  support/fix-gate-honesty-sweep                             L-haiku r5 ... high/unknown/high/high kind=project $0.0556 98s
+  support/fix-json-error-envelope                            L-haiku r5 ... med/unknown/unknown/med kind=project $0.0480 86s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L-haiku r5 ... high/low/high/high kind=project $0.0997 169s
+  support/fix-ci-pinned-pack-drift-guard                     L-haiku r5 ... unknown/unknown/low/unknown kind=project $0.0667 107s
+  _archive/docs-site-brand-identity/contrast-verification    L-haiku r5 ... high/low/med/high kind=project $0.0495 113s
+  _archive/live-views                                        L-haiku r5 ... high/med/high/high kind=initiative $0.0306 76s
+  _archive/docs-site-brand-identity                          L-haiku r5 ... high/med/high/high kind=initiative $0.0581 128s
+  support                                                    L-haiku r5 ... unknown/unknown/unknown/unknown kind=initiative $0.0236 52s
+  support/links-hand-edit-denied-with-no-backfill-path       L-haiku r5 ... low/med/med/high kind=story $0.0382 91s
+  support/advance-commit-ignored-path                        L-haiku r5 ... med/unknown/unknown/high kind=bug $0.0675 148s
+  support/telemetry-gitignored-so-runs-never-travel          L-haiku r5 ... high/low/low/med kind=bug $0.0523 81s
+
+  spend in this file: $10.66 of $40.00
+wrote ..\results\p1-arm-l.jsonl
+=== ARM-L-DONE haiku 2026-09-08T00:41:51.1463070-07:00 ===

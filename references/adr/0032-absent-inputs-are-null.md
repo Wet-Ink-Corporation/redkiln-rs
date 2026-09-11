@@ -6,7 +6,7 @@ date: 2026-09-07
 legacy_id: SCHEMA-2
 source: references/2026-09-07-activity-graph-schema.md §9a (amendment 2)
 supersedes: []
-superseded_by: []
+superseded_by: ["0103"]
 related: ["0069"]
 evidence: ["P9 spikes/F32-DRAFT.md §4"]
 consumers: []

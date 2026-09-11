@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: none
 source: references/2026-09-08-evidence-augmentation.md §2 (Rust practice), §3 (Rust practice, incl. direct repository inspection), §4 rec 8, §5 row "authoritative guidance for a ~12-crate workspace"
 supersedes: []
-superseded_by: []
+superseded_by: ["0102"]
 related: ["0076", "0084"]
 evidence: []
 consumers: []

@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: none
 source: spikes/F38-DRAFT.md (P8, PARTIAL); spikes/METHOD-P.md §5.2/§5.4; spikes/DECISIONS-2026-09-09.md #24, #28, #35, #36
 supersedes: []
-superseded_by: []
+superseded_by: ["0106"]
 related: ["0012", "0017", "0038", "0045", "0062"]
 evidence: ["F38", "F19", "F28", "F22", "F10"]
 consumers: []
