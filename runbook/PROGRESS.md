@@ -81,7 +81,7 @@ Decisions the audit assigned to the operator, walked one by one on 2026-09-11. `
 
 | Item | Value | Where recorded |
 | --- | --- | --- |
-| Rust toolchain pin | `1.98.1` (the spike programme ran on 1.97.1; the move is recorded per golden constraint 8) | s0 §0.2 / §0.3 |
+| Rust toolchain pin | `1.98.1` (installed on this box 2026-09-11 via `rustup toolchain install 1.98.1 --profile minimal -c rustfmt -c clippy --no-self-update`; the spike programme ran on 1.97.1; the move is recorded per golden constraint 8) | s0 §0.2 / §0.3 |
 | Claude Code instrument | read from `spikes/results/instrument-checks/RUNBOOK-instrument.txt` at run time (last measured 2.1.268 on 2026-09-10) | s0 §0.3 |
 | Corpus pin | `47faec9f46b8d983c2c75f0794164e68415ae706` (predecessor) · the redkiln-corpus SHA in `CORPUS_PIN` after Step 2 | s2 |
 
@@ -205,9 +205,9 @@ Columns: id · priority · build stage first reached · classification (NEW / SH
 
 | Limit | Task | Cost | Status |
 | --- | --- | --- | --- |
-| M-01 | S-PORTS — a throwaway crate compiling the five port traits, one fake, `CancelToken`, a `compile_fail` doctest (consumer: Step 7a, ADR-0099) | 1–2 h | this pass |
-| M-02 | S-GRAMMAR — EBNF + recursive-descent parser over every predicate in `spikes/p9` (consumer: Step 7b lint, ADR-0103) | 2–4 h | this pass |
-| C-09 | `cargo audit` on `spikes/runner/Cargo.lock`; `spikes/p9/lint.py` over the packs and catalog | minutes | this pass |
+| M-01 | S-PORTS — a throwaway crate compiling the five port traits, one fake, `CancelToken`, a `compile_fail` doctest (consumer: Step 7a, ADR-0099) | 1–2 h | **done 2026-09-11** — `spikes/s-ports/`, F41: 5/5 tests + 2/2 compile_fail on rustc 1.97.1 and 1.98.1, clippy clean |
+| M-02 | S-GRAMMAR — EBNF + recursive-descent parser over every predicate in `spikes/p9` (consumer: Step 7b lint, ADR-0103) | 2–4 h | **done 2026-09-11** — `spikes/p9/grammar-probe.py`, F42: 285/287 parse, 0 precedence-dependent, 191 bare literals, 2 pack defects (`exists()` in packs/incident.toml; a hyphenated value in catalog-b) + 3 catalog-b `on_false` defects; two grammar forms the packs used and no record stated (set-membership `in`; hyphens in `${ref}` segments) recorded |
+| C-09 | `cargo audit` on `spikes/runner/Cargo.lock`; `spikes/p9/lint.py` over the packs and catalog | minutes | **done 2026-09-11** — cargo-audit 0.22.2 (1,243 advisories loaded) and cargo-deny 0.20.2: 141 packages, 0 vulnerabilities, 0 warnings; the runner carries none of the product's load-bearing crates (no gix/rusqlite). `lint.py`: errors=0, warnings=2 (pre-existing R4/R9); `lattice.py --validate`: no errors, localisation family holes=0 after the bisect ceiling |
 | C-06 | DECISIONS-2026-09-09 + HANDOFF diffed against the ADR set | 1 h | this pass |
 | M-06 | Operator label file over the 17 P1 + a seeded 30 P2 concerns (agree / disagree / unsure) | 2–3 human hours | templated: `references/audit/2026-09-10/labels-ryan-TODO.md` |
 | C-01 | Slice finder + refuter over AC §12 (CLI/doctor, AC-400..439) | 1 agent-pass | before Step 7d (noted in s7d) |
@@ -236,6 +236,6 @@ Columns: id · priority · build stage first reached · classification (NEW / SH
 | ADR files (`ls references/adr/*.md \| wc -l`, README included) | 90 | |
 | Stale strings (the `git grep` list in INDEX §Validation) | present | |
 | Checkpoint dry-run (targets that exist today) | — | |
-| S-PORTS `cargo check` | — | |
-| S-GRAMMAR parse-fail / ambiguous count with denominator | — | |
-| `cargo audit` on `spikes/runner/Cargo.lock` | — | |
+| S-PORTS `cargo check` | — | pass on 1.97.1 and 1.98.1 (F41) |
+| S-GRAMMAR parse-fail / ambiguous count with denominator | — | 2/287 fail (both pack defects); 0/287 precedence-dependent (F42) |
+| `cargo audit` on `spikes/runner/Cargo.lock` | — | 0 vulnerabilities / 0 warnings, 141 crates, RustSec DB fetched 2026-09-11 |

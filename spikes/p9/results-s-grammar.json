@@ -1,0 +1,62 @@
+{
+ "strings": 386,
+ "by_kind": {
+  "when": 248,
+  "on_false": 99,
+  "applicable_if": 39
+ },
+ "parsed": 285,
+ "failed": [
+  [
+   "catalog-b/blameless-postmortem.toml",
+   "/activity/applicable_if",
+   "kind in [incident, security-vuln] or (kind == bug and criticality >= high)",
+   "lex error at 27: '-vuln] or (k'"
+  ],
+  [
+   "packs/incident.toml",
+   "/stage/closeout/spawn[0]/when",
+   "exists(ProblemRecord)",
+   "trailing input at 6: '(' in 'exists(ProblemRecord)'"
+  ]
+ ],
+ "mixed_unparenthesised": [],
+ "features": {
+  "bare_literal": 191,
+  "or": 25,
+  "ref": 62,
+  "len": 14,
+  "and": 23,
+  "ref_optional": 11,
+  "quoted": 55,
+  "in": 1,
+  "null": 2,
+  "parens": 1,
+  "in_membership": 11
+ },
+ "on_false_ok": 96,
+ "on_false_forms": {
+  "keyword": 33,
+  "loop-back": 66
+ },
+ "on_false_failed": [
+  [
+   "catalog-b/api-contract-spec.toml",
+   "/step[5]/on_false",
+   "assemble",
+   "keyword"
+  ],
+  [
+   "catalog-b/blameless-postmortem.toml",
+   "/step[2]/on_false",
+   "draft",
+   "keyword"
+  ],
+  [
+   "catalog-b/blameless-postmortem.toml",
+   "/step[4]/on_false",
+   "draft",
+   "keyword"
+  ]
+ ]
+}

@@ -151,6 +151,11 @@ bundled SQLite in `libsqlite3-sys` < 0.25.1 (three advisories in the rusqlite fa
 libsqlite3-sys ^0.38.2, unaffected. Line 19: gix "multi-maintainer … not a single-author risk" — multi-contributor,
 **one crates.io owner** (Byron). [documented, crates.io, fetched 2026-09-10] Decision unchanged.
 
+**E-0084-3 (2026-09-11, audit grounding EXT-CRATEVER-019/-026).** The "Verified versions, as at 2026-09-08" line: `jsonschema` 0.55.1 is
+now **0.56.0** (2026-09-10; five releases in eleven days — the reason ADR-0100 exact-pins it) and `release-plz` 0.3.163 is **0.3.165**
+(0.3.164 on 2026-09-09, 0.3.165 on 2026-09-10). Both were correct on the read date; thirteen of the audit's 860 rows went stale within 48
+hours, which is why the runbook's Step 0 re-verifies pins on the day. [documented, crates.io, fetched 2026-09-10/11] Decision unchanged.
+
 **E-0084-2 (2026-09-11, PIA-005).** Line 117: "no limits table was found on the platform structured-outputs page,
 which truncated on fetch" — **What is true:** the page carries a "Schema complexity limits" table (24 optional
 parameters, 16 union-typed parameters, 20 strict tools per request, 180 s compile timeout; per request) — present on
@@ -165,6 +170,14 @@ rationale, owner, closure date) is the antecedent rule 6 extends, and Appendix D
 the antecedent rule 4 specialises; the norms name a method class, not a test id. Read "specialises documented
 requirements-engineering practice; no agile-AC-specific norm found". [documented, fetched 2026-09-10] Decision
 unchanged.
+
+**E-0085-2 (2026-09-11, PIA-023; audit grounding EXT-DECISION-004/-008, EXT-NOURL-011).** The evidence line "Flat `NNNN-slug.md` with a
+generated index is community consensus at 100+ records … adr-tools AND Log4brains regenerate a README index" — **What is true:**
+`adr-tools -s` stamps bidirectional Superceded-by/Supercedes links and strips Accepted (confirmed); **Log4brains rejects NNNN numbering**
+(it uses `YYYYMMDD-slug.md`), builds a static site with a timeline and infers metadata from raw text plus git log — cite adr-tools alone
+for the NNNN convention. MADR's minimal cut keeps Considered Options and has no frontmatter; "updated over time" is MADR's allowance for
+Consequences/Confirmation, not a description of its status field. [documented, github.com/adr/madr; log4brains docs, fetched 2026-09-10]
+Decision unchanged (the format is this repository's; the citation was the overclaim).
 
 ## ADR-0086 — No durable-execution framework; the memo table is built here
 
