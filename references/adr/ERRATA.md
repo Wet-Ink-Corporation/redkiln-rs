@@ -216,9 +216,10 @@ Decision unchanged (the option was rejected on cost and on relocating the vocabu
 
 **E-0089-2 (2026-09-11, PIA-073, PIA-077).** Limits 1: "roughly 60 positives are needed for a lower bound above 0.95"
 — **What is true:** **73** all-correct positives at the registered two-sided z = 1.96 (92 with continuity correction;
-72 under Clopper–Pearson). The F39 table's "140 truth cells" is **136** after the panel-file key
-(`resolve-open-questions` → `resolve-open-question`) is fixed and `score-arm-d-panel.py` fails closed on a truth cell
-with no engine record; `auth` reads 0/12 [0.00, 0.24]. [measured, re-run] Decision unchanged.
+72 under Clopper–Pearson). The F39 table's "140 truth cells" were **136 scored** on 2026-09-09 (four cells skipped on a panel-file key
+mismatch, `resolve-open-questions` vs `resolve-open-question`); with the key fixed and `score-arm-d-panel.py` failing closed on a truth
+cell with no engine record, the 2026-09-11 re-run scores **all 140** and `auth` reads 0/12 [0.00, 0.24] (fp 11 → 12); every verdict is
+unchanged. [measured, re-run 2026-09-11] Decision unchanged.
 
 ---
 

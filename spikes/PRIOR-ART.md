@@ -19,7 +19,7 @@ the RFC's headline cost argument.
 | Agentless: three fixed phases, 32.00% on SWE-bench Lite at $0.70/instance vs CodeR 28.33% at $3.34 | **Holds.** Phases confirmed as localization → repair → patch validation. $0.70 is the figure for the 32.00% configuration; the original July-2024 release reported $0.34. The charter's use is fair |
 | "Kim et al. — 260 configurations, 5 architectures, 6 benchmarks, compute-matched … effects from +80.8% to −70.0%" | **Materially wrong, and the correction is more useful than the claim.** See §2 |
 | Reflexion / self-correction depends on test quality; Huang et al. — intrinsic self-correction without an oracle degrades accuracy | Consistent with the wider literature; not separately re-verified here |
-| LLM-judge ceiling ~62.5% agreement / κ=0.37 | Plausible and conservative. But the charter's *reporting rule* is wrong — see §4 |
+| LLM-judge ceiling ~62.5% agreement / κ=0.37 | Plausible and conservative. But the charter's *reporting rule* is wrong — see §4. *[Amended 2026-09-11: the figure is [inferred, unsourced] — §11 A1]* |
 | Temperature 0 is not deterministic (1,000 completions → 80 unique outputs) | Consistent with the consensus that agentic evaluation is stochastic end-to-end |
 | "No published benchmark of in-session Task dispatch vs `claude -p` per agent" | **Still true**, but no longer the closest evidence available — see §3 |
 
@@ -119,7 +119,9 @@ two raters, e.g. E6's panel arm) as the headline, with raw agreement only
 alongside. Conventional bands: κ > 0.80 strong, 0.60–0.80 substantial, < 0.60
 means the rubric needs work. The charter's own cited ceiling (κ = 0.37) is
 already below that floor, which is an argument for leaning on deterministic
-outcomes wherever they exist — as the charter says it prefers to.
+outcomes wherever they exist — as the charter says it prefers to. *[Amended
+2026-09-11: κ = 0.37 is unsourced; the argument rests on the Landis–Koch bands and
+Judge's Verdict — §11 A1]*
 
 ---
 
@@ -174,6 +176,7 @@ claimed benefits match the charter's reasoning exactly — preventing questionab
 research practices, forcing design feedback before data collection, and letting
 readers judge how severely a claim was tested. There is an OSF-based registered
 report template for SE controlled experiments whose structure we can borrow.
+*[Amended 2026-09-11: a proposed direction, not a finished template — §11 A2]*
 
 This does not change the plan; it confirms it, and it means the open item in
 FINDINGS (nothing committed, so `preregistration_sha` currently points at a
@@ -248,3 +251,29 @@ cannot both be true. It is now directly testable against
 - [Registered reports in software engineering (EMSE)](https://link.springer.com/article/10.1007/s10664-022-10277-5) · [Benefits of preregistration and Registered Reports](https://www.tandfonline.com/doi/full/10.1080/2833373X.2024.2376046) · [OSF-based RR template for SE (arXiv 2602.09292)](https://arxiv.org/pdf/2602.09292)
 - Mutation testing: [Codecov overview](https://about.codecov.io/blog/mutation-testing-how-to-ensure-code-coverage-isnt-a-vanity-metric/) · [LLMs for equivalent mutant detection (arXiv 2607.00511)](https://arxiv.org/pdf/2607.00511)
 - [AgentLens (arXiv 2607.06624)](https://arxiv.org/pdf/2607.06624) · [Claw-SWE-Bench (arXiv 2606.12344)](https://arxiv.org/pdf/2606.12344) · [Prompt cache hit rate as a production metric](https://tianpan.co/blog/2026-04-20-prompt-cache-hit-rate-production-metric)
+
+---
+
+## 11. Amendments (2026-09-11)
+
+Dated amendments from the 2026-09-10 pre-implementation audit (PIA-101 research-lineage part, PIA-108;
+DECISIONS-2026-09-11 #14). The original lines stand with a marker; nothing above is rewritten.
+
+**A1 — :22 and :120, the "~62.5% agreement / κ = 0.37" LLM-judge ceiling is [inferred, unsourced].** The figure
+is quoted from the charter (`references/2026-08-31-rust-inversion-spike-charter.md` :221), which cites no
+write-up, and a targeted search on 2026-09-10 attributed it to nothing live: the nearest on-topic study
+(arXiv 2509.01494, code-review LLM-judge agreement) reports human–LLM κ 0.43–0.71 and human–human 0.61–0.76, and
+no source states 0.37 with 62.5% agreement [documented, audit PIA-108, fetched 2026-09-10]. It is retagged
+**[inferred, unsourced]** here and in the charter's reading. §4's argument does not need it: the rule change
+rests on the **Landis–Koch bands** (κ < 0.60 means the rubric needs work) and on *Judge's Verdict: A Comprehensive
+Analysis of LLM Judge Capability Through Human Agreement* (arXiv 2510.09738, confirmed live 2026-09-10 as the
+sourced treatment of LLM-judge agreement in κ terms). "Already below that floor" therefore reads "an LLM judge on
+this corpus should be assumed below that floor until measured, which E6's κ would do". The charter is a dated
+document and is left as is; this amendment points at it.
+
+**A2 — :175-176, the OSF "template to borrow".** Bett et al. 2026 (arXiv 2602.09292) is a **gap analysis that
+proposes a direction for an OSF-based registered-report template for SE controlled experiments; it ships no
+template**. The sentence reads: "there is **a proposed direction for an OSF-based template (Bett et al. 2026,
+arXiv 2602.09292); no finished template exists**". §7's conclusion ("this does not change the plan; it confirms
+it") is unchanged — the practice this programme follows is METHOD's own pre-registration form, not a borrowed
+template [documented, fetched 2026-09-10].

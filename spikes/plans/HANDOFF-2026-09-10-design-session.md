@@ -69,7 +69,11 @@ the remaining 27 asset-only commits and the METHOD-S amendment is extended, neve
 
 **Registered and unrun, with named consumers:** `S-FACET` (ADR-0089), `P2-B` (recall's missing denominator),
 `S-GIX`, `S-TTL1`, `S-H1c`, `S-SUBTLE-CB`, `S-CODEX`, `S-RETRY`. §10.5 carries all of them with cost and gate
-status. **P2-B is registered once, in §10.5** — an earlier draft of the F40 absorption registered the same
+status. *[corrected 2026-09-11, PIA-102: not all with a cost — on 2026-09-10 `S-SUBTLE-CB`'s Cost cell held no
+figure ("must be sized before it runs") and `P2-B`'s read "Not computed"; `S-CODEX`'s 46 dispatches carried no
+price. As of 2026-09-11 S-SUBTLE-CB carries a first-order estimate (2 framings × 5 items × k draws at S-TYPED's
+median $3.03/review, ADR-0101), P2-B is sized in METHOD-P amendment 12 ($0 model cost; ≥ 35 positives to label),
+and S-CODEX is registered in `spikes/METHOD-S-CODEX.md` with its cost stated as unpriced.]* **P2-B is registered once, in §10.5** — an earlier draft of the F40 absorption registered the same
 spike three times under three names, which is the exact failure ADR-0012's named-consumer rule exists to
 prevent.
 

@@ -128,7 +128,7 @@ invariant with no discriminating test is untested.
 | --- | --- | --- |
 | detection | 23/23 | 23/23 |
 | false positives | **1/23** | **0/23** |
-| MCC | +0.978 | **+1.000** |
+| MCC | +0.978 *[corrected 2026-09-11: +0.957 — see the dated correction at the foot]* | **+1.000** |
 
 The direction is unchanged from the unadjudicated result — headless is not
 worse — and the gap is still one item, which McNemar cannot separate from
@@ -144,3 +144,22 @@ supposed to apply this same card. Either the historical reviews did not apply
 the card's stated standard, or the standard is stricter than the process
 enforces. Investigating that is tracked separately; it is a finding about
 redkiln, not about the inversion thesis.
+
+## Correction (2026-09-11) — arm (a)'s MCC was a computation error
+
+**Audit PIA-073; ERRATA E-0074-3, E-0080-1, E-0001-1.** The table above gives arm (a) **MCC +0.978**. From the
+matrix the same table states — detection 23/23, false positives 1/23 — the confusion matrix is **tp 23 / fn 0 /
+fp 1 / tn 22**, and MCC = (23·22 − 1·0) / √((23+1)(23+0)(22+1)(22+0)) = **+0.957** [measured, recomputed
+2026-09-11 from the matrix above; F21 computes its own +0.917 the same way]. The earlier figure was a computation error, not a
+different matrix; arm (b)'s +1.000 (tp 23 / fn 0 / fp 0 / tn 23) is unchanged. The one-item gap, its direction
+(headless not worse) and "McNemar cannot separate it from chance" all stand.
+
+**The McNemar p = 0.625 is bound to the right quantity.** Where restatements say "detection 23/23 vs 23/23,
+McNemar p = 0.625", the test is not on detection — detection has **no discordant pairs and admits no test**. The
+p = 0.625 is the exact two-sided McNemar on the **CLEAN false-positive discordant pairs as recorded before this
+adjudication: 3 items (a) rejected / (b) approved against 1 the other way** (F23). After this adjudication the
+recorded 4/23 vs 2/23 settles to 1/23 vs 0/23 — one discordant pair, still nothing a test can separate.
+
+This is a decision record; the correction is dated and the original line is left in place with a marker.
+**countersign: PENDING (Ryan)** — written by Claude on 2026-09-11; the operator countersigns by replacing this
+line with `countersign: Ryan Britton, <date>`.

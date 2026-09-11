@@ -3,7 +3,7 @@
 **What this is.** The operator-facing build runbook, one file per stage, so a build session loads the stage it is
 executing and not the whole. It is the execution order for `references/2026-09-08-architecture-design.md` §0.1 and
 §10.2, absorbing the pre-implementation audit of 2026-09-10 (110 concerns, all dispositioned in `PROGRESS.md` §4)
-and the twenty decision records that pass produced (ADR-0092–0111; `spikes/DECISIONS-2026-09-11.md`). It decides
+and the twenty-one decision records that pass produced (ADR-0092–0112; `spikes/DECISIONS-2026-09-11.md`). It decides
 nothing the record does not: precedence is **ADR-0092**'s — accepted ADRs > the AC register > the SM register > the
 spike files > this runbook — and where a stage file disagrees with any of those, the stage file is wrong.
 

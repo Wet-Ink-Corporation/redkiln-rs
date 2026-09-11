@@ -20,7 +20,7 @@ counts.
 
 **The rule.** `main` is at the pin the pre-implementation audit measured, **`009a4ec`** ("Closeout: the F40 pass's
 fourteen minor findings applied…", 2026-09-10). The remediation branch `remediation/pia-2026-09-11` carries, on top
-of it: the audit and its instrument (`references/audit/2026-09-10/`), ADR-0092–0111 and `ERRATA.md`,
+of it: the audit and its instrument (`references/audit/2026-09-10/`), ADR-0092–0112 and `ERRATA.md`,
 `DECISIONS-2026-09-11.md`, the register/design/spike-file amendments, this `runbook/` folder, the promoted
 `spikes/F30-DRAFT.md`, the S-PORTS and S-GRAMMAR instruments (`spikes/s-ports/`, `spikes/p9/grammar-probe.py`) and
 their drafts F41/F42. **Step 0 starts from that branch merged to `main`** — if `git log --oneline -1 main` does not
@@ -52,8 +52,8 @@ git -C D:/repos/redkiln-rs status --porcelain | grep -v '^?? runbook/'
 **Count it, do not read it off this listing**: `git status --porcelain | grep -c '^??'` is the number, and this
 enumeration has been wrong before. The P2 artefacts, the F39/F40 amendments and the 2026-09-09 ` M` lines that
 earlier revisions enumerated are all committed (`4519edc` … `009a4ec`); what Step 1 commits is the noise above and
-nothing else. `references/adr/` holds **109 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
-is **111** — Checkpoint 1 asserts that number. `e3b0bac` survives only as the **pre-design-pass reference point**
+nothing else. `references/adr/` holds **110 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
+is **112** — Checkpoint 1 asserts that number. `e3b0bac` survives only as the **pre-design-pass reference point**
 that Step 9's rollback and Step 1.3's fresh-clone branch both name.
 
 Do not re-run `spikes/p9/COMMIT-2026-09-09.sh`. Step 1 commits what is left.
@@ -119,7 +119,7 @@ instrument line is made checkable by writing the version to a file rather than b
 
 ```bash
 git -C D:/repos/redkiln-rs rev-parse --abbrev-ref HEAD    # → build/phase-0-to-1
-ls D:/repos/redkiln-rs/references/adr/0111-*.md >/dev/null && test -f D:/repos/redkiln-rs/runbook/INDEX.md && echo "remediation present"   # → the 2026-09-11 remediation is in the tree (ADR-0111 and this runbook exist)
+ls D:/repos/redkiln-rs/references/adr/0112-*.md >/dev/null && test -f D:/repos/redkiln-rs/runbook/INDEX.md && echo "remediation present"   # → the 2026-09-11 remediation is in the tree (ADR-0111 and this runbook exist)
 rustup run 1.98.1 rustc --version                         # → rustc 1.98.1 (48a229cea 2026-09-01) — the pin; the PATH rustc is recorded, not asserted
 claude --version | tee D:/repos/redkiln-rs/spikes/results/instrument-checks/RUNBOOK-instrument.txt
                                                           # → writes e.g. "2.1.268 (Claude Code)" to a FILE; read it back, never retype it

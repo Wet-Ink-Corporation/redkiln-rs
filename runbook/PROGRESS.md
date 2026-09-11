@@ -17,7 +17,7 @@ Execution order is `0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7a → 7b �
 
 | Stage | File | Status | Entry gate | Exit checkpoint | Result / commit | Blocker |
 | --- | --- | --- | --- | --- | --- | --- |
-| R — remediation of the 2026-09-10 audit | (this pass) | in progress | — | §4 all rows non-`open`; validators re-run (§6) | — | — |
+| R — remediation of the 2026-09-10 audit | (this pass) | **done 2026-09-11** (W0–W5; three items left with Ryan — §2, §5) | — | §4 all rows non-`open`; validators re-run (§6) | branch `remediation/pia-2026-09-11`: `0e1b1bc` (W0), `7954bd0` (W1), `0e34384` (W3+W4 spikes), W2 = this commit, W4 = the next | Ryan merges |
 | 0 — Preconditions and safety | `phase-0/s0-preconditions.md` | not started | — | Checkpoint 0 | | |
 | 1 — Commit the spike output | `phase-0/s1-commit-spike-output.md` | not started | Checkpoint 0 | Checkpoint 1 | | |
 | 3 — Review-consumer check and the label files | `phase-0/s3-review-consumer-and-labels.md` | not started | Checkpoint 1 | Checkpoints 3a/3b/3c | | |
@@ -43,18 +43,18 @@ Decisions the audit assigned to the operator, walked one by one on 2026-09-11. `
 | D-A | convention | Errata to frozen ADRs live in `references/adr/ERRATA.md`; the precedence rule; the cut-id re-issue licence | ADR-0092 | recorded |
 | D-B | PIA-001 | `stage`/`rigor`/`role`/`cost` → `source = "kernel"`; `surfaces` → `"declared"`; `recent_deploy` stays derived (NOT MEASURABLE); S-BIN gate scoped to the `ChangeSummary` type | ADR-0093 | recorded |
 | P7-CEIL | PIA-001 | `bisect` is a ceiling activity: `max_rigor = "recommended"`; lattice re-run | DECISIONS-2026-09-11 #1 | recorded |
-| D-C | PIA-003 | `has_repro`/`external_dep`/`market_facing` → `source = "human"` at triage; carried into ADR-0090 at Step 4.4 | s4 §4.1 pre-registration; DECISIONS #2 | DECISIONS recorded; s4 edit in W3 |
+| D-C | PIA-003 | `has_repro`/`external_dep`/`market_facing` → `source = "human"` at triage; carried into ADR-0090 at Step 4.4 | s4 §4.1 pre-registration; DECISIONS #2 | recorded (W1); s4/s4a/halts edited (W3) |
 | D-D | PIA-004/072 | Phase-1 adapters {SQLite, Claude, Node, Rust}; exit = fix lane AND a story-lane run (AC-521; Step 8 check 1b) | ADR-0094 | recorded |
 | D-E | PIA-005/014 | No `oneOf`; `anyOf` via post-derive transform; ≤16 union-typed and ≤24 optional per exported schema (vendor per-request scope stated); the StepError table | ADR-0095; S-SCHEMA-CAP | recorded |
-| D-F | PIA-006 | Phase-1 companion kinds: `_integration`, `_grounding`, `_decomposition`, `_review`, `_ledger`; the other eight census kinds are Phase 2 | s5 §5.3 decision; DECISIONS #3 | DECISIONS recorded; s5 edit in W3 |
+| D-F | PIA-006 | Phase-1 companion kinds: `_integration`, `_grounding`, `_decomposition`, `_review`, `_ledger`; the other eight census kinds are Phase 2 | s5 §5.3 decision; DECISIONS #3 | recorded (W1); s5 decision 7 written (W3); AC-143 note (W2) |
 | D-G | PIA-007/056 | Typed repro (`kind`, `mutation`, machine-readable `expected`); prose-only rejected; `mutation-survived` needs a reverted-fix mutant or a discriminating assertion | ADR-0096 | recorded |
 | D-H | PIA-008 | Memo stays tier 2; AC-161/164 narrow to the stage-level next action; AC-187 scoped; memo key = SHA-256 over a length-prefixed ordered tuple | ADR-0097 | recorded |
 | D-I | PIA-009 | S-GIX/a no-go → `git rev-parse --git-common-dir` via the wrapper; the review clone is a retained gix WRITE op | ADR-0098 | recorded |
 | D-J | PIA-010/045/059 | Blocking `dispatch` returning `DispatchOutcome`; `CancelToken` owned by the composition root; `Arc<dyn Port + Send + Sync>`; Windows Job Object / POSIX process group; Harness alone carries cancel | ADR-0099; S-PORTS | recorded |
-| D-K | PIA-011/044 | New Step 7e Pack authoring; `stale_policy` = `rematerialise`, coarse scope, every class | s7e; DECISIONS #4 | DECISIONS recorded; s7e in W3 |
-| D-L | PIA-012 | `cache_profile = default` is F28's arm: no `--system-prompt`, the card prepended to the user message | AC-383; design §7.1 | to record |
-| D-M | PIA-016 | Tool-set inequality is `NotIsolated` everywhere; AC-204 amended | DECISIONS #5 | DECISIONS recorded; AC-204 in W2 |
-| D-N | PIA-002/028/029 | `git bundle --all` of the predecessor into redkiln-corpus; corpus-bound tests a local-only `corpus` feature; the YAML reader named (verified live); cargo-deny + `deny.toml`; the explicit 0.x pin list | s2; ADR-0100 | ADR recorded; s2 in W3 |
+| D-K | PIA-011/044 | New Step 7e Pack authoring; `stale_policy` = `rematerialise`, coarse scope, every class | s7e; DECISIONS #4 | recorded (W1); s7e written (W3); design §4.4 step 3 schema (W2) |
+| D-L | PIA-012 | `cache_profile = default` is F28's arm: no `--system-prompt`, the card prepended to the user message | DECISIONS #19; AC-383; AC-211 GIVEN; design §7.1 dated paragraph; s7c golden argv per profile | recorded (W1/W2/W3) |
+| D-M | PIA-016 | Tool-set inequality is `NotIsolated` everywhere; AC-204 amended | DECISIONS #5; AC-204; §0.3 row C4; SM-061 set digest | recorded (W1/W2) |
+| D-N | PIA-002/028/029 | `git bundle --all` of the predecessor into redkiln-corpus; corpus-bound tests a local-only `corpus` feature; the YAML reader named (verified live); cargo-deny + `deny.toml`; the explicit 0.x pin list | s2; s5 §5.2; ADR-0100; design §9.2 | recorded (W1/W3/W2) |
 | D-O | PIA-013 | ADR-0088 superseded in full (real title, prior-approval framing arm, measured effect, FN-up/FP-down mechanism); the symmetric arm registered as S-SUBTLE-SYM | ADR-0101; S-SUBTLE-SYM | recorded |
 | D-Q | PIA-023/026/027/079 | `rust-version` = the pin; member `[lints]` is `workspace = true` only; `#[expect]`; evidence lines corrected | ADR-0102 | recorded |
 | D-R | PIA-048/052/053/100 | Predicate grammar: `not` > comparison/`in` > `and` > `or`, left-associative; literal-vs-field; quoting; null semantics; quantifier null rules; the closed `on_false` set | ADR-0103; S-GRAMMAR | recorded |
@@ -63,19 +63,20 @@ Decisions the audit assigned to the operator, walked one by one on 2026-09-11. `
 | D-U | PIA-080 | ADR-0087's "costs less" withdrawn; comparator = `cache_creation_input_tokens` + `total_cost_usd` | ADR-0106 | recorded |
 | — | PIA-082 | CLI shape; StructuredOutput configuration-time check; reconcile-at-every-entry + tiers + trailer axes; headroom rules | ADR-0107–0110 | recorded |
 | — | PIA-073 | The S-P7B re-run must change the criterion, not only n | ADR-0111 | recorded |
-| — | PIA-014 | argv cap before spawn; `--system-prompt-file` registered as S-SPF; AC-523 `RateLimited` | AC-523; S-SPF | to record |
-| — | PIA-071 | AC-312 PROVISIONAL on S-SUBTLE-CB; fixtures authored, unrun | AC-312 note | to record |
-| — | PIA-018 | Arm L outstanding; labelled later at a new corpus pin | DECISIONS #6 | DECISIONS recorded; s2/s3 in W3 |
-| — | PIA-046 | Specificity = subsumption; cross-pack order = enabled list then declaration; `discouraged` reserved with a lint; AC-101/SM-026 pack-default | design §4.3/4.4 | to record |
+| — | AC §0.3 row C5 (found absorbing ADR-0095) | `StepError` gains `Platform`, `Unsupported`, `Overage` — eleven variants; S-PORTS re-run | ADR-0112; F41 note | recorded |
+| — | PIA-014 | argv cap before spawn; `--system-prompt-file` registered as S-SPF; AC-523 `RateLimited` | DECISIONS #18; AC-523; design §10.5 S-SPF + S-RETRY extended; s7c argv assertion | recorded (W1/W2/W3) |
+| — | PIA-071 | AC-312 PROVISIONAL on S-SUBTLE-CB; fixtures authored, unrun | AC-312 note; DECISIONS #17; s7a/s7c explicit subsets | recorded (W2/W3) |
+| — | PIA-018 | Arm L outstanding; labelled later at a new corpus pin | DECISIONS #6; s2 Checkpoint 2; s3 | recorded (W1/W3) |
+| — | PIA-046 | Specificity = subsumption; cross-pack order = enabled list then declaration; `discouraged` reserved with a lint; AC-101/SM-026 pack-default | design §4.3 rules 1/3, §4.4 step 1; AC-070/072/084/087/101; SM-026/027; DECISIONS #20 | recorded (W2) |
 | — | PIA-046 | METHOD-P override-mode keep/strike | — | **awaiting-ryan** |
-| — | PIA-050 | Fresh gate record on re-reach; escalate-to-escalate refused; the write-tree rule | new AC; design §6.3 | to record |
-| — | PIA-038 | The eight crate labels are modules; mapping table in AC §0 | AC §0 | to record |
-| — | PIA-024 | The rustc pin moves to **1.98.1**; the instrument move recorded | s0; DECISIONS #7 | DECISIONS recorded; s0 in W3 |
-| — | PIA-078/084/096 | S-MIG counts 76/87 and 96.0%; the S-FACET kill re-registered (paired FP count); METHOD-P amendment 9 scoped | drafts; change-classification §6; METHOD-P | to record |
+| — | PIA-050 | Fresh gate record on re-reach; escalate-to-escalate refused; the write-tree rule | AC-524 (PROVISIONAL on P8-B); AC-245/254/259/260; design §6.3.2/6.3.4/6.3.6; ADR-0105 | recorded (W1/W2) |
+| — | PIA-038 | The eight crate labels are modules; mapping table in AC §0 | AC §0 mapping table; design §9.1; DECISIONS #15 | recorded (W2) |
+| — | PIA-024 | The rustc pin moves to **1.98.1**; the instrument move recorded | s0 §0.2/0.3; s5 grep; design §10.5 R-ASYNC discharged; DECISIONS #7 | recorded (W1/W3/W2) |
+| — | PIA-078/084/096 | S-MIG counts 76/87 and 96.0%; the S-FACET kill re-registered (paired FP count); METHOD-P amendment 9 scoped | s-mig-report; F39 §5 note; change-classification §6 dated amendment; METHOD-P; DECISIONS #11–13 | recorded (W2) |
 | — | PIA-096 | The `blind_attestation:` line for F39's 32 adjudicated cells | `spikes/results/p1-arm-d-labels-ryan.md:27` | **awaiting-ryan** |
-| — | PIA-106/108 | Namespace prefix `rk-`; κ 0.37 tagged [inferred, unsourced] | DECISIONS #8; PRIOR-ART | DECISIONS recorded; PRIOR-ART in W2 |
-| — | PIA-060 | Child env = inherit minus a committed denylist; the captured map as a value; a `tools:`-less card is a doctor error | AC-217/488/422; design §3.6.1 | to record |
-| — | PIA-032/033 | The `ReviewWeight` projection; structured `Gwt`; the closed ledger enum; `EvidenceClass` vs `ReExecution` | AC §9–10; design §5 | to record |
+| — | PIA-106/108 | Namespace prefix `rk-`; κ 0.37 tagged [inferred, unsourced] | DECISIONS #8; AC-506/AC-531; PRIOR-ART :22/:120 | recorded (W1/W2) |
+| — | PIA-060 | Child env = inherit minus a committed denylist; the captured map as a value; a `tools:`-less card is a doctor error | AC-217/488/422; design §3.6.1 + §8.4 doctor row; DECISIONS #16 | recorded (W2) |
+| — | PIA-032/033 | The `ReviewWeight` projection; structured `Gwt`; the closed ledger enum; `EvidenceClass` vs `ReExecution` | AC §9–10 (AC-299/300/137/454/313/333/335/352); SM-088; design §5.1/5.2/6.4.2/6.5.1; DECISIONS #21 | recorded (W2) |
 
 ## 3. Instrument choices
 
@@ -91,116 +92,116 @@ Columns: id · priority · build stage first reached · classification (NEW / SH
 
 | id | P | stage | class | kind | title | disposition | landed in |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PIA-001 | P1 | pre-5 | SHA | decision | AC-520 fails pack load on `stage`, `rigor`, `role`, `cost` and `recent_deploy` with no … | open | — |
-| PIA-002 | P1 | pre-5 | SHA | decision | The corpus Steps 6-7 test against is neither moved by Step 2 nor reachable from the pin… | open | — |
-| PIA-003 | P1 | pre-5 | NEW | decision | The three LLM boolean facets have no disposition between Step 4's pre-registered rule a… | open | — |
-| PIA-004 | P1 | 5 | NEW | decision | Phase-1 exit (1) self-hosts on a Rust repo with only a Node toolchain adapter | open | — |
-| PIA-005 | P1 | 5 | SHA | decision | rk-types' closed-output schema rules cannot all hold | open | — |
-| PIA-006 | P1 | 5 | SHA | decision | The companion kind list is delegated to a runbook that never mentions it | open | — |
-| PIA-007 | P1 | 5 | NEW | decision | `Findings.repro` as fixed by ADR-0074 and snapshotted at Step 5.3 has no field for the … | open | — |
-| PIA-008 | P1 | 6 | SHA | decision | The memo record is specified three ways and its keys are unpinned | open | — |
-| PIA-009 | P1 | 6 | SHA | decision | ADR-0077 keeps linked-worktree common-dir resolution on gix -- the interplay it says gi… | open | — |
-| PIA-010 | P1 | 7a | SHA | edit | The Harness port's `dispatch`/`cancel(handle)` contract is unimplementable as written | open | — |
-| PIA-011 | P1 | 7b | SHA | decision | Pack authoring and `.redkiln/` have no owning step | open | — |
-| PIA-012 | P1 | 7b | NEW | decision | cache_profile = default names a profile with no delivery mechanism | open | — |
-| PIA-013 | P1 | 7c | SHA | decision | ADR-0088 misnames its source paper and inverts its mechanism | open | — |
-| PIA-014 | P1 | 7c | SHA | edit | rk-adapter-claude | open | — |
-| PIA-015 | P1 | 7c | NEW | decision | AC-212/236/036 require the card to carry model+effort | open | — |
-| PIA-016 | P1 | 7c | SHA | decision | Tool set unequal to card allowlist is NotAdopted in AC-204 but NotIsolated in AC-202/AC… | open | — |
-| PIA-017 | P1 | 7c | NEW | edit | AC-372/376/377 state tick rules in decimal fractions | open | — |
-| PIA-018 | P2 | pre-5 | NEW | decision | Three undisclosed ordering hazards | open | — |
-| PIA-019 | P2 | pre-5 | SHA | decision | The corpus's account of its own tree and instrument is stale | open | — |
-| PIA-020 | P2 | pre-5 | SHA | edit | ADR-0079's external corroboration overstates three preprints | open | — |
-| PIA-021 | P2 | pre-5 | SHA | decision | Step 2's pin script leaves the arm-L blind labels in one unpushed copy, stamps a litera… | open | — |
-| PIA-022 | P2 | pre-5 | NEW | decision | Migrate tool and corpus split | open | — |
-| PIA-023 | P2 | 5 | SHA | edit | ADR-0083's and ADR-0085's evidence lines misquote or misattribute their sources | open | — |
-| PIA-024 | P2 | 5 | SHA | edit | RUNBOOK pins rustc 1.97.1 and greps for '1.97' while stable is 1.98.1 | open | — |
-| PIA-025 | P2 | 5 | NEW | edit | RUNBOOK 5.1's verbatim root Cargo.toml fails `cargo clippy` on the pinned toolchain (li… | open | — |
-| PIA-026 | P2 | 5 | NEW | edit | ADR-0083 | open | — |
-| PIA-027 | P2 | 5 | SHA | decision | Omitting `package.rust-version` leaves the edition-2024 MSRV-aware resolver inert | open | — |
-| PIA-028 | P2 | 5 | NEW | decision | Four 0.x crates sit on caret ranges in the §9.2 table while ADR-0084 says 0.x dependenc… | open | — |
-| PIA-029 | P2 | 5 | SHA | decision | Register self-description fails verification | open | — |
-| PIA-030 | P2 | 5 | NEW | decision | Three RUNBOOK commands are wrong as written | open | — |
-| PIA-031 | P2 | 5 | NEW | edit | Step 5 owns the lint/CI policy yet leaves AC-001-004 with no clippy.toml, a trybuild fi… | open | — |
-| PIA-032 | P2 | 5 | NEW | edit | Review/verify registers name enum values they never define | open | — |
-| PIA-033 | P2 | 5 | NEW | decision | rk-store and redkiln-migrate contracts | open | — |
-| PIA-034 | P2 | 5 | SHA | edit | Checkpoint 5's snapshot guard fails for the ADR-0083 test layout, and no RUNBOOK line a… | open | — |
-| PIA-035 | P2 | 5 | SHA | decision | Checkpoints 3c, 5, 6 and 7b/8 carry lines green on the untouched tree or on a violation | open | — |
-| PIA-036 | P2 | 5 | SHA | decision | The design diverges from the binding register it defers to | open | — |
-| PIA-037 | P2 | 5 | SHA | decision | Fully superseded ADR-0004 is the governing decision on 57 criteria in seven sections | open | — |
-| PIA-038 | P2 | 5 | NEW | decision | About 95 criteria are assigned to eight crate labels that exist in neither design secti… | open | — |
-| PIA-039 | P2 | 5 | NEW | decision | No precedence rule ranks the design, AC register, SM register and RUNBOOK | open | — |
-| PIA-040 | P2 | 6 | SHA | decision | rk-git's and rk-store's Step-6 contracts are lists, not rules | open | — |
-| PIA-041 | P2 | 6 | SHA | decision | reconcile.rs | open | — |
-| PIA-042 | P2 | 6 | SHA | edit | ADR-0077's gitoxide citations point at sources that say the opposite | open | — |
-| PIA-043 | P2 | 6 | SHA | decision | Two Step-6 doctor rules rest on undefined terms | open | — |
-| PIA-044 | P2 | 6 | SHA | edit | Step-3 drift contract | open | — |
-| PIA-045 | P2 | 7a | NEW | decision | First-party Rust guidance does address the fake-vs-real dispatch question and ranks dyn… | open | — |
-| PIA-046 | P2 | 7b | NEW | decision | Selection-area terms never defined | open | — |
-| PIA-047 | P2 | 7b | NEW | edit | No step builds or checkpoints the three gates (AC-240–AC-359), filed under 7c | open | — |
-| PIA-048 | P2 | 7b | NEW | decision | Step 7b lint/loader | open | — |
-| PIA-049 | P2 | 7b | NEW | decision | Verification gate underspecified | open | — |
-| PIA-050 | P2 | 7b | NEW | decision | Gate semantics | open | — |
-| PIA-051 | P2 | 7b | SHA | edit | One behaviour, two criteria | open | — |
-| PIA-052 | P2 | 7b | NEW | decision | `null` in `require` predicates | open | — |
-| PIA-053 | P2 | 7b | SHA | edit | Predicate grammar for the 7b parser has no precedence/associativity, no mixed-unparenth… | open | — |
-| PIA-054 | P2 | 7b | NEW | decision | Design §4 misstates ADR-0056/0058 | open | — |
-| PIA-055 | P2 | 7b | SHA | edit | Backoff base 2 s / cap 5 min has two homes | open | — |
-| PIA-056 | P2 | 7b | SHA | decision | An equivalent mutant survives re-execution, so ADR-0074's `mutation-survived` class can… | open | — |
-| PIA-057 | P2 | 7b | SHA | edit | AC-388's per-sibling stagger chain is not the vendor's mechanism (hold until first resp… | open | — |
-| PIA-058 | P2 | 7c | SHA | decision | The prompt-and-cache ADR pair (0016/0078) disagrees with its own evidence and its instr… | open | — |
-| PIA-059 | P2 | 7c | NEW | edit | Five Phase-1 criteria's instruments pass on the behaviour they forbid or read inputs no… | open | — |
-| PIA-060 | P2 | 7c | NEW | edit | Claude adapter contract | open | — |
-| PIA-061 | P2 | 7c | NEW | edit | Headroom contract | open | — |
-| PIA-062 | P2 | 7c | NEW | edit | RUNBOOK 7c lifts event.rs and throttle.rs 'unchanged' though they carry `Default`/`unwr… | open | — |
-| PIA-063 | P2 | 7c | NEW | edit | AC-311 offers a 'quarantine' ADR-0082 makes an error | open | — |
-| PIA-064 | P2 | 7c | SHA | edit | Claude Code `defer` (`tool_deferred`) shipped in 2.1.89 on 2026-03-31 and is documented… | open | — |
-| PIA-065 | P2 | 7c | SHA | decision | Recorded evidence disowned by the registers | open | — |
-| PIA-066 | P2 | 7c | NEW | decision | ADR-0016/design 7.1 say S-WT measured a `--system-prompt` 'carrying the card body' | open | — |
-| PIA-067 | P2 | 7c | SHA | decision | 'F3 measured the ephemeral_1h/5m fields absent' is false | open | — |
-| PIA-068 | P2 | 7c | SHA | decision | `system/api_retry` payload the corpus says was never captured is captured on 139 rows i… | open | — |
-| PIA-069 | P2 | 7c | SHA | edit | `rate_limit_event` is now documented in both Agent SDK references with a shape F1 did n… | open | — |
-| PIA-070 | P2 | 7d/8 | SHA | decision | Summary rows, acceptance-set ranges, cross-reference ids and restated figures overstate… | open | — |
-| PIA-071 | P2 | 7d/8 | SHA | decision | Steps 7a/7c acceptance sets sweep in out-of-phase, CONDITIONAL, retired, S-BIN-blocked … | open | — |
-| PIA-072 | P2 | 7d/8 | SHA | decision | Phase-1 ports scope drawn three ways | open | — |
-| PIA-073 | P2 | record | SHA | decision | Statistics tagged [measured] or settled do not reproduce under the registered two-sided… | open | — |
-| PIA-074 | P2 | record | SHA | edit | ADR-0086's crate facts were wrong on its own 2026-09-08 read date (temporalio-sdk 1.0.0… | open | — |
-| PIA-075 | P2 | record | SHA | decision | Corrections and restorations recorded as applied left copies uncorrected | open | — |
-| PIA-076 | P2 | record | SHA | edit | Register baselines carry the wrong condition label or qualifier | open | — |
-| PIA-077 | P2 | record | SHA | decision | Spike-draft headline figures do not reproduce from their result files | open | — |
-| PIA-078 | P2 | record | SHA | decision | Corpus-pin figures restated as [measured] do not reproduce | open | — |
-| PIA-079 | P2 | record | SHA | edit | 'No first-party source' for the thiserror/anyhow split is false in six live places | open | — |
-| PIA-080 | P2 | record | SHA | decision | F38's 0.45x/0.55x/0.78x divides P8 output tokens by F28's cache-creation tokens | open | — |
-| PIA-081 | P2 | record | SHA | edit | E3 severity adjudication closed 2026-09-09 NOT BLIND | open | — |
-| PIA-082 | P2 | record | SHA | decision | Five DECIDED Phase-1 rules cite ADRs whose bodies do not contain them and no ADR does | open | — |
-| PIA-083 | P2 | record | SHA | edit | ADR-0084's advisory evidence misattributes three gix advisories, 'no advisory affects b… | open | — |
-| PIA-084 | P2 | record | SHA | decision | Four registered-unrun spikes cannot decide their own criterion | open | — |
-| PIA-085 | P2 | record | SHA | edit | Design section 6.6's durable-systems survey carries wrong cells | open | — |
-| PIA-086 | P2 | record | SHA | edit | ADR-0085 rules 4 and 6 claim 'no external norm at all' | open | — |
-| PIA-087 | P2 | record | SHA | edit | `Quarantined` 'no prior art beyond GitLab and Cloudflare' (ADR-0074/0082) is contradict… | open | — |
-| PIA-088 | P2 | record | SHA | decision | §10.5/open-item rows vs ADR-0027/0012 | open | — |
-| PIA-089 | P2 | record | NEW | decision | Pre-data claims fail against git | open | — |
-| PIA-090 | P2 | record | SHA | decision | The narrowed novelty claim 'in an AI-coding-specific backlog or spec tool' is false | open | — |
-| PIA-091 | P2 | record | NEW | edit | The AWS backoff post does not 'nudge toward Equal Jitter for throttling' | open | — |
-| PIA-092 | P2 | record | SHA | edit | ADR-0081's 'no source frames activity selection as a research question at all' contradi… | open | — |
-| PIA-093 | P2 | record | NEW | edit | ADR-0089's 'Semgrep 0.57%-23.8% recall' floor is from a mis-cited arXiv ID (RealVuln | open | — |
-| PIA-094 | P2 | record | SHA | decision | Spike-register gate verdicts drift from the governing table | open | — |
-| PIA-095 | P2 | record | NEW | decision | Review-gate ADRs mis-state F24/F31 | open | — |
-| PIA-096 | P2 | record | SHA | decision | F39's panel-adjudicated auth 0.00 (load-bearing for ADR-0089) rests on an uncommitted a… | open | — |
-| PIA-097 | P2 | record | SHA | decision | F31's block counts, sink seeds and typed-arm scoring came from the model-emitted eviden… | open | — |
-| PIA-098 | P2 | record | NEW | edit | The rank-reversal sentence behind 'rigor is ordinal, never summed' is pinned to a TOPSI… | open | — |
-| PIA-099 | P2 | record | SHA | edit | Principle 8 was changed on a vendor compaction quote ('nuanced understanding ...') that… | open | — |
-| PIA-100 | P3 | 5 | SHA | decision | Names the governing record cannot lex or does not forbid | open | — |
-| PIA-101 | P3 | record | NEW | edit | Research-folder citation hygiene | open | — |
-| PIA-102 | P3 | record | SHA | decision | Six relations the ADR README and section 10.5 leave undeclared, so a supersession check… | open | — |
-| PIA-103 | P3 | record | SHA | edit | Retired vocabulary survives | open | — |
-| PIA-104 | P3 | record | SHA | edit | Record hygiene against the corpus's own rules | open | — |
-| PIA-105 | P3 | record | NEW | decision | Three landscape citations in evidence-augmentation are mis-scoped or paraphrased as ver… | open | — |
-| PIA-106 | P3 | record | NEW | edit | Two register-filing contradictions | open | — |
-| PIA-107 | P3 | record | SHA | edit | Statistical restatement hygiene | open | — |
-| PIA-108 | P3 | record | NEW | decision | PRIOR-ART research-lineage hygiene | open | — |
-| PIA-109 | P3 | record | SHA | edit | S-H1b-24H's cost cell omits that the 2026-09-06 mark is spent and METHOD-S's correction… | open | — |
-| PIA-110 | P3 | record | NEW | edit | Design section 0.1 row 24 names the S-P7B re-run in prose, the only one of ten BLOCKED … | open | — |
+| PIA-001 | P1 | pre-5 | SHA | decision | AC-520 fails pack load on `stage`, `rigor`, `role`, `cost` and `recent_deploy` with no … | recorded; facets.toml re-class executes at Step 4a | ADR-0093, AC, SM, design, EA, brief, DECISIONS-2026-09-11, s3-review-consumer-and-labels, s4a-apply-adr-0089, s8-exit-criterion |
+| PIA-002 | P1 | pre-5 | SHA | decision | The corpus Steps 6-7 test against is neither moved by Step 2 nor reachable from the pin… | recorded | ADR-0100, AC, design, DECISIONS-2026-09-11, METHOD, s2-corpus-extraction, s5-workspace-ci-rk-types, s7b-kernel, s7d-cli-and-migrate |
+| PIA-003 | P1 | pre-5 | NEW | decision | The three LLM boolean facets have no disposition between Step 4's pre-registered rule a… | done; ADR-0090 carries it at Step 4.4 | halts, s4-blocking-gate, s4a-apply-adr-0089, s7b-kernel |
+| PIA-004 | P1 | 5 | NEW | decision | Phase-1 exit (1) self-hosts on a Rust repo with only a Node toolchain adapter | recorded | ADR-0094, AC, design, DECISIONS-2026-09-11, s8-exit-criterion |
+| PIA-005 | P1 | 5 | SHA | decision | rk-types' closed-output schema rules cannot all hold | recorded; ADR-0112 closes the StepError gap the register found | ADR-0095, ADR-0112, ERRATA, AC, design, DECISIONS-2026-09-11, s5-workspace-ci-rk-types |
+| PIA-006 | P1 | 5 | SHA | decision | The companion kind list is delegated to a runbook that never mentions it | recorded (DECISIONS #3); confirmed per kind at Step 5.3 | ERRATA, AC |
+| PIA-007 | P1 | 5 | NEW | decision | `Findings.repro` as fixed by ADR-0074 and snapshotted at Step 5.3 has no field for the … | recorded | ADR-0096, AC, design, DECISIONS-2026-09-11 |
+| PIA-008 | P1 | 6 | SHA | decision | The memo record is specified three ways and its keys are unpinned | recorded | ADR-0097, AC, design, DECISIONS-2026-09-11 |
+| PIA-009 | P1 | 6 | SHA | decision | ADR-0077 keeps linked-worktree common-dir resolution on gix -- the interplay it says gi… | recorded | ADR-0098, design, DECISIONS-2026-09-11, s6-store-and-git |
+| PIA-010 | P1 | 7a | SHA | edit | The Harness port's `dispatch`/`cancel(handle)` contract is unimplementable as written | recorded | ADR-0099, AC, design, DECISIONS-2026-09-11 |
+| PIA-011 | P1 | 7b | SHA | decision | Pack authoring and `.redkiln/` have no owning step | recorded (DECISIONS #4); Step 7e added | SM, design, s4a-apply-adr-0089, s7e-pack-authoring, s8-exit-criterion |
+| PIA-012 | P1 | 7b | NEW | decision | cache_profile = default names a profile with no delivery mechanism | recorded | AC, SM, design, DECISIONS-2026-09-11, s7c-adapters |
+| PIA-013 | P1 | 7c | SHA | decision | ADR-0088 misnames its source paper and inverts its mechanism | recorded; S-SUBTLE-SYM registered (DECISIONS #9) | ADR-0101, design, EA, DECISIONS-2026-09-11, METHOD-S |
+| PIA-014 | P1 | 7c | SHA | edit | rk-adapter-claude | recorded | ADR-0095, ADR-0112, design, DECISIONS-2026-09-11, s7c-adapters |
+| PIA-015 | P1 | 7c | NEW | decision | AC-212/236/036 require the card to carry model+effort | done | AC, design |
+| PIA-016 | P1 | 7c | SHA | decision | Tool set unequal to card allowlist is NotAdopted in AC-204 but NotIsolated in AC-202/AC… | recorded | ADR-0095, ADR-0112, AC, SM |
+| PIA-017 | P1 | 7c | NEW | edit | AC-372/376/377 state tick rules in decimal fractions | recorded | ADR-0110, AC, design, s7c-adapters |
+| PIA-018 | P2 | pre-5 | NEW | decision | Three undisclosed ordering hazards | recorded (DECISIONS #6); arm L outstanding by decision | DECISIONS-2026-09-11, HANDOFF, s2-corpus-extraction, s3-review-consumer-and-labels, s4-blocking-gate, s4a-apply-adr-0089, s7c-adapters, s9-rollback |
+| PIA-019 | P2 | pre-5 | SHA | decision | The corpus's account of its own tree and instrument is stale | done; instrument version read from the file at run time | ADR-0092, design, brief, F30, HANDOFF, METHOD-S, halts, s0-preconditions, s1-commit-spike-output |
+| PIA-020 | P2 | pre-5 | SHA | edit | ADR-0079's external corroboration overstates three preprints | done | ERRATA, design, EA, research/method-engineering, s4-blocking-gate |
+| PIA-021 | P2 | pre-5 | SHA | decision | Step 2's pin script leaves the arm-L blind labels in one unpushed copy, stamps a litera… | done | HANDOFF, s2-corpus-extraction, s3-review-consumer-and-labels |
+| PIA-022 | P2 | pre-5 | NEW | decision | Migrate tool and corpus split | done | AC, s2-corpus-extraction |
+| PIA-023 | P2 | 5 | SHA | edit | ADR-0083's and ADR-0085's evidence lines misquote or misattribute their sources | recorded | ADR-0092, ADR-0102, ERRATA, design, EA, DECISIONS-2026-09-11 |
+| PIA-024 | P2 | 5 | SHA | edit | RUNBOOK pins rustc 1.97.1 and greps for '1.97' while stable is 1.98.1 | done; pin moved to 1.98.1 (DECISIONS #7), not held at 1.97.1 | ADR-0102, design, s5-workspace-ci-rk-types |
+| PIA-025 | P2 | 5 | NEW | edit | RUNBOOK 5.1's verbatim root Cargo.toml fails `cargo clippy` on the pinned toolchain (li… | recorded | ADR-0102, design, s5-workspace-ci-rk-types |
+| PIA-026 | P2 | 5 | NEW | edit | ADR-0083 | recorded | ADR-0102, s5-workspace-ci-rk-types |
+| PIA-027 | P2 | 5 | SHA | decision | Omitting `package.rust-version` leaves the edition-2024 MSRV-aware resolver inert | recorded | ADR-0102 |
+| PIA-028 | P2 | 5 | NEW | decision | Four 0.x crates sit on caret ranges in the §9.2 table while ADR-0084 says 0.x dependenc… | recorded | ADR-0100, design |
+| PIA-029 | P2 | 5 | SHA | decision | Register self-description fails verification | recorded | ADR-0092, ADR-0100, AC, SM, design, s5-workspace-ci-rk-types |
+| PIA-030 | P2 | 5 | NEW | decision | Three RUNBOOK commands are wrong as written | recorded | ADR-0107, AC, design, s5-workspace-ci-rk-types, s6-store-and-git, s8-exit-criterion |
+| PIA-031 | P2 | 5 | NEW | edit | Step 5 owns the lint/CI policy yet leaves AC-001-004 with no clippy.toml, a trybuild fi… | done | AC, s5-workspace-ci-rk-types, s8-exit-criterion |
+| PIA-032 | P2 | 5 | NEW | edit | Review/verify registers name enum values they never define | recorded | AC, SM, design, DECISIONS-2026-09-11, s5-workspace-ci-rk-types |
+| PIA-033 | P2 | 5 | NEW | decision | rk-store and redkiln-migrate contracts | recorded | ERRATA, AC, SM, design, DECISIONS-2026-09-11 |
+| PIA-034 | P2 | 5 | SHA | edit | Checkpoint 5's snapshot guard fails for the ADR-0083 test layout, and no RUNBOOK line a… | done | s5-workspace-ci-rk-types |
+| PIA-035 | P2 | 5 | SHA | decision | Checkpoints 3c, 5, 6 and 7b/8 carry lines green on the untouched tree or on a violation | done; BEFORE assertions beside every AFTER | ADR-0105, 00-preamble, INDEX, s3-review-consumer-and-labels, s5-workspace-ci-rk-types, s6-store-and-git |
+| PIA-036 | P2 | 5 | SHA | decision | The design diverges from the binding register it defers to | recorded | ADR-0092, AC, SM, design, DECISIONS-2026-09-11, s6-store-and-git |
+| PIA-037 | P2 | 5 | SHA | decision | Fully superseded ADR-0004 is the governing decision on 57 criteria in seven sections | recorded | ADR-0092, AC, ADR README |
+| PIA-038 | P2 | 5 | NEW | decision | About 95 criteria are assigned to eight crate labels that exist in neither design secti… | recorded | ADR-0099, AC |
+| PIA-039 | P2 | 5 | NEW | decision | No precedence rule ranks the design, AC register, SM register and RUNBOOK | recorded | ADR-0092, design, brief |
+| PIA-040 | P2 | 6 | SHA | decision | rk-git's and rk-store's Step-6 contracts are lists, not rules | recorded | ADR-0105, design, DECISIONS-2026-09-11 |
+| PIA-041 | P2 | 6 | SHA | decision | reconcile.rs | done | SM |
+| PIA-042 | P2 | 6 | SHA | edit | ADR-0077's gitoxide citations point at sources that say the opposite | recorded | ADR-0098, ERRATA, design, EA |
+| PIA-043 | P2 | 6 | SHA | decision | Two Step-6 doctor rules rest on undefined terms | recorded | ADR-0105, AC, SM, design |
+| PIA-044 | P2 | 6 | SHA | edit | Step-3 drift contract | recorded | AC, design, DECISIONS-2026-09-11, s7e-pack-authoring |
+| PIA-045 | P2 | 7a | NEW | decision | First-party Rust guidance does address the fake-vs-real dispatch question and ranks dyn… | recorded | ADR-0099, design, EA |
+| PIA-046 | P2 | 7b | NEW | decision | Selection-area terms never defined | recorded; METHOD-P override-mode keep/strike **awaiting-ryan** | AC, SM, design, DECISIONS-2026-09-11 |
+| PIA-047 | P2 | 7b | NEW | edit | No step builds or checkpoints the three gates (AC-240–AC-359), filed under 7c | done; Step 7b-ii added | AC, design, s6-store-and-git, s7b-kernel, s7c-adapters |
+| PIA-048 | P2 | 7b | NEW | decision | Step 7b lint/loader | recorded | ADR-0103, AC, design, DECISIONS-2026-09-11, s7b-kernel |
+| PIA-049 | P2 | 7b | NEW | decision | Verification gate underspecified | recorded | ADR-0104, AC, SM, design, DECISIONS-2026-09-11 |
+| PIA-050 | P2 | 7b | NEW | decision | Gate semantics | recorded | ADR-0105, AC, SM, design |
+| PIA-051 | P2 | 7b | SHA | edit | One behaviour, two criteria | recorded | ADR-0104, AC, SM, design |
+| PIA-052 | P2 | 7b | NEW | decision | `null` in `require` predicates | recorded | ADR-0103, AC |
+| PIA-053 | P2 | 7b | SHA | edit | Predicate grammar for the 7b parser has no precedence/associativity, no mixed-unparenth… | recorded | ADR-0103 |
+| PIA-054 | P2 | 7b | NEW | decision | Design §4 misstates ADR-0056/0058 | done | AC, design |
+| PIA-055 | P2 | 7b | SHA | edit | Backoff base 2 s / cap 5 min has two homes | done | AC, design, s7e-pack-authoring |
+| PIA-056 | P2 | 7b | SHA | decision | An equivalent mutant survives re-execution, so ADR-0074's `mutation-survived` class can… | recorded | ADR-0096, AC |
+| PIA-057 | P2 | 7b | SHA | edit | AC-388's per-sibling stagger chain is not the vendor's mechanism (hold until first resp… | done | AC, SM, design |
+| PIA-058 | P2 | 7c | SHA | decision | The prompt-and-cache ADR pair (0016/0078) disagrees with its own evidence and its instr… | done | design, EA, brief, architecture-proposal |
+| PIA-059 | P2 | 7c | NEW | edit | Five Phase-1 criteria's instruments pass on the behaviour they forbid or read inputs no… | recorded | ADR-0099, AC, s7a-ports-and-fakes, s7c-adapters, s7e-pack-authoring |
+| PIA-060 | P2 | 7c | NEW | edit | Claude adapter contract | recorded | AC, design, DECISIONS-2026-09-11 |
+| PIA-061 | P2 | 7c | NEW | edit | Headroom contract | recorded | ADR-0110, AC, SM, design, s8-exit-criterion |
+| PIA-062 | P2 | 7c | NEW | edit | RUNBOOK 7c lifts event.rs and throttle.rs 'unchanged' though they carry `Default`/`unwr… | done | AC, s7c-adapters |
+| PIA-063 | P2 | 7c | NEW | edit | AC-311 offers a 'quarantine' ADR-0082 makes an error | done | AC |
+| PIA-064 | P2 | 7c | SHA | edit | Claude Code `defer` (`tool_deferred`) shipped in 2.1.89 on 2026-03-31 and is documented… | done | design, EA |
+| PIA-065 | P2 | 7c | SHA | decision | Recorded evidence disowned by the registers | done; ERRATA E-0019-1 | ADR-0112, ERRATA, AC, SM, brief, architecture-proposal, findings-for-product |
+| PIA-066 | P2 | 7c | NEW | decision | ADR-0016/design 7.1 say S-WT measured a `--system-prompt` 'carrying the card body' | done | design |
+| PIA-067 | P2 | 7c | SHA | decision | 'F3 measured the ephemeral_1h/5m fields absent' is false | done; ADR-0078 successor left with Ryan (F3 finding, PROGRESS §5) | design, FINDINGS, METHOD, s7c-adapters |
+| PIA-068 | P2 | 7c | SHA | decision | `system/api_retry` payload the corpus says was never captured is captured on 139 rows i… | done | AC, SM, design |
+| PIA-069 | P2 | 7c | SHA | edit | `rate_limit_event` is now documented in both Agent SDK references with a shape F1 did n… | recorded | ADR-0095, design |
+| PIA-070 | P2 | 7d/8 | SHA | decision | Summary rows, acceptance-set ranges, cross-reference ids and restated figures overstate… | done | AC, SM, design, s7a-ports-and-fakes, s7b-kernel, s7c-adapters |
+| PIA-071 | P2 | 7d/8 | SHA | decision | Steps 7a/7c acceptance sets sweep in out-of-phase, CONDITIONAL, retired, S-BIN-blocked … | recorded (DECISIONS #17); framing fixtures authored at 7c, unrun | AC, DECISIONS-2026-09-11, s7a-ports-and-fakes, s7c-adapters |
+| PIA-072 | P2 | 7d/8 | SHA | decision | Phase-1 ports scope drawn three ways | recorded | ADR-0094, AC, design |
+| PIA-073 | P2 | record | SHA | decision | Statistics tagged [measured] or settled do not reproduce under the registered two-sided… | done; e3 sheet countersign **awaiting-ryan** | ADR-0093, ADR-0106, ADR-0111, ERRATA, AC, SM, design, brief, 00-preamble, DECISIONS-2026-09-11, F37, F39, FINDINGS, HANDOFF, METHOD-P, METHOD-S, change-classification, results/e3-severity-annotation-ryan, rfc-amendment |
+| PIA-074 | P2 | record | SHA | edit | ADR-0086's crate facts were wrong on its own 2026-09-08 read date (temporalio-sdk 1.0.0… | done | ERRATA, design, EA |
+| PIA-075 | P2 | record | SHA | decision | Corrections and restorations recorded as applied left copies uncorrected | done | AC, SM, design, brief, FINDINGS, findings-for-product |
+| PIA-076 | P2 | record | SHA | edit | Register baselines carry the wrong condition label or qualifier | done | AC, SM, design, s7e-pack-authoring |
+| PIA-077 | P2 | record | SHA | decision | Spike-draft headline figures do not reproduce from their result files | recorded | ADR-0110, ADR-0111, ERRATA, SM, design, brief, F29, F35, F36, F37, F39, FINDINGS, METHOD-P, change-classification, process-catalog-proposal, rfc-amendment |
+| PIA-078 | P2 | record | SHA | decision | Corpus-pin figures restated as [measured] do not reproduce | recorded | ERRATA, AC, SM, design, DECISIONS-2026-09-11, METHOD-S, results/s-mig-report, s6-store-and-git |
+| PIA-079 | P2 | record | SHA | edit | 'No first-party source' for the thiserror/anyhow split is false in six live places | recorded | ADR-0102, design, EA |
+| PIA-080 | P2 | record | SHA | decision | F38's 0.45x/0.55x/0.78x divides P8 output tokens by F28's cache-creation tokens | recorded | ADR-0106, ERRATA, AC, SM, design, brief, DECISIONS-2026-09-11, F37, F38, HANDOFF, METHOD-P |
+| PIA-081 | P2 | record | SHA | edit | E3 severity adjudication closed 2026-09-09 NOT BLIND | done | AC, SM, design, HANDOFF |
+| PIA-082 | P2 | record | SHA | decision | Five DECIDED Phase-1 rules cite ADRs whose bodies do not contain them and no ADR does | recorded | ADR-0105/0107/0108/0109/0110, AC, SM, design, DECISIONS-2026-09-11 |
+| PIA-083 | P2 | record | SHA | edit | ADR-0084's advisory evidence misattributes three gix advisories, 'no advisory affects b… | recorded | ADR-0100, ERRATA, design, EA |
+| PIA-084 | P2 | record | SHA | decision | Four registered-unrun spikes cannot decide their own criterion | recorded | ADR-0093, AC, brief, DECISIONS-2026-09-11, METHOD-P, METHOD-S, METHOD-S-CODEX, change-classification, s3-review-consumer-and-labels |
+| PIA-085 | P2 | record | SHA | edit | Design section 6.6's durable-systems survey carries wrong cells | done | design, design-recommendation, EA, architecture-proposal, research/grounding-s-results |
+| PIA-086 | P2 | record | SHA | edit | ADR-0085 rules 4 and 6 claim 'no external norm at all' | done | ERRATA, design, EA |
+| PIA-087 | P2 | record | SHA | edit | `Quarantined` 'no prior art beyond GitLab and Cloudflare' (ADR-0074/0082) is contradict… | done | ERRATA, design, EA |
+| PIA-088 | P2 | record | SHA | decision | §10.5/open-item rows vs ADR-0027/0012 | done | AC, design, HANDOFF |
+| PIA-089 | P2 | record | NEW | decision | Pre-data claims fail against git | done | design, FINDINGS, HANDOFF, METHOD-E3, METHOD-H, METHOD-P |
+| PIA-090 | P2 | record | SHA | decision | The narrowed novelty claim 'in an AI-coding-specific backlog or spec tool' is false | done | design, design-recommendation, EA, process-catalog-proposal |
+| PIA-091 | P2 | record | NEW | edit | The AWS backoff post does not 'nudge toward Equal Jitter for throttling' | done | design, EA, architecture-proposal |
+| PIA-092 | P2 | record | SHA | edit | ADR-0081's 'no source frames activity selection as a research question at all' contradi… | done | ERRATA, design, EA |
+| PIA-093 | P2 | record | NEW | edit | ADR-0089's 'Semgrep 0.57%-23.8% recall' floor is from a mis-cited arXiv ID (RealVuln | done | ERRATA, design, change-classification |
+| PIA-094 | P2 | record | SHA | decision | Spike-register gate verdicts drift from the governing table | done | design, METHOD-P |
+| PIA-095 | P2 | record | NEW | decision | Review-gate ADRs mis-state F24/F31 | recorded | ADR-0101, ERRATA, design, brief, s7c-adapters |
+| PIA-096 | P2 | record | SHA | decision | F39's panel-adjudicated auth 0.00 (load-bearing for ADR-0089) rests on an uncommitted a… | done; `blind_attestation:` line **awaiting-ryan**; Artifact export not located | AC, DECISIONS-2026-09-11, F39, HANDOFF, METHOD-P, results/p1-arm-d-labels-ryan |
+| PIA-097 | P2 | record | SHA | decision | F31's block counts, sink seeds and typed-arm scoring came from the model-emitted eviden… | recorded | ADR-0096, ERRATA, AC, SM, design |
+| PIA-098 | P2 | record | NEW | edit | The rank-reversal sentence behind 'rigor is ordinal, never summed' is pinned to a TOPSI… | done | design |
+| PIA-099 | P2 | record | SHA | edit | Principle 8 was changed on a vendor compaction quote ('nuanced understanding ...') that… | done | design, EA |
+| PIA-100 | P3 | 5 | SHA | decision | Names the governing record cannot lex or does not forbid | recorded | ADR-0103, AC, design |
+| PIA-101 | P3 | record | NEW | edit | Research-folder citation hygiene | done (one dated erratum block per research file) | EA, PRIOR-ART, architecture-proposal, change-classification, research/activity-catalog-raw, research/archon, research/competitive-workflows, research/github-platform, research/grounding-s-results, research/landscape-sentiment, research/method-engineering, research/selection-and-planning, research/shipmates-status, research/verification, research/workflow-model |
+| PIA-102 | P3 | record | SHA | decision | Six relations the ADR README and section 10.5 leave undeclared, so a supersession check… | done; E3-SEV-BLIND registered, not taken | ERRATA, SM, design, FINDINGS, plans/HANDOFF-2026-09-10-design-session, s3-review-consumer-and-labels |
+| PIA-103 | P3 | record | SHA | edit | Retired vocabulary survives | done | AC, SM, design-recommendation, brief, architecture-proposal, s7c-adapters |
+| PIA-104 | P3 | record | SHA | edit | Record hygiene against the corpus's own rules | done | ERRATA, SM, design |
+| PIA-105 | P3 | record | NEW | decision | Three landscape citations in evidence-augmentation are mis-scoped or paraphrased as ver… | done | EA, process-catalog-proposal |
+| PIA-106 | P3 | record | NEW | edit | Two register-filing contradictions | done | AC, design, brief |
+| PIA-107 | P3 | record | SHA | edit | Statistical restatement hygiene | done | AC, SM, design, s6-store-and-git |
+| PIA-108 | P3 | record | NEW | decision | PRIOR-ART research-lineage hygiene | done; κ 0.37 tagged [inferred, unsourced] until Ryan supplies the source | DECISIONS-2026-09-11, PRIOR-ART |
+| PIA-109 | P3 | record | SHA | edit | S-H1b-24H's cost cell omits that the 2026-09-06 mark is spent and METHOD-S's correction… | done | design, brief, F30, METHOD-S |
+| PIA-110 | P3 | record | NEW | edit | Design section 0.1 row 24 names the S-P7B re-run in prose, the only one of ten BLOCKED … | recorded | AC, SM, design, EA, brief, DECISIONS-2026-09-11 |
 ## 5. §8 follow-ups (what the audit did not run)
 
 | Limit | Task | Cost | Status |
@@ -208,7 +209,7 @@ Columns: id · priority · build stage first reached · classification (NEW / SH
 | M-01 | S-PORTS — a throwaway crate compiling the five port traits, one fake, `CancelToken`, a `compile_fail` doctest (consumer: Step 7a, ADR-0099) | 1–2 h | **done 2026-09-11** — `spikes/s-ports/`, F41: 5/5 tests + 2/2 compile_fail on rustc 1.97.1 and 1.98.1, clippy clean |
 | M-02 | S-GRAMMAR — EBNF + recursive-descent parser over every predicate in `spikes/p9` (consumer: Step 7b lint, ADR-0103) | 2–4 h | **done 2026-09-11** — `spikes/p9/grammar-probe.py`, F42: 285/287 parse, 0 precedence-dependent, 191 bare literals, 2 pack defects (`exists()` in packs/incident.toml; a hyphenated value in catalog-b) + 3 catalog-b `on_false` defects; two grammar forms the packs used and no record stated (set-membership `in`; hyphens in `${ref}` segments) recorded |
 | C-09 | `cargo audit` on `spikes/runner/Cargo.lock`; `spikes/p9/lint.py` over the packs and catalog | minutes | **done 2026-09-11** — cargo-audit 0.22.2 (1,243 advisories loaded) and cargo-deny 0.20.2: 141 packages, 0 vulnerabilities, 0 warnings; the runner carries none of the product's load-bearing crates (no gix/rusqlite). `lint.py`: errors=0, warnings=2 (pre-existing R4/R9); `lattice.py --validate`: no errors, localisation family holes=0 after the bisect ceiling |
-| C-06 | DECISIONS-2026-09-09 + HANDOFF diffed against the ADR set | 1 h | this pass |
+| C-06 | DECISIONS-2026-09-09 + HANDOFF diffed against the ADR set | 1 h | **done 2026-09-11.** Of the 37 decisions in `spikes/DECISIONS-2026-09-09.md`, 26 are instrument decisions (lane A scripts, encodings, fixture builds, the `confirm` runner, the P7/P8 driver — #8–#21, #24–#32, #34, #37) whose home is the METHOD file they amend (ADR-0012), not an ADR. The eleven that touch the record each have one: #1 version drift → s0 reads the instrument from the file (PIA-019); #2 four ordinal axes → `facets.toml` and ADR-0093's `kernel` class; #3 loop-back cap `max = 2` (the catalog governs) → ADR-0027/ADR-0072 versioning, F37; #4 the second `no-hypothesis` gate → F37, ADR-0111; #5/#6 sample and `commits` source → F39, METHOD-P; #7 `max_rigor = "recommended"` on `root-cause` → the same ceiling rule DECISIONS-2026-09-11 #1 applies to `bisect` (ADR-0081's lint); #12 `recent_deploy` feed absent → ADR-0093 (NOT MEASURABLE); #22 no `model` key, dispatch identity is `role` → design :72 / AC-212 ("the pin is a role property"); #23 the catalog governs step scheduling → ADR-0081; #33 the `mandatory` arm dropped and #35/#36 P8's fixture → ADR-0111 (S-P7B re-sized) and METHOD-P §5.2's dated amendment. `spikes/HANDOFF.md` records no decision the two DECISIONS logs do not; its 2026-09-11 corrections are dated inline. **No decision lacks a home.** |
 | M-06 | Operator label file over the 17 P1 + a seeded 30 P2 concerns (agree / disagree / unsure) | 2–3 human hours | templated: `references/audit/2026-09-10/labels-ryan-TODO.md` |
 | C-01 | Slice finder + refuter over AC §12 (CLI/doctor, AC-400..439) | 1 agent-pass | before Step 7d (noted in s7d) |
 | C-02 | Slice finder + refuter over AC §3.1–3.6 (selection engine steps 1, 3–7) | 1 agent-pass | before Step 7b (noted in s7b) |
@@ -222,20 +223,28 @@ Columns: id · priority · build stage first reached · classification (NEW / SH
 | C-03 | A seeded 10-criteria decidability sample per under-named section (§§4, 7, 8, 11, 13) | <1 h | not run |
 | C-07 | Read the 30 unread ADRs against their citation sites | ~128 KB | not run |
 | C-08/M-13 | The doc-map stale-risk (12) and strict-orphan (27) lens; 69 prose anomalies vs the pool | ½ day | not run |
-| C-10 | Re-cite or drop EXT-CLAUDECO-042 / EXT-PROCESSL-154; HANDOFF.md:303 marked a pointer | minutes | this pass |
+| C-10 | Re-cite or drop EXT-CLAUDECO-042 / EXT-PROCESSL-154; HANDOFF.md:303 marked a pointer | minutes | **done 2026-09-11** — both rows are in `research/2026-09-07-competitive-workflows.md`'s dated erratum block (:232 knightli 404; :236 no stability date on the docs page) under PIA-101; `spikes/HANDOFF.md` :339 marks the private artifact link as a convenience pointer with `findings-for-product.md` the content of record |
 | C-13 | Re-run the nine census scripts after the Step 3c-closing commit and diff the counts | 5 min | at Step 3c |
+| — (found 2026-09-11, beyond the audit) | The F3 recount: of 955 usage-bearing records 950 carry the nested `cache_creation` object, **621 have `ephemeral_1h_input_tokens > 0` and none has `ephemeral_5m > 0`**; on all 804 records with both fields the tier sum equals `cache_creation_input_tokens` (FINDINGS F3 Correction; METHOD.md §E1 note). What this does to ADR-0078 clause (iv), S-TTL1's scope and design §0.1 row 28 is a decision for the ADR-0078 successor, not taken here | — | **awaiting-ryan** (a successor to ADR-0078, or S-TTL1 re-scoped to the 5 m tier only) |
+| — (found 2026-09-11) | The trailer-commit recount by a message grep gives 229/344 reachable/all against the audit's 231/348 (a different parser); the audit's figures are cited [documented] in METHOD.md; Step 2's bundle line makes the count re-derivable | — | noted |
+| — (found 2026-09-11, design pass) | Design §8.6's tracker labels use the `rk:stage/*` / `rk:gate/*` form; DECISIONS-2026-09-11 #8 fixes `rk-` for crates and generated artefact names and says nothing about tracker labels (a GitHub label namespace, where `:` is the idiom). Whether #8 reaches them is unstated | minutes (a DECISIONS line) | **awaiting-ryan** — the runbook does not need it before Step 7c's GitHub adapter (Phase 4) |
+| — (found 2026-09-11, design pass) | Design §6.5.3's AC-340 default-weight sentence still reads as if a surviving mutant's block were purely a policy-table matter, while ADR-0104 decision 4 says a quarantined survivor still blocks exit (AC-346; AC-345/SM-095 review-gate-only) | minutes | open — one dated sentence in design §6.5.3 at Step 7b-ii's authoring, cited from AC-346 |
+| — | The P1 arm-D adjudication surface (a claude.ai Artifact page) was not located or exported into `spikes/p1/` (DECISIONS #13) | minutes if the page exists | **awaiting-ryan** |
+| — | `spikes/results/e3-severity-annotation-ryan.md` Correction (2026-09-11) carries `countersign: PENDING (Ryan)` | minutes | **awaiting-ryan** |
 
 ## 6. Validation
 
 | Check | Baseline (untouched tree, 2026-09-11) | After remediation |
 | --- | --- | --- |
-| `census_ids.py` — failed anchor assertions | `[]` | |
-| `census_adr.py` — anchor failures | 0 | |
-| `census_anchors.py` — C-refs resolved / past end · file paths resolved | 207 / 0 · 1690 | |
-| `census_constants.py` — content sha256 | `85ac6849…6950de` | |
-| ADR files (`ls references/adr/*.md \| wc -l`, README included) | 90 | |
-| Stale strings (the `git grep` list in INDEX §Validation) | present | |
-| Checkpoint dry-run (targets that exist today) | — | |
+| `census_ids.py` — failed anchor assertions | `[]` | `[]` (2026-09-11, final tree) |
+| `census_adr.py` — anchor failures | 0 | 6 anchor *strings* no longer match (the README's tally/numbering sentences were rewritten and the file count is 110, not 89 — the script's literals are frozen at the audit's tree); the graph checks all pass: **27 supersession edges, all reciprocal, acyclic; 0 dangling ids; 110/110 records with the eleven keys, six sections and a forbids block; status 106/3/1**; README vs frontmatter: every count agrees except the two the audit already carried (0039's back-ticked title; 0054/0040's declared-only relation) |
+| `census_anchors.py` — C-refs resolved / past end · file paths resolved | 207 / 0 · 1690 | 212 / 0 · 2246 (corpus 243 files; three frozen literal assertions fail because the corpus grew and RUNBOOK.md is a stub). § refs: 5494 resolved, 69 flagged — every one read: the runbook's `sN §x.y` idiom and each file's § namespace line, or a document named on the line (`register §0.3`, `design §10.5`, `audit §8`); **0 real dangling** |
+| `census_constants.py` — content sha256 | `85ac6849…6950de` | `5fa72b54…95f89a4`; seed AGREE 141 (baseline 141), VARIANT 12, ABSENT 2 |
+| ADR files (`ls references/adr/*.md \| wc -l`, README included) | 90 | **112** (110 records + README.md + ERRATA.md) |
+| Stale strings (the `git grep` list in INDEX §Validation) | present | Every hit is a quoted historical figure beside its dated correction or inside design §12's *was* column (lines ≥ 2126); the INDEX list's `thirteen area files` matches the registers' *inputs* sentences, which are history, not ownership — ownership now reads "the register" at every site the audit named |
+| Checkpoint dry-run (targets that exist today) | — | 2026-09-11: C0 `rustup run 1.98.1 rustc --version` → 1.98.1 (48a229cea); `ls references/adr/0112-*.md && test -f runbook/INDEX.md` → present; C1 `ls references/adr/*.md \| wc -l` → 112; `git ls-files runbook/INDEX.md` → tracked; C3b P2 regression: `labelled_at: 2026-09-10T15:58:08Z`, 0 FILL, arm-L file MISSING (expected, DECISIONS #6); C4a BEFORE: derived 11 · llm 7 · kernel 0 · deriver 0 · surfaces 0; C5 BEFORE: no `rust-toolchain.toml`, no `.github/workflows`, `crates/` empty — every line reads as its stage file states |
 | S-PORTS `cargo check` | — | pass on 1.97.1 and 1.98.1 (F41) |
 | S-GRAMMAR parse-fail / ambiguous count with denominator | — | 2/287 fail (both pack defects); 0/287 precedence-dependent (F42) |
 | `cargo audit` on `spikes/runner/Cargo.lock` | — | 0 vulnerabilities / 0 warnings, 141 crates, RustSec DB fetched 2026-09-11 |
+| Runbook id resolution (every `ADR-`/`AC-`/`SM-`/`DECISIONS #`/`F` id and relative link cited from `runbook/`) | — | 2026-09-11: all resolve; the nine unmatched `AC-` ids (075, 119, 207, 255, 297, 513 across s7a/s7b/s7c/s7e) are the register's retired/unallocated set, cited as exclusions |
+| PIA ledger (§4) | 110 `open` | 110 non-`open`: 49 `done` · 58 `recorded` · 3 `done`/`recorded` with one half **awaiting-ryan** (PIA-046, PIA-073, PIA-096); "landed in" derived from where each id is cited in the live tree |

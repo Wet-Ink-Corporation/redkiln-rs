@@ -176,10 +176,11 @@ for the environment), or record in the commit that they remain conventions. Do n
 `futures`, no `async-trait`. Four shapes it ships are fixed by the 2026-09-11 records and are **not** left to the
 implementer:
 
-- **`StepError`** is ADR-0095's eight-variant table — `Transport`, `Schema { attempts }`, `Timeout`, `Cancelled { by }`,
-  `NonZero { code, stderr_digest }`, `RateLimited { resets_at }`, `NotAdopted`, `NotIsolated { surface }` — with
-  `spoke()` total over it and one event arm each. S-PORTS compiled exactly this shape on 1.97.1 and 1.98.1 [measured,
-  F41]; the variant set is redesigned from step.rs's six, not carried.
+- **`StepError`** is ADR-0095's table as ADR-0112 extends it — **eleven** variants: `Transport`, `Schema { attempts }`,
+  `Timeout`, `Cancelled { by }`, `NonZero { code, stderr_digest }`, `RateLimited { resets_at }`, `NotAdopted`,
+  `NotIsolated { surface }`, `Platform { status, retry_after }`, `Unsupported { capability }`, `Overage { reason }` —
+  with `spoke()` total over it and one event arm each. S-PORTS compiled exactly this shape on 1.98.1 (the eight on
+  1.97.1 as well) [measured, F41 + its 2026-09-11 note]; the variant set is redesigned from step.rs's six, not carried.
 - **`Findings.repro`** is typed (ADR-0096): `{ kind: run | mutate, command, mutation: Option<{ patch, suite }>,
   expected: { exit } | { assertion }, observed, expected_when_met }`; a prose-only `command` is rejected at ingest,
   never routed to advisory. The snapshot is taken on this shape; F31's 52/52 conformance figure describes the old

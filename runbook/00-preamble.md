@@ -11,8 +11,8 @@ threshold and instrument. Where a stage file disagrees with any of those, the st
 Phase 0 (close the programme) and Phase 1 (kernel, store, fix and story lanes, four adapters) only. Phases 2–4 are
 out of scope. · **Inputs:** `references/2026-09-08-architecture-design.md` (§0.1, §5.3, §5.9, §9, §10) ·
 `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519, AC-520 — the derived-facet gate — and the ids the
-2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**109 records**,
-`0001`–`0111` with `0090` and `0091` reserved for Steps 4.4 and 6.1; `references/adr/ERRATA.md` for corrections to
+2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**110 records**,
+`0001`–`0112` with `0090` and `0091` reserved for Steps 4.4 and 6.1; `references/adr/ERRATA.md` for corrections to
 frozen records) · `spikes/DECISIONS-2026-09-11.md` (the eighteen operator decisions this runbook executes) ·
 `spikes/F39-DRAFT.md` · `spikes/F40-DRAFT.md` · `spikes/F41-DRAFT.md` (S-PORTS) · `spikes/F42-DRAFT.md` (S-GRAMMAR) ·
 `spikes/HANDOFF.md` · `spikes/DECISIONS-2026-09-09.md` · `references/2026-09-08-evidence-brief.md` §E. ·
@@ -36,11 +36,11 @@ and two are numbered decisions recorded in `spikes/DECISIONS-2026-09-11.md` befo
 | 6 | Per-AC mutants are author-declared | Step 5.3 (the spec template's `mutation:` field) and 7b-ii | **ADR-0104** |
 | 7 | The Phase-1 companion kind list | Step 5.3 | **DECISIONS-2026-09-11 #3** — `_integration`, `_grounding`, `_decomposition`, `_review`, `_ledger`; recorded against ADR-0075 clause 3 |
 
-**`0089` is taken, and so are `0092`–`0111`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
+**`0089` is taken, and so are `0092`–`0112`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
 was accepted on 2026-09-09 and partially supersedes ADR-0030 (PC8); ADR-0093 (2026-09-11) supersedes it in part
 again — `stage`/`rigor`/`role`/`cost` are `source = "kernel"`, `surfaces` is `source = "declared"`, six facets stay
 `derived` — and Step 4a executes both. Step 4.4's context-vector record is **0090** and Step 6.1's S-GIX successor is
-**0091**; both numbers are reserved in the ADR README and the next free number after them is **0112**. **Step 4a is
+**0091**; both numbers are reserved in the ADR README and the next free number after them is **0113**. **Step 4a is
 not a decision** — it is the execution order for the registry, schema and lint work ADR-0089 and ADR-0093 force.
 
 Everything else this runbook does is execution order. **Where a stage is tempted to decide something else, it stops.**

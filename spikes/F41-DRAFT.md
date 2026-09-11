@@ -66,3 +66,10 @@ property AC-229/AC-360 want.
    different reason and still pass.
 3. `cargo +1.98.1` was available on this box only because the toolchain was installed for this spike
    (`rustup toolchain install 1.98.1 --profile minimal -c rustfmt -c clippy`); the runbook's Step 0 records it.
+
+### Correction (2026-09-11, later the same day)
+
+ADR-0112 adds `Platform { status, retry_after }`, `Unsupported { capability }` and `Overage { reason }` to the `StepError` table —
+three variants thirteen criteria already named and ADR-0095's table omitted (register §0.3 row C5). `spikes/s-ports/` was extended to
+the **eleven**-variant enum and re-run on 1.98.1: `step_error_is_matched_exhaustively_with_one_event_arm_each` carries eleven cases;
+5/5 unit tests and 2/2 doctests pass, unchanged. The row above that says "closed eight-variant enum" reads "eleven" after this note.

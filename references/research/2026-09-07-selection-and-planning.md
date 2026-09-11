@@ -398,3 +398,12 @@ human sees at a gate and the input to the conformance check.
 **Non-goals confirmed by this survey.** No PDDL planner, no SAT at runtime, no MCTS over workflows, no
 model-generated orchestration scripts. Offline SAT/ASP for catalog linting and process-mining for evaluation are
 the only solver-class tools worth adopting, and both stay outside the run loop.
+
+## Erratum (2026-09-11)
+
+Appended after the pre-implementation audit of 2026-09-10 (PIA-101 and the citation census, `references/audit/2026-09-10/census/grounding-by-file/`); this dossier is a dated record and its rows are not rewritten. One bullet per corrected line: `:NN — was … → is …, source, fetched date`. Every fetch below is dated 2026-09-10 unless stated. The dossiers carried no fetch dates, which is why half of these were already stale at authoring: every research read going forward carries a fetch date.
+
+- :105 — "retaining explanations via preferred minimal conflict sets [documented] arXiv 2207.08599, arXiv 2109.08304" → arXiv 2109.08304 (Mishra, *Product Configuration in Answer Set Programming*, ICLP 2021 DC) is a preliminary knowledge-representation encoding with a bike example; explanations and preferred conflict sets appear there only as cited construction (QuickXplain), not as a result, and neither cited source establishes the clause — point it at Junker 2004 (QuickXplain) if kept (census EXT-PREPRINT-078, fetched 2026-09-10; PIA-101).
+- :111 — "real-world models are easy for modern solvers [documented] arXiv 1506.05198, 10.1145/3634713.3634733" → the "easy" finding is Liang et al., SPLC 2015 (arXiv 1506.05198); the 2024 VaMoS paper is the **caveat** — reasonably well on many models, but hardness is heterogeneous and hard to estimate — and is cited as support for the claim it qualifies. The sentence stands on the first citation only (census EXT-PEERANDS-098, fetched 2026-09-10; PIA-101).
+- :255 — "a working agreement, not a strict set of rules" is a paraphrase presented as a quotation; the agileambition page says "Regard the criteria as guidelines, not strict rules" — drop the quotation marks (census EXT-PROCESSL-195, fetched 2026-09-10; PIA-101).
+- :213 — not corrected: a URL line; the Dynamic Workflows plan-list drift (no Pro) is corrected at verification :10 and competitive-workflows :129 (census EXT-PROCESSL-073).

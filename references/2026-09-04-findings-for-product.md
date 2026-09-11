@@ -236,3 +236,11 @@ implies.
    callers to blame the model.
 4. **B2** — verdict instability. Needs measurement before design; the honest
    next step is more repeats, not a redesign.
+
+## Erratum (2026-09-11)
+
+Appended after the pre-implementation audit of 2026-09-10 (`references/audit/2026-09-10/MASTER.json` and its citation census); this document is a dated record and is not rewritten. One bullet per corrected line: `:NN — was … → is …, source, fetched date`. Every fetch is dated 2026-09-10 unless stated; every research read going forward carries a fetch date.
+
+- :21 / :232 — F20's structured-output rules (no `oneOf`; `additionalProperties: false` at every object) are confirmed against the platform page, which also carries the "Schema complexity limits" table the later corpus said was absent: 24 optional and 16 union-typed parameters **per request across all strict tool schemas plus the JSON output schema**, 20 strict tools, 180 s compile (census EXT-ANTHROPI-002, platform.claude.com structured-outputs, fetched 2026-09-10; E-0084-2; ADR-0095, and ADR-0108 makes `StructuredOutput` a configuration-time check).
+- :67 — "a top-level `rate_limit_event` the docs do not mention" — no longer true as a blanket statement: the Agent SDK TypeScript reference now types `rate_limit_event` with a `rate_limit_info` object (status / resetsAt / utilization); the `unifiedWindows.{five_hour,seven_day}` shape this finding measures and `isUsingOverage` remain undocumented (0 hits in typescript.md and python.md), so the "undocumented field" characterisation survives for the fields the instrument reads (census EXT-CLAUDECO-024, code.claude.com/docs/en/agent-sdk/typescript, fetched 2026-09-10). `isUsingOverage` is recorded false-valued on every E0 and S-VAR record (PIA-065).
+- :81–86 — the `is_error` / `api_error_status` frames described here are held by seven `spikes/results/e3.jsonl` records (six 529, one 500; exit 1 + `is_error: true`), which the registers had called "may not exist" (PIA-075). No change to this document.

@@ -1,7 +1,16 @@
 # Pre-registration #3 — H: the human gate
 
 **Status:** H2/H3 reported (F19). **H1 and H4 approved and running from
-2026-09-04.** Written before any H dispatch.
+2026-09-04.** Written before any H dispatch. *Corrected 2026-09-11 (audit
+PIA-089): the first H1 records and four arm (a) H4 records pre-date that
+line's "running from 2026-09-04" — they were dispatched 2026-09-02/03 and
+committed in `7a796ce` (2026-09-02 21:39 −0700: `h1.jsonl` 6 lines,
+`h1-gap.jsonl` 2 lines, `h4.jsonl` lines 1–4); whether those were approved
+dispatches or pre-approval instrument runs is not recorded and is not claimed
+here. Read the line as "approved as a set and running from 2026-09-04, with
+records from 2026-09-02/03 on file" — see the §6 correction below. "Written before any H dispatch" holds: this file's
+first commit is `18066e9`, 2026-09-02 21:21 −0700, eighteen minutes before
+`7a796ce`.*
 **Corpus pin:** redkiln @ `47faec9f`. **Instrument:** `spikes/runner`.
 **Why it exists:** RFC §7 identifies the mid-run human approval gate as the
 *unoccupied market gap* — the capability that would justify building
@@ -187,6 +196,37 @@ context fidelity. If FULL systematically differs, the digest schema is
 under-specified and §6's original conclusion stands.
 
 **n.** 5 items × 3 arms = 15 dispatches.
+
+### Corrected 2026-09-11 — the amendment above post-dates three arm (a) draws
+
+Audit PIA-089, checked against git. The heading "Amended 2026-09-04, before any
+H4 dispatch" is wrong by four records. `results/h4.jsonl` lines 1–4 are four
+`a-contiguous` (arm (a)) H4 records stamped 2026-09-03T04:37Z, committed in
+**`7a796ce`** ("H1 part 1: a review-scale payload IS cached", 2026-09-02 21:39
+−0700) together with the first H1 records; lines 5–6 are that batch's two
+`batch_draw` headroom lines. The amendment is commit **`3eb93d5`** ("H1 first
+datapoints, and an H4 amendment: the registered comparison is vacuous",
+2026-09-04 23:23 −0700) [measured, `git log`, `git show 7a796ce --stat`,
+2026-09-11]. So the registered contiguous/suspended comparison had been run on
+its contiguous arm — three items, four records — two days before it was declared
+vacuous.
+
+**Were they seen before the amendment was written?** Not recorded, and not
+claimed either way. The amendment's text cites no arm (a) record, and its
+argument ("every step under inversion is its own `claude -p` process, so both
+arms receive exactly the same thing") is about the mechanism and needs none.
+But the four records sat in the same results file for two days before it was
+written, so "unseen" cannot be asserted. Reported as: **on disk, not cited,
+seen-status unrecorded** — which is weaker than "before any H4 dispatch" and is
+what the heading should have said.
+
+**What they contribute to.** Nothing in F28. Every H4 figure — the DIGEST / FULL
+/ CONTROL Jaccard table, the 11,560 → 21,958 byte handover — is from the 15
+dispatches of 2026-09-05 (`h4.jsonl` lines 7–21). The four arm (a) records were
+the comparison the amendment withdrew; they are retained, unedited, and score
+nothing. F28's "the latter amended before any H4 dispatch" carries the same
+correction; the design's "replaced before data" (:117) reads "amended after
+three arm (a) draws, disclosed".
 
 ---
 

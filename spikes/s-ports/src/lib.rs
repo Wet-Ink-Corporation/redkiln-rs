@@ -49,7 +49,7 @@ pub struct Typed {
     pub value: serde_json::Value,
 }
 
-/// The closed error set of ADR-0095 decision 2.
+/// The closed error set of ADR-0095 decision 2 plus ADR-0112's three: eleven variants.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StepError {
     Transport { kind: TransportKind, detail: String },
@@ -60,6 +60,10 @@ pub enum StepError {
     RateLimited { resets_at: Option<u64> },
     NotAdopted { expected_agent: String, observed: String },
     NotIsolated { surface: IsolationSurface, diff_digest: String },
+    // ADR-0112 (2026-09-11): the three the register already named
+    Platform { status: u16, retry_after: Option<u64> },
+    Unsupported { capability: String },
+    Overage { reason: Option<String> },
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TransportKind { Spawn, Io, Decode }
@@ -74,7 +78,7 @@ impl StepError {
         matches!(
             self,
             StepError::Schema { .. } | StepError::Timeout { .. } | StepError::Cancelled { .. }
-                | StepError::NonZero { .. } | StepError::RateLimited { .. }
+                | StepError::NonZero { .. } | StepError::RateLimited { .. } | StepError::Platform { .. }
         )
     }
 }
@@ -203,6 +207,9 @@ impl Harness for FakeHarness {
                 StepError::RateLimited { .. } => Event::RateLimited,
                 StepError::NotAdopted { .. } => Event::StepRefused { class: "not_adopted".into() },
                 StepError::NotIsolated { .. } => Event::StepRefused { class: "not_isolated".into() },
+                StepError::Unsupported { .. } => Event::StepRefused { class: "unsupported".into() },
+                StepError::Overage { .. } => Event::StepRefused { class: "overage".into() },
+                StepError::Platform { status, .. } => Event::StepFailed { class: format!("platform:{status}") },
                 other => Event::StepFailed { class: format!("{other:?}").split(' ').next().unwrap_or("").to_lowercase() },
             });
         }
@@ -300,6 +307,9 @@ mod tests {
             StepError::RateLimited { resets_at: None },
             StepError::NotAdopted { expected_agent: "a".into(), observed: "b".into() },
             StepError::NotIsolated { surface: IsolationSurface::Tools, diff_digest: String::new() },
+            StepError::Platform { status: 529, retry_after: None },
+            StepError::Unsupported { capability: "affected-selection".into() },
+            StepError::Overage { reason: None },
         ];
         for e in cases {
             let h = FakeHarness::scripted(vec![Err(e.clone())]);

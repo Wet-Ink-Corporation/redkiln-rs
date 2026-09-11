@@ -88,6 +88,19 @@ is free.
 **Inputs.** 232 `Story:` and 104 `Slice-Verdict:` trailers across all refs at the
 pinned SHA, plus the 124 recorded `workflow_run` events.
 
+**Amended 2026-09-11 (audit PIA-002), after the data — a correction to the input
+description, not to the metric or the result.** "Across all refs at the pinned
+SHA" conflates two things. The trailers and slices F12 replayed are reachable
+**across all refs of the frozen clone** — 118 refs: 42 heads, 41 remote-tracking,
+35 tags [measured, `git for-each-ref` on `D:/repos/redkiln`, 2026-09-11] — not
+from the pinned SHA alone: **from `47faec9f` alone 46 of the 74 slices and
+231 of the 348 trailer commits are reachable** [documented, audit PIA-002,
+2026-09-10]. The pin fixes the `.bklg` corpus S-MIG censused; the S0.2 substrate
+is the whole clone's ref set, and any artefact that carries it forward (a
+`git bundle create --all`, or a fixed list of the trailer-commit SHAs) has to
+carry all 118 refs, which the RUNBOOK's Step 2 now states. F12's figures are
+unchanged.
+
 **Primary metric.** Agreement with the recorded outcome per run, and an
 enumeration of every divergence with its cause.
 
@@ -164,7 +177,8 @@ a point estimate.
    instrument available, and the gate is withdrawn rather than left to block
    the programme indefinitely.
 
-   **Why.** F14: 40 dispatches processing ~1.9M tokens — 500k as cache reads,
+   **Why.** F14: 40 dispatches processing ~1.9M tokens *[corrected 2026-09-11:
+   ~1.0M — 854k cache-read, 157k cache-creation; F14 "Correction (2026-09-11)"]* — 500k as cache reads,
    149k as cache creation — moved `seven_day` by **less than one 0.01 tick** in
    either direction. Both the docs' reading ("cache hits are not deducted") and
    charter §6.1's ("~0.1×") remain fully consistent with that. Resolving it
@@ -246,6 +260,12 @@ subagents are forced to 5m. The platform docs say the default is **5 minutes**,
 Claude Code's effective TTL silently moved 1h→5m in March 2026. And
 `usage.cache_creation` reads `{ephemeral_1h: 0, ephemeral_5m: 0}` on every
 dispatch observed — present but uninformative. **Behaviour is the only route.**
+*[Amended 2026-09-11 (audit PIA-067), after the data — a correction to the
+premise, not to the design: the "every dispatch" was the handful of 2026-09-02
+smoke dispatches. Over the programme's 955 usage-bearing records 621 carry
+`ephemeral_1h_input_tokens > 0` and none carries `ephemeral_5m_input_tokens > 0`
+(F3 "Correction (2026-09-11)"). The behavioural route was still run (E1-TTL,
+F10) and stands; the field is informative on the `-p` side.]*
 
 **Design.** For each gap: warm a prefix, wait, read it back. Each gap gets its
 **own** warm dispatch, because a cache read refreshes the entry and a cumulative

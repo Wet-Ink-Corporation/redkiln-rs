@@ -80,7 +80,7 @@ the pass.
 #   AND panel_verdict == "scored"        AND  corpus_sha == <catalog corpus pin>
 #
 # panel_verdict == "scored" IS NOW SATISFIABLE AND, FOR ARM D, SATISFIED — F39 scored it on 2026-09-09
-# over 136 truth cells at 47faec9f (140 before the 2026-09-11 panel-file key fix; F39-DRAFT's Correction).
+# over 140 truth cells at 47faec9f (all scored after the 2026-09-11 panel-file key fix; the 2026-09-09 run scored 136 — F39-DRAFT's Correction).
 # THE OTHER FOUR ARE UNTOUCHED, and identity measured 0.25 / 0.15 / 0.10 / 0.10 against 0.80
 # [measured, F36]. A discharged clause is not a partial unblocking: the gate still fails on the second
 # branch, and the fixture set stays at FIVE. After Step 4a the FIRST branch is what passes — zero llm facets

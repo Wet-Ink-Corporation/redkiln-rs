@@ -20,3 +20,10 @@
 
 ## Summary
 14 of 15 claims are fully CONFIRMED against primary or near-primary sources. Claim 12 (HumanLayer pricing) rests on secondary aggregator pages rather than a first-party pricing page. Claim 13 needed one correction: the "Google/MIT" framing is not how the primary source (Google Research blog) bills itself — it's a Google Research/DeepMind study whose author list includes MIT-affiliated researchers — and the cited 180-config/4-benchmark figures match the original paper version rather than a later 260-config/6-benchmark revision (both are consistent with the primary Google blog post). Claim 15's exact closure date (2026-07-29) was not independently confirmable, though every other detail checked out.
+
+## Erratum (2026-09-11)
+
+Appended after the pre-implementation audit of 2026-09-10 (PIA-101 and the citation census, `references/audit/2026-09-10/census/grounding-by-file/`); this dossier is a dated record and its rows are not rewritten. One bullet per corrected line: `:NN — was … → is …, source, fetched date`. Every fetch below is dated 2026-09-10 unless stated. The dossiers carried no fetch dates, which is why half of these were already stale at authoring: every research read going forward carries a fetch date.
+
+- :9 — "GraphQL rate limit ~2,000 pts/min" (CONFIRMED) → the number is real but mislabelled: 2,000 points/min is a **secondary** per-endpoint limit; the GraphQL **primary** limit is 5,000 points/hour per user (census EXT-COMPETIT-097; github-platform :73 carries the same mislabel; fetched 2026-09-10). The ~80/min and 500/hr content-creating limits match.
+- :10 — "on Pro/Max/Team/Enterprise" → neither InfoQ nor testingcatalog names **Pro**: Max, Team, eligible Enterprise, API and partner platforms; and the token-use warning this row could not pin to a first-party page is quoted by InfoQ as Anthropic's — "can consume substantially more tokens than a typical Claude Code session" (census EXT-PROCESSL-073 / -074, fetched 2026-09-10). May 28 2026 and research preview confirmed.

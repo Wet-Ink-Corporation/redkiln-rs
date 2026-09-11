@@ -86,6 +86,7 @@ measured number, never taste.
 | reconcile at every entry; two tiers; three trailer axes (PIA-082) | ADR-0109 |
 | Headroom in ticks; batch delta; visible windows (PIA-082/017/061) | ADR-0110 |
 | S-P7B must change the criterion (PIA-073) | ADR-0111 |
+| `StepError` gains `Platform`, `Unsupported`, `Overage` — eleven variants (register §0.3 row C5, found absorbing ADR-0095) | ADR-0112 |
 
 ## Left with Ryan (not decided here)
 

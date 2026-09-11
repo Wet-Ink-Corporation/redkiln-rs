@@ -81,7 +81,7 @@ facets ran ungated. **Build the lint rule with the field, in the same change** (
 
 ### 4a.2 The repo-wide `auth` boolean is withdrawn for a set-valued `surfaces` facet
 
-`auth` is **withdrawn**, not tuned. Eleven positives, eleven false, upper bound 0.26 on the 2026-09-09 scoring (0/11 [0.00, 0.26]; F39-DRAFT's 2026-09-11 Correction carries the figure after the panel-file key fix, and it is no better — ERRATA E-0089-2) — the rule carries no signal on
+`auth` is **withdrawn**, not tuned. Eleven positives, eleven false, upper bound 0.26 on the 2026-09-09 scoring (0/11 [0.00, 0.26]; 0/12 [0.00, 0.24] after the 2026-09-11 panel-file key fix scored all 140 cells — F39-DRAFT's Correction; ERRATA E-0089-2) — the rule carries no signal on
 this corpus and adding word boundaries to one alternative does not recover it [measured, F39 §1, §2]. Its
 replacement is a **set-valued `surfaces` facet** (`set = true`, the shape `toolchain` and `change` already carry)
 whose values come from a **checked-in `surfaces.toml` mapping path globs to closed surface names**. A fact is the

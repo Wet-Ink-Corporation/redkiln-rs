@@ -45,7 +45,7 @@ rule below is **the rule as pre-registered**; the measured outcome is recorded *
   destination" option — so that after Step 4a **no facet is `source = "llm"`** and AC-071 has nothing to fail
   closed on. ADR-0090 carries this clause; Checkpoint 4a asserts the zero count.
 - **Clause B was applied on 2026-09-09 and NO FACET CLEARS THE BAR.** The rule above was written before the
-  numbers were read, was run unchanged, and returned this. Union source, 20 items, 140 truth cells as scored 2026-09-09 (136 after the 2026-09-11 panel-file key fix — F39-DRAFT's Correction; no verdict moves), Wilson 95%
+  numbers were read, was run unchanged, and returned this. Union source, 20 items, 140 truth cells (the 2026-09-09 run scored 136 of them; the 2026-09-11 panel-file key fix scores all 140 and moves no verdict — F39-DRAFT's Correction), Wilson 95%
   intervals [measured, F39 §1]:
 
   | facet | precision | 95% CI | recall | tp | fp | fn | tn | excl | verdict |
@@ -192,7 +192,7 @@ python spikes/p1/score-arm-d.py \
 # The panel-adjudicated scoring is a SECOND script over the same engine records. It takes NO ARGUMENTS —
 # its five input paths are constants inside the file, resolved from the repo root, so the `cd` above is
 # load-bearing here in a way it is not for score-arm-d.py:
-python spikes/p1/score-arm-d-panel.py       # 136 truth cells at pin 47faec9f after the 2026-09-11 key fix (140 before), $0 model cost, F39's corrected figures
+python spikes/p1/score-arm-d-panel.py       # 140 truth cells at pin 47faec9f, all scored after the 2026-09-11 key fix (the 2026-09-09 run scored 136), $0 model cost, F39's corrected figures
 # reads spikes/results/p1-arm-d.jsonl + -oracle.jsonl + -panel-accepted.jsonl + -contested.json
 #     + -adjudications.json. If any is missing this is a HALT (halt condition 8), not a skip.
 
@@ -387,9 +387,9 @@ stamp in the same second, so it refuses. That is fail-closed, and it is correct.
 ### 4.4 Take the decision and record it as a new ADR
 
 **The number is `0090`, and it is reserved for this step.** `0089` was taken on 2026-09-09 by the facet-provenance
-amendment Step 4a executes; `0092`–`0111` were taken on 2026-09-11 by the audit remediation; `references/adr/README.md`
-§Numbering now reads, verbatim: "`0074`–`0089` and `0092`–`0111` are allocated; `0090` and `0091` are reserved for
-the runbook's Step 4.4 and Step 6.1 records; the next free number is **`0112`**." Write
+amendment Step 4a executes; `0092`–`0112` were taken on 2026-09-11 by the audit remediation; `references/adr/README.md`
+§Numbering now reads, verbatim: "`0074`–`0089` and `0092`–`0112` are allocated; `0090` and `0091` are reserved for
+the runbook's Step 4.4 and Step 6.1 records; the next free number is **`0113`**." Write
 `references/adr/0090-<slug>.md` carrying all eleven frontmatter keys in order, all six mandatory sections, and a
 `**What this forbids**` block inside Consequences. **The record carries §4.1's booleans clause** — `has_repro`,
 `external_dep` and `market_facing` are `source = "human"` — as a numbered decision beside the ordinal axes, and cites
@@ -432,26 +432,26 @@ grep -c '^superseded_by: \["0090"\]$'   "$A"   # → 1  AFTER
 ```
 
 Then update `references/adr/README.md`, which needs **five** changes and each has its own anchor. **Every anchor
-string changed on 2026-09-11 when ADR-0092–0111 landed**; two earlier revisions of this table each quoted anchors
+string changed on 2026-09-11 when ADR-0092–0112 landed**; two earlier revisions of this table each quoted anchors
 that were stale within a day, so **copy them from the file, not from here, before you write** — the row below says
 what each becomes, and the anchor column is a hint about where to look:
 
 | # | Anchor now in README.md (as of 2026-09-11 — re-read it) | Becomes |
 | --- | --- | --- |
-| 1 | The Lifecycle sentence: `The set now holds **105 \`accepted\`, 3 \`superseded\`** (0004, 0041, 0088) **and 1 \`proposed\`** (0079, …)` | **106** `accepted`, **4** `superseded` (0004, 0041, 0088, **0079**) and **0** `proposed` |
-| 2 | §Numbering: `` `0090` and `0091` are reserved for the runbook's Step 4.4 and Step 6.1 records; the next free number is **`0112`** `` | `0090` **written** (this step); `0091` reserved for Step 6.1; next free still `0112` |
-| 3 | The **Supersessions** lead sentence: `Twenty-six supersession links exist in this set, from twenty-two superseding records … Three links are full (0004→0074, 0041→0064, 0088→0101); twenty-three are partial` | **Twenty-seven** links from **twenty-three** records; **four** full (add **0079→0090**); twenty-three partial. Add the `0079 → 0090` row to the table: **Full**, "0079 decided nothing and forbade amendment; 0090 decides the axis source on F36's clause A" |
+| 1 | The Lifecycle sentence: `The set now holds **106 \`accepted\`, 3 \`superseded\`** (0004, 0041, 0088) **and 1 \`proposed\`** (0079, …)` | **107** `accepted`, **4** `superseded` (0004, 0041, 0088, **0079**) and **0** `proposed` |
+| 2 | §Numbering: `` `0090` and `0091` are reserved for the runbook's Step 4.4 and Step 6.1 records; the next free number is **`0113`** `` | `0090` **written** (this step); `0091` reserved for Step 6.1; next free still `0113` |
+| 3 | The **Supersessions** lead sentence: `Twenty-seven supersession links exist in this set, from twenty-three superseding records … Three links are full (0004→0074, 0041→0064, 0088→0101); twenty-four are partial` | **Twenty-eight** links from **twenty-four** records; **four** full (add **0079→0090**); twenty-four partial. Add the `0079 → 0090` row to the table: **Full**, "0079 decided nothing and forbade amendment; 0090 decides the axis source on F36's clause A" |
 | 4 | The **New records** table's `0079` row status `proposed` | `superseded (by 0090)`; add the `0090` row |
 | 5 | §Open items: `` `0079` is the only `proposed` record `` … and `exactly four records are not at \`accepted\` — \`0041\`, \`0004\` and \`0088\`, the three targets of a full supersession, at \`superseded\`, and \`0079\` at **\`proposed\`**` | no `proposed` record remains; **exactly four** at `superseded` (0004, 0041, 0088, 0079); rewrite the 0079 paragraph to say what 0090 decided and that the block on LLM-sourced axes stands on AC-071's first clause |
 
-**Anchor 3 is the one that moved most and is easiest to get wrong.** Twenty-three partial supersessions already sit
+**Anchor 3 is the one that moved most and is easiest to get wrong.** Twenty-four partial supersessions already sit
 in that table and every predecessor of a partial **stays `accepted`** [documented, README §Supersessions]. Do not
 "tidy" any of them while you are in the file.
 
 Leave the accepted records that carry named open items (0077/S-GIX with ADR-0098's fallback, 0078/S-TTL1, 0080 as
 narrowed by ADR-0111, 0089/S-FACET as narrowed by ADR-0093, 0101/S-SUBTLE) exactly as they are; this step settles one
-row, not the section. The README's file count does **not** move (0090 fills a reserved number: 109 records → 110,
-`ls references/adr/*.md | wc -l` → **112** with README.md and ERRATA.md).
+row, not the section. The README's file count does **not** move (0090 fills a reserved number: 110 records → 111,
+`ls references/adr/*.md | wc -l` → **113** with README.md and ERRATA.md).
 
 **Checkpoint 4.** All twelve. This is the gate; treat a failure as a stop, not a note. **Two of the twelve are P2's, and
 P2 does not gate anything this step gates** (§4.1's last bullet) — they are here because this is where the scorers

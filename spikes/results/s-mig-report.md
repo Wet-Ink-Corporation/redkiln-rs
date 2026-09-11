@@ -2,6 +2,8 @@
 
 ## F3x — S-MIG RESULT: 98% of spec sections lift; the losses name exactly three type decisions
 
+> *Corrected 2026-09-11:* 98% is the spec-section slot; the record-weighted typed-slot overall is **96.0%** (3,011 / 3,138). See "Correction (2026-09-11)" at the foot.
+
 **Established by:** a deterministic census of every markdown file under `.bklg/` and
 `.kb/` at corpus pin `47faec9f` — **1,312 files, 6,877 (artifact, section) records** —
 read via `git show`, never the working tree. **Zero model cost.** Pre-registered in
@@ -49,7 +51,7 @@ as evidence.
 
 | prediction | measured | verdict |
 | --- | --- | --- |
-| ACs lift ≥ 95% | 88% strict; 100% if GIVEN/WHEN/THEN and a verification are optional | **falsified as stated** — 19 of 153 specs carry ACs without GWT (45 ACs) or without a verification note (46 ACs), all in the fix lane and the late archive |
+| ACs lift ≥ 95% | 88% strict; 100% if GIVEN/WHEN/THEN and a verification are optional | **falsified as stated** — 19 of 153 specs carry ACs without GWT (45 ACs) or without a verification note (46 ACs) *[cap-truncated; uncapped 76 / 87 loss lines — Correction (2026-09-11)]*, all in the fix lane and the late archive |
 | Anchors ≥ 90%, boundary ≥ 90% | 100% / 99% | holds |
 | TDD table < 80% (columns changed over time) | 91% lift; every one of 142 lacks the F25 mutation column | **falsified in the good direction** — the table is regular; it is the *columns* that are missing, uniformly |
 | kb bodies opaque, 100% | 100% | holds |
@@ -106,5 +108,49 @@ section grammar). In cards: everything but the frontmatter and the AC list.
    tables elsewhere are counted by row.
 3. **18 files are unmapped** — evidence attachments and readings under two archived
    projects. They migrate as opaque attachments; no type is proposed for them.
-4. **One frozen SHA.** The fix-lane generation (42 specs) and the archived generation
+4. **One frozen SHA.** The fix-lane generation (42 specs *[43 — Correction (2026-09-11)]*) and the archived generation
    (110) differ in template; both are in the count.
+
+### Correction (2026-09-11)
+
+Audit PIA-078; DECISIONS-2026-09-11 #11; ERRATA E-0075-1; METHOD-S §7 (2026-09-11, item 4). Original figures above
+are left in place with markers.
+
+**1. The per-AC loss counts were cap-truncated.** `census-s-mig.py` recorded each `LiftedWithLoss` AC section's loss
+list as `loss[:6]`, and 12 of the 19 spec records hit the cap, so the "45 ACs without GWT / 46 without a
+verification note" in the predictions table are sums over truncated lists. The cap was lifted for future runs on
+2026-09-11 and the script re-run **read-only at the pin** (`python spikes/results/census-s-mig.py --redkiln
+D:/repos/redkiln --sha 47faec9f --out <scratch file>`; 45 s; every one of the 6,877 records' `(path, kind, slot,
+outcome)` identical to `s-mig.jsonl`, which is not replaced). Uncapped, over the same 19 specs:
+
+| count | capped (recorded run) | uncapped |
+| --- | --- | --- |
+| loss lines "no GIVEN/WHEN/THEN" | 45 | **76** |
+| loss lines "no verification" | 46 | **87** |
+| distinct `(spec, id)` pairs — no GWT / no verification | — | **75 / 85** |
+| ACs with at least one loss | — | **131** |
+| ACs lacking both | — | **29** |
+| ACs in the 19 specs | — | **208** |
+
+[measured, uncapped re-run 2026-09-11]. The slot-level figures — 19 of 153 specs, 88% — are unaffected, because the
+slot outcome was never capped; only the *within-record* enumeration was. The identical ids repeat across specs
+(AC-001 … in every fix-lane spec), which is why 76 lines are 75 pairs and only 15 distinct id strings.
+
+**2. The 98% is one slot, not the census.** The heading's 98% is the **spec-section** slot. Over every typed
+slot the record-weighted overall is **96.0% = 3,011 Lifted / 3,138 (Lifted + LiftedWithLoss + Failed)** — 98.3%
+only if LiftedWithLoss is counted as lifted [measured, `s-mig.jsonl` recount 2026-09-11]. Restatements that read
+"the census overall of 98%" read 96.0% typed-slot with that denominator.
+
+**3. Two counts the table under-reports by one.** The table's Failed column sums to **53**; the census holds **54**
+— the one not tabled is a `report / gates` slot (1 Failed) outside the fifteen tabled slots [measured,
+`s-mig.jsonl`]. And Limits 4's "fix-lane generation (42 specs)" is **43**: the `support/` lane holds 43 `spec.md`
+at the pin, the one the count missed being
+`.bklg/support/issue-146-147-story-gate/issue-146-147-boundary-window/spec.md` [measured, `s-mig.jsonl` paths].
+AC-469 assigns that file; the design and the AC register carry the 43.
+
+**4. Which instrument, and the 0/156.** The census instrument was `spikes/results/census-s-mig.py`; nothing
+named `redkiln-migrate` ran (it does not exist). The "0/156 historical reports carry the discriminating-mutation
+columns" figure (ADR-0019 :51; ERRATA E-0019-1) is the 2026-09-05 proposal's; what **this** report measures is
+narrower and is the figure to cite: **142 of the 142 lifted TDD tables lack the F25 mutation column** (§ "What this
+settles" item 3), out of 156 impl-reports of which 7 lifted with loss and 7 failed to lift and were not assessed
+for the column [measured, `s-mig.jsonl`]. 0/156 is 0/142 plus 14 unassessed, not a count over 156.

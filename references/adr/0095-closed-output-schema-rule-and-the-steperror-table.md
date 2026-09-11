@@ -6,7 +6,7 @@ date: 2026-09-11
 legacy_id: none
 source: references/2026-09-10-pre-implementation-audit.md PIA-005 (§3.2), PIA-014 (§3.5), PIA-016; references/adr/0084 :64, :69, :117; platform.claude.com/docs/en/build-with-claude/structured-outputs (fetched 2026-09-10)
 supersedes: ["0084"]
-superseded_by: []
+superseded_by: ["0112"]
 related: ["0075", "0076", "0083", "0099"]
 evidence: ["PIA-005", "PIA-014", "PIA-016", "F20", "F31", "F1"]
 consumers: []
