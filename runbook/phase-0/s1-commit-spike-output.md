@@ -117,8 +117,8 @@ without the records it carries.
 cd D:/repos/redkiln-rs
 st=$(git status --porcelain)                           # → EMPTY (no output at all). Phase-0 exit (a).
 [ -z "$st" ] || { echo "FAIL: tree not clean — Phase-0 exit (a) not met:"; printf '%s\n' "$st"; exit 1; }
-n=$(ls references/adr/*.md | wc -l)                    # → 116 (114 records + README.md + ERRATA.md) — 114 verified 2026-09-11; 0115/0116 landed 2026-09-12
-[ "$n" -eq 116 ] || { echo "FAIL: expected 116 ADR files, found $n"; exit 1; }
+n=$(ls references/adr/*.md | wc -l)                    # → 117 (115 records + README.md + ERRATA.md) — 114 verified 2026-09-11; 0115/0116 landed 2026-09-12; ADR-0090 landed 2026-09-12 at Step 4.4
+[ "$n" -eq 117 ] || { echo "FAIL: expected 117 ADR files, found $n"; exit 1; }
 k=$(git ls-files references/adr/0114-*.md | wc -l)     # → 1  the last remediation record is tracked, not just on disk
 [ "$k" -eq 1 ] || { echo "FAIL: ADR-0114 tracked-file count is $k, expected 1"; exit 1; }
 # → runbook/INDEX.md  (the split runbook is tracked)
@@ -150,9 +150,12 @@ intention with no check behind it.
 
 **The ADR file count, and why the number keeps moving.** **Superseded 2026-09-11:** this paragraph argued 89 → 90
 (88 records + README, then ADR-0089) and contradicted the checkpoint five paragraphs above it, which asserts
-**116**. The tree measures 116 — **114 records + `README.md` + `ERRATA.md`** — after the 2026-09-11 remediation
-landed ADR-0092–0114 and the errata convention. The lesson the old paragraph was carrying still holds: anyone
-reading a smaller number here on a tree that has 114 is reading a stale runbook, not a broken tree, and Step 4.4's
-numbering moves with it (the next free number is **0115**).
+**117**. The tree measures 117 — **115 records + `README.md` + `ERRATA.md`** — after the 2026-09-11 remediation
+landed ADR-0092–0114 and the errata convention, the 2026-09-12 alignment review landed ADR-0115/0116, and Step 4.4
+landed **ADR-0090**. The lesson the old paragraph was carrying still holds: anyone reading a smaller number here on
+a tree that has 115 records is reading a stale runbook, not a broken tree, and Step 4.4's numbering moves with it
+(the next free number is **`0117`**, and `0091` is now the only reserved number left). *(Corrected 2026-09-12 at
+Step 4.4: this paragraph said 116 / 114 and gave the next free number as **0115**, which was already stale — 0115 and
+0116 were taken on 2026-09-12 before Step 4 ran.)*
 
 ---

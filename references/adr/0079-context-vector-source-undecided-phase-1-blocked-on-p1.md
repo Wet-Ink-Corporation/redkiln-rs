@@ -1,12 +1,12 @@
 ---
 id: "0079"
 title: The selection engine's context-vector source is undecided; Phase 1 pack authoring is blocked on P1's human panel
-status: proposed
+status: superseded
 date: 2026-09-08
 legacy_id: none
 source: spikes/F36-DRAFT.md (P1 arm L, v1 and the §1.4 re-run); spikes/METHOD-P.md §1; references/2026-09-08-evidence-augmentation.md §3 (method engineering), §4 rec 21
 supersedes: []
-superseded_by: []
+superseded_by: ["0090"]
 related: ["0012", "0030", "0056", "0060", "0061"]
 evidence: ["F36", "F27", "F34", "F35"]
 consumers: []

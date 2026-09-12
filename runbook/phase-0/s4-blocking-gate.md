@@ -58,6 +58,8 @@ rule below is **the rule as pre-registered**; the measured outcome is recorded *
   | **`auth`** | **0.00** | **[0.00, 0.26]** | n/a | **0** | **11** | 0 | 4 | 4 | stays |
   | `data_migration` | — | — | — | 0 | 0 | 0 | 15 | 4 | **not measurable** |
 
+  *(The table above is the **2026-09-09 scoring of 136 cells**. The 2026-09-11 panel-file key fix scores all 140 and moves `auth` to **0/12, [0.00, 0.24]** — fp 11 → 12 — and every other verdict is unchanged; ERRATA **E-0089-2**, and `halts.md` Halt 10 carries both readings. `score-arm-d-panel.py`, which Checkpoint 4 runs, prints the 140-cell reading, so the two figures beside each other are the same result at two scorings and not a disagreement. Noted 2026-09-12; no rule above was re-worded and no number was substituted.)*
+
   **The sub-0.95 clause fires on five facets. The ≥ 0.95 clause fires on none, and cannot.** No facet has enough
   positives to clear 0.95 with confidence *even in principle at this n*: `ui` is 7/7 and its lower bound is 0.65,
   and **73** all-correct positives are needed for a lower bound above 0.95 at the registered two-sided
@@ -366,8 +368,18 @@ evidence only that its precondition held** — it says the labels were stamped b
 exactly the blindness claim P2 rests on, and it says nothing whatever about the verdicts. Record the non-firing;
 do not read it as a pass on the result.
 
-**Six more messages exist and this table did not carry them** — eleven refusals in total, five here and six there, because `spikes/p2/score-p2.py`
-did not exist when it was written: `labels are not timestamped — refusing to score` (a `FILL` in `labelled_at`),
+**Six more messages exist and this table did not carry them** — and, **recounted off the scripts on 2026-09-12 as
+this section instructs, the total is thirteen, not eleven.** `grep -c 'sys.exit(\|SystemExit' ` gives **6** in
+`score-p2.py` (`:53`, `:72`, `:77`, `:79`, `:90`, `:92`), **3** label guards in `reconstruct-derived-from.py`
+(`:133`, `:135`, `:138`; its `:41` is a git-failure passthrough, not a label guard), and **4** in
+`score-arm-d.py` (`:37`, `:46`, `:74`, `:81`). The table below and this paragraph between them name eleven; the two
+they miss are **amendment 8's own guards** in `score-arm-d.py` — `blind_attestation is present but not filled in`
+(`:37`) and `--attested-blind was passed but the file carries no blind_attestation line` (`:81`) — which is the
+mechanism at the centre of Checkpoint 4's 2026-09-12 repair, so the undercount was hiding exactly the guards that
+mattered here. **This is the second time this count has been low**: `halts.md` Halt 7 read "eight … three more"
+until 2026-09-11, when it dropped the BLINDNESS guard. Count them off the scripts, never off a sentence. The six
+`score-p2.py` messages, because it
+did not exist when this table was written: `labels are not timestamped — refusing to score` (a `FILL` in `labelled_at`),
 `no engine records` (the scorer-side guard for the truncated-file case Checkpoint 4 also covers),
 `engine records span several corpus pins: {…}`, `engine was run against different labels: {…} vs {…}`,
 `<stamp> is not a UTC ...Z stamp`, and **`BLINDNESS VIOLATED: labelled_at <t> does not precede the engine's
@@ -442,8 +454,8 @@ what each becomes, and the anchor column is a hint about where to look:
 | # | Anchor now in README.md (as of **2026-09-12** — re-read it; ADR-0115/0116 moved four of these five) | Becomes |
 | --- | --- | --- |
 | 1 | The Lifecycle sentence: `The set now holds **110 \`accepted\`, 3 \`superseded\`** (0004, 0041, 0088) **and 1 \`proposed\`** (0079, …)` *(110, not 108, since 2026-09-12)* | **111** `accepted`, **4** `superseded` (0004, 0041, 0088, **0079**) and **0** `proposed` |
-| 2 | §Numbering: `` `0074`–`0089` and `0092`–`0116` are allocated; `0090` and `0091` are reserved for the runbook's Step 4.4 and Step 6.1 records; the next free number is **`0117`** `` *(the `0115`/`0116` half moved 2026-09-12; re-read it before asserting)* | `0090` **written** (this step); `0091` reserved for Step 6.1; next free still `0115` |
-| 3 | The **Supersessions** lead sentence: `Twenty-nine supersession links exist in this set, from twenty-five superseding records … Three links are full (0004→0074, 0041→0064, 0088→0101); twenty-six are partial` | **Thirty** links from **twenty-six** records; **four** full (add **0079→0090**); twenty-six partial. Add the `0079 → 0090` row to the table: **Full**, "0079 decided nothing and forbade amendment; 0090 decides the axis source on F36's clause A" |
+| 2 | §Numbering: `` `0074`–`0089` and `0092`–`0116` are allocated; `0090` and `0091` are reserved for the runbook's Step 4.4 and Step 6.1 records; the next free number is **`0117`** `` *(the `0115`/`0116` half moved 2026-09-12; re-read it before asserting)* | `0090` **written** (this step); `0091` alone reserved for Step 6.1; next free still **`0117`**. *(Corrected 2026-09-12: this cell said `0115`. `63d9555` realigned the anchor column and left the outcome column behind — the same defect one column over.)* |
+| 3 | The **Supersessions** lead sentence, as it read on 2026-09-12 *before* this step: `Thirty-one supersession links exist in this set, from twenty-seven superseding records … Three links are full (0004→0074, 0041→0064, 0088→0101); twenty-six are partial`. **Two of those four numbers were already wrong** — 3 + 26 = 29, not the sentence's own 31; measured on disk, 3 full + **28** partial. `census_adr.py`'s `readme:full_partial_split` anchor is frozen at the audit's tree and matched 0 lines, so it could not catch the drift. *(This row itself was stale until 2026-09-12: it quoted the pre-0115/0116 sentence, "Twenty-nine … twenty-five", which `63d9555` did not realign.)* | **Thirty-two** links from **twenty-eight** superseding records; **four** full (add **0079→0090**); **twenty-eight** partial. Add the `0079 → 0090` row to the table: **Full**, "0079 decided nothing and forbade amendment; 0090 decides the axis source on F36's clause A" |
 | 4 | The **New records** table's `0079` row status `proposed` | `superseded (by 0090)`; add the `0090` row |
 | 5 | §Open items: `` `0079` is the only `proposed` record `` … and `exactly four records are not at \`accepted\` — \`0041\`, \`0004\` and \`0088\`, the three targets of a full supersession, at \`superseded\`, and \`0079\` at **\`proposed\`**` | no `proposed` record remains; **exactly four** at `superseded` (0004, 0041, 0088, 0079); rewrite the 0079 paragraph to say what 0090 decided and that the block on LLM-sourced axes stands on AC-071's first clause |
 
@@ -461,17 +473,58 @@ maintenance rule that recorded pass becomes **provisional until the hardened blo
 *(Corrected 2026-09-12: this paragraph said the count does not move and quoted 112 → 113 / 115, from before
 ADR-0115 and ADR-0116 landed.)*
 
-**Checkpoint 4.** All thirteen — recounted on disk 2026-09-11; the block said "twelve" and carries thirteen. This is the gate; treat a failure as a stop, not a note. **Two of the thirteen are P2's, and
-P2 does not gate anything this step gates** (§4.1's last bullet) — they are here because this is where the scorers
-are run, and a green P2 pair says nothing about the selection path.
+**Checkpoint 4's first assertion was wrong, and the guard it fought is right. Corrected 2026-09-12, at the run.**
+The line ran `score-arm-d.py` and asserted `rc -eq 0`. The script **refuses** —
+`labelled_at missing — labels must be timestamped before unblinding` — and **three independent facts say the refusal
+is the correct state, not a blocker to route around** (Halt 7, golden constraint 9: establish the guard's scope
+before you obey it *and* before you work around it):
+
+1. `spikes/results/p1-arm-d-labels-ryan.md` carries `labelled_at: FILL-ME-ISO8601Z`, and the file's own comment at
+   `:27` says why — *"It covers F39's 32 adjudicated cells only; **the label rows below stay unfilled by design
+   (amendment 9 replaced this worksheet's route)**."* PIA-096's disposition is the same: the cells are
+   **attested-blind, never timestamp-verified**.
+2. **The worksheet's value cells are empty.** Even with `labelled_at` filled, `parse_labels` skips empty and `?`
+   cells, so `tp`/`fp`/`fn` stay empty, the per-facet loop prints nothing, and the script exits **0** having scored
+   nothing. That is Halt 8's shape, and the old line 2 (`grep -q 'precision='`) is the guard that catches it.
+3. **`score-arm-d-panel.py` is the instrument that produced F39's figures.** It reads `p1-arm-d.jsonl` +
+   `-oracle.jsonl` + `-panel-accepted.jsonl` + `-contested.json` + `-adjudications.json` — **not** the worksheet.
+   Scoring arm D through `score-arm-d.py` is scoring through the route METHOD-P amendment 9 retired.
+
+So the refusal is asserted as the **expected state**, and the panel scorer is promoted to carry the **scoring**
+assertion. Both, not one: dropping the refusal line would lose the standing evidence that the blindness guard is
+armed (Halt 7 — *"these refusals are the instrument"*), and dropping the panel line would leave this checkpoint with
+no scoring evidence at all.
+
+**A finding recorded here rather than repaired, because repairing it would be routing around the guard.**
+`score-arm-d.py` implements METHOD-P **amendment 8**'s attested-blind path in full — a `--attested-blind` flag, a
+`parse_attestation` that refuses an unsigned or too-short claim, and an `ATTESTED-BLIND, not timestamp-verified`
+report banner — and the label file carries a filled, signed `blind_attestation:` line. **That path is nonetheless
+unreachable on this tree and always will be:** `parse_labels`'s `FILL-ME` check refuses *before* the amendment-8
+branch is reached, and the rows it would score are empty by design. Do **not** fill `labelled_at` and do **not**
+pass `--attested-blind` to get a number out. Whether to retire the worksheet, reorder the guard, or leave both as
+they are is a decision for whoever owns METHOD-P; it is not this step's, and nothing downstream waits on it.
+
+**Checkpoint 4.** All sixteen — recounted on disk 2026-09-12 after the first assertion was split into a refusal
+assertion plus three panel-scorer assertions; the block said "thirteen" before that. This is the gate; treat a
+failure as a stop, not a note. **Two of the sixteen are P2's, and P2 does not gate anything this step gates**
+(§4.1's last bullet) — they are here because this is where the scorers are run, and a green P2 pair says nothing
+about the selection path.
 
 ```bash
 cd D:/repos/redkiln-rs
+# 1-2. The arm-D worksheet's route was replaced by METHOD-P amendment 9; its value cells are unfilled BY DESIGN and
+#      `labelled_at` is FILL by design (PIA-096). score-arm-d.py therefore REFUSES, and the refusal is the EXPECTED
+#      state. Asserting rc != 0 AND the specific message: a different refusal is a different fact and must be read.
 out=$(python spikes/p1/score-arm-d.py --engine spikes/results/p1-arm-d.jsonl \
-       --labels spikes/results/p1-arm-d-labels-ryan.md) ; rc=$? ; printf '%s\n' "$out" ; echo "exit=$rc"
-test "$rc" -eq 0 || { echo "FAIL: score-arm-d.py exited $rc (its refusal is on stderr, above)"; exit 1; }
-printf '%s\n' "$out" | grep -q 'precision=' || { echo "FAIL: no per-facet row printed — exit 0 is not evidence it scored anything"; exit 1; }   # → exit=0, per-facet table printed
-python spikes/p1/score-arm-d-panel.py ; rc=$? ; echo "exit=$rc" ; test "$rc" -eq 0 || { echo "FAIL: score-arm-d-panel.py exited $rc"; exit 1; }   # → exit=0, F39's figures reproduce
+       --labels spikes/results/p1-arm-d-labels-ryan.md 2>&1) ; rc=$? ; printf '%s\n' "$out" ; echo "exit=$rc"
+test "$rc" -ne 0 || { echo "FAIL: score-arm-d.py exited 0 — either the blindness guard is no longer armed, or the worksheet was filled in. Read the label file before you go on"; exit 1; }   # → exit=1
+printf '%s\n' "$out" | grep -q 'labelled_at missing' || { echo "FAIL: score-arm-d.py refused for a DIFFERENT reason than the unfilled worksheet — establish the new guard's scope before you proceed (Halt 7)"; exit 1; }   # → "labelled_at missing — labels must be timestamped before unblinding"
+# 3-5. THE SCORING ASSERTION for arm D. This is the script that produced F39's figures, and it takes no arguments —
+#      its five input paths are constants resolved from the repo root, so the `cd` above is load-bearing.
+out=$(python spikes/p1/score-arm-d-panel.py 2>&1) ; rc=$? ; printf '%s\n' "$out" ; echo "exit=$rc"
+test "$rc" -eq 0 || { echo "FAIL: score-arm-d-panel.py exited $rc"; exit 1; }
+printf '%s\n' "$out" | grep -q 'truth cells: 140' || { echo "FAIL: the panel scorer did not score 140 truth cells — exit 0 is not evidence it scored anything"; exit 1; }   # → 140 cells: oracle 60, panel 39, panel(moot-flag) 9, human 32
+printf '%s\n' "$out" | grep -q 'NOT MEASURABLE' || { echo "FAIL: data_migration's NOT MEASURABLE verdict is absent — a criterion with no denominator may not be reported as a pass, a failure, 0.00 or n/a (golden constraint 10)"; exit 1; }   # → exit=0, F39's figures reproduce; no facet clears 0.95
 n=$(wc -l < spikes/results/p2-engine.jsonl) ; test "${n:-0}" -eq 82 || { echo "FAIL: p2-engine.jsonl has ${n:-0} lines, expected 82"; exit 1; }
                                                                    # → silent; 82 (41 rows x 2 scopes), NOT `test -s`:
                                                                    #   a truncated file is non-empty too
@@ -483,12 +536,22 @@ test "$(ls references/adr/0090-*.md 2>/dev/null | wc -l)" = 1 || { echo "FAIL: r
 n=$(grep -c '^superseded_by: \["0090"\]$' references/adr/0079-*.md); test "${n:-0}" -eq 1 || { echo "FAIL: ADR-0079 carries ${n:-<unreadable>} back-links to 0090, expected 1"; exit 1; }   # → silent: back-link present
 n=$(grep -c '^status: superseded$' references/adr/0079-*.md); test "${n:-0}" -eq 1 || { echo "FAIL: ADR-0079's status is not 'superseded' (got ${n:-<unreadable>})"; exit 1; }   # → silent: status moved
 test "$(grep -c '0079. is the only .proposed. record' references/adr/README.md)" = 0 || { echo "FAIL: README still carries the stale '0079 is the only proposed record' claim"; exit 1; }   # → silent; the stale claim is GONE
-test "$(grep -c '0090. and .0091. are reserved' references/adr/README.md)" = 0 || { echo "FAIL: the '0090 and 0091 are reserved' sentence is still in README (BOTH sites: Purpose and §Numbering)"; exit 1; }   # → silent; the PREVIOUS reservation sentence is gone
+test "$(grep -c '0090. and .0091. are reserved' references/adr/README.md)" = 0 || { echo "FAIL: the '0090 and 0091 are reserved' sentence is still in README. Measured 2026-09-12, the two sites this regex matches are §Numbering and §Open items — NOT Purpose"; exit 1; }   # → silent; BEFORE = 2 (§Numbering, §Open items), AFTER = 0
+test "$(grep -c 'are \*\*reserved, unwritten\*\* numbers' references/adr/README.md)" = 0 || { echo "FAIL: README's Purpose paragraph still calls 0090 and 0091 'reserved, unwritten'. This is the THIRD site of the claim and the regex above cannot see it — the bolding breaks the match"; exit 1; }   # → silent; the Purpose site, which no earlier revision of this checkpoint guarded
 n=$(grep -c '0091. reserved for' references/adr/README.md); test "${n:-0}" -eq 1 || { echo "FAIL: README carries ${n:-<unreadable>} '0091 reserved for' sentences, expected exactly 1 (Step 6.1)"; exit 1; }   # → silent: 0091 alone stays reserved
 test "$(grep -c 'source = "llm"' spikes/p9/facets.toml)" = 7 || { echo "FAIL: spikes/p9/facets.toml no longer carries exactly 7 source = \"llm\" facets — the BEFORE half of Checkpoint 4a's zero"; exit 1; }   # → silent; 7 BEFORE Step 4a (the registry is Step 4a's; this line is the BEFORE half of Checkpoint 4a's zero)
 ls references/adr/0090-*.md >/dev/null 2>&1 || { echo "FAIL: references/adr/0090-*.md absent — grep -c would exit 2 and print nothing"; exit 1; }
 n=$(grep -c 'has_repro\|external_dep\|market_facing' references/adr/0090-*.md); test "${n:-0}" -ge 1 || { echo "FAIL: ADR-0090 does not name the three booleans — the clause DECISIONS-2026-09-11 #2 pre-registered is missing (PIA-003)"; exit 1; }   # → silent: ≥ 1
+# The three ADR paths PLUS everything this step moved with them: the count moves ADR-0090 forces (s0, s1,
+# 00-preamble, s6), this file, the §4.2 precondition append, and the tracker. One commit, then a second for
+# its own hash (the preamble's two-commit rule). **The SUBJECT is fixed**: `s9-rollback.md` matches
+# "ADR-0090: the context-vector source" with `git log -F --grep`, so rewording it turns Step 9's cherry-pick
+# into a silent DEFERRED. Change the body, never the subject.
 git add references/adr/0090-*.md references/adr/0079-*.md references/adr/README.md \
+      runbook/00-preamble.md runbook/halts.md runbook/PROGRESS.md \
+      runbook/phase-0/s0-preconditions.md runbook/phase-0/s1-commit-spike-output.md \
+      runbook/phase-0/s4-blocking-gate.md runbook/phase-1/s6-store-and-git.md \
+      spikes/DECISIONS-2026-09-12.md \
   && git commit -m "ADR-0090: the context-vector source — supersedes 0079 in full; every LLM-sourced axis and boolean is human at triage (DECISIONS-2026-09-11 #2)" \
   || { echo "FAIL: git add/commit did not succeed"; exit 1; }
 st=$(git status --porcelain) || { echo "FAIL: git status itself failed"; exit 1; }

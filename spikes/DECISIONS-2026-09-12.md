@@ -70,3 +70,32 @@ back to its two pre-existing disagreements.
 | **E11** | *Reconcile on all five* — maximally safe and keeps principle 4 literally true, but contradicts ADR-0105 clause 8 outright (needing a successor) and puts a reconcile on every roll-up read, against F18's 45–48% of gates exceeding 1 h. *Keeping both as distinct criteria* — leaves the `status` disagreement unresolved in the register, which is the actual question. |
 | **E12** | *Phase 4* — most conservative on the gate bar (ADR-0007's E3-shaped checks; S-CODEX unrun), but requires **superseding** an accepted Decision. *Phase-agnostic in the runbook* — nothing in Phase 1 depends on the answer, but it leaves two accepted documents disagreeing in the record. |
 | **E13** | *Excluding AC-475 with the rest of the corpus-bound set* — maximal deference to the register, but s5 §5.3's no-synthesis claim would then cite a criterion no Phase-1 stage claims. *Keeping s7d as-is* — leaves nine ids claimed on an instrument the stage cannot run. |
+
+---
+
+## Step 4's §4.2 precondition — DECISIONS-2026-09-09 #15, #18 and #27, settled 2026-09-12
+
+`s4` §4.2 opens by requiring the three rows of `DECISIONS-2026-09-09.md`'s *"Decisions Ryan should reverse or
+confirm first"* table that **change what the §4.2 scorers measure** to be confirmed or reversed **in writing before
+the scorers run**, and records that the previous revision of the runbook skipped the precondition entirely. This
+section is that writing. Taken by the operator (Ryan Britton) on 2026-09-12, each put with its grounding and its
+alternative in front of him, before ADR-0090 was drafted.
+
+**Disclosed, because the rule §4.2 states is about reading order.** The three scorers were run in this session's
+planning pass, before this section was written. That is **not** the defect §4.2 exists to prevent, for two reasons
+and they are both checkable: (1) every figure the scorers print is already restated verbatim in `s4` §4.1 and §4.2,
+which an operator must read before executing the stage — the stage file *"carries results as well as rules"* by
+design, so the numbers cannot be un-read by deferring a command; and (2) **#27's confirmation is verdict-neutral** —
+every reading of clause A fails the 0.80 line, so no choice among them can have been fitted to an outcome. Recorded
+rather than presented as a clean sequence, per golden constraint 9's "the scope is the finding".
+
+| # | What it changes | Disposition, 2026-09-12 |
+| --- | --- | --- |
+| **#27** | METHOD-P §1.4's prescribed anchor-rewrite re-run was taken as arm `L2`. Reversing it would let v1 stand alone as the pre-registered reading, `L2` discarded without touching v1 — **a different clause-A record set**, and clause A is what ADR-0090 decides on | **CONFIRMED as taken — `L2` is kept.** Clause A's record set is the four-draw reading **0.25 / 0.15 / 0.10 / 0.10** (v1 `bug-standard` 5/20 and `story` 3/20; `L2` 2/20 and 2/20), `KILL fires` on all four [measured, `analyse-arm-l.py`, re-run 2026-09-12]. **The verdict is identical under either reading** — every figure sits far below the 0.80 line, Wilson upper bounds 46.9 / 36.0 / 30.1 / 30.1 — so this confirmation changes no outcome; it fixes which record set ADR-0090 cites. It is the reading `00-preamble.md` constraint 1, `halts.md` Halt 9 and golden constraint 1, `s4` §4.1 clause A, `s7b`'s STOP banner and `references/adr/README.md` §Open items **already all cite as "4 times out of 4"**; reversing would make that phrase wrong in five documents for no change in the decision |
+| **#18** | `_intake-brief.md` and `discover.md` were added to both P2 scripts' artifact lists; `_ledger.md` deliberately not. Reconstruct records go 72 → 77 and the advisory candidates become reachable at all | **CONFIRMED as taken.** The two are the only non-card artifacts mapping to an `artifacts.toml` human root, and their absence from **both** the selector's `ARTIFACTS` and the reconstructor's `STAGE_ORDER` was a silent narrowing of the whole P2 scope. `_ledger.md` stays out, deliberately |
+| **#15** | `human_authored` remapped from a commit-authorship heuristic to the `artifacts.toml` registry. The old heuristic yields **0** advisory cases (every commit in this repo is co-authored by Claude); the new one yields **6** | **CARRIED UNSETTLED, deliberately, with its scope stated.** It changes what METHOD-P §2.3's **advisory** fraction measures and therefore gates **criterion 3 only** — which is **UNRUN**, because the advisory half (A01–A06) is labelled after the engine in its own file. It does **not** gate the perturbation half (P01–P12), which was scored on 2026-09-10 without it and whose figures do not move when #15 is decided [measured, F40]. It is **not** ADR-0090's subject. Recorded as owed to the operator — *do not* read "the P2 engine has run" as "#15 is discharged", and do not label the advisory half until it is written down either way |
+
+**What none of the three moves.** Clause A fails on every reading; clause B's ≥ 0.95 branch is unreachable at n = 20
+for any facet however good the method; P2 sits outside the blocking gate altogether (`s4` §4.1's last bullet). So
+ADR-0090's warrant is unchanged by all three dispositions, which is the point of settling them before it is written
+rather than after.

@@ -44,8 +44,9 @@ cargo test -p rk-git -- --ignored s_gix_c_shallow_clone_by_sha_matches_git
 the narrowing is written as a **successor record**, never as an edit to 0077 — ADR-0077 is `accepted`, and the
 immutability rule binds accepted records absolutely. **This is the second of the seven decisions this runbook
 takes** (see the preamble's table); it is an ADR, and **its number is `0091`, reserved** — `0089` was taken by the
-facet-provenance amendment, `0090` by Step 4.4, `0092`–`0114` by the 2026-09-11 remediation, and the README's
-numbering sentence names `0091` as this step's. **A no-go does not cost nothing — that sentence was false for arm a
+facet-provenance amendment, `0090` **by Step 4.4 on 2026-09-12**, `0092`–`0114` by the 2026-09-11 remediation and
+`0115`–`0116` by the 2026-09-12 alignment review, and the README's numbering sentence names `0091` as this step's —
+the only reserved number left. **A no-go does not cost nothing — that sentence was false for arm a
 (PIA-009).** The two outcomes are written down already: ADR-0098 fixes what each arm's no-go does (arm a → the
 wrapper resolves the common dir; arm c → the wrapper clones), so ADR-0091 records the *results* and the git-version
 floor, and supersedes 0077 in part only on a **go** that narrows it. Write into ADR-0091 the two verdict lines

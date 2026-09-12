@@ -11,8 +11,8 @@ threshold and instrument. Where a stage file disagrees with any of those, the st
 Phase 0 (close the programme) and Phase 1 (kernel, store, fix and story lanes, four adapters) only. Phases 2–4 are
 out of scope. · **Inputs:** `references/2026-09-08-architecture-design.md` (§0.1, §5.3, §5.9, §9, §10) ·
 `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519, AC-520 — the derived-facet gate — and the ids the
-2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**114 records**,
-`0001`–`0116` with `0090` and `0091` reserved for Steps 4.4 and 6.1; `references/adr/ERRATA.md` for corrections to
+2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**115 records**,
+`0001`–`0116` with `0090` written at Step 4.4 on 2026-09-12 and `0091` still reserved for Step 6.1; `references/adr/ERRATA.md` for corrections to
 frozen records) · `spikes/DECISIONS-2026-09-11.md` and `spikes/DECISIONS-2026-09-12.md` (the operator decisions this runbook executes — the 2026-09-11 log runs to #27; the 2026-09-12 log carries E1–E13 from the alignment review and is cited as `DECISIONS-2026-09-12 E<n>`) ·
 `spikes/F39-DRAFT.md` · `spikes/F40-DRAFT.md` · `spikes/F41-DRAFT.md` (S-PORTS) · `spikes/F42-DRAFT.md` (S-GRAMMAR) ·
 `spikes/HANDOFF.md` · `spikes/DECISIONS-2026-09-09.md` · `references/2026-09-08-evidence-brief.md` §E. ·
@@ -38,11 +38,13 @@ and two are numbered decisions recorded in `spikes/DECISIONS-2026-09-11.md` befo
 
 **An eighth, added 2026-09-12.** The 2026-09-11 audit left the two must-fail fixture crates (AC-001–AC-004, AC-005) without a name, a path or a shape, and this table did not carry them as a decision. They are now decided — feature-gated workspace members at `tests/fixtures/rk-clock-read/` and `tests/fixtures/rk-banned-dep/`, **DECISIONS-2026-09-12 E4**, executed at s5 §5.1a. Five further decisions from the same review (**E1**, **E2**, **E3**, **E11**, **E12**) move a record at or above the runbook in ADR-0092's chain and are **owed, not executed here** — `DECISIONS-2026-09-12` names what each one must write.
 
-**`0089` is taken, and so are `0092`–`0114`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
+**`0089` is taken, and so are `0092`–`0116` and now `0090`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
 was accepted on 2026-09-09 and partially supersedes ADR-0030 (PC8); ADR-0093 (2026-09-11) supersedes it in part
 again — `stage`/`rigor`/`role`/`cost` are `source = "kernel"`, `surfaces` is `source = "declared"`, six facets stay
-`derived` — and Step 4a executes both. Step 4.4's context-vector record is **0090** and Step 6.1's S-GIX successor is
-**0091**; both numbers are reserved in the ADR README and the next free number after them is **0115**. **Step 4a is
+`derived` — and Step 4a executes both. Step 4.4's context-vector record is **0090** — **written 2026-09-12**, superseding ADR-0079 in full — and Step 6.1's
+S-GIX successor is **0091**, which is now the only number the ADR README still carries as reserved; the next free
+number is **`0117`**. *(Corrected 2026-09-12: this sentence said the next free number was 0115, from before ADR-0115
+and ADR-0116 landed.)* **Step 4a is
 not a decision** — it is the execution order for the registry, schema and lint work ADR-0089 and ADR-0093 force.
 
 Everything else this runbook does is execution order. **Where a stage is tempted to decide something else, it stops.**

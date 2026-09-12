@@ -44,12 +44,16 @@ Two more that this tree has already produced and that cost time when unrecognise
 
 Two more that this revision added, because the audit that produced it found both live in the previous one:
 
-7. **A guard refuses and you are about to work around it.** The **eleven** refusals in s4 §4.3 are the instrument
-   (five in its table, six more that `score-p2.py` added and the table did not carry — **corrected 2026-09-11 by
-   the runbook-wide checkpoint sweep: this line read "eight … three more" until the refusals were counted off the
-   script, which is what s4 §4.3 instructs. `grep -c 'sys.exit(' spikes/p2/score-p2.py` → 6, at :53, :72, :77, :79,
-   :90 and :92. The undercount silently dropped the BLINDNESS guard — the one s4 §4.3 calls "the one worth
-   knowing" — out of the set Halt 7 declares to be the instrument**), and
+7. **A guard refuses and you are about to work around it.** The **thirteen** refusals in s4 §4.3 are the instrument
+   (**recounted off the scripts on 2026-09-12 at Step 4's run: 6 in `score-p2.py`, 4 in `score-arm-d.py`, 3 label
+   guards in `reconstruct-derived-from.py`. This line read "eleven" — five in the table plus six — and the two it
+   missed are METHOD-P amendment 8's own guards, `score-arm-d.py:37` and `:81`, which is the mechanism Checkpoint
+   4's 2026-09-12 repair turns on. That makes this the SECOND undercount of the same number, by the same route:
+   not counting it off the script.** The first was **corrected 2026-09-11 by the runbook-wide checkpoint sweep**,
+   when this line read "eight … three more" until the refusals were counted off the script, which is what s4 §4.3
+   instructs: `grep -c 'sys.exit(' spikes/p2/score-p2.py` → 6, at :53, :72, :77, :79, :90 and :92, and that
+   undercount silently dropped the BLINDNESS guard — the one s4 §4.3 calls "the one worth knowing" — out of the set
+   Halt 7 declares to be the instrument), and
    s4 §4.3's list of what not to do is not exhaustive — the shape is. **Stop at any refusal and establish the
    guard's scope first** (golden constraint 9): is it too narrow, so the failure is passing through elsewhere, or
    too wide, so it is refusing valid work? Back-dating `labelled_at`, editing an `at` field, re-running an engine
