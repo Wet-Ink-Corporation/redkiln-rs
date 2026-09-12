@@ -1,5 +1,0 @@
-P8 [run] arm 0-delay r1 ΓÇö 3 item(s), model haiku | graph 01e17f07f1a6 | spent $1.97 of $40.00
-Error: could not clear fixture \\?\D:\repos\redkiln-rs\spikes\fixtures\p8-0-delay-issue-74-plan-briefs-dead-plan-anchor\e3-silent-issue-74-plan-briefs-dead-plan-anchor
-
-Caused by:
-    The process cannot access the file because it is being used by another process. (os error 32)

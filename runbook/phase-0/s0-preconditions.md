@@ -18,16 +18,18 @@ Every previous revision of this section enumerated the working tree and was stal
 revision states the **rule** and the measurement that held when it was written, and Checkpoint 0 re-derives the
 counts.
 
-**The rule.** `main` is at the pin the pre-implementation audit measured, **`009a4ec`** ("Closeout: the F40 pass's
-fourteen minor findings applied…", 2026-09-10). The remediation branch `remediation/pia-2026-09-11` carries, on top
-of it: the audit and its instrument (`references/audit/2026-09-10/`), ADR-0092–0112 and `ERRATA.md`,
+**The rule.** `main` is at the remediation merge, **`66d0ced`** (2026-09-11), on top of the pin the pre-implementation
+audit measured, **`009a4ec`** ("Closeout: the F40 pass's fourteen minor findings applied…", 2026-09-10). The merged
+branch `remediation/pia-2026-09-11` (eight commits, `0e1b1bc`…`58ae8ef`; the branch itself is deleted) carried, on top
+of it: the audit and its instrument (`references/audit/2026-09-10/`), ADR-0092–0114 and `ERRATA.md`,
 `DECISIONS-2026-09-11.md`, the register/design/spike-file amendments, this `runbook/` folder, the promoted
 `spikes/F30-DRAFT.md`, the S-PORTS and S-GRAMMAR instruments (`spikes/s-ports/`, `spikes/p9/grammar-probe.py`) and
-their drafts F41/F42. **Step 0 starts from that branch merged to `main`** — if `git log --oneline -1 main` does not
-show the remediation merge, stop and merge it first; the stage files below assume every record they cite exists.
+their drafts F41/F42. **Step 0 starts from `main` at or after that merge** — if `git log --oneline main | grep -c 66d0ced`
+is 0, stop and merge it first; the stage files below assume every record they cite exists.
 
-**What is still run noise, measured 2026-09-11** — the same seventeen items the 2026-09-09 revision listed, none of
-them committed by the remediation pass because Step 1.2 owns them:
+**What is still run noise, measured 2026-09-11 after the merge** — the same seventeen items the 2026-09-09 revision
+listed. The remediation's first commit (`7954bd0`) had swept them in with `git add -A`; the merge closeout un-tracked
+them again (`git rm --cached`, files kept on disk) so that Step 1.2 disposes of them as written:
 
 ```bash
 git -C D:/repos/redkiln-rs status --porcelain | grep -v '^?? runbook/'
@@ -52,8 +54,8 @@ git -C D:/repos/redkiln-rs status --porcelain | grep -v '^?? runbook/'
 **Count it, do not read it off this listing**: `git status --porcelain | grep -c '^??'` is the number, and this
 enumeration has been wrong before. The P2 artefacts, the F39/F40 amendments and the 2026-09-09 ` M` lines that
 earlier revisions enumerated are all committed (`4519edc` … `009a4ec`); what Step 1 commits is the noise above and
-nothing else. `references/adr/` holds **110 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
-is **112** — Checkpoint 1 asserts that number. `e3b0bac` survives only as the **pre-design-pass reference point**
+nothing else. `references/adr/` holds **112 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
+is **114** — Checkpoint 1 asserts that number. `e3b0bac` survives only as the **pre-design-pass reference point**
 that Step 9's rollback and Step 1.3's fresh-clone branch both name.
 
 Do not re-run `spikes/p9/COMMIT-2026-09-09.sh`. Step 1 commits what is left.
@@ -119,7 +121,7 @@ instrument line is made checkable by writing the version to a file rather than b
 
 ```bash
 git -C D:/repos/redkiln-rs rev-parse --abbrev-ref HEAD    # → build/phase-0-to-1
-ls D:/repos/redkiln-rs/references/adr/0112-*.md >/dev/null && test -f D:/repos/redkiln-rs/runbook/INDEX.md && echo "remediation present"   # → the 2026-09-11 remediation is in the tree (ADR-0111 and this runbook exist)
+ls D:/repos/redkiln-rs/references/adr/0114-*.md >/dev/null && test -f D:/repos/redkiln-rs/runbook/INDEX.md && echo "remediation present"   # → the 2026-09-11 remediation is in the tree (ADR-0111 and this runbook exist)
 rustup run 1.98.1 rustc --version                         # → rustc 1.98.1 (48a229cea 2026-09-01) — the pin; the PATH rustc is recorded, not asserted
 claude --version | tee D:/repos/redkiln-rs/spikes/results/instrument-checks/RUNBOOK-instrument.txt
                                                           # → writes e.g. "2.1.268 (Claude Code)" to a FILE; read it back, never retype it

@@ -1,7 +1,0 @@
-P8 [resume] arm 0-delay r1 ΓÇö 3 item(s), model haiku | graph 01e17f07f1a6 | spent $2.43 of $40.00
-  issue-81-plan-discover-spec-gate-mismatch [0-delay] resume after 29.1 min, 1 step(s) before the kill
-    attempt p2 (post-resume) ... reproduced $0.2540 116s
-    emit ... lossless=true second_arrival=true minted=true resume 8408 tok (F28 ratio 0.45) $0.2540
-
-  spend in this file: $2.68 of $40.00
-wrote ..\results\p8.jsonl

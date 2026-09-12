@@ -93,7 +93,7 @@ Instrument at time of commit: claude $(cat spikes/results/instrument-checks/RUNB
 2.1.268 — the F37 §7 lineage breaks are recorded, not repaired). Rust toolchain pin 1.98.1 (DECISIONS-2026-09-11 #7);
 the spike programme ran on 1.97.1.
 
-The set is 110 ADR records (0001–0112, 0090/0091 reserved): 106 accepted, 3 superseded, 1 proposed (0079, still
+The set is 112 ADR records (0001–0114, 0090/0091 reserved): 108 accepted, 3 superseded, 1 proposed (0079, still
 deliberately undecided until Step 4.4). It is NOT design final: S-BIN, S-H1c and P8's unrun arms gate that label.
 EOF
 ```
@@ -107,8 +107,8 @@ without the records it carries.
 ```bash
 cd D:/repos/redkiln-rs
 git status --porcelain                                 # → EMPTY (no output at all). Phase-0 exit (a).
-ls references/adr/*.md | wc -l                         # → 112 (110 records + README.md + ERRATA.md) — verified 2026-09-11
-git ls-files references/adr/0112-*.md | wc -l          # → 1  the last remediation record is tracked, not just on disk
+ls references/adr/*.md | wc -l                         # → 114 (112 records + README.md + ERRATA.md) — verified 2026-09-11
+git ls-files references/adr/0114-*.md | wc -l          # → 1  the last remediation record is tracked, not just on disk
 git ls-files runbook/INDEX.md                          # → runbook/INDEX.md  (the split runbook is tracked)
 git log --oneline -1                                   # → the commit this step wrote
 git log -1 --format=%B | grep -qF "$(cat spikes/results/instrument-checks/RUNBOOK-instrument.txt)" && echo "instrument quoted from the file"

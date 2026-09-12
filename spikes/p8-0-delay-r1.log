@@ -1,3 +1,0 @@
-=== P8 cycle arm=0-delay repeat=1 delay=0m kill=force 2026-09-08T18:59:44.8439111-07:00 ===
-items: issue-74-plan-briefs-dead-plan-anchor, issue-79-plan-prds-verifier-false-pass, issue-81-plan-discover-spec-gate-mismatch
-waiting for 3 gate mark(s)...

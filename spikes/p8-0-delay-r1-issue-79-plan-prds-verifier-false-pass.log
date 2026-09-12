@@ -1,5 +1,0 @@
-P8 [run] arm 0-delay r1 ΓÇö 3 item(s), model haiku | graph 01e17f07f1a6 | spent $1.97 of $40.00
-  issue-79-plan-prds-verifier-false-pass [0-delay] attempt p1 ... reproduced $0.2736 172s
-GATE-MARK issue-79-plan-prds-verifier-false-pass 0-delay r1
-  gate mark written: ../results/p8-state\issue-79-plan-prds-verifier-false-pass--0-delay--r1.json
-  blocking up to 7200s for the kill ...
