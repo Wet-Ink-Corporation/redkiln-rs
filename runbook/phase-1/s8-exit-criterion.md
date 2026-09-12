@@ -22,22 +22,37 @@ Cargo workspace, and a Node-only Phase 1 could not have passed this line (PIA-00
 
 ```bash
 cd D:/repos/redkiln-rs
-./target/debug/redkiln run --lane fix --item <a real defect in this repo>
-./target/debug/redkiln explain --run <run-id> --stages
+test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (1) NOT RUN (Halt 8)"; exit 1; }
+test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM to a real defect id first — a bare <placeholder> is a bash redirect, not an argument"; exit 1; }
+./target/debug/redkiln run --lane fix --item "$FIX_ITEM" || { echo "FAIL: the fix-lane run exited non-zero"; exit 1; }
+out=$(./target/debug/redkiln explain --run "$RUN_ID" --stages) || { echo "FAIL: explain exited non-zero"; exit 1; }
+test -n "$out" || { echo "FAIL: empty stage log — there is nothing to read against the PASS conditions below"; exit 1; }
+printf '%s\n' "$out"   # → READ against the three lines below. NO stage-line pattern is pinned: `explain --run … --stages` is a shape found nowhere else in the corpus (audit 2026-09-10:895), so a grep for one would false-fail a correct binary.
 # PASS only when the event log contains EVERY lane stage from intake to a landed commit,
 # with NO stage performed by the old redkiln, and the verify stage's toolchain is rk-adapter-toolchain-rust.
 # The claim is REFUSED if any stage is missing. The run id is the evidence; a statement is not.
 
 # (1b) — AC-521, the story-lane twin
-./target/debug/redkiln run --lane story --item <a Phase-2 story to author>
-./target/debug/redkiln explain --run <run-id> --stages
+test -n "$STORY_ITEM" || { echo "FAIL: set STORY_ITEM to the Phase-2 story to author"; exit 1; }
+./target/debug/redkiln run --lane story --item "$STORY_ITEM" || { echo "FAIL: the story-lane run exited non-zero"; exit 1; }
+out=$(./target/debug/redkiln explain --run "$RUN_ID" --stages) || { echo "FAIL: explain exited non-zero"; exit 1; }
+test -n "$out" || { echo "FAIL: empty stage log"; exit 1; }
+printf '%s\n' "$out"   # → READ against the line below; no stage-line pattern is pinned, for the reason given in (1)
+test -n "$AUTHORED_STORY" || { echo "FAIL: set AUTHORED_STORY to the path the run authored"; exit 1; }
+git ls-files --error-unmatch "$AUTHORED_STORY" || { echo "FAIL: the authored story is not tracked — the second half of the line below"; exit 1; }
 # PASS only when the event log contains every story-lane stage and the authored story is in the tree.
 ```
 
 **(2) Replay — AC-184 / SM-124, and the kernel replay test.**
 
 ```bash
-./target/debug/redkiln doctor --rebuild
+test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (2) NOT RUN (Halt 8)"; exit 1; }
+before=$(./target/debug/redkiln doctor) || { echo "FAIL: doctor exited non-zero before the rebuild"; exit 1; }
+test -n "$before" || { echo "FAIL: doctor printed nothing before the rebuild — two empty readings compare equal"; exit 1; }
+./target/debug/redkiln doctor --rebuild || { echo "FAIL: doctor --rebuild exited non-zero (AC-427)"; exit 1; }
+after=$(./target/debug/redkiln doctor) || { echo "FAIL: doctor exited non-zero after the rebuild"; exit 1; }
+test -n "$after" || { echo "FAIL: doctor printed nothing after the rebuild"; exit 1; }
+printf '%s\n' "$before"; echo '--- rebuild ---'; printf '%s\n' "$after"   # → both readings printed and diffed BY EYE. The "same next action" half is NOT asserted mechanically and must not be yet: no next-action line is specified anywhere (AC-427 verifies by a CI divergence-report artifact, not by stdout; s7d:55 says doctor prints one rule table), and byte-equality of the whole table would go red on a rebuild timestamp or store count. NEEDS A DECISION on doctor's output contract.
 # reproduces the SAME next action from git alone, after dropping tier-2 entirely.
 # This is the FIRST time the FSM is replayed at all — F19 proved suspension lossless
 # 174/174 and explicitly left "same next action" unproven. Includes the adversarial-store
@@ -51,8 +66,12 @@ cd D:/repos/redkiln-rs
 # --resume flag and no resume verb (ADR-0107; AC-013/AC-186/AC-264/AC-400). The previous revision of this line
 # invoked `redkiln run --resume <run-id>`, a flag four criteria deny (PIA-030); that it is refused is itself
 # AC-400's behavioural check (s7d's checkpoint).
-./target/debug/redkiln run --lane fix --item <the same item>
-./target/debug/redkiln explain --item <the same item>            # the run id is read back from the event log (AC-013)
+test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (3) NOT RUN (Halt 8)"; exit 1; }
+test -n "$ITEM" || { echo "FAIL: set ITEM to the same item the killed run was on"; exit 1; }
+./target/debug/redkiln run --lane fix --item "$ITEM" || { echo "FAIL: the re-invocation exited non-zero — there is no --resume flag and none is added here (ADR-0107; AC-013/AC-186/AC-264/AC-400)"; exit 1; }
+out=$(./target/debug/redkiln explain --item "$ITEM") || { echo "FAIL: explain exited non-zero"; exit 1; }   # the run id is read back from the event log (AC-013)
+test -n "$out" || { echo "FAIL: empty event log — two empty outputs compare equal, so this may never be the comparison's floor"; exit 1; }
+printf '%s\n' "$out"   # → diff this against the PRE-KILL `explain --item` capture. That capture is taken nowhere in this block: taking it before the taskkill is owed, and no step-output digest field is named in any ADR, so the equality is READ, not asserted. NEEDS A DECISION.
 # every step-output digest before the kill equals the digest after resume (compare the two `explain` outputs).
 # F38 held exactly ONE step at n=3; this criterion is the multi-step case, which is unmeasured — and AC-265
 # (the gate answer surviving the kill) is exercised here, not in 7b-ii.
@@ -64,7 +83,23 @@ nursery to a group deny ADR-0083 forbids; PIA-030) plus the `clippy.toml`-driven
 clock read (AC-001–AC-004; PIA-031 — a `trybuild` fixture cannot fail on a lint). The fixture **failing the lint** is
 the pass.
 
+```bash
+# Run this block as a script or in a subshell — every guard below ends in `exit 1`.
+test -f Cargo.toml && test -f clippy.toml || { echo "FAIL: no workspace-root Cargo.toml / clippy.toml — AC-001–AC-004 have no instrument; criterion (4) NOT RUN (Halt 8)"; exit 1; }
+cargo clippy --workspace --all-targets || { echo "FAIL: the clippy gate is red (never -D warnings on the CLI — ADR-0083; PIA-030)"; exit 1; }
+test -n "$CLOCK_FIXTURE" || { echo "FAIL: name the clock-read fixture crate in CLOCK_FIXTURE — no ADR or register names it; NEEDS A DECISION"; exit 1; }
+cargo metadata --format-version 1 --no-deps | grep -q "\"$CLOCK_FIXTURE\"" || { echo "FAIL: $CLOCK_FIXTURE is not a workspace member — a missing fixture must never read as the pass"; exit 1; }
+cargo clippy -p "$CLOCK_FIXTURE"; rc=$?; [ "$rc" -ne 0 ] || { echo "FAIL: the clock-read fixture PASSED the lint — the fixture FAILING it is the pass (PIA-031)"; exit 1; }
+```
+
 **(5) The `--stay`-class error is unrepresentable** — a `trybuild` must-fail fixture, not a runtime assertion.
+
+```bash
+test -d crates/rk-kernel || { echo "FAIL: rk-kernel absent — criterion (5) NOT RUN (Halt 8)"; exit 1; }
+out=$(cargo test -p rk-kernel -- trybuild 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: the trybuild filter matched 0 tests — an unwritten --stay fixture reads exactly like a passing one"; exit 1; }
+```
 
 **(6) `redkiln lint --facet-stability` (AC-071) passes**, which means one of exactly two things and nothing else:
 
@@ -122,6 +157,15 @@ computed in integer ticks over readings sharing one `resetsAt`, over the account
 `low_sample` with no delta quoted (ADR-0110). `redkiln cost` renders the flag; a run that reports a per-run figure
 without it has laundered an unmeasurable into a measurement.
 
+```bash
+test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (7) NOT RUN (Halt 8)"; exit 1; }
+test -n "$ITEM" || { echo "FAIL: set ITEM to the item whose cost rows are being read"; exit 1; }
+out=$(./target/debug/redkiln cost "$ITEM") || { echo "FAIL: redkiln cost exited non-zero"; exit 1; }
+test -n "$out" || { echo "FAIL: redkiln cost printed nothing"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'resolution_limited|low_sample|not attributable' || { echo "FAIL: a headroom report carrying none of ADR-0110's three renderings — an unmeasurable laundered into a measurement"; exit 1; }
+printf '%s\n' "$out"   # → READ: every dispatch carries a cost row (AC-394) and no per-run headroom figure appears (AC-373). `n` is deliberately NOT greped for — ADR-0110 requires the count, never a rendering of it.
+```
+
 **Checkpoint 8.** All seven pass (with (1)'s two halves and (6)'s two lints), and the following remain true and
 unviolated across the whole phase:
 
@@ -161,5 +205,66 @@ unviolated across the whole phase:
   `toolchain` and `change` [measured, F39 §3]; the decision is an arm of S-FACET and ADR-0089 does not take it.
 - **No document, section or commit message describes this design as final.** S-BIN, S-H1c and P8's unrun arms gate
   that label, and P8 has no result on its own question.
+
+Those sixteen are not read, they are run. Checkpoint 8's mechanical lines, in bullet order:
+
+```bash
+cd D:/repos/redkiln-rs
+# Run this block as a script or in a subshell — every guard below ends in `exit 1`.
+# Guards first: an absent or empty tree answers every prohibition below for free (Halt 8).
+test -n "$(ls -A crates)" || { echo "FAIL: crates/ empty — Checkpoint 8's crates/ checks NOT RUN (Halt 8)"; exit 1; }
+test -f .redkiln/facets.toml && test -d .redkiln/packs && test -d .redkiln/catalog || { echo "FAIL: .redkiln/ not derived — Checkpoint 8's registry and pack checks NOT RUN (Halt 8)"; exit 1; }
+
+# no require row keyed on an LLM-emitted facet, and after Step 4a no llm facet at all
+grep -rnE 'require.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b' crates/ .redkiln/ --include=*.rs --include=*.toml; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: an LLM-emitted facet keys a require row, or grep errored (rc=$rc)"; exit 1; }
+test "$(grep -c '^source = "llm"' .redkiln/facets.toml)" = 0 || { echo "FAIL: a facet still declares source = \"llm\" (ADR-0090; DECISIONS-2026-09-11 #2)"; exit 1; }
+
+# stale_policy recorded per cost class, never defaulted from P2 (decision 5; Step 7e; warrant F40 §3)
+set=$(grep -rh 'stale_policy' .redkiln/packs --include=*.toml); test -n "$set" || { echo "FAIL: no stale_policy written in any pack — decision 5 was defaulted, not recorded"; exit 1; }
+printf '%s\n' "$set" | grep -v 'rematerialise'; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a stale_policy is not rematerialise (rc=$rc)"; exit 1; }
+
+# no require row on a declared or NOT MEASURABLE facet (ADR-0093)
+grep -rnE 'require.*\b(surfaces|data_migration|recent_deploy)\b' .redkiln/packs .redkiln/catalog; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a declared or NOT MEASURABLE facet keys a require row (rc=$rc)"; exit 1; }
+
+# bisect's ceiling on the SHIPPED catalog — spikes/p9's copy is already green, so it may not be the path (PIA-035)
+grep -q 'max_rigor *= *"recommended"' .redkiln/catalog/bisect.toml || { echo "FAIL: bisect has no max_rigor = \"recommended\" ceiling (P7-CEIL; DECISIONS-2026-09-11 #1)"; exit 1; }
+out=$(cargo test -p rk-kernel -- rigor_monotonicity 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: the rigor_monotonicity filter matched 0 tests"; exit 1; }
+
+# ChangeSummary nowhere in crates/ but its rk-ports newtype (ADR-0093; S-BIN unrun — the BrittonGames fixture is not the spike)
+out=$(grep -rn 'ChangeSummary' crates/ --include=*.rs | grep -v 'crates/rk-ports/'); test -z "$out" || { echo "FAIL: ChangeSummary outside rk-ports:"; printf '%s\n' "$out"; exit 1; }
+
+# card append route never defaulted on; no quality-shorthand default or terminal condition
+grep -rnE 'append(_route)? *= *true' crates/ .redkiln/ --include=*.rs --include=*.toml; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a card append route is enabled by default (rc=$rc)"; exit 1; }
+grep -rnE 'findings\.none\(evidence in \[Reproduced, MutationSurvived\]\)|quality_shorthand *=' crates/ .redkiln/; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a quality-shorthand default or terminal condition (rc=$rc)"; exit 1; }
+
+# gix does not own the write path — a SCREEN, because ADR-0098 retains one gix write deliberately
+test -f crates/rk-git/Cargo.toml || { echo "FAIL: rk-git absent — write-path check NOT RUN (Halt 8)"; exit 1; }
+printf '%s\n' "$(grep -rn 'gix' crates/rk-git/Cargo.toml crates/rk-git/src/)"   # → READ every hit: the write path is the exec wrapper (ADR-0077) and the review clone is the ONE retained gix write (ADR-0098); zero hits and review-clone-only are both passes, anything else is not
+
+# the "leaves the model" check this checkpoint promises — widened to leave[sd]?, because METHOD-P §1.4 and ADR-0079 say "leave the model"
+grep -rniE 'leave[sd]? the model' crates/ --include=*.rs --include=*.toml --include=*.md; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a crates/ document asserts a facet leaves the model — none does (F39) (rc=$rc)"; exit 1; }
+
+# AC-520: every derived facet names a deriver, and a vacuous 0 0 is not a pass
+awk '/^source = "derived"/{d++} /^deriver = /{v++} END{print d+0, v+0; exit !(d>0 && d==v)}' .redkiln/facets.toml || { echo "FAIL: derived facets without a named deriver, or a vacuous 0 0"; exit 1; }   # → 6 6
+
+# no derived boolean resolves an absence of evidence to false — it is null, routed to AC-079
+out=$(cargo test -p rk-kernel -- unknown_facet 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: the unknown_facet filter matched 0 tests — the tri-valued path is untested"; exit 1; }
+
+# Three SCREENS. Their predicate is a reading, so no hit count is the verdict and none of them may go red on a hit.
+test -d references && test -d runbook && test -d spikes || { echo "FAIL: doc tree absent — Checkpoint 8's screens NOT RUN (Halt 8)"; exit 1; }
+printf '%s\n' "$(grep -rniE '1 ?h TTL' --include=*.md references/ runbook/ spikes/ | grep -v 'ephemeral_')"   # → every surviving hit READ: none is a per-run TTL report without ephemeral_* evidence (ADR-0078)
+printf '%s\n' "$(grep -rniE 'human[- ]panel' --include=*.md references/ runbook/ spikes/ | grep -vE 'panel-adjudicated|not a human|no human|never')"   # → READ: F39's oracle is 60 oracle / 48 unanimous panel / 32 human of 140; most survivors are METHOD-P §1.2's own human agreement panel, a different object
+printf '%s\n' "$(grep -rniE 'design (is|as) final' --include=*.md references/ runbook/ spikes/*.md | grep -vE 'may (not|never)|no document|BLOCKED|gates that|not .*final')"   # → READ; spikes/fixtures/ is excluded on purpose (frozen RFC prose, and unscoped this regex returns 173 lines)
+
+# "four questions on twenty items" — a plain grep, because ZERO hits would mean design §10.5's row was deleted
+grep -rn 'four questions on twenty items' --include=*.md . ; rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: the phrase is gone (rc=$rc) — design §10.5's row may have been deleted"; exit 1; }   # → each hit READ: an oracle-construction measurement, never a forecast
+
+# source asymmetry is NOT a predicate. The runnable half is that the record still holds the question open.
+grep -q 'Source asymmetry is an arm of the same spike and is settled nowhere' references/2026-09-08-architecture-design.md || { echo "FAIL: the asymmetry-open statement is gone from design §10.5 — a section may have decided it"; exit 1; }
+```
 
 ---

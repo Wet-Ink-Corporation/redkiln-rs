@@ -14,7 +14,9 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 
 ### 1.1 The CRLF trap, first
 
-`COMMIT-2026-09-09.sh` records it and it is still live: `git status` shows whole-file `M` on `LICENSE`,
+`COMMIT-2026-09-09.sh` records it. **Measured 2026-09-11 at Step 1: NOT live on this tree — `git diff -w --stat`
+and `git status --porcelain | grep -v '^??'` were both empty, not one tracked file modified, so the revert step
+below had no work to do. Check anyway; the trap is real when it fires.** As recorded: `git status` shows whole-file `M` on `LICENSE`,
 `.gitignore`, `references/2026-08-31-*.md`, `references/2026-09-0{1,2,3,4}-*.md`, `references/conformance-*.md`,
 `references/research/2026-09-03-*.md`, `spikes/FINDINGS.md` and others, with **no content change** — line-ending
 normalisation on this Windows checkout. Check before you stage anything:
@@ -47,7 +49,7 @@ to the file you think you are:
 
 ```bash
 grep -q 'spikes/results/ is deliberately NOT ignored' D:/repos/redkiln-rs/.gitignore \
-  || echo "ANCHOR MISSING in .gitignore — stop and read it before appending"
+  || { echo "FAIL: ANCHOR MISSING in .gitignore — stop and read it before appending"; exit 1; }
 ```
 
 ```bash
@@ -82,9 +84,13 @@ instrument record. Stage it, and quote it in the commit message **from the file*
 
 ```bash
 cd D:/repos/redkiln-rs
+test -s spikes/results/instrument-checks/RUNBOOK-instrument.txt \
+  || { echo "FAIL: instrument record absent or empty — Step 0 did not produce it; the commit below would quote nothing"; exit 1; }
 git add spikes/results/instrument-checks/RUNBOOK-instrument.txt
 # Re-derive rather than trusting this sentence — the tree is the truth:
-git status --porcelain | grep -v '^??' ; echo "--- untracked, expected EMPTY after 1.2:" ; git status --porcelain | grep '^??'
+git status --porcelain | grep -v '^??'                 # staged work — expected: the instrument record
+u=$(git status --porcelain | grep '^??')               # untracked, expected EMPTY after 1.2
+[ -z "$u" ] || { echo "FAIL: untracked paths left after 1.2:"; printf '%s\n' "$u"; exit 1; }
 git commit -F - <<EOF
 Phase 0, part 1: run noise ignored, instrument recorded
 
@@ -106,24 +112,44 @@ without the records it carries.
 
 ```bash
 cd D:/repos/redkiln-rs
-git status --porcelain                                 # → EMPTY (no output at all). Phase-0 exit (a).
-ls references/adr/*.md | wc -l                         # → 114 (112 records + README.md + ERRATA.md) — verified 2026-09-11
-git ls-files references/adr/0114-*.md | wc -l          # → 1  the last remediation record is tracked, not just on disk
-git ls-files runbook/INDEX.md                          # → runbook/INDEX.md  (the split runbook is tracked)
-git log --oneline -1                                   # → the commit this step wrote
-git log -1 --format=%B | grep -qF "$(cat spikes/results/instrument-checks/RUNBOOK-instrument.txt)" && echo "instrument quoted from the file"
-git log -1 --format=%B | grep -qE 'claude 2\.1\.[0-9]+' && echo "instrument named in the commit message"
+st=$(git status --porcelain)                           # → EMPTY (no output at all). Phase-0 exit (a).
+[ -z "$st" ] || { echo "FAIL: tree not clean — Phase-0 exit (a) not met:"; printf '%s\n' "$st"; exit 1; }
+n=$(ls references/adr/*.md | wc -l)                    # → 114 (112 records + README.md + ERRATA.md) — verified 2026-09-11
+[ "$n" -eq 114 ] || { echo "FAIL: expected 114 ADR files, found $n"; exit 1; }
+k=$(git ls-files references/adr/0114-*.md | wc -l)     # → 1  the last remediation record is tracked, not just on disk
+[ "$k" -eq 1 ] || { echo "FAIL: ADR-0114 tracked-file count is $k, expected 1"; exit 1; }
+# → runbook/INDEX.md  (the split runbook is tracked)
+git ls-files --error-unmatch runbook/INDEX.md \
+  || { echo "FAIL: runbook/INDEX.md is not tracked (bare ls-files prints nothing and exits 0)"; exit 1; }
+s1c=$(git log -1 --format=%H --grep='^Phase 0, part 1: run noise ignored, instrument recorded$')
+test -n "$s1c" || { echo "FAIL: this step's commit is not in history"; exit 1; }
+git log --oneline -1 "$s1c"                            # → the commit this step wrote
+test -s spikes/results/instrument-checks/RUNBOOK-instrument.txt \
+  || { echo "FAIL: instrument record absent or empty — an empty grep -qF pattern matches every line"; exit 1; }
+git log -1 --format=%B "$s1c" | grep -qF "$(cat spikes/results/instrument-checks/RUNBOOK-instrument.txt)" \
+  || { echo "FAIL: PIA-019 — the commit message does not quote the instrument file"; exit 1; }
+echo "instrument quoted from the file"
+git log -1 --format=%B "$s1c" | grep -qE 'claude 2\.1\.[0-9]+' \
+  || { echo "FAIL: no 'claude 2.1.N' in the commit message"; exit 1; }
+echo "instrument named in the commit message"
 ```
 
 The sixth line is the PIA-019 regression: it fails if the commit message was typed rather than read from the file.
+**Corrected 2026-09-11 — as originally written it did not, and this sentence is why the hole survived review.**
+With the instrument file absent, `$(cat …)` is the empty string and `grep -qF ""` matches every line, so the line
+printed its success token and exited 0 having asserted nothing (demonstrated on this tree). It is now guarded on
+both sides: `test -s` proves the pattern non-empty first, and the message is read from the step's own commit.
+This is Halt 8 shape (d).
 
 A non-empty `status --porcelain` here is a failed checkpoint, not a nuisance. Design §10.2 makes it Phase-0 exit
 condition (a) verbatim. The last line exists because "record the version in the commit message" was previously an
 intention with no check behind it.
 
-**The count moved from 89 to 90 and the reason matters.** The previous revision expected 89 = 88 records + README;
-the tree now holds 90 = **89** records + README, because ADR-0089 landed on 2026-09-09 [documented, ADR-0089].
-Anyone reading 89 here on a tree that has 90 is reading a stale runbook, not a broken tree — and Step 4.4's
-numbering has moved by the same one.
+**The ADR file count, and why the number keeps moving.** **Superseded 2026-09-11:** this paragraph argued 89 → 90
+(88 records + README, then ADR-0089) and contradicted the checkpoint five paragraphs above it, which asserts
+**114**. The tree measures 114 — **112 records + `README.md` + `ERRATA.md`** — after the 2026-09-11 remediation
+landed ADR-0092–0114 and the errata convention. The lesson the old paragraph was carrying still holds: anyone
+reading a smaller number here on a tree that has 114 is reading a stale runbook, not a broken tree, and Step 4.4's
+numbering moves with it (the next free number is **0115**).
 
 ---

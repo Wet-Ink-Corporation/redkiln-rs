@@ -50,25 +50,45 @@ round-trip of AC-454 is the check).
 **Checkpoint 7d:**
 
 ```bash
-cd D:/repos/redkiln-rs
-cargo build --workspace
-./target/debug/redkiln doctor           # exit 0, zero model cost, one rule table printed
-./target/debug/redkiln run --help       # the idempotent entry exists
-./target/debug/redkiln run --resume 2>&1 | grep -qiE 'unexpected|unrecognized|error' && echo "resume is refused"   # AC-400/AC-264: the flag does not exist (ADR-0107)
-./target/debug/redkiln answer --help    # the only Phase-1 gate channel
-./target/debug/redkiln init && ./target/debug/redkiln init ; echo "exit=$?"   # → exit=0 twice: idempotent (AC-437)
-cargo test --workspace                  # trycmd/assert_cmd CLI-surface tests pass; the argument-surface snapshot is committed
-./target/debug/redkiln-migrate --version                                       # → the binary EXISTS (v0, PIA-002)
-./target/debug/redkiln-migrate --dry-run --target <a small fixture> ; echo "exit=$?"   # → exit=0 and a report on stdout conforming to AC-448/AC-468
-cargo test -p redkiln-migrate -- refuses_dirty_target ; echo "exit=$?"         # → exit=0 (AC-522)
-cargo test -p redkiln-migrate -- idempotent_across_kill ; echo "exit=$?"       # → exit=0 (AC-450 extended)
-grep -c 'yaml_serde = "=0.10.7"' Cargo.toml                                    # → 1 (ADR-0100; the only YAML crate)
-cargo metadata --format-version 1 | python -c "import json,sys; m=json.load(sys.stdin); print(sorted(p['name'] for p in m['packages'] if any('yaml' in d['name'] for d in p['dependencies'])))"   # → ['redkiln-migrate']
+cd D:/repos/redkiln-rs || { echo "FAIL: repo root absent"; exit 1; }   # no `set -e`/`pipefail` in this block — each line below carries its own guard
+test -f Cargo.toml || { echo "FAIL: workspace Cargo.toml absent — Checkpoint 7d unrunnable (Halt 8)"; exit 1; }   # cargo searches ANCESTOR dirs
+cargo build --workspace || { echo "FAIL: cargo build --workspace failed — nothing below is meaningful (golden constraint 3)"; exit 1; }
+test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — Checkpoint 7d unrunnable (Halt 8)"; exit 1; }
+out=$(./target/debug/redkiln doctor); rc=$?   # zero model cost is READ off the run; no line can assert it
+[ "$rc" -eq 0 ] && test -n "$out" || { echo "FAIL: doctor exited $rc, or printed no rule table"; exit 1; }
+./target/debug/redkiln run --help || { echo "FAIL: no idempotent run entry (ADR-0107)"; exit 1; }   # the idempotent entry exists
+out=$(./target/debug/redkiln run --resume 2>&1); rc=$?   # AC-400/AC-264: the flag does not exist (ADR-0107)
+[ "$rc" -ne 0 ] || { echo "FAIL: run --resume was ACCEPTED (exit 0) — ADR-0107's denylist is breached"; exit 1; }
+printf '%s\n' "$out" | grep -qiE 'unexpected|unrecognized|error' && printf '%s\n' "$out" | grep -q -- '--resume' || { echo "FAIL: run --resume exited $rc but not as an unknown-argument refusal"; printf '%s\n' "$out" | tail -5; exit 1; }
+echo "resume is refused"
+./target/debug/redkiln answer --help || { echo "FAIL: answer is absent — the only Phase-1 gate channel (ADR-0009)"; exit 1; }   # the only Phase-1 gate channel
+./target/debug/redkiln init && ./target/debug/redkiln init || { echo "FAIL: init is not idempotent — a run exited non-zero (AC-437)"; exit 1; }   # → both runs exit 0
+out=$(cargo test --workspace 2>&1); rc=$?   # trycmd/assert_cmd CLI-surface tests; the snapshot clause has no command of its own
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: the workspace suite ran 0 tests"; exit 1; }
+./target/debug/redkiln-migrate --version || { echo "FAIL: redkiln-migrate absent or --version failed — v0 does not exist (PIA-002)"; exit 1; }   # → the binary EXISTS
+FIXTURE=   # set to a real small fixture path — a bare <…> is not prose to bash: `<a` redirects input and the trailing `>` TRUNCATES a file
+test -n "$FIXTURE" && test -x ./target/debug/redkiln-migrate && test -e "$FIXTURE" || { echo "FAIL: FIXTURE unset, or redkiln-migrate / the fixture absent — the v0 dry run is unassertable (Halt 8)"; exit 1; }
+out=$(./target/debug/redkiln-migrate --dry-run --target "$FIXTURE"); rc=$?
+[ "$rc" -eq 0 ] && test -n "$out" || { echo "FAIL: dry run exited $rc, or printed no report (AC-448/AC-468 schema conformance is still read by eye)"; exit 1; }
+out=$(cargo test -p redkiln-migrate -- refuses_dirty_target 2>&1); rc=$?   # AC-522
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test -p redkiln-migrate exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: refuses_dirty_target matched 0 tests — AC-522 unasserted"; exit 1; }
+out=$(cargo test -p redkiln-migrate -- idempotent_across_kill 2>&1); rc=$?   # AC-450 extended
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test -p redkiln-migrate exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: idempotent_across_kill matched 0 tests — AC-450's kill case unasserted"; exit 1; }
+test -f Cargo.toml || { echo "FAIL: workspace Cargo.toml absent — ADR-0100 pin unassertable (Halt 8)"; exit 1; }
+test "$(grep -c 'yaml_serde = "=0.10.7"' Cargo.toml)" -eq 1 || { echo "FAIL: the exact ADR-0100 pin is not present exactly once"; exit 1; }   # → 1 (the only YAML crate)
+test -f Cargo.toml || { echo "FAIL: workspace Cargo.toml absent — the YAML-confinement check cannot run (Halt 8)"; exit 1; }
+meta=$(cargo metadata --format-version 1) || { echo "FAIL: cargo metadata exited non-zero"; exit 1; }
+printf '%s' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); n=sorted(p['name'] for p in m['packages'] if any('yaml' in d['name'] for d in p['dependencies'])); print(n); sys.exit(0 if n==['redkiln-migrate'] else 1)" || { echo "FAIL: the YAML dep set is not exactly ['redkiln-migrate'] (ADR-0100)"; exit 1; }
 ```
 
 ```bash
-grep -rnE 'unread[_-]?artifact[_-]?window|window_n' crates/rk-cli/src/ | wc -l   # → ≥ 1: N is DECLARED
-grep -rn 'dual.write\|compat.write' crates/ --include=*.rs --include=*.toml | wc -l   # → 0 (AC-474)
+test -d crates/rk-cli/src || { echo "FAIL: crates/rk-cli/src absent — N is not DECLARED (Halt 8)"; exit 1; }
+grep -rnE 'unread[_-]?artifact[_-]?window|window_n' crates/rk-cli/src/ || { echo "FAIL: N is not declared in rk-cli — AC-472/AC-426 have no truth value"; exit 1; }   # → ≥ 1 hit
+test -n "$(find crates -name '*.rs' -print -quit)" || { echo "FAIL: crates/ carries no .rs — AC-474 unassertable (Halt 8)"; exit 1; }
+! grep -rn 'dual.write\|compat.write' crates/ --include=*.rs --include=*.toml || { echo "FAIL: a dual-write/compat-write route exists (AC-474)"; exit 1; }   # → no match
 ```
 
 **Acceptance set (explicit):** **AC-400–AC-439** (CLI and `doctor`; AC-428 is a re-issued id — read its hazard note),

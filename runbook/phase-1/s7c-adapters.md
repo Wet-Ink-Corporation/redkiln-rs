@@ -100,24 +100,46 @@ Card delivery, per profile (DECISIONS-2026-09-11 #19; PIA-012): **`static`** —
 append flags are **absent from argv** in every profile — S-H1c is unrun, and the route may not be enabled as
 anything but an unmeasured config option. The 18,603-token flat-prefix promise (AC-384, SM-113) is `static`'s only.
 
-**Checkpoint 7c.** All fourteen:
+**Checkpoint 7c.** All fourteen, and then the fifteenth below, which no `cargo test` can stand in for:
 
 ```bash
 cd D:/repos/redkiln-rs
-cargo build -p rk-adapter-claude -p rk-adapter-sqlite -p rk-adapter-toolchain-node -p rk-adapter-toolchain-rust   # exit 0 — build BEFORE any dispatch
-cargo test -p rk-adapter-claude -- api_key_refuses_construction ; echo "exit=$?"   # → exit=0 (AC-488)
-cargo test -p rk-adapter-claude -- structured_output_required   ; echo "exit=$?"   # → exit=0: a card that omits it is REFUSED (ADR-0108)
-cargo test -p rk-adapter-claude -- env_denylist_config_map      ; echo "exit=$?"   # → exit=0: the AC-217/AC-488 instrument, dispatch count 0
-cargo test -p rk-adapter-claude -- golden_argv_per_profile      ; echo "exit=$?"   # → exit=0: static and default argv pinned (DECISIONS #19)
-cargo test -p rk-adapter-claude -- argv_cap_refuses_before_spawn ; echo "exit=$?"  # → exit=0 (PIA-014)
-cargo test -p rk-adapter-claude -- rate_limited_from_stream     ; echo "exit=$?"   # → exit=0 (AC-523)
-cargo test -p rk-adapter-claude -- tick_arithmetic_vectors      ; echo "exit=$?"   # → exit=0: the six vectors of ADR-0110 (PIA-017)
-cargo test -p rk-adapter-claude -- cancel_reaps_process_tree    ; echo "exit=$?"   # → exit=0: AC-224, the Job Object / process group, grandchild included (PIA-047)
-cargo test -p rk-adapter-toolchain-rust -- fake_conformance     ; echo "exit=$?"   # → exit=0: the fourth adapter's conformance row (ADR-0094)
-grep -rnE 'set_var|remove_var'      crates/ --include=*.rs | wc -l   # → 0 (edition 2024: these are unsafe fn)
-grep -rn  'append-system-prompt'    crates/ --include=*.rs | wc -l   # → 0 (AC-211, S-H1c unrun)
-grep -rn  'allow(unsafe_code)'      crates/ --include=*.rs           # → exactly ONE hit, in rk-adapter-claude's Job Object module, with its comment (ADR-0102)
-grep -rnE 'impl Default for (Usage|CacheCreation|Margins)' crates/ --include=*.rs | wc -l   # → 0 (PIA-062; AC-362/AC-377)
+# Two helpers, defined once so every check below stays one line. Paste the block whole, or run it as
+# `bash <<'EOF' … EOF` if you would rather a FAIL not end an interactive shell.
+# The rule both exist for: never put the command whose status matters on the LEFT of a pipe. A pipeline's status
+# is the last stage's, and `cargo test` prints one `test result:` line PER BINARY — so a passing binary's line
+# would launder a red suite green.
+rk_test() {      # <pkg> <filter> <what>: cargo's own status FIRST, then a NON-ZERO matched count
+  out=$(cargo test -p "$1" -- "$2" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { printf '%s\n' "$out" | tail -20; echo "FAIL: cargo test -p $1 -- $2 exited $rc"; exit 1; }
+  printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+    || { echo "FAIL: 0 tests matched '$2' — $3 never ran"; exit 1; }
+  echo "PASS: $2 — $3"
+}
+rk_absent() {    # <pattern> <what>: the search must actually cover code (Halt 8), and only then find nothing
+  find crates -name '*.rs' -print -quit | grep -q . \
+    || { echo "FAIL: no .rs under crates/ — this absence grep cannot run: $2 (Halt 8, not a pass)"; exit 1; }
+  grep -rnE "$1" crates/ --include=*.rs; rc=$?
+  [ "$rc" -eq 1 ] || { echo "FAIL: $2 — grep rc=$rc (0 = the hits printed above; 2 = could not search)"; exit 1; }
+  echo "PASS: no hits — $2"
+}
+cargo build -p rk-adapter-claude -p rk-adapter-sqlite -p rk-adapter-toolchain-node -p rk-adapter-toolchain-rust \
+  || { echo "FAIL: the four adapters do not build — nothing below is meaningful and no dispatch happens (GC3)"; exit 1; }   # build BEFORE any dispatch
+rk_test rk-adapter-claude api_key_refuses_construction 'AC-488: construction refuses while ANTHROPIC_API_KEY is present'
+rk_test rk-adapter-claude structured_output_required 'ADR-0108: a card that omits StructuredOutput is REFUSED at configuration time'
+rk_test rk-adapter-claude env_denylist_config_map 'the AC-217/AC-488 instrument, dispatch count 0 — a zero-match run has dispatch count 0 too, which is why the match count is asserted'
+rk_test rk-adapter-claude golden_argv_per_profile 'static AND default argv pinned (DECISIONS #19) — two profiles; the per-profile count is asserted in the test body, not here'
+rk_test rk-adapter-claude argv_cap_refuses_before_spawn 'PIA-014: the fixture AT the cap, refused with a typed configuration error before spawn'
+rk_test rk-adapter-claude rate_limited_from_stream 'AC-523: RateLimited { resets_at } from the last rate_limit_event, never a back-off (ADR-0095)'
+rk_test rk-adapter-claude tick_arithmetic_vectors 'ADR-0110 fixtures: bases 0.09/0.10, 0.10/0.12, 0.20/0.21 and margins 0.07/0.18 (PIA-017)'
+rk_test rk-adapter-claude cancel_reaps_process_tree 'AC-224: the Job Object / process group, detached grandchild included (PIA-047) — the Windows arm is cfg-gated, so a zero-match run here IS the platform hole'
+rk_test rk-adapter-toolchain-rust fake_conformance "the fourth adapter's conformance row (ADR-0094)"
+rk_absent 'set_var|remove_var' 'edition 2024: set_var/remove_var are unsafe fn — forbidden workspace-wide, tests included'
+rk_absent 'append-system-prompt' 'AC-211: the append flags are ABSENT from argv in every profile — S-H1c is unrun'
+h=$(grep -rn 'allow(unsafe_code)' crates/ --include=*.rs); printf '%s\n' "$h"   # → exactly ONE hit, in rk-adapter-claude's Job Object module, with its comment (ADR-0102)
+[ "$(printf '%s' "$h" | grep -c .)" -eq 1 ] || { echo "FAIL: expected exactly ONE allow(unsafe_code) in the workspace (ADR-0102)"; exit 1; }
+printf '%s\n' "$h" | grep -q '^crates/rk-adapter-claude/' || { echo "FAIL: the one allow(unsafe_code) is not in rk-adapter-claude (ADR-0102)"; exit 1; }
+rk_absent 'impl Default for (Usage|CacheCreation|Margins)' 'PIA-062: the lifted Usage/CacheCreation/Margins carry NO Default (AC-362/AC-377)'
 ```
 
 **Spikes owed by this step (PIA-047):** **S-CANCEL-WIN** — one fixture-cancel-rm run on Windows, recorded in its

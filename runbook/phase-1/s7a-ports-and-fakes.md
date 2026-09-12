@@ -50,19 +50,36 @@ a fake that quietly stops tracking its trait is the failure this catches.
 `compile_fail` doctests pass, clippy clean [measured, F41]. Start `rk-ports` from it; do not start from ADR-0076's
 "handle minted when the operation started" wording, which F41's first doctest is written to reject.
 
-**Checkpoint 7a.** All nine:
+**Checkpoint 7a.** All nine assertions — each is now guarded, so the block is longer than nine lines; count
+assertions, not lines:
 
 ```bash
 cd D:/repos/redkiln-rs
 cargo build -p rk-ports && cargo test -p rk-ports         # exit 0 (build first — golden constraint 3)
-grep -rnE 'async fn|impl Future|-> .*Future' crates/rk-ports/src/ | wc -l   # → 0: no async fn and no future-returning method (the ADR-0076 criterion added 2026-09-11)
-grep -c 'Send + Sync' crates/rk-ports/src/lib.rs           # → 5: every port trait carries the supertraits (ADR-0099)
-grep -c 'CancelToken' crates/rk-ports/src/lib.rs           # → ≥ 1: the token is a port-crate type, not an adapter local
-grep -rn 'traits.len() == fakes.len()' crates/rk-ports/ | wc -l   # → ≥ 1: the assertion EXISTS
-cargo test -p rk-ports -- port_fake_parity ; echo "exit=$?"        # → exit=0: and it PASSES
-cargo test -p rk-ports --doc ; echo "exit=$?"              # → exit=0: the two compile_fail doctests (F41's) are carried over and still fail to compile
-grep -rn 'ChangeSummary' crates/rk-ports/src/ | grep -c 'pub(crate) ()'   # → 1: the opaque newtype, and nothing else about it
-cargo tree -p rk-ports -e normal | grep -cE 'tokio|async-std|futures|async-trait'   # → 0
+test -d crates/rk-ports/src || { echo "FAIL: crates/rk-ports/src absent"; exit 1; }
+hits=$(grep -rnE 'async fn|impl Future|-> .*Future' crates/rk-ports/src/); rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: async fn / future-returning method in a port trait (grep rc=$rc)"; printf '%s\n' "$hits"; exit 1; }   # → silent: the ADR-0076 criterion added 2026-09-11 (grep rc must be exactly 1 = searched, matched nothing)
+test -f crates/rk-ports/src/lib.rs || { echo "FAIL: crates/rk-ports/src/lib.rs absent"; exit 1; }
+n=$(grep -cE '^pub trait [A-Za-z]+: Send \+ Sync' crates/rk-ports/src/lib.rs)
+[ "${n:-0}" -eq 5 ] || { echo "FAIL: ${n:-0} port traits declare Send + Sync, expected 5"; exit 1; }   # → silent: all five port traits carry the supertraits (ADR-0099). Anchored on the declaration: a bare `grep -c 'Send + Sync'` counts doc-comment and helper lines too and reads 10, not 5, on the F41 reference this step says to start from.
+test -f crates/rk-ports/src/lib.rs || { echo "FAIL: crates/rk-ports/src/lib.rs absent"; exit 1; }
+grep -q 'CancelToken' crates/rk-ports/src/lib.rs || { echo "FAIL: no CancelToken in rk-ports — the token must be a port-crate type, not an adapter local"; exit 1; }   # → silent: ≥ 1
+test -d crates/rk-ports || { echo "FAIL: crates/rk-ports absent"; exit 1; }
+grep -rn 'traits.len() == fakes.len()' crates/rk-ports/ || { echo "FAIL: the AC-481 parity assertion is absent — it must be spelled 'traits.len() == fakes.len()' (design §3 P2, AC-481's Verified-by)"; exit 1; }   # → ≥ 1 hit printed: the assertion EXISTS
+out=$(cargo test -p rk-ports -- port_fake_parity 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test port_fake_parity exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: the filter matched 0 tests — port_fake_parity does not exist under that name"; exit 1; }   # → silent: it ran AND it PASSES
+out=$(cargo test -p rk-ports --doc 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test --doc exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+n=$(printf '%s\n' "$out" | sed -n 's/^test result: ok\. \([0-9]*\) passed.*/\1/p' | head -1)
+[ "${n:-0}" -ge 2 ] || { echo "FAIL: ${n:-0} doctests ran — F41's two must both be present (doctest = false runs 0 and still exits 0)"; exit 1; }
+n=$(grep -rn '```compile_fail' crates/rk-ports/src/ | wc -l); [ "$n" -eq 2 ] || { echo "FAIL: $n compile_fail doctests in rk-ports/src, expected exactly 2"; exit 1; }   # → silent: both of F41's are carried over and still fail to compile
+test -d crates/rk-ports/src || { echo "FAIL: crates/rk-ports/src absent"; exit 1; }
+n=$(grep -rn 'ChangeSummary' crates/rk-ports/src/ | grep -c 'pub(crate) ()')
+[ "${n:-0}" -eq 1 ] || { echo "FAIL: ${n:-0} 'pub(crate) ()' ChangeSummary sites, expected exactly 1 (ADR-0099 clause 5)"; exit 1; }   # → silent: the opaque newtype, and nothing else about it
+out=$(cargo tree -p rk-ports -e normal); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo tree -p rk-ports exited $rc — nothing was resolved, so a count of 0 would be a fake 0"; exit 1; }
+if printf '%s\n' "$out" | grep -qE 'tokio|async-std|futures|async-trait'; then echo "FAIL: rk-ports pulls an async runtime"; printf '%s\n' "$out" | grep -nE 'tokio|async-std|futures|async-trait'; exit 1; fi   # → silent: → 0
 ```
 
 "the assertion present and passing" was an intention; those last two lines are it as commands. The number matters

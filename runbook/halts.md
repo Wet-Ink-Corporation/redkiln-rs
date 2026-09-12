@@ -6,9 +6,15 @@
    not exit 0. **Do not run the binary that is already in `target/`** — `cargo test` and `cargo clippy` do not
    rebuild it, and a stale binary is how this programme reached two false conclusions that code was broken.
 
-2. **The instrument version differs from the pin.** As of 2026-09-10 it already does: measured **2.1.268** (read from
-   `spikes/results/instrument-checks/RUNBOOK-instrument.txt`, never hard-coded — PIA-019) against HANDOFF's original
-   **2.1.263**, with P7 having straddled **2.1.265** and 2026-09-09's measurement at **2.1.266**; and the Rust
+2. **The instrument version differs from the pin.** As of 2026-09-10 it already does: measured **2.1.268** (stated
+   here as read from `spikes/results/instrument-checks/RUNBOOK-instrument.txt`, never hard-coded — PIA-019;
+   **corrected 2026-09-11: that file did not exist on this tree when this line was written — the directory held
+   `README.md` and twelve `.jsonl` results and none by that name, and Checkpoint 0 line 4 created it for the first
+   time at Step 0. The 2.1.268 figure was therefore hard-coded, which is the very PIA-019 defect this clause
+   cites**) against HANDOFF's original
+   **2.1.263**, with P7 having straddled **2.1.265** and 2026-09-09's measurement at **2.1.266**; **and, measured
+   2026-09-11 at Step 0 and written to that file for the first time, 2.1.269 (Claude Code) — the move 2.1.268 →
+   2.1.269 is recorded in `PROGRESS.md` §1/§3/§6 and in `bf5086a`, not worked around**; and the Rust
    toolchain moves from the spike programme's **1.97.1** to the pinned **1.98.1** (DECISIONS-2026-09-11 #7).
    **Record it; do not silently continue.** A version
    move mid-run splits a comparison (F20, F37 §7), and the rig's `doctor` printing `version >= floor : true` is a
@@ -38,8 +44,12 @@ Two more that this tree has already produced and that cost time when unrecognise
 
 Two more that this revision added, because the audit that produced it found both live in the previous one:
 
-7. **A guard refuses and you are about to work around it.** The **eight** refusals in s4 §4.3 are the instrument
-   (five in its table, three more that `score-p2.py` added and the table did not carry), and
+7. **A guard refuses and you are about to work around it.** The **eleven** refusals in s4 §4.3 are the instrument
+   (five in its table, six more that `score-p2.py` added and the table did not carry — **corrected 2026-09-11 by
+   the runbook-wide checkpoint sweep: this line read "eight … three more" until the refusals were counted off the
+   script, which is what s4 §4.3 instructs. `grep -c 'sys.exit(' spikes/p2/score-p2.py` → 6, at :53, :72, :77, :79,
+   :90 and :92. The undercount silently dropped the BLINDNESS guard — the one s4 §4.3 calls "the one worth
+   knowing" — out of the set Halt 7 declares to be the instrument**), and
    s4 §4.3's list of what not to do is not exhaustive — the shape is. **Stop at any refusal and establish the
    guard's scope first** (golden constraint 9): is it too narrow, so the failure is passing through elsewhere, or
    too wide, so it is refusing valid work? Back-dating `labelled_at`, editing an `at` field, re-running an engine
@@ -49,7 +59,26 @@ Two more that this revision added, because the audit that produced it found both
 
 8. **A checkpoint cannot be run because a path it names does not exist.** That is a halt, not a skip, and it is
    *specifically* a halt when the checkpoint would go green anyway. `!`-negated `grep` over a missing directory
-   exits 0. `grep -c` over a missing file exits 2. Both look like a pass in a terminal. **A checkpoint you could
+   exits 0. `grep -c` over a missing file exits 2. Both look like a pass in a terminal. **Those two are not the
+   whole list. Added 2026-09-11 after the runbook-wide checkpoint sweep, which found six more shapes — five of
+   them re-verified in a subshell on this tree that day, the sixth read off Step 0's own record rather than
+   re-run, because re-running it truncates the file it is about:** (c) **a status-bearing command on the LEFT of
+   a pipe** — a pipeline's status is its LAST stage's, so `{ printf 'test result: ok. 5 passed'; exit 101; } |
+   grep -q 'ok'` exits **0** and the 101 is gone; (d) **an unguarded `grep -qF "$(cat X)"` with `X` absent** — the
+   pattern is the empty string, which matches every line, so the check prints its success token and exits **0**
+   having asserted nothing (this is s1 Checkpoint 1 line 6, the file's own PIA-019 regression check, which
+   therefore cannot catch the defect it is named for); (e) **`git ls-files <path>` on an untracked path** — prints
+   nothing and exits **0** (s1 Checkpoint 1 line 4); (f) **`… || echo "FAIL: …"` used as the guard** — `echo`
+   succeeds, so the guard exits **0**, and a guard whose last statement is `false` rather than `exit 1` does not
+   stop the lines after it either; (g) **any pass condition that is the ABSENCE of output** — `test -z "$(grep -r
+   P missing/ 2>/dev/null)" && echo clean` prints `clean` and exits **0** over a tree that is not there; (h) **a
+   command whose own output is the record** — `claude --version | tee <file>` opens its target `O_TRUNC` before
+   reading stdin, so a failed re-run leaves a **0-byte** file and the line itself reports nothing (s0 Checkpoint 0
+   line 4; line 5's `test -s` is what catches it, and it may not be dropped). **(c), (d) and (f) are the shapes a
+   hardening pass itself introduces, so they are also the rule for writing one:** never put a status-bearing
+   command left of a pipe — capture with `out=$(cmd 2>&1); rc=$?`, assert `rc` first, then grep the capture; prove
+   a `$(…)` substitution non-empty before grepping with it; and always `|| { echo "FAIL: …"; exit 1; }`.
+   **A checkpoint you could
    not run is a failed checkpoint** — record which one and why, and do not advance the step counter.
    **One carve-out, and it is narrow (PIA-003):** a checkpoint line marked **`[WILL EXIST]`** is **deferred, not
    failed** — record the deferral in `PROGRESS.md` against the stage the line names and re-run it there. The

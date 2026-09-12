@@ -453,29 +453,38 @@ narrowed by ADR-0111, 0089/S-FACET as narrowed by ADR-0093, 0101/S-SUBTLE) exact
 row, not the section. The README's file count does **not** move (0090 fills a reserved number: 112 records → 113,
 `ls references/adr/*.md | wc -l` → **115** with README.md and ERRATA.md).
 
-**Checkpoint 4.** All twelve. This is the gate; treat a failure as a stop, not a note. **Two of the twelve are P2's, and
+**Checkpoint 4.** All thirteen — recounted on disk 2026-09-11; the block said "twelve" and carries thirteen. This is the gate; treat a failure as a stop, not a note. **Two of the thirteen are P2's, and
 P2 does not gate anything this step gates** (§4.1's last bullet) — they are here because this is where the scorers
 are run, and a green P2 pair says nothing about the selection path.
 
 ```bash
 cd D:/repos/redkiln-rs
-python spikes/p1/score-arm-d.py --engine spikes/results/p1-arm-d.jsonl \
-       --labels spikes/results/p1-arm-d-labels-ryan.md ; echo "exit=$?"   # → exit=0, per-facet table printed
-python spikes/p1/score-arm-d-panel.py ; echo "exit=$?"             # → exit=0, F39's figures reproduce
-wc -l < spikes/results/p2-engine.jsonl                             # → 82  (41 rows x 2 scopes), NOT `test -s`:
+out=$(python spikes/p1/score-arm-d.py --engine spikes/results/p1-arm-d.jsonl \
+       --labels spikes/results/p1-arm-d-labels-ryan.md) ; rc=$? ; printf '%s\n' "$out" ; echo "exit=$rc"
+test "$rc" -eq 0 || { echo "FAIL: score-arm-d.py exited $rc (its refusal is on stderr, above)"; exit 1; }
+printf '%s\n' "$out" | grep -q 'precision=' || { echo "FAIL: no per-facet row printed — exit 0 is not evidence it scored anything"; exit 1; }   # → exit=0, per-facet table printed
+python spikes/p1/score-arm-d-panel.py ; rc=$? ; echo "exit=$rc" ; test "$rc" -eq 0 || { echo "FAIL: score-arm-d-panel.py exited $rc"; exit 1; }   # → exit=0, F39's figures reproduce
+n=$(wc -l < spikes/results/p2-engine.jsonl) ; test "${n:-0}" -eq 82 || { echo "FAIL: p2-engine.jsonl has ${n:-0} lines, expected 82"; exit 1; }
+                                                                   # → silent; 82 (41 rows x 2 scopes), NOT `test -s`:
                                                                    #   a truncated file is non-empty too
-python spikes/p2/score-p2.py ; echo "exit=$?"                      # → exit=0; "0 should re-run, 41 need not",
+python spikes/p2/score-p2.py ; rc=$? ; echo "exit=$rc" ; test "$rc" -eq 0 || { echo "FAIL: score-p2.py exited $rc"; exit 1; }
+                                                                   # → exit=0; "0 should re-run, 41 need not",
                                                                    #   coarse specificity 0.73, fine 0.55,
                                                                    #   recall NOT COMPUTABLE, criterion 1 FIRES
-ls references/adr/0090-*.md | wc -l                                # → 1  (exactly one file)
+test "$(ls references/adr/0090-*.md 2>/dev/null | wc -l)" = 1 || { echo "FAIL: references/adr/0090-*.md is not exactly one file"; exit 1; }   # → silent; exactly one file
 grep -c '^superseded_by: \["0090"\]$' references/adr/0079-*.md     # → 1  back-link present
 grep -c '^status: superseded$'        references/adr/0079-*.md     # → 1  status moved
-grep -c '0079. is the only .proposed. record' references/adr/README.md   # → 0  the stale claim is GONE
-grep -c '0090. and .0091. are reserved'        references/adr/README.md   # → 0  the PREVIOUS reservation sentence is gone
+test "$(grep -c '0079. is the only .proposed. record' references/adr/README.md)" = 0 || { echo "FAIL: README still carries the stale '0079 is the only proposed record' claim"; exit 1; }   # → silent; the stale claim is GONE
+test "$(grep -c '0090. and .0091. are reserved' references/adr/README.md)" = 0 || { echo "FAIL: the '0090 and 0091 are reserved' sentence is still in README (BOTH sites: Purpose and §Numbering)"; exit 1; }   # → silent; the PREVIOUS reservation sentence is gone
 grep -c '0091. reserved for'                   references/adr/README.md   # → 1  0091 alone stays reserved (Step 6.1)
-grep -c 'source = "llm"' spikes/p9/facets.toml                            # → 7 BEFORE Step 4a (the registry is Step 4a's; this line is the BEFORE half of Checkpoint 4a's zero)
+test "$(grep -c 'source = "llm"' spikes/p9/facets.toml)" = 7 || { echo "FAIL: spikes/p9/facets.toml no longer carries exactly 7 source = \"llm\" facets — the BEFORE half of Checkpoint 4a's zero"; exit 1; }   # → silent; 7 BEFORE Step 4a (the registry is Step 4a's; this line is the BEFORE half of Checkpoint 4a's zero)
+ls references/adr/0090-*.md >/dev/null 2>&1 || { echo "FAIL: references/adr/0090-*.md absent — grep -c would exit 2 and print nothing"; exit 1; }
 grep -c 'has_repro\|external_dep\|market_facing' references/adr/0090-*.md   # → ≥ 1: the booleans clause is in the record (PIA-003)
-git add references/adr/0090-*.md references/adr/0079-*.md references/adr/README.md   && git commit -m "ADR-0090: the context-vector source — supersedes 0079 in full; every LLM-sourced axis and boolean is human at triage (DECISIONS-2026-09-11 #2)"   && git status --porcelain | grep -c '^ M' ; echo "exit=$?"              # → 0 modified files remain; the decision is in history BEFORE Step 4a and Step 5 (PIA-018)
+git add references/adr/0090-*.md references/adr/0079-*.md references/adr/README.md \
+  && git commit -m "ADR-0090: the context-vector source — supersedes 0079 in full; every LLM-sourced axis and boolean is human at triage (DECISIONS-2026-09-11 #2)" \
+  || { echo "FAIL: git add/commit did not succeed"; exit 1; }
+st=$(git status --porcelain) || { echo "FAIL: git status itself failed"; exit 1; }
+if printf '%s\n' "$st" | grep -q '^ M'; then echo "FAIL: modified files remain after the commit"; printf '%s\n' "$st"; exit 1; fi   # → silent; the decision is in history BEFORE Step 4a and Step 5 (PIA-018)
 ```
 
 The `next free number` pair replaced `grep -c 'proposed' references/adr/README.md`, which was **not a check at

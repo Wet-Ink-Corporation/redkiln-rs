@@ -108,38 +108,85 @@ powerless at n=3 — every Wilson interval overlaps by construction — and the 
 `findings.none(evidence in [Reproduced, MutationSurvived])` may not be used as a terminal condition. Each quality
 block is authored explicitly, per activity.
 
-**Checkpoint 7b.** All eighteen (nine on the kernel and lints; three the Step 4a deferrals re-run here; six on 7b-ii):
+**Checkpoint 7b.** All twenty (eleven on the kernel and lints; three in the Step 4a group re-run here; six on 7b-ii)
+— recounted on disk 2026-09-11; this read "eighteen … nine" and the block carries twenty:
 
 ```bash
 cd D:/repos/redkiln-rs
-cargo build -p rk-kernel && cargo test -p rk-kernel                   # exit 0
-cargo test -p rk-kernel -- trybuild ; echo "exit=$?"                  # → exit=0: the must-fail fixtures
+cargo build -p rk-kernel || { echo "FAIL: cargo build -p rk-kernel"; exit 1; }   # golden constraint 3: build before you test
+out=$(cargo test -p rk-kernel 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test -p rk-kernel exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: rk-kernel compiled but ran 0 tests"; exit 1; }   # exit 0
+out=$(cargo test -p rk-kernel -- trybuild 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: trybuild exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched trybuild"; exit 1; }               # → the must-fail fixtures
                                                                       #   FAIL TO COMPILE, which is the pass
+test -f crates/rk-kernel/Cargo.toml || { echo "FAIL: crates/rk-kernel/Cargo.toml absent"; exit 1; }
 grep -rnE 'tokio|async-trait|async-std|futures' crates/rk-kernel/Cargo.toml | wc -l   # → 0
-cargo metadata --format-version 1 --no-deps >/dev/null && \
-  cargo tree -p rk-kernel -e normal 2>/dev/null | grep -c 'rk-adapter-'  # → 0 (AC-484)
-cargo test -p rk-kernel -- facet_stability_five_clause ; echo "exit=$?" # → exit=0: five clauses, four negatives
-cargo test -p rk-kernel -- facet_provenance_fixtures   ; echo "exit=$?" # → exit=0: AC-520, four must-fail
+cargo metadata --format-version 1 --no-deps >/dev/null || { echo "FAIL: workspace metadata"; exit 1; }
+deps=$(cargo tree -p rk-kernel -e normal) || { echo "FAIL: cargo tree -p rk-kernel did not run"; exit 1; }
+printf '%s\n' "$deps" | grep -c 'rk-adapter-'                            # → 0 (AC-484)
+out=$(cargo test -p rk-kernel -- facet_stability_five_clause 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: facet_stability_five_clause exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched facet_stability_five_clause"; exit 1; }   # → five clauses, four negatives (AC-071)
+out=$(cargo test -p rk-kernel -- facet_provenance_fixtures 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: facet_provenance_fixtures exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched facet_provenance_fixtures"; exit 1; }    # → AC-520, four must-fail
                                                                        #   fixtures AND one that must LOAD
+test -d crates/rk-kernel/src || { echo "FAIL: crates/rk-kernel/src absent"; exit 1; }
 grep -rn 'facet_stability\|facet_provenance' crates/rk-kernel/src/ | grep -c 'fn '   # → ≥ 2: TWO rules, not one
+test -d crates/rk-kernel/src || { echo "FAIL: crates/ has no rk-kernel — Checkpoint 7b is not runnable"; exit 1; }
 grep -rnE 'require.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b' \
      crates/ --include=*.toml --include=*.rs | wc -l                   # → 0. Golden constraint 1, as a command.
+test -d crates/rk-kernel/src || { echo "FAIL: crates/ has no rk-kernel — Checkpoint 7b is not runnable"; exit 1; }
 grep -rniE 'leaves the model' crates/ --include=*.rs --include=*.toml --include=*.md | wc -l
                                                                        # → 0. NO FACET DOES (s4 §4.1 clause B, F39).
-cargo test -p rk-kernel -- rigor_monotonicity ; echo "exit=$?"         # → exit=0 on the shipped catalog (P7-CEIL: bisect is ceilinged)
-python spikes/p9/grammar-probe.py | grep -E '^predicates parsed'       # → the parser's fixture corpus; the kernel's parser must agree with the probe on every string that parses
+out=$(cargo test -p rk-kernel -- rigor_monotonicity 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: rigor_monotonicity exited $rc on the shipped catalog"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched rigor_monotonicity"; exit 1; }      # → passes on the shipped catalog (P7-CEIL: bisect is ceilinged)
+test -f spikes/p9/grammar-probe.py || { echo "FAIL: spikes/p9/grammar-probe.py absent"; exit 1; }
+out=$(python spikes/p9/grammar-probe.py); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: grammar-probe did not run (exit $rc)"; exit 1; }   # 0 = clean, 1 = the known pack defects (F42)
+printf '%s\n' "$out" | grep -E '^predicates parsed [1-9][0-9]*/[0-9]+' \
+  || { echo "FAIL: probe printed no parsed count — it crashed, or the corpus is empty"; exit 1; }   # → the parser's fixture corpus; the kernel's parser must agree with the probe on every string that parses
 # --- Checkpoint 4a's [WILL EXIST] lines, re-run here as named lines (PIA-003): the lint now exists, so the
 #     expectation is "exit != 0 AND stderr names the failing clause" — a missing binary passes neither half
 ./target/debug/redkiln lint --facet-provenance .redkiln/facets.toml 2>err.txt ; test $? -ne 0 && grep -qE 'deriver|record|positive' err.txt && echo "AC-520 fails closed, naming the clause"
 ./target/debug/redkiln lint --facet-stability  .redkiln/facets.toml 2>err.txt ; echo "exit=$?"   # → exit=0 on the ZERO-llm branch (Step 4a): the expected outcome, not a shortfall
-cargo test -p rk-kernel -- golden_log_replay ; echo "exit=$?"          # → exit=0: the kernel records golden event logs on the pinned corpus and replays them (AC-006/AC-188; the logs are committed to redkiln-corpus as fixtures — PIA-002)
+out=$(cargo test -p rk-kernel -- golden_log_replay 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: golden_log_replay exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched golden_log_replay"; exit 1; }       # → the kernel records golden event logs on the pinned corpus and replays them (AC-006/AC-188; the logs are committed to redkiln-corpus as fixtures — PIA-002)
 # --- 7b-ii, the gates
-cargo test -p rk-kernel -- ac334_flip_predicate ; echo "exit=$?"        # → exit=0: the flip predicate on a declared mutant
-cargo test -p rk-kernel -- ac015_inversion_regression ; echo "exit=$?"  # → exit=0 and the case yields mutation-survived, never pinned (F25)
-cargo test -p rk-kernel -- ac313_replay_k10 ; echo "exit=$?"            # → exit=0: ten replays, one digest
-cargo test -p rk-kernel -- ac310_sink_accounting ; echo "exit=$?"       # → exit=0: findings_in == blocks + sink_records
-cargo test -p rk-kernel -- trybuild -- ac294_block_constructor ; echo "exit=$?"   # → exit=0: the must-fail compiles nothing
-cargo test -p rk-kernel -- ac524_fresh_record_on_rereach ; echo "exit=$?"         # → exit=0 (PROVISIONAL until P8-B)
+out=$(cargo test -p rk-kernel -- ac334_flip_predicate 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: ac334_flip_predicate exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched ac334_flip_predicate"; exit 1; }    # → the flip predicate on a declared mutant
+out=$(cargo test -p rk-kernel -- ac015_inversion_regression 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: ac015_inversion_regression exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched ac015_inversion_regression"; exit 1; }   # → and the case yields mutation-survived, never pinned (F25)
+out=$(cargo test -p rk-kernel -- ac313_replay_k10 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: ac313_replay_k10 exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched ac313_replay_k10"; exit 1; }        # → ten replays, one digest
+out=$(cargo test -p rk-kernel -- ac310_sink_accounting 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: ac310_sink_accounting exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched ac310_sink_accounting"; exit 1; }   # → findings_in == blocks + sink_records
+out=$(cargo test -p rk-kernel -- trybuild -- ac294_block_constructor 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: trybuild/ac294_block_constructor exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched trybuild/ac294_block_constructor — check the doubled '--'"; exit 1; }   # → the must-fail compiles nothing
+out=$(cargo test -p rk-kernel -- ac524_fresh_record_on_rereach 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: ac524_fresh_record_on_rereach exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched ac524_fresh_record_on_rereach"; exit 1; }   # → (PROVISIONAL until P8-B)
 ```
 
 The LLM-ordinal line is the standing prohibition made mechanical. It is coarse and it will occasionally flag a

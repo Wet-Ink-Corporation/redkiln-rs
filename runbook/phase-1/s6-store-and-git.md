@@ -121,19 +121,37 @@ run-owned worktree **from the store**, never from cwd (the new AC §6.4 criterio
 ```bash
 cd D:/repos/redkiln-rs
 cargo build --workspace && cargo clippy --workspace --all-targets && cargo test --workspace   # exit 0 each
-cargo test --workspace --features corpus                                   # exit 0 on this box: AC-440's fixture and the F12 replay read the bundle
+out=$(cargo test --workspace --features corpus 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test --features corpus exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: --features corpus selected 0 tests — the bundle was never read"; exit 1; }   # exit 0 on this box AND ≥ 1 test actually ran: AC-440's fixture and the F12 replay read the bundle
+test -f Cargo.toml || { echo "FAIL: Cargo.toml absent — the workspace table does not exist yet"; exit 1; }
 grep -c 'gix = "=0.87.1"' Cargo.toml                                       # → 1. EXACT pin, in the WORKSPACE table (ADR-0084)
+test -f crates/rk-git/Cargo.toml || { echo "FAIL: crates/rk-git/Cargo.toml absent"; exit 1; }
 grep -c 'gix.workspace = true' crates/rk-git/Cargo.toml                    # → 1. the member inherits it (PIA-030: the old grep false-failed on this form)
-grep -rnE 'std::process::Command|tokio::process::Command' crates/ --include=*.rs \
-  | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l                       # → 0: one wrapper, one file — and clippy.toml's disallowed-types is the same rule at build time
-grep -rn 'Command::new("git")' crates/ --include=*.rs | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l   # → 0 (the CI grep, PIA-035)
+test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent — the type-ban grep is vacuous"; exit 1; }
+test "$(grep -rnE 'std::process::Command|tokio::process::Command' crates/ --include=*.rs \
+  | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l)" = 0 \
+  || { echo "FAIL: process::Command outside the one wrapper"; exit 1; }   # → 0: one wrapper, one file — and clippy.toml's disallowed-types is the same rule at build time
+test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent — the CI grep is vacuous"; exit 1; }
+test "$(grep -rn 'Command::new("git")' crates/ --include=*.rs | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l)" = 0 \
+  || { echo "FAIL: Command::new(\"git\") outside the wrapper"; exit 1; }   # → 0 (the CI grep, PIA-035)
+test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent"; exit 1; }
 grep -c 'hooksPath' crates/rk-git/src/git_exec.rs                          # → ≥ 1: hooks isolation on every commit (ADR-0105 clause 2)
+test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent"; exit 1; }
 grep -c 'ifexists=add\|if-exists=add' crates/rk-git/src/git_exec.rs          # → ≥ 1: repeated identical trailers are appended, not dropped
 cargo audit --deny unmaintained                                            # exit 0; gix-* clean at the pin; clone is on gix and in scope
-ls references/adr/0091-*.md | wc -l                                        # → 1: the S-GIX successor record
-grep -cE '^S-GIX/[abc]: (go|no-go)$' references/adr/0091-*.md              # → 3: one explicit verdict line per arm (PIA-035)
+test "$(ls references/adr/0091-*.md 2>/dev/null | wc -l)" = 1 || { echo "FAIL: expected exactly one references/adr/0091-*.md — the S-GIX successor record"; exit 1; }   # → 1: the S-GIX successor record
+ls references/adr/0091-*.md >/dev/null 2>&1 || { echo "FAIL: ADR-0091 absent — no S-GIX record to grep"; exit 1; }
+test "$(grep -cE '^S-GIX/[abc]: (go|no-go)$' references/adr/0091-*.md)" = 3 \
+  || { echo "FAIL: ADR-0091 does not carry exactly three S-GIX verdict lines"; exit 1; }   # → 3: one explicit verdict line per arm (PIA-035)
+ls references/adr/0091-*.md >/dev/null 2>&1 || { echo "FAIL: ADR-0091 absent — no S-GIX record to grep"; exit 1; }
 grep -cE 'git (>=|version) [0-9]+\.[0-9]+' references/adr/0091-*.md         # → 1: the git-version floor is a number in the record
-cargo test -p rk-git -- --ignored s_gix_ ; echo "exit=$?"                  # → the three arms ran; their verdicts match the record
+out=$(cargo test -p rk-git -- --ignored s_gix_ 2>&1); rc=$?
+test "$(printf '%s\n' "$out" | grep -cE '^test .*s_gix_[abc]_')" = 3 \
+  || { echo "FAIL: the s_gix_ filter did not select exactly the three arms"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -E '^test .*s_gix_[abc]_'
+if [ "$rc" -eq 0 ]; then echo "S-GIX: all three arms GO"; else echo "S-GIX: NO-GO on at least one arm (rc=$rc) — each arm above must equal its S-GIX/x line in ADR-0091"; fi   # → the three arms ran; their verdicts match the record
 ```
 
 The verdict and floor lines make "a **written S-GIX result**" checkable instead of aspirational, and the

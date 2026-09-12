@@ -15,8 +15,9 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 ### 0.1 What the tree actually is (re-derive it; do not read it off this section)
 
 Every previous revision of this section enumerated the working tree and was stale within a day (PIA-019). This
-revision states the **rule** and the measurement that held when it was written, and Checkpoint 0 re-derives the
-counts.
+revision states the **rule** and the measurement that held when it was written. **Corrected 2026-09-11: this read
+"and Checkpoint 0 re-derives the counts" — it does not. No Checkpoint 0 line counts anything; the count lives in
+this section's own block below (the `awk` line), and that is where Step 0 ran it.**
 
 **The rule.** `main` is at the remediation merge, **`66d0ced`** (2026-09-11), on top of the pin the pre-implementation
 audit measured, **`009a4ec`** ("Closeout: the F40 pass's fourteen minor findings applied…", 2026-09-10). The merged
@@ -24,8 +25,8 @@ branch `remediation/pia-2026-09-11` (eight commits, `0e1b1bc`…`58ae8ef`; the b
 of it: the audit and its instrument (`references/audit/2026-09-10/`), ADR-0092–0114 and `ERRATA.md`,
 `DECISIONS-2026-09-11.md`, the register/design/spike-file amendments, this `runbook/` folder, the promoted
 `spikes/F30-DRAFT.md`, the S-PORTS and S-GRAMMAR instruments (`spikes/s-ports/`, `spikes/p9/grammar-probe.py`) and
-their drafts F41/F42. **Step 0 starts from `main` at or after that merge** — if `git log --oneline main | grep -c 66d0ced`
-is 0, stop and merge it first; the stage files below assume every record they cite exists.
+their drafts F41/F42. **Step 0 starts from `main` at or after that merge** — if `git merge-base --is-ancestor 66d0ced main`
+exits non-zero, stop and merge it first — 2026-09-11: it exits 0 [re-measured]. The earlier `git log --oneline main | grep -c 66d0ced` form prints `0` and exits **1** on a MISS, so its exit status inverts the sentence, and it matches the sha anywhere in the oneline text including a commit message; the stage files below assume every record they cite exists.
 
 **What is still run noise, measured 2026-09-11 after the merge** — the same seventeen items the 2026-09-09 revision
 listed. The remediation's first commit (`7954bd0`) had swept them in with `git add -A`; the merge closeout un-tracked
@@ -51,7 +52,7 @@ git -C D:/repos/redkiln-rs status --porcelain | grep -v '^?? runbook/'
 # ?? spikes/runner/target-p8/
 ```
 
-**Count it, do not read it off this listing**: `git status --porcelain | grep -c '^??'` is the number, and this
+**Count it, do not read it off this listing**: `git status --porcelain | awk '/^\?\?/{n++} END{print n+0}'` is the number — it always prints a count and exits 0, where `grep -c '^??'` prints `0` but exits **1** on a swept tree [hardened 2026-09-11] — and this
 enumeration has been wrong before. The P2 artefacts, the F39/F40 amendments and the 2026-09-09 ` M` lines that
 earlier revisions enumerated are all committed (`4519edc` … `009a4ec`); what Step 1 commits is the noise above and
 nothing else. `references/adr/` holds **112 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
@@ -82,14 +83,17 @@ file.
 ### 0.3 Instrument, and the lineage rule
 
 ```bash
-claude --version   # measured 2026-09-10: 2.1.268 (Claude Code); measured 2026-09-09: 2.1.266
+claude --version   # measured 2026-09-11 at Step 0: 2.1.269 (Claude Code) — the first measurement actually written
+                   #   to spikes/results/instrument-checks/RUNBOOK-instrument.txt, which did not exist before then;
+                   #   measured 2026-09-10: 2.1.268 (Claude Code); measured 2026-09-09: 2.1.266
 ```
 
 **Record this before anything dispatches — to a file, never to a sentence in this runbook** (PIA-019: the
 previous revision hard-coded "2.1.266" in a commit message that claimed to quote a file). `spikes/HANDOFF.md`
 originally pinned **2.1.263** (DECISIONS-2026-09-09 #1, which moved the pin from 2.1.259 and noted the rig treats it
 as a *floor*, not an exact pin); P7 then moved to **2.1.265** mid-run; 2026-09-09 measured **2.1.266**; 2026-09-10
-measured **2.1.268**. Every later line that needs the version reads
+measured **2.1.268**; **2026-09-11, at Step 0, measured 2.1.269 (Claude Code) — the move is recorded, not worked
+around (Halt 2, golden constraint 8)**. Every later line that needs the version reads
 `$(cat spikes/results/instrument-checks/RUNBOOK-instrument.txt)`.
 
 The rule (F20 / F37 §7): **a version move mid-run splits a comparison.** Two consequences here, both non-optional:
@@ -100,7 +104,9 @@ The rule (F20 / F37 §7): **a version move mid-run splits a comparison.** Two co
 
   ```bash
   cd D:/repos/redkiln-rs/spikes/runner && cargo build && ./target/debug/redkiln-spike-runner doctor
-  # expect two lines, verified verbatim against runner/src/main.rs:1753 and :1756 —
+  # expect FIVE lines; the two below are verified verbatim against runner/src/main.rs:1753 and :1756 (the citation
+  # is exact — re-checked 2026-09-11; "expect two lines" was wrong: doctor also prints `claude version`,
+  # `API key absent` and `platform`) —
   #   version >= floor : true
   #   environment is fit for a measured run.
   ```
@@ -120,13 +126,23 @@ git -C D:/repos/redkiln-rs checkout -b build/phase-0-to-1
 instrument line is made checkable by writing the version to a file rather than by intending to remember it.
 
 ```bash
-git -C D:/repos/redkiln-rs rev-parse --abbrev-ref HEAD    # → build/phase-0-to-1
-ls D:/repos/redkiln-rs/references/adr/0114-*.md >/dev/null && test -f D:/repos/redkiln-rs/runbook/INDEX.md && echo "remediation present"   # → the 2026-09-11 remediation is in the tree (ADR-0111 and this runbook exist)
-rustup run 1.98.1 rustc --version                         # → rustc 1.98.1 (48a229cea 2026-09-01) — the pin; the PATH rustc is recorded, not asserted
-claude --version | tee D:/repos/redkiln-rs/spikes/results/instrument-checks/RUNBOOK-instrument.txt
-                                                          # → writes e.g. "2.1.268 (Claude Code)" to a FILE; read it back, never retype it
-test -s D:/repos/redkiln-rs/spikes/results/instrument-checks/RUNBOOK-instrument.txt && echo "instrument recorded"
-cd D:/repos/redkiln-rs/spikes/runner && cargo build && ./target/debug/redkiln-spike-runner doctor  # → exit 0
+b=$(git -C D:/repos/redkiln-rs rev-parse --abbrev-ref HEAD); [ "$b" = "build/phase-0-to-1" ] || { echo "FAIL: HEAD is '$b', not build/phase-0-to-1 — §0.4: nothing below runs on main"; exit 1; }; echo "on $b"    # → on build/phase-0-to-1
+ls D:/repos/redkiln-rs/references/adr/0114-*.md >/dev/null 2>&1 || { echo "FAIL: references/adr/0114-*.md absent"; exit 1; }; test -f D:/repos/redkiln-rs/runbook/INDEX.md || { echo "FAIL: runbook/INDEX.md absent"; exit 1; }; echo "remediation present"   # → the 2026-09-11 remediation is in the tree; the command globs ADR-**0114**, not ADR-0111 — both are present, the comment was wrong [corrected 2026-09-11]
+v=$(rustup run 1.98.1 rustc --version); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: rustup run 1.98.1 rustc exited $rc"; exit 1; }; printf '%s\n' "$v" | grep -q '^rustc 1\.98\.1 ' || { echo "FAIL: the pin is 1.98.1 exactly, got '$v'"; exit 1; }; echo "$v"    # → rustc 1.98.1 (48a229cea 2026-09-01); only the 1.98.1 pin is asserted, not the build hash — the PATH rustc is recorded, not asserted
+v=$(claude --version); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: claude --version exited $rc — instrument NOT recorded, file untouched"; exit 1; }
+printf '%s\n' "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+' || { echo "FAIL: no version in '$v' — instrument NOT recorded, file untouched"; exit 1; }
+printf '%s\n' "$v" > D:/repos/redkiln-rs/spikes/results/instrument-checks/RUNBOOK-instrument.txt
+echo "$v"
+                                                          # → validates the capture, THEN writes e.g. "2.1.269 (Claude Code)" (measured 2026-09-11) to a FILE; read it back, never retype it.
+                                                          #   The old `claude --version | tee <file>` form put claude on the LEFT of a pipe (pipeline status is tee's) AND tee opens O_TRUNC before reading stdin: a failed instrument exited 0 and left a 0-byte file [hardened 2026-09-11].
+f=D:/repos/redkiln-rs/spikes/results/instrument-checks/RUNBOOK-instrument.txt; test -s "$f" || { echo "FAIL: $f absent or empty"; exit 1; }; grep -qE '^[0-9]+\.[0-9]+\.[0-9]+' "$f" || { echo "FAIL: no version in $f: '$(cat "$f")'"; exit 1; }; echo "instrument recorded: $(cat "$f")"   # → instrument recorded: 2.1.269 (Claude Code); non-empty AND a version, so the downstream `grep -qF "$(cat …)"` in s1 Checkpoint 1 can never degrade to an empty pattern [hardened 2026-09-11]
+( cd D:/repos/redkiln-rs/spikes/runner && cargo build ) || { echo "FAIL: the rig does not build — Halt 1"; exit 1; }
+out=$(cd D:/repos/redkiln-rs/spikes/runner && ./target/debug/redkiln-spike-runner doctor); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: doctor exited $rc"; exit 1; }
+printf '%s\n' "$out" | grep -qF 'version >= floor : true' || { echo "FAIL: doctor did not print 'version >= floor : true'"; exit 1; }
+printf '%s\n' "$out" | grep -qF 'environment is fit for a measured run.' || { echo "FAIL: doctor did not print the fitness line"; exit 1; }
+printf '%s\n' "$out"   # → exit 0, and the two lines §0.3 names are ASSERTED, not eyeballed (main.rs:1753, :1756). A passing floor is NOT a matched instrument (Halt 2).
 ```
 
 `spikes/results/instrument-checks/` already exists. That file is what Step 1.3's commit message quotes, and what

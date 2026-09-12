@@ -143,21 +143,30 @@ PY
 git add .gitignore && git commit -m "chore: reconcile the .gitignore results paragraph with ADR-0013"
 ```
 
-**Checkpoint 2.** All ten:
+**Checkpoint 2.** All eleven checks — recounted on disk 2026-09-11; the block said "ten" and carries eleven, and
+several now carry a one-line precondition guard above them, so the block runs longer than eleven lines:
 
 ```bash
 git -C D:/repos/redkiln-corpus rev-parse HEAD                  # → a 40-hex SHA
 grep CORPUS_SHA D:/repos/redkiln-rs/CORPUS_PIN | grep -qE '=[0-9a-f]{40}$' && echo "40-hex, unabbreviated"
-grep -q "$(git -C D:/repos/redkiln-corpus rev-parse HEAD)" D:/repos/redkiln-rs/CORPUS_PIN && echo "pin matches HEAD"
-git -C D:/repos/redkiln-corpus status --porcelain              # → EMPTY (AC-464 refuses a dirty checkout)
-git -C D:/repos/redkiln-rs ls-files | grep -E '^spikes/(corpus|results|runner)/' | wc -l   # → 0
+h=$(git -C D:/repos/redkiln-corpus rev-parse HEAD) && test -n "$h" || { echo "FAIL: corpus HEAD unreadable"; exit 1; }
+grep -q "$h" D:/repos/redkiln-rs/CORPUS_PIN && echo "pin matches HEAD" || { echo "FAIL: CORPUS_PIN missing, or it does not carry HEAD"; exit 1; }
+out=$(git -C D:/repos/redkiln-corpus status --porcelain) || { echo "FAIL: corpus repo unreadable"; exit 1; }
+test -z "$out" && echo "corpus clean" || { echo "FAIL: corpus dirty (AC-464)"; printf '%s\n' "$out"; exit 1; }   # → "corpus clean"
+git -C D:/repos/redkiln-rs rev-parse --git-dir >/dev/null || { echo "FAIL: redkiln-rs is not a repo"; exit 1; }
+n=$(git -C D:/repos/redkiln-rs ls-files | grep -E '^spikes/(corpus|results|runner)/' | wc -l)   # wc -l, not grep -c — see below
+test "$n" -eq 0 && echo "no corpus paths tracked here" || { echo "FAIL: $n corpus paths still tracked here (AC-465)"; exit 1; }   # → 0
 ls D:/repos/redkiln-corpus/results/p1-arm-d-labels-ryan.md \
    D:/repos/redkiln-corpus/results/p2-labels-ryan.md         # → both; Step 3b's work travelled
-test -f D:/repos/redkiln-corpus/results/p1-arm-l-labels-ryan.md && echo "arm L travelled" || echo "arm L outstanding — expected (DECISIONS-2026-09-11 #6)"
-test -d D:/repos/redkiln-corpus/results/p8-state && echo "FAIL: p8-state travelled" || echo "p8-state excluded"
+test -d D:/repos/redkiln-corpus/results || { echo "FAIL: corpus results/ absent — the arm-L check is not runnable"; exit 1; }
+test -f D:/repos/redkiln-corpus/results/p1-arm-l-labels-ryan.md && echo "arm L travelled" || echo "DEFERRED: arm L outstanding — expected (DECISIONS-2026-09-11 #6)"
+test -d D:/repos/redkiln-corpus/results || { echo "FAIL: corpus results/ absent — the p8-state exclusion is unverifiable"; exit 1; }
+test -d D:/repos/redkiln-corpus/results/p8-state && { echo "FAIL: p8-state travelled (PIA-021)"; exit 1; } || echo "p8-state excluded"
 git -C D:/repos/redkiln-corpus bundle verify predecessor-47faec9f.bundle >/dev/null && echo "predecessor bundle verifies"
-test "$(cat D:/repos/redkiln-corpus/predecessor-refs.count)" = "$(grep '^PREDECESSOR_REFS=' D:/repos/redkiln-rs/CORPUS_PIN | cut -d= -f2)" && echo "ref count pinned"
-git -C D:/repos/redkiln-rs status --porcelain                 # → EMPTY (PIA-018: the split is committed before Step 5)
+c=$(cat D:/repos/redkiln-corpus/predecessor-refs.count); p=$(grep '^PREDECESSOR_REFS=' D:/repos/redkiln-rs/CORPUS_PIN | cut -d= -f2)
+test -n "$c" && test "$c" = "$p" && echo "ref count pinned" || { echo "FAIL: refs.count='$c' CORPUS_PIN='$p'"; exit 1; }
+out=$(git -C D:/repos/redkiln-rs status --porcelain) || { echo "FAIL: redkiln-rs unreadable"; exit 1; }
+test -z "$out" && echo "redkiln-rs clean" || { echo "FAIL: redkiln-rs dirty — PIA-018 wants the split committed"; printf '%s\n' "$out"; exit 1; }   # → "redkiln-rs clean"
 ```
 
 The label-file lines are the check that the previous ordering would have failed silently: the filled panels are

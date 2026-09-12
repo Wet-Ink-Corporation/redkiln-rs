@@ -107,18 +107,27 @@ The `--out` path is absolute on purpose. The previous revision wrote `--out resu
 **Checkpoint 3a.** Both:
 
 ```bash
-grep -c 'review\.pass !== true'  D:/repos/redkiln/workflows/forge-fix.js   # → 2   (982 fixed + 1019 pre-existing)
-grep -c 'review\.pass === false' D:/repos/redkiln/workflows/forge-fix.js   # → 0   (the defect is gone)
+F=D:/repos/redkiln/workflows/forge-fix.js; test -f "$F" || { echo "FAIL: $F absent"; exit 1; }
+n=$(grep -c 'review\.pass !== true' "$F" || true); [ "$n" = 2 ] || { echo "FAIL: 'review.pass !== true' count=$n, expected 2"; exit 1; }   # → 2   (982 fixed + 1019 pre-existing)
+n=$(grep -c 'review\.pass === false' "$F" || true); [ "$n" = 0 ] || { echo "FAIL: the defect 'review.pass === false' is still present ($n), expected 0"; exit 1; }   # → 0   (the defect is gone)
 ```
 
 Two lines, not one, and the second is the one that actually discriminates: `=== false` reaching zero is only
 possible if line 982 changed. Before the fix these read **1** and **1**.
 
-and either a `d-fixconsumer.jsonl` record with a PASS/FAIL verdict, **or** a written line in
+and either a `d-fixconsumer.jsonl` record with a PASS/FAIL verdict, **or** a written line tagged `D-FIXCONSUMER` in
 `spikes/DECISIONS-2026-09-09.md` recording that the dispatch was deferred and that the runtime's behaviour is
-therefore still UNVERIFIED. Silence is not a checkpoint. The **principle** is already generalised into Phase 1
+therefore still UNVERIFIED. Silence is not a checkpoint, and **the tag is what makes the deferral checkable** — the
+checker below enforces the spelling this sentence states, and invents none. The **principle** is already generalised into Phase 1
 (AC-282, AC-439, design §9.6's `spoke()` row: absence is a block, never a pass) — but generalising it does not discharge
 the specific check, and this runbook does not pretend it does.
+
+```bash
+# Absolute paths on purpose: like Checkpoint 3a's block above, this one carries no `cd`.
+test -s D:/repos/redkiln-rs/spikes/results/d-fixconsumer.jsonl \
+  || grep -q 'D-FIXCONSUMER' D:/repos/redkiln-rs/spikes/DECISIONS-2026-09-09.md \
+  || { echo "FAIL: no d-fixconsumer.jsonl record and no line tagged D-FIXCONSUMER in DECISIONS-2026-09-09.md"; exit 1; }
+```
 
 ### 3b — Generate and hand over the three blind label files
 
@@ -272,21 +281,31 @@ pass. That checkpoint went green when Step 3b had not been done at all.
 
 ```bash
 cd D:/repos/redkiln-rs
-test -f spikes/results/p1-arm-l-labels-ryan.md || echo "MISSING: p1-arm-l-labels-ryan.md"
-                                                    # → no output. Measured 2026-09-10: it PRINTS — the file
-                                                    #   does not exist and arm L is genuinely outstanding.
-grep -l "FILL" spikes/results/p1-arm-l-labels-ryan.md | wc -l                                     # → 0
-grep -h "^labelled_at:" spikes/results/p1-arm-l-labels-ryan.md | grep -cE 'Z$'                    # → 1
+if test -f spikes/results/p1-arm-l-labels-ryan.md; then L=1
+elif grep -qi 'arm L outstanding' runbook/PROGRESS.md; then L=0
+  echo "### DEFERRED, NOT A PASS: arm-L labels absent — recorded outstanding in PROGRESS.md (DECISIONS-2026-09-11 #6); label at the new corpus pin ###"
+else echo "FAIL: p1-arm-l-labels-ryan.md absent AND no 'arm L outstanding' deferral recorded in runbook/PROGRESS.md"; exit 1; fi
+                                                    # → the DEFERRED line, exit 0. Three states, not two: PASS (file
+                                                    #   present, the two lines below then apply), DEFERRED (absent but
+                                                    #   recorded), FAIL (absent and unrecorded — silence).
+if [ "$L" = 1 ]; then n=$(grep -c "FILL" spikes/results/p1-arm-l-labels-ryan.md || true)
+  [ "$n" = 0 ] || { echo "FAIL: FILL placeholders remain in p1-arm-l-labels-ryan.md (count=$n; empty = unreadable)"; exit 1; }; fi   # → no output (skipped while DEFERRED)
+if [ "$L" = 1 ]; then n=$(grep -cE '^labelled_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$' spikes/results/p1-arm-l-labels-ryan.md || true)
+  [ "$n" = 1 ] || { echo "FAIL: arm-L labelled_at count=$n, expected 1 bare ...Z UTC stamp"; exit 1; }; fi   # → no output (skipped while DEFERRED)
 ```
 
 **The discharged half — P2. All four hold on this tree; run them as a regression check, not as work to do:**
 
 ```bash
 cd D:/repos/redkiln-rs
-test -f spikes/results/p2-labels-ryan.md || echo "MISSING: p2-labels-ryan.md"                     # → no output
-grep -l "FILL" spikes/results/p2-labels-ryan.md | wc -l                                           # → 0
-grep -h "^labelled_at:" spikes/results/p2-labels-ryan.md | grep -cE 'Z$'                          # → 1
-grep -cE '^\| P[0-9]{2} \|.*\| *(yes|no) *\|' spikes/results/p2-labels-ryan.md                     # → 41 of 41 rows answered
+test -f spikes/results/p2-labels-ryan.md || { echo "FAIL: p2-labels-ryan.md absent"; exit 1; }                    # → no output
+n=$(grep -c "FILL" spikes/results/p2-labels-ryan.md || true); [ "$n" = 0 ] || { echo "FAIL: FILL placeholders remain in p2-labels-ryan.md (count=$n; empty = unreadable)"; exit 1; }   # → no output
+n=$(grep -cE '^labelled_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$' spikes/results/p2-labels-ryan.md || true)
+[ "$n" = 1 ] || { echo "FAIL: P2 labelled_at count=$n, expected 1 bare ...Z UTC stamp (FILL-ME-ISO8601Z also ends in Z)"; exit 1; }   # → no output
+n=$(grep -cE '^\| P[0-9]{2} \|.*\| *(yes|no) *\|' spikes/results/p2-labels-ryan.md || true)
+[ "$n" = 41 ] || { echo "FAIL: answered P2 rows=$n, expected 41"; exit 1; }   # → no output (41 of 41 rows answered)
+{ grep -q '^labelled_at: 2026-09-10T15:58:08Z' spikes/results/p2-labels-ryan.md \
+  && grep -q '^labeller: Ryan Britton' spikes/results/p2-labels-ryan.md; } || { echo "FAIL: P2's labelled_at/labeller are no longer the F40 values"; exit 1; }
 grep -h "^labell" spikes/results/p2-labels-ryan.md
 # → labelled_at: 2026-09-10T15:58:08Z   /   labeller: Ryan Britton   [measured, F40]
 ```
@@ -366,12 +385,15 @@ no command that can check a decision was taken:
 ```bash
 cd D:/repos/redkiln-rs
 grep -c 'ChangeSummary' references/adr/0093-*.md                    # → ≥ 1: the S-BIN scoping record exists (ADR-0093 decision 4)
+for f in spikes/FINDINGS.md spikes/F39-DRAFT.md; do test -f "$f" || { echo "FAIL: $f absent"; exit 1; }; done
 grep -rn '^## F.*S-BIN' spikes/FINDINGS.md spikes/F*-DRAFT.md \
-  || echo "S-BIN has no finding yet — expected; the fixture is BrittonGames and the run is unscheduled"
+  || echo "### DEFERRED, NOT A PASS: S-BIN has no finding yet — expected; the fixture is BrittonGames and the run is unscheduled ###"
 grep -c 'before any S-BIN dispatch' spikes/METHOD-S.md               # → ≥ 1: the per-pass rule amendment (DECISIONS-2026-09-11; PIA-084)
 grep -c 'S-FACET' references/2026-09-09-change-classification.md     # → ≥ 1, and the §6 block dated 2026-09-11 re-registers the kill
-grep -n 'S-FACET' references/2026-09-08-architecture-design.md | grep -c 'pack rows'   # → ≥ 1: the row says what it gates
-grep -rn "E3-SEV" references/2026-09-08-architecture-design.md      # → "DONE (non-blind, 2026-09-04)" and the E3-SEV-BLIND row "Registered, not taken"
+grep -n 'S-FACET' references/2026-09-08-architecture-design.md | grep -c 'not Phase-1 entry'   # → ≥ 1: the row says what it gates
+D=references/2026-09-08-architecture-design.md
+grep -qF 'DONE (non-blind, the 2026-09-04 sheet)' "$D" || { echo "FAIL: the E3-SEV DONE disposition is absent from the design"; exit 1; }
+grep -n 'E3-SEV-BLIND' "$D" | grep -q 'Registered, not taken' || { echo "FAIL: the E3-SEV-BLIND row no longer reads 'Registered, not taken'"; exit 1; }   # → silent: both dispositions are written
 test -s spikes/F39-DRAFT.md && echo "arm D's result has an F-number"  # → F39, the source of record
 ```
 

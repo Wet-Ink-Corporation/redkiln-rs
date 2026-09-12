@@ -108,23 +108,29 @@ The new unsatisfiable rate, its pack count (12) and its rigor mode (pack-default
 records against SM-026/SM-027 and the AC register cites in AC-101/AC-102; the old figures stay in the record as
 "pre-ADR-0089/0093".
 
-**Checkpoint 7e.** All eleven:
+**Checkpoint 7e.** All thirteen — recounted on disk 2026-09-11; "eleven" silently dropped the commit line and the
+tag line, both of which carry `# →` expectations and both of which had defects:
 
 ```bash
 cd D:/repos/redkiln-rs
-test -f .redkiln/facets.toml && echo "registry derived"                             # → the product registry exists
-grep -c '^source = "llm"' .redkiln/facets.toml                                      # → 0
-awk '/^source = "derived"/{d++} /^deriver = /{v++} END{print d, v}' .redkiln/facets.toml   # → 6 6
-./target/debug/redkiln lint --facet-stability  .redkiln/facets.toml ; echo "exit=$?" # → exit=0 on the zero-llm branch (AC-071)
-./target/debug/redkiln lint --facet-provenance .redkiln/facets.toml ; echo "exit=$?" # → exit=0: six derived, six records (AC-520)
-./target/debug/redkiln doctor ; echo "exit=$?"                                        # → exit=0: every pack loads under AC-071/AC-520/AC-072
-ls .redkiln/DISPOSITIONS-*.md | wc -l                                                # → 1, and its row count equals the three greps' sum
-grep -rn 'stale_policy' .redkiln/packs/*.toml | grep -c 'rematerialise'              # → one per cost class per Phase-1 pack, each with its warrant comment
-grep -rn 'exists(' .redkiln/packs .redkiln/catalog | wc -l                           # → 0 (F42's incident row rewritten)
-python spikes/p9/grammar-probe.py >/dev/null ; echo "exit=$?"                        # → exit=0 over spikes/p9 once the incident row is fixed there too (or 1 with only catalog-b's four defects listed — record which)
+test -f .redkiln/facets.toml && echo "registry derived" || { echo "FAIL: .redkiln/facets.toml absent — 7e.1 did not run (Halt 8)"; exit 1; }   # → the product registry exists
+n=$(grep -c '^source = "llm"' .redkiln/facets.toml); echo "llm-sourced: ${n:-<registry unreadable>}"; test "$n" = 0 || { echo "FAIL: expected 0 llm-sourced facets, got '${n:-<unreadable>}' (ADR-0090)"; exit 1; }   # → 0
+dv=$(awk '/^source = "derived"/{d++} /^deriver = /{v++} END{print d+0, v+0}' .redkiln/facets.toml); echo "$dv"; test "$dv" = "6 6" || { echo "FAIL: derived/deriver is '$dv', expected '6 6' (AC-520)"; exit 1; }   # → 6 6
+test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — Step 7d has not built it; Checkpoint 7e's three CLI lines cannot be run (Halt 8)"; exit 1; }
+./target/debug/redkiln lint --facet-stability  .redkiln/facets.toml || { rc=$?; echo "FAIL: lint --facet-stability exited $rc (AC-071)"; exit 1; }; echo "facet-stability exit=0"   # → exit=0 on the zero-llm branch (AC-071)
+./target/debug/redkiln lint --facet-provenance .redkiln/facets.toml || { rc=$?; echo "FAIL: lint --facet-provenance exited $rc — 127 means the binary is absent, not a lint verdict (AC-520)"; exit 1; }; echo "facet-provenance exit=0"   # → exit=0: six derived, six records (AC-520)
+./target/debug/redkiln doctor || { rc=$?; echo "FAIL: doctor exited $rc — 127 means the binary is absent, not a pack-load verdict (AC-071/AC-520/AC-072)"; exit 1; }; echo "doctor exit=0"   # → exit=0: every pack loads under AC-071/AC-520/AC-072
+test "$(ls -1 .redkiln/DISPOSITIONS-*.md 2>/dev/null | wc -l)" -eq 1 || { echo "FAIL: not exactly one .redkiln/DISPOSITIONS-*.md"; exit 1; }; ls -1 .redkiln/DISPOSITIONS-*.md   # → 1, and its row count equals the three greps' sum
+grep -rn 'stale_policy' .redkiln/packs/*.toml || { echo "FAIL: no stale_policy row in any pack — 7e.3 did not run"; exit 1; }
+sp=$(grep -rh 'stale_policy' .redkiln/packs/*.toml | wc -l); rem=$(grep -rh 'stale_policy' .redkiln/packs/*.toml | grep -c 'rematerialise'); echo "stale_policy=$sp rematerialise=$rem"; test "$sp" -eq "$rem" || { echo "FAIL: $((sp-rem)) stale_policy rows are not rematerialise — decision 5 fixes every Phase-1 class (DECISIONS-2026-09-11 #4)"; exit 1; }   # → one per cost class per Phase-1 pack, each with its warrant comment
+grep -rn 'exists(' .redkiln/packs .redkiln/catalog; rc=$?; test "$rc" -eq 1 || { echo "FAIL: rc=$rc — 0 means an exists() predicate remains (ADR-0033 admits no such user function, F42); 2 means .redkiln/packs or .redkiln/catalog is absent (Halt 8)"; exit 1; }; echo "OK: no exists( predicate"   # → 0 (F42's incident row rewritten)
+out=$(python spikes/p9/grammar-probe.py); rc=$?; printf '%s\n' "$out" | grep -E '^predicates parsed|^on_false forms|FAIL '
+test "$rc" -le 1 || { echo "FAIL: grammar-probe exited $rc — it did not run to completion"; exit 1; }
+printf '%s\n' "$out" | grep -qE '^  (FAIL|ON_FALSE-FAIL) (packs|catalog)/' && { echo "FAIL: a defect remains in packs/ or catalog/ — 7e.2's rewrite did not land"; exit 1; }; echo "OK rc=$rc — nothing under packs/ or catalog/ failed; anything listed is catalog-b's, which 7e.1 does not copy"   # → rc 0 or 1, and NO FAIL naming packs/ or catalog/ (record the catalog-b defects that remain)
 grep -rn '^executed = ' .redkiln/catalog/*.toml | grep -c never                       # → 102 minus root-cause's P7 members (ADR-0114: a doctor row, never a lint failure)
-git add .redkiln spikes/p9 && git commit -m "Step 7e: pack authoring — .redkiln/ derived, rows dispositioned, stale_policy recorded per class, lattice re-baselined" && git status --porcelain | grep -c '^ M'   # → 0
-git tag -a redkiln-pack-v0 -m "ADR-0114: P6 lint green at pack-default; 287/287 parsed" && git tag -l redkiln-pack-v0   # → the tag exists on the Step 7e commit; its two conditions are the doctor and grammar-probe lines above (no CLI verb — ADR-0107 has none for it)
+git add .redkiln spikes/p9 && git commit -m "Step 7e: pack authoring — .redkiln/ derived, rows dispositioned, stale_policy recorded per class, lattice re-baselined" || { echo "FAIL: git add/commit did not complete"; exit 1; }
+n=$(git status --porcelain | grep -c '^ M'); echo "$n"; test "$n" -eq 0 || { echo "FAIL: $n tracked files still modified after the Step 7e commit"; exit 1; }   # → 0
+git tag -a redkiln-pack-v0 -m "ADR-0114: P6 lint green at pack-default; 287/287 parsed" && git rev-parse -q --verify refs/tags/redkiln-pack-v0 || { echo "FAIL: redkiln-pack-v0 was not created"; exit 1; }   # → the tag's SHA on the Step 7e commit; its two conditions are the doctor and grammar-probe lines above (no CLI verb — ADR-0107 has none for it)
 ```
 
 **Acceptance set (explicit):** **AC-080–AC-118** (packs and catalog lint — AC-119 unallocated), **AC-068** (PROVISIONAL,

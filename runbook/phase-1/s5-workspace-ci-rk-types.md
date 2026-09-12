@@ -261,9 +261,14 @@ test ! -d .github/workflows && echo "BEFORE: no CI yet"               # → prin
 # AFTER assertions
 cargo build --workspace                                  # builds, on the pinned toolchain (rust-toolchain.toml selects it)
 cargo fmt --all --check                                  # exit 0
-cargo clippy --workspace --all-targets ; echo "exit=$?"  # → exit=0; nursery WARNINGS are permitted, the gate is the exit code (PIA-030)
-cargo test --workspace                                   # exit 0 — the corpus-bound suite is behind --features corpus
-cargo test --workspace --features corpus                 # exit 0 on THIS box (redkiln-corpus at CORPUS_PIN is present); not a CI line
+cargo clippy --workspace --all-targets; rc=$?; echo "exit=$rc"; [ "$rc" -eq 0 ] || exit 1   # → exit=0; nursery WARNINGS are permitted, the gate is the exit code (PIA-030)
+out=$(cargo test --workspace 2>&1); rc=$?                 # exit 0 — the corpus-bound suite is behind --features corpus
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: the workspace suite ran 0 tests"; exit 1; }
+test -f CORPUS_PIN && test -d D:/repos/redkiln-corpus || { echo "FAIL: corpus absent — Step 2 has not landed, or redkiln-corpus is not checked out on this box"; exit 1; }
+out=$(cargo test --workspace --features corpus 2>&1); rc=$?   # not a CI line: it runs only on a box holding redkiln-corpus at CORPUS_PIN
+[ "$rc" -eq 0 ] || { echo "FAIL: corpus suite exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 corpus tests ran"; exit 1; }
 cargo audit --deny unmaintained                          # exit 0
 cargo deny check bans advisories licenses                # exit 0 (deny.toml committed)
 test -f rust-toolchain.toml && grep -q 'channel = "1.98.1"' rust-toolchain.toml   # the FULL string (PIA-024), not a prefix
@@ -271,16 +276,22 @@ grep -q 'rust-version = "1.98.1"' Cargo.toml             # equal to the pin (ADR
 grep -q 'exclude = \["spikes/runner", "spikes/s-ports"\]' Cargo.toml   # the exclude survived the first `cargo new` (PIA-035)
 test -f .github/workflows/ci.yml && grep -q 'windows-latest' .github/workflows/ci.yml && grep -q 'ubuntu-latest' .github/workflows/ci.yml
 test -f clippy.toml && grep -q 'disallowed-methods' clippy.toml
-test -f deny.toml && grep -c 'temporalio-sdk\|graph-flow\|dbos\|durable' deny.toml   # → 4
-grep -L '^\[lints\]' crates/*/Cargo.toml                  # → empty: every member carries the table
-grep -l 'workspace = true' crates/*/Cargo.toml | wc -l    # → the member count
-test -d crates/rk-types/tests/it/snapshots \
-  && { grep -rnE 'oneOf' crates/rk-types/tests/it/snapshots/ | wc -l; }   # → 0, and the dir MUST exist (PIA-034)
+test -f deny.toml || { echo "FAIL: deny.toml absent"; exit 1; }
+for b in temporalio-sdk graph-flow dbos durable; do grep -q "$b" deny.toml || { echo "FAIL: deny.toml is missing ADR-0086 ban $b"; exit 1; }; done   # → all four, whatever the line layout
+n=$(ls crates/*/Cargo.toml 2>/dev/null | wc -l); [ "$n" -gt 0 ] || { echo "FAIL: no crates/*/Cargo.toml"; exit 1; }
+miss=$(grep -L '^\[lints\]' crates/*/Cargo.toml); [ -z "$miss" ] || { echo "FAIL: no [lints] table in: $miss"; exit 1; }   # → empty: every member carries the table
+n=$(ls -d crates/*/ 2>/dev/null | wc -l); k=$(grep -l 'workspace = true' crates/*/Cargo.toml 2>/dev/null | wc -l)
+[ "$n" -gt 0 ] && [ "$n" -eq "$k" ] || { echo "FAIL: $k of $n members carry 'workspace = true'"; exit 1; }   # → the member count, asserted not eyeballed
+test -d crates/rk-types/tests/it/snapshots || { echo "FAIL: snapshot dir absent (PIA-034)"; exit 1; }
+one=$(grep -rnE 'oneOf' crates/rk-types/tests/it/snapshots/); [ -z "$one" ] || { echo "FAIL: oneOf in an exported schema:"; printf '%s\n' "$one"; exit 1; }   # → 0, and the dir MUST exist (PIA-034)
                                                           # anyOf is legal only as schemars' nullable form and
                                                           # never nested — the snapshot TEST asserts that, not a grep
-grep -rn 'ChangeSummary' crates/ --include='*.rs' | grep -v 'crates/rk-ports/' | wc -l   # → 0. Blocked on S-BIN — lives only as
+test -d crates/rk-types/src || { echo "FAIL: crates/rk-types/src absent"; exit 1; }
+cs=$(grep -rn 'ChangeSummary' crates/ --include='*.rs' | grep -v 'crates/rk-ports/'); [ -z "$cs" ] || { echo "FAIL: ChangeSummary outside rk-ports:"; printf '%s\n' "$cs"; exit 1; }   # → 0. Blocked on S-BIN — lives only as
                                                           #   rk-ports' opaque newtype (ADR-0099 clause 5), and rk-ports is 7a's
-cargo metadata --format-version 1 | python -c "import json,sys; m=json.load(sys.stdin); print(sorted(p['name'] for p in m['packages'] if any(d['name']=='anyhow' for d in p['dependencies'])))"
+test -f Cargo.toml || { echo "FAIL: no root manifest"; exit 1; }
+meta=$(cargo metadata --format-version 1); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: cargo metadata exited $rc"; exit 1; }
+printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; print(sorted(p['name'] for p in m['packages'] if any(d['name']=='anyhow' for d in p['dependencies'])))"
                                                           # → [] at Step 5 (rk-cli and redkiln-migrate are 7d's); the design §9.1 anyhow convention, as a check
 ```
 

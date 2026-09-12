@@ -77,20 +77,34 @@ git -C D:/repos/redkiln status --porcelain -- workflows/   # → EMPTY: the wrap
 **Checkpoint 9.** Rollback is not done until these pass:
 
 ```bash
-git -C D:/repos/redkiln-rs rev-parse --abbrev-ref HEAD              # → main
-git -C D:/repos/redkiln-rs log --oneline -6                         # → the salvage cherry-picks (Step 1,
+test "$(git -C D:/repos/redkiln-rs rev-parse --abbrev-ref HEAD)" = main \
+  || { echo "FAIL: HEAD is $(git -C D:/repos/redkiln-rs rev-parse --abbrev-ref HEAD), not main"; exit 1; }   # → main
+git -C D:/repos/redkiln-rs log --oneline -6 main                    # → the salvage cherry-picks (Step 1,
                                                                     #   Checkpoint 4, Checkpoint 4a, Checkpoint 2,
                                                                     #   Step 6.1 if reached) on top of main's HEAD —
-                                                                    #   the 2026-09-11 remediation merge, not
+                                                                    #   the 2026-09-11 remediation lineage, not
                                                                     #   `009a4ec` and not `e3b0bac`; `e3b0bac` is
                                                                     #   the pre-design-pass point (s0 §0.1)
+subs=$(git -C D:/repos/redkiln-rs log --format=%s main)             # the eyeball above is not the check; this is
+test -n "$subs" || { echo "FAIL: main's subject log is unreadable"; exit 1; }
+for s in "Phase 0, part 1: run noise ignored, instrument recorded" "Extract redkiln-corpus at a pinned SHA" \
+         "ADR-0090: the context-vector source" "Apply ADR-0089/0090/0093"; do   # verbatim from s1/s2/s4/s4a's own `git commit -m`
+  printf '%s\n' "$subs" | grep -qF "$s" \
+    || { echo "FAIL: \"$s\" is on no commit on main — cherry-pick it before the branch goes (if its step was never reached, record that first)"; exit 1; }
+done
+test -n "$(git -C D:/repos/redkiln-rs ls-tree --name-only main references/adr/ | grep '^references/adr/0091-')" \
+  && echo "salvaged: ADR-0091 (Step 6.1)" \
+  || echo "DEFERRED: ADR-0091 not on main — Step 6.1 was never reached (the salvage block marks it conditional); NOT a pass"
 ls D:/repos/redkiln-rs/spikes/corpus D:/repos/redkiln-rs/spikes/results \
    D:/repos/redkiln-rs/spikes/runner >/dev/null && echo "spike tree restored"
 ls D:/repos/redkiln-rs/spikes/results/p1-arm-d-labels-ryan.md \
    D:/repos/redkiln-rs/spikes/results/p2-labels-ryan.md             # → both: the panels survived (arm L only if it was ever labelled)
-git -C D:/repos/redkiln rev-parse HEAD                              # → 47faec9f46b8d983c2c75f0794164e68415ae706
-git -C D:/repos/redkiln diff --stat -- workflows/forge-fix.js       # → empty
-grep -c 'spikes/results/ is deliberately NOT ignored' D:/repos/redkiln-rs/.gitignore   # → 1: paragraph restored
+test "$(git -C D:/repos/redkiln rev-parse HEAD)" = 47faec9f46b8d983c2c75f0794164e68415ae706 \
+  || { echo "FAIL: predecessor HEAD is not 47faec9f"; exit 1; }
+git -C D:/repos/redkiln diff HEAD --exit-code --stat -- workflows/forge-fix.js   # → empty; a staged or unstaged edit now exits 1
+test -f D:/repos/redkiln-rs/.gitignore || { echo "FAIL: .gitignore absent"; exit 1; }
+test "$(grep -c 'spikes/results/ is deliberately NOT ignored' D:/repos/redkiln-rs/.gitignore)" = 1 \
+  || { echo "FAIL: paragraph not restored exactly once"; exit 1; }
 ```
 
 **What rollback cannot undo, and must not pretend to.** Four things, named rather than glossed:

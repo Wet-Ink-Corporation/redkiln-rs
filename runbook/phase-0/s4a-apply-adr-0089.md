@@ -154,28 +154,32 @@ a `deriver` declared lexical — **plus a positive companion that must load** (a
 `deriver`, a scored record and positives). **Without the positive companion the rule is satisfied by a lint that
 rejects everything**, which is golden constraint 9 arriving from the too-wide direction.
 
-**Checkpoint 4a.** All twelve. **Ten** are commands against files that exist today; two are marked **`[WILL EXIST]`**
+**Checkpoint 4a.** All eleven. **Nine** are commands against files that exist today; two are marked **`[WILL EXIST]`**
+(recounted 2026-09-11: this read "twelve … Ten" — the tally was never decremented when PIA-003 struck the
+`surfaces.toml` line. Count assertions, not physical lines: the hardening splits two of them into two statements each)
 because the lint is Phase-1 output and Step 7b builds it, and they are **deferred, not failed** here (Halt 8's
 carve-out) and re-run as named lines of Checkpoint 7b (PIA-003).
 
 ```bash
 cd D:/repos/redkiln-rs
 F=spikes/p9/facets.toml
-grep -c '^\[facet\.auth\]'      "$F"      # → 0: the repo-wide auth boolean is WITHDRAWN, not retuned
-grep -c '^\[facet\.surfaces\]'  "$F"      # → 1: its replacement exists
-grep -A4 '^\[facet\.surfaces\]' "$F" | grep -c '^set = true'          # → 1: declared as a SET, by name
-grep -A4 '^\[facet\.surfaces\]' "$F" | grep -c '^source = "declared"' # → 1: the token AC-072 recognises (ADR-0093)
-awk '/^source = "derived"/{d++} /^deriver = /{v++} END{print d, v}' "$F"
+test "$(grep -c '^\[facet\.auth\]' "$F")" = 0 || { echo "FAIL: [facet.auth] still declared"; exit 1; }   # → silent, exit 0: the repo-wide auth boolean is WITHDRAWN, not retuned
+test "$(grep -c '^\[facet\.surfaces\]' "$F")" = 1 || { echo "FAIL: [facet.surfaces] stanza count is not 1"; exit 1; }   # → silent, exit 0: its replacement exists
+grep -q '^\[facet\.surfaces\]' "$F" || { echo "FAIL: [facet.surfaces] absent"; exit 1; }
+test "$(awk '/^\[facet\.surfaces\]/{f=1;next} /^\[/{f=0} f' "$F" | grep -c '^set = true')" = 1 || { echo "FAIL: surfaces does not declare set = true"; exit 1; }   # → silent, exit 0: declared as a SET, by name, inside the surfaces stanza ONLY
+test "$(awk '/^\[facet\.surfaces\]/{f=1;next} /^\[/{f=0} f' "$F" | grep -c '^source = "declared"')" = 1 || { echo "FAIL: surfaces is not source = \"declared\""; exit 1; }   # → silent, exit 0: the token AC-072 recognises (ADR-0093), inside the surfaces stanza ONLY
+awk '/^source = "derived"/{d++} /^deriver = /{v++} END{printf "%d %d\n", d, v; exit !(d==6 && v==6)}' "$F" || { echo "FAIL: derived count and deriver count are not both 6"; exit 1; }
                                           # → the two numbers are EQUAL, and both are 6 (ADR-0093 decision 2):
                                           #   toolchain, change, ui, flag_exists, data_migration, recent_deploy.
                                           #   NOTE the pattern is NOT anchored with `$`: `recent_deploy` carries a
                                           #   trailing comment, so an anchored match undercounts.
-grep -c '^source = "kernel"'   "$F"       # → 4: stage, rigor, role, cost (ADR-0093 decision 1)
-grep -c '^source = "llm"'      "$F"       # → 0: ADR-0090 re-sourced all seven to human (PIA-003)
-grep -c 'values = \[true, false\]' "$F"   # → 0: no boolean still declares a two-valued domain (4a.3) — all
+test "$(grep -c '^source = "kernel"' "$F")" = 4 || { echo "FAIL: kernel-sourced facets != 4"; exit 1; }   # → silent, exit 0: stage, rigor, role, cost (ADR-0093 decision 1)
+test "$(grep -c '^source = "llm"' "$F")" = 0 || { echo "FAIL: llm-sourced facets remain"; exit 1; }   # → silent, exit 0: ADR-0090 re-sourced all seven to human (PIA-003)
+test "$(grep -c 'values = \[true, false\]' "$F")" = 0 || { echo "FAIL: two-valued boolean domains remain"; exit 1; }   # → silent, exit 0: no boolean still declares a two-valued domain (4a.3) — all
                                           #   EIGHT booleans, the three re-sourced-to-human ones included
 git add spikes/p9/facets.toml && git commit -m "Apply ADR-0089/0090/0093: deriver, kernel and declared sources, surfaces, tri-valued booleans, no llm facet" \
-  && git status --porcelain | grep -c '^ M' ; echo "exit=$?"            # → 0: the registry edit is in history before Step 2 moves anything (PIA-018)
+  || { echo "FAIL: nothing was committed"; exit 1; }
+test -z "$(git status --porcelain spikes/p9/facets.toml)" || { echo "FAIL: facets.toml still dirty after commit"; exit 1; }   # → silent, exit 0: the registry edit is in history before Step 2 moves anything (PIA-018)
 ```
 
 **The `surfaces.toml` line is gone from this checkpoint** (PIA-003): no such file exists in this tree, ADR-0089 makes
