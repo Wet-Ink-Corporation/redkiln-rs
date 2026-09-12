@@ -1,24 +1,7 @@
-> **DRAFT — not an accepted record.** Drafted 2026-09-12 for **DECISIONS-2026-09-12 E3**. It lives in `spikes/`
-> deliberately: `s1` Checkpoint 1 asserts `ls references/adr/*.md | wc -l` **is exactly 114**, so a file added to
-> `references/adr/` before acceptance breaks a checkpoint that has already passed (`66276bf`).
->
-> **Landing checklist**, when accepted:
-> 1. Move to `references/adr/0116-the-event-kind-table-gains-artifact-write.md`.
-> 2. Flip `status: proposed` → `accepted`.
-> 3. Edit `references/adr/0105-*.md` frontmatter: `superseded_by: []` → `superseded_by: ["0116"]`. **Assert the
->    anchor first** (golden constraint 7).
-> 4. `references/adr/README.md`: index row; `accepted (partially superseded by 0116)` on 0105; next-free moves on.
-> 5. `s1`'s count and `00-preamble.md`'s Inputs move by one **per record landed** — land 0115 and 0116 together and
->    the move is 114 → 116, 112 → 114 records. Re-run `census_adr.py`; record the new tally and edge count.
-> 6. Add the table row to design §5 and the variant to `rk-types`' `EventKind` **in the same change** — the golden
->    schema snapshot (s5 §5.3) is what catches one without the other.
-> 7. `s7d`/`s8` may then assert AC-521's digest half; remove the NOT-RUN framing if any remains.
-
 ---
-
 id: "0116"
 title: The event-kind table gains artifact.write — the producing half of artifact.read, so a run's outputs are a query rather than a replay
-status: proposed
+status: accepted
 date: 2026-09-12
 legacy_id: none
 source: spikes/DECISIONS-2026-09-12.md E3; references/2026-09-08-acceptance-criteria.md AC-521 *Verified by* (:6767-6768), AC-472 (:6727-6735), AC-426 (:6034-6040); references/2026-09-08-architecture-design.md §5 the event-kind table (:699, :706-722); references/adr/0105-rk-git-and-rk-store-contracts-as-rules.md clause 7; references/adr/0075-typed-artifacts-revision-4-refinements.md (:58, :84)
@@ -27,7 +10,6 @@ superseded_by: []
 related: ["0006", "0018", "0075", "0097", "0099", "0109", "0115"]
 evidence: ["PIA-002", "S-MIG", "E3"]
 consumers: []
-
 ---
 
 ## Context and problem

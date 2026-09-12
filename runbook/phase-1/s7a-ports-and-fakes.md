@@ -35,6 +35,15 @@ remains nightly-only through 1.98.1 (R-ASYNC, discharged 2026-09-10): "no generi
 - **Every port trait carries `Send + Sync` as supertraits, and the composition root holds each as
   `Arc<dyn Port + Send + Sync>`** — a fake that holds an `Rc` does not compile, which is one of F41's two
   `compile_fail` doctests; the other is AC-480's generics-leak rule.
+- **The EventStore port is the one exception, and it is a record, not a workaround: `Arc<Mutex<dyn EventStore>>`**
+  (**ADR-0115**, narrowing ADR-0099 clause 4). An `Arc<dyn T>` yields `&T` and never `&mut T`, so a bare `Arc`
+  cannot produce the `&mut dyn EventStore` clause 1's `dispatch` takes — the two clauses were not jointly
+  satisfiable, and F41 compiled this shape. What clause 4 still forbids is a **user-defined** wrapper between the
+  `Arc` and the trait object (`struct StoreHandle(Arc<dyn EventStore>)` and every shape like it): the test is
+  whether the type adds a second dispatch or a seam a fake must be swapped at, and `Mutex` adds neither. The lock
+  is taken by the composition root at the call boundary and released when the dispatch returns; **no port method
+  acquires it, and it is never held across a dispatch to another port.** Lock **poisoning** is an open item
+  ADR-0115 names and does not close — it must not be silently recovered with `unwrap_or_else(|e| e.into_inner())`.
 - **`Typed`** is an erased validated value (`serde_json::Value` + schema id) the kernel deserialises; `ActivitySpec`
   carries `StepSpec`'s fields and `DispatchRecord` carries `StepRecord`'s (argv and env as digests only — ADR-0105
   clause 7).
@@ -111,8 +120,8 @@ negative). **Its scope is owed a reconciliation (R11):** the register's clause n
 `rk-kernel`. Both crates must be clean; run it on both here and state the scope once when the register is corrected.
 **Excluded, by id and reason:** AC-501–AC-506 (Phase 2),
 AC-507/AC-508/AC-510 (Phase 3), AC-512/AC-514–AC-517/AC-519 in part (CONDITIONAL — unbuildable until the distribution
-decision), AC-496 (PROVISIONAL), AC-482 (human-gated), AC-513 (retired, never reuse), AC-502 (S-CODEX unrun; Phase 4
-is the earliest a second harness ships), AC-239 (list-is-data test — kept, in 7b's set). The `rk-port-toolchain`
+decision), AC-496 (PROVISIONAL), AC-482 (human-gated), AC-513 (retired, never reuse), AC-502 (S-CODEX unrun; the second
+harness is **Phase 2** — ADR-0094 decision 2, ERRATA E-0094-1), AC-239 (list-is-data test — kept, in 7b's set). The `rk-port-toolchain`
 label on register rows is a subject tag for this crate (design §9.1 is the crate authority).
 
 **Spikes this step consumed:** S-PORTS (F41, done). **Spikes it owes:** none — S-BIN is 7c's `change_summary` body.

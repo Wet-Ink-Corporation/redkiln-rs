@@ -27,23 +27,26 @@ decide for itself** — `00-preamble.md`: *"Where a stage is tempted to decide s
 | **E10** | The minimum `git` version the wrapper asserts — decision #3 of the preamble's table, left a stub | **A: `>= 2.20` unconditionally, and conditional above that.** ADR-0091 at Step 6.1 records the final floor | 2.20 is what `interpret-trailers --if-exists=add` needs, and every other op in ADR-0105 clause 5's **unconditional** write set is older. The one newer op is `git clone --depth 1 --revision <sha>`, reached **only on an S-GIX/c no-go** (ADR-0098) — on a /c go the wrapper never invokes it. [measured, 2026-09-12: `git version 2.55.0.windows.3` lists `--[no-]revision <rev>` in `git clone -h`] | s6 constraint 3 states both halves. ADR-0091 — written at §6.1 immediately after the arms run — carries the final number beside the three S-GIX verdict lines. The floor must be met by the CI runners, not only this box. **Confirm the `--revision` introducing version against the git release notes when writing ADR-0091** | Yes |
 | **E13** | Step 7d's migration acceptance set against the register's corpus-bound list | **A: align to the register, keeping AC-475 as a negative tripwire** | The register's phase note (`:6263`) names AC-444, AC-451–454, AC-456–462, AC-464, AC-467–469 **and AC-475** a *Phase-2 acceptance set*, and lists what Phase 1 owes. Step 7d claimed **nine** of them (AC-453–458, AC-462, AC-464, AC-467) on an instrument it cannot run here — the PIA-059 shape. AC-475's Verified-by has two halves and the second, *"a schema assertion of zero `ChangeSummary` values in migrated output"*, needs **no corpus** | s7d's set realigned. AC-475 stays claimed: it is a **negative** criterion, cheap to assert before the code that could violate it exists, and s5 §5.3's *"no `ChangeSummary` value is synthesised (AC-475)"* would otherwise cite a criterion no Phase-1 stage claims. **Owed (errata):** AC-475's placement, and **AC-468**, which the phase note lists as corpus-bound *and* as part of what Phase 1 owes — it cannot be both | Yes |
 
-## The five that need a record above the runbook — owed; drafted 2026-09-12, not landed
+## The five that need a record above the runbook — **landed 2026-09-12**
 
 These are **not** runbook edits. Each moves a record at or above the runbook in ADR-0092's precedence chain, so each
 is authored and reviewed on its own terms before the runbook cites it as settled.
 
-**Drafts exist and are paste-ready**, each carrying the frozen text it replaces with the line it was read at:
+**All five landed on 2026-09-12**, drafted first and accepted after review:
 
-| draft | covers | lands as |
-| --- | --- | --- |
-| `spikes/ADR-0115-DRAFT.md` | **E2** | `references/adr/0115-*.md`, superseding ADR-0099 in part (clause 4) |
-| `spikes/ADR-0116-DRAFT.md` | **E3** | `references/adr/0116-*.md`, superseding ADR-0105 in part (the event-kind table) |
-| `spikes/AMENDMENTS-2026-09-12-DRAFT.md` | **E1**, **E11**, **E12**, and the two errata **E13** raised | an `ERRATA.md` section for 0094; inline dated amendments to AC-072, AC-402 and the register's phase note; dated corrections at design `:170`, `:1311`, `:1905` |
+| # | landed as |
+| --- | --- |
+| **E2** | **ADR-0115** `references/adr/0115-the-event-store-port-is-held-behind-interior-mutability.md`; ADR-0099 `superseded_by: ["0115"]` |
+| **E3** | **ADR-0116** `references/adr/0116-the-event-kind-table-gains-artifact-write.md`; ADR-0105 `superseded_by: ["0116"]`; the design §5 table row |
+| **E1** | AC-072 amended — the `nullable = true` key, its lint rule and its two fixtures; Step 4a writes the key with the `source` moves |
+| **E11** | AC-402 amended to three entry paths with a negative case; design `:1311` and principle 4 (`:170`) corrected |
+| **E12** | `ERRATA.md` **E-0094-1**; design `:1905` corrected; `s7a`'s AC-502 exclusion reason |
+| **E13** | the register's phase note amended — AC-468 split, AC-475 removed from the corpus-bound set |
 
-**They are drafted in `spikes/`, not `references/adr/`, on purpose.** `s1` Checkpoint 1 asserts
-`ls references/adr/*.md | wc -l` **is exactly 114** and that checkpoint has already passed (`66276bf`): a record
-added before acceptance breaks it. Each draft carries its own landing checklist, including the reciprocal
-`superseded_by` frontmatter edit `census_adr.py` validates and the count moves in `s1` and `00-preamble.md`.
+**Counts moved once, deliberately:** `references/adr/*.md` **114 → 116** (112 → 114 records; 110 accepted, 3
+superseded, 1 proposed), with `s1`'s assertion, its prose, `00-preamble.md`'s Inputs line and the README's own
+tallies moved with it. `census_adr.py` reports **31 supersession edges, 31 reciprocal**, and the README diff is
+back to its two pre-existing disagreements.
 
 | # | decision | choice | grounding | what must be written |
 | --- | --- | --- | --- | --- |

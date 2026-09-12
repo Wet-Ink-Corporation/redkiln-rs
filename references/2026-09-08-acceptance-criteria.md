@@ -1375,7 +1375,8 @@ facets.toml so it can feed no require row**; `dynamism` **pre-registered with no
 set shape as a third registry shape · decisions: ADR-0061, ADR-0059, ADR-0030, ADR-0089, ADR-0093 (the five `source` tokens), ADR-0103 (facet-name lexis)
 GIVEN a facet name appearing in any `applicable_if`, `require.when`, or `claimed_predicate`
 WHEN lint runs
-THEN load fails unless that name has a live registry entry in `facets.toml` with a declared domain, source, anchor and —
+THEN load fails unless that name has a live registry entry in `facets.toml` with a declared domain, source, anchor,
+a declared **`nullable = true`** where the facet may abstain, and —
 where `source = "derived"` — a named **`deriver`** identifying the instrument that computes it
 AND `source` is one of the **five** closed tokens the loader recognises by name — `human | llm | derived | kernel |
 declared` (ADR-0093 decision 1): `kernel` for `stage`, `rigor`, `role`, `cost` (no `deriver`, no record — a `kernel`
@@ -1384,6 +1385,18 @@ S-FACET scores it — a row keyed on it fails load)
 AND the declared domain is one of **three** shapes the loader recognises **explicitly, by name rather than by
 omission**: boolean, ordinal, or **set** (`set = true`) — the shape `toolchain` and `change` already carry and the shape
 the `surfaces` facet takes, whose members disjoin under ADR-0050 while distinct facets conjoin
+AND a facet whose value may be **absent** declares **`nullable = true`**; absence is never inferred from the domain.
+`null` is *no evidence computed* and is **not** a member of the declared domain — the three shapes above are unchanged
+and a fourth still fails load. A `require` row or `applicable_if` that reads a `nullable` facet and does not handle
+`null` is a lint error at pack load (ADR-0103 decision 5(i)); a `null` read at selection step 2 emits
+`gate_opened { reason: unknown_facet, axis }` counted once per read facet (AC-079), and **never**
+`Unsatisfiable`, which is step 4's and is reserved for predicates that evaluated to `false` (ADR-0103 decision
+5(iii)).
+*(Amended 2026-09-12, DECISIONS-2026-09-12 E1: ADR-0089 decision 3 makes the boolean facets tri-valued at the
+context-vector level and says AC-079's route "cannot reach [them] because their declared domain is `[true, false]`",
+but names no on-disk form — and TOML has no `null` literal, so `values = [true, false, null]` is inexpressible while
+deleting `values` fails this criterion's own declared-domain clause. Declaring nullability **by name rather than by
+omission** is this criterion's rule, applied to nullability.)*
 AND facet names match `[a-z_][a-z0-9_]*`, ADR-0030's hyphenated spellings reading as their underscore forms (ADR-0103
 decision 2)
 AND an unregistered facet can feed no row, so `binary_change` and `dynamism` cannot silently become selection inputs
@@ -1392,7 +1405,9 @@ AND an unregistered facet can feed no row, so `binary_change` and `dynamism` can
 against the current registry; a fixture entry declaring `source = "derived"` with no `deriver` field, which must fail
 load; a fixture entry whose `source` is none of the five tokens, a `kernel` entry with a `deriver`, and a `require` row
 keyed on a `declared` facet, each of which must fail load (ADR-0093; PIA-046); a fixture entry whose declared shape is
-none of the three, which must fail load; the verbatim `[facet.surfaces]` block (`source = "declared"`, no `deriver`,
+none of the three, which must fail load; a fixture entry that abstains without `nullable = true`, which must fail
+load, and a positive `nullable = true` fixture that must load and whose `null` read emits exactly one `gate_opened`
+per read facet and never an `Unsatisfiable`; the verbatim `[facet.surfaces]` block (`source = "declared"`, no `deriver`,
 `set = true`, `values`) as a positive fixture that must load; and a positive `set = true` fixture that must load and
 whose member predicate resolves, so the shape is recognised rather than merely tolerated. NEGATIVE criterion apart from
 the positive fixtures, which are what stop a reject-everything lint passing.
@@ -5762,12 +5777,19 @@ measured it. SM-130 carries the same correction.
 **AC-402** — `rk-cli`, `rk-git` · evidence: F19 (drift 12/174 = 7%; 3/95 at ≤1 h vs 9/79 at >1 h) [measured, one
 operator, one machine], F18 (45% of gate→verdict intervals, n=174, and 48% of stage→verdict intervals, n=191, exceed
 1 h) [measured] · decisions: proposal §4.5 rule 3, principle 2
-GIVEN any entry point that acts on an item (`run`, `answer`, `status`, `explain`)
+GIVEN any entry point that **can cause an action** (`run`, `answer`, `doctor`) — `status` and `explain` are
+read-only and do **not** reconcile (ADR-0105 clause 8; AC-172)
 WHEN it begins
 THEN `reconcile(recorded, world)` has run before any decision is taken, and no CLI flag can skip it.
-*Verified by:* a kernel test enumerating the four entry paths and asserting `reconcile` is called on each; the
+*Verified by:* a kernel test enumerating the **three** entry paths and asserting `reconcile` is called on each, **and
+a negative case asserting `status` and `explain` do not call it**; the
 argument-surface snapshot (AC-400) additionally fails the build on any `--no-reconcile` / `--skip-reconcile` / `--fast`
 flag.
+*(Amended 2026-09-12, DECISIONS-2026-09-12 E11: this criterion enumerated **four** paths — including `status`, which
+ADR-0105 clause 8 excludes in terms, and omitting `doctor`, which can act via `--fix` and `--rebuild`. AC-172 had
+already been amended to the governing set and cited clause 8 by name; this row and design §8.1's verb table were the
+un-updated copies. ADR-0109 decision 1's scope — "every CLI entry that **can cause an action**" — is the governing
+form.)*
 **Cut on refutation:** the original also claimed no *configuration key* could skip reconcile. No instrument checked
 configuration keys, so the claim is withdrawn rather than left uninstrumented.
 
@@ -6260,7 +6282,9 @@ AC-218 is the harness-area owner of the same behaviour; §0.3 carries the twin r
 **State:** 40 binding (AC-521 and AC-522 added 2026-09-11) · 1 provisional (AC-475) · 1 human-gated (AC-476) — 42 in force
 **Sources:** proposal §5 (clean break and migration), §4.4 rev. 4, §6, §7; evidence brief §A/§C/§D/§E; ADR-0002, 0005, 0006, 0008, 0009, 0011, 0012, 0013, 0017, 0019 — all ten verified `status: accepted` in `references/adr/` at HEAD `ab58733`; **ADR-0100** (the YAML reader: `yaml_serde = "=0.10.7"` in `redkiln-migrate` alone), **ADR-0094** (self-hosting means both lanes; AC-521).
 
-*Phase note (2026-09-11, PIA-002).* The criteria bound to the frozen corpus (AC-444, AC-451–AC-454, AC-456–AC-462, AC-464, AC-467–AC-469, AC-475 and every S-MIG-figured fixture) are a **Phase-2 acceptance set**: the 1,312-file corpus and the 118-ref history live only in `D:/repos/redkiln`, `redkiln-corpus` does not exist at HEAD, and no CI job fetches either [measured, PIA-002]. Runbook Step 2 materialises the substrate (a `git bundle create --all` of the frozen clone, or a fetchable remote plus SHA in `CORPUS_PIN`); until it lands these tests are a local-only suite with a named runner. What Phase 1's Step 7d owes is a **v0** — the binary exists (AC-441); the structural assertions AC-441/AC-466/AC-474; the report schema AC-448/AC-468; the run contract AC-447/AC-450/AC-522; and a dry run over a small fixture — with a checkpoint line that invokes `redkiln-migrate`.
+*Phase note (2026-09-11, PIA-002; **amended 2026-09-12, DECISIONS-2026-09-12 E13**).* The criteria bound to the frozen corpus (AC-444, AC-451–AC-454, AC-456–AC-462, AC-464, AC-467, AC-469 and every S-MIG-figured fixture) are a **Phase-2 acceptance set**: the 1,312-file corpus and the 118-ref history live only in `D:/repos/redkiln`, `redkiln-corpus` does not exist at HEAD, and no CI job fetches either [measured, PIA-002]. Runbook Step 2 materialises the substrate (a `git bundle create --all` of the frozen clone, or a fetchable remote plus SHA in `CORPUS_PIN`); until it lands these tests are a local-only suite with a named runner. What Phase 1's Step 7d owes is a **v0** — the binary exists (AC-441); the structural assertions AC-441/AC-466/AC-474; the report schema AC-448/AC-468; the run contract AC-447/AC-450/AC-522; and a dry run over a small fixture — with a checkpoint line that invokes `redkiln-migrate`.
+
+*(Amended 2026-09-12, DECISIONS-2026-09-12 E13 — **two ids this note listed on both sides**, which it could not. **AC-468** was inside the corpus-bound range `AC-467–AC-469` **and** named in what Phase 1 owes ("the report schema AC-448/AC-468"). The range now reads AC-467, AC-469, and AC-468 splits: its **schema conformance** of the differential report is **Phase 1's** — asserted against the v0 dry run's own report, needing no corpus — while its **corpus-scale** assertion over the 1,312-file run is Phase 2's. **AC-475** is removed from the corpus-bound list and splits the same way: its `Verified by:` has two halves, and the second — "a schema assertion of zero `ChangeSummary` values in migrated output" — needs no corpus, runs on Step 7d's own dry-run fixture, and is a **negative** criterion, so asserting it before the code that could violate it exists is the cheap direction. The **loss-marker migration fixture** half stays Phase 2's. Runbook Step 7d claims AC-468 and AC-475 on exactly those readings and excludes the rest of the corpus-bound set by id.)*
 
 *Scope note.* **S-MIG has no F-number.** The brief's ledger (F1–F38, F9 struck, F30 unassigned) contains no S-MIG entry; §D records only that S-MIG cost $0. Every S-MIG figure here is cited `[measured, S-MIG]` with its own n and was re-derived from `spikes/results/s-mig-report.md` and `spikes/corpus/PINNED_SHA` (`REDKILN_SHA=47faec9f…`). The instrument was iterated four times against this corpus before the recorded run.
 
@@ -6856,7 +6880,7 @@ operator].
 GIVEN a port trait in `rk-ports`
 WHEN `rk-kernel` is compiled
 THEN no function, struct or trait in `rk-kernel`'s public or internal API carries a generic type parameter bound by a port trait
-AND every port is held as a single object-safe trait object — `Arc<dyn Port + Send + Sync>`, with `Send + Sync` as supertraits on all
+AND every port is held as a single object-safe trait object — `Arc<dyn Port + Send + Sync>` (the **EventStore** port is `Arc<Mutex<dyn EventStore>>`, because `dispatch` takes `&mut dyn EventStore` — **ADR-0115**, narrowing ADR-0099 clause 4), with `Send + Sync` as supertraits on all
 five traits, a bare trait object and not a newtype (ADR-0099 decision 4; the divergence from M-DI-HIERARCHY's ranking is stated there).
 *Verified by:* an API-surface lint over `rk-kernel` (rejects `<P: Harness>`-shaped bounds and any `impl Trait` return naming a port);
 a compile-fail test fixture that introduces one such parameter and must not build.

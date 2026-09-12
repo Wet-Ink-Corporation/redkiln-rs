@@ -102,7 +102,7 @@ Instrument at time of commit: claude $(cat spikes/results/instrument-checks/RUNB
 2.1.268 — the F37 §7 lineage breaks are recorded, not repaired). Rust toolchain pin 1.98.1 (DECISIONS-2026-09-11 #7);
 the spike programme ran on 1.97.1.
 
-The set is 112 ADR records (0001–0114, 0090/0091 reserved): 108 accepted, 3 superseded, 1 proposed (0079, still
+The set is 114 ADR records (0001–0116, 0090/0091 reserved): 110 accepted, 3 superseded, 1 proposed (0079, still
 deliberately undecided until Step 4.4). It is NOT design final: S-BIN, S-H1c and P8's unrun arms gate that label.
 EOF
 ```
@@ -117,8 +117,8 @@ without the records it carries.
 cd D:/repos/redkiln-rs
 st=$(git status --porcelain)                           # → EMPTY (no output at all). Phase-0 exit (a).
 [ -z "$st" ] || { echo "FAIL: tree not clean — Phase-0 exit (a) not met:"; printf '%s\n' "$st"; exit 1; }
-n=$(ls references/adr/*.md | wc -l)                    # → 114 (112 records + README.md + ERRATA.md) — verified 2026-09-11
-[ "$n" -eq 114 ] || { echo "FAIL: expected 114 ADR files, found $n"; exit 1; }
+n=$(ls references/adr/*.md | wc -l)                    # → 116 (114 records + README.md + ERRATA.md) — 114 verified 2026-09-11; 0115/0116 landed 2026-09-12
+[ "$n" -eq 116 ] || { echo "FAIL: expected 116 ADR files, found $n"; exit 1; }
 k=$(git ls-files references/adr/0114-*.md | wc -l)     # → 1  the last remediation record is tracked, not just on disk
 [ "$k" -eq 1 ] || { echo "FAIL: ADR-0114 tracked-file count is $k, expected 1"; exit 1; }
 # → runbook/INDEX.md  (the split runbook is tracked)
@@ -150,7 +150,7 @@ intention with no check behind it.
 
 **The ADR file count, and why the number keeps moving.** **Superseded 2026-09-11:** this paragraph argued 89 → 90
 (88 records + README, then ADR-0089) and contradicted the checkpoint five paragraphs above it, which asserts
-**114**. The tree measures 114 — **112 records + `README.md` + `ERRATA.md`** — after the 2026-09-11 remediation
+**116**. The tree measures 116 — **114 records + `README.md` + `ERRATA.md`** — after the 2026-09-11 remediation
 landed ADR-0092–0114 and the errata convention. The lesson the old paragraph was carrying still holds: anyone
 reading a smaller number here on a tree that has 114 is reading a stale runbook, not a broken tree, and Step 4.4's
 numbering moves with it (the next free number is **0115**).

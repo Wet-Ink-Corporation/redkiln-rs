@@ -1,23 +1,7 @@
-> **DRAFT — not an accepted record.** Drafted 2026-09-12 for **DECISIONS-2026-09-12 E2**. It lives in `spikes/`
-> deliberately: `references/adr/` is the authority, and `s1` Checkpoint 1 asserts `ls references/adr/*.md | wc -l`
-> **is exactly 114** — adding a file there before acceptance breaks a checkpoint that has already passed (`66276bf`).
->
-> **Landing checklist**, when accepted:
-> 1. Move to `references/adr/0115-the-event-store-port-is-held-behind-interior-mutability.md`.
-> 2. Flip `status: proposed` → `accepted`.
-> 3. Edit `references/adr/0099-*.md` frontmatter: `superseded_by: []` → `superseded_by: ["0115"]` — the reciprocal
->    edge `census_adr.py` validates. **Assert the anchor first** (golden constraint 7).
-> 4. `references/adr/README.md`: add the index row with status `accepted (partially superseded by 0115)` on 0099,
->    the legacy-id map row for 0115, and move the numbering sentence's next-free from `0115` to `0116`.
-> 5. `s1` §"The set is…" and its Checkpoint 1 count move **114 → 115** (and 112 → 113 records); `00-preamble.md`'s
->    Inputs line moves likewise. Re-run `census_adr.py` and record the new status tally and edge count.
-> 6. Mirror the shape in design §3.3 P10, design §9.1 and AC-497, and in `s7a`.
-
 ---
-
 id: "0115"
 title: The EventStore port is held behind interior mutability; ADR-0099 clause 4's bare-trait-object rule is narrowed to the four ports whose methods take &self
-status: proposed
+status: accepted
 date: 2026-09-12
 legacy_id: none
 source: spikes/DECISIONS-2026-09-12.md E2; references/adr/0099-harness-dispatch-blocks-cancel-is-a-token-and-containment-is-per-os.md clause 1 (:52) and clause 4 (:80-84); spikes/s-ports/src/lib.rs:174; spikes/F41-DRAFT.md; references/adr/0092-errata-precedence-and-cut-id-reissue.md decision 1 (the erratum/supersession line)
@@ -26,7 +10,6 @@ superseded_by: []
 related: ["0076", "0086", "0092", "0097", "0102", "0105", "0109"]
 evidence: ["F41", "E2"]
 consumers: []
-
 ---
 
 ## Context and problem

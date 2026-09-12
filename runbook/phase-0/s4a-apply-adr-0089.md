@@ -114,7 +114,13 @@ empty diffs into sixteen confident booleans** [measured, F39 §4]: the panel ret
 cells of the 4 items that changed no code, and the script emitted a confident boolean on every one.
 
 **AC-079's existing `gate_opened { reason: unknown_facet, axis }` route is extended to the boolean facets**, which
-today it cannot reach because their declared domain is `[true, false]`. The grammar already supports it: ADR-0032
+today it cannot reach because their declared domain is `[true, false]`. **The on-disk form is a declared
+`nullable = true` key** beside `values = [true, false]` (DECISIONS-2026-09-12 E1; AC-072 as amended 2026-09-12):
+TOML has no `null` literal, so the domain cannot carry it, and AC-072 closes the shape vocabulary at three — so
+nullability is declared **by name**, exactly as that criterion requires of the domain itself. **This step writes the
+key** on every facet that may abstain, in the same edit as the `source` moves; a facet that can abstain without it
+fails load. `values` stays required and is never deleted — `spikes/p9/lint.py:49` reads `f["values"]` unguarded and
+raises `KeyError` on a facet without it. The grammar already supports it: ADR-0032
 makes absent inputs `null`, ADR-0069 defines `==`/`!=` against `null` while ordering against it is a lint error, and
 and **ADR-0103 decision 5 fixes the order of outcomes on a null read**, in three steps that must not be collapsed:
 (i) at **pack load**, the lint rejects an unguarded ordering against a nullable facet (AC-069); (ii) at **selection

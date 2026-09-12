@@ -203,6 +203,21 @@ untouched.
 
 *(No errata; the record moved to `superseded` and its corrections are ADR-0101's body.)*
 
+## ADR-0094 — Phase 1 ships a Rust toolchain adapter; self-hosting means both lanes
+
+**E-0094-1 (2026-09-12, DECISIONS-2026-09-12 E12).** Evidence and confidence, line 123: "It does not decide the
+Codex adapter's phase or the CI decision ADR-0010 defers." — **What is true:** the record's own **decision 2** does
+decide the phase, in terms: *"The Harness port's second real adapter (Codex) is **Phase 2** and stays behind the CI
+decision ADR-0010 defers"* (:67-69). The Evidence sentence is right about the **CI decision**, which decision 2
+expressly leaves with ADR-0010, and wrong about the **phase**, which decision 2 assigns. Read as written it would
+make an accepted Decision self-withdrawing. The sentence reads correctly as: *"It does not license any claim about
+the Rust adapter's behaviour — none exists … It does not decide the CI decision ADR-0010 defers."* [documented,
+references/adr/0094 :67-69 against :123, read 2026-09-12] **What this does not change:** decision 2 stands verbatim,
+and with it Codex = Phase 2; `rk-adapter-codex` is out of Phase 1 under every reading; ADR-0010's CI decision stays
+deferred; AC-496 stays PROVISIONAL on S-CODEX, which is unrun. Raised by the 2026-09-12 runbook alignment review,
+which found design :1905 carrying "Phase 4 is the earliest it ships" — a row dated 2026-09-08, three days older than
+this record and corrected the same day.
+
 ## ADR-0089 — Facet provenance, declared surfaces and abstention
 
 *(Partially superseded by ADR-0093.)* **E-0089-1 (2026-09-11, PIA-093).** Lines 75 and 164: "plain Semgrep's measured
