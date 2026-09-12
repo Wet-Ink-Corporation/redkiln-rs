@@ -34,3 +34,13 @@ __pycache__/
 references/audit/2026-09-10/census/
 references/audit/2026-09-10/rerun/
 references/audit/2026-09-10/scripts/__pycache__/
+
+# Waiter logs, tee'd for the `until grep` waiters. The JSONL in spikes/results/ is the evidence.
+spikes/*.log
+
+# Suspended graph state; regenerable, and meaningless without the run that made it.
+# The digests that matter are in spikes/results/p8.jsonl.
+spikes/results/p8-state/
+
+# Extra build dirs cut when target/ was locked by a live run.
+spikes/runner/target-*/
