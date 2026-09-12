@@ -75,7 +75,7 @@ cp -r D:/repos/redkiln-rs/spikes/prompts ./prompts              # the cards the 
 # The predecessor, every ref, as one pinnable object (PIA-002): the F12 substrate travels with the corpus.
 git -C D:/repos/redkiln bundle create D:/repos/redkiln-corpus/predecessor-47faec9f.bundle --all
 git bundle verify ./predecessor-47faec9f.bundle                  # → "is okay"
-git bundle list-heads ./predecessor-47faec9f.bundle | wc -l      # → 118 (re-derive: git -C D:/repos/redkiln for-each-ref | wc -l)
+n=$(git bundle list-heads ./predecessor-47faec9f.bundle | wc -l); test "${n:-0}" -eq 118 || { echo "FAIL: the bundle carries ${n:-<unreadable>} refs, expected 118 (re-derive: git -C D:/repos/redkiln for-each-ref | wc -l)"; exit 1; }   # → silent: 118
 git bundle list-heads ./predecessor-47faec9f.bundle | wc -l > ./predecessor-refs.count
 
 git add -A && git commit -m "redkiln-corpus v0: pinned corpus, spike results, spike runner, the predecessor bundled with all 118 refs (ADR-0013, ADR-0100)"
@@ -168,7 +168,7 @@ it in the same commit, with an anchor assertion first (golden constraint 7):
 cd D:/repos/redkiln-rs
 grep -q 'spikes/results/ is deliberately NOT ignored' .gitignore \
   && python - <<'PY' \
-  || echo "ANCHOR MISSING — the paragraph is not there; read .gitignore and stop"
+  || { echo "ANCHOR MISSING — the paragraph is not there; read .gitignore and stop"; exit 1; }
 import io,sys
 p=".gitignore"; t=io.open(p,encoding="utf-8",newline="").read()
 old="""# spikes/results/ is deliberately NOT ignored: charter §14.2 makes the raw
@@ -189,7 +189,8 @@ several now carry a one-line precondition guard above them, so the block runs lo
 
 ```bash
 git -C D:/repos/redkiln-corpus rev-parse HEAD                  # → a 40-hex SHA
-grep CORPUS_SHA D:/repos/redkiln-rs/CORPUS_PIN | grep -qE '=[0-9a-f]{40}$' && echo "40-hex, unabbreviated"
+grep CORPUS_SHA D:/repos/redkiln-rs/CORPUS_PIN | grep -qE '=[0-9a-f]{40}$' && echo "40-hex, unabbreviated" \
+  || { echo "FAIL: CORPUS_PIN's CORPUS_SHA is not an unabbreviated 40-hex SHA (a CRLF line ending fails this too)"; exit 1; }
 h=$(git -C D:/repos/redkiln-corpus rev-parse HEAD) && test -n "$h" || { echo "FAIL: corpus HEAD unreadable"; exit 1; }
 grep -q "$h" D:/repos/redkiln-rs/CORPUS_PIN && echo "pin matches HEAD" || { echo "FAIL: CORPUS_PIN missing, or it does not carry HEAD"; exit 1; }
 out=$(git -C D:/repos/redkiln-corpus status --porcelain) || { echo "FAIL: corpus repo unreadable"; exit 1; }

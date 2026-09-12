@@ -14,8 +14,9 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 
 > ### 🚦 GATE CHECK
 > ```bash
-> ls D:/repos/redkiln-rs/references/adr/0090-*.md >/dev/null 2>&1 \
->   && echo "GATE DISCHARGED — proceed" || echo "GATE OPEN — go back to Step 4"
+> ( ls D:/repos/redkiln-rs/references/adr/0090-*.md >/dev/null 2>&1 \
+>     || { echo "GATE OPEN — no ADR-0090. Go back to Step 4; no work in this stage may start."; exit 1; }
+>   echo "GATE DISCHARGED — proceed" )   # a subshell: a pasted FAIL must not kill an interactive shell
 > ```
 > **`0090`, not `0089`** — see Step 5's banner for why the token moved.
 
@@ -62,10 +63,16 @@ Six constraints that come with the hybrid and are easy to lose:
 1. **All** shelling out to git goes through **one wrapper type inside `rk-git`**. No `std::process::Command` for
    git exists anywhere else in the workspace.
 2. Git's stderr is diagnostic payload and is **never parsed for control flow**.
-3. The wrapper asserts **at startup, not at first use**, that `git` is on `PATH` at or above a minimum version —
-   and **that minimum is not yet established**, so the assertion is incomplete until you establish it. **This is
-   the third of the seven decisions this runbook takes.** Pick a version, record it in the same successor record
-   6.1 produces (ADR-0091), do not leave the assertion as a stub. (`git --version` on this box, 2026-09-08: the MSYS
+3. The wrapper asserts **at startup, not at first use**, that `git` is on `PATH` at or above a minimum version.
+   **The floor is `2.20` unconditionally, and it is conditional above that** (DECISIONS-2026-09-12 E10): 2.20 is
+   what `interpret-trailers --if-exists=add` needs, and every other op in clause 5's *unconditional* write set is
+   older than that. The one op that is newer is **`git clone --depth 1 --revision <sha>`**, and that is reached
+   **only on an S-GIX/c no-go** — if gix performs the review clone, the wrapper never invokes it. So ADR-0091,
+   which §6.1 writes immediately after the arms run, records the final floor: it stays `2.20` on a /c **go**, and
+   rises to the version that introduced `clone --revision` on a /c **no-go** (confirm that version against the
+   git release notes when you write the record; `git version 2.55.0.windows.3` on this box lists
+   `--[no-]revision <rev>` in `git clone -h` [measured, 2026-09-12]). **This is the third of the seven decisions
+   this runbook takes**, and it is taken here rather than left a stub. (`git --version` on this box, 2026-09-08: the MSYS
    git at `/mingw64/bin/git`. Whatever you pick, the floor must be met by the CI runners too, not only by this
    machine; `--if-exists=add` on `interpret-trailers` needs git ≥ 2.20.)
 4. Two git implementations in one process can disagree — about config resolution and about Windows path handling.
@@ -116,6 +123,26 @@ run-owned worktree **from the store**, never from cwd (the new AC §6.4 criterio
 **Spikes owed by this step (PIA-047):** **R-SQLITE** — the `busy_timeout` / one-writer read against docs.rs rusqlite
 0.40.2 and sqlite.org, $0, minutes; run it or record its deferral in the checkpoint commit.
 
+**Red first (golden constraint 12; ADR-0019).** The checkpoint below is the floor, not the evidence:
+every one of its `cargo test … -- <filter>` lines is satisfied by an implementation that nothing pins.
+Author each named test **before** the code it describes, run it, and watch it fail for the right reason —
+the absent behaviour, not a compile error or a filter that matched nothing.
+
+- The three **S-GIX arms are themselves the red step** and run before a line of worktree code (§6.1) — that
+  ordering is already test-first, and it is why a no-go costs a wrapper call rather than a rewrite.
+- `trailer_roundtrip_matches_interpret_trailers` — over ADR-0105 clause 3's **named fixture matrix**: an existing
+  trailer block, no trailing newline, a `---` divider, CRLF, and a duplicate token. Red on the duplicate-token case
+  specifically: git's default `addIfDifferentNeighbor` silently drops a repeated identical `Gate:` trailer, so a
+  wrapper that omits `--if-exists=add` must fail this test. That case is the discriminating one; the other four
+  pass either way.
+- `reconcile_runs_at_every_entry` — AC-172's `Reconciled<State>` is the instrument: a state that reaches the kernel
+  without passing through it must not be **constructible**. Red as a `trybuild` must-fail fixture, not a runtime
+  assertion, because this one is type-level.
+- `git_paths_are_drive_letter_form` — the `\\?\` extended-length path that broke `git fetch` (F20/2). Red by
+  handing the normaliser an extended-length path. Note golden constraint 4's warning: this defect was **not**
+  reachable from a unit test when it happened, so the unit test pins the normaliser, and the wrapper still needs
+  one real end-to-end invocation before Checkpoint 6 is claimed.
+
 **Checkpoint 6.** All of:
 
 ```bash
@@ -126,9 +153,9 @@ out=$(cargo test --workspace --features corpus 2>&1); rc=$?
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
   || { echo "FAIL: --features corpus selected 0 tests — the bundle was never read"; exit 1; }   # exit 0 on this box AND ≥ 1 test actually ran: AC-440's fixture and the F12 replay read the bundle
 test -f Cargo.toml || { echo "FAIL: Cargo.toml absent — the workspace table does not exist yet"; exit 1; }
-grep -c 'gix = "=0.87.1"' Cargo.toml                                       # → 1. EXACT pin, in the WORKSPACE table (ADR-0084)
+n=$(grep -c 'gix = "=0.87.1"' Cargo.toml); test "${n:-0}" -eq 1 || { echo "FAIL: ${n:-<unreadable>} exact gix pins in the workspace table, expected 1 (ADR-0084)"; exit 1; }   # → silent: EXACT pin, in the WORKSPACE table
 test -f crates/rk-git/Cargo.toml || { echo "FAIL: crates/rk-git/Cargo.toml absent"; exit 1; }
-grep -c 'gix.workspace = true' crates/rk-git/Cargo.toml                    # → 1. the member inherits it (PIA-030: the old grep false-failed on this form)
+n=$(grep -c 'gix.workspace = true' crates/rk-git/Cargo.toml); test "${n:-0}" -eq 1 || { echo "FAIL: rk-git does not inherit the workspace gix pin exactly once (got ${n:-<unreadable>})"; exit 1; }   # → silent: the member inherits it (PIA-030: the old grep false-failed on this form)
 test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent — the type-ban grep is vacuous"; exit 1; }
 test "$(grep -rnE 'std::process::Command|tokio::process::Command' crates/ --include=*.rs \
   | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l)" = 0 \
@@ -137,16 +164,16 @@ test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exe
 test "$(grep -rn 'Command::new("git")' crates/ --include=*.rs | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l)" = 0 \
   || { echo "FAIL: Command::new(\"git\") outside the wrapper"; exit 1; }   # → 0 (the CI grep, PIA-035)
 test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent"; exit 1; }
-grep -c 'hooksPath' crates/rk-git/src/git_exec.rs                          # → ≥ 1: hooks isolation on every commit (ADR-0105 clause 2)
+n=$(grep -c 'hooksPath' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: git_exec.rs never sets core.hooksPath — ADR-0105 clause 2's hooks isolation is absent"; exit 1; }   # → silent: ≥ 1, hooks isolation on every commit
 test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent"; exit 1; }
-grep -c 'ifexists=add\|if-exists=add' crates/rk-git/src/git_exec.rs          # → ≥ 1: repeated identical trailers are appended, not dropped
+n=$(grep -c 'ifexists=add\|if-exists=add' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: git_exec.rs never passes --if-exists=add — a repeated identical Gate:/Slice-Verdict: trailer is silently dropped (ADR-0105 clause 3)"; exit 1; }   # → silent: ≥ 1
 cargo audit --deny unmaintained                                            # exit 0; gix-* clean at the pin; clone is on gix and in scope
 test "$(ls references/adr/0091-*.md 2>/dev/null | wc -l)" = 1 || { echo "FAIL: expected exactly one references/adr/0091-*.md — the S-GIX successor record"; exit 1; }   # → 1: the S-GIX successor record
 ls references/adr/0091-*.md >/dev/null 2>&1 || { echo "FAIL: ADR-0091 absent — no S-GIX record to grep"; exit 1; }
 test "$(grep -cE '^S-GIX/[abc]: (go|no-go)$' references/adr/0091-*.md)" = 3 \
   || { echo "FAIL: ADR-0091 does not carry exactly three S-GIX verdict lines"; exit 1; }   # → 3: one explicit verdict line per arm (PIA-035)
 ls references/adr/0091-*.md >/dev/null 2>&1 || { echo "FAIL: ADR-0091 absent — no S-GIX record to grep"; exit 1; }
-grep -cE 'git (>=|version) [0-9]+\.[0-9]+' references/adr/0091-*.md         # → 1: the git-version floor is a number in the record
+n=$(grep -cE 'git (>=|version) [0-9]+\.[0-9]+' references/adr/0091-*.md); test "${n:-0}" -ge 1 || { echo "FAIL: ADR-0091 states no git-version floor as a number — decision 3 of the preamble's table is undischarged"; exit 1; }   # → silent: ≥ 1, the floor is a number in the record
 out=$(cargo test -p rk-git -- --ignored s_gix_ 2>&1); rc=$?
 test "$(printf '%s\n' "$out" | grep -cE '^test .*s_gix_[abc]_')" = 3 \
   || { echo "FAIL: the s_gix_ filter did not select exactly the three arms"; printf '%s\n' "$out" | tail -20; exit 1; }
@@ -160,7 +187,11 @@ didn't need to run it" is not a result; the spike is what licenses the *narrowin
 ADR-0077 exactly where it is. If you record the result in `spikes/` rather than an ADR, point those two lines at
 that file instead — but point them somewhere, and run them.
 
-**Acceptance set:** git-as-truth **AC-160–AC-199** (notably **AC-178** common-dir resolution at startup, **AC-184**
+**Acceptance set:** **AC-529** first — allocated outside this area's exhausted range by the 2026-09-11 amendment
+and claimed by no stage until 2026-09-12: a tier-1 write resolves the run-owned worktree **from the store**, never
+from cwd, and the kernel refuses to write when that worktree's HEAD is not the run's branch (ADR-0018 as ADR-0105
+clause 8 narrows it — "current worktree" means the worktree the store owns for the run). **No spike measured a
+foreign-worktree write**, so this is built and tested, not measured. Then git-as-truth **AC-160–AC-199** (notably **AC-178** common-dir resolution at startup, **AC-184**
 `doctor --rebuild` from git alone with its 40-hex corpus-pin assertion, **AC-187** resume); store and typed-artifact
 **AC-120–AC-159**; **AC-464** corpus reads through the object store, **AC-465** residency. **AC-013, AC-187,
 AC-266, AC-267, AC-271, AC-401 are PROVISIONAL on P8** — multi-step resume is unmeasured; F38 held exactly one step

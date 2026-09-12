@@ -25,7 +25,22 @@ cd D:/repos/redkiln-rs
 # the 2026-09-11 remediation (ADR-0092–0111, ERRATA.md, this runbook) are on main already and are not at risk.
 git log --oneline main..build/phase-0-to-1
 git checkout main
-git cherry-pick <the Step 1 commit> <the Checkpoint 4 commit> <the Checkpoint 4a commit> <the Checkpoint 2 commit> [<the Step 6.1 commit>]
+# Derive each commit rather than typing it: a bare <the Step 1 commit> is a bash redirect, not an
+# argument, and this block sits immediately above an irreversible `branch -D`. The subjects are the
+# ones Checkpoint 9 asserts below, verbatim, in execution order (1 -> 4 -> 4a -> 2 -> 6.1).
+PICKS=""
+for s in "Phase 0, part 1: run noise ignored, instrument recorded" \
+         "ADR-0090: the context-vector source" \
+         "Apply ADR-0089/0090/0093" \
+         "Extract redkiln-corpus at a pinned SHA"; do
+  h=$(git log --format=%H -F --grep="$s" -1 build/phase-0-to-1)
+  if [ -n "$h" ]; then PICKS="$PICKS $h"
+  else echo "DEFERRED: \"$s\" is on no commit — that step was never reached; nothing to salvage from it"; fi
+done
+h=$(git log --format=%H -F --grep='S-GIX' -1 build/phase-0-to-1)   # Step 6.1's ADR-0091, only if reached
+test -n "$h" && PICKS="$PICKS $h"
+test -n "$PICKS" || { echo "FAIL: nothing resolved to salvage — check the branch name BEFORE deleting anything"; exit 1; }
+git cherry-pick $PICKS
 # Deleting the branch without this rolls back the decisions along with the code they were taken for:
 # ADR-0090 (the context vector) and, if reached, ADR-0091 (the S-GIX result and git-version floor). Reverting
 # ADR-0090 would leave 0079's `superseded_by` a one-sided link, which is a defect — cherry-pick before delete.
@@ -126,6 +141,6 @@ test "$(grep -c 'spikes/results/ is deliberately NOT ignored' D:/repos/redkiln-r
    in a stronger position still**: it is `accepted`, it landed before this branch, and it is not this build's to
    revert. Reverting it would also mean reverting ADR-0030's `superseded_by` back-link, and a one-sided
    supersession link is a defect [documented, README §Supersessions]. If you want it gone, that is a new record
-   superseding `0089` — and it would have to answer `auth` at 0.00 over 11 positives [measured, F39].
+   superseding `0089` — and it would have to answer `auth` at 0.00 (0/11 [0.00, 0.26] on the 2026-09-09 scoring; 0/12 [0.00, 0.24] after the 2026-09-11 panel-file key fix scored all 140 cells — F39-DRAFT's Correction; ERRATA E-0089-2) [measured, F39].
 
 ---

@@ -70,9 +70,11 @@ grep -c '^deriver = '          "$F"     # → 0 BEFORE. If not 0, this step has 
 grep -n '^\[facet\.auth\]'     "$F"     # → exactly one line. This is 4a.2's anchor too.
 grep -c '^\[facet\.surfaces\]' "$F"     # → 0 BEFORE, 1 AFTER 4a.2
 # …make the edits…
-grep -c '^source = "derived"'  "$F"     # → 6 AFTER: toolchain, change, ui, flag_exists, data_migration, recent_deploy
-grep -c '^deriver = '          "$F"     # → 6 AFTER: equals the derived count, reconciled by NAME —
-                                        #   a bare count that "looks right" is not a check.
+d=$(grep -c '^source = "derived"'  "$F"); test "${d:-0}" -eq 6 || { echo "FAIL: ${d:-<unreadable>} derived facets AFTER, expected 6 (toolchain, change, ui, flag_exists, data_migration, recent_deploy)"; exit 1; }
+v=$(grep -c '^deriver = '          "$F"); test "${v:-0}" -eq 6 || { echo "FAIL: ${v:-<unreadable>} deriver fields AFTER, expected 6 — one per derived facet"; exit 1; }
+# The two counts matching is necessary, NOT sufficient: a bare count that "looks right" is not a check.
+# Reconcile the six by NAME here, and note Checkpoint 7e's awk line asserts the same pairing on the
+# product registry (s7e Checkpoint 7e, the `dv` line).
 ```
 
 **Failure mode this step is guarding.** A `deriver` field added to the registry while the lint that reads it is not
@@ -114,8 +116,16 @@ cells of the 4 items that changed no code, and the script emitted a confident bo
 **AC-079's existing `gate_opened { reason: unknown_facet, axis }` route is extended to the boolean facets**, which
 today it cannot reach because their declared domain is `[true, false]`. The grammar already supports it: ADR-0032
 makes absent inputs `null`, ADR-0069 defines `==`/`!=` against `null` while ordering against it is a lint error, and
-a `require` row whose predicate cannot be evaluated over a `null` yields `Unsatisfiable(kind, failed_predicates)`
-and escalates to the existing human gate. **ADR-0067's `recent_deploy` is the live precedent** — it already emits
+and **ADR-0103 decision 5 fixes the order of outcomes on a null read**, in three steps that must not be collapsed:
+(i) at **pack load**, the lint rejects an unguarded ordering against a nullable facet (AC-069); (ii) at **selection
+step 2**, a `null` top-level `applicable_if` or `require.when` emits `gate_opened { reason: unknown_facet, axis }`
+(AC-079), **counted once per read facet, never per abstaining facet**, and that is what escalates to the existing
+human gate; (iii) **`Unsatisfiable(kind, failed_predicates)` is reserved for step 4**, over predicates that
+evaluated to `false`, and is **never** the route for a `null`. Until 2026-09-12 this paragraph sent the uncomputable
+boolean straight to `Unsatisfiable`, which ADR-0103 clause 5(iii) and AC-079 both forbid — a `null` is an *unknown*,
+and reporting it as unsatisfiable is the fault-name blurring golden constraint 10 exists to stop. The must-fail
+fixture ADR-0103 names: **`any` over absent evidence must not pass an activity** (`any` over `null` or an empty list
+is `false`; `all`/`none` are `true`, which is why `none` cannot terminate a quality block — AC-527, s7b). **ADR-0067's `recent_deploy` is the live precedent** — it already emits
 `null` under rule `R-recent-deploy-feed-absent` because the `toolchain:deploy_log` feed does not exist at this pin.
 **The pattern is generalised, not invented.**
 

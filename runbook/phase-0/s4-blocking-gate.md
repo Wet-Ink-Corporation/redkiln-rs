@@ -60,7 +60,9 @@ rule below is **the rule as pre-registered**; the measured outcome is recorded *
 
   **The sub-0.95 clause fires on five facets. The ≥ 0.95 clause fires on none, and cannot.** No facet has enough
   positives to clear 0.95 with confidence *even in principle at this n*: `ui` is 7/7 and its lower bound is 0.65,
-  and roughly **60 positives** are needed for a lower bound above 0.95, so **METHOD-P §1.4's threshold is not
+  and **73** all-correct positives are needed for a lower bound above 0.95 at the registered two-sided
+  z = 1.96 (92 with continuity correction; 72 under Clopper–Pearson) [ERRATA E-0089-2, which withdrew the
+  "roughly 60" this line carried until 2026-09-12], so **METHOD-P §1.4's threshold is not
   reachable at n=20 for any facet however good the method** — the same class of defect as P1's α rule (F36) and
   P7's criterion 1 (F37), and the reason golden constraint 10 exists [measured, F39 Limits 1]. `data_migration`
   emits **0 positives on 20 items across all three sources**: precision is undefined, a perfect method scores
@@ -424,11 +426,11 @@ greps for — verified 2026-09-08 against `0004`, the existing `superseded_by: [
 ```bash
 cd D:/repos/redkiln-rs
 A=$(ls references/adr/0079-*.md)
-grep -c '^status: proposed$'      "$A"   # → 1  BEFORE. If 0, stop: you are editing the wrong file or the wrong key.
-grep -c '^superseded_by: \[\]$'   "$A"   # → 1  BEFORE.
+n=$(grep -c '^status: proposed$' "$A"); test "${n:-0}" -eq 1 || { echo "FAIL: ADR-0079 is not 'status: proposed' (got ${n:-<unreadable>}) — you are editing the wrong file or the wrong key"; exit 1; }   # → silent: the BEFORE anchor (golden constraint 7)
+n=$(grep -c '^superseded_by: \[\]$' "$A"); test "${n:-0}" -eq 1 || { echo "FAIL: ADR-0079's superseded_by is not the empty list (got ${n:-<unreadable>}) — the BEFORE anchor is absent"; exit 1; }   # → silent: the BEFORE anchor
 # …make the two edits…
-grep -c '^status: superseded$'          "$A"   # → 1  AFTER
-grep -c '^superseded_by: \["0090"\]$'   "$A"   # → 1  AFTER
+n=$(grep -c '^status: superseded$' "$A"); test "${n:-0}" -eq 1 || { echo "FAIL: the status edit did not land — ADR-0079 is not 'status: superseded'"; exit 1; }   # → silent: AFTER
+n=$(grep -c '^superseded_by: \["0090"\]$' "$A"); test "${n:-0}" -eq 1 || { echo "FAIL: the back-link edit did not land — ADR-0079 does not point at 0090"; exit 1; }   # → silent: AFTER
 ```
 
 Then update `references/adr/README.md`, which needs **five** changes and each has its own anchor. **Every anchor
@@ -472,14 +474,14 @@ python spikes/p2/score-p2.py ; rc=$? ; echo "exit=$rc" ; test "$rc" -eq 0 || { e
                                                                    #   coarse specificity 0.73, fine 0.55,
                                                                    #   recall NOT COMPUTABLE, criterion 1 FIRES
 test "$(ls references/adr/0090-*.md 2>/dev/null | wc -l)" = 1 || { echo "FAIL: references/adr/0090-*.md is not exactly one file"; exit 1; }   # → silent; exactly one file
-grep -c '^superseded_by: \["0090"\]$' references/adr/0079-*.md     # → 1  back-link present
-grep -c '^status: superseded$'        references/adr/0079-*.md     # → 1  status moved
+n=$(grep -c '^superseded_by: \["0090"\]$' references/adr/0079-*.md); test "${n:-0}" -eq 1 || { echo "FAIL: ADR-0079 carries ${n:-<unreadable>} back-links to 0090, expected 1"; exit 1; }   # → silent: back-link present
+n=$(grep -c '^status: superseded$' references/adr/0079-*.md); test "${n:-0}" -eq 1 || { echo "FAIL: ADR-0079's status is not 'superseded' (got ${n:-<unreadable>})"; exit 1; }   # → silent: status moved
 test "$(grep -c '0079. is the only .proposed. record' references/adr/README.md)" = 0 || { echo "FAIL: README still carries the stale '0079 is the only proposed record' claim"; exit 1; }   # → silent; the stale claim is GONE
 test "$(grep -c '0090. and .0091. are reserved' references/adr/README.md)" = 0 || { echo "FAIL: the '0090 and 0091 are reserved' sentence is still in README (BOTH sites: Purpose and §Numbering)"; exit 1; }   # → silent; the PREVIOUS reservation sentence is gone
-grep -c '0091. reserved for'                   references/adr/README.md   # → 1  0091 alone stays reserved (Step 6.1)
+n=$(grep -c '0091. reserved for' references/adr/README.md); test "${n:-0}" -eq 1 || { echo "FAIL: README carries ${n:-<unreadable>} '0091 reserved for' sentences, expected exactly 1 (Step 6.1)"; exit 1; }   # → silent: 0091 alone stays reserved
 test "$(grep -c 'source = "llm"' spikes/p9/facets.toml)" = 7 || { echo "FAIL: spikes/p9/facets.toml no longer carries exactly 7 source = \"llm\" facets — the BEFORE half of Checkpoint 4a's zero"; exit 1; }   # → silent; 7 BEFORE Step 4a (the registry is Step 4a's; this line is the BEFORE half of Checkpoint 4a's zero)
 ls references/adr/0090-*.md >/dev/null 2>&1 || { echo "FAIL: references/adr/0090-*.md absent — grep -c would exit 2 and print nothing"; exit 1; }
-grep -c 'has_repro\|external_dep\|market_facing' references/adr/0090-*.md   # → ≥ 1: the booleans clause is in the record (PIA-003)
+n=$(grep -c 'has_repro\|external_dep\|market_facing' references/adr/0090-*.md); test "${n:-0}" -ge 1 || { echo "FAIL: ADR-0090 does not name the three booleans — the clause DECISIONS-2026-09-11 #2 pre-registered is missing (PIA-003)"; exit 1; }   # → silent: ≥ 1
 git add references/adr/0090-*.md references/adr/0079-*.md references/adr/README.md \
   && git commit -m "ADR-0090: the context-vector source — supersedes 0079 in full; every LLM-sourced axis and boolean is human at triage (DECISIONS-2026-09-11 #2)" \
   || { echo "FAIL: git add/commit did not succeed"; exit 1; }
@@ -527,8 +529,9 @@ Concretely, after Checkpoint 4 the following are still true and are still enforc
 ```bash
 cd D:/repos/redkiln-rs
 # The gate token every later step checks. It asserts a DECISION exists, not that the block lifted.
-ls references/adr/0090-*.md >/dev/null 2>&1 && echo "GATE DISCHARGED — ADR-0090 exists" \
-                                            || echo "GATE OPEN — no selection-path work may start"
+( ls references/adr/0090-*.md >/dev/null 2>&1 \
+    || { echo "GATE OPEN — no ADR-0090, so no selection-path work may start. Go to Step 4."; exit 1; }
+  echo "GATE DISCHARGED — ADR-0090 exists" )   # a subshell, so a pasted FAIL does not kill an interactive shell
 ```
 
 Run that line at the head of Steps 5, 6, 7a and 7b. It is the cheapest possible check and it is the one thing

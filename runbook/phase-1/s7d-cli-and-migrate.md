@@ -14,7 +14,12 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 
 `rk-cli` is the **composition root**: a `clap` router, one idempotent `run` entry (ADR-0107 — no `--resume`, no
 `resume`, a committed argument-surface snapshot and a name denylist), plus `answer`, `status`, `explain`, `doctor`
-and an idempotent `init`. The adapter set — all four reals (ADR-0094) — is resolved **once at startup** and is a
+and an idempotent `init`. **`init` scaffolds `.redkiln/config.toml`** (DECISIONS-2026-09-12 E6) — the file design §3's port
+rule P3 and design §4.3 rule 3 both read and that no stage created before 2026-09-12: it carries `[adapters]`,
+`[packs] enabled` (empty here; Step 7e fills it) and `doctor.unread_window_runs`. A repository on which only
+`init` has run must be loadable, because AC-485/AC-486 resolve the adapter set **at startup** from that file.
+AC-437's idempotence holds because one verb owns creation: a second `init` leaves the tree identical.
+The adapter set — all four reals (ADR-0094) — is resolved **once at startup** and is a
 run-scoped constant (AC-485); an adapter that is not compiled in or is misconfigured **refuses the run before any
 spawn or store write** (AC-486). The process reads its environment in exactly one place — here, while building
 `Config` — and configuration reaches the kernel **as a value**; the `CancelToken` is constructed here and wired to
@@ -46,6 +51,21 @@ explicit **Phase-2 acceptance set for the full migration**; Phase 1's v0 claims 
 The companion kinds it lifts as typed sidecars are the six of DECISIONS-2026-09-11 #3; the other eight census kinds
 lift as opaque prose (ADR-0075 clause 6). It never populates `gwt` or `verification` (AC-137; the 153-spec byte-identical
 round-trip of AC-454 is the check).
+
+**Red first (golden constraint 12; ADR-0019).** The checkpoint below is the floor, not the evidence:
+every one of its `cargo test … -- <filter>` lines is satisfied by an implementation that nothing pins.
+Author each named test **before** the code it describes, run it, and watch it fail for the right reason —
+the absent behaviour, not a compile error or a filter that matched nothing.
+
+- `refuses_dirty_target` — red against a target with non-empty `git status --porcelain`: `redkiln-migrate` must
+  refuse **before any write** (AC-522). A test that checks the refusal only after a partial write pins nothing.
+- `idempotent_across_kill` — AC-450's kill case: red by killing **between the write and the commit**, then
+  re-running. This is the one Halt 4 exists for; a digest that differs across the boundary is a halt, not a retry.
+- `resume_is_refused` — red by adding `--resume` to the argument surface: ADR-0107's denylist means the flag must
+  not **exist**, and the test asserts the unknown-argument refusal, not merely a non-zero exit.
+- `doctor_window_n_fixtures` — the paired **N−1 / N+1** threshold fixtures AC-472/AC-426 name. They cannot be
+  authored until `N` is declared (**DECISIONS-2026-09-12 E9**, owed); until then this criterion has no truth value and
+  SM-139's target cannot be missed. Record that, do not grep for an identifier and call it covered.
 
 **Checkpoint 7d:**
 
@@ -92,14 +112,38 @@ test -n "$(find crates -name '*.rs' -print -quit)" || { echo "FAIL: crates/ carr
 ```
 
 **Acceptance set (explicit):** **AC-400–AC-439** (CLI and `doctor`; AC-428 is a re-issued id — read its hazard note),
-**AC-263** (the gate's CLI half, from 7b-ii); the **v0** rows of the migration area — **AC-441, AC-442, AC-443,
-AC-445–AC-450, AC-453–AC-458, AC-462–AC-468, AC-470–AC-478** — plus **AC-522**; **AC-485, AC-486, AC-488**.
-**Excluded, by id and reason:** AC-440, 444, 451, 452, 459, 460, 461, 469, 479 (corpus-bound; the local-only suite
-and Phase 2's full-migration set — PIA-002), AC-505 (Phase 2, `rk-plugin-gen`). `AC-472`/`AC-426` cannot be evaluated
-until `doctor`'s unread-artifact window `N` is **declared** — that is **the fourth of the seven decisions this runbook
-takes**. Declare it in the rule table in this step and record the number, or the criterion has no truth value and
-SM-139's target cannot be missed. The namespace prefix `doctor` and `rk-plugin-gen` lint for is **`rk-`**
-(DECISIONS-2026-09-11 #8; AC-506).
+**AC-263** (the gate's CLI half, from 7b-ii); the **v0** rows of the migration area, realigned 2026-09-12 to the
+register's own phase note (register :6263) — **AC-441, AC-442, AC-443, AC-445–AC-450, AC-463, AC-465, AC-466,
+AC-468, AC-470–AC-474, AC-476–AC-478** — plus **AC-522**; **AC-485, AC-486, AC-488**; and **AC-475** as a **negative
+tripwire** (below).
+**Excluded, by id and reason:** AC-440, AC-444, AC-451–AC-454, AC-456–AC-462, AC-464, AC-467, AC-469, AC-479
+and **AC-455** (`rk-kernel` **policy**, not the migrator's: its GIVEN/WHEN is a spec with
+`verification: None` against a pack policy and *"the stage's admissibility is evaluated"* — it sits in the
+migration id range and belongs to nothing in this step; **cross-listed to 7b-ii**, where admissibility is built)
+(**corpus-bound**: the register's phase note names these a *Phase-2 acceptance set* — they need the 1,312-file
+corpus, which reaches this box only as Step 2's local-only suite; PIA-002). Until 2026-09-12 this step claimed
+nine of them (AC-453–AC-458, AC-462, AC-464, AC-467) on an instrument it cannot run here, which is the PIA-059
+shape. AC-505 (Phase 2, `rk-plugin-gen`).
+**AC-475 is claimed, deliberately, against the register's placement of it** (DECISIONS-2026-09-12 E13): its Verified-by has
+two halves, and the second — *"a schema assertion of zero `ChangeSummary` values in migrated output"* — needs no
+corpus and runs on this step's own dry-run fixture. It is a **negative** criterion, so asserting it before the
+code that could violate it exists is the cheap direction, and s5 §5.3's *"no `ChangeSummary` value is
+synthesised (AC-475)"* would otherwise cite a criterion no Phase-1 stage claims. **Owed to the register
+(errata):** AC-475's placement, and **AC-468**, which the phase note lists as corpus-bound *and* as part of what
+Phase 1 owes (*"the report schema AC-448/AC-468"*) — it cannot be both; this step claims AC-468 on the report
+schema reading and the contradiction is raised, not resolved here. **`doctor`'s unread-artifact window `N` is declared here as
+`unread_window_runs = 50`** (DECISIONS-2026-09-12 E9) — **the fourth of the seven decisions this runbook takes**,
+now taken. It goes in the `doctor` rule table and in the `[doctor]` block `init` scaffolds; AC-426 makes the key
+**required with no default**, so every repository declares its own and 50 is what `init` writes. The warrant, in
+one line: a genuinely dead artifact kind has **zero reads forever** — `plan.md` was dead in **110/110** and was
+found by census, not by a window — so a wide window costs detection *latency* and nothing else, while a narrow
+one false-flags a kind that is legitimately read once per initiative and teaches the operator to ignore `doctor`.
+AC-472/AC-426 are evaluable from this value, and SM-139's target can now be missed. The namespace prefix `doctor` and `rk-plugin-gen` lint for is **`rk-`**
+(DECISIONS-2026-09-11 #8). **Claim it as AC-531, not AC-506** (corrected 2026-09-12): AC-531 is the Phase-1
+criterion for exactly this rule on `redkiln init`'s output, was allocated by the 2026-09-11 amendment outside this
+area's exhausted range, and was claimed by no stage — while **AC-506 is Phase 2** and is excluded by name at Step
+7a. The evidence is shipmates L3.1: twenty generically-named skills prefixed at a cost of one release, three
+regressions and six follow-ups — "free at t=0; ~9 issues at t=30d".
 
 **Before this step, not after (audit §8 C-01):** the CLI/doctor criteria AC-400–AC-439 and SM-121–SM-130 had no owning
 slice in the 2026-09-10 audit — 27 of 40 criteria were never named by any finder. Run one slice finder + refuter over

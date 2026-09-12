@@ -104,7 +104,7 @@ Three more that F39 produced, and that this revision added because it met all th
 
 10. **A deriver's false positives cluster on the vocabulary of the thing being measured.** That is a correlated
     failure, not a tuning parameter, and it does not average out with more data. `auth` marks true on 14 of 20
-    items and scores **0.00 over 11 positives**, upper bound **0.26**, because `auth` is a substring of *authored*
+    items and scores **0.00** — 0/11 [0.00, 0.26] on the 2026-09-09 scoring; 0/12 [0.00, 0.24] after the 2026-09-11 panel-file key fix scored all 140 cells — F39-DRAFT's Correction; ERRATA E-0089-2 — because `auth` is a substring of *authored*
     (40 hits), `oauth` of *coauthor* (8) and `token` matches a design token (36) [measured, F39 §2]. **Stop and
     read what the rule fired *inside* before you adjust the rule.** Adding word boundaries here removes the
     `coauthor` (8) and ARIA-`role` (2) hits and leaves the 40 *authored* and 36 design-`token` hits untouched — they

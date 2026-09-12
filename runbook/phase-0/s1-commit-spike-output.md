@@ -23,7 +23,10 @@ normalisation on this Windows checkout. Check before you stage anything:
 
 ```bash
 git -C D:/repos/redkiln-rs diff -w --stat        # anything listed here with 0 real changes is CRLF churn
-git -C D:/repos/redkiln-rs checkout -- <file>    # revert those, or set core.autocrlf, BEFORE staging
+# Revert exactly those, or set core.autocrlf, BEFORE staging. Name the paths in CRLF_PATHS: a bare
+# <file> is a bash redirect, not an argument (the hazard s7d and s8 (1) both flag).
+CRLF_PATHS=""                                    # e.g. CRLF_PATHS="spikes/results/a.md spikes/results/b.md"
+test -n "$CRLF_PATHS" && git -C D:/repos/redkiln-rs checkout -- $CRLF_PATHS
 ```
 
 ### 1.2 Remove the run noise

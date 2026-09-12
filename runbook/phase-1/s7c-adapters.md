@@ -100,6 +100,29 @@ Card delivery, per profile (DECISIONS-2026-09-11 #19; PIA-012): **`static`** —
 append flags are **absent from argv** in every profile — S-H1c is unrun, and the route may not be enabled as
 anything but an unmeasured config option. The 18,603-token flat-prefix promise (AC-384, SM-113) is `static`'s only.
 
+**Red first (golden constraint 12; ADR-0019).** The checkpoint below is the floor, not the evidence:
+every one of its `cargo test … -- <filter>` lines is satisfied by an implementation that nothing pins.
+Author each named test **before** the code it describes, run it, and watch it fail for the right reason —
+the absent behaviour, not a compile error or a filter that matched nothing.
+
+- `api_key_refuses_construction` — red with `ANTHROPIC_API_KEY` present in the `Config` map: construction must
+  **fail**, not warn (AC-488). The map is a value, which is what keeps this a unit test rather than a forbidden
+  `set_var`.
+- `structured_output_required` — red on a card that omits `StructuredOutput`: refused at **configuration time**
+  (ADR-0108). F20 is why this cannot be a runtime check — a `tools` allowlist silently disables `--json-schema`,
+  `structured_output` is absent, and the process **exits 0 reporting success**.
+- `golden_argv_per_profile` — two profiles, two pinned argvs, asserted per profile in the test body. Red by
+  swapping them: `static` puts the card on `--system-prompt`, `default` prepends it to the user message
+  (DECISIONS-2026-09-11 #19). A test that accepts either pins neither.
+- `argv_cap_refuses_before_spawn` — the fixture sits **at** the cap and must be refused with a typed configuration
+  error **before** spawn (PIA-014).
+- `cancel_reaps_process_tree` — red with a **detached grandchild** (AC-224); a fixture that only reaps the direct
+  child passes a weaker test. The Windows arm is `cfg`-gated, so a zero-match run on this filter IS the platform
+  hole, not a pass.
+
+**And then the fifteenth line, which no test replaces:** one real dispatch, validated before any set (golden
+constraint 4). Three E3 defects survived "built and validated" because none was reachable from a unit test.
+
 **Checkpoint 7c.** All fourteen, and then the fifteenth below, which no `cargo test` can stand in for:
 
 ```bash
@@ -139,7 +162,21 @@ rk_absent 'append-system-prompt' 'AC-211: the append flags are ABSENT from argv 
 h=$(grep -rn 'allow(unsafe_code)' crates/ --include=*.rs); printf '%s\n' "$h"   # → exactly ONE hit, in rk-adapter-claude's Job Object module, with its comment (ADR-0102)
 [ "$(printf '%s' "$h" | grep -c .)" -eq 1 ] || { echo "FAIL: expected exactly ONE allow(unsafe_code) in the workspace (ADR-0102)"; exit 1; }
 printf '%s\n' "$h" | grep -q '^crates/rk-adapter-claude/' || { echo "FAIL: the one allow(unsafe_code) is not in rk-adapter-claude (ADR-0102)"; exit 1; }
-rk_absent 'impl Default for (Usage|CacheCreation|Margins)' 'PIA-062: the lifted Usage/CacheCreation/Margins carry NO Default (AC-362/AC-377)'
+rk_absent 'impl Default for (Usage|CacheCreation|Margins)' 'PIA-062: no hand-written Default on the lifted Usage/CacheCreation/Margins (AC-362/AC-377)'
+# The lifted source carries the DERIVE form, not an impl block — `grep 'impl Default for'` over
+# spikes/runner/src/event.rs matches nothing while five `#[derive(Debug, Clone, Default, …)]` lines stand
+# (measured 2026-09-12, event.rs:95/124/191/209/295). An assertion that cannot see the shape it forbids
+# passed vacuously over exactly the code this step lifts. Both forms are asserted now:
+for t in Usage CacheCreation Margins; do
+  f=$(grep -rln "struct $t" crates/rk-adapter-claude/src/) \
+    || { echo "FAIL: no struct $t in rk-adapter-claude — the Default ban has nothing to search"; exit 1; }
+  printf '%s\n' "$f" | while read -r m; do
+    grep -B3 "struct $t" "$m" | grep -qE '#\[derive\([^)]*\bDefault\b' \
+      && { echo "FAIL: $t derives Default in $m — PIA-062 requires Option over 0, with NO Default (AC-362/AC-377)"; exit 1; }
+  done
+  echo "PASS: $t carries no derived Default"
+done
+rk_absent 'unwrap_or\(0\)|unwrap_or_default\(\)' 'AC-362: no unwrap_or(0)/unwrap_or_default() on the usage struct — a Some(0) makes a TTL claim look verified'
 ```
 
 **Spikes owed by this step (PIA-047):** **S-CANCEL-WIN** — one fixture-cancel-rm run on Windows, recorded in its
@@ -156,7 +193,11 @@ reachable from a unit test.
 **Acceptance set (explicit, per PIA-071/PIA-070):** **AC-200–AC-239** (harness port and adapter) **minus AC-207**
 (retired, never reuse) and plus **AC-523**; **AC-360–AC-399** (event log, cost attribution, throttling); the
 adapter-side halves of the gates — **AC-282**, and **AC-243/AC-267/AC-269/AC-279** cross-listed from 7b-ii; and the
-Toolchain rows **AC-328/AC-329** for both toolchain adapters. **Excluded, by id and reason:** AC-240–AC-359's kernel
+Toolchain rows **AC-328/AC-329** for both toolchain adapters; plus **AC-526**, allocated outside this area's
+exhausted range by the 2026-09-11 amendment and claimed by no stage until 2026-09-12 — the environment builder and
+`doctor` must refuse a path that sets **one** of `CLAUDE_CODE_PROMPT_CACHE_TTL` and
+`CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` without the other (ADR-0078; both variables are already prescribed in this
+step's cache paragraph, so this is the criterion for text the step carries but never claimed). **Excluded, by id and reason:** AC-240–AC-359's kernel
 halves (7b-ii's), **AC-356** (PROVISIONAL, S-BIN), the human-gated halves of **AC-357/AC-358**, **AC-312**
 (PROVISIONAL on S-SUBTLE-CB — its framing-variant fixtures are **authored here and left unrun**, priced in design
 §10.5; DECISIONS-2026-09-11 #17), AC-255 and AC-297 (cut).

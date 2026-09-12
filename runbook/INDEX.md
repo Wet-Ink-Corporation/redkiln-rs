@@ -13,6 +13,33 @@ its checkpoint, record the result in `PROGRESS.md` in the same commit, and move 
 checkpoint you could not run is a failed checkpoint (Halt 8), and a `[WILL EXIST]` line is deferred to the stage it
 names, not passed.
 
+**What redkiln-rs is, and why it is a rewrite — read this once if you have not read the RFC.** Redkiln is
+backlog-as-code: the work items, the process that moves them and the evidence that they are done all live in the
+repository as files, and an agent harness executes that process against them. The predecessor is a Node/TypeScript
+Claude Code plugin at `D:/repos/redkiln`, frozen at `47faec9f` and bundled into the corpus at Step 2. The RFC of
+2026-08-31 separated two bets and recommended only the first: **invert control** — Rust owns the loop and spawns
+`claude -p` per step — on the finding that roughly two-thirds of the workflow layer is compensation for the Workflow
+runtime's sandbox and *disappears* rather than ports, and that ~50% of the command layer is orchestration logic
+living as prose the model must re-execute correctly on every run [measured, RFC §0]. The design of 2026-09-08 took
+the stronger clean-break form (ADR-0002): **one Rust binary that owns the loop**, with a **deterministic kernel** —
+selection, gates, budgets, retry, replay — that holds no non-determinism of its own and dispatches one harness
+process per activity; durable state as git trailers first and an append-only event log second; human gates as
+durable marks, never a process that waits; and every agent output a typed value of which markdown is a *rendering*
+and never a source (design §0). The kernel is hexagonal along **five named ports** — event store, harness, tracker,
+docs site, toolchain (ADR-0003) — each a sync trait with a fake, every `.await` confined to an adapter.
+
+**Why that shape matters to you while you build it.** The point of the inversion is that a decision becomes a thing
+you can write a test about. Every constraint in `00-preamble.md`, every halt in `halts.md` and every checkpoint in
+these stages exists because a decision that could not be replayed or falsified had already cost this programme
+something measurable. When a stage file tells you to assert rather than read, that is the same bet, one level down.
+
+**Where the vision lives**, when a stage does not say enough: `references/2026-08-31-rust-inversion-RFC.md` and its
+amendment `references/2026-09-02-rfc-amendment.md` (why at all), `references/2026-09-05-architecture-proposal.md`
+(the shape at revision 4), and the binding `references/2026-09-08-architecture-design.md` (§0 in one paragraph,
+§0.1 decided-vs-blocked, §2 the principles the data imposes). **Phase 1 ends when Redkiln-RS runs its own fix lane
+and authors a Phase-2 story** — both lanes, four adapters (ADR-0011, ADR-0094) — which is what self-hosting means
+here.
+
 ## Execution order
 
 `0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7a → 7b → 7c → 7d → 7e → 8` — Step 2 runs **sixth** (its ORDER banner says why:
@@ -49,6 +76,26 @@ it deletes the directory Step 3b writes into and Step 4 reads from). Step 9 is r
 | **M4 — the system runs** | Checkpoint 7e passed (after 7c, 7d) | four adapters, a CLI, a migrator and a loadable pack set |
 | **M5 — Phase 1 exits** | Checkpoint 8 passed | Redkiln-RS ran its own fix lane and authored a Phase-2 story |
 
+## Where the human is needed
+
+Every entry gate in the table above names a checkpoint or a banner. **None of them names a person**, and three
+obligations are outstanding that no stage gate will stop you on. They are tracked in `PROGRESS.md` §1 and §2, not
+here; this table exists so an operator planning a session knows where it will block on someone rather than something.
+
+| Owed | Since | What is owed | Where it is recorded | What proceeds without it |
+| --- | --- | --- | --- | --- |
+| **D-FIXCONSUMER countersignature** | Step 3a, 2026-09-12 | The runtime probe is `[WILL EXIST]` and could not run, so the Workflow runtime's behaviour is **UNVERIFIED**. A forced deferral, not an adjudicated one: countersign it, or schedule the dispatch. | `DECISIONS-2026-09-09 #39`; `PROGRESS.md` §1 | Steps 4–7e. **Step 8 check (1)** consumes the fix lane and is where it bites. |
+| **Arm L labels** | Step 3b, by decision | Arm L is outstanding and is labelled later, at a new corpus pin (DECISIONS-2026-09-11 #6). It reports **DEFERRED** through the three-state form, never a pass. | `DECISIONS-2026-09-11 #6`; `s2` Checkpoint 2; `s3` §3b | Everything. It is a decision, not a blocker. |
+| **M-06 Part 2** | before Step 5 | The 30 seeded P2 operator labels. C-01 and C-02 each got a "Before this step, not after" paragraph at their consumer stage; this one is **tracker-enforced only**. | `PROGRESS.md` §2 / §5 | Step 5 does not gate on it. Read the tracker before starting Phase 1. |
+
+**And the decisions the runbook may not take for you.** `00-preamble.md`'s table names seven this runbook executes;
+the ones still *open* are listed there with their record. A stage that meets an open decision **stops** — it does
+not choose a default. `doctor`'s window `N` (Step 7d) and the `git` version floor (Step 6.2) are the two that will
+halt a build session outright if they are still open when you reach them.
+
+Twenty AC rows across the Phase-1 stages are **human-gated** and are excluded from the stages' acceptance sets by
+name and reason; they are not in this table because they gate the criterion, not the build.
+
 ## Shared conventions (stated once here, restated in each file's header)
 
 - **Shell:** every block is POSIX, run in Git Bash from `D:/repos/redkiln-rs` unless it opens with its own `cd`.
@@ -70,25 +117,31 @@ file and record where its remediation landed.
 
 ## Validation of this runbook (the "validated" in its name)
 
-Run from the repository root after any change to `runbook/`:
+Run from the repository root after any change to `runbook/`. **Checks 3 and 4 exit non-zero on failure and are
+the only two that do** — check 1 pipes each validator to `tail` (read its output), and check 2 is an inverted
+grep whose pass condition is no hit, so read both rather than trusting their status. A check that only prints
+is the Halt 8 shape this very block carried until 2026-09-12, when check 3's regexes were found
+double-escaped — matching 0 headings and 0 references, and so printing `0` on every tree. The two checkers now
+live in `runbook/tools/` rather than in a `python - <<'PY'` heredoc, because escaping a regex through a
+heredoc is what broke it; each carries a corpus-wide self-test that fails if its patterns stop matching.
 
 ```bash
 # 1. the corpus's own validators (the audit's instrument, kept in-tree)
 for s in census_ids census_adr census_anchors census_constants; do python references/audit/2026-09-10/scripts/$s.py | tail -2; done
 # 2. no stale claim survives in a live document (each hit must be a quoted historical figure beside its correction)
 git grep -nE 'Step 7b pack authoring|both are 11|Do not cite them as a platform constraint|redkiln run --resume <|nursery = "warn"$|1\.97\.1 or later|thirteen area files|rk-adapter-node\b' -- runbook references/2026-09-08-*.md references/adr/README.md
-# 3. every § reference in runbook/ resolves to a heading in the file it names
-python - <<'PY'
-import re,glob
-files={f.replace('\\\\','/'):open(f,encoding='utf-8').read() for f in glob.glob('runbook/**/*.md',recursive=True)}
-bad=0
-for f,s in files.items():
-    heads=set(re.findall(r'^#+ .*?(\\d+[a-z]?(?:\\.\\d+)?)',s,re.M))
-    for m in re.finditer(r'(?<![A-Za-z-])§(\\d+[a-z]?\\.\\d+)',s):
-        pre=s[max(0,m.start()-14):m.start()]
-        if re.search(r'(design|METHOD\\S*|README|brief|AC|SM|s\\d+[a-z]?)\\s*$',pre): continue
-        if m.group(1) not in heads and not any(h.startswith(m.group(1)) for h in heads): bad+=1; print(f, m.group(0))
-print('unresolved bare § refs:', bad)
-PY
-# 4. the checkpoint dry-run: every checkpoint line whose target exists today, executed, with its output recorded in PROGRESS.md §6
+# 2b. strings the 2026-09-12 review pass retired. Scope is `-- runbook` ONLY, minus this file: ADR-0089:248's
+#     "roughly 60" is frozen body covered by ERRATA E-0089-2, and the audit, the design's §12 "was" column and
+#     the proposals carry several of these as sanctioned historical quotes. This file is excluded because it
+#     CONTAINS the patterns and would otherwise always match itself — the same shape as a guard that cannot fail.
+#     Expected: exactly ONE hit, PROGRESS.md §6's 2026-09-12 row, which quotes each retired string beside its
+#     correction. A second hit is drift; read it against the rule in check 2.
+git grep -nE 'roughly \*\*60 positives\*\*|MCC \+0\.978|Today that is \*\*2\.1\.266|clippy -D warnings|^resolver = "2"|--stability-record <path>|the line reads `FILL-ME`|\(AC-104, SM-035\)|0\.00 over 11 positives' -- runbook ':!runbook/INDEX.md'
+# 3. every bare section reference resolves to a heading in its own file, or names its document
+python runbook/tools/check-refs.py    # exit 0; prints the ref and heading counts it actually matched
+# 4. every checkpoint line can fail (Halt 8 shapes (a)-(h)), with the justified exceptions enumerated
+python runbook/tools/check-checkpoints.py    # exit 0; prints flagged-vs-allowed
+# 5. the checkpoint dry-run: every checkpoint line whose target exists today, executed, with its output
+#    recorded in PROGRESS.md §6. Still operator-driven — it has no single command, because "whose target
+#    exists today" moves with the tree. Record which lines you ran and which you could not, by stage.
 ```

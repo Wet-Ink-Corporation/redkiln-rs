@@ -33,7 +33,27 @@ grep -c '^source = "declared"' spikes/p9/facets.toml     # → 1
 cp spikes/p9/facets.toml .redkiln/facets.toml
 cp spikes/p9/artifacts.toml .redkiln/artifacts.toml
 cp spikes/p9/catalog/*.toml .redkiln/catalog/            # 102 activities, bisect at version 3 with its ceiling (DECISIONS #1)
-cp spikes/p9/packs/*.toml   .redkiln/packs/              # 12 packs; only bug-standard and story are Phase 1 (ADR-0011)
+# EXACTLY TWO packs are installed (DECISIONS-2026-09-12 E7). ADR-0011's Decision is one sentence — "Phase 1 ships
+# exactly two process packs: bug-standard and story" — and `doctor` loads EVERY pack in .redkiln/packs/ under
+# AC-071/AC-520/AC-072, so copying all twelve would put ten unreviewed Phase-2 packs in front of Checkpoint 7e's
+# `doctor` exit 0 and every later doctor run, for no Phase-1 benefit. The other ten stay in spikes/p9/.
+for p in bug-standard story; do
+  test -f "spikes/p9/packs/$p.toml" || { echo "FAIL: spikes/p9/packs/$p.toml absent — the Phase-1 pack set is incomplete (ADR-0011)"; exit 1; }
+  cp "spikes/p9/packs/$p.toml" .redkiln/packs/
+done
+n=$(ls -1 .redkiln/packs/*.toml | wc -l); test "${n:-0}" -eq 2 \
+  || { echo "FAIL: ${n:-0} packs installed, expected exactly 2 (ADR-0011)"; exit 1; }
+# The enabled-pack list (DECISIONS-2026-09-12 E6): `init` scaffolded .redkiln/config.toml at Step 7d with an empty list;
+# this step fills it. Design §4.3 rule 3 reads cross-pack order off exactly this list.
+test -f .redkiln/config.toml || { echo "FAIL: .redkiln/config.toml absent — Step 7d's `init` did not run, or did not scaffold it (E6)"; exit 1; }
+python - "$PWD/.redkiln/config.toml" <<'PY'
+import re, sys
+p = sys.argv[1]; t = open(p, encoding='utf-8').read()
+assert '[packs]' in t, 'config.toml carries no [packs] table — init did not scaffold it'
+t = re.sub(r'(?m)^enabled\s*=.*$', 'enabled = ["bug-standard", "story"]', t, count=1)
+open(p, 'w', encoding='utf-8', newline='').write(t)
+print('[packs] enabled = ["bug-standard", "story"]')
+PY
 ```
 
 `catalog-b/` (the unshipped extended file, ADR-0027) is **not** copied; its three `on_false` defects and one bare
@@ -127,7 +147,16 @@ grep -rn 'exists(' .redkiln/packs .redkiln/catalog; rc=$?; test "$rc" -eq 1 || {
 out=$(python spikes/p9/grammar-probe.py); rc=$?; printf '%s\n' "$out" | grep -E '^predicates parsed|^on_false forms|FAIL '
 test "$rc" -le 1 || { echo "FAIL: grammar-probe exited $rc — it did not run to completion"; exit 1; }
 printf '%s\n' "$out" | grep -qE '^  (FAIL|ON_FALSE-FAIL) (packs|catalog)/' && { echo "FAIL: a defect remains in packs/ or catalog/ — 7e.2's rewrite did not land"; exit 1; }; echo "OK rc=$rc — nothing under packs/ or catalog/ failed; anything listed is catalog-b's, which 7e.1 does not copy"   # → rc 0 or 1, and NO FAIL naming packs/ or catalog/ (record the catalog-b defects that remain)
-grep -rn '^executed = ' .redkiln/catalog/*.toml | grep -c never                       # → 102 minus root-cause's P7 members (ADR-0114: a doctor row, never a lint failure)
+# ADR-0114 decision 2's `executed` ledger is KERNEL-written, on `activity_committed` — so at v0 it is ABSENT
+# from the catalog and 7e authors none of it (DECISIONS-2026-09-12 E8). "Reads executed: never" is doctor's
+# RENDERING of first = None, which is why this asserts doctor's count and not a grep for a row that should not
+# exist yet. A doctor row, never a lint failure (ADR-0114).
+n=$(grep -rlE '^\s*(executed\s*=|\[[^]]*\.executed\])' .redkiln/catalog/*.toml | wc -l)
+test "${n:-0}" -eq 0 || { echo "FAIL: ${n} catalog file(s) carry a hand-seeded executed field — ADR-0114 assigns it to the kernel"; exit 1; }
+out=$(./target/debug/redkiln doctor 2>&1) || { echo "FAIL: doctor exited non-zero"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qiE 'never[- ]executed' \
+  || { echo "FAIL: doctor prints no never-executed line — ADR-0114 decision 2's ledger is not reported"; exit 1; }
+printf '%s\n' "$out" | grep -iE 'never[- ]executed'   # → 102 minus root-cause's P7 members, whose first/last come from F37's run ids
 git add .redkiln spikes/p9 && git commit -m "Step 7e: pack authoring — .redkiln/ derived, rows dispositioned, stale_policy recorded per class, lattice re-baselined" || { echo "FAIL: git add/commit did not complete"; exit 1; }
 n=$(git status --porcelain | grep -c '^ M'); echo "$n"; test "$n" -eq 0 || { echo "FAIL: $n tracked files still modified after the Step 7e commit"; exit 1; }   # → 0
 git tag -a redkiln-pack-v0 -m "ADR-0114: P6 lint green at pack-default; 287/287 parsed" && git rev-parse -q --verify refs/tags/redkiln-pack-v0 || { echo "FAIL: redkiln-pack-v0 was not created"; exit 1; }   # → the tag's SHA on the Step 7e commit; its two conditions are the doctor and grammar-probe lines above (no CLI verb — ADR-0107 has none for it)

@@ -46,35 +46,57 @@ git ls-files --error-unmatch "$AUTHORED_STORY" || { echo "FAIL: the authored sto
 **(2) Replay — AC-184 / SM-124, and the kernel replay test.**
 
 ```bash
-test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (2) NOT RUN (Halt 8)"; exit 1; }
-before=$(./target/debug/redkiln doctor) || { echo "FAIL: doctor exited non-zero before the rebuild"; exit 1; }
-test -n "$before" || { echo "FAIL: doctor printed nothing before the rebuild — two empty readings compare equal"; exit 1; }
+cd D:/repos/redkiln-rs
+# The instruments are the ones the REGISTER names, not doctor's stdout (DECISIONS-2026-09-12 E5).
+# AC-161 asks for the stage-level next action "equal, under the CANONICAL SERIALISER"; AC-184 names "the
+# rebuild differential test, run in CI on every commit" over the tier-1 projection (ADR-0105 clause 9).
+# Neither needs a doctor output contract, and pinning one would create a second source of truth that drifts
+# from the serialiser — and would go red on a rebuild timestamp. doctor's stdout stays a human affordance.
+out=$(cargo test -p rk-kernel -- rebuild_differential 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: rebuild_differential exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched rebuild_differential — AC-184's tier-1 projection differential does not exist under that name"; exit 1; }
+out=$(cargo test -p rk-kernel -- stage_level_next_action 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: stage_level_next_action exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched stage_level_next_action — AC-161's canonical-serialiser equality is unasserted"; exit 1; }
+# The operator path must still work (AC-427), but its STDOUT is not the comparison.
+test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (2)'s operator half NOT RUN (Halt 8)"; exit 1; }
 ./target/debug/redkiln doctor --rebuild || { echo "FAIL: doctor --rebuild exited non-zero (AC-427)"; exit 1; }
-after=$(./target/debug/redkiln doctor) || { echo "FAIL: doctor exited non-zero after the rebuild"; exit 1; }
-test -n "$after" || { echo "FAIL: doctor printed nothing after the rebuild"; exit 1; }
-printf '%s\n' "$before"; echo '--- rebuild ---'; printf '%s\n' "$after"   # → both readings printed and diffed BY EYE. The "same next action" half is NOT asserted mechanically and must not be yet: no next-action line is specified anywhere (AC-427 verifies by a CI divergence-report artifact, not by stdout; s7d:55 says doctor prints one rule table), and byte-equality of the whole table would go red on a rebuild timestamp or store count. NEEDS A DECISION on doctor's output contract.
-# reproduces the SAME next action from git alone, after dropping tier-2 entirely.
-# This is the FIRST time the FSM is replayed at all — F19 proved suspension lossless
-# 174/174 and explicitly left "same next action" unproven. Includes the adversarial-store
-# variant and the 40-hex corpus-pin assertion.
+echo "(2) asserted: AC-184 differential + AC-161 next action, both under the canonical serialiser"
+# This is the FIRST time the FSM is replayed at all — F19 proved suspension lossless 174/174 and explicitly
+# left "same next action" unproven. Includes the adversarial-store variant and the 40-hex corpus-pin assertion.
 ```
 
 **(3) Deterministic resume across a real kill, at MORE THAN ONE STEP.**
 
 ```bash
-# taskkill /T /F the running process mid-graph, then re-invoke the SAME idempotent entry — there is no
-# --resume flag and no resume verb (ADR-0107; AC-013/AC-186/AC-264/AC-400). The previous revision of this line
-# invoked `redkiln run --resume <run-id>`, a flag four criteria deny (PIA-030); that it is refused is itself
-# AC-400's behavioural check (s7d's checkpoint).
-test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (3) NOT RUN (Halt 8)"; exit 1; }
-test -n "$ITEM" || { echo "FAIL: set ITEM to the same item the killed run was on"; exit 1; }
-./target/debug/redkiln run --lane fix --item "$ITEM" || { echo "FAIL: the re-invocation exited non-zero — there is no --resume flag and none is added here (ADR-0107; AC-013/AC-186/AC-264/AC-400)"; exit 1; }
-out=$(./target/debug/redkiln explain --item "$ITEM") || { echo "FAIL: explain exited non-zero"; exit 1; }   # the run id is read back from the event log (AC-013)
-test -n "$out" || { echo "FAIL: empty event log — two empty outputs compare equal, so this may never be the comparison's floor"; exit 1; }
-printf '%s\n' "$out"   # → diff this against the PRE-KILL `explain --item` capture. That capture is taken nowhere in this block: taking it before the taskkill is owed, and no step-output digest field is named in any ADR, so the equality is READ, not asserted. NEEDS A DECISION.
-# every step-output digest before the kill equals the digest after resume (compare the two `explain` outputs).
-# F38 held exactly ONE step at n=3; this criterion is the multi-step case, which is unmeasured — and AC-265
-# (the gate answer surviving the kill) is exercised here, not in 7b-ii.
+cd D:/repos/redkiln-rs
+# Two halves (DECISIONS-2026-09-12 E5). The ASSERTED half is a kernel test over AC-013's N-step fixture graph;
+# the OPERATIONAL half is the real-process arm ADR-0107 decision 4 pins, which is READ, not asserted — no
+# step-output digest field is named on `explain`'s output contract, and that residual is owed to an ADR-0107
+# erratum, not resolved here. AC-013 is PROVISIONAL on P8: F38 held exactly ONE step at n=3.
+out=$(cargo test -p rk-kernel -- kill_and_resume_n_step 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: kill_and_resume_n_step exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
+  || { echo "FAIL: 0 tests matched kill_and_resume_n_step — AC-013's multi-step digest equality is unasserted"; exit 1; }
+echo "(3) asserted: AC-013 N-step kill-and-resume, digest equality, zero re-dispatch"
+# --- the operational arm, in order. The PRE-KILL capture is taken HERE; until 2026-09-12 this block
+# --- diffed against a capture it never took, and never performed the kill (it lived in a comment).
+test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — (3)'s operational arm NOT RUN (Halt 8)"; exit 1; }
+test -n "$ITEM" || { echo "FAIL: set ITEM to the item the run is on"; exit 1; }
+pre=$(./target/debug/redkiln explain "$ITEM") || { echo "FAIL: pre-kill explain exited non-zero"; exit 1; }   # POSITIONAL (ADR-0107 decision 4; design:1311) — not --item
+test -n "$pre" || { echo "FAIL: empty pre-kill capture — two empty outputs compare equal"; exit 1; }
+# Now kill the running process mid-graph, from another shell:   taskkill /T /F /PID <pid>
+# Then re-invoke the SAME idempotent entry — there is no --resume flag and no resume verb (ADR-0107;
+# AC-013/AC-186/AC-264/AC-400). That --resume is refused is itself AC-400's check, at s7d's checkpoint.
+./target/debug/redkiln run --lane fix --item "$ITEM" || { echo "FAIL: the re-invocation exited non-zero"; exit 1; }
+post=$(./target/debug/redkiln explain "$ITEM") || { echo "FAIL: post-resume explain exited non-zero"; exit 1; }
+test -n "$post" || { echo "FAIL: empty post-resume capture"; exit 1; }
+diff <(printf '%s\n' "$pre") <(printf '%s\n' "$post")   # → READ this. Whole-output equality is NOT asserted: the
+# post-resume output necessarily carries the resume's own appended events, so a bare `=` test would false-fail
+# on a correct binary. The kernel test above is the generalising instrument; this arm is the real-process check.
+# AC-265 (the gate answer surviving the kill) is exercised here, not in 7b-ii.
 ```
 
 **(4) The determinism ban list fails the build.** `cargo clippy --workspace --all-targets` gated on its exit code
@@ -87,7 +109,7 @@ the pass.
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
 test -f Cargo.toml && test -f clippy.toml || { echo "FAIL: no workspace-root Cargo.toml / clippy.toml — AC-001–AC-004 have no instrument; criterion (4) NOT RUN (Halt 8)"; exit 1; }
 cargo clippy --workspace --all-targets || { echo "FAIL: the clippy gate is red (never -D warnings on the CLI — ADR-0083; PIA-030)"; exit 1; }
-test -n "$CLOCK_FIXTURE" || { echo "FAIL: name the clock-read fixture crate in CLOCK_FIXTURE — no ADR or register names it; NEEDS A DECISION"; exit 1; }
+CLOCK_FIXTURE=rk-clock-read   # s5 §5.1a names it; a feature-gated workspace member (DECISIONS-2026-09-12 E4)
 cargo metadata --format-version 1 --no-deps | grep -q "\"$CLOCK_FIXTURE\"" || { echo "FAIL: $CLOCK_FIXTURE is not a workspace member — a missing fixture must never read as the pass"; exit 1; }
 cargo clippy -p "$CLOCK_FIXTURE"; rc=$?; [ "$rc" -ne 0 ] || { echo "FAIL: the clock-read fixture PASSED the lint — the fixture FAILING it is the pass (PIA-031)"; exit 1; }
 ```
@@ -107,8 +129,15 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo
 # [WILL EXIST] — and so does its argument: there is NO .redkiln/ directory in redkiln-rs today
 # (verified 2026-09-11). The facet registry that exists now is spikes/p9/facets.toml, which STEP 7e's
 # pack authoring derives .redkiln/facets.toml from (PIA-011). Both the binary and the file are Phase-1 output.
-./target/debug/redkiln lint --facet-stability .redkiln/facets.toml \
-                            --stability-record <path>
+./target/debug/redkiln lint --facet-stability .redkiln/facets.toml
+# The passing branch after Step 4a is the ZERO-llm branch, which needs no stability record -- this is the
+# form s7e Checkpoint 7e uses, and it is why the argument is dropped here. A bare <path> is a bash
+# redirect, not an argument: the line above never ran until 2026-09-12. If a facet is ever
+# source = "llm", the record-bearing form is
+#   STABILITY_RECORD=          # set to a real path first
+#   test -n "$STABILITY_RECORD" || { echo "FAIL: no stability record path"; exit 1; }
+#   ./target/debug/redkiln lint --facet-stability .redkiln/facets.toml --stability-record "$STABILITY_RECORD"
+# [WILL EXIST] -- re-run at Checkpoint 7e, where s7e:120-121 runs both lints against the product registry.
 # exit 0 only when EITHER zero facets are declared source = "llm",
 # OR a stability record satisfies ALL FIVE clauses:
 #   modal_required_set_identity >= 0.80  AND  n_items >= 20  AND  draws_per_item >= 10

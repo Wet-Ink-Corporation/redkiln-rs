@@ -50,6 +50,20 @@ a fake that quietly stops tracking its trait is the failure this catches.
 `compile_fail` doctests pass, clippy clean [measured, F41]. Start `rk-ports` from it; do not start from ADR-0076's
 "handle minted when the operation started" wording, which F41's first doctest is written to reject.
 
+**Red first (golden constraint 12; ADR-0019).** The checkpoint below is the floor, not the evidence:
+every one of its `cargo test … -- <filter>` lines is satisfied by an implementation that nothing pins.
+Author each named test **before** the code it describes, run it, and watch it fail for the right reason —
+the absent behaviour, not a compile error or a filter that matched nothing.
+
+- `port_fake_parity` — the assertion is spelled `traits.len() == fakes.len()` and is **evaluated**. Red by adding a
+  sixth trait with no fake: the test must fail **without anyone editing an inventory** (PIA-059; AC-481's amended
+  Verified-by). A grep that the string exists is not this test; keep the grep as the floor and the fixture as the
+  evidence.
+- The two `compile_fail` doctests are already red by construction — that is what `compile_fail` means — but assert
+  they **ran**: `doctest = false` runs zero and still exits 0, which is why Checkpoint 7a counts them.
+- `arc_dyn_port_rejects_rc` — a fake holding an `Rc` must not compile (F41's first doctest); `no_generics_leak` is
+  AC-480's. Both are type-level, so both are `compile_fail`, not runtime assertions.
+
 **Checkpoint 7a.** All nine assertions — each is now guarded, so the block is longer than nine lines; count
 assertions, not lines:
 
@@ -73,7 +87,7 @@ out=$(cargo test -p rk-ports --doc 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --doc exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
 n=$(printf '%s\n' "$out" | sed -n 's/^test result: ok\. \([0-9]*\) passed.*/\1/p' | head -1)
 [ "${n:-0}" -ge 2 ] || { echo "FAIL: ${n:-0} doctests ran — F41's two must both be present (doctest = false runs 0 and still exits 0)"; exit 1; }
-n=$(grep -rn '```compile_fail' crates/rk-ports/src/ | wc -l); [ "$n" -eq 2 ] || { echo "FAIL: $n compile_fail doctests in rk-ports/src, expected exactly 2"; exit 1; }   # → silent: both of F41's are carried over and still fail to compile
+n=$(grep -rnE '[`]{3}compile_fail' crates/rk-ports/src/ | wc -l); [ "$n" -eq 2 ] || { echo "FAIL: $n compile_fail doctests in rk-ports/src, expected exactly 2"; exit 1; }   # → silent: both of F41's are carried over and still fail to compile
 test -d crates/rk-ports/src || { echo "FAIL: crates/rk-ports/src absent"; exit 1; }
 n=$(grep -rn 'ChangeSummary' crates/rk-ports/src/ | grep -c 'pub(crate) ()')
 [ "${n:-0}" -eq 1 ] || { echo "FAIL: ${n:-0} 'pub(crate) ()' ChangeSummary sites, expected exactly 1 (ADR-0099 clause 5)"; exit 1; }   # → silent: the opaque newtype, and nothing else about it
@@ -89,7 +103,13 @@ that is never evaluated catches nothing.
 **Acceptance set (the explicit Phase-1 subset — PIA-071, PIA-070):** **AC-480–AC-495, AC-497–AC-500, AC-509,
 AC-511, AC-518** — with **AC-497** carried only as the opaque-newtype assertion (its `change_summary` body is S-BIN's;
 PROVISIONAL) and **AC-499** only for the ports with a Phase-1 real adapter (EventStore, Harness, Toolchain — the
-Tracker/DocsSite rows say "fake only until Phase 3"). **Excluded, by id and reason:** AC-501–AC-506 (Phase 2),
+Tracker/DocsSite rows say "fake only until Phase 3"). Plus **AC-528**, allocated outside this area's exhausted range by the 2026-09-11 amendment and claimed by no
+stage until 2026-09-12: the five port traits stay **sync** and no async runtime reaches the kernel's normal
+dependency graph (ADR-0076; `async_fn_in_dyn_trait` is nightly-only through the 1.98.1 pin — R-ASYNC discharged
+negative). **Its scope is owed a reconciliation (R11):** the register's clause names
+`cargo tree -p rk-kernel -e normal` while Checkpoint 7a runs it on `-p rk-ports` and s5 §5.2's table says
+`rk-kernel`. Both crates must be clean; run it on both here and state the scope once when the register is corrected.
+**Excluded, by id and reason:** AC-501–AC-506 (Phase 2),
 AC-507/AC-508/AC-510 (Phase 3), AC-512/AC-514–AC-517/AC-519 in part (CONDITIONAL — unbuildable until the distribution
 decision), AC-496 (PROVISIONAL), AC-482 (human-gated), AC-513 (retired, never reuse), AC-502 (S-CODEX unrun; Phase 4
 is the earliest a second harness ships), AC-239 (list-is-data test — kept, in 7b's set). The `rk-port-toolchain`

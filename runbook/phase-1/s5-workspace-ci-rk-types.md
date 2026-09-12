@@ -14,8 +14,9 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 
 > ### 🚦 GATE CHECK — run this line before the first `cargo new`
 > ```bash
-> ls D:/repos/redkiln-rs/references/adr/0090-*.md >/dev/null 2>&1 \
->   && echo "GATE DISCHARGED — proceed" || echo "GATE OPEN — go back to Step 4"
+> ( ls D:/repos/redkiln-rs/references/adr/0090-*.md >/dev/null 2>&1 \
+>     || { echo "GATE OPEN — no ADR-0090. Go back to Step 4; no work in this stage may start."; exit 1; }
+>   echo "GATE DISCHARGED — proceed" )   # a subshell: a pasted FAIL must not kill an interactive shell
 > ```
 > **`0090`, not `0089`.** `0089` is the facet-provenance amendment Step 4a executes; it is accepted, it does not
 > touch ADR-0079, and it is **not** this gate's token.
@@ -43,14 +44,22 @@ you run `cargo build`, and keep the `exclude`:**
 
 ```toml
 [workspace]
-members = ["crates/*"]
-resolver = "2"
+members = ["crates/*", "tests/fixtures/*"]
+# Resolver 3, not 2 (corrected 2026-09-12). The MSRV-aware fallback `rust-version` exists to arm is
+# resolver 3's; under `resolver = "2"` the `rust-version` line below is inert and ADR-0102's
+# PIA-027 clause buys nothing. Edition 2024 defaults to 3, but the workspace root is not an edition
+# consumer, so it must be stated here explicitly.
+resolver = "3"
 # spikes/runner/ is its own package with its own Cargo.toml. If Step 2 has landed it is gone and this
 # line is inert; if it has NOT, cargo walks up from spikes/runner/, finds this root, sees that
 # members = ["crates/*"] does not cover it, and fails with
 #   error: current package believes it's in a workspace when it's not
 # — which reads as Halt condition 1 (the rig fails to build) from entirely the wrong direction.
 # spikes/s-ports/ is the S-PORTS throwaway crate (F41) and is excluded for the same reason.
+# tests/fixtures/* ARE members (§5.1a): the AC-001–AC-004 and AC-005 must-fail fixture crates.
+# Each one's offending call or dependency sits behind a NON-DEFAULT feature, so the default
+# `cargo clippy --workspace` and `cargo deny check bans` gates stay green and the fixture is still
+# checked by the same invocation with its feature on (DECISIONS-2026-09-12 E4).
 exclude = ["spikes/runner", "spikes/s-ports"]
 
 [workspace.package]
@@ -58,6 +67,20 @@ edition = "2024"
 # Equal to the pin, always (ADR-0102): it arms resolver 3's MSRV fallback and `cargo add`; it is NOT a
 # consumer floor. The pin-bump PR bumps this and rust-toolchain.toml together.
 rust-version = "1.98.1"
+
+# ADR-0100 decision 2's pin list lives HERE and nowhere else; members inherit with `dep.workspace = true`
+# (which is the form Checkpoint 6 greps for in rk-git). Before 2026-09-12 this table was absent, so the
+# pin list had no home and `gix.workspace = true` could not have resolved.
+[workspace.dependencies]
+gix        = "=0.87.1"    # exact (ADR-0084, unchanged by ADR-0100); read path only (ADR-0077/0098)
+jsonschema = "=0.56.0"    # exact: weekly cadence. Format validation is OPT-IN — call
+                          # .should_validate_formats(true) wherever the design relies on format checks
+rusqlite   = "=0.40.2"    # exact: carries the one-writer semantics ADR-0105 clause 7 depends on
+yaml_serde = "=0.10.7"    # exact; redkiln-migrate ONLY — the one crate that may depend on a YAML reader
+chrono     = "^0.4"       # EXEMPT from the 0.x exact-pin rule: de-facto stable, multi-year line, semver discipline
+sha2       = "^0.11"      # EXEMPT, same reason
+# Any new 0.x dependency is exact-pinned unless its row says why not. A pin bump is a PR that re-runs
+# `cargo audit` and `cargo deny` (ADR-0100 decision 2).
 
 [workspace.lints.rust]
 unsafe_code = "deny"
@@ -86,10 +109,82 @@ the one that will carry it — and **every other in-source override is `#[expect
 never `#[allow]`, so an override that stops being needed fails the build (ADR-0102).
 
 A `clippy.toml` sits beside the root manifest (PIA-031) and carries the `disallowed-methods` / `disallowed-types`
-tables AC-001–AC-004's instrument reads: `std::env::set_var`, `std::env::remove_var` (ADR-0083's ban),
-`std::process::Command` and `tokio::process::Command` outside `rk-git`'s wrapper module (Checkpoint 6's type ban),
-and the `unwrap_or(0)` / `unwrap_or_default()` shapes AC-362 forbids on the usage struct. AC-001–AC-004's Verified-by
-is a fixture crate checked under `cargo clippy` — a `trybuild` fixture cannot fail on a lint.
+tables AC-001–AC-004's instrument reads. **Enumerate them here; they are the whole determinism ban and they were
+named nowhere in this runbook before 2026-09-12:**
+
+```toml
+# clippy.toml — at the workspace root, beside Cargo.toml
+disallowed-methods = [
+  # AC-001 — the wall clock, a monotonic instant, a timezone-dependent value
+  "std::time::SystemTime::now", "std::time::Instant::now", "chrono::Utc::now",
+  # AC-002 — randomness and non-deterministic ids (ids derive from the ADR-0097 idempotency key or a content hash)
+  "rand::random", "rand::thread_rng", "uuid::Uuid::new_v4",
+  # AC-003 — I/O and blocking sleeps on the workflow side
+  "std::thread::sleep", "tokio::time::sleep",
+  # ADR-0083's ban, workspace-wide: these became `unsafe fn` in edition 2024 and race a concurrent getenv
+  "std::env::set_var", "std::env::remove_var",
+]
+disallowed-types = [
+  # AC-004 — unordered iteration in a workflow decision; ordered containers or an explicit total-key sort
+  "std::collections::HashMap", "std::collections::HashSet",
+  # Checkpoint 6's type ban — git shells out through exactly one wrapper in rk-git
+  "std::process::Command", "tokio::process::Command",
+]
+```
+
+**`clippy.toml` has no path or module scoping**, so every entry above is workspace-wide once declared. That is why
+AC-001's Verified-by pairs it with a module-level `#[deny(clippy::disallowed_methods)]` on `rk-kernel::workflow`
+(ADR-0083's commented override; ADR-0102) rather than a group deny, and why `rk-git`'s wrapper, the adapters and
+`rk-store` carry `#[expect(clippy::disallowed_types, reason = "…")]` where they legitimately need `Command` or a
+hash map. AC-362's `unwrap_or(0)` / `unwrap_or_default()` shapes on the usage struct are **not** clippy entries —
+they are the CI grep in §5.2's table, because the ban is scoped to specific fields, not to the method.
+
+AC-001–AC-004's Verified-by is a must-fail **fixture crate** checked under `cargo clippy`, and CI is **gated on
+the exit code, never `-D warnings`** (which would promote `clippy::nursery` to the group deny ADR-0083 forbids) —
+a `trybuild` fixture cannot fail on a lint, only on a compile error, so it is not the instrument here
+(both halves amended 2026-09-11, PIA-030/PIA-031).
+
+### 5.1a The two must-fail fixture crates
+
+AC-001–AC-004 and AC-005 are each verified by a fixture that **must fail** its gate. Before 2026-09-12 neither was
+named, given a path, or given a home in the workspace anywhere in this runbook — while Step 8 (4) asserted three
+things about them. Author both here, by these names:
+
+| Fixture | Path | Reintroduces | Gate it must fail | Criteria |
+| --- | --- | --- | --- | --- |
+| `rk-clock-read` | `tests/fixtures/rk-clock-read/` | one `SystemTime::now()` call, behind feature `reintroduce` | `cargo clippy` (the `disallowed-methods` table above) | **AC-001**–AC-004 |
+| `rk-banned-dep` | `tests/fixtures/rk-banned-dep/` | one of ADR-0086's four banned durable-execution crates, as an **optional** dependency behind feature `reintroduce` | `cargo deny check bans` | **AC-005**, AC-044, AC-120 |
+
+Each is a **workspace member** whose offending call or dependency sits behind a **non-default feature**
+(DECISIONS-2026-09-12 E4). That is what lets both halves of the record hold verbatim: ADR-0100 decision 3 calls it a
+*"scratch **member**"*, and AC-001's Verified-by wants it *"checked under the **same** `cargo clippy`
+invocation"* — which it is, with the feature on. With the feature off the default gates are green:
+
+```bash
+cd D:/repos/redkiln-rs
+# The DEFAULT gates, which must stay green: the fixtures are members, but their features are off.
+cargo clippy --workspace --all-targets || { echo "FAIL: the default clippy gate is red"; exit 1; }
+cargo deny check bans || { echo "FAIL: the default cargo-deny gate is red"; exit 1; }
+# Each fixture must FAIL with its feature on. Assert the non-zero status AND the message: an unrelated
+# failure (a typo, a missing file) would otherwise read as the pass and the fixture would certify nothing.
+out=$(cargo clippy --workspace --all-targets --features rk-clock-read/reintroduce 2>&1); rc=$?
+[ "$rc" -ne 0 ] || { echo "FAIL: rk-clock-read CLIPPED CLEAN with its feature on — the AC-001 ban list is not in force"; exit 1; }
+printf '%s\n' "$out" | grep -q 'disallowed_method' \
+  || { echo "FAIL: rk-clock-read failed for some OTHER reason than the clock ban"; printf '%s\n' "$out" | tail -20; exit 1; }
+echo "AC-001: the clock-read fixture fails on disallowed_methods, as required"
+out=$(cargo deny --all-features check bans 2>&1); rc=$?
+[ "$rc" -ne 0 ] || { echo "FAIL: rk-banned-dep passed check bans — ADR-0086's four banned crates are not banned"; exit 1; }
+printf '%s\n' "$out" | grep -qi 'banned' \
+  || { echo "FAIL: rk-banned-dep failed for some OTHER reason than the ban"; printf '%s\n' "$out" | tail -20; exit 1; }
+echo "AC-005: the banned-dep fixture fails check bans, as required"
+```
+
+**One cargo-deny trap this shape carries.** `deny.toml`'s `[graph]` section must **not** set
+`all-features = true`, or the banned optional dependency enters the default graph and the everyday
+`cargo deny check bans` gate is permanently red — which is how a gate gets deleted rather than fixed. The
+default gate resolves with the feature off; the fixture's own check passes `--all-features` explicitly, as
+above. Step 8 (4) asserts the same fixture by `-p`, and because these are members its
+`cargo metadata --no-deps` membership check resolves — which it would not under an excluded package.
 
 `rust-toolchain.toml` at the root — an **exact** channel, not `stable`:
 
@@ -250,6 +345,28 @@ cargo +1.98.1 insta test -p rk-types --accept   # inspect every .snap before acc
 
 A changed snapshot is a schema change and is reviewed as one. The residual ADR-0084 names about itself stands: a
 reviewer can rubber-stamp `cargo insta accept`, and the guard against that is convention, not mechanism.
+
+**Red first (golden constraint 12; ADR-0019).** The checkpoint below is the floor, not the evidence:
+every one of its `cargo test … -- <filter>` lines is satisfied by an implementation that nothing pins.
+Author each named test **before** the code it describes, run it, and watch it fail for the right reason —
+the absent behaviour, not a compile error or a filter that matched nothing.
+
+- `step_error_is_total` — `spoke()` over all **eleven** `StepError` variants with no catch-all arm, and one event
+  arm each (ADR-0095 as ADR-0112 extends it). Red against the six-variant `step.rs` shape this crate does **not**
+  carry over: it must fail to compile on the five new variants, which is the discrimination.
+- `no_oneof_at_any_node` and `union_and_optional_caps` — assert over **every** exported schema that no `oneOf`
+  survives the post-derive transform, that no union nests inside a union, that `additionalProperties: false` holds
+  at every object level, and that the ≤ 16 union-typed / ≤ 24 optional caps hold per schema (AC-131, AC-157).
+  Red by deriving a tagged enum **without** the transform: `schemars` 1.2.2 renders `oneOf` (PIA-005), so the
+  untransformed derive is the mutant and the test must fail on it.
+- `repro_rejects_prose_only` — an ingest fixture whose `command` is prose is **rejected**, never routed to
+  advisory (ADR-0096). Red before the typed `Findings.repro` exists.
+- `companion_kind_has_registered_schema` — AC-143's fixture enumerates exactly the six kinds; a seventh must fail
+  to load. Red by adding a seventh with no registered sidecar schema.
+
+The `schema_snapshot` insta test is the **exception that proves the rule**: a golden snapshot has no meaningful red
+state, which is why its first acceptance is a deliberate one-time rubber-stamp (below) and why it pins *change*
+rather than *correctness*. It is not evidence that a criterion is discriminated; the four tests above are.
 
 **Checkpoint 5.** All of:
 
