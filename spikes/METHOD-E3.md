@@ -5,6 +5,11 @@
 changes, and each made before the data it could affect was seen — §6 (the
 card's tool set, FINDINGS F20), §5 (CLEAN and S-SILENT built to the same
 shape), and §6 again (arm (a)'s construction and its three validity checks).
+*Corrected 2026-09-11 (audit PIA-089): **four, 2026-09-02/03** — the count above
+omits §4's input-set amendment (22 → 23 items, "Amended after S0.3", commit
+`0d44a85`, 2026-09-02), which is the file's first amendment and the one
+`HANDOFF.md` §Pre-registration status lists as amendment 2. The three of
+2026-09-03 are commits `4888328` and `72d5ca9` [measured, `git log`].*
 **Supersedes:** the E3/E6 primary metric in `references/2026-08-31-rust-inversion-spike-charter.md` §10.
 **Reason:** FINDINGS **F9** — the original answer key does not exist.
 **Baseline:** this document's commit. **Corpus pin:** redkiln @ `47faec9f`.

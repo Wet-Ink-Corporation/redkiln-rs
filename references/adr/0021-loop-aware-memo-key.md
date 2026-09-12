@@ -6,7 +6,7 @@ date: 2026-09-07
 legacy_id: D21
 source: references/2026-09-05-architecture-proposal.md §9 (D21, "from schema §9b.13")
 supersedes: []
-superseded_by: []
+superseded_by: ["0097"]
 related: ["0022", "0043", "0059"]
 evidence: ["P9b A18"]
 consumers: []

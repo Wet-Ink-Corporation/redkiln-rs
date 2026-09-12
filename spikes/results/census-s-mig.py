@@ -167,7 +167,10 @@ def lift_criteria(content, kind, strict=True):
         if strict and kind == "AC" and not e["verification"]:
             loss.append(f"{e['id']}: no verification")
     if loss:
-        return "LiftedWithLoss", {"n": len(entries), "what": loss[:6]}
+        # 2026-09-11 (audit PIA-078, METHOD-S §7): the loss list is no longer capped at six entries. The recorded
+        # run of 2026-09-05 (s-mig.jsonl) was produced under `loss[:6]`, so its per-AC loss counts are truncated;
+        # the uncapped counts are in s-mig-report.md "Correction (2026-09-11)".
+        return "LiftedWithLoss", {"n": len(entries), "what": loss}
     return "Lifted", {"n": len(entries)}
 
 
@@ -200,7 +203,7 @@ def lift_anchors(content):
         return "EmptyTemplate", {}
     loss = [r[0] for r in good if len(r) < 4]
     if loss:
-        return "LiftedWithLoss", {"n": len(good), "what": [f"row without a 'serves AC' column: {l[:40]}" for l in loss[:4]]}
+        return "LiftedWithLoss", {"n": len(good), "what": [f"row without a 'serves AC' column: {l[:40]}" for l in loss]}  # uncapped 2026-09-11 (was loss[:4])
     return "Lifted", {"n": len(good)}
 
 
@@ -215,7 +218,7 @@ def lift_tdd_table(content):
     if not ac_rows:
         return "Failed", {"why": "table rows carry no AC/EC/NF id"}
     if other:
-        return "LiftedWithLoss", {"n": len(ac_rows), "what": [f"row keyed by non-AC label: {o[:50]}" for o in other[:4]]}
+        return "LiftedWithLoss", {"n": len(ac_rows), "what": [f"row keyed by non-AC label: {o[:50]}" for o in other]}  # uncapped 2026-09-11 (was other[:4])
     # The proposal's per-AC evidence columns (Assertion / Mutation / Test-run / Red?) do not exist
     # in this corpus by construction (F25 remediation is staged, not applied); record that as loss
     # of a different kind so it is not mistaken for regularity.
@@ -271,7 +274,7 @@ def lift_ledger_yaml(body):
         return "EmptyTemplate", {}
     bad = [r.get("id", "?") for r in rows if not isinstance(r, dict) or not {"id", "criterion", "satisfied", "evidence"} <= set(r)]
     if bad:
-        return "LiftedWithLoss", {"n": len(rows), "what": [f"row missing required keys: {b}" for b in bad[:4]]}
+        return "LiftedWithLoss", {"n": len(rows), "what": [f"row missing required keys: {b}" for b in bad]}  # uncapped 2026-09-11 (was bad[:4])
     return "Lifted", {"n": len(rows)}
 
 
@@ -400,7 +403,7 @@ def lift_frontmatter(fm, expected, kind):
     if missing:
         return "Failed", {"why": f"missing required keys {missing}"}
     if extra:
-        return "LiftedWithLoss", {"what": [f"unknown key `{k}`" for k in extra[:6]]}
+        return "LiftedWithLoss", {"what": [f"unknown key `{k}`" for k in extra]}  # uncapped 2026-09-11 (was extra[:6])
     return "Lifted", {}
 
 
@@ -422,7 +425,7 @@ def census_file(path, text, kb_ids):
         if isinstance(fm, dict) and "__error__" not in fm:
             dangling = [r for k in ("related", "depends_on") for r in (fm.get(k) or []) if isinstance(r, str) and r not in kb_ids]
             rec("links", "links", "LiftedWithLoss" if dangling else "Lifted",
-                {"what": [f"dangling link {d}" for d in dangling[:4]]} if dangling else {"n": len((fm.get('related') or [])) + len((fm.get('depends_on') or []))})
+                {"what": [f"dangling link {d}" for d in dangling]} if dangling else {"n": len((fm.get('related') or [])) + len((fm.get('depends_on') or []))})  # uncapped 2026-09-11 (was dangling[:4])
         rec("body", "prose.body", "Opaque")
         return recs
 

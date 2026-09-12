@@ -6,7 +6,7 @@ date: 2026-09-05
 legacy_id: D3
 source: references/2026-09-05-architecture-proposal.md §9 (choice grounded in §4.1)
 supersedes: []
-superseded_by: []
+superseded_by: ["0094"]
 related: ["0001", "0008"]
 evidence: []
 consumers: []

@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: none
 source: references/2026-09-08-evidence-augmentation.md §2 (dependencies), §3 (dependencies), §4 recs 6 and 7, §5 rows on rusqlite WAL and the RUSTSEC listing
 supersedes: []
-superseded_by: []
+superseded_by: ["0095", "0100"]
 related: ["0003", "0077", "0083"]
 evidence: ["F20", "F31"]
 consumers: []

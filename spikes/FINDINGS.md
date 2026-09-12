@@ -121,6 +121,27 @@ bundled price table, so it is a comparison unit, not a bill.
 
 ---
 
+### Correction (2026-09-11)
+
+Audit PIA-067. F3's "**not** the `ephemeral_1h_input_tokens` / `ephemeral_5m_input_tokens` split" was read
+downstream as "F3 measured the fields absent" (design §0.1 row 28; ADR-0078 clause (iv)). What was absent on
+2026-09-02 was the **flat** naming from the costs page. The split is on the record as a **nested object**,
+`usage.cache_creation.{ephemeral_5m_input_tokens, ephemeral_1h_input_tokens}`, and the runner has parsed it since
+E0 (`runner/src/event.rs` `ttl_split()`, :155-165; METHOD.md §E1 :247 already says "present"). Recounted
+2026-09-11 over every `spikes/results/*.jsonl` record carrying a `usage` block: **950 of 955** carry the nested
+object (the five without are four void records and one P8 driver record with `digest: null`); on all 804 records
+where both the total and the object are present, `cache_creation_input_tokens` equals the two tiers' sum
+[measured]. What the object holds, which F3 did not say and no later entry recorded: **621 records carry
+`ephemeral_1h_input_tokens > 0` and not one carries `ephemeral_5m_input_tokens > 0`** — every cache creation a
+`-p` dispatch reported in this programme was on the **1 h tier** (e.g. `e3.jsonl` `b-s-silent`: 30,687 / 23,894 /
+20,800 / 21,149 created, all `ephemeral_1h`, `ephemeral_5m` 0; the 329 "both zero" records are warm re-reads that
+created nothing) [measured, recount 2026-09-11]. That is per-run `ephemeral_*` evidence for the `-p` 1 h tier, the
+thing design §0.1 row 28's gate asked for; the in-session side (arm (a)'s subagents) is not separated by this
+field and stays untested. ADR-0078's successor and S-TTL1's scope are the register's to settle; nothing here is an
+edit to F3, whose flat-naming observation was correct on the day.
+
+---
+
 ## F4 — Other undocumented events on the `-p` stream
 
 **Established by:** event census, 2026-09-02.
@@ -494,7 +515,7 @@ establish it for dissimilar ones.
 
 ---
 
-## F14 — Headroom: 40 dispatches and ~1.9M tokens stayed below the instrument
+## F14 — Headroom: 40 dispatches and ~1.9M tokens stayed below the instrument *[corrected 2026-09-11: ~1.0M — Correction (2026-09-11) below]*
 
 **Established by:** the same 40 dispatches.
 
@@ -513,7 +534,7 @@ merely small.
 What the batches *do* establish:
 
 - **An upper bound for sizing.** 40 haiku dispatches processing ~1.9M tokens
-  cost at most ~0.01 of the seven-day window — under 1%, and possibly far less.
+  *[corrected 2026-09-11: ~1.0M]* cost at most ~0.01 of the seven-day window — under 1%, and possibly far less.
   Haiku mechanism arms are effectively free at this scale.
 - **`five_hour` and `seven_day` move independently** (0.200/0.100, later
   0.210/0.110), confirming they are not mirrors of one another.
@@ -524,6 +545,19 @@ windows*. Any observed delta includes that traffic. Headroom-per-dispatch
 therefore cannot be cleanly attributed while the session is active, and the
 figures above should be read as upper bounds on the probe's own draw, not as
 measurements of it.
+
+---
+
+### Correction (2026-09-11)
+
+Audit PIA-077. The heading's and the sizing bullet's token total is a mis-sum; the table above is right. Over
+the two batches: cache_read **854,003** (497,398 + 356,605), cache_creation **156,531** (7,822 + 148,709), output
+1,704 — **~1.0M tokens (854k cache-read, 157k cache-creation)** [measured, `results/e0-headroom.jsonl` and
+`results/e0-headroom-cold.jsonl`, recounted 2026-09-11]. Both batches' `seven_day` readings, from the same records'
+`batch_draw` lines: warm batch `first 0.10 → last 0.10` over 20 dispatches; cold batch `first 0.11 → last 0.11` over
+its 20 single-dispatch draws (`resolution_limited: true` on every line). The conclusion — neither batch moved
+`seven_day` by a tick — is unchanged; the upper bound it licenses is for ~1.0M tokens, not ~1.9M. `METHOD.md` §E0's
+struck gate and `HANDOFF.md` restate the 1.9M and carry the same marker.
 
 ---
 
@@ -792,7 +826,7 @@ needs the ported engine and remains open.
 | **> 1 h** | 79 | 9 | **11%** |
 
 **A gate that outlives the cache TTL is 3.6× more likely to have the world move
-underneath it.** The same threshold governs both cost and correctness, which is
+underneath it.** *[RR 3.6, 95% CI [1.0, 12.9], Fisher exact p = 0.039 — marginal at n = 174, one operator; Correction (2026-09-11) below]* The same threshold governs both cost and correctness, which is
 a convenient coincidence for design: *short gates are cheap and safe; long gates
 are expensive and risky, together.*
 
@@ -879,6 +913,18 @@ This has now paid for itself four times. The H1 decay mark at `04:38:06Z`
 survived a kill that destroyed the job scheduled to read it, and remains valid
 and readable at any later moment — the read simply reports whatever elapsed time
 it measures.
+
+---
+
+### Correction (2026-09-11)
+
+Audit PIA-073. "3.6× more likely" is the point relative risk of the H3 table — 9/79 against 3/95 = **RR 3.6** — and
+was stated without its interval. **95% CI [1.0, 12.9]; Fisher exact p = 0.039** [measured, recomputed 2026-09-11
+from the table above; the audit's figures agree]. The lower bound touches 1.0, so the effect is **marginal at
+n = 174, one operator**; the bimodal-drift observation and the design conclusions (reconcile eagerly; gate length is
+the lever) do not rest on the ratio's size. Restated the same way wherever 3.6× is quoted (`HANDOFF.md` :36 by
+marker; the SM register and the design by their own errata). The S0.2 figure quoted with it in some restatements is
+**20.3%** (15/74, the table at F12 above), not 20.2%.
 
 ---
 
@@ -1089,7 +1135,7 @@ sub-limit remains invisible (F1).
 
 ### Platform errors are now a named category
 
-Seven dispatches returned API **529 Overloaded** and one API **500** — `turns=1`,
+Seven dispatches returned API **529 Overloaded** and one API **500** *[corrected 2026-09-11: six and one, seven records — Correction (2026-09-11) below]* — `turns=1`,
 $0, `subtype: "success"`, `is_error: true`. All were originally filed as *schema*
 faults, which would later have read as the reviewer or the rig failing.
 `api_error_status` is on the result, so the distinction costs nothing, and the
@@ -1107,6 +1153,18 @@ record supersedes is marked as such: it cost a dispatch, not data.
 4. **No item has been run twice** — E0's per-item stability (`--repeat N`) is
    still unmeasured, and a 23/23 with no variance estimate is one sample of a
    stochastic process, not a constant.
+
+---
+
+### Correction (2026-09-11)
+
+Audit PIA-075. "Seven … 529 and one … 500" is eight; `results/e3.jsonl` holds **seven** `is_error: true` records:
+**six** `api_error_status: 529` — `fix-doctor-git-config-repair`, `issue-122-doctor-foundation-reachability`
+(twice), `issue-130-slice-review-story-gate`, `issue-131-kb-ingest-doctor-scope`,
+`issue-72-plan-briefs-readonly-grounding` — and **one** `500` — `issue-82-status-terminal-field-collision`, whose
+`void_reason` still reads "no schema-valid digest (schema)" because it was filed before the category existed. All seven are arm `b-s-silent`,
+`turns=1`, $0, void, and superseded by a clean retry [measured, recount 2026-09-11]. The fixtures the registers
+call "may not exist" (AC-428, SM-127) are these seven records.
 
 ---
 
@@ -1683,7 +1741,8 @@ verdict stability** — offered as a hypothesis on n=4, not a result.
 ### Limits
 
 1. **n=3 at best, n=2 on two items.** A "stable" classification here means "did
-   not flip in 2–3 draws" and is compatible with a real flip rate up to ~30%.
+   not flip in 2–3 draws" and is compatible with a real flip rate up to ~30%
+   *[corrected 2026-09-11: up to ~56% (n = 3) / ~66% (n = 2), Wilson 95% — Correction (2026-09-11) below]*.
 2. **Only arm (b) was repeated.** Arm (a)'s stability is unmeasured; there is no
    reason to expect it differs, and that is an assumption, not a finding.
 3. **Two of the four E3 disagreements remain unexplained** — `issue-74` and
@@ -1693,12 +1752,24 @@ verdict stability** — offered as a hypothesis on n=4, not a result.
 
 ---
 
+### Correction (2026-09-11)
+
+Audit PIA-073. Limits 1's "compatible with a real flip rate up to ~30%" was not computed. A classification that did
+not flip in n draws is compatible, at the registered two-sided Wilson 95% interval, with a true flip rate up to
+**~56% at n = 3** (0/3 → [0.000, 0.561]) and **~66% at n = 2** (0/2 → [0.000, 0.658]) [measured, recomputed
+2026-09-11; the audit's figures agree]. "Stable" at this n is therefore an even weaker claim than the original
+sentence allowed, which is the direction the finding already argued (nothing inferred from a single draw; S-VAR at
+n = 10). `METHOD-S.md` §1.1 restates the ~30% and carries a dated amendment; ADR-0074 and ADR-0101 (ex-0088) carry
+the correction by erratum.
+
+---
+
 ## F28 — H1/H4 RESULT: a human gate costs a bounded 18.6k tokens however long it lasts, and the digest carries everything the next step uses
 
 **Established by:** 3 TTL reads (haiku) and 15 step-2 dispatches (Opus/`xhigh`),
 2026-09-04/05, corpus pin `47faec9f`. `results/h1-gap.jsonl`, `results/h4.jsonl`.
 **Spend: $18.85.** Pre-registered in `METHOD-H.md` §3 and §6, the latter amended
-before any H4 dispatch.
+before any H4 dispatch *[corrected 2026-09-11: amended after three arm (a) draws, disclosed — Correction (2026-09-11) below]*.
 
 RFC §7 calls the mid-run human approval gate the **unoccupied market gap** — the
 capability that would justify building Redkiln-RS at all. These are the first
@@ -1902,6 +1973,20 @@ rates.
 
 ---
 
+### Correction (2026-09-11)
+
+Audit PIA-089. "§6 … amended before any H4 dispatch" is wrong against git. `results/h4.jsonl` lines 1–4 are four
+arm (a) (`a-contiguous`) H4 records stamped 2026-09-03T04:37Z, committed in **`7a796ce`** (2026-09-02 21:39 −0700);
+the §6 amendment headed "before any H4 dispatch" is commit **`3eb93d5`** (2026-09-04 23:23 −0700) [measured,
+`git log`, `git show 7a796ce --stat`]. So §6 was **amended after three arm (a) draws** (four records; lines 5–6 of
+the file are the batch's two `batch_draw` headroom lines), and the amendment's heading overstated its timing. The
+four records contribute to **no** figure in this finding: every H4 number above is from the 15 DIGEST / FULL /
+CONTROL dispatches of 2026-09-05 (lines 7–21), and the arm (a) records were the registered comparison the amendment
+declared vacuous. METHOD-H §6 carries the dated correction and states whether the draws were seen; the design's
+"replaced before data" (:117) reads "amended after three arm (a) draws, disclosed".
+
+---
+
 ## Open — the pre-registration SHA is currently meaningless
 
 Every results header records `preregistration_sha` from repo HEAD. Nothing has
@@ -1937,3 +2022,38 @@ Carried here so the eventual RFC amendment (charter §14.4) has a single source.
 | Charter E4 | Oracle is "AC ledger rows satisfiable" | **Not computable.** All 110 `_ledger.md` are under `_archive/`; none in the `support/` fix lane. Empty join — oracle must change |
 | Charter §8.1 | Negative signal is scarce | True, but understated in one direction: `gate_result` runs **187 pass / 53 fail**, a usable 22% negative class the charter does not mention |
 | — | Affected-area test selection | **Does not exist.** `affected_gate` is `pnpm typecheck && pnpm lint && pnpm test` with no `{{changed}}` placeholder, so every gate run is the whole 236-file vitest suite. Dominates E4/E5 wall clock |
+
+## Continued in (2026-09-11)
+
+This file stops at F28. Every later F-number is a dated draft under `spikes/` and is indexed here so that
+architecture-design §10.2(c)'s "in FINDINGS.md" resolves by pointer (audit PIA-102). Drafts are records in their own
+right; none is folded into this file.
+
+| F | draft | spike | headline |
+| --- | --- | --- | --- |
+| F29 | `spikes/F29-DRAFT.md` | S-VAR | verdict stability at n = 10: no defect class is stable-reject |
+| F30 | `spikes/F30-DRAFT.md` | S-H1b / S-WT | `--system-prompt` makes worktree fan-out free; the `h1b-24h` read is still not taken (drafted 2026-09-06, promoted 2026-09-11) |
+| F31 | `spikes/F31-DRAFT.md` | S-TYPED | the typed contract costs no detection; blocks 9/23 on CLEAN with zero verified false positives |
+| F32 | `spikes/F32-DRAFT.md` | P9 | authoring ergonomics, first author |
+| F33 | `spikes/F33-DRAFT.md` | P9b | second-author check |
+| F34 | `spikes/F34-DRAFT.md` | P6 authoring | third author, 90 activities |
+| F35 | `spikes/F35-DRAFT.md` | P6 | catalog completeness over the lattice: 23.5% → 11.4% → 0.3%; dead 6/102 after run9 |
+| F36 | `spikes/F36-DRAFT.md` | P1 arm L | the LLM-emitted context vector is not stable enough to drive selection |
+| F37 | `spikes/F37-DRAFT.md` | P7 | the adversary → policy block costs 2.64×; criterion 1 fires while powerless |
+| F38 | `spikes/F38-DRAFT.md` | P8 (partial) | resume is lossless across a real kill; cost ordering UNMEASURED |
+| F39 | `spikes/F39-DRAFT.md` | P1 arm D | no derived facet clears the 0.95 bar; `auth` 0/12 |
+| F40 | `spikes/F40-DRAFT.md` | P2 | the corpus holds no staleness to detect; recall has no denominator |
+| F3x (unnumbered) | `spikes/results/s-mig-report.md` | S-MIG | 96.0% of typed slots lift; the losses name three type decisions |
+
+A later F-number is added here the day its draft is written.
+
+### Correction (2026-09-11) — a reference-document citation
+
+Grounding row EXT-CLAUDECO-021 (`references/audit/2026-09-10/census/grounding-by-file/spikes__FINDINGS.md.json`),
+fetched 2026-09-10 from code.claude.com/docs/en/sub-agents and the Claude Code CHANGELOG. The charter's rationale
+for the `claude ≥ 2.1.251` floor this file restates (F20's "The instrument moved" note; the RFC/charter corrections
+table) says the subagent cap needs **2.1.219+**; the cap shipped in **2.1.217** ("Added a cap on concurrently-running
+subagents (default 20, override with `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`)"); 2.1.219 is the nested-subagent
+`parent_tool_use_id` forwarding. `promptCacheTtl` at 2.1.242 and `spend_limit` / `prompt_cache` at 2.1.251 are
+confirmed. The floor conclusion (≥ 2.1.251) is unaffected [documented, fetched 2026-09-10]. This file never carried
+the 2.1.219 figure; the row is recorded here because the file is the one that restates the floor.

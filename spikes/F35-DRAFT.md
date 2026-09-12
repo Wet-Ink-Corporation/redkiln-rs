@@ -1,5 +1,13 @@
 ## F35 — P6 RESULT: the v0 catalog is 23.5% unsatisfiable over the pre-registered lattice on first run, 11.4% after two rounds of tag-level fixes, and 2.2% once the binary-only Unreal slice is set aside; the mixed Node+UE slice adds no unsatisfiable stage; 15 of 101 activities are dead, 14 of them by the rank rule, not by absence — and 0.3% / 7 of 102 after decisions 1–10 (§1.6)
 
+> **Correction (2026-09-11, audit PIA-077).** The heading's "7 of 102 after decisions 1–10 (§1.6)" reads **"6 of 102
+> after decisions 1–10 and Ryan's R3/R7 (§1.6 run9)"**: `results-p6-run9.txt` :188 records `dead=6/102 (5.9%)`
+> (`bdd-outside-in`, `design-sprint`, `failover`, `fault-tree-analysis`, `flag-progressive-rollout`,
+> `property-based-testing`; 11/102 under the eight pre-registered packs) and §1.6's run9 row already says so
+> [measured, `results-p6-run9.txt`]. The 0.3% is unchanged. The heading itself is not renamed: no file cites its text,
+> but `HANDOFF.md` :200 restates "dead 7/102" and is corrected by marker there; the design, the SM register and the AC
+> register already carry 6/102.
+
 **Established by:** `spikes/p9/lattice.py` (selection steps 1, 2, 4, 5 of catalog proposal §2.5, every artifact `Missing`) over the v0 catalog (`spikes/p9/catalog/`, 100 → 101 activities) and the v0 packs (`spikes/p9/packs/`, 8 pre-registered + 4 supplementary), 2026-09-08 ~03:40–04:40Z. Pre-registered in `METHOD-P.md` §3. **Zero model dispatches.** Raw outputs, each line stamped `cat:<catalog digest> fac:<facets digest> pk:<packs digest>` (METHOD-P §0 rule 2): `results-p6-run0-engine-v1.txt` (first run, reporting-only instrument), `results-p6-run1b-instrument-v3.txt` (same catalog and packs, final instrument — unsatisfiable counts verified identical to run0 line for line), `results-p6-run2.txt` (after fix round 1), `results-p6-run3.txt` (after fix round 2, current), `results-p6-run3-packdefault-node.txt` (the pack-default × Node slice alone). Precondition (METHOD-P §3.2): the catalog passed activity-level lint with zero errors before every run (`results-v2-catalog-full.txt`, `results-v2-batch-p6fixes.txt`).
 
 ### Metrics against the kill criteria (METHOD-P §3.4)

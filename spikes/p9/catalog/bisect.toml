@@ -3,7 +3,7 @@
 # localisation family: root-cause(10) < differential-debugging(20) < bisect(30) < instrumented-trace-analysis(40)
 [activity]
 id           = "bisect"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-11 (P7-CEIL ceiling); 2 on 2026-09-08 (§9c.42)
 stage        = "analysis"
 provides     = ["RootCause"]
 requires     = ["ReproCase"]
@@ -13,6 +13,7 @@ applicable_if = "has_repro"
 method_rank  = 30
 family       = "localisation"
 min_rigor    = "optional"
+max_rigor    = "recommended"   # P7-CEIL ceiling, 2026-09-11 (ADR-0093 decision 5; DECISIONS-2026-09-11 #1): bisect has no adversary and no policy step (F37), so at mandatory the family escalates past it
 cost_class   = "M"
 evidence     = ["ToolReport", "GreenAt", "HumanAnswer?"]
 budget       = { attempts_total = 6, tokens = 200_000, wall_clock_secs = 7200 }

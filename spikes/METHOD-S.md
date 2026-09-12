@@ -47,7 +47,7 @@ named.
 
 F27 measured verdict stability on 4 CLEAN items at n=2–3: two flipped. A
 "stable" classification at that n is compatible with a true flip rate up to
-~30%; an "unstable" one says nothing about *how* unstable. D4 moves the blocking
+~30% *(corrected 2026-09-11 — up to ~56% at n=3, ~66% at n=2; see §7)*; an "unstable" one says nothing about *how* unstable. D4 moves the blocking
 decision into a Rust policy, but the policy's thresholds — which evidence
 classes block — need a measured relationship between evidence class and
 stability that F27 could only hypothesise: *strength of the underlying defect
@@ -1030,5 +1030,77 @@ dispatch. Arm labels carry every instrument variant (`b-typed-clean`,
   `state` is uniformly `Success` across all 1029 tests including the 180 warned ones [measured],
   so it cannot see the degradation finding 2 is about. That is the mechanism ADR-0019's per-AC
   discriminating-test norm needs, and S-BIN can measure whether a reviewer uses it.
+
+- **2026-09-11, before any S-BIN dispatch, after every S-VAR, S-TYPED, S-MIG, S-H1b and S-WT record on
+  file — five entries absorbing the 2026-09-10 pre-implementation audit** (`references/audit/2026-09-10/MASTER.json`;
+  `spikes/DECISIONS-2026-09-11.md`). Registered wording is left verbatim throughout; each entry says what it
+  post-dates.
+
+  1. **§1.1's "~30%" (PIA-073).** The flip-rate bound F27 Limits 1 stated and §1.1 restates was not computed. At the
+     registered two-sided Wilson 95% interval a classification that did not flip is compatible with a true flip rate
+     up to **~56% at n = 3** (0/3 → [0.000, 0.561]) and **~66% at n = 2** (0/2 → [0.000, 0.658]) [measured,
+     recomputed 2026-09-11]. §1.1's argument for S-VAR is strengthened, not weakened; nothing in §1.4/§1.5 moves.
+     Post-dates all 60 S-VAR records (F29).
+
+  2. **S-BIN's combination rule (PIA-084; ADR-0093 decision 4 scopes what S-BIN gates).** §3.6 registers each item
+     dispatched **twice** for a stability read, and §3.4's decision rule is written per item as if once. Registered
+     here before any dispatch: **the rule is evaluated per pass.** Branch 1 ("2/2 detection and ≤ 1/3 false positive
+     → ship the type as drafted") **requires both passes** to satisfy it. A pass in which a seed is missed routes to
+     branch 2 or 3 **on that pass's own prose** (the field the reviewer names, or the fields it cites without the
+     asset), independently of the other pass. **Both passes are reported**, each with its detection count, its false
+     positives and its cited fields; no figure pools them, and a 2/2 in one pass beside a 1/2 in the other is
+     reported as exactly that — a stability finding, not a rounded pass. Post-dates no S-BIN record (none exists).
+
+  3. **The prior-approval framing arm — predictions entered before any draw (PIA-013; ADR-0101 clauses 1–6, which
+     supersede ADR-0088).** The arm is the S-SUBTLE family's "prior-approval framing" condition (the name replaces
+     the earlier "already approved" wording): the five E3-H S-SUBTLE seeds and their five CLEAN pairs, typed arm only
+     (§2's schema and strict policy), the card asserting in the paper's **strong** form that the change was
+     reviewed and approved (arXiv 2603.18740 v2, *Measuring and Exploiting Contextual Bias in LLM-Assisted Security
+     Code Review*: strong bug-free framing lowered detection 16–93 percentage points on 5 of 6 models, Opus 4.5
+     −4.9 pp n.s.; weak framing 0.8–24.7 pp; true negatives rose +46 to +95 pp). Comparator: the same ten items
+     under §2.4's unframed typed arm. **Measured quantity: detection** (ADR-0101 clause 2). **Both halves are
+     reported separately every time** — missed seeds (FN) and the **CLEAN-pair approval rate** — because the
+     mechanism is a whole-classifier shift toward "clean", and a pooled error rate would read a falling FP rate as
+     an improvement (clause 3). **Predictions, before any draw:** (i) **detection goes down** on the seeded five
+     against the unframed arm's 5/5 (F31); (ii) the **CLEAN-pair approval rate goes up** against the unframed
+     typed arm's 14/23 approvals (F31: 9/23 blocked under the resolved policy) — the false-positive half *falls*,
+     it does not stay put, which was the ground ADR-0088 rested on; (iii) **Opus-class models may show a null effect** on detection (the paper's
+     Opus 4.5 cell), in which case the arm reports a bound, not a detection drop. **Sizing:** at n = 5 with
+     detection at ceiling only a large effect (≥ 2 of 5 missed) is observable; each item is drawn k ≥ 3 times and
+     reported as k/n with its Wilson interval; the arm reports a bound where it cannot decide (clause 6).
+     **Cost (first order; design §10.5's cell, [inferred]):** ≈ 2 framings × 5 items × k draws at S-TYPED's
+     median $3.03/review — ≈ $91 at k = 3, ≈ $152 at k = 5 for the five seeded items; reporting the CLEAN-pair
+     half as registered above doubles the item count, so the honest first-order figure for both halves is
+     ≈ $182 at k = 3 / ≈ $303 at k = 5, and the design's cell is the seeded half only; unscheduled. Consumer: the negative-control
+     fixture design under ADR-0096 and the review card's framing rules. Until it runs no document claims the review
+     gate is guarded against false approval (clause 5).
+
+     **S-SUBTLE-SYM — registered, not designed (DECISIONS-2026-09-11 #9; ADR-0101 clause 7).** The symmetric arm:
+     the same items framed as **already rejected**, measuring the false-rejection direction. Consumer: the
+     review-gate policy table. Cost ≈ 2 framings × 5 items × k draws at $3.03/review, unpriced beyond that
+     estimate; unscheduled. No claim about the false-rejection direction is made until it runs; it is second, not
+     absent, because the gate's re-execution guard already protects that direction. Post-dates no record of either
+     arm (none exists).
+
+  4. **S-MIG's per-AC loss counts were cap-truncated (PIA-078; DECISIONS-2026-09-11 #11; ERRATA E-0075-1).**
+     `spikes/results/census-s-mig.py` recorded each `LiftedWithLoss` record's loss list as `loss[:6]`, so the
+     2026-09-05 run's per-AC counts (45 ACs without GIVEN/WHEN/THEN, 46 without a verification note) were the
+     capped sums over 12 truncated records. On 2026-09-11 the cap was lifted for future runs — every `[:6]` / `[:4]`
+     list truncation in the script (AC losses, TDD rows, gate rows, ledger rows, unknown keys, dangling links) — and
+     the script was re-run **read-only at the pin** (`python spikes/results/census-s-mig.py --redkiln
+     D:/repos/redkiln --sha 47faec9f --out <scratch>`, 45 s; `git show` reads, no write to the corpus or to
+     `s-mig.jsonl`). Every one of the 6,877 records' `(path, kind, slot, outcome)` is identical to the recorded run;
+     only the `what` lists lengthen. Uncapped: **76** loss lines "no GIVEN/WHEN/THEN" and **87** "no verification"
+     (75 and 85 distinct `(spec, id)` pairs), **131** ACs with at least one loss, **29** lacking both, of **208** ACs
+     in the 19 specs — 19/153 and 88% unchanged [measured, 2026-09-11]. The 98% the report's heading
+     carries is the spec-section slot; the record-weighted typed-slot overall is **96.0%** (3,011 / 3,138). The
+     recorded `s-mig.jsonl` is not replaced; `s-mig-report.md` carries the dated correction.
+
+  5. **F30's `h1b-24h` read, restated for the schedule (PIA-109, PIA-019).** The 2026-09-06 correction above
+     (item 3 of the five disclosures, and its correction) means the `h1b-24h` mark laid on 2026-09-06 is **spent** —
+     S-WT and later dispatches refreshed its shared segment — so the read requires a **fresh mark and a ≥ 24 h
+     window with no other dispatch on the machine** before it. `F30-DRAFT.md` (drafted 2026-09-06, promoted into the
+     main checkout 2026-09-11) records the arm as unread. No new instrument rule; a restatement so the schedule
+     cannot miss it.
 
 Any later change is disclosed here with the date and the records it post-dates.

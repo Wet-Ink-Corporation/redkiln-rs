@@ -6,7 +6,7 @@ date: 2026-09-07
 legacy_id: SCHEMA-18
 source: references/2026-09-07-activity-graph-schema.md §9b (amendment 18)
 supersedes: []
-superseded_by: []
+superseded_by: ["0103"]
 related: ["0030"]
 evidence: []
 consumers: []

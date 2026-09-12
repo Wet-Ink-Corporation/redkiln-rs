@@ -1,0 +1,203 @@
+{
+  "artifact": "critic-method.json",
+  "phase": "synthesis -- method critic: modalities the pre-implementation audit did not run",
+  "generated": "2026-09-11",
+  "corpus_pin": "009a4ec68119896e63a3fb3e405ce1b6616665c3 (constants.json meta.corpus_git_head; git log -1 agrees) [measured]",
+  "house_note": "This file audits the audit. Every limit names the modality that was not run, the concern classes whose confidence it bounds, and the cheapest closure. Absence of a finding in a class below is reported as absence, never as a clean bill. Tags: [measured] = computed or read by this critic from the audit's own artifacts or the repo; [documented] = stated by the orchestrator brief or a live source; [inferred] = reasoned.",
+
+  "modalities_run": {
+    "census": "9 script-computed artifacts, all 9 re-run REPRODUCIBLE (reconcile.json reproducible_count 9; identical_after_stripping_volatile_meta true for all) [measured]",
+    "internal_reading": "21 area slices + 13 corpus-wide lenses; 357 candidates -> 338 survivors (P1:24 P2:213 P3:101); 1,420 anchors, 0 without a quote [measured]",
+    "refutation": "one refuter per finder judging truth and materiality in one agent (brief: 'after a budget cut from two'); truth WEAKENED 102/338, material WEAKENED 115/338; 19 killed [measured; the budget cut is documented by the brief]",
+    "external_grounding": "860 claims, verify methods arxiv_abs 101 / crates_io_api 32 / docs_rs 5 / doi_resolve 79 / github_api 122 / rustsec_osv 14 / vendor_docs 212 / web_search 295; fetched 2026-09-10; second opinion on every non-confirmed verdict, 3 of 147 bucketed rows flipped between first_verdict and verdict [measured: external.json counts; B09 rows]",
+    "best_practice": "four lanes x one agent: bp-durable-workflow 20, bp-rust-architecture 20, bp-sdd-landscape 19, bp-llm-evaluation 18 = 77 rows; no truth_verdict/material_verdict field exists on any B10 row [measured]"
+  },
+
+  "limits": [
+    {
+      "id": "PIA-M-01",
+      "limit": "Nothing was compiled. The Rust design's realisability -- five sync port traits held as dyn objects, an explicit cancel handle, the rk-kernel/rk-ports/rk-types layering -- was judged by reading design, ADRs and the spike runner's source, with rustc 1.97.1 installed on the box and crates/ empty.",
+      "evidence": [
+        {"file": "coverage.json L06-buildability", "quote": "Read by window: design ?3 (222-429 in three windows), ?5 (618-794), ?7.4-7.7 (1115-1195), ?9 (1639-1776) ... spikes/runner runner.rs (100-150, 300-400, 460-485, grep), step.rs (60-250)", "tag": "measured"},
+        {"file": "coverage.json slice-G21", "quote": "rustc/cargo 1.97.1 installed matches the pin", "tag": "measured"},
+        {"file": "references/2026-09-08-architecture-design.md", "line": 36, "quote": "Five named ports, sync traits, async in adapters | **DECIDED** | Native async-fn-in-trait is **still not dyn-compatible**; `async_fn_in_dyn_trait` remains nightly-only.", "tag": "measured"},
+        {"file": "references/2026-09-08-architecture-design.md", "line": 266, "quote": "`dispatch(ActivitySpec) -> Result<Typed, StepError>`; capability registry with dated probes; cost/usage; **`cancel(handle)`**", "tag": "measured"},
+        {"file": "references/2026-09-08-architecture-design.md", "line": 279, "quote": "One trait per port; **no generic parameter bound by a port trait appears anywhere in the kernel**, and every port is held as one object-safe trait object | API-surface lint + a compile-fail", "tag": "measured"}
+      ],
+      "consequence": "Every B02-realisability verdict (14 findings, P1:3 -- L06-buildability-01 and -03 among them) and every 'no defect found' on trait shape in L06 (ADR-0076 layering vs the section 9.1 crate table; edition-2024 set_var; StepError variant census) is a reading-verdict with no compiler behind it. The design's own row 279 names 'a compile-fail' as the instrument for P1, and the audit never produced one. The one runtime measurement in this class is n=1 on one machine ('taskkill /T /F victim exit code = 1 on this Windows 11 box'). Confidence that Step 7a's trait can be written as ADR-0076 states it is [inferred], not [measured]; a shape the compiler rejects (object safety with an associated Typed, a cancel token that must be Send across the adapter runtime) would have been invisible to this audit.",
+      "how_to_close": "A named spike (ADR-0012 discharge, consumer RUNBOOK Step 7a): one throwaway crate of 50-150 lines under scratch, not crates/, declaring the five port traits as written in ADR-0076 and design section 3, one fake, a CancelToken, `traits.len() == fakes.len()`, and a `compile_fail` doctest for the generics-leak rule (design:279); `cargo check` on 1.97.1. Cost: 1-2 hours; zero corpus edits; the outcome is a spike file, and if it fails a successor to ADR-0076, never an edit.",
+      "concern_classes": ["B02-realisability", "B01-readiness (Step 7a/7c rows)", "L06 no-defect verdicts"]
+    },
+    {
+      "id": "PIA-M-02",
+      "limit": "No parser was written for the predicate grammar. Eight grammar ADRs (0033, 0034, 0035, 0040, 0048, 0049, 0069, 0070) were read for ambiguity; the only executable check of the grammar in the corpus is the P9 lint's R9, which is a regex vocabulary scan, not a parser, and precedence is undeclared by design.",
+      "evidence": [
+        {"file": "references/adr/0033-normative-predicate-grammar.md", "line": 35, "quote": "Predicate grammar (normative): roots are step inputs, facets, `rigor`, `item`; `.field` access; `len()`; `none/all/any(<field> in [...])` with the element's fields in scope; operators `== != < <= > >= in`; boolean connectives `and or not`; literals are string/number/bool/`null`. No user functions.", "tag": "measured"},
+        {"file": "references/adr/0048-predicate-grammar-gains-parens-and-quoted-facet-values.md", "line": 21, "quote": "grouping is needed for readable `and`/`or` compositions without inventing precedence rules by convention", "tag": "measured"},
+        {"file": "spikes/p9/lint.py", "line": 316, "quote": "# --- R9 grammar + vocabulary", "tag": "measured"},
+        {"file": "coverage.json L04-ambiguity", "quote": "Read ADR-0031/0032/0033/0034/0040/0044/0046/0048/0049/0069/0070 in full plus schema 9a.1-7, 9b.18-19, 9c.39-40 and the P9 lint.py on_false handling.", "tag": "measured"},
+        {"file": "grep -i precedence|associativ|EBNF over the eight grammar ADRs, design and AC register", "quote": "only hit inside the grammar ADRs is 0048:21 above; no precedence table, no associativity rule, no EBNF anywhere in the corpus", "tag": "measured"}
+      ],
+      "consequence": "B03-ambiguity's grammar findings and its absences are reading-only. Whether `not a and b or c`, a nested `any(... in ...)` inside `len()`, or a string literal containing `]` parses to one tree is not-answerable from the corpus as written, and the audit could not have found the cases a parser generator rejects. The corpus records the coalesce-chaining and null==non-null holes itself (L04: ALREADY-RECORDED); it does not record that the grammar has no precedence rule -- that is the class this modality would have surfaced. [inferred] Step 7b's lint author and the pack authors will infer precedence independently, which is exactly the two-implementer failure ADR-0033 was written to prevent.",
+      "how_to_close": "A named spike (consumer: RUNBOOK Step 7b lint, and a successor record to ADR-0033 if a precedence rule is needed): write the EBNF for ADR-0033+0048+0049+0070, a 150-250 line recursive-descent parser (Python is fine; it is throwaway), run it over every `applicable_if`/`require.when`/`on_false` string in spikes/p9 packs and catalog, and report the count that fail or parse two ways. Cost: 2-4 hours. Report as a count with its denominator, not as prose.",
+      "concern_classes": ["B03-ambiguity (grammar rows)", "B01-readiness (Step 7b)"]
+    },
+    {
+      "id": "PIA-M-03",
+      "limit": "Wilson intervals were recomputed by one lens (L11) over 'every stated interval I could pair with a k/n', with partial independent recomputation in G01 (F36/F39), G02 (F40) and G15 (F29/F31). The pairing was manual; intervals whose k/n L11 could not locate were neither recomputed nor counted.",
+      "evidence": [
+        {"file": "coverage.json L11-statistics", "quote": "Scripted (python, z=1.959964, plain Wilson) every stated interval I could pair with a k/n. MATCH to 2 dp, no defect", "tag": "measured"},
+        {"file": "coverage.json slice-G02", "quote": "Wilson intervals recomputed independently", "tag": "measured"},
+        {"file": "coverage.json slice-G15", "quote": "Wilson 0-14.3%, 0-27.8%, 33.0-70.8%, 22.2-59.2% all recompute: no defect", "tag": "measured"}
+      ],
+      "consequence": "B07-citation-statistics' 'no defect' on intervals holds for the paired set only; the unpaired residue has no number (not-measurable, not zero). One formula (plain Wilson, no continuity correction) was assumed everywhere; an interval the corpus computed by Clopper-Pearson or with correction would show as a mismatch at 2 dp only if the difference exceeds rounding -- at n<=15 it often does not. The exact-McNemar and MCC checks for E3 were done once, by one script.",
+      "how_to_close": "Script: regex every `[a, b]` or `a-b%` bracket within 40 characters of a `k/n` or `k of n` in the four authority documents, FINDINGS.md and the F##-DRAFT files; recompute with Wilson, Wilson-cc and Clopper-Pearson; emit paired/unpaired/matched/mismatched counts. Cost: 1 hour. The unpaired count is the deliverable, whatever it is.",
+      "concern_classes": ["B07-citation-statistics", "B06-inaccuracy (rate rows)"]
+    },
+    {
+      "id": "PIA-M-04",
+      "limit": "The 481-id design/register mirror diff (L12) ran over all 481 ids [measured], but it diffed four keyword classes only -- thresholds with units, comparator phrasings, state words, Instrument vs Verified-by -- and read by hand the 141 rows in the first class. Wording divergence of the GIVEN/WHEN/THEN body between a design mention and its register block was not diffed.",
+      "evidence": [
+        {"file": "coverage.json L12-authority", "quote": "Scripted over all 481 mirrored AC ids: 1,079 design mentions vs 514 register blocks ... 141 mention rows with unit-bearing numbers absent from the register block, all read ... 12 comparator phrasings beside an id: all agree. 27 state-word pairs near an id ... 79 Instrument-column vs Verified-by pairs: 12 keyword differences ... Checked 481 AC ids for threshold/Phase/state/instrument divergence: no defect found.", "tag": "measured"}
+      ],
+      "consequence": "'No defect found' on the mirror is a no-defect on four keyword classes at full coverage, not on the criteria's semantics. A design row that narrows or widens an AC's WHEN clause without changing a number, a state word or the instrument column is outside what was checked. B04/B05-contradiction findings that touch AC wording came from area slices reading a sample, so the population rate of wording drift over 481 ids is not-measurable from this audit.",
+      "how_to_close": "Script: for each of the 481 ids, normalise the design sentence(s) carrying the id and the register block's GIVEN/WHEN/THEN, compute a token-set similarity, hand-read the lowest 50. Cost: 2 hours. Report the distribution, not a verdict.",
+      "concern_classes": ["B04-contradiction-a", "B05-contradiction-b", "L12 no-defect"]
+    },
+    {
+      "id": "PIA-M-05",
+      "limit": "Refutation was a single vote: one refuter per finder, judging truth and materiality in one pass, after the planned two-agent split was cut for budget; the three-vote panel originally planned did not run. No inter-rater figure exists for the refuter because no record was refuted twice.",
+      "evidence": [
+        {"file": "orchestrator brief", "quote": "single-agent adversarial refutation (truth + materiality in one agent, after a budget cut from two)", "tag": "documented"},
+        {"file": "buckets B01-B08 (338 records)", "quote": "truth_verdict UPHELD 236 / WEAKENED 102; material_verdict UPHELD 223 / WEAKENED 115; P1 records with at least one WEAKENED vote: 10 of 24 (L03-01, L03-03, slice-G12-01, slice-G20-01, G15-02, slice-G07-04, L06-buildability-03, L08-02, slice-G04-01, slice-G06-01)", "tag": "measured"}
+      ],
+      "consequence": "The P1/P2/P3 split rests on one judgement per record. 19 of 357 candidates were killed (5.3%, no interval computed -- one refuter, one pass, so an interval would describe nothing). Ten P1 concerns carry a WEAKENED vote from the only refuter that saw them and remain P1; whether a second refuter would move them to P2, or move ten P2s up, is not-measurable. The corpus's own discipline for adjudicated labels is a panel with a recorded disagreement count (F39: '15 of 32 differ' in G01's re-count); the audit applied a weaker standard to its own labels than the corpus applies to its spikes.",
+      "how_to_close": "A second, independent refuter over the 24 P1 records and the 72 P2 records that carry any WEAKENED vote (96 records), blind to the first refuter's reasons; report the agreement count on priority and on classification NEW/SHARPENS-KNOWN; a third vote only on the disagreements. Cost: 3-4 agent-hours. Present the agreement count as k/n with its Wilson interval.",
+      "concern_classes": ["every P1 in B01-B08", "priority ordering of the deliverable"]
+    },
+    {
+      "id": "PIA-M-06",
+      "limit": "No human adjudicated anything. The corpus's evidence idiom labels human reads separately from model reads (p1-arm-d-labels-ryan.md, p2-labels-ryan.md, e3-severity-annotation-ryan.md exist in spikes/results); the audit's 338 survivors and 860 grounding verdicts are model-labelled only.",
+      "evidence": [
+        {"file": "spikes/results (directory listing)", "quote": "p1-arm-d-labels-ryan.md, p1-arm-d-labels-BLANK.md, p2-labels-ryan.md, p2-labels-BLANK.md, e3-severity-annotation-ryan.md, e3-severity-annotation-model.md", "tag": "measured"},
+        {"file": "buckets B01-B08", "quote": "confidence: high 278 / medium 60 -- assigned by the finder itself, not by an adjudicator", "tag": "measured"}
+      ],
+      "consequence": "The 'confidence' field is self-report by the same agent that raised the finding; it carries no calibration. The P0/P1 line -- 'Step 5 would build the WRONG THING' -- is a judgement the corpus would ordinarily put in front of its human before it acts on it. Nothing in this audit has been.",
+      "how_to_close": "A blank label file in the corpus's own shape (id | agree/disagree/unsure | note) over the 24 P1 records plus a random 30 of the 213 P2, filled by the user before Step 5; the disagreement count is recorded next to the deliverable. Cost: 2-3 human hours. Do not re-threshold the priorities after the labels are in; report the disagreements.",
+      "concern_classes": ["P0/P1 assignment", "NEW vs SHARPENS-KNOWN classification"]
+    },
+    {
+      "id": "PIA-M-07",
+      "limit": "Spike scorers were re-run for five results only: P1 arm-D panel (G01), P2 (G02), E3 from e3.jsonl (L11), F12 from the old repo's git log (G14), and the S-MIG census (G19, G20). P7 (analyse-p7.py), P8, H1-H4, E0-E2, E3H, S-H1B/S-WT, P1 arm-L (analyse-arm-l.py), and the P9 lint/lattice were not re-run; F29/F31/F35/F37 figures were checked as restatements against the F-files, not reproduced from jsonl.",
+      "evidence": [
+        {"file": "coverage.json slice-G01", "quote": "re-ran spikes/p1/score-arm-d-panel.py at the pin and re-derived the truth set from the four label files", "tag": "measured"},
+        {"file": "coverage.json slice-G02", "quote": "re-ran spikes/p2/score-p2.py at the pin (read-only; it prints only)", "tag": "measured"},
+        {"file": "coverage.json L11-statistics", "quote": "Re-derived E3 from spikes/results/e3.jsonl (92 scored rows) ... all reproduce F23 exactly", "tag": "measured"},
+        {"file": "coverage.json slice-G19", "quote": "re-ran spikes/results/census-s-mig.py against D:/repos/redkiln at 47faec9f into scratch (read-only on both repos)", "tag": "measured"},
+        {"file": "spikes/ (script census)", "quote": "scorer scripts present: p1/analyse-arm-l.py, p1/score-arm-d.py, p1/score-arm-d-panel.py, p2/score-p2.py, p7/analyse-p7.py, p9/lint.py, p9/lattice.py, results/audit-e3.py, results/audit-s.py, results/census-s-mig.py; jsonl present for e0/e1/e2/e3/e3h/h1/h2-h3/h4/p1/p2/p7/p8/s-h1b; no scorer script exists for F29/F31/F37 (runner-emitted)", "tag": "measured"}
+      ],
+      "consequence": "For P7, P8, H1-H4, E0-E2, E3H and S-H1B the audit checked that the corpus restates itself consistently (B06/B07), not that the restated number is what the data gives. A scorer bug or a jsonl that drifted after the F-file was written is invisible. For F29/F31/F37 the numbers are not-reproducible-by-script from the repo at all and must be named as such in the deliverable; consistency-of-restatement is the only check that exists for them.",
+      "how_to_close": "Run each existing scorer at the pin into scratch and diff against the F-file (P7, P1 arm-L, audit-e3, audit-s, lint/lattice --validate): 1-2 hours. For the jsonl-only results (P8, H1-H4, E0-E2, E3H, S-H1B) a 20-line recount of the headline k/n per file: 1 hour. For F29/F31/F37 record 'runner-emitted, no scorer' as a known limit rather than attempting a reconstruction.",
+      "concern_classes": ["B06-inaccuracy (spike figures)", "B07-citation-statistics", "B08-method-integrity"]
+    },
+    {
+      "id": "PIA-M-08",
+      "limit": "The NEW / SHARPENS-KNOWN / ALREADY-RECORDED classification (174 / 161 / 3) rests on a keyword search_index over the 1,381 known-issues rows (about 15 keywords per row), queried by the finder and then by the refuter. A known row phrased in other vocabulary is missed and its finding counted NEW. The rows carry a source_anchor (file:line) that was not used for proximity matching.",
+      "evidence": [
+        {"file": "census/known-issues.json", "quote": "search_index: list 1381; sample entry {\"id\": \"ARCH-0.1-001\", \"kind\": \"blocked_decision\", \"keywords\": [\"0.168\", \"200\", \"80%\", \"adr-0079\", \"p1\", \"context-vector\", ...]}; rows[0].source_anchor = \"references/2026-09-08-architecture-design.md:19\"", "tag": "measured"},
+        {"file": "coverage.json L06-buildability", "quote": "Queried known-issues.json search_index for every finding (process group/job object/taskkill/143, handle, timeout, sqlite/busy_timeout, memo key/canonical ...)", "tag": "measured"}
+      ],
+      "consequence": "NEW is an upper bound; the direction of the error is one-way (a missed known row can only convert NEW to SHARPENS-KNOWN or ALREADY-RECORDED, never the reverse). The house rule 'never present a known item as a discovery' is therefore satisfied only to the recall of a keyword index whose recall was never measured. The 3 ALREADY-RECORDED survivors show the refuter did catch some; how many it did not is not-measurable.",
+      "how_to_close": "Script: for each of the 338 survivors, list every known-issues row whose source_anchor is in the same file within +/-5 lines of any finding anchor (1,420 anchors x 1,381 rows; trivial); hand-read the pairs for the 174 NEW. Cost: 30 minutes to script, 1-2 hours to read. Report the reclassification count.",
+      "concern_classes": ["NEW/SHARPENS-KNOWN tag on every concern"]
+    },
+    {
+      "id": "PIA-M-09",
+      "limit": "Preprint verification was abstract-level for most of the 99 preprint claims: the census assigns verify method arxiv_abs to 101 claims, and the brief records abstracts read for 89 of 99. Full text was fetched only where the first verdict was not CONFIRMED (in the 16 bucketed preprint rows, 4 notes cite a full-text pass).",
+      "evidence": [
+        {"file": "census/external.json counts", "quote": "\"family:preprints\": 99, \"method:arxiv_abs\": 101, \"distinct_arxiv_ids\": 99", "tag": "measured"},
+        {"file": "orchestrator brief", "quote": "web verification read abstracts for 89 of 99 preprints", "tag": "documented"},
+        {"file": "buckets B09 preprint rows (16)", "quote": "notes mentioning 'full text': 4; mentioning 'abstract' only: 2; neither: 10", "tag": "measured"},
+        {"file": "B09 EXT-PREPRINT-024", "quote": "Three full-text passes (v1 HTML, v1 PDF, v2 HTML) found no statement about precise criterion matching or deterministic validation vs LLM properties.", "tag": "measured"}
+      ],
+      "consequence": "A CONFIRMED verdict on a preprint attests that the id resolves, the title and authors match and the abstract is consistent with the corpus's gloss; it does not attest that a figure or claim the corpus attributes to the body (a table value, a limitation sentence) is there. EXT-PREPRINT-024 shows the failure mode: the abstract was consistent and the body did not contain the attributed statement. The 83 preprints that passed at abstract level carry that residual risk; its rate is not-measurable from this audit.",
+      "how_to_close": "For every preprint claim tagged load_bearing (external.json load_bearing_rule) fetch arxiv html or pdf full text and grep for the corpus's quoted figure or phrase; report found/not-found as k/n. Cost: 2-3 hours for the load-bearing subset; the whole 99 is a day.",
+      "concern_classes": ["B09-grounding (preprint CONFIRMED rows)", "evidence-brief and evidence-augmentation citations"]
+    },
+    {
+      "id": "PIA-M-10",
+      "limit": "The four best-practice lanes were four single agents with no refuter: 77 rows carry verdict/impact but no truth_verdict or material_verdict field. Four rows are tagged blocks-decision and seven changes-a-number on one agent's say-so.",
+      "evidence": [
+        {"file": "buckets/B10-best-practice.json", "quote": "row keys: claim_id, verdict, url, fetched, source_quote, corpus_says, source_says, impact, note, batch -- no refutation field; impact counts: none 46, changes-a-citation 11, cosmetic 9, changes-a-number 7, blocks-decision 4", "tag": "measured"}
+      ],
+      "consequence": "B10's four blocks-decision rows enter the deliverable at the same standing as refuted internal findings while having had no adversarial read. Lane scope was also each agent's own choice; a practice the lane did not think to look for is absent, and absent is all that can be said.",
+      "how_to_close": "One refuter over the 11 rows with impact blocks-decision or changes-a-number, with the same truth/materiality fields as B01-B08. Cost: 1 hour.",
+      "concern_classes": ["B10-best-practice", "any P1 derived from a B10 row"]
+    },
+    {
+      "id": "PIA-M-11",
+      "limit": "The L07-testability lens produced 8 findings and an empty coverage statement (0 characters).",
+      "evidence": [
+        {"file": "coverage.json internal_coverage.L07-testability", "quote": "\"\" (length 0)", "tag": "measured"},
+        {"file": "buckets B01-B08 finder tally", "quote": "L07-testability: 8 findings", "tag": "measured"}
+      ],
+      "consequence": "What L07 read and did not read is unknown, so the absence of testability findings outside its 8 is not-measurable rather than reassuring. Testability of the 514 criteria is the class Step 5's acceptance set depends on most directly; the category tally shows testability 19 findings, 8 of them from a lens whose scope cannot be stated.",
+      "how_to_close": "Re-issue the lens with the coverage statement mandatory, or accept the 8 findings and record the lens as unscoped in the deliverable. Cost: 1 agent-hour, or zero if recorded as a limit.",
+      "concern_classes": ["testability findings", "B01-readiness (acceptance sets per step)"]
+    },
+    {
+      "id": "PIA-M-12",
+      "limit": "The audit's own lenses and slices were run once; nothing estimates test-retest. Reproducibility was checked for the census scripts only (9/9), not for any reading agent.",
+      "evidence": [
+        {"file": "census/reconcile.json", "quote": "\"reproducible_count\": 9", "tag": "measured"},
+        {"file": "coverage.json", "quote": "34 coverage entries, one per finder; no finder appears twice", "tag": "measured"}
+      ],
+      "consequence": "The finding count per lens (L04 13, L06 13, L08 13, down to L12 7) is a single draw. A second run of the same lens over the same windows would yield a different set with unknown overlap; the audit cannot say what fraction of findings of a given class it captures (no recall estimate), only what it found.",
+      "how_to_close": "Re-run two lenses blind (L04-ambiguity and L08-sequencing, the two with the largest Phase-1 exposure) and report the Jaccard overlap of finding sets after anchor-matching. Cost: 2 agent-hours. If overlap is below one half, the deliverable's per-class 'absence' statements should be downgraded to 'not sampled'.",
+      "concern_classes": ["every absence-of-finding statement in the deliverable"]
+    },
+    {
+      "id": "PIA-M-13",
+      "limit": "The census anomaly pool the lenses queried is not the set the census agents counted: eight of nine artifacts hold no structured anomaly list, so 69 of 82 agent-reported anomalies exist only in prose returns and the pool (115 after dedupe) was rebuilt from structured stand-ins.",
+      "evidence": [
+        {"file": "census/reconcile.json inconsistencies", "quote": "only ids.json stores a structured anomalies list; constants, anchors, adr-graph, slices, external, known-issues, phase1-deps and doc-map hold no anomaly list, so the anomaly texts the agents counted (69 in total) exist only in their prose returns. The pool below is rebuilt from structured anomaly-equivalent records instead.", "severity": "material", "tag": "measured"},
+        {"file": "census/reconcile.json anomaly_pool_counts", "quote": "\"raw_harvested\": 117, \"after_dedupe\": 115 ... \"agent_reported_total\": 82", "tag": "measured"}
+      ],
+      "consequence": "Any lens that treated the pool as 'the census anomalies' (L03 cites 'reconcile anomaly_pool') was reading a reconstruction. An anomaly a census agent saw and described only in prose may have reached no lens. reconcile.json records this itself (severity material), so the limit is known; its downstream effect on which findings were never seeded is not-measurable.",
+      "how_to_close": "None required for the deliverable beyond stating it; if the orchestrator's prose returns from the census phase are retained, a 30-minute pass can list the 69 prose anomalies against the 115-row pool.",
+      "concern_classes": ["seeding of L01/L03 findings"]
+    },
+    {
+      "id": "PIA-M-14",
+      "limit": "Truth and materiality were judged by the same agent in one pass, so a materiality argument could shade the truth reading and vice versa; the two verdicts are not independent observations.",
+      "evidence": [
+        {"file": "buckets B01-B08 crosstab", "quote": "(truth, material): UU 181, UW 55, WU 42, WW 60 -- the WW cell at 60/338 is what a single agent produces when one doubt colours both fields; no independent estimate exists", "tag": "measured"}
+      ],
+      "consequence": "Records whose truth was UPHELD but materiality WEAKENED (55) may sit a priority too high; records with truth WEAKENED but materiality UPHELD (42) may carry a weakened quote into the deliverable. Neither cell was re-read by a second agent.",
+      "how_to_close": "Folded into PIA-M-05's second refuter; no separate cost.",
+      "concern_classes": ["priority of B01-B08 records"]
+    }
+  ],
+
+  "what_the_numbers_rest_on": {
+    "statement": "In the corpus's own idiom: every count in this audit is a single pass by one model family on one day over one pin. 338 findings and 860 grounding verdicts are model-labelled with no human label file and no second draw; the only reproducibility figure is 9/9 on the census scripts, which measures the scripts, not the readers. Rates quoted about the audit (5.3% killed, 30.2% truth-WEAKENED) carry no interval because the process that produced them was run once and an interval over one run describes nothing. External verdicts are dated 2026-09-10 and are STALE-BY-DATE by construction from the next crates.io publish or docs change onward.",
+    "pin": "corpus git HEAD 009a4ec68119896e63a3fb3e405ce1b6616665c3, 17 porcelain lines in the working tree at audit time (spike logs, spikes/results/p8-state/, spikes/runner/target-*/), none of which is the file of any of the 1,420 finding anchors [measured]",
+    "model_family": "one (Claude, this session's agents) for census scripting, reading, refutation, grounding and best-practice lanes; no cross-family read [documented: session]",
+    "day": "web fetches 2026-09-10; census generated 2026-09-11T01:35Z; synthesis 2026-09-11 [measured]",
+    "passes": "one finder pass, one refuter pass, one grounding pass plus one second-opinion pass on non-confirmed rows only (3 of 147 bucketed rows flipped at that stage; 28 flipped across the full 860 per the brief) [measured; brief]",
+    "human": "none [measured: no label file exists under synthesis/]",
+    "fault_names": {
+      "saturated": "not applicable to the audit's own rates -- nothing hit 0/n or n/n except the census reproducibility 9/9, which is a script property",
+      "powerless": "the killed-rate 19/357 and any per-lens finding count: n=1 run, no design could decide a hypothesis about them",
+      "not_measurable": "recall of any lens (PIA-M-12); keyword-index recall for NEW (PIA-M-08); wording-drift rate over 481 ids (PIA-M-04); residual body-vs-abstract risk over 83 preprints (PIA-M-09)",
+      "not_answerable": "whether the port traits compile (PIA-M-01) and whether the predicate grammar is unambiguous (PIA-M-02) -- the corpus as written does not contain the answer, and the audit did not build the instrument that would"
+    }
+  },
+
+  "ordering_for_the_deliverable": [
+    "PIA-M-01 and PIA-M-02 are the two modalities whose absence can change what Step 5/7a/7b builds; both close in under half a day and each discharges as a named spike with a named consumer, which is the only form the corpus accepts for an unknown (ADR-0012).",
+    "PIA-M-05, PIA-M-06 and PIA-M-14 bound confidence in the priority ordering itself; PIA-M-08 bounds the NEW tag. These four should be stated at the head of the deliverable, before any concern.",
+    "PIA-M-03, PIA-M-04, PIA-M-07, PIA-M-09, PIA-M-10 bound specific classes and are each a one-to-three-hour script or fetch.",
+    "PIA-M-11, PIA-M-12, PIA-M-13 are hygiene of the audit record and cost nothing to state."
+  ]
+}

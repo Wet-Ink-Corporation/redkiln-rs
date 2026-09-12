@@ -1,6 +1,6 @@
 ## F36 — P1 arm L RESULT (unlabelled half): the LLM-emitted context vector is **not stable enough to drive a deterministic selection engine**, and the pre-registered remedy does not repair it. Across two instruments and both packs, an identical required-artifact set `R(stage, ctx)` across ten draws is reached on **5/20, 3/20, 2/20 and 2/20** items against an 80% line — the kill fires four times out of four. §1.4's anchor-rewrite re-run left `blast_radius` unmoved (0.488 → 0.473, so it becomes human-supplied) and made `external_dep` **constant** rather than reliable (200/200 `false`). And three axes whose anchors were byte-identical between the two runs drifted by up to **−0.168**, which is larger than the effect the α < 0.6 threshold is meant to detect — so on this corpus that threshold is not a decidable predicate
 
-**Established by:** 200 classification dispatches (20 items × 5 repeats × 2 models), 2026-09-07 22:22Z – 2026-09-08 07:41Z, arms `L-haiku` and `L-sonnet`, default temperature, no effort parameter, corpus pin `47faec9f`, `claude` **2.1.263** on all 200 records. `spikes/results/p1-arm-l.jsonl`. **200 valid, 0 void.** Pre-registered in `METHOD-P.md` §1. **$10.66** of a $40 cap, ~3.4 h of dispatch, no throttle halt. **Plus the §1.4 re-run** (§3): a further 200 dispatches under arm `L2-*`, card `0384080216a9`, `spikes/results/p1-arm-l-v2.jsonl`, **200 valid, 0 void**, $9.70 — analysed together by `spikes/p1/analyse-arm-l.py --compare-to`. Card `spikes/prompts/p1-classify.md` (`9d86e7044490`), schema `spikes/schemas/p1-classify.schema.json` (`5fd33472d73e`), both committed before the first dispatch and unedited during the run — every record carries both digests and the run asserts they never changed. Analysis: `spikes/p1/analyse-arm-l.py` → `spikes/results/p1-arm-l-analysis.txt`, stamped `cat:f89154d762a7 fac+art:149a74a0d053 pk:6994b61bc64d` (METHOD-P §0 rule 2).
+**Established by:** 200 classification dispatches (20 items × 5 repeats × 2 models), 2026-09-07 22:22Z – 2026-09-08 07:41Z, arms `L-haiku` and `L-sonnet`, default temperature, no effort parameter, corpus pin `47faec9f`, `claude` **2.1.263** on all 200 records. `spikes/results/p1-arm-l.jsonl`. **200 valid, 0 void.** Pre-registered in `METHOD-P.md` §1. **$10.66** of a $40 cap, ~3.4 h of dispatch, no throttle halt. **Plus the §1.4 re-run** (§3): a further 200 dispatches under arm `L2-*`, card `0384080216a9`, `spikes/results/p1-arm-l-v2.jsonl`, **200 valid, 0 void**, $9.70 *[corrected 2026-09-11: $10.71 — Correction (2026-09-11)]* — analysed together by `spikes/p1/analyse-arm-l.py --compare-to`. Card `spikes/prompts/p1-classify.md` (`9d86e7044490`), schema `spikes/schemas/p1-classify.schema.json` (`5fd33472d73e`), both committed before the first dispatch and unedited during the run — every record carries both digests and the run asserts they never changed. Analysis: `spikes/p1/analyse-arm-l.py` → `spikes/results/p1-arm-l-analysis.txt`, stamped `cat:f89154d762a7 fac+art:149a74a0d053 pk:6994b61bc64d` (METHOD-P §0 rule 2).
 
 **This is the unlabelled half only.** METHOD-P §1.2's human agreement panel — two labels per item per facet, written from the item alone before unblinding (§0 rule 1) — is not written yet, and nothing here is compared to it. Arm D's precision/recall against that panel, which is the criterion that decides whether a facet *leaves the model*, therefore has no result in this draft. The skeleton is `spikes/results/p1-arm-l-labels-RYAN-TODO.md`.
 
@@ -55,7 +55,7 @@ Four of the eight registered facets pass the alpha bar comfortably; two fail; `s
 §1.4's first bullet: an axis below 0.6 has "its anchors rewritten first and re-run once; if still < 0.6,
 human-supplied." `spikes/prompts/p1-classify-v2.md` (`0384080216a9`) rewrote **`blast_radius` and `external_dep`
 only**; every other anchor and the `unknown` policy are byte-identical to v1. 200 dispatches, **0 void**, $9.70,
-recorded under arm `L2-*` in `spikes/results/p1-arm-l-v2.jsonl` — never pooled with `L-*`.
+recorded under arm `L2-*` in `spikes/results/p1-arm-l-v2.jsonl` — never pooled with `L-*`. *[$9.70 corrected 2026-09-11 to $10.71 — Correction (2026-09-11)]*
 
 | facet | rewritten? | α v1 | α v2 | Δ |
 | --- | --- | --- | --- | --- |
@@ -111,3 +111,22 @@ result Phase 1 should act on.**
 6. **Alpha is undefined, not 1.0**, where every draw agreed; no facet hit that case in this run, but the analysis reports `n/a` rather than a flattering number if one ever does.
 7. **Nothing is compared to a human panel.** Half of §1.3's metrics have no value in this draft by design.
 8. **The v2 instrument is a single re-run**, which is what §1.4 licenses ("re-run once") and no more. The drift finding in §3.3 rests on one pair of draws per axis; it is enough to show α is not resolvable at this size, and not enough to quantify how unstable it is. A bootstrap over items would do that and was not run.
+
+### Correction (2026-09-11)
+
+Dated correction from the 2026-09-10 pre-implementation audit (PIA-077; ERRATA E-0079-1). The §1.4 re-run's cost is
+stated twice above as **$9.70**. That figure was read from the sonnet driver's last spend line before the haiku
+driver had finished its final repeats. The re-run cost **$10.71** — haiku **$4.91** + sonnet **$5.79** — from the
+two log lines and the record file:
+
+- `spikes/p1-arm-l-v2-haiku.log` :265 — `spend in this file: $10.71 of $40.00` (the last spend line written to the
+  shared results file);
+- `spikes/p1-arm-l-v2-sonnet.log` :316 — `spend in this file: $9.70 of $40.00` (sonnet's last line, written while
+  haiku's repeats 4–5 were still running);
+- `spikes/results/p1-arm-l-v2.jsonl` — Σ `total_cost_usd` over 200 records: `L2-haiku` $4.9142 (100), `L2-sonnet`
+  $5.7926 (100), total **$10.7068** [measured, recounted 2026-09-11].
+
+The v1 run's **$10.66** (`L-haiku` $4.7539 + `L-sonnet` $5.9068, `p1-arm-l.jsonl`) is unaffected, and the two-run
+total `HANDOFF.md` carries — **$21.37** — was already the sum on the corrected figure (10.6607 + 10.7068 = 21.3675),
+so only this draft's two cost readings were wrong. No metric, α or verdict in this draft depends on the cost.
+ADR-0079 :211's cost parenthetical is reconciled by ERRATA E-0079-1.

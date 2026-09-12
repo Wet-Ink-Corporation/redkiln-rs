@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: none
 source: references/2026-09-08-evidence-augmentation.md §1 rows 1 and 4, §3 (context and caching), §4 recs 1–2; evidence brief §C.1
 supersedes: ["0016"]
-superseded_by: []
+superseded_by: ["0113"]
 related: ["0010", "0017"]
 evidence: ["F16", "F28", "F13", "F3", "F10", "F18", "S-WT", "S-H1b"]
 consumers: []

@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: none
 source: references/adr/README.md; references/2026-09-07-design-recommendation.md §5; references/2026-09-08-evidence-augmentation.md §3 (decision records), §4 recs 19–20, §5
 supersedes: []
-superseded_by: []
+superseded_by: ["0092"]
 related: ["0012", "0019", "0075"]
 evidence: []
 consumers: []

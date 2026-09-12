@@ -1,0 +1,36 @@
+{
+  "item": "issue-74-plan-briefs-dead-plan-anchor",
+  "arm": "0-delay",
+  "repeat": 1,
+  "activity": "minimal-repro",
+  "graph_sha256": "01e17f07f1a63243f16a6d2cba931a70a77a42d82c9dfc92eb8452362fdcccc5",
+  "corpus_sha": "1c4aed2e",
+  "fixture": "\\\\?\\D:\\repos\\redkiln-rs\\spikes\\fixtures\\p8e\\e3-silent-issue-74-plan-briefs-dead-plan-anchor",
+  "steps": [
+    {
+      "step": "attempt",
+      "pass": 1,
+      "output": {
+        "blocker": "",
+        "observed": "Test failures showing that the manifest doesn't handle deadAnchors from verify digest: (1) Project rows don't carry deadAnchors field - test expects to find ../_plan.md in deadAnchors array but gets empty array. (2) When verify reports deadAnchors with pass:false, degraded entry includes missingArtifacts but test shows dead anchors are not included in the degraded array structure. This means the verify pass finding the self-inflicted dead link to _plan.md would not properly surface the issue to the operator since the manifest doesn't propagate deadAnchors to the degraded array.",
+        "status": "reproduced",
+        "steps_tried": [
+          "Examined forge-plan-briefs.js lines 714-715 which instruct agent to link ${DIR}/_plan.md",
+          "Found Stage 5 verify pass at lines 919-967 that checks for dead anchors (item 4)",
+          "Checked manifest construction at lines 983-1000",
+          "Reviewed VERIFY_DIGEST schema which supports optional deadAnchors field",
+          "Created test case that patches verify digest to report deadAnchors",
+          "Ran npm test -- test/issue-74-plan-briefs-dead-plan-anchor.test.ts",
+          "Confirmed tests fail: (1) deadAnchors not in project rows, (2) deadAnchors not in degraded entries"
+        ]
+      },
+      "digest": "a99f7afaefc7dbca9ef91bef0d1b13de0dcd315f42271f4347befb2ad0199aaa",
+      "tokens": 15060,
+      "cost_usd": 0.34679709999999997
+    }
+  ],
+  "gate_arrivals": 1,
+  "marked_at": "2026-09-09T01:10:53.669052700Z",
+  "tokens_before_gate": 15060,
+  "cost_before_gate": 0.34679709999999997
+}

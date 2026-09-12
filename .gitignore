@@ -29,3 +29,8 @@ spikes/fixtures/
 # Python bytecode from the spike tooling (spikes/p1, p2, p9). The .py sources
 # are tracked; the caches are per-interpreter and rebuild on every run.
 __pycache__/
+
+# Regenerable census output of the 2026-09-10 audit instrument (references/audit/2026-09-10/scripts/); ~16 MB, rebuilt by the scripts
+references/audit/2026-09-10/census/
+references/audit/2026-09-10/rerun/
+references/audit/2026-09-10/scripts/__pycache__/

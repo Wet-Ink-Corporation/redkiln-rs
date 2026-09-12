@@ -1,0 +1,37 @@
+{
+  "item": "issue-81-plan-discover-spec-gate-mismatch",
+  "arm": "0-delay",
+  "repeat": 1,
+  "activity": "minimal-repro",
+  "graph_sha256": "01e17f07f1a63243f16a6d2cba931a70a77a42d82c9dfc92eb8452362fdcccc5",
+  "corpus_sha": "2cf1728f",
+  "fixture": "\\\\?\\D:\\repos\\redkiln-rs\\spikes\\fixtures\\p8-0-delay-issue-81-plan-discover-spec-gate-mismatch\\e3-silent-issue-81-plan-discover-spec-gate-mismatch",
+  "steps": [
+    {
+      "step": "attempt",
+      "pass": 1,
+      "output": {
+        "blocker": "",
+        "observed": "Created a standard-tier story which starts at the 'discover' stage with discover.md containing 4 unticked gate checkboxes. Attempting to advance directly to 'spec' as plan.md step 9 instructs fails with: 'checklist gate 'gates/discover' failed: 4 required item(s) not ticked'. The advance only succeeds after filling in discover.md content and ticking all checkboxes. This confirms the issue: plan.md step 9 instructs an action (direct discover->spec advance) that cannot succeed without first satisfying the gate, but nothing in step 9 satisfies the gate.",
+        "status": "reproduced",
+        "steps_tried": [
+          "Listed projects in support initiative to find a suitable parent",
+          "Created a standard-tier story using 'redkiln new story' with parent project RK-P0030",
+          "Verified story was created with process='story' and stage='discover'",
+          "Confirmed discover.md was created with 4 unticked checkboxes in the Gate: Discover section",
+          "Attempted to advance story to spec with 'redkiln advance RK-S0255 --to spec --apply' - FAILED",
+          "Filled in discover.md content and ticked all 4 checkboxes",
+          "Retried advance to spec - SUCCEEDED"
+        ]
+      },
+      "digest": "c805a59fd82b0fe28bc5ed811818b508bf0be75505fb40eae0ba62bb29b8e2f3",
+      "tokens": 7828,
+      "cost_usd": 0.1842878
+    }
+  ],
+  "gate_arrivals": 1,
+  "gate_forced": true,
+  "marked_at": "2026-09-09T02:02:10.406225200Z",
+  "tokens_before_gate": 7828,
+  "cost_before_gate": 0.1842878
+}

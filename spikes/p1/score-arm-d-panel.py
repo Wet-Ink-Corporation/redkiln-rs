@@ -14,8 +14,18 @@ Standing caution recorded with the result: the uncontested cells rest on unanimo
 "Nine Judges, Two Effective Votes" measured a 9-judge panel supplying ~2.18 effective independent votes with
 accuracy 8-22 points short of independent-vote predictions. Unanimity here is a weaker correctness signal than
 its arithmetic suggests; the contested cells carry a human and the uncontested ones do not.
+
+Corrected 2026-09-11 (audit PIA-077, ERRATA E-0089-2). Two defects in the 2026-09-09 scoring run:
+  1. `p1-arm-d-panel-accepted.jsonl` keys four cells of one item under the slug
+     `.../kb-harvest-and-closeout/resolve-open-questions` (plural); the engine, the oracle and the contested file
+     all key that item `.../resolve-open-question` (singular). The four cells (auth, data_migration, flag_exists,
+     ui — all `false`) therefore had no engine record and were skipped without a word by the `continue` below.
+     The result files are records and are not edited; the known mis-key is normalised on read (PANEL_KEY_FIX).
+  2. A truth cell with no engine record was silently dropped. The scorer now FAILS CLOSED: every truth cell must
+     have an engine record for every source, or the run aborts naming the cells.
+F39's table was computed over 136 scored cells of the 140 it claimed; see F39-DRAFT.md "Correction (2026-09-11)".
 """
-import io, json, collections, math
+import io, json, collections, math, sys
 
 ENGINE = "spikes/results/p1-arm-d.jsonl"
 ORACLE = "spikes/results/p1-arm-d-oracle.jsonl"
@@ -25,6 +35,18 @@ ADJ = "spikes/results/p1-arm-d-adjudications.json"
 
 SEMANTIC = ["auth", "data_migration", "ui", "flag_exists"]
 MECHANICAL = ["toolchain", "change", "binary_change"]
+SOURCES = ("docs", "commits", "union")
+
+# Item slugs the panel files spell differently from the engine records. Applied on read to every panel-derived
+# file (accepted, contested, adjudications); never to the engine or oracle records, which carry the true slug.
+PANEL_KEY_FIX = {
+    "_archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-questions":
+        "_archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question",
+}
+
+
+def key(item):
+    return PANEL_KEY_FIX.get(item, item)
 
 
 def norm(v):
@@ -58,39 +80,47 @@ def main():
 
     for line in io.open(ACCEPTED, encoding="utf-8"):
         r = json.loads(line)
-        truth[(r["item"], r["facet"])] = norm(r["value"])
-        prov[(r["item"], r["facet"])] = "panel"
+        truth[(key(r["item"]), r["facet"])] = norm(r["value"])
+        prov[(key(r["item"]), r["facet"])] = "panel"
 
     # cells whose only flag was a mechanically-moot adversarial prediction keep the panel's unanimous value
     c = json.load(io.open(CONTESTED, encoding="utf-8"))
     for r in c.get("moot", []):
         vals = {norm(p["value"]) for p in r["panel"]}
         if len(vals) == 1:
-            truth[(r["item"], r["facet"])] = vals.pop()
-            prov[(r["item"], r["facet"])] = "panel(moot-flag)"
+            truth[(key(r["item"]), r["facet"])] = vals.pop()
+            prov[(key(r["item"]), r["facet"])] = "panel(moot-flag)"
 
     for r in json.load(io.open(ADJ, encoding="utf-8")):
-        truth[(r["item"], r["facet"])] = norm(r["value"])
-        prov[(r["item"], r["facet"])] = "human"
+        truth[(key(r["item"]), r["facet"])] = norm(r["value"])
+        prov[(key(r["item"]), r["facet"])] = "human"
 
     eng = collections.defaultdict(dict)
     for line in io.open(ENGINE, encoding="utf-8"):
         r = json.loads(line)
         eng[(r["item"], r["facet"])][r["source"]] = r["value"]
 
-    print(f"truth cells: {len(truth)}   provenance: {dict(collections.Counter(prov.values()))}\n")
+    # Fail closed: a truth cell the engine never scored is a defect in the inputs, not a cell to skip.
+    missing = sorted((item, f, src) for (item, f) in truth for src in SOURCES if src not in eng.get((item, f), {}))
+    if missing:
+        sys.stderr.write(f"ABORT: {len(missing)} truth cell/source pairs have no engine record:\n")
+        for item, f, src in missing:
+            sys.stderr.write(f"  {item}  {f}  {src}\n")
+        sys.exit(2)
+
+    print(f"truth cells: {len(truth)}   provenance: {dict(collections.Counter(prov.values()))}")
+    print(f"every truth cell has an engine record for every source (fail-closed check passed; key fix applied to "
+          f"{len(PANEL_KEY_FIX)} panel slug{'s' if len(PANEL_KEY_FIX) != 1 else ''})\n")
     print(f"{'facet':16}{'source':9}{'prec':>7}{'  95% CI':>16}{'rec':>7}   tp  fp  fn  tn  excl")
     print("-" * 84)
     verdicts = {}
     for facet in MECHANICAL + SEMANTIC:
-        for source in ("docs", "commits", "union"):
+        for source in SOURCES:
             tp = fp = fn = tn = excl = 0
             for (item, f), t in truth.items():
                 if f != facet:
                     continue
-                if source not in eng.get((item, f), {}):
-                    continue
-                g = eng[(item, f)][source]
+                g = eng[(item, f)][source]  # guaranteed present by the fail-closed check above
                 if facet in ("toolchain", "change"):
                     T, G = set(t or []), set(g or [])
                     tp += len(T & G); fp += len(G - T); fn += len(T - G)

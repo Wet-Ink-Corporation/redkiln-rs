@@ -365,3 +365,11 @@ the decision no longer rests on it.
    material, one flipped flag — but it is one number from one corpus on one
    machine, and the in-session 5m-cache premise that would have widened it does
    **not** hold (§5).
+
+## Erratum (2026-09-11)
+
+Appended after the pre-implementation audit of 2026-09-10 (`references/audit/2026-09-10/MASTER.json` and its citation census); this document is a dated record and is not rewritten. One bullet per corrected line: `:NN — was … → is …, source, fetched date`. Every fetch is dated 2026-09-10 unless stated; every research read going forward carries a fetch date.
+
+- :223 — the arm-(a) MCC as printed there → **+0.957**, from the matrix tp 23 / fn 0 / fp 1 / tn 22 (E-0074-3, E-0001-1; PIA-073); the +1.000 column is the if-all-blocking hypothetical and stands.
+- :320 — "1.9M … moved it by less than one tick" → **~1.0M tokens** (854k cache-read, 157k cache-creation) across the 40 dispatches (PIA-077); the reading (below the 0.01 instrument resolution) stands.
+- :327 — the census extracted "Nothing found" here as a stated absence; it is the amendment's own summary of internal findings, not a claim about an external source (census EXT-STATEDAB-004: not a defect).

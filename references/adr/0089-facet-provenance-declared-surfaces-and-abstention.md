@@ -6,7 +6,7 @@ date: 2026-09-09
 legacy_id: none
 source: spikes/F39-DRAFT.md; references/2026-09-09-change-classification.md §0, §4.1–§4.3, §5
 supersedes: ["0030"]
-superseded_by: []
+superseded_by: ["0093"]
 related: ["0012", "0024", "0032", "0050", "0060", "0061", "0067", "0069", "0073", "0079"]
 evidence: ["F39", "F36", "F18"]
 consumers: []

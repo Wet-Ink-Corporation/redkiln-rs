@@ -11,7 +11,7 @@
 | criterion | measured | verdict |
 | --- | --- | --- |
 | **Any lost or changed step output** → escalation becomes activity-terminal; §3's "resume into the same step" is withdrawn | **0 changed, 0 lost, 3/3 runs.** State digest identical before and after in every case | **does not fire** |
-| **Resume cost > 1.5 × F28's ~18.6k** → a mid-graph gate is priced like a stage gate plus the graph's replay | **0.45× / 0.55× / 0.78×** (8,408 / 10,314 / 14,579 output tokens) | **does not fire** |
+| **Resume cost > 1.5 × F28's ~18.6k** → a mid-graph gate is priced like a stage gate plus the graph's replay | **0.45× / 0.55× / 0.78×** (8,408 / 10,314 / 14,579 output tokens) *[corrected 2026-09-11: unlike counters — on `cache_creation_input_tokens` the same dispatches read 4.57× / 2.66× / 2.52×; Correction (2026-09-11)]* | **does not fire** *[corrected 2026-09-11: fires on the like counter, subject to the cross-fixture caveat; the cost ordering is UNMEASURED — Correction (2026-09-11)]* |
 | **Second arrival does not mint a new mark** → §9b's A8 reversed, gate gains an explicit `rearm` flag | the gate's own predicate was **false on every second arrival**; arrivals were forced, and the mark was minted by the driver under test | **NOT ANSWERABLE** (§3) |
 
 ### 1. Resume is lossless across a real kill [measured]
@@ -28,7 +28,7 @@ Independently, the state **files** were sha256'd immediately before and after th
 
 **This extends F19 rather than repeating it.** F19 proved lossless resume at *activity* granularity; §5.1's open question was whether that holds with **partial step outputs bound mid-graph**. It does, on this evidence — with the large caveat in §4 that the state being round-tripped holds exactly one step.
 
-### 2. A mid-graph resume is cheaper than a stage gate, not dearer [measured]
+### 2. A mid-graph resume is cheaper than a stage gate, not dearer [measured] *[withdrawn 2026-09-11 — the ratio divides unlike counters; see Correction (2026-09-11)]*
 
 | item | resume output tokens | ÷ F28's ~18.6k |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ The sharpest form of it: `issue-74-plan-briefs-dead-plan-anchor` was localised *
 ### 5. What this settles
 
 - **Settles (n=3):** serialise → kill → reload is lossless at mid-graph granularity, across a destructive process kill, in a fresh process. §5.4's first criterion does not fire, and it is the criterion that would have withdrawn §3's "resume into the same step".
-- **Settles (n=3):** a mid-graph resume is priced **below** a stage gate, not above. The second criterion does not fire, and the "plus the graph's replay" term it assumed does not exist in this design.
+- **Settles (n=3):** a mid-graph resume is priced **below** a stage gate, not above. The second criterion does not fire, and the "plus the graph's replay" term it assumed does not exist in this design. *[withdrawn 2026-09-11: the cost ordering is UNMEASURED — Correction (2026-09-11), ADR-0106]*
 - **Settles:** "remove the repro steps so the gate fires" is not a workable fixture construction against an agent with repository access (§4).
 - **Does not settle:** A8 / the `rearm` question (§3).
 - **Does not settle:** anything about delay. All three runs sat inside F10's ~1 h cache TTL (0.9–29.1 min). The arms that straddle it were not run.
@@ -82,3 +82,34 @@ The sharpest form of it: `issue-74-plan-briefs-dead-plan-anchor` was localised *
 6. **Haiku only**, per §5.5.
 7. **The first emit record was written by a defective instrument** and is superseded, not deleted (the results file is append-only). Its `second_arrival_minted_a_new_mark: false` conflated "gate not re-reached" with "re-reached and minted nothing", its `gate_forced` read the resume invocation's flag rather than the run's, and its `ms_from_answer_to_first_post_resume_dispatch` (686,454) timed the dispatch instead of the latency to its start. All three are fixed (#37); **that record's `lossless` and token figures are unaffected and stand**.
 8. **`taskkill /T /F` only.** The polite WM_CLOSE form is a different experiment and was not run.
+
+### Correction (2026-09-11)
+
+Dated correction from the 2026-09-10 pre-implementation audit (PIA-080; ADR-0106, which supersedes ADR-0087 in
+part; ERRATA E-0087-1). §2's figures stand as written above; what follows corrects what they measure.
+
+**§2 divided unlike counters.** The numerators 8,408 / 10,314 / 14,579 are the resumed `attempt` dispatch's
+**`output_tokens`** (`runner/src/main.rs` :3288); the denominator ~18.6k is F28's **`cache_creation_input_tokens`**
+per gate (`main.rs` :3349 hard-codes 18600.0). Output tokens do not price a resume — the cost of a resume is the
+rebuilt prefix — so §2's three ratios are not cost ratios and are not quoted as such again (ADR-0106 forbids).
+
+**§2 restated on the like counter.** On `cache_creation_input_tokens`, summed across the turns of the first
+post-resume dispatch (pass 2 of each item's `attempt` record in `spikes/results/p8.jsonl`):
+
+| item | resume `cache_creation_input_tokens` | ÷ F28's 18,603 | resume `output_tokens` (§2, unchanged) | `total_cost_usd` |
+| --- | --- | --- | --- | --- |
+| `issue-74` | **84,960** | **4.57×** | 10,314 | $0.4165 |
+| `issue-81` | **49,468** | **2.66×** | 8,408 | $0.2540 |
+| `issue-79` | **46,961** | **2.52×** | 14,579 | $0.3251 |
+
+[measured, `p8.jsonl` `step.usage` on the pass-2 `attempt` records, recounted 2026-09-11; the audit's figures
+agree]. On that field METHOD-P §5.4's **> 1.5 × F28 kill fires on all three runs** — subject to the cross-fixture
+caveat that F28's gate (a review-scale prefix re-read by `ttl-read`) and F38's resume (a fresh `attempt` dispatch
+carrying the gate answer, whose prefix includes the item's repository state) are different fixtures, and to
+n = 3 with intervals that overlap (ADR-0080's own n = 3 rule). What the like-counter reading licenses is
+narrower than either headline: **the cost ordering between a mid-graph gate and a stage gate is UNMEASURED**
+(ADR-0106 decision 1). §2's heading, its "cheaper than a stage gate" sentence and §5's second "Settles" bullet
+are withdrawn to that state; §5.4's second criterion is reported as **fires on `cache_creation_input_tokens`,
+cross-fixture, n = 3 — not decidable as a cost ordering**, never as "does not fire". The comparator unit for P8-B is
+fixed by ADR-0106 decision 2 and METHOD-P §5.4's dated note: `cache_creation_input_tokens` on the first post-resume
+dispatch, reported beside `total_cost_usd`. The losslessness result (§1) is untouched.

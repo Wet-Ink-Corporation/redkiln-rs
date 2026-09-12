@@ -39,3 +39,10 @@ Tracked **in GitHub, not in-repo files**: `/plan-epics` creates an epic issue pl
 **Avoid:** (1) The referee/FSM detour itself — a hook enforcement layer the team's own design doc admitted couldn't deliver real isolation or determinism, abandoned after ~5 days; a caution against chasing "hard gates" before validating payoff. (2) Very fine-grained same-day patch releases (three in six hours) — fine for solo velocity, noisy as a maturity signal for adopters. (3) No visible external-contributor process yet (0 forks, no outside issues found) — nothing here proves the model holds up with multiple contributors. (4) Cargo.toml lagging release tags — a small hygiene gap worth avoiding.
 
 UNVERIFIED throughout: exact contributor count, any third-party sentiment (none found), whether the Cargo.toml/tag mismatch is real or a crawl artifact.
+
+## Erratum (2026-09-11)
+
+Appended after the pre-implementation audit of 2026-09-10 (PIA-101 and the citation census, `references/audit/2026-09-10/census/grounding-by-file/`); this dossier is a dated record and its rows are not rewritten. One bullet per corrected line: `:NN — was … → is …, source, fetched date`. Every fetch below is dated 2026-09-10 unless stated. The dossiers carried no fetch dates, which is why half of these were already stale at authoring: every research read going forward carries a fetch date.
+
+- :8 — "`Cargo.toml` on `main` still reads `0.1.12` … UNVERIFIED whether that's a real gap or a crawl-timing artifact" → retired: Cargo.toml on main reads **0.1.19**, equal to the latest tag, and the commit that set it is dated **2026-09-01T20:48Z**, before the 2026-09-03 pass — the observation was a crawl/caching artefact, not a hygiene gap (census EXT-STATEDAB-058 / EXT-PROCESSL-072, raw.githubusercontent.com/saman-mb/shipmates/main/Cargo.toml, fetched 2026-09-10).
+- :39 — "Avoid: … (4) Cargo.toml lagging release tags — a small hygiene gap worth avoiding" → **struck**; it rested on the :8 artefact and on nothing else.

@@ -1,0 +1,267 @@
+=== P1 arm L v2 haiku — started 2026-09-08T06:04:47.2131548-07:00 ===
+--- v2 repeat 1 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 1 | card 0384080216a9 schema 5fd33472d73e | spent $0.08 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L2-haiku r1 ... high/med/med/high kind=bug $0.0516 145s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L2-haiku r1 ... unknown/unknown/unknown/unknown kind=story $0.0252 83s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L2-haiku r1 ... high/low/low/high kind=bug $0.0653 164s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L2-haiku r1 ... unknown/unknown/unknown/med kind=story $0.0372 124s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L2-haiku r1 ... unknown/unknown/unknown/med kind=story $0.0386 141s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L2-haiku r1 ... unknown/unknown/unknown/unknown kind=story $0.0253 125s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L2-haiku r1 ... unknown/low/unknown/med kind=story $0.0373 151s
+  _archive/docs-site-brand-identity/typography-delivery      L2-haiku r1 ... high/med/high/high kind=project $0.1359 220s
+  support/fix-gate-honesty-sweep                             L2-haiku r1 ... unknown/unknown/low/unknown kind=project $0.0233 80s
+  support/fix-json-error-envelope                            L2-haiku r1 ... unknown/unknown/low/high kind=project $0.0488 125s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L2-haiku r1 ... high/med/high/high kind=project $0.0726 153s
+=== P1 arm L v2 haiku — started 2026-09-08T06:32:03.0055170-07:00 ===
+--- v2 repeat 1 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 1 | card 0384080216a9 schema 5fd33472d73e | spent $2.02 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers skipped (recorded)
+  support/phase-1-total-outcomes/gate-passes-its-known-base  skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation skipped (recorded)
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question skipped (recorded)
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree skipped (recorded)
+  _archive/docs-site-brand-identity/typography-delivery      skipped (recorded)
+  support/fix-gate-honesty-sweep                             skipped (recorded)
+  support/fix-json-error-envelope                            skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  skipped (recorded)
+  support/fix-ci-pinned-pack-drift-guard                     L2-haiku r1 ... unknown/unknown/low/med kind=project $0.0427 91s
+  _archive/docs-site-brand-identity/contrast-verification    L2-haiku r1 ... high/low/med/high kind=project $0.1292 195s
+  _archive/live-views                                        L2-haiku r1 ... high/med/high/high kind=initiative $0.0871 161s
+  _archive/docs-site-brand-identity                          L2-haiku r1 ... med/med/high/high kind=initiative $0.1528 226s
+  support                                                    L2-haiku r1 ... unknown/unknown/unknown/unknown kind=initiative $0.0233 125s
+  support/links-hand-edit-denied-with-no-backfill-path       L2-haiku r1 ... low/med/unknown/med kind=bug $0.0639 228s
+  support/advance-commit-ignored-path                        L2-haiku r1 ... med/unknown/low/med kind=bug $0.0622 163s
+  support/telemetry-gitignored-so-runs-never-travel          L2-haiku r1 ... low/low/low/low kind=bug $0.0570 167s
+
+  spend in this file: $2.64 of $40.00
+wrote ..\results\p1-arm-l-v2.jsonl
+--- v2 repeat 2 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 2 | card 0384080216a9 schema 5fd33472d73e | spent $3.45 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics L2-haiku r2 ... med/med/med/high kind=bug $0.1258 260s
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L2-haiku r2 ... high/low/med/high kind=bug $0.0180 74s
+=== P1 arm L v2 haiku — started 2026-09-08T07:02:59.9085564-07:00 ===
+--- v2 repeat 1 of 5 ---
+wrote ..\results\p1-arm-l-v2.jsonl
+P1 arm L: 20 items, model haiku, repeat 1 | card 0384080216a9 schema 5fd33472d73e | spent $3.78 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers skipped (recorded)
+  support/phase-1-total-outcomes/gate-passes-its-known-base  skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation skipped (recorded)
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question skipped (recorded)
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree skipped (recorded)
+  _archive/docs-site-brand-identity/typography-delivery      skipped (recorded)
+  support/fix-gate-honesty-sweep                             skipped (recorded)
+  support/fix-json-error-envelope                            skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  skipped (recorded)
+  support/fix-ci-pinned-pack-drift-guard                     skipped (recorded)
+  _archive/docs-site-brand-identity/contrast-verification    skipped (recorded)
+  _archive/live-views                                        skipped (recorded)
+  _archive/docs-site-brand-identity                          skipped (recorded)
+  support                                                    skipped (recorded)
+  support/links-hand-edit-denied-with-no-backfill-path       skipped (recorded)
+  support/advance-commit-ignored-path                        skipped (recorded)
+  support/telemetry-gitignored-so-runs-never-travel          skipped (recorded)
+
+  spend in this file: $3.78 of $40.00
+--- v2 repeat 2 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 2 | card 0384080216a9 schema 5fd33472d73e | spent $3.78 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L2-haiku r2 ... med/low/low/med kind=story $0.0568 133s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L2-haiku r2 ... high/low/low/high kind=bug $0.0377 73s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L2-haiku r2 ... unknown/unknown/unknown/med kind=story $0.0355 84s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L2-haiku r2 ... unknown/unknown/unknown/med kind=story $0.0235 56s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L2-haiku r2 ... unknown/unknown/unknown/med kind=story $0.0340 82s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L2-haiku r2 ... med/low/unknown/med kind=story $0.0380 88s
+  _archive/docs-site-brand-identity/typography-delivery      L2-haiku r2 ... med/med/high/high kind=project $0.0272 68s
+  support/fix-gate-honesty-sweep                             L2-haiku r2 ... unknown/unknown/unknown/high kind=project $0.0381 69s
+  support/fix-json-error-envelope                            L2-haiku r2 ... med/low/low/high kind=bug $0.0688 121s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L2-haiku r2 ... high/med/high/med kind=project $0.1187 201s
+  support/fix-ci-pinned-pack-drift-guard                     L2-haiku r2 ... unknown/unknown/unknown/med kind=project $0.0291 92s
+  _archive/docs-site-brand-identity/contrast-verification    L2-haiku r2 ... high/med/med/high kind=project $0.0894 227s
+  _archive/live-views                                        L2-haiku r2 ... high/med/high/high kind=initiative $0.0839 145s
+  _archive/docs-site-brand-identity                          L2-haiku r2 ... med/med/high/high kind=initiative $0.0284 64s
+  support                                                    L2-haiku r2 ... unknown/unknown/unknown/unknown kind=initiative $0.0194 45s
+  support/links-hand-edit-denied-with-no-backfill-path       L2-haiku r2 ... low/med/med/high kind=story $0.0626 145s
+  support/advance-commit-ignored-path                        L2-haiku r2 ... high/unknown/unknown/med kind=bug $0.0345 80s
+  support/telemetry-gitignored-so-runs-never-travel          L2-haiku r2 ... med/low/low/high kind=bug $0.0642 143s
+
+  spend in this file: $4.67 of $40.00
+wrote ..\results\p1-arm-l-v2.jsonl
+--- v2 repeat 3 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 3 | card 0384080216a9 schema 5fd33472d73e | spent $6.57 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics L2-haiku r3 ... med/low/med/med kind=bug $0.0516 120s
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L2-haiku r3 ... high/med/med/high kind=bug $0.0519 116s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L2-haiku r3 ... unknown/unknown/unknown/unknown kind=story $0.0291 65s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L2-haiku r3 ... high/low/low/high kind=story $0.0297 68s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L2-haiku r3 ... med/unknown/unknown/med kind=story $0.0349 80s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L2-haiku r3 ... med/unknown/unknown/med kind=story $0.0400 99s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L2-haiku r3 ... unknown/unknown/unknown/unknown kind=story $0.0104 26s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L2-haiku r3 ... med/low/low/med kind=story $0.0442 83s
+  _archive/docs-site-brand-identity/typography-delivery      L2-haiku r3 ... high/med/high/high kind=project $0.0468 72s
+  support/fix-gate-honesty-sweep                             L2-haiku r3 ... unknown/unknown/high/unknown kind=project $0.0380 89s
+  support/fix-json-error-envelope                            L2-haiku r3 ... unknown/unknown/unknown/med kind=project $0.0739 124s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L2-haiku r3 ... high/med/med/med kind=project $0.0355 109s
+  support/fix-ci-pinned-pack-drift-guard                     L2-haiku r3 ... unknown/unknown/unknown/med kind=project $0.0356 100s
+  _archive/docs-site-brand-identity/contrast-verification    L2-haiku r3 ... high/low/med/high kind=project $0.0436 99s
+  _archive/live-views                                        L2-haiku r3 ... med/med/high/high kind=initiative $0.0403 96s
+  _archive/docs-site-brand-identity                          L2-haiku r3 ... high/med/high/high kind=initiative $0.0597 148s
+  support                                                    L2-haiku r3 ... unknown/unknown/unknown/unknown kind=initiative $0.0099 26s
+  support/links-hand-edit-denied-with-no-backfill-path       L2-haiku r3 ... low/high/unknown/med kind=spike $0.0649 144s
+  support/advance-commit-ignored-path                        L2-haiku r3 ... med/unknown/unknown/med kind=bug $0.0478 108s
+  support/telemetry-gitignored-so-runs-never-travel          L2-haiku r3 ... low/low/low/low kind=bug $0.0340 84s
+
+  spend in this file: $7.39 of $40.00
+wrote ..\results\p1-arm-l-v2.jsonl
+--- v2 repeat 4 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 4 | card 0384080216a9 schema 5fd33472d73e | spent $8.91 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics L2-haiku r4 ... med/med/low/med kind=bug $0.1278 229s
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L2-haiku r4 ... high/med/med/high kind=bug $0.0485 130s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L2-haiku r4 ... low/low/low/low kind=story $0.0253 73s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L2-haiku r4 ... high/low/low/high kind=bug $0.0436 91s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L2-haiku r4 ... unknown/unknown/unknown/unknown kind=story $0.0223 42s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L2-haiku r4 ... unknown/unknown/unknown/high kind=story $0.0462 86s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L2-haiku r4 ... unknown/unknown/unknown/unknown kind=story $0.0277 56s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L2-haiku r4 ... med/low/unknown/med kind=story $0.0425 97s
+  _archive/docs-site-brand-identity/typography-delivery      L2-haiku r4 ... high/med/med/high kind=project $0.0589 134s
+  support/fix-gate-honesty-sweep                             L2-haiku r4 ... unknown/unknown/high/high kind=project $0.0401 96s
+  support/fix-json-error-envelope                            L2-haiku r4 ... unknown/unknown/unknown/unknown kind=project $0.0333 81s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L2-haiku r4 ... high/low/med/med kind=project $0.0593 133s
+  support/fix-ci-pinned-pack-drift-guard                     L2-haiku r4 ... unknown/unknown/unknown/med kind=project $0.0497 116s
+  _archive/docs-site-brand-identity/contrast-verification    L2-haiku r4 ... high/med/high/med kind=project $0.0765 136s
+  _archive/live-views                                        L2-haiku r4 ... high/med/high/high kind=initiative $0.0405 101s
+  _archive/docs-site-brand-identity                          L2-haiku r4 ... high/med/high/high kind=initiative $0.0371 59s
+  support                                                    L2-haiku r4 ... unknown/unknown/unknown/unknown kind=initiative $0.0119 27s
+=== P1 arm L v2 haiku — started 2026-09-08T08:35:33.3273114-07:00 ===
+--- v2 repeat 1 of 5 ---
+wrote ..\results\p1-arm-l-v2.jsonl
+P1 arm L: 20 items, model haiku, repeat 1 | card 0384080216a9 schema 5fd33472d73e | spent $9.70 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers skipped (recorded)
+  support/phase-1-total-outcomes/gate-passes-its-known-base  skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation skipped (recorded)
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question skipped (recorded)
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree skipped (recorded)
+  _archive/docs-site-brand-identity/typography-delivery      skipped (recorded)
+  support/fix-gate-honesty-sweep                             skipped (recorded)
+  support/fix-json-error-envelope                            skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  skipped (recorded)
+  support/fix-ci-pinned-pack-drift-guard                     skipped (recorded)
+  _archive/docs-site-brand-identity/contrast-verification    skipped (recorded)
+  _archive/live-views                                        skipped (recorded)
+  _archive/docs-site-brand-identity                          skipped (recorded)
+  support                                                    skipped (recorded)
+  support/links-hand-edit-denied-with-no-backfill-path       skipped (recorded)
+  support/advance-commit-ignored-path                        skipped (recorded)
+  support/telemetry-gitignored-so-runs-never-travel          skipped (recorded)
+
+  spend in this file: $9.70 of $40.00
+--- v2 repeat 2 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 2 | card 0384080216a9 schema 5fd33472d73e | spent $9.70 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers skipped (recorded)
+  support/phase-1-total-outcomes/gate-passes-its-known-base  skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation skipped (recorded)
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question skipped (recorded)
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree skipped (recorded)
+  _archive/docs-site-brand-identity/typography-delivery      skipped (recorded)
+  support/fix-gate-honesty-sweep                             skipped (recorded)
+  support/fix-json-error-envelope                            skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  skipped (recorded)
+  support/fix-ci-pinned-pack-drift-guard                     skipped (recorded)
+  _archive/docs-site-brand-identity/contrast-verification    skipped (recorded)
+  _archive/live-views                                        skipped (recorded)
+  _archive/docs-site-brand-identity                          skipped (recorded)
+  support                                                    skipped (recorded)
+  support/links-hand-edit-denied-with-no-backfill-path       skipped (recorded)
+  support/advance-commit-ignored-path                        skipped (recorded)
+  support/telemetry-gitignored-so-runs-never-travel          skipped (recorded)
+
+  spend in this file: $9.70 of $40.00
+wrote ..\results\p1-arm-l-v2.jsonl
+--- v2 repeat 3 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 3 | card 0384080216a9 schema 5fd33472d73e | spent $9.70 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers skipped (recorded)
+  support/phase-1-total-outcomes/gate-passes-its-known-base  skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation skipped (recorded)
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question skipped (recorded)
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree skipped (recorded)
+  _archive/docs-site-brand-identity/typography-delivery      skipped (recorded)
+  support/fix-gate-honesty-sweep                             skipped (recorded)
+  support/fix-json-error-envelope                            skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  skipped (recorded)
+  support/fix-ci-pinned-pack-drift-guard                     skipped (recorded)
+  _archive/docs-site-brand-identity/contrast-verification    skipped (recorded)
+  _archive/live-views                                        skipped (recorded)
+  _archive/docs-site-brand-identity                          skipped (recorded)
+  support                                                    skipped (recorded)
+  support/links-hand-edit-denied-with-no-backfill-path       skipped (recorded)
+wrote ..\results\p1-arm-l-v2.jsonl
+  support/advance-commit-ignored-path                        skipped (recorded)
+  support/telemetry-gitignored-so-runs-never-travel          skipped (recorded)
+
+  spend in this file: $9.70 of $40.00
+--- v2 repeat 4 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 4 | card 0384080216a9 schema 5fd33472d73e | spent $9.70 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre skipped (recorded)
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers skipped (recorded)
+  support/phase-1-total-outcomes/gate-passes-its-known-base  skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation skipped (recorded)
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question skipped (recorded)
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree skipped (recorded)
+  _archive/docs-site-brand-identity/typography-delivery      skipped (recorded)
+  support/fix-gate-honesty-sweep                             skipped (recorded)
+  support/fix-json-error-envelope                            skipped (recorded)
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  skipped (recorded)
+  support/fix-ci-pinned-pack-drift-guard                     skipped (recorded)
+  _archive/docs-site-brand-identity/contrast-verification    skipped (recorded)
+  _archive/live-views                                        skipped (recorded)
+  _archive/docs-site-brand-identity                          skipped (recorded)
+  support                                                    skipped (recorded)
+  support/links-hand-edit-denied-with-no-backfill-path       L2-haiku r4 ... low/low/med/med kind=story $0.0640 146s
+  support/advance-commit-ignored-path                        L2-haiku r4 ... high/unknown/unknown/med kind=bug $0.0334 76s
+  support/telemetry-gitignored-so-runs-never-travel          L2-haiku r4 ... high/low/low/high kind=bug $0.0527 123s
+
+wrote ..\results\p1-arm-l-v2.jsonl
+  spend in this file: $9.85 of $40.00
+--- v2 repeat 5 of 5 ---
+P1 arm L: 20 items, model haiku, repeat 5 | card 0384080216a9 schema 5fd33472d73e | spent $9.85 of $40.00
+  _archive/docs-site-brand-identity/typography-delivery/plex-per-weight-fallback-metrics L2-haiku r5 ... med/med/high/high kind=bug $0.0663 154s
+  _archive/docs-site-brand-identity/highlight-and-states/dark-cut-focus-ring-on-pre L2-haiku r5 ... high/med/med/high kind=bug $0.0662 109s
+  _archive/docs-site-brand-identity/highlight-and-states/landing-and-component-consumers L2-haiku r5 ... unknown/unknown/unknown/unknown kind=story $0.0316 49s
+  support/phase-1-total-outcomes/gate-passes-its-known-base  L2-haiku r5 ... high/low/low/high kind=story $0.0297 66s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/kb-and-graph-validation L2-haiku r5 ... unknown/unknown/unknown/unknown kind=story $0.0273 62s
+  _archive/live-views/proof-and-readings/fixme-cannot-pass-tripwire L2-haiku r5 ... med/unknown/unknown/high kind=story $0.0378 90s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout/resolve-open-question L2-haiku r5 ... unknown/unknown/unknown/unknown kind=story $0.0343 76s
+  support/fix-lane-plumbing/issue-50-fix-story-before-worktree L2-haiku r5 ... med/low/unknown/med kind=story $0.0426 98s
+  _archive/docs-site-brand-identity/typography-delivery      L2-haiku r5 ... high/med/high/high kind=project $0.0649 108s
+  support/fix-gate-honesty-sweep                             L2-haiku r5 ... unknown/unknown/unknown/unknown kind=project $0.0281 54s
+  support/fix-json-error-envelope                            L2-haiku r5 ... unknown/unknown/unknown/high kind=bug $0.0289 65s
+  _archive/docs-site-brand-identity/kb-harvest-and-closeout  L2-haiku r5 ... high/low/med/med kind=project $0.0318 76s
+  support/fix-ci-pinned-pack-drift-guard                     L2-haiku r5 ... unknown/unknown/high/unknown kind=project $0.0280 92s
+  _archive/docs-site-brand-identity/contrast-verification    L2-haiku r5 ... high/low/med/high kind=project $0.0823 160s
+  _archive/live-views                                        L2-haiku r5 ... high/med/high/high kind=initiative $0.0470 114s
+  _archive/docs-site-brand-identity                          L2-haiku r5 ... high/med/high/high kind=initiative $0.0436 126s
+  support                                                    L2-haiku r5 ... unknown/unknown/unknown/unknown kind=initiative $0.0203 56s
+  support/links-hand-edit-denied-with-no-backfill-path       L2-haiku r5 ... low/high/med/high kind=story $0.0628 146s
+  support/advance-commit-ignored-path                        L2-haiku r5 ... med/unknown/unknown/med kind=bug $0.0359 81s
+  support/telemetry-gitignored-so-runs-never-travel          L2-haiku r5 ... low/low/low/low kind=bug $0.0483 109s
+
+  spend in this file: $10.71 of $40.00
+wrote ..\results\p1-arm-l-v2.jsonl
+=== ARM-L-V2-DONE haiku 2026-09-08T09:13:01.8291809-07:00 ===

@@ -166,10 +166,10 @@ sample of it in the programme.
 | 1 | 20 | 0.21 | 0.0105 |
 | 2 | 21 | 0.20 | 0.0095 |
 | 3 | 15 | 0.16 | 0.0107 |
-| **pooled** | **56** | — | **0.0098** |
+| **pooled** | **56** | — | **0.0098** *[corrected 2026-09-11: 56 draws pool to 0.0102; 0.0098 is the four-window pool over 60 — Correction (2026-09-11)]* |
 
 F21 records **+0.077** five_hour per CLEAN dispatch. The measured figure here is
-**0.0098 — 7.8× lower** — consistent across three independent full windows and
+**0.0098 — 7.8× lower** *[the four-window pool over 60 draws; three full windows give 0.0102, 7.5× — Correction (2026-09-11)]* — consistent across three independent full windows and
 far past the 0.01 quantisation that made F21's estimate resolution-limited.
 `seven_day` drew 0.0017/draw (0.27 → 0.37 across the run).
 
@@ -177,3 +177,15 @@ far past the 0.01 quantisation that made F21's estimate resolution-limited.
 times, and METHOD-S §1.7's "three five-hour windows" sizing was wrong in the safe
 direction. **Wall clock, not headroom, is the binding constraint on a CLEAN
 set:** 16.2 h for 60 draws at a median 671 s each.
+
+### Correction (2026-09-11)
+
+Dated correction from the 2026-09-10 pre-implementation audit (PIA-077). The five-hour-draw table's **pooled** row
+mixes two pools: its **56** draws are the three full windows (20 + 21 + 15, Σ delta 0.57 → **0.0102** per draw),
+while **0.0098** is the pool over all **60** draws including a fourth, partial window (4 draws, delta 0.02, reset
+2026-09-07T01:00Z; Σ delta 0.59 / 60 = **0.0098**) [measured, `spikes/results/s-var.jsonl` `step.headroom`
+recount 2026-09-11, grouped by `five_hour_resets_at`]. The table's three rows, the 0.0098, the 60-dispatch count in
+the surrounding prose and the seven-day figure (0.27 → 0.37) are all reproduced; only the pooled row's n was wrong.
+**The downstream figure uses the four-window pool: 0.0098 over 60 draws**, and "7.8× lower" than F21's 0.077 is
+0.077 / 0.0098 = 7.86. On the three-window pool it is 0.077 / 0.0102 = 7.5×. Either reading leaves the consequence
+paragraph unchanged (the throttle never bound; wall clock, not headroom, binds a CLEAN set).

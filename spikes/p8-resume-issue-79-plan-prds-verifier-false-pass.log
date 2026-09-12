@@ -1,0 +1,7 @@
+P8 [resume] arm 0-delay r1 ΓÇö 3 item(s), model haiku | graph 01e17f07f1a6 | spent $2.43 of $40.00
+  issue-79-plan-prds-verifier-false-pass [0-delay] resume after 28.4 min, 1 step(s) before the kill
+    attempt p2 (post-resume) ... reproduced $0.3251 205s
+    emit ... lossless=true second_arrival=true minted=true resume 14579 tok (F28 ratio 0.78) $0.3251
+
+wrote ..\results\p8.jsonl
+  spend in this file: $2.75 of $40.00

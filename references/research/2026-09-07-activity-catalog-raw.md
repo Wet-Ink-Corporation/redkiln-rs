@@ -473,3 +473,9 @@ Notes from the sources that shape this table: SRE and PagerDuty both put mitigat
 2. DA per-goal decision points could not be fetched from pmi.org this session (timeouts); the DA goal poster PDF at https://www.pmi.org/-/media/pmi/microsites/disciplined-agile/posters/daprocessgoalsposter85x11.pdf lists the 24 goals only. A follow-up should capture the decision-point lists for Explore Scope (partially captured: Explore Purpose, Explore Usage, Explore the Domain...), Develop Test Strategy, Ensure Production Readiness, Address Risk, Deploy the Solution.
 3. ITIL 4 practice guides are behind Axelos's cookie/login wall; incident/problem/change rows are inferred from the practice names and general knowledge.
 4. IEEE 29148 content is inferred (Wikipedia page 404'd); SWEBOK ch.1 covers the same ground and is documented.
+
+## Erratum (2026-09-11)
+
+Appended after the pre-implementation audit of 2026-09-10 (PIA-101 and the citation census, `references/audit/2026-09-10/census/grounding-by-file/`); this dossier is a dated record and its rows are not rewritten. One bullet per corrected line: `:NN — was … → is …, source, fetched date`. Every fetch below is dated 2026-09-10 unless stated. The dossiers carried no fetch dates, which is why half of these were already stale at authoring: every research read going forward carries a fetch date.
+
+- :473 — "the DA goal poster PDF … lists the 24 goals only" → the poster (1 page) lists **21** goals — an older goal set lacking Intake Work, Organize Metrics and Measure Outcomes, and naming "Govern Delivery Team" rather than "Govern Team"; the 24-goal list is on the process-goals **web page**. The other half of the note no longer holds either: the process-goals page and the how-to-read page were reachable on 2026-09-10 (via the Exa fetcher) and carry the Explore Scope decision points, so the follow-up capture is unblocked (census EXT-PEERANDS-056, pmi.org daprocessgoalsposter85x11.pdf, fetched 2026-09-10).

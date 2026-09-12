@@ -1,0 +1,238 @@
+=== P7 recommended — started 2026-09-08T05:58:35.4842274-07:00 ===
+--- recommended repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $3.70 of $200.00
+  issue-77-advance-commit-partial-stage        skipped (recorded)
+  fix-advance-write-lock-gate-scope [recommended] r1
+    hypothesise p1 ... confirmed $1.459 335s
+    confirm ... failed (1574361 ms)
+=== P7 recommended — started 2026-09-08T06:31:55.2580188-07:00 ===
+--- recommended repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $7.13 of $200.00
+  issue-77-advance-commit-partial-stage        skipped (recorded)
+Error: could not clear fixture \\?\D:\repos\redkiln-rs\spikes\fixtures\p7-recommended\e3-silent-fix-advance-write-lock-gate-scope
+
+Caused by:
+    The process cannot access the file because it is being used by another process. (os error 32)
+--- recommended repeat 2 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 2, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $7.13 of $200.00
+  issue-77-advance-commit-partial-stage [recommended] r2
+    hypothesise p1 ... confirmed $1.130 455s
+=== P7 recommended — started 2026-09-08T07:02:53.8505514-07:00 ===
+--- recommended repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $10.59 of $200.00
+  issue-77-advance-commit-partial-stage        skipped (recorded)
+  fix-advance-write-lock-gate-scope [recommended] r1
+    hypothesise p1 ... confirmed $1.796 412s
+    confirm ... failed (421430 ms)
+    adversary ... 7 finding(s) $2.420 700s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $4.22
+  issue-82-status-terminal-field-collision [recommended] r1
+    hypothesise p1 ... confirmed $1.423 264s
+    confirm ... failed (421147 ms)
+    adversary ... 4 finding(s) $1.903 426s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $3.33
+  issue-79-plan-prds-verifier-false-pass [recommended] r1
+    hypothesise p1 ... confirmed $0.806 431s
+    confirm ... failed (421581 ms)
+    adversary ... 6 finding(s) $1.989 830s
+    policy   ... FALSE
+    emit     ... root cause missed | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.80
+  issue-66-id-lock-ec001-rmdir [recommended] r1
+    hypothesise p1 ... confirmed $0.737 138s
+    confirm ... failed (421397 ms)
+    adversary ... 6 finding(s) $1.007 316s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $1.74
+  issue-146-147-boundary-window [recommended] r1
+=== P7 recommended — started 2026-09-08T08:35:29.3590774-07:00 ===
+--- recommended repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $42.47 of $200.00
+  issue-77-advance-commit-partial-stage        skipped (recorded)
+  fix-advance-write-lock-gate-scope            skipped (recorded)
+  issue-82-status-terminal-field-collision     skipped (recorded)
+  issue-79-plan-prds-verifier-false-pass       skipped (recorded)
+  issue-66-id-lock-ec001-rmdir                 skipped (recorded)
+Error: could not clear fixture \\?\D:\repos\redkiln-rs\spikes\fixtures\p7-recommended\e3-silent-issue-146-147-boundary-window
+
+Caused by:
+    The process cannot access the file because it is being used by another process. (os error 32)
+--- recommended repeat 2 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 2, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $42.47 of $200.00
+  issue-77-advance-commit-partial-stage [recommended] r2
+    hypothesise p1 ... confirmed $0.748 202s
+    confirm ... failed (901518 ms)
+    adversary ... 6 finding(s) $2.420 951s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $3.17
+  fix-advance-write-lock-gate-scope [recommended] r2
+    hypothesise p1 ... confirmed $1.240 378s
+    confirm ... failed (902129 ms)
+=== P7 recommended — started 2026-09-08T09:35:07.0777414-07:00 ===
+--- recommended repeat 1 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 1, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $49.85 of $200.00
+  issue-77-advance-commit-partial-stage        skipped (recorded)
+  fix-advance-write-lock-gate-scope            skipped (recorded)
+  issue-82-status-terminal-field-collision     skipped (recorded)
+  issue-79-plan-prds-verifier-false-pass       skipped (recorded)
+  issue-66-id-lock-ec001-rmdir                 skipped (recorded)
+  issue-146-147-boundary-window [recommended] r1
+    hypothesise p1 ... confirmed $1.227 500s
+    confirm ... passed (174060 ms)
+    adversary ... 6 finding(s) $2.769 936s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $4.00
+  issue-63-advance-gate-diagnostic-truncated [recommended] r1
+    hypothesise p1 ... confirmed $0.966 193s
+    confirm ... passed (26023 ms)
+    adversary ... 5 finding(s) $1.296 299s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.26
+  issue-74-plan-briefs-dead-plan-anchor [recommended] r1
+    hypothesise p1 ... confirmed $1.006 177s
+    confirm ... passed (2016 ms)
+    adversary ... 8 finding(s) $1.589 1043s
+    policy   ... FALSE
+    emit     ... root cause missed | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.59
+  issue-81-plan-discover-spec-gate-mismatch [recommended] r1
+    hypothesise p1 ... confirmed $0.741 137s
+    confirm ... passed (2023 ms)
+    adversary ... 5 finding(s) $1.238 714s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $1.98
+  issue-70-plugin-root-unset [recommended] r1
+    hypothesise p1 ... confirmed $0.852 156s
+    confirm ... failed (4020 ms)
+    adversary ... 7 finding(s) $1.622 1045s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.47
+
+  spend in this file: $63.15 of $200.00
+wrote ..\results\p7.jsonl
+--- recommended repeat 2 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 2, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $76.11 of $200.00
+  issue-77-advance-commit-partial-stage        skipped (recorded)
+  fix-advance-write-lock-gate-scope [recommended] r2
+    hypothesise p1 ... confirmed $1.298 267s
+    confirm ... failed (2014 ms)
+    adversary ... 7 finding(s) $2.836 1651s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $4.13
+  issue-82-status-terminal-field-collision [recommended] r2
+    hypothesise p1 ... confirmed $0.735 139s
+    confirm ... passed (4027 ms)
+    adversary ... 4 finding(s) $1.080 275s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $1.82
+  issue-79-plan-prds-verifier-false-pass [recommended] r2
+    hypothesise p1 ... confirmed $1.444 263s
+    confirm ... passed (4018 ms)
+    adversary ... 5 finding(s) $1.940 1527s
+    policy   ... FALSE
+    emit     ... root cause missed | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $3.38
+  issue-66-id-lock-ec001-rmdir [recommended] r2
+    hypothesise p1 ... confirmed $0.709 156s
+    confirm ... failed (2016 ms)
+    adversary ... 7 finding(s) $1.346 555s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.06
+  issue-146-147-boundary-window [recommended] r2
+    hypothesise p1 ... confirmed $1.505 403s
+    confirm ... passed (150042 ms)
+    adversary ... 6 finding(s) $1.985 535s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $3.49
+  issue-63-advance-gate-diagnostic-truncated [recommended] r2
+    hypothesise p1 ... confirmed $0.826 171s
+    confirm ... passed (18016 ms)
+    adversary ... 6 finding(s) $1.469 402s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.30
+  issue-74-plan-briefs-dead-plan-anchor [recommended] r2
+    hypothesise p1 ... confirmed $1.199 219s
+    confirm ... passed (4017 ms)
+    adversary ... 4 finding(s) $1.406 866s
+    policy   ... FALSE
+    emit     ... root cause missed | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.60
+  issue-81-plan-discover-spec-gate-mismatch [recommended] r2
+    hypothesise p1 ... confirmed $1.171 195s
+    confirm ... passed (4016 ms)
+    adversary ... 3 finding(s) $1.733 957s
+    policy   ... FALSE
+    emit     ... root cause missed | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.90
+  issue-70-plugin-root-unset [recommended] r2
+    hypothesise p1 ... confirmed $0.950 187s
+    confirm ... passed (4016 ms)
+    adversary ... 6 finding(s) $1.163 806s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.11
+
+  spend in this file: $100.91 of $200.00
+wrote ..\results\p7.jsonl
+--- recommended repeat 3 of 3 ---
+P7 ΓÇö 10 items, arm recommended, repeat 3, opus/xhigh | graph root-cause v4 306b58ba7504 | loopback max 2 | spent $106.41 of $200.00
+  issue-77-advance-commit-partial-stage [recommended] r3
+    hypothesise p1 ... confirmed $1.621 365s
+    confirm ... passed (4020 ms)
+    adversary ... 4 finding(s) $1.152 746s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.77
+  fix-advance-write-lock-gate-scope [recommended] r3
+    hypothesise p1 ... confirmed $1.066 178s
+    confirm ... failed (2018 ms)
+    adversary ... 7 finding(s) $1.213 290s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.28
+  issue-82-status-terminal-field-collision [recommended] r3
+    hypothesise p1 ... confirmed $1.035 184s
+    confirm ... passed (16025 ms)
+    adversary ... 3 finding(s) $1.672 645s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.71
+  issue-79-plan-prds-verifier-false-pass [recommended] r3
+    hypothesise p1 ... confirmed $1.101 209s
+    confirm ... passed (4016 ms)
+    adversary ... 5 finding(s) $1.456 492s
+    policy   ... FALSE
+    emit     ... root cause missed | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.56
+  issue-66-id-lock-ec001-rmdir [recommended] r3
+    hypothesise p1 ... confirmed $0.599 116s
+    confirm ... failed (2027 ms)
+    adversary ... 7 finding(s) $0.951 305s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $1.55
+  issue-146-147-boundary-window [recommended] r3
+    hypothesise p1 ... confirmed $1.661 363s
+    confirm ... passed (114038 ms)
+    adversary ... 6 finding(s) $2.946 687s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $4.61
+  issue-63-advance-gate-diagnostic-truncated [recommended] r3
+    hypothesise p1 ... confirmed $1.046 218s
+    confirm ... passed (4023 ms)
+    adversary ... 6 finding(s) $1.358 603s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.40
+  issue-74-plan-briefs-dead-plan-anchor [recommended] r3
+    hypothesise p1 ... confirmed $0.794 153s
+    confirm ... passed (2022 ms)
+    adversary ... 6 finding(s) $1.434 442s
+    policy   ... FALSE
+    emit     ... root cause missed | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.23
+  issue-81-plan-discover-spec-gate-mismatch [recommended] r3
+    hypothesise p1 ... confirmed $0.634 129s
+    confirm ... passed (2015 ms)
+    adversary ... 6 finding(s) $1.318 572s
+    policy   ... FALSE
+    emit     ... root cause missed | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $1.95
+  issue-70-plugin-root-unset [recommended] r3
+    hypothesise p1 ... confirmed $0.596 114s
+    confirm ... failed (2026 ms)
+    adversary ... 9 finding(s) $1.556 504s
+    policy   ... FALSE
+    emit     ... root cause CORRECT | 1 pass(es), 0 gate arrival(s), 0 loop-back(s), $2.15
+
+  spend in this file: $131.62 of $200.00
+wrote ..\results\p7.jsonl
+=== P7-DONE recommended 2026-09-08T15:53:51.7762283-07:00 ===
