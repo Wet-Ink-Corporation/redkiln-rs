@@ -170,11 +170,29 @@ a `deriver` declared lexical — **plus a positive companion that must load** (a
 `deriver`, a scored record and positives). **Without the positive companion the rule is satisfied by a lint that
 rejects everything**, which is golden constraint 9 arriving from the too-wide direction.
 
-**Checkpoint 4a.** All eleven. **Nine** are commands against files that exist today; two are marked **`[WILL EXIST]`**
-(recounted 2026-09-11: this read "twelve … Ten" — the tally was never decremented when PIA-003 struck the
-`surfaces.toml` line. Count assertions, not physical lines: the hardening splits two of them into two statements each)
-because the lint is Phase-1 output and Step 7b builds it, and they are **deferred, not failed** here (Halt 8's
-carve-out) and re-run as named lines of Checkpoint 7b (PIA-003).
+**Checkpoint 4a's boolean-domain assertion was wrong, and the record it contradicts outranks it. Corrected
+2026-09-12, at the run.** The line asserted `grep -c 'values = [true, false]'` → **0**, which is **jointly
+unsatisfiable** with §4a.3 above and with **AC-072 as amended 2026-09-12** (DECISIONS-2026-09-12 **E1**): the
+on-disk form of a tri-valued boolean is a declared `nullable = true` key **beside** `values = [true, false]`,
+because TOML has no `null` literal, `null` is **not** a domain member, *"the three shapes above are unchanged and a
+fourth still fails load"*, and deleting `values` raises `KeyError` at `spikes/p9/lint.py:49`. The assertion was
+written on **2026-09-11** (`0e34384`, the runbook split) and E1's prose landed on **2026-09-12** (`8f612a3`) — the
+amendment moved the paragraph and left the assertion under it behind. Under ADR-0092's precedence the **AC register
+outranks this runbook**, so the assertion is what is wrong. It is replaced by three: the domain count at **7**, the
+`nullable` count at **7**, and a per-stanza **pairing** check, since two equal counts are necessary and not
+sufficient — §4a.1 says exactly that about `derived`/`deriver`. *(This is the third instance in two days of an
+amendment landing in prose while the assertion beneath it stayed: Checkpoint 4's first line, s4 §4.4's anchor table,
+and this. When you amend a paragraph, grep the block below it.)*
+
+**Checkpoint 4a.** **Thirteen** against files that exist today, plus **two** marked **`[WILL EXIST]`** — fifteen in
+all. The count is given with the rule that produces it, because this tally has been wrong twice: **count statements
+that can FAIL** — each carrying `|| { …; exit 1; }` or `awk`'s `exit !(…)` — with backslash continuations joined, and
+count the `git add … && git commit` pair as one. On that rule the live block carries **thirteen** of sixteen
+non-comment statements, measured 2026-09-12. It read "twelve … Ten" (never decremented when PIA-003 struck the
+`surfaces.toml` line), then "eleven … Nine" (which excluded the commit pair without saying so), and the boolean
+assertion has since been split into three. The two deferred lines are the lint, which is Phase-1 output that Step 7b
+builds; they are **deferred, not failed** here (Halt 8's carve-out) and are re-run as named lines of Checkpoint 7b
+(PIA-003).
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -191,8 +209,19 @@ awk '/^source = "derived"/{d++} /^deriver = /{v++} END{printf "%d %d\n", d, v; e
                                           #   trailing comment, so an anchored match undercounts.
 test "$(grep -c '^source = "kernel"' "$F")" = 4 || { echo "FAIL: kernel-sourced facets != 4"; exit 1; }   # → silent, exit 0: stage, rigor, role, cost (ADR-0093 decision 1)
 test "$(grep -c '^source = "llm"' "$F")" = 0 || { echo "FAIL: llm-sourced facets remain"; exit 1; }   # → silent, exit 0: ADR-0090 re-sourced all seven to human (PIA-003)
-test "$(grep -c 'values = \[true, false\]' "$F")" = 0 || { echo "FAIL: two-valued boolean domains remain"; exit 1; }   # → silent, exit 0: no boolean still declares a two-valued domain (4a.3) — all
-                                          #   EIGHT booleans, the three re-sourced-to-human ones included
+# The two-valued DOMAIN STAYS, and nullability is declared BESIDE it, by name (AC-072 as amended
+# 2026-09-12, DECISIONS-2026-09-12 E1: the three declared shapes are UNCHANGED and a fourth still
+# fails load; `null` is never a domain member; and `values` is never deleted, because
+# `spikes/p9/lint.py:49` reads `f["values"]` unguarded and raises KeyError without it).
+# SEVEN booleans, not eight: `auth` was withdrawn above, and `surfaces` is a set, not a boolean.
+# LEADING-ANCHORED on purpose: the unanchored form is movable by prose — this file's own registry
+# comment quotes the literal `values = [true, false]`, which inflates an unanchored count to 8.
+test "$(grep -c '^values = \[true, false\]' "$F")" = 7 || { echo "FAIL: the seven booleans do not all still declare the two-valued domain — AC-072 keeps the three shapes unchanged and a fourth fails load"; exit 1; }   # → silent, exit 0
+test "$(grep -c '^nullable = true' "$F")" = 7 || { echo "FAIL: nullable = true is not declared on exactly 7 facets (4a.3)"; exit 1; }   # → silent, exit 0: every boolean that may abstain says so BY NAME
+# Two equal counts are necessary and NOT sufficient — 4a.1 says this about derived/deriver and it is
+# just as true here. This is the per-stanza PAIRING check: no boolean declares one without the other.
+# Negative control, run 2026-09-12: with `ui`'s nullable stripped it prints 1, so it can fail.
+n=$(awk '/^\[facet\./{if(b&&!u)x++; b=0;u=0} /^values = \[true, false\]$/{b=1} /^nullable = true$/{u=1} END{if(b&&!u)x++; print x+0}' "$F"); test "${n:-1}" -eq 0 || { echo "FAIL: ${n:-<unreadable>} boolean facet(s) declare values = [true, false] with NO nullable = true beside it"; exit 1; }   # → silent, exit 0
 git add spikes/p9/facets.toml && git commit -m "Apply ADR-0089/0090/0093: deriver, kernel and declared sources, surfaces, tri-valued booleans, no llm facet" \
   || { echo "FAIL: nothing was committed"; exit 1; }
 test -z "$(git status --porcelain spikes/p9/facets.toml)" || { echo "FAIL: facets.toml still dirty after commit"; exit 1; }   # → silent, exit 0: the registry edit is in history before Step 2 moves anything (PIA-018)
@@ -201,6 +230,29 @@ test -z "$(git status --porcelain spikes/p9/facets.toml)" || { echo "FAIL: facet
 **The `surfaces.toml` line is gone from this checkpoint** (PIA-003): no such file exists in this tree, ADR-0089 makes
 it a per-target-repository artefact, and S-FACET's own checklist is where its seeding is asserted. Asserting it here
 was the "green anyway" shape Halt 8 names.
+
+**Withdrawing `auth` breaks the P9 catalog lint, on purpose, and Step 7e repairs it. Measured 2026-09-12.**
+`spikes/p9/lint.py` exits **0** before this step and **1** after it, with exactly **three** R9 errors —
+`applicable_if: identifier 'auth' is not a facet, input, or builtin` at `catalog/security-requirements.toml:10`,
+`catalog/security-review.toml:10` and `catalog/threat-model.toml:9`. **That is the correct state and it is not this
+step's to fix:** `s7e` §7e.2 owns the row dispositions, and its rule for these is written down — *a `require` row on
+`auth` becomes an `applicable_if` or is dropped, **never** a `require` on `surfaces`*, because `surfaces` is unscored
+and may key no `require` row until S-FACET runs. **Four more rows are keyed on `auth` and the lint does not see them
+at all** — `packs/bug-standard.toml:68`, `packs/initiative.toml:32` and `:42`, `packs/project.toml:35`, `:42`
+and `:103` read `when = "auth"`, and `lint.py` does not check pack `when` predicates (`lattice.py` walks them).
+Seven sites in total; do not read three as the whole set. Nothing between here and Step 7e asserts the P9 lint —
+`s7b`:113's prose claims *"Checkpoint 7b runs it"* but **no command in Checkpoint 7b does**, so the red does not
+block a stage; `s7e` §7e.4 is the only place it is asserted at `errors=0`, and that is after §7e.2's rewrite.
+
+> **A trap, measured both ways, that will be waiting at Step 7e.** `spikes/p9/lint.py:339` accepts any bare
+> identifier that matches a facet **value**, so declaring `auth` among `surfaces`'s `values` makes all three errors
+> **vanish and the lint exit 0** — while the three predicates still read `applicable_if = "auth or …"` and now parse
+> as a bare literal in a boolean position, which nothing checks. Measured 2026-09-12: with `auth` among the values,
+> **0** errors; without it, **3**. So this step declares `surfaces` with a placeholder vocabulary that **omits
+> `auth` and `ui`** — the two surface names the records name that are also facet names — precisely to keep the three
+> errors visible, and says so in the registry comment. **When Step 7e authors the full vocabulary it must rewrite
+> the predicates first, or it will silence them instead of fixing them.** This is golden constraint 9 from the
+> too-narrow direction: a guard that admits the failure it exists to catch.
 
 ```bash
 # [WILL EXIST] — Step 7b builds the lint; these are its acceptance shape. DEFERRED here, re-run as Checkpoint 7b's
@@ -217,11 +269,31 @@ cargo test -p rk-kernel -- facet_provenance_fixtures ; echo "exit=$?"  # → exi
 - It may **not** decide **source asymmetry**. `commits` beats `docs` on every facet and `union` is worse than
   `commits` alone on `toolchain` and `change` [measured, F39 §3]. ADR-0089 explicitly does not decide it; it is an
   arm of S-FACET.
-- It may **not** touch **ADR-0079**, which stays `proposed` until Step 4.4 writes ADR-0090. ADR-0089 forbids being
-  read as deciding anything in 0079.
+- It may **not** touch **ADR-0079**, and by the time this step runs there is nothing left to touch: Step 4.4 wrote
+  **ADR-0090** on 2026-09-12, which supersedes 0079 **in full** and moved it to `status: superseded`. This step
+  consumes that record and may not re-open it; a reversal is a successor to 0090, never an edit. ADR-0089 forbids
+  being read as deciding anything in 0079, and it did not decide it — F36's clause A did.
 - It may **not** substitute unanimous N-seat model agreement for a human confirmation, **including as a later
   efficiency proposal**. Small-panel unanimity is a weaker correctness signal than its arithmetic implies and it
   fails in the correlated direction [documented, preprint, arXiv:2605.29800].
 - It may **not** treat a `null` as a false negative in any scoring of a facet deriver.
+
+**One decision this step met and did NOT take, because no record names the form (found 2026-09-12).** AC-520's last
+clause is that *"a facet whose only computation is a lexical scan of free text, file paths and diff lines included,
+does not satisfy PC8 rule 2 for `require`-row purposes whatever its record says"*, and its *Verified by* lists **"a
+`deriver` declared lexical"** among six must-fail fixtures. **Nothing in any record says how a deriver is declared
+lexical on disk** — not ADR-0089, not ADR-0093, not AC-072's key list. This is **structurally identical to E1**:
+ADR-0089 made the booleans tri-valued and named no on-disk form, and DECISIONS-2026-09-12 E1 had to decide
+`nullable = true`. So the same question is open one field over, and the same answer shape is available — a declared
+key (`deriver_class = "lexical" | "structural"`), which is AC-072's own *"by name rather than by omission"* rule
+applied to the `deriver` companion.
+
+**Checkpoint 4a does not assert it, so this step completes without it** and does not choose a default (`00-preamble`:
+*"Where a stage is tempted to decide something else, it stops"*). The six `deriver` names this step writes are
+factual descriptions of each rule and are true under either resolution. **Step 7b cannot build
+`lint --facet-provenance` without the form** and must not invent one: three of the six derived facets (`ui`,
+`flag_exists`, `data_migration`) are lexical scans over paths and diff lines and are exactly what the clause blocks,
+while `toolchain` and `change` are git metadata only, so the distinction is load-bearing and currently
+undeclarable. **Owed to the operator before Step 7b**, recorded in `PROGRESS.md` §1 and §2.
 
 ---

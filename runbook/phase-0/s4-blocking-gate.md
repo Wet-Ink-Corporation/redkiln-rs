@@ -504,8 +504,18 @@ branch is reached, and the rows it would score are empty by design. Do **not** f
 pass `--attested-blind` to get a number out. Whether to retire the worksheet, reorder the guard, or leave both as
 they are is a decision for whoever owns METHOD-P; it is not this step's, and nothing downstream waits on it.
 
-**Checkpoint 4.** All sixteen — recounted on disk 2026-09-12 after the first assertion was split into a refusal
-assertion plus three panel-scorer assertions; the block said "thirteen" before that. This is the gate; treat a
+**Checkpoint 4.** All **twenty**, and the number is now given with the rule that produces it, because it has been
+wrong three times. **Count statements that can FAIL** — each carrying `|| { …; exit 1; }`, `awk`'s `exit !(…)`, or an
+`if …; then …; exit 1; fi` guard — with backslash continuations joined first, and count the `git add … && git commit`
+pair as the one statement it is. On that rule the block carries **twenty**: it said "twelve", then "thirteen", then
+"sixteen" when the first assertion was split into a refusal assertion plus three panel-scorer assertions, and the
+measured figure on 2026-09-12 is **twenty** of thirty non-comment statements.
+
+**One of the twenty is a BEFORE assertion and is one-shot.** `grep -c 'source = "llm"' spikes/p9/facets.toml` → **7**
+is the BEFORE half of Checkpoint 4a's zero, so **it stops holding the moment Step 4a runs** — re-running this block
+after Step 4a fails on that line by construction, at `llm = 0`. That is not a regression and not a stale checkpoint:
+it is a snapshot the next step consumes. Re-run the other nineteen freely; Step 9 and any checkpoint dry-run should
+expect this one to fail once 4a has landed. This is the gate; treat a
 failure as a stop, not a note. **Two of the sixteen are P2's, and P2 does not gate anything this step gates**
 (§4.1's last bullet) — they are here because this is where the scorers are run, and a green P2 pair says nothing
 about the selection path.
