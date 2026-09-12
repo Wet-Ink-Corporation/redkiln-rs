@@ -11,27 +11,27 @@ labeller: Ryan Britton
 
 ## Part 1 — the 17 P1 concerns (label now)
 
-labelled_at_p1: FILL-ME   # UTC, stamped by command
+labelled_at_p1: 2026-09-12T04:31:54Z   # stamped by command; labels taken one row at a time via AskUserQuestion, recorded by Claude at Ryan's direction
 
 | id | priority | title (abridged) | label (agree / disagree / unsure) | note |
 | --- | --- | --- | --- | --- |
-| PIA-001 | P1 | AC-520 fails pack load on `stage`, `rigor`, `role`, `cost` and `recent_deploy` with no RUNBOOK step or registe | FILL-ME | |
-| PIA-002 | P1 | The corpus Steps 6-7 test against is neither moved by Step 2 nor reachable from the pinned SHA: the 1,312-file | FILL-ME | |
-| PIA-003 | P1 | The three LLM boolean facets have no disposition between Step 4's pre-registered rule and Checkpoint 4a: ADR-0 | FILL-ME | |
-| PIA-004 | P1 | Phase-1 exit (1) self-hosts on a Rust repo with only a Node toolchain adapter | FILL-ME | |
-| PIA-005 | P1 | rk-types' closed-output schema rules cannot all hold: 'no `oneOf` anywhere' (ADR-0084:64, RUNBOOK 5.3) vs nest | FILL-ME | |
-| PIA-006 | P1 | The companion kind list is delegated to a runbook that never mentions it | FILL-ME | |
-| PIA-007 | P1 | `Findings.repro` as fixed by ADR-0074 and snapshotted at Step 5.3 has no field for the mutant or suite that AC | FILL-ME | |
-| PIA-008 | P1 | The memo record is specified three ways and its keys are unpinned: ADR-0086's SQLite tier vs AC-161/AC-187 | FILL-ME | |
-| PIA-009 | P1 | ADR-0077 keeps linked-worktree common-dir resolution on gix -- the interplay it says gix lacks and the operati | FILL-ME | |
-| PIA-010 | P1 | The Harness port's `dispatch`/`cancel(handle)` contract is unimplementable as written: blocking dispatch, a ha | FILL-ME | |
-| PIA-011 | P1 | Pack authoring and `.redkiln/` have no owning step | FILL-ME | |
-| PIA-012 | P1 | cache_profile = default names a profile with no delivery mechanism | FILL-ME | |
-| PIA-013 | P1 | ADR-0088 misnames its source paper and inverts its mechanism: under bug-free framing false positives collapse, | FILL-ME | |
-| PIA-014 | P1 | rk-adapter-claude: subscription exhaustion mid-dispatch has no error class and backs off | FILL-ME | |
-| PIA-015 | P1 | AC-212/236/036 require the card to carry model+effort | FILL-ME | |
-| PIA-016 | P1 | Tool set unequal to card allowlist is NotAdopted in AC-204 but NotIsolated in AC-202/AC-386/design 7.4 | FILL-ME | |
-| PIA-017 | P1 | AC-372/376/377 state tick rules in decimal fractions: a naive f64 implementation passes every named vector yet | FILL-ME | |
+| PIA-001 | P1 | AC-520 fails pack load on `stage`, `rigor`, `role`, `cost` and `recent_deploy` with no RUNBOOK step or registe | agree | |
+| PIA-002 | P1 | The corpus Steps 6-7 test against is neither moved by Step 2 nor reachable from the pinned SHA: the 1,312-file | agree | |
+| PIA-003 | P1 | The three LLM boolean facets have no disposition between Step 4's pre-registered rule and Checkpoint 4a: ADR-0 | agree | |
+| PIA-004 | P1 | Phase-1 exit (1) self-hosts on a Rust repo with only a Node toolchain adapter | agree | |
+| PIA-005 | P1 | rk-types' closed-output schema rules cannot all hold: 'no `oneOf` anywhere' (ADR-0084:64, RUNBOOK 5.3) vs nest | agree | |
+| PIA-006 | P1 | The companion kind list is delegated to a runbook that never mentions it | agree | |
+| PIA-007 | P1 | `Findings.repro` as fixed by ADR-0074 and snapshotted at Step 5.3 has no field for the mutant or suite that AC | agree | |
+| PIA-008 | P1 | The memo record is specified three ways and its keys are unpinned: ADR-0086's SQLite tier vs AC-161/AC-187 | agree | |
+| PIA-009 | P1 | ADR-0077 keeps linked-worktree common-dir resolution on gix -- the interplay it says gix lacks and the operati | agree | |
+| PIA-010 | P1 | The Harness port's `dispatch`/`cancel(handle)` contract is unimplementable as written: blocking dispatch, a ha | agree | |
+| PIA-011 | P1 | Pack authoring and `.redkiln/` have no owning step | agree | |
+| PIA-012 | P1 | cache_profile = default names a profile with no delivery mechanism | agree | |
+| PIA-013 | P1 | ADR-0088 misnames its source paper and inverts its mechanism: under bug-free framing false positives collapse, | agree | |
+| PIA-014 | P1 | rk-adapter-claude: subscription exhaustion mid-dispatch has no error class and backs off | agree | |
+| PIA-015 | P1 | AC-212/236/036 require the card to carry model+effort | agree | |
+| PIA-016 | P1 | Tool set unequal to card allowlist is NotAdopted in AC-204 but NotIsolated in AC-202/AC-386/design 7.4 | agree | |
+| PIA-017 | P1 | AC-372/376/377 state tick rules in decimal fractions: a naive f64 implementation passes every named vector yet | agree | |
 
 ## Part 2 — the seeded 30 P2 concerns (label before Step 5)
 
