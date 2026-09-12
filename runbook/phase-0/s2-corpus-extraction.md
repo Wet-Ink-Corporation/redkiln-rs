@@ -83,8 +83,31 @@ git rev-parse HEAD    # ← this is the pin. Record it.
 ```
 
 **Before the `rm -rf` below, the corpus repo must exist somewhere other than this disk** (PIA-021: after the split,
-the two filled blind panels exist in one copy). Push it to a remote, or at minimum `git -C D:/repos/redkiln-corpus
-bundle create D:/backup/redkiln-corpus-$(date -u +%F).bundle --all` to a second volume, and record where.
+the two filled blind panels exist in one copy). **Corrected 2026-09-12: the written fallback is not available —
+`test -d D:/backup` fails on this box, and `D:/backup` is on the same volume as the repo in any case, so it was
+never the "second volume" the sentence asked for.** Two routes remain, and one must actually have run before the
+deletion. PIA-021 is a precondition, not advice, so it is written as a check that refuses:
+
+```bash
+cd D:/repos/redkiln-corpus
+# Route (a), preferred: a remote that is not this machine.
+# Route (b): a bundle on a volume that is NOT D:. Set BACKUP to that path first.
+if git remote | grep -q . ; then
+  r=$(git remote | head -1)
+  git push --all "$r" && git push --tags "$r" || { echo "FAIL: push to '$r' failed — the corpus is still in one copy"; exit 1; }
+  echo "off-disk: pushed to remote $r"
+elif test -n "$BACKUP" ; then
+  case "$BACKUP" in [Dd]:*) echo "FAIL: BACKUP is on D:, the same volume as the repo — PIA-021 wants a SECOND volume"; exit 1 ;; esac
+  test -d "$(dirname "$BACKUP")" || { echo "FAIL: BACKUP's directory does not exist"; exit 1; }
+  git bundle create "$BACKUP" --all || { echo "FAIL: bundle create failed"; exit 1; }
+  git bundle verify "$BACKUP" >/dev/null || { echo "FAIL: the bundle does not verify — it is not a backup"; exit 1; }
+  echo "off-disk: verified bundle at $BACKUP"
+else
+  echo "FAIL: no remote and no BACKUP set — after the rm -rf the corpus, and both filled blind panels, would exist in ONE copy on ONE disk (PIA-021). Add a remote, or set BACKUP to a path on another volume."; exit 1
+fi
+```
+
+Record which route ran, and where it went, in `PROGRESS.md` §3 beside the corpus pin.
 
 Then record the pin in this repo and delete the originals:
 
@@ -107,9 +130,27 @@ PREDECESSOR_REFS=118
 EOF
 # The placeholders are filled by hand on purpose; a heredoc that expands $(date) would also expand the SHA
 # line's `<`, so this file is written, then checked by Checkpoint 2, never templated (golden constraint 7).
-git rm -r --cached spikes/corpus spikes/results spikes/runner
-rm -rf spikes/corpus spikes/results spikes/runner
-printf '\nspikes/corpus/\nspikes/results/\nspikes/runner/\n' >> .gitignore
+# `spikes/results/instrument-checks/RUNBOOK-instrument.txt` DOES NOT LEAVE THIS REPO.
+# [added 2026-09-12] It is this repo's LIVE instrument record, not corpus evidence: Halt 2 and golden
+# constraint 8 make every later record read the version from that path, never hard-coded (PIA-019);
+# s0 §0.3 writes it and s1 §1.3 commits it here; and `grep -rn RUNBOOK-instrument runbook/phase-1/`
+# returns nothing, so NO Phase-1 stage re-points the path. Moving it leaves Steps 5, 6, 7a-7e and 8
+# reading a path that is not there. It is also a file every build session appends to, which is the one
+# thing a frozen pinned corpus must not carry. Copied above as provenance; KEPT here as the record.
+test -s spikes/results/instrument-checks/RUNBOOK-instrument.txt \
+  || { echo "FAIL: instrument record absent before the split (Step 0/1 did not produce it)"; exit 1; }
+
+git rm -r --cached spikes/corpus spikes/runner
+git ls-files spikes/results | grep -v '^spikes/results/instrument-checks/RUNBOOK-instrument.txt$' > .rk-untrack
+test -s .rk-untrack && git rm --cached --pathspec-from-file=.rk-untrack ; rm -f .rk-untrack
+rm -rf spikes/corpus spikes/runner
+find spikes/results -mindepth 1 -maxdepth 1 ! -name instrument-checks -exec rm -rf {} +
+find spikes/results/instrument-checks -mindepth 1 ! -name RUNBOOK-instrument.txt -exec rm -rf {} +
+printf '\nspikes/corpus/\nspikes/runner/\nspikes/results/*\n!spikes/results/instrument-checks/\nspikes/results/instrument-checks/*\n!spikes/results/instrument-checks/RUNBOOK-instrument.txt\n' >> .gitignore
+# The `/*` form is deliberate and not a style choice: git CANNOT re-include a path whose parent
+# DIRECTORY is excluded, so `spikes/results/` + `!…/RUNBOOK-instrument.txt` silently fails to keep it.
+test -s spikes/results/instrument-checks/RUNBOOK-instrument.txt \
+  || { echo "FAIL: the split destroyed the instrument record"; exit 1; }
 git add CORPUS_PIN .gitignore && git commit -m "Extract redkiln-corpus at a pinned SHA (ADR-0013); AC-465 becomes enforceable"
 ```
 
@@ -154,8 +195,15 @@ grep -q "$h" D:/repos/redkiln-rs/CORPUS_PIN && echo "pin matches HEAD" || { echo
 out=$(git -C D:/repos/redkiln-corpus status --porcelain) || { echo "FAIL: corpus repo unreadable"; exit 1; }
 test -z "$out" && echo "corpus clean" || { echo "FAIL: corpus dirty (AC-464)"; printf '%s\n' "$out"; exit 1; }   # → "corpus clean"
 git -C D:/repos/redkiln-rs rev-parse --git-dir >/dev/null || { echo "FAIL: redkiln-rs is not a repo"; exit 1; }
-n=$(git -C D:/repos/redkiln-rs ls-files | grep -E '^spikes/(corpus|results|runner)/' | wc -l)   # wc -l, not grep -c — see below
+n=$(git -C D:/repos/redkiln-rs ls-files | grep -E '^spikes/(corpus|results|runner)/' | grep -v '^spikes/results/instrument-checks/RUNBOOK-instrument.txt$' | wc -l)   # wc -l, not grep -c — see below
 test "$n" -eq 0 && echo "no corpus paths tracked here" || { echo "FAIL: $n corpus paths still tracked here (AC-465)"; exit 1; }   # → 0
+# [added 2026-09-12] The one deliberate exemption, asserted POSITIVELY so the split cannot quietly take
+# it: the instrument record stays here, and stays TRACKED (Halt 2, golden constraint 8, PIA-019).
+test -s D:/repos/redkiln-rs/spikes/results/instrument-checks/RUNBOOK-instrument.txt \
+  || { echo "FAIL: the instrument record did not survive the split"; exit 1; }
+git -C D:/repos/redkiln-rs ls-files --error-unmatch spikes/results/instrument-checks/RUNBOOK-instrument.txt >/dev/null \
+  || { echo "FAIL: the instrument record survived on disk but is no longer tracked"; exit 1; }
+echo "instrument record kept and tracked"
 ls D:/repos/redkiln-corpus/results/p1-arm-d-labels-ryan.md \
    D:/repos/redkiln-corpus/results/p2-labels-ryan.md         # → both; Step 3b's work travelled
 test -d D:/repos/redkiln-corpus/results || { echo "FAIL: corpus results/ absent — the arm-L check is not runnable"; exit 1; }
