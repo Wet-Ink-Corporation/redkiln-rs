@@ -95,6 +95,38 @@ rather than presented as a clean sequence, per golden constraint 9's "the scope 
 | **#18** | `_intake-brief.md` and `discover.md` were added to both P2 scripts' artifact lists; `_ledger.md` deliberately not. Reconstruct records go 72 → 77 and the advisory candidates become reachable at all | **CONFIRMED as taken.** The two are the only non-card artifacts mapping to an `artifacts.toml` human root, and their absence from **both** the selector's `ARTIFACTS` and the reconstructor's `STAGE_ORDER` was a silent narrowing of the whole P2 scope. `_ledger.md` stays out, deliberately |
 | **#15** | `human_authored` remapped from a commit-authorship heuristic to the `artifacts.toml` registry. The old heuristic yields **0** advisory cases (every commit in this repo is co-authored by Claude); the new one yields **6** | **CARRIED UNSETTLED, deliberately, with its scope stated.** It changes what METHOD-P §2.3's **advisory** fraction measures and therefore gates **criterion 3 only** — which is **UNRUN**, because the advisory half (A01–A06) is labelled after the engine in its own file. It does **not** gate the perturbation half (P01–P12), which was scored on 2026-09-10 without it and whose figures do not move when #15 is decided [measured, F40]. It is **not** ADR-0090's subject. Recorded as owed to the operator — *do not* read "the P2 engine has run" as "#15 is discharged", and do not label the advisory half until it is written down either way |
 
+**#15 CONFIRMED 2026-09-13 (Ryan Britton, via AskUserQuestion; recorded by Claude at his direction).** The row above
+carried it as *"carried UNSETTLED, deliberately"*; it is now settled, as **option A — remap to the `artifacts.toml`
+registry**, exactly as taken on 2026-09-09 and with the "confirm the mapping before scoring" condition discharged.
+
+**The grounding, which is a definitional point and not a preference.** PC3's advisory path is defined over artifacts
+whose **registry** `source` is `human` — `BugReport`, `IntakeRecord`, `IncidentRecord`, `ImpactAssessment`,
+`SessionNotes`, which in this corpus are the card files plus `_intake-brief.md` and `discover.md`. That is a property
+of the artifact **type**, not of who typed a commit. The original heuristic asked the second question and could not
+answer it on this corpus at all: `human_authored` was `not any("redkiln" or "claude" in author+body)`, every commit
+here ends `Co-Authored-By: Claude…` and prose bodies say "redkiln" constantly, so it was **False for every artifact**
+and yielded **0 of METHOD-P §2.2's 10 advisory cases** [measured]. A metric that is constant by construction measures
+nothing — the same fault as a label set with no positive class, one field over.
+
+**What it unblocks, and what it does not.** Criterion 3 (*"advisory useful fraction < 0.3 → PC3's advisory is demoted
+to a log line"*) becomes **labellable**: advisory candidates go 0 → **6**, so the fraction has a denominator. It is
+still **UNRUN** — the advisory half (A01–A06) is labelled after the engine in its own file, under METHOD-P §2.3 — and
+this confirmation does not run it. **ADR-0117's forbids clause is discharged by this and only this**: that record
+forbids labelling the advisory half *"until DECISIONS-2026-09-09 #15's `human_authored` remap is settled in writing"*,
+and it now is. Nothing else in ADR-0117 moves: `stale_policy` stays `rematerialise` at coarse scope for every class,
+criterion 1's prescribed remedy stays **not applied**, and criteria 1 and 2 stay **NOT ANSWERABLE** on this corpus.
+
+**AC-071 clause C — NOT COMMISSIONED, 2026-09-13 (Ryan Britton, same walk-through).** Recorded as a decision rather
+than left as an open obligation. Clause C is the full P1 re-run at n ≥ 20 items × ≥ 10 draws, and it is the only route
+that would unblock LLM-sourced ordinals. It is **not commissioned**, on four grounds: **(1)** ADR-0090 decides Phase 1
+either way, on human-sourced axes; **(2)** `s4` §4.1 states in terms that the re-run is *"not part of Phase 1's
+critical path"*; **(3)** clause A failed **4 of 4** with Wilson upper bounds ≤ 46.9 against an 0.80 line, and F36's own
+conclusion is that modal-`R` *"fires 4 times out of 4, needs no inter-rater statistic, and is what the engine actually
+feels — act on that one"*; **(4)** a bigger n against an unchanged criterion risks re-measuring the same instability,
+which is precisely the rule **ADR-0111** states for S-P7B — *the re-run must change the criterion, not only n*. So a
+future re-run is a **successor to ADR-0090** carrying a changed criterion, not a scheduled repeat of P1.
+**AC-071 remains the machine-checkable statement of the block** and is not weakened, narrowed or marked satisfied.
+
 **What none of the three moves.** Clause A fails on every reading; clause B's ≥ 0.95 branch is unreachable at n = 20
 for any facet however good the method; P2 sits outside the blocking gate altogether (`s4` §4.1's last bullet). So
 ADR-0090's warrant is unchanged by all three dispositions, which is the point of settling them before it is written
