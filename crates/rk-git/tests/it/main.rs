@@ -1,4 +1,13 @@
+mod gitops;
+mod grammar;
+mod paths;
+mod reconciled;
+mod review_clone;
 mod s_gix_a;
 mod s_gix_b;
 mod s_gix_c;
 mod support;
+mod trailers;
+mod tree;
+mod version;
+mod worktree;

@@ -133,3 +133,53 @@ jobs:
           print('members depending on anyhow outside the allowed set:', bad)
           sys.exit(1 if bad else 0)
           PY
+
+      # ADR-0077:70 and ADR-0105 clause 5 -- git shells out through EXACTLY ONE wrapper type.
+      # Step 5's structural-assertions table assigned this grep to Checkpoint 6; it landed at
+      # Step 6.2. It is scoped with `git ls-files`, not `crates/`, so tests/fixtures/* -- which ARE
+      # workspace members -- are in scope too, and the exclusion is ANCHORED, so a comment
+      # elsewhere that merely names the wrapper's path cannot silently exempt a file.
+      - name: git shells out through one wrapper only (ADR-0105 clause 5)
+        run: |
+          wrapper='crates/rk-git/src/git_exec.rs'
+          test -s "$wrapper" || { echo "FAIL: $wrapper is absent -- this grep would be vacuous"; exit 1; }
+          # The trailing `grep -vE` drops COMMENT lines, and it is here because this assertion was
+          # RUN rather than trusted: rk-git/src/lib.rs quotes ADR-0077's rule verbatim in its
+          # module header, and the unfiltered grep flagged that quotation as a violation. The rule
+          # is about INVOCATIONS; prose stating the rule is not one (golden constraint 9 — a guard
+          # scoped too wide refuses valid work).
+          bad=$(git ls-files '*.rs' | xargs grep -nE 'std::process::Command|tokio::process::Command' \
+                | grep -vE "^${wrapper}:" \
+                | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' || true)
+          if [ -n "$bad" ]; then
+            echo "FAIL: a process::Command outside the one wrapper (ADR-0077:70):"
+            printf '%s\n' "$bad"
+            exit 1
+          fi
+          bad=$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE "^${wrapper}:" || true)
+          if [ -n "$bad" ]; then
+            echo "FAIL: Command::new(\"git\") outside the wrapper:"
+            printf '%s\n' "$bad"
+            exit 1
+          fi
+          # The POSITIVE half. Both checks above pass on a workspace with no git exec at all --
+          # Halt 8 shape (g), a pass condition that is the absence of output. This asserts the
+          # wrapper really does invoke git, so the bans above are guarding something.
+          n=$(grep -c 'Command::new("git")' "$wrapper")
+          test "${n:-0}" -ge 1 || { echo "FAIL: the wrapper does not invoke git; the ban greps assert nothing"; exit 1; }
+          echo "ADR-0105 clause 5: one wrapper, and it is not empty"
+
+      # AC-529 -- the run-owned worktree is resolved from the STORE, never from the process cwd.
+      # A cwd-based resolution passes the refusal test and the positive control by accident,
+      # because on the happy path the two are the same directory. This is the structural half.
+      - name: the run-owned worktree is not resolved from cwd (AC-529)
+        run: |
+          bad=$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
+                | xargs grep -n 'env::current_dir' \
+                | grep -vE '^\s*//' || true)
+          if [ -n "$bad" ]; then
+            echo "FAIL: a crate reads the current directory (AC-529, ADR-0105 clause 8):"
+            printf '%s\n' "$bad"
+            exit 1
+          fi
+          echo "AC-529: no src/ path reads the current directory"

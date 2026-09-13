@@ -28,12 +28,14 @@ corpus = []
 # S-GIX/c's candidate -- PrepareFetch::with_revision + with_shallow -- does not compile without it.
 gix.workspace = true
 gix.features = ["blocking-network-client"]
+rk-types = { path = "../rk-types" }
 
 # Repeated for the integration binary: a crate's own [dependencies] are not in scope inside tests/.
 # The INLINE-TABLE spelling here on purpose, so this line adds no second hit to the count above.
 [dev-dependencies]
 gix = { workspace = true, features = ["blocking-network-client"] }
 tempfile = "3"
+trybuild.workspace = true
 
 # ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
 [[test]]

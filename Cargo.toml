@@ -44,6 +44,9 @@ serde      = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }   # preserve_order: AC-158's property
 schemars   = { version = "=1.2.2", features = ["preserve_order"] }   # order is otherwise unobservable
 insta      = { version = "=1.48.0", features = ["json"] }
+# AC-160 and AC-172 are type-level criteria: their instrument is a compile FAILURE, which only a
+# must-fail harness can observe. 1.x, so a caret range under ADR-0100 decision 2 rather than a pin.
+trybuild   = "1"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

@@ -40,17 +40,31 @@ cargo test -p rk-git -- --ignored s_gix_b_trailer_roundtrip_matches_interpret_tr
 cargo test -p rk-git -- --ignored s_gix_c_shallow_clone_by_sha_matches_git
 ```
 
-**Run these before the worktree code, not after.** A **go** on an arm may narrow ADR-0077 and nothing else may, and
-the narrowing is written as a **successor record**, never as an edit to 0077 — ADR-0077 is `accepted`, and the
-immutability rule binds accepted records absolutely. **This is the second of the seven decisions this runbook
-takes** (see the preamble's table); it is an ADR, and **its number is `0091`, reserved** — `0089` was taken by the
-facet-provenance amendment, `0090` **by Step 4.4 on 2026-09-12**, `0092`–`0114` by the 2026-09-11 remediation and
-`0115`–`0116` by the 2026-09-12 alignment review, and the README's numbering sentence names `0091` as this step's —
-the only reserved number left. **A no-go does not cost nothing — that sentence was false for arm a
-(PIA-009).** The two outcomes are written down already: ADR-0098 fixes what each arm's no-go does (arm a → the
-wrapper resolves the common dir; arm c → the wrapper clones), so ADR-0091 records the *results* and the git-version
-floor, and supersedes 0077 in part only on a **go** that narrows it. Write into ADR-0091 the two verdict lines
-Checkpoint 6 greps for, literally `S-GIX/a: go` / `S-GIX/a: no-go` and the same for `/b` and `/c`, one per line.
+**Run these before the worktree code, not after.** A **go** on an arm is what may narrow ADR-0077 *in ADR-0091*,
+and the narrowing is written as a **successor record**, never as an edit to 0077 — ADR-0077 is `accepted`, and the
+immutability rule binds accepted records absolutely. *(Corrected 2026-09-13: this read "a **go** on an arm may
+narrow ADR-0077 **and nothing else may**", which is false as history. **ADR-0098** narrowed 0077 on 2026-09-11 on a
+documentation read, with no arm having run — legitimately, because an accepted ADR may supersede another under
+ADR-0092 clause 2.1. The sentence is about what licenses *this* record's narrowing, not about 0077's history.)*
+**This is the second of the seven decisions this runbook takes** (see the preamble's table); it is an ADR, and
+**its number is `0091`** — `0089` was taken by the facet-provenance amendment, `0090` **by Step 4.4 on
+2026-09-12**, `0092`–`0114` by the 2026-09-11 remediation, `0115`–`0116` by the 2026-09-12 alignment review and
+`0117` by the `stale_policy` adjudication on 2026-09-13; `0091` was the last reserved number. **A no-go does not
+cost nothing — that sentence was false for arm a (PIA-009).** The two outcomes are written down already: ADR-0098
+fixes what each arm's no-go does (arm a → the wrapper resolves the common dir; arm c → the wrapper clones), so
+ADR-0091 records the *results* and the git-version floor, and supersedes 0077 in part only on a **go** that narrows
+it. Write into ADR-0091 the three verdict lines Checkpoint 6 greps for, literally `S-GIX/a: go` / `S-GIX/a: no-go`
+and the same for `/b` and `/c`, one per line.
+
+> **EXECUTED 2026-09-13 — `7669fa3`.** The arms ran and **ADR-0091 is accepted**: `S-GIX/a: go`, `S-GIX/b: no-go`,
+> `S-GIX/c: go`. It **supersedes nothing** — arm b was the only arm whose go could have withdrawn a sentence of
+> ADR-0077, so 0077's write path stands in full and its frontmatter was not touched. The floor is **`git >= 2.20`**
+> (ADR-0091 decision 4): the conditional half of E10 resolved *downward*, because `clone --revision` (git 2.49) is
+> reached only on a /c no-go and /c is a go. §6.2 below therefore builds the **go** branch of arms a and c: gix owns
+> the common-dir read, gix performs the review clone, and neither `rev-parse --git-common-dir` nor
+> `clone --depth 1 --revision` enters the wrapper's write set. Arm b's no-go leaves the trailer write path exactly
+> where ADR-0077 put it. The three arms remain as `#[ignore]`d tests and now **assert their own verdict against the
+> record**, so re-running them is a cross-check rather than a re-measurement.
 
 ### 6.2 Build to the hybrid, whatever S-GIX says
 
@@ -83,7 +97,14 @@ Six constraints that come with the hybrid and are easy to lose:
    unit test (ADR-0105 clause 6).
 5. **Git operations on the activity side go through the journalled `GitOps` seam** (ADR-0105 clause 1): a struct in
    `rk-git` that records every invocation and its result to the EventStore, so that on replay the kernel is served
-   the journal and `rk-git` performs **zero writes** (AC-006/AC-008's "and zero rk-git writes").
+   the journal and `rk-git` performs **zero writes** (AC-006/AC-008's "and zero rk-git writes"). It is a **struct
+   and never a trait**, so AC-483's port-inventory denylist stands and Checkpoint 7a's count of five port traits is
+   unaffected. **ADR-0115 governs the handle it journals through** *(added 2026-09-13; this step was written before
+   0115 existed and did not cite it)*: the EventStore port is held as `Arc<Mutex<dyn EventStore>>`, because
+   `append` takes `&mut self` and an `Arc<dyn T>` yields only `&T`. The lock is acquired by the composition root at
+   the call boundary and released when the call returns; **no port method acquires it, and no lock is held across a
+   dispatch of another port**. Lock poisoning is an open item 0115 names and does not close — it must not be
+   silently recovered with `unwrap_or_else(|e| e.into_inner())`.
 6. **Worktrees are re-created per run, never reused**; a failed `worktree remove` (the Windows handle case, Halt 6)
    is a typed `rk-git` error and a `doctor` orphans row, with S-CANCEL-WIN's fixture as the regression. The review
    clone is **bare** unless the review activity declares it needs a working tree.
@@ -111,18 +132,30 @@ table ADR-0086 builds here — and is rebuildable by re-execution, never by rebu
 reproduces the **stage-level** next action from git alone (AC-161/AC-164 as narrowed), and AC-187's memo replay is
 scoped to a run whose EventStore survives. The memo key is SHA-256 over ADR-0097's eight-component length-prefixed
 tuple; liveness is the verb's `live = true` flag and nothing else. **rk-store's contract as rules (ADR-0105 clause
-7):** `busy_timeout` **5000 ms** (rusqlite's default; the R-SQLITE read confirms); every write transaction shorter
+7 — one of its **eleven**, not nine):** `busy_timeout` **5000 ms** (rusqlite's default, a **documented** figure;
+see the R-SQLITE note below for what is and is not measured); every write transaction shorter
 than it — a rebuild writes a separate file and renames; **one writer connection per process behind a mutex, no
 queue** (`rusqlite::Connection` is `Send` and `!Sync`); readers one per thread, also with `busy_timeout`; `doctor`
 refuses a common dir on a network filesystem (WAL does not work over one); the event-kind table (kind · tier ·
-payload · producing step) is design §5's with `rk-types` as owning crate; retention is argv/env **digest-only**,
+payload · producing step) is design §5's with `rk-types` as owning crate — **and ADR-0116 supersedes ADR-0105
+clause 7 in part**: the table gains **`artifact.write`** (tier 2, emitted by every activity output, payload
+`kind, item id, schema_version, artifact content digest`), the `EventKind` enum is **closed**, a kind in the design
+table and not in the enum (or the reverse) is schema drift, and the digest is the artifact's content digest
+computed by the **same** function the typed-artifact digests use — no second digest algorithm enters the system; retention is argv/env **digest-only**,
 stdout/stderr verbatim up to a size cap, child environment **never**, with a `doctor` row for credential-shaped
 values. AC-184's **tier-1 projection** is the tier-1 rows whose anchor is reachable from the clone's refs; orphan
 rows and rewrite events sit outside the rebuild differential (ADR-0105 clause 9). A tier-1 write resolves the
 run-owned worktree **from the store**, never from cwd (the new AC §6.4 criterion).
 
-**Spikes owed by this step (PIA-047):** **R-SQLITE** — the `busy_timeout` / one-writer read against docs.rs rusqlite
-0.40.2 and sqlite.org, $0, minutes; run it or record its deferral in the checkpoint commit.
+**Spikes owed by this step (PIA-047):** **R-SQLITE**, and it splits in two — *(clarified 2026-09-13: this step
+previously said the read "confirms" the 5000 ms figure four paragraphs above while listing the whole spike as owed
+here, which cannot both be true)*. Its **documentary** half is **discharged and cited**: rusqlite 0.40.2's
+`busy_timeout` default and `Connection: Send + !Sync`, and sqlite.org's WAL single-writer and network-filesystem
+rules, are `[documented]` evidence lines on ADR-0105 itself. Its **empirical** half is **not** discharged, and it is
+**AC-181's literal instrument** — the two-process contention test. ADR-0105's own evidence limits say so: *"It does
+not license claiming … that 5000 ms suffices under the self-hosting run's load — R-SQLITE and Step 8 (3) are the
+measurements."* So: cite the documentary half, build AC-181's test, and if it cannot be run, record the deferral in
+the checkpoint commit and report the store's concurrency contract as **documented-only** — never as measured.
 
 **Red first (golden constraint 12; ADR-0019).** The checkpoint below is the floor, not the evidence:
 every one of its `cargo test … -- <filter>` lines is satisfied by an implementation that nothing pins.

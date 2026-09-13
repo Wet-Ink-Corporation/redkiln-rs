@@ -14,7 +14,8 @@
 
 use std::path::{Path, PathBuf};
 
-use rk_git::git_exec::{self, GitError, GitOutput};
+use rk_git::error::GitError;
+use rk_git::git_exec::{self, GitOutput};
 
 /// A temporary directory plus the isolated environment every `git` call in these tests uses.
 pub struct Fixture {
@@ -83,14 +84,14 @@ impl Fixture {
     pub fn git(&self, cwd: &Path, args: &[&str]) -> GitOutput {
         match self.try_git(cwd, args) {
             Ok(o) => o,
-            Err(GitError::NonZeroExit { code, stderr }) => panic!(
-                "git {:?} in {} exited {:?}: {}",
+            Err(GitError::NonZeroExit { op, code, stderr }) => panic!(
+                "git {op} {:?} in {} exited {:?}: {}",
                 args,
                 cwd.display(),
                 code,
                 String::from_utf8_lossy(&stderr)
             ),
-            Err(GitError::Spawn { detail }) => panic!("git could not be spawned: {detail}"),
+            Err(other) => panic!("git could not be run: {other:?}"),
         }
     }
 
@@ -111,6 +112,45 @@ impl Fixture {
         self.git(&repo, &["commit", "--quiet", "-m", "one"]);
         repo
     }
+}
+
+/// A content fingerprint of every file under `dir`, for before/after comparison.
+///
+/// Deliberately content-based, never mtime: a clone, a checkout or a format-on-save advances mtime
+/// with identical content, and an mtime-preserving write hides a real mutation. AC-159 makes the
+/// same point about artifacts and says mtime is not an instrument.
+pub fn dir_fingerprint(dir: &Path) -> Vec<(String, u64, Vec<u8>)> {
+    let mut out = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        let Ok(rd) = std::fs::read_dir(&d) else {
+            continue;
+        };
+        for e in rd.filter_map(Result::ok) {
+            let p = e.path();
+            if p.is_dir() {
+                stack.push(p);
+            } else if let Ok(bytes) = std::fs::read(&p) {
+                out.push((
+                    p.strip_prefix(dir).unwrap_or(&p).display().to_string(),
+                    bytes.len() as u64,
+                    bytes,
+                ));
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// ADR-0091's full text, or `None` if the record does not exist.
+pub fn read_adr_0091() -> Option<String> {
+    let adr_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../references/adr");
+    let entry = std::fs::read_dir(&adr_dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .find(|e| e.file_name().to_string_lossy().starts_with("0091-"))?;
+    std::fs::read_to_string(entry.path()).ok()
 }
 
 /// The verdict ADR-0091 records for one S-GIX arm, read out of the record itself.

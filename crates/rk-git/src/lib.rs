@@ -17,4 +17,14 @@
 //! and this crate is not one. No `anyhow` either — that is confined to `rk-cli` and
 //! `redkiln-migrate` (ADR-0102 decision 6), and CI asserts it over `cargo metadata`.
 
+pub mod clone;
+pub mod error;
 pub mod git_exec;
+pub mod gitops;
+pub mod path;
+pub mod reconcile;
+pub mod reconciled;
+pub mod trailer;
+pub mod tree;
+pub mod version;
+pub mod worktree;
