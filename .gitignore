@@ -22,9 +22,9 @@ target
 # Spike fixtures are throwaway git repos; results are raw measurement data.
 spikes/fixtures/
 
-# spikes/results/ is deliberately NOT ignored: charter §14.2 makes the raw
-# records a deliverable, and a results file that has to be force-added is a
-# results file that eventually goes missing.
+# spikes/results/ moved to D:/repos/redkiln-corpus at the pin in CORPUS_PIN
+# (ADR-0013). Charter §14.2 still makes the raw records a deliverable — they are
+# a deliverable OF THE CORPUS REPO now, and AC-465 forbids them here.
 
 # Python bytecode from the spike tooling (spikes/p1, p2, p9). The .py sources
 # are tracked; the caches are per-interpreter and rebuild on every run.
@@ -44,3 +44,10 @@ spikes/results/p8-state/
 
 # Extra build dirs cut when target/ was locked by a live run.
 spikes/runner/target-*/
+
+spikes/corpus/
+spikes/runner/
+spikes/results/*
+!spikes/results/instrument-checks/
+spikes/results/instrument-checks/*
+!spikes/results/instrument-checks/RUNBOOK-instrument.txt

@@ -1,0 +1,31 @@
+# redkiln-corpus pin (ADR-0013). Every corpus read resolves through this SHA via the
+# object store, never through a working tree (AC-464). A run against an unpinned
+# reference, or against a corpus checkout with uncommitted changes, is REFUSED.
+CORPUS_REPO=D:/repos/redkiln-corpus
+CORPUS_SHA=27d97e9b164d09dc755fe38e353de922cb97c482
+PINNED_AT=2026-09-13
+
+# The frozen predecessor corpus this repo pins in turn, unchanged — and its bundle inside the corpus repo,
+# which is what every corpus-bound test reads (never the machine-local clone; ADR-0100 / PIA-002):
+REDKILN_REPO=D:/repos/redkiln
+REDKILN_SHA=47faec9f46b8d983c2c75f0794164e68415ae706
+PREDECESSOR_BUNDLE=predecessor-47faec9f.bundle
+PREDECESSOR_REFS=118
+
+# PREDECESSOR_REFS is the SUBSTRATE count — heads + remote-tracking + tags, re-derivable as
+# `git -C $REDKILN_REPO for-each-ref | wc -l`. It is NOT what `git bundle list-heads` returns:
+# that reports 123, adding HEAD and one worktrees/<name>/HEAD per linked worktree (four exist).
+# The two are not comparable; all 118 are verified PRESENT IN the bundle by containment, which a
+# count cannot check because a count is blind to a swap. [measured 2026-09-12]
+
+# What a bundle cannot carry, so it travels beside it: the predecessor's uncommitted working-tree
+# delta, whose substantive half is Step 3a's D-FIXCONSUMER fix (forge-fix.js:982). Deliberately NOT
+# committed to the predecessor — AC-464 freezes the SHA above — and verified by reverse-apply to be
+# exactly the live delta. Its runtime probe is [WILL EXIST] and UNVERIFIED (DECISIONS-2026-09-09 #39).
+PREDECESSOR_WORKING_TREE_PATCH=predecessor-working-tree-2026-09-12.patch
+
+# PIA-021's off-disk copy, so the two filled blind panels are never in one place on one disk.
+# Route (b): a verified bundle on a volume that is not D:. Restore-tested — both panels come back
+# byte-identical to the originals, and the corpus carries a `* -text` .gitattributes so any clone on
+# any platform reproduces the bytes that were scored. [2026-09-12]
+CORPUS_BACKUP_BUNDLE=C:/rk-corpus-backup/corpus-v0-2026-09-12.bundle
