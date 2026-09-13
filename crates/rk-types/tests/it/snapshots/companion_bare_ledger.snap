@@ -1,0 +1,116 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AcLedger",
+  "type": "object",
+  "properties": {
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ac": {
+            "type": "string"
+          },
+          "status": {
+            "description": "One closed status per AC. `Unpinned` is RESERVED and explicit: an AC with no discriminating\ntest is *unpinned*, which is a state to be named, not an absence to be inferred\n(DECISIONS-2026-09-11, PIA-032/033).",
+            "anyOf": [
+              {
+                "description": "The AC's named assertion flips under its declared mutation (AC-334's predicate).",
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "pinned"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "description": "The suite stayed green under the mutation. A survivor blocks exit even when quarantined\n(ADR-0104 decision 4).",
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "mutation_survived"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "description": "No discriminating test. Reserved, and never a default.",
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "unpinned"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "description": "The toolchain pack declares mutation infeasible (AC-337).",
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "not_feasible"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "reason"
+                ]
+              },
+              {
+                "description": "A human gate answered THAT AC explicitly (AC-357).",
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "human_answered"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "reason"
+                ]
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ac",
+          "status"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "rows"
+  ]
+}

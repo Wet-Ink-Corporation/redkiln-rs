@@ -371,13 +371,13 @@ rather than *correctness*. It is not evidence that a criterion is discriminated;
 **Checkpoint 5.** All of:
 
 ```bash
-cd D:/repos/redkiln-rs
+cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # BEFORE assertions — each fails on the untouched tree (PIA-035); run them first and expect the stated failure
 test ! -f rust-toolchain.toml && echo "BEFORE: no pin yet"           # → prints on the untouched tree; after the step, silent
 test ! -d .github/workflows && echo "BEFORE: no CI yet"               # → prints on the untouched tree
 # AFTER assertions
-cargo build --workspace                                  # builds, on the pinned toolchain (rust-toolchain.toml selects it)
-cargo fmt --all --check                                  # exit 0
+cargo build --workspace || { echo "FAIL: cargo build --workspace"; exit 1; }   # builds, on the pinned toolchain (rust-toolchain.toml selects it)
+cargo fmt --all --check || { echo "FAIL: cargo fmt --all --check"; exit 1; }   # exit 0
 cargo clippy --workspace --all-targets; rc=$?; echo "exit=$rc"; [ "$rc" -eq 0 ] || exit 1   # → exit=0; nursery WARNINGS are permitted, the gate is the exit code (PIA-030)
 out=$(cargo test --workspace 2>&1); rc=$?                 # exit 0 — the corpus-bound suite is behind --features corpus
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
@@ -386,13 +386,13 @@ test -f CORPUS_PIN && test -d D:/repos/redkiln-corpus || { echo "FAIL: corpus ab
 out=$(cargo test --workspace --features corpus 2>&1); rc=$?   # not a CI line: it runs only on a box holding redkiln-corpus at CORPUS_PIN
 [ "$rc" -eq 0 ] || { echo "FAIL: corpus suite exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 corpus tests ran"; exit 1; }
-cargo audit --deny unmaintained                          # exit 0
-cargo deny check bans advisories licenses                # exit 0 (deny.toml committed)
-test -f rust-toolchain.toml && grep -q 'channel = "1.98.1"' rust-toolchain.toml   # the FULL string (PIA-024), not a prefix
-grep -q 'rust-version = "1.98.1"' Cargo.toml             # equal to the pin (ADR-0102)
-grep -q 'exclude = \["spikes/runner", "spikes/s-ports"\]' Cargo.toml   # the exclude survived the first `cargo new` (PIA-035)
-test -f .github/workflows/ci.yml && grep -q 'windows-latest' .github/workflows/ci.yml && grep -q 'ubuntu-latest' .github/workflows/ci.yml
-test -f clippy.toml && grep -q 'disallowed-methods' clippy.toml
+cargo audit --deny unmaintained || { echo "FAIL: cargo audit --deny unmaintained"; exit 1; }   # exit 0
+cargo deny check bans advisories licenses || { echo "FAIL: cargo deny check bans advisories licenses"; exit 1; }   # exit 0 (deny.toml committed)
+test -f rust-toolchain.toml && grep -q 'channel = "1.98.1"' rust-toolchain.toml || { echo "FAIL: rust-toolchain.toml absent, or not pinned to the FULL string 1.98.1"; exit 1; }   # the FULL string (PIA-024), not a prefix
+grep -q 'rust-version = "1.98.1"' Cargo.toml || { echo "FAIL: rust-version is not equal to the pin"; exit 1; }   # equal to the pin (ADR-0102)
+grep -q 'exclude = \["spikes/runner", "spikes/s-ports"\]' Cargo.toml || { echo "FAIL: the exclude line is absent or was rewritten"; exit 1; }   # the exclude survived the first `cargo new` (PIA-035)
+test -f .github/workflows/ci.yml && grep -q 'windows-latest' .github/workflows/ci.yml && grep -q 'ubuntu-latest' .github/workflows/ci.yml || { echo "FAIL: ci.yml absent, or the two-OS matrix does not name both"; exit 1; }
+test -f clippy.toml && grep -q 'disallowed-methods' clippy.toml || { echo "FAIL: clippy.toml absent, or carries no disallowed-methods table"; exit 1; }
 test -f deny.toml || { echo "FAIL: deny.toml absent"; exit 1; }
 for b in temporalio-sdk graph-flow dbos durable; do grep -q "$b" deny.toml || { echo "FAIL: deny.toml is missing ADR-0086 ban $b"; exit 1; }; done   # → all four, whatever the line layout
 n=$(ls crates/*/Cargo.toml 2>/dev/null | wc -l); [ "$n" -gt 0 ] || { echo "FAIL: no crates/*/Cargo.toml"; exit 1; }
@@ -407,18 +407,46 @@ test -d crates/rk-types/src || { echo "FAIL: crates/rk-types/src absent"; exit 1
 cs=$(grep -rn 'ChangeSummary' crates/ --include='*.rs' | grep -v 'crates/rk-ports/'); [ -z "$cs" ] || { echo "FAIL: ChangeSummary outside rk-ports:"; printf '%s\n' "$cs"; exit 1; }   # → 0. Blocked on S-BIN — lives only as
                                                           #   rk-ports' opaque newtype (ADR-0099 clause 5), and rk-ports is 7a's
 test -f Cargo.toml || { echo "FAIL: no root manifest"; exit 1; }
-meta=$(cargo metadata --format-version 1); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: cargo metadata exited $rc"; exit 1; }
-printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; print(sorted(p['name'] for p in m['packages'] if any(d['name']=='anyhow' for d in p['dependencies'])))"
-                                                          # → [] at Step 5 (rk-cli and redkiln-migrate are 7d's); the design §9.1 anyhow convention, as a check
+meta=$(cargo metadata --format-version 1 --no-deps); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: cargo metadata exited $rc"; exit 1; }
+printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; bad=sorted(p['name'] for p in m['packages'] if any(d['name']=='anyhow' for d in p['dependencies'])); print(bad); sys.exit(1 if bad else 0)" \
+  || { echo "FAIL: a workspace MEMBER depends on anyhow"; exit 1; }
+                                                          # → [] at Step 5 (rk-cli and redkiln-migrate are 7d's); the design §9.1 anyhow convention, as a check.
+                                                          # --no-deps is load-bearing: without it the walk is the whole transitive
+                                                          # graph, not the members the convention is about (golden constraint 9),
+                                                          # and the line PRINTED the offending list instead of asserting on it —
+                                                          # Halt 8 shape (g), a pass condition that is the absence of output.
+                                                          # Both corrected 2026-09-13 at Step 5's run.
 ```
 
 Two of those lines changed shape. `! grep -rn 'oneOf' <dir>` **passes when the directory does not exist** — grep
 exits 2, `!` inverts it, and a checkpoint asserting "no `oneOf` survives into any exported schema" goes green on a
 project with no snapshots at all. The `test -d` guard makes a missing snapshot directory the failure it is. The
-`ChangeSummary` line is piped to `wc -l` for the same reason, though there the false pass was benign: the property
-being asserted is absence, and a missing `src/` is a different failure the build already catches.
+`ChangeSummary` line captures into `cs=$(…)` and tests `-z` for the same reason, though there the false pass was
+benign: the property being asserted is absence, and a missing `src/` is a different failure the build already
+catches. *(Corrected 2026-09-13: this sentence said the line was piped to `wc -l`, which it has not been.)*
 
 `grep -L` without `-r`: the arguments are an explicit glob of files, so `-r` did nothing.
+
+**Hardened 2026-09-13, at Step 5's own run.** Counted mechanically — backslash continuations joined, comments and
+blanks dropped — this block carries **33 statements**, of which **17** could stop execution and **16** could not.
+**Eleven** of those sixteen were AFTER assertions and are now guarded: five silent `grep -q` lines (the `channel`,
+`rust-version`, `exclude`, `ci.yml` and `clippy.toml` lines, which print **nothing** on failure), four loud but
+non-stopping gates (`cargo build`, `cargo fmt`, `cargo audit`, `cargo deny`), the `cd`, and the `anyhow` line above.
+The count is now **28 guarded of 33**, re-derived mechanically rather than eyeballed — a first pass wrote "27 of 33"
+by tallying the ten of paragraph (a) and forgetting the `anyhow` line, which is the same eyeballing defect this
+block exists to stop. The five that remain unguarded are the two BEFORE readings (PIA-035 prints, not assertions)
+and three `out=$(…); rc=$?` / assignment halves whose guard is the statement immediately below them. These lines
+passed `check-checkpoints.py` before this pass because that checker lints three shapes — COUNT-ONLY, ECHO-GUARD
+and PIPE-STATUS — and an unguarded `grep -q` is none of them. **Silence is not a pass.**
+
+**What the two `--features corpus` lines attest at *this* step, stated because they do not attest what they look
+like they attest.** Step 5 has **zero** corpus-bound tests — every criterion in its acceptance set is local, and
+the corpus-bound ids of §5.2 first appear at Step 6. `rk-types` declares `[features] corpus = []` so the feature
+**exists** (without it `cargo test --workspace --features corpus` exits **101** with *"none of the selected
+packages contains these features"*, and this checkpoint could not pass — measured 2026-09-13). The
+`test result: ok. N passed` grep on that run therefore matches the ordinary unit tests, not a corpus read. At
+Step 5 the pair attests **the workspace suite is green with the feature on**; `s6` Checkpoint 6 is where the same
+shape first attests that the bundle was read. Do not report it here as corpus coverage.
 
 **Acceptance set:** the typed-artifact criteria of **AC-120–AC-159** that `rk-types` can carry before the store
 exists — the schema-design rules **AC-129, AC-130, AC-131, AC-132, AC-133, AC-157, AC-158** (AC-158 verifiable via

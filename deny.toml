@@ -1,0 +1,74 @@
+# deny.toml — the fifth CI gate, beside fmt/clippy/test/audit (ADR-0100 decision 3).
+# `cargo deny check bans advisories licenses`
+
+[graph]
+# MUST NOT be `all-features = true`. The AC-005 fixture at tests/fixtures/rk-banned-dep/ carries its
+# banned crate as an OPTIONAL dependency behind a non-default `reintroduce` feature; turning
+# all-features on here would pull it into the DEFAULT graph and make the everyday `cargo deny check
+# bans` gate permanently red — which is how a gate gets deleted rather than fixed
+# (DECISIONS-2026-09-12 E4). The fixture's own check passes `--all-features` on the command line.
+all-features = false
+# Dev-dependencies are in scope: ADR-0086's bans are workspace-wide "including dev-dependencies used
+# to smuggle in a runtime" (0086 Consequences; ADR-0100 decision 3).
+exclude-dev = false
+
+[advisories]
+# ADR-0100 decision 4's INTENT: "an archived transitive dependency is a red build, not a silence."
+#
+# Its literal parenthetical — 'equivalently `cargo deny check advisories` with
+# `unmaintained = "deny"`' — no longer parses. cargo-deny 0.20.2 (the version the preamble's
+# preflight measured on this box) changed this key from a lint LEVEL to a SCOPE and refuses any
+# other value: `expected '["all", "workspace", "transitive", "none"]'` [measured 2026-09-13].
+# `"all"` is the faithful translation — every unmaintained advisory is checked, transitive ones
+# included, and advisories are errors by default in this version. The ADR's primary form,
+# `cargo audit --deny unmaintained`, is unaffected and still runs as the fourth gate.
+#
+# The guard was right and the config was wrong (Halt 7). An erratum against ADR-0100 decision 4's
+# parenthetical is OWED; nothing here weakens what the decision asked for.
+unmaintained = "all"
+yanked = "deny"
+
+[bans]
+multiple-versions = "warn"
+# ADR-0086: no durable-execution framework enters redkiln-rs's dependency graph. The four names are
+# ADR-0100 decision 3's and design §9.2's.
+#
+# Recorded divergence, not reconciled here: ADR-0086's own Decision body names THREE exclusions —
+# `temporalio-sdk`/`temporalio-sdk-core`, `graph-flow` and `iopsystems/durable` — and never names
+# `dbos`, which it discusses only to withdraw a stale claim ("Rust remains second-class across every
+# first-party SDK") and excludes on ADR-0003's grounds alone. Every downstream source that says
+# "ADR-0086's four bans" lists the four below. `temporalio-sdk-core` is added here because 0086's
+# Consequences clause names it explicitly and a substring ban would not be a name ban.
+deny = [
+  { name = "temporalio-sdk" },
+  { name = "temporalio-sdk-core" },
+  { name = "graph-flow" },
+  { name = "dbos" },
+  { name = "durable" },
+]
+
+[licenses]
+# Built from what the resolved graph ACTUALLY uses, re-derived when the lock moves — not guessed.
+# `Unicode-3.0` is load-bearing: `unicode-ident` (a transitive dependency of serde_derive and
+# schemars_derive) is "(MIT OR Apache-2.0) AND Unicode-3.0", and the AND clause cannot be satisfied
+# by the MIT/Apache alternatives alone [measured 2026-09-13].
+# Measured off `cargo metadata` on 2026-09-13, not guessed — and a first pass DID guess, listing
+# BSD-2-Clause, BSD-3-Clause, ISC and Zlib, all four of which cargo-deny reported as
+# `license-not-encountered`. An allowance nothing uses is not free: it pre-approves a license this
+# workspace has never taken a view on. The eight expressions in the resolved graph today are
+# satisfied entirely by the three below.
+#
+# `Unicode-3.0` is load-bearing: `unicode-ident` (a transitive dependency of serde_derive and
+# schemars_derive) is "(MIT OR Apache-2.0) AND Unicode-3.0", and the AND clause cannot be satisfied
+# by the MIT/Apache alternatives alone. `Apache-2.0 WITH LLVM-exception` appears in two OR
+# expressions whose other arms are already allowed; it is omitted deliberately, so the exception is
+# never silently relied on.
+#
+# A new dependency under any other license makes this gate RED, which is the point: a new license is
+# a decision, taken in a PR, not a default.
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Unicode-3.0",
+]
+confidence-threshold = 0.93

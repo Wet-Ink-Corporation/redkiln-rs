@@ -1,0 +1,35 @@
+# clippy.toml — at the workspace root, beside Cargo.toml (PIA-031).
+#
+# This file IS the determinism ban (AC-001–AC-004). `clippy.toml` has NO path or module scoping, so
+# every entry below is workspace-wide once declared. That is why AC-001's Verified-by pairs it with a
+# module-level `#[deny(clippy::disallowed_methods)]` on `rk-kernel::workflow` (ADR-0083's commented
+# override, ADR-0102) rather than a group deny, and why `rk-git`'s wrapper, the adapters and
+# `rk-store` will carry `#[expect(clippy::disallowed_types, reason = "…")]` where they legitimately
+# need `Command` or a hash map — `#[expect]`, never `#[allow]`, so an override that stops being
+# needed fails the build (ADR-0102 decision 3).
+#
+# The instrument is a must-fail fixture CRATE checked under `cargo clippy`, and CI is gated on the
+# EXIT CODE, never `-D warnings` — which would promote `clippy::nursery` to the group deny ADR-0083
+# forbids. A `trybuild` fixture cannot fail on a lint, only on a compile error, so it is NOT the
+# instrument here (both halves amended 2026-09-11, PIA-030/PIA-031).
+#
+# AC-362's `unwrap_or(0)` / `unwrap_or_default()` shapes on the usage struct are NOT clippy entries —
+# they are the CI grep rule, because that ban is scoped to specific fields, not to the method.
+
+disallowed-methods = [
+  # AC-001 — the wall clock, a monotonic instant, a timezone-dependent value
+  "std::time::SystemTime::now", "std::time::Instant::now", "chrono::Utc::now",
+  # AC-002 — randomness and non-deterministic ids (ids derive from the ADR-0097 idempotency key or a content hash)
+  "rand::random", "rand::thread_rng", "uuid::Uuid::new_v4",
+  # AC-003 — I/O and blocking sleeps on the workflow side
+  "std::thread::sleep", "tokio::time::sleep",
+  # ADR-0083's ban, workspace-wide: these became `unsafe fn` in edition 2024 and race a concurrent getenv
+  "std::env::set_var", "std::env::remove_var",
+]
+
+disallowed-types = [
+  # AC-004 — unordered iteration in a workflow decision; ordered containers or an explicit total-key sort
+  "std::collections::HashMap", "std::collections::HashSet",
+  # Checkpoint 6's type ban — git shells out through exactly one wrapper in rk-git
+  "std::process::Command", "tokio::process::Command",
+]

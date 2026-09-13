@@ -1,0 +1,37 @@
+# MUST-FAIL FIXTURE — AC-005 (with AC-044, AC-120).
+#
+# A feature-gated workspace MEMBER (DECISIONS-2026-09-12 E4), so Step 8 (4)'s
+# `cargo metadata --no-deps` membership check resolves — which it would not for an excluded package.
+#
+#   green:  cargo deny check bans
+#   RED:    cargo deny --all-features check bans
+#
+# WHICH banned crate, and why this one. All four of ADR-0100 decision 3's names were measured
+# against the crates.io index on 2026-09-13: `durable` 0.1.0 has ZERO dependencies; `dbos` 0.5.0
+# pulls 10 (including sqlx and tokio); `graph-flow` 0.8.0 pulls 10; `temporalio-sdk` 1.0.0 pulls 21.
+# An optional dependency still enters Cargo.lock, and `cargo audit` reads the lock — so a heavy pick
+# would put a large transitive tree under the `cargo audit --deny unmaintained` gate for no benefit
+# to this fixture.
+#
+# Stated honestly, because the fixture must not claim more than it proves: the crates.io crate named
+# `durable` is NOT demonstrably `iopsystems/durable`, the WASM/Postgres project ADR-0086 rejected.
+# What this fixture proves is that the `[bans].deny` MECHANISM fires on a banned NAME, which is
+# exactly what AC-005/AC-044/AC-120's Verified-by asks of it ("a must-fail fixture adds a banned
+# crate to a scratch member and asserts `cargo deny check bans` exits non-zero"). It does not
+# exercise the framework, and no record may cite it as having done so.
+[package]
+name = "rk-banned-dep"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+reintroduce = ["dep:durable"]
+
+[dependencies]
+durable = { version = "0.1.0", optional = true }
+
+[lints]
+workspace = true

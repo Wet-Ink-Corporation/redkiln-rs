@@ -1,0 +1,28 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GroundingCompanion",
+  "description": "The `_grounding` sidecar.\n\nPhase-1 minimum. No record fixes this companion's field set, so it carries the\nstage-level facts the process already names and nothing invented beside them. AC-143's\ncompleteness test cannot judge the contents, only that a schema is registered — its own\nresidual-risk line records that as the limit.",
+  "type": "object",
+  "properties": {
+    "item": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string"
+    },
+    "summary": {
+      "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "item",
+    "stage",
+    "summary"
+  ]
+}

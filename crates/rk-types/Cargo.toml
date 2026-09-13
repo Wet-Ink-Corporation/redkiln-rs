@@ -1,0 +1,42 @@
+[package]
+name = "rk-types"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# The corpus-bound suite is LOCAL-ONLY (decision D-N; PIA-002). Tests that read redkiln-corpus at
+# CORPUS_PIN compile behind this feature and run as `cargo test --workspace --features corpus` on a
+# box that holds the corpus at the pinned SHA; CI's plain `cargo test --workspace` runs everything
+# else, and a corpus-bound test that is NOT behind the feature is a CI failure — which is the point.
+#
+# It is declared EMPTY here, and deliberately: Step 5 has zero corpus-bound tests (its whole
+# acceptance set is local), but the feature must EXIST from the first crate or
+# `cargo test --workspace --features corpus` exits 101 with "none of the selected packages contains
+# these features" and Checkpoint 5 cannot pass [measured 2026-09-13]. Step 6 is the first stage that
+# puts a test behind it.
+corpus = []
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+
+# Repeated for the integration binary: a crate's own [dependencies] are not in scope inside
+# tests/, and tests/it/fixtures.rs needs #[derive(JsonSchema)].
+[dev-dependencies]
+insta.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+
+# Stated explicitly rather than relying on directory auto-discovery: ONE integration binary per
+# crate under test, `tests/it/main.rs` with a `mod` per case, never one file per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

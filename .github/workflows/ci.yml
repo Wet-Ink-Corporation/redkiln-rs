@@ -1,0 +1,135 @@
+# CI — ADR-0083's floor, as ADR-0102 and ADR-0100 correct it.
+#
+# "A minimal workflow exists from the first commit and runs on every push and pull request... This
+# is a floor, not a ceiling — it is specified as the minimum that must never be absent again."
+# There was no `.github/` in this repository at all until Step 5; this file is that floor.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  # RUSTFLAGS is deliberately NOT set to `-D warnings`: that would promote clippy::nursery to the
+  # group deny ADR-0083 forbids. The clippy gate is its exit code (ADR-0102 decision 5, PIA-030).
+
+jobs:
+  gates:
+    name: gates (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # TWO OS targets, and they are not decoration (PIA-031). AC-121's cross-OS half — "the same
+        # value rendered twice, on two operating systems... byte-identical, line endings included" —
+        # is only checkable if CI runs two targets, and AC-158's property ordering with it. With a
+        # single target both are unverified and must be marked so, not assumed.
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # NO toolchain action, deliberately. `rust-toolchain.toml` pins an exact channel and rustup
+      # honours it on the first cargo invocation, installing the `components` it names. An action
+      # taking an explicit `toolchain:` input would be a THIRD copy of the pin — after
+      # rust-toolchain.toml and workspace.package.rust-version — and ADR-0102's pin-bump PR moves
+      # two lines, not three. One source of truth; `rustup show` makes the resolved version visible
+      # in the log so a silent fallback cannot pass unnoticed.
+      - name: Show the resolved toolchain
+        run: |
+          rustup show
+          rustc --version
+          cargo --version
+
+      # ---- the five gates, none optional (ADR-0083 + ADR-0100 decision 3) ----
+
+      - name: fmt
+        run: cargo fmt --all --check
+
+      # Gated on the EXIT CODE, never `-D warnings` — which would promote `clippy::nursery` to the
+      # group deny ADR-0083 forbids and ADR-0102 decision 5 restates. Nursery warnings are permitted
+      # and are expected to appear in this log (PIA-030).
+      - name: clippy
+        run: cargo clippy --workspace --all-targets
+
+      # The corpus-bound suite is NOT here: it reads redkiln-corpus at CORPUS_PIN, which no hosted
+      # runner can fetch. It is a local-only suite behind `--features corpus` on a named runner
+      # (decision D-N; PIA-002). A corpus-bound test that is not behind the feature fails HERE,
+      # which is the point — nothing is silently absent.
+      - name: test
+        run: cargo test --workspace
+
+      - name: install audit tooling
+        run: |
+          cargo install cargo-audit --locked
+          cargo install cargo-deny --locked
+
+      # Against the committed Cargo.lock, watching the gix-* advisory cluster specifically.
+      - name: audit
+        run: cargo audit --deny unmaintained
+
+      # deny.toml: ADR-0086's bans, workspace-wide and including dev-dependencies used to smuggle
+      # in a runtime; `[advisories] unmaintained = "deny"`; `[licenses]`.
+      - name: deny
+        run: cargo deny check bans advisories licenses
+
+  structural:
+    name: structural assertions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # AC-465 — the corpus-residency lint. Enforceable for the FIRST TIME as of Step 2: before the
+      # redkiln-corpus split this criterion was violated by construction. No frozen tree, no E3
+      # fixture, no spike JSONL is tracked in the product repo; the only reference is the pinned SHA
+      # in CORPUS_PIN. One deliberate exemption, asserted by name rather than by silence.
+      - name: corpus residency (AC-465)
+        run: |
+          test -f CORPUS_PIN || { echo "FAIL: CORPUS_PIN absent"; exit 1; }
+          bad=$(git ls-files 'spikes/corpus/*' 'spikes/results/*' 'spikes/runner/*' '*.jsonl' \
+                 | grep -v '^spikes/results/instrument-checks/RUNBOOK-instrument.txt$' || true)
+          if [ -n "$bad" ]; then
+            echo "FAIL: corpus artifacts tracked in the product repo (ADR-0013, AC-465):"
+            printf '%s\n' "$bad"
+            exit 1
+          fi
+          echo "AC-465: no corpus artifact is tracked here"
+          git ls-files spikes/results/instrument-checks/RUNBOOK-instrument.txt \
+            | grep -q . || { echo "FAIL: the instrument record must STAY tracked (Halt 2, PIA-019)"; exit 1; }
+          echo "AC-465: the one deliberate exemption is present and tracked"
+
+      # AC-362 — absent must never read as a measured zero. F3 measured the TTL-split fields absent
+      # from `usage`; a `Some(0)` on a genuinely absent field would make a TTL claim look verified.
+      #
+      # ARMED, NOT DISCHARGED, and recorded as such: `rk-adapter-claude` does not exist until Step
+      # 7c, so this grep matches nothing today and passes vacuously. It is here from the first
+      # commit so the rule is in force BEFORE the code it governs exists — not as evidence that the
+      # criterion is met.
+      - name: usage fields are not laundered (AC-362 — armed, vacuous until 7c)
+        run: |
+          hits=$(git grep -nE 'unwrap_or\(0\)|unwrap_or_default\(\)' -- \
+                 'crates/rk-adapter-claude/*' 'crates/*/src/usage.rs' || true)
+          if [ -n "$hits" ]; then
+            echo "FAIL: absent is being read as zero on the usage struct (AC-362):"
+            printf '%s\n' "$hits"
+            exit 1
+          fi
+          echo "AC-362: no unwrap_or(0)/unwrap_or_default() on the usage struct's fields"
+
+      # design §9.1's anyhow convention, as a check rather than a phrase. `anyhow` is confined to
+      # `rk-cli` and `redkiln-migrate` (ADR-0102 decision 6); neither exists before Step 7d, so the
+      # expected result today is an empty list.
+      - name: anyhow is confined to the binary crates (design §9.1)
+        run: |
+          cargo metadata --format-version 1 --no-deps > /tmp/meta.json
+          python3 - <<'PY'
+          import json, sys
+          m = json.load(open('/tmp/meta.json'))
+          allowed = {'rk-cli', 'redkiln-migrate'}
+          bad = sorted(p['name'] for p in m['packages']
+                       if any(d['name'] == 'anyhow' for d in p['dependencies'])
+                       and p['name'] not in allowed)
+          print('members depending on anyhow outside the allowed set:', bad)
+          sys.exit(1 if bad else 0)
+          PY

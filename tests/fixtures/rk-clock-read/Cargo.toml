@@ -1,0 +1,26 @@
+# MUST-FAIL FIXTURE — AC-001 (and AC-002–AC-004's instrument).
+#
+# A feature-gated workspace MEMBER (DECISIONS-2026-09-12 E4). Both halves of the record hold
+# verbatim under this shape: ADR-0100 decision 3 calls it a "scratch member", and AC-001's
+# Verified-by wants it "checked under the same `cargo clippy` invocation" — which it is, with the
+# feature on. With the feature OFF the default gate stays green.
+#
+#   green:  cargo clippy --workspace --all-targets
+#   RED:    cargo clippy --workspace --all-targets --features rk-clock-read/reintroduce
+[package]
+name = "rk-clock-read"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+reintroduce = []
+
+# `workspace = true` AND NOTHING ELSE (Cargo rejects a mixed [lints] table; RFC 3389, cargo #13157,
+# PIA-026). This is load-bearing here, not cosmetic: `clippy::disallowed_methods` is warn-by-default,
+# and it is `clippy::all = "deny"` inherited through THIS table that turns the reintroduced clock
+# read into a non-zero exit. Without it the fixture would warn and the gate would pass.
+[lints]
+workspace = true

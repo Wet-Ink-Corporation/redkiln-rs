@@ -1,0 +1,11 @@
+# The PIN (ADR-0083 as ADR-0102 corrects it; DECISIONS-2026-09-11 #7). An EXACT channel, never
+# `stable`: a pin and a floor answer different questions and are not substitutes. The floor is
+# `workspace.package.rust-version` in Cargo.toml, set EQUAL to this value, never below it and never
+# instead of it. A pin bump is a deliberate PR that moves both lines together and re-runs
+# `cargo audit` and `cargo deny` (ADR-0100 decision 2).
+#
+# Every measurement in the spike programme was taken on 1.97.1; the move to 1.98.1 is recorded in
+# Step 0.3 and is not worked around (Halt 2, golden constraint 8).
+[toolchain]
+channel = "1.98.1"
+components = ["rustfmt", "clippy"]

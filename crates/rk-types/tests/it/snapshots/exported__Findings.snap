@@ -1,0 +1,147 @@
+---
+source: crates/rk-types/tests/it/schema_snapshot.rs
+expression: schema
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Findings",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ac": {
+            "type": "string"
+          },
+          "claim": {
+            "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+            "type": "string"
+          },
+          "rationale": {
+            "description": "A free-text field. AC-283 names `claim` and `rationale` as the only free-text fields on a\nfinding, and neither is an input to the classifier or to `policy::classify`.",
+            "type": "string"
+          },
+          "repro": {
+            "description": "The repro record.",
+            "type": "object",
+            "properties": {
+              "kind": {
+                "description": "`run` reproduces; `mutate` applies a patch, runs a suite and reverts.",
+                "type": "string",
+                "enum": [
+                  "run",
+                  "mutate"
+                ]
+              },
+              "command": {
+                "description": "A shell string. MUST begin with an executable token.",
+                "type": "string"
+              },
+              "expected": {
+                "description": "Machine-readable, beside the prose.\n\nA `kind`-discriminated enum. On export it passes through `rk-types`' post-derive transform and\nemerges as an `anyOf` (ADR-0095 decision 1); `schema::transform` carries the full reason, and\nthis text deliberately does not repeat the forbidden token — doc comments are serialised into\nthe schema as `description`, Checkpoint 5 greps the snapshot directory for that token as a\nSUBSTRING, and it cannot tell a schema node from prose.\n\nREQUIRED on `Repro`: wrapped in an `Option` it would become a union nested inside a union,\nwhich AC-131 forbids.",
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "exit": {
+                        "type": "integer",
+                        "format": "int32"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "const": "exit"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "exit"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "assertion": {
+                        "description": "Where an assertion lives, so a gate can watch it flip.",
+                        "type": "object",
+                        "properties": {
+                          "file": {
+                            "type": "string"
+                          },
+                          "test": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                          "file",
+                          "test"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "const": "assertion"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "assertion"
+                    ]
+                  }
+                ]
+              },
+              "observed": {
+                "type": "string"
+              },
+              "expected_when_met": {
+                "type": "string"
+              },
+              "mutation": {
+                "description": "REQUIRED when `kind = mutate` (enforced at ingest, not by the schema).\n\nDeclared LAST, and that is not cosmetic: AC-158 requires every required property to precede\nevery optional one in the emitted order, and `mutation` is this struct's only optional\nfield. ADR-0096 decision 1 lists the fields; it does not fix their order, and the register\ndoes. Declared in the record's own order this struct fails its own lint — which is how the\ndefect was found.",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "patch": {
+                    "type": "string"
+                  },
+                  "suite": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "patch",
+                  "suite"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "command",
+              "expected",
+              "observed",
+              "expected_when_met"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ac",
+          "claim",
+          "rationale",
+          "repro"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ]
+}
