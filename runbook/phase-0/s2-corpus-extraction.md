@@ -218,15 +218,27 @@ grep -q 'spikes/results/ is deliberately NOT ignored' .gitignore \
   && python - <<'PY' \
   || { echo "ANCHOR MISSING — the paragraph is not there; read .gitignore and stop"; exit 1; }
 import io,sys
+# MATCHED LINE BY LINE, and that is not a style choice. `.gitignore` on this tree is MIXED-ending and
+# this paragraph is CRLF, so a three-line `old` joined with 
+ matches ZERO times and the replace can
+# never fire -- measured 2026-09-12 at the run. The previous revision did exactly that; its
+# `assert t.count(old)==1` refused rather than silently no-opping, which is golden constraint 7
+# working, but a guard that always refuses is not a step. A single line carries no terminator, so
+# line-wise matching preserves whatever each line ends with and works on either ending.
 p=".gitignore"; t=io.open(p,encoding="utf-8",newline="").read()
-old="""# spikes/results/ is deliberately NOT ignored: charter §14.2 makes the raw
-# records a deliverable, and a results file that has to be force-added is a
-# results file that eventually goes missing."""
-assert t.count(old)==1, "anchor not unique — stop, do not write"
-new="""# spikes/results/ moved to D:/repos/redkiln-corpus at the pin in CORPUS_PIN
-# (ADR-0013). Charter §14.2 still makes the raw records a deliverable — they are
-# a deliverable OF THE CORPUS REPO now, and AC-465 forbids them here."""
-io.open(p,"w",encoding="utf-8",newline="").write(t.replace(old,new))
+PAIRS=[("# spikes/results/ is deliberately NOT ignored: charter §14.2 makes the raw",
+        "# spikes/results/ moved to D:/repos/redkiln-corpus at the pin in CORPUS_PIN"),
+       ("# records a deliverable, and a results file that has to be force-added is a",
+        "# (ADR-0013). Charter §14.2 still makes the raw records a deliverable — they are"),
+       ("# results file that eventually goes missing.",
+        "# a deliverable OF THE CORPUS REPO now, and AC-465 forbids them here.")]
+bad=[(o,t.count(o)) for o,n in PAIRS if t.count(o)!=1]
+if bad:
+    for o,c in bad: sys.stderr.write("FAIL: anchor line resolved %d times, expected 1: %r
+"%(c,o[:60]))
+    sys.exit(1)
+for o,n in PAIRS: t=t.replace(o,n,1)
+io.open(p,"w",encoding="utf-8",newline="").write(t)
 print("gitignore paragraph reconciled")
 PY
 git add .gitignore && git commit -m "chore: reconcile the .gitignore results paragraph with ADR-0013"
