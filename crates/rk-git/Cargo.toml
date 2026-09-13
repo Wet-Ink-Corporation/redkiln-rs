@@ -1,0 +1,44 @@
+[package]
+name = "rk-git"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Same contract as rk-types': corpus-bound tests compile behind this feature and run as
+# `cargo test --workspace --features corpus` on a box holding redkiln-corpus at CORPUS_PIN.
+# Declared EMPTY at s6 §6.1, which has zero corpus-bound tests -- the three S-GIX arms are
+# entirely local. §6.2/§6.3's AC-444/AC-464/AC-173 reads go behind it.
+corpus = []
+
+[dependencies]
+# The dotted form below is load-bearing, not a style choice. Checkpoint 6 counts the workspace
+# inheritance line in this file and requires EXACTLY ONE; the inline-table spelling does not
+# contain that string at all, so it would read as zero. Features go on a second dotted key so the
+# count stays at one.
+#
+# NOTE, and it cost a rewrite of this very file: the checkpoint's pattern is unanchored and its
+# dot is an unescaped wildcard, so ANY comment quoting the inheritance line is counted too. A first
+# draft of this header quoted it twice and the assertion read 3. Do not name it literally here.
+#
+# `blocking-network-client` is NOT a gix default feature (gix-0.87.1/Cargo.toml:130 lists
+# default = ["max-performance-safe","comfort","basic","extras","auto-chain-error","sha1"]), and
+# S-GIX/c's candidate -- PrepareFetch::with_revision + with_shallow -- does not compile without it.
+gix.workspace = true
+gix.features = ["blocking-network-client"]
+
+# Repeated for the integration binary: a crate's own [dependencies] are not in scope inside tests/.
+# The INLINE-TABLE spelling here on purpose, so this line adds no second hit to the count above.
+[dev-dependencies]
+gix = { workspace = true, features = ["blocking-network-client"] }
+tempfile = "3"
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

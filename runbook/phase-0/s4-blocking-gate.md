@@ -548,7 +548,7 @@ n=$(grep -c '^status: superseded$' references/adr/0079-*.md); test "${n:-0}" -eq
 test "$(grep -c '0079. is the only .proposed. record' references/adr/README.md)" = 0 || { echo "FAIL: README still carries the stale '0079 is the only proposed record' claim"; exit 1; }   # → silent; the stale claim is GONE
 test "$(grep -c '0090. and .0091. are reserved' references/adr/README.md)" = 0 || { echo "FAIL: the '0090 and 0091 are reserved' sentence is still in README. Measured 2026-09-12, the two sites this regex matches are §Numbering and §Open items — NOT Purpose"; exit 1; }   # → silent; BEFORE = 2 (§Numbering, §Open items), AFTER = 0
 test "$(grep -c 'are \*\*reserved, unwritten\*\* numbers' references/adr/README.md)" = 0 || { echo "FAIL: README's Purpose paragraph still calls 0090 and 0091 'reserved, unwritten'. This is the THIRD site of the claim and the regex above cannot see it — the bolding breaks the match"; exit 1; }   # → silent; the Purpose site, which no earlier revision of this checkpoint guarded
-n=$(grep -c '0091. reserved for' references/adr/README.md); test "${n:-0}" -eq 1 || { echo "FAIL: README carries ${n:-<unreadable>} '0091 reserved for' sentences, expected exactly 1 (Step 6.1)"; exit 1; }   # → silent: 0091 alone stays reserved
+n=$(grep -c '0091. reserved for' references/adr/README.md); test "${n:-0}" -eq 0 || { echo "FAIL: README carries ${n:-<unreadable>} '0091 reserved for' sentences, expected 0 — Step 6.1 wrote the record on 2026-09-13, so nothing may still reserve the number"; exit 1; }   # → silent: 0. BEFORE was 1, at Step 4.4, when 0091 was the last reserved number; AFTER is 0 as of Step 6.1. Still falsifiable: a README that re-reserves 0091 fails it (amended 2026-09-13)
 test "$(grep -c 'source = "llm"' spikes/p9/facets.toml)" = 7 || { echo "FAIL: spikes/p9/facets.toml no longer carries exactly 7 source = \"llm\" facets — the BEFORE half of Checkpoint 4a's zero"; exit 1; }   # → silent; 7 BEFORE Step 4a (the registry is Step 4a's; this line is the BEFORE half of Checkpoint 4a's zero)
 ls references/adr/0090-*.md >/dev/null 2>&1 || { echo "FAIL: references/adr/0090-*.md absent — grep -c would exit 2 and print nothing"; exit 1; }
 n=$(grep -c 'has_repro\|external_dep\|market_facing' references/adr/0090-*.md); test "${n:-0}" -ge 1 || { echo "FAIL: ADR-0090 does not name the three booleans — the clause DECISIONS-2026-09-11 #2 pre-registered is missing (PIA-003)"; exit 1; }   # → silent: ≥ 1
@@ -575,7 +575,12 @@ a command's clothes. **The `0090`/`0091` pair is now given both ways, and that i
 revision asserted `→ 1` on `the next free number is 0090`, which was already true on this tree before Step 4.4 ran
 a single edit — a checkpoint green when you have done nothing, the exact defect §3a names. Asserting `0091 → 1`
 **and** `0090 → 0` cannot both be satisfied by the starting state — and the 2026-09-11 pair keeps that shape against the
-README as it now stands (the reservation sentence is the BEFORE state, "0091 alone reserved" the AFTER). The commit
+README as it now stands (the reservation sentence is the BEFORE state, "0091 alone reserved" the AFTER).
+*(Amended 2026-09-13, at Step 6.1's run: that line now asserts `0091 → 0`, because Step 6.1 wrote the record and
+nothing may still reserve the number. The pair keeps its shape — `0090 → 0` and `0091 → 0` are still jointly
+unsatisfiable by any tree that has not run both steps, and a README that re-reserves `0091` still fails. Under the
+preamble's maintenance rule the Checkpoint-4 pass recorded at `b39581a` attested the older text, so the block was
+re-run in the same session that moved it; see PROGRESS §6.)* The commit
 line exists because no earlier revision committed ADR-0090 anywhere, so Step 9's cherry-pick named a commit that did
 not exist (PIA-018).
 

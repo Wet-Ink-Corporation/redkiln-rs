@@ -66,9 +66,39 @@ deny = [
 #
 # A new dependency under any other license makes this gate RED, which is the point: a new license is
 # a decision, taken in a PR, not a default.
+# Re-derived 2026-09-13 at Step 6.1, when `gix = "=0.87.1"` took the resolved graph from 41 packages
+# to 187 (60 of them `gix-*`). Four expressions in the new graph were not satisfied by the three
+# above; each is added below with the crate that forces it and its path, per this file's own rule
+# that the list is measured off what the graph ACTUALLY uses and never guessed. `cargo deny check
+# licenses` reported exactly these four and nothing else [measured 2026-09-13].
 allow = [
   "MIT",
   "Apache-2.0",
   "Unicode-3.0",
+  # `encoding_rs 0.8.41` is "(Apache-2.0 OR MIT) AND BSD-3-Clause" — an AND clause, so the
+  # MIT/Apache alternatives cannot satisfy it alone, exactly as Unicode-3.0 above.
+  #   encoding_rs <- gix-filter 0.34.0 <- gix (and gix-diff/-merge/-status/-worktree-state/
+  #   -worktree-stream/-archive). Reached by any gix build that can apply clean/smudge filters.
+  "BSD-3-Clause",
+  # Two crates, both in gix's hashing/compression path:
+  #   foldhash 0.2.0 <- hashbrown 0.16/0.17 <- clru/gix-hashtable <- gix-pack/gix-odb/gix-object
+  #   zlib-rs 0.6.7  <- gix's compression path
+  "Zlib",
+  # WEAK COPYLEFT, allowed deliberately on 2026-09-13 with the operator's decision recorded here
+  # rather than defaulted (the halt rule for this pass was: permissive adds itself, copyleft asks).
+  #   uluru 3.1.0 <- gix-pack 0.74.2 <- gix 0.87.1 / gix-odb 0.84.0
+  # uluru is gix's packfile LRU cache. It is OPTIONAL in gix-pack, behind
+  # `pack-cache-lru-static`, but gix's own defaults reach it: default -> max-performance-safe ->
+  # max-control -> pack-cache-lru-static -> dep:uluru [measured, gix-0.87.1/Cargo.toml:132,177-181;
+  # gix-pack-0.74.2/Cargo.toml:61,155-157]. Removing it therefore means `default-features = false`
+  # on gix, which also drops parallel/comfort/basic/extras/sha1 and narrows what rk-git can do —
+  # an architectural change, not a licence tidy-up.
+  #
+  # Why allowing it is not a concession: MPL-2.0's copyleft is PER FILE. It attaches to the
+  # covered files themselves, so redistributing uluru unmodified as a transitive library imposes
+  # no source obligation on redkiln-rs's own code. This allowance covers exactly that case — an
+  # unmodified upstream dependency. MODIFYING an MPL-2.0 crate (a vendored patch, a fork) is a
+  # different question this line does not answer, and would need its own decision.
+  "MPL-2.0",
 ]
 confidence-threshold = 0.93

@@ -11,8 +11,8 @@ threshold and instrument. Where a stage file disagrees with any of those, the st
 Phase 0 (close the programme) and Phase 1 (kernel, store, fix and story lanes, four adapters) only. Phases 2–4 are
 out of scope. · **Inputs:** `references/2026-09-08-architecture-design.md` (§0.1, §5.3, §5.9, §9, §10) ·
 `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519, AC-520 — the derived-facet gate — and the ids the
-2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**116 records**,
-`0001`–`0117` with `0090` written at Step 4.4 on 2026-09-12, `0117` on 2026-09-13, and `0091` still reserved for Step 6.1; `references/adr/ERRATA.md` for corrections to
+2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**117 records**,
+`0001`–`0117` contiguous, with `0090` written at Step 4.4 on 2026-09-12, `0117` on 2026-09-13 and `0091` at Step 6.1 on 2026-09-13 — no reserved number remains; `references/adr/ERRATA.md` for corrections to
 frozen records) · `spikes/DECISIONS-2026-09-11.md` and `spikes/DECISIONS-2026-09-12.md` (the operator decisions this runbook executes — the 2026-09-11 log runs to #27; the 2026-09-12 log carries E1–E13 from the alignment review and is cited as `DECISIONS-2026-09-12 E<n>`) ·
 `spikes/F39-DRAFT.md` · `spikes/F40-DRAFT.md` · `spikes/F41-DRAFT.md` (S-PORTS) · `spikes/F42-DRAFT.md` (S-GRAMMAR) ·
 `spikes/HANDOFF.md` · `spikes/DECISIONS-2026-09-09.md` · `references/2026-09-08-evidence-brief.md` §E. ·
@@ -29,8 +29,8 @@ and two are numbered decisions recorded in `spikes/DECISIONS-2026-09-11.md` befo
 | # | Decision | Where | Record |
 | --- | --- | --- | --- |
 | 1 | The context-vector source | **Step 4** — the blocking gate | **ADR-0090**, superseding ADR-0079 in full; carries the three LLM booleans' disposition (DECISIONS-2026-09-11 #2) |
-| 2 | Whether S-GIX narrows the git write path | Step 6.1 | a **successor** to ADR-0077, never an edit to it — **ADR-0091** (ADR-0098 already fixes the no-go fallback) |
-| 3 | The minimum `git` executable version the wrapper asserts | Step 6.2 constraint 3 | **TAKEN 2026-09-12** — `>= 2.20` unconditionally, conditional above that; **DECISIONS-2026-09-12 E10**. ADR-0091 records the final floor beside the S-GIX verdicts |
+| 2 | Whether S-GIX narrows the git write path | Step 6.1 | **TAKEN 2026-09-13** — **ADR-0091**, accepted: `S-GIX/a: go`, `S-GIX/b: no-go`, `S-GIX/c: go`. It narrows **nothing**: arm b is the only arm whose go could have withdrawn a sentence of ADR-0077, and it is a no-go, so 0077's write path stands in full and 0091 carries `supersedes: []` |
+| 3 | The minimum `git` executable version the wrapper asserts | Step 6.2 constraint 3 | **TAKEN 2026-09-12**, **final number recorded 2026-09-13** — `>= 2.20`; **DECISIONS-2026-09-12 E10** and **ADR-0091** decision 4. The conditional half resolved downward: `git clone --revision` (git 2.49) is reached only on an S-GIX/c no-go, and /c is a **go**, so gix performs the review clone and nothing raises the floor above 2.20 |
 | 4 | `doctor`'s unread-artifact window `N` | Step 7d | **TAKEN 2026-09-12** — `unread_window_runs = 50`; **DECISIONS-2026-09-12 E9**. In the `doctor` rule table and `init`'s scaffold, cited by AC-472/AC-426 |
 | 5 | `stale_policy` per cost class | Step 7e — pack authoring | **DECISIONS-2026-09-11 #4** (`rematerialise`, coarse scope, every class); recorded per class with its warrant in the pack; Checkpoint 8 asserts no value was defaulted from P2 |
 | 6 | Per-AC mutants are author-declared | Step 5.3 (the spec template's `mutation:` field) and 7b-ii | **ADR-0104** |
@@ -42,7 +42,7 @@ and two are numbered decisions recorded in `spikes/DECISIONS-2026-09-11.md` befo
 was accepted on 2026-09-09 and partially supersedes ADR-0030 (PC8); ADR-0093 (2026-09-11) supersedes it in part
 again — `stage`/`rigor`/`role`/`cost` are `source = "kernel"`, `surfaces` is `source = "declared"`, six facets stay
 `derived` — and Step 4a executes both. Step 4.4's context-vector record is **0090** — **written 2026-09-12**, superseding ADR-0079 in full — and Step 6.1's
-S-GIX successor is **0091**, which is now the only number the ADR README still carries as reserved; the next free
+S-GIX successor is **0091**, **written on 2026-09-13**, which was the last number the ADR README carried as reserved; the next free
 number is **`0118`**. *(Corrected 2026-09-12: this sentence said the next free number was 0115, from before ADR-0115
 and ADR-0116 landed.)* **Step 4a is
 not a decision** — it is the execution order for the registry, schema and lint work ADR-0089 and ADR-0093 force.
