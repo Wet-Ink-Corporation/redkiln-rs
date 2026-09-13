@@ -23,8 +23,10 @@ exclude-dev = false
 # included, and advisories are errors by default in this version. The ADR's primary form,
 # `cargo audit --deny unmaintained`, is unaffected and still runs as the fourth gate.
 #
-# The guard was right and the config was wrong (Halt 7). An erratum against ADR-0100 decision 4's
-# parenthetical is OWED; nothing here weakens what the decision asked for.
+# The guard was right and the config was wrong (Halt 7); nothing here weakens what the decision
+# asked for. The erratum this comment said was OWED is now WRITTEN: **E-0100-1**, 2026-09-13,
+# in references/adr/ERRATA.md. It withdraws the parenthetical's claim of equivalence at this
+# cargo-deny version and leaves the Decision, its consequence and its forbids bullet standing.
 unmaintained = "all"
 yanked = "deny"
 

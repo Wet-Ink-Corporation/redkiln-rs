@@ -236,6 +236,38 @@ mismatch, `resolve-open-questions` vs `resolve-open-question`); with the key fix
 cell with no engine record, the 2026-09-11 re-run scores **all 140** and `auth` reads 0/12 [0.00, 0.24] (fp 11 → 12); every verdict is
 unchanged. [measured, re-run 2026-09-11] Decision unchanged.
 
+## ADR-0100 — Dependency policy: the YAML reader, the 0.x pin list and cargo-deny
+
+**E-0100-1 (2026-09-13, Step 5.2 / Step 6).** Lines 68-69 (as at HEAD `96ba9c2`; this record postdates the `009a4ec`
+pin): "**4. `cargo audit --deny unmaintained`** is the form the audit job runs (equivalently `cargo deny check
+advisories` with `unmaintained = "deny"`), so an archived transitive dependency is a red build, not a silence."
+— **What is true:** the parenthetical **does not parse** at cargo-deny **0.20.2**, the version the preamble's tool
+preflight measured on this box. That line changed `[advisories].unmaintained` from a lint **level** to a **scope**,
+and the tool refuses any other value:
+
+```text
+error[unexpected-value]: expected '["all", "workspace", "transitive", "none"]'
+2 | unmaintained = "deny"
+  |                 ━━━━ unexpected value
+```
+
+`unmaintained = "all"` is the faithful translation — every unmaintained advisory is checked, transitive ones
+included, and advisories are errors by default in this version; the same command then reports `advisories ok`.
+[measured 2026-09-13, cargo-deny 0.20.2, both values run in an isolated probe crate so the result is a property of
+the tool and not of this workspace's graph]
+
+**What this does not change:** the Decision's normative sentence — that **`cargo audit --deny unmaintained` is the
+form the audit job runs** — stands as written, and so does the clause it serves, *"an archived transitive dependency
+is a red build, not a silence"*, which `unmaintained = "all"` implements exactly. The forbids bullet *"Forbids
+describing the `cargo audit` job as covering unmaintained crates unless it runs with `--deny unmaintained`"* is
+untouched, and the committed `deny.toml` has carried `"all"` with its reasoning since Step 5. Only the
+parenthetical's **claim of equivalence at this cargo-deny version** is withdrawn. Decision unchanged.
+
+*(Recorded here rather than as a supersession on the ADR-0086 precedent: E-0086-1 withdraws line 55's instruction,
+also a `## Decision` line, while leaving the decision standing. ADR-0092's test is whether every sentence of
+`## Decision` still stands, not whether a correction falls inside that section — and here the normative sentence,
+its consequence and its forbids bullet all stand.)*
+
 ---
 
 *Later errata are appended under the record's heading with the next `E-NNNN-k` id. A heading with no entries is not
