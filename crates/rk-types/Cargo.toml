@@ -23,6 +23,10 @@ corpus = []
 serde.workspace = true
 serde_json.workspace = true
 schemars.workspace = true
+# ADR-0097 decision 2 needs SHA-256 here, and ADR-0116 clause 6 says here ONLY: "No second
+# digest algorithm enters the system." `sha2` is exempt from the 0.x exact-pin rule with the
+# reason stated in the workspace table (de-facto stable, multi-year line).
+sha2.workspace = true
 
 # Repeated for the integration binary: a crate's own [dependencies] are not in scope inside
 # tests/, and tests/it/fixtures.rs needs #[derive(JsonSchema)].

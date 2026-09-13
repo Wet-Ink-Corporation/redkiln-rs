@@ -1,0 +1,14 @@
+# 0001_initial -- declared key domains (AC-166).
+#
+# One line per repo-referencing column: <table>.<column> = sha | tree
+# A column marked `-- repo-key` in the .sql and absent here fails the lint, and so does one here
+# declaring any domain other than `sha` or `tree`. This file is why the criterion is decidable:
+# the column declares what it references rather than the lint inferring it from a name.
+
+rk_identity.root_commit        = sha
+t1_stage_transition.anchor_sha = sha
+t1_stage_transition.tree_hash  = tree
+t1_gate.tree_hash              = tree
+t1_gate.anchor_sha             = sha
+t1_slice_seal.anchor_sha       = sha
+t2_event.anchor_sha            = sha

@@ -1,0 +1,11 @@
+error: a field of this state type carries no durability tier (AC-160; ADR-0109 decision 2). Every field must be declared `tier1 <name>: <type>` or `tier2 <name>: <type>`. tier1 is decision-bearing and written to git first; tier2 is EventStore-only and rebuildable or disposable. The test is: if the database were deleted, would `redkiln run` take a different next action? Which tier a field belongs in is a design judgement no instrument settles -- but answering is not optional.
+  --> tests/ui/tier_missing.rs:11:1
+   |
+11 | / tiered_state! {
+12 | |     pub struct Unannotated {
+13 | |         tier1 stage: String,
+...  |
+17 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `tiered_state` (in Nightly builds, run with -Z macro-backtrace for more info)

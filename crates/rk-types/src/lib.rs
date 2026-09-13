@@ -17,6 +17,7 @@ pub mod digest;
 pub mod drift;
 pub mod error;
 pub mod event;
+pub mod event_kind;
 pub mod registry;
 pub mod repro;
 pub mod schema;

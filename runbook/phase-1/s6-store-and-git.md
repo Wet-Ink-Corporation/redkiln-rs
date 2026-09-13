@@ -191,11 +191,13 @@ n=$(grep -c 'gix = "=0.87.1"' Cargo.toml); test "${n:-0}" -eq 1 || { echo "FAIL:
 test -f crates/rk-git/Cargo.toml || { echo "FAIL: crates/rk-git/Cargo.toml absent"; exit 1; }
 n=$(grep -c 'gix.workspace = true' crates/rk-git/Cargo.toml); test "${n:-0}" -eq 1 || { echo "FAIL: rk-git does not inherit the workspace gix pin exactly once (got ${n:-<unreadable>})"; exit 1; }   # → silent: the member inherits it (PIA-030: the old grep false-failed on this form)
 test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent — the type-ban grep is vacuous"; exit 1; }
-test "$(grep -rnE 'std::process::Command|tokio::process::Command' crates/ --include=*.rs \
-  | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l)" = 0 \
-  || { echo "FAIL: process::Command outside the one wrapper"; exit 1; }   # → 0: one wrapper, one file — and clippy.toml's disallowed-types is the same rule at build time
+test "$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
+  | xargs grep -nE 'std::process::Command|tokio::process::Command' \
+  | grep -vE '^crates/rk-git/src/git_exec\.rs:' \
+  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
+  || { echo "FAIL: process::Command in production code outside the one wrapper"; exit 1; }   # → 0: one wrapper, one file — and clippy.toml's disallowed-types is the same rule at build time
 test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent — the CI grep is vacuous"; exit 1; }
-test "$(grep -rn 'Command::new("git")' crates/ --include=*.rs | grep -v 'crates/rk-git/src/git_exec.rs' | wc -l)" = 0 \
+test "$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE '^crates/rk-git/src/git_exec\.rs:' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
   || { echo "FAIL: Command::new(\"git\") outside the wrapper"; exit 1; }   # → 0 (the CI grep, PIA-035)
 test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent"; exit 1; }
 n=$(grep -c 'hooksPath' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: git_exec.rs never sets core.hooksPath — ADR-0105 clause 2's hooks isolation is absent"; exit 1; }   # → silent: ≥ 1, hooks isolation on every commit
@@ -214,6 +216,32 @@ test "$(printf '%s\n' "$out" | grep -cE '^test .*s_gix_[abc]_')" = 3 \
 printf '%s\n' "$out" | grep -E '^test .*s_gix_[abc]_'
 if [ "$rc" -eq 0 ]; then echo "S-GIX: all three arms GO"; else echo "S-GIX: NO-GO on at least one arm (rc=$rc) — each arm above must equal its S-GIX/x line in ADR-0091"; fi   # → the three arms ran; their verdicts match the record
 ```
+
+> **Two Checkpoint-6 lines were narrowed to their warrant on 2026-09-13, at s6 §6.3's run.**
+>
+> **(a) The `process::Command` ban.** It read `grep -rnE 'std::process::Command|tokio::process::Command'
+> crates/`, which bans **every** subprocess spawn anywhere under `crates/` — including `tests/`. Its warrant
+> is narrower. ADR-0077:70 says: *"All shelling out goes through one wrapper type inside `rk-git`. **No
+> `std::process::Command` for git** exists anywhere else in the workspace."* ADR-0105 clause 5 enumerates the
+> **git** write set. Neither forbids a non-git child process.
+>
+> The wider form was not merely over-strict, it **blocked a criterion**: **AC-181**'s GIVEN is *"two redkiln
+> processes running in two worktrees of the same repository, of two different items"* and its Verified-by is
+> *"a **two-process** integration test"* — which is also **R-SQLITE**'s empirical half. A ban wider than its
+> record would have forced that criterion to be reported as not-dischargeable for a reason no record states.
+>
+> So the line is now scoped to **production code** (`crates/*/src/**`), comment lines excluded, and the
+> `Command::new("git")` line below it stays **workspace-wide including tests** — that one *is* the record's
+> own sentence. The git rule is not weakened in any respect; what changes is that a non-git spawn in a test
+> is no longer caught by a rule about git. The AC-181 test carries an `#[expect(clippy::disallowed_types)]`
+> naming the criterion, so the exemption is a declaration and not a silence.
+>
+> **(b) The `wc -l` comparisons** gained `| tr -d '[:space:]'`: `wc -l` emits leading whitespace on some
+> builds, and `test " 0" = 0` is false.
+>
+> The same narrowing is mirrored in `.github/workflows/ci.yml`'s structural job, which carries the rule
+> between checkpoint runs. **Recorded as a decision, not a tidy-up** — the operator was asked before the line
+> moved, and the alternative offered was to leave AC-181 undischarged.
 
 The verdict and floor lines make "a **written S-GIX result**" checkable instead of aspirational, and the
 `hooksPath`/`ifexists` greps make two of ADR-0105's rules a build-time fact rather than a sentence. "We built the hybrid so we

@@ -148,7 +148,14 @@ jobs:
           # module header, and the unfiltered grep flagged that quotation as a violation. The rule
           # is about INVOCATIONS; prose stating the rule is not one (golden constraint 9 — a guard
           # scoped too wide refuses valid work).
-          bad=$(git ls-files '*.rs' | xargs grep -nE 'std::process::Command|tokio::process::Command' \
+          # Scoped to PRODUCTION code, and narrowed to its warrant on 2026-09-13 with the operator's
+          # decision recorded (s6 §6.2's note). ADR-0077:70 forbids "std::process::Command FOR GIT"
+          # anywhere but the wrapper; ADR-0105 clause 5 enumerates the GIT write set. Neither forbids
+          # a non-git child process, and the wider form blocked AC-181, whose GIVEN is literally two
+          # redkiln PROCESSES and whose instrument is also R-SQLITE's empirical half. The git rule
+          # below is unweakened and stays workspace-wide, tests included.
+          bad=$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
+                | xargs grep -nE 'std::process::Command|tokio::process::Command' \
                 | grep -vE "^${wrapper}:" \
                 | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' || true)
           if [ -n "$bad" ]; then
@@ -174,9 +181,19 @@ jobs:
       # because on the happy path the two are the same directory. This is the structural half.
       - name: the run-owned worktree is not resolved from cwd (AC-529)
         run: |
+          # Two corrections, both found by RUNNING this rule rather than trusting it (2026-09-13):
+          #
+          # 1. The comment filter was `grep -vE '^\s*//'`, which can never match: grep prints
+          #    `path:line:content`, so the line starts with the PATH. The anchored form below is
+          #    the one that works. rk-git/src/worktree.rs states this very rule in its module
+          #    header, and the broken filter flagged it -- the FIFTH assertion in Step 6 to trip on
+          #    prose naming the thing it governs.
+          # 2. `git ls-files` lists only TRACKED files, so this rule passes vacuously over new code
+          #    that has not been committed yet -- precisely when it is most wanted. CI always runs
+          #    on committed code so it is sound here; run it locally only AFTER `git add`.
           bad=$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
                 | xargs grep -n 'env::current_dir' \
-                | grep -vE '^\s*//' || true)
+                | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' || true)
           if [ -n "$bad" ]; then
             echo "FAIL: a crate reads the current directory (AC-529, ADR-0105 clause 8):"
             printf '%s\n' "$bad"

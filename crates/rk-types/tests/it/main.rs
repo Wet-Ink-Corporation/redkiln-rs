@@ -2,6 +2,8 @@
 //! structured as `tests/it/main.rs` with `mod` declarations for the cases, never one file per case).
 
 mod companion_kinds;
+mod digest_compute;
+mod event_kinds;
 mod fixtures;
 mod repro_ingest;
 mod schema_caps;

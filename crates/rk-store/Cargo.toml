@@ -1,0 +1,47 @@
+[package]
+name = "rk-store"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Same contract as the other members: corpus-bound tests compile behind this feature and run as
+# `cargo test --workspace --features corpus` on a box holding redkiln-corpus at CORPUS_PIN.
+corpus = []
+
+[dependencies]
+rk-types = { path = "../rk-types" }
+serde.workspace = true
+serde_json.workspace = true
+
+# `bundled` compiles SQLite from the vendored amalgamation rather than linking a system library.
+#
+# RECORDED DIVERGENCE, not taken silently. ADR-0084 puts this feature on "the EventStore adapter",
+# and design §9.2 scopes `rusqlite` to `rk-adapter-sqlite` (Step 7c). But ADR-0105 clause 7 gives
+# *rk-store* the connection contract it describes -- busy_timeout, one writer behind a mutex,
+# readers per thread, WAL, and the network-filesystem refusal -- and a contract that cannot open a
+# connection cannot be tested. Feature unification also means whoever declares `bundled`, every
+# member resolves with it, so declaring it here is compatible with ADR-0084's *behaviour* while
+# diverging from its *wording*.
+#
+# An ERRATUM against ADR-0084's "adapter" phrasing is OWED (PROGRESS section 6). Non-bundled is not
+# an option on this box or on `windows-latest`: neither provides a system sqlite3 or SQLITE3_LIB_DIR.
+# The cost is a C compile on every clean build and on both CI targets, which ADR-0084 already
+# records as a negative.
+rusqlite = { workspace = true, features = ["bundled"] }
+
+[dev-dependencies]
+rk-types = { path = "../rk-types" }
+serde_json.workspace = true
+tempfile = "3"
+trybuild.workspace = true
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true
