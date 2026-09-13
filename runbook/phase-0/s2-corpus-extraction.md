@@ -62,8 +62,11 @@ mkdir -p D:/repos/redkiln-corpus && cd D:/repos/redkiln-corpus && git init
 cp -r D:/repos/redkiln-rs/spikes/corpus   ./corpus
 cp -r D:/repos/redkiln-rs/spikes/results  ./results
 rm -rf ./results/p8-state                                       # suspended graph state Step 1.2 ignored; never corpus (PIA-021)
-cp -r D:/repos/redkiln-rs/spikes/runner   ./runner
-rm -rf ./runner/target ./runner/target-dev ./runner/target-p8   # build output, never corpus
+# Measured 2026-09-12: `spikes/runner` is 1.4G and ALL of it is ./target — src is 440K. Copy-then-delete
+# writes 1.4G to throw it away, so exclude at the copy instead; identical end state. Either form is fine,
+# but assert the exclusion held rather than assuming it (Checkpoint 2 does not cover it).
+mkdir -p ./runner && (cd D:/repos/redkiln-rs/spikes/runner && tar cf - --exclude=./target --exclude=./target-dev --exclude=./target-p8 .) | (cd ./runner && tar xf -)
+test ! -e ./runner/target || { echo "FAIL: build output travelled into the corpus"; exit 1; }
 cp -r D:/repos/redkiln-rs/spikes/schemas ./schemas              # p1-classify.schema.json — a runner input
 cp -r D:/repos/redkiln-rs/spikes/prompts ./prompts              # the cards the records were produced under
 # schemas/ and prompts/ are COPIED, not moved: the records cannot be replayed without the card and
@@ -72,15 +75,60 @@ cp -r D:/repos/redkiln-rs/spikes/prompts ./prompts              # the cards the 
 # spikes/fixtures/ (2.4 GB, e1/e3 fixture trees) is deliberately LOCAL and unversioned: the runner's
 # build_fixture_at regenerates every one from the pinned predecessor. It is not copied and not moved (PIA-022).
 
+# A bundle carries REFS, NOT A WORKING TREE — and the predecessor's working tree is not clean: Step 3a's
+# D-FIXCONSUMER fix (`workflows/forge-fix.js:982`) is deliberately UNCOMMITTED, because AC-464 freezes
+# the pin every later record cites. Without this the fix would exist in ONE place, uncommitted, on one
+# disk — the PIA-021 shape one artifact over. So capture it beside the bundle; `HEAD` in the bundle is
+# still `47faec9f…` and nothing is committed to the predecessor. [added 2026-09-12, at the run]
+git -C D:/repos/redkiln diff > ./predecessor-working-tree-<date>.patch
+git -C D:/repos/redkiln apply --check --reverse D:/repos/redkiln-corpus/predecessor-working-tree-<date>.patch \
+  || { echo "FAIL: the patch is not the live working-tree delta — do not pin it"; exit 1; }   # → silent: it reverse-applies, so it is exactly the delta
+# Note the ABSOLUTE path: `git -C <dir> apply <relative>` resolves the patch against <dir>, not the cwd.
+# Write a short companion note saying what the patch is, that it is NOT committed by design (AC-464),
+# and that the fix's runtime probe is [WILL EXIST] and UNVERIFIED (DECISIONS-2026-09-09 #39).
+
 # The predecessor, every ref, as one pinnable object (PIA-002): the F12 substrate travels with the corpus.
 git -C D:/repos/redkiln bundle create D:/repos/redkiln-corpus/predecessor-47faec9f.bundle --all
-git bundle verify ./predecessor-47faec9f.bundle                  # → "is okay"
-n=$(git bundle list-heads ./predecessor-47faec9f.bundle | wc -l); test "${n:-0}" -eq 118 || { echo "FAIL: the bundle carries ${n:-<unreadable>} refs, expected 118 (re-derive: git -C D:/repos/redkiln for-each-ref | wc -l)"; exit 1; }   # → silent: 118
-git bundle list-heads ./predecessor-47faec9f.bundle | wc -l > ./predecessor-refs.count
+git bundle verify ./predecessor-47faec9f.bundle                  # → "is okay" + "records a complete history"
+# THE SUBSTRATE COUNT, and it is NOT what `bundle list-heads` returns. Measured 2026-09-12: 118 from
+# `for-each-ref` (42 heads + 41 remote-tracking + 35 tags) against **123** from `bundle list-heads`,
+# which adds `HEAD` and one `worktrees/<name>/HEAD` per linked worktree — FOUR exist in the
+# predecessor. The two are not comparable, and the previous revision asserted one against the other,
+# so this line FAILED on a correct bundle and `predecessor-refs.count` was written from the wrong
+# command (see the note below the block).
+s=$(git -C D:/repos/redkiln for-each-ref --format='%(refname)' | wc -l); test "${s:-0}" -eq 118 || { echo "FAIL: the predecessor carries ${s:-<unreadable>} substrate refs, expected 118 (re-derive: git -C D:/repos/redkiln for-each-ref | wc -l)"; exit 1; }   # → silent: 118
+# CONTAINMENT is the property that matters and the one a count cannot check: a count is blind to a
+# swap. Every substrate ref must be IN the bundle, or F12's 74 slices are not reachable from the pin.
+# Captured, rc asserted, THEN piped: a status-bearing command left of a pipe loses its status, which is
+# Halt 8 shape (c) and this runbook's own rule for writing a hardening pass. `printf` carries no status.
+br=$(git bundle list-heads ./predecessor-47faec9f.bundle) || { echo "FAIL: bundle list-heads failed — the bundle is unreadable"; exit 1; }
+rr=$(git -C D:/repos/redkiln for-each-ref --format='%(refname)') || { echo "FAIL: for-each-ref failed — the predecessor is unreadable"; exit 1; }
+test -n "$br" && test -n "$rr" || { echo "FAIL: one of the two ref listings is EMPTY — comm would report a clean 0 against nothing"; exit 1; }
+printf '%s
+' "$br" | awk '{print $2}' | sort > ./.rk-bundle-refs
+printf '%s
+' "$rr" | sort > ./.rk-repo-refs
+m=$(comm -13 ./.rk-bundle-refs ./.rk-repo-refs | wc -l); test "${m:-1}" -eq 0 || { echo "FAIL: ${m:-<unreadable>} substrate ref(s) are NOT in the bundle:"; comm -13 ./.rk-bundle-refs ./.rk-repo-refs; exit 1; }   # → silent: 0 missing
+rm -f ./.rk-bundle-refs ./.rk-repo-refs
+# refs.count records the SUBSTRATE count, because that is what CORPUS_PIN's PREDECESSOR_REFS means and
+# what Checkpoint 2's "ref count pinned" line compares it against. Writing it from `bundle list-heads`
+# puts 123 in this file against CORPUS_PIN's 118 and Checkpoint 2 cannot pass.
+printf '%s\n' "$s" > ./predecessor-refs.count
 
 git add -A && git commit -m "redkiln-corpus v0: pinned corpus, spike results, spike runner, the predecessor bundled with all 118 refs (ADR-0013, ADR-0100)"
 git rev-parse HEAD    # ← this is the pin. Record it.
 ```
+
+> **Two ref-count defects, found by executing this step on 2026-09-12 and fixed above.** `git bundle list-heads`
+> returns **123** on this predecessor and `git for-each-ref` returns **118**; the difference is `HEAD` plus one
+> `worktrees/<name>/HEAD` per linked worktree, and **four linked worktrees exist in `D:/repos/redkiln`**. The
+> previous revision (a) asserted `list-heads | wc -l -eq 118`, which **fails on a correct bundle**, and (b) wrote
+> `predecessor-refs.count` from that same command, so the file would hold **123** while `CORPUS_PIN` holds
+> `PREDECESSOR_REFS=118` — and **Checkpoint 2's "ref count pinned" line compares exactly those two, so it could not
+> have passed either**. Nothing was wrong with the bundle: all 118 substrate refs are in it, verified by
+> containment, 0 missing. **118 stays the number everywhere it appears** — the prose above, `CORPUS_PIN`,
+> `predecessor-refs.count` — because it is the F12 substrate count; `123` is an artifact of how `list-heads`
+> reports and belongs in neither.
 
 **Before the `rm -rf` below, the corpus repo must exist somewhere other than this disk** (PIA-021: after the split,
 the two filled blind panels exist in one copy). **Corrected 2026-09-12: the written fallback is not available —
