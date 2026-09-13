@@ -7,6 +7,15 @@
 #   llm      = emitted by triage classification. **NO FACET CARRIES THIS ANY MORE** -- ADR-0090 (2026-09-12)
 #              re-sourced all seven (four ordinal axes + three booleans) to `human`, so AC-071 has nothing
 #              left to fail closed on. Re-introducing it needs a scored P1 stability record (AC-071).
+# deriver_class declares WHETHER THE COMPUTATION IS LEXICAL, by name (AC-520 as amended 2026-09-13):
+#   lexical    = its only computation is a scan of free text, file paths and diff lines included. Such a
+#                deriver does NOT satisfy PC8 rule 2 for `require`-row purposes whatever its record says,
+#                so the facet may be authored, linted and read -- and may key no `require` row.
+#   structural = it reads git metadata, a declared boundary map or a registered feed. No lexical bar.
+# deriver_record points at the scored precision record AC-520 requires: a Wilson 95% interval and a
+#   positive-instance count over a PINNED corpus. The path is corpus-relative and resolves through
+#   CORPUS_PIN, never through a working tree (AC-464). **[WILL EXIST]** -- see the note at the foot of
+#   this file; the record is Step 7b's to produce and nothing reads it before then.
 # nullable = true declares that a facet may ABSTAIN. `null` is "no evidence computed" and is NOT a member of
 #   the declared domain -- the three shapes (boolean, ordinal, set) are unchanged and a fourth fails load.
 #   A null read at selection step 2 emits gate_opened { reason: unknown_facet, axis }, counted once per read
@@ -52,13 +61,17 @@ source = "human"          # ADR-0090: supplied or confirmed at the triage gate
 [facet.toolchain]
 values = ["node", "dotnet", "python", "rust", "unreal"]   # set-valued per item (PC7); tech packs may extend values
 source = "derived"
-deriver = "R-toolchain-extension-manifest-table"   # git metadata only: canonical extension/manifest table. Record: 0.73 [0.48, 0.89] at 47faec9f [F39]
+deriver = "R-toolchain-extension-manifest-table"   # git metadata only: canonical extension/manifest table
+deriver_class = "structural"        # git metadata, not a text scan
+deriver_record = "results/p1-arm-d-panel-scored.json"   # precision 0.73, 95% CI [0.48, 0.89], 15 positives, at 47faec9f [F39]
 set = true
 
 [facet.change]
 values = ["text", "binary", "generated"]   # set-valued per item
 source = "derived"
-deriver = "R-change-extension-and-numstat-marker"   # git metadata only: extension table + --numstat's binary marker. Record: 0.72 [0.54, 0.85] at 47faec9f [F39]
+deriver = "R-change-extension-and-numstat-marker"   # git metadata only: extension table + --numstat's binary marker
+deriver_class = "structural"        # git metadata, not a text scan
+deriver_record = "results/p1-arm-d-panel-scored.json"   # precision 0.72, 95% CI [0.54, 0.85], 29 positives, at 47faec9f [F39]
 set = true
 
 [facet.role]
@@ -112,7 +125,9 @@ set = true
 values = [true, false]
 nullable = true
 source = "derived"
-deriver = "R-data-migration-path-and-diff-scan"   # NOT MEASURABLE at 47faec9f: 0 positives on 20 items across all three sources, so precision is undefined and a perfect method scores identically. The record EXISTS, is PINNED and is READ (AC-520); the facet may key NO require row [F39 §4]
+deriver = "R-data-migration-path-and-diff-scan"
+deriver_class = "lexical"           # a scan over paths and diff lines — may key no require row (AC-520)
+deriver_record = "results/p1-arm-d-panel-scored.json"   # NOT MEASURABLE at 47faec9f: 0 positives on 20 items across all three sources, so precision is undefined and a perfect method scores identically [F39 §4]. BARRED TWICE, independently: lexical, and no positive instance
 [facet.external_dep]
 values = [true, false]
 nullable = true
@@ -121,7 +136,9 @@ source = "human"          # ADR-0090 decision 2 (DECISIONS-2026-09-11 #2; PIA-00
 values = [true, false]
 nullable = true
 source = "derived"
-deriver = "R-ui-path-and-diff-scan"   # Record: precision 1.00 over 7 positives, 95% CI [0.65, 1.00] at 47faec9f -- the POINT clears 0.95 and the INTERVAL DOES NOT, and 73 all-correct positives are needed for a lower bound above 0.95 at z = 1.96, so no facet can clear the bar at n = 20 [F39; Limits 1]. S-FACET gates its require rows
+deriver = "R-ui-path-and-diff-scan"
+deriver_class = "lexical"           # a scan over paths and diff lines — may key no require row (AC-520)
+deriver_record = "results/p1-arm-d-panel-scored.json"   # precision 1.00 over 7 positives, 95% CI [0.65, 1.00] at 47faec9f — the POINT clears 0.95 and the INTERVAL DOES NOT, and 73 all-correct positives are needed for a lower bound above 0.95 at z = 1.96, so no facet clears the bar at n = 20 [F39; Limits 1]. S-FACET gates its require rows
 [facet.market_facing]
 values = [true, false]
 nullable = true
@@ -134,7 +151,9 @@ source = "human"          # ADR-0090 decision 2 (DECISIONS-2026-09-11 #2; PIA-00
 values = [true, false]
 nullable = true
 source = "derived"
-deriver = "R-flag-exists-path-and-diff-scan"   # Record: precision 0.00 over 2 positives, 95% CI [0.00, 0.66] at 47faec9f [F39]. S-FACET gates its require rows; arm 4 would match declared flag-SDK call sites on an AST node kind rather than a substring
+deriver = "R-flag-exists-path-and-diff-scan"
+deriver_class = "lexical"           # a scan over paths and diff lines — may key no require row (AC-520)
+deriver_record = "results/p1-arm-d-panel-scored.json"   # precision 0.00 over 2 positives, 95% CI [0.00, 0.66] at 47faec9f [F39]. S-FACET arm 4 would match declared flag-SDK call sites on an AST NODE KIND rather than a substring, which is what would make it structural
 
 # ---- 2026-09-07 P6 authoring batch (third author): value additions only, no new facets ----
 # (none needed for discovery; see F34 for facets that were *wanted* and could not be added)
@@ -144,4 +163,22 @@ deriver = "R-flag-exists-path-and-diff-scan"   # Record: precision 0.00 over 2 p
 values = [true, false]
 nullable = true
 source = "derived"        # from toolchain:deploy_log — anchor: a deploy touching the item's surface within the last 24 h
-deriver = "R-recent-deploy-feed-absent"   # NOT MEASURABLE at 47faec9f: the toolchain:deploy_log feed does not exist at this pin, so it emits `null` on every item and F39 could not score it. The record EXISTS, is PINNED and is READ (AC-520); the facet may key NO require row. This is the ABSTENTION PRECEDENT the other six booleans generalise (ADR-0067; ADR-0089 decision 3)
+deriver = "R-recent-deploy-feed-absent"
+deriver_class = "structural"        # it reads a registered feed, not free text — so NOT barred as lexical
+deriver_record = "results/p1-arm-d-panel-scored.json"   # NOT MEASURABLE at 47faec9f: the toolchain:deploy_log feed does not exist at this pin, so it emits `null` on every item and F39 could not score it. It may key NO require row — on the no-positive-instance clause, which is a DIFFERENT bar from the lexical one and is doing its own work here. The ABSTENTION PRECEDENT the seven booleans generalise (ADR-0067; ADR-0089 decision 3)
+
+# ---- AC-520's scored record: [WILL EXIST], and owed to Step 7b (recorded 2026-09-13) ----
+# Every `deriver_record` above names `results/p1-arm-d-panel-scored.json` in the pinned corpus, and
+# THAT FILE DOES NOT EXIST YET. Measured 2026-09-13: `spikes/p1/score-arm-d-panel.py` reads its five
+# inputs and PRINTS to stdout — it has no `--out` and persists nothing, so the Wilson intervals and
+# positive counts AC-520 requires to "exist, be pinned and be read" live only in terminal output. The
+# figures themselves are measured and are quoted per facet above, so nothing here is invented; what is
+# missing is the machine-readable artifact the lint reads.
+#
+# This is the THIRD undefined property in AC-520, found while closing the first two. Step 7b builds
+# `lint --facet-provenance`, so Step 7b produces the record: give the scorer an `--out`, write the
+# record into the corpus, and let the corpus pin move once with the rest of 7b's work rather than
+# twice. Nothing reads `deriver_record` before then, and AC-520's lint does not exist before then.
+# AC-071's sibling is in the same state by construction — its `--stability-record
+# spikes/results/p1/stability.json` is `[WILL EXIST]` AND now names a directory this repo no longer
+# has, since Step 2 moved `spikes/results/` to the corpus. Both paths are corpus-relative from here.

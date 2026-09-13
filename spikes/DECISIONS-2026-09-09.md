@@ -344,4 +344,28 @@ requires one of two artefacts and the other one cannot be produced. Dated inline
 branches and only one is executable today. It needs countersigning, or the dispatch needs scheduling. Instrument at
 the time of writing, read from the file and not retyped: `2.1.269 (Claude Code)`.
 
+**COUNTERSIGNED 2026-09-13 (Ryan Britton, via AskUserQuestion; recorded by Claude at his direction).** The deferral
+stands and the probe is **not** scheduled. The Workflow runtime's behaviour remains **UNVERIFIED** and is reported
+that way — never as absent-equals-safe. Three grounds, each checkable rather than asserted:
+
+1. **Nothing in Phase 1 reads it.** `git grep` over `runbook/phase-1/` and the AC register for the predecessor's
+   review-verdict shape returns **zero** hits [measured 2026-09-13]. The question is about a mechanism redkiln-rs
+   **replaces**, not one it consumes.
+2. **Step 8 check (1) does not touch it.** That check runs the fix lane and the story lane wholly through the Rust
+   binary and `rk-adapter-toolchain-rust`, and its PASS condition is explicit: *"with NO stage performed by the old
+   redkiln"*. The row's own "where it bites" pointer was therefore too strong; this countersignature narrows it.
+3. **The forward claim is independently pinned, by criteria that must discriminate.** **AC-282** (a review dispatch
+   exiting 0 with no `structured_output`) and **AC-439** (a dispatch exiting 0 to which a JSON schema was passed)
+   both sit on `rk-adapter-claude` + `rk-kernel`, both cite **F20**, and both rest on ADR-0074's principle 4 —
+   absence of evidence is a block. Each carries its own discriminating test at Steps 7b/7c under golden constraint
+   12. **This does not retroactively discharge the probe**, and the row's warning that "generalising it does not
+   discharge this check" stands as written: what is countersigned is that the check is **retrospective evidence
+   about a replaced system with no identified dependent**, not that the evidence was obtained.
+
+**What would reopen it.** Any Phase-1 or Phase-2 path that reads a verdict written by the old Workflow runtime —
+`redkiln-migrate` lifting historical review records is the plausible one — makes the untested claim load-bearing
+again, and the dispatch in this row's last column is what settles it. The fix itself travels: it is
+`predecessor-working-tree-2026-09-12.patch` in the pinned corpus, verified by reverse-apply, and deliberately not
+committed to the predecessor (AC-464).
+
 Also recorded, because it cost two runs: **a resume launched through the harness's own background mechanism was killed with it.** That is F22 exactly — "background jobs die; a detached process does not" — and it had already been written down. Relaunched with `Start-Process`, both completed.

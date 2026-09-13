@@ -1306,23 +1306,49 @@ GIVEN a `facets.toml` in which any facet is declared `source = "derived"` — an
 from `surfaces.toml`, unscored, may key no `require` row until S-FACET scores a declared boundary map) are outside this
 gate by construction (ADR-0093 decision 1)
 WHEN a pack is loaded, or CI runs
-THEN load fails unless that facet declares a named `deriver` **and** a scored precision record exists for that deriver
-over a pinned corpus, carrying a Wilson 95% interval and a positive-instance count — a record that says **NOT
+THEN load fails unless that facet declares a named `deriver`, a **`deriver_class`** of `lexical` or `structural`,
+and a **`deriver_record`** naming the scored precision record — which must exist for that deriver over a pinned
+corpus, carrying a Wilson 95% interval and a positive-instance count — a record that says **NOT
 MEASURABLE** (0 positives; or a feed absent at the pin, as `recent_deploy`'s `R-recent-deploy-feed-absent`) **exists, is
 pinned and is read**, and satisfies this clause
 AND a facet whose scored record shows **no positive instance**, or is NOT MEASURABLE, is reported so — neither passed
 nor failed — and may key no `require` row (`data_migration`, `recent_deploy`)
 AND a facet whose only computation is a lexical scan of free text, file paths and diff lines included, does not satisfy
-PC8 rule 2 for `require`-row purposes whatever its record says.
+PC8 rule 2 for `require`-row purposes whatever its record says — and it declares that **by name**, as
+`deriver_class = "lexical"`. Absence is never inferred: a `derived` facet with no `deriver_class` fails load, exactly as
+one with no `deriver` does. The lexical bar and the no-positive-instance bar are **separate clauses doing separate
+work**, and a facet may be barred by either or both: `ui` and `flag_exists` are barred as lexical while carrying
+positives, `recent_deploy` is `structural` and barred for having none, and `data_migration` is barred twice over.
 *Verified by:* the `--facet-provenance` lint rule; six must-fail fixture `facets.toml` files, one clause at a time — a
 `derived` facet with no `deriver` field; a named `deriver` with no scored record; a record carrying 0 positives whose
-facet keys a `require` row; a `deriver` declared lexical; a `kernel`-class facet carrying a `deriver` or claiming a
-record (ADR-0093 forbids); a `require` row keyed on a `declared` facet — and a **positive companion** that must load (a
+facet keys a `require` row; a `deriver` declared lexical (`deriver_class = "lexical"`) whose facet keys a `require` row; a `derived` facet with no
+`deriver_class`, and one whose `deriver_class` is neither of the two tokens; a `derived` facet with no
+`deriver_record`, and one whose `deriver_record` names a path absent from the pinned corpus; a `kernel`-class facet
+carrying a `deriver`, a `deriver_class`, a `deriver_record` or claiming a record (ADR-0093 forbids); a `require` row
+keyed on a `declared` facet — and a **positive companion** that must load (a
 `derived` facet with a named `deriver`, a scored record and positives; a `kernel` facet with neither; a `declared`
 facet keying no row), without which the rule is satisfied by a lint that rejects everything. Runbook Checkpoint 4a
 asserts **six** derived facets and six records, reconciled by name — not eleven (the earlier assertion that both counts are eleven is withdrawn). This
 criterion is **not** provisional: like AC-071 it is a machine-checkable statement of a gap; unlike AC-071, as of
 ADR-0093 it **passes** on the registry at the pin, because every facet it gates has a record.
+*(Amended 2026-09-13. This criterion required two properties it gave no on-disk form for, and depends on a third
+artifact that does not exist. **(1) Lexicality.** The clause above and this criterion's own must-fail fixture list both
+turn on a deriver being "declared lexical", and no record — not ADR-0089, not ADR-0093, not AC-072's key list — said
+how. It is now `deriver_class`, declared **by name rather than by omission**, which is AC-072's own rule applied one
+field over and exactly the shape DECISIONS-2026-09-12 E1 chose for `nullable`. The distinction is load-bearing and
+measured: of the six `derived` facets at the pin, `ui`, `flag_exists` and `data_migration` are scans over paths and
+diff lines while `toolchain` and `change` are git metadata only — which is the whole of F39's finding, and it was
+undeclarable. **(2) The record's location.** This criterion requires a scored record to "exist, be pinned and be
+read", but `redkiln lint --facet-provenance` takes only `.redkiln/facets.toml` at every call site, so nothing said
+where the lint looks. It is now `deriver_record`, corpus-relative, resolved through `CORPUS_PIN` and never through a
+working tree (AC-464). **(3) And the record does not exist.** Measured 2026-09-13:
+`spikes/p1/score-arm-d-panel.py` reads its five inputs and prints to stdout — it has no `--out` and persists nothing,
+so the Wilson intervals and positive counts are terminal output only. The figures are measured and are quoted per
+facet in `facets.toml`; the machine-readable artifact is **`[WILL EXIST]`** and is **Step 7b's to produce**, with the
+lint that reads it. AC-071 is in the same state by construction: its `--stability-record
+spikes/results/p1/stability.json` is `[WILL EXIST]` and now names a directory this repo no longer has, Step 2 having
+moved `spikes/results/` into the corpus. Nothing is withdrawn by this amendment.)*
+
 *The domain this GIVEN reaches — as written 2026-09-09, and as resolved 2026-09-11.* At corpus pin `47faec9f`,
 `spikes/p9/facets.toml` declared **eleven** facets `source = "derived"` — `stage`, `rigor`, `toolchain`, `change`,
 `role`, `cost`, `auth`, `data_migration`, `ui`, `flag_exists` and `recent_deploy` [measured, `spikes/p9/facets.toml` at
@@ -1377,7 +1403,10 @@ GIVEN a facet name appearing in any `applicable_if`, `require.when`, or `claimed
 WHEN lint runs
 THEN load fails unless that name has a live registry entry in `facets.toml` with a declared domain, source, anchor,
 a declared **`nullable = true`** where the facet may abstain, and —
-where `source = "derived"` — a named **`deriver`** identifying the instrument that computes it
+where `source = "derived"` — a named **`deriver`** identifying the instrument that computes it, a
+**`deriver_class`** of `lexical` or `structural`, and a **`deriver_record`** naming its scored record (all three
+required together; AC-520 owns what the class and the record MEAN, this criterion owns that the ENTRY carries them
+— amended 2026-09-13, and the two must not be collapsed into one lint rule)
 AND `source` is one of the **five** closed tokens the loader recognises by name — `human | llm | derived | kernel |
 declared` (ADR-0093 decision 1): `kernel` for `stage`, `rigor`, `role`, `cost` (no `deriver`, no record — a `kernel`
 entry carrying either fails load); `declared` for `surfaces` (read from `surfaces.toml`; may key no `require` row until

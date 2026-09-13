@@ -55,8 +55,8 @@ git -C D:/repos/redkiln-rs status --porcelain | grep -v '^?? runbook/'
 **Count it, do not read it off this listing**: `git status --porcelain | awk '/^\?\?/{n++} END{print n+0}'` is the number — it always prints a count and exits 0, where `grep -c '^??'` prints `0` but exits **1** on a swept tree [hardened 2026-09-11] — and this
 enumeration has been wrong before. The P2 artefacts, the F39/F40 amendments and the 2026-09-09 ` M` lines that
 earlier revisions enumerated are all committed (`4519edc` … `009a4ec`); what Step 1 commits is the noise above and
-nothing else. `references/adr/` holds **115 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
-is **117** — Checkpoint 1 asserts that number. *(Corrected 2026-09-12: this read 112 / 114, which was already two
+nothing else. `references/adr/` holds **116 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
+is **118** — Checkpoint 1 asserts that number. *(Corrected 2026-09-12: this read 112 / 114, which was already two
 records behind the tree and contradicted the assertion it describes; ADR-0115/0116 then ADR-0090 landed that day.)* `e3b0bac` survives only as the **pre-design-pass reference point**
 that Step 9's rollback and Step 1.3's fresh-clone branch both name.
 
