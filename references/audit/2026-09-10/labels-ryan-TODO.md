@@ -35,39 +35,39 @@ labelled_at_p1: 2026-09-12T04:31:54Z   # stamped by command; labels taken one ro
 
 ## Part 2 — the seeded 30 P2 concerns (label before Step 5)
 
-labelled_at_p2: FILL-ME   # UTC, stamped by command
+labelled_at_p2: 2026-09-13T03:01:48Z   # stamped by command; labels taken one row at a time via AskUserQuestion, recorded by Claude at Ryan's direction
 
 | id | priority | title (abridged) | label (agree / disagree / unsure) | note |
 | --- | --- | --- | --- | --- |
-| PIA-019 | P2 | The corpus's account of its own tree and instrument is stale: RUNBOOK 0.1/1.3 describe HEAD ce04058 and hard-c | FILL-ME | |
-| PIA-021 | P2 | Step 2's pin script leaves the arm-L blind labels in one unpushed copy, stamps a literal PINNED_AT and re-admi | FILL-ME | |
-| PIA-029 | P2 | Register self-description fails verification: seven ADR clauses have no criterion, cargo-deny is unprovisioned | FILL-ME | |
-| PIA-033 | P2 | rk-store and redkiln-migrate contracts: locator end rule, Gwt shape, conservation vocabulary, and no locator/c | FILL-ME | |
-| PIA-035 | P2 | Checkpoints 3c, 5, 6 and 7b/8 carry lines green on the untouched tree or on a violation | FILL-ME | |
-| PIA-038 | P2 | About 95 criteria are assigned to eight crate labels that exist in neither design section 9.1 nor the RUNBOOK  | FILL-ME | |
-| PIA-040 | P2 | rk-git's and rk-store's Step-6 contracts are lists, not rules: unowned git ops (patch-id, merge, common-dir fa | FILL-ME | |
-| PIA-044 | P2 | Step-3 drift contract: `stale_policy` has no schema and AC-067's vouched-root trigger names no edge set | FILL-ME | |
-| PIA-047 | P2 | No step builds or checkpoints the three gates (AC-240–AC-359), filed under 7c | FILL-ME | |
-| PIA-050 | P2 | Gate semantics: loop-back re-reach has no AC, escalate chains are unbounded, the tree hash of an empty commit  | FILL-ME | |
-| PIA-052 | P2 | `null` in `require` predicates: guard narrowing undefined, `null == <non-null>` undefined, and three outcomes  | FILL-ME | |
-| PIA-053 | P2 | Predicate grammar for the 7b parser has no precedence/associativity, no mixed-unparenthesised rule and no lite | FILL-ME | |
-| PIA-056 | P2 | An equivalent mutant survives re-execution, so ADR-0074's `mutation-survived` class can block on a no-op mutat | FILL-ME | |
-| PIA-057 | P2 | AC-388's per-sibling stagger chain is not the vendor's mechanism (hold until first response begins, cap 5 s, r | FILL-ME | |
-| PIA-059 | P2 | Five Phase-1 criteria's instruments pass on the behaviour they forbid or read inputs nothing writes: AC-173, A | FILL-ME | |
-| PIA-061 | P2 | Headroom contract: batch delta undefined across a window reset and shared-account fan-out, SM-111's n>=10 floo | FILL-ME | |
-| PIA-064 | P2 | Claude Code `defer` (`tool_deferred`) shipped in 2.1.89 on 2026-03-31 and is documented at code.claude.com/doc | FILL-ME | |
-| PIA-066 | P2 | ADR-0016/design 7.1 say S-WT measured a `--system-prompt` 'carrying the card body' | FILL-ME | |
-| PIA-070 | P2 | Summary rows, acceptance-set ranges, cross-reference ids and restated figures overstate, mis-point or were nev | FILL-ME | |
-| PIA-073 | P2 | Statistics tagged [measured] or settled do not reproduce under the registered two-sided Wilson interval: MCC + | FILL-ME | |
-| PIA-075 | P2 | Corrections and restorations recorded as applied left copies uncorrected: F35 section 1.3 still 'must be re-gr | FILL-ME | |
-| PIA-077 | P2 | Spike-draft headline figures do not reproduce from their result files: F36 $9.70, F14 ~1.9M tokens, F39 140 ce | FILL-ME | |
-| PIA-080 | P2 | F38's 0.45x/0.55x/0.78x divides P8 output tokens by F28's cache-creation tokens | FILL-ME | |
-| PIA-082 | P2 | Five DECIDED Phase-1 rules cite ADRs whose bodies do not contain them and no ADR does: the CLI shape (0011), t | FILL-ME | |
-| PIA-083 | P2 | ADR-0084's advisory evidence misattributes three gix advisories, 'no advisory affects bundled' is false, and g | FILL-ME | |
-| PIA-090 | P2 | The narrowed novelty claim 'in an AI-coding-specific backlog or spec tool' is false: spec-kit, Archon and Bern | FILL-ME | |
-| PIA-093 | P2 | ADR-0089's 'Semgrep 0.57%-23.8% recall' floor is from a mis-cited arXiv ID (RealVuln: recall 17.5%) | FILL-ME | |
-| PIA-095 | P2 | Review-gate ADRs mis-state F24/F31: 0082/0088 credit F24 with '≥13 of 23' (F24 said ≥5/23 | FILL-ME | |
-| PIA-098 | P2 | The rank-reversal sentence behind 'rigor is ordinal, never summed' is pinned to a TOPSIS-only paper | FILL-ME | |
-| PIA-099 | P2 | Principle 8 was changed on a vendor compaction quote ('nuanced understanding ...') that is on no live first-pa | FILL-ME | |
-
-**Disagreement count:** FILL-ME / 47
+| PIA-019 | P2 | The corpus's account of its own tree and instrument is stale: RUNBOOK 0.1/1.3 describe HEAD ce04058 and hard-c | agree | |
+| PIA-021 | P2 | Step 2's pin script leaves the arm-L blind labels in one unpushed copy, stamps a literal PINNED_AT and re-admi | agree | |
+| PIA-029 | P2 | Register self-description fails verification: seven ADR clauses have no criterion, cargo-deny is unprovisioned | agree | |
+| PIA-033 | P2 | rk-store and redkiln-migrate contracts: locator end rule, Gwt shape, conservation vocabulary, and no locator/c | agree | |
+| PIA-035 | P2 | Checkpoints 3c, 5, 6 and 7b/8 carry lines green on the untouched tree or on a violation | agree | |
+| PIA-038 | P2 | About 95 criteria are assigned to eight crate labels that exist in neither design section 9.1 nor the RUNBOOK  | agree | |
+| PIA-040 | P2 | rk-git's and rk-store's Step-6 contracts are lists, not rules: unowned git ops (patch-id, merge, common-dir fa | agree | |
+| PIA-044 | P2 | Step-3 drift contract: `stale_policy` has no schema and AC-067's vouched-root trigger names no edge set | agree | |
+| PIA-047 | P2 | No step builds or checkpoints the three gates (AC-240–AC-359), filed under 7c | agree | |
+| PIA-050 | P2 | Gate semantics: loop-back re-reach has no AC, escalate chains are unbounded, the tree hash of an empty commit  | agree | |
+| PIA-052 | P2 | `null` in `require` predicates: guard narrowing undefined, `null == <non-null>` undefined, and three outcomes  | agree | |
+| PIA-053 | P2 | Predicate grammar for the 7b parser has no precedence/associativity, no mixed-unparenthesised rule and no lite | agree | |
+| PIA-056 | P2 | An equivalent mutant survives re-execution, so ADR-0074's `mutation-survived` class can block on a no-op mutat | agree | |
+| PIA-057 | P2 | AC-388's per-sibling stagger chain is not the vendor's mechanism (hold until first response begins, cap 5 s, r | agree | |
+| PIA-059 | P2 | Five Phase-1 criteria's instruments pass on the behaviour they forbid or read inputs nothing writes: AC-173, A | agree | |
+| PIA-061 | P2 | Headroom contract: batch delta undefined across a window reset and shared-account fan-out, SM-111's n>=10 floo | agree | |
+| PIA-064 | P2 | Claude Code `defer` (`tool_deferred`) shipped in 2.1.89 on 2026-03-31 and is documented at code.claude.com/doc | agree | |
+| PIA-066 | P2 | ADR-0016/design 7.1 say S-WT measured a `--system-prompt` 'carrying the card body' | agree | |
+| PIA-070 | P2 | Summary rows, acceptance-set ranges, cross-reference ids and restated figures overstate, mis-point or were nev | agree | |
+| PIA-073 | P2 | Statistics tagged [measured] or settled do not reproduce under the registered two-sided Wilson interval: MCC + | agree | |
+| PIA-075 | P2 | Corrections and restorations recorded as applied left copies uncorrected: F35 section 1.3 still 'must be re-gr | agree | |
+| PIA-077 | P2 | Spike-draft headline figures do not reproduce from their result files: F36 $9.70, F14 ~1.9M tokens, F39 140 ce | agree | |
+| PIA-080 | P2 | F38's 0.45x/0.55x/0.78x divides P8 output tokens by F28's cache-creation tokens | agree | |
+| PIA-082 | P2 | Five DECIDED Phase-1 rules cite ADRs whose bodies do not contain them and no ADR does: the CLI shape (0011), t | agree | |
+| PIA-083 | P2 | ADR-0084's advisory evidence misattributes three gix advisories, 'no advisory affects bundled' is false, and g | agree | |
+| PIA-090 | P2 | The narrowed novelty claim 'in an AI-coding-specific backlog or spec tool' is false: spec-kit, Archon and Bern | agree | |
+| PIA-093 | P2 | ADR-0089's 'Semgrep 0.57%-23.8% recall' floor is from a mis-cited arXiv ID (RealVuln: recall 17.5%) | agree | |
+| PIA-095 | P2 | Review-gate ADRs mis-state F24/F31: 0082/0088 credit F24 with '≥13 of 23' (F24 said ≥5/23 | agree | |
+| PIA-098 | P2 | The rank-reversal sentence behind 'rigor is ordinal, never summed' is pinned to a TOPSIS-only paper | agree | |
+| PIA-099 | P2 | Principle 8 was changed on a vendor compaction quote ('nuanced understanding ...') that is on no live first-pa | agree | |
+**Disagreement count:** 0 / 47  
+*(Derived from the filled cells, not typed: {'agree': 47}. Part 1's 17 P1 rows labelled 2026-09-12T04:31:54Z, Part 2's 30 seeded P2 rows 2026-09-13T03:01:48Z, both one row at a time via AskUserQuestion and recorded by Claude at Ryan's direction. **No priority was re-thresholded** — this file forbids it, and every one of the 47 concerns keeps the disposition §4 of `runbook/PROGRESS.md` already records. A `disagree` would have been recorded here and nowhere else.)*
