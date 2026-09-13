@@ -84,13 +84,6 @@ impl DispatchRecord {
     }
 }
 
-/// Does this value look like a credential? `doctor`'s rule row (clause 7).
-///
-/// Deliberately **shape-based and deliberately noisy**: the cost of a false positive is a `doctor`
-/// row an operator reads and dismisses; the cost of a false negative is a credential in a retained
-/// field. The asymmetry is the whole design, and it is stated here so that a later pass tightening
-/// this for tidiness knows what it is trading away.
-#[must_use]
 /// Common token prefixes, and the shapes that carry secrets.
 const CREDENTIAL_PREFIXES: [&str; 8] = [
     "sk-",
@@ -103,6 +96,13 @@ const CREDENTIAL_PREFIXES: [&str; 8] = [
     "Bearer ",
 ];
 
+/// Does this value look like a credential? `doctor`'s rule row (clause 7).
+///
+/// Deliberately **shape-based and deliberately noisy**: the cost of a false positive is a `doctor`
+/// row an operator reads and dismisses; the cost of a false negative is a credential in a retained
+/// field. The asymmetry is the whole design, and it is stated here so that a later pass tightening
+/// this for tidiness knows what it is trading away.
+#[must_use]
 pub fn looks_like_credential(value: &str) -> bool {
     let v = value.trim();
     if v.len() < 16 {

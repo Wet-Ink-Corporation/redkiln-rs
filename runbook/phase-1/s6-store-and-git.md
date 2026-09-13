@@ -179,42 +179,134 @@ the absent behaviour, not a compile error or a filter that matched nothing.
 
 **Checkpoint 6.** All of:
 
+**Hardened 2026-09-13, before its first run** — the preamble's rule is that hardening lands *before* the pass,
+or the recorded pass attests the old text. The audit found **one line that failed on this tree for a reason
+unrelated to its rule** and **three that could not fail at all**; each is marked below with what it was.
+
 ```bash
-cd D:/repos/redkiln-rs
-cargo build --workspace && cargo clippy --workspace --all-targets && cargo test --workspace   # exit 0 each
+cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
+
+# ---- the five CI gates, each guarded. `cargo build && clippy && test` on one line exited non-zero
+# ---- without stopping the block: nothing consumed the status (the guard was absent, not weak). And
+# ---- `fmt` and `deny` were MISSING from this checkpoint entirely, which is how CI goes red after a
+# ---- green Checkpoint 6 — the licence set is re-derived when the lock moves, and it moved here.
+cargo build --workspace  || { echo "FAIL: cargo build --workspace"; exit 1; }
+cargo fmt --all --check  || { echo "FAIL: cargo fmt --all --check"; exit 1; }
+cargo clippy --workspace --all-targets || { echo "FAIL: cargo clippy --workspace --all-targets"; exit 1; }
+out=$(cargo test --workspace 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
+cargo audit --deny unmaintained || { echo "FAIL: cargo audit --deny unmaintained"; exit 1; }   # gix-* clean at the pin; the clone is on gix and in scope
+cargo deny check bans advisories licenses || { echo "FAIL: cargo deny check bans advisories licenses"; exit 1; }
+
+# ---- the corpus precondition, BEFORE any corpus read (AC-464). A dirty or unpinned checkout is
+# ---- refused rather than read.
+test -f CORPUS_PIN || { echo "FAIL: CORPUS_PIN absent"; exit 1; }
+CORPUS_REPO=$(grep '^CORPUS_REPO=' CORPUS_PIN | cut -d= -f2-)
+CORPUS_SHA=$(grep '^CORPUS_SHA=' CORPUS_PIN | cut -d= -f2-)
+test -d "$CORPUS_REPO" || { echo "FAIL: corpus absent at $CORPUS_REPO"; exit 1; }
+echo "$CORPUS_SHA" | grep -qE '^[0-9a-f]{40}$' || { echo "FAIL: CORPUS_SHA is not an unabbreviated 40-hex SHA"; exit 1; }
+h=$(git -C "$CORPUS_REPO" rev-parse HEAD); test "$h" = "$CORPUS_SHA" || { echo "FAIL: corpus HEAD $h != CORPUS_SHA $CORPUS_SHA"; exit 1; }
+d=$(git -C "$CORPUS_REPO" status --porcelain); [ -z "$d" ] || { echo "FAIL: the corpus checkout is dirty; AC-464 refuses before any read"; printf '%s\n' "$d"; exit 1; }
+
+# ---- the corpus suite. The old form grepped for `test result: ok. N passed`, which matches ANY
+# ---- binary in a workspace run — it attested that the feature existed, not that the bundle was
+# ---- read. THIS CANNOT FAIL as written. Replaced by the NAMED tests plus a differential proving
+# ---- the feature is what gates them.
 out=$(cargo test --workspace --features corpus 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --features corpus exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
-  || { echo "FAIL: --features corpus selected 0 tests — the bundle was never read"; exit 1; }   # exit 0 on this box AND ≥ 1 test actually ran: AC-440's fixture and the F12 replay read the bundle
+n=$(printf '%s\n' "$out" | grep -cE '^test corpus_f12::.* \.\.\. ok$')
+test "${n:-0}" -ge 3 || { echo "FAIL: ${n:-<unreadable>} corpus_f12 tests ran, expected >= 3 — the bundle was never read"; exit 1; }
+k=$(cargo test --workspace -- --list 2>/dev/null | grep -c 'corpus_f12' | tr -d '[:space:]')
+test "${k:-1}" = 0 || { echo "FAIL: the corpus tests are selected WITHOUT --features corpus (got ${k}); the feature is not what gates them"; exit 1; }
+
+# ---- the pins. `grep -c 'gix = "=0.87.1"'` returned **0** on this tree: Cargo.toml:32 is
+# ---- column-aligned (`gix` + 8 spaces), so the line FAILED FOR A REASON UNRELATED TO ITS RULE.
+# ---- The guard's scope is "exactly one exact pin in the workspace table"; alignment is incidental,
+# ---- so the regex is hardened and the manifest left alone (golden constraint 9).
 test -f Cargo.toml || { echo "FAIL: Cargo.toml absent — the workspace table does not exist yet"; exit 1; }
-n=$(grep -c 'gix = "=0.87.1"' Cargo.toml); test "${n:-0}" -eq 1 || { echo "FAIL: ${n:-<unreadable>} exact gix pins in the workspace table, expected 1 (ADR-0084)"; exit 1; }   # → silent: EXACT pin, in the WORKSPACE table
+n=$(grep -cE '^gix[[:space:]]*= "=0\.87\.1"' Cargo.toml); test "${n:-0}" -eq 1 || { echo "FAIL: ${n:-<unreadable>} exact gix pins in the workspace table, expected 1 (ADR-0084)"; exit 1; }
+# `.` was an unescaped wildcard, and a COMMENT quoting this line counts: a first draft of
+# rk-git/Cargo.toml named it twice in its header and the assertion read 3. Anchored and escaped.
 test -f crates/rk-git/Cargo.toml || { echo "FAIL: crates/rk-git/Cargo.toml absent"; exit 1; }
-n=$(grep -c 'gix.workspace = true' crates/rk-git/Cargo.toml); test "${n:-0}" -eq 1 || { echo "FAIL: rk-git does not inherit the workspace gix pin exactly once (got ${n:-<unreadable>})"; exit 1; }   # → silent: the member inherits it (PIA-030: the old grep false-failed on this form)
+n=$(grep -cE '^gix\.workspace = true$' crates/rk-git/Cargo.toml); test "${n:-0}" -eq 1 || { echo "FAIL: rk-git does not inherit the workspace gix pin exactly once (got ${n:-<unreadable>})"; exit 1; }
+
+# ---- one wrapper. Scoped to PRODUCTION code and comment lines excluded (narrowed to its warrant
+# ---- 2026-09-13; see §6.2's note — ADR-0077:70 bans process::Command FOR GIT, and the wider form
+# ---- blocked AC-181's two-process instrument).
 test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent — the type-ban grep is vacuous"; exit 1; }
 test "$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
   | xargs grep -nE 'std::process::Command|tokio::process::Command' \
   | grep -vE '^crates/rk-git/src/git_exec\.rs:' \
   | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
-  || { echo "FAIL: process::Command in production code outside the one wrapper"; exit 1; }   # → 0: one wrapper, one file — and clippy.toml's disallowed-types is the same rule at build time
-test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent — the CI grep is vacuous"; exit 1; }
+  || { echo "FAIL: process::Command in production code outside the one wrapper"; exit 1; }
+# The git rule stays workspace-wide, tests included — that one IS ADR-0077:70's own sentence.
 test "$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE '^crates/rk-git/src/git_exec\.rs:' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
-  || { echo "FAIL: Command::new(\"git\") outside the wrapper"; exit 1; }   # → 0 (the CI grep, PIA-035)
-test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent"; exit 1; }
-n=$(grep -c 'hooksPath' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: git_exec.rs never sets core.hooksPath — ADR-0105 clause 2's hooks isolation is absent"; exit 1; }   # → silent: ≥ 1, hooks isolation on every commit
-test -s crates/rk-git/src/git_exec.rs || { echo "FAIL: crates/rk-git/src/git_exec.rs absent"; exit 1; }
-n=$(grep -c 'ifexists=add\|if-exists=add' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: git_exec.rs never passes --if-exists=add — a repeated identical Gate:/Slice-Verdict: trailer is silently dropped (ADR-0105 clause 3)"; exit 1; }   # → silent: ≥ 1
-cargo audit --deny unmaintained                                            # exit 0; gix-* clean at the pin; clone is on gix and in scope
-test "$(ls references/adr/0091-*.md 2>/dev/null | wc -l)" = 1 || { echo "FAIL: expected exactly one references/adr/0091-*.md — the S-GIX successor record"; exit 1; }   # → 1: the S-GIX successor record
-ls references/adr/0091-*.md >/dev/null 2>&1 || { echo "FAIL: ADR-0091 absent — no S-GIX record to grep"; exit 1; }
+  || { echo "FAIL: Command::new(\"git\") outside the wrapper"; exit 1; }
+# THE POSITIVE HALF. Both bans above pass on a workspace with no git exec at all — Halt 8 shape (g),
+# a pass condition that is the absence of output. THIS CANNOT FAIL without it.
+n=$(grep -c 'Command::new("git")' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: the wrapper does not invoke git; the two bans above assert nothing"; exit 1; }
+
+# ---- ADR-0105 clauses 2 and 3. The greps are satisfied by a COMMENT, so each is paired with the
+# ---- behavioural test that actually discriminates it. THE GREPS ALONE CANNOT FAIL meaningfully.
+n=$(grep -c 'hooksPath' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: git_exec.rs never sets core.hooksPath — ADR-0105 clause 2's hooks isolation is absent"; exit 1; }
+out=$(cargo test -p rk-git --test it -- trailers::a_message_rewriting_hook_has_no_effect 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the hooks-isolation fault injection (AC-162) did not pass"; printf '%s\n' "$out" | tail -20; exit 1; }
+n=$(grep -c 'ifexists=add\|if-exists=add' crates/rk-git/src/git_exec.rs); test "${n:-0}" -ge 1 || { echo "FAIL: git_exec.rs never passes --if-exists=add — a repeated identical Gate:/Slice-Verdict: trailer is silently dropped (ADR-0105 clause 3)"; exit 1; }
+out=$(cargo test -p rk-git --test it -- trailers::trailer_roundtrip_matches_interpret_trailers 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the trailer round-trip over clause 3's five-case matrix did not pass"; printf '%s\n' "$out" | tail -20; exit 1; }
+
+# ---- ADR-0091: the record, its verdicts, and the floor.
+test "$(ls references/adr/0091-*.md 2>/dev/null | wc -l | tr -d '[:space:]')" = 1 || { echo "FAIL: expected exactly one references/adr/0091-*.md — the S-GIX successor record"; exit 1; }
 test "$(grep -cE '^S-GIX/[abc]: (go|no-go)$' references/adr/0091-*.md)" = 3 \
-  || { echo "FAIL: ADR-0091 does not carry exactly three S-GIX verdict lines"; exit 1; }   # → 3: one explicit verdict line per arm (PIA-035)
-ls references/adr/0091-*.md >/dev/null 2>&1 || { echo "FAIL: ADR-0091 absent — no S-GIX record to grep"; exit 1; }
-n=$(grep -cE 'git (>=|version) [0-9]+\.[0-9]+' references/adr/0091-*.md); test "${n:-0}" -ge 1 || { echo "FAIL: ADR-0091 states no git-version floor as a number — decision 3 of the preamble's table is undischarged"; exit 1; }   # → silent: ≥ 1, the floor is a number in the record
+  || { echo "FAIL: ADR-0091 does not carry exactly three S-GIX verdict lines"; exit 1; }
+n=$(grep -cE 'git (>=|version) [0-9]+\.[0-9]+' references/adr/0091-*.md); test "${n:-0}" -ge 1 || { echo "FAIL: ADR-0091 states no git-version floor as a number — decision 3 of the preamble's table is undischarged"; exit 1; }
+# That grep also matches the record's MEASUREMENT prose ("git version 2.55.0.windows.3 on this box"),
+# so decision 3 could read as discharged by a sentence that is not the decision. This test compares
+# the number the WRAPPER asserts on against the number the RECORD decides.
+out=$(cargo test -p rk-git --test it -- version::the_floor_in_the_code_equals_the_floor_in_the_record 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: version::GIT_FLOOR and ADR-0091's floor have drifted"; printf '%s\n' "$out" | tail -20; exit 1; }
+
+# ---- the three arms. The old block echoed on BOTH branches and exited 0 either way, while its
+# ---- comment claimed "their verdicts match the record" — nothing compared them. Halt 8 shape (f),
+# ---- and THIS CANNOT FAIL. Closed at the source: each arm now reads its own S-GIX/<x> line out of
+# ---- ADR-0091 and asserts the behaviour it measured equals it, so rc == 0 MEANS agreement.
 out=$(cargo test -p rk-git -- --ignored s_gix_ 2>&1); rc=$?
 test "$(printf '%s\n' "$out" | grep -cE '^test .*s_gix_[abc]_')" = 3 \
   || { echo "FAIL: the s_gix_ filter did not select exactly the three arms"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -E '^test .*s_gix_[abc]_'
-if [ "$rc" -eq 0 ]; then echo "S-GIX: all three arms GO"; else echo "S-GIX: NO-GO on at least one arm (rc=$rc) — each arm above must equal its S-GIX/x line in ADR-0091"; fi   # → the three arms ran; their verdicts match the record
+[ "$rc" -eq 0 ] || { echo "FAIL: an S-GIX arm DISAGREES with the verdict ADR-0091 records"; printf '%s\n' "$out" | tail -30; exit 1; }
+echo "S-GIX: all three arms agree with ADR-0091"
+
+# ---- the criteria this step claims that a grep cannot see.
+for t in \
+  "paths::git_paths_are_drive_letter_form" \
+  "reconciled::reconcile_runs_at_every_entry" \
+  "worktree::the_resolution_reads_the_store_row_and_not_the_current_directory" \
+  "tree::untracked_files_are_excluded_from_the_working_state_tree" \
+  "gitops::replay_serves_the_journal_and_performs_zero_writes" ; do
+  out=$(cargo test -p rk-git --test it -- "$t" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: rk-git $t"; printf '%s\n' "$out" | tail -20; exit 1; }
+done
+for t in \
+  "tier_ui::a_state_field_without_a_tier_is_a_compile_error" \
+  "contention::two_processes_writing_concurrently_both_land_with_no_lock_errors" \
+  "locator::a_duplicate_genuine_heading_is_an_error_and_never_a_first_match" ; do
+  out=$(cargo test -p rk-store --test it -- "$t" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: rk-store $t"; printf '%s\n' "$out" | tail -20; exit 1; }
+done
+
+# ---- AC-529's structural half: no production path resolves the run-owned worktree from cwd.
+test "$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' | xargs grep -n 'env::current_dir' \
+  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
+  || { echo "FAIL: a crate resolves the current directory (AC-529, ADR-0105 clause 8)"; exit 1; }
+
+# ---- PIA-036: the lifted module names the corpus SHA it was lifted from.
+grep -q "$CORPUS_SHA" crates/rk-git/src/reconcile.rs || { echo "FAIL: reconcile.rs's header does not name CORPUS_SHA $CORPUS_SHA"; exit 1; }
+
+# ---- the CI rule Step 5's table assigned to Checkpoint 6. Nothing asserted it had ever landed.
+test -f .github/workflows/ci.yml || { echo "FAIL: ci.yml absent"; exit 1; }
+grep -q 'Command::new("git")' .github/workflows/ci.yml || { echo "FAIL: ci.yml carries no Command::new(\"git\") structural rule (Step 5's table assigned it here)"; exit 1; }
+n=$(grep -c '^      - name:' .github/workflows/ci.yml); test "${n:-0}" -ge 11 || { echo "FAIL: ci.yml has ${n:-<unreadable>} named steps, expected >= 11 (five gates + the structural job's five)"; exit 1; }
 ```
 
 > **Two Checkpoint-6 lines were narrowed to their warrant on 2026-09-13, at s6 §6.3's run.**
