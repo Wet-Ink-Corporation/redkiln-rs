@@ -7,42 +7,22 @@
 //! The environment is handled by there being **no field to put it in**. That is not pedantry: a
 //! field plus a rule to leave it empty is a field someone eventually fills, and the child
 //! environment is where credentials live.
+//!
+//! **`Retained`, `STDIO_CAP` and `HEAD_TAIL` moved to `rk-types` at Step 7a and are re-exported
+//! here unchanged**, so `rk_store::retention::Retained` still resolves and every caller and test
+//! is untouched. The move was forced, not chosen: ADR-0099:62 homes `DispatchRecord` in `rk-types`
+//! (*"Both are `rk-types`"*) and runbook `s7a` §7a.5 authors that record's minimal form there with
+//! the ADR-0105 clause 7 retention fields on it — which `rk-types` cannot name while they live in
+//! a crate that depends on it (`rk-types -> rk-store` is a cycle cargo refuses). Re-declaring the
+//! enum in `rk-types` instead would have created a second one-name-two-crates collision of exactly
+//! the kind §7a.5 is repairing for `DispatchRecord`. **One type, one declaration, two paths.** The
+//! record naming its home is OWED with the four other §7a.5 routings.
+//!
+//! `DispatchRecord` below is **not** moved: two types under one name in two crates is the
+//! collision `s7a` §7a.5 names, and collapsing it is 7c's.
 
 use rk_types::digest::{Digest, sha256};
-
-/// How much stdout/stderr is kept verbatim before it becomes digest + head/tail.
-pub const STDIO_CAP: usize = 64 * 1024;
-
-/// How much of each end survives the cap.
-pub const HEAD_TAIL: usize = 2 * 1024;
-
-/// A retained stream: verbatim while small, summarised once it is not.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Retained {
-    Verbatim(Vec<u8>),
-    Capped {
-        digest: Digest,
-        head: Vec<u8>,
-        tail: Vec<u8>,
-        total_len: usize,
-    },
-}
-
-impl Retained {
-    #[must_use]
-    pub fn of(bytes: &[u8]) -> Self {
-        if bytes.len() <= STDIO_CAP {
-            Self::Verbatim(bytes.to_vec())
-        } else {
-            Self::Capped {
-                digest: sha256(bytes),
-                head: bytes[..HEAD_TAIL].to_vec(),
-                tail: bytes[bytes.len() - HEAD_TAIL..].to_vec(),
-                total_len: bytes.len(),
-            }
-        }
-    }
-}
+pub use rk_types::retention::{HEAD_TAIL, Retained, STDIO_CAP};
 
 /// One dispatch's retained record.
 ///

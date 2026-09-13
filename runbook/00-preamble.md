@@ -11,9 +11,9 @@ threshold and instrument. Where a stage file disagrees with any of those, the st
 Phase 0 (close the programme) and Phase 1 (kernel, store, fix and story lanes, four adapters) only. Phases 2–4 are
 out of scope. · **Inputs:** `references/2026-09-08-architecture-design.md` (§0.1, §5.3, §5.9, §9, §10) ·
 `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519, AC-520 — the derived-facet gate — and the ids the
-2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**117 records**,
-`0001`–`0117` contiguous, with `0090` written at Step 4.4 on 2026-09-12, `0117` on 2026-09-13 and `0091` at Step 6.1 on 2026-09-13 — no reserved number remains; `references/adr/ERRATA.md` for corrections to
-frozen records) · `spikes/DECISIONS-2026-09-11.md` and `spikes/DECISIONS-2026-09-12.md` (the operator decisions this runbook executes — the 2026-09-11 log runs to #27; the 2026-09-12 log carries E1–E13 from the alignment review and is cited as `DECISIONS-2026-09-12 E<n>`) ·
+2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**118 records**,
+`0001`–`0118` contiguous, with `0090` written at Step 4.4 on 2026-09-12, `0117` on 2026-09-13, `0091` at Step 6.1 on 2026-09-13 and `0118` for Step 7a on 2026-09-13 — no reserved number remains; `references/adr/ERRATA.md` for corrections to
+frozen records) *(Corrected 2026-09-13: this read "**117 records**, `0001`–`0117` contiguous" until ADR-0118 — the lock-poisoning halt, closing the residual ADR-0115 assigned to Step 7a — was written.)* · `spikes/DECISIONS-2026-09-11.md` and `spikes/DECISIONS-2026-09-12.md` (the operator decisions this runbook executes — the 2026-09-11 log runs to #27; the 2026-09-12 log carries E1–E13 from the alignment review and is cited as `DECISIONS-2026-09-12 E<n>`) ·
 `spikes/F39-DRAFT.md` · `spikes/F40-DRAFT.md` · `spikes/F41-DRAFT.md` (S-PORTS) · `spikes/F42-DRAFT.md` (S-GRAMMAR) ·
 `spikes/HANDOFF.md` · `spikes/DECISIONS-2026-09-09.md` · `references/2026-09-08-evidence-brief.md` §E. ·
 **Tree state:** every path and every existing command in the stage files was re-verified against the working tree
@@ -38,12 +38,15 @@ and two are numbered decisions recorded in `spikes/DECISIONS-2026-09-11.md` befo
 
 **An eighth, added 2026-09-12.** The 2026-09-11 audit left the two must-fail fixture crates (AC-001–AC-004, AC-005) without a name, a path or a shape, and this table did not carry them as a decision. They are now decided — feature-gated workspace members at `tests/fixtures/rk-clock-read/` and `tests/fixtures/rk-banned-dep/`, **DECISIONS-2026-09-12 E4**, executed at s5 §5.1a. Five further decisions from the same review (**E1**, **E2**, **E3**, **E11**, **E12**) move a record at or above the runbook in ADR-0092's chain and are **owed, not executed here** — `DECISIONS-2026-09-12` names what each one must write.
 
-**`0089` is taken, and so are `0092`–`0117` and now `0090`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
+**`0089` is taken, and so are `0092`–`0118` and now `0090`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
 was accepted on 2026-09-09 and partially supersedes ADR-0030 (PC8); ADR-0093 (2026-09-11) supersedes it in part
 again — `stage`/`rigor`/`role`/`cost` are `source = "kernel"`, `surfaces` is `source = "declared"`, six facets stay
 `derived` — and Step 4a executes both. Step 4.4's context-vector record is **0090** — **written 2026-09-12**, superseding ADR-0079 in full — and Step 6.1's
-S-GIX successor is **0091**, **written on 2026-09-13**, which was the last number the ADR README carried as reserved; the next free
-number is **`0118`**. *(Corrected 2026-09-12: this sentence said the next free number was 0115, from before ADR-0115
+S-GIX successor is **0091**, **written on 2026-09-13**, which was the last number the ADR README carried as reserved. Step 7a's
+lock-poisoning record is **0118**, **written on 2026-09-13** — a poisoned store lock halts the run; it closes the residual
+ADR-0115:135-138 named and assigned to this stage, and it supersedes nothing. The next free
+number is **`0119`**. *(Corrected 2026-09-13: this sentence gave the next free number as `0118`, from before that
+record was written.)* *(Corrected 2026-09-12: this sentence said the next free number was 0115, from before ADR-0115
 and ADR-0116 landed.)* **Step 4a is
 not a decision** — it is the execution order for the registry, schema and lint work ADR-0089 and ADR-0093 force.
 

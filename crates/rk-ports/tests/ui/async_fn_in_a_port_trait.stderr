@@ -1,0 +1,17 @@
+error[E0038]: the trait `AsyncPort` is not dyn compatible
+  --> tests/ui/async_fn_in_a_port_trait.rs:32:21
+   |
+32 |     let _p: Arc<dyn AsyncPort> = Arc::new(Probe);
+   |                     ^^^^^^^^^ `AsyncPort` is not dyn compatible
+   |
+note: for a trait to be dyn compatible it needs to allow building a vtable
+      for more information, visit <https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility>
+  --> tests/ui/async_fn_in_a_port_trait.rs:22:14
+   |
+21 | pub trait AsyncPort: Send + Sync {
+   |           --------- this trait is not dyn compatible...
+22 |     async fn probe(&self);
+   |              ^^^^^ ...because method `probe` is `async`
+   = help: consider moving `probe` to another trait
+   = help: only type `Probe` implements `AsyncPort` within this crate; consider using it directly instead.
+   = note: `AsyncPort` may be implemented in other crates; if you want to support your users passing their own types here, you can't refer to a specific type

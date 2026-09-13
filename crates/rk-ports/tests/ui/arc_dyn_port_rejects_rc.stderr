@@ -1,0 +1,35 @@
+error[E0277]: `Rc<()>` cannot be shared between threads safely
+  --> tests/ui/arc_dyn_port_rejects_rc.rs:20:18
+   |
+20 | impl Harness for NotSendHarness {
+   |                  ^^^^^^^^^^^^^^ `Rc<()>` cannot be shared between threads safely
+   |
+   = help: within `NotSendHarness`, the trait `Sync` is not implemented for `Rc<()>`
+note: required because it appears within the type `NotSendHarness`
+  --> tests/ui/arc_dyn_port_rejects_rc.rs:18:8
+   |
+18 | struct NotSendHarness(Rc<()>);
+   |        ^^^^^^^^^^^^^^
+note: required by a bound in `Harness`
+  --> src/harness.rs
+   |
+   | pub trait Harness: Send + Sync {
+   |                           ^^^^ required by this bound in `Harness`
+
+error[E0277]: `Rc<()>` cannot be sent between threads safely
+  --> tests/ui/arc_dyn_port_rejects_rc.rs:20:18
+   |
+20 | impl Harness for NotSendHarness {
+   |                  ^^^^^^^^^^^^^^ `Rc<()>` cannot be sent between threads safely
+   |
+   = help: within `NotSendHarness`, the trait `Send` is not implemented for `Rc<()>`
+note: required because it appears within the type `NotSendHarness`
+  --> tests/ui/arc_dyn_port_rejects_rc.rs:18:8
+   |
+18 | struct NotSendHarness(Rc<()>);
+   |        ^^^^^^^^^^^^^^
+note: required by a bound in `Harness`
+  --> src/harness.rs
+   |
+   | pub trait Harness: Send + Sync {
+   |                    ^^^^ required by this bound in `Harness`

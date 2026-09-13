@@ -11,15 +11,19 @@
 //! cannot be fixed. It lives only as `rk-ports`' opaque newtype at Step 7a (ADR-0099 clause 5,
 //! ADR-0093 decision 4), and Checkpoint 5 asserts the name appears nowhere under `crates/`.
 
+pub mod activity;
 pub mod artifact;
 pub mod companion;
 pub mod digest;
+pub mod docset;
 pub mod drift;
 pub mod error;
 pub mod event;
 pub mod event_kind;
 pub mod registry;
 pub mod repro;
+pub mod retention;
 pub mod schema;
 pub mod text;
 pub mod time;
+pub mod typed;

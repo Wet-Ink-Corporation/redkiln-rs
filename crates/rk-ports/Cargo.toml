@@ -1,0 +1,49 @@
+[package]
+name = "rk-ports"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Same contract as the other three members: corpus-bound tests compile behind this feature and run
+# as `cargo test --workspace --features corpus` on a box holding redkiln-corpus at CORPUS_PIN.
+#
+# Declared EMPTY, and deliberately: Step 7a has zero corpus-bound tests -- its whole acceptance set
+# is local -- but the feature must EXIST or a `--features corpus` invocation naming this package
+# exits 101 with "none of the selected packages contains these features". The reason is written out
+# in full at crates/rk-types/Cargo.toml:10-17.
+corpus = []
+
+[dependencies]
+rk-types = { path = "../rk-types" }
+serde.workspace = true
+serde_json.workspace = true
+
+# WHAT IS NOT HERE IS THE POINT (ADR-0076; AC-528). This crate declares five SYNC port traits, and
+# no runtime for driving futures may appear in its normal dependency graph -- directly or
+# transitively. `async fn` in a trait is still not dyn-compatible on the pin and
+# `async_fn_in_dyn_trait` remains nightly-only through 1.98.1 (R-ASYNC, discharged 2026-09-10), so
+# "no generics leak into the core" and "dyn-dispatched port" are in direct tension the moment a
+# port method is async. Every `.await` lives in an adapter. AC-528's second instrument is a fixture
+# COMMIT against this table (register :7163), not a file.
+
+[dev-dependencies]
+# AC-483's and AC-528's instruments are compile FAILURES, which only a must-fail harness can
+# observe, and each case commits a .stderr snapshot so a case that starts failing for a DIFFERENT
+# reason goes red -- the job a bare `compile_fail` fence measurably cannot do (s7a §7a.8).
+trybuild.workspace = true
+# Repeated for the integration binary: a crate's own [dependencies] are not in scope inside
+# tests/, and AC-500's instrument is "an integration test on the fake" naming
+# StepError::Unsupported { capability } (register :7149).
+rk-types = { path = "../rk-types" }
+serde_json.workspace = true
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

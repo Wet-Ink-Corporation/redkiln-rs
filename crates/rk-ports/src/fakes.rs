@@ -1,0 +1,348 @@
+//! The five fakes — design §3.3's Required-fake column, and AC-481's evidence line verbatim
+//! (register :6917): in-memory `Vec`, scripted responder, in-memory board, no-op recorder,
+//! fixture-driven.
+//!
+//! **All five are `pub` library items, not `#[cfg(test)]` stubs.** The reference shape ships two
+//! — `VecStore` and `FakeHarness` — and implements `Tracker`, `DocsSite` and `Toolchain` only with
+//! test-local `struct T` / `struct D` / `struct C` inside its own `#[cfg(test)] mod tests`. Those
+//! are stubs, not fakes: Checkpoint 7a counts `impl <Port> for` **anchored at column 0**, and a
+//! stub inside a test module is indented; and AC-498's *"using fakes for all five ports"* is a
+//! claim about what the kernel's own suite can construct, one crate over, where a `#[cfg(test)]`
+//! item does not exist at all.
+//!
+//! **Every error these fakes construct is `rk-types`'.** The spike declares its own `StepError`
+//! and `spoke()` under a `// ---- rk-types` header because it is a throwaway single crate; the
+//! payloads differ from the shipped ones in three variants, so an error construction lifted
+//! unchanged does not compile. `spoke()` is **not** re-implemented here and may not be: the
+//! spike's `matches!` form expands to an implicit catch-all that would silently accept a twelfth
+//! variant, and the arm-per-variant form trips `clippy::match_same_arms`, denied individually at
+//! `Cargo.toml`:65. The bridge below goes through `StepError::event()`, which `rk-types` already
+//! owns and which is total over the closed eleven.
+
+use std::sync::Mutex;
+
+use rk_types::activity::{ActivitySpec, DispatchRecord};
+use rk_types::digest::sha256;
+use rk_types::docset::DocSet;
+use rk_types::drift::Drift;
+use rk_types::error::{CancelledBy, StepError, TransportKind};
+use rk_types::event::{ErrorEvent, Event};
+use rk_types::event_kind::EventKind;
+use rk_types::retention::Retained;
+use rk_types::typed::Typed;
+
+use crate::cancel::CancelToken;
+use crate::docs_site::DocsSite;
+use crate::event_store::{EventStore, Query, Snapshot};
+use crate::harness::{DispatchOutcome, Harness};
+use crate::toolchain::{ChangeSummary, Classification, Toolchain};
+use crate::tracker::{ExternalRef, Tracker, TypedInput};
+
+/// The message every fake's own lock carries when it is poisoned.
+///
+/// **This is not poison recovery and may not become it** (ADR-0118 clauses 1 and 3): `.expect()`
+/// propagates, it does not resume. No spelling of `PoisonError::into_inner`, and no `catch_unwind`
+/// that resumes the run, may appear in this crate — and note the scope: ADR-0118 clause 4 is about
+/// the two **store** locks, while these are a fake's own internal state, which ADR-0115 clause 5's
+/// one-seam rule also does not reach (its subject is how the composition root *holds* a port).
+const LOCK: &str = "a poisoned lock halts the run; it is never recovered (ADR-0118)";
+
+// ---------------------------------------------------------------- EventStore: an in-memory Vec
+
+/// The `EventStore` fake: an in-memory `Vec` (design:265).
+///
+/// **`query` returns every appended event whatever the selector, and that is a consequence of a
+/// routing rather than a shortcut.** `rk-types`' `Event` is `{ kind, payload }` and the per-kind
+/// payload field sets are not typed yet (`s7a` §7a.5 — the typed-payload record is OWED), so an
+/// event carries no item id, commit SHA or run id for the fake to filter on. When that record
+/// lands this fake gains the filter, and the conformance body above it does not change.
+///
+/// **`snapshot`/`rebuild` are identity here for the same reason.** `Snapshot` is one of this
+/// crate's opaque newtypes with no field set decided, so it carries nothing to restore from. What
+/// the conformance suite can assert at 7a is that rebuilding from a snapshot of the *current*
+/// state leaves the store unchanged; a round-trip through a **stale** snapshot is not assertable
+/// until `Snapshot`'s contents are decided, and it is not claimed.
+#[derive(Debug, Default)]
+pub struct VecStore {
+    events: Vec<Event>,
+}
+
+impl VecStore {
+    /// Everything appended, in order. The fake's own window, not part of the port.
+    #[must_use]
+    pub fn events(&self) -> &[Event] {
+        &self.events
+    }
+}
+
+impl EventStore for VecStore {
+    fn append(&mut self, event: Event) -> Result<(), StepError> {
+        self.events.push(event);
+        Ok(())
+    }
+
+    fn query(&self, _by: Query) -> Result<Vec<Event>, StepError> {
+        Ok(self.events.clone())
+    }
+
+    fn snapshot(&self) -> Result<Snapshot, StepError> {
+        Ok(Snapshot(()))
+    }
+
+    fn rebuild(&mut self, _snapshot: &Snapshot) -> Result<(), StepError> {
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------- Harness: a scripted responder
+
+/// The `Harness` fake: a scripted responder (design:266).
+#[derive(Debug)]
+pub struct FakeHarness {
+    script: Mutex<Vec<Result<Typed, StepError>>>,
+    token: CancelToken,
+}
+
+impl FakeHarness {
+    /// Script a sequence of outcomes, consumed front to back.
+    #[must_use]
+    pub fn scripted(script: Vec<Result<Typed, StepError>>) -> Self {
+        Self {
+            script: Mutex::new(script),
+            token: CancelToken::new(),
+        }
+    }
+
+    /// Hand the fake the composition root's token, exactly as a real adapter receives it at
+    /// construction. The kernel never holds it and never fires it (ADR-0099 clause 1).
+    #[must_use]
+    pub fn with_token(mut self, token: CancelToken) -> Self {
+        self.token = token;
+        self
+    }
+
+    fn next(&self) -> Option<Result<Typed, StepError>> {
+        let mut script = self.script.lock().expect(LOCK);
+        if script.is_empty() {
+            None
+        } else {
+            Some(script.remove(0))
+        }
+    }
+}
+
+/// The record every dispatch produces, whatever the outcome (AC-360). Argv and env are **digests
+/// only** (ADR-0105 clause 7) and there is no field for the child environment at all.
+fn fake_record() -> DispatchRecord {
+    DispatchRecord {
+        argv_digest: sha256(b"fake-argv"),
+        env_digest: sha256(b"fake-env"),
+        instrument_version: "fake".to_owned(),
+        stdout: Retained::of(b""),
+        stderr: Retained::of(b""),
+    }
+}
+
+/// The one event arm a failed step maps to, bridged from `rk-types`' own total `event()`.
+///
+/// An arm-per-`StepError`-variant form of this bridge is what trips `clippy::match_same_arms`;
+/// routing through `ErrorEvent` keeps the match at four arms with four distinct bodies, and leaves
+/// exhaustiveness over the closed eleven where `rk-types` already enforces it.
+fn event_for(error: &StepError) -> Event {
+    match error.event() {
+        ErrorEvent::StepFailed { class, status } => Event::new(
+            EventKind::StepFailed,
+            serde_json::json!({ "class": class, "status": status }),
+        ),
+        ErrorEvent::StepCancelled => Event::new(EventKind::StepCancelled, serde_json::json!({})),
+        ErrorEvent::RateLimited => Event::new(EventKind::RateLimited, serde_json::json!({})),
+        ErrorEvent::StepRefused { class, capability } => Event::new(
+            EventKind::StepRefused,
+            serde_json::json!({ "class": class, "capability": capability }),
+        ),
+    }
+}
+
+impl Harness for FakeHarness {
+    fn dispatch(&self, _spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
+        let record = fake_record();
+
+        // The token is the composition root's, fired by the CLI's signal path or the per-activity
+        // timeout. The fake READS it; it never fires it, and neither does the kernel.
+        if self.token.is_cancelled() {
+            let error = StepError::Cancelled {
+                by: CancelledBy::Operator,
+            };
+            let _ = store.append(event_for(&error));
+            return DispatchOutcome {
+                record,
+                result: Err(error),
+            };
+        }
+
+        let result = self.next().unwrap_or_else(|| {
+            Err(StepError::Transport {
+                kind: TransportKind::Spawn,
+                detail: "script exhausted".to_owned(),
+            })
+        });
+        if let Err(error) = &result {
+            let _ = store.append(event_for(error));
+        }
+
+        DispatchOutcome { record, result }
+    }
+}
+
+// ---------------------------------------------------------------- Tracker: an in-memory board
+
+/// The `Tracker` fake: an in-memory board (design:267).
+#[derive(Debug, Default)]
+pub struct BoardTracker {
+    projected: Mutex<Vec<String>>,
+    inbox: Mutex<Vec<TypedInput>>,
+}
+
+impl BoardTracker {
+    /// Put one typed input on the inbox, as an external tracker would.
+    pub fn push_inbox(&self, input: TypedInput) {
+        self.inbox.lock().expect(LOCK).push(input);
+    }
+
+    /// What the board holds. The fake's own window, not part of the port.
+    #[must_use]
+    pub fn board(&self) -> Vec<String> {
+        self.projected.lock().expect(LOCK).clone()
+    }
+}
+
+impl Tracker for BoardTracker {
+    fn project(&self, item: &str) -> Result<ExternalRef, StepError> {
+        let mut board = self.projected.lock().expect(LOCK);
+        // **Idempotent writes** (design:267): projecting the same item twice leaves ONE entry.
+        // Getting this wrong is the failure shipmates L5.4 records — one thread holding the same
+        // report posted three times by their own orchestrator.
+        if !board.iter().any(|existing| existing == item) {
+            board.push(item.to_owned());
+        }
+        Ok(ExternalRef(()))
+    }
+
+    fn inbox(&self) -> Result<Vec<TypedInput>, StepError> {
+        Ok(self.inbox.lock().expect(LOCK).clone())
+    }
+}
+
+// ---------------------------------------------------------------- DocsSite: a no-op recorder
+
+/// The `DocsSite` fake: a no-op recorder (design:268).
+#[derive(Debug, Default)]
+pub struct RecordingDocs {
+    calls: Mutex<Vec<&'static str>>,
+    drift: Mutex<Vec<Drift>>,
+}
+
+impl RecordingDocs {
+    /// Script what the next `drift` call reports.
+    pub fn will_report(&self, drift: Vec<Drift>) {
+        *self.drift.lock().expect(LOCK) = drift;
+    }
+
+    /// What the recorder observed, in order. The fake's own window, not part of the port.
+    #[must_use]
+    pub fn calls(&self) -> Vec<&'static str> {
+        self.calls.lock().expect(LOCK).clone()
+    }
+
+    fn record(&self, call: &'static str) {
+        self.calls.lock().expect(LOCK).push(call);
+    }
+}
+
+impl DocsSite for RecordingDocs {
+    fn build(&self, _docs: &DocSet) -> Result<(), StepError> {
+        self.record("build");
+        Ok(())
+    }
+
+    fn check_links(&self) -> Result<(), StepError> {
+        self.record("check_links");
+        Ok(())
+    }
+
+    fn drift(&self, _changed_sources: &[String]) -> Result<Vec<Drift>, StepError> {
+        self.record("drift");
+        Ok(self.drift.lock().expect(LOCK).clone())
+    }
+}
+
+// ---------------------------------------------------------------- Toolchain: fixture-driven
+
+/// The `Toolchain` fake: fixture-driven (design:269).
+///
+/// The fixture is an **ordered list of `(path, classification)` pairs**, not a map: `HashMap` and
+/// `HashSet` are in `clippy.toml`'s `disallowed-types`, denied through the workspace's
+/// `all = { level = "deny", priority = -1 }`, and CI lints test targets.
+///
+/// **A path the fixture does not name classifies as `Text`.** The fixture drives what is *not*
+/// text, which is what AC-497 turns on — `Binary` is the discriminant its port shape carries
+/// (register :7109).
+#[derive(Debug, Default)]
+pub struct FixtureToolchain {
+    fixture: Vec<(String, Classification)>,
+    present: bool,
+}
+
+impl FixtureToolchain {
+    /// Drive the fake from a fixture: a path, and what the toolchain says about it.
+    #[must_use]
+    pub fn from_fixture(fixture: Vec<(&str, Classification)>) -> Self {
+        Self {
+            fixture: fixture
+                .into_iter()
+                .map(|(path, class)| (path.to_owned(), class))
+                .collect(),
+            present: true,
+        }
+    }
+
+    /// Script `detect` as reporting the toolchain absent.
+    #[must_use]
+    pub fn absent(mut self) -> Self {
+        self.present = false;
+        self
+    }
+}
+
+impl Toolchain for FixtureToolchain {
+    fn detect(&self) -> Result<bool, StepError> {
+        Ok(self.present)
+    }
+
+    fn build(&self) -> Result<(), StepError> {
+        Ok(())
+    }
+
+    fn test(&self, selection: &[String]) -> Result<u32, StepError> {
+        Ok(u32::try_from(selection.len()).unwrap_or(u32::MAX))
+    }
+
+    fn lint(&self) -> Result<(), StepError> {
+        Ok(())
+    }
+
+    fn classify(&self, path: &str) -> Result<Classification, StepError> {
+        let found = self
+            .fixture
+            .iter()
+            .find(|(fixture_path, _)| fixture_path == path)
+            .map(|(_, class)| *class);
+        Ok(found.unwrap_or(Classification::Text))
+    }
+
+    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {
+        // The BODY is not written at this step — that is 7c's, behind S-BIN (ADR-0093 decision 4).
+        // The Phase-1 fake returns the opaque newtype and no real adapter implements it yet.
+        Ok(ChangeSummary(()))
+    }
+}

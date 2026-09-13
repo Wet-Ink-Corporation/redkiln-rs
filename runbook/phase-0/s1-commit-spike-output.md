@@ -117,8 +117,8 @@ without the records it carries.
 cd D:/repos/redkiln-rs
 st=$(git status --porcelain)                           # → EMPTY (no output at all). Phase-0 exit (a).
 [ -z "$st" ] || { echo "FAIL: tree not clean — Phase-0 exit (a) not met:"; printf '%s\n' "$st"; exit 1; }
-n=$(ls references/adr/*.md | wc -l)                    # → 119 (117 records + README.md + ERRATA.md) — 114 verified 2026-09-11; 0115/0116 and ADR-0090 landed 2026-09-12; ADR-0117 (the stale_policy adjudication) and ADR-0091 (Step 6.1's S-GIX result) 2026-09-13
-[ "$n" -eq 119 ] || { echo "FAIL: expected 119 ADR files, found $n"; exit 1; }
+n=$(ls references/adr/*.md | wc -l)                    # → 120 (118 records + README.md + ERRATA.md) — 114 verified 2026-09-11; 0115/0116 and ADR-0090 landed 2026-09-12; ADR-0117 (the stale_policy adjudication) and ADR-0091 (Step 6.1's S-GIX result) 2026-09-13; **ADR-0118** (Step 7a's lock-poisoning halt) 2026-09-13
+[ "$n" -eq 120 ] || { echo "FAIL: expected 120 ADR files, found $n"; exit 1; }
 k=$(git ls-files references/adr/0114-*.md | wc -l)     # → 1  the last remediation record is tracked, not just on disk
 [ "$k" -eq 1 ] || { echo "FAIL: ADR-0114 tracked-file count is $k, expected 1"; exit 1; }
 # → runbook/INDEX.md  (the split runbook is tracked)
@@ -150,9 +150,13 @@ intention with no check behind it.
 
 **The ADR file count, and why the number keeps moving.** **Superseded 2026-09-11:** this paragraph argued 89 → 90
 (88 records + README, then ADR-0089) and contradicted the checkpoint five paragraphs above it, which asserts
-**119**. The tree measures 119 — **117 records + `README.md` + `ERRATA.md`** — after the 2026-09-11 remediation
+**120**. The tree measures 120 — **118 records + `README.md` + `ERRATA.md`** — after the 2026-09-11 remediation
 landed ADR-0092–0114 and the errata convention, the 2026-09-12 alignment review landed ADR-0115/0116, Step 4.4
-landed **ADR-0090**, and Step 6.1 landed **ADR-0091** on 2026-09-13. The lesson the old paragraph was carrying still holds: anyone reading a smaller number here on
+landed **ADR-0090**, Step 6.1 landed **ADR-0091** on 2026-09-13, and Step 7a landed **ADR-0118** — the
+lock-poisoning halt closing the residual ADR-0115:135-138 assigned to that stage — the same day.
+*(Moved 119 → 120 on 2026-09-13 when ADR-0118 was written; this is the third time this assertion has moved,
+after 118 → 119 at Step 6.1 and 116 → 117 at Step 4.4, and each move was re-run in the session that caused it.)*
+The lesson the old paragraph was carrying still holds: anyone reading a smaller number here on
 a tree that has 115 records is reading a stale runbook, not a broken tree, and Step 4.4's numbering moves with it
 (the next free number is **`0118`**, and since Step 6.1 wrote `0091` on 2026-09-13 **no reserved number remains**). *(Corrected 2026-09-12 at
 Step 4.4: this paragraph said 116 / 114 and gave the next free number as **0115**, which was already stale — 0115 and

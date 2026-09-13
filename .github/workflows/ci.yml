@@ -200,3 +200,60 @@ jobs:
             exit 1
           fi
           echo "AC-529: no src/ path reads the current directory"
+
+      # design:1783 names three of Step 7a's assertions as CI's, by id: the `rk-ports` count
+      # assertion `traits.len() == fakes.len()` (AC-481), the port-inventory lint with a denylist on
+      # the git surface (AC-483), and "no `async fn` and no future-returning method in any
+      # `rk-ports` trait" (AC-528).
+      #
+      # ARMED, NOT DISCHARGED, and recorded as such: PROGRESS.md:307 records that this workflow is
+      # authored and has never run, so a row added here is armed and nothing more.
+      #
+      # Each rule is COMMENT-FILTERED and ANCHORED, and carries the TRACKED-FILE POSITIVE CONTROL.
+      # All three properties were paid for: `grep -vE '^\s*//'` can never match, because grep prints
+      # `path:line:content` and the line starts with the PATH (ci.yml:186-190 records it as the form
+      # that does not work); this workspace's house pattern is a module header naming the governing
+      # record, so an unfiltered rule halts on a CORRECT crate; and a pass condition that is the
+      # ABSENCE of output exits 0 over a tree that is not there (Halt 8 shape (g)), which is what
+      # the file-count control below closes.
+      - name: the rk-ports port inventory (AC-481, AC-483, AC-528 — armed, never yet run)
+        run: |
+          files=$(git ls-files 'crates/rk-ports/src/*.rs' 'crates/rk-ports/src/**/*.rs')
+          test -n "$files" || { echo "FAIL: no TRACKED .rs files under crates/rk-ports/src -- every rule below would be vacuous"; exit 1; }
+
+          # AC-481. The assertion must EXIST and be spelled as design:1783 names it: the idiomatic
+          # `assert_eq!(traits.len(), fakes.len())` does not contain this string. Whether it RAN is
+          # the `cargo test` gate's job, not this one's.
+          grep -rq 'traits.len() == fakes.len()' crates/rk-ports/ \
+            || { echo "FAIL: rk-ports carries no AC-481 parity assertion spelled 'traits.len() == fakes.len()'"; exit 1; }
+          echo "AC-481: the parity assertion is present"
+
+          # AC-483. Git is deliberately not a port (ADR-0003:44, :57-58); GitOps is a struct inside
+          # rk-git (ADR-0105 clause 1). The denylist is the register's own enumeration at :6957.
+          bad=$(printf '%s\n' "$files" | xargs grep -HnE '^pub trait [A-Za-z]*(Git|Trailer|Worktree|Clone|Reconcile)' || true)
+          if [ -n "$bad" ]; then
+            echo "FAIL: a port trait names the git surface (AC-483):"
+            printf '%s\n' "$bad"
+            exit 1
+          fi
+          echo "AC-483: no port trait abstracts git"
+
+          # AC-528. The alternation is as wide as the register's, which names BoxFuture too
+          # (:7159-7160); only the comment exclusion narrows, and that is ADR-0076's own scope --
+          # the rule is about DECLARATIONS, and rk-ports' module header explains why the ports are
+          # sync. `-H` is load-bearing: grep prints the path prefix only when given more than one
+          # file, so on a single-file crate the two-colon filter would match nothing.
+          bad=$(printf '%s\n' "$files" | xargs grep -HnE 'async fn|impl Future|-> .*Future|BoxFuture' \
+                | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' || true)
+          if [ -n "$bad" ]; then
+            echo "FAIL: an async fn or future-returning method in a port trait (AC-528, ADR-0076):"
+            printf '%s\n' "$bad"
+            exit 1
+          fi
+          echo "AC-528: no port trait declares an async or future-returning method"
+
+          # THE POSITIVE CONTROL for the two denylists above: both pass over a crate with no port
+          # traits at all. This asserts the five are there to be guarded.
+          n=$(printf '%s\n' "$files" | xargs grep -hE '^pub trait [A-Za-z][A-Za-z0-9_]*: Send \+ Sync' | grep -c . | tr -d '[:space:]')
+          test "${n:-0}" -eq 5 || { echo "FAIL: ${n:-0} port traits declare Send + Sync, expected 5 (ADR-0003:34) -- the denylists above assert nothing"; exit 1; }
+          echo "AC-480/AC-481: five port traits, Send + Sync on all five"

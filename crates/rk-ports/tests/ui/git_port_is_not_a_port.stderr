@@ -1,0 +1,7 @@
+error[E0560]: struct `Ports` has no field named `git`
+  --> tests/ui/git_port_is_not_a_port.rs:43:9
+   |
+43 |         git: Arc::new(FakeGit),
+   |         ^^^ `Ports` does not have this field
+   |
+   = note: all struct fields are already assigned

@@ -53,7 +53,7 @@ Read that total with four deductions in front of it.
 1. **Every instrument is prospective.** No criterion in this register has ever been run. The number counts specified checks, not coverage.
 2. **Twenty human gates and six conditionals contribute no machine assurance**, and a further set of criteria are negative guards a system doing nothing also satisfies (the harness area names four of its own; events-cost names six). The count of criteria that can actually catch a regression on day one is materially below 469, and no area was able to state that number for itself.
 3. **The measures are thinner than 135 suggests.** Every area's refutation found measures that saturate at zero by construction, that carry no firing kill, or that have no baseline at all. Where an area labelled a measure a *discovery instrument*, a *tracker*, a *tripwire* or a *descriptive report*, the label is reproduced in the per-area measure table's `note` column and must travel with it.
-4. **Twenty-four of the 112 decisions are cited by no criterion** (§15.3, recomputed 2026-09-11 from every `decisions:` field — 112 was the record count with ADR-0092..ADR-0114; **the set is now 116 records over `0001`–`0117` and this split has NOT been recomputed for the four added since — see the dated note at §15.3**; on 2026-09-08 it was 33 of 89, including the whole ADR-0074..ADR-0088 block). Eleven of that block's fifteen are now cited by the criteria that carry their rules; the rest of the uncited set is one premise, three superseded or proposed records, two conventions and seventeen schema/grammar amendments. The behaviour is mostly covered; the citation layer is closer to the behaviour than it was.
+4. **Twenty-four of the 112 decisions are cited by no criterion** (§15.3, recomputed 2026-09-11 from every `decisions:` field — 112 was the record count with ADR-0092..ADR-0114; **the set is now 118 records over `0001`–`0118`, contiguous, and this split has NOT been recomputed for the six added since — see the dated note at §15.3**; on 2026-09-08 it was 33 of 89, including the whole ADR-0074..ADR-0088 block). Eleven of that block's fifteen are now cited by the criteria that carry their rules; the rest of the uncited set is one premise, three superseded or proposed records, two conventions and seventeen schema/grammar amendments. The behaviour is mostly covered; the citation layer is closer to the behaviour than it was.
 
 ### 0.2 What this register is not
 
@@ -6915,14 +6915,32 @@ five traits, a bare trait object and not a newtype (ADR-0099 decision 4; the div
 a compile-fail test fixture that introduces one such parameter and must not build.
 
 **AC-481** — `rk-ports` · evidence: proposal §4.1 ("a fake per port is a hard requirement of adding the port"); the §4.1 port table names all five fakes (in-memory Vec, scripted responder, in-memory board, no-op recorder, fixture-driven); shipmates L5.8 (count-as-assertion) · decisions: ADR-0003
-GIVEN the set of port traits declared in `rk-ports` — **derived from source** (every `pub trait` in `rk-ports` carrying the `#[port]`
-registration attribute; every fake carrying `#[fake_for(Trait)]`), never from a hand-maintained inventory list
+GIVEN the set of port traits declared in `rk-ports` — **derived from source** (a parse of `rk-ports`' own source text: the set of
+`pub trait` declarations it exports as ports, and the set of types implementing one as a fake), never from a hand-maintained inventory list
 WHEN the workspace test suite runs
 THEN the count of fake implementations equals the count of port traits, and the equality is asserted as a number, not as a spot check
 AND a port trait added without a fake fails the suite naming the missing fake, by name, from the same source parse.
 *Verified by:* a `rk-ports` inventory test asserting `traits.len() == fakes.len()` over the source-derived sets; a fixture branch adding a
 sixth trait with no fake **and editing no inventory** that must fail naming it. *(Amended 2026-09-11, PIA-059: an inventory the fixture
 also had to edit passed on the behaviour it forbids.)* The fake count is per port and unchanged by ADR-0094's second Toolchain adapter.
+*(Amended 2026-09-13, against the operator decision taken that day for runbook Step 7a. **The registration attributes this GIVEN named
+were never built, and cannot be built where this corpus puts crates.** As authored on 2026-09-11 the GIVEN derived the trait set from
+`#[port]` on every `pub trait` and the fake set from `#[fake_for(Trait)]` on every fake. Neither is a Rust attribute: applied to a
+five-port shape under the pinned toolchain they give ``error: cannot find attribute `port` in this scope`` and ``error: cannot find
+attribute `fake_for` in this scope`` [measured 2026-09-13, rustc 1.98.1 (48a229cea 2026-09-01), the pin; the same two errors under
+1.97.1]. An attribute macro needs a crate with `proc-macro = true` to define it, and design §9.1 — *"Ten crate families — **and this
+table is the crate-name authority**"* (`references/2026-09-08-architecture-design.md`:1695, per ADR-0099 clause 5) — names no macro
+crate among the ten [documented]. **What is replaced is the mechanism, not the criterion:** both sets are derived from a **parse of
+`rk-ports`' own source**. **The three binding clauses are unchanged and are restated here so this cannot be read as a weakening:** the
+sets are derived from source and **never** from a hand-maintained inventory; the equality is asserted **as a number**, not as a spot
+check; and the AND clause stands in full — a port trait added without a fake **fails the suite naming the missing fake by name, from the
+same source parse** — as does the PIA-059 fixture above, which must add the sixth trait **and edit no inventory**. **What the amendment
+costs, stated rather than smoothed:** an attribute registration is a **declared** set and a source parse is an **inferred** one, so the
+parse can disagree with authorial intent in two directions — a `pub trait` the author did not mean to register is counted, and a fake the
+parse cannot see (generated by a macro, behind a `cfg`, or written in a shape the parse does not match) is not. Neither direction is
+visible in the count alone, because both sides can move together [inferred]. **The PIA-059 fixture is what holds the parse honest**: a
+sixth trait with no fake, editing no inventory, must fail, and must name that trait. **No proc-macro crate is created and design §9.1's
+crate authority is not amended** — the ten families stand.)*
 
 **AC-482** — architecture review · evidence: proposal §3 principle 9 ("a port exists where a substitute has been named, or where the fake alone pays for it") · decisions: ADR-0003, ADR-0017
 GIVEN a proposal to add a sixth port
@@ -7499,7 +7517,7 @@ Decisions cited by exactly one criterion — ADR-0032 (AC-434), ADR-0035 (AC-022
 
 ### 15.3 Decisions no criterion cites
 
-`references/adr/` holds **116 records** — ADR-0001..ADR-0090 plus ADR-0092..ADR-0117; `0091` is the one reserved, unwritten number, allocated to runbook Step 6.1 (**amended 2026-09-13**; this read *"112 decisions — ADR-0001..ADR-0089 plus the twenty-three records of 2026-09-11, ADR-0092..ADR-0114 (ADR-0090 and ADR-0091 are allocated to runbook Steps 4.4 and 6 and are unwritten)"*, which was true on 2026-09-11 and went stale in three steps: **ADR-0090** was written at runbook Step 4.4 on 2026-09-12 — the context-vector record, superseding ADR-0079 in full — **ADR-0115** and **ADR-0116** on 2026-09-12 by the runbook alignment review, and **ADR-0117** on 2026-09-13, the `stale_policy` adjudication). The criteria cite **88** of the 112 counted on 2026-09-11, and **that split is not restated for the 116**: it was recomputed from every `decisions:` field and is not re-derivable by a coarse scan. What **is** measured, 2026-09-13, over the register's **531** `decisions:` lines: **none of ADR-0090, ADR-0115, ADR-0116 or ADR-0117 is cited by any criterion**, so the uncited set has grown by four and the cited count is unchanged at 88 — a recount of the whole set is owed and is not performed here. The remaining **24** are listed below, because a decision no criterion cites is a decision nothing will test — and this was the largest single defect the 2026-09-08 assembly found. [measured, recomputed 2026-09-11]
+`references/adr/` holds **118 records** — ADR-0001..ADR-0118, **contiguous, with no reserved and no unwritten number** (**amended 2026-09-13, second time that day**; this read *"116 records — ADR-0001..ADR-0090 plus ADR-0092..ADR-0117; `0091` is the one reserved, unwritten number, allocated to runbook Step 6.1"*, which went stale in two further steps of the same day: **ADR-0091** was written at runbook Step 6.1 — the S-GIX result and the git-version floor — and **ADR-0118** at Step 7a, the lock-poisoning halt closing the residual ADR-0115:135-138 named for that stage. Before that it read *"112 decisions — ADR-0001..ADR-0089 plus the twenty-three records of 2026-09-11, ADR-0092..ADR-0114 (ADR-0090 and ADR-0091 are allocated to runbook Steps 4.4 and 6 and are unwritten)"*, which was true on 2026-09-11 and went stale in three: **ADR-0090** at runbook Step 4.4 on 2026-09-12 — the context-vector record, superseding ADR-0079 in full — **ADR-0115** and **ADR-0116** on 2026-09-12 by the runbook alignment review, and **ADR-0117** on 2026-09-13, the `stale_policy` adjudication). The criteria cite **88** of the 112 counted on 2026-09-11, and **that split is not restated for the 118**: it was recomputed from every `decisions:` field and is not re-derivable by a coarse scan. What **is** measured, 2026-09-13, over the **532** lines of this register containing `decisions:` — a count that includes this sentence, which is the only one of them that names any of the six: **none of ADR-0090, ADR-0091, ADR-0115, ADR-0116, ADR-0117 or ADR-0118 is cited by any criterion**, so the uncited set has grown by **six**, not four, and the cited count is unchanged at 88 — a recount of the whole set is owed and is not performed here. *(The 2026-09-13 revision of this sentence gave the line count as 531 and the growth as four; the line count does not reproduce and the growth was measured before `0091` and `0118` were written.)* The remaining **24** are listed below, because a decision no criterion cites is a decision nothing will test — and this was the largest single defect the 2026-09-08 assembly found. [measured, recomputed 2026-09-11]
 
 | decision | title (frontmatter, verbatim) | status |
 | --- | --- | --- |

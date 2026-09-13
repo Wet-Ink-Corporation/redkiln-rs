@@ -1,0 +1,18 @@
+error[E0308]: mismatched types
+  --> tests/ui/bare_arc_store_has_no_mut.rs:34:5
+   |
+33 | fn store_field_is_not_the_withdrawn_shape(ports: &Ports) -> &Arc<dyn EventStore> {
+   |                                                             -------------------- expected `&Arc<(dyn EventStore + 'static)>` because of return type
+34 |     &ports.store
+   |     ^^^^^^^^^^^^ expected `&Arc<dyn EventStore>`, found `&Arc<Mutex<dyn EventStore>>`
+   |
+   = note: expected reference `&Arc<(dyn EventStore + 'static)>`
+              found reference `&Arc<std::sync::Mutex<(dyn EventStore + 'static)>>`
+
+error[E0596]: cannot borrow data in an `Arc` as mutable
+  --> tests/ui/bare_arc_store_has_no_mut.rs:56:43
+   |
+56 |     let _ = ports.harness.dispatch(&spec, &mut *ports.store);
+   |                                           ^^^^^^^^^^^^^^^^^ cannot borrow as mutable
+   |
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Arc<dyn EventStore>`
