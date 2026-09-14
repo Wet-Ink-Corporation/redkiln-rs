@@ -506,11 +506,38 @@ pub fn decide_after_inner_retries(
 ) -> RetryDecision {
     if inner.any() {
         return RetryDecision::Refuse {
-            class: "harness_already_retried",
+            class: HARNESS_ALREADY_RETRIED,
         };
     }
     decide(error, key, cap)
 }
+
+/// **The refusal class [`decide_after_inner_retries`] names — and it is THIS CRATE'S PROPOSAL, not
+/// a record's word.**
+///
+/// *(Named here rather than spelled inline, 2026-09-14, on an adversarial verification pass that
+/// reproduced it: `grep -rn harness_already_retried references/ runbook/ crates/` returned **one
+/// line, this module's own**.)*
+///
+/// Every other `class` this module emits comes from a **closed** vocabulary: the `UpToAttempts`
+/// branch's `RetryDecision::Refuse { class }` is [`error_tag`]'s, which is an exhaustive
+/// no-wildcard `match` over ADR-0112's eleven. This token is the one exception. It is not in the
+/// register, not in ADR-0122 — which settled the *rule* (decision 1's charge unit, decision 2's
+/// dispatch scope) and named no class token for the refusal — and not in design §5.
+///
+/// **It is not derived from `error_tag` deliberately.** `error_tag(error)` would spell the class of
+/// the *failure* (`platform`, `transport`, …) where what is being reported is the class of the
+/// *refusal*: **the kernel declined to retry because the harness already did**. Collapsing the two
+/// would make a refusal for this reason indistinguishable from `UpToAttempts`' refusal of the same
+/// error, which is precisely the conflation the eleven exist to prevent one type up.
+///
+/// So it is declared here, on `crates/rk-types/src/event_kind.rs`:16-21's precedent for the three
+/// names that enum proposes to design §5: *"they are named here rather than invented silently …
+/// until it lands those three are this crate's proposal rather than the design's word."* **A record
+/// naming the refusal-class vocabulary is OWED**, and until it lands this token is **this crate's
+/// proposal**, reported as such and never as a record's spelling. `00-preamble.md`:55 — a stage
+/// records what is owed rather than deciding it.
+pub const HARNESS_ALREADY_RETRIED: &str = "harness_already_retried";
 
 /// One recorded `system/api_retry` event, as the harness stream carries it.
 ///
@@ -660,8 +687,23 @@ pub fn schedule(error: &StepError, key: &IdempotencyKey, cap: AttemptCap) -> Ret
     // The bound is the pack's and the loop cannot outrun it: `decide` returns `CapReached` at
     // `attempt >= cap`, which authorises nothing. The fence is a second, redundant stop so that a
     // future change to the policy cannot turn this into a non-terminating function.
+    //
+    // 🛑 **A `loop`, NOT `while attempt <= fence` — repaired 2026-09-14 on an adversarial
+    // verification pass, which reproduced the defect.** The guard used to be the loop *condition*,
+    // so a key whose `attempt` was already past `cap + 1` **never entered the body**: `decisions`
+    // came back empty, [`RetrySchedule::surfaced`] came back `None`, and
+    // [`RetrySchedule::dispatches`] still reported **1**. An error handed to the scheduler came
+    // back as *"no failure surfaced"* — the silent pass `00-preamble.md`:55 forbids, and the exact
+    // inverse of AC-027's *"the run fails with the configuration error surfaced"*. A resumed run,
+    // or a pack whose `N` was lowered between runs, reaches that state ordinarily.
+    //
+    // The body now runs **at least once** for every key. At an over-cap attempt `decide` returns
+    // `CapReached` — it authorises nothing, so the loop stops after one pass — and the error is
+    // surfaced, which is what an over-cap entry must do. The fence survives unchanged in purpose:
+    // it is checked **after** an authorised re-dispatch, where a non-terminating policy would be
+    // caught, rather than before the first decision, where it was suppressing one.
     let fence = cap.get().saturating_add(1);
-    while attempt <= fence {
+    loop {
         let at = IdempotencyKey {
             item: key.item.clone(),
             activity_id_at_version: key.activity_id_at_version.clone(),
@@ -674,6 +716,9 @@ pub fn schedule(error: &StepError, key: &IdempotencyKey, cap: AttemptCap) -> Ret
             break;
         }
         attempt = attempt.saturating_add(1);
+        if attempt > fence {
+            break;
+        }
     }
 
     // AC-027's "the run fails with the configuration error surfaced", and AC-030's "exits 0" read

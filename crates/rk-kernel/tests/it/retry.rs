@@ -46,8 +46,8 @@ use rk_kernel::budget::{
     charge_observed_inner_attempts, exhausted_counter, fold,
 };
 use rk_kernel::retry::{
-    ActivityOutcome, ApiRetryEvent, BACKOFF_BASE_SECS, BACKOFF_CAP_SECS, InnerAttempts, JitterDraw,
-    RetryDecision, backoff_ceiling_secs, backoff_delay, consult, decide,
+    ActivityOutcome, ApiRetryEvent, BACKOFF_BASE_SECS, BACKOFF_CAP_SECS, HARNESS_ALREADY_RETRIED,
+    InnerAttempts, JitterDraw, RetryDecision, backoff_ceiling_secs, backoff_delay, consult, decide,
     decide_after_inner_retries, error_tag, refused_before_spawn, schedule, schedule_for,
 };
 use rk_kernel::select::Pack;
@@ -881,9 +881,18 @@ fn api_retry_rows() -> Vec<Row> {
 /// ADR-0122's *"the counter restarts within a single dispatch on 37 of 139 recorded rows"*. **Every
 /// one of those reproduces** against the corpus at `CORPUS_SHA` 27d97e9b [measured 2026-09-14, by
 /// summing `step.api_retries` over `$CORPUS_REPO/results/*.jsonl`], including the twelve per-file
-/// row counts (e3 26, p7 38, s-var 28, s-typed 18, e0-stability 6, p8 5, s-var-2400 5, h4 4,
+/// row counts (p7 38, s-var 28, e3 26, s-typed 18, e0-stability 6, p8 5, s-var-2400 5, h4 4,
 /// p1-arm-l-v2 4, s-typed-oldschema 3, e3-pilot 1, e3h 1) and the `overloaded`/529 : `unknown`/null
 /// split of 67 : 217. The per-file **event** counts are published nowhere and are not reproduced.
+///
+/// 🛑 **Every one of those numbers is now ASSERTED below, and until 2026-09-14 none of them was.**
+/// The paragraph above published twelve per-file counts and a two-way split and the body asserted
+/// **neither**, so a fixture that drifted would have left this doc describing a distribution its
+/// own bytes no longer carried and nothing would have gone red. An unasserted number in a doc
+/// comment is a claim with no instrument. Both are read off the fixture now, and both are
+/// cross-checked against the totals already asserted — the twelve must sum to 139 rows and the
+/// split must exhaust 284 events — so the per-file figures and the aggregate figures cannot drift
+/// apart while each stays individually true.
 ///
 /// 🛑 **One published number does not reproduce, and this fixture is built to the measurement.**
 /// ADR-0122 decision 1 states the loss as *"61 of 284 attempts"*, which puts the terminal-`attempt`
@@ -942,6 +951,72 @@ fn inner_retry_ac026() {
         per_row.into_iter().collect::<Vec<_>>(),
         vec![1, 2, 3, 4, 5, 6, 10],
         "the recorded per-row attempt counts"
+    );
+
+    // ---- THE TWELVE PER-FILE ROW COUNTS AND THE STATUS SPLIT, ASSERTED ---------------------------
+    //
+    // Added 2026-09-14 on an adversarial verification pass. This doc comment **published** these
+    // twelve numbers and the 67 : 217 split and asserted **none of them**: a drifted fixture would
+    // have left the prose describing a distribution the bytes no longer carried, and nothing would
+    // have gone red. An unasserted number in a doc comment is a claim with no instrument, so each
+    // is now read off the fixture. Every figure below is the register's (AC-026's PIA-068
+    // Correction) and ADR-0122's, re-derived from the corpus at `CORPUS_SHA` 27d97e9b on
+    // 2026-09-14, and the fixture reproduces all of them.
+    let mut per_file: Vec<(&str, usize)> = {
+        let mut counts: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+        for row in &rows {
+            *counts.entry(row.result_file.as_str()).or_insert(0) += 1;
+        }
+        counts.into_iter().collect()
+    };
+    // Descending by count, then by name — the order the register publishes them in.
+    per_file.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
+    assert_eq!(
+        per_file,
+        vec![
+            ("p7.jsonl", 38),
+            ("s-var.jsonl", 28),
+            ("e3.jsonl", 26),
+            ("s-typed.jsonl", 18),
+            ("e0-stability.jsonl", 6),
+            ("p8.jsonl", 5),
+            ("s-var-2400.jsonl", 5),
+            ("h4.jsonl", 4),
+            ("p1-arm-l-v2.jsonl", 4),
+            ("s-typed-oldschema.jsonl", 3),
+            ("e3-pilot.jsonl", 1),
+            ("e3h.jsonl", 1),
+        ],
+        "the twelve per-file row counts the register publishes and this test's doc names"
+    );
+    assert_eq!(
+        per_file.iter().map(|(_, n)| n).sum::<usize>(),
+        139,
+        "the twelve per-file counts must sum to the 139 rows asserted above — otherwise the two \
+         premises could drift apart and each stay individually true"
+    );
+
+    // The `overloaded`/529 : `unknown`/null split, over the 284 EVENTS and not over the rows.
+    let overloaded = rows
+        .iter()
+        .flat_map(|r| &r.events)
+        .filter(|e| e.error_status == Some(529))
+        .count();
+    let unknown = rows
+        .iter()
+        .flat_map(|r| &r.events)
+        .filter(|e| e.error_status.is_none())
+        .count();
+    assert_eq!(
+        (overloaded, unknown),
+        (67, 217),
+        "the 67 : 217 status split"
+    );
+    assert_eq!(
+        overloaded + unknown,
+        284,
+        "the split must exhaust the 284 events — a third status would make both halves true and \
+         the distribution wrong"
     );
 
     // ---- ADR-0122 DECISION 1: THE UNIT IS THE EVENT, NOT THE COUNTER -----------------------------
@@ -1089,6 +1164,61 @@ fn inner_retry_ac026() {
         unsuppressed.authorises_redispatch(),
         "without this, `authorises_redispatch() == false` above is satisfied by a policy that \
          never retries `Platform` at all"
+    );
+
+    // ---- THE REFUSAL CLASS IS THIS CRATE'S PROPOSAL, AND THAT IS ASSERTED RATHER THAN ASSUMED ----
+    //
+    // Added 2026-09-14 on an adversarial verification pass. `HARNESS_ALREADY_RETRIED` is spelled by
+    // **no record anywhere** — not the register, not ADR-0122 (which settled the rule and named no
+    // class token), not design §5 — while every other `class` this module emits comes from
+    // `error_tag`'s closed eleven. `src/workflow/retry.rs` declares it as the crate's proposal with
+    // the record OWED, on `rk-types`' `event_kind.rs`:16-21 precedent, and these two assertions are
+    // what stop it drifting into looking like a record's word.
+    let suppressed =
+        decide_after_inner_retries(&overloaded, &key_at(1), cap, InnerAttempts::observed(1));
+    assert_eq!(
+        suppressed,
+        RetryDecision::Refuse {
+            class: HARNESS_ALREADY_RETRIED
+        },
+        "the suppression is a typed Refusal carrying the named token, not an arbitrary string"
+    );
+    let eleven_tags: BTreeSet<&str> = every_step_error().iter().map(error_tag).collect();
+    assert_eq!(eleven_tags.len(), 11, "PREMISE: ADR-0112's closed set");
+    assert!(
+        !eleven_tags.contains(HARNESS_ALREADY_RETRIED),
+        "the token is NOT one of `error_tag`'s eleven — it names the class of the REFUSAL (the \
+         kernel declined because the harness already retried), not the class of the FAILURE. If it \
+         ever collapses into one of the eleven, a refusal for this reason becomes \
+         indistinguishable from `UpToAttempts`' refusal of the same error"
+    );
+    assert!(
+        // ANCHORED TO THE DECLARATION, NOT THE FILE. A whole-file `contains` was green on
+        // `JitterDraw`'s copy of the same phrase at :51 when the label was deleted from the
+        // declaration [measured 2026-09-14 by mutation]. A control that passes on some other
+        // item's text is decoration, so the window is the declaration's own preceding doc.
+        {
+            let src = include_str!("../../src/workflow/retry.rs");
+            let decl = src
+                .find("pub const HARNESS_ALREADY_RETRIED")
+                .expect("declared here");
+            // NEWLINE-AGNOSTIC, AND THAT IS THE WHOLE POINT. This walked back to the previous
+            // blank line with a two-newline needle, which on this CRLF tree matched NOTHING, fell
+            // through to the start of the file, and made the "window" 30,288 bytes -- the entire
+            // file, including the same phrase used of `JitterDraw` at :51. It was decoration twice
+            // over [measured 2026-09-14: a probe printed len=30288 where the real doc block is
+            // 1,861 bytes]. Walking back over doc-comment lines cannot care about the ending.
+            let doc: String = src[..decl]
+                .lines()
+                .rev()
+                .take_while(|l| l.trim_start().starts_with("///"))
+                .collect::<Vec<_>>()
+                .join(" ");
+            let doc = doc.as_str();
+            doc.contains("this crate's proposal") && doc.contains("OWED")
+        },
+        "the declaration must keep saying it is this crate's proposal with the record OWED; a \
+         token that quietly stops being labelled reads as a record's spelling"
     );
 }
 
@@ -1242,4 +1372,82 @@ fn inner_retry_ac026_at_the_corpus_pin() {
          8's `a filter that matches nothing exits 0`"
     );
     println!("inner_retry at the pin: rows={rows_seen} events={events_seen}");
+}
+
+// ---- the scheduler's over-cap entry -------------------------------------------------------------
+
+/// **An over-cap entry surfaces the error. It used to come back as "no failure surfaced".**
+///
+/// *(Authored 2026-09-14 on an adversarial verification pass that reproduced the defect.)*
+/// `rk_kernel::retry::schedule` drove its loop with `while attempt <= fence`, `fence = cap + 1`, so
+/// a key whose `attempt` was already past `cap + 1` **never entered the body**: `decisions()` came
+/// back **empty**, `surfaced()` came back **`None`** and `dispatches()` still reported **1**. An
+/// error handed to the scheduler was reported as a run with no failure — the silent pass
+/// `00-preamble.md`:55 forbids, and the exact inverse of AC-027's *"the run fails with the
+/// configuration error surfaced"*.
+///
+/// **This is not a hypothetical key.** `key.attempt` is the activation's own dispatch counter
+/// (`crate::runtime`'s `next_attempt`), so a resumed run, or a pack whose `N` was lowered between
+/// runs, reaches an over-cap attempt ordinarily — and the failure mode is silence, which is the
+/// one the instrument set is least able to notice.
+///
+/// **What makes each assertion discriminating:**
+///
+/// - The **control comes first**: at attempt 1 the same error and the same cap produce a schedule
+///   that surfaces and re-dispatches. Without it, "surfaced is `Some`" is satisfied by a function
+///   that surfaces unconditionally.
+/// - `decisions()` is asserted **non-empty and terminal**: exactly one decision, authorising no
+///   re-dispatch. An over-cap entry must stop, not restart the ladder from the top.
+/// - `u32::MAX` is included, because `attempt + 1` saturates there and a fence checked in the wrong
+///   place is how a saturating counter becomes a non-terminating loop.
+#[test]
+fn schedule_refuses_to_swallow_an_over_cap_attempt() {
+    let cap = declared_cap();
+    let error = transport();
+
+    // ---- CONTROL: inside the cap the schedule surfaces AND re-dispatches -------------------------
+    let inside = schedule(&error, &key_at(1), cap);
+    assert_eq!(inside.surfaced(), Some(&error));
+    assert!(
+        inside.redispatches() >= 1,
+        "PREMISE: this class re-dispatches inside the cap, so the over-cap cases below are a \
+         different outcome and not the only one this function can produce"
+    );
+    assert_eq!(inside.dispatches(), cap.get());
+
+    // ---- and PAST the cap it surfaces too, rather than reporting nothing -------------------------
+    for attempt in [
+        cap.get().saturating_add(1),
+        cap.get().saturating_add(2),
+        cap.get().saturating_add(50),
+        u32::MAX,
+    ] {
+        let sched = schedule(&error, &key_at(attempt), cap);
+        assert!(
+            !sched.decisions().is_empty(),
+            "attempt {attempt} is past the cap of {}, and an entry the loop never reached reports \
+             an error as a run with no decisions at all",
+            cap.get()
+        );
+        assert_eq!(
+            sched.surfaced(),
+            Some(&error),
+            "attempt {attempt}: the error handed to the scheduler must come back SURFACED. \
+             `None` here is the scheduler saying no failure occurred"
+        );
+        assert_eq!(
+            sched.redispatches(),
+            0,
+            "attempt {attempt}: past the cap nothing is authorised — AC-029's *never exceeds the \
+             pack's N*"
+        );
+        let terminal = sched
+            .decisions()
+            .last()
+            .expect("a non-empty schedule has a last decision");
+        assert!(
+            !terminal.authorises_redispatch(),
+            "attempt {attempt}: the terminal decision must authorise nothing; got {terminal:?}"
+        );
+    }
 }

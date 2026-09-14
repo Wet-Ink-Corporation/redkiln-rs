@@ -47,7 +47,7 @@
 //! | the record's words | the kind used | lawful because |
 //! | --- | --- | --- |
 //! | AC-030 *"writes a `retry_at(resets_at)` mark"* | `EventKind::RateLimited` | design §5 row 18 puts *"`resets_at` on `rate_limited`"* — **not** a reading |
-//! | AC-024 *"the kernel writes a durable mark"* (wall clock) | `EventKind::GateOpened`, kind `budget_extension` | AC-039's own mechanism half; already on disk at `crate::workflow::budget::wall_clock_expiry_mark` |
+//! | AC-024 *"the kernel writes a durable mark"* (wall clock) | `EventKind::GateOpened`, kind `budget_extension` | AC-039's own mechanism half. **The mark's VALUE is on disk at `crate::workflow::budget::wall_clock_expiry_mark`; its WRITER is ARMED and has no call site — see the split table below** |
 //! | AC-012's activation | `EventKind::ActivityCommitted` | design §5 row 10, *"at most once per **step activation**"* (ADR-0097 decision 2) |
 //! | AC-525's advisory | `EventKind::DriftAdvisory` | design §5 row 22 |
 //! | 🛑 AC-033's breaker mark | **none exists** | `RefusalClass` is closed at four and `FailureClass` at five; **ARMED, NOT DISCHARGED** since Slice 4d and unchanged here |
@@ -57,9 +57,33 @@
 //! AC-024's and AC-030's THEN each end *"and exits 0"*. `rk-kernel` is a **library**: a `cargo test`
 //! binary cannot assert its own process exit, and `std::process::exit` inside one aborts the
 //! harness. Residual 10d is FORCED and its Read line is followed — the kernel returns a terminal
-//! outcome and the process exit is `rk-cli`'s, **Step 7d**. What is discharged here is *"writes a
-//! durable mark"* and *"no thread sleeps"*; the exit half is **ARMED, NOT DISCHARGED** and its home
-//! is named. AC-024 is additionally a **twin** (AC-240 + AC-278 own it) and is not double-claimed.
+//! outcome and the process exit is `rk-cli`'s, **Step 7d**. The exit half is **ARMED, NOT
+//! DISCHARGED** and its home is named. AC-024 is additionally a **twin** (AC-240 + AC-278 own it)
+//! and is not double-claimed.
+//!
+//! 🛑 **AND THE TWO MARKS ARE NOT JOINTLY DISCHARGED — corrected 2026-09-14 on an adversarial
+//! verification pass.** The sentence that stood here said *"what is discharged here is **writes a
+//! durable mark** and **no thread sleeps**"* of AC-024 **and** AC-030 together. It was false of
+//! AC-024, and the split is now stated per criterion:
+//!
+//! | criterion | its mark's **value** | its mark's **writer**, on a live path |
+//! | --- | --- | --- |
+//! | **AC-030** *"writes a `retry_at(resets_at)` mark"* | [`crate::runtime::marks::RetryAtMark`] | **WRITTEN** — `activity.rs`'s `run_activity` appends it on the `WaitForReset` branch. `grep -rn RetryAtMark crates/rk-kernel/src/` names that call site |
+//! | **AC-024** *"the kernel writes a durable mark"* | [`crate::workflow::budget::wall_clock_expiry_mark`] | **ARMED, NOT DISCHARGED** — it has **ZERO call sites**: `grep -rn 'wall_clock_expiry_mark(' crates/*/src/ | grep -v '^.*//'` finds only the definition at `workflow/budget.rs` [measured 2026-09-14]. *(Corrected the same day: this cell read "returns two lines, both doc text, and ZERO callers". The bare grep returns **four** lines — the definition plus three doc mentions, two of which are this cell and its twin — so the figure was falsified by the edit that wrote it. The claim that survives is about call sites, and it is stated as one.)* |
+//!
+//! **Why AC-024's writer is not simply added here, rather than why it would be nice to add it.**
+//! The mark is a function of a [`crate::workflow::budget::BudgetLedger`] and a
+//! [`crate::workflow::budget::BudgetEnvelope`], and **this module holds neither**: `grep -rn
+//! 'BudgetLedger\|WallClockSecs\|charge' crates/rk-kernel/src/runtime*` returns no ledger, no
+//! envelope and no charge site [measured 2026-09-14]. The ledger's `wall_clock` counter is a fold
+//! over **journaled charges**, and nothing in this tree produces one: `rk_ports::harness::
+//! DispatchOutcome` and `rk_types::activity::DispatchRecord` carry **no elapsed-seconds channel**,
+//! and `rk_types::time::Timestamp` has no `now()` *deliberately*, so the kernel cannot derive an
+//! elapsed value either. Deciding what charges the wall clock — and from which journaled instants —
+//! is a decision `00-preamble.md`:55 reserves; a record routing an elapsed value from the adapter
+//! to the kernel is **OWED**, and it is named here rather than written here. The shape is AC-026's
+//! exactly (`crate::workflow::retry::decide_after_inner_retries`): the **rule** is on disk and
+//! pinned, the **wiring** needs a carrier no record has minted.
 //!
 //! # 🛑 THE STORE LOCK IS TAKEN HERE, AND THAT IS A READING WITH A NAMED TENSION
 //!

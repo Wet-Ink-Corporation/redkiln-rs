@@ -81,6 +81,17 @@
 //! [`divergence`] holds AC-007 alone and is separate from [`fsm`] on design §4's own filing: the
 //! divergence is the **replay's** subject, and the two tests fail for different reasons.
 //!
+//! 🛑 **[`recorded_log`], 2026-09-14: the committed golden log's UNFEATURED controls, and the
+//! reason it is a module of its own.** [`replay`] is `#![cfg(feature = "corpus")]` **whole**, so
+//! every control in it is invisible to Checkpoint 7b's third loop and to :1345-1346's unfeatured
+//! `--list`. Two guards did not need that gating and had no unfeatured control at all, and an
+//! adversarial pass reproduced both: `src/replay.rs`'s divergence comparison (patched to
+//! `if false && …`: **83 passed, 0 failed**) and `read_run`'s refusal of a log missing
+//! `inputs/specs.json` (removed: the whole replay suite **green**). `read_run` and the extracted
+//! `compare_recorded_residue` bind no port, spawn no `git` and read no corpus, so their controls
+//! belong in the run that is actually executed. **Neither name here contains `golden_log_replay`
+//! or `ac161_ac164_delete_db_replay`**, so the zero-selection line is unaffected.
+//!
 //! That rule is also why `ac029_n_is_declared_never_defaulted` is in [`envelope`] and **stays
 //! there** now that [`retry`] exists. Design §4 files it beside `outer_retry_ac029`; it asserts the
 //! pack-validation half — that `N` is declared and never defaulted — which is `src/workflow/
@@ -111,6 +122,7 @@ mod memo;
 mod on_false;
 mod probe_differential;
 mod producer;
+mod recorded_log;
 mod replay;
 mod retry;
 mod rigor;

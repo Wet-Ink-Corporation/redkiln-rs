@@ -86,7 +86,7 @@
 //! surface AC-483 counts. AC-006, AC-008 and `s7b`:1121 all name `GitOps` by name. The kernel-local
 //! trait is deleted and the replay now counts `rk-git`'s own invocations.
 //!
-//! # The per-run layout inside `golden-logs/` — **fixed here, as `s7b`:831-832 requires**
+//! # The per-run layout inside `golden-logs/` — written here, and **OWED to `s7b` §7b.11**
 //!
 //! > The per-run layout inside `golden-logs/` is this stage's to fix … Write it into this section in
 //! > the commit that authors the replay test, before the pin moves.
@@ -1034,6 +1034,18 @@ impl<'a> ServedJournal<'a> {
     /// **A divergence, never a silent skip.** If the cursor is exhausted, or the next row belongs
     /// to a different activation, or the run of rows carries no commit, this refuses and names
     /// what the journal offered instead.
+    ///
+    /// # 🛑 THE ACTIVATION-MATCH CHECK IS THE ONLY NON-TAUTOLOGICAL FACT HERE, AND IT IS CONTROLLED
+    ///
+    /// *(Added 2026-09-14 on an adversarial verification pass.)* The rows served back are **clones
+    /// of the recorded rows**, and the re-derived journal is then compared byte for byte with the
+    /// recorded one — over this region that comparison is a comparison of the same bytes with
+    /// themselves. Three facts survive it: the **count**, the **per-activation commit**, and **that
+    /// the caller asked for the right activation in the right order**. Deleting the item/activation
+    /// comparison below left **all seven replay tests green** [measured 2026-09-14], so the third
+    /// was pinned by nothing. Its control is now
+    /// `tests/it/replay.rs::golden_log_replay_swapped_activations_is_red`, which swaps the two
+    /// recorded activation pairs and requires [`ReplayError::JournalHasNoResult`].
     fn serve(&mut self, key: &IdempotencyKey, step_id: &str) -> Result<Vec<Event>, ReplayError> {
         let mut out: Vec<Event> = Vec::new();
         let mut committed = false;
@@ -1554,6 +1566,17 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
     // would re-derive a journal with **zero** dispatches and compare it against a recorded journal
     // with zero dispatches — AC-008's GIVEN satisfied over an empty N, which is the vacuous green
     // this whole slice exists to remove. Reading an absent file as an empty map would restore it.
+    //
+    // 🛑 **AND IT HAS A POSITIVE CONTROL AS OF 2026-09-14.** It had none until an adversarial
+    // verification pass removed the refusal and found **the whole replay suite still green** — the
+    // same class as the 2026-09-13 G23 finding on the dispatch counter, and the shape §7b.14
+    // :1266-1276 bans outright (*"every absence-based ban carries a positive control OR says per
+    // ban why it cannot"*). The control is
+    // `tests/it/recorded_log.rs::read_run_refuses_a_log_whose_specs_json_is_missing`: a copy of the
+    // committed log with this one file deleted must be refused, and restoring it must restore the
+    // read. It is **unfeatured** deliberately — `read_run` binds no port, spawns no `git` and reads
+    // no corpus, so the reasons `tests/it/replay.rs` is `corpus`-gated do not reach it, and the
+    // unfeatured run is the one Checkpoint 7b's third loop executes.
     let specs_path = inputs_dir.join("specs.json");
     if !specs_path.is_file() {
         return Err(ReplayError::Malformed {
@@ -1692,6 +1715,59 @@ fn one_file(dir: &Path) -> Result<PathBuf, ReplayError> {
     Ok(paths.remove(0))
 }
 
+/// **AC-007's DETECTION** — the two comparisons that turn a difference into a typed halt.
+///
+/// # 🛑 WHY THIS IS A NAMED FUNCTION AND NOT TWO `if`S INSIDE [`replay`]
+///
+/// *(Extracted 2026-09-14 on an adversarial verification pass, which measured the gap.)*
+/// `crates/rk-kernel/tests/it/divergence.rs::ac007_replay_divergence_halts` constructs a
+/// [`crate::workflow::fsm::Divergence`] itself and calls `.halt()` — it pins the **halt**, and by
+/// its own header says so. Nothing in the **unfeatured** suite pinned the **detection**: with both
+/// comparisons patched to `if false && …` the unfeatured run reported **83 passed, 0 failed**. The
+/// only controls that bite are `golden_log_replay_next_action_mismatch_is_red` and
+/// `golden_log_replay_terminal_state_mismatch_is_red`, and both live behind `--features corpus`,
+/// which Checkpoint 7b's third loop does not run.
+///
+/// As a function it is reachable without the corpus feature, without `git`, and without a
+/// [`ReplayPorts`], so `tests/it/recorded_log.rs` pins it over the committed in-crate log — and a
+/// source lint in the same file asserts [`replay`] still **calls** it, because a guard that is
+/// pinned but no longer invoked is the same defect wearing a passing test.
+///
+/// **The recorded side is read back from `run.json`, never recomputed here.** Two folds of
+/// byte-identical journals are equal by construction, and AC-008's whole content is that *"a kernel
+/// that does nothing at all fails the terminal-state half."*
+///
+/// # Errors
+///
+/// [`ReplayError::NextActionDiverged`] when the recomputed next action differs from the recorded
+/// one, and [`ReplayError::TerminalStateDiverged`] when the terminal state does. The next action is
+/// compared **first**: it is the earlier decision, so it is the one that caused the other.
+pub fn compare_recorded_residue(
+    recorded: &RecordedRun,
+    recomputed_terminal: &str,
+    recomputed_next: &str,
+) -> Result<(), ReplayError> {
+    if recorded.next_action != recomputed_next {
+        return Err(ReplayError::NextActionDiverged(
+            Divergence::NextAction {
+                recorded: recorded.next_action.clone(),
+                recomputed: recomputed_next.to_owned(),
+            }
+            .halt(&recorded.run_id),
+        ));
+    }
+    if recorded.terminal_state != recomputed_terminal {
+        return Err(ReplayError::TerminalStateDiverged(
+            Divergence::TerminalState {
+                recorded: recorded.terminal_state.clone(),
+                recomputed: recomputed_terminal.to_owned(),
+            }
+            .halt(&recorded.run_id),
+        ));
+    }
+    Ok(())
+}
+
 /// **The replay.** Re-derive the DAG from the logged inputs alone and compare the journal byte for
 /// byte with the recorded one.
 ///
@@ -1802,24 +1878,7 @@ pub fn replay(dir: &Path, ports: &mut ReplayPorts<'_, '_>) -> Result<ReplayRepor
     // produces `{"terminal":"not_started"}`, the manifest says otherwise, and the replay refuses.
     let (recomputed_terminal, recomputed_next) =
         fsm_residue(&recorded.inputs, &selection, &item, &rederived)?;
-    if recorded.next_action != recomputed_next {
-        return Err(ReplayError::NextActionDiverged(
-            Divergence::NextAction {
-                recorded: recorded.next_action.clone(),
-                recomputed: recomputed_next,
-            }
-            .halt(&recorded.run_id),
-        ));
-    }
-    if recorded.terminal_state != recomputed_terminal {
-        return Err(ReplayError::TerminalStateDiverged(
-            Divergence::TerminalState {
-                recorded: recorded.terminal_state.clone(),
-                recomputed: recomputed_terminal,
-            }
-            .halt(&recorded.run_id),
-        ));
-    }
+    compare_recorded_residue(&recorded, &recomputed_terminal, &recomputed_next)?;
 
     // ---- the recorded EVENT journal is served back to the store --------------------------------
     //

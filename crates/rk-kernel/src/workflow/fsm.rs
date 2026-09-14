@@ -105,6 +105,36 @@
 //! steer the state — and an answer naming a token no derived gate carries is
 //! [`FsmError::GateAnsweredWithoutOpen`], a typed refusal, never a silently dropped answer.
 //!
+//! # 🛑 A KNOWN DEFECT: `gate_opened → gate_expired → gate_answered` IS PERMANENTLY UNFOLDABLE
+//!
+//! *(Found 2026-09-14 on an adversarial verification pass, reproduced, and deliberately NOT fixed
+//! here.)* [`apply`]'s `GateExpired` arm **removes** the token from `gates_open`; its `GateAnswered`
+//! arm refuses **any** token absent from `gates_open`. So a journal carrying all three rows for one
+//! derived token folds to [`FsmError::GateAnsweredWithoutOpen`] — **and never stops doing so**. The
+//! journal is append-only, so the run is not merely halted, it is **unfoldable for ever**, and
+//! `next_action`, `stage_action` and every replay over that item are unreachable with it.
+//!
+//! **The refusal also says the wrong thing.** `GateAnsweredWithoutOpen`'s whole purpose is the
+//! sentence above it: *"a forged token cannot steer the state"*. Here the token is not forged — the
+//! operator answered a gate this system itself opened and then expired, which is an ordinary race
+//! (a gate whose deadline passes while the answer is in flight; F18 measured **45% of gate→verdict
+//! intervals above one hour**, so it is the common case rather than the pathological one). The
+//! diagnostic accuses the operator of forgery for it.
+//!
+//! **Why it is pinned rather than repaired.** The lawful continuation looks like a **VOID** —
+//! AC-039's *"an answer whose tree hash no longer matches is **void, not reconciled**"* is the
+//! nearest rule, [`EventKind::GateAnswerVoid`] already exists so no kind would be minted, and
+//! `gates_void` is already terminal (nothing in this module moves a token out of it). **But AC-039
+//! is about a `tree_hash` mismatch and says nothing about expiry**, and no other record in this
+//! programme does either: ADR-0105 clause 10 constrains only what an expiry *action* may be, and
+//! the register's AC-039 is marked **HUMAN GATE**. Choosing "an answer to an expired gate is void"
+//! over "…is refused" or "…re-opens the gate" is **semantics a stage may not settle**
+//! (`00-preamble.md`:55). So the current behaviour is pinned exactly as it is by
+//! `tests/it/fsm.rs::gate_answered_after_expiry_is_unfoldable_known_defect`, which documents it as
+//! a defect rather than as a property — and **a record settling the disposition of an answer to an
+//! expired gate is OWED**. When it lands, that test goes red and whoever changed the behaviour has
+//! to say which clause licensed it.
+//!
 //! # 🛑 FOUR VALUES THIS MODULE NEEDS AND CANNOT COMPUTE, EACH AN ARGUMENT WITH ONE CONSTRUCTOR
 //!
 //! The same discipline `breaker.rs` applies to its family key and its expiry, for the same reason:

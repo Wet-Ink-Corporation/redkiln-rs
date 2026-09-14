@@ -1,0 +1,261 @@
+//! **The committed golden log's UNFEATURED controls** — the two guards `--features corpus` was the
+//! only thing pinning. Authored 2026-09-14 on an adversarial verification pass.
+//!
+//! [`crate::replay`] — `tests/it/replay.rs` — is `#![cfg(feature = "corpus")]` whole, for two
+//! stated reasons: its read route re-points to `$CORPUS_REPO/golden-logs/` at §7b.11's pin move
+//! (AC-464), and it spawns `git` through `rk_git::version::assert_at_startup`, the only minter of
+//! the capability token `GitExec::new` demands. **Neither reason reaches the two guards below.**
+//! `rk_kernel::replay::read_run` and `rk_kernel::replay::compare_recorded_residue` read a directory
+//! and compare two strings; they bind no port, spawn no process and touch no corpus. So the
+//! controls for them belong in the **unfeatured** run, which is the one Checkpoint 7b's third loop
+//! (`s7b`:1520-1532) and its zero-selection line (:1345-1346) actually execute.
+//!
+//! **Neither test name here contains `golden_log_replay` or `ac161_ac164_delete_db_replay`**, so
+//! :1345-1346's bare-substring count over the unfeatured `--list` stays at **0**. That line counts
+//! substrings with **no** word anchor, which is why the names below avoid them outright rather than
+//! relying on a boundary.
+//!
+//! # What each control closes, and the measurement that found it open
+//!
+//! | control | the defect it closes | how it was measured |
+//! | --- | --- | --- |
+//! | [`ac007_divergence_detection_over_the_committed_log`] | `ac007_replay_divergence_halts` constructs a `Divergence` itself and calls `.halt()`, so it pins the **halt** and not the **detection**. Both production comparisons could be dead | both patched to `if false && …`: the unfeatured suite reported **83 passed, 0 failed** |
+//! | [`read_run_refuses_a_log_whose_specs_json_is_missing`] | `read_run`'s refusal of a log without `inputs/specs.json` had no positive control | the refusal removed: the whole replay suite stayed **green**. Same class as the 2026-09-13 G23 finding |
+//!
+//! # 🛑 A PINNED GUARD THAT IS NO LONGER CALLED IS THE SAME DEFECT WEARING A GREEN
+//!
+//! Extracting the two comparisons into [`rk_kernel::replay::compare_recorded_residue`] makes them
+//! reachable from here — and it also moves the mutation target. Deleting the **call** from
+//! `replay()` would leave every assertion below passing. [`the_replay_still_calls_the_divergence_
+//! detection`] is the source lint that closes that, over `include_str!` of the real file, on this
+//! crate's own established pattern (`tests/it/retry.rs`'s `ac028_policy_match_has_no_wildcard`
+//! reads `src/workflow/retry.rs` the same way).
+
+use std::path::{Path, PathBuf};
+
+use rk_kernel::replay::{ReplayError, compare_recorded_residue, read_run};
+
+/// The committed in-crate copies (§7b.12's `logs/` row) — the same path `tests/it/replay.rs` uses.
+fn committed_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/logs")
+}
+
+/// The one committed run, whichever `<run_id>` directory it is under.
+///
+/// **Found rather than spelled**, because `run_id` is a content hash of the inputs and moves with
+/// them; a hard-coded directory name would turn a re-blessed fixture into a compile-time-looking
+/// failure in the wrong place.
+fn the_committed_run() -> PathBuf {
+    let mut runs: Vec<PathBuf> = std::fs::read_dir(committed_root())
+        .expect("tests/fixtures/logs is readable")
+        .map(|e| e.expect("a readable entry").path())
+        .filter(|p| p.is_dir())
+        .collect();
+    runs.sort();
+    assert_eq!(
+        runs.len(),
+        1,
+        "exactly one committed golden log is expected under {}; found {:?}",
+        committed_root().display(),
+        runs
+    );
+    runs.remove(0)
+}
+
+/// Copy the committed run into a scratch directory so a control can perturb it.
+///
+/// **Not under `target/golden-logs-staging/`**, which is what the operator's single `CORPUS_PIN`
+/// move copies: a deliberately-corrupted run sitting there would be copied into the corpus with the
+/// good ones (`s7b`:922-926).
+fn copy_into_scratch(name: &str) -> PathBuf {
+    let dest = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/golden-log-scratch")
+        .join(name);
+    if dest.exists() {
+        std::fs::remove_dir_all(&dest).expect("the scratch copy is removable");
+    }
+    copy_tree(&the_committed_run(), &dest);
+    dest
+}
+
+fn copy_tree(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).expect("the scratch tree is creatable");
+    for entry in std::fs::read_dir(from).expect("readable") {
+        let path = entry.expect("a readable entry").path();
+        let target = to.join(path.file_name().expect("a file name"));
+        if path.is_dir() {
+            copy_tree(&path, &target);
+        } else {
+            std::fs::copy(&path, &target).expect("the file copies");
+        }
+    }
+}
+
+/// **AC-007's DETECTION, pinned without `--features corpus`.**
+///
+/// > **AC-007** — GIVEN a replay whose recomputed decision differs from the recorded one / WHEN the
+/// > divergence is **detected** / THEN the run halts with a typed
+/// > `ReplayDivergence { activity_id, recorded, recomputed }`.
+///
+/// `tests/it/divergence.rs::ac007_replay_divergence_halts` builds the `Divergence` itself, so what
+/// it pins is `.halt()`. **This pins the comparison that produces one**, over the recorded side of
+/// the committed log — `run.json`'s `terminal_state` and `next_action`, values written at record
+/// time — so nothing here is compared against a second fold of the same journal.
+///
+/// **What makes it discriminating, clause by clause:**
+///
+/// - The *agreement* case comes first, and it uses the log's **own** recorded strings. A comparison
+///   that refused everything would fail here.
+/// - Each divergence case perturbs **one** side, and the perturbed value is asserted **non-empty
+///   and different** before the comparison runs — otherwise the halt is built from two equal
+///   strings and asserts nothing.
+/// - The **order** is asserted: with both sides wrong, the error is `NextActionDiverged`. The next
+///   action is the earlier decision, so it is the one that caused the other, and a comparison that
+///   reported the terminal state first would name the consequence as the cause.
+/// - All three fields of the typed halt are asserted populated, which is AC-007's THEN verbatim.
+#[test]
+fn ac007_divergence_detection_over_the_committed_log() {
+    let run = read_run(&the_committed_run()).expect("the committed log reads back");
+
+    let recorded_terminal = run.terminal_state().to_owned();
+    let recorded_next = run.next_action().to_owned();
+    // PREMISE: the recorded side carries content. An empty pair would make every comparison below
+    // a comparison of two empty strings.
+    assert!(
+        !recorded_terminal.is_empty() && !recorded_next.is_empty(),
+        "the committed run.json must carry both residue strings, or AC-008's terminal-state half \
+         is being compared against nothing"
+    );
+
+    // ---- 1. AGREEMENT. The recorded values compare equal to themselves --------------------------
+    compare_recorded_residue(&run, &recorded_terminal, &recorded_next)
+        .expect("the recorded residue agrees with itself, or the comparison refuses everything");
+
+    // ---- 2. A DIVERGENT TERMINAL STATE IS DETECTED, not absorbed --------------------------------
+    let tampered_terminal = format!("{recorded_terminal}-tampered");
+    assert_ne!(tampered_terminal, recorded_terminal, "PREMISE");
+    let err = compare_recorded_residue(&run, &tampered_terminal, &recorded_next)
+        .expect_err("a rewritten terminal state must be DETECTED, never absorbed");
+    match err {
+        ReplayError::TerminalStateDiverged(halt) => {
+            assert_eq!(halt.recorded, recorded_terminal);
+            assert_eq!(halt.recomputed, tampered_terminal);
+            assert!(
+                !halt.activity_id.is_empty(),
+                "AC-007 names three fields and all three must be populated"
+            );
+            assert_ne!(
+                halt.recorded, halt.recomputed,
+                "a halt whose two sides are equal is not a divergence"
+            );
+        }
+        other => panic!("expected TerminalStateDiverged, got {other:?}"),
+    }
+
+    // ---- 3. A DIVERGENT NEXT ACTION IS DETECTED -------------------------------------------------
+    let tampered_next = format!("{recorded_next}-tampered");
+    assert_ne!(tampered_next, recorded_next, "PREMISE");
+    let err = compare_recorded_residue(&run, &recorded_terminal, &tampered_next)
+        .expect_err("a rewritten next action must be DETECTED, never absorbed");
+    match err {
+        ReplayError::NextActionDiverged(halt) => {
+            assert_eq!(halt.recorded, recorded_next);
+            assert_eq!(halt.recomputed, tampered_next);
+            assert!(!halt.activity_id.is_empty());
+        }
+        other => panic!("expected NextActionDiverged, got {other:?}"),
+    }
+
+    // ---- 4. THE ORDER, because naming the consequence as the cause is a real failure ------------
+    let err = compare_recorded_residue(&run, &tampered_terminal, &tampered_next)
+        .expect_err("both sides wrong is still a divergence");
+    assert!(
+        matches!(err, ReplayError::NextActionDiverged(_)),
+        "with both wrong the NEXT ACTION is reported: it is the earlier decision and therefore the \
+         cause. Got {err:?}"
+    );
+}
+
+/// **The guard above is pinned; this asserts it is still CALLED.**
+///
+/// Extracting the two comparisons out of `replay()` made them testable here and moved the mutation
+/// target at the same time: deleting the call would leave every assertion above green. The source
+/// lint is this crate's own pattern — `tests/it/retry.rs`'s `ac028_policy_match_has_no_wildcard`
+/// reads `src/workflow/retry.rs` through `include_str!` for the same reason.
+///
+/// It is a **grep over source**, and its limit is stated rather than left to be discovered: it
+/// cannot tell a call on a live path from a call inside a branch that never runs. What it does
+/// catch is the deletion, the comment-out and the `if false &&` — the three shapes the mutation
+/// that found this defect actually used.
+#[test]
+fn the_replay_still_calls_the_divergence_detection() {
+    let src = include_str!("../../src/replay.rs");
+    assert_eq!(
+        src.matches("compare_recorded_residue(&recorded,").count(),
+        1,
+        "`replay()` must call `compare_recorded_residue` exactly once; a guard nothing invokes is \
+         the same defect as a guard that is not there"
+    );
+    // **Over CODE lines only.** This file's own header quotes the mutation shape, and a naive
+    // `contains` over the whole file matches the prose describing the defect as readily as the
+    // defect — which is a lint that fires on its own documentation and therefore says nothing.
+    let disabled: Vec<&str> = src
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.starts_with("//"))
+        .filter(|l| l.contains("if false") || l.contains("if true"))
+        .collect();
+    assert!(
+        disabled.is_empty(),
+        "src/replay.rs carries a constant-folded guard — the exact shape the mutation that found \
+         this gap used to disable both comparisons: {disabled:?}"
+    );
+}
+
+/// **`read_run` refuses a log without `inputs/specs.json` — the positive control it had none of.**
+///
+/// The refusal is at `src/replay.rs`'s `read_run`, and its warrant is `terminal_state`'s: a run
+/// recorded before Slice 4i carries no dispatch bindings, so replaying one re-derives a journal
+/// with **zero** dispatches and compares it against a recorded journal with zero dispatches —
+/// AC-008's GIVEN satisfied over an empty N, which is the vacuous green Slice 4i exists to remove.
+/// **Removing the refusal left the whole replay suite green** [measured 2026-09-14], which is the
+/// same class as the 2026-09-13 G23 finding on the dispatch counter.
+///
+/// The control is a **copy** of the committed log with one file deleted: nothing under
+/// `tests/fixtures/` is mutated, and the copy goes to `target/golden-log-scratch/`, never to the
+/// staging tree the operator's `CORPUS_PIN` move copies.
+#[test]
+fn read_run_refuses_a_log_whose_specs_json_is_missing() {
+    let dir = copy_into_scratch("specs-json-removed");
+
+    // PREMISE, and it is the discriminating half: the copy reads back BEFORE the deletion. Without
+    // it, a refusal below could be about the copy being broken rather than about the missing file.
+    read_run(&dir).expect("the unperturbed copy reads back");
+
+    let specs = dir.join("inputs/specs.json");
+    assert!(specs.is_file(), "PREMISE: the committed log carries one");
+    std::fs::remove_file(&specs).expect("the scratch copy is writable");
+
+    let err = read_run(&dir).expect_err("a log without inputs/specs.json must be REFUSED");
+    match err {
+        ReplayError::Malformed { path, detail } => {
+            assert!(
+                path.ends_with("specs.json"),
+                "the refusal must name the file it is about; got {path}"
+            );
+            assert!(
+                detail.contains("specs.json"),
+                "the refusal must say what is wrong; got {detail}"
+            );
+        }
+        other => panic!(
+            "the refusal must be the typed Malformed refusal, not an Io error or a silent empty \
+             map; got {other:?}"
+        ),
+    }
+
+    // AND IT IS NOT REFUSING EVERYTHING: restoring the file restores the read. Without this the
+    // assertion above is satisfied by a `read_run` that refuses every log it is handed.
+    copy_tree(&the_committed_run(), &dir);
+    read_run(&dir).expect("restoring specs.json restores the read");
+}

@@ -88,6 +88,7 @@
 //! | `harness_dispatches=0` | `golden_log_replay_dispatching_fake_is_red` | 2026-09-13, after mutation G23 found the counter unpinned |
 //! | `terminal_state=matched` | `golden_log_replay_terminal_state_mismatch_is_red` | **2026-09-14, this slice** — it had neither a control nor a stated reason (gap G-1), which is the one exception §7b.14's own rule did not permit |
 //! | `results_served=N` | `golden_log_replay_missing_result_is_red` | **2026-09-14, Slice 4i** — the token is new because N was 0 before it, and an absence over an empty set needs no control |
+//! | the served rows' **activation order** | `golden_log_replay_swapped_activations_is_red` | **2026-09-14**, after a mutation found `ServedJournal::serve`'s activation-match check deletable with all seven replay tests still green. The served rows are CLONES of the recorded rows, so the byte comparison over that region is tautological; the count and the per-activation commit are controlled above, and *which* activation was asked for, in *what* order, was not |
 //!
 //! **The control was observed red before it was made green, and the red was the interesting one:**
 //! with the FSM residue computed and recorded but the two comparison steps not yet in `replay()`,
@@ -101,8 +102,32 @@
 //! :848-849 — *"the staged records live in a **scratch tree**, never under `spikes/results/`"*.
 //! Neither names a path. **This stage fixes it:** `target/golden-logs-staging/`, which is
 //! `.gitignore`d, so nothing corpus-shaped is tracked (AC-465), and which the operator's single
-//! `CORPUS_PIN` move copies into `golden-logs/` at the corpus root. The per-run layout is written
-//! into `§7b.11` in the same commit as this test, as :831-832 requires.
+//! `CORPUS_PIN` move copies into `golden-logs/` at the corpus root.
+//!
+//! 🛑 **THE §7b.11 LAYOUT AMENDMENT IS *OWED*, NOT DISCHARGED — corrected 2026-09-14 on an
+//! adversarial verification pass.** The sentence that stood here read *"the per-run layout is
+//! written into `§7b.11` in the same commit as this test, as :831-832 requires"*, and **both
+//! halves of it were false**:
+//!
+//! * **The layout was not written.** §7b.11's layout block (`s7b`:890-902) names `run.json`,
+//!   `inputs/{pack,catalog,artifacts,facets.toml,context.json,artifact-state.json,deviation.json}`
+//!   and `events.jsonl` — and **nothing else**. `grep -n 'inputs/specs.json\|results_at'
+//!   runbook/phase-1/s7b-kernel.md` returns **zero lines** [measured 2026-09-14], while this
+//!   crate's shipped layout (`src/replay.rs`:95-112) adds `inputs/runtime.json` (Slice 4f),
+//!   `inputs/specs.json` (Slice 4i), `runtime.json`'s `results_at` (4i) and `run.json`'s
+//!   `terminal_state`/`next_action` (4f). §7b.11 precondition **3** — *"the `golden-logs/` per-run
+//!   layout is written into this section"* — is therefore **NOT met for the layout this crate
+//!   writes**, and it gates the `CORPUS_PIN` move, which is what copies these logs into the
+//!   corpus. What §7b.11 *did* gain (:918-926) is the **staging path**, `target/golden-logs-
+//!   staging/`; that is a different obligation and it is discharged.
+//! * **The citation was stale.** `s7b`:831-832 is the *"### 7b.10 The kernel runtime"* heading, not
+//!   a requirement about the layout. The requirement is precondition 3 at :946.
+//!
+//! The runbook is outside this session's editable set (`00-preamble.md`:55 — a stage records what
+//! is owed rather than deciding it), so what is done here is the record: **a dated §7b.11 amendment
+//! naming the four layout additions is OWED to the operator, BEFORE the pin move**, and until it
+//! lands precondition 3 is false and the move may not run on precondition 3's word. Nothing in this
+//! file may be read as having discharged it.
 //!
 //! The committed in-crate copies at `tests/fixtures/logs/` are §7b.12's own row — *"the golden
 //! event logs' in-crate copies for the red step, before the corpus copies exist"*. This file
@@ -1416,4 +1441,169 @@ fn copy_tree(from: &Path, to: &Path) {
         }
         std::fs::copy(from.join(&rel), dest).expect("copyable");
     }
+}
+
+/// **The activation-match check in `ServedJournal::serve` had no control, and this is it.**
+///
+/// *(Authored 2026-09-14 on an adversarial verification pass, which reproduced the gap: deleting
+/// the `if item != key.item || activation != key.activity_id_at_version { break; }` guard at
+/// `src/replay.rs`'s `ServedJournal::serve` left **every replay test green**.)*
+///
+/// # Why this is the only non-tautological fact in that region
+///
+/// The rows the journal serves back are **clones of the recorded rows**, and the re-derived journal
+/// is then compared byte for byte against the recorded one. Over the served region that comparison
+/// is **tautological**: the same bytes are being compared with themselves. Three facts survive it,
+/// and only three — the **count** (`results_served=N`, controlled by
+/// `golden_log_replay_missing_result_is_red`), the **per-activation commit** (the same control's
+/// second half), and **that the FSM asked for the right activation in the right order**. The third
+/// was pinned by nothing, and it is the one that carries AC-008's *"served once, in order"*.
+///
+/// # The control
+///
+/// Copy the log and **swap the two recorded activation pairs** in `events.jsonl` — the same four
+/// rows, the same bytes, a different order. The FSM's first request is then answered by a run of
+/// rows belonging to the *other* activation, and `serve` must refuse with
+/// [`ReplayError::JournalHasNoResult`] naming what the journal offered instead. With the guard
+/// deleted, `serve` takes rows up to the first `activity_committed` regardless of whose it is, and
+/// **the wrong activation's result is served for the request** — which is a replay that agrees with
+/// a recording it did not reproduce.
+///
+/// **Two premises make it discriminating:** the unperturbed copy is replayed successfully first, so
+/// a refusal below cannot be about a broken copy; and the swap is asserted to have actually changed
+/// the file's bytes, so it cannot be a no-op over a log with one activation.
+#[test]
+fn golden_log_replay_swapped_activations_is_red() {
+    let run_id = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    let source = committed_root().join(&run_id);
+
+    // ---- PREMISE 1: the UNPERTURBED copy replays ------------------------------------------------
+    let control = scratch_root().join("activations-unswapped");
+    copy_tree(&source, &control);
+    {
+        let harness = RefusingHarness::default();
+        let mut store = CountingStore::default();
+        let mut journal = VecJournal::default();
+        let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+        let mut ports = ReplayPorts {
+            harness: &harness,
+            dispatches: &harness.dispatches,
+            store: &mut store,
+            git: &mut git,
+        };
+        rk_kernel::replay::replay(&control, &mut ports)
+            .expect("the unperturbed copy replays, or the refusal below is about the copy");
+    }
+
+    // ---- the swap: the same four rows, a different order ----------------------------------------
+    let swapped = scratch_root().join("activations-swapped");
+    copy_tree(&source, &swapped);
+    let events_path = swapped.join("events.jsonl");
+    let before = std::fs::read_to_string(&events_path).expect("readable");
+
+    let mut lines: Vec<String> = before.lines().map(str::to_owned).collect();
+    let activation_of = |line: &str| -> Option<(String, String)> {
+        let v: serde_json::Value = serde_json::from_str(line).ok()?;
+        let kind = v["kind"].as_str()?;
+        if kind != "dispatch" && kind != "activity_committed" {
+            return None;
+        }
+        Some((
+            v["payload"]["item"].as_str()?.to_owned(),
+            v["payload"]["activity_id_at_version"].as_str()?.to_owned(),
+        ))
+    };
+    let indices: Vec<usize> = (0..lines.len())
+        .filter(|i| activation_of(&lines[*i]).is_some())
+        .collect();
+    let activations: Vec<(String, String)> = {
+        let mut seen: Vec<(String, String)> = Vec::new();
+        for i in &indices {
+            let a = activation_of(&lines[*i]).expect("filtered above");
+            if !seen.contains(&a) {
+                seen.push(a);
+            }
+        }
+        seen
+    };
+    // PREMISE 2: there are TWO activations to swap. With one, the swap is a no-op and the refusal
+    // below would never be asked for — which is the state this log was in before Slice 4i.
+    assert_eq!(
+        activations.len(),
+        2,
+        "the committed log must carry two recorded activations for this control to mean anything; \
+         got {activations:?}"
+    );
+    assert_eq!(
+        indices.len(),
+        4,
+        "two activations, a dispatch and a commit each"
+    );
+
+    let second_first: Vec<String> = [&activations[1], &activations[0]]
+        .into_iter()
+        .flat_map(|want| {
+            indices
+                .iter()
+                .filter(|i| activation_of(&lines[**i]).as_ref() == Some(want))
+                .map(|i| lines[*i].clone())
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert_eq!(second_first.len(), indices.len());
+    for (slot, line) in indices.iter().zip(second_first) {
+        lines[*slot] = line;
+    }
+    let after = format!("{}\n", lines.join("\n"));
+    assert_ne!(
+        before, after,
+        "PREMISE: the swap must actually change the file, or the replay is being asked to refuse \
+         the log it already accepts"
+    );
+    std::fs::write(&events_path, after).expect("writable");
+
+    // ---- and the replay REFUSES -----------------------------------------------------------------
+    let harness = RefusingHarness::default();
+    let mut store = CountingStore::default();
+    let mut journal = VecJournal::default();
+    let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+    let mut ports = ReplayPorts {
+        harness: &harness,
+        dispatches: &harness.dispatches,
+        store: &mut store,
+        git: &mut git,
+    };
+
+    match rk_kernel::replay::replay(&swapped, &mut ports) {
+        Err(ReplayError::JournalHasNoResult {
+            activity_id_at_version,
+            served_instead,
+            ..
+        }) => {
+            let offered = served_instead.expect(
+                "the journal offered a row belonging to the other activation, and the halt must \
+                 NAME it — an `Option::None` here would report an absence where there was a \
+                 substitution",
+            );
+            assert!(
+                !offered.contains(&activity_id_at_version),
+                "the halt must name a DIFFERENT activation as what was served instead; it asked \
+                 for {activity_id_at_version} and reports {offered}"
+            );
+        }
+        Ok(_) => panic!(
+            "the replay ACCEPTED a journal whose two activation pairs were swapped — the served \
+             rows are CLONES of the recorded rows, so the byte comparison over that region is \
+             tautological and the only fact left is that the FSM asked for the right activation \
+             in the right order. This is that fact going unchecked"
+        ),
+        Err(other) => panic!("expected JournalHasNoResult, got {other}"),
+    }
+    assert_eq!(
+        harness.dispatches(),
+        0,
+        "AC-008: a refusal is not a licence to dispatch"
+    );
 }

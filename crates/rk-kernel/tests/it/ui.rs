@@ -7,14 +7,25 @@
 //!
 //! # What is here, and what §7b.4's table still owes
 //!
-//! **Corrected 2026-09-14, Slice 4e.** The paragraph that stood here said *"`ac480_generics_leak.rs`
-//! and **`stay_class_state_is_unconstructible.rs` are NOT written**"*, and half of it is now false.
-//! **FIVE of §7b.4:426-433's six cases are here**: `ac041_selection_reads_no_clock.rs`,
+//! **Corrected 2026-09-14, Slice 4e, and again on this pass.** The paragraph that stood here said
+//! *"`ac480_generics_leak.rs` and **`stay_class_state_is_unconstructible.rs` are NOT written**"*;
+//! then it said *"FIVE of §7b.4:426-433's six cases are here … **`ac480_generics_leak.rs` is still
+//! absent** and is Slice 4i's"*. **Slice 4i shipped without it** — the absence survived three
+//! slices of being reported — and **all SIX are now here**: `ac041_selection_reads_no_clock.rs`,
 //! `ac050_rigor_is_not_arithmetic.rs`, `ac061_required_set_is_not_constructible_outside_select.rs`,
-//! `ac061_required_set_has_no_deserialize.rs` and — new — `stay_class_state_is_unconstructible.rs`.
-//! **`ac480_generics_leak.rs` is still absent** and is Slice 4i's; Checkpoint 7b asserts all six
-//! **by path** with their `.stderr`, so that one absence is live and is reported here rather than
-//! left to be discovered by that assertion.
+//! `ac061_required_set_has_no_deserialize.rs`, `stay_class_state_is_unconstructible.rs` and
+//! `ac480_generics_leak.rs`. Checkpoint 7b's by-path loop (:1584-1589) enumerates exactly those six
+//! and would have halted on the last one.
+//!
+//! **`ac480_generics_leak.rs` is a SUBSTITUTE and its own header says so**, on
+//! `ac028_steperror_wildcard.rs`'s precedent: a `<P: Harness>` bound compiles, so `s7b`:1020's
+//! *"red by adding one `<P: Harness>` bound"* has no literal construction. What the file pins is
+//! the property that makes AC-480's THEN true of this crate — `Runtime::new` takes
+//! `rk_ports::root::Ports` and nothing generic, a bare port-bound parameter is not a trait object,
+//! `Ports`' fields are the trait objects, and no `rk-kernel` type is a port so an `impl Harness`
+//! return has nothing to name. **AC-480's other named instrument, the API-surface lint over
+//! `rk-kernel` (design:279; `s7a`:584 *"added at 7b"*), is NOT built and is ARMED, NOT DISCHARGED**
+//! — no grep in Checkpoint 7b asserts it, so it is recorded here rather than left to be discovered.
 //!
 //! **Why the `--stay` case could not be written before now, and why it can be.** §7b.13 assigns it
 //! to **Slice 1**. Residual 9 is FORCED on why it did not land there: *"it cannot be authored until
@@ -131,6 +142,7 @@ fn trybuild_pins_the_reason_each_kernel_fixture_fails() {
     t.compile_fail("tests/ui/ac007_divergence_match_has_no_wildcard.rs");
     t.compile_fail("tests/ui/ac010_dispatch_without_key.rs");
     t.compile_fail("tests/ui/ac041_selection_reads_no_clock.rs");
+    t.compile_fail("tests/ui/ac480_generics_leak.rs");
     t.compile_fail("tests/ui/ac020_counters_never_share.rs");
     t.compile_fail("tests/ui/ac025_exhaustion_is_not_a_pass.rs");
     t.compile_fail("tests/ui/ac028_steperror_wildcard.rs");
@@ -139,4 +151,83 @@ fn trybuild_pins_the_reason_each_kernel_fixture_fails() {
     t.compile_fail("tests/ui/ac061_required_set_is_not_constructible_outside_select.rs");
     t.compile_fail("tests/ui/ac061_required_set_has_no_deserialize.rs");
     t.compile_fail("tests/ui/stay_class_state_is_unconstructible.rs");
+}
+
+/// **Every case in `tests/ui/` is registered above, and every one commits a non-empty `.stderr`.**
+///
+/// Two failures this closes, neither of which the harness above can see:
+///
+/// 1. **A case on disk that no `compile_fail` line names never runs.** `trybuild` is driven by the
+///    explicit list, not by the directory, so an unregistered file is invisible — and
+///    `trybuild_pins_the_reason_each_kernel_fixture_fails` stays green while it is. The set
+///    equality below is what makes adding a file without registering it red.
+/// 2. **A case with an empty or absent `.stderr` is green whenever compilation fails for ANY
+///    reason** (`s7a` §7a.8), which is the same defect one level down.
+///
+/// Checkpoint 7b's by-path loop (`s7b`:1584-1589) asserts **six** of these files. The other six
+/// are asserted by no checkpoint line at all — this module's header lists them and says why — so
+/// this test is what notices any of the eleven going missing, not only the six.
+#[test]
+fn every_kernel_compile_fail_case_is_registered_and_commits_a_stderr() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/ui");
+    let harness = include_str!("ui.rs");
+
+    let mut on_disk: Vec<String> = Vec::new();
+    for entry in std::fs::read_dir(&dir).expect("tests/ui is readable") {
+        let path = entry.expect("a readable directory entry").path();
+        if path.extension().and_then(std::ffi::OsStr::to_str) != Some("rs") {
+            continue;
+        }
+        let name = path
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .expect("a UTF-8 file name")
+            .to_owned();
+
+        // Its `.stderr` is committed and carries bytes.
+        let stderr = path.with_extension("stderr");
+        assert!(
+            stderr.is_file(),
+            "{} commits no .stderr, so the case is green whenever compilation fails for ANY              reason (s7a §7a.8)",
+            stderr.display()
+        );
+        assert!(
+            std::fs::metadata(&stderr).expect("readable").len() > 0,
+            "{} is empty, which is the same defect as its absence",
+            stderr.display()
+        );
+
+        on_disk.push(name);
+    }
+    on_disk.sort();
+
+    // PREMISE: a directory that had shrunk to nothing would satisfy every equality below.
+    assert!(
+        on_disk.len() >= 12,
+        "tests/ui holds {} cases; it held 12 when this assertion was written, ac480_generics_leak.rs included -- a floor one below the set it guards lets a case be deleted with its registration and still pass, and a shrinking set          is what it exists to notice",
+        on_disk.len()
+    );
+
+    let mut registered: Vec<String> = harness
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("t.compile_fail(\"tests/ui/"))
+        .filter_map(|l| l.split('"').next())
+        .map(str::to_owned)
+        .collect();
+    registered.sort();
+
+    assert_eq!(
+        registered, on_disk,
+        "every case in tests/ui must be registered in the one harness and vice versa — an          unregistered file NEVER RUNS and the harness stays green while it sits there"
+    );
+
+    // AC-480's case specifically, because Checkpoint 7b's by-path loop found it absent for three
+    // slices while this module's header reported it: the path assertion is written out so the
+    // report and the instrument cannot drift apart again.
+    for f in ["ac480_generics_leak.rs", "ac480_generics_leak.stderr"] {
+        assert!(
+            dir.join(f).is_file(),
+            "AC-480's compile-fail fixture is handed here by `s7a`:995 and asserted by path at              `s7b`:1584-1589; {f} is missing"
+        );
+    }
 }

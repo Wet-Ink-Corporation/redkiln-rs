@@ -31,6 +31,24 @@
 //! therefore built from **two real folds of two real journals** — never hand-written strings — so
 //! that what is asserted is a difference the FSM actually produces. That is as far as this slice
 //! reaches, and the header of `src/workflow/fsm.rs` says so in its ARMED table.
+//!
+//! 🛑 **AND THE DETECTION IS PINNED ELSEWHERE, BY NAME — added 2026-09-14 on an adversarial
+//! verification pass that reproduced the gap.** `ac007_replay_divergence_halts` **constructs** the
+//! `Divergence` itself and calls `.halt()`, so **both production guards can be dead while this test
+//! is green**: patched to `if false && …`, the unfeatured suite reported **83 passed, 0 failed**
+//! [measured 2026-09-14]. A reader must not take this file's green as evidence that a divergence is
+//! ever *noticed*. The controls that do notice are named here so the claim is checkable:
+//!
+//! | what pins the DETECTION | where | run by |
+//! | --- | --- | --- |
+//! | `ac007_divergence_detection_over_the_committed_log` | `tests/it/recorded_log.rs` | the **unfeatured** suite — Checkpoint 7b's third loop runs it |
+//! | `the_replay_still_calls_the_divergence_detection` | `tests/it/recorded_log.rs` | the unfeatured suite; a source lint, because a guard nothing invokes is the same defect |
+//! | `golden_log_replay_next_action_mismatch_is_red` | `tests/it/replay.rs` | `--features corpus` only |
+//! | `golden_log_replay_terminal_state_mismatch_is_red` | `tests/it/replay.rs` | `--features corpus` only |
+//!
+//! The first two exist **because** the last two were the only ones: `src/replay.rs`'s
+//! `compare_recorded_residue` was extracted out of `replay()` on that pass so the comparison could
+//! be reached without the corpus feature, without `git` and without a `ReplayPorts`.
 
 use rk_kernel::workflow::fsm::{Divergence, TerminalState, fold};
 use rk_types::event::Event;

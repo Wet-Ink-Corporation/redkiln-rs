@@ -1,11 +1,12 @@
 //! **The FSM** — `src/workflow/fsm.rs`. Slice 4e.
 //!
-//! Two tests, and what each is for:
+//! Three tests, and what each is for — the third is a **pin on a known defect**, not a property:
 //!
 //! | test | criteria | what it measures | what it does NOT |
 //! | --- | --- | --- | --- |
 //! | [`ac039_gate_record_and_the_void_answer`] | **AC-039** (HUMAN GATE) | the *mechanism* residue only: the gate record bound to `(token, tree_hash, deadline)`, the derived token, and *"an answer whose tree hash no longer matches is **void, not reconciled**"* | **never the answer.** §7b.15 excludes AC-039 from the claim and this file may not restore it |
 //! | [`ac008_terminal_state_and_the_next_action_grains`] | AC-008, AC-006 (3), AC-161, AC-164 — all **ARMED** | the *recomputable* side: the five terminal states, the six next actions in their fixed order, and the tier-1 filter | **the recorded side**, which is `run.json`'s and Slice **4f**'s; and the **route** from git trailers, which is 7d's |
+//! | [`gate_answered_after_expiry_is_unfoldable_known_defect`] | **none** — no criterion covers it | 🛑 that `gate_opened → gate_expired → gate_answered` for one derived token is **permanently unfoldable** today, and that the refusal accuses the operator of forging a token this system itself opened | **anything about whether that is right.** It is a pin on a DEFECT found 2026-09-14; the lawful continuation looks like a VOID (AC-039's *"void, not reconciled"*) but AC-039 is about a `tree_hash` mismatch and no record settles expiry, so **a record is OWED** and the stage takes no decision (`00-preamble.md`:55) |
 //!
 //! 🛑 **A green here is not AC-008 discharged, and the name says so deliberately.** AC-008's
 //! comparison has two sides — *"the replay reaches **the recorded** terminal state"* — and this
@@ -790,5 +791,85 @@ fn ac008_terminal_state_and_the_next_action_grains() {
                 kind.wire_name()
             ),
         }
+    }
+}
+
+// ---- a KNOWN DEFECT, pinned as one -------------------------------------------------------------
+
+/// 🛑 **A KNOWN DEFECT, PINNED AS CURRENT BEHAVIOUR AND NOT AS A PROPERTY.**
+///
+/// *(Found 2026-09-14 on an adversarial verification pass and deliberately NOT fixed — the repair
+/// is semantics `00-preamble.md`:55 reserves. See `src/workflow/fsm.rs`'s header section of the
+/// same name.)*
+///
+/// `apply`'s `GateExpired` arm **removes** the token from `gates_open`; its `GateAnswered` arm
+/// refuses **any** token absent from `gates_open`. So a journal carrying
+/// `gate_opened → gate_expired → gate_answered` for **one derived token** folds to
+/// `FsmError::GateAnsweredWithoutOpen`, and — because the journal is append-only — it does so for
+/// ever. The item is not halted, it is **unfoldable**: `next_action`, `stage_action` and every
+/// replay over it are unreachable with that journal.
+///
+/// **The token is not forged, and the diagnostic says it is.** The operator answered a gate this
+/// system opened and then expired — an ordinary race, not an attack. F18 measured **45% of
+/// gate→verdict intervals above one hour** (AC-039's own evidence line), so an answer arriving
+/// after a deadline is the common case.
+///
+/// **What this test is and is not.** It is a **pin on the defect**, so the behaviour cannot change
+/// silently: the lawful continuation looks like a VOID (AC-039's *"void, not reconciled"*;
+/// `EventKind::GateAnswerVoid` already exists, so nothing would be minted; `gates_void` is already
+/// terminal), **but AC-039 is about a `tree_hash` mismatch and says nothing about expiry**, ADR-0105
+/// clause 10 constrains only what an expiry *action* may be, and AC-039 is marked **HUMAN GATE**.
+/// No record settles it, so no stage may. **A record settling the disposition of an answer to an
+/// expired gate is OWED.** When it lands this test goes red, and whoever changed the behaviour has
+/// to name the clause that licensed it. It is **not** evidence that the refusal is correct.
+///
+/// The control below is what makes the pin about *expiry* rather than about gates in general: the
+/// same journal **without** the `gate_expired` row folds, and its answer is recorded.
+#[test]
+fn gate_answered_after_expiry_is_unfoldable_known_defect() {
+    let record = GateRecord::derive(
+        "budget_extension",
+        TREE_A,
+        Timestamp::from_unix_seconds(1_700),
+    )
+    .expect("derives");
+    let token = record.token().as_str().to_owned();
+
+    let opened = gate_opened("budget_extension", TREE_A, 1_700);
+    let expired = Event::new(
+        EventKind::GateExpired,
+        serde_json::json!({ "token": token }),
+    );
+    let answered = gate_answered(&token, TREE_A, "extend");
+
+    // ---- CONTROL FIRST: without the expiry the very same answer folds and is RECORDED -----------
+    //
+    // Without this, the refusal below is satisfied by a fold that refuses every `gate_answered`,
+    // and the test would be about nothing.
+    let without_expiry = fold(ITEM, STAGE, &[opened.clone(), answered.clone()])
+        .expect("gate_opened -> gate_answered folds");
+    assert!(
+        without_expiry.answered_gates().count() == 1,
+        "PREMISE: the answer is accepted when the gate is still open, so the refusal below is \
+         caused by the EXPIRY and by nothing else"
+    );
+
+    // ---- AND THE DEFECT: one extra recorded row makes the journal unfoldable, for ever ----------
+    let err = fold(ITEM, STAGE, &[opened, expired, answered])
+        .expect_err("KNOWN DEFECT: this journal does not fold today");
+    match err {
+        FsmError::GateAnsweredWithoutOpen { token: refused } => {
+            assert_eq!(
+                refused.as_str(),
+                token,
+                "the refusal names the very token this system derived, opened and expired — it is \
+                 not forged, and `GateAnsweredWithoutOpen` is the wrong accusation for it"
+            );
+        }
+        other => panic!(
+            "the KNOWN DEFECT this test pins is `GateAnsweredWithoutOpen`. Getting {other:?} means \
+             the behaviour CHANGED — which may well be the repair, but it is a repair that needs a \
+             record: see src/workflow/fsm.rs's header. Do not simply update this expectation"
+        ),
     }
 }
