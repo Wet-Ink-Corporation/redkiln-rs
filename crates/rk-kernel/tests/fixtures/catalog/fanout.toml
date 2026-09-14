@@ -1,0 +1,49 @@
+# AC-022's fixture: one `for_each` step projecting over a runtime-computed list, beside one plain
+# dispatchable step and one that mints no dispatch. The fan-out source is transcribed from
+# spikes/p9/catalog/bdd-outside-in.toml:25 — `artifact:GherkinScenarios.scenarios`, one of the seven
+# shipped `for_each` declarations [measured 2026-09-14] — so the SHAPE is the corpus's and the file
+# is an in-crate fixture, which §7b.12 requires ("none of them may be a shipped artefact").
+#
+# The runtime charge for one pass is 2 at every fan-out cardinality: the `for_each` step counts ONCE
+# (AC-022), the plain `tool` step counts once, and `emit` mints no dispatch. A charge that scaled
+# with N would read 1 + N + 0.
+#
+# Nothing in this file declares N. Schema §1: "cardinality is runtime-computed but the *shape* is
+# declared" — which is ADR-0053's own driver, and it is why the cardinality reaches the charge as an
+# argument the test supplies at 1, 2 and 50 rather than as a field here.
+[activity]
+id           = "fanout"
+version      = 1
+stage        = "implement"
+provides     = ["ImplReport"]
+requires     = ["GherkinScenarios"]
+derived_from = ["GherkinScenarios"]
+tags         = ["change:text"]
+method_rank  = 20
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "ToolReport", "GreenAt"]
+budget       = { attempts_total = 2, tokens = 200_000, wall_clock_secs = 3600 }
+deviation_ok = ["skip"]
+
+[[step]]
+id      = "acceptance-red"
+kind    = "agent"
+role    = "implementer"
+for_each = "artifact:GherkinScenarios.scenarios"
+inputs  = { scenario = "${item}" }
+outputs = "value:SelfCheck"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "red-verify"
+kind    = "tool"
+run     = "toolchain:test"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+outputs = "value:ImplReport"

@@ -1,0 +1,35 @@
+# The pack that DECLARES the runtime envelope: `N` (the attempt cap), `K` (the breaker threshold)
+# and the per-item token appetite. It is the positive half of AC-029's *"a pack-validation test that
+# `N` is declared, never defaulted in code"* and of AC-033's *"`K` is a pack value, asserted present
+# by pack validation"*.
+#
+# **The three values are deliberately three DIFFERENT numbers**, and that is the fixture's whole
+# point: an accessor that read the wrong key would still pass a test written over a pack that
+# declared 3, 3 and 3. `appetite.points` is a fourth, different number again — it is step 5's
+# cost-class sum (AC-058, invariant I6) and NOT the token appetite, and a reader that conflated the
+# two would read `50` as a token budget.
+#
+# **The key spellings are a READING and no record states them** — there is no `attempts_cap`,
+# `consecutive_platform_failures` or `appetite.tokens` in any shipped pack
+# [measured 2026-09-14: `grep -rn 'attempts_cap\|consecutive_platform\|tokens' spikes/p9/packs/`
+# -> 0 hits]. `crates/rk-kernel/src/workflow/envelope.rs`'s header carries the reading and names the
+# record that is OWED. This file is authored, never copied: §7b.12 forbids editing `spikes/p9/` to
+# make a case, and none of the twelve shipped packs declares any of the three.
+[pack]
+id = "runtime-envelope-fixture"
+applies = "kind == incident"
+appetite = { points = 50, tokens = 50_000 }
+
+# `N` — AC-029's attempt cap. Four, which is not three and not fifty.
+[retry]
+attempts_cap = 4
+
+# `K` — AC-033's consecutive-`Platform`-failure threshold. Three.
+[breaker]
+consecutive_platform_failures = 3
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]

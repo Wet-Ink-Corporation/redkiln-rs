@@ -1,0 +1,33 @@
+# AC-018 must-fail fixture 2 of 2: "a step declaring `memo = false`".
+#
+# The verb is `test`, which is `live = false`. That is the whole point of the pairing: this file
+# isolates ADR-0097 decision 3's clause -- *"a step-level `memo = false` declaration is itself a pack
+# validation error (there is no per-step memo field)"* -- from the liveness clause, so a rule that
+# only ever fires on live verbs fails here while `live-verb-memoised.toml` still passes it.
+#
+# It is the SHIPPED shape: all nineteen `memo` declarations in `spikes/p9/catalog/` are `memo = false`
+# [measured 2026-09-14] and not one is `memo = true`, so the clause that matters against the real
+# artefacts is this one.
+[activity]
+id           = "step-declares-memo-false"
+version      = 2
+stage        = "verify"
+provides     = ["TestReport"]
+method_rank  = 20
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 1, tokens = 20_000, wall_clock_secs = 600 }
+
+[[step]]
+id      = "suite"
+kind    = "tool"
+run     = "toolchain:test"
+outputs = "value:TestReport"
+timeout_secs = 900
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+outputs = "value:TestReport"

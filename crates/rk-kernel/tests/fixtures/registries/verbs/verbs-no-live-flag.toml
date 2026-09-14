@@ -1,0 +1,15 @@
+# The LOAD refusal `VerbRegistryError::Shape` exists for, and the reason it is a refusal rather than
+# a default.
+#
+# `deploy` here declares `outputs` and `timeout` and NOT `live`. A registry reader that defaulted the
+# missing flag to `false` would report every step using `deploy` as lawfully memoisable -- which is
+# AC-018's exact failure mode, arrived at by a reader's convenience rather than by an author's
+# declaration. The alternative default (`true`) would refuse every step using an under-declared verb,
+# which is fail-closed but silent about WHY.
+#
+# So the registry refuses at LOAD and names the verb. `test` is declared completely, so the refusal
+# is demonstrably about `deploy` and not about the file.
+
+[verb]
+deploy = { outputs = "DeployReport", timeout = "deploy_timeout" }
+test   = { outputs = "TestReport", live = false, timeout = "test_timeout" }

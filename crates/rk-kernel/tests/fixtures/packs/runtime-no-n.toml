@@ -1,0 +1,28 @@
+# The refusal fixture for **AC-029's `N`**: a pack that declares `K` and the token appetite and
+# declares NO `[retry] attempts_cap`.
+#
+# It is identical to `runtime-envelope.toml` except for the missing `[retry]` table, so the pair
+# discriminates the accessor rather than the loader. Two things it must be true of, and both are
+# asserted by `ac029_n_is_declared_never_defaulted`:
+#
+#   1. It **LOADS**. A missing declaration is not a parse failure: `None` is an absence the pack
+#      validation refuses on, not a file this crate rejects. Every pack fixture in this directory
+#      that predates 2026-09-14 declares none of the three and must keep loading.
+#   2. `attempt_cap()` is `None` and NOT `Some(0)`, NOT `Some(3)` (which is `K`, declared below) and
+#      NOT `Some(50)` (which is `appetite.points`). A code default and a mis-keyed read are
+#      different defects and this fixture separates them.
+[pack]
+id = "runtime-no-n-fixture"
+applies = "kind == incident"
+appetite = { points = 50, tokens = 50_000 }
+
+# No `[retry]` table at all. THIS ABSENCE IS THE FIXTURE.
+
+[breaker]
+consecutive_platform_failures = 3
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]

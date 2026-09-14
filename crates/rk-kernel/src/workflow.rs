@@ -67,14 +67,191 @@
 //! asserts **both** halves of that run — a non-zero exit **and** `disallowed_method` in the
 //! output — so an unrelated failure cannot read as the pass (`s5`:168-174 is the shape).
 //!
-//! # What is not here yet
+//! # What is here now, and what is still not
 //!
-//! The workflow/activity split, the memo, the budgets, retry, the breaker, degradation and replay
-//! are **Slice 4's** (§7b.10), and the seven-step pure selection function is **Slice 3's**
-//! (§7b.9). Neither is stubbed here: an empty module that returns a default reads as built.
+//! **The sentence that stood here until 2026-09-14 said *"the memo, the budgets, retry, the breaker,
+//! degradation and replay are Slice 4's … Neither is stubbed here"*, and half of it is now false.**
+//! [`budget`] is on disk: the three counters AC-020 separates, lint rule 8's declared minimum
+//! (AC-021), the runtime fan-out charge (AC-022), the appetite-raise refusal AC-023 and AC-389
+//! share, and — **added 2026-09-14, Slice 4b** — the exhaustion gate AC-025 names, its kernel-local
+//! `BudgetExhausted` and the durable mark AC-024's wall clock owes. [`envelope`] is on disk beside
+//! it: `N`, `K` and the per-item token appetite, the numbers §7b.10 says are *"declared in the pack
+//! and refused as code defaults"*. Both are **child modules of this one**, so the two `#![deny]`
+//! attributes below cover them — lint levels propagate down the module tree — and that inheritance
+//! is the reason the budget counters live here rather than in a sibling module named for the
+//! register's area.
+//!
+//! **Corrected again 2026-09-14, Slice 4c.** The paragraph that stood here said *"Still **not built
+//! and not stubbed**: retry (AC-026–AC-032) …"* and *"The two kernel retry constants (base 2 s, cap
+//! 5 min) are NOT in [`envelope`] and are not anywhere yet"*. The second sentence is still true of
+//! [`envelope`] and is now false of this module: [`retry`] is on disk, and
+//! `BACKOFF_BASE_SECS` / `BACKOFF_CAP_SECS` are where PIA-055 puts them. With them come the policy
+//! over ADR-0112's eleven variants (AC-027, AC-028), the full-jitter envelope and the attempt cap
+//! against the pack's `N` (AC-029), ADR-0122's inner-attempt accounting (AC-026) and the one door an
+//! activity outcome reaches a retry decision through (AC-032). A pack key for the base or the cap
+//! would violate the register exactly as a code default for `N` does, and the two mistakes are one
+//! edit apart.
+//!
+//! **Corrected once more 2026-09-14, Slice 4d.** The sentence that stood here said *"Still **not
+//! built and not stubbed**: the breaker (AC-033–AC-035), degradation (AC-036–AC-038), the memo
+//! (AC-014–AC-019) and the FSM"*, and half of that list is now false. [`breaker`] and [`degrade`]
+//! are on disk: the K-consecutive-`Platform` counting rule with its reset rule, the per-key
+//! isolation AC-034 calls *"never trips globally"*, the store-derived state AC-035's own lint names,
+//! the two source lints those two criteria specify, the substitution refusal AC-036 owes, the
+//! `Degraded { from, to, why }` record in both of AC-037's sinks, and the five-row per-rigor policy
+//! table AC-038 asks for.
+//!
+//! **What those two modules do NOT contain is as load-bearing as what they do**, and each absence is
+//! a criterion half reported ARMED rather than an omission: the breaker's **key** (no model family
+//! exists in `rk-types`, `rk-ports` or this crate, and the catalog's `family` is ADR-0058's
+//! **activity** family), the breaker's **durable mark** (`EventKind` is closed at 29 and ADR-0116
+//! says *"the kind is minted by record or not at all"*), the breaker's **expiry value and its home**
+//! (§7b.10's two lists contain neither), the **model-tier binding** (the binder is built by no stage
+//! — `PROGRESS.md`:279), and any **ordering** over model tiers. Each is taken as a caller-supplied
+//! argument with exactly one constructor, so a later record narrows the shape rather than rewriting
+//! it. Each module's header states which record is owed.
+//!
+//! **Corrected a fourth time 2026-09-14, Slice 4e.** The sentence that stood here said *"Still
+//! **not built and not stubbed**: the memo (AC-014–AC-019) and **the FSM**"*, and half of that is
+//! now false too. [`fsm`] is on disk, and with it the half `s7b-kernel.md`:1103-1109 and :1153-1159
+//! each recorded **NOT BUILDABLE** — *"both are the FSM's, and **there is no FSM**"*. What is there
+//! now: `RunState` as a **pure fold** over the recorded journal (never a mutable machine — which is
+//! what makes AC-035's durable-state rule structural rather than conventional), the step-grain
+//! `NextAction` AC-006 assertion 3 compares, the **stage-grain** `StageAction` AC-161 and AC-164
+//! compare with the tier filter **inside** the function, the five-state `TerminalState` a kernel
+//! that does nothing at all cannot fake, AC-039's gate record bound to
+//! `(token, tree_hash, deadline)` with its **void, not reconciled** rule, and AC-007's `Divergence`
+//! and its three-arm no-wildcard halt.
+//!
+//! **And [`fsm`] carries the proof that these five child modules are inside the gate at all.**
+//! Every module added since Slice 4a relies on the two attributes below propagating **down** the
+//! module tree, and until 2026-09-14 that was asserted in six headers and demonstrated nowhere:
+//! `workflow-clock-reintroduce` reintroduces the banned call in **this file**, which carries the
+//! attribute, so it cannot tell inheritance from declaration. [`fsm::fsm_reads_the_wall_clock`],
+//! behind the new non-default `workflow-fsm-clock-reintroduce`, reintroduces it in a **child**:
+//!
+//! ```text
+//! RED:  cargo clippy --workspace --all-targets --features rk-kernel/workflow-fsm-clock-reintroduce
+//! ```
+//!
+//! [measured 2026-09-14: exit **101**, *"use of a disallowed method `std::time::SystemTime::now`"*
+//! at `src/workflow/fsm.rs`, with clippy's own *"note: the lint level is defined here"* pointing at
+//! the `#![deny]` **in this file** — the parent's attribute, reached from a child. The same run over
+//! `workflow-clock-reintroduce` names the same level source, which is what makes the pair a
+//! comparison rather than two copies of one observation.] **No Checkpoint 7b line runs the new
+//! feature**; :1396-1398 names only `workflow-clock-reintroduce`, so an owed §7b.14 line is recorded
+//! in the slice report and this control is never reported as a checkpoint pass.
+//!
+//! **What [`fsm`] does NOT contain is four values it needs and cannot compute**, each a
+//! caller-supplied argument with one constructor on [`breaker`]'s precedent: the gate's
+//! `tree_hash` (ADR-0105 clause 4's, `rk-git`'s), its `deadline` (a journaled instant), **the
+//! successor stage** (this system models no stage ordering — `spikes/p9/packs/incident.toml`:1-2
+//! says so in its own first comment — so `next_action` answers `Done` rather than inventing one),
+//! and the `@version` half of `activity_id@version`, which has no carrier in this tree at all.
+//!
+//! **Corrected a fifth time 2026-09-14, Slice 4g.** The sentence that stood here said *"Still **not
+//! built and not stubbed**: the memo (AC-014–AC-019), and the runtime boundary that would act on
+//! what [`fsm`] decides"*, and its first clause is now false. [`memo`] is on disk: the eight runtime
+//! facts `rk_store::memo::StepKeyComponents` is **assembled** from — assembled, because ADR-0119
+//! clause 1 says that struct does not move and a second derivation in this crate is the accidental
+//! equality AC-014/AC-016/AC-019 exist to prevent — the activity-level key's separate formula with
+//! AC-016's single-card lint, the nine-member `memo_hit` payload AC-019 enumerates, the journal
+//! identity *"executed steps plus `memo_hit` events equals step **activations**"*, and AC-018's two
+//! pack-validation clauses.
+//!
+//! **What [`memo`] does NOT contain, each absence a reported half rather than an omission**: memo
+//! key component 5's **tool branch source** (`Toolchain::detect` returns a `bool`, not a version
+//! string, and there is no Toolchain adapter at 7b), component 8's **`schema_version` source** (no
+//! such field exists on any type in this tree), AC-043's **`Evicted` decision** (its third state is
+//! a dated amendment ADR-0119 clause 7 owes the register, and a variant no call site can produce
+//! reads as a refusal the system performs), and AC-045's **selection memo key**, which is
+//! `rk-kernel::select`'s and stays ARMED under ADR-0119 clause 8. Nothing in it appends: AC-015's
+//! *"re-runs"* and AC-019's identity are measured over a **projection** of a decision sequence into
+//! the events Slice 4h will write.
+//!
+//! **Corrected a sixth time 2026-09-14, Slice 4h.** The paragraph that stood here said *"Still **not
+//! built and not stubbed**: the runtime boundary that would act on what [`fsm`] decides"*, and named
+//! three things inside [`retry`] that needed it — *"AC-030's durable mark, AC-031's
+//! scripted-responder instrument and the dispatch loop itself"*. **All four are now built, and none
+//! of them is in this module.** The boundary is [`crate::runtime`], a **top-level** module beside
+//! [`crate::replay`]: it dispatches, it appends and it takes a `Mutex`, and the two attributes below
+//! reach every child of this one — so a `runtime` module here would either fail to compile or need
+//! an `#[expect]` per I/O call, which in the module whose *purpose* is I/O is a gate that has
+//! stopped meaning anything.
+//!
+//! **What stayed here is the half that has no port in it**, and [`idem`] is the new one: the
+//! `(item, activity_id@version, attempt)` key is a **pure function** of three values, and its three
+//! refusals (AC-010) are decided before any process is spawned. [`idem::PlannedDispatch`] is a
+//! **value** carrying the key by field. 🛑 **Nothing in this crate consumes a `PlannedDispatch`**:
+//! `rk_ports::harness::Harness::dispatch` takes `(spec, store)` and **no key**
+//! (`crates/rk-ports/src/harness.rs`:37), and `crate::runtime`'s one live call site passes an
+//! `ActivitySpec` that carries none either. The key is computed, journaled and returned; it never
+//! crosses the port. *(Corrected 2026-09-14: this sentence asserted a port call that does not
+//! exist.)*
+//!
+//! So the rule the retracted sentence carried still holds, one level out: **nothing under this
+//! module dispatches, appends or writes a mark.** `NextAction` is a decision value, a backoff delay
+//! is a number, a `BudgetExtensionMark` is a value, and `OpenMark` is a fold's output. The module
+//! that acts on any of them is one `pub mod` line away in `src/lib.rs` and is outside this gate by
+//! construction.
 
 #![deny(clippy::disallowed_methods)]
 #![deny(clippy::disallowed_types)]
+
+/// **AC-020–AC-025.** The three budget counters, the activity's declared envelope, the two
+/// quantities `attempts_total` names, and the exhaustion gate. A child of this module, so the deny
+/// attributes above reach it.
+pub mod budget;
+
+/// **AC-029's `N`, AC-033's `K` and the per-item token appetite** — the numbers a pack declares and
+/// this crate refuses to default. A child of this module, for [`budget`]'s reason.
+pub mod envelope;
+
+/// **AC-033–AC-035.** The circuit breaker: the K-consecutive-`Platform` counting rule, the reset
+/// rule, the per-key isolation, the store-derived state and the refusal — keyed on an **opaque
+/// family token this crate never constructs**. A child of this module, for [`budget`]'s reason, and
+/// pointedly so: AC-035's expiry comparison is against a journaled value, and a `SystemTime::now()`
+/// in that comparison is a non-zero clippy exit under the attributes above rather than a review
+/// comment.
+pub mod breaker;
+
+/// **AC-036–AC-038.** Degradation as a typed value: the substitution refusal, the
+/// `Degraded { from, to, why }` record in both of the sinks AC-037 names, and the per-rigor policy
+/// table a tier-demanding gate closes (or does not) under. A child of this module, for [`budget`]'s
+/// reason.
+pub mod degrade;
+
+/// **AC-006–AC-008, AC-039, AC-161, AC-164.** The FSM: `RunState` as a pure fold over the recorded
+/// journal, the step-grain `NextAction` and the stage-grain `StageAction`, the `TerminalState` a
+/// kernel that does nothing at all cannot fake, and `Divergence`'s typed halt. A child of this
+/// module, for [`budget`]'s reason — and this one carries the proof of it: [`fsm`]'s
+/// `fsm_reads_the_wall_clock`, behind `workflow-fsm-clock-reintroduce`, is the only thing in the
+/// tree that shows the two attributes below are **inherited by a child** rather than merely
+/// declared one file away.
+pub mod fsm;
+
+/// **AC-010–AC-012.** The idempotency key's validator and the dispatch that cannot be constructed
+/// without one. A child of this module, for [`budget`]'s reason — and pointedly so: a key is a pure
+/// function of `(item, activity_id@version, attempt)`, and a key minted from a clock or a random
+/// source would be the non-deterministic id AC-002 bans. What is NOT here is the dispatch itself:
+/// [`idem::PlannedDispatch`] is a value that **nothing consumes** — the port takes no key
+/// (`crates/rk-ports/src/harness.rs`:37). *(Corrected 2026-09-14; see this module's header.)*
+pub mod idem;
+
+/// **AC-014–AC-019.** The memo: the eight runtime facts `rk_store::memo::StepKeyComponents` is
+/// **assembled** from (never a second derivation of the key), the activity-level key's separate
+/// formula and its single-card-reference lint, the `memo_hit` payload AC-019 enumerates, and the
+/// two lints ADR-0059 and ADR-0097 decision 3 leave behind. A child of this module, for [`budget`]'s
+/// reason — and pointedly so here too: a memo key is a **pure function of journaled facts**, and a
+/// clock read or an unordered set inside it would make the same key derive differently on a replay.
+pub mod memo;
+
+/// **AC-026–AC-032.** The retry policy over ADR-0112's eleven variants, the backoff envelope and
+/// its two kernel constants, the attempt cap against the pack's `N`, and the one door an activity
+/// outcome reaches a retry decision through. A child of this module, for [`budget`]'s reason — and
+/// pointedly so: a delay computed here is a **number**, and the two sleeps `clippy.toml` bans are
+/// denied in this file by the attributes above.
+pub mod retry;
 
 /// The AC-001 must-fail control: exactly one banned determinism call, behind a non-default feature.
 ///

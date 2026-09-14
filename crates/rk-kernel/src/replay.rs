@@ -16,17 +16,44 @@
 //!
 //! # 🛑 WHAT IS MEASURED, AND WHAT IS NOT — AC-006's five assertions
 //!
-//! | # | assertion | state at Slice 3 |
+//! | # | assertion | state at Slice 4f, 2026-09-14 |
 //! | --- | --- | --- |
 //! | 1 | every port bound to its fake | **a type fact, not a measurement** — [`ReplayPorts`] has no optional field, so an unbound port does not compile. This module reports **no list of bound ports**: a `Vec` of string literals the replay prints about itself is the very shape `s7b`:1018-1023 forbids, and it was one until 2026-09-13 |
 //! | 2 | byte-identical decisions | **measured** under `rk_store::canon` |
-//! | 3 | byte-identical **next action** | **NOT BUILDABLE — there is no FSM.** The workflow/activity split, the memo, retry and the runtime are §7b.10's Slice 4. Reported ARMED |
-//! | 4 | zero `rk-git` writes | **measured against `rk-git`'s OWN counter** — [`rk_git::gitops::GitOps::writes_performed`], read before and after. ADR-0105 decision 1's named instrument, not a seam this crate invented |
-//! | 5 | zero harness dispatches **with the terminal state matched** | **dispatch half measured** through the caller's own counter ([`ReplayPorts::dispatches`]), read before and after; **terminal-state half NOT BUILDABLE**, for assertion 3's reason |
+//! | 3 | byte-identical **next action** | **MEASURED**, as of 2026-09-14. [`crate::workflow::fsm::next_action`]'s canonical bytes, recomputed from the re-derived journal and compared against the value `run.json` **committed at record time**. Diverging is [`ReplayError::NextActionDiverged`], never a warning |
+//! | 4 | zero `rk-git` writes | **measured against `rk-git`'s OWN counter** — [`rk_git::gitops::GitOps::writes_performed`], read before and after. ADR-0105 decision 1's named instrument, not a seam this crate invented. `git` is `&mut` as of 2026-09-14 (residual 10h), so the absence is over a seam the replay COULD have written through |
+//! | 5 | zero harness dispatches **with the terminal state matched** | **dispatch half measured** through the caller's own counter ([`ReplayPorts::dispatches`]), read before and after; **terminal-state half MEASURED** as of 2026-09-14, the same way as row 3. 🛑 But see the paragraph below: **N is 0 on the only recorded run, so AC-008's GIVEN is half-satisfied and the criterion is NOT reported as covered** |
+//!
+//! **The sentence that stood in rows 3 and 5 until 2026-09-14 was:** *"**NOT BUILDABLE — there is
+//! no FSM.** The workflow/activity split, the memo, retry and the runtime are §7b.10's Slice 4."*
+//! The FSM is now on disk at `src/workflow/fsm.rs` and both rows are measured. What that sentence
+//! got right, and what survives it, is the next paragraph.
+//!
+//! # 🛑 AC-008's GIVEN IS *"a run that dispatched N activities"*, AND N IS 0
+//!
+//! [measured 2026-09-14: the committed golden log holds **4** events — `stage_transition`,
+//! `dag_assembled`, `gate_opened`, `dag_amended` — and **zero** `dispatch` and `activity_committed`
+//! events.] So *"all N results served from the journal"* is satisfied over an empty N, and the
+//! **dispatch half of AC-008 is vacuous**. The terminal-state half is not — the fold lands on
+//! `awaiting_dispatch` and a fold that stopped moving would land on `not_started` and refuse — but
+//! **AC-008 as a whole is ARMED, not discharged**, and the reason is one thing and not a mystery:
+//!
+//! > **A recording with dispatches needs a dispatcher, and there is none.** [`record`] would have
+//! > to drive [`crate::workflow::fsm::NextAction::Dispatch`] through a bound
+//! > [`rk_ports::harness::Harness`] and append an `activity_committed` per commit — which means
+//! > assembling a real [`rk_types::activity::ActivitySpec`] (card digest, tool allowlist, schema
+//! > id, timeout, resolved inputs) from a DAG node. **Nothing in this crate resolves any of those
+//! > five**, and the activity-dispatch boundary is Slice 4h's. Building a half of it here to
+//! > lengthen a journal would be building the dispatcher without its criteria.
+//!
+//! What [`record`] **does** drive is the one runtime act that needs no port, no clock and no
+//! dispatcher: the tier-1 `stage_transition` that enters the stage. That is why the journal is 4
+//! events and not 3, and it is what gives AC-161/AC-164 a tier-1 record to compare at stage grain.
 //!
 //! **Both counters are read from the caller's fakes, before and after**, so neither is a constant
 //! this module prints about itself — which is exactly what `s7b`:1018-1023 says the positive control
-//! exists to prevent.
+//! exists to prevent. The third token, `terminal_state=matched`, had **no** control until
+//! 2026-09-14 (gap G-1); `golden_log_replay_terminal_state_mismatch_is_red` is now it.
 //!
 //! # The git counter is `rk-git`'s, and the earlier claim that it could not be was FALSE
 //!
@@ -48,7 +75,8 @@
 //! ```text
 //! golden-logs/
 //!   <run_id>/                     run_id = sha256_lp(["rk-kernel/golden-log/v1", stage, inputs])
-//!     run.json                    { schema, run_id, stage, inputs_digest, event_count, producer }
+//!     run.json                    { schema, run_id, stage, inputs_digest, event_count, producer,
+//!                                   terminal_state, next_action }   ← the last two NEW at 4f
 //!     inputs/
 //!       pack/<name>.toml          the pack, verbatim
 //!       catalog/<name>.toml       one file per activity, verbatim
@@ -56,6 +84,7 @@
 //!       facets.toml               the facet registry, verbatim
 //!       context.json              the item's context digest preimage (canonical)
 //!       artifact-state.json       the item's artifact digests preimage (canonical)
+//!       runtime.json              NEW at 4f: { tree_hash, deadline, entered_from, successor }
 //!       deviation.json            OPTIONAL: the RequestDeviation and its requesting activity
 //!     events.jsonl                one canonical JSON object per line, LF-terminated
 //! ```
@@ -65,6 +94,21 @@
 //! downstream — and a replay recomputes it rather than reading it back. **Nothing in the layout
 //! carries a timestamp**, for the same reason: a recorded `at` would make two runs of identical
 //! inputs produce different bytes and turn AC-042's byte-identity into a comparison of clocks.
+//! `runtime.json`'s `deadline` is not an exception and the distinction is the whole reason it is
+//! an **input**: it is a value the caller recorded, read back on replay, and never read from a
+//! clock by anything in this crate.
+//!
+//! **`inputs/runtime.json` participates in `run_id`, and that is the point.** AC-042's THEN is
+//! *"re-derives the DAG from the **logged inputs alone**"*; a tree hash or a deadline the replay
+//! had to be told out of band would be exactly the hidden input [`HiddenInput`] exists to report.
+//! Adding it moved every recorded `run_id`, which is why the Slice-3 fixture directory
+//! `implement-ea970997d42e7e04` is gone and `implement-d8401695754074c7` stands in its place —
+//! re-blessed through the named `bless_the_committed_golden_log` act, never hand-edited.
+//!
+//! **A log written before 2026-09-14 is REFUSED, not read with defaults.** [`read_run`] requires
+//! both new manifest members: a `None` default would let a replay succeed with nothing to compare
+//! the FSM residue against, which is a green whose terminal-state half asserts exactly what AC-008
+//! warns about.
 //!
 //! **`events.jsonl` is canonical JSON, one object per line.** `rk_store::canon` emits no trailing
 //! newline, so the line separator is added here and the last line carries one — stated because the
@@ -87,7 +131,8 @@ use rk_git::gitops::GitOps;
 use rk_ports::event_store::EventStore;
 use rk_ports::harness::Harness;
 use rk_types::event::Event;
-use rk_types::event_kind::EventKind;
+use rk_types::event_kind::{EventKind, ReplayDivergence};
+use rk_types::time::Timestamp;
 
 use crate::catalog::Catalog;
 use crate::registry::Registry;
@@ -95,6 +140,7 @@ use crate::select::{
     ArtifactRegistry, DeviationKind, Item, Pack, RequestDeviation, SelectError, Selection, select,
     step7,
 };
+use crate::workflow::fsm::{self, Divergence, FsmContext, FsmError};
 
 /// The layout version, carried in `run.json` so a reader never has to guess which shape a run is in.
 pub const SCHEMA: &str = "rk-kernel/golden-log/v1";
@@ -150,6 +196,20 @@ pub enum ReplayError {
         detail: String,
     },
     Divergent(HiddenInput),
+    /// **AC-006 assertion 3.** *"…the sequence of decisions and the **next action** are
+    /// byte-identical to the recorded ones."* The recorded side is read back out of `run.json` —
+    /// a value written at record time and committed — and never recomputed from the same bytes.
+    ///
+    /// It carries [`rk_types::event_kind::ReplayDivergence`] and not a pair of strings, because
+    /// AC-007's THEN is *"the run halts with a typed `ReplayDivergence { activity_id, recorded,
+    /// recomputed }`"*; [`Divergence::halt`] is what mints it, and it consumes the recomputed
+    /// value so no continuation on it is reachable.
+    NextActionDiverged(ReplayDivergence),
+    /// **AC-008's terminal-state half.** *"…a test that separately asserts the terminal state
+    /// matches the record — so a kernel that does nothing at all fails the terminal-state half."*
+    /// A fold that returns [`crate::workflow::fsm::TerminalState::NotStarted`] for everything
+    /// produces `{"terminal":"not_started"}` here and the manifest says otherwise.
+    TerminalStateDiverged(ReplayDivergence),
 }
 
 impl fmt::Display for ReplayError {
@@ -180,11 +240,50 @@ impl fmt::Display for ReplayError {
                 write!(f, "the event store refused an append: {detail}")
             }
             Self::Divergent(h) => write!(f, "{h}"),
+            Self::NextActionDiverged(d) => write!(
+                f,
+                "the recomputed next action is not the recorded one (AC-006 assertion 3). \
+                 activity_id={:?} recorded={} recomputed={}. The recorded side was read back out \
+                 of `run.json`, so this is a comparison against a committed value and not two \
+                 folds of the same bytes",
+                d.activity_id, d.recorded, d.recomputed
+            ),
+            Self::TerminalStateDiverged(d) => write!(
+                f,
+                "the recomputed terminal state is not the recorded one (AC-008). activity_id={:?} \
+                 recorded={} recomputed={}. A kernel that does nothing at all lands on \
+                 `not_started` here and fails this half, which is what the criterion exists to \
+                 catch",
+                d.activity_id, d.recorded, d.recomputed
+            ),
         }
     }
 }
 
 impl std::error::Error for ReplayError {}
+
+impl From<FsmError> for ReplayError {
+    /// **Mapped onto [`ReplayError::Malformed`], and no new variant is minted for it.** A journal
+    /// the fold cannot read is a malformed log — the same defect `Malformed` already names — and
+    /// the payload member that refused travels in `detail` rather than being flattened into a
+    /// third divergence variant. The two variants this slice adds are the two AC-006 assertion 3
+    /// and AC-008 name; a fold refusal is neither.
+    fn from(e: FsmError) -> Self {
+        Self::Malformed {
+            path: "events.jsonl".to_owned(),
+            detail: format!("{} ({e})", e.as_str()),
+        }
+    }
+}
+
+impl From<rk_store::canon::CanonError> for ReplayError {
+    fn from(e: rk_store::canon::CanonError) -> Self {
+        Self::Malformed {
+            path: "<canonical>".to_owned(),
+            detail: e.to_string(),
+        }
+    }
+}
 
 impl From<SelectError> for ReplayError {
     fn from(e: SelectError) -> Self {
@@ -211,7 +310,16 @@ pub struct ReplayPorts<'a, 'j> {
     pub store: &'a mut dyn EventStore,
     /// `rk-git`'s journalled seam (ADR-0105 clause 1), in [`rk_git::gitops::Mode::Replay`]. Its
     /// `writes_performed()` is what AC-006's *"zero `rk-git` writes"* is measured off.
-    pub git: &'a GitOps<'j>,
+    ///
+    /// **`&mut`, as of 2026-09-14 (residual 10h).** It was `&GitOps<'j>` until then, and that
+    /// shared reference made the binding a *promise*: `rk_git::gitops::GitOps::run` — the one
+    /// method that can move `writes_performed()` — takes `&mut self`, so a shared borrow could
+    /// never reach it and the replay was structurally incapable of the write it asserts the
+    /// absence of. An absence measured over a seam that cannot act is not a measurement. With the
+    /// exclusive borrow the replay *could* call `run` and does not, and
+    /// `golden_log_replay_writing_fake_is_red` is what shows the counter moves when something
+    /// does.
+    pub git: &'a mut GitOps<'j>,
 }
 
 /// What the replay measured.
@@ -225,6 +333,90 @@ pub struct ReplayReport {
     /// `rk_git::gitops::GitOps::writes_performed()` as read **after** the replay.
     pub rk_git_writes: usize,
     pub harness_dispatches: u32,
+    /// The canonical bytes of the **recomputed** terminal state, as UTF-8.
+    ///
+    /// A `String` and not a `bool`, because `terminal_state=matched` is a token the test prints
+    /// **about itself** (§7b.14:1547-1553) and a caller that can only see a boolean cannot print
+    /// what it compared. The recorded side it was compared against is
+    /// [`RecordedRun::terminal_state`], read back out of `run.json`.
+    pub terminal_state: String,
+    /// The canonical bytes of the **recomputed** next action, as UTF-8 — AC-006 assertion 3.
+    pub next_action: String,
+}
+
+/// The four values [`crate::workflow::fsm::next_action`] needs, **recorded as part of the input
+/// set**.
+///
+/// 🛑 **They are inputs, not context, and that is the whole point.** AC-042's THEN is that the run
+/// *"re-derives the DAG from the **logged inputs alone**"*; a tree hash or a deadline the replay
+/// had to be told out of band would be exactly the hidden input `HiddenInput` exists to report.
+/// They are written to `inputs/runtime.json` and they participate in `run_id`, on AC-064's own
+/// model for the deviation record — *"the deviation record is part of the replay input set, so an
+/// amended DAG is not a hidden input."*
+///
+/// **Nothing here is defaulted.** [`RunInputs`] carries an `Option<RuntimeContext>` and
+/// [`record`] refuses a run without one rather than substituting an empty tree hash or a zero
+/// deadline: `select()` cannot mint either (AC-041 bans the clock and the filesystem read), and a
+/// zero deadline is a gate that expired at the epoch.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeContext {
+    tree_hash: String,
+    deadline: i64,
+    entered_from: Option<String>,
+    successor: Option<String>,
+}
+
+impl RuntimeContext {
+    /// The only constructor, named `supplied` on [`crate::workflow::fsm::FsmContext`]'s own model:
+    /// every call site is transcribing something this crate did not derive.
+    #[must_use]
+    pub fn supplied(tree_hash: &str, deadline: i64) -> Self {
+        Self {
+            tree_hash: tree_hash.to_owned(),
+            deadline,
+            entered_from: None,
+            successor: None,
+        }
+    }
+
+    /// The stage this run entered FROM, if the caller recorded one.
+    ///
+    /// Optional because **this system models no stage ordering** — `spikes/p9/packs/incident.toml`
+    /// :1-2, in its own first comment: *"Stage ORDER … is not modelled by the selection
+    /// function."* With none supplied the stage-entry event carries no `from` member, and the
+    /// fold's own `optional_str` reading is what makes that legible rather than a silent zero.
+    #[must_use]
+    pub fn entered_from(mut self, stage: &str) -> Self {
+        self.entered_from = Some(stage.to_owned());
+        self
+    }
+
+    /// The successor stage, for [`crate::workflow::fsm::NextAction::AdvanceStage`]. Same reason as
+    /// [`Self::entered_from`]: supplied, never invented.
+    #[must_use]
+    pub fn advances_to(mut self, stage: &str) -> Self {
+        self.successor = Some(stage.to_owned());
+        self
+    }
+
+    #[must_use]
+    pub fn tree_hash(&self) -> &str {
+        &self.tree_hash
+    }
+
+    #[must_use]
+    pub const fn deadline(&self) -> i64 {
+        self.deadline
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "deadline": self.deadline,
+            "entered_from": self.entered_from,
+            "successor": self.successor,
+            "tree_hash": self.tree_hash,
+        })
+    }
 }
 
 /// The four digests' preimages, plus the optional deviation, as one recorded value.
@@ -238,6 +430,7 @@ pub struct RunInputs {
     context: serde_json::Value,
     artifact_state: serde_json::Value,
     deviation: Option<(RequestDeviation, String)>,
+    runtime: Option<RuntimeContext>,
 }
 
 impl RunInputs {
@@ -300,6 +493,28 @@ impl RunInputs {
         self
     }
 
+    /// Record the [`RuntimeContext`] as part of the run's input set.
+    #[must_use]
+    pub fn with_runtime(mut self, runtime: RuntimeContext) -> Self {
+        self.runtime = Some(runtime);
+        self
+    }
+
+    /// The recorded runtime context, **refused rather than defaulted** when absent.
+    ///
+    /// # Errors
+    ///
+    /// [`ReplayError::Malformed`] naming `inputs/runtime.json`.
+    fn runtime(&self) -> Result<&RuntimeContext, ReplayError> {
+        self.runtime.as_ref().ok_or_else(|| ReplayError::Malformed {
+            path: "inputs/runtime.json".to_owned(),
+            detail: "no runtime context was recorded, and neither the tree hash nor the gate \
+                     deadline can be defaulted here: `select()` is forbidden both a git read and \
+                     a clock (AC-041), and a zero deadline is a gate that expired at the epoch"
+                .to_owned(),
+        })
+    }
+
     /// The activity that returned the deviation — needed for AC-062's `deviation_ok` check.
     #[must_use]
     pub fn requested_by(mut self, activity_id: &str) -> Self {
@@ -326,6 +541,7 @@ impl RunInputs {
                 "request": r.to_json_public(),
                 "requested_by": by,
             })),
+            "runtime": self.runtime.as_ref().map(RuntimeContext::to_json),
         })
     }
 
@@ -387,12 +603,31 @@ pub struct RecordedRun {
     pub events: Vec<Event>,
     run_id: String,
     inputs_digest: String,
+    terminal_state: String,
+    next_action: String,
 }
 
 impl RecordedRun {
     #[must_use]
     pub fn run_id(&self) -> &str {
         &self.run_id
+    }
+
+    /// The canonical bytes of the terminal state **as the recording computed them**, as UTF-8.
+    ///
+    /// This is the value `run.json` carries and the value a replay compares against. It is never
+    /// recomputed from the recorded journal during a replay: two folds of byte-identical journals
+    /// are equal by construction, and AC-008's whole content is that *"a kernel that does nothing
+    /// at all fails the terminal-state half."*
+    #[must_use]
+    pub fn terminal_state(&self) -> &str {
+        &self.terminal_state
+    }
+
+    /// The canonical bytes of the next action as the recording computed them — AC-006 assertion 3.
+    #[must_use]
+    pub fn next_action(&self) -> &str {
+        &self.next_action
     }
 
     /// The four-digest tuple AC-041 names, as the selection derived it.
@@ -440,10 +675,18 @@ fn canonical_events(events: &[Event]) -> Result<Vec<u8>, ReplayError> {
 /// # Errors
 ///
 /// [`ReplayError`] for a malformed input or a selection that could not resolve.
-fn derive(inputs: &RunInputs) -> Result<Vec<Event>, ReplayError> {
+fn derive(inputs: &RunInputs) -> Result<(Selection, Item, Vec<Event>), ReplayError> {
     let (pack, catalog, artifacts, facets, item) = inputs.build()?;
     let selection: Selection = select(&pack, &catalog, &artifacts, &facets, &inputs.stage, &item)?;
-    let mut events = selection.journal();
+
+    // **THE RUNTIME'S OWN FIRST DURABLE ACT, and it is first in the journal because it happens
+    // first.** Entering a stage is a tier-1, trailer-carried `stage_transition` (design §5;
+    // `EventKind::tier`), and it is the one act the runtime performs that needs no port, no clock
+    // and no dispatcher — so it is the one act this slice can record. Everything after it
+    // (opening a gate, dispatching, committing) needs the dispatcher Slice 4h builds, and the
+    // module header says so rather than leaving a reader to infer it from a short journal.
+    let mut events = vec![stage_entry(&inputs.stage, inputs.runtime()?)];
+    events.extend(selection.journal());
 
     if let Some((request, requested_by)) = &inputs.deviation {
         let outcome = step7(
@@ -464,23 +707,80 @@ fn derive(inputs: &RunInputs) -> Result<Vec<Event>, ReplayError> {
             events.push(event);
         }
     }
-    Ok(events)
+    Ok((selection, item, events))
+}
+
+/// The stage entry, as an event.
+///
+/// `from` is present only when the caller recorded a predecessor: the fold reads it with
+/// `optional_str` and this system models no stage ordering, so inventing one here would put a
+/// transition into the trailer record that nothing decided.
+fn stage_entry(stage: &str, runtime: &RuntimeContext) -> Event {
+    let mut payload = serde_json::Map::new();
+    payload.insert("to".to_owned(), serde_json::Value::from(stage));
+    if let Some(from) = &runtime.entered_from {
+        payload.insert("from".to_owned(), serde_json::Value::from(from.clone()));
+    }
+    Event::new(
+        EventKind::StageTransition,
+        serde_json::Value::Object(payload),
+    )
+}
+
+/// **The FSM residue of a journal** — the terminal state and the next action, as canonical UTF-8.
+///
+/// Both are computed the same way on the recording side and on the replay side, and that is
+/// deliberate: what makes the comparison discriminate is not that the two computations differ, it
+/// is that the recording's answer is **committed into `run.json`** and the replay's is compared
+/// against those bytes. A fold that stops moving the state produces `{"terminal":"not_started"}`
+/// here, the committed manifest says otherwise, and the replay refuses.
+///
+/// # Errors
+///
+/// [`ReplayError::Malformed`] carrying the fold's own refusal, or the canonical serialiser's.
+fn fsm_residue(
+    inputs: &RunInputs,
+    selection: &Selection,
+    item: &Item,
+    events: &[Event],
+) -> Result<(String, String), ReplayError> {
+    let runtime = inputs.runtime()?;
+    let state = fsm::fold(item.id(), &inputs.stage, events)?;
+    let ctx = FsmContext::supplied(
+        item.id(),
+        &runtime.tree_hash,
+        Timestamp::from_unix_seconds(runtime.deadline),
+        runtime.successor.as_deref(),
+    );
+    let next = fsm::next_action(selection, &state, &ctx)?;
+    let as_text = |bytes: Vec<u8>| -> Result<String, ReplayError> {
+        String::from_utf8(bytes).map_err(|e| ReplayError::Malformed {
+            path: "<canonical>".to_owned(),
+            detail: e.to_string(),
+        })
+    };
+    Ok((
+        as_text(state.terminal().canonical_bytes()?)?,
+        as_text(next.canonical_bytes()?)?,
+    ))
 }
 
 /// Produce one golden-log run from its inputs. **The journal is derived, never hand-written.**
 ///
 /// # Errors
 ///
-/// [`ReplayError`] for a malformed input or a selection that could not resolve.
+/// [`ReplayError`] for a malformed input, a selection that could not resolve, or a journal the
+/// FSM refused to fold.
 pub fn record(inputs: &RunInputs) -> Result<RecordedRun, ReplayError> {
-    let events = derive(inputs)?;
-    let (pack, catalog, artifacts, facets, item) = inputs.build()?;
-    let selection = select(&pack, &catalog, &artifacts, &facets, &inputs.stage, &item)?;
+    let (selection, item, events) = derive(inputs)?;
+    let (terminal_state, next_action) = fsm_residue(inputs, &selection, &item, &events)?;
     Ok(RecordedRun {
         run_id: inputs.run_id()?,
         inputs_digest: selection.inputs_digest().as_str().to_owned(),
         inputs: inputs.clone(),
         events,
+        terminal_state,
+        next_action,
     })
 }
 
@@ -531,6 +831,11 @@ pub fn write_run(root: &Path, run: &RecordedRun) -> Result<PathBuf, ReplayError>
         "inputs_digest": run.inputs_digest,
         "event_count": run.events.len(),
         "producer": "rk-kernel::replay::record",
+        // NEW at Slice 4f. Neither carries a timestamp, so *"nothing in the layout carries a
+        // timestamp"* (the module header) still holds: the gate deadline inside `next_action` is
+        // a RECORDED INPUT read back out of `inputs/runtime.json`, not a clock reading.
+        "terminal_state": run.terminal_state,
+        "next_action": run.next_action,
     });
     let mut manifest_bytes =
         rk_store::canon::canonical(&manifest).map_err(|e| ReplayError::Malformed {
@@ -563,6 +868,15 @@ pub fn write_run(root: &Path, run: &RecordedRun) -> Result<PathBuf, ReplayError>
         })?;
         bytes.push(b'\n');
         write_file(&inputs.join(name), &bytes)?;
+    }
+    if let Some(runtime) = &run.inputs.runtime {
+        let mut bytes =
+            rk_store::canon::canonical(&runtime.to_json()).map_err(|e| ReplayError::Malformed {
+                path: "runtime.json".to_owned(),
+                detail: e.to_string(),
+            })?;
+        bytes.push(b'\n');
+        write_file(&inputs.join("runtime.json"), &bytes)?;
     }
     if let Some((request, by)) = &run.inputs.deviation {
         let mut bytes = rk_store::canon::canonical(&serde_json::json!({
@@ -608,6 +922,32 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         .as_str()
         .ok_or_else(|| bad("no inputs_digest"))?
         .to_owned();
+    // **A LOG WITHOUT THESE TWO IS REFUSED, and the refusal is the point.** A manifest written
+    // before 2026-09-14 carries neither, and reading one with a `None` default would let a replay
+    // *succeed* with nothing to compare the FSM residue against — a green whose terminal-state
+    // half asserts nothing, which is precisely AC-008's named failure. The Slice-3 fixture
+    // therefore goes RED here until it is re-blessed through
+    // `bless_the_committed_golden_log`, rather than replaying vacuously.
+    let terminal_state = manifest["terminal_state"]
+        .as_str()
+        .ok_or_else(|| {
+            bad(
+                "no terminal_state — this log predates Slice 4f's layout and there is nothing to \
+                 compare the recomputed terminal state against (AC-008). Re-bless it with \
+                 `cargo test -p rk-kernel --features corpus --test it -- --ignored \
+                 bless_the_committed_golden_log`",
+            )
+        })?
+        .to_owned();
+    let next_action = manifest["next_action"]
+        .as_str()
+        .ok_or_else(|| {
+            bad(
+                "no next_action — this log predates Slice 4f's layout and AC-006 assertion 3 has \
+                 nothing to compare against. Re-bless it",
+            )
+        })?
+        .to_owned();
 
     let inputs_dir = dir.join("inputs");
     let mut inputs = RunInputs::new(stage);
@@ -634,6 +974,30 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
     inputs = inputs.with_facets(&read_text(&inputs_dir.join("facets.toml"))?);
     inputs.context = parse_json(&inputs_dir.join("context.json"))?;
     inputs.artifact_state = parse_json(&inputs_dir.join("artifact-state.json"))?;
+
+    let runtime_path = inputs_dir.join("runtime.json");
+    if runtime_path.is_file() {
+        let value = parse_json(&runtime_path)?;
+        let bad = |d: &str| ReplayError::Malformed {
+            path: runtime_path.display().to_string(),
+            detail: d.to_owned(),
+        };
+        let mut runtime = RuntimeContext::supplied(
+            value["tree_hash"]
+                .as_str()
+                .ok_or_else(|| bad("no tree_hash"))?,
+            value["deadline"].as_i64().ok_or_else(|| {
+                bad("`deadline` is absent or is not an integer — never a silent 0")
+            })?,
+        );
+        if let Some(from) = value["entered_from"].as_str() {
+            runtime = runtime.entered_from(from);
+        }
+        if let Some(to) = value["successor"].as_str() {
+            runtime = runtime.advances_to(to);
+        }
+        inputs = inputs.with_runtime(runtime);
+    }
 
     let deviation_path = inputs_dir.join("deviation.json");
     if deviation_path.is_file() {
@@ -699,6 +1063,8 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         events,
         run_id,
         inputs_digest,
+        terminal_state,
+        next_action,
     })
 }
 
@@ -779,7 +1145,7 @@ pub fn replay(dir: &Path, ports: &mut ReplayPorts<'_, '_>) -> Result<ReplayRepor
     }
 
     let recorded = read_run(dir)?;
-    let rederived = derive(&recorded.inputs)?;
+    let (selection, item, rederived) = derive(&recorded.inputs)?;
 
     // ---- byte-identical decisions --------------------------------------------------------------
     let recorded_lines = split_lines(&canonical_events(&recorded.events)?);
@@ -806,6 +1172,36 @@ pub fn replay(dir: &Path, ports: &mut ReplayPorts<'_, '_>) -> Result<ReplayRepor
                 rederived_lines.len()
             ),
         }));
+    }
+
+    // ---- 4b + 4c: the next action and the terminal state ---------------------------------------
+    //
+    // **The recorded side of both comparisons is READ BACK out of `run.json`** — a value written
+    // at record time and committed — and is NOT recomputed from the recorded journal here.
+    // Recomputing both sides from the same input would make the assertion vacuous: two folds of
+    // byte-identical journals are equal by construction, and AC-008's whole content is that *"a
+    // kernel that does nothing at all fails the terminal-state half."* With the recorded value
+    // read back from the manifest, a fold that returns `TerminalState::NotStarted` for everything
+    // produces `{"terminal":"not_started"}`, the manifest says otherwise, and the replay refuses.
+    let (recomputed_terminal, recomputed_next) =
+        fsm_residue(&recorded.inputs, &selection, &item, &rederived)?;
+    if recorded.next_action != recomputed_next {
+        return Err(ReplayError::NextActionDiverged(
+            Divergence::NextAction {
+                recorded: recorded.next_action.clone(),
+                recomputed: recomputed_next,
+            }
+            .halt(&recorded.run_id),
+        ));
+    }
+    if recorded.terminal_state != recomputed_terminal {
+        return Err(ReplayError::TerminalStateDiverged(
+            Divergence::TerminalState {
+                recorded: recorded.terminal_state.clone(),
+                recomputed: recomputed_terminal,
+            }
+            .halt(&recorded.run_id),
+        ));
     }
 
     // ---- the recorded EVENT journal is served back to the store --------------------------------
@@ -842,6 +1238,8 @@ pub fn replay(dir: &Path, ports: &mut ReplayPorts<'_, '_>) -> Result<ReplayRepor
         divergences: 0,
         rk_git_writes: git_after,
         harness_dispatches: dispatches_after,
+        terminal_state: recomputed_terminal,
+        next_action: recomputed_next,
     })
 }
 

@@ -1,0 +1,65 @@
+# AC-019's premise fixture: a graph whose STEP ACTIVATIONS outnumber its static steps, and outnumber
+# them for BOTH of the two reasons the register names.
+#
+#   > "a replay assertion that executed steps plus `memo_hit` events equals the number of **step
+#   >  activations** in the recorded run -- NOT the graph's static step count, which `repeat`/
+#   >  `on_false` (AC-017) and `for_each` (AC-022) make unequal to it."
+#
+# So the fixture carries one of each, and the premise `assert_ne!(activations, static_step_count)` in
+# `ac019_executed_plus_hits_equals_activations` is what forces it to keep carrying them:
+#
+#   static steps (`activity.steps.len()`)                           = 4
+#   dispatchable activations in the recorded run                    = 6
+#     `draft`      one agent step, one activation                     1
+#     `per-finding` a `for_each` step over a 3-element list           3   (AC-022: N is runtime)
+#     `settle`     a `repeat` step that took 2 of its 3 iterations    2   (AC-017)
+#   `emit` mints no dispatch (ADR-0036), so it is in the first number and not the second.
+#
+# Every step is `agent` DELIBERATELY (residual 5b): memo-key component 5's `tool` branch needs the
+# Toolchain adapter's detected version string, `Toolchain::detect()` returns a bool, and there is no
+# adapter at 7b -- so every Slice-4 fixture that feeds a `StepContext` stays on the card-digest
+# branch rather than filling the other one with an invented value. The AC-018 fixtures beside this
+# file DO carry `tool` steps, and they must: AC-018's GIVEN is a tool step. They never build a
+# `StepContext`.
+[activity]
+id           = "memo-activations"
+version      = 2
+stage        = "implement"
+provides     = ["ImplReport"]
+requires     = ["Spec"]
+derived_from = ["Spec"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+budget       = { attempts_total = 8, tokens = 120_000, wall_clock_secs = 1800 }
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "implementer"
+inputs  = { spec = "artifact:Spec" }
+outputs = "value:SelfCheck"
+timeout_secs = 600
+
+[[step]]
+id      = "per-finding"
+kind    = "agent"
+role    = "implementer"
+for_each = "${draft.outputs.findings}"
+inputs  = { finding = "${draft.outputs.findings}" }
+outputs = "value:Findings"
+timeout_secs = 600
+
+[[step]]
+id      = "settle"
+kind    = "agent"
+role    = "adversary"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 600
+repeat  = { until = "${settle.outputs.blocking} == 0", max = 3 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+outputs = "value:ImplReport"

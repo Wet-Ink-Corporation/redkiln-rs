@@ -1,0 +1,44 @@
+# AC-018 must-fail fixture 1 of 2: "a tool step whose verb's registry entry carries `live = true`"
+# and which declares `memo = true`.
+#
+# `deploy` is `live = true` in tests/fixtures/registries/verbs/verbs-live.toml AND in the shipped
+# `spikes/p9/registry.toml`, so the fixture does not disagree with the artefact its registry is
+# transcribed from.
+#
+# The OTHER tool step (`check-lint`, verb `lint`, `live = false`, no `memo` key) is why this file
+# does not read as "any catalog with a tool step fails": it is lawful and must produce no violation,
+# so the rule's output over this one file is a SUBSET of its steps and not all of them.
+#
+# 🛑 This step trips BOTH clauses -- the liveness rule AND ADR-0097 decision 3's withdrawn field --
+# and the rule reports both. Design §4 writes the expectation as `Err([LiveVerbMemoised])`; see
+# src/workflow/memo.rs's `live_verb_memo_rule` for why suppressing the second would make the shipped
+# catalog's violation count depend on which clause fired first.
+[activity]
+id           = "live-verb-memoised"
+version      = 1
+stage        = "operate"
+provides     = ["DeployReport"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+budget       = { attempts_total = 2, tokens = 40_000, wall_clock_secs = 900 }
+
+[[step]]
+id      = "ship"
+kind    = "tool"
+run     = "toolchain:deploy"
+outputs = "value:DeployReport"
+timeout_secs = 600
+memo    = true
+
+[[step]]
+id      = "check-lint"
+kind    = "tool"
+run     = "toolchain:lint"
+outputs = "value:LintReport"
+timeout_secs = 300
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+outputs = "value:DeployReport"

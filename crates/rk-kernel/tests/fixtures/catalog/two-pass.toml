@@ -1,0 +1,61 @@
+# AC-021's fixture: an activity whose graph runs A = 3 agent/tool steps on ONE pass and whose steps
+# declare retries summing to 2A = 6. It is authored, not copied: no shipped activity has all three
+# dispatchable steps at `retry.max = 2`, and §7b.12 forbids editing spikes/p9/ to make a case.
+#
+# The two formulas it discriminates between:
+#   ADR-0037's lint rule 8      -> agent/tool steps on one pass         = 3   (A)
+#   the formula it REPLACED     -> sum of per-step retry.max            = 6   (2A)
+# and the shape that counts everything with an id -> 5. All three are different, so a test asserting
+# 3 cannot be satisfied by either of the other two.
+[activity]
+id           = "two-pass"
+version      = 1
+stage        = "implement"
+provides     = ["ImplReport"]
+requires     = ["Spec"]
+derived_from = ["Spec"]
+tags         = ["change:text"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings", "SelfCheck"]
+# >= A, which is exactly what rule 8 requires. It is NOT 2A, and that is the fixture's whole point.
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 1200 }
+deviation_ok = ["skip"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "implementer"
+inputs  = { spec = "artifact:Spec" }
+outputs = "value:SelfCheck"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "verify"
+kind    = "tool"
+run     = "toolchain:test"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "adversary"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 2 }
+
+# --- the two steps that mint no dispatch, so "count the steps" and "count the dispatchable steps"
+# --- are different numbers on this graph (ADR-0036; schema §9a item 7 says "agent/tool steps").
+[[step]]
+id      = "complete"
+kind    = "check"
+when    = "adversary.outputs.blocking == 0"
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+outputs = "value:ImplReport"

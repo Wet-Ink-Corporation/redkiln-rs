@@ -96,6 +96,50 @@ pub struct Step {
     pub output_type: Option<String>,
     /// The step's own `when` guard, verbatim. `None` means the step always runs.
     pub when: Option<String>,
+    /// `for_each = "${step.outputs.<list>}"` or `"artifact:Kind.<list>"` (schema §9b.5), verbatim.
+    ///
+    /// **The cardinality is not here and cannot be**: schema §1 is *"cardinality is runtime-computed
+    /// but the *shape* is declared"*, which is ADR-0053's whole driver. The runtime charge for a
+    /// step carrying this is [`crate::budget::charge_for_each`], and AC-022's THEN is that it does
+    /// not read the cardinality either.
+    ///
+    /// Seven shipped steps declare one [measured 2026-09-14:
+    /// `grep -cE '^for_each' spikes/p9/catalog/*.toml` sums to 7 across 7 files].
+    pub for_each: Option<String>,
+    /// `retry = { max = N }` (schema §4), selecting the kernel's per-error-class policy.
+    ///
+    /// Read for one reason at Slice 4a: it is the **losing** formula ADR-0037 replaced — `Σ (step
+    /// retry.max × 1)` — and `attempts_total_counts_a_pass_not_retries` computes it in order to
+    /// assert that lint rule 8 does **not**. A step *"never defines its own backoff"* (schema §4), so
+    /// nothing here is a retry policy.
+    pub retry_max: Option<u32>,
+    /// `repeat = { until = "...", max = N }` (schema 4) -- the `max` only.
+    ///
+    /// Read for one reason at Slice 4g: AC-019's identity is *"executed steps plus `memo_hit`
+    /// events equals the number of **step activations** ... not the graph's static step count,
+    /// which `repeat`/`on_false` (AC-017) and `for_each` (AC-022) make unequal to it"*, and
+    /// `ac019_executed_plus_hits_equals_activations` needs the two to be unequal **as a parsed
+    /// premise** rather than as a number a reader has to trust. The `until` predicate is **not**
+    /// read here: evaluating it is the runtime's (Slice 4h), ADR-0103's evaluator already exists
+    /// for it, and a second reading would be a second home for the loop condition.
+    ///
+    /// Fourteen shipped steps across fourteen files declare one [measured 2026-09-14:
+    /// `grep -rn '^repeat' spikes/p9/catalog/ | wc -l` -> 14, and `-rln` -> 14].
+    pub repeat_max: Option<u32>,
+    /// `memo = <bool>` on one `[[step]]` -- **the field ADR-0097 decision 3 withdrew**.
+    ///
+    /// It is parsed **so that its presence can be refused**, which is the opposite of the usual
+    /// reason to parse a key. AC-018's THEN is *"a step-level `memo = false` declaration is itself
+    /// a pack validation error (there is no per-step memo field)"*, and a rule cannot refuse a key
+    /// the loader silently drops. [`crate::memo::live_verb_memo_rule`] is that rule: `Some(false)`
+    /// and `Some(true)` are both violations and `None` is the only lawful shape.
+    ///
+    /// **Nineteen shipped steps across fourteen activities declare one, every one of them
+    /// `memo = false`** [measured 2026-09-14: `grep -rn 'memo' spikes/p9/catalog/ | wc -l` -> 19;
+    /// `grep -rln 'memo' spikes/p9/catalog/ | wc -l` -> 14]. So the rule is **red against the
+    /// shipped catalog by design** and the repairs are Step 7e's: 7b.12:970-977 forbids editing
+    /// `spikes/p9/` to make a green.
+    pub memo_declared: Option<bool>,
 }
 
 impl Step {
@@ -165,6 +209,24 @@ pub struct Activity {
     /// open, rather than an id they then have to find.
     pub source: String,
     pub id: String,
+    /// ADR-0072's **`@version`** -- component 1 of the step memo key, and the second part of the
+    /// idempotency key.
+    ///
+    /// 🛑 **A CORRECTION TO SLICE 4e's REPORT, and it is the one that matters most here.** Slice 4e
+    /// reported *"`@version` has no carrier in this tree"* on the measurement
+    /// `grep -n "version" crates/rk-kernel/src/catalog.rs` -> 0 hits. That measured **this
+    /// loader**, not the tree: **all 102 shipped activities declare `version`**
+    /// [measured 2026-09-14: `grep -l '^version' spikes/p9/catalog/*.toml | wc -l` -> 102 of 102,
+    /// values 1-4], and so does every catalog fixture under `crates/rk-kernel/tests/fixtures/`. The
+    /// carrier was the file all along and the loader dropped it. Slice 4g reads it, because AC-014
+    /// component 1 is `activity_id@version` and a memo key assembled from the id alone would stand
+    /// still across the version bump ADR-0097 component 1 exists to move it on.
+    ///
+    /// **`Option`, and `None` is not `1`.** An activity that declares no version has declared
+    /// none; [`Activity::id_at_version`] returns `None` rather than inventing a number, which is
+    /// what leaves AC-010's *"an `activity_id` without `@version`"* refusal (Slice 4h's)
+    /// something real to refuse.
+    pub version: Option<u32>,
     pub stage: String,
     pub provides: Vec<String>,
     pub tags: Vec<String>,
@@ -200,8 +262,40 @@ pub struct Activity {
     /// forbids clause is *"a `deviate` declaration whose `kind` falls outside the closed
     /// `skip | downgrade | add` vocabulary"*.
     pub deviation_ok: Vec<String>,
+    /// The activity's **declared** `budget = { attempts_total, tokens, wall_clock_secs }` (schema
+    /// §4). All 102 shipped activities carry one [measured 2026-09-14:
+    /// `grep -lE '^budget' spikes/p9/catalog/*.toml | wc -l` → 102].
+    ///
+    /// **`Option`, and `None` is not "unbounded"** — `Pack::appetite`'s doctrine at
+    /// `select/pack.rs`:249-256, verbatim: *"a code default here would decide a value the pack owes"*.
+    /// An activity that declares no budget has declared none, and nothing in this crate supplies one.
+    ///
+    /// This is the **declaration**, which is AC-021's quantity and ADR-0037's lint-rule-8 subject.
+    /// The runtime draw-down is AC-026's and is a different number (ADR-0122 decision 3).
+    pub budget: Option<ActivityBudget>,
     pub steps: Vec<Step>,
 }
+
+impl Activity {
+    /// `activity_id@version` -- memo-key component 1 and idempotency-key part 2.
+    ///
+    /// `None` when the activity declares no `version`. **There is deliberately no fallback**: a
+    /// default of `1` would make every unversioned activity share a memo key with version 1 of a
+    /// versioned one, which is the collision component 1 exists to prevent, and it would silently
+    /// satisfy the AC-010 refusal Slice 4h owes.
+    #[must_use]
+    pub fn id_at_version(&self) -> Option<String> {
+        self.version.map(|v| format!("{}@{v}", self.id))
+    }
+}
+
+/// An activity's declared budget table.
+///
+/// It **is** [`crate::budget::BudgetEnvelope`] and is not a second three-field struct: design §2.1
+/// already declares exactly this shape as *"the declared envelope"*, and a parallel type would be
+/// the second set of three counters AC-020 exists to prevent. The alias exists so the name design
+/// §1.4 gives the catalog field resolves as well.
+pub type ActivityBudget = crate::workflow::budget::BudgetEnvelope;
 
 /// A directory of activities.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -367,6 +461,7 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
             )));
         }
     }
+    let budget = activity_budget(head, &id, &shape)?;
     let mut steps = Vec::new();
     if let Some(Value::Array(rows)) = doc.get("step") {
         for row in rows {
@@ -383,6 +478,21 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
                      (agent, tool, check, gate, emit)"
                 ))
             })?;
+            // ADR-0097 decision 3 withdrew this key; it is read so that the rule that refuses it
+            // has something to refuse. A `memo` that is not a boolean is a SHAPE error and never a
+            // silently absent declaration -- `retry_max`'s and `activity_budget`'s discipline, and
+            // for the same reason: a dropped key reads as a lawful step.
+            let memo_declared = match table.get("memo") {
+                None => None,
+                Some(Value::Bool(b)) => Some(*b),
+                Some(_) => {
+                    return Err(shape(format!(
+                        "{id}/{step_id}: `memo` is not a boolean. ADR-0097 decision 3 withdrew the \
+                         per-step memo field; a non-boolean value is refused here rather than \
+                         dropped, because a dropped key reads as a step that never declared one"
+                    )));
+                }
+            };
             steps.push(Step {
                 id: step_id,
                 kind,
@@ -392,12 +502,30 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
                         .map_or_else(|| o.clone(), ToOwned::to_owned)
                 }),
                 when: text(table, "when"),
+                for_each: text(table, "for_each"),
+                retry_max: bounded_max(table, "retry", &id, &shape)?,
+                repeat_max: bounded_max(table, "repeat", &id, &shape)?,
+                memo_declared,
             });
         }
     }
+    // ADR-0072's `@version`. Absent is `None` and never `1` -- see `Activity::version`.
+    let version =
+        match head.get("version") {
+            None => None,
+            Some(v) => {
+                let raw = v
+                    .as_int()
+                    .ok_or_else(|| shape(format!("{id}: `version` is not an integer")))?;
+                Some(u32::try_from(raw).map_err(|_| {
+                    shape(format!("{id}: `version` is {raw}, which is outside u32"))
+                })?)
+            }
+        };
     Ok(Activity {
         source: name.to_owned(),
         id,
+        version,
         stage,
         provides: strings(head, "provides"),
         tags: strings(head, "tags"),
@@ -413,10 +541,95 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
         cost_class: text(head, "cost_class"),
         excludes: strings(head, "excludes"),
         deviation_ok,
+        budget,
         method_rank,
         min_rigor: text(head, "min_rigor").unwrap_or_else(|| "optional".to_owned()),
         max_rigor: text(head, "max_rigor"),
         family: text(head, "family"),
         steps,
     })
+}
+
+/// `<key> = { max = N, … }` on one `[[step]]`, or `None`. Used for `retry` (Slice 4a) and for
+/// `repeat` (Slice 4g) — the two step tables of schema §4 whose only member this crate reads is
+/// `max`.
+///
+/// **One helper, not two, and the reason is the failure it prevents**: a second copy would be a
+/// second place for the never-a-silent-zero rule to be forgotten.
+///
+/// # Errors
+///
+/// [`CatalogError::Shape`] for a `<key>` that is not a table, a `max` that is not an integer, or one
+/// outside `u32` — never a silent `0`, which would make the losing formula
+/// `attempts_total_counts_a_pass_not_retries` computes read as `A` and the test vacuous, and which
+/// would make a `repeat` loop read as a step that runs once.
+fn bounded_max(
+    table: &Table,
+    key: &str,
+    id: &str,
+    shape: &impl Fn(String) -> CatalogError,
+) -> Result<Option<u32>, CatalogError> {
+    let Some(value) = table.get(key) else {
+        return Ok(None);
+    };
+    let inner = value
+        .as_table()
+        .ok_or_else(|| shape(format!("{id}: `{key}` is not a table")))?;
+    let Some(max) = inner.get("max") else {
+        return Ok(None);
+    };
+    let raw = max
+        .as_int()
+        .ok_or_else(|| shape(format!("{id}: `{key}.max` is not an integer")))?;
+    u32::try_from(raw)
+        .map(Some)
+        .map_err(|_| shape(format!("{id}: `{key}.max` is {raw}, which is outside u32")))
+}
+
+/// The `[activity]` table's `budget = { attempts_total, tokens, wall_clock_secs }`, or `None`.
+///
+/// **All three keys or none.** A partial table is a shape error rather than a table with two
+/// counters and a defaulted third: the defaulted one would be a policy number this crate does not
+/// own (`00-preamble.md`:55), and it would be invisible at the call site.
+///
+/// # Errors
+///
+/// [`CatalogError::Shape`] for a `budget` that is not a table, a missing or non-integer member, or a
+/// negative one.
+fn activity_budget(
+    head: &Table,
+    id: &str,
+    shape: &impl Fn(String) -> CatalogError,
+) -> Result<Option<ActivityBudget>, CatalogError> {
+    let Some(value) = head.get("budget") else {
+        return Ok(None);
+    };
+    let table = value
+        .as_table()
+        .ok_or_else(|| shape(format!("{id}: `budget` is not a table")))?;
+    let member = |key: &str| -> Result<i64, CatalogError> {
+        let raw = table
+            .get(key)
+            .and_then(Value::as_int)
+            .ok_or_else(|| shape(format!("{id}: `budget` has no integer `{key}`")))?;
+        if raw < 0 {
+            return Err(shape(format!(
+                "{id}: `budget.{key}` is {raw}, which is negative"
+            )));
+        }
+        Ok(raw)
+    };
+    let attempts = member("attempts_total")?;
+    let tokens = member("tokens")?;
+    let wall_clock = member("wall_clock_secs")?;
+    let attempts_total = u32::try_from(attempts).map_err(|_| {
+        shape(format!(
+            "{id}: `budget.attempts_total` is {attempts}, which is outside u32"
+        ))
+    })?;
+    Ok(Some(ActivityBudget {
+        attempts_total: crate::budget::Attempts::new(attempts_total),
+        tokens: crate::budget::Tokens::new(tokens.unsigned_abs()),
+        wall_clock_secs: crate::budget::WallClockSecs::new(wall_clock.unsigned_abs()),
+    }))
 }

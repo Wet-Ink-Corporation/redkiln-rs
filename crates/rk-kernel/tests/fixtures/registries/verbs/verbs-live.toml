@@ -1,0 +1,28 @@
+# AC-018's verb registry. Transcribed from `spikes/p9/registry.toml`'s `[verb]` shape -- one table
+# per verb with a typed `outputs`, a `live` flag and a default `timeout` key -- and NOT copied
+# wholesale: this file needs to discriminate, and the shipped registry's 38 verbs would make every
+# assertion below a needle in a haystack.
+#
+# The registry's own header states the rule this fixture exists for:
+#   "verbs are one table per verb with a typed `outputs`, `live` (=> memo = false on every step
+#    using it) and a default `timeout` key."
+#
+# FOUR verbs, deliberately, and the four are not interchangeable:
+#   deploy  live = true   -- the GIVEN of AC-018 ("a tool step whose verb's registry entry carries
+#                            live = true"). `deploy` is live in the shipped registry too, so the
+#                            fixture does not disagree with the artefact it is transcribed from.
+#   metrics live = true   -- a SECOND live verb, so "the rule found the live one" cannot be passed
+#                            by a rule that hard-codes a single verb name.
+#   test    live = false  -- the positive fixture's verb. A rule that refuses every tool step fails
+#                            against it, which is what AC-018's must-load third fixture is for.
+#   lint    live = false  -- a second non-live verb, for the same reason `metrics` exists.
+#
+# `timeout` is carried verbatim from the shipped shape and is read by NOTHING here: the timeout
+# routing is the harness's (Step 7c) and a reader should be able to see that this fixture did not
+# quietly become a timeout fixture.
+
+[verb]
+deploy  = { outputs = "DeployReport", live = true, timeout = "deploy_timeout" }
+metrics = { outputs = "TelemetryReport", live = true, timeout = "deploy_timeout" }
+test    = { outputs = "TestReport", live = false, timeout = "test_timeout" }
+lint    = { outputs = "LintReport", live = false, timeout = "scan_timeout" }

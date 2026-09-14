@@ -1,0 +1,36 @@
+# The pack that **permits** a model substitution — AC-037's GIVEN, *"a permitted model
+# substitution"*.
+#
+# It is the positive half of the AC-036 pair and the precondition of AC-037's two sinks: without a
+# pack that permits, `substitute()` refuses every case and the `Degraded { from, to, why }` record
+# is never minted, so the event-schema and digest-schema assertions would have nothing to run over.
+#
+# **The key spelling `[degradation] permit_substitution` is a READING and no record states it.**
+# [measured 2026-09-14: `grep -rn "permit_substitution" spikes/p9/packs/` -> 0 hits across all
+# twelve shipped packs.] It is the fourth undocumented pack key this build reads, after
+# `[retry] attempts_cap`, `[breaker] consecutive_platform_failures` and `appetite.tokens`; a record
+# naming all four is OWED and `crates/rk-kernel/src/workflow/degrade.rs`'s header carries it.
+# §7b.12 forbids editing `spikes/p9/` to make a case, so this file is authored and never copied.
+#
+# It declares the full envelope as well, so that a test driving substitution against it does not
+# also have to hold a second pack for `N` and `K`.
+[pack]
+id = "runtime-degrade-permitted-fixture"
+applies = "kind == incident"
+appetite = { points = 50, tokens = 50_000 }
+
+[retry]
+attempts_cap = 4
+
+[breaker]
+consecutive_platform_failures = 3
+
+# THE PERMISSION. AC-036's WHEN is "the pack does not permit substitution"; this pack does.
+[degradation]
+permit_substitution = true
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]

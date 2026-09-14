@@ -1,0 +1,36 @@
+# The refusal fixture for **AC-033's `K`**: a pack that declares `N` and the token appetite and
+# declares NO `[breaker] consecutive_platform_failures`.
+#
+# It is identical to `runtime-envelope.toml` except for the missing `[breaker]` table, so the pair
+# discriminates the accessor rather than the loader — `runtime-no-n.toml` is the mirror of it for
+# `N`, and the two absences are independent. Three things it must be true of, all asserted by
+# `breaker_ac033_ac035`:
+#
+#   1. It **LOADS**. A missing declaration is not a parse failure. Every pack fixture in this
+#      directory that predates 2026-09-14 declares none of the three and must keep loading.
+#   2. `breaker_threshold()` is `None` and NOT `Some(0)` (the shape a code default takes — and a
+#      `K` of zero is a breaker that is open before anything has failed) and NOT `Some(4)`, which
+#      is `N`, declared below.
+#   3. `require_breaker_threshold()` refuses by name. AC-033's own *Verified by* — *"`K` is a pack
+#      value, asserted present by pack validation"* — is that refusal, and AC-033's *Note* says why
+#      no default could be justified even if the rule allowed one: *"no corpus figure sizes `K`,
+#      and no spike measured a `Platform` failure rate at all (gap 3)."*
+#
+# **This file was NOT authored at Slice 4b, deliberately**: nothing at 4b would have asserted
+# against it, and an unused fixture is a file that reads as a case. Slice 4d builds the breaker, so
+# the case now exists.
+[pack]
+id = "runtime-no-k-fixture"
+applies = "kind == incident"
+appetite = { points = 50, tokens = 50_000 }
+
+[retry]
+attempts_cap = 4
+
+# No `[breaker]` table at all. THIS ABSENCE IS THE FIXTURE.
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]

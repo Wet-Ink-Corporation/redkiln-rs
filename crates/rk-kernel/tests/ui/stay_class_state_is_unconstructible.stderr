@@ -1,0 +1,36 @@
+error[E0624]: associated function `initial` is private
+  --> tests/ui/stay_class_state_is_unconstructible.rs:41:30
+   |
+41 |     let _resumed = RunState::initial("INC-1", "implement");
+   |                              ^^^^^^^ private associated function
+   |
+  ::: src/workflow/fsm.rs
+   |
+   |     pub(in crate::workflow) fn initial(item: &str, stage: &str) -> Self {
+   |     ------------------------------------------------------------------- private associated function defined here
+
+error[E0599]: no associated function or constant named `default` found for struct `RunState` in the current scope
+  --> tests/ui/stay_class_state_is_unconstructible.rs:45:28
+   |
+45 |     let _fresh = RunState::default();
+   |                            ^^^^^^^ associated function or constant not found in `RunState`
+
+error: cannot construct `RunState` with struct literal syntax due to private fields
+  --> tests/ui/stay_class_state_is_unconstructible.rs:49:20
+   |
+49 |     let _literal = RunState {
+   |                    ^^^^^^^^
+50 |         item: "INC-1".to_owned(),
+   |         ------------------------ private field
+51 |         stage: "implement".to_owned(),
+   |         ----------------------------- private field
+   |
+   = note: ...and other private fields that were not provided
+help: you might have meant to use the `initial` associated function
+   |
+49 -     let _literal = RunState {
+50 -         item: "INC-1".to_owned(),
+51 -         stage: "implement".to_owned(),
+52 -     };
+49 +     let _literal = RunState::initial(_, _);
+   |

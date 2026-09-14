@@ -11,10 +11,27 @@
 //!
 //! The shape is `spikes/p9/packs/incident.toml`'s, verbatim.
 //!
+//! * **The runtime envelope** — `[retry] attempts_cap` (`N`), `[breaker]
+//!   consecutive_platform_failures` (`K`) and `appetite.tokens` (the per-item token appetite).
+//!   **Added 2026-09-14, Slice 4b.**
+//!
 //! # What is NOT read here, and why that is a statement rather than a gap
 //!
-//! `appetite` is step 5's (AC-058) and `spawn` is the runtime's; both are left on the TOML and not
-//! modelled, because a field read into a struct nothing consults reads as implemented.
+//! **Corrected 2026-09-14.** The sentence that stood here said *"`appetite` is step 5's (AC-058) and
+//! `spawn` is the runtime's; both are left on the TOML and not modelled"*, and the first half is now
+//! half false: `appetite.points` is still step 5's and still only carried, but `appetite.tokens` is
+//! **read** — it is the per-item token appetite [`crate::workflow::budget::evaluate_gate`] evaluates
+//! a gate against, and §7b.10 requires it to be *"declared in the pack and refused as a code
+//! default"*. The two are **different counters** and are deliberately not folded into one field:
+//! points are the cost-class sum invariant I6 compares, tokens are AC-020's second counter, and a
+//! single `appetite` field would be the shared counter AC-020 exists to prevent, arriving through a
+//! loader. `spawn` is still the runtime's and is still not modelled.
+//!
+//! **The three new values are deliberately absent from [`Pack::to_json`]**, which is the
+//! `dag_assembled` payload's shape: adding a member there changes bytes AC-040's byte-identity
+//! assertions and the committed golden log are measured over. What the runtime reads, it reads
+//! through the accessors.
+//!
 //! `policy.<cost_class>.stale_policy` is AC-068's, **PROVISIONAL under ADR-0117 clause 4**, and is
 //! deliberately not read: `00-preamble.md`:55 forbids defaulting a value a record owes, and a
 //! loader that read it would have to decide what an absent one means.
@@ -24,6 +41,8 @@ use std::fmt;
 
 use crate::rigor::Rigor;
 use crate::toml_subset::{self, Value};
+use crate::workflow::budget::Tokens;
+use crate::workflow::envelope::{AttemptCap, BreakerThreshold, EnvelopeError};
 
 /// One `[[stage.<name>.require]]` row.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,6 +123,18 @@ pub struct Pack {
     /// runtime's and is not steps 1-4's, so nothing here evaluates it.
     pub applies: Option<String>,
     appetite: Option<i64>,
+    /// **The runtime envelope the pack declares, and this crate refuses to default.** Three
+    /// `Option`s and three absences: `None` is *"the pack declares none"* and is neither a zero nor
+    /// an unbounded value — `crate::workflow::envelope`'s header carries the whole reading, and the
+    /// keys these are read from are stated there as a reading with a record OWED.
+    attempt_cap: Option<AttemptCap>,
+    breaker_threshold: Option<BreakerThreshold>,
+    token_appetite: Option<Tokens>,
+    /// **AC-036's substitution permission**, from `[degradation] permit_substitution`. `None` is
+    /// *"the pack never considered substitution"* and `Some(false)` is *"it considered it and said
+    /// no"*; both refuse, and keeping them apart is what stops a fail-closed fold reading as a
+    /// constant. The key spelling is a reading — see [`Self::substitution_permitted`].
+    substitution_permitted: Option<bool>,
     stage_rigor: BTreeMap<String, Rigor>,
     stages: BTreeMap<String, StageSpec>,
 }
@@ -235,6 +266,32 @@ impl Pack {
                 .and_then(Value::as_table)
                 .and_then(|t| t.get("points"))
                 .and_then(Value::as_int),
+            // THE RUNTIME ENVELOPE, and an absent table is an ABSENCE rather than a number. The
+            // three key spellings are a reading and no record states them —
+            // `crate::workflow::envelope`'s header carries it and names the record that is OWED.
+            attempt_cap: declared_u32(&doc, "retry", "attempts_cap", &shape)?
+                .map(AttemptCap::declared),
+            breaker_threshold: declared_u32(
+                &doc,
+                "breaker",
+                "consecutive_platform_failures",
+                &shape,
+            )?
+            .map(BreakerThreshold::declared),
+            // `appetite.tokens` sits beside `appetite.points` and is a DIFFERENT counter: points
+            // are step 5's cost-class sum (AC-058, invariant I6), tokens are AC-020's second
+            // counter. A pack declaring only `points` declares no token appetite.
+            token_appetite: token_appetite(head, &shape)?,
+            // AC-036's permission. A BOOLEAN, not one of §7b.10's unmeasured quantities: a
+            // permission that was never granted is an absence, and the fail-closed fold is
+            // `permits_substitution`. A non-boolean value is a `Shape` error, never a silent
+            // `false` — the same discipline `declared_u32` holds for the three numbers.
+            substitution_permitted: declared_bool(
+                &doc,
+                "degradation",
+                "permit_substitution",
+                &shape,
+            )?,
             stage_rigor,
             stages,
         })
@@ -255,6 +312,113 @@ impl Pack {
     #[must_use]
     pub const fn appetite(&self) -> Option<i64> {
         self.appetite
+    }
+
+    /// `[retry] attempts_cap` — **AC-029's `N`** — or `None` when the pack declares none.
+    ///
+    /// `None` is the **absence**, on [`Self::appetite`]'s exact doctrine: not unbounded, not zero,
+    /// and not a load failure. Where a missing declaration fails is [`Self::require_attempt_cap`],
+    /// which is the *"pack-validation"* half AC-029's *Verified by* names.
+    #[must_use]
+    pub const fn attempt_cap(&self) -> Option<AttemptCap> {
+        self.attempt_cap
+    }
+
+    /// `[breaker] consecutive_platform_failures` — **AC-033's `K`** — or `None`.
+    ///
+    /// The accessor is here; **the breaker is not built** (Slice 4d), and nothing in Slice 4b may
+    /// be read as covering AC-033. `None` is the absence, as above.
+    #[must_use]
+    pub const fn breaker_threshold(&self) -> Option<BreakerThreshold> {
+        self.breaker_threshold
+    }
+
+    /// `appetite.tokens` — the **per-item token appetite**, fixed at triage — or `None`.
+    ///
+    /// A **different counter** from [`Self::appetite`]'s points: points are step 5's cost-class sum
+    /// (AC-058, invariant I6) and tokens are AC-020's second counter. A pack declaring only
+    /// `appetite.points` declares no token appetite, and this returns `None` for it.
+    #[must_use]
+    pub const fn token_appetite(&self) -> Option<Tokens> {
+        self.token_appetite
+    }
+
+    /// The attempt cap, or the refusal. **AC-029's pack-validation half.**
+    ///
+    /// > *Verified by:* … a pack-validation test that `N` is **declared, never defaulted in code**.
+    ///
+    /// # Errors
+    ///
+    /// [`EnvelopeError::AttemptCapNotDeclared`] when the pack declares no `[retry] attempts_cap`.
+    /// There is no `unwrap_or`, no `const` fallback and no `Default` on [`AttemptCap`] behind this
+    /// call: the refusal is the only other outcome.
+    pub fn require_attempt_cap(&self) -> Result<AttemptCap, EnvelopeError> {
+        self.attempt_cap
+            .ok_or_else(|| EnvelopeError::AttemptCapNotDeclared {
+                pack: self.id.clone(),
+            })
+    }
+
+    /// The per-item token appetite, or the refusal.
+    ///
+    /// # Errors
+    ///
+    /// [`EnvelopeError::TokenAppetiteNotDeclared`] when the pack declares no `appetite.tokens`. A
+    /// gate is **not** evaluated against a defaulted token budget: an absent appetite refuses here
+    /// rather than passing as zero (which closes nothing) or as unbounded (which closes everything).
+    pub fn require_token_appetite(&self) -> Result<Tokens, EnvelopeError> {
+        self.token_appetite
+            .ok_or_else(|| EnvelopeError::TokenAppetiteNotDeclared {
+                pack: self.id.clone(),
+            })
+    }
+
+    /// The breaker threshold, or the refusal. **AC-033's pack-validation half.**
+    ///
+    /// > *Verified by:* … `K` is a pack value, **asserted present by pack validation**.
+    ///
+    /// # Errors
+    ///
+    /// [`EnvelopeError::BreakerThresholdNotDeclared`] when the pack declares no
+    /// `[breaker] consecutive_platform_failures`. There is no `unwrap_or`, no `const` fallback and
+    /// no `Default` on [`BreakerThreshold`] behind this call, and AC-033's own *Note* records why
+    /// one could not be justified even if the rule allowed it: *"no corpus figure sizes `K`, and no
+    /// spike measured a `Platform` failure rate at all (gap 3)."*
+    pub fn require_breaker_threshold(&self) -> Result<BreakerThreshold, EnvelopeError> {
+        self.breaker_threshold
+            .ok_or_else(|| EnvelopeError::BreakerThresholdNotDeclared {
+                pack: self.id.clone(),
+            })
+    }
+
+    /// `[degradation] permit_substitution` — **AC-036's permission** — or `None` when the pack
+    /// declares neither.
+    ///
+    /// `None` and `Some(false)` are kept apart deliberately: a pack that never considered
+    /// substitution and a pack that considered it and said no are different states, and collapsing
+    /// them at the accessor would hide the first. Both refuse; see [`Self::permits_substitution`].
+    ///
+    /// **The key spelling is a READING and no record states it** — the same gap this module already
+    /// records for `[retry] attempts_cap`, `[breaker] consecutive_platform_failures` and
+    /// `appetite.tokens`. [measured 2026-09-14: `grep -rn "permit_substitution" spikes/p9/packs/`
+    /// → 0 hits across all twelve shipped packs.] A record naming all four is OWED.
+    #[must_use]
+    pub const fn substitution_permitted(&self) -> Option<bool> {
+        self.substitution_permitted
+    }
+
+    /// Whether the pack permits a model substitution. **Absent is refused**, and that is not a
+    /// defaulted constant.
+    ///
+    /// §7b.10's 🛑 forbids defaulting `K`, `N`, the backoff base and cap, the headroom margin and
+    /// the appetite — **quantities with no measured value**. A permission is not one of those:
+    /// AC-036's WHEN is *"the pack **does not permit** substitution"*, and a permission that was
+    /// never granted is a permission that is absent. The fold is fail-closed, which is the
+    /// direction AC-036's THEN points — *"the substitution is refused and the activity fails rather
+    /// than running at the lower tier"*.
+    #[must_use]
+    pub fn permits_substitution(&self) -> bool {
+        self.substitution_permitted == Some(true)
     }
 
     /// Every stage the policy mentions, with its rigor, in byte order.
@@ -303,4 +467,99 @@ impl Pack {
                 .collect::<serde_json::Map<_, _>>(),
         })
     }
+}
+
+/// One `[<table>] <key> = <integer>` declaration, or `None` when the pack declares none.
+///
+/// **The absence and the malformed value are different outcomes**, and keeping them apart is the
+/// whole of `00-preamble.md`:55 here: a pack that declares nothing gets `None`, and a pack that
+/// declares `attempts_cap = -1` or `attempts_cap = "four"` gets a [`PackError::Shape`] naming the
+/// site. **Never a silent zero** — the discipline is `catalog.rs`'s `retry_max`/`activity_budget`
+/// pair, verbatim.
+///
+/// # Errors
+///
+/// [`PackError::Shape`] for a table that is not a table, a value that is not an integer, and a
+/// value outside `u32` in either direction.
+fn declared_u32(
+    doc: &toml_subset::Table,
+    table: &str,
+    key: &str,
+    shape: &impl Fn(String) -> PackError,
+) -> Result<Option<u32>, PackError> {
+    let Some(value) = doc.get(table) else {
+        return Ok(None);
+    };
+    let inner = value
+        .as_table()
+        .ok_or_else(|| shape(format!("[{table}] is not a table")))?;
+    let Some(raw) = inner.get(key) else {
+        return Ok(None);
+    };
+    let raw = raw
+        .as_int()
+        .ok_or_else(|| shape(format!("{table}.{key} is not an integer")))?;
+    u32::try_from(raw)
+        .map(Some)
+        .map_err(|_| shape(format!("{table}.{key} is {raw}, which is outside u32")))
+}
+
+/// One `[<table>] <key> = <boolean>` declaration, or `None` when the pack declares none.
+///
+/// **The absence and the malformed value are different outcomes**, exactly as in [`declared_u32`]:
+/// a pack that declares nothing gets `None`, and a pack that declares
+/// `permit_substitution = "yes"` gets a [`PackError::Shape`] naming the site. **Never a silent
+/// `false`** — a permission that failed to parse is not a permission that was refused.
+///
+/// # Errors
+///
+/// [`PackError::Shape`] for a table that is not a table and a value that is not a boolean.
+fn declared_bool(
+    doc: &toml_subset::Table,
+    table: &str,
+    key: &str,
+    shape: &impl Fn(String) -> PackError,
+) -> Result<Option<bool>, PackError> {
+    let Some(value) = doc.get(table) else {
+        return Ok(None);
+    };
+    let inner = value
+        .as_table()
+        .ok_or_else(|| shape(format!("[{table}] is not a table")))?;
+    let Some(raw) = inner.get(key) else {
+        return Ok(None);
+    };
+    raw.as_bool()
+        .map(Some)
+        .ok_or_else(|| shape(format!("{table}.{key} is not a boolean")))
+}
+
+/// `appetite.tokens`, or `None`.
+///
+/// # Errors
+///
+/// [`PackError::Shape`] for an `appetite` that is not a table, a `tokens` that is not an integer,
+/// and a negative one — never a silent zero, for `declared_u32`'s reason.
+fn token_appetite(
+    head: &toml_subset::Table,
+    shape: &impl Fn(String) -> PackError,
+) -> Result<Option<Tokens>, PackError> {
+    let Some(value) = head.get("appetite") else {
+        return Ok(None);
+    };
+    let table = value
+        .as_table()
+        .ok_or_else(|| shape("[pack] appetite is not a table".to_owned()))?;
+    let Some(raw) = table.get("tokens") else {
+        return Ok(None);
+    };
+    let raw = raw
+        .as_int()
+        .ok_or_else(|| shape("appetite.tokens is not an integer".to_owned()))?;
+    if raw < 0 {
+        return Err(shape(format!(
+            "appetite.tokens is {raw}, which is negative"
+        )));
+    }
+    Ok(Some(Tokens::new(raw.unsigned_abs())))
 }

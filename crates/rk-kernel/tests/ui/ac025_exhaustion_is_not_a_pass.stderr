@@ -1,0 +1,30 @@
+error[E0603]: unit variant `Closed` is private
+  --> tests/ui/ac025_exhaustion_is_not_a_pass.rs:45:32
+   |
+45 |     let _minted = GateVerdict::Closed;
+   |                                ^^^^^^ private unit variant
+   |
+note: the unit variant `Closed` is defined here
+  --> src/workflow/budget.rs
+   |
+   |     #[non_exhaustive]
+   |     ----------------- cannot be constructed because it is `#[non_exhaustive]`
+   |     Closed,
+   |     ^^^^^^
+
+error[E0277]: the trait bound `GateVerdict: From<BudgetExhausted>` is not satisfied
+  --> tests/ui/ac025_exhaustion_is_not_a_pass.rs:42:42
+   |
+42 |     let _passed: GateVerdict = exhausted.into();
+   |                                          ^^^^ the trait `From<BudgetExhausted>` is not implemented for `GateVerdict`
+   |
+   = note: required for `BudgetExhausted` to implement `Into<GateVerdict>`
+
+error[E0639]: cannot create non-exhaustive variant using struct expression
+  --> tests/ui/ac025_exhaustion_is_not_a_pass.rs:47:17
+   |
+47 |       let _open = GateVerdict::Open {
+   |  _________________^
+48 | |         reason: String::new(),
+49 | |     };
+   | |_____^

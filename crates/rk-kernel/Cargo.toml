@@ -33,6 +33,24 @@ corpus = []
 # invocation errors rather than lints (s5:168-169).
 workflow-clock-reintroduce = []
 
+# THE INHERITANCE CONTROL (AC-001-AC-004; design C §1.1). ADDED 2026-09-14, Slice 4e, and it is a
+# DIFFERENT PROPOSITION from `workflow-clock-reintroduce` directly above rather than a duplicate of
+# it. That one reintroduces the banned call in `src/workflow.rs` -- the file that CARRIES the
+# `#![deny(clippy::disallowed_methods)]`. This one reintroduces it in a CHILD module,
+# `src/workflow/fsm.rs`, which carries no attribute of its own:
+#
+#   green:  cargo clippy --workspace --all-targets
+#   RED:    cargo clippy --workspace --all-targets --features rk-kernel/workflow-fsm-clock-reintroduce
+#
+# Every module added since Slice 4a -- budget, envelope, retry, breaker, degrade and now fsm -- is a
+# child of `workflow` and relies on lint levels propagating DOWN the module tree. Nothing in the tree
+# demonstrated that propagation; each of those modules' headers asserts it in prose. This feature is
+# the one thing that shows it. COMMITTED rather than observed and reverted
+# (DECISIONS-2026-09-12 E4). **No Checkpoint 7b line runs it**: :1396-1398 names only
+# `workflow-clock-reintroduce`, so this control's result is reported in the slice record and is never
+# claimed as a checkpoint pass. An owed §7b.14 line is recorded with it.
+workflow-fsm-clock-reintroduce = []
+
 # THE SELECTION PURITY GATE'S POSITIVE CONTROL (AC-041; s7b §7b.9(2)). The same shape and the same
 # warrant as `workflow-clock-reintroduce` directly above, pointed at `rk-kernel::select`:
 #
@@ -47,8 +65,18 @@ workflow-clock-reintroduce = []
 select-clock-reintroduce = []
 
 [dependencies]
-# ONE OF THE FOUR IS STILL DECLARED AND NOT YET CALLED, and that is stated rather than left for a
-# reader to discover. THREE ARE CALLED as of Slice 3: `rk-store` -- `rk_store::canon` is the
+# ALL FOUR ARE NOW CALLED, as of Slice 4h (2026-09-14). The paragraph that stood here said "ONE OF
+# THE FOUR IS STILL DECLARED AND NOT YET CALLED", and named the site its call would land at:
+# "Where `rk-ports` will first be USED: the kernel runtime boundary that appends what `select`
+# RETURNS (Slice 4, s7b §7b.10 -- ADR-0119 clause 5, ADR-0120 clause 4 and AC-525's 2026-09-13
+# amendment all put the append OUTSIDE the pure function). Delete that line when its call site
+# lands." **That call site is `src/runtime.rs` and this is the deletion it asked for.** The
+# boundary binds `rk_ports::root::Ports`, dispatches through `Harness`, appends through
+# `EventStore`, and holds the store as `Arc<Mutex<dyn EventStore>>` per ADR-0115 clause 1.
+#
+# What has NOT changed is what a declared edge proves: AC-483's half is discharged by a manifest
+# line and a `cargo tree` edge and never by a call, and that stays true now that the call exists.
+# THREE WERE ALREADY CALLED as of Slice 3: `rk-store` -- `rk_store::canon` is the
 # canonical serialiser every byte-identity comparison in `select` runs through, at
 # `src/select/canonical.rs`; `rk-types`, for `digest::{Digest, sha256, sha256_lp}`, the one hash
 # ADR-0116 clause 6 admits, at the same file; and `rk-git`, at `src/replay.rs` -- the replay is
@@ -59,17 +87,10 @@ select-clock-reintroduce = []
 # `crates/rk-git/src/gitops.rs`:44-51 ships `VecJournal`, described in its own header as *"the fake,
 # and what the replay tests drive"*.
 #
-# `rk-ports` is the one that is not called: the port traits are the RUNTIME boundary's (Slices 4-5).
-# Its edge is here because it is the SUBJECT of criteria -- as is `rk-git`'s, whose AC-483 half is
-# *"`rk-kernel` depends on `rk-git` as a concrete crate"*, and AC-484/AC-528 are assertions about
-# this graph's shape -- so removing it would delete the thing under test. **What a declared edge is
-# NOT is exercise**: AC-483's half is discharged by a manifest line and a `cargo tree` edge, never
-# by a call, and that stays true now that the call also exists.
-#
-# Where `rk-ports` will first be USED: the kernel runtime boundary that appends what `select`
-# RETURNS (Slice 4, §7b.10 -- ADR-0119 clause 5, ADR-0120 clause 4 and AC-525's 2026-09-13
-# amendment all put the append OUTSIDE the pure function). Delete that line when its call site
-# lands.
+# `rk-ports`' edge was here BEFORE its call site, and would still belong here without one: it is the
+# SUBJECT of criteria -- as is `rk-git`'s, whose AC-483 half is *"`rk-kernel` depends on `rk-git` as
+# a concrete crate"*, and AC-484/AC-528 are assertions about this graph's shape -- so removing it
+# would delete the thing under test.
 rk-types = { path = "../rk-types" }
 rk-ports = { path = "../rk-ports" }
 # THE CANONICAL-SERIALISER EDGE, taken by the operator's decision of 2026-09-13 (D3) and NOT taken
@@ -121,6 +142,17 @@ rk-types = { path = "../rk-types" }
 # AC-040's byte-identity assertion compares `rk_store::canon::canonical` output, so the integration
 # binary needs the same edge the library took above.
 rk-store = { path = "../rk-store" }
+# ADDED 2026-09-14 (Slice 4c), for AC-464's REFUSAL half and for nothing else. The corpus-gated
+# `inner_retry_ac026_at_the_corpus_pin` reads AC-026's rows from `$CORPUS_REPO/results/` at the pin,
+# and `crates/rk-git/tests/it/corpus_f12.rs`:72-96 is the house rule for that read: refuse BEFORE any
+# read if the corpus checkout is not at `CORPUS_SHA` or is dirty. `rk_git::git_exec::run` is the one
+# wrapper `std::process::Command` is allowed behind (it is in `clippy.toml`'s `disallowed-types` and
+# `rk-git` carries the `#[expect]`), so the check cannot be written in this crate without this line.
+#
+# **The resolved graph does not move**: `rk-git` is already a normal dependency of this crate above,
+# so `cargo tree -p rk-kernel -e normal` is unchanged and AC-484/AC-528's assertions read the same
+# graph. It is not an async runtime and it is not an `rk-adapter-*`.
+rk-git = { path = "../rk-git" }
 serde_json.workspace = true
 # The compile-fail harness. Its cases' instrument is a compile FAILURE, which only a must-fail
 # harness can observe, and each case commits a .stderr snapshot so a case that starts failing for a

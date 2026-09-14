@@ -1,0 +1,28 @@
+error[E0277]: the trait bound `StepError: From<Findings>` is not satisfied
+  --> tests/ui/ac032_finding_is_not_a_steperror.rs:46:14
+   |
+46 |     findings.into()
+   |              ^^^^ the trait `From<Findings>` is not implemented for `StepError`
+   |
+   = note: required for `Findings` to implement `Into<StepError>`
+
+error[E0308]: mismatched types
+  --> tests/ui/ac032_finding_is_not_a_steperror.rs:51:21
+   |
+50 | fn one_finding_is_not_an_error(finding: Finding) -> StepError {
+   |                                                     --------- this return type influences the call expression's return type
+51 |     StepError::from(finding)
+   |     --------------- ^^^^^^^ expected `StepError`, found `Finding`
+   |     |
+   |     arguments to this function are incorrect
+   |
+note: associated function defined here
+  --> $RUST/core/src/convert/mod.rs
+
+error[E0277]: the trait bound `Findings: From<StepError>` is not satisfied
+  --> tests/ui/ac032_finding_is_not_a_steperror.rs:56:11
+   |
+56 |     error.into()
+   |           ^^^^ the trait `From<StepError>` is not implemented for `Findings`
+   |
+   = note: required for `StepError` to implement `Into<Findings>`

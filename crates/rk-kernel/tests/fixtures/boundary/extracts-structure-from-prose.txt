@@ -1,0 +1,41 @@
+// AC-031's MUST-FAIL FIXTURE for the prose-extraction ban.
+//
+// This is a `.txt` and not a `.rs`, deliberately. `crates/rk-kernel/tests/ui/` is the `trybuild`
+// glob root and holds compile-FAIL cases only (s7b §7b.4:433-436); this file is a SOURCE the lint
+// reads, not a file the compiler builds, and putting it under `tests/ui/` would add a seventh case
+// to a harness whose instrument is a compile failure.
+//
+// It carries every one of `BOUNDARY_ANCHORS`, so the rule fails it on the BAN and not on a missing
+// anchor — a fixture refused for being empty would prove nothing about prose extraction. The three
+// paths below are the shape AC-031's sub-clause names: "the boundary never extracts structure from
+// prose", verified "by a grep-lint over the boundary module rejecting any markdown/JSON-from-prose
+// extraction path".
+//
+// Nothing here is compiled and nothing here is correct Rust beyond being recognisable as the shape
+// a well-meaning implementer reaches for when a model answers in prose with a JSON object in it.
+
+use rk_types::error::StepError;
+
+pub fn run_activity(stdout_text: &str) -> Result<serde_json::Value, StepError> {
+    // The anchor the rule asserts FIRST, present in a code position so this fixture fails on the
+    // BAN rather than on an emptied file.
+    let demanded = spec.schema.clone();
+    let _ = demanded;
+
+    // PATH 1 - recover the object by locating its braces in free text. This is the one that looks
+    // most reasonable and is the most dangerous: it silently accepts a value the schema never saw.
+    let start = stdout_text.find('{').unwrap_or(0);
+    let end = stdout_text.rfind('}').unwrap_or(0);
+
+    // PATH 2 - parse the slice as JSON. The value that comes out carries no schema id at all, so
+    // `spec.schema` has nothing to be compared against and the boundary's one check is void.
+    let value: serde_json::Value = serde_json::from_str(&stdout_text[start..=end])
+        .map_err(|e| StepError::Schema { attempts: 1, last_error: e.to_string() })?;
+
+    // PATH 3 - fall back to the dispatch record's captured bytes. The record is evidence, never a
+    // value source: ADR-0105 clause 7 keeps argv and env as digests for exactly this reason.
+    let raw = String::from_utf8(outcome.record.stdout.bytes().to_vec()).unwrap_or_default();
+    let _ = outcome.record.stderr;
+
+    Ok(value)
+}

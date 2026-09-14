@@ -1,0 +1,42 @@
+# AC-018's THIRD fixture, and the one that does the discriminating work: "a positive fixture where a
+# non-live verb memoises" -- it must LOAD and the rule must return `Ok(())`.
+#
+# Without it a `live_verb_memo_rule` written `Err(vec![...])` for every step passes both must-fail
+# fixtures. §7b.13 insists on the same shape for `facet_provenance_fixtures` and
+# `ac527_empty_set_terminal_condition`; AC-018's own *Verified by* names three fixtures, two
+# must-fail and one must-load.
+#
+# Memoisation here is NOT declared, and that is the point: under ADR-0059 the verb registry's `live`
+# flag is the only carrier, so a non-live verb's step is memoised by DEFAULT and writing `memo = true`
+# to say so would itself be the violation the sibling fixture carries. The lawful shape for "this
+# step memoises" is the absence of the key.
+[activity]
+id           = "non-live-verb-memoises"
+version      = 3
+stage        = "verify"
+provides     = ["LintReport"]
+method_rank  = 30
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 1, tokens = 15_000, wall_clock_secs = 300 }
+
+[[step]]
+id      = "scan"
+kind    = "tool"
+run     = "toolchain:lint"
+outputs = "value:LintReport"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { scan = "${scan.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 600
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+outputs = "value:LintReport"

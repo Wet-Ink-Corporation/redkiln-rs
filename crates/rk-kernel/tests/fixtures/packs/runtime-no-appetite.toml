@@ -1,0 +1,32 @@
+# The refusal fixture for the **per-item token appetite**: a pack that declares `N` and `K` and no
+# `appetite` table at all.
+#
+# `exhaustion_ac024_ac025` assembles its gate envelope from this pack's sibling
+# (`runtime-envelope.toml`) and asserts against this one that the envelope **cannot be assembled**:
+# an absent appetite is refused, never defaulted to zero (which closes nothing) and never treated as
+# unbounded (which closes everything). That is `select/pack.rs`:249-256's shipped doctrine for
+# `appetite.points`, applied to the counter beside it: *"**`None` is not \"unbounded\"** … because a
+# code default here would decide a value the pack owes (`00-preamble.md`:55)."*
+#
+# 🛑 The criterion behind that refusal is NOT AC-023. §7b.10:854-855 cites AC-023 for *"`K`, `N` and
+# the appetite are declared in the pack and refused as code defaults"*, but AC-023's GIVEN/WHEN/THEN
+# is about a mid-run appetite RAISE and says nothing about pack declaration — the stage file is
+# adding a THEN there, which ADR-0092's precedence does not permit. Contradiction C3 over AC-023 is
+# open and nothing here claims it.
+[pack]
+id = "runtime-no-appetite-fixture"
+applies = "kind == incident"
+
+# No `appetite` table at all — neither `points` nor `tokens`. THIS ABSENCE IS THE FIXTURE.
+
+[retry]
+attempts_cap = 4
+
+[breaker]
+consecutive_platform_failures = 3
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]

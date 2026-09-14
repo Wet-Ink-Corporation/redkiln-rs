@@ -11,24 +11,73 @@
 //! byte-identical decisions; byte-identical next action; zero `rk-git` writes; and zero harness
 //! dispatches with the terminal state matched."*
 //!
-//! **Three of the five are measured here. Two are NOT BUILDABLE at Slice 3 and are reported as
-//! ARMED, not as green:**
+//! **All five are measured here as of 2026-09-14 (Slice 4f). The sentence that stood here until
+//! then — *"Three of the five are measured here. Two are NOT BUILDABLE at Slice 3"* — is now
+//! false, and the two rows it pointed at are rewritten below with the date. What it got right
+//! survives it and is stated in its own section: AC-008's GIVEN names N dispatched activities and
+//! N is 0, so the criterion is ARMED, not discharged.**
 //!
 //! | # | assertion | state |
 //! | --- | --- | --- |
 //! | 1 | every port bound to its fake | **a type fact, not a measurement, and it is now stated as one.** [`rk_kernel::replay::ReplayPorts`] has no optional field, so an unbound port does not compile. The report used to carry a `ports_bound: vec!["Harness", "EventStore", "GitWriter"]` LITERAL and this file asserted that literal against the same literal; the field is deleted. What is asserted below instead is the ports' **observable effects**: the store holds the served journal, and both counters are read off the caller's own fakes |
 //! | 2 | byte-identical decisions | **measured** — the re-derived event journal is compared to the recorded one **byte for byte under `rk_store::canon`** |
-//! | 3 | byte-identical **next action** | **NOT BUILDABLE.** The next action is the FSM's, and **there is no FSM**: the workflow/activity split, the memo, retry and the runtime are §7b.10's **Slice 4**, which is not in this slice's scope. `grep` for a state machine in `crates/rk-kernel/src/` returns `workflow.rs`, whose whole body is one `#[cfg(feature)]` control. Reported ARMED |
+//! | 3 | byte-identical **next action** | **MEASURED, 2026-09-14.** `rk_kernel::workflow::fsm::next_action`'s canonical bytes, recomputed from the re-derived journal and compared against the value **committed in `run.json`** at record time. The recorded side is READ BACK, never recomputed from the same bytes: two folds of byte-identical journals are equal by construction, so both-sides-recomputed would assert nothing. A premise below rules out `done` first, so the comparison is not held over a next action that decides nothing |
 //! | 4 | zero `rk-git` writes | **measured against `rk-git`'s OWN counter.** The replay is handed a real [`rk_git::gitops::GitOps`] in [`rk_git::gitops::Mode::Replay`], driving a [`rk_git::gitops::VecJournal`] — the fake `rk-git`'s own header calls *"the fake, and what the replay tests drive"* — and the zero is `GitOps::writes_performed()`. Until 2026-09-13 this file counted a `GitWriter` trait the KERNEL declared, justified by *"`rk-git` … exposes no port to bind a fake to"*, which `crates/rk-git/src/gitops.rs`:44-51 refutes. `golden_log_replay_writing_fake_is_red` is its positive control, and it now drives a `GitOps` that has performed one write |
-//! | 5 | zero harness dispatches **with the terminal state matched** | **half measured.** The dispatch count is real — the fake bound below **fails the test on any `dispatch` call** (AC-008's own shape) and the counter is the CALLER's `AtomicU32`, read by the replay before and after. The **terminal-state half is NOT BUILDABLE** for assertion 3's reason: there is no terminal state without an FSM. AC-008's warning — *"a kernel that does nothing at all passes without the terminal-state half"* — therefore **applies to this file**, and it is written here rather than discovered later. **Checkpoint 7b:1515's `terminal_state=matched` grep is therefore unreachable until Slice 4**, and nothing here prints the literal |
+//! | 5 | zero harness dispatches **with the terminal state matched** | **both halves measured, 2026-09-14 — and the criterion is still ARMED, for a different reason (next section).** The dispatch count is real: the fake bound below **fails the test on any `dispatch` call** (AC-008's own shape) and the counter is the CALLER's `AtomicU32`, read by the replay before and after. The terminal state is compared against the committed manifest exactly as row 3 is, with `assert_ne!(.., NotStarted)` first so *"a kernel that does nothing at all"* cannot reach a green. **Checkpoint 7b:1515's `terminal_state=matched` grep is reachable and this file now prints the token — computed from the comparison, never as a literal** |
 //!
-//! # And this replay is over the SELECTION journal, not a workflow run
+//! # 🛑 AC-008 IS ARMED, NOT DISCHARGED — ITS GIVEN NAMES N DISPATCHED ACTIVITIES AND N IS 0
 //!
-//! What is recorded and replayed is what exists: `select()`'s own event journal —
-//! `dag_assembled`, `gate_opened`, `drift_advisory`, `dag_amended` — re-derived from the logged
-//! inputs alone. That is AC-042's *"re-derives the DAG from the logged inputs alone and reports
+//! > **AC-008** GIVEN a replay of a run that **dispatched N activities** … THEN the replay reaches
+//! > the recorded terminal state with **all N results served from the journal**, zero harness
+//! > dispatches, and zero `rk-git` writes.
+//!
+//! [measured 2026-09-14: the recorded run holds **4** events — `stage_transition`, `dag_assembled`,
+//! `gate_opened`, `dag_amended` — and **zero** `dispatch` and `activity_committed` events.] So
+//! *"all N results served from the journal"* is a statement about an empty set, and **the dispatch
+//! half of this criterion is vacuous**. It is stated here rather than left for a reader to infer
+//! from a short journal.
+//!
+//! **What is NOT vacuous, and why the terminal-state half still discriminates:** the fold lands on
+//! `awaiting_dispatch`, `assert_ne!(.., NotStarted)` rules out AC-008's own named failure, and the
+//! recorded side of the comparison is a byte string committed in `run.json` — so a changed fold, a
+//! changed evaluation order or a changed canonical form all move off it and the replay refuses.
+//!
+//! **Why a journal with dispatches was not produced in this slice.** `record()` would have to
+//! drive `NextAction::Dispatch` through the bound `Harness` and append an `activity_committed` per
+//! commit — which means assembling a real `rk_types::activity::ActivitySpec` (card digest, tool
+//! allowlist, schema id, timeout, resolved inputs) from a DAG node. **Nothing in `rk-kernel`
+//! resolves any of those five**, and the activity-dispatch boundary is Slice 4h's. Building half a
+//! dispatcher here to lengthen a journal would be building it without its criteria. What `record`
+//! DOES drive is the one runtime act needing no port, no clock and no dispatcher: the tier-1
+//! `stage_transition` that enters the stage — which is also what gives
+//! `ac161_ac164_delete_db_replay` a tier-1 record to compare at stage grain.
+//!
+//! # And this replay is over the SELECTION journal plus the stage entry, not a full workflow run
+//!
+//! What is recorded and replayed is what exists: the runtime's `stage_transition` into the stage,
+//! then `select()`'s own event journal — `dag_assembled`, `gate_opened`, `drift_advisory`,
+//! `dag_amended` — re-derived from the logged inputs alone. That is AC-042's *"re-derives the DAG from the logged inputs alone and reports
 //! `HiddenInput { run_id, first_divergent_node }` on any mismatch"*, and it is the half the scope
 //! pass assigns to this slice. `redkiln replay --run <id>`, the cross-process half, is **7d's**.
+//!
+//! # The three self-reported tokens, and the third control that did not exist until today
+//!
+//! `s7b`:1018-1023 names three strings this test prints **about itself** — `rk_git_writes=0`,
+//! `harness_dispatches=0`, `terminal_state=matched` — and warns that *"a kernel that counts
+//! nothing and prints the three literals passes all three greps."* §7b.14:1266-1276 then states
+//! the rule: *"every absence-based ban carries a positive control OR says per ban why it cannot."*
+//!
+//! | token | positive control | since |
+//! | --- | --- | --- |
+//! | `rk_git_writes=0` | `golden_log_replay_writing_fake_is_red` | §7b.13 |
+//! | `harness_dispatches=0` | `golden_log_replay_dispatching_fake_is_red` | 2026-09-13, after mutation G23 found the counter unpinned |
+//! | `terminal_state=matched` | `golden_log_replay_terminal_state_mismatch_is_red` | **2026-09-14, this slice** — it had neither a control nor a stated reason (gap G-1), which is the one exception §7b.14's own rule did not permit |
+//!
+//! **The control was observed red before it was made green, and the red was the interesting one:**
+//! with the FSM residue computed and recorded but the two comparison steps not yet in `replay()`,
+//! `golden_log_replay` passed and this control failed with *"the replay ACCEPTED a rewritten
+//! terminal_state"*. That is the token being printed without being compared — precisely the defect
+//! §7b.14:1547-1553 describes — and nothing else in the suite noticed.
 //!
 //! # Where the logs go
 //!
@@ -69,12 +118,14 @@ use std::sync::atomic::AtomicU32;
 use rk_git::git_exec::{GitExec, GitOp};
 use rk_git::gitops::{GitOps, Mode, VecJournal};
 use rk_git::path::WorktreePath;
-use rk_kernel::replay::{HiddenInput, ReplayError, ReplayPorts, RunInputs};
+use rk_kernel::replay::{HiddenInput, ReplayError, ReplayPorts, RunInputs, RuntimeContext};
+use rk_kernel::workflow::fsm::{NextAction, StageAction, TerminalState, stage_action};
 use rk_ports::event_store::{EventStore, Query, Snapshot};
 use rk_ports::harness::{DispatchOutcome, Harness};
 use rk_types::activity::ActivitySpec;
 use rk_types::error::StepError;
 use rk_types::event::Event;
+use rk_types::event_kind::{EventKind, Tier};
 
 const DEVIATION: &str = include_str!("../fixtures/packs/incident-deviation.toml");
 const ARTIFACTS: &str = include_str!("../fixtures/registries/artifacts/artifacts.toml");
@@ -103,6 +154,24 @@ const CATALOG: &[(&str, &str)] = &[
 ];
 
 const BANDS: [&str; 4] = ["low", "med", "high", "critical"];
+
+/// The item and the stage every fold below is keyed on. They are the values [`inputs`] builds, and
+/// they are named once so no assertion re-types one and silently keys a fold on a different run.
+const ITEM: &str = "INC-1";
+const STAGE: &str = "implement";
+
+/// **ADR-0105 clause 4's tree hash, SUPPLIED and recorded — never read from git here.**
+///
+/// A real 64-character hex string rather than a placeholder, because
+/// `rk_kernel::workflow::fsm::GateRecord::derive` hashes it and a shorter value would derive a
+/// token that no real gate could carry. It is an INPUT: it goes into `inputs/runtime.json` and
+/// into `run_id`, so a replay reads it back rather than being told it out of band.
+const TREE_HASH: &str = "9f2c1ab4d6e80357bb41c0d9e2f7a85643c1908df5b2e7461ac30d98f5b1e2c7";
+
+/// The gate deadline, as a recorded value. **Not a clock reading** — `rk_types::time::Timestamp`
+/// *"has no `now()`, deliberately"*, and a deadline the replay computed would make two runs of
+/// identical inputs produce different bytes.
+const DEADLINE: i64 = 1_760_000_000;
 
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -138,13 +207,21 @@ fn inputs() -> RunInputs {
     let facets_src = std::fs::read_to_string(workspace_root().join("spikes/p9/facets.toml"))
         .expect("the shipped facet registry is readable");
 
-    RunInputs::new("implement")
+    RunInputs::new(STAGE)
+        .with_runtime(
+            // Supplied, never derived, and recorded as part of the input set. `entered_from` and
+            // `advances_to` are both present so neither branch of the fold's `optional_str`
+            // reading nor `next_action`'s successor argument is exercised only by its absence.
+            RuntimeContext::supplied(TREE_HASH, DEADLINE)
+                .entered_from("triage")
+                .advances_to("verify"),
+        )
         .with_pack("incident-deviation.toml", DEVIATION)
         .with_catalog(CATALOG)
         .with_artifacts("artifacts.toml", ARTIFACTS)
         .with_facets(&facets_src)
         .with_item(
-            &rk_kernel::select::Item::new("INC-1", "incident")
+            &rk_kernel::select::Item::new(ITEM, "incident")
                 .with_toolchain("node", ["text"])
                 .with_facet_ordinal("criticality", &BANDS, "critical")
                 .with_facet_bool("external_dep", true)
@@ -289,13 +366,16 @@ fn golden_log_replay() {
     // (gitops.rs:13-16: "every method matches on the mode first … there is no branch in which a
     // replayed call reaches `GitExec`"). `writes_performed()` is the number AC-006 asserts.
     let mut journal = VecJournal::default();
-    let git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+    // `&mut`, as of 2026-09-14 (residual 10h): `GitOps::run` takes `&mut self`, so a shared borrow
+    // could never reach the one method that moves `writes_performed()`. The zero below is now an
+    // absence over a seam the replay COULD have written through.
+    let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
     let report = {
         let mut ports = ReplayPorts {
             harness: &harness,
             dispatches: &harness.dispatches,
             store: &mut store,
-            git: &git,
+            git: &mut git,
         };
         rk_kernel::replay::replay(&committed, &mut ports)
             .expect("REPLAY DIVERGED — this is a FINDING, not a flake: see AC-042 and Phase-1 exit criterion (2)")
@@ -344,9 +424,54 @@ fn golden_log_replay() {
         "the replay recorded a git invocation into the journal"
     );
 
+    // assertion 3 — byte-identical NEXT ACTION, and the recorded side is READ BACK from the
+    // committed `run.json` rather than recomputed from the journal the replay just re-derived.
+    // That is the whole discrimination: two folds of byte-identical journals are equal by
+    // construction, so a comparison of both sides against each other would assert nothing. The
+    // right-hand side below is a committed byte string that a changed fold, a changed evaluation
+    // order or a changed canonical form all move off.
+    let recorded_back =
+        rk_kernel::replay::read_run(&committed).expect("the committed run reads back");
+    let done = String::from_utf8(
+        NextAction::Done
+            .canonical_bytes()
+            .expect("the canonical form of `done`"),
+    )
+    .expect("canonical JSON is UTF-8");
+    assert_ne!(
+        report.next_action, done,
+        "PREMISE: this run has a plan still to dispatch, so `done` would mean the FSM saw no work \
+         and the comparison below would hold over a next action that decides nothing"
+    );
+    assert_eq!(
+        report.next_action,
+        recorded_back.next_action(),
+        "AC-006 assertion 3: the recomputed next action is not the recorded one"
+    );
+
     // assertion 5, dispatch half — zero harness dispatches.
     assert_eq!(report.harness_dispatches, 0);
     assert_eq!(harness.dispatches(), 0);
+
+    // assertion 5b — THE TERMINAL STATE, with AC-008's own named failure mode ruled out first.
+    let not_started = String::from_utf8(
+        TerminalState::NotStarted
+            .canonical_bytes()
+            .expect("the canonical form of `not_started`"),
+    )
+    .expect("canonical JSON is UTF-8");
+    assert_ne!(
+        report.terminal_state, not_started,
+        "PREMISE: a fold that never moved would print `matched` against an initial state and \
+         assert nothing — *\"a kernel that does nothing at all fails the terminal-state half\"*"
+    );
+    let terminal_matched = report.terminal_state == recorded_back.terminal_state();
+    assert!(
+        terminal_matched,
+        "AC-008: recomputed {} vs recorded {}",
+        report.terminal_state,
+        recorded_back.terminal_state()
+    );
 
     // …and the journal the replay served back is the recorded one, in order.
     let served = store.events.len();
@@ -376,18 +501,307 @@ fn golden_log_replay() {
     // above, never written as literals, and `golden_log_replay_writing_fake_is_red` /
     // `golden_log_replay_dispatching_fake_is_red` are what show each counter moves.
     //
-    // **`terminal_state` is deliberately NOT printed.** :1515 greps for `terminal_state[= ]matched`
-    // and there is no FSM and no terminal state at Slice 3 (module header, assertion 3). Printing
-    // the literal would satisfy the grep and assert nothing, which is the exact defect the
-    // checkpoint's own comment at :1508-1511 describes. That line is unreachable until Slice 4
-    // builds the runtime, and it is reported ARMED rather than papered over here.
+    // **`terminal_state` IS printed now, and the sentence that stood here until 2026-09-14 said it
+    // deliberately was not:** *"there is no FSM and no terminal state at Slice 3 … that line is
+    // unreachable until Slice 4 builds the runtime."* Half of that is now false — the FSM is on
+    // disk at `src/workflow/fsm.rs` — and the half that remains true is stated in the module
+    // header's row 5: **N is still 0**, so the DISPATCH half of AC-008's GIVEN is vacuous and is
+    // reported ARMED.
+    //
+    // The token below is **computed from the comparison**, never written as a literal: it reads
+    // `matched` only when the recomputed canonical bytes equal the ones committed in `run.json`,
+    // and `DIVERGED` otherwise — and the replay would have refused before reaching this line in
+    // that case anyway. `golden_log_replay_terminal_state_mismatch_is_red` is its positive
+    // control, and it is the third one §7b.14:1266-1276's own rule demanded and the file named
+    // for neither.
     println!(
-        "replay {} events_compared={} divergences={} rk_git_writes={} harness_dispatches={}",
+        "replay {} events_compared={} divergences={} rk_git_writes={} harness_dispatches={} \
+         terminal_state={} next_action_bytes={}",
         report.run_id,
         report.events_compared,
         report.divergences,
         report.rk_git_writes,
-        report.harness_dispatches
+        report.harness_dispatches,
+        if terminal_matched {
+            "matched"
+        } else {
+            "DIVERGED"
+        },
+        report.next_action.len(),
+    );
+}
+
+/// **THE THIRD POSITIVE CONTROL — the one §7b.14's own rule demanded and no file named.**
+///
+/// > §7b.14:1266-1276: *"Every absence-based ban below carries a positive control OR says per ban
+/// > why it cannot."*
+///
+/// `rk_git_writes=0` has `golden_log_replay_writing_fake_is_red`; `harness_dispatches=0` has
+/// `golden_log_replay_dispatching_fake_is_red`; **`terminal_state=matched` had neither a control
+/// nor a reason, and a kernel that printed the literal without comparing passed the grep.** Gap
+/// G-1 in the runbook pass, FORCED by residual 10i.
+///
+/// The adverse condition is constructed **in this test** on
+/// `golden_log_replay_writing_fake_is_red`'s exact model, not committed as a second fixture tree:
+/// a second tree is a second thing to keep in sync, and a stale one is green for the wrong reason.
+/// `run.json`'s `terminal_state` is rewritten to a state the fold **cannot** produce from this
+/// journal — `sealed`, which needs a `slice_sealed` event the journal does not carry — and the
+/// replay must return `Err(ReplayError::TerminalStateDiverged)`.
+///
+/// **It is weaker than it looks in one direction and the doc says so rather than leaving it to be
+/// discovered:** it shows the comparison happens and refuses. The `assert_ne!` premise inside
+/// `golden_log_replay` is a second, weaker control that catches a fold which never moves but not
+/// one that moves wrongly. Both are named; neither is reported as the other.
+#[test]
+fn golden_log_replay_terminal_state_mismatch_is_red() {
+    let recorded = rk_kernel::replay::record(&inputs()).expect("resolves");
+    let source = committed_root().join(recorded.run_id());
+
+    let rewritten = scratch_root().join("terminal-state-rewritten");
+    copy_tree(&source, &rewritten);
+    let manifest_path = rewritten.join("run.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&manifest_path).expect("readable"))
+            .expect("the manifest parses");
+
+    let honest = manifest["terminal_state"]
+        .as_str()
+        .expect("the committed manifest carries a terminal_state")
+        .to_owned();
+    let forged = String::from_utf8(
+        TerminalState::Sealed {
+            verdict: "accepted".to_owned(),
+        }
+        .canonical_bytes()
+        .expect("canonical"),
+    )
+    .expect("canonical JSON is UTF-8");
+    assert_ne!(
+        honest, forged,
+        "PREMISE: the rewrite must actually change the recorded state, or the replay would be \
+         asked to refuse a value it should accept"
+    );
+    manifest["terminal_state"] = serde_json::Value::from(forged.clone());
+    std::fs::write(
+        &manifest_path,
+        serde_json::to_vec(&manifest).expect("serialisable"),
+    )
+    .expect("writable");
+
+    let harness = RefusingHarness::default();
+    let mut store = CountingStore::default();
+    let mut journal = VecJournal::default();
+    let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+    let mut ports = ReplayPorts {
+        harness: &harness,
+        dispatches: &harness.dispatches,
+        store: &mut store,
+        git: &mut git,
+    };
+
+    match rk_kernel::replay::replay(&rewritten, &mut ports) {
+        Err(ReplayError::TerminalStateDiverged(d)) => {
+            assert_eq!(d.recorded, forged, "the halt carries the RECORDED side");
+            assert_eq!(
+                d.recomputed, honest,
+                "and the RECOMPUTED side, so the two are distinguishable in the halt"
+            );
+            assert_eq!(
+                d.activity_id,
+                recorded.run_id(),
+                "AC-007's typed halt names what diverged"
+            );
+        }
+        Ok(report) => panic!(
+            "the replay ACCEPTED a rewritten terminal_state and reported terminal_state={} — the \
+             token is printed without being compared, which is exactly what this control exists \
+             to catch",
+            report.terminal_state
+        ),
+        Err(other) => panic!("expected TerminalStateDiverged, got {other}"),
+    }
+}
+
+/// **The positive control for AC-006 assertion 3, and it exists because a mutation found the gap.**
+///
+/// `golden_log_replay_terminal_state_mismatch_is_red` above controls the *terminal state* half.
+/// Nothing controlled the **next action** half until 2026-09-14: replacing `src/replay.rs`'s
+/// `if recorded.next_action != recomputed_next {` with `if false && …` left **every replay test
+/// green** — 7 passed, 0 failed, with `golden_log_replay` itself among them [measured 2026-09-14,
+/// mutation applied and reverted, `md5sum` identical before and after]. A guard that can be
+/// disabled with the suite still green is declared and not measured, which is the same defect
+/// `golden_log_replay_dispatching_fake_is_red` was authored for on the dispatch counter.
+///
+/// Same shape as the terminal-state control: rewrite the **recorded** side of the comparison in a
+/// scratch copy to a well-formed but different value, and require the replay to **refuse**. The
+/// recomputed side is unchanged, so a replay that compares nothing returns `Ok` and this test goes
+/// red — which is exactly the state the mutation above put the tree in.
+#[test]
+fn golden_log_replay_next_action_mismatch_is_red() {
+    let recorded = rk_kernel::replay::record(&inputs()).expect("resolves");
+    let source = committed_root().join(recorded.run_id());
+
+    let rewritten = scratch_root().join("next-action-rewritten");
+    copy_tree(&source, &rewritten);
+    let manifest_path = rewritten.join("run.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&manifest_path).expect("readable"))
+            .expect("the manifest parses");
+
+    let honest = manifest["next_action"]
+        .as_str()
+        .expect("the committed manifest carries a next_action")
+        .to_owned();
+    let forged = String::from_utf8(NextAction::Done.canonical_bytes().expect("canonical"))
+        .expect("canonical JSON is UTF-8");
+    assert_ne!(
+        honest, forged,
+        "PREMISE: the rewrite must actually change the recorded action, or the replay would be \
+         asked to refuse a value it should accept. `Done` is the action a run with nothing left to \
+         do returns, and the committed run has an open gate, so the two differ by construction"
+    );
+    manifest["next_action"] = serde_json::Value::from(forged.clone());
+    std::fs::write(
+        &manifest_path,
+        serde_json::to_vec(&manifest).expect("serialisable"),
+    )
+    .expect("writable");
+
+    let harness = RefusingHarness::default();
+    let mut store = CountingStore::default();
+    let mut journal = VecJournal::default();
+    let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+    let mut ports = ReplayPorts {
+        harness: &harness,
+        dispatches: &harness.dispatches,
+        store: &mut store,
+        git: &mut git,
+    };
+
+    match rk_kernel::replay::replay(&rewritten, &mut ports) {
+        Err(ReplayError::NextActionDiverged(d)) => {
+            assert_eq!(d.recorded, forged, "the halt carries the RECORDED side");
+            assert_eq!(
+                d.recomputed, honest,
+                "and the RECOMPUTED side, so the two are distinguishable in the halt"
+            );
+            assert_eq!(
+                d.activity_id,
+                recorded.run_id(),
+                "AC-007's typed halt names what diverged"
+            );
+        }
+        Ok(_) => panic!(
+            "the replay ACCEPTED a rewritten next_action — AC-006 assertion 3's guard is declared \
+             and does not bite. This is the exact state `if false && recorded.next_action != …` \
+             produced, and the whole replay suite was green in it"
+        ),
+        Err(other) => panic!("expected NextActionDiverged, got {other}"),
+    }
+}
+
+/// **AC-161 and AC-164 — the stage-grain next action survives the event database.**
+///
+/// > **AC-161** THEN the **stage-level next action** — the FSM's next stage transition and the
+/// > gate records the trailers carry — is equal, under the canonical serialiser, to the one
+/// > selected before the deletion. *The comparison is at stage grain; a step-grain comparison
+/// > would assert what tier 2 cannot promise.*
+///
+/// 🛑 **TWO THINGS ARE ARMED HERE AND NEITHER IS REPORTED AS COVERED.**
+///
+/// 1. **The ROUTE is not measured, only the EQUALITY.** The tier-1 projection below is read from
+///    the golden log's own `events.jsonl`, **not** from git trailers: the trailer reader is
+///    `rk-git`'s and `rk-cli`'s and it is Step 7d's. What is measured is that the stage action is
+///    a function of the tier-1 events alone. What is not is *"from git alone"*.
+/// 2. **The "event database" here is the bound `EventStore` fake, and it is DROPPED rather than
+///    unlinked.** There is no SQLite-backed `EventStore` in this workspace — the adapter is
+///    `rk-adapter-sqlite` and it is 7c's — so creating and deleting an empty `store.sqlite3`
+///    beside this test would be a filesystem gesture that produces the same green as the real
+///    operation while measuring nothing. The deletion that is performed is the one this tree can
+///    perform: the store holding every tier-2 event goes away, and the recomputation is handed the
+///    tier-1 events alone.
+///
+/// **AC-164's `doctor`-classification half has no home at all** (residual 10l): it is in neither
+/// §7b.15's claimed list nor its ARMED table, and `doctor` is 7d's. AC-164 is **not** covered.
+#[test]
+fn ac161_ac164_delete_db_replay() {
+    let recorded = rk_kernel::replay::record(&inputs()).expect("the recorded run resolves");
+
+    // ---- premises: the journal really spans both tiers ----------------------------------------
+    let tier_one: Vec<Event> = recorded
+        .events
+        .iter()
+        .filter(|e| e.kind.tier() == Tier::One)
+        .cloned()
+        .collect();
+    let tier_two = recorded.events.len() - tier_one.len();
+    assert!(
+        tier_two >= 2 && !tier_one.is_empty(),
+        "PREMISE: an all-tier-1 journal makes the truncation equality trivially true. Got {} \
+         tier-1 and {tier_two} tier-2 events",
+        tier_one.len()
+    );
+
+    // ---- the stage action while the store holds EVERYTHING -------------------------------------
+    let mut store = CountingStore::default();
+    for event in &recorded.events {
+        store.append(event.clone()).expect("the fake accepts");
+    }
+    assert_eq!(
+        store.events.len(),
+        recorded.events.len(),
+        "PREMISE: the event database really held the whole journal before it was deleted"
+    );
+    let full = stage_action(ITEM, STAGE, &store.events).expect("the tier-1 fold resolves");
+    assert_ne!(
+        full,
+        StageAction::default(),
+        "PREMISE: an empty stage action is equal to another empty one, and the comparison below \
+         would hold over two nothings"
+    );
+
+    // ---- AC-164: the tier-2 events are truncated ----------------------------------------------
+    assert!(
+        tier_one.len() < recorded.events.len(),
+        "PREMISE: something must actually be truncated"
+    );
+    let projected = stage_action(ITEM, STAGE, &tier_one).expect("resolves");
+    assert_eq!(
+        full.canonical_bytes().expect("canonical"),
+        projected.canonical_bytes().expect("canonical"),
+        "AC-164: losing every tier-2 event does not change the stage-grain next action"
+    );
+
+    // ---- AC-161: the event database is gone -----------------------------------------------------
+    drop(store);
+    let after = stage_action(ITEM, STAGE, &tier_one).expect("resolves");
+    assert_eq!(
+        full.canonical_bytes().expect("canonical"),
+        after.canonical_bytes().expect("canonical"),
+        "AC-161: the stage-level next action after the deletion is byte-identical, under the \
+         canonical serialiser, to the one selected before it"
+    );
+
+    // ---- THE CONTROL: a different journal must give a DIFFERENT stage action --------------------
+    //
+    // Without it every assertion above is satisfied by a `stage_action` that returns a constant —
+    // and a constant is exactly what a function whose tier filter dropped everything returns.
+    let elsewhere = vec![Event::new(
+        EventKind::StageTransition,
+        serde_json::json!({ "from": STAGE, "to": "verify" }),
+    )];
+    let control = stage_action(ITEM, "verify", &elsewhere).expect("resolves");
+    assert_ne!(
+        full.canonical_bytes().expect("canonical"),
+        control.canonical_bytes().expect("canonical"),
+        "CONTROL: a different tier-1 journal must give a different stage action, or the three \
+         equalities above are satisfied by a constant"
+    );
+
+    println!(
+        "ac161_ac164 stage_action tier1={} tier2={tier_two} bytes={}",
+        tier_one.len(),
+        full.canonical_bytes().expect("canonical").len()
     );
 }
 
@@ -426,7 +840,7 @@ fn golden_log_replay_writing_fake_is_red() {
         harness: &harness,
         dispatches: &harness.dispatches,
         store: &mut store,
-        git: &git,
+        git: &mut git,
     };
 
     match rk_kernel::replay::replay(&dir, &mut ports) {
@@ -464,12 +878,12 @@ fn golden_log_replay_dispatching_fake_is_red() {
         .store(1, std::sync::atomic::Ordering::SeqCst);
     let mut store = CountingStore::default();
     let mut journal = VecJournal::default();
-    let git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+    let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
     let mut ports = ReplayPorts {
         harness: &harness,
         dispatches: &harness.dispatches,
         store: &mut store,
-        git: &git,
+        git: &mut git,
     };
 
     match rk_kernel::replay::replay(&dir, &mut ports) {
@@ -511,12 +925,12 @@ fn replay_reports_hidden_input_on_divergence() {
     let harness = RefusingHarness::default();
     let mut store = CountingStore::default();
     let mut journal = VecJournal::default();
-    let git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+    let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
     let mut ports = ReplayPorts {
         harness: &harness,
         dispatches: &harness.dispatches,
         store: &mut store,
-        git: &git,
+        git: &mut git,
     };
 
     match rk_kernel::replay::replay(&perturbed, &mut ports) {

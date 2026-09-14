@@ -1,0 +1,37 @@
+# **AC-036's must-fail fixture pack**: a pack that considered substitution and said no.
+#
+# > *Verified by:* a unit test over a pack without the permission asserting refusal; **a must-fail
+# > fixture pack**.
+#
+# "Must-fail" is the SUBSTITUTION's, not the loader's: this file is a valid pack and must load. What
+# must fail is `substitute(.., pack.permits_substitution(), ..)` against it — AC-036's THEN, *"the
+# substitution is refused and the activity fails rather than running at the lower tier"*.
+#
+# **It declares `permit_substitution = false` EXPLICITLY, and that is the point of the third
+# fixture.** `runtime-envelope.toml` declares no `[degradation]` table at all, so the pair
+# separates two states a fail-closed fold would otherwise make indistinguishable: a pack that never
+# considered substitution (`substitution_permitted() == None`) and a pack that considered it and
+# refused (`Some(false)`). Both refuse, and `degradation_ac036_ac038` asserts both the shared
+# refusal and the distinguishable accessor — because a `permits_substitution()` written to return
+# `false` unconditionally would pass the refusal half and is exactly what the `None`/`Some(false)`
+# split catches.
+[pack]
+id = "runtime-no-degrade-fixture"
+applies = "kind == incident"
+appetite = { points = 50, tokens = 50_000 }
+
+[retry]
+attempts_cap = 4
+
+[breaker]
+consecutive_platform_failures = 3
+
+# THE REFUSAL, DECLARED. Not an absence — `runtime-envelope.toml` is the absence.
+[degradation]
+permit_substitution = false
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]
