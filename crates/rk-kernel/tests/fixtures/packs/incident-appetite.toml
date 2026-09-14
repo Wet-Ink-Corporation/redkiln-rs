@@ -1,0 +1,23 @@
+# AC-058's over-budget fixture. Identical to `incident-forbidden.toml` except `appetite.points`,
+# which is set BELOW the assembled DAG's summed `cost_class` so step 5's appetite check fires.
+#
+# **The point mapping is TRANSCRIBED, not defaulted.** `spikes/p9/lattice.py`:17 states invariant
+# I6 in terms -- *"cost_class points S=1 M=3 L=8 XL=20 summed over the selected DAG against
+# pack.appetite.points"* -- and `spikes/p9/packs/bug-standard.toml`:5 carries the same mapping as a
+# comment beside its own `appetite`. What `spikes/DECISIONS-2026-09-08.md`:16 records as undecided
+# is the *unit* ("appetite units (I6, F35 §1.5)"), which does not enter the comparison
+# `Sigma points > appetite.points`. A pack that declares NO `appetite` gets NO appetite check --
+# never an unbounded default that silently passes (`00-preamble.md`:55).
+#
+# On the `implement` stage with a node-only item the DAG is change-summary(S=1) +
+# implement-change(M=3) + impl-report(S=1) = 5, so `points = 4` overruns by exactly 1.
+[pack]
+id = "incident-appetite-fixture"
+applies = "kind == incident"
+appetite = { points = 4 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "recommended", specification = "forbidden", design = "forbidden", planning = "forbidden", implement = "recommended", verify = "recommended", review = "mandatory", release = "mandatory", operate = "mandatory", closeout = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]

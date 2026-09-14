@@ -1,0 +1,16 @@
+# Rank 20 -- admissible, and beaten. AC-046's THEN: "the selection record names the rank of every
+# candidate it beat", so this row must appear in the record and not merely be absent from it.
+[activity]
+id           = "verdict-dear"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["kind:story", "kind:incident"]
+method_rank  = 20
+min_rigor    = "optional"
+cost_class   = "M"
+[[step]]
+id      = "emit"
+kind    = "emit"

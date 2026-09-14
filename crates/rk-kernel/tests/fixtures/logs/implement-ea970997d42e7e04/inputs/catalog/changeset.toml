@@ -1,0 +1,27 @@
+# The Changeset producer. One candidate, no rank contest: it is here so `change-summary`'s
+# `requires = ["Changeset"]` recursion (design §4.4 row 4, "recurse on the producer's requires")
+# has somewhere to go.
+[activity]
+id           = "implement-change"
+version      = 1
+stage        = "implement"
+provides     = ["Changeset"]
+requires     = []
+derived_from = []
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:tech-debt", "kind:chore", "kind:docs", "kind:project"]
+# FIXTURE-ONLY, and the POSITIVE COMPANION to `impl-report`'s `deviation_ok = ["skip"]`. Without
+# an activity that permits `add` and `downgrade`, AC-062's per-kind refusals are indistinguishable
+# from the two kinds simply not being implemented.
+deviation_ok = ["add", "downgrade"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+
+[[step]]
+id      = "edit"
+kind    = "agent"
+outputs = "value:Changeset"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

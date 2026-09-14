@@ -1,0 +1,29 @@
+# COPIED from spikes/p9/catalog/change-summary.toml and trimmed to the header fields steps 1-4
+# read. The generic text-change producer of ChangeSummary (PC7). It carries NO `toolchain:` tag and
+# discriminates on `change` alone, which is exactly the shape AC-049's THEN names: "the generic
+# producer's condition (e.g. `'text' in change`) is evaluated per instance rather than once against
+# the item".
+[activity]
+id           = "change-summary"
+version      = 1
+stage        = "implement"
+provides     = ["ChangeSummary"]
+requires     = ["Changeset"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:tech-debt", "kind:chore", "kind:docs", "kind:project"]
+applicable_if = "'text' in change"
+# The shipped `change-summary.toml`:18 declares `deviation_ok = []` -- no deviation of any kind
+# may be requested about it. Copied verbatim.
+deviation_ok = []
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "summarise"
+kind    = "agent"
+outputs = "value:ChangeSummary"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

@@ -1,0 +1,19 @@
+# AC-053's dangling `requires`. `Telemetry` is declared by NO `[artifact.*]` row in
+# `artifacts.toml` and is provided by no activity, so the edge binds to nothing. ADR-0057 makes
+# `artifacts.toml` the kind vocabulary, so this is a pack/catalog defect at LOAD and not a missing
+# artifact at run time.
+[activity]
+id           = "smoke-check"
+version      = 1
+stage        = "verify"
+provides     = ["SmokeResult"]
+requires     = ["Telemetry"]
+derived_from = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id   = "emit"
+kind = "emit"

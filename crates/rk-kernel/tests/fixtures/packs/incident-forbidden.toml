@@ -1,0 +1,31 @@
+# A fixture pack in the shape of `spikes/p9/packs/incident.toml`, trimmed to what steps 1-4 read.
+#
+# Why a fixture and not the shipped pack: AC-051's and AC-077's fixtures must FAIL, and the shipped
+# incident pack loads. The stages, the `forbidden` rows and the `[[stage.*.require]]` shape are
+# copied from the shipped file so the fixture is the shipped shape with the defect added, never a
+# shape invented here.
+[pack]
+id = "incident-fixture"
+applies = "kind == incident"
+appetite = { points = 50 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "recommended", specification = "forbidden", design = "forbidden", planning = "forbidden", implement = "recommended", verify = "recommended", review = "mandatory", release = "mandatory", operate = "mandatory", closeout = "mandatory" }
+
+[stage.operate]
+baseline = ["MitigationRecord", "IncidentLog"]
+
+[stage.analysis]
+baseline = ["IncidentTimeline", "RootCause"]
+[[stage.analysis.require]]
+when = "criticality >= high"
+artifacts = ["CausalChain"]
+[[stage.analysis.require]]
+when = "external_dep"
+artifacts = ["APIContract"]
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+
+[stage.review]
+baseline = ["ChangeRecord", "ReviewVerdict"]

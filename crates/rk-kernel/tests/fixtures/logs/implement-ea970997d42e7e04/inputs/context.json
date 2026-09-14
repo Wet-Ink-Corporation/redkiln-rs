@@ -1,0 +1,1 @@
+{"facets":{"change":["text"],"criticality":{"domain":["low","med","high","critical"],"index":3},"external_dep":true,"kind":"incident","toolchain":["node"],"ui":false},"id":"INC-1","kind":"incident","rigor_overrides":{},"toolchains":{"node":["text"]}}

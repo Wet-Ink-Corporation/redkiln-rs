@@ -1,0 +1,111 @@
+# The artifact-kind registry (ADR-0057's Decision, which mints `artifacts.toml`; proposal §2.1),
+# trimmed to the kinds these fixtures name. Every row below is COPIED from
+# `spikes/p9/artifacts.toml` verbatim except the two marked `# FIXTURE-ONLY`, which are the
+# discriminating pair §7b.9(6) says AC-066's 8-case table is owed.
+#
+#   source = "human"    -> a ROOT: no producer anywhere, supplied at intake (PC3, derived_from = []).
+#   source = "activity" -> some catalog activity provides it.
+#   keyed_by = "toolchain" -> one required instance per element of the item's toolchain set (ADR-0073).
+
+[artifact.APIContract]
+source = "activity"
+schema = "APIContract"
+
+[artifact.CausalChain]
+source = "activity"
+schema = "CausalChain"
+
+[artifact.ChangeRecord]
+source = "activity"
+schema = "ChangeRecord"
+
+[artifact.ChangeSummary]
+source = "activity"
+schema = "ChangeSummary"
+keyed_by = "toolchain"
+
+[artifact.Changeset]
+source = "activity"
+schema = "ChangeSummary"
+keyed_by = "toolchain"
+
+[artifact.CompetitorAnalysis]
+source = "human"
+schema = "CompetitorAnalysis"
+
+[artifact.DesignDoc]
+source = "activity"
+schema = "DesignDoc"
+
+[artifact.ImplReport]
+source = "activity"
+schema = "ImplReport"
+
+[artifact.IncidentLog]
+source = "activity"
+schema = "IncidentLog"
+
+[artifact.IncidentTimeline]
+source = "activity"
+schema = "IncidentTimeline"
+
+[artifact.IntakeRecord]
+source = "human"
+schema = "IntakeRecord"
+
+[artifact.MitigationRecord]
+source = "activity"
+schema = "MitigationRecord"
+
+[artifact.ProblemStatement]
+source = "activity"
+schema = "ProblemStatement"
+
+[artifact.ReviewVerdict]
+source = "activity"
+schema = "Verdict"
+
+[artifact.RootCause]
+source = "activity"
+schema = "RootCause"
+
+[artifact.Spec]
+source = "activity"
+schema = "Spec"
+
+[artifact.TestReport]
+source = "activity"
+schema = "TestReport"
+keyed_by = "toolchain"
+
+# FIXTURE-ONLY. §7b.9(6)'s discriminating pair: two kinds of the SAME shape -- each carries a
+# declared input (`MarketScan`) and each is presented with `derived_from = []` -- differing ONLY in
+# the registered `source`. Under the AC-067-first reading the human one is `Present` and the machine
+# one is `Stale`; under the AC-066-first reading BOTH are `Stale`. These two rows are what makes the
+# readings distinguishable, and the register edit that adds their equivalents to AC-066's own
+# 8-case table is OWED (§7b.9(6)) and is not written by this crate.
+[artifact.VouchedBrief]
+source = "human"
+schema = "CompetitorAnalysis"
+
+[artifact.DerivedBrief]
+source = "activity"
+schema = "CompetitorAnalysis"
+
+[artifact.MarketScan]
+source = "activity"
+schema = "MarketScan"
+
+[artifact.SmokeResult]
+source = "activity"
+schema = "SmokeResult"
+
+# FIXTURE-ONLY. The two kinds the symmetric `excludes` pair provides, so step 5's runtime
+# `excludes` check can be reached at all (falsification G22, 2026-09-13).
+[artifact.Deployment]
+source = "activity"
+schema = "Deployment"
+
+[artifact.Rollout]
+source = "activity"
+schema = "Rollout"

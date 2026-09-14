@@ -1,0 +1,13 @@
+# AC-050's third AND: `discouraged` is RESERVED in Phase 1 and a pack that sets any stage or
+# `min_rigor` to it fails validation NAMING THE SITE (decision #20 of 2026-09-11). This pack must
+# not load. A fourth live rigor level was rejected for having no measured need; nothing implements
+# one.
+[pack]
+id = "discouraged-fixture"
+applies = "kind == chore"
+
+[policy]
+stages = { triage = "mandatory", discovery = "discouraged", closeout = "optional" }
+
+[stage.triage]
+baseline = ["IntakeRecord"]

@@ -1,0 +1,17 @@
+# The other half of the symmetric pair. Both are selected, so step 5 sees them together.
+[activity]
+id           = "canary-release"
+version      = 1
+stage        = "release"
+provides     = ["Rollout"]
+requires     = []
+derived_from = []
+excludes     = ["deploy-blue-green"]
+tags         = ["kind:incident"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+
+[[step]]
+id   = "emit"
+kind = "emit"

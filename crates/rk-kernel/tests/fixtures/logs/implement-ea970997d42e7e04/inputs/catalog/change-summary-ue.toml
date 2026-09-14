@@ -1,0 +1,26 @@
+# COPIED from spikes/p9/catalog/change-summary-ue.toml and trimmed. The Unreal specialisation. It
+# discriminates on the `toolchain:unreal` TAG, not on an `applicable_if`, and it shares
+# `method_rank = 10` with the generic producer above -- which is the F35 §1.3 pair. They are not a
+# RankTie because the keyed expansion narrows the context per instance, so they are never
+# simultaneously admissible for one slot (ADR-0073; AC-049).
+[activity]
+id           = "change-summary-ue"
+version      = 2
+stage        = "implement"
+provides     = ["ChangeSummary", "AssetManifest"]
+requires     = ["Changeset"]
+derived_from = ["Changeset"]
+deviation_ok = []
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:tech-debt", "kind:project", "kind:chore", "kind:docs", "toolchain:unreal"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "L"
+
+[[step]]
+id      = "cook"
+kind    = "tool"
+run     = "toolchain:cook"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

@@ -1,0 +1,28 @@
+# The ImplReport producer. `requires = ["Spec?"]` is the CONDITIONAL form -- the `?` suffix the
+# shipped catalog uses (e.g. `requires = ["Spec", "DesignDoc?"]` at
+# spikes/p9/catalog/api-contract-spec.toml:6). AC-051's load-time failure covers only the
+# UNCONDITIONAL case, so this pack LOADS and the runtime case §7b.9(7) names is live.
+[activity]
+id           = "impl-report"
+version      = 1
+stage        = "implement"
+provides     = ["ImplReport"]
+requires     = ["Changeset", "Spec?"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:tech-debt", "kind:chore", "kind:docs", "kind:project"]
+# AC-062's fixture activity: `deviation_ok = ["skip"]` and nothing else, so `downgrade` and
+# `add` are refused as CONFIGURATION ERRORS before predicate evaluation. The shipped catalog
+# spells the key this way at spikes/p9/catalog/api-contract-spec.toml:17.
+deviation_ok = ["skip"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "write"
+kind    = "agent"
+outputs = "value:ImplReport"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

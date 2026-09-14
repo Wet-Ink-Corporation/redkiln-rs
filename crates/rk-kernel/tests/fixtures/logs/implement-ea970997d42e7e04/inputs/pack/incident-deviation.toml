@@ -1,0 +1,18 @@
+# Step 7's fixture pack. `ChangeSummary` arrives through a CONDITIONAL `require` row rather than
+# the baseline, so an accepted `skip` deviation against it produces a real delta in `R` -- the
+# baseline is *"the mandatory core, never tailored away"* (proposal §2.3) and a deviation against a
+# baseline member would be asking the channel to do what the pack forbids.
+[pack]
+id = "incident-deviation-fixture"
+applies = "kind == incident"
+appetite = { points = 50 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "recommended", specification = "forbidden", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]
+
+[[stage.implement.require]]
+when = "criticality >= high"
+artifacts = ["ChangeSummary"]

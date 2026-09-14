@@ -129,6 +129,35 @@ impl Step {
     }
 }
 
+/// One entry of an activity's `requires` list.
+///
+/// The shipped catalog spells an **optional** requirement with a `?` suffix —
+/// `requires = ["Spec", "DesignDoc?"]` at `spikes/p9/catalog/api-contract-spec.toml`:6 — and the
+/// distinction is load-bearing rather than cosmetic. **AC-051's load-time failure covers only the
+/// UNCONDITIONAL case**, so a conditional requirement reaching a `forbidden` stage LOADS, and the
+/// runtime case §7b.9(7) names is live: it owes both a skip row and an `Unsatisfiable` gate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Requirement {
+    pub kind: String,
+    /// `true` for the `Kind?` spelling.
+    pub optional: bool,
+}
+
+impl Requirement {
+    fn parse(raw: &str) -> Self {
+        raw.strip_suffix('?').map_or_else(
+            || Self {
+                kind: raw.to_owned(),
+                optional: false,
+            },
+            |kind| Self {
+                kind: kind.to_owned(),
+                optional: true,
+            },
+        )
+    }
+}
+
 /// One `[activity]` plus its steps.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Activity {
@@ -144,6 +173,33 @@ pub struct Activity {
     pub min_rigor: String,
     pub max_rigor: Option<String>,
     pub family: Option<String>,
+    /// The kinds this activity needs before it can run. Step 4 recurses on this (design §4.4
+    /// row 4), and AC-051/AC-053 lint it at load.
+    pub requires: Vec<Requirement>,
+    /// The kinds the activity's output is derived FROM, as the catalog declares them. Step 3's
+    /// "declared inputs" are read from the **producer's** row, and a missing `derived_from` entry
+    /// for one of them is `Stale` and never "assumed fresh" (AC-066).
+    pub derived_from: Vec<Requirement>,
+    /// `S` / `M` / `L`. Step 5 sums it against the item's appetite (AC-058) and AC-068 resolves
+    /// `policy.<cost_class>.stale_policy` through it. The first is built
+    /// ([`crate::select::step5`]); the second is **not** — AC-068 is PROVISIONAL under ADR-0117
+    /// clause 4 and its `stale_policy` value is a pack's to declare.
+    pub cost_class: Option<String>,
+    /// Activities this one may not appear beside in one DAG. **`excludes` are symmetric** (proposal
+    /// §2.6), and [`crate::select::excludes_lint`] is AC-060's instrument.
+    ///
+    /// **There is no live instance**: `grep -rn excludes spikes/p9/catalog/` returns 0 hits
+    /// [measured 2026-09-13]. The field is read because the rule that needs it is built, and the
+    /// whole fixture pair for that rule is authored.
+    pub excludes: Vec<String>,
+    /// What an agent may **request** about this activity — the closed `skip | downgrade | add`
+    /// vocabulary of ADR-0046. A `kind` outside this list is refused as a configuration error
+    /// **before** predicate evaluation (AC-062).
+    ///
+    /// A token outside the three is a load error rather than a silently ignored entry: ADR-0046's
+    /// forbids clause is *"a `deviate` declaration whose `kind` falls outside the closed
+    /// `skip | downgrade | add` vocabulary"*.
+    pub deviation_ok: Vec<String>,
     pub steps: Vec<Step>,
 }
 
@@ -299,6 +355,18 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
         .get("method_rank")
         .and_then(Value::as_int)
         .ok_or_else(|| shape(format!("{id}: no method_rank")))?;
+    // ADR-0046's forbids clause: *"a `deviate` declaration whose `kind` falls outside the closed
+    // `skip | downgrade | add` vocabulary"*. A fourth token is a LOAD error and never a silently
+    // ignored entry, because an ignored one reads as a permission the activity does not have.
+    let deviation_ok = strings(head, "deviation_ok");
+    for token in &deviation_ok {
+        if !matches!(token.as_str(), "skip" | "downgrade" | "add") {
+            return Err(shape(format!(
+                "{id}: deviation_ok carries {token:?}, which is outside ADR-0046's closed \
+                 `skip | downgrade | add` vocabulary"
+            )));
+        }
+    }
     let mut steps = Vec::new();
     if let Some(Value::Array(rows)) = doc.get("step") {
         for row in rows {
@@ -334,6 +402,17 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
         provides: strings(head, "provides"),
         tags: strings(head, "tags"),
         applicable_if: text(head, "applicable_if"),
+        requires: strings(head, "requires")
+            .iter()
+            .map(|r| Requirement::parse(r))
+            .collect(),
+        derived_from: strings(head, "derived_from")
+            .iter()
+            .map(|r| Requirement::parse(r))
+            .collect(),
+        cost_class: text(head, "cost_class"),
+        excludes: strings(head, "excludes"),
+        deviation_ok,
         method_rank,
         min_rigor: text(head, "min_rigor").unwrap_or_else(|| "optional".to_owned()),
         max_rigor: text(head, "max_rigor"),

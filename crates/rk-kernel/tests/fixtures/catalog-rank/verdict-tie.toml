@@ -1,0 +1,18 @@
+# Rank 5 AGAIN, same kind, same stage, same tags -- simultaneously admissible with verdict-cheap in
+# every enumerated context. AC-047: load fails with `RankTie { kind, context, activities }` BEFORE
+# any activity is dispatched. There is no runtime tie-break of any kind, for any artifact kind
+# (ADR-0056; ADR-0073 withdraws specificity for producer-of-a-kind selection).
+[activity]
+id           = "verdict-tie"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["kind:story", "kind:incident"]
+method_rank  = 5
+min_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"

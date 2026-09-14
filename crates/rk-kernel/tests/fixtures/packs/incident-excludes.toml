@@ -1,0 +1,14 @@
+# The pack that puts BOTH members of the symmetric `excludes` pair into one `R`, so step 5's runtime
+# check has something to refuse. The load-time symmetry lint (AC-060) passes on this catalog, which
+# is the point: the two instruments are different and a catalog can clear the first and fail the
+# second.
+[pack]
+id = "incident-excludes-fixture"
+applies = "kind == incident"
+appetite = { points = 50 }
+
+[policy]
+stages = { release = "recommended" }
+
+[stage.release]
+baseline = ["Deployment", "Rollout"]

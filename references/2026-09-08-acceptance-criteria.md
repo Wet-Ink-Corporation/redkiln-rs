@@ -1019,6 +1019,59 @@ AND the deviation record is part of the replay input set, so an amended DAG is n
 *Verified by:* unit test on the delta event (fields present, `added`/`removed` match the fixture's expected delta); the
 replay identity of an amended DAG is AC-042's assertion extended over deviation-amended runs and is measured there, not
 here.
+*(**Amended 2026-09-13 — `deviation_id`'s derivation, settled here because a record assigned it here.** ADR-0120
+mints `dag_amended`, fixes its tier, its four payload names and its producing step, and then names one thing it
+deliberately does **not** decide: *"how `deviation_id` is derived … this class of identity question — run-scoped
+versus item-scoped, derived versus stored — is a register amendment's to settle, not a record's by implication"*
+(ADR-0120 clause 7). This is that amendment. It adds no clause to the GIVEN/WHEN/THEN and withdraws none; it fixes
+the construction of the first of the four payload fields, which was otherwise going to be chosen at a call site.
+**(1) The derivation, named exactly.** `deviation_id = sha256_lp([target, kind, claimed_predicate])` — the SHA-256
+of the **length-prefixed tuple** of exactly those three components of the `RequestDeviation`, **in that order**,
+which is the declaration order AC-061's THEN and design §4.4 row 7 both give
+(`RequestDeviation { target, kind, claimed_predicate, why }`). The hash is `rk_types::digest::sha256_lp` — the one
+hash ADR-0116 clause 6 admits (*"No second digest algorithm enters the system"*) — carrying ADR-0097 decision 2's
+`u32-length || bytes` big-endian framing. **The framing is load-bearing, not decoration:** without it `("ab", "c")`
+and `("a", "bc")` hash identically, so two different requests whose components absorbed each other's boundaries
+would share an id and one deviation's delta would be logged under the other's identity.
+**The bytes of each component are that field's value under the canonical serialiser** — `rk_store::canon`'s
+`canonical`, the *"object keys sorted byte-wise, LF only, no trailing newline, floats refused"* form that AC-040's
+byte-identity is already measured under and that ADR-0097 decision 2 component 4 already names for step inputs.
+**No second canonical form and no second hash is minted here.** All three fields are strings today; naming the
+canonical form anyway is what stops a component that later becomes structured from acquiring a serialisation chosen
+at whichever call site reaches it first. This is ADR-0119's shape for the selection memo key (`sha256_lp` over a
+length-prefixed tuple, derived in `rk-kernel::select`) applied to a different tuple, and ADR-0119 clause 6 governs
+the reuse: sharing the length-prefixed **primitive** is not sharing a key derivation, and **no shared key helper is
+written** — a helper that computed *"the key"* is the thing that would make two of them accidentally equal.
+**(2) `why` is EXCLUDED, and that is a decision rather than an omission.** The type carries four fields and the
+identity takes three. Three reasons, and the cost is stated with them. **(a)** AC-065 keeps free text and
+model-interpreted content out of selection; `why` is prose an activity authors, and an identity derived over it
+puts model-authored text inside a selection-affecting derivation, where re-wording the justification for the same
+request changes the `dag_amended` payload. **(b)** The id is the identity of the *request*, and the delta the re-run
+produces is a function of `target`, `kind` and `claimed_predicate` alone — two requests differing only in their
+prose amend `R` identically, so they are one deviation and must carry one id. Putting a free-text field inside the
+identity would make two semantically identical deviations distinct; that is the question this clause was asked to
+settle and the answer is **no, it is not wanted**. **(c)** A content hash of the request is what lets a re-offered
+identical request be recognised as the same request without reading anything back — the same shape AC-525's
+2026-09-13 amendment takes for `drift_advisory`'s `(root, upstream, new_digest)`.
+**The cost, stated rather than smoothed:** two deviations that differ **only** in `why` are indistinguishable **by
+id**. `why` is not lost — the deviation record carries it and this criterion's second AND puts that record in the
+replay input set — but `deviation_id` is a handle to the request, not a container for it, and anything that needs
+the justification reads the record.
+**(3) What it makes true under replay — the property the amendment exists to fix.** This criterion's AND puts the
+deviation record in the replay input set and AC-042 asserts a byte-identical re-derivation, so a **derived** id and
+a **stored** id behave differently and the difference is not cosmetic. A stored id — a counter, a UUID, a
+timestamp-derived value — is a datum replay can only **read back** from the log; a `select()` that minted one would
+be reading a clock, a random source or the store, which AC-041 forbids **at compile time** and AC-043 exists to
+catch downstream. A derived id is a pure function of a record replay already holds, so replaying the recorded
+`RequestDeviation` recomputes the same `deviation_id` and the whole `dag_amended` payload is byte-identical
+**without the id being an input of its own**. The identity is reproducible *from* the replay input set instead of
+being carried *in* it, which is what makes this criterion's *"an amended DAG is not a hidden input"* checkable.
+**(4) It is constructible on either side of ADR-0120 clause 4's boundary, and that is why this construction and not
+another.** Clause 4 puts the append **outside** the pure function: the re-run returns the delta and the kernel's
+step-7 handler appends the event through the `EventStore` port. The `RequestDeviation` reaches step 7 under either
+reading of that clause, so a content hash of the request needs **no boundary crossing, no store read and no
+handler-side privilege**, and its value does not depend on which side computes it. Nothing in AC-041, AC-042 or
+ADR-0120 clause 4 moves.)*
 
 **AC-065** — `redkiln lint` · evidence: catalog §5 risk row ("human-judged criteria disguised as predicates"); F27
 (**verdict 2/4 items flaky** over repeated draws; detection 0/7 flaky over 21 draws — judgement is the unstable half) ·
@@ -1071,6 +1124,48 @@ AND the next `gate_opened` record the item reaches carries that advisory.
 with all four fields; a re-entry test asserting no second advisory for the same digest; a gate test asserting the next
 `gate_opened` record carries it; the AC-067 out-of-set fixture as the negative companion. *(PIA-029 named ADR-0025's
 positive clause as one no criterion covered; AC-067 was the negative half only.)*
+*(**Amended 2026-09-13 — the scope of "exactly one", and which half of `rk-select` + `rk-kernel` does what.**
+`runbook/phase-1/s7b-kernel.md` §7b.9(5) raised two residuals against this criterion and settled neither: whether
+*"the next gate the item reaches"* is **run-scoped** or **item-scoped across runs**, and whether the *"exactly one"*
+is reachable at all from inside a pure function whose only inputs are the four digests (AC-041). Both are settled
+here. Neither is a new decision: they are the execution order this criterion's own THEN already forces once AC-041
+is read beside it.
+**(1) Step 3 returns a classification and nothing else.** `select()`'s step 3 classifies a vouched root (AC-067:
+registered `source = "human"`, `derived_from = []`) as **`Present`** and **returns that classification**. It does
+not construct the advisory, does not append it, and does not read any log to decide whether one was appended
+before. **`select()` never reads the event log** — AC-041 makes the four digests its only inputs, and a `select()`
+that scanned the log to de-duplicate would be exactly the hidden input AC-041, AC-042 and AC-043 exist as a chain to
+prevent, while still passing all four of the fixtures named above.
+**(2) The advisory is derived and appended at the runtime boundary.** The comparison of the recorded upstream digest
+against the current one, the construction of `drift_advisory { root, upstream, old_digest, new_digest }` and its
+append through the `EventStore` port happen **outside the pure function** — at the kernel's step-3 boundary or in
+`reconcile()`. This is the shape ADR-0119 clause 5 fixes for the selection memo key (*derived inside `select`,
+looked up outside it*) and ADR-0120 clause 4 fixes for `dag_amended` (*returned by the re-run, appended by the
+handler*), applied to the third derivation in the same function. **Design §5's event-kind table already places
+`drift_advisory`'s producing step at `reconcile()`** (the `structured_drift` / `drift_advisory` /
+`review_class_drift` row) [verified 2026-09-13], so `reconcile()` needs no new authority; a kernel that instead
+derives it at the step-3 boundary is producing it at a site design §5's row does not name, and **a matching note in
+design §5 is OWED** — named here, not taken here.
+**(3) "Exactly one, never zero, never one per re-entry" is RUN-SCOPED.** Its bound is one `redkiln run`. The
+de-duplication memory is therefore **in-process at the append site**, keyed on the `(root, upstream, new_digest)`
+triple this THEN already names, and **no log read happens anywhere** — not in `select()`, not at the boundary. The
+re-entry fixture above is a re-entry **within a run**, which is what it already tests. **Item-scoped-across-runs is
+not chosen**, and the consequence is stated rather than implied: a second `redkiln run` over the same unchanged
+upstream may append a second advisory for the same triple, one per run. ADR-0025's *"the next gate the item
+reaches"* therefore reads as the next gate **within that run**, and no `advisory_created` / `advisory_retired`
+lifecycle is minted for it (that accounting is AC-310's and AC-530's, over the review gate's Advisory sink, and this
+criterion does not reach it).
+**(4) The instrument gains one, and it is the discriminating one.** Beside the four tests above: **a replay over a
+run that emitted an advisory must re-derive the same DAG with no store read.** The first four are all passed by an
+implementation that de-duplicates by scanning the log; this one is not.
+**(5) The cost, stated plainly.** This criterion is attributed to `rk-select` **+ `rk-kernel`**, and after this
+amendment the **`rk-select` half does less than the unamended wording suggests**: read literally, *"WHEN step 3 next
+classifies the root THEN exactly one `drift_advisory` … is appended"* puts the append inside step 3, and it is not
+there. Step 3 returns `Present`; every asserted behaviour — the derivation, the *exactly one*, the append, and the
+carriage on the next `gate_opened` record — is `rk-kernel`'s at the boundary. That is the price of keeping AC-041
+true, it is paid deliberately, and it is written here so that a stage claiming this id cannot report the
+selection-side half as covering more than a classification. SM-022 still has **no baseline**: the noise rate is
+reported, never thresholded.)*
 
 **AC-068** — `rk-select` · **PROVISIONAL (P2 — the criteria that would settle it have no denominator on the registered
 corpus, and the remedy the fired criterion prescribes is contraindicated by the measurement)** · evidence: **F40** (P2's

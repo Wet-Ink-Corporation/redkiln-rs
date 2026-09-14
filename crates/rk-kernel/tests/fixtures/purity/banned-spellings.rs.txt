@@ -1,0 +1,103 @@
+// THE POSITIVE CONTROL FOR `selection_source_reads_no_hidden_input`. NOT COMPILED.
+//
+// `crates/rk-kernel/tests/fixtures/` is not a compilation unit and the extension is `.rs.txt`, so
+// nothing here is built — it exists so the scanner that reads `src/select.rs` and `src/select/*.rs`
+// is shown to FIND each banned spelling rather than merely to report none. A scanner whose pattern
+// list has silently stopped matching returns the same clean answer as a clean module, and that is
+// the shape this file refuses (the `crates/rk-ports/Cargo.toml`:25 precedent, quoted at
+// `s7b`:1408-1412: "assert the SAME alternation still matches text of the shape it exists to find").
+//
+// Every line below is what a hidden input would actually look like inside the pure function. The
+// test asserts that EVERY spelling in its own list is found here, so adding a ban without a control
+// line fails, and losing a pattern fails too.
+
+fn a_clock() -> std::time::SystemTime {
+    std::time::SystemTime::now()
+}
+
+fn an_instant() -> std::time::Instant {
+    std::time::Instant::now()
+}
+
+fn a_random() -> u64 {
+    rand::random::<u64>()
+}
+
+fn a_sleep() {
+    std::thread::sleep(std::time::Duration::from_millis(1));
+}
+
+fn an_env_read(stage: &str) -> String {
+    std::env::var("RK_STAGE_OVERRIDE").unwrap_or_else(|_| stage.to_owned())
+}
+
+fn an_env_os_read() -> Option<std::ffi::OsString> {
+    env::var_os("RK_STAGE_OVERRIDE")
+}
+
+fn a_file_read() -> String {
+    std::fs::read_to_string("/etc/redkiln.toml").unwrap_or_default()
+}
+
+fn a_file_read_through_an_import() -> Vec<u8> {
+    fs::read("/etc/redkiln.toml").unwrap_or_default()
+}
+
+fn a_file_write() {
+    fs::write("/tmp/leak", b"").ok();
+}
+
+fn a_file_handle() -> std::io::Result<std::fs::File> {
+    File::open("/etc/redkiln.toml")
+}
+
+fn a_subprocess() -> std::io::Result<std::process::Output> {
+    Command::new("git").arg("rev-parse").output()
+}
+
+fn a_process_path() {
+    let _ = std::process::id();
+}
+
+// ---- AC-525: `select()` NEVER reads the event log. D3 put `rk-store` on this crate's dependency
+// ---- edge for `rk_store::canon`, so every OTHER module of that crate is now one path away.
+
+fn a_store_connection() {
+    let _ = rk_store::conn::Reader::open(std::path::Path::new(".git"));
+}
+
+fn a_store_memo() {
+    let _ = rk_store::memo::lookup("k");
+}
+
+fn a_store_identity() {
+    let _ = rk_store::identity::of("k");
+}
+
+fn a_store_locator() {
+    let _ = rk_store::locator::resolve("k");
+}
+
+fn a_store_retention() {
+    let _ = rk_store::retention::sweep();
+}
+
+fn a_store_tier() {
+    let _ = rk_store::tier::of("k");
+}
+
+fn a_store_schema_lint() {
+    let _ = rk_store::schema_lint::check("k");
+}
+
+fn a_port() {
+    let _ = rk_ports::harness::DispatchOutcome::Refused;
+}
+
+fn an_event_store(store: &mut dyn EventStore) {
+    let _ = store.query(rk_ports::event_store::Query::All);
+}
+
+fn an_event_store_module() {
+    let _ = event_store::Query::All;
+}

@@ -1,0 +1,22 @@
+# AC-059's 3-NODE CYCLE. `requires` runs Alpha -> Beta -> Gamma -> Alpha, which is the La Rosa
+# contradiction/cycle check's own subject (proposal §2.6). F35 measured **hard cycles 0** across the
+# enumerated lattice, so this catalog is authored rather than found: there is no live instance and
+# a lint with no red fixture is a lint that enumerates nothing (Halt 8).
+#
+# The cycle must fail at LOAD, naming the path. AC-078 is the separate runtime assertion over a DAG
+# that reached step 5 anyway, and the two are deliberately different instruments.
+[activity]
+id           = "alpha"
+version      = 1
+stage        = "implement"
+provides     = ["Alpha"]
+requires     = ["Beta"]
+derived_from = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id   = "emit"
+kind = "emit"

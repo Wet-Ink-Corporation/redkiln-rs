@@ -1837,6 +1837,7 @@ version = "0.0.0"
 dependencies = [
  "rk-git",
  "rk-ports",
+ "rk-store",
  "rk-types",
  "serde",
  "serde_json",

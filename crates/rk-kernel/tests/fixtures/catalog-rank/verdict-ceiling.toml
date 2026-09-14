@@ -1,0 +1,19 @@
+# AC-048's ceiling half (PIA-054) and AC-052's second AND: rank 1, in the right stage -- and
+# `max_rigor = "optional"`, so above its ceiling it is NOT A CANDIDATE, whatever its rank. An absent
+# ceiling is no upper bound (ADR-0056; `bisect.toml`'s `max_rigor = "recommended"` is the shipped
+# instance, ADR-0093 decision 5).
+[activity]
+id           = "verdict-ceiling"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["kind:story", "kind:incident"]
+method_rank  = 1
+min_rigor    = "optional"
+max_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"

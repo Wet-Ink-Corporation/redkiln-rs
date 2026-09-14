@@ -1,0 +1,13 @@
+# The companion to `incident-appetite.toml`: a pack that declares NO `appetite` at all. Step 5 then
+# runs NO appetite check and `dag_assembled.appetite` is `null` -- visible in the record rather than
+# smoothed into an unbounded default (`00-preamble.md`:55; `spikes/p9/lattice.py`:146 defaults to
+# `10**9`, which is exactly the silent-pass shape this fixture exists to refuse).
+[pack]
+id = "incident-no-appetite-fixture"
+applies = "kind == incident"
+
+[policy]
+stages = { implement = "recommended", specification = "forbidden" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]

@@ -1,0 +1,18 @@
+# AC-052's fixture, verbatim from its *Verified by*: "an identical, LOWER-ranked producer registered
+# in a NEIGHBOURING stage, which must not be chosen". Rank 1 beats everything in `review` -- and it
+# is in `verify`, so candidacy never reaches it. Candidacy does not cross stage boundaries
+# (ADR-0057's Decision).
+[activity]
+id           = "verdict-neighbour"
+version      = 1
+stage        = "verify"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["kind:story", "kind:incident"]
+method_rank  = 1
+min_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"

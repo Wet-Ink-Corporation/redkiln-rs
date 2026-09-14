@@ -176,21 +176,50 @@ settled**, with the record that is owed named, in §7b.15.
 
 **All four are on disk. Read them before citing them.**
 
-1. **`dag_amended` was not a kind, and a record — not this stage — mints one.** AC-064's THEN requires a
-   `dag_amended { deviation_id, added, removed, rows_refired }` event. `git grep 'dag_amended\|DagAmended'` over the
-   whole tree returns **exactly two hits**: AC-064's THEN and SM-017's *Instrument* line [measured 2026-09-13]. It is
-   absent from the design's event-kind table and from `crates/rk-types/src/event_kind.rs`, whose `ALL` is `[Self; 28]`.
-   **ADR-0116 is the precedent and it forbids the shortcut by name**: *"the kind is minted by record or not at all"*,
-   and its rejected option is *"mint the kind in the runbook"*. **The Slice-0 pass STOPPED rather than minting it**,
-   correctly, and recorded two free residuals a stage may not settle — the **tier** (ADR-0109 decision 2's
-   deleted-database test; `dag_assembled` is the nearest sibling at tier 2, *"rebuildable by replay"*) and the
-   **producing step** (AC-064's evidence line says *"re-run 2–5"*, so the producer is the re-run, not step 5 as first
-   fired). **An ADR is OWED before AC-064 is built, and it is Slice 3's blocker, not this session's.** One correction
-   the next attempt needs: adding a variant does **not** move `rk-types`' golden snapshot —
-   `crates/rk-types/tests/it/schema_snapshot.rs` snapshots `registry::export_all()` plus `CompanionKind::ALL`, and
-   `EventKind` is in neither; what moves is the hand-written pin at `crates/rk-types/tests/it/event_kinds.rs`:9
-   (`assert_eq!(EventKind::ALL.len(), 28)`) and `event_kind.rs`:81's `[Self; 28]`, plus the `wire_name` and `tier`
-   exhaustive matches, which give the `E0004` that forces the tier decision [measured 2026-09-13].
+1. **`dag_amended` was not a kind; a record — not this stage — minted one, and that record is `ADR-0120`.**
+   AC-064's THEN requires a `dag_amended { deviation_id, added, removed, rows_refired }` event. When the Slice-0 pass
+   ran, `git grep 'dag_amended\|DagAmended'` returned **exactly two hits above the runbook** — AC-064's THEN and
+   SM-017's *Instrument* line [measured 2026-09-13] — and the kind was absent from the design's event-kind table and
+   from `crates/rk-types/src/event_kind.rs`, whose `ALL` was `[Self; 28]`. **ADR-0116 is the precedent and it forbids
+   the shortcut by name**: *"the kind is minted by record or not at all"*, with *"mint the kind in the runbook"*
+   enumerated and rejected on mechanism. **The Slice-0 pass STOPPED rather than minting it**, correctly, and recorded
+   two free residuals a stage may not settle — the **tier** and the **producing step**.
+   **Both were settled by record later the same session, before any kernel code.**
+   `references/adr/0120-the-event-kind-table-gains-dag-amended.md` is `status: accepted`, dated 2026-09-13,
+   `supersedes: []`, and decides: **1 and 2 — tier 2**, *"rebuildable by replay"*, on ADR-0109 decision 2's
+   deleted-database test (the deviation record is already in the replay input set, so the event is the **log** of the
+   delta and not its carrier) and on a second, structural ground — a tier-1 delta over a tier-2 base would survive
+   into the `doctor --rebuild` projection after the object it amends was dropped; **3 — the producing step is step 7's
+   accepted branch, the re-run of steps 2–5, never step 5**; **4 — the append happens OUTSIDE the pure function**:
+   the re-run *returns* the delta and the kernel's step-7 handler appends it through the `EventStore` port, because
+   `select()` reads no store and writes none (AC-041); **5 — the other two branches of step 7 write nothing** (a
+   `false` `claimed_predicate` opens AC-063's gate with `R` unchanged; a `kind` outside the activity's `deviation_ok`
+   is AC-062's configuration error, refused before predicate evaluation). Its forbids clause additionally bars
+   emitting a second `dag_assembled` in place of the amendment, and bars appending or reading `dag_amended` from
+   inside `select()`.
+   **The record's `rk-types` half has landed** [measured 2026-09-13]: `crates/rk-types/src/event_kind.rs`:54 carries
+   `DagAmended`, `ALL` is `[Self; 29]` (:87), `wire_name` is `dag_amended` (:132) and its `tier()` arm is 2 (:174);
+   the hand-written pin at `crates/rk-types/tests/it/event_kinds.rs`:10 reads `assert_eq!(EventKind::ALL.len(), 29)`;
+   and design §5's event-kind table carries the row. **So AC-064 is no longer blocked on a record and no ADR is
+   owed** — this bullet said *"an ADR is OWED before AC-064 is built, and it is Slice 3's blocker"* until 2026-09-13,
+   which was true when written and was superseded within the same session. What remains of AC-064 is **code**: the
+   delta event, emitted once per accepted deviation, from the re-run of 2–5.
+   **One residual survived ADR-0120, and it is now settled by amendment rather than carried into the build.** Clause
+   7 named it and refused to decide it: **how `deviation_id` is derived**, because *"this class of identity question
+   — run-scoped versus item-scoped, derived versus stored — is a register amendment's to settle, not a record's by
+   implication"*. That amendment landed against **AC-064** on 2026-09-13:
+   `deviation_id = sha256_lp([target, kind, claimed_predicate])`, each component under `rk_store::canon`'s canonical
+   form, in that field order, with **`why` excluded** — so that two deviations identical but for their free-text
+   justification carry **one** id, and so that no model-authored prose enters a selection-affecting derivation
+   (AC-065). The derived-versus-stored half is what makes AC-064's second AND checkable: a stored id could only be
+   read back from the log, and a `select()` that minted one would be reading a clock or a random source. **Nothing
+   further is owed above this stage before AC-064 is built.**
+   **One correction the implementer still needs**, which was true when written and stays true of the next kind:
+   adding a variant does **not** move `rk-types`' golden snapshot — `crates/rk-types/tests/it/schema_snapshot.rs`
+   snapshots `registry::export_all()` plus `CompanionKind::ALL`, and `EventKind` is in neither; what moves is the
+   hand-written pin at `crates/rk-types/tests/it/event_kinds.rs` and `event_kind.rs`'s `[Self; N]`, plus the
+   `wire_name` and `tier` exhaustive matches, whose `E0004` is what forces the tier decision to be answered rather
+   than defaulted [measured 2026-09-13].
 2. **AC-045's key is a fourth key — `ADR-0119`, accepted 2026-09-13.**
    `references/adr/0119-the-selection-memo-key-is-a-fourth-key-and-adr-0097-gains-no-ninth-component.md`:
    `SelectionMemoKey` is SHA-256 over a length-prefixed tuple of the pack digest, the catalog digest, the context
@@ -344,7 +373,16 @@ carries what `rk-types`, `rk-store`, `rk-git` and `rk-ports` carry:
 - `[dependencies]` — `rk-types`, `rk-ports` and **`rk-git` as a concrete crate** (AC-483's second clause; git is
   deliberately not a port, ADR-0003), plus `serde`/`serde_json` from the workspace table. **No async runtime**, which
   is what AC-528's fixture commit is a commit against, and **no `rk-adapter-*`**, which AC-484 forbids directly or
-  transitively. The `rk-store` edge is §7b.9's layering question and is settled there, not here;
+  transitively. **The `rk-store` edge is TAKEN** — §7b.9(2)'s layering question, settled 2026-09-13 by the
+  operator as **option A, the dependency**, and written into this list in the same commit as the selection
+  function's steps 1–4 as that sub-step requires: `rk-kernel` depends on `rk-store` for `rk_store::canon`
+  rather than moving `canon` to `rk-types`. **The canonical form is not invented** — `crates/rk-store/src/canon.rs`
+  already forces it. **Nothing is superseded and no checkpoint row moves**: the MOVE option would have edited
+  `rk-types` (Checkpoint 5, `96ba9c2`) and `rk-store` (Checkpoint 6, `ea83eac`) after they passed and made both
+  rows provisional under `00-preamble.md`:232-237; the dependency edits neither crate. **The cost is measured and
+  stated**: `rk-store` declares `rusqlite = { features = ["bundled"] }`, so `rusqlite`, `libsqlite3-sys` and a C
+  compile enter `rk-kernel`'s resolved graph and appear in `cargo tree -p rk-kernel -e normal` — neither an async
+  runtime (AC-528) nor an `rk-adapter-*` (AC-484), so the two assertions that tree is read for are untouched;
 - `[dev-dependencies] trybuild.workspace = true`, plus `rk-types` repeated — *"a crate's own `[dependencies]` are not
   in scope inside `tests/`"* (`crates/rk-types/Cargo.toml`:31-32);
 - `[[test]] name = "it"` / `path = "tests/it/main.rs"` — **one** integration binary with a `mod` per case, never one
@@ -765,6 +803,18 @@ step 2 — and record in `PROGRESS.md` that it ships uncovered, as the design re
 not coverage here, and closing the gap with a criterion of this stage's own devising is deciding something the runbook
 may not decide.
 
+**Built 2026-09-13 at `crates/rk-kernel/src/select/step6.rs`, to the invariant and to nothing else.** `step6` takes
+`&Dag` and returns an `ExecutionPlan` of antichain layers; it does not take `RequiredSet`, takes no `&mut`, and has no
+return path to either — so *"execution cannot change `R`"* is a property of the signature rather than a rule the body
+obeys. Its two tests live at `crates/rk-kernel/tests/it/execute.rs` and **neither is named after a criterion**, which
+is the same rule stated one level down: naming one `ac0xx_…` would claim coverage the design records as absent. The
+module's own header carries the design's *"recorded as a gap, not papered over"* verbatim.
+
+🛑 **The `PROGRESS.md` line is OWED and is the caller's.** `runbook/PROGRESS.md` is outside the building session's
+editable set (the single pin move and the tracker are named acts at the END of Step 7b), so the record this paragraph
+requires has **not** been written. It is one line: *step 6 of the pure selection function ships uncovered — design
+§4.4 row 6 states that no criterion in the thirteen area files reaches it.*
+
 **And `discouraged` is reserved.** The variant exists in the enum and a pack setting any stage or `min_rigor` to it
 **fails validation naming the site** (AC-050's last clause; DECISIONS-2026-09-11 #20 choice A; design §4.4 step 1).
 Its semantics are Phase 2's and may not be defaulted here — option B, a fourth live rigor level, was rejected for
@@ -830,6 +880,57 @@ state matches the record — so a kernel that does nothing at all fails the term
 
 **The per-run layout inside `golden-logs/` is this stage's to fix**, and the register's amendment says so in terms.
 Write it into this section in the commit that authors the replay test, before the pin moves.
+
+#### The per-run layout, FIXED 2026-09-13 in the commit that authored the replay test
+
+The producer is `rk_kernel::replay::{record, write_run}` and the reader is `rk_kernel::replay::read_run`; the layout
+version travels in the file as `schema = "rk-kernel/golden-log/v1"`, so a reader never guesses which shape a run is in.
+
+```text
+golden-logs/
+  <run_id>/                     run_id = "<stage>-" + first 16 hex of
+                                sha256_lp(["rk-kernel/golden-log/v1", stage, canonical(inputs)])
+    run.json                    { schema, run_id, stage, inputs_digest, event_count, producer }
+    inputs/
+      pack/<name>.toml          the pack, verbatim
+      catalog/<name>.toml       one file per activity, verbatim
+      artifacts/<name>.toml     the artifact-kind registry, verbatim
+      facets.toml               the facet registry, verbatim
+      context.json              the item's CONTEXT digest preimage, canonical, LF-terminated
+      artifact-state.json       the item's ARTIFACT digests preimage, canonical, LF-terminated
+      deviation.json            OPTIONAL: the RequestDeviation and its requesting activity
+    events.jsonl                one canonical JSON object per line, every line LF-terminated
+```
+
+**Three properties of the layout are load-bearing and are stated rather than left to be inferred.**
+
+1. **`run_id` is DERIVED, never stamped.** It is a content hash of the input set, so producing one needs no clock, no
+   counter and no random source — the three things AC-041 forbids and AC-043 exists to catch downstream — and a replay
+   **recomputes** it instead of reading it back. This is the same shape AC-064's 2026-09-13 amendment takes for
+   `deviation_id` and AC-525's takes for `drift_advisory`, and the reason is the amendment's own: *"the identity is
+   reproducible **from** the replay input set instead of being carried **in** it."*
+2. **Nothing in the layout carries a timestamp.** A recorded `at` would make two runs over identical inputs produce
+   different bytes and turn AC-042's byte-identity into a comparison of clocks.
+3. **`inputs/` holds the four digests' PREIMAGES, not the digests.** AC-042's THEN is *"re-derives the DAG from the
+   logged inputs **alone**"*, so the log must carry enough to rebuild the pack, the catalog, both registries and the
+   item — `inputs_digest` in `run.json` is an assertion about them, not a substitute for them.
+
+#### The staging tree, NAMED — `target/golden-logs-staging/`
+
+:860 requires *"a **staging** tree, never the corpus"* and :848-849 requires *"a **scratch tree**, never under
+`spikes/results/`"*, and neither named a path. **It is `target/golden-logs-staging/`**, at the repository root:
+`target/` is `.gitignore`d, so AC-465 (*"nothing corpus-shaped is tracked in `redkiln-rs`"*) holds by construction, and
+the path is stable, so the operator's single `CORPUS_PIN` move is a copy of a named directory rather than a search.
+`crates/rk-kernel/tests/it/replay.rs::golden_log_replay` writes it on every run, and **only produced runs are in
+it**: the divergence case's deliberately-corrupted copy goes to `target/golden-log-scratch/` instead, because a
+corrupted run sitting in the staging tree would be copied into the corpus alongside the good ones.
+
+**The in-crate committed copies are a different thing and §7b.12's `logs/` row already names them** — *"the golden
+event logs' in-crate copies **for the red step, before the corpus copies exist**"*. The replay test asserts the staged
+run is **byte-identical** to the committed copy, which is what makes precondition 1's *"its logs were produced by that
+run, not hand-made"* a check rather than a promise: a hand-edited fixture byte goes red. The committed copy is
+re-produced by the deliberate, `#[ignore]`d `bless_the_committed_golden_log`, on `trybuild`'s `TRYBUILD=overwrite`
+pattern — a test that rewrote its own fixture every run could never go red.
 
 **The single `CORPUS_PIN` move, at the END of Step 7b.** It carries three artifacts in one corpus commit and one pin
 bump: **(1)** AC-520's scored precision record, `results/p1-arm-d-panel-scored.json`, produced by
@@ -959,6 +1060,13 @@ error or a filter that matched nothing.
   the crate — the workspace denies only `unsafe_code` under `[workspace.lints.rust]` (`Cargo.toml`:51-52), so it is
   noise rather than a failure, but it is noise in a record transcribed into `PROGRESS.md`.)* **Nothing else in the checkpoint reaches them**:
   the unfiltered `cargo test -p rk-kernel` is satisfied by any test the implementer wrote.
+
+  **All four are on disk as of 2026-09-13.** `selection_seven_steps_are_pure` was `selection_steps_one_to_four_are_pure`
+  while four of the seven were built — claiming the seven over four is golden constraint 10's shape — and it now
+  exercises **all seven inside its 100-repetition loop**: steps 1–5 through `select()`, step 6 through
+  `Selection::plan`, and step 7 through `step7`, with the plan's order and the `deviation_id` folded into the canonical
+  bytes. A purity loop over 1–5 alone would miss the two steps most likely to leak an input: step 6 orders a graph
+  (where iteration order shows) and step 7 derives an identity (where a clock, a counter or a random source would).
 - `forbidden_stage_via_conditional_requires` — §7b.9(7): **zero dispatches, the skip row in `dag_assembled.skipped`
   naming the stage, AND an `Unsatisfiable` gate for the kind with `R` unchanged**. Both, not either.
 - `memo_key_eight_components` — **eight must-miss cases plus one must-hit**, one per component of design §3.5's tuple.
@@ -977,6 +1085,63 @@ error or a filter that matched nothing.
   terminal-state half). There is no prior green to regress from, so the red step here is the first honest
   measurement, not a formality. **Behind `#[cfg(feature = "corpus")]`** — it reads `$CORPUS_REPO/golden-logs`, and
   D-N/PIA-002 makes a corpus-bound test outside the feature a CI failure.
+
+  🛑 **BUILT 2026-09-13, AND THREE THINGS ABOUT IT ARE NOT WHAT THIS BULLET SAYS. Read them before reading its green.**
+
+  **(a) It IS `corpus`-gated — corrected 2026-09-13 after the first build left the gate off.** The gate and the READ
+  ROUTE are two different obligations and the first build conflated them. `$CORPUS_REPO/golden-logs` does not exist
+  until the move at §7b.11 — and **precondition 1 of that move is *"Slice 3 is green: `golden_log_replay`
+  passes"*** — so the test reads §7b.12's `logs/` row, *"the golden event logs' **in-crate copies for the red step,
+  before the corpus copies exist**"*, and the corpus-relative form (AC-464, read through `CORPUS_PIN` at
+  `CORPUS_SHA`) is **ARMED, NOT DISCHARGED**, the caller's to switch on after the move. But `#![cfg(feature =
+  "corpus")]` costs nothing and §7b.14:1316 asserts it: `cargo test -p rk-kernel -- --list` **without** the feature
+  must select zero tests matching `golden_log_replay|ac161_ac164_delete_db_replay`. Ungated it selected **3**
+  [measured 2026-09-13], which also made :1301's name loop pass **vacuously**, because a `--features corpus` run
+  selects every test, gated or not. The module now carries the attribute, and the two checkpoint lines are one
+  deferral rather than two. The module also spawns `git` — `rk_git::version::assert_at_startup` is the only minter of
+  the capability token `GitExec::new` demands — which is a second reason it does not belong in the unfeatured run.
+
+  **(b) Only three of the five assertions are measured.** *Byte-identical **next action*** and the **terminal-state**
+  half of the fifth are **NOT BUILDABLE**: both are the FSM's, and **there is no FSM** — the workflow/activity split,
+  the memo, retry and the runtime are §7b.10's **Slice 4**. `crates/rk-kernel/src/workflow.rs`'s whole body is one
+  `#[cfg(feature)]` control. What IS measured: every port bound to its fake (`ReplayPorts` has no optional field);
+  byte-identical decisions (the journal compared under `rk_store::canon`); zero `rk-git` writes; and zero harness
+  dispatches. **AC-008's own warning applies to this file and is repeated inside it**: without the terminal-state half
+  a kernel that does nothing at all passes.
+
+  **(c) The `rk-git` counter IS `rk-git`'s — and the sentence that stood here on 2026-09-13 was FALSE.** It read:
+  *"`rk-git` is a concrete crate and not a port (AC-483; ADR-0003:57-58), so there is nothing to bind a fake to"*,
+  and justified a `pub trait GitWriter { fn writes(&self) -> u32 }` declared inside `rk-kernel`. **`rk-git`'s own
+  source refutes it.** `crates/rk-git/src/gitops.rs`:44-51 declares `trait GitJournal` — *"crate-local by design: it
+  is not a sixth port"* — and `VecJournal`, *"an in-memory journal — **the fake, and what the replay tests drive**"*;
+  :85-106 gives `GitOps { mode, writes_performed }` with `pub const fn writes_performed()`, documented at :13-16 as
+  *"`writes_performed` counts what actually happened so a test can assert the zero rather than trust it"*. Being **not
+  a port** is precisely why `GitOps` is bindable without touching the port surface AC-483 counts. The record names the
+  instrument in three places — AC-006's *Verified by*, AC-008's THEN, and this file at :1121 (*"a `GitOps` fake that
+  performs **one** write"*) — and `rk-git` is already a normal dependency of `rk-kernel`. The kernel-local `GitWriter`
+  is **deleted**; the replay is handed a real `GitOps` in `Mode::Replay` driving a `VecJournal`, and asserts
+  `writes_performed() == 0`. The control drives a `Mode::Live` `GitOps` that has performed one real `git rev-parse`.
+  The claim is now *"`rk-git` performed no write"*, measured on `rk-git`'s own counter.
+
+  **(d) Two port-shaped `pub trait`s were declared in `rk-kernel` and both are gone.** `GitWriter` above, and
+  `ReplayHarness: Harness`, a kernel-side extension of an `rk-ports` trait. Neither was covered by the guard that
+  exists for the class: AC-483's port-inventory denylist parses `rk-ports`' source only, so a git-shaped trait
+  declared in `rk-kernel` was **invisible to the assertion that exists to prevent it**, and AC-481's fake/port parity
+  likewise. The dispatch counter is now the caller's own `AtomicU32`, handed in as a `ReplayPorts` field and read
+  before and after — a value, not a trait.
+
+  **(e) `ReplayReport::ports_bound` is deleted.** It was `vec!["Harness", "EventStore", "GitWriter"]`, a literal
+  constructed unconditionally after the work, and the test asserted that literal against the same literal — AC-006
+  assertion 1 reported as measured when it was self-reported. Assertion 1 is a **type fact**: `ReplayPorts` has four
+  non-`Option` fields, so a replay with a port left out does not compile. What the test asserts instead is each port's
+  observable effect — the store holds the served journal, `GitOps::writes_performed()` is read off `rk-git`, and the
+  harness fake's own counter is read before and after.
+- `golden_log_replay_dispatching_fake_is_red` — **added 2026-09-13, and it exists because a falsification found the
+  gap.** This file gave the `rk_git_writes` counter a positive control and gave `harness_dispatches` none. Mutation G23
+  replaced both reads of the dispatch counter with a literal `0` and **every test stayed green**, because a replay that
+  never dispatches cannot tell a read counter from a printed one — which is exactly the failure the bullet below names
+  for the other counter. The control is that bullet's shape: a harness fake reporting one prior dispatch, and the
+  replay must refuse.
 - `golden_log_replay_writing_fake_is_red` — **the positive control for the three counters above**, and it exists
   because `rk_git_writes=0`, `harness_dispatches=0` and `terminal_state=matched` are strings the replay prints
   **about itself**: a kernel that counts nothing and prints the three literals passes all three greps. This test
@@ -984,6 +1149,14 @@ error or a filter that matched nothing.
   move off 0. Red on a kernel whose counter is a constant. Also `corpus`-gated.
 - `ac161_ac164_delete_db_replay` — delete the event database and replay; the next action must be byte-identical to
   the recorded one. Step 6 could not author it. Also `corpus`-gated, for the same reason.
+
+  🛑 **NOT BUILT at Slice 3, and the reason is the same as (b) above: *"the next action"* is the FSM's and there is no
+  FSM.** Deleting the database and replaying is buildable; asserting *"the next action is byte-identical"* is not,
+  because nothing in this crate computes a next action. **AC-161's and AC-164's next-action halves stay ARMED, NOT
+  DISCHARGED**, and their instrument is Slice 4's runtime plus this test. Nothing in Checkpoint 7b's corpus loop reaches
+  them today, and that loop's `for t in golden_log_replay ac161_ac164_delete_db_replay` will fail on both names until
+  the move and Slice 4 have both happened — which is a **live finding about the checkpoint block**, not a defect in the
+  slice.
 
 **Slice 4 — the runtime.** One red test per counter-independence pair (AC-020–AC-023) and one per named class
 (AC-024–AC-038). **All ten are named here AND asserted by name in §7b.14's third loop** — because "each with a
@@ -1013,14 +1186,16 @@ a *statement that can stop the block* is one carrying its own `exit 1`. That is 
 is named here because **the same number in no unit is this checkpoint's own recorded defect, twice** — it read
 *"eighteen … nine"* and then *"All twenty (eleven … three … six)"*, and neither reconciled off the block (Halt 7:
 *"the SECOND undercount of the same number, by the same route: not counting it off the script"*). **149 non-comment
-statements, of which 90 can stop the block and 59 cannot.** The 59 that cannot are not unguarded assertions and the
-decomposition reproduces: **3** BEFORE readings (PIA-035 — prints for comparison, not assertions); **39** `out=` /
+statements, of which 89 can stop the block and 60 cannot** — re-counted 2026-09-13 after the `DENY_AT` and
+`"resolve"` repairs below, which replaced one stopping statement (the redundant `workflow` pairing grep, now folded
+into the `DENY_AT` selection itself) with one capture (`DENY_AT`'s fallback half), leaving the total unchanged. The 60 that cannot are not unguarded assertions and the
+decomposition reproduces: **3** BEFORE readings (PIA-035 — prints for comparison, not assertions); **40** `out=` /
 `n=` / `k=` / `c=` / `hits=` / `raw=` / `body=` / `deps=` / `tree=` / `inv=` / `h=` / `d=` / `DECL=` / `DECL_LINE=` /
 `DENY_AT=` / `note=` / `list=` / `CORPUS_*=` capture halves whose guard is the statement immediately below them;
 **1** clippy line whose last statement is an `echo` and whose guard is the line below; **1** `printf '%s\n' "$out"`
 that puts the `#[deny]` attribute's own file, line and text into the checkpoint's record; **1** `echo "AC-001: …"`
 recording the reintroduce run's verdict, whose three guards are the lines above it; and **7 + 7**, the `for` and
-`done` of the seven loops. 3 + 39 + 1 + 1 + 1 + 14 = 59; 149 − 59 = 90. **Re-count and re-write every number in this
+`done` of the seven loops. 3 + 40 + 1 + 1 + 1 + 14 = 60; 149 − 60 = 89. **Re-count and re-write every number in this
 paragraph after any repair to this block** — counted off the script by joining backslash continuations and dropping
 comments and blanks, never by eye.
 
@@ -1198,13 +1373,21 @@ printf '%s\n' "$out"   # the hit is PRINTED: for a criterion whose point is that
 # closed nothing. A grep cannot tell a comment from an attribute. What CAN is clippy's own
 # level-source note, so the declaration's file:line is captured here and CROSS-CHECKED against it.
 DECL_LINE='^[^:]+:[0-9]+:[[:space:]]*#!?\[deny\(clippy::disallowed_methods\)\]$'
-DENY_AT=$(printf '%s\n' "$out" | grep -E "$DECL_LINE" | head -1 | cut -d: -f1,2)
-test -n "$DENY_AT" || { echo "FAIL: the deny hit is not a bare attribute line — grep -A 1 prints context with a '-' separator, so a match found only in the CONTEXT half is not a declaration. READ the printed hit above"; exit 1; }
-# AND THE MODULE NAME IS TIED TO THE SAME HIT, not to the whole -A 1 blob. `grep -q 'workflow'` over
-# the blob passes whenever ANY hit's path or context line carries the string, so a declaration in the
-# wrong module passed while some other line said `workflow`. Either the declaring file's own path
-# names the module (the inner `#![deny]` form) or the item on the context line does (the outer form).
-printf '%s\n' "$out" | grep -E "$DECL_LINE" | grep -q 'workflow' || printf '%s\n' "$out" | grep -A1 -E "$DECL_LINE" | grep -qE '^[^:]+-[0-9]+-[[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+workflow' || { echo "FAIL: the deny attribute is present but neither ITS OWN path nor the item directly beneath IT names the workflow module — READ the hit above; AC-001 names rk-kernel::workflow and clippy.toml cannot scope it"; exit 1; }
+# `head -1` OVER THE WHOLE SET IS WRONG AND WAS WRONG FROM THE MOMENT A SECOND MODULE DECLARED THE
+# ATTRIBUTE. Slice 3 legitimately added `#![deny(clippy::disallowed_methods)]` to src/select.rs for
+# AC-041, `select.rs` sorts before `workflow.rs`, and `head -1` therefore read
+# `crates/rk-kernel/src/select.rs:85` while clippy's level source was `workflow.rs:76` — so the
+# cross-check below compared two different declarations and FAILED on a correct tree [measured
+# 2026-09-13]. The old `grep -q 'workflow'` pairing that followed passed VACUOUSLY at the same time,
+# because it greps the whole set of declaration lines: workflow.rs:76's mere presence greenlit a
+# DENY_AT pointing at select.rs, which is exactly the defect the paragraph above says was repaired.
+# AC-001 names rk-kernel::workflow, so SELECT THE WORKFLOW ONE — by its own path (the inner
+# `#![deny]` form), falling back to the item on its context line (the outer `#[deny]` above
+# `mod workflow;`). The two forms are still both admitted and the pairing is now folded in: a hit in
+# some OTHER module leaves DENY_AT empty and the guard below fires.
+DENY_AT=$(printf '%s\n' "$out" | grep -E "$DECL_LINE" | grep -E '^[^:]*workflow[^:]*:' | head -1 | cut -d: -f1,2)
+DENY_AT=${DENY_AT:-$(printf '%s\n' "$out" | grep -A1 -E "$DECL_LINE" | grep -B1 -E '^[^:]+-[0-9]+-[[:space:]]*(pub[[:space:]]+)?mod[[:space:]]+workflow' | grep -E "$DECL_LINE" | head -1 | cut -d: -f1,2)}
+test -n "$DENY_AT" || { echo "FAIL: no module-level #[deny(clippy::disallowed_methods)] whose OWN path names the workflow module, and none directly above a \`mod workflow\` — READ the printed hits above. A deny in some OTHER module (src/select.rs carries one for AC-041) does not discharge AC-001, and clippy.toml cannot scope the lint. grep -A 1 also prints context with a '-' separator, so a match found only in the CONTEXT half is not a declaration"; exit 1; }
 # THE BEHAVIOURAL PAIR, on Step 5's own shape (s5:168-174). §7b.5's `workflow_clock_read_is_red` is
 # one `SystemTime::now()` inside `rk-kernel::workflow` behind a NON-DEFAULT feature OF THIS CRATE, so a
 # workspace-scoped clippy selects it. IT MUST EXIT NON-ZERO, and the message is asserted too — an unrelated
@@ -1274,7 +1457,11 @@ grep -qE 'tokio|async-trait|async-std|futures' crates/rk-ports/Cargo.toml || { e
 # ---- async alternation: `cargo tree` renders every member as `<name> v<ver> (<checkout path>)`, so a
 # ---- repository cloned under a path containing `futures` or `tokio` would FAIL a correct crate.
 deps=$(cargo metadata --format-version 1 2>/dev/null) || { echo "FAIL: cargo metadata (WITH the resolve graph) did not run — AC-484's instrument is a dependency-GRAPH assertion"; exit 1; }
-printf '%s\n' "$deps" | grep -q '"resolve"' || { echo "FAIL: cargo metadata returned no resolve graph — AC-484 cannot be asserted off --no-deps output"; exit 1; }
+# THE KEY IS NOT THE GRAPH. `cargo metadata --no-deps` emits `"resolve":null` — measured
+# 2026-09-13 — and `grep -q '"resolve"'` MATCHES that string, so this guard passed on exactly the
+# output its own FAIL message says it refuses. The nodes array is what AC-484's dependency-GRAPH
+# assertion is read off (224 nodes with deps; absent without), so require it.
+printf '%s\n' "$deps" | grep -q '"resolve":{"nodes":\[' || { echo "FAIL: cargo metadata returned no resolve GRAPH — AC-484 cannot be asserted off --no-deps output, which emits \"resolve\":null and which the old \`grep -q '\"resolve\"'\` form MATCHED [measured 2026-09-13]"; exit 1; }
 tree=$(cargo tree -p rk-kernel -e normal) || { echo "FAIL: cargo tree -p rk-kernel did not run"; exit 1; }
 n=$(printf '%s\n' "$tree" | grep -c 'rk-adapter-' | tr -d '[:space:]')
 [ "${n:-1}" -eq 0 ] || { echo "FAIL: rk-kernel depends on ${n} rk-adapter-* crate(s) — AC-484 forbids the edge, direct or transitive"; printf '%s\n' "$tree" | grep -n 'rk-adapter-'; exit 1; }   # → 0, by package absence at 7b; falsifiable from 7c

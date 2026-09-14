@@ -362,25 +362,41 @@ fn quantifier_empty_and_null() {
     );
 }
 
-/// The commutativity of Kleene absorption is a READING of ADR-0103 decision 4, not its words.
+/// Kleene absorption is commutative in BOTH operand positions — **ADR-0121 decision 1**.
 ///
-/// Decision 4 (:71) gives each absorbing case in ONE order — *"`false and null` = false,
-/// `true or null` = true, otherwise `null`"* — while spelling out BOTH orders two sentences earlier
-/// for `==`. So `null and false` and `null or true` fall under "otherwise" on a literal reading and
-/// under absorption on the standard three-valued one, and the two answers are different.
+/// `null and false` is `false`, `null or true` is `true`, and `and`/`or` are commutative and
+/// associative over `{true, false, null}`. **ADR-0121 supersedes ADR-0103 decision 4's connective
+/// sentence in part** — *"`and`/`or` are three-valued: `false and null` = false, `true or null` =
+/// true, otherwise `null`"* (`0103`:70-71) — withdrawing its *"otherwise `null`"* catch-all as it
+/// applies to exactly those two cells, and to nothing else. Everything else of decision 4 stands: the
+/// `==`/`!=`/`in` null rules, `not null`, the quantifier rules, the abstention case and the narrowing
+/// pattern. So this test no longer pins a reading the kernel chose — it pins the rule an accepted
+/// record states.
 ///
-/// This is **not academic**: `spikes/p9/` carries
-/// `"${rollback.outputs?} == null and (${proceed.answer?} == 'proceed' or rigor < mandatory)"`, whose
-/// left operand is `null` whenever `rollback.outputs` is PRESENT. Under Kleene the conjunction can be
-/// `false`, which step 4 may report as `Unsatisfiable`; under the literal reading it is `null`, which
-/// decision 4 makes the **abstention** case. Same pack, two different outcome classes.
+/// **The supersession was taken on the merits and is not a clarification of what 0103 already
+/// meant.** Read literally, decision 4 makes `a and b` differ from `b and a`: *"otherwise `null`"* is
+/// a total catch-all and the same sentence spells BOTH orders for `==` two clauses earlier. Four live
+/// predicates break under that reading — most sharply the swapped pair
+/// `spikes/p9/catalog/api-contract-spec.toml`:10 (`"external_dep or kind == project"`) and
+/// `spikes/p9/catalog/integration-tests.toml`:10 (`"kind == project or external_dep"`), one guard
+/// written both ways, which would select differently on operand order alone; plus
+/// `spikes/p9/catalog-b/feature-flag-kill.toml`:43, which can never be true once `answer` exists, and
+/// `spikes/p9/catalog/canary-release.toml`:73, which turns abstain-versus-`Unsatisfiable` on the same
+/// cell.
 ///
-/// This test pins the reading the kernel implements so the choice is visible and reversible. **It is
-/// evidence of a decision taken, not of a decision the record made** — a clarification against
-/// ADR-0103 decision 4 is OWED (PROGRESS §2), and if it resolves the other way this test is the thing
-/// that goes red and names the site.
+/// **What ADR-0121 does NOT decide, and this test does not assert:** evaluation order. The table is
+/// about VALUES; decision 4's narrowing pattern `x != null and <ordering on x>` is safe only because
+/// the ordering is never REACHED, and commutative absorption gives no such guarantee. The
+/// short-circuit is pinned separately, in `predicate_null_arithmetic`'s AC-079 block above.
+///
+/// **Falsification, retained** (2026-09-13): mutating the live `Expr::And` arm in
+/// `predicate/eval.rs` to the literal reading turns this test red with the right message; restoring
+/// it turns it green. Mutating `or3`/`and3` does **not** — those serve `in`-membership and the
+/// quantifiers, not the connectives — and a mutation that does not flip the test is evidence about
+/// the harness, not about the code. If ADR-0121 is itself ever superseded, this is the site that goes
+/// red and names it.
 #[test]
-fn kleene_absorption_is_commutative_which_adr_0103_does_not_state() {
+fn kleene_absorption_is_commutative_per_adr_0121() {
     let absent = abstaining_context();
     // `novelty` is DECLARED and null — the abstaining case — while the two booleans carry real
     // values. An undeclared facet is an `unknown field` error, which is a different rule entirely.
@@ -389,31 +405,32 @@ fn kleene_absorption_is_commutative_which_adr_0103_does_not_state() {
         .with("has_repro", Value::Bool(false))
         .with("market_facing", Value::Bool(true));
 
-    // The orders decision 4 STATES. These are not in doubt under either reading.
+    // The orders ADR-0103 decision 4 already STATED. ADR-0121 leaves these two cells untouched.
     assert_eq!(
         truth("has_repro and novelty == high", &present),
         Tri::False,
-        "false and null = false (stated)"
+        "false and null = false (ADR-0103 decision 4, stated, and unchanged by ADR-0121)"
     );
     assert_eq!(
         truth("market_facing or novelty == high", &present),
         Tri::True,
-        "true or null = true (stated)"
+        "true or null = true (ADR-0103 decision 4, stated, and unchanged by ADR-0121)"
     );
 
-    // The orders decision 4 does NOT state. A literal reading makes both `Tri::Null`.
+    // The two cells ADR-0121 MOVES. ADR-0103's "otherwise null" assigned both `Tri::Null`.
     assert_eq!(
         truth("novelty == high and has_repro", &present),
         Tri::False,
-        "null and false: Kleene says false; a literal reading of \"otherwise null\" says null"
+        "null and false = false (ADR-0121 decision 1; ADR-0103's \"otherwise null\" said null)"
     );
     assert_eq!(
         truth("novelty == high or market_facing", &present),
         Tri::True,
-        "null or true: Kleene says true; a literal reading of \"otherwise null\" says null"
+        "null or true = true (ADR-0121 decision 1; ADR-0103's \"otherwise null\" said null)"
     );
 
-    // And the genuinely-otherwise case, which both readings agree is null.
+    // And the genuinely-otherwise case. ADR-0121 clause 2 keeps "otherwise null" in full force
+    // everywhere but the two cells above, so this one is stated by BOTH records.
     assert_eq!(
         truth("novelty == high and novelty == high", &absent),
         Tri::Null,

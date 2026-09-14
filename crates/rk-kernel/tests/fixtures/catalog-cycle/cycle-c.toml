@@ -1,0 +1,15 @@
+[activity]
+id           = "gamma"
+version      = 1
+stage        = "implement"
+provides     = ["Gamma"]
+requires     = ["Alpha"]
+derived_from = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id   = "emit"
+kind = "emit"

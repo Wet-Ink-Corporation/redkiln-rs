@@ -5,10 +5,13 @@
 //! a slice, and the slices are `runbook/phase-1/s7b-kernel.md` §7b.3's. **Slices 1 and 2 are on
 //! disk:** the crate skeleton (§7b.4), the determinism gate (§7b.5) and the ADR-0103 grammar with
 //! its evaluator (§7b.6); and the **two fail-closed facet lints** with their two fixture sets
-//! (§7b.7) plus **rigor monotonicity** (§7b.8). The seven-step pure selection function (Slice 3)
-//! and the kernel runtime (Slice 4) are **not built and are not stubbed**: a module that exists and
-//! returns nothing reads as built to the next reader, and `00-preamble.md`'s golden constraint 10
-//! is that powerless is reported as powerless.
+//! (§7b.7) plus **rigor monotonicity** (§7b.8); and [`select`] carries **steps 1-4 of the seven**
+//! (§7b.9) — rigor, the required set, the short-circuit and the producer. **Steps 5 (validate),
+//! 6 (execute) and 7 (deviation) are not built and are not stubbed**, and neither is the kernel
+//! runtime (Slice 4): a module that exists and returns nothing reads as built to the next reader,
+//! and `00-preamble.md`'s golden constraint 10 is that powerless is reported as powerless. The
+//! entry point is [`select::select`], which is steps 1-5; step 6 is `Selection::plan` and step 7 is
+//! `select::step7`, and neither runs anything.
 //!
 //! **Two things Slice 2 does not contain, stated so the absence is not read as an oversight.**
 //! **AC-072 — the registry-entry loader rule — is a THIRD rule with its own eleven-case fixture
@@ -69,6 +72,8 @@ pub mod facet_provenance;
 pub mod facet_stability;
 pub mod predicate;
 pub mod registry;
+pub mod replay;
 pub mod rigor;
+pub mod select;
 pub mod toml_subset;
 pub mod workflow;

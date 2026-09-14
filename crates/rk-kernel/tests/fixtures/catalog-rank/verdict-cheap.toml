@@ -1,0 +1,15 @@
+# Rank 5 -- the winner. Design §4.4 row 4: "lowest `method_rank` wins" (SHOP2 ordered methods).
+[activity]
+id           = "verdict-cheap"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = []
+derived_from = []
+tags         = ["kind:story", "kind:incident"]
+method_rank  = 5
+min_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"

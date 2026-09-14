@@ -18,26 +18,26 @@
 //!    short-circuits and the ordering — a lint error against `null` under ADR-0069 — is never
 //!    evaluated. Under the alternative (`null != null` is `null`) the guard cannot guard.
 //! 2. **The connectives are Kleene's strong three-valued logic, and both absorbing positions
-//!    absorb.** The record names one example per connective — *"`false and null` = false,
-//!    `true or null` = true, otherwise `null`"* — and read literally *"otherwise"* makes
-//!    `null and false` = `null`, so `a and b` would differ from `b and a`. Nothing in the records
-//!    contemplates a non-commutative `and`, and the clauses the record does fix (`null == null`
-//!    true, `not null` null) are Kleene's.
+//!    absorb.** ✅ **SETTLED BY RECORD — this is no longer a reading.** **ADR-0121** decision 1
+//!    (accepted 2026-09-13) states the two full truth tables and makes `and` and `or` commutative
+//!    and associative, and it **supersedes ADR-0103 decision 4's connective sentence in part**:
+//!    exactly two cells move — `null and false` from `null` to `false`, `null or true` from `null`
+//!    to `true`. ADR-0103's *"otherwise `null`"* keeps full force everywhere else, and the rest of
+//!    decision 4 (the `==`/`!=`/`in` null rules, `not null`, the quantifier rules, the abstention
+//!    case, the narrowing pattern) and decisions 1, 2, 3, 5 and 6 all stand, so ADR-0103 stays
+//!    `accepted` carrying `superseded_by: ["0121"]`.
 //!
-//!    🛑 **THIS IS IMPLEMENTED-PENDING-RECORD AND THE ERRATUM HAS NOT LANDED.** Measured
-//!    2026-09-13: `references/adr/ERRATA.md` carries **no ADR-0103 section at all**
-//!    (`grep -n 0103 references/adr/ERRATA.md` → nothing). So the accepted record's literal text
-//!    and this crate's shipped behaviour disagree, with only this comment between them, and
-//!    [`super::super::predicate`]'s tests **pin the divergence**: `evaluator.rs` asserts
-//!    `Tri::False` for `null and false` and `Tri::True` for `null or true`. **What is OWED, by
-//!    id**: an erratum against **ADR-0103 decision 4** quoting the frozen sentence *"`and`/`or` are
-//!    three-valued: `false and null` = false, `true or null` = true, otherwise `null`"*, recording
-//!    that **both absorbing positions absorb** — the connectives are Kleene's strong three-valued
-//!    logic and are commutative — and naming what it does not change (the `==` clauses, the
-//!    quantifier clauses and decision 4's narrowing pattern all stand). It is **not written here**:
-//!    `ERRATA.md` is an accepted-record file and outside this crate (`00-preamble.md`:55, ADR-0092
-//!    decision 2 rule 1). Until it lands this clause is a **residual against ADR-0103**, reported
-//!    as one and not as a settled reading.
+//!    **It was taken on the merits, not as a clarification**: read literally, decision 4 made
+//!    `a and b` differ from `b and a`, and ADR-0121's Context measures four live `spikes/p9`
+//!    predicates that break under it. The behaviour below is unchanged — what changed is that it is
+//!    now warranted by an accepted record rather than pinned as a divergence — and
+//!    `evaluator::kleene_absorption_is_commutative_per_adr_0121` is where it is asserted.
+//!
+//!    **What ADR-0121 does NOT decide, and this module must still guarantee:** evaluation order.
+//!    Its table is about VALUES. The short-circuit below is what makes decision 4's narrowing
+//!    pattern safe and what keeps AC-079's read-facet count honest; see the `Expr::And` arm.
+//!    ADR-0121 clause 5 states the obligation and declines to supply it. Nor does it decide
+//!    `null != null` — that stays reading 1 above, and it stays a residual against ADR-0103.
 //! 3. **`<`, `<=`, `>`, `>=` against `null` are an ERROR at evaluation, never a value.** ADR-0069's
 //!    forbids clause is *"lint must reject it, **not evaluate it with some default ordering**"*,
 //!    and returning `null` for it would be a default. The lint ([`super::lint`]) is the primary
@@ -266,14 +266,19 @@ impl Eval<'_> {
                 // The short-circuit is load-bearing, not an optimisation: it is what makes
                 // `x != null and <ordering on x>` safe when `x` is absent.
                 //
-                // THE ABSORPTION BELOW IS COMMUTATIVE, AND THAT IS A READING OF ADR-0103 DECISION 4
-                // RATHER THAN ITS WORDS. Decision 4 gives each absorbing case in one order only;
-                // `null and false` and `null or true` are covered by "otherwise `null`" on a
-                // literal reading. The full argument, the corpus predicate that reaches it, and why
-                // it changes abstain-vs-Unsatisfiable are on `or3` below. THIS is the site the test
-                // `evaluator::kleene_absorption_is_commutative_which_adr_0103_does_not_state`
+                // THE ABSORPTION BELOW IS COMMUTATIVE, AND ADR-0121 DECISION 1 IS THE WARRANT.
+                // `null and false` is `false` and `null or true` is `true`; ADR-0121 supersedes
+                // ADR-0103 decision 4's connective sentence in part, moving exactly those two cells
+                // and leaving the rest of decision 4 standing. The full argument and the four live
+                // predicates that forced it are in ADR-0121 and summarised on `or3` below. THIS is
+                // the site the test `evaluator::kleene_absorption_is_commutative_per_adr_0121`
                 // actually pins — `or3`/`and3` serve `in`-membership and the quantifiers, not the
-                // connectives — and a clarification against decision 4 is OWED (PROGRESS §2).
+                // connectives.
+                //
+                // The SHORT-CIRCUIT above is NOT ADR-0121's — its table is about values, not order.
+                // ADR-0121 clause 5(a) states the obligation and leaves it to the implementation:
+                // `and` must return `false` on a `false` left operand WITHOUT evaluating the right,
+                // or decision 4's narrowing pattern errors and AC-079's read-facet count is wrong.
                 let left = self.truth(l, scope)?;
                 if left == Tri::False {
                     return Ok(Tri::False);
@@ -547,27 +552,26 @@ fn rank(domain: &[String], member: &str) -> Result<usize, EvalError> {
 
 /// Kleene `or`: `true` absorbs from either side.
 ///
-/// **The commutativity is a READING of ADR-0103 decision 4, not a quotation of it, and the record is
-/// ambiguous here.** Decision 4 (:71) says *"`and`/`or` are three-valued: `false and null` = false,
-/// `true or null` = true, otherwise `null`"* -- each absorbing case in ONE order only. Two sentences
-/// earlier the same decision spells out BOTH orders when it means commutativity (*"`null == v` **and**
-/// `v == null` ... are `null`"*), so "otherwise `null`" cannot simply be assumed to be shorthand.
-/// The readings differ observably on `null or true` and `null and false`.
+/// **The commutativity is ADR-0121 decision 1**, which states both truth tables in full and makes
+/// `and` and `or` commutative and associative over `{true, false, null}`. It **supersedes ADR-0103
+/// decision 4's connective sentence in part**: decision 4 (`0103`:70-71) read *"`and`/`or` are
+/// three-valued: `false and null` = false, `true or null` = true, otherwise `null`"* -- each
+/// absorbing case in ONE order, with a total catch-all, while the same sentence spells out BOTH
+/// orders for `==` two clauses earlier. Exactly **two cells** move: `null and false` `null` ->
+/// `false`, `null or true` `null` -> `true`. Everything else of decision 4 stands.
 ///
-/// **It is reachable on the live corpus and it changes the outcome class.** `spikes/p9/` carries
-/// `"${rollback.outputs?} == null and (${proceed.answer?} == 'proceed' or rigor < mandatory)"`, whose
-/// left operand is `null` whenever `rollback.outputs` is PRESENT (decision 4: `v == null` is `null`).
-/// Under Kleene, `null and false` is `false` and step 4 may report `Unsatisfiable`; under the literal
-/// reading it is `null`, which decision 4 makes the **abstention** case. Abstain and unsatisfiable are
-/// not the same answer [measured 2026-09-13, grammar-probe census: `and` 23, `or` 25, `null` 2 over
-/// 287 live predicates].
+/// **It was taken on the merits, on four live predicates, not as a clarification.** The swapped pair
+/// `catalog/api-contract-spec.toml`:10 (`"external_dep or kind == project"`) and
+/// `catalog/integration-tests.toml`:10 (`"kind == project or external_dep"`) is one guard written
+/// both ways that would select differently on operand order alone; `catalog-b/feature-flag-kill.toml`
+/// :43 could never be true once `answer` existed; and
+/// `"${rollback.outputs?} == null and (${proceed.answer?} == 'proceed' or rigor < mandatory)"`
+/// (`catalog/canary-release.toml`:73) has a left operand that is `null` whenever `rollback.outputs` is
+/// PRESENT, so the cell decides abstain versus `Unsatisfiable` -- and those are not the same answer
+/// [measured 2026-09-13, grammar-probe census: `and` 23, `or` 25, `null` 2 over 287 live predicates].
 ///
-/// Kleene is implemented because it is the standard three-valued reading and because a
-/// non-commutative `and` is a surprise this corpus would name if it meant it. **That is a judgement,
-/// so it is pinned by `evaluator::kleene_absorption_is_commutative_which_adr_0103_does_not_state`
-/// rather than left implicit, and a clarification against ADR-0103 decision 4 is OWED** (PROGRESS §2).
-/// A stage may not settle a record's ambiguity in code; what it may do is make the choice visible and
-/// falsifiable, which is what that test is for.
+/// Pinned by `evaluator::kleene_absorption_is_commutative_per_adr_0121`, which is also the site that
+/// goes red and names itself if ADR-0121 is ever superseded in turn.
 const fn or3(a: Tri, b: Tri) -> Tri {
     match (a, b) {
         (Tri::True, _) | (_, Tri::True) => Tri::True,

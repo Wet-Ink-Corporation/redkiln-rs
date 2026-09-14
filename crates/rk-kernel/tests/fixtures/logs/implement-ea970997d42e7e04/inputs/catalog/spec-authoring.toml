@@ -1,0 +1,23 @@
+# The ONLY producer of `Spec`, and it lives in `specification` -- which the incident fixture pack
+# sets to `forbidden`. This is the far end of §7b.9(7)'s transitive reach.
+[activity]
+id           = "spec-authoring"
+version      = 1
+stage        = "specification"
+provides     = ["Spec"]
+requires     = []
+derived_from = []
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:project"]
+deviation_ok = ["skip"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+outputs = "value:Spec"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

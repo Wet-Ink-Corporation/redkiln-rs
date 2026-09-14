@@ -1,0 +1,10 @@
+error[E0624]: associated function `new` is private
+  --> tests/ui/ac061_required_set_is_not_constructible_outside_select.rs:14:27
+   |
+14 |     let _r = RequiredSet::new(std::collections::BTreeSet::new());
+   |                           ^^^ private associated function
+   |
+  ::: src/select/step2.rs
+   |
+   |     pub(in crate::select) const fn new(kinds: BTreeSet<Instance>) -> Self {
+   |     --------------------------------------------------------------------- private associated function defined here

@@ -1,0 +1,16 @@
+# The other half of AC-060's pair: it declares NO `excludes`, so the relation is one-way.
+[activity]
+id           = "canary-release"
+version      = 1
+stage        = "release"
+provides     = ["Rollout"]
+requires     = []
+derived_from = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+
+[[step]]
+id   = "emit"
+kind = "emit"

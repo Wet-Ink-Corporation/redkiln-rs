@@ -1,0 +1,18 @@
+# AC-054's fixture: the ONLY producer of `SmokeResult`, and its `applicable_if` evaluates FALSE on
+# the item under test. No candidate => `Unsatisfiable { kind, failed_predicates }` => a gate, with
+# the evaluated operands typed into the variant (§7b.9(4)) and NOTHING dropped from R.
+[activity]
+id           = "smoke-on-market-facing"
+version      = 1
+stage        = "review"
+provides     = ["SmokeResult"]
+requires     = []
+derived_from = []
+tags         = ["kind:story", "kind:incident"]
+applicable_if = "market_facing"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+[[step]]
+id      = "emit"
+kind    = "emit"

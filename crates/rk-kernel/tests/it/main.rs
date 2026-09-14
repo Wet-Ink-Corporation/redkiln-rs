@@ -11,11 +11,19 @@
 //! with its own eleven-case fixture set and the register forbids collapsing it into either facet
 //! lint; it is not built, so there is no module for it and no test claiming it.
 
+mod dag;
+mod deviation;
 mod evaluator;
+mod execute;
 mod facet_provenance;
 mod facet_stability;
 mod grammar;
 mod on_false;
 mod probe_differential;
+mod producer;
+mod replay;
 mod rigor;
+mod selection;
+mod short_circuit;
 mod support;
+mod ui;

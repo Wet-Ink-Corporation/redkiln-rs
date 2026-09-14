@@ -1,0 +1,22 @@
+# Design §4.4 row 5's *"`excludes` respected"* — the RUNTIME half, over an assembled graph.
+#
+# AC-060 is the LOAD-time symmetry lint and its fixtures are `asymmetric-*.toml` / `symmetric-b.toml`.
+# This pair is SYMMETRIC, so it LOADS, and both activities are then simultaneously selected -- which
+# is the only way step 5's own check can be reached at all. Without this pair that check enumerates
+# nothing, which is Halt 8's shape and was measured as such by falsification G22 on 2026-09-13.
+[activity]
+id           = "deploy-blue-green"
+version      = 1
+stage        = "release"
+provides     = ["Deployment"]
+requires     = []
+derived_from = []
+excludes     = ["canary-release"]
+tags         = ["kind:incident"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+
+[[step]]
+id   = "emit"
+kind = "emit"

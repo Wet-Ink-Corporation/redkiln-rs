@@ -1,0 +1,25 @@
+# AC-060. `excludes` are SYMMETRIC (proposal §2.6, catalog §2.6's own words): A declaring
+# `excludes = [B]` while B does not declare `excludes = [A]` fails load with
+# `AsymmetricExcludes { a, b }`.
+#
+# **There is no live instance of `excludes` in the shipped catalog** — `grep -rn excludes
+# spikes/p9/catalog/` returns 0 hits, measured 2026-09-13 — so the whole fixture pair is authored.
+# The register words AC-060's fixture as "a fixture PACK that must fail load"; `excludes` is an
+# ACTIVITY field in proposal §2.2, so the fixture is a catalog. The mismatch is the register's
+# wording and is reported rather than repaired here.
+[activity]
+id           = "deploy-blue-green"
+version      = 1
+stage        = "release"
+provides     = ["Deployment"]
+requires     = []
+derived_from = []
+excludes     = ["canary-release"]
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+
+[[step]]
+id   = "emit"
+kind = "emit"

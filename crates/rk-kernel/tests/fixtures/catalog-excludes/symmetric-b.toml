@@ -1,0 +1,18 @@
+# The MUST-LOAD companion. Without it AC-060 is satisfied by a lint that rejects every catalog
+# carrying an `excludes` key at all.
+[activity]
+id           = "canary-release"
+version      = 1
+stage        = "release"
+provides     = ["Rollout"]
+requires     = []
+derived_from = []
+excludes     = ["deploy-blue-green"]
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+
+[[step]]
+id   = "emit"
+kind = "emit"

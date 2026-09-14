@@ -33,22 +33,67 @@ corpus = []
 # invocation errors rather than lints (s5:168-169).
 workflow-clock-reintroduce = []
 
-[dependencies]
-# DECLARED AND NOT YET USED, and that is stated rather than left for a reader to discover.
-# `grep -rn 'rk_types\|rk_ports\|rk_git' crates/rk-kernel/{src,tests}` returns NOTHING on this tree
-# [measured 2026-09-13]: Slices 1 and 2 are the grammar, the two facet lints and rigor
-# monotonicity, none of which touches a type, a port or the VCS. The edges are here because they
-# are the SUBJECT of criteria -- AC-483's rk-kernel half is *"`rk-kernel` depends on `rk-git` as a
-# concrete crate"*, and AC-484/AC-528 are assertions about this graph's shape -- so removing them
-# would delete the thing under test. **What they are NOT is exercise**: AC-483's half is discharged
-# by a manifest line and a `cargo tree` edge, never by a call, and a lint such as
-# `unused_crate_dependencies` would flag all three today.
+# THE SELECTION PURITY GATE'S POSITIVE CONTROL (AC-041; s7b §7b.9(2)). The same shape and the same
+# warrant as `workflow-clock-reintroduce` directly above, pointed at `rk-kernel::select`:
 #
-# Where each is first USED: `rk-types` and `rk-ports` in the seven-step selection function and the
-# replay (Slice 3, §7b.9/§7b.11); `rk-git` in the replay's zero-writes assertion (Slice 3, AC-006
-# and ADR-0105 decision 1). Delete this comment when the first call site lands.
+#   green:  cargo clippy --workspace --all-targets
+#   RED:    cargo clippy --workspace --all-targets --features rk-kernel/select-clock-reintroduce
+#
+# It exists because AC-041 is a NEGATIVE criterion -- *"the hidden input must become impossible, not
+# merely absent"* -- and a module-level `#[deny(clippy::disallowed_methods)]` that is merely
+# DECLARED is indistinguishable from one that BITES. This feature is the only thing in the tree that
+# tells the two apart for `select`, and it is COMMITTED rather than reverted (DECISIONS-2026-09-12
+# E4: a reverted observation is not an assertion).
+select-clock-reintroduce = []
+
+[dependencies]
+# ONE OF THE FOUR IS STILL DECLARED AND NOT YET CALLED, and that is stated rather than left for a
+# reader to discover. THREE ARE CALLED as of Slice 3: `rk-store` -- `rk_store::canon` is the
+# canonical serialiser every byte-identity comparison in `select` runs through, at
+# `src/select/canonical.rs`; `rk-types`, for `digest::{Digest, sha256, sha256_lp}`, the one hash
+# ADR-0116 clause 6 admits, at the same file; and `rk-git`, at `src/replay.rs` -- the replay is
+# handed an `rk_git::gitops::GitOps` in `Mode::Replay` and AC-006's *"zero rk-git writes"* is read
+# off ITS OWN `writes_performed()` counter (ADR-0105 decision 1). That last edge was declared and
+# uncalled until 2026-09-13, while the replay counted a `GitWriter` trait the kernel had declared
+# for itself on the FALSE warrant that `rk-git` "exposes no port to bind a fake to" --
+# `crates/rk-git/src/gitops.rs`:44-51 ships `VecJournal`, described in its own header as *"the fake,
+# and what the replay tests drive"*.
+#
+# `rk-ports` is the one that is not called: the port traits are the RUNTIME boundary's (Slices 4-5).
+# Its edge is here because it is the SUBJECT of criteria -- as is `rk-git`'s, whose AC-483 half is
+# *"`rk-kernel` depends on `rk-git` as a concrete crate"*, and AC-484/AC-528 are assertions about
+# this graph's shape -- so removing it would delete the thing under test. **What a declared edge is
+# NOT is exercise**: AC-483's half is discharged by a manifest line and a `cargo tree` edge, never
+# by a call, and that stays true now that the call also exists.
+#
+# Where `rk-ports` will first be USED: the kernel runtime boundary that appends what `select`
+# RETURNS (Slice 4, §7b.10 -- ADR-0119 clause 5, ADR-0120 clause 4 and AC-525's 2026-09-13
+# amendment all put the append OUTSIDE the pure function). Delete that line when its call site
+# lands.
 rk-types = { path = "../rk-types" }
 rk-ports = { path = "../rk-ports" }
+# THE CANONICAL-SERIALISER EDGE, taken by the operator's decision of 2026-09-13 (D3) and NOT taken
+# silently at a manifest line. §7b.9(2) framed the layering as a two-way question -- either
+# `rk-kernel` depends on `rk-store` for `rk_store::canon`, or `canon` MOVES to `rk-types` beside
+# `digest`. **Option A was chosen: the dependency.** The canonical FORM is not invented here; it is
+# already forced by `crates/rk-store/src/canon.rs` (*"object keys sorted byte-wise, LF only, no
+# trailing newline, floats refused"*), which ADR-0097 decision 2 component 4 already names for step
+# inputs and which AC-040's byte-identity is measured under. Writing a second one in this crate is
+# what the edge exists to prevent: `serde_json` carries `preserve_order` WORKSPACE-WIDE (root
+# `Cargo.toml`:44), so a plain `to_vec` over an insertion-ordered map leaks construction order into
+# AC-040's assertion and can still pass its 100 shuffled repetitions.
+#
+# **Nothing is superseded and no checkpoint is disturbed.** The MOVE option would have edited
+# `rk-types` (Checkpoint 5, `96ba9c2`) and `rk-store` (Checkpoint 6, `ea83eac`) after they passed,
+# and `00-preamble.md`:232-237 would then have made both rows provisional. Taking the dependency
+# edits neither crate, so neither row moves.
+#
+# **The cost, measured and stated rather than discovered later:** `rk-store` declares
+# `rusqlite = { features = ["bundled"] }`, so `rusqlite`, `libsqlite3-sys` and a C compile enter
+# `rk-kernel`'s RESOLVED graph and appear in `cargo tree -p rk-kernel -e normal`. Neither is an
+# async runtime (AC-528) nor an `rk-adapter-*` (AC-484), so the two assertions the tree is read for
+# are untouched -- but the kernel now builds SQLite, and that is the price of Option A.
+rk-store = { path = "../rk-store" }
 # A CONCRETE CRATE, not a port, and that is the decision and not an omission (AC-483's second
 # clause; ADR-0003:57-58). Trailers, worktrees, disposable clones and reconcile() have measured
 # behaviour and no alternative VCS is named, so the git axis fails ADR-0003's own test for a port;
@@ -65,15 +110,17 @@ serde_json.workspace = true
 # asserts this over the RESOLVED graph (`cargo tree -p rk-kernel -e normal`), because this table
 # sees direct dependencies only.
 #
-# `rk-store` is deliberately absent at Slice 1 and its edge is NOT a default: §7b.9(2) makes the
-# canonical serialiser a layering question -- either `rk-kernel` depends on `rk-store` for
-# `rk_store::canon`, or `canon` moves to `rk-types` beside `digest` -- to be settled in the same
-# commit as the selection function (Slice 3). Nothing in this slice serialises.
+# `rk-store` WAS deliberately absent at Slice 1, and §7b.9(2)'s layering question is settled at
+# Slice 3 as option A -- the edge above. See its comment for what was chosen, what it costs and
+# what it leaves untouched.
 
 [dev-dependencies]
 # Repeated for the integration binary: a crate's own [dependencies] are not in scope inside
 # tests/ (crates/rk-types/Cargo.toml:31-32).
 rk-types = { path = "../rk-types" }
+# AC-040's byte-identity assertion compares `rk_store::canon::canonical` output, so the integration
+# binary needs the same edge the library took above.
+rk-store = { path = "../rk-store" }
 serde_json.workspace = true
 # The compile-fail harness. Its cases' instrument is a compile FAILURE, which only a must-fail
 # harness can observe, and each case commits a .stderr snapshot so a case that starts failing for a
