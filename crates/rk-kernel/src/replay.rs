@@ -16,39 +16,58 @@
 //!
 //! # 🛑 WHAT IS MEASURED, AND WHAT IS NOT — AC-006's five assertions
 //!
-//! | # | assertion | state at Slice 4f, 2026-09-14 |
+//! | # | assertion | state at Slice 4i, 2026-09-14 |
 //! | --- | --- | --- |
 //! | 1 | every port bound to its fake | **a type fact, not a measurement** — [`ReplayPorts`] has no optional field, so an unbound port does not compile. This module reports **no list of bound ports**: a `Vec` of string literals the replay prints about itself is the very shape `s7b`:1018-1023 forbids, and it was one until 2026-09-13 |
 //! | 2 | byte-identical decisions | **measured** under `rk_store::canon` |
 //! | 3 | byte-identical **next action** | **MEASURED**, as of 2026-09-14. [`crate::workflow::fsm::next_action`]'s canonical bytes, recomputed from the re-derived journal and compared against the value `run.json` **committed at record time**. Diverging is [`ReplayError::NextActionDiverged`], never a warning |
 //! | 4 | zero `rk-git` writes | **measured against `rk-git`'s OWN counter** — [`rk_git::gitops::GitOps::writes_performed`], read before and after. ADR-0105 decision 1's named instrument, not a seam this crate invented. `git` is `&mut` as of 2026-09-14 (residual 10h), so the absence is over a seam the replay COULD have written through |
-//! | 5 | zero harness dispatches **with the terminal state matched** | **dispatch half measured** through the caller's own counter ([`ReplayPorts::dispatches`]), read before and after; **terminal-state half MEASURED** as of 2026-09-14, the same way as row 3. 🛑 But see the paragraph below: **N is 0 on the only recorded run, so AC-008's GIVEN is half-satisfied and the criterion is NOT reported as covered** |
+//! | 5 | zero harness dispatches **with the terminal state matched** | **dispatch half measured** through the caller's own counter ([`ReplayPorts::dispatches`]), read before and after; **terminal-state half MEASURED** as of 2026-09-14, the same way as row 3. **And as of Slice 4i the GIVEN is satisfied**: the recorded run dispatches N ≥ 1 and the replay serves all N from the journal — see the next section |
 //!
 //! **The sentence that stood in rows 3 and 5 until 2026-09-14 was:** *"**NOT BUILDABLE — there is
 //! no FSM.** The workflow/activity split, the memo, retry and the runtime are §7b.10's Slice 4."*
 //! The FSM is now on disk at `src/workflow/fsm.rs` and both rows are measured. What that sentence
 //! got right, and what survives it, is the next paragraph.
 //!
-//! # 🛑 AC-008's GIVEN IS *"a run that dispatched N activities"*, AND N IS 0
+//! # AC-008's GIVEN IS *"a run that dispatched N activities"*, AND N WAS 0 UNTIL SLICE 4i
 //!
-//! [measured 2026-09-14: the committed golden log holds **4** events — `stage_transition`,
-//! `dag_assembled`, `gate_opened`, `dag_amended` — and **zero** `dispatch` and `activity_committed`
-//! events.] So *"all N results served from the journal"* is satisfied over an empty N, and the
-//! **dispatch half of AC-008 is vacuous**. The terminal-state half is not — the fold lands on
-//! `awaiting_dispatch` and a fold that stopped moving would land on `not_started` and refuse — but
-//! **AC-008 as a whole is ARMED, not discharged**, and the reason is one thing and not a mystery:
+//! **The section this replaces said, and was right to say:**
 //!
-//! > **A recording with dispatches needs a dispatcher, and there is none.** [`record`] would have
-//! > to drive [`crate::workflow::fsm::NextAction::Dispatch`] through a bound
-//! > [`rk_ports::harness::Harness`] and append an `activity_committed` per commit — which means
-//! > assembling a real [`rk_types::activity::ActivitySpec`] (card digest, tool allowlist, schema
-//! > id, timeout, resolved inputs) from a DAG node. **Nothing in this crate resolves any of those
-//! > five**, and the activity-dispatch boundary is Slice 4h's. Building a half of it here to
-//! > lengthen a journal would be building the dispatcher without its criteria.
+//! > [measured 2026-09-14: the committed golden log holds **4** events — `stage_transition`,
+//! > `dag_assembled`, `gate_opened`, `dag_amended` — and **zero** `dispatch` and
+//! > `activity_committed` events.] So *"all N results served from the journal"* is satisfied over
+//! > an empty N, and the **dispatch half of AC-008 is vacuous** … **A recording with dispatches
+//! > needs a dispatcher, and there is none.**
 //!
-//! What [`record`] **does** drive is the one runtime act that needs no port, no clock and no
-//! dispatcher: the tier-1 `stage_transition` that enters the stage. That is why the journal is 4
-//! events and not 3, and it is what gives AC-161/AC-164 a tier-1 record to compare at stage grain.
+//! Slice 4h built the dispatcher — [`crate::runtime::Runtime::run_activity`], through
+//! `rk_ports::harness::Harness`, appending `dispatch` and `activity_committed`. Slice 4i makes
+//! [`record`] drive it. **What changed, in four parts:**
+//!
+//! 1. [`record`] takes [`rk_ports::root::Ports`] and runs the FSM loop — `next_action` → if
+//!    `Dispatch` { obtain } → fold → repeat, until the next action is not a dispatch. The recorded
+//!    journal therefore carries a real `dispatch` and a real `activity_committed` per activation,
+//!    and the terminal state the manifest commits is `stage_complete` rather than
+//!    `awaiting_dispatch`.
+//! 2. [`replay`] runs **the same loop** with the recorded journal as the result source: every row
+//!    is served once, in order, and **nothing is dispatched**. An activation the journal does not
+//!    carry is [`ReplayError::JournalHasNoResult`] — a typed divergence, never a skipped step.
+//!    That is *"all N results served from the journal, zero harness dispatches"* as an
+//!    architecture rather than as an assertion (design-a §3.2).
+//! 3. The [`rk_types::activity::ActivitySpec`] is a **RECORDED INPUT** — `inputs/specs.json`, in
+//!    the layout below, folded into `run_id` and `inputs_digest` like every other input. See
+//!    [`RecordedSpec`] for the measurement behind that: the five fields are the **binder's**
+//!    output, the binder is unbuilt, and **a record routing spec assembly is OWED**.
+//! 4. Every earlier recorded `run_id` moved again, so `implement-d8401695754074c7` is gone and the
+//!    fixture directory it names is re-blessed through `bless_the_committed_golden_log` — never
+//!    hand-edited.
+//!
+//! 🛑 **WHAT IS STILL NOT DISCHARGED, so a green here is not read as more than it is.** AC-008's
+//! dispatches are the **fake** `Harness`'s: a scripted responder the test binds, not a model. The
+//! criterion asks for exactly that (*"a replay test with a scripted-responder `Harness` fake that
+//! fails the test on any `dispatch` call"*), so this is coverage rather than a shortfall — but the
+//! N being served is N **fake** results, and no line of this module should be read as evidence
+//! about a real adapter, which is 7c's. AC-007's divergence detection, AC-161's route *"from git
+//! alone"* and AC-164's `doctor` half are each unchanged and each still named where they are owed.
 //!
 //! **Both counters are read from the caller's fakes, before and after**, so neither is a constant
 //! this module prints about itself — which is exactly what `s7b`:1018-1023 says the positive control
@@ -84,19 +103,32 @@
 //!       facets.toml               the facet registry, verbatim
 //!       context.json              the item's context digest preimage (canonical)
 //!       artifact-state.json       the item's artifact digests preimage (canonical)
-//!       runtime.json              NEW at 4f: { tree_hash, deadline, entered_from, successor }
+//!       runtime.json              NEW at 4f: { tree_hash, deadline, entered_from, successor,
+//!                                   results_at }   ← `results_at` NEW at 4i
+//!       specs.json                NEW at 4i: { "<dag node id>": { activity_id_at_version,
+//!                                   card_digest, tools, schema, timeout_secs, inputs } }
 //!       deviation.json            OPTIONAL: the RequestDeviation and its requesting activity
 //!     events.jsonl                one canonical JSON object per line, LF-terminated
 //! ```
 //!
+//! **`specs.json` is REQUIRED, and an empty object is how a run with no dispatchable node says
+//! so.** A missing file is refused by [`read_run`] on `terminal_state`'s exact warrant: a log
+//! without it records no dispatches, and replaying one would satisfy AC-008's GIVEN over an empty
+//! N — the vacuous green Slice 4i exists to remove.
+//!
 //! **`run_id` is derived, never stamped.** It is a content hash of the inputs, so it needs no clock,
 //! no counter and no random source — the three things AC-041 forbids and AC-043 exists to catch
-//! downstream — and a replay recomputes it rather than reading it back. **Nothing in the layout
-//! carries a timestamp**, for the same reason: a recorded `at` would make two runs of identical
+//! downstream — and a replay recomputes it rather than reading it back. **Nothing in the layout is
+//! a CLOCK READING**, for the same reason: a `now()` anywhere would make two runs of identical
 //! inputs produce different bytes and turn AC-042's byte-identity into a comparison of clocks.
 //! `runtime.json`'s `deadline` is not an exception and the distinction is the whole reason it is
 //! an **input**: it is a value the caller recorded, read back on replay, and never read from a
-//! clock by anything in this crate.
+//! clock by anything in this crate. **`results_at` is the second value of that shape, added at
+//! 4i** — the `at` every `activity_committed` carries. It is supplied, never defaulted, and
+//! **refused when absent**, because `rk_types::time::Timestamp` *"has no `now()`, deliberately"*
+//! and a zero `at` is a commit stamped at the epoch. The sentence that stood here until 4i read
+//! *"nothing in the layout carries a timestamp"*, which was true of a journal with no commits in
+//! it; the proposition it was **for** is the one above, and it is unchanged.
 //!
 //! **`inputs/runtime.json` participates in `run_id`, and that is the point.** AC-042's THEN is
 //! *"re-derives the DAG from the **logged inputs alone**"*; a tree hash or a deadline the replay
@@ -130,17 +162,24 @@ use std::sync::atomic::Ordering;
 use rk_git::gitops::GitOps;
 use rk_ports::event_store::EventStore;
 use rk_ports::harness::Harness;
+use rk_ports::root::Ports;
+use rk_store::memo::IdempotencyKey;
+use rk_types::activity::ActivitySpec;
 use rk_types::event::Event;
 use rk_types::event_kind::{EventKind, ReplayDivergence};
 use rk_types::time::Timestamp;
+use rk_types::typed::SchemaId;
 
 use crate::catalog::Catalog;
 use crate::registry::Registry;
+use crate::runtime::{Runtime, RuntimeError};
 use crate::select::{
     ArtifactRegistry, DeviationKind, Item, Pack, RequestDeviation, SelectError, Selection, select,
     step7,
 };
-use crate::workflow::fsm::{self, Divergence, FsmContext, FsmError};
+use crate::workflow::breaker::JournaledNow;
+use crate::workflow::envelope::AttemptCap;
+use crate::workflow::fsm::{self, Divergence, FsmContext, FsmError, NextAction};
 
 /// The layout version, carried in `run.json` so a reader never has to guess which shape a run is in.
 pub const SCHEMA: &str = "rk-kernel/golden-log/v1";
@@ -210,6 +249,29 @@ pub enum ReplayError {
     /// A fold that returns [`crate::workflow::fsm::TerminalState::NotStarted`] for everything
     /// produces `{"terminal":"not_started"}` here and the manifest says otherwise.
     TerminalStateDiverged(ReplayDivergence),
+    /// **The runtime boundary refused a dispatch the RECORDING had to make.** A recording drives
+    /// [`crate::workflow::fsm::NextAction::Dispatch`] through [`crate::runtime::Runtime`], so
+    /// AC-010's key refusal, the store's refusal and the fold's all reach this module — carried
+    /// whole rather than flattened, because each names a different repair.
+    Runtime(RuntimeError),
+    /// A recorded dispatch produced no `activity_committed`, so the FSM would ask for the same
+    /// activation for ever. **Refused, never looped**: a run whose activity failed is not a run
+    /// this stage can record, and saying so is better than a journal that grows without end.
+    NotCommitted {
+        step_id: String,
+        activity_id_at_version: String,
+    },
+    /// **The replay asked the recorded journal for an activation it does not carry.** This is
+    /// AC-008's *"all N results served from the journal"* failing on the side that matters: the
+    /// FSM wanted a result, the recording has none, and the replay refuses rather than skipping
+    /// the step silently and folding on.
+    JournalHasNoResult {
+        step_id: String,
+        activity_id_at_version: String,
+        /// What the journal offered instead, when it offered anything — so the halt names the
+        /// divergence rather than merely the absence.
+        served_instead: Option<String>,
+    },
 }
 
 impl fmt::Display for ReplayError {
@@ -256,11 +318,41 @@ impl fmt::Display for ReplayError {
                  catch",
                 d.activity_id, d.recorded, d.recomputed
             ),
+            Self::Runtime(e) => write!(f, "the runtime boundary refused a dispatch: {e}"),
+            Self::NotCommitted {
+                step_id,
+                activity_id_at_version,
+            } => write!(
+                f,
+                "the dispatch of `{step_id}` ({activity_id_at_version}) returned without an \
+                 `activity_committed`, so the FSM would select it again for ever. A recording \
+                 refuses rather than looping"
+            ),
+            Self::JournalHasNoResult {
+                step_id,
+                activity_id_at_version,
+                served_instead,
+            } => write!(
+                f,
+                "the recorded journal carries no result for `{step_id}` \
+                 ({activity_id_at_version}), and the re-derivation asked for one. AC-008's THEN is \
+                 that **all N results are served from the journal**; a replay that skipped the \
+                 step instead would serve N-1 and still report a green. The journal offered {}",
+                served_instead
+                    .as_deref()
+                    .map_or_else(|| "nothing further".to_owned(), |s| format!("`{s}`"))
+            ),
         }
     }
 }
 
 impl std::error::Error for ReplayError {}
+
+impl From<RuntimeError> for ReplayError {
+    fn from(e: RuntimeError) -> Self {
+        Self::Runtime(e)
+    }
+}
 
 impl From<FsmError> for ReplayError {
     /// **Mapped onto [`ReplayError::Malformed`], and no new variant is minted for it.** A journal
@@ -364,6 +456,7 @@ pub struct RuntimeContext {
     deadline: i64,
     entered_from: Option<String>,
     successor: Option<String>,
+    results_at: Option<i64>,
 }
 
 impl RuntimeContext {
@@ -376,7 +469,23 @@ impl RuntimeContext {
             deadline,
             entered_from: None,
             successor: None,
+            results_at: None,
         }
+    }
+
+    /// The journaled instant every `activity_committed` this run writes carries — **a recorded
+    /// input, exactly as [`Self::deadline`] is, and for the identical reason.**
+    ///
+    /// `rk_types::time::Timestamp` *"has no `now()`, deliberately"*, so an `at` member could only
+    /// have come from data. Recording it keeps the module header's *"nothing in the layout carries
+    /// a timestamp"* true in the sense that sentence means: no value here is a **clock reading**,
+    /// and two runs of identical inputs produce identical bytes. It is **never defaulted** — a
+    /// recording that needs one and was given none is refused, because a zero `at` is a commit
+    /// stamped at the epoch.
+    #[must_use]
+    pub const fn results_at(mut self, unix_seconds: i64) -> Self {
+        self.results_at = Some(unix_seconds);
+        self
     }
 
     /// The stage this run entered FROM, if the caller recorded one.
@@ -413,14 +522,163 @@ impl RuntimeContext {
         serde_json::json!({
             "deadline": self.deadline,
             "entered_from": self.entered_from,
+            "results_at": self.results_at,
             "successor": self.successor,
             "tree_hash": self.tree_hash,
         })
     }
+
+    /// The journaled instant, **refused rather than defaulted** when absent.
+    fn require_results_at(&self) -> Result<JournaledNow, ReplayError> {
+        let secs = self.results_at.ok_or_else(|| ReplayError::Malformed {
+            path: "inputs/runtime.json".to_owned(),
+            detail:
+                "no `results_at` was recorded, and the instant an `activity_committed` carries \
+                     cannot be defaulted here: this crate has no clock (AC-001) and a zero `at` is \
+                     a commit stamped at the epoch"
+                    .to_owned(),
+        })?;
+        Ok(JournaledNow::from_journal(Timestamp::from_unix_seconds(
+            secs,
+        )))
+    }
 }
 
-/// The four digests' preimages, plus the optional deviation, as one recorded value.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// **One node's dispatch binding, as a RECORDED INPUT** — the `ActivitySpec` AC-008's dispatches
+/// need, plus the activation identity the idempotency key's second part is.
+///
+/// 🛑 **Why it is an input and not something this crate resolves.** `rk_types::activity::
+/// ActivitySpec` has five fields and **this tree resolves none of them from a DAG node**
+/// [measured 2026-09-14: `card_digest`, `tools` and `schema` appear in **zero** catalog fixtures;
+/// `timeout_secs` is declared in 10 and parsed by nothing — `grep -c timeout_secs
+/// crates/rk-kernel/src/catalog.rs` → 0 — and one of the ten is `"${toolchain.test_timeout}"`, a
+/// substitution no `Toolchain` adapter exists to resolve at 7b]. **The spec is the binder's
+/// output, and the binder is unbuilt**, so at Step 7b it is supplied as a recorded input and
+/// **a record routing spec assembly is OWED**.
+///
+/// Nothing is invented to fill the gap: no catalog key is read that the loader does not already
+/// parse, and no field is defaulted. What makes this lawful under AC-042 — *"re-derives the DAG
+/// from the **logged inputs alone**"* — is that the binding is **logged**: it lives in
+/// `inputs/specs.json`, it participates in `run_id`, and a replay reads it back rather than being
+/// told it out of band. That is AC-064's own model for the deviation record.
+///
+/// **`activity_id_at_version` is here for the same reason and is NOT a sixth spec field.** The
+/// join between a DAG node and `crate::catalog::Activity::id_at_version` has three candidate homes
+/// and `crate::workflow::fsm`'s header records that choosing one is a decision this stage may not
+/// take; the binding transcribes it instead, and the record naming the join's home is still OWED.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordedSpec {
+    activity_id_at_version: String,
+    spec: ActivitySpec,
+}
+
+impl RecordedSpec {
+    /// The only constructor, named `supplied` on [`RuntimeContext::supplied`]'s model: every call
+    /// site is transcribing something this crate did not derive.
+    #[must_use]
+    pub fn supplied(activity_id_at_version: &str, spec: ActivitySpec) -> Self {
+        Self {
+            activity_id_at_version: activity_id_at_version.to_owned(),
+            spec,
+        }
+    }
+
+    /// The activation identity — the idempotency key's second part (ADR-0097 decision 2).
+    #[must_use]
+    pub fn activity_id_at_version(&self) -> &str {
+        &self.activity_id_at_version
+    }
+
+    /// The spec the `Harness` port is handed.
+    #[must_use]
+    pub const fn spec(&self) -> &ActivitySpec {
+        &self.spec
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "activity_id_at_version": self.activity_id_at_version,
+            "card_digest": self.spec.card_digest.as_str(),
+            "inputs": self
+                .spec
+                .inputs
+                .iter()
+                .map(|(name, value)| serde_json::json!({ "name": name, "value": value }))
+                .collect::<Vec<_>>(),
+            "schema": self.spec.schema.as_str(),
+            "timeout_secs": self.spec.timeout_secs,
+            "tools": self.spec.tools,
+        })
+    }
+
+    /// Read one binding back. **Every member is required**; none is defaulted, for the reason the
+    /// type's own doc gives.
+    fn from_json(node: &str, value: &serde_json::Value) -> Result<Self, ReplayError> {
+        let bad = |detail: String| ReplayError::Malformed {
+            path: "inputs/specs.json".to_owned(),
+            detail: format!("{node}: {detail}"),
+        };
+        let member = |name: &str| -> Result<&serde_json::Value, ReplayError> {
+            value.get(name).ok_or_else(|| bad(format!("no `{name}`")))
+        };
+        let text = |name: &str| -> Result<String, ReplayError> {
+            member(name)?
+                .as_str()
+                .map(str::to_owned)
+                .ok_or_else(|| bad(format!("`{name}` is not a string")))
+        };
+        let card_digest = rk_types::digest::Digest::from_hex(&text("card_digest")?)
+            .map_err(|e| bad(format!("`card_digest` is not a digest: {e:?}")))?;
+        let tools = member("tools")?
+            .as_array()
+            .ok_or_else(|| bad("`tools` is not an array".to_owned()))?
+            .iter()
+            .map(|t| {
+                t.as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| bad("a `tools` member is not a string".to_owned()))
+            })
+            .collect::<Result<Vec<String>, ReplayError>>()?;
+        let timeout_secs = member("timeout_secs")?.as_u64().ok_or_else(|| {
+            bad("`timeout_secs` is absent or negative — never a silent 0".to_owned())
+        })?;
+        let inputs = member("inputs")?
+            .as_array()
+            .ok_or_else(|| bad("`inputs` is not an array".to_owned()))?
+            .iter()
+            .map(|row| {
+                let name = row
+                    .get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or_else(|| bad("an `inputs` row has no `name`".to_owned()))?;
+                let value = row
+                    .get("value")
+                    .ok_or_else(|| bad("an `inputs` row has no `value`".to_owned()))?;
+                Ok((name.to_owned(), value.clone()))
+            })
+            .collect::<Result<Vec<(String, serde_json::Value)>, ReplayError>>()?;
+        Ok(Self {
+            activity_id_at_version: text("activity_id_at_version")?,
+            spec: ActivitySpec {
+                card_digest,
+                tools,
+                schema: SchemaId::new(text("schema")?),
+                timeout_secs,
+                inputs,
+            },
+        })
+    }
+}
+
+/// The four digests' preimages, plus the optional deviation and the per-node dispatch bindings, as
+/// one recorded value.
+///
+/// **`Eq` is not derived**, and the reason is [`RecordedSpec`]'s: it carries an
+/// `rk_types::activity::ActivitySpec`, which is `PartialEq` and not `Eq` because a spec's `inputs`
+/// are `serde_json::Value`s. The comparison this module makes is the **canonical byte** one, and
+/// deriving `Eq` here would offer one AC-042 does not use — `RecordedRun`'s own doc already states
+/// the rule.
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct RunInputs {
     stage: String,
     pack: (String, String),
@@ -431,6 +689,9 @@ pub struct RunInputs {
     artifact_state: serde_json::Value,
     deviation: Option<(RequestDeviation, String)>,
     runtime: Option<RuntimeContext>,
+    /// `(DAG node id, binding)`, sorted — so the log is a function of the bindings and not of the
+    /// caller's argument order, exactly as [`Self::with_catalog`] sorts.
+    specs: Vec<(String, RecordedSpec)>,
 }
 
 impl RunInputs {
@@ -500,6 +761,51 @@ impl RunInputs {
         self
     }
 
+    /// Record one DAG node's dispatch binding as part of the run's input set.
+    ///
+    /// **This is what makes AC-008's GIVEN — *"a run that dispatched N activities"* — reachable at
+    /// Step 7b.** See [`RecordedSpec`] for why the binding is a logged input rather than something
+    /// this crate resolves, and for the record that is OWED.
+    #[must_use]
+    pub fn with_spec(mut self, node_id: &str, binding: RecordedSpec) -> Self {
+        self.specs.retain(|(id, _)| id != node_id);
+        self.specs.push((node_id.to_owned(), binding));
+        self.specs.sort_by(|a, b| a.0.cmp(&b.0));
+        self
+    }
+
+    /// The recorded bindings, in node order.
+    #[must_use]
+    pub fn specs(&self) -> &[(String, RecordedSpec)] {
+        &self.specs
+    }
+
+    /// The `(node id, activity_id@version)` list [`crate::workflow::fsm::FsmContext`] is supplied.
+    fn activations(&self) -> Vec<(String, String)> {
+        self.specs
+            .iter()
+            .map(|(id, b)| (id.clone(), b.activity_id_at_version.clone()))
+            .collect()
+    }
+
+    /// The binding for one DAG node, **refused rather than defaulted** when absent: an empty spec
+    /// is a dispatch of a card nobody wrote (`crate::runtime::RuntimeError::SpecNotSupplied`'s own
+    /// words, one module over).
+    fn spec_for(&self, node_id: &str) -> Result<&RecordedSpec, ReplayError> {
+        self.specs
+            .iter()
+            .find(|(id, _)| id == node_id)
+            .map(|(_, b)| b)
+            .ok_or_else(|| ReplayError::Malformed {
+                path: "inputs/specs.json".to_owned(),
+                detail: format!(
+                    "the FSM selected `{node_id}` for dispatch and no binding was recorded for it. \
+                     The spec is the binder's output, the binder is unbuilt, and this stage \
+                     supplies it as a recorded input rather than assembling half of one"
+                ),
+            })
+    }
+
     /// The recorded runtime context, **refused rather than defaulted** when absent.
     ///
     /// # Errors
@@ -542,6 +848,13 @@ impl RunInputs {
                 "requested_by": by,
             })),
             "runtime": self.runtime.as_ref().map(RuntimeContext::to_json),
+            // NEW at Slice 4i. The bindings participate in `run_id` like every other input, which
+            // is exactly what keeps AC-042's *"from the logged inputs alone"* true of a run that
+            // dispatches: a spec the replay had to be told out of band would be the hidden input
+            // `HiddenInput` exists to report.
+            "specs": self.specs.iter().map(|(id, b)| serde_json::json!({
+                "node": id, "binding": b.to_json(),
+            })).collect::<Vec<_>>(),
         })
     }
 
@@ -667,25 +980,116 @@ fn canonical_events(events: &[Event]) -> Result<Vec<u8>, ReplayError> {
     Ok(out)
 }
 
-/// **Run selection over the logged inputs and collect the journal.**
+/// **Where a dispatched activity's result comes from — the ONE thing that differs between a
+/// recording and a replay.**
+///
+/// design-a §3.2's own sentence, which this enum is: *"the whole runtime is therefore a pure fold
+/// the replay can re-run … where `source` is the only thing that differs between a recording (a
+/// `Harness`) and a replay (the recorded journal). That is AC-008's **all N results served from the
+/// journal, zero harness dispatches** stated as an architecture rather than as an assertion."*
+///
+/// The loop above it is identical in both directions — `next_action` → `Dispatch` → obtain → fold
+/// → repeat — so a replay cannot agree with a recording because the two were written to agree.
+enum Results<'a> {
+    /// **record**: the caller's bound ports. [`crate::runtime::Runtime::run_activity`] dispatches
+    /// through `rk_ports::harness::Harness` and appends, and the events collected are the ones the
+    /// store actually received — read back off the port, never reconstructed here to match.
+    Dispatched(&'a Runtime),
+    /// **replay**: the recorded journal, and **nothing is dispatched**.
+    Journal(ServedJournal<'a>),
+}
+
+/// The recorded `dispatch` / `activity_committed` rows, served back in order and **once each**.
+///
+/// A cursor rather than a search, because *"all N results served from the journal"* is a statement
+/// about the same N in the same order: a lookup that re-served row 1 for attempt 2 would make a
+/// journal with one recorded attempt satisfy a re-derivation that wanted three.
+struct ServedJournal<'a> {
+    rows: Vec<&'a Event>,
+    next: usize,
+}
+
+impl<'a> ServedJournal<'a> {
+    fn of(events: &'a [Event]) -> Self {
+        Self {
+            rows: events
+                .iter()
+                .filter(|e| matches!(e.kind, EventKind::Dispatch | EventKind::ActivityCommitted))
+                .collect(),
+            next: 0,
+        }
+    }
+
+    /// Which activation a served row belongs to, read off the payload the fold already reads.
+    fn activation_of(event: &Event) -> Option<(&str, &str)> {
+        Some((
+            event.payload.get("item")?.as_str()?,
+            event.payload.get("activity_id_at_version")?.as_str()?,
+        ))
+    }
+
+    /// Serve one activation's recorded rows: everything from the cursor that belongs to it, up to
+    /// and including its `activity_committed`.
+    ///
+    /// **A divergence, never a silent skip.** If the cursor is exhausted, or the next row belongs
+    /// to a different activation, or the run of rows carries no commit, this refuses and names
+    /// what the journal offered instead.
+    fn serve(&mut self, key: &IdempotencyKey, step_id: &str) -> Result<Vec<Event>, ReplayError> {
+        let mut out: Vec<Event> = Vec::new();
+        let mut committed = false;
+        while let Some(event) = self.rows.get(self.next) {
+            let Some((item, activation)) = Self::activation_of(event) else {
+                break;
+            };
+            if item != key.item || activation != key.activity_id_at_version {
+                break;
+            }
+            out.push((*event).clone());
+            self.next += 1;
+            if event.kind == EventKind::ActivityCommitted {
+                committed = true;
+                break;
+            }
+        }
+        if committed {
+            return Ok(out);
+        }
+        let served_instead = self.rows.get(self.next).map(|event| {
+            Self::activation_of(event).map_or_else(
+                || event.kind.wire_name().to_owned(),
+                |(item, activation)| format!("{} for {item}/{activation}", event.kind.wire_name()),
+            )
+        });
+        Err(ReplayError::JournalHasNoResult {
+            step_id: step_id.to_owned(),
+            activity_id_at_version: key.activity_id_at_version.clone(),
+            served_instead,
+        })
+    }
+}
+
+/// **Run selection over the logged inputs, then drive the FSM to a non-dispatch action.**
 ///
 /// This is the one place the journal is derived, and both [`record`] and [`replay`] go through it —
 /// so a replay cannot agree with a recording because the two were written to agree.
 ///
 /// # Errors
 ///
-/// [`ReplayError`] for a malformed input or a selection that could not resolve.
-fn derive(inputs: &RunInputs) -> Result<(Selection, Item, Vec<Event>), ReplayError> {
+/// [`ReplayError`] for a malformed input, a selection that could not resolve, a dispatch the
+/// boundary refused, or an activation the recorded journal does not carry.
+fn derive(
+    inputs: &RunInputs,
+    results: &mut Results<'_>,
+) -> Result<(Selection, Item, Vec<Event>), ReplayError> {
     let (pack, catalog, artifacts, facets, item) = inputs.build()?;
-    let selection: Selection = select(&pack, &catalog, &artifacts, &facets, &inputs.stage, &item)?;
+    let mut selection: Selection =
+        select(&pack, &catalog, &artifacts, &facets, &inputs.stage, &item)?;
+    let runtime = inputs.runtime()?;
 
     // **THE RUNTIME'S OWN FIRST DURABLE ACT, and it is first in the journal because it happens
     // first.** Entering a stage is a tier-1, trailer-carried `stage_transition` (design §5;
-    // `EventKind::tier`), and it is the one act the runtime performs that needs no port, no clock
-    // and no dispatcher — so it is the one act this slice can record. Everything after it
-    // (opening a gate, dispatching, committing) needs the dispatcher Slice 4h builds, and the
-    // module header says so rather than leaving a reader to infer it from a short journal.
-    let mut events = vec![stage_entry(&inputs.stage, inputs.runtime()?)];
+    // `EventKind::tier`), and it needs no port, no clock and no dispatcher.
+    let mut events = vec![stage_entry(&inputs.stage, runtime)];
     events.extend(selection.journal());
 
     if let Some((request, requested_by)) = &inputs.deviation {
@@ -706,8 +1110,128 @@ fn derive(inputs: &RunInputs) -> Result<(Selection, Item, Vec<Event>), ReplayErr
         if let Some(event) = outcome.event() {
             events.push(event);
         }
+        // 🛑 **THE RUN CONTINUES ON THE AMENDED SELECTION, and until Slice 4i nothing in this
+        // function noticed the difference.** `step7`'s accepted branch *"returns a second
+        // `Selection` produced by re-running steps 2-5"*, and before there was a dispatch loop the
+        // only consumer of a selection here was `fsm_residue`'s single `next_action` — which, on
+        // this fixture, answers the same either way. A loop is not so forgiving: driving the BASE
+        // selection would dispatch the node the accepted deviation REMOVED, and the recorded
+        // journal would show a run doing exactly what its own `dag_amended` says it did not do.
+        // AC-064's *"the deviation record is part of the replay input set"* is about a replay
+        // re-deriving the amendment, not about a run ignoring it.
+        if let Some(amended) = outcome.selection() {
+            selection = amended.clone();
+        }
+    }
+
+    // ---- the envelope a RECORDING dispatches under, read before the loop -----------------------
+    //
+    // `N` is the PACK's (AC-029: *"declared, never defaulted in code"*) and the journaled instant
+    // is `inputs/runtime.json`'s. Both are read here rather than inside the loop so a recording
+    // that could satisfy neither refuses before it dispatches anything, and both are **logged
+    // inputs**: nothing in this function chooses a number.
+    let dispatch_envelope = match results {
+        Results::Dispatched(rt) => {
+            let cap = pack
+                .require_attempt_cap()
+                .map_err(|e| ReplayError::Malformed {
+                    path: format!("inputs/pack/{}", inputs.pack.0),
+                    detail: e.to_string(),
+                })?;
+            let now = runtime.require_results_at()?;
+            // The pre-events go through the port too, so the runtime's own fold reads the journal
+            // the run actually has rather than a truncated one.
+            for event in &events {
+                rt.append(event.clone())?;
+            }
+            Some((cap, now))
+        }
+        Results::Journal(_) => None,
+    };
+
+    // ---- THE LOOP. `next_action` -> if `Dispatch` { obtain } -> fold -> repeat -----------------
+    //
+    // AC-008's *"the replay reaches the recorded terminal state with all N results served from the
+    // journal, zero harness dispatches"* — as an architecture. The loop is the same in both
+    // directions; only [`Results`] differs.
+    let activations = inputs.activations();
+    loop {
+        let state = fsm::fold(item.id(), &inputs.stage, &events)?;
+        let ctx = fsm_context(runtime, &item, &activations);
+        let action = fsm::next_action(&selection, &state, &ctx)?;
+        let NextAction::Dispatch { key, step_id } = &action else {
+            break;
+        };
+        let binding = inputs.spec_for(step_id)?;
+        let produced = match (&mut *results, dispatch_envelope) {
+            (Results::Dispatched(rt), Some((cap, now))) => {
+                dispatch_through(rt, key, step_id, binding, cap, now)?
+            }
+            // Unreachable by construction: the envelope is `Some` exactly when the source is
+            // `Dispatched`. Refused rather than unwrapped, because an `expect` here would be a
+            // panic on a state a later edit could make reachable.
+            (Results::Dispatched(_), None) => {
+                return Err(ReplayError::Malformed {
+                    path: "inputs/runtime.json".to_owned(),
+                    detail: "a recording reached a dispatch with no envelope".to_owned(),
+                });
+            }
+            (Results::Journal(journal), _) => journal.serve(key, step_id)?,
+        };
+        events.extend(produced);
     }
     Ok((selection, item, events))
+}
+
+/// One dispatch through the bound ports, and **the events are read back off the store**.
+///
+/// The journal is queried before and after, and the delta is what the boundary appended. Nothing
+/// here re-builds a `dispatch` or an `activity_committed` to match what `crate::runtime` writes:
+/// a recording that constructed its own copy of the rows would be the two-written-to-agree defect
+/// this module's header names, one level down.
+fn dispatch_through(
+    rt: &Runtime,
+    key: &IdempotencyKey,
+    step_id: &str,
+    binding: &RecordedSpec,
+    cap: AttemptCap,
+    now: JournaledNow,
+) -> Result<Vec<Event>, ReplayError> {
+    let before = rt.journal(&key.item)?.len();
+    let report = rt.run_activity(
+        &key.item,
+        &key.activity_id_at_version,
+        step_id,
+        binding.spec(),
+        cap,
+        now,
+    )?;
+    if !report.committed() {
+        return Err(ReplayError::NotCommitted {
+            step_id: step_id.to_owned(),
+            activity_id_at_version: key.activity_id_at_version.clone(),
+        });
+    }
+    Ok(rt
+        .journal(&key.item)?
+        .into_iter()
+        .skip(before)
+        .collect::<Vec<Event>>())
+}
+
+/// The FSM's context for this run — four supplied values plus the recorded activations.
+fn fsm_context<'a>(
+    runtime: &'a RuntimeContext,
+    item: &'a Item,
+    activations: &'a [(String, String)],
+) -> FsmContext<'a> {
+    FsmContext::supplied(
+        item.id(),
+        &runtime.tree_hash,
+        Timestamp::from_unix_seconds(runtime.deadline),
+        runtime.successor.as_deref(),
+    )
+    .with_activations(activations)
 }
 
 /// The stage entry, as an event.
@@ -746,12 +1270,8 @@ fn fsm_residue(
 ) -> Result<(String, String), ReplayError> {
     let runtime = inputs.runtime()?;
     let state = fsm::fold(item.id(), &inputs.stage, events)?;
-    let ctx = FsmContext::supplied(
-        item.id(),
-        &runtime.tree_hash,
-        Timestamp::from_unix_seconds(runtime.deadline),
-        runtime.successor.as_deref(),
-    );
+    let activations = inputs.activations();
+    let ctx = fsm_context(runtime, item, &activations);
     let next = fsm::next_action(selection, &state, &ctx)?;
     let as_text = |bytes: Vec<u8>| -> Result<String, ReplayError> {
         String::from_utf8(bytes).map_err(|e| ReplayError::Malformed {
@@ -767,12 +1287,22 @@ fn fsm_residue(
 
 /// Produce one golden-log run from its inputs. **The journal is derived, never hand-written.**
 ///
+/// 🛑 **It takes `Ports` as of 2026-09-14 (Slice 4i), and the signature change IS the criterion.**
+/// AC-008's GIVEN is *"a replay of a run that **dispatched N activities**"*, and until this slice N
+/// was 0 on the only recorded run — so *"all N results served from the journal"* was a statement
+/// about an empty set and a kernel that dispatched nothing satisfied it. A recording with
+/// dispatches needs a dispatcher, and [`crate::runtime::Runtime::run_activity`] is it. The
+/// `run_id` the boundary stamps into every `activity_committed` is [`RunInputs::run_id`]'s derived
+/// content hash and is **not** a value the caller may choose, which is why the [`Runtime`] is
+/// constructed here rather than handed in whole.
+///
 /// # Errors
 ///
-/// [`ReplayError`] for a malformed input, a selection that could not resolve, or a journal the
-/// FSM refused to fold.
-pub fn record(inputs: &RunInputs) -> Result<RecordedRun, ReplayError> {
-    let (selection, item, events) = derive(inputs)?;
+/// [`ReplayError`] for a malformed input, a selection that could not resolve, a journal the FSM
+/// refused to fold, or a dispatch the boundary refused.
+pub fn record(inputs: &RunInputs, ports: Ports) -> Result<RecordedRun, ReplayError> {
+    let runtime = Runtime::new(ports, &inputs.run_id()?, &inputs.stage);
+    let (selection, item, events) = derive(inputs, &mut Results::Dispatched(&runtime))?;
     let (terminal_state, next_action) = fsm_residue(inputs, &selection, &item, &events)?;
     Ok(RecordedRun {
         run_id: inputs.run_id()?,
@@ -831,9 +1361,9 @@ pub fn write_run(root: &Path, run: &RecordedRun) -> Result<PathBuf, ReplayError>
         "inputs_digest": run.inputs_digest,
         "event_count": run.events.len(),
         "producer": "rk-kernel::replay::record",
-        // NEW at Slice 4f. Neither carries a timestamp, so *"nothing in the layout carries a
-        // timestamp"* (the module header) still holds: the gate deadline inside `next_action` is
-        // a RECORDED INPUT read back out of `inputs/runtime.json`, not a clock reading.
+        // NEW at Slice 4f. Neither is a clock reading, so the module header's rule still holds:
+        // the gate deadline inside `next_action` is a RECORDED INPUT read back out of
+        // `inputs/runtime.json`.
         "terminal_state": run.terminal_state,
         "next_action": run.next_action,
     });
@@ -878,6 +1408,23 @@ pub fn write_run(root: &Path, run: &RecordedRun) -> Result<PathBuf, ReplayError>
         bytes.push(b'\n');
         write_file(&inputs.join("runtime.json"), &bytes)?;
     }
+    // NEW at Slice 4i. **Always written, even when empty**, so the layout is one shape: a reader
+    // that had to distinguish "no bindings" from "an older log" would be back where `read_run`'s
+    // refusal of a missing `terminal_state` started.
+    let mut specs = serde_json::Map::new();
+    for (node, binding) in &run.inputs.specs {
+        specs.insert(node.clone(), binding.to_json());
+    }
+    let mut spec_bytes =
+        rk_store::canon::canonical(&serde_json::Value::Object(specs)).map_err(|e| {
+            ReplayError::Malformed {
+                path: "specs.json".to_owned(),
+                detail: e.to_string(),
+            }
+        })?;
+    spec_bytes.push(b'\n');
+    write_file(&inputs.join("specs.json"), &spec_bytes)?;
+
     if let Some((request, by)) = &run.inputs.deviation {
         let mut bytes = rk_store::canon::canonical(&serde_json::json!({
             "request": request.to_json_public(),
@@ -996,7 +1543,35 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         if let Some(to) = value["successor"].as_str() {
             runtime = runtime.advances_to(to);
         }
+        if let Some(at) = value["results_at"].as_i64() {
+            runtime = runtime.results_at(at);
+        }
         inputs = inputs.with_runtime(runtime);
+    }
+
+    // **A LOG WITHOUT `inputs/specs.json` IS REFUSED**, on `terminal_state`'s exact warrant one
+    // page up: a run recorded before Slice 4i carries no dispatch bindings, so a replay of one
+    // would re-derive a journal with **zero** dispatches and compare it against a recorded journal
+    // with zero dispatches — AC-008's GIVEN satisfied over an empty N, which is the vacuous green
+    // this whole slice exists to remove. Reading an absent file as an empty map would restore it.
+    let specs_path = inputs_dir.join("specs.json");
+    if !specs_path.is_file() {
+        return Err(ReplayError::Malformed {
+            path: specs_path.display().to_string(),
+            detail: "no specs.json — this log predates Slice 4i's layout, so its journal records \
+                     no dispatches and AC-008's GIVEN would be satisfied over an empty N. \
+                     Re-bless it with `cargo test -p rk-kernel --features corpus --test it -- \
+                     --ignored bless_the_committed_golden_log`"
+                .to_owned(),
+        });
+    }
+    let specs = parse_json(&specs_path)?;
+    let specs = specs.as_object().ok_or_else(|| ReplayError::Malformed {
+        path: specs_path.display().to_string(),
+        detail: "specs.json is not an object keyed by DAG node id".to_owned(),
+    })?;
+    for (node, value) in specs {
+        inputs = inputs.with_spec(node, RecordedSpec::from_json(node, value)?);
     }
 
     let deviation_path = inputs_dir.join("deviation.json");
@@ -1145,7 +1720,49 @@ pub fn replay(dir: &Path, ports: &mut ReplayPorts<'_, '_>) -> Result<ReplayRepor
     }
 
     let recorded = read_run(dir)?;
-    let (selection, item, rederived) = derive(&recorded.inputs)?;
+
+    // ---- THE RECORDED INPUT SET IS POLICED BEFORE IT IS TRUSTED (AC-042) -----------------------
+    //
+    // ADDED 2026-09-14, and it closes a gap an adversarial pass found: `replay()` read
+    // `inputs_digest` out of the manifest and **never compared it to anything**, and never
+    // re-derived `run_id` either. A tampered `inputs/` — a rewritten `specs.json`, a card digest,
+    // an edited pack — was therefore accepted by `replay()` itself. It went red only in
+    // `golden_log_replay`, and only because that TEST re-records and byte-compares against the
+    // committed copy [measured 2026-09-14: editing one `timeout_secs` in the committed fixture
+    // fails at `tests/it/replay.rs`'s fixture comparison, not inside `replay()`].
+    //
+    // **The test's check does not travel.** `redkiln replay --run <id>` is 7d's, it runs against an
+    // arbitrary recorded run with **no committed copy to compare against**, and AC-042's whole
+    // subject is re-derivation *"from the logged inputs alone"* with a `HiddenInput` on any
+    // mismatch. An input set the replay accepts without checking is a hidden input by construction.
+    //
+    // `run_id` is a content hash of the whole input set — `sha256_lp([SCHEMA, stage,
+    // canonical(inputs)])`, and `specs.json` is folded into it like every other input — so one
+    // comparison policies all of them. It needs no clock and no port: the recomputation is the
+    // same pure function that minted the name.
+    let rederived_run_id = recorded.inputs.run_id()?;
+    if rederived_run_id != recorded.run_id {
+        return Err(ReplayError::Divergent(HiddenInput {
+            run_id: recorded.run_id.clone(),
+            first_divergent_node: format!(
+                "inputs/: the recorded run_id is {} and the logged input set hashes to {} — some \
+                 input was edited after the run was recorded, so the re-derivation below would \
+                 have run against inputs the recording never saw",
+                recorded.run_id, rederived_run_id
+            ),
+        }));
+    }
+
+    // **THE RECORDED JOURNAL IS THE RESULT SOURCE, and the harness is never reached.** Every
+    // `dispatch`/`activity_committed` row the FSM asks for is served from the recording, once, in
+    // order; an activation the journal does not carry is `ReplayError::JournalHasNoResult` and
+    // never a step quietly skipped. That is AC-008's *"all N results served from the journal, zero
+    // harness dispatches"* — the zero below is then a reading over a loop that had somewhere else
+    // to get its results from, rather than over a loop that never wanted any.
+    let (selection, item, rederived) = derive(
+        &recorded.inputs,
+        &mut Results::Journal(ServedJournal::of(&recorded.events)),
+    )?;
 
     // ---- byte-identical decisions --------------------------------------------------------------
     let recorded_lines = split_lines(&canonical_events(&recorded.events)?);

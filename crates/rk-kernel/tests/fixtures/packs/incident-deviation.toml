@@ -16,3 +16,11 @@ baseline = ["Changeset", "ImplReport"]
 [[stage.implement.require]]
 when = "criticality >= high"
 artifacts = ["ChangeSummary"]
+
+# AC-029's `N`, DECLARED and never defaulted in code. Added 2026-09-14 (Slice 4i): the golden-log
+# recording now drives `NextAction::Dispatch` through the bound `Harness`, and
+# `Pack::require_attempt_cap` REFUSES a pack that declares none -- there is no `unwrap_or` and no
+# `const` fallback behind that call. The key spelling is `select/pack.rs`'s stated reading and a
+# record naming it is OWED there, not here.
+[retry]
+attempts_cap = 4

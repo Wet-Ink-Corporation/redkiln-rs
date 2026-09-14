@@ -64,9 +64,12 @@
 //! 2026-09-14, built the other**: the recorded side is now `run.json`'s `terminal_state` and
 //! `next_action`, written at record time, committed, and read back by [`replay`] — so AC-006
 //! assertion 3 and AC-008's terminal-state half are measured against a committed byte string
-//! rather than against a second fold of the same journal. **What did not move**: AC-008's GIVEN
-//! names *"a run that dispatched N activities"* and **N is 0**, because a journal with dispatches
-//! needs Slice 4h's dispatcher; AC-161's **route** *"from git alone"* is 7d's; and AC-164's
+//! rather than against a second fold of the same journal. **Slice 4i, 2026-09-14, moved the last
+//! of it**: this sentence read *"**What did not move**: AC-008's GIVEN names \"a run that
+//! dispatched N activities\" and **N is 0**"*, and N is now **2** — the recorded journal carries
+//! two `dispatch` and two `activity_committed` rows, and the replay serves both from the journal
+//! with the `RefusingHarness` bound. **What still did not move**: AC-161's **route** *"from git
+//! alone"* is 7d's; and AC-164's
 //! `doctor`-classification half is in neither §7b.15's claimed list nor its ARMED table (residual
 //! 10l). None of the three is reported as covered, and [`replay`]'s header carries each reason.
 //! AC-039 is a **HUMAN GATE** §7b.15 excludes from the claim outright, so

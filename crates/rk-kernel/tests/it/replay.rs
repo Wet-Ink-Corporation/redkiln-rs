@@ -13,9 +13,11 @@
 //!
 //! **All five are measured here as of 2026-09-14 (Slice 4f). The sentence that stood here until
 //! then — *"Three of the five are measured here. Two are NOT BUILDABLE at Slice 3"* — is now
-//! false, and the two rows it pointed at are rewritten below with the date. What it got right
-//! survives it and is stated in its own section: AC-008's GIVEN names N dispatched activities and
-//! N is 0, so the criterion is ARMED, not discharged.**
+//! false, and the two rows it pointed at are rewritten below with the date. And the clause that
+//! replaced it — *"AC-008's GIVEN names N dispatched activities and N is 0, so the criterion is
+//! ARMED"* — is false as of **Slice 4i**: `record()` drives the FSM's `Dispatch` through a bound
+//! `Harness` and the recorded run dispatches N = 2. Its own section below is rewritten rather
+//! than deleted, because what it said about the vacuity was right while it stood.**
 //!
 //! | # | assertion | state |
 //! | --- | --- | --- |
@@ -23,34 +25,47 @@
 //! | 2 | byte-identical decisions | **measured** — the re-derived event journal is compared to the recorded one **byte for byte under `rk_store::canon`** |
 //! | 3 | byte-identical **next action** | **MEASURED, 2026-09-14.** `rk_kernel::workflow::fsm::next_action`'s canonical bytes, recomputed from the re-derived journal and compared against the value **committed in `run.json`** at record time. The recorded side is READ BACK, never recomputed from the same bytes: two folds of byte-identical journals are equal by construction, so both-sides-recomputed would assert nothing. A premise below rules out `done` first, so the comparison is not held over a next action that decides nothing |
 //! | 4 | zero `rk-git` writes | **measured against `rk-git`'s OWN counter.** The replay is handed a real [`rk_git::gitops::GitOps`] in [`rk_git::gitops::Mode::Replay`], driving a [`rk_git::gitops::VecJournal`] — the fake `rk-git`'s own header calls *"the fake, and what the replay tests drive"* — and the zero is `GitOps::writes_performed()`. Until 2026-09-13 this file counted a `GitWriter` trait the KERNEL declared, justified by *"`rk-git` … exposes no port to bind a fake to"*, which `crates/rk-git/src/gitops.rs`:44-51 refutes. `golden_log_replay_writing_fake_is_red` is its positive control, and it now drives a `GitOps` that has performed one write |
-//! | 5 | zero harness dispatches **with the terminal state matched** | **both halves measured, 2026-09-14 — and the criterion is still ARMED, for a different reason (next section).** The dispatch count is real: the fake bound below **fails the test on any `dispatch` call** (AC-008's own shape) and the counter is the CALLER's `AtomicU32`, read by the replay before and after. The terminal state is compared against the committed manifest exactly as row 3 is, with `assert_ne!(.., NotStarted)` first so *"a kernel that does nothing at all"* cannot reach a green. **Checkpoint 7b:1515's `terminal_state=matched` grep is reachable and this file now prints the token — computed from the comparison, never as a literal** |
+//! | 5 | zero harness dispatches **with the terminal state matched** | **both halves measured, 2026-09-14, and at Slice 4i over a GIVEN that is satisfied** — the recorded run dispatches N = 2 and the replay serves both results from the journal (next section). The dispatch count is real: the fake bound below **fails the test on any `dispatch` call** (AC-008's own shape) and the counter is the CALLER's `AtomicU32`, read by the replay before and after. The terminal state is compared against the committed manifest exactly as row 3 is, with `assert_ne!(.., NotStarted)` first so *"a kernel that does nothing at all"* cannot reach a green. **Checkpoint 7b:1515's `terminal_state=matched` grep is reachable and this file now prints the token — computed from the comparison, never as a literal** |
 //!
-//! # 🛑 AC-008 IS ARMED, NOT DISCHARGED — ITS GIVEN NAMES N DISPATCHED ACTIVITIES AND N IS 0
+//! # AC-008's GIVEN NAMES N DISPATCHED ACTIVITIES, AND N WAS 0 UNTIL SLICE 4i
 //!
 //! > **AC-008** GIVEN a replay of a run that **dispatched N activities** … THEN the replay reaches
 //! > the recorded terminal state with **all N results served from the journal**, zero harness
 //! > dispatches, and zero `rk-git` writes.
 //!
-//! [measured 2026-09-14: the recorded run holds **4** events — `stage_transition`, `dag_assembled`,
-//! `gate_opened`, `dag_amended` — and **zero** `dispatch` and `activity_committed` events.] So
-//! *"all N results served from the journal"* is a statement about an empty set, and **the dispatch
-//! half of this criterion is vacuous**. It is stated here rather than left for a reader to infer
-//! from a short journal.
+//! **What this section said while it was true, and it was:**
 //!
-//! **What is NOT vacuous, and why the terminal-state half still discriminates:** the fold lands on
-//! `awaiting_dispatch`, `assert_ne!(.., NotStarted)` rules out AC-008's own named failure, and the
-//! recorded side of the comparison is a byte string committed in `run.json` — so a changed fold, a
-//! changed evaluation order or a changed canonical form all move off it and the replay refuses.
+//! > [measured 2026-09-14: the recorded run holds **4** events — `stage_transition`,
+//! > `dag_assembled`, `gate_opened`, `dag_amended` — and **zero** `dispatch` and
+//! > `activity_committed` events.] So *"all N results served from the journal"* is a statement
+//! > about an empty set, and **the dispatch half of this criterion is vacuous** … **Why a journal
+//! > with dispatches was not produced in this slice.** `record()` would have to drive
+//! > `NextAction::Dispatch` through the bound `Harness` … **Nothing in `rk-kernel` resolves any of
+//! > those five**, and the activity-dispatch boundary is Slice 4h's.
 //!
-//! **Why a journal with dispatches was not produced in this slice.** `record()` would have to
-//! drive `NextAction::Dispatch` through the bound `Harness` and append an `activity_committed` per
-//! commit — which means assembling a real `rk_types::activity::ActivitySpec` (card digest, tool
-//! allowlist, schema id, timeout, resolved inputs) from a DAG node. **Nothing in `rk-kernel`
-//! resolves any of those five**, and the activity-dispatch boundary is Slice 4h's. Building half a
-//! dispatcher here to lengthen a journal would be building it without its criteria. What `record`
-//! DOES drive is the one runtime act needing no port, no clock and no dispatcher: the tier-1
-//! `stage_transition` that enters the stage — which is also what gives
-//! `ac161_ac164_delete_db_replay` a tier-1 record to compare at stage grain.
+//! Slice 4h built that boundary and **Slice 4i makes `record()` drive it**. [measured 2026-09-14,
+//! after: the recorded run holds **8** events — the four above plus **2** `dispatch` and **2**
+//! `activity_committed` — its terminal state is `stage_complete` rather than `awaiting_dispatch`,
+//! and its next action is `advance_stage`.] The five `ActivitySpec` fields are still resolved by
+//! nothing, and that is not papered over: they arrive as a **recorded input**, `inputs/specs.json`,
+//! folded into `run_id` like every other input, so AC-042's *"from the logged inputs alone"* holds
+//! and **a record routing spec assembly is OWED** (`rk_kernel::replay::RecordedSpec`'s own doc).
+//!
+//! **Three things make the served N non-vacuous, and each is an assertion rather than a claim:**
+//!
+//! 1. `recorded_dispatches > 0`, with the recording's own fake counter equal to it — so the rows
+//!    are the port's and not rows the recorder minted beside a port it never reached;
+//! 2. `events_compared == recorded.events.len()` with `divergences == 0` — the re-derivation
+//!    asked the journal for every one of the N results and got them, and a loop that served none
+//!    would re-derive a 4-event journal that the length comparison inside `replay()` refuses;
+//! 3. [`golden_log_replay_missing_result_is_red`] — the positive control: strip the
+//!    `activity_committed` rows from a scratch copy and the replay must return
+//!    `ReplayError::JournalHasNoResult` rather than skipping the step and folding on.
+//!
+//! 🛑 **AND WHAT IS STILL NOT DISCHARGED.** The N dispatches are a **scripted fake's**. AC-008 asks
+//! for exactly that, so this is coverage and not a shortfall — but nothing here is evidence about a
+//! real adapter, which is 7c's, and no line of this file should be read as such. AC-161's route
+//! *"from git alone"* and AC-164's `doctor` half are unchanged and still uncovered, below.
 //!
 //! # And this replay is over the SELECTION journal plus the stage entry, not a full workflow run
 //!
@@ -72,6 +87,7 @@
 //! | `rk_git_writes=0` | `golden_log_replay_writing_fake_is_red` | §7b.13 |
 //! | `harness_dispatches=0` | `golden_log_replay_dispatching_fake_is_red` | 2026-09-13, after mutation G23 found the counter unpinned |
 //! | `terminal_state=matched` | `golden_log_replay_terminal_state_mismatch_is_red` | **2026-09-14, this slice** — it had neither a control nor a stated reason (gap G-1), which is the one exception §7b.14's own rule did not permit |
+//! | `results_served=N` | `golden_log_replay_missing_result_is_red` | **2026-09-14, Slice 4i** — the token is new because N was 0 before it, and an absence over an empty set needs no control |
 //!
 //! **The control was observed red before it was made green, and the red was the interesting one:**
 //! with the FSM residue computed and recorded but the two comparison steps not yet in `replay()`,
@@ -114,18 +130,29 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU32;
+use std::sync::{Arc, Mutex};
 
 use rk_git::git_exec::{GitExec, GitOp};
 use rk_git::gitops::{GitOps, Mode, VecJournal};
 use rk_git::path::WorktreePath;
-use rk_kernel::replay::{HiddenInput, ReplayError, ReplayPorts, RunInputs, RuntimeContext};
+use rk_kernel::replay::{
+    HiddenInput, RecordedSpec, ReplayError, ReplayPorts, RunInputs, RuntimeContext,
+};
 use rk_kernel::workflow::fsm::{NextAction, StageAction, TerminalState, stage_action};
+use rk_ports::docs_site::DocsSite;
 use rk_ports::event_store::{EventStore, Query, Snapshot};
+use rk_ports::fakes::{BoardTracker, FixtureToolchain, RecordingDocs};
 use rk_ports::harness::{DispatchOutcome, Harness};
-use rk_types::activity::ActivitySpec;
+use rk_ports::root::Ports;
+use rk_ports::toolchain::Toolchain;
+use rk_ports::tracker::Tracker;
+use rk_types::activity::{ActivitySpec, DispatchRecord};
+use rk_types::digest::Digest;
 use rk_types::error::StepError;
 use rk_types::event::Event;
 use rk_types::event_kind::{EventKind, Tier};
+use rk_types::retention::Retained;
+use rk_types::typed::{SchemaId, Typed};
 
 const DEVIATION: &str = include_str!("../fixtures/packs/incident-deviation.toml");
 const ARTIFACTS: &str = include_str!("../fixtures/registries/artifacts/artifacts.toml");
@@ -173,6 +200,37 @@ const TREE_HASH: &str = "9f2c1ab4d6e80357bb41c0d9e2f7a85643c1908df5b2e7461ac30d9
 /// identical inputs produce different bytes.
 const DEADLINE: i64 = 1_760_000_000;
 
+/// The journaled instant every `activity_committed` this run writes carries. Same rule as
+/// [`DEADLINE`] and same reason: a clock reading here would make the recorded journal a different
+/// byte string on every run and turn AC-042's byte-identity into a comparison of clocks.
+const RESULTS_AT: i64 = 1_759_900_000;
+
+/// The schema every recorded [`ActivitySpec`] demands, and the one the scripted responder returns.
+///
+/// One id for all three bindings deliberately: the boundary's whole AC-031 check is
+/// `typed.schema == spec.schema`, and a script whose entries had to be matched to nodes by
+/// position would make this file's fixture depend on the plan's order rather than on the bindings.
+const RECORDED_SCHEMA: &str = "RecordedResult/v1";
+
+/// **The dispatch bindings, as RECORDED INPUTS** — one per DAG node the amended plan carries.
+///
+/// 🛑 **Why they are supplied and not resolved.** `rk_types::activity::ActivitySpec` has five
+/// fields and this tree resolves none of them from a DAG node [measured 2026-09-14: `card_digest`,
+/// `tools` and `schema` appear in **zero** catalog fixtures; `timeout_secs` is declared in ten and
+/// parsed by nothing]. The spec is the **binder's** output and the binder is unbuilt, so at Step 7b
+/// it is a logged input and **a record routing spec assembly is OWED** —
+/// `rk_kernel::replay::RecordedSpec`'s own doc carries the same statement beside the code.
+///
+/// `activity_id_at_version` is here for the sibling reason: the join between a `DagNode` and
+/// `Activity::id_at_version` has three candidate homes and `workflow::fsm`'s header records that
+/// choosing one is a decision this stage may not take. The versions below are the ones the
+/// **committed catalog fixtures declare** (`version = 1` in each of the three), transcribed.
+const BINDINGS: [(&str, &str, &str); 3] = [
+    ("change-summary[node]", "change-summary@1", "ChangeSummary"),
+    ("impl-report", "impl-report@1", "ImplReport"),
+    ("implement-change[node]", "implement-change@1", "Changeset"),
+];
+
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
@@ -207,14 +265,15 @@ fn inputs() -> RunInputs {
     let facets_src = std::fs::read_to_string(workspace_root().join("spikes/p9/facets.toml"))
         .expect("the shipped facet registry is readable");
 
-    RunInputs::new(STAGE)
+    let mut inputs = RunInputs::new(STAGE)
         .with_runtime(
             // Supplied, never derived, and recorded as part of the input set. `entered_from` and
             // `advances_to` are both present so neither branch of the fold's `optional_str`
             // reading nor `next_action`'s successor argument is exercised only by its absence.
             RuntimeContext::supplied(TREE_HASH, DEADLINE)
                 .entered_from("triage")
-                .advances_to("verify"),
+                .advances_to("verify")
+                .results_at(RESULTS_AT),
         )
         .with_pack("incident-deviation.toml", DEVIATION)
         .with_catalog(CATALOG)
@@ -233,7 +292,111 @@ fn inputs() -> RunInputs {
             "criticality >= high",
             "the incident is already summarised in the timeline",
         ))
-        .requested_by("impl-report")
+        .requested_by("impl-report");
+
+    // One binding per node the ASSEMBLED dag carries — including `change-summary[node]`, which the
+    // accepted deviation removes. Recording a binding for a node the amended plan never dispatches
+    // is deliberate: the input set is a function of the DAG, not of the amendment, so the log does
+    // not quietly encode the outcome of step 7 in what it supplies.
+    for (node, activation, kind) in BINDINGS {
+        inputs = inputs.with_spec(
+            node,
+            RecordedSpec::supplied(
+                activation,
+                ActivitySpec {
+                    card_digest: Digest::from_hex(&card_digest_hex(node))
+                        .expect("64 lowercase hex characters"),
+                    tools: vec!["Read".to_owned()],
+                    schema: SchemaId::new(RECORDED_SCHEMA),
+                    timeout_secs: 900,
+                    inputs: vec![
+                        ("item".to_owned(), serde_json::json!(ITEM)),
+                        ("kind".to_owned(), serde_json::json!(kind)),
+                    ],
+                },
+            ),
+        );
+    }
+    inputs
+}
+
+/// A distinct, derived card digest per node. **Derived and not a constant**: three bindings sharing
+/// one digest would let a spec mixed up between two nodes reach the port unnoticed.
+fn card_digest_hex(node: &str) -> String {
+    rk_types::digest::sha256(node.as_bytes())
+        .as_str()
+        .to_owned()
+}
+
+/// **The recording's result source: a scripted `Harness` that COUNTS.**
+///
+/// AC-008's fake fails the test on any dispatch, and that is [`RefusingHarness`] — bound on the
+/// **replay** side, which is where the criterion's zero is asserted. A recording has to dispatch,
+/// so the fake bound here answers instead, and its counter is what makes *"N is not 0"* a reading.
+#[derive(Debug, Default)]
+struct RecordingHarness {
+    dispatches: AtomicU32,
+}
+
+impl RecordingHarness {
+    fn dispatches(&self) -> u32 {
+        self.dispatches.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+impl Harness for RecordingHarness {
+    fn dispatch(&self, spec: &ActivitySpec, _store: &mut dyn EventStore) -> DispatchOutcome {
+        self.dispatches
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        DispatchOutcome {
+            record: DispatchRecord {
+                argv_digest: rk_types::digest::sha256(b"recording-argv"),
+                env_digest: rk_types::digest::sha256(b"recording-env"),
+                instrument_version: "recording-fake".to_owned(),
+                stdout: Retained::of(b""),
+                stderr: Retained::of(b""),
+            },
+            // **A function of the SPEC, never of the call order.** The value is derived from the
+            // card digest and the kind the binding supplied, so two runs of identical inputs
+            // produce identical bytes; a counter or a clock in this value would move
+            // `events.jsonl` on every run and make the byte-identity assertion untestable. It also
+            // differs per node, so a spec delivered to the wrong dispatch is visible in the
+            // journal rather than absorbed.
+            result: Ok(Typed::new(
+                SchemaId::new(RECORDED_SCHEMA),
+                serde_json::json!({
+                    "card": spec.card_digest.as_str(),
+                    "produced": spec
+                        .inputs
+                        .iter()
+                        .find(|(k, _)| k == "kind")
+                        .map_or(serde_json::Value::Null, |(_, v)| v.clone()),
+                }),
+            )),
+        }
+    }
+}
+
+/// Every port bound, for the **recording**. The three this run never calls are `rk-ports`' own
+/// fakes; a `Runtime` cannot be constructed over four, which is what makes *"every port bound"* a
+/// type fact here as it is on the replay side.
+fn recording_ports(harness: &Arc<RecordingHarness>) -> Ports {
+    Ports {
+        store: Arc::new(Mutex::new(CountingStore::default())) as Arc<Mutex<dyn EventStore>>,
+        harness: Arc::clone(harness) as Arc<dyn Harness>,
+        tracker: Arc::new(BoardTracker::default()) as Arc<dyn Tracker>,
+        docs: Arc::new(RecordingDocs::default()) as Arc<dyn DocsSite>,
+        toolchain: Arc::new(FixtureToolchain::default()) as Arc<dyn Toolchain>,
+    }
+}
+
+/// Record the one run this file is about, and hand back the fake that answered so its dispatch
+/// count is a **reading** rather than a number the recording printed about itself.
+fn record_the_run() -> (rk_kernel::replay::RecordedRun, Arc<RecordingHarness>) {
+    let harness = Arc::new(RecordingHarness::default());
+    let recorded = rk_kernel::replay::record(&inputs(), recording_ports(&harness))
+        .expect("the recorded run resolves");
+    (recorded, harness)
 }
 
 // ---------------------------------------------------------------------------- the bound fakes
@@ -323,29 +486,59 @@ fn git_exec() -> GitExec {
 #[test]
 #[ignore = "writes the committed fixture; run deliberately when the recorded run changes"]
 fn bless_the_committed_golden_log() {
-    let recorded = rk_kernel::replay::record(&inputs()).expect("the recorded run resolves");
+    let (recorded, _harness) = record_the_run();
     let dir = rk_kernel::replay::write_run(&committed_root(), &recorded)
         .expect("the fixture tree is writable");
     println!("wrote {}", dir.display());
 }
 
-/// **AC-006 / AC-008, as far as this slice can measure them — and the first replay in this
-/// system's history.**
+/// **AC-006 / AC-008 — and the first replay in this system's history that had anything to serve.**
 ///
-/// Read the module header before reading this green: assertions 3 and the terminal-state half of 5
-/// are **not buildable without an FSM** and are not claimed.
+/// Read the module header before reading this green. The sentence that stood here said *"assertions
+/// 3 and the terminal-state half of 5 are **not buildable without an FSM** and are not claimed"*;
+/// the FSM landed at Slice 4e, the recorded side of both comparisons at 4f, and **the N dispatched
+/// activities AC-008's GIVEN names at 4i**. What is still not claimed is named in the header's
+/// last 🛑 paragraph: these are a scripted fake's dispatches, not an adapter's.
 #[test]
 fn golden_log_replay() {
-    let inputs = inputs();
-
     // ---- 1. produce the log. THIS RUN produces it; nothing here is hand-made ------------------
-    let recorded = rk_kernel::replay::record(&inputs).expect("the recorded run resolves");
+    let (recorded, recording_harness) = record_the_run();
     assert!(
         !recorded.events.is_empty(),
         "an empty journal would satisfy every comparison below vacuously"
     );
     let staged = rk_kernel::replay::write_run(&staging_root(), &recorded)
         .expect("the staging tree is writable");
+
+    // ---- 1b. AC-008's GIVEN: **a run that dispatched N activities** ---------------------------
+    //
+    // This is the premise the whole criterion hangs on, and until 2026-09-14 it was false: the
+    // recorded journal held 4 events and **zero** `dispatch` and `activity_committed` rows, so
+    // *"all N results served from the journal"* was a statement about an empty set and a
+    // do-nothing kernel satisfied it. `record()` now drives the FSM's `Dispatch` through the
+    // bound `Harness`, and the two counts below are what make N real.
+    let recorded_dispatches = crate::runtime::count_kind(&recorded.events, EventKind::Dispatch);
+    let recorded_commits =
+        crate::runtime::count_kind(&recorded.events, EventKind::ActivityCommitted);
+    assert!(
+        recorded_dispatches > 0,
+        "AC-008's GIVEN is a replay of a run that DISPATCHED N activities, and N is \
+         {recorded_dispatches}. With N = 0 the dispatch half of the criterion is vacuous and the \
+         green below discharges nothing"
+    );
+    assert_eq!(
+        recorded_dispatches, recorded_commits,
+        "every dispatch this recording made committed, so the N the replay serves back is the N \
+         the recording produced"
+    );
+    // …and the rows are not a decoration the recorder wrote about itself: the RECORDING's own
+    // fake was reached exactly N times. The counter is the fake's, read on this thread.
+    assert_eq!(
+        recording_harness.dispatches(),
+        u32::try_from(recorded_dispatches).expect("N fits a u32"),
+        "the `dispatch` rows in the journal are the ones the bound Harness produced, not rows the \
+         recorder minted beside a port it never reached"
+    );
 
     // ---- 2. the committed in-crate copy is byte-identical to what this run just produced -------
     //
@@ -481,6 +674,32 @@ fn golden_log_replay() {
         "ADR-0105 decision 1: on replay the kernel is SERVED the journal"
     );
 
+    // assertion 5c — **ALL N RESULTS SERVED FROM THE JOURNAL**, and the discriminating reading is
+    // `report.events_compared`, NOT the store.
+    //
+    // 🛑 **The store would say `matched` either way and that is worth stating.** `replay()` serves
+    // the RECORDED journal to the bound `EventStore` at the end of its own body, so counting
+    // `dispatch` rows in `store.events` measures that loop and nothing about the re-derivation. It
+    // is the equality above — `events_compared == recorded.events.len()` with `divergences == 0`,
+    // over a journal whose last {recorded_dispatches} × 2 rows ARE the dispatches — that says the
+    // replay's own `next_action` → `Dispatch` → obtain → fold loop asked for every one of the N
+    // results and got them from the recording: a loop that served none would re-derive a
+    // {short}-event journal and the length comparison inside `replay()` would refuse.
+    // `golden_log_replay_missing_result_is_red` is the positive control for that refusal.
+    let short = recorded.events.len() - (recorded_dispatches + recorded_commits);
+    assert_eq!(
+        report.events_compared,
+        recorded.events.len(),
+        "AC-008: the re-derivation reached all {recorded_dispatches} dispatches and all \
+         {recorded_commits} results, not the {short}-event prefix a loop that served nothing \
+         would produce"
+    );
+    assert!(
+        short < report.events_compared,
+        "PREMISE: the journal must actually carry dispatch rows for the comparison above to be \
+         about them"
+    );
+
     // The amended DAG is in the journal, which is what makes AC-064's second AND checkable.
     assert!(
         store
@@ -516,7 +735,7 @@ fn golden_log_replay() {
     // for neither.
     println!(
         "replay {} events_compared={} divergences={} rk_git_writes={} harness_dispatches={} \
-         terminal_state={} next_action_bytes={}",
+         terminal_state={} next_action_bytes={} recorded_dispatches={} results_served={}",
         report.run_id,
         report.events_compared,
         report.divergences,
@@ -528,6 +747,8 @@ fn golden_log_replay() {
             "DIVERGED"
         },
         report.next_action.len(),
+        recorded_dispatches,
+        crate::runtime::count_kind(&store.events, EventKind::ActivityCommitted),
     );
 }
 
@@ -554,8 +775,10 @@ fn golden_log_replay() {
 /// one that moves wrongly. Both are named; neither is reported as the other.
 #[test]
 fn golden_log_replay_terminal_state_mismatch_is_red() {
-    let recorded = rk_kernel::replay::record(&inputs()).expect("resolves");
-    let source = committed_root().join(recorded.run_id());
+    let run_id = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    let source = committed_root().join(&run_id);
 
     let rewritten = scratch_root().join("terminal-state-rewritten");
     copy_tree(&source, &rewritten);
@@ -607,8 +830,7 @@ fn golden_log_replay_terminal_state_mismatch_is_red() {
                 "and the RECOMPUTED side, so the two are distinguishable in the halt"
             );
             assert_eq!(
-                d.activity_id,
-                recorded.run_id(),
+                d.activity_id, run_id,
                 "AC-007's typed halt names what diverged"
             );
         }
@@ -638,8 +860,10 @@ fn golden_log_replay_terminal_state_mismatch_is_red() {
 /// red — which is exactly the state the mutation above put the tree in.
 #[test]
 fn golden_log_replay_next_action_mismatch_is_red() {
-    let recorded = rk_kernel::replay::record(&inputs()).expect("resolves");
-    let source = committed_root().join(recorded.run_id());
+    let run_id = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    let source = committed_root().join(&run_id);
 
     let rewritten = scratch_root().join("next-action-rewritten");
     copy_tree(&source, &rewritten);
@@ -686,8 +910,7 @@ fn golden_log_replay_next_action_mismatch_is_red() {
                 "and the RECOMPUTED side, so the two are distinguishable in the halt"
             );
             assert_eq!(
-                d.activity_id,
-                recorded.run_id(),
+                d.activity_id, run_id,
                 "AC-007's typed halt names what diverged"
             );
         }
@@ -697,6 +920,161 @@ fn golden_log_replay_next_action_mismatch_is_red() {
              produced, and the whole replay suite was green in it"
         ),
         Err(other) => panic!("expected NextActionDiverged, got {other}"),
+    }
+}
+
+/// **THE POSITIVE CONTROL FOR *"all N results served from the journal"*** — the half of AC-008
+/// that had no instrument at all before 2026-09-14, because N was 0 and an absence over an empty
+/// set needs no serving.
+///
+/// `golden_log_replay` asserts that the re-derivation reached every recorded event. This asserts
+/// the other direction: with the recorded `activity_committed` rows **removed** from a scratch
+/// copy, the FSM asks for a result the journal cannot give, and the replay must **refuse** with
+/// `ReplayError::JournalHasNoResult`. A replay that skipped the step instead would serve N-1
+/// results, fold on, and report a green — which is precisely the silent shortfall AC-008's
+/// *"**all** N"* rules out.
+///
+/// It is also the control for the loop's termination: a replay that neither served nor refused
+/// would ask for the same activation for ever.
+#[test]
+fn golden_log_replay_missing_result_is_red() {
+    let run_id = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    let source = committed_root().join(&run_id);
+
+    let stripped = scratch_root().join("results-stripped");
+    copy_tree(&source, &stripped);
+    let events_path = stripped.join("events.jsonl");
+    let text = std::fs::read_to_string(&events_path).expect("the journal is readable");
+    let kept: Vec<&str> = text
+        .lines()
+        .filter(|line| !line.contains(r#""kind":"activity_committed""#))
+        .collect();
+    assert!(
+        kept.len() < text.lines().count(),
+        "PREMISE: the committed journal must actually carry `activity_committed` rows, or this \
+         control removes nothing and asserts a refusal over an unchanged log"
+    );
+    std::fs::write(&events_path, format!("{}\n", kept.join("\n"))).expect("writable");
+
+    let harness = RefusingHarness::default();
+    let mut store = CountingStore::default();
+    let mut journal = VecJournal::default();
+    let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+    let mut ports = ReplayPorts {
+        harness: &harness,
+        dispatches: &harness.dispatches,
+        store: &mut store,
+        git: &mut git,
+    };
+
+    match rk_kernel::replay::replay(&stripped, &mut ports) {
+        Err(ReplayError::JournalHasNoResult {
+            step_id,
+            activity_id_at_version,
+            ..
+        }) => {
+            assert!(
+                !step_id.is_empty() && activity_id_at_version.contains('@'),
+                "the refusal names the activation it could not serve: {step_id} / \
+                 {activity_id_at_version}"
+            );
+            assert_eq!(
+                harness.dispatches(),
+                0,
+                "and it refused rather than falling back to the port — a replay that dispatched \
+                 on a journal miss would spend money to paper over a divergence"
+            );
+        }
+        Ok(report) => panic!(
+            "the replay served {} events from a journal with no results in it — the loop is not \
+             asking the journal for anything",
+            report.events_compared
+        ),
+        Err(other) => panic!("expected JournalHasNoResult, got {other}"),
+    }
+}
+
+/// **AC-042's hidden input, on the RECORDED INPUT SET rather than on the journal.**
+///
+/// Added 2026-09-14. `replay()` read `inputs_digest` out of the manifest and compared it to
+/// nothing, and never re-derived `run_id`, so a rewritten `inputs/` was accepted by `replay()`
+/// itself. `golden_log_replay` caught it only because that test re-records and byte-compares
+/// against the committed copy — a check that does **not** travel to `redkiln replay --run <id>`
+/// (7d's), which runs against an arbitrary recorded run with no committed copy to compare to.
+///
+/// The tamper is the mildest available: one `timeout_secs`, on one activation, in a value the
+/// selection never reads. It must still refuse, because the input set is hashed whole.
+#[test]
+fn golden_log_replay_tampered_input_is_red() {
+    // **AC-042's hidden input, on the RECORDED INPUT SET rather than on the journal.** Added
+    // 2026-09-14: `replay()` read `inputs_digest` out of the manifest and compared it to nothing,
+    // and never re-derived `run_id`, so a rewritten `inputs/` was accepted by `replay()` itself.
+    // The golden-log test caught it only because that test re-records and byte-compares against
+    // the committed copy — a check that does NOT travel to `redkiln replay --run <id>` (7d's),
+    // which runs against an arbitrary recorded run with no committed copy to compare against.
+    //
+    // The tamper below is the mildest one available: a single `timeout_secs` on ONE activation,
+    // in a value the selection never reads. It must still refuse, because the input set is hashed
+    // whole.
+    let run_id = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    let source = committed_root().join(&run_id);
+
+    let tampered = scratch_root().join("inputs-tampered");
+    copy_tree(&source, &tampered);
+    let specs_path = tampered.join("inputs").join("specs.json");
+    let mut specs: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&specs_path).expect("readable"))
+            .expect("specs.json parses");
+    let key = specs
+        .as_object()
+        .expect("an object")
+        .keys()
+        .next()
+        .expect("at least one recorded binding")
+        .clone();
+    let before = specs[&key]["timeout_secs"].clone();
+    specs[&key]["timeout_secs"] = serde_json::Value::from(1);
+    assert_ne!(
+        before, specs[&key]["timeout_secs"],
+        "PREMISE: the rewrite must actually change the input set, or the replay would be asked to \
+         refuse a log it should accept"
+    );
+    std::fs::write(
+        &specs_path,
+        serde_json::to_vec(&specs).expect("serialisable"),
+    )
+    .expect("writable");
+
+    let harness = RefusingHarness::default();
+    let mut store = CountingStore::default();
+    let mut journal = VecJournal::default();
+    let mut git = GitOps::new(git_exec(), &mut journal, Mode::Replay);
+    let mut ports = ReplayPorts {
+        harness: &harness,
+        dispatches: &harness.dispatches,
+        store: &mut store,
+        git: &mut git,
+    };
+
+    match rk_kernel::replay::replay(&tampered, &mut ports) {
+        Err(ReplayError::Divergent(hidden)) => {
+            assert_eq!(hidden.run_id, run_id, "the halt names the run it refused");
+            assert!(
+                hidden.first_divergent_node.contains("inputs/"),
+                "the halt must say the INPUT SET diverged, not a journal row: {}",
+                hidden.first_divergent_node
+            );
+        }
+        Ok(_) => panic!(
+            "the replay ACCEPTED a rewritten input set. `replay()` is then trusting bytes it never \
+             checked, and AC-042's re-derivation *\"from the logged inputs alone\"* is over inputs \
+             the recording never saw"
+        ),
+        Err(other) => panic!("expected Divergent(HiddenInput), got {other}"),
     }
 }
 
@@ -725,7 +1103,7 @@ fn golden_log_replay_next_action_mismatch_is_red() {
 /// §7b.15's claimed list nor its ARMED table, and `doctor` is 7d's. AC-164 is **not** covered.
 #[test]
 fn ac161_ac164_delete_db_replay() {
-    let recorded = rk_kernel::replay::record(&inputs()).expect("the recorded run resolves");
+    let (recorded, _harness) = record_the_run();
 
     // ---- premises: the journal really spans both tiers ----------------------------------------
     let tier_one: Vec<Event> = recorded
@@ -821,8 +1199,10 @@ fn ac161_ac164_delete_db_replay() {
 /// number would put this control back where the 2026-09-13 repair started.
 #[test]
 fn golden_log_replay_writing_fake_is_red() {
-    let recorded = rk_kernel::replay::record(&inputs()).expect("resolves");
-    let dir = committed_root().join(recorded.run_id());
+    let run_id = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    let dir = committed_root().join(&run_id);
 
     let harness = RefusingHarness::default();
     let mut store = CountingStore::default();
@@ -869,8 +1249,10 @@ fn golden_log_replay_writing_fake_is_red() {
 /// replay must **refuse**.
 #[test]
 fn golden_log_replay_dispatching_fake_is_red() {
-    let recorded = rk_kernel::replay::record(&inputs()).expect("resolves");
-    let dir = committed_root().join(recorded.run_id());
+    let run_id = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    let dir = committed_root().join(&run_id);
 
     let harness = RefusingHarness::default();
     harness
@@ -911,9 +1293,12 @@ fn golden_log_replay_dispatching_fake_is_red() {
 /// 100%** — so what this test asserts is the refusal, and the count is printed.
 #[test]
 fn replay_reports_hidden_input_on_divergence() {
-    let recorded = rk_kernel::replay::record(&inputs()).expect("resolves");
-    let source = committed_root().join(recorded.run_id());
+    let run_id = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    let source = committed_root().join(&run_id);
 
+    let run_id_expected = run_id.clone();
     let perturbed = scratch_root().join("perturbed");
     copy_tree(&source, &perturbed);
     let events_path = perturbed.join("events.jsonl");
@@ -938,7 +1323,7 @@ fn replay_reports_hidden_input_on_divergence() {
             run_id,
             first_divergent_node,
         })) => {
-            assert_eq!(run_id, recorded.run_id());
+            assert_eq!(run_id, run_id_expected);
             assert!(
                 first_divergent_node.contains("implement-change"),
                 "the FIRST divergent node is named, not merely that something differed: \
@@ -957,8 +1342,7 @@ fn replay_reports_hidden_input_on_divergence() {
 /// produce the same context digest as the one that was recorded.
 #[test]
 fn the_logged_inputs_are_sufficient_to_rebuild_the_run() {
-    let inputs = inputs();
-    let recorded = rk_kernel::replay::record(&inputs).expect("resolves");
+    let (recorded, _harness) = record_the_run();
     let dir = committed_root().join(recorded.run_id());
     let read_back = rk_kernel::replay::read_run(&dir).expect("the committed run reads back");
 

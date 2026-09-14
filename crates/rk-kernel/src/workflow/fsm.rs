@@ -87,7 +87,7 @@
 //! | id | what this module gives it | state |
 //! | --- | --- | --- |
 //! | **AC-007** | [`Divergence`], its three-arm no-wildcard [`Divergence::halt`], and the `trybuild` case that pins the arms | the **halt** is measured; the divergence is not yet *detected* anywhere — `src/replay.rs` gains steps 4b/4c at Slice **4f** |
-//! | **AC-008** | [`TerminalState`] and [`RunState::canonical_bytes`] — the recomputable side of the comparison | **ARMED**: the recorded side is `run.json`'s, which Slice 4f writes. No claim is made here |
+//! | **AC-008** | [`TerminalState`] and [`RunState::canonical_bytes`] — the recomputable side of the comparison | the recorded side is `run.json`'s (Slice 4f) and the **N dispatched activities its GIVEN names** arrive at Slice 4i, when `crate::replay::record` drives [`NextAction::Dispatch`] through a bound `rk_ports::harness::Harness`. **No claim is made here**: what this module owns is the fold and the two grains, and `crate::replay`'s header carries the criterion's state |
 //! | **AC-006** assertion 3 | [`NextAction::canonical_bytes`] | **ARMED**, same reason |
 //! | **AC-161 / AC-164** | [`stage_action`] and its tier filter | **ARMED**: the *equality* is computable now; the **route** (from git trailers rather than from the log) is `rk-git`'s and `rk-cli`'s, Step 7d. AC-164's `doctor`-classification half is claimed by **no stage at all**, which is a homelessness finding and not a gap this module can close |
 //! | **AC-039** | the gate record bound to `(token, tree_hash, deadline)` and the **void, not reconciled** rule | the *mechanism* half only. **HUMAN GATE** — §7b.15 excludes the id, and the answer is never asserted |
@@ -121,13 +121,26 @@
 //!    successor: with one supplied it can answer [`NextAction::AdvanceStage`], and with none it
 //!    answers [`NextAction::Done`]. **Both are asserted**, so the absence is visible rather than
 //!    defaulted.
-//! 4. **`activity_id@version`** — ADR-0072's version has **no carrier in this tree**
-//!    [measured 2026-09-14: `grep -n "version" crates/rk-kernel/src/catalog.rs` → **0 hits**;
-//!    `DagNode` carries `id` and `activity_id` and no version]. The idempotency key's second part
-//!    is therefore the DAG node's `activity_id` **verbatim**, and the `@version` suffix is
-//!    **ARMED**. AC-010's *"an `activity_id` without `@version` is refused"* is a **validator**,
-//!    `src/workflow/idem.rs`'s, and it is Slice 4h's — this module mints no key that pretends to
-//!    carry a version it could not read.
+//! 4. **`activity_id@version`** — ADR-0072's version has **no carrier on a `DagNode`**
+//!    [measured 2026-09-14: `DagNode` carries `id` and `activity_id` and no version]. The
+//!    idempotency key's second part is therefore the DAG node's `activity_id` **verbatim** unless
+//!    the caller supplies an activation for that node, and the `@version` suffix is **ARMED**.
+//!    AC-010's *"an `activity_id` without `@version` is refused"* is a **validator**,
+//!    `src/workflow/idem.rs`'s — this module mints no key that pretends to carry a version it
+//!    could not read.
+//!
+//!    🛑 **[`FsmContext::with_activations`] is the fifth supplied value, added 2026-09-14, and it
+//!    is SUPPLIED rather than DERIVED for the same reason the other four are.** The join between a
+//!    DAG node and `crate::catalog::Activity::id_at_version` has three candidate homes — step 5's
+//!    `DagNode` construction, this function's node lookup, or the composition root — and choosing
+//!    one is a decision `00-preamble.md`:55 reserves. **This slice takes none of the three.** What
+//!    it adds is an argument: a `(node id, activity_id@version)` list the caller transcribes, on
+//!    the same model as `tree_hash`, `deadline` and the successor stage. `crate::replay` supplies
+//!    it out of `inputs/specs.json` — a **logged input**, so AC-042's *"from the logged inputs
+//!    alone"* still holds — and **a record naming where the join lives is still OWED**. With no
+//!    activation supplied the key carries the bare `activity_id` exactly as before, which is what
+//!    keeps `the_fsm_dispatch_key_has_no_version_and_the_boundary_refuses_it`'s pinned finding
+//!    true rather than quietly repairing it.
 //!
 //! # The payload shape is a READING, against an already-OWED record
 //!
@@ -714,6 +727,10 @@ pub struct FsmContext<'a> {
     tree_hash: &'a str,
     deadline: Timestamp,
     successor: Option<&'a str>,
+    /// `(node id, activity_id@version)`, supplied by the caller — the header's fifth value.
+    /// **Empty is the ARMED state and not a default**: with no activation for a node the key
+    /// carries the bare `activity_id` and AC-010's validator refuses it at the boundary.
+    activations: &'a [(String, String)],
 }
 
 impl<'a> FsmContext<'a> {
@@ -730,7 +747,24 @@ impl<'a> FsmContext<'a> {
             tree_hash,
             deadline,
             successor,
+            activations: &[],
         }
+    }
+
+    /// Supply the `(node id, activity_id@version)` activations — the header's fifth value.
+    ///
+    /// **Transcribed, never derived here.** The list is a caller's; `crate::replay` reads it out of
+    /// the run's own `inputs/specs.json`, so a replay is told nothing out of band.
+    #[must_use]
+    pub const fn with_activations(mut self, activations: &'a [(String, String)]) -> Self {
+        self.activations = activations;
+        self
+    }
+
+    /// The supplied activations, in the caller's order.
+    #[must_use]
+    pub const fn activations(&self) -> &'a [(String, String)] {
+        self.activations
     }
 
     #[must_use]
@@ -1294,14 +1328,24 @@ pub fn next_action(
         let Some(node) = selection.dag().nodes().iter().find(|n| n.id == node_id) else {
             continue;
         };
-        if state.is_committed(ctx.item, &node.activity_id) {
+        // The header's fifth supplied value. **`unwrap_or` on the bare id is the ARMED state, not
+        // a default**: with no activation supplied the key is exactly what it was before
+        // 2026-09-14, and `crate::workflow::idem::checked_key` refuses it for want of an
+        // `@version`. Nothing here derives a version from the catalog — that join is the decision
+        // this module does not take.
+        let activation = ctx
+            .activations
+            .iter()
+            .find(|(id, _)| *id == node.id)
+            .map_or(node.activity_id.as_str(), |(_, at)| at.as_str());
+        if state.is_committed(ctx.item, activation) {
             continue;
         }
         return Ok(NextAction::Dispatch {
             key: IdempotencyKey {
                 item: ctx.item.to_owned(),
-                activity_id_at_version: node.activity_id.clone(),
-                attempt: state.next_attempt(ctx.item, &node.activity_id),
+                activity_id_at_version: activation.to_owned(),
+                attempt: state.next_attempt(ctx.item, activation),
             },
             step_id: node.id.clone(),
         });

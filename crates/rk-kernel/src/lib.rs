@@ -55,11 +55,18 @@
 //! [`replay::ReplayError::NextActionDiverged`] and
 //! [`replay::ReplayError::TerminalStateDiverged`] as typed halts over
 //! `rk_types::event_kind::ReplayDivergence`, and a log written before this layout is **refused**
-//! rather than replayed with nothing to compare. **AC-006's five assertions are all measured.
-//! AC-008 is still ARMED** — its GIVEN names *"a run that dispatched N activities"* and N is 0 on
-//! the only recorded run, because a journal with dispatches needs the dispatcher Slice 4h builds.
-//! [`replay`]'s header states that in its own section rather than leaving a short journal to imply
-//! it. **AC-161's equality is measured at stage grain and its route *"from git alone"* is not**;
+//! rather than replayed with nothing to compare. **AC-006's five assertions are all measured.**
+//!
+//! **And — Slice 4i — AC-008's dispatch half stopped being vacuous.** *(Corrected 2026-09-14. This
+//! paragraph read "**AC-008 is still ARMED** — its GIVEN names *\"a run that dispatched N
+//! activities\"* and N is 0 on the only recorded run, because a journal with dispatches needs the
+//! dispatcher Slice 4h builds." Slice 4h built it, Slice 4i drove it, and **N is 2**.)* [`record`]
+//! now takes ports and runs the FSM loop through a bound `Harness`, so the recorded journal carries
+//! real `dispatch` and `activity_committed` rows; [`replay`] serves those rows **from the journal**
+//! and dispatches nothing, which is AC-008's *"all N results served from the journal, zero harness
+//! dispatches"* as an architecture rather than an assertion. The five `ActivitySpec` fields are a
+//! **recorded input** (`inputs/specs.json`) and not a binder output — the binder is unbuilt — and a
+//! record routing spec assembly is **OWED**. [`replay`]'s header carries the table and the reading. **AC-161's equality is measured at stage grain and its route *"from git alone"* is not**;
 //! **AC-164's `doctor`-classification half has no home in this stage at all** (residual 10l) and
 //! neither id is reported as covered.
 //!
