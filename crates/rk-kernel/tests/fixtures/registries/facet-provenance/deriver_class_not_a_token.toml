@@ -1,0 +1,21 @@
+# AC-520 clause group 5b -- "and one whose `deriver_class` is neither of the two tokens".
+#
+# A SECOND FILE, not a second assertion in the first: an absent class and a class outside
+# {lexical, structural} are two different registries and two different messages, and E-0520-1's
+# whole point is that the enumeration -- not the headline count -- decides what must exist.
+#
+# "heuristic" is chosen because it is the plausible third token an author would reach for.
+
+[facet.change]
+values = ["text", "binary", "generated"]
+set = true
+source = "derived"
+deriver = "R-change-extension-and-numstat-marker"
+deriver_class = "heuristic"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-change-extension-and-numstat-marker"
+positives = 29
+interval = [0.54, 0.85]   # the Wilson 95% interval AC-520's THEN names beside the count (F39)

@@ -42,8 +42,12 @@ here.
 
 ## Execution order
 
-`0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7a → 7b → 7c → 7d → 7e → 8` — Step 2 runs **sixth** (its ORDER banner says why:
-it deletes the directory Step 3b writes into and Step 4 reads from). Step 9 is rollback and may run at any point.
+`0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7a → 7b → 7b-ii → 7c → 7d → 7e → 8` — Step 2 runs **sixth** (its ORDER banner says
+why: it deletes the directory Step 3b writes into and Step 4 reads from). Step 9 is rollback and may run at any point.
+**Step 7b-ii became its own stage file on 2026-09-13**: the three gates were 120 criteria in force carried inside
+`s7b` as one paragraph with six checkpoint assertions, and they now have their own acceptance set and their own
+**Checkpoint 7b-ii**. Step 7b's exit checkpoint is unchanged; Step 7c's entry gate moved from Checkpoint 7b to
+Checkpoint 7b-ii in the same change, or the execution order stops resolving.
 
 | order | stage | file | what it delivers | entry gate | exit checkpoint | decisions it executes |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -58,11 +62,12 @@ it deletes the directory Step 3b writes into and Step 4 reads from). Step 9 is r
 | 7 | Step 5 | [`phase-1/s5-workspace-ci-rk-types.md`](phase-1/s5-workspace-ci-rk-types.md) | workspace, five-gate CI, `rk-types` with the golden snapshot under ADR-0095's rule, `StepError`, the typed repro, the companion kinds | 🚦 gate + Checkpoint 2 | Checkpoint 5 | decisions 6 and 7 (ADR-0104; DECISIONS #3) |
 | 8 | Step 6 | [`phase-1/s6-store-and-git.md`](phase-1/s6-store-and-git.md) | S-GIX/a, /b, /c run first; **ADR-0091**; the hybrid under ADR-0098/0105; `rk-store` under ADR-0097/0109 | Checkpoint 5 | Checkpoint 6 | decisions 2 and 3 (ADR-0091) |
 | 9 | Step 7a | [`phase-1/s7a-ports-and-fakes.md`](phase-1/s7a-ports-and-fakes.md) | `rk-ports` to ADR-0099's shape (F41 is the reference), the fakes, the parity assertion | Checkpoint 6 | Checkpoint 7a | **ADR-0118** — a poisoned store lock halts the run, closing the residual ADR-0115:135-138 named and assigned to this stage *(this column read `—` until 2026-09-13; the residual was there all along and no file said the stage met it)* |
-| 10 | Step 7b | [`phase-1/s7b-kernel.md`](phase-1/s7b-kernel.md) | `rk-kernel`: the selection engine's semantics, both facet lints, the rigor-monotonicity lint, the grammar to ADR-0103 (F42), 7b-ii the three gates | 🛑 STOP banner | Checkpoint 7b | — |
-| 11 | Step 7c | [`phase-1/s7c-adapters.md`](phase-1/s7c-adapters.md) | four real adapters; the Claude adapter's containment, cancel, denylist, tick arithmetic, per-profile argv | Checkpoint 7b | Checkpoint 7c | DECISIONS #16, #19 |
-| 12 | Step 7d | [`phase-1/s7d-cli-and-migrate.md`](phase-1/s7d-cli-and-migrate.md) | `rk-cli` (one idempotent `run`, `answer`, `doctor`, `explain`, `init`); `redkiln-migrate` v0 as defined | Checkpoint 7c | Checkpoint 7d | decision 4 (`doctor`'s `N`) |
-| 13 | Step 7e | [`phase-1/s7e-pack-authoring.md`](phase-1/s7e-pack-authoring.md) | `.redkiln/`, the derived registry, row dispositions, `stale_policy` with its warrant, the lattice re-baselined | Checkpoint 7d | Checkpoint 7e | decision 5 (DECISIONS #4) |
-| 14 | Step 8 | [`phase-1/s8-exit-criterion.md`](phase-1/s8-exit-criterion.md) | the seven exit checks — (1) in both lanes, (6) on both lints — and the standing prohibitions | Checkpoint 7e | Checkpoint 8 | — |
+| 10 | Step 7b | [`phase-1/s7b-kernel.md`](phase-1/s7b-kernel.md) | `rk-kernel`: the crate skeleton and the determinism gate, the grammar to ADR-0103 (F42), the registry loader and both facet lints, the rigor-monotonicity lint, the seven-step selection function, the runtime, the golden logs and the single `CORPUS_PIN` move | **Checkpoint 7a + 🛑 STOP banner** | Checkpoint 7b | **ADR-0119** — AC-045's key is a fourth, selection-level key derived in `rk-kernel::select` (written 2026-09-13 for this stage; `00-preamble.md`:47-49) *(the same 00-preamble decision-table drift `s7a` §7a.1 records for ADR-0118 applies here and is owed)* |
+| 11 | Step 7b-ii | [`phase-1/s7b-ii-gates.md`](phase-1/s7b-ii-gates.md) | the three gates, all `rk-kernel`'s: the human-gate record and its one write-tree derivation, the review classifier and policy table, re-execution, quarantine, the advisory sink, replay determinism, the verify harness and the AC evidence ledger | Checkpoint 7b | Checkpoint 7b-ii | decision 6 (**ADR-0104**, author-declared per-AC mutants — `00-preamble.md`:36 names 7b-ii as one of its two sites) |
+| 12 | Step 7c | [`phase-1/s7c-adapters.md`](phase-1/s7c-adapters.md) | four real adapters; the Claude adapter's containment, cancel, denylist, tick arithmetic, per-profile argv | **Checkpoint 7b-ii** | Checkpoint 7c | DECISIONS #16, #19 |
+| 13 | Step 7d | [`phase-1/s7d-cli-and-migrate.md`](phase-1/s7d-cli-and-migrate.md) | `rk-cli` (one idempotent `run`, `answer`, `doctor`, `explain`, `init`); `redkiln-migrate` v0 as defined | Checkpoint 7c | Checkpoint 7d | decision 4 (`doctor`'s `N`) |
+| 14 | Step 7e | [`phase-1/s7e-pack-authoring.md`](phase-1/s7e-pack-authoring.md) | `.redkiln/`, the derived registry, row dispositions, `stale_policy` with its warrant, the lattice re-baselined | Checkpoint 7d | Checkpoint 7e | decision 5 (DECISIONS #4) |
+| 15 | Step 8 | [`phase-1/s8-exit-criterion.md`](phase-1/s8-exit-criterion.md) | the seven exit checks — (1) in both lanes, (6) on both lints — and the standing prohibitions | Checkpoint 7e | Checkpoint 8 | — |
 | any | Step 9 | [`s9-rollback.md`](s9-rollback.md) | clean, total rollback; the salvage first | a decision to abandon | Checkpoint 9 | — |
 
 ## Milestones
@@ -72,7 +77,7 @@ it deletes the directory Step 3b writes into and Step 4 reads from). Step 9 is r
 | **M0 — Phase 0 closed** | Checkpoint 2 passed (after 0, 1, 3, 4, 4a) | the programme's records are committed, the gate is discharged by a record, the registry is honest, the corpus is pinned |
 | **M1 — the foundation builds** | Checkpoint 5 passed | a workspace with CI and the typed core, every schema inside the vendor's contract |
 | **M2 — state is durable** | Checkpoint 6 passed | git is the tier-1 store and the store's contract is rules, not lists |
-| **M3 — the kernel decides** | Checkpoint 7b passed | selection, gates and lints exist and fail closed |
+| **M3 — the kernel decides** | **Checkpoint 7b-ii passed** (after Checkpoint 7b) | selection, gates and lints exist and fail closed — **and the milestone needs both checkpoints, which is why it names the later one**: Checkpoint 7b attests the selection engine, the grammar, the three registry/facet lints and the golden-log replay; Checkpoint 7b-ii attests the human, review and verify gates. *(This row read "Checkpoint 7b passed" until 2026-09-13, when the gates were split into `s7b-ii`; the row's meaning is unchanged and the gate that carries it moved.)* **ADR-0101 clause 5 bounds what this row may be read as**: until S-SUBTLE-CB runs, no document may claim the review gate is guarded against false approval |
 | **M4 — the system runs** | Checkpoint 7e passed (after 7c, 7d) | four adapters, a CLI, a migrator and a loadable pack set |
 | **M5 — Phase 1 exits** | Checkpoint 8 passed | Redkiln-RS ran its own fix lane and authored a Phase-2 story |
 

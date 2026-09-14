@@ -1832,6 +1832,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rk-kernel"
+version = "0.0.0"
+dependencies = [
+ "rk-git",
+ "rk-ports",
+ "rk-types",
+ "serde",
+ "serde_json",
+ "trybuild",
+]
+
+[[package]]
 name = "rk-ports"
 version = "0.0.0"
 dependencies = [

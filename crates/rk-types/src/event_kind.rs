@@ -3,7 +3,9 @@
 //! ADR-0105 clause 7 puts the table in the design with `rk-types` as the owning crate; **ADR-0116**
 //! supersedes that clause in part, adds `artifact.write`, and fixes the rule that makes the enum
 //! worth having: *"the `EventKind` enum is closed, a kind in the design table and not in the enum
-//! (or the reverse) is schema drift."*
+//! (or the reverse) is schema drift."* **ADR-0120** mints `dag_amended` under that same rule and
+//! supersedes nothing — ADR-0116 had already withdrawn the completeness reading of clause 7, and
+//! what survives of it is the rule this crate obeys by carrying the variant.
 //!
 //! The **tier** column is the deleted-database test applied per kind (ADR-0109 decision 2): *if the
 //! database were deleted, would `redkiln run` take a different next action?* Five kinds are tier 1
@@ -46,6 +48,10 @@ pub enum EventKind {
     ReconcileStarted,
     GateAnswerVoid,
     DagAssembled,
+    /// Added by **ADR-0120**: the delta an accepted deviation writes when selection steps 2–5
+    /// re-run (AC-064). Tier 2 for the same reason `DagAssembled` is — a delta may not outrank the
+    /// assembly it amends, and the deviation record is already in the replay input set.
+    DagAmended,
     ActivityCommitted,
     MemoHit,
     MemoMiss,
@@ -78,7 +84,7 @@ pub enum EventKind {
 impl EventKind {
     /// Every kind, for the completeness test. Built from an exhaustive match so a new variant
     /// cannot be added without appearing here.
-    pub const ALL: [Self; 28] = [
+    pub const ALL: [Self; 29] = [
         Self::StageTransition,
         Self::GateOpened,
         Self::GateAnswered,
@@ -87,6 +93,7 @@ impl EventKind {
         Self::ReconcileStarted,
         Self::GateAnswerVoid,
         Self::DagAssembled,
+        Self::DagAmended,
         Self::ActivityCommitted,
         Self::MemoHit,
         Self::MemoMiss,
@@ -122,6 +129,7 @@ impl EventKind {
             Self::ReconcileStarted => "reconcile_started",
             Self::GateAnswerVoid => "gate_answer_void",
             Self::DagAssembled => "dag_assembled",
+            Self::DagAmended => "dag_amended",
             Self::ActivityCommitted => "activity_committed",
             Self::MemoHit => "memo_hit",
             Self::MemoMiss => "memo_miss",
@@ -163,6 +171,7 @@ impl EventKind {
             Self::ReconcileStarted
             | Self::GateAnswerVoid
             | Self::DagAssembled
+            | Self::DagAmended
             | Self::ActivityCommitted
             | Self::MemoHit
             | Self::MemoMiss

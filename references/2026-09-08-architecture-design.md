@@ -708,6 +708,7 @@ Every trailer write runs through the wrapper with `-c trailer.ifexists=add` (and
 | `reconcile_started` | 2 | invocation id, HEAD, the drift set that followed | every CLI entry that can cause an action (exactly one per invocation) |
 | `gate_answer_void` | 2 (drift observation) | token, bound tree hash, observed tree hash | `reconcile()` (§6.3.3) |
 | `dag_assembled` | 2 (rebuildable by replay) | `inputs_digest, nodes, edges, rows_fired, skipped` | selection step 5 |
+| `dag_amended` | 2 (rebuildable by replay) | `deviation_id, added, removed, rows_refired` — every change to `R` | selection step 7, on a `claimed_predicate` that evaluates **true**: the re-run of steps 2–5, never step 5 *(added 2026-09-13, **ADR-0120**: AC-064's THEN and SM-017's Instrument line both name it, step 7's own row below requires the engine to "log the delta", and a delta may not outrank the tier-2 assembly it amends)* |
 | `activity_committed` | 2 | `(item, activity_id@version, attempt)`, result digest | each step activation, at most once per triple |
 | `memo_hit` / `memo_miss` / `memo_evicted` | 2 | the step key and exactly its eight components; `reason: unsound_replay` on eviction | the memo layer |
 | dispatch record (cost row) | 2 | argv digest, env digest, instrument version, usage, timings, `total_cost_usd`, stdout/stderr verbatim up to a size cap then digest + head/tail, the child environment **never** | `Harness::dispatch` (AC-360) |

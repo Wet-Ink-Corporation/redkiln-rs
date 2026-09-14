@@ -1,0 +1,23 @@
+# AC-071 fixture 5 of 6 -- clause 4, arm-D panel scored.
+#
+# 🛑 THIS IS THE FIXTURE THE REGISTER FORECLOSES DELETING. F39 scored arm D over 140 truth cells at
+# pin 47faec9f, so this clause is DISCHARGED FOR ARM D -- and "a discharged clause is not a partial
+# unblocking, and the five-case fixture set stays at five" (AC-071's own dated note). A discharged
+# clause makes a loose implementation CHEAPER to rationalise, not less costly, which is why the
+# negative stays: the lint must still be able to fail on it for a record that carries any other
+# verdict.
+#
+# `unrun` rather than a typo of `scored`: the register's clause is `rec.panel_verdict == "scored"`,
+# and the failure this pins is a record whose panel half was never adjudicated at all.
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+[stability.criticality]
+modal_required_set_identity = 0.85
+n_items = 20
+draws_per_item = 10
+panel_verdict = "unrun"
+corpus_sha = "47faec9f46b8d983c2c75f0794164e68415ae706"

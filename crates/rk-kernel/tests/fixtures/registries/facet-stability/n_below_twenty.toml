@@ -1,0 +1,16 @@
+# AC-071 fixture 3 of 6 -- clause 2, n >= 20 items.
+#
+# 19 is one short, deliberately: a bar is discriminated by the value beside it, not by a value far
+# from it. Every other clause passes.
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+[stability.criticality]
+modal_required_set_identity = 0.85
+n_items = 19
+draws_per_item = 10
+panel_verdict = "scored"
+corpus_sha = "47faec9f46b8d983c2c75f0794164e68415ae706"

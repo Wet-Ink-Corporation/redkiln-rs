@@ -1,0 +1,26 @@
+# AC-520 clause group 8 -- "a `require` row keyed on a `declared` facet".
+#
+# `declared` is outside this gate's GIVEN by construction -- ADR-0093 decision 1 puts `surfaces`
+# there, read from surfaces.toml -- and it is UNSCORED until S-FACET scores a declared boundary
+# map, so it may key no `require` row on ADR-0089's strength alone. The row, not the entry, is the
+# defect: this same registry with no row loads.
+#
+# The row's key is read by PARSING its `when` with this crate's ADR-0103 parser and taking the
+# field paths, never by a substring search. `'flags' in surfaces` is ADR-0050's set-membership form
+# -- a string literal on the left, a set-valued facet on the right -- and a scan for the word
+# `surfaces` would also match it inside a quoted literal, while a scan keyed on the facet name
+# would miss `when = "kind == surfaces"`, where `surfaces` is a VALUE and keys nothing.
+
+[facet.surfaces]
+values = ["flags", "migration", "payments", "secrets"]
+set = true
+source = "declared"
+
+[facet.kind]
+values = ["initiative", "project", "story", "bug", "incident", "spike", "chore", "tech-debt", "security-vuln", "docs"]
+source = "human"
+
+[stage.review]
+[[stage.review.require]]
+when = "'flags' in surfaces"
+artifacts = ["FlagChangeRecord"]

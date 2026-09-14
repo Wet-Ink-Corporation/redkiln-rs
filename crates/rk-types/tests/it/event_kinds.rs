@@ -1,4 +1,5 @@
-//! The closed `EventKind` table (ADR-0105 clause 7 as ADR-0116 supersedes it; design §5).
+//! The closed `EventKind` table (ADR-0105 clause 7 as ADR-0116 supersedes it, and as ADR-0120
+//! extends it; design §5).
 
 use rk_types::event_kind::{EventKind, Tier};
 
@@ -6,7 +7,7 @@ use rk_types::event_kind::{EventKind, Tier};
 /// silent hole in every completeness check that follows.
 #[test]
 fn all_lists_every_variant_exactly_once() {
-    assert_eq!(EventKind::ALL.len(), 28);
+    assert_eq!(EventKind::ALL.len(), 29);
     let mut names: Vec<&str> = EventKind::ALL.iter().map(|k| k.wire_name()).collect();
     let before = names.len();
     names.sort_unstable();
@@ -24,6 +25,24 @@ fn artifact_write_exists_and_is_tier_two() {
         EventKind::from_wire("artifact.write"),
         Some(EventKind::ArtifactWrite)
     );
+}
+
+/// **ADR-0120's addition.** AC-064's THEN names `dag_amended` and nothing minted it, so the
+/// criterion was unimplementable and Step 7b carried it ARMED. Tier 2 for `dag_assembled`'s reason:
+/// a delta may not outrank the assembly it amends, and the deviation record is already in the
+/// replay input set, so the amended DAG is reproduced by replay rather than read back from here.
+#[test]
+fn dag_amended_exists_and_is_tier_two() {
+    assert_eq!(EventKind::DagAmended.wire_name(), "dag_amended");
+    assert_eq!(EventKind::DagAmended.tier(), Tier::Two);
+    assert_eq!(
+        EventKind::from_wire("dag_amended"),
+        Some(EventKind::DagAmended)
+    );
+    // The delta and the assembly are two kinds, not one — a second `dag_assembled` is forbidden as
+    // the re-run's record (ADR-0120 decision 5's forbids).
+    assert_ne!(EventKind::DagAmended, EventKind::DagAssembled);
+    assert_eq!(EventKind::DagAmended.trailer_axis(), None);
 }
 
 /// The two dotted names are dotted. A blanket `rename_all = "snake_case"` would quietly turn them

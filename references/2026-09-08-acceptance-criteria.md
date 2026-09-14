@@ -218,7 +218,7 @@ redkiln lint --facet-stability .redkiln/facets.toml \
 | 10 | The distribution mechanism | Proposal **§4.9 decides no installer** — a plain git clone plus a `cargo-dist` binary shim. Receipts, rename tables, ownership states and integrity scans are shipmates' architecture, not a Redkiln-RS decision | §4.9 is reopened and a mechanism with an install-and-repair step is decided, or the six criteria are cut and 'decide the distribution mechanism' becomes a gating open question. | AC-512, AC-514, AC-515, AC-516, AC-517, AC-519 (partly); SM-149 |
 | 11 | The false-block rate's denominator | The E3 severity adjudication was **adjudicated 2026-09-04 and closed 2026-09-09, NOT BLIND** — facts settled 6/6; severity from a sheet filled by the model at Ryan's direction, one operator, κ forfeited (PIA-081). The rates are settled on it: arm (a) FP 1/23, MCC +0.957 (E-0074-3); arm (b) FP 0/23, MCC +1.000 — upper bounds against CLEAN | **E3-SEV-BLIND** — a blind annotation of the preserved `e3-severity-annotation-BLANK.md` by an independent rater (design §10.5, consumer SM-086) — is what buys κ back. AC-298 sets the **system default** off the same NOT-BLIND sheet. | AC-308 (PROVISIONAL because the sheet is not an independent rater, not because the adjudication is open), AC-309, AC-357, AC-358; SM-086 |
 | 12 | The whole-suite p95 half of the timeout rule | No whole-suite p95 wall clock was ever recorded — the field did not exist | First production readings. Until then only AC-330's declaration half can fire, which the criterion states inside itself. | AC-330; SM-102 |
-| 13 | Corpus residency and the pinned-corpus instruments | `redkiln-corpus` **does not exist**; `spikes/corpus/`, `spikes/results/*.jsonl` and `spikes/runner/` are all tracked in this repo at HEAD `ab58733`; the 1,312-file corpus and the 118-ref history live only in `D:/repos/redkiln`; no golden event log exists for AC-006/AC-188 (PIA-002) | The ADR-0013 split happens at runbook Step 2 — a `git bundle create --all` of the frozen clone (or a fetchable remote plus SHA in `CORPUS_PIN`) pinned by that repository's SHA — and golden-log generation lands at Steps 5/6. **AC-465 is violated today by construction** and no measure tracks the distance to compliance; every corpus-bound test is a local-only suite until then. | AC-465; AC-006, AC-184, AC-188, AC-427, AC-444, AC-464, AC-519's fixture pin; SM-124 |
+| 13 | Corpus residency and the pinned-corpus instruments | `redkiln-corpus` **does not exist**; `spikes/corpus/`, `spikes/results/*.jsonl` and `spikes/runner/` are all tracked in this repo at HEAD `ab58733`; the 1,312-file corpus and the 118-ref history live only in `D:/repos/redkiln`; no golden event log exists for AC-006/AC-188 (PIA-002) | The ADR-0013 split happens at runbook Step 2 — a `git bundle create --all` of the frozen clone (or a fetchable remote plus SHA in `CORPUS_PIN`) pinned by that repository's SHA — and golden-log generation lands at **Step 7b** *(corrected 2026-09-13: this read "at Steps 5/6"; Checkpoints 5 `96ba9c2` and 6 `ea83eac` both closed without the logs and `rk-kernel` does not exist — see AC-006's 2026-09-13 ownership amendment)*. **AC-465 is violated today by construction** and no measure tracks the distance to compliance; every corpus-bound test is a local-only suite until then. | AC-465; AC-006, AC-184, AC-188, AC-427, AC-444, AC-464, AC-519's fixture pin; SM-124 |
 | 14 | Dead-artifact detection | `doctor`'s window **N is undeclared**, so AC-472's AND clause has no truth value and SM-139's target cannot be missed | N is declared in the `doctor` rule table and AC-472's threshold fixtures (N-1 must not fire, N+1 must) are written. | AC-472, AC-426; SM-139 |
 | 15 | The worktree cost cell | **Discharged 2026-09-11 (PIA-075).** The S-WT run record (`spikes/results/s-wt.jsonl`) names `--system-prompt`, so §C.1 was right: static × worktree is 1.000 steady (w1 0.807 cold, n = 9) and F16's worktree-each 0.685 (n = 9) is the **default** × worktree cell — two cells, not a contest. CONTESTED is struck here and at AC-387; S-WT-REC is DONE | Nothing; AC-387 prices the two measured cells from their records and returns `Unmeasured(cell)` for every other. What remains thin is n = 9 on one machine at one CLI pin. | AC-387; SM-053, SM-113, SM-114 |
 
@@ -291,10 +291,44 @@ GIVEN a recorded event log for a completed or suspended run
 WHEN the workflow is replayed against that log with every port bound to its fake
 THEN the sequence of decisions and the next action are byte-identical to the recorded ones.
 *Verified by:* a golden-log replay test in `rk-kernel` over **golden event logs recorded by `rk-kernel` itself on the
-pinned corpus repository and committed to `redkiln-corpus` as fixtures [WILL EXIST after runbook Step 5 — no such log
-exists today; golden-log generation is a Step 5/Step 6 checkpoint item]** (ADR-0013); run in CI on every commit, at zero
+pinned corpus repository and committed to `redkiln-corpus` as fixtures under `golden-logs/`, read corpus-relative
+through `CORPUS_PIN` and never through a working tree (AC-464) [WILL EXIST — **runbook Step 7b's output**; no such log
+exists today. Amended 2026-09-13, ownership settled — see the note below]** (ADR-0013); run in CI on every commit, at zero
 model cost, and asserting **zero `rk-git` writes** on replay (ADR-0105 decision 1: the `GitOps` journal is served back).
 *(Amended 2026-09-11, PIA-002: the earlier wording read as if recorded runs existed; they do not.)*
+*(**Amended 2026-09-13 — golden-log ownership, settled here rather than in the runbook.** This criterion and AC-188 both
+assigned generation to "a Step 5/Step 6 checkpoint item". **Three live documents gave three owners**: this register said
+Steps 5/6; `runbook/phase-0/s2-corpus-extraction.md`:55 said "AC-006/188's golden logs **once Step 5 records them**";
+`runbook/phase-1/s5-workspace-ci-rk-types.md`:459 — inside Step 5's own exclusion list — said "**the logs are Step 7b's
+output** and are re-run there", as does `runbook/phase-1/s7b-kernel.md` § 7b.2(4) and § 7b.11 *(cited by
+section, not by line: that file was rewritten from 264 to over 1,200 lines on 2026-09-13 and the line this sentence
+first named no longer carries the claim)*. Steps 5 and 6 are now **closed without the
+logs** — Checkpoint 5 at `96ba9c2` and Checkpoint 6 at `ea83eac`, both 2026-09-13 — and they closed **correctly**: no
+crate that can record an event log `rk-kernel` writes existed at either, and `rk-kernel` does not exist today.
+`runbook/PROGRESS.md`:343 records the consequence: "**AC-006/AC-008/AC-188 remain unclaimed**". Under ADR-0092 the
+register outranks the runbook, so until this note the runbook was **formally overriding a record while being right on
+the merits**. It is settled here so that it is no longer an override.
+**(1) Producer and stage.** `rk-kernel` records them, at **runbook Step 7b**, in the same slice as the `golden_log_replay`
+test that reads them. Not `rk-cli`: `redkiln replay --run <id>` is Step 7d's, and AC-042's cross-process re-derivation
+goes with it; only the in-crate replay is AC-006's.
+**(2) Where they live.** In `redkiln-corpus`, under a **`golden-logs/`** directory at the corpus root — a sibling of
+`corpus/`, `results/`, `prompts/`, `runner/` and `schemas/`, which are the whole of that repository's top-level
+**directories** at pin `27d97e9b` (five trees; the top level also holds five blobs — `.gitattributes`,
+`predecessor-47faec9f.bundle`, `predecessor-refs.count`, `predecessor-working-tree-2026-09-12.patch` and
+`predecessor-working-tree-README.md`) [measured 2026-09-13, `git ls-tree`]. They are **not** tracked in `redkiln-rs`: AC-465 forbids a corpus artifact resident in
+the product repo, and ADR-0013 names fixtures as part of what moves. **The per-run file layout inside `golden-logs/` is
+Step 7b's to fix and is deliberately not decided here** — this note settles the owner, the location and the read route,
+which is what was contested.
+**(3) How they are read.** Corpus-relative, resolved through `CORPUS_PIN` at `CORPUS_SHA` via the object store, **never
+through a working tree**, with a run against an unpinned reference or a corpus checkout carrying uncommitted changes
+refused before any read — **AC-464**, now named by id here as AC-520's `deriver_record` names it.
+**(4) The pin moves exactly once.** These logs, AC-520's `results/p1-arm-d-panel-scored.json` and AC-071's stability
+record are **one `CORPUS_PIN` move**, taken at the end of Step 7b when all three exist — `runbook/PROGRESS.md`:103 (row
+L2) states that the pin should move "**once**, with 7b's work, not twice", and the logs are produced in Step 7b's replay
+slice, after the two scored records. A move that carries the records without the logs moves the pin twice.
+**(5) Nothing is withdrawn.** Every clause stands unchanged: every port bound to its fake; the decision sequence and the
+next action byte-identical to the recorded ones; zero `rk-git` writes on replay. Only the owner, the location and the
+read route move, and the `[WILL EXIST]` state is unchanged — no log exists at this pin.)*
 
 **AC-007** — `rk-kernel::replay` · evidence: F19 [measured], principle 4 "absence of evidence is a block" [documented]
 · decisions: ADR-0022
@@ -1319,7 +1353,11 @@ PC8 rule 2 for `require`-row purposes whatever its record says — and it declar
 one with no `deriver` does. The lexical bar and the no-positive-instance bar are **separate clauses doing separate
 work**, and a facet may be barred by either or both: `ui` and `flag_exists` are barred as lexical while carrying
 positives, `recent_deploy` is `structural` and barred for having none, and `data_migration` is barred twice over.
-*Verified by:* the `--facet-provenance` lint rule; six must-fail fixture `facets.toml` files, one clause at a time — a
+*Verified by:* the `--facet-provenance` lint rule; six must-fail fixture `facets.toml` files, one clause at a time
+*(**the count is stale — see `references/adr/ERRATA.md` `E-0520-1`, 2026-09-13.** The enumeration that follows is
+**eight clause groups over ten must-fail files** plus the positive companion: the 2026-09-13 amendment below inserted
+`deriver_class` and `deriver_record` and did not revisit this sentence's number. **Read the enumeration, not the
+number** — the list decides what must exist and the arithmetic decides nothing. Nothing is withdrawn.)* — a
 `derived` facet with no `deriver` field; a named `deriver` with no scored record; a record carrying 0 positives whose
 facet keys a `require` row; a `deriver` declared lexical (`deriver_class = "lexical"`) whose facet keys a `require` row; a `derived` facet with no
 `deriver_class`, and one whose `deriver_class` is neither of the two tokens; a `derived` facet with no
@@ -2923,10 +2961,19 @@ WHEN the deterministic workflow is replayed from the log
 THEN the sequence of selected actions equals the sequence originally taken
 AND a non-deterministic construct in the workflow layer (clock, RNG, filesystem read outside an activity) fails replay.
 *Verified by:* the replay test in `rk-kernel` over **golden event logs recorded by `rk-kernel` on the pinned corpus
-repository and committed to `redkiln-corpus` as fixtures [WILL EXIST after runbook Step 5 — none exists today; their
-generation is a Step 5/Step 6 checkpoint item, PIA-002]**, asserting sequence equality; a determinism lint denying
+repository and committed to `redkiln-corpus` as fixtures under `golden-logs/`, read corpus-relative through `CORPUS_PIN`
+and never through a working tree (AC-464) [WILL EXIST — **runbook Step 7b's output**; none exists today. Amended
+2026-09-13, PIA-002 as superseded by that day's ownership settlement]**, asserting sequence equality; a determinism lint denying
 clock/RNG/filesystem symbols in the workflow module, with a fixture using one that must fail. **This criterion exists
 specifically to close F19's stated limit, and AC-161 depends on it.**
+*(**Amended 2026-09-13 — the same golden-log ownership settlement as AC-006, and it is written out in full there.** This
+criterion's bracket carried the identical "Step 5/Step 6 checkpoint item" assignment; Checkpoints 5 (`96ba9c2`) and 6
+(`ea83eac`) both closed without the logs, correctly, and `runbook/PROGRESS.md`:343 records AC-006/AC-008/AC-188 as
+unclaimed in consequence. Producer `rk-kernel`, stage **runbook Step 7b**, location `redkiln-corpus` `golden-logs/`,
+read route corpus-relative through `CORPUS_PIN` (AC-464), and **one** `CORPUS_PIN` move carrying these logs together
+with AC-520's and AC-071's scored records (PROGRESS.md:103, row L2). **One settlement, one amendment, deliberately not
+restated clause by clause here** — a second copy is a second thing to drift. The determinism-lint half of this
+criterion's *Verified by* is untouched and is not part of the settlement.)*
 
 ### 6.7 Worktrees, disposable clones, merge queue
 
@@ -3071,7 +3118,7 @@ with no surviving child process.
 - The change-summary-in-a-depth-1-clone question is now UNANSWERED, not resolved: cutting the old AC-199 removed a contradiction with AC-191 but decided nothing. It belongs on the open-questions list gated on S-BIN.
 - SM-053's target rests on S-WT numbers in the F30 slot, and **F30 was never written as a dated entry** — but the run exists: `spikes/results/s-wt.jsonl` records the `--system-prompt` × worktree combination (w2–w10 cache-read share 1.000, n = 9; w1 0.807 cold), so S-WT-REC is DONE and the "unrun"/CONTESTED reading is withdrawn (PIA-075; AC-387 carries the cells). What remains weak is that it is one run, one machine.
 - AC-174 (read-only git dir) and AC-181 (two-process contention) are environment-dependent tests; on Windows, the primary platform, a flaky instrument marked allow-fail is a criterion that has quietly died.
-- The F12 substrate the rebuild and replay tests name (AC-184, AC-165, AC-444, AC-464) and the golden event logs AC-006/AC-188 replay do not exist at HEAD: the 1,312-file corpus and the 118-ref history live only in `D:/repos/redkiln`, and no golden log has been recorded [measured, PIA-002]. Both are [WILL EXIST] items on runbook Steps 2 and 5/6; until then every corpus-bound test here is a local-only suite, and a CI run that reports them green is reporting their absence.
+- The F12 substrate the rebuild and replay tests name (AC-184, AC-165, AC-444, AC-464) and the golden event logs AC-006/AC-188 replay do not exist at HEAD: the 1,312-file corpus and the 118-ref history live only in `D:/repos/redkiln`, and no golden log has been recorded [measured, PIA-002]. Both are [WILL EXIST] items on runbook Step 2 and **Step 7b** *(corrected 2026-09-13: the second read "Steps 5/6"; ownership is settled in AC-006's 2026-09-13 amendment — `rk-kernel` records them at Step 7b into `redkiln-corpus` `golden-logs/`. Step 2 has since landed at `bbdaf35`, so the F12 substrate half is no longer [WILL EXIST]; the golden-log half is)*; until then every corpus-bound test here is a local-only suite, and a CI run that reports them green is reporting their absence.
 
 ---
 

@@ -1,0 +1,21 @@
+# AC-520 clause group 2 -- "a named `deriver` with no scored record".
+#
+# THIS IS NOT THE SAME FAILURE AS deriver_record_absent_at_pin.toml, and the two files exist
+# because the register enumerates them separately. Here the PATH resolves at the pin -- the record
+# file is there -- and it carries no row for THIS deriver. There the path is not in the corpus at
+# all. One predicate answering both would collapse two clauses into one.
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]
+set = true
+source = "derived"
+deriver = "R-toolchain-extension-manifest-table"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+# The record exists at the pin and scores a DIFFERENT deriver.
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-some-other-deriver"
+positives = 29
+interval = [0.54, 0.85]   # the Wilson 95% interval AC-520's THEN names beside the count (F39)

@@ -268,6 +268,96 @@ also a `## Decision` line, while leaving the decision standing. ADR-0092's test 
 `## Decision` still stands, not whether a correction falls inside that section — and here the normative sentence,
 its consequence and its forbids bullet all stand.)*
 
+## AC-520 — The derived-facet sibling gate (`redkiln lint --facet-provenance`)
+
+*(A criterion of the AC register, not an ADR. Recorded here by extension of ADR-0092 decision 1, which writes the
+convention for an accepted **record**; clause 2.2 makes the register the in-tree owner of every criterion's
+`*Verified by:*` instrument, and the register is amendable in place, so this section is the lighter instrument and not
+the only one available. It is the right one because what moves is a **count that restates an enumeration** — not the
+enumeration, not the GIVEN/WHEN/THEN, not the state label. **Lines are as at the working tree this erratum is
+committed with** (2026-09-13), not the `009a4ec` pin this file's header names and not HEAD `60f17c6`: a first draft
+pinned them at `60f17c6` and the AC-006/AC-188 golden-log amendment — written into the same register in the same
+session — inserted **30** lines above AC-520, so every one of them was stale before it was committed [measured
+2026-09-13]. **The clause each number names is quoted beside it and is the citation that survives; the number is a
+convenience and may go stale again.**)*
+
+**E-0520-1 (2026-09-13, the Step 7b audit, finding RECORD-OWED-A).** Line 1356, the opening of `*Verified by:*`:
+"the `--facet-provenance` lint rule; **six** must-fail fixture `facets.toml` files, one clause at a time" — **What is
+true:** the enumeration that the same sentence then carries, running :1356-:1366 (*"a `derived` facet with no
+`deriver` field"* through *"a `require` row keyed on a `declared` facet"*), is **eight clause groups over ten
+must-fail files**, and the positive companion stands beside them at :1366-:1369 (*"and a **positive companion** that
+must load"*). Counted off the register:
+
+| # | Clause group, as the register writes it | Files |
+| --- | --- | --- |
+| 1 | a `derived` facet with no `deriver` field | 1 |
+| 2 | a named `deriver` with no scored record | 1 |
+| 3 | a record carrying 0 positives whose facet keys a `require` row | 1 |
+| 4 | a `deriver` declared lexical (`deriver_class = "lexical"`) whose facet keys a `require` row | 1 |
+| 5 | a `derived` facet with no `deriver_class`, **and** one whose `deriver_class` is neither of the two tokens | **2** |
+| 6 | a `derived` facet with no `deriver_record`, **and** one whose `deriver_record` names a path absent from the pinned corpus | **2** |
+| 7 | a `kernel`-class facet carrying a `deriver`, a `deriver_class`, a `deriver_record` or claiming a record (ADR-0093 forbids) | 1 |
+| 8 | a `require` row keyed on a `declared` facet | 1 |
+
+— **eight groups, ten files**; plus the **positive companion** that must load (:1328-:1330: a `derived` facet with a
+named `deriver`, a scored record and positives; a `kernel` facet with neither; a `declared` facet keying no row),
+"without which the rule is satisfied by a lint that rejects everything". [measured, counted off
+`references/2026-09-08-acceptance-criteria.md` :1356-:1369, 2026-09-13]
+
+**Why "six" was once exact.** Groups **5** and **6** are the two the **2026-09-13 amendment** at :1372-:1388
+inserted — :1375 "It is now `deriver_class`, declared **by name rather than by omission**" and :1381 "It is now
+`deriver_record`, corpus-relative, resolved through `CORPUS_PIN` and never through a working tree (AC-464)". Before
+that amendment the list was groups 1-4, 7 and 8: **six groups, six files, one clause each**, and "six … one clause at
+a time" was exact for what stood. The amendment added two groups of two files apiece and did not revisit the count,
+and it states at :1388 that "**Nothing is withdrawn by this amendment**" — so the six pre-amendment clauses stand and
+four files join them. Nothing is withdrawn here either: this corrects arithmetic that went stale under an amendment,
+not a requirement.
+
+**The enumeration is the authority; the number is not.** The fixture set is the list at :1356-:1366 plus the
+companion, taken **by reference**. Ten is the count of that list as the register writes it today, and it is reported
+here so a reader meeting "six" knows the sentence disagrees with itself — it is not a new bar, and a downstream
+document that restates **any** number instead of the list will go stale again the next time a clause is added. One
+group makes the point: group 7 is written with "or" across four forbidden fields, so a fixture author who chose one
+file per forbidden field would count more than ten and still satisfy the clause exactly. The list decides what must
+exist; the arithmetic decides nothing.
+
+**Checkpoint 4a's six is a DIFFERENT six, and it is untouched.** Line 1369-1370 — "Runbook Checkpoint 4a asserts
+**six** derived facets and six records, reconciled by name — not eleven" — counts **facets in `.redkiln/facets.toml`
+and their scored records**, not fixture files. Verified against the runbook: `runbook/phase-0/s4a-apply-adr-0089.md`
+:73-74 asserts `grep -c '^source = "derived"'` = 6 and `grep -c '^deriver = '` = 6 on that file, and Checkpoint 4a's
+own line :205 asserts `d==6 && v==6` over the same two patterns, with §4a.1 :52 requiring the six be "reconciled by
+name, never by the number" — the six being `toolchain`, `change`, `ui`, `flag_exists`, `data_migration`,
+`recent_deploy`, the facets ADR-0093 decision 2 leaves `source = "derived"`. [measured, s4a :52, :73-74, :205, read
+2026-09-13] The two sixes coincided by accident until 2026-09-13 and the coincidence is now broken. **This erratum
+moves the must-fail fixture count and nothing else**; the six `derived` facets, their six records and every Checkpoint
+4a assertion over them stand as written.
+
+**What this does not change:** the GIVEN, WHEN and THEN (:1338-:1355) in full, including the three-clause THEN the
+amendment wrote (`deriver`, `deriver_class`, `deriver_record`) and ":1352 Absence is never inferred"; the enumeration
+itself, every clause of which stands verbatim; the positive companion and the reason it exists; the criterion's state
+— **not provisional**, and passing on the registry at the pin (:1370-:1371); the SM-157 back-link; the amendment's
+three findings, including that the machine-readable scored record is `[WILL EXIST]` and **Step 7b's to produce**
+(:1382-:1385).
+
+**The back-pointer this erratum names as owed HAS been landed.** AC-520's `*Verified by:*` now carries a one-line
+`ERRATA E-0520-1` citation immediately after "one clause at a time", in the same commit as this section, on the form
+the register already uses elsewhere. A builder reading only the register therefore meets the correction where the
+stale count is, rather than only through `ERRATA.md`'s header — which is the discoverability gap this erratum
+otherwise conceded, since AC-520 is a criterion and can carry no `(errata)` marker in the ADR README's index.
+
+*(Recorded as an erratum rather than as a further register amendment on the E-0100-1 / E-0086-1 precedent:
+ADR-0092's test is whether every normative sentence still stands, not whether the correction falls inside a section
+that carries normative weight — E-0086-1 withdraws a `## Decision` line's instruction while leaving the decision
+standing, and E-0100-1 cites it for exactly that. Here the `*Verified by:*` line's normative content is the
+enumeration and the positive companion; both stand verbatim, and only the arithmetic restating them moves.)*
+
+*(Discoverability, stated rather than smoothed. ADR-0092 decision 1 hangs an erratum's findability on the corrected
+record's index row in `README.md` carrying `(errata)`. **AC-520 has no such row** — that README indexes the ADR
+records `0001`-`0118` and nothing else — so no row was marked, and none could be. The back-pointer this section needs
+is a citation of **E-0520-1** at register :1322, in the form the register already uses for errata it depends on
+(`ERRATA E-0089-2` at :1296, `ERRATA E-0056-1` at :790). That edit is **owed and not made here**: this erratum was
+written under a task that names this file alone.)*
+
 ---
 
 *Later errata are appended under the record's heading with the next `E-NNNN-k` id. A heading with no entries is not

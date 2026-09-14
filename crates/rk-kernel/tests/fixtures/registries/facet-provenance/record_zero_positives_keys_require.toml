@@ -1,0 +1,35 @@
+# AC-520 clause group 3 -- "a record carrying 0 positives whose facet keys a `require` row".
+#
+# THE RECORD EXISTS, IS PINNED AND IS READ, AND THAT CLAUSE IS SATISFIED. What fails is a different
+# one: a facet whose scored record shows no positive instance "is reported so -- neither passed nor
+# failed -- and may key no `require` row" (golden constraint 10, Halt 9: not-measurable is a fault
+# name, never a 0.00 and never an n/a).
+#
+# `recent_deploy` is the live instance and is copied from the shipped registry rather than invented:
+# it is source = "derived", deriver_class = "structural" -- so it is NOT barred as lexical, and this
+# clause is doing its own separate work -- and its record is NOT MEASURABLE at 47faec9f because the
+# toolchain:deploy_log feed does not exist at that pin, so it emits null on every item and F39 could
+# not score it (ADR-0067's R-recent-deploy-feed-absent; ADR-0089 decision 3).
+#
+# The require row below carries the pack's own [[stage.<stage>.require]] shape
+# (spikes/p9/packs/bug-standard.toml). In production the rows live in the pack and the wiring is
+# Step 7e's; a fixture that could not express the PAIRING could not pin this clause at all.
+
+[facet.recent_deploy]
+values = [true, false]
+nullable = true
+source = "derived"
+deriver = "R-recent-deploy-feed-absent"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-recent-deploy-feed-absent"
+positives = 0
+not_measurable = true
+
+[stage.release]
+[[stage.release.require]]
+when = "recent_deploy"
+artifacts = ["RollbackPlan"]

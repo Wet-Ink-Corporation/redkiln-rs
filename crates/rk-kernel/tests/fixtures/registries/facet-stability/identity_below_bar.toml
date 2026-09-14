@@ -1,0 +1,19 @@
+# AC-071 fixture 2 of 6 -- clause 1, identity.
+#
+# 🛑 THIS IS THE CLAUSE THAT STILL HOLDS THE BLOCK, and 0.25 is not an invented number: it is the
+# first of F36's own four measurements of modal required-set identity -- 5/20, 3/20, 2/20, 2/20,
+# i.e. 0.25 / 0.15 / 0.10 / 0.10 -- against the pre-registered 0.80 line. The other four clauses of
+# this record are satisfied, so a lint that reads them and skips this one exits 0 on the number
+# that holds the entire provisional apparatus shut.
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+[stability.criticality]
+modal_required_set_identity = 0.25
+n_items = 20
+draws_per_item = 10
+panel_verdict = "scored"
+corpus_sha = "47faec9f46b8d983c2c75f0794164e68415ae706"

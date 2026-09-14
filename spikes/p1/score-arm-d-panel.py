@@ -24,14 +24,36 @@ Corrected 2026-09-11 (audit PIA-077, ERRATA E-0089-2). Two defects in the 2026-0
   2. A truth cell with no engine record was silently dropped. The scorer now FAILS CLOSED: every truth cell must
      have an engine record for every source, or the run aborts naming the cells.
 F39's table was computed over 136 scored cells of the 140 it claimed; see F39-DRAFT.md "Correction (2026-09-11)".
-"""
-import io, json, collections, math, sys
 
-ENGINE = "spikes/results/p1-arm-d.jsonl"
-ORACLE = "spikes/results/p1-arm-d-oracle.jsonl"
-ACCEPTED = "spikes/results/p1-arm-d-panel-accepted.jsonl"
-CONTESTED = "spikes/results/p1-arm-d-contested.json"
-ADJ = "spikes/results/p1-arm-d-adjudications.json"
+`--out <path>` added 2026-09-13 (runbook Step 7b Slice 0; PROGRESS.md row L2; AC-520 as amended 2026-09-13).
+Until then this script printed and persisted nothing, so the Wilson intervals and positive counts AC-520 requires to
+"exist, be pinned and be read" lived only in terminal output. `--out` writes them as the machine-readable record every
+`deriver_record` in `spikes/p9/facets.toml` already names, `results/p1-arm-d-panel-scored.json`. **stdout is byte-for-byte
+what it always was** whether or not `--out` is given; with `--out` one extra `wrote <path>` line follows the report, which
+is `analyse-arm-l.py`'s convention in this same directory. The record carries UNROUNDED precision, recall and Wilson
+bounds — the printed table rounds to 2dp for reading, and a difference between the two is the rounding, not a defect.
+No wall-clock stamp is written: the inputs are pinned, so the record must be byte-reproducible from them.
+
+`--results-dir` added at the same time, and it is a SECOND defect, not a convenience. The five input constants below
+were repo-relative to `spikes/results/`, and runbook Step 2 (`bbdaf35`, 2026-09-12) moved that directory into
+`redkiln-corpus`. Measured 2026-09-13 at this repo's HEAD: `python spikes/p1/score-arm-d-panel.py` raises
+`FileNotFoundError: spikes/results/p1-arm-d-oracle.jsonl` before scoring a single cell. The default is left at the old
+path deliberately — it is what every existing invocation and every quotation of this script says — so the failure stays
+visible rather than being papered over by a default that reaches into a working tree. AC-464 requires a corpus read to
+resolve through `CORPUS_PIN` at `CORPUS_SHA` via the object store and never through a working tree; `--results-dir`
+pointing at a corpus checkout is an operator read, not that resolution, and the object-store route is owed to the stage
+file, not taken here.
+"""
+import argparse, io, json, collections, math, os, sys
+
+RESULTS_DIR = "spikes/results"   # the default, unchanged: see the --results-dir paragraph above
+INPUTS = {
+    "engine":    "p1-arm-d.jsonl",
+    "oracle":    "p1-arm-d-oracle.jsonl",
+    "accepted":  "p1-arm-d-panel-accepted.jsonl",
+    "contested": "p1-arm-d-contested.json",
+    "adj":       "p1-arm-d-adjudications.json",
+}
 
 SEMANTIC = ["auth", "data_migration", "ui", "flag_exists"]
 MECHANICAL = ["toolchain", "change", "binary_change"]
@@ -68,6 +90,18 @@ def wilson(k, n, z=1.96):
 
 
 def main():
+    ap = argparse.ArgumentParser(description="P1 arm D final scoring (METHOD-P amendment 9).")
+    ap.add_argument("--results-dir", default=RESULTS_DIR,
+                    help="directory holding the five p1-arm-d input files (default: %(default)s, which runbook "
+                         "Step 2 moved into redkiln-corpus)")
+    ap.add_argument("--out", default=None,
+                    help="write the scored record as JSON to this path (AC-520's deriver_record). "
+                         "stdout is unchanged either way.")
+    a = ap.parse_args()
+    path = {k: os.path.join(a.results_dir, v).replace("\\", "/") for k, v in INPUTS.items()}
+    ENGINE, ORACLE, ACCEPTED, CONTESTED, ADJ = (
+        path["engine"], path["oracle"], path["accepted"], path["contested"], path["adj"])
+
     truth, prov = {}, {}
 
     for line in io.open(ORACLE, encoding="utf-8"):
@@ -96,9 +130,20 @@ def main():
         prov[(key(r["item"]), r["facet"])] = "human"
 
     eng = collections.defaultdict(dict)
+    shas = set()
     for line in io.open(ENGINE, encoding="utf-8"):
         r = json.loads(line)
         eng[(r["item"], r["facet"])][r["source"]] = r["value"]
+        shas.add(r.get("corpus_sha"))
+
+    # The record's own pin, read off the engine records rather than hard-coded (golden constraint 8: the
+    # instrument's pin is part of the record). Fail closed on a split set — a record spanning two corpus
+    # SHAs is two measurements, and AC-071's `rec.corpus_sha` clause has no answer for it.
+    if len(shas) != 1 or None in shas:
+        sys.stderr.write(f"ABORT: engine records carry {len(shas)} distinct corpus_sha value(s): "
+                         f"{sorted(str(s) for s in shas)}\n")
+        sys.exit(3)
+    corpus_sha = shas.pop()
 
     # Fail closed: a truth cell the engine never scored is a defect in the inputs, not a cell to skip.
     missing = sorted((item, f, src) for (item, f) in truth for src in SOURCES if src not in eng.get((item, f), {}))
@@ -114,6 +159,7 @@ def main():
     print(f"{'facet':16}{'source':9}{'prec':>7}{'  95% CI':>16}{'rec':>7}   tp  fp  fn  tn  excl")
     print("-" * 84)
     verdicts = {}
+    cells = collections.defaultdict(dict)   # facet -> source -> the same numbers the table prints, unrounded
     for facet in MECHANICAL + SEMANTIC:
         for source in SOURCES:
             tp = fp = fn = tn = excl = 0
@@ -135,6 +181,13 @@ def main():
             cis = f"[{ci[0]:.2f},{ci[1]:.2f}]" if ci else "     n/a"
             print(f"{facet:16}{source:9}{(f'{p:.2f}' if p is not None else '  n/a'):>7}{cis:>16}"
                   f"{(f'{r:.2f}' if r is not None else '  n/a'):>7}  {tp:3} {fp:3} {fn:3} {tn:3}  {excl:3}")
+            cells[facet][source] = {
+                "precision": p, "recall": r,
+                "wilson95": list(ci) if ci else None,
+                "positives": tp + fp,          # emitted positives — the denominator of precision
+                "tp": tp, "fp": fp, "fn": fn, "tn": tn, "excluded_unknown": excl,
+                "measurable": p is not None,
+            }
             if source == "union":
                 verdicts[facet] = (p, ci, tp + fp, excl)
         print()
@@ -142,16 +195,75 @@ def main():
     print("=" * 84)
     print("VERDICT on the union source — METHOD-P §1.4: precision >= 0.95 removes the facet from the model")
     print("=" * 84)
+    verdict_text = {}
     for facet, (p, ci, n, excl) in verdicts.items():
         if p is None:
+            verdict_text[facet] = "NOT MEASURABLE"
             print(f"  {facet:16} NOT MEASURABLE — the script emitted no positive; nothing to be precise about"
                   f"{f' ({excl} cells excluded as unknown)' if excl else ''}")
         else:
             ok = "LEAVES THE MODEL" if ci and ci[0] >= 0.95 else ("point >= 0.95 but interval does not clear"
                                                                  if p >= 0.95 else "STAYS")
+            verdict_text[facet] = ok
             print(f"  {facet:16} precision {p:.2f} over {n} positives, 95% CI [{ci[0]:.2f},{ci[1]:.2f}] -> {ok}")
     print()
     print("Reported as PANEL-ADJUDICATED (METHOD-P amendment 9), never as human-panel.")
+
+    if a.out:
+        write_record(a.out, corpus_sha, truth, prov, cells, verdict_text, path)
+        print(f"wrote {a.out}")
+
+
+def write_record(out_path, corpus_sha, truth, prov, cells, verdict_text, path):
+    """AC-520's `deriver_record`: the machine-readable form of exactly what was just printed.
+
+    No wall-clock stamp and no absolute paths — the inputs are pinned, so two runs over the same inputs must
+    produce the same bytes. Numbers are UNROUNDED; the table rounds for reading, this does not.
+    """
+    record = {
+        "record": "p1-arm-d-panel-scored",
+        "schema_version": 1,
+        "produced_by": "spikes/p1/score-arm-d-panel.py",
+        "method": "METHOD-P amendment 9 — panel-adjudicated oracle; reported as PANEL-ADJUDICATED, never as "
+                  "human-panel. `unknown` is excluded from scoring, never counted against the script (§1.4).",
+        "corpus_sha": corpus_sha,
+        # CORPUS-RELATIVE, never the resolved path: an absolute machine-local directory in a record pinned by
+        # corpus_sha would make the bytes depend on which box scored it, and AC-464 reads the corpus through
+        # CORPUS_PIN, not through whatever directory this invocation happened to point at.
+        "inputs": ["results/" + INPUTS[k] for k in ("engine", "oracle", "accepted", "contested", "adj")],
+        "wilson_z": 1.96,
+        "precision_bar": 0.95,
+        "verdict_source": "union",
+        "truth_cells": len(truth),
+        "provenance": dict(sorted(collections.Counter(prov.values()).items())),
+        "panel_key_fix_applied": len(PANEL_KEY_FIX),
+        "facets": {
+            facet: {
+                "verdict": verdict_text[facet],
+                "measurable": cells[facet]["union"]["measurable"],
+                "precision": cells[facet]["union"]["precision"],
+                "wilson95": cells[facet]["union"]["wilson95"],
+                "positives": cells[facet]["union"]["positives"],
+                "by_source": cells[facet],
+            }
+            for facet in verdict_text
+        },
+        "limits": [
+            "A facet with no emitted positive is NOT MEASURABLE — not 0.00, not n/a, and not a pass or a failure "
+            "(golden constraint 10; Halt 9). A perfect method scores identically.",
+            "Unanimous 3-seat panel cells carry no human. arXiv:2605.29800 measured a 9-judge panel supplying "
+            "~2.18 effective independent votes, so unanimity fails in the correlated direction.",
+            "One repo, one operator, one pin: every number here is over the corpus_sha above.",
+            "No facet clears the 0.95 bar, and the bar is not reachable at n=20 for any facet however good — "
+            "73 all-correct positives are needed for a lower bound above 0.95 at z=1.96 (F39 Limits 1).",
+        ],
+    }
+    d = os.path.dirname(out_path)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    with io.open(out_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(record, f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,97 @@
+[package]
+name = "rk-kernel"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Same contract as the other four members: corpus-bound tests compile behind this feature and run
+# as `cargo test --workspace --features corpus` on a box holding redkiln-corpus at CORPUS_PIN.
+#
+# Declared EMPTY, and deliberately: the feature must EXIST or a `--features corpus` invocation
+# naming this package exits 101 with "none of the selected packages contains these features", and
+# Checkpoint 6 runs `cargo test --workspace --features corpus`. The reason is written out in full
+# at crates/rk-types/Cargo.toml:10-17. It stays `[]` even once this crate HAS corpus-bound tests,
+# because it gates code through `#[cfg(feature = "corpus")]`, which needs no feature entry --
+# crates/rk-git/Cargo.toml declares `corpus = []` while three tests sit behind
+# `#![cfg(feature = "corpus")]` in crates/rk-git/tests/it/corpus_f12.rs, and that is the house form.
+corpus = []
+
+# THE DETERMINISM GATE'S POSITIVE CONTROL (AC-001-AC-004; s7b §7b.5). A non-default feature OF THIS
+# CRATE that reintroduces exactly one banned determinism call inside `rk-kernel::workflow`, so a
+# WORKSPACE-scoped clippy selects it:
+#
+#   green:  cargo clippy --workspace --all-targets
+#   RED:    cargo clippy --workspace --all-targets --features rk-kernel/workflow-clock-reintroduce
+#
+# It is COMMITTED, not reverted (the tests/fixtures/rk-clock-read/ precedent, DECISIONS-2026-09-12
+# E4): a reverted observation is not an assertion, and the `#[deny]` grep in Checkpoint 7b has no
+# other way to show the attribute BITES rather than merely being declared. Do NOT reach for
+# `-p rk-kernel --features rk-clock-read/reintroduce`: that is ANOTHER member's feature and the
+# invocation errors rather than lints (s5:168-169).
+workflow-clock-reintroduce = []
+
+[dependencies]
+# DECLARED AND NOT YET USED, and that is stated rather than left for a reader to discover.
+# `grep -rn 'rk_types\|rk_ports\|rk_git' crates/rk-kernel/{src,tests}` returns NOTHING on this tree
+# [measured 2026-09-13]: Slices 1 and 2 are the grammar, the two facet lints and rigor
+# monotonicity, none of which touches a type, a port or the VCS. The edges are here because they
+# are the SUBJECT of criteria -- AC-483's rk-kernel half is *"`rk-kernel` depends on `rk-git` as a
+# concrete crate"*, and AC-484/AC-528 are assertions about this graph's shape -- so removing them
+# would delete the thing under test. **What they are NOT is exercise**: AC-483's half is discharged
+# by a manifest line and a `cargo tree` edge, never by a call, and a lint such as
+# `unused_crate_dependencies` would flag all three today.
+#
+# Where each is first USED: `rk-types` and `rk-ports` in the seven-step selection function and the
+# replay (Slice 3, §7b.9/§7b.11); `rk-git` in the replay's zero-writes assertion (Slice 3, AC-006
+# and ADR-0105 decision 1). Delete this comment when the first call site lands.
+rk-types = { path = "../rk-types" }
+rk-ports = { path = "../rk-ports" }
+# A CONCRETE CRATE, not a port, and that is the decision and not an omission (AC-483's second
+# clause; ADR-0003:57-58). Trailers, worktrees, disposable clones and reconcile() have measured
+# behaviour and no alternative VCS is named, so the git axis fails ADR-0003's own test for a port;
+# `rk-ports` declares five ports and no sixth, and its `git_port_is_not_a_port` fixture is what
+# refuses the sixth.
+rk-git = { path = "../rk-git" }
+serde.workspace = true
+serde_json.workspace = true
+
+# WHAT IS NOT HERE IS THE POINT (AC-528, AC-484; ADR-0076). No async runtime -- `tokio`,
+# `async-std`, `futures` or `async-trait` -- directly or transitively, and no `rk-adapter-*` edge,
+# directly or transitively. The kernel is the workflow side of the split: every `.await` lives in
+# an adapter, and the kernel reaches the world only through `rk-ports`' sync traits. Checkpoint 7b
+# asserts this over the RESOLVED graph (`cargo tree -p rk-kernel -e normal`), because this table
+# sees direct dependencies only.
+#
+# `rk-store` is deliberately absent at Slice 1 and its edge is NOT a default: §7b.9(2) makes the
+# canonical serialiser a layering question -- either `rk-kernel` depends on `rk-store` for
+# `rk_store::canon`, or `canon` moves to `rk-types` beside `digest` -- to be settled in the same
+# commit as the selection function (Slice 3). Nothing in this slice serialises.
+
+[dev-dependencies]
+# Repeated for the integration binary: a crate's own [dependencies] are not in scope inside
+# tests/ (crates/rk-types/Cargo.toml:31-32).
+rk-types = { path = "../rk-types" }
+serde_json.workspace = true
+# The compile-fail harness. Its cases' instrument is a compile FAILURE, which only a must-fail
+# harness can observe, and each case commits a .stderr snapshot so a case that starts failing for a
+# DIFFERENT reason goes red (s7a §7a.8).
+trybuild.workspace = true
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case, never one file per case
+# (ADR-0083:74). This is also what makes `--test it` addressable in Checkpoint 7b.
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+# `workspace = true` AND NOTHING ELSE (ADR-0102 decision 2; Cargo rejects a mixed [lints] table --
+# RFC 3389, cargo #13157, PIA-026). THIS LINE IS LOAD-BEARING AND IS NOT COSMETIC: `clippy.toml`
+# CONFIGURES `disallowed_methods`, it does not raise its level, and `clippy::disallowed_methods` is
+# warn-by-default. The level comes from the root Cargo.toml's `[workspace.lints.clippy] all =
+# { level = "deny", priority = -1 }`, which a member reaches only through this table. Without it
+# EVERY lint assertion in Checkpoint 7b passes over an unlinted crate
+# (tests/fixtures/rk-clock-read/Cargo.toml:21-24 says so in terms).
+[lints]
+workspace = true

@@ -1,0 +1,3722 @@
+{
+ "_provenance": {
+  "instrument": "spikes/p9/grammar-probe.py",
+  "corpus": "spikes/p9/{packs,catalog,catalog-b}/**/*.toml",
+  "captured": "2026-09-13",
+  "finding": "F42 (S-GRAMMAR)",
+  "note": "Per-string verdicts of the PROBE, captured by importing its own Parser/collect/check_on_false. The kernel's parser must agree with every row. Regenerate only by re-running the probe; never hand-edit a verdict."
+ },
+ "totals": {
+  "strings": 386,
+  "predicates": 287,
+  "parsed": 285,
+  "failed": 2,
+  "mixed_unparenthesised": 0,
+  "on_false": 99,
+  "on_false_in_closed_set": 96,
+  "feature_census": {
+   "and": 23,
+   "bare_literal": 191,
+   "in": 1,
+   "in_membership": 11,
+   "len": 14,
+   "null": 2,
+   "or": 25,
+   "parens": 1,
+   "quoted": 55,
+   "ref": 62,
+   "ref_optional": 11
+  }
+ },
+ "predicates": [
+  {
+   "site": "catalog-b/api-contract-spec.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog-b/api-contract-spec.toml/step[6]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog-b/blameless-postmortem.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "kind in [incident, security-vuln] or (kind == bug and criticality >= high)",
+   "parses": false,
+   "error_kind": "lex",
+   "error_pos": 27,
+   "probe_message": "lex error at 27: '-vuln] or (k'"
+  },
+  {
+   "site": "catalog-b/blameless-postmortem.toml/step[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog-b/feature-flag-kill.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "flag_exists",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog-b/feature-flag-kill.toml/step[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended or blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 2,
+    "or": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/adr-record.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/adversarial-review.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory and ${review.outputs.items}.len() > 0",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/api-contract-spec.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "external_dep or kind == project",
+   "parses": true,
+   "features": {
+    "bare_literal": 1,
+    "or": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/api-contract-spec.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/api-contract-spec.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory or ${draft.outputs.breaking_changes}.len() > 0",
+   "parses": true,
+   "features": {
+    "bare_literal": 1,
+    "len": 1,
+    "or": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/appetite-check.toml/step[2]/when",
+   "kind": "when",
+   "text": "${size.outputs.fits_appetite} == false",
+   "parses": true,
+   "features": {
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/appetite-check.toml/step[3]/when",
+   "kind": "when",
+   "text": "${overrun.answer?} == 'narrow-scope'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/architecture-tradeoff-analysis.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/bdd-outside-in.toml/step[5]/when",
+   "kind": "when",
+   "text": "${green-verify.outputs.status} != 'passing'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/bdd-scenarios.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/bdd-scenarios.toml/step[6]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/bisect.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "has_repro",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/bisect.toml/step[1]/when",
+   "kind": "when",
+   "text": "${bisect.outputs.status} != 'found'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/bisect.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/blameless-postmortem.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "kind in [incident, 'security-vuln'] or criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 2,
+    "in": 1,
+    "or": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/blue-green-deploy.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/blue-green-deploy.toml/step[4]/when",
+   "kind": "when",
+   "text": "${cutover.answer} == 'cutover'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/branch-by-abstraction.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "size >= high and blast_radius < high",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/branch-by-abstraction.toml/step[7]/when",
+   "kind": "when",
+   "text": "${cutover.answer} == 'remove'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/c4-component.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "size >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/c4-component.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/c4-container.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/c4-context.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/canary-release.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/canary-release.toml/step[3]/when",
+   "kind": "when",
+   "text": "${observe.outputs.breached}.len() > 0",
+   "parses": true,
+   "features": {
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/canary-release.toml/step[4]/when",
+   "kind": "when",
+   "text": "${degraded.answer?} == 'rollback'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/canary-release.toml/step[5]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory and ${observe.outputs.breached}.len() == 0",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/canary-release.toml/step[6]/when",
+   "kind": "when",
+   "text": "${rollback.outputs?} == null and (${proceed.answer?} == 'proceed' or rigor < mandatory)",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "null": 1,
+    "or": 1,
+    "parens": 1,
+    "quoted": 1,
+    "ref": 2,
+    "ref_optional": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/change-authorization.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "kind == incident or blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 2,
+    "or": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/change-summary.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/closure-record.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/code-review.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory and ${review.outputs.items}.len() > 0",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/competitor-analysis.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "market_facing",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/competitor-analysis.toml/step[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/confirmation-test.toml/step[2]/when",
+   "kind": "when",
+   "text": "${before.outputs.status} != 'passing'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/data-migration-plan.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/data-migration-plan.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/data-migration-plan.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= recommended or blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 2,
+    "or": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/dependency-update.toml/step[1]/when",
+   "kind": "when",
+   "text": "${bump.outputs.breaking} == true",
+   "parses": true,
+   "features": {
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/dependency-update.toml/step[2]/when",
+   "kind": "when",
+   "text": "${breaking.answer?} == 'accept-breaking'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/design-doc.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/design-doc.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/design-review-lightweight.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory and ${review.outputs.items}.len() > 0",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/design-review.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory and ${review.outputs.items}.len() > 0",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/design-sprint.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "novelty >= high and criticality >= high",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/differential-debugging.toml/step[1]/when",
+   "kind": "when",
+   "text": "${compare.outputs.confidence} != 'high'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/differential-debugging.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/differential-debugging.toml/step[5]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/discovery-report.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/equivalence-boundary.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/equivalence-boundary.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/exploitability-analysis.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/exploitability-analysis.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= recommended or criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 2,
+    "or": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/failover.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/failover.toml/step[1]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/failover.toml/step[2]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/failover.toml/step[3]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed' and ${observe.outputs.status?} != 'stable'",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "quoted": 2,
+    "ref": 2,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/fault-tree-analysis.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/feature-flag-kill.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "flag_exists",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/feature-flag-kill.toml/step[1]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/feature-flag-kill.toml/step[2]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/feature-flag-kill.toml/step[3]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed' and ${observe.outputs.status?} != 'stable'",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "quoted": 2,
+    "ref": 2,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/feature-flag-wrap.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/fishbone-analysis.toml/step[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/five-whys.toml/step[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/fix-design.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/fix-spec.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/fix-spec.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/flag-progressive-rollout.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "flag_exists",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/flag-progressive-rollout.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/flag-progressive-rollout.toml/step[4]/when",
+   "kind": "when",
+   "text": "${hold.answer?} == 'kill'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/formal-inspection.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/implement-ue.toml/step[4]/when",
+   "kind": "when",
+   "text": "${automation.outputs.status} != 'passing'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/incident-command.toml/step[2]/when",
+   "kind": "when",
+   "text": "${observe.outputs.status} == 'stable'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/integration-tests.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "kind == project or external_dep",
+   "parses": true,
+   "features": {
+    "bare_literal": 1,
+    "or": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/knowledge-harvest.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/migration-dry-run.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/migration-dry-run.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/migration-expand-execute.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/migration-expand-execute.toml/step[1]/when",
+   "kind": "when",
+   "text": "${approve.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/minimal-repro-ue.toml/step[3]/when",
+   "kind": "when",
+   "text": "${attempt.outputs.status} != 'reproduced'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/minimal-repro.toml/step[1]/when",
+   "kind": "when",
+   "text": "${attempt.outputs.status} != 'reproduced'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/opportunity-solution-tree.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/opportunity-solution-tree.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/outcome-definition.toml/step[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/outcome-definition.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/problem-framing.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/problem-framing.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/production-readiness-review.toml/step[4]/when",
+   "kind": "when",
+   "text": "${audit.outputs.gaps}.len() > 0",
+   "parses": true,
+   "features": {
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/property-based-testing.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "'text' in change and criticality >= high and novelty >= high",
+   "parses": true,
+   "features": {
+    "and": 2,
+    "bare_literal": 2,
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/prototype-test.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "novelty >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/prototype-test.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rate-limit-shed.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rate-limit-shed.toml/step[1]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rate-limit-shed.toml/step[2]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rate-limit-shed.toml/step[3]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed' and ${observe.outputs.status?} != 'stable'",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "quoted": 2,
+    "ref": 2,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/relative-estimation.toml/step[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/relative-estimation.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/risk-register.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/risk-register.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rollback-mitigation.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "recent_deploy",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rollback-mitigation.toml/step[1]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rollback-mitigation.toml/step[2]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rollback-mitigation.toml/step[3]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed' and ${observe.outputs.status?} != 'stable'",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "quoted": 2,
+    "ref": 2,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rollback.toml/step[1]/when",
+   "kind": "when",
+   "text": "${confirm.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rollback.toml/step[2]/when",
+   "kind": "when",
+   "text": "${confirm.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rolling-deploy.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "blast_radius < med or rigor < recommended or kind == incident",
+   "parses": true,
+   "features": {
+    "bare_literal": 3,
+    "or": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rolling-deploy.toml/step[3]/when",
+   "kind": "when",
+   "text": "${smoke.outputs.status} != 'passing'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rolling-restart.toml/step[1]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rolling-restart.toml/step[2]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rolling-restart.toml/step[3]/when",
+   "kind": "when",
+   "text": "${authorize.answer} == 'proceed' and ${observe.outputs.status?} != 'stable'",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "quoted": 2,
+    "ref": 2,
+    "ref_optional": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/rollout-plan.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory or blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 2,
+    "or": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/root-cause.toml/step[1]/when",
+   "kind": "when",
+   "text": "${hypothesise.outputs.status} != 'confirmed'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/root-cause.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/root-cause.toml/step[5]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/sca-scan.toml/step[2]/when",
+   "kind": "when",
+   "text": "${scan.outputs.critical} > 0 or ${scan.outputs.high} > 0",
+   "parses": true,
+   "features": {
+    "or": 1,
+    "ref": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/schema-migration-script.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/schema-migration-script.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/security-requirements.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "auth or kind == 'security-vuln'",
+   "parses": true,
+   "features": {
+    "or": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/security-requirements.toml/step[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/security-requirements.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/security-requirements.toml/step[5]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/security-review.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "auth or kind == 'security-vuln'",
+   "parses": true,
+   "features": {
+    "or": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/security-review.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended and ${review.outputs.items}.len() > 0",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/slo-monitoring.toml/step[2]/when",
+   "kind": "when",
+   "text": "${query.outputs.breached}.len() > 0",
+   "parses": true,
+   "features": {
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/spike-decision-review.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended and ${review.outputs.items}.len() > 0",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/spike-report.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/strangler-fig.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "size >= high and blast_radius >= high",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/structured-nl-requirements.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/structured-nl-requirements.toml/step[4]/when",
+   "kind": "when",
+   "text": "${draft.outputs.conflicts}.len() > 0",
+   "parses": true,
+   "features": {
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/structured-nl-requirements.toml/step[6]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/structured-retrospective.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/structured-retrospective.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/t-shirt-sizing.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "size < high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/t-shirt-sizing.toml/step[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/tdd-red-green-refactor.toml/step[5]/when",
+   "kind": "when",
+   "text": "${green-verify.outputs.status} != 'passing'",
+   "parses": true,
+   "features": {
+    "quoted": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/tdd-red-green-refactor.toml/step[6]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/tdd-red-green-refactor.toml/step[7]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/tdd-red-green-refactor.toml/step[8]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/tech-debt-assessment.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/technical-spike.toml/step[3]/when",
+   "kind": "when",
+   "text": "${measure.outputs.timebox_exhausted} == true and ${measure.outputs.kill_hit} == null",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "null": 1,
+    "ref": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/threat-model.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "auth or data_migration or external_dep",
+   "parses": true,
+   "features": {
+    "or": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/threat-model.toml/step[3]/when",
+   "kind": "when",
+   "text": "${model.outputs.residual}.len() > 0",
+   "parses": true,
+   "features": {
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/timeline-reconstruction.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/unit-tests.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/unit-tests.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/unit-tests.toml/step[3]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/unit-tests.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/unit-tests.toml/step[5]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/use-case-spec.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/use-case-spec.toml/step[5]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/user-story-ac.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/user-story-ac.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory and ${draft.outputs.open_questions}.len() > 0",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 1,
+    "len": 1,
+    "ref": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/ux-flow-design.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "ui",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/ux-flow-design.toml/step[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/ux-flow-design.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/vertical-slicing.toml/step[4]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "catalog/walking-skeleton.toml/activity/applicable_if",
+   "kind": "applicable_if",
+   "text": "size < high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-expedite.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-expedite.toml/stage/verify/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-expedite.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/analysis/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/design/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/planning/require[1]/when",
+   "kind": "when",
+   "text": "size >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/verify/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/verify/require[1]/when",
+   "kind": "when",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/verify/require[2]/when",
+   "kind": "when",
+   "text": "criticality >= high and rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/review/require[1]/when",
+   "kind": "when",
+   "text": "auth",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/review/require[2]/when",
+   "kind": "when",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/release/require[0]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/closeout/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/bug-standard.toml/stage/closeout/require[1]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/chore.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/chore.toml/stage/verify/require[0]/when",
+   "kind": "when",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/chore.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/docs.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/docs.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/incident.toml/stage/analysis/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/incident.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/incident.toml/stage/release/require[0]/when",
+   "kind": "when",
+   "text": "kind == incident",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/incident.toml/stage/closeout/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/incident.toml/stage/closeout/spawn[0]/when",
+   "kind": "when",
+   "text": "exists(ProblemRecord)",
+   "parses": false,
+   "error_kind": "trailing",
+   "error_pos": 6,
+   "probe_message": "trailing input at 6: '(' in 'exists(ProblemRecord)'"
+  },
+  {
+   "site": "packs/initiative.toml/stage/discovery/require[0]/when",
+   "kind": "when",
+   "text": "market_facing",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/initiative.toml/stage/discovery/require[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/initiative.toml/stage/discovery/require[2]/when",
+   "kind": "when",
+   "text": "novelty >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/initiative.toml/stage/specification/require[0]/when",
+   "kind": "when",
+   "text": "auth",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/initiative.toml/stage/design/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/initiative.toml/stage/design/require[1]/when",
+   "kind": "when",
+   "text": "auth or data_migration or external_dep",
+   "parses": true,
+   "features": {
+    "or": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/initiative.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/initiative.toml/stage/review/require[1]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/discovery/require[0]/when",
+   "kind": "when",
+   "text": "market_facing",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/discovery/require[1]/when",
+   "kind": "when",
+   "text": "novelty >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/discovery/require[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/specification/require[0]/when",
+   "kind": "when",
+   "text": "external_dep",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/specification/require[1]/when",
+   "kind": "when",
+   "text": "auth",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/design/require[0]/when",
+   "kind": "when",
+   "text": "auth or data_migration or external_dep",
+   "parses": true,
+   "features": {
+    "or": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/design/require[1]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/design/require[2]/when",
+   "kind": "when",
+   "text": "ui",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/design/require[3]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/planning/require[1]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/implement/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/verify/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/verify/require[1]/when",
+   "kind": "when",
+   "text": "size >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/verify/require[2]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/verify/require[3]/when",
+   "kind": "when",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/review/require[1]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/review/require[2]/when",
+   "kind": "when",
+   "text": "auth",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/review/require[3]/when",
+   "kind": "when",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/release/require[0]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/project.toml/stage/closeout/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/security-vuln.toml/stage/analysis/require[0]/when",
+   "kind": "when",
+   "text": "has_repro",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/security-vuln.toml/stage/design/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/security-vuln.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/security-vuln.toml/stage/verify/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/security-vuln.toml/stage/verify/require[1]/when",
+   "kind": "when",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/security-vuln.toml/stage/verify/require[2]/when",
+   "kind": "when",
+   "text": "has_repro",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/security-vuln.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/security-vuln.toml/stage/closeout/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/spike.toml/stage/discovery/require[0]/when",
+   "kind": "when",
+   "text": "market_facing",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/spike.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "size >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/spike.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/spike.toml/stage/closeout/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/specification/require[0]/when",
+   "kind": "when",
+   "text": "auth",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/specification/require[1]/when",
+   "kind": "when",
+   "text": "external_dep",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/design/require[0]/when",
+   "kind": "when",
+   "text": "auth or data_migration or external_dep",
+   "parses": true,
+   "features": {
+    "or": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/design/require[1]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/design/require[2]/when",
+   "kind": "when",
+   "text": "ui",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/design/require[3]/when",
+   "kind": "when",
+   "text": "size >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/design/require[4]/when",
+   "kind": "when",
+   "text": "novelty >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/implement/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/implement/require[1]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/implement/require[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/implement/require[3]/when",
+   "kind": "when",
+   "text": "'unreal' in toolchain",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/verify/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/verify/require[1]/when",
+   "kind": "when",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/verify/require[2]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/verify/require[3]/when",
+   "kind": "when",
+   "text": "external_dep",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/verify/require[4]/when",
+   "kind": "when",
+   "text": "criticality >= high and rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/review/require[1]/when",
+   "kind": "when",
+   "text": "auth",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/review/require[2]/when",
+   "kind": "when",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/release/require[0]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/operate/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story-ue.toml/stage/closeout/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/specification/require[0]/when",
+   "kind": "when",
+   "text": "auth",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/specification/require[1]/when",
+   "kind": "when",
+   "text": "external_dep",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/design/require[0]/when",
+   "kind": "when",
+   "text": "auth or data_migration or external_dep",
+   "parses": true,
+   "features": {
+    "or": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/design/require[1]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/design/require[2]/when",
+   "kind": "when",
+   "text": "ui",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/design/require[3]/when",
+   "kind": "when",
+   "text": "size >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/design/require[4]/when",
+   "kind": "when",
+   "text": "novelty >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/implement/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/implement/require[1]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/implement/require[2]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/verify/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/verify/require[1]/when",
+   "kind": "when",
+   "text": "'text' in change",
+   "parses": true,
+   "features": {
+    "in_membership": 1,
+    "quoted": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/verify/require[2]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/verify/require[3]/when",
+   "kind": "when",
+   "text": "external_dep",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/verify/require[4]/when",
+   "kind": "when",
+   "text": "criticality >= high and rigor >= mandatory",
+   "parses": true,
+   "features": {
+    "and": 1,
+    "bare_literal": 2
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/review/require[1]/when",
+   "kind": "when",
+   "text": "auth",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/review/require[2]/when",
+   "kind": "when",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/release/require[0]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/operate/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/story.toml/stage/closeout/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/analysis/require[0]/when",
+   "kind": "when",
+   "text": "size >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/design/require[0]/when",
+   "kind": "when",
+   "text": "size >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/design/require[1]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/planning/require[0]/when",
+   "kind": "when",
+   "text": "blast_radius >= med",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/implement/require[0]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/verify/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/verify/require[1]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/review/require[0]/when",
+   "kind": "when",
+   "text": "criticality >= high",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/release/require[0]/when",
+   "kind": "when",
+   "text": "data_migration",
+   "parses": true,
+   "features": {},
+   "mixed_unparenthesised": false
+  },
+  {
+   "site": "packs/tech-debt.toml/stage/closeout/require[0]/when",
+   "kind": "when",
+   "text": "rigor >= recommended",
+   "parses": true,
+   "features": {
+    "bare_literal": 1
+   },
+   "mixed_unparenthesised": false
+  }
+ ],
+ "on_false": [
+  {
+   "site": "catalog-b/api-contract-spec.toml/step[5]/on_false",
+   "value": "assemble",
+   "in_closed_set": false,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog-b/blameless-postmortem.toml/step[2]/on_false",
+   "value": "draft",
+   "in_closed_set": false,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog-b/blameless-postmortem.toml/step[4]/on_false",
+   "value": "draft",
+   "in_closed_set": false,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog-b/feature-flag-kill.toml/step[2]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog-b/feature-flag-kill.toml/step[5]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/adr-record.toml/step[2]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/adversarial-review.toml/step[2]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/api-contract-spec.toml/step[3]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/appetite-check.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/assumption-mapping.toml/step[2]/on_false",
+   "value": {
+    "to": "map",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/bdd-outside-in.toml/step[2]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/bdd-scenarios.toml/step[4]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/blameless-postmortem.toml/step[3]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/blameless-postmortem.toml/step[5]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/blue-green-deploy.toml/step[2]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/branch-by-abstraction.toml/step[2]/on_false",
+   "value": {
+    "to": "seam",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/branch-by-abstraction.toml/step[5]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/branch-by-abstraction.toml/step[9]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/build-package.toml/step[1]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/c4-component.toml/step[3]/on_false",
+   "value": {
+    "to": "draw",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/c4-container.toml/step[3]/on_false",
+   "value": {
+    "to": "draw",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/c4-context.toml/step[3]/on_false",
+   "value": {
+    "to": "draw",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/canary-release.toml/step[2]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/change-authorization.toml/step[2]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 1
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/checklist-review.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/closure-record.toml/step[1]/on_false",
+   "value": {
+    "to": "audit",
+    "max": 1
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/code-review.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/confirmation-test.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/data-migration-plan.toml/step[3]/on_false",
+   "value": {
+    "to": "plan",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/dependency-update.toml/step[4]/on_false",
+   "value": {
+    "to": "bump",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/dependency-update.toml/step[6]/on_false",
+   "value": {
+    "to": "bump",
+    "max": 1
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/design-doc.toml/step[3]/on_false",
+   "value": {
+    "to": "write",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/design-review-lightweight.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/design-review.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/design-sprint.toml/step[5]/on_false",
+   "value": {
+    "to": "prototype",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/differential-debugging.toml/step[4]/on_false",
+   "value": {
+    "to": "compare",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/discovery-report.toml/step[3]/on_false",
+   "value": {
+    "to": "synthesise",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/docs-update.toml/step[3]/on_false",
+   "value": {
+    "to": "write",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/equivalence-boundary.toml/step[3]/on_false",
+   "value": {
+    "to": "write",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/equivalence-boundary.toml/step[5]/on_false",
+   "value": {
+    "to": "design",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/exploitability-analysis.toml/step[3]/on_false",
+   "value": {
+    "to": "assess",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/fault-tree-analysis.toml/step[2]/on_false",
+   "value": {
+    "to": "build",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/feature-flag-wrap.toml/step[2]/on_false",
+   "value": {
+    "to": "wrap",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/fishbone-analysis.toml/step[2]/on_false",
+   "value": {
+    "to": "categorise",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/five-whys.toml/step[2]/on_false",
+   "value": {
+    "to": "ask",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/fix-design.toml/step[3]/on_false",
+   "value": {
+    "to": "design",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/fix-spec.toml/step[3]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/flag-progressive-rollout.toml/step[2]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/hotfix.toml/step[2]/on_false",
+   "value": {
+    "to": "fix",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/hotfix.toml/step[4]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/implement-ue.toml/step[2]/on_false",
+   "value": {
+    "to": "edit",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/instrumented-trace-analysis.toml/step[5]/on_false",
+   "value": {
+    "to": "instrument",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/integration-tests.toml/step[2]/on_false",
+   "value": {
+    "to": "write",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/knowledge-harvest.toml/step[3]/on_false",
+   "value": {
+    "to": "extract",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/migration-dry-run.toml/step[1]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/migration-dry-run.toml/step[3]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/mutation-testing.toml/step[0]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/mutation-testing.toml/step[2]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/opportunity-solution-tree.toml/step[3]/on_false",
+   "value": {
+    "to": "map",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/outcome-definition.toml/step[2]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/problem-framing.toml/step[3]/on_false",
+   "value": {
+    "to": "frame",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/problem-record.toml/step[1]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/production-readiness-review.toml/step[3]/on_false",
+   "value": {
+    "to": "audit",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/property-based-testing.toml/step[2]/on_false",
+   "value": {
+    "to": "invariants",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/prototype-test.toml/step[3]/on_false",
+   "value": {
+    "to": "build",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/relative-estimation.toml/step[2]/on_false",
+   "value": {
+    "to": "estimate",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/risk-register.toml/step[3]/on_false",
+   "value": {
+    "to": "enumerate",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/rolling-deploy.toml/step[2]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/rollout-plan.toml/step[2]/on_false",
+   "value": {
+    "to": "plan",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/root-cause.toml/step[4]/on_false",
+   "value": {
+    "to": "hypothesise",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/sca-scan.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/schema-migration-script.toml/step[3]/on_false",
+   "value": {
+    "to": "write",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/security-requirements.toml/step[4]/on_false",
+   "value": {
+    "to": "derive",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/security-review.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/slo-monitoring.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/spike-decision-review.toml/step[1]/on_false",
+   "value": "continue",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/spike-question-spec.toml/step[2]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/spike-report.toml/step[3]/on_false",
+   "value": {
+    "to": "write",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/spike-timebox-plan.toml/step[2]/on_false",
+   "value": {
+    "to": "plan",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/strangler-fig.toml/step[2]/on_false",
+   "value": {
+    "to": "facade",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/strangler-fig.toml/step[5]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/structured-nl-requirements.toml/step[3]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/structured-retrospective.toml/step[3]/on_false",
+   "value": {
+    "to": "gather",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/tdd-red-green-refactor.toml/step[2]/on_false",
+   "value": {
+    "to": "red",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/tdd-red-green-refactor.toml/step[8]/on_false",
+   "value": {
+    "to": "refactor",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/tech-debt-assessment.toml/step[3]/on_false",
+   "value": {
+    "to": "assess",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/test-after.toml/step[2]/on_false",
+   "value": {
+    "to": "implement",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/threat-model.toml/step[2]/on_false",
+   "value": {
+    "to": "model",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/timeline-reconstruction.toml/step[3]/on_false",
+   "value": {
+    "to": "reconstruct",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/unit-tests-ue.toml/step[1]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/unit-tests.toml/step[1]/on_false",
+   "value": "fail",
+   "in_closed_set": true,
+   "form": "keyword"
+  },
+  {
+   "site": "catalog/unit-tests.toml/step[5]/on_false",
+   "value": {
+    "to": "fill",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/use-case-spec.toml/step[3]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/user-story-ac.toml/step[3]/on_false",
+   "value": {
+    "to": "draft",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/ux-flow-design.toml/step[3]/on_false",
+   "value": {
+    "to": "design",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/vertical-slicing.toml/step[2]/on_false",
+   "value": {
+    "to": "dag",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/vertical-slicing.toml/step[5]/on_false",
+   "value": {
+    "to": "slice",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/walking-skeleton.toml/step[2]/on_false",
+   "value": {
+    "to": "skeleton",
+    "max": 3
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  },
+  {
+   "site": "catalog/walking-skeleton.toml/step[4]/on_false",
+   "value": {
+    "to": "skeleton",
+    "max": 2
+   },
+   "in_closed_set": true,
+   "form": "loop-back"
+  }
+ ]
+}

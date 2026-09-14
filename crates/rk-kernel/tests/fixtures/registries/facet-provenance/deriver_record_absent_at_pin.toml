@@ -1,0 +1,26 @@
+# AC-520 clause group 6b -- "and one whose `deriver_record` names a path absent from the pinned
+# corpus".
+#
+# The entry is otherwise complete and the corpus DOES carry a scored record for this deriver -- at
+# a different path. What fails is resolution: AC-464 resolves the path through CORPUS_PIN at
+# CORPUS_SHA via the object store, and a name that is not there is not a record.
+#
+# THIS IS THE CLAUSE THE LIVE REGISTRY WOULD FAIL TODAY, and the fact is recorded rather than
+# smoothed: every deriver_record in spikes/p9/facets.toml names
+# results/p1-arm-d-panel-scored.json, and that path becomes resolvable only at the single
+# CORPUS_PIN move at the END of Step 7b (s7b §7b.11). Until then the corpus-resolution half of
+# AC-520 is ARMED, NOT DISCHARGED.
+
+[facet.flag_exists]
+values = [true, false]
+nullable = true
+source = "derived"
+deriver = "R-flag-exists-path-and-diff-scan"
+deriver_class = "lexical"
+deriver_record = "results/does-not-exist-at-the-pin.json"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-flag-exists-path-and-diff-scan"
+positives = 2
+interval = [0.00, 0.66]   # the Wilson 95% interval AC-520's THEN names beside the count (F39)

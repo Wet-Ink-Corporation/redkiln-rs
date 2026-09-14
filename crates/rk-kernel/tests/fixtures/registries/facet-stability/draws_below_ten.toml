@@ -1,0 +1,15 @@
+# AC-071 fixture 4 of 6 -- clause 3, >= 10 draws per item.
+#
+# 9 is one short. Every other clause passes.
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+[stability.criticality]
+modal_required_set_identity = 0.85
+n_items = 20
+draws_per_item = 9
+panel_verdict = "scored"
+corpus_sha = "47faec9f46b8d983c2c75f0794164e68415ae706"

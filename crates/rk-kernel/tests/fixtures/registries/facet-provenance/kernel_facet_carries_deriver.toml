@@ -1,0 +1,17 @@
+# AC-520 clause group 7 -- "a `kernel`-class facet carrying a `deriver`, a `deriver_class`, a
+# `deriver_record` or claiming a record (ADR-0093 forbids)".
+#
+# 🛑 THIS IS THE CLAUSE THAT GUARDS THE ESCAPE ROUTE, and the register names the temptation in
+# terms: "AC-520 now passes at the pin, and that is the risk ... the temptation moved: not to weaken
+# the lint, but to MOVE A FACET INTO `kernel` TO ESCAPE IT." A kernel facet is a projection of the
+# kernel's own state -- `stage`, `rigor`, `role`, `cost`, the closed list -- and carrying provenance
+# is a claim that it was computed over a changeset, which it was not.
+#
+# `rigor` is the live one: it is a lookup over policy.<class>.stages, not a computation over a
+# changeset, which is exactly why ADR-0093 decision 1 re-classed it out of `derived`.
+
+[facet.rigor]
+ordered = true
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]
+source = "kernel"
+deriver = "R-rigor-policy-lookup"

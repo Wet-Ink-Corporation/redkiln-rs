@@ -11,9 +11,9 @@ threshold and instrument. Where a stage file disagrees with any of those, the st
 Phase 0 (close the programme) and Phase 1 (kernel, store, fix and story lanes, four adapters) only. Phases 2–4 are
 out of scope. · **Inputs:** `references/2026-09-08-architecture-design.md` (§0.1, §5.3, §5.9, §9, §10) ·
 `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519, AC-520 — the derived-facet gate — and the ids the
-2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**118 records**,
-`0001`–`0118` contiguous, with `0090` written at Step 4.4 on 2026-09-12, `0117` on 2026-09-13, `0091` at Step 6.1 on 2026-09-13 and `0118` for Step 7a on 2026-09-13 — no reserved number remains; `references/adr/ERRATA.md` for corrections to
-frozen records) *(Corrected 2026-09-13: this read "**117 records**, `0001`–`0117` contiguous" until ADR-0118 — the lock-poisoning halt, closing the residual ADR-0115 assigned to Step 7a — was written.)* · `spikes/DECISIONS-2026-09-11.md` and `spikes/DECISIONS-2026-09-12.md` (the operator decisions this runbook executes — the 2026-09-11 log runs to #27; the 2026-09-12 log carries E1–E13 from the alignment review and is cited as `DECISIONS-2026-09-12 E<n>`) ·
+2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**120 records**,
+`0001`–`0120` contiguous, with `0090` written at Step 4.4 on 2026-09-12, `0117` on 2026-09-13, `0091` at Step 6.1 on 2026-09-13, `0118` for Step 7a on 2026-09-13 and `0119` and `0120` for Step 7b on 2026-09-13 — no reserved number remains; `references/adr/ERRATA.md` for corrections to
+frozen records) *(Corrected 2026-09-13 three times: this read "**119 records**, `0001`–`0119` contiguous" until ADR-0120 — the `dag_amended` event kind AC-064's THEN requires, minted by record because ADR-0116 permits no other route — was written, "**118 records**, `0001`–`0118` contiguous" until ADR-0119 — the selection memo key, settling AC-045's fourth key for Step 7b — was written, and "**117 records**, `0001`–`0117` contiguous" until ADR-0118, the lock-poisoning halt closing the residual ADR-0115 assigned to Step 7a.)* · `spikes/DECISIONS-2026-09-11.md` and `spikes/DECISIONS-2026-09-12.md` (the operator decisions this runbook executes — the 2026-09-11 log runs to #27; the 2026-09-12 log carries E1–E13 from the alignment review and is cited as `DECISIONS-2026-09-12 E<n>`) ·
 `spikes/F39-DRAFT.md` · `spikes/F40-DRAFT.md` · `spikes/F41-DRAFT.md` (S-PORTS) · `spikes/F42-DRAFT.md` (S-GRAMMAR) ·
 `spikes/HANDOFF.md` · `spikes/DECISIONS-2026-09-09.md` · `references/2026-09-08-evidence-brief.md` §E. ·
 **Tree state:** every path and every existing command in the stage files was re-verified against the working tree
@@ -38,15 +38,21 @@ and two are numbered decisions recorded in `spikes/DECISIONS-2026-09-11.md` befo
 
 **An eighth, added 2026-09-12.** The 2026-09-11 audit left the two must-fail fixture crates (AC-001–AC-004, AC-005) without a name, a path or a shape, and this table did not carry them as a decision. They are now decided — feature-gated workspace members at `tests/fixtures/rk-clock-read/` and `tests/fixtures/rk-banned-dep/`, **DECISIONS-2026-09-12 E4**, executed at s5 §5.1a. Five further decisions from the same review (**E1**, **E2**, **E3**, **E11**, **E12**) move a record at or above the runbook in ADR-0092's chain and are **owed, not executed here** — `DECISIONS-2026-09-12` names what each one must write.
 
-**`0089` is taken, and so are `0092`–`0118` and now `0090`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
+**`0089` is taken, and so are `0092`–`0120` and now `0090`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
 was accepted on 2026-09-09 and partially supersedes ADR-0030 (PC8); ADR-0093 (2026-09-11) supersedes it in part
 again — `stage`/`rigor`/`role`/`cost` are `source = "kernel"`, `surfaces` is `source = "declared"`, six facets stay
 `derived` — and Step 4a executes both. Step 4.4's context-vector record is **0090** — **written 2026-09-12**, superseding ADR-0079 in full — and Step 6.1's
 S-GIX successor is **0091**, **written on 2026-09-13**, which was the last number the ADR README carried as reserved. Step 7a's
 lock-poisoning record is **0118**, **written on 2026-09-13** — a poisoned store lock halts the run; it closes the residual
-ADR-0115:135-138 named and assigned to this stage, and it supersedes nothing. The next free
-number is **`0119`**. *(Corrected 2026-09-13: this sentence gave the next free number as `0118`, from before that
-record was written.)* *(Corrected 2026-09-12: this sentence said the next free number was 0115, from before ADR-0115
+ADR-0115:135-138 named and assigned to this stage, and it supersedes nothing. Step 7b's selection-memo-key record is
+**0119**, **written on 2026-09-13** — AC-045's key is a fourth, selection-level key derived in `rk-kernel::select` and
+looked up outside `select()`; ADR-0097's step memo key gains no ninth component, so it too supersedes nothing. Step 7b's
+second record is **0120**, **written on 2026-09-13** — the closed `EventKind` table gains **`dag_amended`** (tier 2 ·
+`deviation_id, added, removed, rows_refired` · selection step 7's re-run of steps 2–5), the kind AC-064's THEN names and
+that nothing minted; ADR-0116 had already withdrawn the completeness reading of ADR-0105 clause 7, so it supersedes
+nothing either. The next free
+number is **`0121`**. *(Corrected 2026-09-13 three times: this sentence gave the next free number as `0120` until ADR-0120 was
+written, as `0119` until ADR-0119 was, and as `0118` before ADR-0118 was.)* *(Corrected 2026-09-12: this sentence said the next free number was 0115, from before ADR-0115
 and ADR-0116 landed.)* **Step 4a is
 not a decision** — it is the execution order for the registry, schema and lint work ADR-0089 and ADR-0093 force.
 
@@ -191,7 +197,7 @@ operator meets them:
 
 | # | Restated at |
 | --- | --- |
-| 1 — the LLM-facet block | Step 4 (the gate), **Step 5 banner**, **Step 6 banner**, **Step 7a/7b banners**, Step 7e, Step 8 |
+| 1 — the LLM-facet block | Step 4 (the gate), **Step 5 banner**, **Step 6 banner**, **Step 7a/7b banners**, **Step 7b-ii's gate-check banner** (AC-302 is its standing negative), Step 7e, Step 8 |
 | 2 — nothing depends on a process surviving | Step 3a (the dispatch), Step 7c, Step 8 (3), Halt 5 |
 | 3 — `cargo build` first | Checkpoint 0, Step 5.3, Step 6.1, Halt 1 |
 | 4 — a rig that compiles has not been run | Step 3a, Step 7c |
@@ -202,7 +208,7 @@ operator meets them:
 | 9 — a guard scoped wrong | Step 3b, Step 4.3, Halt 7 |
 | 10 — a bar its own n cannot decide | **Step 4.1 clause B**, **Step 4.2 (P2's criteria 1 and 2)**, Halt 9 |
 | 11 — a fired criterion whose remedy is contraindicated | **Step 4.2 (P2's criterion 1)**, Step 4.5, **Halt 12** |
-| 12 — test-first, and a discriminating test per AC | **Step 5.3**, **Step 6.3**, **Step 7a**, **Step 7b**, **Step 7c**, **Step 7d** — every stage that writes Rust. Step 7e authors TOML and is out of its scope; Steps 0–4a write records, not code. |
+| 12 — test-first, and a discriminating test per AC | **Step 5.3**, **Step 6.3**, **Step 7a**, **Step 7b**, **Step 7b-ii**, **Step 7c**, **Step 7d** — every stage that writes Rust. Step 7e authors TOML and is out of its scope; Steps 0–4a write records, not code. |
 
 ---
 
@@ -240,5 +246,5 @@ operator meets them:
   hash into §1 (`a64f1f2`, `8a2b5a3`, `54b61d8`; Step 0 differed — `bf5086a` touches `PROGRESS.md` alone). A §1 row
   is hashless only between the two. Any cleanliness assertion in a checkpoint must tolerate the tracker row being
   unstaged at the moment it runs.
-- **Execution order** — `0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7a → 7b → 7c → 7d → 7e → 8`; Step 2 runs sixth (its
+- **Execution order** — `0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7a → 7b → 7b-ii → 7c → 7d → 7e → 8`; Step 2 runs sixth (its
   ORDER banner); Step 9 is rollback and may run at any point.

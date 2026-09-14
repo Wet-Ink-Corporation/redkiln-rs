@@ -2,7 +2,7 @@
 
 | stage | phase | entry gate | exit checkpoint | previous | next |
 | --- | --- | --- | --- | --- | --- |
-| `s7c` | Phase 1 | Checkpoint 7b | Checkpoint 7c | `s7b` | `s7d` |
+| `s7c` | Phase 1 | Checkpoint 7b-ii | Checkpoint 7c | `s7b-ii` | `s7d` |
 
 *Part of `runbook/` — the index is `runbook/INDEX.md`, the tracker `runbook/PROGRESS.md`, the shared preamble
 (golden constraints, tool preflight, legend) `runbook/00-preamble.md`, the halt conditions `runbook/halts.md`.

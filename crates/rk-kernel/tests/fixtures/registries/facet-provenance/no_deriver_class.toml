@@ -1,0 +1,20 @@
+# AC-520 clause group 5a -- "a `derived` facet with no `deriver_class`".
+#
+# ABSENCE IS NEVER INFERRED. This fails load EXACTLY as a missing `deriver` does -- it is not a
+# default-to-structural and it is not a warning. The amendment of 2026-09-13 made lexicality a
+# declared name because no record said how a deriver was "declared lexical", and declaring by name
+# rather than by omission is AC-072's own rule applied one field over (DECISIONS-2026-09-12 E1's
+# shape for `nullable`).
+
+[facet.change]
+values = ["text", "binary", "generated"]
+set = true
+source = "derived"
+deriver = "R-change-extension-and-numstat-marker"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-change-extension-and-numstat-marker"
+positives = 29
+interval = [0.54, 0.85]   # the Wilson 95% interval AC-520's THEN names beside the count (F39)

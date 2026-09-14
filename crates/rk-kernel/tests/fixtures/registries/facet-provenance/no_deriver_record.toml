@@ -1,0 +1,20 @@
+# AC-520 clause group 6a -- "a `derived` facet with no `deriver_record`".
+#
+# The record's LOCATION was the second of the three undefined properties the 2026-09-13 amendment
+# closed: the criterion required a scored record to "exist, be pinned and be read", while
+# `redkiln lint --facet-provenance` took only .redkiln/facets.toml at every call site, so nothing
+# said where the lint looks. It is now `deriver_record`, corpus-relative, resolved through
+# CORPUS_PIN and never through a working tree (AC-464) -- and an entry that names none fails load.
+
+[facet.flag_exists]
+values = [true, false]
+nullable = true
+source = "derived"
+deriver = "R-flag-exists-path-and-diff-scan"
+deriver_class = "lexical"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-flag-exists-path-and-diff-scan"
+positives = 2
+interval = [0.00, 0.66]   # the Wilson 95% interval AC-520's THEN names beside the count (F39)

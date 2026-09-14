@@ -1,0 +1,23 @@
+# AC-071 fixture 6 of 6 -- clause 5, corpus pinned.
+#
+# The record carries no corpus_sha at all, so it cannot be said to have been measured over the
+# pinned catalog corpus. This is the clause §7b.2 makes load-bearing in a way the register does not
+# yet say: re-running the identity instrument TODAY over a registry Step 4a rewrote returns
+# identity = 1.00 on all four packs, because analyse-arm-l.py's load_lattice() reads facets.toml,
+# artifacts.toml and catalog/ FROM THE WORKING TREE. A record with no pin is a record whose numbers
+# cannot be attributed to any registry state -- which is exactly how a 0.10 becomes a 1.00 without
+# anyone editing a number.
+#
+# The MISMATCH case -- a record carrying a sha that is not the pin -- is exercised in the test by
+# patching this file's text, so the six committed files stay the six the register enumerates.
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+[stability.criticality]
+modal_required_set_identity = 0.85
+n_items = 20
+draws_per_item = 10
+panel_verdict = "scored"

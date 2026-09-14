@@ -55,9 +55,9 @@ git -C D:/repos/redkiln-rs status --porcelain | grep -v '^?? runbook/'
 **Count it, do not read it off this listing**: `git status --porcelain | awk '/^\?\?/{n++} END{print n+0}'` is the number — it always prints a count and exits 0, where `grep -c '^??'` prints `0` but exits **1** on a swept tree [hardened 2026-09-11] — and this
 enumeration has been wrong before. The P2 artefacts, the F39/F40 amendments and the 2026-09-09 ` M` lines that
 earlier revisions enumerated are all committed (`4519edc` … `009a4ec`); what Step 1 commits is the noise above and
-nothing else. `references/adr/` holds **118 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
-is **120** — Checkpoint 1 asserts that number. *(Corrected 2026-09-12: this read 112 / 114, which was already two
-records behind the tree and contradicted the assertion it describes; ADR-0115/0116 then ADR-0090 landed that day. Moved 116 / 118 -> 117 / 119 on 2026-09-13, when Step 6.1 wrote ADR-0091, and 117 / 119 -> 118 / 120 later the same day, when Step 7a wrote ADR-0118.)* `e3b0bac` survives only as the **pre-design-pass reference point**
+nothing else. `references/adr/` holds **120 records + README.md + ERRATA.md**, so `ls references/adr/*.md | wc -l`
+is **122** — Checkpoint 1 asserts that number. *(Corrected 2026-09-12: this read 112 / 114, which was already two
+records behind the tree and contradicted the assertion it describes; ADR-0115/0116 then ADR-0090 landed that day. Moved 116 / 118 -> 117 / 119 on 2026-09-13, when Step 6.1 wrote ADR-0091; 117 / 119 -> 118 / 120 later the same day, when Step 7a wrote ADR-0118; and 118 / 120 -> **120 / 122** the same day again, when Step 7b's Slice 0 wrote ADR-0119 and ADR-0120. **Five moves of one hard-coded literal in three days.**)* `e3b0bac` survives only as the **pre-design-pass reference point**
 that Step 9's rollback and Step 1.3's fresh-clone branch both name.
 
 Do not re-run `spikes/p9/COMMIT-2026-09-09.sh`. Step 1 commits what is left.

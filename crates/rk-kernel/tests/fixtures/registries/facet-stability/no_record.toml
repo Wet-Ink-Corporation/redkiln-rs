@@ -1,0 +1,14 @@
+# AC-071 fixture 1 of 6 — "a fixture facets.toml declaring source = "llm" with no record, which
+# must fail load". This is the one case of the six that is not a clause of the record: there is no
+# record at all.
+#
+# THE LINT'S SUBJECT IS `source = "llm"` AND NOTHING ELSE. After Step 4a the shipped registry has
+# zero llm facets -- ADR-0090 re-sourced all seven to `human` -- so the gate has no true instance on
+# disk and this fixture is the only place its GIVEN is met.
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "llm"
+
+# NO [stability.criticality] TABLE. That is the whole fixture.

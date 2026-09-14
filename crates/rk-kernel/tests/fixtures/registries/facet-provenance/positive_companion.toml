@@ -1,0 +1,44 @@
+# AC-520's POSITIVE COMPANION -- this file MUST LOAD.
+#
+# "without which the rule is satisfied by a lint that rejects everything." Ten must-fail files are
+# ten ways of proving a lint can say no; this is the only file that proves it can say yes, and it
+# carries all three shapes the register's companion names:
+#
+#   1. a `derived` facet with a named deriver, a scored record and positives -- and it keys a
+#      `require` row, which is the strongest positive available: a STRUCTURAL deriver carrying
+#      positives is exactly the entry both require-row bars must let through;
+#   2. a `kernel` facet with none -- no deriver, no deriver_class, no deriver_record, claiming no
+#      record;
+#   3. a `declared` facet keying no row.
+#
+# The declared facet is present and silent ON PURPOSE. Deleting it would make clause group 8 pass
+# for the wrong reason -- absence rather than permission -- and this file is where "a declared
+# facet that keys nothing is fine" is stated positively.
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]
+set = true
+source = "derived"
+deriver = "R-toolchain-extension-manifest-table"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[facet.stage]
+values = ["triage", "discovery", "analysis", "specification", "design", "planning", "implement", "verify", "review", "release", "operate", "closeout"]
+source = "kernel"
+
+[facet.surfaces]
+values = ["flags", "migration", "payments", "secrets"]
+set = true
+source = "declared"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-toolchain-extension-manifest-table"
+positives = 15
+interval = [0.48, 0.89]   # the Wilson 95% interval AC-520's THEN names beside the count (F39)
+
+[stage.verify]
+[[stage.verify.require]]
+when = "'node' in toolchain"
+artifacts = ["ScanReport"]

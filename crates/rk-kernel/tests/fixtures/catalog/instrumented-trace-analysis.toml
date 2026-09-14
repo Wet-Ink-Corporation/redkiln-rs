@@ -1,0 +1,84 @@
+# reach: (incident, analysis, mandatory) with change = {binary} — deviation add otherwise (F34 ambiguity B1)
+# localisation family: root-cause(10) < differential-debugging(20) < bisect(30) < instrumented-trace-analysis(40)
+[activity]
+id           = "instrumented-trace-analysis"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "analysis"
+provides     = ["RootCause"]
+requires     = ["ReproCase"]
+derived_from = ["ReproCase"]
+tags         = ["kind:bug", "kind:incident", "kind:security-vuln"]   # 2026-09-08 family totality
+method_rank  = 40
+family       = "localisation"
+min_rigor    = "mandatory"
+cost_class   = "L"
+evidence     = ["ToolReport", "GreenAt", "Findings", "HumanAnswer?"]
+budget       = { attempts_total = 8, tokens = 500_000, wall_clock_secs = 7200 }
+deviation_ok = ["downgrade"]
+keywords     = ["tracing", "instrumentation", "opentelemetry", "examine"]
+rationale    = "SRE ch.12 'Examine': when hypotheses and history both fail, add instrumentation and read the trace; expensive, so mandatory-only."
+
+[[step]]
+id      = "instrument"
+kind    = "agent"
+role    = "investigator"
+inputs  = { repro = "artifact:ReproCase", telemetry = "toolchain:telemetry?", previous = "${analyse.outputs?}", findings = "${adversary.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "collect"
+kind    = "tool"
+run     = "toolchain:trace_collect"
+inputs  = { command = "artifact:ReproCase.command", changes = "${instrument.outputs.files}" }
+outputs = "value:TraceAnalysis"
+timeout_secs = 1800
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "analyse"
+kind    = "agent"
+role    = "investigator"
+inputs  = { trace = "${collect.outputs}", repro = "artifact:ReproCase" }
+outputs = "value:RootCause"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "confirm"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "artifact:ReproCase.command" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { cause = "${analyse.outputs}", trace = "${collect.outputs}", report = "${confirm.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { findings = "${adversary.outputs}", cause = "${analyse.outputs}" }
+expr    = "cause.confidence == 'high' and findings.none(evidence in ['Reproduced'])"
+on_false = { to = "instrument", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+question = "root-cause.accept"
+inputs  = { cause = "${analyse.outputs}", findings = "${adversary.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { RootCause = "${analyse.outputs}" }
+evidence  = ["${collect}", "${confirm}", "${adversary}", "${signoff}"]

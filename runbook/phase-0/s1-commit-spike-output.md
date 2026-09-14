@@ -117,8 +117,8 @@ without the records it carries.
 cd D:/repos/redkiln-rs
 st=$(git status --porcelain)                           # → EMPTY (no output at all). Phase-0 exit (a).
 [ -z "$st" ] || { echo "FAIL: tree not clean — Phase-0 exit (a) not met:"; printf '%s\n' "$st"; exit 1; }
-n=$(ls references/adr/*.md | wc -l)                    # → 120 (118 records + README.md + ERRATA.md) — 114 verified 2026-09-11; 0115/0116 and ADR-0090 landed 2026-09-12; ADR-0117 (the stale_policy adjudication) and ADR-0091 (Step 6.1's S-GIX result) 2026-09-13; **ADR-0118** (Step 7a's lock-poisoning halt) 2026-09-13
-[ "$n" -eq 120 ] || { echo "FAIL: expected 120 ADR files, found $n"; exit 1; }
+n=$(ls references/adr/*.md | wc -l)                    # → 122 (120 records + README.md + ERRATA.md) — 114 verified 2026-09-11; 0115/0116 and ADR-0090 landed 2026-09-12; ADR-0117 and ADR-0091 2026-09-13; **ADR-0118** (Step 7a's lock-poisoning halt), **ADR-0119** (Step 7b Slice 0's selection memo key) and **ADR-0120** (Step 7b Slice 0's dag_amended) all 2026-09-13
+[ "$n" -eq 122 ] || { echo "FAIL: expected 122 ADR files, found $n"; exit 1; }
 k=$(git ls-files references/adr/0114-*.md | wc -l)     # → 1  the last remediation record is tracked, not just on disk
 [ "$k" -eq 1 ] || { echo "FAIL: ADR-0114 tracked-file count is $k, expected 1"; exit 1; }
 # → runbook/INDEX.md  (the split runbook is tracked)

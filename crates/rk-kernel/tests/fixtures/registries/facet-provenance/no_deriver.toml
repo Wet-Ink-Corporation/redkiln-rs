@@ -1,0 +1,23 @@
+# AC-520 clause group 1 -- "a `derived` facet with no `deriver` field".
+#
+# Every other property of this entry is well formed: it declares a deriver_class by name and a
+# deriver_record that resolves at the pin. The single defect is the absent `deriver`.
+#
+# The [[corpus_record]] block below is this fixture's model of THE PINNED CORPUS. AC-520 resolves
+# deriver_record corpus-relative through CORPUS_PIN and never through a working tree (AC-464), and
+# the record it names -- results/p1-arm-d-panel-scored.json -- IS NOT IN THE CORPUS YET: the single
+# pin move is a named act at the END of Step 7b (s7b §7b.11). So the corpus-resolution half of this
+# criterion is ARMED, NOT DISCHARGED, and the rule reads the model rather than opening a path.
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]
+set = true
+source = "derived"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-toolchain-extension-manifest-table"
+positives = 15
+interval = [0.48, 0.89]   # the Wilson 95% interval AC-520's THEN names beside the count (F39)

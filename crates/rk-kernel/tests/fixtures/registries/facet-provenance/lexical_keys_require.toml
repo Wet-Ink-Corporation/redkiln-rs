@@ -1,0 +1,31 @@
+# AC-520 clause group 4 -- "a `deriver` declared lexical (deriver_class = "lexical") whose facet
+# keys a `require` row".
+#
+# THE LEXICAL BAR AND THE NO-POSITIVE-INSTANCE BAR ARE SEPARATE CLAUSES DOING SEPARATE WORK, and
+# this fixture is where that is pinned: `ui` carries POSITIVES -- F39 scored it 1.00 [0.65, 1.00]
+# over 7 of them, the best figure in the whole panel -- and is barred anyway, because "a facet whose
+# only computation is a lexical scan of free text, file paths and diff lines included, does not
+# satisfy PC8 rule 2 for require-row purposes WHATEVER ITS RECORD SAYS".
+#
+# The repair the discrimination applies -- flipping deriver_class to "structural" -- is a FICTION
+# about this facet and is labelled as one: `ui`'s deriver really is a path-and-diff scan. What the
+# repair demonstrates is that the rule fires on the DECLARED CLASS and on nothing incidental.
+
+[facet.ui]
+values = [true, false]
+nullable = true
+source = "derived"
+deriver = "R-ui-path-and-diff-scan"
+deriver_class = "lexical"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-ui-path-and-diff-scan"
+positives = 7
+interval = [0.65, 1.00]   # the Wilson 95% interval AC-520's THEN names beside the count (F39)
+
+[stage.review]
+[[stage.review.require]]
+when = "ui"
+artifacts = ["DesignReviewVerdict"]
