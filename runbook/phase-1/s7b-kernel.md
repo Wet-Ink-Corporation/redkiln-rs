@@ -884,12 +884,12 @@ Write it into this section in the commit that authors the replay test, before th
 #### The per-run layout, FIXED 2026-09-13 in the commit that authored the replay test, **AMENDED 2026-09-14**
 
 The producer is `rk_kernel::replay::{record, write_run}` and the reader is `rk_kernel::replay::read_run`; the layout
-version travels in the file as `schema = "rk-kernel/golden-log/v1"`, so a reader never guesses which shape a run is in.
+version travels in the file as `schema = "rk-kernel/golden-log/v2"`, so a reader never guesses which shape a run is in.
 
 ```text
 golden-logs/
   <run_id>/                     run_id = "<stage>-" + first 16 hex of
-                                sha256_lp(["rk-kernel/golden-log/v1", stage, canonical(inputs)])
+                                sha256_lp(["rk-kernel/golden-log/v2", stage, canonical(inputs)])
     run.json                    { schema, run_id, stage, inputs_digest, event_count, producer,
                                   terminal_state, next_action }
     inputs/
@@ -924,18 +924,26 @@ keeps AC-042's *"re-derives the DAG from the logged inputs **alone**"* true of a
 logged, not hidden. **A record routing spec assembly is OWED**, and the binder's build is assigned to **7c**
 (mechanism plus fixture cards; the shipped card set cross-lists to 7e).
 
-🛑 **THE LAYOUT VERSION IS STILL `v1` FOR WHAT IS NOW A THIRD SHAPE, AND THE BUMP TO `v2` IS OWED BEFORE THE
-PIN MOVE.** The sentence above says the version exists *"so a reader never guesses which shape a run is in"*, and
-three distinct shapes now share `v1`. The bump is **not** taken in this amendment because it is **half a change**:
-`pub const SCHEMA` in `crates/rk-kernel/src/replay.rs` still reads `v1`, and a runbook that described a version the
-code does not write would be the documented-but-false state this file has been repaired for twice already. **It
-lands in ONE act touching both files, and it must land before the move**, because the schema string is an **input
-to the `run_id` derivation** above - so bumping it **renames every run**. At the time of writing the corpus holds
-**no** `golden-logs/` [measured 2026-09-14], so the bump costs one re-bless of one in-crate fixture through the
-`#[ignore]`d `bless_the_committed_golden_log`; after the single `CORPUS_PIN` move it would invalidate
-corpus-committed run ids under a SHA **AC-464 freezes** and `PROGRESS.md`:103 forbids moving twice. **Re-read
-precondition 3 against this block after the bump lands**, since that precondition is an assertion about this
-section.
+**The version was bumped to `v2` on 2026-09-15, in the act this paragraph is the record of.** Three distinct
+shapes had come to share `v1`, against this section's own stated reason for carrying a version at all. The bump
+is **not** cosmetic and its timing was forced: the schema string is an **input to the `run_id` derivation**
+above, so bumping it **renames every run**. At the moment it was taken the corpus held **no** `golden-logs/`
+[measured 2026-09-14], so it cost one re-bless of one in-crate fixture through the `#[ignore]`d
+`bless_the_committed_golden_log`; after the single `CORPUS_PIN` move it would have invalidated
+corpus-committed run ids under a SHA **AC-464 freezes** and `PROGRESS.md`:103 forbids moving twice.
+
+**The rename is the evidence the bump reached the derivation**, and it was asserted rather than assumed: the
+committed fixture moved from `implement-a539b5a7b654d16f` to `implement-bf1d8cec3b22d288`. Had the run id not
+moved, the schema string would not be reaching `sha256_lp`, and the entire warrant for bumping **before** the
+move rather than after it would have been void — a failure that would otherwise have been silent.
+
+**It landed in two commits and not one, and that is recorded rather than smoothed.** `0780198` (2026-09-14)
+amended the member list and **deliberately left `v1` standing**, because `pub const SCHEMA` still read `v1` and
+a runbook describing a version the code does not write is the documented-but-false state this file has been
+repaired for twice. `b37fcbb` (2026-09-15) bumped the constant and re-blessed the fixture, and this edit closes
+the pair. Between those two commits the tree carried the mirror state — code at `v2`, runbook at `v1` — which
+`b37fcbb`'s own message records as owed. **Precondition 3 is an assertion about this section and has been
+re-read against it as amended.**
 
 **Three properties of the layout are load-bearing and are stated rather than left to be inferred.**
 
