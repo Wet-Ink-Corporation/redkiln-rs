@@ -102,38 +102,58 @@
 //!
 //! A consequence, stated because it is load-bearing: a `token` member **recorded in the journal is
 //! not read**. The fold derives the token from the payload it can verify, so a forged token cannot
-//! steer the state — and an answer naming a token no derived gate carries is
-//! [`FsmError::GateAnsweredWithoutOpen`], a typed refusal, never a silently dropped answer.
+//! steer the state — and an answer naming a token **no derived gate this journal ever opened**
+//! carries is [`FsmError::GateAnsweredWithoutOpen`], a typed refusal, never a silently dropped
+//! answer. The emphasis is the subject of the next section.
 //!
-//! # 🛑 A KNOWN DEFECT: `gate_opened → gate_expired → gate_answered` IS PERMANENTLY UNFOLDABLE
+//! # `gate_answered` IS THREE CASES, AND ONLY ONE OF THEM IS FORGERY
 //!
-//! *(Found 2026-09-14 on an adversarial verification pass, reproduced, and deliberately NOT fixed
-//! here.)* [`apply`]'s `GateExpired` arm **removes** the token from `gates_open`; its `GateAnswered`
-//! arm refuses **any** token absent from `gates_open`. So a journal carrying all three rows for one
-//! derived token folds to [`FsmError::GateAnsweredWithoutOpen`] — **and never stops doing so**. The
-//! journal is append-only, so the run is not merely halted, it is **unfoldable for ever**, and
-//! `next_action`, `stage_action` and every replay over that item are unreachable with it.
+//! **The repair of a defect found 2026-09-14 on an adversarial verification pass, landed on the
+//! operator decision of the same day.** [`apply`]'s [`EventKind::GateAnswered`] arm asked one
+//! question — *is the token in `gates_open`?* — and gave **one** answer to **two different
+//! situations**. That is the whole warrant, and it is deliberately no wider than this sentence.
 //!
-//! **The refusal also says the wrong thing.** `GateAnsweredWithoutOpen`'s whole purpose is the
-//! sentence above it: *"a forged token cannot steer the state"*. Here the token is not forged — the
-//! operator answered a gate this system itself opened and then expired, which is an ordinary race
-//! (a gate whose deadline passes while the answer is in flight; F18 measured **45% of gate→verdict
-//! intervals above one hour**, so it is the common case rather than the pathological one). The
-//! diagnostic accuses the operator of forgery for it.
+//! The three cases now:
 //!
-//! **Why it is pinned rather than repaired.** The lawful continuation looks like a **VOID** —
-//! AC-039's *"an answer whose tree hash no longer matches is **void, not reconciled**"* is the
-//! nearest rule, [`EventKind::GateAnswerVoid`] already exists so no kind would be minted, and
-//! `gates_void` is already terminal (nothing in this module moves a token out of it). **But AC-039
-//! is about a `tree_hash` mismatch and says nothing about expiry**, and no other record in this
-//! programme does either: ADR-0105 clause 10 constrains only what an expiry *action* may be, and
-//! the register's AC-039 is marked **HUMAN GATE**. Choosing "an answer to an expired gate is void"
-//! over "…is refused" or "…re-opens the gate" is **semantics a stage may not settle**
-//! (`00-preamble.md`:55). So the current behaviour is pinned exactly as it is by
-//! `tests/it/fsm.rs::gate_answered_after_expiry_is_unfoldable_known_defect`, which documents it as
-//! a defect rather than as a property — and **a record settling the disposition of an answer to an
-//! expired gate is OWED**. When it lands, that test goes red and whoever changed the behaviour has
-//! to say which clause licensed it.
+//! | the token is… | the fold | why |
+//! | --- | --- | --- |
+//! | in `gates_open` | answered (or **void** on a `tree_hash` mismatch) — **unchanged** | AC-039 |
+//! | in `gates_expired` | **void**, and the fold **CONTINUES** | this section |
+//! | never seen | [`FsmError::GateAnsweredWithoutOpen`] | forgery — the message is correct *here* |
+//!
+//! **What the middle row was before, and why it could not stay.** The `GateExpired` arm **removes**
+//! the token from `gates_open`, so a journal carrying `gate_opened → gate_expired → gate_answered`
+//! for one derived token folded to [`FsmError::GateAnsweredWithoutOpen`] — **and never stopped
+//! doing so**. The journal is append-only: the run was not merely halted, it was **unfoldable for
+//! ever**, and `next_action`, `stage_action` and every replay over that item were unreachable with
+//! it. The token was also not forged — the operator answered a gate this system itself derived,
+//! opened and expired, an ordinary race (F18 measured **45% of gate→verdict intervals above one
+//! hour**, so it is the common case, not the pathological one) — and the diagnostic accused them of
+//! forgery for it.
+//!
+//! **Nothing is minted.** [`EventKind::GateAnswerVoid`] already exists and [`apply`] already has an
+//! arm for it writing exactly this disposition; `rk_types::drift` already models a void answer; and
+//! `gates_void` is already terminal — nothing in this module moves a token out of it — so a voided
+//! answer can never later count as one.
+//!
+//! # 🛑 WHETHER A VOIDED GATE RE-OPENS IS **NOT** SETTLED HERE — IT IS 7b-ii's
+//!
+//! Stated separately so the narrow warrant above cannot be read wider. AC-176 classifies a
+//! `tree_hash`-drifted answer void **and** re-opens the gate, but its **Boundary note assigns
+//! gate-record semantics to the gates area (7b-ii)**, and AC-039 — the nearest rule in this module —
+//! is about a `tree_hash` mismatch, says nothing about expiry, and is marked **HUMAN GATE**.
+//! ADR-0105 clause 10 constrains only what an expiry *action* may be.
+//!
+//! So [`next_action`]'s step 2 is **untouched**: it still declines to re-open a token in
+//! `gates_expired`, which is the behaviour that was already here and not a reading taken today.
+//! [`RunState::awaiting_gate`] reads `gates_open` alone, so an expired token does not hold the run
+//! at [`TerminalState::AwaitingGate`] either — also unchanged.
+//!
+//! Pinned by `tests/it/fsm.rs::gate_answered_after_expiry_is_void_and_the_fold_continues`, which
+//! supersedes `gate_answered_after_expiry_is_unfoldable_known_defect`, the pin that held the
+//! unfoldable journal as a DEFECT until the decision landed. That name carries **no AC id** and
+//! **a durable record naming the decision is OWED**, because no criterion states the disposition of
+//! an answer to an expired gate.
 //!
 //! # 🛑 FOUR VALUES THIS MODULE NEEDS AND CANNOT COMPUTE, EACH AN ARGUMENT WITH ONE CONSTRUCTOR
 //!
@@ -695,8 +715,12 @@ pub enum FsmError {
     MalformedPayload { kind: &'static str, detail: String },
     /// A float reached the canonical serialiser.
     Canon(CanonError),
-    /// A `gate_answered` naming a token no derived gate carries. A typed refusal, never a silently
-    /// dropped answer.
+    /// A `gate_answered` naming a token **this journal never opened**. A typed refusal, never a
+    /// silently dropped answer.
+    ///
+    /// **This is the forgery case and only the forgery case**, as of 2026-09-14: an answer to a
+    /// gate the journal opened and then EXPIRED is void and the fold continues, and does not reach
+    /// here. See the module header's *"`gate_answered` is three cases"*.
     GateAnsweredWithoutOpen { token: Digest },
     /// Step 6 could not order the DAG (a cycle). An assembled `Selection` has already been
     /// validated acyclic, so this cannot fire on one this crate produced.
@@ -728,9 +752,10 @@ impl fmt::Display for FsmError {
             Self::Canon(e) => write!(f, "{e}"),
             Self::GateAnsweredWithoutOpen { token } => write!(
                 f,
-                "a `gate_answered` names the token {} and no gate the fold derived carries it. The \
-                 token is DERIVED from (kind, tree_hash, deadline) and a recorded `token` member is \
-                 not read, so a forged token cannot steer the state",
+                "a `gate_answered` names the token {} and no gate this journal opened carries it — \
+                 not as open, and not as expired. The token is DERIVED from (kind, tree_hash, \
+                 deadline) and a recorded `token` member is not read, so a forged token cannot \
+                 steer the state",
                 token.as_str()
             ),
             Self::PlanNotOrderable { detail } => {
@@ -942,8 +967,14 @@ impl RunState {
         self.gates_answered.values()
     }
 
-    /// **AC-039's *"void, not reconciled"***: every gate whose answer arrived against a different
-    /// tree hash. Nothing in this module ever moves a token out of this set.
+    /// Every gate whose answer does not count, from **two** sources as of 2026-09-14:
+    ///
+    /// 1. **AC-039's *"void, not reconciled"***: the answer arrived against a different tree hash;
+    /// 2. the answer arrived after the journal **expired** the gate — the module header's
+    ///    *"`gate_answered` is three cases"*, which carries the whole of that warrant.
+    ///
+    /// Nothing in this module ever moves a token out of this set, which is what makes both
+    /// dispositions terminal.
     pub fn void_gates(&self) -> impl Iterator<Item = &Digest> {
         self.gates_void.iter()
     }
@@ -1212,7 +1243,32 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             let token = required_digest(event, "gate_answered", "token")?;
             let tree_hash = required_str(event, "gate_answered", "tree_hash")?;
             let verdict = required_str(event, "gate_answered", "verdict")?;
+            // **THE THREE-WAY SPLIT, 2026-09-14.** Until today this arm asked one question — *is
+            // the token in `gates_open`?* — and gave one answer to two different situations. The
+            // `GateExpired` arm below REMOVES the token from `gates_open`, so
+            // `gate_opened -> gate_expired -> gate_answered` fell into the `else` and refused; and
+            // because the journal is append-only, it refused for ever. Only ONE of the two
+            // situations is forgery, and the refusal is the wrong sentence for the other.
+            //
+            // 🛑 **THE WARRANT IS NARROW AND DOES NOT INCLUDE RE-OPENING.** What is settled here is
+            // that an answer the system's own expiry raced is not a forged token. Whether a voided
+            // gate RE-OPENS is gate-record semantics and belongs to **7b-ii** (AC-176 classifies a
+            // `tree_hash`-drifted answer void *and* re-opens, but its Boundary note assigns those
+            // semantics to the gates area). Step 2 of `next_action` is UNCHANGED by this arm and
+            // still declines to re-open an expired token; that is the behaviour that was already
+            // here, not a reading taken today.
             let Some(gate) = state.gates_open.get(&token) else {
+                // The expired case: VOID, and the fold CONTINUES. Nothing is minted —
+                // `EventKind::GateAnswerVoid` already exists and its arm already writes exactly
+                // this, and `gates_void` is already terminal (nothing in this module moves a token
+                // out of it), so a void answer can never later count as one.
+                if state.gates_expired.contains(&token) {
+                    state.gates_void.insert(token);
+                    return Ok(());
+                }
+                // The forgery case, and the ONLY one: a token no derived gate this journal opened
+                // ever carried. The diagnostic's sentence — *"a forged token cannot steer the
+                // state"* — is correct **here**.
                 return Err(FsmError::GateAnsweredWithoutOpen { token });
             };
             // **AC-039's machine residue.** An answer whose tree hash no longer matches the gate's
@@ -1235,8 +1291,29 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
         EventKind::GateExpired => {
             state.survey.state_moving += 1;
             let token = required_digest(event, "gate_expired", "token")?;
-            state.gates_open.remove(&token);
-            state.gates_expired.insert(token);
+            // 🛑 A GATE THAT WAS NEVER OPEN CANNOT EXPIRE, AND RECORDING IT AS EXPIRED WOULD
+            // REOPEN THE FORGERY HOLE D-5 EXISTS TO KEEP SHUT.
+            //
+            // `GateOpened` above DERIVES its token from `(kind, tree_hash, deadline)`, so a token in
+            // `gates_open` is unforgeable. This arm reads the token VERBATIM off the payload, and until
+            // 2026-09-15 it did `gates_open.remove(&token)` — which silently no-ops for a token no gate
+            // ever opened — followed by an UNCONDITIONAL `gates_expired.insert(token)`. `gates_expired`
+            // has exactly one writer, which is this line.
+            //
+            // The consequence ran straight through D-5's three-way split: append one `gate_expired`
+            // naming any digest, and a later `gate_answered` for that same digest folds as **void and
+            // continues** instead of halting as `GateAnsweredWithoutOpen`. The branch D-5 kept
+            // deliberately — *"token never seen -> forgery, and the message is correct HERE"* — became
+            // reachable-around with one extra row, and the fold would have reported the run healthy.
+            //
+            // So expiry is recorded only for a gate this fold actually SAW open. A `gate_expired` for
+            // anything else moves no state: it is counted (the survey still increments above, so it is
+            // never a silently dropped row) and then ignored, and the answer that follows it still
+            // meets the forgery halt. This decides nothing about gate semantics that D-5 reserved to
+            // 7b-ii — it restores the precondition D-5 was written against.
+            if state.gates_open.remove(&token).is_some() {
+                state.gates_expired.insert(token);
+            }
         }
         EventKind::SliceSealed => {
             state.survey.state_moving += 1;

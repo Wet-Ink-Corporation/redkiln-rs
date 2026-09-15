@@ -94,6 +94,34 @@ pub struct Step {
     pub run: Option<String>,
     /// `outputs = "value:…"`, with the `value:` prefix stripped.
     pub output_type: Option<String>,
+    /// `role = "<archetype>"` — **the input to the breaker's partition key**, and ADR-0014's
+    /// *"an activity nominates a **role** and a typed contract, never a card."*
+    ///
+    /// Read as of **2026-09-14** (operator decision D-7). The pack declares a model family per role
+    /// — `[role.<name>] family`, extending design :480's *"tier policy per role"* — the kernel
+    /// resolves role → family at plan time through
+    /// [`crate::select::Pack::require_family_for_role`], and [`crate::workflow::breaker`] keys on
+    /// the **resolved family**. Until today this loader parsed `role` **zero** times [measured
+    /// 2026-09-14: `grep -c role crates/rk-kernel/src/catalog.rs` → 0] while the shipped catalog
+    /// declared one **185 times in 8 distinct values** — `architect`, `implementer`,
+    /// `investigator`, `operator`, `planner`, `releaser`, `reviewer`, `spec-author` [measured
+    /// 2026-09-14 over `spikes/p9/catalog/*.toml`]. The carrier was the file all along and the
+    /// loader dropped it, which is `version`'s correction above, a second time.
+    ///
+    /// 🛑 **THIS IS NOT [`Activity::family`], AND THE DISTANCE BETWEEN THEM IS ONE FIELD ACCESS.**
+    /// [`Activity::family`] is ADR-0058's **activity** family — a rank-escalation ladder whose
+    /// members (`root-cause(10) < differential-debugging(20) < bisect(30) <
+    /// instrumented-trace-analysis(40)`) would typically all run on the **same** model. A breaker
+    /// keyed on it would trip globally with respect to the model and locally with respect to the
+    /// method, which is the exact inverse of AC-034 on both axes.
+    /// `crates/rk-kernel/src/workflow/breaker.rs`'s header carries the whole of that reading, and
+    /// [`crate::workflow::breaker::family_key_never_from_the_activity_catalog_rule`] is the lint
+    /// that keeps the substitution out of the file where it would be invisible.
+    ///
+    /// **`Option`, and `None` is not a role.** A `check`, `tool` or `emit` step nominates none —
+    /// the schema puts `role` on `agent` and `gate` steps — and a step that declares none has
+    /// declared none. Nothing here invents one, on [`Activity::version`]'s doctrine.
+    pub role: Option<String>,
     /// The step's own `when` guard, verbatim. `None` means the step always runs.
     pub when: Option<String>,
     /// `expr = "…"` on a `check` step, verbatim — the schema's **policy predicate**, and the thing
@@ -249,6 +277,24 @@ pub struct Activity {
     pub method_rank: i64,
     pub min_rigor: String,
     pub max_rigor: Option<String>,
+    /// ADR-0058's **ACTIVITY** family — a rank-escalation ladder, and **not a model family.**
+    ///
+    /// > *"An activity declares its family membership with a `family = "<name>"` field. Lint checks
+    /// > three things for every declared family: that its members share `provides`, that they hold
+    /// > distinct `method_rank` values, and that the family satisfies rule 26's
+    /// > totality-over-rigor property."*
+    ///
+    /// 🛑 **This field is never the circuit breaker's key, and as of 2026-09-14 that is a live
+    /// hazard rather than a theoretical one.** Operator decision D-7 made the kernel resolve a
+    /// **model** family at plan time from [`Step::role`], which puts an `Activity` carrying *this*
+    /// family in scope at the moment the key is built. A breaker keyed on it would trip globally
+    /// with respect to the model and locally with respect to the method — the exact inverse of
+    /// AC-034 on both axes — because a family's members (`root-cause(10) <
+    /// differential-debugging(20) < bisect(30) < instrumented-trace-analysis(40)`) would typically
+    /// all run on the **same** model. Two instruments stop it:
+    /// [`crate::workflow::breaker::family_key_never_from_the_activity_catalog_rule`] structurally,
+    /// and `breaker_key_is_the_packs_role_family_never_the_activity_family` behaviourally, over a
+    /// fixture activity that declares this field **and** two different roles.
     pub family: Option<String>,
     /// The kinds this activity needs before it can run. Step 4 recurses on this (design §4.4
     /// row 4), and AC-051/AC-053 lint it at load.
@@ -516,6 +562,13 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
                     o.strip_prefix("value:")
                         .map_or_else(|| o.clone(), ToOwned::to_owned)
                 }),
+                // ADR-0014's *"an activity nominates a ROLE … never a card"*, transcribed and not
+                // interpreted: the role VOCABULARY is the pack's, so a role this crate has never
+                // heard of is carried here and refused at the resolution
+                // (`Pack::require_family_for_role`) rather than at load. A token outside a closed
+                // set is a load error where the set is closed by a record — `deviation_ok` above —
+                // and roles are closed by no record at all.
+                role: text(table, "role"),
                 when: text(table, "when"),
                 expr: text(table, "expr"),
                 for_each: text(table, "for_each"),

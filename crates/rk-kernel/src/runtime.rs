@@ -52,14 +52,35 @@
 //! | AC-525's advisory | `EventKind::DriftAdvisory` | design §5 row 22 |
 //! | 🛑 AC-033's breaker mark | **none exists** | `RefusalClass` is closed at four and `FailureClass` at five; **ARMED, NOT DISCHARGED** since Slice 4d and unchanged here |
 //!
-//! # 🛑 *"exits 0"* IS NOT THIS CRATE'S TO ASSERT
+//! # 🛑 *"exits 0"* IS NOT THIS **MODULE'S** TO ASSERT — AMENDED 2026-09-14 (D-8)
 //!
-//! AC-024's and AC-030's THEN each end *"and exits 0"*. `rk-kernel` is a **library**: a `cargo test`
-//! binary cannot assert its own process exit, and `std::process::exit` inside one aborts the
-//! harness. Residual 10d is FORCED and its Read line is followed — the kernel returns a terminal
-//! outcome and the process exit is `rk-cli`'s, **Step 7d**. The exit half is **ARMED, NOT
-//! DISCHARGED** and its home is named. AC-024 is additionally a **twin** (AC-240 + AC-278 own it)
-//! and is not double-claimed.
+//! **This section was headed *"*\"exits 0\"* IS NOT THIS CRATE'S TO ASSERT"* and said:**
+//!
+//! > AC-024's and AC-030's THEN each end *"and exits 0"*. `rk-kernel` is a **library**: a
+//! > `cargo test` binary cannot assert its own process exit, and `std::process::exit` inside one
+//! > aborts the harness. Residual 10d is FORCED and its Read line is followed — the kernel returns
+//! > a terminal outcome and the process exit is `rk-cli`'s, **Step 7d**. The exit half is **ARMED,
+//! > NOT DISCHARGED** and its home is named.
+//!
+//! **Every sentence there is true of a test asserting its OWN exit, and the conclusion drawn from
+//! them was wider than they support.** A `cargo test` binary can assert a **child's** exit, and
+//! operator decision **D-8** built the harness that does: `tests/it/cross_process.rs` re-execs this
+//! binary through `std::env::current_exe()` with an env marker, and
+//! `ac024_wall_clock_mark_outlives_the_process_that_wrote_it` reads the child's exit code beside
+//! the mark the child left on disk — which is AC-024's own *Verified by*, *"a test asserting
+//! **process exit** and a **written mark**"*, verbatim.
+//!
+//! **What is still 7d's, stated narrowly so the green is not misread:** that the process which
+//! exits 0 is **`redkiln run`**. The child is a libtest binary. Residual 10d's Read line still
+//! holds for the CLI half, and AC-024 is additionally a **twin** (AC-240 + AC-278 own it) and is
+//! not double-claimed.
+//!
+//! **AC-030 is ROUTED to 7d and the harness is deliberately NOT pointed at it (D-8).** Its own
+//! *Verified by* ends *"the next **`redkiln run`** resumes from the mark (AC-013's re-entry
+//! test)"* — it names the binary, and AC-013's re-entry test is **PROVISIONAL** and may not be
+//! counted. **AC-013 is routed the same way**: its WHEN is *"WHEN `redkiln run <item>` re-enters"*.
+//! Both stay **ARMED, NOT DISCHARGED** with that reason, and `crate::runtime::activity`'s table
+//! carries it per row.
 //!
 //! 🛑 **AND THE TWO MARKS ARE NOT JOINTLY DISCHARGED — corrected 2026-09-14 on an adversarial
 //! verification pass.** The sentence that stood here said *"what is discharged here is **writes a

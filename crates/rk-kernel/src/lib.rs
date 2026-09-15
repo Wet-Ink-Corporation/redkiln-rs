@@ -81,8 +81,10 @@
 //! enumerates and the journal identity beneath it; and AC-018's two pack-validation clauses, which
 //! are **red against the shipped catalog by design** — nineteen shipped steps across fourteen
 //! activities declare the `memo` key ADR-0097 decision 3 withdrew [measured 2026-09-14] and the
-//! repairs are Step 7e's, not this stage's. **Component 5's tool branch and component 8's
-//! `schema_version` have no source in this tree and neither is invented**; AC-043's `Evicted`
+//! repairs are Step 7e's, not this stage's. **Component 5's tool branch has no source in this
+//! tree and is not invented**; **component 8 is `ActivitySpec.schema`'s whole id** as of
+//! 2026-09-14, and the note saying what `schema_version` formally is stays OWED; AC-043's
+//! `Evicted`
 //! decision is not built, because its third state is an amendment ADR-0119 clause 7 owes the
 //! register; AC-045 stays ARMED under clause 8. **The port boundary is still absent and still not
 //! stubbed.**
@@ -106,20 +108,36 @@
 //! choice: this module dispatches, appends and takes a `Mutex`, and `workflow`'s two `#![deny]`
 //! attributes reach every child.
 //!
-//! **Five halves inside it are ARMED and none is claimed**: AC-013's *"process was killed"* (the
-//! boundary here is a dropped `Runtime`, and ADR-0087 clause 2 says *"a reload that reads state
-//! back in-process is not a valid implementation of this decision and is not evidence for it"* —
-//! on top of AC-013 being **PROVISIONAL**), AC-024's and AC-030's *"exits 0"* (a **process** claim;
-//! `rk-cli` is Step 7d), AC-030's *"the next run resumes from the mark"* (it rides on AC-013),
+//! **FOUR halves inside it are ARMED and none is claimed** *(this read **five** until 2026-09-14;
+//! the count is moved rather than the sentence deleted, so a reader can see which one left)*:
+//! AC-013's *"process was killed"* (the boundary here is a dropped `Runtime`, and ADR-0087 clause 2
+//! says *"a reload that reads state back in-process is not a valid implementation of this decision
+//! and is not evidence for it"* — on top of AC-013 being **PROVISIONAL**; **ROUTED TO 7d** under
+//! operator decision **D-8**, because its WHEN names `redkiln run <item>`), AC-030's *"exits 0"*
+//! (**ROUTED TO 7d** the same day — this clause read *"AC-024's and AC-030's *\"exits 0\"* (a
+//! **process** claim; `rk-cli` is Step 7d)"*, and **AC-024's half left the list**: D-8 built the
+//! re-exec harness in `tests/it/cross_process.rs`, which reads a **child's** exit code beside the
+//! mark the child wrote — the register's own *"test asserting process exit and a written mark"*.
+//! AC-030 stays because its *Verified by* names `redkiln run` itself), AC-030's *"the next run
+//! resumes from the mark"* (it rides on AC-013),
 //! AC-031's prose-extraction sub-clause (built, and the register itself calls the criterion
 //! compound), and AC-110's ledger coverage, which is **POWERLESS**: AC-110's own THEN is a
 //! load-time configuration error and says nothing about `executed: { first, last }`.
 //!
-//! **And four halves inside Slice 4d are ARMED, not discharged**, each because the value it needs
-//! is named by no type and no record: the breaker's model-family key, its durable mark, its expiry
-//! (value and home both), and the resolved card's model tier. Each arrives as a caller-supplied
-//! argument with one constructor; [`workflow::breaker`]'s and [`workflow::degrade`]'s headers carry
-//! the measurements and name the records that are owed.
+//! **And TWO halves inside Slice 4d are ARMED, not discharged**: the breaker's **durable mark**
+//! (`EventKind` is closed at 29 and ADR-0116 says *"the kind is minted by record or not at all"*)
+//! and the resolved card's **model tier**. Each arrives as a caller-supplied argument with one
+//! constructor; [`workflow::breaker`]'s and [`workflow::degrade`]'s headers carry the measurements
+//! and name the records that are owed.
+//!
+//! *(This paragraph said "**four halves**" until 2026-09-14 and listed the breaker's **model-family
+//! key** and its **expiry (value and home both)** as the other two. Operator decision **D-7** built
+//! both: the key is the pack's `[role.<name>] family` resolved from
+//! [`catalog::Step::role`] through [`select::Pack::require_family_for_role`], and the expiry is
+//! pack-declared at `[breaker] expiry_secs` beside `K`. The count moved 4 → 2 rather than the
+//! sentence being deleted, because a reader needs to see which two left and why. What is **still
+//! owed** is narrower and is recorded at each site: the five pack key **spellings** are a reading,
+//! and the expiry's **value** is sized by no corpus figure — only its home is settled.)*
 //!
 //! **Slice 2's third rule, 2026-09-14: [`facet_registry`].** *(This paragraph opened "**Two things
 //! Slice 2 does not contain**" and its first was "**AC-072 — the registry-entry loader rule — is a

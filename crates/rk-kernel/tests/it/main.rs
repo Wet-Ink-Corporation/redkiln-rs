@@ -88,8 +88,13 @@
 //! 🛑 **Five halves in those three files are ARMED and none is claimed.** AC-013 is **PROVISIONAL**
 //! *and* its process boundary is a dropped `Runtime` — ADR-0087 clause 2 says *"a reload that reads
 //! state back in-process is not a valid implementation of this decision and is not evidence for
-//! it"*, which is a **second** reason §7b.15's ARMED row does not carry. AC-024's and AC-030's
-//! *"exits 0"* is a **process** claim a `cargo test` binary cannot make. AC-030's *"the next run
+//! it"*, which is a **second** reason §7b.15's ARMED row does not carry; as of 2026-09-14 it is
+//! also **ROUTED TO 7d** (D-8), because AC-013's WHEN names `redkiln run <item>`. AC-030's
+//! *"exits 0"* is likewise 7d's, on its own *Verified by*'s words. *(This sentence read **"AC-024's
+//! and AC-030's *\"exits 0\"* is a **process** claim a `cargo test` binary cannot make"** until
+//! 2026-09-14. **AC-024's half left it**: a `cargo test` binary cannot assert its OWN exit, which is
+//! all that clause supports, and [`cross_process`] asserts a **CHILD's**. The count of five is kept
+//! because AC-030's half is still one of them and only its REASON moved.)* AC-030's *"the next run
 //! resumes from the mark"* rides on AC-013. AC-031 is **compound** by the register's own admission.
 //! And `ac110_executed_ledger_first_and_last` is named for a criterion whose own THEN is a
 //! **load-time configuration error** and says nothing about a ledger: the test measures **ADR-0114
@@ -102,17 +107,59 @@
 //! instruments with the discriminating one first, AC-017's two iterations and their control,
 //! AC-018's three fixtures and the shipped catalog's **nineteen** live violations, and AC-019's two
 //! halves. Its header carries the same WHAT-IS-MEASURED table [`breaker`] and [`fsm`] do, and four
-//! of its rows are ARMED: memo-key component 5's **tool branch** and component 8's
-//! **`schema_version`** have no source in this tree, AC-019's *"event-schema test"* is over JSON
-//! keys because `Event.payload` is untyped and the record is OWED, and every *"re-execution"* in
-//! the file is measured against a **projection** of a decision sequence rather than against a
-//! dispatched run, because nothing dispatches before Slice 4h.
+//! of its rows are ARMED: memo-key component 5's **tool branch** has no source in this tree,
+//! AC-019's *"event-schema test"* is over JSON keys because `Event.payload` is untyped and the
+//! record is OWED, and every *"re-execution"* in the file is measured against a **projection**
+//! of a decision sequence rather than against a dispatched run, because nothing dispatches
+//! before Slice 4h. **Component 8's source was the fourth and is no longer ARMED**: the operator
+//! decision of 2026-09-14 sources it from `ActivitySpec.schema`'s whole id, and
+//! `component_eight_is_the_whole_schema_id_and_never_a_parsed_version` pins it — named without
+//! an AC id, because a dated note saying what `schema_version` formally is remains **OWED**.
 //!
 //! 🛑 **[`breaker`], [`degradation`] and [`fsm`] each carry a WHAT-IS-MEASURED table, and it is not
-//! decoration.** Four halves inside the first two are ARMED and not discharged — the breaker's
-//! model-family key, its durable mark, its expiry, and the resolved card's model tier — and every
-//! case in both files supplies those values itself. A green there is coverage of the mechanism and
-//! of nothing above it; the tables say so by id.
+//! decoration.** **Two** halves inside the first two are ARMED and not discharged — the breaker's
+//! **durable mark** and the resolved card's **model tier** — and every case that needs those values
+//! supplies them itself. A green there is coverage of the mechanism and of nothing above it; the
+//! tables say so by id.
+//!
+//! **[`cross_process`], 2026-09-14: A REAL PROCESS BOUNDARY — AC-035 and AC-024.** Operator
+//! decision **D-8**, on ADR-0087 clause 2: *"Resume must cross a real process boundary. A reload
+//! that reads state back in-process is not a valid implementation of this decision and **is not
+//! evidence for it**."* The mechanism is a re-exec harness — `std::env::current_exe()`, an env
+//! marker, an `#[ignore]`d child entrypoint per criterion, and a parent that waits on the child and
+//! then asserts **what the child left on disk**. The precedents for spawning are
+//! `crates/rk-store/tests/it/contention.rs`:77-85 (AC-181's two-process test, which re-execs
+//! `current_exe()` exactly this way) and [`adapter_edge`]'s two `cargo` children; AC-003's process
+//! ban scopes to the **workflow module**, not to tests, and `clippy.toml`'s `Command` entry is
+//! Checkpoint 6's **git** ban.
+//!
+//! The two criteria are here because **neither's *Verified by* names a binary**: AC-035's is *"a
+//! kill-and-re-enter test asserting the refusal survives the restart"* and AC-024's is *"a test
+//! asserting process exit and a written mark"*. **AC-013 and AC-030 are ROUTED TO 7d** by the same
+//! decision and the harness is deliberately not pointed at them — AC-013's WHEN is *"WHEN `redkiln
+//! run <item>` re-enters"* and AC-030's *Verified by* is *"the next **`redkiln run`** resumes from
+//! the mark (AC-013's re-entry test)"*. Both are reported ARMED with that reason, in [`runtime`]'s
+//! table and in `src/runtime.rs`'s, and AC-013 stays **PROVISIONAL on P8** either way.
+//!
+//! 🛑 **Three things there are NOT claimed, and each is in the file's own table.** The process that
+//! exits 0 is a **libtest binary**, not `redkiln run` — the CLI half stays 7d's. The durable medium
+//! is a **test-owned file-backed `EventStore`**, because measured 2026-09-14 the only
+//! `impl EventStore` in `crates/*/src` is `rk_ports::fakes::VecStore`, an in-memory `Vec`; **no
+//! durable store exists in this tree at 7b** and the SQLite adapter is 7c's. And the breaker
+//! expiry's **value** is still sized by no corpus figure. A fourth is recorded as a finding and not
+//! repaired: `rk_ports::event_store::Snapshot`'s only field is `pub(crate)`, so **no `EventStore`
+//! implementation outside `rk-ports` can construct one** — the fixture refuses `snapshot`/`rebuild`
+//! rather than faking them, and `rk-ports` is not edited, because Checkpoint 7a has passed.
+//!
+//! *(This said **four halves** until 2026-09-14 and listed the breaker's **model-family key** and
+//! its **expiry** as the other two. Operator decision **D-7** built both — the key is the pack's
+//! `[role.<name>] family` resolved from the step's `role`, the expiry is pack-declared at
+//! `[breaker] expiry_secs` — and
+//! `breaker_key_is_the_packs_role_family_never_the_activity_family` pins them, named without an
+//! AC id because the five pack key **spellings** remain a reading with a record **OWED**. The count
+//! moved 4 → 2 rather than the sentence being deleted, so a reader can see which two left. The
+//! breaker's two AC-033/AC-034/AC-035 cases still supply arbitrary tokens on purpose: AC-034's
+//! property is over two *arbitrary* distinct keys, and [`breaker`]'s header says so.)*
 //!
 //! **[`fsm`] is the sharpest instance of that rule in this binary**, and its own name is the reason
 //! it needs saying: `ac008_terminal_state_and_the_next_action_grains` is named for a criterion whose
@@ -221,6 +268,7 @@ mod adapter_edge;
 mod advisory;
 mod breaker;
 mod budget;
+mod cross_process;
 mod dag;
 mod degradation;
 mod deviation;

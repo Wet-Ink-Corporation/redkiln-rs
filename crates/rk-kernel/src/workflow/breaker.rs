@@ -1,5 +1,5 @@
 //! **The circuit breaker** — the counting rule, the per-key isolation and the store-derived state
-//! of AC-033–AC-035, keyed on a family token this crate does not construct.
+//! of AC-033–AC-035, keyed on the model family the **pack** declares for a step's role.
 //!
 //! > **AC-033** — `rk-kernel::retry` · decisions: ADR-0022
 //! > GIVEN K consecutive `Platform` failures for one model family
@@ -28,14 +28,48 @@
 //! > *Note:* the expiry comparison reads the current time as a **journaled activity result**
 //! > (AC-001), never from the workflow's own clock.
 //!
-//! # 🛑 THE KEY HAS NO CARRIER, AND THE CATALOG'S `family` IS A DIFFERENT FAMILY
+//! # THE KEY IS THE PACK'S `[role.<name>] family`, RESOLVED FROM THE STEP'S ROLE — DECIDED
+//! 2026-09-14
 //!
 //! Eight occurrences of *"family"* across those three criteria, five of them the key the breaker is
-//! partitioned by — and **nothing in this tree represents a model family**.
-//! [measured 2026-09-14: `grep -rn "family\|ModelFamily\|model_tier" crates/rk-types/src/
-//! crates/rk-ports/src/` → **0 hits, exit 1**.] `ActivitySpec` is *"ADR-0099:61's five fields and no
-//! sixth"* and carries the card as a **digest**, so even a bound card's tier is behind a hash at the
-//! moment AC-033's WHEN fires.
+//! partitioned by. **Operator decision D-7, 2026-09-14:**
+//!
+//! > *"The pack declares the family per role (extending design :480's 'tier policy per role'); the
+//! > kernel resolves role → family at plan time and keys the breaker on the resolved family."*
+//!
+//! The producer is [`crate::select::Pack::require_family_for_role`] and its input is
+//! `crate::catalog::Step::role`, which `catalog.rs` began parsing on the same day and had parsed
+//! **zero** times before it while the shipped catalog declared one **185 times in 8 distinct
+//! values**. D-7 was chosen over three alternatives *"because it is the only one consistent with
+//! records already written: the pack owns roles and tier policy (design :480-481, ADR-0014), `K` is
+//! **already** a pack value asserted by pack validation (AC-033's own Verified by), and the breaker
+//! expiry's home falls out in the same place."* It needs no ADR supersession, re-words no
+//! criterion's GIVEN, and touches neither `ActivitySpec` nor `rk-types` — `ActivitySpec` is still
+//! *"ADR-0099:61's five fields and no sixth"* and no sixth was added.
+//!
+//! **CORRECTED HERE, NOT QUIETLY REPLACED.** The section that stood here until 2026-09-14 was
+//! headed *"🛑 THE KEY HAS NO CARRIER"* and said *"**nothing in this tree represents a model
+//! family**"* [measured: `grep -rn "family\|ModelFamily\|model_tier" crates/rk-types/src/
+//! crates/rk-ports/src/` → 0 hits], concluding that the binding *"is **ARMED, NOT DISCHARGED** and
+//! is reported against Step 7c. A record is OWED."* The measurement it rested on is **still true and
+//! was re-taken today** — there is no model family in `rk-types` or `rk-ports`, and none was added:
+//! the carrier D-7 chose is a **pack declaration**, which is a TOML table and not a type, so the
+//! type-level absence the old sentence measured was never the thing that blocked it. What is
+//! withdrawn is the conclusion, not the measurement.
+//!
+//! **What is still OWED, and it is narrower than what stood here.** The key *spellings* —
+//! `[role.<name>] family` and `[breaker] expiry_secs` — are a **reading**, exactly as
+//! [`super::envelope`]'s 🛑 already records for `[retry] attempts_cap`,
+//! `[breaker] consecutive_platform_failures` and `appetite.tokens`; a record naming all five is
+//! OWED. And **whether `claude-opus-4` and `claude-opus-4-5` are one family or two is still settled
+//! nowhere** — it is now a question about what a *pack author* writes in the table rather than about
+//! what this crate can represent, and the shipped packs' own tables are **Step 7e's** (§7b.15's
+//! AC-080–AC-118 shape: rules and fixtures here, shipped artifacts there). [measured 2026-09-14:
+//! `grep -rn role spikes/p9/packs/` → **0 hits across all twelve shipped packs**.] The pinning test
+//! `breaker_key_is_the_packs_role_family_never_the_activity_family` carries **no AC id** for that
+//! reason, on `appetite_raise_from_an_activity_result_is_refused`'s precedent.
+//!
+//! # 🛑 AND THE CATALOG'S `family` IS STILL A DIFFERENT FAMILY — THE DANGER GREW RATHER THAN SHRANK
 //!
 //! **`crates/rk-kernel/src/catalog.rs`'s `family` is ADR-0058's ACTIVITY family and may never be
 //! read here.** ADR-0058: *"An activity declares its family membership with a `family = "<name>"`
@@ -45,18 +79,29 @@
 //! `root-cause(10) < differential-debugging(20) < bisect(30) < instrumented-trace-analysis(40)` —
 //! and every member of it would typically run on the **same** model. A breaker keyed on it would
 //! trip globally with respect to the model and locally with respect to the method, which is the
-//! exact inverse of AC-034 on both axes; and a two-"family" unit test written from the catalog would
-//! pass. **The distance between the right answer and the worst one is a single `.family`**, and
-//! nothing in Checkpoint 7b's instrument set would catch it — which is why [`FamilyKey`] has exactly
-//! one constructor, [`FamilyKey::supplied`], and why no expression in this file reads
-//! [`crate::catalog`].
+//! exact inverse of AC-034 on both axes. **The distance between the right answer and the worst one
+//! is a single `.family`.**
 //!
-//! So the **binding** — what produces a family token, and whether `claude-opus-4` and
-//! `claude-opus-4-5` are one family or two — is **ARMED, NOT DISCHARGED** and is reported against
-//! Step 7c. A record is OWED; the operator's instruction for a half-buildable criterion is to build
-//! the buildable half and record the other. What is built here is the half that does not depend on
-//! what the key *means*: the counting rule, the reset rule, the per-key isolation, the store
-//! derivation and the refusal.
+//! Until 2026-09-14 that risk was theoretical here, because nothing produced a key at all and the
+//! paragraph above said so. **D-7 made it live**: the resolution now runs at plan time off an
+//! activity's steps, so a value carrying the *other* `family` is in scope at the moment the key is
+//! built. Two instruments answer it, and neither existed before today:
+//!
+//! 1. **Behavioural** — `breaker_key_is_the_packs_role_family_never_the_activity_family` resolves
+//!    two roles of **one** fixture activity that declares `family = "localisation"`, and asserts the
+//!    two keys DIFFER, that neither is `localisation`, that `localisation` is *refused* as a role,
+//!    and that a journal tripping one role's family leaves the other proceeding. The old
+//!    instrument could not do this: every case in `tests/it/breaker.rs` supplied its own arbitrary
+//!    token, so a fold reading the activity family passed all of them, and that file's own header
+//!    said so in terms.
+//! 2. **Structural** — [`family_key_never_from_the_activity_catalog_rule`], run over **both** this
+//!    file and `src/select/pack.rs` (the two files the substitution could be written in), banning
+//!    `::catalog` on their code lines.
+//!
+//! [`FamilyKey`] still has one constructor, and it is still [`FamilyKey::supplied`] — the resolution
+//! **calls** it rather than replacing it, because the fold must mint a key from a token it reads off
+//! a journaled payload and the two keys have to compare equal. What changed is that there is now a
+//! lawful *producer* of the token, and [`FamilyKey::supplied`]'s own doc says which call is which.
 //!
 //! # 🛑 `K` HAS NO MEASURED VALUE AND IS PACK-DECLARED
 //!
@@ -67,19 +112,37 @@
 //! [`crate::select::Pack::breaker_threshold`] and the refusal is
 //! [`crate::select::Pack::require_breaker_threshold`]. Nothing in this file names a number.
 //!
-//! # 🛑 THE EXPIRY HAS NO VALUE AND NO HOME, AND THIS MODULE DOES NOT GIVE IT ONE
+//! # THE EXPIRY'S HOME IS PACK-DECLARED, BESIDE `K` — DECIDED 2026-09-14
 //!
-//! AC-035's *"until the mark is read and found expired"* names a duration. §7b.10:852-856 sorts
-//! every Slice-4 number with no measured value into exactly two homes — pack-declared (`K`, `N`, the
-//! appetite) and kernel policy constant (backoff base 2 s, cap 5 min) — **and the breaker's expiry
-//! is in neither** [measured 2026-09-14: `grep -n "expir" runbook/phase-1/s7b-kernel.md` returns
-//! nothing in §7b.10]. Four homes are structurally available (pack-declared beside `K`; a kernel
-//! policy constant beside the backoff pair, which contradicts PIA-055's own exhaustive split;
-//! derived from the backoff cap, which is a default with arithmetic in front of it; or no expiry at
-//! all, which re-words a THEN a stage may not touch). **None is chosen here.** [`BreakerExpiry`]
-//! has one constructor, [`BreakerExpiry::declared`], no `Default` and no `const` fallback, and
-//! [`BreakerState::decide`] takes it **as an argument** — so the value enters from outside this
-//! crate and the choice of home remains the operator's. A record is OWED.
+//! AC-035's *"until the mark is read and found expired"* names a duration. **D-7 gave it a home in
+//! the same motion as the key**, and that co-location is one of the decision's own stated reasons
+//! for choosing the pack table: *"the breaker expiry's home falls out in the same place."* It is
+//! read from `[breaker] expiry_secs`, beside `[breaker] consecutive_platform_failures`, and the
+//! refusal is [`crate::select::Pack::require_breaker_expiry`]. The two `[breaker]` members are
+//! **independent absences**: a pack may declare `K` and no expiry, and
+//! `breaker_key_is_the_packs_role_family_never_the_activity_family` asserts that pair against
+//! `runtime-envelope.toml`, which declares exactly it.
+//!
+//! **CORRECTED HERE, NOT QUIETLY REPLACED.** The section that stood here until 2026-09-14 was headed
+//! *"🛑 THE EXPIRY HAS NO VALUE AND NO HOME, AND THIS MODULE DOES NOT GIVE IT ONE"* and listed four
+//! structurally available homes — *"pack-declared beside `K`; a kernel policy constant beside the
+//! backoff pair, which contradicts PIA-055's own exhaustive split; derived from the backoff cap,
+//! which is a default with arithmetic in front of it; or no expiry at all, which re-words a THEN a
+//! stage may not touch"* — and said **"None is chosen here."** The operator chose the **first** of
+//! those four, and the module's own reasons for ranking it first stand unedited above it. The
+//! measurement the section rested on is still true and is not withdrawn: §7b.10:852-856's two lists
+//! contain no expiry [re-measured 2026-09-14: `grep -n "expir" runbook/phase-1/s7b-kernel.md`
+//! returns nothing in §7b.10], which is why the choice was the operator's to make and not this
+//! stage's.
+//!
+//! **What is still true of the type, and is load-bearing.** [`BreakerExpiry`] still has one
+//! constructor, [`BreakerExpiry::declared`], **no `Default`**, no `const` fallback and no
+//! `unwrap_or`, and [`BreakerState::decide`] still takes it **as an argument**. Nothing in this file
+//! names a number; the value enters from a pack. The *value* is still sized by no corpus figure —
+//! only its home is settled — and **a record naming the key spelling `expiry_secs` is OWED** with
+//! the other four.
+//!
+//! **And the `elapsed >= expiry` boundary is unchanged**, for the reason reading 2 below states.
 //!
 //! # 🛑 THE DURABLE MARK HAS NO CARRIER — AC-033's SECOND CONJUNCT IS ARMED
 //!
@@ -121,10 +184,12 @@
 //!    the expiry AC-035 names, and a half-open probe policy is in no record either — so the mark
 //!    stands until [`BreakerState::decide`] finds it expired.
 //! 2. **The expiry boundary is `elapsed >= expiry`.** Neither AC-035 nor ADR-0017 says which side
-//!    *"found expired"* falls on. The sibling reading is already on disk — `budget.rs`'s
-//!    `exhausted_counter` takes `spent >= declared`, i.e. a declared quantity is **reached** when
-//!    the spend equals it — and taking the opposite side here would mean two declared quantities in
-//!    one crate with two boundary rules. Both sides are asserted by `breaker_ac033_ac035`.
+//!    *"found expired"* falls on. The sibling reading is already on disk, and it is the **wall
+//!    clock's**: `budget.rs`'s `exhausted_counter` takes `spent >= declared` for
+//!    `Counter::WallClock`, on AC-024's verb *"reaches"* — an ELAPSED-TIME quantity is reached when
+//!    the elapsed value equals it, which is exactly this expiry's kind. (Its attempts and token
+//!    counters take `>` on AC-025's *"ran out"* as of 2026-09-14; those are draw-down quantities
+//!    and are not this one's sibling.) Both sides are asserted by `breaker_ac033_ac035`.
 //!
 //! # What IS discharged here
 //!
@@ -132,9 +197,20 @@
 //! ([`breaker_no_module_state_rule`]); AC-035's own named instrument, *"a lint that breaker state is
 //! constructed only from the store"* ([`breaker_state_from_store_rule`]), plus the survival of a
 //! dropped-and-rebuilt state over the same events; and AC-033's counting rule, its refusal, and
-//! `K` read from a pack and refused as a code default. Both lints are declared as `fn`s in
-//! `crates/rk-kernel/src/` on the facet-lint pattern, so the declaration is grep-visible the way
-//! §7b.14:1592-1594 makes the three facet rules visible.
+//! `K` read from a pack and refused as a code default.
+//!
+//! **Added 2026-09-14 (D-8)**: that survival across a **real** process boundary, in
+//! `tests/it/cross_process.rs` rather than here — the dropped-and-rebuilt form above is the
+//! in-process one and ADR-0087 clause 2 does not admit it as evidence. **No production code in this
+//! module moved for it.**
+//!
+//! **Added 2026-09-14 (D-7)**: the **key's own binding** — the pack's role → family table resolved
+//! through [`crate::select::Pack::require_family_for_role`] and keyed on here — the **expiry's
+//! home**, pack-declared and refused as a code default beside `K`, and a third lint,
+//! [`family_key_never_from_the_activity_catalog_rule`]. AC-034's isolation is now additionally
+//! asserted over **resolved** keys (two roles of one activity) rather than over two arbitrary tokens
+//! only. All three lints are declared as `fn`s in `crates/rk-kernel/src/` on the facet-lint pattern,
+//! so the declaration is grep-visible the way §7b.14:1592-1594 makes the three facet rules visible.
 //!
 //! # What is deliberately NOT here
 //!
@@ -142,9 +218,28 @@
 //! `#![deny(clippy::disallowed_methods)]` reaches this child, so a `SystemTime::now()` here is a
 //! non-zero clippy exit and not a review comment. No `static`, no `lazy_static`, no `OnceLock`, no
 //! `thread_local`, no `Mutex`, no `RefCell` — AC-034's lint runs over this file's own source. No
-//! dispatch and no append: the refusal is a **decision value**, and the runtime boundary that would
-//! act on it is Slice 4h's. No widening of the trip condition: the breaker keys on `Platform`
-//! **only** (AC-033's GIVEN), and no record licenses `Transport` or `Timeout` tripping it.
+//! dispatch and no append: the refusal is a **decision value**. No widening of the trip condition:
+//! the breaker keys on `Platform` **only** (AC-033's GIVEN), and no record licenses `Transport` or
+//! `Timeout` tripping it.
+//!
+//! 🛑 **AND NOTHING CALLS [`BreakerState::decide`] ON A PRODUCTION PATH — CORRECTED 2026-09-14.**
+//! The clause above read *"…and the runtime boundary that would act on it is **Slice 4h's**"*, which
+//! was a forward reference when it was written and is a **stale** one now: Slice 4h shipped,
+//! [`crate::runtime`] dispatches at `runtime/activity.rs`:311, and it does **not** consult this
+//! module [measured 2026-09-14: `grep -rn "\.decide(" crates/rk-kernel/src` → **0 hits**;
+//! `runtime/activity.rs` imports [`JournaledNow`] and [`code_lines`] from here and nothing else].
+//! So the gap is not *"a later slice will do it"* — it is that AC-033's WHEN (*"the next dispatch
+//! for that family is requested"*) has a live dispatch beside it and no wire between them, which
+//! `runtime.rs`:53 already reports for AC-033's mark half.
+//!
+//! **D-7 did not change that and did not claim to.** Its work is the **key**: a producer for the
+//! family token, its expiry's home, and the ban on the other `family`. The consequence, stated
+//! rather than left for a reader to infer: the role → family resolution is **pinned by
+//! `breaker_key_is_the_packs_role_family_never_the_activity_family` rather than exercised by a
+//! runtime path**, exactly as `StepContext.output_schema`'s binding is pinned by
+//! `component_eight_is_the_whole_schema_id_and_never_a_parsed_version` and by no production call
+//! site. Wiring the refusal into the dispatch is a separate piece of work that this decision neither
+//! performs nor authorises.
 //!
 //! **On concurrency (residual 10m).** [`BreakerState`] is a fold over values with no cell of any
 //! kind, so it holds nothing across a call and nothing to interleave. ADR-0076 — *"the kernel never
@@ -152,6 +247,16 @@
 //! concurrency instrument at the composition root, and a second process lifetime is simply a second
 //! fold over the same store. That is what makes AC-035's survival assertion a property of this
 //! function rather than of a process.
+//!
+//! **Amended 2026-09-14 (D-8), and the amendment is that the claim is now MEASURED rather than
+//! argued.** *"A second process lifetime is simply a second fold over the same store"* was an
+//! argument from this function's shape, and ADR-0087 clause 2 says an in-process reload *"is not
+//! evidence"* for the proposition it is being offered for. `tests/it/cross_process.rs`'s
+//! `ac035_breaker_refusal_survives_a_real_process_death` re-execs the test binary, has the CHILD
+//! open the breaker and die, and folds what the child left on disk in a process that never saw the
+//! failures — AC-035's own *Verified by*, *"a kill-and-re-enter test"*. Nothing in **this module**
+//! changed for it: the property is still the fold's, and that is exactly why the boundary could be
+//! crossed without a line of production code moving.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -170,19 +275,36 @@ use super::envelope::BreakerThreshold;
 /// `snake_case` serialisation (`event.rs`:9-19).
 pub const PLATFORM_CLASS: &str = "platform";
 
-/// The breaker's partition key — **an opaque token this crate never constructs from its own data.**
+/// The breaker's partition key — **a token this crate transcribes and never computes from its own
+/// data.**
 ///
-/// There is exactly one constructor and it takes the token from the caller. That is the whole of
-/// the header's first 🛑 written into the type: no model family exists in `rk-types`, `rk-ports` or
-/// this crate, so a `FamilyKey::from_activity(&Activity)` would have to read
-/// `catalog.rs`'s `family` — ADR-0058's **activity** family — and the named instrument would not
-/// catch the substitution.
+/// There is exactly one constructor and it takes the token from the caller. As of **2026-09-14**
+/// there are exactly two lawful callers, and naming them is the point of keeping the constructor
+/// single:
+///
+/// | caller | what it transcribes |
+/// | --- | --- |
+/// | [`crate::select::Pack::require_family_for_role`] | the **pack's** `[role.<name>] family` — the PLAN-TIME producer (D-7), and the only route by which a dispatch decision gets a key |
+/// | [`BreakerState::from_events`] | the `family` member of a **journaled event payload** — the token the fold reads back, which must compare equal to the one above or the mark is for a different partition |
+///
+/// **What is still forbidden, and the type is what forbids it**: a
+/// `FamilyKey::from_activity(&Activity)` would have to read `catalog.rs`'s `family` — ADR-0058's
+/// **activity** family — and would be the substitution the module header's second 🛑 describes. No
+/// such constructor exists, [`family_key_never_from_the_activity_catalog_rule`] bans the module path
+/// that would be needed to write one in either file, and
+/// `breaker_key_is_the_packs_role_family_never_the_activity_family` catches it behaviourally.
+///
+/// **The name stays `supplied` and was not renamed with the decision.** It is still accurate — every
+/// call site transcribes something this crate did not compute — and it is `Pack`'s `require_…` call
+/// that carries the provenance, so a reader looking for *"where does a key come from"* finds a
+/// producer with a name rather than a constructor with an adjective.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FamilyKey(String);
 
 impl FamilyKey {
     /// From a token the caller supplied. **The only constructor**, and named `supplied` rather than
-    /// `new` because every call site is transcribing something this crate did not compute.
+    /// `new` because every call site is transcribing something this crate did not compute. The two
+    /// lawful callers are named in the type's own doc.
     #[must_use]
     pub fn supplied(token: &str) -> Self {
         Self(token.to_owned())
@@ -225,11 +347,18 @@ impl JournaledNow {
     }
 }
 
-/// How long an open breaker mark stands. **Declared, never defaulted, and homed by no record.**
+/// How long an open breaker mark stands. **Declared, never defaulted, and homed in the PACK as of
+/// 2026-09-14.**
 ///
-/// See the header's third 🛑: the expiry is in neither of §7b.10's two lists, four homes are
-/// available and none is chosen here. No `Default`, no `const` fallback, no `unwrap_or` — the value
-/// reaches [`BreakerState::decide`] as an argument from outside this crate.
+/// The home is `[breaker] expiry_secs` and the refusal is
+/// [`crate::select::Pack::require_breaker_expiry`] — operator decision D-7, which chose the first of
+/// the four homes the module header listed. No `Default`, no `const` fallback, no `unwrap_or` and no
+/// derivation from the backoff cap: the value reaches [`BreakerState::decide`] as an argument, from
+/// a pack.
+///
+/// *(This doc said "**homed by no record**" and "four homes are available and none is chosen here"
+/// until 2026-09-14. The home is chosen; the **value** is still sized by no corpus figure and the
+/// key spelling is still a reading with a record OWED.)*
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BreakerExpiry(u64);
 
@@ -530,8 +659,9 @@ impl BreakerState {
         // The comparison is against a JOURNALED instant and a DECLARED expiry, and neither is this
         // crate's to produce. A `now` BEFORE the mark yields a negative elapsed, which `u64`
         // conversion refuses — so a stale journaled instant cannot reopen a family. The boundary
-        // is `>=`, `budget.rs`'s `exhausted_counter` reading for a declared quantity: reaching the
-        // declared number is reaching it.
+        // is `>=`, `budget.rs`'s `exhausted_counter` reading for the WALL-CLOCK counter (AC-024's
+        // *"reaches"*): reaching the declared number is reaching it. Its attempts and token
+        // counters take `>` instead — a different verb over a different kind of quantity.
         let elapsed = now
             .timestamp()
             .unix_seconds()
@@ -613,6 +743,14 @@ pub enum BreakerLintViolation {
         /// The 1-indexed source line it was found on.
         line: usize,
     },
+    /// **AC-033/AC-034, added 2026-09-14 (D-7).** A form through which the breaker's partition key
+    /// could become ADR-0058's **activity** family instead of the pack's model family.
+    ReadsTheActivityCatalog {
+        /// The banned form, as a stable token.
+        form: &'static str,
+        /// The 1-indexed source line it was found on.
+        line: usize,
+    },
     /// The anchor the lint exists to check is absent: the file is empty, renamed or gutted, and an
     /// absence-based ban over it would otherwise be a vacuous pass.
     AnchorMissing {
@@ -628,6 +766,7 @@ impl BreakerLintViolation {
         match self {
             Self::ModuleLevelState { .. } => "module-level-state",
             Self::StateNotFromStore { .. } => "state-not-from-store",
+            Self::ReadsTheActivityCatalog { .. } => "reads-the-activity-catalog",
             Self::AnchorMissing { .. } => "anchor-missing",
         }
     }
@@ -645,6 +784,14 @@ impl fmt::Display for BreakerLintViolation {
                 f,
                 "line {line} introduces `{form}`, through which breaker state could come from \
                  somewhere other than a fold over the store (AC-035)"
+            ),
+            Self::ReadsTheActivityCatalog { form, line } => write!(
+                f,
+                "line {line} reads `{form}`: the activity catalog carries ADR-0058's ACTIVITY \
+                 family, and a breaker keyed on it trips globally with respect to the model and \
+                 locally with respect to the method — the exact inverse of AC-034 on both axes. The \
+                 key is the PACK's `[role.<name>] family`, resolved from the step's role \
+                 (`Pack::require_family_for_role`, 2026-09-14)"
             ),
             Self::AnchorMissing { anchor } => write!(
                 f,
@@ -673,9 +820,38 @@ pub const STATIC_ITEM: &str = "static ";
 pub const NOT_FROM_STORE_FORMS: [&str; 5] =
     ["Mutex<", "RefCell<", "Cell<", "Deserialize", "OnceCell"];
 
-/// The anchors both lints assert before any absence, so a renamed or emptied file is not a pass.
+/// The one form through which the breaker's key could become ADR-0058's **activity** family.
+///
+/// **One entry, and the single entry is the point.** The activity family lives on
+/// `crate::catalog::Activity` and nowhere else in this tree — `crate::catalog` has **no crate-root
+/// re-export under another name** [measured 2026-09-14: the only `pub use`s in
+/// `crates/rk-kernel/src/lib.rs` are `budget`, `retry`, `memo` and `activity`] — so the *module
+/// path* is the whole surface. Every route to it, a `use` or a fully-qualified expression or an
+/// alias, has to write `::catalog` on a code line of the file that takes it. A longer list of
+/// spellings would read as more rigour and cover strictly less.
+///
+/// **The separator is load-bearing and is not decoration.** The bare token `catalog` matches this
+/// module's own `family_key_never_from_the_activity_catalog_rule`, so a ban on it would be red
+/// against the correct file — a vacuous *failure*, exactly as an unanchored absence is a vacuous
+/// *pass*. And it is **not** `.family`: [`OpenMark`] has a `family` field, `self.family` and
+/// `mark.family` appear on code lines of this module, and that ban would be red against the correct
+/// file too.
+pub const NOT_THE_ACTIVITY_FAMILY_FORMS: [&str; 1] = ["::catalog"];
+
+/// The anchors the three breaker lints assert before any absence, so a renamed or emptied file is
+/// not a pass.
 pub const BREAKER_ANCHORS: [&str; 3] =
     ["pub struct BreakerState", "pub fn from_events", "&[Event]"];
+
+/// The anchors [`family_key_never_from_the_activity_catalog_rule`] asserts when it is run over
+/// `crates/rk-kernel/src/select/pack.rs` — **the second file the ban has to cover**, because the
+/// role → family resolution lives there and a lint that scanned only `breaker.rs` would leave the
+/// one expression that could read the wrong `family` unguarded.
+pub const ROLE_RESOLUTION_ANCHORS: [&str; 3] = [
+    "pub fn require_family_for_role",
+    "role_families",
+    "RoleFamilyNotDeclared",
+];
 
 /// **AC-034's lint half**: *"a lint banning module-level `static`/`lazy_static`/`OnceLock` breaker
 /// state, so process-wide breaker state cannot be introduced."*
@@ -694,7 +870,7 @@ pub const BREAKER_ANCHORS: [&str; 3] =
 ///
 /// Every clause that failed, collected — never the first one only.
 pub fn breaker_no_module_state_rule(src: &str) -> Result<(), Vec<BreakerLintViolation>> {
-    let mut out = missing_anchors(src);
+    let mut out = missing_anchors(src, &BREAKER_ANCHORS);
     // EVERY FORM, EVERY LINE, AND NO EARLY RETURN. A rule that returned on the first hit would
     // report one form per file and the four one-form controls would stop discriminating between
     // the forms they are named for (`facet_stability.rs`:203-205 is the shape).
@@ -718,7 +894,7 @@ pub fn breaker_no_module_state_rule(src: &str) -> Result<(), Vec<BreakerLintViol
 ///
 /// Every clause that failed, collected — never the first one only.
 pub fn breaker_state_from_store_rule(src: &str) -> Result<(), Vec<BreakerLintViolation>> {
-    let mut out = missing_anchors(src);
+    let mut out = missing_anchors(src, &BREAKER_ANCHORS);
     for (n, line) in code_lines(src) {
         for form in NOT_FROM_STORE_FORMS {
             if carries(&line, form) {
@@ -729,11 +905,54 @@ pub fn breaker_state_from_store_rule(src: &str) -> Result<(), Vec<BreakerLintVio
     if out.is_empty() { Ok(()) } else { Err(out) }
 }
 
-/// Every [`BREAKER_ANCHORS`] entry the source does not carry — the positive clause both lints run
-/// **first**, so an emptied or renamed file fails on the anchor rather than passing every absence.
-fn missing_anchors(src: &str) -> Vec<BreakerLintViolation> {
-    BREAKER_ANCHORS
-        .into_iter()
+/// **The key's own lint, added 2026-09-14 (operator decision D-7).**
+///
+/// D-7 gave the breaker a real partition key — the pack's `[role.<name>] family`, resolved from
+/// `crate::catalog::Step::role` — and in the same motion made a second `family` reachable from the
+/// same plan-time code path: `crate::catalog::Activity::family`, which is **ADR-0058's activity
+/// family**. The two are one field access apart and the consequence of confusing them is not a
+/// smaller breaker but an inverted one: the activity family is a rank-escalation ladder
+/// (`root-cause(10) < differential-debugging(20) < bisect(30) <
+/// instrumented-trace-analysis(40)`) whose members would typically all run on the **same** model, so
+/// a breaker keyed on it trips globally with respect to the model and locally with respect to the
+/// method — AC-034 inverted on both axes.
+///
+/// **This rule exists because the behavioural instrument alone could not see the substitution.**
+/// Before today every case in `tests/it/breaker.rs` supplied its own arbitrary token, so a fold that
+/// read the activity family would have passed all of them; the test file's own header said so. The
+/// pin `breaker_key_is_the_packs_role_family_never_the_activity_family` now catches it
+/// behaviourally over a fixture activity that carries both, and this rule catches it structurally
+/// in the two files where it would be written.
+///
+/// **It is run over two sources, and the anchors say which**: [`BREAKER_ANCHORS`] for
+/// `src/workflow/breaker.rs`, [`ROLE_RESOLUTION_ANCHORS`] for `src/select/pack.rs`. Comment lines
+/// and string literals are stripped by [`code_lines`], so this module's own header — which names
+/// `crate::catalog` repeatedly, on purpose — is not what the rule measures.
+///
+/// # Errors
+///
+/// Every clause that failed, collected — never the first one only.
+pub fn family_key_never_from_the_activity_catalog_rule(
+    src: &str,
+    anchors: &[&'static str],
+) -> Result<(), Vec<BreakerLintViolation>> {
+    let mut out = missing_anchors(src, anchors);
+    for (n, line) in code_lines(src) {
+        for form in NOT_THE_ACTIVITY_FAMILY_FORMS {
+            if carries(&line, form) {
+                out.push(BreakerLintViolation::ReadsTheActivityCatalog { form, line: n });
+            }
+        }
+    }
+    if out.is_empty() { Ok(()) } else { Err(out) }
+}
+
+/// Every anchor the source does not carry — the positive clause all three lints run **first**, so an
+/// emptied or renamed file fails on the anchor rather than passing every absence.
+fn missing_anchors(src: &str, anchors: &[&'static str]) -> Vec<BreakerLintViolation> {
+    anchors
+        .iter()
+        .copied()
         .filter(|anchor| !src.contains(anchor))
         .map(|anchor| BreakerLintViolation::AnchorMissing { anchor })
         .collect()

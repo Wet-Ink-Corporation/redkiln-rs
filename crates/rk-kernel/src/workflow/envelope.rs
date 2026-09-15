@@ -4,7 +4,7 @@
 //! | criterion | what this module carries | state |
 //! | --- | --- | --- |
 //! | **AC-029** (2/2) | [`AttemptCap`] — the pack's `N`, and [`EnvelopeError::AttemptCapNotDeclared`], which is what a pack declaring none produces | **built**; the backoff envelope itself is Slice 4c's |
-//! | **AC-033** (part) | [`BreakerThreshold`] — the pack's `K`, *"a pack value, asserted present by pack validation"* | the **type and the accessor** are built; the breaker's behaviour, its durable mark and its own refusal are Slice 4d's and **nothing here may be read as covering AC-033** |
+//! | **AC-033** (part) | [`BreakerThreshold`] — the pack's `K`, *"a pack value, asserted present by pack validation"* — and, as of 2026-09-14 (D-7), [`EnvelopeError::BreakerExpiryNotDeclared`] and [`EnvelopeError::RoleFamilyNotDeclared`], the refusals for the two values the same decision made pack-declared | the **types and the accessors** are built; the breaker's behaviour and its durable mark are [`super::breaker`]'s and **nothing here may be read as covering AC-033** |
 //! | **AC-023 / AC-389** (part) | [`EnvelopeError::TokenAppetiteNotDeclared`] — a gate is not evaluated against a **defaulted** token budget | **built**, as the refusal only; C3 is open and the appetite-raise mechanism is not built (see [`super::budget`]) |
 //!
 //! # The rule this module exists to make unwritable
@@ -49,17 +49,24 @@
 //! `K` and `N` are named in every record that discusses them and **spelled in none**: there is no
 //! `attempts_cap`, `consecutive_platform_failures` or `appetite.tokens` key in any shipped pack
 //! [measured 2026-09-14: `grep -rn 'attempts_cap\|consecutive_platform\|tokens' spikes/p9/packs/`
-//! → 0 hits]. The three keys this build reads are stated here as a **reading**, not as a discovery:
+//! → 0 hits]. The keys this build reads are stated here as a **reading**, not as a discovery:
 //!
 //! | value | key read | why this spelling |
 //! | --- | --- | --- |
 //! | `N` | `[retry] attempts_cap` | AC-029's own words — *"the attempt count never exceeds the pack's `N`"* — and `[retry]` is the table the activity-graph schema already uses for the per-step `retry = { max }` |
 //! | `K` | `[breaker] consecutive_platform_failures` | AC-033's GIVEN is *"K consecutive `Platform` failures"*, and `Platform` is ADR-0112's variant; a bare `k = 3` would be unreadable at the call site |
 //! | the appetite | `appetite.tokens` | it sits beside `appetite.points`, which `select/pack.rs` already reads, and the two are **different counters** — points are step 5's cost-class sum (AC-058, invariant I6) and tokens are AC-020's second counter |
+//! | the breaker expiry | `[breaker] expiry_secs` | **added 2026-09-14 (D-7)** — it sits in the table that already holds `K`, which is the co-location the decision chose it for, and `_secs` is the suffix the activity-graph schema's own `wall_clock_secs` and `timeout_secs` already use |
+//! | the breaker's key, per role | `[role.<name>] family` | **added 2026-09-14 (D-7)** — design :480 already puts a `[role.<name>]` table in the process pack (*"tier policy per role"*, `[role.implementer] tier = { model = …, effort = … }`), so this is one key beside `tier` and not a new table shape |
 //!
-//! A record naming the three keys is **OWED**. Until it lands these are this crate's proposal, and a
-//! pack author following a future record with different spellings gets `None` and a refusal — which
-//! is the failure direction the whole module is built in, and not a silent default.
+//! **A record naming all FIVE keys is OWED.** *(This paragraph said "the three keys" and "A record
+//! naming the three keys is OWED" until 2026-09-14; D-7 added two and changed nothing about the
+//! rule.)* Until it lands these are this crate's proposal, and a pack author following a future
+//! record with different spellings gets `None` and a refusal — which is the failure direction the
+//! whole module is built in, and not a silent default. [Re-measured 2026-09-14 for the two new ones:
+//! `grep -rn 'expiry_secs\|role' spikes/p9/packs/` → **0 hits across all twelve shipped packs**, so
+//! no shipped pack contradicts either spelling and none satisfies it; the shipped packs' own tables
+//! are **Step 7e's**.]
 //!
 //! # 🛑 AND THE AUTHORITY FOR "DECLARED IN THE PACK" IS AC-029's AND AC-033's, NOT AC-023's
 //!
@@ -176,6 +183,25 @@ pub enum EnvelopeError {
         /// The pack's `[pack] id`.
         pack: String,
     },
+    /// `[breaker] expiry_secs` is absent, so AC-035's *"until the mark is read and found expired"*
+    /// has no duration to compare against. **Added 2026-09-14 (operator decision D-7)**, which is
+    /// what gave the expiry a home: it is pack-declared, beside `K`.
+    BreakerExpiryNotDeclared {
+        /// The pack's `[pack] id`.
+        pack: String,
+    },
+    /// `[role.<role>] family` is absent, so the breaker has no partition key for a step that
+    /// nominates that role. **Added 2026-09-14 (operator decision D-7).**
+    ///
+    /// The refusal names **both** the pack and the role, because the two failures an operator has to
+    /// tell apart are *"this pack declares no role table at all"* and *"this pack declares one and
+    /// this role is missing from it"* — and a message naming only the pack collapses them.
+    RoleFamilyNotDeclared {
+        /// The pack's `[pack] id`.
+        pack: String,
+        /// The role the step nominated, as the catalog spelled it.
+        role: String,
+    },
 }
 
 impl EnvelopeError {
@@ -187,6 +213,8 @@ impl EnvelopeError {
             Self::AttemptCapNotDeclared { .. } => "attempt_cap_not_declared",
             Self::TokenAppetiteNotDeclared { .. } => "token_appetite_not_declared",
             Self::BreakerThresholdNotDeclared { .. } => "breaker_threshold_not_declared",
+            Self::BreakerExpiryNotDeclared { .. } => "breaker_expiry_not_declared",
+            Self::RoleFamilyNotDeclared { .. } => "role_family_not_declared",
         }
     }
 }
@@ -214,6 +242,23 @@ impl fmt::Display for EnvelopeError {
                  AC-033's own *Verified by* says `K` is a pack value, asserted present by \
                  pack validation, and no corpus figure sizes it (gap 3). An absent \
                  declaration is an absence, never a breaker that never trips"
+            ),
+            Self::BreakerExpiryNotDeclared { pack } => write!(
+                f,
+                "pack `{pack}` declares no `[breaker] expiry_secs`, so an open breaker mark has no \
+                 duration to be found expired against (AC-035). It is not defaulted here and it is \
+                 not derived from the backoff cap: a default with arithmetic in front of it is \
+                 still a default. An absent declaration is an absence, never a mark that never \
+                 expires and never one that expires at once"
+            ),
+            Self::RoleFamilyNotDeclared { pack, role } => write!(
+                f,
+                "pack `{pack}` declares no `[role.{role}] family`, so a step nominating the role \
+                 `{role}` has no model family for the circuit breaker to be keyed on (AC-033, \
+                 AC-034). It is not defaulted here and the role is NOT used as its own family: N \
+                 roles map to one model, so a per-role key would stop one role's share of traffic \
+                 to a failing model while the rest kept flowing. The activity's own `family` is \
+                 ADR-0058's ACTIVITY family and is never read here"
             ),
         }
     }

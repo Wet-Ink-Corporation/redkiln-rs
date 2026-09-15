@@ -59,7 +59,8 @@
 //!    output, the binder is unbuilt, and **a record routing spec assembly is OWED**.
 //! 4. Every earlier recorded `run_id` moved again, so `implement-d8401695754074c7` is gone and the
 //!    fixture directory it names is re-blessed through `bless_the_committed_golden_log` — never
-//!    hand-edited.
+//!    hand-edited. *(And moved once more on 2026-09-14 when [`SCHEMA`] went to `v2`; the committed
+//!    name is `implement-bf1d8cec3b22d288` and the section below says why.)*
 //!
 //! 🛑 **WHAT IS STILL NOT DISCHARGED, so a green here is not read as more than it is.** AC-008's
 //! dispatches are the **fake** `Harness`'s: a scripted responder the test binds, not a model. The
@@ -93,7 +94,7 @@
 //!
 //! ```text
 //! golden-logs/
-//!   <run_id>/                     run_id = sha256_lp(["rk-kernel/golden-log/v1", stage, inputs])
+//!   <run_id>/                     run_id = sha256_lp(["rk-kernel/golden-log/v2", stage, inputs])
 //!     run.json                    { schema, run_id, stage, inputs_digest, event_count, producer,
 //!                                   terminal_state, next_action }   ← the last two NEW at 4f
 //!     inputs/
@@ -134,13 +135,31 @@
 //! *"re-derives the DAG from the **logged inputs alone**"*; a tree hash or a deadline the replay
 //! had to be told out of band would be exactly the hidden input [`HiddenInput`] exists to report.
 //! Adding it moved every recorded `run_id`, which is why the Slice-3 fixture directory
-//! `implement-ea970997d42e7e04` is gone and `implement-d8401695754074c7` stands in its place —
-//! re-blessed through the named `bless_the_committed_golden_log` act, never hand-edited.
+//! `implement-ea970997d42e7e04` is gone — re-blessed through the named
+//! `bless_the_committed_golden_log` act, never hand-edited. *(The sentence here named
+//! `implement-d8401695754074c7` as its replacement and had not been moved when Slice 4i's
+//! `inputs/specs.json` renamed the run again; the current name is four lines down.)*
 //!
-//! **A log written before 2026-09-14 is REFUSED, not read with defaults.** [`read_run`] requires
-//! both new manifest members: a `None` default would let a replay succeed with nothing to compare
-//! the FSM residue against, which is a green whose terminal-state half asserts exactly what AC-008
-//! warns about.
+//! # THE LAYOUT VERSION MOVED TO `v2` ON 2026-09-14, AND THAT RENAMED THE RUN AGAIN
+//!
+//! Operator decision **D-4**. [`SCHEMA`]'s own doc carries the warrant and the OWED §7b.11 half;
+//! what belongs here is the consequence for this layout: the version string is the **first**
+//! length-prefixed field of the `run_id` derivation *and* a member of `canonical(inputs)`, so the
+//! committed fixture went `implement-a539b5a7b654d16f` → **`implement-bf1d8cec3b22d288`**.
+//! `inputs_digest` was **byte-identical across the bump** (`3345ce07…`), which is what attributes
+//! the rename to the version string rather than to something else moving underneath it, and
+//! `tests/it/replay.rs`'s `the_layout_version_reaches_the_run_id_derivation` is where that pair of
+//! facts is asserted rather than asserted here in prose. **The bump is taken before the single
+//! `CORPUS_PIN` move and could not be taken after it** — there are no corpus `golden-logs/` today
+//! [measured 2026-09-14], so it costs one re-bless; afterwards it would invalidate run ids under a
+//! SHA AC-464 freezes.
+//!
+//! **A log written before 2026-09-14 is REFUSED, not read with defaults** — in two independent
+//! places. [`read_run`] requires both new manifest members, because a `None` default would let a
+//! replay succeed with nothing to compare the FSM residue against: a green whose terminal-state
+//! half asserts exactly what AC-008 warns about. And **it refuses on the version first**, naming
+//! both the version the log carries and the one this build reads, so a `v1` log produces
+//! *"re-bless it"* rather than a reader guessing which of the three shapes `v1` meant.
 //!
 //! **`events.jsonl` is canonical JSON, one object per line.** `rk_store::canon` emits no trailing
 //! newline, so the line separator is added here and the last line carries one — stated because the
@@ -182,7 +201,34 @@ use crate::workflow::envelope::AttemptCap;
 use crate::workflow::fsm::{self, Divergence, FsmContext, FsmError, NextAction};
 
 /// The layout version, carried in `run.json` so a reader never has to guess which shape a run is in.
-pub const SCHEMA: &str = "rk-kernel/golden-log/v1";
+///
+/// # `v1` → `v2`, 2026-09-14 (operator decision **D-4**)
+///
+/// **`v1` was carried by three different shapes**, which is the sentence above being false of it:
+/// the Slice-3 layout; Slice 4f's, which added `run.json`'s `terminal_state` and `next_action`
+/// and `inputs/runtime.json`; and Slice 4i's, which added `inputs/specs.json` and
+/// `runtime.json`'s `results_at`. A reader handed a `v1` log still had to guess.
+///
+/// **This string is an INPUT to [`RunInputs::run_id`]** — `sha256_lp([SCHEMA, stage,
+/// canonical(inputs)])`, and it also sits inside `canonical(inputs)` — so **bumping it renames
+/// every run**. That is why the bump is taken *now*: the corpus holds no `golden-logs/` today
+/// [measured 2026-09-14], so it costs one re-bless of one in-crate fixture through the
+/// `#[ignore]`d `bless_the_committed_golden_log`; after the single `CORPUS_PIN` move it would
+/// invalidate corpus-committed run ids under a SHA **AC-464 freezes** and `PROGRESS`:103 forbids
+/// moving twice. The committed fixture went `implement-a539b5a7b654d16f` →
+/// `implement-bf1d8cec3b22d288` [measured, and `inputs_digest` was byte-identical across it,
+/// which is what attributes the rename to this string and to nothing else].
+///
+/// 🛑 **THE §7b.11 HALF IS THE OPERATOR'S AND IS NOT DONE HERE.** That section's own amendment
+/// (`0780198`) says the bump *"lands in ONE act touching both files"* and left the block at `v1`
+/// deliberately, to avoid a runbook describing a version the code does not write. `runbook/` is
+/// outside this session's editable set, so the state that now stands is the mirror of the one it
+/// refused: the code writes `v2` and §7b.11 still says `v1`. **A dated §7b.11 amendment carrying
+/// `v2`, and the re-read of that section's precondition 3 it asks for, are OWED** — before the
+/// pin move. The pinning test is
+/// `tests/it/replay.rs`'s `the_layout_version_reaches_the_run_id_derivation`, and it carries no
+/// AC id for that reason.
+pub const SCHEMA: &str = "rk-kernel/golden-log/v2";
 
 /// **AC-042's THEN.** *"…reports `HiddenInput { run_id, first_divergent_node }` on any mismatch,
 /// never a warning."*
@@ -1469,8 +1515,26 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         path: dir.join("run.json").display().to_string(),
         detail: detail.to_owned(),
     };
-    if manifest["schema"].as_str() != Some(SCHEMA) {
-        return Err(bad("schema is not this layout's"));
+    // **THE REFUSAL NAMES BOTH VERSIONS AS OF 2026-09-14 (operator decision D-4).** What stood
+    // here was `bad("schema is not this layout's")` — which tells a reader *that* the log was
+    // rejected and never *why*, and names neither the version the log carries nor the one this
+    // build reads. With [`SCHEMA`] at `v2` the commonest rejection is a log stamped
+    // `rk-kernel/golden-log/v1`, and `v1` is exactly the stamp a reader cannot act on: **three
+    // distinct shapes carried it** (the Slice-3 layout, Slice 4f's `terminal_state` /
+    // `next_action` / `inputs/runtime.json`, and Slice 4i's `inputs/specs.json` and
+    // `results_at`), which is §7b.11's own stated reason for the bump. Naming it is what turns
+    // *"this is not my shape"* into *"re-bless it"*.
+    let carried = manifest["schema"].as_str();
+    if carried != Some(SCHEMA) {
+        let carried = carried.unwrap_or("<absent>");
+        return Err(bad(&format!(
+            "the golden-log layout version is `{carried}` and this build reads `{SCHEMA}`. A log \
+             stamped `rk-kernel/golden-log/v1` is refused here rather than read with defaults: v1 \
+             was carried by THREE different shapes, so the stamp does not say which one the run \
+             is in — the ambiguity the v2 bump exists to remove. Re-bless it with `cargo test -p \
+             rk-kernel --features corpus --test it -- --ignored bless_the_committed_golden_log`, \
+             or re-record the run"
+        )));
     }
     let stage = manifest["stage"].as_str().ok_or_else(|| bad("no stage"))?;
     let run_id = manifest["run_id"]

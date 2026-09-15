@@ -129,6 +129,19 @@
 //! lands precondition 3 is false and the move may not run on precondition 3's word. Nothing in this
 //! file may be read as having discharged it.
 //!
+//! **HALF OF THAT WAS DISCHARGED AT `0780198` AND A DIFFERENT HALF IS NOW OWED — 2026-09-14.** The
+//! four layout additions landed in §7b.11 at that commit, so the paragraph above is satisfied as
+//! written. What that amendment deliberately did **not** take is the version bump, on the stated
+//! ground that *"a runbook that described a version the code does not write would be the
+//! documented-but-false state this file has been repaired for twice already"* — and the operator's
+//! decision **D-4** has now taken the code half: `rk_kernel::replay::SCHEMA` reads
+//! `rk-kernel/golden-log/v2` and the committed fixture is re-blessed at
+//! `implement-bf1d8cec3b22d288`. So the OWED debt has **changed shape, not size**: §7b.11 still
+//! says `v1`, which is the mirror of the state `0780198` refused to create, and **a dated §7b.11
+//! amendment carrying `v2` plus the re-read of precondition 3 that block asks for are OWED to the
+//! operator, still BEFORE the pin move**. [`the_layout_version_reaches_the_run_id_derivation`] is
+//! the pin on the code half and carries no AC id for exactly this reason.
+//!
 //! The committed in-crate copies at `tests/fixtures/logs/` are §7b.12's own row — *"the golden
 //! event logs' in-crate copies for the red step, before the corpus copies exist"*. This file
 //! asserts the staged run is **byte-identical** to them, which is what makes precondition 1's
@@ -515,6 +528,185 @@ fn bless_the_committed_golden_log() {
     let dir = rk_kernel::replay::write_run(&committed_root(), &recorded)
         .expect("the fixture tree is writable");
     println!("wrote {}", dir.display());
+}
+
+/// The `run_id` this exact input set derived while [`rk_kernel::replay::SCHEMA`] read
+/// `rk-kernel/golden-log/v1`.
+///
+/// **Read off the committed fixture, never computed here.**
+/// `tests/fixtures/logs/implement-a539b5a7b654d16f/run.json` at `7437a26` carried
+/// `"run_id":"implement-a539b5a7b654d16f"` beside `"schema":"rk-kernel/golden-log/v1"`, and the
+/// directory that name spells is the tree that stood before the bump.
+const V1_RUN_ID: &str = "implement-a539b5a7b654d16f";
+
+/// The selection's own `inputs_digest` at that same commit — **and the discriminator.**
+///
+/// It is AC-041's four-digest tuple as `select()` derived it, and the layout version is **not**
+/// among its inputs: [`rk_kernel::replay::SCHEMA`] reaches `run_id` and reaches nothing else. So
+/// it must be byte-identical across the bump while the run id moves. Without it, *"the run id
+/// changed"* would be satisfied by anything at all changing under the derivation; with it, what
+/// moved is the schema string and nothing else.
+const V1_INPUTS_DIGEST: &str = "3345ce0749d822cf08e28883d9dc18db36d1741fdf60cd94f04d1f91fd0a719c";
+
+/// **THE LAYOUT VERSION IS AN INPUT TO `run_id`, AND NOTHING CHECKED THAT IT WAS.**
+///
+/// §7b.11 fixes `run_id = sha256_lp([SCHEMA, stage, canonical(inputs)])`, and the operator's
+/// decision of 2026-09-14 (**D-4**) bumps `SCHEMA` to `rk-kernel/golden-log/v2` **before** the
+/// single `CORPUS_PIN` move: three distinct shapes had come to share `v1`, against §7b.11's own
+/// stated reason for carrying a version — *"so a reader never guesses which shape a run is in"* —
+/// and after the move the rename would invalidate corpus-committed run ids under a SHA AC-464
+/// freezes, which `PROGRESS`:103 forbids re-taking.
+///
+/// # Why this exists rather than the re-bless being its own evidence
+///
+/// [`bless_the_committed_golden_log`] writes the fixture tree at whatever name the derivation
+/// produces, and [`golden_log_replay`] then joins `committed_root()` with that **same** derived
+/// name. **If the schema string never reached the derivation, both sides would agree on the old
+/// name and every replay test would stay green** — the bump would have been performed, recorded
+/// in the diff, and be worth nothing, with nothing red anywhere. The whole warrant for bumping
+/// *now* rather than after the pin move is that the string renames runs; a bump that renamed
+/// nothing would have spent the one act `PROGRESS`:103 allows on a no-op. This is that check, and
+/// it is worth its lines precisely because its failure would otherwise be silent.
+///
+/// # What discriminates
+///
+/// The run id must have **moved off** [`V1_RUN_ID`] while `inputs_digest` **stays at**
+/// [`V1_INPUTS_DIGEST`]. One without the other proves nothing: a run id that changed alongside a
+/// changed input set says only that something moved, and an unchanged input set alone says only
+/// that the fixture was not edited. Together they say the layout version — and only the layout
+/// version — reached the derivation.
+///
+/// Part 5 is the other half of the same decision: a log written under the old version is
+/// **refused by [`rk_kernel::replay::read_run`], and the refusal names both versions**, so a
+/// reader of the error learns *why* the log was rejected rather than only *that* it was.
+///
+/// # 🛑 THE RUNBOOK HALF IS THE OPERATOR'S AND IS **NOT** DONE HERE
+///
+/// §7b.11's own amendment (committed `0780198`) says the bump *"lands in ONE act touching both
+/// files"* and deliberately left the block reading `v1`, because *"a runbook that described a
+/// version the code does not write would be the documented-but-false state this file has been
+/// repaired for twice already."* `runbook/` is outside this session's editable set, so what now
+/// stands is the mirror image of the state that amendment refused to create: **the code writes
+/// `v2` and §7b.11 still says `v1`.** A dated §7b.11 amendment carrying `v2`, and the **re-read
+/// of precondition 3** that block itself asks for, are **OWED to the operator**; nothing in this
+/// file may be read as having discharged either.
+///
+/// **This test's name carries no AC id** for the same reason the D-5, D-6, D-7 and D-10 phases'
+/// pins carry none — a record is owed for the reading — on
+/// `appetite_raise_from_an_activity_result_is_refused`'s precedent.
+#[test]
+fn the_layout_version_reaches_the_run_id_derivation() {
+    // ---- 1. the bump itself, pinned as a literal -------------------------------------------
+    //
+    // A literal and not a `starts_with("rk-kernel/golden-log/")`: what D-4 decided is a specific
+    // version, and a prefix check would be green against the `v1` it exists to have left.
+    assert_eq!(
+        rk_kernel::replay::SCHEMA,
+        "rk-kernel/golden-log/v2",
+        "D-4 bumps the golden-log layout version to v2, before the CORPUS_PIN move"
+    );
+
+    // ---- 2. the derivation MOVED ------------------------------------------------------------
+    //
+    // `inputs()` is the pure input set — the same one `record_the_run` folds — so this is the
+    // derivation itself, not a value read back out of a file something else wrote.
+    let derived = inputs()
+        .run_id()
+        .expect("the run id is a content hash of the inputs");
+    assert_ne!(
+        derived, V1_RUN_ID,
+        "THE SCHEMA STRING IS NOT REACHING `run_id`. `SCHEMA` reads v2 and this input set still \
+         derives the v1 name {V1_RUN_ID}, so bumping the version renamed no run — and the whole \
+         warrant for bumping NOW rather than after the pin move (§7b.11: the string is an INPUT \
+         to the derivation) is void"
+    );
+
+    // ---- 3. exactly one tree replaced one tree ----------------------------------------------
+    let committed = committed_root().join(&derived);
+    assert!(
+        committed.is_dir(),
+        "the committed in-crate copy is missing at {} — re-bless it with `cargo test -p \
+         rk-kernel --features corpus --test it -- --ignored bless_the_committed_golden_log`",
+        committed.display()
+    );
+    assert!(
+        !committed_root().join(V1_RUN_ID).exists(),
+        "the v1 tree {V1_RUN_ID} is STILL on disk beside the v2 one. `write_run` removes nothing \
+         outside the directory it writes, so a re-bless ADDS a tree; the superseded one is \
+         deleted deliberately, or §7b.12's `logs/` row carries two runs of the same inputs under \
+         two layout versions and `read_run` accepts only one of them"
+    );
+
+    // ---- 4. the manifest agrees, and NOTHING BUT the version moved --------------------------
+    let manifest: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(committed.join("run.json"))
+            .expect("the committed manifest is readable"),
+    )
+    .expect("run.json parses");
+    assert_eq!(
+        manifest["schema"].as_str(),
+        Some(rk_kernel::replay::SCHEMA),
+        "the committed manifest was not re-blessed after the bump"
+    );
+    assert_eq!(
+        manifest["run_id"].as_str(),
+        Some(derived.as_str()),
+        "the committed manifest's run_id is not the one this input set derives"
+    );
+    assert_eq!(
+        manifest["inputs_digest"].as_str(),
+        Some(V1_INPUTS_DIGEST),
+        "THE INPUT SET MOVED TOO, so the rename above is not attributable to the schema string. \
+         `inputs_digest` is the SELECTION's digest and the layout version is not among its \
+         inputs, so it is byte-identical across a version bump — and across nothing else"
+    );
+
+    // ---- 5. AN OLDER LOG IS REFUSED BY VERSION, AND THE REFUSAL NAMES BOTH -------------------
+    //
+    // The control comes first: the untouched copy reads back, so the refusal below is
+    // attributable to the one member this test rewrites and not to a broken copy.
+    let stale = scratch_root().join("schema-v1");
+    copy_tree(&committed, &stale);
+    rk_kernel::replay::read_run(&stale)
+        .expect("PREMISE: the unperturbed copy reads back, so the refusal below is the rewrite's");
+
+    let manifest_path = stale.join("run.json");
+    let mut rewritten: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(&manifest_path).expect("the copied manifest is readable"),
+    )
+    .expect("run.json parses");
+    rewritten["schema"] = serde_json::Value::from("rk-kernel/golden-log/v1");
+    assert_ne!(
+        rewritten["schema"].as_str(),
+        Some(rk_kernel::replay::SCHEMA),
+        "PREMISE: the rewrite must name a DIFFERENT version, or `read_run` would be asked to \
+         refuse a log it should accept"
+    );
+    std::fs::write(
+        &manifest_path,
+        serde_json::to_vec(&rewritten).expect("serialisable"),
+    )
+    .expect("the scratch copy is writable");
+
+    match rk_kernel::replay::read_run(&stale) {
+        Err(ReplayError::Malformed { detail, .. }) => {
+            assert!(
+                detail.contains("rk-kernel/golden-log/v1"),
+                "the refusal must name the version the log CARRIES, so a reader learns why it was \
+                 rejected rather than only that it was: {detail}"
+            );
+            assert!(
+                detail.contains(rk_kernel::replay::SCHEMA),
+                "the refusal must name the version this build READS: {detail}"
+            );
+        }
+        Ok(_) => panic!(
+            "`read_run` ACCEPTED a log stamped with an older layout version. The version is \
+             carried *\"so a reader never guesses which shape a run is in\"*, and a reader that \
+             accepts every shape is the guess"
+        ),
+        Err(other) => panic!("expected Malformed naming both versions, got {other}"),
+    }
 }
 
 /// **AC-006 / AC-008 — and the first replay in this system's history that had anything to serve.**

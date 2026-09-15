@@ -22,7 +22,8 @@
 //! `crates/rk-store/src/memo.rs` are **not moved** by this record."* [`StepContext`] is the
 //! **runtime facts** the eight components are assembled FROM, one field per component in ADR-0097's
 //! order, and [`StepContext::components`] is an **assembly**: it canonicalises component 4, tags
-//! component 5's branch, and hands the result to `rk-store`, whose `digest()` is the only hash. A
+//! component 5's branch, passes component 8's schema id through **whole and unparsed**, and hands
+//! the result to `rk-store`, whose `digest()` is the only hash. A
 //! second derivation in this crate is the accidental-equality hazard the quoted sentence exists to
 //! prevent — and it would also make both crates' tests true of two different keys.
 //!
@@ -45,7 +46,10 @@
 //! the other one — **all 102 shipped activities declare `version`** and so does every catalog
 //! fixture [measured 2026-09-14]. The loader dropped it; the files always carried it.
 //!
-//! # 🛑 TWO COMPONENTS HAVE NO PRODUCER IN THIS TREE, AND NEITHER IS INVENTED HERE
+//! # 🛑 ONE COMPONENT HAS NO PRODUCER IN THIS TREE, AND IT IS NOT INVENTED HERE
+//!
+//! *(It was two until 2026-09-14. Component 8's source was decided that day and the section
+//! below this one carries it; component 5's is still owed.)*
 //!
 //! - **Component 5's tool branch.** `crates/rk-ports/src/toolchain.rs`:47 is
 //!   `fn detect(&self) -> Result<bool, StepError>` — a **bool**, not a version string — and
@@ -57,15 +61,44 @@
 //!   toolchain the string `"true"`, so two different tools would share a key and one tool's
 //!   memoised result would be served to another — precisely the collision `sha256_lp`'s length
 //!   framing exists to prevent (`crates/rk-types/src/digest.rs`:395-401).
-//! - **Component 8's `schema_version`.** [measured 2026-09-14:
-//!   `grep -rn schema_version crates/ --include=*.rs` finds it only on `rk-store`'s SQLite identity
-//!   row and on `StepKeyComponents` itself; no `schema_version` exists on `Typed`, `ActivitySpec`
-//!   or any artifact type.] It arrives as a caller-supplied value beside the step's declared output
-//!   type, with **no code default**: [`StepContext::components`] refuses an empty one
-//!   ([`MemoError::SchemaVersionNotSupplied`]) rather than hashing `""`, because `""` is a default
-//!   wearing a string's clothes. **`SchemaId::as_str()` is explicitly not used**: it is an id, not
-//!   a version, and sourcing component 8 from it would make the key move on a rename and stand
-//!   still on a schema change — which inverts AC-014's THEN.
+//!
+//! # COMPONENT 8 IS `ActivitySpec.schema`'s WHOLE ID — DECIDED 2026-09-14
+//!
+//! AC-014 calls component 8 *"the output type's `schema_version`"* and **there is no such field**
+//! [measured 2026-09-14: `grep -rn schema_version crates/rk-types/src crates/rk-ports/src` → **0**;
+//! across the whole workspace it appears only on `rk-store`'s SQLite identity row and on
+//! `StepKeyComponents` itself]. Design §3.5 names a field that does not exist.
+//!
+//! [`StepContext::output_schema`] is therefore a [`rk_types::typed::SchemaId`] — the id carried by
+//! [`rk_types::activity::ActivitySpec::schema`] — and [`StepContext::components`] hands
+//! `SchemaId::as_str()` to `rk-store` **whole and unparsed**. Four reasons, in the order they were
+//! weighed: it is the **only** value in the tree carrying a version; it is **already on the spec**
+//! where the key is built; AC-014's property holds, because `…/v1` → `…/v2` moves the key; and it
+//! also moves when the output **kind** does, which is correct — a different output type is
+//! different work. The id appears nowhere else among the eight, so nothing is double-counted.
+//!
+//! **🛑 PARSING THE `vN` SUFFIX WAS REJECTED**, and the reason is a collision rather than a taste:
+//! it invents a convention no record states, has no defined behaviour on an id carrying no suffix,
+//! and would give **every output type at `/v1` the same component 8** — so two different output
+//! types share a key and one type's memoised result is served for the other. That is the weakening
+//! of AC-014's nine-case property `memo_key_eight_components` exists to prevent, and
+//! `tests/it/memo.rs`'s `component_eight_is_the_whole_schema_id_and_never_a_parsed_version` is red
+//! under the parse and green under this reading.
+//!
+//! **Corrected here, not quietly replaced.** What stood in this header until 2026-09-14 was
+//! *"**`SchemaId::as_str()` is explicitly not used**: it is an id, not a version, and sourcing
+//! component 8 from it would make the key move on a rename and stand still on a schema change —
+//! which inverts AC-014's THEN"*. Its first half is now the implementation, and its second half is
+//! the cost the decision **accepted**: a rename of an output type does move the key, and is read
+//! as a different type rather than as the same one under a new name, because nothing in this tree
+//! can tell those two apart.
+//!
+//! **A record is OWED and this green does not claim it**: a dated note saying what
+//! `schema_version` formally is. Until it lands the pinning test carries **no AC id** in its name
+//! (`tests/it/budget.rs`'s `appetite_raise_from_an_activity_result_is_refused` is the precedent),
+//! and an empty id is still **refused** rather than hashed
+//! ([`MemoError::SchemaVersionNotSupplied`]) — `""` is a default wearing a string's clothes, and
+//! typing the field does not make an empty one meaningful.
 //!
 //! # 🛑 A READING: COMPONENT 5 CARRIES A BRANCH TAG
 //!
@@ -124,6 +157,7 @@ use rk_store::memo::StepKeyComponents;
 use rk_types::digest::{Digest, sha256_lp};
 use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
+use rk_types::typed::SchemaId;
 
 use crate::catalog::{Catalog, StepKind};
 use crate::rigor::Rigor;
@@ -187,8 +221,12 @@ pub struct StepContext {
     pub kb_atoms: Vec<Digest>,
     /// 7. The loop iteration counter, `0` outside a loop (ADR-0021).
     pub loop_iteration: u32,
-    /// 8. The output type's `schema_version`. **No default** — empty is refused.
-    pub schema_version: String,
+    /// 8. The output type's `schema_version`, and **it is the whole `SchemaId`** —
+    ///    [`rk_types::activity::ActivitySpec::schema`]'s id, unparsed. Typed rather than a
+    ///    `String` so the only thing that can arrive here is a schema id: see the header for the
+    ///    decision of 2026-09-14 and for the `vN`-parse it refused. **No default** — an empty id
+    ///    is refused.
+    pub output_schema: SchemaId,
 }
 
 impl StepContext {
@@ -200,7 +238,7 @@ impl StepContext {
     /// rather than choosing a format for; [`MemoError::SchemaVersionNotSupplied`] for an empty
     /// component 8.
     pub fn components(&self) -> Result<StepKeyComponents, MemoError> {
-        if self.schema_version.is_empty() {
+        if self.output_schema.as_str().is_empty() {
             return Err(MemoError::SchemaVersionNotSupplied {
                 step_id: self.step_id.clone(),
             });
@@ -222,7 +260,7 @@ impl StepContext {
             card_or_tool: self.card_or_tool.as_component(),
             kb_atom_digests: self.kb_atoms.clone(),
             loop_iteration: self.loop_iteration,
-            schema_version: self.schema_version.clone(),
+            schema_version: self.output_schema.as_str().to_owned(),
         })
     }
 
@@ -243,7 +281,13 @@ pub enum MemoError {
     /// A resolved step input carries a float. `rk_store::canon` refuses rather than choosing a
     /// format, and so does this.
     Canon { pointer: String },
-    /// Component 8 arrived empty. `""` is a code default wearing a string's clothes.
+    /// Component 8 arrived empty — the spec's [`rk_types::typed::SchemaId`] carries no id. `""` is
+    /// a code default wearing a string's clothes.
+    ///
+    /// **The variant keeps AC-014's word for component 8** rather than the field it is now sourced
+    /// from, because `schema_version` is the name both the criterion and
+    /// `rk_store::memo::StepKeyComponents` use, and neither moves. What `schema_version` formally
+    /// **is** remains a record OWED — see the header.
     SchemaVersionNotSupplied { step_id: String },
     /// A journal event's payload is not the shape [`tally_activations`] reads.
     MalformedPayload { kind: &'static str, detail: String },
@@ -272,9 +316,10 @@ impl fmt::Display for MemoError {
             ),
             Self::SchemaVersionNotSupplied { step_id } => write!(
                 f,
-                "step `{step_id}` supplied no `schema_version` for memo-key component 8. There is \
-                 no code default: an empty component 8 would make the key stand still across a \
-                 schema change, which inverts AC-014's THEN"
+                "step `{step_id}` reached memo-key component 8 with an empty schema id. \
+                 Component 8 is the activity spec's whole schema id and there is no code \
+                 default: an empty component 8 would make the key stand still across a schema \
+                 change, which inverts AC-014's THEN"
             ),
             Self::MalformedPayload { kind, detail } => {
                 write!(f, "a `{kind}` payload is not readable: {detail}")

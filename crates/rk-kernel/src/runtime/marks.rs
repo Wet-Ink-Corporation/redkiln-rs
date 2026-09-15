@@ -32,11 +32,18 @@
 //!
 //! # 🛑 *"exits 0"* is not this module's, and *"resumes from the mark"* is not either
 //!
-//! The exit is a **process** claim and `rk-kernel` is a library (residual 10d; `rk-cli` is Step 7d).
-//! The resume rides on AC-013's re-entry test, which is **PROVISIONAL** and may not be counted. Both
-//! halves are ARMED and both are named in `super::activity`'s WHAT-IS-MEASURED table. What this
-//! module discharges is the mark's **write** and its **readback**, and [`read_retry_at_marks`]
-//! exists so the second is a function rather than a test scanning a `Vec` by hand.
+//! The exit is a **process** claim and this module exits nothing. *(This sentence read *"and
+//! `rk-kernel` is a library (residual 10d; `rk-cli` is Step 7d)"* until 2026-09-14. The parenthesis
+//! stays for the CLI half; the library clause is no longer a reason no test in this crate can
+//! measure a process exit, because operator decision **D-8** built a re-exec harness that reads a
+//! **child's** — `tests/it/cross_process.rs`. It is pointed at AC-024 and AC-035 and **NOT** at
+//! AC-030, and the reason is AC-030's own words below.)* The resume rides on AC-013's re-entry
+//! test, which is **PROVISIONAL** and may not be counted — and AC-030's *Verified by* names *"the
+//! next **`redkiln run`** resumes from the mark"*, a binary that does not exist before Step 7d, so
+//! **D-8 routes both of AC-030's remaining halves to 7d**. Both are ARMED and both are named in
+//! `super::activity`'s WHAT-IS-MEASURED table. What this module discharges is the mark's **write**
+//! and its **readback**, and [`read_retry_at_marks`] exists so the second is a function rather than
+//! a test scanning a `Vec` by hand.
 
 use rk_types::event::Event;
 use rk_types::event_kind::EventKind;

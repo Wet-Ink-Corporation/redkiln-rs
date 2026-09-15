@@ -1,12 +1,13 @@
 //! **The FSM** — `src/workflow/fsm.rs`. Slice 4e.
 //!
-//! Three tests, and what each is for — the third is a **pin on a known defect**, not a property:
+//! Three tests, and what each is for — the third replaced a **pin on a known defect** with the
+//! repair, on the operator decision of 2026-09-14:
 //!
 //! | test | criteria | what it measures | what it does NOT |
 //! | --- | --- | --- | --- |
 //! | [`ac039_gate_record_and_the_void_answer`] | **AC-039** (HUMAN GATE) | the *mechanism* residue only: the gate record bound to `(token, tree_hash, deadline)`, the derived token, and *"an answer whose tree hash no longer matches is **void, not reconciled**"* | **never the answer.** §7b.15 excludes AC-039 from the claim and this file may not restore it |
 //! | [`ac008_terminal_state_and_the_next_action_grains`] | AC-008, AC-006 (3), AC-161, AC-164 — all **ARMED** | the *recomputable* side: the five terminal states, the six next actions in their fixed order, and the tier-1 filter | **the recorded side**, which is `run.json`'s and Slice **4f**'s; and the **route** from git trailers, which is 7d's |
-//! | [`gate_answered_after_expiry_is_unfoldable_known_defect`] | **none** — no criterion covers it | 🛑 that `gate_opened → gate_expired → gate_answered` for one derived token is **permanently unfoldable** today, and that the refusal accuses the operator of forging a token this system itself opened | **anything about whether that is right.** It is a pin on a DEFECT found 2026-09-14; the lawful continuation looks like a VOID (AC-039's *"void, not reconciled"*) but AC-039 is about a `tree_hash` mismatch and no record settles expiry, so **a record is OWED** and the stage takes no decision (`00-preamble.md`:55) |
+//! | [`gate_answered_after_expiry_is_void_and_the_fold_continues`] | **none** — no criterion covers it | that `gate_answered` is **three** cases: open → answered, **expired → void and the fold CONTINUES**, never seen → `GateAnsweredWithoutOpen`. The warrant is exactly this wide: **the arm conflated two situations and only one is forgery** | **whether a voided gate RE-OPENS** — gate-record semantics, assigned to **7b-ii** by AC-176's Boundary note. It supersedes `gate_answered_after_expiry_is_unfoldable_known_defect`, the pin that held the `permanently unfoldable` journal as a DEFECT until the decision landed; **a durable record naming that decision is still OWED**, so the name carries no AC id |
 //!
 //! 🛑 **A green here is not AC-008 discharged, and the name says so deliberately.** AC-008's
 //! comparison has two sides — *"the replay reaches **the recorded** terminal state"* — and this
@@ -794,39 +795,39 @@ fn ac008_terminal_state_and_the_next_action_grains() {
     }
 }
 
-// ---- a KNOWN DEFECT, pinned as one -------------------------------------------------------------
+// ---- the three-way split, and the defect it replaced --------------------------------------------
 
-/// 🛑 **A KNOWN DEFECT, PINNED AS CURRENT BEHAVIOUR AND NOT AS A PROPERTY.**
+/// **`gate_answered` is THREE cases, not two** — the operator decision of **2026-09-14**, landed as
+/// code. An answer to a gate this system opened and then EXPIRED is **void**, and **the fold
+/// continues**; an answer naming a token the journal never opened is still
+/// `FsmError::GateAnsweredWithoutOpen`.
 ///
-/// *(Found 2026-09-14 on an adversarial verification pass and deliberately NOT fixed — the repair
-/// is semantics `00-preamble.md`:55 reserves. See `src/workflow/fsm.rs`'s header section of the
-/// same name.)*
+/// **What this replaces.** Until today this file carried
+/// `gate_answered_after_expiry_is_unfoldable_known_defect`, a pin asserting the refusal *as a
+/// defect*: the `GateExpired` arm removes the token from `gates_open`, the `GateAnswered` arm
+/// refused any token absent from it, and the journal is append-only — so
+/// `gate_opened → gate_expired → gate_answered` was **permanently unfoldable**, and the diagnostic
+/// accused the operator of forging a token this system itself derived, opened and expired. That
+/// pin required whoever changed the behaviour to name what licensed it; the line above is that
+/// naming. F18 measured **45% of gate→verdict intervals above one hour**, so the answer that races
+/// its own deadline is the common case, not the pathological one.
 ///
-/// `apply`'s `GateExpired` arm **removes** the token from `gates_open`; its `GateAnswered` arm
-/// refuses **any** token absent from `gates_open`. So a journal carrying
-/// `gate_opened → gate_expired → gate_answered` for **one derived token** folds to
-/// `FsmError::GateAnsweredWithoutOpen`, and — because the journal is append-only — it does so for
-/// ever. The item is not halted, it is **unfoldable**: `next_action`, `stage_action` and every
-/// replay over it are unreachable with that journal.
+/// **The warrant is narrow and is stated here so it cannot widen: the arm conflated two different
+/// situations, and only one of them is forgery.** Nothing here decides whether a voided gate
+/// RE-OPENS — that is gate-record semantics, and AC-176's Boundary note assigns it to **7b-ii**.
+/// This test asserts nothing about `next_action`, whose step 2 is untouched.
 ///
-/// **The token is not forged, and the diagnostic says it is.** The operator answered a gate this
-/// system opened and then expired — an ordinary race, not an attack. F18 measured **45% of
-/// gate→verdict intervals above one hour** (AC-039's own evidence line), so an answer arriving
-/// after a deadline is the common case.
+/// **Nothing is minted**: `EventKind::GateAnswerVoid` already exists with its own `apply` arm
+/// writing exactly this disposition, `rk_types::drift` already models a void answer, and
+/// `gates_void` was already terminal.
 ///
-/// **What this test is and is not.** It is a **pin on the defect**, so the behaviour cannot change
-/// silently: the lawful continuation looks like a VOID (AC-039's *"void, not reconciled"*;
-/// `EventKind::GateAnswerVoid` already exists, so nothing would be minted; `gates_void` is already
-/// terminal), **but AC-039 is about a `tree_hash` mismatch and says nothing about expiry**, ADR-0105
-/// clause 10 constrains only what an expiry *action* may be, and AC-039 is marked **HUMAN GATE**.
-/// No record settles it, so no stage may. **A record settling the disposition of an answer to an
-/// expired gate is OWED.** When it lands this test goes red, and whoever changed the behaviour has
-/// to name the clause that licensed it. It is **not** evidence that the refusal is correct.
-///
-/// The control below is what makes the pin about *expiry* rather than about gates in general: the
-/// same journal **without** the `gate_expired` row folds, and its answer is recorded.
+/// No AC id in the name, and that is deliberate: no criterion states the disposition of an answer
+/// to an expired gate — AC-039 is about a `tree_hash` mismatch and is marked HUMAN GATE — so a
+/// green here claims no settlement, and **a durable record naming the decision is OWED**.
+/// (`budget.rs`'s `appetite_raise_from_an_activity_result_is_refused` is the precedent in this
+/// crate for a name that withholds an id.)
 #[test]
-fn gate_answered_after_expiry_is_unfoldable_known_defect() {
+fn gate_answered_after_expiry_is_void_and_the_fold_continues() {
     let record = GateRecord::derive(
         "budget_extension",
         TREE_A,
@@ -841,35 +842,140 @@ fn gate_answered_after_expiry_is_unfoldable_known_defect() {
         serde_json::json!({ "token": token }),
     );
     let answered = gate_answered(&token, TREE_A, "extend");
+    // The row that proves the fold CONTINUES rather than merely not erroring: a state-moving event
+    // AFTER the answer, whose effect is visible in the folded state.
+    let moved_on = transition(STAGE, "review");
 
-    // ---- CONTROL FIRST: without the expiry the very same answer folds and is RECORDED -----------
-    //
-    // Without this, the refusal below is satisfied by a fold that refuses every `gate_answered`,
-    // and the test would be about nothing.
-    let without_expiry = fold(ITEM, STAGE, &[opened.clone(), answered.clone()])
-        .expect("gate_opened -> gate_answered folds");
-    assert!(
-        without_expiry.answered_gates().count() == 1,
-        "PREMISE: the answer is accepted when the gate is still open, so the refusal below is \
-         caused by the EXPIRY and by nothing else"
+    // ---- (a) the expired case: VOID, and the fold carries on past it -------------------------
+    let state = fold(
+        ITEM,
+        STAGE,
+        &[opened.clone(), expired, answered.clone(), moved_on.clone()],
+    )
+    .expect("an answer to an EXPIRED gate must not make the journal unfoldable");
+    let void: Vec<&str> = state
+        .void_gates()
+        .map(rk_types::digest::Digest::as_str)
+        .collect();
+    assert_eq!(
+        void,
+        vec![token.as_str()],
+        "the answer to the expired gate is VOID — `EventKind::GateAnswerVoid`'s own disposition, \
+         and nothing is minted for it"
+    );
+    assert_eq!(
+        state.answered_gates().count(),
+        0,
+        "and it is NOT an answer: a gate the system expired is not settled by an answer that \
+         arrived after the deadline"
+    );
+    let expired_tokens: Vec<&str> = state
+        .expired_gates()
+        .map(rk_types::digest::Digest::as_str)
+        .collect();
+    assert_eq!(
+        expired_tokens,
+        vec![token.as_str()],
+        "the expiry itself still stands — voiding the answer does not un-expire the gate"
+    );
+    assert_eq!(
+        state.stage(),
+        "review",
+        "THE FOLD CONTINUES: the state-moving row recorded AFTER the void answer was applied. \
+         This is the whole point — an append-only journal must never become unfoldable"
     );
 
-    // ---- AND THE DEFECT: one extra recorded row makes the journal unfoldable, for ever ----------
-    let err = fold(ITEM, STAGE, &[opened, expired, answered])
-        .expect_err("KNOWN DEFECT: this journal does not fold today");
-    match err {
-        FsmError::GateAnsweredWithoutOpen { token: refused } => {
+    // ---- (b) THE CONTROL that keeps the forgery refusal alive --------------------------------
+    //
+    // Without this, (a) is satisfied by an arm that voids every answer it cannot place, and
+    // `GateAnsweredWithoutOpen` would be dead code.
+    let orphan = fold(
+        ITEM,
+        STAGE,
+        &[gate_answered(&"d".repeat(64), TREE_A, "extend")],
+    );
+    match orphan {
+        Err(FsmError::GateAnsweredWithoutOpen { token: refused }) => {
             assert_eq!(
                 refused.as_str(),
-                token,
-                "the refusal names the very token this system derived, opened and expired — it is \
-                 not forged, and `GateAnsweredWithoutOpen` is the wrong accusation for it"
+                "d".repeat(64),
+                "a token the journal NEVER opened is the forgery case, and the message is correct \
+                 there"
             );
         }
         other => panic!(
-            "the KNOWN DEFECT this test pins is `GateAnsweredWithoutOpen`. Getting {other:?} means \
-             the behaviour CHANGED — which may well be the repair, but it is a repair that needs a \
-             record: see src/workflow/fsm.rs's header. Do not simply update this expectation"
+            "an answer naming a token no derived gate ever carried must STILL halt the fold — \
+             that is the one case `GateAnsweredWithoutOpen` is about: {other:?}"
         ),
     }
+
+    // ---- (c) THE SECOND CONTROL: without the expiry row the answer is ANSWERED, not void ------
+    let still_open = fold(ITEM, STAGE, &[opened, answered, moved_on]).expect("folds");
+    assert_eq!(
+        still_open.void_gates().count(),
+        0,
+        "an answer to a gate that is still OPEN, at the matching tree hash, is unchanged by D-5"
+    );
+    assert_eq!(
+        still_open.answered_gates().count(),
+        1,
+        "…and it is recorded as the answer it is. Without this row (a)'s `void` is satisfied by \
+         an arm that voids everything"
+    );
+
+    // ---- (c) THE FORGERY BRANCH IS NOT REACHABLE-AROUND VIA A FORGED EXPIRY ---------------
+    //
+    // Added 2026-09-15 after an adversarial pass found the hole this very split opened.
+    // `GateOpened` DERIVES its token from `(kind, tree_hash, deadline)`, so a token in
+    // `gates_open` is unforgeable; the `GateExpired` arm reads its token VERBATIM off the
+    // payload. Until the repair it did an unconditional `gates_expired.insert(token)` after a
+    // `remove` that silently no-ops — so appending ONE `gate_expired` naming any digest made a
+    // later `gate_answered` for that digest fold as VOID AND CONTINUE instead of halting as
+    // `GateAnsweredWithoutOpen`. D-5 deliberately kept that halt ("token never seen -> forgery,
+    // and the message is correct HERE"), and one extra row went around it.
+    let forged = GateRecord::derive(
+        "budget_extension",
+        TREE_A,
+        Timestamp::from_unix_seconds(9_999),
+    )
+    .expect("derives");
+    let forged_token = forged.token().as_str().to_owned();
+    assert_ne!(
+        forged_token, token,
+        "PREMISE: the forged token must differ from the one a gate actually opened, or this case \
+         is re-testing (a)"
+    );
+
+    let forged_expiry = Event::new(
+        EventKind::GateExpired,
+        serde_json::json!({ "token": forged_token }),
+    );
+    let forged_answer = gate_answered(&forged_token, TREE_A, "extend");
+
+    let err = fold(ITEM, STAGE, &[forged_expiry, forged_answer])
+        .expect_err("a gate this fold never saw OPEN cannot be expired into existence");
+    assert!(
+        matches!(err, FsmError::GateAnsweredWithoutOpen { .. }),
+        "the answer must still meet the FORGERY halt. If this folds as a void instead, a \
+         forged `gate_expired` row is a way around the one branch D-5 deliberately kept: \
+         {err:?}"
+    );
+
+    // And the expiry itself moved no state: it is counted, never silently dropped, but a gate
+    // that was never open is not recorded as expired either.
+    let lone = fold(
+        ITEM,
+        STAGE,
+        &[Event::new(
+            EventKind::GateExpired,
+            serde_json::json!({ "token": forged_token }),
+        )],
+    )
+    .expect("a lone expiry folds; it simply records nothing");
+    assert_eq!(
+        lone.expired_gates().count(),
+        0,
+        "a gate that was never open must not appear in `expired_gates` — `gates_expired` has one \
+         writer and this is the guard on it"
+    );
 }

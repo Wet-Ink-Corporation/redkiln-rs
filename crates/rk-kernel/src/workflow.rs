@@ -102,14 +102,27 @@
 //! table AC-038 asks for.
 //!
 //! **What those two modules do NOT contain is as load-bearing as what they do**, and each absence is
-//! a criterion half reported ARMED rather than an omission: the breaker's **key** (no model family
-//! exists in `rk-types`, `rk-ports` or this crate, and the catalog's `family` is ADR-0058's
-//! **activity** family), the breaker's **durable mark** (`EventKind` is closed at 29 and ADR-0116
-//! says *"the kind is minted by record or not at all"*), the breaker's **expiry value and its home**
-//! (§7b.10's two lists contain neither), the **model-tier binding** (the binder is built by no stage
-//! — `PROGRESS.md`:279), and any **ordering** over model tiers. Each is taken as a caller-supplied
-//! argument with exactly one constructor, so a later record narrows the shape rather than rewriting
-//! it. Each module's header states which record is owed.
+//! a criterion half reported ARMED rather than an omission: the breaker's **durable mark**
+//! (`EventKind` is closed at 29 and ADR-0116 says *"the kind is minted by record or not at all"*),
+//! the **model-tier binding** (the binder is built by no stage — `PROGRESS.md`:279; D-11 routes it
+//! to 7c), and any **ordering** over model tiers. Each is taken as a caller-supplied argument with
+//! exactly one constructor, so a later record narrows the shape rather than rewriting it. Each
+//! module's header states which record is owed.
+//!
+//! **Corrected 2026-09-14 (operator decision D-7), and the two that left are named rather than
+//! dropped.** This list also carried the breaker's **key** — *"no model family exists in `rk-types`,
+//! `rk-ports` or this crate, and the catalog's `family` is ADR-0058's **activity** family"* — and the
+//! breaker's **expiry value and its home** — *"§7b.10's two lists contain neither"*. Both are built:
+//! the key is the **pack's** `[role.<name>] family`, resolved from [`crate::catalog::Step::role`]
+//! through [`crate::select::Pack::require_family_for_role`], and the expiry is pack-declared at
+//! `[breaker] expiry_secs` beside `K`. **Both measurements the old clauses rested on are still true**
+//! and were re-taken today — there is still no model family *type* in `rk-types` or `rk-ports`, and
+//! §7b.10 still lists no expiry — because what D-7 added is a **pack declaration**, which is a TOML
+//! table and not a type, and a **home**, which §7b.10 never fixed. The catalog's `family` is still a
+//! different family and is now guarded by a third source lint,
+//! [`breaker::family_key_never_from_the_activity_catalog_rule`], plus a behavioural pin over a
+//! fixture activity that carries both. What is still OWED is narrower: the five pack key
+//! **spellings** are a reading, and the expiry's **value** is sized by no corpus figure.
 //!
 //! **Corrected a fourth time 2026-09-14, Slice 4e.** The sentence that stood here said *"Still
 //! **not built and not stubbed**: the memo (AC-014–AC-019) and **the FSM**"*, and half of that is
@@ -161,13 +174,20 @@
 //!
 //! **What [`memo`] does NOT contain, each absence a reported half rather than an omission**: memo
 //! key component 5's **tool branch source** (`Toolchain::detect` returns a `bool`, not a version
-//! string, and there is no Toolchain adapter at 7b), component 8's **`schema_version` source** (no
-//! such field exists on any type in this tree), AC-043's **`Evicted` decision** (its third state is
+//! string, and there is no Toolchain adapter at 7b), AC-043's **`Evicted` decision** (its third
+//! state is
 //! a dated amendment ADR-0119 clause 7 owes the register, and a variant no call site can produce
 //! reads as a refusal the system performs), and AC-045's **selection memo key**, which is
 //! `rk-kernel::select`'s and stays ARMED under ADR-0119 clause 8. Nothing in it appends: AC-015's
 //! *"re-runs"* and AC-019's identity are measured over a **projection** of a decision sequence into
 //! the events Slice 4h will write.
+//!
+//! *(Corrected 2026-09-14: component 8's **`schema_version` source** was the second absence in
+//! that list until the operator decision of that date sourced it from
+//! `rk_types::activity::ActivitySpec::schema`'s **whole id**. What was retired is the missing
+//! source, NOT the missing record: a dated note saying what `schema_version` formally is stays
+//! **OWED**, and [`memo`]'s own header carries the decision, the `vN`-parse it rejected and the
+//! test that pins it.)*
 //!
 //! **Corrected a sixth time 2026-09-14, Slice 4h.** The paragraph that stood here said *"Still **not
 //! built and not stubbed**: the runtime boundary that would act on what [`fsm`] decides"*, and named
@@ -203,13 +223,17 @@
 /// attributes above reach it.
 pub mod budget;
 
-/// **AC-029's `N`, AC-033's `K` and the per-item token appetite** — the numbers a pack declares and
-/// this crate refuses to default. A child of this module, for [`budget`]'s reason.
+/// **AC-029's `N`, AC-033's `K`, the per-item token appetite and — as of 2026-09-14 (D-7) — the
+/// breaker's expiry and its role → family key** — the values a pack declares and this crate refuses
+/// to default. A child of this module, for [`budget`]'s reason.
 pub mod envelope;
 
 /// **AC-033–AC-035.** The circuit breaker: the K-consecutive-`Platform` counting rule, the reset
-/// rule, the per-key isolation, the store-derived state and the refusal — keyed on an **opaque
-/// family token this crate never constructs**. A child of this module, for [`budget`]'s reason, and
+/// rule, the per-key isolation, the store-derived state and the refusal — keyed on the **model
+/// family the pack declares for a step's role**, resolved at plan time (D-7, 2026-09-14; this said
+/// *"an opaque family token this crate never constructs"* until that decision, and the token is
+/// still never constructed *here* — it is transcribed from a pack declaration).
+/// A child of this module, for [`budget`]'s reason, and
 /// pointedly so: AC-035's expiry comparison is against a journaled value, and a `SystemTime::now()`
 /// in that comparison is a non-zero clippy exit under the attributes above rather than a review
 /// comment.

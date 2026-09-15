@@ -5,7 +5,7 @@
 //!
 //! | criterion | measured here | **not** here |
 //! | --- | --- | --- |
-//! | **AC-014** | the eight components, one perturbation each plus the must-hit; the `u32-length \|\| bytes` framing; component 4's canonicalisation **by `rk_store::canon`** and its declaration order; component 6's sortedness | component 5's **tool branch** — `Toolchain::detect()` returns a `bool` and there is no adapter at 7b (residual 5b) — and component 8's **source**. Both arrive as caller-supplied values and both are **ARMED** |
+//! | **AC-014** | the eight components, one perturbation each plus the must-hit; the `u32-length \|\| bytes` framing; component 4's canonicalisation **by `rk_store::canon`** and its declaration order; component 6's sortedness; and — as of 2026-09-14 — component 8 being `ActivitySpec.schema`'s **whole id**, with the same-version/different-kind pin the rejected `vN` parse fails | component 5's **tool branch** — `Toolchain::detect()` returns a `bool` and there is no adapter at 7b (residual 5b) — which still arrives as a caller-supplied value and is still **ARMED**. Component 8's source is no longer among them; what `schema_version` formally **is** stays a record **OWED**, so the pin below carries no AC id |
 //! | **AC-015** | a `memo_miss` **then** a re-execution, in that order, over the projection; the resolved-atom-set reading; the unchanged-activation **control** | the real append. Nothing in `rk-kernel::workflow` appends; Slice 4h's boundary does. **ARMED** |
 //! | **AC-016** | all three instruments, the third one first: the activity key is **unchanged** when a step's resolved inputs change | nothing. This is the one criterion in the file whose every named instrument is here |
 //! | **AC-017** | two iterations, byte-identical inputs, two keys **and** two executions, with the same-iteration control | nothing beyond the projection caveat AC-015 carries |
@@ -49,9 +49,11 @@ use rk_kernel::memo::{
 };
 use rk_kernel::rigor::Rigor;
 use rk_store::memo::StepKeyComponents;
+use rk_types::activity::ActivitySpec;
 use rk_types::digest::{Digest, sha256};
 use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
+use rk_types::typed::SchemaId;
 use serde_json::json;
 
 /// The shipped catalog, relative to the workspace root. On a non-comment line deliberately, for
@@ -102,13 +104,46 @@ fn baseline() -> StepContext {
         card_or_tool: CardOrTool::Card(d("card/implementer@v4")),
         kb_atoms: vec![d("kb/atom-a@v1"), d("kb/atom-b@v1")],
         loop_iteration: 0,
-        schema_version: "2".to_owned(),
+        output_schema: SchemaId::new("RecordedResult/v1"),
     }
 }
 
 fn key_of(ctx: &StepContext) -> Digest {
     ctx.key()
         .unwrap_or_else(|e| panic!("the {} context assembles: {e}", ctx.step_id))
+}
+
+/// An [`ActivitySpec`] differing from its siblings **only in `schema`**, so a key that moved
+/// moved because component 8 did. The other four fields are ADR-0099:61's, filled with the shape
+/// `tests/it/degradation.rs`:60 already uses.
+fn spec_with_schema(id: &str) -> ActivitySpec {
+    ActivitySpec {
+        card_digest: d("card/implementer@v4"),
+        tools: vec!["Read".to_owned()],
+        schema: SchemaId::new(id),
+        timeout_secs: 900,
+        inputs: vec![("item".to_owned(), json!("issue-81"))],
+    }
+}
+
+/// [`baseline`]'s seven other runtime facts, with **component 8 taken from the spec** and from
+/// nowhere else — the decision of 2026-09-14 written as a call rather than as a comment.
+fn ctx_from_spec(spec: &ActivitySpec) -> StepContext {
+    StepContext {
+        output_schema: spec.schema.clone(),
+        ..baseline()
+    }
+}
+
+/// The assembled components with **component 8 blanked**: everything a premise of the form *"and
+/// nothing else moved"* has to hold fixed, compared at `rk-store`'s boundary rather than at this
+/// file's, so a wire crossed during assembly is caught by the premise and not hidden by it.
+fn held_fixed(ctx: &StepContext) -> StepKeyComponents {
+    let mut c = ctx
+        .components()
+        .unwrap_or_else(|e| panic!("the {} context assembles: {e}", ctx.step_id));
+    c.schema_version = String::new();
+    c
 }
 
 fn kinds(journal: &[Event]) -> Vec<EventKind> {
@@ -164,7 +199,10 @@ fn memo_key_eight_components() {
     let mut c7 = base.clone();
     c7.loop_iteration = 1;
     let mut c8 = base.clone();
-    c8.schema_version = "3".to_owned();
+    // A VERSION bump, which is the move AC-014 names: `RecordedResult/v1` -> `/v2`. Component 8
+    // is the spec's whole schema id as of 2026-09-14 (see the module header), so the case that
+    // perturbs it perturbs an id and not a bare number.
+    c8.output_schema = SchemaId::new("RecordedResult/v2");
 
     let cases: [(&str, &StepContext); 8] = [
         ("1 activity_id@version", &c1),
@@ -174,7 +212,7 @@ fn memo_key_eight_components() {
         ("5 card digest", &c5),
         ("6 kb atoms", &c6),
         ("7 loop iteration", &c7),
-        ("8 schema_version", &c8),
+        ("8 output schema id", &c8),
     ];
     let mut seen: BTreeSet<Digest> = BTreeSet::new();
     seen.insert(base_key.clone());
@@ -288,12 +326,13 @@ fn memo_key_eight_components() {
 
     // ---- the two refusals: neither component is allowed a silent default ----------------------
     let mut no_schema = base.clone();
-    no_schema.schema_version = String::new();
+    no_schema.output_schema = SchemaId::new("");
     assert_eq!(
         no_schema.components().unwrap_err().as_str(),
         "schema_version_not_supplied",
-        "component 8 has no source in this tree and no code default: an empty one is refused \
-         rather than hashed, because `\"\"` is a default wearing a string's clothes"
+        "component 8 has a source as of 2026-09-14 \u{2014} the spec's schema id \u{2014} and still no code \
+         default: an empty id is refused rather than hashed, because `\"\"` is a default wearing \
+         a string's clothes"
     );
     let mut floaty = base.clone();
     floaty.resolved_inputs = vec![json!({"ratio": 0.5})];
@@ -312,6 +351,113 @@ fn memo_key_eight_components() {
         "ADR-0119 clause 1: `StepKeyComponents` does not move, and this module ASSEMBLES it. A key \
          computed here rather than by rk-store is the accidental equality the two crates' headers \
          exist to prevent"
+    );
+}
+
+/// **Component 8 is `ActivitySpec.schema`'s WHOLE id** — the operator decision of 2026-09-14
+/// (D-10), and the pin on the reading that was rejected with it.
+///
+/// **The name carries no AC id on purpose.** AC-014 calls component 8 *"the output type's
+/// `schema_version`"*, and **no `schema_version` field exists anywhere in `rk-types` or
+/// `rk-ports`** [measured 2026-09-14: `grep -rn schema_version crates/rk-types/src
+/// crates/rk-ports/src` → 0]. Design §3.5 names a field that does not exist, so **a dated note
+/// saying what `schema_version` formally is remains OWED**. Until it lands, a test named for a
+/// criterion would claim a settlement no record has made —
+/// `tests/it/budget.rs`'s `appetite_raise_from_an_activity_result_is_refused` is the precedent, and
+/// `tests/it/fsm.rs`'s expiry test the second.
+///
+/// **What the decision chose**: the spec's schema id, whole and unparsed
+/// ([`rk_types::activity::ActivitySpec::schema`]). It is the only value in the tree carrying a
+/// version, it is already on the spec where the key is built, and AC-014's property holds —
+/// `v1` → `v2` moves the key.
+///
+/// **What it rejected, and what assertion 3 below is the pin for**: parsing the `vN` suffix. That
+/// invents a convention no record states, has no defined behaviour on an id without a suffix, and
+/// makes **every output type at `/v1` share one component 8** — so two different output types
+/// collide there, and the nine-case property `memo_key_eight_components` exists to pin is weakened
+/// to a version check. Assertion 3 is red under that reading and green under this one.
+#[test]
+fn component_eight_is_the_whole_schema_id_and_never_a_parsed_version() {
+    // ---- 1. the WHOLE id reaches rk-store's component 8, character for character ---------------
+    let recorded = spec_with_schema("RecordedResult/v1");
+    let base = ctx_from_spec(&recorded);
+    let comps = base.components().expect("the baseline assembles");
+    assert_eq!(
+        comps.schema_version,
+        recorded.schema.as_str(),
+        "component 8 IS `ActivitySpec.schema`'s id — assembled from the spec, not re-spelled by a \
+         literal in this test and not derived from anything else"
+    );
+    assert_eq!(
+        comps.schema_version, "RecordedResult/v1",
+        "and the whole id is what lands: the kind AND the version, in one string"
+    );
+    for parsed in ["v1", "1", "RecordedResult"] {
+        assert_ne!(
+            comps.schema_version, parsed,
+            "component 8 must not be a PART of the id. `{parsed}` is what a suffix (or prefix) \
+             parse would leave, and the decision of 2026-09-14 refused exactly that"
+        );
+    }
+
+    // ---- 2. AC-014's property over the version: v1 -> v2 moves the key -------------------------
+    let bumped = spec_with_schema("RecordedResult/v2");
+    let after_bump = ctx_from_spec(&bumped);
+    assert_eq!(
+        held_fixed(&base),
+        held_fixed(&after_bump),
+        "premise: the bump moved component 8 and nothing else, so the miss below is attributable \
+         to component 8 alone"
+    );
+    assert_ne!(
+        key_of(&base),
+        key_of(&after_bump),
+        "*\"(8) the output type's `schema_version`\"*: a schema bump must miss the memo. A \
+         component 8 that stood still across v1 -> v2 would serve the OLD shape's memoised result \
+         for the NEW shape, which inverts AC-014's THEN"
+    );
+
+    // ---- 3. THE PIN ON THE REJECTED READING: same version, different output KIND --------------
+    // Both ids end in the SAME version. Under the rejected `vN` parse both components 8 are `v1`
+    // and these two keys are EQUAL — one output type's memoised result served to another.
+    let other_kind = spec_with_schema("ImplReport/v1");
+    assert_ne!(
+        other_kind.schema.as_str(),
+        recorded.schema.as_str(),
+        "premise: two different schema ids"
+    );
+    assert!(
+        other_kind.schema.as_str().ends_with("/v1") && recorded.schema.as_str().ends_with("/v1"),
+        "premise: and they agree on the VERSION — without this the assertion below is satisfied by \
+         the version parse it exists to refuse, and is vacuous"
+    );
+    let other = ctx_from_spec(&other_kind);
+    assert_eq!(
+        held_fixed(&base),
+        held_fixed(&other),
+        "premise: the other seven components are identical across the two kinds"
+    );
+    assert_ne!(
+        key_of(&base),
+        key_of(&other),
+        "two different OUTPUT TYPES at the same version are different work and must be different \
+         keys. This is the collision the rejected `vN` parse would introduce, and the reason \
+         component 8 is the whole id"
+    );
+
+    // ---- 4. and the refusal survives the retyping: an empty id is not hashed -------------------
+    let mut empty = ctx_from_spec(&spec_with_schema(""));
+    assert_eq!(
+        empty.components().unwrap_err().as_str(),
+        "schema_version_not_supplied",
+        "an empty schema id is still REFUSED rather than hashed: `\"\"` is a code default wearing \
+         a string's clothes, and a typed component 8 does not make an empty one meaningful"
+    );
+    empty.output_schema = recorded.schema;
+    assert!(
+        empty.components().is_ok(),
+        "control: the SAME context with the spec's id restored assembles, so the refusal above is \
+         component 8's and not some other field's"
     );
 }
 
@@ -1067,7 +1213,7 @@ fn ac019_executed_plus_hits_equals_activations() {
                 card_or_tool: CardOrTool::Card(d("card/implementer@v4")),
                 kb_atoms: vec![d("kb/atom-a@v1")],
                 loop_iteration: iteration,
-                schema_version: "2".to_owned(),
+                output_schema: SchemaId::new("RecordedResult/v1"),
             });
         };
         push("draft", json!({"spec": "INC-1"}), 0);

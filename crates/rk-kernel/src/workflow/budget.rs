@@ -7,7 +7,7 @@
 //! | **AC-021** | [`required_attempts_total`] — lint rule 8's **declared** minimum | **built** |
 //! | **AC-022** | [`charge_for_each`] / [`charge_pass`] — the **runtime** charge, constant in the fan-out cardinality | **built**; see the 🛑 on ADR-0053 below |
 //! | **AC-023** | [`appetite_raise_from_activity_result`] — the refusal, and **only** the refusal | **partial**; C3 is open, and the escape hatch is not built |
-//! | **AC-024** | [`wall_clock_expiry_mark`] — the durable mark's **value**, on [`EventKind::GateOpened`] with kind `budget_extension` | **partial**; *"exits 0"* is 7d's and the *write* has **no call site anywhere in `src/`** [re-measured 2026-09-14, after Slice 4h shipped without one: it has zero call sites; the bare grep returns four lines, the definition plus three doc mentions, so the count is stated as call sites and not as grep hits]. The sentence here read *"the *write* is Slice 4h's"*; 4h is committed and did not write it, so the forward reference is replaced by the measurement. `crate::runtime`'s header carries the reason the kernel is powerless to add one — no ledger, no envelope and no elapsed-seconds carrier — and the record routing an elapsed value to the kernel is **OWED**. Both halves ARMED below. AC-024 is a **twin** (owner: AC-240 + AC-278) |
+//! | **AC-024** | [`wall_clock_expiry_mark`] — the durable mark's **value**, on [`EventKind::GateOpened`] with kind `budget_extension` | **partial**; the *write* has **no call site anywhere in `src/`** [re-measured 2026-09-14, after Slice 4h shipped without one: it has zero call sites; the bare grep returns four lines, the definition plus three doc mentions, so the count is stated as call sites and not as grep hits]. The sentence here read *"the *write* is Slice 4h's"*; 4h is committed and did not write it, so the forward reference is replaced by the measurement. `crate::runtime`'s header carries the reason the kernel is powerless to add one — no ledger, no envelope and no elapsed-seconds carrier — and the record routing an elapsed value to the kernel is **OWED**. Both halves ARMED below. **Amended 2026-09-14 (D-8):** this cell began *"*\"exits 0\"* is 7d's and the *write* has no call site"*; the first clause is withdrawn, because [`BudgetExtensionMark::to_event`] gives the mark an event form and `tests/it/cross_process.rs` re-execs the test binary, writes the mark in a **child** and reads that child's **exit code** — the register's own *"test asserting process exit and a written mark"*. The *write on a live `src/` path* is untouched by that and stays ARMED, measured as stated. AC-024 is a **twin** (owner: AC-240 + AC-278) |
 //! | **AC-025** | [`BudgetExhausted`], [`GateVerdict`], [`evaluate_gate`] — and no route from the first to a closed second | **built**; the negative fixture is `tests/it/budget.rs`'s nine-row table, with `tests/ui/ac025_exhaustion_is_not_a_pass.rs` in addition |
 //!
 //! # The two quantities `attempts_total` names, and why they are two functions
@@ -70,20 +70,38 @@
 //! settles C3. The test in `tests/it/budget.rs` is deliberately **not** named `ac023_…`: claiming
 //! the id would claim the hatch.
 //!
-//! # 🛑 THE EXHAUSTION BOUNDARY MOVED ON 2026-09-14, AND THE MOVE IS A READING NO RECORD STATES
+//! # 🛑 THE EXHAUSTION BOUNDARY IS PER COUNTER AS OF 2026-09-14, AND IT IS A READING NO RECORD STATES
 //!
-//! **The rule that stood in this file until 2026-09-14 was `spent > declared`, and it is now
-//! `spent >= declared`.** Under the old rule an activity declaring `attempts_total = 3` was not
-//! exhausted at three attempts spent and could take a fourth: the declared budget was a number the
-//! run was permitted to exceed by one. No record states which side of the boundary *"ran out"*
-//! falls on — AC-025's GIVEN is *"a gate whose evidence-producing activity **ran out** of any
-//! budget"* and AC-024's is *"a run that **reaches** its wall-clock budget"*, and those two words
-//! are all either criterion offers. The reading taken is the fail-closed one, on principle 4's
-//! warrant (GATE-01, RK-B0013, AC-025's own evidence line). It is stated here rather than left in
-//! the diff because it changes what a green Slice-4a assertion meant: the four tests of 2026-09-14
-//! pass unchanged under both rules, so nothing went red to announce it. See [`exhausted_counter`],
-//! which is now the **single** definition — [`fold`]'s observation and [`evaluate_gate`]'s verdict
-//! both call it, so the two cannot disagree.
+//! **The true history first, because the sentence that stood here until 2026-09-14 got it wrong.**
+//! That sentence read *"the rule that stood in this file until 2026-09-14 was `spent > declared`,
+//! and it is now `spent >= declared`"*. **That is false.** The comparison is byte-identical at
+//! `71b20c1` and at `6d1a8fa` — `envelope.X.get() > 0 && ledger.X >= envelope.X` at both, on all
+//! three counters, and those are the only two commits that have ever touched this file. `spent >
+//! declared` was **never committed**: it existed in an uncommitted working copy for minutes. The
+//! same sentence also recast what the stage actually did — *"the existing rule was kept and the
+//! contradiction recorded as OWED"*, which is what [`exhausted_counter`]'s own body said — into
+//! *"the boundary was moved on a fail-closed reading"*, claiming a decision the stage did not take
+//! and erasing the OWED record along with it. Both sites are corrected with the measurement.
+//!
+//! **What actually changed on 2026-09-14 is this**, and it is a change to attempts and tokens only:
+//! the comparison is now **one rule per counter**, each following its own criterion's verb —
+//! `spent > declared` for [`Attempts`] and [`Tokens`] (AC-025: *"a gate whose evidence-producing
+//! activity **ran out** of any budget"*), `spent >= declared` for [`WallClockSecs`] (AC-024: *"a run
+//! that **reaches** its wall-clock budget"*), with the declared-`0` guard kept on all three. The
+//! wall clock's comparison is therefore unchanged from both commits above.
+//!
+//! **The defect the change repairs was live** [measured 2026-09-14]: **9 of the 102** shipped
+//! activities declare exactly their lawful ADR-0037 rule-8 minimum, so under the uniform `>=` each
+//! was exhausted by its own **successful** pass and [`evaluate_gate`] could never close a gate on
+//! its evidence. The in-crate reproduction is `tests/fixtures/catalog/two-pass.toml`, which has the
+//! same shape.
+//!
+//! **A dated note fixing the comparison per counter is still OWED**, because neither criterion
+//! states a comparison outright — those two verbs are all either offers, and the split above is
+//! this file's reading of them. The reading is pinned by `tests/it/budget.rs`'s
+//! `minimum_declaration_is_not_exhausted_by_its_own_clean_pass`, whose name carries no AC id for
+//! exactly that reason. See [`exhausted_counter`], which stays the **single** definition —
+//! [`fold`]'s observation and [`evaluate_gate`]'s verdict both call it, so the two cannot disagree.
 //!
 //! # What is deliberately NOT here
 //!
@@ -97,8 +115,13 @@
 //! constraint 10). [`BudgetReport::exhausted`] stays an **observation**: it reports which counter
 //! has run out and decides nothing, and the verdict is [`evaluate_gate`]'s alone.
 //!
-//! **What AC-024 does NOT cover here, named so a green is not misread:** the *"exits 0"* half is a
-//! **process** exit and this is a library crate — there is no `rk-cli` before Step 7d. The mark's
+//! **What AC-024 does NOT cover here, named so a green is not misread** *(amended 2026-09-14)*: the
+//! *"exits 0"* half is a **process** exit, and this sentence continued *"and this is a library crate
+//! — there is no `rk-cli` before Step 7d"*. The premise is still true of this MODULE, which exits
+//! nothing; the conclusion that followed from it elsewhere — that no test in this crate can measure
+//! a process exit — is withdrawn under **D-8**, because `tests/it/cross_process.rs` re-execs the
+//! test binary and reads a **child's** exit code. What is 7d's is that the exiting process is
+//! `redkiln run`. Nothing in THIS module is that instrument. The mark's
 //! *write* is outside the pure function (ADR-0119 clause 5, ADR-0120 clause 4) and is Slice 4h's,
 //! and so is *"no further dispatch"*, which needs a dispatch counter. The gate record itself —
 //! ADR-0017's `(token, tree_hash, deadline)` — is the FSM's (Slice 4e), because ADR-0105 clause 4
@@ -113,6 +136,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
 
 use super::retry::InnerAttempts;
@@ -702,46 +726,71 @@ impl GateEvidence {
 /// the observation and the verdict cannot disagree. The sweep is over [`Counter::ALL`], so a fourth
 /// counter is a compile error here and not a row someone forgot.
 ///
-/// **A reading, stated because no record states it — and CORRECTED here.** The rule that stood in
-/// this file on 2026-09-14 was `spent > declared`; it is now `spent >= declared`. Under the old
-/// rule an activity declaring `attempts_total = 3` was not exhausted at three attempts spent and
-/// could take a fourth — the declared budget was a number the run was permitted to **exceed by
-/// one**, which is the shape AC-029's sibling clause (*"the attempt count never exceeds the pack's
-/// `N`"*) exists to prevent. No record states which side of the boundary *"ran out"* falls on:
-/// AC-025's GIVEN is *"a gate whose evidence-producing activity ran out of any budget"* and
-/// AC-024's is *"a run that **reaches** its wall-clock budget"*, and *"reaches"* is the only word
-/// either criterion offers. The reading taken is the fail-closed one, on principle 4's warrant
-/// (GATE-01, RK-B0013): a boundary that guesses in the permissive direction is the silent pass the
-/// gate exists to refuse.
+/// **The true history first, because the sentence that stood here until 2026-09-14 got it wrong.**
+/// That sentence read *"the rule that stood in this file on 2026-09-14 was `spent > declared`; it
+/// is now `spent >= declared`"*. **That is false.** The comparison is byte-identical at `71b20c1`
+/// and at `6d1a8fa` — `envelope.X.get() > 0 && ledger.X >= envelope.X` on all three counters, and
+/// those are the only two commits that have ever touched this file. `spent > declared` was **never
+/// committed**. What this function's body actually said on 2026-09-14 is what the stage actually
+/// did: *"`>=` … is kept"*, with the contradiction recorded as **OWED**. The module header carries
+/// the measurement in full.
+///
+/// **A reading, stated because no record states it, and it is PER COUNTER as of 2026-09-14.** What
+/// changed is attempts and tokens only; the wall clock's comparison is unchanged from both commits
+/// above. Each counter follows its own criterion's verb:
+///
+/// * **AC-025** — *"a gate whose evidence-producing activity **ran out** of any budget"* → `spent >
+///   declared` for [`Counter::Attempts`] and [`Counter::Tokens`]. An activity that spent exactly
+///   what it declared spent its budget; it did not run out of it.
+/// * **AC-024** — *"a run that **reaches** its wall-clock budget"* → `spent >= declared` for
+///   [`Counter::WallClock`]. *"Reaches"* is the criterion's own word and it names the equality.
+///
+/// The declared-`0` guard is kept on all three: nothing runs out of a budget it never drew on.
+///
+/// **This stays ONE function** with a per-counter rule rather than becoming three, so [`fold`]'s
+/// observation and [`evaluate_gate`]'s verdict still cannot disagree.
+///
+/// **A dated note fixing the comparison per counter is OWED.** Neither criterion states a
+/// comparison outright — those two verbs are all either offers — so the rule above is this file's
+/// reading of them and not a record's text. Until that note lands, a reader must not take the
+/// per-counter split as settled. It is pinned by
+/// `tests/it/budget.rs`'s `minimum_declaration_is_not_exhausted_by_its_own_clean_pass`, whose name
+/// carries no AC id for exactly that reason.
 #[must_use]
 pub fn exhausted_counter(ledger: &BudgetLedger, envelope: &BudgetEnvelope) -> Option<Counter> {
-    // 🛑 A CONTRADICTION WITH ADR-0037's RULE 8 LIVES IN THIS EXPRESSION, AND IT IS RECORDED
-    // RATHER THAN SILENTLY DECIDED. *(Found 2026-09-14 by an adversarial pass, which reproduced
-    // it against the shipped fixture `tests/fixtures/catalog/two-pass.toml`: `attempts_total = 3`,
-    // `required_attempts_total` = 3, a clean pass charges 3 -> `exhausted = Some(Attempts)` and
+    // 🛑 THE CONTRADICTION WITH ADR-0037's RULE 8 THAT LIVED IN THIS EXPRESSION IS REPAIRED HERE,
+    // AND THE READING IT TAKES IS STILL OWED A RECORD.
+    //
+    // *(Found 2026-09-14 by an adversarial pass, which reproduced it against the in-crate fixture
+    // `tests/fixtures/catalog/two-pass.toml`: `attempts_total = 3`, `required_attempts_total` = 3,
+    // a clean pass charges 3 -> under a uniform `>=`, `exhausted = Some(Attempts)` and
     // `evaluate_gate` returns `Err(BudgetExhausted)`.)*
     //
     // Rule 8, verbatim: *"`budget.attempts_total >= number of agent/tool steps on one pass`"* — so
     // declaring EXACTLY the lawful minimum is lawful, and one clean pass then spends exactly the
-    // declared amount. Under the `>=` below, that activity is exhausted by its own SUCCESSFUL pass
-    // and AC-025 closes no gate for any minimally-declared activity. Under `>` it is not, and
-    // "exhausted" means the charge the envelope could not cover.
+    // declared amount. **The defect was live, not theoretical** [measured 2026-09-14]: 9 of the 102
+    // shipped activities declare exactly their lawful minimum (`change-summary` 2/2,
+    // `change-summary-ue` 3/3, `checklist-review` 2/2, `debt-logging` 2/2, `dependency-update` 6/6,
+    // `rolling-deploy` 4/4, `smoke-test` 2/2, `t-shirt-sizing` 2/2, `unit-tests` 4/4), so under a
+    // uniform `>=` each was exhausted by its own SUCCESSFUL pass and `evaluate_gate` could never
+    // close a gate on its evidence.
     //
-    // **Neither reading is written down.** AC-025's GIVEN is *"an activity that ran out of any
-    // budget"*; design §3.6:344 and schema §4:83 both name the OUTCOME (`Err(BudgetExhausted)`,
-    // `Blocked { reason }`) and neither fixes the COMPARISON. `>=` is what `exhaustion_ac024_ac025`
-    // already encodes, so it is kept — changing it here would move an instrument on this stage's
-    // own authority, which `00-preamble.md`:55 forbids. **A record settling `>=` against `>` is
-    // OWED**, and until it lands an activity declaring rule 8's bare minimum cannot close a gate.
+    // The comparison now follows each criterion's own verb — `>` for attempts and tokens (AC-025,
+    // *"ran out"*), `>=` for the wall clock (AC-024, *"reaches"*) — and the doc comment above
+    // carries the warrant and the OWED record. Design §3.6:344 and schema §4:83 both name the
+    // OUTCOME (`Err(BudgetExhausted)`, `Blocked { reason }`) and neither fixes the COMPARISON.
     //
-    // What IS repaired here is the degenerate case, which needs no decision: `0 >= 0` held, so a
-    // declared 0 against an EMPTY ledger read as exhausted and minted a budget-extension mark for
-    // a run that had done nothing. Nothing can run out of a budget it never drew on.
+    // The declared-`0` guard is unchanged and is load-bearing for the wall clock's `>=`: without
+    // it, a declared 0 against an EMPTY ledger reads as exhausted and mints a budget-extension mark
+    // for a run that has done nothing.
     Counter::ALL.into_iter().find(|counter| match counter {
+        // AC-025: *"ran out"* — spending exactly the declared number is not running out of it.
         Counter::Attempts => {
-            envelope.attempts_total.get() > 0 && ledger.attempts >= envelope.attempts_total
+            envelope.attempts_total.get() > 0 && ledger.attempts > envelope.attempts_total
         }
-        Counter::Tokens => envelope.tokens.get() > 0 && ledger.tokens >= envelope.tokens,
+        // AC-025 again, the same verb over the same kind of quantity.
+        Counter::Tokens => envelope.tokens.get() > 0 && ledger.tokens > envelope.tokens,
+        // AC-024: *"reaches"* — reaching the declared wall clock IS reaching it.
         Counter::WallClock => {
             envelope.wall_clock_secs.get() > 0 && ledger.wall_clock >= envelope.wall_clock_secs
         }
@@ -840,6 +889,78 @@ impl BudgetExtensionMark {
     pub const fn declared(&self) -> WallClockSecs {
         self.declared
     }
+
+    /// The mark **as the event that carries it** — added 2026-09-14 for D-8.
+    ///
+    /// `crate::runtime::marks::RetryAtMark::to_event` is the shape, one kind over, so the journal
+    /// carries **one** convention for a mark rather than two: a `kind` tag that tells the mark
+    /// apart from the other producer of the same [`EventKind`], and the mark's own members beside
+    /// it. `gate_opened` has two producers here exactly as `rate_limited` does — the FSM's gate
+    /// record and this — and a reader that guessed between them would be silently wrong, which is
+    /// what [`Self::KIND`] exists to prevent.
+    ///
+    /// **This is the mark's FORM and not its WRITE.** The append is outside the pure function
+    /// (ADR-0119 clause 5, ADR-0120 clause 4) and nothing in `src/` calls
+    /// [`wall_clock_expiry_mark`] even now — see that function's own doc for the re-measured count.
+    /// What this method changes is that a caller which *has* decided to write the mark no longer
+    /// has to invent a payload shape of its own.
+    ///
+    /// **The payload's field set is a reading, and so is `RetryAtMark`'s**: `rk_types::event::Event`
+    /// carries `payload: serde_json::Value` and the typed-payload record, per kind, is **OWED**
+    /// (`rk-types/src/event.rs`:53-59). Nothing here mints an `EventKind` — the carrier is
+    /// [`Self::event_kind`], one of the closed 29.
+    #[must_use]
+    pub fn to_event(self) -> Event {
+        Event::new(
+            Self::event_kind(),
+            serde_json::json!({
+                "kind": Self::KIND,
+                "spent": self.spent.get(),
+                "declared": self.declared.get(),
+            }),
+        )
+    }
+
+    /// Rebuild a mark the journal already carries.
+    ///
+    /// **The readback's constructor, and it decides nothing.** [`wall_clock_expiry_mark`] stays the
+    /// only place that decides *whether* a mark is owed; this only re-reads one that was already
+    /// written. `crate::runtime::marks::RetryAtMark::carried` is the precedent — a public
+    /// constructor used by the producer and the reader alike.
+    #[must_use]
+    pub const fn from_journal(spent: WallClockSecs, declared: WallClockSecs) -> Self {
+        Self { spent, declared }
+    }
+}
+
+/// Every budget-extension mark the journal holds, in append order — added 2026-09-14 for D-8.
+///
+/// **A `gate_opened` row that is not this mark is skipped rather than defaulted**, and a row that
+/// claims to be one but is missing a member is skipped too. Design §5 gives `gate_opened` to both
+/// the FSM's gate record and this mark; `kind = "budget_extension"` is what tells them apart, and
+/// the shape is `crate::runtime::marks::read_retry_at_marks`' verbatim — one kind, two
+/// propositions, and a fold that guesses between them is a fold that can be wrong silently.
+#[must_use]
+pub fn read_budget_extension_marks(events: &[Event]) -> Vec<BudgetExtensionMark> {
+    events
+        .iter()
+        .filter(|e| e.kind == BudgetExtensionMark::event_kind())
+        .filter(|e| {
+            e.payload.get("kind").and_then(serde_json::Value::as_str)
+                == Some(BudgetExtensionMark::KIND)
+        })
+        .filter_map(|e| {
+            let spent = e.payload.get("spent").and_then(serde_json::Value::as_u64)?;
+            let declared = e
+                .payload
+                .get("declared")
+                .and_then(serde_json::Value::as_u64)?;
+            Some(BudgetExtensionMark::from_journal(
+                WallClockSecs::new(spent),
+                WallClockSecs::new(declared),
+            ))
+        })
+        .collect()
 }
 
 /// **AC-024, half 1.** The mark a run that has reached its wall-clock budget owes, or `None`.
@@ -851,19 +972,29 @@ impl BudgetExtensionMark {
 /// `#![deny(clippy::disallowed_methods)]` on the parent module is the structural half (AC-003),
 /// re-run here rather than re-claimed.
 ///
-/// **ARMED, NOT DISCHARGED, and named rather than assumed:** AC-024's *"exits 0"* is a **process**
-/// exit and `rk-kernel` is a library — there is no `rk-cli` before Step 7d, and a test that called
-/// `std::process::exit` would kill the harness rather than assert anything. The *write* of this mark
-/// and *"no further dispatch"* are the runtime's (Slice 4h). AC-024 is also a **twin**, not the
-/// owner: the owner is the human-gate pair AC-240 + AC-278, and this half may not be double-claimed
-/// against that area.
+/// **ARMED, NOT DISCHARGED, and named rather than assumed.** This paragraph opened *"AC-024's
+/// *\"exits 0\"* is a **process** exit and `rk-kernel` is a library — there is no `rk-cli` before Step
+/// 7d, and a test that called `std::process::exit` would kill the harness rather than assert
+/// anything"* until 2026-09-14. The clause about `std::process::exit` is still true and is still
+/// why no test asserts its OWN exit; the conclusion drawn from it is withdrawn under **D-8**, which
+/// built `tests/it/cross_process.rs`'s `ac024_wall_clock_mark_outlives_the_process_that_wrote_it` —
+/// a child process that reaches its wall-clock budget, writes [`BudgetExtensionMark::to_event`]'s
+/// row and exits, with the PARENT reading both. What is still 7d's is that the exiting process is
+/// `redkiln run`. **What is still ARMED here and is not moved by any of that:** the *write* of this
+/// mark on a live `src/` path, and *"no further dispatch"*, which needs a dispatch counter — both
+/// the runtime's. AC-024 is also a **twin**, not the owner: the owner is the human-gate pair
+/// AC-240 + AC-278, and this half may not be double-claimed against that area.
 #[must_use]
 pub fn wall_clock_expiry_mark(
     ledger: &BudgetLedger,
     envelope: &BudgetEnvelope,
 ) -> Option<BudgetExtensionMark> {
-    // The SAME boundary as every other counter's, because it is the same function: a run that has
-    // reached its declared wall clock has run out of it (`exhausted_counter`'s stated reading).
+    // THE SAME BOUNDARY `exhausted_counter` TAKES FOR `Counter::WallClock`, and stated per counter
+    // because as of 2026-09-14 the three counters no longer share one comparison: AC-024's verb is
+    // *"reaches"*, so this is `>=` — while attempts and tokens take AC-025's *"ran out"* and are
+    // `>`. This is a second expression rather than a call, and the two are kept in step by
+    // `exhaustion_ac024_ac025`'s obligation 4, which asserts the mark at `wall` and its absence at
+    // `wall - 1`.
     (ledger.wall_clock >= envelope.wall_clock_secs).then_some(BudgetExtensionMark {
         spent: ledger.wall_clock,
         declared: envelope.wall_clock_secs,

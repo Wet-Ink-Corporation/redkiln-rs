@@ -1,0 +1,75 @@
+# The pack that DECLARES the breaker's key — **`[role.<name>] family`**, the role → model-family
+# table of the operator decision of 2026-09-14 (D-7) — and the breaker envelope beside it: `K` and
+# the expiry.
+#
+# It is the positive half of the key that `src/workflow/breaker.rs`'s header reported as
+# **ARMED, NOT DISCHARGED** until today: *"nothing in this tree represents a model family"*. The pack
+# does now, and this file is what a resolver reads.
+#
+# **THE THREE NUMBERS AND THE THREE TOKENS ARE ALL DIFFERENT FROM EACH OTHER AND FROM
+# `runtime-envelope.toml`'s, AND THAT IS THE FIXTURE'S WHOLE POINT.** An accessor that read the wrong
+# key, or a test written over a pack whose values collide, would not discriminate:
+#
+#   | value              | here | `runtime-envelope.toml` |
+#   | ---                | ---  | ---                     |
+#   | `K`                | 2    | 3                       |
+#   | `N`                | 5    | 4                       |
+#   | the expiry         | 900  | *(declares none)*       |
+#   | `appetite.points`  | 70   | 50                      |
+#   | `appetite.tokens`  | 70_000 | 50_000                |
+#
+# **THE ROLE → FAMILY TABLE IS NOT AN IDENTITY MAP, AND THAT IS DELIBERATE.** `investigator` and
+# `implementer` resolve to the SAME family while `reviewer` resolves to a different one — which is
+# D-7's own reason for rejecting the cheaper alternative of keying the breaker on the **role**:
+# *"N roles map to one model, so a per-role breaker stops one role's share of traffic to a failing
+# model while the rest keeps flowing, and AC-034's 'never trips globally' becomes true in a way that
+# misses the point."* A resolver that returned the role verbatim gives three keys where there are
+# two, and the pinning test sees it.
+#
+# **AND NO FAMILY TOKEN HERE IS ANY ACTIVITY'S `family`.** `crates/rk-kernel/tests/fixtures/catalog/
+# differential-debugging.toml` declares `family = "localisation"` — ADR-0058's **ACTIVITY** family, a
+# rank-escalation ladder — and carries steps at `role = "investigator"` and `role = "reviewer"`. One
+# activity, one activity-family, two roles, two model families. A resolver that read `.family`
+# instead of the role would key both steps on `localisation`, which trips globally with respect to
+# the model and locally with respect to the method; no token below is `localisation`, so that
+# substitution is a red rather than a pass.
+#
+# **THE KEY SPELLINGS ARE A READING AND NO RECORD STATES THEM** — `[role.<name>] family` extends
+# design :480's *"tier policy per role"* and `[breaker] expiry_secs` sits beside the `K` key
+# `crates/rk-kernel/src/workflow/envelope.rs` already records as a reading. There is no `role` table
+# in any shipped pack [measured 2026-09-14: `grep -rn role spikes/p9/packs/` → **0 hits across all
+# twelve**], so this file is AUTHORED, never copied: §7b.12 forbids editing `spikes/p9/` to make a
+# case, and the shipped packs' own role tables are **Step 7e's** (§7b.15's AC-080–AC-118 shape —
+# rules and fixtures here, shipped artifacts there).
+[pack]
+id = "role-families-fixture"
+applies = "kind == incident"
+appetite = { points = 70, tokens = 70_000 }
+
+# `N` — AC-029's attempt cap. Five, which is not two, not four and not nine hundred.
+[retry]
+attempts_cap = 5
+
+# `K` — AC-033's consecutive-`Platform`-failure threshold — and the expiry AC-035's
+# *"until the mark is read and found expired"* names. The expiry's HOME was reported as settled by no
+# record until 2026-09-14; D-7 puts it beside `K`, where the breaker's other pack-declared number
+# already lives.
+[breaker]
+consecutive_platform_failures = 2
+expiry_secs = 900
+
+# THE ROLE → MODEL-FAMILY TABLE. Two families over three roles.
+[role.investigator]
+family = "deliberative"
+
+[role.implementer]
+family = "deliberative"
+
+[role.reviewer]
+family = "adversarial"
+
+[policy]
+stages = { triage = "mandatory", analysis = "recommended", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]

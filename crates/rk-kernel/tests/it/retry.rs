@@ -8,7 +8,7 @@
 //! | **AC-026** | ADR-0122 decision 1's charge unit (one charge per recorded `system/api_retry` **event**, never the terminal `attempt` value) and decision 2's dispatch-scoped suppression, over a committed fixture | **the register's own instrument** — *"rows from `spikes/results/e3.jsonl` (and `p7`/`s-var`) **at the corpus pin**"*. That half is [`inner_retry_ac026_at_the_corpus_pin`], behind `--features corpus`. The unfeatured half below pins the **accounting rule** and is not AC-026's named instrument |
 //! | **AC-027** | the four classes the criterion names, table-driven: `redispatches() == 0` **and** the typed error surfaced, per class | nothing is claimed for `Cancelled` or `NonZero`, which ADR-0095's table also marks `never` and **no criterion's THEN names** |
 //! | **AC-028** | that the two policy `match`es over `StepError` are exhaustive and carry no wildcard — a **source lint** with anchors, plus `tests/ui/ac028_steperror_wildcard.rs` | see [`ac028_policy_match_has_no_wildcard`]'s doc: the literal *"the wildcard cannot be reintroduced"* is **not constructible** as a compile-fail case and the substitute is named there |
-//! | **AC-029** | the two kernel constants, the exponent, the cap, full jitter's envelope **and its two endpoints**, determinism across two evaluations, and the cap read from a **pack fixture** | the **production jitter draw is unbound** — [`rk_kernel::retry::JitterDraw`] is a parameter and this crate mints none. AC-029's *"full jitter"* conjunct is discharged at the envelope and at the determinism, and the draw is **ARMED, NOT DISCHARGED** |
+//! | **AC-029** | the two kernel constants, the exponent, the cap, full jitter's envelope **and its two endpoints**, determinism across two evaluations, the cap read from a **pack fixture**, and — as of 2026-09-14 — the **production draw**, whose identity at both delay-carrying arms is [`jitter_source_is_forced_and_owes_no_record`]'s | *(this cell said the production draw was **unbound** and **ARMED, NOT DISCHARGED**. Both were false in the tree: `decide` calls `JitterDraw::from_key` at two sites, and AC-002's own closing sentence licenses that source. The correction is measured, not argued — see that test's doc)* |
 //! | **AC-030** | nothing. `WaitForReset` is exercised only as a row of AC-027's control sweep | the `retry_at(resets_at)` mark, the exit and the resume need the runtime boundary and are not built |
 //! | **AC-031** | nothing | the scripted-responder instrument needs a dispatcher; the prose-extraction sub-clause needs a boundary module. Both are **not built** |
 //! | **AC-032** | both halves the criterion names: the type test (`tests/ui/ac032_finding_is_not_a_steperror.rs`) and **dispatch count 1** | — |
@@ -176,13 +176,16 @@ fn blocking_findings() -> Findings {
     }
 }
 
+/// `src/workflow/retry.rs`, verbatim. **The only reader that wants the comments is the one below.**
+const RETRY_SRC: &str = include_str!("../../src/workflow/retry.rs");
+
 /// `src/workflow/retry.rs` with every comment line removed.
 ///
 /// The criteria's own words are quoted in that file's header, so a lint that matched prose would be
 /// measuring its own documentation. `tests/it/budget.rs` uses the same stripper for AC-024's
 /// no-sleep half and the reason is the same.
 fn retry_source_without_comments() -> String {
-    const SRC: &str = include_str!("../../src/workflow/retry.rs");
+    const SRC: &str = RETRY_SRC;
     SRC.lines()
         .filter(|line| {
             let t = line.trim_start();
@@ -190,6 +193,63 @@ fn retry_source_without_comments() -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// The module header of `src/workflow/retry.rs` — the **leading run of `//!` lines and nothing
+/// else**, in source order, joined with a space.
+///
+/// **A whole-file `contains` is decoration, and this module has the measurement to prove it.**
+/// `inner_retry_ac026`'s own comment records it: a whole-file match for *"this crate's proposal"*
+/// stayed green when the phrase was deleted from the declaration it claimed to be about, because a
+/// copy of the same phrase sat 400 lines away. So every prose assertion in this file windows first.
+///
+/// Joined in **source** order, not reverse, so a phrase that wraps across two `//!` lines is still
+/// found rather than being silently unmatchable.
+fn retry_module_header() -> String {
+    RETRY_SRC
+        .lines()
+        .take_while(|l| l.trim_start().starts_with("//!"))
+        // THE MARKER IS STRIPPED, AND THAT IS NOT COSMETIC. Joining raw lines leaves a `//!`
+        // between them, so any phrase that wraps across two lines becomes unmatchable and every
+        // positive assertion silently weakens to "must not wrap" [measured 2026-09-14: the first
+        // draft of this helper went red on a phrase that is present].
+        .map(|l| l.trim_start().trim_start_matches("//!").trim())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The doc block immediately above one declaration in `src/workflow/retry.rs`, as one line.
+///
+/// Three properties, each of which was a defect in some earlier version of this instrument:
+///
+/// - **Attribute-aware.** The walk back passes over the `#[must_use]` between a doc block and its
+///   item; a walk that stopped at the first non-`///` line would make `from_key`'s window empty and
+///   every negative assertion over it vacuously true.
+/// - **Newline-agnostic.** The window is taken by walking lines, never by searching for a blank
+///   line with a two-newline needle — which matched nothing on a CRLF tree, fell through to the
+///   start of the file and produced a 30,288-byte "window" where the real block is 1,861
+///   [measured 2026-09-14; the note lives on `inner_retry_ac026`].
+/// - **Source order.** Joined forward, so a phrase that wraps across two `///` lines matches.
+fn retry_doc_block_above(decl: &str) -> String {
+    let at = RETRY_SRC
+        .find(decl)
+        .unwrap_or_else(|| panic!("`{decl}` must be declared in src/workflow/retry.rs"));
+    let head = &RETRY_SRC[..at];
+    let head = &head[..head.rfind('\n').map_or(0, |i| i + 1)];
+    let mut doc: Vec<&str> = head
+        .lines()
+        .rev()
+        .take_while(|l| {
+            let t = l.trim_start();
+            t.starts_with("///") || t.starts_with('#')
+        })
+        .filter(|l| l.trim_start().starts_with("///"))
+        // Stripped for [`retry_module_header`]'s reason: a retained `///` between two joined lines
+        // makes every wrapped phrase unmatchable.
+        .map(|l| l.trim_start().trim_start_matches("///").trim())
+        .collect();
+    doc.reverse();
+    doc.join(" ")
 }
 
 // ---- AC-027 — configuration classes are never retried -------------------------------------------
@@ -466,13 +526,19 @@ fn ac028_policy_match_has_no_wildcard() {
 /// count never exceeds the pack's `N`**. Verified by: a unit test with an **injected clock and
 /// seeded jitter** asserting the delay envelope and the attempt cap."*
 ///
-/// **The seeded jitter is literal, not figurative.** This crate mints no draw:
-/// [`rk_kernel::retry::JitterDraw`] is a parameter, and the sequence below is supplied by this test.
-/// The second, derived constructor — `JitterDraw::from_key` — reads the leading bytes of the
-/// idempotency key's digest, which is `sha256_lp(item, activity_id@version, attempt)`, so a replay
-/// recomputes the same delay from recorded inputs alone. **A record authorising a *draw* seeded from
-/// that tuple is OWED**: AC-002 licenses it for *ids* and a delay is not an id. The module header
-/// carries the residual.
+/// **The seeded jitter is literal, not figurative.** [`rk_kernel::retry::JitterDraw`] is a
+/// parameter of `backoff_delay`, and the sequence swept below is supplied by this test, which is
+/// what puts a delay at each endpoint of the envelope. The second, derived constructor —
+/// `JitterDraw::from_key` — reads the leading bytes of the idempotency key's digest, which is
+/// `sha256_lp(item, activity_id@version, attempt)`, so a replay recomputes the same delay from
+/// recorded inputs alone.
+///
+/// **That source is FORCED and owes no record** *(corrected 2026-09-14; this paragraph claimed one
+/// was OWED on the reading that AC-002 licenses the tuple for* ids *and a delay is not an id)*.
+/// AC-002 bans a **non-deterministic** source and names the idempotency key and a content hash as
+/// the licensed derivations; AC-029 requires a seeded draw. The binding on the production path is
+/// [`jitter_source_is_forced_and_owes_no_record`]'s to assert; what is asserted **here** is the
+/// envelope, its endpoints, and that a different key moves the delay somewhere.
 ///
 /// **`N` is read from a pack fixture and appears as no literal here.** Inverting the two homes —
 /// pack-reading the base and cap, code-defaulting `N` — violates the register in both directions at
@@ -705,6 +771,294 @@ const fn delay_of(decision: &RetryDecision) -> Option<u64> {
         | RetryDecision::WaitForReset { .. }
         | RetryDecision::Refuse { .. }
         | RetryDecision::CapReached { .. } => None,
+    }
+}
+
+// ---- the jitter SOURCE — forced by AC-002, and the record that is NOT owed -----------------------
+
+/// **The jitter source is FORCED by AC-002, it is WIRED on the production path, and no record is
+/// owed for it** — decided 2026-09-14, and this is what stops the module drifting back.
+///
+/// # The warrant, in the register's own words
+///
+/// AC-002's WHEN bans a draw *"from a **non-deterministic** source (`rand`, `uuid::new_v4`, address
+/// hashing)"* — it bans **non-determinism**, not derivation. Its closing sentence sanctions the
+/// route in terms: *"Ids the workflow needs are derived from the idempotency key `(item,
+/// activity_id@version, attempt)` (ADR-0097) **or from a content hash**."*
+/// `rk_kernel::retry::JitterDraw::from_key` reads that key's digest, which is `sha256_lp` over
+/// exactly that tuple; AC-029 *requires* a seeded draw. The class is blessed, the route is the
+/// blessed one, and **there is no free residual for an operator to settle**.
+///
+/// # What stood here until today, and why it is withdrawn rather than edited away
+///
+/// `src/workflow/retry.rs`'s header said *"AC-002 licenses that tuple for **ids**, and a delay is
+/// not an id. No record says the idempotency key may seed a **draw** … `JitterDraw::from_key` is
+/// this crate's proposal"*, and its criterion table called the production draw *"not bound"*. Both
+/// are false in this tree. The second is refuted by **part 1**, which reads the delay `decide`
+/// actually returns rather than the delay it is allowed to return. The first is refuted by AC-002's
+/// own closing sentence — which that same header **quoted at its own `:41-43`, five lines above the
+/// sentence at `:48` that contradicted it**.
+///
+/// # How part 2 tells a withdrawn claim from a deleted one
+///
+/// Both sites keep the withdrawn sentence **verbatim**, because a correction that deletes what it
+/// corrects leaves the next reader nothing to check it against — `budget.rs`'s header takes the
+/// same discipline with its own false history. A blunt `!contains` would therefore be wrong in both
+/// directions: red on an honest correction, green on a silent scrub. The marker
+/// `WITHDRAWN 2026-09-14` splits each window into the **live claims** and the **quoted history**,
+/// and both halves are asserted — the phrase absent above it, present below it.
+///
+/// # 🛑 THE MODULE'S OTHER OWED-RECORD CLAIM IS **KEPT**, AND PART 3 IS WHAT KEEPS IT
+///
+/// `HARNESS_ALREADY_RETRIED` **is** this crate's proposal with a record OWED — spelled by no
+/// register line, by no ADR-0122 decision and by no design §5 entry — and nothing here withdraws
+/// it. Part 2's two **negative** assertions are otherwise satisfiable by deleting every such phrase
+/// from the file, which would silently withdraw the claim that must stand; part 3 is the control
+/// that refuses that, and `inner_retry_ac026` pins the same window independently.
+///
+/// # Why the name carries no AC id
+///
+/// **Not** for `appetite_raise_from_an_activity_result_is_refused`'s reason (`it/budget.rs`) — that
+/// name is AC-id-free because a record is owed, and here none is. It carries none because it
+/// discharges no criterion's named instrument: AC-002's are `clippy.toml`'s denylist and the source
+/// lint `it/no_egress.rs` runs; AC-029's are `outer_retry_ac029`'s. What is measured here is a
+/// **binding** and a **warrant**.
+///
+/// # What would make it vacuous, and what stops each
+///
+/// - *An arm that passes a constant draw.* Every equality in part 1 would still hold if `decide`
+///   passed `JitterDraw::supplied(0)` and `from_key` also drew 0. **Premise 1** asserts two
+///   different keys draw differently and that the attempt moves the draw; **control 1** asserts a
+///   production delay is actually non-zero.
+/// - *The `Timeout` arm, which only ever backs off at attempt 1, where the ceiling is 2.* One key
+///   there cannot discriminate and the first draft's single equality did not: rewriting that arm to
+///   `supplied(0)` left the whole workspace green [measured 2026-09-14 by mutation]. It is swept
+///   over eight keys and the delays must take **more than one value**, which no constant draw can.
+/// - *A window that fell through to the whole file.* **Premise 2** asserts each of the three
+///   windows is non-empty, is a fraction of the file, and carries a phrase only it can carry.
+/// - *Deleting the phrases everywhere.* **Part 3** keeps `HARNESS_ALREADY_RETRIED`'s label, and
+///   part 2's history half keeps the withdrawn words at both of their own sites.
+/// - *A seventh number appearing in this module.* **Part 4** — the six quantities §7b.10 fixes, and
+///   the three `pub const`s this file is allowed to write.
+#[test]
+fn jitter_source_is_forced_and_owes_no_record() {
+    // ---- PREMISE 1 — the draw is a function of the key ------------------------------------------
+    assert_ne!(
+        JitterDraw::from_key(&key_at(1)),
+        JitterDraw::from_key(&other_key_at(1)),
+        "PREMISE: two different keys must draw differently, or every equality below is satisfied \
+         by a `from_key` that returns a constant"
+    );
+    assert_ne!(
+        JitterDraw::from_key(&key_at(1)),
+        JitterDraw::from_key(&key_at(2)),
+        "PREMISE: the attempt is INSIDE the key, so it moves the draw too"
+    );
+
+    // ---- (1) THE SOURCE IS WIRED, AT BOTH ARMS THAT CARRY A DELAY -------------------------------
+    //
+    // This is the assertion that refutes *"the production draw is not bound"*. `outer_retry_ac029`
+    // asserts the delay is INSIDE the envelope and that a different key moves it somewhere; what is
+    // asserted here is the **identity** — the number `decide` returns is `backoff_delay` over this
+    // key's own `from_key` draw and over nothing else.
+    let cap = declared_cap();
+    assert!(cap.get() > 2, "the sweep is vacuous at N <= 2; N is {cap}");
+
+    let mut any_non_zero = false;
+    for attempt in 1..cap.get() {
+        let key = key_at(attempt);
+        let produced = delay_of(&decide(&transport(), &key, cap));
+        assert_eq!(
+            produced,
+            Some(backoff_delay(attempt, JitterDraw::from_key(&key))),
+            "the `Backoff` arm draws from the idempotency key at attempt {attempt}"
+        );
+        any_non_zero |= produced.unwrap_or(0) > 0;
+    }
+    // CONTROL 1 — a zero draw yields zero at every attempt, so an arm hard-wired to one would pass
+    // every equality above if `from_key` happened to draw zero as well.
+    assert_eq!(backoff_delay(9, JitterDraw::supplied(0)), 0);
+    assert!(
+        any_non_zero,
+        "every production delay was zero — the equalities above would then be satisfied by an arm \
+         that draws nothing at all"
+    );
+
+    // The second arm. AC-029's GIVEN names `Timeout` explicitly, so ADR-0095's ONE retry carries
+    // the same envelope — and, measured here, the same source through the same function.
+    let timeout = StepError::Timeout { after_secs: 900 };
+    assert_eq!(
+        timeout.retry_class(),
+        RetryClass::OnceThenEscalate,
+        "PREMISE: ADR-0095 decision 2's row, encoded in rk-types"
+    );
+    //
+    // 🛑 AND IT IS SWEPT OVER SEVERAL KEYS, BECAUSE ONE KEY CANNOT DISCRIMINATE HERE. This arm
+    // backs off only at `attempt <= 1`, where the ceiling is **2** — so the delay is one of
+    // {0, 1, 2} and a single equality against `from_key` is satisfied by an arm hard-wired to
+    // `supplied(0)` roughly one key in three. It was: the first draft asserted exactly one key, and
+    // rewriting this arm to `JitterDraw::supplied(0)` left the WHOLE workspace suite green
+    // [measured 2026-09-14 by mutation — `key_at(1)` happens to draw into the 0 bucket at ceiling
+    // 2]. The discriminator is that the delays this arm produces take **more than one value** over
+    // a key sweep, which no constant draw can do.
+    let sweep: Vec<IdempotencyKey> = (0..8)
+        .map(|n| IdempotencyKey {
+            item: format!("RK-{n:04}"),
+            activity_id_at_version: "review-implementation@3".to_owned(),
+            attempt: 1,
+        })
+        .collect();
+    let mut produced: BTreeSet<Option<u64>> = BTreeSet::new();
+    for key in &sweep {
+        let delay = delay_of(&decide(&timeout, key, cap));
+        assert_eq!(
+            delay,
+            Some(backoff_delay(1, JitterDraw::from_key(key))),
+            "the `OnceThenEscalate` arm draws from the key it was handed, through the same function"
+        );
+        produced.insert(delay);
+    }
+    assert!(
+        produced.len() > 1,
+        "the `Timeout` arm produced the single delay {produced:?} across {} distinct keys — a \
+         constant draw satisfies every equality above, so this arm's binding would be unpinned",
+        sweep.len()
+    );
+
+    // ---- PREMISE 2 — three REAL windows, none of them the whole file ----------------------------
+    let header = retry_module_header();
+    let from_key_doc = retry_doc_block_above("pub fn from_key(");
+    let token_doc = retry_doc_block_above("pub const HARNESS_ALREADY_RETRIED");
+    for (name, window, only_here) in [
+        ("the module header", &header, "AC-029'S"),
+        (
+            "`from_key`'s doc",
+            &from_key_doc,
+            "no arithmetic constant is introduced",
+        ),
+        (
+            "`HARNESS_ALREADY_RETRIED`'s doc",
+            &token_doc,
+            "the class of the *refusal*",
+        ),
+    ] {
+        assert!(
+            !window.is_empty(),
+            "the window for {name} is EMPTY — the walk found nothing and every assertion over it \
+             would be vacuously true"
+        );
+        assert!(
+            window.len() < RETRY_SRC.len() / 2,
+            "the window for {name} is {} bytes of a {}-byte file — it fell through, and a \
+             `contains` over the whole file is decoration",
+            window.len(),
+            RETRY_SRC.len()
+        );
+        assert!(
+            window.contains(only_here),
+            "the window for {name} does not carry {only_here:?}, so it is not the block it claims \
+             to be"
+        );
+    }
+
+    // ---- (2) THE HEADER STATES THE CLAUSE AND CLAIMS NO OWED RECORD FOR THE SOURCE --------------
+    for clause in [
+        "AC-002",
+        "or from a content hash",
+        "idempotency key `(item, activity_id@version, attempt)`",
+    ] {
+        assert!(
+            header.contains(clause),
+            "the header must state the clause that FORCES the source; {clause:?} is missing"
+        );
+    }
+    // THE WITHDRAWN CLAIM IS QUOTED, NOT SCRUBBED — AND THE GUARD HAS TO TELL THOSE APART.
+    //
+    // Both sites keep the sentence that stood until today, verbatim, because a correction that
+    // deletes what it corrects leaves the next reader unable to check it (this is the same
+    // discipline `budget.rs`'s header takes for the `spent > declared` false history). So a blunt
+    // `!contains` is wrong in BOTH directions: it fails on an honest correction, and it passes on a
+    // silent deletion. The marker `WITHDRAWN 2026-09-14` splits each window into the LIVE claims
+    // and the QUOTED HISTORY, and both halves are asserted — the phrase must be absent above the
+    // marker and present below it.
+    let marker = "WITHDRAWN 2026-09-14";
+    for (name, window, phrase) in [
+        ("the module header", &header, "this crate's proposal"),
+        ("`from_key`'s doc", &from_key_doc, "is OWED"),
+    ] {
+        let (live, history) = window.split_once(marker).unwrap_or_else(|| {
+            panic!(
+                "{name} carries no {marker:?} marker, so the withdrawal is unrecorded and this \
+                 assertion cannot tell a live claim from a quoted one"
+            )
+        });
+        assert!(
+            !live.contains(phrase),
+            "{name} still asserts {phrase:?} as a LIVE claim. AC-002's closing sentence sanctions \
+             the idempotency key and a content hash outright and bans only a non-deterministic \
+             source, so there is no proposal here and no record is owed for it"
+        );
+        assert!(
+            history.contains(phrase),
+            "{name} withdrew {phrase:?} without quoting it. A correction that deletes what it \
+             corrects leaves the next reader nothing to check the correction against"
+        );
+    }
+
+    // ---- (3) THE CONTROL — the module's OTHER proposal keeps its label --------------------------
+    //
+    // Without this, part 2 is satisfied by deleting the phrases from the file, which would withdraw
+    // the one claim that IS owed. `inner_retry_ac026` asserts the same window for its own reason;
+    // that this is asserted twice is deliberate, because the two tests fail for different causes.
+    assert!(
+        token_doc.contains("this crate's proposal"),
+        "`HARNESS_ALREADY_RETRIED` is spelled by NO record and must keep saying so"
+    );
+    assert!(
+        token_doc.contains("OWED"),
+        "and the record naming the refusal-class vocabulary is still owed"
+    );
+    assert!(
+        RETRY_SRC.contains("this crate's proposal"),
+        "PREMISE: the phrase still exists in this module, so part 2's negatives are about WHERE it \
+         appears and not about whether the vocabulary was scrubbed"
+    );
+
+    // ---- (4) THE SIX CONSTANTS, AND THE SEVENTH THIS MODULE MAY NOT MINT ------------------------
+    //
+    // §7b.10's 🛑 fixes six quantities with no measured value: `K`, `N`, the backoff base and cap,
+    // the two-tick headroom margin and the per-item token appetite. Two are kernel literals and
+    // live here (PIA-055). `K`, `N` and the appetite are pack-declared and refused as code defaults
+    // — `ac029_n_is_declared_never_defaulted` (`it/envelope.rs`) is `N`'s instrument and neither
+    // `AttemptCap` nor `BreakerThreshold` derives `Default`. The headroom margin is **AC-377's**,
+    // in `rk-adapter-claude`/`doctor`, which is in NO §7b.15 claimed range: it gets no constant
+    // here and no test named for it [measured 2026-09-14: `grep -rni headroom
+    // crates/rk-kernel/tests` -> 0 hits].
+    let src = retry_source_without_comments();
+    for declared in [
+        "pub const BACKOFF_BASE_SECS: u64 = 2;",
+        "pub const BACKOFF_CAP_SECS: u64 = 300;",
+    ] {
+        assert!(
+            src.contains(declared),
+            "the kernel literal {declared:?} is this module's, by PIA-055"
+        );
+    }
+    for foreign in [
+        "headroom",
+        "margin",
+        "Margins",
+        "appetite",
+        "AttemptCap::declared",
+        "BreakerThreshold",
+    ] {
+        assert!(
+            !src.contains(foreign),
+            "`{foreign}` may not appear in the retry policy's CODE. The other four of §7b.10's six \
+             are declared elsewhere — three in the pack and one in `rk-adapter-claude` — and a \
+             constant for any of them written here would violate the register in the direction \
+             PIA-055 names"
+        );
     }
 }
 
@@ -1193,10 +1547,13 @@ fn inner_retry_ac026() {
          indistinguishable from `UpToAttempts`' refusal of the same error"
     );
     assert!(
-        // ANCHORED TO THE DECLARATION, NOT THE FILE. A whole-file `contains` was green on
-        // `JitterDraw`'s copy of the same phrase at :51 when the label was deleted from the
-        // declaration [measured 2026-09-14 by mutation]. A control that passes on some other
-        // item's text is decoration, so the window is the declaration's own preceding doc.
+        // ANCHORED TO THE DECLARATION, NOT THE FILE. A whole-file `contains` was green when the
+        // label was deleted from this declaration, because `JitterDraw`'s header section carried a
+        // copy of the same phrase [measured 2026-09-14 by mutation]. That copy has since been
+        // WITHDRAWN — the jitter source is forced by AC-002 and owes no record — so the defect is
+        // no longer reproducible at that particular site. The anchoring stays regardless: a
+        // control that passes on some other item's text is decoration however few other items
+        // there happen to be today. The window is the declaration's own preceding doc.
         {
             let src = include_str!("../../src/workflow/retry.rs");
             let decl = src

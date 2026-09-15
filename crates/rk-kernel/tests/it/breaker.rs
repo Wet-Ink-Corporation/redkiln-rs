@@ -6,27 +6,48 @@
 //! | criterion | measured here | ARMED, not discharged |
 //! | --- | --- | --- |
 //! | **AC-033** | the K-consecutive-`Platform` counting rule, the reset rule, the refusal, and `K` read from a pack fixture and **refused as a code default** (`require_breaker_threshold`) | *"a durable breaker mark for the family is **written**"* — **no `EventKind`, no `RefusalClass` and no `StepError` variant can carry one**, and minting a kind outside a record is schema drift under ADR-0116. The mark is **derived** from the store here and never written |
-//! | **AC-034** | the two-family property over two arbitrary distinct keys (one refusal, one success), and the lint banning module-level `static`/`lazy_static`/`OnceLock` breaker state | nothing |
-//! | **AC-035** | a dropped-and-rebuilt state over the same journal still refuses; the lint that breaker state is constructed only from the store; the expiry compared against a **journaled** instant | the **value and the home of the expiry** (§7b.10's two lists contain neither) and the **real process-death grain** — the grain here is a dropped value, and a `taskkill` boundary is 7d's |
+//! | **AC-034** | the two-family property over two arbitrary distinct keys (one refusal, one success), and the lint banning module-level `static`/`lazy_static`/`OnceLock` breaker state — and, as of 2026-09-14, the same isolation over two **resolved** keys belonging to two roles of one activity | nothing |
+//! | **AC-035** | a dropped-and-rebuilt state over the same journal still refuses; the lint that breaker state is constructed only from the store; the expiry compared against a **journaled** instant, and (2026-09-14) **pack-declared and refused as a code default** | the expiry's **value** (sized by no corpus figure — only its home is settled). *(**The real process-death grain left this cell on 2026-09-14.** It read *"and the **real process-death grain** — the grain here is a dropped value, and a `taskkill` boundary is 7d's"*. Operator decision **D-8** built the boundary in `tests/it/cross_process.rs`, whose `ac035_breaker_refusal_survives_a_real_process_death` re-execs this test binary and folds a journal a **dead child process** wrote — the criterion's own *"kill-and-re-enter test"*. What is still 7d's is narrower: *"`redkiln run` is invoked again"* as a **CLI** re-entry. The grain in THIS file is still a dropped value and it still claims nothing more.)* |
 //!
-//! # 🛑 AND THE KEY ITSELF IS ARMED — READ THIS BEFORE ADDING A CASE
+//! # THE KEY IS BUILT AS OF 2026-09-14 — READ THIS BEFORE ADDING A CASE
 //!
-//! Every case below supplies its own family token through [`FamilyKey::supplied`]. **Nothing in
-//! this tree represents a model family** [measured 2026-09-14: `grep -rn
-//! "family\|ModelFamily\|model_tier" crates/rk-types/src/ crates/rk-ports/src/` → 0 hits, exit 1],
-//! and `crates/rk-kernel/src/catalog.rs`'s `family` is **ADR-0058's activity family** — a
-//! rank-escalation ladder whose members would typically all run on the *same* model. A breaker keyed
-//! on it would trip globally with respect to the model and locally with respect to the method, which
-//! is the inverse of AC-034 on both axes — **and every assertion in this file would still pass.**
-//! The instrument cannot tell the two apart, which is why the substitution is banned in prose here
-//! and by construction in `src/workflow/breaker.rs` (one constructor, taking the token from the
-//! caller). The binding is 7c's and a record is OWED.
+//! **This section was headed *"🛑 AND THE KEY ITSELF IS ARMED"* until 2026-09-14 and said**:
+//!
+//! > Every case below supplies its own family token through [`FamilyKey::supplied`]. **Nothing in
+//! > this tree represents a model family** … and `crates/rk-kernel/src/catalog.rs`'s `family` is
+//! > **ADR-0058's activity family** … A breaker keyed on it would trip globally with respect to the
+//! > model and locally with respect to the method, which is the inverse of AC-034 on both axes —
+//! > **and every assertion in this file would still pass.** The instrument cannot tell the two
+//! > apart … The binding is 7c's and a record is OWED.
+//!
+//! **Operator decision D-7 built the binding here**: the pack declares `[role.<name>] family`, the
+//! kernel resolves role → family at plan time, and the breaker keys on the resolved family. The
+//! sentence that mattered most in the quoted paragraph — *"every assertion in this file would still
+//! pass"* — **was true when it was written and is false now**, and making it false is the point of
+//! the last test in this file. `breaker_key_is_the_packs_role_family_never_the_activity_family`
+//! resolves two roles of **one** fixture activity that declares `family = "localisation"` and
+//! asserts the two keys differ, that neither is `localisation`, that `localisation` is *refused* as
+//! a role, and that tripping one role's family leaves the other proceeding. A resolver that read
+//! `.family` fails four of those assertions.
+//!
+//! **The two cases above still supply their own arbitrary tokens, and that is deliberate.** AC-034's
+//! property is over two *arbitrary* distinct keys and does not depend on what a key means; writing
+//! them over resolved keys would make them depend on a pack fixture for no gain. What changed is
+//! that the file no longer relies on the arbitrary-token form **alone**.
+//!
+//! **What is still OWED**, and it is why the new test's name carries no AC id: the key spellings
+//! `[role.<name>] family` and `[breaker] expiry_secs` are a **reading** — the same gap
+//! `src/workflow/envelope.rs`'s 🛑 already records for the three envelope keys — and whether two
+//! model names are one family or two is a question for a pack author, whose shipped tables are
+//! **Step 7e's** [measured 2026-09-14: `grep -rn role spikes/p9/packs/` → 0 hits across all twelve].
 
+use rk_kernel::catalog::{Activity, Catalog};
 use rk_kernel::select::Pack;
 use rk_kernel::workflow::breaker::{
     BREAKER_ANCHORS, BreakerDecision, BreakerExpiry, BreakerLintViolation, BreakerState, FamilyKey,
-    JournaledNow, MODULE_STATE_FORMS, NOT_FROM_STORE_FORMS, breaker_no_module_state_rule,
-    breaker_state_from_store_rule,
+    JournaledNow, MODULE_STATE_FORMS, NOT_FROM_STORE_FORMS, NOT_THE_ACTIVITY_FAMILY_FORMS,
+    ROLE_RESOLUTION_ANCHORS, breaker_no_module_state_rule, breaker_state_from_store_rule,
+    family_key_never_from_the_activity_catalog_rule,
 };
 use rk_kernel::workflow::envelope::{AttemptCap, BreakerThreshold, EnvelopeError};
 use rk_types::event::Event;
@@ -37,6 +58,18 @@ use rk_types::time::Timestamp;
 const FIXTURE_ENVELOPE: &str = include_str!("../fixtures/packs/runtime-envelope.toml");
 /// The same pack with no `[breaker]` table.
 const FIXTURE_NO_K: &str = include_str!("../fixtures/packs/runtime-no-k.toml");
+/// **The pack that declares the KEY** — the `[role.<name>] family` table of 2026-09-14 (D-7) — and
+/// the breaker envelope beside it: `K = 2`, the expiry `= 900`. Every number in it differs from
+/// `runtime-envelope.toml`'s, so a test reading the wrong pack lands on a number this file names.
+const FIXTURE_ROLE_FAMILIES: &str = include_str!("../fixtures/packs/role-families.toml");
+/// The fixture activity carrying **both** families: `family = "localisation"` (ADR-0058's activity
+/// family) and steps at two different roles.
+const FIXTURE_ACTIVITY: &str = include_str!("../fixtures/catalog/differential-debugging.toml");
+
+/// `crates/rk-kernel/src/select/pack.rs`'s own source — the **second** file the key's substitution
+/// could be written in, because the role → family resolution lives there. Compiled in, never
+/// opened, for [`BREAKER_SRC`]'s reason.
+const PACK_SRC: &str = include_str!("../../src/select/pack.rs");
 
 /// The breaker module's own source, for the two lints AC-034 and AC-035 name.
 ///
@@ -411,9 +444,16 @@ fn breaker_ac033_ac035() {
     assert!(state_noise.mark(&family).is_some());
 
     // ---- 4. AC-035: the refusal survives the state being dropped ------------------------------
-    // The grain is a DROPPED VALUE, not a `taskkill`: the real process-death grain is 7d's and is
-    // reported ARMED. What this asserts is the property AC-035's THEN turns on — that the refusal
-    // is a function of the store's contents and of nothing held in memory.
+    // The grain here is a DROPPED VALUE, not a `taskkill`, and that is deliberate rather than a
+    // limit. This comment continued "the real process-death grain is 7d's and is reported ARMED"
+    // until 2026-09-14; operator decision D-8 made both clauses false, and the correction is stated
+    // rather than the sentence deleted. `cross_process::ac035_breaker_refusal_survives_a_real_
+    // process_death` re-execs this binary and folds what a DEAD process left on disk — AC-035's own
+    // named instrument, a "kill-and-re-enter test". This case KEEPS the dropped-value grain because
+    // it is the cheap in-process form of the same property and it runs under `breaker_ac033_ac035`,
+    // a Checkpoint 7b name that spawns nothing. What this asserts is the property AC-035's THEN
+    // turns on — that the refusal is a function of the store's contents and of nothing held in
+    // memory.
     let first = BreakerState::from_events(&tripped, k).expect("the journal folds");
     let refused_before = first.decide(&family, now(1_100), BreakerExpiry::declared(600));
     drop(first);
@@ -438,7 +478,9 @@ fn breaker_ac033_ac035() {
     // number with no measured value into pack-declared and kernel-constant, and the breaker's
     // expiry is in NEITHER list. It arrives here as a declared argument, and this crate names no
     // number. The BOUNDARY is `elapsed >= expiry`, the reading `budget.rs`'s `exhausted_counter`
-    // already takes for a declared quantity, and both sides are asserted.
+    // already takes for its WALL-CLOCK counter (AC-024's *"reaches"*), which is this quantity's
+    // kind; its attempts and token counters take `>` on AC-025's *"ran out"*. Both sides are
+    // asserted.
     let expiry = BreakerExpiry::declared(600);
     assert_eq!(expiry.get(), 600, "the premise: the test declared it");
     let opened = 1_020_i64;
@@ -648,6 +690,366 @@ fn ac034_breaker_never_trips_globally() {
     let empty = breaker_no_module_state_rule("")
         .expect_err("an emptied file must fail on the anchor, not pass four absences");
     assert!(empty.iter().any(|v| v.clause() == "anchor-missing"));
+}
+
+// ---- THE KEY ITSELF, decided 2026-09-14 ------------------------------------------------------
+
+/// **The breaker's partition key is the PACK's `[role.<name>] family`, resolved from the step's
+/// role — and it is never the activity's own `family`.**
+///
+/// > **Operator decision D-7, 2026-09-14** — *"The pack declares the family per role (extending
+/// > design :480's 'tier policy per role'); the kernel resolves role → family at plan time and keys
+/// > the breaker on the resolved family."*
+///
+/// **THE NAME CARRIES NO AC ID, AND THAT IS DELIBERATE.** It is the precedent
+/// `appetite_raise_from_an_activity_result_is_refused` set in `tests/it/budget.rs` and the D-5, D-6
+/// and D-10 phases of this same session followed: the key spellings this test reads —
+/// `[role.<name>] family` and `[breaker] expiry_secs` — are a **reading**, and a record naming them
+/// is **OWED** exactly as `crates/rk-kernel/src/workflow/envelope.rs`'s 🛑 already records for
+/// `[retry] attempts_cap`, `[breaker] consecutive_platform_failures` and `appetite.tokens`. A green
+/// here must not be read as a settlement no record has made. What *is* settled by AC-033/AC-034 and
+/// is asserted under their own names above is the counting rule, the isolation and the refusal.
+///
+/// **WHAT THIS TEST EXISTS TO CATCH, WHICH NOTHING ABOVE COULD.** Until today every case in this
+/// file supplied its own arbitrary token through [`FamilyKey::supplied`], and this file's own header
+/// said what that cost: *"a breaker keyed on [the activity family] would trip globally with respect
+/// to the model and locally with respect to the method, which is the inverse of AC-034 on both axes
+/// — **and every assertion in this file would still pass.**"* The fixture activity below carries
+/// **both** kinds of family at once — one `family = "localisation"` (ADR-0058's activity family, a
+/// rank-escalation ladder) and two steps at two different roles — so the substitution the header
+/// describes is now a **red** rather than a pass.
+///
+/// Six parts, each with its premise asserted first:
+///
+/// 1. the catalog carries the role and the loader now reads it (it parsed it **zero** times until
+///    today), and the same activity carries the other `family`;
+/// 2. the pack's table resolves role → family and is **not an identity map** — two roles share one
+///    family, which is D-7's own reason for rejecting a breaker keyed on the *role*;
+/// 3. **THE PIN** — the activity's `family` is refused as a role, and a pack with no role table
+///    refuses every role;
+/// 4. the breaker keyed on the resolved families isolates two steps of **one** activity, and the
+///    activity-family token and the role token are both shown to key nothing;
+/// 5. the expiry is pack-declared and refused as a code default, independently of `K`;
+/// 6. the structural guard, over **both** files the substitution could be written in, with a
+///    positive control per file.
+#[test]
+fn breaker_key_is_the_packs_role_family_never_the_activity_family() {
+    // ---- 1. the role is on the step, and the ACTIVITY family is on the activity ---------------
+    let activity = fixture_activity();
+    assert_eq!(
+        activity.id, "differential-debugging",
+        "the premise: the fixture this test reasons about"
+    );
+    assert_eq!(
+        activity.family.as_deref(),
+        Some("localisation"),
+        "THE PREMISE THE WHOLE TEST TURNS ON: this activity declares ADR-0058's ACTIVITY family, so \
+         a resolver that read `.family` has something to read and would not simply fail"
+    );
+    let roles: Vec<Option<&str>> = activity
+        .steps
+        .iter()
+        .map(|s| s.role.as_deref())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        roles,
+        vec![
+            Some("investigator"),
+            None,
+            None,
+            Some("reviewer"),
+            None,
+            None,
+            None,
+        ],
+        "`catalog.rs` parsed `role` ZERO times until 2026-09-14 while the shipped catalog declared \
+         one 185 times in 8 distinct values; a loader that still dropped the key reports seven \
+         `None`s here"
+    );
+    // TWO DISTINCT ROLES ON ONE ACTIVITY — without this the isolation case in part 4 could be
+    // satisfied by an activity that has only one role to resolve.
+    assert_ne!(
+        roles[0], roles[3],
+        "the premise: one activity, one activity-family, TWO roles"
+    );
+
+    // ---- 2. the pack resolves role -> family, and the table is not an identity map -------------
+    let role_pack = pack("role-families.toml", FIXTURE_ROLE_FAMILIES);
+    let declared: Vec<(&str, &str)> = role_pack
+        .role_families()
+        .map(|(r, f)| (r.as_str(), f.as_str()))
+        .collect();
+    assert_eq!(
+        declared,
+        vec![
+            ("implementer", "deliberative"),
+            ("investigator", "deliberative"),
+            ("reviewer", "adversarial"),
+        ],
+        "the premise: the table the fixture declares, in byte order"
+    );
+
+    let investigator = role_pack
+        .require_family_for_role("investigator")
+        .expect("the fixture pack binds `investigator`");
+    let reviewer = role_pack
+        .require_family_for_role("reviewer")
+        .expect("the fixture pack binds `reviewer`");
+    let implementer = role_pack
+        .require_family_for_role("implementer")
+        .expect("the fixture pack binds `implementer`");
+
+    assert_ne!(
+        investigator, reviewer,
+        "two roles of ONE activity resolve to two families — a resolver keyed on the activity's \
+         `family` returns one key for both and fails here"
+    );
+    assert_eq!(
+        investigator, implementer,
+        "N ROLES MAP TO ONE MODEL, and that is D-7's own reason for rejecting a breaker keyed on \
+         the ROLE: a per-role key stops one role's share of traffic to a failing model while the \
+         rest keeps flowing, and AC-034's `never trips globally` becomes true in a way that misses \
+         the point"
+    );
+    assert_eq!(investigator.as_str(), "deliberative");
+    assert_eq!(reviewer.as_str(), "adversarial");
+    // ... and neither resolved key is the ROLE, nor the ACTIVITY family. A resolver that returned
+    // its argument verbatim, or that read `.family`, lands on one of these three.
+    for wrong in ["investigator", "reviewer", "localisation"] {
+        assert_ne!(
+            investigator,
+            FamilyKey::supplied(wrong),
+            "the resolved family is the pack's token, not `{wrong}`"
+        );
+        assert_ne!(
+            reviewer,
+            FamilyKey::supplied(wrong),
+            "the resolved family is the pack's token, not `{wrong}`"
+        );
+    }
+    assert_eq!(
+        role_pack.family_for_role("investigator"),
+        Some("deliberative")
+    );
+    assert_eq!(
+        role_pack.family_for_role("localisation"),
+        None,
+        "the ACTIVITY family is not a role, so the raw accessor reports an absence for it"
+    );
+
+    // ---- 3. THE PIN: the activity family is refused as a role ---------------------------------
+    let refused = role_pack
+        .require_family_for_role("localisation")
+        .expect_err("the activity family is not a role and this pack binds no such role");
+    assert_eq!(
+        refused,
+        EnvelopeError::RoleFamilyNotDeclared {
+            pack: "role-families-fixture".to_owned(),
+            role: "localisation".to_owned(),
+        },
+        "the refusal names the pack AND the role, so `this pack has no role table` and `this role \
+         is missing from it` are told apart"
+    );
+    assert_eq!(refused.as_str(), "role_family_not_declared");
+    // ... and a pack declaring no `[role]` table at all refuses EVERY role — the absence is an
+    // absence, never an identity map and never a wildcard.
+    let no_roles = pack("runtime-envelope.toml", FIXTURE_ENVELOPE);
+    assert_eq!(
+        no_roles.role_families().count(),
+        0,
+        "the premise: this pack declares no role table"
+    );
+    for role in ["investigator", "reviewer", "implementer"] {
+        assert_eq!(
+            no_roles.require_family_for_role(role),
+            Err(EnvelopeError::RoleFamilyNotDeclared {
+                pack: "runtime-envelope-fixture".to_owned(),
+                role: role.to_owned(),
+            }),
+            "an absent table is not a fallback to the role's own name, and not a wildcard: a \
+             resolver that returned `FamilyKey::supplied(role)` here would make every pack in this \
+             tree look bound"
+        );
+    }
+    // THE CONTROL: it must still LOAD and must still report `K`, or the three refusals above are
+    // passed by a loader that rejects every pack lacking a role table.
+    assert_eq!(no_roles.id, "runtime-envelope-fixture");
+    assert_eq!(
+        no_roles
+            .require_breaker_threshold()
+            .map(BreakerThreshold::get),
+        Ok(3),
+        "only the role table is absent; the absences are independent"
+    );
+
+    // ---- 4. the breaker, keyed on the RESOLVED families ---------------------------------------
+    let k = role_pack
+        .require_breaker_threshold()
+        .expect("the fixture pack declares `K`");
+    assert_eq!(
+        k,
+        BreakerThreshold::declared(2),
+        "the premise: this pack's `K` is 2, which is NOT `runtime-envelope.toml`'s 3 — a test \
+         reading the wrong pack lands on the other number"
+    );
+    // Two steps of ONE activity, at two roles, resolving to two families. The investigator's family
+    // takes K consecutive `Platform` failures; the reviewer's takes one.
+    let journal = [
+        platform_failure(investigator.as_str(), 2_000),
+        platform_failure(reviewer.as_str(), 2_005),
+        platform_failure(investigator.as_str(), 2_010),
+    ];
+    let state = BreakerState::from_events(&journal, k).expect("the journal folds");
+    assert_eq!(
+        state.consecutive(&investigator),
+        2,
+        "the premise: the fold counted the investigator's family's rows"
+    );
+    assert_eq!(state.consecutive(&reviewer), 1);
+
+    let expiry = role_pack
+        .require_breaker_expiry()
+        .expect("the fixture pack declares the expiry");
+    let at = now(2_100);
+    assert!(
+        state.decide(&investigator, at, expiry).refuses(),
+        "the investigator's family reached `K` and is refused"
+    );
+    assert_eq!(
+        state.decide(&reviewer, at, expiry),
+        BreakerDecision::Proceed,
+        "THE ISOLATION, over REAL resolved keys rather than two arbitrary tokens: the other step of \
+         the SAME activity proceeds"
+    );
+    // ... and the two tokens a substitution would have produced key NOTHING. Both of these would be
+    // open marks if the fold had been handed the activity family or the role.
+    assert_eq!(
+        state.decide(&FamilyKey::supplied("localisation"), at, expiry),
+        BreakerDecision::Proceed,
+        "the ACTIVITY family keys nothing here — a fold that read `.family` would have opened a \
+         mark under this token and refused both steps"
+    );
+    assert_eq!(
+        state.decide(&FamilyKey::supplied("investigator"), at, expiry),
+        BreakerDecision::Proceed,
+        "and neither does the ROLE"
+    );
+
+    // ---- 5. the expiry is PACK-DECLARED and refused as a code default -------------------------
+    assert_eq!(
+        expiry,
+        BreakerExpiry::declared(900),
+        "the premise: the pack's number, and it is none of `K`(2), `N`(5) or the appetite"
+    );
+    assert_eq!(
+        role_pack.breaker_expiry(),
+        Some(BreakerExpiry::declared(900))
+    );
+    // The boundary MOVES with the declared value, so the argument is read rather than ignored.
+    assert!(
+        state
+            .decide(&investigator, now(2_010 + 899), expiry)
+            .refuses(),
+        "one second inside the pack's declared expiry, the mark still refuses"
+    );
+    assert!(
+        !state
+            .decide(&investigator, now(2_010 + 900), expiry)
+            .refuses(),
+        "at the pack's declared expiry the mark is found expired (AC-024's `reaches`)"
+    );
+    // A pack that declares `K` and NOT the expiry refuses by name, so the two `[breaker]` members
+    // are independent and an accessor reading the wrong key lands on 3.
+    assert_eq!(
+        no_roles.breaker_expiry(),
+        None,
+        "an absent declaration is an absence, never a duration"
+    );
+    assert_ne!(
+        no_roles.breaker_expiry(),
+        Some(BreakerExpiry::declared(0)),
+        "a defaulted expiry would most likely arrive as zero — a mark that is expired the instant \
+         it opens"
+    );
+    let no_expiry = no_roles
+        .require_breaker_expiry()
+        .expect_err("a pack declaring no expiry cannot drive the breaker's expiry comparison");
+    assert_eq!(
+        no_expiry,
+        EnvelopeError::BreakerExpiryNotDeclared {
+            pack: "runtime-envelope-fixture".to_owned()
+        }
+    );
+    assert_eq!(no_expiry.as_str(), "breaker_expiry_not_declared");
+
+    // ---- 6. the structural guard, over BOTH files it could be written in -----------------------
+    // The behavioural parts above catch a substitution that has already been made. This catches the
+    // route: `crate::catalog` reachable from either the fold or the resolution.
+    let breaker_src = code_only(BREAKER_SRC);
+    let pack_src = code_only(PACK_SRC);
+    for (label, src, anchors) in [
+        ("src/workflow/breaker.rs", &breaker_src, &BREAKER_ANCHORS),
+        ("src/select/pack.rs", &pack_src, &ROLE_RESOLUTION_ANCHORS),
+    ] {
+        for anchor in anchors.as_slice() {
+            assert!(
+                src.contains(anchor),
+                "the anchor `{anchor}` is absent from {label}, so the ban below would be a vacuous \
+                 pass"
+            );
+        }
+        family_key_never_from_the_activity_catalog_rule(src, anchors.as_slice()).unwrap_or_else(
+            |v| {
+                panic!("{label} reaches the activity catalog: {v:?}");
+            },
+        );
+        // THE POSITIVE CONTROL, per file. Without it "the rule passed" is indistinguishable from
+        // "the rule matched nothing" (Halt 8, one level up).
+        for form in NOT_THE_ACTIVITY_FAMILY_FORMS {
+            let poisoned =
+                format!("{src}\nfn poisoned(a: &crate{form}::Activity) {{ a.family; }}\n");
+            let found =
+                family_key_never_from_the_activity_catalog_rule(&poisoned, anchors.as_slice())
+                    .expect_err("the rule must see a path into the activity catalog");
+            assert!(
+                found.iter().any(|v| matches!(
+                    v,
+                    BreakerLintViolation::ReadsTheActivityCatalog { form: f, .. } if *f == form
+                )),
+                "the rule saw something in {label}, but not `{form}`: {found:?}"
+            );
+            assert!(
+                found
+                    .iter()
+                    .all(|v| v.clause() == "reads-the-activity-catalog"),
+                "a clean file plus one banned form yields exactly that clause: {found:?}"
+            );
+        }
+        let empty = family_key_never_from_the_activity_catalog_rule("", anchors.as_slice())
+            .expect_err("an emptied file must fail on the anchor rather than pass an absence");
+        assert!(
+            empty.iter().any(|v| v.clause() == "anchor-missing"),
+            "an emptied file fails on the ANCHOR, not on an absence: {empty:?}"
+        );
+    }
+}
+
+/// The fixture activity that carries **both** families — `family = "localisation"` (ADR-0058's
+/// activity family) and two steps at `role = "investigator"` and `role = "reviewer"`.
+///
+/// **Compiled in, never opened**, for [`BREAKER_SRC`]'s reason.
+///
+/// # Panics
+///
+/// With the loader's own error, so a fixture that stops parsing names its reason.
+fn fixture_activity() -> Activity {
+    let catalog = Catalog::from_sources(&[("differential-debugging.toml", FIXTURE_ACTIVITY)])
+        .unwrap_or_else(|e| panic!("the differential-debugging fixture loads: {e}"));
+    catalog
+        .activities()
+        .first()
+        .cloned()
+        .expect("the fixture holds one activity")
 }
 
 /// A journaled instant. There is no clock in this file either.

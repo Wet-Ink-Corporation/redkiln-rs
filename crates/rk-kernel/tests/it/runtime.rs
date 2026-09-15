@@ -11,8 +11,8 @@
 //! | [`ac010_malformed_key_is_refused_before_spawn`] | AC-010 | the three named malformations, each with a dispatch count of **0** | the `@version`'s **producer**, which no type in this tree has |
 //! | [`ac011_attempt_increases_and_the_triple_is_unique`] | AC-011 | strictly increasing `attempt`; the triple unique **across the whole log** | |
 //! | [`ac012_late_duplicate_is_discarded`] | AC-012 | two threads, one activation, one commit, one discard | a **process** race — the register says *"driving two attempts"*, and where it means two processes it says so (AC-181 :2941, AC-271 :4166) |
-//! | [`ac013_re_entry_reexecutes_nothing`] | AC-013 — **PROVISIONAL** | zero re-dispatch of a committed step; byte-identical committed digests | **BUILT, NOT CLAIMED.** P8 is PARTIAL (3 of 27+3, one recorded step), and the process boundary here is a **dropped `Runtime`** — ADR-0087 clause 2: *"a reload that reads state back in-process is not a valid implementation of this decision and is not evidence for it"* |
-//! | [`ac030_rate_limited_writes_a_mark_and_never_sleeps`] | AC-030 | the `retry_at(resets_at)` mark, no further dispatch, no clock anywhere in the module | *"exits 0"* (a **process** claim, 7d's) and *"the next run resumes from the mark"* (rides on AC-013, which may not be counted) |
+//! | [`ac013_re_entry_reexecutes_nothing`] | AC-013 — **PROVISIONAL** | zero re-dispatch of a committed step; byte-identical committed digests | **BUILT, NOT CLAIMED.** P8 is PARTIAL (3 of 27+3, one recorded step), and the process boundary here is a **dropped `Runtime`** — ADR-0087 clause 2: *"a reload that reads state back in-process is not a valid implementation of this decision and is not evidence for it"*. **ROUTED TO 7d, 2026-09-14 (D-8):** a real re-exec harness now exists in [`crate::cross_process`] and is deliberately **not** pointed here, because AC-013's WHEN is *"WHEN `redkiln run <item>` re-enters"* — the thing re-entering is the CLI |
+//! | [`ac030_rate_limited_writes_a_mark_and_never_sleeps`] | AC-030 | the `retry_at(resets_at)` mark, no further dispatch, no clock anywhere in the module | *"exits 0"* and *"the next run resumes from the mark"*, both **ROUTED TO 7d, 2026-09-14 (D-8)**. This cell read *"a **process** claim, 7d's"* of the exit; that reason is now too wide — [`crate::cross_process`] reads a **child's** exit for AC-024. AC-030 is not routed there because its own *Verified by* names *"the next **`redkiln run`** resumes from the mark (AC-013's re-entry test)"*: a binary that is 7d's, and a criterion that is PROVISIONAL |
 //! | [`ac031_schema_reprompts_exactly_once`] | AC-031 — **compound** | exactly two dispatches and `Schema { attempts: 2 }`; **and** the prose-extraction grep-lint with its must-fail fixture | AC-031 is **not claimed whole**: the register's own residual-risk list says *"the prose-extraction ban will be under-tracked until the range widens"* |
 //! | [`runtime_step_appends_only_what_the_action_names`] | — | that three of the six `NextAction` arms append **nothing at all** | |
 //! | [`the_fsm_dispatch_key_has_no_version_and_the_boundary_refuses_it`] | — | 🛑 **a finding, pinned**: the DAG node carries a bare `activity_id`, so the FSM's own `Dispatch` key is refused by AC-010 and `next_action` → `step` cannot complete end to end on this tree | it does not **fix** it: the join has three candidate homes and choosing one is a decision `00-preamble.md`:55 reserves |
@@ -849,6 +849,15 @@ fn ac012_late_duplicate_is_discarded() {
 ///    `rk-cli`'s and Step **7d**'s. The ARMED row's *missing at 7b* column carries only reason 1,
 ///    and that is a finding this slice reports rather than repairs.
 ///
+///    🛑 **2026-09-14: THE HARNESS THIS WOULD NEED NOW EXISTS, AND AC-013 IS STILL NOT CLAIMED.**
+///    Operator decision **D-8** built a re-exec harness in [`crate::cross_process`] —
+///    `std::env::current_exe()`, an env marker, a child that writes and a parent that asserts what
+///    the child left behind — and pointed it at **AC-035** and **AC-024**, whose *Verified by*
+///    lines name no binary. **D-8 routes AC-013 to 7d** on the clause above: the thing that
+///    re-enters is `redkiln run <item>`. Re-pointing the harness at this test would produce a green
+///    named for a CLI re-entry no binary in this tree performs, and would leave reason 1 —
+///    PROVISIONAL on P8 — untouched in any case. This test is unchanged.
+///
 /// What IS measured: the re-entry predicate itself — a second `Runtime` over the same store
 /// re-dispatches nothing that committed, and every committed digest is unchanged.
 #[test]
@@ -984,11 +993,17 @@ fn ac013_re_entry_reexecutes_nothing() {
 /// **AC-030.** *"GIVEN a `RateLimited { resets_at }` failure / WHEN the kernel handles it / THEN it
 /// writes a `retry_at(resets_at)` mark and **exits 0**; it **never sleeps** until the reset."*
 ///
-/// 🛑 **Two halves are ARMED and are not asserted here.** *"Exits 0"* is a **process** claim and
-/// `rk-kernel` is a library (residual 10d; `rk-cli` is 7d) — a `cargo test` binary cannot assert its
-/// own exit and `std::process::exit` inside one aborts the harness. And *"the next `redkiln run`
-/// resumes from the mark"* is, by the criterion's own words, **AC-013's re-entry test**, which is
-/// PROVISIONAL and may not be counted. What is discharged is the **mark** and the **no-sleep**.
+/// 🛑 **Two halves are ARMED, are not asserted here, and are ROUTED TO 7d (D-8, 2026-09-14).**
+///
+/// This note read *"*\"Exits 0\"* is a **process** claim and `rk-kernel` is a library (residual 10d;
+/// `rk-cli` is 7d) — a `cargo test` binary cannot assert its own exit and `std::process::exit`
+/// inside one aborts the harness"*. The clause about a test's OWN exit is still true. The clause
+/// about the crate is not a reason any more: [`crate::cross_process`] re-execs this binary and
+/// reads a **child's** exit code for AC-024. **AC-030 is deliberately not routed there**, and the
+/// reason is the criterion's own *Verified by*: *"the next **`redkiln run`** resumes from the mark
+/// (AC-013's re-entry test)"* — it names the binary, and AC-013's test is PROVISIONAL and may not
+/// be counted. So both halves are 7d's, for the criterion's reason rather than for a limit of this
+/// harness. What is discharged here is the **mark** and the **no-sleep**.
 #[test]
 fn ac030_rate_limited_writes_a_mark_and_never_sleeps() {
     let reset = Timestamp::from_unix_seconds(1_700_000_600);

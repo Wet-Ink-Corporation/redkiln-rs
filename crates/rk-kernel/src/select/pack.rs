@@ -1,6 +1,6 @@
 //! The process pack, as steps 1 and 2 read it.
 //!
-//! Two tables and no more:
+//! Two tables steps 1 and 2 read, plus what the runtime reads through the accessors:
 //!
 //! * **`[policy] stages = { <stage> = "<rigor>", … }`** — step 1's `policy.<class>`. The pack *is*
 //!   the class (its `[pack] applies` is the class predicate), so the per-class indirection design
@@ -14,6 +14,13 @@
 //! * **The runtime envelope** — `[retry] attempts_cap` (`N`), `[breaker]
 //!   consecutive_platform_failures` (`K`) and `appetite.tokens` (the per-item token appetite).
 //!   **Added 2026-09-14, Slice 4b.**
+//! * **`[breaker] expiry_secs`** — how long an open breaker mark stands — and **`[role.<name>]
+//!   family`**, the role → model-family table the circuit breaker is partitioned by.
+//!   **Added 2026-09-14 by operator decision D-7**, which put both here rather than in code:
+//!   *"the pack owns roles and tier policy (design :480-481, ADR-0014), `K` is **already** a pack
+//!   value asserted by pack validation, and the breaker expiry's home falls out in the same
+//!   place."* The role table extends design :480's *"tier policy per role"* by one key beside
+//!   `tier`; see [`role_families`] and [`Pack::require_family_for_role`].
 //!
 //! # What is NOT read here, and why that is a statement rather than a gap
 //!
@@ -27,10 +34,13 @@
 //! single `appetite` field would be the shared counter AC-020 exists to prevent, arriving through a
 //! loader. `spawn` is still the runtime's and is still not modelled.
 //!
-//! **The three new values are deliberately absent from [`Pack::to_json`]**, which is the
+//! **All FIVE of those values are deliberately absent from [`Pack::to_json`]**, which is the
 //! `dag_assembled` payload's shape: adding a member there changes bytes AC-040's byte-identity
 //! assertions and the committed golden log are measured over. What the runtime reads, it reads
-//! through the accessors.
+//! through the accessors. *(This said "**The three new values**" until 2026-09-14; the expiry and
+//! the role table joined them under D-7 and are held to the same rule — `to_json` is byte-identical
+//! before and after, which is what leaves §7b.11's layout and the golden log untouched by this
+//! change.)*
 //!
 //! `policy.<cost_class>.stale_policy` is AC-068's, **PROVISIONAL under ADR-0117 clause 4**, and is
 //! deliberately not read: `00-preamble.md`:55 forbids defaulting a value a record owes, and a
@@ -41,6 +51,7 @@ use std::fmt;
 
 use crate::rigor::Rigor;
 use crate::toml_subset::{self, Value};
+use crate::workflow::breaker::{BreakerExpiry, FamilyKey};
 use crate::workflow::budget::Tokens;
 use crate::workflow::envelope::{AttemptCap, BreakerThreshold, EnvelopeError};
 
@@ -130,6 +141,16 @@ pub struct Pack {
     attempt_cap: Option<AttemptCap>,
     breaker_threshold: Option<BreakerThreshold>,
     token_appetite: Option<Tokens>,
+    /// `[breaker] expiry_secs` — **the breaker expiry's home, decided 2026-09-14 (D-7)**. `None` is
+    /// *"the pack declares none"*, on the three fields above's doctrine exactly.
+    breaker_expiry: Option<BreakerExpiry>,
+    /// **`[role.<name>] family` — the breaker's partition key, per role.**
+    ///
+    /// An EMPTY map is *"the pack declares no role table"* and is neither an identity map nor a
+    /// wildcard: [`Self::require_family_for_role`] refuses for every role against it. The values are
+    /// carried as `String` rather than as [`FamilyKey`] because this is the **declaration**; the
+    /// key is minted at the resolution, which is the one place a reader should have to look.
+    role_families: BTreeMap<String, String>,
     /// **AC-036's substitution permission**, from `[degradation] permit_substitution`. `None` is
     /// *"the pack never considered substitution"* and `Some(false)` is *"it considered it and said
     /// no"*; both refuse, and keeping them apart is what stops a fail-closed fold reading as a
@@ -292,6 +313,15 @@ impl Pack {
                 "permit_substitution",
                 &shape,
             )?,
+            // The breaker expiry, read with `declared_u32`'s discipline for `declared_u32`'s
+            // reason: `expiry_secs = -1` and `expiry_secs = "ten minutes"` are SHAPE errors and
+            // never a silent zero, which would be a mark expired the instant it opened.
+            breaker_expiry: declared_u32(&doc, "breaker", "expiry_secs", &shape)?
+                .map(|secs| BreakerExpiry::declared(u64::from(secs))),
+            // THE BREAKER'S KEY, per role. An absent `[role]` table is an EMPTY map — an absence,
+            // never an identity map and never a wildcard — and `require_family_for_role` is where
+            // that absence fails.
+            role_families: role_families(&doc, &shape)?,
             stage_rigor,
             stages,
         })
@@ -389,6 +419,82 @@ impl Pack {
             .ok_or_else(|| EnvelopeError::BreakerThresholdNotDeclared {
                 pack: self.id.clone(),
             })
+    }
+
+    /// `[breaker] expiry_secs` — **how long an open breaker mark stands** — or `None`.
+    ///
+    /// `None` is the absence, on [`Self::appetite`]'s doctrine: not *"never expires"*, not
+    /// *"expires at once"*, and not a load failure. Where a missing declaration fails is
+    /// [`Self::require_breaker_expiry`].
+    #[must_use]
+    pub const fn breaker_expiry(&self) -> Option<BreakerExpiry> {
+        self.breaker_expiry
+    }
+
+    /// The breaker expiry, or the refusal.
+    ///
+    /// # Errors
+    ///
+    /// [`EnvelopeError::BreakerExpiryNotDeclared`] when the pack declares no
+    /// `[breaker] expiry_secs`. There is no `unwrap_or`, no `const` fallback, no `Default` on
+    /// [`BreakerExpiry`] — **and no derivation from the backoff cap**, which was one of the four
+    /// homes `crate::workflow::breaker`'s header listed and is *"a default with arithmetic in front
+    /// of it"*. The operator decision of 2026-09-14 (D-7) put the expiry here, beside `K`, because
+    /// the pack already owns `K` and the two are read together or not at all.
+    pub fn require_breaker_expiry(&self) -> Result<BreakerExpiry, EnvelopeError> {
+        self.breaker_expiry
+            .ok_or_else(|| EnvelopeError::BreakerExpiryNotDeclared {
+                pack: self.id.clone(),
+            })
+    }
+
+    /// `[role.<role>] family` — **the model family this pack binds one role to** — or `None`.
+    ///
+    /// The raw declaration, for a caller that needs to report the table rather than key on it.
+    /// The key itself comes from [`Self::require_family_for_role`].
+    #[must_use]
+    pub fn family_for_role(&self, role: &str) -> Option<&str> {
+        self.role_families.get(role).map(String::as_str)
+    }
+
+    /// Every `[role.<name>] family` declaration, in byte order — the table as declared.
+    ///
+    /// Carried so a test can assert the **premise** of an isolation case (*"these two roles map to
+    /// different families and these two map to the same one"*) rather than trusting it, and so a
+    /// future `doctor` rule has the whole table rather than one lookup.
+    pub fn role_families(&self) -> impl Iterator<Item = (&String, &String)> {
+        self.role_families.iter()
+    }
+
+    /// **The breaker's partition key for one role — the whole of the resolution.**
+    ///
+    /// > **D-7, 2026-09-14** — *"The pack declares the family per role (extending design :480's
+    /// > 'tier policy per role'); the kernel resolves role → family at plan time and keys the
+    /// > breaker on the resolved family."*
+    ///
+    /// The argument is a **role**, which is `crate::catalog::Step::role`'s value, and it is
+    /// deliberately not an `&Activity`: the activity's own `family` is ADR-0058's **activity**
+    /// family, and a signature that could not see it is cheaper than a rule that forbids reading it.
+    ///
+    /// **The role is never its own family.** A role absent from the table refuses; it does not fall
+    /// back to `FamilyKey::supplied(role)`. That identity fallback is D-7's rejected alternative
+    /// (ii) written as a default: *"N roles map to one model, so a per-role breaker stops one role's
+    /// share of traffic to a failing model while the rest keeps flowing, and AC-034's 'never trips
+    /// globally' becomes true in a way that misses the point."*
+    ///
+    /// # Errors
+    ///
+    /// [`EnvelopeError::RoleFamilyNotDeclared`], naming the pack **and** the role.
+    pub fn require_family_for_role(&self, role: &str) -> Result<FamilyKey, EnvelopeError> {
+        self.role_families.get(role).map_or_else(
+            || {
+                Err(EnvelopeError::RoleFamilyNotDeclared {
+                    pack: self.id.clone(),
+                    role: role.to_owned(),
+                })
+            },
+            |family| Ok(FamilyKey::supplied(family)),
+        )
     }
 
     /// `[degradation] permit_substitution` — **AC-036's permission** — or `None` when the pack
@@ -532,6 +638,52 @@ fn declared_bool(
     raw.as_bool()
         .map(Some)
         .ok_or_else(|| shape(format!("{table}.{key} is not a boolean")))
+}
+
+/// Every `[role.<name>] family = "<token>"` declaration, or an empty map.
+///
+/// **The shape extends design :480's *"tier policy per role"***, which already puts a
+/// `[role.<name>]` table in the process pack (*"`[role.implementer] tier = { model = …, effort = …
+/// }`"*, proposal §4.2.1). What is added is one key beside `tier`, and the spelling is a **READING**
+/// with a record OWED — `crate::workflow::envelope`'s 🛑 already carries that statement for the
+/// three envelope keys and this is the fourth. [measured 2026-09-14: `grep -rn role
+/// spikes/p9/packs/` → **0 hits across all twelve shipped packs**, so no shipped pack contradicts
+/// the spelling and none satisfies it either; the shipped packs' own tables are Step 7e's.]
+///
+/// **A `[role.<name>]` table that declares no `family` is an ABSENCE, not an error.** The table is
+/// the pack's to put a tier in, and a role with a tier and no family has declared no family;
+/// [`Pack::require_family_for_role`] is where that fails. A `family` that is not a string is a
+/// [`PackError::Shape`] naming the site — [`declared_u32`]'s discipline, for its reason: a dropped
+/// key reads as a role the pack never bound, and the two are different states.
+///
+/// # Errors
+///
+/// [`PackError::Shape`] for a `[role]` that is not a table, a `[role.<name>]` that is not a table,
+/// and a `family` that is not a string.
+fn role_families(
+    doc: &toml_subset::Table,
+    shape: &impl Fn(String) -> PackError,
+) -> Result<BTreeMap<String, String>, PackError> {
+    let Some(value) = doc.get("role") else {
+        return Ok(BTreeMap::new());
+    };
+    let table = value
+        .as_table()
+        .ok_or_else(|| shape("[role] is not a table".to_owned()))?;
+    let mut out = BTreeMap::new();
+    for (role, body) in table {
+        let body = body
+            .as_table()
+            .ok_or_else(|| shape(format!("[role.{role}] is not a table")))?;
+        let Some(raw) = body.get("family") else {
+            continue;
+        };
+        let family = raw
+            .as_str()
+            .ok_or_else(|| shape(format!("role.{role}.family is not a string")))?;
+        out.insert(role.clone(), family.to_owned());
+    }
+    Ok(out)
 }
 
 /// `appetite.tokens`, or `None`.

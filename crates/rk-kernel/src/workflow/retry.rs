@@ -6,7 +6,7 @@
 //! | **AC-026** | [`InnerAttempts`], [`ApiRetryEvent`] and [`decide_after_inner_retries`] — ADR-0122 decision 1's charge unit and decision 2's dispatch-scoped suppression | 🛑 **ARMED, NOT DISCHARGED** — see the section below. The rule is on disk and pinned by `inner_retry_ac026`; **no dispatcher calls it**, and C1 is resolved by ADR-0122 |
 //! | **AC-027** | [`decide`]'s `Never` classes and [`refused_before_spawn`] | **built** — `redispatches() == 0` and the typed error surfaced, per class |
 //! | **AC-028** | [`error_tag`] and [`refused_before_spawn`] — two exhaustive `match`es over the eleven, **no wildcard, no `matches!`** | **built**, compile-time only; no unit test discharges it |
-//! | **AC-029** | [`BACKOFF_BASE_SECS`], [`BACKOFF_CAP_SECS`], [`backoff_ceiling_secs`], [`backoff_delay`], [`JitterDraw`], the cap check in [`decide`] | the **envelope, the exponent, the cap and the determinism** are built; the *production* draw is not bound (see the 🛑 below) |
+//! | **AC-029** | [`BACKOFF_BASE_SECS`], [`BACKOFF_CAP_SECS`], [`backoff_ceiling_secs`], [`backoff_delay`], [`JitterDraw`], the cap check in [`decide`] | **built** — the envelope, the exponent, the cap, the determinism, and (2026-09-14) the **production draw**, which is bound at both arms of [`decide`] that carry a delay |
 //! | **AC-030** | [`RetryDecision::WaitForReset`] only | the `retry_at(resets_at)` **mark**, the exit and the resume are the runtime boundary's — **not built, not claimed** |
 //! | **AC-031** | [`RetryDecision::Reprompt`] and [`SCHEMA_REPROMPT_LIMIT`] | the scripted-responder instrument needs a dispatcher and is **not built**; the prose-extraction sub-clause is **not built** and the register itself records it as under-tracked |
 //! | **AC-032** | [`ActivityOutcome`], [`consult`], [`schedule_for`] | **built** — an `Ok`, findings and all, never reaches [`decide`] |
@@ -26,7 +26,19 @@
 //! not measured — no spike sized them (gap 3). The criterion verifies conformance to the declared
 //! envelope, not that the envelope is right."*
 //!
-//! # 🛑 AC-029'S *"SEEDED JITTER"*: WHAT IS BUILT, WHAT IS INJECTED, AND WHAT IS STILL OWED
+//! **All six of §7b.10's quantities are placed, and confirmed placed [2026-09-14].** That 🛑 fixes
+//! `K`, `N`, the backoff base and cap, the two-tick headroom margin and the per-item token
+//! appetite. Two are kernel literals and live here (PIA-055). `K`, `N` and the appetite are
+//! **pack-declared and refused as code defaults** — `Pack::require_attempt_cap`,
+//! `require_breaker_threshold` and `require_token_appetite` each return a refusal and neither
+//! [`super::envelope::AttemptCap`] nor `BreakerThreshold` derives `Default`. The headroom margin is
+//! **AC-377's**, in `rk-adapter-claude`/`doctor`, which is in **no** §7b.15 claimed range — it has
+//! no constant in this crate and no test named for it here [measured: `grep -rni headroom
+//! crates/rk-kernel/tests` → 0 hits]. `jitter_source_is_forced_and_owes_no_record`'s part 4 is what
+//! keeps a seventh number from appearing in this file: it asserts the two literals above by their
+//! exact declaration and that none of the other four names reaches a **code** line here.
+//!
+//! # AC-029'S *"SEEDED JITTER"*: THE SOURCE IS **FORCED**, AND NO RECORD IS OWED FOR IT
 //!
 //! `rand` is not in this workspace — `grep -rn "rand" Cargo.toml crates/*/Cargo.toml` → **0 hits,
 //! exit 1** [measured 2026-09-14] — and `clippy.toml` bans `rand::random` / `rand::thread_rng`
@@ -36,23 +48,41 @@
 //! fixed sequence *is* the *"seeded jitter"* AC-029's instrument names, and the seeding is the
 //! caller's.
 //!
-//! The one derivation offered — [`JitterDraw::from_key`] — reads the leading bytes of
+//! The derivation [`decide`] uses — [`JitterDraw::from_key`] — reads the leading bytes of
 //! `rk_store::memo::IdempotencyKey::digest()`, which is `sha256_lp(item, activity_id@version,
-//! attempt)`. That is a **content-hash read, not a generator**: AC-002's own *Verified by* names
-//! this exact tuple as the licensed derivation (*"Ids the workflow needs are derived from the
-//! idempotency key `(item, activity_id@version, attempt)` (ADR-0097) or from a content hash"*), and
-//! every component is a recorded input, so a replay recomputes the same delay with no clock, no
+//! attempt)`. That is a **content-hash read, not a generator**, and it is the route AC-002 blesses
+//! in terms. AC-002's WHEN bans a draw *"from a **non-deterministic** source (`rand`,
+//! `uuid::new_v4`, address hashing)"* — it bans **non-determinism**, not derivation — and its
+//! closing sentence names the licensed route: *"Ids the workflow needs are derived from the
+//! idempotency key `(item, activity_id@version, attempt)` (ADR-0097) **or from a content hash**."*
+//! Every component is a recorded input, so a replay recomputes the same delay with no clock, no
 //! counter and no entropy source — the property `replay.rs`:63-70 says the golden-log layout exists
-//! to keep.
+//! to keep. AC-029, for its part, **requires** a seeded draw. There is nothing left for an operator
+//! to settle: the class is blessed, the alternative is banned, and **no record is owed for the
+//! source**.
 //!
-//! **What is OWED and is stated rather than assumed:** AC-002 licenses that tuple for **ids**, and
-//! a delay is not an id. No record says the idempotency key may seed a *draw*. The owed record's
-//! own words are that this *"is the free residual, and it is an operator's"*. Until it lands,
-//! [`JitterDraw::from_key`] is this crate's proposal; [`JitterDraw::supplied`] is the shape that is
-//! correct under either resolution, and it is the constructor the envelope test drives. The
-//! production binding of a draw is the stage that owns a binary; at Step 7b there is none.
-//! **AC-029's *"full jitter"* conjunct is therefore discharged at the envelope and at the
-//! determinism, and the production draw is ARMED, NOT DISCHARGED.**
+//! **The draw is bound on the production path, not merely offered.** [`decide`] calls
+//! [`JitterDraw::from_key`] at both arms that carry a delay — `RetryClass::Backoff` and
+//! `RetryClass::OnceThenEscalate`'s one retry — and `jitter_source_is_forced_and_owes_no_record`
+//! (`tests/it/retry.rs`) asserts the **identity**: the number [`decide`] returns is
+//! [`backoff_delay`] over that key's own draw and over nothing else, at every attempt inside the
+//! pack's `N`. [`JitterDraw::supplied`] remains the constructor the envelope sweep drives, because
+//! a fixed sequence is what puts a delay at each endpoint. **AC-029's *"full jitter"* conjunct is
+//! discharged at the envelope, at the determinism and at the source.**
+//!
+//! **WITHDRAWN 2026-09-14 — what stood here, corrected rather than quietly replaced.** *(Everything
+//! below this marker is quoted history. The pinning test splits this header on the marker and
+//! requires the withdrawn phrases to appear **only** after it — so the claim cannot come back as a
+//! live one, and the record of it cannot be paraphrased away either.)* This section said
+//! *"AC-002 licenses that tuple for **ids**, and a delay is not an id. No record says the
+//! idempotency key may seed a **draw** … [`JitterDraw::from_key`] is this crate's proposal"*, and
+//! the table row above called the production draw *"not bound"*. The first is refuted by AC-002's
+//! own closing sentence, which that version **quoted at its own `:41-43`, five lines above the
+//! sentence at `:48` that contradicted it** — the clause was on the page the whole time, and the
+//! only thing missing was reading the two together. The second is refuted by measurement: the
+//! two call sites are in
+//! [`decide`]'s body and the pinning test reads the delay the function actually returns. **Neither
+//! was a decision taken today**; both were readings this module had already outrun.
 //!
 //! # 🛑 `Timeout`: TWO RECORDS, ONE VARIANT (conflict C-5), AND WHAT *"ESCALATE"* RESOLVES TO
 //!
@@ -141,8 +171,18 @@ impl JitterDraw {
     /// a pure function of three recorded inputs and a replay recomputes the same delay. The leading
     /// 64 bits of the hex digest are read; no arithmetic constant is introduced.
     ///
-    /// 🛑 **A record authorising this seed is OWED** — see the module header. Prefer
-    /// [`JitterDraw::supplied`] wherever the draw can be handed in.
+    /// **The source is FORCED, and no record is owed for it** — see the module header. AC-002's
+    /// closing sentence names the idempotency key and a content hash as *the* licensed derivations
+    /// and bans only a **non-deterministic** source; AC-029 requires a seeded draw. This constructor
+    /// is [`decide`]'s, at both arms that carry a delay. [`JitterDraw::supplied`] stays the
+    /// constructor a test drives, because a fixed sequence is what puts a delay at each endpoint of
+    /// the envelope.
+    ///
+    /// **WITHDRAWN 2026-09-14** — this block said *"A record authorising this seed is OWED"*, on
+    /// the reading that AC-002 licenses the tuple for **ids** and a delay is not an id. Withdrawn
+    /// against the clause itself rather than replaced: the criterion bans the source it bans, and
+    /// this is not one. *(The marker is load-bearing — the pinning test splits this doc on it and
+    /// requires the withdrawn words below it and nowhere above it.)*
     #[must_use]
     pub fn from_key(key: &IdempotencyKey) -> Self {
         Self::from_digest(&key.digest())
@@ -322,7 +362,11 @@ pub const fn backoff_ceiling_secs(attempt: u32) -> u64 {
 
 /// **AC-029's full jitter**: the delay is uniform on `[0, ceiling]` for the supplied draw.
 ///
-/// The draw is a parameter and this crate mints none. Full jitter is `U(0, min(cap, base ·
+/// The draw is a **parameter of this function** and no generator produces one anywhere in this
+/// crate; [`decide`] supplies it by reading the idempotency key's digest through
+/// [`JitterDraw::from_key`], which AC-002's closing sentence licenses outright. *(This line read
+/// "the draw is a parameter and this crate mints none" until 2026-09-14, which was true of this
+/// function and false of the module that calls it.)* Full jitter is `U(0, min(cap, base ·
 /// 2^attempt))`; the mapping is `draw · (ceiling + 1) / 2^64`, which uses no constant beyond the
 /// word size of the draw itself.
 #[must_use]

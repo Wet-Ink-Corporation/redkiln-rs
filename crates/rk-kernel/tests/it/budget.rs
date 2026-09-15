@@ -26,7 +26,7 @@
 //! | **AC-021** | the **declared** field, ADR-0037's lint rule 8 (ADR-0122 decision 3) | the runtime draw-down is AC-026's and is Slice 4c's |
 //! | **AC-022** | the **runtime** charge at N = 1, 2, 50 | — |
 //! | **AC-023** | the refusal | *"an event-schema test that every appetite change carries an author field"* — **ARMED, NOT DISCHARGED**: no `EventKind` can carry a budget change and minting one takes a record |
-//! | **AC-024** | the durable mark's **value** and its carrier; the *"no thread sleeps"* half, over the module's own source | *"exits 0"* (a **process** exit — 7d's), the mark's **write** and *"no further dispatch"* (Slice 4h's). AC-024 is a **twin**, owner AC-240 + AC-278 |
+//! | **AC-024** | the durable mark's **value** and its carrier; the *"no thread sleeps"* half, over the module's own source | the mark's **write on a live path** and *"no further dispatch"*. *(**"exits 0" left this cell on 2026-09-14.** It read *"*\"exits 0\"* (a **process** exit — 7d's)"*, and operator decision **D-8** built the register's own instrument for it — `tests/it/cross_process.rs`'s `ac024_wall_clock_mark_outlives_the_process_that_wrote_it` re-execs this binary and reads a **child's** exit code beside the mark the child left. What is still 7d's is narrower and is stated there: that the process exiting 0 is `redkiln run` rather than a libtest binary.)* AC-024 is a **twin**, owner AC-240 + AC-278 |
 //! | **AC-025** | the unit test per budget (three, swept over `Counter::ALL`), the nine-row negative table, and the must-close positive | — the compile-fail companion is `tests/ui/ac025_exhaustion_is_not_a_pass.rs`, taken **in addition to** the register's named instrument |
 //!
 //! **Corrected 2026-09-14 (Slice 4b).** The row that stood in the table above read *"AC-024, AC-025
@@ -518,10 +518,15 @@ fn minted_by(activity: &Activity) -> Vec<Evidence> {
 ///
 /// # 🛑 ARMED, NOT DISCHARGED — named rather than left for a reader to discover
 ///
-/// * **AC-024's *"exits 0"*.** `rk-kernel` is a library; there is no `rk-cli` before Step 7d, and a
-///   test that called `std::process::exit` would kill this harness rather than assert anything. The
-///   exit is **7d's**. AC-024 is also a **twin** — the owner is the human-gate pair AC-240 + AC-278
-///   — so this half may not be double-claimed against that area.
+/// * **AC-024's *"exits 0"* — NOT HERE, AND NO LONGER NOWHERE (corrected 2026-09-14).** This bullet
+///   read *"`rk-kernel` is a library; there is no `rk-cli` before Step 7d, and a test that called
+///   `std::process::exit` would kill this harness rather than assert anything. The exit is
+///   **7d's**"*. The middle clause is still true and is why the half is not asserted **in this
+///   test**: a test cannot assert its own exit. It does not follow that no test can assert a
+///   **child's**, and operator decision **D-8** built the one that does —
+///   `cross_process::ac024_wall_clock_mark_outlives_the_process_that_wrote_it`. What remains 7d's is
+///   that the exiting process is `redkiln run`. AC-024 is also a **twin** — the owner is the
+///   human-gate pair AC-240 + AC-278 — so this half may not be double-claimed against that area.
 /// * **The mark's *write*.** The append is outside the pure function (ADR-0119 clause 5, ADR-0120
 ///   clause 4) and is Slice 4h's, with `rk-ports`' `EventStore`. What is asserted here is the value
 ///   the budget hands the writer.
@@ -586,11 +591,15 @@ fn exhaustion_ac024_ac025() {
 
     // ---- 1. AC-025's unit test per budget, swept over the closed set of counters ---------------
     for counter in Counter::ALL {
-        // A ledger that has reached exactly this counter's declared limit and nothing else's. The
-        // match is exhaustive, so a fourth counter fails to compile here rather than being skipped.
+        // A ledger that has run out on exactly this counter and on no other, AT THAT COUNTER'S OWN
+        // BOUNDARY: `>` for attempts and tokens (AC-025's *"ran out"*), `>=` for the wall clock
+        // (AC-024's *"reaches"*). The boundary itself is pinned by
+        // `minimum_declaration_is_not_exhausted_by_its_own_clean_pass`; what is asserted here is
+        // AC-025's per-budget obligation, one case per counter. The match is exhaustive, so a
+        // fourth counter fails to compile here rather than being skipped.
         let ledger = match counter {
-            Counter::Attempts => ledger_at(&envelope, envelope.attempts_total.get(), 1, 1),
-            Counter::Tokens => ledger_at(&envelope, 1, envelope.tokens.get(), 1),
+            Counter::Attempts => ledger_at(&envelope, envelope.attempts_total.get() + 1, 1, 1),
+            Counter::Tokens => ledger_at(&envelope, 1, envelope.tokens.get() + 1, 1),
             Counter::WallClock => ledger_at(&envelope, 1, 1, envelope.wall_clock_secs.get()),
         };
 
@@ -616,6 +625,12 @@ fn exhaustion_ac024_ac025() {
     // The expectation column is written out here rather than computed, so this table is an
     // independent statement of what exhaustion means and not a restatement of the implementation.
     // AC-025's own words are "*no code path*", and one happy-path case cannot say that.
+    //
+    // THE BOUNDARY IS PER COUNTER, and the three "at the declared limit" rows are where that shows:
+    // attempts and tokens AT their declared number have spent the budget, not run out of it
+    // (AC-025's *"ran out"* → `>`), while a run that has REACHED its wall clock has (AC-024's
+    // *"reaches"* → `>=`). `minimum_declaration_is_not_exhausted_by_its_own_clean_pass` pins the
+    // rule itself; these rows are it crossed with the evidence sets.
     let cap = envelope.attempts_total.get();
     let tok = envelope.tokens.get();
     let wall = envelope.wall_clock_secs.get();
@@ -631,9 +646,9 @@ fn exhaustion_ac024_ac025() {
             None,
         ),
         (
-            "attempts at the declared limit",
+            "attempts at the declared limit — spent, NOT run out",
             ledger_at(&envelope, cap, 10, 5),
-            Some(Counter::Attempts),
+            None,
         ),
         (
             "attempts past it",
@@ -641,9 +656,9 @@ fn exhaustion_ac024_ac025() {
             Some(Counter::Attempts),
         ),
         (
-            "tokens at the declared limit",
+            "tokens at the declared limit — spent, NOT run out",
             ledger_at(&envelope, 1, tok, 5),
-            Some(Counter::Tokens),
+            None,
         ),
         (
             "tokens past it",
@@ -651,7 +666,7 @@ fn exhaustion_ac024_ac025() {
             Some(Counter::Tokens),
         ),
         (
-            "wall clock at the declared limit",
+            "wall clock at the declared limit — REACHED, and that is AC-024's word",
             ledger_at(&envelope, 1, 10, wall),
             Some(Counter::WallClock),
         ),
@@ -709,9 +724,10 @@ fn exhaustion_ac024_ac025() {
     // Without it every assertion above is satisfied by `fn evaluate_gate(..) -> Err(..)`, or by one
     // that never closes: "the gate does not close" is trivially true of a gate that cannot.
     assert_eq!(
-        closed, 2,
-        "exactly the two inside-every-limit rows with satisfied evidence must CLOSE, or this test \
-         is satisfied by a gate that never closes"
+        closed, 4,
+        "exactly the four not-run-out rows with satisfied evidence must CLOSE — the two inside \
+         every limit and the two AT the attempts and token lines — or this test is satisfied by a \
+         gate that never closes"
     );
 
     // ---- 4. AC-024's durable mark, its carrier, and the run that owes none ----------------------
@@ -768,4 +784,145 @@ fn exhaustion_ac024_ac025() {
              the workflow only as a journaled activity result"
         );
     }
+}
+
+// ---- THE PER-COUNTER BOUNDARY, and the activity that declares rule 8's bare minimum -------------
+
+/// **The exhaustion boundary, one rule per counter** — and the live defect it repairs.
+///
+/// `exhausted_counter` stays **one** function, so [`fold`]'s observation and [`evaluate_gate`]'s
+/// verdict still cannot disagree, but the comparison follows each criterion's own verb:
+///
+/// * **AC-025** — *"an activity that **ran out** of any budget"* → `spent > declared` for
+///   [`Counter::Attempts`] and [`Counter::Tokens`]. Spending exactly what was declared is spending
+///   the budget, not running out of it.
+/// * **AC-024** — *"a run that **reaches** its wall-clock budget"* → `spent >= declared` for
+///   [`Counter::WallClock`]. *"Reaches"* is the criterion's own word and it names the equality.
+///
+/// The declared-`0` guard is kept on all three: nothing can run out of a budget it never drew on.
+///
+/// # The defect was live, not theoretical [measured 2026-09-14]
+///
+/// **9 of the 102 shipped activities declare exactly their lawful ADR-0037 rule-8 minimum** —
+/// `change-summary` 2/2, `change-summary-ue` 3/3, `checklist-review` 2/2, `debt-logging` 2/2,
+/// `dependency-update` 6/6, `rolling-deploy` 4/4, `smoke-test` 2/2, `t-shirt-sizing` 2/2,
+/// `unit-tests` 4/4. Under `>=` each is exhausted by its own **successful** pass, so
+/// [`evaluate_gate`] could never close a gate on its evidence. `tests/fixtures/catalog/two-pass.toml`
+/// is the same shape (`attempts_total = 3`, `required_attempts_total` = 3) and is what this test
+/// runs on, so the case is reproduced in-tree rather than asserted about `spikes/p9/`.
+///
+/// # Why this name carries no AC id
+///
+/// **A dated note fixing the comparison per counter is OWED**: neither AC-024 nor AC-025 states the
+/// comparison outright, and the verbs above are a reading of them. The name is deliberately not
+/// `ac024_…`/`ac025_…` for the same reason
+/// `appetite_raise_from_an_activity_result_is_refused` is not `ac023_…` — claiming the id would
+/// claim a settlement no record has made. `exhaustion_ac024_ac025` keeps both ids and both
+/// criteria's own halves; what is pinned **here** is the boundary.
+///
+/// # The controls, without which this test is satisfied by a gate that never refuses
+///
+/// A second clean pass **is** exhausted, tokens past the declared number **are** exhausted, and the
+/// wall clock **at** its declared number is exhausted while attempts and tokens at theirs are not —
+/// so a blanket `>` on all three fails here, and so does a blanket `>=`.
+#[test]
+fn minimum_declaration_is_not_exhausted_by_its_own_clean_pass() {
+    let activity = fixture("two-pass.toml", FIXTURE_TWO_PASS);
+    let envelope = declared_envelope(&activity);
+
+    // THE PREMISE: this activity declares EXACTLY rule 8's minimum, with no slack. Without it the
+    // clean pass below could be inside a roomy budget and the test would assert nothing.
+    assert_eq!(
+        required_attempts_total(&activity),
+        envelope.attempts_total,
+        "ADR-0037 rule 8 is `budget.attempts_total >= agent/tool steps on one pass`, and the \
+         fixture declares it with zero slack — that is the whole case"
+    );
+
+    // ONE CLEAN PASS spends exactly the declared amount.
+    let pass = charge_pass(&activity, &FanOut::new());
+    assert_eq!(
+        pass, envelope.attempts_total,
+        "one pass must spend the whole declared budget, or 'exhausted by its own pass' is not the \
+         situation under test"
+    );
+
+    let minted = minted_by(&activity);
+    let satisfied = GateEvidence::new(minted.clone(), minted);
+    assert!(satisfied.is_satisfied(), "the premise for a closed gate");
+
+    // AC-025's verb: the pass SPENT its budget, it did not RUN OUT of it.
+    let after_one_pass = ledger_at(&envelope, pass.get(), 10, 5);
+    assert_eq!(
+        exhausted_counter(&after_one_pass, &envelope),
+        None,
+        "an activity declaring rule 8's lawful minimum is not exhausted by its own successful pass"
+    );
+    let verdict = evaluate_gate(&after_one_pass, &envelope, &satisfied)
+        .expect("the gate is evaluated, not refused, after one clean pass");
+    assert!(
+        verdict.is_closed(),
+        "AC-025 closes the gate on evidence a minimally-declared activity actually minted: \
+         {verdict:?}"
+    );
+
+    // ---- CONTROL 1: a SECOND pass does run out, so the rule is not "never exhausted" -----------
+    let after_two_passes = ledger_at(&envelope, pass.get() * 2, 10, 5);
+    assert_eq!(
+        exhausted_counter(&after_two_passes, &envelope),
+        Some(Counter::Attempts),
+        "the draw-down accumulates across passes (ADR-0122 decision 3), so the second pass runs out"
+    );
+    assert_eq!(
+        evaluate_gate(&after_two_passes, &envelope, &satisfied),
+        Err(BudgetExhausted {
+            counter: Counter::Attempts
+        }),
+    );
+
+    // ---- CONTROL 2: tokens take the SAME verb as attempts, and the wall clock does NOT ---------
+    //
+    // Three ledgers, each at exactly one declared number. A blanket `>` fails the wall-clock row
+    // and a blanket `>=` fails the other two, so this block is what discriminates the per-counter
+    // rule from either uniform one.
+    let at_attempts = ledger_at(&envelope, envelope.attempts_total.get(), 10, 5);
+    let at_tokens = ledger_at(&envelope, 1, envelope.tokens.get(), 5);
+    let at_wall = ledger_at(&envelope, 1, 10, envelope.wall_clock_secs.get());
+    assert_eq!(
+        (
+            exhausted_counter(&at_attempts, &envelope),
+            exhausted_counter(&at_tokens, &envelope),
+            exhausted_counter(&at_wall, &envelope),
+        ),
+        (None, None, Some(Counter::WallClock)),
+        "AC-025's `ran out` is `>` for attempts and tokens; AC-024's `reaches` is `>=` for the \
+         wall clock"
+    );
+
+    // AND ONE UNIT PAST EACH, so "not exhausted at the line" is not "never exhausted".
+    let past_attempts = ledger_at(&envelope, envelope.attempts_total.get() + 1, 10, 5);
+    let past_tokens = ledger_at(&envelope, 1, envelope.tokens.get() + 1, 5);
+    assert_eq!(
+        (
+            exhausted_counter(&past_attempts, &envelope),
+            exhausted_counter(&past_tokens, &envelope),
+        ),
+        (Some(Counter::Attempts), Some(Counter::Tokens)),
+    );
+
+    // ---- CONTROL 3: the declared-`0` guard survives the change ---------------------------------
+    //
+    // Nothing runs out of a budget it never drew on. `0 > 0` is false for attempts and tokens
+    // anyway; the guard is load-bearing only for the wall clock's `>=`, and that is why it stays.
+    let undeclared = BudgetEnvelope {
+        attempts_total: Attempts::new(0),
+        tokens: Tokens::new(0),
+        wall_clock_secs: WallClockSecs::new(0),
+    };
+    let (empty, report) = fold(&[], &undeclared);
+    assert_eq!(exhausted_counter(&empty, &undeclared), None);
+    assert_eq!(
+        report.exhausted, None,
+        "the observation calls the same function as the verdict"
+    );
 }
