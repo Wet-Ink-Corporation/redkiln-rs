@@ -881,7 +881,7 @@ state matches the record — so a kernel that does nothing at all fails the term
 **The per-run layout inside `golden-logs/` is this stage's to fix**, and the register's amendment says so in terms.
 Write it into this section in the commit that authors the replay test, before the pin moves.
 
-#### The per-run layout, FIXED 2026-09-13 in the commit that authored the replay test
+#### The per-run layout, FIXED 2026-09-13 in the commit that authored the replay test, **AMENDED 2026-09-14**
 
 The producer is `rk_kernel::replay::{record, write_run}` and the reader is `rk_kernel::replay::read_run`; the layout
 version travels in the file as `schema = "rk-kernel/golden-log/v1"`, so a reader never guesses which shape a run is in.
@@ -890,7 +890,8 @@ version travels in the file as `schema = "rk-kernel/golden-log/v1"`, so a reader
 golden-logs/
   <run_id>/                     run_id = "<stage>-" + first 16 hex of
                                 sha256_lp(["rk-kernel/golden-log/v1", stage, canonical(inputs)])
-    run.json                    { schema, run_id, stage, inputs_digest, event_count, producer }
+    run.json                    { schema, run_id, stage, inputs_digest, event_count, producer,
+                                  terminal_state, next_action }
     inputs/
       pack/<name>.toml          the pack, verbatim
       catalog/<name>.toml       one file per activity, verbatim
@@ -899,8 +900,42 @@ golden-logs/
       context.json              the item's CONTEXT digest preimage, canonical, LF-terminated
       artifact-state.json       the item's ARTIFACT digests preimage, canonical, LF-terminated
       deviation.json            OPTIONAL: the RequestDeviation and its requesting activity
+      runtime.json              { tree_hash, deadline, entered_from, results_at, successor } - the
+                                values the FSM needs and that `select()` cannot compute
+      specs.json                DAG node id -> { activity_id_at_version, card_digest, tools, schema,
+                                timeout_secs, inputs } - the BINDER's output, recorded
     events.jsonl                one canonical JSON object per line, every line LF-terminated
 ```
+
+**Amended 2026-09-14: four members were added by Slices 4f and 4i and this block did not carry them.** Measured
+before the amendment: `grep -c 'specs.json\|results_at' runbook/phase-1/s7b-kernel.md` returned **0** while
+`crates/rk-kernel/src/replay.rs` wrote both. `run.json` gained **`terminal_state`** and **`next_action`** at Slice
+**4f** - the *recorded* side of AC-006 assertion 3 and AC-008's terminal-state half, which a replay compares
+against rather than recomputing from the same journal twice, since two folds of byte-identical journals are equal
+by construction. `inputs/` gained **`runtime.json`** at 4f (its `results_at` member at 4i) and **`specs.json`** at
+**4i**, when `record()` began driving real dispatches through a bound `Harness` and AC-008's N stopped being 0.
+**`read_run` REFUSES a log missing any of them**, naming the file or the member, so a log written under the older
+shape goes red rather than replaying with nothing to compare.
+
+**`specs.json` is a recorded input because the binder is unbuilt, and that is a reading rather than a design.**
+`ActivitySpec`'s five fields are the binder's output; measured 2026-09-14, `card_digest`, `tools` and `schema`
+appear in **zero** catalog fixtures and `timeout_secs` is declared in ten and parsed by nothing. Recording them
+keeps AC-042's *"re-derives the DAG from the logged inputs **alone**"* true of a run that dispatches - the spec is
+logged, not hidden. **A record routing spec assembly is OWED**, and the binder's build is assigned to **7c**
+(mechanism plus fixture cards; the shipped card set cross-lists to 7e).
+
+🛑 **THE LAYOUT VERSION IS STILL `v1` FOR WHAT IS NOW A THIRD SHAPE, AND THE BUMP TO `v2` IS OWED BEFORE THE
+PIN MOVE.** The sentence above says the version exists *"so a reader never guesses which shape a run is in"*, and
+three distinct shapes now share `v1`. The bump is **not** taken in this amendment because it is **half a change**:
+`pub const SCHEMA` in `crates/rk-kernel/src/replay.rs` still reads `v1`, and a runbook that described a version the
+code does not write would be the documented-but-false state this file has been repaired for twice already. **It
+lands in ONE act touching both files, and it must land before the move**, because the schema string is an **input
+to the `run_id` derivation** above - so bumping it **renames every run**. At the time of writing the corpus holds
+**no** `golden-logs/` [measured 2026-09-14], so the bump costs one re-bless of one in-crate fixture through the
+`#[ignore]`d `bless_the_committed_golden_log`; after the single `CORPUS_PIN` move it would invalidate
+corpus-committed run ids under a SHA **AC-464 freezes** and `PROGRESS.md`:103 forbids moving twice. **Re-read
+precondition 3 against this block after the bump lands**, since that precondition is an assertion about this
+section.
 
 **Three properties of the layout are load-bearing and are stated rather than left to be inferred.**
 
