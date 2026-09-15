@@ -1,0 +1,18 @@
+# AC-072 case 1 of 11 -- "fixture predicates naming `dynamism` ... that must fail load AGAINST THE
+# CURRENT REGISTRY".
+#
+# THIS FILE CARRIES NO [facet.*] ENTRY AT ALL, AND THAT IS THE POINT. The criterion's instrument is
+# the SHIPPED registry: `dynamism` is the brief's "pre-registered with no registry entry" case --
+# the process-catalog proposal lists it among the ordinal axes (references/2026-09-07-process-
+# catalog-proposal.md:111) and spikes/p9/facets.toml has no [facet.dynamism] block [measured
+# 2026-09-14]. A fixture that carried its own registry would be asserting against a registry the
+# implementer chose, which is not the claim.
+#
+# All three of AC-072's predicate carriers are exercised across the fixture set; this one uses the
+# `require` row, because "an unregistered facet can feed no row" is the clause's own wording.
+
+[stage.triage]
+baseline = ["TriageRecord"]
+[[stage.triage.require]]
+when = "dynamism"
+artifacts = ["ScanReport"]

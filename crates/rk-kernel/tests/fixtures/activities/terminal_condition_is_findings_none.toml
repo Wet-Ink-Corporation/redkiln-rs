@@ -1,0 +1,78 @@
+# AC-527, red fixture 1 of 3 — **the verbatim predicate**, which must FAIL.
+#
+# ADR-0080 decision 2: *"The predicate `findings.none(evidence in [Reproduced, MutationSurvived])`
+# is forbidden as a quality block's terminal condition."* The `expr` below is that predicate in the
+# spelling the shipped catalog writes it (quoted members, as `spikes/p9/catalog/root-cause.toml`:62
+# does), copied rather than paraphrased — §7b.12 requires the verbatim case.
+#
+# **The activity around it is authored, not copied.** §7b.12:972-976 forbids editing `spikes/p9/`
+# to make a red case, so this file is a new activity that carries the schema's `adversary → policy
+# → gate` block. That block is written out rather than declared with the `quality = { adversary,
+# policy, gate }` shorthand because **ADR-0080 decision 4 ships that shorthand with NO default** —
+# *"every activity that wants the block writes it"* — and no activity on disk carries a `quality`
+# key [measured 2026-09-14: `grep -rlE '^ *quality *=' spikes/p9/catalog/` → nothing].
+#
+# Why it is forbidden, in one line the fixture cannot assert for itself: F37 measured **33 of 33**
+# adversary dispatches producing at least one finding in a blocking evidence class and **none**
+# producing zero, so this condition is satisfied only by a reviewer that does not review; and F29
+# measured a reproduced regression **approved 3 of 10 times**, so the empty set is not evidence
+# either way.
+
+[activity]
+id           = "ac527-none-over-empty"
+version      = 1
+stage        = "analysis"
+provides     = ["RootCause"]
+requires     = ["ReproCase"]
+derived_from = ["ReproCase"]
+tags         = ["kind:bug"]
+method_rank  = 10
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+max_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["Findings?", "GreenAt", "ToolReport"]
+deviation_ok = ["add"]
+
+[[step]]
+id      = "hypothesise"
+kind    = "agent"
+role    = "investigator"
+inputs  = { repro = "artifact:ReproCase" }
+outputs = "value:HypothesisLog"
+
+[[step]]
+id      = "verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${hypothesise.outputs.discriminating_test}" }
+outputs = "value:TestReport"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { log = "${hypothesise.outputs}", report = "${verify.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION. `none` over an empty list is TRUE (ADR-0103 decision 4, pinned by
+# `quantifier_empty_and_null`), so the block terminates on the absence of findings.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}" }
+expr     = "findings.none(evidence in ['Reproduced', 'MutationSurvived'])"
+on_false = { to = "hypothesise", max = 2 }
+
+[[step]]
+id       = "signoff"
+kind     = "gate"
+when     = "rigor >= mandatory"
+question = "ac527-none-over-empty.accept"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { RootCause = "${hypothesise.outputs.root_cause}" }
+evidence  = ["${verify}", "${adversary?}", "${signoff?}"]

@@ -127,13 +127,43 @@ impl fmt::Display for TomlError {
 
 impl std::error::Error for TomlError {}
 
+/// Where every header and every key was read from: a canonical dotted path to the 1-based line.
+///
+/// An array-of-tables element is spelled with its index — `stage.review.require[0]` — which is the
+/// **same** vocabulary `crate::select::pack`'s `RequireRow::site` is built from, so a caller holding
+/// a loaded `Pack` can look a row's span up without a second path convention to keep in sync.
+///
+/// The header line and the key lines of one table are separate entries: `stage.review.require[0]` is
+/// the `[[stage.review.require]]` line and `stage.review.require[0].capability` is the `capability =`
+/// line inside it.
+pub type Spans = BTreeMap<String, usize>;
+
 /// Read one document.
 ///
 /// # Errors
 ///
 /// [`TomlError`] naming the line, for anything outside the subset this module documents.
 pub fn parse(src: &str) -> Result<Table, TomlError> {
+    // ONE PARSER. `parse_spans` is the loop and this is a projection of it, rather than two loops
+    // that could come to disagree about what a line is — which would put a span on a line the value
+    // did not come from, and AC-495's whole THEN is a span location.
+    parse_spans(src).map(|(table, _)| table)
+}
+
+/// Read one document, **and** the line each header and each key was read at.
+///
+/// **AC-495's instrument needs a span** — *"validation fails with a span pointing at the requiring
+/// row"* — and a line is the grain this reader has: its subset is measured line-oriented (see the
+/// module header), so every value in the corpus sits on exactly one line and a line number is an
+/// exact location rather than an approximation of one.
+///
+/// # Errors
+///
+/// [`TomlError`] naming the line, for anything outside the subset this module documents.
+pub fn parse_spans(src: &str) -> Result<(Table, Spans), TomlError> {
     let mut root = Table::new();
+    let mut spans = Spans::new();
+    let mut prefix = String::new();
     let mut path: Vec<String> = Vec::new();
     for (n, raw) in src.lines().enumerate() {
         let line_no = n + 1;
@@ -151,12 +181,16 @@ pub fn parse(src: &str) -> Result<Table, TomlError> {
                 .ok_or_else(|| err("unterminated [[array-of-tables]] header".to_owned()))?;
             path = split_header(name, line_no)?;
             push_array_table(&mut root, &path).map_err(err)?;
+            prefix = canonical_path(&root, &path);
+            spans.insert(prefix.clone(), line_no);
         } else if let Some(rest) = line.strip_prefix('[') {
             let name = rest
                 .strip_suffix(']')
                 .ok_or_else(|| err("unterminated [table] header".to_owned()))?;
             path = split_header(name, line_no)?;
             open_table(&mut root, &path).map_err(err)?;
+            prefix = canonical_path(&root, &path);
+            spans.insert(prefix.clone(), line_no);
         } else {
             let (key, value_src) = line
                 .split_once('=')
@@ -174,9 +208,54 @@ pub fn parse(src: &str) -> Result<Table, TomlError> {
             if table.insert(key.to_owned(), value).is_some() {
                 return Err(err(format!("duplicate key {key:?}")));
             }
+            let at = if prefix.is_empty() {
+                key.to_owned()
+            } else {
+                format!("{prefix}.{key}")
+            };
+            spans.insert(at, line_no);
         }
     }
-    Ok(root)
+    Ok((root, spans))
+}
+
+/// The dotted path a header resolves to, with `[i]` on every array-of-tables segment.
+///
+/// It walks the **already-built** tree by [`open_table`]'s own rule — descending through an
+/// array-of-tables lands in its last element — so the index it writes is the index the value was
+/// actually stored at, rather than a count kept in parallel that could drift from it.
+fn canonical_path(root: &Table, path: &[String]) -> String {
+    use std::fmt::Write as _;
+
+    let mut out = String::new();
+    let mut cursor = Some(root);
+    for seg in path {
+        if !out.is_empty() {
+            out.push('.');
+        }
+        let Some(table) = cursor else {
+            // Unreachable through `parse_spans`, which calls this only after the descent succeeded.
+            // It degrades to the bare segment rather than panicking, because a span is a diagnostic
+            // and a diagnostic that aborts the read is worse than one that is coarse.
+            out.push_str(seg);
+            continue;
+        };
+        match table.get(seg) {
+            Some(Value::Array(items)) => {
+                let _ = write!(out, "{seg}[{}]", items.len().saturating_sub(1));
+                cursor = items.last().and_then(Value::as_table);
+            }
+            Some(Value::Table(t)) => {
+                out.push_str(seg);
+                cursor = Some(t);
+            }
+            _ => {
+                out.push_str(seg);
+                cursor = None;
+            }
+        }
+    }
+    out
 }
 
 const fn is_bare_key_char(c: char) -> bool {

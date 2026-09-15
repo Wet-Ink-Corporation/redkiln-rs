@@ -1,0 +1,35 @@
+# AC-072 case 6 of 11 -- "a `require` row keyed on a `declared` facet ... which must fail load"
+# (ADR-0093 decision 1: `declared` for `surfaces`, read from surfaces.toml, "may key no `require`
+# row until S-FACET scores it -- a row keyed on it fails load").
+#
+# THE ONE CLAUSE BOTH CRITERIA ENUMERATE, AND IT IS IMPLEMENTED IN BOTH ON PURPOSE. AC-520's
+# registries/facet-provenance/require_keyed_on_declared.toml pins it as a PROVENANCE consequence --
+# a facet S-FACET has not scored may key nothing. This file pins it as an ENTRY-SHAPE consequence:
+# `declared` is one of the five closed tokens and the token carries the bar with it, so the entry's
+# own `source` decides the row's fate without any record being read. Two rules reaching one registry
+# defect by two routes is what the register means by "four areas lint the same registry"; it is not
+# the collapse the 2026-09-13 amendment forbids, which is about the DERIVER FIELDS and their MEANING.
+#
+# The [facet.surfaces] block is the shipped one, verbatim (spikes/p9/facets.toml:112-115, minus its
+# trailing comment). The defect is the row below it and nothing about the entry.
+#
+# [facet.kind] IS HERE SO THE ONE-RESPECT REPAIR HAS SOMEWHERE TO LAND. The discrimination re-keys
+# the row off `surfaces` and onto a lawful facet, and "an unregistered facet can feed no row" is
+# this same rule's headline clause -- so a repair naming a facet this file does not declare would go
+# red on the OTHER clause and prove nothing about this one. It is the shipped entry
+# (spikes/p9/facets.toml:24-26), and it is `human`-sourced, which carries no bar at all.
+
+[facet.kind]
+values = ["initiative", "project", "story", "bug", "incident", "spike", "chore", "tech-debt", "security-vuln", "docs"]
+source = "human"
+
+[facet.surfaces]
+values = ["flags", "migration", "payments", "secrets"]
+source = "declared"
+set = true
+
+[stage.review]
+baseline = ["ReviewFindings"]
+[[stage.review.require]]
+when = "'flags' in surfaces"
+artifacts = ["ScanReport"]

@@ -19,7 +19,11 @@
 //! asserts nothing reads as coverage — so there is no `edges` module here, because the five `ac4xx`
 //! hand-forwards are not built. (`breaker` and `degradation` left that list with Slice 4d, `fsm`
 //! with Slice 4e, `memo` with Slice 4g, and [`runtime`], [`ledger`] and [`advisory`] with Slice 4h;
-//! the sentence is corrected rather than extended.)
+//! the sentence is corrected rather than extended.) **The clause about the five is now false of
+//! one**: AC-487's is built, in [`kernel_denylist`], and **four** remain — AC-484, AC-494, AC-495
+//! and AC-498. **Corrected again 2026-09-14: two of those four are now built** — AC-494's in
+//! [`resolver`] and AC-495's in [`pack_validation`] — and **two** remain, AC-484 and AC-498. It is
+//! still true that no module here stands in for either of them.
 //!
 //! **Slice 4h, 2026-09-14: [`runtime`], [`ledger`] and [`advisory`].** This is where `rk-ports` is
 //! CALLED for the first time in the workspace. [`runtime`] holds AC-009's verbatim journaling and
@@ -99,9 +103,67 @@
 //! the module it reads. The checkpoint grep is over the test NAME and not over its file, so the
 //! placement costs no assertion either way. [`envelope`]'s own header states it.
 //!
-//! **`facet_registry_entry_shape` is absent and that is deliberate.** AC-072 is a **third** rule
-//! with its own eleven-case fixture set and the register forbids collapsing it into either facet
-//! lint; it is not built, so there is no module for it and no test claiming it.
+//! **[`facet_registry`], 2026-09-14: AC-072, and the sentence this paragraph used to carry.** It
+//! read *"**`facet_registry_entry_shape` is absent and that is deliberate.** AC-072 is a **third**
+//! rule with its own eleven-case fixture set and the register forbids collapsing it into either
+//! facet lint; it is not built, so there is no module for it and no test claiming it."* The rule is
+//! built, the eleven fixtures are committed under `tests/fixtures/registries/entry-shape/`, and the
+//! module and the test both exist — so the paragraph is corrected rather than deleted, on the rule
+//! the header above states: **no empty module stands in for an unbuilt one**, and its converse is
+//! that a module arriving is the absence-note's retirement.
+//!
+//! **[`quality_block`], 2026-09-14: AC-527, and the absence note in [`evaluator`] it retires.**
+//! `evaluator.rs`:236 carried *"the lint that acts on it **IS NOT BUILT** —
+//! `ac527_empty_set_terminal_condition` selects zero tests on this crate"*; the filter now selects
+//! one. The three fixtures §7b.12 names are committed under `tests/fixtures/activities/`, and the
+//! **second** is the whole point: `findings.all(…)` over an empty set, which shares no text with
+//! ADR-0080's forbidden predicate — this file asserts that over the fixture's own bytes, with
+//! fixture 1 as the control on the check — and must fail for the same reason. The third must LOAD,
+//! and two patched variants of it are the controls that stop the rule being a denylist of the word
+//! `findings` or a rule keyed on the block's shape. 🛑 **Three things here are not covered**: the
+//! `rk-catalog` CLI surface (Step 7d's), the shipped catalog's **eleven** live violations (Step
+//! 7e's repairs — and **none** of its 94 terminal conditions is decided *lawful*, which the test
+//! asserts as a number), and the reading gap between AC-527's THEN and ADR-0080 decision 2, whose
+//! size is **83** and whose erratum is **OWED**.
+//!
+//! Its **three positives** are the discrimination and not decoration (§7b.13 says so by name), and
+//! its **fourth** is `spikes/p9/facets.toml` itself: two of the eleven cases are predicates that
+//! must fail *"against the current registry"*, so that file is an input and a rule that rejected it
+//! would be caught there. 🛑 **Three clauses of AC-072 are recorded and not built**, each with its
+//! measurement in `src/facet_registry.rs`'s header: the **`anchor`** clause has no on-disk form in
+//! any record; the domain-shape set is **four on disk and three in the register**; and the general
+//! *"may abstain"* case is decidable from no entry. **Three register amendments are OWED**, and the
+//! CLI surface is Step 7d's over Step 7e's file — none of the four is reported as covered.
+//!
+//! **[`kernel_denylist`], 2026-09-14: AC-487, the first of the five `ac4xx` hand-forwards to land.**
+//! The lint is a **source rule** over `crates/rk-kernel/src/` and not a `clippy` entry (`clippy.toml`
+//! has no module scoping and `downcast_ref` has no nameable path) and not a `trybuild` case (an
+//! identity check *compiles*). Its positive control is `tests/fixtures/lint-controls/`'s, the
+//! directory `s7b-ii` §7b-ii.10 opens for exactly that, and the compile-fail fixture the register
+//! names **beside** the lint is `tests/ui/ac487_port_identity_is_not_askable.rs`, which pins the
+//! half a source rule cannot: no port trait carries an `Any` supertrait, so the kernel cannot ask a
+//! port object what it is. 🛑 **Two things here are not covered.** AC-487's *"and the difference is
+//! expressed as a capability lookup"* is **STRUCK by the criterion's own note** as unverifiable by
+//! this instrument and is carried by AC-494 and AC-495, **both of which are now built** — in
+//! [`resolver`] and [`pack_validation`], and deliberately not in this file, because an absence rule
+//! and a presence rule sharing one test file is how the two get read as one; and the
+//! *"no adapter-discriminant enum"* clause is reached **by prefix only** — a substring rule sees
+//! `enum AdapterKind` and not `enum Backend`, which is **ARMED, NOT DISCHARGED**.
+
+//! **2026-09-14: [`resolver`] and [`pack_validation`] — AC-494 and AC-495, the third and fourth of
+//! the five `ac4xx` hand-forwards.** [`resolver`] holds the register's **three** named instruments
+//! and not one: the unit test over a fake adapter whose registry omits the capability (with the
+//! adapter's own dispatch counter reading **0**, which is *"never a `pass`"*), the exhaustiveness
+//! test whose mechanism is `E0004` on a twelfth `StepError` variant, and the negative test over the
+//! **shipped** retry policy at every attempt from 1 to `N + 2`. [`pack_validation`] holds the two
+//! fixture packs — one unroutable, one routed, differing by one `[[stage.verify.require]]` row and
+//! an `id` — and asserts the **span location** on the failing one as a literal *and* by reading the
+//! fixture's own text back at that line.
+//!
+//! 🛑 **Three halves there are ARMED and none is claimed**: where an activity's capability need comes
+//! from (no `ActivitySpec` field, no catalog key — a record is **OWED**), AC-495's *"before any
+//! activity runs"* as a live ordering (`rk-cli`, Step 7d), and **AC-500**, which AC-495's own *Note*
+//! trims out of this criterion. Each file's header carries its table.
 
 mod advisory;
 mod breaker;
@@ -114,16 +176,21 @@ mod envelope;
 mod evaluator;
 mod execute;
 mod facet_provenance;
+mod facet_registry;
 mod facet_stability;
 mod fsm;
 mod grammar;
+mod kernel_denylist;
 mod ledger;
 mod memo;
 mod on_false;
+mod pack_validation;
 mod probe_differential;
 mod producer;
+mod quality_block;
 mod recorded_log;
 mod replay;
+mod resolver;
 mod retry;
 mod rigor;
 mod runtime;

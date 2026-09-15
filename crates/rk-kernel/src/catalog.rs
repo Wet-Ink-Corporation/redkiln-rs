@@ -96,6 +96,21 @@ pub struct Step {
     pub output_type: Option<String>,
     /// The step's own `when` guard, verbatim. `None` means the step always runs.
     pub when: Option<String>,
+    /// `expr = "…"` on a `check` step, verbatim — the schema's **policy predicate**, and the thing
+    /// ADR-0080 calls a quality block's *terminal condition*.
+    ///
+    /// Read for one reason, at Slice 2's AC-527 debt: [`crate::quality_block`] evaluates it over an
+    /// empty findings set. It is **not** evaluated here and it is **not** parsed here — a predicate
+    /// that does not parse is a violation the rule reports with the activity and the step that
+    /// carry it, and a loader that refused it would move AC-527's THEN (*"lint fails **naming the
+    /// activity and the predicate**"*) into a `CatalogError` that names neither.
+    ///
+    /// Carried on **every** step kind and not only on `check`, because the field is transcribed and
+    /// not interpreted: the schema puts `expr` on `check` alone, and a step of another kind that
+    /// declares one is a schema defect this loader must not hide by dropping the key. **Ninety-four
+    /// shipped steps declare one, all of them `check`** [measured 2026-09-14:
+    /// `grep -rhc '^expr' spikes/p9/catalog/*.toml` sums to 94].
+    pub expr: Option<String>,
     /// `for_each = "${step.outputs.<list>}"` or `"artifact:Kind.<list>"` (schema §9b.5), verbatim.
     ///
     /// **The cardinality is not here and cannot be**: schema §1 is *"cardinality is runtime-computed
@@ -502,6 +517,7 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
                         .map_or_else(|| o.clone(), ToOwned::to_owned)
                 }),
                 when: text(table, "when"),
+                expr: text(table, "expr"),
                 for_each: text(table, "for_each"),
                 retry_max: bounded_max(table, "retry", &id, &shape)?,
                 repeat_max: bounded_max(table, "repeat", &id, &shape)?,

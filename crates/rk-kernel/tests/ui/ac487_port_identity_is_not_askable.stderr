@@ -1,0 +1,28 @@
+error[E0599]: no method named `downcast_ref` found for reference `&Arc<(dyn Harness + 'static)>` in the current scope
+  --> tests/ui/ac487_port_identity_is_not_askable.rs:51:13
+   |
+51 |     harness.downcast_ref::<FakeHarness>().is_some()
+   |             ^^^^^^^^^^^^
+   |
+help: there is a method `as_ref` with a similar name
+   |
+51 -     harness.downcast_ref::<FakeHarness>().is_some()
+51 +     harness.as_ref::<FakeHarness>().is_some()
+   |
+
+error[E0308]: mismatched types
+  --> tests/ui/ac487_port_identity_is_not_askable.rs:57:28
+   |
+57 |     let erased: &dyn Any = harness;
+   |                 --------   ^^^^^^^ expected trait `Any`, found trait `Harness`
+   |                 |
+   |                 expected due to this
+   |
+   = note: expected reference `&(dyn Any + 'static)`
+              found reference `&dyn Harness`
+
+error[E0599]: no method named `downcast_mut` found for mutable reference `&mut dyn EventStore` in the current scope
+  --> tests/ui/ac487_port_identity_is_not_askable.rs:64:11
+   |
+64 |     store.downcast_mut::<VecStore>().is_some()
+   |           ^^^^^^^^^^^^ method not found in `&mut dyn EventStore`

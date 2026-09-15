@@ -1,0 +1,17 @@
+# AC-072 case 3 of 11 -- "a fixture entry declaring `source = "derived"` with no `deriver` field,
+# which must fail load".
+#
+# AC-072 OWNS THAT THE ENTRY CARRIES THE THREE FIELDS; AC-520 OWNS WHAT THEY MEAN. The amendment of
+# 2026-09-13 says so in terms and adds "the two must not be collapsed into one lint rule", so this
+# file is NOT registries/facet-provenance/no_deriver.toml with a different name: that fixture models
+# a PINNED CORPUS in a [[corpus_record]] block and its rule resolves the record; this one carries no
+# corpus at all, because the entry-shape rule reads none. The single defect is the absent `deriver`,
+# and the other two of the three are present so that the "all three required together" clause
+# reports exactly one field missing rather than three.
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]
+set = true
+source = "derived"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"

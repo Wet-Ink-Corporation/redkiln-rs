@@ -1,0 +1,79 @@
+# AC-527, fixture 3 of 3 — **the positive, which must LOAD**, and without it every assertion above
+# it is satisfied by a lint that refuses every activity.
+#
+# AC-527's THEN names what a lawful terminal condition is: *"a quality block terminates on a
+# positive evidence record (a `GreenAt(sha)` verify result, a reproduced-and-flipped finding set, a
+# human gate answer), never on the absence of findings."* This block terminates on the first of the
+# three, and it does so **structurally** and not only in spelling: the `verify` step is
+# `run = "toolchain:test"`, which is the one shape ADR-0036 mints `GreenAt` for
+# (`rk_kernel::catalog::Step::mints`), so the step the predicate names really is a verify result.
+#
+# The block is otherwise identical in shape to fixture 1's — same `adversary → policy → gate`, same
+# `on_false` loop-back, same `rigor >= recommended` guard on the adversary. **Only the terminal
+# condition differs**, which is what makes the pair a control: if the rule were keyed on the
+# presence of an adversary step, on `on_false`, or on the block's shape, this fixture would fail
+# too.
+#
+# Its truth over an empty findings set is **not** `true`: `verify.status` is unknown at lint time,
+# so the predicate is `null`, and `null` is not `true`. That is the whole of AC-527's THEN, and it
+# is why this file loads while the two above it do not.
+
+[activity]
+id           = "ac527-verify-result"
+version      = 1
+stage        = "analysis"
+provides     = ["RootCause"]
+requires     = ["ReproCase"]
+derived_from = ["ReproCase"]
+tags         = ["kind:bug"]
+method_rank  = 11
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+max_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["Findings?", "GreenAt", "ToolReport"]
+deviation_ok = ["add"]
+
+[[step]]
+id      = "hypothesise"
+kind    = "agent"
+role    = "investigator"
+inputs  = { repro = "artifact:ReproCase" }
+outputs = "value:HypothesisLog"
+
+[[step]]
+id      = "verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${hypothesise.outputs.discriminating_test}" }
+outputs = "value:TestReport"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { log = "${hypothesise.outputs}", report = "${verify.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION — a re-execution outcome, which is ADR-0080 decision 2's second admissible
+# shape (*"a different quantity entirely — a bounded loop-back count, a re-execution outcome, or a
+# delta against the previous iteration's findings"*). A reviewer doing its job can terminate it.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { report = "${verify.outputs}" }
+expr     = "verify.status == 'passing' and verify.green_at != null"
+on_false = { to = "hypothesise", max = 2 }
+
+[[step]]
+id       = "signoff"
+kind     = "gate"
+when     = "rigor >= mandatory"
+question = "ac527-verify-result.accept"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { RootCause = "${hypothesise.outputs.root_cause}" }
+evidence  = ["${verify}", "${adversary?}", "${signoff?}"]

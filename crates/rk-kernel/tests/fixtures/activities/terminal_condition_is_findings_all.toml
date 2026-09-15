@@ -1,0 +1,57 @@
+# AC-527, red fixture 2 of 3 — **THE DISCRIMINATOR**, and it must FAIL for the same reason as
+# fixture 1 while sharing none of its text.
+#
+# 🛑 ADR-0080's own spelling does not occur anywhere in this file — not in the predicate and not in
+# this comment, which is asserted by the test over these very bytes. A lint that matches that
+# spelling, or any denylist of spellings, passes fixture 1 and fixture 3 and still admits this one;
+# §7b.13:1047-1051 names exactly that failure and calls this case "the discrimination", because a
+# lint matching the forbidden string alone passes it, and the rule is on the **form**, not the
+# string.
+#
+# The form: `all` over an empty list is **true** (ADR-0103 decision 4 — the same clause that makes
+# `none` true, which is why one rule reaches both). So "every finding this reviewer raised is
+# non-blocking" terminates the block when the reviewer raised nothing — the identical defect,
+# authored the way an author who had read only the forbidden *string* would write it.
+
+[activity]
+id           = "ac527-all-over-empty"
+version      = 1
+stage        = "build"
+provides     = ["ReviewNote"]
+requires     = ["Diff"]
+tags         = ["kind:bug"]
+method_rank  = 20
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "author"
+inputs  = { diff = "artifact:Diff" }
+outputs = "value:ReviewDraft"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION. `all` over an empty list is TRUE, so this reads "the reviewer found
+# nothing blocking" and is satisfied identically by "the reviewer found nothing".
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}" }
+expr     = "findings.all(severity != 'blocking')"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ReviewNote = "${draft.outputs.note}" }
+evidence  = ["${adversary?}"]

@@ -121,14 +121,26 @@
 //! argument with one constructor; [`workflow::breaker`]'s and [`workflow::degrade`]'s headers carry
 //! the measurements and name the records that are owed.
 //!
-//! **Two things Slice 2 does not contain, stated so the absence is not read as an oversight.**
-//! **AC-072 — the registry-entry loader rule — is a THIRD rule with its own eleven-case fixture
-//! set**, the register forbids collapsing it into either lint, and it is **not written**: nothing
-//! in `src/` is named for it, so no checkpoint assertion keyed on its name can read [`registry`]'s
-//! loader as that rule. And **both lints' CLI surfaces are absent**: `redkiln lint
-//! --facet-stability` and `--facet-provenance` are `rk-cli`'s (**Step 7d**) over `.redkiln/`
-//! (**Step 7e**), so those halves are **ARMED, NOT DISCHARGED**. What is discharged here is the
-//! fail-closed behaviour, which §7b.14 says is what Step 7b owes in their place.
+//! **Slice 2's third rule, 2026-09-14: [`facet_registry`].** *(This paragraph opened "**Two things
+//! Slice 2 does not contain**" and its first was "**AC-072 — the registry-entry loader rule — is a
+//! THIRD rule with its own eleven-case fixture set**, the register forbids collapsing it into
+//! either lint, and it is **not written**". It is written now, and the correction is the behaviour
+//! arriving.)* Its subject is the **entry** — every entry, whatever its `source` — and it reads no
+//! record at all: the unregistered-facet clause over all three of AC-072's predicate carriers, the
+//! declared domain and its shape, the five closed `source` tokens, `derived`'s three fields
+//! **together** and `kernel`'s none of them, the `declared` require-row bar, nullability declared
+//! **by name**, and ADR-0103 decision 2's lexis. **Three clauses of it are recorded and not built**
+//! and the module header carries each measurement: AC-072's **`anchor`** has no on-disk form in any
+//! record [measured: one occurrence in `spikes/p9/facets.toml`, inside a comment]; the domain-shape
+//! set is **four on disk and three in the register** [measured: `kind`, `cos`, `stage`, `role`]; and
+//! the general *"may abstain"* case is decidable from no entry, so the `nullable` clause is pinned
+//! at ADR-0089 decision 3's boolean grain. **Three register amendments are OWED** and this stage
+//! takes none of the three decisions (`00-preamble.md`:55).
+//!
+//! **What Slice 2 still does not contain**: all three lints' CLI surfaces. `redkiln lint
+//! --facet-stability`, `--facet-provenance` and the registry lint are `rk-cli`'s (**Step 7d**) over
+//! `.redkiln/` (**Step 7e**), so those halves are **ARMED, NOT DISCHARGED**. What is discharged here
+//! is the fail-closed behaviour, which §7b.14 says is what Step 7b owes in their place.
 //!
 //! # The two halves, and why the split is a compile-time fact here
 //!
@@ -161,26 +173,123 @@
 //! (**AC-484**). `rk-git` is a dependency **as a concrete crate** and not as a port (**AC-483**;
 //! ADR-0003:57-58). The assertions are over the resolved graph — `cargo tree -p rk-kernel -e
 //! normal` — because a manifest sees direct dependencies only.
-
-//! # The two fail-closed facet lints
 //!
-//! [`facet_stability`] is **AC-071**, the unblocking gate, and its subject is `source = "llm"`.
-//! [`facet_provenance`] is **AC-520**, the sibling gate F39 forced, and its subject is
-//! `source = "derived"`. They are **two rules with two fixture sets**, never one gate with two
-//! subjects: AC-520's own record says why — *"a single gate carrying two different subjects, two
-//! different records and two different failure meanings is the shape that invites that collapse"*.
+//! # The kernel holds no adapter identity, which is a different claim from the one above
+//!
+//! [`kernel_denylist`] is **AC-487**, and it is **not** AC-484 one level down. AC-484 is about the
+//! dependency **graph**: no `rk-adapter-*` edge, direct or transitive. AC-487 is about this crate's
+//! **source**: no comparison against an adapter identity — no adapter name string, no
+//! `Any::downcast`, no adapter-discriminant enum — which a graph assertion cannot see, because a
+//! `match id { "rk-adapter-sqlite" => … }` needs no edge at all. The rule is a source scan over
+//! `crates/rk-kernel/src/` reporting **file and line**, over **code lines only**: this very
+//! paragraph, `:172` above and `workflow/retry.rs`:493 name the forbidden crates in prose, and a
+//! whole-file `contains` would fire on the sentence describing the ban.
+//!
+//! 🛑 **AC-487's own note strikes a clause and this crate does not claim it**: *"the lint proves the
+//! absence of identity checks; it cannot prove the presence of a capability lookup, so the earlier
+//! clause 'and the difference is expressed as a capability lookup' is struck as unverifiable by the
+//! named instrument."* That the lookup exists is AC-494's and AC-495's, and **both are built as of
+//! 2026-09-14** — [`resolver`] and [`pack_validation`]. The sentence that stood here said *"neither
+//! is built"* and is corrected in place rather than deleted, because the reason it was written still
+//! holds: [`kernel_denylist`] proves an absence and cannot prove a presence, and the presence is a
+//! different instrument in a different module. The two claims stay separate.
+//!
+//! # The capability lookup is a lookup on DATA, at two moments
+//!
+//! [`resolver`] is **AC-494** and [`pack_validation`] is **AC-495**, and they are one reading at two
+//! moments rather than one rule twice: validation refuses a **pack** at startup whose only route
+//! through a stage needs a token no configured adapter claims, naming the requiring row with a
+//! **span**; the resolver refuses an **activity** at resolution whose need the claimed set does not
+//! hold, with `StepError::Unsupported { capability }` carrying the token. `tests/it/resolver.rs`'s
+//! `the_pack_that_cannot_route_and_the_activity_that_cannot_resolve_name_one_token` asserts the two
+//! agree on the token, so the pair cannot drift into describing two systems.
+//!
+//! **Neither module holds an adapter.** The claimed set arrives as a value — `resolver`'s header
+//! carries the measurement that **no capability registry exists in this workspace** — so the
+//! question both rules ask is *"does this set contain this token?"* and never *"which adapter is
+//! this?"*. That is what keeps them consistent with [`kernel_denylist`] rather than in tension with
+//! it, and it is design §3.3 P5's *"capability differences are **data**"* read literally.
+//!
+//! 🛑 **Three halves are ARMED and none is claimed.** Where an activity's capability **need** comes
+//! from is a decision no record has taken — `ActivitySpec` carries *"five fields and no sixth"* and
+//! the catalog schema declares no `capability` key — so the need is handed in and **a record routing
+//! it is OWED** (`00-preamble.md`:55). AC-495's *"before any activity runs"* is discharged as a type
+//! fact and not as an ordering inside a live run, which needs `rk-cli`'s composition root at **Step
+//! 7d**. And **AC-500 is ARMED, not claimed**: the route-around is a *dispatch-time* behaviour that
+//! AC-495's own *Note* trims out of this criterion, and its pack half is Step 7e's.
+
+//! # The three registry rules
+//!
+//! [`facet_stability`] is **AC-071**, the unblocking gate, and its subject is `source = "llm"`
+//! against a scored stability record. [`facet_provenance`] is **AC-520**, the sibling gate F39
+//! forced, and its subject is `source = "derived"` against a scored precision record.
+//! [`facet_registry`] is **AC-072**, and its subject is the **entry** — every entry, no record at
+//! all. They are **three rules with three fixture sets**, never one gate with three subjects:
+//! AC-520's own record says why — *"a single gate carrying two different subjects, two different
+//! records and two different failure meanings is the shape that invites that collapse"* — and
+//! AC-072's 2026-09-13 amendment says it again for the pair it is half of: *"AC-520 owns what the
+//! class and the record MEAN, this criterion owns that the ENTRY carries them … and the two must not
+//! be collapsed into one lint rule."*
 //!
 //! # Rigor monotonicity
 //!
 //! [`rigor`] is **AC-105 / SM-035** over **ADR-0081 clause 1's** superset relation, and it is the
 //! first measurement of monotonicity by any tool: `grep -ci monoton spikes/p9/lattice.py` is **0**.
+//!
+//! # The quality block's terminal condition
+//!
+//! **And — the last of Slice 2's debt — [`quality_block`], which is AC-527.** `tests/it/
+//! evaluator.rs`:236 carried the absence note for it (*"the lint that acts on it **IS NOT BUILT**"*)
+//! and that note is retired in place rather than deleted. The rule is on the **FORM**: it evaluates
+//! a `check` step's `expr` over a context in which the findings set is empty — and again over one in
+//! which it is absent, which is the shape F37's `optional` arm measured — across the three live
+//! rigor levels, and refuses it if any cell comes out `true`. That reaches `findings.none(…)`,
+//! `findings.all(…)`, `findings == null` and `findings.len() == 0` with one rule, where a denylist
+//! of ADR-0080's spelling reaches only the first. **It binds `findings` and `rigor` and nothing
+//! else**, and that restraint is measured rather than assumed: binding every read path to `null`
+//! makes `X.all(…)` over an unknown collection vacuously true and refuses `mutation-testing`'s
+//! threshold and `flag-progressive-rollout`'s re-execution outcome — the two shapes ADR-0080
+//! decision 2 *prescribes as the remedy*. **It is red against the shipped catalog by design**: 11 of
+//! the 94 live terminal conditions are refused, 83 have no truth value here, and **none is decided
+//! lawful**. The repairs are Step 7e's and the CLI surface is Step 7d's; neither is claimed, and an
+//! erratum reconciling AC-527's THEN with ADR-0080 decision 2's broader *"satisfiable only by an
+//! empty finding set"* is **OWED**. The module header carries the table.
 
 pub mod catalog;
 pub mod facet_provenance;
+pub mod facet_registry;
 pub mod facet_stability;
+/// **AC-487's kernel denylist** — the source rule that proves `rk-kernel` compares against no
+/// adapter identity. A **top-level** module beside [`facet_registry`] and deliberately not inside
+/// [`workflow`] or [`select`]: it reads files, which both of those deny.
+///
+/// It is also outside the two modules the other architecture lints police, for the reason
+/// `s7b-ii`:534-539 states in general — *"a lint written inside `policy` or `classify` makes the
+/// ban fire on its own implementation"*. This rule's subject is the **whole crate**, so it cannot
+/// stand outside its own scope; its header records the one marked, counted exemption that follows
+/// from that, and `tests/it/kernel_denylist.rs` asserts the exemption's size.
+pub mod kernel_denylist;
+/// **AC-495's pack validation** — the startup rule that refuses a stage whose only route needs a
+/// capability nothing claims, with a span at the requiring row.
+///
+/// A **top-level** module and not a child of [`select`], for a reason that is the mirror of
+/// [`runtime`]'s: this rule is not part of the selection function. Its verdict feeds no `DagNode`,
+/// its `capability` key is deliberately absent from `Pack::to_json` — which is the `dag_assembled`
+/// payload AC-040's byte-identity is measured over — and a routing concern living inside `select`
+/// would put a startup validation on the pure function's input path.
+pub mod pack_validation;
 pub mod predicate;
+pub mod quality_block;
 pub mod registry;
 pub mod replay;
+/// **AC-494's resolver** — a missing capability is `StepError::Unsupported { capability }` carrying
+/// the token, decided against a claimed set the kernel is **handed**.
+///
+/// A **top-level** module, for the reason its header states in full: it holds no adapter, binds no
+/// port and takes no type parameter, so there is no value in its scope from which an adapter
+/// identity could be read. That is what makes it consistent with [`kernel_denylist`] rather than in
+/// tension with it.
+pub mod resolver;
 pub mod rigor;
 
 /// **The impure shell — AC-009–AC-013, AC-030, AC-031, AC-110, AC-525.**

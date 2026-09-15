@@ -1,0 +1,26 @@
+# AC-072 case 9 of 11, AND THE FIRST OF THE THREE THAT MUST LOAD -- "a positive `nullable = true`
+# fixture that must load and whose `null` read emits exactly one `gate_opened { reason:
+# unknown_facet, axis }` per read facet and never an `Unsatisfiable`".
+#
+# THE THREE POSITIVES ARE "WHAT STOP A REJECT-EVERYTHING LINT PASSING" -- the criterion's own
+# sentence, and the reason it labels itself "NEGATIVE criterion apart from the positive fixtures".
+# This one goes further than loading: its clause has a RUNTIME half, so the test drives this very
+# registry through selection step 2 (AC-079's route) and asserts the gate count and the absence of
+# an Unsatisfiable. A registry that merely parsed would satisfy the first half of the sentence and
+# none of the second.
+#
+# THE TWO ENTRIES ARE THE TWO THE PACK FIXTURE READS. crates/rk-kernel/tests/fixtures/packs/
+# incident-forbidden.toml carries two `require` rows at `analysis`, one keyed on an ordinal and one
+# on the boolean below; step 2 lints every predicate identifier against THIS registry (AC-065), so
+# both must be here or the run fails for a vocabulary reason instead of the one under test. Both
+# blocks are the shipped shapes (spikes/p9/facets.toml:40-43 and the boolean block at :133-136).
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"
+
+[facet.external_dep]
+values = [true, false]
+nullable = true
+source = "human"

@@ -1,0 +1,40 @@
+# AC-495's ROUTED pack — the criterion's AND: "a pack that declares an alternative route for that
+# capability validates instead of failing".
+#
+# It is `ac495-unroutable.toml` with ONE `[[stage.verify.require]]` row added and its `id` changed,
+# and nothing else. `ac495_pack_validation` asserts that body equality, and then DELETES the added
+# row from this text and re-runs the rule — so the green below is shown to depend on the alternative
+# route rather than on any other difference between the two files.
+#
+# The alternative is design:1031's own: "the pack routes to an explicit whole-suite policy". The
+# fake adapter's registry claims `whole-suite` and does not claim `affected-selection`, so the first
+# row is still unroutable on its own and the second one is what makes the stage routable.
+[pack]
+id = "ac495-routed"
+applies = "kind == story"
+appetite = { points = 30, tokens = 100_000 }
+
+[policy]
+stages = { verify = "mandatory", review = "recommended" }
+
+# THE CONTROL INSIDE THE FIXTURE. A stage with no capability anywhere: it must stay routable
+# whatever the claimed set holds, or the rule is refusing stages rather than refusing routes.
+[stage.review]
+goal = "The change is reviewed"
+baseline = ["ReviewVerdict"]
+
+[stage.verify]
+goal = "The repro passes"
+baseline = ["ConfirmationResult"]
+# The same requiring row as the unroutable pack, needing the same unclaimed capability. It is NOT
+# removed here: AC-495's AND is that a pack which declares an ALTERNATIVE validates, not that a pack
+# which drops the requirement validates.
+[[stage.verify.require]]
+when = "changed_paths > 0"
+artifacts = ["AffectedTestReport"]
+capability = "affected-selection"
+# THE ALTERNATIVE ROUTE, and the only thing this file adds.
+[[stage.verify.require]]
+when = "changed_paths > 0"
+artifacts = ["AffectedTestReport"]
+capability = "whole-suite"

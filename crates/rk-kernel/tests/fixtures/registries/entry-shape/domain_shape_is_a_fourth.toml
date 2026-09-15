@@ -1,0 +1,29 @@
+# AC-072 case 7 of 11 -- "a fixture entry whose declared shape is none of the three, which must fail
+# load".
+#
+# THE FOURTH SHAPE IS NOT A NONSENSE WORD, IT IS THE ONE A CAREFUL AUTHOR ACTUALLY WRITES. The
+# criterion's own 2026-09-12 amendment (DECISIONS-2026-09-12 E1) names it: an author who has read
+# ADR-0089 decision 3 and wants to say the facet is tri-valued reaches for
+#
+#     values = [true, false, null]
+#
+# "-- and TOML has no `null` literal, so [it] is inexpressible while deleting `values` fails this
+# criterion's own declared-domain clause. Declaring nullability BY NAME rather than by omission is
+# this criterion's rule, applied to nullability." So the reachable spelling is the quoted one below,
+# and what it produces is a domain that is neither the two-member boolean shape nor a closed string
+# vocabulary: a shape with no name. That is the clause's bite -- "a fourth still fails load" -- and
+# it lands on the exact mistake the amendment was written about.
+#
+# `nullable = true` IS declared here, and it is what makes the fixture repairable in ONE respect:
+# deleting the third member leaves a lawful boolean entry that already declares its nullability. The
+# abstention clause is scoped to the BOOLEAN shape and so cannot fire on this file at all -- which is
+# itself the discrimination, since a rule that inferred "boolean-ish" from the two leading members
+# would report two clauses here and the fixture would stop naming one.
+
+[facet.data_migration]
+values = [true, false, "null"]
+nullable = true
+source = "derived"
+deriver = "R-data-migration-path-and-diff-scan"
+deriver_class = "lexical"
+deriver_record = "results/p1-arm-d-panel-scored.json"

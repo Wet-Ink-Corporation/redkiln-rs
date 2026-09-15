@@ -232,14 +232,22 @@ fn quantifier_empty_and_null() {
         );
         // THE LOAD-BEARING ONE. `none` over an empty set is TRUE, which is exactly why
         // `findings.none(…)` is satisfiable by an empty finding set and why ADR-0080 forbids it as
-        // a quality block's terminal condition. AC-527's rule rests on this value, and **the lint
-        // that acts on it IS NOT BUILT** — `ac527_empty_set_terminal_condition` selects zero tests
-        // on this crate. (This comment said "is Slice 2's" until 2026-09-13; Slice 2 did not build
-        // it and reported it out of scope, so a later reader could take the forward reference for
-        // a landed one. The slice that owns it is not named here, because no session has been
-        // scoped to it.) What the rule will be on, when it exists, is the FORM and not the string:
-        // ADR-0080's forbids clause reads "or any policy predicate satisfiable only by an empty
-        // finding set", so `findings.all(…)` over an empty set fails it too.
+        // a quality block's terminal condition.
+        //
+        // **Corrected 2026-09-14: the lint that acts on this value is BUILT.** This comment read
+        // "**the lint that acts on it IS NOT BUILT** — `ac527_empty_set_terminal_condition` selects
+        // zero tests on this crate", and before that it read "is Slice 2's"; neither is true now.
+        // The rule is `rk_kernel::quality_block::quality_block_terminal_condition_rule` and the test
+        // is `quality_block::ac527_empty_set_terminal_condition`, with its three fixtures under
+        // `tests/fixtures/activities/`. The paragraph is corrected rather than deleted, on
+        // `main.rs`'s rule: a module arriving is the absence note's retirement, and a reader who
+        // remembers the old text needs to find out what happened to it.
+        //
+        // What that rule is on is the FORM and not the string — `findings.all(…)` over an empty set
+        // fails it too — and **this assertion is its premise**: the rule refuses a predicate whose
+        // truth over an empty findings set is `true`, so if this value ever stops being `true` the
+        // rule silently stops refusing anything. That is why the value is pinned here, in the
+        // evaluator's own file, and not restated inside the lint.
         assert_eq!(
             truth("findings.none(evidence == Reproduced)", ctx),
             Tri::True,

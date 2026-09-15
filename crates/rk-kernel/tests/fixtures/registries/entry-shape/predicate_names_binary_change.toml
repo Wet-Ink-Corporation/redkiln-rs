@@ -1,0 +1,24 @@
+# AC-072 case 2 of 11 -- "fixture predicates naming ... `binary_change` that must fail load AGAINST
+# THE CURRENT REGISTRY".
+#
+# A SECOND FILE AND NOT A SECOND LINE IN THE FIRST, because the two names fail for two different
+# reasons and the criterion's evidence line states both separately: `dynamism` is "pre-registered
+# with no registry entry", while `binary_change` is "MEASURED BUT UNREGISTERED IN facets.toml SO IT
+# CAN FEED NO REQUIRE ROW" -- PC7 computes it per item from affected paths, so a reader who knows
+# the fact exists is exactly the reader who would key a row on it. Collapsing them into one file
+# would leave one of the two reasons with no case of its own.
+#
+# THE CARRIER HERE IS `applicable_if`, the activity catalog's key (spikes/p9/catalog/bisect.toml:12
+# is the live shape this table copies), because AC-072's GIVEN names three carriers and a rule that
+# read only `require` rows would pass this file. `[[step]]`'s id is carried beside it deliberately:
+# facets.toml:1 says a predicate identifier may be "a facet here, a step id, `rigor`, `item`, or a
+# builtin", so the step id is the carve-out the rule must honour and not a decoration.
+
+[activity]
+id            = "entry-shape-fixture"
+stage         = "analysis"
+applicable_if = "binary_change"
+method_rank   = 30
+
+[[step]]
+id = "scan"

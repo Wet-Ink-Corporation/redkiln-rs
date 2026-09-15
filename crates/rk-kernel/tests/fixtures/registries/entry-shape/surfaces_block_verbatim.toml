@@ -1,0 +1,23 @@
+# AC-072 case 10 of 11, and the second that MUST LOAD -- "the verbatim `[facet.surfaces]` block
+# (`source = "declared"`, no `deriver`, `set = true`, `values`) as a positive fixture that must
+# load".
+#
+# COPIED RATHER THAN REFERENCED, which is s7b SECTION 7b.12's own instruction for this file
+# ("AC-072's eleven, INCLUDING THE VERBATIM `[facet.surfaces]` BLOCK COPIED RATHER THAN
+# REFERENCED"). The four lines below are spikes/p9/facets.toml:112-115 byte for byte, trailing
+# comment included. A fixture that read the shipped file at test time would go green or red with an
+# edit to the product registry and would stop being a fixture; a fixture that PARAPHRASED the block
+# would let the shipped one drift out from under the criterion silently. The test asserts the copy
+# against the shipped lines, so this file going stale is itself a failure rather than a slow lie.
+#
+# WHAT THE BLOCK IS A POSITIVE FOR, stated because three of its four properties are absences and an
+# absence proves nothing on its own: a `declared` facet is outside the deriver clauses ENTIRELY --
+# it carries no `deriver`, no `deriver_class`, no `deriver_record` and no record, and that is
+# LAWFUL, not an omission the rule failed to notice. Its one obligation is the require-row bar, and
+# the bar is about a ROW: this file carries none, so the entry is permitted rather than merely
+# unexamined. Deleting this fixture would make the declared clause pass by absence.
+
+[facet.surfaces]
+values = ["flags", "migration", "payments", "secrets"]   # placeholder; the real set comes from surfaces.toml (above)
+source = "declared"
+set = true

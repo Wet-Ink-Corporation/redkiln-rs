@@ -1,0 +1,39 @@
+# AC-072 case 11 of 11, and the third that MUST LOAD -- "a positive `set = true` fixture that must
+# load and whose MEMBER PREDICATE RESOLVES, so the shape is recognised rather than merely
+# tolerated".
+#
+# "RATHER THAN MERELY TOLERATED" IS THE WHOLE CLAUSE, and it is why the test evaluates rather than
+# only parsing. The set shape "was previously admitted by omission -- `toolchain` and `change` carry
+# `set = true` and no rule mentioned it -- and ADR-0073 keeps boolean and ordinal registries
+# separate, so A THIRD SHAPE ENTERING BY OMISSION IS HOW A LOADER SILENTLY ACCEPTS A MEMBER
+# PREDICATE IT HAS NO SEMANTICS FOR" (AC-072's 2026-09-09 amendment, clause 2). A lint that loaded
+# this file and an evaluator that returned `null` for `'node' in toolchain` would satisfy every
+# assertion about the ENTRY and none about the shape being understood.
+#
+# BOTH shipped set-valued entries are here, and the `require` row reads one of them: the row is what
+# makes the member predicate a predicate of this registry rather than a string in a test, and it is
+# keyed on a `derived`/structural facet carrying positives, which no bar in either sibling rule
+# touches. Under ADR-0050 the members of ONE set facet DISJOIN while distinct facets CONJOIN, so a
+# one-member read is the smallest honest case.
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]
+set = true
+source = "derived"
+deriver = "R-toolchain-extension-manifest-table"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[facet.change]
+values = ["text", "binary", "generated"]
+set = true
+source = "derived"
+deriver = "R-change-extension-and-numstat-marker"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[stage.verify]
+baseline = ["TestReport"]
+[[stage.verify.require]]
+when = "'node' in toolchain"
+artifacts = ["ScanReport"]

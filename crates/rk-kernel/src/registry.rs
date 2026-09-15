@@ -1,10 +1,14 @@
 //! The facet registry the two fail-closed lints read, and the two artifacts each of them resolves.
 //!
-//! **This module is a loader, not a rule.** AC-072 — *"the ENTRY carries them"* — is a **third**
-//! rule with its own eleven-case fixture set, the register forbids collapsing it into either lint
-//! (§7b.7), and **it is not built here**: nothing in this file is named for it, so no checkpoint
-//! grep keyed on `facet_registry` can read a loader as that rule. What is here is the shape both
-//! rules need in order to disagree about the same registry.
+//! **This module is a loader, not a rule** — and that is still true now that all **three** rules
+//! exist. *(Corrected 2026-09-14. This paragraph read "**it is not built here**" of AC-072 and gave
+//! the absence of any `facet_registry`-named item in this file as the proof. AC-072 is built, at
+//! [`crate::facet_registry`], and it is still not built HERE: nothing in this file is named for it,
+//! so the checkpoint grep keyed on `facet_registry` reads that module and can never read a loader
+//! as that rule.)* What is here is the shape all three rules need in order to disagree about the
+//! same registry: [`Facet`] for the entry AC-072 reads, [`StabilityRecord`] for AC-071's record and
+//! [`PrecisionRecord`] for AC-520's, and [`PredicateSites`] for the three carriers AC-072's GIVEN
+//! names.
 //!
 //! # The three inputs, and which of them is real at Slice 2
 //!
@@ -39,16 +43,20 @@ use crate::toml_subset::{self, Table, Value};
 /// this type carries it through unchanged so that neither lint here can be read as having claimed
 /// that criterion.
 ///
-/// 🛑 **A KNOWN, NAMED HOLE, AND IT IS AC-072'S.** Both lints are scoped by this enum — AC-071 on
-/// [`Source::Llm`], AC-520 on [`Source::Derived`] — so an entry whose `source` is *misspelled*
-/// (`"Derived"`, `"llm "`) becomes `Other` and is read by **neither**. Nothing in Slice 2 rejects
-/// it, because the criterion that does is *"a `source` outside the five tokens"*, one of AC-072's
-/// eleven must-fail cases, and **AC-072 is not built** (§7b.7; the operator's scoping of
-/// 2026-09-13). The hole is pinned rather than left latent by
-/// `crate::registry` tests' `source_outside_the_five_escapes_both_gates_until_ac072`, which asserts
-/// the escape and names its owner, and it will go **red** the moment AC-072 lands — which is the
-/// point of writing it down. The *absent*-key half of the same hole is closed here and now, by
-/// [`facet_from`], because a reader may not fabricate a field the file does not carry.
+/// **THE HOLE THIS PARAGRAPH RECORDED IS CLOSED** *(2026-09-14)*. It said: both lints are scoped by
+/// this enum — AC-071 on [`Source::Llm`], AC-520 on [`Source::Derived`] — so an entry whose `source`
+/// is *misspelled* (`"Derived"`, `"llm "`) becomes `Other`, is read by **neither**, and *"nothing in
+/// Slice 2 rejects it, because the criterion that does is one of AC-072's eleven must-fail cases and
+/// AC-072 is not built"*. **AC-072 is built** — [`crate::facet_registry::facet_registry_rule`] — and
+/// a token outside the five is its
+/// [`crate::facet_registry::EntryShapeViolation::SourceNotAToken`].
+///
+/// The first two facts are unchanged and still load-bearing: this type carries the token through
+/// **unchanged**, and neither lint widens to meet it, so the third rule is what rejects it and
+/// neither of the other two can be read as having claimed that criterion. All three are asserted
+/// together by `source_outside_the_five_is_ac072s_load_failure` below. The *absent*-key half of the
+/// same hole is closed by [`facet_from`], because a reader may not fabricate a field the file does
+/// not carry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Source {
     Human,
@@ -249,6 +257,106 @@ impl PinnedCorpus {
     }
 }
 
+/// Which of AC-072's **three** predicate carriers a predicate was read from.
+///
+/// The criterion's GIVEN names them by key: *"a facet name appearing in any `applicable_if`,
+/// `require.when`, or `claimed_predicate`"*. They are three separate variants and not one "a
+/// predicate" because the failure message has to name the site a reader can go and edit, and
+/// because two of the three sit in files a `require` row never appears in — `applicable_if` is the
+/// activity catalog's key (`spikes/p9/catalog/bisect.toml`:12) and `claimed_predicate` is a
+/// `RequestDeviation` field ([`crate::select::step7`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SiteKind {
+    /// An activity's `applicable_if`.
+    ApplicableIf,
+    /// A pack `[[stage.<stage>.require]]` row's `when`.
+    RequireWhen,
+    /// A `RequestDeviation`'s `claimed_predicate`.
+    ClaimedPredicate,
+}
+
+impl SiteKind {
+    /// The key as the file spells it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ApplicableIf => "applicable_if",
+            Self::RequireWhen => "require.when",
+            Self::ClaimedPredicate => "claimed_predicate",
+        }
+    }
+}
+
+/// One predicate, with the field-path roots it reads.
+///
+/// The roots are taken by **parsing the predicate with this crate's own ADR-0103 parser** and
+/// walking the expression, never by a substring search — [`collect_paths`]'s doc comment carries
+/// the reason, and it is the same reason [`RequireRow`] does it that way: `when = "'text' in
+/// change"` reads `change` and a scan for a facet's name would also match the word inside a quoted
+/// literal.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PredicateSite {
+    pub kind: SiteKind,
+    /// Where a reader goes to edit it: the activity id, the stage, or the deviation target.
+    pub owner: String,
+    /// The predicate, verbatim.
+    pub predicate: String,
+    /// Every field-path root the predicate reads, whether or not it is a registered facet.
+    pub keys: BTreeSet<String>,
+}
+
+impl PredicateSite {
+    /// `<kind> of <owner>`, the string a violation message names.
+    #[must_use]
+    pub fn site(&self) -> String {
+        format!("{} of {:?}", self.kind.as_str(), self.owner)
+    }
+}
+
+/// Every predicate site read beside a registry, plus the step ids that are lawfully **not** facets.
+///
+/// `facets.toml`'s own first line fixes the vocabulary a predicate identifier may come from:
+/// *"Every predicate identifier must be a facet here, a step id, `rigor`, `item`, or a builtin."*
+/// So AC-072's *"an unregistered facet can feed no row"* is asserted against the registry **minus**
+/// that carve-out, and the carve-out has to be read from the document rather than assumed:
+/// [`Self::step_ids`] is `[[step]] id` as the catalog writes it.
+///
+/// 🛑 **`builtin` HAS NO ENUMERATION IN ANY RECORD** [measured 2026-09-14: `facets.toml`:1 is the
+/// only place the word appears in a rule, and it names no set]. This type therefore carries `item`
+/// as a **named** constant ([`NON_FACET_ROOTS`]) and the step ids as **read** data, and the builtin
+/// half is **ARMED, NOT DISCHARGED** — a record naming the builtin set is **OWED**. Nothing here
+/// invents one, because a fabricated allow-list is exactly the shape that makes an unregistered
+/// facet silently legal.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct PredicateSites {
+    sites: Vec<PredicateSite>,
+    step_ids: BTreeSet<String>,
+}
+
+/// The non-facet predicate roots `facets.toml`:1 names **by name**, minus the two it names by
+/// class: a step id is read from the document, and `rigor` is a registered facet already.
+pub const NON_FACET_ROOTS: [&str; 1] = ["item"];
+
+impl PredicateSites {
+    /// Build from rows.
+    #[must_use]
+    pub const fn new(sites: Vec<PredicateSite>, step_ids: BTreeSet<String>) -> Self {
+        Self { sites, step_ids }
+    }
+
+    /// Every site, in document order within each carrier.
+    #[must_use]
+    pub fn sites(&self) -> &[PredicateSite] {
+        &self.sites
+    }
+
+    /// The `[[step]] id`s declared beside these predicates.
+    #[must_use]
+    pub const fn step_ids(&self) -> &BTreeSet<String> {
+        &self.step_ids
+    }
+}
+
 /// What stopped a registry load.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoadError {
@@ -436,6 +544,102 @@ impl Registry {
     }
 }
 
+impl Registry {
+    /// Read every predicate site AC-072's GIVEN names out of one document.
+    ///
+    /// Three carriers, three keys, in the shapes the corpus actually writes them:
+    ///
+    /// - `[[stage.<stage>.require]]` rows' `when` — the pack shape
+    ///   (`spikes/p9/packs/bug-standard.toml`:63-64), read by [`require_rows_from`] so the two
+    ///   readings of a `require` row can never disagree;
+    /// - `[activity]`'s `applicable_if` — the catalog shape (`spikes/p9/catalog/bisect.toml`:4-12),
+    ///   owned by that table's own `id`;
+    /// - `[[deviation]]`'s `claimed_predicate` — a `RequestDeviation` written down, owned by its
+    ///   `target`. There is no on-disk carrier for a deviation in the corpus, because a deviation
+    ///   is a runtime request; the fixture form is stated here rather than inferred so a reader can
+    ///   see that it is this loader's shape and not a record's.
+    ///
+    /// `[[step]] id` is collected beside them — not a predicate, but the carve-out `facets.toml`:1
+    /// grants, and a rule that asserts *"an unregistered facet can feed no row"* has to know it.
+    ///
+    /// # Errors
+    ///
+    /// [`LoadError`] for a file outside the subset, a predicate of the wrong type, or a predicate
+    /// that does not parse under ADR-0103. **A predicate that does not parse is a grammar failure
+    /// reported as one**, never a site that silently reads nothing: a site that reads nothing
+    /// passes every rule here.
+    pub fn predicate_sites_from_str(src: &str) -> Result<PredicateSites, LoadError> {
+        let doc = toml_subset::parse(src).map_err(LoadError::Toml)?;
+        let mut sites = Vec::new();
+        for row in require_rows_from(&doc)? {
+            sites.push(PredicateSite {
+                kind: SiteKind::RequireWhen,
+                owner: row.stage,
+                predicate: row.when,
+                keys: row.keys,
+            });
+        }
+        if let Some(Value::Table(activity)) = doc.get("activity")
+            && let Some(when) = activity.get("applicable_if")
+        {
+            let owner = activity
+                .get("id")
+                .and_then(Value::as_str)
+                .unwrap_or("activity");
+            sites.push(one_site(SiteKind::ApplicableIf, owner, when)?);
+        }
+        if let Some(Value::Array(rows)) = doc.get("deviation") {
+            for row in rows {
+                let Some(table) = row.as_table() else {
+                    return Err(LoadError::BadShape(
+                        "[[deviation]] is not a table".to_owned(),
+                    ));
+                };
+                let Some(claimed) = table.get("claimed_predicate") else {
+                    continue;
+                };
+                let owner = table.get("target").and_then(Value::as_str).unwrap_or("?");
+                sites.push(one_site(SiteKind::ClaimedPredicate, owner, claimed)?);
+            }
+        }
+        let mut step_ids = BTreeSet::new();
+        if let Some(Value::Array(rows)) = doc.get("step") {
+            for row in rows {
+                if let Some(id) = row
+                    .as_table()
+                    .and_then(|t| t.get("id"))
+                    .and_then(Value::as_str)
+                {
+                    step_ids.insert(id.to_owned());
+                }
+            }
+        }
+        Ok(PredicateSites::new(sites, step_ids))
+    }
+}
+
+/// One predicate value, typed, parsed and walked.
+fn one_site(kind: SiteKind, owner: &str, value: &Value) -> Result<PredicateSite, LoadError> {
+    let Some(text) = value.as_str() else {
+        return Err(LoadError::BadShape(format!(
+            "{} of {owner:?} is {value:?}, not a string",
+            kind.as_str()
+        )));
+    };
+    let parsed = parse(text).map_err(|e| LoadError::BadPredicate {
+        when: text.to_owned(),
+        detail: e.to_string(),
+    })?;
+    let mut keys = BTreeSet::new();
+    collect_paths(&parsed.expr, &mut keys);
+    Ok(PredicateSite {
+        kind,
+        owner: owner.to_owned(),
+        predicate: text.to_owned(),
+        keys,
+    })
+}
+
 fn facet_from(name: &str, table: &Table) -> Result<Facet, LoadError> {
     let text = |key: &str| -> Result<Option<String>, LoadError> {
         match table.get(key) {
@@ -586,36 +790,59 @@ mod tests {
         );
     }
 
-    /// 🛑 **THE HOLE, PINNED RATHER THAN LEFT LATENT — and it is AC-072's.**
+    /// **THE HOLE, CLOSED — and this test is the rewrite it asked for.**
     ///
-    /// A `source` token outside ADR-0093 decision 1's five is *"AC-072's load failure"* (the
-    /// register's own words, and one of its eleven must-fail cases). **AC-072 is a third rule with
-    /// its own fixture set and is NOT built** — the operator scoped this session to two rules — so
-    /// a misspelled token becomes [`Source::Other`] and **escapes both** fail-closed gates today.
+    /// *(Renamed 2026-09-14 from `source_outside_the_five_escapes_both_gates_until_ac072`. That
+    /// test asserted the ESCAPE and said in its own message that the assertion "must be rewritten
+    /// as AC-072's must-fail case when it is [built]". AC-072 is built —
+    /// [`crate::facet_registry::facet_registry_rule`] — and this is that rewrite, not a new test
+    /// beside it.)*
     ///
-    /// This test asserts the escape so a reader of the suite meets the hole instead of inferring
-    /// its absence, and so that it goes **RED** the moment AC-072 lands and has to be rewritten as
-    /// that criterion's case. It is not a claim that the behaviour is correct; it is golden
-    /// constraint 10's form — powerless reported as powerless.
+    /// A `source` token outside ADR-0093 decision 1's five is *"AC-072's load failure"* — the
+    /// register's own words, and one of its eleven must-fail cases. **Both halves are asserted
+    /// here and the pairing is the point**: the loader still carries the token through unchanged,
+    /// both fail-closed lints are still SCOPED by `source` and so still do not see it, and the
+    /// third rule is what rejects it. A reader who meets `Source::Other` needs all three facts, and
+    /// the first two on their own were the hole.
     #[test]
-    fn source_outside_the_five_escapes_both_gates_until_ac072() {
+    fn source_outside_the_five_is_ac072s_load_failure() {
         use crate::facet_provenance::facet_provenance_rule;
-        use crate::registry::PinnedCorpus;
+        use crate::facet_registry::facet_registry_rule;
+        use crate::registry::{PinnedCorpus, PredicateSites};
 
-        let misspelled = "[facet.toolchain]\nsource = \"Derived\"\n";
+        let misspelled = "[facet.toolchain]\nvalues = [\"node\", \"rust\"]\nset = true\n\
+                          source = \"Derived\"\n";
         let registry = Registry::from_toml(misspelled).expect("the token is carried, not rejected");
         assert_eq!(
             registry.facet("toolchain").expect("present").source,
             Source::Other("Derived".to_owned()),
-            "the loader carries the token through unchanged so neither lint can be read as having \
-             claimed AC-072"
+            "the loader carries the token through unchanged, so the rule that rejects it is a RULE \
+             and not a parse accident"
         );
         assert_eq!(
             facet_provenance_rule(&registry, &PinnedCorpus::default()).map(|r| r.derived_facets),
             Ok(0),
-            "AC-520's gate does not see it — its GIVEN is `source = \"derived\"` exactly. THIS IS \
-             THE HOLE: it is AC-072's clause, AC-072 is not built, and this assertion must be \
-             rewritten as AC-072's must-fail case when it is"
+            "AC-520's gate still does not see it — its GIVEN is `source = \"derived\"` exactly, and \
+             widening it would be the collapse the register forbids"
+        );
+
+        // AND AC-072 DOES. One violation, of its own clause, naming the token as written.
+        let errs = facet_registry_rule(&registry, &PredicateSites::default())
+            .expect_err("a token outside the five fails load");
+        assert_eq!(errs.len(), 1, "exactly one clause fails: {errs:?}");
+        assert_eq!(errs[0].clause(), "source_outside_the_five");
+        assert_eq!(errs[0].facet(), "toolchain");
+        assert!(errs[0].to_string().contains("Derived"), "{}", errs[0]);
+
+        // The control on it: the same entry with the token spelled correctly LOADS, so the failure
+        // is the token and nothing else about the entry.
+        let correct = misspelled.replace("\"Derived\"", "\"human\"");
+        assert!(
+            facet_registry_rule(
+                &Registry::from_toml(&correct).expect("loads"),
+                &PredicateSites::default()
+            )
+            .is_ok()
         );
     }
 }

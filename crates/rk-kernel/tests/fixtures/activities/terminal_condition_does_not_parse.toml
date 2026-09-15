@@ -1,0 +1,73 @@
+# AC-527, the FAIL-CLOSED case — a terminal condition that does not PARSE, which must be REFUSED
+# and never skipped.
+#
+# **Added 2026-09-14 because a mutation survived.** `src/quality_block.rs`'s header claims, and the
+# variant's own `Display` repeats, that *"a rule that skipped what it could not read would return
+# `Ok` on a catalog of garbage"* — and nothing asserted it: replacing the whole
+# `TerminalConditionViolation::PredicateDoesNotParse` arm in `walk` with a silent `continue` left
+# the entire suite GREEN (106 passed, 0 failed) [measured 2026-09-14, mutation applied and
+# reverted]. A fail-closed claim that can be deleted with the suite still green is a claim with no
+# instrument — the one thing this criterion's own fixture set exists to prevent.
+#
+# **The path is reachable, not dead code.** `crates/rk-kernel/src/catalog.rs`:520 stores `expr`
+# verbatim as an `Option<String>` and `catalog.rs` never references `crate::predicate`, so no
+# load-time parse happens and an unparseable `expr` reaches `walk` intact, exactly as this fixture
+# delivers it.
+#
+# **Why this is AC-527's business and not AC-069's.** An ordering against a nullable facet is a
+# load-time lint error under ADR-0069 / AC-069 with its own fixtures, and a predicate that *errors
+# in every cell* is counted in `TerminalConditionReport::errored` and deliberately NOT refused — it
+# cannot be *"`true` over an empty findings set"* if it has no truth value at all. This is neither:
+# the `expr` below is not a predicate in ADR-0103's grammar under any reading, so the rule cannot
+# evaluate it to decide whether an empty findings set satisfies it. Refusing is the only honest
+# answer, and admitting it would let a garbage terminal condition through the one gate that exists
+# to stop one.
+#
+# The activity around it is authored rather than copied, on the other three fixtures' warrant:
+# §7b.12:972-976 forbids editing `spikes/p9/` to make a red case.
+
+[activity]
+id           = "ac527-does-not-parse"
+version      = 1
+stage        = "analysis"
+provides     = ["RootCause"]
+requires     = ["ReproCase"]
+derived_from = ["ReproCase"]
+tags         = ["kind:bug"]
+method_rank  = 10
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+max_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["Findings?", "GreenAt", "ToolReport"]
+deviation_ok = ["add"]
+
+[[step]]
+id      = "hypothesise"
+kind    = "agent"
+role    = "investigator"
+inputs  = { repro = "artifact:ReproCase" }
+outputs = "value:HypothesisLog"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { log = "${hypothesise.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION. An unbalanced bracket and a dangling `in`: not a predicate in ADR-0103's
+# grammar under any reading, so `crate::predicate::parse` refuses it rather than returning an
+# expression that evaluates to anything at all.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}" }
+expr     = "findings.none(evidence in ["
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { RootCause = "${hypothesise.outputs.root_cause}" }
+evidence  = ["${adversary?}"]

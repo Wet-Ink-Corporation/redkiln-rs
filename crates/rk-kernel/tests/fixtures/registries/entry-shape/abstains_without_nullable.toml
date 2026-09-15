@@ -1,0 +1,23 @@
+# AC-072 case 8 of 11 -- "a fixture entry that abstains without `nullable = true`, which must fail
+# load".
+#
+# THIS IS F39 SECTION 4'S MEASURED DEFECT, COMMITTED AS A FILE. The shipped registry's own comment
+# above its seven booleans says what the line below is: "The registry line `values = [true, false]`
+# ALONE is what turned FOUR EMPTY DIFFS INTO SIXTEEN CONFIDENT BOOLEANS -- the panel returned
+# `unknown` on all 16 semantic cells of the 4 items that changed no code, and the script emitted a
+# confident boolean on every one [measured, F39 SECTION 4]." ADR-0089 decision 3 makes all seven
+# TRI-VALUED at the context-vector level while keeping the two-valued DOMAIN, and all seven live
+# entries declare `nullable = true` beside it [measured 2026-09-14]. This one does not.
+#
+# WHY THE CLAUSE IS SCOPED TO THE BOOLEAN SHAPE AND NOT TO "may abstain" IN GENERAL: whether an
+# arbitrary facet may abstain is NOT a fact its entry carries. `toolchain` and `change` are `derived`
+# and declare no `nullable`; `recent_deploy` is `derived` and does. So `derived` neither implies nor
+# denies abstention, and a rule keyed on it would be invented rather than read. The general case is
+# ARMED and a record is OWED -- crates/rk-kernel/src/facet_registry.rs's header states it.
+
+[facet.ui]
+values = [true, false]
+source = "derived"
+deriver = "R-ui-path-and-diff-scan"
+deriver_class = "lexical"
+deriver_record = "results/p1-arm-d-panel-scored.json"

@@ -1,0 +1,19 @@
+# AC-072 case 5 of 11 -- "a `kernel` entry with a `deriver` ... which must fail load" (ADR-0093
+# decision 1: `kernel` for `stage`, `rigor`, `role`, `cost`, "no `deriver`, no record -- a `kernel`
+# entry carrying either fails load").
+#
+# THREE FORBIDDEN FORMS HERE, NOT FOUR. AC-520's group 7 names a fourth -- "or claiming a record" --
+# which is a row in the PINNED CORPUS carrying the facet's own name, and is that rule's to catch
+# (crates/rk-kernel/src/registry.rs's `PinnedCorpus::claimed_by`). This rule reads no corpus, so the
+# forms it can see are the three ENTRY FIELDS. That is the split the register fixes and not an
+# omission: "AC-072 requires the registry *entry*, AC-520 requires the scored *record* behind it".
+#
+# `rigor` is the subject because it is one of the four ADR-0093 names by name, and because its live
+# entry (spikes/p9/facets.toml:35-38) is a `kernel` ORDINAL -- so the fixture also shows that the
+# forbidden thing is the provenance field and never the shape.
+
+[facet.rigor]
+ordered = true
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]
+source = "kernel"
+deriver = "R-rigor-policy-lookup"

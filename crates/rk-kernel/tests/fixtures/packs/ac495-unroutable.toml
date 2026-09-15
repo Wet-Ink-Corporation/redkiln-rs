@@ -1,0 +1,37 @@
+# AC-495's UNROUTABLE pack — the criterion's GIVEN: "a process pack whose only route through a
+# stage requires a capability no configured adapter claims".
+#
+# The scenario is design:1031's rather than an invented one: "no `basis: affected` record may exist
+# for a toolchain whose `affected-selection` capability has no probe result at the current version
+# pin — selection is refused `Unsupported` and the pack routes to an explicit whole-suite policy."
+# This pack does NOT route around it. `AffectedTestReport` is reachable through exactly one
+# declaration, and that declaration needs `affected-selection`.
+#
+# `ac495-routed.toml` is this file with ONE alternative row added and its `id` changed, and nothing
+# else — `ac495_pack_validation` asserts that, so "the routed pack validates" cannot be true for
+# some other difference between the two files.
+[pack]
+id = "ac495-unroutable"
+applies = "kind == story"
+appetite = { points = 30, tokens = 100_000 }
+
+[policy]
+stages = { verify = "mandatory", review = "recommended" }
+
+# THE CONTROL INSIDE THE FIXTURE. A stage with no capability anywhere: it must stay routable
+# whatever the claimed set holds, or the rule is refusing stages rather than refusing routes.
+[stage.review]
+goal = "The change is reviewed"
+baseline = ["ReviewVerdict"]
+
+[stage.verify]
+goal = "The repro passes"
+baseline = ["ConfirmationResult"]
+# THE REQUIRING ROW. AC-495's "a span pointing at the requiring row" points at the line below, and
+# its `capability` key is the line three after it. Both are asserted as literals in the test AND
+# cross-read against this file's own text, so moving these lines moves the test with them and
+# reporting a plausible-but-wrong line is red.
+[[stage.verify.require]]
+when = "changed_paths > 0"
+artifacts = ["AffectedTestReport"]
+capability = "affected-selection"

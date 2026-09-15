@@ -429,7 +429,11 @@ fn keyed_kind_expands_per_toolchain() {
 // Purity — AC-040, AC-041
 // ---------------------------------------------------------------------------------------------
 
-const CATALOG: &[(&str, &str)] = &[
+/// `pub(crate)` since 2026-09-14: `facet_registry.rs` drives AC-072's positive `nullable = true`
+/// fixture through the WHOLE steps-1-to-4 path to assert *"and never an `Unsatisfiable`"*, which
+/// needs a catalog. Sharing this one is deliberate rather than convenient — a second copy of the
+/// same eight files would let the two tests' notions of "the fixture catalog" drift apart.
+pub(crate) const CATALOG: &[(&str, &str)] = &[
     (
         "impl-report.toml",
         include_str!("../fixtures/catalog-select/impl-report.toml"),

@@ -1,0 +1,20 @@
+# AC-072 case 4 of 11 -- "a fixture entry whose `source` is none of the five tokens" (ADR-0093
+# decision 1; PIA-046).
+#
+# THIS IS THE HOLE SLICE 2 PINNED AND COULD NOT CLOSE. crates/rk-kernel/src/registry.rs's own
+# `source_outside_the_five_escapes_both_gates_until_ac072` asserted the escape and named its owner:
+# BOTH fail-closed lints are SCOPED by `source` -- AC-071 on `llm`, AC-520 on `derived` -- so an
+# entry whose token is MISSPELLED becomes Source::Other and is read by NEITHER. `"Derived"` with a
+# capital D is the shape that escape takes, and it is the token written here for that reason rather
+# than a nonsense word: a reader who typos the case of a real token gets a facet that silently feeds
+# selection with no provenance gate on it at all.
+#
+# Every other property of the entry is well formed, so the single violation is the token.
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]
+set = true
+source = "Derived"
+deriver = "R-toolchain-extension-manifest-table"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
