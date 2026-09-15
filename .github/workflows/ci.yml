@@ -74,6 +74,118 @@ jobs:
       - name: deny
         run: cargo deny check bans advisories licenses
 
+  # AC-498 -- the ONLY instrument in this repository that reaches the class a dependency-graph
+  # assertion cannot see. D-2, taken 2026-09-14.
+  #
+  # AC-498's THEN: "the `rk-kernel` and pack-validation test suites complete with zero model
+  # dispatches and zero outbound network calls, using fakes for all five ports". Verified by: "a CI
+  # job with network egress denied and no adapter crates linked; a dispatch counter asserted at 0."
+  #
+  # Three of the four instruments are IN-TREE and run under the `test` gate above:
+  # `crates/rk-kernel/tests/it/no_egress.rs`'s `ac498_no_egress_dispatch_zero` holds the dispatch
+  # counter at 0 with a control that proves it moves, the no-adapter walk (AC-484's own reader,
+  # re-used), and the no-networking-crate walk. THIS JOB IS THE FOURTH, and it is not redundant with
+  # them: a resolved-graph reading cannot see `std::net::TcpStream`, which needs no dependency and
+  # enters no Cargo.lock, and `clippy.toml` carries NO network entry at all [measured 2026-09-14:
+  # `grep -niE 'net|tcp|socket|reqwest|hyper|ureq|curl' clippy.toml deny.toml` -> 0 lines], so
+  # AC-003's network half is enforced by nothing else. A denied container fails the `connect`
+  # itself, which is the only place that class is observable.
+  #
+  # NO MARKETPLACE ACTION beyond `actions/checkout`, which the two jobs above already use. `docker`
+  # is preinstalled on `ubuntu-latest` and `--network none` is a Docker primitive, so this adds no
+  # supply-chain surface to a repository gated on `cargo-audit` and `cargo-deny` (D-2).
+  #
+  # 🛑 WHY THE DENIAL IS ON THE `docker run` AND NOT ON A JOB-LEVEL `container:`, WHICH IS THE FORM
+  # D-2 WROTE. The literal form --
+  #
+  #     no-egress:
+  #       container: { image: rust:1.98.1, options: --network none }
+  #       steps: [checkout, cargo test]
+  #
+  # -- cannot work, and the reason is NOT the cargo cache. EVERY step of a container job runs INSIDE
+  # that container, `actions/checkout` included, and checkout fetches the repository over the
+  # network from github.com. With `--network none` the job has no source tree to test. That is
+  # fatal before a single cargo invocation.
+  #
+  # The second reason stands behind it and is measured on this tree: `Cargo.lock` resolves 218
+  # registry packages, there is no `vendor/` directory and no `.cargo/config.toml`, so a fresh
+  # `rust:1.98.1` container's empty `CARGO_HOME` must fetch the index and 218 `.crate` files before
+  # anything compiles. `cargo test` in a network-less container with a cold cache fails at
+  # dependency resolution, not at a socket a test opened.
+  #
+  # So the job is structured to make the DENIAL LAND ON THE PROCESS UNDER TEST, which is what the
+  # criterion is about, rather than on the plumbing that hands it its inputs: checkout and the fetch
+  # run on the networked host, and the suites run in the pinned image with `--network none`. The
+  # cargo home and the rustup directory are carried between the two runs in named volumes (a named
+  # volume is seeded from the image on first use, so `cargo` and the pinned toolchain are still the
+  # image's). Nothing in the tested step may reach the network, and that is the property asserted.
+  #
+  # ARMED, NOT DISCHARGED, and recorded as such: PROGRESS.md:330 records that this workflow is
+  # authored and has never run. `ac498_no_egress_dispatch_zero` asserts this job is PRESENT; that it
+  # has PASSED is claimed nowhere.
+  no-egress:
+    name: no egress (AC-498)
+    runs-on: ubuntu-latest
+    env:
+      # The pin, and the THIRD copy of it is deliberate and bounded: a container image tag is not a
+      # rustup channel, so `rust-toolchain.toml` cannot be read by `docker run`. It is asserted
+      # against the pin below rather than trusted, so a bump that moves rust-toolchain.toml and
+      # forgets this line fails HERE instead of silently testing a different compiler.
+      IMAGE: rust:1.98.1
+      CARGO_VOLUME: rk-egress-cargo
+      RUSTUP_VOLUME: rk-egress-rustup
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: the image tag matches rust-toolchain.toml's pin
+        run: |
+          pinned=$(grep -E '^channel *= *"' rust-toolchain.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          test -n "$pinned" || { echo "FAIL: no channel in rust-toolchain.toml"; exit 1; }
+          test "$IMAGE" = "rust:${pinned}" \
+            || { echo "FAIL: this job runs $IMAGE while rust-toolchain.toml pins $pinned"; exit 1; }
+          echo "pin: $pinned; image: $IMAGE"
+
+      # WITH NETWORK, and nothing is tested here. This step exists only so the denied step below has
+      # a populated cargo home; if it fetched nothing the next step would fail on resolution and the
+      # egress property would never be exercised.
+      - name: warm the pinned image's caches (network ON -- no assertion is made in this step)
+        run: |
+          docker run --rm \
+            -v "$CARGO_VOLUME":/usr/local/cargo -v "$RUSTUP_VOLUME":/usr/local/rustup \
+            -v "$PWD":/w -w /w "$IMAGE" \
+            sh -c 'rustup show && cargo fetch --locked'
+
+      # THE JOB. `--network none` gives the container no interface but loopback, so any outbound
+      # call -- through a crate or straight out of `std` -- fails inside the test that made it.
+      # `CARGO_NET_OFFLINE=true` is belt and braces: it makes cargo REFUSE to reach for the network
+      # rather than block on a socket that will never connect, and it is inherited by the child
+      # `cargo metadata` / `cargo tree` invocations AC-484's and AC-498's tests spawn.
+      - name: the kernel suite, with egress DENIED
+        run: |
+          docker run --rm --network none \
+            -e CARGO_NET_OFFLINE=true -e CARGO_TERM_COLOR=always \
+            -v "$CARGO_VOLUME":/usr/local/cargo -v "$RUSTUP_VOLUME":/usr/local/rustup \
+            -v "$PWD":/w -w /w "$IMAGE" \
+            cargo test --offline -p rk-kernel
+
+      # The pack-validation half, named separately because AC-498 names it separately -- and with
+      # the POSITIVE CONTROL on the filter itself. A `cargo test` filter that matches nothing exits
+      # 0 (Halt 8 shape (g)), so the count is checked before the run rather than after.
+      - name: the pack-validation suite, with egress DENIED
+        run: |
+          run_denied() {
+            docker run --rm --network none \
+              -e CARGO_NET_OFFLINE=true -e CARGO_TERM_COLOR=always \
+              -v "$CARGO_VOLUME":/usr/local/cargo -v "$RUSTUP_VOLUME":/usr/local/rustup \
+              -v "$PWD":/w -w /w "$IMAGE" "$@"
+          }
+          n=$(run_denied cargo test --offline -p rk-kernel --test it -- --list pack_validation:: \
+              | grep -c ': test$' || true)
+          test "${n:-0}" -ge 1 \
+            || { echo "FAIL: the pack-validation filter selects 0 tests -- this step would pass over nothing"; exit 1; }
+          echo "the pack-validation filter selects $n tests"
+          run_denied cargo test --offline -p rk-kernel --test it -- pack_validation::
+
   structural:
     name: structural assertions
     runs-on: ubuntu-latest
@@ -206,7 +318,7 @@ jobs:
       # the git surface (AC-483), and "no `async fn` and no future-returning method in any
       # `rk-ports` trait" (AC-528).
       #
-      # ARMED, NOT DISCHARGED, and recorded as such: PROGRESS.md:307 records that this workflow is
+      # ARMED, NOT DISCHARGED, and recorded as such: PROGRESS.md:330 records that this workflow is
       # authored and has never run, so a row added here is armed and nothing more.
       #
       # Each rule is COMMENT-FILTERED and ANCHORED, and carries the TRACKED-FILE POSITIVE CONTROL.

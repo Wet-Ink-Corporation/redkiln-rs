@@ -64,6 +64,35 @@ workflow-fsm-clock-reintroduce = []
 # E4: a reverted observation is not an assertion).
 select-clock-reintroduce = []
 
+# THE ADAPTER-EDGE GATE'S POSITIVE CONTROL (AC-484; D-1, 2026-09-14). The same warrant as the three
+# features above -- a rule that has never been seen to FIRE is indistinguishable from one that
+# cannot -- pointed at this crate's dependency GRAPH rather than at its source:
+#
+#   green:  cargo metadata                                               -> no rk-adapter-* in this crate's RESOLVED graph
+#   RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-sqlite
+#
+# UNLIKE THE THREE CLOCK FEATURES ABOVE, THIS ONE TURNS NO GATE RED, and that is a property of the
+# instrument rather than a weakness. Those three reintroduce a banned METHOD, which clippy sees, so
+# a workspace-scoped clippy run flips to rc=101. AC-484 is a DEPENDENCY-GRAPH property, which clippy
+# does not read and which cargo-deny cannot express either (its bans are workspace-wide, while
+# AC-484 is a per-crate edge -- see the OWED erratum in tests/it/adapter_edge.rs). Measured
+# 2026-09-14: cargo clippy --workspace --all-targets --features rk-kernel/adapter-edge-reintroduce
+# exits 0, where the other three exit 101. The must-fail half is therefore driven BY THE TEST, which
+# spawns cargo metadata both ways and asserts the violation appears in one and not the other.
+#
+# It is COMMITTED, not made and reverted (DECISIONS-2026-09-12 E4). AC-484's Verified-by asks for
+# "a fixture commit adding `rk-adapter-sqlite` to `rk-kernel` that must fail", and a commit that is
+# reverted proves nothing after the revert; the feature is the permanent, always-checkable form of
+# it. Both halves run inside `ac484_adapter_edge_fixture`
+# (crates/rk-kernel/tests/it/adapter_edge.rs).
+#
+# 🛑 THE ASSERTION IS OVER `resolve.nodes[]`, NEVER OVER `packages[].dependencies[]`. Because the
+# edge below is OPTIONAL, the manifest view lists it whether or not this feature is on -- so a check
+# written over `packages[]` would report a violation on a green tree and would be deleted rather
+# than fixed. `crates/rk-kernel/src/adapter_edge.rs` reads `resolve` and offers the manifest reading
+# only so the test can assert the two DISAGREE.
+adapter-edge-reintroduce = ["dep:rk-adapter-sqlite"]
+
 [dependencies]
 # ALL FOUR ARE NOW CALLED, as of Slice 4h (2026-09-14). The paragraph that stood here said "ONE OF
 # THE FOUR IS STILL DECLARED AND NOT YET CALLED", and named the site its call would land at:
@@ -123,6 +152,18 @@ rk-store = { path = "../rk-store" }
 rk-git = { path = "../rk-git" }
 serde.workspace = true
 serde_json.workspace = true
+# THE ONE `rk-adapter-*` EDGE THIS CRATE MAY CARRY, AND IT IS OFF (AC-484; D-1, 2026-09-14). It is
+# OPTIONAL, so it is selected only by `adapter-edge-reintroduce` above and appears in no default
+# build, no default `cargo tree -p rk-kernel -e normal`, and no default `resolve.nodes[]` entry for
+# this package. It is the positive control for the paragraph immediately below: without it, "no
+# `rk-adapter-*` edge" is a proposition nothing in the tree has ever been seen to falsify.
+#
+# The target crate is tests/fixtures/rk-adapter-sqlite/ -- a workspace MEMBER with ZERO
+# dependencies. Zero is required, not tidy: an optional dependency enters Cargo.lock either way and
+# `cargo audit` / `cargo deny` read the lock, and AC-528 forbids an async runtime anywhere in this
+# crate's resolved graph. That fixture is NOT the real adapter; Step 7c's will live under `crates/`,
+# and this one is renamed or retired then rather than silently shadowed. Its own Cargo.toml says so.
+rk-adapter-sqlite = { path = "../../tests/fixtures/rk-adapter-sqlite", optional = true }
 
 # WHAT IS NOT HERE IS THE POINT (AC-528, AC-484; ADR-0076). No async runtime -- `tokio`,
 # `async-std`, `futures` or `async-trait` -- directly or transitively, and no `rk-adapter-*` edge,
@@ -130,6 +171,15 @@ serde_json.workspace = true
 # an adapter, and the kernel reaches the world only through `rk-ports`' sync traits. Checkpoint 7b
 # asserts this over the RESOLVED graph (`cargo tree -p rk-kernel -e normal`), because this table
 # sees direct dependencies only.
+#
+# **Amended 2026-09-14 (D-1), and the amendment is the second half of that last sentence.** This
+# table now DOES carry an `rk-adapter-*` line -- the optional `rk-adapter-sqlite` above -- and the
+# sentence about it holds precisely because the reading is the resolved graph: the optional edge is
+# absent from `resolve.nodes[]` and from `cargo tree -p rk-kernel -e normal` unless
+# `adapter-edge-reintroduce` is selected. It IS present in `cargo metadata`'s
+# `packages[].dependencies[]`, which is the manifest view of exactly this table and is therefore the
+# reading no assertion may use. `ac484_adapter_edge_fixture` asserts both readings off the same
+# bytes so that the difference is a committed test and not a comment.
 #
 # `rk-store` WAS deliberately absent at Slice 1, and §7b.9(2)'s layering question is settled at
 # Slice 3 as option A -- the edge above. See its comment for what was chosen, what it costs and

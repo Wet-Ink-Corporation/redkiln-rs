@@ -255,6 +255,19 @@
 //! erratum reconciling AC-527's THEN with ADR-0080 decision 2's broader *"satisfiable only by an
 //! empty finding set"* is **OWED**. The module header carries the table.
 
+/// **AC-484's dependency-edge reading** — the pure reader that answers *"does `rk-kernel` reach an
+/// `rk-adapter-*` crate, directly or transitively?"* from `cargo metadata` output.
+///
+/// A **top-level** module beside [`kernel_denylist`] and for the same reason: its subject is the
+/// **whole crate's** graph, so it cannot sit inside [`workflow`] or [`select`], both of which deny
+/// the file reads and the unordered containers such a rule reaches for.
+///
+/// 🛑 **It reads `resolve.nodes[]` and never `packages[].dependencies[]`.** D-1 (2026-09-14) makes
+/// the must-fail fixture a permanent **optional** edge on this crate, which the manifest view lists
+/// whether or not its feature is on; an assertion over that view would be red on a green tree. The
+/// module header states the trap and `tests/it/adapter_edge.rs` asserts the two readings disagree,
+/// so it is a committed assertion rather than a warning to a future reader.
+pub mod adapter_edge;
 pub mod catalog;
 pub mod facet_provenance;
 pub mod facet_registry;
@@ -269,6 +282,22 @@ pub mod facet_stability;
 /// stand outside its own scope; its header records the one marked, counted exemption that follows
 /// from that, and `tests/it/kernel_denylist.rs` asserts the exemption's size.
 pub mod kernel_denylist;
+/// **AC-498's egress surface** — the same resolved graph [`adapter_edge`] reads, classified a
+/// second time: is a **networking** crate linked?
+///
+/// A **top-level** module beside [`adapter_edge`], for that module's reason and not a new one: its
+/// subject is the **whole crate's** graph. It calls [`adapter_edge::resolved_reading`] and writes
+/// no second walker (D-2, 2026-09-14), so the adapter answer and the networking answer are two
+/// classifications of **one** reading rather than two readings that could disagree.
+///
+/// 🛑 **What it cannot see is larger than what it can.** A graph reading answers *"is a networking
+/// crate linked?"*; it does not answer *"can this process open a socket?"* — `std::net` needs no
+/// dependency and reaches no `resolve.nodes[]` entry — and **no lint closes that**: measured
+/// 2026-09-14, `clippy.toml` and `deny.toml` carry **no network entry at all**, so AC-003's network
+/// half is enforced by nothing and stays **ARMED**. The instrument for that class is the
+/// `no-egress` CI job's denied container, and this module is not a substitute for it. Its header
+/// and `tests/it/no_egress.rs`'s carry the measurement.
+pub mod no_egress;
 /// **AC-495's pack validation** — the startup rule that refuses a stage whose only route needs a
 /// capability nothing claims, with a span at the requiring row.
 ///

@@ -1,0 +1,55 @@
+# MUST-FAIL FIXTURE — AC-484 (with AC-528's graph reading).
+#
+# A feature-gated workspace MEMBER, on the tests/fixtures/rk-banned-dep/ and
+# tests/fixtures/rk-clock-read/ precedent (DECISIONS-2026-09-12 E4), taken as **D-1 on 2026-09-14**.
+# The root Cargo.toml's `members = ["crates/*", "tests/fixtures/*"]` already covers this directory,
+# and MEMBERSHIP is the point: Step 8 (4)'s `cargo metadata --no-deps` membership check resolves for
+# a member and would NOT for an excluded package, so an excluded fixture is one cargo cannot see.
+#
+# The gate is NOT here. It is an OPTIONAL dependency on this crate declared by `rk-kernel`, behind
+# that crate's non-default `adapter-edge-reintroduce` feature:
+#
+#   green:  cargo metadata                                               -> no rk-adapter-* in rk-kernel's RESOLVED graph
+#   RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-sqlite
+#
+# Both are run from inside `ac484_adapter_edge_fixture`
+# (crates/rk-kernel/tests/it/adapter_edge.rs), which also takes the MANIFEST reading of the same
+# bytes and asserts the two disagree — because `packages[].dependencies` lists an optional
+# dependency whether or not it is enabled, and an assertion written over that view would be red on a
+# green tree.
+#
+# WHY THIS CRATE PULLS NOTHING, and why that is a requirement rather than tidiness. An optional
+# dependency enters Cargo.lock whether or not its feature is on (tests/fixtures/rk-banned-dep/
+# Cargo.toml records the same measurement for its own pick), and `cargo audit` and
+# `cargo deny check bans advisories licenses` both read the LOCK. AC-528 additionally forbids an
+# async runtime anywhere in `rk-kernel`'s resolved graph, directly or transitively. A fixture with a
+# dependency tree would therefore put that tree under three gates and buy this criterion nothing.
+# Zero dependencies. Adding one is a decision, not a convenience.
+#
+# STATED HONESTLY, because the fixture must not claim more than it proves: this crate is NOT an
+# adapter. It implements no port, links no SQLite, and shares nothing with the real
+# `rk-adapter-sqlite` that Step 7c will build except the name. What it proves is that the
+# dependency-graph rule fires on an `rk-adapter-*` package NAME reachable from `rk-kernel`, which is
+# exactly what AC-484's Verified-by asks of it ("a fixture commit adding `rk-adapter-sqlite` to
+# `rk-kernel` that must fail"). When the real crate lands at 7c it will live under `crates/`, and
+# this one must be renamed or retired then rather than silently shadowed.
+[package]
+name = "rk-adapter-sqlite"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# INTENTIONALLY EMPTY, and not an omission. The reintroduction switch lives on the CONSUMER
+# (`rk-kernel`'s `adapter-edge-reintroduce`), because AC-484 is a property of the consumer's graph:
+# a feature declared here could only change what THIS crate pulls, and could never add or remove the
+# edge INTO it. The rk-banned-dep/rk-clock-read fixtures carry their switch locally because their
+# criteria are about their own contents; this one is not.
+[dependencies]
+
+# `workspace = true` AND NOTHING ELSE (Cargo rejects a mixed [lints] table; RFC 3389, cargo #13157,
+# PIA-026). Carried so this member is linted by the same workspace-scoped `cargo clippy` invocation
+# as every other, rather than being a hole in the gate that happens to contain no code today.
+[lints]
+workspace = true

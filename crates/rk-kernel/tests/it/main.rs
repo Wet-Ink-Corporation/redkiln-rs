@@ -23,7 +23,59 @@
 //! one**: AC-487's is built, in [`kernel_denylist`], and **four** remain — AC-484, AC-494, AC-495
 //! and AC-498. **Corrected again 2026-09-14: two of those four are now built** — AC-494's in
 //! [`resolver`] and AC-495's in [`pack_validation`] — and **two** remain, AC-484 and AC-498. It is
-//! still true that no module here stands in for either of them.
+//! still true that no module here stands in for either of them. **Corrected a third time
+//! 2026-09-14: AC-484's is now built**, in [`adapter_edge`], and **one** remains — AC-498.
+//! **Corrected a fourth and last time 2026-09-14: AC-498's is now built**, in [`no_egress`], and
+//! **none** of the five remains. The rule the sentence carries outlives the list it was written
+//! about and is restated rather than retired: no empty module stands in for an unbuilt one, and
+//! the clause that says so is now about what the five modules **do** assert rather than about
+//! which of them is missing.
+//!
+//! **[`adapter_edge`], 2026-09-14: AC-484, the last of the five `ac4xx` hand-forwards but one.**
+//! The mechanism is **D-1**: `tests/fixtures/rk-adapter-sqlite/` is a zero-dependency workspace
+//! member on the `rk-banned-dep`/`rk-clock-read` precedent, and `rk-kernel` carries an **optional**
+//! edge to it behind the non-default `adapter-edge-reintroduce` feature — so the *"fixture commit …
+//! that must fail"* the register asks for is committed and permanent rather than made and reverted,
+//! and the must-fail half is reached by a feature flip inside the one test.
+//!
+//! 🛑 **The whole test is one distinction: `resolve`, never `packages`.** `cargo metadata` publishes
+//! two readings of the dependency relation, and an **optional** edge appears in the manifest view
+//! (`packages[].dependencies[]`) whether or not its feature is on — so an assertion written there
+//! would be red on a green tree. The criterion's question is answered only by the feature-resolved
+//! `resolve.nodes[]`. The test takes **both** readings off the same bytes and asserts they
+//! **disagree**, so the trap is a committed assertion rather than a warning. A second trap sits
+//! under it: `resolve.nodes[].deps[].name` is the **lib** name (`rk_adapter_sqlite`), and AC-484's
+//! THEN is *"naming the adapter crate"*, so every `pkg` id is resolved back through `packages[]`
+//! and the hyphenated package name is what the violation renders.
+//!
+//! 🛑 **One of AC-484's three named instruments is ARMED and an erratum is OWED against it.** Its
+//! third is *"the same `deny.toml` `[bans].deny` list AC-005 names"*; measured 2026-09-14, that list
+//! names five workflow engines and **no adapter**, and it cannot become AC-484's — `cargo deny`
+//! bans are **workspace-wide** while AC-484 is a **per-crate edge** property, so banning
+//! `rk-adapter-sqlite` workspace-wide would forbid it in `rk-cli`, which legitimately depends on
+//! adapters at 7d. The register is not edited here; [`adapter_edge`]'s header carries the
+//! measurement and the reasoning, and nothing in the file claims the clause is covered.
+//!
+//! **[`no_egress`], 2026-09-14: AC-498, the last of the five `ac4xx` hand-forwards.** The mechanism
+//! is **D-2**, and it is three instruments and a fourth that is not in this binary at all. In
+//! tree: **one caller-owned `AtomicU32`**, bound as the only `Harness` a sweep of both suites
+//! AC-498 names can reach and read at **0** on the test's own thread — with a control on a second
+//! fake that reads **1**, because a counter nothing can move reports zero forever; **no
+//! `rk-adapter-*` in the resolved graph**, which is [`adapter_edge`]'s own walk re-used rather than
+//! a second walker; and **no networking crate** in it, against the seven tokens D-2 measured at
+//! zero, with the rule shown to fire over a synthetic graph reaching `tokio-util` transitively
+//! while leaving `hyperlocal` alone.
+//!
+//! 🛑 **The larger half of AC-498 is NOT in this binary and nothing here reads as covering it.** A
+//! resolved-graph assertion answers *"is a networking crate linked?"*, never *"can this process
+//! open a socket?"* — `std::net::TcpStream` needs no dependency and reaches no `Cargo.lock` — and
+//! **no lint closes that**: measured 2026-09-14, `clippy.toml` and `deny.toml` carry **no network
+//! entry at all**, so **AC-003's network half is enforced by nothing and stays ARMED**. The one
+//! instrument that reaches the class is the **`no-egress` CI job**'s denied container, and this
+//! file asserts only that the job is **present** — never that it has run. Two further bounds are in
+//! the module's table: the token list is a **denylist** that cannot see `native-tls` or `socket2`,
+//! and the walk is over `kind: null` edges, so a networking crate arriving through the **dev**
+//! closure is outside it (the direct dev rows are closed by name; the closure is not).
 //!
 //! **Slice 4h, 2026-09-14: [`runtime`], [`ledger`] and [`advisory`].** This is where `rk-ports` is
 //! CALLED for the first time in the workspace. [`runtime`] holds AC-009's verbatim journaling and
@@ -165,6 +217,7 @@
 //! activity runs"* as a live ordering (`rk-cli`, Step 7d), and **AC-500**, which AC-495's own *Note*
 //! trims out of this criterion. Each file's header carries its table.
 
+mod adapter_edge;
 mod advisory;
 mod breaker;
 mod budget;
@@ -183,6 +236,7 @@ mod grammar;
 mod kernel_denylist;
 mod ledger;
 mod memo;
+mod no_egress;
 mod on_false;
 mod pack_validation;
 mod probe_differential;
