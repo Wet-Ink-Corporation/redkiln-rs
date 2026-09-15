@@ -300,6 +300,19 @@ pub mod facet_stability;
 /// stand outside its own scope; its header records the one marked, counted exemption that follows
 /// from that, and `tests/it/kernel_denylist.rs` asserts the exemption's size.
 pub mod kernel_denylist;
+/// **AC-294's third instrument** — the module-boundary architecture lint, for the **`--stay` class**
+/// state the criterion is extended to carry.
+///
+/// A **top-level** module beside [`kernel_denylist`], for that module's stated reason: a lint
+/// written inside the module it polices makes the ban fire on its own implementation
+/// (`s7b-ii`:534-539, quoted at [`kernel_denylist`] above). Its subject is `crate::workflow`, so it
+/// sits outside it.
+///
+/// 🛑 **It does NOT cover AC-294's block value.** The criterion's own THEN is about a block value
+/// constructed outside `rk-kernel::policy`, and measured 2026-09-15 there is **no `policy` module,
+/// no block-value type and no `stage_weight`** anywhere under `crates/*/src/` — so that half is
+/// **ARMED, NOT DISCHARGED** and `tests/it/module_boundary.rs`'s table says so by clause.
+pub mod module_boundary;
 /// **AC-498's egress surface** — the same resolved graph [`adapter_edge`] reads, classified a
 /// second time: is a **networking** crate linked?
 ///

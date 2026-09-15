@@ -284,6 +284,7 @@ mod grammar;
 mod kernel_denylist;
 mod ledger;
 mod memo;
+mod module_boundary;
 mod no_egress;
 mod on_false;
 mod pack_validation;
