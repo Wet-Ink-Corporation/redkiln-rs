@@ -127,7 +127,10 @@ it; none is written by the build session (`00-preamble.md`:55).
    encodes it and a stage may not move an instrument on its own authority. **A record settling it is OWED.** *(Settled 2026-09-14 by the operator as `DECISIONS-2026-09-14 D-6`, and recorded here 2026-09-15: **`>` for attempts and tokens, `>=` for the wall clock**, each following its own criterion's verb — AC-024's *"reaches"* against AC-025's *"ran out"*. The code consequence landed at `b37fcbb` and the dated note fixing the comparison **per counter** landed 2026-09-15. The defect was live: **9 of 102** shipped activities declare exactly their ADR-0037 rule-8 minimum [**D-6’s figure**, cited and not re-derived by this tracker], so under a uniform `>=` each was exhausted by its own successful pass and `evaluate_gate` could never close a gate on its evidence.)*
 
 **The record work of 2026-09-15 — the five items `DECISIONS-2026-09-14.md` left OWED, and what it left in turn.**
-Landed on `build/phase-0-to-1` on 2026-09-15 as record work above the runbook. Four operator decisions were needed
+Landed on `build/phase-0-to-1` on 2026-09-15 as record work above the runbook, in two commits: the AC-294
+module-boundary lint at **`b504a66`** (it is a behaviour change with its own test, so it is not folded into the
+record work that cites it) and the five items plus the three dated notes at **`596a774`**. Four operator decisions
+were needed
 before any of it could be written and are recorded at **`spikes/DECISIONS-2026-09-15.md`** as **D15-1…D15-4**, cited
 as `DECISIONS-2026-09-15 D15-<n>`. **Fourteen agents read the primary records rather than the drafts**, and **three
 load-bearing claims in the 2026-09-14 drafts were refuted** — the drafts under `spikes/decisions-2026-09-14-drafts/`
