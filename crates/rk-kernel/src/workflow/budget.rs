@@ -6,7 +6,7 @@
 //! | **AC-020** | [`Attempts`], [`Tokens`], [`WallClockSecs`] — three newtypes with no `From`, no `Add`, no `Sum` and no `Into<f64>` crossing them; [`fold`] touches one counter per [`Charge`] | **built**; the separation half is `tests/ui/ac020_counters_never_share.rs` |
 //! | **AC-021** | [`required_attempts_total`] — lint rule 8's **declared** minimum | **built** |
 //! | **AC-022** | [`charge_for_each`] / [`charge_pass`] — the **runtime** charge, constant in the fan-out cardinality | **built**; see the 🛑 on ADR-0053 below |
-//! | **AC-023** | [`appetite_raise_from_activity_result`] — the refusal, and **only** the refusal | **partial**; C3 is open, and the escape hatch is not built |
+//! | **AC-023** | [`appetite_raise_from_activity_result`] — the refusal, and **only** the refusal | **built**; C3 is **RESOLVED** in favour of AC-389 (DECISIONS-2026-09-14 D-13) — an in-run raise is refused **outright**, AC-023's *"unless"* clause is **CUT** by dated register amendment and its second instrument is withdrawn **with** the clause, so the escape hatch is not unbuilt but **withdrawn**. What is still unbuilt is **AC-389's** second THEN half, *"the attempt is appended as an event"* — no `EventKind` exists for it and it is residual **R-1** in `spikes/DECISIONS-2026-09-15.md` |
 //! | **AC-024** | [`wall_clock_expiry_mark`] — the durable mark's **value**, on [`EventKind::GateOpened`] with kind `budget_extension` | **partial**; the *write* has **no call site anywhere in `src/`** [re-measured 2026-09-14, after Slice 4h shipped without one: it has zero call sites; the bare grep returns four lines, the definition plus three doc mentions, so the count is stated as call sites and not as grep hits]. The sentence here read *"the *write* is Slice 4h's"*; 4h is committed and did not write it, so the forward reference is replaced by the measurement. `crate::runtime`'s header carries the reason the kernel is powerless to add one — no ledger, no envelope and no elapsed-seconds carrier — and the record routing an elapsed value to the kernel is **OWED**. Both halves ARMED below. **Amended 2026-09-14 (D-8):** this cell began *"*\"exits 0\"* is 7d's and the *write* has no call site"*; the first clause is withdrawn, because [`BudgetExtensionMark::to_event`] gives the mark an event form and `tests/it/cross_process.rs` re-execs the test binary, writes the mark in a **child** and reads that child's **exit code** — the register's own *"test asserting process exit and a written mark"*. The *write on a live `src/` path* is untouched by that and stays ARMED, measured as stated. AC-024 is a **twin** (owner: AC-240 + AC-278) |
 //! | **AC-025** | [`BudgetExhausted`], [`GateVerdict`], [`evaluate_gate`] — and no route from the first to a closed second | **built**; the negative fixture is `tests/it/budget.rs`'s nine-row table, with `tests/ui/ac025_exhaustion_is_not_a_pass.rs` in addition |
 //!
@@ -54,21 +54,39 @@
 //! `for_each_charges_once_independent_of_n` to accept a charge that scales with N is exactly the red
 //! §7b.13 names, turned green against a `Consequences` paragraph.
 //!
-//! # 🛑 AC-023 IS BUILT TO THE REFUSAL BOTH CRITERIA SHARE, AND NOT ONE WORD FURTHER
+//! # 🛑 AC-023 IS BUILT TO THE REFUSAL BOTH CRITERIA SHARE, AND C3 IS NOW SETTLED
 //!
-//! C3 is open (`references/2026-09-08-acceptance-criteria.md`:117): AC-023 refuses an in-run raise
-//! *"unless it arrives as a typed budget-change event with an author"*; AC-389 refuses it outright
-//! and appends an event. *"A build cannot implement both refusals."* What both agree on — a raise
-//! arriving **from an activity result** is refused — is what
-//! [`appetite_raise_from_activity_result`] is, and it is all of it. The escape hatch is **not
-//! buildable at all**: it needs a typed budget-change `EventKind`, `rk_types::event_kind::EventKind`
-//! is closed at 29 variants and carries no budget or appetite change, and minting one takes a record
-//! (ADR-0116 clause 5; ADR-0120 is the precedent). AC-389's *"the attempt is appended as an event"*
-//! is **not built either** — it is the half where the two criteria differ, and appending would take
-//! C3 against AC-023. **AC-023's second instrument — *"an event-schema test that every appetite
-//! change carries an author field"* — is ARMED, NOT DISCHARGED**, and its home is whatever record
-//! settles C3. The test in `tests/it/budget.rs` is deliberately **not** named `ac023_…`: claiming
-//! the id would claim the hatch.
+//! **C3 is RESOLVED, in favour of AC-389: an in-run appetite raise is refused OUTRIGHT, and
+//! AC-023's *"unless it arrives as a typed budget-change event with an author"* clause is CUT by
+//! dated register amendment** (`DECISIONS-2026-09-14 D-13`). The paragraph that stood here read
+//! *"C3 is open (`references/2026-09-08-acceptance-criteria.md`:117)"* — quoted verbatim; `:117`
+//! was C3's row when that sentence was written and is **C1**'s row now, because this pass's own
+//! register amendments moved it, so C3 is named here by its `| C3 |` cell and not by line
+//! [re-derived 2026-09-15: `grep -n '^| C3 ' references/2026-09-08-acceptance-criteria.md`]. The
+//! paragraph took the two refusals as irreconcilable — *"A build cannot implement both refusals."*
+//! It is corrected rather than deleted, because **what this module builds did not move**: a raise
+//! arriving **from an activity result** is refused, which is what
+//! [`appetite_raise_from_activity_result`] is and all of it.
+//!
+//! The resolution's warrant is that the hatch was **not buildable at all**: it needs a typed
+//! budget-change `EventKind`, `rk_types::event_kind::EventKind` is closed at 29 variants and
+//! carries no budget or appetite change, and minting one takes a record (ADR-0116 clause 5;
+//! ADR-0120 is the precedent). **AC-396 still routes the appetite VALUE to a human gate**, so
+//! *"refused outright"* refuses the in-run mechanism and not the quantity.
+//!
+//! **AC-023's second instrument — *"an event-schema test that every appetite change carries an
+//! author field"* — is WITHDRAWN WITH THE CLAUSE** rather than left ARMED against no stage: D-13
+//! cuts the clause and its instrument together. AC-023's **only** surviving instrument is therefore
+//! *"a unit test asserting refusal of an in-run raise from an activity result"*, which is exactly
+//! `tests/it/budget.rs`'s `appetite_raise_from_an_activity_result_is_refused` — **so the taboo on
+//! naming that test `ac023_…` is LIFTED.** Nothing is renamed here: Checkpoint 7b asserts literal
+//! test names and a rename is a separate, checked act. Recorded, not done.
+//!
+//! 🛑 **AC-389's *"the attempt is appended as an event"* IS STILL NOT BUILT AND STILL OWED A
+//! RECORD.** It was the half where the two criteria differed and D-13 did not build it: there is no
+//! `EventKind` for a refused appetite raise, the enum is closed at 29, ADR-0112's eleven `StepError`
+//! variants carry no member for one, and design §5's table has no row. It is residual **R-1** in
+//! `spikes/DECISIONS-2026-09-15.md`, and C3's resolution must not be read as discharging it.
 //!
 //! # 🛑 THE EXHAUSTION BOUNDARY IS PER COUNTER AS OF 2026-09-14, AND IT IS A READING NO RECORD STATES
 //!
@@ -96,11 +114,22 @@
 //! its evidence. The in-crate reproduction is `tests/fixtures/catalog/two-pass.toml`, which has the
 //! same shape.
 //!
-//! **A dated note fixing the comparison per counter is still OWED**, because neither criterion
-//! states a comparison outright — those two verbs are all either offers, and the split above is
-//! this file's reading of them. The reading is pinned by `tests/it/budget.rs`'s
-//! `minimum_declaration_is_not_exhausted_by_its_own_clean_pass`, whose name carries no AC id for
-//! exactly that reason. See [`exhausted_counter`], which stays the **single** definition —
+//! **The dated note fixing the comparison per counter has LANDED, 2026-09-15** — a dated register
+//! note against **AC-024/AC-025**, on operator decision `DECISIONS-2026-09-14 D-6`, which states
+//! the per-counter split in the register's own voice. This paragraph opened *"A dated note fixing
+//! the comparison per counter is still OWED"*; it is corrected rather than deleted, because the
+//! warrant it carried is still the warrant — neither criterion states a comparison outright, those
+//! two verbs are all either offers, and D-6 is what turns this file's reading of them into a
+//! record's text. The reading is still pinned by `tests/it/budget.rs`'s
+//! `minimum_declaration_is_not_exhausted_by_its_own_clean_pass`, whose name carries no AC id, now
+//! for the narrower reason that D-6's instrument is a dated amendment against **two** criteria and
+//! not a criterion of its own, so there is no id for the test to take.
+//!
+//! 🛑 **AND THE COMPARISON IS NOT EXERCISED END-TO-END AT 7b** [measured 2026-09-15, code lines
+//! only]. [`evaluate_gate`] has **zero callers under any `crates/*/src/`** — the only code-line hit
+//! is its own definition — and [`wall_clock_expiry_mark`]'s **write on a live `src/` path is still
+//! ARMED**, as the AC-024 row above states. So D-6's repair is pinned by unit cases and by nothing
+//! that dispatches. See [`exhausted_counter`], which stays the **single** definition —
 //! [`fold`]'s observation and [`evaluate_gate`]'s verdict both call it, so the two cannot disagree.
 //!
 //! # What is deliberately NOT here
@@ -555,8 +584,9 @@ impl fmt::Display for AppetiteRaiseRefused {
         write!(
             f,
             "an activity result asked to raise the item's token appetite from {} to {}, and the \
-             raise is refused: the appetite is fixed at triage (AC-023, AC-389). Which mechanism, if \
-             any, may raise it is contradiction C3 and no record settles it",
+             raise is refused outright: the appetite is fixed at triage (AC-023, AC-389). C3 is \
+             settled in favour of AC-389 (DECISIONS-2026-09-14 D-13) — the only route to a higher \
+             appetite is returning the item to triage, and AC-396 routes the value to a human gate",
             self.fixed_at_triage, self.proposed
         )
     }
@@ -573,13 +603,14 @@ impl std::error::Error for AppetiteRaiseRefused {}
 /// # Errors
 ///
 /// [`AppetiteRaiseRefused`] — **always, for every input**, and that is the criterion rather than an
-/// unfinished implementation. The `Ok` arm is where C3 splits the two criteria: AC-023 admits a
-/// raise *"if it arrives as a typed budget-change event with an author"* and AC-389 admits none at
-/// all. That hatch is **not built** — `EventKind` is closed at 29 and carries no budget or appetite
-/// change, so it is not merely unwritten but unbuildable without a record — and the `Ok` type is
-/// kept so that whichever way C3 resolves, the resolution is a body change here and not a signature
-/// change at every call site. **Do not "simplify" this to a non-`Result`**: that would take C3
-/// against AC-023 by deleting the only place its hatch could land.
+/// unfinished implementation. The `Ok` arm **was** where C3 split the two criteria: AC-023 admitted
+/// a raise *"if it arrives as a typed budget-change event with an author"* and AC-389 admits none
+/// at all. **C3 is RESOLVED in favour of AC-389 — refused outright — by DECISIONS-2026-09-14 D-13,
+/// and AC-023's *"unless"* clause is CUT by dated register amendment**, so there is no hatch left
+/// for the `Ok` arm to hold open. It is kept regardless: narrowing the signature to a non-`Result`
+/// is a change at every call site that the resolution does not ask for, and **AC-389's own *"the
+/// attempt is appended as an event"* is STILL NOT BUILT** — there is no `EventKind` for it, the
+/// enum is closed at 29, and that half is residual **R-1** in `spikes/DECISIONS-2026-09-15.md`.
 pub const fn appetite_raise_from_activity_result(
     envelope: &BudgetEnvelope,
     proposed: Tokens,
@@ -750,16 +781,25 @@ impl GateEvidence {
 /// **This stays ONE function** with a per-counter rule rather than becoming three, so [`fold`]'s
 /// observation and [`evaluate_gate`]'s verdict still cannot disagree.
 ///
-/// **A dated note fixing the comparison per counter is OWED.** Neither criterion states a
-/// comparison outright — those two verbs are all either offers — so the rule above is this file's
-/// reading of them and not a record's text. Until that note lands, a reader must not take the
-/// per-counter split as settled. It is pinned by
-/// `tests/it/budget.rs`'s `minimum_declaration_is_not_exhausted_by_its_own_clean_pass`, whose name
-/// carries no AC id for exactly that reason.
+/// **The dated note fixing the comparison per counter has LANDED, 2026-09-15**, against
+/// **AC-024/AC-025**, on operator decision `DECISIONS-2026-09-14 D-6`. This paragraph read *"A
+/// dated note fixing the comparison per counter is OWED … Until that note lands, a reader must not
+/// take the per-counter split as settled"*, and it is corrected in place: neither criterion states a
+/// comparison outright — those two verbs are all either offers — so the rule above followed each
+/// criterion's own verb, and D-6 is what makes that a record's text rather than this file's reading.
+/// It is still pinned by `tests/it/budget.rs`'s
+/// `minimum_declaration_is_not_exhausted_by_its_own_clean_pass`, whose name carries no AC id —
+/// because D-6's instrument is an amendment against two criteria, not an id a test could take.
+///
+/// 🛑 **Not exercised end-to-end at 7b** [measured 2026-09-15, code lines only]: [`evaluate_gate`]
+/// has **zero callers under any `crates/*/src/`** and [`wall_clock_expiry_mark`]'s write on a live
+/// `src/` path is still **ARMED**, so nothing that dispatches reaches this comparison.
 #[must_use]
 pub fn exhausted_counter(ledger: &BudgetLedger, envelope: &BudgetEnvelope) -> Option<Counter> {
     // 🛑 THE CONTRADICTION WITH ADR-0037's RULE 8 THAT LIVED IN THIS EXPRESSION IS REPAIRED HERE,
-    // AND THE READING IT TAKES IS STILL OWED A RECORD.
+    // AND THE READING IT TAKES IS NOW A RECORD'S. A dated register note against AC-024/AC-025
+    // landed 2026-09-15 on operator decision DECISIONS-2026-09-14 D-6. This line read "AND THE
+    // READING IT TAKES IS STILL OWED A RECORD" until then.
     //
     // *(Found 2026-09-14 by an adversarial pass, which reproduced it against the in-crate fixture
     // `tests/fixtures/catalog/two-pass.toml`: `attempts_total = 3`, `required_attempts_total` = 3,
@@ -777,7 +817,8 @@ pub fn exhausted_counter(ledger: &BudgetLedger, envelope: &BudgetEnvelope) -> Op
     //
     // The comparison now follows each criterion's own verb — `>` for attempts and tokens (AC-025,
     // *"ran out"*), `>=` for the wall clock (AC-024, *"reaches"*) — and the doc comment above
-    // carries the warrant and the OWED record. Design §3.6:344 and schema §4:83 both name the
+    // carries the warrant and the dated AC-024/AC-025 note that now records it (D-6); that clause
+    // read "the OWED record" until 2026-09-15. Design §3.6:344 and schema §4:83 both name the
     // OUTCOME (`Err(BudgetExhausted)`, `Blocked { reason }`) and neither fixes the COMPARISON.
     //
     // The declared-`0` guard is unchanged and is load-bearing for the wall clock's `>=`: without

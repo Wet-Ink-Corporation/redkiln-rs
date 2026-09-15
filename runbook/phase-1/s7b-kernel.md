@@ -105,8 +105,34 @@ category.** Every item below was measured on 2026-09-13; none of the files named
 > live record, which supersedes ADR-0079 *in full* per ADR-0090 decision 3, exactly as this banner's own second line
 > asserts** — AC-071 and design §10.2's "may not" column, all saying the same sentence. *(This read "golden
 > constraint 1, ADR-0079, AC-071 …" until 2026-09-13, citing as current authority the record its own banner proves
-> superseded. Two sources above this file still call ADR-0079 `proposed` — AC-071's THEN and `00-preamble.md`'s
-> golden constraint 1 — and an erratum is owed there; the prohibition itself is unchanged in substance.)*
+> superseded. It then read "Two sources above this file still call ADR-0079 `proposed` — AC-071's THEN and
+> `00-preamble.md`'s golden constraint 1 — and an erratum is owed there" until 2026-09-15, and **both halves of
+> that were wrong — the scope and the instrument.** **The scope, RE-DERIVED on this tree 2026-09-15 and carried
+> from no summary.** The co-occurrence sweep —
+> `find . -name '*.md' -not -path './.git/*' -not -path './spikes/*' -not -path './references/adr/*' -print0 | xargs -0 grep -n 'ADR-0079' | grep -i proposed`
+> — returns **37 lines across 12 files** re-run at the close of this pass, and that is an **upper bound, not the
+> claim**: most of those lines are the dated in-place corrections themselves — including the one this pass wrote at
+> `s7a`:24, which is why the sweep returned **36** before it and 37 after — or carry `proposed` for an unrelated
+> reason. **Every one was read. Eight lines across seven files asserted it in the PRESENT TENSE when this pass
+> opened**, and they are named rather than counted:
+> `references/2026-09-09-change-classification.md`:220 and :227, `references/2026-09-08-success-measures.md`:219,
+> `references/2026-09-08-evidence-brief.md`:231, `references/2026-09-10-pre-implementation-audit.md`:2023,
+> `references/2026-09-07-process-catalog-proposal.md`:14, **`s7a`:24 in this runbook — corrected in place and dated
+> on this pass, which leaves seven lines across six files above and beside this file** — and `s4`:442, which is
+> not prose but an **executable** guard asserting ADR-0079 carries exactly one `status: proposed` line; measured
+> now, `grep -c '^status: proposed$' references/adr/0079-*.md` returns **0**, so that guard can no longer pass.
+> **The design and the AC register are no longer on this list**: their 13 and 7 co-occurring lines are, every one,
+> dated corrections or unrelated uses of the word. **And `00-preamble.md` now carries ZERO present-tense claims** —
+> said explicitly, because an earlier revision of this banner named its golden constraint 1 as one of two stale
+> sites and the revision after that dropped the file from the enumeration without a word: `00-preamble.md`:111 is
+> that correction, dated 2026-09-15, and it is the file's only co-occurring line. *(This passage read **"31 lines
+> across 11 amendable documents"** until 2026-09-15 while itemising 30 across 10 — a headline that reproduced under
+> no reading of its own list — and that itemisation silently dropped `00-preamble.md`. Both are replaced above.)*
+> The instrument: **no erratum is owed.** `E-0079-2` is
+> **withdrawn as an instrument** (DECISIONS-2026-09-15 D15-2) — ADR-0079's frontmatter already reads
+> `status: superseded` and ADR-0090:108-110 keeps its body deliberately untouched, so there is **no frozen line for
+> an erratum to correct**; each site takes a dated in-place correction in the amendable document that carries it.
+> None of them is written here (`00-preamble.md`:55), and the prohibition itself is unchanged in substance.)*
 >
 > **F39 moved exactly one of AC-071's five clauses.** Arm D was scored on 2026-09-09, discharging the fourth —
 > "arm-D panel `scored`" — and only that one [measured, F39]. The block holds on the **first**: modal required-set
@@ -145,12 +171,17 @@ parameter bound by a port trait (AC-480). **The gates are `s7b-ii`'s.**
   `rk-kernel` is written `#[expect(clippy::<lint>, reason = "…")]` and never `#[allow]` (ADR-0102 decision 3).
   §7b.5 says what is new here and what was discharged at Step 5.
 - **The `--stay`-class error is unrepresentable** — a `trybuild` must-fail fixture, not a runtime assertion, and
-  Phase-1 exit criterion (5) (design §10.2's Phase-1 row) gates on it. **It has no AC id and no ADR clause**: the only
-  record is ADR-0001:42 (*"Every `advance`, gate, retry and budget becomes code, making the `--stay` class of
-  corruption unrepresentable"*), which the register itself classes as *"a premise, not a checkable behaviour"*. So
+  **AC-294's THEN covers it**, extended to the resumed half-advanced state by dated register amendment on
+  2026-09-15 (DECISIONS-2026-09-14 D-14). *(This read "Phase-1 exit criterion (5) (design §10.2's Phase-1 row)
+  gates on it. **It has no AC id and no ADR clause**" until 2026-09-15, when (5) was WITHDRAWN, its number retired
+  with nothing renumbered, and the property folded into AC-294. Until then the only record was ADR-0001:42
+  (*"Every `advance`, gate, retry and budget becomes code, making the `--stay` class of corruption
+  unrepresentable"*), which the register classes as *"a premise, not a checkable behaviour"*.)* So
   this bullet is **documented reasoning, not one of the four measured ones** around it. §7b.4 gives the fixture its
-  own path and name so Step 8's filter cannot be satisfied by a different stage's fixture, and the missing id is
-  recorded as a residual against Step 8 check (5). AC-294's block constructor is the type-level ban that *does* have
+  own path and name, and **the missing-id residual against Step 8 check (5) is DISCHARGED — there is no check (5)
+  left to record it against** *(this clause read "the missing id is recorded as a residual against Step 8 check
+  (5)" until 2026-09-15; §7b.4 also refutes the reason it gave, since Step 8's filter DID reach this crate's
+  harness)*. AC-294's block constructor is the type-level ban that *does* have
   a criterion and a record, and it is `s7b-ii`'s.
 - **Selection semantics only.** The seven-step pure function, rank, tie-is-an-error, unsatisfiable-is-a-typed-gate,
   deviation-never-edits-`R`, and the lint set all get built (§7b.9). What does not: any `require` row keyed on an
@@ -299,7 +330,7 @@ one** (`00-preamble.md`:55) and the `corpus_sha` clause's fixture is authored ag
 
 ### 7b.3 The slices, and where a session is
 
-**Step 7b is six to eight sessions, not one.** Its acceptance set is **115 criteria in this file** plus `s7b-ii`'s
+**Step 7b is six to eight sessions, not one.** Its acceptance set is **116 criteria in this file** plus `s7b-ii`'s
 **122** (the register's three gate areas at **120 in force**, plus AC-455 and AC-239's list-is-data half, both
 cross-listed), against Step 7a's **24** in a file five times the length.
 
@@ -315,12 +346,16 @@ reported. Under that one rule, per range, with the same exclusions §7b.15 names
 | AC-001–AC-039 | 39 | − AC-013 (PROVISIONAL on P8, built not claimed), − AC-039 (human-gated) | **37** |
 | AC-040–AC-079 | 39 *(AC-075 cut and never defined)* | − AC-044 (armed; §7b.9(8)) | **38** |
 | AC-080–AC-118 | 39 *(AC-119 unallocated)* | − AC-092..AC-099 and AC-118 (doctor, 7d's), − AC-101/AC-102 (7e's baseline), − AC-113, − AC-114/AC-115 | **25** |
-| AC-520, AC-525, AC-527 | 3 | — *(AC-530 is `s7b-ii`'s)* | **3** |
+| AC-520, AC-525, AC-527, AC-532 | 4 | — *(AC-530 is `s7b-ii`'s)* | **4** |
 | AC-161, AC-164 *(next-action halves)* | 2 | — | **2** |
 | AC-005 *(`cargo tree -i` half)* | 1 | — | **1** |
 | §14 hand-forwards | 10 | − AC-500 (**ARMED, not claimed** — §7b.15 says so in terms) | **9** |
 
-37 + 38 + 25 + 3 + 2 + 1 + 9 = **115**. The nine §14 ids counted are AC-484, AC-487, AC-494, AC-495, AC-498 and the
+37 + 38 + 25 + 4 + 2 + 1 + 9 = **116**. *(This read `37 + 38 + 25 + 3 + 2 + 1 + 9 = **115**` until 2026-09-15,
+when **AC-532** was allocated and claimed in §7b.15 — DECISIONS-2026-09-14 D-12, DECISIONS-2026-09-15 D15-3. The
+new number was **re-counted off §7b.15 under the rule above**, range by range, and not tallied: AC-532's bullet
+writes neither *minus*, *Excluding* nor *Excluded*, so it is a claim, and it is the ONLY row that moved.)* The nine
+§14 ids counted are AC-484, AC-487, AC-494, AC-495, AC-498 and the
 four part-halves AC-480, AC-483, AC-497, AC-528. **Re-count this off §7b.15 after any change to the set, under the
 rule above and not by eye** — three of this block's four previous numbers were written by tallying rather than
 counting, which is Halt 7's shape and the reason the rule is written down. Projecting off `rk-git`'s measured
@@ -421,7 +456,7 @@ that directory and says why). Its Phase-1 cases:
 
 | case file | what must not compile | criterion |
 | --- | --- | --- |
-| `stay_class_state_is_unconstructible.rs` | the resumed/half-advanced state the `--stay` class depends on | **none** — Phase-1 exit criterion (5) only; the id is a residual (§7b.1, §7b.15) |
+| `stay_class_state_is_unconstructible.rs` | the resumed/half-advanced state the `--stay` class depends on | **AC-294**, whose THEN was extended to this state by dated register amendment 2026-09-15 (D-14); the criterion is `s7b-ii`'s to claim, not this file's *(this cell read "**none** — Phase-1 exit criterion (5) only; the id is a residual (§7b.1, §7b.15)" until 2026-09-15, when (5) was withdrawn and its number retired)* |
 | `ac480_generics_leak.rs` | a `<P: Harness>`-shaped bound, or an `impl Trait` return naming a port | AC-480's first THEN clause, handed here by `s7a`:995 |
 | `ac050_rigor_is_not_arithmetic.rs` | `Add` / `Sum` / `Into<f64>` on `Rigor` | AC-050 |
 | `ac041_selection_reads_no_clock.rs` | a clock, env, filesystem, network or random read reachable from `select()` | AC-041 |
@@ -435,17 +470,31 @@ is explicitly *"constructed inside the crate"* — so the `R`-equality assertion
 `#[cfg(test)]` public one, silently converts AC-061 from a type fact into a convention**, and nothing at this stage
 would catch it: nothing in `rk-kernel` is agent-facing until 7c.
 
-**Step 8 filters the same suite, and what it cannot see is stated rather than assumed.** `s8`:121 is
-`cargo test -p rk-kernel -- trybuild`. *(This paragraph read "a filter spelled `trybuild` selects **zero** tests
-against the house convention" until 2026-09-13. **That is false of this crate's own harness**, whose name contains the
-substring: measured on this tree, `cargo test -p rk-ports --test it -- trybuild` selects
-`ui::trybuild_pins_the_reason_each_port_fixture_fails` and reports `ok. 1 passed`. The claim is true of `rk-git`'s
-`reconcile_runs_at_every_entry` and `rk-store`'s `a_state_field_without_a_tier_is_a_compile_error`, and it was carried
-across to the kernel without re-measuring.)* So Step 8 check (5) **does** reach this harness. What it cannot
-distinguish is **which cases the harness ran**: it is green whenever any one of them passes, so an absent
-`stay_class_state_is_unconstructible.rs` reads exactly like a present one. **Checkpoint 7b closes that here by
-asserting all six case files and their six `.stderr` files BY PATH**, and **a matching by-path assertion in `s8`
-check (5) is OWED** and is recorded in §7b.15 beside the missing criterion id. The `--stay` case's own filter name
+**Step 8 filters the same suite, and what it cannot see is stated rather than assumed — but there is no longer a
+check (5) for this harness to reach.** Phase-1 exit criterion **(5) is WITHDRAWN** (2026-09-15), its number
+**RETIRED with nothing renumbered** — ADR-0110 (accepted) cites exit criterion **(7)** by number — and its
+obligation folded into **AC-294** by dated register amendment (DECISIONS-2026-09-14 D-14). **Nothing is OWED at
+`s8` against this harness.** Re-read 2026-09-15 against `s8-exit-criterion.md` as it stands: `s8` **cut** its (5)
+block outright rather than annotating it, and asserts `stay_class_state_is_unconstructible.rs` **and its committed
+`.stderr` BY PATH** inside Checkpoint 8's standing-prohibitions block, modelled on this file's loop. **Cite `s8`'s
+*"(5) WITHDRAWN 2026-09-15"* note by name and not by line number** — this paragraph cited `s8`:121 for a
+`cargo test -p rk-kernel -- trybuild` line until 2026-09-15 and **that line no longer exists**; :121 now falls
+inside the withdrawal note itself.
+
+**What survived the withdrawal is a measurement, not an obligation, and it is stated in the past tense because the
+block it was measured against is gone.** The filter `trybuild` **did** select this crate's harness, whose name
+contains the substring, and what it could **not** distinguish was **which cases the harness ran**: it is green
+whenever any one of them passes, so an absent `stay_class_state_is_unconstructible.rs` read exactly like a present
+one. `s8`'s withdrawal note records the same measurement. **Checkpoint 7b closes that here by asserting all six
+case files and their six `.stderr` files BY PATH.** *(History, in order. This paragraph read "a filter spelled
+`trybuild` selects **zero** tests against the house convention" until 2026-09-13; that was false of this crate's
+own harness — measured then, `cargo test -p rk-ports --test it -- trybuild` selected
+`ui::trybuild_pins_the_reason_each_port_fixture_fails` and reported `ok. 1 passed`. The zero-selection claim was
+true of `rk-git`'s `reconcile_runs_at_every_entry` and `rk-store`'s
+`a_state_field_without_a_tier_is_a_compile_error`, and it had been carried across to the kernel without
+re-measuring. It then read "So Step 8 check (5) **does** reach this harness … and **a matching by-path assertion
+in `s8` check (5) is OWED** and is recorded in §7b.15 beside the missing criterion id" until 2026-09-15.)*
+The `--stay` case's own filter name
 does not fix this and is not claimed to: `stay_class_unrepresentable` is a *fixture* name in §7b.13's red-first list,
 not a `cargo test` name, and §7b.13 says so.
 
@@ -841,11 +890,24 @@ step key and **not** a hash of step keys, and a key computed from a single card 
 **two loop iterations give two keys and two executions** — the direct regression test for *"loops cannot learn"*
 (AC-017); and a memo hit **appends a `memo_hit` event carrying the key and exactly its eight components** — a skip is
 never invisible (AC-019). **AC-045's key is a fourth key and is ADR-0119's** (§7b.2(2)); `rk-store`'s three keys share
-no code and neither does this one.
+no code and neither does this one. **What component 8 formally IS: the whole `SchemaId` string.** Design §3.5 words
+it *"the output type's `schema_version`"* and **no such field exists** — `grep -rn schema_version
+crates/rk-types/src crates/rk-ports/src` returned **0** [measured 2026-09-14] — so the value hashed is the id
+itself, never a `vN` suffix parsed out of it, which invents a convention no record states and **collides
+`RecordedResult/v1` with `ChangeSummary/v1`** in component 8 (DECISIONS-2026-09-14 D-10). **A dated note fixing
+that lands against AC-014 and AC-019 on 2026-09-15**; the key still has **eight** components and its property test
+still runs **nine** cases — do not read this note as changing either number.
 
 **The budgets.** Three counters, **never shared** — distinct newtypes with no `From`/`Add` crossing them, so a shared
 counter does not compile; `attempts_total` counts the agent/tool steps of a **pass**, not the sum of retried steps
-across passes; a `for_each` over N items charges **once**, independent of N (AC-020–AC-023). Inner retry is AC-026,
+across passes; a `for_each` over N items charges **once**, independent of N (AC-020–AC-023). **The `attempts_total`
+clause specifically — *"counts the agent/tool steps of a **pass**, not the sum of retried steps across passes"* —
+is design §3.6:337 verbatim, and it is that clause, not the `for_each` clause beside it, that governs the DECLARED
+field, on ADR-0037's unit — the load-time lint floor — and not the runtime counter.** The very next row, design §3.6:338, reads *"inner attempts count against the activity's
+budget"*; two adjacent rows of one in-force table are either self-contradictory or name **two quantities**, and the
+second is the reading under which the design is coherent (ADR-0122 decisions 3 and 5(d); DECISIONS-2026-09-14 D-1).
+**A dated clarification to design §3.6:337 saying which quantity its sentence governs lands 2026-09-15**; carry the
+qualification with the sentence whenever this stage restates it. Inner retry is AC-026,
 outer retry AC-029, the never-retried class AC-027, the disjoint channels AC-032, the breaker AC-033–AC-035,
 degradation AC-036–AC-038, exhaustion AC-024/AC-025.
 
@@ -860,7 +922,17 @@ item, at }>, last: Option<{ run_id, item, at }> }` and **the kernel writes it** 
 `activity_committed` for that activity (ADR-0022's activation record) — nothing else sees that event, and Step 7e
 authors TOML only. At v0 every activity but `root-cause`'s P7 members reads `executed: never`. `doctor`'s
 never-executed count is 7d's and `lint` **warns, never fails**, past the pack's declared `rot_after` — a pack-level
-setting, not a kernel constant. The register routes this through **AC-110**, inside this stage's claimed range.
+setting, not a kernel constant. **The register routes this through AC-532**, allocated 2026-09-15 in the
+register's **§4 packs-catalog** beside AC-110 and AC-114 (DECISIONS-2026-09-14 D-12; DECISIONS-2026-09-15
+D15-3), and its THEN states **both readings this build already took**: the **resolved, in-memory** catalog record,
+**never the shipped TOML** — writing `executed` into the committed TOML would trip **AC-111** on every run — and
+`first`/`last` as **journal (append) order, not `at` order** (DECISIONS-2026-09-15 D15-4).
+**Amended 2026-09-15: this sentence read "The register routes this through **AC-110**, inside this stage's claimed
+range" and that was the runbook adding a THEN.** AC-110's THEN says nothing about a ledger, and under ADR-0092 a
+stage file may not supply one; the correction is an **allocation above this file**, not a re-reading here. **The
+red test KEEPS ITS NAME — `ac110_executed_ledger_first_and_last` — because §7b.14's third loop asserts that
+literal; what changes is WHAT IT CLAIMS, which is AC-532 and no longer AC-110.** Renaming it is a separate, later
+edit that must move §7b.14's assertion in the same change or the checkpoint halts on an absent name.
 *(Do not name the red test after AC-114: the register marks AC-114 **HUMAN GATE**, and naming a red test after it
 would claim a human gate as buildable.)*
 
@@ -985,7 +1057,21 @@ event logs under `golden-logs/`, produced by Slice 3's replay test.
 
 1. Slice 3 is green: `golden_log_replay` passes and **its logs were produced by that run, not hand-made**.
 2. AC-071's stability record exists, was **transcribed from F36**, and its dated register amendment has landed naming
-   its path and its producer.
+   its path and its producer. **Amended 2026-09-15: the SECOND half is satisfied and the FIRST is not, so this
+   precondition is still FALSE and the move is still blocked — on the corpus write alone.** The dated register
+   amendment **landed 2026-09-15** (DECISIONS-2026-09-14 D-3), naming the record's path, its producer and its
+   non-reproducibility; **the record itself is not written**, because it lands in the corpus and **precondition 7
+   reserves that write to the operator** — precondition 7 is unchanged and nothing here relaxes it. Three things
+   the amendment settles, carried here so the record is authored against them rather than re-derived:
+   **(a)** in a **transcribed** record `corpus_sha` denotes **the pin the measurement was taken at**, not the
+   catalog pin at read time — `47faec9f46b8d983c2c75f0794164e68415ae706`, the value F36's own engine rows carry and
+   the one `crates/rk-kernel/tests/it/facet_stability.rs`:37 already hard-codes as `CATALOG_CORPUS_PIN`
+   (DECISIONS-2026-09-15 D15-1). **(b)** Clause 5 therefore **does NOT clear**, because that is not today's catalog
+   pin — and that is **fail-closed and correct**: AC-071 already fails on clause 1 (identity **0.10** against the
+   **0.80** line), the gate is unchanged, and a record that made clause 5 pass while clause 1 failed would be
+   golden constraint 9's guard-scoped-wrong one level up. **(c)** The record must carry **the three registry
+   digests it was measured under** (§7b.2), with the four figures per (instrument, pack) and never averaged into
+   one.
 3. The `golden-logs/` per-run layout is written into this section.
 4. `git status --porcelain` is empty in **both** repositories, and `git -C "$CORPUS_REPO" rev-parse HEAD` equals
    `CORPUS_SHA` — AC-464 refuses a dirty or unpinned corpus **before any read**.
@@ -1065,12 +1151,15 @@ error or a filter that matched nothing.
   `crates/rk-kernel/tests/ui/ac480_generics_leak.rs`, it runs inside the one harness, and Checkpoint 7b asserts it
   **by path** together with its committed `.stderr`. A `cargo test -- no_generics_leak` filter would select zero
   tests and exit 0.
-- `stay_class_unrepresentable` — Phase-1 exit criterion (5)'s fixture, also a `trybuild` CASE and not a `cargo
+- `stay_class_unrepresentable` — the `--stay` fixture, also a `trybuild` CASE and not a `cargo
   test` name: `crates/rk-kernel/tests/ui/stay_class_state_is_unconstructible.rs`, asserted **by path** with its
-  `.stderr`. *(This bullet said "under its **own** filter name, so Step 8's filter cannot be satisfied by a
-  different stage's case" until 2026-09-13. The premise was false — see §7b.4: `s8`:121's `trybuild` filter DOES
-  select this crate's harness, and what it cannot see is which cases ran. The by-path assertion is the fix, and a
-  matching one in `s8` check (5) is OWED.)*
+  `.stderr`. **The by-path assertion this bullet once owed to `s8` check (5) is DISCHARGED WITH THE CHECK**:
+  criterion (5) was WITHDRAWN 2026-09-15 and its number retired, and `s8` carries its own by-path assertion — the
+  `.rs` and its committed `.stderr` — in Checkpoint 8's standing-prohibitions block. *(This bullet said "under its
+  **own** filter name, so Step 8's filter cannot be satisfied by a different stage's case" until 2026-09-13; the
+  premise was false — see §7b.4, where the `trybuild` filter **did** select this crate's harness and what it could
+  not see was which cases ran. It then said "a matching one in `s8` check (5) is OWED" until 2026-09-15. Cite
+  `s8`'s *"(5) WITHDRAWN 2026-09-15"* note by name; the `s8`:121 line this bullet cited is gone.)*
 
 **Slice 2 — the three rules:**
 
@@ -1137,9 +1226,10 @@ error or a filter that matched nothing.
   passes"*** — so the test reads §7b.12's `logs/` row, *"the golden event logs' **in-crate copies for the red step,
   before the corpus copies exist**"*, and the corpus-relative form (AC-464, read through `CORPUS_PIN` at
   `CORPUS_SHA`) is **ARMED, NOT DISCHARGED**, the caller's to switch on after the move. But `#![cfg(feature =
-  "corpus")]` costs nothing and §7b.14:1316 asserts it: `cargo test -p rk-kernel -- --list` **without** the feature
-  must select zero tests matching `golden_log_replay|ac161_ac164_delete_db_replay`. Ungated it selected **3**
-  [measured 2026-09-13], which also made :1301's name loop pass **vacuously**, because a `--features corpus` run
+  "corpus")]` costs nothing and **§7b.14's `list=$(cargo test -p rk-kernel -- --list …)` capture-then-assert
+  pair** asserts it: that filter **without** the feature must select zero tests matching
+  `golden_log_replay|ac161_ac164_delete_db_replay`. Ungated it selected **3** [measured 2026-09-13], which also
+  made **that pair's own `k=` grep** pass **vacuously**, because a `--features corpus` run
   selects every test, gated or not. The module now carries the attribute, and the two checkpoint lines are one
   deferral rather than two. The module also spawns `git` — `rk_git::version::assert_at_startup` is the only minter of
   the capability token `GitExec::new` demands — which is a second reason it does not belong in the unfeatured run.
@@ -1379,9 +1469,10 @@ done
 # targets do not compile prints nothing, k reads 0, and the gate PASSES — measured: a deliberate
 # unclosed delimiter in src/lib.rs gave cargo rc=101 with `error: this file contains an unclosed
 # delimiter` and k=0. That is precisely the configuration nothing else has guarded at this point:
-# the two tests are `#![cfg(feature = "corpus")]`-gated, :1143's `cargo build -p rk-kernel` does not
-# build test targets and runs four statements LATER, and :1146's `cargo test -p rk-kernel` is later
-# still.
+# the two tests are `#![cfg(feature = "corpus")]`-gated, this block's `cargo build -p rk-kernel` does
+# not build test targets and runs LATER in the same block, and its bare `cargo test -p rk-kernel` is
+# later still. NAMED, NOT NUMBERED: this comment cited them as :1143 and :1146 until 2026-09-15, and
+# re-measured that day neither line was either statement — both cites had drifted into §7b.13's prose.
 list=$(cargo test -p rk-kernel -- --list 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: 'cargo test -p rk-kernel -- --list' did not run (rc=$rc) — its status was DISCARDED left of a pipe until 2026-09-13, so a crate whose non-corpus test targets do not compile read as k=0 and passed this gate"; printf '%s\n' "$list" | tail -20; exit 1; }
 k=$(printf '%s\n' "$list" | grep -cE 'golden_log_replay|ac161_ac164_delete_db_replay' | tr -d '[:space:]')
@@ -1612,11 +1703,17 @@ grep -qE '^[[:space:]]*ap\.add_argument\("--out"' spikes/p1/score-arm-d-panel.py
 # ---- correct HERE because §7b.4 FIXES this harness's file at `crates/rk-kernel/tests/it/ui.rs`. THE
 # ---- HARNESS NAME IS WHAT MAKES THE FILTER DISCRIMINATING, NOT THE ABSENCE OF THE SUBSTRING: this crate's
 # ---- harness is `trybuild_pins_the_reason_each_kernel_fixture_fails`, which CONTAINS `trybuild`, so
-# ---- `s8`:121's `cargo test -p rk-kernel -- trybuild` DOES select it — measured on this tree 2026-09-13,
+# ---- a bare `cargo test -p rk-kernel -- trybuild` DID select it — measured on this tree 2026-09-13,
 # ---- `cargo test -p rk-ports --test it -- trybuild` selects `ui::trybuild_pins_the_reason_each_port_fixture_fails`
-# ---- and reports `ok. 1 passed`. What Step 8 check (5) therefore CANNOT see is WHICH cases the harness ran:
+# ---- and reports `ok. 1 passed`. What that filter therefore CANNOT see is WHICH cases the harness ran:
 # ---- it is green whenever any one of them passes. The six by-path assertions below are what pin the
-# ---- `--stay` case at this stage, and **a matching by-path assertion in `s8` check (5) is OWED** (§7b.15).
+# ---- `--stay` case AT THIS STAGE. Phase-1 exit criterion (5) was WITHDRAWN 2026-09-15 and its obligation
+# ---- folded into AC-294 (DECISIONS-2026-09-14 D-14), so the "by-path assertion in `s8` check (5) is OWED"
+# ---- this comment carried is DISCHARGED WITH THE CHECK, and NOTHING is owed above this file either:
+# ---- re-read 2026-09-15, `s8` cut its (5) block OUTRIGHT and carries its own by-path assertion — the
+# ---- `.rs` and its committed `.stderr` — inside Checkpoint 8. The bare `-- trybuild` line went with the
+# ---- check, so cite `s8`'s "(5) WITHDRAWN 2026-09-15" note BY NAME; this comment cited it as `s8`:121,
+# ---- which is no longer that line, until 2026-09-15 (§7b.15).
 # ---- AND NEVER TWO FREE FILTERS AFTER A DOUBLED `--`: libtest OR-unions them, so
 # ---- `-- trybuild -- ac294_block_constructor` passes whenever ANY test whose name contains `trybuild`
 # ---- passes. MEASURED on this tree 2026-09-13: `cargo test -p rk-ports --test it -- trybuild --
@@ -1627,7 +1724,7 @@ printf '%s\n' "$out" | grep -qE '^test .*\btrybuild_pins_the_reason_each_kernel_
 for f in stay_class_state_is_unconstructible ac480_generics_leak ac050_rigor_is_not_arithmetic \
          ac041_selection_reads_no_clock ac061_required_set_is_not_constructible_outside_select \
          ac061_required_set_has_no_deserialize ; do
-  test -f "crates/rk-kernel/tests/ui/$f.rs" || { echo "FAIL: the trybuild case $f.rs is absent — a harness that runs proves nothing about a case that is not there, and Phase-1 exit check (5)'s filter is satisfied by any other case"; exit 1; }
+  test -f "crates/rk-kernel/tests/ui/$f.rs" || { echo "FAIL: the trybuild case $f.rs is absent — a harness that runs proves nothing about a case that is not there, and a bare trybuild filter is satisfied by any other case — these six by-path assertions are the only thing pinning the case now that Phase-1 exit criterion (5) is withdrawn"; exit 1; }
   test -s "crates/rk-kernel/tests/ui/$f.stderr" || { echo "FAIL: $f commits no .stderr, so it is green whenever compilation fails for ANY reason (s7a §7a.8)"; exit 1; }
 done
 
@@ -1819,6 +1916,16 @@ and no corpus run is recorded.**
   terminal condition — the rule is on the FORM, not the string: ADR-0080's forbids clause reads *"or any policy
   predicate satisfiable only by an empty finding set"*, and its *Verified by* is **three** fixtures, not one) and
   **AC-530 is NOT claimed here** — it is `s7b-ii`'s, with the advisory sink whose exit invariant it owns.
+- **AC-532 — CLAIMED HERE, added 2026-09-15.** ADR-0114 decision 2's **executed-once ledger**, allocated in the
+  register's **§4 packs-catalog** beside AC-110 and AC-114 because the criterion follows its subject — ADR-0114
+  calls the field *the catalog record's* — and not §2 kernel, where the code happens to live (DECISIONS-2026-09-14
+  D-12; DECISIONS-2026-09-15 D15-3). Its THEN states **both readings this build already took**: the **resolved,
+  in-memory** catalog record, **never the shipped TOML**, and `first`/`last` in **journal (append) order, not `at`
+  order** (DECISIONS-2026-09-15 D15-4). Pinned by `ac110_executed_ledger_first_and_last`, which **keeps its name**
+  because §7b.14's third loop asserts that literal; §7b.10 routed this through **AC-110** until 2026-09-15, which
+  was the runbook adding a THEN. **This is a claim and not a subtraction**: it raises §7b.3's out-of-range row from
+  **3 to 4** and this file's total from **115 to 116**, re-counted off this section under §7b.3's rule rather than
+  tallied. **The `doctor` never-executed count remains 7d's and is not claimed here.**
 - **AC-161 and AC-164's next-action halves**, handed forward by Step 6: their instrument is *"the delete-the-database
   replay test in `rk-kernel`"*, which does not exist until this step. **AC-184's projection half is not claimed** —
   it waits on `rk-cli`'s `doctor --rebuild` at 7d.
@@ -1872,21 +1979,55 @@ is recorded in `PROGRESS.md` §1 as carried forward:
 - **AC-291/AC-292 are ORPHANED** and are raised in `s7b-ii` §7b-ii.14, which states the two lawful routes. They are
   not claimed here: their subject is `rk-git` and their instruments are structural assertions over a spawn
   configuration and a clone shape.
-- **The `--stay` fixture has no criterion.** Phase-1 exit check (5) gates on it and no criterion in the register
-  states it (searched `--stay`, `stay`, `unrepresentable`: the only hits are AC-446's corpus list and ADR-0107's
-  denylist). Either a criterion is allocated for it, outside an exhausted range per the register's §0.4, with its own
-  GIVEN/WHEN/THEN naming which constructor must not exist, **or exit check (5) is withdrawn and its obligation folded
-  into AC-294**. **And a second, separable half is owed at `s8` itself:** `s8`:121's `cargo test -p rk-kernel --
-  trybuild` **does** select this crate's harness (§7b.4 corrects the claim that it does not), but it is green
-  whenever **any** case in the harness passes, so an absent `stay_class_state_is_unconstructible.rs` reads exactly
-  like a present one. **Owed: add the by-path assertion Checkpoint 7b carries — the `.rs` and its committed
-  `.stderr` — to `s8` check (5).** `s8` is not edited in this pass. **Record the missing id as a residual in
-  `PROGRESS.md` §2 against Step 8 check (5)**, and do not decide here which type carries the ban.
-- **Errata owed above this file, each named in place:** E-0079-2 (AC-071's THEN and `00-preamble.md`'s golden
-  constraint 1 still call ADR-0079 `proposed`); E-0071-1 (AC-071's dead `--stability-record` path, plus the
-  non-reproducibility of §7b.2); E-0105-1 (AC-105's THEN is narrower than ADR-0081 clause 1); the AC-520 self-
-  contradiction of §7b.7; AC-043's third state, AC-045's key name and design §4.4's *"The memo key"* (ADR-0119 clause
-  8); AC-056's series; AC-066's 8-case table; AC-525's run scope; F42's *"the design's grammar section records both"*;
+- **The `--stay` fixture's criterion — SETTLED 2026-09-15, and the SECOND of the two lawful routes is the one
+  taken.** This block offered two: allocate a criterion outside an exhausted range per the register's §0.4, **or
+  exit check (5) is withdrawn and its obligation folded into AC-294**. **The second was taken**
+  (DECISIONS-2026-09-14 D-14), because AC-294 already owns the identical instrument family in the same crate — a
+  private constructor, a module-boundary lint and a `trybuild` case — and exit check (5)'s only warrant was
+  ADR-0001:42, which the register classes as *"a premise, not a checkable behaviour"*. So **AC-294's THEN is
+  extended by dated register amendment, Phase-1 exit criterion (5) is WITHDRAWN, its number is RETIRED, and NOTHING
+  is renumbered** — ADR-0110 (accepted) cites exit criterion **(7)** by number. *(This block's opener read "The
+  `--stay` fixture has no criterion … no criterion in the register states it (searched `--stay`, `stay`,
+  `unrepresentable`: the only hits are AC-446's corpus list and ADR-0107's denylist)" until 2026-09-15. The
+  verification pass recorded at `DECISIONS-2026-09-15` refutes the strong half — **AC-446's THEN reaches the
+  recorded `--stay` bug id** — which does not change the route taken, because AC-446 states a corpus fact and not
+  the unrepresentability the check gated on.)* **The second, separable half owed at `s8` is DISCHARGED WITH THE
+  CHECK, not transferred:** there is no check (5) left to add a by-path assertion to. **Re-read 2026-09-15 against
+  `s8-exit-criterion.md` as it stands: `s8` has cut its (5) block outright and carries the by-path assertion — the
+  `.rs` and its committed `.stderr` — in Checkpoint 8's standing-prohibitions block, modelled on this file's loop,
+  so NOTHING is owed at `s8` for this.** The measurement that made the half look owed survives only as history:
+  `cargo test -p rk-kernel -- trybuild` **did** select this crate's harness (§7b.4 corrects the earlier claim that
+  it did not) and was green whenever **any** case passed. **That block is gone, so cite `s8`'s *"(5) WITHDRAWN
+  2026-09-15"* note by name — it records the same measurement — and never `s8`:121**, which this bullet cited for
+  the `cargo test` line until 2026-09-15 and which now falls inside the withdrawal note. *(`s8`'s own pointer back
+  to this file cites `s7b-kernel.md:1627-1633`, which no longer holds that loop — it is §7b.14's six-case
+  `for f in stay_class_state_is_unconstructible …` loop, and it moves again with this pass. An `s8`-side
+  correction, and an argument for naming the loop rather than its lines; not this file's to make.)*
+  *(`PROGRESS.md`:116-119 recorded "the
+  `--stay` fixture has no criterion id" as a residual against Step 8 check (5), and this bullet said that row was
+  **OWED a correction**, until 2026-09-15. Re-read on this tree that day: `PROGRESS.md`'s row 2 now carries the
+  residual **struck through and DISCHARGED**, so nothing is owed there either. `PROGRESS.md` is not edited from
+  here (`00-preamble.md`:55).)*
+- **Corrections owed above this file, each named in place — and the INSTRUMENT changed on 2026-09-15.**
+  **DECISIONS-2026-09-15 D15-2: a CRITERION correction takes a dated in-place register amendment, not an erratum**,
+  because the register is amendable and ADR-0092 decision 1's erratum is the instrument for a **frozen** record;
+  `ERRATA.md`:273-276 concedes the route in its own words and §7b.11 precondition 2 asks for exactly that and names
+  no erratum at all. **E-0071-1, E-0079-2 and E-0105-1 are WITHDRAWN AS INSTRUMENTS, never as obligations** — each
+  correction still lands, in place and dated — and **nothing is written to `references/adr/ERRATA.md` on this
+  pass; its convention header is UNCHANGED.** *(This list read "**Errata owed above this file, each named in
+  place:** E-0079-2 …; E-0071-1 …; E-0105-1 …" until 2026-09-15.)* Re-pointed, by id:
+  **E-0079-2 → a dated in-place correction in each amendable document that carries the stale text** — ADR-0079's
+  frontmatter already reads `status: superseded` and ADR-0090:108-110 keeps its body deliberately untouched, so
+  **there is no frozen line for an erratum to correct**, and the banner at the head of this file (:106-109) carries
+  the measured scope. **E-0071-1 → AC-071's dated register amendment** (the dead `--stability-record` path, plus
+  the non-reproducibility of §7b.2). **E-0105-1 → AC-105's dated register amendment** (its THEN is narrower than
+  ADR-0081 clause 1); that id could never have been minted in any case, because **ADR-0105 exists** and
+  `ERRATA.md`'s only criterion-keyed precedent, `E-0520-1`, could take its id only because no ADR-0520 exists or can
+  exist. **The AC-484 instrument correction takes the same form.** Also register amendments rather than errata,
+  being criterion corrections: the AC-520 self-contradiction of §7b.7; AC-043's third state; AC-045's key name;
+  AC-056's series; AC-066's 8-case table; AC-525's run scope. **Still record-side corrections and therefore NOT
+  re-pointed:** design §4.4's *"The memo key"* (ADR-0119 clause 8); F42's *"the design's grammar section records
+  both"*;
   **ADR-0103's two missing productions** — `string in <set-valued facet>` and the refseg hyphen (§7b.6), which the
   kernel's parser implements and no record admits; **ADR-0081 clause 2's instrument**, which names `lattice
   --validate` where this stage builds `rigor_monotonicity` (§7b.8); and **the design's two stale copies of AC-001's
@@ -1896,7 +2037,7 @@ is recorded in `PROGRESS.md` §1 as carried forward:
   the single case in this list where the stage file is right and the record above it is stale**, so it takes a dated
   in-place correction rather than a supersession — neither sentence is an ADR `## Decision`. **None of them is
   written here** (`00-preamble.md`:55).
-- **The register reconciliation is OWED.** This file claims **115** ids (§7b.3 carries the rule and the arithmetic) and names its
+- **The register reconciliation is OWED.** This file claims **116** ids (§7b.3 carries the rule and the arithmetic) and names its
   discharges and its arms by id; what it does **not** do is reconcile the claimed ranges against the register's own per-area State lines, which
   moved during this session. That is a register-side count and `00-preamble.md`:7-10 gives the register every criterion's
   state. **Record it in `PROGRESS.md` §2 against Step 7b.**

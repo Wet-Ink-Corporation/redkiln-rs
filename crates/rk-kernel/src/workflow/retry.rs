@@ -577,10 +577,34 @@ pub fn decide_after_inner_retries(
 ///
 /// So it is declared here, on `crates/rk-types/src/event_kind.rs`:16-21's precedent for the three
 /// names that enum proposes to design §5: *"they are named here rather than invented silently …
-/// until it lands those three are this crate's proposal rather than the design's word."* **A record
-/// naming the refusal-class vocabulary is OWED**, and until it lands this token is **this crate's
-/// proposal**, reported as such and never as a record's spelling. `00-preamble.md`:55 — a stage
-/// records what is owed rather than deciding it.
+/// until it lands those three are this crate's proposal rather than the design's word."* This token
+/// is **this crate's proposal**, reported as such and never as a record's spelling.
+///
+/// # WITHDRAWN 2026-09-15 — the owed record, not the label
+///
+/// This paragraph ended *"**A record naming the refusal-class vocabulary is OWED**, and until it
+/// lands this token is this crate's proposal"*. That clause is **withdrawn as an overclaim** by
+/// `spikes/DECISIONS-2026-09-15.md`, its section *"A fifth thing this pass settles, which is a
+/// correction and not a decision"*, which refutes `DECISIONS-2026-09-14` D-9's landed column —
+/// *"the separate note … **stands** and is still owed"* — on measurement, and states the
+/// consequence: **nothing is owed above the runbook, and the runbook may carry the token.** The
+/// withdrawn sentence is quoted rather than scrubbed, on this module's own `WITHDRAWN` discipline:
+/// a correction that deletes what it corrects leaves the next reader nothing to check it against.
+///
+/// **Why the `event_kind.rs` analogy does not transfer.** `EventKind` **is** design §5's own closed,
+/// serialised table, so a name this crate invents for a row of it is genuinely a proposal to the
+/// design. This token is not. It is a `&'static str` on the kernel-internal [`RetryDecision`], which
+/// derives neither `Serialize` nor `Deserialize`, never crosses a port and is never journaled; and
+/// its only producer [`decide_after_inner_retries`] has **zero callers** under any `crates/*/src/`
+/// [re-measured 2026-09-15, code lines only: `grep -rn decide_after_inner_retries crates/*/src/`
+/// with comment lines filtered returns **one** line, the declaration itself]. Nor can it become a
+/// record's token: `RefusalClass` (`crates/rk-types/src/event.rs`:24-29) is **closed at four** —
+/// `NotAdopted`, `NotIsolated`, `Unsupported`, `Overage` — one-to-one with `StepError`'s four
+/// refusal variants, and ADR-0112 forbids a twelfth `StepError` variant without a successor record.
+///
+/// The label itself **stands**: this is still this crate's own spelling and is still never reported
+/// as a record's. `00-preamble.md`:55 — a stage records what is owed rather than deciding it, and
+/// that includes recording, on a record's authority, that nothing is.
 pub const HARNESS_ALREADY_RETRIED: &str = "harness_already_retried";
 
 /// One recorded `system/api_retry` event, as the harness stream carries it.

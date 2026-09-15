@@ -21,7 +21,7 @@
 //! | --- | --- | --- |
 //! | **AC-029** (2/2) | *"a pack-validation test that `N` is declared, never defaulted in code"* | the whole first instrument — injected clock, seeded jitter, the delay envelope, base 2 s, cap 5 min, the cap decision — is `outer_retry_ac029`'s and is **Slice 4c's**. Nothing here asserts a delay |
 //! | **AC-033** | nothing | `K`'s accessor is exercised as a **premise** (that the three accessors do not alias), and the breaker — its per-family state, its refusal, its durable mark — is Slice 4d's. No assertion here may be read as covering AC-033 |
-//! | **AC-023** | nothing | the token appetite's accessor is exercised as the same premise. C3 is open; the refusal that IS built is in `tests/it/budget.rs` and is deliberately not named `ac023_…` |
+//! | **AC-023** | nothing | the token appetite's accessor is exercised as the same premise. C3 is **RESOLVED** in favour of AC-389 — refused outright, AC-023's *"unless"* clause **CUT** (DECISIONS-2026-09-14 D-13). The refusal that IS built is in `tests/it/budget.rs`, whose `ac023_…` taboo the resolution **LIFTS** (the rename is Checkpoint 7b's and is not done here). AC-389's append half is still unbuilt — residual **R-1**, `spikes/DECISIONS-2026-09-15.md` |
 
 use rk_kernel::budget::Tokens;
 use rk_kernel::select::Pack;
@@ -69,8 +69,10 @@ fn pack(name: &str, src: &str) -> Pack {
 ///   pack must return `Ok`; the refusal is at the pack-validation call and not at the loader.
 ///
 /// 🛑 `K` and the token appetite are asserted here as a **premise** — that the three accessors do
-/// not alias — and **not as coverage of AC-033 or AC-023**. The breaker is Slice 4d's and C3 over
-/// AC-023 is open.
+/// not alias — and **not as coverage of AC-033 or AC-023**. The breaker is Slice 4d's, and C3 over
+/// AC-023 is **RESOLVED** in favour of AC-389 (DECISIONS-2026-09-14 D-13) — which changes nothing
+/// here, because this test never asserted an appetite raise either way. This sentence read *"C3
+/// over AC-023 is open"* until 2026-09-15.
 #[test]
 fn ac029_n_is_declared_never_defaulted() {
     let declared = pack("runtime-envelope.toml", FIXTURE_ENVELOPE);

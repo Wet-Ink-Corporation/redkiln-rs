@@ -17,12 +17,25 @@
 //!
 //! Residual 6 is FORCED and its Read line is followed exactly: **build it, do not stop**; an
 //! accepted ADR is authority enough to *execute* and `00-preamble.md`:64 forbids a stage from
-//! *deciding*. The test is named `ac110_executed_ledger_first_and_last` because Checkpoint 7b
-//! :1498-1507 asserts that name and the block halts without it — and it is **not** named after
+//! *deciding*. The test is named `ac110_executed_ledger_first_and_last` because **Checkpoint 7b's
+//! grammar-and-facet name loop** — §7b.14's first of the three the runbook itself calls *"the three
+//! name loops"*, the one whose `for t in` list opens `grammar_agrees_with_the_s_grammar_probe` —
+//! carries that literal in its list, and the block halts without it. **That loop is cited here by
+//! what it asserts and no longer by line or by ordinal, 2026-09-15.** The cite read `:1498-1507` —
+//! the `cargo metadata` / AC-484 dependency-graph block, which asserts no test name at all — and
+//! was then corrected to `:1541-1550`, *"the third name loop"*, which was wrong twice over: those
+//! lines moved the same day, and it is the **first** of the three, not the third [re-derived
+//! 2026-09-15: `grep -n 'for t in' runbook/phase-1/s7b-kernel.md`]. It is **not** named after
 //! AC-114, which the register marks **HUMAN GATE**. What is reported is: the ledger is **built to
-//! ADR-0114 decision 2**, and **AC-110's ledger coverage is POWERLESS** (golden constraint 10,
-//! `00-preamble.md`:154). A register amendment — widen AC-110's THEN, or allocate a new id — is
-//! **OWED**. AC-110's own `doctor` half is 7d's per §7b.15's ARMED table and is not claimed here.
+//! ADR-0114 decision 2**, and **AC-110's ledger coverage is POWERLESS** — golden constraint 10, *"a
+//! pre-registered bar whose registered n cannot decide it is powerless, and must be reported as
+//! powerless"*, cited by its number and its own words because `00-preamble.md`:154 no longer reaches
+//! it. The register amendment this paragraph called **OWED** — *"widen AC-110's THEN, or allocate a
+//! new id"* — is **DISCHARGED on its second branch as of 2026-09-15**: **AC-532** is allocated for
+//! ADR-0114 decision 2's executed-once ledger, in §4 packs-catalog (`DECISIONS-2026-09-15 D15-3`).
+//! **The POWERLESS report above is NOT retired by that** — this test is still named for AC-110 and
+//! still measures no clause of it. AC-110's own `doctor` half is 7d's per §7b.15's ARMED table and
+//! is not claimed here.
 //!
 //! # 🛑 THE LEDGER IS A PROJECTION OVER THE STORE, NEVER A FIELD IN THE SHIPPED TOML
 //!
@@ -31,7 +44,11 @@
 //! content-digest change with no `version` bump — on **every run**, and a per-run `version` bump
 //! would invalidate **every** memo entry keyed on `activity_id@version` (ADR-0097 component 1). So
 //! *"the catalog record"* is read as the **resolved, in-memory** record, which is consistent with
-//! §7b.10's own *"Step 7e authors TOML only"*. **That is a reading and a decision is OWED.**
+//! §7b.10's own *"Step 7e authors TOML only"*. **That reading is now the RECORD's.** This sentence
+//! ended *"That is a reading and a decision is OWED"* until 2026-09-15: **AC-532**'s THEN states it
+//! — the **RESOLVED, IN-MEMORY** catalog record, never the shipped TOML — allocated in §4
+//! packs-catalog by `DECISIONS-2026-09-15 D15-3` and worded by **D15-4(i)**, which cites the two
+//! sentences above as its grounding. Nothing is owed here any longer.
 //!
 //! # 🛑 `at` ARRIVES ON THE PAYLOAD, AND A ROW WITHOUT ONE IS REFUSED
 //!
@@ -53,8 +70,11 @@
 //! **first `activity_committed` in append order** as `first` and the **most recent** as `last`, and
 //! `ac110_executed_ledger_first_and_last` asserts both readings against a case in which journal
 //! order and `at` order **disagree**. On a well-behaved journal the two rules agree, which is why
-//! the disagreeing case is in the test rather than left to be discovered. **No record settles it; a
-//! record is OWED.**
+//! the disagreeing case is in the test rather than left to be discovered. **A record settles it.**
+//! These two sentences ended *"No record settles it; a record is OWED"* until 2026-09-15:
+//! **AC-532**'s THEN states `first` and `last` as **JOURNAL (APPEND) ORDER**, not `at` order —
+//! `DECISIONS-2026-09-15 D15-4(ii)`, which grounds itself on this paragraph and on the
+//! discriminating case at `tests/it/ledger.rs`:145-157. Nothing is owed here any longer.
 //!
 //! # The granularity is the one AC-012 uses, and the two must agree
 //!

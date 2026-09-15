@@ -1,6 +1,6 @@
 # Redkiln-RS — the acceptance-criteria register
 
-**Date:** 2026-09-08 · **Status:** Register, rev. 1, **amended 2026-09-09** to absorb F39 (P1 arm D scored) and ADR-0089 — §0.1, §0.4, §1.1, §1.2, §3.7 (AC-069, AC-070, AC-071, AC-072, AC-076, AC-079 and the new AC-520), AC-113, AC-148, AC-302, AC-347 and §15; **further amended 2026-09-10** to absorb F40 (P2's *perturbation* half scored; its advisory half unrun) — §1.2 row 2, §3's scope note, AC-068, AC-113, AC-434, the selection area's residual-risk list and §15.1. **The 2026-09-10 amendment adds no criterion and moves no count**: F40 changes *why* AC-068 is provisional, not what it asserts. **Further amended 2026-09-11 to absorb the pre-implementation audit (PIA-001…PIA-110):** the twenty-three ADRs 0092–0114 and the eighteen-plus-six decisions of `spikes/DECISIONS-2026-09-11.md` are absorbed — eleven criteria added (AC-521..AC-531, every one outside an exhausted range, §0.4), four PROVISIONAL labels moved (AC-026 and AC-428 lifted on recorded evidence; AC-284 and AC-312 gained on S-CLASS-REPLAY and S-SUBTLE-CB), the `StepError` set, the memo key, the idempotency key, the schema rule, the containment model, the headroom contract (ticks), the review-gate vocabulary, the companion kind list and the facet `source` classes restated to the records that fix them, every `decisions: ADR-0004` re-pointed to ADR-0074 and the §15 tables regenerated from the records' own frontmatter, and the §0.3 table gained rows C4 and C5 and six twin rows. Under ADR-0092 this register is the in-tree owner of each criterion's GIVEN/WHEN/THEN, instrument, state label and id; the thirteen area files it was assembled from are history, not owners. Binding on the Phase 1 build runbook; it decides nothing new and supersedes no ADR. · **Companion:** the success-measure register (SM-001..SM-154 **plus SM-157**, the derived-facet precision measure the 2026-09-09 amendment added — the measure bodies live there, not here) and the ADR set at `references/adr/` (with `references/adr/ERRATA.md`, cited here by erratum id where a frozen number moved) ·
+**Date:** 2026-09-08 · **Status:** Register, rev. 1, **amended 2026-09-09** to absorb F39 (P1 arm D scored) and ADR-0089 — §0.1, §0.4, §1.1, §1.2, §3.7 (AC-069, AC-070, AC-071, AC-072, AC-076, AC-079 and the new AC-520), AC-113, AC-148, AC-302, AC-347 and §15; **further amended 2026-09-10** to absorb F40 (P2's *perturbation* half scored; its advisory half unrun) — §1.2 row 2, §3's scope note, AC-068, AC-113, AC-434, the selection area's residual-risk list and §15.1. **The 2026-09-10 amendment adds no criterion and moves no count**: F40 changes *why* AC-068 is provisional, not what it asserts. **Further amended 2026-09-11 to absorb the pre-implementation audit (PIA-001…PIA-110):** the twenty-three ADRs 0092–0114 and the eighteen-plus-six decisions of `spikes/DECISIONS-2026-09-11.md` are absorbed — eleven criteria added (AC-521..AC-531, every one outside an exhausted range, §0.4), four PROVISIONAL labels moved (AC-026 and AC-428 lifted on recorded evidence; AC-284 and AC-312 gained on S-CLASS-REPLAY and S-SUBTLE-CB), the `StepError` set, the memo key, the idempotency key, the schema rule, the containment model, the headroom contract (ticks), the review-gate vocabulary, the companion kind list and the facet `source` classes restated to the records that fix them, every `decisions: ADR-0004` re-pointed to ADR-0074 and the §15 tables regenerated from the records' own frontmatter, and the §0.3 table gained rows C4 and C5 and six twin rows. Under ADR-0092 this register is the in-tree owner of each criterion's GIVEN/WHEN/THEN, instrument, state label and id; the thirteen area files it was assembled from are history, not owners. Binding on the Phase 1 build runbook; it decides nothing new and supersedes no ADR. **Further amended 2026-09-15** to land the five record items `spikes/DECISIONS-2026-09-14.md` left OWED (D-1, D-3, D-12, D-13, D-14) plus its dated notes D-6 and D-10, under the four operator decisions of `spikes/DECISIONS-2026-09-15.md` (D15-1..D15-4) — §0's header, §0.1, §0.3 (rows C1 and C3 resolved; only C2 of the three remains), §0.4, §1.1, §1.2 row 8, AC-005, AC-014, AC-019, AC-023, AC-024/AC-025, AC-026, AC-071, AC-294, AC-391, AC-484, AC-520, the §4 area key, the harness residual-risk list, **the new AC-532**, and §15.2/§15.3. **It adds one criterion (AC-532), withdraws Phase-1 exit criterion (5) without renumbering the rest, and supersedes no ADR.** **Every correction it makes is a dated in-place register amendment and none is an erratum (D15-2): `references/adr/ERRATA.md` is untouched and its convention header is unchanged.** · **Companion:** the success-measure register (SM-001..SM-154 **plus SM-157**, the derived-facet precision measure the 2026-09-09 amendment added — the measure bodies live there, not here) and the ADR set at `references/adr/` (with `references/adr/ERRATA.md`, cited here by erratum id where a frozen number moved) ·
 **Inputs:** the thirteen area files; the condensed evidence brief of 2026-09-08 — `references/2026-09-08-evidence-brief.md`, a working condensation of findings F1–F38 (F9 struck, F30 unassigned) that every area refuted against — **those findings are in two places**: `spikes/FINDINGS.md` holds **F1–F28**, and **F29 and F31–F40 exist only as `spikes/F<NN>-DRAFT.md`**, never folded back into the running log [measured, `ls spikes/F*-DRAFT.md`, 2026-09-09]; the spike files it condenses remain authoritative where they disagree with it; `references/2026-09-05-architecture-proposal.md` rev. 4; `references/2026-09-07-design-recommendation.md`; the process-catalog proposal; `references/adr/`; `spikes/results/` (including `s-mig-report.md` and `spikes/corpus/PINNED_SHA`); `references/2026-09-01-shipmates-lessons-for-redkiln-rs.md`. **Absorbed after the brief was condensed and therefore read from the corpus, not from the brief:** `spikes/F39-DRAFT.md`, `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`, `references/2026-09-09-change-classification.md`, and — for the 2026-09-10 amendment — `spikes/F40-DRAFT.md` with the P2 instrument decisions it rests on in `spikes/DECISIONS-2026-09-09.md` (#15, #16, #19) and the pre-registration it reports against, `spikes/METHOD-P.md` §2.2–§2.4 ·
 **Evidence discipline:** every criterion carries an evidence tag — **[measured]** = a number that is in the evidence brief, or (for the 2026-09-09 and 2026-09-10 amendments only) in `spikes/F39-DRAFT.md` and `spikes/F40-DRAFT.md`, both of which postdate the brief · **[documented]** = a platform, ADR or proposal contract with no measurement behind it · **[inferred]** = a design consequence, labelled as such. Two areas add a third tag where it earns its place: **[motivating, not evidential]** (git-reconcile) and **[surface unverified]** (harness). A finding may be tagged `[measured]` against a criterion only when the measurement is about the same quantity the criterion constrains. The refutation pass cut every citation that failed that test and **named the cut inside the criterion that carried it**, so the cut is auditable rather than invisible. Where a result is one draw, one repo or one operator, it says so. Unrun spikes are listed as unrun in §1, never assumed.
 
@@ -27,7 +27,7 @@ All thirteen area files were present and complete; **no area is missing or empty
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | 2 | Kernel | 39 | 37 | 1 | 1 | 0 | SM-001..SM-010 |
 | 3 | Selection engine | 41 | 39 | 1 | 1 | 0 | SM-013..SM-024, SM-157 |
-| 4 | Process packs, technology packs, the activity catalog and its lint | 40 | 37 | 1 | 2 | 0 | SM-025..SM-036 |
+| 4 | Process packs, technology packs, the activity catalog and its lint | 41 | 38 | 1 | 2 | 0 | SM-025..SM-036 |
 | 5 | Typed artifacts and the store | 40 | 36 | 1 | 3 | 0 | SM-037..SM-046 |
 | 6 | Git as truth | 41 | 39 | 1 | 1 | 0 | SM-049..SM-058 |
 | 7 | Harness port and the `claude -p` adapter | 41 | 37 | 3 | 1 | 0 | SM-061..SM-070 |
@@ -38,11 +38,13 @@ All thirteen area files were present and complete; **no area is missing or empty
 | 12 | CLI surface and `doctor` | 41 | 40 | 0 | 1 | 0 | SM-121..SM-130 |
 | 13 | `redkiln-migrate` and the clean break | 42 | 40 | 1 | 1 | 0 | SM-133..SM-141 |
 | 14 | Ports, fakes, plugin generation and distribution | 40 | 31 | 2 | 1 | 6 | SM-145..SM-149, SM-151, SM-153, SM-154 |
-| | **total** | **525** | **479** | **20** | **20** | **6** | **135 rows** |
+| | **total** | **526** | **480** | **20** | **20** | **6** | **135 rows** |
 
-**525 criteria in force.** 479 binding, 20 provisional, 20 human-gated, 6 conditional. **135 measure rows** are cross-referenced (134 measures plus SM-098, which the verify-gate pass demoted to a descriptive report and excluded from its own count).
+**526 criteria in force** (**amended 2026-09-15**: 525 until AC-532 was allocated — §0.4). 480 binding, 20 provisional, 20 human-gated, 6 conditional. **135 measure rows** are cross-referenced (134 measures plus SM-098, which the verify-gate pass demoted to a descriptive report and excluded from its own count).
 
 **The 2026-09-11 amendment adds eleven criteria and moves four labels.** Added, each outside an exhausted range (§0.4): AC-521 (§13, story-lane self-hosting twin of AC-473 — ADR-0094), AC-522 (§13, `redkiln-migrate` refuses a dirty target and writes into its own branch/worktree — PIA-002), AC-523 (§7, `RateLimited { resets_at }` — ADR-0095), AC-524 (§8, fresh gate record on loop-back re-reach — ADR-0105, PROVISIONAL on P8-B), AC-525 (§3, `drift_advisory` — ADR-0025), AC-526 (§7, both TTL variables — ADR-0078), AC-527 (§4, the forbidden empty-set quality-block predicate — ADR-0080), AC-528 (§14, no `async fn` in `rk-ports` and no async runtime in `rk-kernel`'s graph — ADR-0076), AC-529 (§6, the run-owned worktree refusal — ADR-0105/ADR-0018), AC-530 (§9, `advisory_retired` accounting — ADR-0082), AC-531 (§12, `init`'s `rk-` namespacing — the clause AC-437 cut). Labels moved: AC-026 and AC-428 binding (their fixtures exist on disk — PIA-068, PIA-075); AC-284 PROVISIONAL (S-CLASS-REPLAY — ADR-0096) and AC-312 PROVISIONAL (S-SUBTLE-CB — decision #17). Net: +11 criteria, +10 binding, +1 provisional. The measure count is unchanged; new measures (SM-158+) are the companion register's.
+
+**The 2026-09-15 amendment adds one criterion, moves no label, and lands the record work `spikes/DECISIONS-2026-09-14.md` left owed.** Added, outside an exhausted range (§0.4): **AC-532** (§4, the executed-once ledger on the resolved catalog record — ADR-0114 decision 2; `spikes/DECISIONS-2026-09-14.md` D-12, allocated by `spikes/DECISIONS-2026-09-15.md` D15-3, both readings by D15-4). Net: **+1 criterion, +1 binding**; no PROVISIONAL, HUMAN GATE or CONDITIONAL label moves and the measure count is unchanged. The rest of the amendment changes no cell of this table: §0.3's **C1** is resolved by ADR-0122 and **C3** by D-13, so of the original three only **C2** is unresolved; AC-391's *Cut* is withdrawn and its clause restored; AC-023's *unless* clause **and** its second instrument are cut; AC-294's THEN is extended to the `--stay` state and **Phase-1 exit criterion (5) is withdrawn with its number retired** — the sequence is (1)(2)(3)(4)(6)(7) and *"seven exit criteria"* reads *"six"*; AC-071 gains the dated amendment naming its stability record's path and producer, and §1.1's dead `--stability-record` path is corrected in place; AC-005's and AC-484's `deny.toml` instruments are corrected against a measurement of `deny.toml`; dated notes land against AC-024/AC-025 (the exhaustion comparison, per counter) and AC-014/AC-019 (what memo-key component 8's `schema_version` formally is); the stale *"ADR-0079 is `proposed`"* text is corrected in place at five sites; and §15.2 and §15.3 are recomputed to ADR-0122. **Every correction in this amendment is a dated in-place register amendment and none is an erratum** (`spikes/DECISIONS-2026-09-15.md` **D15-2**, which withdraws `E-0071-1`, `E-0079-2` and `E-0105-1` as *instruments* while their obligations still land): **`references/adr/ERRATA.md` is untouched by this pass and its convention header is unchanged.**
 
 **The selection row gained one criterion and one measure on 2026-09-09**, and they are the only changes to this table since rev. 1: **AC-520**, the derived-facet sibling gate that F39 forced (§3.7), and **SM-157**, the derived-facet precision measure whose scored record AC-520 gates on. Both are counted in the selection area because that is the area they belong to, and both ids sit outside that area's ranges because AC-040..AC-079 and SM-013..SM-024 are exhausted — §0.4 records the criterion-side hazard, and the companion register's §1 numbering paragraph records the measure-side one. The measure total therefore moves 134 → 135, matching the companion register's own count.
 
@@ -108,13 +110,13 @@ The areas were authored independently against one proposal, so the same behaviou
 | Per-AC mutation evidence; a surviving mutant is not `pinned` | **AC-334** | AC-317, AC-458 (migrated rows), AC-140 (rendering) | AC-334 owns the flip predicate and the `mutation-survived` status; AC-317 is the harness invocation that calls it and no longer carries a second predicate (ADR-0104 decision 2; PIA-051). |
 | No model-authored decision field reaches policy | **AC-280 + AC-283** | AC-343 | AC-283's type-signature test is the load-bearing instrument in all three. |
 
-**Five contradictions.** Three (C1–C3) the 2026-09-08 assembly could not resolve and left for a human decision; C1 is now decidable by measurement (PIA-068). C4 was found by the audit and resolved by decision #5 of 2026-09-11; C5 was found while absorbing ADR-0095 on 2026-09-11 and is recorded, not resolved.
+**Five contradictions.** Three (C1–C3) the 2026-09-08 assembly could not resolve and left for a human decision. **Amended 2026-09-15:** the operator took C1 and C3 on 2026-09-14 — **C1** by ADR-0122 (`spikes/DECISIONS-2026-09-14.md` D-1) and **C3** by `spikes/DECISIONS-2026-09-14.md` D-13 (committed `d75a7fc`) — so of the original three **only C2 is still unresolved**. The clause this replaces read *"C1 is now decidable by measurement (PIA-068)"*, which was true on 2026-09-11 and was overtaken by the decision it invited. C4 was found by the audit and resolved by decision #5 of 2026-09-11; C5 was found while absorbing ADR-0095 on 2026-09-11 and was **recorded and resolved the same day by ADR-0112** (successor-in-part to ADR-0095) — which is what C5's own row cell has said all along *(corrected 2026-09-15: this half of the sentence read "and is recorded, not resolved", contradicting that cell. **Pre-existing, not introduced by the 2026-09-15 pass**, which was instructed to correct the C1 half of this sentence and did)*. **The arithmetic, derived here from the five rows of the table below rather than carried from a summary:** C1 resolved 2026-09-14 (ADR-0122), C2 **unresolved**, C3 resolved 2026-09-14 (`DECISIONS-2026-09-14` D-13), C4 resolved 2026-09-11 (decision #5), C5 resolved 2026-09-11 (ADR-0112) — so **exactly one of the five contradictions, C2, remains unresolved**, and it is the only one this section still leaves open.
 
 | # | the contradiction | criteria | why it matters |
 | --- | --- | --- | --- |
-| C1 | **Do harness-internal retries charge the activity's attempt budget?** AC-026 and AC-232 say each observed inner attempt is counted against the budget and the kernel adds no retry of its own. AC-391 explicitly **cut** that clause in refutation as unlicensed — ADR-0037 counts *steps per pass*, and §4.3's own row says observe and record, do not duplicate — on the ground that it would make the budget a function of platform-side behaviour the kernel cannot bound. | AC-026, AC-232 vs AC-391 | Both readings are implementable and they give different budgets. **Re-opened as decidable by measurement (2026-09-11, PIA-068):** the `system/api_retry` payload *is* captured — 139 rows in 12 result files; per row 1 attempt on 89, 2 on 21, 3 on 12, 4 on 4, 5 on 1, 6 on 6, 10 on 6 (the `max_retries = 10` ceiling) [measured, recount at AC-026]. Under AC-026's reading, six recorded dispatches would have spent ten attempts of an activity budget on platform-side `overloaded`/529 weather before the kernel acted once. The decision is the operator's; the register records the distribution and does not take it. If C1 resolves against AC-391, ADR-0037 is superseded, never edited. |
+| C1 | **Do harness-internal retries charge the activity's attempt budget?** AC-026 and AC-232 say each observed inner attempt is counted against the budget and the kernel adds no retry of its own. AC-391 explicitly **cut** that clause in refutation as unlicensed — ADR-0037 counts *steps per pass*, and §4.3's own row says observe and record, do not duplicate — on the ground that it would make the budget a function of platform-side behaviour the kernel cannot bound. 🛑 *(Read this cell with column 4. It states the contradiction **as found on 2026-09-08 and as refuted** — §0's convention for this whole register, *"It preserves the criteria as authored and as refuted"* — and it is **not** a statement of the current state: **AC-391's *Cut* is WITHDRAWN and its cut clause restored, 2026-09-15**, per ADR-0122 decision 5(a). The historical sentence above is left exactly as authored.)* | AC-026, AC-232 vs AC-391 | **Resolved 2026-09-14 by the operator's decision at Step 7b Slice 4, recorded as ADR-0122 (`spikes/DECISIONS-2026-09-14.md` D-1; the register amendments landed 2026-09-15): AC-026 and AC-232 stand — an inner attempt charges, one charge per recorded `system/api_retry` event, in the pass that dispatched it — and AC-391's *Cut* is withdrawn with its clause restored.** Both readings are implementable and they give different budgets. **Re-opened as decidable by measurement (2026-09-11, PIA-068):** the `system/api_retry` payload *is* captured — 139 rows in 12 result files; per row 1 attempt on 89, 2 on 21, 3 on 12, 4 on 4, 5 on 1, 6 on 6, 10 on 6 (the `max_retries = 10` ceiling) [measured, recount at AC-026]. Under AC-026's reading, six recorded dispatches would have spent ten attempts of an activity budget on platform-side `overloaded`/529 weather before the kernel acted once. The decision is the operator's; the register records the distribution and does not take it — *as this row stood before the resolution above*. **Correction (2026-09-15, ADR-0122 decision 4, via decision 5(b)):** this row also read *"If C1 resolves against AC-391, ADR-0037 is superseded, never edited"*, and **that sentence is false**. ADR-0037's whole `## Decision` is one sentence — *"Lint rule 8 becomes: `budget.attempts_total ≥ number of agent/tool steps on one pass`."* — a **load-time lint on a DECLARED field**; nothing in it moves, ADR-0122 carries `supersedes: []` and ADR-0037 keeps `superseded_by: []`. What overreached was four criteria — AC-021, AC-026, AC-390 and AC-391 — **citing** ADR-0037 as authority for a runtime rule it never states, and **an interpretation cannot be superseded**. The half of the old instruction that binds, and is honoured, is *"never edited"*: ADR-0037 is not edited. **Still owed from this resolution:** ADR-0122 decision 5(c)'s dated clarification of AC-391's surviving class-scoped clause against AC-026's *"the same failure"* — residual **R-2** of `spikes/DECISIONS-2026-09-15.md`. |
 | C2 | **Is a hand-edit inside a rendered section drift, or is it silently overwritten?** AC-124, AC-411 and AC-159 say the edit is surfaced as typed drift with both digests, and AC-159 has `doctor` report an unrecorded artifact mutation by digest comparison. AC-478 says the typed values are returned unchanged, the markdown is regenerated over the edit, and — verbatim — *no comparison of stored-vs-regenerated rendering is performed, so no drift state exists to report*. | AC-124, AC-159, AC-411 vs AC-478 | AC-478 records this as the intended ADR-0005 trade and states the consequence honestly. It is nonetheless the opposite behaviour, on the one surface a human touches most. |
-| C3 | **How is a per-item token appetite raised?** AC-023 refuses an in-run raise *unless it arrives as a typed budget-change event with an author*. AC-389 refuses it outright: *raising the appetite is possible only by returning the item to triage*. | AC-023 vs AC-389 | AC-396 routes the appetite **value** to a human gate, which suits either mechanism — but a build cannot implement both refusals. |
+| C3 | **How is a per-item token appetite raised?** AC-023 refuses an in-run raise *unless it arrives as a typed budget-change event with an author*. AC-389 refuses it outright: *raising the appetite is possible only by returning the item to triage*. | AC-023 vs AC-389 | **Resolved 2026-09-14 by the operator's decision at Step 7b Slice 4, recorded at `spikes/DECISIONS-2026-09-14.md` D-13 (committed `d75a7fc`): AC-389 — refuse outright.** AC-023's *unless* clause **and its second instrument** are **cut in place**, dated 2026-09-15; **AC-389 and AC-396 are unchanged**. Ground: the escape hatch needs an `EventKind`, the enum is closed at 29 (`crates/rk-types/src/event_kind.rs`) and ADR-0116:40-41 permits minting only by record. AC-396 routes the appetite **value** to a human gate, which suits either mechanism — but a build cannot implement both refusals. 🛑 **What this row does NOT settle, said here so a later reader does not rediscover it:** AC-389's *other* THEN half — *"and the attempt is appended as an event"* — **names no event kind that exists**, for the same reason the escape hatch was unbuildable. `EventKind` is closed at 29, ADR-0112's eleven `StepError` variants carry no member for a refused appetite raise, and design §5's table has no row; the crate says so in `crates/rk-kernel/tests/it/budget.rs` — its module-header section *"AND AC-389's OTHER HALF IS STILL UNBUILT AND STILL OWED A RECORD"* (*"`EventKind` for a refused appetite raise, the enum is closed at 29"* … *"variants carry no member for one, and design §5's table has no row."*), and the doc on `appetite_raise_from_an_activity_result_is_refused` (*"and AC-389's append is not built either"*). **Cited by section, symbol and quotation, not by line (2026-09-15): the line window this cite first carried named a different paragraph of that header, and the file is under edit.** That is residual **R-1** of `spikes/DECISIONS-2026-09-15.md` and needs its own record — an ADR in ADR-0116's or ADR-0120's form, or a dated amendment withdrawing the append clause. **It is not settled here and no amendment in this pass touches AC-389.** |
 | C4 | **What class is a tool set unequal to the card's allowlist?** AC-204 said `StepError::NotAdopted`; AC-202, AC-386 and design §7.4 said `StepError::NotIsolated`; only `NotIsolated` triggers AC-399's quarantine, so the pick silently decided whether adoption failures quarantined a run's metrics. | AC-204 vs AC-386 (and AC-202, AC-399) | **Resolved 2026-09-11 — decision #5 of `spikes/DECISIONS-2026-09-11.md` (PIA-016): `NotIsolated` everywhere.** AC-204 amended; AC-386 and AC-399 unchanged; ADR-0095's `StepError` table reserves `NotAdopted` for the wrong agent answering; SM-061's instrument is a set digest. |
 | C5 | **Which `StepError` variants exist?** ADR-0095 decision 2 fixes the closed set at eight — `Transport`, `Schema`, `Timeout`, `Cancelled`, `NonZero`, `RateLimited`, `NotAdopted`, `NotIsolated` — and forbids any variant not in the table. Nine criteria and design §3.6 name three others as variants: `Platform { status, retry_after }` (AC-029, AC-218, AC-233, AC-237, AC-428), `Unsupported(capability)` (AC-027, AC-234, AC-238, AC-328, AC-494, AC-500) and `Overage` (AC-027, AC-221, AC-234, AC-378). | AC-027, AC-029, AC-218, AC-221, AC-233, AC-234, AC-237, AC-238, AC-328, AC-378, AC-428, AC-494, AC-500 vs ADR-0095 | **Recorded and resolved 2026-09-11 by ADR-0112** (successor-in-part to ADR-0095): the table gains `Platform { status, retry_after }` (retry with backoff honouring `retry_after`; `spoke()` true; `step_failed { class: platform }`), `Unsupported { capability }` (never retried; `step_refused { class: unsupported }`) and `Overage { reason }` (refused before spawn; `step_refused { class: overage }`) — eleven variants; the thirteen criteria keep their names. |
 
@@ -155,6 +157,7 @@ The git-reconcile pass recommends retiring AC-185 and AC-199 and using AC-200/AC
 | **AC-529** | git-reconcile (§6.4, beside AC-183) | AC-160..AC-199 — exhausted | A tier-1 write from a worktree the store does not own for the run is refused (ADR-0105 clause 8; ADR-0018; PIA-029). Added 2026-09-11. |
 | **AC-530** | review gate (§9.6, beside AC-310) | AC-280..AC-319 — exhausted (AC-297 cut) | `advisory_retired { reason: not_re_raised }` and `live_sink == created - retired - dismissed` (ADR-0082; PIA-029). Added 2026-09-11. |
 | **AC-531** | cli-doctor (§12.9, beside AC-437) | AC-400..AC-439 — exhausted | `init`'s namespacing clause, cut from AC-437 on 2026-09-08 and re-added under the decided `rk-` prefix (decision #8; PIA-106). Added 2026-09-11 — **allocated by this amendment beyond the brief's AC-521..AC-530 block**, and reported as such. |
+| **AC-532** | packs-catalog (§4.6, beside AC-114; ADR-0114's other criteria are AC-110 and AC-114) | AC-080..AC-118 — AC-119 was never allocated and stays unallocated | ADR-0114 decision 2's executed-once ledger: `executed: { first, last }` on the **resolved, in-memory** catalog record, in **journal (append) order** (`spikes/DECISIONS-2026-09-15.md` D15-3 for the area, D15-4 for both readings; owed by `spikes/DECISIONS-2026-09-14.md` D-12). Added 2026-09-15 — **allocated by the 2026-09-15 amendment beyond the AC-521..AC-531 block**, and reported as such. |
 
 **The 2026-09-11 ids follow the brief's order for the six PIA-029 criteria** — `drift_advisory` (AC-525), TTL variables (AC-526), the rk-catalog empty-set lint (AC-527), no-async-in-ports (AC-528), the §6.4 ownership refusal (AC-529), `advisory_retired` accounting (AC-530) — after the four the brief allocated by name (AC-521 story lane, AC-522 migrate run contract, AC-523 `RateLimited`, AC-524 fresh gate record). Every one is counted in the area its §0.4 row names, and the area's `**Criteria:**` line says so. ADR-0092 clause 3 governs the six re-issued ids above: each conforms (no external citation at the cut, both sites note the other, this table lists both meanings) and they are not debt.
 
@@ -174,7 +177,7 @@ This section comes first because the rest of the document reads as decided, and 
 
 **Why `auth` scores zero**, because it decides what the repair is. The rule is an unanchored, case-insensitive regex over paths **and** diff lines, and it marks `auth = true` on 14 of 20 items. `token` fired 44 times, 36 of them inside `brand-token-substrate` / `brand-tokens.test.ts` / `redkiln.tokens.json` / `tokens_out`; `auth` fired 43 times, 40 of them inside *authored* / `report-md-unauthored` / *author* / *authors* / *authoring* / `only-the-author-can-advance`; `oauth` fired 8 times, all 8 inside *coauthor* (the string `oauth` sits inside `c-oauth-or`); `session` fired 8 times, 6 of them a *work* session; `role` fired twice, both an ARIA `role` attribute [measured, F39 §2]. **The failure is correlated, not random:** the colliding vocabulary is the vocabulary of the instrument under test. Eleven positives, eleven false, upper bound 0.26 — the rule carries **no signal** on this corpus, which is a finding about the method and not a tuning parameter.
 
-**What F39 discharges, and what still holds the block.** AC-071 has five clauses — identity ≥ 0.80, n ≥ 20 items, ≥ 10 draws per item, arm-D panel scored, corpus pinned — and F39 discharges **the fourth clause only**. The block stands on the **first**: F36 measured modal required-set identity at **0.25 / 0.15 / 0.10 / 0.10** against the 0.80 line. **ADR-0079 stays `proposed`**: F39 measures a *derived* context vector and ADR-0079 asks about an *LLM-emitted* one, so F39 narrows 0079's options without deciding among them [documented, ADR-0089]. Nothing in this register may now say a facet *leaves the model* — none does — and nothing here makes this design *final*: S-BIN, S-H1c and P8's unrun arms gate that word.
+**What F39 discharges, and what still holds the block.** AC-071 has five clauses — identity ≥ 0.80, n ≥ 20 items, ≥ 10 draws per item, arm-D panel scored, corpus pinned — and F39 discharges **the fourth clause only**. The block stands on the **first**: F36 measured modal required-set identity at **0.25 / 0.15 / 0.10 / 0.10** against the 0.80 line. **ADR-0079 stayed `proposed` when this was written; corrected in place and dated 2026-09-15 — its frontmatter now reads `status: superseded`**, ADR-0090 having superseded it in full at runbook Step 4.4 on 2026-09-12 [measured 2026-09-15, by reading every `references/adr/` frontmatter]. What F39 established is unchanged: it measures a *derived* context vector and ADR-0079 asked about an *LLM-emitted* one, so F39 narrowed 0079's options without deciding among them [documented, ADR-0089]. *(In place, not as `E-0079-2`: that erratum is withdrawn as an instrument under `spikes/DECISIONS-2026-09-15.md` **D15-2**, because ADR-0090:108-110 leaves ADR-0079's body deliberately untouched and there is therefore **no frozen line for an erratum to correct** — the stale text lives in amendable registers, and this is one.)* Nothing in this register may now say a facet *leaves the model* — none does — and nothing here makes this design *final*: S-BIN, S-H1c and P8's unrun arms gate that word.
 
 **Two further F39 results changed criteria in §3.7.** First, **four of the twenty items changed no code whatsoever** — every changed file is `.bklg/` bookkeeping or telemetry — the panel returned `unknown` on all sixteen of their semantic-facet cells, and the script emitted a confident boolean on every one [measured, F39 §4]. That is the `excl = 4` column, and the registry line `values = [true, false]` is what turned four empty diffs into sixteen confident booleans; AC-079's route is extended to the booleans in consequence. Second, AC-071 gates `source = "llm"` and **nothing gated `source = "derived"`**, so the semantic facets sat outside the block and ran **ungated while measurably wrong** — **AC-520** is the sibling gate that closes it, new in this revision and allocated outside the selection range (§0.4). ADR-0089, accepted 2026-09-09, records the decision behind both: provenance classes with a `deriver` companion field, a set-valued `surfaces` facet replacing the repo-wide `auth` boolean, and tri-valued booleans routed to AC-079's existing `gate_opened { reason: unknown_facet }`. **Source asymmetry is not decided here.** `commits` beats `docs` on every facet — `toolchain` 1.00 [0.70, 1.00] against 0.50 [0.22, 0.78]; `change` 0.80 [0.61, 0.91] against 0.50 [0.24, 0.76]; `binary_change` 0.60 at recall 1.00 against no positives at all from `docs`, 3 missed; `ui` 1.00 at recall 0.67 against 1.00 at recall 0.22, union 1.00 at recall 0.78 — and `union` is *worse than `commits` alone* on `toolchain` (0.73) and `change` (0.72), because unioning a precise source with an imprecise one imports the imprecision [measured, F39 §3]. Which source the engine trusts is registered as an arm of the named spike **S-FACET** (ADR-0012), whose named consumer is `facets.toml`'s `source`/`deriver` fields.
 
@@ -186,7 +189,7 @@ This section comes first because the rest of the document reads as decided, and 
 
 ```sh
 redkiln lint --facet-stability .redkiln/facets.toml \
-             --stability-record spikes/results/p1/stability.json
+             --stability-record results/p1-arm-l-stability.json   # corpus-relative, resolved through CORPUS_PIN
 # exit 0 only when, for EVERY facet declared source = "llm" in facets.toml:
 #   rec.modal_required_set_identity >= 0.80          # THE CLAUSE THAT STILL HOLDS THE BLOCK.
 #                                                    # the pre-registered P1 line; F36 measured 0.25/0.15/0.10/0.10
@@ -197,6 +200,17 @@ redkiln lint --facet-stability .redkiln/facets.toml \
 #   AND rec.corpus_sha == <catalog corpus pin>       # F37's emit.corpus_sha was misnamed; this one is the corpus
 # Until that command exits 0, no facet may be source = "llm"; every ordinal axis is source = "human".
 ```
+
+***Path corrected 2026-09-15 — `spikes/DECISIONS-2026-09-14.md` D-3; `spikes/DECISIONS-2026-09-15.md` D15-2.*** *The
+argument above read `--stability-record spikes/results/p1/stability.json`, and that path was **dead on both halves**:
+nothing ever wrote the file, and `spikes/results/` moved into the corpus at runbook Step 2 under ADR-0013 / AC-465, so
+the directory is not in this repository. The record is **`results/p1-arm-l-stability.json`**, corpus-relative and
+resolved through `CORPUS_PIN`, never through a working tree (AC-464). **This correction lands here, in place and
+dated — not as an erratum.** The owed `E-0071-1` is withdrawn **as an instrument** under D15-2 (its id collides with
+ADR-0071, and `ERRATA.md`:273-276 concedes in its own words that the register is amendable in place and that errata
+are *"not the only one available"*); the obligation lands, the instrument changes, and **nothing is written to
+`references/adr/ERRATA.md` by this pass**. AC-071's own dated amendment of the same date names the record's path, its
+producer and its non-reproducibility, which is what `s7b-kernel.md` §7b.11 precondition 2 asks for.*
 
 **Which clause holds the block, now that one of the five is discharged.** The fourth clause was written when no arm-D record existed; F39 supplies one, so `panel_verdict == "scored"` is no longer an unsatisfiable stub and no longer the reason the command exits non-zero. The block rests on the **first** clause: modal required-set identity measured **0.25 / 0.15 / 0.10 / 0.10** against the pre-registered 0.80 line [measured, F36]. Discharging one clause of a five-clause gate is not a partial unblocking, and the arm-D numbers are not a warrant to relax any of the other four.
 
@@ -213,7 +227,7 @@ redkiln lint --facet-stability .redkiln/facets.toml \
 | 5 | The second harness | **S-CODEX**. It is in proposal §8's spike table (46 Codex dispatches) but **does not appear in the evidence brief at all — not even in its unrun list**; the Codex adapter is Phase 2 behind the CI decision ADR-0010 defers (ADR-0094 decision 2) | A recorded E3-shaped validation result for the candidate adapter exists in the pinned corpus repo — with a METHOD entry before dispatch whose primary metric is a non-saturated measure (S-SUBTLE-tier detection; CLEAN FP with its Wilson upper bound), since E3 §9 is saturated (PIA-084). | AC-239, AC-496; SM-154. AC-502's dialect-parity domain is undefined until then |
 | 6 | Multi-step resume, and every duration claim about it | **P8**, PARTIAL: 3 of a pre-registered 27+3 runs, recorded state holding exactly **one** step; the 65-min arm, the 24-h arm and all three controls are unrun | P8's remaining arms run. Note its §5.4(3) second-arrival criterion is **circular by construction** and no completion fixes that. | AC-013, AC-187, AC-266, AC-267, AC-271, AC-401; SM-002, SM-052, SM-073, SM-130 |
 | 7 | Detecting an overage | **Narrowed 2026-09-11 (PIA-065).** The envelope *is* recorded — `isUsingOverage: false`, `overageDisabledReason`, `overageStatus` on F1's own `rate_limit_event` payload (`spikes/FINDINGS.md` :42–48), and `is_using_overage: false` on all 20 E0-headroom and all 60 S-VAR rows the runner captured; the condensed brief omitted the keys. What was never recorded is a **`true`** value | One recorded real stream carrying `isUsingOverage: true`. Until then the adapter test runs against the recorded false-valued payload with the boolean flipped — a recorded envelope, not a fixture of our own construction; S-RETRY is the named consumer of the first true reading. | AC-378 (PROVISIONAL narrowed to "no true-valued instance"), AC-221; SM-112 — whose baseline is absent for the same reason |
-| 8 | Inner/outer retry accounting | **Discharged 2026-09-11 (PIA-068).** The payload **was** captured: `api_retries` carries `{attempt, error, error_status, max_retries, retry_delay_ms}` on 139 rows in 12 result files (`e3.jsonl` 26 of them) [measured, recount 2026-09-11]; "never captured" was false. What remains open is the *accounting* question — whether inner attempts charge the activity budget (C1 in §0.3), now **decidable by measurement** over those rows rather than blocked on a capture | C1's decision; the per-row attempt distribution is recorded at AC-026 | AC-026, AC-232, AC-391; SM-003 (the "payload never captured" premise is withdrawn in its companion row) |
+| 8 | Inner/outer retry accounting | **Discharged 2026-09-11 (PIA-068).** The payload **was** captured: `api_retries` carries `{attempt, error, error_status, max_retries, retry_delay_ms}` on 139 rows in 12 result files (`e3.jsonl` 26 of them) [measured, recount 2026-09-11]; "never captured" was false. **Fully discharged 2026-09-14 (amended here 2026-09-15).** The *accounting* question — whether inner attempts charge the activity budget (C1 in §0.3) — is **resolved by ADR-0122** (`spikes/DECISIONS-2026-09-14.md` D-1): **they charge**, one charge per recorded `system/api_retry` event, in the pass that dispatched it. The clause this replaces read *"What remains open is the accounting question … now decidable by measurement"* | **Settled.** C1's decision is taken (ADR-0122, 2026-09-14); the per-row attempt distribution is recorded at AC-026. What is still owed is not this row's: the *scope* clarification of AC-391's surviving second clause, ADR-0122 decision 5(c) — residual **R-2** of `spikes/DECISIONS-2026-09-15.md` | AC-026, AC-232, AC-391; SM-003 (the "payload never captured" premise is withdrawn in its companion row) |
 | 9 | The Advisory sink | Brief §C.8 records that **no advisory sink exists** — 7 adjudicated-true `narrowed-pin` findings have no destination | AC-310 is the requirement that builds it. AC-344 is a requirement **on** that sink, not an assumption one is there. | AC-310, AC-311, AC-344; SM-089, SM-022, SM-104's kill |
 | 10 | The distribution mechanism | Proposal **§4.9 decides no installer** — a plain git clone plus a `cargo-dist` binary shim. Receipts, rename tables, ownership states and integrity scans are shipmates' architecture, not a Redkiln-RS decision | §4.9 is reopened and a mechanism with an install-and-repair step is decided, or the six criteria are cut and 'decide the distribution mechanism' becomes a gating open question. | AC-512, AC-514, AC-515, AC-516, AC-517, AC-519 (partly); SM-149 |
 | 11 | The false-block rate's denominator | The E3 severity adjudication was **adjudicated 2026-09-04 and closed 2026-09-09, NOT BLIND** — facts settled 6/6; severity from a sheet filled by the model at Ryan's direction, one operator, κ forfeited (PIA-081). The rates are settled on it: arm (a) FP 1/23, MCC +0.957 (E-0074-3); arm (b) FP 0/23, MCC +1.000 — upper bounds against CLEAN | **E3-SEV-BLIND** — a blind annotation of the preserved `e3-severity-annotation-BLANK.md` by an independent rater (design §10.5, consumer SM-086) — is what buys κ back. AC-298 sets the **system default** off the same NOT-BLIND sheet. | AC-308 (PROVISIONAL because the sheet is not an independent rater, not because the adjudication is open), AC-309, AC-357, AC-358; SM-086 |
@@ -278,11 +292,21 @@ signatures and locals, plus a must-fail fixture crate under `cargo clippy` (AC-0
 GIVEN the crate dependency graph
 WHEN `rk-kernel`'s workflow module gains a direct dependency on any adapter crate (`rk-adapter-*`)
 THEN the build fails.
-*Verified by:* a `cargo-deny` `[bans].deny` entry for every `rk-adapter-*` crate in `rk-kernel`'s graph in the committed
-`deny.toml` (`cargo install cargo-deny --locked` at runbook Step 5.2; `cargo deny check bans` is a CI gate beside
-fmt/clippy/test/audit — ADR-0100 decision 3, so the instrument named here now exists), plus a CI `cargo tree -i`
-assertion that returns empty. The workflow reaches the world only through `rk-ports` traits, so a fake per port can
+*Verified by:* a CI `cargo tree -i` assertion over `rk-kernel`'s graph that returns empty for every `rk-adapter-*`
+crate. *(`cargo deny check bans` does run as a CI gate beside fmt/clippy/test/audit — `cargo install cargo-deny
+--locked` at runbook Step 5.2, ADR-0100 decision 3 — but it is **not** this criterion's instrument; see the
+Correction below.)* The workflow reaches the world only through `rk-ports` traits, so a fake per port can
 drive every replay test at zero model cost.
+**Correction (2026-09-15, `spikes/DECISIONS-2026-09-15.md` D15-2).** As authored this required *"a `cargo-deny`
+`[bans].deny` entry for every `rk-adapter-*` crate in `rk-kernel`'s graph in the committed `deny.toml`"*. **No such
+entry exists, and none should.** `deny.toml`'s `[bans].deny` carries five entries, all five ADR-0086's
+durable-execution names — `temporalio-sdk`, `temporalio-sdk-core`, `graph-flow`, `dbos`, `durable` — and no adapter
+[measured 2026-09-15, `deny.toml`:44-50]. **cargo-deny bans are WORKSPACE-WIDE; this criterion is a PER-CRATE EDGE
+property**, so an adapter banned to keep it out of `rk-kernel`'s graph would also be forbidden in **`rk-cli`**, which
+legitimately depends on adapters at Step 7d. The requirement is therefore **cut in place**, not merely annotated, and
+the `cargo tree -i` assertion is this criterion's instrument. **AC-484's third instrument carried the identical defect
+and is corrected at the same date; the two criteria cross-reference each other.** ADR-0100 decision 3 is untouched.
+**In place and dated, NOT an erratum** (D15-2): nothing is written to `references/adr/ERRATA.md` by this pass.
 
 **AC-006** — `rk-kernel::replay` · evidence: F19 [measured: 174/174 lossless suspension, **but the FSM was never
 replayed**, so "same next action" is unproven — this criterion is the instrument that would prove it]
@@ -416,6 +440,26 @@ WHEN any one component changes and all others are held fixed
 THEN the key changes and the memo lookup misses.
 *Verified by:* a property test in `rk-kernel::memo` parameterised over each key component (**eight** cases, one per
 component), each asserting a miss; and a companion test asserting a hit when all eight are identical.
+**Note (2026-09-15, `spikes/DECISIONS-2026-09-14.md` D-10) — what component 8's `schema_version` formally is.**
+Component 8 above reads *"the output type's `schema_version`"* and **no such field exists**:
+`grep -rn schema_version crates/rk-types/src crates/rk-ports/src` → **0** [re-measured 2026-09-15]. The only value in
+those crates carrying a version is **`SchemaId(String)`**, in a `Kind/vN` convention, so for the build **component 8
+is THE WHOLE `SchemaId` STRING** — not a parsed `vN` suffix. Parsing the suffix was refused because it invents a
+convention no record states, has no defined behaviour on an id that carries none, and would make
+**`RecordedResult/v1` and `ChangeSummary/v1` collide** in component 8, which is the one outcome this criterion's
+property test exists to prevent. **This reading is MEASUREMENT-CONTINGENT and it expires.** **AC-135** *requires* a
+`schema_version` per shipped artifact type — *"the change fails unless the type's `schema_version` is incremented in
+the same commit"* — so the field is **UNBUILT in `rk-types`, not nonexistent by design**; when it is built, ADR-0097
+decision 2 item 8 names **it**, and the whole-`SchemaId` reading ends on that day. **Nothing here changes the
+component count.** The key has **eight** components, this criterion says *"exactly these eight components"*, and its
+property test runs **nine cases** — eight misses plus one hit — under the name `memo_key_eight_components`
+(`crates/rk-kernel/tests/it/memo.rs`, cited by declaration `fn memo_key_eight_components()` and not by line,
+2026-09-15, that crate being under edit). The crate's own *"nine-case"* wording — the doc above that test,
+*"**nine cases**, and they are the first nine assertions below."*, and the later *"the nine-case property
+`memo_key_eight_components` exists to pin is weakened"* — is
+**correct** and is not a claim of nine components; nobody claimed nine and nothing is corrected to nine. **AC-019
+carries the same note**, because its THEN reads *"exactly AC-014's list"* and ADR-0119:171-172 says in terms that the
+pair move together.
 **Correction (2026-09-11, audit PIA-008).** The key was written as a five-component `hash(...)` with three different
 component lists across the register, the design and the schema and no hash framing; ADR-0097 fixes the list, the
 order and the framing, and this criterion and AC-019 enumerate exactly it.
@@ -472,6 +516,13 @@ skip is never silent.
 *Verified by:* an event-schema test asserting the field set; a replay assertion that executed steps plus `memo_hit`
 events equals the number of **step activations** in the recorded run — not the graph's static step count, which
 `repeat`/`on_false` (AC-017) and `for_each` (AC-022) make unequal to it.
+**Note (2026-09-15, `spikes/DECISIONS-2026-09-14.md` D-10).** This THEN's *"**eight** components (exactly AC-014's
+list, ADR-0097)"* is **unchanged and the eight stands**. What is fixed is what component 8's `schema_version`
+formally **is** for the build — **the whole `SchemaId` string**, there being no `schema_version` field in `rk-types`
+or `rk-ports` (`grep -rn schema_version crates/rk-types/src crates/rk-ports/src` → **0** [re-measured 2026-09-15]).
+The reading, its refusal of a parsed `vN` suffix, and its expiry once **AC-135**'s required per-type `schema_version`
+is built are stated once in **AC-014**'s note of the same date. This criterion and AC-014 move together, which
+ADR-0119:171-172 says in terms.
 
 ### 2.4 Budgets — three counters, never shared
 
@@ -497,11 +548,24 @@ THEN the step counts once, independent of N.
 **AC-023** — `rk-kernel::budget` · evidence: proposal §4.7 "per-item appetite fixed at triage" [documented] · decisions: ADR-0022
 GIVEN an item whose token appetite was fixed at triage
 WHEN any activity attempts to raise it mid-run
-THEN the raise is refused unless it arrives as a typed budget-change event with an author.
-*Verified by:* a unit test asserting refusal of an in-run raise from an activity result; an event-schema test that
-every appetite change carries an author field.
+THEN the raise is refused.
+*Verified by:* a unit test asserting refusal of an in-run raise from an activity result.
 *(The `doctor` rule listing items whose appetite differs from its triage value is a diagnostic, not an instrument
 for this THEN.)*
+**Correction (2026-09-15, `spikes/DECISIONS-2026-09-14.md` D-13, committed `d75a7fc`; the instrument form is
+`spikes/DECISIONS-2026-09-15.md` D15-2).** As authored the THEN read *"the raise is refused **unless it arrives as a
+typed budget-change event with an author**"*, and the *Verified by* carried a second instrument — *"an event-schema
+test that every appetite change carries an author field."* **Both are cut, here and in place**, rather than described:
+the escape hatch they name is not merely unbuilt but **unbuildable without a record**. A typed budget-change event
+needs an `EventKind`; the enum is **closed at 29** (`crates/rk-types/src/event_kind.rs`, `pub const ALL: [Self; 29]`)
+and ADR-0116:40-41 says in terms that *"the kind is minted by record or not at all"*. Withdrawing the clause while
+leaving its instrument standing would have left that instrument **armed against a stage that can never satisfy it**,
+which is why D-13 withdraws the two together. **AC-389 is the surviving refusal** — *"raising the appetite is possible
+only by returning the item to triage"* — and this criterion now agrees with it rather than contradicting it.
+**AC-396 is UNCHANGED**: it routes the appetite *value* to a human gate, which suits either mechanism and is not
+touched by this cut. **This criterion's only surviving instrument is the unit test asserting refusal of an in-run
+raise from an activity result**; the `doctor` rule above remains a diagnostic and was never an instrument for this
+THEN. §0.3 row **C3** carries the resolution.
 
 **AC-024** — `rk-kernel::budget` · evidence: **F22** [measured: ~12 background kills vs one 12,000 s detached survivor];
 principle 3 "nothing waits" [documented] · decisions: ADR-0022, ADR-0017
@@ -519,6 +583,33 @@ WHEN the gate is evaluated
 THEN the result is `Err(BudgetExhausted)` and the gate does not close.
 *Verified by:* a unit test per budget asserting the gate does not close; a negative fixture proving no code path maps
 an exhausted budget to `pass`.
+**Note (2026-09-15, `spikes/DECISIONS-2026-09-14.md` D-6) — against AC-024 and AC-025 both, because one predicate
+serves two criteria.** *Exhausted* is **not one comparison across the three counters**; each counter follows **its own
+criterion's verb**. **Wall clock: `>=`** — AC-024's GIVEN is *"a run that **reaches** its wall-clock budget"*, and
+reaching it is exhaustion. **Attempts and tokens: `>`** — AC-025's GIVEN is *"an activity that **ran out of** any
+budget"*, and an activity that spends exactly its declared budget has not run out of it. **The defect this closes was
+LIVE**, and was re-measured 2026-09-15 against `spikes/p9/catalog/` (**102** activity files): **exactly 9 of 102
+activities declare their ADR-0037 rule-8 minimum and 0 declare below it** — `change-summary` 2/2,
+`change-summary-ue` 3/3, `checklist-review` 2/2, `debt-logging` 2/2, `dependency-update` 6/6, `rolling-deploy` 4/4,
+`smoke-test` 2/2, `t-shirt-sizing` 2/2, `unit-tests` 4/4 — so under a **uniform `>=`** each of those nine was
+exhausted by its own **successful** pass, and `evaluate_gate` could never close a gate on its evidence.
+**What does and does not exercise this comparison at Step 7b [measured 2026-09-15, code lines only].**
+`evaluate_gate` — at its `pub fn evaluate_gate(` declaration in `crates/rk-kernel/src/workflow/budget.rs`
+— has **ZERO callers under any `crates/*/src/`**, and the doc above that same file's
+`pub fn wall_clock_expiry_mark(` declaration records the **write** of its mark on a live `src/` path as still
+**ARMED**. *(Cites converted from line numbers to declarations 2026-09-15: they read `:814` and `:988`, which
+were already stale against this tree —
+`grep -nE 'fn evaluate_gate|wall_clock_expiry_mark' crates/rk-kernel/src/workflow/budget.rs`, comment lines
+filtered — and both had moved again before this same session ended, the one command returning **851/1025**
+and then **855/1029** hours apart as a sibling edit landed. **No replacement line number is recorded here**,
+for that reason: the declaration is the cite.)*
+The comparison is therefore settled in the fold and **not yet reachable from a run**. 🛑 **The unmeasured claim that
+AC-024's THEN sequences ahead of AC-025's gate is deliberately NOT made here**: the overlap is unreachable today
+because **neither path is wired**, and a sequencing claim would be an inference wearing a measurement's clothes.
+🛑 **ADR-0037 is deliberately NOT added to AC-024's or AC-025's `decisions:` field.** §15.2 states that its criteria
+column is **computed** from every criterion's `decisions:` field, so a citation added here would silently move
+§15.2's ADR-0037 row out of step with the recomputation that produced it. The rule-8 minimum above is cited as a
+measured property of the shipped catalog, not as a decision these two criteria carry.
 
 **AC-026** — `rk-kernel::budget` · evidence: proposal §4.3 inner-layer row [documented]; `system/api_retry` **payload
 captured** — the runner's `api_retries: Vec<ApiRetry>` (`spikes/runner/src/runner.rs:61`) holds `{attempt, error,
@@ -539,7 +630,10 @@ recorded per-row attempt distribution is 1 attempt on 89 rows, 2 on 21, 3 on 12,
 on 217; `max_retries` is 10 on every row [measured, same recount; interval not computed]. PROVISIONAL is lifted; the
 payload-capture check is discharged against the existing record, and §0.3's C1 is decidable by measurement. S-RETRY
 keeps only its throttle-margin arm and gains exhaustion-on-result (ADR-0095, AC-523); it no longer waits on a
-payload capture. Whether inner attempts charge the budget (AC-391's cut) stays C1's question.
+payload capture. Whether inner attempts charge the budget (AC-391's cut) stayed C1's question. **Resolved 2026-09-14 (ADR-0122;
+`spikes/DECISIONS-2026-09-14.md` D-1), amended here 2026-09-15: they charge** — one charge per recorded
+`system/api_retry` event, in the pass that dispatched it. This criterion's THEN stands exactly as written; AC-391's
+*Cut* is withdrawn with its clause restored, and §0.3's C1 row carries the resolution.
 
 ### 2.5 Layered retry — and what is never retried
 
@@ -717,7 +811,7 @@ reconciled), but the answer is not.
 
 *Scope note.* **This area is blocked — read section 1 first.** The engine's *semantics* are writable and are written here: purity, rank, tie-is-an-error, unsatisfiable-is-a-gate, deviation-never-edits-`R`, replay, lint. What is not writable is any criterion presuming a stable LLM-emitted context vector. AC-071 is the machine-checkable statement of the block and is not itself provisional.
 
-*Scope note, added 2026-09-09.* Arm D is now scored [measured, F39], and the §3.7 criteria absorb it: AC-071's arm-D clause is discharged and its other four are not, AC-070's discard rule is bounded and its facet names corrected, AC-072 gains the `deriver` field and the set shape, AC-079's abstention route is extended to the boolean facets, and **AC-520** closes the gap where `source = "derived"` was gated by nothing. None of that unblocks the area, and none of it touches ADR-0079, which stays `proposed`: F39 measures a *derived* context vector, and ADR-0079 asks about an *LLM-emitted* one.
+*Scope note, added 2026-09-09.* Arm D is now scored [measured, F39], and the §3.7 criteria absorb it: AC-071's arm-D clause is discharged and its other four are not, AC-070's discard rule is bounded and its facet names corrected, AC-072 gains the `deriver` field and the set shape, AC-079's abstention route is extended to the boolean facets, and **AC-520** closes the gap where `source = "derived"` was gated by nothing. None of that unblocks the area, and none of it touches ADR-0079 — **which was `proposed` when this note was written and now reads `status: superseded`, ADR-0090 having superseded it in full at runbook Step 4.4 on 2026-09-12 (corrected in place and dated 2026-09-15; `spikes/DECISIONS-2026-09-15.md` D15-2, not `E-0079-2`)**: F39 measures a *derived* context vector, and ADR-0079 asked about an *LLM-emitted* one.
 
 *Scope note, added 2026-09-10.* **P2's perturbation half is now scored** [measured, F40] and its **advisory half (A01–A06) is unrun**; §3.6 absorbs it in **AC-068 alone**. The area's counts do not move and **no criterion was added**, which is a deliberate departure from the F39 shape: F39 exposed a *behaviour* nothing in the register gated (`source = "derived"` with no scored record) and therefore forced AC-520; F40 exposes no ungated behaviour. It changes the *warrant* under AC-068 — from "P2 is unrun" to "the criteria that would settle it have no denominator on the registered corpus, and the one that fires prescribes a remedy the measurement contraindicates" — and the residue it leaves, the `stale_policy` default for `L`-class, is an **open decision this register may not take**. Writing that residue as a criterion would be this document deciding it. §1.2 row 2 carries the rewritten executable precondition.
 
@@ -1201,7 +1295,9 @@ redkiln lint --stale-policy .redkiln/packs --p2-record spikes/results/p2/shortci
 #       AND rec.recall/rec.precision clear METHOD-P §2.4's PRE-REGISTERED lines; until then the value is [decided],
 #       and the lint reports it so.
 # The record an instrument writes: score-p2.py --out spikes/results/p2/shortcircuit.json [WILL EXIST — the scorer
-#   has no --out today]; AC-071's stability.json likewise [WILL EXIST].
+#   has no --out today]. AC-071's record is results/p1-arm-l-stability.json, corpus-relative through CORPUS_PIN,
+#   and it is TRANSCRIBED FROM F36 and never generated — so it is NOT [WILL EXIST] in the same sense: no instrument
+#   writes it (amended 2026-09-15; see AC-071's dated amendment and §1.1).
 # Historical reading of the P2 record, unchanged:
 # exit 0 (old form) only when rec.labels_timestamped == true AND rec.n_items >= 20
 #   AND rec.recall/rec.precision clear P2's PRE-REGISTERED lines.
@@ -1404,8 +1500,9 @@ AND until such a record exists, every ordinal axis is `source = "human"` — sup
 so are the three boolean facets the registry declared `llm` (`has_repro`, `external_dep`, `market_facing`; decision #2
 of 2026-09-11, carried into ADR-0090 at runbook Step 4.4, so Checkpoint 4a asserts `grep -c 'source = "llm"'
 spikes/p9/facets.toml` → 0 and every one of the eight booleans is tri-valued), and the engine refuses an LLM-emitted
-value for any of them (ADR-0079, `proposed`, is the record of this block; ADR-0090 supersedes it at
-runbook Step 4.4 and carries ERRATA E-0079-1's citation corrections).
+value for any of them (ADR-0079 — **`status: superseded` since runbook Step 4.4 on 2026-09-12; this clause read *"ADR-0079, `proposed`"*
+until it was corrected in place and dated 2026-09-15** — is the record of this block; ADR-0090 superseded it there
+and carries ERRATA E-0079-1's citation corrections).
 *Verified by:* the `--facet-stability` lint rule; a fixture `facets.toml` declaring `source = "llm"` with no record,
 which must fail load; a second fixture with a record that fails one clause at a time (5 cases). This criterion is
 **not** provisional: it is the machine-checkable statement of the block.
@@ -1417,6 +1514,68 @@ not a partial unblocking, and the five-case fixture set stays at five.
 no scored precision record — is **AC-520**, authored as its own criterion rather than bolted on here, because this
 criterion's own residual-risk sentence (§1.1) names a loosely-implemented multi-clause gate as precisely the failure
 mode: a sixth clause with a different subject would be the first thing an implementer collapsed.
+
+**Amendment (2026-09-15) — the stability record's path and its producer.** Grounded in
+`spikes/DECISIONS-2026-09-14.md` **D-3** and `spikes/DECISIONS-2026-09-15.md` **D15-1** and **D15-2**; required in
+exactly this form by `runbook/phase-1/s7b-kernel.md` §7b.11 precondition 2 (*"its dated register amendment has landed
+naming its path and its producer"*). **Nothing in this criterion's GIVEN, WHEN or THEN is changed by it.**
+
+- **Path.** The record is **`results/p1-arm-l-stability.json`**, **corpus-relative and resolved through `CORPUS_PIN`,
+  never through a working tree** (AC-464). ***Corrected in place:*** the `--stability-record
+  spikes/results/p1/stability.json` this register's §1.1 argument carried was dead on both halves — nothing ever wrote
+  it, and `spikes/results/` moved into the corpus at runbook Step 2 under ADR-0013 / AC-465 — and §1.1 is corrected at
+  the same date. **Under D15-2 that correction is a dated in-place register amendment and NOT an erratum**: the owed
+  `E-0071-1` is withdrawn as an *instrument* (its id collides with ADR-0071), the obligation still lands, and nothing
+  is written to `references/adr/ERRATA.md` by this pass.
+- **Producer — a TRANSCRIPTION, not a script; the record is NEVER REGENERATED.** The four identity figures are
+  **copied from F36's frozen output** — 5/20, 3/20, 2/20, 2/20, i.e. **0.25 / 0.15 / 0.10 / 0.10** — carried per
+  (instrument, pack) and never averaged into one. Re-running P1 arm L produces different draws: F36 §3.3 measured
+  untouched anchors drifting by up to **−0.168** between its two instruments, so a regenerated record would measure a
+  different registry than the one this gate was pre-registered against — golden constraint 9's guard-scoped-wrong, one
+  level up (`s7b-kernel.md` **§7b.2**, which measures the same failure on its own re-run — the identity
+  instrument returning 20/20 today against F36's frozen 5/20, 3/20, 2/20, 2/20 — and draws the same
+  conclusion: *"the instrument now measures a different registry than the one it was pre-registered
+  against"*; cite re-pointed
+  from `:292-298` to the section 2026-09-15, that file being under edit). There is no script to name, and
+  naming one would be the defect.
+- **The fields it carries are this criterion's consumer's**, and no others: `modal_required_set_identity`, `n_items`,
+  `draws_per_item`, `panel_verdict`, `corpus_sha` — the five clauses of the executable precondition at §1.1, read by
+  `crates/rk-kernel/src/facet_stability.rs` — its four `pub const` declarations `IDENTITY_BAR`, `N_ITEMS_BAR`,
+  `DRAWS_PER_ITEM_BAR` and `PANEL_VERDICT_SCORED` (e.g. `pub const IDENTITY_BAR: f64 = 0.80;`), cited by
+  declaration and not by line (2026-09-15), that crate being under edit.
+- **`modal_required_set_identity` is the MINIMUM of the four figures — `0.10` — with all four disclosed beside it.**
+  A scalar that is the minimum is **fail-closed**: a mean (0.15) also fails 0.80 on these numbers but would not in
+  general, and a gate that can be made to pass by aggregating is the failure mode §1.1's residual-risk sentence names.
+  Ground: `spikes/DECISIONS-2026-09-14.md` D-3, *"scalar = the minimum, fail-closed"*.
+- **It also carries the three registry digests it was measured under**, which `s7b-kernel.md` **§7b.2**
+  requires — *"transcribed from F36's frozen output … together with the three registry digests it was
+  measured under"* *(cite re-pointed from `:294-296` to the section 2026-09-15: that window carries the digest
+  **values**, while the requirement is a later sentence of the same section, and the file is under edit)*:
+  F36's own stamp **`cat:f89154d762a7 fac+art:149a74a0d053 pk:6994b61bc64d`**. Without them the record does not say
+  which registry its figures are about, which is the whole of the non-reproducibility above.
+- 🛑 **What `corpus_sha` denotes, and what that costs — stated rather than buried** (D15-1). In a **transcribed**
+  record `corpus_sha` denotes **the pin the measurement was taken at**, not the catalog pin at read time. For this
+  record that is **`47faec9f46b8d983c2c75f0794164e68415ae706`** — the value F36's own engine rows carry, and the value
+  already hard-coded in this tree at `crates/rk-kernel/tests/it/facet_stability.rs`, whose declaration reads
+  `const CATALOG_CORPUS_PIN: &str = "47faec9f46b8d983c2c75f0794164e68415ae706";` — cited by that declaration and
+  not by line (2026-09-15), that crate being under edit.
+  **Clause 5 therefore DOES NOT CLEAR**, because that sha is not today's catalog pin. Said plainly: that is
+  **fail-closed and correct**. This criterion already fails on **clause 1** — identity **0.10** against **0.80** — the
+  gate is unchanged, and a record engineered to make clause 5 pass while clause 1 fails would be §1.1's own
+  *"reading `modal_required_set_identity` and skipping `panel_verdict` or `corpus_sha`"* failure, one level over.
+- ⚠️ **A guard that is too wide, recorded rather than narrowed** (golden constraint 9 / Halt 7). §7b.11 precondition 2
+  requires this record, but **the registry carries ZERO `llm` facets** [measured 2026-09-14: 9 human, 6 derived, 4
+  kernel, 1 declared; runbook Step 4a took `llm` 7 → 0 at `db6b55c`], so this criterion's THEN requires a record *"for
+  that facet"* and **no facet requires one** — and **Checkpoint 7b reads the record nowhere**. The guard was
+  **satisfied rather than narrowed**, because the pin move happens exactly once — `runbook/phase-1/s7b-kernel.md`
+  **§7b.2**, *"`CORPUS_PIN` does not move in this session, and it moves exactly once in the whole of Step 7b"* —
+  and narrowing a guard to fit the tree is the more expensive mistake. *(Corrected 2026-09-15: this cited
+  `PROGRESS.md`:103, which is residual row **L2**, about AC-520's scored record. L2 does say the pin move
+  *"should happen once, with 7b's work, not twice"* and §7b.2 cites it in turn, so the ground is not lost — but
+  the exactly-once statement itself is §7b.2's and appears nowhere in `PROGRESS.md`; re-derived this date
+  with `grep -rn 'does not move' runbook/`. Cited by section and quotation rather than by line, because
+  `s7b-kernel.md` is under edit in this same session.)* That it is too wide is a finding about the guard, not about
+  this criterion, and it is recorded here so a later reader does not read the record's existence as coverage.
 
 **AC-520** — `redkiln lint --facet-provenance` · **THE DERIVED-FACET SIBLING GATE** · **id allocated outside this
 area's range — see §0.4** · measure: **SM-157** (derived-facet precision, per facet and per source — the scored record
@@ -1481,6 +1640,14 @@ facet in `facets.toml`; the machine-readable artifact is **`[WILL EXIST]`** and 
 lint that reads it. AC-071 is in the same state by construction: its `--stability-record
 spikes/results/p1/stability.json` is `[WILL EXIST]` and now names a directory this repo no longer has, Step 2 having
 moved `spikes/results/` into the corpus. Nothing is withdrawn by this amendment.)*
+
+***Note added 2026-09-15 — `spikes/DECISIONS-2026-09-14.md` D-3.*** *The 2026-09-13 amendment above is kept frozen as
+authored, and one half of its closing sentence about AC-071 is now falsified: **AC-071's record has a path and a
+producer**. It is `results/p1-arm-l-stability.json`, corpus-relative and resolved through `CORPUS_PIN` (AC-464), and
+it is **transcribed from F36's frozen output and never regenerated** — see AC-071's own dated amendment of
+2026-09-15, which also corrects §1.1's dead `spikes/results/p1/stability.json` **in place rather than as `E-0071-1`**
+(`spikes/DECISIONS-2026-09-15.md` D15-2). **What still stands is AC-520's own half:** this criterion's
+`deriver_record` artifact is still `[WILL EXIST]` and is Step 7b's to produce, with the lint that reads it.*
 
 *The domain this GIVEN reaches — as written 2026-09-09, and as resolved 2026-09-11.* At corpus pin `47faec9f`,
 `spikes/p9/facets.toml` declared **eleven** facets `source = "derived"` — `stage`, `rigor`, `toolchain`, `change`,
@@ -1668,8 +1835,8 @@ but unsupported and struck — so it cannot be used as evidence for anything.
 
 ## 4. Process packs, technology packs, the activity catalog and its lint
 
-**Area key:** `packs-catalog` · **Criteria:** AC-080..AC-118 **plus AC-527** (AC-119 unallocated and never reused; AC-116..AC-118 are splits; AC-527 is allocated outside the range — see §0.4) — **40 in force** · **Measures:** SM-025..SM-036
-**State:** 37 binding (AC-527 added 2026-09-11) · 1 provisional (AC-113) · 2 human-gated (AC-114, AC-115)
+**Area key:** `packs-catalog` · **Criteria:** AC-080..AC-118 **plus AC-527 and AC-532** (AC-119 unallocated and never reused; AC-116..AC-118 are splits; AC-527 and AC-532 are allocated outside the range — see §0.4) — **41 in force** · **Measures:** SM-025..SM-036
+**State:** 38 binding (AC-527 added 2026-09-11; **AC-532 added 2026-09-15**) · 1 provisional (AC-113) · 2 human-gated (AC-114, AC-115)
 **Sources:** proposal §4.2, §4.2.1; ADR-0014, 0022, 0024, 0027, 0028, 0029, 0030, 0050, 0051, 0056, 0057, 0058, 0059, 0060, 0061, 0065, 0067, 0072, 0073.
 
 *Scope note.* Everything in the criteria set is configuration-time and spends no dispatch. SM-028 and SM-036 are the exceptions — they read runtime telemetry. F20 is the canonical defect a configuration-time check must catch *because it is invisible at run time*: the voided dispatch returns exit 0, `subtype: success`, `structured_output` absent.
@@ -2094,6 +2261,66 @@ THEN a named human records whether the block actually discriminates the failure 
 reproduced regression was approved 3 of 10 times by a review gate [measured, F29] and four adjudicated defects survived
 fully green suites of 1,890/1,890 and 1,907/1,907 [measured, F31]. A boolean "has a quality block" (AC-112) is
 checkable; "the block works" is not.
+
+**AC-532** *(added 2026-09-15 — allocated outside this area's exhausted range; see §0.4)* — `rk-catalog` (the
+resolved catalog record) · evidence: **ADR-0114 decision 2** [documented: *"The catalog record gains
+`executed: { first, last }`"*, written *"on the first and every subsequent `activity_committed`"*]; ADR-0027
+rationale (catalogues rot from unexecuted content) [documented] · decisions: ADR-0114
+GIVEN a run journal carrying `activity_committed` rows
+WHEN the catalog is resolved and the executed-once ledger is folded over that journal
+THEN the **resolved, in-memory catalog record** — **never the shipped TOML** — carries `executed: { first, last }`
+per `activity_id@version`, each stamp holding all three of `{ run_id, item, at }`
+AND `first` and `last` are the first and last rows in **JOURNAL (APPEND) ORDER, not `at` order**, so a row appended
+later with an earlier `at` is still `last` and the earlier-appended row is still `first`
+AND an activity with no `activity_committed` row is **absent from the ledger map**, never defaulted to a zero stamp,
+an epoch or a synthesised entry.
+*Verified by:* `ac110_executed_ledger_first_and_last` in `crates/rk-kernel/tests/it/ledger.rs` — **which keeps that
+name**, because Checkpoint 7b asserts the literal in `runbook/phase-1/s7b-kernel.md` **§7b.14**'s test-name loop,
+the one whose `for t in` list carries *"rigor_monotonicity ac110_executed_ledger_first_and_last"*
+*(corrected 2026-09-15: what stood here was a bare line number into that runbook file, and the window it named
+held a `Cargo.toml` async-dependency grep rather than any test-name loop. It is replaced by the **section** plus
+the loop's own quoted list entry, and **no replacement number is recorded**: the number this note was first
+corrected to had itself moved twice before the correction was finished, while §7b.14 held still throughout)* —
+covering the three-commit
+fold, the fourth commit that moves `last` and not `first`, and the per-activity control that a single global pair
+would fail; the **discriminating append-order case**, block **(d)** of that test, which asserts
+*"`first` is the first row in APPEND order, even though its `at` is the later one"*; and the built negative in
+block **(c)**, which asserts **absence from the map** — `!led.contains_key("review@1")`, *"an activity with no
+commits is absent from the map"*.
+**Allocation (2026-09-15, `spikes/DECISIONS-2026-09-15.md` D15-3; owed by `spikes/DECISIONS-2026-09-14.md` D-12).**
+Allocated in **§4 packs-catalog**, beside AC-110 and AC-114 — ADR-0114's other criteria — because a criterion follows
+its **subject** and ADR-0114 decision 2 calls the field *"the catalog record's"*. The `rk-*` label is a **subject
+tag, not a crate name** (§0), so where the writer, the test and Checkpoint 7b's claimed range live decides nothing.
+§7b.10 had routed ADR-0114 decision 2 *"through AC-110"*, whose THEN says nothing about a ledger, and under ADR-0092
+a runbook cannot add a THEN. **AC-110 is UNCHANGED** — ADR-0114 decision 3 says so in terms — and amending it was
+refused because it would bolt a second, unrelated subject onto one id, against this register's own definition of a
+criterion as *"One GIVEN/WHEN/THEN naming **one** observable behaviour"*.
+**Both readings are stated because the build already took them** (`spikes/DECISIONS-2026-09-15.md` **D15-4**);
+minting this criterion silent on either would leave a committed discriminating test with no criterion behind it.
+**(i) The resolved, in-memory record, never the shipped TOML.** `crates/rk-kernel/src/runtime/ledger.rs`'s
+header section *"THE LEDGER IS A PROJECTION OVER THE STORE, NEVER A FIELD IN THE SHIPPED TOML"* refused the
+TOML reading on the record *(cite widened from a line window to the named section 2026-09-15: the sentences quoted
+next sit just past that window, and the file is under edit)*: writing `executed` into the committed catalog
+TOML *"would trip **AC-111** —
+a shipped-activity content-digest change with no `version` bump — on **every run**, and a per-run `version` bump
+would invalidate **every** memo entry keyed on `activity_id@version` (ADR-0097 component 1)."*
+**(ii) `first`/`last` are JOURNAL (APPEND) ORDER.** Ground: the header section of
+`crates/rk-kernel/src/runtime/ledger.rs` that ends *"ARE JOURNAL ORDER, NOT `at` ORDER"* — *"about the
+**sequence of events**, not about their timestamps"* — under which `fold_executed` takes the *"first
+`activity_committed` in append order"* as `first`; and the discriminating case already committed as block **(d)**
+of `ac110_executed_ledger_first_and_last` *(cite re-pointed from a line window to the section and the symbol
+2026-09-15: the window it named is not the journal-order passage, which sits further down that file, and the
+file is under edit)*. ADR-0114 says *"on the first and every subsequent `activity_committed`"*
+and nothing about timestamps, so the ADR does not forbid this reading — but it does not state it either, which is why
+it took a decision and not a default. The negative above is worded **as the build asserts it** — absence from the map
+— and deliberately **not** as *"reads `executed: never`"*, which nothing in the crate holds of the map
+(`Executed::default().never()` is a fact about an empty entry, not a value the map returns for a missing key).
+⚠️ **A tension named here and deliberately not smoothed — residual R-3 of `spikes/DECISIONS-2026-09-15.md`.** §4's
+scope note reads *"Everything in the criteria set is configuration-time and spends no dispatch"*, and a ledger folded
+at runtime over `activity_committed` is not configuration-time. **D15-3's finding is that the scope note is what has
+become imprecise, not the allocation**: it was written before ADR-0114 gave a catalog record a runtime-written
+projection. A dated amendment to that scope note is **OWED and is not written here**. This pointer exists so the next
+reader reads the note as stale rather than reading this criterion as misfiled.
 
 ---
 
@@ -4483,9 +4710,61 @@ wrong — a review that produced blocks is not green.)*
 GIVEN the whole workspace
 WHEN the review path is compiled
 THEN the build fails if a block value is constructed anywhere outside `rk-kernel::policy`, and every block value that
-does exist originated in a `(class, stage_weight)` lookup.
+does exist originated in a `(class, stage_weight)` lookup
+AND — **on any compilation of that workspace, not only of the review path** — the resumed, half-advanced run state
+that the `--stay` class depends on is likewise **unrepresentable** outside the module that owns it: no call site
+anywhere in the workspace can construct one, so a half-advanced state cannot be minted and `--stay` behaviour cannot
+be reached by construction.
 *Verified by:* a private constructor plus a module-boundary architecture lint asserting zero construction sites outside
-`rk-kernel::policy`; a compile-fail test (`trybuild`) that adds one.
+`rk-kernel::policy`; a compile-fail test (`trybuild`) that adds one. For the `--stay` state, the same three-part
+instrument family in the same crate: the private constructor, the module-boundary lint, and the committed compile-fail
+case `crates/rk-kernel/tests/ui/stay_class_state_is_unconstructible.rs` with its committed `.stderr`.
+**Amendment (2026-09-15, `spikes/DECISIONS-2026-09-14.md` D-14).** The THEN gains its second subject because Phase-1
+exit criterion (5) gated on the `--stay` fixture while **no criterion stated the property that fixture is evidence
+for**. Stated precisely, against a claim that does **not** survive: it is **false** that *"no criterion states it"*.
+**AC-446 is a criterion and its THEN reaches the recorded `--stay` bug id** — every listed bug id must resolve to a
+named test that fails under a mutation reintroducing the recorded bug's mechanism. What no criterion stated is the
+**unrepresentability property**: that the half-advanced state cannot be *constructed at all* outside its owning
+module, which is a compile-time fact about a type, not a bug-provenance fact about a fixture. AC-294 already owned
+exactly that instrument family for block values, in the same crate, which is why the property folds in here rather
+than taking a new id. **This criterion's GIVEN is already *"the whole workspace"***, so the extension is in scope,
+and the added clause deliberately does **not** hang off the *"WHEN the review path is compiled"* trigger — the
+`--stay` state is not on the review path.
+**What is built, and what is not [measured 2026-09-15, code lines only — re-measured at the close of this pass,
+because the answer moved while the amendment was being written].** The private constructor and the `trybuild` case
+are built for the `--stay` state: `crates/rk-kernel/tests/ui/stay_class_state_is_unconstructible.rs` and its
+`.stderr` are committed. **The third instrument — the module-boundary architecture lint — was NOT built when
+`spikes/DECISIONS-2026-09-15.md` recorded residual R-4, and is now built for the `--stay` half only**:
+`crates/rk-kernel/src/module_boundary.rs`, wired by `pub mod module_boundary;` in `crates/rk-kernel/src/lib.rs`
+and by `mod module_boundary;` in `tests/it/main.rs`, asserts zero construction sites for `RunState` outside
+`crate::workflow`. *(Corrected 2026-09-15: this cited a bare line in `lib.rs` that carried `pub mod no_egress;`
+when the cite was checked, not the `module_boundary` declaration it claimed. Both wirings
+are now cited by their **declaration** rather than by a line, because that crate is under edit; re-derived this
+date with `grep -nE 'pub mod' crates/rk-kernel/src/lib.rs` and
+`grep -n module_boundary crates/rk-kernel/tests/it/main.rs`, comment lines filtered, which finds
+`pub mod module_boundary;` and `mod module_boundary;` and confirms the `tests/it/main.rs` cite — only the first
+was wrong. **No
+replacement line number is recorded here**, deliberately: that is the habit that produced this defect.)* **The BLOCK-VALUE half is still not built and cannot
+yet be**: this workspace has **no block value and no `rk-kernel::policy` module** —
+`grep -riE '\bBlockValue\b|\bstage_weight\b|mod policy|ReviewWeight'` over `crates/**/*.rs`, comment lines
+filtered, returns **0** [measured 2026-09-15]. A lint over a type this tree does not have would return green over
+nothing. **That half is what residual R-4 of `spikes/DECISIONS-2026-09-15.md` still covers**, and this amendment
+claims neither half as discharged: the first clause of this THEN is **armed, not discharged**, until
+`rk-kernel::policy` exists and takes its own entry in that lint beside `RunState`'s.
+**Phase-1 exit criterion (5) is WITHDRAWN and its number RETIRED.** The sequence becomes (1) (2) (3) (4) (6) (7), and
+every *"seven exit criteria"* now reads *"six"*. 🛑 **The remaining numbers do not move.** ADR-0110
+(`status: accepted`) cites *"Phase-1 exit criterion (7)"* by number at :31 and :58 — a **frozen** record, so those
+numbers stand — and the design cites *"§10.2 exit (6)"* twice more, in its **§0.1** blocked-row table (*"§4.9 and
+§10.2 exit (6) state the same condition and no other"*) and in **§10.x**'s drifted-figure table (*"AC-071's
+unblocking bar was written **≥ 5 draws per item** in §4.1, §4.9 and §10.2 exit (6)"*) — cited by section and
+quotation, not by line (2026-09-15), that document being under edit, and matching the wording the design's own
+copy of this sentence already carries. Renumbering to close the gap would force a supersession of an accepted
+record to repair two
+citations. A retired number in a sequence is the cheaper and the more honest repair, and it is the same convention
+§0.4 already applies to retired criterion ids. Exit check (5)'s only warrant was **ADR-0001**, which §15.3 lists among
+*"The other uncited records"* as *"a premise, not a checkable behaviour"* — which is also why **ADR-0001 is
+deliberately NOT added to this criterion's `decisions:` line**: citing it here would be the self-defeating move the
+withdrawal rests on refusing, and §15.2 has no ADR-0001 row to move.
 
 **AC-295** — `rk-kernel` · evidence: F31 (CLEAN blocks strict 12/23, lenient 9/23), F29 (class means Reproduced 0.70 >
 MutationSurvived 0.37 > NarrowedPin 0.10 > control 0.00) · decisions: ADR-0015, ADR-0020, ADR-0023
@@ -5799,6 +6078,8 @@ decisions: ADR-0037
 GIVEN a dispatch during which the harness performs its own inner retries
 WHEN those retries are observed on the stream
 THEN each observed inner attempt is recorded as a tier-2 event carrying the harness's own attempt fields
+AND counted toward the activity's budget for that pass — one charge per recorded `system/api_retry` event,
+in the pass that dispatched it (**restored 2026-09-15**; ADR-0122 decision 1, via decision 5(a))
 AND the kernel issues no retry of its own for an error class the harness already retried.
 *Verified by:* a fixture stream replay containing `system/api_retry` events, asserting one tier-2 row per observed attempt
 and no outer retry issued.
@@ -5806,9 +6087,28 @@ and no outer retry issued.
 139 rows in 12 result files (AC-026 carries the recount and the attempt distribution) — so the fixture is a recorded
 row, not synthetic, and this criterion now verifies the event's shape and field names as well as the kernel's handling.
 F4 establishes only that further undocumented stream events exist, and the one it names is `system/thinking_tokens`.
+***Cut — WITHDRAWN 2026-09-15.*** *The clause is restored to the THEN above; the paragraph below is kept at its
+authored wording and line breaks, because this register's convention is to keep what was authored and refuted.*
 *Cut:* "counted toward the activity's budget for that pass". ADR-0037 counts *steps* per pass and the §4.3 gloss says
 observe and record, do not duplicate; nothing cited licensed folding harness-internal retries into the attempts budget,
 and doing so would make the budget a function of platform-side behaviour the kernel cannot see or bound.
+**Correction (2026-09-15, ADR-0122 decision 5(a); `spikes/DECISIONS-2026-09-14.md` D-1).** The *Cut* above is **withdrawn** and
+its clause restored, because its stated ground is refuted against its own cited source. §4.3's Inner cell reads, whole:
+*"| Inner | the harness itself (…) | **Observe, record, do not duplicate.** Inner attempts count toward the activity's
+budget |"* (`references/2026-09-05-architecture-proposal.md`:252) — the *Cut* quoted the bolded first sentence and
+stopped at it. The same rule is carried independently at `references/2026-09-07-activity-graph-schema.md`:83 (*"Inner
+harness retries (`system/api_retry`) count."*) and in `references/2026-09-08-architecture-design.md` **§3.6**'s
+**Inner retry** row — *"inner attempts count against the activity's budget"*, cited by section and quotation and
+not by line (2026-09-15), that document being under edit. ADR-0037 is
+not the authority the *Cut* took it for: its whole `## Decision` is one sentence and is a **load-time lint on a
+declared field**, so nothing in it moves — ADR-0122 carries `supersedes: []` and ADR-0037 keeps `superseded_by: []`
+(ADR-0122 decision 4). §0.3's **C1** row carries the resolution.
+**What this amendment does not touch.** This criterion's tier-2-event clause, its PIA-068 *Limit* note and its F4
+citation all stand. Its surviving second clause — *"for an error class the harness already retried"* — is **not**
+reworded here: it is class-scoped in this text and dispatch-scoped in the build (ADR-0122 decision 2), and the dated
+clarification against AC-026's *"the same failure"* that ADR-0122 decision 5(c) owes is **still owed** — residual
+**R-2** of `spikes/DECISIONS-2026-09-15.md`. A stage claiming AC-391 reports that clause **armed, not discharged**,
+for that reason and no other.
 
 **AC-392** — `rk-kernel` · evidence: §4.7 [documented]; C.6 / F22 [measured: nothing may depend on a process surviving] ·
 decisions: ADR-0003, ADR-0017
@@ -5897,7 +6197,7 @@ single-use token, the tree hash the human saw, a deadline with a terminal path),
 
 - AC-387's CONTESTED reading was resolved 2026-09-11 by the S-WT run record (`s-wt.jsonl` names `--system-prompt`): static × worktree and default × worktree are two measured cells, not two readings of one. What remains is that both are n = 9 on one machine at one CLI pin, and every other cell is `Unmeasured`.
 - AC-378 is verified against the recorded `rate_limit_event` payload with `isUsingOverage` flipped: the field is recorded (`false` on all 20 E0-headroom and 60 S-VAR rows), a `true` value never has been, so the overage refusal has still not been exercised against a real overage.
-- AC-391's `system/api_retry` fixture is a recorded row (139 captured, AC-026); the open question is C1's accounting, not the event's shape.
+- AC-391's `system/api_retry` fixture is a recorded row (139 captured, AC-026). **Amended 2026-09-15: C1's accounting is no longer open** — ADR-0122 resolved it on 2026-09-14 (inner attempts charge) and AC-391's *Cut* is withdrawn with its clause restored. What is still open here is the **scope** of AC-391's surviving second clause — class-scoped in this register, dispatch-scoped in the build — which ADR-0122 decision 5(c) owes a dated clarification against AC-026's *"the same failure"*: residual **R-2** of `spikes/DECISIONS-2026-09-15.md`.
 - Headroom is now an integer-tick contract (AC-372/374/376/377, ADR-0110); the lifted `throttle.rs` is rewritten, not lifted, and a re-lift that reintroduces `f64` subtraction passes every decimal-named vector while mis-flagging 80 of 100 one-tick deltas — the tick-typed field and the 0.09/0.10, 0.10/0.12, 0.20/0.21 vectors are the only guards.
 - Six criteria are negative constraints (AC-361's second half, AC-373, AC-374, AC-375, AC-381, AC-393) that a system dispatching nothing satisfies trivially. Their real enforcement is CI grep and compile-fail tests — and a grep rule is defeated by renaming an identifier.
 - About a third of the criteria rest on `[documented]` proposal sections (§4.3, §4.5, §4.7) that could not be read. AC-363, AC-369, AC-390 and the 'margins ≥2 ticks' rule behind AC-377 stand entirely on unverified proposal text.
@@ -7107,8 +7407,20 @@ GIVEN the workspace dependency graph
 WHEN CI runs the dependency check
 THEN `rk-kernel` has no dependency edge — direct or transitive — on any `rk-adapter-*` crate
 AND an added edge fails CI naming the adapter crate.
-*Verified by:* a `cargo metadata` dependency-graph assertion in CI; a fixture commit adding `rk-adapter-sqlite` to `rk-kernel` that must fail;
-the same `deny.toml` `[bans].deny` list AC-005 names (ADR-0100 decision 3), so the two instruments read one committed list.
+*Verified by:* a `cargo metadata` dependency-graph assertion in CI; a fixture commit adding `rk-adapter-sqlite` to `rk-kernel` that must fail.
+**Correction (2026-09-15, `spikes/DECISIONS-2026-09-15.md` D15-2).** A third instrument stood here — *"the same
+`deny.toml` `[bans].deny` list AC-005 names (ADR-0100 decision 3), so the two instruments read one committed list"* —
+and it is **cut, here and in place**, because the claim does not survive its own measurement. `deny.toml`'s
+`[bans].deny` carries **five entries and all five are ADR-0086's durable-execution names** — `temporalio-sdk`,
+`temporalio-sdk-core`, `graph-flow`, `dbos`, `durable` — and **no `rk-adapter-*` entry** [measured 2026-09-15,
+`deny.toml`:44-50]. It could not carry one: **cargo-deny bans are WORKSPACE-WIDE, while this criterion is a PER-CRATE
+EDGE property**, so banning an adapter to keep it out of `rk-kernel`'s graph would also forbid it in **`rk-cli`**,
+which legitimately depends on adapters at Step 7d. The two instruments were never going to read one committed list.
+**AC-005 carries the identical defect and is corrected at the same date, in the same form; the two cross-reference
+each other.** ADR-0100 decision 3 is untouched — it makes `cargo deny check bans` a CI gate, which it is; what it
+never said is that the ban list carries adapter names. **This criterion's other two instruments are built and green:**
+the `cargo metadata` dependency-graph assertion and the must-fail fixture commit. **In place and dated, NOT an
+erratum** (D15-2): nothing is written to `references/adr/ERRATA.md` by this pass.
 
 **AC-485** — `rk-cli`, `rk-kernel` · evidence: proposal §4.1 ("adapters selected once at startup from `.redkiln/config.toml`") · decisions: ADR-0003
 GIVEN a run whose adapter set was resolved at startup
@@ -7649,7 +7961,32 @@ Read them with one caveat. The refutation pass cut many citations and **named ea
 | **ADR-0111** | The S-P7B re-run must change the criterion, not only n — P7's criterion 1 had zero power at n = 3 and ten draws per cell are still powerless for the effect it registers | AC-303 | 1 | — |
 | **ADR-0112** | StepError gains Platform, Unsupported and Overage — the three variants thirteen criteria and design §3.6 already named — making the closed set eleven | AC-218, AC-221, AC-494 | 3 | — |
 | **ADR-0113** | TTL verification is read from the nested cache_creation object — a -p run with ephemeral_1h > 0 and ephemeral_5m = 0 is verified 1 h — and S-TTL1 narrows to the subagent bucket and the billing-mode confound | AC-526 | 1 | — |
-| **ADR-0114** | The executed-once gate moves to extended→shipped promotion; the v0 pack tags on P6 lint, the F42 parse and a per-activity executed-once ledger the doctor reports | AC-110, AC-114 | 2 | — |
+| **ADR-0114** | The executed-once gate moves to extended→shipped promotion; the v0 pack tags on P6 lint, the F42 parse and a per-activity executed-once ledger the doctor reports | AC-110, AC-114, **AC-532** | 3 | **AC-532 added 2026-09-15** — decision 2's executed-once ledger, on the resolved in-memory catalog record and in journal (append) order (`spikes/DECISIONS-2026-09-14.md` D-12; allocated by `spikes/DECISIONS-2026-09-15.md` D15-3, both readings by D15-4) |
+| **ADR-0115** | The EventStore port is held behind interior mutability; ADR-0099 clause 4's bare-trait-object rule is narrowed to the four ports whose methods take &self | — | 0 | **Added 2026-09-15. No criterion's `decisions:` field names it** [recomputed 2026-09-15 over all 527 `**AC-NNN**` headers] |
+| **ADR-0116** | The event-kind table gains artifact.write — the producing half of artifact.read, so a run's outputs are a query rather than a replay | — | 0 | **Added 2026-09-15. No criterion's `decisions:` field names it** [recomputed 2026-09-15 over all 527 `**AC-NNN**` headers] |
+| **ADR-0117** | stale_policy stays rematerialise at coarse scope for every cost class, and METHOD-P §2.4 criterion 1's prescribed remedy is NOT applied because the same run contraindicates it | — | 0 | **Added 2026-09-15. No criterion's `decisions:` field names it** [recomputed 2026-09-15 over all 527 `**AC-NNN**` headers] |
+| **ADR-0118** | A poisoned store lock halts the run — it is not a twelfth StepError variant, ADR-0112's closed set stays at eleven, and ADR-0115's named residual is closed | — | 0 | **Added 2026-09-15. No criterion's `decisions:` field names it** [recomputed 2026-09-15 over all 527 `**AC-NNN**` headers] |
+| **ADR-0119** | AC-045's key is a fourth, selection-level key derived in rk-kernel::select and looked up outside select() — ADR-0097's step memo key gains no ninth component and is untouched | — | 0 | **Added 2026-09-15. No criterion's `decisions:` field names it** [recomputed 2026-09-15 over all 527 `**AC-NNN**` headers] |
+| **ADR-0120** | The event-kind table gains dag_amended — the tier-2 delta an accepted deviation writes when selection steps 2–5 re-run, so AC-064's THEN names a kind that exists | — | 0 | **Added 2026-09-15. No criterion's `decisions:` field names it** [recomputed 2026-09-15 over all 527 `**AC-NNN**` headers] |
+| **ADR-0121** | Kleene absorption is commutative in both operand positions — `null and false` is `false` and `null or true` is `true`, and ADR-0103 decision 4's connective sentence is superseded in part on measured pack evidence | — | 0 | **Added 2026-09-15. No criterion's `decisions:` field names it** [recomputed 2026-09-15 over all 527 `**AC-NNN**` headers] |
+| **ADR-0122** | Conflict C1 resolves for AC-026 and AC-232 — a harness-internal `system/api_retry` attempt charges the activity's attempt budget, one charge per recorded event in the pass that dispatched it, and the kernel adds no outer retry for the failure the harness already retried; AC-391's *Cut* does not stand and ADR-0037's lint rule is untouched | — | 0 | **Added 2026-09-15. No criterion's `decisions:` field names it** [recomputed 2026-09-15 over all 527 `**AC-NNN**` headers] |
+
+***Extended 2026-09-15 to ADR-0122 — recomputed, not tallied.*** *This table ended at ADR-0114 while eight accepted
+records had been written past it, and §0.3's C1 resolution cites one of them (ADR-0122). The eight rows above were
+produced the way this section's own regeneration note requires — by reading every criterion's `decisions:` field —
+and the result is reported as it measured: **none of ADR-0115, ADR-0116, ADR-0117, ADR-0118, ADR-0119, ADR-0120,
+ADR-0121 or ADR-0122 is cited by any criterion**, so all eight rows carry an empty criteria set and a count of **0**
+[measured 2026-09-15 over all **527** line-start `**AC-NNN**` headers of this register, with `(supersedes …)` /
+`(… related)` parentheticals excluded per this section's own rule]. 🛑 **527 headers is a header count, not a
+criterion count, and its difference from §0.1's *526 criteria in force* is not an error in either number.**
+Re-derived on this tree 2026-09-15: `grep -cE '^\*\*AC-[0-9]{3}\*\*'` over this file returns **527**; the same matches
+through `sort -u | wc -l` return **526 distinct ids**; and `sort | uniq -d` returns exactly one id — **AC-428**, which
+carries **two** line-start headers because it was **cut as a duplicate of AC-427 and the id re-issued to the
+split half of AC-439**, both sites headed, which is §0.4's re-issue convention working as written and not a
+duplicate criterion. **527 − 1 = 526.** The recompute scans headers because a `decisions:` field hangs off a
+header, and both AC-428 headers were scanned. **An empty set is reported as empty; none is invented.**
+**ADR-0114's row moves 2 → 3** on AC-532, allocated by this amendment. That eight accepted records are cited by no
+criterion is §15.3's defect restated at a larger number, not a new one, and §15.3 is amended at the same date.*
 
 **How to read the spread.** ADR-0003 (87), ADR-0006 (58), ADR-0074 (58), ADR-0017 (54) and ADR-0019 (41) carry most of the register between them — the five ports, the review gate (as ADR-0074, which supersedes ADR-0004 in full), the artifact layout, the gate record and the per-AC discriminating test. That concentration is a risk as much as a fact: **the ADR text itself was outside the refutation pass's evidence set in every area**, so a misquoted or superseded clause in one of those five would propagate into dozens of criteria and nothing in this document would have caught it. Verifying those five ADRs against the criteria that cite them is the second-highest-value audit left; the first is §15.3.
 
@@ -7659,7 +7996,7 @@ Decisions cited by exactly one criterion — ADR-0032 (AC-434), ADR-0035 (AC-022
 
 ### 15.3 Decisions no criterion cites
 
-`references/adr/` holds **118 records** — ADR-0001..ADR-0118, **contiguous, with no reserved and no unwritten number** (**amended 2026-09-13, second time that day**; this read *"116 records — ADR-0001..ADR-0090 plus ADR-0092..ADR-0117; `0091` is the one reserved, unwritten number, allocated to runbook Step 6.1"*, which went stale in two further steps of the same day: **ADR-0091** was written at runbook Step 6.1 — the S-GIX result and the git-version floor — and **ADR-0118** at Step 7a, the lock-poisoning halt closing the residual ADR-0115:135-138 named for that stage. Before that it read *"112 decisions — ADR-0001..ADR-0089 plus the twenty-three records of 2026-09-11, ADR-0092..ADR-0114 (ADR-0090 and ADR-0091 are allocated to runbook Steps 4.4 and 6 and are unwritten)"*, which was true on 2026-09-11 and went stale in three: **ADR-0090** at runbook Step 4.4 on 2026-09-12 — the context-vector record, superseding ADR-0079 in full — **ADR-0115** and **ADR-0116** on 2026-09-12 by the runbook alignment review, and **ADR-0117** on 2026-09-13, the `stale_policy` adjudication). The criteria cite **88** of the 112 counted on 2026-09-11, and **that split is not restated for the 118**: it was recomputed from every `decisions:` field and is not re-derivable by a coarse scan. What **is** measured, 2026-09-13, over the **532** lines of this register containing `decisions:` — a count that includes this sentence, which is the only one of them that names any of the six: **none of ADR-0090, ADR-0091, ADR-0115, ADR-0116, ADR-0117 or ADR-0118 is cited by any criterion**, so the uncited set has grown by **six**, not four, and the cited count is unchanged at 88 — a recount of the whole set is owed and is not performed here. *(The 2026-09-13 revision of this sentence gave the line count as 531 and the growth as four; the line count does not reproduce and the growth was measured before `0091` and `0118` were written.)* The remaining **24** are listed below, because a decision no criterion cites is a decision nothing will test — and this was the largest single defect the 2026-09-08 assembly found. [measured, recomputed 2026-09-11]
+`references/adr/` holds **122 records** — ADR-0001..ADR-0122, **contiguous, with no reserved and no unwritten number** (**amended 2026-09-15**: this read *"118 records — ADR-0001..ADR-0118"*, which went stale in **four** — **ADR-0119** (AC-045's selection-level key; ADR-0097 gains no ninth component), **ADR-0120** (`dag_amended`), **ADR-0121** (Kleene absorption is commutative) and **ADR-0122** (conflict C1 resolves for AC-026 and AC-232) were all written after 2026-09-13. Measured 2026-09-15: `ls references/adr/[0-9]*.md | wc -l` → **122**. **The status split is re-derived by reading every record's frontmatter `status:` line rather than by trusting any summary: 118 `accepted` and 4 `superseded` — ADR-0004, ADR-0041, ADR-0079 and ADR-0088 — and NO record now carries `proposed`**, which is why the ADR-0079 row below and four sites earlier in this register were corrected in place at the same date. §15.2's recompute of 2026-09-15 also measured **none of ADR-0119..ADR-0122 cited by any criterion**, so the uncited set has grown by **ten** since the 112 count and not by six; the whole-set recount named below is still owed. **Previously amended 2026-09-13, second time that day**; this read *"116 records — ADR-0001..ADR-0090 plus ADR-0092..ADR-0117; `0091` is the one reserved, unwritten number, allocated to runbook Step 6.1"*, which went stale in two further steps of the same day: **ADR-0091** was written at runbook Step 6.1 — the S-GIX result and the git-version floor — and **ADR-0118** at Step 7a, the lock-poisoning halt closing the residual ADR-0115:135-138 named for that stage. Before that it read *"112 decisions — ADR-0001..ADR-0089 plus the twenty-three records of 2026-09-11, ADR-0092..ADR-0114 (ADR-0090 and ADR-0091 are allocated to runbook Steps 4.4 and 6 and are unwritten)"*, which was true on 2026-09-11 and went stale in three: **ADR-0090** at runbook Step 4.4 on 2026-09-12 — the context-vector record, superseding ADR-0079 in full — **ADR-0115** and **ADR-0116** on 2026-09-12 by the runbook alignment review, and **ADR-0117** on 2026-09-13, the `stale_policy` adjudication). The criteria cite **88** of the 112 counted on 2026-09-11, and **that split is not restated for the 118**: it was recomputed from every `decisions:` field and is not re-derivable by a coarse scan. What **is** measured, 2026-09-13, over the **532** lines of this register containing `decisions:` — a count that includes this sentence, which is the only one of them that names any of the six: **none of ADR-0090, ADR-0091, ADR-0115, ADR-0116, ADR-0117 or ADR-0118 is cited by any criterion**, so the uncited set has grown by **six**, not four, and the cited count is unchanged at 88 — a recount of the whole set is owed and is not performed here. *(The 2026-09-13 revision of this sentence gave the line count as 531 and the growth as four; the line count does not reproduce and the growth was measured before `0091` and `0118` were written.)* The remaining **24** are listed below, because a decision no criterion cites is a decision nothing will test — and this was the largest single defect the 2026-09-08 assembly found. [measured, recomputed 2026-09-11]
 
 | decision | title (frontmatter, verbatim) | status |
 | --- | --- | --- |
@@ -7682,7 +8019,7 @@ Decisions cited by exactly one criterion — ADR-0032 (AC-434), ADR-0035 (AC-022
 | ADR-0068 | A gate step inside a for_each is a lint error | `accepted` |
 | ADR-0070 | Quantifier bodies admit len() and nested calls | `accepted` |
 | ADR-0071 | Empty evidence is legal only for activities with no agent step | `accepted` |
-| ADR-0079 | The selection engine's context-vector source is undecided; Phase 1 pack authoring is blocked on P1's human panel | `proposed` |
+| ADR-0079 | The selection engine's context-vector source is undecided; Phase 1 pack authoring is blocked on P1's human panel | `superseded` *(corrected in place 2026-09-15; this column read `proposed` — ADR-0090 superseded it at runbook Step 4.4 on 2026-09-12)* |
 | ADR-0084 | Dependency policy — exact-pinned gix, audited CI, a golden schema snapshot, one SQLite writer | `accepted` |
 | ADR-0085 | Documentation and traceability conventions for the design phase | `accepted` |
 | ADR-0088 | Negative-control fixtures gain a confirmation-bias arm | `superseded` |
@@ -7692,7 +8029,7 @@ Decisions cited by exactly one criterion — ADR-0032 (AC-434), ADR-0035 (AC-022
 
 **Of the twenty-three 2026-09-11 records**, ADR-0092 (errata, precedence, cut-id re-issue — a convention, cited in §0 and §0.4, no criterion) is uncited by nature; ADR-0098 (S-GIX/a's shell fallback, the retained review clone and S-GIX/c) is cited by AC-191; ADR-0100 (the dependency policy) by AC-005, AC-044, AC-120, AC-461, AC-484; ADR-0106 and ADR-0111 by AC-266 and AC-303; ADR-0112 (the three added `StepError` variants) by AC-218, AC-221 and AC-494; ADR-0113 (the per-run TTL read) by AC-526; ADR-0114 (the executed-once ledger and promotion route) by AC-110 and AC-114. A reader should check the table above before assuming a gap.
 
-**The other uncited records** are ADR-0001 (the inversion bet — a premise, not a checkable behaviour), ADR-0004 (superseded by ADR-0074, whose citations replace it), ADR-0079 (`proposed`; the §1.1 block and AC-071 describe it and ADR-0090 supersedes it at runbook Step 4.4) and the activity-graph schema and predicate-grammar amendments: ADR-0031, ADR-0034, ADR-0039, ADR-0040, ADR-0041, ADR-0044, ADR-0048, ADR-0049, ADR-0051, ADR-0052, ADR-0054, ADR-0062, ADR-0065, ADR-0066, ADR-0068, ADR-0070, ADR-0071. ADR-0103 (2026-09-11) consolidates the grammar's precedence, literal, quoting, null and `on_false` rules and is cited by AC-069, AC-072, AC-079 and AC-527, which covers the part of ADR-0048/ADR-0069's territory a Phase-1 lint reaches; ERRATA E-0012-1 records that ADR-0054 extends ADR-0040 rather than superseding it. Several of the rest are plausibly narrower than a criterion needs to be — but **that has not been audited**, and at least three read as lint rules that ought to have one (ADR-0065's `on_false` target-rigor reachability lint, ADR-0068's gate-inside-a-loop rule, ADR-0066's slot-filler ordering). Recorded per ADR-0012 as an audit with a named consumer — this section's count — not discharged as prose.
+**The other uncited records** are ADR-0001 (the inversion bet — a premise, not a checkable behaviour), ADR-0004 (superseded by ADR-0074, whose citations replace it), ADR-0079 (**`superseded`** — corrected in place 2026-09-15, this read *"`proposed`"*; the §1.1 block and AC-071 describe it and ADR-0090 superseded it at runbook Step 4.4 on 2026-09-12) and the activity-graph schema and predicate-grammar amendments: ADR-0031, ADR-0034, ADR-0039, ADR-0040, ADR-0041, ADR-0044, ADR-0048, ADR-0049, ADR-0051, ADR-0052, ADR-0054, ADR-0062, ADR-0065, ADR-0066, ADR-0068, ADR-0070, ADR-0071. ADR-0103 (2026-09-11) consolidates the grammar's precedence, literal, quoting, null and `on_false` rules and is cited by AC-069, AC-072, AC-079 and AC-527, which covers the part of ADR-0048/ADR-0069's territory a Phase-1 lint reaches; ERRATA E-0012-1 records that ADR-0054 extends ADR-0040 rather than superseding it. Several of the rest are plausibly narrower than a criterion needs to be — but **that has not been audited**, and at least three read as lint rules that ought to have one (ADR-0065's `on_false` target-rigor reachability lint, ADR-0068's gate-inside-a-loop rule, ADR-0066's slot-filler ordering). Recorded per ADR-0012 as an audit with a named consumer — this section's count — not discharged as prose.
 
 ---
 

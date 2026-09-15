@@ -1007,16 +1007,39 @@ fn jitter_source_is_forced_and_owes_no_record() {
 
     // ---- (3) THE CONTROL — the module's OTHER proposal keeps its label --------------------------
     //
-    // Without this, part 2 is satisfied by deleting the phrases from the file, which would withdraw
-    // the one claim that IS owed. `inner_retry_ac026` asserts the same window for its own reason;
-    // that this is asserted twice is deliberate, because the two tests fail for different causes.
+    // Without this, part 2 is satisfied by deleting the phrases from the file rather than
+    // withdrawing them on a record. This sentence read *"which would withdraw the one claim that IS
+    // owed"* until 2026-09-15; `DECISIONS-2026-09-15`'s fifth section settles that **no record is
+    // owed** for this token either, so what the control now protects is the LABEL and the dated
+    // withdrawal below it, not an outstanding obligation. `inner_retry_ac026` asserts the same
+    // window for its own reason; that this is asserted twice is deliberate, because the two tests
+    // fail for different causes.
     assert!(
         token_doc.contains("this crate's proposal"),
         "`HARNESS_ALREADY_RETRIED` is spelled by NO record and must keep saying so"
     );
+    // THE OWED HALF IS WITHDRAWN, AND THIS USES THE SAME SPLIT PART 2 DOES. Until 2026-09-15 this
+    // asserted `token_doc.contains("OWED")` outright. `DECISIONS-2026-09-15`'s fifth section
+    // withdraws that claim on measurement — the token is a kernel-internal `&'static str`, never
+    // serialised, and `RefusalClass` is closed at four so it cannot become a record's token — so a
+    // bare `contains` would now certify an overclaim, while a bare `!contains` would pass on a
+    // silent deletion of the quoted history. Both halves are asserted instead.
+    let owed_marker = "WITHDRAWN 2026-09-15";
+    let (owed_live, owed_history) = token_doc.split_once(owed_marker).unwrap_or_else(|| {
+        panic!(
+            "`HARNESS_ALREADY_RETRIED`'s doc carries no {owed_marker:?} marker, so the withdrawal \
+             is unrecorded and this assertion cannot tell a live claim from a quoted one"
+        )
+    });
     assert!(
-        token_doc.contains("OWED"),
-        "and the record naming the refusal-class vocabulary is still owed"
+        !owed_live.contains("OWED"),
+        "the declaration still asserts an OWED record as a LIVE claim. Nothing is owed above the \
+         runbook for this token"
+    );
+    assert!(
+        owed_history.contains("OWED"),
+        "the declaration withdrew the OWED claim without quoting it. A correction that deletes \
+         what it corrects leaves the next reader nothing to check the correction against"
     );
     assert!(
         RETRY_SRC.contains("this crate's proposal"),
@@ -1525,9 +1548,12 @@ fn inner_retry_ac026() {
     // Added 2026-09-14 on an adversarial verification pass. `HARNESS_ALREADY_RETRIED` is spelled by
     // **no record anywhere** — not the register, not ADR-0122 (which settled the rule and named no
     // class token), not design §5 — while every other `class` this module emits comes from
-    // `error_tag`'s closed eleven. `src/workflow/retry.rs` declares it as the crate's proposal with
-    // the record OWED, on `rk-types`' `event_kind.rs`:16-21 precedent, and these two assertions are
-    // what stop it drifting into looking like a record's word.
+    // `error_tag`'s closed eleven. `src/workflow/retry.rs` declares it as the crate's proposal, and
+    // these two assertions are what stop it drifting into looking like a record's word. **The
+    // "record OWED" half of that declaration was WITHDRAWN 2026-09-15** by
+    // `DECISIONS-2026-09-15`'s fifth section: the `event_kind.rs`:16-21 analogy does not transfer,
+    // because `EventKind` IS design §5's own closed serialised table while this token is a
+    // kernel-internal `&'static str` that `RefusalClass` (closed at four) cannot admit.
     let suppressed =
         decide_after_inner_retries(&overloaded, &key_at(1), cap, InnerAttempts::observed(1));
     assert_eq!(
@@ -1572,10 +1598,15 @@ fn inner_retry_ac026() {
                 .collect::<Vec<_>>()
                 .join(" ");
             let doc = doc.as_str();
-            doc.contains("this crate's proposal") && doc.contains("OWED")
+            // THE NEEDLE MOVED WITH THE RECORD, 2026-09-15. This read `doc.contains("OWED")`; the
+            // OWED claim is withdrawn as an overclaim by `DECISIONS-2026-09-15`'s fifth section, so
+            // what the declaration must now keep is the LABEL plus the dated withdrawal. Asserting
+            // the marker rather than the absence of "OWED" keeps the quoted history legal.
+            doc.contains("this crate's proposal") && doc.contains("WITHDRAWN 2026-09-15")
         },
-        "the declaration must keep saying it is this crate's proposal with the record OWED; a \
-         token that quietly stops being labelled reads as a record's spelling"
+        "the declaration must keep saying it is this crate's proposal, and must keep the dated \
+         withdrawal of the OWED claim; a token that quietly stops being labelled reads as a \
+         record's spelling"
     );
 }
 

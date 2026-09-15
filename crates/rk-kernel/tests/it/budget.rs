@@ -2,10 +2,13 @@
 //! half of **AC-023** that is common ground between it and AC-389.
 //!
 //! Four of the five names here are §7b.13's Slice-4 names and are asserted verbatim by §7b.14's
-//! third loop (`s7b-kernel.md`:1520-1532), which runs **without** `--features corpus` — so nothing
-//! in this file is feature-gated, and no name here contains `golden_log_replay` or
-//! `ac161_ac164_delete_db_replay` as a substring (the `--list` differential at :1345-1346 counts
-//! bare substrings and requires the unfeatured count to be zero).
+//! **third name loop** — the one whose `for t in` list opens `budget_three_counters_never_share` —
+//! which runs **without** `--features corpus`, so nothing in this file is feature-gated, and no name
+//! here contains `golden_log_replay` or `ac161_ac164_delete_db_replay` as a substring (the
+//! `cargo test -p rk-kernel -- --list` differential in the same block counts bare substrings and
+//! requires the unfeatured count to be zero). **Both were line cites — `:1520-1532` and
+//! `:1345-1346` — and both were stale: `s7b-kernel.md` moves under this file on every editing pass
+//! [re-derived 2026-09-15: `grep -n "for t in" runbook/phase-1/s7b-kernel.md`].**
 //!
 //! # The one name here that is in no checkpoint loop, and why it is not `ac023_…`
 //!
@@ -13,10 +16,34 @@
 //! because §7b.13 pairs AC-023 with `for_each_charges_once_independent_of_n`, and an N-cardinality
 //! charge test asserts nothing whatever about an appetite raise or an author field — so AC-023 would
 //! otherwise be reached by nothing but the unfiltered `cargo test -p rk-kernel` floor, which
-//! `00-preamble.md`:186-189 says *"is satisfied by an implementation nothing pins"*. It is
-//! deliberately not named `ac023_…`: **contradiction C3 is open**, only the refusal both criteria
-//! share is built, and naming the test after the id would claim the escape hatch AC-023 admits and
-//! AC-389 denies. See `src/workflow/budget.rs`'s header.
+//! `00-preamble.md`'s **golden constraint 12** says *"is satisfied by an implementation nothing
+//! pins"*, in its *"A checkpoint grep is not this"* paragraph. **Cited by constraint number and no
+//! longer by line, 2026-09-15**: the `:186-189` that stood here lands inside constraint **11**'s F40
+//! scope finding [re-derived 2026-09-15: `grep -n 'nothing pins' runbook/00-preamble.md`]. It
+//! **was** deliberately not named `ac023_…`: **contradiction C3 was open**, only the refusal both
+//! criteria shared was built, and naming the test after the id would have claimed the escape hatch
+//! AC-023 admitted and AC-389 denied. See `src/workflow/budget.rs`'s header.
+//!
+//! # 🛑 THAT TABOO IS LIFTED, AND THE RENAME IS DELIBERATELY NOT DONE HERE
+//!
+//! **C3 is RESOLVED in favour of AC-389** (`DECISIONS-2026-09-14 D-13`): an in-run raise is refused
+//! **outright**, AC-023's *"unless it arrives as a typed budget-change event with an author"* clause
+//! is **CUT** by dated register amendment, and that amendment withdraws AC-023's second instrument —
+//! *"an event-schema test that every appetite change carries an author field"* — **with the clause**
+//! rather than leaving it ARMED against no stage. **AC-023's only surviving instrument is therefore
+//! *"a unit test asserting refusal of an in-run raise from an activity result"*, which is exactly
+//! the test below**, so there is no hatch left for the id to claim.
+//!
+//! It is **not** renamed here. Checkpoint 7b asserts **literal** test names (`s7b-kernel.md`
+//! §7b.14), so a rename is a separate, checked act against the checkpoint rather than a consequence
+//! of this correction. Recorded, not done.
+//!
+//! # 🛑 AND AC-389's OTHER HALF IS STILL UNBUILT AND STILL OWED A RECORD
+//!
+//! *"The attempt is appended as an event"* is **not built and not buildable here**: there is no
+//! `EventKind` for a refused appetite raise, the enum is closed at 29, ADR-0112's eleven `StepError`
+//! variants carry no member for one, and design §5's table has no row. It is residual **R-1** in
+//! `spikes/DECISIONS-2026-09-15.md`, and C3's resolution does not discharge it.
 //!
 //! # 🛑 WHAT IS MEASURED HERE AND WHAT IS NOT
 //!
@@ -25,7 +52,7 @@
 //! | **AC-020** | the runtime half — three pair-cases over [`fold`] | the separation half is a compile failure and lives at `tests/ui/ac020_counters_never_share.rs` |
 //! | **AC-021** | the **declared** field, ADR-0037's lint rule 8 (ADR-0122 decision 3) | the runtime draw-down is AC-026's and is Slice 4c's |
 //! | **AC-022** | the **runtime** charge at N = 1, 2, 50 | — |
-//! | **AC-023** | the refusal | *"an event-schema test that every appetite change carries an author field"* — **ARMED, NOT DISCHARGED**: no `EventKind` can carry a budget change and minting one takes a record |
+//! | **AC-023** | the refusal — and as of D-13 that is AC-023's **only** surviving instrument | *"an event-schema test that every appetite change carries an author field"* — **WITHDRAWN WITH THE CLAUSE**, not ARMED. This cell read *"ARMED, NOT DISCHARGED"* until 2026-09-15: C3 is **RESOLVED** in favour of AC-389 (DECISIONS-2026-09-14 D-13), AC-023's *"unless"* clause is **CUT**, and D-13 withdraws its second instrument **with** the clause. What is still unbuilt is **AC-389's** *"the attempt is appended as an event"* — no `EventKind` can carry a budget change and minting one takes a record — residual **R-1** in `spikes/DECISIONS-2026-09-15.md` |
 //! | **AC-024** | the durable mark's **value** and its carrier; the *"no thread sleeps"* half, over the module's own source | the mark's **write on a live path** and *"no further dispatch"*. *(**"exits 0" left this cell on 2026-09-14.** It read *"*\"exits 0\"* (a **process** exit — 7d's)"*, and operator decision **D-8** built the register's own instrument for it — `tests/it/cross_process.rs`'s `ac024_wall_clock_mark_outlives_the_process_that_wrote_it` re-execs this binary and reads a **child's** exit code beside the mark the child left. What is still 7d's is narrower and is stated there: that the process exiting 0 is `redkiln run` rather than a libtest binary.)* AC-024 is a **twin**, owner AC-240 + AC-278 |
 //! | **AC-025** | the unit test per budget (three, swept over `Counter::ALL`), the nine-row negative table, and the must-close positive | — the compile-fail companion is `tests/ui/ac025_exhaustion_is_not_a_pass.rs`, taken **in addition to** the register's named instrument |
 //!
@@ -389,9 +416,13 @@ fn for_each_charges_once_independent_of_n() {
 /// What both criteria assert is that a raise **arriving on an activity result** is refused, and that
 /// is all this test asserts. The escape hatch AC-023 admits is not built (no `EventKind` can carry a
 /// typed budget change and the enum is closed at 29), and AC-389's append is not built either — it
-/// is the half where the two differ, so appending would take C3. **C3 is open and a decision is
-/// owed.** AC-023's second instrument, *"an event-schema test that every appetite change carries an
-/// author field"*, is **ARMED, NOT DISCHARGED**.
+/// is the half where the two differ. **C3 is RESOLVED in favour of AC-389 — refused outright — by
+/// DECISIONS-2026-09-14 D-13**, which CUTS AC-023's *"unless"* clause and withdraws its second
+/// instrument, *"an event-schema test that every appetite change carries an author field"*, **with**
+/// the clause rather than leaving it ARMED. These three lines read *"so appending would take C3.
+/// **C3 is open and a decision is owed.** … is **ARMED, NOT DISCHARGED**"* until 2026-09-15.
+/// **AC-389's append half is still unbuilt and still owed a record — residual R-1 in
+/// `spikes/DECISIONS-2026-09-15.md`** — so the sentence above, that it is not built, stands.
 ///
 /// The envelope is read off the fixture's **declared** `budget` table; nothing in this test or in
 /// the library supplies a token appetite of its own.
@@ -437,8 +468,8 @@ fn appetite_raise_from_an_activity_result_is_refused() {
         assert!(
             appetite_raise_from_activity_result(&envelope, other).is_err(),
             "no proposal arriving on an activity result may write the appetite, including \
-             {other}: AC-023's only admitted route is a typed budget-change event and AC-389's is \
-             a return to triage — an activity result is neither"
+             {other}: C3 is resolved in favour of AC-389 (DECISIONS-2026-09-14 D-13), so the only \
+             route to a higher appetite is a return to triage — an activity result is not one"
         );
     }
 }

@@ -67,7 +67,7 @@ Checkpoint 7b-ii in the same change, or the execution order stops resolving.
 | 12 | Step 7c | [`phase-1/s7c-adapters.md`](phase-1/s7c-adapters.md) | four real adapters; the Claude adapter's containment, cancel, denylist, tick arithmetic, per-profile argv | **Checkpoint 7b-ii** | Checkpoint 7c | DECISIONS #16, #19 |
 | 13 | Step 7d | [`phase-1/s7d-cli-and-migrate.md`](phase-1/s7d-cli-and-migrate.md) | `rk-cli` (one idempotent `run`, `answer`, `doctor`, `explain`, `init`); `redkiln-migrate` v0 as defined | Checkpoint 7c | Checkpoint 7d | decision 4 (`doctor`'s `N`) |
 | 14 | Step 7e | [`phase-1/s7e-pack-authoring.md`](phase-1/s7e-pack-authoring.md) | `.redkiln/`, the derived registry, row dispositions, `stale_policy` with its warrant, the lattice re-baselined | Checkpoint 7d | Checkpoint 7e | decision 5 (DECISIONS #4) |
-| 15 | Step 8 | [`phase-1/s8-exit-criterion.md`](phase-1/s8-exit-criterion.md) | the seven exit checks — (1) in both lanes, (6) on both lints — and the standing prohibitions | Checkpoint 7e | Checkpoint 8 | — |
+| 15 | Step 8 | [`phase-1/s8-exit-criterion.md`](phase-1/s8-exit-criterion.md) | the **six** exit checks — (1) in both lanes, (6) on both lints — and the standing prohibitions *(this read "the seven exit checks" until 2026-09-15: design §10.2's **(5) is WITHDRAWN**, its number **retired** and **nothing renumbered**, so the sequence is (1) (2) (3) (4) (6) (7) — `DECISIONS-2026-09-14 D-14`, and `s8`:15-19 carries the same count)* | Checkpoint 7e | Checkpoint 8 | — |
 | any | Step 9 | [`s9-rollback.md`](s9-rollback.md) | clean, total rollback; the salvage first | a decision to abandon | Checkpoint 9 | — |
 
 ## Milestones

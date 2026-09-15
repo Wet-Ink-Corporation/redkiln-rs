@@ -5,7 +5,7 @@
 //! | --- | --- | --- |
 //! | **AC-029** (2/2) | [`AttemptCap`] — the pack's `N`, and [`EnvelopeError::AttemptCapNotDeclared`], which is what a pack declaring none produces | **built**; the backoff envelope itself is Slice 4c's |
 //! | **AC-033** (part) | [`BreakerThreshold`] — the pack's `K`, *"a pack value, asserted present by pack validation"* — and, as of 2026-09-14 (D-7), [`EnvelopeError::BreakerExpiryNotDeclared`] and [`EnvelopeError::RoleFamilyNotDeclared`], the refusals for the two values the same decision made pack-declared | the **types and the accessors** are built; the breaker's behaviour and its durable mark are [`super::breaker`]'s and **nothing here may be read as covering AC-033** |
-//! | **AC-023 / AC-389** (part) | [`EnvelopeError::TokenAppetiteNotDeclared`] — a gate is not evaluated against a **defaulted** token budget | **built**, as the refusal only; C3 is open and the appetite-raise mechanism is not built (see [`super::budget`]) |
+//! | **AC-023 / AC-389** (part) | [`EnvelopeError::TokenAppetiteNotDeclared`] — a gate is not evaluated against a **defaulted** token budget | **built**, as the refusal only. C3 is **RESOLVED** in favour of AC-389 (DECISIONS-2026-09-14 D-13): an in-run raise is refused **outright** and AC-023's *"unless"* clause is **CUT**, so there is no appetite-raise mechanism left to build. AC-389's *"the attempt is appended as an event"* is still unbuilt — residual **R-1** in `spikes/DECISIONS-2026-09-15.md` (see [`super::budget`]) |
 //!
 //! # The rule this module exists to make unwritable
 //!
@@ -75,8 +75,13 @@
 //! says nothing about pack declaration, so on that clause the stage file is adding a THEN, which
 //! ADR-0092's precedence does not let it do. The two criteria that **do** say it in their own words
 //! are cited above instead — AC-029's *Verified by* for `N` and AC-033's for `K` — and the token
-//! appetite's refusal is built on the same shape without claiming AC-023, whose contradiction C3 is
-//! open. Nothing here decides C3 and nothing here is named `ac023_…`.
+//! appetite's refusal is built on the same shape without claiming AC-023. **C3 is RESOLVED in
+//! favour of AC-389 — refused outright, AC-023's *"unless"* clause CUT (DECISIONS-2026-09-14
+//! D-13)** — and that changes nothing here: the authority for *"declared in the pack"* was never
+//! AC-023's, before the resolution or after it. This sentence ended *"whose contradiction C3 is
+//! open. Nothing here decides C3"* until 2026-09-15. Nothing here is named `ac023_…`, now for the
+//! narrower reason that this module asserts no appetite refusal at all — the one that is built is
+//! `tests/it/budget.rs`'s.
 //!
 //! # What is deliberately NOT here
 //!

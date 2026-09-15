@@ -21,8 +21,15 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 > **`0090`, not `0089`** — see Step 5's banner for why the token moved.
 >
 > **Golden constraint 1, the LLM-facet block, restated here** because `00-preamble.md`:194 names a Step 7a banner
-> and until 2026-09-13 this file was the only stage in that row that carried none. ADR-0079 is `proposed` and
-> **forbids being amended into a decision**; ADR-0090 supersedes it in full and is the gate's token. **Nothing in
+> and until 2026-09-13 this file was the only stage in that row that carried none. ADR-0079 is `superseded` and is
+> **not amended into a decision**; ADR-0090 supersedes it in full and is the gate's token. *(Corrected in place
+> 2026-09-15: this read "ADR-0079 is `proposed` and **forbids being amended into a decision**". ADR-0079's
+> frontmatter reads `status: superseded`; ADR-0090 **decision 3** superseded it **in full** at runbook Step 4.4,
+> and that status change plus the back-link are the only edits made to it, its body deliberately untouched.
+> **No erratum is owed** — `E-0079-2` is withdrawn **as an instrument** (DECISIONS-2026-09-15 D15-2), because
+> there is no frozen line for an erratum to correct and each site takes a dated in-place correction in the
+> amendable document that carries it. The substance is unchanged: no decision is taken on the LLM-emitted
+> context-vector source.)* **Nothing in
 > this step touches the selection path** — `rk-ports` declares five traits and their fakes, keys no `require` row,
 > and reads no `criticality`, `novelty`, `size`, `blast_radius`, `market_facing`, `external_dep` or `has_repro` —
 > so a discharged gate is a **formality here, which is exactly why it is checked here**, one stage before 7b, where
@@ -1199,12 +1206,23 @@ at the register. **The register is right and nothing is owed to it for the scope
 - **AC-239** — not inside this step's claimed range on any reading, and **its stage is disputed; this step raises
   it and does not settle it.** The register assigns the list-is-data half to *"the runbook's **7b/7d** acceptance
   sets (PIA-072)"* (register :3588-3589) and the id is PROVISIONAL on S-CODEX (:3575). Measured: **`s7c`:193 is the
-  only set that contains it**, via AC-200–AC-239 minus AC-207; **no `s7b` range reaches it** — `s7b`:238-255 runs
-  AC-001–AC-039, AC-040–AC-079, AC-080–AC-118, AC-520/AC-525/AC-527/AC-530, AC-455 and then AC-240–AC-359, so the
-  gates range opens one id past it — and `s7d`'s set does not name it. *(The previous revision said "kept, in 7b's
-  set", which is false; the revision after it said `s7b`'s ranges START at AC-240, which is also false — the
-  conclusion held on a stated reason that did not.)* The allocation is owed a
-  correction in `s7b`'s or `s7d`'s set, not here.
+  only set in Phase 1's *build* stages that contains it**, via AC-200–AC-239 minus AC-207; **no `s7b` range reaches
+  it** — `s7b` §7b.15's claimed ranges are AC-001–AC-039, AC-040–AC-079, AC-080–AC-118,
+  AC-520/AC-525/AC-527/AC-532, AC-161/AC-164, AC-005's `cargo tree -i` half and the §14 hand-forwards, and **none of
+  them opens at AC-239** — and `s7d`'s set does not name it. **Amended 2026-09-15, and the re-measurement moved
+  three things.** (1) **AC-532** joins the out-of-range row: it was allocated 2026-09-15 in the register's §4
+  packs-catalog for ADR-0114 decision 2's executed-once ledger (DECISIONS-2026-09-14 D-12; DECISIONS-2026-09-15
+  D15-3), which is why this enumeration had to move with it. (2) The old cross-reference **`s7b`:238-255 pointed at
+  §7b.2** — the Slice-0 records and the single `CORPUS_PIN` move — **and not at an acceptance set at all**; the set
+  is §7b.15, cited here by section so it survives the next reflow. (3) The old enumeration's tail
+  — `AC-530`, `AC-455` and `AC-240–AC-359` — describes the **pre-split** `s7b`: those moved to `s7b-ii` on
+  2026-09-13, so *"the gates range opens one id past it"* is no longer the reason, though the conclusion it was
+  offered for still holds. **And the conclusion itself is now narrower than it reads:** `s7b-ii` §7b-ii.14
+  **claims AC-239's list-is-data half by name**, so `s7c`:193 is no longer the only set that contains the id and
+  `s7b` §7b.15:1868-1871 says so. *(The previous revision said "kept, in 7b's set", which is false; the revision
+  after it said `s7b`'s ranges START at AC-240, which is also false — the conclusion held on a stated reason that
+  did not.)* The allocation is still owed a correction — now an alignment between `s7b-ii`'s claim and `s7c`:193's
+  bare range sweep — **and it is not taken here** (`00-preamble.md`:55).
 - **AC-005's second half** — handed forward by Step 5 (`PROGRESS.md`:28 and :307: *"only the `[bans].deny`
   mechanism is exercised here; the `rk-adapter-*` entries and the `cargo tree -i` assertion belong to 7a/7c"*).
   **Excluded here, and it is 7c's**: the remainder is `[bans].deny` entries for `rk-adapter-*` crates and a

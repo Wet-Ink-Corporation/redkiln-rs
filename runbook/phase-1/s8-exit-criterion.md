@@ -12,8 +12,15 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 ---
 
 
-Phase 1 exits on **seven runnable checks** — design §10.2's seven, with (1) now carrying a second half (ADR-0094:
-self-hosting is both lanes) — not on a narrative milestone. All seven, in order:
+Phase 1 exits on **six runnable checks** — design §10.2's seven **less (5), withdrawn 2026-09-15** (see (5) below;
+`DECISIONS-2026-09-14 D-14`), with (1) now carrying a second half (ADR-0094: self-hosting is both lanes) — not on a
+narrative milestone. **(5)'s number is retired and nothing renumbers**: the sequence is (1) (2) (3) (4) (6) (7),
+because ADR-0110 (accepted) cites *"Phase-1 exit criterion (7)"* by number twice — in its Context and again as
+its decision 5 — and the design carries the literal string *"§10.2 exit (6)"* at three sites: its §0.1
+selection-engine row, its §10.2 phase table's own Phase-1 row and its §10.x review row. **Count them in
+`references/2026-09-08-architecture-design.md` with `grep -cF`, never by line** — that design §10.2 Phase-1 row
+gained its citation in this pass's own withdrawal edit, so a line-numbered count written earlier today was
+already short by a site. A renumbering would silently move every one. All six, in order:
 
 **(1) Self-hosting — AC-473, and AC-521.** Redkiln-RS runs its own fix lane end to end, **and** one story-lane run
 authors a Phase-2 story under it (ADR-0094 decision 3; ADR-0011's exit bar, which ADR-0002's "solely" never
@@ -114,14 +121,23 @@ cargo metadata --format-version 1 --no-deps | grep -q "\"$CLOCK_FIXTURE\"" || { 
 cargo clippy -p "$CLOCK_FIXTURE"; rc=$?; [ "$rc" -ne 0 ] || { echo "FAIL: the clock-read fixture PASSED the lint — the fixture FAILING it is the pass (PIA-031)"; exit 1; }
 ```
 
-**(5) The `--stay`-class error is unrepresentable** — a `trybuild` must-fail fixture, not a runtime assertion.
+**(5) WITHDRAWN 2026-09-15.** It read *"The `--stay`-class error is unrepresentable — a `trybuild` must-fail
+fixture, not a runtime assertion"*, and its obligation is **folded into AC-294** (`DECISIONS-2026-09-14 D-14`):
+AC-294 already owns a private constructor, a module-boundary architecture lint and a `trybuild` case — the
+identical instrument family in the same crate — while check (5)'s only warrant was ADR-0001:42, which the
+register classes as *"a premise, not a checkable behaviour"*. **The number is retired; nothing renumbers.**
 
-```bash
-test -d crates/rk-kernel || { echo "FAIL: rk-kernel absent — criterion (5) NOT RUN (Halt 8)"; exit 1; }
-out=$(cargo test -p rk-kernel -- trybuild 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: cargo test exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: the trybuild filter matched 0 tests — an unwritten --stay fixture reads exactly like a passing one"; exit 1; }
-```
+**Its shell block is cut, not annotated, and what was wrong with it is recorded here rather than left standing.**
+The block ran `cargo test -p rk-kernel -- trybuild` and asserted `test result: ok. [1-9][0-9]* passed`. **That
+filter is green whenever ANY ONE case passes**: 13 case files live in `crates/rk-kernel/tests/ui/` and the
+`trybuild` filter does select the harness [measured 2026-09-15], so an **absent** `--stay` case read exactly like a
+present one. **This is not a Halt 8 shape and must not be described as one** — it captured `rc` before grepping,
+greped the capture and not a pipe, and every guard ended in `exit 1`, so it is none of Halt 8's sub-shapes
+(a)–(h); and Halt 8's headline (*"a path it names does not exist"*) cannot engage, because the block **named no
+fixture path at all**. The defect is the any-case-passes filter, and its repair is the **by-path** assertion now
+carried in Checkpoint 8 below — not a re-run of the harness. AC-294's own discharge stays **Checkpoint 7b-ii's**
+(`s7b-ii` :697-698, its block-constructor case); Step 8 asserts only that the `--stay` case file and its committed
+`.stderr` are still there.
 
 **(6) `redkiln lint --facet-stability` (AC-071) passes**, which means one of exactly two things and nothing else:
 
@@ -134,26 +150,47 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo
 # form s7e Checkpoint 7e uses, and it is why the argument is dropped here. A bare <path> is a bash
 # redirect, not an argument: the line above never ran until 2026-09-12. If a facet is ever
 # source = "llm", the record-bearing form is
-#   STABILITY_RECORD=          # set to a real path first
+#   CORPUS_REPO=$(grep '^CORPUS_REPO=' CORPUS_PIN | cut -d= -f2-)
+#   STABILITY_RECORD="$CORPUS_REPO/results/p1-arm-l-stability.json"   # the path, filled 2026-09-15; the
+#                                    # placeholder that stood here (`STABILITY_RECORD=  # set to a real path
+#                                    # first`) was the landing record's to fill and is now filled. Read
+#                                    # CORPUS-RELATIVE THROUGH CORPUS_PIN, never through a working tree (AC-464).
 #   test -n "$STABILITY_RECORD" || { echo "FAIL: no stability record path"; exit 1; }
+#   test -s "$STABILITY_RECORD" || { echo "FAIL: no stability record at $STABILITY_RECORD — an absent record must never read as the pass"; exit 1; }
 #   ./target/debug/redkiln lint --facet-stability .redkiln/facets.toml --stability-record "$STABILITY_RECORD"
 # [WILL EXIST] -- re-run at Checkpoint 7e, where s7e:120-121 runs both lints against the product registry.
 # exit 0 only when EITHER zero facets are declared source = "llm",
 # OR a stability record satisfies ALL FIVE clauses:
 #   modal_required_set_identity >= 0.80  AND  n_items >= 20  AND  draws_per_item >= 10
-#   AND panel_verdict == "scored"        AND  corpus_sha == <catalog corpus pin>
+#   AND panel_verdict == "scored"        AND  corpus_sha == <the pin the MEASUREMENT was taken at>
 #
-# panel_verdict == "scored" IS NOW SATISFIABLE AND, FOR ARM D, SATISFIED — F39 scored it on 2026-09-09
+# READ THE SECOND BRANCH AS FAILING. It is stated plainly here because the record's PATH is now named --
+# by AC-071's dated register amendment, 2026-09-15 -- and the block must not imply the gate could pass on it.
+# THE RECORD FILE ITSELF DOES NOT EXIST. [measured 2026-09-15: `git -C $CORPUS_REPO ls-tree -r 27d97e9b
+# --name-only | grep -c p1-arm-l-stability` -> 0, and no such file on disk.] Its write lands in the corpus
+# and s7b §7b.11 precondition 7 reserves it to the operator -- which is why s7b §7b.11 precondition 2 is
+# still FALSE, on that half alone, and s7b-kernel.md says so in those terms. WHEN it is written it is a
+# TRANSCRIPTION of F36 that s7b §7b.2 forbids regenerating; its scalar is the MINIMUM of F36's four
+# identity figures, 0.10, so
+# CLAUSE 1 FAILS at 0.10 against the 0.80 line [measured, F36: 0.25 / 0.15 / 0.10 / 0.10].
+# CLAUSE 5 DOES NOT CLEAR EITHER, and that is fail-closed and correct. Under DECISIONS-2026-09-15 D15-1,
+# `corpus_sha` in a TRANSCRIBED record denotes THE PIN THE MEASUREMENT WAS TAKEN AT --
+# 47faec9f46b8d983c2c75f0794164e68415ae706, the value F36's own engine rows carry and the value
+# crates/rk-kernel/tests/it/facet_stability.rs:37 already hard-codes as CATALOG_CORPUS_PIN -- and NOT the
+# catalog pin at read time, which CORPUS_PIN moves. So clause 5 is unsatisfied whenever CORPUS_PIN is not
+# that sha. A record edited to make clause 5 pass while clause 1 failed would be the "a lint that reads
+# identity and skips the panel clause" failure one level over, and D15-1 refuses it by name.
+# panel_verdict == "scored" IS SATISFIABLE AND, FOR ARM D, SATISFIED — F39 scored it on 2026-09-09
 # over 140 truth cells at 47faec9f (all scored after the 2026-09-11 panel-file key fix; the 2026-09-09 run scored 136 — F39-DRAFT's Correction).
-# THE OTHER FOUR ARE UNTOUCHED, and identity measured 0.25 / 0.15 / 0.10 / 0.10 against 0.80
-# [measured, F36]. A discharged clause is not a partial unblocking: the gate still fails on the second
-# branch, and the fixture set stays at FIVE. After Step 4a the FIRST branch is what passes — zero llm facets
-# (ADR-0090; DECISIONS-2026-09-11 #2) — which is the expected outcome.
+# A discharged clause is not a partial unblocking: the gate still fails on the second branch — on clause 1
+# and on clause 5 — and the fixture set stays at FIVE. After Step 4a the FIRST branch is what passes — zero
+# llm facets (ADR-0090; DECISIONS-2026-09-11 #2) — which is the expected outcome, and it is the branch this
+# check takes: nothing in Phase 1 reaches the record-bearing form.
 ```
 
 **(6, second lint) `redkiln lint --facet-provenance` (AC-520) passes** — the derived-facet sibling, new since F39,
-which gates the half of the registry AC-071 never reached. **This is not an eighth exit criterion**: design §10.2
-names seven and this runbook does not add to them. It is stated here because AC-520 is the criterion that makes
+which gates the half of the registry AC-071 never reached. **This is not an added exit criterion**: design §10.2
+names seven, this runbook **withdraws (5)** (2026-09-15) and adds none. It is stated here because AC-520 is the criterion that makes
 (6)'s neighbouring half checkable, and a Phase 1 that exits on (6) with `--facet-provenance` unbuilt has left the
 measurably-wrong half of the registry ungated — which is the state F39 found:
 
@@ -195,7 +232,7 @@ printf '%s\n' "$out" | grep -qE 'resolution_limited|low_sample|not attributable'
 printf '%s\n' "$out"   # → READ: every dispatch carries a cost row (AC-394) and no per-run headroom figure appears (AC-373). `n` is deliberately NOT greped for — ADR-0110 requires the count, never a rendering of it.
 ```
 
-**Checkpoint 8.** All seven pass (with (1)'s two halves and (6)'s two lints), and the following remain true and
+**Checkpoint 8.** All six pass (with (1)'s two halves and (6)'s two lints), and the following remain true and
 unviolated across the whole phase:
 
 - No `require` row keyed on an LLM-emitted `criticality`, `novelty`, `size`, `blast_radius`, `market_facing`,
@@ -234,8 +271,13 @@ unviolated across the whole phase:
   `toolchain` and `change` [measured, F39 §3]; the decision is an arm of S-FACET and ADR-0089 does not take it.
 - **No document, section or commit message describes this design as final.** S-BIN, S-H1c and P8's unrun arms gate
   that label, and P8 has no result on its own question.
+- **The `--stay`-class state stays unconstructible, and its `trybuild` case is asserted BY PATH.** *(Added
+  2026-09-15 with the withdrawal of exit criterion (5); `DECISIONS-2026-09-14 D-14`.)* Both
+  `crates/rk-kernel/tests/ui/stay_class_state_is_unconstructible.rs` **and its committed `.stderr`** exist, and
+  the kernel's must-fail suite passes under its own name. A harness that runs proves nothing about a case that is
+  not there — which is exactly what the withdrawn check (5) could not see.
 
-Those sixteen are not read, they are run. Checkpoint 8's mechanical lines, in bullet order:
+Those seventeen are not read, they are run. Checkpoint 8's mechanical lines, in bullet order:
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -294,6 +336,20 @@ grep -rn 'four questions on twenty items' --include=*.md . ; rc=$?; [ "$rc" -eq 
 
 # source asymmetry is NOT a predicate. The runnable half is that the record still holds the question open.
 grep -q 'Source asymmetry is an arm of the same spike and is settled nowhere' references/2026-09-08-architecture-design.md || { echo "FAIL: the asymmetry-open statement is gone from design §10.5 — a section may have decided it"; exit 1; }
+
+# the --stay case BY PATH — the assertion withdrawn check (5) never made. Modelled on Checkpoint 7b's own
+# by-path loop, in `s7b-kernel.md` under `### 7b.14 Checkpoint 7b`, whose opening line reads
+#   for f in stay_class_state_is_unconstructible ac480_generics_leak ac050_rigor_is_not_arithmetic
+# CITED BY THAT LITERAL AND NOT BY LINE, checkable with `grep -cF` at any later moment. The line range that
+# stood here did NOT hold that loop — it resolves to the GRAMMAR-name loop, whose own opening line reads
+# `for t in grammar_agrees_with_the_s_grammar_probe` — and `s7b-kernel.md` says of its by-path block that
+# "it moves again with this pass". A green trybuild harness is NOT this: `-- trybuild` passes whenever any one of the
+# 13 cases in tests/ui/ passes, so the case file itself is named, and its .stderr is asserted non-empty.
+test -f crates/rk-kernel/tests/ui/stay_class_state_is_unconstructible.rs || { echo "FAIL: the --stay trybuild case is absent — a harness that runs proves nothing about a case that is not there (AC-294; DECISIONS-2026-09-14 D-14)"; exit 1; }
+test -s crates/rk-kernel/tests/ui/stay_class_state_is_unconstructible.stderr || { echo "FAIL: the --stay case commits no .stderr, so it is green whenever compilation fails for ANY reason (s7a §7a.8)"; exit 1; }
+out=$(cargo test -p rk-kernel --test it -- trybuild_pins_the_reason_each_kernel_fixture_fails 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the kernel must-fail suite did not pass (rc=$rc) — a fixture COMPILED, or its .stderr drifted"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE '^test .*\btrybuild_pins_the_reason_each_kernel_fixture_fails\b.* \.\.\. ok$' || { echo "FAIL: no test of that name ran and passed — a filter matching nothing exits 0 (00-preamble.md:178)"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 ```
 
 ---

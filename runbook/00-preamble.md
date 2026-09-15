@@ -11,9 +11,9 @@ threshold and instrument. Where a stage file disagrees with any of those, the st
 Phase 0 (close the programme) and Phase 1 (kernel, store, fix and story lanes, four adapters) only. Phases 2–4 are
 out of scope. · **Inputs:** `references/2026-09-08-architecture-design.md` (§0.1, §5.3, §5.9, §9, §10) ·
 `references/2026-09-08-acceptance-criteria.md` (AC-001–AC-519, AC-520 — the derived-facet gate — and the ids the
-2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**121 records**,
-`0001`–`0121` contiguous, with `0090` written at Step 4.4 on 2026-09-12, `0117` on 2026-09-13, `0091` at Step 6.1 on 2026-09-13, `0118` for Step 7a on 2026-09-13 and `0119`, `0120` and `0121` for Step 7b on 2026-09-13 — no reserved number remains; `references/adr/ERRATA.md` for corrections to
-frozen records) *(Corrected 2026-09-13 four times: this read "**120 records**, `0001`–`0120` contiguous" until ADR-0121 — commutative Kleene absorption, superseding ADR-0103 decision 4's connective sentence in part for Step 7b Slice 3 — was written, "**119 records**, `0001`–`0119` contiguous" until ADR-0120 — the `dag_amended` event kind AC-064's THEN requires, minted by record because ADR-0116 permits no other route — was written, "**118 records**, `0001`–`0118` contiguous" until ADR-0119 — the selection memo key, settling AC-045's fourth key for Step 7b — was written, and "**117 records**, `0001`–`0117` contiguous" until ADR-0118, the lock-poisoning halt closing the residual ADR-0115 assigned to Step 7a.)* · `spikes/DECISIONS-2026-09-11.md`, `spikes/DECISIONS-2026-09-12.md` and **`spikes/DECISIONS-2026-09-14.md`** (the operator decisions this runbook executes — the 2026-09-11 log runs to #27; the 2026-09-12 log carries E1–E13 from the alignment review and is cited as `DECISIONS-2026-09-12 E<n>`; the **2026-09-14** log carries **D-1…D-14**, the decisions Step 7b Slice 4 was not permitted to take, cited as `DECISIONS-2026-09-14 D-<n>` — seven executed in code, two build-scope, five still owed as record work above the runbook) ·
+2026-09-11 amendment allocated from AC-521 upward, and **its** §12.10) · `references/adr/` (**122 records**,
+`0001`–`0122` contiguous, with `0090` written at Step 4.4 on 2026-09-12, `0117` on 2026-09-13, `0091` at Step 6.1 on 2026-09-13, `0118` for Step 7a on 2026-09-13, `0119`, `0120` and `0121` for Step 7b on 2026-09-13 and `0122` at Step 7b Slice 4 on 2026-09-14 — no reserved number remains; `references/adr/ERRATA.md` for corrections to
+frozen records) *(Corrected 2026-09-15: this read "**121 records**, `0001`–`0121` contiguous" from before **ADR-0122** was committed at `71b20c1` on 2026-09-14. Re-measured on this tree 2026-09-15: `ls references/adr/*.md | wc -l` → **124** files, of which **122** are numbered records — **118** `accepted`, **4** `superseded`, **0** `proposed` — plus `README.md` and `ERRATA.md`. The count in the parenthetical above is the RECORD count, which is what this sentence has always meant.)* *(Corrected 2026-09-13 four times: this read "**120 records**, `0001`–`0120` contiguous" until ADR-0121 — commutative Kleene absorption, superseding ADR-0103 decision 4's connective sentence in part for Step 7b Slice 3 — was written, "**119 records**, `0001`–`0119` contiguous" until ADR-0120 — the `dag_amended` event kind AC-064's THEN requires, minted by record because ADR-0116 permits no other route — was written, "**118 records**, `0001`–`0118` contiguous" until ADR-0119 — the selection memo key, settling AC-045's fourth key for Step 7b — was written, and "**117 records**, `0001`–`0117` contiguous" until ADR-0118, the lock-poisoning halt closing the residual ADR-0115 assigned to Step 7a.)* · `spikes/DECISIONS-2026-09-11.md`, `spikes/DECISIONS-2026-09-12.md`, **`spikes/DECISIONS-2026-09-14.md`** and **`spikes/DECISIONS-2026-09-15.md`** (the operator decisions this runbook executes — the 2026-09-11 log runs to #27; the 2026-09-12 log carries E1–E13 from the alignment review and is cited as `DECISIONS-2026-09-12 E<n>`; the **2026-09-14** log carries **D-1…D-14**, the decisions Step 7b Slice 4 was not permitted to take, cited as `DECISIONS-2026-09-14 D-<n>` — seven executed in code, two build-scope, five landed 2026-09-15 as record work above the runbook *(corrected 2026-09-15: this read "five still owed as record work above the runbook", and a later cut left "five record work above the runbook" — a noun phrase with no verb. The five — **D-1**, **D-3**, **D-12**, **D-13**, **D-14** — were landed on **2026-09-15**, with two obligations carried forward rather than absorbed: **ADR-0122 decision 5(c)** as residual **R-2**, and **AC-071's stability record itself**, which lands in the corpus and `s7b` §7b.11 precondition 7 reserves to the operator)*; the **2026-09-15** log carries **D15-1…D15-4**, the four free residuals that surfaced while landing those five and that no draft had named, cited as `DECISIONS-2026-09-15 D15-<n>`, and it names six residuals **R-1…R-6** it does not settle) ·
 `spikes/F39-DRAFT.md` · `spikes/F40-DRAFT.md` · `spikes/F41-DRAFT.md` (S-PORTS) · `spikes/F42-DRAFT.md` (S-GRAMMAR) ·
 `spikes/HANDOFF.md` · `spikes/DECISIONS-2026-09-09.md` · `references/2026-09-08-evidence-brief.md` §E. ·
 **Tree state:** every path and every existing command in the stage files was re-verified against the working tree
@@ -38,7 +38,7 @@ and two are numbered decisions recorded in `spikes/DECISIONS-2026-09-11.md` befo
 
 **An eighth, added 2026-09-12.** The 2026-09-11 audit left the two must-fail fixture crates (AC-001–AC-004, AC-005) without a name, a path or a shape, and this table did not carry them as a decision. They are now decided — feature-gated workspace members at `tests/fixtures/rk-clock-read/` and `tests/fixtures/rk-banned-dep/`, **DECISIONS-2026-09-12 E4**, executed at s5 §5.1a. Five further decisions from the same review (**E1**, **E2**, **E3**, **E11**, **E12**) move a record at or above the runbook in ADR-0092's chain and are **owed, not executed here** — `DECISIONS-2026-09-12` names what each one must write.
 
-**`0089` is taken, and so are `0092`–`0121` and now `0090`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
+**`0089` is taken, and so are `0092`–`0122` and now `0090`.** `references/adr/0089-facet-provenance-declared-surfaces-and-abstention.md`
 was accepted on 2026-09-09 and partially supersedes ADR-0030 (PC8); ADR-0093 (2026-09-11) supersedes it in part
 again — `stage`/`rigor`/`role`/`cost` are `source = "kernel"`, `surfaces` is `source = "declared"`, six facets stay
 `derived` — and Step 4a executes both. Step 4.4's context-vector record is **0090** — **written 2026-09-12**, superseding ADR-0079 in full — and Step 6.1's
@@ -55,8 +55,15 @@ Kleene's strong three-valued connectives and **both** absorbing positions absorb
 `null or true` = `true`), which **supersedes ADR-0103 decision 4's connective sentence IN PART**: exactly two cells of
 the two truth tables move, every other clause of decision 4 and decisions 1, 2, 3, 5 and 6 stand, and ADR-0103 stays
 `accepted` carrying `superseded_by: ["0121"]`. It is a departure **on the merits**, not a clarification — the record as
-written forces the literal, left-sequential reading, and four live `spikes/p9` predicates break under it. The next free
-number is **`0122`**. *(Corrected 2026-09-13 four times: this sentence gave the next free number as `0121` until ADR-0121 was
+written forces the literal, left-sequential reading, and four live `spikes/p9` predicates break under it. Step 7b Slice 4's record is **0122**, **written on
+2026-09-14** — register §0.3's **C1**, its oldest open contradiction, resolves for **AC-026 and AC-232**: a
+harness-internal `system/api_retry` attempt **charges** the activity's attempt budget, one charge per recorded
+event in the pass that dispatched it, and **AC-391's *Cut* does not stand**. It supersedes **nothing** —
+ADR-0037's whole `## Decision` is a load-time lint rule on a **declared** field and nothing in it moves, so
+`supersedes: []` and ADR-0037 keeps `superseded_by: []` — and the register amendments its decision 5 owes are
+`DECISIONS-2026-09-14 D-1`'s, not this runbook's. The next free number is **`0123`**.
+*(Corrected 2026-09-15: this sentence gave the next free number as `0122` until ADR-0122 was written at Step 7b
+Slice 4 on 2026-09-14 and committed at `71b20c1`; it is `accepted`, dated 2026-09-14.)* *(Corrected 2026-09-13 four times: this sentence gave the next free number as `0121` until ADR-0121 was
 written, as `0120` until ADR-0120 was, as `0119` until ADR-0119 was, and as `0118` before ADR-0118 was.)* *(Corrected 2026-09-12: this sentence said the next free number was 0115, from before ADR-0115
 and ADR-0116 landed.)* **Step 4a is
 not a decision** — it is the execution order for the registry, schema and lint work ADR-0089 and ADR-0093 force.
@@ -99,8 +106,16 @@ rustup run 1.98.1 rustc --version >/dev/null 2>&1 || echo "MISSING: toolchain 1.
 These hold for every step below. They are not advice; each one is a measured failure this programme already paid for.
 
 1. **Nothing in the selection path over LLM-emitted facets starts before Step 4's gate clears.** ADR-0079 is
-   `proposed`, is the only non-accepted record in the set other than two full supersessions, and **forbids being
-   amended into a decision**. Until Step 4 closes, no `require` row may be keyed on an LLM-sourced `criticality`,
+   `superseded` — it was `proposed`, and the only non-accepted record in the set other than two full
+   supersessions, when this constraint was written, and it **forbade being amended into a decision**.
+   *(Corrected 2026-09-15: this read "ADR-0079 is `proposed`, is the only non-accepted record in the set other
+   than two full supersessions, and **forbids being amended into a decision**". **ADR-0090** superseded it in
+   full at Step 4.4 on 2026-09-12, and 0079's frontmatter reads `status: superseded`, `superseded_by:
+   ["0090"]` today. **THE BLOCK ITSELF IS UNCHANGED IN FORCE**; only the record's status
+   label was stale, and the prohibition was honoured rather than lifted — 0079 was never amended into a
+   decision, a successor was written instead. Under `DECISIONS-2026-09-15 D15-2` a stale status label in an
+   amendable file takes a **dated in-place correction and not an erratum**, and **`E-0079-2` is withdrawn as an
+   instrument, not as an obligation** — this paragraph is where that obligation lands.)* Until Step 4 closes, no `require` row may be keyed on an LLM-sourced `criticality`,
    `novelty`, `size`, `blast_radius`, `market_facing`, `external_dep` or `has_repro`. `kind` is out of scope of the
    block (human input, ADR-0030 rule 4). The engine's *semantics* are decided and may be built now; its *input* may
    not. [F36: modal `R` identical on 5/20, 3/20, 2/20, 2/20 against an 80% line; 400 dispatches, 0 void, $21.37]
@@ -110,7 +125,9 @@ These hold for every step below. They are not advice; each one is a measured fai
    **discharges the fourth clause only** [measured, F39]. The block still stands on the **first**: modal
    required-set identity was measured at **0.25 / 0.15 / 0.10 / 0.10** against the 0.80 line [measured, F36]. F39
    measures a *derived* context vector; ADR-0079 asks about an *LLM-emitted* one, so F39 narrows 0079's options
-   without deciding among them and **0079 stays `proposed`** until Step 4.4 writes its successor.
+   without deciding among them and **0079 stayed `proposed`** until Step 4.4 wrote its successor — which it did,
+   as **ADR-0090**, on 2026-09-12. *(Corrected 2026-09-15 with the label above: the sentence was written before
+   Step 4.4 ran and its tense was never moved. The clause it supports is unchanged.)*
 
 2. **Nothing may depend on a process surviving.** Anything long-running is a durable mark plus a later read. F22
    measured ~12 background kills against one 12,000 s survivor under `Start-Process`; `issue-81` was killed three
