@@ -166,11 +166,12 @@ carried in Checkpoint 8 below — not a re-run of the harness. AC-294's own disc
 #
 # READ THE SECOND BRANCH AS FAILING. It is stated plainly here because the record's PATH is now named --
 # by AC-071's dated register amendment, 2026-09-15 -- and the block must not imply the gate could pass on it.
-# THE RECORD FILE ITSELF DOES NOT EXIST. [measured 2026-09-15: `git -C $CORPUS_REPO ls-tree -r 27d97e9b
-# --name-only | grep -c p1-arm-l-stability` -> 0, and no such file on disk.] Its write lands in the corpus
-# and s7b §7b.11 precondition 7 reserves it to the operator -- which is why s7b §7b.11 precondition 2 is
-# still FALSE, on that half alone, and s7b-kernel.md says so in those terms. WHEN it is written it is a
-# TRANSCRIPTION of F36 that s7b §7b.2 forbids regenerating; its scalar is the MINIMUM of F36's four
+# THE RECORD FILE NOW EXISTS. *(Corrected 2026-09-15, later the same day: this read "THE RECORD FILE
+# ITSELF DOES NOT EXIST", measured against pin 27d97e9b before s7b §7b.11's move. The operator minted it
+# and moved the pin 27d97e9b -> 61f590e5, so s7b §7b.11 precondition 2 is SATISFIED and Checkpoint 7b has
+# PASSED. NONE OF THAT CHANGES THE BRANCH ABOVE, which still reads as FAILING -- and that is the point of
+# saying so here: the record's existence was never what the gate turned on.) It is a TRANSCRIPTION of F36
+# that s7b §7b.2 forbids regenerating; its scalar is the MINIMUM of F36's four
 # identity figures, 0.10, so
 # CLAUSE 1 FAILS at 0.10 against the 0.80 line [measured, F36: 0.25 / 0.15 / 0.10 / 0.10].
 # CLAUSE 5 DOES NOT CLEAR EITHER, and that is fail-closed and correct. Under DECISIONS-2026-09-15 D15-1,
