@@ -2,8 +2,8 @@
 # object store, never through a working tree (AC-464). A run against an unpinned
 # reference, or against a corpus checkout with uncommitted changes, is REFUSED.
 CORPUS_REPO=D:/repos/redkiln-corpus
-CORPUS_SHA=27d97e9b164d09dc755fe38e353de922cb97c482
-PINNED_AT=2026-09-13
+CORPUS_SHA=61f590e51cbb00301c310e46aab615563a7787b8
+PINNED_AT=2026-09-15
 
 # The frozen predecessor corpus this repo pins in turn, unchanged — and its bundle inside the corpus repo,
 # which is what every corpus-bound test reads (never the machine-local clone; ADR-0100 / PIA-002):
@@ -28,4 +28,4 @@ PREDECESSOR_WORKING_TREE_PATCH=predecessor-working-tree-2026-09-12.patch
 # Route (b): a verified bundle on a volume that is not D:. Restore-tested — both panels come back
 # byte-identical to the originals, and the corpus carries a `* -text` .gitattributes so any clone on
 # any platform reproduces the bytes that were scored. [2026-09-12]
-CORPUS_BACKUP_BUNDLE=C:/rk-corpus-backup/corpus-v0-2026-09-12.bundle
+CORPUS_BACKUP_BUNDLE=C:/rk-corpus-backup/corpus-v0-2026-09-15.bundle
