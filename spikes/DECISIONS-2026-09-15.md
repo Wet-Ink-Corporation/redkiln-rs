@@ -11,7 +11,7 @@ Cite them as `DECISIONS-2026-09-15 D15-<n>`.
 **Where they came from.** The session that landed the five record items `DECISIONS-2026-09-14.md` left owed
 (D-1, D-3, D-12, D-13, D-14) verified each draft against its primary record before authoring, and **four free
 residuals surfaced that none of the five drafts had named**. Each blocked an edit that would otherwise have been
-written on a default. `00-preamble.md`:55 — *"Where a stage is tempted to decide something else, it stops."*
+written on a default. `00-preamble.md`, the golden constraints' closing line — *"Where a stage is tempted to decide something else, it stops."*
 
 **What the verification cost, stated once.** Fourteen agents read the primary records rather than the drafts.
 Three of the drafts' load-bearing claims were **refuted**, and each would have landed a defect:
@@ -55,6 +55,19 @@ failed would be the *"a lint that reads identity and skips the panel clause"* fa
 
 **What it owes.** One clause in AC-071's dated amendment saying what `corpus_sha` denotes for a transcribed
 record — **the pin the measurement was taken at, not the catalog pin at read time**.
+
+**🛑 Corroborated 2026-09-15 while staging the move, and it makes this decision weaker than it looked — in the
+good direction. This is not a new convention; it is the one already implemented in code.** AC-520's scored
+precision record is produced by `spikes/p1/score-arm-d-panel.py`, which does **not** read `CORPUS_PIN` for the
+value at all: it collects `corpus_sha` **from the engine records themselves**, aborts if they carry more than one
+distinct value (*"ABORT: engine records carry N distinct corpus_sha value(s)"*), and writes the one they agree
+on. Run against the five inputs extracted from the object store at today's pin `27d97e9b…`, the record it emits
+carries **`47faec9f…`** — the pin the measurement was taken at — and `27d97e9b` appears nowhere in it [measured
+2026-09-15, staged at `C:/rk-pin-move-2026-09-15`]. So the **sibling record in the same corpus commit already
+does what D15-1 fixes for this one**, and the two are consistent rather than one being an exception. A check
+written on the other reading — that the scored record should carry today's catalog pin — was tried first and
+**failed against the record**; establishing the guard's scope before obeying it (golden constraint 9) showed the
+check was wrong, not the artifact.
 
 ---
 

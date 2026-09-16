@@ -72,7 +72,37 @@ below, and is yours. That is the whole gate.
 
 ---
 
-## A. Stage the three artifacts — into a scratch tree, never the corpus
+## A. Stage the three artifacts — ✅ **DONE 2026-09-15. Read this, then go to step B.**
+
+**Staged and verified at `C:/rk-pin-move-2026-09-15`** — outside both repositories, so precondition 5 holds and
+nothing was written to the corpus. **All fifteen staged checks pass**; re-run them yourself with:
+
+```bash
+python C:/rk-pin-move-2026-09-15/verify-staged.py    # → 0 failures, exit 0
+```
+
+| staged | what was verified |
+| --- | --- |
+| `results/p1-arm-d-panel-scored.json` | **140 truth cells**; a per-facet interval-plus-positives pair on 7 rows; carries `corpus_sha` `47faec9f…`. Provenance `oracle 60 · panel 39 · panel(moot-flag) 9 · human 32`. `auth` scores **0.00 [0.00, 0.24]** on 0/12, matching `halts.md` Halt 10's recorded figure |
+| `results/p1-arm-l-stability.json` | F36's four figures **0.25 / 0.15 / 0.10 / 0.10** and **not `1.00`**; scalar is the **minimum**; `corpus_sha` is the measurement pin; `regenerated: false`; the three registry digests; `clears_identity_bar: false` |
+| `golden-logs/implement-bf1d8cec3b22d288/` | non-empty, 15 files; `run.json` `schema` is **`rk-kernel/golden-log/v2`** with its **8** members; `inputs/` with its **9**; `events.jsonl` LF-terminated, no CR |
+
+**The scorer's inputs were extracted from the OBJECT STORE at the pin, never from the checkout** — AC-464 requires
+that and a clean checkout is only a proxy for it:
+`git -C "$CORPUS_REPO" show "$CORPUS_SHA:results/<f>"` for each of the five.
+
+> 🛑 **One check of mine failed first and the record was right.** I asserted the scored record "carries the pin",
+> reading that as today's catalog pin `27d97e9b…`. It does not, and it should not:
+> `spikes/p1/score-arm-d-panel.py` never reads `CORPUS_PIN` for that value — it collects `corpus_sha` **from the
+> engine records themselves**, aborts if they disagree, and writes the one they agree on, which is
+> **`47faec9f…`, the measurement pin**. So **AC-520's sibling record already does what `DECISIONS-2026-09-15`
+> D15-1 fixes for AC-071's** — the two are consistent, and D15-1 is a convention this codebase already had rather
+> than one it invented. Establishing the guard's scope before obeying it (golden constraint 9) is what separated
+> "the artifact is wrong" from "my check is wrong".
+
+The rest of this section records **how** the three were produced, so the act is reproducible and auditable.
+
+### How they were produced — into a scratch tree, never the corpus
 
 `s7b` §7b.11's order paragraph: *"produce all three artifacts into a **staging** tree, never into the corpus;
 verify the staged artifacts **before** any copy."* Precondition 5 (AC-465) is why the staging tree must not be
