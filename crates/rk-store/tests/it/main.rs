@@ -5,3 +5,4 @@ mod locator;
 mod store;
 mod support;
 mod tier_ui;
+mod verify;

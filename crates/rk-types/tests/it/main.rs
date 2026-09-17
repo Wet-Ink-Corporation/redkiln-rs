@@ -12,3 +12,4 @@ mod schema_no_oneof;
 mod schema_snapshot;
 mod step_error_is_total;
 mod support;
+mod verify_types;

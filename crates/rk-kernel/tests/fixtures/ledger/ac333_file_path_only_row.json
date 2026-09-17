@@ -1,0 +1,5 @@
+{
+  "ac": "AC-901",
+  "status": { "kind": "pinned" },
+  "evidence": { "file": "test/implement-contract.test.ts", "test": "", "assertion": "" }
+}

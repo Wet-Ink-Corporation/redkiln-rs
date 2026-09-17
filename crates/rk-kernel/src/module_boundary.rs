@@ -1005,6 +1005,7 @@ pub const LEDGER_TOKENS: &[&str] = &[
     "AcLedger",
     "LedgerStatus",
     "AcLedgerRow",
+    "AssertionLocator",
     "::Pinned",
     "ledger::",
 ];

@@ -29,3 +29,5 @@ pub mod schema;
 pub mod text;
 pub mod time;
 pub mod typed;
+/// The verify gate's record type (Step 7b-ii): the adapter's report with its closed basis and reason.
+pub mod verify;

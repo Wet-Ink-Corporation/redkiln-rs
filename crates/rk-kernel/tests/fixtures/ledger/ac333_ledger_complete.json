@@ -1,0 +1,24 @@
+{
+  "rows": [
+    {
+      "ac": "AC-901",
+      "status": { "kind": "pinned" },
+      "evidence": { "file": "test/implement-contract.test.ts", "test": "orders the plan steps", "assertion": "expect(order).toEqual([...])" }
+    },
+    {
+      "ac": "AC-902",
+      "status": { "kind": "mutation_survived" },
+      "evidence": { "file": "test/implement-contract.test.ts", "test": "AC-015 step 7 runs after step 6", "assertion": "expect(steps[6].name).toBe('run-tests')" }
+    },
+    {
+      "ac": "AC-903",
+      "status": { "kind": "unpinned" },
+      "evidence": null
+    },
+    {
+      "ac": "AC-904",
+      "status": { "kind": "not_feasible", "reason": "the pack declares mutation infeasible for binary assets" },
+      "evidence": null
+    }
+  ]
+}

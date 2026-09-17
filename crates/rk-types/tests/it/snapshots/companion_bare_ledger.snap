@@ -10,6 +10,7 @@ expression: schema
     "rows": {
       "type": "array",
       "items": {
+        "description": "One AC's row. `evidence` is declared last because it is optional (AC-158's ordering rule) and\noptional only because `unpinned`, `not_feasible` and `human_answered` rows have none to give.",
         "type": "object",
         "properties": {
           "ac": {
@@ -99,6 +100,31 @@ expression: schema
                 ]
               }
             ]
+          },
+          "evidence": {
+            "description": "Where the evidence for a row lives: **file, test identifier and the assertion within that\ntest** (AC-333). Three members, all required, none empty — a file alone is the shape F25\nmeasured as vacuous (36/36 green at file granularity over an inverted ordering).",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "test": {
+                "type": "string"
+              },
+              "assertion": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "file",
+              "test",
+              "assertion"
+            ],
+            "default": null
           }
         },
         "additionalProperties": false,
