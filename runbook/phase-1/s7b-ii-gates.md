@@ -123,8 +123,13 @@ file's.
 **AC-524 is claimed by no other stage.** It is allocated outside the exhausted AC-240..AC-279 range (register §0.4),
 `grep -rn 'AC-524' runbook/` returned `s7b`:118 *(at `60f17c6`; that file was rewritten from 264 to over 1,200
 lines the same day, so the anchor reads only against the pin)* and `PROGRESS.md`:77 and nothing else before this
-file existed [measured 2026-09-13], and Checkpoint 7b has run `ac524_fresh_record_on_rereach` since PIA-047 against an id in no
-acceptance set. It is claimed here, in §7b-ii.14, with its PROVISIONAL label stated.
+file existed [measured 2026-09-13], and Checkpoint 7b's block **carried** a `cargo test -p rk-kernel --
+ac524_fresh_record_on_rereach` line from PIA-047 (`s7b`:226-229 at `60f17c6`) against an id in no acceptance set. It
+is claimed here, in §7b-ii.14, with its PROVISIONAL label stated. *(Corrected 2026-09-17: this read "Checkpoint 7b
+**has run** `ac524_fresh_record_on_rereach` since PIA-047". That was true of the block's TEXT at `60f17c6` and false
+of any run: the split commit `80a40da` moved the line out of `s7b` the same day, the block that passed at `ddc57be`
+does not contain it, and `git grep -n ac524 -- crates runbook/phase-1/s7b-kernel.md runbook/PROGRESS.md` returns
+nothing on this tree [measured 2026-09-17]. The test is first authored at this stage, Slice B, red-first.)*
 
 ### 7b-ii.3 The review classifier — one total decision table, and two of the three are binding
 
@@ -350,8 +355,14 @@ does not exist here — Step 7e derives it (`s7e` §7e.1), and `ls -d .redkiln` 
 validator are measured against, so they may not be edited to make a red case.
 
 Author every fixture under **`crates/rk-kernel/tests/fixtures/`**, beside the sub-tree `s7b` §7b.12 opens and in
-five directories of its own (`s7b` §7b.12's table is Step 7b's set; these five are added by this sub-step, and
-`ui/` is shared because the crate has **one** trybuild harness):
+five directories of its own (`s7b` §7b.12's table is Step 7b's set; **three** of these five — `gates/`, `findings/`,
+`ledger/` — are added by this sub-step, **two** — `packs/` and `lint-controls/` — already exist from Step 7b and gain
+files here, and `ui/` is shared because the crate has **one** trybuild harness) *(corrected 2026-09-17: this read
+"these five are added by this sub-step". Measured on the untouched tree at `fc4c502`: `packs/` held 15 pack fixtures
+and `lint-controls/` held `ac294_runstate_construction_control.rs` and `ac487_identity_check_control.rs`, both 7b's.
+The consequence for §7b-ii.13 is stated where it bites: the `test -d …/lint-controls` line is a **guard** that already
+passes on the untouched tree, and what discriminates this stage's two controls is the pair of `grep -q` lines that
+name each file — not the directory's existence)*:
 
 - `gates/` — AC-244's partial records (one per missing field), AC-245's dirty-worktree pair, AC-524's two-iteration
   loop graph;
