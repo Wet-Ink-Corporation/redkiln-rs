@@ -473,6 +473,7 @@ pub fn gate_opened_event(record: &crate::workflow::fsm::GateRecord) -> Event {
         serde_json::json!({
             "deadline": record.deadline().unix_seconds(),
             "kind": record.kind(),
+            "reach": record.reach(),
             "token": record.token().as_str(),
             "tree_hash": record.tree_hash(),
         }),

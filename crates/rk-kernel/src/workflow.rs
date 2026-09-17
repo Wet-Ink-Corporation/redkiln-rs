@@ -222,6 +222,10 @@
 /// quantities `attempts_total` names, and the exhaustion gate. A child of this module, so the deny
 /// attributes above reach it.
 pub mod budget;
+/// **The human gate's answer path and re-reach** (Step 7b-ii, `s7b-ii` §7b-ii.2): the spent-token
+/// refusal, the void, the fresh record on a loop-back re-reach. A child of this module, for
+/// [`budget`]'s reason — and AC-242's: no sleep, no blocking receive, no timer on the gate path.
+pub mod gate;
 
 /// **AC-029's `N`, AC-033's `K`, the per-item token appetite and — as of 2026-09-14 (D-7) — the
 /// breaker's expiry and its role → family key** — the values a pack declares and this crate refuses

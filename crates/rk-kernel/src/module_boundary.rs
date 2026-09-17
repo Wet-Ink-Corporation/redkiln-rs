@@ -362,3 +362,174 @@ pub fn run_state_boundary_rule(
 pub fn kernel_sources() -> std::io::Result<Vec<SourceFile>> {
     crate::kernel_denylist::kernel_sources()
 }
+
+// ------------------------------------------------------------ AC-250: no consumer of gate_answer_void writes a transition
+
+/// **AC-250's architecture rule** — *"the codebase contains no merge, re-application or
+/// deferred-reconciliation path that consumes a `gate_answer_void` event as an input to a state
+/// transition"*, verified by *"an architecture test that no consumer of `gate_answer_void` writes
+/// a state transition"*.
+///
+/// **What a consumer is here.** Any `match` arm, `if let`/`if` branch or `|`-grouped arm whose
+/// head names `GateAnswerVoid` (the enum variant) or `gate_answer_void` (the wire name), together
+/// with the block it selects. The rule extracts that block by brace matching from the first `=>`
+/// or `{` after the naming line and scans its **code** (comments stripped) for the transition
+/// writes below. The universal half of AC-250 is this rule; the existential half is the generated
+/// interleavings in `tests/it/gates.rs`.
+///
+/// **Why the rule lives here and not in `workflow::fsm` or `workflow::gate`.** It must contain the
+/// very tokens it searches for, so a rule written inside the module it polices would fire on its
+/// own implementation (`s7b-ii` §7b-ii.12; `s7a`:1032-1039's self-referential shape). This module
+/// is the house source-walk lint, outside both paths.
+///
+/// **Its positive control is committed**: `tests/fixtures/gates/ac250_reconcile_branch.rs` is
+/// ADR-0017's rejected option written as a fold arm — a consumer of `gate_answer_void` that
+/// re-applies the answer and advances the stage — and `ac250_no_reconciliation_path` asserts the
+/// rule reports it. A lint with no fixture is green over a gate path nobody has written.
+pub const TRANSITION_WRITES: &[&str] = &[
+    "state.stage = ",
+    ".stage = ",
+    "stages_entered.push",
+    "last_transition = Some",
+    "committed.insert",
+    "stage_transition_event",
+    "AdvanceStage",
+    "EventKind::StageTransition",
+];
+
+/// What [`void_consumer_rule`] walked, so a green can be read against a floor.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VoidConsumerReport {
+    pub files_walked: usize,
+    /// Consumer blocks found and scanned. A rule that found none over `src/` walked the wrong tree:
+    /// the fold's own `GateAnswerVoid` arm exists and must be among them.
+    pub consumers_scanned: usize,
+    pub code_lines_scanned: usize,
+}
+
+const VOID_NAMES: &[&str] = &["GateAnswerVoid", "gate_answer_void"];
+
+/// Find the block a consumer head selects: from `start` (the byte offset of the naming line),
+/// skip to the first `=>` or `{`, then brace-match. Returns the block's byte range, or `None` if
+/// the head is not followed by a block within the window (a bare `| EventKind::GateAnswerVoid`
+/// line inside a grouped arm is followed by more heads and then the arm's own `=>`).
+fn consumer_block(text: &str, start: usize) -> Option<(usize, usize)> {
+    let window_end = text.len().min(start + 4_000);
+    let window = &text[start..window_end];
+    let arrow = window.find("=>");
+    let brace = window.find('{');
+    let open = match (arrow, brace) {
+        (Some(a), Some(b)) if a < b => {
+            // `=> {` or `=> expr,` — an expression arm has no braces; take it to the line end.
+            let after = &window[a + 2..];
+            let nb = after.find(|c: char| !c.is_whitespace())?;
+            if after[nb..].starts_with('{') {
+                start + a + 2 + nb
+            } else {
+                let end = after.find('\n').map_or(window.len(), |e| a + 2 + e);
+                return Some((start + a + 2, start + end));
+            }
+        }
+        (_, Some(b)) => start + b,
+        (Some(a), None) => {
+            let end = window[a..].find('\n').map_or(window.len(), |e| a + e);
+            return Some((start + a + 2, start + end));
+        }
+        (None, None) => return None,
+    };
+    let bytes = text.as_bytes();
+    let mut depth = 0_usize;
+    let mut i = open;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'{' => depth += 1,
+            b'}' => {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    return Some((open, i + 1));
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+/// The rule. `Ok` carries what was walked; `Err` carries one violation per transition write
+/// found inside a consumer block, naming the file, the line and the write.
+///
+/// # Errors
+///
+/// The violations, when any consumer of `gate_answer_void` writes a state transition.
+pub fn void_consumer_rule(
+    files: &[SourceFile],
+) -> Result<VoidConsumerReport, Vec<BoundaryViolation>> {
+    let mut violations: Vec<BoundaryViolation> = Vec::new();
+    let mut consumers_scanned = 0_usize;
+    let mut code_lines_scanned = 0_usize;
+
+    for file in files {
+        // Heads are located over comment-stripped text, so a doc comment naming the variant is
+        // not a consumer. Stripping does not preserve byte length, so blocks are cut from the
+        // ORIGINAL text at the line's original offset and line numbers are re-derived from it.
+        let mut in_block = false;
+        let mut seen_blocks: Vec<(usize, usize)> = Vec::new();
+        let mut offset = 0_usize;
+        for raw in file.text.split_inclusive('\n') {
+            let code = strip_comments(raw, &mut in_block);
+            let names_void = VOID_NAMES.iter().any(|n| code.contains(n));
+            // A naming line INSIDE a block already collected is the consumer's own body (the
+            // fold's arm reads its payload by wire name), not a second consumer — brace-matching
+            // from it would land in the NEXT arm and attribute that arm's writes to this one
+            // [measured 2026-09-17: the first cut reported `committed.insert` from the
+            // `ActivityCommitted` arm against the `GateAnswerVoid` one].
+            let inside_seen = seen_blocks
+                .iter()
+                .any(|(b0, b1)| offset >= *b0 && offset < *b1);
+            if names_void
+                && !inside_seen
+                && let Some(range) = consumer_block(&file.text, offset)
+                && !seen_blocks.contains(&range)
+            {
+                seen_blocks.push(range);
+            }
+            offset += raw.len();
+        }
+
+        for (b0, b1) in seen_blocks {
+            consumers_scanned += 1;
+            let block = &file.text[b0..b1];
+            // the line number of the block's first byte, 1-based, from the original text
+            let first_line = file.text[..b0].matches('\n').count() + 1;
+            let mut in_block = false;
+            for (i, raw) in block.split_inclusive('\n').enumerate() {
+                let code = strip_comments(raw, &mut in_block);
+                if code.trim().is_empty() {
+                    continue;
+                }
+                code_lines_scanned += 1;
+                for pattern in TRANSITION_WRITES {
+                    if code.contains(pattern) {
+                        violations.push(BoundaryViolation {
+                            path: file.path.clone(),
+                            line: first_line + i,
+                            pattern,
+                            text: code.trim().to_owned(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    if violations.is_empty() {
+        Ok(VoidConsumerReport {
+            files_walked: files.len(),
+            consumers_scanned,
+            code_lines_scanned,
+        })
+    } else {
+        Err(violations)
+    }
+}

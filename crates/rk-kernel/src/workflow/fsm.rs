@@ -311,6 +311,7 @@ pub struct GateRecord {
     kind: String,
     tree_hash: String,
     deadline: Timestamp,
+    reach: u32,
 }
 
 impl GateRecord {
@@ -326,9 +327,28 @@ impl GateRecord {
     /// decision. No member of this record is a float, so this cannot fire on a value this module
     /// built — it can on a serialiser that later grows one, which is why it is not swallowed.
     pub fn derive(kind: &str, tree_hash: &str, deadline: Timestamp) -> Result<Self, CanonError> {
+        Self::derive_reach(kind, tree_hash, deadline, 1)
+    }
+
+    /// Derive the record a given **reach** of the gate step mints (AC-524, ADR-0105 clause 10).
+    ///
+    /// `reach` is a member of the digest, so a loop-back that re-reaches the step over an
+    /// unchanged tree inside one deadline window still mints a **fresh** token — freshness is
+    /// structural, not a property of the clock. The first reach is `1`, and [`derive`] is that.
+    ///
+    /// # Errors
+    ///
+    /// As [`derive`](Self::derive).
+    pub fn derive_reach(
+        kind: &str,
+        tree_hash: &str,
+        deadline: Timestamp,
+        reach: u32,
+    ) -> Result<Self, CanonError> {
         let token = canonical_digest(&serde_json::json!({
             "deadline": deadline.unix_seconds(),
             "kind": kind,
+            "reach": reach,
             "tree_hash": tree_hash,
         }))?;
         Ok(Self {
@@ -336,7 +356,14 @@ impl GateRecord {
             kind: kind.to_owned(),
             tree_hash: tree_hash.to_owned(),
             deadline,
+            reach,
         })
+    }
+
+    /// Which reach of this gate step minted the record (1 on first reach).
+    #[must_use]
+    pub const fn reach(&self) -> u32 {
+        self.reach
     }
 
     /// The derived token — the value a `Gate:` trailer carries.
@@ -366,6 +393,7 @@ impl GateRecord {
         serde_json::json!({
             "deadline": self.deadline.unix_seconds(),
             "kind": self.kind,
+            "reach": self.reach,
             "token": self.token.as_str(),
             "tree_hash": self.tree_hash,
         })
@@ -854,6 +882,8 @@ pub struct FoldSurvey {
     state_moving: usize,
     tier_one: usize,
     gates_announced: usize,
+    spent_refusals: usize,
+    spent_recorded: usize,
 }
 
 impl FoldSurvey {
@@ -883,6 +913,18 @@ impl FoldSurvey {
     pub const fn gates_announced(self) -> usize {
         self.gates_announced
     }
+
+    /// Second answers on a spent or void token the fold refused (AC-246).
+    #[must_use]
+    pub const fn spent_refusals(self) -> usize {
+        self.spent_refusals
+    }
+
+    /// `gate_answer_spent` rows folded (ADR-0123).
+    #[must_use]
+    pub const fn spent_recorded(self) -> usize {
+        self.spent_recorded
+    }
 }
 
 /// The FSM's state — **the fold of a recorded event journal**, and the type
@@ -899,6 +941,9 @@ pub struct RunState {
     stages_entered: Vec<String>,
     last_transition: Option<(String, String)>,
     gates_open: BTreeMap<Digest, GateRecord>,
+    /// Every runtime-shaped `gate_opened` for a gate step, in journal order — the per-(item, gate
+    /// step) reach counter AC-524 names as the discovery instrument.
+    gates_by_kind: BTreeMap<String, Vec<Digest>>,
     gates_answered: BTreeMap<Digest, GateAnswer>,
     gates_void: BTreeSet<Digest>,
     gates_expired: BTreeSet<Digest>,
@@ -922,6 +967,7 @@ impl RunState {
             stages_entered: Vec::new(),
             last_transition: None,
             gates_open: BTreeMap::new(),
+            gates_by_kind: BTreeMap::new(),
             gates_answered: BTreeMap::new(),
             gates_void: BTreeSet::new(),
             gates_expired: BTreeSet::new(),
@@ -960,6 +1006,42 @@ impl RunState {
     /// Every gate the journal opened and did not expire, in token order.
     pub fn open_gates(&self) -> impl Iterator<Item = &GateRecord> {
         self.gates_open.values()
+    }
+
+    /// How many times this gate step has been reached — the count of runtime-shaped
+    /// `gate_opened` rows carrying `kind` (AC-524's per-(item, gate step) counter).
+    #[must_use]
+    pub fn reaches(&self, kind: &str) -> u32 {
+        self.gates_by_kind
+            .get(kind)
+            .map_or(0, |v| u32::try_from(v.len()).unwrap_or(u32::MAX))
+    }
+
+    /// The most recently minted token for this gate step, if any reach has happened.
+    #[must_use]
+    pub fn latest_gate(&self, kind: &str) -> Option<&Digest> {
+        self.gates_by_kind.get(kind).and_then(|v| v.last())
+    }
+
+    /// The record a token was minted with, if this journal opened it (open, answered or void).
+    #[must_use]
+    pub fn gate_record(&self, token: &Digest) -> Option<&GateRecord> {
+        self.gates_open.get(token)
+    }
+
+    #[must_use]
+    pub fn is_answered(&self, token: &Digest) -> bool {
+        self.gates_answered.contains_key(token)
+    }
+
+    #[must_use]
+    pub fn is_void(&self, token: &Digest) -> bool {
+        self.gates_void.contains(token)
+    }
+
+    #[must_use]
+    pub fn is_expired(&self, token: &Digest) -> bool {
+        self.gates_expired.contains(token)
     }
 
     /// Every gate whose answer matched the gate's tree hash.
@@ -1048,9 +1130,14 @@ impl RunState {
     /// make the assertion authoritative rather than merely stated.
     #[must_use]
     pub fn awaiting_gate(&self) -> Option<&Digest> {
+        // A void token is TERMINAL (ADR-0017: void, not reconciled; AC-252: the kernel's next act
+        // after a void is a fresh gate). It stays in `gates_open` as the record the trailers
+        // carry, but it is not what the run awaits — otherwise a voided gate would hold the run
+        // at `AwaitingGate` on a dead token for ever, which is "nothing" in AC-252's *"never by
+        // nothing"*.
         self.gates_open
             .keys()
-            .find(|t| !self.gates_answered.contains_key(*t))
+            .find(|t| !self.gates_answered.contains_key(*t) && !self.gates_void.contains(*t))
     }
 
     /// **AC-008's *"the recorded terminal state"***, read off the journal alone.
@@ -1221,8 +1308,32 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
                 let kind = required_str(event, "gate_opened", "kind")?;
                 let tree_hash = required_str(event, "gate_opened", "tree_hash")?;
                 let deadline = required_i64(event, "gate_opened", "deadline")?;
-                let record =
-                    GateRecord::derive(&kind, &tree_hash, Timestamp::from_unix_seconds(deadline))?;
+                // `reach` (AC-524, ADR-0105 clause 10): absent on a row written before this member
+                // existed, and that is reach 1 — the only reach a pre-7b-ii runtime could write.
+                let reach = match event.payload.get("reach") {
+                    None => 1,
+                    Some(v) => v
+                        .as_u64()
+                        .and_then(|n| u32::try_from(n).ok())
+                        .filter(|n| *n >= 1)
+                        .ok_or_else(|| FsmError::MalformedPayload {
+                            kind: "gate_opened",
+                            detail: format!(
+                                "`reach` is present but is not a positive integer: {v}"
+                            ),
+                        })?,
+                };
+                let record = GateRecord::derive_reach(
+                    &kind,
+                    &tree_hash,
+                    Timestamp::from_unix_seconds(deadline),
+                    reach,
+                )?;
+                state
+                    .gates_by_kind
+                    .entry(kind)
+                    .or_default()
+                    .push(record.token.clone());
                 state.gates_open.insert(record.token.clone(), record);
             } else if event.payload.get("reason").is_some() {
                 // The selection's announcement. Counted, never dropped silently, and it moves no
@@ -1243,6 +1354,20 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             let token = required_digest(event, "gate_answered", "token")?;
             let tree_hash = required_str(event, "gate_answered", "tree_hash")?;
             let verdict = required_str(event, "gate_answered", "verdict")?;
+            // **THE SPENT TOKEN, 2026-09-17 (AC-246; ADR-0017's single-use token).** A token the
+            // answered set already holds, or one already voided, is CONSUMED: a second
+            // `gate_answered` carrying it moves NOTHING — the first answer stands, a void stays
+            // void — and the row is counted, never dropped and never an error (an error here
+            // would make the journal unfoldable for ever, D-5's lesson). Until this arm existed
+            // the lookup below asked only "is the token open?", and an answered token IS still
+            // open, so a duplicate silently rewrote the verdict [measured 2026-09-17: `approve ->
+            // changes-requested`; ADR-0123's evidence line]. The refusal's own record is
+            // `gate_answer_spent`, appended by the answer path (`super::gate::answer`) and folded
+            // as a no-op below; the mechanism is this set membership, not that row.
+            if state.gates_answered.contains_key(&token) || state.gates_void.contains(&token) {
+                state.survey.spent_refusals += 1;
+                return Ok(());
+            }
             // **THE THREE-WAY SPLIT, 2026-09-14.** Until today this arm asked one question — *is
             // the token in `gates_open`?* — and gave one answer to two different situations. The
             // `GateExpired` arm below REMOVES the token from `gates_open`, so
@@ -1359,11 +1484,16 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
         // and evictions, the drift rows, the advisory rows, the artifact rows, the rate readings
         // and `rewrite` are telemetry. `dag_assembled` is the selection the state is read AGAINST
         // rather than a fact about the run's progress. `reconcile_started` is `rk-git`'s.
-        // `gate_answer_spent` and `gate_resumed` (ADR-0123) are RECORDS of a refusal and of a
-        // resume, not their mechanism: the refusal is derived from `gates_answered` in the
-        // `gate_answered` arm above, and neither row moves a member of the state.
+        // `gate_answer_spent` (ADR-0123) is the RECORD of a refusal, not its mechanism: the
+        // refusal is derived from `gates_answered`/`gates_void` in the `gate_answered` arm above.
+        // The row moves no member of the state and is counted, so `spent_recorded` can be held
+        // against `spent_refusals` by a replay assertion.
+        EventKind::GateAnswerSpent => {
+            state.survey.spent_recorded += 1;
+        }
+        // `gate_resumed` (ADR-0123) is resume telemetry; its `prefix_rewrites <= 1` is AC-279's
+        // assertion over the journal, not a fold effect.
         EventKind::ReconcileStarted
-        | EventKind::GateAnswerSpent
         | EventKind::GateResumed
         | EventKind::DagAssembled
         | EventKind::MemoMiss
@@ -1421,14 +1551,37 @@ pub fn next_action(
     //    differing only in axis must not derive one token and collapse into one gate.
     for gate in selection.gates() {
         let kind = format!("{}:{}", gate.reason.as_str(), gate.axis);
-        let record = GateRecord::derive(&kind, ctx.tree_hash, ctx.deadline)?;
-        let token = record.token.clone();
-        if !state.gates_open.contains_key(&token)
-            && !state.gates_answered.contains_key(&token)
-            && !state.gates_void.contains(&token)
-            && !state.gates_expired.contains(&token)
+        // The gate STEP decides, not a token derived from the caller's context: the reach
+        // counter says whether this step has been reached, and the latest record's disposition
+        // says what to do. (Until 2026-09-17 this derived `(kind, ctx.tree_hash, ctx.deadline)`
+        // and looked the token up — so a tree that moved after an answer would have re-opened an
+        // answered gate on every call, and a void token could never re-open at all.)
+        let reaches = state.reaches(&kind);
+        if reaches == 0 {
+            return Ok(NextAction::OpenGate(GateRecord::derive_reach(
+                &kind,
+                ctx.tree_hash,
+                ctx.deadline,
+                1,
+            )?));
+        }
+        // **AC-252 — a void is followed by a re-open, fresh in all three fields.** The record is
+        // minted over the CURRENT tree and the deadline the caller supplies at this act; the
+        // reach is one past the voided one, so the token is fresh even if neither moved.
+        // (`DECISIONS-2026-09-14 D-5` left "does a voided gate re-open?" to this stage; the
+        // register answers it in AC-252 and this arm executes that answer.) An EXPIRED latest
+        // record is deliberately NOT re-opened here: its disposition is the expiry policy's
+        // terminal path (ADR-0017: fail / escalate / auto-decide; AC-257, AC-259), not a bare
+        // re-open — and an answered one proceeds.
+        if let Some(latest) = state.latest_gate(&kind)
+            && state.gates_void.contains(latest)
         {
-            return Ok(NextAction::OpenGate(record));
+            return Ok(NextAction::OpenGate(GateRecord::derive_reach(
+                &kind,
+                ctx.tree_hash,
+                ctx.deadline,
+                reaches.saturating_add(1),
+            )?));
         }
     }
     // 3. Step 6's topological order is the source of *which one*, and step 6 is already on disk as

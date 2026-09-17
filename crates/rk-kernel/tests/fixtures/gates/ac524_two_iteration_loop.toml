@@ -1,0 +1,25 @@
+# AC-524's fixture graph: a gate step inside a two-iteration loop.
+#
+# ADR-0103 clause 6's loop-back form, `{ to = <earlier step id>, max = N }`, as `rk_kernel::predicate::on_false`
+# classifies it. `check` re-reaches `gate` when its predicate is false, at most twice - so the gate step is
+# reached once on the way in and once more on the loop-back, which is the "two-iteration loop" the register names.
+#
+# WHAT THIS FIXTURE PROVES AND WHAT IT DOES NOT. It proves the graph is the register's shape: the on_false table
+# classifies as `OnFalse::LoopBack { to: "gate", max: 2 }` and nothing else. It does not drive the loop: Step 7b
+# parsed and linted the form (`src/predicate/on_false.rs`) and built no executor for it, so the RE-REACH in
+# `ac524_fresh_record_on_rereach` is performed by the test calling `rk_kernel::workflow::gate::reach` exactly as the
+# loop executor will - stated in the test's header, and the reason AC-524 is "built, not claimed" beside its
+# PROVISIONAL-on-P8-B label.
+id = "loop-with-gate"
+version = 1
+
+[[step]]
+id = "gate"
+kind = "gate"
+question = "proceed with the re-derived plan?"
+
+[[step]]
+id = "check"
+kind = "predicate"
+predicate = "answer == 'proceed'"
+on_false = { to = "gate", max = 2 }

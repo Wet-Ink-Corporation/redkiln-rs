@@ -8,7 +8,7 @@ error: cannot construct `GateRecord` with struct literal syntax due to private f
 22 |         tree_hash: "aaaa111122223333444455556666777788889999".to_owned(),
    |         ---------------------------------------------------------------- private field
    |
-   = note: ...and other private fields `token` and `deadline` that were not provided
+   = note: ...and other private fields `token`, `deadline` and `reach` that were not provided
 
 error[E0061]: this function takes 3 arguments but 2 arguments were supplied
   --> tests/ui/ac244_gate_record_missing_a_field.rs:26:25

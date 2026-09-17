@@ -99,7 +99,7 @@ fn planned() -> rk_kernel::select::Selection {
 
 /// A selection carrying **exactly one** `gate_opened { reason: unknown_facet, axis }` — the
 /// abstaining-facet case `selection.rs`'s `unknown_facet_abstains_and_is_not_unsatisfiable` pins.
-fn gated() -> rk_kernel::select::Selection {
+pub fn gated() -> rk_kernel::select::Selection {
     let (pack, catalog, artifacts, facets) = parts();
     let item = Item::new(ITEM, "incident")
         .with_facet_ordinal("criticality", &["low", "med", "high", "critical"], "low")
@@ -301,14 +301,34 @@ fn ac039_gate_record_and_the_void_answer() {
         "and it was NOT reconciled into the answered set — there is no path in this module that \
          moves a token out of the void set, which is what `not reconciled` means"
     );
+    // CORRECTED 2026-09-17 at Step 7b-ii (AC-252). This asserted `TerminalState::AwaitingGate {
+    // token: base.token() }` — that the run holds at the VOID token. The register says otherwise:
+    // AC-252, *"GIVEN an answer that resolved void / WHEN the kernel next acts on the item / THEN a
+    // new gate is opened whose record differs from the voided gate's in all three fields"*, and
+    // its replay assertion *"a void is always followed by either a re-open or a terminal state,
+    // never by nothing"*. A void token is TERMINAL for that token: `awaiting_gate` no longer
+    // returns it, and `next_action` re-opens (pinned by
+    // `tests/it/gates.rs::ac252_void_reopens_fresh_in_all_three_fields`). What AC-039's `void,
+    // not reconciled` requires is preserved and asserted here: the void set holds the token, the
+    // answered set does not, and NO decision was applied to the item. The register outranks the
+    // reading this test took on 2026-09-14 (ADR-0092).
     assert_eq!(
+        stale.awaiting_gate(),
+        None,
+        "a void token is terminal: the run does not hold at AwaitingGate on a dead token (AC-252)"
+    );
+    assert_ne!(
         stale.terminal(),
         TerminalState::AwaitingGate {
             token: base.token().clone()
         },
-        "a void answer is not an answer: the gate is still open and the kernel still takes no \
-         action. A runtime that RECONCILED the stale answer would report the gate answered here, \
-         which is the exact failure AC-039's `void, not reconciled` names"
+        "…and the terminal projection does not report the voided gate as still awaited"
+    );
+    assert!(
+        stale.committed().next().is_none() && stale.stages_entered().is_empty(),
+        "a void answer applied no decision: nothing committed, no stage entered — a runtime that \
+         RECONCILED the stale answer would have moved one of these, which is the exact failure \
+         AC-039's `void, not reconciled` names"
     );
 
     // THE CONTROL, and it is the discriminating half: the same answer against the SAME tree hash
