@@ -62,3 +62,97 @@ pub trait Toolchain: Send + Sync {
     /// path classifies as `Binary` (AC-497).
     fn change_summary(&self, range: &str) -> Result<ChangeSummary, StepError>;
 }
+
+/// **AC-337 — a toolchain pack declares mutation feasibility explicitly.** *"Per-AC mutation
+/// evidence is required only where the toolchain declares mutation feasible"* (design §4.2;
+/// ADR-0008's Unreal fixture is the canonical infeasible toolchain). The declaration is a type,
+/// not a trait method: no record fixes a sixth port method, Checkpoint 7a counts exactly six on
+/// this port, and a declaration is a fact about the PACK, read when the pack is loaded.
+///
+/// An absent declaration is a **configuration error** ([`FeasibilityError::Undeclared`]), never a
+/// default in either direction — a pack that says nothing has said nothing. Where mutation is
+/// infeasible, every AC's mutation-path status is `not-feasible(reason)`
+/// ([`Self::ledger_status`]), which is **not `pinned`** and does not let a stage exit (AC-346);
+/// AC-357 routes such an AC to a human gate.
+///
+/// The `[mutation] feasible = …, reason = …` table this is read from is the pack loader's
+/// (`rk-kernel`); the key name is the runbook's fixture wording, not a record's, and is raised as
+/// such.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MutationFeasibility {
+    Feasible,
+    NotFeasible { reason: String },
+}
+
+/// How a feasibility declaration was refused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FeasibilityError {
+    /// The pack declares nothing — a configuration error, not a default (AC-337).
+    Undeclared,
+    /// `feasible = false` with no reason: the register's shape is `not-feasible(reason)`.
+    InfeasibleWithoutReason,
+    /// `feasible = true` with a reason, which means nothing and is refused rather than dropped.
+    FeasibleWithReason,
+}
+
+impl std::fmt::Display for FeasibilityError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Undeclared => write!(
+                f,
+                "the toolchain pack declares no mutation feasibility — `[mutation] feasible` is \
+                 required, and its absence is a configuration error, not a default (AC-337)"
+            ),
+            Self::InfeasibleWithoutReason => write!(
+                f,
+                "`feasible = false` needs a `reason`: an AC records `not-feasible(reason)` (AC-337)"
+            ),
+            Self::FeasibleWithReason => {
+                write!(
+                    f,
+                    "`feasible = true` carries a `reason`, which means nothing here"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for FeasibilityError {}
+
+impl MutationFeasibility {
+    /// Build the declaration from the pack's two members as the loader read them.
+    ///
+    /// # Errors
+    ///
+    /// [`FeasibilityError`] — absent, infeasible without a reason, or feasible with one.
+    pub fn declared(
+        feasible: Option<bool>,
+        reason: Option<&str>,
+    ) -> Result<Self, FeasibilityError> {
+        let reason = reason.map(str::trim).filter(|r| !r.is_empty());
+        match (feasible, reason) {
+            (None, _) => Err(FeasibilityError::Undeclared),
+            (Some(false), None) => Err(FeasibilityError::InfeasibleWithoutReason),
+            (Some(false), Some(reason)) => Ok(Self::NotFeasible {
+                reason: reason.to_owned(),
+            }),
+            (Some(true), None) => Ok(Self::Feasible),
+            (Some(true), Some(_)) => Err(FeasibilityError::FeasibleWithReason),
+        }
+    }
+
+    /// The status an infeasible toolchain fixes for every AC's mutation path — `not-feasible`,
+    /// which is not `pinned`. A feasible toolchain fixes nothing: the flip predicate decides per
+    /// AC (AC-334).
+    #[must_use]
+    pub fn ledger_status(&self) -> Option<rk_types::artifact::ledger::LedgerStatus> {
+        match self {
+            Self::Feasible => None,
+            Self::NotFeasible { reason } => {
+                Some(rk_types::artifact::ledger::LedgerStatus::NotFeasible {
+                    reason: rk_types::text::Text::new(reason.clone()),
+                })
+            }
+        }
+    }
+}

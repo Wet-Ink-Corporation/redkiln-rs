@@ -1,6 +1,7 @@
 mod conformance;
 mod denylist;
 mod fake_behaviour;
+mod feasibility;
 mod parity;
 mod ports_struct;
 mod source_parse;
