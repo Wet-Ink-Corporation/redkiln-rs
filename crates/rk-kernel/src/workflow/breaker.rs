@@ -146,7 +146,7 @@
 //!
 //! # 🛑 THE DURABLE MARK HAS NO CARRIER — AC-033's SECOND CONJUNCT IS ARMED
 //!
-//! `EventKind` is closed at 29 variants (`event_kind.rs`:87, *"Built from an exhaustive match so a
+//! `EventKind` is closed at 31 variants *(29 until ADR-0123, 2026-09-17)* (`event_kind.rs`:87, *"Built from an exhaustive match so a
 //! new variant cannot be added without appearing here"*) and none is a breaker mark; `RefusalClass`
 //! is closed at four (`NotAdopted`, `NotIsolated`, `Unsupported`, `Overage`) and none is a breaker;
 //! `StepError` is closed at eleven (ADR-0112, *"Forbids a twelfth variant without a successor to
@@ -487,7 +487,7 @@ pub struct BreakerState {
 impl BreakerState {
     /// Fold a recorded journal into the breaker's state, against a pack-declared `K`.
     ///
-    /// Total over the closed 29 kinds with **no catch-all arm**, so a thirtieth kind is an `E0004`
+    /// Total over the closed 31 kinds with **no catch-all arm**, so a thirty-second kind is an `E0004`
     /// here exactly as it is in `EventKind::tier()`: a kind cannot enter the system without someone
     /// deciding whether it moves the breaker. Grouped or-patterns, because
     /// `clippy::match_same_arms` is denied workspace-wide.
@@ -514,7 +514,7 @@ impl BreakerState {
             let family = FamilyKey::supplied(family);
             state.survey.family_scoped += 1;
 
-            // TOTAL OVER THE CLOSED 29, WITH NO CATCH-ALL ARM. A thirtieth kind is an `E0004`
+            // TOTAL OVER THE CLOSED 31, WITH NO CATCH-ALL ARM. A thirty-second kind is an `E0004`
             // here, exactly as it is in `EventKind::tier()`: a kind cannot enter the system
             // without someone deciding whether it moves the breaker. Grouped or-patterns, because
             // `clippy::match_same_arms` is denied workspace-wide.
@@ -591,6 +591,8 @@ impl BreakerState {
                 | EventKind::SliceSealed
                 | EventKind::ReconcileStarted
                 | EventKind::GateAnswerVoid
+                | EventKind::GateAnswerSpent
+                | EventKind::GateResumed
                 | EventKind::DagAssembled
                 | EventKind::DagAmended
                 | EventKind::MemoHit

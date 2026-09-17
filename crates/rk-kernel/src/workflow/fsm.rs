@@ -1173,7 +1173,7 @@ impl RunState {
 
 /// Fold a recorded journal into a state.
 ///
-/// **Total over the closed 29 kinds, with no catch-all arm**, so a thirtieth kind is an `E0004`
+/// **Total over the closed 31 kinds, with no catch-all arm**, so a thirty-second kind is an `E0004`
 /// here exactly as it is in `EventKind::tier()` — *"a kind cannot enter the system without someone
 /// deciding whether losing it would change the next action."*
 ///
@@ -1359,7 +1359,12 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
         // and evictions, the drift rows, the advisory rows, the artifact rows, the rate readings
         // and `rewrite` are telemetry. `dag_assembled` is the selection the state is read AGAINST
         // rather than a fact about the run's progress. `reconcile_started` is `rk-git`'s.
+        // `gate_answer_spent` and `gate_resumed` (ADR-0123) are RECORDS of a refusal and of a
+        // resume, not their mechanism: the refusal is derived from `gates_answered` in the
+        // `gate_answered` arm above, and neither row moves a member of the state.
         EventKind::ReconcileStarted
+        | EventKind::GateAnswerSpent
+        | EventKind::GateResumed
         | EventKind::DagAssembled
         | EventKind::MemoMiss
         | EventKind::MemoEvicted

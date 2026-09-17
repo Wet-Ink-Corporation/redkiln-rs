@@ -119,7 +119,7 @@
 //! `src/workflow/envelope.rs`'s rule from Slice 4b applies: *a variant no call site can produce
 //! reads as a refusal the system performs*. The variant lands with the record, not before;
 //! `rk_store::memo::EvictionReason` already exists to carry it, and `EventKind::MemoEvicted` is
-//! already one of the closed 29, so nothing is blocked by its absence here.
+//! already one of the closed 31 *(29 until ADR-0123)*, so nothing is blocked by its absence here.
 //!
 //! # The fourth key is not here either
 //!
@@ -650,8 +650,8 @@ pub fn tally_activations(events: &[Event]) -> Result<ActivationTally, MemoError>
                     Some(true) | None => t.unattributed_dispatches += 1,
                 }
             }
-            // The other 26 of the closed 29. Grouped rather than wildcarded: a thirtieth kind is a
-            // compile error here and must be routed by whoever mints it (ADR-0116).
+            // The other 28 of the closed 31. Grouped rather than wildcarded: a thirty-second kind is
+            // a compile error here and must be routed by whoever mints it (ADR-0116).
             EventKind::StageTransition
             | EventKind::GateOpened
             | EventKind::GateAnswered
@@ -659,6 +659,8 @@ pub fn tally_activations(events: &[Event]) -> Result<ActivationTally, MemoError>
             | EventKind::SliceSealed
             | EventKind::ReconcileStarted
             | EventKind::GateAnswerVoid
+            | EventKind::GateAnswerSpent
+            | EventKind::GateResumed
             | EventKind::DagAssembled
             | EventKind::DagAmended
             | EventKind::ActivityCommitted

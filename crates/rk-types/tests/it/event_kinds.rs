@@ -1,5 +1,5 @@
-//! The closed `EventKind` table (ADR-0105 clause 7 as ADR-0116 supersedes it, and as ADR-0120
-//! extends it; design §5).
+//! The closed `EventKind` table (ADR-0105 clause 7 as ADR-0116 supersedes it, and as ADR-0120 and
+//! ADR-0123 extend it; design §5).
 
 use rk_types::event_kind::{EventKind, Tier};
 
@@ -7,7 +7,8 @@ use rk_types::event_kind::{EventKind, Tier};
 /// silent hole in every completeness check that follows.
 #[test]
 fn all_lists_every_variant_exactly_once() {
-    assert_eq!(EventKind::ALL.len(), 29);
+    // 29 until ADR-0123 (2026-09-17) minted `gate_answer_spent` and `gate_resumed`.
+    assert_eq!(EventKind::ALL.len(), 31);
     let mut names: Vec<&str> = EventKind::ALL.iter().map(|k| k.wire_name()).collect();
     let before = names.len();
     names.sort_unstable();
@@ -43,6 +44,33 @@ fn dag_amended_exists_and_is_tier_two() {
     // the re-run's record (ADR-0120 decision 5's forbids).
     assert_ne!(EventKind::DagAmended, EventKind::DagAssembled);
     assert_eq!(EventKind::DagAmended.trailer_axis(), None);
+}
+
+/// **ADR-0123's two additions.** AC-246's THEN says a second answer on a spent token *"records a
+/// distinct event"* and nothing minted one; AC-279 and AC-267 assert on a `gate_resumed` event
+/// that no table defined. Both tier 2 by the deleted-database test: the spent refusal is derived
+/// from the tier-1 `gate_answered` rows and this row only records that it happened; the resume row
+/// is telemetry about a dispatch that already happened.
+#[test]
+fn gate_answer_spent_and_gate_resumed_exist_and_are_tier_two() {
+    assert_eq!(EventKind::GateAnswerSpent.wire_name(), "gate_answer_spent");
+    assert_eq!(EventKind::GateAnswerSpent.tier(), Tier::Two);
+    assert_eq!(
+        EventKind::from_wire("gate_answer_spent"),
+        Some(EventKind::GateAnswerSpent)
+    );
+    assert_eq!(EventKind::GateResumed.wire_name(), "gate_resumed");
+    assert_eq!(EventKind::GateResumed.tier(), Tier::Two);
+    assert_eq!(
+        EventKind::from_wire("gate_resumed"),
+        Some(EventKind::GateResumed)
+    );
+    // Spent and void are two facts with two fold effects (ADR-0123's forbids): a void un-answers
+    // the gate, a spent refusal leaves the first answer standing.
+    assert_ne!(EventKind::GateAnswerSpent, EventKind::GateAnswerVoid);
+    // Neither rides a trailer; no fourth axis was minted.
+    assert_eq!(EventKind::GateAnswerSpent.trailer_axis(), None);
+    assert_eq!(EventKind::GateResumed.trailer_axis(), None);
 }
 
 /// The two dotted names are dotted. A blanket `rename_all = "snake_case"` would quietly turn them
