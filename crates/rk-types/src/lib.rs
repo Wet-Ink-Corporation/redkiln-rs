@@ -23,6 +23,8 @@ pub mod event_kind;
 pub mod registry;
 pub mod repro;
 pub mod retention;
+/// The review gate's record types (Step 7b-ii): the reviewed-tree outcome and the quarantine.
+pub mod review;
 pub mod schema;
 pub mod text;
 pub mod time;

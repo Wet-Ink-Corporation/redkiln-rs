@@ -16,13 +16,87 @@ pub enum IngestError {
     MutateWithoutMutation { item: String },
 }
 
+/// The model's own evidence label — ADR-0074 clause 1's `evidence (advisory label)`. **Retained for
+/// drift monitoring only** (clause 2; AC-285): the class the policy table acts on is computed in
+/// Rust from the repro record, and this label may never be routed into it. Its spelling is the
+/// class vocabulary's (`reproduced` / `mutation-survived` / `narrowed-pin` / `advisory`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum EvidenceLabel {
+    Reproduced,
+    MutationSurvived,
+    NarrowedPin,
+    Advisory,
+}
+
+impl EvidenceLabel {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Reproduced => "reproduced",
+            Self::MutationSurvived => "mutation-survived",
+            Self::NarrowedPin => "narrowed-pin",
+            Self::Advisory => "advisory",
+        }
+    }
+}
+
+/// One finding — ADR-0074 clause 1's `{ ac, claim, evidence (advisory label), rationale, files[],
+/// repro }` with ADR-0096 decision 1's typed `repro`. `claim` and `rationale` are the **only**
+/// free-text members (AC-283); `evidence` is a closed label and `files` are paths.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Finding {
     pub ac: String,
     pub claim: Text,
+    /// The model's label. Read by the drift instrument and the persisted record; **never by the
+    /// policy module** (AC-285's architecture lint).
+    pub evidence: EvidenceLabel,
     pub rationale: Text,
     pub repro: Repro,
+    /// Paths the finding names. Optional, so declared LAST: AC-158's schema lint refuses an
+    /// optional member ahead of a required one (it did, on the first cut, 2026-09-17).
+    #[serde(default)]
+    pub files: Vec<String>,
+}
+
+/// **AC-280's decision-field denylist** — ADR-0074's forbids: *"any `pass`, `verdict` or `approve`
+/// field on the review card's output schema"*, enumerated so the check is a name check a test can
+/// fail deterministically, never a semantic judgement (the criterion's own repair note).
+pub const DECISION_FIELD_DENYLIST: &[&str] = &[
+    "pass", "verdict", "approve", "approved", "approval", "ok", "status", "decision",
+];
+
+/// **AC-280's schema-shape check.** Every property name in [`DECISION_FIELD_DENYLIST`] that the
+/// schema declares on the top-level `Findings` object or on its **item** object (the `Finding`,
+/// which the closed-output transform inlines at `/properties/items/items`; a `$defs` entry is
+/// walked too, for a derivation that does not inline). Empty is the pass; a non-empty result is a
+/// configuration error to be raised *before any dispatch*. A **name** check on those two objects
+/// only, deliberately — deciding that some other boolean deeper in the shape "means" approval is
+/// a judgement no test can make (the criterion's own repair note).
+#[must_use]
+pub fn decision_fields_declared(schema: &serde_json::Value) -> Vec<String> {
+    fn names(props: Option<&serde_json::Value>, out: &mut Vec<String>) {
+        if let Some(map) = props.and_then(serde_json::Value::as_object) {
+            for name in map.keys() {
+                if DECISION_FIELD_DENYLIST.contains(&name.as_str()) && !out.contains(name) {
+                    out.push(name.clone());
+                }
+            }
+        }
+    }
+    let mut out = Vec::new();
+    names(schema.get("properties"), &mut out);
+    names(
+        schema.pointer("/properties/items/items/properties"),
+        &mut out,
+    );
+    if let Some(defs) = schema.get("$defs").and_then(serde_json::Value::as_object) {
+        for def in defs.values() {
+            names(def.get("properties"), &mut out);
+        }
+    }
+    out
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

@@ -32,6 +32,11 @@ sha2.workspace = true
 # tests/, and tests/it/fixtures.rs needs #[derive(JsonSchema)].
 [dev-dependencies]
 insta.workspace = true
+# ADDED 2026-09-17 (Step 7b-ii, the review gate). AC-281's *Verified by* is "`serde` round-trip +
+# `jsonschema` validation tests" over the five negative fixtures; the workspace pinned this crate at
+# `=0.56.0` on 2026-09-11 and no member had used it until now. Dev-only: the schema is validated in
+# tests, never at runtime, and the resolved NORMAL graph of every member is unchanged.
+jsonschema.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 schemars.workspace = true

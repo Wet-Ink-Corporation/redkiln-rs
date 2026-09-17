@@ -163,6 +163,7 @@ fn blocking_findings() -> Findings {
         items: vec![Finding {
             ac: "AC-032".to_owned(),
             claim: Text::new("the change reverses the invariant"),
+            evidence: rk_types::artifact::findings::EvidenceLabel::Reproduced,
             rationale: Text::new("the guard is evaluated after the write"),
             repro: Repro {
                 kind: ReproKind::Run,
@@ -172,6 +173,7 @@ fn blocking_findings() -> Findings {
                 expected_when_met: "exit 0".to_owned(),
                 mutation: None,
             },
+            files: Vec::new(),
         }],
     }
 }

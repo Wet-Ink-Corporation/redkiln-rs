@@ -20,6 +20,7 @@ fn valid_run() -> serde_json::Value {
         "items": [{
             "ac": "AC-281",
             "claim": "the ingest guard rejects a prose command",
+            "evidence": "reproduced",
             "rationale": "ADR-0096 decision 1",
             "repro": {
                 "kind": "run",

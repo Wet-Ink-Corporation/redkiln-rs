@@ -6,6 +6,7 @@ mod digest_compute;
 mod event_kinds;
 mod fixtures;
 mod repro_ingest;
+mod review_gate;
 mod schema_caps;
 mod schema_no_oneof;
 mod schema_snapshot;
