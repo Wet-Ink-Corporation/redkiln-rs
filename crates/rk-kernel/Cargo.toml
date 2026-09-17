@@ -204,6 +204,12 @@ rk-store = { path = "../rk-store" }
 # graph. It is not an async runtime and it is not an `rk-adapter-*`.
 rk-git = { path = "../rk-git" }
 serde_json.workspace = true
+# ADDED 2026-09-17 (Step 7b-ii, the human gate). AC-245's property test drives `rk_git::tree::tree_hash`
+# over a REAL repository built at test time -- a git repo cannot be a committed fixture -- and the
+# repository has to live somewhere that is deleted with the test. Same crate, same version spec as
+# crates/rk-git/Cargo.toml:37, the one other place in the workspace that builds repos in tests, so the
+# resolved graph gains no new crate: `tempfile 3` is already in Cargo.lock through rk-git's dev-deps.
+tempfile = "3"
 # The compile-fail harness. Its cases' instrument is a compile FAILURE, which only a must-fail
 # harness can observe, and each case commits a .stderr snapshot so a case that starts failing for a
 # DIFFERENT reason goes red (s7a §7a.8).

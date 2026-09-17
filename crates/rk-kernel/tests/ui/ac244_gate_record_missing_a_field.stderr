@@ -1,0 +1,27 @@
+error: cannot construct `GateRecord` with struct literal syntax due to private fields
+  --> tests/ui/ac244_gate_record_missing_a_field.rs:20:20
+   |
+20 |     let _partial = GateRecord {
+   |                    ^^^^^^^^^^
+21 |         kind: "human:review".to_owned(),
+   |         ------------------------------- private field
+22 |         tree_hash: "aaaa111122223333444455556666777788889999".to_owned(),
+   |         ---------------------------------------------------------------- private field
+   |
+   = note: ...and other private fields `token` and `deadline` that were not provided
+
+error[E0061]: this function takes 3 arguments but 2 arguments were supplied
+  --> tests/ui/ac244_gate_record_missing_a_field.rs:26:25
+   |
+26 |     let _two_of_three = GateRecord::derive("human:review", "aaaa111122223333444455556666777788889999");
+   |                         ^^^^^^^^^^^^^^^^^^------------------------------------------------------------ argument #3 of type `Timestamp` is missing
+   |
+note: associated function defined here
+  --> src/workflow/fsm.rs
+   |
+   |     pub fn derive(kind: &str, tree_hash: &str, deadline: Timestamp) -> Result<Self, CanonError> {
+   |            ^^^^^^
+help: provide the argument
+   |
+26 |     let _two_of_three = GateRecord::derive("human:review", "aaaa111122223333444455556666777788889999", /* Timestamp */);
+   |                                                                                                      +++++++++++++++++

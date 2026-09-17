@@ -280,6 +280,7 @@ mod facet_provenance;
 mod facet_registry;
 mod facet_stability;
 mod fsm;
+mod gates;
 mod grammar;
 mod kernel_denylist;
 mod ledger;
