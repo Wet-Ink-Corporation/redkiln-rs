@@ -8,7 +8,9 @@
 //! what survives of it is the rule this crate obeys by carrying the variant. **ADR-0123** mints two
 //! more under the same rule for Step 7b-ii's human gate — `gate_answer_spent`, the row AC-246's
 //! *"records a distinct event"* names, and `gate_resumed`, the event AC-267/AC-279 and SM-073 assert
-//! on — and likewise supersedes nothing.
+//! on — and likewise supersedes nothing. **ADR-0124** mints the review and verify gates' five —
+//! `review_block`, `quarantine_granted`, `quarantine_removed`, `quarantine_expired` and
+//! `selection_ineffective` — each named by a criterion or a success measure, under the same rule.
 //!
 //! The **tier** column is the deleted-database test applied per kind (ADR-0109 decision 2): *if the
 //! database were deleted, would `redkiln run` take a different next action?* Five kinds are tier 1
@@ -60,6 +62,19 @@ pub enum EventKind {
     /// adapter fills them at Step 7c, `cache_creation_input_tokens` and `total_cost_usd` (AC-267,
     /// SM-073) — **absent, not zero**, until then.
     GateResumed,
+    /// Added by **ADR-0124**: AC-307's block event, written by the path that decided the block and
+    /// nowhere else, carrying `adjudication: null` for a later adjudication to attach to.
+    ReviewBlock,
+    /// Added by **ADR-0124**: the human override moving a finding to `Quarantined` (ADR-0074
+    /// clause 6). Carries AC-307's members plus `reason, by, until`.
+    QuarantineGranted,
+    /// Added by **ADR-0124**: the human override lifting a quarantine before `until`.
+    QuarantineRemoved,
+    /// Added by **ADR-0124**: `until` passed and the finding is re-raised (AC-306).
+    QuarantineExpired,
+    /// Added by **ADR-0124**: the verify gate's bootstrap comparator reclassified an `affected`
+    /// claim (AC-326; ADR-0104 decision 3) — `selection-ineffective` or `probe-unverified`.
+    SelectionIneffective,
     DagAssembled,
     /// Added by **ADR-0120**: the delta an accepted deviation writes when selection steps 2–5
     /// re-run (AC-064). Tier 2 for the same reason `DagAssembled` is — a delta may not outrank the
@@ -97,7 +112,7 @@ pub enum EventKind {
 impl EventKind {
     /// Every kind, for the completeness test. Built from an exhaustive match so a new variant
     /// cannot be added without appearing here.
-    pub const ALL: [Self; 31] = [
+    pub const ALL: [Self; 36] = [
         Self::StageTransition,
         Self::GateOpened,
         Self::GateAnswered,
@@ -107,6 +122,11 @@ impl EventKind {
         Self::GateAnswerVoid,
         Self::GateAnswerSpent,
         Self::GateResumed,
+        Self::ReviewBlock,
+        Self::QuarantineGranted,
+        Self::QuarantineRemoved,
+        Self::QuarantineExpired,
+        Self::SelectionIneffective,
         Self::DagAssembled,
         Self::DagAmended,
         Self::ActivityCommitted,
@@ -145,6 +165,11 @@ impl EventKind {
             Self::GateAnswerVoid => "gate_answer_void",
             Self::GateAnswerSpent => "gate_answer_spent",
             Self::GateResumed => "gate_resumed",
+            Self::ReviewBlock => "review_block",
+            Self::QuarantineGranted => "quarantine_granted",
+            Self::QuarantineRemoved => "quarantine_removed",
+            Self::QuarantineExpired => "quarantine_expired",
+            Self::SelectionIneffective => "selection_ineffective",
             Self::DagAssembled => "dag_assembled",
             Self::DagAmended => "dag_amended",
             Self::ActivityCommitted => "activity_committed",
@@ -189,6 +214,11 @@ impl EventKind {
             | Self::GateAnswerVoid
             | Self::GateAnswerSpent
             | Self::GateResumed
+            | Self::ReviewBlock
+            | Self::QuarantineGranted
+            | Self::QuarantineRemoved
+            | Self::QuarantineExpired
+            | Self::SelectionIneffective
             | Self::DagAssembled
             | Self::DagAmended
             | Self::ActivityCommitted

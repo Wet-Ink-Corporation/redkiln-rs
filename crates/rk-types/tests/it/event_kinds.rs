@@ -1,5 +1,5 @@
-//! The closed `EventKind` table (ADR-0105 clause 7 as ADR-0116 supersedes it, and as ADR-0120 and
-//! ADR-0123 extend it; design §5).
+//! The closed `EventKind` table (ADR-0105 clause 7 as ADR-0116 supersedes it, and as ADR-0120,
+//! ADR-0123 and ADR-0124 extend it; design §5).
 
 use rk_types::event_kind::{EventKind, Tier};
 
@@ -7,8 +7,9 @@ use rk_types::event_kind::{EventKind, Tier};
 /// silent hole in every completeness check that follows.
 #[test]
 fn all_lists_every_variant_exactly_once() {
-    // 29 until ADR-0123 (2026-09-17) minted `gate_answer_spent` and `gate_resumed`.
-    assert_eq!(EventKind::ALL.len(), 31);
+    // 29 until ADR-0123 (2026-09-17) minted `gate_answer_spent` and `gate_resumed`; 31 until
+    // ADR-0124 (the same day) minted the review and verify gates' five.
+    assert_eq!(EventKind::ALL.len(), 36);
     let mut names: Vec<&str> = EventKind::ALL.iter().map(|k| k.wire_name()).collect();
     let before = names.len();
     names.sort_unstable();
@@ -71,6 +72,31 @@ fn gate_answer_spent_and_gate_resumed_exist_and_are_tier_two() {
     // Neither rides a trailer; no fourth axis was minted.
     assert_eq!(EventKind::GateAnswerSpent.trailer_axis(), None);
     assert_eq!(EventKind::GateResumed.trailer_axis(), None);
+}
+
+/// **ADR-0124's five additions** — the review and verify gates' rows, each named by a criterion or a
+/// success measure and minted by nothing until now. All tier 2: a block is DERIVED from the recorded
+/// payload and re-execution (AC-313 recomputes it), a quarantine's effect rides the finding's
+/// persisted state, and `selection_ineffective` is a reclassification the verify report itself
+/// carries — losing any of these rows loses a count, never a decision (ADR-0109 decision 2).
+#[test]
+fn the_review_and_verify_gates_five_kinds_exist_and_are_tier_two() {
+    let five = [
+        (EventKind::ReviewBlock, "review_block"),
+        (EventKind::QuarantineGranted, "quarantine_granted"),
+        (EventKind::QuarantineRemoved, "quarantine_removed"),
+        (EventKind::QuarantineExpired, "quarantine_expired"),
+        (EventKind::SelectionIneffective, "selection_ineffective"),
+    ];
+    for (kind, wire) in five {
+        assert_eq!(kind.wire_name(), wire);
+        assert_eq!(kind.tier(), Tier::Two, "{wire} is tier 2");
+        assert_eq!(EventKind::from_wire(wire), Some(kind));
+        assert_eq!(kind.trailer_axis(), None, "{wire} rides no trailer");
+    }
+    // a block is not drift and not sink intake — three kinds, three counts (AC-307, AC-310)
+    assert_ne!(EventKind::ReviewBlock, EventKind::ReviewClassDrift);
+    assert_ne!(EventKind::ReviewBlock, EventKind::AdvisoryCreated);
 }
 
 /// The two dotted names are dotted. A blanket `rename_all = "snake_case"` would quietly turn them

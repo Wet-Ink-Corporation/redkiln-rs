@@ -1156,10 +1156,10 @@ fn ac019_memo_hit_is_never_silent() {
     // ---- THE ARMED PIN ------------------------------------------------------------------------
     assert_eq!(
         EventKind::ALL.len(),
-        31,
-        // DECIDED HERE 2026-09-17 (ADR-0123, 29 -> 31): `gate_answer_spent` and `gate_resumed`
+        36,
+        // DECIDED HERE 2026-09-17 (ADR-0123, 29 -> 31; ADR-0124, 31 -> 36, the same answer): `gate_answer_spent` and `gate_resumed`
         // are gate rows, not memo rows; the memo's typed-payload record is STILL OWED, unchanged.
-        "`EventKind` is closed at 31 (ADR-0116; ADR-0123). If another is minted, whoever mints it must \
+        "`EventKind` is closed at 36 (ADR-0116; ADR-0123; ADR-0124). If another is minted, whoever mints it must \
          decide whether the memo's payload record is still OWED — this line goes red rather than \
          the gap quietly widening"
     );

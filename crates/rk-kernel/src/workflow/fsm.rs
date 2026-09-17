@@ -1285,7 +1285,7 @@ impl RunState {
 
 /// Fold a recorded journal into a state.
 ///
-/// **Total over the closed 31 kinds, with no catch-all arm**, so a thirty-second kind is an `E0004`
+/// **Total over the closed 36 kinds, with no catch-all arm**, so a thirty-seventh kind is an `E0004`
 /// here exactly as it is in `EventKind::tier()` — *"a kind cannot enter the system without someone
 /// deciding whether losing it would change the next action."*
 ///
@@ -1562,7 +1562,15 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             let token = required_digest(event, "gate_resumed", "token")?;
             state.gates_resumed.insert(token);
         }
+        // The review and verify gates' five (ADR-0124) are the gates' own rows — blocks, quarantine
+        // dispositions, the bootstrap comparator's reclassification — and move no member of the
+        // run's state; `crate::review` folds them for its own invariants (AC-307, AC-310, AC-530).
         EventKind::ReconcileStarted
+        | EventKind::ReviewBlock
+        | EventKind::QuarantineGranted
+        | EventKind::QuarantineRemoved
+        | EventKind::QuarantineExpired
+        | EventKind::SelectionIneffective
         | EventKind::DagAssembled
         | EventKind::MemoMiss
         | EventKind::MemoEvicted

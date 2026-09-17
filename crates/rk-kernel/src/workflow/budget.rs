@@ -69,7 +69,7 @@
 //! [`appetite_raise_from_activity_result`] is and all of it.
 //!
 //! The resolution's warrant is that the hatch was **not buildable at all**: it needs a typed
-//! budget-change `EventKind`, `rk_types::event_kind::EventKind` is closed at 31 variants *(29 until ADR-0123, 2026-09-17)* and
+//! budget-change `EventKind`, `rk_types::event_kind::EventKind` is closed at 36 variants *(29 until ADR-0123 and 31 until ADR-0124, both 2026-09-17)* and
 //! carries no budget or appetite change, and minting one takes a record (ADR-0116 clause 5;
 //! ADR-0120 is the precedent). **AC-396 still routes the appetite VALUE to a human gate**, so
 //! *"refused outright"* refuses the in-run mechanism and not the quantity.
@@ -883,7 +883,7 @@ pub fn evaluate_gate(
 /// > writes a durable mark and exits 0; no thread sleeps waiting for the budget to be extended.
 ///
 /// The **carrier** is [`EventKind::GateOpened`] with `kind = "budget_extension"`, and that is a
-/// reading of design §2.9's table rather than a record's word: `EventKind` is closed at 31 variants *(29 until ADR-0123)*
+/// reading of design §2.9's table rather than a record's word: `EventKind` is closed at 36 variants *(29 until ADR-0123, 31 until ADR-0124)*
 /// (ADR-0116's *"a kind in the design table and not in the enum … is schema drift"*) and none of
 /// them is a budget mark, so the choice is between existing kinds. `GateOpened` is the one AC-024's
 /// own `decisions:` line points at — ADR-0017 defines the gate record `(token, tree_hash, deadline)`
@@ -907,7 +907,7 @@ impl BudgetExtensionMark {
     /// The gate kind this mark opens. A stable tag, matched by tests rather than message text.
     pub const KIND: &'static str = "budget_extension";
 
-    /// The event kind that carries it — one of the closed 31, minted by nobody here.
+    /// The event kind that carries it — one of the closed 36, minted by nobody here.
     #[must_use]
     pub const fn event_kind() -> EventKind {
         EventKind::GateOpened
@@ -949,7 +949,7 @@ impl BudgetExtensionMark {
     /// **The payload's field set is a reading, and so is `RetryAtMark`'s**: `rk_types::event::Event`
     /// carries `payload: serde_json::Value` and the typed-payload record, per kind, is **OWED**
     /// (`rk-types/src/event.rs`:53-59). Nothing here mints an `EventKind` — the carrier is
-    /// [`Self::event_kind`], one of the closed 31.
+    /// [`Self::event_kind`], one of the closed 36.
     #[must_use]
     pub fn to_event(self) -> Event {
         Event::new(
