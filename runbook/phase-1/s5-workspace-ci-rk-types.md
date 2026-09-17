@@ -404,8 +404,25 @@ one=$(grep -rnE 'oneOf' crates/rk-types/tests/it/snapshots/); [ -z "$one" ] || {
                                                           # anyOf is legal only as schemars' nullable form and
                                                           # never nested — the snapshot TEST asserts that, not a grep
 test -d crates/rk-types/src || { echo "FAIL: crates/rk-types/src absent"; exit 1; }
-cs=$(grep -rn 'ChangeSummary' crates/ --include='*.rs' | grep -v 'crates/rk-ports/'); [ -z "$cs" ] || { echo "FAIL: ChangeSummary outside rk-ports:"; printf '%s\n' "$cs"; exit 1; }   # → 0. Blocked on S-BIN — lives only as
-                                                          #   rk-ports' opaque newtype (ADR-0099 clause 5), and rk-ports is 7a's
+# ChangeSummary — THE TYPE lives only as rk-ports' opaque newtype until S-BIN reports (ADR-0099 clause 5's Decision
+# text: "the grep for ITS absence" — the NEWTYPE's; design §9.2: S-BIN "gates the type and the port's change_summary
+# body, nothing else"). The artifact KIND named `ChangeSummary` is ADR-0073's — one of the five toolchain-keyed kinds
+# whose keyed expansion the kernel's selection tests exercise in string literals BY DESIGN — so the rule is "the name
+# in CODE, not in a string literal and not in a comment". String literals are stripped BEFORE the word is matched, so
+# a type use on a line that also carries a string is still caught. (Amended 2026-09-17, reading 2 of PROGRESS §1 row 5:
+# the bare `grep -rn 'ChangeSummary'` fired on 27 kernel hits — 22 string literals, 5 comment lines, ZERO in a type
+# position — all present since Step 7b, so this block could not pass from 7b to 2026-09-17 and no re-run noticed.
+# The pipe is SPLIT (halts.md shape (c)): the old `$(grep | grep -v)` read a missing crates/ as a clean tree.)
+raw=$(grep -rn 'ChangeSummary' crates/ --include='*.rs'); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the ChangeSummary search could not run (grep rc=$rc; 2 = no such path) — a count of 0 here would be a fake 0"; exit 1; }
+cs=$(printf '%s\n' "$raw" | grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b')
+[ -z "$cs" ] || { echo "FAIL: the ChangeSummary TYPE is named in code outside rk-ports (ADR-0099 clause 5; blocked on S-BIN):"; printf '%s\n' "$cs"; exit 1; }   # → silent
+# POSITIVE CONTROL, in two halves. (1) The unfiltered search must still see rk-ports' own newtype, or the search is
+# looking at the wrong tree. (2) The FILTER must still let a code-position use through: run it over rk-ports' own
+# definition line and demand a hit — a filter that stripped too much would read every tree as clean.
+printf '%s\n' "$raw" | grep -q '^crates/rk-ports/src/toolchain.rs:[0-9]*:pub struct ChangeSummary(' || { echo "FAIL: rk-ports' own ChangeSummary newtype was not found by the search — the ban above is looking at the wrong tree (it was at crates/rk-ports/src/toolchain.rs:42 on 2026-09-17)"; exit 1; }
+ctl=$(printf '%s\n' "$raw" | grep '^crates/rk-ports/src/toolchain.rs:[0-9]*:pub struct ChangeSummary(' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b')
+[ -n "$ctl" ] || { echo "FAIL: the comment/string filter dropped rk-ports' own definition line — the filter is too wide and the ban above is vacuous"; exit 1; }
 test -f Cargo.toml || { echo "FAIL: no root manifest"; exit 1; }
 meta=$(cargo metadata --format-version 1 --no-deps); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: cargo metadata exited $rc"; exit 1; }
 printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; bad=sorted(p['name'] for p in m['packages'] if any(d['name']=='anyhow' for d in p['dependencies'])); print(bad); sys.exit(1 if bad else 0)" \
@@ -427,8 +444,18 @@ catches. *(Corrected 2026-09-13: this sentence said the line was piped to `wc -l
 
 `grep -L` without `-r`: the arguments are an explicit glob of files, so `-r` did nothing.
 
+**Re-counted 2026-09-17, after the `ChangeSummary` line was re-scoped to the TYPE (PROGRESS §1 row 5, reading 2).**
+Counted mechanically off the block — backslash continuations joined, comments and blanks dropped, a statement that
+*can stop the block* being one carrying its own `exit 1` (the unit `s7b-ii` §7b-ii.13 fixes) — this block now carries
+**39 statements, of which 31 can stop the block and 8 cannot**: the 2 BEFORE readings and 6 `out=`/`n=`/`raw=`/`cs=`/
+`ctl=` capture halves whose guard is the statement beneath them. The same counter reads the previous text at
+**33 / 28 / 5**, which is the figure the paragraph below recorded and the calibration that makes this one comparable.
+The one line that changed was replaced by nine statements (a split pipe, a filter, the ban, two positive controls),
+and each of the three FAIL shapes was exercised before the count was taken: silent on the tree; red on a scratch
+type-position use beside a string literal; red on a renamed newtype (each control by its own message).
+
 **Hardened 2026-09-13, at Step 5's own run.** Counted mechanically — backslash continuations joined, comments and
-blanks dropped — this block carries **33 statements**, of which **17** could stop execution and **16** could not.
+blanks dropped — this block carried **33 statements**, of which **17** could stop execution and **16** could not.
 **Eleven** of those sixteen were AFTER assertions and are now guarded: five silent `grep -q` lines (the `channel`,
 `rust-version`, `exclude`, `ci.yml` and `clippy.toml` lines, which print **nothing** on failure), four loud but
 non-stopping gates (`cargo build`, `cargo fmt`, `cargo audit`, `cargo deny`), the `cd`, and the `anyhow` line above.
