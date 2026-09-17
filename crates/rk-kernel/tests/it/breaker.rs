@@ -555,12 +555,13 @@ fn breaker_ac033_ac035() {
     // is the breaker's carrier — rather than the gap quietly closing or quietly widening.
     assert_eq!(
         EventKind::ALL.len(),
-        36,
+        37,
         // DECIDED HERE 2026-09-17, when ADR-0123 minted the thirtieth and thirty-first: neither
         // `gate_answer_spent` (a refused duplicate answer) nor `gate_resumed` (resume telemetry)
-        // is a breaker mark. AC-033's `written` half stays ARMED; only the count moved, 29 -> 31 -> 36
-        // (ADR-0124's five are the review and verify gates' rows, none a breaker mark either).
-        "`EventKind` is closed at 36 (29 until ADR-0123, 31 until ADR-0124) and none of them is a breaker mark: AC-033's `written` half is \
+        // is a breaker mark. AC-033's `written` half stays ARMED; only the count moved, 29 -> 31 -> 36 -> 37
+        // (ADR-0124's five are the review and verify gates' rows, ADR-0125's `stage_exit_refused` the
+        // verify gate's exit refusal — none a breaker mark either).
+        "`EventKind` is closed at 37 (29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125) and none of them is a breaker mark: AC-033's `written` half is \
          ARMED, NOT DISCHARGED, and no kind is minted at Slice 4d"
     );
 }

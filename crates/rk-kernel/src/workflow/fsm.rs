@@ -1285,7 +1285,7 @@ impl RunState {
 
 /// Fold a recorded journal into a state.
 ///
-/// **Total over the closed 36 kinds, with no catch-all arm**, so a thirty-seventh kind is an `E0004`
+/// **Total over the closed 37 kinds, with no catch-all arm**, so a thirty-eighth kind is an `E0004`
 /// here exactly as it is in `EventKind::tier()` — *"a kind cannot enter the system without someone
 /// deciding whether losing it would change the next action."*
 ///
@@ -1571,6 +1571,7 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
         | EventKind::QuarantineRemoved
         | EventKind::QuarantineExpired
         | EventKind::SelectionIneffective
+        | EventKind::StageExitRefused
         | EventKind::DagAssembled
         | EventKind::MemoMiss
         | EventKind::MemoEvicted

@@ -387,12 +387,13 @@ fn ac039_gate_record_and_the_void_answer() {
     // budget-extension gate's carrier — rather than the question never being asked.
     assert_eq!(
         EventKind::ALL.len(),
-        36,
+        37,
         // DECIDED HERE 2026-09-17 (ADR-0123, 29 -> 31; ADR-0124, 31 -> 36 — the review and verify
-        // gates' five rows, none of which opens a gate): `gate_answer_spent` records a refused
+        // gates' five rows; ADR-0125, 36 -> 37 — `stage_exit_refused`, which opens no gate either:
+        // AC-357's gate is what FOLLOWS a refusal): `gate_answer_spent` records a refused
         // second answer and `gate_resumed` records a resume. Neither opens a gate, so the
         // budget-extension gate's carrier is still `gate_opened` with kind `budget_extension`.
-        "EventKind is closed at 36 (ADR-0116: `the kind is minted by record or not at all`; \n         ADR-0123 minted the two beyond 29, ADR-0124 the five beyond 31)"
+        "EventKind is closed at 37 (ADR-0116: `the kind is minted by record or not at all`; \n         ADR-0123 minted the two beyond 29, ADR-0124 the five beyond 31, ADR-0125 the one beyond 36)"
     );
 }
 

@@ -146,7 +146,7 @@
 //!
 //! # 🛑 THE DURABLE MARK HAS NO CARRIER — AC-033's SECOND CONJUNCT IS ARMED
 //!
-//! `EventKind` is closed at 36 variants *(29 until ADR-0123 and 31 until ADR-0124, both 2026-09-17)* (`event_kind.rs`:87, *"Built from an exhaustive match so a
+//! `EventKind` is closed at 37 variants *(29 until ADR-0123, 31 until ADR-0124 and 36 until ADR-0125, all 2026-09-17)* (`event_kind.rs`:87, *"Built from an exhaustive match so a
 //! new variant cannot be added without appearing here"*) and none is a breaker mark; `RefusalClass`
 //! is closed at four (`NotAdopted`, `NotIsolated`, `Unsupported`, `Overage`) and none is a breaker;
 //! `StepError` is closed at eleven (ADR-0112, *"Forbids a twelfth variant without a successor to
@@ -487,7 +487,7 @@ pub struct BreakerState {
 impl BreakerState {
     /// Fold a recorded journal into the breaker's state, against a pack-declared `K`.
     ///
-    /// Total over the closed 36 kinds with **no catch-all arm**, so a thirty-seventh kind is an `E0004`
+    /// Total over the closed 37 kinds with **no catch-all arm**, so a thirty-eighth kind is an `E0004`
     /// here exactly as it is in `EventKind::tier()`: a kind cannot enter the system without someone
     /// deciding whether it moves the breaker. Grouped or-patterns, because
     /// `clippy::match_same_arms` is denied workspace-wide.
@@ -598,6 +598,7 @@ impl BreakerState {
                 | EventKind::QuarantineRemoved
                 | EventKind::QuarantineExpired
                 | EventKind::SelectionIneffective
+                | EventKind::StageExitRefused
                 | EventKind::DagAssembled
                 | EventKind::DagAmended
                 | EventKind::MemoHit

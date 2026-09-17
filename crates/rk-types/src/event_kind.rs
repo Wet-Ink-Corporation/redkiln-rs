@@ -75,6 +75,9 @@ pub enum EventKind {
     /// Added by **ADR-0124**: the verify gate's bootstrap comparator reclassified an `affected`
     /// claim (AC-326; ADR-0104 decision 3) — `selection-ineffective` or `probe-unverified`.
     SelectionIneffective,
+    /// Added by **ADR-0125**: the verify gate refused a stage exit over unpinned ACs and named them
+    /// (AC-346). Derived from the AC ledger, recomputed at every attempt — tier 2.
+    StageExitRefused,
     DagAssembled,
     /// Added by **ADR-0120**: the delta an accepted deviation writes when selection steps 2–5
     /// re-run (AC-064). Tier 2 for the same reason `DagAssembled` is — a delta may not outrank the
@@ -112,7 +115,7 @@ pub enum EventKind {
 impl EventKind {
     /// Every kind, for the completeness test. Built from an exhaustive match so a new variant
     /// cannot be added without appearing here.
-    pub const ALL: [Self; 36] = [
+    pub const ALL: [Self; 37] = [
         Self::StageTransition,
         Self::GateOpened,
         Self::GateAnswered,
@@ -127,6 +130,7 @@ impl EventKind {
         Self::QuarantineRemoved,
         Self::QuarantineExpired,
         Self::SelectionIneffective,
+        Self::StageExitRefused,
         Self::DagAssembled,
         Self::DagAmended,
         Self::ActivityCommitted,
@@ -170,6 +174,7 @@ impl EventKind {
             Self::QuarantineRemoved => "quarantine_removed",
             Self::QuarantineExpired => "quarantine_expired",
             Self::SelectionIneffective => "selection_ineffective",
+            Self::StageExitRefused => "stage_exit_refused",
             Self::DagAssembled => "dag_assembled",
             Self::DagAmended => "dag_amended",
             Self::ActivityCommitted => "activity_committed",
@@ -219,6 +224,7 @@ impl EventKind {
             | Self::QuarantineRemoved
             | Self::QuarantineExpired
             | Self::SelectionIneffective
+            | Self::StageExitRefused
             | Self::DagAssembled
             | Self::DagAmended
             | Self::ActivityCommitted
