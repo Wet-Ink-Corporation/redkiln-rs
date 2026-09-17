@@ -602,7 +602,7 @@ cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # ---- BEFORE readings (PIA-035): each PRINTS on the untouched tree and is silent after the step. They are
 # ---- READINGS FOR COMPARISON, NOT ASSERTIONS — nothing below consumes them, and the count above puts them
 # ---- among the statements that cannot stop the block. Run them first and record all three prints.
-test -z "$(ls -d crates/rk-kernel/src/policy crates/rk-kernel/src/policy.rs 2>/dev/null)" && echo "BEFORE: no rk-kernel::policy module yet"
+test -z "$(ls -d crates/rk-kernel/src/policy crates/rk-kernel/src/policy.rs 2>/dev/null)" && echo "BEFORE: no rk-kernel::policy module yet"   # ← still PRINTS after the step (2026-09-17): the policy table landed at src/review/policy.rs, which the three bans below reach by MODULE PATH (`policy(\.rs|/)`) and this top-level `ls` does not. The reading was written to a location the design leaves to the implementer (§7b-ii.12); it is kept, not moved, and the tracker records that it prints
 test ! -d crates/rk-kernel/tests/fixtures/gates && echo "BEFORE: no gate fixtures yet"
 test ! -f crates/rk-kernel/tests/ui/ac294_block_constructor.rs && echo "BEFORE: no AC-294 block-constructor fixture yet"
 
@@ -661,7 +661,14 @@ for t in ac294_block_constructor_is_private_outside_policy ac295_weight_change_a
          ac314_corpus_sha_is_the_corpus_repos ac334_flip_predicate ac015_inversion_regression \
          ac335_green_suite_does_not_promote_a_survivor ac345_quarantine_changes_no_ledger_status \
          ac346_quarantined_survivor_still_refuses_exit ac326_bootstrap_comparator \
-         ac239_gate_eligible_list_is_data ac455_policy_decides_not_the_type ; do
+         ac239_gate_eligible_list_is_data ac455_policy_decides_not_the_type \
+         ac315_review_never_marks_an_ac_verified ac316_green_suite_does_not_clear_a_block \
+         ac338_restored_mutation_is_unverifiable ac342_review_findings_are_not_a_ledger_input \
+         ac322_inert_filter_records_whole_suite ac332_empty_selection_is_never_green \
+         ac352_basis_reason_is_exhaustive ac324_absent_basis_is_err \
+         ac343_model_authored_pass_is_a_schema_violation ac344_verify_findings_use_the_review_predicate \
+         ac340_survivor_finding_blocks_under_default_weight ac347_verify_dispatches_nothing \
+         ac336_toolchain_version_bump_moves_the_verify_memo_key ; do
   out=$(cargo test -p rk-kernel -- "$t" 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: $t exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
   printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: no test named $t ran and passed — the -- filter is a SUBSTRING match (s7a:939)"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
@@ -934,9 +941,32 @@ nothing pins"*. **Before this step is RUN, either author a named test per id and
 to ARMED with its reason.** They are not moved to ARMED now because nothing external blocks them — the code and the
 tests are this stage's, and what is missing is the lines.
 *(2026-09-17: done for the human gate — six named and in the block, one asserted by name inside another, three
-ARMED with reasons, all in the human-gate bullet above. The review-gate and verify-gate remainders — AC-315, AC-316;
-AC-320–AC-322, AC-324, AC-332, AC-336, AC-338–AC-344, AC-347–AC-353, AC-355, AC-359 — still stand under this
-sentence and are settled when their slices are built.)*
+ARMED with reasons, all in the human-gate bullet above. **Done for the review gate the same day**: AC-315
+(`ac315_review_never_marks_an_ac_verified`) and AC-316 (`ac316_green_suite_does_not_clear_a_block`) are named and in
+the block. **Done for the verify gate the same day** — eleven named and in the block: AC-322
+(`ac322_inert_filter_records_whole_suite`), AC-324 (`ac324_absent_basis_is_err`), AC-332
+(`ac332_empty_selection_is_never_green`), AC-336's unit half (`ac336_toolchain_version_bump_moves_the_verify_memo_key`;
+the integration recompute over a store is Step 8's), AC-338's predicate half (`ac338_restored_mutation_is_unverifiable`;
+the post-run content hash is the harness's, 7c), AC-340 (`ac340_survivor_finding_blocks_under_default_weight`), AC-342
+(`ac342_review_findings_are_not_a_ledger_input`), AC-343 (`ac343_model_authored_pass_is_a_schema_violation`), AC-344
+(`ac344_verify_findings_use_the_review_predicate`; the missing-binary fixture is 7c's), AC-347
+(`ac347_verify_dispatches_nothing`; F39's accuracy half is AC-070's), AC-352 (`ac352_basis_reason_is_exhaustive`). And
+**eleven ARMED with reasons**, each needing a thing this stage does not have: **AC-320** (the verify activity's
+runtime and `process_spawned` events — the activity runner is 7c's; AC-455's admissibility is the pure half that runs
+here), **AC-321** (a replay over a *completed verify run's* event — no verify-run event kind exists and ADR-0124/0125
+minted none; the kind is a record's to mint, RAISED), **AC-339** (a disposable clone and a tree-hash equality around a
+real mutation run — `rk-git`'s worktree and 7c's harness), **AC-341** (the integration halves — a green CI through the
+Tracker port and a zero-status-check-writes port assertion — 7c; its static half, *the verify gate's input type
+contains no tracker or CI field*, is `verify_reads_no_suite_verdict_rule`'s `Tracker` / `ci_status` / `status_check`
+bans and runs inside `ac335_…`), **AC-348** (affected-area test selection over a change set does not exist — Step 7b's
+`select` is activity selection; the selector is 7c's, with its 200-change-set property test), **AC-349** (the binder
+over two toolchain claims — 7c), **AC-350** (a Node + .NET fixture over real adapters — 7c), **AC-351** (the pack lint
+over a toolchain pack's facet references — `rk-port-toolchain`, 7c; no toolchain pack loader exists), **AC-353**
+(`taskkill /T /F` against a verify run in progress — a child process, 7c/8), **AC-355** (the two-fixture selection
+regression suite in CI — 7c, with the selector), **AC-359** (the verify activity re-opening a gate on drift — its gate
+half is AC-245/AC-249's, built at the human gate; the ledger-recompute-after-re-open half needs the activity, 7c).
+These are not moved into the ARMED table above, which is fixed at this file's 2026-09-13 text; this parenthetical is
+their ARMED row, as the human gate's is.)*
 
 **RAISED, NOT SETTLED — allocation questions this file may not decide** (`00-preamble.md`:55; `s7a`:1217):
 

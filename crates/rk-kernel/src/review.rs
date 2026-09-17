@@ -27,8 +27,9 @@
 //! `crate::module_boundary`, outside both (`s7b-ii` §7b-ii.12).
 //!
 //! **ADR-0101 clause 5 bounds what any of this may be read as.** S-SUBTLE-CB is registered and
-//! unrun; the gate exists and fails closed, and nothing in this module or its tests claims it is
-//! guarded against false approval.
+//! unrun; the gate exists and fails closed, and nothing in this module or its tests claims more
+//! than that. (The forbidden sentence itself is not written here even to deny it: Checkpoint
+//! 7b-ii's guard is a substring rule over the crate, and it was right to fire on the negation.)
 
 pub mod classify;
 pub mod confirm;
