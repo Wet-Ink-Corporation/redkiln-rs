@@ -210,6 +210,8 @@ serde_json.workspace = true
 # crates/rk-git/Cargo.toml:37, the one other place in the workspace that builds repos in tests, so the
 # resolved graph gains no new crate: `tempfile 3` is already in Cargo.lock through rk-git's dev-deps.
 tempfile = "3"
+# ADDED 2026-09-17 (Step 7b-ii, the review gate): AC-286's and AC-296's named instrument. Dev-only.
+proptest.workspace = true
 # The compile-fail harness. Its cases' instrument is a compile FAILURE, which only a must-fail
 # harness can observe, and each case commits a .stderr snapshot so a case that starts failing for a
 # DIFFERENT reason goes red (s7a §7a.8).

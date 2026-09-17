@@ -1,0 +1,13 @@
+# AC-301 MUST-FAIL FIXTURE: a pack configuring a cheap-first review cascade — a read-only pass gating whether the
+# execution-grade review runs (design §9.3: "Cascades are refused, not priced"). The refusal's reason is what the lift
+# is keyed on: "cascade recall loss unmeasured (S-CASCADE unrun)". S-CASCADE is registered and unrun.
+[pack]
+id = "story-cascaded"
+applies = "kind == story"
+appetite = { points = 20 }
+
+[policy]
+stages = { triage = "mandatory", implement = "mandatory", review = "mandatory" }
+
+[review]
+cascade = ["read-only", "execution-grade"]   # run the cheap tier first; escalate only when it finds something

@@ -1,0 +1,8 @@
+{
+  "unset": "lenient",
+  "forbidden": "read_only",
+  "discouraged": "read_only",
+  "optional": "read_only",
+  "recommended": "lenient",
+  "mandatory": "strict"
+}

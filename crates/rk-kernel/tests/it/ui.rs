@@ -171,6 +171,8 @@ fn trybuild_pins_the_reason_each_kernel_fixture_fails() {
     t.compile_fail("tests/ui/stay_class_state_is_unconstructible.rs");
     // Step 7b-ii (s7b-ii §7b-ii.11, §7b-ii.12): AC-244's type-level half.
     t.compile_fail("tests/ui/ac244_gate_record_missing_a_field.rs");
+    // Step 7b-ii (s7b-ii §7b-ii.4, §7b-ii.12): AC-294's block constructor.
+    t.compile_fail("tests/ui/ac294_block_constructor.rs");
 }
 
 /// **Every case in `tests/ui/` is registered above, and every one commits a non-empty `.stderr`.**

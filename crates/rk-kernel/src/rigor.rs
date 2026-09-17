@@ -76,7 +76,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use crate::catalog::{Activity, Catalog, Evidence};
+use crate::catalog::{Activity, Catalog, Evidence, Step, StepKind};
 use crate::predicate::{Context, EvalError, Expr, Literal, Tri, Value, evaluate, parse};
 use crate::registry::Registry;
 use crate::toml_subset::Value as TomlValue;
@@ -866,4 +866,239 @@ mod tests {
         assert_eq!(survey.families, 1);
         assert!(survey.contexts_checked > 0, "{survey:?}");
     }
+}
+
+// ------------------------------------------------------------ AC-303: the review-confirm step survives escalation
+
+/// A review-confirm step the family lattice lost on escalation (AC-303).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfirmStepViolation {
+    pub family: String,
+    pub context: String,
+    pub lower: Rigor,
+    pub upper: Rigor,
+    pub lower_activity: String,
+    pub lower_source: String,
+    pub upper_activity: String,
+    pub upper_source: String,
+    /// The review-confirm steps present in the lower selection's resolved graph and absent from
+    /// the upper's, by step id.
+    pub lost: Vec<String>,
+}
+
+impl fmt::Display for ConfirmStepViolation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "family {:?}: escalating {} -> {} in context [{}] moves the selection from {:?} ({}) to \
+             {:?} ({}) and DROPS the review-confirm step(s) {:?}",
+            self.family,
+            self.lower.as_str(),
+            self.upper.as_str(),
+            self.context,
+            self.lower_activity,
+            self.lower_source,
+            self.upper_activity,
+            self.upper_source,
+            self.lost
+        )
+    }
+}
+
+/// What the AC-303 rule walked.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ConfirmSurvey {
+    pub families: usize,
+    pub contexts_checked: usize,
+    pub comparisons: usize,
+    pub violations: Vec<ConfirmStepViolation>,
+}
+
+/// **The review-confirm block, identified structurally.** No catalog step is named `review-confirm`,
+/// and the steps literally named `confirm` are `toolchain:test` tool steps that `bisect` KEEPS — so
+/// a rule keyed on that id could never make AC-303's own regression row red [measured 2026-09-17].
+/// The design's sentence introducing AC-303 names the F37 case as *"bisect, an activity with no
+/// adversary and no policy step"*: the **review** half is the reviewer agent (`kind = agent`,
+/// `role = reviewer`, `outputs = value:Findings`) and the **confirm** half is the `check` step that
+/// consumes its findings (`quality_block::reads_findings` over its `expr`). A `check` mints no
+/// evidence, which is exactly why AC-105's lint cannot see its loss and AC-303 must.
+fn is_review_confirm_step(step: &Step) -> bool {
+    match step.kind {
+        StepKind::Agent => {
+            step.role.as_deref() == Some("reviewer")
+                && step.output_type.as_deref() == Some("Findings")
+        }
+        StepKind::Check => step
+            .expr
+            .as_deref()
+            .and_then(|src| parse(src).ok())
+            .is_some_and(|p| crate::quality_block::reads_findings(&p.expr)),
+        StepKind::Tool | StepKind::Gate | StepKind::Emit => false,
+    }
+}
+
+impl Prepared<'_> {
+    /// The steps the activity's graph resolves to at `ctx`: every step whose `when` guard (with
+    /// `${…}` references nulled out) is `Tri::True`, in declaration order. [`Self::evidence`] is
+    /// this set projected to ADR-0036 evidence; AC-303 reads the steps themselves.
+    fn resolved_steps(&self, ctx: &Context) -> Result<Vec<&Step>, RigorError> {
+        let mut out = Vec::new();
+        for (step, guard) in self.activity.steps.iter().zip(&self.guards) {
+            if let Some(guard) = guard
+                && self.truth(guard, &step.id, ctx)? != Tri::True
+            {
+                continue;
+            }
+            out.push(step);
+        }
+        Ok(out)
+    }
+
+    /// The review-confirm steps in the resolved graph, by id.
+    fn review_confirm_steps(&self, ctx: &Context) -> Result<BTreeSet<String>, RigorError> {
+        Ok(self
+            .resolved_steps(ctx)?
+            .into_iter()
+            .filter(|s| is_review_confirm_step(s))
+            .map(|s| s.id.clone())
+            .collect())
+    }
+}
+
+/// **AC-303 — no escalation removes the review-confirm step from the resolved graph.**
+///
+/// > GIVEN any pair of rigor levels (lower, higher) for a stage that has a review-confirm step /
+/// > WHEN the lattice is linted / THEN no escalation removes the review-confirm step from the
+/// > resolved graph.
+///
+/// The same lattice as [`rigor_monotonicity_rule`] — every family, every context the family's
+/// members read, every live rigor, the lowest-`method_rank` admissible member selected at each,
+/// **every ordered pair** compared — projected to a different thing: the set of review-confirm
+/// step ids in the selected member's resolved graph, not the evidence it mints. **AC-105's twin,
+/// not its credit** (`s7b-ii` §7b-ii.4): the two rules share the F37 `mandatory`+`has_repro`
+/// regression row and nothing else, and a lost `check` step is visible only here.
+///
+/// The `(activity × rigor)` wording is read as *the activity selected at each rigor over the
+/// family lattice*: an intra-activity reading is vacuously green on both the fixture and the
+/// shipped catalog (every rigor-only step guard in the catalog is upward), and the F37 loss is
+/// between two different selected activities. Both readings are stated so the one taken is
+/// visible; the register amendment to AC-303's wording is raised in the tracker, not written here.
+///
+/// # Errors
+///
+/// As [`rigor_monotonicity_rule`].
+pub fn confirm_step_monotonicity_rule(
+    catalog: &Catalog,
+    registry: &Registry,
+) -> Result<ConfirmSurvey, RigorError> {
+    let mut families: BTreeMap<String, Vec<&Activity>> = BTreeMap::new();
+    for activity in catalog.activities() {
+        if let Some(family) = &activity.family {
+            families.entry(family.clone()).or_default().push(activity);
+        }
+    }
+    if families.is_empty() {
+        return Err(RigorError::NoFamilies);
+    }
+
+    let mut survey = ConfirmSurvey {
+        families: families.len(),
+        ..ConfirmSurvey::default()
+    };
+    let mut seen: BTreeSet<(String, Rigor, Rigor, String, String, Vec<String>)> = BTreeSet::new();
+
+    for (family, members) in &families {
+        let prepared = members
+            .iter()
+            .map(|a| Prepared::build(a, registry))
+            .collect::<Result<Vec<_>, _>>()?;
+        let read = read_facets(&prepared);
+        let axes = axes_for(&read, registry)?;
+
+        for bindings in Odometer::new(&axes) {
+            survey.contexts_checked += 1;
+            let label = render_context(&bindings);
+
+            let mut selected: BTreeMap<Rigor, &Prepared> = BTreeMap::new();
+            for rigor in Rigor::LIVE {
+                let ctx = context_for(&bindings, rigor, registry);
+                let mut best: Option<&Prepared> = None;
+                for candidate in &prepared {
+                    if !candidate.admissible(rigor, &ctx)? {
+                        continue;
+                    }
+                    if best.is_none_or(|b| candidate.activity.method_rank < b.activity.method_rank)
+                    {
+                        best = Some(candidate);
+                    }
+                }
+                if let Some(best) = best {
+                    selected.insert(rigor, best);
+                }
+            }
+
+            for (i, lower) in Rigor::LIVE.into_iter().enumerate() {
+                for upper in Rigor::LIVE.into_iter().skip(i + 1) {
+                    let (Some(low), Some(high)) = (selected.get(&lower), selected.get(&upper))
+                    else {
+                        continue;
+                    };
+                    survey.comparisons += 1;
+                    let low_steps =
+                        low.review_confirm_steps(&context_for(&bindings, lower, registry))?;
+                    let high_steps =
+                        high.review_confirm_steps(&context_for(&bindings, upper, registry))?;
+                    // the CONFIRM step is compared by signature class, not by id, because ids
+                    // differ across activities (`adversary` / `review`, `policy` / `verdict`):
+                    // the loss is "the lower graph had a reviewer step and the upper has none",
+                    // and likewise for the findings-consuming check. The ids reported are the
+                    // lower graph's, so the row names what was dropped.
+                    let has = |steps: &BTreeSet<String>, act: &Activity, kind: StepKind| {
+                        act.steps
+                            .iter()
+                            .any(|s| s.kind == kind && steps.contains(&s.id))
+                    };
+                    let mut lost: Vec<String> = Vec::new();
+                    for kind in [StepKind::Agent, StepKind::Check] {
+                        if has(&low_steps, low.activity, kind)
+                            && !has(&high_steps, high.activity, kind)
+                        {
+                            lost.extend(
+                                low.activity
+                                    .steps
+                                    .iter()
+                                    .filter(|s| s.kind == kind && low_steps.contains(&s.id))
+                                    .map(|s| s.id.clone()),
+                            );
+                        }
+                    }
+                    if lost.is_empty() {
+                        continue;
+                    }
+                    let key = (
+                        family.clone(),
+                        lower,
+                        upper,
+                        low.activity.id.clone(),
+                        high.activity.id.clone(),
+                        lost.clone(),
+                    );
+                    if seen.insert(key) {
+                        survey.violations.push(ConfirmStepViolation {
+                            family: family.clone(),
+                            context: label.clone(),
+                            lower,
+                            upper,
+                            lower_activity: low.activity.id.clone(),
+                            lower_source: low.activity.source.clone(),
+                            upper_activity: high.activity.id.clone(),
+                            upper_source: high.activity.source.clone(),
+                            lost,
+                        });
+                    }
+                }
+            }
+        }
+    }
+    Ok(survey)
 }

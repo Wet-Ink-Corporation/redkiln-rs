@@ -296,6 +296,7 @@ mod recorded_log;
 mod replay;
 mod resolver;
 mod retry;
+mod review;
 mod rigor;
 mod runtime;
 mod selection;

@@ -350,6 +350,10 @@ pub mod replay;
 /// identity could be read. That is what makes it consistent with [`kernel_denylist`] rather than in
 /// tension with it.
 pub mod resolver;
+/// **The review gate** (Step 7b-ii, `s7b-ii` §7b-ii.3–.8): the classifier, the policy table, re-execution,
+/// ingest, the confirm half. Two functions, two files — `review::classify` and `review::policy::classify`
+/// (AC-283) — and the lints that police them live in [`module_boundary`], outside both.
+pub mod review;
 pub mod rigor;
 
 /// **The impure shell — AC-009–AC-013, AC-030, AC-031, AC-110, AC-525.**

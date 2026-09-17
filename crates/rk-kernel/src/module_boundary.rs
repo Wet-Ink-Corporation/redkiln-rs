@@ -628,3 +628,298 @@ pub fn gate_path_purity_rule(
         Err(violations)
     }
 }
+
+// ------------------------------------------------------------ the review gate's five source rules
+
+/// What a review-gate source rule walked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewRuleReport {
+    pub files_scanned: usize,
+    pub code_lines_scanned: usize,
+}
+
+/// Does `path` name the module `module` — as `module.rs`, `module/mod.rs` or `module/<child>.rs`,
+/// under any parent — the way Checkpoint 7b-ii's greps scope by MODULE PATH and never by directory
+/// (`s7b-ii` §7b-ii.13: *"admits `policy.rs`, `policy/mod.rs` and `review/policy/*.rs` alike"*)?
+fn names_module(path: &str, module: &str) -> bool {
+    let p = path.replace('\\', "/");
+    p.ends_with(&format!("/{module}.rs")) || p.contains(&format!("/{module}/"))
+}
+
+/// Blank the CONTENTS of every double-quoted string literal on one code line, keeping the quotes.
+/// A call, a read or an extraction is code; the same spelling inside a string is a message or a
+/// key, and a rule that matched it would fire on its own violation text — the self-referential
+/// shape `s7a`:1032-1039 records, met again 2026-09-17 when the AC-302 rule reported its own
+/// `pattern: "resolve_review_tier(<model value>)"` line. Char literals are left alone (AC-318's
+/// `.find('{')` is a char). Escapes inside the literal are skipped with their escaped character.
+fn blank_string_literals(code: &str) -> String {
+    let mut out = String::with_capacity(code.len());
+    let mut chars = code.chars().peekable();
+    let mut in_str = false;
+    while let Some(c) = chars.next() {
+        if in_str {
+            match c {
+                '\\' => {
+                    chars.next();
+                }
+                '"' => {
+                    in_str = false;
+                    out.push('"');
+                }
+                _ => {}
+            }
+        } else {
+            out.push(c);
+            if c == '"' {
+                in_str = true;
+            }
+        }
+    }
+    out
+}
+
+/// Scan `files` (those `select`ed) on code lines — string-literal contents blanked — for `bans`,
+/// one violation per hit.
+fn ban_tokens(
+    files: &[SourceFile],
+    select: impl Fn(&str) -> bool,
+    bans: &[&'static str],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    let mut violations: Vec<BoundaryViolation> = Vec::new();
+    let mut files_scanned = 0_usize;
+    let mut code_lines_scanned = 0_usize;
+    for file in files {
+        if !select(&file.path) {
+            continue;
+        }
+        files_scanned += 1;
+        let mut in_block = false;
+        for (i, raw) in file.text.lines().enumerate() {
+            let code = blank_string_literals(&strip_comments(raw, &mut in_block));
+            if code.trim().is_empty() {
+                continue;
+            }
+            code_lines_scanned += 1;
+            for pattern in bans {
+                if code.contains(pattern) {
+                    violations.push(BoundaryViolation {
+                        path: file.path.clone(),
+                        line: i + 1,
+                        pattern,
+                        text: code.trim().to_owned(),
+                    });
+                }
+            }
+        }
+    }
+    if violations.is_empty() {
+        Ok(ReviewRuleReport {
+            files_scanned,
+            code_lines_scanned,
+        })
+    } else {
+        Err(violations)
+    }
+}
+
+/// **AC-285's architecture lint**: `finding.evidence_label` has no reader inside the policy
+/// module. The model's label is retained on the persisted record for drift monitoring and routed
+/// nowhere; a policy module that read it would be ADR-0074's rejected *model-chosen evidence
+/// class*. Scoped to files that name the `policy` module; the positive control is
+/// `tests/fixtures/lint-controls/ac285_policy_reads_the_model_label.rs`.
+///
+/// # Errors
+///
+/// One violation per code line in a policy-module file naming `evidence_label`.
+pub fn policy_reads_no_model_label_rule(
+    files: &[SourceFile],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    ban_tokens(files, |p| names_module(p, "policy"), &["evidence_label"])
+}
+
+/// The tokens AC-286 bans inside the classifier module — on the module's own SYNTAX, because
+/// *"a crate-level dependency-edge check alone would not catch a transitive route"*.
+pub const CLASSIFIER_BANS: &[&str] = &["std::fs", "std::time", "std::env", "SystemTime", "Instant"];
+
+/// **AC-286's source-level lint**: the classifier module reads no clock, no environment variable
+/// and no file. Scoped to files that name the `classify` module; the positive control is
+/// `tests/fixtures/lint-controls/ac286_classifier_reads_the_clock.rs`.
+///
+/// # Errors
+///
+/// One violation per banned token per code line.
+pub fn classifier_purity_rule(
+    files: &[SourceFile],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    ban_tokens(files, |p| names_module(p, "classify"), CLASSIFIER_BANS)
+}
+
+/// The shapes of text-to-JSON extraction AC-318 bans on the review path: parsing a string as
+/// JSON, hunting for braces in prose, stripping a code fence, or reaching for a regex.
+pub const PROSE_JSON_BANS: &[&str] = &[
+    "from_str(",
+    ".find('{')",
+    ".find(\"{\")",
+    "rfind('}')",
+    "rfind(\"}\")",
+    "trim_start_matches(\"",
+    "strip_prefix(\"",
+    "Regex",
+    "regex::",
+];
+
+/// **AC-318's architecture lint**: zero calls into any text-to-JSON extraction helper on the review
+/// path (every file under the `review` module). The payload is `structured_output` or it is an
+/// error (AC-282); prose is never parsed. The lint-fail fixture is
+/// `tests/fixtures/lint-controls/ac318_review_parses_prose_as_json.rs`.
+///
+/// # Errors
+///
+/// One violation per banned shape per code line.
+pub fn review_path_no_prose_json_rule(
+    files: &[SourceFile],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    ban_tokens(files, |p| names_module(p, "review"), PROSE_JSON_BANS)
+}
+
+/// The spellings of a model-produced value that may not appear in a `resolve_review_tier(…)`
+/// argument list (AC-302; golden constraint 1's standing negative).
+pub const MODEL_VALUE_TOKENS: &[&str] = &[
+    "structured_output",
+    "model",
+    "Typed",
+    "suggested",
+    "payload",
+    "result",
+    "facet",
+    "llm",
+];
+
+/// **AC-302's call-graph lint**: every CALL of `resolve_review_tier` in `src/` passes a pack- or
+/// catalog-declared rigor and nothing a model produced. The definition line is not a call site;
+/// a call site whose argument text names any of [`MODEL_VALUE_TOKENS`] is a violation.
+///
+/// # Errors
+///
+/// One violation per offending call line.
+pub fn review_tier_call_graph_rule(
+    files: &[SourceFile],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    let mut violations: Vec<BoundaryViolation> = Vec::new();
+    let mut files_scanned = 0_usize;
+    let mut code_lines_scanned = 0_usize;
+    for file in files {
+        files_scanned += 1;
+        let mut in_block = false;
+        for (i, raw) in file.text.lines().enumerate() {
+            let code = blank_string_literals(&strip_comments(raw, &mut in_block));
+            if code.trim().is_empty() {
+                continue;
+            }
+            code_lines_scanned += 1;
+            let Some(at) = code.find("resolve_review_tier(") else {
+                continue;
+            };
+            // the definition is `fn resolve_review_tier(`; an import or a bare path is not a call
+            if code[..at].trim_end().ends_with("fn") || !code[at..].contains(')') {
+                continue;
+            }
+            let args = &code[at + "resolve_review_tier(".len()..];
+            if MODEL_VALUE_TOKENS.iter().any(|t| args.contains(t)) {
+                violations.push(BoundaryViolation {
+                    path: file.path.clone(),
+                    line: i + 1,
+                    pattern: "resolve_review_tier(<model value>)",
+                    text: code.trim().to_owned(),
+                });
+            }
+        }
+    }
+    if violations.is_empty() {
+        Ok(ReviewRuleReport {
+            files_scanned,
+            code_lines_scanned,
+        })
+    } else {
+        Err(violations)
+    }
+}
+
+/// What [`block_construction_sites_rule`] walked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BlockSitesReport {
+    pub files_walked: usize,
+    /// Construction sites found INSIDE the owning module. A rule that found none walked the wrong
+    /// tree: `review/policy.rs` constructs the one block value there is.
+    pub sites_inside_owner: usize,
+}
+
+/// Is there a block-value CONSTRUCTION on this code line? Anchored on construction, not on the
+/// token — `pub struct Block {`, `impl Block {` and a `Block { .. } =>` pattern are not (Checkpoint
+/// 7b-ii's own note). The shapes: `Block::new(` / `BlockSet::new(`, and `Block {` / `BlockSet {`
+/// preceded by `=` or `(` (an assignment or an argument), which is the checkpoint grep's pattern.
+fn constructs_block(code: &str) -> bool {
+    for name in ["BlockSet", "Block"] {
+        let mut from = 0;
+        while let Some(rel) = code[from..].find(name) {
+            let at = from + rel;
+            let end = at + name.len();
+            let before = code[..at].trim_end();
+            let word_start = at == 0
+                || !code.as_bytes()[at - 1].is_ascii_alphanumeric()
+                    && code.as_bytes()[at - 1] != b'_';
+            let after = code[end..].trim_start();
+            if word_start
+                && (after.starts_with("::new")
+                    || (after.starts_with('{') && (before.ends_with('=') || before.ends_with('('))))
+            {
+                return true;
+            }
+            from = end;
+        }
+    }
+    false
+}
+
+/// **AC-294's module-boundary lint**: zero block-value construction sites outside the policy
+/// module. The compile-fail case is the evidence; this is the floor beneath it, and
+/// `tests/ui/ac294_block_constructor.rs` is its positive control (it constructs a `Block` and must
+/// be reported when scanned as a non-policy source).
+///
+/// # Errors
+///
+/// One violation per construction site outside a file naming the `policy` module.
+pub fn block_construction_sites_rule(
+    files: &[SourceFile],
+) -> Result<BlockSitesReport, Vec<BoundaryViolation>> {
+    let mut violations: Vec<BoundaryViolation> = Vec::new();
+    let mut sites_inside_owner = 0_usize;
+    for file in files {
+        let inside = names_module(&file.path, "policy");
+        let mut in_block = false;
+        for (i, raw) in file.text.lines().enumerate() {
+            let code = blank_string_literals(&strip_comments(raw, &mut in_block));
+            if code.trim().is_empty() || !constructs_block(&code) {
+                continue;
+            }
+            if inside {
+                sites_inside_owner += 1;
+            } else {
+                violations.push(BoundaryViolation {
+                    path: file.path.clone(),
+                    line: i + 1,
+                    pattern: "Block construction outside policy",
+                    text: code.trim().to_owned(),
+                });
+            }
+        }
+    }
+    if violations.is_empty() {
+        Ok(BlockSitesReport {
+            files_walked: files.len(),
+            sites_inside_owner,
+        })
+    } else {
+        Err(violations)
+    }
+}

@@ -1,0 +1,9 @@
+error[E0451]: fields `class` and `weight` of struct `rk_kernel::review::policy::Block` are private
+  --> tests/ui/ac294_block_constructor.rs:17:9
+   |
+16 |     let _forged = Block {
+   |                   ----- in this type
+17 |         class: EvidenceClass::Reproduced,
+   |         ^^^^^ private field
+18 |         weight: ReviewWeight::Strict,
+   |         ^^^^^^ private field
