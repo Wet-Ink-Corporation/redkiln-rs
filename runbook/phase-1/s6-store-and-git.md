@@ -300,8 +300,16 @@ test "$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' | xargs grep -n 
   | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | wc -l | tr -d '[:space:]')" = 0 \
   || { echo "FAIL: a crate resolves the current directory (AC-529, ADR-0105 clause 8)"; exit 1; }
 
-# ---- PIA-036: the lifted module names the corpus SHA it was lifted from.
-grep -q "$CORPUS_SHA" crates/rk-git/src/reconcile.rs || { echo "FAIL: reconcile.rs's header does not name CORPUS_SHA $CORPUS_SHA"; exit 1; }
+# ---- PIA-036: the lifted module names the corpus SHA it was lifted from. The lift SHA is a fact about the
+# ---- lift and does not move when CORPUS_PIN does (re-scoped 2026-09-17, PROGRESS section 2 D17-2: the line
+# ---- read "$CORPUS_SHA", the LIVE pin, and could not pass after 7b.11's single move at ddc57be). Four
+# ---- statements: the header names a 40-hex SHA (its first); that SHA is one CORPUS_PIN has carried, in its
+# ---- committed history; the lifted file exists in the corpus at that SHA; and the blob the header names is
+# ---- that file's blob there.
+lift=$(grep -oE '\b[0-9a-f]{40}\b' crates/rk-git/src/reconcile.rs | head -1); test -n "$lift" || { echo "FAIL: reconcile.rs's header names no 40-hex corpus SHA (PIA-036)"; exit 1; }
+git log --format= -p -- CORPUS_PIN | grep -qE "^\+CORPUS_SHA=$lift\$" || { echo "FAIL: reconcile.rs names lift SHA $lift, which CORPUS_PIN has never carried (PIA-036)"; exit 1; }
+lift_blob=$(git -C "$CORPUS_REPO" rev-parse --verify -q "$lift:runner/src/reconcile.rs") || { echo "FAIL: runner/src/reconcile.rs is not in the corpus at lift SHA $lift"; exit 1; }
+grep -q "$lift_blob" crates/rk-git/src/reconcile.rs || { echo "FAIL: reconcile.rs's header does not name the lifted file's blob $lift_blob at $lift"; exit 1; }
 
 # ---- the CI rule Step 5's table assigned to Checkpoint 6. Nothing asserted it had ever landed.
 test -f .github/workflows/ci.yml || { echo "FAIL: ci.yml absent"; exit 1; }
