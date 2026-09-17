@@ -304,3 +304,4 @@ mod selection;
 mod short_circuit;
 mod support;
 mod ui;
+mod verify;

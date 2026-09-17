@@ -1,0 +1,38 @@
+# AC-347 — the positive fixture: a verify activity attempting an AGENT step at `pre-test`. "No
+# harness dispatch participates: the selection is a pure function of the changed-file set, the
+# toolchain config and facets.toml" — this must FAIL the lint, naming the step.
+[activity]
+id           = "ac347-verify-with-agent-step"
+version      = 1
+stage        = "verify"
+provides     = ["TestReport"]
+requires     = ["Changeset"]
+derived_from = ["Changeset"]
+tags         = ["kind:feature"]
+method_rank  = 10
+family       = "ac347-fixtures"
+min_rigor    = "optional"
+max_rigor    = "mandatory"
+cost_class   = "M"
+evidence     = ["GreenAt", "ToolReport", "Findings?"]
+deviation_ok = []
+
+[[step]]
+id      = "pre-test"
+kind    = "agent"
+role    = "implementer"
+inputs  = { changed = "artifact:Changeset" }
+outputs = "value:Selection"
+
+[[step]]
+id      = "run-suite"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${pre-test.outputs}" }
+outputs = "value:TestReport"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { TestReport = "${run-suite.outputs}" }
+evidence  = ["${run-suite}"]

@@ -1020,3 +1020,145 @@ pub fn review_touches_no_ledger_rule(
 ) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
     ban_tokens(files, |p| names_module(p, "review"), LEDGER_TOKENS)
 }
+
+// ---- the verify gate's four rules (Step 7b-ii, `s7b-ii` §7b-ii.9) ----------------------------------
+
+/// What [`stage_exit_refused_single_site_rule`] found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExitRefusalReport {
+    /// Construction sites of `EventKind::StageExitRefused` in `src/`. Exactly one is the invariant
+    /// (ADR-0125 decision 3).
+    pub construction_sites: usize,
+}
+
+/// **ADR-0125 decision 3**: the `stage_exit_refused` row is constructed at exactly one site in
+/// `src/` — the exit check that computes the refusal. A second site could write a refusal for an
+/// exit that was not refused; none could compute a refusal that writes no row.
+///
+/// The three exhaustive folds (`fsm.rs`, `breaker.rs`, `memo.rs`) NAME the variant in a match arm
+/// and do not construct it; a construction is the variant passed to `Event::new(` or written as an
+/// `Event {` literal, so the rule looks for the name on a line that also constructs an event.
+///
+/// # Errors
+///
+/// A violation per site beyond the first, or one when there is none.
+pub fn stage_exit_refused_single_site_rule(
+    files: &[SourceFile],
+) -> Result<ExitRefusalReport, Vec<BoundaryViolation>> {
+    let mut sites: Vec<BoundaryViolation> = Vec::new();
+    for file in files {
+        let mut in_block = false;
+        let lines: Vec<String> = file
+            .text
+            .lines()
+            .map(|l| blank_string_literals(&strip_comments(l, &mut in_block)))
+            .collect();
+        for (i, code) in lines.iter().enumerate() {
+            if !code.contains("EventKind::StageExitRefused") {
+                continue;
+            }
+            // a construction: `Event::new(` on this line or the two before it
+            let window = &lines[i.saturating_sub(2)..=i];
+            if window
+                .iter()
+                .any(|l| l.contains("Event::new(") || l.contains("Event {"))
+            {
+                sites.push(BoundaryViolation {
+                    path: file.path.clone(),
+                    line: i + 1,
+                    pattern: "a stage_exit_refused construction site",
+                    text: code.trim().to_owned(),
+                });
+            }
+        }
+    }
+    match sites.len() {
+        1 => Ok(ExitRefusalReport {
+            construction_sites: 1,
+        }),
+        0 => Err(vec![BoundaryViolation {
+            path: "crates/rk-kernel/src/verify/exit.rs".to_owned(),
+            line: 0,
+            pattern: "no stage_exit_refused construction site at all",
+            text: "a refusal that writes no row is not an event (AC-346)".to_owned(),
+        }]),
+        _ => Err(sites),
+    }
+}
+
+/// What the verify module may not name on a code line: the item's suite verdict (AC-335), a
+/// review's findings or outcome (AC-342), a quarantine (AC-345; ADR-0104 decision 4), a CI or
+/// tracker status (AC-341).
+pub const VERIFY_FORBIDDEN_INPUTS: &[&str] = &[
+    "GreenAt",
+    "SuiteVerdict",
+    "suite_verdict",
+    "Findings",
+    "ReviewOutcome",
+    "PersistedFinding",
+    "Quarantine",
+    "quarantine",
+    "Tracker",
+    "ci_status",
+    "status_check",
+];
+
+/// **AC-335 / AC-341 / AC-342 / AC-345's architecture lint**: no file of the verify module names a
+/// forbidden input on a code line. String-literal contents are blanked and comments stripped, so a
+/// doc that EXPLAINS the ban does not fire it.
+///
+/// # Errors
+///
+/// One violation per forbidden token per code line in a `verify` file.
+pub fn verify_reads_no_suite_verdict_rule(
+    files: &[SourceFile],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    ban_tokens(
+        files,
+        |p| names_module(p, "verify"),
+        VERIFY_FORBIDDEN_INPUTS,
+    )
+}
+
+/// **AC-324's lint**: no `Default` and no `unwrap_or_default` on the verify path — a verify result
+/// whose basis, digest or command record is absent resolves to `Err`, never to a value.
+///
+/// # Errors
+///
+/// One violation per hit on a code line in a `verify` file.
+pub fn verify_path_no_default_rule(
+    files: &[SourceFile],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    ban_tokens(
+        files,
+        |p| names_module(p, "verify"),
+        &[
+            "unwrap_or_default",
+            "Default::default",
+            "impl Default",
+            "derive(Default",
+        ],
+    )
+}
+
+/// **AC-344's architecture assertion**: the block predicate is `review::reexec`'s, not a second
+/// copy in the verify module — no `fn four_cell`, `fn mutation_outcome` or `fn policy_classify`
+/// defined there.
+///
+/// # Errors
+///
+/// One violation per second definition on a code line in a `verify` file.
+pub fn verify_defines_no_second_predicate_rule(
+    files: &[SourceFile],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    ban_tokens(
+        files,
+        |p| names_module(p, "verify"),
+        &[
+            "fn four_cell",
+            "fn mutation_outcome",
+            "fn classify(",
+            "struct Block",
+        ],
+    )
+}

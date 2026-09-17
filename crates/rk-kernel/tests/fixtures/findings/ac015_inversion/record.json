@@ -1,0 +1,37 @@
+{
+  "criterion": "AC-334 / ac015_inversion_regression (F25; AC-015 of the predecessor item issue-146-147-boundary-window)",
+  "mutation": {
+    "patch_file": "inversion.patch",
+    "suite": "npx vitest run test/implement-contract.test.ts",
+    "suite_filter": "-t \"AC-015\""
+  },
+  "expected": {
+    "kind": "assertion",
+    "assertion": {
+      "file": "test/implement-contract.test.ts",
+      "test": "AC-015: `record-links` is explicitly ordered AFTER the commit exists — a sha cannot name the commit it is inside"
+    }
+  },
+  "recorded": {
+    "F25": "remove step 7 -> RED on assertion 1; invert the ordering -> 36/36 GREEN [measured, F25, n=1 AC, one operator]",
+    "e3_jsonl_line_54": "replacing workflows/forge-implement.js:1800 ... with \"as the FIRST thing you do, before you make the checkpoint at all\" ... leaves both AC-015 tests GREEN (vitest run test/implement-contract.test.ts -t \"AC-015\" -> 2 passed)",
+    "suite_green_under_mutant": true,
+    "assertion_flipped": false,
+    "cases_in_file": 36
+  },
+  "provenance": {
+    "original_text": "predecessor-47faec9f.bundle at CORPUS_SHA 61f590e51cbb00301c310e46aab615563a7787b8, f21f55fc355eb49b42faf2eb07cad266b647ec1e:workflows/forge-implement.js:1800-1801 (read through the object store)",
+    "inverted_text": "redkiln-corpus results/e3.jsonl line 54, .step.digest.issues[0].issue (arm b-clean, slug issue-146-147-boundary-window), copied verbatim below",
+    "patch": "authored 2026-09-17 as the unified diff of the recorded original against the recorded inversion; no patch file exists in any record (F25 is prose)"
+  },
+  "recorded_issue_verbatim": {
+    "files": [
+      "test/implement-contract.test.ts",
+      "workflows/forge-implement.js",
+      ".bklg/support/issue-146-147-story-gate/issue-146-147-boundary-window/implementation-report.md"
+    ],
+    "fix": "Scope the ordering assertion to the `record-links` sentence rather than the whole step. E.g. slice step 7 out of `commitStep` (`const step7 = commitStep.match(/7\\.\\s*RECORD THE CHECKPOINT[\\s\\S]*/)?.[0] ?? \"\"`), assert `expect(step7).not.toBe(\"\")` for non-vacuity, then `expect(step7.toLowerCase()).toMatch(/immediately after the commit exists/)` and, for order, `expect(commitStep.indexOf(\"redkiln record-links\")).toBeGreaterThan(commitStep.indexOf(\"6. COMMIT\"))` — and confirm the new assertion dies under the BEFORE-the-checkpoint mutant above. Correct the AC-015 row in `implementation-report.md` to state what the assertion actually pins.",
+    "issue": "AC-015's ordering criterion is not actually tested. `test/implement-contract.test.ts:449` asserts `/after[^.]{0,40}commit/` against the entire lowercased COMMIT step, and that regex is already satisfied by pre-existing step-6 prose at `workflows/forge-implement.js:1796` (\"…on the staged files LAST (after any lint --fix); commit WITHOUT --no-verify…\"), independently of step 7. Proven by mutation: replacing `workflows/forge-implement.js:1800` \"immediately AFTER the commit exists (a sha cannot be written inside the commit it names)\" with \"as the FIRST thing you do, before you make the checkpoint at all\" — the exact inversion AC-015 exists to forbid — leaves both AC-015 tests GREEN (`vitest run test/implement-contract.test.ts -t \"AC-015\"` → 2 passed). The AC's verification column demands \"the same assertion reads the ordering words out of the prompt\"; it does not. Compounding this, the implementation report's TDD row (`implementation-report.md:43`) presents this as \"RED pre-fix … the ordering words did not exist\", crediting the assertion with a discrimination it lacks — the same near-tautology class the author correctly tightened for AC-018 in review #2."
+  },
+  "patch_sha256": "1e10013c7f86e028606f4761f4611e4aeda8a62fda7fd63d603adc5bc5374af6"
+}

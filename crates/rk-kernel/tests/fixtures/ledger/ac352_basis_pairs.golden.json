@@ -1,0 +1,6 @@
+{
+  "affected": { "basis": "affected", "reason": null },
+  "selection-ineffective": { "basis": "whole-suite", "reason": "selection-ineffective" },
+  "probe-unverified": { "basis": "whole-suite", "reason": "probe-unverified" },
+  "selection-empty": { "basis": "whole-suite", "reason": "selection-empty" }
+}

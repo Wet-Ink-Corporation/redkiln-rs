@@ -1,0 +1,11 @@
+--- a/workflows/forge-implement.js
++++ b/workflows/forge-implement.js
+@@ -1797,7 +1797,7 @@
+      --no-verify (let the pre-commit hook run — CLAUDE.md).
+      DOUBLE-COMMIT GUARD: before committing, git log ${baseRef}..HEAD --grep "Story: <projectSlug>/<slug>" — if a
+      commit already exists and nothing new is staged for it, do not duplicate; report it committed with that SHA.
+-  7. RECORD THE CHECKPOINT — immediately AFTER the commit exists (a sha cannot be written inside the commit it
++  7. RECORD THE CHECKPOINT — as the FIRST thing you do, before you make the checkpoint at all (a sha cannot be written inside the commit it
+      names), record it as this story's provenance with the CLI: \`redkiln record-links <story id> --sha <sha>\`,
+      using the id listed for the story above. Do it HERE, inside the run — not later, not "once the project is
+      done": \`redkiln verify --grain story\` derives this story's boundary window from \`links.commits\`, so an

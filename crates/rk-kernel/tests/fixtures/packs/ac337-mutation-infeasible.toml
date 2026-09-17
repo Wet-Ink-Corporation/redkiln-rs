@@ -1,0 +1,14 @@
+# AC-337 — the fixture pack declaring mutation INFEASIBLE (ADR-0008's Unreal shape). Every AC's
+# mutation-path status under it is `not-feasible(reason)`, which is not `pinned`; AC-357 routes
+# such an AC to a human gate. The `[mutation]` table's key spelling is the runbook's fixture wording
+# (`s7b-ii` §7b-ii.10 "feasible = false") and no record's — raised in the tracker.
+[pack]
+id = "ac337-mutation-infeasible"
+applies = "kind == asset"
+
+[policy]
+stages = { implement = "mandatory" }
+
+[mutation]
+feasible = false
+reason = "the Unreal asset toolchain has no mutation harness; a .uasset diff is not a reverted fix (ADR-0008)"

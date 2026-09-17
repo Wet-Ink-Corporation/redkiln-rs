@@ -1,0 +1,11 @@
+# AC-455, policy row 1 — the pack whose policy REQUIRES a verification at `implement`. Over the
+# fixture spec `ledger/ac455_spec.toml` the stage is refused naming `AC-455-B`.
+[pack]
+id = "ac455-requires-verification"
+applies = "kind == feature"
+
+[policy]
+stages = { implement = "mandatory", triage = "recommended" }
+# The key is this stage's reading — no record fixes its spelling (raised in the tracker). A list of
+# the stages at which every AC must carry a verification.
+verification_required = ["implement"]

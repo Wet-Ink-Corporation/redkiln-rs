@@ -1,0 +1,43 @@
+# AC-347 — the CONTROL: a verify activity whose steps are tool / check / emit only. Must pass the
+# lint, or a lint refusing every verify activity satisfies the positive fixture vacuously.
+[activity]
+id           = "ac347-verify-clean"
+version      = 1
+stage        = "verify"
+provides     = ["TestReport"]
+requires     = ["Changeset"]
+derived_from = ["Changeset"]
+tags         = ["kind:feature"]
+method_rank  = 10
+family       = "ac347-fixtures"
+min_rigor    = "optional"
+max_rigor    = "mandatory"
+cost_class   = "M"
+evidence     = ["GreenAt", "ToolReport"]
+deviation_ok = []
+
+[[step]]
+id      = "select"
+kind    = "tool"
+run     = "toolchain:classify"
+inputs  = { changed = "artifact:Changeset" }
+outputs = "value:Selection"
+
+[[step]]
+id      = "run-suite"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${select.outputs}" }
+outputs = "value:TestReport"
+
+[[step]]
+id     = "basis"
+kind   = "check"
+inputs = { report = "${run-suite.outputs}" }
+expr   = "run-suite.status == 'passing'"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { TestReport = "${run-suite.outputs}" }
+evidence  = ["${run-suite}"]

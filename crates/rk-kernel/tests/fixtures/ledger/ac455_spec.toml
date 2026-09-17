@@ -1,0 +1,16 @@
+# AC-455 — one fixture spec, two policy rows. `AC-455-A` declares a verification; `AC-455-B` is at
+# `verification: None` — which the TYPE accepts without complaint (S-MIG decision 1: the policy, not
+# the type, decides whether that blocks a stage).
+
+[[ac]]
+id = "AC-455-A"
+verification = "tests/it/x.rs::pins_it"
+
+[ac.assertion]
+file = "tests/it/x.rs"
+test = "pins_it"
+assertion = "assert_eq!(a, b)"
+
+[[ac]]
+id = "AC-455-B"
+# no verification, no assertion, no mutation — by design

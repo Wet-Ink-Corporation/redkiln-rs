@@ -46,7 +46,7 @@
 //! deliberately not read: `00-preamble.md`:55 forbids defaulting a value a record owes, and a
 //! loader that read it would have to decide what an absent one means.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use crate::rigor::Rigor;
@@ -158,6 +158,14 @@ pub struct Pack {
     substitution_permitted: Option<bool>,
     stage_rigor: BTreeMap<String, Rigor>,
     stages: BTreeMap<String, StageSpec>,
+    /// **AC-455's policy row**: `[policy] verification_required = [<stages>]` — the stages at which
+    /// every AC must carry a verification. An absent key is an EMPTY set: the pack requires none.
+    /// The key's spelling is Step 7b-ii's reading and no record's (raised in the tracker).
+    verification_required: BTreeSet<String>,
+    /// **AC-337's declaration**, carried raw: `[mutation] feasible = <bool>, reason = <str>`. Read
+    /// on demand by [`Self::mutation_feasibility`] so that a PROCESS pack that says nothing loads
+    /// (every shipped pack does) and the configuration error fires where the verify gate reads it.
+    mutation: Option<(Option<bool>, Option<String>)>,
 }
 
 impl Pack {
@@ -198,6 +206,45 @@ impl Pack {
                 });
             }
             Ok(r)
+        };
+
+        let mut verification_required = BTreeSet::new();
+        if let Some(policy) = doc.get("policy").and_then(Value::as_table)
+            && let Some(required) = policy.get("verification_required")
+        {
+            let items = required
+                .as_array()
+                .ok_or_else(|| shape("policy.verification_required is not an array".to_owned()))?;
+            for item in items {
+                let stage = item.as_str().ok_or_else(|| {
+                    shape("policy.verification_required carries a non-string".to_owned())
+                })?;
+                verification_required.insert(stage.to_owned());
+            }
+        }
+        let mutation = match doc.get("mutation") {
+            None => None,
+            Some(m) => {
+                let m = m
+                    .as_table()
+                    .ok_or_else(|| shape("[mutation] is not a table".to_owned()))?;
+                let feasible =
+                    match m.get("feasible") {
+                        None => None,
+                        Some(v) => Some(v.as_bool().ok_or_else(|| {
+                            shape("mutation.feasible is not a boolean".to_owned())
+                        })?),
+                    };
+                let reason = match m.get("reason") {
+                    None => None,
+                    Some(v) => Some(
+                        v.as_str()
+                            .ok_or_else(|| shape("mutation.reason is not a string".to_owned()))?
+                            .to_owned(),
+                    ),
+                };
+                Some((feasible, reason))
+            }
         };
 
         let mut stage_rigor = BTreeMap::new();
@@ -324,7 +371,24 @@ impl Pack {
             role_families: role_families(&doc, &shape)?,
             stage_rigor,
             stages,
+            verification_required,
+            mutation,
         })
+    }
+
+    /// Does the pack's policy require every AC to carry a verification at `stage` (AC-455)?
+    #[must_use]
+    pub fn requires_verification_at(&self, stage: &str) -> bool {
+        self.verification_required.contains(stage)
+    }
+
+    /// The pack's raw `[mutation]` declaration (AC-337): `(feasible, reason)` as written, or
+    /// `None` for a pack that says nothing. The TYPE this becomes is the port's
+    /// (`rk_ports::toolchain::MutationFeasibility`) and is built by `crate::verify` — the pure
+    /// selection function names no port (AC-525), so the pack only carries the two members.
+    #[must_use]
+    pub fn mutation_declaration(&self) -> Option<(Option<bool>, Option<&str>)> {
+        self.mutation.as_ref().map(|(f, r)| (*f, r.as_deref()))
     }
 
     /// The rigor `policy.stages` declares for one stage. `None` for a stage the pack does not

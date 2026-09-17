@@ -355,6 +355,11 @@ pub mod resolver;
 /// (AC-283) — and the lints that police them live in [`module_boundary`], outside both.
 pub mod review;
 pub mod rigor;
+/// **The verify gate** (Step 7b-ii, `s7b-ii` §7b-ii.9; the register's `rk-kernel-verify`): the flip
+/// predicate, the AC ledger, the stage-exit refusal, the bootstrap comparator, the gate-eligible list,
+/// the admissibility policy. Reads no suite verdict, finding, quarantine or CI status — the lints that
+/// hold that live in [`module_boundary`], outside it.
+pub mod verify;
 
 /// **The impure shell — AC-009–AC-013, AC-030, AC-031, AC-110, AC-525.**
 ///

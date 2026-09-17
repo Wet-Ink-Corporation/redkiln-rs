@@ -1,0 +1,8 @@
+# AC-455, policy row 2 — THE MUST-PASS CONTROL: the same spec passes under a pack whose policy does
+# not require a verification. Without this row a refusal that fires on every spec passes row 1.
+[pack]
+id = "ac455-permits-unverified"
+applies = "kind == feature"
+
+[policy]
+stages = { implement = "recommended", triage = "recommended" }

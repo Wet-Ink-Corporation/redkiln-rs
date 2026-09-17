@@ -1,0 +1,8 @@
+# AC-239 (list-is-data half; the criterion is PROVISIONAL — S-CODEX not reported in the brief).
+# The gate-eligible adapter list is DATA with exactly one entry in Phase 1 (ADR-0007: no non-Claude
+# adapter behind a review or verification gate until it passes E3-shaped checks). The kernel holds
+# the entries as opaque strings and names no adapter itself — AC-487's denylist bans the identity
+# on every code line under crates/rk-kernel/src/, which is why this file, and not a constant, is
+# where the name lives.
+phase = 1
+adapters = ["rk-adapter-claude"]
