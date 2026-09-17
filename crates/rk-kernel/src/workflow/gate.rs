@@ -1,4 +1,4 @@
-//! **The human gate's answer path and re-reach** — Step 7b-ii, `s7b-ii` §7b-ii.2, slice B.
+//! **The human gate's answer path, re-reach and expiry** — Step 7b-ii, `s7b-ii` §7b-ii.2, slices B and C.
 //!
 //! The fold in [`super::fsm`] is the only thing that moves the state, and it moves it from rows.
 //! What this module owns is the two places a row is **decided** before it is written:
@@ -7,6 +7,8 @@
 //! | --- | --- | --- | --- |
 //! | [`reach`] | **AC-524** (PROVISIONAL, P8-B), ADR-0105 clause 10 | the record a reach of a gate step mints — reach `n + 1` after `n` prior reaches, over the tree and deadline the caller supplies **at this reach** | nothing; the caller appends [`crate::runtime::gate_opened_event`] |
 //! | [`answer`] | **AC-246**, **AC-247**, **AC-249**, ADR-0017 | applied / void / refused-as-spent / refused-wrong-gate | the rows in [`AnswerOutcome::events`], or nothing on a refusal that is an error |
+//! | [`expire`] | **AC-259**, **AC-272**, AC-256/AC-257's kernel half, ADR-0017, ADR-0105 clause 10 | not due / already settled / failed / escalated / auto-decided, at a journaled `now` | `gate_expired { action }`, plus the escalation's own `gate_opened` |
+//! | [`drifted`], [`dispatches_across_open_gates`], [`prefix_rewrites_exceeding_one`], [`lint_expiry_policy_row`] | **AC-253**, **AC-243**, **AC-279**, **AC-260** | the drift predicate; two replay checkers; the expiry-policy lint | nothing — readers and checkers |
 //!
 //! # What is decided here and what is derived from the journal
 //!
@@ -24,11 +26,13 @@
 //!    (`crate::predicate::on_false`) and built no executor; nothing in `src/` re-enters an earlier
 //!    step yet, and `tests/it/gates.rs::ac524_fresh_record_on_rereach` says in its header that the
 //!    test performs the re-reach the executor will.
-//! 2. **It does not resolve an expiry.** An answer presented to an **expired** gate is
-//!    [`GateError::Expired`] — nothing written — because the disposition of an expired gate is the
-//!    expiry policy's terminal path (ADR-0017: fail / escalate / auto-decide; AC-257, AC-259),
-//!    which is slice C's, and a raced raw `gate_answered` row on an expired token is already the
-//!    fold's D-5 case (void, and the fold continues). Refusing here decides nothing about that.
+//! 2. **It resolves an expiry only at a journaled instant, never at a clock's.** [`expire`] takes
+//!    `now` as data (AC-257: the expiry is observed at the next read, with no process alive at the
+//!    deadline) and writes ADR-0017's terminal path — `fail`, `escalate` (a second gate of class
+//!    `escalation`, AC-259), `auto-decide` — and an answer presented to an already-expired gate is
+//!    [`GateError::Expired`], nothing written. What it does NOT do is choose the action: the
+//!    policy is the caller's declaration, linted by [`lint_expiry_policy_row`] (AC-260), and
+//!    `reconcile()`'s sweep over every past-deadline gate (AC-256) is `rk-git`'s / `rk-cli`'s.
 //! 3. **It computes no tree hash.** `tree_hash` arrives as a value on both sides (ADR-0105 clause
 //!    4; `rk_git::tree::tree_hash` is the one derivation), and [`FsmContext`] carries the one the
 //!    caller derived at this reach.
@@ -78,6 +82,8 @@ pub enum GateError {
     NeverOpened { token: Digest },
     /// The gate expired; its disposition is the expiry policy's terminal path, not an answer.
     Expired { token: Digest },
+    /// An `escalation`-class gate may not itself escalate (ADR-0105 clause 10; AC-259, AC-260).
+    EscalateOnEscalation { token: Digest },
 }
 
 impl std::fmt::Display for GateError {
@@ -95,6 +101,11 @@ impl std::fmt::Display for GateError {
             Self::Expired { token } => write!(
                 f,
                 "gate {} expired; its disposition is the expiry policy's, not an answer",
+                token.as_str()
+            ),
+            Self::EscalateOnEscalation { token } => write!(
+                f,
+                "escalation gate {} may not itself escalate; every chain terminates within one hop",
                 token.as_str()
             ),
         }
@@ -218,4 +229,268 @@ pub fn gate_answer_spent_event(token: &Digest, tree_hash: &str) -> Event {
         EventKind::GateAnswerSpent,
         serde_json::json!({ "token": token.as_str(), "tree_hash": tree_hash }),
     )
+}
+
+// ------------------------------------------------------------------ slice C: expiry, drift, the replay checkers
+
+/// ADR-0017's terminal path for an expired gate — *"fail / escalate / auto-decide, never a
+/// hang"*. There is no fourth arm and no default: a gate class with no action declared is
+/// AC-260's lint failure, never an implicit choice (AC-276 makes the choice a human's).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExpiryAction {
+    /// The run halts (`HaltReason::GateExpired`).
+    Fail,
+    /// A second, kernel-owned gate of class `escalation` is opened with its own
+    /// `(token, tree_hash, deadline)` (AC-259; ADR-0022, ADR-0038). Its own expiry may not
+    /// escalate again (ADR-0105 clause 10).
+    Escalate { deadline: rk_types::time::Timestamp },
+    /// The gate is answered with the policy's verdict, at the gate's own tree hash.
+    AutoDecide { verdict: String },
+}
+
+impl ExpiryAction {
+    /// The `action` member `gate_expired` carries — design §5:706, *"the terminal expiry action
+    /// taken"*.
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Fail => "fail",
+            Self::Escalate { .. } => "escalate",
+            Self::AutoDecide { .. } => "auto-decide",
+        }
+    }
+}
+
+/// How an expiry resolved. `NotDue` and `AlreadySettled` write nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Resolution {
+    /// The deadline has not passed at the journaled instant supplied.
+    NotDue,
+    /// The gate is already answered, void or expired; there is nothing to resolve.
+    AlreadySettled,
+    Failed,
+    Escalated {
+        record: GateRecord,
+    },
+    AutoDecided,
+}
+
+/// The rows an expiry resolution writes, in the order they are appended.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExpiryOutcome {
+    pub resolution: Resolution,
+    pub events: Vec<Event>,
+}
+
+/// The class every escalation gate carries (AC-259: *"fixed"*).
+pub const ESCALATION_CLASS: &str = "escalation";
+
+/// Resolve a gate's expiry **at a journaled instant** (`now` is data, never a clock; AC-257: the
+/// expiry is observed at the next read, with no process alive at the deadline), under the
+/// declared terminal path, over the tree hash the caller derived at this read.
+///
+/// - not yet due → [`Resolution::NotDue`], nothing written;
+/// - already answered, void or expired → [`Resolution::AlreadySettled`], nothing written;
+/// - `Fail` → one `gate_expired { action: "fail" }` row; the fold halts the run;
+/// - `Escalate` → `gate_expired { action: "escalate" }` and a second `gate_opened` whose record
+///   is a [`GateRecord`] like any other — class [`ESCALATION_CLASS`], the caller's tree hash, the
+///   policy's deadline, its own reach — carrying **one** member beyond the record: `question`,
+///   the id of the gate step it escalates (AC-259; ADR-0038: *"only a question id"*). An
+///   escalation gate itself may not escalate: [`GateError::EscalateOnEscalation`];
+/// - `AutoDecide` → one `gate_expired { action: "auto-decide", verdict }` row; the fold answers
+///   the gate at its own tree hash.
+///
+/// # Errors
+///
+/// [`GateError::NeverOpened`] for a token this journal never opened;
+/// [`GateError::EscalateOnEscalation`] as above.
+pub fn expire(
+    state: &RunState,
+    token: &Digest,
+    now: rk_types::time::Timestamp,
+    action: &ExpiryAction,
+    tree_hash: &str,
+) -> Result<ExpiryOutcome, GateError> {
+    let Some(record) = state.gate_record(token) else {
+        return Err(GateError::NeverOpened {
+            token: token.clone(),
+        });
+    };
+    if state.is_answered(token) || state.is_void(token) || state.is_expired(token) {
+        return Ok(ExpiryOutcome {
+            resolution: Resolution::AlreadySettled,
+            events: Vec::new(),
+        });
+    }
+    if now.unix_seconds() < record.deadline().unix_seconds() {
+        return Ok(ExpiryOutcome {
+            resolution: Resolution::NotDue,
+            events: Vec::new(),
+        });
+    }
+    match action {
+        ExpiryAction::Fail => Ok(ExpiryOutcome {
+            resolution: Resolution::Failed,
+            events: vec![gate_expired_event(token, action, None)],
+        }),
+        ExpiryAction::AutoDecide { verdict } => Ok(ExpiryOutcome {
+            resolution: Resolution::AutoDecided,
+            events: vec![gate_expired_event(token, action, Some(verdict))],
+        }),
+        ExpiryAction::Escalate { deadline } => {
+            if record.kind() == ESCALATION_CLASS {
+                return Err(GateError::EscalateOnEscalation {
+                    token: token.clone(),
+                });
+            }
+            let escalation = GateRecord::derive_reach(
+                ESCALATION_CLASS,
+                tree_hash,
+                *deadline,
+                state.reaches(ESCALATION_CLASS).saturating_add(1),
+            )
+            .map_err(|_| GateError::NeverOpened {
+                token: token.clone(),
+            })?;
+            let mut opened = crate::runtime::gate_opened_event(&escalation);
+            if let Some(obj) = opened.payload.as_object_mut() {
+                obj.insert(
+                    "question".to_owned(),
+                    serde_json::Value::from(record.kind().to_owned()),
+                );
+            }
+            Ok(ExpiryOutcome {
+                resolution: Resolution::Escalated { record: escalation },
+                events: vec![gate_expired_event(token, action, None), opened],
+            })
+        }
+    }
+}
+
+/// The tier-1 `gate_expired` row (design §5:706): token, the terminal expiry action taken, and
+/// the verdict when the action is `auto-decide`.
+#[must_use]
+pub fn gate_expired_event(token: &Digest, action: &ExpiryAction, verdict: Option<&str>) -> Event {
+    let mut payload = serde_json::json!({ "action": action.as_str(), "token": token.as_str() });
+    if let (Some(v), Some(obj)) = (verdict, payload.as_object_mut()) {
+        obj.insert("verdict".to_owned(), serde_json::Value::from(v));
+    }
+    Event::new(EventKind::GateExpired, payload)
+}
+
+/// ADR-0123's `gate_resumed` row: the gate resumed from and the kernel's prefix-rewrite count.
+/// The adapter's metric fields are **absent, not zero** — no member is written for them here.
+#[must_use]
+pub fn gate_resumed_event(token: &Digest, prefix_rewrites: u32) -> Event {
+    Event::new(
+        EventKind::GateResumed,
+        serde_json::json!({ "prefix_rewrites": prefix_rewrites, "token": token.as_str() }),
+    )
+}
+
+/// **AC-253 — drift is a comparison of tree hashes and nothing else.** Not mtimes, not elapsed
+/// time, not commit counts, not the branch tip: the record's bound tree against the current one.
+#[must_use]
+pub fn drifted(record: &GateRecord, current_tree_hash: &str) -> bool {
+    record.tree_hash() != current_tree_hash
+}
+
+/// A `dispatch` row that fell inside a gate's open window (AC-243).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DispatchAcrossGate {
+    pub gate: Digest,
+    pub dispatch_index: usize,
+}
+
+fn payload_token(event: &Event) -> Option<Digest> {
+    event
+        .payload
+        .get("token")
+        .and_then(serde_json::Value::as_str)
+        .and_then(|s| Digest::from_hex(s).ok())
+}
+
+/// **AC-243's replay assertion**: every `dispatch` row that falls between a runtime-shaped
+/// `gate_opened` and that gate's terminal event (`gate_answered`, `gate_answer_void`,
+/// `gate_expired`) in the same item's journal. Empty is the invariant.
+#[must_use]
+pub fn dispatches_across_open_gates(events: &[Event]) -> Vec<DispatchAcrossGate> {
+    let mut open: Vec<Digest> = Vec::new();
+    let mut found: Vec<DispatchAcrossGate> = Vec::new();
+    for (i, e) in events.iter().enumerate() {
+        match e.kind {
+            EventKind::GateOpened => {
+                let runtime_shaped = e.payload.get("tree_hash").is_some();
+                if runtime_shaped && let Some(t) = payload_token(e) {
+                    open.push(t);
+                }
+            }
+            EventKind::GateAnswered | EventKind::GateAnswerVoid | EventKind::GateExpired => {
+                if let Some(t) = payload_token(e) {
+                    open.retain(|o| *o != t);
+                }
+            }
+            EventKind::Dispatch => {
+                for g in &open {
+                    found.push(DispatchAcrossGate {
+                        gate: g.clone(),
+                        dispatch_index: i,
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+    found
+}
+
+/// **AC-279's count assertion**: the indices of `gate_resumed` rows whose `prefix_rewrites` is
+/// above one, or not a count at all. Empty is the invariant.
+#[must_use]
+pub fn prefix_rewrites_exceeding_one(events: &[Event]) -> Vec<usize> {
+    events
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| e.kind == EventKind::GateResumed)
+        .filter(|(_, e)| {
+            e.payload
+                .get("prefix_rewrites")
+                .and_then(serde_json::Value::as_u64)
+                .is_none_or(|n| n > 1)
+        })
+        .map(|(i, _)| i)
+        .collect()
+}
+
+/// AC-260's lint failures over a gate-class policy row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExpiryPolicyLint {
+    /// *"there is no implicit default expiry action"*.
+    NoActionDeclared { class: String },
+    /// *"no escalate-on-escalate (ADR-0105 clause 10)"*.
+    EscalateOnEscalation,
+    /// Not one of ADR-0017's three terminal paths.
+    UnknownAction { class: String, action: String },
+}
+
+/// **AC-260 — the expiry-policy lint, one row at a time.** `class` is the gate class the row
+/// declares; `action` is its declared expiry action, `None` when the row declares none.
+///
+/// # Errors
+///
+/// [`ExpiryPolicyLint`] naming the failure.
+pub fn lint_expiry_policy_row(class: &str, action: Option<&str>) -> Result<(), ExpiryPolicyLint> {
+    let Some(action) = action else {
+        return Err(ExpiryPolicyLint::NoActionDeclared {
+            class: class.to_owned(),
+        });
+    };
+    match action {
+        "escalate" if class == ESCALATION_CLASS => Err(ExpiryPolicyLint::EscalateOnEscalation),
+        "fail" | "escalate" | "auto-decide" => Ok(()),
+        other => Err(ExpiryPolicyLint::UnknownAction {
+            class: class.to_owned(),
+            action: other.to_owned(),
+        }),
+    }
 }

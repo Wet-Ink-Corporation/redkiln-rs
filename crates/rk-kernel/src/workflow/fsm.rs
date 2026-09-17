@@ -507,7 +507,11 @@ impl TerminalState {
 
 /// The one halt this crate can read out of a recorded journal.
 ///
-/// **One variant, deliberately.** AC-024's budget exhaustion and AC-033's breaker refusal are halts
+/// **One variant, deliberately** — until 2026-09-17, when Step 7b-ii's slice C added the second
+/// for ADR-0017's first terminal path, recorded by a row that DOES exist: `gate_expired { action:
+/// "fail" }`. The reasoning below stands for every other candidate.
+///
+/// **Originally:** AC-024's budget exhaustion and AC-033's breaker refusal are halts
 /// too, and neither has an `EventKind` to be recorded under — see the module header's second
 /// reading. A variant no call site can produce reads as a refusal the system performs.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -516,6 +520,10 @@ pub enum HaltReason {
     /// or billing state, never a judgement"*, so it halts the run and never reaches a gate as a
     /// verdict.
     Refused { class: String },
+    /// A gate passed its deadline under an expiry policy of `fail` (ADR-0017's first terminal
+    /// path; AC-256, AC-259). Recorded by the `gate_expired { action: "fail" }` row the expiry
+    /// resolution writes (Step 7b-ii, slice C).
+    GateExpired { token: Digest },
 }
 
 impl HaltReason {
@@ -523,6 +531,7 @@ impl HaltReason {
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Refused { .. } => "refused",
+            Self::GateExpired { .. } => "gate_expired",
         }
     }
 
@@ -530,6 +539,9 @@ impl HaltReason {
         match self {
             Self::Refused { class } => {
                 serde_json::json!({ "reason": self.as_str(), "class": class })
+            }
+            Self::GateExpired { token } => {
+                serde_json::json!({ "reason": self.as_str(), "token": token.as_str() })
             }
         }
     }
@@ -944,6 +956,9 @@ pub struct RunState {
     /// Every runtime-shaped `gate_opened` for a gate step, in journal order — the per-(item, gate
     /// step) reach counter AC-524 names as the discovery instrument.
     gates_by_kind: BTreeMap<String, Vec<Digest>>,
+    /// Tokens a `gate_resumed` row (ADR-0123) has been written for — so the runtime writes one
+    /// per resumed gate and never a second (AC-279's count is per resume).
+    gates_resumed: BTreeSet<Digest>,
     gates_answered: BTreeMap<Digest, GateAnswer>,
     gates_void: BTreeSet<Digest>,
     gates_expired: BTreeSet<Digest>,
@@ -968,6 +983,7 @@ impl RunState {
             last_transition: None,
             gates_open: BTreeMap::new(),
             gates_by_kind: BTreeMap::new(),
+            gates_resumed: BTreeSet::new(),
             gates_answered: BTreeMap::new(),
             gates_void: BTreeSet::new(),
             gates_expired: BTreeSet::new(),
@@ -1042,6 +1058,11 @@ impl RunState {
     #[must_use]
     pub fn is_expired(&self, token: &Digest) -> bool {
         self.gates_expired.contains(token)
+    }
+
+    #[must_use]
+    pub fn is_resumed(&self, token: &Digest) -> bool {
+        self.gates_resumed.contains(token)
     }
 
     /// Every gate whose answer matched the gate's tree hash.
@@ -1135,9 +1156,13 @@ impl RunState {
         // carry, but it is not what the run awaits — otherwise a voided gate would hold the run
         // at `AwaitingGate` on a dead token for ever, which is "nothing" in AC-252's *"never by
         // nothing"*.
-        self.gates_open
-            .keys()
-            .find(|t| !self.gates_answered.contains_key(*t) && !self.gates_void.contains(*t))
+        // An EXPIRED token is not awaited either: the record stays (it is what the trailers carry
+        // and what an escalation names), the expiry policy's terminal path decides what follows.
+        self.gates_open.keys().find(|t| {
+            !self.gates_answered.contains_key(*t)
+                && !self.gates_void.contains(*t)
+                && !self.gates_expired.contains(*t)
+        })
     }
 
     /// **AC-008's *"the recorded terminal state"***, read off the journal alone.
@@ -1368,6 +1393,14 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
                 state.survey.spent_refusals += 1;
                 return Ok(());
             }
+            // The expired case of the three-way split below, checked FIRST since 2026-09-17: the
+            // `gate_expired` arm no longer removes the record from `gates_open` (an escalation
+            // names it and the trailers carry it), so "is it open?" would now say yes for an
+            // expired gate. Same disposition as before: VOID, and the fold CONTINUES.
+            if state.gates_expired.contains(&token) {
+                state.gates_void.insert(token);
+                return Ok(());
+            }
             // **THE THREE-WAY SPLIT, 2026-09-14.** Until today this arm asked one question — *is
             // the token in `gates_open`?* — and gave one answer to two different situations. The
             // `GateExpired` arm below REMOVES the token from `gates_open`, so
@@ -1436,8 +1469,39 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             // never a silently dropped row) and then ignored, and the answer that follows it still
             // meets the forgery halt. This decides nothing about gate semantics that D-5 reserved to
             // 7b-ii — it restores the precondition D-5 was written against.
-            if state.gates_open.remove(&token).is_some() {
-                state.gates_expired.insert(token);
+            //
+            // 2026-09-17 (slice C): the record is KEPT in `gates_open` — an escalation names it
+            // and `stage_action` carries it — and the row's `action` member, when present, is
+            // ADR-0017's terminal path taken: `fail` halts the run (AC-256/AC-259's first
+            // terminus), `auto-decide` answers the gate with the policy's verdict at the gate's
+            // own tree hash, `escalate` is recorded here and the escalation gate arrives as its
+            // own `gate_opened` row. A row with no `action` (the shape written before this
+            // member existed) expires the gate and decides nothing further.
+            let already_settled = state.gates_answered.contains_key(&token)
+                || state.gates_void.contains(&token)
+                || state.gates_expired.contains(&token);
+            if let Some(record) = state.gates_open.get(&token)
+                && !already_settled
+            {
+                let bound_tree = record.tree_hash.clone();
+                state.gates_expired.insert(token.clone());
+                match optional_str(event, "action").as_deref() {
+                    Some("fail") => {
+                        state.halt = Some(HaltReason::GateExpired { token });
+                    }
+                    Some("auto-decide") => {
+                        let verdict = required_str(event, "gate_expired", "verdict")?;
+                        state.gates_answered.insert(
+                            token.clone(),
+                            GateAnswer {
+                                token,
+                                tree_hash: bound_tree,
+                                verdict,
+                            },
+                        );
+                    }
+                    _ => {}
+                }
             }
         }
         EventKind::SliceSealed => {
@@ -1492,9 +1556,13 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             state.survey.spent_recorded += 1;
         }
         // `gate_resumed` (ADR-0123) is resume telemetry; its `prefix_rewrites <= 1` is AC-279's
-        // assertion over the journal, not a fold effect.
+        // assertion over the journal, not a fold effect. The token is kept so the runtime writes
+        // one row per resumed gate and never a second.
+        EventKind::GateResumed => {
+            let token = required_digest(event, "gate_resumed", "token")?;
+            state.gates_resumed.insert(token);
+        }
         EventKind::ReconcileStarted
-        | EventKind::GateResumed
         | EventKind::DagAssembled
         | EventKind::MemoMiss
         | EventKind::MemoEvicted

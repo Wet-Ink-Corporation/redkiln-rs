@@ -390,6 +390,21 @@ impl Runtime {
         if state.is_committed(item, activity_id_at_version) {
             return Ok(report);
         }
+        // **AC-279's row (ADR-0123's `gate_resumed`).** The first dispatch after a gate on this
+        // item was answered IS the resume, and the kernel's count of prompt-prefix rewrites for it
+        // is one — this dispatch. One row per resumed gate: a token the fold already saw a
+        // `gate_resumed` for is not written again, so a later dispatch in the same run is not a
+        // second resume. The adapter's metric fields (`cache_creation_input_tokens`,
+        // `total_cost_usd`; AC-267, SM-073) are ABSENT here, never zero — Step 7c fills them.
+        for answered in state.answered_gates() {
+            if !state.is_resumed(answered.token()) {
+                self.append(crate::workflow::gate::gate_resumed_event(
+                    answered.token(),
+                    1,
+                ))?;
+                report.appended += 1;
+            }
+        }
         // **AC-011.** The first attempt number comes from the fold, so a re-entry after two
         // recorded attempts resumes at three rather than restarting at one and reusing a number.
         let mut attempt = state.next_attempt(item, activity_id_at_version);

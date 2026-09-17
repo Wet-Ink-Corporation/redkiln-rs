@@ -1,5 +1,6 @@
 //! **The human gate** — Step 7b-ii, `s7b-ii` §7b-ii.2. Slice A: the record and the one derivation.
-//! Slice B: the answer path and the re-reach (`src/workflow/gate.rs`).
+//! Slice B: the answer path and the re-reach (`src/workflow/gate.rs`). Slice C: the log-only
+//! reconstruction, one gate mechanism, expiry, and the kernel halves of the cross-listed ids.
 //!
 //! | test | criterion | what it measures | what it does NOT |
 //! | --- | --- | --- | --- |
@@ -10,6 +11,14 @@
 //! | [`ac252_void_reopens_fresh_in_all_three_fields`] | **AC-252** (answers `DECISIONS-2026-09-14 D-5` from the register) | after a void the run does not hold on the dead token and `next_action` re-opens with a fresh token, the current tree, a fresh deadline, reach 2 | an EXPIRED gate's disposition — the expiry policy's terminal path (AC-257/AC-259), slice C |
 //! | [`ac250_no_reconciliation_path`] | **AC-250** | 64 seeded interleavings of (commit, answer, resume, expire): no mismatched answer is ever applied, no stage moves; the source rule over every `gate_answer_void` consumer, with the committed reconciling fixture as its positive control | prove *"there exists no sequence"* by generation — the register assigns that half to the architecture rule, and this file does too |
 //! | [`ac247_answer_against_the_wrong_gate_is_refused`] | **AC-247** | A's token against B is `GateError::WrongGate` naming both, nothing written, B open; 5×5 pairings apply iff i == j | — |
+//! | [`ac270_gate_state_from_the_log_alone`] | **AC-270**, and **AC-258** by name | every open / answer / spent / void / re-open / expiry / escalation is present in a fold of the read-back log, byte-identical to the live derivation, under two roots; the gate path's purity rule | cross-machine reproduction (the register's own scope note) |
+//! | [`ac272_escalation_is_one_gate_mechanism`] | **AC-272**, **AC-259** | the escalation's `gate_opened` carries the stage gate's members exactly plus `question`; class `escalation`; folds into the same record set; voids the same way; may not itself escalate; resolves to fail or auto-decide; not-due writes nothing | the *activity-internal* producer — no activity graph raises an escalation yet; the record shape is what is pinned |
+//! | [`ac260_expiry_policy_lint`] | **AC-260** | the missing-action row and the `escalation → escalate` row fail, the three terminal paths pass, an unknown action fails | the `doctor` rule-table row (7d) |
+//! | [`ac243_no_dispatch_across_open_gate`] | **AC-243** (kernel half; 7c's adapter half cross-listed) | five ticks over an open gate: `AwaitGate` every time, 0 harness dispatches, no `dispatch` row; the replay checker with a forged positive control | the ~1 h TTL itself — no adapter, no clock |
+//! | [`ac279_one_prefix_rewrite`] | **AC-279** (kernel half) | the resume writes ONE `gate_resumed { prefix_rewrites: 1 }` before its dispatch, metric fields absent; a later dispatch is not a second resume; the ≤ 1 checker with a forged control | AC-267's threshold (7c, against a recorded baseline) |
+//! | [`ac253_drift_is_a_tree_hash_comparison`] | **AC-253** | an amended commit over the same tree and a touch-back are not drift; a changed tree is; the predicate's module reads no clock | — |
+//! | [`ac242_gate_path_blocks_nothing`] | **AC-242** (syntactic half) | the gate path carries no sleep / recv / spawn / tokio / clock / fs / env; the committed control fails the rule on every construct | the build-failing half, which is `workflow.rs`'s `#![deny]` and its `workflow-fsm-clock-reintroduce` control |
+//! | [`ac261_state_is_rederived_at_every_entry`] | **AC-261** | a second `Runtime::state` sees an append the first did not; `Runtime` carries no state; red via the deleted-derivation mutant | trailers and the tree as inputs — the kernel's world is the journal; `reconcile()` is `rk-git`'s |
 //! | [`ac245_write_tree_one_algorithm`] | **AC-245**, and AC-249's *commits-between* fixture | over a REAL repository: the recorded hash resolves to one tree object; an untracked file does **not** move it and a tracked modification **does**; the same derivation at open and at answer, so an answer over a drifted tree is **void** | a second derivation in this crate — there is none to test, and the architecture half is `rk-git`'s own `there_is_exactly_one_write_tree_call_site`, cited and not re-credited |
 //!
 //! **Where red was observed, and against what.** Golden constraint 12 asks for a failure *"for the
@@ -1022,4 +1031,784 @@ fn ac247_answer_against_the_wrong_gate_is_refused() {
             }
         }
     }
+}
+
+// ================================================================== Slice C — log-only state, one gate mechanism
+
+use rk_kernel::module_boundary::gate_path_purity_rule;
+use rk_kernel::runtime::StepOutcome;
+use rk_kernel::workflow::breaker::JournaledNow;
+use rk_kernel::workflow::envelope::AttemptCap;
+use rk_kernel::workflow::gate::{ExpiryAction, Resolution};
+
+const GATE_PATH_CONTROL: &str = include_str!("../fixtures/lint-controls/ac242_gate_path_blocks.rs");
+const EXPIRY_POLICY_ROWS: &str = include_str!("../fixtures/gates/ac260_expiry_policy_rows.toml");
+
+fn at(secs: i64) -> Timestamp {
+    Timestamp::from_unix_seconds(secs)
+}
+
+/// A journal that exercises every gate transition AC-270 names — open, answer, void, expiry,
+/// escalation and re-open — built through the answer path and the runtime, never by hand.
+fn every_transition_journal() -> (Vec<Event>, Vec<GateRecord>) {
+    let mut journal: Vec<Event> = Vec::new();
+    let mut records: Vec<GateRecord> = Vec::new();
+    let kind = "human:review";
+
+    // open, answer, spent
+    let g1 = gate::reach(&fold_all(&journal), kind, &ctx(TREE_A, 9_000)).expect("mints");
+    journal.push(gate_opened_event(&g1));
+    let a = gate::answer(
+        &fold_all(&journal),
+        g1.token(),
+        g1.token(),
+        TREE_A,
+        "approve",
+    )
+    .expect("answers");
+    journal.extend(a.events);
+    let spent = gate::answer(
+        &fold_all(&journal),
+        g1.token(),
+        g1.token(),
+        TREE_A,
+        "approve",
+    )
+    .expect("refuses");
+    journal.extend(spent.events);
+    records.push(g1);
+
+    // a second gate step: open, void, re-open (AC-252's shape via reach)
+    let kind2 = "human:release";
+    let g2 = gate::reach(&fold_all(&journal), kind2, &ctx(TREE_A, 9_000)).expect("mints");
+    journal.push(gate_opened_event(&g2));
+    let v = gate::answer(
+        &fold_all(&journal),
+        g2.token(),
+        g2.token(),
+        TREE_B,
+        "approve",
+    )
+    .expect("answers");
+    assert_eq!(v.disposition, Disposition::Void);
+    journal.extend(v.events);
+    let g2b = gate::reach(&fold_all(&journal), kind2, &ctx(TREE_B, 12_600)).expect("mints");
+    journal.push(gate_opened_event(&g2b));
+    records.push(g2);
+    records.push(g2b.clone());
+
+    // expiry with escalation: the re-opened gate passes its deadline unanswered
+    let esc = gate::expire(
+        &fold_all(&journal),
+        g2b.token(),
+        at(12_601),
+        &ExpiryAction::Escalate {
+            deadline: at(16_200),
+        },
+        TREE_B,
+    )
+    .expect("resolves");
+    let Resolution::Escalated { record: e } = &esc.resolution else {
+        panic!(
+            "an escalate policy past its deadline escalates: {:?}",
+            esc.resolution
+        );
+    };
+    let e = e.clone();
+    journal.extend(esc.events);
+    records.push(e);
+    (journal, records)
+}
+
+/// **AC-270 — every gate transition is reconstructible from the log alone.** Doubles as
+/// **AC-258**'s clock-independence instrument, by the register's own instruction.
+///
+/// > GIVEN only the event log for an item / WHEN it is replayed / THEN every gate open, answer,
+/// > void, expiry, escalation and re-open is present and the item's terminal gate state is
+/// > reconstructible without reading the working tree. *Verified by:* a replay assertion that
+/// > reconstructs state from the log alone and compares it to the live derivation; the same test
+/// > doubles as AC-258's clock-independence instrument.
+///
+/// RED (observed 2026-09-17) against an `expire()` that never resolved: the journal carried no
+/// expiry and no escalation, so the reconstruction could not contain them.
+#[test]
+fn ac270_gate_state_from_the_log_alone() {
+    let (journal, records) = every_transition_journal();
+    let kinds: Vec<EventKind> = journal.iter().map(|e| e.kind).collect();
+    for k in [
+        EventKind::GateOpened,
+        EventKind::GateAnswered,
+        EventKind::GateAnswerSpent,
+        EventKind::GateAnswerVoid,
+        EventKind::GateExpired,
+    ] {
+        assert!(kinds.contains(&k), "the journal carries a {k:?} row");
+    }
+    assert_eq!(
+        kinds
+            .iter()
+            .filter(|k| **k == EventKind::GateOpened)
+            .count(),
+        4,
+        "open, open, re-open, escalation — four gate_opened rows"
+    );
+
+    // the LIVE derivation: what the runtime computes from the store it appended to
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let rt = runtime_over(&store);
+    for e in &journal {
+        rt.append(e.clone()).expect("append");
+    }
+    let live = rt.state(ITEM).expect("the live derivation folds");
+
+    // the reconstruction: the log ALONE, read back, with no worktree in reach — the fold takes
+    // events and nothing else, and the purity rule below is what makes "nothing else" a fact
+    let read_back = rt.journal(ITEM).expect("query");
+    let reconstructed = fold_all(&read_back);
+    assert_eq!(
+        reconstructed.canonical_bytes().expect("canonical"),
+        live.canonical_bytes().expect("canonical"),
+        "the log alone reconstructs the live derivation byte for byte"
+    );
+    // every transition is PRESENT in the reconstruction
+    assert!(reconstructed.is_answered(records[0].token()), "the answer");
+    assert!(reconstructed.is_void(records[1].token()), "the void");
+    assert!(
+        reconstructed.is_expired(records[2].token()),
+        "the expiry of the re-opened gate"
+    );
+    assert_eq!(records[3].kind(), "escalation", "the escalation");
+    assert_eq!(
+        reconstructed.awaiting_gate(),
+        Some(records[3].token()),
+        "…which is what the run awaits"
+    );
+    assert_eq!(reconstructed.reaches("human:release"), 2, "the re-open");
+    // The two spent counters read differently on purpose: the answer path refused the duplicate
+    // BEFORE writing a `gate_answered` row, so the fold refused nothing (0) and recorded the one
+    // `gate_answer_spent` row the path wrote (1). A raw duplicate row would move the first.
+    assert_eq!(
+        reconstructed.survey().spent_refusals(),
+        0,
+        "no raw duplicate reached the fold"
+    );
+    assert_eq!(
+        reconstructed.survey().spent_recorded(),
+        1,
+        "the refusal's own row is present"
+    );
+
+    // ---- AC-258, by name: two injected clocks and two roots give one terminal state -----------
+    //
+    // > WHEN the log is replayed twice under two different injected clocks and two different
+    // > working directories / THEN the gate's terminal state and the item's next action are
+    // > identical.
+    // The fold takes no clock — `Timestamp` has no `now()` — so the "injected clock" is the
+    // journaled instant the expiry was resolved at, already in the log; what can vary between
+    // two replays is the ambient host, so the root is moved between them.
+    let here = std::env::current_dir().expect("cwd");
+    let elsewhere = tempfile::tempdir().expect("tempdir");
+    let first = fold_all(&read_back);
+    std::env::set_current_dir(elsewhere.path()).expect("chdir");
+    let second = fold_all(&read_back);
+    std::env::set_current_dir(&here).expect("chdir back");
+    assert_eq!(
+        first.terminal(),
+        second.terminal(),
+        "AC-258: one terminal state under two roots"
+    );
+    assert_eq!(
+        first.canonical_bytes().expect("canonical"),
+        second.canonical_bytes().expect("canonical"),
+        "AC-258: byte-identical state under two roots"
+    );
+    let purity = gate_path_purity_rule(
+        &rk_kernel::module_boundary::kernel_sources().expect("src/ is readable"),
+    )
+    .unwrap_or_else(|v| {
+        panic!("AC-258/AC-242: the gate path reads ambient host state or blocks:\n{v:#?}")
+    });
+    assert!(
+        purity.files_scanned >= 2,
+        "PREMISE: the gate path is fsm.rs and gate.rs; the rule scanned {}",
+        purity.files_scanned
+    );
+}
+
+/// **AC-272 — escalation is the same gate mechanism.**
+///
+/// > GIVEN an escalation raised from inside an activity's internal graph / WHEN it is observed in
+/// > the event log and the trailer / THEN it is indistinguishable in mechanism from a stage-level
+/// > gate: the same record shape, the same reconcile path, the same terminal-expiry rule.
+/// > *Verified by:* a test asserting the two producers emit structurally identical `gate_opened`
+/// > records; a schema test that one gate type exists, not two.
+///
+/// And **AC-259**'s clauses in the same test: class `escalation`, a payload carrying only a
+/// question id beyond the record, and an escalation that may not itself escalate.
+///
+/// RED (observed 2026-09-17) against an `expire()` that never escalated.
+#[test]
+fn ac272_escalation_is_one_gate_mechanism() {
+    let mut journal: Vec<Event> = Vec::new();
+    let stage_gate =
+        gate::reach(&fold_all(&journal), "human:review", &ctx(TREE_A, 9_000)).expect("mints");
+    journal.push(gate_opened_event(&stage_gate));
+    let out = gate::expire(
+        &fold_all(&journal),
+        stage_gate.token(),
+        at(9_001),
+        &ExpiryAction::Escalate {
+            deadline: at(12_600),
+        },
+        TREE_A,
+    )
+    .expect("resolves");
+    let Resolution::Escalated { record: escalation } = &out.resolution else {
+        panic!("escalate past the deadline escalates: {:?}", out.resolution);
+    };
+    let kinds: Vec<EventKind> = out.events.iter().map(|e| e.kind).collect();
+    assert_eq!(kinds, [EventKind::GateExpired, EventKind::GateOpened]);
+    assert_eq!(out.events[0].payload["action"], "escalate");
+
+    // (a) structurally identical `gate_opened` records: the SAME payload keys as the stage gate's
+    // — plus exactly one, the question id (AC-259: "carries only a question id", ADR-0038).
+    let stage_row = gate_opened_event(&stage_gate);
+    let stage_keys: Vec<&str> = stage_row
+        .payload
+        .as_object()
+        .expect("object")
+        .keys()
+        .map(String::as_str)
+        .collect();
+    let esc_payload = out.events[1].payload.as_object().expect("object");
+    let mut esc_keys: Vec<&str> = esc_payload.keys().map(String::as_str).collect();
+    assert!(
+        esc_keys.contains(&"question"),
+        "the escalation names its question: {esc_keys:?}"
+    );
+    esc_keys.retain(|k| *k != "question");
+    assert_eq!(
+        esc_keys, stage_keys,
+        "the record members are the stage gate's, exactly"
+    );
+    assert_eq!(
+        esc_payload["question"],
+        stage_gate.kind(),
+        "the question id is the gate step it escalates"
+    );
+    assert_eq!(escalation.kind(), "escalation", "the class is fixed");
+    assert_eq!(escalation.tree_hash(), TREE_A);
+    assert_eq!(escalation.deadline(), at(12_600));
+    assert_eq!(escalation.reach(), 1, "the first escalation of this step");
+
+    // (b) one gate type, not two: the escalation folds into the SAME record set as a stage gate,
+    // through the same arm, and no second kind exists for it.
+    journal.extend(out.events.clone());
+    let state = fold_all(&journal);
+    assert!(state.is_expired(stage_gate.token()));
+    assert_eq!(state.awaiting_gate(), Some(escalation.token()));
+    let folded: Vec<&GateRecord> = state
+        .open_gates()
+        .filter(|g| g.token() == escalation.token())
+        .collect();
+    assert_eq!(
+        folded,
+        vec![escalation],
+        "the escalation is a GateRecord like any other"
+    );
+    assert_eq!(
+        EventKind::from_wire("gate_escalated"),
+        None,
+        "there is no second gate kind — escalation rides gate_opened"
+    );
+    // …and the same reconcile path: an answer over a drifted tree voids it exactly as a stage gate
+    let drifted = gate::answer(
+        &state,
+        escalation.token(),
+        escalation.token(),
+        TREE_B,
+        "approve",
+    )
+    .expect("answers");
+    assert_eq!(drifted.disposition, Disposition::Void);
+
+    // (c) the same terminal-expiry rule, bounded: an escalation may not itself escalate
+    // (ADR-0105 clause 10; AC-259/AC-260) — it resolves to fail or auto-decide, never a third mark.
+    let again = gate::expire(
+        &state,
+        escalation.token(),
+        at(12_601),
+        &ExpiryAction::Escalate {
+            deadline: at(20_000),
+        },
+        TREE_A,
+    );
+    assert!(
+        matches!(again, Err(GateError::EscalateOnEscalation { .. })),
+        "escalate-on-escalate is refused: {again:?}"
+    );
+    let failed = gate::expire(
+        &state,
+        escalation.token(),
+        at(12_601),
+        &ExpiryAction::Fail,
+        TREE_A,
+    )
+    .expect("fail resolves");
+    assert_eq!(failed.resolution, Resolution::Failed);
+    let auto = gate::expire(
+        &state,
+        escalation.token(),
+        at(12_601),
+        &ExpiryAction::AutoDecide {
+            verdict: "approve".to_owned(),
+        },
+        TREE_A,
+    )
+    .expect("auto-decide resolves");
+    assert_eq!(auto.resolution, Resolution::AutoDecided);
+    // a gate not yet due is not resolved at all: nothing written
+    let early = gate::expire(
+        &state,
+        escalation.token(),
+        at(12_599),
+        &ExpiryAction::Fail,
+        TREE_A,
+    )
+    .expect("not due is an outcome");
+    assert_eq!(early.resolution, Resolution::NotDue);
+    assert!(early.events.is_empty());
+}
+
+/// **AC-260 — the expiry policy has no implicit default and no escalate-on-escalate.**
+///
+/// > GIVEN a gate class in the policy table with no expiry action declared, or the `escalation`
+/// > class with expiry action `escalate` / WHEN the table is linted / THEN the lint fails.
+/// > *Verified by:* a lint rule over the policy table with a fixture table that must fail on the
+/// > missing action and a second must-fail fixture row `escalation → escalate`; a `doctor`
+/// > rule-table row.
+///
+/// The `doctor` row is `rk-cli`'s (7d) and ARMED. RED (observed 2026-09-17) against a lint that
+/// accepted every row.
+#[test]
+fn ac260_expiry_policy_lint() {
+    let table = rk_kernel::toml_subset::parse(EXPIRY_POLICY_ROWS).expect("the fixture parses");
+    let rows = table["row"].as_array().expect("[[row]]");
+    let mut outcomes: Vec<(String, bool)> = Vec::new();
+    for row in rows {
+        let row = row.as_table().expect("a row table");
+        let class = row["class"].as_str().expect("class");
+        let action = row
+            .get("action")
+            .and_then(rk_kernel::toml_subset::Value::as_str);
+        let expect_ok = matches!(row["expect"].as_str(), Some("ok"));
+        let verdict = gate::lint_expiry_policy_row(class, action);
+        outcomes.push((class.to_owned(), verdict.is_ok()));
+        assert_eq!(
+            verdict.is_ok(),
+            expect_ok,
+            "row `{class}` / {action:?}: expected {} and got {verdict:?}",
+            if expect_ok { "ok" } else { "a lint failure" }
+        );
+    }
+    // the two must-fail rows the register names are both present and both failed
+    assert!(
+        outcomes.iter().any(|(c, ok)| c == "review" && !ok),
+        "the missing-action row failed"
+    );
+    assert!(
+        outcomes.iter().any(|(c, ok)| c == "escalation" && !ok),
+        "the escalation→escalate row failed"
+    );
+    assert!(
+        outcomes.iter().any(|(_, ok)| *ok),
+        "PREMISE: at least one valid row passes, or the lint refuses everything"
+    );
+}
+
+/// **AC-243 — zero dispatches while a gate is open.** The kernel half; cross-listed with 7c.
+///
+/// > THEN zero harness dispatches are issued for that item until the gate reaches a terminal
+/// > state. *Verified by:* a replay assertion over the event log — no `dispatch` event with a
+/// > timestamp between `gate_opened` and the gate's terminal event for the same item; a regression
+/// > test on the P8 fixture asserting the dispatch count across an open gate is 0.
+///
+/// RED (observed 2026-09-17) against a replay checker that never reported: its positive control —
+/// a hand-built journal with a dispatch between open and answer — was read as clean.
+#[test]
+fn ac243_no_dispatch_across_open_gate() {
+    // ---- the runtime: a gate opens, and the next action is AwaitGate, never Dispatch ----------
+    let gated = crate::fsm::gated();
+    let harness = Arc::new(crate::runtime::CountingHarness::scripted(Vec::new()));
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let rt = Runtime::new(
+        crate::runtime::ports(
+            Arc::clone(&harness) as Arc<dyn rk_ports::harness::Harness>,
+            &store,
+        ),
+        "run-ac243",
+        "analysis",
+    );
+    let state0 = rt.state(ITEM).expect("folds");
+    let open = match next_action(&gated, &state0, &ctx(TREE_A, 9_000)).expect("computes") {
+        NextAction::OpenGate(record) => record,
+        other => panic!("{other:?}"),
+    };
+    let outcome = rt
+        .step(
+            &NextAction::OpenGate(open.clone()),
+            None,
+            AttemptCap::declared(4),
+            JournaledNow::from_journal(at(9_000)),
+        )
+        .expect("steps");
+    assert!(matches!(outcome, StepOutcome::GateOpened { .. }));
+    for tick in 1..=5 {
+        let state = rt.state(ITEM).expect("folds");
+        let action = next_action(&gated, &state, &ctx(TREE_A, 9_000 + tick)).expect("computes");
+        assert!(
+            matches!(action, NextAction::AwaitGate { .. }),
+            "tick {tick}: with a gate open the next action is AwaitGate, not {action:?}"
+        );
+        rt.step(
+            &action,
+            None,
+            AttemptCap::declared(4),
+            JournaledNow::from_journal(at(9_000 + tick)),
+        )
+        .expect("awaiting is a step");
+    }
+    assert_eq!(
+        harness.dispatches(),
+        0,
+        "the P8 regression: 0 dispatches across an open gate"
+    );
+    let journal = rt.journal(ITEM).expect("query");
+    assert!(
+        journal.iter().all(|e| e.kind != EventKind::Dispatch),
+        "no dispatch row was written while the gate was open"
+    );
+
+    // ---- the replay assertion, as a checker over ANY journal ---------------------------------
+    assert_eq!(
+        gate::dispatches_across_open_gates(&journal),
+        Vec::<gate::DispatchAcrossGate>::new(),
+        "the runtime's own journal is clean"
+    );
+    // POSITIVE CONTROL: a dispatch between gate_opened and the gate's terminal event is reported.
+    let mut forged = vec![gate_opened_event(&open)];
+    forged.push(Event::new(
+        EventKind::Dispatch,
+        serde_json::json!({ "item": ITEM, "activity_id_at_version": "impl-report@1", "attempt": 1 }),
+    ));
+    forged.push(gate::gate_answered_event(open.token(), TREE_A, "proceed"));
+    let found = gate::dispatches_across_open_gates(&forged);
+    assert_eq!(
+        found.len(),
+        1,
+        "the dispatch inside the open window is reported: {found:?}"
+    );
+    assert_eq!(found[0].gate, *open.token());
+    // …and a dispatch AFTER the terminal event is not.
+    let mut after = vec![
+        gate_opened_event(&open),
+        gate::gate_answered_event(open.token(), TREE_A, "proceed"),
+    ];
+    after.push(forged[1].clone());
+    assert!(
+        gate::dispatches_across_open_gates(&after).is_empty(),
+        "a dispatch after the answer is the resume, not a violation"
+    );
+}
+
+/// **AC-279 — at most one prompt-prefix rewrite per resume.** The kernel half; cross-listed with
+/// 7c, whose adapter fills `gate_resumed`'s metric fields (AC-267, ARMED there).
+///
+/// > WHEN the item resumes / THEN the resume performs at most one prompt-prefix rewrite.
+/// > *Verified by:* a count assertion on prefix-rewrite events per `gate_resumed`, asserted ≤ 1.
+///
+/// The kernel's count is the number of resume dispatches it issues for the gate — one — and the
+/// `gate_resumed` row (ADR-0123) carries it. RED (observed 2026-09-17) against a runtime that
+/// wrote no `gate_resumed` at all: the resume had no row to count against.
+#[test]
+fn ac279_one_prefix_rewrite() {
+    use rk_kernel::workflow::idem::checked_key;
+    let harness = Arc::new(crate::runtime::CountingHarness::scripted(vec![
+        crate::runtime::ok_typed(serde_json::json!({ "n": 1 })),
+        crate::runtime::ok_typed(serde_json::json!({ "n": 2 })),
+    ]));
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let rt = Runtime::new(
+        crate::runtime::ports(
+            Arc::clone(&harness) as Arc<dyn rk_ports::harness::Harness>,
+            &store,
+        ),
+        "run-ac279",
+        STAGE,
+    );
+    // a gate opens and is answered, then the item resumes into its first dispatch
+    let g = gate::reach(
+        &rt.state(ITEM).expect("folds"),
+        "human:review",
+        &ctx(TREE_A, 9_000),
+    )
+    .expect("mints");
+    rt.append(gate_opened_event(&g)).expect("append");
+    let ans = gate::answer(
+        &rt.state(ITEM).expect("folds"),
+        g.token(),
+        g.token(),
+        TREE_A,
+        "proceed",
+    )
+    .expect("answers");
+    for e in ans.events {
+        rt.append(e).expect("append");
+    }
+    let resume = NextAction::Dispatch {
+        key: checked_key(ITEM, crate::runtime::AID, 1).expect("well-formed"),
+        step_id: crate::runtime::STEP.to_owned(),
+    };
+    rt.step(
+        &resume,
+        Some(&crate::runtime::spec()),
+        AttemptCap::declared(crate::runtime::CAP),
+        JournaledNow::from_journal(at(9_600)),
+    )
+    .expect("the resume dispatches");
+    assert_eq!(harness.dispatches(), 1);
+
+    let journal = rt.journal(ITEM).expect("query");
+    let resumed: Vec<&Event> = journal
+        .iter()
+        .filter(|e| e.kind == EventKind::GateResumed)
+        .collect();
+    assert_eq!(
+        resumed.len(),
+        1,
+        "the resume recorded exactly one gate_resumed row"
+    );
+    assert_eq!(resumed[0].payload["token"], g.token().as_str());
+    assert_eq!(
+        resumed[0].payload["prefix_rewrites"], 1,
+        "one prefix rewrite for one resume"
+    );
+    assert!(
+        resumed[0]
+            .payload
+            .get("cache_creation_input_tokens")
+            .is_none()
+            && resumed[0].payload.get("total_cost_usd").is_none(),
+        "the adapter's metric fields are ABSENT, not zero, until an adapter fills them (ADR-0123)"
+    );
+    // the row precedes the dispatch it describes
+    let i_resumed = journal
+        .iter()
+        .position(|e| e.kind == EventKind::GateResumed)
+        .expect("present");
+    let i_dispatch = journal
+        .iter()
+        .position(|e| e.kind == EventKind::Dispatch)
+        .expect("present");
+    assert!(
+        i_resumed < i_dispatch,
+        "gate_resumed is written before the resumed dispatch's row"
+    );
+
+    // the ≤ 1 assertion as a checker over any journal, and its positive control
+    assert!(gate::prefix_rewrites_exceeding_one(&journal).is_empty());
+    let mut forged = journal.clone();
+    forged.push(Event::new(
+        EventKind::GateResumed,
+        serde_json::json!({ "token": g.token().as_str(), "prefix_rewrites": 2 }),
+    ));
+    assert_eq!(
+        gate::prefix_rewrites_exceeding_one(&forged).len(),
+        1,
+        "a resume that rewrote twice is reported"
+    );
+
+    // a second dispatch in the same resumed run is NOT a second resume: no second gate_resumed
+    rt.step(
+        &NextAction::Dispatch {
+            key: checked_key(ITEM, crate::runtime::AID, 2).expect("well-formed"),
+            step_id: crate::runtime::STEP.to_owned(),
+        },
+        Some(&crate::runtime::spec()),
+        AttemptCap::declared(crate::runtime::CAP),
+        JournaledNow::from_journal(at(9_700)),
+    )
+    .expect("dispatches");
+    let n = rt
+        .journal(ITEM)
+        .expect("query")
+        .iter()
+        .filter(|e| e.kind == EventKind::GateResumed)
+        .count();
+    assert_eq!(
+        n, 1,
+        "one resume, one row — a later dispatch in the same run is not a resume"
+    );
+}
+
+/// **AC-253 — drift is a comparison of tree hashes and nothing else.**
+///
+/// > THEN the decision is a comparison of tree hashes only — never file mtimes, wall-clock elapsed
+/// > time, commit counts, or branch tip identity. *Verified by:* a unit test over a fixture that
+/// > rewrites history to an identical tree (drift must be false) and one that touches files back
+/// > to identical content (drift must be false); an architecture test that the drift predicate
+/// > reads no clock.
+///
+/// RED (observed 2026-09-17) against a predicate that answered `true` for every pair.
+#[test]
+fn ac253_drift_is_a_tree_hash_comparison() {
+    let repo = Repo::with_one_commit();
+    let exec = repo.exec();
+    let h0 = working_tree(&repo, &exec);
+    let record = GateRecord::derive("human:review", h0.as_str(), at(9_000)).expect("derive");
+
+    // (a) history rewritten to an IDENTICAL tree: a new commit id, the same tree → no drift
+    repo.git(&["commit", "--quiet", "--amend", "-m", "one, reworded"]);
+    let h_amended = working_tree(&repo, &exec);
+    assert_eq!(
+        h_amended, h0,
+        "PREMISE: the amend changed the commit and not the tree"
+    );
+    assert!(
+        !gate::drifted(&record, h_amended.as_str()),
+        "a rewritten history over the same tree is not drift"
+    );
+
+    // (b) files touched back to identical content: mtime moved, content did not → no drift
+    repo.write("a.txt", b"one, modified\n");
+    repo.write("a.txt", b"one\n");
+    let h_touched = working_tree(&repo, &exec);
+    assert_eq!(
+        h_touched, h0,
+        "PREMISE: touching back to identical content leaves the tree alone"
+    );
+    assert!(
+        !gate::drifted(&record, h_touched.as_str()),
+        "an mtime change is not drift"
+    );
+
+    // (c) the control: a real content change IS drift
+    repo.write("a.txt", b"two\n");
+    let h_changed = working_tree(&repo, &exec);
+    assert_ne!(h_changed, h0);
+    assert!(
+        gate::drifted(&record, h_changed.as_str()),
+        "a changed tree is drift"
+    );
+
+    // (d) the predicate reads no clock and no filesystem: the gate path's purity rule
+    gate_path_purity_rule(&rk_kernel::module_boundary::kernel_sources().expect("src/ is readable"))
+        .unwrap_or_else(|v| {
+            panic!("the drift predicate's module reads a clock or the host:\n{v:#?}")
+        });
+}
+
+/// **AC-242 — nothing on the gate path sleeps, blocks or spawns a timer.** The syntactic half.
+///
+/// > THEN the build fails if that code contains a call to `thread::sleep`, a blocking channel
+/// > receive, or a timer/scheduler spawn on the gate-lifecycle path. *Verified by:* a
+/// > `cargo`-level deny-list / clippy lint over the named modules, failing the build rather than
+/// > a test run; a fixture module containing each forbidden construct that must fail the lint.
+///
+/// The build-failing half is `workflow.rs`'s `#![deny(clippy::disallowed_methods)]` over
+/// `thread::sleep`, which reaches `gate.rs` as a child (and `workflow-clock-reintroduce` is its
+/// committed control). This test is the source rule for the constructs clippy's denylist does not
+/// name — a blocking `recv`, a `thread::spawn`, a `tokio::` timer — with the fixture module the
+/// register asks for as its positive control. RED (observed 2026-09-17) against a rule that
+/// reported nothing over the fixture.
+#[test]
+fn ac242_gate_path_blocks_nothing() {
+    let report = gate_path_purity_rule(
+        &rk_kernel::module_boundary::kernel_sources().expect("src/ is readable"),
+    )
+    .unwrap_or_else(|v| panic!("the gate path blocks, sleeps or spawns:\n{v:#?}"));
+    assert!(
+        report.files_scanned >= 2,
+        "fsm.rs and gate.rs are the gate path; scanned {}",
+        report.files_scanned
+    );
+    assert!(
+        report.code_lines_scanned > 100,
+        "PREMISE: the rule read code, not an empty walk"
+    );
+
+    // POSITIVE CONTROL: the fixture module carries each forbidden construct and must fail.
+    let fixture = vec![SourceFile {
+        path: "crates/rk-kernel/src/workflow/gate.rs".to_owned(), // the path the rule scopes on
+        text: GATE_PATH_CONTROL.to_owned(),
+    }];
+    let violations =
+        gate_path_purity_rule(&fixture).expect_err("the control carries every banned construct");
+    for needle in [
+        "thread::sleep",
+        ".recv(",
+        "thread::spawn",
+        "SystemTime",
+        "std::fs",
+        "std::env",
+    ] {
+        assert!(
+            violations.iter().any(|v| v.text().contains(needle)),
+            "the rule reports `{needle}`: {violations:#?}"
+        );
+    }
+}
+
+/// **AC-261 — the state is re-derived from the world at every entry, with no cached fast path.**
+///
+/// > THEN it re-derives the item's state from the world (tree, trailers, event log) before acting,
+/// > with no cached-state fast path that skips that derivation. *Verified by:* an architecture
+/// > test asserting the single entry point calls the derivation; a mutation-style test — deleting
+/// > the re-derivation call must fail at least one test.
+///
+/// The kernel's entry point is `Runtime::state`, and its derivation is the fold over the journal
+/// read at that call. RED (observed 2026-09-17) via a temporary mutant of `runtime.rs` that
+/// returned the fold of an EMPTY journal — the deleted derivation the register names — and the
+/// assertion below failed on the append the second call could not see. Reverted before commit.
+#[test]
+fn ac261_state_is_rederived_at_every_entry() {
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let rt = runtime_over(&store);
+    let g = gate::reach(
+        &rt.state(ITEM).expect("folds"),
+        "human:review",
+        &ctx(TREE_A, 9_000),
+    )
+    .expect("mints");
+    let before = rt.state(ITEM).expect("folds");
+    assert_eq!(before.open_gates().count(), 0);
+    rt.append(gate_opened_event(&g)).expect("append");
+    let after = rt.state(ITEM).expect("folds");
+    assert_eq!(
+        after.open_gates().count(),
+        1,
+        "the second entry re-derived the state and saw the append"
+    );
+    assert_ne!(
+        before.canonical_bytes().expect("c"),
+        after.canonical_bytes().expect("c")
+    );
+
+    // the architecture half: the entry point holds no state to serve from — `Runtime` carries
+    // ports, a run id and a stage, and nothing of `RunState`'s
+    let src = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/runtime.rs"),
+    )
+    .expect("runtime.rs is readable");
+    let start = src.find("pub struct Runtime {").expect("the struct");
+    let end = src[start..].find('}').expect("closes") + start;
+    let body = &src[start..end];
+    assert!(
+        !body.contains("RunState") && !body.contains("cache") && !body.contains("Cell"),
+        "Runtime carries a cached state: {body}"
+    );
+    assert!(
+        src.contains("crate::workflow::fsm::fold(item, &self.stage, &events)"),
+        "the single entry point calls the derivation"
+    );
 }

@@ -533,3 +533,98 @@ pub fn void_consumer_rule(
         Err(violations)
     }
 }
+
+// ------------------------------------------------------------ AC-242 / AC-258 / AC-253: the gate path is pure
+
+/// The constructs the gate path may not contain (AC-242's *"thread::sleep, a blocking channel
+/// receive, or a timer/scheduler spawn"*; AC-258's *"reads no ambient host state"*; AC-253's
+/// *"reads no clock"*), matched on code lines only. `workflow.rs`'s
+/// `#![deny(clippy::disallowed_methods)]` already fails the BUILD on `thread::sleep`,
+/// `SystemTime::now` and `Instant::now`; this rule is the syntactic net over what that denylist
+/// does not name, and its positive control is `tests/fixtures/lint-controls/ac242_gate_path_blocks.rs`.
+pub const GATE_PATH_BANS: &[&str] = &[
+    "thread::sleep",
+    "::sleep(",
+    ".recv(",
+    ".recv_timeout(",
+    "thread::spawn",
+    "tokio::",
+    "SystemTime",
+    "Instant::",
+    "std::fs",
+    "std::env",
+    "process::Command",
+];
+
+/// The modules that ARE the gate path: the fold and the answer/expiry module.
+pub const GATE_PATH_MODULES: &[&str] = &["workflow/fsm.rs", "workflow/gate.rs"];
+
+/// What [`gate_path_purity_rule`] walked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GatePathReport {
+    pub files_scanned: usize,
+    pub code_lines_scanned: usize,
+}
+
+/// The rule. Files whose path ends in one of [`GATE_PATH_MODULES`] are scanned on their code
+/// lines (comments stripped) for every [`GATE_PATH_BANS`] token.
+///
+/// # Errors
+///
+/// One violation per banned token per code line.
+pub fn gate_path_purity_rule(
+    files: &[SourceFile],
+) -> Result<GatePathReport, Vec<BoundaryViolation>> {
+    let mut violations: Vec<BoundaryViolation> = Vec::new();
+    let mut files_scanned = 0_usize;
+    let mut code_lines_scanned = 0_usize;
+    for file in files {
+        if !GATE_PATH_MODULES.iter().any(|m| file.path.ends_with(m)) {
+            continue;
+        }
+        files_scanned += 1;
+        let mut in_block = false;
+        // THE ONE EXEMPTION, scoped structurally and not by name: an item under
+        // `#[cfg(feature = "…-reintroduce")]` is a committed positive control for the clippy
+        // determinism gate (`workflow-fsm-clock-reintroduce`; DECISIONS-2026-09-12 E4's
+        // "committed, not reverted" form) — it EXISTS to carry a banned call, is never compiled
+        // by default, and is the reason the gate can be shown to bite. The exemption runs from
+        // that attribute to the item's closing `}` at column 0 and nowhere else.
+        let mut in_reintroduce_control = false;
+        for (i, raw) in file.text.lines().enumerate() {
+            let code = strip_comments(raw, &mut in_block);
+            if code.trim().is_empty() {
+                continue;
+            }
+            if code.contains("#[cfg(feature = \"") && code.contains("-reintroduce\")") {
+                in_reintroduce_control = true;
+                continue;
+            }
+            if in_reintroduce_control {
+                if code == "}" {
+                    in_reintroduce_control = false;
+                }
+                continue;
+            }
+            code_lines_scanned += 1;
+            for pattern in GATE_PATH_BANS {
+                if code.contains(pattern) {
+                    violations.push(BoundaryViolation {
+                        path: file.path.clone(),
+                        line: i + 1,
+                        pattern,
+                        text: code.trim().to_owned(),
+                    });
+                }
+            }
+        }
+    }
+    if violations.is_empty() {
+        Ok(GatePathReport {
+            files_scanned,
+            code_lines_scanned,
+        })
+    } else {
+        Err(violations)
+    }
+}

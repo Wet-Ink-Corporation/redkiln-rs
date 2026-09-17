@@ -1,0 +1,39 @@
+# AC-260's fixture table: gate-class rows with their declared expiry action, and what the lint must say.
+#
+# "there is no implicit default expiry action, and no escalate-on-escalate (ADR-0105 clause 10)". The two
+# must-fail rows the register names are `review` (no action declared) and `escalation -> escalate`; the
+# rest are the valid shapes, so the lint is shown to accept something and not merely to refuse everything.
+
+[[row]]
+class = "review"
+expect = "fail"            # no `action` key: there is no implicit default (AC-276 makes the choice human)
+
+[[row]]
+class = "escalation"
+action = "escalate"
+expect = "fail"            # escalate-on-escalate: every chain terminates within one hop
+
+[[row]]
+class = "review"
+action = "escalate"
+expect = "ok"
+
+[[row]]
+class = "escalation"
+action = "fail"
+expect = "ok"
+
+[[row]]
+class = "escalation"
+action = "auto-decide"
+expect = "ok"
+
+[[row]]
+class = "release"
+action = "fail"
+expect = "ok"
+
+[[row]]
+class = "release"
+action = "retry"
+expect = "fail"            # not one of ADR-0017's three terminal paths

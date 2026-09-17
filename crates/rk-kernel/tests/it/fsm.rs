@@ -91,7 +91,7 @@ fn parts() -> (
 
 /// A selection whose plan is **not empty** — `implement` over a mixed item. `execute.rs` already
 /// asserts that this plan has more than one layer, so the dispatch order below is a real order.
-fn planned() -> rk_kernel::select::Selection {
+pub fn planned() -> rk_kernel::select::Selection {
     let (pack, catalog, artifacts, facets) = parts();
     let item = Item::new(ITEM, "incident").with_toolchain("node", ["text"]);
     select(&pack, &catalog, &artifacts, &facets, STAGE, &item).expect("selection resolves")
