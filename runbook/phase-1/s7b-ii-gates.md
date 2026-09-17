@@ -640,6 +640,9 @@ for t in ac244_gate_record_requires_all_three ac245_write_tree_one_algorithm ac5
          ac246_token_is_single_use ac249_stale_tree_hash_is_void ac250_no_reconciliation_path \
          ac270_gate_state_from_the_log_alone ac272_escalation_is_one_gate_mechanism \
          ac243_no_dispatch_across_open_gate ac279_one_prefix_rewrite \
+         ac247_answer_against_the_wrong_gate_is_refused ac252_void_reopens_fresh_in_all_three_fields \
+         ac253_drift_is_a_tree_hash_comparison ac242_gate_path_blocks_nothing \
+         ac261_state_is_rederived_at_every_entry ac260_expiry_policy_lint \
          ac284_class_decision_table ac285_class_drift_event ac286_classifier_is_deterministic \
          ac283_no_free_text_reaches_policy ac282_structured_output_required \
          ac318_no_json_from_prose_in_the_review_path ; do
@@ -901,6 +904,20 @@ The remainder of the three claimed ranges, by id:
 
 - **Human gate:** **AC-242, AC-247, AC-252, AC-253, AC-254, AC-257, AC-258, AC-259, AC-261, AC-278** — all
   `rk-kernel`, all with ADR-0017 (AC-259 also ADR-0022/ADR-0038, AC-261 also ADR-0009) on their `decisions:` line.
+  *(Amended 2026-09-17, when the human gate was built (slices A–C, `11b347e`…`ad0e91a`): **six of the ten now have a
+  named test in the block above** — `ac247_answer_against_the_wrong_gate_is_refused`,
+  `ac252_void_reopens_fresh_in_all_three_fields`, `ac253_drift_is_a_tree_hash_comparison`,
+  `ac242_gate_path_blocks_nothing` (the syntactic half; the build-failing half is `workflow.rs`'s `#![deny]`),
+  `ac261_state_is_rederived_at_every_entry`, and **AC-259** inside `ac272_escalation_is_one_gate_mechanism` with
+  **AC-260**'s lint as `ac260_expiry_policy_lint` — and **AC-258** is asserted by name inside
+  `ac270_gate_state_from_the_log_alone`, as the register instructs. **The remaining three move to ARMED, by reason:
+  AC-254** (the drift attachment's *render* — commits since the trailer commit and paths differing between the two
+  trees — is `rk-git`'s diff over AC-245's algorithm and `rk-cli`'s rendering; the kernel's `drifted` predicate is
+  AC-253's), **AC-257** (an integration test in a *fresh process* with no prior process — `rk-cli`, 7d; the kernel
+  half, `expire()` at a journaled `now`, is built) and **AC-278** (the process table after exit — `rk-cli`/adapter,
+  7d/7c; no process is spawned on the gate path, which `ac242_gate_path_blocks_nothing`'s rule asserts). They are
+  not moved into the ARMED table above, which is fixed at this file's 2026-09-13 text; this parenthetical is their
+  ARMED row.)*
 - **Review gate:** **AC-315, AC-316** — both `rk-kernel`.
 - **Verify gate:** **AC-320–AC-322, AC-324, AC-332, AC-336, AC-338–AC-344, AC-347–AC-353, AC-355, AC-359**.
 
@@ -916,6 +933,10 @@ crate-wide `cargo test -p rk-kernel` floor, which `00-preamble.md`:186-189 says 
 nothing pins"*. **Before this step is RUN, either author a named test per id and add it to the block, or move the id
 to ARMED with its reason.** They are not moved to ARMED now because nothing external blocks them — the code and the
 tests are this stage's, and what is missing is the lines.
+*(2026-09-17: done for the human gate — six named and in the block, one asserted by name inside another, three
+ARMED with reasons, all in the human-gate bullet above. The review-gate and verify-gate remainders — AC-315, AC-316;
+AC-320–AC-322, AC-324, AC-332, AC-336, AC-338–AC-344, AC-347–AC-353, AC-355, AC-359 — still stand under this
+sentence and are settled when their slices are built.)*
 
 **RAISED, NOT SETTLED — allocation questions this file may not decide** (`00-preamble.md`:55; `s7a`:1217):
 
