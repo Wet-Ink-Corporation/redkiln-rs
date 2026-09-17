@@ -1,0 +1,235 @@
+{
+  "provenance": "redkiln-corpus at CORPUS_SHA 61f590e51cbb00301c310e46aab615563a7787b8: results/s-typed-adjudication.jsonl (the 7 CONFIRMED narrowed-pin rows + the severity-decision row) and results/s-typed.jsonl (the finding objects, copied verbatim; PRE-ADR-0096 shape: repro {command, observed, expected_when_met}, no kind/mutation/expected, prose commands). Seeded under the MODEL-LABEL policy (AC-310; ERRATA E-0074-2): `evidence` is the model's label and no Rust-computed class is claimed for these. Two checkpoint SHAs (65730043, fe8d8b03) are unreachable in predecessor-47faec9f.bundle; seeding needs only the finding object.",
+  "severity_decision": {
+    "record": "severity-decision",
+    "decided_by": "Ryan Britton",
+    "decided_at": "2026-09-08T00:09:31.893336+00:00",
+    "decision": "narrowed-pin ADVISES, it does not block. reproduced and mutation-survived block.",
+    "equals": "the LENIENT policy as registered in METHOD-S 2.2 before any data",
+    "scope": "the severity judgement F24 reserved for a human; the model that built the rig did not make it",
+    "consequences": {
+      "default_stage_weight": "lenient",
+      "clean_blocks": "9/23 (was 12/23 under strict)",
+      "verified_false_positives": "0/23 - all 9 blocking items rest on adjudicated-CONFIRMED blocking-grade findings (4 from F24, 5 from F31)",
+      "findings_reclassified_advisory": 7,
+      "detection_cost": "none - S-SILENT 23/23 and S-SUBTLE 5/5 are identical under lenient and strict",
+      "items_no_longer_blocking": [
+        "fix-doctor-git-config-repair",
+        "issue-82-status-terminal-field-collision",
+        "memoize-repo-root"
+      ]
+    }
+  },
+  "seed": [
+    {
+      "slug": "fix-doctor-git-config-repair",
+      "ac": "AC-002",
+      "checkpoint_sha": "65730043",
+      "adjudication": {
+        "slug": "fix-doctor-git-config-repair",
+        "ac": "AC-002",
+        "evidence": "narrowed-pin",
+        "verdict": "CONFIRMED",
+        "mutation": "deleted the 3-line [branch] block from renderGitConfig",
+        "targeted_result": "test/doctor-git-config.test.ts 15/15 green",
+        "whole_suite": null
+      },
+      "finding": {
+        "ac": "AC-002",
+        "claim": "No test pins the `[branch \"<default>\"]` block AC-002 requires the reconstructed config to name — deleting it entirely from the repair leaves the whole suite green.",
+        "evidence": "narrowed-pin",
+        "files": [
+          "test/doctor-git-config.test.ts",
+          "src/migrate/health.ts"
+        ],
+        "rationale": "The shipped code does write the branch block (I confirmed it through the real CLI on a live fixture), so the criterion itself is met — but the AC's THEN clause says the config must name \"the correct remote URL AND default branch\" while the test file only asserts the URL (`test/doctor-git-config.test.ts:215`, `:263`, `:265`) and that `git status` exits 0. `git status` succeeds with no `[branch]` block at all, so the branch half of the criterion is unprotected. The spec's own Verification recipe for AC-002 also omits it, so this is a pin narrower than the criterion rather than a defect the implementer introduced — hence narrowed-pin, not mutation-survived.",
+        "repro": {
+          "command": "Deleted the three `[branch \"${remote.branch}\"]` / `remote = origin` / `merge = refs/heads/${remote.branch}` lines from `renderGitConfig` (src/migrate/health.ts:939-941), then `npx vitest run test/doctor-git-config.test.ts`",
+          "expected_when_met": "At least one AC-002 test fails, e.g. an assertion that `git -C <fixture> config --get branch.main.merge` returns `refs/heads/main` (or `--get-regexp '^branch\\.'` names the FETCH_HEAD branch) after the repair.",
+          "observed": "Test Files 1 passed, Tests 15 passed (15) — a reconstruction that names no branch at all is indistinguishable from the correct one. (An earlier, cruder mutation that wrote `merge = refs/heads/wrongbranch<name>` was likewise green.)"
+        }
+      },
+      "source": "results/s-typed.jsonl slug=fix-doctor-git-config-repair .step.digest.findings[0]"
+    },
+    {
+      "slug": "fix-doctor-git-config-repair",
+      "ac": "AC-004",
+      "checkpoint_sha": "65730043",
+      "adjudication": {
+        "slug": "fix-doctor-git-config-repair",
+        "ac": "AC-004",
+        "evidence": "narrowed-pin",
+        "verdict": "CONFIRMED",
+        "mutation": "inserted a git rev-parse --git-common-dir subprocess at the top of resolveGitCommonDir",
+        "targeted_result": "test/doctor-git-config.test.ts 15/15 green",
+        "whole_suite": null
+      },
+      "finding": {
+        "ac": "AC-004",
+        "claim": "The AC-004 subprocess spy only counts `execFileSync` calls whose first argument is `rev-parse`, so a git subprocess inside the resolution step in any other shape passes unnoticed.",
+        "evidence": "narrowed-pin",
+        "files": [
+          "test/doctor-git-config.test.ts",
+          "src/migrate/health.ts"
+        ],
+        "rationale": "AC-004's Verification demands a spy asserting the RESOLUTION step \"makes zero subprocess calls\"; the helper at test/doctor-git-config.test.ts:161-163 filters `cmd === \"git\" && args[0] === \"rev-parse\"`, which misses `git -C <root> rev-parse …`, `git config --file …`, and anything spawned via `spawnSync`/`execSync`. I class this narrowed-pin rather than mutation-survived because the substantive hazard IS pinned — a subprocess-ONLY resolver fails 8 of the 15 tests — and the shipped resolver provably spawns nothing (it reports the corruption with `git` removed from PATH entirely). The gap is the purity clause, not the behaviour.",
+        "repro": {
+          "command": "Inserted at the top of `resolveGitCommonDir` (src/migrate/health.ts:756) a `execFileSync(\"git\", [\"-C\", root, \"rev-parse\", \"--git-common-dir\"], …)` returning its result when it succeeds, falling through to the fs walk otherwise; then `npx vitest run test/doctor-git-config.test.ts`. Control: the same mutation with `[\"rev-parse\", \"--git-common-dir\"]` + `cwd` fails 2 tests; a subprocess-only resolver with no fs fallback fails 8.",
+          "expected_when_met": "The AC-004 spy fails on any `child_process` spawn observed during the resolution step (count all mocked-module calls, or assert `execFileSyncMock` records zero `\"git\"` invocations across `diagnose`), not just those whose `args[0]` is `rev-parse`.",
+          "observed": "Test Files 1 passed, Tests 15 passed (15) — resolution shelling out to git went undetected. Separately, `node bin/redkiln.mjs doctor --cwd <corrupt fixture> --json` with PATH set to a nonexistent directory still emitted the `git-config-corrupt` problem, confirming the shipped resolver needs no git."
+        }
+      },
+      "source": "results/s-typed.jsonl slug=fix-doctor-git-config-repair .step.digest.findings[1]"
+    },
+    {
+      "slug": "issue-130-slice-review-story-gate",
+      "ac": "AC-005",
+      "checkpoint_sha": "9e98b848",
+      "adjudication": {
+        "slug": "issue-130-slice-review-story-gate",
+        "ac": "AC-005",
+        "evidence": "narrowed-pin",
+        "verdict": "CONFIRMED",
+        "mutation": "simulated pre-fix: disabled the storyGateFailures branch and removed both STORY_GATE_CMDS blocks",
+        "targeted_result": "-t 're-enters a story-gate rejection at Review': 1 passed | 36 skipped",
+        "whole_suite": null
+      },
+      "finding": {
+        "ac": "AC-005",
+        "claim": "AC-005's test passes unchanged with the entire #130 change removed from the workflow, because it hand-writes the story-gate finding into the `preflight:` digest fixture and then asserts a re-entry path that predates this story.",
+        "evidence": "narrowed-pin",
+        "files": [
+          "test/implement-behaviour.test.ts",
+          "workflows/forge-implement.js"
+        ],
+        "rationale": "The re-entry behaviour the test asserts genuinely holds, so this is not a false claim — but the test pins strictly less than the criterion. The spec assigns this row the novel half ('what this AC pins is that a STORY-GATE seal reaches it — it is the second half of AC-003, and the finding string in the patch is one only the new code at AC-003 can produce'), and that half is pre-set in the fixture rather than produced by the substrate: the finding string is typed literally into the `sliceVerdicts[0].findings` patch at test/implement-behaviour.test.ts:715-717. The implementation report concedes this verbatim ('passed unchanged pre-fix — fixture-pinned, proves nothing'), and I confirmed it independently rather than taking it on trust.",
+        "repro": {
+          "command": "Simulate pre-fix: in workflows/forge-implement.js replace `if (storyGateFailures.length > 0) {` with `if (false && storyGateFailures.length > 0) {` AND delete the two occurrences of the block `  2. The story-grain gate — ONE RUN PER STORY, every one of them, from the worktree root:\\n${STORY_GATE_CMDS}\\n`; then `npx vitest run test/implement-behaviour.test.ts -t \"re-enters a story-gate rejection at Review\"`",
+          "expected_when_met": "The case reds under the pre-fix simulation, because its GIVEN (a seal carrying a story-gate finding) would be unreachable — i.e. the test drives the finding through the seal path rather than typing it into the preflight fixture.",
+          "observed": "1 passed | 36 skipped — the AC-005 case is green against a workflow that can no longer produce a story-gate seal at all."
+        }
+      },
+      "source": "results/s-typed.jsonl slug=issue-130-slice-review-story-gate .step.digest.findings[1]"
+    },
+    {
+      "slug": "issue-81-plan-discover-spec-gate-mismatch",
+      "ac": "AC-002",
+      "checkpoint_sha": "2cf1728f",
+      "adjudication": {
+        "slug": "issue-81-plan-discover-spec-gate-mismatch",
+        "ac": "AC-002",
+        "evidence": "narrowed-pin",
+        "verdict": "CONFIRMED",
+        "mutation": "inserted a story-lite discover+tick instruction elsewhere in step 9",
+        "targeted_result": "test/plan-contract.test.ts 34/34 green",
+        "whole_suite": null
+      },
+      "finding": {
+        "ac": "AC-002",
+        "claim": "The story-lite regression guard only inspects a fixed ±(100,250)-character window around one literal phrase, so a discover-authoring instruction aimed at story-lite placed elsewhere in step 9 passes green.",
+        "evidence": "narrowed-pin",
+        "files": [
+          "test/plan-contract.test.ts",
+          "commands/plan.md"
+        ],
+        "rationale": "A real test exists and does catch the obvious adjacent mutation (I inserted a gates/discover clause directly into the story-lite sentence and the assertion went red), so the behaviour is partly protected. But the assertion at test/plan-contract.test.ts:287-290 slices `stepNine` to `[liteIdx-100, liteIdx+250]` around the literal string 'the lite pack has no `discover` stage' rather than checking the story-lite branch as a whole, which pins a strictly narrower claim than AC-002's 'no discover-authoring sub-step inserted'. The shipped commands/plan.md itself is correct here (line 304 explicitly says 'A `story-lite` story has neither the artifact nor the stage — do none of this for it', and I confirmed at runtime that a story-lite story advances intake -> spec with no discover.md), so this is a test-strength gap, not an unmet behaviour.",
+        "repro": {
+          "command": "python: insert '   For a `story-lite` (small-tier) story, first author its `discover.md` and tick the four\\n   `gates/discover` boxes, then re-run the advance above.\\n\\n' immediately before '   **Then persist the dependency graph the storymap designed.**' in commands/plan.md  then: npx vitest run test/plan-contract.test.ts",
+          "expected_when_met": "The AC-002 assertion fails on any discover-authoring / gates/discover instruction targeted at story-lite anywhere within step 9, not only within a fixed character window around one phrase.",
+          "observed": "Tests  34 passed (34) — a sub-step that explicitly orders discover-authoring + gates/discover ticking for story-lite stories was added inside step 9 and the AC-002 describe block did not detect it (the text lands beyond the +250 char window)."
+        }
+      },
+      "source": "results/s-typed.jsonl slug=issue-81-plan-discover-spec-gate-mismatch .step.digest.findings[1]"
+    },
+    {
+      "slug": "issue-82-status-terminal-field-collision",
+      "ac": "AC-003",
+      "checkpoint_sha": "1a285525",
+      "adjudication": {
+        "slug": "issue-82-status-terminal-field-collision",
+        "ac": "AC-003",
+        "evidence": "narrowed-pin",
+        "verdict": "CONFIRMED",
+        "mutation": "made bug/spike report dodOwner 0 instead of null",
+        "targeted_result": "queries-status + index-build 59/59 green",
+        "whole_suite": null
+      },
+      "finding": {
+        "ac": "AC-003",
+        "claim": "AC-003 enumerates `bug` and `spike` as non-project types that must report `dodOwner: null`, but no fixture contains either type and a mutation giving them a non-null value survives the entire test suite.",
+        "evidence": "narrowed-pin",
+        "files": [
+          "test/queries-status.test.ts",
+          "src/index/build.ts"
+        ],
+        "rationale": "I chose narrowed-pin over mutation-survived because the shipped behaviour genuinely satisfies the criterion: `dodOwnerFor` keys on `data.type !== \"project\"` (src/index/build.ts:218), so bug/spike really do resolve to null, and the schema refinement at src/schema/item.ts:256-261 forbids `terminal` on non-project types anyway. The gap is purely in the pin: the test at test/queries-status.test.ts:351-364 asserts over `items().filter(i => i.type !== \"project\")` and locks the observed type set to exactly {initiative, story, incident}, which is narrower than the five types the criterion names. The spec's own _Verification_ clause scopes to \"each non-project type in the existing fixture set\", so this deviation is sanctioned by the spec and is a coverage gap rather than an unmet criterion. I note it as mutation-supported evidence of the narrowness, not as a behaviour violation.",
+        "repro": {
+          "command": "sed -i 's/data.type !== \"project\" ? null : (data.terminal ?? true) ? 1 : 0/data.type === \"bug\" || data.type === \"spike\" ? 0 : data.type !== \"project\" ? null : (data.terminal ?? true) ? 1 : 0/' src/index/build.ts && npx vitest run test/queries-status.test.ts test/index-build.test.ts   (also confirmed via `grep -rn dodOwner src test` that no other suite asserts the field, so the full suite cannot catch it either)",
+          "expected_when_met": "At least one assertion fails, because a fixture exercising a `bug` and a `spike` item pins `dodOwner === null` for those two types as the criterion explicitly enumerates them.",
+          "observed": "Test Files 2 passed (2); Tests 59 passed (59) — the mutation making bug/spike report `dodOwner: false` instead of `null` is not detected by any test. (Mutation reverted; `git status` clean.)"
+        }
+      },
+      "source": "results/s-typed.jsonl slug=issue-82-status-terminal-field-collision .step.digest.findings[0]"
+    },
+    {
+      "slug": "issue-83-plan-prds-write-timeout",
+      "ac": "AC-001",
+      "checkpoint_sha": "e2c0019b",
+      "adjudication": {
+        "slug": "issue-83-plan-prds-write-timeout",
+        "ac": "AC-001",
+        "evidence": "narrowed-pin",
+        "verdict": "CONFIRMED",
+        "mutation": "crammed all 18 section headers into stage 1",
+        "targeted_result": "test/plan-dag.test.ts 21/21 green",
+        "whole_suite": null
+      },
+      "finding": {
+        "ac": "AC-001",
+        "claim": "The new tests pin only the parenthetical (\"not all 18 sections AND the ledger in one turn\"), not the criterion's \"each authoring a bounded subset\" clause — a degenerate split where stage 1 authors the entire spec body stays green.",
+        "evidence": "narrowed-pin",
+        "files": [
+          "test/plan-dag.test.ts",
+          "workflows/forge-plan-prds.js"
+        ],
+        "rationale": "I chose narrowed-pin over mutation-survived because AC-001's own gloss defines the bound as \"no single call's prompt asks for all 16+ sections + the ledger\", and the surviving mutation (stage 1 asks for all 18 sections, stage 2 still owns the ledger) does not strictly violate that gloss — so the criterion as literally worded is still pinned. But the criterion's first clause (\"each authoring a bounded subset of the spec body's sections\") is not: test/plan-dag.test.ts:349-352 only fails when one dispatch has all 18 headers AND the ledger phrase, and test/plan-dag.test.ts:357-360's union check does not catch a stage 1 that swallows the whole body. That degenerate shape reproduces the defect issue #83 exists to end (one turn writing the entire spec.md body) while the suite reports success. The delivered split (workflows/forge-plan-prds.js:873-880 vs :932-941) is the spec's own suggested 8/10 boundary and genuinely meets AC-001; the gap is that no assertion holds either stage to a bounded section count.",
+        "repro": {
+          "command": "node -e \"const fs=require('fs');const p='workflows/forge-plan-prds.js';let s=fs.readFileSync(p,'utf8');const a='## Data and migrations   (or \\\"N/A\\\" with reason)\\n';const extra=['## Acceptance criteria','## Interaction quality','## Error conditions','## Non-functional','## Implementation notes','## Tests and CI','## Risks and coupling','## Dependencies','## Anchors (progressive disclosure)','## Clarifications resolved during spec'].join('\\n')+'\\n';const i=s.indexOf(a);s=s.slice(0,i+a.length)+extra+s.slice(i+a.length);fs.writeFileSync(p,s)\" && npx vitest run test/plan-dag.test.ts",
+          "expected_when_met": "The AC-001 block reds — e.g. an assertion bounding each dispatch's header count (`expect(headerCount).toBeLessThan(SECTION_HEADERS.length)` per dispatch, or that each stage's header set is a proper, non-overlapping subset) so a stage that swallows the whole body is caught.",
+          "observed": "Test Files 1 passed (1); Tests 21 passed (21) — stage 1 now asks for all 18 `##` sections in a single turn and the AC-001 describe block stays green."
+        }
+      },
+      "source": "results/s-typed.jsonl slug=issue-83-plan-prds-write-timeout .step.digest.findings[1]"
+    },
+    {
+      "slug": "memoize-repo-root",
+      "ac": "AC-003",
+      "checkpoint_sha": "fe8d8b03",
+      "adjudication": {
+        "slug": "memoize-repo-root",
+        "ac": "AC-003",
+        "evidence": "narrowed-pin",
+        "verdict": "CONFIRMED",
+        "mutation": "memo key resolve(cwd) -> \"SHARED\", witness left per-cwd",
+        "targeted_result": "both AC-003 tests green",
+        "whole_suite": "whole suite DOES catch it: 3 other tests red (AC-002, AC-004 negative, AC-005)"
+      },
+      "finding": {
+        "ac": "AC-003",
+        "claim": "The two tests designated as AC-003's verification both stay green when per-`cwd` cache keying is removed entirely, so they do not actually pin \"the cache is keyed per cwd, never shared\".",
+        "evidence": "narrowed-pin",
+        "files": [
+          "test/git-memo.test.ts",
+          "src/git/index.ts"
+        ],
+        "rationale": "The criterion itself IS genuinely met by the production code (`const key = resolve(cwd)` at src/git/index.ts:131), and other tests in the same file (AC-002, AC-004-negative, AC-005) do go red under the mutation, so a regression would not ship silently. But the AC-003 tests as written pin a weaker claim — \"each directory gets a correct answer\" — which the `gitDirWitness` re-check satisfies on its own even with a globally shared key. Hence narrowed-pin, not mutation-survived (the file catches it) and not reproduced (the behaviour is correct).",
+        "repro": {
+          "command": "In src/git/index.ts:131 replace `const key = resolve(cwd);` with `const key = \"SHARED\";` (keeping `const witness = gitDirWitness(resolve(cwd));`), then `npx vitest run test/git-memo.test.ts --reporter=verbose`",
+          "expected_when_met": "At least one test inside the `AC-003: cache is keyed per cwd, never shared` describe block goes red when the cache stops being keyed per cwd — e.g. an assertion that resolving repoA then repoB then repoA again costs no additional `--show-toplevel` spawn for repoA, which would fail under a shared key.",
+          "observed": "Both AC-003 tests PASS ('two different working directories each get their own answer' ✓, 'a nested subdirectory of a repo resolves to that repo's root' ✓). The 3 failures are AC-002, AC-004-negative and AC-005's first case — none of them the AC-003 block."
+        }
+      },
+      "source": "results/s-typed.jsonl slug=memoize-repo-root .step.digest.findings[0]"
+    }
+  ]
+}

@@ -19,6 +19,9 @@
 //! adapter are `rk-ports` (7a) and `rk-adapter-sqlite` (7c). `rk-store` owns the contract ADR-0105
 //! clause 7 describes and the connection discipline that contract is about.
 
+/// `rk-store-artifacts` (design §9.1) — the review and verify gates' stored records: the finding
+/// identity (AC-305) and the advisory sink's accounting (AC-310, AC-530). Step 7b-ii.
+pub mod artifacts;
 pub mod canon;
 pub mod conn;
 pub mod identity;

@@ -154,17 +154,17 @@ impl Scripted {
 }
 
 impl ReExecutor for Scripted {
-    fn run(&self, finding: &Finding, sha: &str) -> ReExecutionRecord {
+    fn run(&self, finding: &Finding, sha: &str) -> Option<ReExecutionRecord> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         let (observation, outcome) = self.script.get(&finding.ac).cloned().unwrap_or((
             Observation::Unrecognised,
             ReExecution::Unverifiable(Unverifiable::CannotRun),
         ));
-        ReExecutionRecord {
+        Some(ReExecutionRecord {
             id: format!("reexec:{}:{sha}", finding.ac),
             observation,
             outcome,
-        }
+        })
     }
 }
 
@@ -960,7 +960,7 @@ fn ac299_read_only_spawns_nothing() {
     // the control: the same payload at Lenient DOES re-execute — so the zero above is a decision,
     // not a re-executor that never runs
     let (findings, exec) = payload();
-    confirm(&findings, ReviewWeight::Lenient, SHA, &exec);
+    let _ = confirm(&findings, ReviewWeight::Lenient, SHA, &exec);
     assert_eq!(exec.calls(), 3);
 }
 

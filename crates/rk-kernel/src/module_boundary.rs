@@ -654,7 +654,7 @@ fn names_module(path: &str, module: &str) -> bool {
 /// `.find('{')` is a char). Escapes inside the literal are skipped with their escaped character.
 fn blank_string_literals(code: &str) -> String {
     let mut out = String::with_capacity(code.len());
-    let mut chars = code.chars().peekable();
+    let mut chars = code.chars();
     let mut in_str = false;
     while let Some(c) = chars.next() {
         if in_str {
@@ -922,4 +922,100 @@ pub fn block_construction_sites_rule(
     } else {
         Err(violations)
     }
+}
+
+/// What [`block_path_appends_its_own_event_rule`] found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BlockPathReport {
+    /// Call sites of `review_block_event(` outside its own definition. Exactly one is the invariant.
+    pub append_sites: usize,
+}
+
+/// **AC-307's architecture lint**: *"the block path and the event append are the same code path"*.
+/// The `review_block` row is appended from exactly ONE site in `src/`, and that site sits inside a
+/// `Decision::Block` match arm — a second site would let a block be recorded twice or a row be
+/// written for no block, and `count(blocks) == count(block_events)` would fail in one direction or
+/// the other.
+///
+/// # Errors
+///
+/// A violation per append site beyond the first, or for the one site when no `Decision::Block`
+/// arm encloses it within the preceding lines.
+pub fn block_path_appends_its_own_event_rule(
+    files: &[SourceFile],
+) -> Result<BlockPathReport, Vec<BoundaryViolation>> {
+    let mut sites: Vec<(String, usize, String, bool)> = Vec::new();
+    for file in files {
+        let mut in_block = false;
+        let lines: Vec<String> = file
+            .text
+            .lines()
+            .map(|l| blank_string_literals(&strip_comments(l, &mut in_block)))
+            .collect();
+        for (i, code) in lines.iter().enumerate() {
+            if !code.contains("review_block_event(") || code.contains("fn review_block_event(") {
+                continue;
+            }
+            // the enclosing arm: a `Decision::Block(` within the six preceding code lines
+            let enclosed = lines[i.saturating_sub(6)..i]
+                .iter()
+                .any(|l| l.contains("Decision::Block("));
+            sites.push((file.path.clone(), i + 1, code.trim().to_owned(), enclosed));
+        }
+    }
+    let mut violations: Vec<BoundaryViolation> = Vec::new();
+    for (idx, (path, line, text, enclosed)) in sites.iter().enumerate() {
+        if idx > 0 {
+            violations.push(BoundaryViolation {
+                path: path.clone(),
+                line: *line,
+                pattern: "a second review_block append site",
+                text: text.clone(),
+            });
+        } else if !enclosed {
+            violations.push(BoundaryViolation {
+                path: path.clone(),
+                line: *line,
+                pattern: "review_block appended outside the Decision::Block arm",
+                text: text.clone(),
+            });
+        }
+    }
+    if sites.is_empty() {
+        violations.push(BoundaryViolation {
+            path: "crates/rk-kernel/src/review/confirm.rs".to_owned(),
+            line: 0,
+            pattern: "no review_block append site at all",
+            text: "a block path that writes no row is count(blocks) > count(block_events)"
+                .to_owned(),
+        });
+    }
+    if violations.is_empty() {
+        Ok(BlockPathReport {
+            append_sites: sites.len(),
+        })
+    } else {
+        Err(violations)
+    }
+}
+
+/// The ledger vocabulary the review module may not name (AC-315: *"a review can only add
+/// findings, never mark an AC verified"*).
+pub const LEDGER_TOKENS: &[&str] = &[
+    "AcLedger",
+    "LedgerStatus",
+    "AcLedgerRow",
+    "::Pinned",
+    "ledger::",
+];
+
+/// **AC-315's architecture lint**: no file of the review module names a ledger type or status.
+///
+/// # Errors
+///
+/// One violation per ledger token per code line in a `review` file.
+pub fn review_touches_no_ledger_rule(
+    files: &[SourceFile],
+) -> Result<ReviewRuleReport, Vec<BoundaryViolation>> {
+    ban_tokens(files, |p| names_module(p, "review"), LEDGER_TOKENS)
 }

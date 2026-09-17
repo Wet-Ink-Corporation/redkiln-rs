@@ -1,3 +1,4 @@
+mod artifacts;
 mod canon_and_memo;
 mod contention;
 mod locator;

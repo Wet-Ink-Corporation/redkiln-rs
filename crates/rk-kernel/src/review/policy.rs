@@ -101,8 +101,15 @@ pub enum NonBlockReason {
     NarrowedPinAdvisesAtWeight,
     /// The weight is `ReadOnly`; nothing blocks (AC-299).
     ReadOnly,
-    /// No re-execution record, or one that did not flip (AC-287, AC-290).
+    /// No re-execution record, or one that could not separate candidate from reference
+    /// (AC-287, AC-290).
     Unverifiable(Unverifiable),
+    /// The re-execution ran and did not flip (AC-288's "candidate passes" cells; a killed or
+    /// non-discriminating mutant).
+    DidNotFlip,
+    /// The finding is under an active quarantine (AC-304); absent from the block set, persisted
+    /// with its reason.
+    Quarantined,
 }
 
 impl NonBlockReason {
@@ -115,6 +122,8 @@ impl NonBlockReason {
             Self::Unverifiable(Unverifiable::BothFail) => "unverifiable:both_fail",
             Self::Unverifiable(Unverifiable::CannotRun) => "unverifiable:cannot_run",
             Self::Unverifiable(Unverifiable::Timeout) => "unverifiable:timeout",
+            Self::DidNotFlip => "did_not_flip",
+            Self::Quarantined => "quarantined",
         }
     }
 }
@@ -141,6 +150,16 @@ pub fn classify(
     if weight == ReviewWeight::ReadOnly {
         return Decision::Advise(NonBlockReason::ReadOnly);
     }
+    // the gate's own answer first: a re-execution that produced no record or could not separate
+    // the two trees is `unverifiable` whatever the class says (AC-287, AC-290) — the class was
+    // computed from the same absence, and the reason persisted is the informative one
+    match reexec {
+        None => return Decision::Advise(NonBlockReason::Unverifiable(Unverifiable::CannotRun)),
+        Some(ReExecution::Unverifiable(reason)) => {
+            return Decision::Advise(NonBlockReason::Unverifiable(*reason));
+        }
+        Some(ReExecution::Flipped | ReExecution::DidNotFlip) => {}
+    }
     match class {
         EvidenceClass::Advisory => return Decision::Advise(NonBlockReason::AdvisoryClass),
         EvidenceClass::NarrowedPin if weight != ReviewWeight::Strict => {
@@ -150,11 +169,9 @@ pub fn classify(
         | EvidenceClass::MutationSurvived
         | EvidenceClass::NarrowedPin => {}
     }
-    match reexec {
-        Some(ReExecution::Flipped) => Decision::Block(Block { class, weight }),
-        Some(ReExecution::Unverifiable(reason)) => {
-            Decision::Advise(NonBlockReason::Unverifiable(*reason))
-        }
-        None => Decision::Advise(NonBlockReason::Unverifiable(Unverifiable::CannotRun)),
+    if reexec == Some(&ReExecution::Flipped) {
+        Decision::Block(Block { class, weight })
+    } else {
+        Decision::Advise(NonBlockReason::DidNotFlip)
     }
 }

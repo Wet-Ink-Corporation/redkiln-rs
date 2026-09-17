@@ -297,6 +297,7 @@ mod replay;
 mod resolver;
 mod retry;
 mod review;
+mod review_confirm;
 mod rigor;
 mod runtime;
 mod selection;

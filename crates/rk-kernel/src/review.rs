@@ -5,11 +5,18 @@
 //! | --- | --- | --- |
 //! | [`classify`] | the pure classifier over the repro record and the gate's observation | AC-284 (PROVISIONAL), AC-286 |
 //! | [`policy`] | the policy table — the only place a class becomes a block — and the tier resolution | AC-283, AC-294, AC-296, AC-298, AC-299, AC-302 |
-//! | [`reexec`] | the re-execution outcome and the port the confirm half re-runs through | AC-287–AC-290 (slice R3) |
-//! | [`confirm`] | findings in, decisions and rows out | AC-285, AC-295, AC-299; AC-307/AC-310/AC-313 (R3) |
+//! | [`reexec`] | the re-execution outcome, the four-cell and mutation rules, and the port the confirm half re-runs through | AC-287–AC-290 |
+//! | [`confirm`] | findings in, decisions and rows out: `review_block` from ONE site, `advisory_created`, `quarantine_expired`, `advisory_retired` | AC-285, AC-295, AC-299, AC-304, AC-306, AC-307, AC-310, AC-313, AC-316, AC-530 |
 //! | [`ingest`] | the dispatch result → `Findings` or a typed error, never an empty set | AC-282, AC-318 |
-//! | [`record`] | the persisted finding, carrying the model label for drift only | AC-285 |
+//! | [`record`] | the persisted finding, carrying the model label for drift only | AC-285, AC-307 |
+//! | [`quarantine`] | the two overrides' rows; advisory and `Quarantined` are disjoint | AC-304, AC-307 |
+//! | [`render`] | the outcome as a markdown table — a rendering, never a source | AC-304 |
+//! | [`regression`] | the regression run's record: the corpus repo's sha and the item's, two fields | AC-314 |
 //! | [`pack_rules`] | the fix lane is `Strict`; a cascade is refused | AC-300, AC-301 |
+//!
+//! The identity every row carries (`finding_id`, AC-305) and the sink's two accounting identities
+//! (AC-310, AC-530) are `rk_store::artifacts`, because the store owns what persists; the confirm
+//! half computes the identity through it and writes the rows the store folds.
 //!
 //! Module layout is load-bearing for Checkpoint 7b-ii's three absence-based bans, which filter on
 //! the MODULE PATH: `policy(\.rs|/)` for AC-285's *no reader of the model label inside the policy
@@ -28,5 +35,8 @@ pub mod confirm;
 pub mod ingest;
 pub mod pack_rules;
 pub mod policy;
+pub mod quarantine;
 pub mod record;
 pub mod reexec;
+pub mod regression;
+pub mod render;
