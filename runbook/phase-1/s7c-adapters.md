@@ -1587,7 +1587,7 @@ that commit through `git show <sha>:<path>`. It is the AC-499 Harness row and is
 `--features live` `#[ignore]` card, `live_disallowed_tool_terminates` (AC-215's integration half), is **authored and
 not run** at 7c (§7c.5).
 
-- **AC-511** — BINDING first conjunct; **[surface unverified]** second. *"GIVEN any argument vector the Claude adapter
+- **AC-511** — BINDING first conjunct; **second conjunct NAMED 2026-09-18 by the probe's raw `system/init`: the field is `apiKeySource`, read as `"none"` on this Max-subscription session** (every live init this day carried it; the probe prints `AUTH_MODE_FIELD=apiKeySource=none`; R-18 closes) — the `[surface unverified]` tag is lifted for the FIELD; what a non-subscription session reports (an API-key value) is unobserved and the assertion is `== "none"`. *"GIVEN any argument vector the Claude adapter
   builds for a dispatch / WHEN the adapter lint runs and the test suite's recorded dispatch events are read / THEN
   `--bare` appears in no argument vector, in source or in any recorded dispatch / AND the session's auth mode is
   asserted from the child's own `system/init` report to be the subscription session, not inferred from the argument
@@ -1602,6 +1602,8 @@ not run** at 7c (§7c.5).
   open item in `spikes/DECISIONS-2026-09-17.md` — the block asserts only that the raw `system/init` was retained.
 
 ### 7c.16 Spikes run here, spikes cited, and the AC-312 fixtures
+
+*(Run 2026-09-18 at the close — the outcomes, retained raw in the corpus repository at commit `f39b2f8e47a4` (`results/step-7c/`, bytes + sha256 in its README; `CORPUS_PIN` unmoved): **S-CANCEL-WIN** — both arms ran, the Job Object arm at Slice 2 and the mid-`vitest` arm at Slice 6 and inside the passing block (bound 30 s after 6 s failed under the whole block's load); no handle prevented removal. **S-TTL1** — one dispatch with both variables set: `cache_creation { ephemeral_1h: 0, ephemeral_5m: 0 }` → `no-write` on the `-p` bucket; **the subagent bucket is NOT observed** because the card dispatched (the catalog's probe card) grants no subagent tooling — a run, not an answer; ADR-0113 d3's question stays OPEN (R-24). **S-RETRY** — the margin arm read the live `rate_limit_event` as ticks (five_hour 0 / seven_day 37, `status: allowed`, `resetsAt` per window, `isUsingOverage: false`) against margins 7 / 18 and the guard admitted — the reading path measured, the refusal path not exercisable on this account (Halt 9: not measurable); the exhaustion-on-result arm returned `subtype: success`, `stop_reason: tool_use`, `terminal_reason: completed`, `detected_by: None` — no usage-limit state was producible: NOT MEASURABLE, reported as such, and AC-523's subtype arm keeps `[surface unverified]`.)*
 
 **Run at 7c (D17-6):** **S-CANCEL-WIN** — one fixture-cancel-rm run on Windows, the Halt 6 handle case; which kill
 path it exercises is **UNCONFIRMED** (design §10.4 names a mid-vitest victim, §10.5 frames it as the Harness Job
