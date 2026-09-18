@@ -95,7 +95,6 @@ fn ac202_isolation_from_system_init_not_argv() {
 ///
 /// RED (observed 2026-09-18) against the skeleton: `equal: expected Ok, got Err(Transport { kind:
 /// Spawn, … })`.
-#[test]
 /// **AC-204 at CLI 2.1.277 — the composite reading (RT-27; the operator's decision of 2026-09-18).**
 /// The first live run's retained raw `system/init` carried NO `agent` key: at 2.1.277 the init
 /// reports `agents` (every loadable agent, the `--agents` entry among them), `model` as the full
@@ -129,6 +128,7 @@ fn ac204_adoption_at_2_1_277_is_read_from_agents_and_model() {
     );
 }
 
+#[test]
 fn ac204_adoption_equal_subset_superset_wrong_agent() {
     let r = dispatch_replay(&with_init("init.scripted.ndjson"), 30);
     assert!(
