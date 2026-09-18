@@ -23,6 +23,16 @@
 //! from the cargo constraint. It is reversible: nothing outside these two modules names the type,
 //! and no checkpoint or CI assertion anywhere in `runbook/` or `ci.yml` anchors on either
 //! location [measured 2026-09-13].
+//!
+//! **Serialised as the derived `Vec<u8>` form — a JSON array of integers** (Step 7c Slice 1;
+//! `s7c` §7c.11), because this type is a member of the `dispatch_completed` row's payload
+//! (ADR-0126) and `Event.payload` is a `serde_json::Value`. The integer array is byte-lossless,
+//! which a UTF-8-lossy text is not and *"verbatim"* (AC-200) has to survive the round trip; it
+//! needs no encoder (no `base64` crate is in the workspace, and a new 0.x edge would need an
+//! exact-pinned row under ADR-0100 decision 2 that the stage does not add); and `rk-store`'s
+//! canonical serialiser accepts integer arrays — it refuses only floats.
+
+use serde::{Deserialize, Serialize};
 
 use crate::digest::{Digest, sha256};
 
@@ -33,7 +43,8 @@ pub const STDIO_CAP: usize = 64 * 1024;
 pub const HEAD_TAIL: usize = 2 * 1024;
 
 /// A retained stream: verbatim while small, summarised once it is not.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Retained {
     Verbatim(Vec<u8>),
     Capped {

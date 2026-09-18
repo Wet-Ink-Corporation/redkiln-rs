@@ -146,8 +146,12 @@
 //!
 //! # 🛑 THE DURABLE MARK HAS NO CARRIER — AC-033's SECOND CONJUNCT IS ARMED
 //!
-//! `EventKind` is closed at 37 variants *(29 until ADR-0123, 31 until ADR-0124 and 36 until ADR-0125, all 2026-09-17)* (`event_kind.rs`:87, *"Built from an exhaustive match so a
-//! new variant cannot be added without appearing here"*) and none is a breaker mark; `RefusalClass`
+//! `EventKind` is closed at 38 variants *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125 and 37 until ADR-0126, all 2026-09-17)* (`event_kind.rs`'s `ALL`, *"Built from an exhaustive match so a
+//! new variant cannot be added without appearing here"* — cited by its sentence and not its line:
+//! this header said `:87` across three mint commits while the constant sat at `:118` and now
+//! `:145` [re-measured 2026-09-17, Step 7c Slice 1]) and none is a breaker mark — ADR-0126's
+//! `dispatch_completed` (Step 7c Slice 1) is the adapter's usage-bearing telemetry row and is folded
+//! below in the no-state-change arm; `RefusalClass`
 //! is closed at four (`NotAdopted`, `NotIsolated`, `Unsupported`, `Overage`) and none is a breaker;
 //! `StepError` is closed at eleven (ADR-0112, *"Forbids a twelfth variant without a successor to
 //! this record"*). ADR-0116's driver fixes the route — *"the kind is minted by record or not at
@@ -487,7 +491,8 @@ pub struct BreakerState {
 impl BreakerState {
     /// Fold a recorded journal into the breaker's state, against a pack-declared `K`.
     ///
-    /// Total over the closed 37 kinds with **no catch-all arm**, so a thirty-eighth kind is an `E0004`
+    /// Total over the closed 38 kinds (37 until ADR-0126, 2026-09-17) with **no catch-all arm**, so a
+    /// thirty-ninth kind is an `E0004`
     /// here exactly as it is in `EventKind::tier()`: a kind cannot enter the system without someone
     /// deciding whether it moves the breaker. Grouped or-patterns, because
     /// `clippy::match_same_arms` is denied workspace-wide.
@@ -583,7 +588,11 @@ impl BreakerState {
                 // `Platform` failure and none is the activation record, so none can move a
                 // consecutive run — including `step_refused` and `rate_limited`, which are
                 // configuration and billing states and never platform failures
-                // (`event.rs`:20-29).
+                // (`event.rs`:20-29) — and including `dispatch_completed` (ADR-0126,
+                // 2026-09-17), the adapter's usage-bearing row: it carries the cost, the usage
+                // and the readings of a dispatch whose outcome the `step_*` rows already
+                // classified, and it is not a breaker mark (decision 4: tier-2 telemetry;
+                // decision 5: the kernel folds it and moves nothing).
                 EventKind::StageTransition
                 | EventKind::GateOpened
                 | EventKind::GateAnswered
@@ -605,6 +614,7 @@ impl BreakerState {
                 | EventKind::MemoMiss
                 | EventKind::MemoEvicted
                 | EventKind::Dispatch
+                | EventKind::DispatchCompleted
                 | EventKind::StepCancelled
                 | EventKind::StepRefused
                 | EventKind::RateLimited

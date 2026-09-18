@@ -4,6 +4,8 @@
 //! whose entire surviving finding was "review failed to produce a digest", because `!review`
 //! conflated "the reviewer said no" with "the reviewer never spoke".
 
+use serde::{Deserialize, Serialize};
+
 use crate::digest::Digest;
 use crate::event::{ErrorEvent, FailureClass, RefusalClass};
 use crate::time::Timestamp;
@@ -17,7 +19,13 @@ pub enum TransportKind {
 }
 
 /// Who cancelled the step.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// `Serialize` + `Deserialize` since Step 7c Slice 1 (`s7c` §7c.11): the `dispatch_completed`
+/// row carries the cancel cause as `cancelled_by: Option<CancelledBy>` on the `Cancelled { by }`
+/// path (AC-225; ADR-0126 decision 1), and a member of that payload has to travel through
+/// `Event.payload`'s `serde_json::Value`. Wire form: `signal | timeout | operator`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum CancelledBy {
     Signal,
     Timeout,

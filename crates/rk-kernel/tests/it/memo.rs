@@ -1156,11 +1156,17 @@ fn ac019_memo_hit_is_never_silent() {
     // ---- THE ARMED PIN ------------------------------------------------------------------------
     assert_eq!(
         EventKind::ALL.len(),
-        37,
+        38,
         // DECIDED HERE 2026-09-17 (ADR-0123, 29 -> 31; ADR-0124, 31 -> 36; ADR-0125, 36 -> 37, the same answer each
         // time): `gate_answer_spent` and `gate_resumed` are gate rows, ADR-0124's five and `stage_exit_refused` are
         // the review and verify gates' rows, not memo rows; the memo's typed-payload record is STILL OWED, unchanged.
-        "`EventKind` is closed at 37 (ADR-0116; ADR-0123; ADR-0124; ADR-0125). If another is minted, whoever mints it must \
+        // DECIDED AGAIN 2026-09-17 (Step 7c Slice 1; ADR-0126, 37 -> 38): `dispatch_completed` is the adapter's
+        // usage-bearing row, not a memo row — the memo fold routes it to its no-state-change arm and NOT to the
+        // `Dispatch` count (decision 3: two kinds, two producers, never counted as one; asserted by
+        // `tests/it/dispatch_completed.rs::adr0126_dispatch_completed_is_not_counted_as_a_dispatch`) — and ADR-0126 decision 6
+        // says in terms that the typed per-kind payload record is NOT decided by it: the memo's payload record
+        // is STILL OWED, unchanged.
+        "`EventKind` is closed at 38 (ADR-0116; ADR-0123; ADR-0124; ADR-0125; ADR-0126). If another is minted, whoever mints it must \
          decide whether the memo's payload record is still OWED — this line goes red rather than \
          the gap quietly widening"
     );

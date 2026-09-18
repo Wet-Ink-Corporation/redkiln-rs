@@ -1285,7 +1285,8 @@ impl RunState {
 
 /// Fold a recorded journal into a state.
 ///
-/// **Total over the closed 37 kinds, with no catch-all arm**, so a thirty-eighth kind is an `E0004`
+/// **Total over the closed 38 kinds (37 until ADR-0126, 2026-09-17), with no catch-all arm**, so a
+/// thirty-ninth kind is an `E0004`
 /// here exactly as it is in `EventKind::tier()` — *"a kind cannot enter the system without someone
 /// deciding whether losing it would change the next action."*
 ///
@@ -1565,7 +1566,11 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
         // The review and verify gates' five (ADR-0124) are the gates' own rows — blocks, quarantine
         // dispositions, the bootstrap comparator's reclassification — and move no member of the
         // run's state; `crate::review` folds them for its own invariants (AC-307, AC-310, AC-530).
+        // `dispatch_completed` (ADR-0126, 2026-09-17) is the adapter's usage-bearing row — the
+        // completed `DispatchRecord`, tier-2 telemetry — and its decision 5 routes it here in
+        // terms: *"the kernel folds it and moves nothing"*. It opens no gate and answers none.
         EventKind::ReconcileStarted
+        | EventKind::DispatchCompleted
         | EventKind::ReviewBlock
         | EventKind::QuarantineGranted
         | EventKind::QuarantineRemoved

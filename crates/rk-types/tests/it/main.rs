@@ -3,6 +3,7 @@
 
 mod companion_kinds;
 mod digest_compute;
+mod dispatch_record;
 mod event_kinds;
 mod fixtures;
 mod repro_ingest;
@@ -12,4 +13,5 @@ mod schema_no_oneof;
 mod schema_snapshot;
 mod step_error_is_total;
 mod support;
+mod usage;
 mod verify_types;

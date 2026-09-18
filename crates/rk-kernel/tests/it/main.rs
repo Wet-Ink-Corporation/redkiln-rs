@@ -273,6 +273,7 @@ mod cross_process;
 mod dag;
 mod degradation;
 mod deviation;
+mod dispatch_completed;
 mod divergence;
 mod envelope;
 mod evaluator;

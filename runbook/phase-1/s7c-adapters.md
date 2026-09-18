@@ -2127,7 +2127,7 @@ rk-types` until it does. **`rk-store`** (Checkpoint 6, passed) — `retention::D
 **E0116**, so the constructor **moves to `rk-types`** and its five-argument signature cannot build the grown record
 (`cli_version`, `api_retry_events`, the two TTL strings and `timings` are required members) — the new shape is
 `rk_types::activity::DispatchRecord::new(argv, env, instrument_version, stdout, stderr, RecordTail { cli_version,
-api_retry_events, ttl, timings, usage, total_cost_usd, headroom_before, headroom_after, cancelled_by, detected_by })`
+api_retry_events, prompt_cache_ttl, subagent_prompt_cache_ttl, timings, usage, total_cost_usd, headroom_before, headroom_after, cancelled_by, detected_by })` *(corrected 2026-09-18 at Slice 1: this spelt the TTL pair as one member, `ttl`, against §7c.11's own "the two TTL fields" and AC-210's "both values are recorded"; Slice 1 declares the two `String` members and no `CacheTtl` wrapper — the review's spec-F5)*
 (or a builder of the same closure), with `rk_store::retention` re-exporting the type as it already re-exports
 `Retained` / `STDIO_CAP` / `HEAD_TAIL`, and `looks_like_credential` staying where it is; (b)
 **`crates/rk-store/tests/it/store.rs`** calls the five-argument `new` (`:338`) and destructures the five-field record

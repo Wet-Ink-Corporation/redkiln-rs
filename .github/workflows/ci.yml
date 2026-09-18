@@ -60,6 +60,25 @@ jobs:
       - name: test
         run: cargo test --workspace
 
+      # AC-499's fake half, and the conformance BODIES, live behind `rk-ports`' `conformance` feature since Step 7c
+      # Slice 1 (runbook s7c §7c.1 RT-16 as re-amended): `crates/rk-ports/src/conformance.rs` is `#[cfg(feature =
+      # "conformance")]` and so is the test binary's `mod conformance;`. Until an adapter's `[dev-dependencies]`
+      # edge names the feature (Slice 2 onward, when resolver-3 unification carries it into every test build), the
+      # two gates above compile NEITHER the module NOR `port_conformance_fake_rows` -- a test that had been in the
+      # workspace gate since Checkpoint 7a passed at 4be8987 would be CI-dark for at least one commit with nothing
+      # saying so. Added 2026-09-17 under the maintenance rule; it stays correct after the dev edge exists. With the
+      # POSITIVE CONTROL on the filter: a `cargo test` filter that matches nothing exits 0 (Halt 8 shape (g)), so the
+      # named line is asserted, not the exit code alone.
+      - name: rk-ports conformance bodies (AC-499 fake half, behind the feature)
+        shell: bash
+        run: |
+          cargo clippy -p rk-ports --all-targets --features conformance
+          out=$(cargo test -p rk-ports --features conformance -- port_conformance_fake_rows 2>&1); rc=$?
+          printf '%s\n' "$out" | tail -5
+          test "$rc" -eq 0 || { echo "FAIL: rk-ports port_conformance_fake_rows exited $rc under --features conformance"; exit 1; }
+          printf '%s\n' "$out" | grep -qE '^test .*\bport_conformance_fake_rows\b.* \.\.\. ok$' \
+            || { echo "FAIL: no test named port_conformance_fake_rows ran and passed -- the filter matched nothing, or the module was not compiled"; exit 1; }
+
       - name: install audit tooling
         run: |
           cargo install cargo-audit --locked

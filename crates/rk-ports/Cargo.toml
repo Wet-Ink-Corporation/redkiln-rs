@@ -15,6 +15,19 @@ publish.workspace = true
 # exits 101 with "none of the selected packages contains these features". The reason is written out
 # in full at crates/rk-types/Cargo.toml:10-17.
 corpus = []
+# AC-499's shared per-port conformance BODIES (design:264-269's five ports, one parameterised body
+# each), as library code so the real adapters at Step 7c run THE SAME bodies the fake rows run --
+# the register's "the same assertions execute against both implementations". Feature-gated, and the
+# gate is the operator's routing (s7c §7c.1, RT-16 as re-amended 2026-09-17): the bodies are test
+# support, and a normal dependent of this crate -- rk-kernel above all -- must never compile them in.
+# Each adapter names it on a DEV edge only (`rk-ports = { path = "../rk-ports", features =
+# ["conformance"] }` under [dev-dependencies]); this crate's own conformance run enables it on the
+# command line, exactly as `corpus` is run: `cargo test -p rk-ports --features conformance --
+# port_conformance_fake_rows`. Under resolver 3 a `cargo test --workspace` unifies the feature onto
+# rk-ports for every package in that build once an adapter's dev edge names it -- test-only code in
+# a test build -- and Checkpoint 7c's `cargo tree -p rk-kernel -e features` line asserts the
+# kernel's NORMAL graph never enables it.
+conformance = []
 
 [dependencies]
 rk-types = { path = "../rk-types" }

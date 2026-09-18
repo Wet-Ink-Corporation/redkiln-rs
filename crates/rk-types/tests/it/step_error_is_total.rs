@@ -11,7 +11,7 @@
 //! owed — recorded, not silently absorbed.
 
 use rk_types::digest::Digest;
-use rk_types::error::{CancelledBy, IsolationSurface, StepError, TransportKind};
+use rk_types::error::{CancelledBy, IsolationSurface, RetryClass, StepError, TransportKind};
 use rk_types::event::{ErrorEvent, FailureClass, RefusalClass};
 use rk_types::time::Timestamp;
 
@@ -184,4 +184,33 @@ fn spoke_partitions_six_true_five_false() {
         5,
         "Transport, NotAdopted, NotIsolated, Unsupported, Overage"
     );
+}
+
+/// **AC-523's zero-backoff row, re-homed here from the adapter** (`s7c` §7c.18): *"the zero-backoff
+/// table is not the adapter's to break"* — `RateLimited → RetryClass::WaitUntilReset` is this
+/// crate's `retry_class()` (Step 5), consumed by `rk-kernel`'s `retry.rs` (7b), and no adapter
+/// mutation moves it. What the adapter keeps is only what it can break: that a usage-limit result
+/// CLASSIFIES as `RateLimited` (`rate_limited_from_stream`). Both arms of the reading — a
+/// `resets_at` present and absent — land on the same row: a rate limit is waited out until the
+/// reset, or until the pack delay, and is **never** backed off against. `Backoff` is `Transport`'s
+/// and `Platform`'s class and no other's.
+#[test]
+fn ac523_zero_backoff_table() {
+    for resets_at in [None, Some(Timestamp::from_unix_seconds(1_789_000_000))] {
+        let err = StepError::RateLimited { resets_at };
+        assert_eq!(
+            err.retry_class(),
+            RetryClass::WaitUntilReset,
+            "a rate limit is waited out until reset, never backed off (AC-523; ADR-0095 decision 2)"
+        );
+        assert_ne!(err.retry_class(), RetryClass::Backoff);
+    }
+    // The converse, so the row above cannot be satisfied by a table that answers WaitUntilReset
+    // for everything: backoff is exactly the two classes ADR-0095 gives it.
+    let backoff: Vec<&str> = table()
+        .iter()
+        .filter(|(_, e, _, _)| e.retry_class() == RetryClass::Backoff)
+        .map(|(name, ..)| *name)
+        .collect();
+    assert_eq!(backoff, ["Transport", "Platform"]);
 }

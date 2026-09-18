@@ -18,51 +18,24 @@
 //! the kind §7a.5 is repairing for `DispatchRecord`. **One type, one declaration, two paths.** The
 //! record naming its home is OWED with the four other §7a.5 routings.
 //!
-//! `DispatchRecord` below is **not** moved: two types under one name in two crates is the
-//! collision `s7a` §7a.5 names, and collapsing it is 7c's.
+//! **`DispatchRecord` followed at Step 7c Slice 1** (2026-09-17; ADR-0126 decision 2: *"one type,
+//! one declaration"*). The five-field record this module declared from Step 6.3 to Step 7b-ii —
+//! the collision `s7a` §7a.5 named — is gone, and the name below is a re-export of the completed
+//! `rk_types::activity::DispatchRecord`, exactly as `Retained` is. **Its constructor went with
+//! it**, and could not have stayed: an inherent `impl` on a type another crate declares is E0116,
+//! and the five-argument `new` could not have built the grown record in any case (`cli_version`,
+//! `api_retry_events`, the two TTL values and `timings` are required members) — so
+//! `rk_types::activity::DispatchRecord::new(argv, env, instrument_version, stdout, stderr,
+//! RecordTail { .. })` is the constructor, and this module re-exports `RecordTail` beside the
+//! record so a caller that reached the constructor through this path still can (the two TTL values
+//! are two `String` members, not a type — `rk_types::activity`'s doc on `prompt_cache_ttl`).
+//! `Retained`, `STDIO_CAP`, `HEAD_TAIL` and the constructor all being `rk-types`' is also why
+//! `rk-adapter-claude` takes no `rk-store` edge (`s7c` §7c.19): nothing in this module is the
+//! Harness adapter's. What stays here is what is this crate's — `looks_like_credential`, the
+//! `doctor` rule row of clause 7.
 
-use rk_types::digest::{Digest, sha256};
+pub use rk_types::activity::{DispatchRecord, RecordTail};
 pub use rk_types::retention::{HEAD_TAIL, Retained, STDIO_CAP};
-
-/// One dispatch's retained record.
-///
-/// Note what is **absent**: there is no `env` field, and no `argv` field either — only their
-/// digests.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DispatchRecord {
-    pub argv_digest: Digest,
-    pub env_digest: Digest,
-    pub instrument_version: String,
-    pub stdout: Retained,
-    pub stderr: Retained,
-}
-
-impl DispatchRecord {
-    /// Build a record from the raw material, digesting what must be digested.
-    ///
-    /// `env` is taken by value and **dropped**: it is digested and never stored. Taking it at all is
-    /// deliberate — the digest is what lets `doctor` notice that two dispatches ran under different
-    /// environments without ever retaining either.
-    #[must_use]
-    pub fn new(
-        argv: &[String],
-        env: &[(String, String)],
-        instrument_version: &str,
-        stdout: &[u8],
-        stderr: &[u8],
-    ) -> Self {
-        let argv_joined = argv.join("\u{1f}");
-        let mut env_sorted: Vec<String> = env.iter().map(|(k, v)| format!("{k}={v}")).collect();
-        env_sorted.sort();
-        Self {
-            argv_digest: sha256(argv_joined.as_bytes()),
-            env_digest: sha256(env_sorted.join("\u{1f}").as_bytes()),
-            instrument_version: instrument_version.to_string(),
-            stdout: Retained::of(stdout),
-            stderr: Retained::of(stderr),
-        }
-    }
-}
 
 /// Common token prefixes, and the shapes that carry secrets.
 const CREDENTIAL_PREFIXES: [&str; 8] = [

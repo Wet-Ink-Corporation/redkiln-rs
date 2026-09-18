@@ -1012,11 +1012,31 @@ n=$(printf '%s' "$out" | grep -c . | tr -d '[:space:]')
 [ "${n:-0}" -eq 1 ] || { echo "FAIL: ${n:-0} 'pub struct ChangeSummary(pub(crate) ());' declarations, expected exactly 1 — ADR-0099 clause 5 (:90-91) decides the type is an opaque, non-finalised newtype in rk-ports and that this is the ONE site in crates/ the name may appear (:131); this exact SPELLING is not the record's but F41:20's and spikes/s-ports/src/lib.rs:163's, carried forward so the grep has one form to match"; exit 1; }
 
 # ---- AC-497's, AC-499's and AC-500's fake-side instruments, which a grep over a type declaration cannot see.
-for t in toolchain_fake_classifies_binary harness_fake_produces_unsupported git_surface_denylist_rejects_git_port ports_struct_holds_arc_dyn_send_sync port_conformance_fake_rows ; do
+# ---- HARDENED 2026-09-17 (Step 7c Slice 1, before the re-run this slice records — 00-preamble's "hardening lands
+# ---- before the pass"): `port_conformance_fake_rows` LEFT this loop and took its own statement below. The loop
+# ---- as it stood ran `cargo test -p rk-ports -- port_conformance_fake_rows` with no feature flag; since Slice 1
+# ---- the conformance bodies are `rk-ports`' `[features] conformance = []` module and the test binary's
+# ---- `mod conformance;` is behind `#[cfg(feature = "conformance")]` (s7c §7c.1 RT-16 as re-amended; s7c §7c.21's
+# ---- own note concedes "a run without the flag would select nothing"), so the old line selected NOTHING, exited
+# ---- 0, and the `^test .*\bport_conformance_fake_rows\b.* \.\.\. ok$` grep FAILED [measured 2026-09-17 on the
+# ---- Slice 1 tree: `0 passed; 0 failed; 12 filtered out`, then `FAIL: no test named port_conformance_fake_rows
+# ---- ran and passed`]. The old line, quoted: `for t in toolchain_fake_classifies_binary
+# ---- harness_fake_produces_unsupported git_surface_denylist_rejects_git_port ports_struct_holds_arc_dyn_send_sync
+# ---- port_conformance_fake_rows ; do`. s7c §7c.19's "exactly one conformance test line" assertion is the grep
+# ---- below, unchanged in what it asserts; what changed is the flag the run needs to reach the module at all. The
+# ---- §7a.10 note RT-16 owes is still owed.
+for t in toolchain_fake_classifies_binary harness_fake_produces_unsupported git_surface_denylist_rejects_git_port ports_struct_holds_arc_dyn_send_sync ; do
   out=$(cargo test -p rk-ports -- "$t" 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: rk-ports $t exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
   printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: no test named $t ran and passed — the -- filter is a SUBSTRING match"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 done
+# ---- AC-499's fake half: the SAME assertion as the loop's, under the feature the module lives behind (the exact
+# ---- form s7c §7c.21 uses: `rk_test rk-ports port_conformance_fake_rows '...' '--features conformance'`).
+t=port_conformance_fake_rows
+out=$(cargo test -p rk-ports --features conformance -- "$t" 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: rk-ports $t exited $rc (under --features conformance)"; printf '%s\n' "$out" | tail -20; exit 1; }
+n=$(printf '%s\n' "$out" | grep -cE "^test .*\b${t}\b.* \.\.\. ok$" | tr -d '[:space:]')
+[ "${n:-0}" -eq 1 ] || { echo "FAIL: ${n:-0} test lines named $t ran and passed under --features conformance, expected exactly one — the -- filter is a SUBSTRING match, without the flag the module is not compiled at all, and a second line is a second body (AC-499: the SAME assertions)"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 
 # ---- AC-528's rk-ports half. `-e normal` deliberately excludes dev-dependencies, matching register
 # ---- :7161's normal-graph wording; it must not later be widened to --all-features. NOTHING IS RUN ON

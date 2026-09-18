@@ -11,6 +11,10 @@
 //! on — and likewise supersedes nothing. **ADR-0124** mints the review and verify gates' five —
 //! `review_block`, `quarantine_granted`, `quarantine_removed`, `quarantine_expired` and
 //! `selection_ineffective` — each named by a criterion or a success measure, under the same rule.
+//! **ADR-0126** mints `dispatch_completed` — the usage-bearing row AC-360's THEN requires on every
+//! termination path and design §5's table carried as a description with no wire name — under the
+//! same rule, and likewise supersedes nothing; the kind and the completed `DispatchRecord` it
+//! carries land in one change (its decision 5), which is Step 7c's Slice 1.
 //!
 //! The **tier** column is the deleted-database test applied per kind (ADR-0109 decision 2): *if the
 //! database were deleted, would `redkiln run` take a different next action?* Five kinds are tier 1
@@ -18,13 +22,21 @@
 //! [`EventKind::tier`] is total with no catch-all, so a new kind cannot be added without answering
 //! that question.
 //!
-//! **Three names are owed to design §5, and they are named here rather than invented silently.**
-//! The table gives three rows in prose only — *"dispatch record (cost row)"*, *"`rate_limit_event`
-//! (as read) / headroom reading"* and the advisory sink's *"dismissed"*. This enum calls them
-//! `Dispatch`, `RateLimitReading` and `AdvisoryDismissed`; a dated correction to design §5 naming
-//! them is **owed**, and until it lands those three are this crate's proposal rather than the
-//! design's word. A fourth row, *"`slice_sealed` / verdict"*, is **one** kind carrying a verdict
-//! field, not two.
+//! **Two names are owed to design §5, and they are named here rather than invented silently.**
+//! The table gives two rows in prose only — *"`rate_limit_event` (as read) / headroom reading"*
+//! and the advisory sink's *"dismissed"*. This enum calls them `RateLimitReading` and
+//! `AdvisoryDismissed`; a dated correction to design §5 naming them is **owed**, and until it
+//! lands those two are this crate's proposal rather than the design's word. A third row,
+//! *"`slice_sealed` / verdict"*, is **one** kind carrying a verdict field, not two. **Until
+//! ADR-0126 (2026-09-17) there were three owed names**: the table's *"dispatch record (cost row)"*
+//! was the third and this enum's `Dispatch` was its name. ADR-0126 decision 1 replaced that row
+//! with `dispatch_completed`, which `DispatchCompleted` carries, and decision 3 keeps `Dispatch` —
+//! the kernel's pre-dispatch row, the idempotency key — **without giving it a row of its own**. So
+//! after ADR-0126 `Dispatch` is a kind in this enum with no row in design §5's table, which is
+//! ADR-0116's *"schema drift"* shape by its own definition; the row it needs is one line ADR-0126
+//! decision 3 already spells (tier 2; the kernel, before the child exists; payload the activation
+//! key) and it is RAISED for `s7c` §7c.22's ledger rather than added here, because a design row is
+//! minted by record and not by a doc comment.
 //!
 //! **`ReplayDivergence` is deliberately not here.** Its tier column reads `—` and the row says
 //! *"a halt, not a durable record"*. It lives beside the enum as its own type, and the completeness
@@ -87,8 +99,23 @@ pub enum EventKind {
     MemoHit,
     MemoMiss,
     MemoEvicted,
-    /// The dispatch cost row. Name owed to design §5 (given there in prose only).
+    /// **The kernel's pre-dispatch row** — the idempotency key, written before the child exists,
+    /// for AC-012/AC-013's commit protocol — and it carries no counter. Until ADR-0126
+    /// (2026-09-17) this was this crate's name for design §5's *"dispatch record (cost row)"*,
+    /// given there in prose only; that row is now `dispatch_completed`, which
+    /// [`Self::DispatchCompleted`] carries, and ADR-0126 decision 3 keeps this kind beside it —
+    /// two kinds, two producers, two moments, and *"nothing counts them as one, and nothing
+    /// may"* — with **no design §5 row of its own**: RAISED, not settled (the module doc).
     Dispatch,
+    /// Added by **ADR-0126**: the usage-bearing row — the completed `rk_types::DispatchRecord`
+    /// (usage, timings, `total_cost_usd`, the two headroom readings, the two-armed CLI version,
+    /// the `api_retry_events` count, the two TTL values, and the cancel cause / detection arm on
+    /// the paths where they apply) — appended by the Harness adapter, once per dispatch, on
+    /// **every** termination path, through the store `dispatch` receives (AC-360). Tier 2 by the
+    /// deleted-database test (decision 4): the next action is a function of the tier-1 commit
+    /// state; losing this row loses the cost, the usage, the headroom pair and the version, and
+    /// never the decision. The kernel folds it and moves nothing (decision 5).
+    DispatchCompleted,
     StepFailed,
     StepCancelled,
     StepRefused,
@@ -115,7 +142,7 @@ pub enum EventKind {
 impl EventKind {
     /// Every kind, for the completeness test. Built from an exhaustive match so a new variant
     /// cannot be added without appearing here.
-    pub const ALL: [Self; 37] = [
+    pub const ALL: [Self; 38] = [
         Self::StageTransition,
         Self::GateOpened,
         Self::GateAnswered,
@@ -138,6 +165,7 @@ impl EventKind {
         Self::MemoMiss,
         Self::MemoEvicted,
         Self::Dispatch,
+        Self::DispatchCompleted,
         Self::StepFailed,
         Self::StepCancelled,
         Self::StepRefused,
@@ -182,6 +210,7 @@ impl EventKind {
             Self::MemoMiss => "memo_miss",
             Self::MemoEvicted => "memo_evicted",
             Self::Dispatch => "dispatch",
+            Self::DispatchCompleted => "dispatch_completed",
             Self::StepFailed => "step_failed",
             Self::StepCancelled => "step_cancelled",
             Self::StepRefused => "step_refused",
@@ -232,6 +261,7 @@ impl EventKind {
             | Self::MemoMiss
             | Self::MemoEvicted
             | Self::Dispatch
+            | Self::DispatchCompleted
             | Self::StepFailed
             | Self::StepCancelled
             | Self::StepRefused

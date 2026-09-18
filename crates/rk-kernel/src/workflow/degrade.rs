@@ -313,7 +313,7 @@ pub fn substitute(
 /// **AC-037's first sink.** The `degraded` row, carrying exactly [`Degraded::FIELDS`]'s three
 /// members.
 ///
-/// `EventKind::Degraded` is an existing variant of the closed 37 *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125)* (design §5 row 20), so nothing is
+/// `EventKind::Degraded` is an existing variant of the closed 38 *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125, 37 until ADR-0126)* (design §5 row 20), so nothing is
 /// minted here. The **write** is the runtime boundary's; this returns the value.
 #[must_use]
 pub fn degraded_event(degraded: &Degraded) -> Event {

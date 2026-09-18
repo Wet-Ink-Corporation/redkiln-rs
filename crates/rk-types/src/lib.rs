@@ -29,5 +29,8 @@ pub mod schema;
 pub mod text;
 pub mod time;
 pub mod typed;
+/// The dispatch record's usage-adjacent types (Step 7c Slice 1; ADR-0126 decision 2): `Usage`,
+/// `CacheCreation`, the window reading, the timings, the two-armed CLI version, the cost string.
+pub mod usage;
 /// The verify gate's record type (Step 7b-ii): the adapter's report with its closed basis and reason.
 pub mod verify;

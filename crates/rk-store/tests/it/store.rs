@@ -2,9 +2,10 @@
 
 use rk_store::conn::{self, BUSY_TIMEOUT_MS, Reader, StoreError, Writer};
 use rk_store::identity::{self, Identity, SCHEMA_VERSION};
-use rk_store::retention::{DispatchRecord, Retained, looks_like_credential};
+use rk_store::retention::{DispatchRecord, RecordTail, Retained, looks_like_credential};
 use rk_store::schema_lint::{self, LintError};
 use rk_store::tiered_state;
+use rk_types::usage::{CliVersion, Timings};
 
 fn tmp() -> tempfile::TempDir {
     tempfile::tempdir().expect("tempdir")
@@ -332,7 +333,32 @@ fn there_is_no_delete_against_a_tier_one_table() {
 
 // ---------------------------------------------------------------- clause 7: retention
 
+/// **One `DispatchRecord`, one declaration** (ADR-0126 decision 2; `s7a` §7a.5's collision, closed
+/// at Step 7c Slice 1). `rk_store::retention::DispatchRecord` is a re-export of
+/// `rk_types::activity::DispatchRecord` and not a second type under the same name — asserted by
+/// type identity at runtime, so the red is two `TypeId`s and not a compile error.
+#[test]
+fn retention_record_is_rk_types_dispatch_record() {
+    use std::any::{TypeId, type_name};
+    assert_eq!(
+        TypeId::of::<rk_store::retention::DispatchRecord>(),
+        TypeId::of::<rk_types::activity::DispatchRecord>(),
+        "two DispatchRecord types are on the tree: {} and {}",
+        type_name::<rk_store::retention::DispatchRecord>(),
+        type_name::<rk_types::activity::DispatchRecord>()
+    );
+    // The re-export is the only spelling this crate offers: the type's home is `rk_types`.
+    assert_eq!(
+        type_name::<rk_store::retention::DispatchRecord>(),
+        "rk_types::activity::DispatchRecord"
+    );
+}
+
 /// argv and env are digests; there is **no field** for the child environment.
+///
+/// The constructor is `rk-types`' since Step 7c Slice 1 and takes the completed record's tail
+/// (ADR-0126; `s7c` §7c.19); this site builds a pre-spawn tail — nothing measured, the pin as
+/// `Pinned` — because what it asserts is the digesting, which the tail does not touch.
 #[test]
 fn a_dispatch_record_keeps_digests_and_has_no_environment_field() {
     let rec = DispatchRecord::new(
@@ -341,6 +367,22 @@ fn a_dispatch_record_keeps_digests_and_has_no_environment_field() {
         "2.1.269",
         b"out",
         b"err",
+        RecordTail {
+            cli_version: CliVersion::Pinned("2.1.269".to_owned()),
+            api_retry_events: 0,
+            prompt_cache_ttl: "1h".to_owned(),
+            subagent_prompt_cache_ttl: "1h".to_owned(),
+            timings: Timings {
+                wall_ms: 0,
+                api_ms: None,
+            },
+            usage: None,
+            total_cost_usd: None,
+            headroom_before: None,
+            headroom_after: None,
+            cancelled_by: None,
+            detected_by: None,
+        },
     );
     assert_eq!(rec.argv_digest.as_str().len(), 64);
     assert!(!rec.argv_digest.as_str().contains("secret"));
@@ -353,6 +395,17 @@ fn a_dispatch_record_keeps_digests_and_has_no_environment_field() {
         instrument_version: _,
         stdout: _,
         stderr: _,
+        usage: _,
+        timings: _,
+        total_cost_usd: _,
+        headroom_before: _,
+        headroom_after: _,
+        cli_version: _,
+        api_retry_events: _,
+        prompt_cache_ttl: _,
+        subagent_prompt_cache_ttl: _,
+        cancelled_by: _,
+        detected_by: _,
     } = rec;
 }
 

@@ -1,5 +1,5 @@
 //! The closed `EventKind` table (ADR-0105 clause 7 as ADR-0116 supersedes it, and as ADR-0120,
-//! ADR-0123, ADR-0124 and ADR-0125 extend it; design §5).
+//! ADR-0123, ADR-0124, ADR-0125 and ADR-0126 extend it; design §5).
 
 use rk_types::event_kind::{EventKind, Tier};
 
@@ -9,8 +9,9 @@ use rk_types::event_kind::{EventKind, Tier};
 fn all_lists_every_variant_exactly_once() {
     // 29 until ADR-0123 (2026-09-17) minted `gate_answer_spent` and `gate_resumed`; 31 until
     // ADR-0124 (the same day) minted the review and verify gates' five; 36 until ADR-0125 (the same
-    // day again) minted `stage_exit_refused`.
-    assert_eq!(EventKind::ALL.len(), 37);
+    // day again) minted `stage_exit_refused`; 37 until ADR-0126 (the same day, Step 7c Slice 1)
+    // minted `dispatch_completed`.
+    assert_eq!(EventKind::ALL.len(), 38);
     let mut names: Vec<&str> = EventKind::ALL.iter().map(|k| k.wire_name()).collect();
     let before = names.len();
     names.sort_unstable();
@@ -120,6 +121,44 @@ fn stage_exit_refused_exists_and_is_tier_two() {
     // a refused exit is not a refused step (ADR-0095's closed classes) and not a review block
     assert_ne!(EventKind::StageExitRefused, EventKind::StepRefused);
     assert_ne!(EventKind::StageExitRefused, EventKind::ReviewBlock);
+}
+
+/// **ADR-0126's addition** — the usage-bearing row AC-360 requires on every termination path
+/// (*"exactly one dispatch event is appended carrying every token counter the harness reports
+/// verbatim, `total_cost_usd`, the `five_hour` and `seven_day` headroom readings taken before and
+/// after, and the pinned harness/CLI version"*), written by the Harness adapter through the store
+/// it is handed. Tier 2 by the deleted-database test (decision 4): the next action is a function
+/// of the tier-1 commit state; losing this row loses the cost, the usage, the headroom pair and the
+/// version — never the decision. It pairs with the kernel's pre-dispatch `dispatch` row and does
+/// not replace it (decision 3): two kinds, two producers, two moments.
+#[test]
+fn adr0126_dispatch_completed_is_tier_two() {
+    // Written first against the wire name and the count, so the red is the ABSENT kind
+    // (`from_wire` answering `None`, `ALL` at 37) and not a compile error naming a variant.
+    assert_eq!(
+        EventKind::ALL.len(),
+        38,
+        "ADR-0126 adds exactly one kind to 7b-ii's 37"
+    );
+    let kind = EventKind::from_wire("dispatch_completed")
+        .expect("`dispatch_completed` is in the closed table (ADR-0126 decision 1)");
+    assert_eq!(kind, EventKind::DispatchCompleted);
+    assert_eq!(kind.wire_name(), "dispatch_completed");
+    assert_eq!(
+        kind.tier(),
+        Tier::Two,
+        "tier 2, not a tier-1 tag (decision 4)"
+    );
+    assert_eq!(
+        kind.trailer_axis(),
+        None,
+        "no fourth trailer axis is minted (decision 4)"
+    );
+    // Two rows per dispatch is the honest count (decision 3): the kernel's pre-dispatch row and
+    // the adapter's completion row are two kinds, and nothing may count them as one.
+    assert_ne!(kind, EventKind::Dispatch);
+    // The row is not one of ADR-0095's failure rows: it is written on success too.
+    assert_ne!(kind, EventKind::StepFailed);
 }
 
 /// The two dotted names are dotted. A blanket `rename_all = "snake_case"` would quietly turn them

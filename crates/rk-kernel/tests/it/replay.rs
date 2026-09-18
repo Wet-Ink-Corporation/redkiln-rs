@@ -191,6 +191,7 @@ use rk_types::event::Event;
 use rk_types::event_kind::{EventKind, Tier};
 use rk_types::retention::Retained;
 use rk_types::typed::{SchemaId, Typed};
+use rk_types::usage::{CliVersion, Timings};
 
 const DEVIATION: &str = include_str!("../fixtures/packs/incident-deviation.toml");
 const ARTIFACTS: &str = include_str!("../fixtures/registries/artifacts/artifacts.toml");
@@ -393,6 +394,23 @@ impl Harness for RecordingHarness {
                 instrument_version: "recording-fake".to_owned(),
                 stdout: Retained::of(b""),
                 stderr: Retained::of(b""),
+                // ADR-0126's members (Step 7c Slice 1), in the pre-spawn shape: this fake spawns
+                // nothing and reads no `system/init`, so the version is `Pinned` and every
+                // usage-adjacent member is `None`, never `Some(0)` (AC-362).
+                usage: None,
+                timings: Timings {
+                    wall_ms: 0,
+                    api_ms: None,
+                },
+                total_cost_usd: None,
+                headroom_before: None,
+                headroom_after: None,
+                cli_version: CliVersion::Pinned("recording-fake".to_owned()),
+                api_retry_events: 0,
+                prompt_cache_ttl: "1h".to_owned(),
+                subagent_prompt_cache_ttl: "1h".to_owned(),
+                cancelled_by: None,
+                detected_by: None,
             },
             // **A function of the SPEC, never of the call order.** The value is derived from the
             // card digest and the kind the binding supplied, so two runs of identical inputs

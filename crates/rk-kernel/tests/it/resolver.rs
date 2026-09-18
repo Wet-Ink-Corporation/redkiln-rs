@@ -53,6 +53,7 @@ use rk_types::error::{CancelledBy, IsolationSurface, RetryClass, StepError, Tran
 use rk_types::retention::Retained;
 use rk_types::time::Timestamp;
 use rk_types::typed::Typed;
+use rk_types::usage::{CliVersion, Timings};
 
 use crate::runtime::{AID, ITEM, spec};
 
@@ -111,6 +112,23 @@ impl Harness for FakeAdapter {
                 instrument_version: "ac494-fake".to_owned(),
                 stdout: Retained::of(b""),
                 stderr: Retained::of(b""),
+                // ADR-0126's members (Step 7c Slice 1), in the pre-spawn shape: this fake spawns
+                // nothing and reads no `system/init`, so the version is `Pinned` and every
+                // usage-adjacent member is `None`, never `Some(0)` (AC-362).
+                usage: None,
+                timings: Timings {
+                    wall_ms: 0,
+                    api_ms: None,
+                },
+                total_cost_usd: None,
+                headroom_before: None,
+                headroom_after: None,
+                cli_version: CliVersion::Pinned("ac494-fake".to_owned()),
+                api_retry_events: 0,
+                prompt_cache_ttl: "1h".to_owned(),
+                subagent_prompt_cache_ttl: "1h".to_owned(),
+                cancelled_by: None,
+                detected_by: None,
             },
             result: Ok(Typed::new(
                 spec.schema.clone(),

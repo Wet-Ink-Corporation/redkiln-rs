@@ -530,11 +530,14 @@ const fn resets_at_of(error: &StepError) -> Option<Timestamp> {
 ///
 /// **The kernel is genuinely powerless to close this at Step 7b, and that is the reason rather than
 /// an excuse.** The charge unit is *"one charge per recorded `system/api_retry` event"* (ADR-0122
-/// decision 1), and the kernel has no way to observe one: `EventKind` is closed at 37 variants *(29 until ADR-0123, 31 until ADR-0124 and 36 until ADR-0125, all 2026-09-17)* with
-/// **no `system/api_retry` member**, ADR-0122 decision 6 deliberately mints none, and
-/// `rk_ports::harness::DispatchOutcome` / `rk_types::activity::DispatchRecord` carry **no
-/// inner-attempt channel**. The stream those events arrive on is the *adapter's* — AC-232 is
-/// `rk-adapter-claude`'s criterion and `rk-adapter-*` does not exist until **Step 7c**.
+/// decision 1), and the kernel has no way to observe one: `EventKind` is closed at 38 variants *(29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125 and 37 until ADR-0126, all 2026-09-17)* with
+/// **no `system/api_retry` member**, ADR-0122 decision 6 deliberately mints none, and the stream
+/// those events arrive on is the *adapter's* — AC-232 is `rk-adapter-claude`'s criterion and
+/// `rk-adapter-*` does not exist until **Step 7c**. *(Corrected 2026-09-17, Step 7c Slice 1: this
+/// paragraph said `DispatchOutcome` / `DispatchRecord` carry **no inner-attempt channel**; since
+/// ADR-0126 the record carries `api_retry_events: u32` — the count, one per recorded event — but the
+/// kernel's `runtime/activity.rs` keeps `outcome.result` and drops `outcome.record`, so the carrier
+/// exists and the WIRING is still what is OWED: R-22, DECISIONS-2026-09-17.)*
 ///
 /// What is discharged here is the **rule**: the charge unit, the dispatch scope, and the refusal,
 /// pinned by `inner_retry_ac026` over a hand-authored fixture shaped like the recorded rows. What

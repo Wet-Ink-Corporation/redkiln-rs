@@ -30,6 +30,7 @@ use rk_types::event::{ErrorEvent, Event};
 use rk_types::event_kind::EventKind;
 use rk_types::retention::Retained;
 use rk_types::typed::Typed;
+use rk_types::usage::{CliVersion, Timings};
 
 use crate::cancel::CancelToken;
 use crate::docs_site::DocsSite;
@@ -133,6 +134,14 @@ impl FakeHarness {
 
 /// The record every dispatch produces, whatever the outcome (AC-360). Argv and env are **digests
 /// only** (ADR-0105 clause 7) and there is no field for the child environment at all.
+///
+/// **Completed at Step 7c Slice 1 with ADR-0126's members, in the pre-spawn shape**: the fake
+/// spawns nothing and reads no `system/init`, so its version is `Pinned` (the shape every
+/// pre-spawn row has — a fake that wrote `Observed` would be the pin masquerading as a
+/// measurement, Halt 11's shape) and every usage-adjacent member is `None` — never `Some(0)`
+/// (AC-362). The count of `system/api_retry` events is `0`, a measurement of a stream the fake
+/// never read; the two TTL values are the pair the register's fixtures set (AC-210); `wall_ms`
+/// is `0` because the fake reads no clock (AC-001).
 fn fake_record() -> DispatchRecord {
     DispatchRecord {
         argv_digest: sha256(b"fake-argv"),
@@ -140,6 +149,20 @@ fn fake_record() -> DispatchRecord {
         instrument_version: "fake".to_owned(),
         stdout: Retained::of(b""),
         stderr: Retained::of(b""),
+        usage: None,
+        timings: Timings {
+            wall_ms: 0,
+            api_ms: None,
+        },
+        total_cost_usd: None,
+        headroom_before: None,
+        headroom_after: None,
+        cli_version: CliVersion::Pinned("fake".to_owned()),
+        api_retry_events: 0,
+        prompt_cache_ttl: "1h".to_owned(),
+        subagent_prompt_cache_ttl: "1h".to_owned(),
+        cancelled_by: None,
+        detected_by: None,
     }
 }
 

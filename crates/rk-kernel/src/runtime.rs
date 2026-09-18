@@ -97,12 +97,16 @@
 //! [`crate::workflow::budget::BudgetEnvelope`], and **this module holds neither**: `grep -rn
 //! 'BudgetLedger\|WallClockSecs\|charge' crates/rk-kernel/src/runtime*` returns no ledger, no
 //! envelope and no charge site [measured 2026-09-14]. The ledger's `wall_clock` counter is a fold
-//! over **journaled charges**, and nothing in this tree produces one: `rk_ports::harness::
-//! DispatchOutcome` and `rk_types::activity::DispatchRecord` carry **no elapsed-seconds channel**,
-//! and `rk_types::time::Timestamp` has no `now()` *deliberately*, so the kernel cannot derive an
-//! elapsed value either. Deciding what charges the wall clock — and from which journaled instants —
-//! is a decision `00-preamble.md`:55 reserves; a record routing an elapsed value from the adapter
-//! to the kernel is **OWED**, and it is named here rather than written here. The shape is AC-026's
+//! over **journaled charges**, and nothing in this tree produces one: `rk_types::time::Timestamp`
+//! has no `now()` *deliberately*, so the kernel cannot derive an elapsed value itself, and the one
+//! measurement that exists is dropped before it could — *(corrected 2026-09-17, Step 7c Slice 1:
+//! this sentence said `DispatchOutcome` / `DispatchRecord` carry **no elapsed-seconds channel**;
+//! since ADR-0126 the record carries `timings.wall_ms`, the adapter's wall clock around the child,
+//! but `runtime/activity.rs` keeps `outcome.result` and drops `outcome.record`, so the carrier
+//! exists and the routing from it to a journaled charge is still the record OWED below)*. Deciding
+//! what charges the wall clock — and from which journaled instants — is a decision
+//! `00-preamble.md`:55 reserves; a record routing an elapsed value from the adapter to the kernel
+//! is **OWED**, and it is named here rather than written here. The shape is AC-026's
 //! exactly (`crate::workflow::retry::decide_after_inner_retries`): the **rule** is on disk and
 //! pinned, the **wiring** needs a carrier no record has minted.
 //!

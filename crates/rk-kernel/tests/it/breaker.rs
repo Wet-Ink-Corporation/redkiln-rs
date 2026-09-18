@@ -555,13 +555,20 @@ fn breaker_ac033_ac035() {
     // is the breaker's carrier — rather than the gap quietly closing or quietly widening.
     assert_eq!(
         EventKind::ALL.len(),
-        37,
+        38,
         // DECIDED HERE 2026-09-17, when ADR-0123 minted the thirtieth and thirty-first: neither
         // `gate_answer_spent` (a refused duplicate answer) nor `gate_resumed` (resume telemetry)
         // is a breaker mark. AC-033's `written` half stays ARMED; only the count moved, 29 -> 31 -> 36 -> 37
         // (ADR-0124's five are the review and verify gates' rows, ADR-0125's `stage_exit_refused` the
         // verify gate's exit refusal — none a breaker mark either).
-        "`EventKind` is closed at 37 (29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125) and none of them is a breaker mark: AC-033's `written` half is \
+        // DECIDED AGAIN 2026-09-17 (Step 7c Slice 1), when ADR-0126 minted the thirty-eighth,
+        // `dispatch_completed`: it is the adapter's usage-bearing row — the completed
+        // `DispatchRecord`, tier-2 telemetry (decision 4) — and NOT a breaker mark; the kernel's
+        // breaker fold routes it to its no-state-change arm (decision 5) — ASSERTED, not stated:
+        // `tests/it/dispatch_completed.rs::adr0126_dispatch_completed_is_not_a_breaker_mark`
+        // folds a family-scoped row and reads the consecutive count unmoved. 37 -> 38; the
+        // `written` half stays ARMED.
+        "`EventKind` is closed at 38 (29 until ADR-0123, 31 until ADR-0124, 36 until ADR-0125, 37 until ADR-0126) and none of them is a breaker mark: AC-033's `written` half is \
          ARMED, NOT DISCHARGED, and no kind is minted at Slice 4d"
     );
 }

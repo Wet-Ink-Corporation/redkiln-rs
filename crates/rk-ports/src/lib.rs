@@ -103,6 +103,12 @@
 //! ```
 
 pub mod cancel;
+/// AC-499's shared per-port conformance bodies, behind `[features] conformance = []` (RT-16 as
+/// re-amended, `s7c` §7c.1): the fake rows in this crate's own suite and the real rows in each
+/// adapter's run **the same bodies**. The attribute is on its own line above the item because
+/// Checkpoint 7c greps for exactly that.
+#[cfg(feature = "conformance")]
+pub mod conformance;
 pub mod docs_site;
 pub mod event_store;
 pub mod fakes;
