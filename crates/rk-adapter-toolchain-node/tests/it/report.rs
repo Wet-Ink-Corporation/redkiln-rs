@@ -106,6 +106,38 @@ fn filtered(pattern: &str) -> Vec<String> {
     vec![SUITE_FILE.to_owned(), "-t".to_owned(), pattern.to_owned()]
 }
 
+/// The suite digest is over the suite's SOURCES and nothing vite leaves beside them. Vite compiles
+/// `vitest.config.ts` to a transient `vitest.config.ts.timestamp-<ms>-<hash>.mjs` next to it for the
+/// life of one run and deletes it after; a walk that admits it (a) reads a file that can vanish
+/// between the listing and the read -- measured 2026-09-18 as `could not read ...timestamp-...mjs
+/// for the suite digest: The system cannot find the file specified (os error 2)` under the crate's
+/// parallel tests -- and (b) makes `suite_sha` differ while a run is in progress, which is a
+/// digest that names no suite. RED before the exclusion: the two digests below differed.
+#[test]
+fn suite_sha_ignores_vites_transient_config_bundle() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::write(root.join("package.json"), b"{}\n").expect("write");
+    std::fs::write(root.join("vitest.config.ts"), b"export default {}\n").expect("write");
+    std::fs::create_dir(root.join("test")).expect("mkdir");
+    std::fs::write(root.join("test/a.test.ts"), b"// a\n").expect("write");
+    let before =
+        rk_adapter_toolchain_node::report::suite_sha(root).expect("digest over the sources");
+    std::fs::write(
+        root.join("vitest.config.ts.timestamp-1789755454505-3bb7d96c12f0d.mjs"),
+        b"// vite's transient bundle of the config\n",
+    )
+    .expect("write");
+    let during = rk_adapter_toolchain_node::report::suite_sha(root)
+        .expect("digest with the transient present");
+    assert_eq!(
+        before, during,
+        "vite's transient config bundle must not enter the suite digest: it exists only while a run is \
+         in progress and is not a source"
+    );
+    dir.close().expect("the walk holds no handle");
+}
+
 /// **AC-329 (adapter half).** The report's nine members come from structured sources — the
 /// count from the reporter file, never from the decoy's prose — and each member absent in turn
 /// is refused.

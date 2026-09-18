@@ -220,8 +220,12 @@ fn toolchain_version(tc: &NodeToolchain, dir: &Path) -> Result<String, StepError
     Ok(version)
 }
 
-/// sha256 over the suite's sources (the module doc).
-fn suite_sha(root: &Path) -> Result<String, StepError> {
+/// sha256 over the suite's sources (the module doc). `pub` so the digest's own test can drive
+/// it over a temp tree without a vitest run.
+///
+/// # Errors
+/// `Transport { Io }` when a source cannot be listed or read.
+pub fn suite_sha(root: &Path) -> Result<String, StepError> {
     let mut files: Vec<PathBuf> = Vec::new();
     collect_sources(root, &mut files)?;
     files.sort();
@@ -254,6 +258,12 @@ fn is_suite_source(name: &str) -> bool {
         "yarn.lock",
         "tsconfig.json",
     ];
+    // Vite compiles the config to a transient `vitest.config.ts.timestamp-<ms>-<hash>.mjs` beside
+    // it for the life of one run and deletes it after: not a source, and a file that can vanish
+    // between the listing and the read [measured 2026-09-18 under the crate's parallel tests].
+    if name.contains(".timestamp-") {
+        return false;
+    }
     FIXED.contains(&name)
         || name.starts_with("vitest.config.")
         || name.starts_with("vite.config.")
