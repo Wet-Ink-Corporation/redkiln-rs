@@ -29,7 +29,7 @@
 //! `61f590e5…`, 101 runner-typed rows; and the F20 transcript on the tree,
 //! `crates/rk-kernel/tests/fixtures/findings/ac282_f20_golden_transcript.jsonl`) at Slice 4 —
 //! **re-dated in the close commit to the probe's corpus commit** (§7c.15), the first dispatch at
-//! the pinned 2.1.275. **Every capability the Harness port does not implement** — `snapshot`,
+//! the pinned 2.1.277. **Every capability the Harness port does not implement** — `snapshot`,
 //! `rebuild` (the store's), `change_summary`, `affected-selection` (the toolchains') — is
 //! **ABSENT from this registry, not `Probe::None`**: a Harness claims no store or toolchain
 //! capability, as the SQLite registry claims no dispatch capability. [`claims`] is what the kernel's
@@ -116,7 +116,7 @@ const REGISTRY: &str = r#"[
   {
     "capability": "dispatch",
     "verified_on": "2026-09-17",
-    "probe": { "recorded": { "source": "redkiln-corpus 61f590e51cbb00301c310e46aab615563a7787b8:results/e3.jsonl (101 recorded dispatch rows at the pin; the seven is_error frames and line 6's api_retries are this crate's fixtures at Slice 5) and crates/rk-kernel/tests/fixtures/findings/ac282_f20_golden_transcript.jsonl (the F20 row on the tree); the first dispatch at the pinned 2.1.275 is the live probe's, whose corpus commit re-dates this row at close (s7c section 7c.15)" } }
+    "probe": { "recorded": { "source": "redkiln-corpus 61f590e51cbb00301c310e46aab615563a7787b8:results/e3.jsonl (101 recorded dispatch rows at the pin; the seven is_error frames and line 6's api_retries are this crate's fixtures at Slice 5) and crates/rk-kernel/tests/fixtures/findings/ac282_f20_golden_transcript.jsonl (the F20 row on the tree); the first dispatch at the pinned 2.1.277 is the live probe's, whose corpus commit re-dates this row at close (s7c section 7c.15)" } }
   }
 ]"#;
 

@@ -5,7 +5,7 @@
 //!
 //! **What `Config` is** (§7c.12, *"the adapter's constructor, stated once"*): the pins —
 //! [`TESTED_CLI_VERSION`], declared in the one form Checkpoint 7c's anchored grep reads (D17-11:
-//! `claude --version` measured `2.1.275 (Claude Code)` on 2026-09-17; ADR-0078: *"the pin is
+//! `claude --version` measured `2.1.277 (Claude Code)` on 2026-09-17; ADR-0078: *"the pin is
 //! recorded with the measurement"*), never read from the process environment — the two TTLs
 //! (ADR-0078 (ii); AC-210; [`CACHE_TTL`]), **`margins: Margins`** (a value handed in, never a pack
 //! the adapter parses — §7c.8), the captured environment map and `harness_binary` (default `claude`;
@@ -100,18 +100,21 @@ use crate::card::AgentCard;
 use crate::env::{PROMPT_CACHE_TTL, SUBAGENT_PROMPT_CACHE_TTL};
 use crate::env_denylist::first_denylisted;
 
-/// The pinned CLI version (D17-11: `claude --version` = `2.1.275 (Claude Code)`, measured
+/// The pinned CLI version (D17-11: `claude --version` = `2.1.277 (Claude Code)`, measured
 /// 2026-09-17 and re-teed into `RUNBOOK-instrument.txt` at stage-open).
 ///
 /// A `Config` value, recorded on every `dispatch_completed` row as `instrument_version` (ADR-0126
 /// decision 1) and the value a child's `system/init` version is compared against (AC-226, AC-385).
 /// Declared in exactly this form: Checkpoint 7c greps `pub const TESTED_CLI_VERSION: &str =
 /// "<pin>"` against the re-teed file.
-pub const TESTED_CLI_VERSION: &str = "2.1.275";
+// Moved 2.1.275 -> 2.1.277 on 2026-09-18 (Halt 2, the second move of Step 7c): the CLI auto-updated between
+// the stage-open re-tee and the first live run, whose init reported `claude_code_version: 2.1.277`, and the
+// adapter refused the dispatch at the init line under MismatchPolicy::Refuse -- as designed (AC-226).
+pub const TESTED_CLI_VERSION: &str = "2.1.277";
 
 /// The CLI version that provides `--permission-prompts` — the register's floor for AC-215.
 ///
-/// **2.1.259 [documented]** (§7c.5: *"the pin is 2.1.275, above it, recorded beside
+/// **2.1.259 [documented]** (§7c.5: *"the pin is 2.1.277, above it, recorded beside
 /// `TESTED_CLI_VERSION` in `Config`"*).
 /// Declared beside the pin in the pin's form; the probe's tag lift at Slice 5 asserts the recorded
 /// version at or above it. The `[surface unverified]` tag on the floor stands until the probe has

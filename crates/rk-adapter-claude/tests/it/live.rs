@@ -36,7 +36,7 @@
 //! ADR-0105 c7, and the probe asserts the vector's digest IS the row's); `OBSERVED_CLI_VERSION=`
 //! (the version taken from the raw init's version field — printed only if a key in
 //! `init::VERSION_KEYS` matched; **[surface unverified]**: if no line is printed, the field is
-//! unnamed at 2.1.275 and the operator names it from `RECORD_PATH`'s raw init); `STORE_PATH=`;
+//! unnamed at 2.1.277 and the operator names it from `RECORD_PATH`'s raw init); `STORE_PATH=`;
 //! `COMPLETED_ROWS=` (asserted 1) and `DISPATCH_ROWS=` (asserted 0 — the probe calls
 //! `Harness::dispatch` directly and no kernel runs). It asserts `structured_output` from the RAW
 //! result frame as a non-empty object or list beside `subtype: success` and `is_error: false`
@@ -431,6 +431,26 @@ fn retain(dir: &Path, name: &str, h: &ClaudeHarness, record: &DispatchRecord) ->
     p
 }
 
+/// A spike run that never reached the model measured nothing, and must say so loudly. Added
+/// 2026-09-18 after the first live run: the CLI had moved 2.1.275 → 2.1.277 between the stage-open
+/// re-tee and the run, the adapter refused all three spike dispatches at the init line (AC-226,
+/// refuse-by-default — as designed), and each driver still printed `ok` because it asserted only
+/// that `dispatch` returned. `Ok` and `RateLimited` are measurements (the second is the
+/// exhaustion arm's whole point); anything else is a run that spent nothing and measured nothing.
+fn spike_dispatch_reached_the_model(
+    result: &Result<rk_types::typed::Typed, rk_types::error::StepError>,
+    spike: &str,
+) {
+    match result {
+        Ok(_) | Err(rk_types::error::StepError::RateLimited { .. }) => {}
+        Err(e) => panic!(
+            "{spike}: the dispatch did not reach the model and measured nothing: {e:?} — a pin \
+             mismatch (Halt 2), an isolation refusal or a spawn failure is a finding about the \
+             run, not a spike result"
+        ),
+    }
+}
+
 #[test]
 #[ignore = "S-RETRY throttle-margin arm (D17-6): one PAID haiku dispatch; run or deferred by the operator at the close"]
 fn s_retry_throttle_margin_driver() {
@@ -443,6 +463,7 @@ fn s_retry_throttle_margin_driver() {
     let o = h.dispatch(&spec, &mut store);
     let p = retain(ts.dir.path(), "s-retry-throttle-margin", &h, &o.record);
     println!("S_RETRY_MARGIN_PATH={}", p.display());
+    spike_dispatch_reached_the_model(&o.result, "S-RETRY throttle-margin");
     println!(
         "HEADROOM_AFTER={:?} MARGINS={margins:?}",
         o.record.headroom_after
@@ -462,6 +483,7 @@ fn s_retry_exhaustion_on_result_driver() {
     let mut store = ts.store;
     let o = h.dispatch(&spec, &mut store);
     let p = retain(ts.dir.path(), "s-retry-exhaustion-on-result", &h, &o.record);
+    spike_dispatch_reached_the_model(&o.result, "S-RETRY exhaustion-on-result");
     let (_, result) = raw_frames(&h, &o.record);
     if let Some(r) = result.and_then(|r| r.parse::<serde_json::Value>().ok()) {
         println!(
@@ -489,6 +511,7 @@ fn s_ttl1_subagent_card_driver() {
     let o = h.dispatch(&spec, &mut store);
     let p = retain(ts.dir.path(), "s-ttl1-subagent-card", &h, &o.record);
     println!("S_TTL1_PATH={}", p.display());
+    spike_dispatch_reached_the_model(&o.result, "S-TTL1");
     println!(
         "TTL_STATE={}",
         rk_adapter_claude::ttl::classify_ttl(o.record.usage.as_ref()).as_str()

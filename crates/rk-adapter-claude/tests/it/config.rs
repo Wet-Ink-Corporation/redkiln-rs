@@ -497,14 +497,14 @@ fn ac377_margin_parse_vectors_and_no_default() {
 /// and never read from the process environment; `Config` carries it as `tested_cli_version`.
 #[test]
 fn tested_cli_version_is_the_pin_as_a_config_value() {
-    assert_eq!(TESTED_CLI_VERSION, "2.1.275");
+    assert_eq!(TESTED_CLI_VERSION, "2.1.277");
     let cfg = crate::support::config();
     assert_eq!(cfg.tested_cli_version(), TESTED_CLI_VERSION);
     let src = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/config.rs"))
         .expect("read src/config.rs");
     assert!(
         src.lines()
-            .any(|l| l.trim_start() == "pub const TESTED_CLI_VERSION: &str = \"2.1.275\";"),
+            .any(|l| l.trim_start() == "pub const TESTED_CLI_VERSION: &str = \"2.1.277\";"),
         "config.rs declares the constant in the form the checkpoint's anchored grep reads (§7c.12)"
     );
 }
@@ -647,7 +647,7 @@ fn harness_binary_that_is_a_batch_file_is_refused() {
     }
 }
 
-/// AC-215: *"the register's floor is 2.1.259 [documented]; the pin is 2.1.275, above it, recorded
+/// AC-215: *"the register's floor is 2.1.259 [documented]; the pin is 2.1.277, above it, recorded
 /// beside `TESTED_CLI_VERSION` in `Config`"* (§7c.5) — the floor is declared beside the pin, and
 /// the pin is at or above it by a version-tuple compare (no float), so the probe's tag lift at
 /// Slice 5 has the floor to read.

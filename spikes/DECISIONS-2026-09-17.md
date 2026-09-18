@@ -177,6 +177,15 @@ options.
 
 ## D17-11 · Instrument moved (Halt 2): `claude --version` 2.1.269 → 2.1.275
 
+*(Amended 2026-09-18 at the close: **a second move, 2.1.275 → 2.1.277.** The CLI auto-updated between the stage-open
+re-tee and the first live run; the spike drivers' retained raw `system/init` reported `claude_code_version:
+2.1.277`, and the adapter refused all three dispatches at the init line under the refuse-by-default mismatch policy
+(O-4) — the design working, at the cost of three refused runs that spent nothing. The same re-tee and pin move are
+applied (`RUNBOOK-instrument.txt`, `TESTED_CLI_VERSION`), recorded in `PROGRESS.md` §1/§3/§6, and the drivers now
+fail loudly on a dispatch that never reached the model. The raw init also named the two `[surface unverified]`
+fields: the version key is `claude_code_version`, and AC-511's auth-mode field is **`apiKeySource`**, read as `"none"`
+on a subscription session.)*
+
 **The measurement.** `claude --version` on this box, 2026-09-17: **2.1.275 (Claude Code)**.
 `spikes/results/instrument-checks/RUNBOOK-instrument.txt` reads **2.1.269 (Claude Code)** (22 bytes, tracked; the
 only file AC-465 permits under `spikes/results/`). Halt 2 fires.

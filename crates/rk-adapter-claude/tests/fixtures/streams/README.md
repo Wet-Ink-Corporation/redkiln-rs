@@ -28,7 +28,7 @@ the CLI's)`).
 
 | file | what it is / which test |
 | --- | --- |
-| `init.scripted.ndjson` | the good init: `agent: probe`, `tools: ["StructuredOutput"]` (EQUAL to the probe card's list), `mcp_servers: []`, `claude_code_version: 2.1.275` (the pin; the version key is [surface unverified] — `init.rs`'s `VERSION_KEYS`). `cwd` is the literal `<worktree>` — the child's real cwd is `echo-env`'s line, not this |
+| `init.scripted.ndjson` | the good init: `agent: probe`, `tools: ["StructuredOutput"]` (EQUAL to the probe card's list), `mcp_servers: []`, `claude_code_version: 2.1.277` (the pin; the version key is [surface unverified] — `init.rs`'s `VERSION_KEYS`). `cwd` is the literal `<worktree>` — the child's real cwd is `echo-env`'s line, not this |
 | `init-wrong-agent.scripted.ndjson` / `init-no-agent.scripted.ndjson` | AC-204's fourth case → `NotAdopted` |
 | `init-superset.scripted.ndjson` / `init-subset.scripted.ndjson` | AC-204/AC-386: extra tools / no tools → `NotIsolated { surface: tools }` |
 | `init-same-count-substituted.scripted.ndjson` | AC-202: the card's tool COUNT with one substituted name — a count-based check is green here, a set digest is red |
