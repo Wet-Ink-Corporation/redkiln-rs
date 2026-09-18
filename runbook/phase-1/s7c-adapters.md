@@ -2921,7 +2921,12 @@ sys.exit(0 if ok else 1)
 # digests the file it read (ADR-0105 c7's carrier; the second review's token-presence grep asserted nothing, since
 # "structured_output" is on the serialised row on every path, as null on the F20 shape).
 want=$(printf '%s\n' "$out" | sed -n 's/^RESULT_RAW_SHA256=//p' | head -1); test -n "$want" || { echo "FAIL: the probe printed no RESULT_RAW_SHA256= line"; exit 1; }
-[ "$(sha256sum "$raw" | cut -d' ' -f1)" = "$want" ] || { echo "FAIL: the raw result frame at $raw does not digest to the RESULT_RAW_SHA256 the probe printed — the file read is not the frame retained"; exit 1; }
+# (Corrected 2026-09-18 on the third live run, which FAILED here on a TRUE frame: GNU sha256sum escapes a filename that
+# carries a backslash and prefixes the whole line with `\`, so over a Windows temp path `cut -d' ' -f1` read `\38009d…`
+# against the probe's `38009d…` [measured: the file digested to the printed value under python and under
+# `sha256sum <`]. The stdin form has no filename to escape. Halt 7's shape — a guard that fires on its own input's
+# spelling — fixed by reading the bytes, never by dropping the check.)
+[ "$(sha256sum < "$raw" | cut -d' ' -f1)" = "$want" ] || { echo "FAIL: the raw result frame at $raw does not digest to the RESULT_RAW_SHA256 the probe printed — the file read is not the frame retained"; exit 1; }
 grep -qE '"subtype":[[:space:]]*"init"' "$rec" || { echo "FAIL: the raw system/init was not retained — AC-511's probe and AC-202/AC-204's first recorded init both need it"; exit 1; }
 # the pin as instrument_version (the Config value serialised on the row) — an existence floor, NOT the measurement;
 # shape-tolerant on the colon's whitespace (§7c.15 fixes compact serde_json::to_string, and a pretty writer must not
