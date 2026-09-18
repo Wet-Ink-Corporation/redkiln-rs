@@ -262,6 +262,7 @@ raw `system/init` is the probe's (§7c.15).
   `rk_absent` over `\bargv\b|\bargs\b|build_args|extra_flags`, module-filtered to `init|isolation` (the files that
   read `system/init` and decide adoption/isolation), with the control `ac202_argv_isolation_control.rs` (§7c.21) —
   a second review found both AC-202's and AC-214's lint halves claimed and built by nothing.
+*(Amended 2026-09-18 at the close — RT-27: at CLI 2.1.277 `system/init` carries no `agent` key [measured]; the adoption reading below is the corpus-era one and stands when the key is present; when it is absent the adapter reads `agents` ∋ expected AND `model` ∈ the card's tier AND tools equality, and AC-204 is PROVISIONAL on that reading — §7c.22.)*
 - **AC-204** — BINDING (twin of owner AC-386). *"GIVEN a dispatch that names a card via `--agent` / WHEN `system/init`
   reports the child's effective tool set / THEN adoption holds only if that set is **equal** to the card's declared
   tool set, and any difference — extra or missing — fails the dispatch as `StepError::NotIsolated { surface: tools, ..
@@ -3131,6 +3132,12 @@ an OWED record and recorded in `PROGRESS.md` §2:
   column (`0001_initial.sql`); `git log --max-parents=0` answers per branch (orphan branches, shallow clones). A
   moved-repository policy, the harness-version column and a multi-root rule are one dated record's — **OWED** (RT-17;
   `PROGRESS.md` §2 R-23).
+- **AC-204's adoption evidence at CLI 2.1.277 is composite, not a field** *(added 2026-09-18 at the close; RT-27)*: the
+  first live run's retained raw `system/init` carries NO `agent` key — it carries `agents` (every loadable agent),
+  `model` as the full id and `tools`. The adapter reads adoption from `agent` when present and, when absent, from
+  `agents` ∋ expected AND `model` ∈ the card's tier AND tools equality (the operator's decision, the refuse-forever
+  alternative named). **AC-204 is PROVISIONAL on that reading**; a dated register amendment naming the 2.1.277
+  shape is **OWED** (`PROGRESS.md` §2 RT-27).
 - **The routing table's open rows** (§7c.1) — **the records OWED, listed by id so the count reproduces off the
   list and not off arithmetic** (the first form of this bullet did arithmetic that did not reproduce and counted a
   correction ADR-0126's committed table already carries): (1) RT-1 the argv cap value; (2) RT-2 the decimal-digit

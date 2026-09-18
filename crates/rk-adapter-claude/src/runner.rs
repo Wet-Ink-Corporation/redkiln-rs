@@ -154,6 +154,9 @@ pub struct Prepared<'a> {
     pub worktree: PathBuf,
     pub timeout: Duration,
     pub expected_agent: &'a str,
+    /// The `--model` element the builder passed — the bound card's tier (AC-212), which the
+    /// 2.1.277 adoption reading compares the reported model id against (RT-27).
+    pub expected_tier: &'a str,
     pub declared_tools: &'a [String],
     pub schema_id: &'a SchemaId,
     pub schema: &'a serde_json::Value,
@@ -205,6 +208,7 @@ struct Expect {
     pinned: String,
     policy: MismatchPolicy,
     expected_agent: String,
+    expected_tier: String,
     declared_tools: Vec<String>,
 }
 
@@ -377,6 +381,7 @@ async fn drain_stdout(
                     &expect.pinned,
                     expect.policy,
                     &expect.expected_agent,
+                    &expect.expected_tier,
                     &expect.declared_tools,
                 ) {
                     Decision::Proceed { .. } => {}
@@ -511,6 +516,7 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
             pinned: prepared.pinned.to_owned(),
             policy: prepared.policy,
             expected_agent: prepared.expected_agent.to_owned(),
+            expected_tier: prepared.expected_tier.to_owned(),
             declared_tools: prepared.declared_tools.to_vec(),
         };
         tokio::spawn(drain_stdout(stdout, expect, Arc::clone(&state)))

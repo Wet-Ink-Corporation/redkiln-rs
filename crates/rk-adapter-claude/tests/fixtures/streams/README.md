@@ -63,3 +63,16 @@ the CLI's)`).
 
 The ≥ 1 MiB prompt that makes `Transport { kind: Io }` deterministic (§7c.11) is generated in the
 test (`support::megabyte_prompt`) rather than tracked as a file.
+
+### The 2.1.277 init shape (added 2026-09-18 at the close; RT-27)
+
+Measured from the first live run's retained raw `system/init` at CLI 2.1.277: **no `agent` key**; an `agents` list
+naming every loadable agent (the `--agents` JSON's entry among them); `model` as the full id
+(`claude-haiku-4-5-20251001`); `tools`, `mcp_servers`, `apiKeySource`, `claude_code_version` as before. All three
+files below are SCRIPTED in that shape.
+
+| file | what it scripts |
+| --- | --- |
+| `init-2-1-277-shape.scripted.ndjson` | the good 2.1.277 init: `agents` carries `probe`, `model` is the haiku id, tools equal the card's — ADOPTED under the composite reading |
+| `init-2-1-277-agents-without-probe.scripted.ndjson` | `agents` lacks `probe` — `NotAdopted` |
+| `init-2-1-277-wrong-model.scripted.ndjson` | `agents` carries `probe` but `model` is a sonnet id — `NotAdopted` (the card's tier was not applied) |

@@ -77,6 +77,10 @@ pub struct EffectiveConfig {
     pub session_id: Option<String>,
     pub model: Option<String>,
     pub agent: Option<String>,
+    /// Every agent the child reports as loadable — the 2.1.277 init's `agents` list, which carries
+    /// the `--agents` JSON's entry by name. `None` when the init carries no list. **[measured
+    /// 2026-09-18 at CLI 2.1.277]**: that init carries `agents` and NO `agent` key (RT-27).
+    pub agents: Option<BTreeSet<String>>,
     pub cwd: Option<String>,
     pub permission_mode: Option<String>,
     /// The child's effective tool set, as reported. `None` when the init carries no `tools` list.
@@ -115,6 +119,7 @@ pub fn effective_config(raw: &str) -> Option<EffectiveConfig> {
         session_id: s("session_id"),
         model: s("model"),
         agent: s("agent"),
+        agents: list("agents"),
         cwd: s("cwd"),
         permission_mode: s("permissionMode").or_else(|| s("permission_mode")),
         tools: list("tools"),
@@ -126,6 +131,15 @@ pub fn effective_config(raw: &str) -> Option<EffectiveConfig> {
         version: VERSION_KEYS.iter().find_map(|k| s(k)),
         init_digest: sha256(raw.as_bytes()),
     })
+}
+
+/// Does a reported model id belong to the tier the builder asked for on `--model`? The child
+/// reports the full id (`claude-haiku-4-5-20251001` [measured 2.1.277]) while the argv carries
+/// the tier word (`haiku`); the tier word is a `-`-delimited segment of the id. A tier that is
+/// itself a full id (a pinned model) must match exactly.
+#[must_use]
+pub fn model_belongs_to_tier(reported: &str, tier: &str) -> bool {
+    reported == tier || reported.split('-').any(|seg| seg == tier)
 }
 
 /// The set digest SM-061 names: SHA-256 over the sorted symmetric difference of the two sets,
@@ -157,6 +171,7 @@ pub fn decide(
     pinned: &str,
     policy: MismatchPolicy,
     expected_agent: &str,
+    expected_tier: &str,
     declared_tools: &[String],
 ) -> Decision {
     // 1. the version — only a MEASURED version can mismatch
@@ -177,15 +192,39 @@ pub fn decide(
             ),
         });
     }
-    // 2. adoption — the wrong agent answering (never tool-set inequality)
-    if init.agent.as_deref() != Some(expected_agent) {
-        return Decision::Refuse(StepError::NotAdopted {
-            expected_agent: expected_agent.to_owned(),
-            observed: init
-                .agent
-                .clone()
-                .unwrap_or_else(|| "<no agent reported>".to_owned()),
-        });
+    // 2. adoption — the wrong agent answering (never tool-set inequality). Two readings, by what
+    //    the init carries (RT-27, the operator's decision of 2026-09-18):
+    //    (a) an `agent` key present: it must equal the expected name — the corpus-era reading;
+    //    (b) NO `agent` key — the 2.1.277 shape [measured]: adopted iff the `agents` list carries
+    //        the expected name AND `model` belongs to the bound card's tier (the `--agent`'s model
+    //        was applied); the tool-set equality that completes the composite is step 3's own
+    //        check. A record settling the reading is OWED.
+    if let Some(agent) = init.agent.as_deref() {
+        if agent != expected_agent {
+            return Decision::Refuse(StepError::NotAdopted {
+                expected_agent: expected_agent.to_owned(),
+                observed: agent.to_owned(),
+            });
+        }
+    } else {
+        let listed = init
+            .agents
+            .as_ref()
+            .is_some_and(|a| a.contains(expected_agent));
+        let model_of_tier = init
+            .model
+            .as_deref()
+            .is_some_and(|m| model_belongs_to_tier(m, expected_tier));
+        if !(listed && model_of_tier) {
+            return Decision::Refuse(StepError::NotAdopted {
+                expected_agent: expected_agent.to_owned(),
+                observed: format!(
+                    "<no agent key; agents {} {expected_agent}; model {}>",
+                    if listed { "carry" } else { "lack" },
+                    init.model.as_deref().unwrap_or("<none reported>")
+                ),
+            });
+        }
     }
     // 3. isolation — the MCP surface (an absent list is the empty set, which equals the declared
     //    empty set — the module doc), then the tool set as EQUALITY

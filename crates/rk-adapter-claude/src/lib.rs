@@ -541,6 +541,7 @@ impl Harness for ClaudeHarness {
             worktree,
             timeout: Duration::from_secs(spec.timeout_secs),
             expected_agent: &bound.card.name,
+            expected_tier: &bound.card.model,
             declared_tools: &bound.card.tools,
             schema_id: &spec.schema,
             schema,

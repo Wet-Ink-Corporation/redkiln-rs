@@ -96,6 +96,39 @@ fn ac202_isolation_from_system_init_not_argv() {
 /// RED (observed 2026-09-18) against the skeleton: `equal: expected Ok, got Err(Transport { kind:
 /// Spawn, … })`.
 #[test]
+/// **AC-204 at CLI 2.1.277 — the composite reading (RT-27; the operator's decision of 2026-09-18).**
+/// The first live run's retained raw `system/init` carried NO `agent` key: at 2.1.277 the init
+/// reports `agents` (every loadable agent, the `--agents` entry among them), `model` as the full
+/// id, and `tools`. Adoption when `agent` is absent is therefore read as: `agents` contains the
+/// expected name AND `model` belongs to the bound card's tier AND the tool set equals the declared
+/// allowlist (step 3's own check). When `agent` IS present it must equal the expected name, as
+/// before. RED before the reading: the good 2.1.277 init was `NotAdopted { observed: "<no agent
+/// reported>" }` — the refusal that killed the probe at the init line.
+#[test]
+fn ac204_adoption_at_2_1_277_is_read_from_agents_and_model() {
+    let r = dispatch_replay(&with_init("init-2-1-277-shape.scripted.ndjson"), 30);
+    assert!(
+        r.outcome.result.is_ok(),
+        "the 2.1.277 init (agents carries probe, model is the haiku id, tools equal): expected Ok, got {:?}",
+        r.outcome.result
+    );
+    let r = dispatch_replay(
+        &with_init("init-2-1-277-agents-without-probe.scripted.ndjson"),
+        30,
+    );
+    assert!(
+        matches!(r.outcome.result, Err(StepError::NotAdopted { .. })),
+        "agents without probe: expected NotAdopted, got {:?}",
+        r.outcome.result
+    );
+    let r = dispatch_replay(&with_init("init-2-1-277-wrong-model.scripted.ndjson"), 30);
+    assert!(
+        matches!(r.outcome.result, Err(StepError::NotAdopted { .. })),
+        "agents with probe but a sonnet model: the tier was not applied — expected NotAdopted, got {:?}",
+        r.outcome.result
+    );
+}
+
 fn ac204_adoption_equal_subset_superset_wrong_agent() {
     let r = dispatch_replay(&with_init("init.scripted.ndjson"), 30);
     assert!(
