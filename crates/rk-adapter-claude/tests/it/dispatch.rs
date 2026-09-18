@@ -1383,3 +1383,29 @@ fn dispatch_is_callable_from_inside_another_runtime() {
     });
     assert!(o.result.is_ok(), "{:?}", o.result);
 }
+
+/// **ADR-0118's principle, applied to the adapter's own locks.** A poisoned accumulator means its
+/// holder panicked mid-update; the data behind it is not trusted and is never recovered through
+/// `PoisonError::into_inner` in any spelling (the block's ban, `rk_absent 'PoisonError|catch_unwind|
+/// unwrap_or_else(..into_inner'`). The seam is `runner::locked`: on poison it answers an `Err`
+/// naming the record, and the dispatch that meets it fails closed as `Transport { Decode }` with its
+/// row. RED before the fix: `locked` recovered the guard and this assertion read `Ok`.
+#[test]
+fn a_poisoned_accumulator_is_never_recovered() {
+    let m = std::sync::Arc::new(std::sync::Mutex::new(0_u32));
+    let poisoner = std::sync::Arc::clone(&m);
+    let joined = std::thread::spawn(move || {
+        let _guard = poisoner.lock().expect("first lock");
+        panic!("the holder panics mid-update");
+    })
+    .join();
+    assert!(joined.is_err(), "the poisoning thread must have panicked");
+    assert!(m.is_poisoned(), "the lock must be poisoned by the panic");
+    match rk_adapter_claude::runner::locked(&m) {
+        Ok(_) => panic!("a poisoned lock was recovered — ADR-0118 forbids it in any spelling"),
+        Err(detail) => assert!(
+            detail.contains("ADR-0118") && detail.contains("poisoned"),
+            "the refusal names the record and the fault: {detail}"
+        ),
+    }
+}

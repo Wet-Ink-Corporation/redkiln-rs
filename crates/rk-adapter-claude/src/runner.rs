@@ -311,10 +311,17 @@ const fn failed_before_stream(err: StepError) -> Run {
     }
 }
 
-/// Lock a shared accumulator; a poisoned lock (the holder panicked mid-line) still yields the
-/// data — the panic itself is retained by the task's `JoinError` marker.
-fn locked<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+/// Lock a shared accumulator. **A poisoned lock is never recovered** (ADR-0118's principle, applied
+/// to the adapter's own locks as the block's ban spells it — no `into_inner` in any spelling): the
+/// holder panicked mid-update, the data behind it is not trusted, and the caller fails closed —
+/// the drain and the stderr reader stop, and the dispatch classifies `Transport { Decode }` with
+/// its row (AC-360 stands). `pub` and hidden because the refusal's own test drives it directly.
+#[doc(hidden)]
+pub fn locked<T>(m: &Mutex<T>) -> Result<std::sync::MutexGuard<'_, T>, String> {
+    m.lock().map_err(|_| {
+        "a shared accumulator's lock is poisoned: its holder panicked mid-update, and ADR-0118          forbids recovering it in any spelling — the dispatch fails closed with its row"
+            .to_owned()
+    })
 }
 
 /// The drain: read stdout to EOF, retaining every byte, classifying every line, taking the init
@@ -333,7 +340,7 @@ async fn drain_stdout(
             Ok(0) | Err(_) => break,
             Ok(n) => n,
         };
-        let mut st = locked(&state);
+        let Ok(mut st) = locked(&state) else { break };
         st.stdout.push(&buf[..n]);
         let mut line = &buf[..n];
         if line.last() == Some(&b'\n') {
@@ -489,7 +496,10 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
             loop {
                 match stderr.read(&mut buf).await {
                     Ok(0) | Err(_) => break,
-                    Ok(n) => locked(&sink).push(&buf[..n]),
+                    Ok(n) => match locked(&sink) {
+                        Ok(mut s) => s.push(&buf[..n]),
+                        Err(_) => break,
+                    },
                 }
             }
         })
@@ -528,7 +538,7 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
             biased;
             joined = &mut drain_task, if drain_done.is_none() => {
                 drain_done = Some(joined.map_err(|j| format!("the stdout drain task did not complete: {j}")));
-                if locked(&state).decided.is_some() {
+                if locked(&state).map(|g| g.decided.is_some()).unwrap_or(true) {
                     break Arm::Decided;
                 }
                 // EOF with no decision: the child may still be alive — keep racing its exit
@@ -588,11 +598,22 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
     };
 
     // ---- what was read, and the markers for what did not complete
-    let drained = std::mem::replace(&mut *locked(&state), Drained::empty());
-    let mut stderr_sink = std::mem::replace(&mut *locked(&stderr_sink), RetainedSink::empty());
-    for marker in [drain_join.err(), stderr_join.err(), kill_error.clone()]
-        .into_iter()
-        .flatten()
+    let (drained, poisoned) = match locked(&state) {
+        Ok(mut g) => (std::mem::replace(&mut *g, Drained::empty()), None),
+        Err(detail) => (Drained::empty(), Some(detail)),
+    };
+    let (mut stderr_sink, poisoned) = match locked(&stderr_sink) {
+        Ok(mut g) => (std::mem::replace(&mut *g, RetainedSink::empty()), poisoned),
+        Err(detail) => (RetainedSink::empty(), poisoned.or(Some(detail))),
+    };
+    for marker in [
+        drain_join.err(),
+        stderr_join.err(),
+        kill_error.clone(),
+        poisoned.clone(),
+    ]
+    .into_iter()
+    .flatten()
     {
         stderr_sink.push(format!("\n<rk-adapter-claude: {marker}>\n").as_bytes());
     }
@@ -614,7 +635,7 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
         }
     };
 
-    let classified = classify::classify(&Evidence {
+    let mut classified = classify::classify(&Evidence {
         cancelled: cancelled_by,
         decided: drained.decided.clone(),
         init_seen: drained.init_seen,
@@ -629,6 +650,14 @@ pub async fn run(prepared: Prepared<'_>, token: &CancelToken) -> Run {
         schema_id: prepared.schema_id,
         schema: prepared.schema,
     });
+    // ADR-0118's principle: a poisoned accumulator is a holder that panicked mid-update; the data
+    // behind it is not trusted, so the dispatch fails closed — WITH its row (AC-360 stands).
+    if let Some(detail) = poisoned {
+        classified.result = Err(StepError::Transport {
+            kind: TransportKind::Decode,
+            detail,
+        });
+    }
     drop(group);
     Run {
         result: classified.result,
