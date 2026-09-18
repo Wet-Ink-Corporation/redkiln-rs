@@ -10,7 +10,7 @@
 //! **The victim's tree is its own** (Halt 6): the fixture's suite is copied into a temporary
 //! directory INSIDE the fixture project (so `npx` resolves the project's `node_modules/.bin/vitest`
 //! by walking up and fetches nothing, and vitest's root is the temp tree), the adapter's project
-//! root is that tree, the bound is 6 s, and the selection is the skip-marked slow test. **That the
+//! root is that tree, the bound is `BOUND_SECS` (30 s — 6 s until 2026-09-18's whole-block run, see the constant), and the selection is the skip-marked slow test. **That the
 //! victim was alive mid-run when the bound killed it is proved by the slow test's own two side
 //! effects** (the fixture's `suite.test.ts`): with `RK_SPAWN_MARKER_DIR` in the child map it writes
 //! `slow-started-<pid>.marker` before its 600 s wait and `slow-finished-<pid>.marker` after — so
@@ -87,6 +87,14 @@ fn leftover_entries(project: &Path) -> Vec<String> {
 }
 
 /// The `<prefix>*.marker` files in the marker directory.
+/// The arm's bound. **30 s, sized against the SLOW condition** (golden constraint 6): at 6 s the
+/// arm passed alone (vitest up in ~2 s) and FAILED inside Checkpoint 7c's whole run on
+/// 2026-09-18 — under the block's load vitest had not started the slow test when the bound
+/// killed the tree (`slow-started-*` markers: 0 found), so the kill was of a victim that was not
+/// yet mid-run, and the arm measured nothing. The victim's own wait is 600 s, so the kill is
+/// still mid-run at any bound below that; the cost is the arm's wall clock, not its meaning.
+const BOUND_SECS: u64 = 30;
+
 fn markers(dir: &Path, prefix: &str) -> Vec<String> {
     std::fs::read_dir(dir)
         .expect("the marker dir is readable")
@@ -122,7 +130,7 @@ fn s_cancel_win_vitest_arm() {
 
     let tc = adapter_with_env(
         rk_adapter_toolchain_node::DEFAULT_PROGRAM.into(),
-        Duration::from_secs(6),
+        Duration::from_secs(BOUND_SECS),
         victim_tree.path(),
         &[(
             "RK_SPAWN_MARKER_DIR",
@@ -136,7 +144,7 @@ fn s_cancel_win_vitest_arm() {
         "slow_by_selection".to_owned(),
     ]);
     match outcome {
-        Err(StepError::Timeout { after_secs }) => assert_eq!(after_secs, 6),
+        Err(StepError::Timeout { after_secs }) => assert_eq!(after_secs, BOUND_SECS),
         other => {
             panic!("the mid-vitest victim was killed at the bound: expected Timeout, got {other:?}")
         }
