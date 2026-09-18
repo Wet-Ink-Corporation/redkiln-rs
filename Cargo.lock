@@ -2723,6 +2723,15 @@ name = "rk-clock-read"
 version = "0.0.0"
 
 [[package]]
+name = "rk-containment"
+version = "0.0.0"
+dependencies = [
+ "libc",
+ "tempfile",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "rk-git"
 version = "0.0.0"
 dependencies = [

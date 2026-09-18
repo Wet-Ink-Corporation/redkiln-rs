@@ -1,0 +1,53 @@
+[package]
+name = "rk-containment"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# ADR-0127 decision 2's dependency sentence, exactly: `std`; `windows-sys` on Windows; `libc` on Unix — and
+# nothing else. No tokio (the fixture child and run_bounded wait without it), no rk-types (the outcome enum is
+# this crate's own), no rk-ports, no rk-adapter-* (ADR-0127 forbids; RT-15). Checkpoint 7c asserts the absence
+# on this manifest by name and on `cargo tree -p rk-containment -e normal`.
+#
+# windows-sys has NO default features, so the ones that link are named HERE, on the member row (s7c §7c.19),
+# never on the workspace row. Five, not the four §7c.10 lists: windows-sys 0.61.2 gates `CreateJobObjectW`
+# behind `Win32_Security` (its `lpJobAttributes` is `*const SECURITY_ATTRIBUTES`) —
+# src/Windows/Win32/System/JobObjects/mod.rs:4 carries `#[cfg(feature = "Win32_Security")]` on the binding
+# [measured 2026-09-18 in the registry copy] — so without it the job cannot be created and the four-feature
+# list links nothing that matters. The feature adds type declarations and the handful of functions that take
+# them; the call passes a null pointer and never constructs the type.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_JobObjects",
+  "Win32_System_Threading",
+  "Win32_System_Diagnostics_ToolHelp",
+] }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+
+# The spawnable fixture child (s7c §7c.17): std only, no unsafe, one marker file per invocation, its modes read
+# from RK_FIXTURE_MODE / RK_FIXTURE_MARKER_DIR at its own edge. rk-adapter-claude declares a SECOND [[bin]] named
+# `rk-fixture-child-claude` from this same source file, because one bin name in two packages is one output
+# path and a link race (§7c.17). Tests reach this copy through env!("CARGO_BIN_EXE_rk-fixture-child").
+[[bin]]
+name = "rk-fixture-child"
+path = "tests/fixtures/bin/rk-fixture-child.rs"
+test = false
+bench = false
+doc = false
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

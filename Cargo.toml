@@ -34,6 +34,15 @@ jsonschema = "=0.56.0"    # exact: weekly cadence. Format validation is OPT-IN �
                           # .should_validate_formats(true) wherever the design relies on format checks
 rusqlite   = "=0.40.2"    # exact: carries the one-writer semantics ADR-0105 clause 7 depends on
 yaml_serde = "=0.10.7"    # exact; redkiln-migrate ONLY — the one crate that may depend on a YAML reader
+# ADDED 2026-09-18 (Step 7c Slice 2, ADR-0127 decision 5): the two binding layers rk-containment's one
+# `#![allow(unsafe_code)]` module calls — a Job Object on Windows, a process group on POSIX. Both are 0.x, so
+# exact-pinned (ADR-0100 decision 2); both were ALREADY in Cargo.lock at 6152219 as transitive resolutions
+# [measured 2026-09-17, ADR-0127 §Evidence], so neither row moves the lock. `nix` is not taken (a second
+# binding layer for one `killpg`) and no safe Job Object wrapper crate is (ADR-0099's own ground, kept by 0127).
+# windows-sys has NO default features: the member row in crates/rk-containment/Cargo.toml names the ones that
+# link, never this row (§7c.19).
+windows-sys = "=0.61.2"   # exact: Windows only — CreateJobObjectW, AssignProcessToJobObject, TerminateJobObject, Toolhelp32
+libc       = "=0.2.189"   # exact: Unix only — killpg / kill(-pgid, 0) for the process-group arm (ARMED to CI)
 chrono     = "^0.4"       # EXEMPT from the 0.x exact-pin rule: de-facto stable, multi-year line, semver discipline
 sha2       = "^0.11"      # EXEMPT, same reason
 # Any new 0.x dependency is exact-pinned unless its row says why not. A pin bump is a PR that re-runs
