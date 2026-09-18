@@ -1,0 +1,21 @@
+[
+  "-p",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--model",
+  "haiku",
+  "--agents",
+  "{\"golden-static\":{\"description\":\"The golden-argv card under the static profile (s7c §7c.5).\",\"prompt\":\"You are a review assistant. Answer concisely.\",\"tools\":[\"Read\",\"StructuredOutput\"],\"model\":\"haiku\",\"permissionMode\":\"default\"}}",
+  "--agent",
+  "golden-static",
+  "--json-schema",
+  "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}},\"required\":[\"ok\"]}",
+  "--permission-mode",
+  "default",
+  "--strict-mcp-config",
+  "--permission-prompts",
+  "none",
+  "--system-prompt",
+  "You are a review assistant. Answer concisely."
+]

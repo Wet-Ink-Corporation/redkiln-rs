@@ -1,0 +1,19 @@
+[
+  "-p",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--model",
+  "haiku",
+  "--agents",
+  "{\"golden-default\":{\"description\":\"The golden-argv card under the default profile (s7c §7c.5): the body travels at the head of the user message.\",\"prompt\":\"You are a review assistant. Answer concisely.\",\"tools\":[\"Read\",\"StructuredOutput\"],\"model\":\"haiku\",\"permissionMode\":\"default\"}}",
+  "--agent",
+  "golden-default",
+  "--json-schema",
+  "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}},\"required\":[\"ok\"]}",
+  "--permission-mode",
+  "default",
+  "--strict-mcp-config",
+  "--permission-prompts",
+  "none"
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "capability": "dispatch",
+    "verified_on": "2026-09-17",
+    "probe": { "recorded": { "source": "redkiln-corpus 61f590e51cbb00301c310e46aab615563a7787b8:results/e3.jsonl", "extra": 1 } }
+  }
+]

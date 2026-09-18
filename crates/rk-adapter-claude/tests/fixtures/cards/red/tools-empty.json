@@ -1,0 +1,7 @@
+{
+  "description": "AC-493's first red card: tools = [] (an empty allowlist inherits everything — L4.4).",
+  "prompt": "You are a review assistant.",
+  "tools": [],
+  "cache_profile": "static",
+  "permission_mode": "default"
+}

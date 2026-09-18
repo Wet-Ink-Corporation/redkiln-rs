@@ -1,0 +1,93 @@
+[package]
+name = "rk-adapter-claude"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Same contract as the other members (AC-464/PIA-002; s7c §7c.19): corpus-bound tests compile behind
+# this feature and run as `cargo test --workspace --features corpus` on a box holding redkiln-corpus at
+# CORPUS_PIN. Declared EMPTY at Slice 4: every configuration-time test reads the EXTRACTED rows under
+# tests/fixtures/recorded/ (RT-23) and never the corpus; the feature must EXIST or a `--features corpus`
+# invocation naming this package exits 101 (the reason is written out at crates/rk-types/Cargo.toml).
+corpus = []
+# The live probe (D17-5; s7c §7c.15): one paid haiku dispatch, `#[ignore]`, run in the foreground by the
+# operator as `cargo test -p rk-adapter-claude --features live -- --ignored live_dispatch_probe`. Declared
+# here so the manifest row is complete (§7c.19); the probe itself is Slice 5's.
+live = []
+
+# The manifest row s7c §7c.19 fixes for this crate, and nothing beyond it. NO normal `rk-git` (the runner's
+# pre-spawn git snapshot is NOT lifted -- §7c.2; the probe's temp repository is a DEV edge below) and NO
+# `rk-store` (nothing in rk_store::retention is the adapter's after Slice 1's collapse -- Retained, STDIO_CAP,
+# HEAD_TAIL and the record constructor live in rk-types -- and a normal edge would pull rusqlite's bundled
+# SQLite into the Harness crate's tree for nothing; Checkpoint 7c asserts this crate's normal graph never
+# reaches rusqlite).
+[dependencies]
+rk-types = { path = "../rk-types" }
+rk-ports = { path = "../rk-ports" }
+# ADR-0127 decision 3: every child is spawned THROUGH rk-containment (spawn_into_job); the adapter builds a
+# Command and hands it over. Consumed by runner.rs at Slice 5; the edge is the manifest row's.
+rk-containment = { path = "../rk-containment" }
+# RT-15 / ADR-0076: the adapter-owned multi_thread Runtime, `block_on` from the sync `dispatch` only. The
+# feature set is the workspace row's (Cargo.toml). Consumed by runner.rs at Slice 5.
+tokio.workspace = true
+# The registry's `derive(Deserialize)` + `deny_unknown_fields` (RT-24, AC-489), the card file's closed record
+# and the config's Margins -- serde_json does not provide the derive macro (§7c.19).
+serde.workspace = true
+# The `--agents` JSON, the `--json-schema` element, the card files, the registry text.
+serde_json.workspace = true
+# `jsonschema` is NOT on this manifest at Slice 4, and the reason is a gate, not an oversight. §7c.19's row
+# names it as a normal dependency, and §7c.19 also says the workspace row is `=0.56.0` with default features ON
+# ("turning the defaults off on the workspace row ... is a stage-open change the operator may take, and is NOT
+# assumed here"). MEASURED 2026-09-18 at this slice: as a NORMAL edge, jsonschema's defaults (`resolve-http` ->
+# reqwest -> rustls, `tls-aws-lc-rs` -> aws-lc-rs) enter this crate's normal graph and `cargo deny check licenses`
+# REFUSES six crates under licences deny.toml does not allow -- aws-lc-rs 1.18.1 "ISC AND (Apache-2.0 OR ISC)",
+# aws-lc-sys 0.45.0, borrow-or-share 0.2.4 "MIT-0", rustls-webpki 0.103.15 "ISC", untrusted 0.9.0 "ISC",
+# webpki-root-certs 1.0.9 "CDLA-Permissive-2.0" (exit 4). The same crates sit in rk-types' DEV graph today and
+# pass because cargo-deny checks dev-only licences only under `[licenses] include-dev`. deny.toml's own rule --
+# "a new license is a decision, taken in a PR, not a default" -- and §7c.19's sentence both put the resolution
+# with the operator: allow the licences, or turn the resolver features off on the workspace row (and give
+# rk-types' dev edge the set its validation tests need). Slice 4 consumes nothing from jsonschema (the
+# result-frame validation, the lifted `extract_digest`, is Slice 5's), so the edge is DEFERRED to Slice 5 with
+# that decision owed before it (recorded in the Slice 4 manifest as a deviation from §7c.19's row and RAISED).
+# ADR-0102 decision 6: thiserror in every library, anyhow in none.
+thiserror.workspace = true
+
+[dev-dependencies]
+# RT-16 as re-amended: the conformance BODIES are rk-ports' own, behind its feature, on a DEV edge only.
+rk-ports = { path = "../rk-ports", features = ["conformance"] }
+# The probe's temporary repository (§7c.15) -- a DEV edge; the Harness adapter takes no normal git edge.
+rk-git = { path = "../rk-git" }
+# The probe's temporary store (§7c.15) -- a dev edge between adapters never reaches rk-kernel's normal graph.
+rk-adapter-sqlite = { path = "../rk-adapter-sqlite" }
+# The golden argv snapshots (§7c.5: one element order, both profiles).
+insta.workspace = true
+# AC-216's matrix: `--bare` is absent from every argv the builder can produce (the matrix, not a grep, is
+# the instrument).
+proptest.workspace = true
+# The must-fail harness (AC-381's case; Slice 5's -- §7c.20 item 4).
+trybuild.workspace = true
+# `tempfile 3` is written directly, as rk-git and rk-kernel write it (no workspace row exists, §7c.19).
+tempfile = "3"
+
+# The spawnable fixture child (s7c §7c.17), compiled FROM rk-containment's source file under a DIFFERENT target
+# name: one bin name in two packages is one output path (target/debug/rk-fixture-child.exe), cargo warns
+# "output filename collision", the two link jobs race and on this box the MSVC linker exits 1104 for both
+# packages [reproduced 2026-09-17]. Tests reach this copy through env!("CARGO_BIN_EXE_rk-fixture-child-claude"),
+# which cargo sets only for the owning package's own tests -- never through std::env::var or current_dir.
+[[bin]]
+name = "rk-fixture-child-claude"
+path = "../rk-containment/tests/fixtures/bin/rk-fixture-child.rs"
+test = false
+bench = false
+doc = false
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

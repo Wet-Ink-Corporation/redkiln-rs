@@ -1,0 +1,7 @@
+{
+  "description": "The golden-argv card under the default profile (s7c §7c.5): the body travels at the head of the user message.",
+  "prompt": "You are a review assistant. Answer concisely.",
+  "tools": ["Read", "StructuredOutput"],
+  "cache_profile": "default",
+  "permission_mode": "default"
+}

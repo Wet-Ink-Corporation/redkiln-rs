@@ -1,0 +1,7 @@
+{
+  "description": "AC-269's red card: a tool list that exposes the answer path (the MCP form of the tool name).",
+  "prompt": "You are a review assistant.",
+  "tools": ["Read", "StructuredOutput", "mcp__redkiln__answer"],
+  "cache_profile": "static",
+  "permission_mode": "default"
+}

@@ -1,0 +1,23 @@
+[
+  "-p",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--model",
+  "sonnet",
+  "--effort",
+  "high",
+  "--agents",
+  "{\"reviewer\":{\"description\":\"A sonnet-tier review card: the effort element is exercised on this one (the tier accepts it).\",\"prompt\":\"You are the review subagent. Read the diff and answer the schema.\",\"tools\":[\"Read\",\"Grep\",\"Glob\",\"StructuredOutput\"],\"model\":\"sonnet\",\"effort\":\"high\",\"permissionMode\":\"bypassPermissions\"}}",
+  "--agent",
+  "reviewer",
+  "--json-schema",
+  "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}},\"required\":[\"ok\"]}",
+  "--permission-mode",
+  "bypassPermissions",
+  "--strict-mcp-config",
+  "--permission-prompts",
+  "none",
+  "--system-prompt",
+  "You are the review subagent. Read the diff and answer the schema."
+]

@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 464a0bcf4dbd729aaee61debde098d6771d1e138c2142de018b95a0064ca8417 # shrinks to (tier, effort, profile, mode, tools, prompt, user, point) = (Haiku, None, Static, "default", ["StructuredOutput"], "", "", ConfigPoint { captured_env: [], ttl: None, harness_binary: "claude", on_version_mismatch: Degraded })
+cc d9a301dd5f70af1ff78497902a7528ffde7104a4f322f6acc1498c0d78e56c14 # shrinks to (tier, effort, profile, mode, tools, prompt, user, point) = (Haiku, None, Static, "default", ["StructuredOutput"], "", "", ConfigPoint { captured_env: [("CLAUDE_CONFIG_DIR", "")], ttl: None, harness_binary: "claude", on_version_mismatch: Refuse })
+cc 1a1c32b0c63673a0801d654c2be9332169b1b2a254ab66f3c85305c18dcaaaa7 # shrinks to (tier, effort, profile, mode, tools, prompt, user, point) = (Haiku, None, Static, "dontAsk", ["StructuredOutput"], "", "", ConfigPoint { captured_env: [], ttl: None, harness_binary: "claude", on_version_mismatch: Refuse })

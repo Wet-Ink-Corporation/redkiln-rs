@@ -1,0 +1,7 @@
+{
+  "description": "AC-205 / AC-417's red card: a tools list that omits StructuredOutput on a schema-bearing dispatch (F20's shape).",
+  "prompt": "You are a review assistant.",
+  "tools": ["Read", "Bash"],
+  "cache_profile": "static",
+  "permission_mode": "default"
+}

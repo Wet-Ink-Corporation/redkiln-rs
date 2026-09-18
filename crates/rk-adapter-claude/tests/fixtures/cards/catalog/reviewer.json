@@ -1,0 +1,7 @@
+{
+  "description": "A sonnet-tier review card: the effort element is exercised on this one (the tier accepts it).",
+  "prompt": "You are the review subagent. Read the diff and answer the schema.",
+  "tools": ["Read", "Grep", "Glob", "StructuredOutput"],
+  "cache_profile": "static",
+  "permission_mode": "bypassPermissions"
+}

@@ -1,0 +1,6 @@
+{
+  "description": "AC-383's red card: no cache_profile.",
+  "prompt": "You are a review assistant.",
+  "tools": ["Read", "StructuredOutput"],
+  "permission_mode": "default"
+}

@@ -1,0 +1,6 @@
+{
+  "description": "AC-493's second red card (PIA-060): no tools key at all.",
+  "prompt": "You are a review assistant.",
+  "cache_profile": "static",
+  "permission_mode": "default"
+}

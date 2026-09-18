@@ -1,0 +1,7 @@
+{
+  "description": "The golden-argv card under the static profile (s7c §7c.5).",
+  "prompt": "You are a review assistant. Answer concisely.",
+  "tools": ["Read", "StructuredOutput"],
+  "cache_profile": "static",
+  "permission_mode": "default"
+}

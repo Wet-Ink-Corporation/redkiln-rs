@@ -65,6 +65,18 @@ proptest   = "1"
 # confines `anyhow` to rk-cli/redkiln-migrate; the five crates 7c adds are the first libraries with error enums
 # large enough to want the derive. 2.x, so a caret range under ADR-0100 decision 2 rather than a pin.
 thiserror  = "2"
+# ADDED 2026-09-18 (Step 7c Slice 4, s7c §7c.19's new-rows column; RT-15): the Harness adapter's async runtime,
+# confined behind sync port methods (ADR-0076) and a dependency of rk-adapter-claude ONLY -- never of
+# rk-containment (ADR-0127 decision 2), never of a closed crate; Checkpoint 7c's `cargo tree -i tokio` line polices
+# it as a ban. The six features are the ones the runner used and the adapter's runtime needs: `rt-multi-thread`
+# (the adapter-owned Runtime `block_on`s from the sync `dispatch`), `process` (the three pipe wrappers --
+# ChildStdin/ChildStdout/ChildStderr::from_std over a std child rk-containment spawned, RT-13), `io-util` (the
+# line reader over them), `time` (the adapter's own timeout arm and the cancel poll interval, §7c.10), `sync`
+# (the channel the drain hands lines over) and `macros` (`select!` over the three-way race). 1.x, so a caret
+# range under ADR-0100 decision 2 rather than a pin; 1.53.1 was ALREADY in Cargo.lock as a transitive of
+# jsonschema's default resolvers [measured 2026-09-17, s7c §7c.1 RT-13], so the row adds tokio-macros and moves
+# nothing else.
+tokio      = { version = "1", features = ["rt-multi-thread", "process", "io-util", "time", "sync", "macros"] }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

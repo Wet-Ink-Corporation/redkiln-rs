@@ -1,0 +1,7 @@
+{
+  "description": "The live probe's card (s7c §7c.15): one haiku dispatch that answers a one-field schema and touches nothing.",
+  "prompt": "You are the redkiln live probe. Answer the JSON schema you were given and do nothing else. Do not read or write any file.",
+  "tools": ["StructuredOutput"],
+  "cache_profile": "static",
+  "permission_mode": "default"
+}

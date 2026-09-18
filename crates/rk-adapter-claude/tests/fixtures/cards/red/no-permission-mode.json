@@ -1,0 +1,6 @@
+{
+  "description": "AC-214's red card: silent on permission_mode — there is no implicit default.",
+  "prompt": "You are a review assistant.",
+  "tools": ["Read", "StructuredOutput"],
+  "cache_profile": "static"
+}

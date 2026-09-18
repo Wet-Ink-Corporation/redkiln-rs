@@ -1,0 +1,8 @@
+{
+  "description": "AC-118 / AC-418's leak: an AUTHORED card carrying the tier the role owns.",
+  "prompt": "You are a review assistant.",
+  "tools": ["Read", "StructuredOutput"],
+  "cache_profile": "static",
+  "permission_mode": "default",
+  "model": "opus"
+}

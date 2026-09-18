@@ -1,0 +1,3 @@
+# The extracted rows are the corpus bytes: never converted on checkout (the corpus carries `* -text` for the
+# same reason). PROVENANCE.md records each file's bytes + sha256, and a CRLF checkout would falsify both.
+*.jsonl -text
