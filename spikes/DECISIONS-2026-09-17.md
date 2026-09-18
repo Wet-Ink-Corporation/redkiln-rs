@@ -193,6 +193,35 @@ the pin the adapter tests against is the one the probe (D17-5) dispatches with.
 
 ---
 
+## D17-12 · `jsonschema`'s workspace row goes `default-features = false` (taken 2026-09-18, before Slice 5)
+
+**The question.** `s7c` §7c.19 recorded that `jsonschema = "=0.56.0"` on the workspace row has its default features ON
+and that turning them off is *"a stage-open change the operator may take, and is not assumed here"*. Slice 4 measured
+the consequence of leaving them on: as a NORMAL edge of `rk-adapter-claude`, 0.56.0's default resolvers (`resolve-http`
+→ `reqwest` → `rustls`, `aws-lc-rs`) enter the shipped graph and `cargo deny check licenses` exits 4 on six licences —
+ISC, MIT-0, CDLA-Permissive-2.0 and the aws-lc pair — that pass today only because cargo-deny ignores dev-only graphs
+(`rk-types` carries the crate as a dev-dependency). ADR-0100 decision 4 and `deny.toml` make a new licence a decision,
+not a default.
+
+**The choice: `jsonschema = { version = "=0.56.0", default-features = false }` on the workspace row.** The adapter
+validates a LOCAL output schema (ADR-0095: one output schema per dispatch, never a remote `$ref`), and `rk-types`'
+validation tests compile local schemas too — no resolver feature is needed anywhere. Measured after the change: `cargo
+test -p rk-types` 67/0; `cargo deny check bans advisories licenses` ok; `reqwest` gone from the graph entirely;
+`cargo tree -i tokio -e normal` names `rk-adapter-claude` alone. Checkpoint 5's row goes provisional in the same
+commit (the root manifest is Step 5's) and is re-run whole.
+
+**Alternative named (rejected).** Allowing the six licences in `deny.toml` with dated rows — faster, but it ships an
+HTTP client and a TLS stack inside a Harness adapter that never makes an HTTP request, and widens the licence set for
+nothing the product uses.
+
+**Also recorded here, because it was found by this re-run.** Slice 3 (`a52c0af`) and Slice 4 (`6c309e2`) each touched
+a Step-5 surface without marking row 5 provisional — Slice 3's `enum Capability { …, ChangeSummary, … }` made
+Checkpoint 5's `ChangeSummary` type-ban fire (it fires on the VARIANT, not the type — reading 3 below), and Slice 4
+added the `tokio` workspace row. Neither re-ran Checkpoint 5; both are re-run and discharged by the commit that carries
+this entry. The lesson lands in `s7c` §7c.19's rule as read: *any* edit to the root manifest is a Step-5 edit.
+
+---
+
 ## Routed at 7c — a value picked, a routing-table row owed in `s7c`, and a **record OWED** for each
 
 Each row below is a **routing, not a decision** (`s7a` §7a.5: *"naming a destination is not routing it there"*).

@@ -415,7 +415,15 @@ test -d crates/rk-types/src || { echo "FAIL: crates/rk-types/src absent"; exit 1
 # The pipe is SPLIT (halts.md shape (c)): the old `$(grep | grep -v)` read a missing crates/ as a clean tree.)
 raw=$(grep -rn 'ChangeSummary' crates/ --include='*.rs'); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the ChangeSummary search could not run (grep rc=$rc; 2 = no such path) — a count of 0 here would be a fake 0"; exit 1; }
-cs=$(printf '%s\n' "$raw" | grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b')
+# (Amended 2026-09-18, reading 3 — PROGRESS §2 D17-1's follow-on, raised at Step 7c Slice 4's Checkpoint 5 re-run: the
+# statement fired on `enum Capability { …, ChangeSummary, … }` and its `Self::ChangeSummary` / `Capability::ChangeSummary`
+# arms in crates/rk-adapter-{sqlite,claude}/src/registry.rs — the capability VOCABULARY's variant for the port method
+# `change_summary` (s7c §7c.7, RT-24), an identifier that is not the rk-ports TYPE and names no shape. The ban is the
+# TYPE's (ADR-0099 clause 5); a guard scoped wrong blocks valid work (golden constraint 9). Two exclusions, both
+# anchored: a path-qualified variant use `::ChangeSummary` and a bare variant declaration line `ChangeSummary,`. A
+# type-position use — `: ChangeSummary`, `-> ChangeSummary`, `<ChangeSummary>`, `ChangeSummary(` — still fires; the
+# synthetic controls below prove both halves. The registry bodies' byte-equality is Checkpoint 7c's, not this line's.)
+cs=$(printf '%s\n' "$raw" | grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b' | grep -vE '::ChangeSummary\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*ChangeSummary,[[:space:]]*$')
 [ -z "$cs" ] || { echo "FAIL: the ChangeSummary TYPE is named in code outside rk-ports (ADR-0099 clause 5; blocked on S-BIN):"; printf '%s\n' "$cs"; exit 1; }   # → silent
 # POSITIVE CONTROL, in two halves. (1) The unfiltered search must still see rk-ports' own newtype, or the search is
 # looking at the wrong tree. (2) The FILTER must still let a code-position use through: run it over rk-ports' own
@@ -423,6 +431,12 @@ cs=$(printf '%s\n' "$raw" | grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]
 printf '%s\n' "$raw" | grep -q '^crates/rk-ports/src/toolchain.rs:[0-9]*:pub struct ChangeSummary(' || { echo "FAIL: rk-ports' own ChangeSummary newtype was not found by the search — the ban above is looking at the wrong tree (it was at crates/rk-ports/src/toolchain.rs:42 on 2026-09-17)"; exit 1; }
 ctl=$(printf '%s\n' "$raw" | grep '^crates/rk-ports/src/toolchain.rs:[0-9]*:pub struct ChangeSummary(' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b')
 [ -n "$ctl" ] || { echo "FAIL: the comment/string filter dropped rk-ports' own definition line — the filter is too wide and the ban above is vacuous"; exit 1; }
+# (3, added 2026-09-18 with reading 3) The two variant exclusions must NOT swallow a type-position use, and MUST admit a
+# path-qualified variant use: two synthetic lines in the grep's own `path:line:content` shape, through the SAME chain.
+syn=$(printf 'x.rs:1:fn f(a: ChangeSummary) -> ChangeSummary { ChangeSummary(()) }\n' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b' | grep -vE '::ChangeSummary\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*ChangeSummary,[[:space:]]*$')
+[ -n "$syn" ] || { echo "FAIL: the reading-3 exclusions swallowed a TYPE-position use of ChangeSummary — the ban is vacuous"; exit 1; }
+syn2=$(printf 'x.rs:2:            Self::ChangeSummary => "",\n' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b' | grep -vE '::ChangeSummary\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*ChangeSummary,[[:space:]]*$')
+[ -z "$syn2" ] || { echo "FAIL: the reading-3 exclusion does not admit a path-qualified variant use — the registry files would fire again"; exit 1; }
 test -f Cargo.toml || { echo "FAIL: no root manifest"; exit 1; }
 meta=$(cargo metadata --format-version 1 --no-deps); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: cargo metadata exited $rc"; exit 1; }
 printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; bad=sorted(p['name'] for p in m['packages'] if any(d['name']=='anyhow' for d in p['dependencies'])); print(bad); sys.exit(1 if bad else 0)" \

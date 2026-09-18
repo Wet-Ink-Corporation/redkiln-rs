@@ -30,7 +30,13 @@ publish = false
 # `<dep>.workspace = true` (the form Checkpoint 6 greps for in rk-git).
 [workspace.dependencies]
 gix        = "=0.87.1"    # exact (ADR-0084, unchanged by ADR-0100); read path only (ADR-0077/0098)
-jsonschema = "=0.56.0"    # exact: weekly cadence. Format validation is OPT-IN — call
+# DEFAULT FEATURES OFF as of 2026-09-18 (Step 7c, DECISIONS-2026-09-17 D17-12, the operator's call s7c §7c.19 reserved
+# to him): with the defaults on, a NORMAL edge from rk-adapter-claude pulls `resolve-http` -> reqwest -> rustls /
+# aws-lc-rs into the shipped graph, and `cargo deny check licenses` refuses six licences (ISC, MIT-0,
+# CDLA-Permissive-2.0, the aws-lc pair) that passed only because cargo-deny ignores dev-only graphs [measured
+# 2026-09-18 at Slice 4]. The adapter validates a LOCAL schema (ADR-0095: one output schema per dispatch, never a
+# remote $ref) and rk-types' validation tests compile local schemas too, so no resolver feature is needed anywhere.
+jsonschema = { version = "=0.56.0", default-features = false }    # exact: weekly cadence. Format validation is OPT-IN — call
                           # .should_validate_formats(true) wherever the design relies on format checks
 rusqlite   = "=0.40.2"    # exact: carries the one-writer semantics ADR-0105 clause 7 depends on
 yaml_serde = "=0.10.7"    # exact; redkiln-migrate ONLY — the one crate that may depend on a YAML reader
