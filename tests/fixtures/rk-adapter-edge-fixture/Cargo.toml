@@ -10,7 +10,7 @@
 # that crate's non-default `adapter-edge-reintroduce` feature:
 #
 #   green:  cargo metadata                                               -> no rk-adapter-* in rk-kernel's RESOLVED graph
-#   RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-sqlite
+#   RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-edge-fixture
 #
 # Both are run from inside `ac484_adapter_edge_fixture`
 # (crates/rk-kernel/tests/it/adapter_edge.rs), which also takes the MANIFEST reading of the same
@@ -33,8 +33,15 @@
 # exactly what AC-484's Verified-by asks of it ("a fixture commit adding `rk-adapter-sqlite` to
 # `rk-kernel` that must fail"). When the real crate lands at 7c it will live under `crates/`, and
 # this one must be renamed or retired then rather than silently shadowed.
+#
+# RENAMED 2026-09-17 at Step 7c's stage-open commit, from `rk-adapter-sqlite` to
+# `rk-adapter-edge-fixture`: Cargo refuses two workspace members with one name, and the real
+# `crates/rk-adapter-sqlite` lands in this stage. The `rk-adapter-` PREFIX is what AC-484's rule
+# keys on (`ADAPTER_CRATE_PREFIX` in crates/rk-kernel/src/adapter_edge.rs), so the fixture still
+# proves what it proved; only the suffix moved. The prose above keeps the old name where it quotes
+# the register.
 [package]
-name = "rk-adapter-sqlite"
+name = "rk-adapter-edge-fixture"
 version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true

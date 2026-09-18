@@ -32,7 +32,8 @@
 //! which of them is missing.
 //!
 //! **[`adapter_edge`], 2026-09-14: AC-484, the last of the five `ac4xx` hand-forwards but one.**
-//! The mechanism is **D-1**: `tests/fixtures/rk-adapter-sqlite/` is a zero-dependency workspace
+//! The mechanism is **D-1**: `tests/fixtures/rk-adapter-edge-fixture/` (renamed from `rk-adapter-sqlite`
+//! at Step 7c, 2026-09-17) is a zero-dependency workspace
 //! member on the `rk-banned-dep`/`rk-clock-read` precedent, and `rk-kernel` carries an **optional**
 //! edge to it behind the non-default `adapter-edge-reintroduce` feature — so the *"fixture commit …
 //! that must fail"* the register asks for is committed and permanent rather than made and reverted,

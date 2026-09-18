@@ -2708,7 +2708,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rk-adapter-sqlite"
+name = "rk-adapter-edge-fixture"
 version = "0.0.0"
 
 [[package]]
@@ -2737,7 +2737,7 @@ name = "rk-kernel"
 version = "0.0.0"
 dependencies = [
  "proptest",
- "rk-adapter-sqlite",
+ "rk-adapter-edge-fixture",
  "rk-git",
  "rk-ports",
  "rk-store",

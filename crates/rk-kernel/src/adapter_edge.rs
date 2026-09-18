@@ -18,7 +18,7 @@
 //!   and `cargo tree` walk.
 //!
 //! D-1 (2026-09-14) puts an **optional, feature-gated** edge from `rk-kernel` to
-//! `tests/fixtures/rk-adapter-sqlite/` so that the criterion's *"an added edge fails"* half is a
+//! `tests/fixtures/rk-adapter-edge-fixture/` (`rk-adapter-sqlite` until 2026-09-17) so that the criterion's *"an added edge fails"* half is a
 //! committed, permanently-checkable fixture rather than a commit somebody makes and reverts. That
 //! edge is therefore **permanently present in the manifest view**, and an assertion written over
 //! `packages[]` would report a violation on a green tree — making AC-484's THEN unprovable and, in

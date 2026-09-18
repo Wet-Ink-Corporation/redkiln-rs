@@ -8,7 +8,7 @@
 //!
 //! ```text
 //! green:  cargo metadata                                               -> no rk-adapter-* in rk-kernel's RESOLVED graph
-//! RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-sqlite
+//! RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-edge-fixture
 //! ```
 //!
 //! **There is deliberately no code here.** Not an empty stub awaiting an implementation — nothing

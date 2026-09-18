@@ -199,8 +199,18 @@ jobs:
       - name: corpus residency (AC-465)
         run: |
           test -f CORPUS_PIN || { echo "FAIL: CORPUS_PIN absent"; exit 1; }
+          # The pin-manifest ALLOWLIST (AC-465's instrument names one), asserted by NAME rather than by silence.
+          # Added 2026-09-17 at Step 7c's stage-open (runbook s7c §7c.17, RT-23 -- a routing; a dated amendment to
+          # AC-465 naming what the allowlist may hold is OWED):
+          #   (a) crates/rk-adapter-claude/tests/fixtures/recorded/*.jsonl -- the EXTRACTED corpus rows the adapter
+          #       tests read (single frames/lines copied out of results/*.jsonl at CORPUS_SHA, each with bytes +
+          #       sha256 in the sibling PROVENANCE.md), never a results file whole;
+          #   (b) rk-kernel's three tracked *.jsonl -- 7b's and 7b-ii's debt, named here as such and NOT folded into
+          #       7c's rows: they pre-date this allowlist and collided with the pathspec while CI had never run.
           bad=$(git ls-files 'spikes/corpus/*' 'spikes/results/*' 'spikes/runner/*' '*.jsonl' \
-                 | grep -v '^spikes/results/instrument-checks/RUNBOOK-instrument.txt$' || true)
+                 | grep -v '^spikes/results/instrument-checks/RUNBOOK-instrument.txt$' \
+                 | grep -vE '^crates/rk-adapter-claude/tests/fixtures/recorded/[^/]+\.jsonl$' \
+                 | grep -vE '^crates/rk-kernel/tests/fixtures/(findings/ac282_f20_golden_transcript|logs/implement-bf1d8cec3b22d288/events|retry/api-retry-rows)\.jsonl$' || true)
           if [ -n "$bad" ]; then
             echo "FAIL: corpus artifacts tracked in the product repo (ADR-0013, AC-465):"
             printf '%s\n' "$bad"
@@ -220,8 +230,12 @@ jobs:
       # criterion is met.
       - name: usage fields are not laundered (AC-362 — armed, vacuous until 7c)
         run: |
+          # Pathspec narrowed 2026-09-17 (Step 7c stage-open, runbook s7c §7c.1 RT-13): `crates/rk-adapter-claude/*`
+          # -> `crates/rk-adapter-claude/src/*`, so the committed POSITIVE CONTROL under that crate's
+          # tests/fixtures/lint-controls/ (the file that carries the banned token on purpose) is not read as a
+          # violation. The register scopes AC-362 to the usage struct's call sites, which live in src/.
           hits=$(git grep -nE 'unwrap_or\(0\)|unwrap_or_default\(\)' -- \
-                 'crates/rk-adapter-claude/*' 'crates/*/src/usage.rs' || true)
+                 'crates/rk-adapter-claude/src/*' 'crates/*/src/usage.rs' || true)
           if [ -n "$hits" ]; then
             echo "FAIL: absent is being read as zero on the usage struct (AC-362):"
             printf '%s\n' "$hits"
@@ -266,22 +280,28 @@ jobs:
           # a non-git child process, and the wider form blocked AC-181, whose GIVEN is literally two
           # redkiln PROCESSES and whose instrument is also R-SQLITE's empirical half. The git rule
           # below is unweakened and stays workspace-wide, tests included.
-          bad=$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
-                | xargs grep -nE 'std::process::Command|tokio::process::Command' \
-                | grep -vE "^${wrapper}:" \
-                | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' || true)
-          if [ -n "$bad" ]; then
-            echo "FAIL: a process::Command outside the one wrapper (ADR-0077:70):"
-            printf '%s\n' "$bad"
-            exit 1
-          fi
-          bad=$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE "^${wrapper}:" || true)
+          #
+          # Narrowed AGAIN on 2026-09-17 (Step 7c's stage-open commit, runbook s7c). The token grep
+          # that stood here (`std::process::Command|tokio::process::Command` over every crate's
+          # src/) was both over-wide and evadable: it fired on ANY qualified spelling in the three
+          # spawning adapters 7c builds (whose children are `claude`, `cargo` and `vitest`, not
+          # git), and a `use std::process::{Command, Stdio};` never carried the token at all. The
+          # real instrument for "no Command outside a warranted site" is clippy.toml's
+          # `disallowed-types` row, which every site answers with a per-site
+          # `#[expect(clippy::disallowed_types, reason = ...)]` (house form:
+          # crates/rk-git/src/git_exec.rs). What THIS step keeps is exactly ADR-0077:70's stated
+          # warrant -- git -- as the `Command::new("git")` check below, and the positive half after it.
+          # 2026-09-17 (Step 7c stage-open, s7c §7c.1 RT-13): the anchored lint-controls exclusion. The adapters'
+          # committed positive controls (crates/<crate>/tests/fixtures/lint-controls/*.rs) carry banned tokens on
+          # purpose -- they are the bans' instruments, not violations. Anchored on the path prefix grep prints.
+          bad=$(git ls-files '*.rs' | xargs grep -n 'Command::new("git")' | grep -vE "^${wrapper}:" \
+                | grep -vE '^crates/[^/]+/tests/fixtures/lint-controls/' || true)
           if [ -n "$bad" ]; then
             echo "FAIL: Command::new(\"git\") outside the wrapper:"
             printf '%s\n' "$bad"
             exit 1
           fi
-          # The POSITIVE half. Both checks above pass on a workspace with no git exec at all --
+          # The POSITIVE half. The check above (two, until 2026-09-17) passes on a workspace with no git exec at all --
           # Halt 8 shape (g), a pass condition that is the absence of output. This asserts the
           # wrapper really does invoke git, so the bans above are guarding something.
           n=$(grep -c 'Command::new("git")' "$wrapper")

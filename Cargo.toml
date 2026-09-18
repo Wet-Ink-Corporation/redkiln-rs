@@ -52,6 +52,10 @@ trybuild   = "1"
 # apply; dev-only in rk-kernel. `rand::random`/`thread_rng` stay on clippy.toml's denylist for OUR code; proptest's
 # own RNG is seeded and its use is inside the crate, not ours.
 proptest   = "1"
+# ADDED 2026-09-17 (Step 7c stage-open, s7c §7c.19): ADR-0102 decision 6 puts `thiserror` in every library and
+# confines `anyhow` to rk-cli/redkiln-migrate; the five crates 7c adds are the first libraries with error enums
+# large enough to want the derive. 2.x, so a caret range under ADR-0100 decision 2 rather than a pin.
+thiserror  = "2"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

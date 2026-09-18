@@ -69,7 +69,7 @@ select-clock-reintroduce = []
 # cannot -- pointed at this crate's dependency GRAPH rather than at its source:
 #
 #   green:  cargo metadata                                               -> no rk-adapter-* in this crate's RESOLVED graph
-#   RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-sqlite
+#   RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-edge-fixture
 #
 # UNLIKE THE THREE CLOCK FEATURES ABOVE, THIS ONE TURNS NO GATE RED, and that is a property of the
 # instrument rather than a weakness. Those three reintroduce a banned METHOD, which clippy sees, so
@@ -91,7 +91,7 @@ select-clock-reintroduce = []
 # written over `packages[]` would report a violation on a green tree and would be deleted rather
 # than fixed. `crates/rk-kernel/src/adapter_edge.rs` reads `resolve` and offers the manifest reading
 # only so the test can assert the two DISAGREE.
-adapter-edge-reintroduce = ["dep:rk-adapter-sqlite"]
+adapter-edge-reintroduce = ["dep:rk-adapter-edge-fixture"]
 
 [dependencies]
 # ALL FOUR ARE NOW CALLED, as of Slice 4h (2026-09-14). The paragraph that stood here said "ONE OF
@@ -158,12 +158,14 @@ serde_json.workspace = true
 # this package. It is the positive control for the paragraph immediately below: without it, "no
 # `rk-adapter-*` edge" is a proposition nothing in the tree has ever been seen to falsify.
 #
-# The target crate is tests/fixtures/rk-adapter-sqlite/ -- a workspace MEMBER with ZERO
+# The target crate is tests/fixtures/rk-adapter-edge-fixture/ -- a workspace MEMBER with ZERO
 # dependencies. Zero is required, not tidy: an optional dependency enters Cargo.lock either way and
 # `cargo audit` / `cargo deny` read the lock, and AC-528 forbids an async runtime anywhere in this
 # crate's resolved graph. That fixture is NOT the real adapter; Step 7c's will live under `crates/`,
 # and this one is renamed or retired then rather than silently shadowed. Its own Cargo.toml says so.
-rk-adapter-sqlite = { path = "../../tests/fixtures/rk-adapter-sqlite", optional = true }
+# Renamed 2026-09-17 (Step 7c stage-open): the fixture was `rk-adapter-sqlite` until the real crate of
+# that name landed under crates/; the `rk-adapter-` prefix is what the rule keys on, so nothing it proves moved.
+rk-adapter-edge-fixture = { path = "../../tests/fixtures/rk-adapter-edge-fixture", optional = true }
 
 # WHAT IS NOT HERE IS THE POINT (AC-528, AC-484; ADR-0076). No async runtime -- `tokio`,
 # `async-std`, `futures` or `async-trait` -- directly or transitively, and no `rk-adapter-*` edge,
@@ -173,7 +175,7 @@ rk-adapter-sqlite = { path = "../../tests/fixtures/rk-adapter-sqlite", optional 
 # sees direct dependencies only.
 #
 # **Amended 2026-09-14 (D-1), and the amendment is the second half of that last sentence.** This
-# table now DOES carry an `rk-adapter-*` line -- the optional `rk-adapter-sqlite` above -- and the
+# table now DOES carry an `rk-adapter-*` line -- the optional `rk-adapter-edge-fixture` above -- and the
 # sentence about it holds precisely because the reading is the resolved graph: the optional edge is
 # absent from `resolve.nodes[]` and from `cargo tree -p rk-kernel -e normal` unless
 # `adapter-edge-reintroduce` is selected. It IS present in `cargo metadata`'s

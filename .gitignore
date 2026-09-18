@@ -45,6 +45,10 @@ spikes/results/p8-state/
 # Extra build dirs cut when target/ was locked by a live run.
 spikes/runner/target-*/
 
+# Step 7c (s7c §7c.14): the predecessor checkout AC-334's real-toolchain flip materialises ONCE, locally, from
+# the pinned bundle -- under target/, which the first row already ignores; this row names the intent.
+target/predecessor-*/
+
 spikes/corpus/
 spikes/runner/
 spikes/results/*

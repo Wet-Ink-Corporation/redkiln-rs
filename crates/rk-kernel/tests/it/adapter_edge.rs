@@ -7,7 +7,8 @@
 //! dependency-graph assertion in CI; a fixture commit adding `rk-adapter-sqlite` to `rk-kernel`
 //! that must fail; the same `deny.toml` `[bans].deny` list AC-005 names."*
 //!
-//! The mechanism here is **D-1, taken 2026-09-14**: `tests/fixtures/rk-adapter-sqlite/` is a
+//! The mechanism here is **D-1, taken 2026-09-14**: `tests/fixtures/rk-adapter-edge-fixture/` (named
+//! `rk-adapter-sqlite` until Step 7c's stage-open commit on 2026-09-17) is a
 //! minimal feature-gated workspace MEMBER on the `tests/fixtures/rk-banned-dep/` and
 //! `tests/fixtures/rk-clock-read/` precedent (DECISIONS-2026-09-12 E4), and `rk-kernel` carries an
 //! **optional** edge to it behind the non-default `adapter-edge-reintroduce` feature. The
@@ -17,7 +18,7 @@
 //!
 //! ```text
 //! green:  cargo metadata                                             -> no rk-adapter-* in rk-kernel's RESOLVED graph
-//! RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-sqlite
+//! RED:    cargo metadata --features rk-kernel/adapter-edge-reintroduce -> the assertion fails NAMING rk-adapter-edge-fixture
 //! ```
 //!
 //! # 🛑 THE SUBTLETY THAT IS THE WHOLE TEST: `resolve`, NEVER `packages`
@@ -105,7 +106,9 @@ use rk_kernel::adapter_edge::{
 /// The fixture crate D-1 names. Written out as a constant because three different assertions below
 /// have to agree about the spelling, and the hyphen is the half AC-484's *"naming the adapter
 /// crate"* turns on.
-const FIXTURE_CRATE: &str = "rk-adapter-sqlite";
+// Renamed 2026-09-17 at Step 7c's stage-open commit (was `rk-adapter-sqlite`, until the real crate of
+// that name landed under crates/). The `rk-adapter-` prefix is the half the rule keys on.
+const FIXTURE_CRATE: &str = "rk-adapter-edge-fixture";
 
 /// The non-default feature of `rk-kernel` that re-introduces the edge.
 const REINTRODUCE: &str = "rk-kernel/adapter-edge-reintroduce";
