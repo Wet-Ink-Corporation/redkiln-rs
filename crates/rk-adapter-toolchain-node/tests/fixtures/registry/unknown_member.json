@@ -1,0 +1,8 @@
+[
+  {
+    "capability": "change_summary",
+    "verified_on": "2026-09-18",
+    "probe": { "none": { "reason": "S-BIN is unrun (D17-9)" } },
+    "adopted": true
+  }
+]

@@ -1,0 +1,79 @@
+# The Rust TECHNOLOGY pack -- a Step 7c FIXTURE (ADR-0094 decision 1: "A Rust technology pack binds the
+# adapter's artifact kinds (`TestReport`, `Changeset`) per ADR-0029"; s7c section 7c.14). No technology
+# pack of any kind exists on the tree (the twelve under spikes/p9/packs/ are PROCESS packs); this one
+# lives here until 7e installs it into .redkiln/. It is read in TESTS ONLY, through
+# rk_kernel::toml_subset over the dev edge (`rust_pack_fixture_binds_kinds_per_adr0029`); the adapter's
+# library parses no pack, and the runtime pack reader is 7d/7e's. Every value sits on one line -- the
+# subset that reader accepts (crates/rk-kernel/src/toml_subset.rs).
+#
+# Its shape is ADR-0029's four clauses, one table each, keyed so the test can name the clause it reads:
+#   (i)   facts -- computed PER ITEM from affected paths via Toolchain::classify, never per repo;
+#   (ii)  producers for EXISTING artifact kinds keyed to `rust` (the two ADR-0094 names; both are
+#         `keyed_by = "toolchain"` in spikes/p9/artifacts.toml, so amendment 43's per-toolchain
+#         instance rule -- ADR-0073 -- applies, not the withdrawn specificity tie-break);
+#   (iii) contributed kinds and ADDITIVE `contribute` rows at a declared stage;
+#   (iv)  timeout_secs / cost_class overrides per activity.
+# A technology pack adds no stage, removes no baseline artifact and edits no `require` row (ADR-0029's
+# forbids): none of those keys appears below.
+
+[pack]
+id = "rust"
+kind = "technology"
+toolchain = "rust"
+adapter = "rk-adapter-toolchain-rust"
+# ADR-0094 decision 1's spelling of the two commands, recorded on the report as the vector actually run.
+build = "cargo build --workspace"
+test = "cargo test --workspace"
+
+# (i) facts: classify is per path, per item.
+[facts]
+toolchains = "per-item from Toolchain::classify over the item's affected paths (ADR-0029 i)"
+change_kinds = ["text", "binary", "generated"]
+binary_change = "any affected path classifies Binary"
+
+# (ii) producers for existing kinds, keyed to `rust`. The Rust TYPE behind TestReport is
+# rk_types::verify::VerifyReport (the adapter's inherent verify_report), never a TestReport struct.
+[[producer]]
+kind = "TestReport"
+toolchain = "rust"
+run = "toolchain:test"
+type = "rk_types::verify::VerifyReport"
+
+[[producer]]
+kind = "Changeset"
+toolchain = "rust"
+run = "toolchain:change_summary"
+# S-BIN unrun: the adapter answers Unsupported from its dated registry row (D17-9, AC-497).
+status = "unsupported-until-S-BIN"
+
+# (iii) a contributed kind and an additive contribute row at a declared stage.
+[[artifact]]
+kind = "CargoMetadata"
+source = "activity"
+schema = "CargoMetadata"
+keyed_by = "toolchain"
+
+[[contribute.verify]]
+when = "'rust' in toolchains"
+artifacts = ["CargoMetadata"]
+
+# (iv) per-activity overrides.
+[[override]]
+activity = "verify"
+timeout_secs = 1800
+cost_class = "M"
+
+# AC-337's declaration, consumed through rk_ports::toolchain::MutationFeasibility::declared
+# (D17-3: the key spelling `feasible` / `reason` is a READING, not a decision; the record that fixes it
+# is the pack schema's). Rust is feasible and carries no reason -- a reason on `feasible = true` is refused.
+[mutation]
+feasible = true
+
+# AC-213's HUMAN input (s7c section 7c.14): `${toolchain.test_timeout}` is what twenty catalog
+# activities and four rk-kernel catalog fixtures declare on their toolchain:test steps [measured
+# 2026-09-17 by grep -rl]. The pack carries the SLOT; the value is a human's, entered at a gate the
+# named record will carry, and NO CI job passes or fails on it (section 7c.22). The placeholder is
+# not a number so nothing downstream can read it as one.
+[toolchain]
+test_timeout = "${gate_record.test_timeout}"
+gate_record = "OWED -- AC-213's human-gate record for the Rust test timeout; none exists at 7c"

@@ -2219,6 +2219,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "rk-adapter-toolchain-node"
+version = "0.0.0"
+dependencies = [
+ "rk-containment",
+ "rk-git",
+ "rk-kernel",
+ "rk-ports",
+ "rk-types",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
+name = "rk-adapter-toolchain-rust"
+version = "0.0.0"
+dependencies = [
+ "rk-containment",
+ "rk-git",
+ "rk-kernel",
+ "rk-ports",
+ "rk-types",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "rk-banned-dep"
 version = "0.0.0"
 dependencies = [

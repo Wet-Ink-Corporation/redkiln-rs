@@ -1,0 +1,74 @@
+[package]
+name = "rk-adapter-toolchain-rust"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Same contract as the other members (AC-464/PIA-002; s7c §7c.19): corpus-bound tests compile behind
+# this feature and run as `cargo test --workspace --features corpus` on a box holding redkiln-corpus at
+# CORPUS_PIN. Declared EMPTY: AC-334's Rust half is ARMED (no Rust ordering-inversion fixture is
+# authored -- s7c §7c.14), so this crate has zero corpus-bound tests; the feature must EXIST or a
+# `--features corpus` invocation naming this package exits 101 (the reason is written out at
+# crates/rk-types/Cargo.toml).
+corpus = []
+
+# The manifest row s7c §7c.19 fixes for this crate. The ONE addition beyond that row is the
+# `[[bin]] rk-argv-wrapper-rust` below (AC-325's wrapper fixture, which §7c.17 sketched as a `.cmd`
+# under the Node `project/` and §7c.19's row does not list) -- a deviation the Slice 6 commit body
+# names for the stage owner to write into both sections, the way rk-adapter-claude's second
+# [[bin]] is written into §7c.19.
+[dependencies]
+rk-types = { path = "../rk-types" }
+rk-ports = { path = "../rk-ports" }
+# The project root is handed to the adapter as a path git accepts (rk_git::path::WorktreePath -- the
+# drive-letter form, never `\?\`), the same type the SQLite adapter takes; no git is spawned by this
+# crate (ADR-0077 confines git to rk-git's one wrapper, and `change_summary` -- the one method that
+# would read a range -- answers Unsupported from the registry, D17-9).
+rk-git = { path = "../rk-git" }
+# ADR-0127 decision 3: every child is spawned THROUGH rk-containment (run_bounded, the token-less
+# bounded run of decision 2); the adapter builds a Command and hands it over.
+rk-containment = { path = "../rk-containment" }
+# The registry's `derive(Deserialize)` + `deny_unknown_fields` (RT-24, AC-489) -- serde_json does not
+# provide the derive macro (§7c.19).
+serde.workspace = true
+# The registry text (JSON). No `cargo metadata` is read anywhere in this crate: `classify` is a
+# path-and-bytes rule and `change_summary` -- the method ADR-0094 d1 puts "over cargo metadata and
+# the changeset" -- answers Unsupported until S-BIN (D17-9); when that body lands, `cargo metadata
+# --format-version 1` is read through THIS row, not a cargo_metadata crate (§7c.14: no new dep).
+serde_json.workspace = true
+# ADR-0102 decision 6: thiserror in every library, anyhow in none.
+thiserror.workspace = true
+
+[dev-dependencies]
+# RT-16 as re-amended: the conformance BODIES are rk-ports' own, behind its feature, on a DEV edge only.
+rk-ports = { path = "../rk-ports", features = ["conformance"] }
+# The Rust technology pack FIXTURE is read in tests only, through rk_kernel::toml_subset (§7c.14: the
+# workspace has no TOML dependency and the one in-tree reader is the kernel's, `pub`). A dev edge is the
+# allowed direction; AC-484 forbids the reverse and Checkpoint 7c walks rk-kernel's normal graph.
+# AC-334's Rust half stays ARMED; this edge is for the pack.
+rk-kernel = { path = "../rk-kernel" }
+# `tempfile 3` is written directly, as rk-git and rk-kernel write it (no workspace row exists, §7c.19).
+tempfile = "3"
+
+# AC-325's wrapper fixture (s7c §7c.14, §7c.17): a std-only program that logs the argv the OS handed it
+# and runs the real toolchain program with every argument forwarded or with the tail dropped. Compiled
+# from THIS crate's fixture source; the Node crate compiles the same file under a different target name
+# (one bin name in two packages is one output path and a link race -- the reason rk-adapter-claude's
+# second [[bin]] gives). Tests reach it through env!("CARGO_BIN_EXE_rk-argv-wrapper-rust").
+[[bin]]
+name = "rk-argv-wrapper-rust"
+path = "tests/fixtures/wrapper/rk-argv-wrapper.rs"
+test = false
+bench = false
+doc = false
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

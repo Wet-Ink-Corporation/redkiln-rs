@@ -1,0 +1,13 @@
+{
+  "name": "rk-toolchain-node-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Node toolchain adapter's fixture project (s7c section 7c.14, 7c.17): one vitest file with two passing tests (one the AC-329 decoy, one filterable by -t), a skip-marked failing test and a skip-marked slow test reachable by -t only; node_modules is git-ignored and installed ONCE by `pnpm install --frozen-lockfile --dir <this dir>` before the block.",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "22.20.0",
+    "prettier": "3.9.1",
+    "typescript": "5.9.3",
+    "vitest": "2.1.9"
+  }
+}

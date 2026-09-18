@@ -1,0 +1,41 @@
+# The Rust toolchain adapter's FIXTURE PROJECT (s7c §7c.14, §7c.17): the crate every
+# rk-adapter-toolchain-rust test and the AC-499 real row run `cargo` IN -- never the workspace
+# running the checkpoint (a Rust adapter over D:/repos/redkiln-rs would run `cargo test --workspace`
+# from inside Checkpoint 7c's own `cargo test --workspace`, re-entering the real row without bound on
+# the same target dir).
+#
+# It is its OWN workspace root: the empty [workspace] table below stops cargo's upward walk at this
+# file, so this package is never "a package that believes it's in a workspace when it's not" against
+# the repository root's members glob -- without touching the root `exclude` line Checkpoint 5 greps
+# literally. It sits outside the root's `tests/fixtures/*` member glob (it is under crates/<crate>/tests/).
+# The adapter sets CARGO_TARGET_DIR to a per-test temp dir, so no target/ is ever written here and
+# concurrent tests share no build lock. Cargo.lock is committed so a run leaves the tree clean.
+#
+# The AC-329 DECOY is in two places, one per stream. tests/zz_decoy.rs (a `harness = false` test
+# target, declared below) prints the prose summary line and a per-test `... ok` line to STDOUT --
+# the stream the adapter reads for libtest's `: test` lines -- on every `cargo test` here, the
+# `--list` passes included (cargo hands a harness-less binary the libtest arguments, which it
+# ignores, and passes its stdout through) [measured 2026-09-18]. build.rs prints the same two lines
+# as `cargo:warning=` lines, which cargo echoes on STDERR on every build of this package. So a
+# summary-line parser over either stream reports 99 (or 101, summing `N passed`), an unanchored
+# `... ok` line-counter over-counts, and libtest's `--list` reports 2 (s7c §7c.14) -- neither
+# decoy line ends in `: test`.
+[package]
+name = "rk-toolchain-rust-fixture"
+version = "0.0.0"
+edition = "2024"
+publish = false
+build = "build.rs"
+
+[workspace]
+
+[dependencies]
+
+[lib]
+doctest = false
+
+# The AC-329 decoy on STDOUT (tests/zz_decoy.rs): a harness-less test target whose prose reaches the
+# stream the adapter reads, on the run and on the `--list` passes alike; build.rs's copy is stderr's.
+[[test]]
+name = "zz_decoy"
+harness = false

@@ -1,0 +1,6 @@
+# Installed ONCE, locally, by `pnpm install --frozen-lockfile --dir <this dir>` before Checkpoint 7c
+# (s7c section 7c.14); never tracked. The lockfile IS tracked.
+node_modules/
+# S-CANCEL-WIN's vitest arm (O-10; s7c section 7c.16) copies the suite into a temp tree INSIDE this
+# project so vitest resolves node_modules by walking up; the temp tree is removed by TempDir::close().
+.s-cancel-win-*/

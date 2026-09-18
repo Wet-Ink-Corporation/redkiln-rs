@@ -1,0 +1,71 @@
+[package]
+name = "rk-adapter-toolchain-node"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Same contract as the other members (AC-464/PIA-002; s7c §7c.19): corpus-bound tests compile behind
+# this feature and run on a box holding redkiln-corpus at CORPUS_PIN. NOT empty here: AC-334's real row
+# is the NODE adapter's (the F25 fixture is a vitest suite -- §7c.14), and `#[cfg(feature = "corpus")]
+# mod ac334;` in tests/it is what this feature gates -- the TEST MODULE, never the rk-kernel dev edge
+# below (cargo refuses `optional = true` on [dev-dependencies]). Run as
+# `cargo test -p rk-adapter-toolchain-node --features corpus -- ac334_flip_predicate_real_toolchain`
+# over the predecessor checkout the preflight materialised ONCE at target/predecessor-f21f55fc.
+corpus = []
+
+# The manifest row s7c §7c.19 fixes for this crate. The ONE addition beyond that row is the
+# `[[bin]] rk-argv-wrapper-node` below (AC-325's wrapper fixture, compiled from the Rust crate's
+# source; §7c.17 sketched it as a `.cmd` under this crate's `project/` and §7c.19's row does not
+# list it) -- a deviation the Slice 6 commit body names for the stage owner to write into both
+# sections, the way rk-adapter-claude's second [[bin]] is written into §7c.19.
+[dependencies]
+rk-types = { path = "../rk-types" }
+rk-ports = { path = "../rk-ports" }
+# The project root is handed to the adapter as a path git accepts (rk_git::path::WorktreePath -- the
+# drive-letter form, never `\?\`), the same type the SQLite adapter takes; no git is spawned by this
+# crate (ADR-0077 confines git to rk-git's one wrapper; the AC-334 test's `git apply` / `apply -R` go
+# through rk_git::git_exec::run in tests/it, and `change_summary` answers Unsupported, D17-9).
+rk-git = { path = "../rk-git" }
+# ADR-0127 decision 3: every child is spawned THROUGH rk-containment (run_bounded, the token-less
+# bounded run of decision 2); the adapter builds a Command and hands it over.
+rk-containment = { path = "../rk-containment" }
+# The registry's `derive(Deserialize)` + `deny_unknown_fields` (RT-24, AC-489) -- serde_json does not
+# provide the derive macro (§7c.19).
+serde.workspace = true
+# The vitest JSON reporter file -- the ONE structured count source (AC-329, §7c.14) -- and the registry.
+serde_json.workspace = true
+# ADR-0102 decision 6: thiserror in every library, anyhow in none.
+thiserror.workspace = true
+
+[dev-dependencies]
+# RT-16 as re-amended: the conformance BODIES are rk-ports' own, behind its feature, on a DEV edge only.
+rk-ports = { path = "../rk-ports", features = ["conformance"] }
+# AC-334's real row replays the kernel's F25 fixture (record.json, inversion.patch) and drives its
+# flip predicate over what the real adapter measured. An UNCONDITIONAL dev edge (§7c.14: cargo refuses
+# `optional = true` on [dev-dependencies]), used only by `#[cfg(feature = "corpus")] mod ac334;`; dev
+# edges are not normal edges, so `cargo tree -p rk-kernel -e normal` and the AC-484 walk are untouched.
+rk-kernel = { path = "../rk-kernel" }
+# `tempfile 3` is written directly, as rk-git and rk-kernel write it (no workspace row exists, §7c.19).
+tempfile = "3"
+
+# AC-325's wrapper fixture, compiled from the Rust crate's ONE source file under a DIFFERENT target
+# name (one bin name in two packages is one output path and a link race -- s7c §7c.17's reason for
+# rk-adapter-claude's second [[bin]]). Tests reach this copy through
+# env!("CARGO_BIN_EXE_rk-argv-wrapper-node"), never std::env::var.
+[[bin]]
+name = "rk-argv-wrapper-node"
+path = "../rk-adapter-toolchain-rust/tests/fixtures/wrapper/rk-argv-wrapper.rs"
+test = false
+bench = false
+doc = false
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

@@ -66,6 +66,18 @@ use crate::source_parse::Source;
 /// CI's; `ac360_one_event_per_termination_path` is the adapter's own count of one
 /// `dispatch_completed` per path, which this body does not assert (the module doc). **Never wired
 /// into CI as a matrix row** (that instrument is ARMED, `s7c` §7c.22).
+///
+/// **Node and Rust (Slice 6, 2026-09-18)**: `port_conformance_real_row_node` /
+/// `port_conformance_real_row_rust` in the two toolchain crates run `conform_toolchain` over the
+/// REAL adapters and their committed `project/` fixtures (`s7c` §7c.14, §7c.17) — never over the
+/// workspace running the checkpoint — with `expected_test_count = 2` (the two passing tests, the
+/// AC-329 decoy among them; the failing and slow tests reachable only by selection), the row's own
+/// `(path, classification)` pairs, and the capability arm fed from each crate's registry
+/// (`change_summary` → `Unsupported`, D17-9); each adds a spawn marker the fixture's own test
+/// writes. AC-334's real row is the NODE adapter's (`ac334_flip_predicate_real_toolchain`, behind
+/// `--features corpus`, over the predecessor checkout the preflight materialised once); the Rust
+/// half stays ARMED (no Rust ordering-inversion fixture exists). The nextest presence arm is ARMED
+/// (nextest absent on this box); the fallback is what the Rust row records.
 const PHASE_1_REAL_ROWS: [(&str, &str, &[&str]); 4] = [
     (
         "EventStore",
@@ -88,8 +100,26 @@ const PHASE_1_REAL_ROWS: [(&str, &str, &[&str]); 4] = [
             "live_dispatch_probe: the same body over the real CLI, #[ignore] behind --features live, local-only (s7c section 7c.15; never CI)",
         ],
     ),
-    ("Toolchain", "Node", &[]),
-    ("Toolchain", "Rust", &[]),
+    (
+        "Toolchain",
+        "Node",
+        &[
+            "port_conformance_real_row_node: conform_toolchain core over the real NodeToolchain and the fixture project (detect true; build = npx.cmd tsc --noEmit; test(&[]) = 2 from the vitest JSON reporter file; lint = npx.cmd prettier --check .; classify over the row's own pairs)",
+            "port_conformance_real_row_node: change_summary -> Err(Unsupported { capability: \"change_summary\" }) from the dated registry row (D17-9)",
+            "port_conformance_real_row_node: a spawn marker written by the fixture's own test (Ok(2) without a spawn is red)",
+            "ac334_flip_predicate_real_toolchain: the F25 inversion over the predecessor checkout, applied and reverted by git apply, mutation-survived against the real adapter (corpus feature, local-only; never CI)",
+        ],
+    ),
+    (
+        "Toolchain",
+        "Rust",
+        &[
+            "port_conformance_real_row_rust: conform_toolchain core over the real RustToolchain and the fixture project (detect true; build = cargo build --workspace; test(&[]) = 2 from libtest's --list, RT-26; lint = cargo clippy --workspace --all-targets; classify over the row's own pairs)",
+            "port_conformance_real_row_rust: change_summary -> Err(Unsupported { capability: \"change_summary\" }) from the dated registry row (D17-9)",
+            "port_conformance_real_row_rust: a spawn marker written by the fixture's own test (Ok(2) without a spawn is red)",
+            "nextest_fallback_recorded_on_report: the recorded argv is the cargo test --workspace fallback (nextest absent on this box; the presence arm ARMED)",
+        ],
+    ),
 ];
 
 // ---------------------------------------------------------------- the matrix
