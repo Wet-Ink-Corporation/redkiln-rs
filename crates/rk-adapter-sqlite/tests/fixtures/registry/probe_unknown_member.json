@@ -1,0 +1,12 @@
+[
+  {
+    "capability": "snapshot",
+    "verified_on": "2026-09-18",
+    "probe": { "none": { "reason": "the Snapshot contents record is OWED (D17-9)" } }
+  },
+  {
+    "capability": "rebuild",
+    "verified_on": "2026-09-18",
+    "probe": { "recorded": { "source": "nothing recorded this", "extra": 1 } }
+  }
+]

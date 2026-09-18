@@ -1,0 +1,54 @@
+[package]
+name = "rk-adapter-sqlite"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Same contract as the other members (AC-464/PIA-002; s7c §7c.19): corpus-bound tests compile behind
+# this feature and run as `cargo test --workspace --features corpus` on a box holding redkiln-corpus at
+# CORPUS_PIN. Declared EMPTY: Slice 3 has zero corpus-bound tests -- every store half runs over a
+# temporary repository built in the test -- but the feature must EXIST or a `--features corpus`
+# invocation naming this package exits 101 (the reason is written out at crates/rk-types/Cargo.toml).
+corpus = []
+
+# The manifest row s7c §7c.19 fixes for this crate, and nothing beyond it.
+#
+# `rusqlite` is NOT a direct dependency: the adapter holds `rk_store::conn::Writer` and opens
+# `rk_store::conn::Reader`s, and every SQL statement it runs goes through those two types' inherent
+# methods (ADR-0105 clause 7 -- rk-store owns the connection discipline; ADR-0084's `bundled` is
+# inherited through it, the reason crates/rk-store/Cargo.toml gives). Naming `rusqlite::` here would
+# be a second connection surface.
+[dependencies]
+rk-types = { path = "../rk-types" }
+rk-ports = { path = "../rk-ports" }
+rk-store = { path = "../rk-store" }
+# RT-17: `git rev-parse --git-common-dir` and `git log --max-parents=0` through ADR-0077's one wrapper.
+rk-git = { path = "../rk-git" }
+# The registry's `derive(Deserialize)` + `deny_unknown_fields` (RT-24, AC-489) -- serde_json does not
+# provide the derive macro (§7c.19).
+serde.workspace = true
+# `t2_event.payload TEXT` <-> the `serde_json::Value` `rk_types::event::Event` carries.
+serde_json.workspace = true
+# ADR-0102 decision 6: thiserror in every library, anyhow in none.
+thiserror.workspace = true
+
+[dev-dependencies]
+# RT-16 as re-amended: the conformance BODIES are rk-ports' own, behind its feature, on a DEV edge only.
+rk-ports = { path = "../rk-ports", features = ["conformance"] }
+# AC-243's real-store replay re-runs the kernel's gate fixture over this store. A dev edge is the
+# allowed direction; AC-484 forbids the reverse and Checkpoint 7c walks rk-kernel's normal graph.
+rk-kernel = { path = "../rk-kernel" }
+# The integration binary sees the normal edges above (rk-types, rk-store, rk-git, serde_json)
+# without a second row here — §7c.19's dev set is these three and nothing else.
+tempfile = "3"
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

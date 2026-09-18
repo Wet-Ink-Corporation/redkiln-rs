@@ -2712,6 +2712,21 @@ name = "rk-adapter-edge-fixture"
 version = "0.0.0"
 
 [[package]]
+name = "rk-adapter-sqlite"
+version = "0.0.0"
+dependencies = [
+ "rk-git",
+ "rk-kernel",
+ "rk-ports",
+ "rk-store",
+ "rk-types",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "rk-banned-dep"
 version = "0.0.0"
 dependencies = [

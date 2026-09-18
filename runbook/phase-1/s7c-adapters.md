@@ -1215,7 +1215,7 @@ root_commit, common_dir, schema_version }` needs two git answers the adapter tak
 ["log", "--max-parents=0", "--format=%H"])`, the first line of which is the root commit** (`GitOp` has no `rev-list`;
 `run` injects the verb only for `InterpretTrailers`, so the verb is in `args` as every caller spells it [measured
 2026-09-17]); every fixture repository `ac369_…`/`ac370_…` build therefore carries **at least one commit**, or
-`Log` prints nothing and the open refuses for a fixture reason — and **that** is what
+`Log` prints nothing and the open refuses for a fixture reason *(measured 2026-09-18 at Slice 3 on git 2.55: `git log --max-parents=0` in a repository with no commit exits NON-ZERO rather than printing nothing, so the refusal is `StoreOpenError::Git { op: "log --max-parents=0" }` and `NoRootCommit` is the guard with no observed producer — `open_refuses_a_repository_with_no_commit` asserts the refusal and that no `redkiln/` directory or store file was created)* — and **that** is what
 `ac365_missing_store_file_recreated` asserts (an `INSERT INTO t2_event` on a fresh file fails without it). `append`
 inserts a `t2_event(kind, payload, anchor_sha)` row; `query` returns ordered by id and `ByItem` matches `VecStore`
 (routed); `snapshot`/`rebuild` return `Unsupported` from a dated registry entry (routed, §7c.1). The store path is
@@ -1282,7 +1282,7 @@ assertions.
   common-dir, schema version, harness versions) do not match the repository it is opened against / WHEN the store is
   opened / THEN the open is refused with a typed error and nothing is written / AND no "adopt this store" fallback
   path exists."* *Verified by:* *"a unit test opening a store against a second fixture repo; a `doctor` rule-table
-  row."* Step 6's `rk_identity` table is the surface.
+  row."* Step 6's `rk_identity` table is the surface. *(Two limits recorded 2026-09-18 at Slice 3, RAISED in §7c.22: (a) the sqlite half discharges the root-commit and schema-version mismatches; the common dir is STAMPED and named in the refusal but not compared, and the harness versions have no column in `0001_initial.sql` — a moved-repository policy and the harness-version column are a dated record's, OWED; (b) `git log --max-parents=0` is branch-dependent — a worktree checked out on an orphan branch, or a shallow clone's boundary commit, yields a different "root" and trips AC-369 against AC-370; the root taken is the one reachable from HEAD, and a multi-root rule (`--all` with a deterministic pick, or a typed refusal naming every root) is a dated record's, OWED — RT-17.)*
 - **AC-370 (three-worktree half)** — BINDING; `doctor` row ARMED to 7d. *"GIVEN a repository with one or more linked
   worktrees / WHEN any worktree opens the store / THEN it opens exactly one store located at `git rev-parse
   --git-common-dir`/redkiln/ / AND a store file discovered under a linked worktree's own `.git` directory is reported
@@ -3126,6 +3126,11 @@ its reason.**
 **RAISED, NOT SETTLED — allocation questions this file may not decide** (`00-preamble.md`; `s7a` §7a.11), each ending in
 an OWED record and recorded in `PROGRESS.md` §2:
 
+- **AC-369's sqlite half is partial, and the root commit is branch-dependent** *(added 2026-09-18 at Slice 3)*: the
+  store compares root commit + schema version, stamps the common dir without comparing it, and has no harness-version
+  column (`0001_initial.sql`); `git log --max-parents=0` answers per branch (orphan branches, shallow clones). A
+  moved-repository policy, the harness-version column and a multi-root rule are one dated record's — **OWED** (RT-17;
+  `PROGRESS.md` §2 R-23).
 - **The routing table's open rows** (§7c.1) — **the records OWED, listed by id so the count reproduces off the
   list and not off arithmetic** (the first form of this bullet did arithmetic that did not reproduce and counted a
   correction ADR-0126's committed table already carries): (1) RT-1 the argv cap value; (2) RT-2 the decimal-digit

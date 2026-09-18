@@ -10,9 +10,10 @@
 //! the module is not compiled and the filter selects nothing.
 //!
 //! The fake row of all five ports is instantiated here; each Phase-1 real row is present as a
-//! **named, empty** row rather than absent — SQLite, Claude, Node, Rust (register :7139-7140) — so
-//! that what is owed is visible in the suite rather than only in a document, and each is filled by
-//! the slice that lands its adapter (`s7c` §7c.20).
+//! **named** row rather than absent — SQLite, Claude, Node, Rust (register :7139-7140) — empty
+//! until the slice that lands its adapter fills it (`s7c` §7c.20), so that what is owed is visible
+//! in the suite rather than only in a document. SQLite was filled at Slice 3 (2026-09-18); the
+//! other three are empty, named as empty, until Slices 5 and 6.
 //!
 //! **`Tracker` and `DocsSite` have a fake only until Phase 3** and this criterion does not fail on
 //! their absence (ADR-0094 decision 2; AC-499's GIVEN), so they carry no real row at all.
@@ -43,10 +44,29 @@ use rk_types::error::StepError;
 use crate::source_parse::Source;
 
 /// The four `{fake, real}` rows Phase 1 ships (ADR-0094; register :7139-7140). The third element
-/// is the row's assertion list: **empty, and named as empty**, because filling them is each
-/// adapter slice's (`s7c` §7c.20 items 3-5; Slice 1 lands the bodies and fills none).
+/// is the row's assertion list, **filled by the slice that lands its adapter** (`s7c` §7c.20
+/// items 3-6; Slice 1 landed the bodies and filled none) and **empty, named as empty, until
+/// then**. A filled row names the real-row test in the adapter's own suite — which runs the SAME
+/// body over the real adapter, through its dev edge on this crate's `conformance` feature — and
+/// what that run asserts beyond the body.
+///
+/// **SQLite (Slice 3, 2026-09-18)**: `port_conformance_real_row_sqlite` in `rk-adapter-sqlite`
+/// runs `conform_event_store` with the capability arm fed from the adapter's registry — the
+/// `snapshot` and `rebuild` rows D17-9 names, so the arm asserts `Err(Unsupported { capability })`
+/// naming each — and `wal_and_busy_timeout_are_enforced` adds the two ADR-0105 clause 7 settings
+/// the fake cannot carry.
 const PHASE_1_REAL_ROWS: [(&str, &str, &[&str]); 4] = [
-    ("EventStore", "SQLite", &[]),
+    (
+        "EventStore",
+        "SQLite",
+        &[
+            "port_conformance_real_row_sqlite: conform_event_store core (append then query is identity)",
+            "port_conformance_real_row_sqlite: snapshot -> Err(Unsupported { capability: \"snapshot\" }) from the dated registry row",
+            "port_conformance_real_row_sqlite: rebuild -> Err(Unsupported { capability: \"rebuild\" }) from the dated registry row",
+            "wal_and_busy_timeout_are_enforced: journal_mode = wal",
+            "wal_and_busy_timeout_are_enforced: busy_timeout = 5000",
+        ],
+    ),
     ("Harness", "Claude", &[]),
     ("Toolchain", "Node", &[]),
     ("Toolchain", "Rust", &[]),
@@ -122,18 +142,24 @@ fn port_conformance_fake_rows() {
     conform_toolchain(&toolchain, &fixture, 0, &[]);
     exercised.insert("Toolchain".to_owned());
 
-    // Every Phase-1 real row is PRESENT, named with what it is waiting for. What is asserted is
-    // that the row names a DECLARED port -- the half that discriminates. The row's assertion list
-    // is `&[]` in this file's own `const`, so a claim that it is empty is a compile-time tautology
-    // no mutation of production code can reach; it is stated as the comment it always was.
+    // Every Phase-1 real row is PRESENT, named with what it is waiting for or what it runs. What
+    // is asserted is that the row names a DECLARED port -- the half that discriminates -- and,
+    // for a filled row, that every assertion it lists names the real-row test that carries it (a
+    // list entry is `<test name>: <what>`), so the list can be read against the adapter's suite by
+    // name. The list's contents are this file's own `const`, so whether a row is filled is a
+    // compile-time fact no mutation of production code can reach; the runs themselves are the
+    // adapters' (Checkpoint 7c's `port_conformance_real_row_*` lines).
     for (port, real, assertions) in PHASE_1_REAL_ROWS {
         assert!(
             ports.contains(port),
             "real row {real} names a port that is not declared: {port}"
         );
-        // The adapter slices fill these (s7c §7c.20). Until then the row is present and empty, by
-        // construction.
-        let _ = assertions;
+        for assertion in assertions {
+            assert!(
+                assertion.split_once(": ").is_some(),
+                "real row {real}: assertion {assertion:?} does not name its test as `<test>: <what>`"
+            );
+        }
     }
 
     let missing: BTreeSet<&String> = ports.difference(&exercised).collect();

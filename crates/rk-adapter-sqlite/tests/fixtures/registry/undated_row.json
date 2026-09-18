@@ -1,0 +1,6 @@
+[
+  {
+    "capability": "snapshot",
+    "probe": { "none": { "reason": "dated by nobody" } }
+  }
+]
