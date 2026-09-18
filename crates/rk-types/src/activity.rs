@@ -164,6 +164,30 @@ impl DispatchRecord {
         stderr: &[u8],
         tail: RecordTail,
     ) -> Self {
+        Self::with_retained(
+            argv,
+            env,
+            instrument_version,
+            Retained::of(stdout),
+            Retained::of(stderr),
+            tail,
+        )
+    }
+
+    /// [`DispatchRecord::new`] with the two streams ALREADY shaped as [`Retained`] — the form an
+    /// adapter that accumulated them in bounded memory (`crate::retention::RetainedSink`) hands
+    /// in, so the whole stream never has to exist in one buffer for the record to be built.
+    /// `new` delegates here with `Retained::of` over its slices. Added 2026-09-18 (Step 7c Slice
+    /// 5, the runtime review's memory bound).
+    #[must_use]
+    pub fn with_retained(
+        argv: &[String],
+        env: &[(String, String)],
+        instrument_version: &str,
+        stdout: Retained,
+        stderr: Retained,
+        tail: RecordTail,
+    ) -> Self {
         let argv_joined = argv.join("\u{1f}");
         let mut env_sorted: Vec<String> = env.iter().map(|(k, v)| format!("{k}={v}")).collect();
         env_sorted.sort();
@@ -184,8 +208,8 @@ impl DispatchRecord {
             argv_digest: sha256(argv_joined.as_bytes()),
             env_digest: sha256(env_sorted.join("\u{1f}").as_bytes()),
             instrument_version: instrument_version.to_string(),
-            stdout: Retained::of(stdout),
-            stderr: Retained::of(stderr),
+            stdout,
+            stderr,
             usage,
             timings,
             total_cost_usd,

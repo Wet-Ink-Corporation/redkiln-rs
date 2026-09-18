@@ -86,6 +86,15 @@ allow = [
   #   foldhash 0.2.0 <- hashbrown 0.16/0.17 <- clru/gix-hashtable <- gix-pack/gix-odb/gix-object
   #   zlib-rs 0.6.7  <- gix's compression path
   "Zlib",
+  # Allowed 2026-09-18 at Step 7c Slice 5 with the operator's decision recorded (DECISIONS-2026-09-17 D17-13):
+  #   borrow-or-share 0.2.4 <- fluent-uri <- referencing <- jsonschema 0.56.0 <- rk-adapter-claude
+  # `referencing` is a NON-optional dependency of jsonschema, so D17-12's `default-features = false` (which
+  # removed reqwest/rustls/aws-lc-rs) does not reach it [measured 2026-09-18]. MIT-0 is MIT with the attribution
+  # clause removed -- strictly more permissive than the MIT already allowed; permissive adds itself under this
+  # file's halt rule, but it is recorded here rather than defaulted because ADR-0100 makes every new licence a
+  # decision. The alternative named and rejected: dropping jsonschema for a hand-written structural check
+  # (weaker than ADR-0095's "validated against the schema").
+  "MIT-0",
   # WEAK COPYLEFT, allowed deliberately on 2026-09-13 with the operator's decision recorded here
   # rather than defaulted (the halt rule for this pass was: permissive adds itself, copyleft asks).
   #   uluru 3.1.0 <- gix-pack 0.74.2 <- gix 0.87.1 / gix-odb 0.84.0
@@ -102,5 +111,17 @@ allow = [
   # unmodified upstream dependency. MODIFYING an MPL-2.0 crate (a vendored patch, a fork) is a
   # different question this line does not answer, and would need its own decision.
   "MPL-2.0",
+  # DECISIONS-2026-09-17 D17-13 (taken 2026-09-18, Step 7c Slice 5): MIT-0 — the MIT licence with
+  # the attribution clause removed, strictly more permissive than the MIT above. Forced by ONE crate
+  # on rk-adapter-claude's NORMAL graph when `jsonschema` became its dependency (the result-frame
+  # validation, s7c §7c.19):
+  #   borrow-or-share 0.2.4 "MIT-0" <- fluent-uri 0.4.1 <- referencing 0.56.0 <- jsonschema 0.56.0
+  #   <- rk-adapter-claude
+  # `referencing` is a NON-optional dependency of jsonschema 0.56.0, so D17-12's
+  # `default-features = false` does not remove it; D17-12's "cargo deny ... ok" was measured while
+  # jsonschema was dev-only, which this check ignores (`include-dev` is false) [measured 2026-09-18,
+  # the hygiene review of Slice 5, H1/H3].
+  "MIT-0",
 ]
 confidence-threshold = 0.93
+

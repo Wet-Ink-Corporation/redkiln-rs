@@ -57,16 +57,48 @@ impl Digest {
 /// Every content digest in the system comes from here (ADR-0116 clause 6).
 #[must_use]
 pub fn sha256(bytes: &[u8]) -> Digest {
-    use sha2::Digest as _;
-    let mut h = sha2::Sha256::new();
+    let mut h = Sha256Stream::start();
     h.update(bytes);
-    let out = h.finalize();
-    let mut hex = String::with_capacity(64);
-    for b in out {
-        use std::fmt::Write as _;
-        let _ = write!(hex, "{b:02x}");
+    h.finish()
+}
+
+/// The one hash, fed in pieces.
+///
+/// [`sha256`] over a byte sequence that arrives as chunks (a child's stdout read from a pipe —
+/// `s7c` §7c.11's retention cap, bounded in memory), with the same digest as [`sha256`] over the
+/// concatenation. Added 2026-09-18 (Step 7c Slice 5, the runtime review's memory bound); no
+/// second algorithm enters — this IS `sha256`'s body, exposed incrementally, and `sha256` calls
+/// it.
+#[derive(Debug, Clone)]
+pub struct Sha256Stream(sha2::Sha256);
+
+impl Sha256Stream {
+    /// An empty stream (named so, not `new`/`Default`: a hasher is started, and nothing about it
+    /// is a value a caller could read as a measurement).
+    #[must_use]
+    pub fn start() -> Self {
+        use sha2::Digest as _;
+        Self(sha2::Sha256::new())
     }
-    Digest(hex)
+
+    /// Feed the next piece.
+    pub fn update(&mut self, bytes: &[u8]) {
+        use sha2::Digest as _;
+        self.0.update(bytes);
+    }
+
+    /// The digest over everything fed so far.
+    #[must_use]
+    pub fn finish(self) -> Digest {
+        use sha2::Digest as _;
+        let out = self.0.finalize();
+        let mut hex = String::with_capacity(64);
+        for b in out {
+            use std::fmt::Write as _;
+            let _ = write!(hex, "{b:02x}");
+        }
+        Digest(hex)
+    }
 }
 
 /// SHA-256 over an ordered tuple of components, each **length-prefixed**.

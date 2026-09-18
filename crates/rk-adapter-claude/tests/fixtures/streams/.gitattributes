@@ -1,0 +1,4 @@
+# Scripted stream-json parts (LF): never converted on checkout, so a transcript composed from them is the
+# bytes the tests wrote and compare (AC-200). Named .ndjson, not .jsonl, because ci.yml's AC-465 rule is keyed on
+# the *.jsonl extension for CORPUS artifacts, which these are not (every line here is SCRIPTED/SYNTHETIC/RECONSTRUCTED).
+*.ndjson -text

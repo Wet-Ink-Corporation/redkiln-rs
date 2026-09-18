@@ -104,6 +104,18 @@ use crate::config::{Config, ConfigError};
 /// OWED (§7c.1).
 pub const ARGV_CAP_BYTES: usize = 32_767;
 
+/// The period, in milliseconds, at which `dispatch` polls `CancelToken::is_cancelled()` while the
+/// child runs.
+///
+/// (RT-3 as amended; `s7c` §7c.10.) The token is an `Arc<AtomicBool>` with no wake-up, so the
+/// cancel arm of the three-way race is a `tokio::time::interval` poll, and this is its
+/// period. **Chosen at Slice 5: 50 ms** — a cancel is honoured within one period plus the kill,
+/// two orders of magnitude under any test's bound and invisible against a dispatch measured in
+/// seconds; **UNCONFIRMED** — no record names the value, and RT-3's OWED record carries it.
+/// Declared beside [`ARGV_CAP_BYTES`], where §7c.1's routing table places it; consumed by
+/// `runner.rs`.
+pub const CANCEL_POLL_MS: u64 = 50;
+
 /// The tool a schema-bearing dispatch's card must declare (AC-205; ADR-0108).
 pub const STRUCTURED_OUTPUT: &str = "StructuredOutput";
 

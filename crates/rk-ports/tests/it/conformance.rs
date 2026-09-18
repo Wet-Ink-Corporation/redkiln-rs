@@ -55,6 +55,17 @@ use crate::source_parse::Source;
 /// `snapshot` and `rebuild` rows D17-9 names, so the arm asserts `Err(Unsupported { capability })`
 /// naming each — and `wal_and_busy_timeout_are_enforced` adds the two ADR-0105 clause 7 settings
 /// the fake cannot carry.
+///
+/// **Claude (Slice 5, 2026-09-18)** — the register's *"local-only, named-runner"* row (D17-5;
+/// `s7c` §7c.15): `port_conformance_real_row_claude` in `rk-adapter-claude` runs `conform_harness`
+/// over the REAL `ClaudeHarness` with the fixture child (`rk-fixture-child-claude`, spawned through
+/// `rk-containment`) as the program — NOT a real `claude` — on both arms the body covers (a replayed
+/// `Ok` transcript; a child that exits 3), so the body's `PROBE_RAN_CONFORMANCE=1` is printed by a
+/// run that reached its end. The live probe (`live_dispatch_probe`, `#[ignore]`, `--features live`)
+/// runs the same body over the real CLI before its own prints and is the fifteenth line's, never
+/// CI's; `ac360_one_event_per_termination_path` is the adapter's own count of one
+/// `dispatch_completed` per path, which this body does not assert (the module doc). **Never wired
+/// into CI as a matrix row** (that instrument is ARMED, `s7c` §7c.22).
 const PHASE_1_REAL_ROWS: [(&str, &str, &[&str]); 4] = [
     (
         "EventStore",
@@ -67,7 +78,16 @@ const PHASE_1_REAL_ROWS: [(&str, &str, &[&str]); 4] = [
             "wal_and_busy_timeout_are_enforced: busy_timeout = 5000",
         ],
     ),
-    ("Harness", "Claude", &[]),
+    (
+        "Harness",
+        "Claude",
+        &[
+            "port_conformance_real_row_claude: conform_harness core over the real ClaudeHarness and the fixture child (Ok arm: instrument_version present, a Pinned arm equals the pin, Typed carries its schema id)",
+            "port_conformance_real_row_claude: conform_harness error arm (exit 3 -> NonZero): the store grew by the dispatch_completed row (AC-360's shape)",
+            "port_conformance_real_row_claude: exactly one fixture-child spawn per body run (the marker count)",
+            "live_dispatch_probe: the same body over the real CLI, #[ignore] behind --features live, local-only (s7c section 7c.15; never CI)",
+        ],
+    ),
     ("Toolchain", "Node", &[]),
     ("Toolchain", "Rust", &[]),
 ];

@@ -1,0 +1,2 @@
+{"type":"system","subtype":"thinking_tokens","count":42,"a_future_field":{"nested":true},"uuid":"scripted-fut"}
+{"type":"telemetry_v9","payload":{"a":1},"uuid":"scripted-fut2"}

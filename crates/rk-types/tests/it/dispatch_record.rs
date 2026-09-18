@@ -309,3 +309,59 @@ fn the_constructor_digests_argv_and_env_and_stores_neither() {
     let d = DispatchRecord::new(&argv(), &two_rev, "2.1.275", b"", b"", pre_spawn_tail());
     assert_eq!(c.env_digest, d.env_digest);
 }
+
+/// `RetainedSink` (Step 7c Slice 5, the runtime review's memory bound) is `Retained::of` over the
+/// concatenation, whatever the chunking: under the cap (verbatim), exactly at it, one over, and
+/// far over with pieces that straddle every boundary — and `Sha256Stream` is `sha256`. The
+/// constructor form `with_retained` builds the same record `new` builds.
+#[test]
+fn retained_sink_equals_retained_of() {
+    use rk_types::digest::{Sha256Stream, sha256};
+    use rk_types::retention::RetainedSink;
+    let pattern: Vec<u8> = (0..=255u8).cycle().take(3 * STDIO_CAP + 17).collect();
+    for total in [
+        0,
+        1,
+        HEAD_TAIL - 1,
+        HEAD_TAIL,
+        HEAD_TAIL + 1,
+        STDIO_CAP - 1,
+        STDIO_CAP,
+        STDIO_CAP + 1,
+        STDIO_CAP + HEAD_TAIL,
+        3 * STDIO_CAP + 17,
+    ] {
+        let bytes = &pattern[..total];
+        for chunk in [1usize, 7, 1000, 8192, STDIO_CAP, usize::MAX] {
+            let mut sink = RetainedSink::empty();
+            let mut hasher = Sha256Stream::start();
+            for piece in bytes.chunks(chunk.min(bytes.len().max(1))) {
+                sink.push(piece);
+                hasher.update(piece);
+            }
+            assert_eq!(sink.total_len(), total);
+            assert_eq!(
+                sink.finish(),
+                Retained::of(bytes),
+                "total {total}, chunk {chunk}: the sink is Retained::of over the concatenation"
+            );
+            assert_eq!(
+                hasher.finish(),
+                sha256(bytes),
+                "the streaming hash IS sha256"
+            );
+        }
+    }
+    let mut out = RetainedSink::empty();
+    out.push(b"ok");
+    let a = DispatchRecord::with_retained(
+        &argv(),
+        &env(),
+        "2.1.275",
+        out.finish(),
+        RetainedSink::empty().finish(),
+        pre_spawn_tail(),
+    );
+    let b = DispatchRecord::new(&argv(), &env(), "2.1.275", b"ok", b"", pre_spawn_tail());
+    assert_eq!(a, b, "with_retained and new build the same record");
+}

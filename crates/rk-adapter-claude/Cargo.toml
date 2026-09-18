@@ -38,20 +38,21 @@ tokio.workspace = true
 serde.workspace = true
 # The `--agents` JSON, the `--json-schema` element, the card files, the registry text.
 serde_json.workspace = true
-# `jsonschema` is NOT on this manifest at Slice 4, and the reason is a gate, not an oversight. §7c.19's row
-# names it as a normal dependency, and §7c.19 also says the workspace row is `=0.56.0` with default features ON
-# ("turning the defaults off on the workspace row ... is a stage-open change the operator may take, and is NOT
-# assumed here"). MEASURED 2026-09-18 at this slice: as a NORMAL edge, jsonschema's defaults (`resolve-http` ->
-# reqwest -> rustls, `tls-aws-lc-rs` -> aws-lc-rs) enter this crate's normal graph and `cargo deny check licenses`
-# REFUSES six crates under licences deny.toml does not allow -- aws-lc-rs 1.18.1 "ISC AND (Apache-2.0 OR ISC)",
-# aws-lc-sys 0.45.0, borrow-or-share 0.2.4 "MIT-0", rustls-webpki 0.103.15 "ISC", untrusted 0.9.0 "ISC",
-# webpki-root-certs 1.0.9 "CDLA-Permissive-2.0" (exit 4). The same crates sit in rk-types' DEV graph today and
-# pass because cargo-deny checks dev-only licences only under `[licenses] include-dev`. deny.toml's own rule --
-# "a new license is a decision, taken in a PR, not a default" -- and §7c.19's sentence both put the resolution
-# with the operator: allow the licences, or turn the resolver features off on the workspace row (and give
-# rk-types' dev edge the set its validation tests need). Slice 4 consumes nothing from jsonschema (the
-# result-frame validation, the lifted `extract_digest`, is Slice 5's), so the edge is DEFERRED to Slice 5 with
-# that decision owed before it (recorded in the Slice 4 manifest as a deviation from §7c.19's row and RAISED).
+# `jsonschema` (§7c.19's row): the lifted `extract_digest`'s validation of the result frame's `structured_output`
+# against the ONE output schema the dispatch carries (ADR-0095; `runner.rs` at the pin) -- a LOCAL schema, never a
+# remote `$ref`, so no resolver feature is needed. Slice 4 deferred this edge because the workspace row then had
+# jsonschema's default resolvers ON and `cargo deny check licenses` refused SIX licences on a normal edge [measured
+# 2026-09-18]: aws-lc-rs 1.18.1 "ISC AND (Apache-2.0 OR ISC) AND OpenSSL", borrow-or-share 0.2.4 "MIT-0",
+# rustls-webpki 0.103.15 "ISC", untrusted 0.9.0 "ISC", webpki-root-certs 1.0.9 "CDLA-Permissive-2.0" (exit 4).
+# DECISIONS-2026-09-17 D17-12 (taken 2026-09-18, before this slice) put the workspace row at
+# `default-features = false`, which removes the resolver/TLS set (aws-lc-rs, rustls-webpki, untrusted,
+# webpki-root-certs) but NOT borrow-or-share: `referencing` is a NON-optional dependency of jsonschema 0.56.0
+# (registry Cargo.toml:247) and reaches fluent-uri 0.4.1 -> borrow-or-share 0.2.4 "MIT-0" on every graph. D17-12's
+# "cargo deny ... ok" reading was taken while jsonschema was dev-only (cargo-deny's [licenses] check ignores
+# dev-only crates), so it did not see this edge; the residual MIT-0 is admitted by DECISIONS-2026-09-17 D17-13 with
+# a dated deny.toml row naming this path (the hygiene review of Slice 5, H1/H3); a dated correction to D17-12's
+# measurement is OWED beside it.
+jsonschema.workspace = true
 # ADR-0102 decision 6: thiserror in every library, anyhow in none.
 thiserror.workspace = true
 

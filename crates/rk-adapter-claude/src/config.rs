@@ -498,6 +498,14 @@ pub enum ConfigError {
         path.display()
     )]
     HarnessBinaryIsBatch { path: PathBuf },
+    /// The adapter's own `multi_thread` runtime could not be built (`ClaudeHarness::new`; ADR-0076,
+    /// RT-15) — a construction failure, before any dispatch.
+    #[error("the adapter's tokio runtime could not be built: {detail}")]
+    Runtime { detail: String },
+    /// The shipped capability registry does not load (`registry.rs`; AC-489) — a build defect
+    /// surfaced at construction, before any dispatch.
+    #[error("the shipped capability registry does not load: {detail}")]
+    Registry { detail: String },
 }
 
 impl Config {

@@ -17,7 +17,9 @@ use rk_adapter_claude::config::{
 use rk_adapter_claude::env::{PROMPT_CACHE_TTL, SUBAGENT_PROMPT_CACHE_TTL};
 use rk_adapter_claude::env_denylist::{DENYLIST, DENYLIST_PREFIXES, is_denylisted};
 
-use crate::support::{config_with_env, fixture, margins_ok, values};
+use crate::support::{
+    Markers, belt_dispatch_count, config_with_env, fixture, margins_ok, spawn_values, values,
+};
 
 /// AC-488 (construction half): *"GIVEN `ANTHROPIC_API_KEY` is present in the environment the
 /// Claude adapter would dispatch from / WHEN the adapter is constructed at startup / THEN
@@ -28,10 +30,29 @@ use crate::support::{config_with_env, fixture, margins_ok, values};
 /// `a Config map carrying ANTHROPIC_API_KEY must not construct (AC-488)`.
 #[test]
 fn api_key_refuses_construction() {
-    let result = config_with_env(&[
-        ("ANTHROPIC_API_KEY", "sk-ant-not-a-real-key"),
-        ("PATH", "x"),
-    ]);
+    let markers = Markers::new();
+    let mut v = spawn_values(&markers, "exit:0");
+    v.captured_env.insert(
+        "ANTHROPIC_API_KEY".to_owned(),
+        "sk-ant-not-a-real-key".to_owned(),
+    );
+    v.captured_env.insert("PATH".to_owned(), "x".to_owned());
+    let result = Config::new(v.clone());
+    // The marker-count belt (§7c.18; Slice 5): on an `Ok` the test dispatches once through the
+    // fixture child and asserts zero marker files — the belt that turns a warning-not-refusal
+    // implementation red on the second assertion.
+    // RED (belt half, observed 2026-09-18) against `Config::new` mutated to STRIP the denylisted
+    // name and proceed: `belt: a marker file appeared after a Config carrying ANTHROPIC_API_KEY
+    // constructed (AC-488; dispatch count must be 0)`: left `1`, right `0`.
+    if result.is_ok() {
+        assert_eq!(
+            belt_dispatch_count(v),
+            0,
+            "belt: a marker file appeared after a Config carrying ANTHROPIC_API_KEY constructed \
+             (AC-488; dispatch count must be 0)"
+        );
+    }
+    assert_eq!(markers.count(), 0, "construction itself spawned nothing");
     let err =
         result.expect_err("a Config map carrying ANTHROPIC_API_KEY must not construct (AC-488)");
     match &err {
@@ -42,8 +63,6 @@ fn api_key_refuses_construction() {
         err.to_string().contains("ANTHROPIC_API_KEY"),
         "the rendered error names the variable: {err}"
     );
-    // Slice 5 adds the marker-count belt here (§7c.18): on an `Ok` it dispatches once through the
-    // fixture child and asserts zero marker files.
 }
 
 /// AC-217: *"a denylisted name found there fails the dispatch as a typed configuration error
@@ -77,7 +96,12 @@ fn env_denylist_config_map() {
         ("GH_ENTERPRISE_TOKEN", "RT-25"),
     ];
     for (name, why) in cases {
-        let result = config_with_env(&[(name, "value"), ("TERM", "xterm"), ("LANG", "C.UTF-8")]);
+        let markers = Markers::new();
+        let mut v = spawn_values(&markers, "exit:0");
+        for (k, val) in [(*name, "value"), ("TERM", "xterm"), ("LANG", "C.UTF-8")] {
+            v.captured_env.insert(k.to_owned(), val.to_owned());
+        }
+        let result = Config::new(v.clone());
         match result {
             Err(ConfigError::DenylistedEnv { name: named }) => {
                 assert_eq!(
@@ -86,12 +110,26 @@ fn env_denylist_config_map() {
                 );
             }
             Err(other) => panic!("{name}: the refusal is DenylistedEnv, got {other:?} ({why})"),
-            Ok(cfg) => panic!(
-                "{name} in the captured map must be REFUSED, not stripped (AC-217; {why}); the \
-                 constructed Config carries {} names",
-                cfg.captured_env().len()
-            ),
+            Ok(cfg) => {
+                // The marker-count belt (§7c.18; Slice 5): a STRIPPED name passes through to a
+                // spawn, and the marker file is the red.
+                // RED (belt half, observed 2026-09-18) against `Config::new` mutated to strip:
+                // `belt: ANTHROPIC_API_KEY was STRIPPED and a marker file appeared (AC-217: refusal,
+                // dispatch count 0)`: left `1`, right `0`.
+                assert_eq!(
+                    belt_dispatch_count(v),
+                    0,
+                    "belt: {name} was STRIPPED and a marker file appeared (AC-217: refusal, \
+                     dispatch count 0)"
+                );
+                panic!(
+                    "{name} in the captured map must be REFUSED, not stripped (AC-217; {why}); the \
+                     constructed Config carries {} names",
+                    cfg.captured_env().len()
+                );
+            }
         }
+        assert_eq!(markers.count(), 0, "{name}: the refusal spawned nothing");
     }
     // A denylisted name is refused on its NAME alone — an empty value is still the variable being
     // present, which is what ADR-0010's "assert absent" means.
@@ -119,7 +157,6 @@ fn env_denylist_config_map() {
         4,
         "nothing is stripped on the accepted path either"
     );
-    // Slice 5 adds the marker-count belt here (§7c.18).
 }
 
 /// AC-422 (adapter instrument): *"an assertion that the `doctor` row and AC-217's construction test
@@ -190,22 +227,43 @@ fn ac422_denylist_is_one_exported_list() {
 /// refused (AC-526)`.
 #[test]
 fn ac526_ttl_pair_refuses_single_or_mismatch() {
+    // Every case carries the spawn seam (the fixture child, a marker dir) so the belt below can
+    // dispatch on an `Ok` and the refusing cases can assert nothing spawned (§7c.18; Slice 5).
+    let markers = Markers::new();
     let with = |p: Option<&str>, s: Option<&str>| {
-        let mut v = values();
+        let mut v = spawn_values(&markers, "exit:0");
         v.prompt_cache_ttl = p.map(str::to_owned);
         v.subagent_prompt_cache_ttl = s.map(str::to_owned);
         Config::new(v)
+    };
+    // The belt: dispatch once through the fixture child on an `Ok` from a refusing case.
+    // RED (belt half, observed 2026-09-18) against `Config::new` mutated to accept a single TTL:
+    // `belt (first only): a marker file appeared after a single-TTL Config constructed (AC-526)`:
+    // left `1`, right `0`.
+    let belt = |case: &str, p: Option<&str>, s: Option<&str>| {
+        let mut v = spawn_values(&markers, "exit:0");
+        v.prompt_cache_ttl = p.map(str::to_owned);
+        v.subagent_prompt_cache_ttl = s.map(str::to_owned);
+        if Config::new(v.clone()).is_ok() {
+            assert_eq!(
+                belt_dispatch_count(v),
+                0,
+                "belt ({case}): a marker file appeared after a single-TTL Config constructed (AC-526)"
+            );
+        }
     };
     // neither: the record's value, explicitly.
     let cfg = with(None, None).expect("neither: the pair is the record's 1h/1h (ADR-0078 (ii))");
     assert_eq!(cfg.cache_ttl(), CACHE_TTL);
     assert_eq!(CACHE_TTL, "1h", "AC-210 names the value");
     // first only.
+    belt("first only", Some("1h"), None);
     let err = with(Some("1h"), None).expect_err(
         "first only: CLAUDE_CODE_PROMPT_CACHE_TTL without CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL must be refused (AC-526)",
     );
     names_both(&err, "first only");
     // second only.
+    belt("second only", None, Some("1h"));
     let err = with(None, Some("1h")).expect_err(
         "second only: CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL without CLAUDE_CODE_PROMPT_CACHE_TTL must be refused (AC-526)",
     );
@@ -214,6 +272,7 @@ fn ac526_ttl_pair_refuses_single_or_mismatch() {
     let cfg = with(Some("5m"), Some("5m")).expect("both equal: one value, accepted");
     assert_eq!(cfg.cache_ttl(), "5m");
     // the mismatched pair.
+    belt("mismatched pair", Some("1h"), Some("5m"));
     let err = with(Some("1h"), Some("5m")).expect_err("a mismatched pair must be refused (AC-526)");
     names_both(&err, "mismatched pair");
     match err {
@@ -222,7 +281,7 @@ fn ac526_ttl_pair_refuses_single_or_mismatch() {
         }
         other => panic!("the mismatch is its own variant carrying both values; got {other:?}"),
     }
-    // Slice 5 adds the marker-count belt here (§7c.18).
+    assert_eq!(markers.count(), 0, "no refusing case spawned");
 }
 
 /// The refusal names BOTH variables (AC-526's THEN), whichever was missing.
@@ -315,11 +374,25 @@ fn ac377_margin_parse_vectors_and_no_default() {
     );
     let text = fixture("config/margin-one-tick.json");
     let one_tick: Margins = serde_json::from_str(&text).expect("margin-one-tick.json parses");
-    let mut v = values();
+    let markers = Markers::new();
+    let mut v = spawn_values(&markers, "exit:0");
     v.margins = one_tick;
+    // The marker-count belt (§7c.18; Slice 5): a sub-two-tick Config that constructs dispatches
+    // once through the fixture child, and the marker file is the red.
+    // RED (belt half, observed 2026-09-18) against `Config::new` mutated to skip the margin lint:
+    // `belt: a marker file appeared after a sub-two-tick margin Config constructed (AC-377)`:
+    // left `1`, right `0`.
+    if Config::new(v.clone()).is_ok() {
+        assert_eq!(
+            belt_dispatch_count(v.clone()),
+            0,
+            "belt: a marker file appeared after a sub-two-tick margin Config constructed (AC-377)"
+        );
+    }
     let err = Config::new(v).expect_err(
         "margin-one-tick.json: a margin under two ticks must be refused (AC-377/AC-220)",
     );
+    assert_eq!(markers.count(), 0, "the refusal spawned nothing");
     match err {
         ConfigError::MarginBelowTwoTicks { window, ticks } => {
             assert_eq!((window, ticks), (Window::FiveHour, 1));
@@ -418,7 +491,6 @@ fn ac377_margin_parse_vectors_and_no_default() {
             .any(|l| l.contains("impl Default for Margins")),
         "Margins has a hand-written Default (AC-377)"
     );
-    // Slice 5 adds the marker-count belt here (§7c.18).
 }
 
 /// D17-11 / ADR-0078: the pin is a `Config` value, declared as the block's anchored grep reads it,

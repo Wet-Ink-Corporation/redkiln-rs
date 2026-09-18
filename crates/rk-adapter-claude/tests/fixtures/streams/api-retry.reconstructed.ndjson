@@ -1,0 +1,2 @@
+{"type":"system","subtype":"api_retry","attempt":1,"max_retries":10,"retry_delay_ms":618,"error":"unknown","error_status":null,"session_id":"scripted-0001","uuid":"reconstructed-r1"}
+{"type":"system","subtype":"api_retry","attempt":1,"max_retries":10,"retry_delay_ms":532,"error":"unknown","error_status":null,"session_id":"scripted-0001","uuid":"reconstructed-r2"}

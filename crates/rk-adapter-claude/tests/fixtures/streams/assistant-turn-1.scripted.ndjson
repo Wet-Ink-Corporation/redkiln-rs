@@ -1,0 +1,1 @@
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"turn one"}],"usage":{"input_tokens":4,"output_tokens":8,"cache_read_input_tokens":40,"cache_creation_input_tokens":20}},"parent_tool_use_id":null,"session_id":"scripted-0001","uuid":"scripted-a1"}

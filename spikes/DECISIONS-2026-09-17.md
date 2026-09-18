@@ -222,6 +222,22 @@ this entry. The lesson lands in `s7c` §7c.19's rule as read: *any* edit to the 
 
 ---
 
+## D17-13 · `MIT-0` joins `deny.toml`'s licence allowlist (taken 2026-09-18, at Slice 5)
+
+**The question.** D17-12 turned `jsonschema`'s default features off and removed the HTTP/TLS stack from the graph, but
+`referencing` is a NON-optional dependency of `jsonschema 0.56.0`, and it reaches `fluent-uri` → `borrow-or-share
+0.2.4`, licensed **MIT-0**. As a normal edge of `rk-adapter-claude` that puts one MIT-0 crate on the shipped graph and
+`cargo deny check licenses` exits 4 [measured 2026-09-18 by Slice 5's hygiene reviewer]. ADR-0100 makes a new licence
+a decision.
+
+**The choice: allow `MIT-0`**, with a dated row in `deny.toml` naming the crate and its path. MIT-0 is MIT with the
+attribution clause removed — strictly more permissive than the MIT already allowed.
+
+**Alternative named (rejected).** Dropping `jsonschema` from the adapter for a hand-written structural check of the
+result payload — weaker than ADR-0095's *"validated against the schema"* and a deviation to record for nothing gained.
+
+---
+
 ## Routed at 7c — a value picked, a routing-table row owed in `s7c`, and a **record OWED** for each
 
 Each row below is a **routing, not a decision** (`s7a` §7a.5: *"naming a destination is not routing it there"*).

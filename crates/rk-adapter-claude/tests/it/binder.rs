@@ -3,9 +3,10 @@
 //! the digest-keyed card store — `Config::cards`, which only the binder fills — `dispatch` reads
 //! the body from (s7c §7c.12, §7c.4).
 //!
-//! **The marker-count belt is Slice 5's** (§7c.18, §7c.20 item 4); these are the `is_err()` halves.
-//! `dispatch_cwd_is_the_spec_worktree_never_process_cwd` (the key read INSIDE `dispatch`) is Slice
-//! 5's too; what the binder puts on the spec is asserted here.
+//! Each refusal is the `is_err()` half plus, since Slice 5, the marker-count belt (§7c.18): on an
+//! `Ok` the test dispatches the spec once through the fixture child and asserts zero markers.
+//! `dispatch_cwd_is_the_spec_worktree_never_process_cwd` (the key read INSIDE `dispatch`) is in
+//! `dispatch.rs`; what the binder puts on the spec is asserted here.
 
 use rk_types::digest::sha256;
 use rk_types::typed::SchemaId;
@@ -15,7 +16,10 @@ use rk_adapter_claude::card::{AgentCard, AuthoredCard, Tier};
 use rk_adapter_claude::command::{CommandSpec, assemble};
 use rk_adapter_claude::config::ConfigError;
 
-use crate::support::{catalog_card, config, config_with_env, role, schema, worktree};
+use crate::support::{
+    Markers, belt_dispatch_spec, catalog_card, config, config_with_env, role, schema, spawn_config,
+    worktree,
+};
 
 fn request<'a>(
     role_name: &'a str,
@@ -49,8 +53,27 @@ fn request<'a>(
 fn ac212_model_effort_from_bound_card_only() {
     let schema = schema();
     let card = catalog_card("reviewer");
-    let wt = worktree();
-    let mut binder = Binder::new(config());
+    // A REAL temp worktree, so the belt's dispatch has a directory to spawn into (a fixed
+    // non-existent path would make every belt count 0 for the wrong reason — a spawn failure).
+    let wt_dir = tempfile::tempdir().expect("a temp worktree");
+    let wt = wt_dir.path().to_path_buf();
+    // The binder sits over a SPAWN config (the fixture child in `exit:0` mode, a marker dir) so the
+    // belt below can dispatch an `Ok(spec)` and every refusal can assert nothing spawned.
+    let markers = Markers::new();
+    let mut binder = Binder::new(spawn_config(&markers, "exit:0"));
+    // The marker-count belt (§7c.18; Slice 5): a spec the binder should have refused, dispatched
+    // once through the fixture child — the marker file is the red.
+    // RED (belt half, observed 2026-09-18) against `Binder::bind` mutated to pass an absent effort
+    // through and default an absent model to sonnet: `belt (a): a bind that should have refused
+    // produced a spec and a marker file appeared (AC-212)`: left `1`, right `0`.
+    let belt = |case: &str, binder: &Binder, spec: &rk_types::activity::ActivitySpec| {
+        assert_eq!(
+            belt_dispatch_spec(binder.config().clone(), spec, &markers),
+            0,
+            "belt ({case}): a bind that should have refused produced a spec and a marker file \
+             appeared (AC-212)"
+        );
+    };
 
     // (a) a role that declares no effort, on a tier that takes one.
     let r = role("sonnet-no-effort");
@@ -65,6 +88,12 @@ fn ac212_model_effort_from_bound_card_only() {
                 ("reviewer", "sonnet-no-effort", "sonnet")
             );
         }
+        Ok(spec) => {
+            belt("a", &binder, &spec);
+            panic!(
+                "(a) a sonnet role declaring no effort must be refused (AC-212); got Ok({spec:?})"
+            )
+        }
         other => {
             panic!("(a) a sonnet role declaring no effort must be refused (AC-212); got {other:?}")
         }
@@ -75,12 +104,20 @@ fn ac212_model_effort_from_bound_card_only() {
         Err(ConfigError::ModelUntraceable { card: c, role: rn }) => {
             assert_eq!((c.as_str(), rn.as_str()), ("reviewer", "no-model"));
         }
+        Ok(spec) => {
+            belt("b", &binder, &spec);
+            panic!("(b) a role declaring no model must be refused (AC-212); got Ok({spec:?})")
+        }
         other => panic!("(b) a role declaring no model must be refused (AC-212); got {other:?}"),
     }
     // An effort on a tier that rejects it is a spec error, not a runtime one (the lifted rule).
     let r = role("haiku-with-effort");
     match binder.bind(request("haiku-with-effort", &r, &card, &schema, &wt)) {
         Err(ConfigError::EffortRefusedByTier { tier, .. }) => assert_eq!(tier, "haiku"),
+        Ok(spec) => {
+            belt("haiku-with-effort", &binder, &spec);
+            panic!("an effort on haiku is refused (haiku rejects the parameter); got Ok({spec:?})")
+        }
         other => {
             panic!("an effort on haiku is refused (haiku rejects the parameter); got {other:?}")
         }
@@ -89,6 +126,7 @@ fn ac212_model_effort_from_bound_card_only() {
         binder.config().cards().is_empty(),
         "three refusals stored nothing"
     );
+    assert_eq!(markers.count(), 0, "three refusals spawned nothing");
 
     // (c) the complete role binds; an env value in the captured map reaches no argv element.
     let cfg_env = config_with_env(&[
@@ -138,7 +176,21 @@ fn ac212_model_effort_from_bound_card_only() {
         !built.argv.iter().any(|a| a == "opus" || a == "max"),
         "the env values appear in no element"
     );
-    // Slice 5 adds the marker-count belt here (§7c.18).
+    // (c) with the bound card INCOMPLETE (a haiku role with no effort is complete; a sonnet role
+    // with no effort is not — case (a)'s red again, through the belt): red by a marker file.
+    let markers = Markers::new();
+    let mut binder = Binder::new(spawn_config(&markers, "exit:0"));
+    let r = role("sonnet-no-effort");
+    if let Ok(spec) = binder.bind(request("sonnet-no-effort", &r, &card, &schema, &wt)) {
+        assert_eq!(
+            belt_dispatch_spec(binder.config().clone(), &spec, &markers),
+            0,
+            "belt (c, incomplete): the incomplete bound card produced a spec and a marker file \
+             appeared (AC-212)"
+        );
+        panic!("(c) an incomplete bound card must be refused (AC-212)");
+    }
+    assert_eq!(markers.count(), 0);
 }
 
 /// D-11 / §7c.12: the binder materialises ADR-0099:61's five fields — `card_digest` (the bound

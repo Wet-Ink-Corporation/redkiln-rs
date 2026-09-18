@@ -2,14 +2,15 @@
 //! (the answer API absent from every card in the catalog — O-6: the fixture cards ARE the catalog),
 //! AC-118/AC-418's leak at the card level, and the lifted `step.rs` tests (s7c §7c.2, §7c.12).
 //!
-//! **The marker-count belt is Slice 5's** (§7c.18, §7c.20 item 4); these are the `is_err()` halves.
+//! Each refusal is the `is_err()` half plus, since Slice 5, the marker-count belt (§7c.18): on an
+//! `Ok` the test binds and dispatches once through the fixture child and asserts zero markers.
 
 use std::collections::BTreeMap;
 
 use rk_adapter_claude::card::{AgentCard, AuthoredCard, CacheProfile, Effort, Tier};
 use rk_adapter_claude::config::ConfigError;
 
-use crate::support::{catalog_card, fixture, fixtures, red_card};
+use crate::support::{belt_dispatch_authored, catalog_card, fixture, fixtures, red_card};
 
 /// AC-383 (card-validator half): *"a card that declares neither [profile] is refused as a
 /// configuration error before any dispatch"* — *"a fixture card with no profile that must fail"*.
@@ -21,10 +22,21 @@ fn ac383_card_without_profile_refused() {
     match red_card("no-profile") {
         Err(ConfigError::CacheProfileAbsent { card }) => assert_eq!(card, "no-profile"),
         Err(other) => panic!("the refusal is CacheProfileAbsent naming the card; got {other:?}"),
-        Ok(card) => panic!(
-            "a card with no cache_profile must be refused (AC-383); loaded as {:?}",
-            card.cache_profile
-        ),
+        Ok(card) => {
+            // The marker-count belt (§7c.18; Slice 5).
+            // RED (belt half, observed 2026-09-18) against `AuthoredCard::from_file` mutated to
+            // default a profile-less card to `static`: `belt: a profile-less card loaded and a
+            // marker file appeared (AC-383)`: left `1`, right `0`.
+            assert_eq!(
+                belt_dispatch_authored(&card, Tier::Haiku, None),
+                0,
+                "belt: a profile-less card loaded and a marker file appeared (AC-383)"
+            );
+            panic!(
+                "a card with no cache_profile must be refused (AC-383); loaded as {:?}",
+                card.cache_profile
+            )
+        }
     }
     // The two profiles the register names load; nothing else does.
     assert_eq!(
@@ -40,7 +52,6 @@ fn ac383_card_without_profile_refused() {
         AuthoredCard::from_file("probe", &text).is_err(),
         "a profile outside {{static, default}} is refused (AC-383 names two axes)"
     );
-    // Slice 5 adds the marker-count belt here (§7c.18).
 }
 
 /// AC-493 (adapter half): *"a fixture mapping with `tools = []` and a second with `tools` absent,
@@ -54,12 +65,31 @@ fn ac493_empty_or_absent_tools_rejected() {
     match red_card("tools-empty") {
         Err(ConfigError::ToolsEmpty { card }) => assert_eq!(card, "tools-empty"),
         Err(other) => panic!("tools-empty.json: the refusal is ToolsEmpty; got {other:?}"),
-        Ok(_) => panic!("tools-empty.json: a card with tools = [] must be refused (AC-493)"),
+        Ok(card) => {
+            // The marker-count belt (§7c.18; Slice 5): an empty allowlist that loads fails open at
+            // the spawn; the marker file is the red.
+            // RED (belt half, observed 2026-09-18) against `from_file` mutated to accept an empty
+            // list: `belt: tools-empty.json loaded and a marker file appeared (AC-493)`: left `1`,
+            // right `0`.
+            assert_eq!(
+                belt_dispatch_authored(&card, Tier::Haiku, None),
+                0,
+                "belt: tools-empty.json loaded and a marker file appeared (AC-493)"
+            );
+            panic!("tools-empty.json: a card with tools = [] must be refused (AC-493)")
+        }
     }
     match red_card("tools-absent") {
         Err(ConfigError::ToolsAbsent { card }) => assert_eq!(card, "tools-absent"),
         Err(other) => panic!("tools-absent.json: the refusal is ToolsAbsent; got {other:?}"),
-        Ok(_) => panic!("tools-absent.json: a card with no tools key must be refused (AC-493)"),
+        Ok(card) => {
+            assert_eq!(
+                belt_dispatch_authored(&card, Tier::Haiku, None),
+                0,
+                "belt: tools-absent.json loaded and a marker file appeared (AC-493)"
+            );
+            panic!("tools-absent.json: a card with no tools key must be refused (AC-493)")
+        }
     }
     // A blank tool name is not a tool either.
     let text = fixture("cards/catalog/probe.json").replace("\"StructuredOutput\"", "\"\"");
@@ -67,7 +97,6 @@ fn ac493_empty_or_absent_tools_rejected() {
         AuthoredCard::from_file("probe", &text).is_err(),
         "an empty tool name is refused"
     );
-    // Slice 5 adds the marker-count belt here (§7c.18).
 }
 
 /// AC-269 (card-validator half; the build-configuration half is ARMED to 7d — no `rk-cli` exists):

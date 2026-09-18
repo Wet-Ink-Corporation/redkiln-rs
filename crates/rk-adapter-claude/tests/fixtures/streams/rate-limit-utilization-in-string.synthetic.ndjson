@@ -1,0 +1,1 @@
+{"note":"a string value carrying \"utilization\":0.99 that a substring scan would read","rate_limit_info":{"isUsingOverage":false,"status":"allowed","resetsAt":1788370800,"unifiedWindows":{"five_hour":{"resetsAt":1788370800,"utilization":0.04},"seven_day":{"resetsAt":1788408000,"utilization":0.04}}},"session_id":"scripted-0001","type":"rate_limit_event","uuid":"scripted-rl-str"}

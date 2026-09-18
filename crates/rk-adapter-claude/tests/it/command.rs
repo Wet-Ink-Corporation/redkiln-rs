@@ -19,7 +19,10 @@ use rk_adapter_claude::command::{
 use rk_adapter_claude::config::{Config, ConfigError, MismatchPolicy};
 use rk_adapter_claude::env_denylist::is_denylisted;
 
-use crate::support::{catalog_card, config, fixture, schema, values};
+use crate::support::{
+    Markers, belt_dispatch_agent, belt_dispatch_authored, catalog_card, config, fixture, schema,
+    spawn_values, values,
+};
 
 /// A bound card the builder takes: the catalog card with the tier injected by hand (the binder's
 /// job, tested in `binder.rs`; here the builder is driven directly).
@@ -305,11 +308,32 @@ fn argv_cap_refuses_before_spawn() {
             assert_eq!((units, cap), (ARGV_CAP_BYTES, ARGV_CAP_BYTES));
         }
         Err(other) => panic!("the refusal is the typed cap error; got {other:?}"),
-        Ok(built) => panic!(
-            "the at-the-cap fixture must be refused before spawn (AC-523; RT-1); the builder produced {} elements measuring {}",
-            built.argv.len(),
-            built.command_line_units
-        ),
+        Ok(built) => {
+            // The marker-count belt (§7c.18; Slice 5), made to measure the SAME vector as the
+            // refusal above (the test-discrimination review of Slice 5, F5): the belt's program
+            // is the fixture child's ABSOLUTE path, not `claude`, and `assemble` measures the
+            // program in `command_line_units` — so the at-the-cap card is dozens of units OVER
+            // under the belt's own program and a "refuse only when over" mutant would refuse it
+            // at bind, count 0 for the wrong reason. The belt card is therefore re-trimmed so the
+            // vector measures EXACTLY the cap under the fixture child, then dispatched once.
+            // RED (belt half, observed 2026-09-18) against `assemble` mutated to refuse only one
+            // unit OVER the cap (`units > ARGV_CAP_BYTES`): `belt: the at-the-cap vector bound
+            // under the belt's own program and a marker file appeared (AC-523; RT-1)`: left `1`,
+            // right `0`.
+            let belt_cfg = Config::new(spawn_values(&Markers::new(), "exit:0")).expect("belt cfg");
+            let belt_card = trimmed_to_cap(&card, &belt_cfg);
+            assert_eq!(
+                belt_dispatch_agent(&belt_card),
+                0,
+                "belt: the at-the-cap vector bound under the belt's own program and a marker file \
+                 appeared (AC-523; RT-1)"
+            );
+            panic!(
+                "the at-the-cap fixture must be refused before spawn (AC-523; RT-1); the builder produced {} elements measuring {}",
+                built.argv.len(),
+                built.command_line_units
+            )
+        }
     }
     // A weaker red refuses only one byte OVER: one over is refused too.
     let mut over = card.clone();
@@ -324,7 +348,35 @@ fn argv_cap_refuses_before_spawn() {
         assemble(&cfg, &spec(&dry_card(&card), &schema.json, &big)).expect("stdin is not argv");
     assert_eq!(built.command_line_units, ARGV_CAP_BYTES - 1);
     assert_eq!(built.stdin.len(), card.prompt.len() - 1 + 2 + big.len());
-    // Slice 5 adds the marker-count belt here (§7c.18).
+}
+
+/// `card` with its prompt shortened so the vector `assemble` builds measures EXACTLY
+/// `ARGV_CAP_BYTES` under `cfg`'s program (F5: the belt's program is the fixture child's absolute
+/// path, so the fixture that is at the cap under `claude` is over it here). The measure is read
+/// off `assemble` itself — the refusal carries `units`, a build carries `command_line_units` —
+/// and asserted at the cap after the trim.
+fn trimmed_to_cap(card: &AgentCard, cfg: &Config) -> AgentCard {
+    let sch = schema();
+    let units = |c: &AgentCard| match assemble(cfg, &spec(c, &sch.json, "")) {
+        Ok(b) => b.command_line_units,
+        Err(ConfigError::ArgvAtOrOverCap { units, .. }) => units,
+        Err(other) => panic!("the at-the-cap card fails only the cap: {other:?}"),
+    };
+    let mut c = card.clone();
+    let over = units(&c);
+    assert!(
+        over >= ARGV_CAP_BYTES,
+        "the belt's program is longer than `claude`: {over} units"
+    );
+    for _ in 0..(over - ARGV_CAP_BYTES) {
+        c.prompt.pop();
+    }
+    assert_eq!(
+        units(&c),
+        ARGV_CAP_BYTES,
+        "the belt card measures exactly the cap under the belt's own program"
+    );
+    c
 }
 
 fn dry_card(card: &AgentCard) -> AgentCard {
@@ -367,6 +419,17 @@ fn structured_output_required() {
             panic!("the refusal is StructuredOutputAbsent naming the card; got {other:?}")
         }
         Ok(_) => {
+            // The marker-count belt (§7c.18; Slice 5): F20 is why a runtime `Schema` error is the
+            // weaker red — the card must never reach a spawn.
+            // RED (belt half, observed 2026-09-18) against `assemble` mutated to warn instead of
+            // refuse: `belt: a card without StructuredOutput bound and a marker file appeared
+            // (AC-205; dispatch count must be 0)`: left `1`, right `0`.
+            assert_eq!(
+                belt_dispatch_agent(&card),
+                0,
+                "belt: a card without StructuredOutput bound and a marker file appeared (AC-205; \
+                 dispatch count must be 0)"
+            );
             panic!("a card whose tools omit StructuredOutput must be refused before spawn (AC-205)")
         }
     }
@@ -380,7 +443,6 @@ fn structured_output_required() {
         agents["golden-static"]["tools"],
         serde_json::json!(["Read", "StructuredOutput"])
     );
-    // Slice 5 adds the marker-count belt here (§7c.18).
 }
 
 /// AC-203: *"a dispatch specification carrying `--agents` with no `--agent <name>` … refused as a
@@ -400,10 +462,22 @@ fn ac203_agents_without_agent_refused() {
     match assemble(&cfg, &define_only) {
         Err(ConfigError::AgentsWithoutAgent { card: named }) => assert_eq!(named, "golden-static"),
         Err(other) => panic!("the refusal is AgentsWithoutAgent; got {other:?}"),
-        Ok(built) => panic!(
-            "--agents without --agent must be refused (AC-203; F7); built {:?}",
-            built.argv
-        ),
+        Ok(built) => {
+            // The marker-count belt (§7c.18; Slice 5): an implementation that lets the define-only
+            // form through binds and spawns; the marker file is the red.
+            // RED (belt half, observed 2026-09-18) against `assemble` mutated to emit `--agents`
+            // without `--agent`: `belt: --agents without --agent bound and a marker file appeared
+            // (AC-203)`: left `1`, right `0`.
+            assert_eq!(
+                belt_dispatch_agent(&card),
+                0,
+                "belt: --agents without --agent bound and a marker file appeared (AC-203)"
+            );
+            panic!(
+                "--agents without --agent must be refused (AC-203; F7); built {:?}",
+                built.argv
+            )
+        }
     }
     // The adopting form carries both, `--agent` directly after the `--agents` pair.
     let built = assemble(&cfg, &spec(&card, &schema.json, "")).expect("builds");
@@ -414,7 +488,6 @@ fn ac203_agents_without_agent_refused() {
         .expect("--agents");
     assert_eq!(built.argv[i + 2], "--agent");
     assert_eq!(built.argv[i + 3], "golden-static");
-    // Slice 5 adds the marker-count belt here (§7c.18).
 }
 
 /// AC-214 (unit half; the lint half is ARMED — §7c.5): *"`--permission-mode` is present with an
@@ -428,10 +501,22 @@ fn ac214_permission_mode_explicit() {
     match crate::support::red_card("no-permission-mode") {
         Err(ConfigError::PermissionModeAbsent { card }) => assert_eq!(card, "no-permission-mode"),
         Err(other) => panic!("the refusal is PermissionModeAbsent; got {other:?}"),
-        Ok(card) => panic!(
-            "a card silent on permission_mode must be refused (AC-214: no implicit default); loaded with {:?}",
-            card.permission_mode
-        ),
+        Ok(card) => {
+            // The marker-count belt (§7c.18; Slice 5): a silent card that loads binds and spawns
+            // with a defaulted mode; the marker file is the red.
+            // RED (belt half, observed 2026-09-18) against `AuthoredCard::from_file` mutated to
+            // default a silent card to `default`: `belt: a card silent on permission_mode loaded
+            // and a marker file appeared (AC-214)`: left `1`, right `0`.
+            assert_eq!(
+                belt_dispatch_authored(&card, Tier::Haiku, None),
+                0,
+                "belt: a card silent on permission_mode loaded and a marker file appeared (AC-214)"
+            );
+            panic!(
+                "a card silent on permission_mode must be refused (AC-214: no implicit default); loaded with {:?}",
+                card.permission_mode
+            )
+        }
     }
     let cfg = config();
     let schema = schema();
@@ -457,7 +542,6 @@ fn ac214_permission_mode_explicit() {
             1
         );
     }
-    // Slice 5 adds the marker-count belt here (§7c.18).
 }
 
 /// AC-215 (argv half): `--permission-prompts none` on every argv, unconditionally; the stdin

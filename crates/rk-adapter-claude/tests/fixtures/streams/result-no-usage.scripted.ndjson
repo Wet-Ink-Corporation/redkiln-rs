@@ -1,0 +1,1 @@
+{"type":"result","subtype":"success","is_error":false,"duration_ms":1234,"duration_api_ms":1000,"num_turns":1,"result":"{\"ok\":true}","session_id":"scripted-0001","structured_output":{"ok":true},"uuid":"scripted-result"}

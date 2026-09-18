@@ -253,8 +253,13 @@ jobs:
           # -> `crates/rk-adapter-claude/src/*`, so the committed POSITIVE CONTROL under that crate's
           # tests/fixtures/lint-controls/ (the file that carries the banned token on purpose) is not read as a
           # violation. The register scopes AC-362 to the usage struct's call sites, which live in src/.
+          # Comment-filtered as of 2026-09-18 (Step 7c Slice 5): the rule is about CALL SITES, and this
+          # workspace's house style names a banned spelling in the module header that explains the ban --
+          # an unfiltered grep fires on the prose describing it (Halt 7's shape; the AC-529 rule beside
+          # this one learned it on 2026-09-13). Anchored on the `path:line:content` prefix grep prints.
           hits=$(git grep -nE 'unwrap_or\(0\)|unwrap_or_default\(\)' -- \
-                 'crates/rk-adapter-claude/src/*' 'crates/*/src/usage.rs' || true)
+                 'crates/rk-adapter-claude/src/*' 'crates/*/src/usage.rs' \
+                 | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' || true)
           if [ -n "$hits" ]; then
             echo "FAIL: absent is being read as zero on the usage struct (AC-362):"
             printf '%s\n' "$hits"

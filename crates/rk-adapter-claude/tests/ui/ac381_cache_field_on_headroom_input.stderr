@@ -1,0 +1,7 @@
+error[E0560]: struct `Sample` has no field named `cache_creation_input_tokens`
+  --> tests/ui/ac381_cache_field_on_headroom_input.rs:13:9
+   |
+13 |         cache_creation_input_tokens: 81_159u64,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Sample` does not have this field
+   |
+   = note: all struct fields are already assigned

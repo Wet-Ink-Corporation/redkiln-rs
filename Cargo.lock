@@ -2184,6 +2184,7 @@ name = "rk-adapter-claude"
 version = "0.0.0"
 dependencies = [
  "insta",
+ "jsonschema",
  "proptest",
  "rk-adapter-sqlite",
  "rk-containment",

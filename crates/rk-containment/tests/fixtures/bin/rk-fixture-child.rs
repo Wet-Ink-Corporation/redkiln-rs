@@ -37,6 +37,8 @@
 //! | mode | what it does |
 //! | --- | --- |
 //! | `replay:<file>` | cat a SCRIPTED transcript file to stdout, exit 0 |
+//! | `replay-then-orphan:<file>` | replay `<file>`, then spawn an `orphan-holder` with stdio INHERITED (it holds the parent's stdout/stderr pipes open), wait for its marker, and exit 0 — the direct child has EXITED while a descendant holds its pipes: the adapter's race must be decided by the child's exit and the frame it read, and the leftover reaped through the group, never a wait to the timer for an EOF the holder withholds (`s7c` §7c.10's race; AC-278's shape) |
+//! | `replay-then-hold:<file>` | replay `<file>` (flushed), then hold with stdout OPEN — a frame is read and the child lives on to the token or the timer: the arm that fired classifies, and what was read before the kill is retained (RT-3 as amended; Halt 4) |
 //! | `exit:<code>` | exit with that code |
 //! | `hold` | write the marker, stay alive until killed (or the 600 s cap) |
 //! | `close-stdin-early` | exit 0 without reading stdin — `std` cannot close an inherited stdin handle, and the exit closes it for the parent's ≥ 1 MiB write to fail on (`Transport { Io }`) |
@@ -89,8 +91,30 @@ fn main() -> ExitCode {
     let argv: Vec<String> = env::args().collect();
 
     let mut extra: Vec<String> = Vec::new();
+    // The modes that carry no mode-specific marker lines write their marker FIRST, before any
+    // output or exit: the marker is the spawn's evidence, and a parent that kills the child on
+    // its first stream line (the Harness adapter's init-time refusals, s7c §7c.4) must still find
+    // it. The holders write theirs before holding; `orphan` and `breakaway` write theirs after the
+    // lines their attempts add. (Moved here at Slice 5, 2026-09-18: `replay` wrote its marker after
+    // the replay, and an init-time kill raced it — the marker count read 0 for a child that ran.)
+    if !matches!(
+        name.as_str(),
+        "hold" | "orphan-holder" | "orphan" | "breakaway"
+    ) {
+        write_marker(marker_dir.as_deref(), &name, &argv, &extra);
+    }
     let run = match name.as_str() {
         "replay" => replay(arg.as_deref()),
+        "replay-then-orphan" => replay(arg.as_deref()).and_then(|code| {
+            let _holder = spawn_self("orphan-holder", false)?;
+            // exit only once the holder is up (its marker is the test's evidence that a
+            // descendant held the pipes when the child exited)
+            if let Some(dir) = marker_dir.as_deref() {
+                wait_for_marker(dir, "orphan-holder")?;
+            }
+            Ok(code)
+        }),
+        "replay-then-hold" => replay(arg.as_deref()).inspect(|_| hold()),
         "exit" => Ok(exit_code(arg.as_deref())),
         "hold" | "orphan-holder" => {
             write_marker(marker_dir.as_deref(), &name, &argv, &extra);
@@ -113,14 +137,6 @@ fn main() -> ExitCode {
             Ok(ExitCode::from(2))
         }
     };
-    // Every mode above that did not write its marker on the way writes it here, so one invocation
-    // is always one file (a holder writes it before holding; the rest write it before exiting).
-    if !matches!(
-        name.as_str(),
-        "hold" | "orphan-holder" | "orphan" | "breakaway"
-    ) {
-        write_marker(marker_dir.as_deref(), &name, &argv, &extra);
-    }
     match run {
         Ok(code) => code,
         Err(e) => {
