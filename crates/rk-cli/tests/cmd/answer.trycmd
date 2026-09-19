@@ -1,0 +1,18 @@
+```console
+$ redkiln answer --help
+Answer an open human gate, by the option its question declared
+
+Usage: redkiln answer [OPTIONS] --explain-sufficed <yes|no> --toml-opened <yes|no> <ITEM> <OPTION>
+
+Arguments:
+  <ITEM>    The item whose gate is open
+  <OPTION>  The option id, as the gate's question declared it
+
+Options:
+      --attach <KIND=PATH>         An artifact the chosen option admits, as KIND=PATH; repeatable
+  -C <PATH>                        Act on the repository at this path instead of the working directory
+      --explain-sufficed <yes|no>  Did reading the explanation suffice to decide? [possible values: yes, no]
+      --toml-opened <yes|no>       Was the item's own file opened before deciding? [possible values: yes, no]
+  -h, --help                       Print help
+
+```

@@ -1,0 +1,22 @@
+```console
+$ redkiln --help
+Backlog-as-code: the kernel selects, a harness executes, git records.
+
+Usage: redkiln [OPTIONS] <COMMAND>
+
+Commands:
+  run      Take the next activity for an item and exit on what it decided
+  answer   Answer an open human gate, by the option its question declared
+  status   Print the roll-up across every item the store knows
+  explain  Print why an item reached the state it is in, from its recorded run
+  doctor   Report what is wrong with this repository's configuration and state
+  init     Create this repository's `.redkiln/` scaffold
+  catalog  Read the activity catalog
+  lint     Check a facet registry against a rule and exit by its table
+
+Options:
+  -C <PATH>      Act on the repository at this path instead of the working directory
+  -h, --help     Print help
+  -V, --version  Print version
+
+```

@@ -1,0 +1,11 @@
+```console
+$ redkiln init --help
+Create this repository's `.redkiln/` scaffold
+
+Usage: redkiln init [OPTIONS]
+
+Options:
+  -C <PATH>   Act on the repository at this path instead of the working directory
+  -h, --help  Print help
+
+```

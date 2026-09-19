@@ -1,0 +1,22 @@
+---
+source: crates/rk-cli/tests/it/exit.rs
+expression: table
+---
+0 Success
+2 Usage
+3 ConfigError
+4 FindingsBlock
+5 NoRecord
+10 Transport
+11 Schema
+12 Timeout
+13 Cancelled
+14 NonZero
+15 RateLimited
+16 NotAdopted
+17 NotIsolated
+18 Platform
+19 Unsupported
+20 Overage
+70 PoisonedLockHalt
+130 SignalOutsideDispatch

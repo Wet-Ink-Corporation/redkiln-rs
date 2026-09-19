@@ -83,6 +83,15 @@ thiserror  = "2"
 # jsonschema's default resolvers [measured 2026-09-17, s7c §7c.1 RT-13], so the row adds tokio-macros and moves
 # nothing else.
 tokio      = { version = "1", features = ["rt-multi-thread", "process", "io-util", "time", "sync", "macros"] }
+# ADDED 2026-09-18 (Step 7d Slice 1, s7d §7d.15). All six are >= 1.0, so caret ranges under ADR-0100 decision 2.
+clap       = { version = "4", features = ["derive"] }   # 4.6.7; rk-cli and redkiln-migrate — the two binaries
+anyhow     = "1"    # 1.0.104; rk-cli and redkiln-migrate ONLY (ADR-0102 d6) — ci.yml's confinement rule names both
+toml       = "1"    # 1.1.6; rk-cli's ConfigFile reader with serde deny_unknown_fields (DECISIONS-2026-09-18 D18-3)
+ctrlc      = { version = "3", features = ["termination"] }   # 3.5.2; rk-cli ONLY — the signal path ADR-0099 d2 assigns
+                    # to the CLI (D18-2); `termination` = SIGTERM/SIGHUP reach the handler on POSIX; its windows-sys
+                    # requires "0.61" and unifies with rk-containment's =0.61.2 (one version; no deny multiple-versions warning)
+trycmd     = "1"    # 1.2.1; dev — AC-400's --help snapshot (NOT 0.x: the plan's "=0.15.x" was measured wrong)
+assert_cmd = "2"    # 2.2.2; dev — the process-level refusals
 
 [workspace.lints.rust]
 unsafe_code = "deny"

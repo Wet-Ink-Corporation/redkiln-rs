@@ -47,6 +47,23 @@ deny = [
   { name = "graph-flow" },
   { name = "dbos" },
   { name = "durable" },
+  # ADDED 2026-09-18 (Step 7d Slice 1, s7d §7d.15; DECISIONS-2026-09-18 RT-36). AC-405's crate-graph
+  # instrument as amended (D-13: "and their kin"): the CLI reaches no tracker and no web surface, and the
+  # instrument is the dependency graph rather than a source grep, because a tracker client that entered
+  # through a transitive edge would satisfy every source-level ban and still be there.
+  #
+  # NONE of the eight is in Cargo.lock at 239e899 [measured 2026-09-18, re-measured 2026-09-19 at this
+  # slice: zero hits each]. That is the point and not a weakness: the rows ban nothing present and bite on
+  # CONTACT — the first PR that reaches for one turns this gate red rather than being discovered later in a
+  # review. A ban that was added to remove something already there would be a repair; this is a fence.
+  { name = "octocrab" },
+  { name = "reqwest" },
+  { name = "hyper" },
+  { name = "axum" },
+  { name = "ureq" },
+  { name = "tokio-tungstenite" },
+  { name = "warp" },
+  { name = "actix-web" },
 ]
 
 [licenses]

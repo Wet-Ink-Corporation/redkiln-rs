@@ -1,0 +1,12 @@
+```console
+$ redkiln doctor --help
+Report what is wrong with this repository's configuration and state
+
+Usage: redkiln doctor [OPTIONS]
+
+Options:
+  -C <PATH>      Act on the repository at this path instead of the working directory
+      --rebuild  Re-derive the tier-2 projection from git alone and compare it with what is stored
+  -h, --help     Print help
+
+```

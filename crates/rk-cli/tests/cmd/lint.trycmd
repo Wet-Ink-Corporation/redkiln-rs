@@ -1,0 +1,18 @@
+```console
+$ redkiln lint --help
+Check a facet registry against a rule and exit by its table
+
+Usage: redkiln lint [OPTIONS] <--facet-stability|--facet-provenance> <FACETS_TOML>
+
+Arguments:
+  <FACETS_TOML>  The facet registry to read
+
+Options:
+  -C <PATH>                      Act on the repository at this path instead of the working directory
+      --facet-stability          Check every declared facet against its stability record at the pinned corpus
+      --facet-provenance         Check that every declared facet value has a registered fact behind it
+      --stability-record <PATH>  Stability records; absent, the rule runs over an empty map
+      --pinned-corpus <PATH>     The pinned corpus results; absent, the location CORPUS_PIN records is used
+  -h, --help                     Print help
+
+```

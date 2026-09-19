@@ -439,8 +439,19 @@ syn2=$(printf 'x.rs:2:            Self::ChangeSummary => "",\n' | grep -vE '^[^:
 [ -z "$syn2" ] || { echo "FAIL: the reading-3 exclusion does not admit a path-qualified variant use — the registry files would fire again"; exit 1; }
 test -f Cargo.toml || { echo "FAIL: no root manifest"; exit 1; }
 meta=$(cargo metadata --format-version 1 --no-deps); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: cargo metadata exited $rc"; exit 1; }
-printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; bad=sorted(p['name'] for p in m['packages'] if any(d['name']=='anyhow' for d in p['dependencies'])); print(bad); sys.exit(1 if bad else 0)" \
-  || { echo "FAIL: a workspace MEMBER depends on anyhow"; exit 1; }
+printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; allowed={'rk-cli','redkiln-migrate'}; bad=sorted(p['name'] for p in m['packages'] if p['name'] not in allowed and any(d['name']=='anyhow' for d in p['dependencies'])); print(bad); sys.exit(1 if bad else 0)" \
+  || { echo "FAIL: a workspace MEMBER outside {rk-cli, redkiln-migrate} depends on anyhow"; exit 1; }
+                                                          # → [] at Step 5 (rk-cli and redkiln-migrate did not exist) and → [] from Step 7d Slice 1 on.
+                                                          # AMENDED 2026-09-19, at Step 7d Slice 1, by the operator's decision, and the line is STALE
+                                                          # rather than wrong (s7d §7d.1's rule: "A record that overturns one of those routings makes
+                                                          # its floor line stale, not wrong: the line is re-pointed in the same commit as the record's
+                                                          # code, the way Checkpoint 5's ChangeSummary line was (D17-1)"). As written it asserted that
+                                                          # NO member depends on anyhow, and its own comment already anticipated the two that would —
+                                                          # so the first slice of 7d to create crates/rk-cli made it unsatisfiable, while Checkpoint 7d's
+                                                          # own manifest loop asserts the opposite: that the anyhow row is PRESENT on both. The authority
+                                                          # is ADR-0102 decision 6, an ACCEPTED record: "thiserror in library crates, anyhow confined to
+                                                          # rk-cli and redkiln-migrate". The allowlist is exactly those two names and is not a widening:
+                                                          # a third member taking anyhow is still red here, which is the whole of what the convention says.
                                                           # → [] at Step 5 (rk-cli and redkiln-migrate are 7d's); the design §9.1 anyhow convention, as a check.
                                                           # --no-deps is load-bearing: without it the walk is the whole transitive
                                                           # graph, not the members the convention is about (golden constraint 9),

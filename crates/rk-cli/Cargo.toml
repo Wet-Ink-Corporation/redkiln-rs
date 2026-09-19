@@ -1,0 +1,50 @@
+[package]
+name = "rk-cli"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The composition root — the `redkiln` binary (design §9.1; Step 7d)."
+
+[[bin]]
+name = "redkiln"
+path = "src/main.rs"
+# src/lib.rs is the library the tests link (an integration test cannot link a [[bin]] or name a pub(crate) item);
+# main.rs only installs the handler and the panic hook and exits through code_for (§7d.10).
+
+[features]
+# Corpus-bound tests, local-only (AC-464/PIA-002); run as `cargo test --workspace --features corpus`.
+corpus = []
+
+[dependencies]
+rk-types = { path = "../rk-types" }
+rk-ports = { path = "../rk-ports" }
+rk-kernel = { path = "../rk-kernel" }
+rk-store = { path = "../rk-store" }
+rk-git = { path = "../rk-git" }
+rk-containment = { path = "../rk-containment" }              # run_bounded for the doctor version probe (D-11)
+rk-adapter-claude = { path = "../rk-adapter-claude" }         # the four reals (ADR-0094 d1), constructed once here
+rk-adapter-sqlite = { path = "../rk-adapter-sqlite" }
+rk-adapter-toolchain-node = { path = "../rk-adapter-toolchain-node" }
+rk-adapter-toolchain-rust = { path = "../rk-adapter-toolchain-rust" }
+clap.workspace = true
+anyhow.workspace = true        # ADR-0102 d6: this crate and redkiln-migrate ONLY
+toml.workspace = true          # D18-3: the ConfigFile reader
+ctrlc.workspace = true         # D18-2: the signal path, this crate ONLY
+serde.workspace = true
+serde_json.workspace = true
+tempfile = "3"                 # H-3: the bootstrap GitExec's hooks directory, before the common dir is known
+
+[dev-dependencies]
+trycmd.workspace = true        # AC-400's --help snapshot
+assert_cmd.workspace = true
+insta.workspace = true         # the Exit::ALL snapshot
+proptest.workspace = true
+
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

@@ -1,0 +1,29 @@
+```console
+$ redkiln catalog --help
+Read the activity catalog
+
+Usage: redkiln catalog [OPTIONS] <COMMAND>
+
+Commands:
+  search  Find activities whose declared keywords match
+
+Options:
+  -C <PATH>   Act on the repository at this path instead of the working directory
+  -h, --help  Print help
+
+```
+
+```console
+$ redkiln catalog search --help
+Find activities whose declared keywords match
+
+Usage: redkiln catalog search [OPTIONS] <QUERY>
+
+Arguments:
+  <QUERY>  What to look for
+
+Options:
+  -C <PATH>   Act on the repository at this path instead of the working directory
+  -h, --help  Print help
+
+```

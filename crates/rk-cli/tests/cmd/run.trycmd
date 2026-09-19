@@ -1,0 +1,25 @@
+```console
+$ redkiln run --help
+Take the next activity for an item and exit on what it decided
+
+Usage: redkiln run [OPTIONS] <ITEM>
+
+Arguments:
+  <ITEM>
+          The item to act on
+
+Options:
+  -C <PATH>
+          Act on the repository at this path instead of the working directory
+
+      --lane <LANE>
+          Which lane the item belongs to
+
+          Possible values:
+          - fix:   The reactive lane
+          - story: The planned lane
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```

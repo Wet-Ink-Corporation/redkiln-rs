@@ -1,0 +1,11 @@
+```console
+$ redkiln status --help
+Print the roll-up across every item the store knows
+
+Usage: redkiln status [OPTIONS]
+
+Options:
+  -C <PATH>   Act on the repository at this path instead of the working directory
+  -h, --help  Print help
+
+```

@@ -1,0 +1,14 @@
+```console
+$ redkiln explain --help
+Print why an item reached the state it is in, from its recorded run
+
+Usage: redkiln explain [OPTIONS] <ITEM>
+
+Arguments:
+  <ITEM>  The item whose recorded run to read
+
+Options:
+  -C <PATH>   Act on the repository at this path instead of the working directory
+  -h, --help  Print help
+
+```
