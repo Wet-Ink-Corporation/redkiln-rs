@@ -1,6 +1,6 @@
 ---
 id: "0129"
-title: The gate-answer grammar is `redkiln answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no>` — the token resolved by the CLI from the item's open gate record, the option validated against an ADR-0063 question registry whose type lands in `rk-kernel` with the default question `approve` / `changes-requested` built in — so ADR-0009's literal `approve|changes-requested` grammar sentence is superseded in part and its CLI-only channel clause stands
+title: The gate-answer grammar is `redkiln answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no> --toml-opened <yes|no>` — the token resolved by the CLI from the item's open gate record, the option validated against an ADR-0063 question registry whose type lands in `rk-kernel` with the default question `approve` / `changes-requested` built in — so ADR-0009's literal `approve|changes-requested` grammar sentence is superseded in part and its CLI-only channel clause stands
 status: proposed
 date: 2026-09-18
 legacy_id: none
@@ -58,7 +58,7 @@ AC-435's required field has no carrier; ADR-0063's `attaches` is dead on arrival
 third option (`proceed`) can never be answered.
 
 ### Option — the option validated against a registry, an attachment flag, the sufficiency field **(taken)**
-`answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no>`. The option is a registry id; the
+`answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no> --toml-opened <yes|no>`. The option is a registry id; the
 default question's two options are `approve` and `changes-requested`, so every invocation ADR-0009's sentence
 admitted is still admitted; the attachment path is exercisable in both directions; the field is required.
 
@@ -69,14 +69,18 @@ are 7d's; the pack-declared questions are 7e's.
 
 ## Decision
 
-**1. The `answer` grammar is `redkiln answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no>`.**
+**1. The `answer` grammar is `redkiln answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no> --toml-opened <yes|no>`.**
 `<item>` and `<option>` are positional. `--attach` is optional and repeatable, `<kind>` an artifact kind name and
-`<path>` a file in the working tree. `--explain-sufficed` is **required** — AC-435's machine half: *"the gate answer
-cannot be submitted with the field absent"* — and its value is `yes` or `no`; the second half of AC-435's field
-(*"whether a TOML was opened"*) is the same flag's `no` arm read as *a TOML was needed*. The flag's **name** is
-the default the implementer may rename at Step 7d; the stage file names the one shipped, and the register's
-AC-435 Verified-by is amended toward that name. The `gate_answered` payload gains the field (design §5's row is
-amended toward the register).
+`<path>` a file in the working tree. `--explain-sufficed` and `--toml-opened` are both **required** — AC-435's machine
+half: *"the gate answer cannot be submitted with the field absent"* — and each takes `yes` or `no`. They are AC-435's
+**two data in one field**: the THEN records *"the answer (yes/no, plus whether a TOML was opened)"* as *a required
+field*, and SM-126's pre-registered kill — *"more than 15 of the first 30 answers report that the reviewer opened a
+TOML anyway"* — is the cell *sufficed = yes AND opened = yes*, which one boolean cannot carry. The `gate_answered`
+payload gains **one** member, `explain_sufficiency { sufficed, toml_opened }` (design §5's row is amended toward the
+register). The flags' **names** are the defaults the implementer may rename at Step 7d; the stage file names the ones
+shipped, and the register's AC-435 Verified-by is amended toward those names. *(Corrected 2026-09-19 before acceptance:
+as proposed this decision named one flag and read the second datum as its `no` arm — the operator's answer to the
+question the stage-open commit carried is two data, one field.)*
 
 **2. The token is resolved by the CLI, never typed.** `answer` reads the item's open gate record from the store,
 takes its live token, and hands `(token, tree_hash, option)` to `rk_kernel::workflow::gate::answer` (AC-405's one
@@ -110,7 +114,7 @@ first, so the operator sees a usage error with zero events, and a caller that sk
 
 **6. The records amended toward it** (ADR-0092 clause 2.2), each a dated in-place amendment, none an erratum:
 AC-410's Verified-by (the positive control); AC-405's and AC-406's Verified-by (the flags named); AC-435's
-Verified-by (the flag name the stage ships); design §8.1's `answer` row (`<option> [--attach …] --explain-sufficed`)
+Verified-by (the flag names the stage ships and the field); design §8.1's `answer` row (`<option> [--attach …] --explain-sufficed --toml-opened`)
 and design §5's `gate_answered` payload row (the field; and either a source for the `answerer` it names or the
 field dropped — 7d's stage file states which).
 
@@ -139,8 +143,8 @@ field dropped — 7d's stage file states which).
   dated amendment in the stage-open commit that carries this record.
 - A `pub` type enters `rk-kernel` at 7d (a Step-7b crate edit; its checkpoint lines re-run), and the registry has
   exactly one question until 7e — the pack-declared arm is exercised by 7d fixtures only.
-- `--explain-sufficed` on every answer is a cost to the operator on every gate; SM-126 is the measure that says
-  whether it was worth asking.
+- `--explain-sufficed` and `--toml-opened` on every answer are a cost to the operator on every gate; SM-126 is the
+  measure that says whether it was worth asking, and it can only be read because both are asked.
 - Committed `proposed`: the operator's word on this shape is recorded in `DECISIONS-2026-09-18` D18-17; the flip to
   `accepted` is a follow-up commit once that line is dated (ADR-0126's precedent), `date` unchanged.
 
@@ -156,8 +160,8 @@ field dropped — 7d's stage file states which).
 - [documented, PIA-059] an instrument satisfied by an implementation that does nothing — the shape AC-410's
   positive control exists to close.
 - **Confidence:** the joint unsatisfiability is a reading of quoted clauses and is not in doubt; the grammar and the
-  registry's stage split are the operator's choice among three named options. The flag's final name and the
+  registry's stage split are the operator's choice among three named options. The flags' final names and the
   `answerer` source are **not decided here** and are named as Step 7d's to state.
-- **What this evidence does not license.** It does not license claiming that `--explain-sufficed` measures
+- **What this evidence does not license.** It does not license claiming that `--explain-sufficed` / `--toml-opened` measure
   legibility — AC-435's Verified-by keeps that *"routed to a human gate; not machine-decidable"*; this record carries
   the field, not the judgement.

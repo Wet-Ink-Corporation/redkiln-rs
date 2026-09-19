@@ -69,9 +69,11 @@ a usage error, not a configuration error). There is no `--item` flag.
 
 **2. The lane is optional and derived from the item when derivable.** When `--lane` is absent, the lane is read
 from the item record's kind where that record makes it derivable; when `--lane` is given it must agree with a
-derivable kind, and a disagreement is refused. When the lane is **neither given nor derivable**, `run` refuses as
-a **configuration error** (AC-438's configuration-error row) naming the item and the two admissible values, and
-writes nothing. It never defaults to a lane.
+derivable kind, and a disagreement is refused as **the same configuration error** (AC-438's configuration-error
+row), naming the given lane and the derived kind — never resolved in favour of either. When the lane is **neither
+given nor derivable**, `run` refuses as a **configuration error** (the same row) naming the item and the two
+admissible values, and writes nothing. It never defaults to a lane. *(Clarified 2026-09-19 before acceptance: the
+disagreement case named no exit row.)*
 
 **3. The lane names the process pack.** `fix` → the `bug-standard` pack; `story` → the `story` pack
 (DECISIONS-2026-09-12 E7's two Phase-1 packs). The pack must be enabled in `.redkiln/config.toml`'s `[packs] enabled`
@@ -83,12 +85,21 @@ grammar, the flag being decision 2's. ADR-0107 decision 4's *"`taskkill /T /F` t
 running process mid-graph, then re-invoke … ; the run id is read back from the event log (AC-013) and digest
 equality is asserted via `redkiln explain <item>`"* stands in every clause except the re-invocation's spelling,
 which is now `redkiln run <item> [--lane fix]` (the lane derived from the item the first invocation ran once the
-item record carries its kind; passed explicitly until then). That `--resume` is
+item record carries its kind; passed explicitly until then), **and the digest it names, which ADR-0107 left
+unnamed (DECISIONS-2026-09-12 E5's owed erratum, closed here 2026-09-19 as O-13): the equality is over each
+committed step's `output_digest` in the recorded resolution** — F38's measured quantity (*"0 changed, 0 lost, digests
+identical"*) and AC-013's N-step read — equal before the kill and after the re-invocation, as `redkiln explain <item>`
+prints them. `explain` may print the `dag_assembled` row's inputs digest beside them (AC-041's tuple; RT-52), but that
+digest is not the equality's subject: a resumed run that re-derives its DAG over a tree a committed step changed may
+legitimately differ there, and a committed step's output may not. That `--resume` is
 refused is still AC-400's behavioural check.
 
 **5. What this record supersedes, exactly.** ADR-0107 decision 4's grammar sentence — the spelling
-*"`redkiln run --lane fix --item <item>`"* — and nothing else of that record: decisions 1, 2, 3, the rest of
-decision 4, and every bullet of its forbids stand; 0107 stays `accepted` carrying `superseded_by: ["0128"]`.
+*"`redkiln run --lane fix --item <item>`"* — **and its digest clause's missing field** (*"digest equality is asserted
+via `redkiln explain <item>`"*, which named none; decision 4 above names the committed steps' `output_digest`) — and
+nothing else of that record: decisions 1, 2, 3, the rest of decision 4, and every bullet of its forbids stand; 0107
+stays `accepted` carrying `superseded_by: ["0128"]`. *(Widened 2026-09-19 before acceptance, by one clause: the E5 route
+— an erratum on a Decision sentence — is the one ADR-0092 :64/:140 forbids, so the field is named here.)*
 
 **6. The records amended toward it** (ADR-0092 clause 2.2 direction: register and design toward the ADR; the
 runbook toward both), each as a dated in-place amendment (DECISIONS-2026-09-15 D15-2), none as an erratum:

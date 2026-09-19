@@ -6325,7 +6325,7 @@ of that wrapper and requires exactly one, in `rk-cli`'s `answer` verb (the kerne
 exempt). "No tracker or web crate" is a `deny.toml` ban list the Step 7d stage authors — `octocrab`, `reqwest`, `hyper`,
 `axum`, `ureq` and their kin — checked by `cargo deny check bans` over the workspace graph; this is instrument
 authoring, not a threshold change. The grammar the one call site serves is `answer <item> <option> [--attach
-<kind>=<path>] --explain-sufficed <yes|no>` — the required flag included, so ADR-0129 decision 6's *"the flags named"*
+<kind>=<path>] --explain-sufficed <yes|no> --toml-opened <yes|no>` — the two required flags included (as corrected 2026-09-19), so ADR-0129 decision 6's *"the flags named"*
 reads true of this note — with the token CLI-resolved from the open gate record (ADR-0129, proposed; AC-248).)*
 **Cut on refutation:** the original cited F18 and F28 (gate duration and gate cost), neither of which bears on who may
 write a gate answer, and asserted "it does not compile" — a claim neither instrument makes. The THEN is now the observable
@@ -6340,8 +6340,8 @@ stage transition occurs — the answer is never reconciled into a verdict.
 *Verified by:* an integration test that answers after a commit lands, asserting a `gate_answer_void` event carrying both
 tree hashes, `gate.state == open`, and no stage transition.
 *(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-04: "`redkiln answer` is invoked with a valid token" — the token is
-never an argument. The grammar is `answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no>` (ADR-0129,
-proposed — the required flag named, as its decision 6 says this note does); the CLI
+never an argument. The grammar is `answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no> --toml-opened <yes|no>` (ADR-0129,
+proposed — the two required flags named, as corrected 2026-09-19, as its decision 6 says this note does); the CLI
 resolves the live token from the item's open gate record (AC-248), and the test invokes that form.)*
 
 **AC-407** — `rk-cli`, `rk-store` · evidence: none measured; this is a design decision · decisions: ADR-0017
@@ -7420,6 +7420,11 @@ AC-463) establish that the losses are *enumerated*, but whether a given loss is 
 content. The gate record is a token + tree hash + deadline (ADR-0017 area), and the gate's cost is bounded and flat in
 duration [measured, F28/F18: 18,603 tokens at both 65.2 min and 49.7 h; gate→verdict median 10.5 min, 45% > 1 h, one
 operator].
+*(Noted 2026-09-19, DECISIONS-2026-09-18 O-14 — the operator's answer: this criterion is **not split**; no stage claims it by
+half. Its AND clause — *"the commit does not land on a machine verdict alone"* — is the behaviour AC-522's run contract
+owns and instruments (the one migration commit lands on `rk-migrate/<short>`, never on the target branch; *"integration into
+the target branch is a separate, reviewed step"*), so the clause is pinned under AC-522's positive run and is not an
+unpinned conjunct here. The gate itself is scheduled by the first stage that proposes a migration commit for landing.)*
 
 ---
 

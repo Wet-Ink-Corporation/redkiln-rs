@@ -37,9 +37,9 @@ halves 7c discharged, AC-404 and AC-408, which are kernel behaviours built at 7b
 fidelity half, and omitted AC-531's proper place, AC-411 (claimed by no stage), AC-263 (handed here by `s7b-ii`), the
 `doctor` halves `s7c` ARMED here, and every record the C-01 pass found undecided (D-22). Every one of those is named
 below in the partition it belongs to. **The records this rewrite executes** are `spikes/DECISIONS-2026-09-18.md` —
-the decisions **D18-1…D18-18** — D18-1…D18-13 the plan recorded, D18-14…D18-16 the three the hardening needed
+the decisions **D18-1…D18-19** — D18-1…D18-13 the plan recorded, D18-14…D18-16 the three the hardening needed
 decided, D18-17 the four blocking C-01 items that were the operator's (D-01, D-02, D-04, D-14) with D-05/D-15/D-18, D18-18
-the amendments' landing; three blocking items were this file's (D-07 → D18-9, RA-M-02 → D18-15, RB-M-01 → the
+the amendments' landing, D18-19 (2026-09-19) the six `s7b-ii` gate `doctor` rows allocated here; three blocking items were this file's (D-07 → D18-9, RA-M-02 → D18-15, RB-M-01 → the
 poisoned-lock entry under D18-4) — and the routings and open items numbered on from DECISIONS-2026-09-17 (**RT-28+**,
 **O-12+**, **R-25+**; this file's own routings are **RT-41…RT-59** — RT-41…RT-46 from the first draft, RT-47…RT-59 added by
 the hardening rounds — and its open item **O-16**, added to that log's tables in the same commit) —
@@ -93,7 +93,7 @@ scratchpad, not in the tree, and nothing below cites them as a record.
 — `rk-kernel` (eight edits, §7d.15; no other closed crate is touched — the console-signal test-support wrapper an earlier
 draft put in `rk-containment` is **not built**, §7d.10).** `rk-cli` is the **composition root** design §9.1 names: a `clap`
 router over the kernel with `run <item> [--lane fix|story]` (ADR-0128), `answer <item> <option> [--attach
-<kind>=<path>] --explain-sufficed yes|no` (ADR-0129 decision 1 — one required flag; §7d.6), `status`, `explain <item>`, `doctor` and `doctor --rebuild`,
+<kind>=<path>] --explain-sufficed yes|no --toml-opened yes|no` (ADR-0129 decision 1 — two required flags, one record field; §7d.6), `status`, `explain <item>`, `doctor` and `doctor --rebuild`,
 `catalog search <query>`, `init` — the verbs design §8.1 lists at Phase 1 — plus `lint --facet-stability|--facet-provenance
 <facets.toml>`, which **no §8.1 row carries** and which `rk-kernel`'s `lib.rs` header and `s8` (6) name as `rk-cli`'s,
 wrapping **two of the three** kernel lints that header says are owed a CLI surface (*"`redkiln lint --facet-stability`,
@@ -119,7 +119,7 @@ crate; the alternative — `doctor` calling the strict loader per file and colle
 rejected because a pack with two defects would surface one; the record naming the diagnostic mode as the loader's
 surface is OWED); (5) `workflow/gate.rs` — `gate::answer` gains **three parameters** — `registry: &QuestionRegistry`
 and `attachments: &[Attachment]`, which it validates against before it closes the mark (ADR-0063's *"the kernel refuses
-to close the mark unless that attachment is supplied"*), and `meta: AnswerMeta { explain_sufficed, answerer }` whose
+to close the mark unless that attachment is supplied"*), and `meta: AnswerMeta { explain_sufficiency, answerer }` whose
 members `gate_answered_event` writes kernel-side (§7d.6, §7d.15; the ~20 call sites in `crates/rk-kernel/tests/it/gates.rs`
 each gain the three arguments and `GateError` gains `OptionRefused(OptionError)`); (6) `replay::resume` — the store-seeded
 twin of `replay::record` that folds the item's recorded journal before `next_action`, steps `NextAction::OpenGate` through
@@ -165,7 +165,7 @@ stops."*):
   (§7d.15; `00-preamble.md`: *"A checkpoint that changed after it passed is provisional"*; precedent `s7c` §7c.19).
   The root `Cargo.toml` rows land at Slice 1 and make Checkpoint 5 provisional the same way.
 - **Nothing about where a criterion is allocated.** Where an id is orphaned, double-claimed or mis-routed — AC-411,
-  AC-455's and AC-530's `doctor` rows, the `s7b-ii` block armed to 7c that names the composition root, SM-123's
+  AC-455's and AC-530's `doctor` rows (settled by the operator as D18-19 on 2026-09-19, not by this file), the `s7b-ii` block armed to 7c that names the composition root, SM-123's
   instrument — this file **raises it and does not settle it** (`s7a` §7a.11: *"naming a destination is not routing
   it there"*). §7d.18 names each one.
 - **Nothing a register THEN or an ADR Decision sentence fixes.** Four of the seven blocking C-01 items (D-01, D-02,
@@ -181,7 +181,7 @@ a surface ADR-0092 assigns to the runbook, none a threshold or an instrument:
 | # | This stage decides | Record | Where |
 | --- | --- | --- | --- |
 | H-1 | **The exit-code table's values** — `0` Success (also gate-open, by D-01; also the AC-450-style no-op; also a `Void` answer, recorded as void — AC-406), `2` Usage, `3` ConfigError, `4` FindingsBlock, `5` NoRecord, `10`–`20` one per `StepError` variant in `error.rs` order, `70` PoisonedLockHalt, `130` SignalOutsideDispatch | **AC-438** says *"a closed, snapshot-pinned table"* and *"a committed snapshot of the exit-code table"* — the committed snapshot IS the record, so no ADR is minted (**D18-4**; the plan's first form of D18-4 named an ADR-0128 for the table and was withdrawn when ADR-0128 was needed for the `run` grammar) | §7d.4 |
-| H-2 | **The non-`StepError` rows the closed table must carry** — usage (clap's default `2`, kept: clap's own refusals, an undeclared option, an attachment no declared option admits or a declared attachment absent — AC-410, ADR-0129 decision 4), configuration error (AC-413/AC-426/AC-486/AC-531 refusals, the error-severity `doctor` rule, ADR-0128's non-derivable lane, D18-8's no-pack repository, unknown keys, the git floor, and an `answer` with no resolvable live token (AC-248) or a spent token (AC-407) — refusals of the repository's recorded state, read as configuration of the item), no-record (AC-432), findings-block, the ADR-0118 halt (clause 6: *"the CLI's surface, owed at Step 7d"*), signal outside a dispatch (RA-M-04) | AC-438's *"for any reason"* (C-01 **D-12**) | §7d.4 |
+| H-2 | **The non-`StepError` rows the closed table must carry** — usage (clap's default `2`, kept: clap's own refusals, an undeclared option, an attachment no declared option admits or a declared attachment absent — AC-410, ADR-0129 decision 4), configuration error (AC-413/AC-426/AC-486/AC-531 refusals, the error-severity `doctor` rule, ADR-0128's non-derivable lane and its given-vs-derived disagreement (decision 2 as clarified 2026-09-19), D18-8's no-pack repository, unknown keys, the git floor, and an `answer` with no resolvable live token (AC-248) or a spent token (AC-407) — refusals of the repository's recorded state, read as configuration of the item), no-record (AC-432), findings-block, the ADR-0118 halt (clause 6: *"the CLI's surface, owed at Step 7d"*), signal outside a dispatch (RA-M-04) | AC-438's *"for any reason"* (C-01 **D-12**) | §7d.4 |
 | H-3 | **The common-dir discovery rule** — every verb discovers the repository from the **inherited cwd through the `rk-git` wrapper**, in this order: a **bootstrap** `GitExec` whose `hooks_empty` is a `tempfile::TempDir` under the OS temp directory (`GitExec::new` creates that directory at construction [measured 2026-09-18, `crates/rk-git/src/git_exec.rs`], and the working hooks directory lives under a common dir not yet known, so the first wrapper cannot be the working one); through it `GitExec::run(GitOp::RevParse, &WorktreePath::new(Path::new(cwd_arg))?, ["rev-parse", "--show-toplevel"])` for the working-tree root that holds `.redkiln/`, `cwd_arg` being `-C <path>` or the literal `"."` — the child git resolves `"."` against the inherited cwd; then `rk_adapter_sqlite::path::common_dir(&bootstrap, &WorktreePath::new(Path::new(&toplevel))?)` — the `pub` reader 7c shipped — for the store's common dir; then the **working** `GitExec` (`hooks_empty = <git-common-dir>/redkiln/hooks-empty/`) that every later op goes through. **The `"."` is used for the one `--show-toplevel` read ONLY**: the `WorktreePath` every later op receives — `SqliteStore::open`, `reconcile_at_entry`, `tree_hash`, `commit_with_trailers` — is over the **absolute** `--show-toplevel` answer, so the identity row's `common_dir` is one absolute string whatever directory the verb was invoked from (§7d.3); never `std::env::current_dir`; `-C <path>` is optional | C-01 **D-18**; AC-529's ban is about tier-1 writes and is untouched — `ci.yml` carries the scope comment (landed 2026-09-18). **ADR-0091** decision 1 says *"gix owns the common-dir read … the wrapper's `rev-parse --git-common-dir` fallback is not commissioned"*; this stage reuses the executable read 7c shipped in `rk-adapter-sqlite/src/path.rs::common_dir` (Checkpoint 7c passed `2791f1d` on it) and adds no second reader — `rk-cli` never issues its own `rev-parse --git-common-dir`, and the one new read this stage adds is `--show-toplevel`, which ADR-0091 does not speak to; `redkiln-migrate`, which may not depend on `rk-adapter-sqlite` (AC-466), issues the one `rev-parse --git-common-dir` its worktree path needs through its own bootstrap wrapper and is named in the RAISED item — the ADR-0091-vs-tree divergence is RAISED in §7d.18 for an erratum or a dated note, not settled here | §7d.3, §7d.11 |
 | H-4 | **Where N lives** — `[doctor] unread_window_runs` is the per-repository key (AC-426: *"a required key, no default"*), read by the one rule row `RK-D-UNREAD` (AC-472 as amended 2026-09-18); `init` writes `INIT_UNREAD_WINDOW_RUNS = 50` as **one** literal | **D18-5**; the value is DECISIONS-2026-09-12 **E9**'s and the preamble's decision 4 | §7d.8, §7d.9 |
 | H-5 | **The `Gate:` trailer commit is a tier-1 write and goes to the run-owned worktree, never to `cwd`** — `run` at a gate and `answer` on `Applied` call `rk_git::worktree::authorise_tier1_write(exec, &owned_path, &ownership)` and commit at the `OwnedWorktree` it returns, where `ownership: RunOwnership { worktree, branch }` is the pair the store records for the item (**RT-47** — routed, not decided: at 7d `run` re-creates the worktree under `<common-dir>/redkiln/worktrees/<item>/` on branch `rk-run/<item>` — both `rk-` names, AC-531 — through `GitExec::run(GitOp::WorktreeAdd, …, ["worktree", "add", "-b", &branch, path, "HEAD"])` on a first run and `rk_git::worktree::add` when the branch exists (the migrator's shape, §7d.11 step (3) — a previous run's tree is torn down first by `GitExec::run(GitOp::WorktreeRemove, …, ["worktree", "remove", "--force", path])`, the raw-`run` form step (3) already uses, because `rk_git::worktree::remove` passes no `--force` and git refuses a tree holding a killed run's uncommitted files [measured 2026-09-18, rc=128: *"contains modified or untracked files, use --force"*]; the `--force` is licensed only because the tree is run-owned, re-created never reused — ADR-0105 clause 6 — and never the user's checkout), and records the pair on the invocation's `reconcile_started` row beside RT-41's members; the record naming the ownership carrier is OWED, §7d.18 RAISED); `tree_hash` at gate open and at answer is taken over that tree, and the reals' `project_root` is that path | **ADR-0105 clause 8** (accepted Decision sentence): *"A tier-1 write resolves the run-owned worktree **from the store**, regardless of cwd, and a target that is not run-owned is refused naming its path and branch"*; **AC-529**'s THEN: *"the run-owned worktree is resolved **from the store**, never from cwd"*; **AC-518**'s THEN: an orchestrator commit from the user's checkout *"is refused unless its target is a run-owned worktree"*; design §3: *"The orchestrator never writes to the user's checkout"*. The hash basis follows **ADR-0017** — *"the tree hash the human saw"* — and the human reviews the run's output where the reals' `project_root` put it, the run-owned worktree; AC-406's void is therefore a move of THAT tree. The guard already ships — `rk_git::worktree::authorise_tier1_write(exec, target, &RunOwnership { worktree, branch }) -> OwnedWorktree`, `RunOwnership`, `OwnedWorktree` [measured 2026-09-18, `crates/rk-git/src/worktree.rs`] — and this row executes it; what it decides is only the 7d carrier of the pair | §7d.5, §7d.6 |
@@ -193,7 +193,7 @@ exists, the `DENYLIST` has eleven names, `INIT_UNREAD_WINDOW_RUNS` is one litera
 `accepted` at the close) **and polices routed rows only as existence and shape floors that move with the record** —
 named here so no reader takes a green line as a decision: RT-41's `reconcile_started` payload (a test reads the first
 row; the field name is a floor), RT-42's `answerer` source (`ac435_…` asserts the field equals the answer commit's `%an <%ae>`; the read precedes the `gate::answer` call — §7d.6), RT-31's
-`--explain-sufficed` flag name (the snapshot pins the shipped spelling; ADR-0129 decision 1 makes it renameable),
+two flag names `--explain-sufficed` / `--toml-opened` (the snapshot pins the shipped spellings; ADR-0129 decision 1 makes them renameable),
 RT-43's `Entry::Answer`-then-`tree_hash` order (a test, not a record), RT-45's three ADR-0105 rows (asserted by
 `adr0105_doctor_rows_network_fs_credential_orphan` and `ac415_…`'s join, outside the register-named `FLOOR` — the block
 has one floor list and they are not on it). The log's own routings RT-28…RT-40 are carried in the same table, each tagged on the row that
@@ -212,8 +212,8 @@ those routings makes its floor line **stale, not wrong**: the line is re-pointed
 | `doctor`'s `Rule` / `RULES` (`&[Rule { id, severity, check }]`, ids `RK-D-*`) | `rk-cli` (`crates/rk-cli/src/doctor/rules.rs`) — data, not a match | AC-415: *"the `doctor` rule table, which is data with a stable id per rule"*; ADR-0099 clause 5: `rk-doctor` → `rk-cli` | Built here; the id set is §7d.8's table, and the checkpoint's floor is the register-named subset (**RA-M-01**) |
 | `NoDispatchHarness` (a `Harness` whose `dispatch` panics naming the rule that reached it) | `rk-cli` (`crates/rk-cli/src/no_dispatch.rs`) — a `src/` type, because `rk_ports::root::Ports` has five mandatory `Arc<dyn …>` fields [measured 2026-09-18, `crates/rk-ports/src/root.rs`] and the register's *"`doctor`'s `Ports.harness` is a fake"* (AC-414 as amended) needs one the binary can hold; **constructed at the composition root**, never inside the `doctor` module, and handed in on the `Ports` the root builds for the `doctor` path (§7d.8) | AC-414's Verified-by as amended 2026-09-18 (C-01 **D-10**): *"'does not link a live adapter' means 'does not construct a `Harness` implementor'"*; **D18-7**: `doctor` never constructs a real `Harness` | **DECIDED by D18-7**; the lint half is a source scan over the `doctor` module for the four adapters' constructor paths (§7d.8) |
 | `QuestionRegistry` (question id → options → per-option `attaches` kinds; the default question `approve` / `changes-requested` built in) | **`rk-kernel`** (a Step 7d edit; `crates/rk-kernel/src/workflow/question.rs` is the implementer's name) | ADR-0129 decision 3: *"A `pub` registry type lands in `rk-kernel` at Step 7d … with the default question built in … Pack-declared questions … are Step 7e's"*; ADR-0063's Decision | **DECIDED by ADR-0129 (proposed)**; the file and type name are DECISIONS **RT-29**'s; pack-declared questions are 7e's — at 7d a non-default question exists **in-process only** (a test-constructed registry, §7d.6) |
-| The `explain_sufficed` field and its flag | a payload member on `gate_answered` (design §5's `gate_answered` row as amended 2026-09-18, which carries `explain_sufficed`), written **kernel-side** through `AnswerMeta` (§7d.6); the flag `--explain-sufficed yes\|no`, required | ADR-0129 decision 1: *"`--explain-sufficed` is required — AC-435's machine half"*, and its reading of the THEN's second datum (*"plus whether a TOML was opened"*) as *"the same flag's `no` arm read as a TOML was needed"*; the flag's name is *"the default the implementer may rename at Step 7d; the stage file names the one shipped"*; DECISIONS-2026-09-18 D18-17 D-05 records *a* required flag (singular) and RT-31 names one. The register's THEN says *"recorded as a required field"* (singular); whether it records one field or two is a question for the operator, RAISED in §7d.18 and **not built ahead of the record** — this file ships the ADR's grammar until it is answered (ADR-0092 clause 2.5: the runbook may not choose a grammar) | **RT-31** — the shipped name is `--explain-sufficed` (the implementer may rename; this file names the one shipped); the snapshot pins it; **the AC-435 Verified-by dated note naming the shipped flag is OWED at the close commit** (DECISIONS RT-31: *"amended to that name at close"*; the register carries no 2026-09-18 note under AC-435 [measured: `git diff` of the register has no hunk there]) |
-| `answerer` on `gate_answered` | the **git author identity the wrapper stamped on the run-owned branch's `HEAD`**, read through the wrapper **before** the `gate::answer` call — `GitExec::run(GitOp::Log, owned.path(), ["log", "-1", "--format=%an <%ae>"])` over `rk-run/<item>`, the author of the gate-open commit `run` made, which is the configured identity the answer commit will carry — so the kernel can write it on the `gate_answered` row it builds; asserted equal to the answer commit's `%an <%ae>` after it (RT-42 as corrected 2026-09-18) | design §5's `gate_answered` row as amended 2026-09-18: *"the intended source is the git author identity read through the `rk-git` wrapper at `answer` time — the implementer confirms this at Step 7d or the field is dropped"*; `GitOp` is a closed enum with no `Config`/`Var` read, and `Log` is on it | **RT-42** — routed to the run-owned branch's author identity (one op, already on the enum, no `rk-git` edit); **the dated design note confirming or dropping the field is OWED** |
+| The `explain_sufficiency` field and its two flags | one payload member on `gate_answered` — `explain_sufficiency { sufficed, toml_opened }` (design §5's `gate_answered` row as amended 2026-09-18 and corrected 2026-09-19), written **kernel-side** through `AnswerMeta` (§7d.6); the flags `--explain-sufficed yes\|no` and `--toml-opened yes\|no`, both required | ADR-0129 decision 1 as accepted 2026-09-19: two required flags, one record field — the register's THEN *"the answer (yes/no, plus whether a TOML was opened) is recorded as a required field"* is two data in one field, and SM-126's kill (*"opened a TOML anyway"*) is the cell *sufficed = yes AND opened = yes*, which the proposed record's one-flag reading could not represent; the flags' names are *"the default the implementer may rename at Step 7d; the stage file names the ones shipped"* | **RT-31** — the shipped names are `--explain-sufficed` / `--toml-opened` (this file names them; the snapshot pins them); **the AC-435 Verified-by dated note naming the shipped flags and the field is OWED at the close commit** (the register carries no 2026-09-18 note under AC-435 [measured: `git diff` of the register has no hunk there]) |
+| `answerer` on `gate_answered` | the **git author identity the wrapper stamped on the run-owned branch's `HEAD`**, read through the wrapper **before** the `gate::answer` call — `GitExec::run(GitOp::Log, owned.path(), ["log", "-1", "--format=%an <%ae>"])` over `rk-run/<item>`, the author of the gate-open commit `run` made, which is the configured identity the answer commit will carry — so the kernel can write it on the `gate_answered` row it builds; asserted equal to the answer commit's `%an <%ae>` after it (RT-42 as corrected 2026-09-18) | design §5's `gate_answered` row as amended 2026-09-18: *"the intended source is the git author identity read through the `rk-git` wrapper at `answer` time — the implementer confirms this at Step 7d or the field is dropped"*; `GitOp` is a closed enum with no `Config`/`Var` read, and `Log` is on it | **RT-42** — routed to the run-owned branch's author identity (one op, already on the enum, no `rk-git` edit); **confirmed by the operator 2026-09-19 (R-26 closed; design §5's row carries the dated confirmation)** |
 | `keywords: Vec<String>` on the loader's `Activity` (AC-436: *"an activity's engine-ignored `keywords` field"*; `catalog.rs` has `pub struct Activity` at one site and `pub struct Step` — an activity's `[[step]]` — at another) | **`rk-kernel`** (`crates/rk-kernel/src/catalog.rs`, a Step 7d edit) and `rk_kernel::catalog::search(&Catalog, &str)` | AC-436's GIVEN names the field and the verb; the 7b loader has no such field [measured 2026-09-18: `grep -n keywords crates/rk-kernel/src/catalog.rs` → 0] so the property test passed by construction (C-01 **RA-M-02**) | **DECIDED by D18-15** (operator, 2026-09-18); the unreachability lint is a source scan over `crates/rk-kernel/src/select/` and `predicate/` for the identifier |
 | The `--lane` derivation source | the item record's kind, when the record makes it derivable; else the flag; else a refusal (exit 3) | ADR-0128 decision 2 | **DECIDED by ADR-0128 (proposed)**; the in-kernel carrier is `rk_kernel::select::item::Item::kind()` (`Item::new(id, kind)` — the `kind` facet, already a kernel type [measured 2026-09-18, `crates/rk-kernel/src/select/item.rs`]); *where* `run <item>` reads the item record from in a repository is routed here as `.redkiln/items/<item>.toml` (**RT-50** — an existence floor the fixtures follow; 7e's pack schema record re-points it; added to DECISIONS-2026-09-18's routed table) — 7d's fixtures carry a top-level `kind` key, a top-level **`stage`** key (the item's current stage — the `stage: &str` every kernel entry takes: `RunInputs::new(stage)`, `fsm::fold(item, stage, ..)`, `fsm::stage_action(item, stage, ..)`, `RunState::initial(item, stage)` [measured 2026-09-18, `crates/rk-kernel/src/replay.rs`, `workflow/fsm.rs`]; `stage_transition_event(from, to)` carries no `item` and `Pack::stage_specs()` is a set with no first, so no fold or pack read yields it — read once per invocation by `run`, `status` and `explain` alike, an absent key exit `3` naming the item — *"no stage on the item record"* — and the fixtures spell `stage = "implement"` or the `pack-min/` stage name) and a `[facets]` table (§7d.5 step (7)) and the test pins the refusal, not the keys' spelling |
 | `redkiln-migrate`'s `Report` and `schema/report.schema.json` | `redkiln-migrate` (`crates/redkiln-migrate/src/report.rs`, `crates/redkiln-migrate/schema/report.schema.json`) | AC-448: *"per-(kind, slot) counts of lifted / lifted-with-loss / failed and the corpus SHA"*; AC-467: *"both the corpus SHA and the lifter/tool version"*; AC-468: *"three required integer fields, no `total`-only form"* | Built here (DECISIONS **RT-28**: the home and the shape; a record fixing the schema as the migration's contract is OWED there); the schema is committed and validated by `jsonschema` in-process |
@@ -227,7 +227,7 @@ those routings makes its floor line **stale, not wrong**: the line is re-pointed
 | `doctor`'s stdout | one line per **evaluated** rule — fired or not — beginning with its id token and a status word (`ok` included); the layout is **not pinned** — no schema, no snapshot | DECISIONS-2026-09-12 **E5**: stdout unspecified; **D18-6** as corrected 2026-09-18: tests assert on the `doctor::Report` value, the checkpoint asserts the exit code and greps each register-named id off a clean repository's stdout; RA-M-01's floor needs the ids to be **present**; the id vocabulary `RK-D-<NOUN>` is **RT-32**'s | **RT-44** — the rule-id token per evaluated row is the ONE thing this file requires of stdout, asserted as an existence floor (the named test `doctor_rule_table_covers_every_register_named_row` is the `Report`-level instrument and the block's FLOOR loop its process-level twin); a pinned contract would be E5's rejected option B |
 | `doctor`'s version probe | `claude --version` on the installed binary through `rk_containment::run_bounded` (10 s; the child's stdout redirected to a file under `<common-dir>/redkiln/` — `run_bounded` returns an `Outcome` with no captured output and requires file-backed stdio [measured 2026-09-18, `crates/rk-containment/src/bounded.rs`] — read back and compared on its first whitespace-delimited token, since the binary prints `2.1.277 (Claude Code)` and the pin is `2.1.277`), compared to `TESTED_CLI_VERSION` (`2.1.277` at this pin) | AC-423's Verified-by as amended 2026-09-18 (C-01 **D-11**): *"the shipped probe is named. `doctor` runs `claude --version`"*; a spawn, not a dispatch — SM-121 stays 0 | **DECIDED** (the register's *"installed"*); the `VersionProbe` seam is the test's stub |
 | The three ADR-0105 clause 6/7 `doctor` rows (a failed `worktree remove`'s orphan; the common dir on a network filesystem; a credential-shaped value in a retained field) | `RK-D-WORKTREE-ORPHAN`, `RK-D-NETWORK-FS`, `RK-D-CREDENTIAL-RETAINED` in the same table | ADR-0105 clauses 6 and 7 are Decision sentences that name `doctor` rows (*"a `doctor` orphans row"*; *"`doctor` checks the common dir is not on a network filesystem"*; *"`doctor` carries a rule row for credential-shaped values in any retained field"*); **no §12 criterion carries them** | **RT-45** — built to the accepted record and **claimed under no AC id**; a register criterion per row is OWED (§7d.18 RAISED). They are outside the RA-M-01 floor |
-| The `doctor` rows `s7b-ii` §7b-ii.14 ARMED to 7d that no §12 criterion carries (AC-290, AC-306, AC-310, AC-314, AC-530's rows; AC-455's *"a `doctor` rule reporting the same at configuration time"*) | none at 7d | `s7b-ii` §7b-ii.14 RAISED: *"until `s7d`'s set carries them the rows are orphaned. Owed: an amendment adding both to `s7d`'s acceptance set, or an erratum re-assigning them"* — this rewrite may not perform that allocation (`s7a` §7a.11) | **O-16 — OPEN**; RAISED in §7d.18, not claimed, no row built; the operator's word adds them to §7d.8's table or re-assigns them |
+| The `doctor` rows `s7b-ii` §7b-ii.14 ARMED to 7d that no §12 criterion carries (AC-290, AC-306, AC-310, AC-314, AC-530's rows; AC-455's *"a `doctor` rule reporting the same at configuration time"*) | **six rows in `rk-cli`'s `doctor` table** — `RK-D-REVIEW-REEXEC`, `RK-D-QUARANTINE-LIVE`, `RK-D-SINK-COUNT`, `RK-D-ADVISORY-LEDGER`, `RK-D-CORPUS-SHA`, `RK-D-VERIFICATION-POLICY` (§7d.8; Slice 4) | `s7b-ii` §7b-ii.14 RAISED: *"until `s7d`'s set carries them the rows are orphaned. Owed: an amendment adding both to `s7d`'s acceptance set, or an erratum re-assigning them"* — the allocation is the operator's, **taken 2026-09-19 as DECISIONS-2026-09-18 D18-19** | **DECIDED (D18-19)**; O-16 closed; CROSS-LISTED in §7d.18, not claimed, no row built; the operator's word adds them to §7d.8's table or re-assigns them |
 | SM-123's `doctor_rule_fired` event | none | SM-123's instrument names an event kind `EventKind::ALL` does not carry, and ADR-0116 permits minting by record only; E5 left stdout unpinned so the fallback has no schema (C-01 **D-19**) | **O-12 — OPEN**; 7d claims nothing on SM-123; the operator mints the kind by record (ADR-0116's route) or re-points the instrument at machine-readable output, which then needs the contract E5 declined |
 | The composite `Toolchain` (two toolchain reals, one `Arc<dyn Toolchain>` slot) | **not built at 7d** — `Ports.toolchain` is filled with the Rust adapter on this workspace and the Node adapter is constructed and held for the `doctor` adapter row only | `s7c` §7c.1 RT-7: *"ARMED to 7d; a record naming the composite is OWED (R-8)"*; a composite is a `Ports` change that re-opens Checkpoint 7a or a new type no record names | **RT-7 / R-8 stand as 7c left them**; DECISIONS **RT-40** (which routed a `SelectingToolchain` composite here) is **withdrawn by a dated line in the log** — a composite is a new type no record names, and R-8 already owes that record; AC-350 stays ARMED (§7d.12); the two-toolchain case is Step 8's or a record's |
 | The `VerifyReport` transport into `rk_kernel::verify` | **not wired at 7d** — the verify activity runner is not in this stage's set (the `s7b-ii` verify block is RAISED for re-routing, §7d.18) | `s7c` §7c.1 RT-6 / R-9: *"the transport into `rk_kernel::verify` is 7d's composition root — a record is OWED"* | **R-9 stands**; RAISED, not built; the `redkiln run` loop this stage builds reaches a gate step and a memoised step through fakes, not a verify activity |
@@ -355,17 +355,17 @@ already landed) or **RECORDED** (owed above this file, listed again in §7d.18 R
 
 8. **D-03** (AC-430–AC-433) — `s8`'s `explain --run "$RUN_ID" --stages` was a runbook-only shape; every §12 THEN,
    ADR-0107 decision 4 and design §8.1 write `explain <item>`. **TAKEN**: 7d builds `explain <item>` only; `s8`'s two
-   lines are the losing record and were rewritten against the event log (landed 2026-09-18). **RECORDED**: the E5-owed
-   ADR-0107 erratum naming which digest field `explain` prints (DECISIONS-2026-09-18 **O-13**; §7d.7).
+   lines are the losing record and were rewritten against the event log (landed 2026-09-18). **TAKEN 2026-09-19**: the
+   digest d4 asserts is each committed step's `output_digest`, named in **ADR-0128 decision 4** (O-13 closed; §7d.7).
 9. **D-05** (AC-435, SM-126, AC-405; absorbing RB-M-08) — AC-435's THEN records the yes/no *"as a required field on the
    gate answer"* and its Verified-by's machine half is *"the gate answer cannot be submitted with the field absent"*;
    design §5's `gate_answered` row lacked it and named an `answerer` the kernel never writes. **TAKEN**: `answer`
-   takes the required flag `--explain-sufficed yes|no` and `gate_answered` gains `explain_sufficed` (ADR-0129 decision
-   1; design §5's `gate_answered` row amended 2026-09-18). ADR-0129 decision 1 reads the THEN's second datum
-   (*"whether a TOML was opened"*) as the same flag's `no` arm; the two-data reading — a second field, a second flag — is
-   RAISED for the operator (§7d.18: *does AC-435's THEN record one field or two?*) and **NOT built ahead of the record**
-   (§7d.1 item 2: the stage file may not choose a grammar, ADR-0092 clause 2.5); `answerer`'s source is routed (RT-42,
-   §7d.1) and its confirming note is **RECORDED** as owed (§7d.6).
+   takes **two required flags**, `--explain-sufficed yes|no --toml-opened yes|no`, and `gate_answered` gains **one**
+   member, `explain_sufficiency { sufficed, toml_opened }` (ADR-0129 decision 1 as accepted; design §5's `gate_answered`
+   row amended 2026-09-18, corrected 2026-09-19). The stage-open commit shipped the proposed record's one-flag reading
+   and RAISED the two-data reading for the operator; **answered 2026-09-19: two data, one field** — SM-126's kill counts
+   the cell *sufficed = yes AND opened = yes*, which one boolean cannot carry (D18-17 D-05 as amended). `answerer`'s
+   source is routed (RT-42, §7d.1) and **confirmed 2026-09-19** (R-26 closed: the git author identity through the wrapper).
 10. **D-08** (AC-426, AC-472, AC-147, SM-139) — three texts for one rule. **TAKEN** by the records: the predicate is
     **kind-per-stage over the last N runs, N = the repository's `unread_window_runs`** (AC-426, the register's §0.3 owner; ADR-0116's
     Context quotation of the kind-level form with N = 50, and its decision 4's produced-vs-consumed reading); AC-472's *"declared constant in the rule table"* and AC-147's
@@ -470,7 +470,7 @@ accordingly.
 **The tree.** One `clap` `Command` named `redkiln`, derive-built in `crates/rk-cli/src/cli.rs`, with these
 subcommands and no others: `run <ITEM> [--lane <LANE>]` (`LANE` a `clap::ValueEnum` closed at `fix` | `story` —
 ADR-0128 decision 1: *"a third value is a usage error, not a configuration error"*); `answer <ITEM> <OPTION>
-[--attach <KIND>=<PATH>]... --explain-sufficed <yes|no>` (ADR-0129 decision 1 — one required flag; §7d.1's routing row, §7d.6); `status`; `explain <ITEM>`; `doctor
+[--attach <KIND>=<PATH>]... --explain-sufficed <yes|no> --toml-opened <yes|no>` (ADR-0129 decision 1 — two required flags, one record field; §7d.1's routing row, §7d.6); `status`; `explain <ITEM>`; `doctor
 [--rebuild]`; `init`; `catalog search <QUERY>`; `lint (--facet-stability | --facet-provenance) <FACETS_TOML>
 [--stability-record <PATH>] [--pinned-corpus <PATH>]` (the two mode flags in an exclusive group, `s8`'s invocation form;
 the kernel functions are `facet_stability_rule(&Registry, &BTreeMap<String, StabilityRecord>, corpus_pin: &str)` and
@@ -518,7 +518,7 @@ fixture file)). One global option, `-C
   flag on any command."* *Verified by:* *"a CLI snapshot test of the accepted flag set; a test asserting `redkiln run
   --resume` exits as an unknown argument."* The same two tests; the *sufficient* half is the named test
   `ac264_run_after_applied_answer_resumes_past_gate`: open a gate (`ac403_…`'s fixture), `answer <item> approve
-  --explain-sufficed yes` (`Applied`), then `redkiln run <item>` with no flag — exit `0`, the fold shows the gate step
+  --explain-sufficed yes --toml-opened no` (`Applied`), then `redkiln run <item>` with no flag — exit `0`, the fold shows the gate step
   committed and the next step reached (a second `dispatch` row, or `run` completing the pack), and no `--resume` was
   needed; red by a `run` that re-opens the gate or refuses (AC-186's *"a resumed run"* is the same assertion).
 - **AC-402 (snapshot half)** — BINDING. Its Verified-by's second instrument: *"the argument-surface snapshot (AC-400)
@@ -536,11 +536,11 @@ fixture file)). One global option, `-C
 - **ADR-0128's grammar** — `adr0128_run_lane_value_enum_closed`: `redkiln run x --lane hotfix` exits `2` (usage) and
   stderr names the two admissible values; `redkiln run --item x` exits `2` (no `--item`); `redkiln run x --lane fix`
   parses. **ADR-0129's grammar** — `adr0129_answer_grammar_positional_option_no_token_flag`: `answer x approve
-  --token t` exits `2`; `answer x approve` without `--explain-sufficed` exits `2` (clap's required-flag error — the
-  register's *"cannot be submitted with the field absent"* is a usage refusal, before any store read); `answer x
-  approve --explain-sufficed maybe` exits `2`; and `answer x approve --explain-sufficed yes --toml-opened no` exits `2`
-  (**no second flag exists** — ADR-0129 decision 1 fixes one; a parser that grew one ahead of the operator's answer to
-  the §7d.18 question is red here).
+  --token t` exits `2`; `answer x approve` without `--explain-sufficed`, and `answer x approve --explain-sufficed yes`
+  without `--toml-opened`, each exit `2` (clap's required-flag error — the register's *"cannot be submitted with the field
+  absent"* is a usage refusal, before any store read); `answer x approve --explain-sufficed maybe --toml-opened no` exits
+  `2`; and the snapshot carries exactly these two sufficiency flags (ADR-0129 decision 1 fixes two — the operator's
+  2026-09-19 answer; a parser that grew a third, or dropped one, is red here).
 - **Common-dir discovery (H-3; D-18)** — every verb resolves the repository in H-3's order: a **bootstrap**
   `GitExec::new(tempdir.path().join("hooks-empty"), toolchain)` whose hooks directory is a `tempfile::TempDir` under the
   OS temp directory (`GitExec::new` creates its `hooks_empty` at construction, and the working hooks directory sits under
@@ -594,7 +594,7 @@ register's §12.10*) because `check-refs.py` rejects the bare form.
   | code | variant | warrant |
   | --- | --- | --- |
   | `0` | `Success` | success; **also a run that opens a gate** (D-01: AC-403 *"exits 0"*, AC-240, AC-024), **the AC-450-style no-op** (ADR-0107 decision 1: *"a no-op that says so"*) and **a `Void` answer** (recorded as void, the gate stays open — AC-406; H-1) |
-  | `2` | `Usage` | clap's default, **kept**: an unknown argument (the AC-400 refusal), a missing required flag (ADR-0129's `--explain-sufficed`), a closed-enum value outside its set (ADR-0128's lane), an option the gate's question does not declare (ADR-0129 decision 3: *"a usage error with zero events"*), an attachment no declared option admits or a declared attachment absent (AC-410; ADR-0129 decision 4; H-2) |
+  | `2` | `Usage` | clap's default, **kept**: an unknown argument (the AC-400 refusal), a missing required flag (ADR-0129's `--explain-sufficed` / `--toml-opened`), a closed-enum value outside its set (ADR-0128's lane), an option the gate's question does not declare (ADR-0129 decision 3: *"a usage error with zero events"*), an attachment no declared option admits or a declared attachment absent (AC-410; ADR-0129 decision 4; H-2) |
   | `3` | `ConfigError` | AC-438's *"configuration error (including any failing error-severity `doctor` rule)"*: AC-413's foreign store, AC-426's missing key, AC-486's adapter refusal, AC-531's naming refusal, ADR-0128 decision 2's non-derivable lane, D18-8's *"no process pack enabled"*, an unknown or dual-write key under `deny_unknown_fields` (AC-474), the git version floor, and an `answer` with no resolvable live token (AC-248) or a spent token (AC-407) — refusals of the repository's recorded state, read as configuration of the item (H-2) |
   | `4` | `FindingsBlock` | AC-438's *"findings-block"*: the review gate's block verdict surfaced by `run` (`review_block`, ADR-0124) — the value exists so the row is distinct; its producer is 7b-ii's kernel |
   | `5` | `NoRecord` | AC-432's *"an item with no recorded resolution is an error rather than a recomputation"* (D-12) |
@@ -993,14 +993,14 @@ check; the `answerer` is read **before the call** through the wrapper — `GitEx
 `run` made, which is the configured identity the answer commit will carry (RT-42 as corrected: read before the call so
 the kernel can write it; `ac435_…` asserts it equals the answer commit's `%an <%ae>` after the commit); then **the
 single call site** — `rk_kernel::workflow::gate::answer(&state, &gate, &presented, &tree_hash, option, &registry,
-&attachments, AnswerMeta { explain_sufficed, answerer })` (the fifth kernel edit: **three parameters added** to today's
+&attachments, AnswerMeta { explain_sufficiency, answerer })` (the fifth kernel edit: **three parameters added** to today's
 five — `state, gate, presented, tree_hash, verdict` [measured 2026-09-18, `crates/rk-kernel/src/workflow/gate.rs`] —
 §7d.15) — and its `Result<AnswerOutcome, GateError>` — `Err(GateError::NeverOpened)` is AC-248's named outcome, exit `3`,
 zero answer rows; `Err(GateError::OptionRefused(OptionError::…))` is the kernel-side ADR-0063 refusal, exit `2`, zero answer rows;
 `Err(GateError::WrongGate { .. })` cannot occur when the CLI resolved the token itself and is rendered as exit `3` naming
 the defect; every other `GateError` (`Expired`, `EscalateOnEscalation`) is exit `3` with its `Display` — and on
 `Ok(AnswerOutcome { disposition, events })`: `Applied` → the events appended (the `gate_answered` row carries
-`explain_sufficed` and `answerer` **as the kernel wrote them** — never inserted by the CLI into the
+`explain_sufficiency` and `answerer` **as the kernel wrote them** — never inserted by the CLI into the
 returned `Event`, so the row stays the kernel's and AC-262's wrapper stays the single caller-facing entry), then the
 `Gate:` trailer commit **as a tier-1 write** — `authorise_tier1_write(exec, owned.path(), &ownership)` then
 `commit_with_trailers` at the `OwnedWorktree`, never `cwd` (H-5; ADR-0105 clause 8; AC-518) — whose value is **the same
@@ -1038,7 +1038,7 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   integration test that answers after a commit lands, asserting a `gate_answer_void` event carrying both tree hashes,
   `gate.state == open`, and no stage transition."* `ac406_answer_after_commit_is_void_gate_stays_open`: open a gate
   (the `ac403_…` fixture), commit a file **in the run-owned worktree on `rk-run/<item>`** (the tree `tree_hash` reads —
-  H-5), `answer <item> approve --explain-sufficed yes`; assert `gate_answer_void` with `recorded` ≠
+  H-5), `answer <item> approve --explain-sufficed yes --toml-opened no`; assert `gate_answer_void` with `recorded` ≠
   `observed`, the fold's gate state `open`, no `stage_transition` row after the void, **no new `Gate:` trailer commit**
   (`git rev-list --count rk-run/<item>` unchanged since the test's commit), and the fixture checkout's `HEAD` and
   porcelain unchanged throughout (AC-518). Red by an answer that hashes
@@ -1057,7 +1057,7 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   names the outcome (*"no open gate on <item>: no live token to answer"*) and **zero answer rows** are written — the
   store gained exactly the invocation's `reconcile_started` row and no `gate_*` / `artifact.*` row (AC-172's one row is
   the baseline — the rule stated at the head of this section); the invocation carries the required flag — `answer
-  <item> approve --explain-sufficed yes` — so the `3` is the store's refusal, not the parser's `2`; an item with an **expired** gate → the same, and the
+  <item> approve --explain-sufficed yes --toml-opened no` — so the `3` is the store's refusal, not the parser's `2`; an item with an **expired** gate → the same, and the
   store shows the expiry resolved at that read (AC-257's *"observed and resolved at that read"*).
 - **AC-410** — BINDING (`rk-cli`, `rk-types`), as amended 2026-09-18 (D-04: the positive control). *"GIVEN a gate
   question whose registry entry declares its options and each option's admissible attachment types / WHEN `redkiln
@@ -1074,13 +1074,13 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   `verbs::answer::run_with(registry, …)` (the verb's function, not the binary); no pack
   TOML declares a question at 7d (ADR-0129 decision 3: pack-declared questions are 7e's), and the binary-level `answer`
   is exercised against the default question (`ac406_…`, `ac407_…`, `ac435_…`) **plus one binary-level twin of the
-  negative that needs no seam**: `answer <item> approve --attach Findings=<path> --explain-sufficed yes` exits `2` —
-  `approve` admits nothing; in-process, `answer <item> proceed --attach Spec=<path> --explain-sufficed yes` exits `2` (usage — the
+  negative that needs no seam**: `answer <item> approve --attach Findings=<path> --explain-sufficed yes --toml-opened no` exits `2` —
+  `approve` admits nothing; in-process, `answer <item> proceed --attach Spec=<path> --explain-sufficed yes --toml-opened no` exits `2` (usage — the
   refusal is at the CLI boundary, before the store) and **the refusal's variant is asserted**:
   `OptionError::AttachmentNotAdmitted { kind }`, never `UnknownOption` (an `UnknownOption` refusal is red); the store
   gained exactly the invocation's `reconcile_started` row and no `gate_*` / `artifact.*` row (AC-172's one row is the
   baseline — §7d.6's rule); `answer <item> proceed
-  --explain-sufficed yes` **without** the declared attachment exits `2` with `OptionError::AttachmentMissing { kind }`
+  --explain-sufficed yes --toml-opened no` **without** the declared attachment exits `2` with `OptionError::AttachmentMissing { kind }`
   (ADR-0063's *"refuses to close
   the mark unless that attachment is supplied"* — refused at the CLI boundary first and, for any caller that skips
   it, inside `gate::answer` by the same `QuestionRegistry::validate`; §7d.6's order). `ac410_admitted_attachment_stored_as_human_root`: `--attach Findings=<path>` is
@@ -1114,12 +1114,13 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
 - **AC-435 (machine half)** — the human half is **human-gated and excluded** (§7d.18). *"THEN the answer (yes/no, plus
   whether a TOML was opened) is recorded as a required field on the gate answer"*; Verified-by: *"the machine-checkable
   half is that the gate answer cannot be submitted with the field absent."*
-  `ac435_answer_refuses_without_explain_sufficed_and_records_it`: without the flag, exit `2` (the parser's — before any
-  store read, so the store is untouched); with `--explain-sufficed no` on one gate and `--explain-sufficed yes` on
-  another, the `gate_answered` payload carries `explain_sufficed: "no"` / `"yes"` verbatim (design §5's `gate_answered`
-  row as amended 2026-09-18, which carries `explain_sufficed`; ADR-0129 decision 1 reads the THEN's second datum as this
-  flag's `no` arm, and whether the THEN records one field or two is the operator's question, RAISED in §7d.18 — no
-  second field is written ahead of the answer) and `answerer` equal to the answer commit's `%an <%ae>`
+  `ac435_answer_refuses_without_explain_sufficiency_and_records_it`: without `--explain-sufficed`, or with it and without
+  `--toml-opened`, exit `2` (the parser's — before any store read, so the store is untouched); with `--explain-sufficed
+  yes --toml-opened yes` on one gate (SM-126's kill cell: `explain` sufficed and the reviewer opened a TOML *anyway*) and
+  `--explain-sufficed no --toml-opened no` on another, the `gate_answered` payload carries one member
+  `explain_sufficiency: { sufficed: "yes", toml_opened: "yes" }` / `{ "no", "no" }` verbatim (design §5's `gate_answered`
+  row as amended 2026-09-18 and corrected 2026-09-19; ADR-0129 decision 1 as accepted — **two data, one field**, the
+  operator's answer of 2026-09-19 to the question the stage-open commit carried) and `answerer` equal to the answer commit's `%an <%ae>`
   (RT-42). SM-126's instrument is the field; the first thirty answers accrue from `s8` at the earliest.
 - **The question registry (`-p rk-kernel`)** — `adr0129_question_registry_default_question_two_options` (the
   registry's default question is `approve` / `changes-requested`, neither with `attaches`; a gate step naming no
@@ -1132,8 +1133,8 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   `ac410_…`'s is; no pack TOML declares one at 7d). Pack-declared questions are **7e's**; the type is
   7d's.
 - **What `answer` does not do**: it does not reconcile the answer into a verdict (the FSM's fold does, on the next
-  `run`); it does not take `--token`; it does not read stdin; it does not default `explain_sufficed`; it grows no second
-  required flag ahead of the operator's answer (§7d.18); it never commits to the checkout it was spawned in (H-5).
+  `run`); it does not take `--token`; it does not read stdin; it does not default either AC-435 datum (both flags are
+  required — the register's *"cannot be submitted with the field absent"*); it never commits to the checkout it was spawned in (H-5).
 
 ### 7d.7 `status` and `explain`
 
@@ -1244,12 +1245,12 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   (`facet_provenance_rule`, AC-520's); a clean pair exits `0`. The lints' criteria are 7b's and 7e's; **7d claims the
   surface only** and neither id.
 - **`s8`'s two `explain --run … --stages` lines were the losing record** (D-03) and were rewritten on 2026-09-18
-  against the event log; the E5-owed ADR-0107 erratum naming the digest field `explain` prints is still owed
-  (O-13; §7d.18 RAISED). What `explain` prints is the recorded resolution whole (AC-430–AC-432); `s8`'s exit check
-  diffs two `explain` outputs and reads the diff, so it needs no named field. Until O-13 lands, `explain` prints **both**
-  digests the two readings name — the `dag_assembled` row's DAG digest and the last committed step's `output_digest` —
-  each labelled, so `s8`'s digest-equality read is satisfiable under either erratum outcome and this file decides neither
-  (**RT-52** — routed, not decided; O-13's recommended default is the `output_digest`).
+  against the event log; the digest field d4 asserts is **named — ADR-0128 decision 4 (2026-09-19, O-13 closed): each
+  committed step's `output_digest` in the recorded resolution**, F38's measured quantity. What `explain` prints is the
+  recorded resolution whole (AC-430–AC-432); it prints **both** digests, labelled — the `dag_assembled` row's inputs
+  digest and each committed step's `output_digest` (**RT-52**, decided) — and `s8`'s exit check (3) reads the
+  `output_digest` lines for its equality; the inputs digest is printed, not asserted, because a resumed run that
+  re-derives its DAG over a tree a committed step changed may legitimately differ there.
 
 ### 7d.8 `doctor`
 
@@ -1333,17 +1334,26 @@ fixture directory under `crates/rk-cli/tests/fixtures/doctor/<id>/` (AC-415: one
 | `RK-D-HEADROOM-MARGIN` | warning | AC-220 (`doctor` half — `s7c` ARMED) | the last recorded `rate_limit_reading` within the pack's margin — a run started now would be refused before spawn | an event log whose last reading is 99 ticks |
 | `RK-D-REBUILT-TIER2` | **ok** | AC-397 (`s7c` ARMED here) | *"the tier-2 emptiness is reported with status `ok` and an explicit 'expected after rebuild' reason AND no rule row reports it as an error or a warning"* — reads the rebuild marker, which is a **sidecar file** `<common-dir>/redkiln/rebuilt` written by `doctor::rebuild` after the rename (its content the rebuild's source `HEAD` sha) and removed by the next successful `run` (**RT-56** — routed, not decided; a dated design §5 / §9.2 note is OWED); **never a table** — `rk-store`'s schema carries no rebuild column or table [measured 2026-09-18, `crates/rk-store/src/migrations/`] and `rk-store` is not edited at 7d (§7d.15); **the sidecar is the row's ONLY discriminator** — the store's tier tables are not one at this pin, because the rebuild's rows land in `t2_event` (the one table `query` reads — the `--rebuild` paragraph below), so *tier-2 emptiness* is not something the row can read off the store; the tier split is RAISED beside RT-56 | a freshly rebuilt fixture store beside its `rebuilt` sidecar — the row emits an `ok`-severity finding with the reason `expected after rebuild` when the sidecar is present and **no finding otherwise**; `ac415_…` counts findings of any severity, and `doctor/clean/` carries no sidecar so the row is silent there |
 | `RK-D-WORKTREE-ORPHAN`, `RK-D-NETWORK-FS`, `RK-D-CREDENTIAL-RETAINED` | error / error / error (the severities design §8.4's row fixes: *"error (orphans, network FS) / error (credential)"* — the design outranks the runbook, ADR-0092 clause 2.5) | **ADR-0105 clauses 6 and 7** — no AC id (RT-45) | *"a `doctor` orphans row"*; *"the common dir is not on a network filesystem"*; *"a rule row for credential-shaped values in any retained field"* (`rk_store::retention::looks_like_credential`) | an orphaned worktree entry (read from `<common-dir>/worktrees/<name>/gitdir` on the filesystem — `GitOp` has no `worktree list` op and `rk-git` is not edited); a UNC common dir (Windows); a retained stdout carrying `sk-ant-…` |
+| `RK-D-REVIEW-REEXEC` | error | AC-290's `doctor` half (kernel half 7b-ii; **allocated here by DECISIONS-2026-09-18 D18-19**, the operator, 2026-09-19 — O-16) | *"a doctor rule that every finding classed `reproduced` or `mutation-survived` carries either a re-execution record"* (or the `Unverifiable` variant the same clause names) — read off the completed reviews in the event log | `doctor/RK-D-REVIEW-REEXEC/events.jsonl`: one `reproduced` finding with no re-execution record |
+| `RK-D-QUARANTINE-LIVE` | **warning** | AC-306's `doctor` half (D18-19) | *"a doctor rule listing live quarantines and their ages"* — one finding per live quarantine, its age from the record's `until` against the invocation's `now` (a listing, not a defect: warning) | `doctor/RK-D-QUARANTINE-LIVE/events.jsonl`: one live quarantine |
+| `RK-D-SINK-COUNT` | error | AC-310's `doctor` half (D18-19) | *"`redkiln doctor` errors when a completed review's non-blocking finding count exceeds its sink's record count"* | `doctor/RK-D-SINK-COUNT/events.jsonl`: a completed review with two non-blocking findings and one sink record |
+| `RK-D-ADVISORY-LEDGER` | error | AC-530's `doctor` row (D18-19) | *"a doctor rule-table row that errors when the live count"* ≠ `created − retired − dismissed` (AC-530's `advisory_retired` accounting) | `doctor/RK-D-ADVISORY-LEDGER/events.jsonl`: three created, one retired, live count two |
+| `RK-D-CORPUS-SHA` | error | AC-314's `doctor` half (D18-19) | *"a doctor rule"* that *"the recorded sha resolves in the corpus repo's history"* — resolved through the wrapper (`GitOp::RevParse` over the configured corpus path); an absent or unconfigured corpus path is the same error naming the path | `doctor/RK-D-CORPUS-SHA/events.jsonl`: a regression run recording a sha no repository holds |
+| `RK-D-VERIFICATION-POLICY` | error | AC-455's third instrument (D18-19; the two policy-table rows are 7b-ii's) | *"a `doctor` rule reporting the same at configuration time"* — a spec whose criterion carries `verification: None` under an enabled pack whose policy requires it (the `rk-kernel` policy-table function 7b-ii built, called over the repository's specs) | `doctor/RK-D-VERIFICATION-POLICY/`: a `.redkiln/` with a requiring pack and one spec with `verification: None` |
 
-**Thirty-two rule ids** (counted off the table's first column with its compound cells split — Halt 7: count it off
-the table, and re-count after any edit), each with a rejecting fixture; the **register-named floor** RA-M-01 asks the
-checkpoint to join is the subset a criterion in the register's §12 or §14 names by instrument — `RK-D-GATE-OUTPUTS`, `RK-D-HOOKS`, `RK-D-STORE-ID`, `RK-D-ROLE-UNRESOLVED`, `RK-D-ROLE-AMBIGUOUS`,
+**Thirty-eight rule ids** (counted off the table's first column with its compound cells split — Halt 7: count it off
+the table, and re-count after any edit; thirty-two until 2026-09-19, when D18-19 allocated the six `s7b-ii` gate rows
+here), each with a rejecting fixture; the **register-named floor** RA-M-01 asks the
+checkpoint to join is the subset a criterion in the register's §9, §12 or §14 names by instrument — `RK-D-GATE-OUTPUTS`, `RK-D-HOOKS`, `RK-D-STORE-ID`, `RK-D-ROLE-UNRESOLVED`, `RK-D-ROLE-AMBIGUOUS`,
 `RK-D-CARD-TOOLS`, `RK-D-CARD-TOOLS-ABSENT`, `RK-D-TIER-LEAK`, `RK-D-TIMEOUT`, `RK-D-DANGLING-ROLE`,
 `RK-D-DANGLING-SLOT`, `RK-D-DANGLING-ATTACH`, `RK-D-DEAD-DEF`, `RK-D-UNFILLED-SLOT`, `RK-D-ENV-DENYLIST`,
 `RK-D-CLI-VERSION`, `RK-D-TTL`, `RK-D-FACET-UNKNOWN`, `RK-D-FACET-VALUE`, `RK-D-FACET-NEW`, `RK-D-FACET-FACT`,
-`RK-D-ADAPTER`, `RK-D-UNREAD` — **twenty-three**, the rows AC-409, 412, 413, 416–426, 486 and 488 demand; the nine
+`RK-D-ADAPTER`, `RK-D-UNREAD`, and the six gate rows `RK-D-REVIEW-REEXEC`, `RK-D-QUARANTINE-LIVE`, `RK-D-SINK-COUNT`,
+`RK-D-ADVISORY-LEDGER`, `RK-D-CORPUS-SHA`, `RK-D-VERIFICATION-POLICY` — **twenty-nine**, the rows AC-409, 412, 413,
+416–426, 486 and 488 demand plus the six AC-290, 306, 310, 314, 455 and 530 name (D18-19); the nine
 others (the five `s7c`-ARMED halves' own rows `RK-D-AGENTS-WITHOUT-AGENT`, `RK-D-CACHE-PROFILE`, `RK-D-MARGIN`,
 `RK-D-HEADROOM-MARGIN`, `RK-D-STRAY-STORE`; `RK-D-REBUILT-TIER2`; and RT-45's three) are outside the floor and are
-asserted by their own tests. `doctor_rule_table_covers_every_register_named_row` asserts the twenty-three are in
+asserted by their own tests. `doctor_rule_table_covers_every_register_named_row` asserts the twenty-nine are in
 `RULES`; the block greps each from the temp repo's `doctor` output (§7d.17).
 
 - **AC-414** — BINDING, as amended 2026-09-18 (D-10). *"GIVEN any configuration, however large, and a rule table each
@@ -1455,10 +1465,19 @@ asserted by their own tests. `doctor_rule_table_covers_every_register_named_row`
     working-tree file"*, which the store is not.
   - **AC-397** — `ac397_rebuilt_store_tier2_emptiness_is_ok_expected` over the rebuilt fixture.
   - **AC-366** — *"a CI job that clones, rebuilds and diffs tier-1 projections"* — a CI run; ARMED (§7d.12).
+- **AC-290, AC-306, AC-310, AC-314, AC-455, AC-530 — the six `s7b-ii` gate rows** (D18-19; O-16 closed 2026-09-19) — one
+  test per row, each over its `events.jsonl` (or `.redkiln/` skeleton) fixture and over `doctor/clean/`:
+  `ac290_reproduced_finding_without_reexecution_record_doctor_row`, `ac306_live_quarantines_listed_with_ages_doctor_row`
+  (warning; the age is `now − until`'s sign and magnitude off a supplied `now`, no clock read),
+  `ac310_sink_count_below_finding_count_doctor_row`, `ac530_advisory_ledger_imbalance_doctor_row`,
+  `ac314_regression_corpus_sha_unresolvable_doctor_row` (the corpus path is a `ConfigFile` key the fixture points at a
+  temp repository; the rejecting fixture's sha resolves nowhere), `ac455_verification_none_under_requiring_pack_doctor_row`
+  (calls the 7b-ii policy-table function; the must-pass control — the same spec under a pack that does not require
+  verification — yields no finding). The kernel halves of all six stay 7b-ii's (CROSS-LISTED, §7d.18).
 - **AC-438's doctor instance** — `ac438_doctor_error_rule_exits_config_error`: the binary over `doctor/RK-D-ADAPTER/`
   exits `3`; over `doctor/clean/` exits `0`; over a warning-only fixture exits `0`.
-- **What is NOT a row and why**: **SM-123's `doctor_rule_fired`** (O-12) — no event is written per rule; **AC-455's
-  and AC-530's rows** (O-16) — RAISED, not built; **AC-147's** own row is `RK-D-UNREAD` (it is AC-426's twin, as
+- **What is NOT a row and why**: **SM-123's `doctor_rule_fired`** (O-12, answered 2026-09-19: minted by ADR when Step 8 first needs the measure) — no event is written per rule (**AC-455's
+  and AC-530's rows**, RAISED as O-16 at stage-open, ARE rows since D18-19 — the table above); **AC-147's** own row is `RK-D-UNREAD` (it is AC-426's twin, as
   amended); **AC-395's `redkiln cost`** and **AC-372's renderers** — `s7c` ARMED them here and they are ARMED on to
   Step 8 with the cost unit record RT-19 still OWED (§7d.12); **AC-398's drift report** — ARMED on (§7d.12).
 
@@ -1836,11 +1855,11 @@ counter the test injects against).
 - **AC-476** — **HUMAN GATE**, *"routed to a human gate; **not machine-decidable**"* whole (its Verified-by; the
   register names no machine half — contrast AC-435, whose Verified-by does): *"a human answers a gate whose question is
   whether the recorded losses … are acceptable AND the commit does not land on a machine verdict alone."* **Not
-  claimed.** DECISIONS-2026-09-18 O-14 (OPEN) asks whether its AND clause is a machine half; until the operator answers,
-  the migrator's behaviour that would satisfy it — the commit lands on `rk-migrate/<short>` and never on the target
-  branch (`ac447_exactly_one_commit_on_migration_branch` asserts the target's original branch unchanged; the block
-  asserts `HEAD` unchanged on the second temp repository, §7d.17) — is built and labelled **O-14's default**, and the
-  report the gate reads is `report.json` (AC-448). The gate itself is `s8`'s or 7e's once a pack declares the question;
+  claimed.** DECISIONS-2026-09-18 O-14 asked whether its AND clause is a machine half; **answered 2026-09-19: not
+  split** — the clause is AC-522's to instrument, and it is: the commit lands on `rk-migrate/<short>` and never on the
+  target branch (`ac447_exactly_one_commit_on_migration_branch` asserts the target's original branch unchanged; the block
+  asserts `HEAD` unchanged on the second temp repository, §7d.17), a dated note on AC-476's Verified-by records the
+  ownership, and the report the gate reads is `report.json` (AC-448). The gate itself is the first landing stage's;
   the id is placed in Excluded (§7d.18).
 - **AC-477** — BINDING (`rk-store` render path) — **ARMED whole, not claimed** (§7d.18, beside AC-478). *"GIVEN a typed
   gate result / WHEN the artifact carrying it is rendered to markdown and the typed value is read back from the store /
@@ -1921,7 +1940,7 @@ AC-251, AC-256, AC-260, AC-268, AC-277, AC-280, AC-300, AC-327, AC-330, AC-337, 
 halves"* name instruments — a CLI integration test of a kernel behaviour — that add no assertion the kernel test did
 not make and no `doctor` row a §12 criterion names; this file does not re-assert them under new names); **ARMED** — AC-323 (wholly, with the
 verify runner — the table above); **RAISED** —
-AC-290, AC-306, AC-310, AC-314, AC-530 and AC-455's `doctor` rows (O-16); AC-254's render (needs a diff render over
+AC-254's render (needs a diff render over
 AC-245's algorithm no record shapes as a verb) — RAISED.
 
 ### 7d.13 Where the fixtures live
@@ -1960,7 +1979,7 @@ that imitates the predecessor's layout says so in a provenance note beside it.
   per_kind_slot: [ { kind, slot, lifted: integer, lifted_with_loss: integer, failed: integer } ] }`,
   `additionalProperties: false` at both levels, `required` on every field, **no `total`** (AC-468). Draft 2020-12; the
   crate validates its own report against it before writing.
-- **`crates/rk-cli/tests/fixtures/doctor/<rule-id>/`** — one rejecting directory per id in §7d.8's table (thirty-two),
+- **`crates/rk-cli/tests/fixtures/doctor/<rule-id>/`** — one rejecting directory per id in §7d.8's table (thirty-eight),
   each a minimal repository skeleton (`.redkiln/config.toml`, a `packs/` tree or an `events.jsonl` as the rule needs,
   a `README` naming the rule and the clause) — parts of a skeleton that live under `.git/` or in a store are not tracked
   as such (git refuses to track a nested `.git/`, and a SQLite file is not a reviewable fixture): the hook file sits at
@@ -1988,9 +2007,9 @@ that imitates the predecessor's layout says so in a provenance note beside it.
   each commented *synthetic 7d fixtures, no corpus provenance*: `crates/rk-cli/tests/fixtures/explain/*/events.jsonl`
   (the run-record directories' event logs, §7d.7) and
   `crates/rk-cli/tests/fixtures/exit/*/*.jsonl` (Slice 3), `crates/rk-cli/tests/fixtures/unread/*.jsonl` and
-  `crates/rk-cli/tests/fixtures/doctor/*/events.jsonl` (Slice 4 — `RK-D-UNREAD`, `RK-D-HEADROOM-MARGIN` and
-  `RK-D-CREDENTIAL-RETAINED`'s skeletons carry one); that is an allowlist edit, stated here so it is not read as a silent
-  widening, and these four are the only AC-465 edits this stage makes.
+  `crates/rk-cli/tests/fixtures/doctor/*/events.jsonl` (Slice 4 — `RK-D-UNREAD`, `RK-D-HEADROOM-MARGIN`,
+  `RK-D-CREDENTIAL-RETAINED`'s and the five D18-19 gate rows' skeletons carry one); that is an allowlist edit, stated
+  here so it is not read as a silent widening, and these four are the only AC-465 edits this stage makes.
 - **`crates/rk-cli/tests/fixtures/config/{missing-doctor,missing-key,unknown-key,dual-write,unknown-adapter,missing-store}.toml`** — §7d.9
   (`unknown-adapter.toml` is the scaffold with one line changed; `missing-store.toml` the scaffold with the `store =`
   line removed — AC-486's second disjunct; `dual-write.toml` IS the AC-474 red fixture, which is
@@ -2113,8 +2132,8 @@ test would accept.
 - `adr0128_run_lane_value_enum_closed` — ADR-0128 decisions 1 and 2. Red by `--lane hotfix` accepted, by `--item`
   accepted, by `--lane` required; a weaker red tests `fix` and `story` only.
 - `adr0129_answer_grammar_positional_option_no_token_flag` — ADR-0129 decisions 1 and 2, AC-435 (usage arm). Red by
-  `--token` accepted, by `answer x approve` accepted without `--explain-sufficed`, by `--explain-sufficed maybe`
-  accepted; a weaker red asserts one of the three.
+  `--token` accepted, by `answer x approve` accepted without `--explain-sufficed`, by `--explain-sufficed yes` accepted
+  without `--toml-opened`, by `--explain-sufficed maybe` accepted; a weaker red asserts one of the four.
 - `ac438_exit_table_snapshot` — AC-438. Red by any change to `Exit::ALL`'s rendered `code variant` lines against the
   committed `insta` snapshot; a weaker red snapshots the count.
 - `ac438_exit_codes_distinct` — AC-438's *"distinct values"*. Red by two variants sharing a code, and by the
@@ -2231,10 +2250,11 @@ test would accept.
 - `ac263_stub_channel_refused_named_outcome` — AC-263. Red by `submit(Channel::TrackerComment, …)` applied, by an
   unnamed error, by a store read before the refusal, or by a row written; a weaker red has no stub channel and tests
   nothing (the register's own vacuity warning — a match arm over an enum with one live variant — is disclosed in §7d.6).
-- `ac435_answer_refuses_without_explain_sufficed_and_records_it` — AC-435 (machine half), ADR-0129 decision 1. Red by
-  an answer accepted without the flag, by `gate_answered` lacking `explain_sufficed`, by the recorded value differing
-  from the flag's (`no` on one gate, `yes` on another), or by `answerer` differing from the answer commit's `%an <%ae>`
-  (RT-42); a weaker red tests the refusal only, or one value.
+- `ac435_answer_refuses_without_explain_sufficiency_and_records_it` — AC-435 (machine half), ADR-0129 decision 1. Red by
+  an answer accepted without either flag, by `gate_answered` lacking `explain_sufficiency` or either of its two members,
+  by a recorded member differing from its flag (`sufficed: yes, toml_opened: yes` on one gate — SM-126's kill cell —
+  `no` / `no` on another), or by `answerer` differing from the answer commit's `%an <%ae>` (RT-42); a weaker red tests
+  the refusal only, one flag only, or one value.
 - `ac401_second_run_issues_no_dispatch_for_memoised_step` — AC-401 (wiring), SM-130. Red by two `dispatch` rows, by
   the second run's `next_action` returning `Dispatch` for the committed node (a fold not seeded from the store), by
   `ReplayError::NotCommitted` (the `record()` path), or by the `activity_committed` digest changing.
@@ -2284,7 +2304,7 @@ test would accept.
   `cancelled_by: timeout`, or by a live child.
 - `ac415_every_rule_id_has_a_rejecting_fixture` — AC-415. Red by a rule id with no `doctor/<id>/`, by a fixture its own
   rule does not reject, or by a fixture directory with no rule; a weaker red joins names without running the rule.
-- `doctor_rule_table_covers_every_register_named_row` — RA-M-01. Red by any of the twenty-three floor ids absent from
+- `doctor_rule_table_covers_every_register_named_row` — RA-M-01. Red by any of the twenty-nine floor ids absent from
   `RULES`; a weaker red asserts `RULES` non-empty.
 - `ac414_doctor_over_corpus_fires_every_expected_rule_with_zero_dispatches` — AC-414, SM-121. Red by a fixture whose
   expected id does not fire, by the `NoDispatchHarness` panicking (a dispatch was issued), or by the enumerated
@@ -2305,7 +2325,13 @@ test would accept.
   `ac425_facet_without_registered_fact_rejected` · `ac486_unknown_adapter_is_a_doctor_error` ·
   `ac203_agents_without_agent_doctor_row` · `ac383_card_without_cache_profile_doctor_row` ·
   `ac377_margin_under_two_ticks_doctor_row` · `ac220_last_reading_within_margin_doctor_row` ·
-  `adr0105_doctor_rows_network_fs_credential_orphan` — one per row family of §7d.8's table, each: the rule over its
+  `adr0105_doctor_rows_network_fs_credential_orphan` ·
+  `ac290_reproduced_finding_without_reexecution_record_doctor_row` ·
+  `ac306_live_quarantines_listed_with_ages_doctor_row` ·
+  `ac310_sink_count_below_finding_count_doctor_row` ·
+  `ac530_advisory_ledger_imbalance_doctor_row` ·
+  `ac314_regression_corpus_sha_unresolvable_doctor_row` ·
+  `ac455_verification_none_under_requiring_pack_doctor_row` (the six D18-19 gate rows) — one per row family of §7d.8's table, each: the rule over its
   rejecting fixture(s) yields the finding with the right id and severity, **and** over `doctor/clean/` yields none.
   Red by a rule that never fires (the first half) and by one that always fires (the second); a weaker red omits the
   clean run. `ac413_…` is red over a store whose `root_commit` is another repository's and green over one whose
@@ -2421,7 +2447,7 @@ test would accept.
   binding the supplier served being refused on `inputs/specs.json` (the seam is not consulted), or by `record()`'s own
   recorded output changing (its 7b fixtures are the control).
 - `adr0129_gate_answered_carries_answer_meta_kernel_side` — the fifth kernel edit. Red by `gate_answered_event`'s payload
-  lacking `explain_sufficed` or `answerer` when `gate::answer` is given an `AnswerMeta`, or by the fold
+  lacking `explain_sufficiency` or `answerer` when `gate::answer` is given an `AnswerMeta`, or by the fold
   reading anything but `token` / `tree_hash` / `verdict` (the 7b-ii tests, passing `&QuestionRegistry::default()`, `&[]`
   and `AnswerMeta::default()` at each of their ~20 call sites, are the control; every exhaustive match over `GateError`
   in the kernel's tests gains the `OptionRefused` arm).
@@ -2617,7 +2643,7 @@ and `catalog::search`; `workflow/question.rs` (the registry, the default questio
 `state, gate, presented, tree_hash, verdict`): `registry: &QuestionRegistry` and `attachments: &[Attachment]`, validated
 by `validate` **inside** the kernel before the mark closes (ADR-0063's *"the kernel refuses to
 close the mark unless that attachment is supplied"* — an accepted Decision sentence; the CLI performs the same
-validation first so the refusal is a usage error), and `meta: AnswerMeta { explain_sufficed, answerer }` whose
+validation first so the refusal is a usage error), and `meta: AnswerMeta { explain_sufficiency, answerer }` whose
 members `gate_answered_event` adds to its payload **kernel-side** (ADR-0129 decision 1's *"the `gate_answered` payload
 gains the field"*; design §5 as amended; RT-42) — never the CLI editing the returned `Event`, so the row stays the
 kernel's and AC-262's wrapper stays the single caller-facing entry; `GateError` gains `OptionRefused(OptionError)`;
@@ -2765,14 +2791,16 @@ the `cargo metadata` lines watch red → green).
    disturbance); fixtures `doctor/<rule-id>/` (thirty-two) and `doctor/clean/`, `unread/{runs-49,runs-51}.jsonl` and
    `doctor/*/events.jsonl` (+ the two AC-465 allowlist rows), the synthetic trailer repository builder for `ac427_…`;
    the `-p rk-kernel` `catalog_load_diagnostic_returns_every_load_error_typed` and
-   `ac409_gate_step_with_outputs_rejected_at_load`. Tests: **thirty-two** — §7d.14's thirty-one from
+   `ac409_gate_step_with_outputs_rejected_at_load`. Tests: **thirty-eight** — §7d.14's thirty-seven from
    `ac415_every_rule_id_has_a_rejecting_fixture` through `ac438_doctor_error_rule_exits_config_error` (the compound
-   bullet's twenty names among them, `ac370_stray_store_under_linked_worktree_is_an_error` included) plus
+   bullet's twenty-six names among them, `ac370_stray_store_under_linked_worktree_is_an_error` and the six D18-19 gate
+   rows included) plus
    `ac402_reconcile_called_on_run_answer_doctor` (moved from Slice 3) — **the rule-id floor**
    `doctor_rule_table_covers_every_register_named_row` is this slice's (RA-M-01). Subject: `CLI, slice 4 (rk-cli
-   doctor): a rule table as data, thirty-two ids each with a
+   doctor): a rule table as data, thirty-eight ids each with a
    rejecting fixture, zero dispatches, one version probe, rebuild git → store (AC-409, AC-412–AC-427, AC-429, AC-486
-   doctor half, AC-488 doctor half, AC-397, the s7c doctor halves; SM-121)`.
+   doctor half, AC-488 doctor half, AC-397, the s7c doctor halves, the six s7b-ii gate rows AC-290/306/310/314/455/530 —
+   D18-19; SM-121)`.
 5. **Slice 5 — `redkiln-migrate` v0**: `crates/redkiln-migrate/{Cargo.toml, src/main.rs, src/legacy/{frontmatter,
    ledger,review,config_yaml}.rs, src/lift.rs, src/report.rs, src/run_contract.rs, schema/report.schema.json}`,
    `tests/it/*`, fixtures `legacy-mini/` + `PROVENANCE.md`, the `crates/redkiln-migrate/tests/fixtures/legacy-mini/**
@@ -3079,7 +3107,7 @@ for t in ac400_help_snapshot_every_verb ac400_denylist_absent_from_parser_tree a
          ac264_run_after_applied_answer_resumes_past_gate \
          ac257_expired_gate_resolved_by_fresh_process ac410_unadmitted_attachment_refused_zero_events \
          ac410_admitted_attachment_stored_as_human_root ac263_stub_channel_refused_named_outcome \
-         ac435_answer_refuses_without_explain_sufficed_and_records_it ac401_second_run_issues_no_dispatch_for_memoised_step \
+         ac435_answer_refuses_without_explain_sufficiency_and_records_it ac401_second_run_issues_no_dispatch_for_memoised_step \
          ac430_explain_prints_both_row_families ac431_explain_names_card_skills_fillers_tier \
          ac432_explain_from_record_only_and_errors_without_resolution ac432_explain_over_replayed_log_is_byte_identical \
          ac433_explain_names_excluding_clause_never_not_selected ac434_unknown_facet_rendered_unknown \
@@ -3100,6 +3128,8 @@ for t in ac400_help_snapshot_every_verb ac400_denylist_absent_from_parser_tree a
          ac426_rule_fire_leaves_write_set_unchanged ac486_unknown_adapter_is_a_doctor_error \
          ac203_agents_without_agent_doctor_row ac383_card_without_cache_profile_doctor_row ac377_margin_under_two_ticks_doctor_row \
          ac220_last_reading_within_margin_doctor_row ac397_rebuilt_store_tier2_emptiness_is_ok_expected \
+         ac290_reproduced_finding_without_reexecution_record_doctor_row ac306_live_quarantines_listed_with_ages_doctor_row ac310_sink_count_below_finding_count_doctor_row \
+         ac530_advisory_ledger_imbalance_doctor_row ac314_regression_corpus_sha_unresolvable_doctor_row ac455_verification_none_under_requiring_pack_doctor_row \
          adr0105_doctor_rows_network_fs_credential_orphan ac427_rebuild_from_git_alone_matches_recorded_next_action \
          ac429_rebuild_writes_no_object_ref_or_file ac438_doctor_error_rule_exits_config_error ; do
   rk_test rk-cli "$t" "the CLI criterion this name binds (§7d.14)"
@@ -3277,11 +3307,11 @@ echo "init is idempotent on $TMP1 (tree digest $dig2)"
 out=$(cd "$TMP1" && D:/repos/redkiln-rs/target/debug/redkiln doctor </dev/null 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: doctor exited $rc on the init-only temp repository, expected 0 (the scaffold names four compiled-in reals; an empty enabled set is init's own state, not a defect — §7d.17); an error-severity row fired or the table is not the one §7d.8 fixes"; printf '%s\n' "$out" | tail -40; exit 1; }
 test -n "$out" || { echo "FAIL: doctor printed nothing — the rule table is E5-unpinned in layout but each row prints its id (RT-44)"; exit 1; }
-FLOOR="RK-D-GATE-OUTPUTS RK-D-HOOKS RK-D-STORE-ID RK-D-ROLE-UNRESOLVED RK-D-ROLE-AMBIGUOUS RK-D-CARD-TOOLS RK-D-CARD-TOOLS-ABSENT RK-D-TIER-LEAK RK-D-TIMEOUT RK-D-DANGLING-ROLE RK-D-DANGLING-SLOT RK-D-DANGLING-ATTACH RK-D-DEAD-DEF RK-D-UNFILLED-SLOT RK-D-ENV-DENYLIST RK-D-CLI-VERSION RK-D-TTL RK-D-FACET-UNKNOWN RK-D-FACET-VALUE RK-D-FACET-NEW RK-D-FACET-FACT RK-D-ADAPTER RK-D-UNREAD"
+FLOOR="RK-D-GATE-OUTPUTS RK-D-HOOKS RK-D-STORE-ID RK-D-ROLE-UNRESOLVED RK-D-ROLE-AMBIGUOUS RK-D-CARD-TOOLS RK-D-CARD-TOOLS-ABSENT RK-D-TIER-LEAK RK-D-TIMEOUT RK-D-DANGLING-ROLE RK-D-DANGLING-SLOT RK-D-DANGLING-ATTACH RK-D-DEAD-DEF RK-D-UNFILLED-SLOT RK-D-ENV-DENYLIST RK-D-CLI-VERSION RK-D-TTL RK-D-FACET-UNKNOWN RK-D-FACET-VALUE RK-D-FACET-NEW RK-D-FACET-FACT RK-D-ADAPTER RK-D-UNREAD RK-D-REVIEW-REEXEC RK-D-QUARANTINE-LIVE RK-D-SINK-COUNT RK-D-ADVISORY-LEDGER RK-D-CORPUS-SHA RK-D-VERIFICATION-POLICY"
 for id in $FLOOR; do
-  printf '%s\n' "$out" | grep -qE "(^|[^A-Z0-9-])${id}([^A-Z0-9-]|$)" || { echo "FAIL: doctor's output names no row ${id} — the register-named floor (AC-409, 412, 413, 416-426, 486, 488; RA-M-01) is not met; over an empty table every join is vacuous"; exit 1; }
+  printf '%s\n' "$out" | grep -qE "(^|[^A-Z0-9-])${id}([^A-Z0-9-]|$)" || { echo "FAIL: doctor's output names no row ${id} — the register-named floor (AC-409, 412, 413, 416-426, 486, 488, and the D18-19 six AC-290/306/310/314/455/530; RA-M-01) is not met; over an empty table every join is vacuous"; exit 1; }
 done
-c=$(printf '%s\n' "$FLOOR" | wc -w | tr -d '[:space:]'); [ "${c:-0}" -eq 23 ] || { echo "FAIL: the FLOOR list above has ${c:-0} ids, not the 23 §7d.8 counts — re-count both (Halt 7)"; exit 1; }   # → 23
+c=$(printf '%s\n' "$FLOOR" | wc -w | tr -d '[:space:]'); [ "${c:-0}" -eq 29 ] || { echo "FAIL: the FLOOR list above has ${c:-0} ids, not the 29 §7d.8 counts — re-count both (Halt 7)"; exit 1; }   # → 29
 # the 3 branch on the real binary (AC-438's doctor clause; AC-486's doctor half): the rejecting adapter fixture over the scaffold.
 # unknown-adapter.toml is the §7d.9 scaffold byte-for-byte with `harness` alone changed to rk-adapter-linear — a COMPLETE
 # ConfigFile, so the load succeeds and the rule table runs; doctor does NOT call AdapterSet::resolve as a startup refusal
@@ -3503,6 +3533,11 @@ four adapters, and nothing else** [measured 2026-09-18 at `239e899`]. **There is
   The catalog iterated at 7c (the binder's fixture cards) stays RAISED under
   7c's `s7e` note.
 - **AC-240, AC-248, AC-257, AC-263, AC-264** — kernel halves 7b-ii; CLI halves here.
+- **AC-290, AC-306, AC-310, AC-314, AC-455, AC-530** — kernel / store / policy halves discharged at 7b-ii; their `doctor`
+  rows here (`RK-D-REVIEW-REEXEC`, `RK-D-QUARANTINE-LIVE`, `RK-D-SINK-COUNT`, `RK-D-CORPUS-SHA`,
+  `RK-D-VERIFICATION-POLICY`, `RK-D-ADVISORY-LEDGER`; §7d.8, §7d.14). Allocated here by the operator on 2026-09-19 —
+  **DECISIONS-2026-09-18 D18-19**, closing O-16 and `s7b-ii` §7b-ii.14's *"until `s7d`'s set carries them the rows are
+  orphaned"*; the closed `s7b-ii` file is not edited (R-21) and its note stands as history.
 
 **ARMED, NOT DISCHARGED — by id and by reason.** Checkpoint 7d may not be read as discharging any of these, and each is
 recorded in `PROGRESS.md` §1 as carried forward:
@@ -3523,7 +3558,7 @@ recorded in `PROGRESS.md` §1 as carried forward:
 | **AC-477**, **AC-478** — the render path | AC-477: *"WHEN the artifact carrying it is rendered to markdown and the typed value is read back from the store"*, *"a render round-trip test (typed → markdown, then typed re-read from the store, not from the markdown)"*; AC-478: *"a mutation test that edits the rendered markdown of a stored artifact and asserts the next read returns the original typed values and rewrites the file"* | `rk-store`'s render path, which does not exist at this pin [measured 2026-09-18: no `fn render` under `crates/rk-store/src`]; this stage edits no `rk-store` `src/`; AC-477's WHEN is not exercised without a render, so no half of it is claimed — `typed_gate_result_round_trips_through_canonical` is kept under no id (§7d.11) | the owner record AC-411 also waits on (RAISED below), then the stage that builds the render path |
 | **The signal path's OS-delivery arm, Windows** | a console `CTRL_BREAK` delivered to a `redkiln` spawned with `CREATE_NEW_PROCESS_GROUP`, exiting `13` / `130` through the table | a safe sender — `GenerateConsoleCtrlEvent` is `unsafe` FFI confined to `rk-containment`, whose surface ADR-0127 decision 2 closes at two, and D18-2 rejected widening it without an annex (§7d.10) | a record adding the sender (an ADR-0127 annex), or Step 8's operator-driven run |
 | **The signal path's POSIX arm** | `SIGINT` / `SIGTERM` (the `termination` feature) delivered to the process; exit `13` / `130` on Linux | a POSIX box; `ci.yml` has never run | a recorded CI `ubuntu-latest` run (as 7c's AC-224 POSIX arm) |
-| **SM-125, SM-126, SM-128, SM-129** | the void rate; `explain` sufficiency; write-path violations; pin drift | production answers; the first thirty gate answers; a writer-identity source; a drift | the instruments exist (`gate_answer_void`, `explain_sufficed`, the AC-405/AC-411 lints, the probe); the rates accrue from `s8` |
+| **SM-125, SM-126, SM-128, SM-129** | the void rate; `explain` sufficiency; write-path violations; pin drift | production answers; the first thirty gate answers; a writer-identity source; a drift | the instruments exist (`gate_answer_void`, `explain_sufficiency`, the AC-405/AC-411 lints, the probe); the rates accrue from `s8` |
 | **SM-130** *(the >0 arm)* | re-dispatch of a memoised step | a run in which a memo is hit under the real harness | `s8`; the 0-gap arm runs here in `ac401_…` |
 
 **Excluded, by id and reason** — only genuinely excluded ids are here:
@@ -3535,17 +3570,17 @@ recorded in `PROGRESS.md` §1 as carried forward:
   the PIA-059 shape; it claims none now. **AC-446** — the bug-provenance table is `rk-kernel`'s (its `--stay` half is
   built there); **AC-473, AC-521** — the self-hosting release check, Step 8's.
 - **AC-455** — `rk-kernel` **policy**, not the migrator's (its GIVEN/WHEN is a spec with `verification: None` against a
-  pack policy); cross-listed to 7b-ii where the two policy-table rows are discharged; **its `doctor` rule is RAISED
-  below** (O-16), not claimed.
+  pack policy); cross-listed to 7b-ii where the two policy-table rows are discharged; **its `doctor` rule is claimed
+  here** (`RK-D-VERIFICATION-POLICY`, D18-19 — CROSS-LISTED above; O-16 closed 2026-09-19).
 - **AC-505, AC-506** — Phase 2 (`rk-plugin-gen`); AC-531 is the Phase-1 criterion for the `init` half of the naming
   rule and is claimed above.
 - **AC-435's human half** — **HUMAN-GATED and not machine-decidable** (*"routed to a human gate"*); the machine half is
   claimed above; **no CI job may pass or fail on it**.
 - **AC-476** — **HUMAN GATE**, *"routed to a human gate; not machine-decidable"* whole (*"a human answers a gate whose
   question is whether the recorded losses … are acceptable AND the commit does not land on a machine verdict alone"*);
-  the register names no machine half, O-14 (OPEN) asks whether the AND clause is one, and this file claims nothing on
-  the id — the behaviour that would satisfy the clause is built and labelled O-14's default (§7d.11); the migration
-  branch is never integrated by this stage; **no CI job may pass or fail on the judgement**.
+  the register names no machine half, O-14 asked whether the AND clause is one — **answered 2026-09-19: not split**; the
+  clause is instrumented under AC-522 (§7d.11) and a dated note on AC-476 says so — and this file claims nothing on the
+  id; the migration branch is never integrated by this stage; **no CI job may pass or fail on the judgement**.
 - **AC-428, AC-439** — twins discharged at 7c under owners AC-218 and AC-206; the stream-corpus replay conjunct is
   unsatisfiable at the pin and its amendment is 7c's RAISED item (§7d.4). Not re-asserted.
 - **AC-408** — kernel-built at 7b-ii (*"a kernel test per terminal-path variant under a fake clock; an exhaustive-match
@@ -3584,20 +3619,20 @@ were landed 2026-09-18 with the records and are **not** re-raised; what remains 
 - **ADR-0128 and ADR-0129 are `proposed`** — the operator's dated confirmation line under D18-17, then the flip commit
   (`date` unchanged) carrying ADR-0107's and ADR-0009's `superseded_by` links and the README's status cells for `0107`
   and `0009` (§7d.16 item 0; the supersession-map rows are already on the tree); the block cannot pass before it
-  (§7d.17). **One question and one note are carried for the operator before the flip** (the two records were
-  corrected in place before the stage-open commit — ADR-0128 decision 4 now spells `redkiln run <item> [--lane fix]`
-  and ADR-0129 decision 4 has the kernel refuse inside `gate::answer` with the CLI refusing first, as §7d.6 builds):
-  **ADR-0129 decision 1 and AC-435's
-  THEN — a question for the operator to answer before the flip: does AC-435's THEN record ONE field or TWO?** The THEN
-  says *"the answer (yes/no, plus whether a TOML was opened) is recorded as a required field"* (singular); decision 1
-  reads the second datum as the one flag's `no` arm; D18-17 D-05 and RT-31 record *a* required flag. This file ships
-  the ADR's grammar — one flag, `--explain-sufficed yes|no`, one `gate_answered` member — and builds no second flag or
-  field ahead of the answer (§7d.1 item 2; ADR-0092 clause 2.5); if the answer is *two*, the ADR's title and decision
-  1, design §5's row and AC-435's close-commit note take the second flag together, and `adr0129_answer_grammar_…`'s
-  no-second-flag arm is re-pointed in the same commit; and **ADR-0129 decision 2**'s CLI lookup of the live token by item is not the item-keyed answer AC-248 and ADR-0017
+  (§7d.17). **The one question the stage-open commit carried is ANSWERED** (2026-09-19, the operator, recorded under
+  D18-17 D-05): AC-435's THEN — *"the answer (yes/no, plus whether a TOML was opened) is recorded as a required field"*
+  — records **two data in one field**. SM-126's pre-registered kill is *"more than 15 of the first 30 answers report that
+  the reviewer opened a TOML **anyway**"* — the cell *sufficed = yes AND opened = yes* — which a single boolean cannot
+  represent, so the one-flag reading the proposed record first carried could never count the kill. ADR-0129 decision 1
+  now names **two required flags**, `--explain-sufficed yes|no --toml-opened yes|no`, and **one `gate_answered` member**,
+  `explain_sufficiency { sufficed, toml_opened }`; this file builds exactly that (§7d.6, `ac435_…`), and the two records
+  were corrected in place before acceptance (ADR-0128 decision 4 spells `redkiln run <item> [--lane fix]`; ADR-0129
+  decision 4 has the kernel refuse inside `gate::answer` with the CLI refusing first, as §7d.6 builds). **One note is
+  still carried for the flip commit:** **ADR-0129 decision 2**'s CLI lookup of the live token by item is not the item-keyed answer AC-248 and ADR-0017
   reject (the answer handed on is token-keyed), which **a dated note on AC-248's THEN** should record and decision 6's
   amendment list should name — OWED with the flip commit.
-- **AC-435's Verified-by dated note** naming the shipped `--explain-sufficed` flag — OWED at the close commit
+- **AC-435's Verified-by dated note** naming the shipped flags `--explain-sufficed` / `--toml-opened` and the one
+  record field `explain_sufficiency { sufficed, toml_opened }` — OWED at the close commit
   (DECISIONS-2026-09-18 RT-31); the register carries no 2026-09-18 note under AC-435 today.
 - **AC-416's binder half** — its Verified-by names *"a binder unit test per case (unresolved, ambiguous) asserting an
   error return and no binding"*; `Binder::bind` takes a `BindRequest` whose card the caller already chose and
@@ -3659,10 +3694,6 @@ were landed 2026-09-18 with the records and are **not** re-raised; what remains 
   declined. 7d claims nothing on SM-123.
 - **AC-476's gate** — the migration commit review is a human gate no stage schedules; the record naming when the v0
   branch is proposed for landing (if ever — v0's branch is a fixture's) is the operator's.
-- **The E5-owed ADR-0107 erratum** (O-13) naming which digest field `explain` prints (D-03); until it lands `explain`
-  prints **both** digests the two readings name, each labelled (RT-52, §7d.7), so `s8`'s digest-equality read is
-  satisfiable under either outcome — O-13's recommended default is the recorded resolution's `output_digest` of the
-  last committed step, and the two readings are reconciled by the erratum, not here.
 - **RT-41 — the run-start carrier**: AC-485's *"recorded on the run-start event"* and design P3 name a kind no table
   carries; routed onto `reconcile_started`'s payload; a dated design §5 note or an ADR-0116-route kind is OWED.
 - **RT-42 — `answerer`'s source**: routed to the git author identity the wrapper stamped on the run-owned branch's
@@ -3690,8 +3721,8 @@ were landed 2026-09-18 with the records and are **not** re-raised; what remains 
   `[facets]` table): an existence floor; **7e's pack schema record re-points it** — nothing further owed by this stage.
 - **RT-51 — the `# redkiln-hook` marker** by which `RK-D-HOOKS` recognises a redkiln-authored hook (§7d.8): no record
   names one because no Phase-1 verb writes a hook; **a dated note on AC-412 is OWED**.
-- **RT-52 — the digest `explain` prints for the exit check**: both, labelled, until O-13's erratum names one (§7d.7);
-  the erratum is the owed record.
+- **RT-52 — the digest `explain` prints for the exit check**: both, labelled; the equality's subject is each committed
+  step's `output_digest` — decided by ADR-0128 decision 4 on 2026-09-19 (O-13 closed; §7d.7). No record owed.
 - **RT-53 — `redkiln-migrate`'s exit values** (§7d.11): `0` / `2` / `3` / `1` as stated, unpinned by any criterion; a
   record is owed only if one asks for a snapshot — until then a routing.
 - **RT-54 — `catalog::load_diagnostic`**, the loader's diagnostic mode (§7d.1, §7d.8): a second loader entry point in a
@@ -3711,8 +3742,8 @@ were landed 2026-09-18 with the records and are **not** re-raised; what remains 
 - **RT-42, corrected 2026-09-18 by the hardening round**: `answerer` must reach the kernel **before** `gate::answer`
   writes the `gate_answered` row, so it is read from the run-owned branch's `HEAD` through `GitOp::Log` before the call —
   the author identity the wrapper stamped on the gate-open commit, which is the configured identity the answer commit
-  will carry — and asserted equal to the answer commit's `%an <%ae>` after it (§7d.6); the dated design §5 note
-  confirming or dropping the field is still OWED (R-26).
+  will carry — and asserted equal to the answer commit's `%an <%ae>` after it (§7d.6); **confirmed by the operator
+  2026-09-19** — the field stays, design §5's row carries the dated confirmation, R-26 is closed.
 - **The `PackExtras` keys** (`margin_ticks`, the two TTLs, `gate_deadline_secs`, per-activity `timeout_secs`, the
   gate-class expiry action — §7d.5 step (7); RT-57): `rk-cli` reads them off the pack file the kernel's `Pack` does not expose;
   **a record fixing these keys in the pack schema is 7e's** and is named here so the reader is not invented twice.
@@ -3727,9 +3758,6 @@ were landed 2026-09-18 with the records and are **not** re-raised; what remains 
   `rk-containment` and adapter sites and gains this stage's; **the `s6` line is RAISED for narrowing** to
   `Command::new("git")` (ADR-0077, its stated warrant) or an anchored `#[expect]`-aware filter — Slice 1 marks the Step 6
   row provisional; the closed `s6` file is not amended here.
-- **O-16 — the orphaned `doctor` rows** `s7b-ii` §7b-ii.14 ARMED here (AC-455's rule; AC-530's row; AC-290, AC-306,
-  AC-310, AC-314's rows): an amendment adding them to this set with their rows, or an erratum re-assigning them —
-  **not built, not claimed**, the operator's word.
 - **AC-411's owner, and the `rk-store` render path AC-477 and AC-478 also need** — the render-path
   criteria are claimed by no stage and the path does not exist at this pin (§7d.11); **an owner record (or an `s6`
   amendment with Step 6's row marked provisional) is OWED**, and R-25's *"new here"* carries a dated line recording why

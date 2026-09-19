@@ -84,9 +84,10 @@ echo "(2) asserted: AC-184 differential + AC-161 next action, both under the can
 ```bash
 cd D:/repos/redkiln-rs
 # Two halves (DECISIONS-2026-09-12 E5). The ASSERTED half is a kernel test over AC-013's N-step fixture graph;
-# the OPERATIONAL half is the real-process arm ADR-0107 decision 4 pins, which is READ, not asserted — no
-# step-output digest field is named on `explain`'s output contract, and that residual is owed to an ADR-0107
-# erratum, not resolved here. AC-013 is PROVISIONAL on P8: F38 held exactly ONE step at n=3.
+# the OPERATIONAL half is the real-process arm ADR-0107 decision 4 pins, which is READ, not asserted. The digest
+# field is NAMED since 2026-09-19 — ADR-0128 decision 4: each committed step's `output_digest` as `explain` prints it
+# (E5's owed erratum closed by that record, DECISIONS-2026-09-18 O-13). AC-013 is PROVISIONAL on P8: F38 held exactly
+# ONE step at n=3.
 out=$(cargo test -p rk-kernel -- kill_and_resume_n_step 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: kill_and_resume_n_step exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' \
