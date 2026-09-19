@@ -233,7 +233,7 @@ producer and its non-reproducibility, which is what `s7b-kernel.md` §7b.11 prec
 | 11 | The false-block rate's denominator | The E3 severity adjudication was **adjudicated 2026-09-04 and closed 2026-09-09, NOT BLIND** — facts settled 6/6; severity from a sheet filled by the model at Ryan's direction, one operator, κ forfeited (PIA-081). The rates are settled on it: arm (a) FP 1/23, MCC +0.957 (E-0074-3); arm (b) FP 0/23, MCC +1.000 — upper bounds against CLEAN | **E3-SEV-BLIND** — a blind annotation of the preserved `e3-severity-annotation-BLANK.md` by an independent rater (design §10.5, consumer SM-086) — is what buys κ back. AC-298 sets the **system default** off the same NOT-BLIND sheet. | AC-308 (PROVISIONAL because the sheet is not an independent rater, not because the adjudication is open), AC-309, AC-357, AC-358; SM-086 |
 | 12 | The whole-suite p95 half of the timeout rule | No whole-suite p95 wall clock was ever recorded — the field did not exist | First production readings. Until then only AC-330's declaration half can fire, which the criterion states inside itself. | AC-330; SM-102 |
 | 13 | Corpus residency and the pinned-corpus instruments | `redkiln-corpus` **does not exist**; `spikes/corpus/`, `spikes/results/*.jsonl` and `spikes/runner/` are all tracked in this repo at HEAD `ab58733`; the 1,312-file corpus and the 118-ref history live only in `D:/repos/redkiln`; no golden event log exists for AC-006/AC-188 (PIA-002) | The ADR-0013 split happens at runbook Step 2 — a `git bundle create --all` of the frozen clone (or a fetchable remote plus SHA in `CORPUS_PIN`) pinned by that repository's SHA — and golden-log generation lands at **Step 7b** *(corrected 2026-09-13: this read "at Steps 5/6"; Checkpoints 5 `96ba9c2` and 6 `ea83eac` both closed without the logs and `rk-kernel` does not exist — see AC-006's 2026-09-13 ownership amendment)*. **AC-465 is violated today by construction** and no measure tracks the distance to compliance; every corpus-bound test is a local-only suite until then. | AC-465; AC-006, AC-184, AC-188, AC-427, AC-444, AC-464, AC-519's fixture pin; SM-124 |
-| 14 | Dead-artifact detection | `doctor`'s window **N is undeclared**, so AC-472's AND clause has no truth value and SM-139's target cannot be missed | N is declared in the `doctor` rule table and AC-472's threshold fixtures (N-1 must not fire, N+1 must) are written. | AC-472, AC-426; SM-139 |
+| 14 | Dead-artifact detection | `doctor`'s window **N is undeclared**, so AC-472's AND clause has no truth value and SM-139's target cannot be missed | N is declared in the `doctor` rule table and AC-472's threshold fixtures (N-1 must not fire, N+1 must) are written. *(Amended 2026-09-18, DECISIONS-2026-09-18 D18-5 / D18-18, C-01 D-20: **N is declared** — `N = 50` (DECISIONS-2026-09-12 E9) — and its home is the per-repository key `[doctor] unread_window_runs` that `redkiln init` writes (AC-426: *"a required key, no default"*; AC-472 as amended), **not** the rule table; the 49-run and 51-run fixtures are authored red-first at Step 7d. This row is stale as of this note.)* | AC-472, AC-426; SM-139 |
 | 15 | The worktree cost cell | **Discharged 2026-09-11 (PIA-075).** The S-WT run record (`spikes/results/s-wt.jsonl`) names `--system-prompt`, so §C.1 was right: static × worktree is 1.000 steady (w1 0.807 cold, n = 9) and F16's worktree-each 0.685 (n = 9) is the **default** × worktree cell — two cells, not a contest. CONTESTED is struck here and at AC-387; S-WT-REC is DONE | Nothing; AC-387 prices the two measured cells from their records and returns `Unmeasured(cell)` for every other. What remains thin is n = 9 on one machine at one CLI pin. | AC-387; SM-053, SM-113, SM-114 |
 
 **One thing that is unmeasurable rather than unmeasured.** Whether cache reads draw down the rate-limit window cannot be decided at the instrument's 0.01 resolution — E0's cache-cost gate was **STRUCK, not answered** (F14, F6). AC-381 therefore encodes the negative (no cache metric may feed a headroom figure) rather than a positive rule, and it is the criterion to revisit first if the platform ever exposes finer resolution.
@@ -2755,6 +2755,12 @@ WHEN `doctor` runs against that repository
 THEN that stage and artifact are listed as produced-but-never-read.
 *Verified by:* a `doctor` rule-table row; a fixture event log containing one produced-unread artifact, asserted to be
 listed, and a second fixture with a matching read event, asserted not to be listed.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-08: **this criterion is read as its §0.3 owner, AC-426** —
+kind-per-stage over the last N runs, N the repository's required `unread_window_runs` key (DECISIONS-2026-09-12 E9: 50).
+"In the whole item history" is the windowless twin text; the rule row has one predicate and one window. The
+produced-unread fixture therefore spans **more than N runs** with zero reads (the 51-run fixture at N = 50), and the
+must-not-list fixture is the read-event case above plus the within-window case (49 runs) AC-426 carries. AC-472 is
+amended the same day to the same key.)*
 *Cut from this criterion:* "AND the check costs zero model dispatches", verified by "a cost assertion that the rule
 issues no harness dispatch". `doctor` is a local rule engine over the event log; no implementation of this rule could
 dispatch a model. The clause passes on any system, including one that does nothing, and it made the criterion look
@@ -6229,6 +6235,12 @@ build on a name matching the committed denylist. The runbook's Phase-1 exit chec
 then re-invoke `redkiln run --lane fix --item <item>` and assert digest equality via `redkiln explain <item>` — is the
 behavioural check that `--resume` is refused (ADR-0107 decision 4; PIA-030: the runbook's `redkiln run --resume
 <run-id>` line was the flag this criterion denies).
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-02 — operator decision 2026-09-18: the re-invocation above reads
+`redkiln run --lane fix --item <item>`, ADR-0107 decision 4's form, while decision 1 and AC-401/AC-403/AC-186/AC-264
+carry `run <item>`. One grammar is fixed by **ADR-0128** (proposed; successor-in-part to ADR-0107): **`run <item>
+[--lane fix|story]`** — the item is positional, `--lane` is optional and derived from the item kind when derivable, and
+the lane maps to a pack — `fix` → `bug-standard`, `story` → `story` (DECISIONS-2026-09-12 E7). The exit check's line
+becomes `redkiln run <item> --lane fix`; the snapshot pins the positional form, and `--item` is not a flag.)*
 **Limit, stated:** the denylist is name-based. A resume-shaped flag under an unlisted name is caught only by human review
 of the snapshot diff, not by the lint. F38 shows a re-invocation was lossless at n=3; it does not license the stronger
 claim that no resume entry point is ever needed.
@@ -6257,10 +6269,14 @@ a negative case asserting `status` and `explain` do not call it**; the
 argument-surface snapshot (AC-400) additionally fails the build on any `--no-reconcile` / `--skip-reconcile` / `--fast`
 flag.
 *(Amended 2026-09-12, DECISIONS-2026-09-12 E11: this criterion enumerated **four** paths — including `status`, which
-ADR-0105 clause 8 excludes in terms, and omitting `doctor`, which can act via `--fix` and `--rebuild`. AC-172 had
-already been amended to the governing set and cited clause 8 by name; this row and design §8.1's verb table were the
-un-updated copies. ADR-0109 decision 1's scope — "every CLI entry that **can cause an action**" — is the governing
-form.)*
+ADR-0105 clause 8 excludes in terms, and omitting `doctor`, which can act via `--rebuild` (and, if it ships, `--fix`).
+AC-172 had already been amended to the governing set and cited clause 8 by name; this row and design §8.1's verb table
+were the un-updated copies. ADR-0109 decision 1's scope — "every CLI entry that **can cause an action**" — is the
+governing form.)*
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 RB-M-06: the parenthetical above read "via `--fix` and `--rebuild`".
+Design §8.1 gives `doctor --fix` no phase (CONDITIONAL, §8.8 — no install mechanism is decided) and its Phase-1 row is
+`doctor` / `doctor --rebuild`; the Step 7d surface is those two, the AC-400 snapshot pins `--fix`'s absence, and every
+`doctor` invocation reconciles regardless of flag (C-01 D-06, dropped as decided).)*
 **Cut on refutation:** the original also claimed no *configuration key* could skip reconcile. No instrument checked
 configuration keys, so the claim is withdrawn rather than left uninstrumented.
 
@@ -6272,8 +6288,12 @@ WHEN `redkiln run <item>` opens that gate
 THEN the `Gate:` trailer and `gate_opened` event are durably written and the process exits 0 without waiting on any
 channel, prompt, socket or sleep.
 *Verified by:* an integration test that runs `run` to a gate under a fake clock, asserting the trailer and event are on
-disk and that the process exits with no live handle held; plus a lint forbidding blocking stdin reads in `rk-cli`
-outside `init`.
+disk and that the process exits with no live handle held; plus a lint forbidding blocking stdin reads in `rk-cli`.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-15: the lint clause read "in `rk-cli` outside `init`". The exemption
+was dead text — `init` writes E6's fixed scaffold (AC-437's amendment of the same date), design §8.1 makes a second
+`init` change nothing, and Checkpoint 7d runs `init` twice with no input — so **no Phase-1 verb reads stdin** and the lint
+has no exemption. The THEN's "exits 0" is the decided gate-open exit; AC-438's list no longer names gate-open as a
+distinct value (C-01 D-01, same date).)*
 
 **AC-404** — `rk-cli`, `rk-adapter-claude` · evidence: F22 / brief §C.6 ("nothing may depend on a process surviving;
 every wait is a durable mark plus a later read") [measured] · decisions: proposal §4.3 outer-retry policy, principle 3
@@ -6298,6 +6318,15 @@ THEN it contains no tracker or web crate, and the gate-answer store method has e
 `answer` command.
 *Verified by:* a crate-graph test asserting no GitHub or web crate in the Phase 1 dependency closure, plus a lint
 asserting exactly one call site of the gate-answer store method.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-13: **the symbol and the crate list are named.** No `rk-store`
+"gate-answer store method" exists — the answer path is `rk_kernel::workflow::gate::answer` behind AC-262's single
+caller-facing wrapper, and the store writes through its generic append — so the call-site lint counts non-test callers
+of that wrapper and requires exactly one, in `rk-cli`'s `answer` verb (the kernel's own tests and the FSM fold are
+exempt). "No tracker or web crate" is a `deny.toml` ban list the Step 7d stage authors — `octocrab`, `reqwest`, `hyper`,
+`axum`, `ureq` and their kin — checked by `cargo deny check bans` over the workspace graph; this is instrument
+authoring, not a threshold change. The grammar the one call site serves is `answer <item> <option> [--attach
+<kind>=<path>] --explain-sufficed <yes|no>` — the required flag included, so ADR-0129 decision 6's *"the flags named"*
+reads true of this note — with the token CLI-resolved from the open gate record (ADR-0129, proposed; AC-248).)*
 **Cut on refutation:** the original cited F18 and F28 (gate duration and gate cost), neither of which bears on who may
 write a gate answer, and asserted "it does not compile" — a claim neither instrument makes. The THEN is now the observable
 the instruments actually check.
@@ -6310,6 +6339,10 @@ THEN the answer is recorded as **void**, the gate stays open with the observed a
 stage transition occurs — the answer is never reconciled into a verdict.
 *Verified by:* an integration test that answers after a commit lands, asserting a `gate_answer_void` event carrying both
 tree hashes, `gate.state == open`, and no stage transition.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-04: "`redkiln answer` is invoked with a valid token" — the token is
+never an argument. The grammar is `answer <item> <option> [--attach <kind>=<path>] --explain-sufficed <yes|no>` (ADR-0129,
+proposed — the required flag named, as its decision 6 says this note does); the CLI
+resolves the live token from the item's open gate record (AC-248), and the test invokes that form.)*
 
 **AC-407** — `rk-cli`, `rk-store` · evidence: none measured; this is a design decision · decisions: ADR-0017
 GIVEN a gate answered once with its single-use token
@@ -6336,7 +6369,13 @@ WHEN the configuration is loaded (and when `doctor` runs over it)
 THEN it is rejected as a configuration error: a gate answer populates the gate step's `answer` and can bind nothing
 downstream.
 *Verified by:* a lint/`doctor` rule row rejecting any graph reference that resolves to `outputs` of a gate step, with a
-red fixture graph that must fail; plus a compile-time test that the gate step type exposes no `outputs`.
+red fixture graph that must fail; plus a loader test asserting that a `Gate` step carrying `outputs` is rejected at load,
+its fixture in the AC-415 corpus.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 RA-M-05: the second instrument read "a compile-time test that the gate
+step type exposes no `outputs`". Step 7b's loader has one `Step` struct for every kind (`kind: StepKind`,
+`output_type: Option<String>` parsed from `outputs =`; `crates/rk-kernel/src/catalog.rs`), so
+`Step { kind: Gate, output_type: Some(..) }` is representable and the compile-time half could not be written against the
+type that exists. The behaviour — rejection — is unchanged; the loader test is the instrument that can fire.)*
 **Cut on refutation:** F32 (P9 authoring) and F33 (P9b ambiguities) were cited here and bear on schema authoring
 verbosity, not on gate output bindings. The THEN was also recast from a type shape to a rejection outcome.
 
@@ -6346,7 +6385,14 @@ GIVEN a gate question whose registry entry declares its options and each option'
 WHEN `redkiln answer` is passed an attachment that no declared option admits
 THEN the answer is refused at the CLI boundary and nothing is written.
 *Verified by:* a unit test on the attachment validator; a red fixture carrying an unbound attachment that must fail; a
-store assertion that the refused path wrote no event.
+store assertion that the refused path wrote no event; **and a positive control: an attachment that a declared option
+admits is accepted and stored as a human-supplied root.**
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-04 — operator decision 2026-09-18: the positive control is added. The
+three instruments as written were all satisfied by a refuse-all validator. The grammar the control exercises is
+`answer <item> <option> [--attach <kind>=<path>]` (ADR-0129, proposed — successor-in-part to ADR-0009): the option is
+validated against an ADR-0063 question registry whose **type** lands in `rk-kernel` at Step 7d with the default question
+(options `approve` / `changes-requested`) built in; pack-declared questions are Step 7e's. The token is CLI-resolved from
+the item's open gate record (AC-248); there is no `--token` flag.)*
 
 ---
 
@@ -6376,11 +6422,16 @@ measured slice rejection states over 360 trailer commits, and does not validate 
 
 **AC-413** — `rk-store` · evidence: **[outside the brief]** — the cited Backlog.md issue and shipmates note are not in the
 evidence brief · decisions: proposal §4.5 rule 5, ADR-0003
-GIVEN a store carrying repo identity (root commit + common-dir), schema version and boot-id
+GIVEN a store carrying repo identity (root commit + common-dir) and schema version
 WHEN any command opens that store from a different repository
 THEN the open is refused as a configuration error and no row is read or written.
 *Verified by:* a store test opening a store against a second fixture repo, asserting the refusal and asserting zero reads
 and writes against the store handle; a red fixture in the `doctor` corpus.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 RA-M-07: **boot-id is dropped from the GIVEN**, which read "(root
+commit + common-dir), schema version and boot-id". The §0.3 owners AC-179/AC-180 built `rk-store::identity` without it —
+"boot-id was cut for having no source, and is not invented here" (`crates/rk-store/src/identity.rs:13-15`; `Identity` is
+`root_commit`, `common_dir`, `schema_version`) — and the twin AC-369 cut it in refutation. A boot-id red fixture could not
+be authored; the `doctor` fixture is over the three fields. Design §8.4's row is corrected the same day.)*
 
 ---
 
@@ -6395,6 +6446,14 @@ THEN every fixture's expected rule fires **and** zero harness dispatches are iss
 *Verified by:* the `doctor` integration test injects a `HarnessPort` fake that fails the test on any dispatch, over the
 AC-415 fixture corpus so that a doctor which does nothing fails the same test; plus a CI assertion that the `doctor` code
 path does not link a live adapter.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-10: **"does not link a live adapter" means "does not construct a
+`Harness` implementor".** `rk-cli` is the composition root and links all four real adapters, so a dependency-graph
+reading of the second instrument can never pass. The instrument is a source lint over the `doctor` module whose denylist
+is the four adapters' constructor paths — `rk_adapter_claude::ClaudeHarness::new` / `Config::new`,
+`rk_adapter_sqlite::SqliteStore::open`, the two `rk_adapter_toolchain_*::*Toolchain::new` — and any `dyn Harness`
+acquisition; `rk_adapter_claude::env_denylist` consts (AC-422's one list) and the version-probe function (AC-423) stay
+readable from `doctor`. `doctor`'s `Ports.harness` is a fake that fails on any dispatch; that behavioural half is the
+load-bearing instrument and is unchanged.)*
 **Repaired:** the original ("zero dispatches") passed trivially on a `doctor` that performs no checks. It is now bound to
 the AC-415 corpus so the zero-cost claim can only be satisfied by a doctor that is actually checking.
 
@@ -6406,7 +6465,13 @@ WHEN CI enumerates the rule ids
 THEN every id has at least one committed fixture configuration that the rule actually rejects, and a rule with no
 rejecting fixture fails the build.
 *Verified by:* a CI test joining rule ids to fixture directories, asserting a non-empty fixture set per id and asserting
-each fixture is genuinely rejected by that id.
+each fixture is genuinely rejected by that id, **and the emitted id set is non-empty and contains every id a §12
+criterion names**.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 RA-M-01: the bold clause is added. The join is quantified over the ids
+the implementer declares, so over an empty or near-empty rule table every per-id assertion — here, AC-414's per-fixture
+assertion and SM-121's dispatch count — was vacuous. The floor is the register-named rule rows: AC-409, AC-412, AC-413,
+AC-416–AC-426, AC-486, AC-488 each demand a `doctor` rule row, and Checkpoint 7d joins that list to the emitted ids so an
+empty table fails.)*
 
 ---
 
@@ -6497,6 +6562,13 @@ WHEN the installed CLI version or either TTL variable differs from the pin, or o
 THEN `doctor` reports the mismatch as a configuration error, naming both the observed and the pinned value.
 *Verified by:* a `doctor` rule row driven by a stubbed version probe; a red fixture with a mismatched version; a red
 fixture with a mismatched TTL; a red fixture with exactly one TTL variable set (AC-526's rule, read by the same row).
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-11: **the shipped probe is named.** `doctor` runs `claude --version`
+on the installed binary (the configured `harness_binary`) through `rk_containment::run_bounded` and compares the
+reported version to `rk_adapter_claude::config::TESTED_CLI_VERSION` (`config.rs`; the crate root re-exports it under no shorter path). That is a bounded child-process **spawn, not a harness
+dispatch** — no `HarnessPort` method is called, no `-p` argument is composed — so AC-414's zero-dispatch assertion and
+SM-121's counter stay at 0; a fixture asserts `doctor` issues exactly that one non-`-p` process. The "installed"
+reading is the register's own: the WHEN names the installed CLI version, a property of the machine, not the newest
+`instrument_version` in the event log (which cannot report on a fresh repository).)*
 **Cut on refutation:** the claim that the cache is org-scoped and that a CLI upgrade anywhere on the account invalidates
 the shared tool block, and the cited platform issue showing a server-side TTL flip, are **not in the brief** and are cut.
 What the brief supports is that the prefix subsidy is a **shared-prefix subsidy** — the docs scope the Claude Code cache
@@ -6650,7 +6722,13 @@ WHEN the `keywords` of every activity in the catalog are mutated arbitrarily and
 vector
 THEN the selected activity set is byte-identical.
 *Verified by:* a property test that permutes `keywords` across the shipped catalog and asserts an unchanged selection,
-plus a lint asserting `keywords` is unreachable from the admissibility evaluator.
+plus a lint asserting `keywords` is unreachable from the admissibility evaluator, **plus a positive control: a
+`redkiln catalog search` for a keyword finds the activity that declares it and misses one that does not.**
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 RA-M-02: the positive control is added. Step 7b's loader dropped
+`keywords` before selection saw it, so the permutation test passed by construction and the unreachability lint was
+vacuous — a check that cannot fail. At Step 7d the loader reads `keywords`, `catalog search` is built as design §8.1's
+Phase-1 verb, and the property test runs over a **synthetic** catalog until Step 7e ships v0 (`[packs] enabled` is empty
+until then); the shipped-catalog run is 7e's.)*
 
 **AC-437** — `rk-cli` · evidence: none measured; namespacing-retrofit precedent **[outside the brief]** ·
 decisions: **ADR-0107** decision 2 (`init` is idempotent; ADR-0011 related; PIA-082), proposal §4.9
@@ -6659,6 +6737,18 @@ WHEN `redkiln init` is run twice in succession
 THEN the second run makes no change — identical tree, identical store identity rows — and exits 0.
 *Verified by:* an integration test asserting an empty `git status --porcelain` diff, unchanged store identity rows and
 exit 0 after the second `init`.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-14 — the E6-owed record (DECISIONS-2026-09-12 E6: "AC-437's
+Verified-by or an ADR-0107 clause should name init's scaffold"), taken as an operator decision 2026-09-18. **`init` is
+EAGER and its scaffold is fixed verbatim.** It writes `.redkiln/config.toml` with exactly these tables and keys:
+`[adapters]` `harness = "rk-adapter-claude"`, `store = "rk-adapter-sqlite"`,
+`toolchains = ["rk-adapter-toolchain-node", "rk-adapter-toolchain-rust"]` — the four compiled-in reals (ADR-0094), so a
+bare-`init` repository is runnable under AC-486; `[packs]` `enabled = []` (Step 7e fills it); `[doctor]`
+`unread_window_runs = 50` (AC-426's required key at E9's value). It also creates the SQLite store at
+`<git-common-dir>/redkiln/store.sqlite3` through `rk_adapter_sqlite::SqliteStore::open`, so "identical store identity
+rows" compares **three real rows** — `root_commit`, `common_dir`, `schema_version` (boot-id was cut for having no
+source, `crates/rk-store/src/identity.rs`; see AC-413's amendment of the same date). The integration test pins those
+bytes and those three rows; `init` reads no stdin and installs no hook (AC-412). The store directory lies outside the
+working tree and is outside AC-531's regex by that criterion's amendment of the same date.)*
 **Cut on refutation, re-added 2026-09-11:** the namespacing half ("every artifact it created is namespaced under the
 single owned prefix") was cut rather than split — its only support was an out-of-brief anecdote and its instrument was
 an unspecified "naming lint". The prefix is now decided (`rk-`, decision #8 of 2026-09-11) and the clause is its own
@@ -6677,6 +6767,13 @@ AND a pre-existing name matching the prefix that `init` did not create is report
 fail; an integration test enumerating the tree diff after `init` and asserting every created name matches the regex; a
 fixture with a pre-existing `rk-` name asserting the report and no overwrite. *(The clause AC-437 cut on 2026-09-08 and
 promised to re-add "when the prefix is decided" — PIA-106.)*
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-14: **the regex is scoped to the user-visible namespace — the
+working tree, git refs and hooks.** "Every name it created outside the repository's own `.redkiln/` directory" is read
+over those three surfaces; the git common dir is not user-visible namespace (shipmates L3.1's hazard is a name a user
+meets), so the SQLite store `init` now creates eagerly at `<git-common-dir>/redkiln/store.sqlite3` (AC-437's amendment
+of the same date; `rk_adapter_sqlite::SqliteStore::open`'s fixed location) is outside the lint and is **not** renamed to
+satisfy it. The tree-diff instrument enumerates the working tree, `refs/` and `.git/hooks`; the manifest of created
+names lists the store path separately, unlinted.)*
 
 ---
 
@@ -6687,10 +6784,20 @@ promised to re-add "when the prefix is decided" — PIA-106.)*
 GIVEN the closed `StepError` enum
 WHEN `redkiln` terminates for any reason
 THEN its exit code comes from a closed, snapshot-pinned table in which success, configuration error (including any
-failing error-severity `doctor` rule), gate-open, findings-block and each runtime error class are distinct values; a new
+failing error-severity `doctor` rule), findings-block and each runtime error class are distinct values; a new
 `StepError` variant with no mapping fails to compile.
 *Verified by:* an exhaustive-match test over `StepError` → exit code; a committed snapshot of the exit-code table; a
 table-driven CLI test over fixtures × expected code, including the `doctor` fixtures of AC-415.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-01 — operator decision 2026-09-18: **gate-open is struck from the
+distinct-value list.** This THEN read "success, configuration error (…), **gate-open**, findings-block and each runtime
+error class are distinct values", which contradicted three register THENs at equal precedence — AC-403 "the process
+exits 0 without waiting on any channel", AC-240 "terminates with exit code 0", AC-024 "exits 0" — and no accepted ADR
+Decision broke the tie (ADR-0009's "the process exits 0" is Context). A `run` that opens a gate is the designed success
+outcome of `run` — state printed, `Gate:` trailer and `gate_opened` event durably written — and **exits 0**; the closed
+table has no gate row. Design §8.1's exit-code paragraph is amended to match. The table's values are the committed
+snapshot's (DECISIONS-2026-09-18 D18-4; the table is a Step 7d header-table row, not an ADR): 0 Success — also gate-open
+and the AC-450-style no-op — 2 Usage (clap's default), 3 ConfigError, 4 FindingsBlock, 5 NoRecord (AC-432), 10–20 one
+per `StepError` variant in `error.rs` order, 70 PoisonedLockHalt (ADR-0118 clause 6), 130 SignalOutsideDispatch.)*
 **Cut on refutation:** the F21 citation ("`is_error`/`api_error_status` observed alongside exit codes that do not match")
 was cut. **F21 in the brief is the E3 arm (b) result** (S-SILENT 23/23, CLEAN FP 2/23, MCC +0.917, $56.47) and contains no
 error-frame observation; the strings `is_error` and `api_error_status` do not appear in the brief at all.
@@ -7225,13 +7332,21 @@ whose artifact is never read is flagged by `doctor`") · decisions: ADR-0006
 GIVEN an activity that consumes an artifact as input
 WHEN the activity runs
 THEN an `artifact.read` event is emitted naming the artifact kind and id
-AND `doctor` flags any artifact kind with zero reads across the last N runs, where N is a declared constant in the
-rule table.
+AND `doctor` flags any artifact kind with zero reads across the last N runs, where N is the repository's
+`unread_window_runs` key (AC-426; DECISIONS-2026-09-12 E9 — `init` writes 50).
 *Verified by:* an event-log assertion per activity input in the kernel test suite; a `doctor` rule-table row with a
 fixture of N+1 runs in which one artifact kind is never read and must be flagged, and a paired fixture at N−1 runs in
 which it must not be — so the threshold itself is exercised.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-08: the AND clause read "where N is a declared constant in the rule
+table". AC-426 is the §0.3 owner of this behaviour and fixes N as the required per-repo key `unread_window_runs` (no
+default); the rule row reads that key, and one value has one home. The predicate is the owner's — kind-per-stage over
+the last N runs — which ADR-0116 already quotes with N = 50.)*
 **Gap:** N is not yet chosen. Until it is, the AND clause has no truth value and this criterion is only half live; the
 `artifact.read` emission (the first clause) is checkable today. SM-139 inherits the same gap.
+*(Amended 2026-09-18, DECISIONS-2026-09-18 / C-01 D-08, D-20: **the Gap above is closed.** N was declared on 2026-09-12
+(DECISIONS-2026-09-12 E9: `unread_window_runs = 50`, written by `init`); the AND clause has had a truth value since
+that date, the N−1 / N+1 fixtures are authored at Step 7d as 49-run and 51-run event logs, and SM-139's target is live
+(its row is amended the same day). The paragraph is kept as history.)*
 
 **AC-473** — self-hosting switch · evidence: proposal §5 ("until Redkiln-RS is self-hosting … that milestone, not a
 phased cutover, is the switch"), §7 Phase 1 exit · decisions: ADR-0002, ADR-0011
@@ -7330,7 +7445,7 @@ operator].
 - The census overall is **96.0%** typed-slot (3,011 / 3,138 — Lifted / (Lifted + LiftedWithLoss + Failed) over typed slots); the "98%" some documents quote is the spec-section slot only (E-0075-1). No single percentage stands for the census (SM-133).
 - SM-133's target compares two different programs — a read-only census (`census-s-mig.py`) against a migration tool that does not exist. Until `redkiln-migrate` reproduces the census figures on the same pin, a slot falling below baseline cannot distinguish a regression from instrument disagreement.
 - AC-465 is VIOLATED TODAY: `spikes/corpus/`, `spikes/results/*.jsonl` and `spikes/runner/` are all tracked at HEAD `ab58733`, and `redkiln-corpus` does not exist. Nothing measures the distance to compliance.
-- AC-472/SM-139's doctor rule is the only instrument for dead-artifact detection and its N is undeclared, so the AND clause has no truth value. Its kill depends on someone running a census to notice the rule did not fire — an instrument whose failure is only detectable by the manual method it replaces.
+- AC-472/SM-139's doctor rule is the only instrument for dead-artifact detection and its N is undeclared, so the AND clause has no truth value. Its kill depends on someone running a census to notice the rule did not fire — an instrument whose failure is only detectable by the manual method it replaces. *(Amended 2026-09-18, DECISIONS-2026-09-18 D18-5 / D18-18, C-01 D-20: N **is** declared — `N = 50` in the per-repository key `[doctor] unread_window_runs` (AC-426; AC-472 as amended; DECISIONS-2026-09-12 E9) — so the AND clause has a truth value from Step 7d; the census-dependence observation stands.)*
 - NOTHING HERE HAS BEEN EXECUTED. `redkiln-migrate` does not exist; the differential numbers come from a read-only census. Forty criteria against an unbuilt tool is a specification, not evidence.
 
 ---

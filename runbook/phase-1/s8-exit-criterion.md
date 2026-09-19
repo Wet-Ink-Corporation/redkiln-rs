@@ -31,20 +31,24 @@ Cargo workspace, and a Node-only Phase 1 could not have passed this line (PIA-00
 cd D:/repos/redkiln-rs
 test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — criterion (1) NOT RUN (Halt 8)"; exit 1; }
 test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM to a real defect id first — a bare <placeholder> is a bash redirect, not an argument"; exit 1; }
-./target/debug/redkiln run --lane fix --item "$FIX_ITEM" || { echo "FAIL: the fix-lane run exited non-zero"; exit 1; }
-out=$(./target/debug/redkiln explain --run "$RUN_ID" --stages) || { echo "FAIL: explain exited non-zero"; exit 1; }
-test -n "$out" || { echo "FAIL: empty stage log — there is nothing to read against the PASS conditions below"; exit 1; }
-printf '%s\n' "$out"   # → READ against the three lines below. NO stage-line pattern is pinned: `explain --run … --stages` is a shape found nowhere else in the corpus (audit 2026-09-10:895), so a grep for one would false-fail a correct binary.
+./target/debug/redkiln run "$FIX_ITEM" --lane fix || { echo "FAIL: the fix-lane run exited non-zero"; exit 1; }   # ADR-0128 grammar (C-01 D-02, 2026-09-18): positional item, --lane optional. A run that STOPS AT A GATE exits 0 (C-01 D-01; AC-403) — this guard does not distinguish "landed" from "gated"; the trailer read below does.
+out=$(./target/debug/redkiln explain "$FIX_ITEM") || { echo "FAIL: explain exited non-zero"; exit 1; }   # POSITIONAL, the recorded resolution (AC-430–AC-432). Until 2026-09-18 this read `explain --run "$RUN_ID" --stages` — a run-keyed stage-listing mode no register criterion, ADR or design row names (C-01 D-03); the stage sequence is read from the event log's tier-1 trailer commits instead, next line.
+test -n "$out" || { echo "FAIL: empty explain output — there is nothing to read against the PASS conditions below"; exit 1; }
+log=$(git log --all --format=%B -E --grep='^(Story|Slice-Verdict|Gate):' 2>&1) || { echo "FAIL: git log over the trailer commits exited non-zero"; exit 1; }   # --all: the tier-1 commits live on the run-owned branch rk-run/<item> (s7d H-5, ADR-0105 clause 8; AC-518), never on the checkout's HEAD — a bare `git log` here would fail a correct binary (corrected 2026-09-18, the same day the line was re-spelt under RT-33)
+test -n "$log" || { echo "FAIL: no Story:/Slice-Verdict:/Gate: trailer commit on any ref (the run's trailers land on rk-run/<item> — s7d H-5) — the run wrote no tier-1 event (ADR-0105: git is the record)"; exit 1; }
+printf '%s\n' "$out"; printf '%s\n' "$log"   # → READ both against the three lines below. NO stage-line pattern is pinned: the trailer values are the pack's stage names (7e's), so a grep for one would false-fail a correct binary.
 # PASS only when the event log contains EVERY lane stage from intake to a landed commit,
 # with NO stage performed by the old redkiln, and the verify stage's toolchain is rk-adapter-toolchain-rust.
 # The claim is REFUSED if any stage is missing. The run id is the evidence; a statement is not.
 
 # (1b) — AC-521, the story-lane twin
 test -n "$STORY_ITEM" || { echo "FAIL: set STORY_ITEM to the Phase-2 story to author"; exit 1; }
-./target/debug/redkiln run --lane story --item "$STORY_ITEM" || { echo "FAIL: the story-lane run exited non-zero"; exit 1; }
-out=$(./target/debug/redkiln explain --run "$RUN_ID" --stages) || { echo "FAIL: explain exited non-zero"; exit 1; }
-test -n "$out" || { echo "FAIL: empty stage log"; exit 1; }
-printf '%s\n' "$out"   # → READ against the line below; no stage-line pattern is pinned, for the reason given in (1)
+./target/debug/redkiln run "$STORY_ITEM" --lane story || { echo "FAIL: the story-lane run exited non-zero"; exit 1; }   # ADR-0128 grammar; a gate-open exits 0 (C-01 D-01) — see (1)
+out=$(./target/debug/redkiln explain "$STORY_ITEM") || { echo "FAIL: explain exited non-zero"; exit 1; }   # POSITIONAL; was `explain --run "$RUN_ID" --stages` until 2026-09-18 (C-01 D-03)
+test -n "$out" || { echo "FAIL: empty explain output"; exit 1; }
+log=$(git log --all --format=%B -E --grep='^(Story|Slice-Verdict|Gate):' 2>&1) || { echo "FAIL: git log over the trailer commits exited non-zero"; exit 1; }   # --all: see (1)
+test -n "$log" || { echo "FAIL: no trailer commit on any ref (the run's trailers land on rk-run/<item> — s7d H-5) — the story-lane run wrote no tier-1 event"; exit 1; }
+printf '%s\n' "$out"; printf '%s\n' "$log"   # → READ against the line below; no stage-line pattern is pinned, for the reason given in (1)
 test -n "$AUTHORED_STORY" || { echo "FAIL: set AUTHORED_STORY to the path the run authored"; exit 1; }
 git ls-files --error-unmatch "$AUTHORED_STORY" || { echo "FAIL: the authored story is not tracked — the second half of the line below"; exit 1; }
 # PASS only when the event log contains every story-lane stage and the authored story is in the tree.
@@ -97,7 +101,7 @@ test -n "$pre" || { echo "FAIL: empty pre-kill capture — two empty outputs com
 # Now kill the running process mid-graph, from another shell:   taskkill /T /F /PID <pid>
 # Then re-invoke the SAME idempotent entry — there is no --resume flag and no resume verb (ADR-0107;
 # AC-013/AC-186/AC-264/AC-400). That --resume is refused is itself AC-400's check, at s7d's checkpoint.
-./target/debug/redkiln run --lane fix --item "$ITEM" || { echo "FAIL: the re-invocation exited non-zero"; exit 1; }
+./target/debug/redkiln run "$ITEM" --lane fix || { echo "FAIL: the re-invocation exited non-zero"; exit 1; }   # ADR-0128 grammar (C-01 D-02): was `run --lane fix --item "$ITEM"`. A re-invocation that reaches a gate exits 0 (C-01 D-01), so this guard passes on a gated run too; the digest diff below is the assertion.
 post=$(./target/debug/redkiln explain "$ITEM") || { echo "FAIL: post-resume explain exited non-zero"; exit 1; }
 test -n "$post" || { echo "FAIL: empty post-resume capture"; exit 1; }
 diff <(printf '%s\n' "$pre") <(printf '%s\n' "$post")   # → READ this. Whole-output equality is NOT asserted: the

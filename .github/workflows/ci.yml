@@ -335,6 +335,15 @@ jobs:
       # AC-529 -- the run-owned worktree is resolved from the STORE, never from the process cwd.
       # A cwd-based resolution passes the refusal test and the positive control by accident,
       # because on the happy path the two are the same directory. This is the structural half.
+      #
+      # Scope (2026-09-18, C-01 D-18 -- recorded before rk-cli exists so nobody widens the exemption):
+      # the ban is about library and tier-1 code paths -- a WRITE resolving the run-owned worktree
+      # (AC-529, ADR-0105 clause 8). It is not a licence for a mandatory `--repo`: `rk-cli`'s verbs
+      # discover the working-tree root from the INHERITED cwd through the rk-git wrapper (one `rev-parse
+      # --show-toplevel` via GitExec with "." as the path — s7d H-3), then take the common dir off that
+      # absolute root through rk-adapter-sqlite's `path::common_dir` (7c's shipped reader; rk-cli issues no
+      # `rev-parse --git-common-dir` of its own), never `std::env::current_dir`, with an
+      # optional `-C <path>`. That path satisfies this grep unchanged. The rule itself is not changed.
       - name: the run-owned worktree is not resolved from cwd (AC-529)
         run: |
           # Two corrections, both found by RUNNING this rule rather than trusting it (2026-09-13):
