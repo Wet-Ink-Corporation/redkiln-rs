@@ -38,15 +38,57 @@ const WALK_COVERAGE: [&str; 9] = [
     "--rebuild",
 ];
 
-/// Every name the built parser tree carries, from [`cli::tree_names`].
+/// **Every name the built parser tree carries**, at every depth: subcommand names and their
+/// aliases, long flags (with `--`), short flags (with `-`), and positional value names (in
+/// `<ANGLE>` form).
 ///
-/// **The walk itself lives in `src/cli.rs`, not here, and that is forced rather than chosen.** An
-/// integration test is an external crate, and §7d.15's manifest gives `rk-cli` no `clap`
-/// dev-dependency — so no test in this binary can name `clap::Command`, which a walker must. The
-/// walk is the router's own self-description beside `DENYLIST`; the ASSERTIONS over it, including
-/// the coverage control that makes them non-vacuous, are this module's and stay here.
+/// This is the instrument of AC-400's lint half, and D18-13 says where it belongs: *"the lint is a
+/// test walking the built `clap::Command` tree"*. It is a test, and it is here.
+///
+/// **Corrected 2026-09-19, the same day it was written.** The first draft put this walk in
+/// `src/cli.rs` and gave a reason that is simply false: that an integration test cannot name
+/// `clap::Command` because `rk-cli` publishes no `clap` dev-dependency. Cargo puts a package's
+/// NORMAL dependencies in scope for its own test targets, and `clap` is one — measured by adding
+/// `use clap::Command;` to this file and compiling, which it does. A test-only helper was therefore
+/// sitting in the shipped library on a constraint that does not exist. Nothing about the manifest
+/// changed to fix it; the fence in §7d.15 still carries no `clap` dev-row, and none is needed.
+///
+/// **Why it walks the tree and not the source**, which is the warrant that IS real: a grep would
+/// fire on a comment or a doc string that merely names `--resume`, and would miss a flag whose long
+/// name came from a `const`. The tree is what the parser will actually accept, which is what the
+/// register's THEN is about.
 fn parser_tree_names() -> BTreeSet<String> {
-    cli::tree_names()
+    let mut names = BTreeSet::new();
+    visit(&cli::command(), &mut names);
+    names
+}
+
+fn visit(cmd: &clap::Command, names: &mut BTreeSet<String>) {
+    names.insert(cmd.get_name().to_owned());
+    for alias in cmd.get_all_aliases() {
+        names.insert(alias.to_owned());
+    }
+    for arg in cmd.get_arguments() {
+        if let Some(long) = arg.get_long() {
+            names.insert(format!("--{long}"));
+        }
+        for alias in arg.get_all_aliases().unwrap_or_default() {
+            names.insert(format!("--{alias}"));
+        }
+        if let Some(short) = arg.get_short() {
+            names.insert(format!("-{short}"));
+        }
+        if arg.is_positional()
+            && let Some(value_names) = arg.get_value_names()
+        {
+            for value_name in value_names {
+                names.insert(format!("<{value_name}>"));
+            }
+        }
+    }
+    for sub in cmd.get_subcommands() {
+        visit(sub, names);
+    }
 }
 
 /// The premise every tree test asserts before it asserts an absence.

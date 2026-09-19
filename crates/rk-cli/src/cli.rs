@@ -16,7 +16,6 @@
 //! (AC-402). And `doctor` ships neither `--fix` nor `--probe` — a CONDITIONAL row reports, it does
 //! not repair (RB-M-06, D18-16).
 
-use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 /// The eleven resume-shaped names AC-400 refuses, verbatim: ADR-0107 decision 3's eight plus the
@@ -250,8 +249,14 @@ pub struct LintArgs {
     pub pinned_corpus: Option<PathBuf>,
 }
 
-/// The built parser tree.
-fn command() -> clap::Command {
+/// The built parser tree — what the parser will actually accept.
+///
+/// `pub` because AC-400's lint half is a test that WALKS this tree (D18-13), and the walk lives in
+/// `tests/it/surface.rs` where the register's wording puts it. Handing the test the built `Command`
+/// rather than a set of names computed here keeps the instrument in the test and leaves this module
+/// with the router and its denylist, which is all it is for.
+#[must_use]
+pub fn command() -> clap::Command {
     <Cli as clap::CommandFactory>::command()
 }
 
@@ -269,51 +274,4 @@ where
     T: Into<std::ffi::OsString> + Clone,
 {
     <Cli as clap::Parser>::try_parse_from(args)
-}
-
-/// **Every name the parser tree carries**, at every depth: subcommand names and their aliases, long
-/// flags (with `--`), short flags (with `-`), and positional value names (in `<ANGLE>` form).
-///
-/// This is the instrument of AC-400's lint half (D18-13). It walks the **built `clap::Command`
-/// tree** rather than the source text, because a grep would fire on a comment that merely names
-/// `--resume` and would miss a flag whose long name came from a `const` — neither of which is what
-/// the register's THEN is about.
-///
-/// It lives in `src/` rather than in the test that uses it for one reason: an integration test is an
-/// external crate and this crate publishes no `clap` dev-dependency, so no test in `tests/it/` can
-/// name `clap::Command`. The assertions over what this returns — including the coverage control
-/// that keeps them from being vacuous — stay in `tests/it/surface.rs`.
-#[must_use]
-pub fn tree_names() -> BTreeSet<String> {
-    let mut names = BTreeSet::new();
-    visit(&command(), &mut names);
-    names
-}
-
-fn visit(cmd: &clap::Command, names: &mut BTreeSet<String>) {
-    names.insert(cmd.get_name().to_owned());
-    for alias in cmd.get_all_aliases() {
-        names.insert(alias.to_owned());
-    }
-    for arg in cmd.get_arguments() {
-        if let Some(long) = arg.get_long() {
-            names.insert(format!("--{long}"));
-        }
-        for alias in arg.get_all_aliases().unwrap_or_default() {
-            names.insert(format!("--{alias}"));
-        }
-        if let Some(short) = arg.get_short() {
-            names.insert(format!("-{short}"));
-        }
-        if arg.is_positional()
-            && let Some(value_names) = arg.get_value_names()
-        {
-            for value_name in value_names {
-                names.insert(format!("<{value_name}>"));
-            }
-        }
-    }
-    for sub in cmd.get_subcommands() {
-        visit(sub, names);
-    }
 }
