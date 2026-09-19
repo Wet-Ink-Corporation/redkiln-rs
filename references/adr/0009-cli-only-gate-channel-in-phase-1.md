@@ -6,7 +6,7 @@ date: 2026-09-05
 legacy_id: D9
 source: references/2026-09-05-architecture-proposal.md §9
 supersedes: []
-superseded_by: []
+superseded_by: ["0129"]
 related: ["0017"]
 evidence: []
 consumers: []

@@ -4110,6 +4110,10 @@ THEN it is refused, and no open gate on that item is matched by item identity.
 *Verified by:* a unit test on the answer path; a CLI test that `redkiln answer <item> approve` without a resolvable live
 token exits non-zero with a named outcome.
 *Why:* negative criterion. ADR-0017 explicitly rejects the item-keyed answer: item identity alone does not detect drift.
+*(Noted 2026-09-19, ADR-0129 decision 2 at acceptance: `redkiln answer <item> …` reads the item's **open gate record** to find
+the live token and hands `gate::answer` and `reconcile()` a **token-keyed, tree-hash-bound** answer (ADR-0017); the CLI's
+lookup *by item* is how the token is found, not the item-keyed answer this criterion refuses — an item with no resolvable live
+token still exits non-zero with the named outcome, and no open gate is ever matched by item identity in `reconcile()`.)*
 
 ### 8.3 Void — an answer against a tree that moved
 
@@ -6707,6 +6711,10 @@ THEN the answer (yes/no, plus whether a TOML was opened) is recorded as a requir
 *Verified by:* **routed to a human gate; not machine-decidable.** Reason: sufficiency-for-a-reader is a legibility
 judgement — that the fields are printed is checkable (AC-430/431/433/434), that they suffice is not. The machine-checkable
 half is that the gate answer cannot be submitted with the field absent. SM-126 carries the rate.
+*(Amended 2026-09-19, ADR-0129 decision 1 at acceptance, DECISIONS-2026-09-18 D18-17 D-05: the required field is **two data in
+one member** — `gate_answered.explain_sufficiency { sufficed, toml_opened }` — carried by the two required flags Step 7d ships,
+`--explain-sufficed yes|no --toml-opened yes|no`; `answer` refuses without both. The second datum is what SM-126's kill counts —
+*"opened a TOML anyway"* is the cell sufficed = yes AND opened = yes.)*
 **Cut on refutation:** "P3 registered the adjacent measure and is UNRUN" was cut. **No spike named P3 appears anywhere in
 the evidence brief** — not in the ledger, the kill-criteria table, or the unrun list.
 

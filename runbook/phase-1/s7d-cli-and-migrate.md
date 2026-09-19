@@ -135,8 +135,8 @@ of it (§7d.4).
 
 **The records that govern**, read before their sections: **ADR-0107** for the one idempotent `run` entry, the
 denylist, the snapshot and the idempotent `init` — with **ADR-0128** superseding its decision 4's grammar sentence in
-part (`proposed`; §7d.3, §7d.5); **ADR-0009** for the CLI-only gate channel — with **ADR-0129** superseding its
-Decision sentence *as a grammar* in part (`proposed`; §7d.6); **ADR-0017** for the `(token, tree_hash, deadline)`
+part (`accepted` 2026-09-19; §7d.3, §7d.5); **ADR-0009** for the CLI-only gate channel — with **ADR-0129** superseding its
+Decision sentence *as a grammar* in part (`accepted` 2026-09-19; §7d.6); **ADR-0017** for the `(token, tree_hash, deadline)`
 record; **ADR-0063** for options that `attaches = <Kind>` and the human-supplied root; **ADR-0099** decision 2 for the
 token and its two owners; **ADR-0102** decision 6 for `anyhow` confined to these two binaries; **ADR-0105** clauses 3
 (trailer plumbing), 4 (`tree_hash`), 6 (worktrees re-created never reused), 7 (the store's `doctor` rows) and 8
@@ -315,7 +315,8 @@ already landed) or **RECORDED** (owed above this file, listed again in §7d.18 R
    (no `--token`), options validated against an ADR-0063 question registry whose **type lands in `rk-kernel` at 7d
    with the default question built in** (`approve` / `changes-requested`) and whose pack-declared questions are 7e's;
    AC-410 gains a **positive control** (an admitted attachment is accepted and stored as a human-supplied root) — as
-   **ADR-0129**, superseding ADR-0009's Decision sentence as a grammar in part, `proposed` (§7d.6).
+   **ADR-0129**, superseding ADR-0009's Decision sentence as a grammar in part, `proposed` at stage-open and `accepted`
+   2026-09-19 (§7d.6).
 4. **D-07 — Checkpoint 7d failed a correct binary.** The 153-line block ran `redkiln doctor` from the product root,
    required exit 0, **before** `init`, in a repository with no `.redkiln/`; AC-426 makes `unread_window_runs` required
    with no default and AC-438 folds an error-severity rule into the configuration-error code, so the line selected for
@@ -2703,7 +2704,7 @@ the `cargo metadata` lines watch red → green).
    cites it as `6f88e37` cited D17-8's) would bind him to a shape he has not
    confirmed (ADR-0126's precedent, `s7c` §7c.20 item
    0); **a follow-up commit flips both to `accepted` with `date` unchanged**, and Checkpoint 7d's two `^status:
-   accepted$` greps cannot pass before it; the ADR README's count and its two `proposed` index rows, and
+   accepted$` greps cannot pass before it *(done 2026-09-19 — the flip commit)*; the ADR README's count and its two `proposed` index rows, and
    `00-preamble.md`'s next-free-number sentence (`0128` → `0130`, dated) — **ADR-0107's and ADR-0009's `superseded_by`
    and the README's status cells for `0107` and `0009` follow in the flip commit** (§7d.16 item 6; the supersession-map
    rows for both are already on the tree, marked `proposed`): an accepted
@@ -3616,10 +3617,10 @@ here with the test that carries it named — none is reached only by the crate-w
 an OWED record and recorded in `PROGRESS.md` §2. The register, SM and design dated amendments §7d.2 lists as *landed*
 were landed 2026-09-18 with the records and are **not** re-raised; what remains owed after the stage-open commit:
 
-- **ADR-0128 and ADR-0129 are `proposed`** — the operator's dated confirmation line under D18-17, then the flip commit
-  (`date` unchanged) carrying ADR-0107's and ADR-0009's `superseded_by` links and the README's status cells for `0107`
-  and `0009` (§7d.16 item 0; the supersession-map rows are already on the tree); the block cannot pass before it
-  (§7d.17). **The one question the stage-open commit carried is ANSWERED** (2026-09-19, the operator, recorded under
+- **ADR-0128 and ADR-0129 are `accepted` since 2026-09-19** — the operator's dated confirmation line under D18-17 and
+  the flip commit (`date` unchanged) carrying ADR-0107's and ADR-0009's `superseded_by` links and the README's status
+  cells for `0107` and `0009` landed the day after stage-open (§7d.16 item 0); the block's two `^status: accepted$`
+  greps read them (§7d.17). *(History: both were committed `proposed` at `c709a59`.)* **The one question the stage-open commit carried is ANSWERED** (2026-09-19, the operator, recorded under
   D18-17 D-05): AC-435's THEN — *"the answer (yes/no, plus whether a TOML was opened) is recorded as a required field"*
   — records **two data in one field**. SM-126's pre-registered kill is *"more than 15 of the first 30 answers report that
   the reviewer opened a TOML **anyway**"* — the cell *sufficed = yes AND opened = yes* — which a single boolean cannot
@@ -3630,9 +3631,10 @@ were landed 2026-09-18 with the records and are **not** re-raised; what remains 
   decision 4 has the kernel refuse inside `gate::answer` with the CLI refusing first, as §7d.6 builds). **One note is
   still carried for the flip commit:** **ADR-0129 decision 2**'s CLI lookup of the live token by item is not the item-keyed answer AC-248 and ADR-0017
   reject (the answer handed on is token-keyed), which **a dated note on AC-248's THEN** should record and decision 6's
-  amendment list should name — OWED with the flip commit.
+  amendment list should name — **landed with the flip commit (2026-09-19)**, a dated note under AC-248's *Why*.
 - **AC-435's Verified-by dated note** naming the shipped flags `--explain-sufficed` / `--toml-opened` and the one
-  record field `explain_sufficiency { sufficed, toml_opened }` — OWED at the close commit
+  record field `explain_sufficiency { sufficed, toml_opened }` — **landed with the flip commit (2026-09-19)**, ahead of the
+  close, so ADR-0129 decision 6 reads true on acceptance
   (DECISIONS-2026-09-18 RT-31); the register carries no 2026-09-18 note under AC-435 today.
 - **AC-416's binder half** — its Verified-by names *"a binder unit test per case (unresolved, ambiguous) asserting an
   error return and no binding"*; `Binder::bind` takes a `BindRequest` whose card the caller already chose and

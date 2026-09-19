@@ -373,6 +373,16 @@ library and tier-1 code paths.
 AC-248, AC-405, AC-406, AC-410, AC-435, AC-437, AC-531, AC-485, AC-486 by clause; ADR-0107, ADR-0009, ADR-0063,
 ADR-0083 by Decision sentence; `identity.rs` as built at Step 6.
 
+**Confirmed 2026-09-19 (dated line, the operator's word).** ADR-0128 — one `run` grammar, `redkiln run <item>
+[--lane fix|story]`, with the given-vs-derived disagreement named as the same configuration error and the exit check's
+digest named as each committed step's `output_digest` (rounds 1 and 3 of 2026-09-19, each asked with its alternatives
+named) — and ADR-0129 — the `answer` grammar with **two required flags** `--explain-sufficed yes|no --toml-opened yes|no`
+and **one** `gate_answered` member `explain_sufficiency { sufficed, toml_opened }`, the kernel refusing a missing
+declared attachment inside `gate::answer` with the CLI refusing first, `answerer` kept as routed (round 2) — are
+confirmed as written on this date. Both flip `proposed → accepted` in the commit this line licenses, `date` unchanged
+(ADR-0126's route); ADR-0107 and ADR-0009 take their `superseded_by` links and the README its status cells in the same
+commit. R-36 is closed by it.
+
 ## D18-18 · The C-01 pass's dated amendments land at stage-open, not accrued
 
 **The choice.** Every dated in-place amendment the C-01 adjudication owes to a record above the runbook is landed
@@ -517,7 +527,7 @@ is decided by this file.
 | R-33 | **AC-427's fidelity** is `s8`'s (`rebuild_differential` / `stage_level_next_action` over the local corpus, owner AC-184) and **SM-124's *"CI job over the `redkiln-corpus` pin"* cannot run in CI** — `CORPUS_PIN` names `D:/repos/redkiln-corpus`, a local path. The SM-124 amendment (D18-18) reads it as the local-only suite until a fetchable pin exists; a fetchable pin is nobody's yet | C-01 D-21 |
 | R-34 | **The `s7c` split notes and ARMED rows naming 7d** (R-11: AC-417 / 422 / 423 / 428 / 439 / 488 / 344; the doctor halves of AC-203 / 205 / 212 / 220 / 226 / 369 / 370 / 377 / 383 / 422 / 423 / 493 / 526; AC-366 / 397 / 395's rebuild; AC-269's build-config half; AC-278's gate path; AC-350 (R-8); AC-361's cost rollup (RT-19)) each need a `§7d.22` disposition — *discharged / ARMED on / excluded* — which the stage file gives and this log does not; **AC-439's *replay across the recorded stream corpus* conjunct** stays unsatisfiable at the pin (no stream corpus exists) and is excluded by name | DECISIONS-2026-09-17 R-11; `s7c` §7c.22 |
 | R-35 | **External anchors into `s7d` are by LINE — three**, all in `s7a` §7a.9's AC-485 / AC-486 / AC-488 rows, each reading *"claimed by id at `s7d`:117"* [measured 2026-09-18 by `grep -rn -oE 's7d\`?:[0-9]+' runbook/`; `PROGRESS.md` §5's C-01 row says *"noted in s7d"* with no line]. Line 117 of the 153-line file is the acceptance-set sentence naming those three ids; it drifts when the file is rewritten (D18-1). On R-21's rule the closed `s7a` is not edited by this stage's commit: each anchor reads against the pre-hardening pin `239e899` (`git show 239e899:runbook/phase-1/s7d-cli-and-migrate.md`) and is re-anchored to the `§7d.N` acceptance-set heading by symbol when `s7a` is next opened. `s7d`'s own outward anchors are by `§N.M` from its first hardened line | R-21; `s7a` §7a.9 |
-| R-36 | **The two `proposed` records** — ADR-0128 and ADR-0129 — are committed `proposed` at stage-open on ADR-0126's precedent and flip to `accepted` by a follow-up commit once the operator's dated confirmation line is written under D18-17; until then the stage file's grammar is the record's reading and not the operator's word, and Checkpoint 7d's AC-400 snapshot line is written against the proposed grammar | D18-17; ADR-0092 (an accepted record outranks this log) |
+| R-36 | **The two `proposed` records** — ADR-0128 and ADR-0129 — are committed `proposed` at stage-open on ADR-0126's precedent and flip to `accepted` by a follow-up commit once the operator's dated confirmation line is written under D18-17; until then the stage file's grammar is the record's reading and not the operator's word, and Checkpoint 7d's AC-400 snapshot line is written against the proposed grammar **CLOSED 2026-09-19** — the dated line is written under D18-17 and the flip commit carries both records `accepted`. | D18-17; ADR-0092 (an accepted record outranks this log) |
 
 ---
 
@@ -540,7 +550,7 @@ router, `answer`, `init` and AC-438's table. D18-18 means the stage file quotes 
 **RT-28, RT-29, RT-31, RT-32, RT-34, RT-35, RT-41, RT-42, RT-45, RT-47, RT-48, RT-49, RT-51, RT-54, RT-55, RT-56, RT-59**
 (seventeen; RT-30, RT-33, RT-36, RT-37, RT-38, RT-39, RT-43, RT-44, RT-46, RT-50, RT-52, RT-53, RT-57 and RT-58 owe none
 beyond the edits or the records they name, and RT-40 is withdrawn — its record is R-8's); the two record flips **ADR-0128 → `accepted`** and **ADR-0129 → `accepted`** on the
-operator's dated line (R-36); **O-12** (answered 2026-09-19 — deferred: the kind is minted by ADR when Step 8 first needs the measure), **O-13** (closed 2026-09-19 — ADR-0128 decision 4 names the digest), **O-14** (closed 2026-09-19 — not split; AC-522 instruments the AND clause), **O-15** (answered 2026-09-19 — yes, at 7e, in the commit that fills `[packs] enabled`) (the product repo's `init`) and
+operator's dated line (R-36 — **done 2026-09-19**); **O-12** (answered 2026-09-19 — deferred: the kind is minted by ADR when Step 8 first needs the measure), **O-13** (closed 2026-09-19 — ADR-0128 decision 4 names the digest), **O-14** (closed 2026-09-19 — not split; AC-522 instruments the AND clause), **O-15** (answered 2026-09-19 — yes, at 7e, in the commit that fills `[packs] enabled`) (the product repo's `init`) and
 **O-16** (closed 2026-09-19 — D18-19 allocates the six rows here), each answered before the slice or stage named; and **R-25…R-36**. The
 amendments D18-18 lists are **not** owed: the stage-open commit carries them. Nothing in this file claims a criterion
 discharged; that is the checkpoint's to say, and only after it runs.
