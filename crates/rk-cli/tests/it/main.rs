@@ -9,20 +9,36 @@
 //! idempotent scaffold; and [`root`], the poisoned-lock halt and the signal handler.
 //!
 //! **No empty module stands in for an unbuilt one** (`rk-kernel`'s `tests/it/main.rs` states the rule
-//! and this file inherits it): there is no `run`, `answer`, `doctor` or `migrate` module here,
-//! because Slices 3–5 build what they would assert. A `mod` that exists and asserts nothing reads as
-//! coverage.
+//! and this file inherits it). *(Corrected 2026-09-19 at Slice 3, cycle 2. This read: **"there is no
+//! `run`, `answer`, `doctor` or `migrate` module here, because Slices 3–5 build what they would
+//! assert."** [`support`] arrives here, and it is the one module in this binary the rule does not
+//! reach — it **holds no test at all**, by design, so it cannot read as coverage of anything. The
+//! sentence still holds of the four it names: there is no `run`, `answer`, `doctor` or `migrate`
+//! module yet, and the first two arrive with their own cases later in this slice.)* A `mod` that
+//! exists and asserts nothing reads as coverage.
 //!
 //! **The two source-scan primitives live HERE, not in `surface.rs`.** [`rs_files`] and [`code_lines`]
 //! are used by `exit::ac438_step_error_mapping_is_exhaustive` and by
 //! `surface::ac403_no_blocking_stdin_read_in_rk_cli`, which sit in different modules; a helper in
-//! either one is unreachable from the other. `tests/it/support.rs` — the scripted-harness helpers —
-//! is Slice 3's (§7d.16 item 3) and is not created early to hold two functions.
+//! either one is unreachable from the other. *(Corrected 2026-09-19 at Slice 3, cycle 2. This read:
+//! **"`tests/it/support.rs` — the scripted-harness helpers — is Slice 3's (§7d.16 item 3) and is not
+//! created early to hold two functions."** It is created NOW, and it holds nine seams rather than
+//! two functions. **Nothing moved out of this file to reach it**: `support.rs` is a sibling `mod` of
+//! the same binary, so `crate::temp_repo()`, `crate::git(..)` and `crate::code_lines(..)` are
+//! reachable from it, and the reason the primitives live here is about CASE modules reaching each
+//! other, which is unchanged.)*
+//!
+//! **The division, stated so it is not re-litigated.** This file holds the *process-and-tree*
+//! primitives ([`redkiln`], [`temp_repo`], [`git`], [`run_init`], [`refs`], [`porcelain`],
+//! [`common_dir`]) and the *source-scan* primitives ([`src_dir`], [`lint_controls_dir`],
+//! [`rs_files`], [`code_lines`], [`assert_no_block_comment`]). [`support`] holds the *in-process
+//! seam* values only.
 
 mod config;
 mod exit;
 mod init;
 mod root;
+mod support;
 mod surface;
 
 use std::path::{Path, PathBuf};

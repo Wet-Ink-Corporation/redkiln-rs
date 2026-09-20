@@ -75,6 +75,19 @@ pub enum ConfigError {
     /// The bytes are not a `ConfigFile` — an unknown key, a missing required key, a wrong type.
     /// `serde`'s own message is carried through, because it names the key and the line.
     Malformed(String),
+    /// The file could not be read at all — absent, a directory, unreadable.
+    ///
+    /// **A separate arm rather than a `Malformed` carrying an io message**, added at Slice 3 with
+    /// [`crate::verbs::ConfigReader`], which is the first thing in this crate to open the file
+    /// rather than be handed its bytes. "There is no configuration here" and "the configuration
+    /// says something this type does not admit" are different facts about a repository, and a run
+    /// on a tree that was never `init`ed should not be reported as a malformed key.
+    Unreadable {
+        /// The path that could not be read.
+        path: String,
+        /// The io error's own message.
+        detail: String,
+    },
 }
 
 impl fmt::Display for ConfigError {
@@ -85,6 +98,9 @@ impl fmt::Display for ConfigError {
                     f,
                     "`.redkiln/config.toml` is not a valid configuration: {detail}"
                 )
+            }
+            Self::Unreadable { path, detail } => {
+                write!(f, "`{path}` could not be read: {detail}")
             }
         }
     }
