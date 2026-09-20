@@ -273,6 +273,20 @@ pub struct Activity {
     pub stage: String,
     pub provides: Vec<String>,
     pub tags: Vec<String>,
+    /// **Search terms, and nothing else** (AC-436; Step 7d Slice 3, the third of §7d.1's eight
+    /// kernel edits).
+    ///
+    /// AC-436's whole content is that a catalog is findable without becoming selectable by the same
+    /// words. `tags` above participates in admissibility; **this field must not**, and the rule is
+    /// enforced rather than intended: `ac436_keywords_unreachable_from_admissibility_evaluator`
+    /// scans `select/` and `predicate/` for the identifier and Checkpoint 7d runs the same ban from
+    /// the shell. A search term that steered selection would make `catalog search` a way to change
+    /// what runs, which is the defect the separation exists to prevent.
+    ///
+    /// It also cannot move a digest, and that is structural rather than careful:
+    /// `select::canonical::catalog_json` hand-enumerates eleven fields and this is not one of them,
+    /// so no `inputs_digest` and no `run_id` on the tree moves because this field exists.
+    pub keywords: Vec<String>,
     pub applicable_if: Option<String>,
     pub method_rank: i64,
     pub min_rigor: String,
@@ -461,6 +475,36 @@ impl Catalog {
 
     /// Every activity, by id.
     #[must_use]
+    /// **Find activities by declared keyword** (AC-436; Step 7d Slice 3).
+    ///
+    /// Matching is case-insensitive and on WHOLE keywords, not substrings: a catalog searched by
+    /// substring would return `plan` for a query of `an`, and a search whose results a reader cannot
+    /// predict is one they stop trusting. The comparison is ASCII-lowercase on both sides, which is
+    /// what the declared terms are.
+    ///
+    /// Results come back in the catalog's own order — which `Catalog` already holds sorted — so two
+    /// searches of the same catalog agree, and a caller that prints them prints the same thing
+    /// twice. **This reads `keywords` and nothing else**: not `id`, not `tags`, not
+    /// `applicable_if`. Searching the admissibility inputs would reintroduce, through the back door,
+    /// exactly the coupling `keywords` exists to break — and `ac436_catalog_search_finds_by_keyword`
+    /// asserts the discriminating case, a query that matches a keyword and appears nowhere in the
+    /// activity's other fields.
+    #[must_use]
+    pub fn search(&self, query: &str) -> Vec<&Activity> {
+        let needle = query.trim().to_ascii_lowercase();
+        if needle.is_empty() {
+            return Vec::new();
+        }
+        self.activities()
+            .iter()
+            .filter(|a| {
+                a.keywords
+                    .iter()
+                    .any(|k| k.trim().to_ascii_lowercase() == needle)
+            })
+            .collect()
+    }
+
     pub fn activities(&self) -> &[Activity] {
         &self.activities
     }
@@ -598,6 +642,7 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
         stage,
         provides: strings(head, "provides"),
         tags: strings(head, "tags"),
+        keywords: strings(head, "keywords"),
         applicable_if: text(head, "applicable_if"),
         requires: strings(head, "requires")
             .iter()

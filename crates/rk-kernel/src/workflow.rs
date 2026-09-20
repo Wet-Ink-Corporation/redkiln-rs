@@ -272,6 +272,10 @@ pub mod idem;
 /// two lints ADR-0059 and ADR-0097 decision 3 leave behind. A child of this module, for [`budget`]'s
 /// reason — and pointedly so here too: a memo key is a **pure function of journaled facts**, and a
 /// clock read or an unordered set inside it would make the same key derive differently on a replay.
+/// The ADR-0063 question registry — what a gate may be answered with, and what an answer must
+/// carry (ADR-0129 d3; Step 7d Slice 3).
+pub mod question;
+
 pub mod memo;
 
 /// **AC-026–AC-032.** The retry policy over ADR-0112's eleven variants, the backoff envelope and

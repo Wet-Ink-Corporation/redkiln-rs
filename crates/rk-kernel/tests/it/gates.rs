@@ -411,21 +411,23 @@ use rk_kernel::module_boundary::{SourceFile, void_consumer_rule};
 use rk_kernel::predicate::{OnFalse, classify_on_false};
 use rk_kernel::select::GateReason;
 use rk_kernel::workflow::fsm::{FsmContext, NextAction, RunState, next_action};
+use rk_kernel::workflow::gate::AnswerMeta;
 use rk_kernel::workflow::gate::{self, Disposition, GateError};
+use rk_kernel::workflow::question::QuestionRegistry;
 use rk_types::digest::Digest;
 
-const TREE_A: &str = "aaaa111122223333444455556666777788889999";
+pub(crate) const TREE_A: &str = "aaaa111122223333444455556666777788889999";
 const TREE_B: &str = "bbbb111122223333444455556666777788889999";
 const TREE_C: &str = "cccc111122223333444455556666777788889999";
 
 const LOOP_GRAPH: &str = include_str!("../fixtures/gates/ac524_two_iteration_loop.toml");
 const RECONCILE_BRANCH: &str = include_str!("../fixtures/gates/ac250_reconcile_branch.rs");
 
-fn ctx(tree: &str, deadline: i64) -> FsmContext<'_> {
+pub(crate) fn ctx(tree: &str, deadline: i64) -> FsmContext<'_> {
     FsmContext::supplied(ITEM, tree, Timestamp::from_unix_seconds(deadline), None)
 }
 
-fn fold_all(events: &[Event]) -> RunState {
+pub(crate) fn fold_all(events: &[Event]) -> RunState {
     fold(ITEM, STAGE, events).expect("the journal folds")
 }
 
@@ -504,6 +506,9 @@ fn ac524_fresh_record_on_rereach() {
         r1.token(),
         TREE_A,
         "proceed",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
     )
     .expect("answers");
     assert_eq!(first.disposition, Disposition::Applied);
@@ -556,13 +561,31 @@ fn ac524_fresh_record_on_rereach() {
     // presented against its own (now spent) gate
     assert!(
         matches!(
-            gate::answer(&rereached, r2.token(), r1.token(), TREE_B, "proceed"),
+            gate::answer(
+                &rereached,
+                r2.token(),
+                r1.token(),
+                TREE_B,
+                "proceed",
+                &QuestionRegistry::default(),
+                &[],
+                &AnswerMeta::default(),
+            ),
             Err(GateError::WrongGate { .. })
         ),
         "the first token presented against the second gate is refused"
     );
-    let spent = gate::answer(&rereached, r1.token(), r1.token(), TREE_A, "proceed")
-        .expect("a refusal is an outcome, not an error");
+    let spent = gate::answer(
+        &rereached,
+        r1.token(),
+        r1.token(),
+        TREE_A,
+        "proceed",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
+    )
+    .expect("a refusal is an outcome, not an error");
     assert_eq!(
         spent.disposition,
         Disposition::RefusedSpent,
@@ -575,8 +598,17 @@ fn ac524_fresh_record_on_rereach() {
     let mut moved: Vec<Event> = Vec::new();
     let m1 = gate::reach(&fold_all(&moved), kind, &ctx(TREE_A, 9_000)).expect("mints");
     moved.push(gate_opened_event(&m1));
-    let ans = gate::answer(&fold_all(&moved), m1.token(), m1.token(), TREE_A, "proceed")
-        .expect("answers");
+    let ans = gate::answer(
+        &fold_all(&moved),
+        m1.token(),
+        m1.token(),
+        TREE_A,
+        "proceed",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
+    )
+    .expect("answers");
     moved.extend(ans.events);
     let m2 = gate::reach(&fold_all(&moved), kind, &ctx(TREE_B, 9_000)).expect("mints");
     moved.push(gate_opened_event(&m2));
@@ -612,8 +644,17 @@ fn ac246_token_is_single_use() {
     let mut journal: Vec<Event> = Vec::new();
     let r = gate::reach(&fold_all(&journal), kind, &ctx(TREE_A, 9_000)).expect("mints");
     journal.push(gate_opened_event(&r));
-    let first = gate::answer(&fold_all(&journal), r.token(), r.token(), TREE_A, "approve")
-        .expect("answers");
+    let first = gate::answer(
+        &fold_all(&journal),
+        r.token(),
+        r.token(),
+        TREE_A,
+        "approve",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
+    )
+    .expect("answers");
     assert_eq!(first.disposition, Disposition::Applied);
     journal.extend(first.events);
     let before = fold_all(&journal);
@@ -627,8 +668,17 @@ fn ac246_token_is_single_use() {
     // RED (observed 2026-09-17, on the fold at 11b347e via the probe cited in ADR-0123, and again
     // here against an `answer()` that mirrored it): the second answer was APPLIED and the recorded
     // verdict moved `approve -> changes-requested`.
-    let second = gate::answer(&before, r.token(), r.token(), TREE_A, "changes-requested")
-        .expect("a spent token is a refusal, not an error");
+    let second = gate::answer(
+        &before,
+        r.token(),
+        r.token(),
+        TREE_A,
+        "changes-requested",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
+    )
+    .expect("a spent token is a refusal, not an error");
     assert_eq!(
         second.disposition,
         Disposition::RefusedSpent,
@@ -703,8 +753,17 @@ fn ac249_stale_tree_hash_is_void() {
     let mut journal: Vec<Event> = Vec::new();
     let r = gate::reach(&fold_all(&journal), kind, &ctx(TREE_A, 9_000)).expect("mints");
     journal.push(gate_opened_event(&r));
-    let out = gate::answer(&fold_all(&journal), r.token(), r.token(), TREE_B, "approve")
-        .expect("answers");
+    let out = gate::answer(
+        &fold_all(&journal),
+        r.token(),
+        r.token(),
+        TREE_B,
+        "approve",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
+    )
+    .expect("answers");
     assert_eq!(
         out.disposition,
         Disposition::Void,
@@ -750,7 +809,17 @@ fn ac249_stale_tree_hash_is_void() {
 
     // A void token is TERMINAL: a later answer carrying it, even with the right tree hash, is
     // refused — otherwise "void" would be a retry with extra steps (ADR-0017: void, not reconciled).
-    let again = gate::answer(&state, r.token(), r.token(), TREE_A, "approve").expect("a refusal");
+    let again = gate::answer(
+        &state,
+        r.token(),
+        r.token(),
+        TREE_A,
+        "approve",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
+    )
+    .expect("a refusal");
     assert_eq!(
         again.disposition,
         Disposition::RefusedSpent,
@@ -808,8 +877,17 @@ fn ac252_void_reopens_fresh_in_all_three_fields() {
     assert_eq!(voided.kind(), kind);
     journal.push(gate_opened_event(&voided));
     let open = fold(ITEM, "analysis", &journal).expect("folds");
-    let out =
-        gate::answer(&open, voided.token(), voided.token(), TREE_B, "proceed").expect("answers");
+    let out = gate::answer(
+        &open,
+        voided.token(),
+        voided.token(),
+        TREE_B,
+        "proceed",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
+    )
+    .expect("answers");
     assert_eq!(out.disposition, Disposition::Void);
     journal.extend(out.events);
     let after_void = fold(ITEM, "analysis", &journal).expect("folds");
@@ -899,8 +977,16 @@ fn ac250_no_reconciliation_path() {
                 1 => {
                     // answer the latest gate at the CURRENT tree — which may not be the bound one
                     if let Some(token) = state.latest_gate(&kind).cloned()
-                        && let Ok(out) =
-                            gate::answer(&state, &token, &token, trees[tree], "proceed")
+                        && let Ok(out) = gate::answer(
+                            &state,
+                            &token,
+                            &token,
+                            trees[tree],
+                            "proceed",
+                            &QuestionRegistry::default(),
+                            &[],
+                            &AnswerMeta::default(),
+                        )
                     {
                         if out.disposition == Disposition::Void {
                             mismatched_answers += 1;
@@ -992,7 +1078,16 @@ fn ac247_answer_against_the_wrong_gate_is_refused() {
     let state = fold_all(&journal);
     assert_eq!(state.open_gates().count(), 2);
 
-    let refused = gate::answer(&state, b.token(), a.token(), TREE_A, "approve");
+    let refused = gate::answer(
+        &state,
+        b.token(),
+        a.token(),
+        TREE_A,
+        "approve",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
+    );
     assert!(
         matches!(&refused, Err(GateError::WrongGate { gate, presented }) if gate == b.token() && presented == a.token()),
         "A's token against B is refused, naming both: {refused:?}"
@@ -1017,7 +1112,16 @@ fn ac247_answer_against_the_wrong_gate_is_refused() {
     let state = fold_all(&journal);
     for (j, target) in gates.iter().enumerate() {
         for (i, presented) in gates.iter().enumerate() {
-            let out = gate::answer(&state, target.token(), presented.token(), TREE_A, "approve");
+            let out = gate::answer(
+                &state,
+                target.token(),
+                presented.token(),
+                TREE_A,
+                "approve",
+                &QuestionRegistry::default(),
+                &[],
+                &AnswerMeta::default(),
+            );
             if i == j {
                 assert!(
                     matches!(&out, Ok(o) if o.disposition == Disposition::Applied),
@@ -1064,6 +1168,9 @@ fn every_transition_journal() -> (Vec<Event>, Vec<GateRecord>) {
         g1.token(),
         TREE_A,
         "approve",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
     )
     .expect("answers");
     journal.extend(a.events);
@@ -1073,6 +1180,9 @@ fn every_transition_journal() -> (Vec<Event>, Vec<GateRecord>) {
         g1.token(),
         TREE_A,
         "approve",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
     )
     .expect("refuses");
     journal.extend(spent.events);
@@ -1088,6 +1198,9 @@ fn every_transition_journal() -> (Vec<Event>, Vec<GateRecord>) {
         g2.token(),
         TREE_B,
         "approve",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
     )
     .expect("answers");
     assert_eq!(v.disposition, Disposition::Void);
@@ -1328,6 +1441,9 @@ fn ac272_escalation_is_one_gate_mechanism() {
         escalation.token(),
         TREE_B,
         "approve",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
     )
     .expect("answers");
     assert_eq!(drifted.disposition, Disposition::Void);
@@ -1560,6 +1676,9 @@ fn ac279_one_prefix_rewrite() {
         g.token(),
         TREE_A,
         "proceed",
+        &QuestionRegistry::default(),
+        &[],
+        &AnswerMeta::default(),
     )
     .expect("answers");
     for e in ans.events {

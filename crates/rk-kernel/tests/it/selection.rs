@@ -17,7 +17,7 @@ use rk_kernel::select::{
     step2,
 };
 
-const INCIDENT: &str = include_str!("../fixtures/packs/incident-forbidden.toml");
+pub(crate) const INCIDENT: &str = include_str!("../fixtures/packs/incident-forbidden.toml");
 const DISCOURAGED: &str = include_str!("../fixtures/packs/discouraged.toml");
 
 fn pack() -> Pack {
@@ -157,14 +157,14 @@ fn workspace_root() -> std::path::PathBuf {
         .expect("the workspace root resolves from this crate's manifest directory")
 }
 
-fn registry() -> ArtifactRegistry {
+pub(crate) fn registry() -> ArtifactRegistry {
     match ArtifactRegistry::from_toml("artifacts.toml", ARTIFACTS) {
         Ok(r) => r,
         Err(e) => panic!("the fixture artifact registry must load: {e}"),
     }
 }
 
-fn facets() -> rk_kernel::registry::Registry {
+pub(crate) fn facets() -> rk_kernel::registry::Registry {
     let path = workspace_root().join(SHIPPED_FACETS);
     let src = std::fs::read_to_string(&path).unwrap_or_else(|e| {
         panic!(

@@ -84,6 +84,10 @@ pub enum GateError {
     Expired { token: Digest },
     /// An `escalation`-class gate may not itself escalate (ADR-0105 clause 10; AC-259, AC-260).
     EscalateOnEscalation { token: Digest },
+    /// The option, or the attachments presented with it, were refused by the question registry
+    /// (ADR-0063's *"the kernel refuses to close the mark unless that attachment is supplied"*;
+    /// ADR-0129 decisions 3 and 4). **The mark stays open.**
+    OptionRefused(crate::workflow::question::OptionError),
 }
 
 impl std::fmt::Display for GateError {
@@ -95,6 +99,7 @@ impl std::fmt::Display for GateError {
                 presented.as_str(),
                 gate.as_str()
             ),
+            Self::OptionRefused(e) => write!(f, "the answer was refused: {e}"),
             Self::NeverOpened { token } => {
                 write!(f, "no gate this journal opened carries {}", token.as_str())
             }
@@ -152,12 +157,19 @@ pub fn reach(state: &RunState, kind: &str, ctx: &FsmContext<'_>) -> Result<GateR
 /// # Errors
 ///
 /// [`GateError`] for the refusals that write nothing, as above.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the arity is the record's, not a design choice: §7d.15 fixes it as \"gains \n              three parameters (the one signature change, against today's five)\" — the \n              registry, the attachments and the answerer's report. Bundling them into a \n              struct would hide which three the record named and make the call sites stop \n              matching the sentence that authorises them"
+)]
 pub fn answer(
     state: &RunState,
     gate: &Digest,
     presented: &Digest,
     tree_hash: &str,
     verdict: &str,
+    registry: &crate::workflow::question::QuestionRegistry,
+    attachments: &[crate::workflow::question::Attachment],
+    meta: &AnswerMeta,
 ) -> Result<AnswerOutcome, GateError> {
     if presented != gate {
         return Err(GateError::WrongGate {
@@ -172,16 +184,28 @@ pub fn answer(
         });
     }
     if let Some(record) = state.gate_record(presented) {
+        // ADR-0063's Decision, and it is the kernel's: *"the kernel refuses to close the mark
+        // unless that attachment is supplied."* Checked BEFORE either disposition is returned and
+        // AFTER the token is established as this gate's, so a wrong-gate answer is still refused as
+        // a wrong gate and an inadmissible option never reaches a row. The refusal writes NOTHING:
+        // the mark stays open, which is the whole content of the sentence.
+        let question = registry.question_for(record.kind());
+        registry
+            .validate_attachments(question, verdict, attachments)
+            .map_err(GateError::OptionRefused)?;
+
         if record.tree_hash() == tree_hash {
             return Ok(AnswerOutcome {
                 disposition: Disposition::Applied,
-                events: vec![gate_answered_event(presented, tree_hash, verdict)],
+                events: vec![gate_answered_event_with_meta(
+                    presented, tree_hash, verdict, meta,
+                )],
             });
         }
         return Ok(AnswerOutcome {
             disposition: Disposition::Void,
             events: vec![
-                gate_answered_event(presented, tree_hash, verdict),
+                gate_answered_event_with_meta(presented, tree_hash, verdict, meta),
                 gate_answer_void_event(presented, record.tree_hash(), tree_hash),
             ],
         });
@@ -194,6 +218,61 @@ pub fn answer(
     Err(GateError::NeverOpened {
         token: presented.clone(),
     })
+}
+
+/// What the answerer reported about HOW they answered (ADR-0129 decision 1; RT-42).
+///
+/// Two members, and both are about the answer's provenance rather than its content: whether reading
+/// the explanation sufficed to decide, and who decided. ADR-0129 decision 1 puts them on the
+/// `gate_answered` payload, which is why they are added **here, kernel-side**, and never by a caller
+/// editing the returned `Event` — a row the CLI could amend is a row the CLI could forge.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct AnswerMeta {
+    /// Did reading the explanation suffice? `None` when the answerer did not say.
+    pub explain_sufficiency: Option<String>,
+    /// Who answered, as the repository records them.
+    pub answerer: Option<String>,
+}
+
+/// The tier-1 `gate_answered` row **with the answerer's report** (ADR-0129 decision 1).
+///
+/// **A second constructor, and the first is left byte-for-byte alone — deliberately.** §7d.15 reads
+/// as though `gate_answered_event` itself should widen, but that helper has a caller in a CLOSED
+/// crate: `crates/rk-adapter-sqlite/tests/it/replay.rs` appends
+/// `gate::gate_answered_event(open_gate.token(), TREE_A, "proceed")`, and §7d.15's own floor says
+/// *"the four adapters are not edited … if a slice finds it must edit one, it stops"*. Widening the
+/// arity would have broken `cargo test --workspace --features corpus` — a line Checkpoint 7b runs —
+/// from inside this slice's own mandated re-run. So the row `answer` produces gains the members,
+/// which is what §7d.14's red is actually about, and the three-argument helper keeps working.
+///
+/// **Absent members are OMITTED, not written as `null`.** A `gate_answered` row produced without an
+/// `AnswerMeta` is byte-identical to one the three-argument constructor produces, so no recorded
+/// journal moves. (Measured at this pin: no committed `.jsonl` carries a `gate_answered` row at
+/// all, so nothing recorded moves either way — but the omission is what makes that still true the
+/// day one does.)
+#[must_use]
+pub fn gate_answered_event_with_meta(
+    token: &Digest,
+    tree_hash: &str,
+    verdict: &str,
+    meta: &AnswerMeta,
+) -> Event {
+    let mut event = gate_answered_event(token, tree_hash, verdict);
+    if let Some(payload) = event.payload.as_object_mut() {
+        if let Some(sufficiency) = &meta.explain_sufficiency {
+            payload.insert(
+                "explain_sufficiency".to_owned(),
+                serde_json::Value::String(sufficiency.clone()),
+            );
+        }
+        if let Some(answerer) = &meta.answerer {
+            payload.insert(
+                "answerer".to_owned(),
+                serde_json::Value::String(answerer.clone()),
+            );
+        }
+    }
+    event
 }
 
 /// The tier-1 `gate_answered` row (design §5:705): token, the answer, the tree hash at answer.
