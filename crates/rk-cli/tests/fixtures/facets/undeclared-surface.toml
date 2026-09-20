@@ -1,0 +1,24 @@
+# `lint --facet-provenance` must exit 3 over this file (s7d §7d.3's "declared-surface violation").
+#
+# The one ProvenanceViolation variant about a `declared` facet and a surface is
+# RequireKeyedOnDeclared { facet, when }, whose clause() is "require_keyed_on_declared", and the
+# canonical declared facet in the shipped registries is `surfaces` — which is what this file's name
+# points at. THE ROW, NOT THE ENTRY, IS THE DEFECT: this same registry with no require row loads.
+#
+# Modelled on crates/rk-kernel/tests/fixtures/registries/facet-provenance/require_keyed_on_declared.toml.
+# NO llm facet, so the same file is a usable negative for provenance ONLY, and nothing else here
+# independently violates — the test asserts exactly one violation and asserts its clause() by name.
+
+[facet.surfaces]
+values = ["flags", "migration", "payments", "secrets"]
+set = true
+source = "declared"
+
+[facet.kind]
+values = ["initiative", "project", "story", "bug", "incident", "spike", "chore", "tech-debt", "security-vuln", "docs"]
+source = "human"
+
+[stage.review]
+[[stage.review.require]]
+when = "'flags' in surfaces"
+artifacts = ["FlagChangeRecord"]

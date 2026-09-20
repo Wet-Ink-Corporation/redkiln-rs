@@ -1,0 +1,33 @@
+# Step 7d Slice 3's synthetic catalog for AC-436's positive control.
+#
+# The two declared keywords are deliberately tokens that appear in NO OTHER FIELD of this activity or
+# any other in this directory -- not the id, not a tag, not a provides, not a step id, and NOT IN THIS
+# COMMENT OR IN THE FILE NAME. That last clause is not fussiness: `ac436_catalog_search_finds_by_keyword`
+# asserts the absence over this file's RAW BYTES with the `keywords` rows stripped, so a token named
+# anywhere else here -- prose included -- fails the fixture's own premise. The first draft of this file
+# was called after its keyword and explained it by name, and the test refused it.
+#
+# The words are real English ones rather than random strings, because a random string would also be
+# absent from a `search` that matched nothing at all.
+[activity]
+id           = "brew-report"
+version      = 1
+stage        = "implement"
+provides     = ["ImplReport"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:story", "kind:bug", "kind:incident"]
+keywords     = ["zymurgy", "fermentation"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "write"
+kind    = "agent"
+outputs = "value:ImplReport"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

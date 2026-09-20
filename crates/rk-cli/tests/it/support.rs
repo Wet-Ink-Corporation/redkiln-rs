@@ -449,3 +449,46 @@ pub fn any_spec(
     let activation = activity_id_at_version.to_owned();
     move |_node: &str| Ok(RecordedSpec::supplied(&activation, spec.clone()))
 }
+
+// ------------------------------------------------------------------------- the store readbacks
+//
+// **Promoted here from `tests/it/init.rs` at Slice 3, cycle 3 — moved, never copied.** `ac413_…`
+// and `common_dir_…` need the identical readings `init`'s own tests make, and two definitions of
+// "the store's identity" can drift while both suites stay green against different notions of the
+// same fact. §7d.16 item 3 puts the shared in-process seams in this file; these are two of them.
+
+/// The store's three identity rows, read the way §7d.9 names: through `rk_store::conn::Reader` and
+/// `rk_store::identity::read`, not through `SqliteStore` — the callers spawn the binary, so they
+/// hold no store of their own.
+///
+/// **`read` returns an `Option`, and the `Some` is asserted here rather than compared.** Two `None`s
+/// compare equal, so a caller that compared the `Option`s directly would pass over a repository with
+/// no identity table at all — which is precisely the state an `init` that never opened the store
+/// leaves behind.
+///
+/// # Panics
+/// If the store does not open, or carries no identity rows — either way the caller's assertion
+/// would be over nothing.
+#[must_use]
+pub fn identity_rows(common_dir: &Path) -> rk_store::identity::Identity {
+    let reader = rk_store::conn::Reader::open(common_dir).unwrap_or_else(|e| {
+        panic!(
+            "the store at {} opens for reading: {e}",
+            common_dir.display()
+        )
+    });
+    rk_store::identity::read(reader.conn())
+        .expect("the identity table reads")
+        .expect(
+            "the store carries identity rows — `init` opens it eagerly (D-14), which stamps them",
+        )
+}
+
+/// The store file's digest, or `None` if there is no store.
+#[must_use]
+pub fn store_digest(common_dir: &Path) -> Option<String> {
+    let path = common_dir.join("redkiln").join("store.sqlite3");
+    std::fs::read(&path)
+        .ok()
+        .map(|b| rk_types::digest::sha256(&b).as_str().to_owned())
+}

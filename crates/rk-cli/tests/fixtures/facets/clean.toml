@@ -1,0 +1,79 @@
+# `lint`'s clean fixture — it must exit 0 under BOTH modes ("a clean pair exits 0", s7d §7d.3).
+#
+# One document carries everything the verb's three path arguments read: [facet.*] tables for
+# Registry::from_toml, [[corpus_record]] rows for pinned_corpus_from_str, and [[stage.*.require]]
+# rows. That is why §7d.13 names three files and no separate record fixtures — the test passes this
+# same path as <FACETS_TOML> and as --pinned-corpus.
+#
+# 🛑 NO `source = "llm"` FACET, AND THAT IS A DELIBERATE CONSTRUCTION RATHER THAN AN OMISSION.
+# facet_stability_rule `continue`s on every non-Llm source, so this passes stability with an empty
+# record map and no --stability-record argument at all. The alternative — an llm facet with a full
+# [stability.<facet>] record — would have to hard-code a corpus sha equal to the one the CLI passes
+# in, i.e. CORPUS_PIN's CORPUS_SHA= line. The kernel's own AC-071 fixtures hard-code a DIFFERENT sha
+# (47faec9f…) and say why they hard-code rather than read: "a test that read it would silently
+# re-pin its own expectation". A CLI fixture that hard-coded today's 61f590e5… would go red the day
+# the pin moves, for a reason having nothing to do with the CLI. So: no llm facet.
+#
+# Modelled on crates/rk-kernel/tests/fixtures/registries/facet-provenance/positive_companion.toml,
+# which is already a passing provenance registry with zero llm facets.
+
+# (1) A `derived` facet with a named STRUCTURAL deriver, a scored record and positives — and it keys
+# a require row, which is the strongest positive available. ProvenanceReport::derived_facets must be
+# >= 1, or the pass is a pass over nothing.
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]
+set = true
+source = "derived"
+deriver = "R-toolchain-extension-manifest-table"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+# (2) A `kernel` facet carrying no deriver, no deriver_class, no deriver_record, and claimed by no
+# [[corpus_record]] row.
+[facet.stage]
+values = ["triage", "discovery", "analysis", "specification", "design", "planning", "implement", "verify", "review", "release", "operate", "closeout"]
+source = "kernel"
+
+# (3) A `declared` facet keying NO require row. Present and silent on purpose: deleting it would make
+# the declared-facet clause pass by absence rather than by permission.
+[facet.surfaces]
+values = ["flags", "migration", "payments", "secrets"]
+set = true
+source = "declared"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-toolchain-extension-manifest-table"
+positives = 15
+interval = [0.48, 0.89]
+
+[stage.verify]
+[[stage.verify.require]]
+when = "'node' in toolchain"
+artifacts = ["ScanReport"]
+
+# (4) A `derived` facet the pinned corpus reports NOT MEASURABLE, keying NO require row.
+#
+# 🛑 THIS ROW IS WHY `ProvenanceReport` IS A TYPE AND NOT `Ok(())`. AC-520's second AND-clause: "a
+# facet whose scored record shows NO POSITIVE INSTANCE, or is NOT MEASURABLE, is reported so —
+# neither passed nor failed — and may key no require row." Without such a facet here,
+# `report.not_measurable` is EMPTY, and a `lint` that swallowed the list entirely would print the
+# same thing as one that rendered it. Measured: with this row absent, the declared mutant "the
+# provenance report is SWALLOWED" ran GREEN — the clause the type exists for was untested.
+#
+# It keys no require row on purpose: one that did would trip NoPositivesKeysRequire and make this a
+# violation fixture rather than a clean one. The shipped precedent is `recent_deploy`, whose feed
+# does not exist at the pin.
+[facet.recent_deploy]
+values = [true, false]
+nullable = true
+source = "derived"
+deriver = "R-recent-deploy-feed-absent"
+deriver_class = "structural"
+deriver_record = "results/p1-arm-d-panel-scored.json"
+
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-recent-deploy-feed-absent"
+positives = 0
+not_measurable = true

@@ -34,9 +34,12 @@
 //! [`rs_files`], [`code_lines`], [`assert_no_block_comment`]). [`support`] holds the *in-process
 //! seam* values only.
 
+mod catalog;
 mod config;
 mod exit;
 mod init;
+mod lint;
+mod reconcile;
 mod root;
 mod support;
 mod surface;
@@ -175,7 +178,24 @@ pub fn redkiln() -> &'static str {
 }
 
 /// A temp repository with one commit, and nothing else.
+///
+/// # 🛑 EVERY REPOSITORY GETS A **DISTINCT ROOT COMMIT**, and that is not decoration
+///
+/// *(Added at Slice 3, cycle 3, after a test failed for this reason.)* This helper used to write the
+/// same `README` with the same author and message every time, and git's commit SHA is a hash of
+/// exactly those — so **two repositories built in the same second were byte-identical and shared a
+/// root commit SHA** (measured: two bare `temp_repo()` calls both produced
+/// `60bfaf79069a19ce210a4ed2ebcd3f7c6a50273d`). `rk_store::identity::check` compares `root_commit`
+/// **first**, so a store copied from one into the other was accepted as its own, and
+/// `ac413_store_opened_from_other_repo_refused_zero_rows` exited `0` where the criterion requires
+/// `3`. Any test that distinguishes two repositories by identity was vacuous against the old helper.
+///
+/// The nonce is a process-wide counter, not a clock: `Instant::now` and `SystemTime::now` are on
+/// `clippy.toml`'s `disallowed-methods`, and a counter is both sufficient (the collision is between
+/// repositories in ONE test binary) and deterministic.
 pub fn temp_repo() -> tempfile::TempDir {
+    static NONCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let nonce = NONCE.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     let dir = tempfile::tempdir().expect("a temp dir");
     git(dir.path(), &["init", "--quiet"]);
     git(
@@ -183,7 +203,11 @@ pub fn temp_repo() -> tempfile::TempDir {
         &["config", "user.email", "test@example.invalid"],
     );
     git(dir.path(), &["config", "user.name", "Test"]);
-    std::fs::write(dir.path().join("README"), b"root\n").expect("the root file writes");
+    std::fs::write(
+        dir.path().join("README"),
+        format!("root {}-{nonce}\n", std::process::id()).as_bytes(),
+    )
+    .expect("the root file writes");
     git(dir.path(), &["add", "README"]);
     git(dir.path(), &["commit", "--quiet", "-m", "root"]);
     dir

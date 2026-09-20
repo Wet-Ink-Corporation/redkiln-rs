@@ -15,7 +15,10 @@
 //! by the block's verb-level lines at the stage close, which drive the real binary and expect a real
 //! answer. Until then the remaining seven exit `3` and say so.
 
+pub mod catalog;
 pub mod init;
+pub mod lint;
+pub mod status;
 
 use std::path::Path;
 
@@ -166,12 +169,12 @@ pub fn dispatch(cli: &Cli) -> Result<Exit, Halt> {
     match &cli.command {
         Command::Run(_) => run(),
         Command::Answer(_) => answer(),
-        Command::Status => status(),
+        Command::Status => status::run(cli, Startup::real()),
         Command::Explain(_) => explain(),
         Command::Doctor(_) => doctor(),
         Command::Init => init::run(cli.cwd.as_deref()),
-        Command::Catalog(_) => catalog(),
-        Command::Lint(_) => lint(),
+        Command::Catalog(args) => catalog::run(cli, &args.command),
+        Command::Lint(args) => lint::run(cli, args),
     }
 }
 
@@ -189,22 +192,10 @@ fn answer() -> Result<Exit, Halt> {
     not_built("answer")
 }
 
-fn status() -> Result<Exit, Halt> {
-    not_built("status")
-}
-
 fn explain() -> Result<Exit, Halt> {
     not_built("explain")
 }
 
 fn doctor() -> Result<Exit, Halt> {
     not_built("doctor")
-}
-
-fn catalog() -> Result<Exit, Halt> {
-    not_built("catalog")
-}
-
-fn lint() -> Result<Exit, Halt> {
-    not_built("lint")
 }

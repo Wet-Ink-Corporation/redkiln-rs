@@ -48,35 +48,11 @@ fn tree_listing(root: &Path) -> Vec<String> {
     out
 }
 
-/// The store's three identity rows, read the way §7d.9 names: through `rk_store::conn::Reader` and
-/// `rk_store::identity::read`, not through `SqliteStore` — the test spawns the binary, so it holds
-/// no store of its own.
-///
-/// **`read` returns an `Option`, and the `Some` is asserted here rather than compared.** Two `None`s
-/// compare equal, so a test that compared the `Option`s directly would pass over a repository with
-/// no identity table at all — which is precisely the state an `init` that never opened the store
-/// leaves behind.
-fn identity_rows(common_dir: &Path) -> rk_store::identity::Identity {
-    let reader = rk_store::conn::Reader::open(common_dir).unwrap_or_else(|e| {
-        panic!(
-            "the store at {} opens for reading: {e}",
-            common_dir.display()
-        )
-    });
-    rk_store::identity::read(reader.conn())
-        .expect("the identity table reads")
-        .expect(
-            "the store carries identity rows — `init` opens it eagerly (D-14), which stamps them",
-        )
-}
-
-/// The store file's digest, or `None` if there is no store.
-fn store_digest(common_dir: &Path) -> Option<String> {
-    let path = common_dir.join("redkiln").join("store.sqlite3");
-    std::fs::read(&path)
-        .ok()
-        .map(|b| rk_types::digest::sha256(&b).as_str().to_owned())
-}
+// `identity_rows` and `store_digest` were DEFINED here until Slice 3, cycle 3, and are now
+// `crate::support`'s: `ac413_store_opened_from_other_repo_refused_zero_rows` and
+// `common_dir_discovered_from_inherited_cwd_via_wrapper` make the identical readings, and two
+// definitions of "the store's identity" can drift while both suites stay green against different
+// notions of the same fact. Moved, never copied.
 
 /// AC-437 as amended (D-14), ADR-0107 decision 2: *"a second `init` on an initialised repository
 /// changes nothing and exits 0."*
@@ -101,8 +77,9 @@ fn ac437_init_twice_identical_tree_and_identity_rows() {
     );
     let porcelain_1 = porcelain(root);
     let tree_1 = tree_listing(root);
-    let store_1 = store_digest(&common).expect("init creates the store eagerly (D-14)");
-    let identity_1 = identity_rows(&common);
+    let store_1 =
+        crate::support::store_digest(&common).expect("init creates the store eagerly (D-14)");
+    let identity_1 = crate::support::identity_rows(&common);
 
     let second = run_init(root);
     assert_eq!(
@@ -124,14 +101,14 @@ fn ac437_init_twice_identical_tree_and_identity_rows() {
     // equal whether or not the second `init` re-stamped them; that is why the file digest below is
     // also compared, and why neither assertion replaces the other. What THIS one catches, and the
     // digest cannot, is an `init` that leaves a store the rows are not in at all.
-    let identity_2 = identity_rows(&common);
+    let identity_2 = crate::support::identity_rows(&common);
     assert_eq!(
         identity_2, identity_1,
         "the store's identity rows moved across the second init"
     );
 
     assert_eq!(
-        store_digest(&common).as_deref(),
+        crate::support::store_digest(&common).as_deref(),
         Some(store_1.as_str()),
         "the store file's bytes moved across the second init, which is how a re-stamped identity \
          row shows: the three rows are deterministic and compare equal either way, so row equality \

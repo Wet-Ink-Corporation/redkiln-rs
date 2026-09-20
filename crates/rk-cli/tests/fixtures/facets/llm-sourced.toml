@@ -1,0 +1,18 @@
+# `lint --facet-stability` must exit 3 over this file and NAME the violation (s7d §7d.3).
+#
+# One facet with source = "llm" and NO [stability.criticality] table — StabilityViolation::NoRecord,
+# which is facet_stability_rule's fail-closed arm and the cleanest single violation. The shape is
+# copied from crates/rk-kernel/tests/fixtures/registries/facet-stability/no_record.toml, whose own
+# comment reads: "NO [stability.criticality] TABLE. That is the whole fixture."
+#
+# The test runs this WITHOUT --stability-record, so the empty-map branch (§7d.3: "absent → an empty
+# map, the zero-llm branch") is what produces the refusal — exercising that clause at the same time.
+#
+# Exactly ONE violation, and it must be the clause this file is named for. facet_stability.rs states
+# the house rule: "the committed fixture must produce exactly one violation, and it must be the
+# clause the file is named for — not 'some violation'."
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "llm"
