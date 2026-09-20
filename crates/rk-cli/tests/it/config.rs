@@ -236,6 +236,70 @@ fn ac486_misconfigured_adapter_refuses_before_spawn_or_store_write() {
         crate::porcelain(repo.path())
     );
 
+    // ---- Arms 3 and 4: THE SPAWNED `run`, added at Slice 3 when a `run` exists. ----------------
+    //
+    // §7d.16 item 2 fixes the split: "Slice 2 lands the in-process arm … and at Slice 3, when `run`
+    // exists, the spawned arm". They are arms of THIS test and not a second `#[test]`: the block
+    // filters by name, and a second name would be a second checkpoint line.
+    //
+    // 🛑 §7d.5's "the harness fixture child's marker count is 0" IS A FLOOR AT THIS CYCLE, and is
+    // therefore NOT written as an assertion. Nothing in the binary spawns `rk-fixture-child-claude`
+    // until `run`'s dispatch path exists, so an empty marker directory is true of every possible
+    // implementation and could not fail. Writing it down as a passing check would be the
+    // guard-that-cannot-fail shape this stage has already shipped three times. It becomes an
+    // instrument in the cycle that makes the child spawnable, and is asserted there.
+    //
+    // 🛑 THE MESSAGE IS THE DISCRIMINATOR, NOT THE CODE. §7d.5 says why in terms: the fixture's
+    // `[packs] enabled = []` means "a warn-and-continue implementation also exits `3` at step (7)
+    // with *no process pack enabled* — the message and the store-file absence are what tell the two
+    // apart". So each arm asserts the adapter is NAMED and that step (7)'s wording is ABSENT.
+    for (fixture, needle) in [
+        ("unknown-adapter.toml", "rk-adapter-linear"),
+        ("missing-store.toml", "store"),
+    ] {
+        let spawned = crate::temp_repo();
+        let spawned_common = crate::common_dir(spawned.path());
+        let spawned_store = spawned_common.join("redkiln").join("store.sqlite3");
+        std::fs::create_dir_all(spawned.path().join(".redkiln")).expect("the .redkiln dir is made");
+        std::fs::write(
+            spawned.path().join(".redkiln").join("config.toml"),
+            config_fixture(fixture),
+        )
+        .expect("the misconfigured configuration installs");
+        assert!(
+            !spawned_store.exists(),
+            "PREMISE: the fixture repository is prepared WITHOUT a store, so the absence below is \
+             observable. {} already exists",
+            spawned_store.display()
+        );
+
+        let out = spawn_run_for_ac486(spawned.path(), "bug-1");
+        let stderr = String::from_utf8_lossy(&out.stderr);
+
+        assert_eq!(
+            out.status.code(),
+            Some(3),
+            "the spawned `run` over {fixture} exited {:?}; stderr:\n{stderr}",
+            out.status.code()
+        );
+        assert!(
+            stderr.contains(needle),
+            "the refusal over {fixture} does not name `{needle}`. Exit 3 alone cannot tell this \
+             refusal from step (7)'s, which the same fixture also reaches; stderr:\n{stderr}"
+        );
+        assert!(
+            !stderr.contains("no process pack enabled"),
+            "the spawned `run` over {fixture} got as far as step (7), so the step-(4) refusal did \
+             NOT happen first — which is the whole of what AC-486 claims; stderr:\n{stderr}"
+        );
+        assert!(
+            !spawned_store.exists(),
+            "the refused `run` created a store at {} — a `SqliteStore::open` that ran would have \
+             created it, and AC-486 refuses BEFORE any store write",
+            spawned_store.display()
+        );
+    }
+
     // THE POSITIVE CONTROL for both assertions above. `init` on the same repository opens the store
     // eagerly (D-14), so the address the absences were asserted over goes non-empty — which is what
     // makes those absences observations rather than a guard over ground nothing could reach.
@@ -327,4 +391,22 @@ fn ac422_config_reads_the_one_denylist() {
         !first.to_string().contains("rk-adapter-linear"),
         "the refusal named the adapter as well as the credential; only the first refusal runs"
     );
+}
+
+/// Spawn `redkiln -C <repo> run <item>` with stdin closed (D-15), for AC-486's spawned arms.
+///
+/// Module level: `clippy::items_after_statements` is DENIED workspace-wide.
+#[expect(
+    clippy::disallowed_types,
+    reason = "AC-486's spawned arm exercises the refusal AS A PROCESS — 'before any spawn or store               write' is a claim about what a real invocation did not do"
+)]
+fn spawn_run_for_ac486(repo: &std::path::Path, item: &str) -> std::process::Output {
+    std::process::Command::new(crate::redkiln())
+        .arg("-C")
+        .arg(repo)
+        .arg("run")
+        .arg(item)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .expect("the redkiln binary runs")
 }

@@ -1,0 +1,11 @@
+# NO top-level `kind`. ADR-0128 decision 2's refusal: with no `--lane` and no derivable kind, `run`
+# exits 3 NAMING THE ITEM AND THE TWO ADMISSIBLE VALUES, and writes nothing. It never defaults to a
+# lane — the ADR forbids a default in terms.
+#
+# It DOES carry `stage` (§7d.13: "every item but the stageless one carries the top-level `stage`
+# key"), so the refusal this file pins is the lane's and not RT-50's.
+id    = "kindless-1"
+stage = "implement"
+
+[facets]
+has_repro = true

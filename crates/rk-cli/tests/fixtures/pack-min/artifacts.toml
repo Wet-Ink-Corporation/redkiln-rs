@@ -1,0 +1,19 @@
+# The artifact-kind registry, trimmed to the kinds pack-min's variants baseline or require.
+#
+# 🛑 NO `keyed_by = "toolchain"` ON ANY ROW. The keyed expansion (AC-049, ADR-0073) multiplies
+# required instances per element of the item's toolchain set, which would make "the smallest loadable
+# pack" not smallest and would give every node a `[key]` suffix no test here reads.
+[artifact.ImplReport]
+source = "activity"
+schema = "ImplReport"
+
+[artifact.ChangeSummary]
+source = "activity"
+schema = "ChangeSummary"
+
+# Named by the one `require` row. It is produced by nothing in this catalog ON PURPOSE: the row
+# abstains over the gate item, so the kind is never actually required, and a producer for it would be
+# a node no test expects.
+[artifact.TestReport]
+source = "activity"
+schema = "TestReport"

@@ -1,0 +1,10 @@
+# The ordinary story item. The lane DERIVES `story` -> pack `story`.
+#
+# The not-enabled arm of `adr0128_lane_maps_to_pack_fix_bug_standard_story_story` removes `story`
+# from `[packs] enabled` and runs THIS item, so the refusal names the pack.
+id    = "story-1"
+kind  = "story"
+stage = "implement"
+
+[facets]
+has_repro = false

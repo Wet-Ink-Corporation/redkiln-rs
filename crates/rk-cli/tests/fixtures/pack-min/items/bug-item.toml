@@ -1,0 +1,13 @@
+# The ordinary bug item. The lane DERIVES `fix` -> pack `bug-standard` with no `--lane` flag
+# (ADR-0128 decision 2 and 3).
+#
+# `stage` is top-level and is the `stage: &str` every kernel entry takes — `RunInputs::new(stage)`,
+# `fsm::fold`, `fsm::stage_action`, `RunState::initial`. It is read ONCE, here, and nowhere else
+# (RT-50). The key SPELLINGS are 7d's fixture choice; 7e's pack schema owns them, and the tests pin
+# the refusal and the lane map, never the spelling.
+id    = "bug-1"
+kind  = "bug"
+stage = "implement"
+
+[facets]
+has_repro = true

@@ -57,7 +57,11 @@ fn main() {
         previous(info);
     }));
 
-    let result = rk_cli::verbs::dispatch(&cli);
+    // §7d.5 step (3): THE ONE ENVIRONMENT READ, performed here at the composition root and handed
+    // down as a value. No verb calls `Env::capture()` — §7d.5's AC-486 bullet: "no test calls
+    // `Env::capture()`; the captured-map inputs of every `resolve` … are values the test builds".
+    let env = rk_cli::env::Env::capture();
+    let result = rk_cli::verbs::dispatch(&cli, &env);
     if let Err(halt) = &result {
         eprintln!("{}", rk_cli::render_halt(halt));
     }

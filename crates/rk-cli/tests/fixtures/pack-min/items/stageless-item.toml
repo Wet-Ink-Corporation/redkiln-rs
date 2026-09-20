@@ -1,0 +1,10 @@
+# NO top-level `stage`. RT-50's refusal: exit 3 naming the item, "no stage on the item record".
+#
+# It carries `kind`, so the lane derives cleanly and the refusal this file pins is the stage's alone.
+# The two refusals are separated across two fixtures deliberately: one item missing both would pass a
+# test that only ever checked the exit code.
+id   = "stageless-1"
+kind = "bug"
+
+[facets]
+has_repro = true

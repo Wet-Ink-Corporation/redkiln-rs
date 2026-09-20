@@ -1,0 +1,21 @@
+# The §7d.9 scaffold bytes, plus the two keys a fixture repository needs.
+#
+# `harness_binary` is a real `Adapters` member (RT-49) and a key on the AC-474 key surface — NOT a
+# toggle. The fixture child's MODE travels in the child ENVIRONMENT the test spawns `redkiln` with
+# (`RK_FIXTURE_MODE`, `RK_FIXTURE_MARKER_DIR`, via `Command::env`), never through `set_var` and never
+# through a key that changes the product's code path.
+#
+# `[packs] enabled` carries ADR-0128 decision 3's two lane names, because `pack.toml` is installed
+# twice under exactly those.
+
+[adapters]
+harness = "rk-adapter-claude"
+store = "rk-adapter-sqlite"
+toolchains = ["rk-adapter-toolchain-node", "rk-adapter-toolchain-rust"]
+harness_binary = "rk-fixture-child-claude"
+
+[packs]
+enabled = ["bug-standard", "story"]
+
+[doctor]
+unread_window_runs = 50

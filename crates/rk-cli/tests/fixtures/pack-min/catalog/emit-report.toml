@@ -1,0 +1,33 @@
+# pack-min's ONE activity. Authored to `activity_from` in `crates/rk-kernel/src/catalog.rs`.
+#
+# `version` is DECLARED and not left absent: an absent one is `None` and never 1, and
+# `Activity::id_at_version()` returns `None` without it — which the memo key and
+# `RecordedSpec.activity_id_at_version` both need.
+#
+# `budget` is all-three-or-none: `activity_budget` refuses a partial table.
+#
+# NO `keywords` row, deliberately: the AC-436 search fixture is `tests/fixtures/catalog/`'s and this
+# pack is about selection, not search.
+[activity]
+id           = "emit-report"
+version      = 1
+stage        = "implement"
+provides     = ["ImplReport"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 }
+
+# ONE `tool` step (§7d.13). `StepKind::from_token` accepts exactly agent | tool | check | gate | emit,
+# and `role` is transcribed here and refused later at `Pack::require_family_for_role` — which is why
+# pack.toml carries `[role.implementer] family`.
+[[step]]
+id      = "check"
+kind    = "tool"
+run     = "toolchain:test"
+role    = "implementer"
+outputs = "value:ImplReport"

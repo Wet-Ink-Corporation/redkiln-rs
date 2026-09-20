@@ -492,3 +492,152 @@ pub fn store_digest(common_dir: &Path) -> Option<String> {
         .ok()
         .map(|b| rk_types::digest::sha256(&b).as_str().to_owned())
 }
+
+// ------------------------------------------------------------------ the pack-min fixture repository
+//
+// §7d.13 requires that "every integration test … mints its own" repository (D18-9), and four Slice-3
+// case modules need the same one. The builder is new, so it lands in this new file and calls
+// `crate::temp_repo` / `crate::git` rather than re-implementing them.
+
+/// Which `pack-min` pack variant a fixture repository installs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PackVariant {
+    /// `pack.toml` — one baseline kind, one node.
+    Base,
+    /// `pack.two-activities.toml` — two baseline kinds, two nodes. Installs the second catalog
+    /// activity beside the first.
+    TwoActivities,
+    /// `pack.gate-1s.toml` — `gate_deadline_secs = 1`, for the expiry tests.
+    GateOneSecond,
+}
+
+impl PackVariant {
+    const fn file(self) -> &'static str {
+        match self {
+            Self::Base => "pack.toml",
+            Self::TwoActivities => "pack.two-activities.toml",
+            Self::GateOneSecond => "pack.gate-1s.toml",
+        }
+    }
+}
+
+/// The `pack-min/` fixture directory, read in place and copied from.
+#[must_use]
+pub fn pack_min_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("pack-min")
+}
+
+/// A temp repository with `pack-min` installed at §7d.5's paths.
+///
+/// The pack is installed **twice**, as `.redkiln/packs/bug-standard.toml` and
+/// `.redkiln/packs/story.toml` — ADR-0128 decision 3's two lane names, one file — and
+/// `[packs] enabled` names both. `init` is NOT run: this builder writes the scaffold itself, because
+/// `init`'s scaffold carries `enabled = []` and every test here needs a pack set.
+///
+/// # Panics
+/// If the fixture directory is absent or a file will not copy — either way the caller's assertions
+/// would be over a repository that is not the fixture.
+#[must_use]
+pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
+    let repo = crate::temp_repo();
+    let root = repo.path();
+    let src = pack_min_dir();
+    let rk = root.join(".redkiln");
+    for sub in ["packs", "catalog", "items"] {
+        std::fs::create_dir_all(rk.join(sub)).expect("the .redkiln subdirectory is created");
+    }
+
+    let pack = std::fs::read(src.join(variant.file())).expect("the pack variant is readable");
+    for name in ["bug-standard.toml", "story.toml"] {
+        std::fs::write(rk.join("packs").join(name), &pack).expect("the pack installs");
+    }
+
+    for (from, to) in [
+        ("artifacts.toml", "artifacts.toml"),
+        ("facets.toml", "facets.toml"),
+        ("config.toml", "config.toml"),
+    ] {
+        std::fs::copy(src.join(from), rk.join(to)).expect("the registry installs");
+    }
+
+    let mut catalog = vec!["emit-report.toml"];
+    if variant == PackVariant::TwoActivities {
+        catalog.push("second-activity.toml");
+    }
+    for name in catalog {
+        std::fs::copy(
+            src.join("catalog").join(name),
+            rk.join("catalog").join(name),
+        )
+        .expect("the catalog activity installs");
+    }
+
+    // 🛑 THE INSTALL NAME IS THE RECORD'S OWN `id`, NOT THE FIXTURE FILE'S NAME. §7d.5 fixes the
+    // path the verb reads as `.redkiln/items/<item>.toml`, where `<item>` is the argument to
+    // `redkiln run` — i.e. the id. The fixture files are named for what they PIN (`kindless-item`,
+    // `stageless-item`) so a reader can see the manifest at a glance, and those two names are
+    // §7d.13's own. Copying them across verbatim would put `kindless-item.toml` where the verb
+    // looks for `kindless-1.toml`, and every refusal test would pass on a MISSING FILE rather than
+    // on the refusal it names.
+    let mut installed = 0_usize;
+    for entry in std::fs::read_dir(src.join("items")).expect("the items directory reads") {
+        let path = entry.expect("an entry").path();
+        let src_text = std::fs::read_to_string(&path).expect("the item record is readable");
+        let id = src_text
+            .lines()
+            .find_map(|l| l.strip_prefix("id"))
+            .and_then(|rest| rest.split('=').nth(1))
+            .map(|v| v.trim().trim_matches('"').to_owned())
+            .unwrap_or_else(|| panic!("{} declares no top-level id", path.display()));
+        std::fs::write(rk.join("items").join(format!("{id}.toml")), &src_text)
+            .expect("the item record installs");
+        installed += 1;
+    }
+    assert!(
+        installed >= 5,
+        "only {installed} item records installed; §7d.13 names five (bug, story, kindless, \
+         stageless, gate) and a test whose record is missing refuses on the absent FILE rather than \
+         on the refusal it is named for"
+    );
+
+    repo
+}
+
+/// Rewrite `[packs] enabled` in a fixture repository's configuration.
+///
+/// `adr0128_lane_maps_to_pack_fix_bug_standard_story_story`'s not-enabled arm removes `story`.
+///
+/// # Panics
+/// If the configuration is absent or the row is not there to replace — a silent no-op would leave
+/// the test asserting a refusal the repository never earned.
+pub fn set_enabled(root: &Path, enabled: &[&str]) {
+    let path = root.join(".redkiln").join("config.toml");
+    let src = std::fs::read_to_string(&path).expect("the fixture configuration is readable");
+    let list = enabled
+        .iter()
+        .map(|p| format!("\"{p}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let want = format!("enabled = [{list}]");
+    let out = src
+        .lines()
+        .map(|l| {
+            if l.trim_start().starts_with("enabled") {
+                want.clone()
+            } else {
+                l.to_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_ne!(
+        out,
+        src,
+        "no `enabled` row was rewritten in {} — the arm would run against the fixture's own pack set",
+        path.display()
+    );
+    std::fs::write(&path, out).expect("the configuration writes");
+}

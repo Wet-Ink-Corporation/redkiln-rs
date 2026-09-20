@@ -1,0 +1,8 @@
+{
+  "description": "pack-min's one card: emit a structured implementation report.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": ["StructuredOutput"],
+  "cache_profile": "static",
+  "permission_mode": "acceptEdits",
+  "fulfils": ["implementer"]
+}

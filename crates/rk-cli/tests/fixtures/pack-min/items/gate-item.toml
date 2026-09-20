@@ -1,0 +1,11 @@
+# `has_repro` IS OMITTED, and that omission is the whole fixture.
+#
+# An absent facet is `with_facet_null` (§7d.5), so the pack's one `require` row — `when = "has_repro"`
+# — evaluates `Tri::Null` over this item, step 2 mints exactly one
+# `GateOpened { reason: UnknownFacet, axis: "has_repro" }`, and `fsm::next_action` opens it at reach 1
+# under the class `unknown_facet:has_repro`. That is the ONLY gate pack-min opens.
+id    = "gate-1"
+kind  = "bug"
+stage = "implement"
+
+[facets]

@@ -341,3 +341,223 @@ fn spawn_status(cwd: &Path, args: &[&str]) -> std::process::Output {
         .output()
         .expect("the redkiln binary runs")
 }
+
+/// Steps (1)-(7) over a `pack-min` fixture repository, for the two in-process cases below.
+///
+/// Module level rather than inside each test: `clippy::items_after_statements` is DENIED
+/// workspace-wide.
+fn resolved_over_pack_min(root: &Path) -> rk_cli::verbs::run::Resolved {
+    let cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let args = rk_cli::cli::RunArgs {
+        item: "bug-1".to_owned(),
+        lane: None,
+    };
+    let env = rk_cli::env::Env::from_map(std::collections::BTreeMap::new());
+    rk_cli::verbs::run::through_step_seven(&cli, &args, &env, rk_cli::verbs::Startup::real())
+        .unwrap_or_else(|e| panic!("steps (1)-(7) resolve over the fixture repository: {e:?}"))
+}
+
+/// **H-2, RA-M-04 — a token fired BEFORE the run starts exits 130 and writes nothing partial.**
+///
+/// §7d.10, verbatim: *"the verb function called with a token fired **before** `run` starts (no env
+/// toggle — `RK_TEST_PREFIRE_CANCEL` is **not** used; AC-474 forbids it; the token is a function
+/// argument); returns `Ok(Exit::SignalOutsideDispatch)`; the store gained at most the
+/// `reconcile_started` row; no commit."*
+///
+/// §7d.14's reds: *"Red by the verb function returning anything but
+/// `Ok(Exit::SignalOutsideDispatch)` on a pre-fired token, by a second row, or by a commit; a weaker
+/// red asserts the exit only."*
+///
+/// **No process is spawned**, so there is no 30 s bound and no `Stdio::null()` — the token is handed
+/// straight to the function, which is the only form AC-474 admits.
+#[test]
+fn signal_outside_dispatch_exits_130_writes_nothing_partial() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let root = repo.path();
+    let porcelain_before = crate::porcelain(root);
+    let resolved = resolved_over_pack_min(root);
+
+    let token = CancelToken::new();
+    token.cancel();
+    assert!(
+        token.is_cancelled(),
+        "PREMISE: the token is not fired, so the exit below would be the ordinary path's"
+    );
+
+    let store = locked_store();
+    let exit = rk_cli::verbs::run::run_with(&resolved, &store, &token)
+        .expect("a pre-fired token is an EXIT, not a halt");
+
+    // (1) the return, THEN (2) the absences — §7d.14's "two things in order".
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::SignalOutsideDispatch,
+        "a pre-fired token must return Exit::SignalOutsideDispatch (130), not {exit:?}"
+    );
+    assert_eq!(exit.code(), 130);
+
+    let rows = store
+        .lock()
+        .expect("the fixture store's lock is sound")
+        .query(rk_kernel::runtime::journal_query("bug-1"))
+        .expect("the fixture store queries");
+    assert!(
+        rows.len() <= 1,
+        "the interrupted run wrote {} rows; §7d.10 admits at most the `reconcile_started` one, \
+         because every store write is ONE row and nothing partial may survive: {:?}",
+        rows.len(),
+        rows.iter().map(|e| e.kind.wire_name()).collect::<Vec<_>>()
+    );
+    if let Some(row) = rows.first() {
+        assert_eq!(
+            row.kind,
+            rk_types::event_kind::EventKind::ReconcileStarted,
+            "the one row an interrupted run may leave is `reconcile_started`"
+        );
+    }
+    assert_eq!(
+        crate::porcelain(root),
+        porcelain_before,
+        "the interrupted run changed the working tree; every git write is ONE commit and an \
+         interrupted run makes none"
+    );
+    assert!(
+        crate::refs(root).iter().all(|r| !r.contains("rk-run/")),
+        "the interrupted run created an `rk-run/*` ref"
+    );
+}
+
+/// **ADR-0118 clauses 1, 3, 5, 6; RB-M-01 — the verb HALTS on a poisoned store lock, and
+/// `is_lock_halt` is asserted against the payload a REAL kernel-side poison produces.**
+///
+/// This is `is_lock_halt`'s first and only instrument; Slice 2 shipped the function untested.
+///
+/// # 🛑 PART B IS THE CLAUSE THAT MATTERS, AND THE VACUOUS FORM IS NAMED SO IT IS NOT WRITTEN
+///
+/// §7d.10: *"a test that built its own `String` around `rk_kernel::runtime::LOCK_HALTS` (the `pub
+/// const`) would never observe the format the kernel's `.lock().expect(LOCK_HALTS)` actually
+/// produces, and a shipped payload of a different shape would leave the hook at 101 with every test
+/// green."* So the payload here comes out of `catch_unwind` around a REAL kernel call, unmodified.
+///
+/// `Runtime::store_guard` is **private** (verified), so §7d.10's literal instruction cannot compile
+/// from an integration test. The nearest public method whose first statement is `self.store_guard()`
+/// is `Runtime::journal`, and that is what is called.
+///
+/// `AssertUnwindSafe` is required (`dyn EventStore` carries no `RefUnwindSafe` bound) and is **not** a
+/// poison recovery: the block's recovery ban is scoped to `crates/rk-cli/src` and
+/// `crates/redkiln-migrate/src`, and `tests/it/` is outside it.
+///
+/// The default panic hook is suppressed around the `catch_unwind` calls, which is process-global
+/// under `cargo test`'s thread-per-test harness. That is an implementation caution, not a decision;
+/// §7d.10 does not address it.
+#[test]
+fn adr0118_poisoned_store_lock_halts_run_exit_70() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let resolved = resolved_over_pack_min(repo.path());
+
+    // ---- Part A: the verb halts. ----------------------------------------------------------------
+    let poisoned = crate::support::poisoned_store();
+    let token = CancelToken::new();
+    let result = rk_cli::verbs::run::run_with(&resolved, &poisoned, &token);
+
+    match &result {
+        Ok(exit) => panic!(
+            "`run` returned Ok({exit:?}) over a poisoned lock. ADR-0118 clause 3 forbids every \
+             spelling of a recovery: the writer panicked while holding this lock, so the state \
+             behind it is of unknown shape"
+        ),
+        Err(halt) => {
+            assert_eq!(
+                halt,
+                &Halt::PoisonedLock {
+                    lock: "store",
+                    verb: "the run"
+                },
+                "the halt does not name the lock and the verb"
+            );
+            let rendered = rk_cli::render_halt(halt);
+            assert!(
+                rendered.contains("the store lock is poisoned (store)"),
+                "the rendered halt does not name the lock; it read:\n{rendered}"
+            );
+        }
+    }
+    assert_eq!(
+        rk_cli::code_for(&result),
+        70,
+        "a poisoned-lock halt is exit 70 (ADR-0118 clause 6; §7d.4's table)"
+    );
+
+    // ---- Part B: `is_lock_halt` against the payload the KERNEL actually produces. ---------------
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+
+    let ports = crate::support::ports(
+        Arc::new(rk_ports::fakes::FakeHarness::scripted(vec![])),
+        &crate::support::poisoned_store(),
+    );
+    let runtime = rk_kernel::runtime::Runtime::new(ports, "run-id", "implement");
+    let real = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = runtime.journal("any-item");
+    }))
+    .expect_err("a poisoned store lock panics at the kernel's own .expect(LOCK_HALTS)");
+
+    let other = std::panic::catch_unwind(|| panic!("something else entirely"))
+        .expect_err("the control panic panics");
+
+    std::panic::set_hook(previous);
+
+    assert!(
+        rk_cli::is_lock_halt(real.as_ref()),
+        "`is_lock_halt` is FALSE on the payload a real kernel-side poison produces. The kernel's \
+         payload is the String formed by `.expect(LOCK_HALTS)` — the const FOLLOWED BY the \
+         PoisonError's Debug rendering — not the const itself, and the hook substring-matches the \
+         exported const. A hook that is false here leaves the process at 101 with every other test \
+         green"
+    );
+    assert!(
+        !rk_cli::is_lock_halt(other.as_ref()),
+        "`is_lock_halt` is TRUE on an unrelated panic payload, so it is not discriminating"
+    );
+    assert!(
+        !rk_cli::is_lock_halt(&42_i32),
+        "`is_lock_halt` is TRUE on a non-string payload"
+    );
+
+    // ---- Part C: no recovered guard anywhere on the product path. -------------------------------
+    //
+    // The seam-level assertions above cannot see an `into_inner` in a file the run did not reach, so
+    // the ban is a source scan — self-controlled first, on §7d.14's standing rule.
+    let control = lint_controls_dir().join("adr0118_poison_recovery_control.rs");
+    let control_text = std::fs::read_to_string(&control)
+        .unwrap_or_else(|e| panic!("the control {} must exist: {e}", control.display()));
+    let recovery = ["into_inner", "catch_unwind"];
+    let control_hits = code_lines(&control_text)
+        .into_iter()
+        .filter(|(_, l)| recovery.iter().any(|r| l.contains(r)))
+        .count();
+    assert!(
+        control_hits >= 1,
+        "the control {} carries no NON-COMMENT recovery spelling — the scan is vacuous",
+        control.display()
+    );
+    let hits: Vec<String> = crate::rs_files(&src_dir())
+        .into_iter()
+        .flat_map(|path| {
+            let text = std::fs::read_to_string(&path).expect("a readable source file");
+            code_lines(&text)
+                .into_iter()
+                .filter(|(_, l)| recovery.iter().any(|r| l.contains(r)))
+                .map(|(n, l)| format!("{}:{n}: {}", path.display(), l.trim()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "a poison RECOVERY is on the product path — ADR-0118's rejected third option:\n{}",
+        hits.join("\n")
+    );
+}

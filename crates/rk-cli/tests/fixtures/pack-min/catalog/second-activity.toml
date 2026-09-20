@@ -1,0 +1,24 @@
+# pack-min's SECOND activity — installed ONLY beside `pack.two-activities.toml`, whose baseline adds
+# `ChangeSummary`. With the base pack this file is not copied, and the plan has one node.
+#
+# `method_rank` is distinct from `emit-report`'s so the two are never a rank contest.
+[activity]
+id           = "second-activity"
+version      = 1
+stage        = "implement"
+provides     = ["ChangeSummary"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 20
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 }
+
+[[step]]
+id      = "summarise"
+kind    = "tool"
+run     = "toolchain:test"
+role    = "implementer"
+outputs = "value:ChangeSummary"

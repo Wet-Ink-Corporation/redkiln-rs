@@ -18,6 +18,7 @@
 pub mod catalog;
 pub mod init;
 pub mod lint;
+pub mod run;
 pub mod status;
 
 use std::path::Path;
@@ -165,9 +166,9 @@ impl Startup<'static> {
 /// # Errors
 /// A [`Halt`], when a verb stops rather than returning a code. None of Slice 1's stubs does; the
 /// first is Slice 2's poisoned-lock acquisition.
-pub fn dispatch(cli: &Cli) -> Result<Exit, Halt> {
+pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
     match &cli.command {
-        Command::Run(_) => run(),
+        Command::Run(args) => run::run(cli, args, env, Startup::real()),
         Command::Answer(_) => answer(),
         Command::Status => status::run(cli, Startup::real()),
         Command::Explain(_) => explain(),
@@ -182,10 +183,6 @@ pub fn dispatch(cli: &Cli) -> Result<Exit, Halt> {
 fn not_built(verb: &str) -> Result<Exit, Halt> {
     eprintln!("redkiln: `{verb}` is not built at slice 1");
     Ok(Exit::ConfigError)
-}
-
-fn run() -> Result<Exit, Halt> {
-    not_built("run")
 }
 
 fn answer() -> Result<Exit, Halt> {

@@ -41,6 +41,7 @@ mod init;
 mod lint;
 mod reconcile;
 mod root;
+mod run;
 mod support;
 mod surface;
 
