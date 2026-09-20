@@ -47,8 +47,15 @@ baseline = ["ImplReport"]
 when = "has_repro"
 artifacts = ["TestReport"]
 
+# 🛑 THE TIER HAS EXACTLY ONE SOURCE, AND IT IS THIS TABLE.
+# `Binder::bind` refuses a role declaring no model -- "role implementer declares no model — the
+# tier is traceable only through the role (AC-212; AC-118)" -- and the CARD may not carry one
+# (`ConfigError::TierLeak`). So `model` and `effort` sit here beside the kernel's own `family`,
+# read through `PackExtras`. Spellings are `Tier` / `Effort` under `rename_all = "lowercase"`.
 [role.implementer]
 family = "claude"
+model = "sonnet"
+effort = "medium"
 
 # --- read by rk-cli's PackExtras; the kernel's toml_subset walker ignores every key below ---
 
@@ -65,16 +72,26 @@ subagent_prompt_ttl = "1h"
 
 # The gate-class expiry row, linted by `gate::lint_expiry_policy_row`.
 #
-# 🛑 THE KEY IS THE FULL GATE KIND, AXIS AND ALL. `fsm::next_action` spells the class
-# `format!("{}:{}", gate.reason.as_str(), gate.axis)`, so the abstention gate this pack opens has
-# kind `unknown_facet:has_repro`. A row keyed on the bare `unknown_facet` matches NO gate this
-# system opens, and the failure surfaces only at run time as
-# `ExpiryPolicyLint::NoActionDeclared { class }`.
+# 🛑 THE CLASS IS THE FULL GATE KIND, AXIS AND ALL, AND IT IS A **VALUE** RATHER THAN A KEY.
+# `fsm::next_action` spells the class `format!("{}:{}", gate.reason.as_str(), gate.axis)`, so the
+# abstention gate this pack opens has kind `unknown_facet:has_repro`. A row keyed on the bare
+# `unknown_facet` matches NO gate this system opens.
+#
+# But the full kind carries a COLON, and a TOML key carrying one must be quoted -- which the
+# kernel's `toml_subset` walker refuses outright: "bare unquoted keys only, and this one is
+# \"unknown_facet:has_repro\"" (crates/rk-kernel/src/toml_subset.rs). TWO parsers read these same
+# bytes, so a key shape only one of them accepts is available to NEITHER. Carrying the class as a
+# VALUE in an array of tables keeps every key bare and keeps the class exactly the string
+# `GateRecord::kind()` produces.
+#
+# Invisible until this cycle: at cycle 4 the pack was READ at step (7) but never PARSED -- the
+# kernel sees these bytes first at `inputs.build()`, which is step (8)/(9)'s.
 #
 # `fail` is the only action of the three needing no second value, which keeps the expiry
 # deterministic for `ac257_…`. `escalate` on the escalation class is refused by the lint itself.
-[gate_expiry]
-"unknown_facet:has_repro" = "fail"
+[[gate_expiry]]
+class = "unknown_facet:has_repro"
+action = "fail"
 
 # `timeout_secs` on EVERY activity (`BindRequest.timeout_secs`).
 [activity.emit-report]

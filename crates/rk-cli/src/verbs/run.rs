@@ -52,15 +52,22 @@ pub struct PackExtras {
     pub margins: Margins,
     /// The two prompt-cache TTLs.
     pub cache: Cache,
-    /// The gate-class expiry table.
+    /// The gate-class expiry rows.
     ///
-    /// 🛑 **Keyed by the FULL gate kind, axis and all.** `fsm::next_action` spells the class
-    /// `format!("{}:{}", gate.reason.as_str(), gate.axis)`, so an abstention gate on `has_repro` has
-    /// kind `unknown_facet:has_repro`. A table keyed on the bare `unknown_facet` matches no gate
-    /// this system opens, and the failure surfaces only at run time as
-    /// `ExpiryPolicyLint::NoActionDeclared { class }`.
+    /// 🛑 **THE CLASS IS THE FULL GATE KIND, AXIS AND ALL — AND IT IS A `class` VALUE RATHER THAN
+    /// A KEY.** `fsm::next_action` spells the class `format!("{}:{}", gate.reason.as_str(),
+    /// gate.axis)`, so an abstention gate on `has_repro` has kind `unknown_facet:has_repro`. A row
+    /// keyed on the bare `unknown_facet` matches no gate this system opens, and the failure
+    /// surfaces only at run time as `ExpiryPolicyLint::NoActionDeclared { class }`.
+    ///
+    /// But the full kind carries a COLON, and a TOML key carrying one must be quoted — which the
+    /// kernel's `toml_subset` walker refuses outright (*"bare unquoted keys only, and this one is
+    /// `\"unknown_facet:has_repro\"`"*, `crates/rk-kernel/src/toml_subset.rs`). **Two parsers read
+    /// the same pack bytes**, so a key shape only one of them accepts is available to neither.
+    /// Hence an array of tables, where every key stays bare and the class is carried as a value
+    /// that is exactly the string `GateRecord::kind()` produces.
     #[serde(default)]
-    pub gate_expiry: BTreeMap<String, String>,
+    pub gate_expiry: Vec<GateExpiryRow>,
     /// `timeout_secs` per activity — `BindRequest.timeout_secs`.
     #[serde(default)]
     pub activity: BTreeMap<String, ActivityExtras>,
@@ -97,8 +104,30 @@ pub struct ActivityExtras {
 /// `[role.<name>]`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct RoleExtras {
-    /// The model family the role resolves to.
+    /// The model family the role resolves to (the kernel's own key).
     pub family: String,
+    /// The tier the binder injects.
+    ///
+    /// 🛑 **The role table is the tier's ONE source.** `Binder::bind` refuses a role declaring no
+    /// model — *"role implementer declares no model — the tier is traceable only through the role
+    /// (AC-212; AC-118)"* — and the CARD may not carry one (`ConfigError::TierLeak`). So it is
+    /// read here, beside the kernel's `family`, and nowhere else.
+    #[serde(default)]
+    pub model: Option<rk_adapter_claude::card::Tier>,
+    /// The reasoning effort the binder injects, from the same single source as [`Self::model`].
+    #[serde(default)]
+    pub effort: Option<rk_adapter_claude::card::Effort>,
+}
+
+/// One `[[gate_expiry]]` row: the gate class, and the action `gate::expire` takes for it.
+///
+/// See [`PackExtras::gate_expiry`] for why the class is a value rather than a key.
+#[derive(Debug, Clone, Deserialize)]
+pub struct GateExpiryRow {
+    /// The full gate kind, exactly as `GateRecord::kind()` renders it.
+    pub class: String,
+    /// One of `fail` | `escalate` | `auto-decide`, linted by `gate::lint_expiry_policy_row`.
+    pub action: String,
 }
 
 /// One item record — `rk-cli`'s own reader, never the kernel's.

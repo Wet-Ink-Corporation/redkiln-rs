@@ -39,6 +39,17 @@ runbook licenses a fourth**, and a fourth would be a variant no test names.
 
 `rk_kernel::select::Pack::from_toml` reads the TOML subset and **ignores unknown keys**; `rk-cli`'s
 own `PackExtras` reads the adapter-facing values (`gate_deadline_secs`, `[margins]`, `[cache]`,
-`[gate_expiry]`, `[activity.<id>] timeout_secs`, `[role.<name>]`). The kernel's `Pack` is **not**
-widened for them — that would re-open Checkpoint 7b for a fixture. A record fixing these key
-spellings in the pack schema is Step 7e's (RT-57; `s7d` §7d.18 RAISED).
+`[[gate_expiry]]`, `[activity.<id>] timeout_secs`, `[role.<name>]` with its `model` / `effort`).
+The kernel's `Pack` is **not** widened for them — that would re-open Checkpoint 7b for a fixture. A
+record fixing these key spellings in the pack schema is Step 7e's (RT-57; `s7d` §7d.18 RAISED).
+
+**"Over the same bytes" is a constraint, not a description.** `[[gate_expiry]]` is an array of
+tables rather than the table it was, because the class it carries is the full gate kind
+`unknown_facet:has_repro`, a TOML key carrying a colon must be quoted, and the kernel's
+`toml_subset` walker refuses quoted keys outright. A key shape only one of the two parsers accepts
+is available to neither. See the 🛑 note on that table in `pack.toml`.
+
+The three variants — `pack.toml`, `pack.gate-1s.toml`, `pack.two-activities.toml` — are **one base
+with one delta each** (the gate deadline; the second activity and its baseline artifact) and are
+regenerated from `pack.toml`, never edited in parallel. They were each two concatenated TOML
+documents until Slice 3 cycle 5, which is what a hand-regeneration that appends produces.
