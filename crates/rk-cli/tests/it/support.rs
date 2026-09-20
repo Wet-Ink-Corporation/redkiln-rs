@@ -1104,3 +1104,98 @@ fn spawn_bound_is_the_thirty_seconds_the_stage_file_states() {
         "§7d.14: \"Every process-spawning test is bounded (30 s unless stated; Halt 5)\""
     );
 }
+
+/// A spec supplier for a case that must never reach a dispatch, which **refuses by name** if one
+/// happens anyway.
+///
+/// The two §7d.10 cases (a pre-fired token, a poisoned lock) return before `replay::resume` is
+/// reached at all. Handing them [`any_spec`] would make a run that wrongly got as far as a dispatch
+/// succeed quietly; this one turns that into a named refusal instead.
+pub fn no_spec() -> impl FnMut(&str) -> Result<RecordedSpec, ReplayError> {
+    move |node: &str| {
+        Err(ReplayError::Malformed {
+            path: "inputs/specs.json".to_owned(),
+            detail: format!(
+                "`{node}` reached the spec supplier, but this case asserts the run returns before                  any dispatch"
+            ),
+        })
+    }
+}
+
+// ------------------------------------------------- the two in-process entry seams, shared
+//
+// **Promoted here at Slice 3, cycle 5 — moved, never copied.** `root.rs` held both privately for
+// §7d.10's two cases; `exit.rs` and `run.rs` now drive the same verb function, and two definitions
+// of "steps (1)-(7) over the fixture repository" can drift while both suites stay green against
+// different notions of the same run. §7d.16 item 3 puts the shared in-process seams in this file.
+
+/// The instant every in-process case builds its inputs at.
+///
+/// §7d.5 gives the composition root **one** clock read, and `prepare_inputs` takes `now` as a value
+/// for exactly that reason. One constant across every case, so `run_id` — a content hash over the
+/// input set, `results_at` included — is stable between them and a test never asserts against a
+/// value that moves with the wall clock.
+pub const FIXED_NOW: i64 = 1_760_000_000;
+
+/// Steps (1)–(7) over a `pack-min` fixture repository, through the REAL seam.
+///
+/// Never hand-built: `Resolved`'s fields are `pub`, but `exec: GitExec` and `worktree: WorktreePath`
+/// have no test constructor in reach, and a hand-built one would skip the very ordering steps
+/// (1)–(7) exist to fix.
+///
+/// # Panics
+/// If steps (1)–(7) refuse — which means the fixture, not the case under test, is wrong.
+#[must_use]
+pub fn resolved_over_pack_min(root: &Path, item: &str) -> rk_cli::verbs::run::Resolved {
+    let cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let args = rk_cli::cli::RunArgs {
+        item: item.to_owned(),
+        lane: None,
+    };
+    let env = Env::from_map(std::collections::BTreeMap::new());
+    rk_cli::verbs::run::through_step_seven(&cli, &args, &env, rk_cli::verbs::Startup::real())
+        .unwrap_or_else(|e| {
+            panic!("steps (1)-(7) resolve over the fixture repository for `{item}`: {e:?}")
+        })
+}
+
+/// The input set over a `pack-min` fixture repository, at [`FIXED_NOW`].
+///
+/// # Panics
+/// If the input set will not build — again a fixture fault, not the case's.
+#[must_use]
+pub fn inputs_over_pack_min(
+    resolved: &rk_cli::verbs::run::Resolved,
+) -> rk_kernel::replay::RunInputs {
+    rk_cli::verbs::run::prepare_inputs(resolved, FIXED_NOW)
+        .unwrap_or_else(|e| panic!("the input set builds over the fixture repository: {e:?}"))
+}
+
+/// The [`ActivitySpec`] every in-process case binds `pack-min`'s one activity to.
+///
+/// The schema is `ImplReport` — what `emit-report` declares it provides — so a scripted `Ok`
+/// carrying that schema COMMITS. A spec whose schema did not match would make `run_activity` mint
+/// `StepError::Schema` itself, and every case would be red on row 11 for a reason unrelated to
+/// what it names.
+#[must_use]
+pub fn any_activity_spec() -> ActivitySpec {
+    ActivitySpec {
+        card_digest: rk_types::digest::sha256(b"pack-min/cards/implementer.json"),
+        tools: vec!["StructuredOutput".to_owned()],
+        schema: rk_types::typed::SchemaId::new("ImplReport"),
+        timeout_secs: 900,
+        inputs: Vec::new(),
+    }
+}
+
+/// A committing result for [`any_activity_spec`] — the schema matches, so the dispatch commits.
+#[must_use]
+pub fn impl_report() -> Typed {
+    Typed::new(
+        rk_types::typed::SchemaId::new("ImplReport"),
+        serde_json::json!({ "summary": "pack-min" }),
+    )
+}

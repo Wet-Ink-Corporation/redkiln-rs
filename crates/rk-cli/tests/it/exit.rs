@@ -249,3 +249,188 @@ fn impl_region(text: &str, header: &str) -> String {
     }
     panic!("`{header}`'s braces never balance — the region cannot be read");
 }
+
+/// **AC-438's IN-PROCESS ELEVEN-ROW ARM** — §7d.4's *"the eleven `StepError` rows are driven
+/// in-process through the verb function with a `FakeHarness::scripted` returning each variant"*.
+///
+/// The three arms above pin the TABLE (its snapshot, its distinctness, the exhaustive `From`). None
+/// of them drives a run. This one pins that the verb **uses** the table: each variant goes through
+/// `run_with` once and the returned `Exit` is that variant's row.
+///
+/// # 🛑 WHY THE CLASS IS READ OFF THE JOURNAL AND NOT OFF `resume`'s ERROR
+///
+/// `Runtime::run_activity` carries a step's failure as a **value** in its report — *"A step's own
+/// failure is a value in the report (AC-032), never an error of this function"* — and
+/// `replay::dispatch_through` then turns an uncommitted report into
+/// `ReplayError::NotCommitted { step_id, activity_id_at_version }`, which has **two `String`
+/// members and no `StepError`**. So all eleven arrive at the CLI as the *same* error value and are
+/// indistinguishable from it alone.
+///
+/// The class survives in exactly one place: the row the harness appended before returning, through
+/// `StepError::event()` → `fakes.rs::event_for`. That map is **bijective over the eleven** —
+/// `StepFailed { class }` covers five, `StepRefused { class }` four, plus `StepCancelled` and
+/// `RateLimited` — and both class enums are CLOSED and `Deserialize`, so step (10) matches them
+/// exhaustively and a twelfth class is a compile error rather than a silent `ConfigError`.
+///
+/// # 🛑 ONE SCRIPT ELEMENT PER ROW, AND THAT IS ENOUGH FOR ALL ELEVEN
+///
+/// `pack-min` declares `[retry] attempts_cap = 1` (AC-029: declared, never defaulted). `retry::decide`
+/// checks the cap **before** the class, and `fsm::next_attempt` returns 1 on a fresh journal, so
+/// `1 >= 1` is `CapReached` for every redispatching class and `authorises_redispatch` is false. No
+/// variant re-dispatches, so no script runs dry into `Transport { detail: "script exhausted" }` —
+/// which §7d.5 names as the way *"a retried class would otherwise land on row 10 for a reason
+/// unrelated to the mapping"*.
+///
+/// # What this test does NOT claim
+///
+/// **Row 10 is not discriminated from an exhausted script.** `event_for` journals only
+/// `{ class, status }`; the `TransportKind` and the `detail` are not written and are not on the
+/// returned `Exit`. A scripted `Transport` and a dry script are observationally identical here. The
+/// `dispatches() == 1` assertion bounds it (a dry script needs a SECOND dispatch, which cap = 1
+/// forbids) and nothing stronger is claimed.
+///
+/// **Row 70 is not one of the eleven.** `Exit::PoisonedLockHalt` is never an `Ok` of a verb: it
+/// arrives as `Err(Halt::PoisonedLock { .. })` and becomes 70 only through `code_for`, which is the
+/// arm asserted at the foot. Its real instrument is §7d.10's
+/// `adr0118_poisoned_store_lock_halts_run_exit_70` over a genuinely poisoned lock.
+///
+/// Red by any variant returning a code other than its row — and, before step (10) read the class at
+/// all, red on all eleven at once with `Ok(Exit::ConfigError)`.
+#[test]
+fn ac438_table_driven_exit_codes_over_fixtures() {
+    // The eleven expected rows, in `rk-types`' own declaration order — the order
+    // `one_of_every_step_error` builds. Written out, because the whole content of this test is that
+    // the verb agrees with the table; deriving them through the same `From` impl the verb uses
+    // would assert nothing.
+    let expected = [
+        Exit::Transport,
+        Exit::Schema,
+        Exit::Timeout,
+        Exit::Cancelled,
+        Exit::NonZero,
+        Exit::RateLimited,
+        Exit::NotAdopted,
+        Exit::NotIsolated,
+        Exit::Platform,
+        Exit::Unsupported,
+        Exit::Overage,
+    ];
+    let variants = one_of_every_step_error();
+    assert_eq!(
+        variants.len(),
+        expected.len(),
+        "the eleven variants and the eleven expected rows are not the same length, so some row \
+         below is unasserted"
+    );
+
+    for (variant, want) in variants.into_iter().zip(expected) {
+        let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+        let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
+        // Step (8)'s BINDING, which cycle 6 will perform through the real `Binder` and which the
+        // in-process cases supply themselves. It is not optional decoration: `RunInputs::specs()`
+        // is what `FsmContext::with_activations` is fed, so WITHOUT a binding the FSM has no
+        // `activity_id@version` for the node and the runtime boundary refuses before any dispatch
+        // with "`emit-report` is not an `activity_id@version`" (ADR-0097 decision 2) — exit 3 for a
+        // reason that has nothing to do with the exit table. Measured, before the binding was added.
+        let inputs = crate::support::inputs_over_pack_min(&resolved).with_spec(
+            "emit-report",
+            rk_kernel::replay::RecordedSpec::supplied("emit-report@1", emit_report_spec()),
+        );
+
+        let trace = crate::support::Trace::new();
+        let store = crate::support::counting_store(&trace);
+        let harness = std::sync::Arc::new(crate::support::ScriptedHarness::scripted(vec![Err(
+            variant.clone(),
+        )]));
+        let ports = crate::support::ports(
+            std::sync::Arc::clone(&harness) as std::sync::Arc<dyn rk_ports::harness::Harness>,
+            &store,
+        );
+
+        // The token is NEVER fired. `FakeHarness::dispatch` checks its own token BEFORE the script
+        // and would substitute `Cancelled { by: Operator }` for whatever was scripted; `run_with`
+        // would return 130 before the dispatch. Either would make this row measure the token.
+        let token = rk_ports::cancel::CancelToken::new();
+        let mut supply = crate::support::any_spec("emit-report@1", emit_report_spec());
+
+        let got = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token);
+
+        assert_eq!(
+            got,
+            Ok(want),
+            "{variant:?} must return {want:?} ({}); step (10) either collapsed the class or read \
+             the wrong row",
+            want.code()
+        );
+
+        // The port was REACHED exactly once. Without this, a row could land on the right code
+        // because the run refused BEFORE the dispatch — a missing `results_at`, an unbound spec —
+        // and every one of those refusals is exit 3 today, so the wrong reason is reachable.
+        assert_eq!(
+            harness.dispatches(),
+            1,
+            "{variant:?} did not reach the harness exactly once ({} dispatches), so the exit above \
+             is not a reading of a dispatch",
+            harness.dispatches()
+        );
+
+        // And the class the exit was derived from was WRITTEN, not inferred: the harness appended
+        // exactly one error row of the kind this variant mints.
+        let appended: Vec<rk_types::event_kind::EventKind> = trace
+            .steps()
+            .into_iter()
+            .filter_map(|s| match s {
+                crate::support::Step::Append(kind) => Some(kind),
+                crate::support::Step::Reconcile(_) | crate::support::Step::Query => None,
+            })
+            .collect();
+        let want_kind = error_row_kind(&variant);
+        assert!(
+            appended.contains(&want_kind),
+            "{variant:?} appended no {want_kind:?} row, so the exit was not read off the journal. \
+             Rows appended, in order: {appended:?}"
+        );
+    }
+}
+
+/// The spec the fixture's one activity binds to. `emit-report` provides `ImplReport`.
+fn emit_report_spec() -> rk_types::activity::ActivitySpec {
+    rk_types::activity::ActivitySpec {
+        card_digest: rk_types::digest::sha256(b"pack-min/cards/implementer.json"),
+        tools: vec!["StructuredOutput".to_owned()],
+        schema: rk_types::typed::SchemaId::new("ImplReport"),
+        timeout_secs: 900,
+        inputs: Vec::new(),
+    }
+}
+
+/// The event kind `StepError::event()` mints for a variant — the row whose class step (10) reads.
+fn error_row_kind(error: &StepError) -> rk_types::event_kind::EventKind {
+    use rk_types::event::ErrorEvent;
+    use rk_types::event_kind::EventKind;
+    match error.event() {
+        ErrorEvent::StepFailed { .. } => EventKind::StepFailed,
+        ErrorEvent::StepCancelled => EventKind::StepCancelled,
+        ErrorEvent::RateLimited => EventKind::RateLimited,
+        ErrorEvent::StepRefused { .. } => EventKind::StepRefused,
+    }
+}
+
+/// **Row 70, and the only way it is reached.** Not an `Ok` of any verb: a poisoned lock is a
+/// [`Halt`], and `code_for` is the one place the table's `70` is produced.
+#[test]
+fn ac438_poisoned_lock_halt_is_seventy_through_code_for() {
+    let halt = rk_cli::exit::Halt::PoisonedLock {
+        lock: "store",
+        verb: "the run",
+    };
+    assert_eq!(
+        rk_cli::code_for(&Err(halt)),
+        70,
+        "a poisoned-lock halt is exit 70 (ADR-0118 clause 6; §7d.4's table)"
+    );
+    assert!(
+        ALL.contains(&Exit::PoisonedLockHalt),
+        "row 70 is absent from the closed table it belongs to"
+    );
+}

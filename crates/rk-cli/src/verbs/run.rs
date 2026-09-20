@@ -171,36 +171,73 @@ pub struct Resolved {
     pub item: Item,
     /// The stage the item record carries (RT-50).
     pub stage: String,
+    /// The kernel's `Config`, **constructed once** at step (4) and threaded from here into
+    /// `RunInputs::with_config` — ADR-0083's *"the composition root builds it; the kernel reads
+    /// it and never makes one"*. See the 🛑 note at its one construction site.
+    pub config: rk_kernel::config::Config,
 }
 
 /// The outer verb.
 ///
+/// # 🛑 STEP (8)'S ADAPTER CONSTRUCTION IS **CYCLE 6'S**, AND THE STUB BELOW IS THE DECISION
+///
+/// The contract's critic sequences cycle 5 as *"run's DISPATCH PATH (steps 8–10 minus the gate) …
+/// **Fake harness only**"* and puts *"real `ClaudeHarness` + the fixture child"* in cycle 6. The
+/// contract's route (B), which the critic endorses, has the outer `run(..)` perform (5) and (8) and
+/// an inner [`run_with`] that the in-process tests call — and says of the real adapter that **"the
+/// test builds the real adapter itself"**, leaving (5) and (8) *"covered only by spawned tests"*:
+/// `ac413_…` (cycle 3), `ac403_…` (cycle 6), `ac486_…`'s spawned arm (cycle 4).
+///
+/// So this cycle builds the whole inner path and **does not** build the real `Harness`. The
+/// alternative — wiring the outer path now and handing `Ports` a `FakeHarness` — would put a stub
+/// in the shipped binary, which golden constraint 4 exists to catch, and it is strictly worse than
+/// an honest refusal. Wiring it with the REAL harness is what the parked `d109463` did, and it
+/// spawned a child that never returned: `rk-fixture-child-claude` takes `hold` when
+/// `RK_FIXTURE_MODE` is unset, and cycle 6 owns setting it.
+///
+/// Every value this arm would need is already resolved; nothing about the stub is load-bearing.
+///
 /// # Errors
 /// [`Halt::PoisonedLock`] from the store acquisition. Every other refusal is a value.
 pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result<Exit, Halt> {
-    match through_step_seven(cli, args, env, startup) {
-        Err(exit) => Ok(exit),
-        Ok(resolved) => {
-            let opened =
-                match rk_adapter_sqlite::SqliteStore::open(&resolved.exec, &resolved.worktree) {
-                    Ok(store) => store,
-                    Err(e) => {
-                        eprintln!("redkiln: {e}");
-                        return Ok(Exit::ConfigError);
-                    }
-                };
-            let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(opened));
-            let token = CancelToken::new();
-            run_with(&resolved, &store, &token)
+    let resolved = match through_step_seven(cli, args, env, startup) {
+        Ok(resolved) => resolved,
+        Err(exit) => return Ok(exit),
+    };
+
+    // ---- (5) the store. AC-413's identity check is inside `open`. ------------------------------
+    let opened = match rk_adapter_sqlite::SqliteStore::open(&resolved.exec, &resolved.worktree) {
+        Ok(store) => store,
+        Err(e) => {
+            eprintln!("redkiln: {e}");
+            return Ok(Exit::ConfigError);
         }
-    }
+    };
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(opened));
+    // Held so the type of the seam cycle 6 fills is visible here rather than only in a diff: the
+    // `Ports` this arm will build takes exactly this `Arc`.
+    drop(store);
+
+    // Step (8)'s adapter construction is cycle 6's — see this function's own note. The inner path
+    // BELOW it is built and driven in-process by this cycle's five tests; only the construction of
+    // the real `Harness` and the call through to `run_with` wait.
+    eprintln!("redkiln: `run` reaches step (8), which is not built at this cycle");
+    Ok(Exit::ConfigError)
 }
 
-/// The inner verb — the in-process twin §7d.10's two tests drive.
+/// The inner verb — the in-process twin every Slice-3 loop test drives.
 ///
-/// **The store ARRIVES pre-built**, which is the whole reason the seam is shaped this way: §7d.10's
+/// **The ports ARRIVE pre-built**, which is the whole reason the seam is shaped this way: §7d.10's
 /// `adr0118_poisoned_store_lock_halts_run_exit_70` hands *"the verb function … the same poisoned
-/// `Arc`"*, and a verb that opened its own store could not be given one.
+/// `Arc`"*, and a verb that opened its own store could not be given one. The contract's route (B)
+/// is the same shape: *"a `run_with(ports: Ports, supply_spec, …)` that replaces (5) and (8), with
+/// the outer `run(..)` doing them and delegating."*
+///
+/// **`supply_spec` IS AN ARGUMENT, NOT A PRIVATE CLOSURE.** §7d.5: a node bound at (8) is served
+/// from `inputs`, and a node first seen inside the loop is bound through the same `Binder` the
+/// closure holds — *"the fake-harness tests hand a supplier over `RecordedSpec::supplied(..)`
+/// values"*. A `run_with` that built its own refusing supplier could not be handed one, and every
+/// fake-harness run would be red on `inputs/specs.json` before any dispatch (RT-55's wrong reason).
 ///
 /// **The token is a FUNCTION ARGUMENT**, never an environment toggle. §7d.10 in terms: *"no env
 /// toggle — `RK_TEST_PREFIRE_CANCEL` is **not** used; AC-474 forbids it; the token is a function
@@ -211,9 +248,18 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
 /// recovery, so there is no `into_inner` on this path and no row is appended on the way out.
 pub fn run_with(
     resolved: &Resolved,
-    store: &Arc<Mutex<dyn EventStore>>,
+    inputs: &rk_kernel::replay::RunInputs,
+    ports: rk_ports::root::Ports,
+    supply_spec: &mut dyn FnMut(
+        &str,
+    ) -> Result<
+        rk_kernel::replay::RecordedSpec,
+        rk_kernel::replay::ReplayError,
+    >,
     token: &CancelToken,
 ) -> Result<Exit, Halt> {
+    let store = Arc::clone(&ports.store);
+    let store = &store;
     // §7d.5: "the root checks `token.is_cancelled()` at each step boundary and returns
     // `Ok(Exit::SignalOutsideDispatch)`, 130, … having written nothing partial (every store write is
     // one row; every git write is one commit)."
@@ -239,10 +285,7 @@ pub fn run_with(
         return Ok(Exit::SignalOutsideDispatch);
     }
 
-    // Steps (8)-(10) are the next cycle's. This arm is replaced there; it is NOT a permanent stub,
-    // and the slice does not land while it stands.
-    eprintln!("redkiln: `run` reaches step (8), which is not built at this cycle");
-    Ok(Exit::ConfigError)
+    resume_and_read(resolved, inputs, ports, supply_spec, token)
 }
 
 /// Steps (1)–(7), in §7d.5's order. `Err(Exit)` is a refusal; `Ok` hands step (8) its inputs.
@@ -279,10 +322,28 @@ pub fn through_step_seven(
     // ---- (3) the ONE environment read happened in `main`; this verb is handed the value.
     // ---- (4) adapter resolution, ONCE, through the counting seam (AC-485's second). A refusal
     // here is exit 3 BEFORE any process is spawned and before any store write (AC-486).
-    let _adapters = startup.adapters.resolve(&config, env).map_err(|e| {
+    let adapters = startup.adapters.resolve(&config, env).map_err(|e| {
         eprintln!("redkiln: {e}");
         Exit::ConfigError
     })?;
+
+    // 🛑 THE `Config` VALUE, CONSTRUCTED ONCE, HERE, AND THREADED (ADR-0083).
+    //
+    // §7d.5 numbers the construction at step (8), but the value is a function of step (4)'s
+    // resolved names and step (2)'s `unread_window_runs` and of nothing later, and §7d.5 also has
+    // the invocation's `reconcile_started` row carry its digest at step (6). Building it where its
+    // last input arrives is what makes "constructed once at the root" a property of the code rather
+    // than of a convention: there is exactly one `Config::new` call in this crate, and every reader
+    // takes the value from [`Resolved`].
+    //
+    // `Config::new` SORTS `toolchains` itself, so the recorded form is a function of the set and not
+    // of the order the file listed it in — the same rule `RunInputs::with_catalog` applies.
+    let kernel_config = rk_kernel::config::Config::new(
+        adapters.harness(),
+        adapters.store(),
+        adapters.toolchains(),
+        config.doctor.unread_window_runs,
+    );
 
     // ---- (7) THE PACK SET, BEFORE ANY LANE DERIVATION.
     //
@@ -382,6 +443,7 @@ pub fn through_step_seven(
         extras,
         item,
         stage,
+        config: kernel_config,
     })
 }
 
@@ -473,4 +535,284 @@ fn build_item(record: &ItemRecord) -> Item {
         };
     }
     item
+}
+
+// ------------------------------------------------------------------ steps (8)-(10), the inner path
+
+/// The recorded input set, with the tree hash taken over the repository.
+///
+/// **`pub` on purpose**: the in-process tests build a `RunInputs` at a FIXED instant so nothing
+/// they assert moves with the wall clock, and §7d.5 gives the root exactly one clock read — a test
+/// that read its own would be a second one.
+///
+/// # Errors
+/// An [`Exit`] row when a registry will not read, or the tree hash cannot be taken.
+pub fn prepare_inputs(resolved: &Resolved, now: i64) -> Result<rk_kernel::replay::RunInputs, Exit> {
+    let tree_hash = rk_git::tree::tree_hash(
+        &resolved.exec,
+        &resolved.worktree,
+        &resolved.common_dir,
+        &rk_git::tree::TreeBasis::WorkingState,
+    )
+    .map_err(|e| {
+        eprintln!("redkiln: the tree hash could not be taken: {e:?}");
+        Exit::ConfigError
+    })?;
+    base_inputs(resolved, tree_hash.as_str(), now)
+}
+
+/// Every `.redkiln/catalog/*.toml`, by name, in sorted order so two runs read one order.
+fn catalog_sources(root: &Path) -> Result<Vec<(String, String)>, Exit> {
+    let dir = root.join(".redkiln").join("catalog");
+    if !dir.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir)
+        .map_err(|e| {
+            eprintln!("redkiln: {}: {e}", dir.display());
+            Exit::ConfigError
+        })?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().is_some_and(|x| x == "toml"))
+        .collect();
+    paths.sort();
+    let mut out = Vec::new();
+    for path in paths {
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let src = std::fs::read_to_string(&path).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", path.display());
+            Exit::ConfigError
+        })?;
+        out.push((name, src));
+    }
+    Ok(out)
+}
+
+/// The recorded input set, minus the `with_spec` bindings step (8) adds.
+///
+/// # 🛑 ONE WALL-CLOCK READ, AND BOTH DERIVED VALUES COME OFF IT
+///
+/// The gate deadline is `now + gate_deadline_secs` and `results_at` is that same `now`. Two reads
+/// would make a run's own deadline and its recorded commit instant disagree by however long step
+/// (8) took, and §7d.5 gives the composition root exactly one read.
+///
+/// # 🛑 `.results_at(..)` IS ABSENT FROM THE WHOLE STAGE FILE, AND EVERY DISPATCHING RUN REFUSES
+/// WITHOUT IT
+///
+/// `grep -n results_at runbook/phase-1/s7d-cli-and-migrate.md` returns **zero hits**, yet
+/// `derive`'s dispatch envelope calls `runtime.require_results_at()?`, which refuses rather than
+/// defaulting — *"a zero `at` is a commit stamped at the epoch"*. `RuntimeContext::supplied` leaves
+/// it `None`, so a root that chained only the tree hash and the deadline would refuse on
+/// `inputs/runtime.json` **before any dispatch** — the wrong reason for four of this cycle's five
+/// tests. RAISED as a stage-file omission; this chain is the repair.
+fn base_inputs(
+    resolved: &Resolved,
+    tree_hash: &str,
+    now: i64,
+) -> Result<rk_kernel::replay::RunInputs, Exit> {
+    let root = Path::new(resolved.worktree.as_str()).to_path_buf();
+    let sources = catalog_sources(&root)?;
+    let artifacts_src = std::fs::read_to_string(root.join(".redkiln").join("artifacts.toml"))
+        .map_err(|e| {
+            eprintln!("redkiln: .redkiln/artifacts.toml: {e}");
+            Exit::ConfigError
+        })?;
+    let facets_src =
+        std::fs::read_to_string(root.join(".redkiln").join("facets.toml")).map_err(|e| {
+            eprintln!("redkiln: .redkiln/facets.toml: {e}");
+            Exit::ConfigError
+        })?;
+    let borrowed: Vec<(&str, &str)> = sources
+        .iter()
+        .map(|(n, s)| (n.as_str(), s.as_str()))
+        .collect();
+    let deadline = now.saturating_add(resolved.extras.gate_deadline_secs);
+    Ok(rk_kernel::replay::RunInputs::new(&resolved.stage)
+        .with_pack(&format!("{}.toml", resolved.pack_name), &resolved.pack_src)
+        .with_catalog(&borrowed)
+        .with_artifacts("artifacts.toml", &artifacts_src)
+        .with_facets(&facets_src)
+        .with_item(&resolved.item)
+        // ONE `with_config`, over the value step (4) constructed — never a second `Config::new`.
+        .with_config(resolved.config.clone())
+        .with_runtime(
+            rk_kernel::replay::RuntimeContext::supplied(tree_hash, deadline).results_at(now),
+        ))
+}
+
+/// Steps (9) and (10): the journal read, `replay::resume`, the run record, and the terminal read.
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from the journal acquisition.
+fn resume_and_read(
+    resolved: &Resolved,
+    inputs: &rk_kernel::replay::RunInputs,
+    ports: rk_ports::root::Ports,
+    supply_spec: &mut dyn FnMut(
+        &str,
+    ) -> Result<
+        rk_kernel::replay::RecordedSpec,
+        rk_kernel::replay::ReplayError,
+    >,
+    token: &CancelToken,
+) -> Result<Exit, Halt> {
+    let item_id = resolved.item.id().to_owned();
+    let store = Arc::clone(&ports.store);
+
+    // `prior` is the store's journal FOR THE ITEM, so the fold `next_action` reads is the recorded
+    // one and a second `run` resumes past an applied answer instead of re-deriving `OpenGate` at
+    // reach 1. This is also what makes a committed step memoised across two runs (AC-401).
+    let prior = {
+        let guard = crate::store::acquire(&store, "the run")?;
+        match guard.query(rk_kernel::runtime::journal_query(&item_id)) {
+            Ok(rows) => rows,
+            Err(e) => {
+                eprintln!("redkiln: the store could not be read: {e:?}");
+                return Ok(Exit::ConfigError);
+            }
+        }
+    };
+
+    if token.is_cancelled() {
+        eprintln!("redkiln: interrupted; nothing after the journal read for `{item_id}` ran.");
+        return Ok(Exit::SignalOutsideDispatch);
+    }
+
+    let recorded = match rk_kernel::replay::resume(inputs, ports, &prior, supply_spec) {
+        Ok(run) => run,
+        // 🛑 A FAILED DISPATCH IS NOT A CONFIGURATION ERROR, AND THE CLASS IS NOT ON THIS VALUE.
+        //
+        // `Runtime::run_activity` carries a step's failure as a VALUE in its report — "a step's own
+        // failure is a value in the report (AC-032), never an error of this function" — and
+        // `replay::dispatch_through` turns an uncommitted report into `NotCommitted { step_id,
+        // activity_id_at_version }`, whose two members are both `String`. All eleven `StepError`
+        // rows therefore arrive here as the SAME value.
+        //
+        // The class survives in exactly one place: the row the harness appended before returning,
+        // through `StepError::event()`. That map is bijective over the eleven, so the journal is
+        // where §7d.4's table is read from. See [`exit_for_uncommitted`].
+        Err(rk_kernel::replay::ReplayError::NotCommitted {
+            step_id,
+            activity_id_at_version,
+        }) => {
+            eprintln!(
+                "redkiln: the dispatch of `{step_id}` ({activity_id_at_version}) did not commit."
+            );
+            return exit_for_uncommitted(&store, &item_id);
+        }
+        Err(e) => {
+            eprintln!("redkiln: {e}");
+            return Ok(Exit::ConfigError);
+        }
+    };
+
+    // §7d.7's persistence: the run record `explain` reads.
+    let runs_dir = resolved.common_dir.join("redkiln").join("runs");
+    if let Err(e) = rk_kernel::replay::write_run(&runs_dir, &recorded) {
+        eprintln!("redkiln: the run record could not be written: {e}");
+        return Ok(Exit::ConfigError);
+    }
+
+    Ok(terminal_read(&item_id, &recorded))
+}
+
+/// Step (10): the terminal read.
+///
+/// **`run` NEVER WAITS** — no channel, prompt, socket or sleep is entered on any arm (golden
+/// constraint 2). A gate among the resumed run's new events is an EXIT, not a wait.
+fn terminal_read(item_id: &str, recorded: &rk_kernel::replay::RecordedRun) -> Exit {
+    let gate = recorded
+        .events
+        .iter()
+        .rev()
+        .find(|e| e.kind == rk_types::event_kind::EventKind::GateOpened);
+    if let Some(row) = gate {
+        let token_hex = row
+            .payload
+            .get("token")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default();
+        println!("gate {token_hex} is open for {item_id}");
+        return Exit::Success;
+    }
+    Exit::Success
+}
+
+/// §7d.4's table, applied to a dispatch that did not commit.
+///
+/// The class is read off the **journal**, because `ReplayError::NotCommitted` does not carry it —
+/// see the note at the call site. The LAST error row wins: a run that retried within its cap wrote
+/// one row per attempt, and the exit describes the attempt the run ended on.
+///
+/// A run that did not commit and wrote no error row at all is a configuration outcome rather than a
+/// class: `Runtime::run_activity` MINTS `StepError::Schema` itself when a returned `Typed`'s schema
+/// is not the spec's, and on that path the harness returned `Ok` and appended nothing. Nothing in
+/// Slice 3 reaches it — the in-process arm scripts `Err` values, which the harness always journals —
+/// but cycle 6's F20 fixture does, and this arm is where it will surface. **RAISED rather than
+/// guessed at here**: a `ConfigError` for a case whose true row is `11` is visibly wrong, and
+/// writing a speculative `Schema` here would make it invisible instead.
+fn exit_for_uncommitted(store: &Arc<Mutex<dyn EventStore>>, item_id: &str) -> Result<Exit, Halt> {
+    let rows = {
+        let guard = crate::store::acquire(store, "the run")?;
+        match guard.query(rk_kernel::runtime::journal_query(item_id)) {
+            Ok(rows) => rows,
+            Err(e) => {
+                eprintln!("redkiln: the store could not be read: {e:?}");
+                return Ok(Exit::ConfigError);
+            }
+        }
+    };
+    let Some(exit) = rows.iter().rev().find_map(exit_for_error_row) else {
+        eprintln!(
+            "redkiln: the dispatch did not commit and the journal carries no error row for \
+             `{item_id}`, so no row of the exit table describes it."
+        );
+        return Ok(Exit::ConfigError);
+    };
+    Ok(exit)
+}
+
+/// One journal row → its row of §7d.4's table, or `None` if the row is not an error row.
+///
+/// **The two class matches carry no wildcard, and that is the point.** `FailureClass` and
+/// `RefusalClass` are closed enums in `rk-types`, and `StepError::event()` is documented as
+/// *"Exactly one per `StepError` variant"* — so a twelfth `StepError` forces a new class arm there,
+/// and a new class arm is a compile error HERE rather than a silent `ConfigError`. That is the same
+/// guarantee `impl From<&StepError> for Exit` gives one level up, kept across the journal round
+/// trip; matching on the payload's STRING would have thrown it away.
+fn exit_for_error_row(row: &rk_types::event::Event) -> Option<Exit> {
+    use rk_types::event::{FailureClass, RefusalClass};
+    use rk_types::event_kind::EventKind;
+
+    // A free generic rather than a closure: a closure would be monomorphised to whichever class
+    // type reached it first, and the two arms below read different ones.
+    fn class<T: serde::de::DeserializeOwned>(row: &rk_types::event::Event) -> Option<T> {
+        row.payload
+            .get("class")
+            .cloned()
+            .and_then(|v| serde_json::from_value(v).ok())
+    }
+    match row.kind {
+        EventKind::StepFailed => Some(match class::<FailureClass>(row)? {
+            FailureClass::Transport => Exit::Transport,
+            FailureClass::Schema => Exit::Schema,
+            FailureClass::Timeout => Exit::Timeout,
+            FailureClass::NonZero => Exit::NonZero,
+            FailureClass::Platform => Exit::Platform,
+        }),
+        EventKind::StepRefused => Some(match class::<RefusalClass>(row)? {
+            RefusalClass::NotAdopted => Exit::NotAdopted,
+            RefusalClass::NotIsolated => Exit::NotIsolated,
+            RefusalClass::Unsupported => Exit::Unsupported,
+            RefusalClass::Overage => Exit::Overage,
+        }),
+        EventKind::StepCancelled => Some(Exit::Cancelled),
+        // Both the failure row and the retry MARK carry this kind (they differ only in the
+        // payload's `kind = "retry_at"`), and both mean the same row of the table.
+        EventKind::RateLimited => Some(Exit::RateLimited),
+        _ => None,
+    }
 }

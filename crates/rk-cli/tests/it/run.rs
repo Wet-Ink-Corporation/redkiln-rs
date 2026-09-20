@@ -208,3 +208,162 @@ fn adr0128_lane_maps_to_pack_fix_bug_standard_story_story() {
         "a lane refusal created the run-owned worktrees directory"
     );
 }
+
+/// **AC-401 — a second `run` issues NO dispatch for a step the first one committed.**
+///
+/// §7d.5: *"Two runs against the two-activity `pack-min/` with `FakeHarness::scripted`; after the
+/// second: **exactly one `dispatch` row**"* — per activation, the two-activity variant assembling
+/// two nodes.
+///
+/// # 🛑 THE ITEM IS `story-1`, AND THAT IS NOT INTERCHANGEABLE WITH `bug-1`
+///
+/// `story-item.toml` carries `has_repro = false`, a DECIDED false, so step 2's `Tri::False` arm
+/// adds nothing and the required set is the baseline alone. `bug-item.toml` carries
+/// `has_repro = true`, which fires the pack's one `require` row for `TestReport` — and the
+/// registry says of that kind, in terms, *"It is produced by nothing in this catalog ON
+/// PURPOSE"*, so step 4 classifies it `Unsatisfiable` and the selection carries a `gate_opened`
+/// row. This test is about memoisation, not gates, and cycle 5 is *"steps 8–10 minus the gate"*.
+///
+/// # 🛑 RUN 2'S SCRIPT IS EMPTY, AND THAT IS THE DISCRIMINATING CHOICE
+///
+/// A non-empty script would let a re-dispatch SUCCEED and the test would pass over the very bug it
+/// names. With an empty one, any dispatch at all runs the fake dry into
+/// `Transport { detail: "script exhausted" }` — so a re-dispatching run cannot return `Success`,
+/// and the assertion has somewhere to fail.
+#[test]
+fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::TwoActivities);
+    let resolved = crate::support::resolved_over_pack_min(repo.path(), "story-1");
+    let inputs = crate::support::inputs_over_pack_min(&resolved)
+        .with_spec(
+            "emit-report",
+            rk_kernel::replay::RecordedSpec::supplied(
+                "emit-report@1",
+                crate::support::any_activity_spec(),
+            ),
+        )
+        .with_spec(
+            "second-activity",
+            rk_kernel::replay::RecordedSpec::supplied(
+                "second-activity@1",
+                crate::support::any_activity_spec(),
+            ),
+        );
+
+    // ONE store across both runs — the whole mechanism is that run 2 reads run 1's journal.
+    let trace = crate::support::Trace::new();
+    let store = crate::support::counting_store(&trace);
+    let token = rk_ports::cancel::CancelToken::new();
+
+    // ---- RUN 1: both nodes dispatch and commit. ------------------------------------------------
+    let h1 = std::sync::Arc::new(crate::support::ScriptedHarness::scripted(vec![
+        Ok(crate::support::impl_report()),
+        Ok(crate::support::impl_report()),
+    ]));
+    let p1 = crate::support::ports(
+        std::sync::Arc::clone(&h1) as std::sync::Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let mut s1 = crate::support::no_spec();
+    let exit1 = rk_cli::verbs::run::run_with(&resolved, &inputs, p1, &mut s1, &token)
+        .expect("a sound lock is not a halt");
+    assert_eq!(
+        exit1,
+        rk_cli::exit::Exit::Success,
+        "run 1 did not complete ({exit1:?}), so there is no memoised state for run 2 to skip"
+    );
+    assert_eq!(
+        h1.dispatches(),
+        2,
+        "run 1 reached the port {} times; the two-activity pack assembles two nodes and both must \
+         dispatch, or run 2 has nothing to memoise",
+        h1.dispatches()
+    );
+
+    let rows1 = store
+        .lock()
+        .expect("the fixture store's lock is sound")
+        .query(rk_kernel::runtime::journal_query("story-1"))
+        .expect("the journal reads");
+    let dispatches1 = rows1
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::Dispatch)
+        .count();
+    let committed1 = rows1
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::ActivityCommitted)
+        .count();
+    assert_eq!(
+        (dispatches1, committed1),
+        (2, 2),
+        "run 1 wrote {dispatches1} dispatch and {committed1} activity_committed rows; both nodes \
+         must have committed or the memo below is about nothing"
+    );
+    let kinds1: Vec<rk_types::event_kind::EventKind> = rows1.iter().map(|e| e.kind).collect();
+    let appends1 = trace.steps().len();
+
+    // ---- RUN 2: the SAME inputs, the SAME store, and an EMPTY script. --------------------------
+    let h2 = std::sync::Arc::new(crate::support::ScriptedHarness::scripted(Vec::new()));
+    let p2 = crate::support::ports(
+        std::sync::Arc::clone(&h2) as std::sync::Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let mut s2 = crate::support::no_spec();
+    let exit2 = rk_cli::verbs::run::run_with(&resolved, &inputs, p2, &mut s2, &token)
+        .expect("a sound lock is not a halt");
+
+    // THE PRIMARY INSTRUMENT. A run that re-dispatched would exhaust the empty script into
+    // `Transport` and return 10, not 0.
+    assert_eq!(
+        exit2,
+        rk_cli::exit::Exit::Success,
+        "run 2 returned {exit2:?}. With an EMPTY script that means it dispatched again: the fold \
+         was not seeded from the store, so a committed activation was selected a second time"
+    );
+    assert_eq!(
+        h2.dispatches(),
+        0,
+        "run 2 reached the port {} times. Every activation the first run committed is memoised; a \
+         second dispatch of one is AC-401's whole negative",
+        h2.dispatches()
+    );
+
+    // THE JOURNAL IS UNCHANGED — not merely "no new dispatch", but no new row of any kind.
+    let rows2 = store
+        .lock()
+        .expect("the fixture store's lock is sound")
+        .query(rk_kernel::runtime::journal_query("story-1"))
+        .expect("the journal reads");
+    let kinds2: Vec<rk_types::event_kind::EventKind> = rows2.iter().map(|e| e.kind).collect();
+    assert_eq!(
+        kinds2,
+        kinds1,
+        "run 2 changed the journal. It appended: {:?}",
+        &kinds2[kinds1.len().min(kinds2.len())..]
+    );
+
+    // AND NOTHING WAS WRITTEN AT ALL, read off the ORDERED trace rather than inferred from a
+    // count: a run that appended and then somehow matched the earlier kinds would still be caught.
+    let after: Vec<crate::support::Step> = trace.steps().into_iter().skip(appends1).collect();
+    assert!(
+        after
+            .iter()
+            .all(|s| matches!(s, crate::support::Step::Query)),
+        "run 2 wrote to the store. It is a READ of a memoised journal and nothing else; it did: \
+         {after:?}"
+    );
+
+    // AND IT DID NOT RE-OPEN THE PLAN. `resume` skips the opening rows only when the journal
+    // already carries a `dag_assembled`; a second pair here would mean it re-assembled.
+    for kind in [
+        rk_types::event_kind::EventKind::DagAssembled,
+        rk_types::event_kind::EventKind::StageTransition,
+    ] {
+        assert_eq!(
+            rows2.iter().filter(|e| e.kind == kind).count(),
+            1,
+            "the journal carries more than one {kind:?} row, so run 2 re-opened a plan the store \
+             already held"
+        );
+    }
+}

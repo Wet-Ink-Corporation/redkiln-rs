@@ -338,24 +338,6 @@ fn spawn_status(cwd: &Path, args: &[&str]) -> std::process::Output {
     crate::support::output_bounded(&mut cmd)
 }
 
-/// Steps (1)-(7) over a `pack-min` fixture repository, for the two in-process cases below.
-///
-/// Module level rather than inside each test: `clippy::items_after_statements` is DENIED
-/// workspace-wide.
-fn resolved_over_pack_min(root: &Path) -> rk_cli::verbs::run::Resolved {
-    let cli = rk_cli::cli::Cli {
-        cwd: Some(root.to_path_buf()),
-        command: rk_cli::cli::Command::Status,
-    };
-    let args = rk_cli::cli::RunArgs {
-        item: "bug-1".to_owned(),
-        lane: None,
-    };
-    let env = rk_cli::env::Env::from_map(std::collections::BTreeMap::new());
-    rk_cli::verbs::run::through_step_seven(&cli, &args, &env, rk_cli::verbs::Startup::real())
-        .unwrap_or_else(|e| panic!("steps (1)-(7) resolve over the fixture repository: {e:?}"))
-}
-
 /// **H-2, RA-M-04 — a token fired BEFORE the run starts exits 130 and writes nothing partial.**
 ///
 /// §7d.10, verbatim: *"the verb function called with a token fired **before** `run` starts (no env
@@ -374,7 +356,7 @@ fn signal_outside_dispatch_exits_130_writes_nothing_partial() {
     let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
     let root = repo.path();
     let porcelain_before = crate::porcelain(root);
-    let resolved = resolved_over_pack_min(root);
+    let resolved = crate::support::resolved_over_pack_min(root, "bug-1");
 
     let token = CancelToken::new();
     token.cancel();
@@ -384,7 +366,13 @@ fn signal_outside_dispatch_exits_130_writes_nothing_partial() {
     );
 
     let store = locked_store();
-    let exit = rk_cli::verbs::run::run_with(&resolved, &store, &token)
+    let inputs = crate::support::inputs_over_pack_min(&resolved);
+    let ports = crate::support::ports(
+        Arc::new(rk_ports::fakes::FakeHarness::scripted(Vec::new())),
+        &store,
+    );
+    let mut supply = crate::support::no_spec();
+    let exit = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token)
         .expect("a pre-fired token is an EXIT, not a halt");
 
     // (1) the return, THEN (2) the absences — §7d.14's "two things in order".
@@ -452,12 +440,18 @@ fn signal_outside_dispatch_exits_130_writes_nothing_partial() {
 #[test]
 fn adr0118_poisoned_store_lock_halts_run_exit_70() {
     let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
-    let resolved = resolved_over_pack_min(repo.path());
+    let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
 
     // ---- Part A: the verb halts. ----------------------------------------------------------------
     let poisoned = crate::support::poisoned_store();
     let token = CancelToken::new();
-    let result = rk_cli::verbs::run::run_with(&resolved, &poisoned, &token);
+    let inputs = crate::support::inputs_over_pack_min(&resolved);
+    let ports = crate::support::ports(
+        Arc::new(rk_ports::fakes::FakeHarness::scripted(Vec::new())),
+        &poisoned,
+    );
+    let mut supply = crate::support::no_spec();
+    let result = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token);
 
     match &result {
         Ok(exit) => panic!(
@@ -555,5 +549,542 @@ fn adr0118_poisoned_store_lock_halts_run_exit_70() {
         hits.is_empty(),
         "a poison RECOVERY is on the product path — ADR-0118's rejected third option:\n{}",
         hits.join("\n")
+    );
+}
+
+/// The environment-read spellings the ADR-0083 ban covers — Checkpoint 7d's own pattern.
+const ENV_SPELLINGS: [&str; 4] = ["std::env::var", "env::var(", "env::vars(", "env::var_os("];
+
+/// Every `(path, line, text)` in `dir`'s Rust files whose CODE (never its prose) carries `needle`.
+fn code_hits(dir: &Path, needles: &[&str]) -> Vec<String> {
+    let mut hits = Vec::new();
+    for file in crate::rs_files(dir) {
+        let text = std::fs::read_to_string(&file).expect("a source file");
+        for (line_no, line) in code_lines(&text) {
+            if needles.iter().any(|n| line.contains(n)) {
+                hits.push(format!("{}:{line_no}: {}", file.display(), line.trim()));
+            }
+        }
+    }
+    hits
+}
+
+/// **ADR-0083, RB-M-05 — the `Config` is built ONCE at the composition root and threaded.**
+///
+/// §7d.14: *"The `rk_kernel::Config` value the run carries has the digest the first row recorded;
+/// `RunInputs::with_config` called **exactly once**; no `std::env::var` outside
+/// `crates/rk-cli/src/env.rs` (source scan, self-controlled against
+/// `lint-controls/adr0083_env_var_control.rs`)."*
+///
+/// # 🛑 HOW THE THREADED VALUE IS READ BACK, AND WHY IT IS THE `run_id`
+///
+/// `RunInputs` exposes **no** `config()` accessor and its `to_json` is private, so the threaded
+/// member cannot be read directly. It is observable in exactly one place: `run_id()` is
+/// `sha256_lp([SCHEMA, stage, canonical(inputs)])`, and `to_json` inserts a `config` key **only
+/// when a config was threaded in**. So re-threading the value the fixture declares must leave the
+/// `run_id` UNCHANGED (it is already there), and threading a DIFFERENT one must move it. Both
+/// halves are asserted: without the second, the first would pass forever against a `to_json` that
+/// had stopped inserting the key at all.
+///
+/// # What this test does NOT claim
+///
+/// **The `config_digest` on the `reconcile_started` row.** §7d.5 puts that member on the row RT-41
+/// describes, and **nothing in either binary appends a `ReconcileStarted` row yet** — measured:
+/// `grep -rn ReconcileStarted crates/*/src/` matches only the kernel's three *classification*
+/// arms. §7d.5 writes that row in its four-member form *"once (8) has re-created the worktree"*,
+/// which is cycle 6's. So the digest half is cycle 6's, and the `adapter_set` half is
+/// `ac485_…`'s. Claimed here: the value is constructed once and threaded, and the run reached the
+/// port with it.
+#[test]
+fn adr0083_config_constructed_once_at_root_and_threaded() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
+    let inputs = crate::support::inputs_over_pack_min(&resolved).with_spec(
+        "emit-report",
+        rk_kernel::replay::RecordedSpec::supplied(
+            "emit-report@1",
+            crate::support::any_activity_spec(),
+        ),
+    );
+
+    // The EXPECTED value, derived from the INSTALLED fixture file rather than from the product's
+    // own threading path — a value read back out of the thing under test would assert nothing.
+    let file = rk_cli::config::parse(
+        &std::fs::read_to_string(repo.path().join(".redkiln").join("config.toml"))
+            .expect("the installed configuration is readable"),
+    )
+    .expect("the fixture configuration parses");
+    let expected = rk_kernel::config::Config::new(
+        &file.adapters.harness,
+        &file.adapters.store,
+        &file.adapters.toolchains,
+        file.doctor.unread_window_runs,
+    );
+
+    // ---- A1: the value IS threaded. Re-threading the same one moves nothing. -------------------
+    let threaded = inputs
+        .clone()
+        .with_config(expected.clone())
+        .run_id()
+        .expect("the input set hashes");
+    let as_built = inputs.run_id().expect("the input set hashes");
+    assert_eq!(
+        threaded, as_built,
+        "the run's input set does not carry the `Config` the repository declares: re-threading it \
+         moved the run_id, so `base_inputs` chained no `.with_config(..)`"
+    );
+
+    // ---- A2: A1's CONTROL. A DIFFERENT config must move it, or A1 is blind. --------------------
+    let wrong = rk_kernel::config::Config::new(
+        &file.adapters.harness,
+        &file.adapters.store,
+        &file.adapters.toolchains,
+        file.doctor.unread_window_runs ^ 1,
+    );
+    let moved = inputs
+        .clone()
+        .with_config(wrong)
+        .run_id()
+        .expect("the input set hashes");
+    assert_ne!(
+        moved, as_built,
+        "a DIFFERENT `Config` left the run_id unchanged, so the run_id is blind to the config \
+         member and A1 above would pass over a run that threaded nothing"
+    );
+
+    // ---- A3: EXACTLY ONE `with_config(` in the crate's source, over CODE LINES ONLY. -----------
+    let threading = code_hits(&src_dir(), &["with_config("]);
+    assert_eq!(
+        threading.len(),
+        1,
+        "ADR-0083: the composition root threads the `Config` exactly once. Found {}:\n{}",
+        threading.len(),
+        threading.join("\n")
+    );
+
+    // ---- A4: THE COMMENT FILTER IS ITSELF CONTROLLED. ------------------------------------------
+    //
+    // Three guards on this tree have passed on their own prose. A scan whose filter is asserted
+    // only by the absence it reports is one of them waiting to happen.
+    for needle in ["with_config(", "std::env::var"] {
+        let prose = format!("//! a header naming {needle}\n// and a line comment: {needle}\n");
+        assert_eq!(
+            code_lines(&prose)
+                .into_iter()
+                .filter(|(_, l)| l.contains(needle))
+                .count(),
+            0,
+            "`code_lines` returned a COMMENT line for {needle}, so every scan below counts prose"
+        );
+        let code = format!("{prose}let _ = x.{needle});\n");
+        assert_eq!(
+            code_lines(&code)
+                .into_iter()
+                .filter(|(_, l)| l.contains(needle))
+                .count(),
+            1,
+            "`code_lines` dropped the CODE line for {needle}, so every scan below sees nothing"
+        );
+    }
+
+    // ---- A5: THE ENV CONTROL FIRES FIRST (§7d.14's standing rule). -----------------------------
+    let control = lint_controls_dir().join("adr0083_env_var_control.rs");
+    let control_text = std::fs::read_to_string(&control)
+        .unwrap_or_else(|e| panic!("the control {} must exist: {e}", control.display()));
+    assert!(
+        code_lines(&control_text)
+            .into_iter()
+            .any(|(_, l)| ENV_SPELLINGS.iter().any(|s| l.contains(s))),
+        "the control {} carries no NON-COMMENT environment read — the ban below is vacuous",
+        control.display()
+    );
+
+    // ---- A6: THE EXCLUDED FILE STILL DOES THE THING IT IS EXCLUDED FOR. ------------------------
+    let env_rs = src_dir().join("env.rs");
+    let env_text = std::fs::read_to_string(&env_rs).expect("env.rs is readable");
+    assert!(
+        code_lines(&env_text)
+            .into_iter()
+            .any(|(_, l)| ENV_SPELLINGS.iter().any(|s| l.contains(s))),
+        "`env.rs` reads no environment variable, so excluding it from A7 excludes nothing and the \
+         zero there is a ban over a program that never does the thing"
+    );
+
+    // ---- A7: ZERO ENV READS OUTSIDE `env.rs`. --------------------------------------------------
+    let stray: Vec<String> = code_hits(&src_dir(), &ENV_SPELLINGS)
+        .into_iter()
+        .filter(|h| !h.starts_with(&format!("{}:", env_rs.display())))
+        .collect();
+    assert!(
+        stray.is_empty(),
+        "ADR-0083: the process reads its environment ONCE, in `env.rs`, while building `Config`:\n{}",
+        stray.join("\n")
+    );
+
+    // ---- A8: THE RUN ACTUALLY RAN, so the assertions above are about a live path. --------------
+    let trace = crate::support::Trace::new();
+    let store = crate::support::counting_store(&trace);
+    let harness = Arc::new(crate::support::ScriptedHarness::scripted(vec![Ok(
+        crate::support::impl_report(),
+    )]));
+    let ports = crate::support::ports(
+        Arc::clone(&harness) as Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let token = CancelToken::new();
+    let mut supply = crate::support::any_spec("emit-report@1", crate::support::any_activity_spec());
+    let exit = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token)
+        .expect("a sound lock is not a halt");
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::Success,
+        "the run did not complete, so nothing above was asserted about a run that threaded anything"
+    );
+    assert_eq!(
+        harness.dispatches(),
+        1,
+        "the run did not reach the port exactly once ({} dispatches)",
+        harness.dispatches()
+    );
+}
+
+/// **AC-404 — a rate-limited dispatch writes the retry mark and EXITS.** It does not wait.
+///
+/// §7d.5: *"In-process: the verb function with a `Ports` whose scripted harness returns
+/// `Err(RateLimited { resets_at: Some(now + 3600) })`."*
+///
+/// # 🛑 TWO PRODUCERS WRITE `EventKind::RateLimited`, AND ONLY ONE OF THEM IS THE MARK
+///
+/// The fake appends a bare failure row on **every** `Err` (`{}` payload), and the kernel appends
+/// the retry MARK (`{ "kind": "retry_at", "resets_at": … }`). A test asserting only *"a
+/// `rate_limited` row exists"* would be green against a kernel that wrote no mark at all. So the
+/// count, both payloads, their ORDER, and `read_retry_at_marks` — which filters on the `kind` tag
+/// and cannot miscount the fake's row — are all asserted.
+///
+/// # The 2 s bound catches a wait that FINISHED, and nothing more
+///
+/// Stated rather than implied: a verb that slept for the scripted hour would hang this suite for an
+/// hour rather than fail at two seconds. `std::thread::sleep` is clippy-banned workspace-wide, and
+/// golden constraint 2 (*"`run` never waits"*) is what actually holds it; this assertion is the
+/// cheap corroboration, not the guarantee.
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test-side bound, not a decision (AC-001) — s7d §7d.15's form"
+)]
+fn ac404_rate_limited_writes_retry_mark_and_exits() {
+    const RESET: i64 = crate::support::FIXED_NOW + 3600;
+
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
+    let inputs = crate::support::inputs_over_pack_min(&resolved).with_spec(
+        "emit-report",
+        rk_kernel::replay::RecordedSpec::supplied(
+            "emit-report@1",
+            crate::support::any_activity_spec(),
+        ),
+    );
+
+    let trace = crate::support::Trace::new();
+    let store = crate::support::counting_store(&trace);
+    let harness = Arc::new(crate::support::ScriptedHarness::scripted(vec![Err(
+        rk_types::error::StepError::RateLimited {
+            resets_at: Some(rk_types::time::Timestamp::from_unix_seconds(RESET)),
+        },
+    )]));
+    let ports = crate::support::ports(
+        Arc::clone(&harness) as Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let token = CancelToken::new();
+    let mut supply = crate::support::any_spec("emit-report@1", crate::support::any_activity_spec());
+
+    let started = std::time::Instant::now();
+    let result = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token);
+    let elapsed = started.elapsed();
+
+    // (1) the return, THEN (2) the rest — root.rs's own order.
+    let exit = result.expect("a rate limit is an EXIT, not a halt");
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::RateLimited,
+        "a rate-limited dispatch is exit 15, not {exit:?}"
+    );
+    assert_eq!(exit.code(), 15);
+
+    // (2) the port was reached exactly once — a verb that looped back to the reset would dispatch
+    // twice, and a verb that returned 15 without dispatching at all would dispatch zero times.
+    assert_eq!(
+        harness.dispatches(),
+        1,
+        "the run reached the harness {} times, so the exit above is not a reading of a dispatch",
+        harness.dispatches()
+    );
+
+    // (3)(4) TWO rows of the one kind, in order, with their two distinct payloads.
+    let rows = store
+        .lock()
+        .expect("the fixture store's lock is sound")
+        .query(rk_kernel::runtime::journal_query("bug-1"))
+        .expect("the journal reads");
+    let rate: Vec<&rk_types::event::Event> = rows
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::RateLimited)
+        .collect();
+    assert_eq!(
+        rate.len(),
+        2,
+        "expected the fake's failure row AND the kernel's retry mark; found {} `rate_limited` \
+         rows: {:?}",
+        rate.len(),
+        rate.iter().map(|e| &e.payload).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        rate[0].payload,
+        serde_json::json!({}),
+        "the FIRST `rate_limited` row is the harness's bare failure row"
+    );
+    assert_eq!(
+        rate[1].payload,
+        serde_json::json!({ "kind": "retry_at", "resets_at": RESET }),
+        "the SECOND is the kernel's MARK, and it carries the reset the failure named"
+    );
+
+    // (5) and as a VALUE, through the reader that filters on the `kind` tag.
+    let marks = rk_kernel::runtime::marks::read_retry_at_marks(&rows);
+    assert_eq!(
+        marks.len(),
+        1,
+        "AC-404 wants ONE retry_at mark carrying the failure's reset; found {marks:?}"
+    );
+
+    // (6) THE ORDER, which two counters cannot express: the dispatch, then the failure, then the
+    //     mark. A mark written before the dispatch is not a mark about it.
+    let appends: Vec<rk_types::event_kind::EventKind> = trace
+        .steps()
+        .into_iter()
+        .filter_map(|s| match s {
+            crate::support::Step::Append(k) => Some(k),
+            crate::support::Step::Query | crate::support::Step::Reconcile(_) => None,
+        })
+        .collect();
+    let tail = &appends[appends.len().saturating_sub(3)..];
+    assert_eq!(
+        tail,
+        [
+            rk_types::event_kind::EventKind::Dispatch,
+            rk_types::event_kind::EventKind::RateLimited,
+            rk_types::event_kind::EventKind::RateLimited,
+        ],
+        "the last three appends are not dispatch → failure → mark; the whole sequence was \
+         {appends:?}"
+    );
+
+    // (7) it EXITED rather than waiting out the scripted hour.
+    assert!(
+        elapsed < std::time::Duration::from_secs(2),
+        "the verb took {elapsed:?} and the scripted reset is an hour out, so `run` waited for it"
+    );
+
+    // ---- (8) THE CONTROL ARM, and it is not optional. -------------------------------------------
+    //
+    // Everything above is satisfied by a step (10) that returned 15 for EVERY error. This arm
+    // scripts a different class over the same fixture and asserts the verb does NOT say 15 — so
+    // the row above is a mapping rather than a constant.
+    let repo2 = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let resolved2 = crate::support::resolved_over_pack_min(repo2.path(), "bug-1");
+    let inputs2 = crate::support::inputs_over_pack_min(&resolved2).with_spec(
+        "emit-report",
+        rk_kernel::replay::RecordedSpec::supplied(
+            "emit-report@1",
+            crate::support::any_activity_spec(),
+        ),
+    );
+    let trace2 = crate::support::Trace::new();
+    let store2 = crate::support::counting_store(&trace2);
+    let harness2 = Arc::new(crate::support::ScriptedHarness::scripted(vec![Err(
+        rk_types::error::StepError::NonZero {
+            code: Some(1),
+            stderr_digest: rk_types::digest::sha256(b""),
+        },
+    )]));
+    let ports2 = crate::support::ports(
+        Arc::clone(&harness2) as Arc<dyn rk_ports::harness::Harness>,
+        &store2,
+    );
+    let mut supply2 =
+        crate::support::any_spec("emit-report@1", crate::support::any_activity_spec());
+    let control_exit =
+        rk_cli::verbs::run::run_with(&resolved2, &inputs2, ports2, &mut supply2, &token)
+            .expect("a NonZero failure is an EXIT, not a halt");
+    assert_ne!(
+        control_exit,
+        rk_cli::exit::Exit::RateLimited,
+        "the verb returned 15 for a NonZero script too, so the 15 above is a constant rather than \
+         a mapping"
+    );
+    let control_rows = store2
+        .lock()
+        .expect("the fixture store's lock is sound")
+        .query(rk_kernel::runtime::journal_query("bug-1"))
+        .expect("the journal reads");
+    assert!(
+        rk_kernel::runtime::marks::read_retry_at_marks(&control_rows).is_empty(),
+        "a NonZero failure wrote a retry_at mark, so the mark above is not about the rate limit"
+    );
+}
+
+/// **AC-485 — the adapter set is resolved ONCE and is RUN-SCOPED.** A configuration rewritten
+/// mid-run does not reach the run that is already going.
+///
+/// §7d.5: *"Two-activity pack; `tests/it/support.rs::MutatingHarness` rewrites `config.toml`'s
+/// `harness` to `rk-adapter-linear` on its second `dispatch` before delegating to
+/// `FakeHarness::scripted`. **The discriminating assertions are the seams**: the `ConfigFile`
+/// reader called **exactly once**, `AdapterSet::resolve` **exactly once**."*
+///
+/// # 🛑 WHY THE SEAMS AND NOT THE OUTCOME
+///
+/// `rk-adapter-linear` is not a real adapter, so a run that DID re-read the file mid-flight would
+/// refuse on the unknown name — and a test asserting only *"the run succeeded"* would pass against
+/// a root that re-read the file **once more after the run**, or that never read it at all. The
+/// counters are what make "exactly once" a reading. They are injected through `Startup`, which is
+/// the seam §7d.5 calls *"counting seams the verb function takes"*.
+///
+/// # 🛑 WHICH HALF IS THE INSTRUMENT, AND WHICH IS A FLOOR AT THIS CYCLE
+///
+/// **The PREMISE is the instrument.** Measured against this test's declared mutant (a second
+/// `startup.config.read(..)` inside `through_step_seven`): the assertion that fires is the
+/// premise — *"they read 2 and resolved 1"* — and not either post-run count.
+///
+/// That is because the counting seams travel on `Startup`, and **`Startup` does not travel past
+/// `through_step_seven`**: `run_with` never receives it. So at this cycle no implementation
+/// reachable from `run_with` could re-read the configuration, and the two post-run counts cannot
+/// fail. They are written because §7d.5 names them, and because they become instruments the moment
+/// cycle 6 wires the outer path — but they are FLOORS here, and their messages say so rather than
+/// leaving a reader to assume they discriminate.
+///
+/// What does discriminate beside the premise: the run COMPLETING over an adapter set resolved
+/// before the rewrite. `rk-adapter-linear` is not a real adapter, so a root that re-read the file
+/// anywhere in the loop would refuse with exit 3.
+///
+/// # 🛑 THE REWRITE IS ASSERTED TO HAVE HAPPENED
+///
+/// The whole test is an absence — *the new bytes did not reach this run* — and an absence over a
+/// rewrite that never occurred is a guard that cannot fail. So the file's bytes are read back at
+/// the end and asserted to carry `rk-adapter-linear`.
+#[test]
+fn ac485_adapter_set_resolved_once_and_run_scoped() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::TwoActivities);
+    let root = repo.path();
+    let config_path = root.join(".redkiln").join("config.toml");
+
+    let trace = crate::support::Trace::new();
+    let reader = crate::support::CountingConfigReader::new();
+    let resolver = crate::support::CountingResolver::new();
+    let reconciler = crate::support::RecordingReconciler::new(&trace);
+
+    let cli = rk_cli::cli::Cli {
+        cwd: Some(root.to_path_buf()),
+        command: rk_cli::cli::Command::Status,
+    };
+    let args = rk_cli::cli::RunArgs {
+        item: "story-1".to_owned(),
+        lane: None,
+    };
+    let env = rk_cli::env::Env::from_map(std::collections::BTreeMap::new());
+    let startup = rk_cli::verbs::Startup {
+        reconciler: &reconciler,
+        config: &reader,
+        adapters: &resolver,
+    };
+    let resolved = rk_cli::verbs::run::through_step_seven(&cli, &args, &env, startup)
+        .expect("steps (1)-(7) resolve over the two-activity fixture");
+
+    // PREMISE: steps (1)-(7) read the file once and resolved once. Without this the post-run
+    // counts below could not distinguish "read once, before the run" from "never read".
+    assert_eq!(
+        (reader.reads(), resolver.resolves()),
+        (1, 1),
+        "steps (1)-(7) did not read the configuration exactly once and resolve exactly once; they \
+         read {} and resolved {}",
+        reader.reads(),
+        resolver.resolves()
+    );
+
+    let inputs = crate::support::inputs_over_pack_min(&resolved)
+        .with_spec(
+            "emit-report",
+            rk_kernel::replay::RecordedSpec::supplied(
+                "emit-report@1",
+                crate::support::any_activity_spec(),
+            ),
+        )
+        .with_spec(
+            "second-activity",
+            rk_kernel::replay::RecordedSpec::supplied(
+                "second-activity@1",
+                crate::support::any_activity_spec(),
+            ),
+        );
+
+    let store = crate::support::counting_store(&trace);
+    // The harness rewrites `config.toml`'s `harness` to `rk-adapter-linear` on its SECOND dispatch,
+    // i.e. WHILE this run is still going. Two script elements, one per node.
+    let harness = std::sync::Arc::new(crate::support::MutatingHarness::new(
+        &config_path,
+        vec![
+            Ok(crate::support::impl_report()),
+            Ok(crate::support::impl_report()),
+        ],
+    ));
+    let ports = crate::support::ports(
+        std::sync::Arc::clone(&harness) as std::sync::Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let token = rk_ports::cancel::CancelToken::new();
+    let mut supply = crate::support::no_spec();
+
+    let exit = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token)
+        .expect("a sound lock is not a halt");
+
+    // The run COMPLETED, over an adapter set resolved before the rewrite. A run that re-read the
+    // file would have met `rk-adapter-linear` and refused with exit 3.
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::Success,
+        "the run did not complete ({exit:?}); if it refused on `rk-adapter-linear` then the \
+         rewritten configuration reached a run already in flight"
+    );
+    assert_eq!(
+        harness.dispatches(),
+        2,
+        "the harness was reached {} times; the rewrite happens on the SECOND dispatch, so fewer \
+         than two means the rewrite never occurred and the absence below is vacuous",
+        harness.dispatches()
+    );
+
+    // THE DISCRIMINATING ASSERTIONS: still once each, AFTER the rewrite.
+    assert_eq!(
+        reader.reads(),
+        1,
+        "FLOOR (see this test's own note): the `ConfigFile` reader was called {} times AFTER the \
+         run. `Startup` does not travel past `through_step_seven`, so nothing in the loop could \
+         have called it; this becomes an instrument when cycle 6 wires the outer path",
+        reader.reads()
+    );
+    assert_eq!(
+        resolver.resolves(),
+        1,
+        "FLOOR (see this test's own note): `AdapterSet::resolve` was called {} times AFTER the run, \
+         and the resolver seam is likewise out of the loop's reach at this cycle",
+        resolver.resolves()
+    );
+
+    // AND THE REWRITE REALLY HAPPENED — otherwise everything above is an absence over nothing.
+    let after = std::fs::read_to_string(&config_path).expect("the configuration is readable");
+    assert!(
+        after.contains("rk-adapter-linear"),
+        "the harness did not rewrite the configuration, so the two counts above are a guard that \
+         cannot fail. config.toml after the run:\n{after}"
     );
 }
