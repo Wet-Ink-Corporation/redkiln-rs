@@ -21,9 +21,7 @@ fn spawn_run(repo: &Path, item: &str, lane: Option<&str>) -> std::process::Outpu
     if let Some(lane) = lane {
         cmd.arg("--lane").arg(lane);
     }
-    cmd.stdin(std::process::Stdio::null())
-        .output()
-        .expect("the redkiln binary runs")
+    crate::support::output_bounded(&mut cmd)
 }
 
 /// **D18-8 — an empty `[packs] enabled` is a CONFIGURATION outcome, before any lane derivation.**

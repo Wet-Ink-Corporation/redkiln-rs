@@ -333,13 +333,9 @@ fn ac413_store_opened_from_other_repo_refused_zero_rows() {
               facts a library call cannot observe (s7d §7d.3's own instrument)"
 )]
 fn spawn_status(cwd: &Path, args: &[&str]) -> std::process::Output {
-    std::process::Command::new(crate::redkiln())
-        .args(args)
-        .arg("status")
-        .current_dir(cwd)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("the redkiln binary runs")
+    let mut cmd = std::process::Command::new(crate::redkiln());
+    cmd.args(args).arg("status").current_dir(cwd);
+    crate::support::output_bounded(&mut cmd)
 }
 
 /// Steps (1)-(7) over a `pack-min` fixture repository, for the two in-process cases below.

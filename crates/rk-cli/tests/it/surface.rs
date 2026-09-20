@@ -256,11 +256,8 @@ fn ac400_resume_refused_as_unknown_argument() {
                   the parser called (rk-git's git_exec.rs is the house form for this attribute)"
     )]
     let mut cmd = std::process::Command::new(env!("CARGO_BIN_EXE_redkiln"));
-    let out = cmd
-        .args(["run", "an-item", "--resume"])
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("the redkiln binary runs");
+    cmd.args(["run", "an-item", "--resume"]);
+    let out = crate::support::output_bounded(&mut cmd);
 
     assert_eq!(
         out.status.code(),

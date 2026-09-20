@@ -401,12 +401,7 @@ fn ac422_config_reads_the_one_denylist() {
     reason = "AC-486's spawned arm exercises the refusal AS A PROCESS — 'before any spawn or store               write' is a claim about what a real invocation did not do"
 )]
 fn spawn_run_for_ac486(repo: &std::path::Path, item: &str) -> std::process::Output {
-    std::process::Command::new(crate::redkiln())
-        .arg("-C")
-        .arg(repo)
-        .arg("run")
-        .arg(item)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("the redkiln binary runs")
+    let mut cmd = std::process::Command::new(crate::redkiln());
+    cmd.arg("-C").arg(repo).arg("run").arg(item);
+    crate::support::output_bounded(&mut cmd)
 }

@@ -242,11 +242,9 @@ pub fn git(cwd: &Path, args: &[&str]) {
               'a stub never replaced' is caught (s7d §7d.13's temp-repository rule)"
 )]
 pub fn run_init(repo: &Path) -> std::process::Output {
-    std::process::Command::new(redkiln())
-        .args(["-C", &repo.display().to_string(), "init"])
-        .stdin(Stdio::null())
-        .output()
-        .expect("the redkiln binary runs")
+    let mut cmd = std::process::Command::new(redkiln());
+    cmd.args(["-C", &repo.display().to_string(), "init"]);
+    crate::support::output_bounded(&mut cmd)
 }
 
 /// Every ref in the repository, sorted — the `refs/` surface AC-531's enumerator covers beside the
