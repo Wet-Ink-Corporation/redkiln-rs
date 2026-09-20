@@ -1407,6 +1407,159 @@ pub fn record(inputs: &RunInputs, ports: Ports) -> Result<RecordedRun, ReplayErr
     })
 }
 
+/// **The store-seeded twin of [`record`]** — §7d.1 edit (6), §7d.5 step (9), RT-55.
+///
+/// [`record`] folds a **fresh local vector** and **breaks** on [`NextAction::OpenGate`] without
+/// appending it, and its loop calls the private `RunInputs::spec_for`, which refuses any dispatched
+/// node with no `with_spec` binding. Both are right for a recording and wrong for `redkiln run`: a
+/// second run over a stored answer would re-derive the gate at reach 1 (AC-264, AC-186), and a
+/// first run would refuse on `inputs/specs.json` before any dispatch. This function is the three
+/// differences and nothing else.
+///
+/// 1. **The fold is seeded from `prior`** — the store's journal for the item — so `next_action`
+///    reads the state the journal recorded rather than one derived from an empty vector.
+/// 2. **`OpenGate` is STEPPED, not broken on**, through [`Runtime::step`], so the `gate_opened` row
+///    carrying `(kind, reach, token, tree_hash, deadline)` reaches the store. The row is read back
+///    off the journal, never reconstructed here to match — [`dispatch_through`]'s rule, one action
+///    over.
+/// 3. **The spec supplier is consulted** where [`record`] calls `spec_for`. A node bound at
+///    §7d.5 step (8) is served from `inputs`; a node first seen inside the loop is served by the
+///    closure.
+///
+/// # 🛑 THE OPENING ROWS ARE EMITTED ONCE PER ITEM, AND `prior.is_empty()` IS NOT THE DISCRIMINATOR
+///
+/// `stage_transition` and `dag_assembled` belong to the run that assembled the plan, and a resumed
+/// run must not write a second copy of either. But `prior` is **not** empty on a first `run`:
+/// §7d.5 step (6) puts one `reconcile_started` row into the store before the kernel is reached, and
+/// the store's `query` ignores its selector and returns every event (§7d.6). So the test is whether
+/// this item's plan has been **assembled** in this journal — a `dag_assembled` row, which
+/// [`Selection::journal`] emits exactly once and always first. An emptiness test would silently
+/// drop the opening rows of every real first run.
+///
+/// The deviation is the same case with one asymmetry: the **event** is a first-run row, but the
+/// **amended selection** governs every run, so the assignment is unconditional and only the push is
+/// guarded. Driving the base selection on a resume would dispatch the node the accepted deviation
+/// removed — `derive`'s own warning, which applies here verbatim.
+///
+/// # The returned [`RecordedRun`] carries `prior` FOLLOWED BY this run's rows
+///
+/// Not this run's rows alone. Three things need the whole journal: [`fsm_residue`], which is the
+/// terminal state a partial journal would get wrong; [`replay`], which serves each activation's
+/// recorded results back in order and would find a resumed record's earlier dispatches missing; and
+/// `explain`, which prints the committed steps of the item's run. So [`write_run`] over a resumed
+/// run writes the journal the item actually has.
+///
+/// # Errors
+///
+/// [`ReplayError`] for a malformed input, a selection that could not resolve, a journal the FSM
+/// refused to fold, a dispatch the boundary refused, or a node neither `inputs` nor the supplier
+/// could bind.
+pub fn resume(
+    inputs: &RunInputs,
+    ports: Ports,
+    prior: &[Event],
+    supply_spec: &mut dyn FnMut(&str) -> Result<RecordedSpec, ReplayError>,
+) -> Result<RecordedRun, ReplayError> {
+    let run_id = inputs.run_id()?;
+    let rt = Runtime::new(ports, &run_id, &inputs.stage);
+    let runtime = inputs.runtime()?;
+
+    let (pack, catalog, artifacts, facets, item) = inputs.build()?;
+    let mut selection: Selection =
+        select(&pack, &catalog, &artifacts, &facets, &inputs.stage, &item)?;
+
+    // See the header: the plan's own row, not the journal's length.
+    let plan_assembled = prior.iter().any(|e| e.kind == EventKind::DagAssembled);
+
+    let mut journal: Vec<Event> = prior.to_vec();
+    let prior_len = journal.len();
+    if !plan_assembled {
+        journal.push(stage_entry(&inputs.stage, runtime));
+        journal.extend(selection.journal());
+    }
+
+    if let Some((request, requested_by)) = &inputs.deviation {
+        let outcome = step7(
+            &pack,
+            &catalog,
+            &artifacts,
+            &facets,
+            &inputs.stage,
+            &item,
+            requested_by,
+            request,
+            &selection,
+        )?;
+        if !plan_assembled && let Some(event) = outcome.event() {
+            journal.push(event);
+        }
+        if let Some(amended) = outcome.selection() {
+            selection = amended.clone();
+        }
+    }
+
+    // Read before the loop, exactly as `derive` does and for the same reason: a run that could
+    // satisfy neither refuses before it dispatches anything, and neither is chosen here. `N` is the
+    // pack's (AC-029) and the instant is `inputs/runtime.json`'s.
+    let cap = pack
+        .require_attempt_cap()
+        .map_err(|e| ReplayError::Malformed {
+            path: format!("inputs/pack/{}", inputs.pack.0),
+            detail: e.to_string(),
+        })?;
+    let now = runtime.require_results_at()?;
+
+    // Only the rows this run minted go through the port — `prior` is already in the store, and
+    // appending it back would record every earlier row a second time.
+    for event in journal.iter().skip(prior_len) {
+        rt.append(event.clone())?;
+    }
+
+    let activations = inputs.activations();
+    loop {
+        let state = fsm::fold(item.id(), &inputs.stage, &journal)?;
+        let ctx = fsm_context(runtime, &item, &activations);
+        let action = fsm::next_action(&selection, &state, &ctx)?;
+        match &action {
+            NextAction::Dispatch { key, step_id } => {
+                // `inputs` first, the supplier second — §7d.5 step (9)'s own order. `specs()` is
+                // read rather than `spec_for`, so an absent binding routes to the seam instead of
+                // being distinguished by the shape of a refusal.
+                let bound = inputs
+                    .specs()
+                    .iter()
+                    .find(|(id, _)| id == step_id)
+                    .map(|(_, b)| b.clone());
+                let binding = match bound {
+                    Some(binding) => binding,
+                    None => supply_spec(step_id)?,
+                };
+                let produced = dispatch_through(&rt, key, step_id, &binding, cap, now)?;
+                journal.extend(produced);
+            }
+            NextAction::OpenGate(_) => {
+                // THE DIFFERENCE FROM `record`. The row is the boundary's, read back off the
+                // journal rather than rebuilt here to agree with it.
+                let before = rt.journal(item.id())?.len();
+                rt.step(&action, None, cap, now)?;
+                journal.extend(rt.journal(item.id())?.into_iter().skip(before));
+                break;
+            }
+            _ => break,
+        }
+    }
+
+    let (terminal_state, next_action) = fsm_residue(inputs, &selection, &item, &journal)?;
+    Ok(RecordedRun {
+        run_id,
+        inputs_digest: selection.inputs_digest().as_str().to_owned(),
+        inputs: inputs.clone(),
+        events: journal,
+        terminal_state,
+        next_action,
+    })
+}
+
 fn write_file(path: &Path, bytes: &[u8]) -> Result<(), ReplayError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| ReplayError::Io {

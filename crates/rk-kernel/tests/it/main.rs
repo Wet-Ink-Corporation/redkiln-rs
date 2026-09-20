@@ -300,6 +300,7 @@ mod question;
 mod recorded_log;
 mod replay;
 mod resolver;
+mod resume;
 mod retry;
 mod review;
 mod review_confirm;

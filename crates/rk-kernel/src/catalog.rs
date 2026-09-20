@@ -473,8 +473,6 @@ impl Catalog {
         Ok(Self { activities })
     }
 
-    /// Every activity, by id.
-    #[must_use]
     /// **Find activities by declared keyword** (AC-436; Step 7d Slice 3).
     ///
     /// Matching is case-insensitive and on WHOLE keywords, not substrings: a catalog searched by
@@ -505,6 +503,8 @@ impl Catalog {
             .collect()
     }
 
+    /// Every activity, by id.
+    #[must_use]
     pub fn activities(&self) -> &[Activity] {
         &self.activities
     }

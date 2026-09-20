@@ -1,0 +1,42 @@
+# Step 7d Slice 3's fixture pack for `rk_kernel::replay::resume` — the ONE selection that is both
+# gated and dispatchable.
+#
+# Why a fixture of its own rather than one of the twenty beside it. `resume`'s three behaviours need
+# a single selection that (a) opens a gate the FSM must STEP through, and then (b) still has work to
+# dispatch once that gate is answered, so the store-seeded fold is observable as a DIFFERENT action
+# rather than as the same one twice. `incident-forbidden.toml` gates at `analysis` but its baseline
+# (`IncidentTimeline`, `RootCause`) is produced by nothing in `catalog-select/`, so the plan after
+# the answer is empty; `incident-deviation.toml` dispatches but its one `require` row reads an
+# ordinal, and an ordering against a null is an ERROR here, never an abstention. Neither shape is
+# edited — both are read by other cases, and widening a shared fixture to serve a new one is how a
+# fixture stops meaning what its own test says it means.
+#
+# The shape is `incident-deviation.toml`'s, copied, with one row changed: the conditional `require`
+# reads a BOOLEAN facet, which is what abstains. An item declaring `external_dep` null makes step 2
+# return `Tri::Null` for this row and mint exactly one
+# `GateOpened { reason: UnknownFacet, axis: "external_dep" }` — the `unknown_facet:external_dep`
+# gate class `next_action` opens at reach 1.
+[pack]
+id = "resume-gate-fixture"
+applies = "kind == incident"
+appetite = { points = 50 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "recommended", specification = "forbidden", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["Changeset", "ImplReport"]
+
+# Abstains when the item declares `external_dep` null — and the artifact is therefore NOT added, so
+# the plan is the baseline's two nodes whether or not the gate is answered. That independence is
+# deliberate: it keeps the dispatch this test observes a consequence of the FOLD reading the answer,
+# not a consequence of the DAG changing shape underneath it.
+[[stage.implement.require]]
+when = "external_dep"
+artifacts = ["ChangeSummary"]
+
+# AC-029's `N`, DECLARED and never defaulted in code. `resume` reads it before its loop for the same
+# reason `derive` does — a run that could satisfy neither the cap nor the journaled instant refuses
+# before it dispatches anything — so a pack without this row refuses every `redkiln run`.
+[retry]
+attempts_cap = 4
