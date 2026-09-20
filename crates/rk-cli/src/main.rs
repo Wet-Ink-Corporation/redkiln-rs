@@ -1,21 +1,62 @@
 //! **The `redkiln` binary** — a thin caller, and deliberately nothing else.
 //!
-//! Parse, dispatch, exit through [`rk_cli::code_for`]. Everything the tests assert on lives in the
-//! library beside this file, because an integration test cannot link a `[[bin]]` (ADR-0083) and a
-//! surface asserted in one place and shipped from another agrees only by inspection.
+//! Parse, install the two handlers, dispatch, exit through [`rk_cli::code_for`]. Everything the
+//! tests assert on lives in the library beside this file, because an integration test cannot link a
+//! `[[bin]]` (ADR-0083) and a surface asserted in one place and shipped from another agrees only by
+//! inspection.
 //!
-//! **One `std::process::exit` site at this slice, and it is below.** §7d.4 allows exactly two, both
-//! in this file: the table exit here, and the panic hook's, which arrives at Slice 2 when the
-//! kernel's `LOCK_HALTS` becomes reachable and a poison first observed inside the kernel has to be
-//! turned into an explicit `70` rather than the unhandled panic's `101`. Checkpoint 7d counts two,
-//! so its count is first satisfiable at Slice 2 and is absent-shaped here.
+//! **The two `std::process::exit` sites are both here, and as of Slice 2 there are two.** The table
+//! exit at the end of `main`, and the panic hook's `70`. Checkpoint 7d counts exactly two and
+//! requires both to be in this file; a third — written, say, to render the halt separately — is what
+//! that count exists to refuse (§7d.4).
 //!
-//! **The table exit and the halt arm are ONE call.** Reaching for a second `std::process::exit` to
-//! render the halt is what the count exists to refuse (§7d.4), so the diagnostic is printed and the
-//! same `code_for` carries both outcomes out.
+//! **Why the hook exists at all.** `rk-cli` acquires the store lock through one function that
+//! returns `Err(Halt)`, so a poison IT observes never panics. But the kernel acquires the same
+//! `Arc<Mutex<…>>` itself, with `.lock().expect(LOCK_HALTS)` — so a poison first observed inside
+//! `rk-kernel` unwinds out through a panic this binary did not raise. Without the hook that leaves
+//! the process at Rust's default `101`, a code the exit table does not describe, for the one
+//! condition ADR-0118 is entirely about. The hook turns exactly that payload into `70` and leaves
+//! every other panic alone.
+
+use rk_cli::exit::Halt;
 
 fn main() {
     let cli = rk_cli::cli::try_parse_from(std::env::args_os()).unwrap_or_else(|e| e.exit());
+
+    // The signal path (ADR-0099 decision 2; D18-2). `ctrlc::set_handler` may be called once per
+    // process, so this is its only call site in the workspace — no test installs one.
+    //
+    // The root's own copy of the token is dropped here, and that is this slice's shape rather than
+    // an oversight: the handler holds the clone that matters, and the flag's readers — the adapter
+    // it is cloned into at construction, and the step-boundary check that turns it into exit `130`
+    // — are Slice 3's, when there is a loop to check it. Carrying it into a verb that ignored it
+    // would read as threading it through when nothing does.
+    match rk_cli::signal::install() {
+        Ok(token) => drop(token),
+        Err(e) => eprintln!("redkiln: the signal handler could not be installed: {e}"),
+    }
+
+    // The panic hook. It CHAINS to the previous hook rather than replacing it, so a panic that is
+    // not a poisoned store lock keeps Rust's own message and its `101` — the hook narrows one case
+    // and changes nothing else. It is not `catch_unwind` and it recovers nothing (clause 3).
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        if rk_cli::is_lock_halt(info.payload()) {
+            eprintln!(
+                "{}",
+                rk_cli::render_halt(&Halt::PoisonedLock {
+                    lock: "store",
+                    verb: "the run",
+                })
+            );
+            std::process::exit(rk_cli::code_for(&Err(Halt::PoisonedLock {
+                lock: "store",
+                verb: "the run",
+            })));
+        }
+        previous(info);
+    }));
+
     let result = rk_cli::verbs::dispatch(&cli);
     if let Err(halt) = &result {
         eprintln!("{}", rk_cli::render_halt(halt));

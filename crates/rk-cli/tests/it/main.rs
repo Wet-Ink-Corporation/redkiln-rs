@@ -18,7 +18,10 @@
 //! either one is unreachable from the other. `tests/it/support.rs` — the scripted-harness helpers —
 //! is Slice 3's (§7d.16 item 3) and is not created early to hold two functions.
 
+mod config;
 mod exit;
+mod init;
+mod root;
 mod surface;
 
 use std::path::{Path, PathBuf};

@@ -15,6 +15,8 @@
 //! by the block's verb-level lines at the stage close, which drive the real binary and expect a real
 //! answer. Until then these eight exit `3` and say so.
 
+pub mod init;
+
 use crate::cli::{Cli, Command};
 use crate::exit::{Exit, Halt};
 
@@ -33,7 +35,7 @@ pub fn dispatch(cli: &Cli) -> Result<Exit, Halt> {
         Command::Status => status(),
         Command::Explain(_) => explain(),
         Command::Doctor(_) => doctor(),
-        Command::Init => init(),
+        Command::Init => init::run(cli.cwd.as_deref()),
         Command::Catalog(_) => catalog(),
         Command::Lint(_) => lint(),
     }
@@ -63,10 +65,6 @@ fn explain() -> Result<Exit, Halt> {
 
 fn doctor() -> Result<Exit, Halt> {
     not_built("doctor")
-}
-
-fn init() -> Result<Exit, Halt> {
-    not_built("init")
 }
 
 fn catalog() -> Result<Exit, Halt> {

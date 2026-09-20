@@ -1,0 +1,14 @@
+---
+source: crates/rk-cli/tests/it/config.rs
+expression: rendered
+---
+adapters
+adapters.harness
+adapters.harness_binary
+adapters.store
+adapters.toolchain_programs
+adapters.toolchains
+doctor
+doctor.unread_window_runs
+packs
+packs.enabled

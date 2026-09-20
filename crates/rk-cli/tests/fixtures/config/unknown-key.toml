@@ -1,0 +1,13 @@
+# Written by `redkiln init` (Step 7d). Step 7e fills [packs].enabled; every other key is read at startup
+# (AC-485/AC-486) and by `redkiln doctor` (AC-426). A second `init` leaves this file untouched (ADR-0107 d2).
+
+[adapters]
+harness = "rk-adapter-claude"
+store = "rk-adapter-sqlite"
+toolchains = ["rk-adapter-toolchain-node", "rk-adapter-toolchain-rust"]
+
+[packs]
+enabled = []
+
+[doctor]
+unread_window_runss = 50

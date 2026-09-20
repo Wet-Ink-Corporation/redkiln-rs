@@ -182,7 +182,17 @@ pub mod marks;
 /// What a poisoned store lock means. **ADR-0118 clause 1**: *"the run stops at the poisoned
 /// acquisition. No `StepError` is constructed, nothing crosses a port boundary, no retry, no next
 /// activity, no gate answer."* `.expect` propagates; it does not resume.
-const LOCK_HALTS: &str = "a poisoned store lock halts the run; it is never recovered (ADR-0118)";
+/// **`pub` since Step 7d Slice 2 — a visibility change and nothing else** (§7d.1 edit (8)).
+/// `rk-cli`'s panic hook matches THIS constant, so that a poison first observed inside the
+/// kernel — which unwinds out through `.expect` below — is turned into an explicit exit `70`
+/// rather than the unhandled panic's `101`. The hook substring-matches the payload against this
+/// string and never against a second copy of it, which is the whole reason the constant is
+/// exported rather than duplicated: two copies can drift, and the drift would be invisible
+/// (every test green, the hook silently at 101).
+///
+/// **The text is UNCHANGED.** Moving a byte of it would break the match it exists for.
+pub const LOCK_HALTS: &str =
+    "a poisoned store lock halts the run; it is never recovered (ADR-0118)";
 
 /// Why the runtime boundary refused.
 ///

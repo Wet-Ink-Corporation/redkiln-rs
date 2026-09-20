@@ -269,6 +269,7 @@ mod adapter_edge;
 mod advisory;
 mod breaker;
 mod budget;
+mod config;
 mod cross_process;
 mod dag;
 mod degradation;

@@ -287,6 +287,7 @@
 /// so it is a committed assertion rather than a warning to a future reader.
 pub mod adapter_edge;
 pub mod catalog;
+pub mod config;
 pub mod facet_provenance;
 pub mod facet_registry;
 pub mod facet_stability;

@@ -17,8 +17,15 @@
 //! Checkpoint 7d counts exactly two, so the count is first satisfiable at Slice 2 and is
 //! `[WILL EXIST]`-shaped by absence here.
 
+pub mod adapters;
 pub mod cli;
+pub mod clock;
+pub mod config;
+pub mod env;
 pub mod exit;
+pub mod repo;
+pub mod signal;
+pub mod store;
 pub mod verbs;
 
 use crate::exit::{Exit, Halt};
@@ -49,4 +56,29 @@ pub fn render_halt(halt: &Halt) -> String {
              it; nothing after {verb} ran."
         ),
     }
+}
+
+/// Is this panic payload the kernel's poisoned-store-lock halt?
+///
+/// **Takes the payload, not the `PanicHookInfo`.** §7d.4 and §7d.10 both spell the parameter as
+/// `&PanicHookInfo`, but §7d.10's own test description hands this function `catch_unwind`'s payload
+/// — a `Box<dyn Any + Send>` — and `PanicHookInfo` has no public constructor, so no test could build
+/// one. The two sentences are incompatible; the payload form is the one that can be tested, and the
+/// hook adapts with `info.payload()`. RAISED as a stage-file defect, not edited.
+///
+/// **It matches `rk_kernel::runtime::LOCK_HALTS` and never a second copy of that string.** That is
+/// the whole reason §7d.1's eighth kernel edit exports the constant: two copies can drift, and the
+/// drift would be invisible — every test green and the hook silently leaving the process at `101`.
+///
+/// The payload of `.expect(LOCK_HALTS)` is a `String` (`"{msg}: {PoisonError:?}"`), and a bare
+/// `panic!("…")` with a literal is a `&'static str`; both are downcast, because which one arrives
+/// depends on how the panic was raised and not on what it means.
+#[must_use]
+pub fn is_lock_halt(payload: &(dyn std::any::Any + Send)) -> bool {
+    let needle = rk_kernel::runtime::LOCK_HALTS;
+    payload
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| payload.downcast_ref::<&'static str>().copied())
+        .is_some_and(|text| text.contains(needle))
 }

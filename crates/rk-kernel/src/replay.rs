@@ -738,6 +738,12 @@ pub struct RunInputs {
     /// `(DAG node id, binding)`, sorted — so the log is a function of the bindings and not of the
     /// caller's argument order, exactly as [`Self::with_catalog`] sorts.
     specs: Vec<(String, RecordedSpec)>,
+    /// The composition root's configuration, as a value (ADR-0083; Step 7d Slice 2, D18-14).
+    ///
+    /// `Option`, and its `None` is what every run recorded before Step 7d carries. See
+    /// [`Self::with_config`] and [`Self::to_json`] for why `None` is OMITTED from the recorded
+    /// object rather than written as `null` like `deviation` and `runtime` beside it.
+    config: Option<crate::config::Config>,
 }
 
 impl RunInputs {
@@ -797,6 +803,18 @@ impl RunInputs {
             .as_ref()
             .map_or_else(String::new, |(_, b)| b.clone());
         self.deviation = Some((request.clone(), by));
+        self
+    }
+
+    /// Thread the composition root's [`crate::config::Config`] in as a recorded input
+    /// (ADR-0083; Step 7d Slice 2).
+    ///
+    /// Takes the value, as every other builder on this type does. A run that never calls this
+    /// leaves the member `None`, and a `None` is invisible in the recorded object — so this method
+    /// adds an input without moving a single `run_id` already on the tree.
+    #[must_use]
+    pub fn with_config(mut self, config: crate::config::Config) -> Self {
+        self.config = Some(config);
         self
     }
 
@@ -878,7 +896,7 @@ impl RunInputs {
 
     /// The whole input set as one canonical value — what `run_id` hashes and what the layout writes.
     fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
+        let mut value = serde_json::json!({
             "schema": SCHEMA,
             "stage": self.stage,
             "pack": { "name": self.pack.0, "src": self.pack.1 },
@@ -901,7 +919,24 @@ impl RunInputs {
             "specs": self.specs.iter().map(|(id, b)| serde_json::json!({
                 "node": id, "binding": b.to_json(),
             })).collect::<Vec<_>>(),
-        })
+        });
+        // NEW at Step 7d Slice 2 (ADR-0083, D18-14), and **inserted rather than written inline,
+        // which is the whole of the care here.** `deviation` and `runtime` above are `Option`s too,
+        // and `json!` writes each of them as an explicit `null` when absent — a KEY, present in the
+        // object. Writing `config` that way would add a key to every run's input object, and
+        // `run_id` is `sha256_lp([SCHEMA, stage, canonical(inputs)])`: a new key changes the
+        // canonical bytes, so EVERY `run_id` and `inputs_digest` recorded on this tree before
+        // Step 7d would move. They must not. So the key exists only when a config was threaded in,
+        // and a `None` leaves the object byte-identical to what it was before this edit — which is
+        // what makes the whole-checkpoint re-run of 7b and 7b-ii the proof of it rather than a
+        // formality (§7d.15).
+        if let Some(config) = &self.config {
+            value
+                .as_object_mut()
+                .expect("json! built an object literal")
+                .insert("config".to_owned(), config.to_json());
+        }
+        value
     }
 
     /// `sha256_lp([SCHEMA, stage, canonical(inputs)])`, hex.
