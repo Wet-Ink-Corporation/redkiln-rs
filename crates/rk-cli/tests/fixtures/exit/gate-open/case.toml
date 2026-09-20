@@ -1,0 +1,10 @@
+# AC-403's row, read through the TABLE rather than through its own test.
+#
+# `gate-1` omits `has_repro`, the pack's one `require` row abstains, the abstention gate
+# opens and step (10) writes its `Gate:` trailer. A gate is a SUCCESSFUL outcome (D-01;
+# AC-240; AC-024). No dispatch happens on this path, so the child's mode is irrelevant
+# here — it is set anyway, because an unset one is `hold` and a run that unexpectedly DID
+# dispatch would park for 600 s instead of failing fast.
+args = ["run", "gate-1"]
+pack = "base"
+mode = "exit:0"

@@ -175,6 +175,9 @@ pub struct Resolved {
     /// `RunInputs::with_config` — ADR-0083's *"the composition root builds it; the kernel reads
     /// it and never makes one"*. See the 🛑 note at its one construction site.
     pub config: rk_kernel::config::Config,
+    /// The optional `[adapters] harness_binary` key (RT-49) — the program every dispatch spawns.
+    /// `None` is the ordinary case and means the adapter's own default.
+    pub harness_binary: Option<String>,
 }
 
 /// The outer verb.
@@ -214,15 +217,69 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         }
     };
     let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(opened));
-    // Held so the type of the seam cycle 6 fills is visible here rather than only in a diff: the
-    // `Ports` this arm will build takes exactly this `Arc`.
-    drop(store);
+    let token = CancelToken::new();
 
-    // Step (8)'s adapter construction is cycle 6's — see this function's own note. The inner path
-    // BELOW it is built and driven in-process by this cycle's five tests; only the construction of
-    // the real `Harness` and the call through to `run_with` wait.
-    eprintln!("redkiln: `run` reaches step (8), which is not built at this cycle");
-    Ok(Exit::ConfigError)
+    // ---- (8) the run-owned worktree, the bindings, and ONLY THEN the real harness. -------------
+    let owned = match recreate_run_worktree(
+        &resolved.exec,
+        &resolved.worktree,
+        &resolved.common_dir,
+        resolved.item.id(),
+    ) {
+        Ok(path) => path,
+        Err(exit) => return Ok(exit),
+    };
+
+    // THE ONE WALL-CLOCK READ. Both derived values come off it — see `base_inputs`.
+    let now = crate::clock::now().unix_seconds();
+    let inputs = match prepare_inputs(&resolved, now) {
+        Ok(inputs) => inputs,
+        Err(exit) => return Ok(exit),
+    };
+
+    let claude = match real_harness_config(&resolved, env) {
+        Ok(config) => config,
+        Err(exit) => return Ok(exit),
+    };
+    let mut binder = rk_adapter_claude::binder::Binder::new(claude);
+    let inputs = match bind_nodes(&resolved, inputs, &mut binder, &owned) {
+        Ok(inputs) => inputs,
+        Err(exit) => return Ok(exit),
+    };
+
+    // **ONLY THEN** the harness, over the config the bindings filled (§7d.5's own order):
+    // `ClaudeHarness::dispatch` refuses a `card_digest` its validated store does not hold, and
+    // `Binder::new(config).bind(..)` then `into_config()` is the one way that store is filled.
+    let harness = match rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone()) {
+        Ok(harness) => harness,
+        Err(e) => {
+            eprintln!("redkiln: the harness could not be built: {e}");
+            return Ok(Exit::ConfigError);
+        }
+    };
+
+    let ports = rk_ports::root::Ports {
+        store,
+        harness: Arc::new(harness),
+        // The three with no Phase-1 real (ADR-0094 decision 2).
+        tracker: Arc::new(rk_ports::fakes::BoardTracker::default()),
+        docs: Arc::new(rk_ports::fakes::RecordingDocs::default()),
+        toolchain: Arc::new(rk_ports::fakes::FixtureToolchain::default()),
+    };
+
+    // Every node the loop reaches was bound above; the supplier is the seam for a node first seen
+    // INSIDE the loop, and it refuses by name rather than silently binding nothing (RT-55).
+    let mut supply_spec =
+        |node: &str| -> Result<rk_kernel::replay::RecordedSpec, rk_kernel::replay::ReplayError> {
+            Err(rk_kernel::replay::ReplayError::Malformed {
+                path: "inputs/specs.json".to_owned(),
+                detail: format!(
+                    "`{node}` was first seen inside the loop and step (8) bound no spec for it"
+                ),
+            })
+        };
+
+    run_with(&resolved, &inputs, ports, &mut supply_spec, &token)
 }
 
 /// The inner verb — the in-process twin every Slice-3 loop test drives.
@@ -418,7 +475,20 @@ pub fn through_step_seven(
         Exit::ConfigError
     })?;
 
-    let item = build_item(&record);
+    // §7d.5 step (7) names `.redkiln/facets.toml` among the registries this step reads. It is read
+    // HERE and not only in `base_inputs`, because the item's context vector is built from it: a
+    // facet the registry declares and the record omits is an abstention, and `build_item` cannot
+    // know which those are without it.
+    let facets_path = root.join(".redkiln").join("facets.toml");
+    let facets_src = std::fs::read_to_string(&facets_path).map_err(|e| {
+        eprintln!("redkiln: {}: {e}", facets_path.display());
+        Exit::ConfigError
+    })?;
+    let registry = rk_kernel::registry::Registry::from_toml(&facets_src).map_err(|e| {
+        eprintln!("redkiln: {}: {e}", facets_path.display());
+        Exit::ConfigError
+    })?;
+    let item = build_item(&record, &registry);
 
     // ---- (6) reconcile at entry, and the invocation's ONE `reconcile_started` row.
     //
@@ -444,6 +514,7 @@ pub fn through_step_seven(
         item,
         stage,
         config: kernel_config,
+        harness_binary: config.adapters.harness_binary.clone(),
     })
 }
 
@@ -516,8 +587,48 @@ const fn lane_name(lane: Lane) -> &'static str {
 /// kernel and is how a `require` row abstains and a gate opens (AC-079 / ADR-0089). A facet written
 /// as an explicit `false` is a DECIDED false and opens nothing — the two are different facts and the
 /// fixtures separate them.
-fn build_item(record: &ItemRecord) -> Item {
+/// The item, rebuilt from its record — with **every facet the registry declares**, decided or null.
+///
+/// # 🛑 AN ABSENT FACET IS `with_facet_null`, AND WITHOUT THAT NO GATE EVER OPENS
+///
+/// §7d.5 step (7), in terms: *"an absent facet is **`with_facet_null`**, which is how a `require`
+/// row abstains and a gate opens — AC-079 / ADR-0089"*.
+///
+/// Until cycle 6 this loop walked the RECORD's facets only, so a facet the item omitted was never
+/// on the context vector at all — and the predicate evaluator returned
+/// `EvalError::UnknownField("has_repro")` rather than `Tri::Null`. Measured 2026-09-20 against the
+/// wired binary, on `gate-1` (whose `[facets]` table is empty on purpose):
+/// *"bug-standard.toml: stage.implement.require[0]: unknown field \"has_repro\""*, exit 3.
+///
+/// So the **abstention gate was unreachable**, and with it every gate case of Slice 3. That is why
+/// the contract sequences `ac403_…` first in this cycle: its fixture is reused by `ac406_…`,
+/// `ac407_…`, `ac264_…` and the AC-410 pair, and none of them could have opened a gate either.
+fn build_item(record: &ItemRecord, registry: &rk_kernel::registry::Registry) -> Item {
     let mut item = Item::new(&record.id, record.kind.as_deref().unwrap_or(""));
+
+    // Every declared facet the record does not carry, as an abstention. Done first, so a record
+    // that does carry one overwrites the null rather than the other way round.
+    //
+    // 🛑 TWO KINDS OF FACET ARE NOT THE RECORD'S TO ABSTAIN FROM, and nulling them mints gates
+    // nobody asked for. Measured: nulling all four of `pack-min`'s declared facets produced THREE
+    // `gate_opened` rows where one was owed.
+    //
+    //  * `kind` is `Item::new(id, kind)`'s — it is the record's TOP-LEVEL key, not a `[facets]`
+    //    entry, and it is already decided by the line above.
+    //  * `source = "kernel"` facets (`stage`, `rigor` here) are the KERNEL's to supply. An item
+    //    record may not declare one, so its absence from `[facets]` is not an abstention — it is
+    //    the ordinary case, and §7b's own rule that a kernel facet is never human-sourced.
+    //
+    // What is left is exactly what §7d.5 means: a facet the pack may `require` on and the item's
+    // author could have decided and did not.
+    for facet in registry.facets() {
+        let kernel_supplied = facet.source == rk_kernel::registry::Source::Kernel;
+        if facet.name == "kind" || kernel_supplied || record.facets.contains_key(&facet.name) {
+            continue;
+        }
+        item = item.with_facet_null(&facet.name);
+    }
+
     for (name, value) in &record.facets {
         item = match value {
             toml::Value::Boolean(b) => item.with_facet_bool(name, *b),
@@ -716,28 +827,86 @@ fn resume_and_read(
         return Ok(Exit::ConfigError);
     }
 
-    Ok(terminal_read(&item_id, &recorded))
+    Ok(terminal_read(resolved, &recorded))
 }
 
 /// Step (10): the terminal read.
 ///
 /// **`run` NEVER WAITS** — no channel, prompt, socket or sleep is entered on any arm (golden
 /// constraint 2). A gate among the resumed run's new events is an EXIT, not a wait.
-fn terminal_read(item_id: &str, recorded: &rk_kernel::replay::RecordedRun) -> Exit {
-    let gate = recorded
-        .events
-        .iter()
-        .rev()
-        .find(|e| e.kind == rk_types::event_kind::EventKind::GateOpened);
-    if let Some(row) = gate {
-        let token_hex = row
-            .payload
-            .get("token")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default();
-        println!("gate {token_hex} is open for {item_id}");
+fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun) -> Exit {
+    let item_id = resolved.item.id();
+
+    // 🛑 THE GATE ROW THIS READS IS THE RUNTIME'S, AND IT IS THE ONE CARRYING A TOKEN.
+    //
+    // `select()` announces its abstention gates into `Selection::journal()` and those rows carry
+    // no token — §7d.5: the fold *"counts [them] as `gates_announced` and moves no state on"*.
+    // `resume` then steps `NextAction::OpenGate(record)` through `Runtime::step`, which appends
+    // `runtime::gate_opened_event(record)` — *"the `(kind, token, tree_hash, deadline)` row"*. A
+    // read that took the last `gate_opened` of either shape would sometimes trailer an
+    // announcement, whose token does not exist.
+    let gate = recorded.events.iter().rev().find(|e| {
+        e.kind == rk_types::event_kind::EventKind::GateOpened
+            && e.payload.get("token").is_some_and(|t| !t.is_null())
+    });
+    let Some(row) = gate else {
         return Exit::Success;
+    };
+    let field = |name: &str| {
+        row.payload
+            .get(name)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned()
+    };
+    let token_hex = field("token");
+    let tree_hash = field("tree_hash");
+    let deadline = row
+        .payload
+        .get("deadline")
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or_default();
+
+    // ---- THE `Gate:` TRAILER COMMIT IS A TIER-1 WRITE (H-5). ------------------------------------
+    //
+    // ADR-0105 clause 8 / AC-529 / AC-518: it goes through `authorise_tier1_write`, against the
+    // RUN-OWNED worktree and its branch, and **never** against `cwd`. `OwnedWorktree`'s path is a
+    // private field with only an accessor — the type IS the mechanism: *was this write checked?*
+    // is answered by which function produced the value the commit is given.
+    let owned_path = resolved
+        .common_dir
+        .join("redkiln")
+        .join("worktrees")
+        .join(item_id);
+    let ownership = rk_git::worktree::RunOwnership {
+        worktree: owned_path.clone(),
+        branch: format!("rk-run/{item_id}"),
+    };
+    let owned =
+        match rk_git::worktree::authorise_tier1_write(&resolved.exec, &owned_path, &ownership) {
+            Ok(owned) => owned,
+            Err(e) => {
+                eprintln!("redkiln: the gate trailer's write was not authorised: {e:?}");
+                return Exit::ConfigError;
+            }
+        };
+    if let Err(e) = rk_git::trailer::write::commit_with_trailers(
+        &resolved.exec,
+        owned.path(),
+        &format!("Gate opened for {item_id}"),
+        &[rk_git::trailer::grammar::Trailer {
+            key: rk_git::trailer::grammar::TrailerKey::Gate,
+            value: format!("{token_hex} {tree_hash} {deadline}"),
+        }],
+        true,
+    ) {
+        eprintln!("redkiln: the gate trailer could not be committed: {e:?}");
+        return Exit::ConfigError;
     }
+
+    // **`run` NEVER WAITS** (golden constraint 2). The gate is an EXIT, and exit 0 at that
+    // (D-01; AC-240; AC-024): a run that opened a gate did everything it was asked to do.
+    println!("gate {token_hex} is open for {item_id}");
     Exit::Success
 }
 
@@ -813,6 +982,272 @@ fn exit_for_error_row(row: &rk_types::event::Event) -> Option<Exit> {
         // Both the failure row and the retry MARK carry this kind (they differ only in the
         // payload's `kind = "retry_at"`), and both mean the same row of the table.
         EventKind::RateLimited => Some(Exit::RateLimited),
+        // 🛑 THE REAL HARNESS JOURNALS NO `step_failed` ROW, AND THIS ARM IS WHAT IT DOES WRITE.
+        //
+        // The bridge above is `FakeHarness`'s: its `dispatch` does
+        // `if let Err(error) = &result { store.append(event_for(error)) }`. `ClaudeHarness` does
+        // NOT — it appends one `dispatch_completed` carrying a serialised `DispatchRecord`
+        // (`record::append_completed`), and `Runtime::run_activity` appends only `dispatch` and
+        // `activity_committed`. Measured 2026-09-20 against the wired binary: *"the dispatch did
+        // not commit and the journal carries no error row"*.
+        //
+        // `DispatchRecord` carries `cancelled_by: Option<CancelledBy>` and **no failure class**, so
+        // this arm recovers the ONE row of the table the real path makes derivable — 13 — and the
+        // rest are RAISED rather than guessed. See `exit_for_uncommitted`'s note.
+        EventKind::DispatchCompleted => row
+            .payload
+            .get("cancelled_by")
+            .filter(|v| !v.is_null())
+            .and_then(|v| serde_json::from_value::<rk_types::error::CancelledBy>(v.clone()).ok())
+            .map(|by| match by {
+                // All three arms are one row (§7d.4): the WHO of a cancellation does not change
+                // the exit. `Timeout` here is the adapter's own timer arm, which is why §7d.4 says
+                // a binary-level timeout fixture is row 13 and *"a fixture whose `expected` reads
+                // `12` is red on a correct binary"*.
+                rk_types::error::CancelledBy::Signal
+                | rk_types::error::CancelledBy::Timeout
+                | rk_types::error::CancelledBy::Operator => Exit::Cancelled,
+            }),
         _ => None,
     }
+}
+
+// ------------------------------------------------------------------- step (8), the outer half
+//
+// Everything below runs ABOVE `run_with` and is what cycle 6 adds: the run-owned worktree, the
+// binder pass over every DAG node, and — only then — the real `ClaudeHarness` built from the
+// config the bindings filled. §7d.5 fixes that order in terms, and `ClaudeHarness::dispatch`
+// refuses a `card_digest` its validated store does not hold, so building the harness before the
+// bindings would refuse every dispatch with *"names no card in the validated store"*.
+
+/// The run-owned worktree: `<common-dir>/redkiln/worktrees/<item>` on `rk-run/<item>`.
+///
+/// **Re-created, never reused** (ADR-0105 clause 6; H-5 / RT-47). The teardown is the RAW
+/// `["worktree", "remove", "--force", path]` rather than `rk_git::worktree::remove`, because that
+/// wrapper passes no `--force` and git refuses a tree a killed run left files in [measured
+/// 2026-09-18, rc=128]. §7d.5 licenses the raw form for exactly this, and for nothing else.
+fn recreate_run_worktree(
+    exec: &GitExec,
+    repo: &WorktreePath,
+    common_dir: &Path,
+    item: &str,
+) -> Result<PathBuf, Exit> {
+    let path = common_dir.join("redkiln").join("worktrees").join(item);
+    let branch = format!("rk-run/{item}");
+
+    // The teardown's failure is ignored ON PURPOSE: the ordinary case is that there is nothing to
+    // remove, and git's refusal to remove an absent tree is not this run's problem.
+    let _ = exec.run(
+        rk_git::git_exec::GitOp::WorktreeRemove,
+        repo,
+        [
+            std::ffi::OsStr::new("worktree"),
+            std::ffi::OsStr::new("remove"),
+            std::ffi::OsStr::new("--force"),
+            path.as_os_str(),
+        ],
+    );
+    let _ = std::fs::remove_dir_all(&path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", parent.display());
+            Exit::ConfigError
+        })?;
+    }
+
+    // `worktree add -b <branch> <path> HEAD` on a FIRST run; `rk_git::worktree::add` when the
+    // branch already exists from an earlier one.
+    if exec
+        .run(
+            rk_git::git_exec::GitOp::WorktreeAdd,
+            repo,
+            [
+                std::ffi::OsStr::new("worktree"),
+                std::ffi::OsStr::new("add"),
+                std::ffi::OsStr::new("-b"),
+                std::ffi::OsStr::new(&branch),
+                path.as_os_str(),
+                std::ffi::OsStr::new("HEAD"),
+            ],
+        )
+        .is_err()
+    {
+        rk_git::worktree::add(exec, repo, &path, &branch).map_err(|e| {
+            eprintln!("redkiln: the run-owned worktree could not be created: {e:?}");
+            Exit::ConfigError
+        })?;
+    }
+    Ok(path)
+}
+
+/// The real harness's configuration, from the pack's margins and TTLs and the captured environment.
+///
+/// # 🛑 `harness_binary` IS THE ONE VALUE HERE WITH A FALLBACK, AND THE FALLBACK IS THE ADAPTER'S
+///
+/// AC-377's rule — *declared, never defaulted in code* — governs the pack-sourced values: the
+/// margins, the two TTLs and the per-activity timeout are read from the pack and a missing one is
+/// a refusal, not a default. `harness_binary` is **not** pack-sourced: it is RT-49's OPTIONAL
+/// `[adapters]` key, whose absence is the ordinary case, and whose documented default is the
+/// adapter's own program name. Spelling that default here is what makes the key optional; it is
+/// stated rather than silent so the AC-377 line above is not read as covering it. The adapter
+/// declares no constant for it (measured: no `DEFAULT_HARNESS_BINARY` in
+/// `rk-adapter-claude/src/config.rs`), and adding one would be an adapter `src` edit that
+/// re-opens Checkpoint 7c for a spelling — so the literal is here, named as what it is.
+fn real_harness_config(
+    resolved: &Resolved,
+    env: &Env,
+) -> Result<rk_adapter_claude::config::Config, Exit> {
+    let binary = resolved
+        .harness_binary
+        .clone()
+        .unwrap_or_else(|| "claude".to_owned());
+    rk_adapter_claude::config::Config::new(rk_adapter_claude::config::ConfigValues {
+        captured_env: env.as_map().clone(),
+        harness_binary: PathBuf::from(binary),
+        prompt_cache_ttl: Some(resolved.extras.cache.prompt_ttl.clone()),
+        subagent_prompt_cache_ttl: Some(resolved.extras.cache.subagent_prompt_ttl.clone()),
+        margins: rk_adapter_claude::config::Margins {
+            five_hour: resolved.extras.margins.five_hour,
+            seven_day: resolved.extras.margins.seven_day,
+        },
+        on_version_mismatch: rk_adapter_claude::config::MismatchPolicy::Refuse,
+    })
+    .map_err(|e| {
+        eprintln!("redkiln: the harness configuration was refused: {e}");
+        Exit::ConfigError
+    })
+}
+
+/// Step (8)'s binding pass: one `Binder::bind` per DAG node, each recorded into the input set.
+///
+/// # 🛑 ONE SPEC PER NODE, NOT PER STEP — THE RUNTIME DISPATCHES WHOLE ACTIVITIES
+///
+/// `Runtime::run_activity` takes one `ActivitySpec` for an `(item, activity_id@version)`
+/// activation, so a DAG node gets exactly one binding whatever its steps' kinds are. The role is
+/// whichever of the activity's steps nominates one — and `pack-min`'s single step is a `tool` step
+/// that carries `role = "implementer"` deliberately, so `Pack::require_family_for_role` has
+/// something to check. An earlier draft of this loop carried a comment claiming an absent role
+/// meant *"a node with no agent step"*; that was false of the one fixture it runs against, and the
+/// filter it implied would have left `pack-min`'s only node unbound.
+///
+/// # The selection is resolved twice, and that is structural rather than sloppy
+///
+/// `replay::resume` re-runs `inputs.build()` and `select()` itself, and it must: it is handed
+/// `inputs`, not a selection. The CLI needs the DAG here to bind, so the two calls both stand.
+/// What is NOT left to drift is the REFUSAL: a selection that will not resolve renders the same
+/// way here as it does one call later, so a test keyed on that message is not keyed on which of
+/// the two fired.
+fn bind_nodes(
+    resolved: &Resolved,
+    mut inputs: rk_kernel::replay::RunInputs,
+    binder: &mut rk_adapter_claude::binder::Binder,
+    owned: &Path,
+) -> Result<rk_kernel::replay::RunInputs, Exit> {
+    let root = Path::new(resolved.worktree.as_str()).to_path_buf();
+    let (pack, catalog, artifacts, facets, item) = inputs.build().map_err(|e| {
+        eprintln!("redkiln: {e}");
+        Exit::ConfigError
+    })?;
+    let selection =
+        rk_kernel::select::select(&pack, &catalog, &artifacts, &facets, &resolved.stage, &item)
+            .map_err(|e| {
+                eprintln!("redkiln: {e}");
+                Exit::ConfigError
+            })?;
+
+    for node in selection.dag().nodes() {
+        let Some(activity) = catalog
+            .activities()
+            .iter()
+            .find(|a| a.id == node.activity_id)
+        else {
+            continue;
+        };
+        let Some(role_name) = activity.steps.iter().find_map(|s| s.role.clone()) else {
+            continue;
+        };
+
+        let card_path = root
+            .join(".redkiln")
+            .join("cards")
+            .join(format!("{role_name}.json"));
+        let card_text = std::fs::read_to_string(&card_path).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", card_path.display());
+            Exit::ConfigError
+        })?;
+        let card = rk_adapter_claude::card::AuthoredCard::from_file(&role_name, &card_text)
+            .map_err(|e| {
+                eprintln!("redkiln: {}: {e}", card_path.display());
+                Exit::ConfigError
+            })?;
+
+        let kind = activity.provides.first().cloned().unwrap_or_default();
+        let schema_path = root
+            .join(".redkiln")
+            .join("schemas")
+            .join(format!("{kind}.json"));
+        let schema_text = std::fs::read_to_string(&schema_path).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", schema_path.display());
+            Exit::ConfigError
+        })?;
+        let schema_json: serde_json::Value = serde_json::from_str(&schema_text).map_err(|e| {
+            eprintln!("redkiln: {} is not JSON: {e}", schema_path.display());
+            Exit::ConfigError
+        })?;
+
+        let timeout_secs = resolved
+            .extras
+            .activity
+            .get(&activity.id)
+            .map(|a| a.timeout_secs)
+            .ok_or_else(|| {
+                eprintln!(
+                    "redkiln: the pack declares no `[activity.{}] timeout_secs`. AC-377's rule \
+                     holds for every adapter-facing value: declared, never defaulted in code.",
+                    activity.id
+                );
+                Exit::ConfigError
+            })?;
+
+        // `Role { model, effort }` is THE PACK'S role table, read through `PackExtras`. The card
+        // may not carry a tier (`ConfigError::TierLeak`), so this row is its only source.
+        let declared = resolved.extras.role.get(&role_name).ok_or_else(|| {
+            eprintln!(
+                "redkiln: the pack declares no `[role.{role_name}]` row, so the tier the binder \
+                 injects has no source (AC-212; AC-118)."
+            );
+            Exit::ConfigError
+        })?;
+        let role = rk_adapter_claude::binder::Role {
+            model: declared.model,
+            effort: declared.effort,
+        };
+
+        let spec = binder
+            .bind(rk_adapter_claude::binder::BindRequest {
+                role_name: &role_name,
+                role: &role,
+                card: &card,
+                schema: &rk_adapter_claude::binder::Schema {
+                    id: rk_types::typed::SchemaId::new(&kind),
+                    json: schema_json,
+                },
+                timeout_secs,
+                worktree: owned,
+                inputs: vec![("item".to_owned(), serde_json::json!(resolved.item.id()))],
+            })
+            .map_err(|e| {
+                eprintln!("redkiln: the binder refused `{}`: {e}", node.id);
+                Exit::ConfigError
+            })?;
+
+        let activation = activity
+            .id_at_version()
+            .unwrap_or_else(|| activity.id.clone());
+        inputs = inputs.with_spec(
+            &node.id,
+            rk_kernel::replay::RecordedSpec::supplied(&activation, spec),
+        );
+    }
+    Ok(inputs)
 }

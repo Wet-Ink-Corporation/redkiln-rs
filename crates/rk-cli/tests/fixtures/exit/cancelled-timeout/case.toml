@@ -1,0 +1,13 @@
+# 🛑 THIS IS ROW 13, NOT ROW 12, AND A FIXTURE READING 12 IS RED ON A CORRECT BINARY.
+#
+# §7d.4, verbatim: "the adapter classifies its timer arm `Cancelled { by: Timeout }` … so
+# this fixture is the binary-level instance of row `13`, not `12`". `StepError::Timeout`
+# (row 12) is reachable in-process only; nothing in `rk-adapter-claude` produces it.
+#
+# The child is held in `hold` — it writes its marker and parks with stdout open and never
+# written, so neither the drain nor the child exit ever resolves and the adapter's own
+# 1 s timer is the only arm left. The pack is `dispatch-1s`, whose `[activity.emit-report]
+# timeout_secs` is 1: the GATE deadline is untouched at 900, because it bounds nothing here.
+args = ["run", "bug-1"]
+pack = "dispatch-1s"
+mode = "hold"

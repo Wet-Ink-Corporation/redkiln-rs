@@ -57,6 +57,13 @@ pub fn src_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("src")
 }
 
+/// The `tests/fixtures/` root.
+pub fn fixtures_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+}
+
 /// The lint-control directory every in-process source-scan test controls itself against (§7d.13).
 pub fn lint_controls_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

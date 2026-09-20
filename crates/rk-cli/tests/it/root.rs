@@ -1088,3 +1088,205 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
          cannot fail. config.toml after the run:\n{after}"
     );
 }
+
+/// **H-2 / AC-225 — a signal DURING a dispatch cancels it, and the run exits 13.**
+///
+/// §7d.10: *"in-process, real `ClaudeHarness` with `harness_binary` → `rk-fixture-child-claude` in
+/// `hold` mode; the test fires the token from a thread **after the child's marker file appears**
+/// under `RK_FIXTURE_MARKER_DIR` (a store poll would block — the kernel holds the store `Mutex`
+/// across `harness.dispatch`)."*
+///
+/// # 🛑 IN-PROCESS WITH A **REAL** ADAPTER, WHICH IS NOT A CONTRADICTION
+///
+/// No test may deliver a console signal at 7d — under `cargo test` the binary is not in its own
+/// process group, so the event would reach `cargo`, libtest and the shell. The OS-delivery arm is
+/// ARMED, not run. What IS run is everything downstream of the token: the harness the test builds
+/// is the real one, the child it spawns is the real fixture child, and the only thing standing in
+/// for the signal is `token.cancel()` — which is exactly what `signal::on_signal` does and nothing
+/// more (`signal_handler_fires_cancel_token` pins that).
+///
+/// # 🛑 THE TOKEN IS FIRED ON THE MARKER FILE, NEVER ON A STORE POLL
+///
+/// `Runtime::run_activity` holds the store `Mutex` across `harness.dispatch`, so a watcher thread
+/// that polled the store would block until the dispatch it is trying to interrupt had finished.
+/// The child's own marker file is outside that lock: `rk-fixture-child` writes `<pid>.marker`
+/// before it parks, so its appearance is proof the child is ALIVE AND HOLDING — which is the
+/// state AC-225 is about.
+///
+/// `timeout_secs` stays the pack's 900. A small one would let the adapter's own timer arm fire
+/// first and the row would read `cancelled_by: timeout` — §7d.4's named wrong-reason red.
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test-side bound, not a decision (AC-001) — s7d §7d.15's form for §7d.14's bounds"
+)]
+fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let root = repo.path();
+    let markers = tempfile::tempdir().expect("a marker directory");
+    let wt = tempfile::tempdir().expect("the spec's worktree");
+    let child = crate::support::fixture_child();
+
+    let resolved = crate::support::resolved_over_pack_min(root, "bug-1");
+
+    // The captured map the adapter hands the child. `RK_FIXTURE_MODE=hold` is what makes the child
+    // park instead of returning, which is the only way a dispatch is still running when the token
+    // fires. Neither name is on the adapter's env denylist.
+    let mut captured = std::collections::BTreeMap::new();
+    captured.insert("RK_FIXTURE_MODE".to_owned(), "hold".to_owned());
+    captured.insert(
+        "RK_FIXTURE_MARKER_DIR".to_owned(),
+        markers.path().to_string_lossy().into_owned(),
+    );
+    let cfg = rk_adapter_claude::config::Config::new(rk_adapter_claude::config::ConfigValues {
+        captured_env: captured,
+        harness_binary: child,
+        prompt_cache_ttl: Some(resolved.extras.cache.prompt_ttl.clone()),
+        subagent_prompt_cache_ttl: Some(resolved.extras.cache.subagent_prompt_ttl.clone()),
+        margins: rk_adapter_claude::config::Margins {
+            five_hour: resolved.extras.margins.five_hour,
+            seven_day: resolved.extras.margins.seven_day,
+        },
+        on_version_mismatch: rk_adapter_claude::config::MismatchPolicy::Refuse,
+    })
+    .expect("the fixture harness configuration constructs");
+
+    // Bound through the REAL binder: it is what fills the card store `dispatch` reads, and an
+    // unbound `card_digest` is a pre-spawn `Transport { Spawn }` rather than a cancellation.
+    // Read off the PACK rather than written as literals, so a pack edit moves this test with it.
+    let card_text =
+        std::fs::read_to_string(root.join(".redkiln").join("cards").join("implementer.json"))
+            .expect("the fixture card is installed");
+    let card = rk_adapter_claude::card::AuthoredCard::from_file("implementer", &card_text)
+        .expect("the fixture card loads");
+    let schema_json: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(
+            root.join(".redkiln")
+                .join("schemas")
+                .join("ImplReport.json"),
+        )
+        .expect("the fixture schema is installed"),
+    )
+    .expect("the schema is JSON");
+    let declared = resolved
+        .extras
+        .role
+        .get("implementer")
+        .expect("pack-min declares [role.implementer]");
+    let role = rk_adapter_claude::binder::Role {
+        model: declared.model,
+        effort: declared.effort,
+    };
+    let timeout_secs = resolved
+        .extras
+        .activity
+        .get("emit-report")
+        .expect("pack-min declares [activity.emit-report]")
+        .timeout_secs;
+    let mut binder = rk_adapter_claude::binder::Binder::new(cfg);
+    let spec = binder
+        .bind(rk_adapter_claude::binder::BindRequest {
+            role_name: "implementer",
+            role: &role,
+            card: &card,
+            schema: &rk_adapter_claude::binder::Schema {
+                id: rk_types::typed::SchemaId::new("ImplReport"),
+                json: schema_json,
+            },
+            timeout_secs,
+            worktree: wt.path(),
+            inputs: vec![("item".to_owned(), serde_json::json!("bug-1"))],
+        })
+        .expect("pack-min's one card binds");
+
+    let token = CancelToken::new();
+    let harness = rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone())
+        .expect("the harness constructs");
+    let store = crate::support::counting_store(&crate::support::Trace::new());
+    let ports = crate::support::ports(
+        Arc::new(harness) as Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let inputs = crate::support::inputs_over_pack_min(&resolved).with_spec(
+        "emit-report",
+        rk_kernel::replay::RecordedSpec::supplied("emit-report@1", spec),
+    );
+
+    // The watcher. A channel nobody sends on is the wait — `std::thread::sleep` is clippy-banned
+    // workspace-wide, and `recv_timeout` reads no clock in our code.
+    let marker_dir = markers.path().to_path_buf();
+    let firing = token.clone();
+    let watcher = std::thread::spawn(move || -> Option<u32> {
+        let (_tx, rx) = std::sync::mpsc::channel::<()>();
+        let started = std::time::Instant::now();
+        while started.elapsed() < std::time::Duration::from_secs(30) {
+            if let Some(pid) = crate::support::marker_pid(&marker_dir) {
+                firing.cancel();
+                return Some(pid);
+            }
+            let _ = rx.recv_timeout(std::time::Duration::from_millis(10));
+        }
+        None
+    });
+
+    let mut supply = crate::support::no_spec();
+    let exit = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token)
+        .expect("a sound lock is not a halt");
+    let child_pid = watcher.join().expect("the watcher thread does not panic");
+
+    // (0) THE PREMISE: the child really did start and park. Without a marker the token fired on a
+    //     timeout rather than on a live dispatch, and everything below is about nothing.
+    let child_pid = child_pid.expect(
+        "the fixture child wrote no marker within 30 s, so the token was never fired ON a running \
+         dispatch and this test measured a bound rather than a cancellation",
+    );
+
+    // (1) THE EXIT.
+    assert_eq!(
+        exit,
+        rk_cli::exit::Exit::Cancelled,
+        "a dispatch cancelled by a signal is exit 13, not {exit:?}"
+    );
+    assert_eq!(exit.code(), 13);
+
+    // (2) THE ROWS, read off the store the run wrote.
+    let rows = store
+        .lock()
+        .expect("the fixture store's lock is sound")
+        .query(rk_kernel::runtime::journal_query("bug-1"))
+        .expect("the journal reads");
+    assert_eq!(
+        rows.iter()
+            .filter(|e| e.kind == rk_types::event_kind::EventKind::Dispatch)
+            .count(),
+        1,
+        "exactly one `dispatch` row is owed — the cancellation is OF a dispatch. Rows: {:?}",
+        rows.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+    let completed: Vec<&rk_types::event::Event> = rows
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::DispatchCompleted)
+        .collect();
+    assert_eq!(
+        completed.len(),
+        1,
+        "the adapter records every path (`finish()`), so exactly one `dispatch_completed` row is \
+         owed. Rows: {:?}",
+        rows.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        completed[0].payload.get("cancelled_by"),
+        Some(&serde_json::json!("signal")),
+        "the `dispatch_completed` row does not carry `cancelled_by: signal`. A `timeout` here \
+         means the adapter's own timer arm fired first and the cancellation was not the token's \
+         (§7d.4's named wrong-reason red); a null means nothing cancelled it at all"
+    );
+
+    // (3) THE CHILD IS DEAD. Read through the pid the CHILD wrote into its own marker, so this is
+    //     a reading of the process the run killed rather than a number the run reported.
+    assert!(
+        !crate::support::pid_is_alive(child_pid),
+        "the fixture child (pid {child_pid}) survived the cancellation. ADR-0099's containment is \
+         what makes a cancelled dispatch leave nothing behind"
+    );
+}

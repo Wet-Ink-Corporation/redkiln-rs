@@ -1,0 +1,6 @@
+# D18-8. The `init` scaffold carries `enabled = []`, so step (7) refuses with "no process
+# pack enabled" BEFORE any lane derivation. `pack = "none"` means the case builds a bare
+# `init`-only repository rather than a pack-min one.
+args = ["run", "some-item"]
+pack = "none"
+mode = "exit:0"

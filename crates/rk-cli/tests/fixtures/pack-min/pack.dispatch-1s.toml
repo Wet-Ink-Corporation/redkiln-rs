@@ -1,0 +1,104 @@
+# The smallest loadable process pack (`s7d` §7d.13). Installed as BOTH
+# `.redkiln/packs/bug-standard.toml` and `.redkiln/packs/story.toml` — ADR-0128 decision 3's two lane
+# names, one file.
+#
+# Read by TWO parsers over these same bytes: the kernel's `Pack::from_toml` (a TOML subset walker
+# that ignores keys it does not know) and `rk-cli`'s own `PackExtras`. The kernel's `Pack` is NOT
+# widened for the adapter-facing keys below; doing so would re-open Checkpoint 7b for a fixture.
+# 🛑 A ROOT KEY, AND IT SITS ABOVE EVERY TABLE HEADER BECAUSE TOML REQUIRES THAT.
+# A bare key belongs to the LAST table opened, so this line below `[role.implementer]` became
+# that table's field and `PackExtras` reported `missing field gate_deadline_secs` at the
+# document root. §7d.5 step (9): the gate deadline is `now + this`, off the ONE wall-clock read.
+gate_deadline_secs = 900
+
+[pack]
+id = "pack-min"
+applies = "kind == bug or kind == story"
+appetite = { points = 50, tokens = 200000 }
+
+# AC-029: DECLARED, never defaulted in code. `replay`'s loop calls `require_attempt_cap` BEFORE it
+# dispatches and refuses a pack that declares none. It is 1 so a one-element `FakeHarness` script is
+# never exhausted into `Transport { detail: "script exhausted" }` — §7d.5's own reason.
+[retry]
+attempts_cap = 1
+
+[breaker]
+consecutive_platform_failures = 3
+expiry_secs = 600
+
+# `discouraged` is RESERVED and refused by `read_rigor`; the five tokens are a closed set.
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["ImplReport"]
+
+# THE ONE `require` ROW, and it reads a NULLABLE BOOLEAN HUMAN-SOURCED facet on purpose.
+#
+# `gate-item.toml` omits `has_repro`, so the item carries `with_facet_null` for it, the evaluator
+# returns `Tri::Null`, and step 2 mints exactly one `GateOpened { reason: UnknownFacet, axis }` —
+# the abstention gate, which is the ONLY gate this pack opens. A `StepKind::Gate` step inside an
+# activity opens nothing at this pin (the loader maps it to `Evidence::HumanAnswer` and the runtime
+# dispatches the whole activity), which is why there is no gate step anywhere in this fixture.
+#
+# `human` and `nullable` also keep `lint --facet-provenance` off it: a `declared` facet keying a
+# require row is `RequireKeyedOnDeclared`, and a lexical `derived` one is barred too.
+[[stage.implement.require]]
+when = "has_repro"
+artifacts = ["TestReport"]
+
+# 🛑 THE TIER HAS EXACTLY ONE SOURCE, AND IT IS THIS TABLE.
+# `Binder::bind` refuses a role declaring no model -- "role implementer declares no model — the
+# tier is traceable only through the role (AC-212; AC-118)" -- and the CARD may not carry one
+# (`ConfigError::TierLeak`). So `model` and `effort` sit here beside the kernel's own `family`,
+# read through `PackExtras`. Spellings are `Tier` / `Effort` under `rename_all = "lowercase"`.
+[role.implementer]
+family = "claude"
+model = "sonnet"
+effort = "medium"
+
+# --- read by rk-cli's PackExtras; the kernel's toml_subset walker ignores every key below ---
+
+# `rk_adapter_claude::config::Margins` — BOTH members required, `deny_unknown_fields`, in TICKS.
+# AC-377: never a code default.
+[margins]
+five_hour = 10
+seven_day = 10
+
+# Both TTLs — CLAUDE_CODE_PROMPT_CACHE_TTL and CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL.
+[cache]
+prompt_ttl = "1h"
+subagent_prompt_ttl = "1h"
+
+# The gate-class expiry row, linted by `gate::lint_expiry_policy_row`.
+#
+# 🛑 THE CLASS IS THE FULL GATE KIND, AXIS AND ALL, AND IT IS A **VALUE** RATHER THAN A KEY.
+# `fsm::next_action` spells the class `format!("{}:{}", gate.reason.as_str(), gate.axis)`, so the
+# abstention gate this pack opens has kind `unknown_facet:has_repro`. A row keyed on the bare
+# `unknown_facet` matches NO gate this system opens.
+#
+# But the full kind carries a COLON, and a TOML key carrying one must be quoted -- which the
+# kernel's `toml_subset` walker refuses outright: "bare unquoted keys only, and this one is
+# \"unknown_facet:has_repro\"" (crates/rk-kernel/src/toml_subset.rs). TWO parsers read these same
+# bytes, so a key shape only one of them accepts is available to NEITHER. Carrying the class as a
+# VALUE in an array of tables keeps every key bare and keeps the class exactly the string
+# `GateRecord::kind()` produces.
+#
+# Invisible until this cycle: at cycle 4 the pack was READ at step (7) but never PARSED -- the
+# kernel sees these bytes first at `inputs.build()`, which is step (8)/(9)'s.
+#
+# `fail` is the only action of the three needing no second value, which keeps the expiry
+# deterministic for `ac257_…`. `escalate` on the escalation class is refused by the lint itself.
+[[gate_expiry]]
+class = "unknown_facet:has_repro"
+action = "fail"
+
+# `timeout_secs` on EVERY activity (`BindRequest.timeout_secs`).
+# 🛑 ONE SECOND, AND IT IS THE DISPATCH'S BOUND RATHER THAN THE GATE'S.
+# `gate_deadline_secs` above still reads 900: it feeds `GateToken::derive` and the expiry
+# read, and bounds nothing the adapter does. THIS key is what `Binder::bind` puts on the
+# `ActivitySpec` and what `runner.rs` wraps its select! in, so a `hold` child is killed by the
+# adapter's own timer here — which the adapter classifies `Cancelled { by: Timeout }`, row 13.
+# §7d.4: "a fixture whose `expected` reads `12` is red on a correct binary".
+[activity.emit-report]
+timeout_secs = 1

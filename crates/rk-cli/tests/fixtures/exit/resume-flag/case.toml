@@ -1,0 +1,5 @@
+# clap's usage code, kept (H-1). `--resume` is not in the parser tree at all — ADR-0128
+# and §7d.3 forbid it — so this is the ROUTER's refusal and it never reaches a verb.
+args = ["run", "bug-1", "--resume"]
+pack = "base"
+mode = "exit:0"

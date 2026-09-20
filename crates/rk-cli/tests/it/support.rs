@@ -510,6 +510,11 @@ pub enum PackVariant {
     TwoActivities,
     /// `pack.gate-1s.toml` — `gate_deadline_secs = 1`, for the expiry tests.
     GateOneSecond,
+    /// `pack.dispatch-1s.toml` — `[activity.emit-report] timeout_secs = 1`, which is
+    /// the DISPATCH's bound and not the gate's. A `hold` child under it is killed by
+    /// the adapter's own timer, which the adapter classifies `Cancelled { by: Timeout }`
+    /// — §7d.4's row 13, never row 12.
+    DispatchOneSecond,
 }
 
 impl PackVariant {
@@ -518,6 +523,7 @@ impl PackVariant {
             Self::Base => "pack.toml",
             Self::TwoActivities => "pack.two-activities.toml",
             Self::GateOneSecond => "pack.gate-1s.toml",
+            Self::DispatchOneSecond => "pack.dispatch-1s.toml",
         }
     }
 }
@@ -547,7 +553,7 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
     let root = repo.path();
     let src = pack_min_dir();
     let rk = root.join(".redkiln");
-    for sub in ["packs", "catalog", "items"] {
+    for sub in ["packs", "catalog", "items", "cards", "schemas"] {
         std::fs::create_dir_all(rk.join(sub)).expect("the .redkiln subdirectory is created");
     }
 
@@ -580,6 +586,31 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
     //
     // Absolutising kills the ambiguity, and `fixture_child`'s presence assertion turns the absent
     // case from a silent wrong-reason refusal into a failure that names its own remedy.
+    // The cards and schemas step (8)'s binder reads, installed beside the pack.
+    //
+    // 🛑 FILTERED TO `*.json`, and that is not tidiness. `cards/` carries a `README.md` (the one
+    // that RAISES `fulfils`), and an unfiltered copy would plant a non-card file in the directory
+    // Slice 4's `doctor/roles.rs` is specified to SCAN — a fixture defect authored here and paid
+    // for one slice later.
+    let mut installed_bindables = 0_usize;
+    for sub in ["cards", "schemas"] {
+        for entry in std::fs::read_dir(src.join(sub)).expect("the fixture subdirectory reads") {
+            let path = entry.expect("an entry").path();
+            if path.extension().is_none_or(|e| e != "json") {
+                continue;
+            }
+            let name = path.file_name().expect("a file name");
+            std::fs::copy(&path, rk.join(sub).join(name)).expect("the fixture file installs");
+            installed_bindables += 1;
+        }
+    }
+    assert!(
+        installed_bindables >= 2,
+        "only {installed_bindables} card/schema files installed; step (8)'s binder reads one card \
+         per role and one schema per provided kind, and a binder that finds neither refuses on the \
+         FIXTURE rather than on anything a test names"
+    );
+
     let config_src = std::fs::read_to_string(src.join("config.toml"))
         .expect("the fixture configuration is readable");
     let child = fixture_child();
@@ -1073,7 +1104,7 @@ fn spawn_bound_fires_on_a_holding_child_and_kills_it() {
     reason = "a liveness READING of the process the bound killed — the control's third assertion \
               is worth nothing without it (Halt 8)"
 )]
-fn pid_is_alive(pid: u32) -> bool {
+pub fn pid_is_alive(pid: u32) -> bool {
     #[cfg(windows)]
     {
         let out = std::process::Command::new("tasklist")
@@ -1198,4 +1229,84 @@ pub fn impl_report() -> Typed {
         rk_types::typed::SchemaId::new("ImplReport"),
         serde_json::json!({ "summary": "pack-min" }),
     )
+}
+
+// --------------------------------------------------- the readbacks a SPAWNED run leaves behind
+
+/// The item's journal, read back out of the store a spawned `redkiln` wrote.
+///
+/// The callers spawn the binary, so they hold no store of their own; `SqliteStore::open` needs a
+/// `GitExec` and a `WorktreePath`, and `resolved_over_pack_min` is already the one place that
+/// produces both through the real seam. Re-running steps (1)–(7) to get them is cheap and writes
+/// nothing (step (6)'s reconcile appends no row at this stage).
+///
+/// # Panics
+/// If the store will not open — which means the run under test never created one.
+#[must_use]
+pub fn journal_rows(root: &Path, item: &str) -> Vec<Event> {
+    let resolved = resolved_over_pack_min(root, item);
+    let store = rk_adapter_sqlite::SqliteStore::open(&resolved.exec, &resolved.worktree)
+        .unwrap_or_else(|e| panic!("the store the run wrote opens: {e}"));
+    store
+        .query(rk_kernel::runtime::journal_query(item))
+        .unwrap_or_else(|e| panic!("the journal reads: {e:?}"))
+}
+
+/// `git -C <dir> log -1 --format=%B` — the HEAD commit's full message, trailers included.
+#[expect(
+    clippy::disallowed_types,
+    reason = "reading a fixture worktree's own HEAD message; the product's git goes through \
+              rk-git's one GitExec wrapper"
+)]
+#[must_use]
+pub fn head_message(dir: &Path) -> String {
+    let out = std::process::Command::new("git")
+        .args(["log", "-1", "--format=%B"])
+        .current_dir(dir)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .expect("git log runs");
+    String::from_utf8_lossy(&out.stdout).into_owned()
+}
+
+/// `git rev-list --count HEAD` — how many commits the repository's current branch carries.
+#[expect(
+    clippy::disallowed_types,
+    reason = "reading a fixture repository's own commit count; see `head_message` above"
+)]
+#[must_use]
+pub fn commit_count(dir: &Path) -> usize {
+    let out = std::process::Command::new("git")
+        .args(["rev-list", "--count", "HEAD"])
+        .current_dir(dir)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .expect("git rev-list runs");
+    String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse()
+        .expect("git rev-list --count prints an integer")
+}
+
+/// The pid out of the first `<pid>.marker` file in `dir`, or `None` while none has appeared.
+///
+/// `rk-fixture-child` writes its marker BEFORE it parks (`hold` writes it first, then holds), so
+/// the file's appearance is proof the child is alive and holding. It is also OUTSIDE the store
+/// lock the kernel holds across a dispatch, which a store poll is not.
+#[must_use]
+pub fn marker_pid(dir: &Path) -> Option<u32> {
+    for entry in std::fs::read_dir(dir).ok()? {
+        let path = entry.ok()?.path();
+        if path.extension().is_none_or(|e| e != "marker") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).ok()?;
+        if let Some(pid) = text
+            .lines()
+            .find_map(|l| l.strip_prefix("pid=")?.parse::<u32>().ok())
+        {
+            return Some(pid);
+        }
+    }
+    None
 }

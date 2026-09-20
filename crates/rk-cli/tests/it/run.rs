@@ -10,17 +10,48 @@ use crate::support::{PackVariant, pack_min_repo, set_enabled};
 use crate::{common_dir, refs, run_init, temp_repo};
 
 /// Spawn `redkiln -C <repo> run <item> [--lane <lane>]` with stdin closed (D-15).
+fn spawn_run(repo: &Path, item: &str, lane: Option<&str>) -> std::process::Output {
+    spawn_run_in_mode(repo, item, lane, "exit:0")
+}
+
+/// `spawn_run`, with the fixture child's MODE named.
+///
+/// # 🛑 THE MODE TRAVELS IN THE CHILD ENVIRONMENT, AND AN ABSENT ONE IS NOT NEUTRAL
+///
+/// §7d.13: the child's mode *"travels in the CHILD environment the test spawns `redkiln` with
+/// (`RK_FIXTURE_MODE`, `RK_FIXTURE_MARKER_DIR`, via `Command::env`, never `set_var`), which the
+/// adapter's `child_env` passes through to the child."* `set_var` is banned workspace-wide
+/// **including** `crates/rk-cli/tests/it`.
+///
+/// Leaving it unset is not "no mode": `rk-fixture-child.rs` reads
+/// `env::var("RK_FIXTURE_MODE").unwrap_or_else(|_| "hold".to_owned())`, so an absent variable
+/// selects a 600 s park with stdout held open. That is what wedged this box on 2026-09-20, and it
+/// became reachable from these tests the moment cycle 6 wired step (8): a lane that DERIVES gets
+/// past the pack and dispatches.
+///
+/// `exit:0` is the default here because the lane cases are about **lane derivation**, not about
+/// what the child said: the child exits at once, the dispatch fails for want of a stream, and the
+/// worktree step (8) created — which is what those cases actually read — is already on disk.
 #[expect(
     clippy::disallowed_types,
     reason = "the verb is exercised AS A PROCESS — golden constraint 4's 'a stub never replaced' is \
               caught only by driving the real binary (s7d §7d.13's temp-repository rule)"
 )]
-fn spawn_run(repo: &Path, item: &str, lane: Option<&str>) -> std::process::Output {
+fn spawn_run_in_mode(
+    repo: &Path,
+    item: &str,
+    lane: Option<&str>,
+    mode: &str,
+) -> std::process::Output {
+    let markers = repo.join(".rk-markers");
+    std::fs::create_dir_all(&markers).expect("the marker directory is created");
     let mut cmd = std::process::Command::new(crate::redkiln());
     cmd.arg("-C").arg(repo).arg("run").arg(item);
     if let Some(lane) = lane {
         cmd.arg("--lane").arg(lane);
     }
+    cmd.env("RK_FIXTURE_MODE", mode)
+        .env("RK_FIXTURE_MARKER_DIR", &markers);
     crate::support::output_bounded(&mut cmd)
 }
 
@@ -120,13 +151,30 @@ fn adr0128_lane_derived_from_item_or_refused() {
     // failure: a `PackExtras` parse error (a root key written below a table header) refused every
     // one of these runs, and the test passed. An absence that any other failure can satisfy is not
     // evidence the thing under test happened.
+    // 🛑 AND IT IS NOW A STRUCTURAL FACT RATHER THAN A MESSAGE. Until cycle 6 this read
+    // `stderr.contains("reaches step (8)")` — the stub's own words, which cycle 6 deleted when it
+    // wired step (8). The replacement keys on what step (8) DOES: it re-creates
+    // `<common-dir>/redkiln/worktrees/<item>` on `rk-run/<item>` (H-5 / RT-47). No message change
+    // can invalidate that, and no lane refusal can produce it.
     for item in ["bug-1", "story-1"] {
         let out = spawn_run(root, item, None);
         let stderr = String::from_utf8_lossy(&out.stderr);
         assert!(
-            stderr.contains("reaches step (8)"),
+            common_dir(root)
+                .join("redkiln")
+                .join("worktrees")
+                .join(item)
+                .is_dir(),
             "`{item}` carries a derivable kind, so the run must get PAST the lane and the pack and \
-             reach step (8). It did not; stderr:\n{stderr}"
+             reach step (8)'s run-owned worktree. It did not; stderr:\n{stderr}"
+        );
+        assert!(
+            refs(root)
+                .iter()
+                .any(|r| r.contains(&format!("rk-run/{item}"))),
+            "`{item}` reached step (8)'s worktree but no `rk-run/{item}` ref exists, so the \
+             worktree is not the run-owned one H-5 names; refs: {:?}",
+            refs(root)
         );
     }
 
@@ -196,16 +244,38 @@ fn adr0128_lane_maps_to_pack_fix_bug_standard_story_story() {
     let bug = spawn_run(root, "bug-1", None);
     let bug_stderr = String::from_utf8_lossy(&bug.stderr);
     assert!(
-        bug_stderr.contains("reaches step (8)"),
+        common_dir(root)
+            .join("redkiln")
+            .join("worktrees")
+            .join("bug-1")
+            .is_dir(),
         "removing `story` from the enabled set also stopped the BUG item, so the refusal above is \
          not about the pack THE LANE NAMES. Asserted positively rather than as an absence: an \
          absence here is satisfied by any unrelated failure; stderr:\n{bug_stderr}"
     );
 
-    // Nothing above created a run-owned worktree: every one of these refusals precedes step (8).
-    assert!(
-        !common_dir(root).join("redkiln").join("worktrees").is_dir(),
-        "a lane refusal created the run-owned worktrees directory"
+    // 🛑 THE REFUSALS CREATED NO WORKTREE, AND THIS IS ASSERTED AS AN EXACT SET.
+    //
+    // Until cycle 6 this read `!worktrees.is_dir()` — a blanket absence, which was true only while
+    // step (8) did not exist. The `bug-1` control above now legitimately creates
+    // `worktrees/bug-1`, so the blanket form became false of a CORRECT binary.
+    //
+    // The narrowing chosen is the exact CONTENTS, not merely "`story-1` is absent": a refused run
+    // that created `worktrees/<anything-else>` — a wrong-item worktree, a stray under a mis-derived
+    // name — would pass the weaker form and is exactly the defect this assertion exists to catch.
+    let mut owned: Vec<String> =
+        std::fs::read_dir(common_dir(root).join("redkiln").join("worktrees"))
+            .expect("step (8) created the worktrees directory for `bug-1` above")
+            .filter_map(Result::ok)
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+    owned.sort();
+    assert_eq!(
+        owned,
+        ["bug-1"],
+        "exactly one run-owned worktree may exist here — `bug-1`'s, from the control above. Every \
+         other run in this test is a refusal that precedes step (8), so any other entry is a \
+         worktree a refusal created"
     );
 }
 
@@ -364,6 +434,244 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
             1,
             "the journal carries more than one {kind:?} row, so run 2 re-opened a plan the store \
              already held"
+        );
+    }
+}
+
+/// **AC-403 — an open gate is a TRAILER, an EVENT, and exit 0. `run` never waits.**
+///
+/// §7d.5 step (10): a `gate_opened` among the resumed run's new events makes the `Gate:` trailer
+/// commit a **TIER-1 WRITE** (H-5), taken through `rk_git::worktree::authorise_tier1_write`
+/// (ADR-0105 clause 8; AC-529; AC-518 — **never `cwd`**), then `commit_with_trailers(..,
+/// &[Trailer { key: TrailerKey::Gate, value: format!("{token} {tree_hash} {deadline_secs}") }],
+/// allow_empty = true)`.
+///
+/// # 🛑 THE ITEM IS `gate-1`, AND ITS `[facets]` TABLE IS EMPTY ON PURPOSE
+///
+/// `pack.toml`'s one `[[stage.implement.require]]` row reads `when = "has_repro"`.
+/// `gate-item.toml` OMITS that facet, so the item carries `with_facet_null` for it, the evaluator
+/// returns `Tri::Null`, and step 2 mints exactly one `GateOpened { reason: UnknownFacet, axis }` —
+/// the abstention gate, and the only gate this pack opens (AC-079 / ADR-0089). `bug-1`
+/// (`has_repro = true`) and `story-1` (`false`) both DECIDE it and open nothing.
+///
+/// # 🛑 NO CHILD IS SPAWNED ON THIS PATH, SO THE MARKER COUNT IS A FLOOR
+///
+/// The gate opens BEFORE any dispatch — `resume`'s loop breaks on `NextAction::OpenGate` — so no
+/// implementation reachable from this fixture could spawn the fixture child. A "zero markers"
+/// assertion here could not fail and is reported rather than written. `RK_FIXTURE_MODE` is still
+/// set on the spawn, because leaving it unset would make an UNEXPECTED dispatch hang for 600 s
+/// instead of failing fast (§7d.13).
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test-side bound, not a decision (AC-001) — s7d §7d.15's form for §7d.14's bounds"
+)]
+fn ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting() {
+    let repo = pack_min_repo(PackVariant::Base);
+    let root = repo.path();
+
+    let started = std::time::Instant::now();
+    let out = spawn_run_in_mode(root, "gate-1", None, "exit:0");
+    let elapsed = started.elapsed();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+
+    // (1) THE EXIT. A gate is a successful outcome, not a failure (D-01; AC-240; AC-024).
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "an open gate is exit 0. stderr:\n{stderr}\nstdout:\n{stdout}"
+    );
+
+    // (2) IT DID NOT WAIT. Golden constraint 2: no channel, prompt, socket or sleep on any arm.
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "the run took {elapsed:?}; an open gate is an EXIT, not a wait"
+    );
+
+    // (3) THE EVENT. Read from the store the run wrote, not from what it printed.
+    let rows = crate::support::journal_rows(root, "gate-1");
+    // 🛑 TWO `gate_opened` ROWS ARE CORRECT, AND ONLY ONE OF THEM IS THIS TEST'S.
+    //
+    // §7d.5: `select()`'s own ANNOUNCEMENT rows go into `Selection::journal()` and *"the fold
+    // counts as `gates_announced` and moves no state on"*; then `resume` steps
+    // `NextAction::OpenGate(record)` through `Runtime::step`, *"which appends
+    // `runtime::gate_opened_event(record)` — the `(kind, token, tree_hash, deadline)` row
+    // `ac403_…` reads"*. The announcement carries no token; the runtime's row does. So the count
+    // that discriminates is of rows carrying a TOKEN, and asserting `gate_opened == 1` would have
+    // been red against a correct binary (measured: 2).
+    let gates: Vec<&rk_types::event::Event> = rows
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::GateOpened)
+        .collect();
+    assert!(
+        !gates.is_empty(),
+        "no `gate_opened` row at all — `gate-1` omits `has_repro`, so the require row must abstain \
+         and the abstention gate must open. Rows: {:?}",
+        rows.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+    let tokened: Vec<&&rk_types::event::Event> = gates
+        .iter()
+        .filter(|e| e.payload.get("token").is_some_and(|t| !t.is_null()))
+        .collect();
+    assert_eq!(
+        tokened.len(),
+        1,
+        "exactly one gate row carries a token — the runtime's, the one a `Gate:` trailer is \
+         derived from. Gate payloads: {:?}",
+        gates.iter().map(|e| &e.payload).collect::<Vec<_>>()
+    );
+    let token = tokened[0]
+        .payload
+        .get("token")
+        .and_then(serde_json::Value::as_str)
+        .expect("the gate row carries its token");
+
+    // (4) THE TRAILER, on the RUN-OWNED worktree's HEAD — and it carries the row's own token, so
+    //     the commit and the event are about the same gate rather than two coincidences.
+    let owned = common_dir(root)
+        .join("redkiln")
+        .join("worktrees")
+        .join("gate-1");
+    assert!(
+        owned.is_dir(),
+        "step (8) created no run-owned worktree, so there was nothing to take a tier-1 write \
+         against. stderr:\n{stderr}"
+    );
+    let body = crate::support::head_message(&owned);
+    assert!(
+        body.contains("Gate:"),
+        "the run-owned worktree's HEAD carries no `Gate:` trailer. §7d.5 step (10) makes it a \
+         TIER-1 WRITE, which is the one thing a gate-opening run must leave behind. HEAD:\n{body}"
+    );
+    assert!(
+        body.contains(token),
+        "the `Gate:` trailer does not carry the token the `gate_opened` row recorded ({token}), so \
+         the commit and the event are not about the same gate. HEAD:\n{body}"
+    );
+
+    // (5) THE WRITE WENT TO THE OWNED WORKTREE AND NOT TO THE PRODUCT REPOSITORY. AC-518/AC-529:
+    //     never `cwd`. The outer repository's HEAD is still its single root commit.
+    assert_eq!(
+        crate::support::commit_count(root),
+        1,
+        "the `Gate:` trailer was committed into the PRODUCT repository. It is a tier-1 write \
+         against the run-owned worktree, authorised through `authorise_tier1_write`, and AC-518 \
+         forbids `cwd`"
+    );
+}
+
+/// One `exit/<name>/` case: what to run, against what, and what the child should do.
+#[derive(Debug, serde::Deserialize)]
+struct ExitCase {
+    args: Vec<String>,
+    pack: String,
+    mode: String,
+}
+
+/// **AC-438's BINARY arm** — §7d.4's *"through the binary"* half of the table-driven test,
+/// over `tests/fixtures/exit/<name>/`.
+///
+/// §7d.13 fixes the layout: *"one directory per expected code, with an `expected` file carrying
+/// the integer"*. Each directory here also carries a `case.toml` saying how the code is reached,
+/// so the fixture is readable without the test.
+///
+/// # 🛑 FOUR DIRECTORIES, NOT NINE — AND THE MISSING FIVE ARE A MEASUREMENT, NOT AN OVERSIGHT
+///
+/// GAP 21 derives nine rows for this arm (0, 2, 3, 5, 10, 11 ×2, 13, 18). Four are here, and the
+/// other five are **RAISED** in `fixtures/exit/README.md` with what was measured:
+///
+///   * **10 / 11 / 14 / 18 need the failure CLASS, and the real harness journals none.** The only
+///     callers of `StepError::event()` in any `src/` are `rk-ports`' `fakes.rs` (`FakeHarness`'s
+///     own bridge) and a discarded call in `conformance.rs`. `ClaudeHarness` appends ONE
+///     `dispatch_completed` row whose `DispatchRecord` carries `cancelled_by` and **no class
+///     member**, and `Runtime::run_activity` appends only `dispatch` and `activity_committed`. So
+///     the class is nowhere in what a real run writes, and `exit_for_uncommitted` has nothing to
+///     read. Two mechanisms would close it; choosing one is above this stage.
+///   * **5 (`Exit::NoRecord`) is `explain`'s**, and nothing in `rk-cli/src` returns it yet.
+///
+/// Row **13 IS here**, because it is the one class the real path does make derivable: the
+/// adapter's own timer arm sets `cancelled_by: timeout` on the record, and step (10) reads it.
+///
+/// # 🛑 THE DIRECTORY SET IS ASSERTED, SO A DELETED CASE IS RED
+///
+/// A table-driven test that walks a directory and asserts over whatever it finds passes over an
+/// EMPTY directory. The names are listed here and compared against what is on disk, in both
+/// directions.
+#[test]
+#[expect(
+    clippy::disallowed_types,
+    reason = "every row of this table is driven AS A PROCESS; that is what makes it the BINARY \
+              arm (s7d §7d.4)"
+)]
+fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
+    const CASES: [&str; 4] = ["cancelled-timeout", "gate-open", "no-pack", "resume-flag"];
+
+    let dir = crate::fixtures_dir().join("exit");
+    let mut on_disk: Vec<String> = std::fs::read_dir(&dir)
+        .expect("tests/fixtures/exit/ exists")
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    on_disk.sort();
+    assert_eq!(
+        on_disk, CASES,
+        "the `exit/` directory set and this test's list disagree. A table that walked the \
+         directory alone would pass over an empty one"
+    );
+
+    for name in CASES {
+        let case_dir = dir.join(name);
+        let expected: i32 = std::fs::read_to_string(case_dir.join("expected"))
+            .unwrap_or_else(|e| panic!("{name}/expected is readable: {e}"))
+            .trim()
+            .parse()
+            .unwrap_or_else(|e| panic!("{name}/expected carries an integer: {e}"));
+        let case: ExitCase = toml::from_str(
+            &std::fs::read_to_string(case_dir.join("case.toml"))
+                .unwrap_or_else(|e| panic!("{name}/case.toml is readable: {e}")),
+        )
+        .unwrap_or_else(|e| panic!("{name}/case.toml parses: {e}"));
+
+        // The repository the case names. `none` is a bare `init`-only one — D18-8's own state.
+        let repo = match case.pack.as_str() {
+            "none" => {
+                let repo = temp_repo();
+                assert_eq!(
+                    run_init(repo.path()).status.code(),
+                    Some(0),
+                    "{name}: the repository initialises"
+                );
+                repo
+            }
+            "base" => pack_min_repo(PackVariant::Base),
+            "dispatch-1s" => pack_min_repo(PackVariant::DispatchOneSecond),
+            other => panic!("{name}/case.toml names an unknown pack {other:?}"),
+        };
+        let root = repo.path();
+
+        let markers = root.join(".rk-markers");
+        std::fs::create_dir_all(&markers).expect("the marker directory is created");
+        let mut cmd = std::process::Command::new(crate::redkiln());
+        cmd.arg("-C").arg(root);
+        for arg in &case.args {
+            cmd.arg(arg);
+        }
+        cmd.env("RK_FIXTURE_MODE", &case.mode)
+            .env("RK_FIXTURE_MARKER_DIR", &markers);
+        let out = crate::support::output_bounded(&mut cmd);
+
+        assert_eq!(
+            out.status.code(),
+            Some(expected),
+            "{name}: `redkiln {}` under mode {:?} exited {:?}, not the {expected} its `expected` \
+             file carries.\nstderr:\n{}\nstdout:\n{}",
+            case.args.join(" "),
+            case.mode,
+            out.status.code(),
+            String::from_utf8_lossy(&out.stderr),
+            String::from_utf8_lossy(&out.stdout)
         );
     }
 }
