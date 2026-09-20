@@ -17,3 +17,10 @@ schema = "ChangeSummary"
 [artifact.TestReport]
 source = "activity"
 schema = "TestReport"
+
+# AC-410's positive control attaches a `Findings` root. Like `TestReport` above it is produced by
+# NOTHING in this catalog on purpose: the pair is about what the question ADMITS, not about what the
+# DAG produces, and a producer would add a node no test expects.
+[artifact.Findings]
+source = "human"
+schema = "Findings"

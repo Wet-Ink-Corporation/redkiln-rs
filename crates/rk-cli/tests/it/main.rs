@@ -1,21 +1,32 @@
 //! `rk-cli`'s **one** integration binary — a `mod` per case, never one file per case (ADR-0083).
 //! This is also what makes `--test it` addressable in Checkpoint 7d.
 //!
-//! What is here is **Slices 1 and 2**. Slice 1: [`surface`], the `clap` router — its committed
+//! What is here is **Slices 1 to 3**. Slice 1: [`surface`], the `clap` router — its committed
 //! `--help` snapshot, the resume-shaped denylist walked over the built parser tree, the two grammars
 //! ADR-0128 and ADR-0129 fix, and the one source ban AC-403's lint half names; and [`exit`], the
 //! closed exit table. Slice 2: [`config`], the configuration root — the required key, the key
 //! surface, the one denylist and the refusal before spawn or store write; [`init`], the eager
-//! idempotent scaffold; and [`root`], the poisoned-lock halt and the signal handler.
+//! idempotent scaffold; and [`root`], the poisoned-lock halt and the signal handler. Slice 3:
+//! [`catalog`] and [`lint`], the read verbs; [`reconcile`], AC-402's negative; [`run`], the loop;
+//! and [`answer`], the gate's other end.
 //!
 //! **No empty module stands in for an unbuilt one** (`rk-kernel`'s `tests/it/main.rs` states the rule
-//! and this file inherits it). *(Corrected 2026-09-19 at Slice 3, cycle 2. This read: **"there is no
-//! `run`, `answer`, `doctor` or `migrate` module here, because Slices 3–5 build what they would
-//! assert."** [`support`] arrives here, and it is the one module in this binary the rule does not
-//! reach — it **holds no test at all**, by design, so it cannot read as coverage of anything. The
-//! sentence still holds of the four it names: there is no `run`, `answer`, `doctor` or `migrate`
-//! module yet, and the first two arrive with their own cases later in this slice.)* A `mod` that
-//! exists and asserts nothing reads as coverage.
+//! and this file inherits it). *(Corrected 2026-09-19 at Slice 3, cycle 2; corrected again
+//! 2026-09-20 at cycle 7. The cycle-2 read was **"there is no `run`, `answer`, `doctor` or
+//! `migrate` module yet, and the first two arrive with their own cases later in this slice"** —
+//! true when written and now false twice over: [`run`] landed at cycles 4 to 6 and [`answer`]
+//! lands here. What survives is the rule and the two that still have no module: there is no
+//! `doctor` module (Slice 4 builds what it would assert) and no `migrate` module (Slice 5's).
+//! [`support`] remains the one module in this binary the rule does not reach — it **holds no test
+//! of the product at all**, by design, carrying only the two self-controls of its own spawn bound,
+//! so it cannot read as coverage of anything else.)* A `mod` that exists and asserts nothing reads
+//! as coverage.
+//!
+//! **[`answer`] opens with a scan and no product code, and that is the sequencing, not an
+//! oversight.** `ac405_gate_answer_has_exactly_one_call_site` is *red at zero* before
+//! `src/verbs/answer.rs` exists, and it is what fixes that file's import spelling — an import of
+//! the symbol counts as a call site, so the verb must reach it through a module import. A module
+//! holding one honest red is not an empty module.
 //!
 //! **The two source-scan primitives live HERE, not in `surface.rs`.** [`rs_files`] and [`code_lines`]
 //! are used by `exit::ac438_step_error_mapping_is_exhaustive` and by
@@ -34,6 +45,7 @@
 //! [`rs_files`], [`code_lines`], [`assert_no_block_comment`]). [`support`] holds the *in-process
 //! seam* values only.
 
+mod answer;
 mod catalog;
 mod config;
 mod exit;

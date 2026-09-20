@@ -214,7 +214,10 @@ fn adr0129_gate_answered_carries_answer_meta_kernel_side() {
     let token = reached.token();
 
     let meta = AnswerMeta {
-        explain_sufficiency: Some("yes".to_owned()),
+        explain_sufficiency: Some(gate::ExplainSufficiency {
+            sufficed: "yes".to_owned(),
+            toml_opened: "no".to_owned(),
+        }),
         answerer: Some("a.operator".to_owned()),
     };
     let applied = gate::answer(
@@ -235,13 +238,24 @@ fn adr0129_gate_answered_carries_answer_meta_kernel_side() {
         .iter()
         .find(|e| e.kind == rk_types::event_kind::EventKind::GateAnswered)
         .expect("an applied answer writes its gate_answered row");
+    // ONE member carrying TWO data. Reading it `as_str()` was the shape this test pinned until
+    // cycle 7, and it was wrong against §7d.6, which fixes the payload as
+    // `explain_sufficiency: { sufficed: "yes", toml_opened: "yes" }` VERBATIM.
+    let sufficiency = row
+        .payload
+        .get("explain_sufficiency")
+        .expect("the row carries the answerer's sufficiency report (ADR-0129 d1)");
     assert_eq!(
-        row.payload
-            .get("explain_sufficiency")
-            .and_then(|v| v.as_str()),
+        sufficiency.get("sufficed").and_then(|v| v.as_str()),
         Some("yes"),
-        "the row does not carry the answerer's sufficiency report, so ADR-0129 d1's \
-         \"the gate_answered payload gains the field\" is unmet: {:?}",
+        "`explain_sufficiency.sufficed` is not what the answerer reported: {:?}",
+        row.payload
+    );
+    assert_eq!(
+        sufficiency.get("toml_opened").and_then(|v| v.as_str()),
+        Some("no"),
+        "`explain_sufficiency.toml_opened` is missing -- it is the member a one-flag reading of \
+         AC-435 drops, and SM-126's kill is the cell it carries: {:?}",
         row.payload
     );
     assert_eq!(

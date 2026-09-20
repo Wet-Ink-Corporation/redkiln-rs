@@ -15,6 +15,7 @@
 //! by the block's verb-level lines at the stage close, which drive the real binary and expect a real
 //! answer. Until then the remaining seven exit `3` and say so.
 
+pub mod answer;
 pub mod catalog;
 pub mod init;
 pub mod lint;
@@ -169,7 +170,7 @@ impl Startup<'static> {
 pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
     match &cli.command {
         Command::Run(args) => run::run(cli, args, env, Startup::real()),
-        Command::Answer(_) => answer(),
+        Command::Answer(args) => answer::run(cli, args, env, Startup::real()),
         Command::Status => status::run(cli, Startup::real()),
         Command::Explain(_) => explain(),
         Command::Doctor(_) => doctor(),
@@ -183,10 +184,6 @@ pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
 fn not_built(verb: &str) -> Result<Exit, Halt> {
     eprintln!("redkiln: `{verb}` is not built at slice 1");
     Ok(Exit::ConfigError)
-}
-
-fn answer() -> Result<Exit, Halt> {
-    not_built("answer")
 }
 
 fn explain() -> Result<Exit, Halt> {

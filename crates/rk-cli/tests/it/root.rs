@@ -588,12 +588,19 @@ fn code_hits(dir: &Path, needles: &[&str]) -> Vec<String> {
 ///
 /// # What this test does NOT claim
 ///
-/// **The `config_digest` on the `reconcile_started` row.** §7d.5 puts that member on the row RT-41
-/// describes, and **nothing in either binary appends a `ReconcileStarted` row yet** — measured:
-/// `grep -rn ReconcileStarted crates/*/src/` matches only the kernel's three *classification*
-/// arms. §7d.5 writes that row in its four-member form *"once (8) has re-created the worktree"*,
-/// which is cycle 6's. So the digest half is cycle 6's, and the `adapter_set` half is
-/// `ac485_…`'s. Claimed here: the value is constructed once and threaded, and the run reached the
+/// **The `config_digest` on the `reconcile_started` row — LANDED at cycle 7, and not in this
+/// test.** §7d.5 puts that member on the row RT-41 describes. When this note was written *nothing
+/// in either binary appended a `ReconcileStarted` row*; cycle 7 writes it, because `answer` cannot
+/// resolve its run-owned worktree from the store without it.
+///
+/// It is still not asserted **here**, and the reason is structural rather than a deferral: §7d.5
+/// writes the row in its four-member form *"once (8) has re-created the worktree"*, and step (8)
+/// is the OUTER path's. This test drives `run_with`, the inner path, which never performs (8) — so
+/// no implementation reachable from this test could write the row, and an assertion for it here
+/// could not fail. The digest is asserted where it can be: `run::ac403_gate_open_writes_trailer_
+/// and_event_and_exits_zero_without_waiting`, which spawns the binary.
+///
+/// Claimed here, unchanged: the value is constructed once and threaded, and the run reached the
 /// port with it.
 #[test]
 fn adr0083_config_constructed_once_at_root_and_threaded() {
@@ -967,6 +974,21 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
 /// before the rewrite. `rk-adapter-linear` is not a real adapter, so a root that re-read the file
 /// anywhere in the loop would refuse with exit 3.
 ///
+/// # ✅ THE `adapter_set` HALF LANDED AT CYCLE 7 — AND NOT IN THIS TEST
+///
+/// AC-485's THEN has two clauses, and only the first is this test's: *"the running run's adapter
+/// set does not change"* is the seam count above; *"**the adapter set recorded on the run-start
+/// event** is the one used for every subsequent dispatch"* needs a recorded row. That row is
+/// §7d.5 step (6)'s `reconcile_started`, written *"once (8) has re-created the worktree"* — and
+/// step (8) belongs to the OUTER path, which this test does not drive: it calls `run_with`, the
+/// inner path, so no implementation reachable from here could write the row at all.
+///
+/// Cycle 7 writes that row (`answer` cannot resolve its run-owned worktree without it) and asserts
+/// all four of its members in `run::ac403_gate_open_writes_trailer_and_event_and_exits_zero_
+/// without_waiting`, which spawns the binary and therefore reaches step (8). The `adapter_set`
+/// assertion there is this clause's evidence. It is recorded here rather than left dangling so the
+/// id's coverage is traceable; RT-41 remains ROUTED and §7d.18 still holds its record OWED.
+///
 /// # 🛑 THE REWRITE IS ASSERTED TO HAVE HAPPENED
 ///
 /// The whole test is an absence — *the new bytes did not reach this run* — and an absence over a
@@ -997,7 +1019,13 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
         config: &reader,
         adapters: &resolver,
     };
-    let resolved = rk_cli::verbs::run::through_step_seven(&cli, &args, &env, startup)
+    let resolved = rk_cli::verbs::run::through_step_seven(
+        &cli,
+        &args,
+        &env,
+        startup,
+        rk_git::reconciled::Entry::Run,
+    )
         .expect("steps (1)-(7) resolve over the two-activity fixture");
 
     // PREMISE: steps (1)-(7) read the file once and resolved once. Without this the post-run

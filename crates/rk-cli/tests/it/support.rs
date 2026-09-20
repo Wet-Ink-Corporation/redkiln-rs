@@ -1187,7 +1187,13 @@ pub fn resolved_over_pack_min(root: &Path, item: &str) -> rk_cli::verbs::run::Re
         lane: None,
     };
     let env = Env::from_map(std::collections::BTreeMap::new());
-    rk_cli::verbs::run::through_step_seven(&cli, &args, &env, rk_cli::verbs::Startup::real())
+    rk_cli::verbs::run::through_step_seven(
+        &cli,
+        &args,
+        &env,
+        rk_cli::verbs::Startup::real(),
+        rk_git::reconciled::Entry::Run,
+    )
         .unwrap_or_else(|e| {
             panic!("steps (1)-(7) resolve over the fixture repository for `{item}`: {e:?}")
         })
@@ -1232,6 +1238,31 @@ pub fn impl_report() -> Typed {
 }
 
 // --------------------------------------------------- the readbacks a SPAWNED run leaves behind
+
+/// **Every row in the repository's store, in insertion order, whatever the repository is.**
+///
+/// [`journal_rows`] resolves its `GitExec` through `resolved_over_pack_min`, which runs steps
+/// (1)-(7) and therefore REFUSES on a repository with no pack — so it cannot read the store of the
+/// very case that proves step (6) wrote a row before step (7) refused. This reads the store the way
+/// the store itself is addressed: discover the repository, open, query with no selector.
+///
+/// `SqliteStore::query` ignores its selector and returns the whole journal ordered by id [measured
+/// at this pin], so `journal_query` here would be decoration; the whole-journal read is what the
+/// row-COUNT assertions of AC-172 actually need.
+///
+/// # Panics
+/// If the repository will not discover, or the store will not open — either means the run under
+/// test never reached step (5), which is a different failure and is reported as itself.
+#[must_use]
+pub fn store_rows(root: &Path) -> Vec<Event> {
+    let repo = rk_cli::repo::discover(Some(root))
+        .unwrap_or_else(|e| panic!("the repository under test discovers: {e}"));
+    let store = rk_adapter_sqlite::SqliteStore::open(&repo.exec, &repo.worktree)
+        .unwrap_or_else(|e| panic!("the store the run wrote opens: {e}"));
+    store
+        .query(rk_kernel::runtime::journal_query("*"))
+        .unwrap_or_else(|e| panic!("the store reads: {e:?}"))
+}
 
 /// The item's journal, read back out of the store a spawned `redkiln` wrote.
 ///

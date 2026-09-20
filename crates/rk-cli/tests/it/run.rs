@@ -10,7 +10,7 @@ use crate::support::{PackVariant, pack_min_repo, set_enabled};
 use crate::{common_dir, refs, run_init, temp_repo};
 
 /// Spawn `redkiln -C <repo> run <item> [--lane <lane>]` with stdin closed (D-15).
-fn spawn_run(repo: &Path, item: &str, lane: Option<&str>) -> std::process::Output {
+pub(crate) fn spawn_run(repo: &Path, item: &str, lane: Option<&str>) -> std::process::Output {
     spawn_run_in_mode(repo, item, lane, "exit:0")
 }
 
@@ -37,7 +37,7 @@ fn spawn_run(repo: &Path, item: &str, lane: Option<&str>) -> std::process::Outpu
     reason = "the verb is exercised AS A PROCESS — golden constraint 4's 'a stub never replaced' is \
               caught only by driving the real binary (s7d §7d.13's temp-repository rule)"
 )]
-fn spawn_run_in_mode(
+pub(crate) fn spawn_run_in_mode(
     repo: &Path,
     item: &str,
     lane: Option<&str>,
@@ -68,10 +68,17 @@ fn spawn_run_in_mode(
 /// directory"* — because those are step (8)'s acts and their absence is what says step (7)'s refusal
 /// came first.
 ///
-/// 🛑 **The `reconcile_started` ROW-COUNT half is OWED to the next cycle, not silently dropped.**
-/// §7d.5 step (6) writes that row, and step (6) is the cycle that builds steps (8)-(10); until it
-/// does, the store holds nothing and a "exactly one row" assertion here would pass over an EMPTY
-/// store — true of a `run` that never opened one. It lands with the row.
+/// ✅ **The `reconcile_started` ROW-COUNT half LANDED at cycle 7, as this note promised.** It was
+/// owed while nothing in either binary appended the row: until then a "exactly one row" assertion
+/// would have passed over an EMPTY store — true of a `run` that never opened one, so not evidence.
+/// Cycle 7 writes the row (§7d.5 step (6)) because `answer` cannot resolve the run-owned worktree
+/// without it, and moved the reconcile to its numbered position **before** step (7) — without that
+/// move this refusal returned before reconciling and could not have written any row at all.
+///
+/// The assertion is therefore made TWICE and the second is the stronger one: one row after the
+/// first invocation, **two after the second**. AC-172's text is *"exactly one `reconcile_started`
+/// event per invocation"* — a single count of `1` is also true of a binary that writes the row once
+/// and then never again, and only the per-invocation count discriminates that.
 ///
 /// 🛑 **The harness marker count is NOT an instrument and is reported as a floor.** An empty pack set
 /// refuses at step (7) before any DAG exists, so **no implementation whatever could have written a
@@ -110,6 +117,38 @@ fn run_on_init_only_repo_is_a_config_outcome() {
          stub also produced, so the wording is what makes this the absent behaviour. stderr:\n{stderr}"
     );
 
+    // ---- AC-172, RT-46, D18-8 as corrected: the refusal that REACHED the reconcile owes one row.
+    let after_first = crate::support::store_rows(root);
+    assert_eq!(
+        after_first.len(),
+        1,
+        "a refused `run` that reached step (6) writes EXACTLY ONE row. §7d.5: *\"a refused `run` \
+         that reached the reconcile (no pack; …) writes exactly one `reconcile_started` row\"*; \
+         D18-8 read \"zero store writes\" until its dated correction, and AC-172 is the register's. \
+         Rows: {:?}",
+        after_first.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        after_first[0].kind,
+        rk_types::event_kind::EventKind::ReconcileStarted,
+        "the one row a refused run leaves is `reconcile_started`; found {:?}",
+        after_first[0].kind
+    );
+    // It carries RT-41's two members and NOT RT-47's pair: no worktree was created, and §7d.5 is
+    // explicit that the pair goes on only "once (8) has re-created the worktree".
+    assert!(
+        after_first[0].payload.get("adapter_set").is_some()
+            && after_first[0].payload.get("config_digest").is_some(),
+        "the row carries neither RT-41 member: {:?}",
+        after_first[0].payload
+    );
+    assert!(
+        after_first[0].payload.get("worktree").is_none(),
+        "a step-(7) refusal created no worktree, so the row must NOT carry RT-47's pair — a row \
+         that does is claiming an ownership nothing established: {:?}",
+        after_first[0].payload
+    );
+
     // The refusal is the SAME whatever item was named — which is what "before any lane derivation"
     // means operationally. `some-item` above has no record at all; this one is a real record whose
     // kind derives a lane, and it must still refuse for the pack set.
@@ -119,6 +158,24 @@ fn run_on_init_only_repo_is_a_config_outcome() {
         String::from_utf8_lossy(&with_record.stderr).contains("no process pack enabled"),
         "a named lane and a derivable item changed the refusal, so the pack-set check is NOT \
          before lane derivation"
+    );
+
+    // AC-172's actual text is PER INVOCATION. A binary that wrote the row once and never again
+    // would satisfy the count of `1` above; only this second reading discriminates it.
+    let after_second = crate::support::store_rows(root);
+    assert_eq!(
+        after_second.len(),
+        2,
+        "two invocations must leave two `reconcile_started` rows — AC-172 is *\"exactly one \
+         `reconcile_started` event per invocation\"*, not one per repository. Rows: {:?}",
+        after_second.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+    assert!(
+        after_second
+            .iter()
+            .all(|e| e.kind == rk_types::event_kind::EventKind::ReconcileStarted),
+        "a refused run wrote something besides its one `reconcile_started` row: {:?}",
+        after_second.iter().map(|e| e.kind).collect::<Vec<_>>()
     );
 
     // ---- the two discriminating absences: step (8) did not happen. -----------------------------
@@ -558,6 +615,96 @@ fn ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting() {
         "the `Gate:` trailer was committed into the PRODUCT repository. It is a tier-1 write \
          against the run-owned worktree, authorised through `authorise_tier1_write`, and AC-518 \
          forbids `cwd`"
+    );
+
+    // ---- (6) THE INVOCATION'S ONE ROW, IN ITS FOUR-MEMBER FORM (RT-41 + RT-47). ---------------
+    //
+    // 🛑 THIS ASSERTION LIVES HERE BECAUSE THIS IS THE ONLY TEST THAT CAN MAKE IT.
+    //
+    // §7d.5 step (6): *"the row is written once (8) has re-created the worktree, with all four
+    // members"*. Step (8) is the OUTER path's. `ac485_…` and `adr0083_…` both drive `run_with`,
+    // the INNER path, which never performs (8) and therefore never writes this row — their notes
+    // owed the `adapter_set` and `config_digest` halves to "the cycle that writes the row", and
+    // this is where that cycle can pay them against a real run rather than a constructed value.
+    //
+    // RT-41 and RT-47 are both ROUTED, not decided: AC-485's *"the adapter set recorded on the
+    // run-start event"* names an event `EventKind::ALL` does not carry, and ADR-0105 clause 8's
+    // *"resolves the run-owned worktree from the store"* names no carrier. §7d.18 holds the record
+    // OWED. Asserted here as built; the ids are not claimed on the strength of it.
+    let all_rows = crate::support::store_rows(root);
+    let first = all_rows
+        .first()
+        .expect("a run that reached step (8) wrote at least its own first row");
+    assert_eq!(
+        first.kind,
+        rk_types::event_kind::EventKind::ReconcileStarted,
+        "the invocation's FIRST row is not `reconcile_started`. §7d.5 step (6) puts it before the \
+         kernel is reached, so anything ahead of it is a row written before the reconcile. Rows: \
+         {:?}",
+        all_rows.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        all_rows
+            .iter()
+            .filter(|e| e.kind == rk_types::event_kind::EventKind::ReconcileStarted)
+            .count(),
+        1,
+        "AC-172: exactly one `reconcile_started` event per invocation. Rows: {:?}",
+        all_rows.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+
+    // RT-41's two. The adapter set is the RESOLVED four, in `Config`'s order — harness, store,
+    // then the toolchains `Config::new` sorted.
+    assert_eq!(
+        first.payload.get("adapter_set").and_then(|v| v.as_array()),
+        Some(&vec![
+            serde_json::Value::String("rk-adapter-claude".to_owned()),
+            serde_json::Value::String("rk-adapter-sqlite".to_owned()),
+            serde_json::Value::String("rk-adapter-toolchain-node".to_owned()),
+            serde_json::Value::String("rk-adapter-toolchain-rust".to_owned()),
+        ]),
+        "AC-485's *\"the adapter set recorded on the run-start event\"* — the row must carry the \
+         four the fixture's `[adapters]` table resolves to. Payload: {:?}",
+        first.payload
+    );
+    let digest = first
+        .payload
+        .get("config_digest")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    assert_eq!(
+        digest.len(),
+        64,
+        "ADR-0083's `config_digest` is a sha256 of the threaded `Config`'s canonical JSON, so it \
+         is 64 hex characters; found {digest:?} in {:?}",
+        first.payload
+    );
+    assert!(
+        digest.chars().all(|c| c.is_ascii_hexdigit()),
+        "the `config_digest` is not hex: {digest:?}"
+    );
+
+    // RT-47's pair, and it must name the tree the trailer was actually committed into — otherwise
+    // `answer` would resolve a DIFFERENT worktree from the store than the one `run` wrote to.
+    assert_eq!(
+        first.payload.get("branch").and_then(|v| v.as_str()),
+        Some("rk-run/gate-1"),
+        "the row does not record the run-owned BRANCH. ADR-0105 clause 8 resolves a tier-1 write's \
+         target *from the store*, and `answer` reads this member. Payload: {:?}",
+        first.payload
+    );
+    let recorded_worktree = first
+        .payload
+        .get("worktree")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    assert_eq!(
+        std::path::Path::new(recorded_worktree),
+        owned.as_path(),
+        "the row records a worktree that is not the one this run created and committed into. \
+         `answer`'s tree hash and its `Gate:` trailer are both taken over the tree THIS member \
+         names, so a mismatch here is a mismatch there. Payload: {:?}",
+        first.payload
     );
 }
 

@@ -228,10 +228,29 @@ pub fn answer(
 /// editing the returned `Event` — a row the CLI could amend is a row the CLI could forge.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct AnswerMeta {
-    /// Did reading the explanation suffice? `None` when the answerer did not say.
-    pub explain_sufficiency: Option<String>,
+    /// What the answerer reported about the explanation. `None` when they did not say.
+    pub explain_sufficiency: Option<ExplainSufficiency>,
     /// Who answered, as the repository records them.
     pub answerer: Option<String>,
+}
+
+/// **ONE payload member, TWO data** (ADR-0129 decision 1 as accepted 2026-09-19).
+///
+/// The register's THEN is *"the answer (yes/no, plus whether a TOML was opened) is recorded as a
+/// required field"* -- two data in one field. SM-126's kill is the cell *sufficed = yes AND
+/// opened = yes*, which a single flag could not represent, so both members are carried and neither
+/// is defaulted.
+///
+/// The members are `String` rather than a `bool` or an enum because the payload's spelling is
+/// binding: §7d.6 fixes it as `{ sufficed: "yes", toml_opened: "yes" }` **verbatim**, and a `bool`
+/// would serialise as `true`/`false`. The CLI's own `YesNo` cannot be the kernel's -- `rk-kernel`
+/// does not depend on `rk-cli` -- so the boundary converts.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ExplainSufficiency {
+    /// Did reading the explanation suffice to decide? `"yes"` or `"no"`.
+    pub sufficed: String,
+    /// Was a TOML opened anyway? `"yes"` or `"no"`.
+    pub toml_opened: String,
 }
 
 /// The tier-1 `gate_answered` row **with the answerer's report** (ADR-0129 decision 1).
@@ -260,9 +279,14 @@ pub fn gate_answered_event_with_meta(
     let mut event = gate_answered_event(token, tree_hash, verdict);
     if let Some(payload) = event.payload.as_object_mut() {
         if let Some(sufficiency) = &meta.explain_sufficiency {
+            // ONE member, an OBJECT carrying two. Never two top-level members, and never a single
+            // string: §7d.14's red is "lacking `explain_sufficiency` or EITHER OF ITS TWO MEMBERS".
             payload.insert(
                 "explain_sufficiency".to_owned(),
-                serde_json::Value::String(sufficiency.clone()),
+                serde_json::json!({
+                    "sufficed": sufficiency.sufficed,
+                    "toml_opened": sufficiency.toml_opened,
+                }),
             );
         }
         if let Some(answerer) = &meta.answerer {

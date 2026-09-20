@@ -34,7 +34,7 @@ use rk_ports::event_store::EventStore;
 
 use crate::cli::{Cli, Lane, RunArgs};
 use crate::exit::{Exit, Halt};
-use crate::verbs::{EntryReconciler, Startup};
+use crate::verbs::Startup;
 use crate::{env::Env, repo};
 
 /// The adapter-facing pack values, read by **`rk-cli`** over the same
@@ -203,7 +203,7 @@ pub struct Resolved {
 /// # Errors
 /// [`Halt::PoisonedLock`] from the store acquisition. Every other refusal is a value.
 pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result<Exit, Halt> {
-    let resolved = match through_step_seven(cli, args, env, startup) {
+    let resolved = match through_step_seven(cli, args, env, startup, Entry::Run) {
         Ok(resolved) => resolved,
         Err(exit) => return Ok(exit),
     };
@@ -229,6 +229,30 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         Ok(path) => path,
         Err(exit) => return Ok(exit),
     };
+
+    // ---- (6)'s ROW, NOW THAT (8) HAS RE-CREATED THE WORKTREE — all four members.
+    //
+    // §7d.5 step (6): *"the row is written once (8) has re-created the worktree, with all four
+    // members, or at (7)'s refusal without the pair"*. This is the invocation's FIRST and ONLY
+    // `reconcile_started` row (RT-46), and the pair on it is what `answer`'s tier-1 write later
+    // resolves the run-owned worktree FROM — ADR-0105 clause 8's *"from the store, regardless of
+    // cwd"*, AC-529's same phrase. A convention-derived path would satisfy neither.
+    let ownership = rk_git::worktree::RunOwnership {
+        worktree: owned.clone(),
+        branch: format!("rk-run/{}", resolved.item.id()),
+    };
+    match reconcile_started_event(&resolved.config, Some(&ownership)) {
+        Ok(event) => {
+            let mut guard = crate::store::acquire(&store, "the run")?;
+            let appended = guard.append(event);
+            drop(guard);
+            if let Err(e) = appended {
+                eprintln!("redkiln: the invocation's first row could not be written: {e:?}");
+                return Ok(Exit::ConfigError);
+            }
+        }
+        Err(exit) => return Ok(exit),
+    }
 
     // THE ONE WALL-CLOCK READ. Both derived values come off it — see `base_inputs`.
     let now = crate::clock::now().unix_seconds();
@@ -360,6 +384,7 @@ pub fn through_step_seven(
     args: &RunArgs,
     env: &Env,
     startup: Startup<'_>,
+    entry: Entry,
 ) -> Result<Resolved, Exit> {
     // ---- (1) the git version floor, and (2)'s common dir + H-3 bootstrap. `repo::discover`
     // performs both; `run` does not re-implement H-3.
@@ -402,19 +427,46 @@ pub fn through_step_seven(
         config.doctor.unread_window_runs,
     );
 
+    // ---- (6) RECONCILE AT ENTRY, BEFORE STEP (7). AC-402, ADR-0105 clause 8.
+    //
+    // §7d.5 numbers this SIXTH and the pack set SEVENTH, and the order is observable: §7d.5's own
+    // table says *"a refused `run` that reached the reconcile (no pack; non-derivable lane; a lane
+    // whose pack is not enabled) writes **exactly one** `reconcile_started` row"*. A reconcile
+    // placed after the pack check could not write that row, and AC-172's *"exactly one
+    // `reconcile_started` event per invocation"* would be unmet on exactly the paths D18-8 names.
+    //
+    // The ENTRY is a parameter because `answer` performs steps (1)-(6) as `run`'s with
+    // `Entry::Answer` (§7d.6), and `rk_git::reconciled::Entry` has no `Status` variant — the type
+    // is what forbids `status` and `explain` from reaching here at all (AC-402's negative).
+    let _ = startup
+        .reconciler
+        .reconcile(&repo.exec, &repo.worktree, entry)
+        .map_err(|e| {
+            eprintln!("redkiln: reconcile at entry refused: {e:?}");
+            Exit::ConfigError
+        })?;
+
     // ---- (7) THE PACK SET, BEFORE ANY LANE DERIVATION.
     //
     // D18-8, and the order is the whole point: "an empty `[packs] enabled` is exit 3 with 'no
     // process pack enabled' BEFORE any lane derivation — so the refusal is the same whatever item
     // was named". The scaffold `init` writes carries `enabled = []`, so this is the init-only
     // repository's refusal and it is reached with no item record read at all.
+    // 🛑 EVERY REFUSAL BELOW HAS RECONCILED, SO EVERY ONE OF THEM OWES AC-172's SINGLE ROW.
+    // `refuse_after_reconcile` opens the store only on these paths; the `Ok` arm leaves it to
+    // step (5).
     if config.packs.enabled.is_empty() {
         eprintln!(
             "redkiln: no process pack enabled — `.redkiln/config.toml`'s `[packs] enabled` is \
              empty, so there is no pack to run `{}` under.",
             args.item
         );
-        return Err(Exit::ConfigError);
+        return Err(refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        ));
     }
 
     // The item record. Read AFTER the pack-set refusal, so the precedence above is real.
@@ -424,14 +476,14 @@ pub fn through_step_seven(
         .join(format!("{}.toml", args.item));
     let record_src = std::fs::read_to_string(&record_path).map_err(|e| {
         eprintln!("redkiln: {}: {e}", record_path.display());
-        Exit::ConfigError
+        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
     })?;
     let record: ItemRecord = toml::from_str(&record_src).map_err(|e| {
         eprintln!(
             "redkiln: {} is not an item record: {e}",
             record_path.display()
         );
-        Exit::ConfigError
+        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
     })?;
 
     // RT-50. Refused rather than defaulted, and the refusal NAMES THE ITEM.
@@ -441,11 +493,18 @@ pub fn through_step_seven(
              record, and is not defaulted.",
             args.item
         );
-        return Err(Exit::ConfigError);
+        return Err(refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        ));
     };
 
     // ---- the lane. ADR-0128 decision 2.
-    let lane = derive_lane(args, record.kind.as_deref())?;
+    let lane = derive_lane(args, record.kind.as_deref()).map_err(|exit| {
+        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, exit)
+    })?;
     let pack_name = pack_for(lane);
 
     // Decision 3: "a lane whose pack is not enabled is the same configuration error with the pack
@@ -456,7 +515,12 @@ pub fn through_step_seven(
              `.redkiln/config.toml`'s `[packs] enabled`.",
             lane_name(lane)
         );
-        return Err(Exit::ConfigError);
+        return Err(refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        ));
     }
 
     let pack_path = root
@@ -465,14 +529,14 @@ pub fn through_step_seven(
         .join(format!("{pack_name}.toml"));
     let pack_src = std::fs::read_to_string(&pack_path).map_err(|e| {
         eprintln!("redkiln: {}: {e}", pack_path.display());
-        Exit::ConfigError
+        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
     })?;
     let extras: PackExtras = toml::from_str(&pack_src).map_err(|e| {
         eprintln!(
             "redkiln: {} does not carry the adapter-facing pack values: {e}",
             pack_path.display()
         );
-        Exit::ConfigError
+        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
     })?;
 
     // §7d.5 step (7) names `.redkiln/facets.toml` among the registries this step reads. It is read
@@ -482,26 +546,13 @@ pub fn through_step_seven(
     let facets_path = root.join(".redkiln").join("facets.toml");
     let facets_src = std::fs::read_to_string(&facets_path).map_err(|e| {
         eprintln!("redkiln: {}: {e}", facets_path.display());
-        Exit::ConfigError
+        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
     })?;
     let registry = rk_kernel::registry::Registry::from_toml(&facets_src).map_err(|e| {
         eprintln!("redkiln: {}: {e}", facets_path.display());
-        Exit::ConfigError
+        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
     })?;
     let item = build_item(&record, &registry);
-
-    // ---- (6) reconcile at entry, and the invocation's ONE `reconcile_started` row.
-    //
-    // The row itself is step (8)'s to write in its four-member form; at a step-(7) refusal it is
-    // written without the worktree pair. Both are the next cycle's, and this cycle's tests assert
-    // the ONE-ROW count rather than the members.
-    let _ = startup
-        .reconciler
-        .reconcile(&repo.exec, &repo.worktree, Entry::Run)
-        .map_err(|e| {
-            eprintln!("redkiln: reconcile at entry refused: {e:?}");
-            Exit::ConfigError
-        })?;
 
     Ok(Resolved {
         exec: repo.exec,
@@ -516,6 +567,180 @@ pub fn through_step_seven(
         config: kernel_config,
         harness_binary: config.adapters.harness_binary.clone(),
     })
+}
+
+/// **The invocation's one `reconcile_started` row** — §7d.5 step (6), RT-41 and RT-47.
+///
+/// > §7d.5 step (6): *"the invocation's one `reconcile_started` row carrying `adapter_set` and
+/// > `config_digest` (RT-41) and, once the run-owned worktree is re-created at (8), the item's
+/// > `RunOwnership { worktree, branch }` (RT-47; H-5) — the row is written once (8) has re-created
+/// > the worktree, **with all four members**, or at (7)'s refusal without the pair (no worktree was
+/// > created), and is in either case the invocation's first and only `reconcile_started` row
+/// > (RT-46)."*
+///
+/// `ownership` is `Some` exactly when step (8) has run. `answer` never creates a worktree, so its
+/// own row carries the two members and it READS the pair off the row a previous `run` wrote — which
+/// is what ADR-0105 clause 8's *"resolves the run-owned worktree **from the store**"* means.
+///
+/// # 🛑 BOTH MEMBERS ARE ROUTED, NOT DECIDED, AND THE RECORD IS OWED
+///
+/// RT-41 puts `adapter_set` and `config_digest` on this row because AC-485's *"the adapter set
+/// recorded on the **run-start event**"* names an event no design §5 row carries — `EventKind::ALL`
+/// has no `run_started`. RT-47 puts the ownership pair on the same row for the same reason. §7d.18
+/// holds both as **OWED**: either a dated design §5 note widening this payload, or a minted kind by
+/// ADR-0116's route. Built here, labelled routed; the id is not claimed.
+pub fn reconcile_started_event(
+    config: &rk_kernel::config::Config,
+    ownership: Option<&rk_git::worktree::RunOwnership>,
+) -> Result<rk_types::event::Event, Exit> {
+    let digest = rk_store::canon::canonical_digest(&config.to_json()).map_err(|e| {
+        eprintln!("redkiln: the configuration will not canonicalise: {e}");
+        Exit::ConfigError
+    })?;
+    // The resolved four, in the order `AdapterSet::resolve` fixed them and `Config::new` sorted the
+    // toolchains into — a function of the SET, never of the order the file listed it in.
+    let mut adapter_set = vec![config.harness().to_owned(), config.store().to_owned()];
+    adapter_set.extend(config.toolchains().iter().cloned());
+
+    let mut payload = serde_json::json!({
+        "adapter_set": adapter_set,
+        "config_digest": digest.as_str(),
+    });
+    if let (Some(own), Some(map)) = (ownership, payload.as_object_mut()) {
+        map.insert(
+            "worktree".to_owned(),
+            serde_json::Value::String(own.worktree.display().to_string()),
+        );
+        map.insert(
+            "branch".to_owned(),
+            serde_json::Value::String(own.branch.clone()),
+        );
+    }
+    Ok(rk_types::event::Event::new(
+        rk_types::event_kind::EventKind::ReconcileStarted,
+        payload,
+    ))
+}
+
+/// **Step (9)'s EXPIRY PASS** — every open gate of the item whose recorded deadline is past is
+/// resolved through `gate::expire` with the pack's declared action.
+///
+/// §7d.6 calls this from `answer` too, and says why it must exist there: *"without it
+/// `gate::answer` would `Applied` a gate whose deadline merely passed, because it refuses
+/// `Expired` only on a `gate_expired` row already in the journal"*. The expiry is therefore
+/// **observed at a read** (AC-257: *"observed and resolved at that read"*, *"with no process alive
+/// at the deadline"*) rather than by anything running at the deadline — there is no timer and no
+/// daemon, and that is the design, not a limitation.
+///
+/// # 🛑 THE CLASS IS THE FULL GATE KIND, AXIS AND ALL
+///
+/// `GateRecord::kind()` is `fsm::next_action`'s `format!("{}:{}", gate.reason.as_str(), gate.axis)`
+/// — `unknown_facet:has_repro`, never a bare `unknown_facet`. A `[[gate_expiry]]` row keyed on the
+/// bare reason matches nothing, and the miss surfaces only here as
+/// `ExpiryPolicyLint::NoActionDeclared`. **There is no default** (AC-260): an undeclared class is a
+/// configuration refusal naming the class, not a `fail` chosen on the operator's behalf.
+///
+/// # 🛑 `auto-decide` IS REFUSED AT 7d, AND THE REFUSAL NAMES WHY
+///
+/// `ExpiryAction::AutoDecide { verdict }` needs a verdict, and `[[gate_expiry]]` carries only
+/// `class` and `action` — the pack schema has nowhere to put one. Inventing a verdict here would be
+/// deciding an answer on the operator's behalf, which is the one thing an expiry policy must not
+/// do silently. The carrier is 7e's (RT-57, §7d.18 RAISED); until it exists the action is refused
+/// by name.
+///
+/// # Errors
+/// [`Exit::ConfigError`] for an undeclared or unusable expiry row, and for a kernel refusal.
+pub fn expiry_pass(
+    extras: &PackExtras,
+    state: &rk_kernel::workflow::fsm::RunState,
+    now: i64,
+    tree_hash: &str,
+) -> Result<Vec<rk_types::event::Event>, Exit> {
+    use rk_kernel::workflow::gate;
+
+    // Collected first so the iteration does not hold a borrow across the `expire` calls, and so the
+    // order is the journal's rather than a hash map's.
+    let due: Vec<(rk_types::digest::Digest, String)> = state
+        .open_gates()
+        .filter(|record| record.deadline().unix_seconds() < now)
+        .map(|record| (record.token().clone(), record.kind().to_owned()))
+        .collect();
+
+    let mut events = Vec::new();
+    for (token, class) in due {
+        let declared = extras
+            .gate_expiry
+            .iter()
+            .find(|row| row.class == class)
+            .map(|row| row.action.as_str());
+
+        if let Err(lint) = gate::lint_expiry_policy_row(&class, declared) {
+            eprintln!(
+                "redkiln: the pack declares no usable expiry action for gate class `{class}`: \
+                 {lint:?}. AC-260 forbids a default, so the gate cannot be resolved."
+            );
+            return Err(Exit::ConfigError);
+        }
+
+        let action = match declared {
+            Some("fail") => gate::ExpiryAction::Fail,
+            Some("escalate") => gate::ExpiryAction::Escalate {
+                deadline: rk_types::time::Timestamp::from_unix_seconds(
+                    now.saturating_add(extras.gate_deadline_secs),
+                ),
+            },
+            Some("auto-decide") => {
+                eprintln!(
+                    "redkiln: gate class `{class}` declares `auto-decide`, but a `[[gate_expiry]]` \
+                     row carries no verdict for the kernel to answer with, and one is not invented \
+                     here. The verdict carrier is Step 7e's (RT-57)."
+                );
+                return Err(Exit::ConfigError);
+            }
+            // Unreachable: the lint above admits exactly the three spellings.
+            Some(_) | None => return Err(Exit::ConfigError),
+        };
+
+        let outcome = gate::expire(
+            state,
+            &token,
+            rk_types::time::Timestamp::from_unix_seconds(now),
+            &action,
+            tree_hash,
+        )
+        .map_err(|e| {
+            eprintln!("redkiln: the expiry of gate {} was refused: {e}", token.as_str());
+            Exit::ConfigError
+        })?;
+        events.extend(outcome.events);
+    }
+    Ok(events)
+}
+
+/// Append the row at a refusal that has already reconciled, opening the store to do it.
+///
+/// # 🛑 THE STORE IS OPENED **ONLY HERE**, ON THE REFUSAL PATH
+///
+/// The success path leaves the store to `run`'s step (5), which is what keeps
+/// `support::resolved_over_pack_min`'s *"re-running steps (1)–(7) to get them is cheap and writes
+/// nothing"* true: that helper only ever takes the `Ok` arm. A refusal that reached step (6) owes
+/// AC-172's *"exactly one `reconcile_started` event per invocation"* and D18-8 as corrected, and it
+/// cannot pay it without a store.
+///
+/// A store that will not open at this point is **not** escalated: the refusal being reported is the
+/// operator's answer, and replacing it with a store error would hide it.
+fn refuse_after_reconcile(
+    exec: &GitExec,
+    worktree: &WorktreePath,
+    config: &rk_kernel::config::Config,
+    exit: Exit,
+) -> Exit {
+    if let Ok(event) = reconcile_started_event(config, None)
+        && let Ok(mut store) = rk_adapter_sqlite::SqliteStore::open(exec, worktree)
+    {
+        let _ = store.append(event);
+    }
+    exit
 }
 
 /// ADR-0128 decision 2, as a function, with every row of §7d.5's outcome table.
