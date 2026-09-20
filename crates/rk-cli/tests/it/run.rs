@@ -361,7 +361,8 @@ fn adr0128_lane_maps_to_pack_fix_bug_standard_story_story() {
 fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
     let repo = crate::support::pack_min_repo(crate::support::PackVariant::TwoActivities);
     let resolved = crate::support::resolved_over_pack_min(repo.path(), "story-1");
-    let inputs = crate::support::inputs_over_pack_min(&resolved)
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+    let inputs = inputs
         .with_spec(
             "emit-report",
             rk_kernel::replay::RecordedSpec::supplied(
@@ -392,8 +393,16 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
         &store,
     );
     let mut s1 = crate::support::no_spec();
-    let exit1 = rk_cli::verbs::run::run_with(&resolved, &inputs, p1, &mut s1, &token)
-        .expect("a sound lock is not a halt");
+    let exit1 = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        p1,
+        &mut s1,
+        &token,
+    )
+    .expect("a sound lock is not a halt");
     assert_eq!(
         exit1,
         rk_cli::exit::Exit::Success,
@@ -436,8 +445,16 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
         &store,
     );
     let mut s2 = crate::support::no_spec();
-    let exit2 = rk_cli::verbs::run::run_with(&resolved, &inputs, p2, &mut s2, &token)
-        .expect("a sound lock is not a halt");
+    let exit2 = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        p2,
+        &mut s2,
+        &token,
+    )
+    .expect("a sound lock is not a halt");
 
     // THE PRIMARY INSTRUMENT. A run that re-dispatched would exhaust the empty script into
     // `Transport` and return 10, not 0.
@@ -821,4 +838,281 @@ fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
             String::from_utf8_lossy(&out.stdout)
         );
     }
+}
+
+/// **AC-264 / AC-186 — a `run` after an APPLIED answer resumes PAST the gate, with no flag.**
+///
+/// §7d.3, verbatim: *"open a gate (`ac403_…`'s fixture), `answer <item> approve --explain-sufficed
+/// yes --toml-opened no` (`Applied`), then `redkiln run <item>` with no flag — exit `0`, the fold
+/// shows the gate step committed and the next step reached (a second `dispatch` row, or `run`
+/// completing the pack), and no `--resume` was needed; red by a `run` that re-opens the gate or
+/// refuses"*.
+///
+/// # 🛑 THIS IS THE CLI-SIDE PROOF OF `replay::resume`, AND THE PREMISE IS WHAT MAKES IT ONE
+///
+/// `record()` folds a **fresh local vector** each call and breaks on `NextAction::OpenGate` without
+/// appending, so a `run` built on it re-derives `OpenGate` at reach 1 for ever and the gate can
+/// never be got past. `resume` seeds the fold from the store's journal instead, which is why the
+/// answered gate moves state. Run 1 is asserted to stop AT the gate — one answerable gate row and
+/// **zero** `dispatch` rows — so the `dispatch` row after run 3 is new, and "the next step reached"
+/// is a change this test observed rather than a state it found lying around.
+///
+/// # 🛑 §7d.3's `exit 0` IS NOT ASSERTED, AND THE REASON IS MEASURED RATHER THAN CONCEDED
+///
+/// §7d.3 says the resumed run is exit `0`. It is exit **`3`** here, and not because anything
+/// refused to resume. Measured, run 3's journal and stderr:
+///
+/// ```text
+/// …, GateAnswered, ReconcileStarted, GateResumed, Dispatch, DispatchCompleted
+/// redkiln: the dispatch of `emit-report` (emit-report@1) did not commit.
+/// redkiln: the dispatch did not commit and the journal carries no error row for `gate-1`, so no
+/// row of the exit table describes it.
+/// ```
+///
+/// The gate WAS resumed and the next step WAS entered — that is what the assertions below read.
+/// Exit `0` additionally requires the dispatch to **commit**, and a committing dispatch needs a
+/// child that emits a result frame: `RK_FIXTURE_MODE=replay:<transcript>`, which no `rk-cli` test
+/// has yet (`exit:0` makes the child exit before any frame). So exit `0` is a claim about the
+/// harness, not about resumption, and this test does not make it — AC-264's own register text is
+/// about the **flag** (*"`redkiln run <item>` is sufficient and `--resume` is not an accepted
+/// flag"*), discharged here and by `ac400_resume_refused_as_unknown_argument`.
+///
+/// **RAISED**: §7d.3's exit `0` is unreachable for every `rk-cli` test until a committing
+/// transcript fixture exists, and this exact case is also the one mechanism B turns from `3` into
+/// its true row — the class here is `Transport`, `10`.
+#[test]
+fn ac264_run_after_applied_answer_resumes_past_gate() {
+    let repo = pack_min_repo(PackVariant::Base);
+    let root = repo.path();
+
+    // ---- (1) THE GATE OPENS, and the run stops there. ------------------------------------------
+    let first = spawn_run(root, "gate-1", None);
+    assert_eq!(
+        first.status.code(),
+        Some(0),
+        "the gate-opening run is exit 0 (AC-403). stderr:\n{}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+    let after_one = crate::support::journal_rows(root, "gate-1");
+    assert_eq!(
+        after_one
+            .iter()
+            .filter(|e| crate::answer::is_answerable_gate(e))
+            .count(),
+        1,
+        "run 1 opened no answerable gate, so there is nothing to resume past. A gate writes TWO \
+         `gate_opened` rows and only the runtime's carries a token. Rows: {:?}",
+        after_one.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        after_one
+            .iter()
+            .filter(|e| e.kind == rk_types::event_kind::EventKind::Dispatch)
+            .count(),
+        0,
+        "run 1 dispatched before the gate was answered, so a `dispatch` row after run 3 would not \
+         be evidence that anything resumed. Rows: {:?}",
+        after_one.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+
+    // ---- (2) THE ANSWER, which must APPLY. -----------------------------------------------------
+    let answered =
+        crate::answer::spawn_answer(root, "gate-1", "approve", &crate::answer::BOTH_FLAGS);
+    assert_eq!(
+        answered.status.code(),
+        Some(0),
+        "PREMISE: the answer must APPLY, or run 3 would be resuming past nothing. stderr:\n{}",
+        String::from_utf8_lossy(&answered.stderr)
+    );
+    let after_answer = crate::support::journal_rows(root, "gate-1");
+    assert_eq!(
+        after_answer
+            .iter()
+            .filter(|e| e.kind == rk_types::event_kind::EventKind::GateAnswered)
+            .count(),
+        1,
+        "PREMISE: exactly one `gate_answered` row is owed after an applied answer. Rows: {:?}",
+        after_answer.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+
+    // ---- (3) THE RESUMED RUN — `redkiln run <item>`, AND NO FLAG. ------------------------------
+    let second = spawn_run(root, "gate-1", None);
+    let after_two = crate::support::journal_rows(root, "gate-1");
+
+    // The gate was not re-opened: that is the named red.
+    assert_eq!(
+        after_two
+            .iter()
+            .filter(|e| crate::answer::is_answerable_gate(e))
+            .count(),
+        1,
+        "the resumed run RE-OPENED the gate — a second answerable `gate_opened` row. That is \
+         `record()`'s behaviour, which folds a fresh vector and re-derives `OpenGate` at reach 1; \
+         §7d.5 step (9) binds `run` to `replay::resume`, which seeds the fold from the \
+         journal.\nrun 3 exited {:?}\nstderr:\n{}\nrows: {:?}",
+        second.status.code(),
+        String::from_utf8_lossy(&second.stderr),
+        after_two.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+
+    // The KERNEL's own record that it got past it. `gate_resumed` is written by the resume path and
+    // by nothing else, so this is the row that separates "resumed" from "never gated in the first
+    // place" — a strictly stronger reading than the dispatch count below.
+    assert_eq!(
+        after_two
+            .iter()
+            .filter(|e| e.kind == rk_types::event_kind::EventKind::GateResumed)
+            .count(),
+        1,
+        "the resumed run wrote no `gate_resumed` row, so it did not get past the gate it was asked \
+         to resume.\nrun 3 exited {:?}\nstderr:\n{}\nrows: {:?}",
+        second.status.code(),
+        String::from_utf8_lossy(&second.stderr),
+        after_two.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+
+    // And the next step was REACHED — §7d.3's *"a second `dispatch` row"*.
+    assert!(
+        after_two
+            .iter()
+            .any(|e| e.kind == rk_types::event_kind::EventKind::Dispatch),
+        "the resumed run reached no `dispatch`, so the step after the gate was never \
+         entered.\nrun 3 exited {:?}\nstderr:\n{}\nrows: {:?}",
+        second.status.code(),
+        String::from_utf8_lossy(&second.stderr),
+        after_two.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+}
+
+/// **AC-257 — a gate whose deadline has passed is resolved at the next `run`, in a FRESH PROCESS.**
+///
+/// §7d.14, verbatim: *"Red by a gate whose deadline passed not resolving at the next `run` in a
+/// fresh process (no `gate_expired` row; or `gate::answer` applying it — the expiry pass of §7d.5
+/// step (9) is what makes the deadline observable, since the kernel refuses `Expired` only on a row
+/// already in the journal); a weaker red resolves it in the same process that opened it"*.
+///
+/// # 🛑 BOTH HALVES ARE ASSERTED, AND THE FIRST IS WHAT MAKES THIS A CROSS-PROCESS TEST
+///
+/// Process 1 opens the gate under `pack.gate-1s.toml`'s `gate_deadline_secs = 1` and must leave
+/// **no** `gate_expired` row behind. Resolving a gate in the process that opened it is the weaker
+/// red §7d.14 names, and an assertion on process 2 alone is satisfied by a binary that expires the
+/// gate the instant it opens it. Process 2 is a fresh `redkiln` and the row must exist after it.
+///
+/// # 🛑 THE WAIT IS TEST-SIDE, AND THE RECORDED DEADLINE IS READ BACK SO IT CANNOT BE VACUOUS
+///
+/// AC-474 forbids a clock seam — no env var, no flag and no config key makes a deadline pass — so
+/// the only admitted mechanism is the 1-second pack variant plus a wait here (*"a test may sleep;
+/// the product never does"*). The deadline process 1 recorded is read off its own gate row and
+/// asserted to be in the past **before** process 2 is spawned. Without that, a variant carrying the
+/// base 900 s deadline would redden every assertion below for the wait rather than for the expiry
+/// pass — which is the wrong reason, and is invisible from the failure text otherwise.
+///
+/// # 🛑 PROCESS 2's EXIT IS REPORTED AND NOT CLAIMED
+///
+/// AC-257's THEN is the resolution, and the resolution is the row. What `run` then decides about a
+/// stage whose only gate has failed is §7d.5 step (10)'s and is asserted by its own tests; this one
+/// carries process 2's exit in its failure text and asserts nothing about it.
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test-side wait past a 1 s gate deadline, and the clock read that proves the wait \
+              cleared it — not a decision (AC-003); s7d §7d.15's form for §7d.14's bounds"
+)]
+fn ac257_expired_gate_resolved_by_fresh_process() {
+    let repo = pack_min_repo(PackVariant::GateOneSecond);
+    let root = repo.path();
+
+    // ---- PROCESS 1 — open the gate. ------------------------------------------------------------
+    let first = spawn_run_in_mode(root, "gate-1", None, "exit:0");
+    assert_eq!(
+        first.status.code(),
+        Some(0),
+        "the gate-opening run is exit 0 (AC-403), so anything below would be measuring a refusal. \
+         stderr:\n{}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+
+    let after_one = crate::support::journal_rows(root, "gate-1");
+    let gate = after_one
+        .iter()
+        .find(|e| {
+            e.kind == rk_types::event_kind::EventKind::GateOpened
+                && e.payload.get("token").is_some_and(|t| !t.is_null())
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "process 1 opened no answerable gate, so there is nothing for a later run to \
+                 expire. A gate writes TWO `gate_opened` rows and only the runtime's carries a \
+                 token. Rows: {:?}",
+                after_one.iter().map(|e| e.kind).collect::<Vec<_>>()
+            )
+        });
+    let deadline = gate
+        .payload
+        .get("deadline")
+        .and_then(serde_json::Value::as_i64)
+        .expect("the runtime's gate row carries its deadline in unix seconds");
+
+    // The weaker red, asserted directly rather than trusted.
+    assert!(
+        !after_one
+            .iter()
+            .any(|e| e.kind == rk_types::event_kind::EventKind::GateExpired),
+        "process 1 wrote a `gate_expired` row for a gate it had just opened. AC-257 is about the \
+         NEXT run observing the deadline; a gate resolved in the process that opened it is the \
+         weaker red §7d.14 names. Rows: {:?}",
+        after_one.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+
+    // ---- THE WAIT, past the deadline process 1 itself recorded. --------------------------------
+    std::thread::sleep(std::time::Duration::from_millis(1_500));
+    let now = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("the clock is after the unix epoch")
+            .as_secs(),
+    )
+    .expect("a unix second fits an i64");
+    assert!(
+        now > deadline,
+        "the wait did not carry the clock past the deadline process 1 recorded ({deadline}); now \
+         is {now}. Every assertion below would then be red for the wait rather than for the absent \
+         expiry pass — check that `PackVariant::GateOneSecond` installed `pack.gate-1s.toml`"
+    );
+
+    // ---- PROCESS 2 — a FRESH `redkiln`, which must resolve it at its step (9). ------------------
+    let second = spawn_run_in_mode(root, "gate-1", None, "exit:0");
+    let after_two = crate::support::journal_rows(root, "gate-1");
+    let expired: Vec<&rk_types::event::Event> = after_two
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::GateExpired)
+        .collect();
+    assert_eq!(
+        expired.len(),
+        1,
+        "the next `run` in a fresh process wrote no `gate_expired` row for a gate whose deadline \
+         had passed. §7d.5 step (9)'s expiry pass is what makes the deadline observable: the kernel \
+         refuses `Expired` only on a row already in the journal, so nothing else resolves \
+         it.\nprocess 2 exited {:?}\nstderr:\n{}\nrows: {:?}",
+        second.status.code(),
+        String::from_utf8_lossy(&second.stderr),
+        after_two.iter().map(|e| e.kind).collect::<Vec<_>>()
+    );
+
+    // And the row is about THE gate process 1 opened, not some other one.
+    let token = gate
+        .payload
+        .get("token")
+        .and_then(serde_json::Value::as_str)
+        .expect("the gate row carries its token");
+    assert_eq!(
+        expired[0]
+            .payload
+            .get("token")
+            .and_then(serde_json::Value::as_str),
+        Some(token),
+        "the `gate_expired` row names a token other than the one process 1's gate carried, so the \
+         two rows are not about the same gate. Payload: {:?}",
+        expired[0].payload
+    );
 }

@@ -366,14 +366,22 @@ fn signal_outside_dispatch_exits_130_writes_nothing_partial() {
     );
 
     let store = locked_store();
-    let inputs = crate::support::inputs_over_pack_min(&resolved);
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
     let ports = crate::support::ports(
         Arc::new(rk_ports::fakes::FakeHarness::scripted(Vec::new())),
         &store,
     );
     let mut supply = crate::support::no_spec();
-    let exit = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token)
-        .expect("a pre-fired token is an EXIT, not a halt");
+    let exit = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        ports,
+        &mut supply,
+        &token,
+    )
+    .expect("a pre-fired token is an EXIT, not a halt");
 
     // (1) the return, THEN (2) the absences — §7d.14's "two things in order".
     assert_eq!(
@@ -445,13 +453,21 @@ fn adr0118_poisoned_store_lock_halts_run_exit_70() {
     // ---- Part A: the verb halts. ----------------------------------------------------------------
     let poisoned = crate::support::poisoned_store();
     let token = CancelToken::new();
-    let inputs = crate::support::inputs_over_pack_min(&resolved);
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
     let ports = crate::support::ports(
         Arc::new(rk_ports::fakes::FakeHarness::scripted(Vec::new())),
         &poisoned,
     );
     let mut supply = crate::support::no_spec();
-    let result = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token);
+    let result = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        ports,
+        &mut supply,
+        &token,
+    );
 
     match &result {
         Ok(exit) => panic!(
@@ -606,7 +622,8 @@ fn code_hits(dir: &Path, needles: &[&str]) -> Vec<String> {
 fn adr0083_config_constructed_once_at_root_and_threaded() {
     let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
     let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
-    let inputs = crate::support::inputs_over_pack_min(&resolved).with_spec(
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+    let inputs = inputs.with_spec(
         "emit-report",
         rk_kernel::replay::RecordedSpec::supplied(
             "emit-report@1",
@@ -740,8 +757,16 @@ fn adr0083_config_constructed_once_at_root_and_threaded() {
     );
     let token = CancelToken::new();
     let mut supply = crate::support::any_spec("emit-report@1", crate::support::any_activity_spec());
-    let exit = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token)
-        .expect("a sound lock is not a halt");
+    let exit = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        ports,
+        &mut supply,
+        &token,
+    )
+    .expect("a sound lock is not a halt");
     assert_eq!(
         exit,
         rk_cli::exit::Exit::Success,
@@ -784,7 +809,8 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
 
     let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
     let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
-    let inputs = crate::support::inputs_over_pack_min(&resolved).with_spec(
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+    let inputs = inputs.with_spec(
         "emit-report",
         rk_kernel::replay::RecordedSpec::supplied(
             "emit-report@1",
@@ -807,7 +833,15 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
     let mut supply = crate::support::any_spec("emit-report@1", crate::support::any_activity_spec());
 
     let started = std::time::Instant::now();
-    let result = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token);
+    let result = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        ports,
+        &mut supply,
+        &token,
+    );
     let elapsed = started.elapsed();
 
     // (1) the return, THEN (2) the rest — root.rs's own order.
@@ -900,7 +934,8 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
     // the row above is a mapping rather than a constant.
     let repo2 = crate::support::pack_min_repo(crate::support::PackVariant::Base);
     let resolved2 = crate::support::resolved_over_pack_min(repo2.path(), "bug-1");
-    let inputs2 = crate::support::inputs_over_pack_min(&resolved2).with_spec(
+    let (inputs2, tree_hash2) = crate::support::inputs_over_pack_min(&resolved2);
+    let inputs2 = inputs2.with_spec(
         "emit-report",
         rk_kernel::replay::RecordedSpec::supplied(
             "emit-report@1",
@@ -921,9 +956,16 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
     );
     let mut supply2 =
         crate::support::any_spec("emit-report@1", crate::support::any_activity_spec());
-    let control_exit =
-        rk_cli::verbs::run::run_with(&resolved2, &inputs2, ports2, &mut supply2, &token)
-            .expect("a NonZero failure is an EXIT, not a halt");
+    let control_exit = rk_cli::verbs::run::run_with(
+        &resolved2,
+        &inputs2,
+        crate::support::FIXED_NOW,
+        &tree_hash2,
+        ports2,
+        &mut supply2,
+        &token,
+    )
+    .expect("a NonZero failure is an EXIT, not a halt");
     assert_ne!(
         control_exit,
         rk_cli::exit::Exit::RateLimited,
@@ -1026,7 +1068,7 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
         startup,
         rk_git::reconciled::Entry::Run,
     )
-        .expect("steps (1)-(7) resolve over the two-activity fixture");
+    .expect("steps (1)-(7) resolve over the two-activity fixture");
 
     // PREMISE: steps (1)-(7) read the file once and resolved once. Without this the post-run
     // counts below could not distinguish "read once, before the run" from "never read".
@@ -1039,7 +1081,9 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
         resolver.resolves()
     );
 
-    let inputs = crate::support::inputs_over_pack_min(&resolved)
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+
+    let inputs = inputs
         .with_spec(
             "emit-report",
             rk_kernel::replay::RecordedSpec::supplied(
@@ -1072,8 +1116,16 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
     let token = rk_ports::cancel::CancelToken::new();
     let mut supply = crate::support::no_spec();
 
-    let exit = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token)
-        .expect("a sound lock is not a halt");
+    let exit = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        ports,
+        &mut supply,
+        &token,
+    )
+    .expect("a sound lock is not a halt");
 
     // The run COMPLETED, over an adapter set resolved before the rewrite. A run that re-read the
     // file would have met `rk-adapter-linear` and refused with exit 3.
@@ -1235,7 +1287,8 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         Arc::new(harness) as Arc<dyn rk_ports::harness::Harness>,
         &store,
     );
-    let inputs = crate::support::inputs_over_pack_min(&resolved).with_spec(
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+    let inputs = inputs.with_spec(
         "emit-report",
         rk_kernel::replay::RecordedSpec::supplied("emit-report@1", spec),
     );
@@ -1258,8 +1311,16 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
     });
 
     let mut supply = crate::support::no_spec();
-    let exit = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token)
-        .expect("a sound lock is not a halt");
+    let exit = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        ports,
+        &mut supply,
+        &token,
+    )
+    .expect("a sound lock is not a halt");
     let child_pid = watcher.join().expect("the watcher thread does not panic");
 
     // (0) THE PREMISE: the child really did start and park. Without a marker the token fired on a

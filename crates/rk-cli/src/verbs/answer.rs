@@ -406,7 +406,9 @@ pub fn run_with(
     };
     let token = record.token().clone();
 
-    answer_the_gate(registry, resolved, args, store, &owned, &token, &tree_hash, &state)
+    answer_the_gate(
+        registry, resolved, args, store, &owned, &token, &tree_hash, &state,
+    )
 }
 
 /// **The one `gate::answer` call site in `crates/rk-cli/src`** (AC-405 as amended, D-13).

@@ -199,7 +199,18 @@ fn ac405_gate_answer_has_exactly_one_call_site() {
 /// `RK_FIXTURE_MODE` is set even though `answer` dispatches nothing: leaving it unset would make an
 /// UNEXPECTED dispatch park for 600 s (the fixture child's default is `hold`) instead of failing
 /// fast. `Command::env`, never `set_var`, which is banned workspace-wide including this tree.
-fn spawn_answer(repo: &std::path::Path, item: &str, option: &str, flags: &[&str]) -> std::process::Output {
+#[expect(
+    clippy::disallowed_types,
+    reason = "the verb is exercised AS A PROCESS — golden constraint 4's 'a stub never replaced' is \
+              caught only by driving the real binary (s7d §7d.13's temp-repository rule); \
+              run::spawn_run_in_mode's form, and its reason"
+)]
+pub(crate) fn spawn_answer(
+    repo: &std::path::Path,
+    item: &str,
+    option: &str,
+    flags: &[&str],
+) -> std::process::Output {
     let markers = repo.join(".rk-markers");
     std::fs::create_dir_all(&markers).expect("the marker directory is created");
     let mut cmd = std::process::Command::new(crate::redkiln());
@@ -219,11 +230,9 @@ fn spawn_answer(repo: &std::path::Path, item: &str, option: &str, flags: &[&str]
 /// carries (no token), and `Runtime::step` writes `(kind, token, tree_hash, deadline)`. Only the
 /// second names something a token can be presented against, so every read of "the gate" in this
 /// module goes through here. Asserting over the unfiltered kind is red on a correct binary.
-fn is_answerable_gate(e: &rk_types::event::Event) -> bool {
+pub(crate) fn is_answerable_gate(e: &rk_types::event::Event) -> bool {
     e.kind == rk_types::event_kind::EventKind::GateOpened
-        && e.payload
-            .get("token")
-            .is_some_and(|t| !t.is_null())
+        && e.payload.get("token").is_some_and(|t| !t.is_null())
 }
 
 /// The repository's real store, opened as `answer`'s outer path opens it.
@@ -236,7 +245,7 @@ fn open_real_store(
 }
 
 /// The two flags AC-435 makes required, in their passing form.
-const BOTH_FLAGS: [&str; 4] = ["--explain-sufficed", "yes", "--toml-opened", "no"];
+pub(crate) const BOTH_FLAGS: [&str; 4] = ["--explain-sufficed", "yes", "--toml-opened", "no"];
 
 /// **AC-248 — an `answer` with no live token is a NAMED OUTCOME, not a crash and not a default.**
 ///
@@ -330,7 +339,10 @@ fn ac248_answer_without_live_token_exits_named_outcome() {
          {} rows before, {} after. Added: {:?}",
         before.len(),
         after.len(),
-        after[before.len()..].iter().map(|e| e.kind).collect::<Vec<_>>()
+        after[before.len()..]
+            .iter()
+            .map(|e| e.kind)
+            .collect::<Vec<_>>()
     );
     assert_eq!(
         after[before.len()].kind,
@@ -349,7 +361,9 @@ fn ac248_answer_without_live_token_exits_named_outcome() {
         String::from_utf8_lossy(&opened.stderr)
     );
     assert!(
-        crate::support::store_rows(eroot).iter().any(is_answerable_gate),
+        crate::support::store_rows(eroot)
+            .iter()
+            .any(is_answerable_gate),
         "PREMISE: no ANSWERABLE gate was opened, so the expiry below would be vacuous"
     );
 
@@ -479,13 +493,15 @@ fn ac407_second_token_refused_one_gate_answered_event() {
         .filter(|e| e.kind == rk_types::event_kind::EventKind::GateAnswerSpent)
         .count();
     assert_eq!(
-        answered, 1,
+        answered,
+        1,
         "exactly ONE `gate_answered` row may exist after two answers -- the second must not be \
          recorded as an answer. Rows: {:?}",
         after.iter().map(|e| e.kind).collect::<Vec<_>>()
     );
     assert_eq!(
-        spent, 1,
+        spent,
+        1,
         "the refused second answer must write exactly ONE `gate_answer_spent` row. A CLI that \
          refused on its own, without presenting the spent token to the kernel, writes NONE -- and \
          that is the implementation §7d.6 rules out. Rows: {:?}",
@@ -558,10 +574,20 @@ fn ac406_answer_after_commit_is_void_gate_stays_open() {
     let owned = owned_worktree(root, "gate-1");
 
     // ---- MOVE THE RUN-OWNED TREE. This is the whole premise.
-    std::fs::write(owned.join("moved.txt"), b"the tree the human saw has changed\n")
-        .expect("the run-owned worktree is writable");
+    std::fs::write(
+        owned.join("moved.txt"),
+        b"the tree the human saw has changed\n",
+    )
+    .expect("the run-owned worktree is writable");
     crate::git(&owned, &["add", "moved.txt"]);
-    crate::git(&owned, &["commit", "-m", "move the run-owned tree after the gate opened"]);
+    crate::git(
+        &owned,
+        &[
+            "commit",
+            "-m",
+            "move the run-owned tree after the gate opened",
+        ],
+    );
 
     let owned_commits_before = crate::support::commit_count(&owned);
     let checkout_head_before = crate::support::head_message(root);
@@ -622,7 +648,10 @@ fn ac406_answer_after_commit_is_void_gate_stays_open() {
             .any(|e| e.kind == rk_types::event_kind::EventKind::StageTransition),
         "a VOID answer advanced the stage. It records that the answer did not apply; it decides \
          nothing. Added: {:?}",
-        after[before.len()..].iter().map(|e| e.kind).collect::<Vec<_>>()
+        after[before.len()..]
+            .iter()
+            .map(|e| e.kind)
+            .collect::<Vec<_>>()
     );
 
     // ---- (3) NO TRAILER COMMIT. A void writes no `Gate:` trailer.
@@ -647,6 +676,11 @@ fn ac406_answer_after_commit_is_void_gate_stays_open() {
 }
 
 /// The git author identity of `dir`'s `HEAD`, as `%an <%ae>`.
+#[expect(
+    clippy::disallowed_types,
+    reason = "reading a fixture worktree's own HEAD author; the product's git goes through rk-git's \
+              one GitExec wrapper (support::head_message's form, and its reason)"
+)]
 fn author_of(dir: &std::path::Path) -> String {
     let out = std::process::Command::new("git")
         .args(["log", "-1", "--format=%an <%ae>"])
@@ -723,12 +757,7 @@ fn ac435_answer_refuses_without_explain_sufficiency_and_records_it() {
     // The OFF-DIAGONAL cells are what discriminate, and SM-126 is why they matter: its kill is a
     // cell where the two data disagree about what the answerer did. So the table is walked whole.
     // §7d.6's two-cell prescription is reported as a stage-file defect (§7d.18), not edited.
-    for (sufficed, toml_opened) in [
-        ("yes", "yes"),
-        ("yes", "no"),
-        ("no", "yes"),
-        ("no", "no"),
-    ] {
+    for (sufficed, toml_opened) in [("yes", "yes"), ("yes", "no"), ("no", "yes"), ("no", "no")] {
         let repo = repo_with_open_gate();
         let root = repo.path();
         let owned = owned_worktree(root, "gate-1");
@@ -750,17 +779,23 @@ fn ac435_answer_refuses_without_explain_sufficiency_and_records_it() {
         let answered = rows
             .iter()
             .find(|e| e.kind == rk_types::event_kind::EventKind::GateAnswered)
-            .unwrap_or_else(|| panic!("no `gate_answered` row: {:?}",
-                rows.iter().map(|e| e.kind).collect::<Vec<_>>()));
+            .unwrap_or_else(|| {
+                panic!(
+                    "no `gate_answered` row: {:?}",
+                    rows.iter().map(|e| e.kind).collect::<Vec<_>>()
+                )
+            });
 
         let sufficiency = answered
             .payload
             .get("explain_sufficiency")
-            .unwrap_or_else(|| panic!(
-                "the `gate_answered` payload carries no `explain_sufficiency` member. ADR-0129 \
+            .unwrap_or_else(|| {
+                panic!(
+                    "the `gate_answered` payload carries no `explain_sufficiency` member. ADR-0129 \
                  decision 1 puts it there, KERNEL-SIDE. Payload: {:?}",
-                answered.payload
-            ));
+                    answered.payload
+                )
+            });
         assert_eq!(
             sufficiency.get("sufficed").and_then(|v| v.as_str()),
             Some(sufficed),
@@ -936,12 +971,15 @@ fn ac410_unadmitted_attachment_refused_zero_events() {
         kind: "Spec".to_owned(),
         path: std::path::PathBuf::from("spec.md"),
     };
-    match rk_cli::verbs::answer::admit(&registry, GATE_KIND, "proceed", &[
-        rk_kernel::workflow::question::Attachment {
+    match rk_cli::verbs::answer::admit(
+        &registry,
+        GATE_KIND,
+        "proceed",
+        &[rk_kernel::workflow::question::Attachment {
             kind: spec.kind.clone(),
             path: "spec.md".to_owned(),
-        },
-    ]) {
+        }],
+    ) {
         Err(rk_kernel::workflow::question::OptionError::AttachmentNotAdmitted { kind }) => {
             assert_eq!(kind, "Spec", "the refusal names the wrong kind");
         }
@@ -1035,9 +1073,8 @@ fn ac410_admitted_attachment_stored_as_human_root() {
     // not adopt the path.
     let findings = root.join("findings.md");
     std::fs::write(&findings, b"the findings the human supplied\n").expect("the file is written");
-    let expected_digest = rk_types::digest::sha256(
-        &std::fs::read(&findings).expect("the attachment reads"),
-    );
+    let expected_digest =
+        rk_types::digest::sha256(&std::fs::read(&findings).expect("the attachment reads"));
 
     let before = crate::support::store_rows(root);
     let store = open_real_store(&resolved);

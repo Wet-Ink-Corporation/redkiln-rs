@@ -332,7 +332,8 @@ fn ac438_table_driven_exit_codes_over_fixtures() {
         // `activity_id@version` for the node and the runtime boundary refuses before any dispatch
         // with "`emit-report` is not an `activity_id@version`" (ADR-0097 decision 2) — exit 3 for a
         // reason that has nothing to do with the exit table. Measured, before the binding was added.
-        let inputs = crate::support::inputs_over_pack_min(&resolved).with_spec(
+        let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+        let inputs = inputs.with_spec(
             "emit-report",
             rk_kernel::replay::RecordedSpec::supplied("emit-report@1", emit_report_spec()),
         );
@@ -353,7 +354,15 @@ fn ac438_table_driven_exit_codes_over_fixtures() {
         let token = rk_ports::cancel::CancelToken::new();
         let mut supply = crate::support::any_spec("emit-report@1", emit_report_spec());
 
-        let got = rk_cli::verbs::run::run_with(&resolved, &inputs, ports, &mut supply, &token);
+        let got = rk_cli::verbs::run::run_with(
+            &resolved,
+            &inputs,
+            crate::support::FIXED_NOW,
+            &tree_hash,
+            ports,
+            &mut supply,
+            &token,
+        );
 
         assert_eq!(
             got,

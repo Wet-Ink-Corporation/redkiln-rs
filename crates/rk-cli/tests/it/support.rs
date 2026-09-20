@@ -1194,19 +1194,23 @@ pub fn resolved_over_pack_min(root: &Path, item: &str) -> rk_cli::verbs::run::Re
         rk_cli::verbs::Startup::real(),
         rk_git::reconciled::Entry::Run,
     )
-        .unwrap_or_else(|e| {
-            panic!("steps (1)-(7) resolve over the fixture repository for `{item}`: {e:?}")
-        })
+    .unwrap_or_else(|e| {
+        panic!("steps (1)-(7) resolve over the fixture repository for `{item}`: {e:?}")
+    })
 }
 
-/// The input set over a `pack-min` fixture repository, at [`FIXED_NOW`].
+/// The input set over a `pack-min` fixture repository, at [`FIXED_NOW`], **and its tree hash**.
+///
+/// The hash is returned because `run_with` takes it: `gate::expire` needs one at step (9), and
+/// `RunInputs::runtime()` is private to `rk-kernel`, so it cannot be read back off the input set
+/// the first member carries. A case that does not reach a gate still passes it through.
 ///
 /// # Panics
 /// If the input set will not build — again a fixture fault, not the case's.
 #[must_use]
 pub fn inputs_over_pack_min(
     resolved: &rk_cli::verbs::run::Resolved,
-) -> rk_kernel::replay::RunInputs {
+) -> (rk_kernel::replay::RunInputs, String) {
     rk_cli::verbs::run::prepare_inputs(resolved, FIXED_NOW)
         .unwrap_or_else(|e| panic!("the input set builds over the fixture repository: {e:?}"))
 }

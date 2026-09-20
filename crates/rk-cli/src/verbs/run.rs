@@ -256,8 +256,8 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
 
     // THE ONE WALL-CLOCK READ. Both derived values come off it — see `base_inputs`.
     let now = crate::clock::now().unix_seconds();
-    let inputs = match prepare_inputs(&resolved, now) {
-        Ok(inputs) => inputs,
+    let (inputs, tree_hash) = match prepare_inputs(&resolved, now) {
+        Ok(pair) => pair,
         Err(exit) => return Ok(exit),
     };
 
@@ -303,7 +303,15 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
             })
         };
 
-    run_with(&resolved, &inputs, ports, &mut supply_spec, &token)
+    run_with(
+        &resolved,
+        &inputs,
+        now,
+        &tree_hash,
+        ports,
+        &mut supply_spec,
+        &token,
+    )
 }
 
 /// The inner verb — the in-process twin every Slice-3 loop test drives.
@@ -327,9 +335,18 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
 /// # Errors
 /// [`Halt::PoisonedLock`] at the first acquisition. ADR-0118 clause 3 forbids every spelling of a
 /// recovery, so there is no `into_inner` on this path and no row is appended on the way out.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "`now` and `tree_hash` are step (8)'s two readings threaded into step (9); taking \
+              either here would be a second clock read (§7d.5) or a second tree hash over one \
+              worktree, and `RunInputs::runtime()` is private to rk-kernel so neither can be read \
+              back off `inputs`"
+)]
 pub fn run_with(
     resolved: &Resolved,
     inputs: &rk_kernel::replay::RunInputs,
+    now: i64,
+    tree_hash: &str,
     ports: rk_ports::root::Ports,
     supply_spec: &mut dyn FnMut(
         &str,
@@ -366,7 +383,7 @@ pub fn run_with(
         return Ok(Exit::SignalOutsideDispatch);
     }
 
-    resume_and_read(resolved, inputs, ports, supply_spec, token)
+    resume_and_read(resolved, inputs, now, tree_hash, ports, supply_spec, token)
 }
 
 /// Steps (1)–(7), in §7d.5's order. `Err(Exit)` is a refusal; `Ok` hands step (8) its inputs.
@@ -476,14 +493,24 @@ pub fn through_step_seven(
         .join(format!("{}.toml", args.item));
     let record_src = std::fs::read_to_string(&record_path).map_err(|e| {
         eprintln!("redkiln: {}: {e}", record_path.display());
-        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
+        refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        )
     })?;
     let record: ItemRecord = toml::from_str(&record_src).map_err(|e| {
         eprintln!(
             "redkiln: {} is not an item record: {e}",
             record_path.display()
         );
-        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
+        refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        )
     })?;
 
     // RT-50. Refused rather than defaulted, and the refusal NAMES THE ITEM.
@@ -502,9 +529,8 @@ pub fn through_step_seven(
     };
 
     // ---- the lane. ADR-0128 decision 2.
-    let lane = derive_lane(args, record.kind.as_deref()).map_err(|exit| {
-        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, exit)
-    })?;
+    let lane = derive_lane(args, record.kind.as_deref())
+        .map_err(|exit| refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, exit))?;
     let pack_name = pack_for(lane);
 
     // Decision 3: "a lane whose pack is not enabled is the same configuration error with the pack
@@ -529,14 +555,24 @@ pub fn through_step_seven(
         .join(format!("{pack_name}.toml"));
     let pack_src = std::fs::read_to_string(&pack_path).map_err(|e| {
         eprintln!("redkiln: {}: {e}", pack_path.display());
-        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
+        refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        )
     })?;
     let extras: PackExtras = toml::from_str(&pack_src).map_err(|e| {
         eprintln!(
             "redkiln: {} does not carry the adapter-facing pack values: {e}",
             pack_path.display()
         );
-        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
+        refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        )
     })?;
 
     // §7d.5 step (7) names `.redkiln/facets.toml` among the registries this step reads. It is read
@@ -546,11 +582,21 @@ pub fn through_step_seven(
     let facets_path = root.join(".redkiln").join("facets.toml");
     let facets_src = std::fs::read_to_string(&facets_path).map_err(|e| {
         eprintln!("redkiln: {}: {e}", facets_path.display());
-        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
+        refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        )
     })?;
     let registry = rk_kernel::registry::Registry::from_toml(&facets_src).map_err(|e| {
         eprintln!("redkiln: {}: {e}", facets_path.display());
-        refuse_after_reconcile(&repo.exec, &repo.worktree, &kernel_config, Exit::ConfigError)
+        refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        )
     })?;
     let item = build_item(&record, &registry);
 
@@ -709,7 +755,10 @@ pub fn expiry_pass(
             tree_hash,
         )
         .map_err(|e| {
-            eprintln!("redkiln: the expiry of gate {} was refused: {e}", token.as_str());
+            eprintln!(
+                "redkiln: the expiry of gate {} was refused: {e}",
+                token.as_str()
+            );
             Exit::ConfigError
         })?;
         events.extend(outcome.events);
@@ -875,15 +924,26 @@ fn build_item(record: &ItemRecord, registry: &rk_kernel::registry::Registry) -> 
 
 // ------------------------------------------------------------------ steps (8)-(10), the inner path
 
-/// The recorded input set, with the tree hash taken over the repository.
+/// The recorded input set, **and the tree hash it was built over**.
 ///
 /// **`pub` on purpose**: the in-process tests build a `RunInputs` at a FIXED instant so nothing
 /// they assert moves with the wall clock, and §7d.5 gives the root exactly one clock read — a test
 /// that read its own would be a second one.
 ///
+/// # 🛑 THE HASH IS RETURNED RATHER THAN DROPPED, BECAUSE STEP (9) NEEDS THE SAME ONE
+///
+/// `gate::expire` takes a tree hash, so the expiry pass of step (9) needs one — and it must be the
+/// hash this function already took, not a second reading. `RuntimeContext` carries it, but
+/// `RunInputs::runtime()` is private to `rk-kernel` (measured), so it cannot be read back out of
+/// the value returned here. Taking it twice would be two `git` invocations over one worktree and
+/// two values that are only *probably* equal; returning it is one reading, used twice.
+///
 /// # Errors
 /// An [`Exit`] row when a registry will not read, or the tree hash cannot be taken.
-pub fn prepare_inputs(resolved: &Resolved, now: i64) -> Result<rk_kernel::replay::RunInputs, Exit> {
+pub fn prepare_inputs(
+    resolved: &Resolved,
+    now: i64,
+) -> Result<(rk_kernel::replay::RunInputs, String), Exit> {
     let tree_hash = rk_git::tree::tree_hash(
         &resolved.exec,
         &resolved.worktree,
@@ -894,7 +954,8 @@ pub fn prepare_inputs(resolved: &Resolved, now: i64) -> Result<rk_kernel::replay
         eprintln!("redkiln: the tree hash could not be taken: {e:?}");
         Exit::ConfigError
     })?;
-    base_inputs(resolved, tree_hash.as_str(), now)
+    let inputs = base_inputs(resolved, tree_hash.as_str(), now)?;
+    Ok((inputs, tree_hash.as_str().to_owned()))
 }
 
 /// Every `.redkiln/catalog/*.toml`, by name, in sorted order so two runs read one order.
@@ -983,9 +1044,16 @@ fn base_inputs(
 ///
 /// # Errors
 /// [`Halt::PoisonedLock`] from the journal acquisition.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "step (9) is one numbered step and reads five recorded values; splitting it would put \
+              §7d.5's order in the call graph rather than in one readable sequence"
+)]
 fn resume_and_read(
     resolved: &Resolved,
     inputs: &rk_kernel::replay::RunInputs,
+    now: i64,
+    tree_hash: &str,
     ports: rk_ports::root::Ports,
     supply_spec: &mut dyn FnMut(
         &str,
@@ -1016,6 +1084,57 @@ fn resume_and_read(
         eprintln!("redkiln: interrupted; nothing after the journal read for `{item_id}` ran.");
         return Ok(Exit::SignalOutsideDispatch);
     }
+
+    // ---- STEP (9)'s EXPIRY PASS, BEFORE THE GATE READ `resume` PERFORMS. -----------------------
+    //
+    // §7d.5 step (9), verbatim: *"**before the gate read**, every open gate of the item whose
+    // recorded deadline `< now` is resolved through `gate::expire(..)` and its events appended"*.
+    //
+    // 🛑 NOTHING ELSE CAN RESOLVE A PASSED DEADLINE. `gate::answer` tests `gate_record(presented)`
+    // — returning `Applied` — BEFORE it tests `is_expired`, and `fsm::apply`'s `GateExpired` arm
+    // deliberately KEEPS the record in `gates_open`. So the kernel's `Expired` branch fires only
+    // for a token already carrying a `gate_expired` row, and a gate whose deadline merely passed is
+    // still live to every reader until this pass writes that row (AC-257; measured at cycle 7 and
+    // RAISED against §7d.6's own phrasing).
+    //
+    // `answer` calls the same function for the same reason (§7d.6: *"the expiry pass of `run`'s
+    // step (9)"*) — it is built once, here, and called from both.
+    let state = match rk_kernel::workflow::fsm::fold(&item_id, &resolved.stage, &prior) {
+        Ok(state) => state,
+        Err(e) => {
+            eprintln!("redkiln: the recorded journal did not fold: {e}");
+            return Ok(Exit::ConfigError);
+        }
+    };
+    let expiry_events = match expiry_pass(&resolved.extras, &state, now, tree_hash) {
+        Ok(events) => events,
+        Err(exit) => return Ok(exit),
+    };
+
+    // The rows are appended and the journal is RE-READ rather than extended locally: `resume` folds
+    // what the STORE holds, so a pass that wrote nowhere would be invisible to it, and reading it
+    // back is what makes the append observable rather than assumed.
+    let prior = if expiry_events.is_empty() {
+        prior
+    } else {
+        let mut guard = crate::store::acquire(&store, "the run")?;
+        for event in expiry_events {
+            if let Err(e) = guard.append(event) {
+                drop(guard);
+                eprintln!("redkiln: an expiry row could not be written: {e:?}");
+                return Ok(Exit::ConfigError);
+            }
+        }
+        let re_read = guard.query(rk_kernel::runtime::journal_query(&item_id));
+        drop(guard);
+        match re_read {
+            Ok(rows) => rows,
+            Err(e) => {
+                eprintln!("redkiln: the store could not be read: {e:?}");
+                return Ok(Exit::ConfigError);
+            }
+        }
+    };
 
     let recorded = match rk_kernel::replay::resume(inputs, ports, &prior, supply_spec) {
         Ok(run) => run,
