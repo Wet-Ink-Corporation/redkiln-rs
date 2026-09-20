@@ -12,7 +12,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use rk_cli::adapters::{self, Refusal};
+use rk_cli::adapters::{AdapterSet, Refusal};
 use rk_cli::config;
 use rk_cli::env::Env;
 
@@ -151,7 +151,7 @@ fn ac474_config_surface_snapshot_has_no_dual_write_key() {
 fn ac486_init_scaffold_resolves_four_reals() {
     let file = config::parse(&scaffold()).expect("the scaffold loads");
     let resolved =
-        adapters::resolve(&file, &clean_env()).expect("the scaffold's four reals resolve");
+        AdapterSet::resolve(&file, &clean_env()).expect("the scaffold's four reals resolve");
     assert_eq!(
         resolved.names(),
         vec![
@@ -179,15 +179,29 @@ fn ac486_init_scaffold_resolves_four_reals() {
 /// Each arm asserts TWO things in order (§7d.14): the refusal, and then that nothing happened —
 /// no marker file, no store file. The side-effect half is what turns a warn-and-continue
 /// implementation red on the second assertion rather than passing on the first.
+/// **The side-effect half observes a REAL repository, and it did not at first.** The first version
+/// minted a bare `tempfile::tempdir()` and asserted it was empty — but that path was never handed to
+/// `parse` or `resolve`, so no implementation of either could have put anything in it. It was a
+/// guard that could not fail. §7d.16 item 2 asks for "zero marker files, no store file", and a store
+/// file has a real address: `<common-dir>/redkiln/store.sqlite3`. The arms now run against a
+/// repository where that address is live, and the **positive control** is at the end — the same
+/// address goes non-empty when `init` legitimately opens a store, so the absence asserted before it
+/// is an absence of something that demonstrably can appear.
 #[test]
 fn ac486_misconfigured_adapter_refuses_before_spawn_or_store_write() {
-    let scratch = tempfile::tempdir().expect("a temp dir");
+    let repo = crate::temp_repo();
+    let common = crate::common_dir(repo.path());
+    let store_path = common.join("redkiln").join("store.sqlite3");
+    assert!(
+        !store_path.exists(),
+        "the fixture repository already has a store before anything ran"
+    );
 
     // Arm 1: a named adapter that is not one of the reals. A COMPLETE ConfigFile, so the load
     // succeeds and the refusal is `resolve`'s.
     let file = config::parse(&config_fixture("unknown-adapter.toml"))
         .expect("unknown-adapter.toml is a complete ConfigFile: only the harness NAME is wrong");
-    let refusal = adapters::resolve(&file, &clean_env())
+    let refusal = AdapterSet::resolve(&file, &clean_env())
         .expect_err("`rk-adapter-linear` is not one of the four reals");
     assert!(
         matches!(refusal, Refusal::UnknownAdapter { .. }),
@@ -206,17 +220,31 @@ fn ac486_misconfigured_adapter_refuses_before_spawn_or_store_write() {
         "the refusal does not name the absent key; it read:\n{err}"
     );
 
-    // The side-effect half, for both arms: nothing was created. `resolve` constructs no port
-    // implementor (§7d.5 step (4)) and neither call touches the filesystem, so the scratch
-    // directory must be exactly as empty as it was.
-    let entries: Vec<_> = std::fs::read_dir(scratch.path())
-        .expect("the scratch dir reads")
-        .map(|e| e.expect("an entry").file_name())
-        .collect();
+    // The side-effect half, for both arms: no store was written. `resolve` returns names and
+    // constructs no port implementor (§7d.5 step (4)), so a store file appearing here would mean the
+    // refusal happened AFTER something opened one — which is exactly what "before any spawn or store
+    // write" forbids.
     assert!(
-        entries.is_empty(),
-        "a refused configuration created something: {entries:?} — AC-486 refuses BEFORE any spawn \
-         or store write"
+        !store_path.exists(),
+        "a refused configuration wrote a store at {} — AC-486 refuses BEFORE any spawn or store \
+         write",
+        store_path.display()
+    );
+    assert!(
+        crate::porcelain(repo.path()).is_empty(),
+        "a refused configuration left something in the working tree: {:?}",
+        crate::porcelain(repo.path())
+    );
+
+    // THE POSITIVE CONTROL for both assertions above. `init` on the same repository opens the store
+    // eagerly (D-14), so the address the absences were asserted over goes non-empty — which is what
+    // makes those absences observations rather than a guard over ground nothing could reach.
+    assert_eq!(crate::run_init(repo.path()).status.code(), Some(0));
+    assert!(
+        store_path.exists(),
+        "the control failed: `init` did not create a store at {}, so the absence asserted above was \
+         over an address nothing writes and proved nothing",
+        store_path.display()
     );
 }
 
@@ -265,7 +293,7 @@ fn ac422_config_reads_the_one_denylist() {
         "ANTHROPIC_FOUNDRY_API_KEY".to_owned(),
         "a-credential".to_owned(),
     );
-    let refusal = adapters::resolve(&file, &Env::from_map(map))
+    let refusal = AdapterSet::resolve(&file, &Env::from_map(map))
         .expect_err("a denylisted credential in the captured environment is refused");
     assert!(
         matches!(refusal, Refusal::DenylistedEnv { .. }),
@@ -274,5 +302,29 @@ fn ac422_config_reads_the_one_denylist() {
     assert!(
         refusal.to_string().contains("ANTHROPIC_FOUNDRY_API_KEY"),
         "the refusal does not name the variable; it read:\n{refusal}"
+    );
+
+    // **The precedence arm.** `AdapterSet::resolve` documents that the environment is checked FIRST
+    // and that "the first refusal wins and nothing after it runs" — and until this arm existed that
+    // sentence had no instrument: moving the denylist check after all three adapter-name checks left
+    // every test in the crate green. A repository whose configuration is ALSO wrong must still be
+    // told about the credential, because the credential is the thing that must not reach a child.
+    let bad_config = config::parse(&config_fixture("unknown-adapter.toml"))
+        .expect("unknown-adapter.toml loads; only the harness NAME is wrong");
+    let mut both = BTreeMap::new();
+    both.insert(
+        "ANTHROPIC_FOUNDRY_API_KEY".to_owned(),
+        "a-credential".to_owned(),
+    );
+    let first = AdapterSet::resolve(&bad_config, &Env::from_map(both))
+        .expect_err("a wrong configuration AND a denylisted credential are both refusals");
+    assert!(
+        matches!(first, Refusal::DenylistedEnv { .. }),
+        "the environment is checked FIRST, so the credential wins over the adapter name; got: \
+         {first}"
+    );
+    assert!(
+        !first.to_string().contains("rk-adapter-linear"),
+        "the refusal named the adapter as well as the credential; only the first refusal runs"
     );
 }

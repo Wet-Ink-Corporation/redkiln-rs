@@ -1,5 +1,5 @@
-//! **The eight verbs** — one per subcommand §7d.3 declares, and at Slice 1 every one of them is a
-//! stub that refuses.
+//! **The eight verbs** — one per subcommand §7d.3 declares. At Slice 2 `init` is built and the other
+//! seven are still stubs that refuse.
 //!
 //! **Why a stub rather than an unimplemented subcommand.** The surface is what Slice 1 delivers: a
 //! committed `--help` snapshot and a denylist lint that bites from the first commit. Both need the
@@ -13,7 +13,7 @@
 //!
 //! **This file is where golden constraint 4 bites**: *a stub never replaced is caught only here* —
 //! by the block's verb-level lines at the stage close, which drive the real binary and expect a real
-//! answer. Until then these eight exit `3` and say so.
+//! answer. Until then the remaining seven exit `3` and say so.
 
 pub mod init;
 

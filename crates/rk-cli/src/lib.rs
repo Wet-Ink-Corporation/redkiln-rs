@@ -5,17 +5,17 @@
 //! `[[bin]]` or name a `pub(crate)` item (ADR-0083) — so the surface the tests assert on and the
 //! surface the binary runs are the same surface, rather than two that agree by inspection.
 //!
-//! **What is here is Slice 1** (`s7d` §7d.16 item 1): [`cli`], the router and its resume-shaped
-//! denylist; [`exit`], the closed exit table and the one halt; and [`verbs`], eight stubs, one per
-//! subcommand, each refusing as a configuration error. There is no `store`, `signal`, `env`,
-//! `clock`, `config`, `adapters`, `repo` or `doctor` module: those are Slices 2–4's, and a module
-//! declared here before its file exists is what an earlier draft of this slice did and could not
-//! have compiled.
+//! **What is here is Slices 1 and 2** (`s7d` §7d.16 items 1 and 2). Slice 1: [`cli`], the router
+//! and its resume-shaped denylist; [`exit`], the closed exit table and the one halt; [`verbs`], the
+//! router's arms. Slice 2: [`env`] the one environment read, [`clock`] the one wall-clock read,
+//! [`config`] the closed `ConfigFile`, [`adapters`] the resolver, [`repo`] H-3's discovery,
+//! [`store`] the one acquisition, [`signal`] the handler, and `verbs::init`. There is **no `doctor`
+//! module** — that is Slice 4's, and a module declared here before its file exists is what an early
+//! draft of Slice 1 did and could not have compiled.
 //!
-//! **The two `std::process::exit` sites are both in `main.rs`, and at this slice there is one.**
-//! The table exit is `main`'s; the panic hook's is Slice 2's, when `LOCK_HALTS` becomes reachable.
-//! Checkpoint 7d counts exactly two, so the count is first satisfiable at Slice 2 and is
-//! `[WILL EXIST]`-shaped by absence here.
+//! **The two `std::process::exit` sites are both in `main.rs`, and as of Slice 2 there are two** —
+//! the table exit and the panic hook's `70`. Checkpoint 7d counts exactly two and requires both to
+//! be in that file.
 
 pub mod adapters;
 pub mod cli;

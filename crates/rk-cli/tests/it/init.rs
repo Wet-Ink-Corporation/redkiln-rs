@@ -10,85 +10,11 @@
 //! product repository is never touched by this stage**, which is why nothing below resolves a path
 //! relative to the working directory.
 
-use std::path::{Path, PathBuf};
-use std::process::Stdio;
+use std::path::Path;
 
 use rk_cli::verbs::init::{CreatedNames, INIT_UNREAD_WINDOW_RUNS, NAME_REGEX, name_is_admissible};
 
-/// The `redkiln` binary, located the one way §7d.13 fixes.
-fn redkiln() -> &'static str {
-    env!("CARGO_BIN_EXE_redkiln")
-}
-
-/// A temp repository with one commit, and nothing else.
-fn temp_repo() -> tempfile::TempDir {
-    let dir = tempfile::tempdir().expect("a temp dir");
-    git(dir.path(), &["init", "--quiet"]);
-    git(
-        dir.path(),
-        &["config", "user.email", "test@example.invalid"],
-    );
-    git(dir.path(), &["config", "user.name", "Test"]);
-    std::fs::write(dir.path().join("README"), b"root\n").expect("the root file writes");
-    git(dir.path(), &["add", "README"]);
-    git(dir.path(), &["commit", "--quiet", "-m", "root"]);
-    dir
-}
-
-/// Run git in `cwd`. The tests build repositories; the PRODUCT never spawns git outside `rk-git`'s
-/// one wrapper, which is what Checkpoint 7d's `Command::new("git")` ban over `src/` enforces.
-#[expect(
-    clippy::disallowed_types,
-    reason = "a test building its own fixture repository; the product's git goes through rk-git's \
-              one GitExec wrapper (ADR-0077), which the block's src/ ban enforces"
-)]
-fn git(cwd: &Path, args: &[&str]) {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git runs");
-    assert!(
-        out.status.success(),
-        "git {args:?} failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-}
-
-/// Spawn `redkiln -C <repo> init` with stdin closed (D-15: no verb reads stdin).
-#[expect(
-    clippy::disallowed_types,
-    reason = "the verb is exercised AS A PROCESS, which is the only way golden constraint 4's \
-              'a stub never replaced' is caught (s7d §7d.13's temp-repository rule)"
-)]
-fn run_init(repo: &Path) -> std::process::Output {
-    std::process::Command::new(redkiln())
-        .args(["-C", &repo.display().to_string(), "init"])
-        .stdin(Stdio::null())
-        .output()
-        .expect("the redkiln binary runs")
-}
-
-/// `git status --porcelain` over the whole tree, as a sorted listing.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository's own porcelain listing; see `git` above"
-)]
-fn porcelain(repo: &Path) -> Vec<String> {
-    let out = std::process::Command::new("git")
-        .args(["status", "--porcelain"])
-        .current_dir(repo)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git status runs");
-    let mut lines: Vec<String> = String::from_utf8_lossy(&out.stdout)
-        .lines()
-        .map(str::to_owned)
-        .collect();
-    lines.sort();
-    lines
-}
+use crate::{common_dir, porcelain, refs, run_init, temp_repo};
 
 /// Every path under `root`, relative and sorted, with `.git/` excluded — the working-tree digest
 /// AC-437 compares across the second `init`.
@@ -122,28 +48,34 @@ fn tree_listing(root: &Path) -> Vec<String> {
     out
 }
 
+/// The store's three identity rows, read the way §7d.9 names: through `rk_store::conn::Reader` and
+/// `rk_store::identity::read`, not through `SqliteStore` — the test spawns the binary, so it holds
+/// no store of its own.
+///
+/// **`read` returns an `Option`, and the `Some` is asserted here rather than compared.** Two `None`s
+/// compare equal, so a test that compared the `Option`s directly would pass over a repository with
+/// no identity table at all — which is precisely the state an `init` that never opened the store
+/// leaves behind.
+fn identity_rows(common_dir: &Path) -> rk_store::identity::Identity {
+    let reader = rk_store::conn::Reader::open(common_dir).unwrap_or_else(|e| {
+        panic!(
+            "the store at {} opens for reading: {e}",
+            common_dir.display()
+        )
+    });
+    rk_store::identity::read(reader.conn())
+        .expect("the identity table reads")
+        .expect(
+            "the store carries identity rows — `init` opens it eagerly (D-14), which stamps them",
+        )
+}
+
 /// The store file's digest, or `None` if there is no store.
 fn store_digest(common_dir: &Path) -> Option<String> {
     let path = common_dir.join("redkiln").join("store.sqlite3");
     std::fs::read(&path)
         .ok()
         .map(|b| rk_types::digest::sha256(&b).as_str().to_owned())
-}
-
-/// The repository's common dir, read from git rather than assumed — a linked worktree's is not
-/// `<root>/.git`.
-#[expect(
-    clippy::disallowed_types,
-    reason = "reading the fixture repository's own common dir; see `git` above"
-)]
-fn common_dir(repo: &Path) -> PathBuf {
-    let out = std::process::Command::new("git")
-        .args(["rev-parse", "--path-format=absolute", "--git-common-dir"])
-        .current_dir(repo)
-        .stdin(Stdio::null())
-        .output()
-        .expect("git rev-parse runs");
-    PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_owned())
 }
 
 /// AC-437 as amended (D-14), ADR-0107 decision 2: *"a second `init` on an initialised repository
@@ -170,6 +102,7 @@ fn ac437_init_twice_identical_tree_and_identity_rows() {
     let porcelain_1 = porcelain(root);
     let tree_1 = tree_listing(root);
     let store_1 = store_digest(&common).expect("init creates the store eagerly (D-14)");
+    let identity_1 = identity_rows(&common);
 
     let second = run_init(root);
     assert_eq!(
@@ -186,6 +119,17 @@ fn ac437_init_twice_identical_tree_and_identity_rows() {
         tree_1,
         "the working tree moved across the second init — bytes, not mtimes"
     );
+    // AC-437's second conjunct, "identical store identity rows", read through the instrument §7d.9
+    // names. The rows are DETERMINISTIC — root commit, common dir, schema version — so they compare
+    // equal whether or not the second `init` re-stamped them; that is why the file digest below is
+    // also compared, and why neither assertion replaces the other. What THIS one catches, and the
+    // digest cannot, is an `init` that leaves a store the rows are not in at all.
+    let identity_2 = identity_rows(&common);
+    assert_eq!(
+        identity_2, identity_1,
+        "the store's identity rows moved across the second init"
+    );
+
     assert_eq!(
         store_digest(&common).as_deref(),
         Some(store_1.as_str()),
@@ -301,7 +245,34 @@ fn ac531_init_created_names_match_regex() {
     // nothing outside it — an assertion that goes red the day `init` creates one, and one an
     // enumerator that lists nothing cannot pass.
     let repo = temp_repo();
+    let refs_before = refs(repo.path());
+    assert!(
+        !refs_before.is_empty(),
+        "the fixture repository has no refs at all, so the refs comparison below would read nothing"
+    );
     assert_eq!(run_init(repo.path()).status.code(), Some(0));
+
+    // **The `refs/` surface.** §7d.9 spells the enumerator as "the real tree diff after `init`
+    // (working tree, `refs/`, `.git/hooks`)" and AC-531 as amended is "scoped to the working tree,
+    // refs and hooks". The hooks third is `ac412_init_installs_zero_hooks`; this is the refs third,
+    // and it was missing when this slice first shipped — an `init` that created a ref whose name
+    // violated the regex passed the whole suite. §7d.9 also says `init` "creates no git ref", so the
+    // assertion is equality rather than a name check; the name check below still governs anything a
+    // later slice adds.
+    let refs_after = refs(repo.path());
+    assert_eq!(
+        refs_after, refs_before,
+        "`init` created or moved a git ref; §7d.9 says it creates none"
+    );
+    for name in &refs_after {
+        if let Some(leaf) = name.rsplit('/').next() {
+            assert!(
+                !leaf.starts_with("rk-") || name_is_admissible(leaf),
+                "a ref named `{name}` carries the rk- prefix and does not match {NAME_REGEX}"
+            );
+        }
+    }
+
     let created: Vec<String> = porcelain(repo.path())
         .into_iter()
         .map(|l| l[3..].to_owned())
@@ -367,6 +338,16 @@ fn ac412_init_installs_zero_hooks() {
     let hooks = common_dir(repo.path()).join("hooks");
 
     let before = hook_entries(&hooks);
+    // The control that the scan root RESOLVES. `hook_entries` returns an empty vector for an
+    // unreadable directory by design — a repository may legitimately have none — so without this a
+    // mis-resolved common dir would make the comparison below pass having read nothing, the Halt 8
+    // shape `rs_files` refuses for source scans. `git init` always seeds `*.sample`, so the control
+    // costs nothing and turns a silently wrong path into a loud red.
+    assert!(
+        !before.is_empty(),
+        "the hooks directory {} is empty or unresolved — this absence assertion would read nothing",
+        hooks.display()
+    );
     assert_eq!(run_init(repo.path()).status.code(), Some(0));
     let after = hook_entries(&hooks);
 

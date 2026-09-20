@@ -1,16 +1,17 @@
 //! `rk-cli`'s **one** integration binary — a `mod` per case, never one file per case (ADR-0083).
 //! This is also what makes `--test it` addressable in Checkpoint 7d.
 //!
-//! What is here is **Slice 1** (`s7d` §7d.16 item 1): [`surface`], the `clap` router — its committed
+//! What is here is **Slices 1 and 2**. Slice 1: [`surface`], the `clap` router — its committed
 //! `--help` snapshot, the resume-shaped denylist walked over the built parser tree, the two grammars
 //! ADR-0128 and ADR-0129 fix, and the one source ban AC-403's lint half names; and [`exit`], the
-//! closed exit table — its `insta` snapshot, the distinctness of its eighteen codes, and the
-//! exhaustiveness of the eleven-arm `From<&StepError>` map.
+//! closed exit table. Slice 2: [`config`], the configuration root — the required key, the key
+//! surface, the one denylist and the refusal before spawn or store write; [`init`], the eager
+//! idempotent scaffold; and [`root`], the poisoned-lock halt and the signal handler.
 //!
 //! **No empty module stands in for an unbuilt one** (`rk-kernel`'s `tests/it/main.rs` states the rule
-//! and this file inherits it): there is no `config`, `init`, `signal`, `run`, `answer`, `doctor` or
-//! `migrate` module here, because Slices 2–5 build what they would assert. A `mod` that exists and
-//! asserts nothing reads as coverage.
+//! and this file inherits it): there is no `run`, `answer`, `doctor` or `migrate` module here,
+//! because Slices 3–5 build what they would assert. A `mod` that exists and asserts nothing reads as
+//! coverage.
 //!
 //! **The two source-scan primitives live HERE, not in `surface.rs`.** [`rs_files`] and [`code_lines`]
 //! are used by `exit::ac438_step_error_mapping_is_exhaustive` and by
@@ -25,6 +26,7 @@ mod root;
 mod surface;
 
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 
 /// The crate's own `src/` directory, resolved from the manifest rather than from the process cwd.
 ///
@@ -148,4 +150,117 @@ pub fn assert_no_block_comment(region: &str, what: &str) {
          reliably, and a scan that silently under-reads its own region is worth nothing. Write the \
          explanation as // lines."
     );
+}
+
+/// The `redkiln` binary, located the one way §7d.13 fixes: as the sibling of the path cargo hands
+/// the test at compile time. Never `assert_cmd`'s `cargo_bin`, which guesses.
+pub fn redkiln() -> &'static str {
+    env!("CARGO_BIN_EXE_redkiln")
+}
+
+/// A temp repository with one commit, and nothing else.
+pub fn temp_repo() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    git(dir.path(), &["init", "--quiet"]);
+    git(
+        dir.path(),
+        &["config", "user.email", "test@example.invalid"],
+    );
+    git(dir.path(), &["config", "user.name", "Test"]);
+    std::fs::write(dir.path().join("README"), b"root\n").expect("the root file writes");
+    git(dir.path(), &["add", "README"]);
+    git(dir.path(), &["commit", "--quiet", "-m", "root"]);
+    dir
+}
+
+/// Run git in `cwd`. The tests build repositories; the PRODUCT never spawns git outside `rk-git`'s
+/// one wrapper, which is what Checkpoint 7d's `Command::new("git")` ban over `src/` enforces.
+#[expect(
+    clippy::disallowed_types,
+    reason = "a test building its own fixture repository; the product's git goes through rk-git's \
+              one GitExec wrapper (ADR-0077), which the block's src/ ban enforces"
+)]
+pub fn git(cwd: &Path, args: &[&str]) {
+    let out = std::process::Command::new("git")
+        .args(args)
+        .current_dir(cwd)
+        .stdin(Stdio::null())
+        .output()
+        .expect("git runs");
+    assert!(
+        out.status.success(),
+        "git {args:?} failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+/// Spawn `redkiln -C <repo> init` with stdin closed (D-15: no verb reads stdin).
+#[expect(
+    clippy::disallowed_types,
+    reason = "the verb is exercised AS A PROCESS, which is the only way golden constraint 4's \
+              'a stub never replaced' is caught (s7d §7d.13's temp-repository rule)"
+)]
+pub fn run_init(repo: &Path) -> std::process::Output {
+    std::process::Command::new(redkiln())
+        .args(["-C", &repo.display().to_string(), "init"])
+        .stdin(Stdio::null())
+        .output()
+        .expect("the redkiln binary runs")
+}
+
+/// Every ref in the repository, sorted — the `refs/` surface AC-531's enumerator covers beside the
+/// working tree and the hooks directory.
+#[expect(
+    clippy::disallowed_types,
+    reason = "reading the fixture repository's own refs; see `git` above"
+)]
+pub fn refs(repo: &Path) -> Vec<String> {
+    let out = std::process::Command::new("git")
+        .args(["for-each-ref", "--format=%(refname)"])
+        .current_dir(repo)
+        .stdin(Stdio::null())
+        .output()
+        .expect("git for-each-ref runs");
+    let mut names: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    names.sort();
+    names
+}
+
+/// `git status --porcelain` over the whole tree, as a sorted listing.
+#[expect(
+    clippy::disallowed_types,
+    reason = "reading the fixture repository's own porcelain listing; see `git` above"
+)]
+pub fn porcelain(repo: &Path) -> Vec<String> {
+    let out = std::process::Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(repo)
+        .stdin(Stdio::null())
+        .output()
+        .expect("git status runs");
+    let mut lines: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    lines.sort();
+    lines
+}
+
+/// The repository's common dir, read from git rather than assumed — a linked worktree's is not
+/// `<root>/.git`.
+#[expect(
+    clippy::disallowed_types,
+    reason = "reading the fixture repository's own common dir; see `git` above"
+)]
+pub fn common_dir(repo: &Path) -> PathBuf {
+    let out = std::process::Command::new("git")
+        .args(["rev-parse", "--path-format=absolute", "--git-common-dir"])
+        .current_dir(repo)
+        .stdin(Stdio::null())
+        .output()
+        .expect("git rev-parse runs");
+    PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_owned())
 }

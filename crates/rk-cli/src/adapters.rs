@@ -30,12 +30,26 @@ const STORE: &str = "rk-adapter-sqlite";
 /// The toolchain adapters this build ships.
 const TOOLCHAINS: [&str; 2] = ["rk-adapter-toolchain-node", "rk-adapter-toolchain-rust"];
 
-/// What the configuration resolved to: names, and nothing constructed.
+/// The resolver. A namespace rather than a value, because §7d.1 and §7d.16 item 2 both name
+/// **`AdapterSet`** as the thing that resolves, and a free function under a module of the same name
+/// is a different spelling of the record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AdapterSet;
+
+/// What the configuration resolved to: names and constructor values, nothing constructed.
+///
+/// The two RT-49 keys are carried rather than dropped. §7d.5 step (4) says `resolve` returns *"names
+/// and constructor values"*, and `harness_binary` / `toolchain_programs` are the constructor values:
+/// they are the one way a process-level test reaches the fixture child without the environment
+/// toggle AC-474 forbids. A resolver that accepted them on the `ConfigFile` and then let them fall
+/// on the floor would make that route silently inoperative.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Resolved {
     harness: String,
     store: String,
     toolchains: Vec<String>,
+    harness_binary: Option<String>,
+    toolchain_programs: Option<std::collections::BTreeMap<String, String>>,
 }
 
 impl Resolved {
@@ -64,6 +78,18 @@ impl Resolved {
     #[must_use]
     pub fn toolchains(&self) -> &[String] {
         &self.toolchains
+    }
+
+    /// RT-49: the harness program to spawn, when the configuration names one.
+    #[must_use]
+    pub fn harness_binary(&self) -> Option<&str> {
+        self.harness_binary.as_deref()
+    }
+
+    /// RT-49: per-toolchain programs, when the configuration names them.
+    #[must_use]
+    pub const fn toolchain_programs(&self) -> Option<&std::collections::BTreeMap<String, String>> {
+        self.toolchain_programs.as_ref()
     }
 }
 
@@ -105,47 +131,52 @@ impl fmt::Display for Refusal {
 
 impl std::error::Error for Refusal {}
 
-/// Resolve the configuration's adapter set against what this build ships and what the environment
-/// carries.
-///
-/// The environment is checked FIRST. A repository whose configuration is fine but whose shell
-/// carries a credential must not be told its configuration is wrong, and a refusal that named the
-/// adapter would be exactly that.
-///
-/// # Errors
-/// [`Refusal::DenylistedEnv`] naming the variable, or [`Refusal::UnknownAdapter`] naming the key and
-/// the adapter. Never both: the first refusal wins and nothing after it runs.
-pub fn resolve(file: &ConfigFile, env: &Env) -> Result<Resolved, Refusal> {
-    if let Some(name) = env_denylist::first_denylisted(env.as_map()) {
-        return Err(Refusal::DenylistedEnv {
-            name: name.to_owned(),
-        });
-    }
-
-    if file.adapters.harness != HARNESS {
-        return Err(Refusal::UnknownAdapter {
-            key: "harness",
-            name: file.adapters.harness.clone(),
-        });
-    }
-    if file.adapters.store != STORE {
-        return Err(Refusal::UnknownAdapter {
-            key: "store",
-            name: file.adapters.store.clone(),
-        });
-    }
-    for name in &file.adapters.toolchains {
-        if !TOOLCHAINS.contains(&name.as_str()) {
-            return Err(Refusal::UnknownAdapter {
-                key: "toolchains",
-                name: name.clone(),
+impl AdapterSet {
+    /// Resolve the configuration's adapter set against what this build ships and what the
+    /// environment carries.
+    ///
+    /// The environment is checked FIRST, and the order is asserted by
+    /// `ac422_config_reads_the_one_denylist`'s precedence arm rather than merely documented here. A
+    /// repository whose configuration is fine but whose shell carries a credential must not be told
+    /// its configuration is wrong, and a refusal that named the adapter would be exactly that.
+    ///
+    /// # Errors
+    /// [`Refusal::DenylistedEnv`] naming the variable, or [`Refusal::UnknownAdapter`] naming the key
+    /// and the adapter. Never both: the first refusal wins and nothing after it runs.
+    pub fn resolve(file: &ConfigFile, env: &Env) -> Result<Resolved, Refusal> {
+        if let Some(name) = env_denylist::first_denylisted(env.as_map()) {
+            return Err(Refusal::DenylistedEnv {
+                name: name.to_owned(),
             });
         }
-    }
 
-    Ok(Resolved {
-        harness: file.adapters.harness.clone(),
-        store: file.adapters.store.clone(),
-        toolchains: file.adapters.toolchains.clone(),
-    })
+        if file.adapters.harness != HARNESS {
+            return Err(Refusal::UnknownAdapter {
+                key: "harness",
+                name: file.adapters.harness.clone(),
+            });
+        }
+        if file.adapters.store != STORE {
+            return Err(Refusal::UnknownAdapter {
+                key: "store",
+                name: file.adapters.store.clone(),
+            });
+        }
+        for name in &file.adapters.toolchains {
+            if !TOOLCHAINS.contains(&name.as_str()) {
+                return Err(Refusal::UnknownAdapter {
+                    key: "toolchains",
+                    name: name.clone(),
+                });
+            }
+        }
+
+        Ok(Resolved {
+            harness: file.adapters.harness.clone(),
+            store: file.adapters.store.clone(),
+            toolchains: file.adapters.toolchains.clone(),
+            harness_binary: file.adapters.harness_binary.clone(),
+            toolchain_programs: file.adapters.toolchain_programs.clone(),
+        })
+    }
 }

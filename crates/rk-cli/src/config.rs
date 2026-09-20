@@ -108,6 +108,12 @@ pub fn parse(src: &str) -> Result<ConfigFile, ConfigError> {
 /// Enumerated from a fully-populated value rather than from a hand-kept list, so the snapshot is a
 /// function of the struct: a key added to `ConfigFile` appears here without anyone remembering to
 /// add it, which is the only version of this test worth having.
+///
+/// # Panics
+/// It cannot, and the `expect` says which fact makes that true: `serde_json::to_value` fails only on
+/// a float that is not a number or a map key that is not a string, and `ConfigFile` has neither. If
+/// a future field introduces one, this panics loudly rather than returning a surface with a hole in
+/// it — a silently short key list is the one outcome AC-474's snapshot must never have.
 #[must_use]
 pub fn key_surface() -> Vec<String> {
     let every = ConfigFile {

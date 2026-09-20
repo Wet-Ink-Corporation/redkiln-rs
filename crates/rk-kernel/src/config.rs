@@ -24,15 +24,17 @@
 //! is an `Option<Config>` **omitted from the recorded JSON when `None`** — see that method for why
 //! omission rather than a `null` is what keeps every recorded `run_id` byte-stable.
 
-use serde::{Deserialize, Serialize};
-
 /// The configuration the composition root resolved, as a value the kernel accepts.
 ///
 /// Constructed only at `rk-cli`'s root. The fields are the **adapter construction values** D18-14
 /// names plus the one `doctor` window the config file carries; each is a resolved name, not a path
 /// and not a handle, because a handle would be a port implementor and the kernel holds those only
 /// through `rk-ports`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// **No `Serialize`/`Deserialize`, deliberately.** Nothing needs them — the recorded form is
+/// [`Self::to_json`] — and a `Deserialize` derive would be a SECOND public construction path that
+/// bypasses [`Self::new`], so the toolchain normalisation documented there would stop being a
+/// property of the type and become a property of one of its two constructors.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
     harness: String,
     store: String,
