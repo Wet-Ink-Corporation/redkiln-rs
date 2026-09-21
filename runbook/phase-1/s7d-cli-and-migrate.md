@@ -2110,8 +2110,17 @@ that imitates the predecessor's layout says so in a provenance note beside it.
   *"only for the owning package's own tests"* (its manifest comment), so `rk-cli`'s tests locate it as the sibling of
   `env!("CARGO_BIN_EXE_redkiln")` in the same target directory
   (`Path::new(env!("CARGO_BIN_EXE_redkiln")).with_file_name("rk-fixture-child-claude")`, `.exe` on Windows), which
-  `cargo build --workspace` — the block's first gate (GC3) — has built; no third `[[bin]]` copy is added, so the
-  one-`[[bin]]` manifest line stands; the fixture repository's `config.toml` names it in the optional `[adapters]
+  `cargo build --workspace` — the block's first gate (GC3) — has built; ***AMENDED 2026-09-21 at Step 7d's close:
+  a third `[[bin]]` copy IS added, and the one-`[[bin]]` manifest line does NOT stand.*** *This read "no third
+  `[[bin]]` copy is added, so the one-`[[bin]]` manifest line stands" — true as a plan and false on the tree since
+  `a65a903` (Slice 4 cycles 6–8), which added `rk-fixture-child-cli` to `rk-cli` and amended nothing. The warrant is
+  measured and stands: one bin name in two packages is one output path, cargo warns of an output filename collision,
+  the two link jobs race and the MSVC linker exits 1104 for both [reproduced 2026-09-17], and
+  `ac423_probe_is_one_version_spawn_not_a_dispatch` reaches the child through
+  `env!("CARGO_BIN_EXE_rk-fixture-child-cli")`, which cargo sets only for the owning package's own tests. **Checkpoint
+  7d failed on this at its first whole run** and its manifest loop now expects TWO for `rk-cli` and ONE for
+  `redkiln-migrate`, with a second line pinning the extra target's NAME so the permission is to that target and not to
+  a third.* The sibling-location mechanism above is unchanged and is still how `rk-fixture-child-claude` is reached; the fixture repository's `config.toml` names it in the optional `[adapters]
   harness_binary` key (§7d.1's `ConfigFile` row — a key on the AC-474 snapshot, not a toggle), and its mode travels in
   the CHILD environment the test spawns `redkiln` with (`RK_FIXTURE_MODE`, `RK_FIXTURE_MARKER_DIR`, via `Command::env`,
   never `set_var`), which the adapter's `child_env` passes through to the child.
@@ -2545,6 +2554,19 @@ path = "src/main.rs"
 # src/lib.rs is the library the tests link (an integration test cannot link a [[bin]] or name a pub(crate) item);
 # main.rs only installs the handler and the panic hook and exits through code_for (§7d.10).
 
+# ADDED 2026-09-21 at Step 7d's close, recording what Slice 4 cycle 7 (`a65a903`) already landed: the spawnable
+# fixture child, compiled FROM rk-containment's source file under a THIRD target name. One bin name in two packages is
+# one output path — cargo warns of an output filename collision, the two link jobs race and the MSVC linker exits 1104
+# for both [reproduced 2026-09-17]. Tests reach it through env!("CARGO_BIN_EXE_rk-fixture-child-cli"), which cargo sets
+# only for the owning package's own tests, never through std::env::var or a path under target/. §7d.13 carries the
+# amendment; the block's manifest loop expects TWO here and ONE in the migrator.
+[[bin]]
+name = "rk-fixture-child-cli"
+path = "../rk-containment/tests/fixtures/bin/rk-fixture-child.rs"
+test = false
+bench = false
+doc = false
+
 [features]
 # Corpus-bound tests, local-only (AC-464/PIA-002); run as `cargo test --workspace --features corpus`.
 corpus = []
@@ -2902,19 +2924,23 @@ the `cargo metadata` lines watch red → green).
    note superseding `runbook-position-2026-09-18` on position. **ADR-0101 clause 5 bounds what (a) and (b) may say.**
 ### 7d.17 Checkpoint 7d
 
-**Counted mechanically off the block below on 2026-09-18, after the block was final and not before it** — comments and
+**Counted mechanically off the block below on 2026-09-18, and RE-COUNTED 2026-09-21 after the two close-time
+amendments (§7d.13's `[[bin]]` permission and the `.lock()` ban's third exclusion), as the next sentence requires** — comments and
 blanks dropped, backslash continuations joined; **re-count and re-write every number in this paragraph after any
 repair to this block** (Halt 7: count it off the script, not off this sentence). **The rule that produces the number is
 `s7c` §7c.21's and is restated so it reproduces:** a *statement that can stop the block* is one carrying its own `exit
 1`, **or a call to one of the three stopping helpers, each of which carries its `exit 1` inside its definition**; a
-call inside a `for` body is one statement however many times the loop runs. **343 non-comment statements, of
-which 188 can stop the block and 155 cannot.** The 188 are **148** statements carrying their own `exit 1` outside the
+call inside a `for` body is one statement however many times the loop runs. **344 non-comment statements, of
+which 189 can stop the block and 155 cannot** *(343 / 188 / 155 until 2026-09-21; the close-time amendment added ONE
+statement carrying its own `exit 1` — the `rk-fixture-child-cli` name line — and the other two edits were within-line,
+so only this bucket moved).* The 189 are **149** statements carrying their own `exit 1` outside the
 helper definitions (the `uname` `case` guard, the two shell-guard `[ -z "$bad" ] || { …; exit 1; }` lines, the
 one-line `for d in $SRC_SCOPE` guard, the `&& { …; exit 1; }` manifest and snapshot bans, the `git`/`cp`/`mv` prelude
 lines of the two temp repositories, the two `eol` guards — before the `cmp` and before the snapshot's row greps — the two `sums` guards, the hooks-directory `test
 -d`, the two `git status` `rc` guards, the `RK-D-ADAPTER` `row=` / `ok` pair, the refused run's `refs=` / `test ! -d …/worktrees` pair (the third hardening round's two lines), the `.redkiln` presence compare, the two
 admission lines before the excluded-module bans and the two before the `template_sig` and clock bans, the
-`process::exit(` count and its `main.rs` check, and the three python closers `' || { …; exit 1; }` among them) plus
+`process::exit(` count and its `main.rs` check, the `rk-fixture-child-cli` name line added 2026-09-21, and the three
+python closers `' || { …; exit 1; }` among them) plus
 **40** helper calls (`rk_test` × 3 — all three in loop bodies, none direct — a call inside a `for` body is one statement
 however many names the loop runs; `rk_absent` × 19; `rk_control` × 18). The 155 that cannot are not unguarded
 assertions and the decomposition reproduces: **2** BEFORE readings (PIA-035 — prints for comparison, not assertions);
@@ -2933,7 +2959,7 @@ hardening round, the `by_kind=` / `assert by_kind` pair the two added by the thi
 `cargo clippy … ; rc=$?; echo "exit=$rc"`, each guarded by the line below; **5** informational `echo`es after a passed
 group (`init is idempotent…`, `resume is refused…`, `run on an init-only…`, `explain, status and catalog search…`,
 `migrate v0 dry run…`); and **1** end-marker `echo`.
-2 + 25 + 32 + 22 + 66 + 2 + 5 + 1 = 155; 343 − 155 = 188.
+2 + 25 + 32 + 22 + 66 + 2 + 5 + 1 = 155; 344 − 155 = 189.
 
 **No line in this block is `[WILL EXIST]`, and the absence is deliberate.** Every binary the block runs is built by the
 block's first gate from this stage's own crates; `halts.md`'s carve-out is for a path a later stage produces, not for a
@@ -3109,10 +3135,11 @@ for c in rk-cli redkiln-migrate; do
   grep -qE '^\[lints\]' "$m" || { echo "FAIL: $m has no [lints] table"; exit 1; }
   tail -n 2 "$m" | grep -qE '^workspace[[:space:]]*=[[:space:]]*true' || { echo "FAIL: [lints] workspace = true is not the LAST table in $m (ADR-0102 d2)"; exit 1; }
   grep -qE '^corpus[[:space:]]*=[[:space:]]*\[\]' "$m" || { echo "FAIL: $m has no [features] corpus = [] (AC-464/PIA-002)"; exit 1; }
-  n=$(grep -cE '^\[\[bin\]\]' "$m" | tr -d '[:space:]'); [ "${n:-0}" -eq 1 ] || { echo "FAIL: $m declares ${n:-0} [[bin]] targets, not one"; exit 1; }
+  n=$(grep -cE '^\[\[bin\]\]' "$m" | tr -d '[:space:]'); [ "${n:-0}" -eq "$(test "$c" = rk-cli && echo 2 || echo 1)" ] || { echo "FAIL: $m declares ${n:-0} [[bin]] targets — rk-cli carries TWO (redkiln, and the rk-fixture-child-cli target Slice 4 cycle 7 added) and redkiln-migrate ONE (AMENDED 2026-09-21, s7d §7d.13)"; exit 1; }
   grep -qE '^anyhow(\.workspace)?[[:space:]]*=' "$m" || { echo "FAIL: $m does not depend on anyhow — ADR-0102 d6 confines it to exactly these two crates, and ci.yml's rule expects both"; exit 1; }
 done
 grep -qE '^name[[:space:]]*=[[:space:]]*"redkiln"' crates/rk-cli/Cargo.toml || { echo "FAIL: rk-cli's [[bin]] is not named redkiln"; exit 1; }
+n=$(grep -cE '^name[[:space:]]*=[[:space:]]*"rk-fixture-child-cli"' crates/rk-cli/Cargo.toml | tr -d '[:space:]'); [ "${n:-0}" -eq 1 ] || { echo "FAIL: rk-cli's SECOND [[bin]] is not the rk-fixture-child-cli target (${n:-0} name lines, not one) — the 2026-09-21 amendment permits that one extra target and NO other, so a third would pass the count above and fail here (s7d §7d.13)"; exit 1; }   # → 1
 n=$(grep -cE '^name[[:space:]]*=[[:space:]]*"redkiln-migrate"' crates/redkiln-migrate/Cargo.toml | tr -d '[:space:]'); [ "${n:-0}" -eq 2 ] || { echo "FAIL: crates/redkiln-migrate/Cargo.toml has ${n:-0} 'name = \"redkiln-migrate\"' lines, not two — the [package] name AND the [[bin]] name (§7d.15); the [package] line alone satisfies a -q grep"; exit 1; }   # → 2
 grep -qE '^ctrlc(\.workspace)?[[:space:]]*=' crates/rk-cli/Cargo.toml || { echo "FAIL: rk-cli has no ctrlc row — the signal path (D18-2) has no dependency"; exit 1; }
 grep -qE '^toml(\.workspace)?[[:space:]]*=' crates/rk-cli/Cargo.toml || { echo "FAIL: rk-cli has no toml row (D18-3)"; exit 1; }
@@ -3266,7 +3293,7 @@ printf '%s\n' "$hits" | grep -vqE '^crates/rk-cli/src/main\.rs:' && { echo "FAIL
 # every .lock() in rk-cli goes through the ONE acquiring function (§7d.4): the ban is module-path filtered to EXCLUDE
 # the store module (the fifth argument), and admission is asserted on the module the exclusion names.
 n=$(find crates/rk-cli/src -name '*.rs' | grep -cE '/([^/]*/)?(store)(\.rs|/)' | tr -d '[:space:]'); [ "${n:-0}" -ge 1 ] || { echo "FAIL: no store module under crates/rk-cli/src — the one acquiring function (exit 70) has no home (§7d.4)"; exit 1; }
-rk_absent '\.lock\(\)' 'ADR-0118 c5: the acquisition is the composition root'"'"'s ONE function — no other Mutex .lock() in rk-cli (io::stdout().lock() / io::stderr().lock() are excluded: not Mutexes — golden constraint 9)' 'crates/rk-cli/src' '' '^crates/rk-cli/src/([^:]*/)?store(\.rs|/)|std(out|err)\(\)\.lock\(\)'
+rk_absent '\.lock\(\)' 'ADR-0118 c5: the acquisition is the composition root'"'"'s ONE function — no other Mutex .lock() in rk-cli (io::stdout().lock() / io::stderr().lock() are excluded: not Mutexes — golden constraint 9)' 'crates/rk-cli/src' '' '^crates/rk-cli/src/([^:]*/)?(store|no_dispatch)(\.rs|/)|std(out|err)\(\)\.lock\(\)'
 rk_control '\.lock\(\)' adr0118_lock_control.rs
 # the ONE environment read (ADR-0083; RB-M-05's owed manifest-level check): std::env::var confined to rk-cli's env module,
 # and absent from redkiln-migrate entirely (AC-474: no env toggle).
