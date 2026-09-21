@@ -1,0 +1,5 @@
+# A slot filler that states `effort` - the second half of the same clause.
+[[filler]]
+slot   = "review"
+card   = "cards/implementer.json"
+effort = "high"

@@ -1,0 +1,6 @@
+{
+  "description": "One of two reviewer cards, equally specific.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": ["StructuredOutput"],
+  "cache_profile": "static"
+}

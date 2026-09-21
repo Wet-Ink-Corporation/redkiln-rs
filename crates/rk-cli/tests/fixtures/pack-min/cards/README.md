@@ -19,6 +19,22 @@ widen `CardFile` or carry the role→card map somewhere other than the card. Nei
 decide — §7d.1 puts the card record's shape outside this stage, and widening a
 `deny_unknown_fields` record in `rk-adapter-claude` would re-open Checkpoint 7c for a fixture.
 
+## ✅ SETTLED 2026-09-21, at Step 7d Slice 4 cycle 4 — the second of the two
+
+**The map moved off the card.** It is `.redkiln/roles.toml`, `[[card]] file / fulfils / selector`,
+read by `crates/rk-cli/src/doctor/roles.rs` and by nothing else; `CardFile` is untouched and every
+card in the tree, this one included, still loads through it. The first option was not merely
+declined but **foreclosed**: `s7d` §7d.1 permits *one closed crate edited* (`rk-kernel`), so
+widening `CardFile` was never available, and a card carrying `fulfils` would in any case have been
+a shape no production pack could use — `run`'s binder loads every card through that type.
+
+`selector` came with it, for a reason this file could not have known: AC-416's second half is *"two
+cards at **equal selector specificity**"*, and a bare list of card names has no specificity, so
+`RK-D-ROLE-AMBIGUOUS` would have been a row that could never fire.
+
+A dated amendment to `s7d` §7d.13 records it; the fixtures are under
+`crates/rk-cli/tests/fixtures/doctor/`, whose `README.md` carries the same measurement.
+
 **What resolves the role today**: nothing in this fixture. The role's own table in `pack.toml`
 (`[role.implementer]`) carries `family`, `model` and `effort`, and `run`'s binder reads the card by
 FILE NAME — `<role>.json` — so the mapping is positional rather than declared. That is sufficient

@@ -117,7 +117,7 @@ pub fn run(cli: &Cli, args: &DoctorArgs, env: &Env, startup: Startup<'_>) -> Res
         // 🚧 Cycle 3 reads the enabled packs. An empty source set is the diagnostic loader's own
         // `Io` row, which is a finding once a rule reads it — so this is not a silent zero.
         catalog: rk_kernel::catalog::load_diagnostic(&[]),
-        pack_roots: BTreeMap::new(),
+        pack_files: BTreeMap::new(),
         registry: None,
         sites: rk_kernel::registry::PredicateSites::default(),
         env: env.clone(),

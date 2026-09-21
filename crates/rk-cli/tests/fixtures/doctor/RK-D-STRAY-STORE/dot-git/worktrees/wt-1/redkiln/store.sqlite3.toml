@@ -1,0 +1,4 @@
+# A DESCRIPTION, materialised into a real store file by the test. Its presence under a
+# LINKED WORKTREE's gitdir is the defect; nothing here needs to be a valid store.
+root_commit = "0000000000000000000000000000000000000000"
+worktree_id = "wt-1"

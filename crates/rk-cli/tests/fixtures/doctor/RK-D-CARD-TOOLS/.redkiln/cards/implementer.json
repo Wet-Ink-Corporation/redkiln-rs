@@ -1,0 +1,6 @@
+{
+  "description": "A card whose tools omit StructuredOutput.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": ["Read", "Grep"],
+  "cache_profile": "static"
+}

@@ -1,0 +1,3 @@
+# A store the materialiser builds and the sidecar below marks as rebuilt.
+root_commit = "HEAD"
+worktree_id = "self"

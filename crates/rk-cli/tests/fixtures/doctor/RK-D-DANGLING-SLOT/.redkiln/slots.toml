@@ -1,0 +1,4 @@
+# Names a slot the pack does not declare.
+[[filler]]
+slot = "postmortem"
+card = "cards/implementer.json"

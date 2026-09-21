@@ -1,0 +1,19 @@
+# One activity, authored to `activity_from` in `crates/rk-kernel/src/catalog.rs`.
+[activity]
+id           = "review"
+version      = 1
+stage        = "review"
+provides     = ["ImplReport"]
+method_rank  = 10
+min_rigor    = "optional"
+
+[[step]]
+id      = "gate"
+kind    = "gate"
+role    = "reviewer"
+outputs = "value:Verdict"
+
+[[step]]
+id      = "act"
+kind    = "check"
+expr    = "${gate.outputs} == 'approve'"

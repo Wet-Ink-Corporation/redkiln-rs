@@ -1,0 +1,4 @@
+# Materialised into a real store by the test. `root_commit` is DELIBERATELY not this
+# fixture repository's first commit - that mismatch is the defect.
+root_commit = "0000000000000000000000000000000000000000"
+worktree_id = "another-repository"

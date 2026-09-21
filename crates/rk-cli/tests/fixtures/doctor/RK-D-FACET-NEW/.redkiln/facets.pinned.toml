@@ -1,0 +1,14 @@
+# The last pinned reading of the registry. `deployment_window` is absent from it,
+# which is the whole defect: the live registry declares a facet this does not.
+[facet.kind]
+values = ["bug", "story"]
+source = "human"
+
+[facet.stage]
+values = ["triage", "implement", "review"]
+source = "kernel"
+
+[facet.rigor]
+ordered = true
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]
+source = "kernel"

@@ -1,0 +1,15 @@
+# The role -> card map, as a SIDECAR the `doctor` reader owns.
+#
+# It is not on the card file, and that is measured rather than chosen:
+# `rk_adapter_claude::card::CardFile` is `#[serde(deny_unknown_fields)]` over exactly seven
+# names and `fulfils` is not among them, so a card carrying it does not load; `s7d` §7d.1
+# permits ONE closed crate edited (`rk-kernel`), so widening it is foreclosed. Slice 3
+# raised this and handed it here by name (pack-min/cards/README.md).
+#
+# `selector` exists because AC-416's second half is *two cards at EQUAL SELECTOR
+# SPECIFICITY* - a bare list has no specificity and could never express it.
+
+[[card]]
+file     = "cards/implementer.json"
+fulfils  = ["implementer"]
+selector = "stage:implement"

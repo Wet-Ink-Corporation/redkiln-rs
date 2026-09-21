@@ -1,5 +1,19 @@
-//! **`doctor`** — Step 7d Slice 4. What is here is **cycle 3**: the rule table's anti-vacuity
-//! floor, and nothing else.
+//! **`doctor`** — Step 7d Slice 4. What is here is **cycle 3's** anti-vacuity floor and **cycle
+//! 4's** fixture materialiser.
+//!
+//! # 🚧 Cycle 4 claims NO test, and that is §7d.14's own reading rather than a shortcut
+//!
+//! Cycle 4 lands the thirty-eight rejecting fixture directories and `clean/`. It does **not** land
+//! `ac415_every_rule_id_has_a_rejecting_fixture`, because §7d.14's red for that test names the
+//! failure mode landing it here would be: *"a weaker red **joins names without running the
+//! rule**."* Every `Rule::check` is still the `unbuilt` placeholder until cycle 5, so a test
+//! landed now could assert the set equality and nothing else — which is that weaker red exactly,
+//! under a name that claims a *rejecting* fixture. It lands at cycle 5, after the last predicate,
+//! where its middle clause — *"each fixture run through its own rule only yields ≥ 1 finding"* —
+//! can actually run.
+//!
+//! The set equality was **measured** in cycle 4's body instead: 38 ids, 38 rejecting directories,
+//! no rule without a directory, no directory without a rule, `clean/` the one named exemption.
 //!
 //! # Why a floor test exists at all, and why it is this slice's FIRST test
 //!
@@ -27,7 +41,8 @@ use rk_cli::doctor::rules::RULES;
 /// **This is a FLOOR and not the table.** The table is thirty-eight; the nine outside this list —
 /// the five `s7c`-ARMED halves, `RK-D-REBUILT-TIER2`, and RT-45's three — are *"outside the floor
 /// and are asserted by their own tests"* (§7d.8), which are cycle 5's. 29 + 9 = 38, and the
-/// partition closes.
+/// partition closes — re-measured 2026-09-21 off the table's first column, and the thirty-eight
+/// rejecting directories under `fixtures/doctor/` are one per id.
 ///
 /// **Transcribed and not derived, deliberately.** A floor computed from `RULES` would be a
 /// restatement of the table rather than a check on it — the exact shape RA-M-01 exists to break.
@@ -83,7 +98,8 @@ const FLOOR: [&str; 29] = [
 /// AC-415 as amended: *"every id has at least one committed fixture configuration that the rule
 /// actually rejects, and a rule with no rejecting fixture fails the build"* — **"and the id set is
 /// non-empty and contains every id a criterion names"**. That amended clause is what this asserts;
-/// the fixture half is `ac415_every_rule_id_has_a_rejecting_fixture`'s, at cycle 4.
+/// the fixture half is `ac415_every_rule_id_has_a_rejecting_fixture`'s, at cycle 5 (see the module
+/// header for why it is not cycle 4's).
 ///
 /// # What is the instrument, and what is not
 ///
@@ -152,4 +168,119 @@ fn doctor_rule_table_covers_every_register_named_row() {
         missing.join("\n  "),
         ids.len()
     );
+}
+
+// ---------------------------------------------------------------------------- the materialiser
+//
+// `s7d` §7d.13: *"each per-row test (and `ac415_…`) **materialises** the directory into a
+// `tempfile` repository (`git init`, `dot-git/` → `.git/`, the store built through
+// `rk_store::conn::Writer::open` and `identity::initialise` from the description) before running
+// the rule, so a fixture that materialises to nothing is red on the rule's own finding count."*
+//
+// 🛑 **IT ASSERTS ITS OWN OUTPUT IS LIVE, AND THAT IS WHY THERE IS NO SEPARATE TEST FOR IT.**
+// A materialiser that silently produced an empty directory would make every rule in the slice
+// report nothing and every per-row test red for a reason that has nothing to do with the rule —
+// or worse, would make an absence-assertion pass having read nothing. `rk-kernel`'s `rs_files`
+// sets the precedent one level down: *"Panics on an absent root rather than returning nothing: a
+// scan over a missing directory reports a pass having read nothing."* The panics below are that
+// rule applied to a tree rather than to a file list.
+//
+// It is deliberately NOT a `#[test]`. §7d.16 item 4 fixes this slice's test count at thirty-eight
+// named tests, and a self-control on test infrastructure is not one of them — `tests/it/main.rs`'s
+// own header records the same division for `support.rs`.
+
+/// Materialise one `fixtures/doctor/<name>/` into a real git repository.
+///
+/// Returns the temp directory; the caller keeps it alive for as long as it reads the tree.
+///
+/// **What it does, in order**: `git init` a fresh repository with one commit (so the tree has a
+/// root commit an identity can be stamped against), copy every tracked file across, rename
+/// `dot-git/` over `.git/`, and leave the `store/` descriptions where the rule's own builder will
+/// read them.
+///
+/// # Panics
+/// If the fixture directory does not exist, if it carries no `.redkiln/config.toml`, or if the
+/// materialised tree is missing either of those afterwards. Each is a fixture that would otherwise
+/// be read as a configuration with nothing wrong with it.
+#[expect(
+    dead_code,
+    reason = "cycle 4 lands the materialiser beside the fixtures it materialises; its callers are \
+              `ac415_every_rule_id_has_a_rejecting_fixture` and the twenty-six family tests, all \
+              of which are cycle 5's. The expectation goes UNFULFILLED on the first caller, which \
+              is what says this attribute can go."
+)]
+pub fn materialise(name: &str) -> tempfile::TempDir {
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("doctor")
+        .join(name);
+    assert!(
+        src.is_dir(),
+        "the doctor fixture {name} does not exist at {} — a rule run over a missing directory \
+         reports nothing and reads as a configuration with no defect in it",
+        src.display()
+    );
+    assert!(
+        src.join(".redkiln").join("config.toml").is_file(),
+        "the doctor fixture {name} carries no `.redkiln/config.toml` — every rule reads it, so \
+         there would be no table to run"
+    );
+
+    let dir = crate::temp_repo();
+    copy_tree(&src, dir.path());
+
+    // `dot-git/` → `.git/`. Git refuses to TRACK a nested `.git/`, which is why the fixture spells
+    // it this way and why the rename is the materialiser's job rather than the author's.
+    let staged = dir.path().join("dot-git");
+    if staged.is_dir() {
+        let git_dir = dir.path().join(".git");
+        merge_into(&staged, &git_dir);
+        std::fs::remove_dir_all(&staged).expect("the staged dot-git is removed");
+    }
+
+    assert!(
+        dir.path().join(".redkiln").join("config.toml").is_file(),
+        "{name} materialised without its `.redkiln/config.toml` — the copy read nothing"
+    );
+    assert!(
+        dir.path().join(".git").is_dir(),
+        "{name} materialised without a `.git/` — `temp_repo` did not initialise, and every rule \
+         that reads the common dir would report an absence that is the harness's, not the \
+         fixture's"
+    );
+    dir
+}
+
+/// Copy `src`'s contents into `dst`, recursively. `dst` exists already.
+fn copy_tree(src: &std::path::Path, dst: &std::path::Path) {
+    for entry in std::fs::read_dir(src).expect("the fixture directory is readable") {
+        let entry = entry.expect("a directory entry");
+        let to = dst.join(entry.file_name());
+        if entry.path().is_dir() {
+            std::fs::create_dir_all(&to).expect("a directory is created");
+            copy_tree(&entry.path(), &to);
+        } else {
+            std::fs::copy(entry.path(), &to).expect("a file copies");
+        }
+    }
+}
+
+/// Merge `src`'s contents into an EXISTING `dst`, overwriting file by file.
+///
+/// **A merge and not a rename**, because `.git/` already exists — `temp_repo` initialised it — and
+/// renaming over it would throw away the repository the fixture is being materialised into. A
+/// fixture's `dot-git/hooks/pre-commit` has to land *beside* git's own `HEAD` and `objects/`, not
+/// instead of them.
+fn merge_into(src: &std::path::Path, dst: &std::path::Path) {
+    std::fs::create_dir_all(dst).expect("the destination exists");
+    for entry in std::fs::read_dir(src).expect("the staged directory is readable") {
+        let entry = entry.expect("a directory entry");
+        let to = dst.join(entry.file_name());
+        if entry.path().is_dir() {
+            merge_into(&entry.path(), &to);
+        } else {
+            std::fs::copy(entry.path(), &to).expect("a file copies");
+        }
+    }
 }

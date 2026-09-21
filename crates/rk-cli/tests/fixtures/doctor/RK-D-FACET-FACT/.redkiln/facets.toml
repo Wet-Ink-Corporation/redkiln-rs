@@ -1,0 +1,24 @@
+[facet.kind]
+values = ["bug", "story"]
+source = "human"
+
+[facet.stage]
+values = ["triage", "implement", "review"]
+source = "kernel"
+
+[facet.rigor]
+ordered = true
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]
+source = "kernel"
+
+[facet.recent_deploy]
+values = [true, false]
+source = "derived"
+
+[facet.binary_change]
+values = [true, false]
+source = "derived"
+
+[facet.dynamism]
+values = ["low", "high"]
+source = "derived"

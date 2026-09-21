@@ -1,0 +1,6 @@
+{
+  "description": "Fulfils a role no pack declares.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": ["StructuredOutput"],
+  "cache_profile": "static"
+}

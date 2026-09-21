@@ -1,0 +1,5 @@
+{"kind":"advisory.created","payload":{"id":"A1"}}
+{"kind":"advisory.created","payload":{"id":"A2"}}
+{"kind":"advisory.created","payload":{"id":"A3"}}
+{"kind":"advisory.retired","payload":{"id":"A1"}}
+{"kind":"advisory.ledger","payload":{"live":2,"created":3,"retired":1}}

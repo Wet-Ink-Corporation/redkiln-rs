@@ -1,0 +1,4 @@
+# A skill file. `attach.roles` is `s7d` §7d.13's floor and collides with nothing:
+# measured 2026-09-21, NOTHING outside `crates/rk-cli/src/doctor/roles.rs` reads skills.
+[attach]
+roles = ["archivist"]

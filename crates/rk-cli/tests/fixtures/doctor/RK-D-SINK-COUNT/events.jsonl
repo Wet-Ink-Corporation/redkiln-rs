@@ -1,0 +1,4 @@
+{"kind":"findings.recorded","payload":{"item":"RK-S0001","finding":"F1","class":"advisory"}}
+{"kind":"findings.recorded","payload":{"item":"RK-S0001","finding":"F2","class":"advisory"}}
+{"kind":"finding.sunk","payload":{"item":"RK-S0001","finding":"F1","sink":"backlog"}}
+{"kind":"review.completed","payload":{"item":"RK-S0001","verdict":"approved"}}

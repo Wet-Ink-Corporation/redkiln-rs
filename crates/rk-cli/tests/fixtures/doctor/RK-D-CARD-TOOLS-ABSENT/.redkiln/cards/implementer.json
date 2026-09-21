@@ -1,0 +1,5 @@
+{
+  "description": "A card with no tools key at all.",
+  "prompt": "Emit an ImplReport for the item. Do nothing else.",
+  "cache_profile": "static"
+}

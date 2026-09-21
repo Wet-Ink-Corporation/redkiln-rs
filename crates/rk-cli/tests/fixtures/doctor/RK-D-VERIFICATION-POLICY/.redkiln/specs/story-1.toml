@@ -1,0 +1,4 @@
+# A spec declaring no verification under a pack that requires it.
+item = "RK-S0001"
+stage = "review"
+verification = "None"

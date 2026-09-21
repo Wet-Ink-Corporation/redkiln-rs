@@ -1,0 +1,4 @@
+#!/bin/sh
+# An OPERATOR hook. No `# redkiln-hook` marker - RK-D-HOOKS must not fire on it.
+# fork-join
+exec make -j "$@"

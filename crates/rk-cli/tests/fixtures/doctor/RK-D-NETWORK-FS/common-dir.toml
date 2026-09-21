@@ -1,0 +1,3 @@
+# What the test reports as the common dir's location for this fixture.
+path = "\\\\server\\share\\repo\\.git"
+kind = "unc"

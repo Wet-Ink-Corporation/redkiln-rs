@@ -1,0 +1,29 @@
+# The fixture's process pack. `.redkiln/packs/<name>.toml` is a FLAT FILE (measured 2026-09-21,
+# `crates/rk-cli/src/verbs/run.rs`:553-555), not a directory; the shape follows
+# `crates/rk-cli/tests/fixtures/pack-min/pack.toml`, trimmed to what a doctor rule reads.
+gate_deadline_secs = 900
+
+[pack]
+id = "demo"
+applies = "kind == bug or kind == story"
+appetite = { points = 50, tokens = 200000 }
+
+[retry]
+attempts_cap = 1
+
+[breaker]
+consecutive_platform_failures = 3
+expiry_secs = 600
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["ImplReport"]
+
+[margins]
+five_hour = 10
+seven_day = 10
+
+[cache]
+prompt_ttl = "5m"

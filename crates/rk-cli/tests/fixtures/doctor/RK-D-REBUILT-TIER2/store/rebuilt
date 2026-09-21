@@ -1,0 +1,3 @@
+# The `<common-dir>/redkiln/rebuilt` sidecar (RT-56 - ROUTED, not decided; a dated
+# design note naming how `doctor` learns a store was rebuilt is OWED, s7d §7d.18).
+rebuilt-at = 2026-09-21

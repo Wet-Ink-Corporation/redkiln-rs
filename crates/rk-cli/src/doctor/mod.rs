@@ -14,8 +14,8 @@
 //! | here | filled by | the test whose red is then behavioural |
 //! | --- | --- | --- |
 //! | [`rules::RULES`], empty | cycle 3 | `doctor_rule_table_covers_every_register_named_row` |
-//! | the 38 fixtures | cycle 4 | `ac415_every_rule_id_has_a_rejecting_fixture` |
-//! | each `Rule::check` | cycle 5 | the 26 family tests |
+//! | the 38 fixtures + `clean/` | cycle 4 | **none** — see below |
+//! | each `Rule::check` | cycle 5 | the 26 family tests, then `ac415_every_rule_id_has_a_rejecting_fixture` |
 //! | [`probe`] | cycle 7 | `ac423_probe_is_one_version_spawn_not_a_dispatch` |
 //! | [`rebuild`] | cycle 9 | `ac427_…`, `ac429_…`, `ac397_…` |
 //!
@@ -34,6 +34,14 @@
 //! **claims none of those three**. The anti-vacuity instrument is cycle 3's
 //! `doctor_rule_table_covers_every_register_named_row` — the twenty-nine register-named ids as a
 //! floor (RA-M-01) — and it is what closes the hole rather than any comment here.
+//!
+//! **Cycle 4 claims none of them either, and `ac415_` is cycle 5's rather than cycle 4's.** §7d.14's
+//! red for that test names the failure landing it beside the fixtures would be: *"a weaker red
+//! **joins names without running the rule**."* Its middle clause is *"each fixture run through its
+//! own rule only yields ≥ 1 finding"*, and every `check` is [`rules::unbuilt`] until cycle 5 — so a
+//! version landed at cycle 4 could assert the set equality and nothing else, which is that weaker
+//! red exactly, under a name claiming a *rejecting* fixture. The set equality was measured in
+//! cycle 4's body instead and is asserted for the first time at cycle 5, when it can run the rules.
 //!
 //! # What this module may not contain, and why the ban is module-path filtered
 //!
@@ -174,9 +182,15 @@ pub struct Ctx {
     /// settled at cycle 1). Not a `Result`: a pack with two defects yields two findings, and a
     /// first-error `Result` is exactly what that edit replaced.
     pub catalog: CatalogLoad,
-    /// The pack roots the catalog above was read from, by pack name — the rules that read
-    /// `cards/` and `skills/` need the directory and not only the activities.
-    pub pack_roots: BTreeMap<String, PathBuf>,
+    /// The enabled packs, by name, each mapped to its own file.
+    ///
+    /// 🛑 **A pack is a FLAT FILE and not a directory** — `.redkiln/packs/<name>.toml` [measured
+    /// 2026-09-21, `crates/rk-cli/src/verbs/run.rs`:553-555]. `s7d` §7d.13 describes cards and
+    /// skills as living under *"the pack's `cards/` and `skills/` directories"*; there is no
+    /// per-pack directory in the tree. Cards are at `.redkiln/cards/<role>.json`, keyed by file
+    /// name, and skills at `.redkiln/skills/`. A dated §7d.13 amendment of 2026-09-21 records it,
+    /// and the field is named for what it holds rather than for what that sentence implies.
+    pub pack_files: BTreeMap<String, PathBuf>,
     /// `facets.toml`, parsed — `Registry::from_toml`. `None` when the repository has none: an
     /// absence a rule reports, never a refusal the verb makes.
     ///

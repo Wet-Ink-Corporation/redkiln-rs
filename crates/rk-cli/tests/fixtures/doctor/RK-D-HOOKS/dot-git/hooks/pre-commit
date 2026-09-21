@@ -1,0 +1,3 @@
+#!/bin/sh
+# redkiln-hook
+exec redkiln run "$@"

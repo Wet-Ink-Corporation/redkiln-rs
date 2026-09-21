@@ -1,0 +1,3 @@
+{"kind":"usage.reading","payload":{"window":"five_hour","ticks":40}}
+{"kind":"usage.reading","payload":{"window":"five_hour","ticks":70}}
+{"kind":"usage.reading","payload":{"window":"five_hour","ticks":99}}

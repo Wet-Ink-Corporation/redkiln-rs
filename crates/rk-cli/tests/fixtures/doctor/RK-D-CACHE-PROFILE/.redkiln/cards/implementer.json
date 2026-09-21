@@ -1,0 +1,5 @@
+{
+  "description": "A card with no cache_profile.",
+  "prompt": "Emit an ImplReport for the item. Do nothing else.",
+  "tools": ["StructuredOutput"]
+}

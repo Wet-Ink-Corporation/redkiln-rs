@@ -15,3 +15,9 @@
 # the `legacy-mini/**` row. Each row lands with the slice whose test pins the bytes.
 crates/rk-cli/tests/it/snapshots/*.snap -text
 crates/rk-cli/tests/fixtures/init/config.toml.expected -text
+# Slice 4 appends the doctor fixture tree. Its bytes are read rather than digested, but three
+# kinds of file in it break under a CRLF rewrite: `events.jsonl` (serde_json refuses a trailing
+#  on a line), `dot-git/hooks/pre-commit` (a shell script), and `dot-git/worktrees/*/gitdir`
+# (a path git reads verbatim). Same rule as the two rows above - the row lands with the slice that
+# lands the files, not three slices later.
+crates/rk-cli/tests/fixtures/doctor/** -text

@@ -1,0 +1,14 @@
+# One activity, authored to `activity_from` in `crates/rk-kernel/src/catalog.rs`.
+[activity]
+id           = "emit-report"
+version      = 1
+stage        = "implement"
+provides     = ["ImplReport"]
+method_rank  = 10
+min_rigor    = "optional"
+applicable_if = "has_repro"
+[[step]]
+id      = "emit"
+kind    = "tool"
+run     = "toolchain:test"
+outputs = "value:ImplReport"
