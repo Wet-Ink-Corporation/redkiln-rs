@@ -259,3 +259,171 @@ fn read_run_refuses_a_log_whose_specs_json_is_missing() {
     copy_tree(&the_committed_run(), &dir);
     read_run(&dir).expect("restoring specs.json restores the read");
 }
+
+/// **Every member of `RunInputs::to_json`'s output survives `write_run` → `read_run`.**
+/// ADR-0130 decision 9.
+///
+/// `run_id` is `sha256_lp([SCHEMA, stage, canonical(to_json())])`, and `replay()` re-derives it
+/// before it re-derives anything else — the kernel's own words at that refusal: *"one comparison
+/// policies all of them"*. That property is worth exactly its coverage, and it is coverage of the
+/// **preimage**, not of the layout. An input inside `to_json` and outside the layout does not weaken
+/// the guard; it makes the guard fire on **every** record, which is worse than a gap, because a halt
+/// that every record triggers is a halt nobody can act on.
+///
+/// # 🛑 ONE ASSERTION OVER THE WHOLE PREIMAGE, AND THAT IS THE POINT
+///
+/// This test compares two `run_id`s. It does **not** enumerate the members, because a field list is
+/// a thing somebody has to remember to extend — and R-54 is precisely what happens when they do not:
+/// Step 7d Slice 2 added `config` to `to_json` and not to the layout, and nothing on the tree
+/// noticed for two slices. A digest over the whole input set catches the next one without being
+/// told about it.
+///
+/// # 🛑 THE COMMITTED LOG CARRIES EVERY OPTIONAL INPUT EXCEPT THE CONFIG
+///
+/// Measured: its `inputs/` holds `runtime.json`, `specs.json` and `deviation.json` beside the five
+/// required entries, and no config — it pre-dates the config edit, which is exactly why the replay
+/// suite stayed green over it. So adding a config is what makes the input set complete, and the
+/// premise below asserts that adding one MOVES the `run_id`: an input that is not in the preimage
+/// could not be the subject of this test, and a premise that did not check would let the whole
+/// thing pass over a member nothing hashes.
+#[test]
+fn write_run_and_read_run_round_trip_every_recorded_input() {
+    let dir = copy_into_scratch("every-recorded-input");
+    let mut run = read_run(&dir).expect("the committed log reads back");
+
+    // PREMISE (1): the committed log carries every OPTIONAL input but the config, so the round trip
+    // below is over a complete set once one is added.
+    for optional in ["runtime.json", "specs.json", "deviation.json"] {
+        assert!(
+            dir.join("inputs").join(optional).is_file(),
+            "PREMISE: the committed log must carry inputs/{optional}, or this test is not over a \
+             complete input set"
+        );
+    }
+    assert!(
+        !dir.join("inputs/config.json").is_file(),
+        "PREMISE: the committed log must carry NO config — it pre-dates the config edit, and that \
+         is why premise (2) below can measure the digest moving"
+    );
+
+    let without_config = run.inputs.run_id().expect("the committed input set hashes");
+
+    run.inputs = run
+        .inputs
+        .clone()
+        .with_config(rk_kernel::config::Config::new(
+            "rk-adapter-claude",
+            "rk-adapter-sqlite",
+            &[
+                "rk-adapter-toolchain-node".to_owned(),
+                "rk-adapter-toolchain-rust".to_owned(),
+            ],
+            50,
+        ));
+    let expected = run
+        .inputs
+        .run_id()
+        .expect("the input set with a config hashes");
+
+    // PREMISE (2): the config IS in the preimage. Without this the equality below is satisfied by a
+    // member `to_json` never hashed, and the test would be green over the wrong thing.
+    assert_ne!(
+        expected, without_config,
+        "PREMISE: threading a `Config` in must move the `run_id`, or `config` is not part of \
+         `to_json`'s output and this test is not about a recorded input at all"
+    );
+
+    // ---- THE ROUND TRIP. -----------------------------------------------------------------------
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/golden-log-scratch/rt");
+    let _ = std::fs::remove_dir_all(&root);
+    let written = rk_kernel::replay::write_run(&root, &run).expect("the record writes");
+    let back = read_run(&written).expect("the written record reads back");
+
+    assert_eq!(
+        back.inputs
+            .run_id()
+            .expect("the read-back input set hashes"),
+        expected,
+        "the input set that came back does not hash to the one that went in, so at least one \
+         member of `to_json`'s output is in the digest and not in the layout. `replay()` \
+         re-derives this value and refuses on a mismatch, so every record carrying that member is \
+         unreplayable — AC-042's *\"from the logged inputs alone\"* cannot hold for it. This is \
+         R-54's shape; ADR-0130 is the record."
+    );
+}
+
+/// **`read_run` refuses a present-but-invalid `inputs/config.json`** — ADR-0130 decision 6's
+/// positive control.
+///
+/// The refusal's warrant is R-54's own shape. An **absent** config is `None`, legitimately: every
+/// log written before Slice 2's config edit carries none, the committed golden log included. A
+/// **present and unreadable** one is different in kind — reading it as `None`, or as a default, or
+/// as a partially-filled value would put the record straight back into the state ADR-0130 repaired,
+/// with `run_id`'s preimage covering a value the layout did carry and the two disagreeing.
+///
+/// # 🛑 WHY THIS CONTROL EXISTS AT ALL
+///
+/// This module's header is the argument: `read_run`'s refusal of a missing `inputs/specs.json` had
+/// no positive control, and when an adversarial pass removed the refusal *"the whole replay suite
+/// stayed green"*. A refusal nothing drives is indistinguishable from a refusal nobody wrote.
+///
+/// The perturbation is `unread_window_runs` as a **string** rather than a number — the member whose
+/// refusal text says *"never a silent 0"*, so the case is the one a `unwrap_or_default()` would have
+/// swallowed.
+#[test]
+fn read_run_refuses_a_log_whose_config_json_is_invalid() {
+    let dir = copy_into_scratch("config-json-invalid");
+    let config = dir.join("inputs/config.json");
+
+    // PREMISE (1): the committed log carries NO config, and reads back. Both halves matter — the
+    // second is what makes a refusal below about the file rather than about the copy.
+    assert!(
+        !config.is_file(),
+        "PREMISE: the committed log carries no config.json"
+    );
+    read_run(&dir).expect("the unperturbed copy reads back");
+
+    // PREMISE (2): a VALID config.json reads back too, so the refusal below is about the CONTENT
+    // and not about the file's presence. Without this, a `read_run` that refused any log carrying a
+    // config at all would satisfy the assertion that follows.
+    std::fs::write(
+        &config,
+        br#"{"harness":"rk-adapter-claude","store":"rk-adapter-sqlite","toolchains":["a","b"],"unread_window_runs":50}
+"#,
+    )
+    .expect("the scratch copy is writable");
+    read_run(&dir).expect("a VALID config.json reads back");
+
+    // THE PERTURBATION: present, well-formed JSON, and `unread_window_runs` is a string.
+    std::fs::write(
+        &config,
+        br#"{"harness":"rk-adapter-claude","store":"rk-adapter-sqlite","toolchains":["a","b"],"unread_window_runs":"50"}
+"#,
+    )
+    .expect("the scratch copy is writable");
+
+    let err = read_run(&dir).expect_err("an invalid config.json must be REFUSED, never defaulted");
+    match err {
+        ReplayError::Malformed { path, detail } => {
+            assert!(
+                path.ends_with("config.json"),
+                "the refusal must name the file it is about; got {path}"
+            );
+            assert!(
+                detail.contains("unread_window_runs"),
+                "the refusal must name the member that is wrong, not merely that something is; \
+                 got {detail}"
+            );
+        }
+        other => panic!(
+            "the refusal must be the typed Malformed refusal, not an Io error and not a silent \
+             `None` that puts the record back in R-54's state; got {other:?}"
+        ),
+    }
+
+    // AND IT IS NOT REFUSING EVERYTHING: removing the file restores the read, because an ABSENT
+    // config is `None` and that is legitimate. This is the half that stops the assertion above
+    // being satisfied by a `read_run` that refuses every log it is handed.
+    std::fs::remove_file(&config).expect("the scratch copy is writable");
+    read_run(&dir).expect("an ABSENT config.json is None, and the log reads back");
+}

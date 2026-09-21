@@ -640,13 +640,13 @@ fn ac434_unknown_facet_rendered_unknown() {
 /// each with its own `lint-controls/` positive control — and not this comparison. Recorded here
 /// rather than left for a reader to discover by running the mutant and finding it green.
 ///
-/// # 🛑 THIS RECORD CARRIES NO `Config`, AND A RECORD `run` WRITES CANNOT BE REPLAYED AT ALL
+/// # 🛑 THIS TEST FOUND R-54, AND NOW CARRIES ITS CONFIRMATION
 ///
-/// Measured while authoring this test. `RunInputs::to_json` — which is exactly what `run_id`
-/// hashes — inserts a `config` key when one was threaded in (`replay.rs`, Slice 2's ADR-0083 /
-/// D18-14 edit), and **`write_run` persists no config while `read_run` restores none**. So a
-/// config-carrying record re-derives a different `run_id` from its own written inputs, and
-/// `replay()`, which re-derives and compares, refuses it:
+/// *(Corrected 2026-09-20 when ADR-0130's repair landed. This section read **"THIS RECORD CARRIES
+/// NO `Config`, AND A RECORD `run` WRITES CANNOT BE REPLAYED AT ALL"**, and the test drove a
+/// deliberately config-less input set through `support::inputs_over_pack_min_without_config`.)*
+///
+/// What it measured on its first run, against a record built the way `run` builds one:
 ///
 /// ```text
 /// Divergent(HiddenInput { … the recorded run_id is implement-61b5dd057fefc7fe and the logged
@@ -654,24 +654,29 @@ fn ac434_unknown_facet_rendered_unknown() {
 /// recorded … })
 /// ```
 ///
-/// `run` threads a config into every record it writes, so **no record the shipped binary produces
-/// is replayable**, and AC-042's *"re-derives the DAG from the logged inputs alone"* does not hold
-/// for them. The kernel's own replay suite does not catch this because its committed golden log
-/// pre-dates the config edit and carries none. This test therefore drives a **config-less** input
-/// set, which is the narrowest thing that lets the byte-identity property be exercised at all.
-/// **RAISED** — the fix is `write_run`/`read_run` persisting the config, which is a kernel edit
-/// and re-opens 7b, so it is not taken here.
+/// `RunInputs::to_json` — exactly what `run_id` hashes — inserted a `config` key when one was
+/// threaded in (Slice 2's ADR-0083 / D18-14 edit) and **the layout persisted none**, so every
+/// config-carrying record re-derived a different `run_id` and `replay()` refused it. `run` threads
+/// a config into every record it writes, so no record the shipped binary produced was replayable
+/// and AC-042's *"re-derives the DAG from the logged inputs alone"* held for none of them. The halt
+/// was **correct** — the config genuinely was a hidden input; the missing half was the layout's.
+///
+/// **ADR-0130 repaired it** and this test is its confirmation: the input set below is the real,
+/// config-carrying one, so the byte-identity property is now asserted over the shape the product
+/// actually produces rather than over a config-less twin. The guard against the next such member is
+/// `-p rk-kernel`'s `recorded_log::write_run_and_read_run_round_trip_every_recorded_input`, which
+/// compares two `run_id`s over the whole preimage rather than enumerating fields.
 #[test]
 fn ac432_explain_over_replayed_log_is_byte_identical() {
     let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
     let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
-    let (_with_config, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
-    // 🛑 WITHOUT THE CONFIG, AND THAT IS A RAISED KERNEL DEFECT RATHER THAN A TEST CONVENIENCE.
-    // `RunInputs::to_json` hashes a `config` key into `run_id` while `write_run` persists no config
-    // and `read_run` restores none, so a config-carrying record re-derives a different `run_id` and
-    // `replay()` refuses it outright. Every record `run` writes carries a config, so no record this
-    // binary produces can be replayed at all. See `support::inputs_over_pack_min_without_config`.
-    let inputs = crate::support::inputs_over_pack_min_without_config(&resolved, &tree_hash);
+    // WITH the config, which is what `run` threads into every record it writes — so this test now
+    // drives the shape the product actually produces. It could not until ADR-0130: `to_json` hashed
+    // a `config` key into `run_id` while the layout persisted none, so a config-carrying record
+    // re-derived a different `run_id` and `replay()` refused it outright. The helper this line used
+    // to call, `support::inputs_over_pack_min_without_config`, existed only to route around that
+    // and is deleted with the repair — ADR-0130 decision 7.
+    let (inputs, _tree_hash) = crate::support::inputs_over_pack_min(&resolved);
     let inputs = inputs.with_spec(
         "emit-report",
         rk_kernel::replay::RecordedSpec::supplied(

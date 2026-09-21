@@ -1677,6 +1677,34 @@ pub fn write_run(root: &Path, run: &RecordedRun) -> Result<PathBuf, ReplayError>
         bytes.push(b'\n');
         write_file(&inputs.join("runtime.json"), &bytes)?;
     }
+    // NEW at Step 7d Slice 3's close (**ADR-0130**, repairing residual **R-54**). **Written only
+    // when the member is `Some`**, on `runtime.json`'s precedent directly above and
+    // `deviation.json`'s below.
+    //
+    // 🛑 WITHOUT THIS THE CONFIG WAS IN `run_id`'s PREIMAGE AND IN NO FILE, WHICH MADE EVERY
+    // 🛑 CONFIG-CARRYING RECORD UNREPLAYABLE.
+    //
+    // Slice 2's D18-14 put a `config` key into [`RunInputs::to_json`] — the preimage of
+    // [`RunInputs::run_id`] — and the layout was not given anywhere to put the value. So the input
+    // set that came back hashed differently from the one that went in, and [`replay`], which
+    // re-derives `run_id` before it re-derives anything else, refused with
+    // `Divergent(HiddenInput)`. `rk-cli`'s `run` threads a config into every record it writes, so
+    // *no record the shipped binary produced was replayable* and AC-042's *"re-derives the DAG from
+    // the logged inputs alone"* held for none of them. The halt was correct — the config genuinely
+    // WAS a hidden input — and this is the half that was missing, not the halt.
+    //
+    // A `None` writes nothing, so a run with no config lays down a byte-identical directory to the
+    // one it laid down before this edit: the committed golden log is unmoved and the schema stays
+    // `v2`.
+    if let Some(config) = &run.inputs.config {
+        let mut bytes =
+            rk_store::canon::canonical(&config.to_json()).map_err(|e| ReplayError::Malformed {
+                path: "config.json".to_owned(),
+                detail: e.to_string(),
+            })?;
+        bytes.push(b'\n');
+        write_file(&inputs.join("config.json"), &bytes)?;
+    }
     // NEW at Slice 4i. **Always written, even when empty**, so the layout is one shape: a reader
     // that had to distinguish "no bindings" from "an older log" would be back where `read_run`'s
     // refusal of a missing `terminal_state` started.
@@ -1834,6 +1862,57 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
             runtime = runtime.results_at(at);
         }
         inputs = inputs.with_runtime(runtime);
+    }
+
+    // **ADR-0130 — the config, read back through `Config::new` and never through a derive.**
+    //
+    // Absent is `None`, which is what every log written before Slice 2's config edit carries and
+    // what the committed golden log needs. Present-and-unreadable is a refusal naming the path,
+    // never a default and never a partially-filled value: a config read as `None` when the file is
+    // there would put the run back in the state R-54 describes, with the digest covering a value
+    // the layout did carry.
+    //
+    // 🛑 `Config::new`, NOT A `Deserialize` DERIVE, AND THE REASON IS `config.rs`'s OWN.
+    //
+    // That module declines `Serialize`/`Deserialize` in terms: *"a `Deserialize` derive would be a
+    // SECOND public construction path that bypasses `Self::new`, so the toolchain normalisation
+    // documented there would stop being a property of the type and become a property of one of its
+    // two constructors."* `Config::new` sorts `toolchains` *"so the recorded form is a function of
+    // the set and not of the order a file happened to list it in"* — and a `run_id` that depended
+    // on a file's line order is exactly what that sort exists to prevent. So the four members are
+    // read by name and handed to the constructor, which is idempotent over an already-sorted list
+    // and therefore byte-exact on the round trip.
+    let config_path = inputs_dir.join("config.json");
+    if config_path.is_file() {
+        let value = parse_json(&config_path)?;
+        let bad = |d: &str| ReplayError::Malformed {
+            path: config_path.display().to_string(),
+            detail: d.to_owned(),
+        };
+        let harness = value["harness"].as_str().ok_or_else(|| bad("no harness"))?;
+        let store = value["store"].as_str().ok_or_else(|| bad("no store"))?;
+        let toolchains = value["toolchains"]
+            .as_array()
+            .ok_or_else(|| bad("`toolchains` is absent or is not an array"))?
+            .iter()
+            .map(|t| {
+                t.as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| bad("a `toolchains` element is not a string"))
+            })
+            .collect::<Result<Vec<String>, ReplayError>>()?;
+        let unread_window_runs = value["unread_window_runs"]
+            .as_u64()
+            .and_then(|n| u32::try_from(n).ok())
+            .ok_or_else(|| {
+                bad("`unread_window_runs` is absent, negative or wider than a u32 — never a silent 0")
+            })?;
+        inputs = inputs.with_config(crate::config::Config::new(
+            harness,
+            store,
+            &toolchains,
+            unread_window_runs,
+        ));
     }
 
     // **A LOG WITHOUT `inputs/specs.json` IS REFUSED**, on `terminal_state`'s exact warrant one
