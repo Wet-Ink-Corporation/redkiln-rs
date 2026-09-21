@@ -1768,3 +1768,208 @@ fn tree_digest(root: &std::path::Path) -> Vec<(String, u64, u64)> {
     out.sort();
     out
 }
+
+// ================================================== cycle 10: the exits, and AC-402's third path
+
+/// **AC-438's doctor instance** — an error-severity rule is the configuration-error code.
+///
+/// §7d.8: exit `3` when an error-severity rule fired, `0` when none did; *"warnings never move the
+/// code"*. §7d.14's B1 note says which arms discriminate: the Slice-1 stub exited `3` too, so the
+/// `clean/` and warning-only arms are the ones a stub could never have passed — and they are why
+/// this test lands last. The stub is gone (cycle 2 replaced it), so all three arms read the real
+/// table.
+///
+/// # 🛑 IT ASSERTS THE BICONDITIONAL, NOT THREE FIXED CODES, AND THE REASON IS MEASURED
+///
+/// AC-438's clause is *"exit 3 **iff** an error-severity rule fired"*. Asserting three fixed codes
+/// would make this test pass or fail on the operator's own machine: measured 2026-09-21, this box
+/// runs `claude 2.1.278` against a `TESTED_CLI_VERSION` of `2.1.277`, so `RK-D-CLI-VERSION` fires
+/// over **every** fixture here, `doctor/clean/` included. That is the row working correctly, and a
+/// test that demanded `clean/` exit `0` would be red on a true statement about a stale pin.
+///
+/// So the code is read against **what actually fired**, per fixture — and *"warnings never move
+/// the code"* is asserted as the thing it is: a statement about the DIFFERENCE between two runs.
+#[test]
+fn ac438_doctor_error_rule_exits_config_error() {
+    /// The ids that fired, by severity word, off the printed rows (RT-44: `<id> <status>`).
+    fn fired(stdout: &str) -> Vec<(String, String)> {
+        stdout
+            .lines()
+            .filter_map(|l| {
+                let mut w = l.split_whitespace();
+                let id = w.next()?.to_owned();
+                let status = w.next()?.to_owned();
+                (status != "ok").then_some((id, status))
+            })
+            .collect()
+    }
+
+    let mut seen = Vec::new();
+    for fixture in ["RK-D-ADAPTER", "clean", "RK-D-DEAD-DEF"] {
+        let dir = materialise(fixture);
+        let out = spawn_doctor_plain(dir.path());
+        let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+        let rows = fired(&stdout);
+        let errors: Vec<&(String, String)> = rows.iter().filter(|(_, s)| s == "error").collect();
+        let code = out.status.code();
+
+        // THE BICONDITIONAL, both directions.
+        if errors.is_empty() {
+            assert_eq!(
+                code,
+                Some(0),
+                "`doctor` over `doctor/{fixture}/` exited {code:?} with NO error-severity row \
+                 fired. Rows: {rows:?}\n{stdout}"
+            );
+        } else {
+            assert_eq!(
+                code,
+                Some(3),
+                "`doctor` over `doctor/{fixture}/` exited {code:?} with {} error-severity row(s) \
+                 fired; AC-438's `ConfigError` is 3. Rows: {errors:?}",
+                errors.len()
+            );
+        }
+        seen.push((fixture, rows, code));
+    }
+
+    // ---- THE ERROR ARM really did carry its own error row, so the `3` above is AC-486's and not
+    // ---- an incidental one.
+    let adapter = &seen[0];
+    assert!(
+        adapter
+            .1
+            .iter()
+            .any(|(id, s)| id == "RK-D-ADAPTER" && s == "error"),
+        "`doctor/RK-D-ADAPTER/` did not fire its own row at error severity: {:?}",
+        adapter.1
+    );
+
+    // ---- THE WARNING-ONLY ARM. `doctor/RK-D-DEAD-DEF/` adds AC-421's WARNING to whatever the box
+    // ---- already reports over `clean/` — so if a warning moved the code, these two runs would
+    // ---- differ despite carrying the same error set. That is *"warnings never move the code"*
+    // ---- stated as a difference, and it holds whatever this machine's CLI version is.
+    let clean_errors: BTreeSet<&str> = seen[1]
+        .1
+        .iter()
+        .filter(|(_, s)| s == "error")
+        .map(|(i, _)| i.as_str())
+        .collect();
+    let warn_errors: BTreeSet<&str> = seen[2]
+        .1
+        .iter()
+        .filter(|(_, s)| s == "error")
+        .map(|(i, _)| i.as_str())
+        .collect();
+    assert_eq!(
+        clean_errors, warn_errors,
+        "the warning-only fixture and the clean fixture do not carry the same ERROR set, so the \
+         comparison below would be about an error rather than about a warning"
+    );
+    assert!(
+        seen[2]
+            .1
+            .iter()
+            .any(|(id, s)| id == "RK-D-DEAD-DEF" && s == "warning"),
+        "`doctor/RK-D-DEAD-DEF/` did not fire AC-421's warning, so this arm proves nothing about \
+         warnings: {:?}",
+        seen[2].1
+    );
+    assert_eq!(
+        seen[1].2, seen[2].2,
+        "adding a WARNING changed the exit code from {:?} to {:?}. §7d.8: *\"warnings never move \
+         the code\"*",
+        seen[1].2, seen[2].2
+    );
+}
+
+/// Spawn `redkiln -C <repo> doctor` with no fixture-child environment.
+///
+/// `RK_FIXTURE_MODE` is left unset deliberately here: nothing on these paths spawns, because the
+/// probe's program is the adapter's own default and the version rule reports whatever it finds.
+#[expect(
+    clippy::disallowed_types,
+    reason = "AC-438's doctor instance is about the PROCESS's exit code, which only driving the \
+              real binary can observe — golden constraint 4's 'a stub never replaced' is caught \
+              nowhere else."
+)]
+fn spawn_doctor_plain(repo: &std::path::Path) -> std::process::Output {
+    let mut cmd = std::process::Command::new(crate::redkiln());
+    cmd.arg("-C")
+        .arg(repo)
+        .arg("doctor")
+        .stdin(std::process::Stdio::null());
+    crate::support::output_bounded(&mut cmd)
+}
+
+/// **AC-402's third path** — `doctor` reconciles at entry, and the entry is `Entry::Doctor`.
+///
+/// AC-402's *"three paths"* is `run`, `answer` and `doctor`; the first two are Slice 3's and this
+/// is what finally makes the claim whole. C-01's **D-06** dropped the finder's doubt about it:
+/// `rk_git`'s `Entry` is exactly `{ Run, Answer, Doctor }`, so `status` and `explain` cannot reach
+/// the seam at all, which is `ac402_status_and_explain_do_not_reconcile`'s negative.
+///
+/// # 🛑 EXACTLY ONE CALL, AND THE ENTRY IS ASSERTED
+///
+/// AC-172's *"exactly one `reconcile_started` event per invocation"* is what a second call would
+/// break. And the entry matters as much as the count: a `doctor` that reconciled as `Entry::Run`
+/// would write the wrong row, and the recorder sees which variant went through the seam.
+///
+/// **It reconciles BEFORE the store is opened.** ADR-0105 clause 8's order — reconcile, then read —
+/// is why `doctor` sees the trailers a concurrent lane wrote rather than a store that predates
+/// them.
+#[test]
+fn ac402_reconcile_called_on_run_answer_doctor() {
+    let dir = materialise("clean");
+    // Discovered so the fixture is known to BE a repository before the verb is asked to reconcile
+    // over it — a `doctor` handed a non-repository refuses before the seam and the count below
+    // would be zero for a reason that is not the one under test.
+    rk_cli::repo::discover(Some(dir.path())).expect("the materialised fixture discovers");
+    let trace = crate::support::Trace::new();
+    let reconciler = crate::support::RecordingReconciler::new(&trace);
+
+    let startup = rk_cli::verbs::Startup {
+        reconciler: &reconciler,
+        config: &rk_cli::verbs::FileConfigReader,
+        adapters: &rk_cli::verbs::RealAdapterResolver,
+    };
+    let cli = rk_cli::cli::Cli {
+        cwd: Some(dir.path().to_path_buf()),
+        command: rk_cli::cli::Command::Doctor(rk_cli::cli::DoctorArgs { rebuild: false }),
+    };
+    let env = rk_cli::env::Env::from_map(std::collections::BTreeMap::new());
+
+    let exit = rk_cli::verbs::doctor::run(
+        &cli,
+        &rk_cli::cli::DoctorArgs { rebuild: false },
+        &env,
+        startup,
+    )
+    .expect("doctor does not halt");
+
+    // The exit code is not this test's subject and is deliberately not pinned: `RK-D-CLI-VERSION`
+    // reads the INSTALLED harness binary, so the code depends on the operator's machine rather
+    // than on the reconcile. What matters is that the verb RAN to completion — one that returned
+    // early would reconcile once and prove nothing about the ordering.
+    assert!(
+        matches!(exit.code(), 0 | 3),
+        "`doctor` exited {}, which is neither success nor the configuration-error code — the run          did not reach the rule table",
+        exit.code()
+    );
+
+    let calls = trace.reconciles();
+    assert_eq!(
+        calls.len(),
+        1,
+        "`doctor` reconciled {} times. AC-172: exactly one `reconcile_started` row per invocation, \
+         and the seam is where that is counted: {calls:?}",
+        calls.len()
+    );
+    assert_eq!(
+        calls[0],
+        rk_git::reconciled::Entry::Doctor,
+        "`doctor` reconciled as {:?} rather than `Entry::Doctor` — the entry is what the row \
+         records, and the wrong one is a row about a path that did not run",
+        calls[0]
+    );
+}

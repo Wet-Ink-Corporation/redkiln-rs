@@ -623,8 +623,13 @@ fn cli_version(ctx: &Ctx) -> Vec<Finding> {
         .as_deref()
         .unwrap_or("claude");
     let pin = rk_adapter_claude::config::TESTED_CLI_VERSION;
+    // 🛑 THE FIRST WHITESPACE TOKEN, NOT THE WHOLE LINE. Measured 2026-09-21: the installed CLI
+    // prints `2.1.278 (Claude Code)` while the pin is the bare `2.1.278` form, so a comparison of
+    // the whole line never matches and the row would fire on EVERY box, at every version. This is
+    // the same normalisation Checkpoint 7d's Halt 2 applies with `${pin%% *}`.
+    let reported = |v: &str| v.split_whitespace().next().unwrap_or("").to_owned();
     match ctx.probe.version(program) {
-        Ok(v) if v.trim() == pin => Vec::new(),
+        Ok(v) if reported(&v) == pin => Vec::new(),
         Ok(v) if v.trim().is_empty() => vec![finding(
             "RK-D-CLI-VERSION",
             Severity::Error,
@@ -635,7 +640,7 @@ fn cli_version(ctx: &Ctx) -> Vec<Finding> {
             Severity::Error,
             format!(
                 "the installed `{program}` reports `{}`; this workspace is tested at `{pin}`",
-                v.trim()
+                reported(&v)
             ),
         )],
         Err(e) => vec![finding(

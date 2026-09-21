@@ -28,3 +28,13 @@ seven_day = 10
 [cache]
 prompt_ttl = "1h"
 subagent_prompt_ttl = "1h"
+
+# Both catalog activities declare a timeout, so this fixture carries ONLY its own warning.
+# Added 2026-09-21 at cycle 10: `ac438_doctor_error_rule_exits_config_error` uses this
+# directory as its WARNING-ONLY arm, and RK-D-TIMEOUT was firing here as well, which made
+# the arm about an error rather than about a warning.
+[activity.emit-report]
+timeout_secs = 900
+
+[activity.orphan]
+timeout_secs = 900
