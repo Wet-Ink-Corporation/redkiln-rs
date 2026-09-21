@@ -1302,3 +1302,469 @@ fn ac415_every_rule_id_has_a_rejecting_fixture() {
         inert.join("\n  ")
     );
 }
+
+// ============================================================ cycle 6: AC-414 and SM-121
+
+/// **AC-414 as amended (D-10)** — *"every fixture's expected rule fires and zero harness dispatches
+/// are issued and zero model tokens are spent"*, over the whole AC-415 corpus.
+///
+/// # 🛑 THE LOOP IS SELF-CONTROLLED, AND THE CONTROL COMES FIRST
+///
+/// §7d.14: red *"by the enumerated directory set (minus `clean/`) being empty or unequal to
+/// `RULES`' id set (the self-control before the loop)"*. AC-414's own *Repaired* note records the
+/// hole it is aimed at — the criterion *"passed trivially on a doctor that performs no checks"* —
+/// and a loop over whatever happens to be on disk is that hole one level up: over an empty corpus
+/// it iterates nothing and reports success. So the set is asserted non-empty and equal to the
+/// table's ids **before** anything is run.
+///
+/// # This runs the WHOLE TABLE, which `ac415_` deliberately does not
+///
+/// `ac415_` runs each fixture through its own rule only, because its join is per-id. This is the
+/// other half: the table as the binary runs it, asserting the expected id is **among** the ids that
+/// fired. A rule firing on a fixture that is not its own is not a defect here — fixtures are
+/// minimal, not mutually exclusive.
+#[test]
+fn ac414_doctor_over_corpus_fires_every_expected_rule_with_zero_dispatches() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("doctor");
+    let mut corpus: BTreeSet<String> = std::fs::read_dir(&root)
+        .expect("the doctor fixture tree exists")
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    corpus.remove("clean");
+
+    // ---- THE SELF-CONTROL, before the loop.
+    assert!(
+        !corpus.is_empty(),
+        "the enumerated fixture corpus is empty, so the loop below would run nothing and report \
+         success — AC-414's own repair note calls that passing trivially"
+    );
+    let ids: BTreeSet<String> = RULES.iter().map(|r| (*r.id).to_owned()).collect();
+    assert_eq!(
+        corpus, ids,
+        "the fixture corpus and the rule table are not the same set, so the loop would not cover \
+         the table it claims to"
+    );
+
+    for id in &corpus {
+        let dir = materialise(id);
+        let ctx = ctx_for(dir.path());
+
+        // The `Ports` the root hands the doctor path: a harness that panics on dispatch and names
+        // the rule, and a COUNTING store fake — SM-121's counter is the fake's.
+        let harness = std::sync::Arc::new(rk_cli::no_dispatch::NoDispatchHarness::default());
+        let store = rk_ports::fakes::VecStore::default();
+
+        let report = rk_cli::doctor::rules::evaluate(&ctx, &harness);
+
+        assert!(
+            report.findings.iter().any(|f| f.id == id.as_str()),
+            "`doctor/{id}/` is {id}'s rejecting fixture and that rule did not fire over it when \
+             the WHOLE table ran. Fired: {:?}",
+            report.findings.iter().map(|f| f.id).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            report.evaluated.len(),
+            RULES.len(),
+            "not every rule was evaluated over `doctor/{id}/` — §7d.8's stdout is one line per \
+             EVALUATED rule, fired or not"
+        );
+
+        // AC-414's behavioural floor. The dispatch itself is impossible by construction — a
+        // `Rule::check` is a `fn(&Ctx) -> Vec<Finding>` and a `fn` item captures nothing, so no
+        // rule holds a harness to dispatch through — and `NoDispatchHarness` panicking is what
+        // would say so if that ever stopped being true.
+        assert_eq!(
+            store.events().len(),
+            0,
+            "a `dispatch` row was appended while `doctor` ran over `doctor/{id}/`"
+        );
+    }
+}
+
+/// **AC-414's lint half, as amended (D-10 / D18-7)** — the `doctor` module constructs no port
+/// implementor and opens no store.
+///
+/// The in-process twin of Checkpoint 7d's `rk_absent` line, over the same module-path filter:
+/// `src/doctor/*.rs` **and** `src/verbs/doctor.rs`.
+///
+/// # 🛑 SELF-CONTROLLED OVER `d10_adapter_constructor_control.rs` FIRST
+///
+/// §7d.14 says it in terms. An absence assertion whose scanner matches nothing anywhere is not an
+/// assertion, and this crate has already paid for that failure: the control file exists so the
+/// pattern is shown to FIND the banned tokens before its silence over `doctor` is believed.
+///
+/// **Code lines only.** The module's own headers discuss `SqliteStore::open` and `dyn Harness` by
+/// name — they have to, to say why neither is there — and a scan that read comments would fire on
+/// the prose explaining the ban. That is a recorded failure mode of this tree, not a hypothetical.
+#[test]
+fn ac414_doctor_module_names_no_adapter_constructor() {
+    const BANNED: [&str; 7] = [
+        "ClaudeHarness::new",
+        "rk_adapter_claude::config::Config::new",
+        "Config::new(",
+        "NodeToolchain::new",
+        "RustToolchain::new",
+        "SqliteStore::open",
+        "dyn Harness",
+    ];
+
+    // ---- THE CONTROL. The pattern must find every token somewhere before its silence means
+    // ---- anything; the control file carries them all, on code lines.
+    let control = crate::lint_controls_dir().join("d10_adapter_constructor_control.rs");
+    let control_text = std::fs::read_to_string(&control)
+        .unwrap_or_else(|e| panic!("the D-10 control {} is unreadable: {e}", control.display()));
+    let control_code: String = crate::code_lines(&control_text)
+        .into_iter()
+        .map(|(_, l)| l)
+        .collect::<Vec<_>>()
+        .join("\n");
+    for token in BANNED {
+        assert!(
+            control_code.contains(token),
+            "the control file carries no NON-COMMENT `{token}`, so this scan has not been seen to \
+             find it and its silence over `doctor` proves nothing"
+        );
+    }
+
+    // ---- the ban itself, over the same filter Checkpoint 7d applies.
+    let src = crate::src_dir();
+    let mut targets: Vec<std::path::PathBuf> = crate::rs_files(&src.join("doctor"));
+    targets.push(src.join("verbs").join("doctor.rs"));
+    assert!(
+        targets.len() >= 2,
+        "the doctor module filter admitted {} file(s) — Checkpoint 7d refuses a filtered ban whose \
+         filter admits nothing, and so does this",
+        targets.len()
+    );
+
+    let mut hits = Vec::new();
+    for file in targets {
+        let text = std::fs::read_to_string(&file).expect("a doctor source file");
+        for (line_no, line) in crate::code_lines(&text) {
+            for token in BANNED {
+                if line.contains(token) {
+                    hits.push(format!("{}:{line_no}: {}", file.display(), line.trim()));
+                }
+            }
+        }
+    }
+    assert!(
+        hits.is_empty(),
+        "the `doctor` module names a port-implementor constructor on a code line. AC-414 as \
+         amended: `doctor` reports and does not dispatch, and the store handle is opened by the \
+         root (`adapters::open_store`) and carried in:\n{}",
+        hits.join("\n")
+    );
+}
+
+// =========================================================== cycle 7: the version probe
+
+/// **AC-423 as amended (D-11), and SM-121** — `doctor`'s one child is a **spawn**, not a dispatch.
+///
+/// §7d.14's red: *"a spawn count ≠ 1, `-p` on the child's argv, or the dispatch counter ≠ 0."*
+///
+/// # 🛑 A SPAWN IS NOT A DISPATCH, AND THAT IS THE WHOLE INSTRUMENT
+///
+/// SM-121 counts **dispatches**, and it stays at zero across a run that probes. A dispatch goes
+/// through `Harness` — which on this path is `NoDispatchHarness` and panics — and costs model
+/// tokens; a `--version` spawn goes through `rk-containment`'s bounded runner and costs none.
+/// `-p` is the flag that would carry a prompt, so its absence from the argv separates the two at
+/// the level of bytes rather than intent.
+///
+/// # 🛑 IT DRIVES THE BINARY, AND IT HAS TO
+///
+/// The fixture child reads `RK_FIXTURE_MODE` and `RK_FIXTURE_MARKER_DIR` **from its own
+/// environment** and inherits its parent's. `std::env::set_var` is banned workspace-wide, so an
+/// in-process call to `RealProbe` cannot put them there — the first draft of this test did exactly
+/// that and counted **zero** markers, because the child wrote none. Spawning `redkiln doctor` with
+/// the two names on its `Command` is the established form (`answer.rs`'s `spawn_answer`) and is
+/// what §7d.8 describes: *"`doctor` under the real probe spawns exactly one child"*.
+///
+/// The counts are **file facts**: one `<pid>.marker` per invocation (`s7c` §7c.17), carrying the
+/// argv the child received. "Exactly one spawn" is a directory listing.
+///
+/// `RK_FIXTURE_MODE=exit:0` and never unset: the child's default is `hold`, a 600 s park, and the
+/// probe would then sit on its own bound on every run.
+#[test]
+fn ac423_probe_is_one_version_spawn_not_a_dispatch() {
+    let child = std::path::PathBuf::from(env!("CARGO_BIN_EXE_rk-fixture-child-cli"));
+    assert!(
+        child.is_file(),
+        "the fixture child was not built at {}",
+        child.display()
+    );
+
+    // A clean repository whose `harness_binary` IS the fixture child, so the probe spawns it.
+    let dir = materialise("clean");
+    let config_path = dir.path().join(".redkiln").join("config.toml");
+    let config = std::fs::read_to_string(&config_path).expect("the clean config is readable");
+    let pointed = config.replace(
+        "toolchains = [",
+        &format!(
+            "harness_binary = {:?}\ntoolchains = [",
+            child.display().to_string()
+        ),
+    );
+    assert_ne!(pointed, config, "the `harness_binary` key was not inserted");
+    std::fs::write(&config_path, &pointed).expect("the config is written");
+
+    let markers = dir.path().join(".rk-markers");
+    std::fs::create_dir_all(&markers).expect("the marker directory is created");
+
+    let out = spawn_doctor(dir.path(), &markers);
+    // 🛑 EXIT 3 IS THE CORRECT ANSWER HERE, AND IT IS THE PROOF THE PROBE WAS CONSULTED.
+    //
+    // The fixture child prints its mode, not `TESTED_CLI_VERSION`, so `RK-D-CLI-VERSION` fires —
+    // an error-severity row, which AC-438 makes exit `3`. A run that exited `0` would mean the
+    // probe's answer never reached the rule, and the spawn would be a child nothing read.
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    assert_eq!(
+        out.status.code(),
+        Some(3),
+        "`doctor` exited {:?}; the fixture child does not report the tested pin, so \
+         `RK-D-CLI-VERSION` must fire and AC-438 makes that exit 3.\nstdout:\n{stdout}\nstderr:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let row = stdout
+        .lines()
+        .find(|l| l.starts_with("RK-D-CLI-VERSION"))
+        .unwrap_or_else(|| panic!("no `RK-D-CLI-VERSION` row was printed:\n{stdout}"));
+    assert!(
+        row.split_whitespace().nth(1) != Some("ok"),
+        "the `RK-D-CLI-VERSION` row reads `ok` while the exit was 3 — a different rule fired and \
+         the probe's answer did not reach this one: {row}"
+    );
+
+    let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(&markers)
+        .expect("the marker dir is readable")
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "marker"))
+        .collect();
+    files.sort();
+    assert_eq!(
+        files.len(),
+        1,
+        "`doctor` spawned {} children; AC-423's instrument is EXACTLY ONE, and `doctor`'s one \
+         child is the version probe",
+        files.len()
+    );
+
+    let marker = std::fs::read_to_string(&files[0]).expect("the marker is readable");
+    let argv: Vec<String> = marker
+        .lines()
+        .filter_map(|l| l.strip_prefix("arg=").map(ToOwned::to_owned))
+        .collect();
+    assert_eq!(
+        argv.len(),
+        2,
+        "the child's argv is `[<program>, \"--version\"]` and nothing else; got {argv:?}"
+    );
+    assert_eq!(
+        argv[1], "--version",
+        "the one argument is not `--version`: {argv:?}"
+    );
+    assert!(
+        !argv.iter().any(|a| a == "-p"),
+        "the child's argv carries `-p`, the flag that carries a prompt — that is a DISPATCH and \
+         not a version spawn: {argv:?}"
+    );
+
+    // SM-121's counter. The child wrote its marker in mode `exit:0`; a DISPATCH would have written
+    // one in a dispatch mode, and nothing on this path holds a `Harness` to make one.
+    assert!(
+        marker.contains("mode=exit"),
+        "the child ran in a mode this test did not choose — `RK_FIXTURE_MODE` did not reach it: \
+         {marker}"
+    );
+}
+
+/// Spawn `redkiln -C <repo> doctor` with the fixture child's two names on its `Command`.
+///
+/// `Command::env`, never `set_var`, which is banned workspace-wide including this tree.
+#[expect(
+    clippy::disallowed_types,
+    reason = "the verb is exercised AS A PROCESS: the fixture child reads its mode from its own \
+              environment and inherits its parent's, so nothing in-process can set it. \
+              `answer.rs`'s `spawn_answer` is the same form for the same reason."
+)]
+fn spawn_doctor(repo: &std::path::Path, markers: &std::path::Path) -> std::process::Output {
+    let mut cmd = std::process::Command::new(crate::redkiln());
+    cmd.arg("-C")
+        .arg(repo)
+        .arg("doctor")
+        .env("RK_FIXTURE_MODE", "exit:0")
+        .env("RK_FIXTURE_MARKER_DIR", markers)
+        .stdin(std::process::Stdio::null());
+    crate::support::output_bounded(&mut cmd)
+}
+
+// ================================================== cycle 8: the unread window
+
+/// Build a `Ctx` over one `unread/` log at a given `unread_window_runs`.
+///
+/// The log replaces the fixture repository's `events.jsonl`, and N is rewritten on the config — so
+/// the same bytes are read at two settings and the key is shown to be live.
+fn unread_ctx(log: &str, window: u32) -> (tempfile::TempDir, rk_cli::doctor::Ctx) {
+    let dir = materialise("clean");
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("unread")
+        .join(log);
+    std::fs::copy(&src, dir.path().join("events.jsonl"))
+        .unwrap_or_else(|e| panic!("{} could not be staged: {e}", src.display()));
+
+    let path = dir.path().join(".redkiln").join("config.toml");
+    let text = std::fs::read_to_string(&path).expect("the config is readable");
+    let rewritten = text.replace(
+        "unread_window_runs = 50",
+        &format!("unread_window_runs = {window}"),
+    );
+    // The OUTCOME is asserted, not the change: at N = 50 the rewrite is a no-op because the
+    // scaffold already says 50, and a test that demanded the text differ would be red on the one
+    // setting it does not need to touch.
+    assert!(
+        rewritten.contains(&format!("unread_window_runs = {window}")),
+        "the config does not carry `unread_window_runs = {window}` after the rewrite, so this          reading would use whatever N the scaffold happened to say"
+    );
+    std::fs::write(&path, rewritten).expect("the config is written");
+
+    let ctx = ctx_for(dir.path());
+    (dir, ctx)
+}
+
+/// Run `RK-D-UNREAD` alone over one log at one window.
+fn unread_findings(log: &str, window: u32) -> Vec<rk_cli::doctor::Finding> {
+    let rule = RULES
+        .iter()
+        .find(|r| r.id == "RK-D-UNREAD")
+        .expect("RK-D-UNREAD is in the table");
+    let (_dir, ctx) = unread_ctx(log, window);
+    (rule.check)(&ctx)
+}
+
+/// **AC-426 / AC-472 as amended / AC-147 as amended, and SM-139** — the window boundary, and that
+/// the key is live.
+///
+/// N = 50 (E9). 49 runs are **not** flagged and 51 **are**; and under `unread_window_runs = 60`
+/// **neither** is — which is what makes N the repository's key rather than a constant in the rule
+/// table, and is the half a test reading one N would miss entirely.
+///
+/// The pair sits one run either side of the boundary on purpose: a rule keyed on `>` instead of
+/// `>=`, or on `N − 1`, passes a 1-versus-100 pair and fails exactly here.
+#[test]
+fn ac426_ac472_unread_window_49_not_flagged_51_flagged() {
+    let under = unread_findings("runs-49.jsonl", 50);
+    assert!(
+        under.is_empty(),
+        "49 runs is UNDER the window of 50 and was flagged: {under:?}"
+    );
+
+    let over = unread_findings("runs-51.jsonl", 50);
+    assert_eq!(
+        over.len(),
+        1,
+        "51 runs is over the window of 50 and must be flagged exactly once — the second kind in \
+         the log is written AND read every run, so a rule that flags everything reports two: \
+         {over:?}"
+    );
+    assert!(
+        over[0].detail.contains("`k`"),
+        "the flagged kind is not `k`, the one written and never read: {over:?}"
+    );
+    assert_eq!(
+        over[0].severity,
+        rk_cli::doctor::Severity::Warning,
+        "AC-426's row is a warning; §7d.8's *\"warnings never move the code\"*"
+    );
+
+    // ---- THE KEY IS LIVE. Same bytes, larger window, neither flagged.
+    for log in ["runs-49.jsonl", "runs-51.jsonl"] {
+        let wide = unread_findings(log, 60);
+        assert!(
+            wide.is_empty(),
+            "{log} was flagged at `unread_window_runs = 60`. Both logs are under 60 runs, so a \
+             rule reading the repository's key reports neither — one that read a constant of 50 \
+             reports `runs-51` here: {wide:?}"
+        );
+    }
+}
+
+/// **AC-426's second instrument** — the rule fires and changes nothing.
+///
+/// # 🛑 THE POSITIVE HALF IS READ FIRST, AND WITHOUT IT THIS ASSERTS NOTHING
+///
+/// RA-M-01's shape: *"a rule that never fires leaves the write set unchanged trivially"*. So the
+/// finding is asserted **before** the digests are compared — a rule that did nothing would satisfy
+/// the negative half perfectly.
+///
+/// The write set is the whole materialised tree, digested file by file. `doctor` is a read: no
+/// store row, no marker, no byte.
+#[test]
+fn ac426_rule_fire_leaves_write_set_unchanged() {
+    let rule = RULES
+        .iter()
+        .find(|r| r.id == "RK-D-UNREAD")
+        .expect("RK-D-UNREAD is in the table");
+    let (dir, ctx) = unread_ctx("runs-51.jsonl", 50);
+
+    let before = tree_digest(dir.path());
+    assert!(
+        !before.is_empty(),
+        "the tree digest read no files, so the comparison below would hold over nothing"
+    );
+
+    // THE POSITIVE HALF, first.
+    let found = (rule.check)(&ctx);
+    assert!(
+        !found.is_empty(),
+        "`RK-D-UNREAD` did not fire over `runs-51.jsonl`, so the write-set comparison below is \
+         true of a rule that did nothing — RA-M-01's own shape"
+    );
+
+    let after = tree_digest(dir.path());
+    assert_eq!(
+        before, after,
+        "the tree changed while a `doctor` rule ran. `doctor` is a read: AC-429's direction — git \
+         to store, never the reverse — and no rule writes a byte"
+    );
+}
+
+/// Every file under `root`, by path, with its bytes' length and a cheap content hash.
+///
+/// Paths **and** contents: a comparison of paths alone would miss a rewritten file, and one of
+/// contents alone would miss a deletion.
+fn tree_digest(root: &std::path::Path) -> Vec<(String, u64, u64)> {
+    fn walk(dir: &std::path::Path, base: &std::path::Path, out: &mut Vec<(String, u64, u64)>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, base, out);
+            } else if let Ok(bytes) = std::fs::read(&path) {
+                let rel = path
+                    .strip_prefix(base)
+                    .unwrap_or(&path)
+                    .display()
+                    .to_string();
+                let sum = bytes.iter().fold(1469598103934665603u64, |h, b| {
+                    (h ^ u64::from(*b)).wrapping_mul(1099511628211)
+                });
+                out.push((rel, bytes.len() as u64, sum));
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(root, root, &mut out);
+    out.sort();
+    out
+}

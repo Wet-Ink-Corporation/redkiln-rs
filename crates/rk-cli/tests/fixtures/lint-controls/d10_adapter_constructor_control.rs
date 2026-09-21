@@ -11,3 +11,28 @@
 fn a_doctor_that_constructs(cfg: &Value) -> ClaudeHarness {
     rk_adapter_claude::config::Config::new(cfg).expect("built")
 }
+
+// EXTENDED 2026-09-21 at Step 7d Slice 4 cycle 6. Until then this file carried ONE of the pattern's
+// alternatives, `rk_adapter_claude::config::Config::new(` -- which also covers the bare
+// `Config::new(` arm -- and the shell's `rk_control` was satisfied, because it needs the file to
+// match the alternation ONCE. The in-process twin `ac414_doctor_module_names_no_adapter_constructor`
+// asks the stronger question, one alternative at a time, and FIVE of the seven had never been seen
+// to be findable at all: a ban on a token no control carries is a ban nothing has tested.
+//
+// Every banned token now appears below on a code line, so each arm of the pattern is shown to bite.
+
+fn a_doctor_that_builds_a_harness() -> ClaudeHarness {
+    ClaudeHarness::new(config, token).expect("built")
+}
+
+fn a_doctor_that_builds_toolchains() -> (NodeToolchain, RustToolchain) {
+    (NodeToolchain::new(cfg), RustToolchain::new(cfg))
+}
+
+fn a_doctor_that_opens_the_store(exec: &GitExec, worktree: &WorktreePath) -> SqliteStore {
+    SqliteStore::open(exec, worktree).expect("opened")
+}
+
+fn a_doctor_that_acquires_a_port(ports: &Ports) -> Arc<dyn Harness> {
+    Arc::clone(&ports.harness)
+}

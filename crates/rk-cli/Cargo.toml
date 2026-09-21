@@ -13,6 +13,21 @@ path = "src/main.rs"
 # src/lib.rs is the library the tests link (an integration test cannot link a [[bin]] or name a pub(crate) item);
 # main.rs only installs the handler and the panic hook and exits through code_for (§7d.10).
 
+# The spawnable fixture child (s7c §7c.17), compiled FROM rk-containment's source file under a THIRD
+# target name -- ADDED 2026-09-21 at Step 7d Slice 4 cycle 7, on the precedent rk-adapter-claude's own
+# copy states: one bin name in two packages is one output path, cargo warns "output filename
+# collision", the two link jobs race and the MSVC linker exits 1104 for both [reproduced 2026-09-17].
+# `ac423_probe_is_one_version_spawn_not_a_dispatch` puts it in `harness_binary`'s place and counts the
+# marker files it writes, so "exactly one spawn" and the child's argv are FILE facts. Tests reach it
+# through env!("CARGO_BIN_EXE_rk-fixture-child-cli"), which cargo sets only for this package's own
+# tests -- never through std::env::var or a path under target/.
+[[bin]]
+name = "rk-fixture-child-cli"
+path = "../rk-containment/tests/fixtures/bin/rk-fixture-child.rs"
+test = false
+bench = false
+doc = false
+
 [features]
 # Corpus-bound tests, local-only (AC-464/PIA-002); run as `cargo test --workspace --features corpus`.
 corpus = []

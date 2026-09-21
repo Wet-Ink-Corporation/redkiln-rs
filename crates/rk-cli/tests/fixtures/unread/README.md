@@ -1,0 +1,28 @@
+# `unread/` — the two synthetic logs AC-426's window boundary is read off
+
+**SYNTHETIC. No corpus byte enters the tree** (AC-465; D18-10). Both files are hand-authored
+2026-09-21 for Step 7d Slice 4 cycle 8; nothing is copied from `D:/repos/redkiln` or from
+`redkiln-corpus`, and no `spikes/` path is referenced.
+
+## What they are
+
+`runs-49.jsonl` and `runs-51.jsonl` — 49 and 51 runs of one stage producing kind `k` with an
+`artifact.write` and **never** an `artifact.read` of it (D-08's kind-per-stage form), beside a
+second kind `read-me` that is written and read once per run, so a rule that flags everything is red
+on the second kind rather than green on the first.
+
+Each row's payload carries ADR-0116 decision 1's members — `kind`, `item`, `schema_version`,
+`digest` — **plus `stage` and `run`**. Those two are **RT-48**: routed here as the row's read set,
+with a dated design §5 note widening the two rows' payloads still **OWED** (`s7d` §7d.18). No
+kernel producer of either kind exists yet, and 7b's emitter, when it lands, writes these keys or
+re-points this rule.
+
+## 🛑 Why 49 and 51, and not 1 and 100
+
+The window is a **count of runs a kind has gone unread**, not a slice of recent history. At
+`unread_window_runs = 50`: 49 is **under** the threshold and is not flagged; 51 is over it and is.
+Under `unread_window_runs = 60` **neither** is flagged — which is what makes the key live rather
+than a constant, and is the half `ac426_ac472_…` would miss if it read only one N.
+
+The pair is one apart from the boundary on each side on purpose: a rule keyed on `>` instead of
+`>=`, or on `N - 1`, passes a 1-versus-100 pair and fails exactly here.

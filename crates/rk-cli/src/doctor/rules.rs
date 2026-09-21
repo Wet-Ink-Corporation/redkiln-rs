@@ -1810,47 +1810,51 @@ fn verification_policy(ctx: &Ctx) -> Vec<Finding> {
 /// AC-426), never a constant. The predicate is kind-per-STAGE (D-08): a kind read at one stage and
 /// not another is unread at the second.
 ///
+/// 🛑 **The window is a COUNT OF RUNS a kind has gone unread, not a slice of recent history**,
+/// and `ac426_ac472_…`'s own fixtures are what fix that reading: 49 runs are **not** flagged and
+/// 51 are, at `unread_window_runs = 50`, and **neither** is at 60. A rule that flagged anything
+/// unread within the last N runs would flag both logs at both settings, and the 49/51 pair would
+/// discriminate nothing. The comparison is `>=`: at N the kind has gone unread N times.
+///
 /// Its own tests are `ac426_ac472_unread_window_49_not_flagged_51_flagged` and
 /// `ac426_rule_fire_leaves_write_set_unchanged`, at cycle 8. The predicate lands here because
 /// `ac415_` needs every one of the thirty-eight rows to reject its fixture.
 fn unread(ctx: &Ctx) -> Vec<Finding> {
     let window = i64::from(ctx.config.doctor.unread_window_runs);
     let run_of = |r: &super::Row| r.payload.get("run").and_then(serde_json::Value::as_i64);
-    let Some(latest) = ctx.journal.iter().filter_map(run_of).max() else {
-        return Vec::new();
-    };
-    let floor = latest - window + 1;
-    let in_window = |r: &super::Row| run_of(r).is_some_and(|n| n >= floor);
-
     let key = |r: &super::Row| {
         Some((
             r.str_field("stage")?.to_owned(),
             r.str_field("kind")?.to_owned(),
         ))
     };
+
+    // Which (stage, kind) pairs were READ at all, and in how many distinct runs each was WRITTEN.
     let read: std::collections::BTreeSet<(String, String)> = of_kind(ctx, "artifact.read")
         .into_iter()
-        .filter(|r| in_window(r))
         .filter_map(key)
         .collect();
-    let mut written: Vec<(String, String)> = of_kind(ctx, "artifact.write")
-        .into_iter()
-        .filter(|r| in_window(r))
-        .filter_map(key)
-        .collect();
-    written.sort();
-    written.dedup();
+    let mut written: std::collections::BTreeMap<(String, String), std::collections::BTreeSet<i64>> =
+        std::collections::BTreeMap::new();
+    for row in of_kind(ctx, "artifact.write") {
+        let (Some(k), Some(run)) = (key(row), run_of(row)) else {
+            continue;
+        };
+        written.entry(k).or_default().insert(run);
+    }
 
     written
         .into_iter()
-        .filter(|k| !read.contains(k))
-        .map(|(stage, kind)| {
+        .filter(|(k, _)| !read.contains(k))
+        .filter(|(_, runs)| i64::try_from(runs.len()).unwrap_or(i64::MAX) >= window)
+        .map(|((stage, kind), runs)| {
             finding(
                 "RK-D-UNREAD",
                 Severity::Warning,
                 format!(
-                    "artifact kind `{kind}` was written at stage `{stage}` in the last {window} \
-                     runs and never read — nothing consumes it"
+                    "artifact kind `{kind}` has been written at stage `{stage}` in {} runs and \
+                     read in none; the window is {window}",
+                    runs.len()
                 ),
             )
         })
