@@ -51,6 +51,10 @@
 
 use std::path::{Path, PathBuf};
 
+use rk_git::git_exec::{GitExec, GitOp};
+use rk_git::path::WorktreePath;
+use rk_git::tree::TreeBasis;
+
 /// The branch prefix every migration commit lands under. Never the target's own branch (AC-476's
 /// AND clause, which AC-522 instruments).
 pub const MIGRATION_BRANCH_PREFIX: &str = "rk-migrate/";
@@ -113,6 +117,244 @@ pub struct Hooks {
 /// [`MigrateError::Refused`] for every refusal that happens before a write (exit `3`);
 /// [`MigrateError::Other`] for anything else (exit `1`).
 pub fn run(target: &Path, dry_run: bool, hooks: Hooks) -> Result<Completed, MigrateError> {
-    let _ = (target, dry_run, hooks);
-    todo!("cycles 3-5: the bootstrap, the porcelain refusal, the worktree, the write, the commit")
+    // (1) The git floor, before anything else reads a repository.
+    let toolchain = rk_git::version::assert_at_startup(target).map_err(other)?;
+
+    // (2) H-3's bootstrap. The hooks directory must exist before the common dir is known, so it is
+    // a `tempfile::TempDir` held for exactly as long as the two reads below need it.
+    let boot_hooks = tempfile::tempdir()
+        .map_err(|e| other_msg(format!("the bootstrap hooks directory: {e}")))?;
+    let boot = GitExec::new(boot_hooks.path().to_path_buf(), toolchain).map_err(other)?;
+    let target_wt = WorktreePath::new(target).map_err(other)?;
+
+    // `rev-parse --git-common-dir` and not `rk-adapter-sqlite`'s resolver: AC-466 forbids that
+    // edge, which is the ADR-0091 divergence §7d.18 records as RAISED.
+    let common_dir = PathBuf::from(
+        boot.run(
+            GitOp::RevParse,
+            &target_wt,
+            ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        )
+        .map_err(other)?
+        .stdout_trimmed(),
+    );
+
+    let exec =
+        GitExec::new(common_dir.join("redkiln").join("hooks-empty"), toolchain).map_err(other)?;
+    drop(boot_hooks);
+
+    // (3) The porcelain read — THE refusal, before any write. There is no porcelain helper in
+    // `rk-git` [measured 2026-09-21: `GitOp::Status` has no other call site in the workspace];
+    // this is the one call site, and it is a call site rather than a new helper because §7d.15's
+    // floor forbids editing `rk-git`.
+    let porcelain = exec
+        .run(GitOp::Status, &target_wt, ["status", "--porcelain"])
+        .map_err(other)?
+        .stdout_trimmed();
+    if !porcelain.is_empty() {
+        return Err(MigrateError::Refused(Refusal::DirtyTarget {
+            paths: porcelain.lines().map(|l| l.trim().to_owned()).collect(),
+        }));
+    }
+
+    let head_short = exec
+        .run(
+            GitOp::RevParse,
+            &target_wt,
+            ["rev-parse", "--short", "HEAD"],
+        )
+        .map_err(other)?
+        .stdout_trimmed();
+    let branch = format!("{MIGRATION_BRANCH_PREFIX}{head_short}");
+    let wt_path = common_dir.join("redkiln").join("migrate-wt");
+
+    // The prior migration commit, read BEFORE the worktree moves anything (AC-450 step (8)).
+    let prior = exec
+        .run(
+            GitOp::RevParse,
+            &target_wt,
+            ["rev-parse", "--verify", "--quiet", &branch],
+        )
+        .ok()
+        .map(|o| o.stdout_trimmed())
+        .filter(|s| !s.is_empty());
+
+    // (4) The worktree — NOT on a dry run: §7d.11 is explicit that "the dry run runs steps 1, 2
+    // and 4 only", so no worktree and no branch may exist after one.
+    let worktree = if dry_run {
+        None
+    } else {
+        Some(open_worktree(
+            &exec,
+            &target_wt,
+            &wt_path,
+            &branch,
+            prior.is_some(),
+        )?)
+    };
+
+    // (5) The read.
+    let lifted = crate::lift::run(target, &mut crate::lift::Natural)
+        .map_err(|e| other_msg(format!("the lift failed: {e:?}")))?;
+    let report_bytes = rk_store::canon::canonical(
+        &serde_json::to_value(&lifted.report)
+            .map_err(|e| other_msg(format!("the report will not serialise: {e}")))?,
+    )
+    .map_err(|e| other_msg(format!("the report will not canonicalise: {e}")))?;
+
+    // (6) `--dry-run` stops here: the JSON document on stdout and nothing else.
+    if dry_run {
+        print_report(&report_bytes);
+        return Ok(Completed::DryRun);
+    }
+    let worktree = worktree.expect("a non-dry run opened its worktree");
+
+    // (7) The write phase. AC-447's AND aborts BEFORE writing, not after.
+    if hooks.request_second_write_phase {
+        return Err(MigrateError::Refused(Refusal::SecondWritePhase));
+    }
+    write_phase(&wt_path, &lifted, &report_bytes, hooks.disable_report_step)?;
+
+    // (8) D18-12's kill seam: a print, never a flag or an environment toggle.
+    println!("{PHASE_WRITTEN_MARKER}");
+
+    exec.run(GitOp::Add, &worktree, ["add", "-A"])
+        .map_err(other)?;
+
+    // (9) AC-450's no-op, defined as tree-digest equality with the prior migration commit's tree.
+    if let Some(prior) = prior {
+        let now = rk_git::tree::tree_hash(&exec, &worktree, &common_dir, &TreeBasis::WorkingState)
+            .map_err(other)?;
+        let then = rk_git::tree::tree_hash(
+            &exec,
+            &worktree,
+            &common_dir,
+            &TreeBasis::CheckpointCommit(prior),
+        )
+        .map_err(other)?;
+        if now == then {
+            print_report(&report_bytes);
+            return Ok(Completed::NoOp);
+        }
+    }
+
+    // AC-448's AND: the layout without a report is refused, and the refusal precedes the commit.
+    if hooks.disable_report_step {
+        return Err(MigrateError::Refused(Refusal::NoReport));
+    }
+
+    // (10) ONE commit, on the migration branch only.
+    let message = format!(
+        "redkiln-migrate: {} {}",
+        lifted.report.corpus_sha, lifted.report.tool_version
+    );
+    let commit =
+        rk_git::trailer::write::commit_with_trailers(&exec, &worktree, &message, &[], false)
+            .map_err(other)?;
+
+    Ok(Completed::Committed { commit, branch })
+}
+
+/// Open the migration worktree, **re-creating it and never reusing it** (ADR-0105 clause 6).
+fn open_worktree(
+    exec: &GitExec,
+    target: &WorktreePath,
+    wt_path: &Path,
+    branch: &str,
+    branch_exists: bool,
+) -> Result<WorktreePath, MigrateError> {
+    // A previous run's worktree is torn down first. `rk_git::worktree::remove` passes no `--force`
+    // and a killed run leaves written, uncommitted files git refuses to remove without it
+    // ("contains modified or untracked files"), so the teardown takes the same raw-`run` form this
+    // step already uses for `worktree add -b`. NO `rk-git` EDIT — §7d.15's floor holds — and the
+    // `--force` is licensed only because this tree is a run-owned worktree, never the user's.
+    if wt_path.exists() {
+        exec.run(
+            GitOp::WorktreeRemove,
+            target,
+            [
+                "worktree",
+                "remove",
+                "--force",
+                &wt_path.to_string_lossy().replace('\\', "/"),
+            ],
+        )
+        .map_err(other)?;
+        if wt_path.exists() {
+            return Err(MigrateError::Refused(Refusal::WorktreePathExists {
+                path: wt_path.to_path_buf(),
+            }));
+        }
+    }
+
+    if branch_exists {
+        // The helper checks out the EXISTING branch — whose HEAD already carries the migrated
+        // layout, which is what makes step (9)'s `add -u` digest meaningful.
+        rk_git::worktree::add(exec, target, wt_path, branch).map_err(other)
+    } else {
+        // A first run: the branch does not exist yet, and `worktree::add` shells
+        // `git worktree add <path> <branch>`, which needs an existing commit-ish. `GitOp` has no
+        // branch or update-ref op, so the raw form carries the `-b`.
+        exec.run(
+            GitOp::WorktreeAdd,
+            target,
+            [
+                "worktree",
+                "add",
+                "-b",
+                branch,
+                &wt_path.to_string_lossy().replace('\\', "/"),
+                "HEAD",
+            ],
+        )
+        .map_err(other)?;
+        WorktreePath::new(wt_path).map_err(other)
+    }
+}
+
+/// Write the new layout into the worktree, and `report.json` beside it.
+///
+/// Each legacy file is REPLACED by its canonical `.json` artifact: the migration is a clean break
+/// (AC-474), so leaving the old bytes beside the new ones would leave `template_sig` in the
+/// migration commit's tree and make `migrated_artifacts_carry_schema_version_and_no_sig` a claim
+/// about a subset rather than about the tree.
+fn write_phase(
+    wt_path: &Path,
+    lifted: &crate::lift::Lifted,
+    report_bytes: &[u8],
+    disable_report_step: bool,
+) -> Result<(), MigrateError> {
+    for (dest, bytes) in &lifted.artifacts {
+        let path = wt_path.join(dest);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| other_msg(format!("{}: {e}", parent.display())))?;
+        }
+        std::fs::write(&path, bytes).map_err(|e| other_msg(format!("{}: {e}", path.display())))?;
+    }
+    for file in &lifted.files {
+        let legacy = wt_path.join(&file.source);
+        if legacy.exists() {
+            std::fs::remove_file(&legacy)
+                .map_err(|e| other_msg(format!("{}: {e}", legacy.display())))?;
+        }
+    }
+    if !disable_report_step {
+        std::fs::write(wt_path.join("report.json"), report_bytes)
+            .map_err(|e| other_msg(format!("report.json: {e}")))?;
+    }
+    Ok(())
+}
+
+/// The report, on stdout, as one JSON document and nothing else.
+fn print_report(report_bytes: &[u8]) {
+    println!("{}", String::from_utf8_lossy(report_bytes));
+}
+
+fn other(e: rk_git::error::GitError) -> MigrateError {
+    MigrateError::Other(anyhow::anyhow!("{e:?}"))
+}
+
+fn other_msg(detail: String) -> MigrateError {
+    MigrateError::Other(anyhow::anyhow!(detail))
 }
