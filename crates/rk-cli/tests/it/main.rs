@@ -20,6 +20,11 @@
 //! [`answer`] at cycle 7 and [`explain`] at cycle 9. What survives is the rule and the two that
 //! still have no module: there is no `doctor` module (Slice 4 builds what it would assert) and no
 //! `migrate` module (Slice 5's).
+//! **Corrected a fourth time 2026-09-21, Step 7d Slice 4 cycle 3: [`doctor`] exists**, and one of
+//! the two the sentence above still excepted is now built. It holds
+//! `doctor_rule_table_covers_every_register_named_row` — RA-M-01's anti-vacuity floor — and that
+//! one test is the whole module, which is what the rule the sentence carries requires: a module
+//! that asserts something is not an empty one. `migrate` remains Slice 5's.)*
 //! [`support`] remains the one module in this binary the rule does not reach — it **holds no test
 //! of the product at all**, by design, carrying only the two self-controls of its own spawn bound,
 //! so it cannot read as coverage of anything else.)* A `mod` that exists and asserts nothing reads
@@ -51,6 +56,7 @@
 mod answer;
 mod catalog;
 mod config;
+mod doctor;
 mod exit;
 mod explain;
 mod init;
