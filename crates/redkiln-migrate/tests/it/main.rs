@@ -21,6 +21,7 @@
 mod contract;
 mod graph;
 mod lift;
+mod output;
 mod provenance;
 mod report;
 
