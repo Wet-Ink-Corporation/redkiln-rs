@@ -9,9 +9,21 @@
 //! and its resume-shaped denylist; [`exit`], the closed exit table and the one halt; [`verbs`], the
 //! router's arms. Slice 2: [`env`] the one environment read, [`clock`] the one wall-clock read,
 //! [`config`] the closed `ConfigFile`, [`adapters`] the resolver, [`repo`] H-3's discovery,
-//! [`store`] the one acquisition, [`signal`] the handler, and `verbs::init`. There is **no `doctor`
-//! module** — that is Slice 4's, and a module declared here before its file exists is what an early
-//! draft of Slice 1 did and could not have compiled.
+//! [`store`] the one acquisition, [`signal`] the handler, and `verbs::init`.
+//!
+//! **Amended 2026-09-20, Step 7d Slice 4 cycle 2.** The sentence that stood here said *"There is
+//! **no `doctor` module** — that is Slice 4's, and a module declared here before its file exists is
+//! what an early draft of Slice 1 did and could not have compiled."* Slice 4 is that slice, and the
+//! two modules it adds are declared below: [`doctor`] — the `Ctx`, the rule table, and the
+//! rebuild / probe / roles signatures — and [`no_dispatch`], the `Harness` the `doctor` path is
+//! handed, which panics on dispatch and names the rule that reached it. The rule the old sentence
+//! carried outlives the list it was written about and is restated: **a module is declared when its
+//! file exists**, and `doctor`'s exists now.
+//!
+//! 🚧 **`doctor` is a SKELETON at this cycle and claims no test.** `doctor::rules::RULES` is empty,
+//! and §7d.14 records that over an empty rule table AC-414's per-fixture join, AC-415's per-id join
+//! and SM-121's dispatch count are all **vacuous** — so none of the three is claimed here. Its
+//! module header carries the cycle-by-cycle table of what fills each unfilled body.
 //!
 //! **The two `std::process::exit` sites are both in `main.rs`, and as of Slice 2 there are two** —
 //! the table exit and the panic hook's `70`. Checkpoint 7d counts exactly two and requires both to
@@ -21,8 +33,10 @@ pub mod adapters;
 pub mod cli;
 pub mod clock;
 pub mod config;
+pub mod doctor;
 pub mod env;
 pub mod exit;
+pub mod no_dispatch;
 pub mod repo;
 pub mod signal;
 pub mod store;

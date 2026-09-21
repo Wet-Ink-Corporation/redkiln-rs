@@ -180,3 +180,40 @@ impl AdapterSet {
         })
     }
 }
+
+// ------------------------------------------------------------------ the root's store open path
+//
+// **Why this lives here and not in `doctor`** (`s7d` §7d.8, Step 7d Slice 4 cycle 2). Checkpoint
+// 7d's D-10 / D18-7 ban forbids `SqliteStore::open` on any non-comment line under a module path
+// matching `doctor` — which admits both `src/doctor/*.rs` and `src/verbs/doctor.rs` — while §7d.8
+// requires `Ctx.store` to carry *"the store handle **the root opened**"* and, on the `--rebuild`
+// path, names *"`adapters.rs`'s open path, the module the block's `doctor` filter does not admit"*
+// as where the rebuilt store is re-opened for its identity check.
+//
+// So the two sentences together put the open HERE. Measured 2026-09-20 before this was added: the
+// six `SqliteStore::open` call sites in this crate were all under `src/verbs/`, and none was in a
+// module the doctor filter excludes — so `doctor` had no open path it was allowed to use.
+//
+// **It is not `AdapterSet::resolve`, and `doctor` calls neither as a startup refusal.** §7d.8:
+// *"`doctor` does NOT call `AdapterSet::resolve` as a startup refusal (that is `run`'s step (4)):
+// it builds its `Ctx` from the `ConfigFile` and reports adapter defects only through
+// `RK-D-ADAPTER`"*. This function is the same shape — it RETURNS what happened and refuses
+// nothing, so a foreign store reaches the table as `RK-D-STORE-ID`'s row rather than as an exit.
+
+/// Open the event store for a repository, **returning the outcome rather than refusing on it**.
+///
+/// The `Result` is the value `doctor` puts in `Ctx.store`, not an error its caller acts on:
+/// AC-413's identity check lives inside `open`, and a `doctor` that exited on a foreign store would
+/// leave `RK-D-STORE-ID`'s id unobservable on the real binary. Every other verb wants the opposite
+/// and calls `SqliteStore::open` directly, because for them a foreign store IS the refusal.
+///
+/// # Errors
+/// [`rk_adapter_sqlite::StoreOpenError`] — **as the value `Ctx.store` carries**, not as something
+/// the caller acts on. No `#[must_use]`: `Result` already carries it, and a second is a lint error
+/// under this workspace's levels.
+pub fn open_store(
+    exec: &rk_git::git_exec::GitExec,
+    worktree: &rk_git::path::WorktreePath,
+) -> Result<rk_adapter_sqlite::SqliteStore, rk_adapter_sqlite::StoreOpenError> {
+    rk_adapter_sqlite::SqliteStore::open(exec, worktree)
+}

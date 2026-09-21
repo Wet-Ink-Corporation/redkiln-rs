@@ -1,9 +1,24 @@
-//! **The eight verbs** — one per subcommand §7d.3 declares. `doctor` is the last stub: Slice 2
-//! built `init`, and Slice 3 has built `run`, `answer`, `status`, `catalog`, `lint` and `explain`.
+//! **The eight verbs** — one per subcommand §7d.3 declares, and as of Step 7d Slice 4 cycle 2
+//! (2026-09-20) **none of them is a stub**: Slice 2 built `init`, Slice 3 built `run`, `answer`,
+//! `status`, `catalog`, `lint` and `explain`, and [`doctor`] is this slice's.
 //!
-//! **Why a stub rather than an unimplemented subcommand.** The surface is what Slice 1 delivers: a
-//! committed `--help` snapshot and a denylist lint that bites from the first commit. Both need the
-//! whole tree to exist. What they do not need is behaviour, and behaviour arrives one lane at a
+//! **Corrected 2026-09-20.** The two sentences that stood here said *"`doctor` is the last stub"*
+//! and, at the foot, *"`doctor` still exits `3` and says so; it is Slice 4's"*. Slice 4 is this
+//! slice. The stub they described was an **inline `fn doctor()` in this file** calling a shared
+//! `not_built(verb)` helper — not a `verbs/doctor.rs`, which did not exist until this cycle created
+//! it [measured 2026-09-20]. Both it and `not_built` are gone: `not_built` had exactly one caller
+//! left, so a helper for *"the one refusal every stub prints"* outlived the stubs it was written
+//! for.
+//!
+//! **The paragraph below is kept, and it is no longer about a stub.** Its rule — a refusal is a
+//! value through the exit table and never an `unimplemented!()` — is what `verbs/doctor.rs`'s
+//! `--rebuild` arm obeys today: that path renames a new store over the old, and until cycle 9 fills
+//! `doctor::rebuild` it would rename an EMPTY one, so it refuses with a reason and a code rather
+//! than running or panicking.
+//!
+//! **Why a refusal rather than an unimplemented subcommand.** The surface is what Slice 1 delivers:
+//! a committed `--help` snapshot and a denylist lint that bites from the first commit. Both need
+//! the whole tree to exist. What they do not need is behaviour, and behaviour arrives one lane at a
 //! time — the loop at Slice 3, `doctor` at Slice 4.
 //!
 //! **Why each refusal is a configuration error and not a panic.** ADR-0118 clause 6 makes every verb
@@ -12,11 +27,12 @@
 //! reached for `unimplemented!()` would exit `101` through a path the exit table does not describe.
 //!
 //! **This file is where golden constraint 4 bites**: *a stub never replaced is caught only here* —
-//! by the block's verb-level lines at the stage close, which drive the real binary and expect a real
-//! answer. `doctor` still exits `3` and says so; it is Slice 4's.
+//! by the block's verb-level lines at the stage close, which drive the real binary and expect a
+//! real answer. Every arm below now reaches one.
 
 pub mod answer;
 pub mod catalog;
+pub mod doctor;
 pub mod explain;
 pub mod init;
 pub mod lint;
@@ -174,19 +190,9 @@ pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
         Command::Answer(args) => answer::run(cli, args, env, Startup::real()),
         Command::Status => status::run(cli, Startup::real()),
         Command::Explain(args) => explain::run(cli, args, Startup::real()),
-        Command::Doctor(_) => doctor(),
+        Command::Doctor(args) => doctor::run(cli, args, env, Startup::real()),
         Command::Init => init::run(cli.cwd.as_deref()),
         Command::Catalog(args) => catalog::run(cli, &args.command),
         Command::Lint(args) => lint::run(cli, args),
     }
-}
-
-/// The one refusal every stub prints, so the eight are one sentence with one subject.
-fn not_built(verb: &str) -> Result<Exit, Halt> {
-    eprintln!("redkiln: `{verb}` is not built at slice 1");
-    Ok(Exit::ConfigError)
-}
-
-fn doctor() -> Result<Exit, Halt> {
-    not_built("doctor")
 }
