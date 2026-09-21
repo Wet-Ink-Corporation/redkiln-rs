@@ -155,7 +155,13 @@ carries one without the other.
   config-carrying `run_id` — which is the ordinary consequence of changing a recorded input, and is that record's
   to state.
 - **`producer` on a resumed run.** `write_run` hard-codes `"rk-kernel::replay::record"` even for a
-  `resume`-produced run; that is **R-38**, still open, and untouched here.
+  `resume`-produced run; that is **R-38**, and it is untouched here. *(As first recorded 2026-09-20 this read
+  *"that is **R-38**, still open, and untouched here"*. **R-38 was settled the same day, at `4b5119b`** —
+  record-only: `producer` names the recording MECHANISM and not the function that wrote the file, so the literal
+  **stands unchanged** for a `resume`-produced run, and the member is documented as informational with no
+  instrument, beside `event_count`. No ADR was owed and none was written. The clause is corrected in place, before
+  acceptance, because ADR-0092's `**What this forbids**` forbids an erratum that touches a `## Decision` sentence;
+  it was open when this record was written and the correction moves nothing this record decides.)*
 - **Whether any other member of `to_json` is similarly unpersisted.** Audited once for this record and the answer
   is no — `stage`, `pack`, `catalog`, `artifacts`, `facets`, `context`, `artifact_state`, `deviation`, `runtime`
   and `specs` each have a file — but the audit is a measurement at `919d073`, not a standing guarantee. The guard
