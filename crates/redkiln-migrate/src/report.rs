@@ -92,8 +92,24 @@ pub enum ReportError {
 /// forty lowercase hex characters — a report naming an unreadable pin compares every future record
 /// against nothing.
 pub fn corpus_sha() -> Result<&'static str, ReportError> {
-    let _ = CORPUS_PIN;
-    todo!("cycle 2: parse CORPUS_SHA= out of CORPUS_PIN and assert 40 lowercase hex")
+    let found = CORPUS_PIN
+        .lines()
+        .filter_map(|l| l.strip_prefix("CORPUS_SHA="))
+        .map(str::trim)
+        .find(|v| !v.is_empty())
+        .ok_or_else(|| ReportError::CorpusPinUnreadable {
+            detail: "CORPUS_PIN carries no non-empty CORPUS_SHA= line".to_owned(),
+        })?;
+    if found.len() != 40
+        || !found
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    {
+        return Err(ReportError::CorpusPinUnreadable {
+            detail: format!("CORPUS_SHA={found} is not forty lowercase hex characters"),
+        });
+    }
+    Ok(found)
 }
 
 /// This tool's version, for AC-467's *"the lifter/tool version"*.
@@ -110,8 +126,34 @@ pub const fn tool_version() -> &'static str {
 /// # Errors
 /// [`ReportError::CorpusPinUnreadable`] by way of [`corpus_sha`].
 pub fn build(outcomes: &BTreeMap<String, Vec<Outcome>>) -> Result<Report, ReportError> {
-    let _ = outcomes;
-    todo!("cycle 2: fold the outcomes into one row per kind")
+    // A BTreeMap, so the row order is the kinds' own order and two runs produce byte-identical
+    // documents whatever order the filesystem listed them in (AC-449's report-digest half).
+    let per_kind_slot = outcomes
+        .iter()
+        .map(|(kind, outcomes)| {
+            let mut row = Row {
+                kind: kind.clone(),
+                slot: SLOT_BODY.to_owned(),
+                lifted: 0,
+                lifted_with_loss: 0,
+                failed: 0,
+            };
+            for outcome in outcomes {
+                match outcome {
+                    Outcome::Lifted => row.lifted += 1,
+                    Outcome::LiftedWithLoss => row.lifted_with_loss += 1,
+                    Outcome::Failed => row.failed += 1,
+                }
+            }
+            row
+        })
+        .collect();
+
+    Ok(Report {
+        corpus_sha: corpus_sha()?.to_owned(),
+        tool_version: tool_version().to_owned(),
+        per_kind_slot,
+    })
 }
 
 /// Validate a report against the committed schema, in process, through `jsonschema` (AC-448).
@@ -120,6 +162,24 @@ pub fn build(outcomes: &BTreeMap<String, Vec<Outcome>>) -> Result<Report, Report
 /// [`ReportError::SchemaUnusable`] if the committed schema will not compile;
 /// [`ReportError::DoesNotValidate`] with every error the validator reported.
 pub fn validate(report: &Report) -> Result<(), ReportError> {
-    let _ = report;
-    todo!("cycle 2: compile REPORT_SCHEMA and validate the serialised report against it")
+    let schema: serde_json::Value =
+        serde_json::from_str(REPORT_SCHEMA).map_err(|e| ReportError::SchemaUnusable {
+            detail: format!("schema/report.schema.json is not JSON: {e}"),
+        })?;
+    let validator =
+        jsonschema::validator_for(&schema).map_err(|e| ReportError::SchemaUnusable {
+            detail: format!("schema/report.schema.json will not compile: {e}"),
+        })?;
+    let instance = serde_json::to_value(report).map_err(|e| ReportError::NotSerialisable {
+        detail: e.to_string(),
+    })?;
+    let errors: Vec<String> = validator
+        .iter_errors(&instance)
+        .map(|e| e.to_string())
+        .collect();
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ReportError::DoesNotValidate { errors })
+    }
 }

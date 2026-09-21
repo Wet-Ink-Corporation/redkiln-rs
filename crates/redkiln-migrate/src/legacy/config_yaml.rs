@@ -33,8 +33,12 @@ pub struct LegacyProcess {
 /// # Errors
 /// [`LegacyError::Malformed`] if the document is not valid YAML.
 pub fn parse_config(path: &Path, src: &str) -> Result<LegacyConfig, LegacyError> {
-    let _ = (path, src);
-    todo!("cycle 2: read config.yaml through yaml_serde")
+    let keys: serde_json::Value =
+        yaml_serde::from_str(src).map_err(|e| LegacyError::Malformed {
+            path: path.to_path_buf(),
+            detail: format!("config.yaml is not valid YAML: {e}"),
+        })?;
+    Ok(LegacyConfig { keys })
 }
 
 /// Read one `.redkiln/processes/<name>.yaml`.
@@ -42,6 +46,17 @@ pub fn parse_config(path: &Path, src: &str) -> Result<LegacyConfig, LegacyError>
 /// # Errors
 /// [`LegacyError::Malformed`] if the document is not valid YAML.
 pub fn parse_process(path: &Path, src: &str) -> Result<LegacyProcess, LegacyError> {
-    let _ = (path, src);
-    todo!("cycle 2: read the process definition through yaml_serde")
+    let definition: serde_json::Value =
+        yaml_serde::from_str(src).map_err(|e| LegacyError::Malformed {
+            path: path.to_path_buf(),
+            detail: format!("the process definition is not valid YAML: {e}"),
+        })?;
+    let name = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .ok_or_else(|| LegacyError::Malformed {
+            path: path.to_path_buf(),
+            detail: "the process file has no stem to take its name from".to_owned(),
+        })?;
+    Ok(LegacyProcess { name, definition })
 }

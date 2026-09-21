@@ -12,6 +12,7 @@
 //! over all of `crates/` is red on a correct tree.
 
 pub mod config_yaml;
+pub mod fence;
 pub mod frontmatter;
 pub mod ledger;
 pub mod review;
@@ -38,7 +39,8 @@ pub enum LegacyError {
 ///
 /// **The two signature literals never appear here.** Dropping `template_sig` and `rendered_sig` is
 /// the clean break AC-471 and AC-474 describe, not a migration loss — see [`crate::lift`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LossMarker {
     /// The legacy key or section that had no home.
     pub what: String,

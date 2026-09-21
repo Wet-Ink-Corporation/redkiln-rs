@@ -46,7 +46,7 @@ exclusion**, and necessarily so: a note cannot carry its own sha256.
 | `.bklg/init-1/proj-1/story-1/_decomposition.md` | 80 | `710ae9bab08e070fb7fb281f2a25197577921cd05f9bf208e52cb28148aa32c6` |
 | `.bklg/init-1/proj-1/story-1/_grounding.md` | 102 | `1a3563e49e7234666960ce8de49fc28289641f281c8de406685d8f5107b8ee17` |
 | `.bklg/init-1/proj-1/story-1/_integration.md` | 96 | `a804b77697e60a4b3daa05b96e2bbe4325eb8c8daca190ed542924761c2dcc72` |
-| `.bklg/init-1/proj-1/story-1/_ledger.md` | 112 | `68a9e5fc820a4e32468b6c6680b9545d151d78fbb43bd430e96880ae91c39ce1` |
+| `.bklg/init-1/proj-1/story-1/_ledger.md` | 118 | `7fa850b216c6de3fec132009bf075186c25f6fe0a51c31bf79b478de51c809de` |
 | `.bklg/init-1/proj-1/story-1/_review.md` | 121 | `05a9fbb46dbcc0271c0a8ad9677694afaec68d672d5ca453c3cc90d08c333d2c` |
 | `.bklg/init-1/proj-1/story-1/ledger.md` | 243 | `6cd6363ebd11ea9497ec236caff1a122c36d3b7c22155f499f6aefd6711e4d89` |
 | `.bklg/init-1/proj-1/story-1/spec.md` | 320 | `1094339b77bdf7eb50a9c10bbe211e5df5b7b4ac8a8572358e01322adf81e4f8` |

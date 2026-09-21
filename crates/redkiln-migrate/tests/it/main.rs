@@ -18,6 +18,11 @@
 //! the alternative to duplication is a shared dev-dependency crate that no record names. The copies
 //! are kept faithful to `rk-cli`'s, which is the version the block's own shell helpers mirror.
 
+mod graph;
+mod lift;
+mod provenance;
+mod report;
+
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
