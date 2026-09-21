@@ -534,17 +534,27 @@ fn collect_sig_keys(value: &serde_json::Value, out: &mut Vec<String>) {
 /// declared mutant, and the source-scan half is **self-controlled** first.
 #[test]
 fn ac475_zero_change_summary_values_in_output() {
+    // ONE spelling of the token, and a plain single-line string literal on purpose.
+    //
+    // Checkpoint 5 bans the ChangeSummary TYPE in a code position under `crates/` outside
+    // `rk-ports` and strips string literals before matching -- but its stripper cannot cross a
+    // backslash, so the token spelled inside a WRAPPED message, or one carrying an escape,
+    // survives the strip and fires a ban that does not mean to catch it. Naming it once here
+    // keeps every message below interpolated and the single literal strippable.
+    // [Found 2026-09-21 by Checkpoint 5's re-run at Step 7d's close.]
+    const TOKEN: &str = "ChangeSummary";
+
     // (a) THE CONTROL, FIRST: the scanner must be seen to find the token before it reports zero.
     let control = lint_controls_dir().join("ac475_change_summary_control.rs");
     let control_text = std::fs::read_to_string(&control)
         .unwrap_or_else(|e| panic!("the control {} must exist: {e}", control.display()));
     let control_hits = code_lines(&control_text)
         .into_iter()
-        .filter(|(_, l)| l.contains("ChangeSummary"))
+        .filter(|(_, l)| l.contains(TOKEN))
         .count();
     assert!(
         control_hits >= 1,
-        "the control {} carries no NON-COMMENT line naming ChangeSummary — the ban below is \
+        "the control {} carries no NON-COMMENT line naming {TOKEN} — the ban below is \
          vacuous",
         control.display()
     );
@@ -554,14 +564,14 @@ fn ac475_zero_change_summary_values_in_output() {
     for file in rs_files(&src_dir()) {
         let text = std::fs::read_to_string(&file).expect("a source file");
         for (n, line) in code_lines(&text) {
-            if line.contains("ChangeSummary") {
+            if line.contains(TOKEN) {
                 hits.push(format!("{}:{n}: {}", file.display(), line.trim()));
             }
         }
     }
     assert!(
         hits.is_empty(),
-        "redkiln-migrate names ChangeSummary (AC-475's tripwire):\n{}",
+        "redkiln-migrate names {TOKEN} (AC-475's tripwire):\n{}",
         hits.join("\n")
     );
 
@@ -570,8 +580,8 @@ fn ac475_zero_change_summary_values_in_output() {
     for p in tree_paths(repo.path(), &branch) {
         let body = blob(repo.path(), &branch, &p);
         assert!(
-            !body.contains("ChangeSummary"),
-            "{p} in the migration commit's tree carries a ChangeSummary value"
+            !body.contains(TOKEN),
+            "{p} in the migration commit's tree carries a {TOKEN} value"
         );
     }
 }

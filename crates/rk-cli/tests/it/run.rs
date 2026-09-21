@@ -1092,8 +1092,9 @@ fn ac264_run_after_applied_answer_resumes_past_gate() {
 #[test]
 #[expect(
     clippy::disallowed_methods,
-    reason = "a test-side wait past a 1 s gate deadline, and the clock read that proves the wait \
-              cleared it — not a decision (AC-003); s7d §7d.15's form for §7d.14's bounds"
+    reason = "a test-side wait past a 1 s gate deadline, the clock reads that prove it cleared it, \
+              and the Instant bound that stops the poll — not a decision (AC-003); s7d §7d.15's \
+              form for §7d.14's bounds"
 )]
 fn ac257_expired_gate_resolved_by_fresh_process() {
     let repo = pack_min_repo(PackVariant::GateOneSecond);
@@ -1142,20 +1143,43 @@ fn ac257_expired_gate_resolved_by_fresh_process() {
     );
 
     // ---- THE WAIT, past the deadline process 1 itself recorded. --------------------------------
-    std::thread::sleep(std::time::Duration::from_millis(1_500));
-    let now = i64::try_from(
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("the clock is after the unix epoch")
-            .as_secs(),
-    )
-    .expect("a unix second fits an i64");
-    assert!(
-        now > deadline,
-        "the wait did not carry the clock past the deadline process 1 recorded ({deadline}); now \
-         is {now}. Every assertion below would then be red for the wait rather than for the absent \
-         expiry pass — check that `PackVariant::GateOneSecond` installed `pack.gate-1s.toml`"
-    );
+    //
+    // 🛑 POLLED, NOT A FIXED SLEEP — a repair, not a preference. This read
+    // `sleep(1_500)` followed by a single `now > deadline` assertion, which is a COIN FLIP: the
+    // deadline is recorded in WHOLE unix seconds as `floor(t0) + 1`, so clearing it after a 1.5 s
+    // sleep requires `frac(t0) + d + 1.5 >= 2` — i.e. `frac(t0) >= 0.5 - d`, where `d` is the
+    // elapsed spawn and journal read. MEASURED 2026-09-21 at Step 7d's close: **2 of 10 filtered
+    // runs failed** on the premise guard, while `--test it` whole stayed green because it burns
+    // more wall clock between the two points. That is why eleven Slice-3 cycles never saw it, and
+    // why Checkpoint 7d failed on this line at its first whole run. A checkpoint line that fails
+    // one run in five is not a gate.
+    //
+    // The premise is now the loop's own EXIT CONDITION, so it cannot be observed unsatisfied.
+    // Bounded at 30 s (Halt 5), and the bound's failure text names the VARIANT rather than the box:
+    // a deadline that never passes means the gate row does not carry the 1-second one, which is the
+    // defect worth reporting.
+    let wait_started = std::time::Instant::now();
+    loop {
+        let now = i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("the clock is after the unix epoch")
+                .as_secs(),
+        )
+        .expect("a unix second fits an i64");
+        if now > deadline {
+            break;
+        }
+        assert!(
+            wait_started.elapsed() < std::time::Duration::from_secs(30),
+            "30 s elapsed and the clock never passed the deadline process 1 recorded ({deadline}); \
+             now is {now}. Every assertion below would be red for the wait rather than for the \
+             absent expiry pass, so this stops here: the gate row does not carry \
+             `pack.gate-1s.toml`'s `gate_deadline_secs = 1`, which is the variant's defect and not \
+             a slow box — check that `PackVariant::GateOneSecond` installed it (Halt 5)"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
 
     // ---- PROCESS 2 — a FRESH `redkiln`, which must resolve it at its step (9). ------------------
     let second = spawn_run_in_mode(root, "gate-1", None, "exit:0");
