@@ -760,8 +760,23 @@ default** (`gate::answer` returns `Err(GateError::Expired)` only when a `gate_ex
 a gate whose deadline merely passed is still open to it [measured 2026-09-18, `crates/rk-kernel/src/workflow/gate.rs`],
 so *resolved at that read* — AC-257 — is this call); then
 `RunInputs::new(stage).with_pack(..).with_catalog(..).with_artifacts(..).with_facets(..)
-.with_item(&item).with_runtime(RuntimeContext::supplied(&tree_hash, deadline)).with_config(&config)` (plus the
-`with_spec` bindings of step (8)) →
+.with_item(&item).with_runtime(RuntimeContext::supplied(&tree_hash, deadline).results_at(now)).with_config(&config)` (plus the
+`with_spec` bindings of step (8)) — ***`.results_at(now)` added by dated amendment 2026-09-20, settling residual R-39.***
+*This chain read `.with_runtime(RuntimeContext::supplied(&tree_hash, deadline))` from the stage-open rewrite of
+2026-09-18 until then, and `results_at` appeared **nowhere in this file** (`grep -c results_at
+runbook/phase-1/s7d-cli-and-migrate.md` → **0**, measured 2026-09-19 at Slice 3 cycle 1's close and again
+2026-09-20). The chain as prescribed **refuses every dispatching run**: `RuntimeContext::supplied` leaves
+`results_at` `None` [`crates/rk-kernel/src/replay.rs`:535, :548], `derive`'s dispatch envelope and `resume` both call
+`require_results_at()` [:1264, :1544], and that call **refuses rather than defaulting** — *"no `results_at` was
+recorded, and the instant an `activity_committed` carries"* [:608-612] — because `rk_types::time::Timestamp` has no
+`now()` and **a zero `at` is a commit stamped at the epoch** (`replay.rs`'s header, `s7b` §7b.11's 4i clause). So a root
+following this chain verbatim would have failed on `inputs/runtime.json` **before any dispatch** — the WRONG REASON
+for four of cycle 5's five tests, which is the failure golden constraint 12 exists to prevent. **The kernel side was
+never the defect and is unchanged**: the builder, the refusal and its two call sites all predate 7d and are `s7b` §7b.11's.
+**Only this file was wrong, and only by omission.** The `rk-cli` half landed at Slice 3 cycle 5 (`41d8a03`) in
+`base_inputs`, chained off **the ONE wall-clock read** the paragraph above fixes — the same `now` that makes
+`deadline`, never a second read, since two reads would let a run's own deadline and its recorded commit instant
+disagree by however long step (8) took. `crates/rk-cli/src/verbs/run.rs`:999-1006 carries the 🛑 note at the site.* →
 **`rk_kernel::replay::resume(&inputs, ports, &prior, &mut supply_spec)`** — the sixth kernel edit (§7d.1, §7d.15), where
 `supply_spec: &mut dyn FnMut(&str) -> Result<RecordedSpec, ReplayError>` is the spec-supplier seam consulted where
 `record()` calls `spec_for` (RT-55: node ids are known only after `select()` runs inside the loop, so a node bound at
