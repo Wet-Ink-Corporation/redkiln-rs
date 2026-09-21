@@ -8,15 +8,18 @@
 //! surface, the one denylist and the refusal before spawn or store write; [`init`], the eager
 //! idempotent scaffold; and [`root`], the poisoned-lock halt and the signal handler. Slice 3:
 //! [`catalog`] and [`lint`], the read verbs; [`reconcile`], AC-402's negative; [`run`], the loop;
-//! and [`answer`], the gate's other end.
+//! [`answer`], the gate's other end; and [`explain`], which prints the record and recomputes
+//! nothing.
 //!
 //! **No empty module stands in for an unbuilt one** (`rk-kernel`'s `tests/it/main.rs` states the rule
 //! and this file inherits it). *(Corrected 2026-09-19 at Slice 3, cycle 2; corrected again
-//! 2026-09-20 at cycle 7. The cycle-2 read was **"there is no `run`, `answer`, `doctor` or
-//! `migrate` module yet, and the first two arrive with their own cases later in this slice"** —
-//! true when written and now false twice over: [`run`] landed at cycles 4 to 6 and [`answer`]
-//! lands here. What survives is the rule and the two that still have no module: there is no
-//! `doctor` module (Slice 4 builds what it would assert) and no `migrate` module (Slice 5's).
+//! 2026-09-20 at cycle 7, and again at cycle 9. The cycle-2 read was **"there is no `run`,
+//! `answer`, `doctor` or `migrate` module yet, and the first two arrive with their own cases later
+//! in this slice"** —
+//! true when written and now false three times over: [`run`] landed at cycles 4 to 6,
+//! [`answer`] at cycle 7 and [`explain`] at cycle 9. What survives is the rule and the two that
+//! still have no module: there is no `doctor` module (Slice 4 builds what it would assert) and no
+//! `migrate` module (Slice 5's).
 //! [`support`] remains the one module in this binary the rule does not reach — it **holds no test
 //! of the product at all**, by design, carrying only the two self-controls of its own spawn bound,
 //! so it cannot read as coverage of anything else.)* A `mod` that exists and asserts nothing reads
@@ -49,6 +52,7 @@ mod answer;
 mod catalog;
 mod config;
 mod exit;
+mod explain;
 mod init;
 mod lint;
 mod reconcile;

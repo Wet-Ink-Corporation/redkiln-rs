@@ -1,5 +1,5 @@
-//! **The eight verbs** — one per subcommand §7d.3 declares. At Slice 2 `init` is built and the other
-//! seven are still stubs that refuse.
+//! **The eight verbs** — one per subcommand §7d.3 declares. `doctor` is the last stub: Slice 2
+//! built `init`, and Slice 3 has built `run`, `answer`, `status`, `catalog`, `lint` and `explain`.
 //!
 //! **Why a stub rather than an unimplemented subcommand.** The surface is what Slice 1 delivers: a
 //! committed `--help` snapshot and a denylist lint that bites from the first commit. Both need the
@@ -13,10 +13,11 @@
 //!
 //! **This file is where golden constraint 4 bites**: *a stub never replaced is caught only here* —
 //! by the block's verb-level lines at the stage close, which drive the real binary and expect a real
-//! answer. Until then the remaining seven exit `3` and say so.
+//! answer. `doctor` still exits `3` and says so; it is Slice 4's.
 
 pub mod answer;
 pub mod catalog;
+pub mod explain;
 pub mod init;
 pub mod lint;
 pub mod run;
@@ -172,7 +173,7 @@ pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
         Command::Run(args) => run::run(cli, args, env, Startup::real()),
         Command::Answer(args) => answer::run(cli, args, env, Startup::real()),
         Command::Status => status::run(cli, Startup::real()),
-        Command::Explain(_) => explain(),
+        Command::Explain(args) => explain::run(cli, args, Startup::real()),
         Command::Doctor(_) => doctor(),
         Command::Init => init::run(cli.cwd.as_deref()),
         Command::Catalog(args) => catalog::run(cli, &args.command),
@@ -184,10 +185,6 @@ pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
 fn not_built(verb: &str) -> Result<Exit, Halt> {
     eprintln!("redkiln: `{verb}` is not built at slice 1");
     Ok(Exit::ConfigError)
-}
-
-fn explain() -> Result<Exit, Halt> {
-    not_built("explain")
 }
 
 fn doctor() -> Result<Exit, Halt> {

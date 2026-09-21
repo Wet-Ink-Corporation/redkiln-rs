@@ -1,0 +1,21 @@
+[activity]
+id           = "emit-tests"
+version      = 1
+stage        = "implement"
+provides     = ["TestReport"]
+requires     = []
+derived_from = []
+tags         = ["kind:bug"]
+applicable_if = "has_repro"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "write"
+kind    = "agent"
+outputs = "value:TestReport"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

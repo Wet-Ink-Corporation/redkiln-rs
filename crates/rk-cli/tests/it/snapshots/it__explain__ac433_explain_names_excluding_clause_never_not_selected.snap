@@ -1,0 +1,47 @@
+---
+source: crates/rk-cli/tests/it/explain.rs
+expression: text
+---
+run: implement-24c570e1fd7bd3af
+stage: implement
+item: explain-2
+inputs_digest: 3b8ef70bacbbb7f44b5e24cecbbe759a70b8803fd5965f4bac36f3cd3cb18540
+
+node: emit-report
+  activity: emit-report
+  provides: ImplReport
+  requires: -
+  applicable_if: kind == bug
+  method_rank: 10
+  min_rigor: optional
+  baseline: ImplReport
+  require: -
+  card: 85b3a8290dc98d0d0640c3604d273152cc3e4b86500cff21e610f34934226ea3
+  skills: not recorded
+  fillers: not recorded
+  tier: not recorded
+  output_digest: 78ab790d09b3b4f5daa8937fb01d525a90235e5218dae27421415da226c841bd
+
+node: emit-tests
+  activity: emit-tests
+  provides: TestReport
+  requires: -
+  applicable_if: has_repro
+  method_rank: 10
+  min_rigor: optional
+  baseline: -
+  require: has_repro -> TestReport
+  card: bdc33db625d6ea38456aa1c665d7e7aafea2c0e156cec64f5bf8d75675fd7e89
+  skills: not recorded
+  fillers: not recorded
+  tier: not recorded
+  output_digest: 5d0121316538f207f93bef5da2ee01a9878b31d9f6eb1e13a6b2c37351a0773f
+
+excluded: excluded-norow
+  clause: no `baseline` entry and no fired `require` row of the recorded pack names `IncidentLog`
+
+excluded: excluded-predicate
+  clause: the `applicable_if` sub-predicate `market_facing` is false over the recorded context
+
+excluded: excluded-rigor
+  clause: its `min_rigor` is `mandatory` and the recorded pack sets this stage to `recommended`

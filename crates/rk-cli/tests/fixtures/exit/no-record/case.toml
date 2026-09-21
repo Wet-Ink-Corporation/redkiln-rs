@@ -1,0 +1,18 @@
+# AC-432's row, read through the TABLE rather than through its own test.
+#
+# `explain` resolves an item to a run id off the store's last `activity_committed` row carrying
+# that item — only that kind carries BOTH `item` and `run_id`, because `dag_assembled` carries
+# neither (GAP 10, measured against `Dag::to_json`). A `pack-min` repository that has never been
+# run holds no such row, so there is no recorded resolution and the verb refuses with `NoRecord`.
+#
+# 🛑 IT IS `5`, NOT `3`, AND THAT IS THE WHOLE POINT OF THE ROW. Until cycle 9 `explain` was a
+# stub returning `Exit::ConfigError`, so a fixture reading `3` would have been green against a
+# verb that did nothing at all. `Exit::NoRecord` is documented on the tree as AC-432's row and is
+# `explain`'s alone — nothing else in `crates/rk-cli/src` returns it.
+#
+# The child's mode is irrelevant here: `explain` dispatches nothing. It is set anyway, because an
+# unset one is `hold` and a run that unexpectedly DID dispatch would park for 600 s instead of
+# failing fast.
+args = ["explain", "gate-1"]
+pack = "base"
+mode = "exit:0"

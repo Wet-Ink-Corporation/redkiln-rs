@@ -1,0 +1,1 @@
+{"facets":{"blast_radius":{"domain":["low","med","high","unknown"],"index":3},"criticality":{"domain":["low","med","high","unknown"],"index":3},"has_repro":true,"kind":"bug","novelty":{"domain":["low","med","high","unknown"],"index":3},"size":{"domain":["low","med","high","unknown"],"index":3}},"id":"explain-3","kind":"bug","rigor_overrides":{},"toolchains":{}}

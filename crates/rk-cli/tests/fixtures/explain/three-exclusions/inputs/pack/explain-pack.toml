@@ -1,0 +1,20 @@
+# The recorded pack. `ImplReport` enters the DAG through `baseline` and `TestReport` through the one
+# CONDITIONAL `require` row, so AC-430's two row families are BOTH populated for BOTH nodes -- a
+# fixture in which every node arrived the same way could not fail the both-or-neither assertion.
+[pack]
+id = "explain-pack"
+applies = "kind == bug"
+appetite = { points = 50 }
+
+[retry]
+attempts_cap = 1
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["ImplReport"]
+
+[[stage.implement.require]]
+when = "has_repro"
+artifacts = ["TestReport"]

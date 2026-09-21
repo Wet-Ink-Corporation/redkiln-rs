@@ -1,0 +1,23 @@
+# EXCLUDED by an UNMET `min_rigor`: the pack sets `implement = "recommended"` and
+# this demands `mandatory`, which is one position higher in the ordered rigor domain.
+[activity]
+id           = "excluded-rigor"
+version      = 1
+stage        = "implement"
+provides     = ["DesignDoc"]
+requires     = []
+derived_from = []
+tags         = ["kind:bug"]
+applicable_if = "kind == bug"
+method_rank  = 10
+min_rigor    = "mandatory"
+cost_class   = "S"
+
+[[step]]
+id      = "write"
+kind    = "agent"
+outputs = "value:DesignDoc"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

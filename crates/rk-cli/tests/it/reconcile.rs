@@ -1,16 +1,25 @@
 //! **AC-402's negative** — `status` and `explain` are read-only and do not reconcile (ADR-0105
 //! clause 8; AC-172).
 //!
-//! # 🛑 WHAT THIS MODULE COVERS AT CYCLE 3, AND WHAT ITS NAME PROMISES
+//! # 🛑 WHAT THIS MODULE COVERS, AND WHAT ITS NAME PROMISES
 //!
 //! The test below is named `ac402_status_and_explain_do_not_reconcile` — the spelling §7d.14 and
-//! §7d.17's name loop fix, which may not be changed. At this cycle **only the `status` arm exists**,
-//! because `crates/rk-cli/src/verbs/explain.rs` does not. The `explain` arm lands with that file
-//! later in this slice, and until it does **this test does not cover the half of its own name**.
-//! That sentence is here rather than implied, because a test whose name claims more than it asserts
-//! is the shape this stage has already shipped three times.
+//! §7d.17's name loop fix, which may not be changed.
+//!
+//! *(Corrected 2026-09-20 at Slice 3, cycle 9. This read: **"At this cycle only the `status` arm
+//! exists, because `crates/rk-cli/src/verbs/explain.rs` does not … until it does this test does not
+//! cover the half of its own name."** It was true when written and is now false: `explain.rs`
+//! landed at cycle 9 and **both arms exist**, each with its own recorder and its own trace so
+//! neither can pass on the other's zero. The source scan's `else { continue }` escape — correct
+//! while the file was absent, a silent pass the moment it was not — went with it.)*
+//!
+//! **What this test still does NOT cover is AC-402's positive half.**
+//! `ac402_reconcile_called_on_run_answer_doctor` drives `doctor` in process and is **Slice 4's**,
+//! where `verbs/doctor.rs` exists; in this slice it would be red for the stub's `3`. So Slice 3
+//! discharges AC-402's NEGATIVE plus the `run` path, and the prescribed commit subject's
+//! *"AC-402 three paths"* is a drift this slice RAISES rather than satisfies.
 
-use rk_cli::verbs::status;
+use rk_cli::verbs::{explain, status};
 
 use crate::support::{RecordingReconciler, Trace, counting_store};
 use crate::{code_lines, src_dir};
@@ -76,6 +85,49 @@ fn ac402_status_and_explain_do_not_reconcile() {
          reconciling — it is evidence that it did nothing"
     );
 
+    // ---- (1b) THE SAME, FOR `explain`. ---------------------------------------------------------
+    //
+    // A second recorder and a second trace, so this arm cannot pass on `status`'s zero.
+    //
+    // 🛑 IT IS EXIT `5`, NOT `0`, AND THE STORE IS STILL REACHED. `explain`'s first act is the
+    // item→run_id resolver, which is a store `query` — only `activity_committed` carries both
+    // `item` and `run_id`, so the journal must be read before anything can be said about the item.
+    // Over an empty store that query finds nothing and the verb refuses with `NoRecord`, which is
+    // AC-432's outcome and not a failure to reach the seam. That is what keeps the zero below
+    // falsifiable without planting a run record here: the trace shows the store WAS touched.
+    let trace_x = Trace::new();
+    let store_x = counting_store(&trace_x);
+    let reconciler_x = RecordingReconciler::new(&trace_x);
+    let mut out_x: Vec<u8> = Vec::new();
+
+    let exit_x = explain::run_with(
+        &reconciler_x,
+        &discovered.exec,
+        &discovered.worktree,
+        &crate::common_dir(repo_dir.path()),
+        &store_x,
+        "no-such-item",
+        &mut out_x,
+    )
+    .expect("explain does not halt");
+    assert_eq!(
+        exit_x.code(),
+        5,
+        "an item with no recorded resolution is `NoRecord` (AC-432); a different code here means \
+         this arm is not measuring the read path it is supposed to be measuring"
+    );
+    assert!(
+        trace_x.reconciles().is_empty(),
+        "`explain` reconciled: {:?}. ADR-0105 clause 8 — `status` and `explain` are read-only and \
+         do not reconcile",
+        trace_x.reconciles()
+    );
+    assert!(
+        !trace_x.steps().is_empty(),
+        "`explain` never touched the store, so the zero above is not evidence that it read \
+         without reconciling — it is evidence that it did nothing"
+    );
+
     // ---- (2) the source scan the declared mutant needs. ----------------------------------------
     let needle = "reconcile_at_entry";
 
@@ -95,12 +147,20 @@ fn ac402_status_and_explain_do_not_reconcile() {
     );
 
     // And zero over the read verbs' own files.
+    // 🛑 THE ABSENCE ESCAPE IS GONE, AND ITS REMOVAL IS PART OF THIS CYCLE'S WORK.
+    //
+    // This loop read `let Ok(src) = std::fs::read_to_string(&path) else { continue };` while
+    // `explain.rs` did not exist — correct then, and a silent pass the moment it did: a DELETED
+    // `explain.rs` would have skipped the scan and reported green. Both files exist now, so a read
+    // failure is a real failure.
     for verb in ["status.rs", "explain.rs"] {
         let path = src_dir().join("verbs").join(verb);
-        let Ok(src) = std::fs::read_to_string(&path) else {
-            // `explain.rs` does not exist at this cycle; see the module header.
-            continue;
-        };
+        let src = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+            panic!(
+                "{} must exist for this scan to mean anything: {e}",
+                path.display()
+            )
+        });
         let hits: Vec<(usize, String)> = code_lines(&src)
             .into_iter()
             .filter(|(_, line)| line.contains(needle))

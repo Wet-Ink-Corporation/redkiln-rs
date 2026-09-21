@@ -1,0 +1,43 @@
+# The smallest registry that declares every identifier any predicate in this fixture reads.
+#
+# `facet_from` REFUSES an entry with no `source`: ADR-0093 decision 1's five tokens are a closed set.
+# No `derived` and no `declared` facet appears here -- either would make the pack fail
+# `lint --facet-provenance` for a reason having nothing to do with what this fixture is for.
+
+[facet.kind]
+values = ["bug", "story"]
+source = "human"
+
+[facet.stage]
+values = ["triage", "implement", "review"]
+source = "kernel"
+
+[facet.rigor]
+ordered = true
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]
+source = "kernel"
+
+[facet.has_repro]
+values = [true, false]
+nullable = true
+source = "human"
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"
+
+[facet.novelty]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"
+
+[facet.size]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"
+
+[facet.blast_radius]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"

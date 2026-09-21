@@ -1,0 +1,24 @@
+# EXCLUDED by a FALSE SUB-PREDICATE. The conjunction is true on its left and false
+# on its right, so there is an identifiable conjunct to name -- a bare false predicate
+# would let a renderer print the whole string and still look like it had named a clause.
+[activity]
+id           = "excluded-predicate"
+version      = 1
+stage        = "implement"
+provides     = ["CausalChain"]
+requires     = []
+derived_from = []
+tags         = ["kind:bug"]
+applicable_if = "kind == bug and market_facing"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "write"
+kind    = "agent"
+outputs = "value:CausalChain"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

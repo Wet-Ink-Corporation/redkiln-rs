@@ -169,6 +169,13 @@ impl ScriptedHarness {
     pub fn dispatches(&self) -> u32 {
         self.dispatches.load(Ordering::SeqCst)
     }
+
+    /// The counter itself, which `replay::ReplayPorts` takes by reference so the kernel can read
+    /// the same cell this type increments — a replay that dispatched would be visible in both.
+    #[must_use]
+    pub const fn counter(&self) -> &AtomicU32 {
+        &self.dispatches
+    }
 }
 
 impl Harness for ScriptedHarness {
@@ -1213,6 +1220,77 @@ pub fn inputs_over_pack_min(
 ) -> (rk_kernel::replay::RunInputs, String) {
     rk_cli::verbs::run::prepare_inputs(resolved, FIXED_NOW)
         .unwrap_or_else(|e| panic!("the input set builds over the fixture repository: {e:?}"))
+}
+
+/// [`inputs_over_pack_min`]'s twin, **without the composition root's `Config`**.
+///
+/// # 🛑 IT EXISTS BECAUSE `write_run` / `read_run` DO NOT ROUND-TRIP A CONFIG, AND THAT IS RAISED
+///
+/// `RunInputs::to_json` — which is exactly what `run_id` hashes — inserts a `config` key when one
+/// was threaded in (`replay.rs`, Slice 2's ADR-0083 / D18-14 edit). **`write_run` writes no config
+/// and `read_run` reads none**, so a record produced from config-carrying inputs re-derives a
+/// DIFFERENT `run_id` on the way back, and `replay()` — which re-derives and compares — refuses it:
+///
+/// ```text
+/// Divergent(HiddenInput { … the recorded run_id is implement-61b5dd057fefc7fe and the logged
+/// input set hashes to implement-ff18038f5d185916 — some input was edited after the run was
+/// recorded … })
+/// ```
+///
+/// Measured 2026-09-20 while authoring `ac432_explain_over_replayed_log_is_byte_identical`. It is a
+/// **kernel** defect, not a test-setup one: every record `run` writes carries a config, so no
+/// record this binary produces can be replayed at all. The kernel's own replay suite does not catch
+/// it because its committed golden log pre-dates the config edit and therefore carries none.
+///
+/// This helper is the narrowest thing that lets the byte-identity property be tested at all, and
+/// the test says in its own doc comment that it is testing a config-less record for this reason.
+///
+/// # Panics
+/// If the input set will not build — a fixture fault, not the case's.
+#[must_use]
+pub fn inputs_over_pack_min_without_config(
+    resolved: &rk_cli::verbs::run::Resolved,
+    tree_hash: &str,
+) -> rk_kernel::replay::RunInputs {
+    let root = Path::new(resolved.worktree.as_str()).to_path_buf();
+    let dir = root.join(".redkiln").join("catalog");
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().is_some_and(|x| x == "toml"))
+        .collect();
+    paths.sort();
+    let sources: Vec<(String, String)> = paths
+        .iter()
+        .map(|p| {
+            (
+                p.file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+                std::fs::read_to_string(p).unwrap_or_else(|e| panic!("{}: {e}", p.display())),
+            )
+        })
+        .collect();
+    let borrowed: Vec<(&str, &str)> = sources
+        .iter()
+        .map(|(n, s)| (n.as_str(), s.as_str()))
+        .collect();
+
+    let artifacts_src = std::fs::read_to_string(root.join(".redkiln").join("artifacts.toml"))
+        .expect("the fixture's artifacts.toml reads");
+    let facets_src = std::fs::read_to_string(root.join(".redkiln").join("facets.toml"))
+        .expect("the fixture's facets.toml reads");
+    let deadline = FIXED_NOW.saturating_add(resolved.extras.gate_deadline_secs);
+
+    rk_kernel::replay::RunInputs::new(&resolved.stage)
+        .with_pack(&format!("{}.toml", resolved.pack_name), &resolved.pack_src)
+        .with_catalog(&borrowed)
+        .with_artifacts("artifacts.toml", &artifacts_src)
+        .with_facets(&facets_src)
+        .with_item(&resolved.item)
+        .with_runtime(
+            rk_kernel::replay::RuntimeContext::supplied(tree_hash, deadline).results_at(FIXED_NOW),
+        )
 }
 
 /// The [`ActivitySpec`] every in-process case binds `pack-min`'s one activity to.

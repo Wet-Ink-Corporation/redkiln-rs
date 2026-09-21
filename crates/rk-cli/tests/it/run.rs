@@ -740,10 +740,11 @@ struct ExitCase {
 /// the integer"*. Each directory here also carries a `case.toml` saying how the code is reached,
 /// so the fixture is readable without the test.
 ///
-/// # 🛑 FOUR DIRECTORIES, NOT NINE — AND THE MISSING FIVE ARE A MEASUREMENT, NOT AN OVERSIGHT
+/// # 🛑 FIVE DIRECTORIES, NOT NINE — AND THE MISSING FOUR ARE A MEASUREMENT, NOT AN OVERSIGHT
 ///
-/// GAP 21 derives nine rows for this arm (0, 2, 3, 5, 10, 11 ×2, 13, 18). Four are here, and the
-/// other five are **RAISED** in `fixtures/exit/README.md` with what was measured:
+/// GAP 21 derives nine rows for this arm (0, 2, 3, 5, 10, 11 ×2, 13, 18). **Five are here** as of
+/// Slice 3 cycle 9, and the other four are **RAISED** in `fixtures/exit/README.md` with what was
+/// measured:
 ///
 ///   * **10 / 11 / 14 / 18 need the failure CLASS, and the real harness journals none.** The only
 ///     callers of `StepError::event()` in any `src/` are `rk-ports`' `fakes.rs` (`FakeHarness`'s
@@ -752,7 +753,11 @@ struct ExitCase {
 ///     member**, and `Runtime::run_activity` appends only `dispatch` and `activity_committed`. So
 ///     the class is nowhere in what a real run writes, and `exit_for_uncommitted` has nothing to
 ///     read. Two mechanisms would close it; choosing one is above this stage.
-///   * **5 (`Exit::NoRecord`) is `explain`'s**, and nothing in `rk-cli/src` returns it yet.
+///
+/// **Row `5` LANDED at cycle 9**, with `explain`: `Exit::NoRecord` is that verb's alone, and
+/// `no-record/` drives a `pack-min` repository that has never been run, so no `activity_committed`
+/// row resolves the item to a run id. It could not have been authored earlier — `explain` was a
+/// stub returning `3`, so the fixture would have been green against a verb that did nothing.
 ///
 /// Row **13 IS here**, because it is the one class the real path does make derivable: the
 /// adapter's own timer arm sets `cancelled_by: timeout` on the record, and step (10) reads it.
@@ -769,7 +774,13 @@ struct ExitCase {
               arm (s7d §7d.4)"
 )]
 fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
-    const CASES: [&str; 4] = ["cancelled-timeout", "gate-open", "no-pack", "resume-flag"];
+    const CASES: [&str; 5] = [
+        "cancelled-timeout",
+        "gate-open",
+        "no-pack",
+        "no-record",
+        "resume-flag",
+    ];
 
     let dir = crate::fixtures_dir().join("exit");
     let mut on_disk: Vec<String> = std::fs::read_dir(&dir)

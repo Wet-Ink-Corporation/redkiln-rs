@@ -1,0 +1,2 @@
+{"kind":"reconcile_started","payload":{"adapter_set":["claude","sqlite"],"config_digest":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}
+{"kind":"stage_transition","payload":{"from":"triage","to":"implement"}}

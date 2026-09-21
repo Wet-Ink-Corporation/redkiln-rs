@@ -226,10 +226,16 @@ jobs:
           #       sha256 in the sibling PROVENANCE.md), never a results file whole;
           #   (b) rk-kernel's three tracked *.jsonl -- 7b's and 7b-ii's debt, named here as such and NOT folded into
           #       7c's rows: they pre-date this allowlist and collided with the pathspec while CI had never run.
+          #   (c) crates/rk-cli/tests/fixtures/explain/<name>/events.jsonl -- the four run-record fixtures
+          #       `explain` reads (Step 7d Slice 3 cycle 9). SYNTHETIC 7d fixtures, no corpus provenance: every
+          #       digest in them is a sha256 over a label naming what it stands for, and none is copied from a
+          #       recorded run. Anchored `[^/]+` on the one variable segment so Slice 4's `unread/` and
+          #       `doctor/` rows are not allowlisted silently by this entry.
           bad=$(git ls-files 'spikes/corpus/*' 'spikes/results/*' 'spikes/runner/*' '*.jsonl' \
                  | grep -v '^spikes/results/instrument-checks/RUNBOOK-instrument.txt$' \
                  | grep -vE '^crates/rk-adapter-claude/tests/fixtures/recorded/[^/]+\.jsonl$' \
-                 | grep -vE '^crates/rk-kernel/tests/fixtures/(findings/ac282_f20_golden_transcript|logs/implement-bf1d8cec3b22d288/events|retry/api-retry-rows)\.jsonl$' || true)
+                 | grep -vE '^crates/rk-kernel/tests/fixtures/(findings/ac282_f20_golden_transcript|logs/implement-bf1d8cec3b22d288/events|retry/api-retry-rows)\.jsonl$' \
+                 | grep -vE '^crates/rk-cli/tests/fixtures/explain/[^/]+/events\.jsonl$' || true)
           if [ -n "$bad" ]; then
             echo "FAIL: corpus artifacts tracked in the product repo (ADR-0013, AC-465):"
             printf '%s\n' "$bad"

@@ -1,0 +1,38 @@
+---
+source: crates/rk-cli/tests/it/explain.rs
+expression: text
+---
+run: implement-03eb5f5b45b9b732
+stage: implement
+item: explain-1
+inputs_digest: f39f24c3c0c60bb63789bcd56a2729378b69cace9de0b3905af6483e793e7044
+
+node: emit-report
+  activity: emit-report
+  provides: ImplReport
+  requires: -
+  applicable_if: kind == bug
+  method_rank: 10
+  min_rigor: optional
+  baseline: ImplReport
+  require: -
+  card: 85b3a8290dc98d0d0640c3604d273152cc3e4b86500cff21e610f34934226ea3
+  skills: not recorded
+  fillers: not recorded
+  tier: not recorded
+  output_digest: 78ab790d09b3b4f5daa8937fb01d525a90235e5218dae27421415da226c841bd
+
+node: emit-tests
+  activity: emit-tests
+  provides: TestReport
+  requires: -
+  applicable_if: has_repro
+  method_rank: 10
+  min_rigor: optional
+  baseline: -
+  require: has_repro -> TestReport
+  card: bdc33db625d6ea38456aa1c665d7e7aafea2c0e156cec64f5bf8d75675fd7e89
+  skills: not recorded
+  fillers: not recorded
+  tier: not recorded
+  output_digest: 5d0121316538f207f93bef5da2ee01a9878b31d9f6eb1e13a6b2c37351a0773f

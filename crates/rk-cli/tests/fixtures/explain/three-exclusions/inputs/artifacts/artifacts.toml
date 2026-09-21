@@ -1,0 +1,22 @@
+# The artifact-kind registry, trimmed to the kinds these fixtures name.
+# Every kind is `source = "activity"`: no human root is presented anywhere here.
+
+[artifact.CausalChain]
+source = "activity"
+schema = "CausalChain"
+
+[artifact.DesignDoc]
+source = "activity"
+schema = "DesignDoc"
+
+[artifact.ImplReport]
+source = "activity"
+schema = "ImplReport"
+
+[artifact.IncidentLog]
+source = "activity"
+schema = "IncidentLog"
+
+[artifact.TestReport]
+source = "activity"
+schema = "TestReport"

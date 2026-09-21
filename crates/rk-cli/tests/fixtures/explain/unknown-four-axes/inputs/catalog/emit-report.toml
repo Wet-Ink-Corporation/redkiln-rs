@@ -1,0 +1,25 @@
+# ITS PREDICATE READS ALL FOUR AXES, and that is the fixture. AC-434's GIVEN is
+# *the admissibility rows that consumed them*: `Outcome.read_facets` carries exactly the
+# context paths an evaluation actually read, so a node reading three of the four would
+# make the fourth unassertable and the test vacuous on it.
+[activity]
+id           = "emit-report"
+version      = 1
+stage        = "implement"
+provides     = ["ImplReport"]
+requires     = []
+derived_from = []
+tags         = ["kind:bug"]
+applicable_if = "criticality >= low and novelty >= low and size >= low and blast_radius >= low"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "write"
+kind    = "agent"
+outputs = "value:ImplReport"
+
+[[step]]
+id      = "emit"
+kind    = "emit"

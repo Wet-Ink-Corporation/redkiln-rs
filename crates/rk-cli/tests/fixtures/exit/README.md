@@ -1,4 +1,4 @@
-# `exit/<name>/` — AC-438's binary arm, and the five rows it does NOT yet carry
+# `exit/<name>/` — AC-438's binary arm, and the four rows it does NOT yet carry
 
 One directory per expected code (§7d.13: *"one directory per expected code, with an `expected` file
 carrying the integer"*), plus a `case.toml` saying how the code is reached, so the fixture is
@@ -11,12 +11,14 @@ over an empty one.
 | `gate-open` | `0` | `gate-1` omits `has_repro`; the abstention gate opens and step (10) trailers it |
 | `resume-flag` | `2` | `--resume` is not in the parser tree; clap's usage code, kept (H-1) |
 | `no-pack` | `3` | the `init` scaffold's `enabled = []` — D18-8's refusal, before any lane derivation |
+| `no-record` | `5` | a `pack-min` repository never run, so no `activity_committed` row resolves `gate-1` to a run id |
 | `cancelled-timeout` | `13` | a `hold` child under `[activity.emit-report] timeout_secs = 1` |
 
-## 🛑 FIVE OF GAP 21's NINE ROWS ARE MISSING, AND IT IS A MEASUREMENT RATHER THAN AN OVERSIGHT
+## 🛑 FOUR OF GAP 21's NINE ROWS ARE MISSING, AND IT IS A MEASUREMENT RATHER THAN AN OVERSIGHT
 
-GAP 21 derives nine rows for this arm — `0, 2, 3, 5, 10, 11 (×2), 13, 18`. Four are above. The
-other five are **RAISED**, with what was measured on 2026-09-20:
+GAP 21 derives nine rows for this arm — `0, 2, 3, 5, 10, 11 (×2), 13, 18`. **Five are above**, the
+`5` having landed with `explain` at Slice 3 cycle 9 exactly as this file said it would. The other
+four are **RAISED**, with what was measured on 2026-09-20:
 
 ### `10` Transport, `11` Schema, `14` NonZero, `18` Platform — the class is never journalled
 
@@ -56,10 +58,13 @@ stage** — §7d.4 says the CLI reads the class but names no mechanism for the r
   no journal round trip. Cost: a **fifth** kernel edit for Slice 3, where §7d.16 item 3 enumerates
   four, and Checkpoints 7b/7b-ii re-run whole.
 
-### `5` NoRecord — not this verb's
+### `5` NoRecord — LANDED at cycle 9
 
-`Exit::NoRecord` is `explain`'s (*"errors without resolution"*), and nothing in `crates/rk-cli/src`
-returns it yet. It lands with `explain`, at cycle 9.
+`Exit::NoRecord` is `explain`'s (*"errors without resolution"*) and nothing else in
+`crates/rk-cli/src` returns it. `no-record/` above is its row: a `pack-min` repository that has
+never been run holds no `activity_committed` row for `gate-1`, so the item→run-id resolver finds
+nothing and the verb refuses. Before cycle 9 `explain` was a stub returning `3`, which is why this
+row could not be authored earlier — it would have been green against a verb that did nothing.
 
 ### `11` twice
 

@@ -1,0 +1,23 @@
+# EXCLUDED by an ABSENT `require` ROW: `IncidentLog` is named by no `baseline` entry
+# and by no `require` row of the recorded pack, so nothing ever asked for it.
+[activity]
+id           = "excluded-norow"
+version      = 1
+stage        = "implement"
+provides     = ["IncidentLog"]
+requires     = []
+derived_from = []
+tags         = ["kind:bug"]
+applicable_if = "kind == bug"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "write"
+kind    = "agent"
+outputs = "value:IncidentLog"
+
+[[step]]
+id      = "emit"
+kind    = "emit"
