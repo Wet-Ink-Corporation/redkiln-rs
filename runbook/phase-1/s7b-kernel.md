@@ -1776,6 +1776,21 @@ raw=$(grep -rnE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(critical
 # hit, crates/rk-kernel/tests/fixtures/catalog/bisect.toml:12]. The exclusion is ONE path prefix; a
 # hit anywhere else under crates/ still halts.
 #
+# ---- AMENDED 2026-09-20 (Step 7d Slice 3 cycle 11, operator decision). THE EXCLUSION NAMES BOTH
+# ---- PRESCRIBED FIXTURE TREES, because there are two. §7d.13 prescribes an `rk-cli` fixture tree
+# ---- of exactly the kind §7b.12 prescribes for `rk-kernel`, and `pack-min` exists to exercise the
+# ---- ABSTENTION GATE — whose one `[[stage.implement.require]]` row is `when = "has_repro"`, since
+# ---- an item omitting that facet is what makes the evaluator return `Tri::Null` and mint the gate.
+# ---- So this block went RED the moment Step 7d authored its fixtures and stayed red: measured
+# ---- 5 hits at `249a155` (Slice 3 cycle 4), 12 at `76af103` (cycle 10). It was not noticed because
+# ---- 7b was last run whole at Slice 3 cycle 1's close, before pack-min existed.
+# ---- NONE of those hits is a true instance, by this guard's own reasoning three paragraphs up:
+# ---- every facet they name — `has_repro`, `market_facing`, and the four ordinal axes — is
+# ---- `source = "human"` in the fixture registries, and after Step 4a no facet anywhere is
+# ---- `source = "llm"`. The EXCLUSION is widened rather than the PATTERN narrowed, so the
+# ---- wider-than-the-record floor still halts on a hit anywhere else under crates/.
+# ---- Measured after the amendment: the block runs rc=0 whole, with no FAIL line.
+#
 # AND THE PATTERN ITSELF IS TOO WIDE BY ONE KEYWORD. design §10.2 principle 3 scopes the seven-facet
 # prohibition to "authoring a `require` row keyed on criticality, novelty, size, blast_radius,
 # market_facing, external_dep or has_repro SOURCED FROM AN LLM CLASSIFICATION DISPATCH".
@@ -1785,7 +1800,7 @@ raw=$(grep -rnE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(critical
 # after the exclusion: after Step 4a NO facet is `source = "llm"` (0 hits for `source = "llm"` in
 # spikes/p9/facets.toml) and `has_repro` is `source = "human"` (facets.toml:149; ADR-0090 decision
 # 2), so no hit this pattern can produce over crates/ is a true instance of clause 1 today.
-hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/rk-kernel/tests/fixtures/')
+hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/(rk-kernel|rk-cli)/tests/fixtures/')
 [ -z "$hits" ] || { echo "FAIL: an LLM-ordinal predicate exists on a non-comment line outside the prescribed fixture tree — golden constraint 1, ADR-0090 clauses 1 and 2, AC-071, design §10.2's 'may not' column. READ each hit (golden constraint 9); do not silence the grep"; printf '%s\n' "$hits"; exit 1; }   # → silent
 # POSITIVE CONTROL, because the line above passes on ABSENCE and a pattern that silently stopped matching
 # would read as a clean tree. The corpus is the control: the SAME alternation over spikes/p9/ returns 103
@@ -1804,7 +1819,7 @@ c=$(grep -rcE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(criticalit
 # which is the clause-4 fixture, and its single in-crate hit is that file's `when = "ui"`.
 raw=$(grep -rnE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(auth|ui|flag_exists|data_migration)\b' crates/ --include=*.toml --include=*.rs); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the lexical-deriver search could not run (grep rc=$rc; 2 = no such path) — design §10.2 principle 3's SECOND clause, as a command"; exit 1; }
-hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/rk-kernel/tests/fixtures/')
+hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/(rk-kernel|rk-cli)/tests/fixtures/')
 [ -z "$hits" ] || { echo "FAIL: a predicate keyed on a lexical-deriver facet exists on a non-comment line outside the prescribed fixture tree — design §10.2 principle 3's SECOND clause, ADR-0089, ADR-0093; S-FACET is UNRUN and auth scores 0/12 [0.00, 0.24], every positive false. READ each hit (golden constraint 9); do not silence the grep"; printf '%s\n' "$hits"; exit 1; }   # → silent
 # ITS OWN POSITIVE CONTROL, for the same reason the LLM-ordinal ban has one: the line above passes
 # on ABSENCE, so a pattern that silently stopped matching would read as a clean tree.
