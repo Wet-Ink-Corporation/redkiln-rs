@@ -125,12 +125,53 @@ pub struct Declarations {
 /// `skills/` has declared no skills; that is the input to `RK-D-DANGLING-ATTACH` finding nothing,
 /// not a refusal. A `.redkiln/` that does not exist at all is a different fact and the verb
 /// refuses on it before any rule runs.
-///
-/// 🚧 Cycle 2/4 — the signature is real; cycle 5 reads the files.
 #[must_use]
 pub fn read_declarations(redkiln_dir: &Path) -> Declarations {
-    let _ = redkiln_dir;
-    Declarations::default()
+    let cards = std::fs::read_to_string(redkiln_dir.join("roles.toml"))
+        .ok()
+        .and_then(|src| toml::from_str::<RolesFile>(&src).ok())
+        .map(|f| f.card)
+        .unwrap_or_default();
+
+    let mut skills = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(redkiln_dir.join("skills")) {
+        let mut paths: Vec<std::path::PathBuf> = entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "toml"))
+            .collect();
+        paths.sort();
+        for path in paths {
+            let Some(name) = path.file_name().map(|n| n.to_string_lossy().into_owned()) else {
+                continue;
+            };
+            let Ok(src) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let Ok(skill) = toml::from_str::<AuthoredSkill>(&src) else {
+                continue;
+            };
+            skills.push((name, skill.attach.roles));
+        }
+    }
+    Declarations { cards, skills }
+}
+
+/// How specific a selector is: the number of comma-separated clauses it carries.
+///
+/// 🛑 **A READING, and 7e's pack schema may re-point it.** Nothing in any record defines selector
+/// specificity, and AC-416 needs an ordering to mean *"two cards at EQUAL specificity"* at all.
+/// Clause count is the reading taken here: `"stage:review"` is one clause and
+/// `"stage:review,kind:bug"` is two, so the second wins and the role resolves. It is stated rather
+/// than assumed because the alternative — treating every selector as equally specific — makes the
+/// word *equal* do no work and turns `RK-D-ROLE-AMBIGUOUS` into *"a role with two cards"*, which
+/// `ac416_`'s own control is written to catch.
+#[must_use]
+pub fn specificity(selector: &str) -> usize {
+    selector
+        .split(',')
+        .filter(|clause| !clause.trim().is_empty())
+        .count()
 }
 
 /// Resolve one role against a pack's declarations.
@@ -140,11 +181,28 @@ pub fn read_declarations(redkiln_dir: &Path) -> Declarations {
 /// declares anything, so no role resolves. Cycle 5's red is the family test finding no card where
 /// its fixture declares one.
 #[must_use]
-#[expect(
-    clippy::missing_const_for_fn,
-    reason = "const only because the cycle-2 body is empty — cycle 5 walks the declarations and               builds an `Ambiguous` vector. The expectation goes UNFULFILLED when that lands,               which is what tells that cycle to delete this attribute."
-)]
 pub fn resolve(declarations: &Declarations, role: &str) -> Resolution {
-    let _ = (declarations, role);
-    Resolution::Unresolved
+    let candidates: Vec<&CardEntry> = declarations
+        .cards
+        .iter()
+        .filter(|c| c.fulfils.iter().any(|r| r == role))
+        .collect();
+
+    let Some(most) = candidates.iter().map(|c| specificity(&c.selector)).max() else {
+        return Resolution::Unresolved;
+    };
+    // Only the cards at the WINNING specificity contend. A less specific card beside a more
+    // specific one is not an ambiguity — it is the ordering doing its job.
+    let mut winners: Vec<String> = candidates
+        .iter()
+        .filter(|c| specificity(&c.selector) == most)
+        .map(|c| c.file.clone())
+        .collect();
+    winners.sort();
+
+    match winners.len() {
+        0 => Resolution::Unresolved,
+        1 => Resolution::Resolved(winners.remove(0)),
+        _ => Resolution::Ambiguous(winners),
+    }
 }

@@ -37,7 +37,7 @@
 //! *thirty-two* and was corrected in the stage file on 2026-09-20: D18-19 moved the table 32 → 38
 //! on 2026-09-19 and that item was not updated with it.
 
-use super::{Ctx, Finding, Severity};
+use super::{Ctx, Finding, Severity, roles};
 
 /// The placeholder every `check` points at until cycle 5 writes its predicate.
 ///
@@ -92,7 +92,7 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-GATE-OUTPUTS",
         severity: Severity::Error,
-        check: unbuilt,
+        check: gate_outputs,
     },
     Rule {
         id: "RK-D-HOOKS",
@@ -112,12 +112,12 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-ROLE-UNRESOLVED",
         severity: Severity::Error,
-        check: unbuilt,
+        check: role_unresolved,
     },
     Rule {
         id: "RK-D-ROLE-AMBIGUOUS",
         severity: Severity::Error,
-        check: unbuilt,
+        check: role_ambiguous,
     },
     Rule {
         id: "RK-D-CARD-TOOLS",
@@ -142,17 +142,17 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-DANGLING-ROLE",
         severity: Severity::Error,
-        check: unbuilt,
+        check: dangling_role,
     },
     Rule {
         id: "RK-D-DANGLING-SLOT",
         severity: Severity::Error,
-        check: unbuilt,
+        check: dangling_slot,
     },
     Rule {
         id: "RK-D-DANGLING-ATTACH",
         severity: Severity::Error,
-        check: unbuilt,
+        check: dangling_attach,
     },
     Rule {
         id: "RK-D-DEAD-DEF",
@@ -806,4 +806,220 @@ fn unfilled_slot(ctx: &Ctx) -> Vec<Finding> {
         }
     }
     out
+}
+
+// ============================================================================ batch 3: the roles
+// ============================================================================ rows, and AC-409
+//
+// Five rows read `.redkiln/roles.toml`, `skills/` and `slots.toml` against the enabled packs'
+// `[role.*]` and `[slot.*]` tables. The sixth reads the loader's own typed diagnostic.
+
+/// Every role name the enabled packs declare, across their `[role.*]` tables.
+fn declared_roles(ctx: &Ctx) -> std::collections::BTreeSet<String> {
+    packs(ctx)
+        .iter()
+        .filter_map(|(_, pack)| table(pack, "role"))
+        .flat_map(|t| t.keys().cloned())
+        .collect()
+}
+
+/// Every slot name the enabled packs declare, across their `[slot.*]` tables.
+fn declared_slots(ctx: &Ctx) -> std::collections::BTreeSet<String> {
+    packs(ctx)
+        .iter()
+        .filter_map(|(_, pack)| table(pack, "slot"))
+        .flat_map(|t| t.keys().cloned())
+        .collect()
+}
+
+/// Every role a loaded activity's step NOMINATES, in catalog order.
+///
+/// ADR-0014: *"an activity nominates a ROLE … never a card"*. This is the demand side; the cards in
+/// `roles.toml` are the supply side, and `RK-D-ROLE-UNRESOLVED` is the join between them.
+fn nominated_roles(ctx: &Ctx) -> Vec<String> {
+    let mut out: Vec<String> = ctx
+        .catalog
+        .catalog
+        .activities()
+        .iter()
+        .flat_map(|a| a.steps.iter().filter_map(|s| s.role.clone()))
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// **`RK-D-ROLE-UNRESOLVED`** — AC-416: *"a role resolves to zero cards"*.
+///
+/// **Scoped to NOMINATED roles.** A role that no step names and no card fulfils is not a defect —
+/// it is a role nobody asked for. The demand comes from the catalog, which is why this row is
+/// silent over a pack whose catalog did not load: there is nothing nominating anything.
+fn role_unresolved(ctx: &Ctx) -> Vec<Finding> {
+    let declarations = roles::read_declarations(&ctx.redkiln());
+    nominated_roles(ctx)
+        .into_iter()
+        .filter(|role| {
+            matches!(
+                roles::resolve(&declarations, role),
+                roles::Resolution::Unresolved
+            )
+        })
+        .map(|role| {
+            finding(
+                "RK-D-ROLE-UNRESOLVED",
+                Severity::Error,
+                format!(
+                    "role `{role}` is nominated by a step and no card in `roles.toml` fulfils it — \
+                     the activity cannot be bound"
+                ),
+            )
+        })
+        .collect()
+}
+
+/// **`RK-D-ROLE-AMBIGUOUS`** — AC-416: *"or to two cards at equal selector specificity"*.
+///
+/// 🛑 **Scoped to DECLARED roles, not nominated ones**, and the difference is what makes
+/// `ac416_`'s control work. An ambiguity is a property of the card set alone: two cards contending
+/// at the same specificity are unorderable whether or not a step names the role today, and the
+/// first step that does would pick arbitrarily. Scoping this to nominated roles would also leave
+/// the control role in the fixture unexamined, and the control is the only thing standing between
+/// this rule and *"a role with two cards"*.
+fn role_ambiguous(ctx: &Ctx) -> Vec<Finding> {
+    let declarations = roles::read_declarations(&ctx.redkiln());
+    let mut roles_declared: Vec<String> = declarations
+        .cards
+        .iter()
+        .flat_map(|c| c.fulfils.iter().cloned())
+        .collect();
+    roles_declared.sort();
+    roles_declared.dedup();
+
+    roles_declared
+        .into_iter()
+        .filter_map(|role| match roles::resolve(&declarations, &role) {
+            roles::Resolution::Ambiguous(files) => Some(finding(
+                "RK-D-ROLE-AMBIGUOUS",
+                Severity::Error,
+                format!(
+                    "role `{role}` resolves to {} cards at equal selector specificity ({}) — \
+                     nothing orders them",
+                    files.len(),
+                    files.join(", ")
+                ),
+            )),
+            roles::Resolution::Resolved(_) | roles::Resolution::Unresolved => None,
+        })
+        .collect()
+}
+
+/// **`RK-D-DANGLING-ROLE`** — AC-420: a card `fulfils` a role no enabled pack declares.
+fn dangling_role(ctx: &Ctx) -> Vec<Finding> {
+    let declared = declared_roles(ctx);
+    roles::read_declarations(&ctx.redkiln())
+        .cards
+        .into_iter()
+        .flat_map(|c| {
+            let file = c.file.clone();
+            c.fulfils
+                .into_iter()
+                .filter(|r| !declared.contains(r))
+                .map(move |role| {
+                    finding(
+                        "RK-D-DANGLING-ROLE",
+                        Severity::Error,
+                        format!(
+                            "`roles.toml` has `{file}` fulfilling role `{role}`, which no enabled \
+                             pack declares"
+                        ),
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// **`RK-D-DANGLING-ATTACH`** — AC-420: a skill `attach.roles` names a role no enabled pack
+/// declares.
+fn dangling_attach(ctx: &Ctx) -> Vec<Finding> {
+    let declared = declared_roles(ctx);
+    roles::read_declarations(&ctx.redkiln())
+        .skills
+        .into_iter()
+        .flat_map(|(name, attaches)| {
+            attaches
+                .into_iter()
+                .filter(|r| !declared.contains(r))
+                .map(move |role| {
+                    finding(
+                        "RK-D-DANGLING-ATTACH",
+                        Severity::Error,
+                        format!(
+                            "`skills/{name}` attaches to role `{role}`, which no enabled pack \
+                             declares"
+                        ),
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// **`RK-D-DANGLING-SLOT`** — AC-420: a slot filler names a slot no enabled pack declares.
+fn dangling_slot(ctx: &Ctx) -> Vec<Finding> {
+    let declared = declared_slots(ctx);
+    let Ok(src) = std::fs::read_to_string(ctx.redkiln().join("slots.toml")) else {
+        return Vec::new();
+    };
+    let Ok(doc) = toml::from_str::<toml::Value>(&src) else {
+        return Vec::new();
+    };
+    let Some(fillers) = doc.get("filler").and_then(toml::Value::as_array) else {
+        return Vec::new();
+    };
+    fillers
+        .iter()
+        .filter_map(|f| f.get("slot")?.as_str())
+        .filter(|slot| !declared.contains(*slot))
+        .map(|slot| {
+            finding(
+                "RK-D-DANGLING-SLOT",
+                Severity::Error,
+                format!(
+                    "`slots.toml` has a filler for slot `{slot}`, which no enabled pack declares"
+                ),
+            )
+        })
+        .collect()
+}
+
+/// **`RK-D-GATE-OUTPUTS`** — AC-409 as amended (C-01 RA-M-05).
+///
+/// 🛑 **It reads the loader's own typed diagnostic and re-derives nothing.** Slice 4 cycle 1 gave
+/// `Catalog::from_sources` the AC-409 refusal and `catalog::load_diagnostic` the vocabulary to
+/// report it apart from every other `Shape` — `DiagnosticKind::GateOutputs`. That discriminant
+/// exists **for this row**: a rule that recognised the refusal by matching text inside
+/// `Shape.detail` would break the first time the message was reworded, and one that walked the
+/// catalog itself would be a second implementation of a predicate `run` already enforces, free to
+/// disagree with it.
+///
+/// So this row fires exactly when `run` would have refused to load the graph, which is what makes
+/// AC-409's WHEN — *"when the configuration is loaded (and when `doctor` runs over it)"* — one
+/// predicate read from two sides rather than two predicates that happen to agree.
+fn gate_outputs(ctx: &Ctx) -> Vec<Finding> {
+    ctx.catalog
+        .diagnostics
+        .iter()
+        .filter(|d| d.kind == rk_kernel::catalog::DiagnosticKind::GateOutputs)
+        .map(|d| {
+            finding(
+                "RK-D-GATE-OUTPUTS",
+                Severity::Error,
+                format!(
+                    "{d} — a gate answer populates the step's `answer` and binds nothing \
+                     downstream (AC-409)"
+                ),
+            )
+        })
+        .collect()
 }

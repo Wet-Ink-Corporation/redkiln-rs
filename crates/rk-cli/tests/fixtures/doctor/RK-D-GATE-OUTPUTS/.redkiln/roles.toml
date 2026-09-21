@@ -1,0 +1,6 @@
+# Lawful: the card fulfils a role the pack declares. See the pack's own note.
+
+[[card]]
+file     = "cards/reviewer.json"
+fulfils  = ["reviewer"]
+selector = "stage:review"

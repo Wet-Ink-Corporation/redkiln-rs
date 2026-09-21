@@ -35,3 +35,10 @@ subagent_prompt_ttl = "1h"
 # half of every family test doing exactly what s7d 7d.8 keeps it for.
 [activity.emit-report]
 timeout_secs = 900
+
+# The role the card in `cards/` fulfils. Without it `RK-D-DANGLING-ROLE` fires on the
+# clean run, because a card fulfilling a role no enabled pack declares is exactly AC-420's
+# clause. `pack-min/pack.toml` declares `[role.implementer]` for the same reason.
+# ADDED 2026-09-21 at cycle 5 batch 3.
+[role.implementer]
+family = "claude"

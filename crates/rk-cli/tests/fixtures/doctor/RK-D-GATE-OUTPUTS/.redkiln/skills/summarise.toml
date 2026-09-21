@@ -1,0 +1,3 @@
+# Lawful: attaches to a role the pack declares.
+[attach]
+roles = ["reviewer"]

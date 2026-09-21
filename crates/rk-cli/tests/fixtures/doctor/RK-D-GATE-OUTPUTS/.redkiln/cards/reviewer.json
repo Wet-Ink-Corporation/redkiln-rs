@@ -1,0 +1,6 @@
+{
+  "description": "A lawful reviewer card - this fixture's defect is in the catalog.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": ["StructuredOutput"],
+  "cache_profile": "static"
+}

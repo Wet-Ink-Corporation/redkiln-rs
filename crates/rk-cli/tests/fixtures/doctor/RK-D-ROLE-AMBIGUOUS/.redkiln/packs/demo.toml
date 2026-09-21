@@ -31,3 +31,6 @@ subagent_prompt_ttl = "1h"
 
 [role.reviewer]
 family = "claude"
+
+[role.planner]
+family = "claude"

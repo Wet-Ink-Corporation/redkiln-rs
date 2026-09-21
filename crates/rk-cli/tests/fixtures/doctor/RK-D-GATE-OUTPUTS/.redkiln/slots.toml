@@ -1,0 +1,4 @@
+# Lawful: fills the slot the pack declares, so `RK-D-UNFILLED-SLOT` is quiet here too.
+[[filler]]
+slot = "review"
+card = "cards/reviewer.json"

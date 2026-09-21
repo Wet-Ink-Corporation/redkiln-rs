@@ -603,3 +603,134 @@ fn ac421_dead_definition_and_unfilled_slot_reported() {
          reporting every activity rather than the unreachable one: {dead:?}"
     );
 }
+
+// ----------------------------------------------------- batch 3: the roles rows, and `ac409_`
+//
+// Three families, six ids. The five AC-416 / AC-420 rows read `.redkiln/roles.toml`, `skills/` and
+// `slots.toml` against the enabled packs' `[role.*]` and `[slot.*]` tables; `RK-D-GATE-OUTPUTS`
+// reads the loader's own typed diagnostic. `ac409_` is here rather than in batch 2 because its red
+// names the other five.
+
+/// **AC-416** — *"a role resolves to zero cards, or to two cards at equal selector specificity"*.
+///
+/// Two ids, two fixtures, because the remedy differs: a role with no card needs one written, and a
+/// role with two needs one of them narrowed.
+///
+/// # 🛑 The ambiguity fixture carries its own CONTROL, and it is the discriminating half
+///
+/// `RK-D-ROLE-AMBIGUOUS/` declares **two** roles: `reviewer` with two cards at the SAME selector,
+/// and `planner` with two cards at DIFFERENT specificity. A rule reading *"two or more cards"*
+/// fires on both and passes every assertion an uncontrolled test could make — so the test asserts
+/// the row fires **once**, names `reviewer`, and does **not** name `planner`. AC-416's clause is
+/// *equal* specificity, and without the control that word does no work.
+#[test]
+fn ac416_role_unresolved_and_ambiguous_rejected() {
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-ROLE-UNRESOLVED",
+        rk_cli::doctor::Severity::Error,
+    );
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-ROLE-AMBIGUOUS",
+        rk_cli::doctor::Severity::Error,
+    );
+
+    let unresolved = findings("RK-D-ROLE-UNRESOLVED", "RK-D-ROLE-UNRESOLVED");
+    assert!(
+        unresolved.iter().any(|f| f.detail.contains("reviewer")),
+        "the finding does not name the role that resolved to nothing: {unresolved:?}"
+    );
+
+    let ambiguous = findings("RK-D-ROLE-AMBIGUOUS", "RK-D-ROLE-AMBIGUOUS");
+    assert_eq!(
+        ambiguous.len(),
+        1,
+        "the fixture declares TWO roles with two cards each — `reviewer` at one selector twice \
+         (ambiguous) and `planner` at two different specificities (resolves, the more specific \
+         wins). Two findings means the rule reads *two or more cards* rather than *two at EQUAL \
+         specificity*, which is AC-416's actual clause: {ambiguous:?}"
+    );
+    assert!(
+        ambiguous[0].detail.contains("reviewer"),
+        "the one finding is not about `reviewer`: {ambiguous:?}"
+    );
+    assert!(
+        !ambiguous[0].detail.contains("planner"),
+        "the row fired on `planner`, whose two cards are at different specificity: {ambiguous:?}"
+    );
+}
+
+/// **AC-420** — *"a card `fulfils`, a skill `attach.roles`, or a slot filler naming a slot … that
+/// no enabled pack declares"*.
+///
+/// **One row per reference kind**, and three fixtures, because the three references live in three
+/// different files and an operator fixing one is not looking at the other two.
+#[test]
+fn ac420_dangling_role_slot_attach_rejected() {
+    for id in [
+        "RK-D-DANGLING-ROLE",
+        "RK-D-DANGLING-SLOT",
+        "RK-D-DANGLING-ATTACH",
+    ] {
+        fires_over_its_fixture_and_not_over_clean(id, rk_cli::doctor::Severity::Error);
+    }
+
+    // Each row names the reference it could not resolve, and each names a DIFFERENT one — three
+    // rules that all reported the same thing would be one rule wearing three ids.
+    assert!(
+        findings("RK-D-DANGLING-ROLE", "RK-D-DANGLING-ROLE")
+            .iter()
+            .any(|f| f.detail.contains("archivist")),
+        "the dangling ROLE row does not name the role the card fulfils"
+    );
+    assert!(
+        findings("RK-D-DANGLING-SLOT", "RK-D-DANGLING-SLOT")
+            .iter()
+            .any(|f| f.detail.contains("postmortem")),
+        "the dangling SLOT row does not name the slot the filler claims"
+    );
+    assert!(
+        findings("RK-D-DANGLING-ATTACH", "RK-D-DANGLING-ATTACH")
+            .iter()
+            .any(|f| f.detail.contains("archivist")),
+        "the dangling ATTACH row does not name the role the skill attaches to"
+    );
+}
+
+/// **AC-409 as amended (C-01 RA-M-05)** — a graph reference resolving to a gate step's `outputs`.
+///
+/// The row fires on the **typed load error** the Slice 4 kernel edit produces: the strict loader
+/// refuses the pack (cycle 1), and `catalog::load_diagnostic` reports that refusal as a
+/// `DiagnosticKind::GateOutputs` beside the activities that did load. This is the first test in the
+/// slice that reads cycle 1's work from the `rk-cli` side.
+///
+/// # 🛑 IT ASSERTS NO `RK-D-DANGLING-*` ROW FIRES, AND THE FIXTURE IS BUILT SO THAT MEANS SOMETHING
+///
+/// §7d.8's row: *"the per-row test asserts `RK-D-GATE-OUTPUTS` fires and **no `RK-D-DANGLING-*`
+/// row does**, so the fixture is rejected for AC-409's reason and not as a dangling reference (a
+/// gate declaring no `outputs` under a `${gate.outputs}` binding would be a dangling reference, a
+/// different predicate)."* The assertion pins the SCOPE of the three AC-420 rows: they resolve
+/// **declaration** references — a card's `fulfils`, a skill's `attach.roles`, a filler's slot — and
+/// not graph bindings, so a `${gate.outputs}` binding is none of their business.
+///
+/// **The fixture carries a lawful role, skill and filler set** precisely so those three rules read
+/// real declarations and still stay quiet. Over a fixture with no cards, no skills and no fillers
+/// they would return nothing having looked at nothing, and this assertion would pin nothing.
+#[test]
+fn ac409_gate_outputs_binding_rejected() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-GATE-OUTPUTS", rk_cli::doctor::Severity::Error);
+
+    for id in [
+        "RK-D-DANGLING-ROLE",
+        "RK-D-DANGLING-SLOT",
+        "RK-D-DANGLING-ATTACH",
+    ] {
+        let co_fired = findings(id, "RK-D-GATE-OUTPUTS");
+        assert!(
+            co_fired.is_empty(),
+            "{id} fired over `doctor/RK-D-GATE-OUTPUTS/`. The gate DECLARES `outputs`, so the \
+             `${{gate.outputs}}` binding beside it is not dangling — the fixture must be rejected \
+             for AC-409's reason and not as a dangling reference (§7d.8). AC-420's three rows \
+             resolve declaration references, never graph bindings: {co_fired:?}"
+        );
+    }
+}

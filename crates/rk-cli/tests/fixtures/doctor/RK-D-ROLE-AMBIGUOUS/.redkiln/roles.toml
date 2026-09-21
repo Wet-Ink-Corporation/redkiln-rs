@@ -1,13 +1,10 @@
-# The role -> card map, as a SIDECAR the `doctor` reader owns.
+# Two roles, and only ONE of them is ambiguous.
 #
-# It is not on the card file, and that is measured rather than chosen:
-# `rk_adapter_claude::card::CardFile` is `#[serde(deny_unknown_fields)]` over exactly seven
-# names and `fulfils` is not among them, so a card carrying it does not load; `s7d` §7d.1
-# permits ONE closed crate edited (`rk-kernel`), so widening it is foreclosed. Slice 3
-# raised this and handed it here by name (pack-min/cards/README.md).
-#
-# `selector` exists because AC-416's second half is *two cards at EQUAL SELECTOR
-# SPECIFICITY* - a bare list has no specificity and could never express it.
+# `reviewer` is the defect: two cards, SAME selector, so neither is more specific and the
+# role resolves to two. `planner` is the CONTROL: two cards at DIFFERENT specificity, so
+# the more specific wins and the role resolves. Without the control a rule reading *two or
+# more cards* passes this fixture, and AC-416's clause is *two cards at EQUAL selector
+# specificity*.
 
 [[card]]
 file     = "cards/reviewer-a.json"
@@ -18,3 +15,13 @@ selector = "stage:review"
 file     = "cards/reviewer-b.json"
 fulfils  = ["reviewer"]
 selector = "stage:review"
+
+[[card]]
+file     = "cards/planner-a.json"
+fulfils  = ["planner"]
+selector = "stage:plan"
+
+[[card]]
+file     = "cards/planner-b.json"
+fulfils  = ["planner"]
+selector = "stage:plan,kind:bug"

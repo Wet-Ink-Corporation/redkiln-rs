@@ -28,3 +28,12 @@ seven_day = 10
 [cache]
 prompt_ttl = "1h"
 subagent_prompt_ttl = "1h"
+
+# A LAWFUL role, slot and skill set, so `ac409_`'s *no `RK-D-DANGLING-*` row fires*
+# assertion is read over declarations those three rules actually examine. Over a fixture
+# with none they would return nothing having looked at nothing.
+[role.reviewer]
+family = "claude"
+
+[slot.review]
+required = true

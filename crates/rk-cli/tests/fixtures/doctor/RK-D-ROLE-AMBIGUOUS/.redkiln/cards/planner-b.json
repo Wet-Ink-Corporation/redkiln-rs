@@ -1,0 +1,6 @@
+{
+  "description": "The specific planner card - two clauses, so it wins.",
+  "prompt": "Emit an ImplReport for the item, as StructuredOutput. Do nothing else.",
+  "tools": ["StructuredOutput"],
+  "cache_profile": "static"
+}
