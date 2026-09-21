@@ -24,7 +24,15 @@
 //! the two the sentence above still excepted is now built. It holds
 //! `doctor_rule_table_covers_every_register_named_row` — RA-M-01's anti-vacuity floor — and that
 //! one test is the whole module, which is what the rule the sentence carries requires: a module
-//! that asserts something is not an empty one. `migrate` remains Slice 5's.)*
+//! that asserts something is not an empty one. `migrate` remains Slice 5's.
+//! **Corrected a fifth time 2026-09-21, Step 7d Slice 5: `migrate` is built, and it is NOT a module
+//! of this binary — nor will it ever be.** The migrator's tests live in
+//! `crates/redkiln-migrate/tests/it/`, because an integration binary cannot link another crate's
+//! integration binary and AC-441 makes `redkiln-migrate` a separate crate nothing in the product
+//! reaches. So the clause *"there is no `migrate` module"* stays TRUE permanently, for a different
+//! reason than the one it was written with: not *not yet*, but *never here*. The four earlier
+//! corrections each recorded a module arriving; this one records that the last name on the list
+//! belongs to another crate, and the sentence is closed rather than waiting.)*
 //! [`support`] remains the one module in this binary the rule does not reach — it **holds no test
 //! of the product at all**, by design, carrying only the two self-controls of its own spawn bound,
 //! so it cannot read as coverage of anything else.)* A `mod` that exists and asserts nothing reads

@@ -281,8 +281,12 @@ jobs:
           echo "AC-362: no unwrap_or(0)/unwrap_or_default() on the usage struct's fields"
 
       # design §9.1's anyhow convention, as a check rather than a phrase. `anyhow` is confined to
-      # `rk-cli` and `redkiln-migrate` (ADR-0102 decision 6); neither exists before Step 7d, so the
-      # expected result today is an empty list.
+      # `rk-cli` and `redkiln-migrate` (ADR-0102 decision 6).
+      #
+      # AMENDED 2026-09-21 (Step 7d Slice 5). This comment read "neither exists before Step 7d, so
+      # the expected result today is an empty list" -- true when it was written and FALSE now: both
+      # crates exist and both take anyhow, so the allowed set below is exercised rather than vacuous
+      # for the first time. The rule itself is unchanged; only its stated expectation was stale.
       - name: anyhow is confined to the binary crates (design §9.1)
         run: |
           cargo metadata --format-version 1 --no-deps > /tmp/meta.json
@@ -296,6 +300,95 @@ jobs:
           print('members depending on anyhow outside the allowed set:', bad)
           sys.exit(1 if bad else 0)
           PY
+
+      # AC-441's build-graph half and AC-466 -- the migrator is reachable only as its own binary.
+      # ADDED 2026-09-21 (Step 7d Slice 5, s7d §7d.15), in the slice whose crate makes it
+      # non-vacuous. Its in-process twin is
+      # `ac466_ac441_migrate_depends_on_no_harness_adapter_or_ports`; the two are deliberately
+      # independent instruments over the same fact.
+      - name: the migrator is reachable only as its own binary (AC-441, AC-466)
+        run: |
+          cargo metadata --format-version 1 --no-deps > /tmp/meta-migrate.json
+          python3 - <<'PY'
+          import json, sys
+          m = json.load(open('/tmp/meta-migrate.json'))
+          # --no-deps gives every WORKSPACE MEMBER with its declared dependencies, which is the whole
+          # of the relevant graph: every rk-* crate and redkiln-migrate are path members. Dev edges
+          # are excluded, because rk-containment IS a dev-dependency of the migrator by design
+          # (terminate_pid, for the kill test) and a dev edge is not in the shipped graph.
+          deps = {p['name']: {d['name'] for d in p['dependencies'] if d.get('kind') != 'dev'}
+                  for p in m['packages']}
+          assert 'redkiln-migrate' in deps, 'cargo metadata does not know redkiln-migrate'
+
+          closure, stack = set(), ['redkiln-migrate']
+          while stack:
+              for dep in deps.get(stack.pop(), ()):
+                  if dep not in closure:
+                      closure.add(dep)
+                      stack.append(dep)
+
+          # THE CONTROL, before the ban: a walk that reached nothing reports a clean closure.
+          assert {'rk-types', 'rk-git'} <= closure, ('the walk reached nothing', sorted(closure))
+
+          bad = sorted(c for c in closure
+                       if c.startswith('rk-adapter-') or c in {'rk-ports', 'rk-kernel'})
+          assert not bad, ('redkiln-migrate reaches a harness adapter, rk-ports or rk-kernel', bad)
+
+          rev = sorted(n for n, d in deps.items()
+                       if n.startswith('rk-') and 'redkiln-migrate' in d)
+          assert not rev, ('an rk-* crate depends on redkiln-migrate', rev)
+
+          yaml = sorted(n for n, d in deps.items() if 'yaml_serde' in d or 'serde_yaml' in d)
+          assert yaml == ['redkiln-migrate'], ('the YAML dependency set (ADR-0100 d1)', yaml)
+
+          print('AC-441/AC-466: closure clean, no reverse edge, YAML set', yaml)
+          PY
+
+      # AC-442 -- the legacy-format provenance lint. Every site that reads or writes an old redkiln
+      # file format is inside the migrator, and a legacy-format handling site anywhere else fails the
+      # build. ADDED 2026-09-21 (Step 7d Slice 5, s7d §7d.15). Its in-process twins are
+      # `ac442_legacy_readers_only_under_legacy_module` (the ban) and
+      # `ac442_lint_flags_legacy_reader_outside_legacy_module` (the two must-fail instruments).
+      - name: legacy formats are read only inside the migrator (AC-442)
+        run: |
+          # src/ ONLY, never tests/: rk-cli's lint-controls/ac442_template_sig_control.rs carries
+          # `template_sig` by design, and redkiln-migrate's own tests/it/ names both literals in
+          # order to assert their absence. A scan over all of crates/ is RED on a correct tree.
+          #
+          # The allowlist is ONE directory, and that is a departure worth stating. §7d.11 and §7d.15
+          # both say "one crate plus one named site -- rk-store's old-layout detector (AC-440's
+          # predicate)". MEASURED 2026-09-21: no such site exists. AC-440 is one of the
+          # corpus-bound migration ids (§7d.18), and `grep -rn bklg crates/rk-store/src` and
+          # `grep -rn AC-440 crates/*/src` are both EMPTY. A row allowlisting a path that does not
+          # exist would pre-approve that file before anyone read it, so the row is deliberately NOT
+          # added: this rule is expected to go RED when the detector lands, and a red that makes
+          # someone add the row deliberately is the loud failure, not the silent one. RAISED in the
+          # slice body rather than resolved here.
+          bad=$(git ls-files 'crates/*/src/*.rs' 'crates/*/src/**/*.rs' \
+                | xargs grep -nE 'template_sig|rendered_sig|yaml_serde|processes/[^"]*\.ya?ml' \
+                | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' \
+                | grep -vE '^crates/redkiln-migrate/src/legacy(\.rs|/)' || true)
+          if [ -n "$bad" ]; then
+            echo "FAIL: a legacy-format site outside crates/redkiln-migrate/src/legacy/ (AC-442):"
+            printf '%s\n' "$bad"
+            exit 1
+          fi
+          echo "AC-442: every legacy-format site is inside the migrator's legacy module"
+
+          # THE POSITIVE CONTROL, through the ban's OWN pattern: an absence asserted by a scanner
+          # that has never been seen to find anything is not an assertion (Halt 8 shape (g)).
+          ctl=crates/rk-cli/tests/fixtures/lint-controls/ac442_template_sig_control.rs
+          test -f "$ctl" || { echo "FAIL: $ctl absent -- the ban above asserts nothing"; exit 1; }
+          n=$(grep -cE 'template_sig|rendered_sig|yaml_serde|processes/[^"]*\.ya?ml' "$ctl" | tr -d '[:space:]')
+          test "${n:-0}" -ge 1 || { echo "FAIL: $ctl carries no line matching the ban's own pattern"; exit 1; }
+          echo "AC-442: the positive control fires"
+
+          # AND THE ALLOWLIST IS NOT VACUOUS: the excluded module must actually read the formats, or
+          # the exclusion excludes nothing and the ban is satisfied by an empty scope.
+          n=$(git ls-files 'crates/redkiln-migrate/src/legacy/*.rs' \
+              | xargs grep -hE 'template_sig|rendered_sig|yaml_serde' | grep -c . | tr -d '[:space:]')
+          test "${n:-0}" -ge 1 || { echo "FAIL: the allowlisted legacy module names no legacy format -- the exclusion excludes nothing"; exit 1; }
+          echo "AC-442: the allowlist is not vacuous"
 
       # ADR-0077:70 and ADR-0105 clause 5 -- git shells out through EXACTLY ONE wrapper type.
       # Step 5's structural-assertions table assigned this grep to Checkpoint 6; it landed at
