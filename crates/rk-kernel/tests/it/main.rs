@@ -12,6 +12,15 @@
 //! record in both sinks, and the five-row per-rigor gate table; and — **Slice 4e** — [`fsm`] and
 //! [`divergence`], the FSM the runbook twice recorded as **NOT BUILDABLE** and AC-007's typed halt.
 //!
+//! **Extended 2026-09-20, Step 7d Slice 4 cycle 1** — and the earlier list is left standing rather
+//! than rewritten, because it is accurate about the slices it names. Step 7d edits this closed
+//! crate three times, each edit re-opening Checkpoints 7b and 7b-ii, and each landing its tests
+//! here: Slice 2's in [`config`], Slice 3's in [`keywords`], [`question`] and [`resume`], and
+//! **Slice 4's in [`catalog_diagnostic`]** — the loader's diagnostic mode (RT-54) and
+//! `Catalog::from_sources`' AC-409 refusal of a `Gate` step carrying `outputs`, the two edits
+//! `s7d` §7d.1 enumerates as (4) and (7). `doctor` itself is `rk-cli`'s and is asserted there; what
+//! is here is only the loader, which is the half that lives in this crate.
+//!
 //! **Corrected 2026-09-14, four times.** The sentence that stood here said *"The selection engine
 //! (Slice 3) and the runtime (Slice 4) have no modules here yet"*; it was already false of Slice 3
 //! when it was written and is now false of nine of Slice 4's modules. The rule it carried still
@@ -269,6 +278,7 @@ mod adapter_edge;
 mod advisory;
 mod breaker;
 mod budget;
+mod catalog_diagnostic;
 mod config;
 mod cross_process;
 mod dag;

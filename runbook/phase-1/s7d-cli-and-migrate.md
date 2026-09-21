@@ -117,7 +117,14 @@ it; **D18-15**; `crates/rk-kernel/src/catalog.rs` has `pub struct Activity` besi
 first, which `doctor` alone calls (§7d.8) (**RT-54** — routed, not decided: a second loader entry point in a Step-7b
 crate; the alternative — `doctor` calling the strict loader per file and collecting first errors — is named and
 rejected because a pack with two defects would surface one; the record naming the diagnostic mode as the loader's
-surface is OWED); (5) `workflow/gate.rs` — `gate::answer` gains **three parameters** — `registry: &QuestionRegistry`
+surface is **SETTLED 2026-09-20 at Step 7d Slice 4 cycle 1**, by a dated amendment note on `design` §9.1's
+`rk-kernel` row — `catalog::load_diagnostic` and `catalog::load_diagnostic_dir` returning `CatalogLoad`, every defect
+typed as a `CatalogDiagnostic { error: CatalogError, kind: DiagnosticKind }`; `CatalogError` stays at three variants
+and `GateOutputs` is a `DiagnosticKind`, not a fourth one. The note says why it is a note and not a supersession
+(ADR-0092): no Decision sentence fixes the loader's entry-point count, and ADR-0045 is enforced by edit (7) rather
+than withdrawn. **The rejected alternative is why the accumulation is INSIDE the activity walk**: two defects in two
+files would each surface under per-file first errors, so the sentence above is only true of two defects in ONE
+activity file, which is the shape §7d.14's red names); (5) `workflow/gate.rs` — `gate::answer` gains **three parameters** — `registry: &QuestionRegistry`
 and `attachments: &[Attachment]`, which it validates against before it closes the mark (ADR-0063's *"the kernel refuses
 to close the mark unless that attachment is supplied"*), and `meta: AnswerMeta { explain_sufficiency, answerer }` whose
 members `gate_answered_event` writes kernel-side (§7d.6, §7d.15; the ~20 call sites in `crates/rk-kernel/tests/it/gates.rs`

@@ -410,6 +410,50 @@ impl fmt::Display for CatalogError {
 
 impl std::error::Error for CatalogError {}
 
+/// Which defect a [`CatalogDiagnostic`] carries, as a VALUE rather than as a substring of a
+/// message.
+///
+/// `Io`, `Toml` and `Shape` are the three [`CatalogError`] variants the loader has, transcribed.
+/// `GateOutputs` is the one defect the diagnostic mode names apart from the rest, because
+/// `rk-cli`'s `RK-D-GATE-OUTPUTS` row has to tell it from every other `Shape` and a rule that told
+/// them apart by matching text inside `Shape.detail` would break the first time the message is
+/// reworded. **The error it carries is still a `CatalogError::Shape`** — the variant set is three
+/// and the refusal is among the `Shape`s (`s7d` §7d.8); this enum is the diagnostic's own
+/// vocabulary, not a fourth variant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DiagnosticKind {
+    Io,
+    Toml,
+    Shape,
+    GateOutputs,
+}
+
+/// One typed load defect: the error the strict loader would have raised, plus the discriminant a
+/// `doctor` rule maps.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CatalogDiagnostic {
+    pub error: CatalogError,
+    pub kind: DiagnosticKind,
+}
+
+impl fmt::Display for CatalogDiagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.error.fmt(f)
+    }
+}
+
+/// What the diagnostic loader returns: **both** halves, always.
+///
+/// The catalog is what loaded — the activities with no defect — and the diagnostics are every
+/// defect found. Neither is a `Result` arm of the other: `doctor` has rules that read the loaded
+/// activities and rules that read the defects, and over a pack where both are non-empty it needs
+/// both in the same pass.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CatalogLoad {
+    pub catalog: Catalog,
+    pub diagnostics: Vec<CatalogDiagnostic>,
+}
+
 impl Catalog {
     /// Build from named sources, so a fixture catalog can be `include_str!`'d rather than opened.
     ///
@@ -419,12 +463,7 @@ impl Catalog {
     /// key the selection filter needs.
     pub fn from_sources(sources: &[(&str, &str)]) -> Result<Self, CatalogError> {
         if sources.is_empty() {
-            return Err(CatalogError::Io {
-                path: "<sources>".to_owned(),
-                detail: "no activity sources were given — an empty catalog is an error, because a \
-                         rule that enumerates nothing passes"
-                    .to_owned(),
-            });
+            return Err(empty_sources());
         }
         let mut activities = Vec::with_capacity(sources.len());
         for (name, src) in sources {
@@ -522,19 +561,180 @@ impl Catalog {
     }
 }
 
-fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
-    let doc = toml_subset::parse(src).map_err(|error| CatalogError::Toml {
-        source: name.to_owned(),
-        error,
-    })?;
+/// **The loader's diagnostic mode** — every load defect typed, instead of the first (RT-54,
+/// `s7d` §7d.1 edit (4), §7d.8). `doctor` is its only caller.
+///
+/// **It is NOT the strict loader called once per source.** `s7d` §7d.1 edit (4) names that
+/// alternative and rejects it — *"a pack with two defects would surface one"* — and the sentence is
+/// only true of two defects in **one** activity file, which is the case [`walk`] exists to handle.
+/// So the accumulation is inside the activity walk, and both loader modes read the same walk:
+/// [`Catalog::from_sources`] takes its first diagnostic, this keeps them all.
+///
+/// **It types only what the loader sees** (§7d.8). The loader reads no `timeout_secs` and validates
+/// no facet, so `RK-D-TIMEOUT` and the three `RK-D-FACET-*` rows are `rk-cli`'s own and no widening
+/// happens here; the one row this maps is [`DiagnosticKind::GateOutputs`] → `RK-D-GATE-OUTPUTS`.
+///
+/// **An empty source set is a diagnostic, not an empty success** — [`Catalog::from_sources`]'
+/// refusal, carried rather than raised, for the reason that refusal gives: a rule that enumerates
+/// nothing passes.
+#[must_use]
+pub fn load_diagnostic(sources: &[(&str, &str)]) -> CatalogLoad {
+    if sources.is_empty() {
+        return CatalogLoad {
+            catalog: Catalog::default(),
+            diagnostics: vec![diagnose(empty_sources())],
+        };
+    }
+    let mut diagnostics = Vec::new();
+    let mut activities = Vec::with_capacity(sources.len());
+    for (name, src) in sources {
+        if let Some(activity) = walk(name, src, &mut diagnostics) {
+            activities.push(activity);
+        }
+    }
+    activities.sort_by(|a: &Activity, b: &Activity| a.id.cmp(&b.id));
+    CatalogLoad {
+        catalog: Catalog { activities },
+        diagnostics,
+    }
+}
+
+/// [`load_diagnostic`] over every `*.toml` in a directory — the form the composition root uses,
+/// because the packs `doctor` reads are on disk.
+///
+/// **This is where `Io` diagnostics actually come from.** An unreadable directory, and a file that
+/// cannot be read, are each typed and carried rather than raised: `doctor` reports a pack it could
+/// not open as a finding, the same as one that failed to parse.
+#[must_use]
+pub fn load_diagnostic_dir(dir: &Path) -> CatalogLoad {
+    let io = |detail: String| CatalogDiagnostic {
+        error: CatalogError::Io {
+            path: dir.display().to_string(),
+            detail,
+        },
+        kind: DiagnosticKind::Io,
+    };
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) => {
+            return CatalogLoad {
+                catalog: Catalog::default(),
+                diagnostics: vec![io(e.to_string())],
+            };
+        }
+    };
+    let mut paths: Vec<_> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "toml"))
+        .collect();
+    paths.sort();
+    if paths.is_empty() {
+        return CatalogLoad {
+            catalog: Catalog::default(),
+            diagnostics: vec![io(
+                "holds no *.toml — an empty catalog is an error, not an empty success".to_owned(),
+            )],
+        };
+    }
+    // Read first, then hand the whole set to `load_diagnostic`: a file that cannot be READ is an
+    // `Io` defect of its own and must not stop the files after it from being walked.
+    let mut read = Vec::with_capacity(paths.len());
+    let mut unreadable = Vec::new();
+    for path in &paths {
+        let name = path.file_name().map_or_else(
+            || path.display().to_string(),
+            |n| n.to_string_lossy().into(),
+        );
+        match std::fs::read_to_string(path) {
+            Ok(src) => read.push((name, src)),
+            Err(e) => unreadable.push(CatalogDiagnostic {
+                error: CatalogError::Io {
+                    path: path.display().to_string(),
+                    detail: e.to_string(),
+                },
+                kind: DiagnosticKind::Io,
+            }),
+        }
+    }
+    let sources: Vec<(&str, &str)> = read.iter().map(|(n, s)| (n.as_str(), s.as_str())).collect();
+    let mut load = if sources.is_empty() {
+        CatalogLoad::default()
+    } else {
+        load_diagnostic(&sources)
+    };
+    // The unreadable files come FIRST, in path order, so the diagnostic list reads in the order the
+    // directory was walked rather than in two blocks whose order depends on which failure happened.
+    unreadable.append(&mut load.diagnostics);
+    load.diagnostics = unreadable;
+    load
+}
+
+/// The refusal [`Catalog::from_sources`] raises for an empty set, in one place so the strict and
+/// the diagnostic paths cannot drift apart on its wording.
+fn empty_sources() -> CatalogError {
+    CatalogError::Io {
+        path: "<sources>".to_owned(),
+        detail: "no activity sources were given — an empty catalog is an error, because a rule \
+                 that enumerates nothing passes"
+            .to_owned(),
+    }
+}
+
+/// A strict error's diagnostic discriminant. Transcription, not judgement — the one defect that is
+/// typed apart from its variant is the AC-409 gate refusal, and [`walk`] pushes that one with its
+/// [`DiagnosticKind::GateOutputs`] written at the site rather than inferred here.
+const fn classify(error: &CatalogError) -> DiagnosticKind {
+    match error {
+        CatalogError::Io { .. } => DiagnosticKind::Io,
+        CatalogError::Toml { .. } => DiagnosticKind::Toml,
+        CatalogError::Shape { .. } => DiagnosticKind::Shape,
+    }
+}
+
+/// A strict error as a diagnostic, typed by [`classify`].
+const fn diagnose(error: CatalogError) -> CatalogDiagnostic {
+    let kind = classify(&error);
+    CatalogDiagnostic { error, kind }
+}
+
+/// Walk one activity source, recording **every** defect in `out` rather than stopping at the
+/// first, and returning the activity when one could be built.
+///
+/// **This is the ONE walker**, and both loader modes are readings of it: [`Catalog::from_sources`]
+/// takes its first diagnostic as the error, [`load_diagnostic`] keeps them all. That makes
+/// `s7d` §7d.14's second red — *"the strict loader's first-error result differing from
+/// `load_diagnostic`'s first typed error"* — impossible **by construction** rather than by care. A
+/// second walker would be a second place for every rule below to be forgotten, which is the reason
+/// `bounded_max` further down is one helper and not two.
+///
+/// **What abandons the source and what does not.** A source whose TOML does not parse, that
+/// carries no `[activity]` table, or whose activity declares no `id` is abandoned: every message
+/// after it would be about a document this function cannot name. Every other defect is recorded
+/// and the walk goes on — a missing `stage` must not hide a malformed step three rows below it,
+/// and a refused step must not hide the one after it. That is the whole reason `doctor` reads
+/// packs through this entry point: `s7d` §7d.1 edit (4) rejects the per-file alternative *"because
+/// a pack with two defects would surface one"*, and the two defects it means are two defects in
+/// **one** activity file.
+fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activity> {
+    let doc = match toml_subset::parse(src) {
+        Ok(doc) => doc,
+        Err(error) => {
+            out.push(diagnose(CatalogError::Toml {
+                source: name.to_owned(),
+                error,
+            }));
+            return None;
+        }
+    };
     let shape = |detail: String| CatalogError::Shape {
         source: name.to_owned(),
         detail,
     };
-    let head = doc
-        .get("activity")
-        .and_then(Value::as_table)
-        .ok_or_else(|| shape("no [activity] table".to_owned()))?;
+    let Some(head) = doc.get("activity").and_then(Value::as_table) else {
+        out.push(diagnose(shape("no [activity] table".to_owned())));
+        return None;
+    };
     let text = |t: &Table, key: &str| t.get(key).and_then(Value::as_str).map(ToOwned::to_owned);
     let strings = |t: &Table, key: &str| -> Vec<String> {
         t.get(key)
@@ -548,41 +748,97 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
             })
             .unwrap_or_default()
     };
-    let id = text(head, "id").ok_or_else(|| shape("[activity] has no id".to_owned()))?;
-    let stage = text(head, "stage").ok_or_else(|| shape(format!("{id}: no stage")))?;
-    let method_rank = head
-        .get("method_rank")
-        .and_then(Value::as_int)
-        .ok_or_else(|| shape(format!("{id}: no method_rank")))?;
+    let Some(id) = text(head, "id") else {
+        out.push(diagnose(shape("[activity] has no id".to_owned())));
+        return None;
+    };
+    // `stage` and `method_rank` are recorded and the walk CONTINUES, though neither can be
+    // defaulted and the activity below will not be built without them. The alternative — returning
+    // here — is what made a pack with a missing `stage` and a malformed step report one defect.
+    let stage = text(head, "stage");
+    if stage.is_none() {
+        out.push(diagnose(shape(format!("{id}: no stage"))));
+    }
+    let method_rank = head.get("method_rank").and_then(Value::as_int);
+    if method_rank.is_none() {
+        out.push(diagnose(shape(format!("{id}: no method_rank"))));
+    }
     // ADR-0046's forbids clause: *"a `deviate` declaration whose `kind` falls outside the closed
     // `skip | downgrade | add` vocabulary"*. A fourth token is a LOAD error and never a silently
     // ignored entry, because an ignored one reads as a permission the activity does not have.
+    // The FIRST bad token is recorded and the rest of the list is not re-read: the defect is the
+    // declaration, and a list of four bad tokens is one defect stated four times.
     let deviation_ok = strings(head, "deviation_ok");
     for token in &deviation_ok {
         if !matches!(token.as_str(), "skip" | "downgrade" | "add") {
-            return Err(shape(format!(
+            out.push(diagnose(shape(format!(
                 "{id}: deviation_ok carries {token:?}, which is outside ADR-0046's closed \
                  `skip | downgrade | add` vocabulary"
-            )));
+            ))));
+            break;
         }
     }
-    let budget = activity_budget(head, &id, &shape)?;
+    let budget = match activity_budget(head, &id, &shape) {
+        Ok(budget) => budget,
+        Err(error) => {
+            out.push(diagnose(error));
+            None
+        }
+    };
     let mut steps = Vec::new();
     if let Some(Value::Array(rows)) = doc.get("step") {
         for row in rows {
-            let table = row
-                .as_table()
-                .ok_or_else(|| shape(format!("{id}: a [[step]] is not a table")))?;
-            let step_id =
-                text(table, "id").ok_or_else(|| shape(format!("{id}: a step has no id")))?;
-            let kind_token =
-                text(table, "kind").ok_or_else(|| shape(format!("{id}/{step_id}: no kind")))?;
-            let kind = StepKind::from_token(&kind_token).ok_or_else(|| {
-                shape(format!(
+            let Some(table) = row.as_table() else {
+                out.push(diagnose(shape(format!("{id}: a [[step]] is not a table"))));
+                continue;
+            };
+            let Some(step_id) = text(table, "id") else {
+                out.push(diagnose(shape(format!("{id}: a step has no id"))));
+                continue;
+            };
+            let Some(kind_token) = text(table, "kind") else {
+                out.push(diagnose(shape(format!("{id}/{step_id}: no kind"))));
+                continue;
+            };
+            let Some(kind) = StepKind::from_token(&kind_token) else {
+                out.push(diagnose(shape(format!(
                     "{id}/{step_id}: kind {kind_token:?} is outside the schema's five \
                      (agent, tool, check, gate, emit)"
-                ))
-            })?;
+                ))));
+                continue;
+            };
+            let output_type = text(table, "outputs").map(|o| {
+                o.strip_prefix("value:")
+                    .map_or_else(|| o.clone(), ToOwned::to_owned)
+            });
+            // **AC-409 (ADR-0045, ADR-0038), as amended 2026-09-18 — C-01 RA-M-05.** *"A gate
+            // answer populates the gate step's `answer` and can bind nothing downstream"*, and the
+            // criterion's WHEN is *"when the configuration is loaded"* — so the refusal is HERE,
+            // in the strict walk `run` loads through, and not in the diagnostic mode alone. Until
+            // 2026-09-20 `outputs` was parsed for every `StepKind` and `run` would load the graph
+            // AC-409 says is rejected.
+            //
+            // The amendment is why this is a LOADER rule rather than a type. This crate has one
+            // `Step` struct for every kind, so `Step { kind: Gate, output_type: Some(..) }` is
+            // representable and the compile-time instrument the criterion first named could not be
+            // written; the behaviour — rejection — is unchanged.
+            //
+            // It is typed `GateOutputs` rather than a plain `Shape` so that `rk-cli`'s
+            // `RK-D-GATE-OUTPUTS` row maps a value instead of matching text inside this message.
+            // The ERROR stays a `CatalogError::Shape`: the variant set is three and the refusal is
+            // among the `Shape`s (`s7d` §7d.8).
+            if kind == StepKind::Gate && output_type.is_some() {
+                out.push(CatalogDiagnostic {
+                    error: shape(format!(
+                        "{id}/{step_id}: a `gate` step carries `outputs`. AC-409: a gate answer \
+                         populates the gate step's `answer` and binds nothing downstream, so a \
+                         graph whose reference resolves to a gate step's `outputs` is a \
+                         configuration error"
+                    )),
+                    kind: DiagnosticKind::GateOutputs,
+                });
+                continue;
+            }
             // ADR-0097 decision 3 withdrew this key; it is read so that the rule that refuses it
             // has something to refuse. A `memo` that is not a boolean is a SHAPE error and never a
             // silently absent declaration -- `retry_max`'s and `activity_budget`'s discipline, and
@@ -591,21 +847,33 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
                 None => None,
                 Some(Value::Bool(b)) => Some(*b),
                 Some(_) => {
-                    return Err(shape(format!(
+                    out.push(diagnose(shape(format!(
                         "{id}/{step_id}: `memo` is not a boolean. ADR-0097 decision 3 withdrew the \
                          per-step memo field; a non-boolean value is refused here rather than \
                          dropped, because a dropped key reads as a step that never declared one"
-                    )));
+                    ))));
+                    continue;
+                }
+            };
+            let retry_max = match bounded_max(table, "retry", &id, &shape) {
+                Ok(max) => max,
+                Err(error) => {
+                    out.push(diagnose(error));
+                    continue;
+                }
+            };
+            let repeat_max = match bounded_max(table, "repeat", &id, &shape) {
+                Ok(max) => max,
+                Err(error) => {
+                    out.push(diagnose(error));
+                    continue;
                 }
             };
             steps.push(Step {
                 id: step_id,
                 kind,
                 run: text(table, "run"),
-                output_type: text(table, "outputs").map(|o| {
-                    o.strip_prefix("value:")
-                        .map_or_else(|| o.clone(), ToOwned::to_owned)
-                }),
+                output_type,
                 // ADR-0014's *"an activity nominates a ROLE … never a card"*, transcribed and not
                 // interpreted: the role VOCABULARY is the pack's, so a role this crate has never
                 // heard of is carried here and refused at the resolution
@@ -616,26 +884,41 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
                 when: text(table, "when"),
                 expr: text(table, "expr"),
                 for_each: text(table, "for_each"),
-                retry_max: bounded_max(table, "retry", &id, &shape)?,
-                repeat_max: bounded_max(table, "repeat", &id, &shape)?,
+                retry_max,
+                repeat_max,
                 memo_declared,
             });
         }
     }
-    // ADR-0072's `@version`. Absent is `None` and never `1` -- see `Activity::version`.
-    let version =
-        match head.get("version") {
-            None => None,
-            Some(v) => {
-                let raw = v
-                    .as_int()
-                    .ok_or_else(|| shape(format!("{id}: `version` is not an integer")))?;
-                Some(u32::try_from(raw).map_err(|_| {
-                    shape(format!("{id}: `version` is {raw}, which is outside u32"))
-                })?)
+    // ADR-0072's `@version`. Absent is `None` and never `1` -- see `Activity::version`. A malformed
+    // one abandons the activity rather than loading it as `None`: a version that silently became
+    // absent reads as an activity that never declared one, which is `memo`'s rule one field over.
+    let version = match head.get("version") {
+        None => None,
+        Some(v) => {
+            let Some(raw) = v.as_int() else {
+                out.push(diagnose(shape(format!(
+                    "{id}: `version` is not an integer"
+                ))));
+                return None;
+            };
+            match u32::try_from(raw) {
+                Ok(v) => Some(v),
+                Err(_) => {
+                    out.push(diagnose(shape(format!(
+                        "{id}: `version` is {raw}, which is outside u32"
+                    ))));
+                    return None;
+                }
             }
-        };
-    Ok(Activity {
+        }
+    };
+    // The two fields that cannot be defaulted. Their defects are already recorded above; this is
+    // where the activity stops being buildable, not where the reader is told why.
+    let (Some(stage), Some(method_rank)) = (stage, method_rank) else {
+        return None;
+    };
+    Some(Activity {
         source: name.to_owned(),
         id,
         version,
@@ -661,6 +944,25 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
         max_rigor: text(head, "max_rigor"),
         family: text(head, "family"),
         steps,
+    })
+}
+
+/// The strict loader: [`walk`], stopping at the first diagnostic.
+///
+/// A source with **any** defect is refused whole, exactly as it was before the walk began
+/// accumulating — an activity that was built around a skipped step is not a lawful activity, it is
+/// one the walk was able to describe further.
+fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
+    let mut diagnostics = Vec::new();
+    let activity = walk(name, src, &mut diagnostics);
+    if let Some(first) = diagnostics.into_iter().next() {
+        return Err(first.error);
+    }
+    // Unreachable as `walk` is written — every `None` path records a diagnostic first — and it is a
+    // value rather than a panic so that an edit which forgets to is a load error and not an abort.
+    activity.ok_or_else(|| CatalogError::Shape {
+        source: name.to_owned(),
+        detail: "the activity could not be built and no defect was recorded".to_owned(),
     })
 }
 
