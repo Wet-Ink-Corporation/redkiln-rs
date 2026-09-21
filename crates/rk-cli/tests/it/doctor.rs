@@ -471,3 +471,135 @@ fn ac203_agents_without_agent_doctor_row() {
 fn ac418_tier_leak_on_card_model_and_filler_effort() {
     fires_over_its_fixture_and_not_over_clean("RK-D-TIER-LEAK", rk_cli::doctor::Severity::Error);
 }
+
+// ---------------------------------------------------------- batch 2: the pack and catalog rows
+//
+// Four families, five ids. Each reads the enabled pack's own TOML or the activity catalog beside
+// it — nothing here reads a card, folds a journal or parses a predicate.
+//
+// 🛑 **`ac409_gate_outputs_binding_rejected` IS NOT IN THIS BATCH**, though `RK-D-GATE-OUTPUTS` is
+// a catalog row. §7d.14's red for it is *"`RK-D-DANGLING-*` firing beside `RK-D-GATE-OUTPUTS` on
+// its fixture"* — the gate declares `outputs`, so the binding is **not** dangling and the test has
+// to assert that no `RK-D-DANGLING-*` row fires. Those three rows are still `unbuilt`, so the
+// assertion would pass over three rules that answer nothing: a guard satisfied by absence. It
+// lands in batch 3 beside the rows it must not co-fire with.
+
+/// **AC-419 / AC-097's doctor half** — a per-activity `timeout_secs` that is absent or not an
+/// integer.
+///
+/// **Two cases in one fixture**, which is what §7d.8's *"two fixtures"* means for a single id:
+/// `[activity.emit-report]` declares none (Missing) and `[activity.review]` declares `"900"`, a
+/// string (NonNumeric). A rule that reported only one of the two would leave the other silent in
+/// production, so the test asserts **both findings**, not merely that something fired.
+#[test]
+fn ac419_missing_or_non_numeric_timeout_rejected() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-TIMEOUT", rk_cli::doctor::Severity::Error);
+
+    let found = findings("RK-D-TIMEOUT", "RK-D-TIMEOUT");
+    assert_eq!(
+        found.len(),
+        2,
+        "the fixture carries BOTH cases — an activity declaring no `timeout_secs` and one \
+         declaring a string — and the row must report each. One finding means one of the two \
+         predicates is not written: {found:?}"
+    );
+    assert!(
+        found.iter().any(|f| f.detail.contains("emit-report")),
+        "the Missing case (an activity with no `timeout_secs` at all) is not reported: {found:?}"
+    );
+    assert!(
+        found.iter().any(|f| f.detail.contains("review")),
+        "the NonNumeric case (`timeout_secs = \"900\"`, a string) is not reported: {found:?}"
+    );
+}
+
+/// **AC-423 / AC-526 / D-11** — the installed CLI's version, and the pack's declared cache TTLs.
+///
+/// Two ids in one family because §7d.8's table puts them in one row. They read different things —
+/// `RK-D-CLI-VERSION` the probe seam, `RK-D-TTL` the pack's `[cache]` table — and the fixture for
+/// each carries only its own defect.
+///
+/// **The probe is STUBBED here** (§7d.8's seam) and returns the fixture's `probe.toml` version.
+/// `ac423_probe_is_one_version_spawn_not_a_dispatch` drives the real one and is cycle 7's; this
+/// test asserts the finding, not the spawn.
+#[test]
+fn ac423_ac526_cli_version_and_ttl_mismatch_rejected() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-CLI-VERSION", rk_cli::doctor::Severity::Error);
+    fires_over_its_fixture_and_not_over_clean("RK-D-TTL", rk_cli::doctor::Severity::Error);
+
+    // The version the fixture stubs is named in the finding, so an operator reads what is
+    // installed rather than only that something is wrong.
+    let version = findings("RK-D-CLI-VERSION", "RK-D-CLI-VERSION");
+    assert!(
+        version.iter().any(|f| f.detail.contains("2.1.200")),
+        "the finding does not name the version the probe returned: {version:?}"
+    );
+
+    // BOTH TTL defects: one TTL named where the pack owes two, and the named one is not `1h`.
+    let ttl = findings("RK-D-TTL", "RK-D-TTL");
+    assert_eq!(
+        ttl.len(),
+        2,
+        "the fixture declares `prompt_ttl = \"5m\"` and NO `subagent_prompt_ttl` — a wrong value \
+         and a missing declaration, and AC-210's THEN names both keys. One finding means one of \
+         the two is unread: {ttl:?}"
+    );
+    assert!(
+        ttl.iter().any(|f| f.detail.contains("subagent_prompt_ttl")),
+        "the absent `subagent_prompt_ttl` is not reported: {ttl:?}"
+    );
+    assert!(
+        ttl.iter().any(|f| f.detail.contains("5m")),
+        "the wrong `prompt_ttl` value is not named: {ttl:?}"
+    );
+}
+
+/// **AC-377's doctor half (`s7c` ARMED)** — a declared margin under two ticks.
+///
+/// The test's own name fixes the floor: *under two*. A margin of `2` is lawful and `1` is not,
+/// which is the boundary a rule keyed on `< 1` or `<= 2` would get wrong in opposite directions.
+#[test]
+fn ac377_margin_under_two_ticks_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-MARGIN", rk_cli::doctor::Severity::Error);
+
+    let found = findings("RK-D-MARGIN", "RK-D-MARGIN");
+    assert!(
+        found.iter().any(|f| f.detail.contains("five_hour")),
+        "the finding does not name which window is under the floor: {found:?}"
+    );
+    // `clean/` declares ten on both windows, so the clean half above already proves the rule does
+    // not fire at ten. The boundary itself — two is lawful — is asserted here rather than left to
+    // a reader, because the fixture is at one and a rule keyed on `< 3` would pass both.
+    assert!(
+        found.iter().all(|f| !f.detail.contains("seven_day")),
+        "the fixture leaves `seven_day` at ten and the row fired on it, so the rule is not reading \
+         the declared value: {found:?}"
+    );
+}
+
+/// **AC-421's two warning rows** — a definition no enabled pack reaches, and a declared slot that
+/// is neither filled nor optional.
+///
+/// **Both are warnings, and the severity is the assertion.** AC-057's warning class stands: a dead
+/// definition costs nothing at run time, and §7d.8's *"warnings never move the code"* means a
+/// `doctor` whose only findings are these two still exits `0`. A rule that reported either as an
+/// error would turn a tidy-up into a refusal.
+#[test]
+fn ac421_dead_definition_and_unfilled_slot_reported() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-DEAD-DEF", rk_cli::doctor::Severity::Warning);
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-UNFILLED-SLOT",
+        rk_cli::doctor::Severity::Warning,
+    );
+
+    let dead = findings("RK-D-DEAD-DEF", "RK-D-DEAD-DEF");
+    assert!(
+        dead.iter().any(|f| f.detail.contains("orphan")),
+        "the finding does not name the unreachable definition: {dead:?}"
+    );
+    assert!(
+        dead.iter().all(|f| !f.detail.contains("emit-report")),
+        "the row fired on `emit-report`, which the pack's policy DOES reach — the rule is \
+         reporting every activity rather than the unreachable one: {dead:?}"
+    );
+}

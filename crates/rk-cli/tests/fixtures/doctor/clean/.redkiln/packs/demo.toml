@@ -28,3 +28,10 @@ seven_day = 10
 [cache]
 prompt_ttl = "1h"
 subagent_prompt_ttl = "1h"
+
+# Every activity the catalog declares owes a `timeout_secs` (AC-097), and `RK-D-TIMEOUT` reads
+# it per activity. `pack-min/pack.toml` carries the same row for the same reason. ADDED
+# 2026-09-21 at cycle 5 batch 2: the clean run fired RK-D-TIMEOUT without it, which is the clean
+# half of every family test doing exactly what s7d 7d.8 keeps it for.
+[activity.emit-report]
+timeout_secs = 900

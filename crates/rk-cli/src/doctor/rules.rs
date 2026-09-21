@@ -137,7 +137,7 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-TIMEOUT",
         severity: Severity::Error,
-        check: unbuilt,
+        check: timeout,
     },
     Rule {
         id: "RK-D-DANGLING-ROLE",
@@ -157,12 +157,12 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-DEAD-DEF",
         severity: Severity::Warning,
-        check: unbuilt,
+        check: dead_def,
     },
     Rule {
         id: "RK-D-UNFILLED-SLOT",
         severity: Severity::Warning,
-        check: unbuilt,
+        check: unfilled_slot,
     },
     Rule {
         id: "RK-D-ENV-DENYLIST",
@@ -172,12 +172,12 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-CLI-VERSION",
         severity: Severity::Error,
-        check: unbuilt,
+        check: cli_version,
     },
     Rule {
         id: "RK-D-TTL",
         severity: Severity::Error,
-        check: unbuilt,
+        check: ttl,
     },
     Rule {
         id: "RK-D-FACET-UNKNOWN",
@@ -222,7 +222,7 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-MARGIN",
         severity: Severity::Error,
-        check: unbuilt,
+        check: margin,
     },
     Rule {
         id: "RK-D-HEADROOM-MARGIN",
@@ -530,6 +530,278 @@ fn tier_leak(ctx: &Ctx) -> Vec<Finding> {
                         ),
                     ));
                 }
+            }
+        }
+    }
+    out
+}
+
+// ============================================================================ batch 2: the pack
+// ============================================================================ and catalog rows
+//
+// Four families, five ids, each reading the enabled pack's own TOML or the catalog beside it.
+//
+// 🛑 **NONE OF THESE READS THROUGH `verbs::run::PackExtras`, AND §7d.8 PRESCRIBES THAT IT DOES.**
+// §7d.8: *"`RK-D-TIMEOUT` reads per-activity `timeout_secs` through `rk-cli`'s own `PackExtras`
+// (absent → `Missing`; non-integer → `NonNumeric`)"*. Measured 2026-09-21, that cannot be built:
+//
+//   * `ActivityExtras.timeout_secs` is a **required `u64`**, so an activity table declaring none
+//     and one declaring `"900"` are the SAME failure — `serde` refuses the whole document either
+//     way, and the two cases the row exists to tell apart become indistinguishable;
+//   * that failure is not local. `PackExtras` also carries `margins` and `cache`, both with
+//     required members, so ONE absent `timeout_secs` would silence `RK-D-MARGIN` and `RK-D-TTL`
+//     as well — three rows blinded by one defect;
+//   * and a pack declaring `[cache] prompt_ttl` alone refuses for the same reason, which is
+//     exactly `RK-D-TTL`'s own rejecting fixture.
+//
+// So the rows below read the pack as `toml::Value`. **This is `CardView`'s asymmetry a second
+// time, and it is worth naming once**: a loader refuses a document so that nothing downstream
+// reads a half-parsed one, while a linter must read the parts that ARE well formed in order to
+// report the part that is not. A doctor rule built on a loader's type reports nothing precisely
+// when there is most to report. A dated §7d.8 amendment records it.
+
+/// Every enabled pack's document, by name, in `config.packs.enabled` order.
+///
+/// An unreadable or unparseable pack is **skipped**, on [`cards`]' rule: each row below says one
+/// thing about a pack it could read, and *"this file is not a pack"* belongs to whichever row a
+/// record gives it.
+fn packs(ctx: &Ctx) -> Vec<(String, toml::Value)> {
+    ctx.config
+        .packs
+        .enabled
+        .iter()
+        .filter_map(|name| {
+            let path = ctx.pack_files.get(name)?;
+            let text = std::fs::read_to_string(path).ok()?;
+            let doc: toml::Value = toml::from_str(&text).ok()?;
+            Some((name.clone(), doc))
+        })
+        .collect()
+}
+
+/// A pack's `[<table>]`, when it has one.
+fn table<'a>(pack: &'a toml::Value, name: &str) -> Option<&'a toml::Table> {
+    pack.get(name).and_then(toml::Value::as_table)
+}
+
+/// **`RK-D-TIMEOUT`** — AC-419, AC-097's doctor half.
+///
+/// **Every activity the catalog declares owes a `timeout_secs`**, so an activity with no
+/// `[activity.<id>]` table at all is `Missing` exactly as one whose table omits the key is: a
+/// declaration that is absent and a declaration that is empty are the same absence to a run that
+/// needs the number. The two arms the row distinguishes are absent and *present but not an
+/// integer*, which is what the loader's type could not tell apart.
+fn timeout(ctx: &Ctx) -> Vec<Finding> {
+    let packs = packs(ctx);
+    ctx.catalog
+        .catalog
+        .activities()
+        .iter()
+        .filter_map(|a| {
+            let declared = packs
+                .iter()
+                .find_map(|(_, pack)| table(pack, "activity")?.get(&a.id)?.get("timeout_secs"));
+            match declared {
+                None => Some(finding(
+                    "RK-D-TIMEOUT",
+                    Severity::Error,
+                    format!(
+                        "activity `{}` declares no `timeout_secs`: no enabled pack carries `[activity.{}] timeout_secs` (Missing)",
+                        a.id, a.id
+                    ),
+                )),
+                Some(v) if v.as_integer().is_none() => Some(finding(
+                    "RK-D-TIMEOUT",
+                    Severity::Error,
+                    format!(
+                        "activity `{}` declares `timeout_secs = {v}`, which is not an integer (NonNumeric)",
+                        a.id
+                    ),
+                )),
+                Some(_) => None,
+            }
+        })
+        .collect()
+}
+
+/// **`RK-D-CLI-VERSION`** — AC-423, D-11: the version of the harness binary **as installed on this
+/// box**, against the pin this workspace was tested at.
+///
+/// It reads the probe seam rather than a file, because that is the only way to learn what is
+/// installed. A probe that cannot answer is reported too: an unprobeable harness is as much a
+/// configuration fact as a mismatched one, and a rule that stayed silent on it would be silent
+/// exactly when the binary is missing.
+fn cli_version(ctx: &Ctx) -> Vec<Finding> {
+    let program = ctx
+        .config
+        .adapters
+        .harness_binary
+        .as_deref()
+        .unwrap_or("claude");
+    let pin = rk_adapter_claude::config::TESTED_CLI_VERSION;
+    match ctx.probe.version(program) {
+        Ok(v) if v.trim() == pin => Vec::new(),
+        Ok(v) if v.trim().is_empty() => vec![finding(
+            "RK-D-CLI-VERSION",
+            Severity::Error,
+            format!("`{program} --version` printed nothing; the tested pin is `{pin}`"),
+        )],
+        Ok(v) => vec![finding(
+            "RK-D-CLI-VERSION",
+            Severity::Error,
+            format!(
+                "the installed `{program}` reports `{}`; this workspace is tested at `{pin}`",
+                v.trim()
+            ),
+        )],
+        Err(e) => vec![finding(
+            "RK-D-CLI-VERSION",
+            Severity::Error,
+            format!("`{program}` could not be probed: {e}"),
+        )],
+    }
+}
+
+/// **`RK-D-TTL`** — AC-424, ADR-0113, AC-210's THEN.
+///
+/// AC-210 names **both** keys and one value: `CLAUDE_CODE_PROMPT_CACHE_TTL=1h` **and**
+/// `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL=1h`. So a pack owes two declarations, and each owes the
+/// recorded value — the constant is read from `rk_adapter_claude::config::CACHE_TTL` and copied
+/// nowhere, on `env_denylist`'s reasoning.
+fn ttl(ctx: &Ctx) -> Vec<Finding> {
+    let want = rk_adapter_claude::config::CACHE_TTL;
+    let mut out = Vec::new();
+    for (name, pack) in packs(ctx) {
+        let cache = table(&pack, "cache");
+        for key in ["prompt_ttl", "subagent_prompt_ttl"] {
+            match cache.and_then(|c| c.get(key)).and_then(toml::Value::as_str) {
+                Some(v) if v == want => {}
+                Some(v) => out.push(finding(
+                    "RK-D-TTL",
+                    Severity::Error,
+                    format!(
+                        "pack `{name}` declares `[cache] {key} = \"{v}\"`; AC-210 names `{want}`"
+                    ),
+                )),
+                None => out.push(finding(
+                    "RK-D-TTL",
+                    Severity::Error,
+                    format!("pack `{name}` declares no `[cache] {key}`; AC-210 names both keys"),
+                )),
+            }
+        }
+    }
+    out
+}
+
+/// **`RK-D-MARGIN`** — AC-377's doctor half (`s7c` ARMED): a declared margin under **two** ticks.
+///
+/// The floor is two and the comparison is `< 2`, so a margin of two is lawful. The test's own name
+/// is what fixes it — *margin under two ticks* — and a rule keyed on `<= 2` or `< 1` would be
+/// wrong in opposite directions at exactly the value the fixture sits on.
+fn margin(ctx: &Ctx) -> Vec<Finding> {
+    const FLOOR: i64 = 2;
+    let mut out = Vec::new();
+    for (name, pack) in packs(ctx) {
+        let Some(margins) = table(&pack, "margins") else {
+            continue;
+        };
+        for window in ["five_hour", "seven_day"] {
+            if let Some(ticks) = margins.get(window).and_then(toml::Value::as_integer)
+                && ticks < FLOOR
+            {
+                out.push(finding(
+                    "RK-D-MARGIN",
+                    Severity::Error,
+                    format!(
+                        "pack `{name}` declares `[margins] {window} = {ticks}`, under the floor of \
+                         {FLOOR} ticks"
+                    ),
+                ));
+            }
+        }
+    }
+    out
+}
+
+/// **`RK-D-DEAD-DEF`** — AC-421, a **warning**: a definition referenced by no enabled pack.
+///
+/// The join is the activity's `stage` against the union of every enabled pack's `[policy] stages`.
+/// A warning and not an error, on AC-057's standing warning class: a dead definition costs nothing
+/// at run time, and §7d.8's *"warnings never move the code"* keeps the exit at `0`.
+fn dead_def(ctx: &Ctx) -> Vec<Finding> {
+    let mut reachable: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for (_, pack) in packs(ctx) {
+        if let Some(stages) = table(&pack, "policy")
+            .and_then(|p| p.get("stages"))
+            .and_then(toml::Value::as_table)
+        {
+            reachable.extend(stages.keys().cloned());
+        }
+    }
+    if reachable.is_empty() {
+        // No enabled pack declares a policy at all. Every activity is then unreachable for a
+        // reason that is not the activity's, and reporting all of them would bury it.
+        return Vec::new();
+    }
+    ctx.catalog
+        .catalog
+        .activities()
+        .iter()
+        .filter(|a| !reachable.contains(&a.stage))
+        .map(|a| {
+            finding(
+                "RK-D-DEAD-DEF",
+                Severity::Warning,
+                format!(
+                    "activity `{}` declares stage `{}`, which no enabled pack's `[policy] stages` \
+                     names — nothing can reach it",
+                    a.id, a.stage
+                ),
+            )
+        })
+        .collect()
+}
+
+/// **`RK-D-UNFILLED-SLOT`** — AC-421, a **warning**: a declared slot neither filled nor optional.
+///
+/// `required = true` is the discriminator: a slot the pack marks optional is a slot the pack said
+/// may stay empty, and reporting it would make the marking meaningless.
+fn unfilled_slot(ctx: &Ctx) -> Vec<Finding> {
+    let filled: std::collections::BTreeSet<String> =
+        std::fs::read_to_string(ctx.redkiln().join("slots.toml"))
+            .ok()
+            .and_then(|src| toml::from_str::<toml::Value>(&src).ok())
+            .and_then(|doc| {
+                Some(
+                    doc.get("filler")?
+                        .as_array()?
+                        .iter()
+                        .filter_map(|f| f.get("slot")?.as_str().map(ToOwned::to_owned))
+                        .collect(),
+                )
+            })
+            .unwrap_or_default();
+
+    let mut out = Vec::new();
+    for (name, pack) in packs(ctx) {
+        let Some(slots) = table(&pack, "slot") else {
+            continue;
+        };
+        for (slot, body) in slots {
+            let required = body
+                .get("required")
+                .and_then(toml::Value::as_bool)
+                .unwrap_or(false);
+            if required && !filled.contains(slot) {
+                out.push(finding(
+                    "RK-D-UNFILLED-SLOT",
+                    Severity::Warning,
+                    format!(
+                        "pack `{name}` declares `[slot.{slot}] required = true` and no filler in \
+                         `slots.toml` names it"
+                    ),
+                ));
             }
         }
     }
