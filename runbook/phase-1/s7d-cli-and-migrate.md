@@ -631,7 +631,7 @@ register's §12.10*) because `check-refs.py` rejects the bare form.
   row's presence in `Exit::ALL`; the eleven `StepError` rows are driven **in-process** through the verb function with a
   `FakeHarness::scripted` returning each variant (`rk_ports::fakes::FakeHarness` is a library value no spawned process
   can be handed), and the binary is driven for the classes the fixture child can produce through the real adapter —
-  `Transport` via a missing `harness_binary`, `Schema` via a malformed frame, a `hold` child under a 1 s
+  `Transport` via a missing `harness_binary`, `Schema` via a malformed frame — ***corrected 2026-09-20, settling residual R-60: a malformed frame does NOT yield `Schema`.*** *Measured through the binary, `init` plus a malformed line exits **`10`**, not `11`: `classify.rs` rule 8 takes a stream with no parseable result frame to `Transport { kind: Decode }`, and `extract_digest` is rule 10. The `Schema` (`11`) fixture is authored as **the other arm of `extract_digest`** instead, which is where an `11` is actually reachable* — a `hold` child under a 1 s
   `timeout_secs` → **`13`** (the adapter classifies its timer arm `Cancelled { by: Timeout }` — `Arm::Timer =>
   Some(CancelledBy::Timeout)` [measured 2026-09-18, `crates/rk-adapter-claude/src/runner.rs`]; `s7c` §7c.10, RT-3 — so
   this fixture is the binary-level instance of row `13`, not `12`, and a fixture whose `expected` reads `12` is red on a
@@ -756,7 +756,7 @@ ports with no Phase-1 real (ADR-0094 decision 2); (9) **before the gate read**, 
 recorded deadline `< now` is resolved through `rk_kernel::workflow::gate::expire(&state, token,
 Timestamp::from_unix_seconds(now), &action, &tree_hash)` and its events appended, where `action` is the pack's declared
 expiry row for the gate class read through `PackExtras` and linted by `gate::lint_expiry_policy_row` (AC-260) — **no
-default** (`gate::answer` returns `Err(GateError::Expired)` only when a `gate_expired` row is already in the journal;
+default** (`gate::answer` returns `Err(GateError::Expired)` only when a `gate_expired` row is already in the journal — ***corrected 2026-09-20, R-44: unreachable for a real expiry; the record is KEPT in `gates_open` and `gate_record` is tested first, so the CLI filters expired tokens itself. The full correction is at §7d.6.***;
 a gate whose deadline merely passed is still open to it [measured 2026-09-18, `crates/rk-kernel/src/workflow/gate.rs`],
 so *resolved at that read* — AC-257 — is this call); then
 `RunInputs::new(stage).with_pack(..).with_catalog(..).with_artifacts(..).with_facets(..)
@@ -967,7 +967,7 @@ unchanged across every `run` in this file (AC-518).
 then **the expiry pass** of `run`'s step (9) — every open gate of the item whose recorded deadline `< now` is resolved
 through `gate::expire(…)` with the pack's declared action and its events appended (AC-257: *"observed and resolved at
 that read"*; without it `gate::answer` would `Applied` a gate whose deadline merely passed, because it refuses `Expired`
-only on a `gate_expired` row already in the journal); then the item's **most recent gate record** is read from the
+only on a `gate_expired` row already in the journal — ***CORRECTED 2026-09-20, settling residual R-44: this is FALSE against the tree and the refusal is UNREACHABLE for a real expiry.*** *`workflow/fsm.rs`'s `GateExpired` arm **keeps the record in `gates_open`** (its own line: *"2026-09-17 (slice C): the record is KEPT in `gates_open` — an escalation names it and `stage_action` carries it"*) and inserts into `gates_expired` beside it, removing nothing. `gate::answer` then tests `state.gate_record(presented)` — which reads `gates_open` — **before** `state.is_expired(presented)`, and an expired token still in `gates_open` returns `Applied` or `Void` and never reaches the `Expired` branch at all [measured 2026-09-20, `crates/rk-kernel/src/workflow/gate.rs`:186-220, `workflow/fsm.rs`:1474-1488]. **So the CLI filters expired tokens itself**, which is what the shipped `answer` does; the kernel's `Expired` is reachable only for a token no longer in `gates_open`. The module header's *"the `GateExpired` arm removes the token from `gates_open`"* is a **historical** account of the pre-2026-09-17 behaviour under *"What the middle row was before"*, not the current arm — read the code, not the prose.* — then the item's **most recent gate record** is read from the
 store — **and at 7d the store is ONE journal per repository**: `SqliteStore::query` ignores its selector and returns
 every event [measured 2026-09-18, `crates/rk-adapter-sqlite/src/lib.rs`, `fn query(&self, _by: Query)`] (RT-4's
 store-side `Query::ByItem` is routed, not built), the `gate_opened` payload carries `{deadline, kind, reach, token,
@@ -994,7 +994,7 @@ keyed on the token and bound to the tree hash (ADR-0017), so AC-248's THEN — *
 item identity"* — governs what `reconcile()` accepts, not how the CLI finds the live token; a dated note on AC-248
 saying so is OWED with the flip commit (§7d.18 RAISED). Then `tree_hash(exec, owned.path(), common_dir,
 &TreeBasis::WorkingState)` **over the run-owned worktree the store records for the item** (H-5 — never `cwd`; ADR-0105
-clause 4's one algorithm; RT-43: the order is reconcile, then read the gate, then hash — a hash before the reconcile
+clause 4's one algorithm; RT-43: the order is reconcile, then read the gate, then hash — ***corrected 2026-09-20, R-50: the last two cannot hold in that order. `gate::expire` TAKES a tree hash, so the hash necessarily PRECEDES the expiry pass; the order is reconcile, then hash, then read the gate. RT-43's substance — reconcile before hash — is unaffected and is the clause that was routed*** — a hash before the reconcile
 would be a hash of a tree the reconcile may report drifted against; a recorded worktree that no longer exists is exit
 `3` naming its path, a refusal of the item's recorded state); the gate's **question** is resolved from the gate record's
 `kind` (`unknown_facet:<axis>` — no gate carries a question id on the tree) → **the default question at 7d** in the
@@ -1106,7 +1106,7 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   dated design §5 note or an ADR-0116-route record is OWED* (§7d.1's table, §7d.18) — the kind exists and nothing in the
   tree writes it yet [measured 2026-09-18: `grep -rn ArtifactWrite crates/rk-kernel/src` → match arms only] — with
   payload in **ADR-0116 decision 1's shape** — `{ kind: "<Kind>", item, schema_version: <the kind's registered schema
-  version>, digest: sha256(file) }` — with the binding path `<gate step>.attachments.<Kind>` carried as the artifact's
+  version>, digest: sha256(file) }` — ***corrected 2026-09-20, settling residual R-49: there IS no registered schema VERSION to read.*** *`ArtifactKind` carries `schema: Option<String>` and **no version field at all** [measured 2026-09-20, `crates/rk-kernel/src/select/artifacts.rs`:59-65 — the fields are `name`, `source`, `keyed_by`, `schema`]. ADR-0116 decision 1's member keeps its name, and its value is the kind's registered `schema` string when one is registered and `null` when none is: **the id is written and a version is NOT invented.** Inventing one would put a number in a tier-1 payload that no registry could ever confirm.* — with the binding path `<gate step>.attachments.<Kind>` carried as the artifact's
   **instance name inside `kind`'s registered slot**, not as a fifth payload member (ADR-0063's `derived_from = []` root is
   what the ABSENCE of an `artifact.read` predecessor means for this row; a widened payload — an `instance` or
   `derived_from` member — is a design §5 dated note or an ADR-0116-route record, RAISED in §7d.18, not written here: a
@@ -1134,7 +1134,15 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   `--toml-opened`, exit `2` (the parser's — before any store read, so the store is untouched); with `--explain-sufficed
   yes --toml-opened yes` on one gate (SM-126's kill cell: `explain` sufficed and the reviewer opened a TOML *anyway*) and
   `--explain-sufficed no --toml-opened no` on another, the `gate_answered` payload carries one member
-  `explain_sufficiency: { sufficed: "yes", toml_opened: "yes" }` / `{ "no", "no" }` verbatim (design §5's `gate_answered`
+  `explain_sufficiency: { sufficed: "yes", toml_opened: "yes" }` / `{ "no", "no" }` verbatim — ***corrected 2026-09-20,
+  settling residual R-45: these two cells are BOTH ON THE DIAGONAL and cannot catch a one-flag record.*** *A mutant
+  writing `"toml_opened": sufficiency.sufficed` — the exact shape ADR-0129 decision 1 was corrected away from, and the
+  one SM-126's pre-registered kill needs — agrees with the record on `{yes,yes}` and on `{no,no}` and is caught by
+  NEITHER prescribed cell. **The discriminating cells are the OFF-DIAGONAL ones**, `{yes,no}` and `{no,yes}`, and the
+  floor is therefore **all four**. The shipped test already runs all four and is stronger than this prescription
+  [measured 2026-09-20, `crates/rk-cli/tests/it/answer.rs`:760 — `for (sufficed, toml_opened) in [("yes","yes"),
+  ("yes","no"),("no","yes"),("no","no")]`]; the correction is recorded here so no later reader trims the test back to
+  this floor and re-opens the escape* (design §5's `gate_answered`
   row as amended 2026-09-18 and corrected 2026-09-19; ADR-0129 decision 1 as accepted — **two data, one field**, the
   operator's answer of 2026-09-19 to the question the stage-open commit carried) and `answerer` equal to the answer commit's `%an <%ae>`
   (RT-42). SM-126's instrument is the field; the first thirty answers accrue from `s8` at the earliest.
@@ -1172,7 +1180,7 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
   logged `RunInputs` sources under `inputs/` — `pack/`, `catalog/`, `artifacts/`, `facets.toml`, `context.json`,
   `artifact-state.json`, `runtime.json`, `specs.json` — and `events.jsonl` [measured 2026-09-18, `replay.rs`]) — and
   **`explain` reads it back through `rk_kernel::replay::read_run(dir)`** for the item's most recent run (the run id from
-  the store's last `activity_committed` / `dag_assembled` row's `run_id`), rendered by a function in
+  the store's last `activity_committed` / `dag_assembled` row's `run_id` — ***corrected 2026-09-20, R-55: the `dag_assembled` half is UNIMPLEMENTABLE as written. That row's payload is `{inputs_digest, nodes, edges, rows_fired, skipped, gated, appetite, cost}` and carries **neither a `run_id` nor an `item`** [measured 2026-09-20, `crates/rk-kernel/src/select/step5.rs`:248-273] — GAP 10. The `activity_committed` half stands; the resolution reads the run id from there alone***), rendered by a function in
   `crates/rk-cli/src/verbs/explain.rs` that takes `&RecordedRun` and nothing else: AC-430's rows are read off the
   recorded pack and catalog **sources** joined on `dag_assembled.nodes[].activity_id` — a read of logged inputs, never a
   selection; AC-431's card is the recorded `RecordedSpec.card_digest`; AC-434's `unknown` facets are the recorded
@@ -1220,7 +1228,7 @@ gate stays open — AC-406), exit `0` (the answer was recorded, as void); `Refus
     clause is not on the record**: `dag_assembled.skipped[].reason` is `forbidden_stage` or
     `forbidden_stage_via_requires` and nothing else, so the three clause kinds the THEN names are printed by reading the
     recorded admissibility row beside the recorded `context.json` and the recorded pack — the false `applicable_if`
-    sub-predicate through `rk_kernel::predicate` (its `on_false` naming, over the recorded vector; a read of two logged
+    sub-predicate through `rk_kernel::predicate` (its `on_false` naming — ***corrected 2026-09-20, R-56: `predicate::on_false` is a MODULE and is not AC-433's sub-predicate namer. The namer is ADR-0103 clause 6's closed form set plus `predicate::classify_on_false` [measured 2026-09-20, `crates/rk-kernel/src/predicate/on_false.rs`:98, re-exported at `predicate.rs`:68]*** — over the recorded vector; a read of two logged
     inputs through the predicate module, never `select`, so AC-432's unreachability scan stands), the unmet `min_rigor`
     against the recorded pack's rigor, the absent `require` row against the recorded pack's rows — **disclosed as a
     re-reading of recorded inputs, not a recorded exclusion**; the register's *from the record only* is met in full
@@ -2250,7 +2258,7 @@ test would accept.
   next step; a weaker red asserts the exit alone.
 - `ac257_expired_gate_resolved_by_fresh_process` — AC-257. Red by a gate whose deadline passed not resolving at the
   next `run` in a fresh process (no `gate_expired` row; or `gate::answer` applying it — the expiry pass of §7d.5 step
-  (9) is what makes the deadline observable, since the kernel refuses `Expired` only on a row already in the journal);
+  (9) is what makes the deadline observable, since the kernel refuses `Expired` only on a row already in the journal — ***corrected 2026-09-20, R-44: that refusal is unreachable for a real expiry; see §7d.6***);
   a weaker red resolves it in the same process that opened it — the deadline passes through the `pack-min/` variant
   declaring a 1-second gate deadline and a test-side wait past it (a test may sleep; the product never does), no clock
   toggle (AC-474); `ac248_…`'s expired arm uses the same variant.
@@ -2308,7 +2316,7 @@ test would accept.
 - `ac438_table_driven_exit_codes_over_fixtures` — AC-438's third instrument. Red by any fixture's code differing from
   its `expected` file. **Through the binary**: `2`, `3`, `5`, `0` (gate-open), the error-severity AC-415 doctor
   fixtures at `3`, the warning/ok-severity ones at `0`, and the adapter-classifiable classes through the fixture child
-  (`Transport` via a missing `harness_binary`, `Schema` via a malformed frame, `Cancelled { by: Timeout }` (row `13`)
+  (`Transport` via a missing `harness_binary`, `Schema` via **the second arm of `extract_digest`** (***corrected 2026-09-20, R-60: a malformed frame exits `10` via `classify.rs` rule 8's `Transport { kind: Decode }`, not `11`; see §7d.4***), `Cancelled { by: Timeout }` (row `13`)
   via `hold` under a 1 s `timeout_secs` — the adapter's timer arm, `s7c` §7c.10 — `Platform` via an `is_error` frame).
   **In-process**: all eleven `StepError` rows through the verb
   function with `FakeHarness::scripted` returning each variant, one element per admitted attempt (`Timeout`, `NotAdopted`,
@@ -2784,7 +2792,7 @@ the `cargo metadata` lines watch red → green).
 3. **Slice 3 — the loop: `run`, `answer`, `status`, `explain`, `catalog search`, `lint`**: `src/verbs/{run,answer,
    status,explain,catalog,lint}.rs`, `tests/it/support.rs` (the scripted-harness helpers, the `EntryReconciler` recorder, the counting store fake);
    **`rk-kernel`'s `catalog::Activity.keywords` + `catalog::search`, `workflow/question.rs`, `workflow/gate.rs`
-   (`AnswerMeta`, the registry arguments) and `replay::resume`** (Checkpoints 7b/7b-ii re-run whole); fixtures
+   (`AnswerMeta`, the registry arguments) and `replay::resume`** — ***corrected 2026-09-20, settling residual R-59: this enumerates FOUR and the slice landed FIVE.*** *The fifth is **mechanism B**, taken on the operator's decision at cycle 10 (`76af103`) and raised rather than absorbed. **The compounding, stated so it is not re-counted silently:** §7d.1 and §7d.15 each enumerate the stage's kernel edits as **EIGHT** — Slice 2 two, this slice four, Slice 4 two — so with this slice's fifth the tree will read **NINE against eight** at Slice 4's close. Item 4's *"the third and last kernel disturbance"* is a separate count and is CORRECT as written: it counts disturbance OCCASIONS (Slices 2, 3, 4), each one whole re-run of Checkpoints 7b and 7b-ii, and Slice 4 is indeed the last* — (Checkpoints 7b/7b-ii re-run whole); fixtures
    `pack-min/` (the three variants and the five items), the `explain/*/` run-record directories and `exit/*/*.jsonl` (+ the two AC-465
    allowlist rows), `exit/<name>/`, `facets/*.toml`; the `-p rk-kernel` `ac436_…` pair, `adr0129_question_registry_…`,
    `adr0063_option_with_attaches_…`, `adr0129_gate_answered_carries_answer_meta_kernel_side`,
@@ -2804,7 +2812,7 @@ the `cargo metadata` lines watch red → green).
 4. **Slice 4 — `doctor`**: `src/doctor/{mod,rules,rebuild,probe}.rs`, `src/verbs/doctor.rs`, `src/no_dispatch.rs`
    (the `NoDispatchHarness` the root hands the `doctor` path); `src/doctor/roles.rs` (the role→card resolver, §7d.8); **`rk-kernel`'s `catalog::load_diagnostic` and
    `Catalog::from_sources`'s AC-409 refusal** (Checkpoints 7b/7b-ii re-run whole — the third and last kernel
-   disturbance); fixtures `doctor/<rule-id>/` (thirty-two) and `doctor/clean/`, `unread/{runs-49,runs-51}.jsonl` and
+   disturbance); fixtures `doctor/<rule-id>/` (***thirty-eight — corrected 2026-09-20; this read "thirty-two" and was STALE.*** *D18-19 allocated the six `s7b-ii` gate rows into the table on 2026-09-19, moving it 32 → 38, and this item was not updated with it. §7d.8 says **"Thirty-eight rule ids … each with a rejecting fixture"** and carries the changed number's own history in the same sentence; §7d.13 says **"one rejecting directory per id in §7d.8's table (thirty-eight)"**. Counted independently off the table's first column, which is Halt 7's own instruction: `grep -oE 'RK-D-[A-Z0-9-]+' | sort -u` → 39 tokens, less `RK-D-DANGLING-`, a prose prefix of the compound cell `RK-D-DANGLING-{ROLE,SLOT,ATTACH}` → **38**. This item is a summary of the other two and loses to both. AC-415's red is a set equality in BOTH directions, so building thirty-two leaves it red*) and `doctor/clean/`, `unread/{runs-49,runs-51}.jsonl` and
    `doctor/*/events.jsonl` (+ the two AC-465 allowlist rows), the synthetic trailer repository builder for `ac427_…`;
    the `-p rk-kernel` `catalog_load_diagnostic_returns_every_load_error_typed` and
    `ac409_gate_step_with_outputs_rejected_at_load`. Tests: **thirty-eight** — §7d.14's thirty-seven from
