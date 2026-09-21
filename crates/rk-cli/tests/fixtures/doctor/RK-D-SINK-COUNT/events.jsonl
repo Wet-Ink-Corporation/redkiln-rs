@@ -1,4 +1,3 @@
-{"kind":"findings.recorded","payload":{"item":"RK-S0001","finding":"F1","class":"advisory"}}
-{"kind":"findings.recorded","payload":{"item":"RK-S0001","finding":"F2","class":"advisory"}}
-{"kind":"finding.sunk","payload":{"item":"RK-S0001","finding":"F1","sink":"backlog"}}
-{"kind":"review.completed","payload":{"item":"RK-S0001","verdict":"approved"}}
+{"kind":"artifact.write","payload":{"kind":"Findings","item":"RK-S0001","schema_version":null,"digest":"d1","stage":"review","findings":["F1","F2","F3"]}}
+{"kind":"review_block","payload":{"actor":"kernel","adjudication":null,"ac":"AC-001","computed_class":"reproduced","finding_id":"F3","model_label":"reproduced","re_execution_id":"RX-1","sha":"deadbeef","stage_weight":"blocking"}}
+{"kind":"advisory_created","payload":{"ac":"AC-002","class":"advisory","finding":{},"finding_id":"F1","reason":"weight_does_not_block","review_id":"RV-1"}}

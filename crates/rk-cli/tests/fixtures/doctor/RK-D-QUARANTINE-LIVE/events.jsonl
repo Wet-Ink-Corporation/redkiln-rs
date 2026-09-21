@@ -1,1 +1,3 @@
-{"kind":"quarantine.opened","payload":{"test":"flaky::one","until":"2026-12-31T00:00:00Z"}}
+{"kind":"quarantine_granted","payload":{"finding_id":"F1","reason":"flaky","by":"operator","until":1800086400}}
+{"kind":"quarantine_granted","payload":{"finding_id":"F2","reason":"flaky","by":"operator","until":1800086400}}
+{"kind":"quarantine_removed","payload":{"finding_id":"F2"}}

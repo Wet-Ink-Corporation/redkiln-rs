@@ -1,0 +1,13 @@
+# A review regression run's record (AC-314).
+#
+# 🛑 NOT an event. §7d.8 sketched this fixture as an `events.jsonl` row and §7d.8 also
+# says the corpus path is *a `ConfigFile` key*. Measured 2026-09-21, NEITHER can carry
+# it: `EventKind::ALL` is closed at 38 and holds no regression kind, and `ConfigFile` is
+# `deny_unknown_fields` over three tables with no corpus key. A record file is what is
+# left, and 7e's schema may re-point it.
+#
+# The sha is 40 hex that resolves in no repository — AC-314's *"a doctor rule that
+# refuses a regression record whose corpus sha is unknown"*.
+corpus_sha = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+passed = 12
+failed = 0

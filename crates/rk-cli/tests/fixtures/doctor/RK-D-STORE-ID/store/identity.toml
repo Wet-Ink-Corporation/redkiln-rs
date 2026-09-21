@@ -1,4 +1,8 @@
-# Materialised into a real store by the test. `root_commit` is DELIBERATELY not this
-# fixture repository's first commit - that mismatch is the defect.
+# Materialised into a REAL store by the test, through `rk_store::conn::Writer::open` and
+# `identity::initialise` (s7d 7d.13). The keys are `rk_store::identity::Identity`'s own.
+#
+# `root_commit` is DELIBERATELY not this fixture repository's — that mismatch is the whole
+# defect, and it is the ONE field `rk_store::identity::check` refuses on besides the
+# schema version [measured 2026-09-21].
 root_commit = "0000000000000000000000000000000000000000"
-worktree_id = "another-repository"
+common_dir = "/elsewhere/.git"

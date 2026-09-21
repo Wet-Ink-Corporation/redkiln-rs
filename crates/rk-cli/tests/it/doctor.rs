@@ -237,6 +237,8 @@ pub fn materialise(name: &str) -> tempfile::TempDir {
         std::fs::remove_dir_all(&staged).expect("the staged dot-git is removed");
     }
 
+    build_stores(dir.path());
+
     assert!(
         dir.path().join(".redkiln").join("config.toml").is_file(),
         "{name} materialised without its `.redkiln/config.toml` — the copy read nothing"
@@ -293,6 +295,13 @@ fn merge_into(src: &std::path::Path, dst: &std::path::Path) {
 // **its own rule only**"*. Running the table would let a fixture pass because some other row fired
 // over it, which is the join AC-415 exists to make per-id.
 
+/// The `now` every fixture is read against — a FIXED value, never a clock.
+///
+/// A test that read the real clock would make `RK-D-QUARANTINE-LIVE` pass or fail on the day it
+/// ran: the fixture's `until` is a fixed instant, and "is it still live?" is only a question with
+/// an answer once both sides are fixed.
+const NOW: i64 = 1_800_000_000;
+
 /// Build the `Ctx` for one materialised fixture, through the **same builder the verb uses**.
 ///
 /// `store` is `None` and the probe is the fixture's stub: neither is configuration, and §7d.8 has
@@ -311,13 +320,41 @@ fn ctx_for(dir: &std::path::Path) -> rk_cli::doctor::Ctx {
         .and_then(|src| toml::from_str::<std::collections::BTreeMap<String, String>>(&src).ok())
         .unwrap_or_default();
 
+    // `common-dir.toml`, when the fixture carries one, IS the common dir the root would have
+    // handed in — the same shape as `env.toml` supplying the environment. `RK-D-NETWORK-FS` reads
+    // the PATH's form, and a fixture cannot put a real UNC share on every box that runs this.
+    let common_dir = std::fs::read_to_string(dir.join("common-dir.toml"))
+        .ok()
+        .and_then(|src| toml::from_str::<toml::Value>(&src).ok())
+        .and_then(|v| {
+            v.get("path")
+                .and_then(|p| p.as_str())
+                .map(std::path::PathBuf::from)
+        })
+        .unwrap_or_else(|| dir.join(".git"));
+
+    // THE STORE, opened through the root's own path — `adapters::open_store`, which returns what
+    // happened rather than refusing on it. A fixture with no store description has none, and
+    // `None` is what the `--rebuild` path carries too.
+    let store = dir
+        .join(".git")
+        .join("redkiln")
+        .join("store.sqlite3")
+        .is_file()
+        .then(|| {
+            let repo =
+                rk_cli::repo::discover(Some(dir)).expect("the materialised fixture is a repo");
+            rk_cli::adapters::open_store(&repo.exec, &repo.worktree)
+        });
+
     rk_cli::doctor::Ctx::build(
         dir.to_path_buf(),
-        dir.join(".git"),
+        common_dir,
         config,
         rk_cli::env::Env::from_map(vars),
-        None,
+        store,
         Box::new(StubProbe::read(dir)),
+        NOW,
     )
 }
 
@@ -733,4 +770,535 @@ fn ac409_gate_outputs_binding_rejected() {
              resolve declaration references, never graph bindings: {co_fired:?}"
         );
     }
+}
+
+/// Build the fixture's stores, after `dot-git/` has been merged into `.git/`.
+///
+/// §7d.13: *"the store built through `rk_store::conn::Writer::open` and `identity::initialise` from
+/// the description"*. Two kinds of description, and they are not the same thing:
+///
+/// * **`store/identity.toml`** — the repository's own store, at `<common-dir>/redkiln/`. It is a
+///   REAL SQLite file with a stamped identity, because `RK-D-STORE-ID` reads what
+///   `SqliteStore::open` says about it and nothing less than a real store produces that.
+///   `root_commit = "HEAD"` means *this repository's own root commit* (the store belongs here);
+///   any other value is a literal, and a foreign one is the defect.
+/// * **`dot-git/worktrees/<name>/redkiln/store.sqlite3.toml`** — a store that should not exist at
+///   all. `RK-D-STRAY-STORE` reads its PRESENCE under a linked worktree's gitdir, so the file is
+///   created and nothing is stamped into it: the description says so itself.
+///
+/// **`store/rebuilt`** is copied to `<common-dir>/redkiln/rebuilt` verbatim — a marker, not a store.
+fn build_stores(dir: &std::path::Path) {
+    let common = dir.join(".git");
+
+    // ---- the stray store: presence is the whole fact.
+    let worktrees = common.join("worktrees");
+    if let Ok(entries) = std::fs::read_dir(&worktrees) {
+        for entry in entries.filter_map(Result::ok) {
+            let stray = entry.path().join("redkiln").join("store.sqlite3.toml");
+            if stray.is_file() {
+                let real = entry.path().join("redkiln").join("store.sqlite3");
+                std::fs::write(&real, b"").expect("the stray store file is created");
+            }
+        }
+    }
+
+    // ---- the `rebuilt` sidecar.
+    let rebuilt = dir.join("store").join("rebuilt");
+    if rebuilt.is_file() {
+        let to = common.join("redkiln");
+        std::fs::create_dir_all(&to).expect("the redkiln dir exists");
+        std::fs::copy(&rebuilt, to.join("rebuilt")).expect("the sidecar copies");
+    }
+
+    // ---- the repository's own store.
+    let Ok(src) = std::fs::read_to_string(dir.join("store").join("identity.toml")) else {
+        return;
+    };
+    let desc: toml::Value = toml::from_str(&src).expect("the store description parses");
+    let declared = desc
+        .get("root_commit")
+        .and_then(toml::Value::as_str)
+        .expect("a store description names a root_commit");
+    let root_commit = if declared == "HEAD" {
+        root_commit_of(dir)
+    } else {
+        declared.to_owned()
+    };
+    let common_dir = desc
+        .get("common_dir")
+        .and_then(toml::Value::as_str)
+        .map_or_else(|| common.display().to_string(), ToOwned::to_owned);
+
+    let writer = rk_store::conn::Writer::open(&common).expect("the staging store opens");
+    writer
+        .transaction(|tx| {
+            rk_store::identity::initialise(
+                tx,
+                &rk_store::identity::Identity {
+                    root_commit,
+                    common_dir,
+                    schema_version: rk_store::identity::SCHEMA_VERSION,
+                },
+            )
+        })
+        .expect("the identity stamps");
+    // Dropped before anything opens it again: `Writer` holds the connection in WAL mode, and on
+    // Windows a second opener would contend with it.
+    drop(writer);
+}
+
+/// This repository's own root commit — what a store stamped `root_commit = "HEAD"` belongs to.
+///
+/// Through `rk_git::git_exec::run`, the one wrapper `std::process::Command` is permitted behind
+/// (ADR-0077; `clippy.toml` disallows the type workspace-wide and this file is not exempt).
+fn root_commit_of(dir: &std::path::Path) -> String {
+    rk_git::git_exec::run(dir, ["rev-list", "--max-parents=0", "HEAD"])
+        .expect("the materialised fixture has a root commit")
+        .stdout_trimmed()
+}
+
+// ------------------------------------------------- batch 4: the git-directory and store rows
+//
+// Four families, six ids. Each reads the common directory or the store handle the root opened —
+// the two parts of a repository that are not files a pack author writes.
+
+/// **AC-412** — a `.git/hooks/` file carrying redkiln's own marker.
+///
+/// # 🛑 THE CLEAN RUN IS THE WHOLE INSTRUMENT HERE
+///
+/// §7d.14: *"`ac412_…` is red on the clean run by a recogniser that fires on any non-`*.sample`
+/// hook — `clean/` carries an operator hook with no marker"*. RT-51 considered and rejected exactly
+/// that recogniser, and `doctor/clean/`'s `pre-commit` — a real hook with a `# fork-join` comment
+/// and no `# redkiln-hook` — is what tells the two apart. A `clean/` with no hooks at all could
+/// not.
+#[test]
+fn ac412_redkiln_hook_in_git_hooks_is_an_error() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-HOOKS", rk_cli::doctor::Severity::Error);
+
+    // The clean fixture really does carry a hook — otherwise the assertion above is satisfied by
+    // a directory the recogniser never opened, and RT-51's rejected alternative would pass.
+    let clean = materialise("clean");
+    let hook = clean.path().join(".git").join("hooks").join("pre-commit");
+    assert!(
+        hook.is_file(),
+        "`doctor/clean/` carries no `pre-commit` hook, so the clean half of this test proves \
+         nothing about the recogniser"
+    );
+    let text = std::fs::read_to_string(&hook).expect("the clean hook is readable");
+    assert!(
+        text.contains("fork-join") && !text.contains("redkiln-hook"),
+        "the clean hook is not an OPERATOR hook — it must carry no `# redkiln-hook` marker, or it \
+         stops discriminating: {text}"
+    );
+}
+
+/// **AC-413 / AC-369** — a store belonging to another repository.
+///
+/// # 🛑 THE POSITIVE CONTROL IS A MOVED REPOSITORY, AND IT LIVES IN `clean/`
+///
+/// §7d.14: *"red over a store whose `root_commit` is another repository's and **green over one
+/// whose `common_dir` was re-stamped by a move** (the three-field reading; a boot-id assertion is
+/// unauthorable and none is written)."* `doctor/clean/` carries a store stamped with **this**
+/// repository's root commit and a `common_dir` naming somewhere it is not — so the clean half of
+/// this test is that control rather than an absence, and a rule keyed on `common_dir` is red.
+///
+/// **The store handle is carried in, never refused before the table** (§7d.8's
+/// `Option<Result<…>>`). A `doctor` that exited on a foreign store would print no row and AC-413's
+/// id would be unobservable on the real binary.
+#[test]
+fn ac413_ac369_ac370_store_identity_rows() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-STORE-ID", rk_cli::doctor::Severity::Error);
+
+    // The clean fixture's store must really have been built and really have opened — otherwise
+    // "no finding" is a store that is not there rather than one that is welcome.
+    let clean = materialise("clean");
+    assert!(
+        clean
+            .path()
+            .join(".git")
+            .join("redkiln")
+            .join("store.sqlite3")
+            .is_file(),
+        "`doctor/clean/` materialised no store, so the moved-common-dir control is not exercised"
+    );
+    let ctx = ctx_for(clean.path());
+    assert!(
+        matches!(ctx.store, Some(Ok(_))),
+        "the clean fixture's store did not OPEN. It is stamped with this repository's own root \
+         commit and a `common_dir` naming somewhere else; `rk_store::identity::check` compares \
+         `root_commit` and `schema_version` and not `common_dir`, so a move is not a refusal"
+    );
+}
+
+/// **AC-370** — a store under a linked worktree's own gitdir.
+///
+/// The store belongs to the common dir. One under `worktrees/<name>/redkiln/` is a second store
+/// nothing will ever reconcile, which is why presence alone is the finding.
+#[test]
+fn ac370_stray_store_under_linked_worktree_is_an_error() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-STRAY-STORE", rk_cli::doctor::Severity::Error);
+
+    assert!(
+        findings("RK-D-STRAY-STORE", "RK-D-STRAY-STORE")
+            .iter()
+            .any(|f| f.detail.contains("wt-1")),
+        "the finding does not name the linked worktree the stray store sits under"
+    );
+}
+
+/// **ADR-0105 clauses 6 and 7 (RT-45)** — the three rows no AC id names.
+///
+/// Three ids, three fixtures, three unrelated facts about a repository: a worktree entry whose
+/// working tree is gone, a common dir on a network filesystem, and a credential left in a retained
+/// stream. They share a family test because they share a record, not because they share a
+/// predicate — so each is asserted over **its own** fixture.
+///
+/// **All three are `Error`.** §7d.8's cell spells the severities as prose and defers to design
+/// §8.4 — *"the design outranks the runbook, ADR-0092 clause 2.5"* — which fixes all three.
+#[test]
+fn adr0105_doctor_rows_network_fs_credential_orphan() {
+    for id in [
+        "RK-D-WORKTREE-ORPHAN",
+        "RK-D-NETWORK-FS",
+        "RK-D-CREDENTIAL-RETAINED",
+    ] {
+        fires_over_its_fixture_and_not_over_clean(id, rk_cli::doctor::Severity::Error);
+    }
+
+    // The credential row must name NEITHER the token nor anything that would carry it into a log.
+    // ADR-0105 clause 7 keeps argv and env as digests for this reason; a finding that quoted the
+    // secret back would be the defect it reports.
+    let cred = findings("RK-D-CREDENTIAL-RETAINED", "RK-D-CREDENTIAL-RETAINED");
+    assert!(
+        !cred.is_empty(),
+        "the credential row did not fire over its own fixture"
+    );
+    for f in &cred {
+        assert!(
+            !f.detail.contains("sk-ant-api03"),
+            "the finding quotes the credential back. A rule that prints the secret it found has \
+             copied it into wherever the report goes: {f:?}"
+        );
+    }
+
+    assert!(
+        findings("RK-D-WORKTREE-ORPHAN", "RK-D-WORKTREE-ORPHAN")
+            .iter()
+            .any(|f| f.detail.contains("gone")),
+        "the orphan row does not name the worktree whose working tree is missing"
+    );
+}
+
+// ------------------------------------------------------------------ batch 5: the facet rows
+
+/// **AC-425 / AC-072's doctor halves** — the three registry rows.
+///
+/// Three ids because the remedies are three different edits: register the facet, correct the
+/// value, or score the new entry. Two of the three are the kernel's own
+/// `facet_registry_rule` reported under a doctor id; `RK-D-FACET-VALUE` and `RK-D-FACET-NEW` are
+/// `doctor`'s own, because `EntryShapeViolation` has no member for either.
+///
+/// **The `applicable_if` carrier is the discriminating one.** `facet_registry_rule`'s own doc says
+/// a rule reading only `require` rows passes *"a catalog whose `applicable_if` names an
+/// unregistered facet, which is `binary_change`'s measured case"*, and the unknown-facet fixture
+/// puts its defect there for exactly that reason.
+#[test]
+fn ac424_unknown_facet_value_and_new_facet_rejected() {
+    for id in ["RK-D-FACET-UNKNOWN", "RK-D-FACET-VALUE", "RK-D-FACET-NEW"] {
+        fires_over_its_fixture_and_not_over_clean(id, rk_cli::doctor::Severity::Error);
+    }
+
+    assert!(
+        findings("RK-D-FACET-UNKNOWN", "RK-D-FACET-UNKNOWN")
+            .iter()
+            .any(|f| f.detail.contains("has_repro")),
+        "the unknown-facet row does not name the facet the predicate reads"
+    );
+    assert!(
+        findings("RK-D-FACET-VALUE", "RK-D-FACET-VALUE")
+            .iter()
+            .any(|f| f.detail.contains("epic")),
+        "the facet-value row does not name the value outside the declared set"
+    );
+    assert!(
+        findings("RK-D-FACET-NEW", "RK-D-FACET-NEW")
+            .iter()
+            .any(|f| f.detail.contains("deployment_window")),
+        "the new-facet row does not name the entry the pinned reading lacks"
+    );
+
+    // The three are DISTINCT predicates, not one rule under three ids: the unknown-facet fixture
+    // declares `kind` correctly and the value fixture registers every facet it names.
+    assert!(
+        findings("RK-D-FACET-VALUE", "RK-D-FACET-UNKNOWN").is_empty(),
+        "the value row fired over the unknown-facet fixture — an UNDECLARED facet is the other \
+         row's, and a rule reporting both makes one fixture reject for two reasons"
+    );
+    assert!(
+        findings("RK-D-FACET-UNKNOWN", "RK-D-FACET-VALUE").is_empty(),
+        "the unknown row fired over the value fixture, whose facet IS declared"
+    );
+}
+
+/// **AC-425 / AC-071 / AC-520's doctor half** — a derived facet with no named `deriver`.
+///
+/// ADR-0089 ships the `deriver` field **plus a record requirement**, and a derived facet with
+/// neither is what this row reports. The fixture declares §7d.8's three by name —
+/// `recent_deploy`, `binary_change`, `dynamism` — so a rule that reported the first and stopped is
+/// red on the count.
+#[test]
+fn ac425_facet_without_registered_fact_rejected() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-FACET-FACT", rk_cli::doctor::Severity::Error);
+
+    let found = findings("RK-D-FACET-FACT", "RK-D-FACET-FACT");
+    for facet in ["recent_deploy", "binary_change", "dynamism"] {
+        assert!(
+            found.iter().any(|f| f.detail.contains(facet)),
+            "the fixture declares `{facet}` as derived with no deriver and the row does not \
+             report it — every unscored entry is a separate thing to fix: {found:?}"
+        );
+    }
+}
+
+// ------------------------------------------------------- batch 6: the journal and record rows
+
+/// **AC-220's doctor half (`s7c` ARMED)** — the last recorded `five_hour` reading sits inside the
+/// pack's declared margin. A **warning**: headroom is a forecast, not a refusal.
+///
+/// **The LAST reading, not any reading.** The fixture climbs 40 → 70 → 99, so a rule that reported
+/// the maximum, or any reading inside the margin, passes for the wrong reason; and one that read
+/// the first is green over a fixture that ends at the limit.
+#[test]
+fn ac220_last_reading_within_margin_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-HEADROOM-MARGIN",
+        rk_cli::doctor::Severity::Warning,
+    );
+    assert!(
+        findings("RK-D-HEADROOM-MARGIN", "RK-D-HEADROOM-MARGIN")
+            .iter()
+            .any(|f| f.detail.contains("99")),
+        "the finding does not name the reading it fired on"
+    );
+}
+
+/// **AC-290 (D18-19)** — a `reproduced` finding with no re-execution record.
+///
+/// **The fixture carries its own control**: two `review_block` rows, both `reproduced`, one with a
+/// `re_execution_id` and one without. A rule keyed on the class alone reports both, so the test
+/// asserts it reports **one** — the class is what makes the record mandatory, and the record is
+/// what discharges it.
+#[test]
+fn ac290_reproduced_finding_without_reexecution_record_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-REVIEW-REEXEC",
+        rk_cli::doctor::Severity::Error,
+    );
+
+    let found = findings("RK-D-REVIEW-REEXEC", "RK-D-REVIEW-REEXEC");
+    assert_eq!(
+        found.len(),
+        1,
+        "the fixture holds two `reproduced` findings, one WITH a `re_execution_id`. Two findings \
+         means the rule reads the class and not the record: {found:?}"
+    );
+    assert!(
+        found[0].detail.contains("F1"),
+        "the wrong finding is reported: {found:?}"
+    );
+}
+
+/// **AC-306 (D18-19)** — live quarantines listed with their ages. A **warning**.
+///
+/// **The age is `now − until` off a SUPPLIED `now`** (§7d.8), never a clock read: the fixture's
+/// `until` is a fixed instant and `Ctx::now` is a fixed constant, so "is it still live?" has an
+/// answer that does not depend on the day the suite runs.
+///
+/// **Its own control again**: two quarantines granted, one already removed. A rule reading grants
+/// alone reports both.
+#[test]
+fn ac306_live_quarantines_listed_with_ages_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-QUARANTINE-LIVE",
+        rk_cli::doctor::Severity::Warning,
+    );
+
+    let found = findings("RK-D-QUARANTINE-LIVE", "RK-D-QUARANTINE-LIVE");
+    assert_eq!(
+        found.len(),
+        1,
+        "the fixture grants two quarantines and REMOVES one. Two findings means the rule reads \
+         grants without folding the removals: {found:?}"
+    );
+    assert!(
+        found[0].detail.contains("F1"),
+        "the removed quarantine is the one reported: {found:?}"
+    );
+}
+
+/// **AC-310 (D18-19)** — a completed review whose sink records do not cover its non-blocking
+/// findings.
+///
+/// AC-310's own replay invariant is `findings_in == blocks + sink_records`. The fixture records
+/// three findings, one blocked and one sunk — so one is **dropped**, which is the criterion's
+/// *"and none is dropped"* read from the journal.
+#[test]
+fn ac310_sink_count_below_finding_count_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-SINK-COUNT", rk_cli::doctor::Severity::Error);
+    assert!(
+        findings("RK-D-SINK-COUNT", "RK-D-SINK-COUNT")
+            .iter()
+            .any(|f| f.detail.contains('3') && f.detail.contains('2')),
+        "the finding does not carry both counts, so an operator cannot see how far short the sink is"
+    );
+}
+
+/// **AC-530 (D18-19)** — the advisory ledger does not balance.
+///
+/// AC-530's invariant is `live_sink == created − retired − dismissed`. The fixture retires a
+/// finding the sink never held, so the arithmetic is unreachable rather than merely wrong — which
+/// is a defect readable from the journal alone, with no second count to trust.
+#[test]
+fn ac530_advisory_ledger_imbalance_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-ADVISORY-LEDGER",
+        rk_cli::doctor::Severity::Error,
+    );
+
+    let found = findings("RK-D-ADVISORY-LEDGER", "RK-D-ADVISORY-LEDGER");
+    assert_eq!(
+        found.len(),
+        1,
+        "the fixture creates A1 and A2 and retires A1 (lawful) and A9 (never created). Two \
+         findings means the rule reports every retirement rather than the unmatched one: {found:?}"
+    );
+    assert!(
+        found[0].detail.contains("A9"),
+        "the lawful retirement is the one reported: {found:?}"
+    );
+}
+
+/// **AC-314 (D18-19)** — a regression record whose corpus sha resolves nowhere.
+///
+/// 🛑 **The record is a FILE.** §7d.8 sketched this as an `events.jsonl` row and also called the
+/// corpus path *"a `ConfigFile` key"*; measured 2026-09-21, neither can carry it — `EventKind::ALL`
+/// is closed at 38 with no regression kind, and `ConfigFile` is `deny_unknown_fields` over three
+/// tables with no corpus key. The fixture's README records it.
+#[test]
+fn ac314_regression_corpus_sha_unresolvable_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-CORPUS-SHA", rk_cli::doctor::Severity::Error);
+    assert!(
+        findings("RK-D-CORPUS-SHA", "RK-D-CORPUS-SHA")
+            .iter()
+            .any(|f| f.detail.contains("deadbeef")),
+        "the finding does not name the sha that resolved nowhere"
+    );
+}
+
+/// **AC-455 (D18-19)** — a spec with `verification: None` under a pack whose policy requires one.
+///
+/// **The must-pass control is `clean/`**, and it is the criterion's own second clause: *"AND the
+/// same spec passes under a pack whose policy does not require it."* `clean/` declares no
+/// `[verification]` table, so a rule keyed on the spec alone — rather than on the spec AND the
+/// policy — fires there and is red.
+#[test]
+fn ac455_verification_none_under_requiring_pack_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-VERIFICATION-POLICY",
+        rk_cli::doctor::Severity::Error,
+    );
+    assert!(
+        findings("RK-D-VERIFICATION-POLICY", "RK-D-VERIFICATION-POLICY")
+            .iter()
+            .any(|f| f.detail.contains("RK-S0001")),
+        "the finding does not name the spec's item, which is what AC-455 asks be named"
+    );
+}
+
+// ------------------------------------------------------------------------ cycle 5's closing test
+
+/// **AC-415 as amended (RA-M-01)** — every rule id has a fixture its own rule actually rejects.
+///
+/// *"Every id has at least one committed fixture configuration that the rule actually rejects, and
+/// a rule with no rejecting fixture fails the build"* — **"and the id set is non-empty and contains
+/// every id a criterion names"**.
+///
+/// # 🛑 IT RUNS THE RULE. THAT IS THE WHOLE DIFFERENCE
+///
+/// §7d.14 names the weaker test this would otherwise be: *"a weaker red **joins names without
+/// running the rule**."* A name join is satisfied by thirty-eight directories and thirty-eight
+/// rules that all answer nothing — exactly the state the tree was in at cycle 4, which is why this
+/// test is cycle 5's and not cycle 4's.
+///
+/// # The set equality is BOTH directions, and `clean/` is the one exemption
+///
+/// A rule with no directory is an error; **a directory with no rule is an error too** — a stale
+/// fixture is a lie about the table, and nothing else in the slice would notice one. `doctor/clean/`
+/// is named as the exemption by §7d.13 because it is the positive control every per-row test runs,
+/// not a rejecting fixture.
+///
+/// # Findings of ANY severity count
+///
+/// `RK-D-REBUILT-TIER2`'s finding is `Ok`-severity — tier-2 emptiness after a rebuild is
+/// *expected*, and the row says so rather than staying silent. A join that counted only errors
+/// would report that row as having no rejecting fixture while it reports perfectly well.
+#[test]
+fn ac415_every_rule_id_has_a_rejecting_fixture() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("doctor");
+    let mut dirs: BTreeSet<String> = std::fs::read_dir(&root)
+        .expect("the doctor fixture tree exists")
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+
+    assert!(
+        dirs.remove("clean"),
+        "`doctor/clean/` is absent. It is the positive control every per-row test runs second, and \
+         the one directory §7d.13 exempts from the join below — without it the exemption has \
+         nothing to except and every per-row test's second half is unasserted"
+    );
+
+    let ids: BTreeSet<&str> = RULES.iter().map(|r| r.id).collect();
+    assert!(
+        !ids.is_empty(),
+        "AC-415 as amended: *\"the id set is non-empty\"*. Over an empty table every join below is \
+         vacuous"
+    );
+
+    // ---- the set equality, BOTH directions, reported together so one run names every defect.
+    let no_fixture: Vec<&str> = ids
+        .iter()
+        .copied()
+        .filter(|id| !dirs.contains(*id))
+        .collect();
+    let no_rule: Vec<&str> = dirs
+        .iter()
+        .map(String::as_str)
+        .filter(|d| !ids.contains(*d))
+        .collect();
+    assert!(
+        no_fixture.is_empty() && no_rule.is_empty(),
+        "the rule table and the fixture tree disagree.\n  rules with no `doctor/<id>/`: {no_fixture:?}\
+         \n  directories with no rule: {no_rule:?}\n(a stale fixture is a lie about the table)"
+    );
+
+    // ---- and the half a name join cannot make: each fixture, through ITS OWN RULE ONLY.
+    let mut inert: Vec<&str> = Vec::new();
+    for id in &ids {
+        if findings(id, id).is_empty() {
+            inert.push(id);
+        }
+    }
+    assert!(
+        inert.is_empty(),
+        "{} rule(s) found NOTHING over their own rejecting fixture. AC-415's clause is a fixture \
+         *\"that the rule ACTUALLY REJECTS\"*, and a rule that never fires satisfies the name join \
+         above, AC-414's per-fixture join and SM-121's dispatch count alike:\n  {}",
+        inert.len(),
+        inert.join("\n  ")
+    );
 }

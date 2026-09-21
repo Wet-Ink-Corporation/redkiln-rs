@@ -119,6 +119,9 @@ pub fn run(cli: &Cli, args: &DoctorArgs, env: &Env, startup: Startup<'_>) -> Res
         // Carried in, never refused here — the type's whole reason. See the header.
         Some(adapters::open_store(&repo.exec, &repo.worktree)),
         Box::new(probe::RealProbe),
+        // THE ONE WALL-CLOCK READ (§7d.5). No rule reads a clock; the quarantine row's age
+        // is `now - until` off this value.
+        crate::clock::now().unix_seconds(),
     );
 
     let mut out = std::io::stdout();

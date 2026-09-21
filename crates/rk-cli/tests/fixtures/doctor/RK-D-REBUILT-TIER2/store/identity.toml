@@ -1,3 +1,4 @@
-# A store the materialiser builds and the sidecar below marks as rebuilt.
+# This repository's own store — the rebuild wrote it here. The sidecar beside it is what
+# `RK-D-REBUILT-TIER2` reads (RT-56, ROUTED and not decided).
 root_commit = "HEAD"
-worktree_id = "self"
+common_dir = "."

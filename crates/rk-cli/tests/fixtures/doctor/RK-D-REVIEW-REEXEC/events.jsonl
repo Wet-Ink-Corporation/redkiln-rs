@@ -1,1 +1,2 @@
-{"kind":"findings.recorded","payload":{"item":"RK-S0001","finding":"F1","class":"reproduced"}}
+{"kind":"review_block","payload":{"actor":"kernel","adjudication":null,"ac":"AC-001","computed_class":"reproduced","finding_id":"F1","model_label":"reproduced","re_execution_id":null,"sha":"deadbeef","stage_weight":"blocking"}}
+{"kind":"review_block","payload":{"actor":"kernel","adjudication":null,"ac":"AC-002","computed_class":"reproduced","finding_id":"F2","model_label":"reproduced","re_execution_id":"RX-7","sha":"deadbeef","stage_weight":"blocking"}}

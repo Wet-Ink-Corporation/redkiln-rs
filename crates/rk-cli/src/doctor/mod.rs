@@ -222,6 +222,13 @@ pub struct Ctx {
     /// it, and `ac423_ac526_…` drives it stubbed while `ac423_probe_is_one_version_spawn_not_a_dispatch`
     /// drives the real one.
     pub probe: Box<dyn probe::VersionProbe>,
+    /// **The invocation's one wall-clock reading**, in unix seconds, supplied by the root.
+    ///
+    /// 🛑 **No rule reads a clock.** §7d.8 fixes `RK-D-QUARANTINE-LIVE`'s age as *"`now − until`'s
+    /// sign and magnitude off a **supplied** `now`, no clock read"*, and §7d.5 gives the
+    /// composition root exactly one read per invocation. A rule that called the clock itself would
+    /// also make every `doctor` run unreproducible over a fixture, which is the second reason.
+    pub now: i64,
     /// The recorded journal the six `s7b-ii` gate rows and the headroom row fold.
     ///
     /// 🛑 **Read from the STORE in the shipped binary and from `events.jsonl` in a fixture**, and
@@ -302,6 +309,7 @@ impl Ctx {
         env: Env,
         store: Option<Result<SqliteStore, StoreOpenError>>,
         probe: Box<dyn probe::VersionProbe>,
+        now: i64,
     ) -> Self {
         let redkiln = worktree.join(".redkiln");
 
@@ -334,6 +342,7 @@ impl Ctx {
             worktree,
             store,
             probe,
+            now,
             journal,
         }
     }

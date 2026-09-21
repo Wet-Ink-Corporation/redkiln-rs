@@ -1,5 +1,4 @@
-{"kind":"advisory.created","payload":{"id":"A1"}}
-{"kind":"advisory.created","payload":{"id":"A2"}}
-{"kind":"advisory.created","payload":{"id":"A3"}}
-{"kind":"advisory.retired","payload":{"id":"A1"}}
-{"kind":"advisory.ledger","payload":{"live":2,"created":3,"retired":1}}
+{"kind":"advisory_created","payload":{"ac":"AC-001","class":"advisory","finding":{},"finding_id":"A1","reason":"advisory","review_id":"RV-1"}}
+{"kind":"advisory_created","payload":{"ac":"AC-002","class":"advisory","finding":{},"finding_id":"A2","reason":"advisory","review_id":"RV-1"}}
+{"kind":"advisory_retired","payload":{"finding_id":"A1","reason":"not_re_raised","review_id":"RV-2"}}
+{"kind":"advisory_retired","payload":{"finding_id":"A9","reason":"not_re_raised","review_id":"RV-2"}}
