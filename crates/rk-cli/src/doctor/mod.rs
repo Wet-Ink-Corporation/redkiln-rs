@@ -59,7 +59,7 @@ pub mod roles;
 pub mod rules;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use rk_adapter_sqlite::{SqliteStore, StoreOpenError};
 use rk_kernel::catalog::CatalogLoad;
@@ -222,4 +222,134 @@ pub struct Ctx {
     /// it, and `ac423_ac526_…` drives it stubbed while `ac423_probe_is_one_version_spawn_not_a_dispatch`
     /// drives the real one.
     pub probe: Box<dyn probe::VersionProbe>,
+    /// The recorded journal the six `s7b-ii` gate rows and the headroom row fold.
+    ///
+    /// 🛑 **Read from the STORE in the shipped binary and from `events.jsonl` in a fixture**, and
+    /// the rules cannot tell which — which is the point. `SqliteStore::query` ignores its selector
+    /// and returns the whole `t2_event` table (`crates/rk-adapter-sqlite/src/lib.rs`), so *"the
+    /// whole journal"* is the only reading either source supports, and a rule written against a
+    /// filtered one would be asserting over a selector that does not exist.
+    pub journal: Vec<Row>,
+}
+
+/// One journal row as `doctor` reads it.
+///
+/// # 🛑 `kind` IS A STRING, AND THAT IS NOT LAZINESS
+///
+/// Two measured reasons. **`rk_types::event::Event` does not implement `Deserialize`** [measured
+/// 2026-09-21, `crates/rk-types/src/event.rs`:32] and `rk-types` is a closed crate `s7d` §7d.1 does
+/// not permit this stage to edit, so a fixture journal cannot be parsed into it at all. And the
+/// kind vocabulary is **closed at 38** (`EventKind::ALL`): parsing straight into it would make a
+/// row whose kind is outside the set a *parse failure* rather than a finding — a defect `doctor`
+/// exists to report would instead stop the table from running.
+///
+/// [`EventKind::from_wire`] is the one way back to the typed kind, and a rule that needs it calls
+/// it and treats `None` as what it is: a kind no record mints.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+pub struct Row {
+    /// The wire name, exactly as design §5.4's table spells it — including the two DOTTED names,
+    /// `artifact.read` and `artifact.write`, which are not snake_case and are not normalised.
+    pub kind: String,
+    /// The row's payload, unread until a rule reads it.
+    #[serde(default)]
+    pub payload: serde_json::Value,
+}
+
+impl Row {
+    /// The typed kind, or `None` for a wire name outside the closed 38.
+    #[must_use]
+    pub fn kind(&self) -> Option<rk_types::event_kind::EventKind> {
+        rk_types::event_kind::EventKind::from_wire(&self.kind)
+    }
+
+    /// One string member of the payload, or `None`.
+    #[must_use]
+    pub fn str_field(&self, key: &str) -> Option<&str> {
+        self.payload.get(key).and_then(serde_json::Value::as_str)
+    }
+}
+
+impl Ctx {
+    /// `<worktree>/.redkiln` — where every configuration file a rule reads lives.
+    #[must_use]
+    pub fn redkiln(&self) -> PathBuf {
+        self.worktree.join(".redkiln")
+    }
+
+    /// Build the whole `Ctx` off a repository, for the composition root and for a test alike.
+    ///
+    /// # 🛑 ONE BUILDER, AND THE REASON IS THE FAILURE A SECOND ONE CAUSES
+    ///
+    /// §7d.8 fixes the `Ctx` as one *"built once **by the composition root**"*. A test that
+    /// assembled its own — reading the catalog differently, or defaulting a field the verb
+    /// populates — would assert every rule against a configuration the shipped binary never sees,
+    /// and each such difference is a rule that passes here and fires in production, or the
+    /// reverse. So `verbs::doctor` and `tests/it/doctor.rs` call **this**, and the four values
+    /// neither can derive from the tree are parameters.
+    ///
+    /// **`store` and `probe` are parameters because they are not configuration.** The store is
+    /// opened by [`crate::adapters::open_store`], outside the module Checkpoint 7d's D-10 ban
+    /// filters; the probe spawns a child, which a fixture must be able to stub.
+    ///
+    /// **Nothing here refuses.** Every absence — no catalog directory, no `facets.toml`, no
+    /// journal — is a value a rule reports, never an error this returns. A builder that refused
+    /// would decide, before the table ran, which defects `doctor` is allowed to find.
+    #[must_use]
+    pub fn build(
+        worktree: PathBuf,
+        common_dir: PathBuf,
+        config: ConfigFile,
+        env: Env,
+        store: Option<Result<SqliteStore, StoreOpenError>>,
+        probe: Box<dyn probe::VersionProbe>,
+    ) -> Self {
+        let redkiln = worktree.join(".redkiln");
+
+        let mut pack_files = BTreeMap::new();
+        for name in &config.packs.enabled {
+            pack_files.insert(
+                name.clone(),
+                redkiln.join("packs").join(format!("{name}.toml")),
+            );
+        }
+
+        let catalog = rk_kernel::catalog::load_diagnostic_dir(&redkiln.join("catalog"));
+        let registry = std::fs::read_to_string(redkiln.join("facets.toml"))
+            .ok()
+            .and_then(|src| Registry::from_toml(&src).ok());
+        let journal = read_journal(&worktree.join("events.jsonl"));
+
+        Self {
+            config,
+            catalog,
+            pack_files,
+            registry,
+            // 🚧 The predicate sites are gathered by the facet family's own reader, which parses
+            // each predicate with `rk_kernel::predicate` rather than scanning it — the kernel's
+            // `collect_paths` is private, and a substring scan would match a facet's name inside a
+            // quoted literal (`registry.rs`'s own reason). Empty until that family lands.
+            sites: PredicateSites::default(),
+            env,
+            common_dir,
+            worktree,
+            store,
+            probe,
+            journal,
+        }
+    }
+}
+
+/// Read a fixture journal, one JSON object per line.
+///
+/// **A line that does not parse is SKIPPED and not an error**, on the builder's own rule: a
+/// malformed journal is something a rule may report, and refusing here would stop the other
+/// thirty-seven rules from running at all. Blank lines are not lines.
+fn read_journal(path: &Path) -> Vec<Row> {
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    text.lines()
+        .filter(|l| !l.trim().is_empty())
+        .filter_map(|l| serde_json::from_str::<Row>(l).ok())
+        .collect()
 }

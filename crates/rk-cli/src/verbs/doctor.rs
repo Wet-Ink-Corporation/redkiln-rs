@@ -47,7 +47,6 @@
 //! journal it exists to reconstruct. The refusal is a value through the exit table, on `run.rs`'s
 //! own cycle-6 precedent, and cycle 9 replaces it.
 
-use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -112,21 +111,15 @@ pub fn run(cli: &Cli, args: &DoctorArgs, env: &Env, startup: Startup<'_>) -> Res
         return Ok(Exit::ConfigError);
     }
 
-    let ctx = Ctx {
+    let ctx = Ctx::build(
+        root,
+        repo.common_dir.clone(),
         config,
-        // 🚧 Cycle 3 reads the enabled packs. An empty source set is the diagnostic loader's own
-        // `Io` row, which is a finding once a rule reads it — so this is not a silent zero.
-        catalog: rk_kernel::catalog::load_diagnostic(&[]),
-        pack_files: BTreeMap::new(),
-        registry: None,
-        sites: rk_kernel::registry::PredicateSites::default(),
-        env: env.clone(),
-        common_dir: repo.common_dir.clone(),
-        worktree: root,
+        env.clone(),
         // Carried in, never refused here — the type's whole reason. See the header.
-        store: Some(adapters::open_store(&repo.exec, &repo.worktree)),
-        probe: Box::new(probe::RealProbe),
-    };
+        Some(adapters::open_store(&repo.exec, &repo.worktree)),
+        Box::new(probe::RealProbe),
+    );
 
     let mut out = std::io::stdout();
     Ok(evaluate_and_render(&ctx, &mut out))

@@ -202,13 +202,11 @@ fn doctor_rule_table_covers_every_register_named_row() {
 /// If the fixture directory does not exist, if it carries no `.redkiln/config.toml`, or if the
 /// materialised tree is missing either of those afterwards. Each is a fixture that would otherwise
 /// be read as a configuration with nothing wrong with it.
-#[expect(
-    dead_code,
-    reason = "cycle 4 lands the materialiser beside the fixtures it materialises; its callers are \
-              `ac415_every_rule_id_has_a_rejecting_fixture` and the twenty-six family tests, all \
-              of which are cycle 5's. The expectation goes UNFULFILLED on the first caller, which \
-              is what says this attribute can go."
-)]
+///
+/// ✅ **Cycle 4 carried `#[expect(dead_code)]` here, and cycle 5 removed it because clippy said
+/// the expectation was UNFULFILLED** — which is what the attribute was for. It had no caller until
+/// the family tests arrived; the first one made it live, and the compiler is what noticed rather
+/// than a reader.
 pub fn materialise(name: &str) -> tempfile::TempDir {
     let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
@@ -283,4 +281,193 @@ fn merge_into(src: &std::path::Path, dst: &std::path::Path) {
             std::fs::copy(entry.path(), &to).expect("a file copies");
         }
     }
+}
+
+// ------------------------------------------------------------------- the per-row test harness
+//
+// Every family test in this module is the same two assertions, and §7d.8 fixes both:
+// *"each runs the rule over its fixture **and over the clean fixture** `doctor/clean/` asserting
+// no finding — the second half is what makes a rule that always fires red."*
+//
+// 🛑 **THE RULE IS RUN ALONE, NOT THE TABLE.** AC-415's own words are *"each fixture run through
+// **its own rule only**"*. Running the table would let a fixture pass because some other row fired
+// over it, which is the join AC-415 exists to make per-id.
+
+/// Build the `Ctx` for one materialised fixture, through the **same builder the verb uses**.
+///
+/// `store` is `None` and the probe is the fixture's stub: neither is configuration, and §7d.8 has
+/// the root hand both in. A `Ctx` assembled any other way here would assert every rule against a
+/// configuration the shipped binary never sees.
+fn ctx_for(dir: &std::path::Path) -> rk_cli::doctor::Ctx {
+    let config_src = std::fs::read_to_string(dir.join(".redkiln").join("config.toml"))
+        .expect("every doctor fixture carries a .redkiln/config.toml");
+    let config = rk_cli::config::parse(&config_src).expect("the fixture's ConfigFile parses");
+
+    // `env.toml`, when the fixture carries one, IS the captured environment — ADR-0083 gives the
+    // process one environment read at the root, so a fixture supplies the map rather than setting
+    // a real variable, which would leak into every other test in this binary.
+    let vars = std::fs::read_to_string(dir.join("env.toml"))
+        .ok()
+        .and_then(|src| toml::from_str::<std::collections::BTreeMap<String, String>>(&src).ok())
+        .unwrap_or_default();
+
+    rk_cli::doctor::Ctx::build(
+        dir.to_path_buf(),
+        dir.join(".git"),
+        config,
+        rk_cli::env::Env::from_map(vars),
+        None,
+        Box::new(StubProbe::read(dir)),
+    )
+}
+
+/// The stubbed version probe (§7d.8's seam). Reads `probe.toml`'s `version`, or answers
+/// `TESTED_CLI_VERSION` so a fixture that is not about the probe is not accidentally about it.
+#[derive(Debug, Clone)]
+struct StubProbe(String);
+
+impl StubProbe {
+    fn read(dir: &std::path::Path) -> Self {
+        let version = std::fs::read_to_string(dir.join("probe.toml"))
+            .ok()
+            .and_then(|src| toml::from_str::<toml::Value>(&src).ok())
+            .and_then(|v| {
+                v.get("version")
+                    .and_then(|v| v.as_str())
+                    .map(ToOwned::to_owned)
+            })
+            .unwrap_or_else(|| rk_adapter_claude::config::TESTED_CLI_VERSION.to_owned());
+        Self(version)
+    }
+}
+
+impl rk_cli::doctor::probe::VersionProbe for StubProbe {
+    fn version(&self, _program: &str) -> Result<String, rk_cli::doctor::probe::ProbeError> {
+        Ok(self.0.clone())
+    }
+}
+
+/// Run **one** rule over one fixture and return what it found.
+///
+/// # Panics
+/// If `rule_id` is not in `RULES` — a test naming a rule the table does not carry would otherwise
+/// report an empty finding list and read exactly like a rule that found nothing.
+fn findings(rule_id: &str, fixture: &str) -> Vec<rk_cli::doctor::Finding> {
+    let rule = RULES
+        .iter()
+        .find(|r| r.id == rule_id)
+        .unwrap_or_else(|| panic!("{rule_id} is not in RULES — no rule to run over {fixture}"));
+    let dir = materialise(fixture);
+    let ctx = ctx_for(dir.path());
+    (rule.check)(&ctx)
+}
+
+/// The two assertions every family test makes, in §7d.8's own order.
+///
+/// **The fixture half first**, because the clean half is satisfied by a rule that never fires and
+/// asserting it first would read green on the thing the fixture half exists to catch.
+fn fires_over_its_fixture_and_not_over_clean(rule_id: &str, severity: rk_cli::doctor::Severity) {
+    let found = findings(rule_id, rule_id);
+    assert!(
+        !found.is_empty(),
+        "{rule_id} found nothing over its own rejecting fixture `doctor/{rule_id}/`. AC-415: \
+         *\"every id has at least one committed fixture configuration that the rule ACTUALLY \
+         REJECTS\"* — a rule that never fires satisfies every join in this slice and reports \
+         nothing in production."
+    );
+    for f in &found {
+        assert_eq!(f.id, rule_id, "a finding carries another rule's id: {f:?}");
+        assert_eq!(
+            f.severity, severity,
+            "{rule_id} fired at the wrong severity. The table's column is what the exit code \
+             reads (AC-438: an error-severity row is exit 3, a warning never moves it): {f:?}"
+        );
+        assert!(
+            !f.detail.trim().is_empty(),
+            "{rule_id} fired with an empty detail — the stdout row would read `<id> <status>` and \
+             tell an operator nothing about what to fix"
+        );
+    }
+
+    let clean = findings(rule_id, "clean");
+    assert!(
+        clean.is_empty(),
+        "{rule_id} fired over `doctor/clean/`, the configuration every rule passes. This is the \
+         half that makes a rule which ALWAYS fires red (§7d.8), and without it every assertion \
+         above is satisfied by `check` returning one finding unconditionally. Found: {clean:?}"
+    );
+}
+
+// ------------------------------------------------------------- batch 1: the card and config rows
+//
+// Six families, seven ids. Each reads the `ConfigFile`, the captured environment, or a card file —
+// nothing here folds a journal or parses a predicate, which is why they land together.
+
+/// **AC-486 / AC-438's doctor half** — an adapter name this build does not ship.
+///
+/// §7d.8: *"`doctor` does **NOT** call `AdapterSet::resolve` as a startup refusal (that is `run`'s
+/// step (4)) … it reports adapter defects only through `RK-D-ADAPTER`, **which is why the row and
+/// its id are observable on the real binary**."* The fixture's `ConfigFile` is COMPLETE — it loads,
+/// and the whole table runs over it — so the only thing that can report `rk-adapter-linear` is this
+/// rule.
+#[test]
+fn ac486_unknown_adapter_is_a_doctor_error() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-ADAPTER", rk_cli::doctor::Severity::Error);
+}
+
+/// **AC-422 / AC-488** — a denylisted variable name in the captured environment.
+///
+/// The one denylist is `rk_adapter_claude::env_denylist`; `rk-cli/src` carries no second copy of
+/// any name in it (AC-422's own source ban, scoped to `src`, which is why a fixture may spell one).
+/// The fixture supplies the map rather than setting a real variable: ADR-0083 gives the process one
+/// environment read at the root, and a test that set one would leak into every other test here.
+#[test]
+fn ac422_ac488_denylisted_env_name_is_a_doctor_error() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-ENV-DENYLIST", rk_cli::doctor::Severity::Error);
+}
+
+/// **AC-417 / AC-205 / AC-493's doctor halves** — the two card-tools rows.
+///
+/// Two ids and two fixtures, because the remedy differs: a card whose `tools` list omits
+/// `StructuredOutput` has an allowlist to edit, and a card with no `tools` key has none to edit.
+/// `CardFile.tools` is `Option`, so both cards LOAD — which is what makes these doctor rows rather
+/// than load errors.
+#[test]
+fn ac417_card_without_structured_output_or_tools_key_rejected() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-CARD-TOOLS", rk_cli::doctor::Severity::Error);
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-CARD-TOOLS-ABSENT",
+        rk_cli::doctor::Severity::Error,
+    );
+}
+
+/// **ADR-0113's doctor half (`s7c` ARMED)** — a card with no `cache_profile`.
+#[test]
+fn ac383_card_without_cache_profile_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-CACHE-PROFILE",
+        rk_cli::doctor::Severity::Error,
+    );
+}
+
+/// **AC-203's doctor half (`s7c` ARMED)** — a card whose binding yields no agent name.
+///
+/// `CardFile.description` is a `String` and an empty one is a value, so the card loads and the
+/// bound `--agents` object has no name to key on. A load error would be the adapter's; this is the
+/// configuration fact.
+#[test]
+fn ac203_agents_without_agent_doctor_row() {
+    fires_over_its_fixture_and_not_over_clean(
+        "RK-D-AGENTS-WITHOUT-AGENT",
+        rk_cli::doctor::Severity::Error,
+    );
+}
+
+/// **AC-418 / AC-212's doctor half** — a card or a slot filler that states its own tier.
+///
+/// The tier is the ROLE's (`[role.<name>]` in the pack). The clause names both carriers and the
+/// fixture spells both: a card with `model`, and a filler with `effort`.
+#[test]
+fn ac418_tier_leak_on_card_model_and_filler_effort() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-TIER-LEAK", rk_cli::doctor::Severity::Error);
 }

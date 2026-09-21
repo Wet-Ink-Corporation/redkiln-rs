@@ -122,17 +122,17 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-CARD-TOOLS",
         severity: Severity::Error,
-        check: unbuilt,
+        check: card_tools,
     },
     Rule {
         id: "RK-D-CARD-TOOLS-ABSENT",
         severity: Severity::Error,
-        check: unbuilt,
+        check: card_tools_absent,
     },
     Rule {
         id: "RK-D-TIER-LEAK",
         severity: Severity::Error,
-        check: unbuilt,
+        check: tier_leak,
     },
     Rule {
         id: "RK-D-TIMEOUT",
@@ -167,7 +167,7 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-ENV-DENYLIST",
         severity: Severity::Error,
-        check: unbuilt,
+        check: env_denylist,
     },
     Rule {
         id: "RK-D-CLI-VERSION",
@@ -202,7 +202,7 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-ADAPTER",
         severity: Severity::Error,
-        check: unbuilt,
+        check: adapter,
     },
     Rule {
         id: "RK-D-UNREAD",
@@ -212,12 +212,12 @@ pub static RULES: &[Rule] = &[
     Rule {
         id: "RK-D-AGENTS-WITHOUT-AGENT",
         severity: Severity::Error,
-        check: unbuilt,
+        check: agents_without_agent,
     },
     Rule {
         id: "RK-D-CACHE-PROFILE",
         severity: Severity::Error,
-        check: unbuilt,
+        check: cache_profile,
     },
     Rule {
         id: "RK-D-MARGIN",
@@ -300,4 +300,238 @@ pub fn evaluate(ctx: &Ctx, harness: &crate::no_dispatch::NoDispatchHarness) -> s
         report.findings.extend((rule.check)(ctx));
     }
     report
+}
+
+// ============================================================================ batch 1: the card
+// ============================================================================ and config rows
+//
+// Six families, seven ids. Each reads the `ConfigFile`, the captured environment, or a card file.
+// Nothing here folds a journal or parses a predicate, which is why they land together.
+
+/// One card as **`doctor`** reads it — permissive on purpose.
+///
+/// 🛑 **Not `rk_adapter_claude::card::CardFile`**, and the reason is what these rules are for.
+/// `CardFile` is `#[serde(deny_unknown_fields)]`, so a card carrying one unknown key fails to
+/// parse — and a rule built on it would then report **nothing** about a card that also omits
+/// `StructuredOutput`. The defect would hide behind the typo. A doctor reader that refuses less
+/// than the loader finds more, which is the asymmetry between a linter and a loader.
+#[derive(Debug, Clone, Default, serde::Deserialize)]
+struct CardView {
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    tools: Option<Vec<String>>,
+    #[serde(default)]
+    cache_profile: Option<String>,
+    #[serde(default)]
+    model: Option<String>,
+    #[serde(default)]
+    effort: Option<String>,
+}
+
+/// Every `.redkiln/cards/*.json`, by file name, in path order.
+///
+/// **An unreadable or unparseable card is SKIPPED, not reported here.** Each row below says one
+/// thing about a card it could read; *"this file is not a card"* is a different finding and belongs
+/// to whichever row a record gives it. Inventing it here would put a defect under an id whose
+/// fixture does not carry it, and `ac415_` would then pass for the wrong reason.
+fn cards(ctx: &Ctx) -> Vec<(String, CardView)> {
+    let dir = ctx.redkiln().join("cards");
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return Vec::new();
+    };
+    let mut paths: Vec<std::path::PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "json"))
+        .collect();
+    paths.sort();
+    paths
+        .iter()
+        .filter_map(|p| {
+            let name = p.file_name()?.to_string_lossy().into_owned();
+            let text = std::fs::read_to_string(p).ok()?;
+            let card: CardView = serde_json::from_str(&text).ok()?;
+            Some((name, card))
+        })
+        .collect()
+}
+
+/// One finding, spelled once so every row reads the same shape.
+const fn finding(id: &'static str, severity: Severity, detail: String) -> Finding {
+    Finding {
+        id,
+        severity,
+        detail,
+    }
+}
+
+/// **`RK-D-ADAPTER`** — AC-486, AC-438's doctor clause.
+///
+/// It calls `AdapterSet::resolve` and reports the refusal **as a finding**, rather than carrying a
+/// second copy of the shipped-adapter list. §7d.8 forbids `doctor` calling it *as a startup
+/// refusal* — that is `run`'s step (4) — not calling it at all, and the difference is why this id
+/// is observable on the real binary: a `doctor` that exited on the refusal would print no row.
+///
+/// **Only the `UnknownAdapter` arm.** `resolve` also refuses a denylisted environment, which is
+/// [`env_denylist`]'s row; a rule reporting both would fire twice over one defect and make each
+/// fixture reject for two reasons.
+fn adapter(ctx: &Ctx) -> Vec<Finding> {
+    match crate::adapters::AdapterSet::resolve(&ctx.config, &ctx.env) {
+        Ok(_) | Err(crate::adapters::Refusal::DenylistedEnv { .. }) => Vec::new(),
+        Err(refusal) => vec![finding(
+            "RK-D-ADAPTER",
+            Severity::Error,
+            refusal.to_string(),
+        )],
+    }
+}
+
+/// **`RK-D-ENV-DENYLIST`** — AC-422, AC-488.
+///
+/// The one denylist is `rk_adapter_claude::env_denylist`, read here and copied nowhere: AC-422's
+/// source ban over `crates/rk-cli/src` exists precisely to keep a second list out of this crate,
+/// and a rule that spelled the names would be the thing the ban forbids.
+fn env_denylist(ctx: &Ctx) -> Vec<Finding> {
+    rk_adapter_claude::env_denylist::first_denylisted(ctx.env.as_map()).map_or_else(
+        Vec::new,
+        |name| {
+            vec![finding(
+                "RK-D-ENV-DENYLIST",
+                Severity::Error,
+                format!(
+                    "the captured environment carries `{name}`, which is refused: a dispatch runs \
+                     on the subscription session and an API-key-mode fallback is not an allowed \
+                     degradation path (ADR-0010)"
+                ),
+            )]
+        },
+    )
+}
+
+/// **`RK-D-CARD-TOOLS`** — AC-417, AC-205, AC-493's doctor halves: a card whose `tools` list omits
+/// `StructuredOutput`.
+///
+/// **A card with NO `tools` key is not this row** — it is [`card_tools_absent`], and the two are
+/// separate ids because the remedy differs: an allowlist to edit, versus no allowlist at all.
+fn card_tools(ctx: &Ctx) -> Vec<Finding> {
+    cards(ctx)
+        .into_iter()
+        .filter_map(|(name, card)| {
+            let tools = card.tools?;
+            (!tools.iter().any(|t| t == "StructuredOutput")).then(|| {
+                finding(
+                    "RK-D-CARD-TOOLS",
+                    Severity::Error,
+                    format!(
+                        "`cards/{name}` declares tools {tools:?}, which omit `StructuredOutput` — \
+                         the effective tool set is the card's declared list and nothing else, so \
+                         the activity cannot return a structured result"
+                    ),
+                )
+            })
+        })
+        .collect()
+}
+
+/// **`RK-D-CARD-TOOLS-ABSENT`** — AC-417, AC-205: a card with no `tools:` key at all.
+fn card_tools_absent(ctx: &Ctx) -> Vec<Finding> {
+    cards(ctx)
+        .into_iter()
+        .filter(|(_, card)| card.tools.is_none())
+        .map(|(name, _)| {
+            finding(
+                "RK-D-CARD-TOOLS-ABSENT",
+                Severity::Error,
+                format!(
+                    "`cards/{name}` declares no `tools` key. `CardFile.tools` is optional, so the \
+                     card loads — the absence is a configuration fact and not a parse failure"
+                ),
+            )
+        })
+        .collect()
+}
+
+/// **`RK-D-CACHE-PROFILE`** — ADR-0113's doctor half (`s7c` ARMED).
+fn cache_profile(ctx: &Ctx) -> Vec<Finding> {
+    cards(ctx)
+        .into_iter()
+        .filter(|(_, card)| card.cache_profile.is_none())
+        .map(|(name, _)| {
+            finding(
+                "RK-D-CACHE-PROFILE",
+                Severity::Error,
+                format!("`cards/{name}` declares no `cache_profile`"),
+            )
+        })
+        .collect()
+}
+
+/// **`RK-D-AGENTS-WITHOUT-AGENT`** — AC-203's doctor half (`s7c` ARMED): a card whose binding
+/// yields no agent name.
+///
+/// The name comes off `description`, and `CardFile.description` is a `String` — an empty one is a
+/// **value**, so the card loads and the bound `--agents` object has no name to key on. Trimmed
+/// before the test, because a description of one space is as nameless as one of none.
+fn agents_without_agent(ctx: &Ctx) -> Vec<Finding> {
+    cards(ctx)
+        .into_iter()
+        .filter(|(_, card)| card.description.trim().is_empty())
+        .map(|(name, _)| {
+            finding(
+                "RK-D-AGENTS-WITHOUT-AGENT",
+                Severity::Error,
+                format!(
+                    "`cards/{name}` has an empty `description`, so its bound `--agents` object has \
+                     no name to key on"
+                ),
+            )
+        })
+        .collect()
+}
+
+/// **`RK-D-TIER-LEAK`** — AC-418, AC-212's doctor half: *"any card or slot filler also sets a model
+/// or effort"*.
+///
+/// **Both carriers, because the clause names both.** The tier is the role's (`[role.<name>]` in the
+/// pack); a card or a filler that states one has taken a decision the pack owns. A rule that read
+/// cards alone would pass a repository whose leak is in `slots.toml`.
+fn tier_leak(ctx: &Ctx) -> Vec<Finding> {
+    let mut out: Vec<Finding> = cards(ctx)
+        .into_iter()
+        .filter_map(|(name, card)| {
+            let member = if card.model.is_some() {
+                "model"
+            } else if card.effort.is_some() {
+                "effort"
+            } else {
+                return None;
+            };
+            Some(finding(
+                "RK-D-TIER-LEAK",
+                Severity::Error,
+                format!("`cards/{name}` sets `{member}`; the tier is the role's"),
+            ))
+        })
+        .collect();
+
+    if let Ok(src) = std::fs::read_to_string(ctx.redkiln().join("slots.toml"))
+        && let Ok(doc) = toml::from_str::<toml::Value>(&src)
+        && let Some(fillers) = doc.get("filler").and_then(toml::Value::as_array)
+    {
+        for (i, f) in fillers.iter().enumerate() {
+            for member in ["model", "effort"] {
+                if f.get(member).is_some() {
+                    out.push(finding(
+                        "RK-D-TIER-LEAK",
+                        Severity::Error,
+                        format!(
+                            "`slots.toml`'s filler #{i} sets `{member}`; the tier is the role's"
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+    out
 }
