@@ -81,7 +81,8 @@ grammar, `redkiln run <item> [--lane fix|story]`, superseding ADR-0107 decision 
 part** (every other clause of 0107 stands), and `0129` fixes the `answer` grammar and the ADR-0063 question registry,
 superseding ADR-0009's literal `approve|changes-requested` sentence **in part** (its CLI-only channel clause stands). Both
 were forced by the C-01 pass: each grammar sat in a Decision sentence, so ADR-0092 allowed neither an erratum nor a
-runbook choice. The next free number is **`0130`**.
+runbook choice. The next free number is **`0131`**.
+*(Corrected 2026-09-20 at ADR-0130's flip: this sentence gave the next free number as `0130` until ADR-0130 — the recorded `Config` written to the run-record layout, repairing residual **R-54** — was written at Step 7d Slice 3's repair commit on 2026-09-20 and accepted the same day on the operator's dated line under `spikes/DECISIONS-2026-09-20.md` D20-1. The sentence went stale at the authoring commit rather than at the flip, and `references/adr/README.md`'s own numbering row had already been moved to `0131`; a next-free-number that names an allocated record is how a number gets reused, which the numbering rule forbids.)*
 *(Corrected 2026-09-18 at Step 7d's stage-open: this sentence gave the next free number as `0128` until ADR-0128 and ADR-0129 were written.)*
 *(Corrected 2026-09-17 at Step 7c's stage-open: this sentence gave the next free number as `0126` until ADR-0126 and ADR-0127 were written.)*
 *(Corrected 2026-09-17, three times: this sentence gave the next free number as `0123` until ADR-0123 was written at Step 7b-ii, as `0124` until ADR-0124 was, and as `0125` until ADR-0125 was.)*
