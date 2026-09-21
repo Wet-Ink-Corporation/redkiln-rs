@@ -112,6 +112,17 @@
 //!     events.jsonl                one canonical JSON object per line, LF-terminated
 //! ```
 //!
+//! **`event_count` and `producer` are written by [`write_run`] and are read by NOTHING — write
+//! them anyway.** [`read_run`] parses `schema`, `stage`, `run_id`, `inputs_digest`,
+//! `terminal_state` and `next_action`; [`RecordedRun`] has no field for either member, so no
+//! replay, no fixture and no `rk-cli` renderer can consult one. They are provenance the manifest
+//! carries for a human reading it, and **neither has an instrument** — a check over either would
+//! be a floor, for the reasons set out beside the write. **`producer` names the recording
+//! MECHANISM and not the function that wrote the file**, which is why it stays the literal
+//! `rk-kernel::replay::record` for a run [`resume`] produced (R-38, settled 2026-09-20; Slice 3's
+//! GAP 17). Changing either member's value changes no behaviour in this workspace, and a reader
+//! who needs one of them to MEAN something must give it a reader and an instrument first.
+//!
 //! **`specs.json` is REQUIRED, and an empty object is how a run with no dispatchable node says
 //! so.** A missing file is refused by [`read_run`] on `terminal_state`'s exact warrant: a log
 //! without it records no dispatches, and replaying one would satisfy AC-008's GIVEN over an empty
@@ -1629,6 +1640,32 @@ pub fn write_run(root: &Path, run: &RecordedRun) -> Result<PathBuf, ReplayError>
         "stage": run.inputs.stage,
         "inputs_digest": run.inputs_digest,
         "event_count": run.events.len(),
+        // 🛑 **`event_count` AND `producer` ARE INFORMATIONAL — WRITTEN HERE, READ BY NOTHING.**
+        // Measured 2026-09-20 at R-38's settlement: each occurs at exactly two sites in
+        // `crates/`, this write and the module header's layout listing. [`read_run`] parses
+        // `schema`, `stage`, `run_id`, `inputs_digest`, `terminal_state` and `next_action` and
+        // nothing else, so [`RecordedRun`] carries no field for either member and `rk-cli`'s
+        // `explain` — which renders a [`RecordedRun`] — cannot print them. The `explain/*/`
+        // fixtures and `ac432_explain_over_replayed_log_is_byte_identical` CARRY both members in
+        // their `run.json` bytes and READ neither.
+        //
+        // **`producer` names the recording MECHANISM, not the function that wrote this file**
+        // (R-38; Slice 3's GAP 17). The literal therefore stays `record` for a run [`resume`]
+        // produced. The other reading is refuted by the literal on EVERY path and not only the
+        // resumed one: `write_run` is what writes `run.json`, and the literal has never said
+        // `write_run`. `record` and `resume` are two entry points with separate loops that build
+        // the same [`RecordedRun`] in the same layout through this one writer, and that shared
+        // layout is what the member names.
+        //
+        // **Neither member gets an instrument, and that is the decision rather than an omission.**
+        // A test pinning this literal would read a hard-coded string back through the writer that
+        // hard-codes it — a FLOOR no implementation could violate, which is reported and never
+        // written down as a check. An `event_count`-against-`events.jsonl` assertion has the same
+        // shape: the count is derived from the vector this function then serialises, so the two
+        // cannot disagree except under hand-editing, which makes it a tamper detector and not a
+        // defect detector. Giving either member a reader would mint a refusal, and a refusal owes
+        // a positive control — this module's header records what happened the last time one
+        // shipped without: it was removed and *"the whole replay suite stayed green"*.
         "producer": "rk-kernel::replay::record",
         // NEW at Slice 4f. Neither is a clock reading, so the module header's rule still holds:
         // the gate deadline inside `next_action` is a RECORDED INPUT read back out of
