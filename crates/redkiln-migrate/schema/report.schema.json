@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redkiln.invalid/schema/redkiln-migrate/report.schema.json",
+  "title": "redkiln-migrate differential report",
+  "description": "AC-448's per-(kind, slot) counts, AC-467's corpus SHA and tool version, and AC-468's three DISTINCT counts. There is deliberately no `total`: a report that presents only a combined total, or folds lifted-with-loss into lifted, must fail validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["corpus_sha", "tool_version", "per_kind_slot"],
+  "properties": {
+    "corpus_sha": {
+      "description": "The corpus pin this tool was built against (AC-467).",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "tool_version": {
+      "description": "The lifter/tool version (AC-467).",
+      "type": "string",
+      "minLength": 1
+    },
+    "per_kind_slot": {
+      "description": "One row per (kind, slot). v0 emits one row per kind with slot = \"body\"; see src/report.rs's header for why the arithmetic forbids more.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "slot", "lifted", "lifted_with_loss", "failed"],
+        "properties": {
+          "kind": {
+            "description": "A companion wire name, an item record kind, or the legacy configuration kind (s7d §7d.11 step (4)).",
+            "type": "string",
+            "minLength": 1
+          },
+          "slot": {
+            "description": "The named sub-part of the kind this row counts.",
+            "type": "string",
+            "minLength": 1
+          },
+          "lifted": {
+            "description": "Carried whole. NOT a sum: folding lifted_with_loss in here is the form AC-468 refuses.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "lifted_with_loss": {
+            "description": "Carried with a migration-loss marker. A distinct count, never folded into lifted.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "description": "Not carried.",
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

@@ -21,3 +21,10 @@ crates/rk-cli/tests/fixtures/init/config.toml.expected -text
 # (a path git reads verbatim). Same rule as the two rows above - the row lands with the slice that
 # lands the files, not three slices later.
 crates/rk-cli/tests/fixtures/doctor/** -text
+# Slice 5 appends the migrator's synthetic old-layout fixture. Its bytes are DIGESTED:
+# `legacy_mini_provenance_matches_bytes` re-computes a sha256 per file against PROVENANCE.md,
+# so a CRLF rewrite on checkout would turn it red for a reason unrelated to the migrator -- and
+# the fixture is also copied verbatim into a temp git repository, where a rewritten YAML fence
+# or ledger block would fail to parse. Same rule as the three rows above: the row lands with
+# the slice that lands the files.
+crates/redkiln-migrate/tests/fixtures/legacy-mini/** -text

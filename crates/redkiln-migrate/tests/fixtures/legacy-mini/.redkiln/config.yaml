@@ -1,0 +1,7 @@
+# The predecessor's configuration, as read.
+version: 1
+store: .redkiln/store.sqlite3
+processes:
+  - bug-standard
+adapters:
+  harness: claude

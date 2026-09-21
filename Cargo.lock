@@ -1958,6 +1958,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "libyaml-rs"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e126dda6f34391ab7b444f9922055facc83c07a910da3eb16f1e4d9c45dc777"
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2399,6 +2405,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "redkiln-migrate"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "insta",
+ "jsonschema",
+ "rk-containment",
+ "rk-git",
+ "rk-store",
+ "rk-types",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "yaml_serde",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2704,6 +2728,12 @@ dependencies = [
  "tempfile",
  "wait-timeout",
 ]
+
+[[package]]
+name = "ryu"
+version = "1.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
 name = "same-file"
@@ -3400,6 +3430,19 @@ name = "wit-bindgen"
 version = "0.57.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
+
+[[package]]
+name = "yaml_serde"
+version = "0.10.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33b729a08a9a6be689bbad3e2bf8015926db54b6622cc89c3a5f7dc174b9e918"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "libyaml-rs",
+ "ryu",
+ "serde",
+]
 
 [[package]]
 name = "zerocopy"

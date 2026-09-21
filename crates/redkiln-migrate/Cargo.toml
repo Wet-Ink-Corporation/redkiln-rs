@@ -1,0 +1,43 @@
+[package]
+name = "redkiln-migrate"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The old-corpus converter — a separate binary, never a `redkiln` verb (AC-441; ADR-0002, ADR-0013). v0 at Step 7d."
+
+[[bin]]
+name = "redkiln-migrate"
+path = "src/main.rs"
+
+[features]
+# The corpus-bound Phase-2 acceptance set (the register's §13 phase note), local-only: `cargo test -p redkiln-migrate --features corpus -- --ignored`.
+# It must EXIST from this crate's first commit or `cargo test --workspace --features corpus` exits
+# 101 with "none of the selected packages contains these features" (the rk-types precedent).
+corpus = []
+
+[dependencies]
+rk-types = { path = "../rk-types" }      # companion kinds, digests, typed artifacts
+rk-store = { path = "../rk-store" }      # the canonical serialiser (AC-470) and the store the lift writes into
+rk-git = { path = "../rk-git" }          # status --porcelain, worktree add/remove, commit_with_trailers, tree_hash (AC-522)
+yaml_serde.workspace = true              # ADR-0100 d1: the ONE crate that may depend on a YAML reader; src/legacy/ only
+serde.workspace = true
+serde_json.workspace = true
+jsonschema.workspace = true              # the report validated against schema/report.schema.json (AC-448/AC-468)
+clap.workspace = true
+anyhow.workspace = true                  # ADR-0102 d6
+tempfile = "3"                           # H-3: the bootstrap GitExec's hooks directory (§7d.11 step (2))
+# NO rk-ports, NO rk-kernel, NO rk-adapter-* (AC-466; AC-441's build-graph half) — the block's cargo metadata walk polices it.
+
+[dev-dependencies]
+rk-containment = { path = "../rk-containment" }   # terminate_pid / is_alive for idempotent_across_kill (dev edge only)
+insta.workspace = true
+
+# ONE integration binary, `tests/it/main.rs` with a `mod` per case (ADR-0083).
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[lints]
+workspace = true

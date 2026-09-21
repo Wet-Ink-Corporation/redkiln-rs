@@ -1,0 +1,9 @@
+# A predecessor process definition, as read.
+name: bug-standard
+stages:
+  - id: plan
+    gate: false
+  - id: implement
+    gate: false
+  - id: report
+    gate: true
