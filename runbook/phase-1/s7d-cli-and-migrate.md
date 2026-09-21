@@ -2732,13 +2732,25 @@ compares three things — the live binary, the instrument file and this constant
 so the stage cannot close until the RAISED bump is either taken or the CLI is pinned back. It is taken.*
 
 *What it costs, stated rather than discovered. **(a)** The pin is not a number but the version the adapter's
-recorded evidence was measured at: `init.rs`'s RT-27 shape lines, `registry.rs`'s probe record and
-`streams/README.md`'s *“The 2.1.277 init shape”* section are MEASUREMENTS of 2026-09-18 and are **not rewritten** —
-they keep the version they were taken at, and a dated confirmation at 2.1.278 is appended to them once the live
-probe has run. **(b)** A pin this crate has not been dispatched at is a claim without evidence, so
-**`live_dispatch_probe` at 2.1.278 is OWED** — one paid haiku dispatch, `#[ignore]` behind `[features] live`, run
-by the operator in the foreground as its own ignore-reason prescribes; the precedent move (`cee6587`, 2.1.275 →
-2.1.277) re-grounded the evidence the same way. **(c)** Checkpoint 7c's D17-11 anchored grep reads this constant,
+recorded evidence was measured at: `init.rs`'s RT-27 shape lines and `streams/README.md`'s *“The 2.1.277 init
+shape”* section are MEASUREMENTS of 2026-09-18 and are **not rewritten** — they keep the version they were taken
+at, and a dated confirmation at 2.1.278 is appended to them once the live probe has run. ***Corrected
+2026-09-21, later the same day: this clause also named `registry.rs`'s probe record, and on reading it that is
+WRONG.*** *That row is 7c's **capability** provenance — `"capability": "dispatch"`, `verified_on: 2026-09-17`,
+a `probe.recorded.source` naming the corpus pin's 101 recorded dispatch rows — and not a statement about the
+CLI pin at all. Appending to it would change a runtime `const` under an amendment that permits the pin and
+nothing else, and re-dating a `verified_on` is 7c's decision, not this stage's. It is left exactly as it
+stands, and the correction is recorded here rather than the work quietly not done.* **(b)** A pin this crate
+has not been dispatched at is a claim without evidence, so **`live_dispatch_probe` at 2.1.278 is OWED** — one
+paid haiku dispatch, `#[ignore]` behind `[features] live`, run by the operator in the foreground as its own
+ignore-reason prescribes; the precedent move (`cee6587`, 2.1.275 → 2.1.277) re-grounded the evidence the same
+way. ***DISCHARGED 2026-09-21: the operator ran it and it PASSED at the new pin.*** *`OBSERVED_CLI_VERSION`
+and `INSTRUMENT_VERSION` both `2.1.278`, `PROBE_RAN_CONFORMANCE=1`, `COMPLETED_ROWS=1`, `DISPATCH_ROWS=0`,
+`TTL_STATE=no-write`, `apiKeySource="none"`, `RESULT_RAW_SHA256=d13c2d1a55d2f52a3a4851930e5b646778770d4ba01f21cb75c78e73f6aebfee`,
+64,526 bytes of stdout retained verbatim. **RT-27's shape is UNCHANGED at the new release** — the retained raw
+`system/init` carries `agents` and no `agent`, `probe` in the list, `model` the full haiku id and `tools`
+`["StructuredOutput"]` — so the two records in (a) take a re-measured confirmation rather than a rewrite. Six
+keys appeared beside them and none is read: `effective_config` picks named keys off a `serde_json::Value`.* **(c)** Checkpoint 7c's D17-11 anchored grep reads this constant,
 so 7c's row goes **provisional** until it is re-run — the same disposition Slice 1 gave Step 6's row, and it is
 recorded in PROGRESS.md §1 rather than absorbed. **(d)** §7d.1's *“one closed crate edited”* is disturbed and takes
 its own dated note there.*

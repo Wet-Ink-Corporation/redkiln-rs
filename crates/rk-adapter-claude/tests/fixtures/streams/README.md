@@ -71,6 +71,15 @@ naming every loadable agent (the `--agents` JSON's entry among them); `model` as
 (`claude-haiku-4-5-20251001`); `tools`, `mcp_servers`, `apiKeySource`, `claude_code_version` as before. All three
 files below are SCRIPTED in that shape.
 
+**Re-measured 2026-09-21 at CLI 2.1.278 and UNCHANGED** (`live_dispatch_probe`, the run the pin move owed;
+`OBSERVED_CLI_VERSION=2.1.278`, `RESULT_RAW_SHA256=d13c2d1a…`): the init still carries `agents` and **no
+`agent`**, `probe` is in the list, `model` is the full haiku id and `tools` is `["StructuredOutput"]`. Six keys
+appeared beside them — `skills`, `plugins`, `capabilities`, `fast_mode_state`, `messaging_socket_path`,
+`powershell_path` — and the reader ignores every one, so the three files below are still the shape they script.
+**Their FILENAMES keep `2-1-277`**: they are named for the release the shape was first measured at, which is a
+fact that does not change; their `claude_code_version` tracks the pin, because `init::decide` refuses a measured
+version ≠ the pin before adoption is ever read.
+
 | file | what it scripts |
 | --- | --- |
 | `init-2-1-277-shape.scripted.ndjson` | the good 2.1.277 init: `agents` carries `probe`, `model` is the haiku id, tools equal the card's — ADOPTED under the composite reading |

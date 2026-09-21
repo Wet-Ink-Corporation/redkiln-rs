@@ -80,6 +80,14 @@ pub struct EffectiveConfig {
     /// Every agent the child reports as loadable — the 2.1.277 init's `agents` list, which carries
     /// the `--agents` JSON's entry by name. `None` when the init carries no list. **[measured
     /// 2026-09-18 at CLI 2.1.277]**: that init carries `agents` and NO `agent` key (RT-27).
+    ///
+    /// **[re-measured 2026-09-21 at CLI 2.1.278, and UNCHANGED]** — `live_dispatch_probe` at the new
+    /// pin returned a `system/init` whose key set carries `agents` and **no `agent`**, `model` the
+    /// full id `claude-haiku-4-5-20251001`, `tools` equal to the declared allowlist and
+    /// `claude_code_version` `2.1.278`. The shape survived the release; six keys appeared beside it
+    /// (`skills`, `plugins`, `capabilities`, `fast_mode_state`, `messaging_socket_path`,
+    /// `powershell_path`) and none is read here — [`effective_config`] picks named keys off a
+    /// `serde_json::Value` and ignores the rest, so a widened init is not a refusal.
     pub agents: Option<BTreeSet<String>>,
     pub cwd: Option<String>,
     pub permission_mode: Option<String>,
@@ -195,10 +203,12 @@ pub fn decide(
     // 2. adoption — the wrong agent answering (never tool-set inequality). Two readings, by what
     //    the init carries (RT-27, the operator's decision of 2026-09-18):
     //    (a) an `agent` key present: it must equal the expected name — the corpus-era reading;
-    //    (b) NO `agent` key — the 2.1.277 shape [measured]: adopted iff the `agents` list carries
-    //        the expected name AND `model` belongs to the bound card's tier (the `--agent`'s model
-    //        was applied); the tool-set equality that completes the composite is step 3's own
-    //        check. A record settling the reading is OWED.
+    //    (b) NO `agent` key — the 2.1.277 shape [measured], RE-MEASURED UNCHANGED at 2.1.278 on
+    //        2026-09-21 by `live_dispatch_probe`: adopted iff the `agents` list carries the expected
+    //        name AND `model` belongs to the bound card's tier (the `--agent`'s model was applied);
+    //        the tool-set equality that completes the composite is step 3's own check. A record
+    //        settling the reading is STILL OWED — two releases agreeing is evidence the shape is
+    //        stable, not a decision that it is the contract.
     if let Some(agent) = init.agent.as_deref() {
         if agent != expected_agent {
             return Decision::Refuse(StepError::NotAdopted {
