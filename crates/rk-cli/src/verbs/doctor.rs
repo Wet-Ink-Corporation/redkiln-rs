@@ -55,7 +55,7 @@ use rk_git::reconciled::Entry;
 use rk_ports::event_store::EventStore;
 
 use crate::cli::{Cli, DoctorArgs};
-use crate::doctor::{Ctx, Report, probe, rules};
+use crate::doctor::{Ctx, Report, probe, rebuild, rules};
 use crate::env::Env;
 use crate::exit::{Exit, Halt};
 use crate::no_dispatch::NoDispatchHarness;
@@ -101,14 +101,21 @@ pub fn run(cli: &Cli, args: &DoctorArgs, env: &Env, startup: Startup<'_>) -> Res
     }
 
     if args.rebuild {
-        // 🚧 Cycle 9's. See the header: a rebuild that produced no events would rename an empty
-        // store over a real one.
-        eprintln!(
-            "redkiln: `doctor --rebuild` is not built until Step 7d Slice 4 cycle 9. It is \
-             refused rather than run because the rebuild renames a new store over the old \
-             (ADR-0105 clause 7) and would replace the journal with an empty one."
-        );
-        return Ok(Exit::ConfigError);
+        // 🛑 THE REBUILD PATH RETURNS HERE, BEFORE `Ctx::build`, AND THAT ORDERING IS THE RULE.
+        //
+        // §7d.8: *"For `--rebuild` the root does NOT hand the open handle in"* — `Ctx.store` is
+        // `None` on this path. Returning above `Ctx::build` is how that is expressed as code
+        // rather than as a comment: no `SqliteStore` exists to hold the file open when
+        // `rebuild::run` renames over it, which on Windows is a sharing violation and not a
+        // style point. The rebuilt store is re-opened for its identity check BY THE ROOT
+        // (`adapters::rebuilt_store_identity`, called from `verbs::dispatch`) after this
+        // function has returned — the module the block's `doctor` filter does not admit.
+        return Ok(rebuild_and_report(
+            &repo.exec,
+            &repo.worktree,
+            &repo.common_dir,
+            &root,
+        ));
     }
 
     let ctx = Ctx::build(
@@ -126,6 +133,41 @@ pub fn run(cli: &Cli, args: &DoctorArgs, env: &Env, startup: Startup<'_>) -> Res
 
     let mut out = std::io::stdout();
     Ok(evaluate_and_render(&ctx, &mut out))
+}
+
+/// Run the rebuild and print what it could and could not resolve.
+///
+/// # 🛑 `unresolvable` IS PRINTED, NOT SWALLOWED
+///
+/// AC-165: a mark that does not become a transition is *"surfaced with the offending text, never
+/// skipped and never coerced"*. Every `Gate:` mark is one of these by construction (§7d.8), and so
+/// is any `Story:` mark whose item record carries no stage. A rebuild that printed only its
+/// successes would report a store reconstructed from *some* of git as though it were all of it.
+///
+/// The exit is `Success` — an incomplete rebuild is a reported fact about the repository, not a
+/// configuration error in it. Only a refusal is `ConfigError`, and a refusal renames nothing.
+fn rebuild_and_report(
+    exec: &rk_git::git_exec::GitExec,
+    worktree: &rk_git::path::WorktreePath,
+    common_dir: &Path,
+    root: &Path,
+) -> Exit {
+    match rebuild::run(exec, worktree, common_dir, root) {
+        Ok(outcome) => {
+            println!(
+                "rebuilt {} tier-1 row(s) from git at {}",
+                outcome.events_written, outcome.head
+            );
+            for mark in &outcome.unresolvable {
+                println!("unresolvable-from-git-alone {mark}");
+            }
+            Exit::Success
+        }
+        Err(e) => {
+            eprintln!("redkiln: `doctor --rebuild` refused, and nothing was renamed: {e}");
+            Exit::ConfigError
+        }
+    }
 }
 
 /// The inner verb — the in-process twin every Slice-4 test drives.

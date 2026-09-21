@@ -47,7 +47,7 @@ use rk_git::path::WorktreePath;
 use rk_git::reconciled::{Entry, Outcome};
 
 use crate::adapters::{AdapterSet, Refusal, Resolved};
-use crate::cli::{Cli, Command};
+use crate::cli::{Cli, Command, DoctorArgs};
 use crate::config::{self, ConfigError, ConfigFile};
 use crate::env::Env;
 use crate::exit::{Exit, Halt};
@@ -190,9 +190,41 @@ pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
         Command::Answer(args) => answer::run(cli, args, env, Startup::real()),
         Command::Status => status::run(cli, Startup::real()),
         Command::Explain(args) => explain::run(cli, args, Startup::real()),
-        Command::Doctor(args) => doctor::run(cli, args, env, Startup::real()),
+        Command::Doctor(args) => doctor_with_rebuild_reopen(cli, args, env),
         Command::Init => init::run(cli.cwd.as_deref()),
         Command::Catalog(args) => catalog::run(cli, &args.command),
         Command::Lint(args) => lint::run(cli, args),
     }
+}
+
+/// `doctor`, plus the one step §7d.8 puts **after** the verb has returned.
+///
+/// # 🛑 THIS ARM EXISTS BECAUSE OF A MODULE-PATH BAN, AND NOT FOR CONVENIENCE
+///
+/// Checkpoint 7d's D-10 / D18-7 ban forbids `SqliteStore::open` on any non-comment line under a
+/// module path matching `doctor`, which admits both `src/doctor/*.rs` and `src/verbs/doctor.rs`.
+/// §7d.8 nonetheless requires the rebuilt store to be re-opened for its identity check *"by the
+/// ROOT … after `verbs::doctor` has returned"*. `dispatch` is the one place outside that filter
+/// which knows `--rebuild` was asked for, so the re-open is sequenced here and performed in
+/// [`crate::adapters::rebuilt_store_identity`].
+///
+/// **The rebuild's own exit wins over the re-open's success**, never the other way round: a
+/// refused rebuild renamed nothing, so re-opening would report on the OLD store and turn a `3`
+/// into a `0`. The re-open can only make a successful rebuild fail, which is what it is for.
+fn doctor_with_rebuild_reopen(cli: &Cli, args: &DoctorArgs, env: &Env) -> Result<Exit, Halt> {
+    let exit = doctor::run(cli, args, env, Startup::real())?;
+    if !args.rebuild || exit != Exit::Success {
+        return Ok(exit);
+    }
+    let Ok(repo) = crate::repo::discover(cli.cwd.as_deref()) else {
+        // Unreachable in practice: `doctor::run` discovered the same repository a moment ago and
+        // returned `Success`. Reported rather than unwrapped, because a panic here would be the
+        // root's, on a path that has already succeeded.
+        eprintln!("redkiln: the repository could not be re-read after the rebuild");
+        return Ok(Exit::ConfigError);
+    };
+    Ok(crate::adapters::rebuilt_store_identity(
+        &repo.exec,
+        &repo.worktree,
+    ))
 }

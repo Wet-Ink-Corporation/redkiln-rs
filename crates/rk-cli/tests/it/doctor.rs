@@ -27,7 +27,7 @@
 //! So this test is the one thing in the slice that a table-shaped hole cannot satisfy, and it lands
 //! before the fixtures (cycle 4), the per-row rules (cycle 5) and the corpus run (cycle 6).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use rk_cli::doctor::rules::RULES;
 
@@ -1971,5 +1971,558 @@ fn ac402_reconcile_called_on_run_answer_doctor() {
         "`doctor` reconciled as {:?} rather than `Entry::Doctor` — the entry is what the row \
          records, and the wrong one is a row about a path that did not run",
         calls[0]
+    );
+}
+
+// ------------------------------------------------------------------- cycle 9: the rebuild path
+//
+// `s7d` §7d.8's `doctor --rebuild` bullet, and §7d.14's three bullets for the tests below.
+//
+// 🛑 **ONE OF THE THREE DECLARES A MUTANT, AND THE OTHER TWO DECLARE NONE.** §7d.14's mutant list
+// names exactly one in this cycle — a `GitOp::Add` in `rebuild.rs`, for
+// `ac429_rebuild_writes_no_object_ref_or_file`. `ac397_…` and `ac427_…` declare none and none is
+// invented for them here.
+
+/// The three items of the synthetic repository, and the stage each item record declares.
+///
+/// **These values ARE the expected rebuild.** §7d.8 as amended 2026-09-21 (the operator's decision
+/// of that date) reads a rebuilt `stage_transition`'s `to` off `.redkiln/items/<slug>.toml`'s
+/// `stage`, because the trailer grammar carries none and `GitOp` has no blob read to fetch one from
+/// the trailer commit's tree. RT-50 already makes the record the one authority for an item's stage.
+const SYNTHETIC_ITEMS: [(&str, &str); 3] = [
+    // Marked, and at a stage the other marked item is not at.
+    ("s-1", "review"),
+    ("s-2", "implement"),
+    // 🛑 UNMARKED. See `synthetic_trailer_repo`'s header: this one is the discriminator.
+    ("s-3", "implement"),
+];
+
+/// The synthetic trailer repository `ac427_…` and `ac429_…` run over.
+///
+/// §7d.8: *"three items, two `Story:` stage marks, one `Slice-Verdict:` seal — **no gate**"*.
+///
+/// # 🛑 THE THIRD ITEM CARRIES NO MARK, AND IT IS THE DISCRIMINATOR
+///
+/// Two marked items alone would be satisfied by a rebuild that emitted a `stage_transition` for
+/// every item record it could find. `s-3` has a record and no trailer, so it must read **initial**
+/// on both sides of `ac427_`'s comparison — a rebuild that over-emits is red on it and on nothing
+/// else.
+///
+/// # 🛑 THE TWO MARKED ITEMS SIT AT DIFFERENT STAGES
+///
+/// `s-1` is at `review` and `s-2` at `implement`. A rebuild that read one item's stage and gave it
+/// to every row would agree with itself perfectly and disagree here.
+///
+/// # 🛑 NO GATE, AND THE REASON IS §7d.8's, NOT THIS TEST'S CONVENIENCE
+///
+/// The fold derives a `gate_opened` token from `(kind, tree_hash, deadline, reach)` and ignores any
+/// `token` in the payload, while the `Gate:` triple carries `(token, tree_hash, deadline)` and no
+/// `kind` or `reach` — so a rebuilt gate row is either `MalformedPayload` or a token that is not
+/// the trailer's. Gate marks are recorded as the facts they are and listed *unresolvable from git
+/// alone*; §7d.18 RAISES the record that would widen the triple, and this repository carries no
+/// gate until that record lands.
+///
+/// The trailer commits go through **the wrapper** (`rk_git::trailer::write::commit_with_trailers`),
+/// which §7d.8 requires in terms: the wrapper is what pins `trailer.ifexists=add` and an empty
+/// hooks path, without which git silently does not append a repeated trailer (design §5.4).
+fn synthetic_trailer_repo() -> tempfile::TempDir {
+    let dir = crate::temp_repo();
+    let rk = dir.path().join(".redkiln");
+    std::fs::create_dir_all(rk.join("items")).expect("the items directory is created");
+    std::fs::write(
+        rk.join("config.toml"),
+        b"[adapters]\nharness = \"rk-adapter-claude\"\nstore = \"rk-adapter-sqlite\"\n\
+          toolchains = [\"rk-adapter-toolchain-node\", \"rk-adapter-toolchain-rust\"]\n\n\
+          [packs]\nenabled = []\n\n[doctor]\nunread_window_runs = 50\n",
+    )
+    .expect("the config writes");
+    for (slug, stage) in SYNTHETIC_ITEMS {
+        std::fs::write(
+            rk.join("items").join(format!("{slug}.toml")),
+            format!("id    = \"{slug}\"\nkind  = \"story\"\nstage = \"{stage}\"\n").as_bytes(),
+        )
+        .expect("an item record writes");
+    }
+    crate::git(dir.path(), &["add", "."]);
+    crate::git(
+        dir.path(),
+        &["commit", "--quiet", "-m", "the .redkiln scaffold"],
+    );
+
+    let repo = rk_cli::repo::discover(Some(dir.path())).expect("the synthetic repository resolves");
+    for (key, value) in [
+        (rk_git::trailer::grammar::TrailerKey::Story, "demo/s-1"),
+        (rk_git::trailer::grammar::TrailerKey::Story, "demo/s-2"),
+        (
+            rk_git::trailer::grammar::TrailerKey::SliceVerdict,
+            "demo/sl-1 approved",
+        ),
+    ] {
+        rk_git::trailer::write::commit_with_trailers(
+            &repo.exec,
+            &repo.worktree,
+            "a trailer commit",
+            &[rk_git::trailer::grammar::Trailer {
+                key,
+                value: value.to_owned(),
+            }],
+            true,
+        )
+        .expect("the trailer commit is made through the wrapper");
+    }
+    dir
+}
+
+/// Spawn `redkiln -C <repo> doctor --rebuild`.
+#[expect(
+    clippy::disallowed_types,
+    reason = "the rebuild is exercised AS A PROCESS: AC-429's fingerprint is a before/after of the \
+              real binary's effect on `.git`, and an in-process call would not be the thing the \
+              criterion is about"
+)]
+fn spawn_doctor_rebuild(repo: &std::path::Path) -> std::process::Output {
+    let mut cmd = std::process::Command::new(crate::redkiln());
+    cmd.arg("-C")
+        .arg(repo)
+        .arg("doctor")
+        .arg("--rebuild")
+        .stdin(std::process::Stdio::null());
+    crate::support::output_bounded(&mut cmd)
+}
+
+/// One git read, through the one wrapper a test is permitted behind (ADR-0077).
+fn git_read(dir: &std::path::Path, args: &[&str]) -> String {
+    rk_git::git_exec::run(dir, args.iter().copied())
+        .unwrap_or_else(|e| panic!("git {args:?} could not be read: {e:?}"))
+        .stdout_trimmed()
+}
+
+/// The AC-174 fingerprint shape, over `.git` **except `.git/redkiln/**`**.
+///
+/// # 🛑 THE EXCLUSION IS EXACTLY ONE PREFIX, AND IT IS NAMED
+///
+/// §7d.8: the store, its `rebuild/` staging directory, the `rebuilt` sidecar and `hooks-empty/` —
+/// *redkiln's own files under the common dir, not git objects*. A rebuild renames a new store over
+/// `store.sqlite3` **by design**, so a fingerprint that included them would be red on a correct
+/// binary and green only through an exclusion nobody reviewed. Nothing else is excluded, which is
+/// what leaves every object, ref, index and hook inside the instrument.
+fn git_fingerprint(repo: &std::path::Path) -> Vec<(String, u64, u64)> {
+    tree_digest(&repo.join(".git"))
+        .into_iter()
+        .filter(|(rel, _, _)| !rel.replace('\\', "/").starts_with("redkiln/"))
+        .collect()
+}
+
+/// A cheap content hash of one file, or `None` when it is not there.
+fn file_digest(path: &std::path::Path) -> Option<u64> {
+    let bytes = std::fs::read(path).ok()?;
+    Some(bytes.iter().fold(1_469_598_103_934_665_603_u64, |h, b| {
+        (h ^ u64::from(*b)).wrapping_mul(1_099_511_628_211)
+    }))
+}
+
+/// `fsm::stage_action` per item, off whatever the repository's store holds.
+///
+/// # 🛑 THE EVENTS ARE FILTERED BY `item` BEFORE THEY ARE FOLDED
+///
+/// `fsm::fold` **partitions nothing** — its `StageTransition` arm never reads `item` [measured
+/// 2026-09-21, `fsm.rs`:1318-1325] — so folding a three-item journal whole would give all three
+/// items the last row's transition. §7d.18 already records this for `gate_opened` and says the CLI
+/// writes no filter *"over an id the rows do not carry"*; `stage_transition` **does** carry `item`
+/// (design §5.4's row), so the filter is over a member that is really there. A row carrying NO
+/// `item` — a `slice_sealed`, which is slice-scoped — folds for every item, as it does in
+/// production. The filter is applied identically on both sides of `ac427_`'s comparison, which is
+/// what keeps that comparison about the rebuild rather than about the filter.
+fn stage_actions(repo: &std::path::Path) -> BTreeMap<String, Option<(String, String)>> {
+    let discovered = rk_cli::repo::discover(Some(repo)).expect("the repository resolves");
+    let store = rk_cli::adapters::open_store(&discovered.exec, &discovered.worktree)
+        .expect("the store opens");
+    let all = rk_ports::event_store::EventStore::query(
+        &store,
+        rk_ports::event_store::Query::ByItem(String::new()),
+    )
+    .expect("the journal reads");
+    // Dropped before the caller touches the file: `Writer` holds the connection in WAL mode and on
+    // Windows a delete or a rename under a live handle is a sharing violation.
+    drop(store);
+
+    let mut out = BTreeMap::new();
+    for (slug, stage) in SYNTHETIC_ITEMS {
+        let item = format!("demo/{slug}");
+        let mine: Vec<rk_types::event::Event> = all
+            .iter()
+            .filter(|e| {
+                e.payload
+                    .get("item")
+                    .and_then(serde_json::Value::as_str)
+                    .is_none_or(|i| i == item)
+            })
+            .cloned()
+            .collect();
+        let action = rk_kernel::workflow::fsm::stage_action(&item, stage, &mine)
+            .unwrap_or_else(|e| panic!("the journal does not fold for {item}: {e:?}"));
+        out.insert(item, action.transition);
+    }
+    out
+}
+
+/// **AC-397 (`s7c` ARMED here)** — a rebuilt store's tier-2 emptiness is reported `ok`, `expected
+/// after rebuild`.
+///
+/// §7d.14's red: *"Red by any severity but `ok`, or by the reason string absent."*
+///
+/// # 🛑 THE THIRD ARM IS THE ONE THAT IS RED BEFORE CYCLE 9's PRODUCT CODE
+///
+/// The first two arms run over `doctor/RK-D-REBUILT-TIER2/`, whose `store/rebuilt` description the
+/// materialiser copies into place — they assert the row and, at cycle 5, the predicate that answers
+/// them already existed, so on their own this test would arrive green and prove only that nobody
+/// had broken it. The **silent-over-`clean/`** arm is the standing positive control (`clean/`
+/// carries no sidecar, deliberately, and its README says so). The third arm is the instrument this
+/// cycle adds: after a **real** `--rebuild`, the sidecar must exist and the row must fire over it.
+/// A rebuild that wrote no sidecar passes arms one and two and fails that one.
+///
+/// **No mutant is declared for this test** (§7d.14 names one in this cycle and it is `ac429_`'s),
+/// and none is invented.
+///
+/// The sidecar's home is **RT-56 — ROUTED, not decided**; a dated design §5 / §9.2 note naming how
+/// `doctor` learns a store was rebuilt is still OWED (§7d.18). This test pins the behaviour the
+/// code has today and settles nothing about where the marker belongs.
+#[test]
+fn ac397_rebuilt_store_tier2_emptiness_is_ok_expected() {
+    let found = findings("RK-D-REBUILT-TIER2", "RK-D-REBUILT-TIER2");
+    assert_eq!(
+        found.len(),
+        1,
+        "the rebuilt fixture carries one `rebuilt` sidecar and the row reports it once: {found:?}"
+    );
+    assert_eq!(
+        found[0].severity,
+        rk_cli::doctor::Severity::Ok,
+        "AC-397: tier-2 emptiness after a rebuild is reported with status `ok`. Any other severity \
+         turns an expected state into a defect, and `RK-D-REBUILT-TIER2` is the table's one \
+         `ok`-severity row: {found:?}"
+    );
+    assert!(
+        found[0].detail.contains("expected after rebuild"),
+        "AC-397's THEN is an *\"explicit 'expected after rebuild' reason\"*; without the string an \
+         operator reads an `ok` row with no account of why it is ok: {found:?}"
+    );
+
+    // ---- THE STANDING POSITIVE CONTROL. `clean/` carries no sidecar, so the row is SILENT there
+    // ---- rather than `ok` — without this, a row that returned one `ok` finding unconditionally
+    // ---- would satisfy everything above.
+    let clean = findings("RK-D-REBUILT-TIER2", "clean");
+    assert!(
+        clean.is_empty(),
+        "`RK-D-REBUILT-TIER2` fired over `doctor/clean/`, which carries no `rebuilt` sidecar. The \
+         sidecar is the row's ONLY discriminator (§7d.8), so a finding here means the row reports \
+         on every repository: {clean:?}"
+    );
+
+    // ---- THE REAL REBUILD. The two arms above read a fixture's *description* of a rebuilt store;
+    // ---- this one reads what `doctor --rebuild` actually left behind.
+    let dir = synthetic_trailer_repo();
+    let out = spawn_doctor_rebuild(dir.path());
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "`doctor --rebuild` exited {:?} over the synthetic repository.\nstdout:\n{}\nstderr:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let sidecar = dir.path().join(".git").join("redkiln").join("rebuilt");
+    assert!(
+        sidecar.is_file(),
+        "`doctor --rebuild` wrote no `{}`. That sidecar is how `doctor` learns a store was rebuilt \
+         (RT-56, routed), and without it the row can never fire on a real rebuild — only on a \
+         fixture that describes one",
+        sidecar.display()
+    );
+    let ctx = ctx_for(dir.path());
+    let rule = RULES
+        .iter()
+        .find(|r| r.id == "RK-D-REBUILT-TIER2")
+        .expect("RK-D-REBUILT-TIER2 is in the table");
+    let after = (rule.check)(&ctx);
+    assert_eq!(
+        after.len(),
+        1,
+        "the row did not fire over a store `--rebuild` had just written, though it fires over a \
+         fixture describing one: {after:?}"
+    );
+    assert_eq!(
+        after[0].severity,
+        rk_cli::doctor::Severity::Ok,
+        "the row fired at the wrong severity over a real rebuild: {after:?}"
+    );
+}
+
+/// **AC-427 (verb + direction at 7d; fidelity at `s8`, D-21)** — the next action a rebuilt store
+/// determines is the one the deleted store determined.
+///
+/// §7d.14's red: *"Red by any item's `stage_action` differing after delete-and-rebuild over the
+/// synthetic trailer repository, or by the pre-delete set being initial for every item (a
+/// pre-delete store `--rebuild` itself produced); a weaker red asserts the store file exists, or
+/// seeds the pre-delete store with a rebuild."*
+///
+/// # 🛑 THE PRE-DELETE STORE IS WRITTEN THROUGH THE NORMAL WRITE PATH, NEVER BY A REBUILD
+///
+/// §7d.8 says why: a pre-delete store that `--rebuild` itself produced *"would make both sides one
+/// function of one input, a comparison with no failure mode"*. The rows below go in through
+/// `EventStore::append` on the real adapter, beside the trailer commits the wrapper made — no 7d
+/// verb writes those trailers, so the test writes both halves of the world and then asks the
+/// rebuild to reconstruct one of them from the other.
+///
+/// # 🛑 NEITHER SIDE WRITES `from`, AND THAT IS THE HONEST ARRANGEMENT
+///
+/// The fold takes `from` from its own running stage when the payload omits it
+/// [`fsm.rs`:1318-1325], and the `Story:` trailer carries no `from` any more than it carries a
+/// `to`. A pre-delete row that declared one would be comparing the rebuild against a datum the
+/// rebuild was never given — a test built to fail on a true statement. Both sides omit it and the
+/// fold supplies the same value to both.
+///
+/// # 🛑 WHAT THIS CLAIMS, AND WHAT IT DOES NOT
+///
+/// AC-427's *"pinned corpus"* and *"CI job"* halves are the local-only corpus suite's (`s5` §5.2;
+/// owner AC-184) and are **not claimed here** — D-21. This is verb + direction over three synthetic
+/// items. **AC-366** — *"a CI job that clones, rebuilds and diffs tier-1 projections"* — stays
+/// ARMED.
+///
+/// **The `to` limit travels with the result**: only the LAST transition per item is recoverable,
+/// because the record holds one stage. This repository therefore carries **one mark per item**, and
+/// an item with two would rebuild to one row (§7d.8 as amended 2026-09-21; the design §5.4 note is
+/// OWED, §7d.18).
+///
+/// **No mutant is declared for this test**, and none is invented. It runs on Windows and is red on
+/// a sharing violation, which is what the drop-before-rename ordering in `rebuild.rs` exists for.
+#[test]
+fn ac427_rebuild_from_git_alone_matches_recorded_next_action() {
+    let dir = synthetic_trailer_repo();
+    let repo = rk_cli::repo::discover(Some(dir.path())).expect("the repository resolves");
+
+    // ---- THE PRE-DELETE STORE, through the normal write path.
+    {
+        let mut store =
+            rk_cli::adapters::open_store(&repo.exec, &repo.worktree).expect("the store opens");
+        for (slug, stage) in [SYNTHETIC_ITEMS[0], SYNTHETIC_ITEMS[1]] {
+            rk_ports::event_store::EventStore::append(
+                &mut store,
+                rk_types::event::Event::new(
+                    rk_types::event_kind::EventKind::StageTransition,
+                    serde_json::json!({ "item": format!("demo/{slug}"), "to": stage }),
+                ),
+            )
+            .expect("the stage transition appends");
+        }
+        rk_ports::event_store::EventStore::append(
+            &mut store,
+            rk_types::event::Event::new(
+                rk_types::event_kind::EventKind::SliceSealed,
+                serde_json::json!({ "slice": "demo/sl-1", "verdict": "approved" }),
+            ),
+        )
+        .expect("the slice seal appends");
+        drop(store);
+    }
+
+    let before = stage_actions(dir.path());
+    // ---- THE POSITIVE CONTROL, and §7d.14 names it: a pre-delete set that is initial for every
+    // ---- item makes the comparison below true of two empty readings.
+    assert!(
+        before.values().any(Option::is_some),
+        "every item read INITIAL before the delete, so the comparison below would hold between two \
+         empty journals — §7d.14's own second red. Read: {before:?}"
+    );
+    assert_eq!(
+        before.get("demo/s-3").cloned().flatten(),
+        None,
+        "`demo/s-3` carries no trailer and no store row, so it must read initial on both sides — \
+         it is the arm a rebuild that emits a row per item record fails: {before:?}"
+    );
+
+    // ---- DELETE THE STORE. AC-427's GIVEN is *"with the store deleted or absent"*.
+    let store_path = dir
+        .path()
+        .join(".git")
+        .join("redkiln")
+        .join("store.sqlite3");
+    for suffix in ["", "-wal", "-shm"] {
+        let p = store_path.with_file_name(format!("store.sqlite3{suffix}"));
+        if p.exists() {
+            std::fs::remove_file(&p).expect("the store file is deleted");
+        }
+    }
+    assert!(
+        !store_path.exists(),
+        "the store was not deleted, so the rebuild below would read what it is supposed to \
+         reconstruct"
+    );
+
+    // ---- THE REBUILD, from git alone.
+    let out = spawn_doctor_rebuild(dir.path());
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "`doctor --rebuild` exited {:?}.\nstdout:\n{}\nstderr:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let after = stage_actions(dir.path());
+    assert_eq!(
+        after, before,
+        "the stage-level next action changed across a delete-and-rebuild. AC-427: *\"a store is \
+         reconstructed from git alone, and the computed next action for every item … is identical \
+         to the recorded one\"*.\n  recorded: {before:?}\n  rebuilt:  {after:?}"
+    );
+}
+
+/// **AC-429 — BINDING (`rk-git`)** — reconciliation is git → store, never the reverse.
+///
+/// §7d.14's red: *"Red by an empty fingerprint set, by a rebuild that recreated no store or wrote
+/// no tier-1 row (the two positive controls), then by any `.git` file digest, `HEAD`, ref or tree
+/// hash differing (the fingerprint is the whole negative instrument); the declared mutant is a
+/// `GitOp::Add` in `rebuild.rs`."*
+///
+/// # 🛑 THE TWO POSITIVE CONTROLS RUN FIRST, AND WITHOUT THEM THIS ASSERTS NOTHING
+///
+/// Halt 8 (d)/(g). A `--rebuild` that did nothing at all leaves every git file untouched and
+/// satisfies the negative half perfectly. So: the fingerprint set is non-empty and names `HEAD` and
+/// at least one ref, **and** the rebuild happened — the store file exists afterwards, holds ≥ 1
+/// tier-1 row, and its own digest CHANGED. Only then is the absence of any other change evidence.
+///
+/// # 🛑 THE FINGERPRINT IS THE WRITE-OP ASSERTION, BECAUSE THERE IS NO JOURNAL TO READ
+///
+/// `GitExec` keeps no record of what it ran, so "no write happened" cannot be asserted by reading a
+/// log — `rk-git`'s own AC-174 test (`reconcile_mutates_nothing_in_git`) uses the same fingerprint
+/// alone, for the same reason. AC-429's clause is *"no git object, ref or working-tree file"*,
+/// **which the store is not**: it lives under `.git/redkiln/`, which the fingerprint excludes by
+/// name and for a stated reason (see [`git_fingerprint`]).
+#[test]
+fn ac429_rebuild_writes_no_object_ref_or_file() {
+    let dir = synthetic_trailer_repo();
+    let repo = rk_cli::repo::discover(Some(dir.path())).expect("the repository resolves");
+    // A store exists before the rebuild, so "its digest changed" is a reading and not an absence.
+    drop(rk_cli::adapters::open_store(&repo.exec, &repo.worktree).expect("the store opens"));
+    let store_path = dir
+        .path()
+        .join(".git")
+        .join("redkiln")
+        .join("store.sqlite3");
+
+    let before = git_fingerprint(dir.path());
+    let head_before = git_read(dir.path(), &["rev-parse", "HEAD"]);
+    let refs_before = git_read(dir.path(), &["show-ref"]);
+    let tree_before = git_read(dir.path(), &["rev-parse", "HEAD^{tree}"]);
+    let store_before = file_digest(&store_path);
+    let tree_files_before = tree_digest(dir.path());
+
+    // ---- POSITIVE CONTROL 1: the fingerprint reads something, and it reads the things AC-429 is
+    // ---- about. An empty set would make every comparison below true of nothing.
+    assert!(
+        !before.is_empty(),
+        "the `.git` fingerprint read no files, so the comparison below would hold over an empty set"
+    );
+    assert!(
+        before.iter().any(|(rel, _, _)| rel == "HEAD"),
+        "the fingerprint does not name `HEAD`; it is not reading the git directory it claims to"
+    );
+    assert!(
+        !refs_before.trim().is_empty(),
+        "the repository has no refs, so the ref comparison below is between two empty strings"
+    );
+
+    let out = spawn_doctor_rebuild(dir.path());
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "`doctor --rebuild` exited {:?}.\nstdout:\n{}\nstderr:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    // ---- POSITIVE CONTROL 2: THE REBUILD HAPPENED. §7d.14 in terms — *"a rebuild that recreated
+    // ---- no store or wrote no tier-1 row"* is red here, before the negative is read.
+    assert!(
+        store_path.is_file(),
+        "`--rebuild` left no store at {}",
+        store_path.display()
+    );
+    let tier_one = {
+        let discovered = rk_cli::repo::discover(Some(dir.path())).expect("the repository resolves");
+        let store = rk_cli::adapters::open_store(&discovered.exec, &discovered.worktree)
+            .expect("the rebuilt store opens");
+        let rows = rk_ports::event_store::EventStore::query(
+            &store,
+            rk_ports::event_store::Query::ByItem(String::new()),
+        )
+        .expect("the rebuilt journal reads");
+        drop(store);
+        rows.iter()
+            .filter(|e| e.kind.tier() == rk_types::event_kind::Tier::One)
+            .count()
+    };
+    assert!(
+        tier_one >= 1,
+        "the rebuilt store holds {tier_one} tier-1 rows. A `--rebuild` that wrote none did nothing, \
+         and the negative half below would be a statement about a binary that never ran"
+    );
+    assert_ne!(
+        file_digest(&store_path),
+        store_before,
+        "`.git/redkiln/store.sqlite3`'s digest did not change across the rebuild — §7d.8's own \
+         positive control that the rebuild happened at all"
+    );
+
+    // ---- THE NEGATIVE. The fingerprint IS the write-op assertion.
+    let after = git_fingerprint(dir.path());
+    assert_eq!(
+        before,
+        after,
+        "`doctor --rebuild` changed a file under `.git` outside `.git/redkiln/`. AC-429: *\"no git \
+         object, ref or working-tree file has been written: reconciliation is git → store, never \
+         the reverse\"*.\n  added/changed: {:?}\n  removed: {:?}",
+        after
+            .iter()
+            .filter(|e| !before.contains(e))
+            .collect::<Vec<_>>(),
+        before
+            .iter()
+            .filter(|e| !after.contains(e))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        head_before,
+        git_read(dir.path(), &["rev-parse", "HEAD"]),
+        "`HEAD` moved across a rebuild"
+    );
+    assert_eq!(
+        refs_before,
+        git_read(dir.path(), &["show-ref"]),
+        "the ref set changed across a rebuild"
+    );
+    assert_eq!(
+        tree_before,
+        git_read(dir.path(), &["rev-parse", "HEAD^{tree}"]),
+        "the committed tree changed across a rebuild"
+    );
+
+    // ---- AND THE WORKING TREE. AC-429's clause names a working-tree file beside the object and
+    // ---- the ref, and neither the fingerprint above nor `HEAD` would see one appear.
+    let tree_files_after: Vec<(String, u64, u64)> = tree_digest(dir.path())
+        .into_iter()
+        .filter(|(rel, _, _)| !rel.replace('\\', "/").starts_with(".git/"))
+        .collect();
+    let expected: Vec<(String, u64, u64)> = tree_files_before
+        .into_iter()
+        .filter(|(rel, _, _)| !rel.replace('\\', "/").starts_with(".git/"))
+        .collect();
+    assert_eq!(
+        expected, tree_files_after,
+        "`doctor --rebuild` wrote a working-tree file. The rebuild reads `.redkiln/items/` for each \
+         `Story:` mark's stage and writes nothing outside `.git/redkiln/`"
     );
 }

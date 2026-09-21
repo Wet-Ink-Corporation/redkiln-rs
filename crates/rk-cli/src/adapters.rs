@@ -217,3 +217,41 @@ pub fn open_store(
 ) -> Result<rk_adapter_sqlite::SqliteStore, rk_adapter_sqlite::StoreOpenError> {
     rk_adapter_sqlite::SqliteStore::open(exec, worktree)
 }
+
+/// Re-open a just-rebuilt store so its stamped identity is checked, and report the outcome.
+///
+/// # 🛑 IT RUNS AFTER `verbs::doctor` HAS RETURNED, AND THAT IS THE WHOLE POINT
+///
+/// §7d.8: the rebuilt store is re-opened for its identity check *"**by the ROOT** —
+/// `adapters.rs`'s open path, the module the block's `doctor` filter does not admit — after
+/// `verbs::doctor` has returned; **neither `doctor/rebuild.rs` nor `verbs/doctor.rs` may name
+/// `SqliteStore::open`**"*. `verbs::dispatch` is the caller because it is the one place that both
+/// knows `--rebuild` was asked for and sits outside the ban's module filter.
+///
+/// **It cannot run earlier.** `SqliteStore` holds a `Writer` with a `Mutex<Connection>` in WAL
+/// mode, and on Windows a rename over a file that handle holds open without `FILE_SHARE_DELETE` is
+/// a sharing violation — so the check has to follow the rename, not precede it.
+///
+/// The return is the exit the root should take: `Success` when the rebuilt store opens under its
+/// own identity, `ConfigError` when it does not. A rebuild that produced a store this binary
+/// cannot open is a configuration error the operator must see, not a silent zero.
+#[must_use]
+pub fn rebuilt_store_identity(
+    exec: &rk_git::git_exec::GitExec,
+    worktree: &rk_git::path::WorktreePath,
+) -> crate::exit::Exit {
+    match rk_adapter_sqlite::SqliteStore::open(exec, worktree) {
+        Ok(store) => {
+            let identity = store.identity();
+            println!(
+                "rebuilt-store-identity ok root_commit={} schema_version={}",
+                identity.root_commit, identity.schema_version
+            );
+            crate::exit::Exit::Success
+        }
+        Err(e) => {
+            eprintln!("redkiln: the rebuilt store does not open under its own identity: {e:?}");
+            crate::exit::Exit::ConfigError
+        }
+    }
+}

@@ -1438,7 +1438,7 @@ asserted by their own tests. `doctor_rule_table_covers_every_register_named_row`
   `rk_git::reconcile::GateRecord` fact it is (commit sha, token, tree hash, deadline) and lists them as *unresolvable
   from git alone* until a record widens the triple or makes the token the fold's key — RAISED in §7d.18 beside the design §5.4
   answer-value row, and `ac427_…`'s synthetic repository carries **no gate**; tier-1 kinds only, payloads built from
-  the trailer values and the commit sha, no tier-2 row, which is exactly what `RK-D-REBUILT-TIER2` reports as `ok`) →
+  the trailer values and the commit sha ***— and, for `Story:` marks, from a THIRD source, amended 2026-09-21, Step 7d Slice 4 cycle 9, on the operator's decision of that date.*** *The prescription as written cannot be built, and the measurements are these. `fsm::apply`'s `StageTransition` arm makes **`to` mandatory** — `required_str(event, "stage_transition", "to")` — while `from` is optional and defaults to the fold's running stage [measured 2026-09-21, `crates/rk-kernel/src/workflow/fsm.rs`:1318-1325]. `ParsedTrailer::Story` is `{ project, slug }` and `ProjectState.stories_committed` is a `BTreeSet<String>` of slugs: **no stage anywhere**, and no commit sha either [`crates/rk-git/src/trailer/grammar.rs`:93-137, `crates/rk-git/src/reconcile.rs`:79-85]. Reading the item record at the trailer commit's TREE is foreclosed by this stage's own floor: `GitOp`'s read set is `RevParse | Status | Log` with no blob read, its doc says *“anything not here is a successor record”*, and §7d.15 declares `rk-git` not edited [`crates/rk-git/src/git_exec.rs`:27-52]. **So the third source is `.redkiln/items/<slug>.toml`'s `stage` key in the checkout** — the only in-repo source of a stage at this pin, and the value RT-50 already makes authoritative for an item everywhere else. **Its limit travels with it: only the LAST transition per item is recoverable**, so the rebuild emits ONE `stage_transition` per committed item, anchored on that item's last `Story:` commit, and an item carrying two marks rebuilds to one row; `ac427_…`'s repository therefore carries one mark per item and states the limit in its doc comment. A mark whose record is absent or declares no `stage` is **listed unresolvable, never coerced** (AC-165), exactly as a `Gate:` mark is. The signature widens with the source — `events_from_trailers(&[CommitTrailers], &State, &ItemStages) -> Rebuilt` — because `&State` alone supplies neither the `to` nor the commit sha this sentence names. **This is the third §7d.8 prescription this slice that could not be built as written**, after `fulfils`-on-a-card (cycle 4) and `PackExtras` (cycle 5 batch 2), and it takes the same form of correction. A dated design §5.4 note is OWED and is RAISED in §7d.18 beside the `Gate:` one*, no tier-2 row, which is exactly what `RK-D-REBUILT-TIER2` reports as `ok`) →
   `rk_kernel::workflow::fsm::fold` per item → `fsm::stage_action` (the stage-level next action `status` prints;
   `fsm::next_action` needs a `Selection` a git-only rebuild does not have and is not called), written to a **new store
   file and renamed over the old** (ADR-0105 clause 7: *"a rebuild writes to a separate file and renames"* — through
@@ -3714,6 +3714,16 @@ were landed 2026-09-18 with the records and are **not** re-raised; what remains 
   reads an open and an answered gate alike as a `Gate:` mark and records both as unresolvable; a record widening the
   triple (a dated design §5.4 note) or making the token the fold's key is OWED before `ac427_…`'s repository may carry a
   gate, and the limit is stated in that test's doc comment.
+- **Design §5.4's `stage_transition` row against the `Story:` grammar** (§7d.8, amended 2026-09-21) — the row's
+  payload is *“item, from, to, tree hash, the trailer commit”* and the fold makes **`to` mandatory**, while the
+  `Story:` trailer's whole value is `<project>/<slug>` and carries no stage; `rk_git::reconcile::State` carries none
+  either, and `GitOp` has no blob read with which to fetch one from the trailer commit's tree [measured 2026-09-21].
+  `doctor --rebuild` therefore reads `to` from `.redkiln/items/<slug>.toml`'s `stage` in the checkout, which
+  recovers **only the LAST transition per item** — an item with two `Story:` marks rebuilds to one row, and the
+  rejection history the second axis exists for survives on the `Slice-Verdict:` axis alone. **A dated design §5.4
+  note is OWED**, naming either a widened `Story:` value carrying the stage or the item record as the declared
+  source, before a repository whose items move more than once may be rebuilt; the limit is stated in
+  `ac427_…`'s doc comment and in `doctor/rebuild.rs`'s header.
 - **AC-263's `rk-ports` tag** — the register tags AC-263 `rk-cli`, `rk-ports`; the `Channel` enum and `submit` wrapper
   are `rk-cli`'s and `rk-ports` is not edited (§7d.15), so the tag is met by no port type; a register note or a port
   type is OWED, and the register's own vacuity warning (one live variant) stands disclosed (§7d.6).
