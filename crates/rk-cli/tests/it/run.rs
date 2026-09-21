@@ -731,6 +731,19 @@ struct ExitCase {
     args: Vec<String>,
     pack: String,
     mode: String,
+    /// A transcript beside `case.toml`, replayed to the child's stdout.
+    ///
+    /// `RK_FIXTURE_MODE=replay:<file>` makes `rk-fixture-child-claude` `fs::read` the path and
+    /// `write_all` the bytes verbatim, so the path must be ABSOLUTE — which a committed `case.toml`
+    /// cannot carry. Named here and resolved against the case directory instead.
+    #[serde(default)]
+    transcript: Option<String>,
+    /// Overrides `[adapters] harness_binary` in the built repository.
+    ///
+    /// §7d.4 reaches `Transport` *"via a missing `harness_binary`"*, which is a property of the
+    /// REPOSITORY and not of the child, so it cannot travel in the child environment like `mode`.
+    #[serde(default)]
+    harness_binary: Option<String>,
 }
 
 /// **AC-438's BINARY arm** — §7d.4's *"through the binary"* half of the table-driven test,
@@ -740,27 +753,38 @@ struct ExitCase {
 /// the integer"*. Each directory here also carries a `case.toml` saying how the code is reached,
 /// so the fixture is readable without the test.
 ///
-/// # 🛑 FIVE DIRECTORIES, NOT NINE — AND THE MISSING FOUR ARE A MEASUREMENT, NOT AN OVERSIGHT
+/// # 🛑 NINE DIRECTORIES — GAP 21's SET, COMPLETE AS OF SLICE 3 CYCLE 10
 ///
-/// GAP 21 derives nine rows for this arm (0, 2, 3, 5, 10, 11 ×2, 13, 18). **Five are here** as of
-/// Slice 3 cycle 9, and the other four are **RAISED** in `fixtures/exit/README.md` with what was
-/// measured:
+/// `0, 2, 3, 5, 10, 11 (×2), 13, 18`. **Never a `12`**: §7d.4 fixes that the adapter classifies its
+/// timer arm `Cancelled { by: Timeout }`, *"so this fixture is the binary-level instance of row
+/// `13`, not `12`, and a fixture whose `expected` reads `12` is red on a correct binary"*. `70` is
+/// in-process only. There is **no `14`** — GAP 21 does not derive one and §7d.4's enumeration of
+/// what the fixture child can produce names none.
 ///
-///   * **10 / 11 / 14 / 18 need the failure CLASS, and the real harness journals none.** The only
-///     callers of `StepError::event()` in any `src/` are `rk-ports`' `fakes.rs` (`FakeHarness`'s
-///     own bridge) and a discarded call in `conformance.rs`. `ClaudeHarness` appends ONE
-///     `dispatch_completed` row whose `DispatchRecord` carries `cancelled_by` and **no class
-///     member**, and `Runtime::run_activity` appends only `dispatch` and `activity_committed`. So
-///     the class is nowhere in what a real run writes, and `exit_for_uncommitted` has nothing to
-///     read. Two mechanisms would close it; choosing one is above this stage.
+/// Four of the nine were RAISED and unreachable until cycle 10, and the reason was measured: until
+/// then `replay::dispatch_through` discarded the failure class into `NotCommitted { step_id,
+/// activity_id_at_version }`, two `String`s, and **nothing a real run wrote named it** —
+/// `ClaudeHarness` appends one `dispatch_completed` carrying `cancelled_by` and no class member,
+/// and the only callers of `StepError::event()` in any `src/` were `FakeHarness`'s own bridge and a
+/// discarded call in `conformance.rs`. So every failed dispatch exited `3`. **Mechanism B** — the
+/// operator's choice — carries the `StepError` on the refusal, and step (10) maps
+/// `impl From<&StepError> for Exit` with no journal round trip. `fixtures/exit/README.md` is the
+/// record of that decision.
 ///
-/// **Row `5` LANDED at cycle 9**, with `explain`: `Exit::NoRecord` is that verb's alone, and
-/// `no-record/` drives a `pack-min` repository that has never been run, so no `activity_committed`
-/// row resolves the item to a run id. It could not have been authored earlier — `explain` was a
-/// stub returning `3`, so the fixture would have been green against a verb that did nothing.
+/// Row **13 was the exception** and is why it was here from cycle 6: `cancelled_by` IS on the
+/// record, so step (10) recovered that one class and nothing else. Row **`5` landed at cycle 9**
+/// with `explain`, and could not have been authored earlier — the verb was a stub returning `3`, so
+/// the fixture would have been green against something that did nothing.
 ///
-/// Row **13 IS here**, because it is the one class the real path does make derivable: the
-/// adapter's own timer arm sets `cancelled_by: timeout` on the record, and step (10) reads it.
+/// # 🛑 §7d.4's *"`Schema` via a malformed frame"* IS NOT ONE OF THEM
+///
+/// Measured through the binary: a system/init frame followed by `this is not json {"type":"result"`
+/// exits **`10`**, not `11`. `classify.rs`'s rule 8 takes a stream that yielded no parseable result
+/// frame to `Transport { kind: Decode }`, and `extract_digest` — where `Schema` is minted — is rule
+/// 10 and is never reached. A `schema-malformed-frame/` reading `11` would be red on a correct
+/// binary in exactly the way a `12` would. GAP 21's second `11` is authored as the other arm of
+/// `extract_digest` instead: `structured_output` present and failing the schema, beside its sibling
+/// carrying none at all. RAISED.
 ///
 /// # 🛑 THE DIRECTORY SET IS ASSERTED, SO A DELETED CASE IS RED
 ///
@@ -774,12 +798,16 @@ struct ExitCase {
               arm (s7d §7d.4)"
 )]
 fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
-    const CASES: [&str; 5] = [
+    const CASES: [&str; 9] = [
         "cancelled-timeout",
         "gate-open",
         "no-pack",
         "no-record",
+        "platform-is-error",
         "resume-flag",
+        "schema-invalid-structured-output",
+        "schema-no-structured-output",
+        "transport-missing-binary",
     ];
 
     let dir = crate::fixtures_dir().join("exit");
@@ -826,6 +854,44 @@ fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
         };
         let root = repo.path();
 
+        // The repository-side override, before anything is spawned.
+        if let Some(binary) = &case.harness_binary {
+            let path = root.join(".redkiln").join("config.toml");
+            let src = std::fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("{name}: {} is readable: {e}", path.display()));
+            let rewritten: String = src
+                .lines()
+                .map(|l| {
+                    if l.trim_start().starts_with("harness_binary") {
+                        format!("harness_binary = \"{binary}\"")
+                    } else {
+                        l.to_owned()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            assert_ne!(
+                rewritten, src,
+                "{name}: no `harness_binary` line was rewritten, so the case is not over the \
+                 configuration it names"
+            );
+            std::fs::write(&path, rewritten).expect("the config rewrites");
+        }
+
+        // The child's mode, with a named transcript resolved to an absolute path.
+        let mode = case.transcript.as_ref().map_or_else(
+            || case.mode.clone(),
+            |file| {
+                let path = case_dir.join(file);
+                assert!(
+                    path.is_file(),
+                    "{name}/case.toml names the transcript {file:?} and {} does not exist",
+                    path.display()
+                );
+                format!("replay:{}", path.display())
+            },
+        );
+
         let markers = root.join(".rk-markers");
         std::fs::create_dir_all(&markers).expect("the marker directory is created");
         let mut cmd = std::process::Command::new(crate::redkiln());
@@ -833,7 +899,7 @@ fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
         for arg in &case.args {
             cmd.arg(arg);
         }
-        cmd.env("RK_FIXTURE_MODE", &case.mode)
+        cmd.env("RK_FIXTURE_MODE", &mode)
             .env("RK_FIXTURE_MARKER_DIR", &markers);
         let out = crate::support::output_bounded(&mut cmd);
 
@@ -843,7 +909,7 @@ fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
             "{name}: `redkiln {}` under mode {:?} exited {:?}, not the {expected} its `expected` \
              file carries.\nstderr:\n{}\nstdout:\n{}",
             case.args.join(" "),
-            case.mode,
+            mode,
             out.status.code(),
             String::from_utf8_lossy(&out.stderr),
             String::from_utf8_lossy(&out.stdout)

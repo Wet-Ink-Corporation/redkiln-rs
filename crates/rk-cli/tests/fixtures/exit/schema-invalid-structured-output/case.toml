@@ -1,0 +1,17 @@
+# The SECOND `11`, and it is a different branch of `extract_digest` from its sibling.
+#
+# A system/init frame is seen and a well-formed result frame arrives carrying a `structured_output`
+# — which then FAILS the dispatch's own output schema. `pack-min/schemas/ImplReport.json` requires
+# `item` and `summary`, both strings, and forbids additional properties; the recorded value is
+# `{"item": 7}`, which is wrong on both counts. `classify.rs` reaches `validator.validate(candidate)`
+# and returns `StepError::Schema { last_error }` → row `11`.
+#
+# Its sibling `schema-no-structured-output/` takes the arm ABOVE this one, where the member is
+# absent altogether (F20). Present-but-invalid and absent are the two ways a frame fails the schema,
+# and GAP 21 asks for two `11` rows.
+#
+# 🛑 THIS REPLACES A `schema-malformed-frame/` ROW THAT DOES NOT REPRODUCE — see ../README.md.
+args = ["run", "bug-1"]
+pack = "base"
+mode = "exit:0"
+transcript = "frames.jsonl"

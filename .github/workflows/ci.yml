@@ -231,11 +231,18 @@ jobs:
           #       digest in them is a sha256 over a label naming what it stands for, and none is copied from a
           #       recorded run. Anchored `[^/]+` on the one variable segment so Slice 4's `unread/` and
           #       `doctor/` rows are not allowlisted silently by this entry.
+          #   (d) crates/rk-cli/tests/fixtures/exit/<name>/*.jsonl -- the synthetic Claude-stream transcripts
+          #       AC-438's BINARY arm replays through the fixture child (Step 7d Slice 3 cycle 10), reaching
+          #       rows 10, 11 (x2) and 18 now that `ReplayError::NotCommitted` carries the terminal class.
+          #       SYNTHETIC 7d fixtures, no corpus provenance: authored against `classify.rs`'s numbered
+          #       order and modelled on rk-adapter-claude's own *.scripted.ndjson shapes, never copied from
+          #       its recorded/ directory. Two `[^/]+` segments, never `.*`, for the same reason as (c).
           bad=$(git ls-files 'spikes/corpus/*' 'spikes/results/*' 'spikes/runner/*' '*.jsonl' \
                  | grep -v '^spikes/results/instrument-checks/RUNBOOK-instrument.txt$' \
                  | grep -vE '^crates/rk-adapter-claude/tests/fixtures/recorded/[^/]+\.jsonl$' \
                  | grep -vE '^crates/rk-kernel/tests/fixtures/(findings/ac282_f20_golden_transcript|logs/implement-bf1d8cec3b22d288/events|retry/api-retry-rows)\.jsonl$' \
-                 | grep -vE '^crates/rk-cli/tests/fixtures/explain/[^/]+/events\.jsonl$' || true)
+                 | grep -vE '^crates/rk-cli/tests/fixtures/explain/[^/]+/events\.jsonl$' \
+                 | grep -vE '^crates/rk-cli/tests/fixtures/exit/[^/]+/[^/]+\.jsonl$' || true)
           if [ -n "$bad" ]; then
             echo "FAIL: corpus artifacts tracked in the product repo (ADR-0013, AC-465):"
             printf '%s\n' "$bad"

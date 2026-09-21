@@ -1,0 +1,11 @@
+# **F20's path, and the CLI's end of it.** The child exits 0, a system/init frame is seen and a
+# well-formed result frame arrives — and it carries NO `structured_output`.
+#
+# `classify.rs` reaches `extract_digest`, whose first arm is exactly this: *"the result frame
+# carried no structured_output (exit 0 and subtype success are not evidence — F20; AC-206)"* →
+# `StepError::Schema` → row `11`. The prose in `result` is deliberately valid JSON, because AC-208
+# forbids reading it: a classifier that fell back to the prose would produce `0` here.
+args = ["run", "bug-1"]
+pack = "base"
+mode = "exit:0"
+transcript = "frames.jsonl"

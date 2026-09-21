@@ -1,0 +1,10 @@
+# §7d.4: *"`Platform` via an `is_error` frame"*.
+#
+# `classify.rs` rule 4 tests `is_error` / `api_error_status` *"regardless of the exit code"* and
+# BEFORE both the child's own verdict (rule 6) and the init check (rule 9), so this row does not
+# depend on the handshake having validated — which is what makes it the cheapest of the four to
+# reach honestly.
+args = ["run", "bug-1"]
+pack = "base"
+mode = "exit:0"
+transcript = "frames.jsonl"

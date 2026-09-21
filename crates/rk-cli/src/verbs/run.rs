@@ -1138,25 +1138,40 @@ fn resume_and_read(
 
     let recorded = match rk_kernel::replay::resume(inputs, ports, &prior, supply_spec) {
         Ok(run) => run,
-        // 🛑 A FAILED DISPATCH IS NOT A CONFIGURATION ERROR, AND THE CLASS IS NOT ON THIS VALUE.
+        // 🛑 A FAILED DISPATCH IS NOT A CONFIGURATION ERROR, AND THE CLASS NOW ARRIVES ON THIS VALUE.
         //
-        // `Runtime::run_activity` carries a step's failure as a VALUE in its report — "a step's own
-        // failure is a value in the report (AC-032), never an error of this function" — and
-        // `replay::dispatch_through` turns an uncommitted report into `NotCommitted { step_id,
-        // activity_id_at_version }`, whose two members are both `String`. All eleven `StepError`
-        // rows therefore arrive here as the SAME value.
+        // §7d.5 step (10): *"a `StepError` → its row"*. `Runtime::run_activity` carries a step's
+        // failure as a VALUE in its report — *"a step's own failure is a value in the report
+        // (AC-032), never an error of this function"* — and until Slice 3 cycle 10
+        // `replay::dispatch_through` discarded it into `NotCommitted { step_id,
+        // activity_id_at_version }`, two `String`s, so all eleven rows arrived here as the SAME
+        // value and step (10) had nothing to map.
         //
-        // The class survives in exactly one place: the row the harness appended before returning,
-        // through `StepError::event()`. That map is bijective over the eleven, so the journal is
-        // where §7d.4's table is read from. See [`exit_for_uncommitted`].
+        // The old repair read the class back off the journal, which worked only because
+        // `FakeHarness` appends an error row through `StepError::event()`. `ClaudeHarness` appends
+        // one `dispatch_completed` carrying `cancelled_by` and **no class member**, so against the
+        // real adapter the journal held nothing to read and every failed dispatch exited `3`.
+        // Mechanism B carries the class on the refusal instead, and `impl From<&StepError> for
+        // Exit` — eleven arms, no wildcard — is the one mapping.
         Err(rk_kernel::replay::ReplayError::NotCommitted {
             step_id,
             activity_id_at_version,
+            class,
         }) => {
             eprintln!(
                 "redkiln: the dispatch of `{step_id}` ({activity_id_at_version}) did not commit."
             );
-            return exit_for_uncommitted(&store, &item_id);
+            let Some(class) = class.as_ref() else {
+                // The activation was already committed, so the report carried no outcome. Nothing
+                // in §7d.4's table describes that, and it is named rather than mapped to a row it
+                // is not.
+                eprintln!(
+                    "redkiln: the dispatch did not commit and carried no terminal class for \
+                     `{item_id}`, so no row of the exit table describes it."
+                );
+                return Ok(Exit::ConfigError);
+            };
+            return Ok(Exit::from(class));
         }
         Err(e) => {
             eprintln!("redkiln: {e}");
@@ -1252,108 +1267,6 @@ fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun)
     // (D-01; AC-240; AC-024): a run that opened a gate did everything it was asked to do.
     println!("gate {token_hex} is open for {item_id}");
     Exit::Success
-}
-
-/// §7d.4's table, applied to a dispatch that did not commit.
-///
-/// The class is read off the **journal**, because `ReplayError::NotCommitted` does not carry it —
-/// see the note at the call site. The LAST error row wins: a run that retried within its cap wrote
-/// one row per attempt, and the exit describes the attempt the run ended on.
-///
-/// A run that did not commit and wrote no error row at all is a configuration outcome rather than a
-/// class: `Runtime::run_activity` MINTS `StepError::Schema` itself when a returned `Typed`'s schema
-/// is not the spec's, and on that path the harness returned `Ok` and appended nothing. Nothing in
-/// Slice 3 reaches it — the in-process arm scripts `Err` values, which the harness always journals —
-/// but cycle 6's F20 fixture does, and this arm is where it will surface. **RAISED rather than
-/// guessed at here**: a `ConfigError` for a case whose true row is `11` is visibly wrong, and
-/// writing a speculative `Schema` here would make it invisible instead.
-fn exit_for_uncommitted(store: &Arc<Mutex<dyn EventStore>>, item_id: &str) -> Result<Exit, Halt> {
-    let rows = {
-        let guard = crate::store::acquire(store, "the run")?;
-        match guard.query(rk_kernel::runtime::journal_query(item_id)) {
-            Ok(rows) => rows,
-            Err(e) => {
-                eprintln!("redkiln: the store could not be read: {e:?}");
-                return Ok(Exit::ConfigError);
-            }
-        }
-    };
-    let Some(exit) = rows.iter().rev().find_map(exit_for_error_row) else {
-        eprintln!(
-            "redkiln: the dispatch did not commit and the journal carries no error row for \
-             `{item_id}`, so no row of the exit table describes it."
-        );
-        return Ok(Exit::ConfigError);
-    };
-    Ok(exit)
-}
-
-/// One journal row → its row of §7d.4's table, or `None` if the row is not an error row.
-///
-/// **The two class matches carry no wildcard, and that is the point.** `FailureClass` and
-/// `RefusalClass` are closed enums in `rk-types`, and `StepError::event()` is documented as
-/// *"Exactly one per `StepError` variant"* — so a twelfth `StepError` forces a new class arm there,
-/// and a new class arm is a compile error HERE rather than a silent `ConfigError`. That is the same
-/// guarantee `impl From<&StepError> for Exit` gives one level up, kept across the journal round
-/// trip; matching on the payload's STRING would have thrown it away.
-fn exit_for_error_row(row: &rk_types::event::Event) -> Option<Exit> {
-    use rk_types::event::{FailureClass, RefusalClass};
-    use rk_types::event_kind::EventKind;
-
-    // A free generic rather than a closure: a closure would be monomorphised to whichever class
-    // type reached it first, and the two arms below read different ones.
-    fn class<T: serde::de::DeserializeOwned>(row: &rk_types::event::Event) -> Option<T> {
-        row.payload
-            .get("class")
-            .cloned()
-            .and_then(|v| serde_json::from_value(v).ok())
-    }
-    match row.kind {
-        EventKind::StepFailed => Some(match class::<FailureClass>(row)? {
-            FailureClass::Transport => Exit::Transport,
-            FailureClass::Schema => Exit::Schema,
-            FailureClass::Timeout => Exit::Timeout,
-            FailureClass::NonZero => Exit::NonZero,
-            FailureClass::Platform => Exit::Platform,
-        }),
-        EventKind::StepRefused => Some(match class::<RefusalClass>(row)? {
-            RefusalClass::NotAdopted => Exit::NotAdopted,
-            RefusalClass::NotIsolated => Exit::NotIsolated,
-            RefusalClass::Unsupported => Exit::Unsupported,
-            RefusalClass::Overage => Exit::Overage,
-        }),
-        EventKind::StepCancelled => Some(Exit::Cancelled),
-        // Both the failure row and the retry MARK carry this kind (they differ only in the
-        // payload's `kind = "retry_at"`), and both mean the same row of the table.
-        EventKind::RateLimited => Some(Exit::RateLimited),
-        // 🛑 THE REAL HARNESS JOURNALS NO `step_failed` ROW, AND THIS ARM IS WHAT IT DOES WRITE.
-        //
-        // The bridge above is `FakeHarness`'s: its `dispatch` does
-        // `if let Err(error) = &result { store.append(event_for(error)) }`. `ClaudeHarness` does
-        // NOT — it appends one `dispatch_completed` carrying a serialised `DispatchRecord`
-        // (`record::append_completed`), and `Runtime::run_activity` appends only `dispatch` and
-        // `activity_committed`. Measured 2026-09-20 against the wired binary: *"the dispatch did
-        // not commit and the journal carries no error row"*.
-        //
-        // `DispatchRecord` carries `cancelled_by: Option<CancelledBy>` and **no failure class**, so
-        // this arm recovers the ONE row of the table the real path makes derivable — 13 — and the
-        // rest are RAISED rather than guessed. See `exit_for_uncommitted`'s note.
-        EventKind::DispatchCompleted => row
-            .payload
-            .get("cancelled_by")
-            .filter(|v| !v.is_null())
-            .and_then(|v| serde_json::from_value::<rk_types::error::CancelledBy>(v.clone()).ok())
-            .map(|by| match by {
-                // All three arms are one row (§7d.4): the WHO of a cancellation does not change
-                // the exit. `Timeout` here is the adapter's own timer arm, which is why §7d.4 says
-                // a binary-level timeout fixture is row 13 and *"a fixture whose `expected` reads
-                // `12` is red on a correct binary"*.
-                rk_types::error::CancelledBy::Signal
-                | rk_types::error::CancelledBy::Timeout
-                | rk_types::error::CancelledBy::Operator => Exit::Cancelled,
-            }),
-        _ => None,
-    }
 }
 
 // ------------------------------------------------------------------- step (8), the outer half

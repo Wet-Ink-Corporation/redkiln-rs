@@ -383,8 +383,21 @@ fn ac438_table_driven_exit_codes_over_fixtures() {
             harness.dispatches()
         );
 
-        // And the class the exit was derived from was WRITTEN, not inferred: the harness appended
-        // exactly one error row of the kind this variant mints.
+        // And the harness JOURNALLED the class beside returning it.
+        //
+        // 🛑 THIS IS NO LONGER WHERE THE EXIT COMES FROM, AND THE DIFFERENCE IS THE POINT.
+        //
+        // Until Slice 3 cycle 10 the exit above WAS read off this row: `NotCommitted` carried two
+        // `String`s and `exit_for_uncommitted` recovered the class by re-reading the journal.
+        // Mechanism B carries the `StepError` on the refusal itself, so the two are now
+        // independent — the exit comes from `impl From<&StepError> for Exit` and this assertion is
+        // about the FAKE's own bridge, `FakeHarness::dispatch`'s
+        // `if let Err(error) = &result { store.append(event_for(error)) }`.
+        //
+        // It is kept because it is exactly what separates the fake from the real adapter:
+        // `ClaudeHarness` appends one `dispatch_completed` carrying `cancelled_by` and no class
+        // member, which is why the journal round trip recovered only row `13` and why mechanism B
+        // was needed at all. A reader comparing this arm with the binary arm needs that visible.
         let appended: Vec<rk_types::event_kind::EventKind> = trace
             .steps()
             .into_iter()
@@ -396,8 +409,9 @@ fn ac438_table_driven_exit_codes_over_fixtures() {
         let want_kind = error_row_kind(&variant);
         assert!(
             appended.contains(&want_kind),
-            "{variant:?} appended no {want_kind:?} row, so the exit was not read off the journal. \
-             Rows appended, in order: {appended:?}"
+            "{variant:?} appended no {want_kind:?} row. `FakeHarness` journals every `Err` it \
+             returns, and that bridge is what this arm rides; the EXIT itself now comes from the \
+             class `NotCommitted` carries. Rows appended, in order: {appended:?}"
         );
     }
 }

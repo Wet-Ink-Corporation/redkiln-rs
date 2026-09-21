@@ -1,0 +1,13 @@
+# §7d.4, verbatim: the binary is driven for the classes the fixture child can produce through the
+# real adapter — *"`Transport` via a missing `harness_binary`"*.
+#
+# This row is a property of the REPOSITORY, not of the child: `[adapters] harness_binary` names a
+# program that does not exist, so the spawn itself fails and the adapter classifies the failure as
+# `Transport`. The child's mode is irrelevant and is set only so an unexpected spawn fails fast.
+#
+# Reachable at all only since Slice 3 cycle 10. Before mechanism B the class was discarded into
+# `ReplayError::NotCommitted`'s two `String`s and every failed dispatch exited `3`.
+args = ["run", "bug-1"]
+pack = "base"
+mode = "exit:0"
+harness_binary = "rk-fixture-child-that-does-not-exist"

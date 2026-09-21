@@ -303,9 +303,23 @@ pub enum ReplayError {
     /// A recorded dispatch produced no `activity_committed`, so the FSM would ask for the same
     /// activation for ever. **Refused, never looped**: a run whose activity failed is not a run
     /// this stage can record, and saying so is better than a journal that grows without end.
+    ///
+    /// # 🛑 `class` CARRIES THE TERMINAL [`StepError`], AND IT IS THE ONLY WAY OUT
+    ///
+    /// Added at Step 7d Slice 3 (the operator's mechanism B). Without it a caller could not tell
+    /// which of §7d.4's eleven rows a failed dispatch belonged to: `Runtime::run_activity` carries
+    /// a step's failure as a VALUE in its report and appends only `dispatch` and
+    /// `activity_committed`, and `ClaudeHarness::dispatch` journals one `dispatch_completed` whose
+    /// `DispatchRecord` has `cancelled_by` and **no class member**. So for the real adapter the
+    /// class existed nowhere a CLI could read it, and `rk-cli` mapped every such failure to exit
+    /// `3`. The value is in hand here — [`crate::runtime::ActivityReport::outcome`] is public and
+    /// the report is already held at the refusal — so it is carried rather than re-derived.
+    ///
+    /// `None` when the activation was already committed and the report therefore has no outcome.
     NotCommitted {
         step_id: String,
         activity_id_at_version: String,
+        class: Option<rk_types::error::StepError>,
     },
     /// **The replay asked the recorded journal for an activation it does not carry.** This is
     /// AC-008's *"all N results served from the journal"* failing on the side that matters: the
@@ -368,11 +382,16 @@ impl fmt::Display for ReplayError {
             Self::NotCommitted {
                 step_id,
                 activity_id_at_version,
+                class,
             } => write!(
                 f,
                 "the dispatch of `{step_id}` ({activity_id_at_version}) returned without an \
                  `activity_committed`, so the FSM would select it again for ever. A recording \
-                 refuses rather than looping"
+                 refuses rather than looping. Terminal class: {}",
+                class.as_ref().map_or_else(
+                    || "none recorded — the activation was already committed".to_owned(),
+                    |e| format!("{e:?}")
+                )
             ),
             Self::JournalHasNoResult {
                 step_id,
@@ -1303,6 +1322,10 @@ fn dispatch_through(
         return Err(ReplayError::NotCommitted {
             step_id: step_id.to_owned(),
             activity_id_at_version: key.activity_id_at_version.clone(),
+            // Mechanism B. The report is already in hand and its outcome is public, so the class
+            // travels with the refusal instead of being discarded and hunted for in the journal —
+            // which is where it was NOT, for every harness but the fake one.
+            class: report.outcome().and_then(|o| o.as_ref().err()).cloned(),
         });
     }
     Ok(rt
