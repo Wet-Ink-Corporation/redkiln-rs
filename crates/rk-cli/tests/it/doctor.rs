@@ -1782,10 +1782,14 @@ fn tree_digest(root: &std::path::Path) -> Vec<(String, u64, u64)> {
 /// # 🛑 IT ASSERTS THE BICONDITIONAL, NOT THREE FIXED CODES, AND THE REASON IS MEASURED
 ///
 /// AC-438's clause is *"exit 3 **iff** an error-severity rule fired"*. Asserting three fixed codes
-/// would make this test pass or fail on the operator's own machine: measured 2026-09-21, this box
-/// runs `claude 2.1.278` against a `TESTED_CLI_VERSION` of `2.1.277`, so `RK-D-CLI-VERSION` fires
-/// over **every** fixture here, `doctor/clean/` included. That is the row working correctly, and a
-/// test that demanded `clean/` exit `0` would be red on a true statement about a stale pin.
+/// would make this test pass or fail on the operator's own machine, because `RK-D-CLI-VERSION`
+/// reads the INSTALLED binary (D-11) and compares it with a constant in the tree. It fired over
+/// **every** fixture here, `doctor/clean/` included, while this box ran `claude 2.1.278` against a
+/// `TESTED_CLI_VERSION` of `2.1.277` — the row working correctly, and a test that demanded
+/// `clean/` exit `0` would have been red on a true statement about a stale pin. *That particular
+/// drift was closed on 2026-09-21 when the pin moved to 2.1.278 (`s7d` §7d.15 as amended), so the
+/// row is quiet again on this box today — but the reason for the biconditional is unchanged and is
+/// not about any one version: the next CLI release re-opens it, and the arms below hold either way.*
 ///
 /// So the code is read against **what actually fired**, per fixture — and *"warnings never move
 /// the code"* is asserted as the thing it is: a statement about the DIFFERENCE between two runs.

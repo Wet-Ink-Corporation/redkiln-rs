@@ -91,7 +91,13 @@ scratchpad, not in the tree, and nothing below cites them as a record.
 
 **Two crates: `rk-cli` (binary `redkiln`) and `redkiln-migrate` (binary `redkiln-migrate`), and one closed crate edited
 — `rk-kernel` (eight edits, §7d.15; no other closed crate is touched — the console-signal test-support wrapper an earlier
-draft put in `rk-containment` is **not built**, §7d.10).** `rk-cli` is the **composition root** design §9.1 names: a `clap`
+draft put in `rk-containment` is **not built**, §7d.10).** ***Amended 2026-09-21, Step 7d Slice 4, on the operator's
+decision of that date: a SECOND closed crate is edited — `rk-adapter-claude`, for the CLI pin and nothing else.***
+*§7d.15 carries the amendment, what it permits, what it does not, and what it costs; this sentence is the summary
+and loses to it, the same precedence that settled the fixture count. The edit is the bump RAISED on 2026-09-19 and
+left OWED (PROGRESS.md §3), which Checkpoint 7d's Halt 2 blocks the stage close on. Note also, and separately, that
+`rk-kernel`'s own count reads **nine** against this sentence's eight — Slice 3 took five where four were enumerated
+(R-59, mechanism B) — which was RAISED on 2026-09-20 at `0e73835` and is not re-counted here.* `rk-cli` is the **composition root** design §9.1 names: a `clap`
 router over the kernel with `run <item> [--lane fix|story]` (ADR-0128), `answer <item> <option> [--attach
 <kind>=<path>] --explain-sufficed yes|no --toml-opened yes|no` (ADR-0129 decision 1 — two required flags, one record field; §7d.6), `status`, `explain <item>`, `doctor` and `doctor --rebuild`,
 `catalog search <query>`, `init` — the verbs design §8.1 lists at Phase 1 — plus `lint --facet-stability|--facet-provenance
@@ -2708,6 +2714,34 @@ adapters are not edited** (the porcelain read is a call site in the migrator thr
 has no journal and none is added [measured 2026-09-18, `crates/rk-git/src/git_exec.rs`] — every git-side assertion in
 this file is a git-side fact or a CLI seam) — if a slice finds it must edit one, it stops and this section is amended
 first. The corpus pin does **not** move.
+
+***AMENDED 2026-09-21, Step 7d Slice 4, on the operator's decision of that date: `rk-adapter-claude` is opened for
+ONE edit and one only — the CLI pin.*** *This is the amendment the sentence above requires, taken before a byte of
+that crate moved, and it is narrow by construction. **What it permits**: `TESTED_CLI_VERSION` moves `2.1.277` →
+`2.1.278`, with the prose that states the pin, the tests that assert it, and the scripted `system/init` fixtures
+whose `claude_code_version` must equal the pin to reach the adoption check at all (`init::decide` refuses a
+measured version ≠ the pin under `MismatchPolicy::Refuse` — AC-226 as designed, which is how the 2.1.275 → 2.1.277
+move was found). **What it does NOT permit**: any other change to that crate, and no change at all to `rk-types`,
+`rk-ports`, `rk-store`, `rk-git` or the other three adapters.*
+
+*Why it is taken rather than deferred again. The move was **recorded and half-taken on 2026-09-19** (PROGRESS.md
+§3, Step 7d Slice 1 `b2f2842`): `claude --version` read `2.1.278` against a `2.1.277` pin, Halt 2 fired, the
+instrument file was re-teed and `TESTED_CLI_VERSION` was deliberately NOT moved with it because this section
+forbade it — the operator's call that day was *“record + re-tee, RAISE the adapter edit”*. Checkpoint 7d's Halt 2
+compares three things — the live binary, the instrument file and this constant — and only the third now disagrees,
+so the stage cannot close until the RAISED bump is either taken or the CLI is pinned back. It is taken.*
+
+*What it costs, stated rather than discovered. **(a)** The pin is not a number but the version the adapter's
+recorded evidence was measured at: `init.rs`'s RT-27 shape lines, `registry.rs`'s probe record and
+`streams/README.md`'s *“The 2.1.277 init shape”* section are MEASUREMENTS of 2026-09-18 and are **not rewritten** —
+they keep the version they were taken at, and a dated confirmation at 2.1.278 is appended to them once the live
+probe has run. **(b)** A pin this crate has not been dispatched at is a claim without evidence, so
+**`live_dispatch_probe` at 2.1.278 is OWED** — one paid haiku dispatch, `#[ignore]` behind `[features] live`, run
+by the operator in the foreground as its own ignore-reason prescribes; the precedent move (`cee6587`, 2.1.275 →
+2.1.277) re-grounded the evidence the same way. **(c)** Checkpoint 7c's D17-11 anchored grep reads this constant,
+so 7c's row goes **provisional** until it is re-run — the same disposition Slice 1 gave Step 6's row, and it is
+recorded in PROGRESS.md §1 rather than absorbed. **(d)** §7d.1's *“one closed crate edited”* is disturbed and takes
+its own dated note there.*
 
 ### 7d.16 The slices
 

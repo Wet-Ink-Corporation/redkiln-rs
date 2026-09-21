@@ -365,7 +365,7 @@ fn ac227_every_harness_event_carries_cli_version() {
     for row in &rows {
         assert_eq!(
             row.cli_version,
-            CliVersion::Observed("2.1.277".to_owned()),
+            CliVersion::Observed("2.1.278".to_owned()),
             "an init that reported a version lands as Observed(v)"
         );
         let payload = &r.store.events()[0].payload;
@@ -1262,7 +1262,7 @@ fn frame_read_before_the_timer_fired_does_not_overturn_the_arm() {
     );
     assert_eq!(
         r.outcome.record.cli_version,
-        CliVersion::Observed("2.1.277".to_owned()),
+        CliVersion::Observed("2.1.278".to_owned()),
         "the init was read before the kill"
     );
 }

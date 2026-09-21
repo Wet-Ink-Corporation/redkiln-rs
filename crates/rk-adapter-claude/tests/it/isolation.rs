@@ -308,7 +308,7 @@ fn ac226_version_mismatch_configured_outcome() {
 /// `Observed`.
 ///
 /// RED (observed 2026-09-18) against the skeleton (the accessor derives nothing): `the row lacks
-/// Observed(2.1.300): Pinned("2.1.277")`.
+/// Observed(2.1.300): Pinned("2.1.278")`.
 #[test]
 fn ac385_version_on_event_and_mismatch_warning() {
     let t = with_init("init-version-higher.scripted.ndjson");
