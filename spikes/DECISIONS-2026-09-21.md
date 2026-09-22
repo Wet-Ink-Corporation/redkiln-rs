@@ -231,3 +231,81 @@ that in terms. It does not discharge the typed per-kind payload record (decision
 decision 10's six named non-decisions.
 
 ---
+
+## D21-7 · ADR-0132 flips to `accepted` — and it was **widened by one site** before acceptance, which is what this line confirms
+
+**Confirmed 2026-09-21 (dated line), at `s7f`'s close.** ADR-0132 — `ImplReport` as the sixth toolchain-keyed
+artifact kind, superseding ADR-0073's keyed-kinds enumeration in part — is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-21` unchanged. ADR-0126's route, which 0128, 0129, 0130 and 0131 each took.
+
+🛑 **THE RECORD IS NOT WHAT D21-4 AUTHORISED, AND THE DIFFERENCE IS THE POINT OF THIS LINE.** D21-4 says the five
+keyed kinds are *"at `0073:47-52`, **inside `## Decision`**"* and authorises a supersession of **that sentence**.
+Executing it found a **second protected site**: ADR-0073 re-enumerates the same five in a `**What this forbids**`
+bullet — *"For the five keyed kinds (`ChangeSummary`, `TestReport`, `ReproCase`, `Changeset`, `ProfileReport`)
+keyed expansion plus an instance-level predicate replaces it outright."* **ADR-0092 rule 1 protects a forbids
+bullet in exactly the same breath as a Decision sentence**, so superseding one and leaving the other would have
+left 0073 stating two different closed sets about itself. ADR-0132 names **both** sites. The precedent for widening
+before acceptance rather than filing a follow-up is 0128, which README already records as *"widened 2026-09-19
+before acceptance, by one clause"*. **A reader who wants the narrower record should strike 0132's site (2) and
+0073's forbids bullet stays at five — nothing else in the record depends on it.**
+
+**A second departure, smaller, also confirmed rather than smuggled.** D21-4's warrant sentence says *"ADR-0056
+makes a tie a validation error"*. It does not: 0056 says of itself that the rule is *"pre-existing … and not
+reopened here"*, at both the sites that state it. ADR-0132 cites `references/2026-09-07-process-catalog-proposal.md`
+§2.5 step 4 (*"a tie is a pack validation error, never a runtime choice"*) as the origin and 0056 as the record
+that keeps it standing. The decision D21-4 took is unchanged; only its citation is corrected.
+
+**Grounding, measured rather than asserted.** Every figure in the record was re-derived from `.redkiln/catalog`
+by an independent parser rather than carried from the stage file: **9** equal-rank producer sets; the two
+`ImplReport` sets shadowing the two `Changeset` sets with identical producer lists at ranks 10 and 30; and both
+remaining pairs disjoint by `kind` tag. The claim that keying clears the surface is not left to the prose — it is
+asserted on every run by `shipped_pack_loads`, which was RED on precisely this `RankTie` before the pack change
+and GREEN after it, with the other three load-time lints passing throughout.
+
+**What this does not license.** It does not assert a tie-break for kinds that are **not** keyed: 0073's own limit
+(*"What replaces the tie-break for kinds that are not keyed is not stated in the source, and is not asserted
+here"*) survives, and 0132 declines to assert it either. It does not license editing `spikes/p9/artifacts.toml`,
+which stays at five keyed kinds and now differs from `.redkiln/` by exactly one line, deliberately. And it moves
+no `method_rank`.
+
+---
+
+## D21-8 · ADR-0133 flips to `accepted`, and RT-19 is settled inside it rather than beside it
+
+**Confirmed 2026-09-21 (dated line), at `s7f`'s close.** ADR-0133 — the `rate_limit_reading` producer and its
+typed payload — is confirmed as written and flips `proposed → accepted`, `date: 2026-09-21` unchanged.
+
+**RT-19 is settled BY this record, which is a correction to how `s7f` §7f.4 reads.** The stage file presents
+§7f.3 (the producer) and §7f.4 (the cost unit) as two sections, and a first pass at the record accordingly said
+the unit was *"settled at §7f.4"* as though that were somewhere else. RT-19's own register row
+(`spikes/DECISIONS-2026-09-17.md`) names its owner in terms: *"the typed-payload record (ADR-0126 decision 6)
+names the cost unit and any arithmetic form"*. That record is ADR-0133. The unit is settled in its **clause 5**,
+and D21-5's *"settled in the same pass"* is executed as *settled in the same record*.
+
+**Clause 5 fixes more than the type, because the type was never the exposed part.** `CostUsd` is
+`pub struct CostUsd(pub String)` with **no `impl` block at all** on this tree — no `Display`, no `FromStr`, no
+arithmetic — so precision cannot be lost today by any route. The field is `pub String`, so nothing *structurally*
+prevents a future caller from `.0.parse::<f64>()`. Clause 5 records what a reader may do (byte equality, verbatim
+rendering, decimal summation carrying every digit) and may not (any binary float at any point, including
+transiently; any fixed re-scaling; any inferred minor unit), so that such a caller is refused by a record and not
+merely by a missing impl.
+
+**Two things the record declines, both measured.** It does **not** take design §5.4's `rate_limit_event` spelling
+for the durable kind: that identifier is already live and distinct as the Claude CLI's stream-line `type`,
+classified by the adapter's own `EventKind::RateLimitEvent` whose `census_key()` returns that literal string.
+Collapsing the two would make the census and the journal indistinguishable by name. And it mints **no `EventKind`
+variant** — unlike 0123, 0124, 0125 and 0126 it carries no arity clause at all, because `RateLimitReading` is
+already one of the 38 and already has the wire name `rate_limit_reading`. What was missing was only the producer.
+
+**Why the gap is a deferral coming due rather than a discovery.** ADR-0126 decision 6 routed *"the typed per-kind
+payload record … off a design §5 table that must first be given types"* forward by name, and `WindowReading`'s own
+doc says *"`resets_at` per window is the typed-payload record's (ADR-0126 decision 6)"*. ADR-0133 is that record,
+for this kind.
+
+**What this does not license.** It does not build `redkiln cost`, define its `n`, its `low_sample` floor or its
+`resolution_limited` flag — AC-372/AC-373/AC-395 and `s7i` own those. It does not make Phase-1 exit criterion (7)
+**met**: it makes the batch delta *computable*, which is a different claim, and the renderer is still owed. And it
+does not license a vacuous rendering — D21-5's prohibition on an `n = 0` `low_sample` delta standing in for a
+green stands untouched.
+
+---
