@@ -66,6 +66,27 @@ const CYCLE: &[(&str, &str)] = &[
     ),
 ];
 
+/// The optional-only and mixed mutual pairs — `catalog-cycle/`'s must-LOAD twin. See
+/// `../fixtures/catalog-cycle-optional/opt-a.toml` for why it exists.
+const CYCLE_OPTIONAL: &[(&str, &str)] = &[
+    (
+        "opt-a.toml",
+        include_str!("../fixtures/catalog-cycle-optional/opt-a.toml"),
+    ),
+    (
+        "opt-b.toml",
+        include_str!("../fixtures/catalog-cycle-optional/opt-b.toml"),
+    ),
+    (
+        "mixed-a.toml",
+        include_str!("../fixtures/catalog-cycle-optional/mixed-a.toml"),
+    ),
+    (
+        "mixed-b.toml",
+        include_str!("../fixtures/catalog-cycle-optional/mixed-b.toml"),
+    ),
+];
+
 const EXCLUDES_ASYMMETRIC: &[(&str, &str)] = &[
     (
         "asymmetric-a.toml",
@@ -284,6 +305,42 @@ fn dag_assembled_carries_the_five_named_fields() {
     assert!(
         !out.dag().edges().is_empty(),
         "a DAG with no edges would satisfy the loop above vacuously"
+    );
+}
+
+/// **AC-059's optional-edge reading, and the LIVE instance that forced it.**
+///
+/// A catalog is cyclic iff its **non-optional** subgraph is cyclic. AC-059's evidence line and
+/// [`requires_cycle_lint`]'s own docstring both cite F35's *hard cycles **0** across the enumerated
+/// lattice*, and `Requirement` has carried `optional: bool` since it was authored — the lint simply
+/// did not read it, so every `Kind?` was a hard edge.
+///
+/// This is not a hypothetical. Measured 2026-09-21 over all **102** shipped activities in
+/// `.redkiln/catalog/`: counting only non-optional edges there is **no cycle anywhere**, which
+/// reproduces F35's 0 exactly; counting optional edges too, the walk finds
+/// `adr-record -> design-doc -> adr-record` and load fails at exit 3 — so no `redkiln run` could
+/// load the shipped catalog at all, and `doctor` exits 0 across all 39 rules without seeing it.
+/// Three mutual pairs have that shape and every one is both-optional.
+///
+/// **Both directions are asserted here**, because an exemption that also exempted hard edges would
+/// be a lint that enumerates nothing (Halt 8).
+#[test]
+fn ac059_optional_only_requires_cycle_loads() {
+    let optional =
+        Catalog::from_sources(CYCLE_OPTIONAL).expect("the fixture catalog itself parses");
+    assert!(
+        requires_cycle_lint(&optional).is_ok(),
+        "a cycle every edge of which is `Kind?` is not a HARD cycle and must LOAD — this is the \
+         shape `adr-record <-> design-doc` carries in the shipped catalog"
+    );
+
+    let hard = Catalog::from_sources(CYCLE).expect("the fixture catalog itself parses");
+    assert!(
+        matches!(
+            requires_cycle_lint(&hard),
+            Err(LoadError::RequiresCycle { .. })
+        ),
+        "the 3-node HARD cycle must STILL fail load — the optional reading may not empty the lint"
     );
 }
 

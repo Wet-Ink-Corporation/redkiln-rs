@@ -1,0 +1,20 @@
+# THE MIXED PAIR, which pins the reading between the two fixtures rather than leaving it to a
+# future reader. `mixed-alpha` requires `MixedBeta` HARD; `mixed-beta` requires `MixedAlpha?`
+# optional. The loop is therefore traversable only through an optional edge, so it is not a HARD
+# cycle and it LOADS. A catalog is cyclic iff its NON-optional subgraph is cyclic — that is the
+# whole rule, and it is the rule F35's "hard cycles 0" was measured under.
+[activity]
+id           = "mixed-alpha"
+version      = 1
+stage        = "implement"
+provides     = ["MixedAlpha"]
+requires     = ["MixedBeta"]
+derived_from = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id   = "emit"
+kind = "emit"

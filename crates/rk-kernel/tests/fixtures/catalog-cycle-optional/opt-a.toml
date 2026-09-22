@@ -1,0 +1,29 @@
+# AC-059's OPTIONAL-ONLY CYCLE — the must-LOAD twin of `catalog-cycle/`, and a LIVE instance rather
+# than an authored one. `.redkiln/catalog/`'s `adr-record` requires `DesignDoc?` while `design-doc`
+# requires `ADR?`, so the mutual edge exists only through the `Kind?` spelling. Two more pairs have
+# the same shape — `data-migration-plan <-> design-doc` and `design-doc <-> threat-model`.
+#
+# AC-059's evidence line and `requires_cycle_lint`'s own docstring both cite F35's **hard cycles 0
+# across the enumerated lattice**. Measured 2026-09-21 over all 102 shipped activities: counting
+# only NON-optional edges there is no cycle anywhere, which reproduces that 0 exactly; counting
+# optional edges too, the walk finds `adr-record -> design-doc -> adr-record` and load fails at
+# exit 3. `Requirement` has carried `optional: bool` since it was authored; the lint did not read it.
+#
+# So this fixture is the one that would have caught it: a cycle whose every edge is optional MUST
+# LOAD. The hard 3-node cycle next door must still fail, and the mixed pair below pins the reading
+# in between.
+[activity]
+id           = "opt-alpha"
+version      = 1
+stage        = "implement"
+provides     = ["OptAlpha"]
+requires     = ["OptBeta?"]
+derived_from = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id   = "emit"
+kind = "emit"

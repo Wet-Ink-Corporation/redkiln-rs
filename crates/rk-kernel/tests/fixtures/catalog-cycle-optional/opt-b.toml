@@ -1,0 +1,16 @@
+# The other half of the optional-only mutual pair. See `opt-a.toml` for the whole narrative.
+[activity]
+id           = "opt-beta"
+version      = 1
+stage        = "implement"
+provides     = ["OptBeta"]
+requires     = ["OptAlpha?"]
+derived_from = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id   = "emit"
+kind = "emit"

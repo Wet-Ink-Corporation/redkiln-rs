@@ -63,6 +63,21 @@ use crate::catalog::Catalog;
 /// lattice, so the red fixture is authored (`tests/fixtures/catalog-cycle/`) — a lint with no red
 /// fixture enumerates nothing, which is Halt 8's shape.
 ///
+/// **An OPTIONAL requirement is not an edge, and a catalog is cyclic iff its NON-optional subgraph
+/// is** *(2026-09-21, Step 8, operator decision)*. A `Kind?` may go unsatisfied, so a loop
+/// traversable only through one can always be broken; and F35's *hard cycles 0* — this criterion's
+/// own cited evidence — is a count under exactly that reading. `Requirement` has carried
+/// `optional: bool` since it was authored and this walk did not read it, which made every `Kind?` a
+/// hard edge. **It was a live defect, not a tidy-up:** measured over all 102 activities in the
+/// shipped `.redkiln/catalog/`, the non-optional subgraph has no cycle at all (reproducing F35's 0),
+/// while counting optional edges the walk finds `adr-record -> design-doc -> adr-record` — so
+/// `redkiln run` refused the shipped catalog at load with exit 3 and could never have loaded it,
+/// while `doctor` passed all 39 rules without seeing it. Three mutual pairs carry that shape
+/// (`adr-record`/`design-doc`, `data-migration-plan`/`design-doc`, `design-doc`/`threat-model`) and
+/// every one is both-optional. The must-LOAD twin is
+/// `tests/fixtures/catalog-cycle-optional/`, whose test also re-asserts that the hard 3-node cycle
+/// still fails.
+///
 /// # Errors
 ///
 /// [`LoadError::RequiresCycle`] naming the path, in the order the walk found it.
@@ -77,6 +92,13 @@ pub fn requires_cycle_lint(catalog: &Catalog) -> Result<(), LoadError> {
     for a in catalog.activities() {
         let out = edges.entry(a.id.as_str()).or_default();
         for requirement in &a.requires {
+            // An OPTIONAL requirement is not a cycle edge. A `Kind?` can go unsatisfied, so a loop
+            // that is only traversable through one can always be broken and is not the HARD cycle
+            // this lint's own evidence is about. See the docstring; the fixture is
+            // `tests/fixtures/catalog-cycle-optional/`.
+            if requirement.optional {
+                continue;
+            }
             for producer in providers
                 .get(requirement.kind.as_str())
                 .into_iter()

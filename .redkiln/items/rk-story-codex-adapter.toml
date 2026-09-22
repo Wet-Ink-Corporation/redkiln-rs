@@ -1,0 +1,20 @@
+# Step 8 criterion (1b), AC-521: the story-lane self-hosting twin. A REAL Phase-2 story.
+#
+# ADR-0094 decision 2: *"The Harness port's second real adapter (Codex) is Phase 2 and stays behind
+# the CI decision ADR-0010 defers, as a named open item with `rk-adapter-codex` as consumer."* That
+# is a Phase-2 story named by an accepted record, which is what AC-521 asks the story lane to author
+# -- *"at least one recorded `story`-lane run under Redkiln-RS authors a Phase-2 story"* -- rather
+# than a placeholder invented for the run.
+#
+# `kind = "story"` derives the lane as `story` -> pack `story` (ADR-0128 decision 3). Both packs are
+# enabled in `.redkiln/config.toml`, which decision 3 also requires.
+id    = "rk-story-codex-adapter"
+kind  = "story"
+stage = "specification"
+
+[facets]
+cos          = "standard"
+criticality  = "med"
+blast_radius = "med"
+size         = "med"
+external_dep = true

@@ -1,0 +1,27 @@
+# Step 8 criterion (1), AC-473: the fix-lane self-hosting item. A REAL defect on this tree.
+#
+# `crates/rk-cli/tests/it/doctor.rs` states this slice's test count as **thirty-eight** in prose,
+# and the file carries **thirty-nine** named tests -- the thirty-ninth being Step 7e's
+# `ac532_executed_ledger_reports_never_executed_activities`. Recorded as 7d's note and carried open
+# into this stage; it is the smallest true defect on the tree that a fix lane can be pointed at, and
+# it is verifiable by counting rather than by opinion.
+#
+# The schema is `ItemRecord` (`crates/rk-cli/src/verbs/run.rs`): `id`, `kind`, `stage`, `[facets]`.
+# The file name must be `<id>.toml` and `<id>` is what `redkiln run` is given. `kind = "bug"` makes
+# the lane DERIVABLE as `fix` -> pack `bug-standard` (ADR-0128 decisions 2 and 3); `--lane fix` is
+# passed anyway in s8's own block, which ADR-0128 decision 4 says to keep until the item's kind
+# makes it derivable -- it now does, and both routes must agree or `run` refuses.
+#
+# `cos = "standard"` is stated rather than left absent because `bug-standard`'s own
+# `applies = "kind == bug and cos != expedite"` reads it, and an absent facet is `with_facet_null`:
+# a null there makes the pack's applicability abstain rather than hold.
+id    = "rk-fix-doctor-test-count"
+kind  = "bug"
+stage = "triage"
+
+[facets]
+cos          = "standard"
+has_repro    = true
+criticality  = "low"
+blast_radius = "low"
+size         = "low"
