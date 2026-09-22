@@ -55,3 +55,10 @@ spikes/results/*
 !spikes/results/instrument-checks/
 spikes/results/instrument-checks/*
 !spikes/results/instrument-checks/RUNBOOK-instrument.txt
+
+# Written by the Claude Code `redkiln` PLUGIN, not by this workspace: session_start /
+# session_end rows keyed by actor+worktree+branch. No crate here writes it -- grep over
+# crates/ for `telemetry` finds only event-kind prose. `.redkiln/` is tracked as of Step 7e,
+# so without this row a foreign tool dirties the tree between a stage's two close commits.
+# [Step 8, 2026-09-21]
+.redkiln/telemetry/

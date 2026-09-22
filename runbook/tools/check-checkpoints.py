@@ -31,8 +31,12 @@ ALLOW = [
     # the form they will take and re-run at the stage they name.
     ('s4a-apply-adr-0089.md', 'lint --facet-provenance', '[WILL EXIST], re-run at Checkpoint 7e'),
     ('s7b-kernel.md', 'lint --facet-stability  .redkiln/facets.toml', '[WILL EXIST] zero-llm branch, exit 0 expected'),
-    ('s8-exit-criterion.md', 'lint --facet-stability', '[WILL EXIST], re-run at 7e'),
-    ('s8-exit-criterion.md', 'lint --facet-provenance', '[WILL EXIST], re-run at 7e'),
+    # The two `s8` lint rows that stood here are REMOVED at Step 8 (2026-09-21). Their reason was
+    # '[WILL EXIST], re-run at 7e' and Checkpoint 7e has now run: both lints are real. They were
+    # also INERT -- neither line carries a COUNT-ONLY, ECHO-GUARD or PIPE-STATUS shape, so neither
+    # was ever flagged. Measured by re-running this checker with exactly these two rows dropped:
+    # `flagged 0`, rc=0, identical to the baseline. An allowlist row that exempts nothing is a
+    # standing claim that something needs exempting, and this one no longer does.
     # Deliberate operator READ screens: the value is read and judged, not thresholded.
     ('s7e-pack-authoring.md', 'grammar-probe.py', 'probe output is READ; the FAIL grep below is the assertion'),
     ('s4a-apply-adr-0089.md', 'BEFORE', 'BEFORE readings (PIA-035): printed for comparison, not asserted'),

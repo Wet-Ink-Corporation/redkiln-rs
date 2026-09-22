@@ -34,7 +34,15 @@ test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM to a real defect id first — 
 ./target/debug/redkiln run "$FIX_ITEM" --lane fix || { echo "FAIL: the fix-lane run exited non-zero"; exit 1; }   # ADR-0128 grammar (C-01 D-02, 2026-09-18): positional item, --lane optional. A run that STOPS AT A GATE exits 0 (C-01 D-01; AC-403) — this guard does not distinguish "landed" from "gated"; the trailer read below does.
 out=$(./target/debug/redkiln explain "$FIX_ITEM") || { echo "FAIL: explain exited non-zero"; exit 1; }   # POSITIONAL, the recorded resolution (AC-430–AC-432). Until 2026-09-18 this read `explain --run "$RUN_ID" --stages` — a run-keyed stage-listing mode no register criterion, ADR or design row names (C-01 D-03); the stage sequence is read from the event log's tier-1 trailer commits instead, next line.
 test -n "$out" || { echo "FAIL: empty explain output — there is nothing to read against the PASS conditions below"; exit 1; }
-log=$(git log --all --format=%B -E --grep='^(Story|Slice-Verdict|Gate):' 2>&1) || { echo "FAIL: git log over the trailer commits exited non-zero"; exit 1; }   # --all: the tier-1 commits live on the run-owned branch rk-run/<item> (s7d H-5, ADR-0105 clause 8; AC-518), never on the checkout's HEAD — a bare `git log` here would fail a correct binary (corrected 2026-09-18, the same day the line was re-spelt under RT-33)
+log=$(git log "rk-run/$FIX_ITEM" --format=%B -E --grep='^(Story|Slice-Verdict|Gate):' 2>&1) || { echo "FAIL: git log over the trailer commits exited non-zero"; exit 1; }   # SCOPED TO THE RUN REF 2026-09-21 (Step 8, operator decision). This read `git log --all`, and `--all`
+# made the guard below SATISFIABLE WITH ZERO RUNS PERFORMED: spike commit ba46ed9 ("H2/H3 RESULT:
+# suspension is lossless...") carries a body line beginning `Slice-Verdict:`, so a run that wrote no
+# tier-1 event at all still passed "the run wrote a tier-1 event" [measured 2026-09-21]. That is Halt 8's
+# shape one level over, on the guard the whole self-hosting claim rests on. The run-owned ref satisfies
+# `--all`'s OWN stated reason exactly -- the tier-1 commits live on rk-run/<item> (s7d H-5, ADR-0105
+# clause 8; AC-518), never on the checkout's HEAD, which is why a bare `git log` would fail a correct
+# binary (corrected 2026-09-18, re-spelt under RT-33) -- while admitting no commit the run did not make.
+# A missing ref exits non-zero and fires the guard: no run ref means no run, which is fail-closed.
 test -n "$log" || { echo "FAIL: no Story:/Slice-Verdict:/Gate: trailer commit on any ref (the run's trailers land on rk-run/<item> — s7d H-5) — the run wrote no tier-1 event (ADR-0105: git is the record)"; exit 1; }
 printf '%s\n' "$out"; printf '%s\n' "$log"   # → READ both against the three lines below. NO stage-line pattern is pinned: the trailer values are the pack's stage names (7e's), so a grep for one would false-fail a correct binary.
 # PASS only when the event log contains EVERY lane stage from intake to a landed commit,
@@ -46,7 +54,7 @@ test -n "$STORY_ITEM" || { echo "FAIL: set STORY_ITEM to the Phase-2 story to au
 ./target/debug/redkiln run "$STORY_ITEM" --lane story || { echo "FAIL: the story-lane run exited non-zero"; exit 1; }   # ADR-0128 grammar; a gate-open exits 0 (C-01 D-01) — see (1)
 out=$(./target/debug/redkiln explain "$STORY_ITEM") || { echo "FAIL: explain exited non-zero"; exit 1; }   # POSITIONAL; was `explain --run "$RUN_ID" --stages` until 2026-09-18 (C-01 D-03)
 test -n "$out" || { echo "FAIL: empty explain output"; exit 1; }
-log=$(git log --all --format=%B -E --grep='^(Story|Slice-Verdict|Gate):' 2>&1) || { echo "FAIL: git log over the trailer commits exited non-zero"; exit 1; }   # --all: see (1)
+log=$(git log "rk-run/$STORY_ITEM" --format=%B -E --grep='^(Story|Slice-Verdict|Gate):' 2>&1) || { echo "FAIL: git log over the trailer commits exited non-zero"; exit 1; }   # scoped to the run ref: see (1)
 test -n "$log" || { echo "FAIL: no trailer commit on any ref (the run's trailers land on rk-run/<item> — s7d H-5) — the story-lane run wrote no tier-1 event"; exit 1; }
 printf '%s\n' "$out"; printf '%s\n' "$log"   # → READ against the line below; no stage-line pattern is pinned, for the reason given in (1)
 test -n "$AUTHORED_STORY" || { echo "FAIL: set AUTHORED_STORY to the path the run authored"; exit 1; }
@@ -152,7 +160,11 @@ carried in Checkpoint 8 below — not a re-run of the harness. AC-294's own disc
 # pack authoring derives .redkiln/facets.toml from (PIA-011). Both the binary and the file are Phase-1 output.
 ./target/debug/redkiln lint --facet-stability .redkiln/facets.toml
 # The passing branch after Step 4a is the ZERO-llm branch, which needs no stability record -- this is the
-# form s7e Checkpoint 7e uses, and it is why the argument is dropped here. A bare <path> is a bash
+# form s7e Checkpoint 7e uses FOR THIS LINT, and it is why the argument is dropped here. **Scoped
+# 2026-09-21:** this said "the form s7e Checkpoint 7e uses" unqualified, which is true of
+# `--facet-stability` (7e drops `--stability-record` too) and FALSE of `--facet-provenance` (7e passes
+# `--pinned-corpus`, and so does this file's own line below, as amended the same day). A dropped argument
+# is the right form for one lint and the exit-3 defect for the other. A bare <path> is a bash
 # redirect, not an argument: the line above never ran until 2026-09-12. If a facet is ever
 # source = "llm", the record-bearing form is
 #   CORPUS_REPO=$(grep '^CORPUS_REPO=' CORPUS_PIN | cut -d= -f2-)
@@ -163,7 +175,12 @@ carried in Checkpoint 8 below — not a re-run of the harness. AC-294's own disc
 #   test -n "$STABILITY_RECORD" || { echo "FAIL: no stability record path"; exit 1; }
 #   test -s "$STABILITY_RECORD" || { echo "FAIL: no stability record at $STABILITY_RECORD — an absent record must never read as the pass"; exit 1; }
 #   ./target/debug/redkiln lint --facet-stability .redkiln/facets.toml --stability-record "$STABILITY_RECORD"
-# [WILL EXIST] -- re-run at Checkpoint 7e, where s7e:120-121 runs both lints against the product registry.
+# [WILL EXIST] -- re-run at Checkpoint 7e, which runs both lints against the product registry. CITED BY
+# QUOTATION, NOT BY LINE (corrected 2026-09-21): this read "where s7e:120-121 runs both lints" and s7e has
+# since grown to 234 lines, where :120-121 resolves to the `stale_policy` warrant prose instead. The two
+# lines meant are the ones opening `./target/debug/redkiln lint --facet-stability  .redkiln/facets.toml`
+# and `./target/debug/redkiln lint --facet-provenance .redkiln/facets.toml --pinned-corpus`, checkable
+# with `grep -cF` at any later moment.
 # exit 0 only when EITHER zero facets are declared source = "llm",
 # OR a stability record satisfies ALL FIVE clauses:
 #   modal_required_set_identity >= 0.80  AND  n_items >= 20  AND  draws_per_item >= 10
@@ -202,7 +219,14 @@ measurably-wrong half of the registry ungated — which is the state F39 found:
 
 ```bash
 # [WILL EXIST] — Step 4a authors the registry half, Step 7b builds the lint, Step 7e derives the file.
-./target/debug/redkiln lint --facet-provenance .redkiln/facets.toml
+./target/debug/redkiln lint --facet-provenance .redkiln/facets.toml --pinned-corpus .redkiln/corpus-records.toml
+# AMENDED 2026-09-21 (Step 8, operator decision). This line ran WITHOUT `--pinned-corpus` and exited 3:
+# `crates/rk-cli/src/verbs/lint.rs` refuses to default that path in terms -- *"its default ... is specified
+# by no record, and a path invented here would be read as one that was decided."* Checkpoint 7e line 141
+# carried the IDENTICAL defect and was fixed the same way: author `.redkiln/corpus-records.toml` and pass
+# it. The argument is the file 7e authored (six `[[corpus_record]]` rows transcribed from arm D's panel).
+# The line stays a bare invocation, as its `--facet-stability` twin above is: this block is a READ of an
+# exit code, and adding a `|| { ...; exit 1; }` guard here would change what the criterion asserts.
 # exit 0 only when EVERY facet declared source = "derived" names a `deriver` AND a scored precision
 # record exists for it over a pinned corpus, carrying a Wilson 95% interval and a positive-instance
 # count. A facet with NO positive instance is reported NOT MEASURABLE — neither passed nor failed —
@@ -293,7 +317,26 @@ test -n "$(ls -A crates)" || { echo "FAIL: crates/ empty — Checkpoint 8's crat
 test -f .redkiln/facets.toml && test -d .redkiln/packs && test -d .redkiln/catalog || { echo "FAIL: .redkiln/ not derived — Checkpoint 8's registry and pack checks NOT RUN (Halt 8)"; exit 1; }
 
 # no require row keyed on an LLM-emitted facet, and after Step 4a no llm facet at all
-grep -rnE 'require.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b' crates/ .redkiln/ --include=*.rs --include=*.toml; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: an LLM-emitted facet keys a require row, or grep errored (rc=$rc)"; exit 1; }
+# REPAIRED 2026-09-21 (Step 8, operator decision). This was ONE statement and it was RED on a correct
+# tree: nine hits, EVERY ONE A COMMENT -- five doc-comments under crates/ (including
+# `crates/rk-kernel/tests/it/rigor.rs`, whose comment carries this very ban's regex) and four `#`
+# lines under .redkiln/ (three catalog `# reach: ... require row` headers and one 7e pack note).
+# NOT ONE is a require row. s7b settled this family's reading already: *"Comment lines are excluded
+# rather than halted on: the house pattern is a file whose header quotes the governing rule in
+# prose."* Halt 7's rule there -- *"do not widen the guard, and do not write the hit"* -- is why the
+# PROSE does not give way here: it is pre-existing, and one hit is the ban itself.
+# THE PATTERN IS DELIBERATELY NOT WIDENED to s7b's `(require|requires|applicable_if|when)` predicate
+# form. Measured 2026-09-21: that form returns 79 comment-free hits over this line's scope, every one
+# legitimate -- `when = "criticality >= high"` rows in the SHIPPED packs and `applicable_if` rows in
+# the prescribed fixture trees -- because all seven axes are `source = "human"` after Step 4a
+# (ADR-0090), and design 10.2 principle 3 scopes the ban to a facet *sourced from an LLM
+# classification dispatch*. s7b carries that form only behind its two path exclusions; this line's
+# scope includes .redkiln/, where those rows correctly live. The llm half is asserted by the NEXT
+# line, mechanically and completely: zero facets declare `source = "llm"`.
+raw=$(grep -rnE 'require.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b' crates/ .redkiln/ --include=*.rs --include=*.toml); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the LLM-ordinal search could not run (grep rc=$rc; 2 = no such path) -- a count of 0 here would be a fake 0"; exit 1; }
+live=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|/\*|\*)' | grep -vE '^[[:space:]]*$'); test -z "$live" || { echo "FAIL: an LLM-emitted facet keys a require row:"; printf '%s\n' "$live"; exit 1; }
+syn=$(printf 'p.toml:1:require = "has_repro"\n' | grep -E 'require.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|/\*|\*)'); test -n "$syn" || { echo "FAIL: the comment exclusion swallowed a live require row -- this ban is vacuous"; exit 1; }
 test "$(grep -c '^source = "llm"' .redkiln/facets.toml)" = 0 || { echo "FAIL: a facet still declares source = \"llm\" (ADR-0090; DECISIONS-2026-09-11 #2)"; exit 1; }
 
 # stale_policy recorded per cost class, never defaulted from P2 (decision 5; Step 7e; warrant F40 §3)
@@ -301,7 +344,21 @@ set=$(grep -rh 'stale_policy' .redkiln/packs --include=*.toml); test -n "$set" |
 printf '%s\n' "$set" | grep -v 'rematerialise'; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a stale_policy is not rematerialise (rc=$rc)"; exit 1; }
 
 # no require row on a declared or NOT MEASURABLE facet (ADR-0093)
-grep -rnE 'require.*\b(surfaces|data_migration|recent_deploy)\b' .redkiln/packs .redkiln/catalog; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a declared or NOT MEASURABLE facet keys a require row (rc=$rc)"; exit 1; }
+# REPAIRED 2026-09-21 (Step 8, operator decision), same shape as the line above and same warrant.
+# RED on a correct tree: six hits, ALL SIX Step 7e's own `-- DROPPED: [[stage.X.require]] when =
+# 'data_migration'` bookkeeping comments -- records of rows 7e REMOVED yesterday under this very rule.
+# A gate broken by the record of its own enforcement is the defect, not the record.
+# THE PATTERN IS DELIBERATELY NOT WIDENED to the predicate-keyword form here either, and the reason is
+# sharper than above: measured 2026-09-21, that form returns 8 comment-free hits over this scope and
+# EVERY ONE IS AN `applicable_if`, NOT A `require` ROW -- .redkiln/catalog/threat-model.toml,
+# security-review.toml, security-requirements.toml, data-migration-plan.toml and four more. ADR-0093
+# bars these facets from keying a REQUIRE ROW and leaves `applicable_if` as the sanctioned route; 7e's
+# own DROPPED notes say so in terms (*"The demand rides on catalog/threat-model.toml's
+# applicable_if"*). Widening here would make the gate red on the route the record prescribes.
+raw=$(grep -rnE 'require.*\b(surfaces|data_migration|recent_deploy)\b' .redkiln/packs .redkiln/catalog); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the declared/NOT-MEASURABLE search could not run (grep rc=$rc; 2 = no such path) -- a count of 0 here would be a fake 0"; exit 1; }
+live=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|/\*|\*)' | grep -vE '^[[:space:]]*$'); test -z "$live" || { echo "FAIL: a declared or NOT MEASURABLE facet keys a require row:"; printf '%s\n' "$live"; exit 1; }
+syn=$(printf 'p.toml:1:require = "data_migration"\n' | grep -E 'require.*\b(surfaces|data_migration|recent_deploy)\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|/\*|\*)'); test -n "$syn" || { echo "FAIL: the comment exclusion swallowed a live require row -- this ban is vacuous"; exit 1; }
 
 # bisect's ceiling on the SHIPPED catalog — spikes/p9's copy is already green, so it may not be the path (PIA-035)
 grep -q 'max_rigor *= *"recommended"' .redkiln/catalog/bisect.toml || { echo "FAIL: bisect has no max_rigor = \"recommended\" ceiling (P7-CEIL; DECISIONS-2026-09-11 #1)"; exit 1; }
@@ -310,11 +367,50 @@ out=$(cargo test -p rk-kernel -- rigor_monotonicity 2>&1); rc=$?
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: the rigor_monotonicity filter matched 0 tests"; exit 1; }
 
 # ChangeSummary nowhere in crates/ but its rk-ports newtype (ADR-0093; S-BIN unrun — the BrittonGames fixture is not the spike)
-out=$(grep -rn 'ChangeSummary' crates/ --include=*.rs | grep -v 'crates/rk-ports/'); test -z "$out" || { echo "FAIL: ChangeSummary outside rk-ports:"; printf '%s\n' "$out"; exit 1; }
+# REPAIRED 2026-09-21 (Step 8, operator decision). This was a bare MENTION-grep and it was RED on a
+# correct tree: 67 hits across 16 files, most of them comments and every non-comment one a `use` or a
+# trait-method signature that ADR-0094 decision 1 REQUIRES -- both toolchain adapters implement
+# `Toolchain::change_summary`, so they must name the type. NARROWED TO THIS BULLET'S OWN WORDS: *"No
+# finalised `ChangeSummary` type; no synthesised `ChangeSummary` value."* A definition, or a
+# construction, outside rk-ports. Measured 2026-09-21: the ONLY definition in the workspace is
+# `crates/rk-ports/src/toolchain.rs`'s `pub struct ChangeSummary(pub(crate) ())` -- an opaque newtype
+# whose single field is crate-private, so it is neither finalised nor constructible from outside --
+# and there are ZERO constructions anywhere outside rk-ports; both adapters' `change_summary` returns
+# `Err(registry::refusal(...))` and synthesises nothing. So this bullet is TRUE of the tree.
+# THIS IS NOT CHECKPOINT 5'S BAN AND DOES NOT DISCHARGE IT. Checkpoint 5 bans naming THE TYPE at all
+# outside rk-ports (ADR-0099 clause 5) and is RED with four hits in the two adapters -- 7c's debt,
+# PROGRESS.md row 5 RAISED, carried here untouched and NOT closed by this narrowing.
+raw=$(grep -rnE '\b(struct|enum|type|trait)[[:space:]]+ChangeSummary\b|ChangeSummary[[:space:]]*[({]' crates/ --include=*.rs); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the ChangeSummary search could not run (grep rc=$rc; 2 = no such path) -- a count of 0 here would be a fake 0"; exit 1; }
+printf '%s\n' "$raw" | grep -q '^crates/rk-ports/src/toolchain.rs:[0-9]*:pub struct ChangeSummary(' || { echo "FAIL: rk-ports' own opaque newtype was not found by this search -- the ban is looking at the wrong tree"; exit 1; }
+out=$(printf '%s\n' "$raw" | grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|/\*|\*)' | grep -vE '^[[:space:]]*$'); test -z "$out" || { echo "FAIL: a finalised ChangeSummary type or a synthesised ChangeSummary value outside rk-ports:"; printf '%s\n' "$out"; exit 1; }
+syn=$(printf 'x.rs:1:    let s = ChangeSummary(());\n' | grep -E '\b(struct|enum|type|trait)[[:space:]]+ChangeSummary\b|ChangeSummary[[:space:]]*[({]' | grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|/\*|\*)'); test -n "$syn" || { echo "FAIL: the exclusions swallowed a synthesised ChangeSummary value -- this ban is vacuous"; exit 1; }
 
 # card append route never defaulted on; no quality-shorthand default or terminal condition
 grep -rnE 'append(_route)? *= *true' crates/ .redkiln/ --include=*.rs --include=*.toml; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a card append route is enabled by default (rc=$rc)"; exit 1; }
-grep -rnE 'findings\.none\(evidence in \[Reproduced, MutationSurvived\]\)|quality_shorthand *=' crates/ .redkiln/; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: a quality-shorthand default or terminal condition (rc=$rc)"; exit 1; }
+# REPAIRED 2026-09-21 (Step 8, operator decision). RED on a correct tree: six hits -- four comments
+# quoting ADR-0080's forbidden predicate (including the must-REFUSE fixture's own header) and two
+# Rust STRING LITERALS at `crates/rk-kernel/tests/it/evaluator.rs`, which feed that predicate to
+# `truth()` to assert it evaluates Tri::False over a reproduced finding and Tri::True over an absent
+# one. That file is the ENFORCEMENT of the rule; a guard that halts on it and the test that proves the
+# predicate behaves are jointly unsatisfiable. Comments are filtered and that one path is excluded --
+# s7b's route, the EXCLUSION widened rather than the PATTERN narrowed, so a hit anywhere else halts.
+#
+# RAISED, NOT ACTED ON -- an operator decision, not an instrument repair. This pattern matches only the
+# UNQUOTED spelling, and the shipped catalog writes the predicate with QUOTED members. Measured
+# 2026-09-21, a pattern admitting an optional quote returns three live `expr` rows in the SHIPPED
+# catalog -- .redkiln/catalog/root-cause.toml:62, differential-debugging.toml:65 and
+# adversarial-review.toml:41 -- plus the prescribed red fixture
+# crates/rk-kernel/tests/fixtures/activities/terminal_condition_is_findings_none.toml:65, whose own
+# header says it copies that very spelling from `spikes/p9/catalog/root-cause.toml`:62. Whether an
+# `expr` on a `kind = "check"` step carrying `on_false` IS the *terminal condition* ADR-0080 decision 2
+# forbids is a reading of the record, and widening this pattern would turn the gate red on the pack
+# Step 7e authored. That is changing what the gate asserts, so it is NOT taken here: it is carried to
+# the operator as an open question against ADR-0080 and AC-527.
+raw=$(grep -rnE 'findings\.none\(evidence in \[Reproduced, MutationSurvived\]\)|quality_shorthand *=' crates/ .redkiln/); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the quality-shorthand search could not run (grep rc=$rc; 2 = no such path) -- a count of 0 here would be a fake 0"; exit 1; }
+out=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|/\*|\*)' | grep -v '^crates/rk-kernel/tests/it/evaluator.rs:' | grep -vE '^[[:space:]]*$'); test -z "$out" || { echo "FAIL: a quality-shorthand default or terminal condition:"; printf '%s\n' "$out"; exit 1; }
+syn=$(printf 'a.toml:1:expr = "findings.none(evidence in [Reproduced, MutationSurvived])"\n' | grep -E 'findings\.none\(evidence in \[Reproduced, MutationSurvived\]\)|quality_shorthand *=' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|/\*|\*)' | grep -v '^crates/rk-kernel/tests/it/evaluator.rs:'); test -n "$syn" || { echo "FAIL: the exclusions swallowed a live terminal condition -- this ban is vacuous"; exit 1; }
 
 # gix does not own the write path — a SCREEN, because ADR-0098 retains one gix write deliberately
 test -f crates/rk-git/Cargo.toml || { echo "FAIL: rk-git absent — write-path check NOT RUN (Halt 8)"; exit 1; }
