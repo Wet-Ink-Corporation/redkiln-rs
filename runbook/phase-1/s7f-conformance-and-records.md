@@ -30,7 +30,8 @@ against the **design's own closed sets**. This step authors that comparison firs
 measured by something written before them rather than by their own account of themselves.
 
 **This step takes one decision and it is recorded, not taken here**: `ImplReport` becomes the sixth toolchain-keyed
-kind (ADR-0073 amendment, operator decision 2026-09-21). §7f.2 executes it.
+kind. The decision is `DECISIONS-2026-09-21` **D21-4**, taken before this stage opened; §7f.2 executes it, and
+it executes it as a **SUPERSESSION IN PART** (`ADR-0132`), not an amendment — see §7f.2.
 
 ### 7f.1 The conformance gate — four assertions over closed sets, three of them ARMED
 
@@ -73,7 +74,7 @@ out=$(cargo test -p rk-kernel --test it -- shipped_pack_loads 2>&1); rc=$?
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched shipped_pack_loads — the product's own pack is asserted by nothing"; exit 1; }
 ```
 
-### 7f.2 ADR-0073 amended — `ImplReport` is the sixth toolchain-keyed kind
+### 7f.2 `ADR-0132` supersedes ADR-0073 in part — `ImplReport` is the sixth toolchain-keyed kind
 
 **The decision, and its warrant.** `redkiln run` refuses the shipped catalog at `RankTie` over `ImplReport`:
 `hotfix` and `implement-ue` both provide it at `method_rank = 10` and are simultaneously admissible. Measured
@@ -89,12 +90,23 @@ and `spike-decision-review` (`kind:spike`) are disjoint by tag, as are `fix-spec
 is in both sets, so neither pair is ever simultaneously admissible [measured 2026-09-21]. **Keying `ImplReport`
 therefore clears the entire remaining rank-tie surface**, which is why it is taken over narrowing a tag.
 
-**`artifacts.toml` was not at fault** and this is an amendment to the record, not a correction of the pack: the
+**`artifacts.toml` was not at fault** and this moves the RECORD, not the pack: the
 registry carries precisely the **five** keyed kinds the design names — `ChangeSummary`, `Changeset`, `ProfileReport`,
 `ReproCase`, `TestReport` — and `ImplReport`, the same activities' other output, is not among them with no record
-stating why. The amendment moves that count to **six**, and `spikes/p9/artifacts.toml` is **not** edited: §7b.12
+stating why. ADR-0132 moves that count to **six**, and `spikes/p9/artifacts.toml` is **not** edited: §7b.12
 forbids editing the spike registry to make a case go green, and `.redkiln/` is derived output, which is the half
 this step may author.
+
+**IT IS A SUPERSESSION, NOT AN AMENDMENT, AND THE ROUTE IS NOT THE RUNBOOK'S TO CHOOSE.** ADR-0073's five
+keyed kinds are named at `:47-52`, **inside `## Decision`**. ADR-0092 rule 1: *"An erratum ... leaves every
+sentence of `## Decision` ... standing as written. A correction that would move either is a supersession and
+takes a new record."* Adding a sixth moves that sentence. So this step writes **`ADR-0132`, superseding
+ADR-0073 IN PART** — the keyed-kinds sentence only — on ADR-0128→0107's form: 0073 stays `accepted` and gains
+`superseded_by: ["0132"]`, every other clause of it stands (PC7(ii)'s withdrawn specificity tie-break, and its
+explicit *"what replaces the tie-break for kinds that are not keyed is not stated in the source, and is not
+asserted here"*), and `references/adr/README.md` takes its recount and index row in the same commit. The
+record is committed `proposed` and flips on its own dated line — ADR-0126's route, which 0128, 0129 and 0130
+each took.
 
 **Not by `method_rank`.** ADR-0056 makes a tie a **validation error** precisely so that it is not resolved by
 nudging a number; `method_rank` is a method-preference ordering and using it as a tie-break would encode a
@@ -142,8 +154,10 @@ The following remain true, and the four assertions of §7f.1 are run rather than
 cd D:/repos/redkiln-rs
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
 test -d .redkiln/catalog && test -f .redkiln/artifacts.toml || { echo "FAIL: .redkiln/ not derived — Checkpoint 7f NOT RUN (Halt 8)"; exit 1; }
-keyed=$(grep -c '^keyed_by = "toolchain"' .redkiln/artifacts.toml); [ "$keyed" -eq 6 ] || { echo "FAIL: $keyed toolchain-keyed kinds, expected 6 (ADR-0073 as amended 2026-09-21)"; exit 1; }
+keyed=$(grep -c '^keyed_by = "toolchain"' .redkiln/artifacts.toml); [ "$keyed" -eq 6 ] || { echo "FAIL: $keyed toolchain-keyed kinds, expected 6 (ADR-0132, superseding ADR-0073 in part, 2026-09-21)"; exit 1; }
 grep -q '^\[artifact.ImplReport\]' .redkiln/artifacts.toml || { echo "FAIL: ImplReport has no registry entry at all"; exit 1; }
+grep -q 'superseded_by: \["0132"\]' references/adr/0073-*.md || { echo "FAIL: ADR-0073 carries no back-link to 0132 — a one-sided link is a defect, not a shorthand (adr/README.md)"; exit 1; }
+grep -q '^supersedes: \["0073"\]' references/adr/0132-*.md || { echo "FAIL: ADR-0132 does not declare what it supersedes"; exit 1; }
 spike=$(grep -c '^keyed_by = "toolchain"' spikes/p9/artifacts.toml); [ "$spike" -eq 5 ] || { echo "FAIL: spikes/p9/artifacts.toml moved to $spike keyed kinds — §7b.12 forbids editing the spike registry"; exit 1; }
 out=$(cargo test -p rk-kernel --test it -- shipped_pack_loads 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: shipped_pack_loads exited $rc — the product's pack does not load"; printf '%s\n' "$out" | tail -20; exit 1; }

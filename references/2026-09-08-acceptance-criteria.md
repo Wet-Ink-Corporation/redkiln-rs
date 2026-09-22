@@ -1049,11 +1049,28 @@ NEGATIVE criterion.
 
 **AC-059** — `redkiln lint` · evidence: catalog §2.6 (La Rosa contradiction/cycle check); F35 (hard cycles **0** across
 the enumerated lattice) · decisions: ADR-0024
-GIVEN a catalog whose `requires` relation contains a cycle
+GIVEN a catalog whose `requires` relation contains a cycle **in its NON-OPTIONAL subgraph** — a requirement written
+`Kind?` may go unsatisfied, so a loop traversable only through one can always be broken and is not the HARD cycle
+this criterion's own evidence line counts
 WHEN lint runs at load
 THEN load fails with the cycle path named.
 *Verified by:* the cycle lint; a fixture catalog with a 3-node cycle that must fail load. *(Step-5 half split to
 AC-078.)*
+*(Amended 2026-09-21, `DECISIONS-2026-09-21` **D21-1**, D15-2's form — the GIVEN is narrowed to the reading its own
+evidence always carried, and no instrument is added.* As written the GIVEN said *"contains a cycle"* unqualified,
+while `requires_cycle_lint` built an edge for **every** requirement without ever reading `Requirement::optional` —
+a field the type has carried since it was authored. **Step 8 found the consequence:** the shipped
+`.redkiln/catalog` could not be loaded by ANY run — the walk found `adr-record -> design-doc -> adr-record` — and
+`redkiln doctor` passed all **39** rules without seeing it, because no rule covers the selection load path. The
+warrant was already here: F35 measured **hard cycles 0** across the enumerated lattice, and measured 2026-09-21
+over all **102** shipped activities the non-optional subgraph reproduces that **0** exactly, while all three
+mutual pairs (`adr-record`/`design-doc`, `data-migration-plan`/`design-doc`, `design-doc`/`threat-model`) are
+**both-optional**. The lint was repaired at `9d3c469`, watched failing first against
+`crates/rk-kernel/tests/fixtures/catalog-cycle-optional/` — the must-LOAD twin of `catalog-cycle/`, which also
+carries a MIXED pair pinning the reading in between — and `ac059_optional_only_requires_cycle_loads` asserts
+**both** directions, so the 3-node HARD cycle still fails load. This amendment brings the register's wording to
+what the code now does, so an implementer reading the GIVEN builds the lint that exists rather than the one that
+was removed.)*
 
 **AC-078** — `rk-select` · evidence: catalog §2.5 step 5 · decisions: ADR-0024
 GIVEN an assembled DAG that is not acyclic
