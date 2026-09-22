@@ -1,0 +1,58 @@
+# reach: (spike, analysis, optional) — require row "kind == spike" → ExperimentResults
+[activity]
+id           = "technical-spike"
+version      = 1
+stage        = "analysis"
+provides     = ["ExperimentResults"]
+requires     = ["SpikeCharter", "SpikePlan"]
+derived_from = ["SpikeCharter", "SpikePlan"]
+tags         = ["kind:spike"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["ToolReport", "GreenAt", "HumanAnswer?"]
+budget       = { attempts_total = 10, tokens = 800_000, wall_clock_secs = 14400 }
+deviation_ok = []
+keywords     = ["spike", "experiment", "timebox", "prove architecture early"]
+rationale    = "XP spike / DA 'Prove Architecture Early': code that answers one question inside a time-box; the checkpoints in the SpikePlan bound the loop."
+
+[[step]]
+id      = "experiment"
+kind    = "agent"
+role    = "implementer"
+for_each = "artifact:SpikePlan.checkpoints"
+inputs  = { checkpoint = "${item}", charter = "artifact:SpikeCharter", plan = "artifact:SpikePlan" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "run"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${experiment.outputs[*].tests_added}" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "measure"
+kind    = "agent"
+role    = "investigator"
+inputs  = { runs = "${experiment.outputs}", report = "${run.outputs}", charter = "artifact:SpikeCharter" }
+outputs = "value:ExperimentResults"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "exhausted"
+kind    = "gate"
+when    = "${measure.outputs.timebox_exhausted} == true and ${measure.outputs.kill_hit} == null"
+question = "spike.timebox-exhausted"
+inputs  = { results = "${measure.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ExperimentResults = "${measure.outputs}" }
+evidence  = ["${run}", "${exhausted?}"]

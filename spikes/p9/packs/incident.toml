@@ -53,5 +53,5 @@ finally = true
 when = "rigor >= recommended"
 artifacts = ["KBAtoms"]
 [[stage.closeout.spawn]]
-when = "exists(ProblemRecord)"
+when = "${ProblemRecord?} != null"
 kind = "initiative"

@@ -1,0 +1,59 @@
+# reach: (incident, analysis, optional) — require row "kind == incident" → IncidentTimeline
+[activity]
+id           = "timeline-reconstruction"
+version      = 1
+stage        = "analysis"
+provides     = ["IncidentTimeline"]
+requires     = ["IncidentRecord"]
+derived_from = ["IncidentRecord"]
+tags         = ["kind:incident", "kind:security-vuln"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?"]
+budget       = { attempts_total = 4, tokens = 250_000, wall_clock_secs = 3600 }
+human_source_ok = true
+deviation_ok = []
+keywords     = ["incident timeline", "evidence links", "detected mitigated resolved"]
+rationale    = "PagerDuty: 'the timeline should be the main focus' of a postmortem; reconstructed from chat, alerts and deploy log with links, before the causes are argued."
+
+[[step]]
+id      = "reconstruct"
+kind    = "agent"
+role    = "investigator"
+inputs  = { incident = "artifact:IncidentRecord", chat = "toolchain:chat_log?", alerts = "toolchain:alerts?", deploys = "toolchain:deploy_log?", findings = "${adversary.outputs?}" }
+outputs = "value:IncidentTimeline"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "investigator"
+inputs  = { draft = "${reconstruct.outputs}", checklist = "checklist:postmortem-sections" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { timeline = "${reconstruct.outputs}", incident = "artifact:IncidentRecord" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", timeline = "${reconstruct.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and timeline.detected_at != null and timeline.mitigated_at != null and findings.none(severity in ['blocking'])"
+on_false = { to = "reconstruct", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { IncidentTimeline = "${reconstruct.outputs}" }
+evidence  = ["${self-check}", "${adversary?}"]

@@ -1,0 +1,41 @@
+# reach: (bug, closeout, optional) — proposal §3: closeout at optional yields only debt-logging
+[activity]
+id           = "debt-logging"
+version      = 1
+stage        = "closeout"
+provides     = ["DebtRegisterEntry"]
+requires     = ["ImplReport"]
+derived_from = ["ImplReport"]
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:security-vuln", "kind:chore"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 2, tokens = 50_000, wall_clock_secs = 600 }
+deviation_ok = ["skip"]
+keywords     = ["tech debt", "shortcuts", "debt register"]
+rationale    = "DA 'Improve Quality': every shortcut recorded in the implementation report becomes a tracked tech-debt item, or the report says there were none."
+
+[[step]]
+id      = "extract"
+kind    = "agent"
+role    = "implementer"
+inputs  = { report = "artifact:ImplReport" }
+outputs = "value:DebtRegisterEntry"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "file"
+kind    = "tool"
+run     = "toolchain:item_create"
+inputs  = { items = "${extract.outputs.items}" }
+outputs = "value:ItemRefs"
+timeout_secs = 60
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { DebtRegisterEntry = "${extract.outputs}" }
+evidence  = ["${file}"]

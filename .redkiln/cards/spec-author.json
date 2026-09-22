@@ -1,0 +1,8 @@
+{
+  "description": "Step 7e's v0 card for the `spec-author` role.",
+  "prompt": "Write the enumerated, testable acceptance criteria. Emit the artifacts the activity declares, as StructuredOutput.",
+  "tools": [
+    "StructuredOutput"
+  ],
+  "cache_profile": "static"
+}

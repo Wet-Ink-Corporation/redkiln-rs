@@ -1,0 +1,58 @@
+# reach: (initiative, closeout, recommended) — require row "kind in [initiative, project, spike, incident]" → KBAtoms
+[activity]
+id           = "knowledge-harvest"
+version      = 1
+stage        = "closeout"
+provides     = ["KBAtoms"]
+requires     = ["Retrospective?", "Postmortem?", "ADR?", "SpikeReport?", "DesignDoc?"]
+derived_from = ["Retrospective?", "Postmortem?", "ADR?", "SpikeReport?"]
+tags         = ["kind:initiative", "kind:project", "kind:spike", "kind:incident", "kind:tech-debt"]
+method_rank  = 10
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["ToolReport", "Findings?"]
+budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = ["skip"]
+keywords     = ["knowledge base", ".kb", "atoms", "supersede", "diataxis explanation"]
+rationale    = "The closeout skill's harvest: concepts, decisions and playbooks into .kb with valid frontmatter; accepted decisions are superseded, never edited."
+
+[[step]]
+id      = "extract"
+kind    = "agent"
+role    = "investigator"
+inputs  = { retro = "artifact:Retrospective?", postmortem = "artifact:Postmortem?", adr = "artifact:ADR?", spike = "artifact:SpikeReport?", design = "artifact:DesignDoc?", index = "toolchain:kb_index", kb = "kb:kb-conventions", validation = "${validate.outputs?}", findings = "${adversary.outputs?}" }
+outputs = "value:KBAtoms"
+timeout_secs = 1200
+retry   = { max = 2 }
+
+[[step]]
+id      = "validate"
+kind    = "tool"
+run     = "toolchain:kb_write"
+inputs  = { atoms = "${extract.outputs.atoms}", superseded = "${extract.outputs.superseded}" }
+outputs = "value:LintReport"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= mandatory"
+inputs  = { atoms = "${extract.outputs}", index = "toolchain:kb_index" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { lint = "${validate.outputs}", findings = "${adversary.outputs?}" }
+expr    = "lint.errors.len() == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "extract", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { KBAtoms = "${extract.outputs}" }
+evidence  = ["${validate}", "${adversary?}"]

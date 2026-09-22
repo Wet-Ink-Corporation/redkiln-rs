@@ -1,0 +1,52 @@
+# reach: (incident, analysis, optional) — require row "kind == incident" → CausalChain
+# causal family: five-whys(10) < fishbone-analysis(20) < fault-tree-analysis(30); all provide CausalChain
+[activity]
+id           = "five-whys"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "analysis"
+provides     = ["CausalChain"]
+requires     = ["RootCause", "IncidentTimeline?"]
+derived_from = ["RootCause"]
+tags         = ["kind:incident", "kind:bug"]
+method_rank  = 10
+family       = "causal"
+max_rigor    = "recommended"   # §9c.26 ceiling — the family escalates above this
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 1200 }
+deviation_ok = ["add"]
+keywords     = ["five whys", "systemic cause", "toyota"]
+rationale    = "Ohno's five whys: from the technical cause to the systemic one, cheaply; fishbone and fault-tree are added when the chain is not linear."
+
+[[step]]
+id      = "ask"
+kind    = "agent"
+role    = "investigator"
+inputs  = { cause = "artifact:RootCause", timeline = "artifact:IncidentTimeline?", findings = "${adversary.outputs?}" }
+outputs = "value:CausalChain"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { chain = "${ask.outputs}", cause = "artifact:RootCause" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { chain = "${ask.outputs}", findings = "${adversary.outputs?}" }
+expr    = "chain.whys.len() >= 3 and chain.systemic_cause != null and findings.none(severity in ['blocking'])"
+on_false = { to = "ask", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { CausalChain = "${ask.outputs}" }
+evidence  = ["${adversary?}"]

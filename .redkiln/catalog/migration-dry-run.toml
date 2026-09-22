@@ -1,0 +1,58 @@
+# reach: (story, verify, recommended) with data_migration — require row → MigrationTestReport
+[activity]
+id           = "migration-dry-run"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "verify"
+provides     = ["MigrationTestReport"]
+requires     = ["MigrationScript", "DataMigrationPlan"]
+derived_from = ["MigrationScript"]
+tags         = ["kind:story", "kind:project", "kind:tech-debt", "kind:bug"]   # P6 run3 gap
+applicable_if = "data_migration != null and data_migration"
+method_rank  = 10
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["ToolReport", "Findings?"]
+budget       = { attempts_total = 4, tokens = 150_000, wall_clock_secs = 7200 }
+deviation_ok = []
+keywords     = ["migration dry run", "prod-like data", "invariants", "row counts"]
+rationale    = "DORA database change management: run the migration and backfill on prod-like data; counts and invariants are the verdict, a reviewer reads the plan against the result at mandatory."
+
+[[step]]
+id      = "run"
+kind    = "tool"
+run     = "toolchain:migrate_dry_run"
+inputs  = { files = "artifact:MigrationScript.files", plan = "artifact:DataMigrationPlan" }
+outputs = "value:MigrationTestReport"
+timeout_secs = "${toolchain.migration_timeout}"
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "ok"
+kind    = "check"
+inputs  = { report = "${run.outputs}" }
+expr    = "report.status == 'passing' and report.invariants_ok == true"
+on_false = "fail"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= mandatory"
+inputs  = { report = "${run.outputs}", plan = "artifact:DataMigrationPlan" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { findings = "${adversary.outputs?}", report = "${run.outputs}" }
+expr    = "findings.none(severity in ['blocking'])"
+on_false = "fail"
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { MigrationTestReport = "${run.outputs}" }
+evidence  = ["${run}", "${adversary?}"]

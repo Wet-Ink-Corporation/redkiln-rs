@@ -1,0 +1,59 @@
+# reach: (story, review, optional) with criticality < high — require row → ReviewVerdict
+# review family: checklist-review(10) < code-review(20) < adversarial-review(30) < formal-inspection(40)
+#   `rigor` in applicable_if keeps ReviewVerdict satisfiable at optional where adversarial-review (min recommended) is ineligible (F34 ambiguity B19)
+[activity]
+id           = "code-review"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = ["ChangeSummary", "Spec?", "TestReport?"]   # P6 run2 fix: incidents forbid specification
+derived_from = ["ChangeSummary", "Spec"]
+tags         = ["kind:story", "kind:bug", "kind:tech-debt", "kind:security-vuln", "kind:project", "kind:incident"]   # P6 run1 fix: incident had no ReviewVerdict producer
+method_rank  = 20
+family       = "review"
+max_rigor    = "recommended"   # §9c.26 ceiling — the family escalates above this
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["Findings", "HumanAnswer?"]
+budget       = { attempts_total = 3, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = ["add"]
+keywords     = ["code review", "google eng-practices", "what to look for"]
+rationale    = "Google eng-practices 'what to look for' as a findings-only pass; without Bash in a clone it is the F23 baseline, which is why it yields to adversarial-review at high criticality."
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { change = "artifact:ChangeSummary", spec = "artifact:Spec?", tests = "artifact:TestReport?", checklist = "checklist:code-review" }
+outputs = "value:Findings"
+timeout_secs = "${toolchain.review_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { findings = "${review.outputs}" }
+expr    = "findings.none(severity in ['blocking'])"
+on_false = "continue"
+
+[[step]]
+id      = "override"
+kind    = "gate"
+when    = "rigor >= mandatory and ${review.outputs.items}.len() > 0"
+question = "review.blocking"
+inputs  = { findings = "${review.outputs}" }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { findings = "${review.outputs}", override = "${override.answer?}" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReviewVerdict = "${record.outputs}" }
+evidence  = ["${review}", "${override?}"]

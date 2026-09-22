@@ -1,0 +1,41 @@
+# reach: (story, release, recommended) with data_migration — require row → MigrationLog
+[activity]
+id           = "migration-expand-execute"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "release"
+provides     = ["MigrationLog"]
+requires     = ["MigrationScript", "MigrationTestReport", "ReviewVerdict"]
+derived_from = ["MigrationScript", "MigrationTestReport"]
+tags         = ["kind:story", "kind:project", "kind:tech-debt", "kind:bug"]   # P6 run1 fix
+applicable_if = "data_migration != null and data_migration"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["ToolReport?", "HumanAnswer"]
+budget       = { attempts_total = 4, tokens = 20_000, wall_clock_secs = 14400 }
+deviation_ok = []
+keywords     = ["expand phase", "backfill", "production migration", "parallel change"]
+rationale    = "Parallel Change expand phase in production after a passing dry run; a human proceeds at recommended and above because the rollback is data, not code."
+
+[[step]]
+id      = "approve"
+kind    = "gate"
+question = "migration.execute"
+inputs  = { script = "artifact:MigrationScript", dry = "artifact:MigrationTestReport" }
+
+[[step]]
+id      = "execute"
+kind    = "tool"
+run     = "toolchain:migrate"
+when    = "${approve.answer} == 'proceed'"
+inputs  = { files = "artifact:MigrationScript.files", phase = "expand" }
+outputs = "value:MigrationLog"
+timeout_secs = "${toolchain.migration_timeout}"
+retry   = { max = 1 }
+memo    = false
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { MigrationLog = { decision = "${approve.answer}", status = "${execute.outputs.status?}", phase = "${execute.outputs.phase?}", sha = "${execute.outputs.sha?}", errors = "${execute.outputs.errors?}" } }   # composing emit (§9c.34); the gate is now unconditional
+evidence  = ["${approve}", "${execute?}"]

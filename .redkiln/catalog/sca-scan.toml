@@ -1,0 +1,46 @@
+# reach: (story, verify, recommended) with 'text' in change — require row → ScanReport; (security-vuln, verify, optional)
+[activity]
+id           = "sca-scan"
+version      = 1
+stage        = "verify"
+provides     = ["ScanReport"]
+requires     = ["Changeset"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:project", "change:text"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 2, tokens = 20_000, wall_clock_secs = 1200 }
+deviation_ok = []
+keywords     = ["SCA", "software composition analysis", "SSDF PW.4 RV.1", "cyclonedx"]
+rationale    = "SSDF PW.4/RV.1: the dependency set at the change's sha is matched against advisories; critical/high findings are a human exception, never silently passed."
+
+[[step]]
+id      = "scan"
+kind    = "tool"
+run     = "toolchain:sca_scan"
+inputs  = { sha = "artifact:Changeset.sha", sbom = "toolchain:sbom?" }
+outputs = "value:ScanReport"
+timeout_secs = "${toolchain.scan_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "clean"
+kind    = "check"
+inputs  = { report = "${scan.outputs}" }
+expr    = "report.critical == 0 and report.high == 0"
+on_false = "continue"
+
+[[step]]
+id      = "exception"
+kind    = "gate"
+when    = "${scan.outputs.critical} > 0 or ${scan.outputs.high} > 0"
+question = "scan.accept-findings"
+inputs  = { report = "${scan.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ScanReport = "${scan.outputs}" }
+evidence  = ["${scan}", "${exception?}"]

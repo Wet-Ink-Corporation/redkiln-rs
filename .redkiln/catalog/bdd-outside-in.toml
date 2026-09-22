@@ -1,0 +1,88 @@
+# reach: (story, implement, *) — deviation add only: tdd(20) tags story and has no applicable_if (F34 ambiguity B1)
+# implement loop family: test-after(10) < tdd-red-green-refactor(20) < bdd-outside-in(30)
+[activity]
+id           = "bdd-outside-in"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["Spec", "GherkinScenarios"]
+derived_from = ["Spec", "GherkinScenarios"]
+tags         = ["kind:story", "change:text"]
+method_rank  = 30
+family       = "implement-loop"
+min_rigor    = "recommended"
+cost_class   = "L"
+evidence     = ["GreenAt", "ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 12, tokens = 800_000, wall_clock_secs = 10800 }
+deviation_ok = ["downgrade"]
+keywords     = ["bdd", "outside-in", "GOOS", "acceptance test first"]
+rationale    = "Freeman & Pryce: a failing acceptance scenario drives the units inward; only worth it when Gherkin scenarios already exist."
+
+[[step]]
+id      = "acceptance-red"
+kind    = "agent"
+role    = "implementer"
+for_each = "artifact:GherkinScenarios.scenarios"
+inputs  = { scenario = "${item}", spec = "artifact:Spec" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "red-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${acceptance-red.outputs[*].tests_added}" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "red-check"
+kind    = "check"
+inputs  = { report = "${red-verify.outputs}" }
+expr    = "report.failed > 0 and report.passed == 0"
+on_false = "fail"
+
+[[step]]
+id      = "inward"
+kind    = "agent"
+role    = "implementer"
+inputs  = { spec = "artifact:Spec", red = "${acceptance-red.outputs}", last = "${green-verify.outputs?}", hint = "${green-gate.answer?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+repeat  = { until = "${green-verify.outputs.status} == 'passing'", max = 4 }
+on_exhausted = "escalate"
+escalate = { question = "tdd.green-exhausted" }
+
+[[step]]
+id      = "green-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green-gate"
+kind    = "gate"
+question = "tdd.green-exhausted"
+when    = "${green-verify.outputs.status} != 'passing'"
+inputs  = { report = "${green-verify.outputs}", impl = "${inward.outputs}" }
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${inward.outputs}" }
+evidence  = ["${red-verify}", "${green-verify}", "${green-gate?}"]

@@ -1,0 +1,77 @@
+# reach: (project, discovery, mandatory) with novelty >= high — require row → PrototypeFindings
+# prototype family: prototype-test(10) < design-sprint(40); both provide PrototypeFindings
+[activity]
+id           = "prototype-test"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "discovery"
+provides     = ["PrototypeFindings"]
+requires     = ["ProblemStatement", "AssumptionList?"]
+derived_from = ["ProblemStatement", "AssumptionList?"]
+tags         = ["kind:initiative", "kind:project", "kind:spike"]
+applicable_if = "novelty >= high"
+method_rank  = 10
+family       = "prototype"
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 6, tokens = 400_000, wall_clock_secs = 5400 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["prototype", "throwaway", "solution test", "desirability"]
+rationale    = "SWEBOK ch.1 §5.3 prototyping / Torres solution tests: a throwaway build answers the riskiest assumption cheaper than a spec does."
+
+[[step]]
+id      = "scope"
+kind    = "agent"
+role    = "planner"
+inputs  = { problem = "artifact:ProblemStatement", assumptions = "artifact:AssumptionList?" }
+outputs = "value:PrototypeBuild"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "build"
+kind    = "agent"
+role    = "implementer"
+inputs  = { scope = "${scope.outputs}", last = "${build-check.outputs?}" }
+outputs = "value:PrototypeBuild"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "build-check"
+kind    = "tool"
+run     = "toolchain:build"
+inputs  = { path = "${build.outputs.path}" }
+outputs = "value:BuildReport"
+timeout_secs = "${toolchain.build_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "builds"
+kind    = "check"
+inputs  = { report = "${build-check.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "build", max = 2 }
+
+[[step]]
+id      = "user-test"
+kind    = "gate"
+when    = "rigor >= recommended"
+question = "prototype.user-test"
+inputs  = { build = "${build.outputs}" }
+
+[[step]]
+id      = "evaluate"
+kind    = "agent"
+role    = "investigator"
+inputs  = { build = "${build.outputs}", assumptions = "artifact:AssumptionList?", sessions = "${user-test.answer?}" }
+outputs = "value:PrototypeFindings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { PrototypeFindings = "${evaluate.outputs}" }
+evidence  = ["${build-check}", "${user-test?}"]

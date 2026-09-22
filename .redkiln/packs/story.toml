@@ -1,0 +1,549 @@
+# v0 pack: story (Node/.NET/text toolchains). Authored 2026-09-07 for P6 before any lattice run.
+# NO RECORD names this number. The corpus anchors the FLOOR: F18/F19's gates
+# had no deadline mechanism and the longest was answered at 226 h (AC register,
+# expiry scope note), so a deadline under that would have expired gates that
+# were in fact answered. 10 days clears it. Authored at Step 7e -- RT-57, OWED.
+gate_deadline_secs = 864000
+[pack]
+id = "story"
+applies = "kind == story and not ('unreal' in toolchain)"
+appetite = { points = 60 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", analysis = "optional", specification = "mandatory", design = "recommended", planning = "optional", implement = "mandatory", verify = "mandatory", review = "mandatory", release = "mandatory", operate = "optional", closeout = "optional" }
+
+[stage.specification]
+goal = "Enumerated, testable acceptance criteria"
+baseline = ["Spec"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.specification.require]] when = 'auth', artifacts = ["SecurityRequirements"]. `auth` withdrawn from the registry; a require row may never key on `surfaces` (ADR-0089 d2/ADR-0093 d1). The demand rides on catalog/security-requirements.toml's applicable_if.
+[[stage.specification.require]]
+when = "external_dep"
+artifacts = ["APIContract"]
+
+[stage.design]
+goal = "Decisions recorded where the change is risky"
+baseline = []
+# Step 7e (2026-09-21) -- NARROWED. `auth` withdrawn and `data_migration` NOT MEASURABLE -- both disjuncts barred from a require row (ADR-0089 d2/ADR-0093 d1; AC-520). `external_dep` is source = "human" and survives, so the row NARROWS rather than dropping: ThreatModel is still required on an external dependency. The auth branch rides on catalog/threat-model.toml's applicable_if.
+[[stage.design.require]]
+when = "external_dep"
+artifacts = ["ThreatModel"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.design.require]] when = 'data_migration', artifacts = ["DataMigrationPlan"]. `data_migration` is NOT MEASURABLE (0 positives at the pin) and deriver_class "lexical" -- it may key no require row (AC-520, ADR-0093 d2).
+# Step 7e (2026-09-21) -- DROPPED: [[stage.design.require]] when = 'ui', artifacts = ["UXDesign"]. `ui` is deriver_class "lexical" -- it may key no require row (AC-520). S-FACET gates it, so it is excluded from Phase 1's acceptance set.
+[[stage.design.require]]
+when = "size >= high"
+artifacts = ["ArchitectureDescription", "DesignDoc"]
+[[stage.design.require]]
+when = "novelty >= high"
+artifacts = ["ADR"]
+
+[stage.planning]
+goal = "Sized; rollout chosen when blast radius warrants"
+baseline = ["Estimate"]
+[[stage.planning.require]]
+when = "blast_radius >= med"
+artifacts = ["RolloutPlan"]
+
+[stage.implement]
+goal = "A tested, summarised change"
+baseline = ["Changeset", "ImplReport", "ChangeSummary"]
+[[stage.implement.require]]
+when = "blast_radius >= med"
+artifacts = ["FlagRecord"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.implement.require]] when = 'data_migration', artifacts = ["MigrationScript"]. `data_migration` may key no require row (AC-520, ADR-0093 d2).
+[[stage.implement.require]]
+when = "rigor >= recommended"
+artifacts = ["Docs"]
+
+[stage.verify]
+
+goal = "AC demonstrated, nothing regressed"
+baseline = ["TestReport", "SmokeResult"]
+# R3 (2026-09-08): criticality raises the rigor of test design; the family escalates on rigor only (§9c.26, D20)
+[[stage.verify.require]]
+when = "criticality >= high"
+artifacts = ["TestReport"]
+rigor = "mandatory"
+[[stage.verify.require]]
+when = "'text' in change"
+artifacts = ["ScanReport"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.verify.require]] when = 'data_migration', artifacts = ["MigrationTestReport"]. `data_migration` may key no require row (AC-520, ADR-0093 d2).
+[[stage.verify.require]]
+when = "external_dep"
+artifacts = ["IntegrationReport"]
+[[stage.verify.require]]
+when = "criticality >= high and rigor >= mandatory"
+artifacts = ["MutationSummary"]
+
+[stage.review]
+
+goal = "Independent verdict"
+baseline = ["ReviewVerdict"]
+# R3 (2026-09-08): criticality raises the rigor of the change review (§9c.26, D20)
+[[stage.review.require]]
+when = "criticality >= high"
+artifacts = ["ReviewVerdict"]
+rigor = "mandatory"
+# Step 7e (2026-09-21) -- DROPPED: [[stage.review.require]] when = 'auth', artifacts = ["SecurityReviewVerdict"]. `auth` withdrawn (ADR-0089 d2/ADR-0093 d1). The demand rides on catalog/security-review.toml's applicable_if.
+[[stage.review.require]]
+when = "blast_radius >= high"
+artifacts = ["ChangeRecord"]
+
+[stage.release]
+goal = "In production, reversibly"
+baseline = ["BuildArtifact", "ReleaseRecord"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.release.require]] when = 'data_migration', artifacts = ["MigrationLog"]. `data_migration` may key no require row (AC-520, ADR-0093 d2).
+
+[stage.operate]
+goal = "Watched after release when the blast radius is high"
+baseline = []
+[[stage.operate.require]]
+when = "blast_radius >= high"
+artifacts = ["SLOReport"]
+
+[stage.closeout]
+goal = "Closed, debt logged"
+baseline = ["ClosureRecord", "DebtRegisterEntry"]
+finally = true
+[[stage.closeout.require]]
+when = "rigor >= recommended"
+artifacts = ["Retrospective"]
+
+# ============================================================================
+# Step 7e (2026-09-21) -- the installed pack's own tables.
+#
+# `spikes/p9/` authored none of these: measured 2026-09-14, `grep -rn
+# 'attempts_cap|consecutive_platform|tokens' spikes/p9/packs/` -> 0 hits across all
+# twelve shipped packs. `crates/rk-kernel/src/workflow/envelope.rs`:66-69 names them
+# as this step's: "the shipped packs' own tables are Step 7e's". The record fixing
+# the key SPELLINGS is RT-57, routed at `s7d` §7d.18 as "7e's pack schema record
+# re-points" -- OWED BY THIS STEP, not discharged by authoring the keys.
+# ============================================================================
+
+# --- the staleness policy, per cost class, with its warrant (§7e.3) ---
+#
+# Decision 5 (DECISIONS-2026-09-11 #4) and ADR-0117 clause 1: `rematerialise`, at
+# COARSE `derived_from` scope, for EVERY class in Phase 1. Fine scope stays
+# available and is never mandatory. ADR-0117 clause 2: METHOD-P §2.4 criterion 1's
+# prescribed remedy is NOT applied. The warrant, beside the value:
+#   F40 §3-§4 -- coarse marks 5 Stale vs fine 15 on the 33 rows both scopes scored;
+#   10 rows flip Present->Stale coarse-to-fine, none the other way [§3]; criterion 1's
+#   own remedy is contraindicated [§4] (Halt 12).
+#
+# The kernel deliberately does NOT read this key -- `crates/rk-kernel/src/select/
+# pack.rs`:45-47, "PROVISIONAL under ADR-0117 clause 4 ... deliberately not read".
+# AC-068's register-named instrument `redkiln lint --stale-policy` does not exist in
+# the CLI Step 7d built, so the only verifier of these rows is Checkpoint 7e's grep.
+# That substitution is DECLARED here rather than left for the grep to paper over.
+
+[policy.S]
+stale_policy = "rematerialise"   # decision 5; coarse derived_from scope
+
+[policy.M]
+stale_policy = "rematerialise"   # decision 5; coarse derived_from scope
+
+[policy.L]
+stale_policy = "rematerialise"   # decision 5; coarse derived_from scope
+
+[policy.XL]
+stale_policy = "rematerialise"   # decision 5; coarse derived_from scope
+
+# --- the retry envelope (AC-029) ---
+#
+# BACKOFF IS NOT HERE. Base 2 s and the 5 min cap are KERNEL policy stated in
+# AC-029 (PIA-055: "only K, N and the appetite are pack values"); a code default
+# for either is refused, and so is a pack declaration of them.
+#
+# DERIVED: each class's N is the maximum `budget.attempts_total` any activity in
+# that class declares, so the pack's N can never contradict a catalog budget --
+# AC-029: "the attempt count never exceeds the pack's N".
+#   S -> 6;  M -> 8;  L -> 12;  XL -> 14
+#
+# `attempts_cap` is FLAT and is the key the kernel actually reads
+# (`select/pack.rs`:340 `declared_u32(&doc, "retry", "attempts_cap", ...)`);
+# `require_attempt_cap` refuses a pack that declares none, so the per-class tables
+# below are IN ADDITION TO it, never instead of it.
+
+[retry]
+attempts_cap = 14   # the max across every class, so no activity can exceed it
+
+[retry.S]
+attempts = 6
+
+[retry.M]
+attempts = 8
+
+[retry.L]
+attempts = 12
+
+[retry.XL]
+attempts = 14
+
+# --- breaker, margins, cache, gate deadline ---
+#
+# 🛑 THE THREE NUMBERS BELOW MARKED `NO RECORD` ARE AUTHORED HERE AND NAMED BY NO
+# RECORD. They are written because `PackExtras` and the doctor rule table require
+# them and a code default is refused; the record that fixes them is RT-57's, OWED.
+
+[breaker]
+# AC-033: "K consecutive `Platform` failures for one model family". K is a pack
+# value; NO RECORD names the number.
+consecutive_platform_failures = 3   # NO RECORD -- authored at Step 7e (RT-57)
+expiry_secs = 600                   # NO RECORD -- authored at Step 7e (RT-57)
+
+[margins]
+# A margin below 2 ticks is a load-time lint error (AC register: "margin_ticks < 2"),
+# so 2 is the floor. 10 ticks is the PRIOR-ART value moved out of code: the runner's
+# `max_five_hour: 0.90` was a code margin (`rk-adapter-claude/src/throttle.rs`:26),
+# and ADR-0078's point is that it comes from the pack, never "from a code default".
+five_hour = 10
+seven_day = 10
+
+[cache]
+# DERIVED from `rk_adapter_claude::config::CACHE_TTL` (= '1h'), which is itself
+# ADR-0078 (ii)'s recorded value, not a code guess. RK-D-TTL compares against it
+# and AC-210 names both keys.
+prompt_ttl = "1h"
+subagent_prompt_ttl = "1h"
+
+# --- the roles this pack declares (RK-D-DANGLING-ROLE) ---
+#
+# The eight roles the shipped catalog's steps nominate, measured on disk:
+#   architect, implementer, investigator, operator, planner, releaser, reviewer, spec-author
+
+[role.architect]
+family = "claude"
+
+[role.implementer]
+family = "claude"
+
+[role.investigator]
+family = "claude"
+
+[role.operator]
+family = "claude"
+
+[role.planner]
+family = "claude"
+
+[role.releaser]
+family = "claude"
+
+[role.reviewer]
+family = "claude"
+
+[role.spec-author]
+family = "claude"
+
+# --- per-activity timeouts (RK-D-TIMEOUT, AC-097) ---
+#
+# DERIVED, one per shipped activity, from that activity's OWN declared
+# `budget.wall_clock_secs` in the catalog. Not a chosen number: all 102 activities
+# declare one (measured 2026-09-21), so every row here is a transcription.
+# Both installed packs carry the full set, so that disabling either leaves the
+# other independently complete.
+
+[activity.adr-record]
+timeout_secs = 1200
+
+[activity.adversarial-review]
+timeout_secs = 7200
+
+[activity.api-contract-spec]
+timeout_secs = 3600
+
+[activity.appetite-check]
+timeout_secs = 1200
+
+[activity.architecture-tradeoff-analysis]
+timeout_secs = 7200
+
+[activity.assumption-mapping]
+timeout_secs = 1200
+
+[activity.bdd-outside-in]
+timeout_secs = 10800
+
+[activity.bdd-scenarios]
+timeout_secs = 3600
+
+[activity.bisect]
+timeout_secs = 7200
+
+[activity.blameless-postmortem]
+timeout_secs = 432000
+
+[activity.blue-green-deploy]
+timeout_secs = 10800
+
+[activity.branch-by-abstraction]
+timeout_secs = 14400
+
+[activity.build-package]
+timeout_secs = 3600
+
+[activity.c4-component]
+timeout_secs = 1800
+
+[activity.c4-container]
+timeout_secs = 1800
+
+[activity.c4-context]
+timeout_secs = 1800
+
+[activity.canary-release]
+timeout_secs = 14400
+
+[activity.change-authorization]
+timeout_secs = 1800
+
+[activity.change-summary]
+timeout_secs = 600
+
+[activity.change-summary-ue]
+timeout_secs = 10800
+
+[activity.checklist-review]
+timeout_secs = 900
+
+[activity.closure-record]
+timeout_secs = 1200
+
+[activity.code-review]
+timeout_secs = 3600
+
+[activity.competitor-analysis]
+timeout_secs = 1800
+
+[activity.confirmation-test]
+timeout_secs = 1800
+
+[activity.data-migration-plan]
+timeout_secs = 3600
+
+[activity.debt-logging]
+timeout_secs = 600
+
+[activity.dependency-update]
+timeout_secs = 3600
+
+[activity.design-doc]
+timeout_secs = 3600
+
+[activity.design-review]
+timeout_secs = 3600
+
+[activity.design-review-lightweight]
+timeout_secs = 1800
+
+[activity.design-sprint]
+timeout_secs = 432000
+
+[activity.differential-debugging]
+timeout_secs = 5400
+
+[activity.discovery-report]
+timeout_secs = 2400
+
+[activity.docs-update]
+timeout_secs = 2400
+
+[activity.equivalence-boundary]
+timeout_secs = 5400
+
+[activity.exploitability-analysis]
+timeout_secs = 3600
+
+[activity.failover]
+timeout_secs = 5400
+
+[activity.fault-tree-analysis]
+timeout_secs = 3600
+
+[activity.feature-flag-kill]
+timeout_secs = 5400
+
+[activity.feature-flag-wrap]
+timeout_secs = 3600
+
+[activity.fishbone-analysis]
+timeout_secs = 1800
+
+[activity.five-whys]
+timeout_secs = 1200
+
+[activity.fix-design]
+timeout_secs = 1800
+
+[activity.fix-spec]
+timeout_secs = 1800
+
+[activity.flag-progressive-rollout]
+timeout_secs = 86400
+
+[activity.formal-inspection]
+timeout_secs = 86400
+
+[activity.hotfix]
+timeout_secs = 5400
+
+[activity.implement-ue]
+timeout_secs = 21600
+
+[activity.incident-command]
+timeout_secs = 28800
+
+[activity.instrumented-trace-analysis]
+timeout_secs = 7200
+
+[activity.integration-tests]
+timeout_secs = 5400
+
+[activity.knowledge-harvest]
+timeout_secs = 3600
+
+[activity.lightweight-retro]
+timeout_secs = 600
+
+[activity.migration-dry-run]
+timeout_secs = 7200
+
+[activity.migration-expand-execute]
+timeout_secs = 14400
+
+[activity.minimal-repro]
+timeout_secs = 3600
+
+[activity.minimal-repro-ue]
+timeout_secs = 10800
+
+[activity.mutation-testing]
+timeout_secs = 7200
+
+[activity.opportunity-solution-tree]
+timeout_secs = 2400
+
+[activity.outcome-definition]
+timeout_secs = 1200
+
+[activity.problem-framing]
+timeout_secs = 1800
+
+[activity.problem-record]
+timeout_secs = 1200
+
+[activity.production-readiness-review]
+timeout_secs = 7200
+
+[activity.property-based-testing]
+timeout_secs = 5400
+
+[activity.prototype-test]
+timeout_secs = 5400
+
+[activity.rate-limit-shed]
+timeout_secs = 5400
+
+[activity.relative-estimation]
+timeout_secs = 1800
+
+[activity.risk-register]
+timeout_secs = 2400
+
+[activity.rollback]
+timeout_secs = 3600
+
+[activity.rollback-mitigation]
+timeout_secs = 5400
+
+[activity.rolling-deploy]
+timeout_secs = 5400
+
+[activity.rolling-restart]
+timeout_secs = 5400
+
+[activity.rollout-plan]
+timeout_secs = 1800
+
+[activity.root-cause]
+timeout_secs = 5400
+
+[activity.sca-scan]
+timeout_secs = 1200
+
+[activity.schema-migration-script]
+timeout_secs = 5400
+
+[activity.security-requirements]
+timeout_secs = 3600
+
+[activity.security-review]
+timeout_secs = 3600
+
+[activity.slo-monitoring]
+timeout_secs = 3600
+
+[activity.smoke-test]
+timeout_secs = 900
+
+[activity.spike-decision-review]
+timeout_secs = 2400
+
+[activity.spike-question-spec]
+timeout_secs = 1200
+
+[activity.spike-report]
+timeout_secs = 3600
+
+[activity.spike-timebox-plan]
+timeout_secs = 900
+
+[activity.strangler-fig]
+timeout_secs = 28800
+
+[activity.structured-nl-requirements]
+timeout_secs = 3600
+
+[activity.structured-retrospective]
+timeout_secs = 3600
+
+[activity.t-shirt-sizing]
+timeout_secs = 600
+
+[activity.tdd-red-green-refactor]
+timeout_secs = 10800
+
+[activity.tech-debt-assessment]
+timeout_secs = 2400
+
+[activity.technical-spike]
+timeout_secs = 14400
+
+[activity.test-after]
+timeout_secs = 3600
+
+[activity.threat-model]
+timeout_secs = 3600
+
+[activity.timeline-reconstruction]
+timeout_secs = 3600
+
+[activity.unit-tests]
+timeout_secs = 3600
+
+[activity.unit-tests-ue]
+timeout_secs = 14400
+
+[activity.use-case-spec]
+timeout_secs = 3600
+
+[activity.user-story-ac]
+timeout_secs = 2400
+
+[activity.ux-flow-design]
+timeout_secs = 3600
+
+[activity.vertical-slicing]
+timeout_secs = 3600
+
+[activity.walking-skeleton]
+timeout_secs = 14400

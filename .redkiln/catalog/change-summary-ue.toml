@@ -1,0 +1,50 @@
+# reach: (story, implement, optional) with 'unreal' in toolchain — Unreal specialisation of change-summary (PC7 ii)
+[activity]
+id           = "change-summary-ue"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["ChangeSummary", "AssetManifest"]
+requires     = ["Changeset"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:tech-debt", "kind:project", "kind:chore", "kind:security-vuln", "kind:docs", "toolchain:unreal"]   # run4
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 3, tokens = 40_000, wall_clock_secs = 10800 }
+deviation_ok = []
+keywords     = ["unreal", "cook", "asset manifest", "binary change", "uasset"]
+rationale    = "PC7: a UE change is cooked and its assets manifested; the summary carries the cook report, since a diff of .uasset files says nothing a reviewer can read."
+
+[[step]]
+id      = "cook"
+kind    = "tool"
+run     = "toolchain:cook"
+inputs  = { range = "artifact:Changeset.sha" }
+outputs = "value:CookReport"
+timeout_secs = "${toolchain.cook_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "manifest"
+kind    = "tool"
+run     = "toolchain:asset_manifest"
+inputs  = { range = "artifact:Changeset.sha", cook = "${cook.outputs}" }
+outputs = "value:AssetManifest"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "summarise"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "artifact:Changeset.sha", manifest = "${manifest.outputs}", cook = "${cook.outputs}" }
+outputs = "value:ChangeSummary"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ChangeSummary = "${summarise.outputs}", AssetManifest = "${manifest.outputs}" }
+evidence  = ["${cook}", "${summarise}"]

@@ -1,0 +1,66 @@
+# reach: (project, design, optional) — baseline DesignDoc for project/initiative packs
+[activity]
+id           = "design-doc"
+version      = 1
+stage        = "design"
+provides     = ["DesignDoc"]
+requires     = ["Spec", "ArchitectureDescription?", "ThreatModel?", "DataMigrationPlan?", "UXDesign?", "ADR?"]
+derived_from = ["Spec", "ArchitectureDescription?", "ThreatModel?", "DataMigrationPlan?", "UXDesign?"]
+tags         = ["kind:initiative", "kind:project", "kind:story", "kind:tech-debt"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 300_000, wall_clock_secs = 3600 }
+human_source_ok = true
+deviation_ok = ["downgrade"]
+keywords     = ["design doc", "design rationale", "components", "interfaces"]
+rationale    = "SWEBOK ch.3 §4.6 design rationale: ties architecture, threat model, migration and UX into one document planning slices from."
+
+[[step]]
+id      = "write"
+kind    = "agent"
+role    = "architect"
+inputs  = { spec = "artifact:Spec", arch = "artifact:ArchitectureDescription?", threats = "artifact:ThreatModel?", migration = "artifact:DataMigrationPlan?", ux = "artifact:UXDesign?", adr = "artifact:ADR?", kb = "kb:architecture-conventions", findings = "${adversary.outputs?}" }
+outputs = "value:DesignDoc"
+timeout_secs = 1200
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "architect"
+inputs  = { draft = "${write.outputs}", checklist = "checklist:design-doc" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${write.outputs}", spec = "artifact:Spec" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", draft = "${write.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and draft.interfaces.len() > 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "write", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { draft = "${write.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { DesignDoc = "${write.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${signoff?}"]

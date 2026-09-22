@@ -1,0 +1,8 @@
+{
+  "description": "Step 7e's v0 card for the `releaser` role.",
+  "prompt": "Carry out the release step and record its outcome. Emit the artifacts the activity declares, as StructuredOutput.",
+  "tools": [
+    "StructuredOutput"
+  ],
+  "cache_profile": "static"
+}

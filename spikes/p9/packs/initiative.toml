@@ -28,9 +28,7 @@ baseline = []
 [stage.specification]
 goal = "Attributed requirements the projects trace to"
 baseline = ["Spec", "RequirementsSet"]
-[[stage.specification.require]]
-when = "auth"
-artifacts = ["SecurityRequirements"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.specification.require]] when = "auth", artifacts = ["SecurityRequirements"]. `auth` was withdrawn from the registry at Step 4a (ADR-0089 d2); a require row may never key on it, and `surfaces` may be authored in an applicable_if only (ADR-0093 d1)
 
 [stage.design]
 goal = "Architecture, decisions, evaluation"
@@ -39,7 +37,8 @@ baseline = ["ArchitectureDescription", "DesignDoc", "ADR"]
 when = "criticality >= high"
 artifacts = ["DesignEvaluation"]
 [[stage.design.require]]
-when = "auth or data_migration or external_dep"
+# Step 7e (2026-09-21) -- NARROWED, the `auth` term removed. `auth` was withdrawn from the registry at Step 4a (ADR-0089 d2); a require row may never key on it, and `surfaces` may be authored in an applicable_if only (ADR-0093 d1)
+when = "data_migration or external_dep"
 artifacts = ["ThreatModel"]
 
 [stage.planning]

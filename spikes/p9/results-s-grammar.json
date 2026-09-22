@@ -1,36 +1,30 @@
 {
- "strings": 386,
+ "strings": 378,
  "by_kind": {
-  "when": 248,
+  "when": 240,
   "on_false": 99,
   "applicable_if": 39
  },
- "parsed": 285,
+ "parsed": 278,
  "failed": [
   [
    "catalog-b/blameless-postmortem.toml",
    "/activity/applicable_if",
    "kind in [incident, security-vuln] or (kind == bug and criticality >= high)",
    "lex error at 27: '-vuln] or (k'"
-  ],
-  [
-   "packs/incident.toml",
-   "/stage/closeout/spawn[0]/when",
-   "exists(ProblemRecord)",
-   "trailing input at 6: '(' in 'exists(ProblemRecord)'"
   ]
  ],
  "mixed_unparenthesised": [],
  "features": {
   "bare_literal": 191,
-  "or": 25,
-  "ref": 62,
+  "or": 18,
+  "ref": 63,
   "len": 14,
   "and": 23,
-  "ref_optional": 11,
+  "ref_optional": 12,
   "quoted": 55,
   "in": 1,
-  "null": 2,
+  "null": 3,
   "parens": 1,
   "in_membership": 11
  },

@@ -1,0 +1,48 @@
+# The role -> card map, as a SIDECAR the `doctor` reader owns (Step 7e, 2026-09-21).
+#
+# `fulfils` is here and not on the card because `rk_adapter_claude::card::CardFile`
+# is `#[serde(deny_unknown_fields)]` over exactly seven names and `fulfils` is not
+# among them -- measured, not chosen (`crates/rk-cli/src/doctor/roles.rs`:16-26).
+#
+# One card per role, so AC-416's ambiguity (two cards at EQUAL selector specificity)
+# cannot arise by construction. The selector is the role itself.
+
+[[card]]
+file     = "cards/architect.json"
+fulfils  = ["architect"]
+selector = "role:architect"
+
+[[card]]
+file     = "cards/implementer.json"
+fulfils  = ["implementer"]
+selector = "role:implementer"
+
+[[card]]
+file     = "cards/investigator.json"
+fulfils  = ["investigator"]
+selector = "role:investigator"
+
+[[card]]
+file     = "cards/operator.json"
+fulfils  = ["operator"]
+selector = "role:operator"
+
+[[card]]
+file     = "cards/planner.json"
+fulfils  = ["planner"]
+selector = "role:planner"
+
+[[card]]
+file     = "cards/releaser.json"
+fulfils  = ["releaser"]
+selector = "role:releaser"
+
+[[card]]
+file     = "cards/reviewer.json"
+fulfils  = ["reviewer"]
+selector = "role:reviewer"
+
+[[card]]
+file     = "cards/spec-author.json"
+fulfils  = ["spec-author"]
+selector = "role:spec-author"

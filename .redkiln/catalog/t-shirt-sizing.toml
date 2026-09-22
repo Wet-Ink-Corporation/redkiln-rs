@@ -1,0 +1,45 @@
+# reach: (story, planning, optional) with size < high — require row → Estimate
+# sizing family: appetite-check(10) < t-shirt-sizing(20) < relative-estimation(30)
+[activity]
+id           = "t-shirt-sizing"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "planning"
+provides     = ["Estimate"]
+requires     = ["Spec"]
+derived_from = ["Spec"]
+tags         = ["kind:story", "kind:bug", "kind:tech-debt"]
+applicable_if = "size < high"
+method_rank  = 20
+family       = "sizing"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck?"]
+budget       = { attempts_total = 2, tokens = 50_000, wall_clock_secs = 600 }
+deviation_ok = ["skip"]
+keywords     = ["t-shirt sizing", "S M L", "coarse estimate"]
+rationale    = "Coarse sizing is enough for small items; larger stories fall through to relative-estimation by the size facet."
+
+[[step]]
+id      = "size"
+kind    = "agent"
+role    = "planner"
+inputs  = { spec = "artifact:Spec", history = "kb:estimation-history" }
+outputs = "value:Estimate"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "planner"
+when    = "rigor >= recommended"
+inputs  = { estimate = "${size.outputs}", checklist = "checklist:risk-register" }
+outputs = "value:SelfCheck"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Estimate = "${size.outputs}" }
+evidence  = ["${self-check?}"]

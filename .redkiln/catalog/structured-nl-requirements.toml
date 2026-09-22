@@ -1,0 +1,84 @@
+# reach: (initiative, specification, recommended) — user-story-ac does not tag initiative, so rank 20 is the
+#   lowest applicable Spec producer there
+# spec form family: user-story-ac(10) < structured-nl-requirements(20) < bdd-scenarios(30) < use-case-spec(40)
+[activity]
+id           = "structured-nl-requirements"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "specification"
+provides     = ["Spec", "RequirementsSet"]
+requires     = ["ProblemStatement", "DiscoveryReport?"]
+derived_from = ["ProblemStatement", "DiscoveryReport?"]
+tags         = ["kind:initiative"]
+method_rank  = 20
+family       = "spec-form"
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = ["downgrade"]
+keywords     = ["EARS", "shall statements", "structured natural language", "requirements attributes"]
+rationale    = "SWEBOK ch.1 §4.2: initiatives need attributed requirements (priority, source, rationale) that projects trace to; a story list is too flat at that level."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { problem = "artifact:ProblemStatement", discovery = "artifact:DiscoveryReport?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}", resolution = "${conflicts.answer?}" }
+outputs = "value:RequirementsSet"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { draft = "${draft.outputs}", checklist = "checklist:ears-requirements" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}", problem = "artifact:ProblemStatement" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}", draft = "${draft.outputs}" }
+expr    = "check.failed == 0 and draft.uncovered.len() == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "conflicts"
+kind    = "gate"
+when    = "${draft.outputs.conflicts}.len() > 0"
+question = "spec.requirements-conflict"
+inputs  = { conflicts = "${draft.outputs.conflicts}" }
+
+[[step]]
+id      = "to-spec"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { requirements = "${draft.outputs}", kb = "kb:spec-conventions" }
+outputs = "value:Spec"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { spec = "${to-spec.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Spec = "${to-spec.outputs}", RequirementsSet = "${draft.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${conflicts?}", "${signoff?}"]

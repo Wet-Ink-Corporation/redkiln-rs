@@ -1,0 +1,77 @@
+# reach: (project, specification, mandatory) — NOT reachable by rank behind user-story-ac(10) at project;
+#   deviation add only (F34 ambiguity B1). Written for the family.
+# spec form family: user-story-ac(10) < structured-nl-requirements(20) < bdd-scenarios(30) < use-case-spec(40)
+[activity]
+id           = "use-case-spec"
+version      = 3   # bumped 2026-09-08 (§9c.42)
+stage        = "specification"
+provides     = ["Spec", "UseCaseSpec"]
+requires     = ["IntakeRecord", "ProblemStatement?"]   # run5: stories forbid discovery
+derived_from = ["IntakeRecord", "ProblemStatement?"]
+tags         = ["kind:project", "kind:tech-debt", "kind:docs"]   # 2026-09-08 family totality: user-story-ac ceilinged at recommended
+method_rank  = 40
+family       = "spec-form"
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = ["downgrade"]
+keywords     = ["use case", "actor goal flows", "RUP", "extensions"]
+rationale    = "DA Explore Usage / RUP: actor-goal narratives with exception flows are the right form when the interaction surface, not the data, is the risk."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { intake = "artifact:IntakeRecord", problem = "artifact:ProblemStatement?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}" }
+outputs = "value:UseCaseSpec"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { draft = "${draft.outputs}", checklist = "checklist:use-case-quality" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}", intake = "artifact:IntakeRecord" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}", draft = "${draft.outputs}" }
+expr    = "check.failed == 0 and draft.extensions.len() > 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "to-spec"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { usecases = "${draft.outputs}", kb = "kb:spec-conventions" }
+outputs = "value:Spec"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory"
+question = "draft.accept"
+inputs  = { spec = "${to-spec.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Spec = "${to-spec.outputs}", UseCaseSpec = "${draft.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${signoff?}"]

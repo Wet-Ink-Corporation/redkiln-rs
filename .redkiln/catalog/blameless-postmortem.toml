@@ -1,0 +1,73 @@
+# reach: (incident, closeout, mandatory) — require row → Postmortem; also (bug, closeout, mandatory) with criticality >= high
+# learning family: lightweight-retro(10) < structured-retrospective(20) < blameless-postmortem(30)
+# NOTE: catalog-b/blameless-postmortem.toml is the second author's record and fails v2 by design; this file is the v0 one.
+[activity]
+id           = "blameless-postmortem"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "closeout"
+provides     = ["Postmortem"]
+requires     = ["RootCause", "IncidentTimeline?", "ImpactAssessment?"]   # P6 run1 fix: bugs have no IncidentTimeline producer
+derived_from = ["RootCause", "IncidentTimeline?"]
+tags         = ["kind:incident", "kind:security-vuln", "kind:bug"]
+applicable_if = "kind in [incident, 'security-vuln'] or criticality >= high"
+method_rank  = 30
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings", "HumanAnswer"]
+budget       = { attempts_total = 6, tokens = 400_000, wall_clock_secs = 432000 }
+deviation_ok = []
+keywords     = ["postmortem", "blameless", "contributing factors", "action items", "SRE ch.15"]
+rationale    = "SRE ch.15 / PagerDuty: impact, timeline, root causes, contributing factors, went well/badly/lucky, action items with owners; a human review meeting closes it."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "investigator"
+inputs  = { timeline = "artifact:IncidentTimeline?", cause = "artifact:RootCause", impact = "artifact:ImpactAssessment?", chat = "toolchain:chat_log?", kb = "kb:incident-playbook", findings = "${adversary.outputs?}", answer = "${review-meeting.answer?}" }
+outputs = "value:Postmortem"
+timeout_secs = 1200
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "investigator"
+inputs  = { draft = "${draft.outputs}", checklist = "checklist:postmortem-sections" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { draft = "${draft.outputs}", timeline = "artifact:IncidentTimeline?" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", draft = "${draft.outputs}", findings = "${adversary.outputs}" }
+expr    = "check.failed == 0 and draft.unassigned_items.len() == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "review-meeting"
+kind    = "gate"
+question = "postmortem.review"
+inputs  = { draft = "${draft.outputs}", findings = "${adversary.outputs}" }
+
+[[step]]
+id      = "approved"
+kind    = "check"
+inputs  = { answer = "${review-meeting.answer}" }
+expr    = "answer == 'approve'"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Postmortem = "${draft.outputs}" }
+evidence  = ["${self-check}", "${adversary}", "${review-meeting}"]

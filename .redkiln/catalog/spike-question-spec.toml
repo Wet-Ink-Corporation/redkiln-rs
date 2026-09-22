@@ -1,0 +1,55 @@
+# reach: (spike, specification, optional) — baseline SpikeCharter for the spike pack
+[activity]
+id           = "spike-question-spec"
+version      = 1
+stage        = "specification"
+provides     = ["SpikeCharter"]
+requires     = ["ProblemStatement"]
+derived_from = ["ProblemStatement"]
+tags         = ["kind:spike"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "HumanAnswer"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 1200 }
+human_source_ok = true
+deviation_ok = []
+keywords     = ["spike", "hypothesis", "timebox", "kill criteria"]
+rationale    = "XP spike / this repo's METHOD files: a spike without a written question, hypothesis and kill criterion cannot be reported on."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "planner"
+inputs  = { problem = "artifact:ProblemStatement", answer = "${accept.answer?}" }
+outputs = "value:SpikeCharter"
+timeout_secs = 600
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "planner"
+inputs  = { draft = "${draft.outputs}", checklist = "checklist:spike-charter" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "complete"
+kind    = "check"
+inputs  = { draft = "${draft.outputs}", check = "${self-check.outputs}" }
+expr    = "draft.kill_criteria.len() > 0 and draft.timebox_secs > 0 and check.failed == 0"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "accept"
+kind    = "gate"
+question = "draft.accept"
+inputs  = { charter = "${draft.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { SpikeCharter = "${draft.outputs}" }
+evidence  = ["${self-check}", "${accept}"]

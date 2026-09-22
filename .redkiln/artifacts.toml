@@ -1,0 +1,320 @@
+# Artifact-kind registry (schema §9c amendments 27 and 43; proposal §2.1). One table per kind.
+# source = "human"  → a root: no producer anywhere; supplied at intake or pasted (PC3, derived_from = []).
+# source = "activity" → some catalog activity provides it (lattice.py --validate checks this).
+# keyed_by = "toolchain" → a required instance per element of the item's toolchain set (amendment 43).
+# schema = the value schema (schemas.toml) the artifact's body is typed by; lint checks composing emits against it.
+# Added 2026-09-08 from the catalog/pack inventory (75 kinds) + SessionNotes (gate attachment) + ProfileReport (PC7).
+
+[artifact.ADR]
+source = "activity"
+schema = "ADR"
+
+[artifact.APIContract]
+source = "activity"
+schema = "APIContract"
+
+[artifact.ArchitectureDescription]
+source = "activity"
+schema = "ArchitectureDescription"
+
+[artifact.AssetManifest]
+source = "activity"
+schema = "AssetManifest"
+
+[artifact.AssumptionList]
+source = "activity"
+schema = "AssumptionList"
+
+[artifact.BugReport]
+source = "human"
+schema = "BugReport"
+
+[artifact.BuildArtifact]
+source = "activity"
+schema = "BuildArtifact"
+
+[artifact.CausalChain]
+source = "activity"
+schema = "CausalChain"
+
+[artifact.ChangeRecord]
+source = "activity"
+schema = "ChangeRecord"
+
+[artifact.ChangeSummary]
+source = "activity"
+schema = "ChangeSummary"
+keyed_by = "toolchain"
+
+[artifact.Changeset]
+source = "activity"
+schema = "ChangeSummary"
+keyed_by = "toolchain"
+
+[artifact.ClosureRecord]
+source = "activity"
+schema = "ClosureRecord"
+
+[artifact.CompetitorAnalysis]
+source = "activity"
+schema = "CompetitorAnalysis"
+
+[artifact.ConfirmationResult]
+source = "activity"
+schema = "ConfirmationResult"
+
+[artifact.DataMigrationPlan]
+source = "activity"
+schema = "DataMigrationPlan"
+
+[artifact.DebtRegisterEntry]
+source = "activity"
+schema = "DebtRegisterEntry"
+
+[artifact.DecisionRecord]
+source = "activity"
+schema = "DecisionRecord"
+
+[artifact.DependencyDAG]
+source = "activity"
+schema = "DependencyDAG"
+
+[artifact.DesignDoc]
+source = "activity"
+schema = "DesignDoc"
+
+[artifact.DesignEvaluation]
+source = "activity"
+schema = "DesignEvaluation"
+
+[artifact.DesignVerdict]
+source = "activity"
+schema = "Verdict"
+
+[artifact.DiscoveryReport]
+source = "activity"
+schema = "DiscoveryReport"
+
+[artifact.Docs]
+source = "activity"
+schema = "Docs"
+
+[artifact.Estimate]
+source = "activity"
+schema = "Estimate"
+
+[artifact.ExperimentResults]
+source = "activity"
+schema = "ExperimentResults"
+
+[artifact.FaultTree]
+source = "activity"
+schema = "FaultTree"
+
+[artifact.FixDesign]
+source = "activity"
+schema = "FixDesign"
+
+[artifact.FlagRecord]
+source = "activity"
+schema = "FlagRecord"
+
+[artifact.GherkinScenarios]
+source = "activity"
+schema = "GherkinScenarios"
+
+[artifact.ImpactAssessment]
+source = "human"
+schema = "ImpactAssessment"
+
+[artifact.ImplReport]
+source = "activity"
+schema = "ImplReport"
+
+[artifact.IncidentLog]
+source = "activity"
+schema = "IncidentLog"
+
+[artifact.IncidentRecord]
+source = "human"
+schema = "IncidentRecord"
+
+[artifact.IncidentTimeline]
+source = "activity"
+schema = "IncidentTimeline"
+
+[artifact.InspectionRecord]
+source = "activity"
+schema = "InspectionRecord"
+
+[artifact.IntakeRecord]
+source = "human"
+schema = "IntakeRecord"
+
+[artifact.IntegrationReport]
+source = "activity"
+schema = "IntegrationReport"
+
+[artifact.KBAtoms]
+source = "activity"
+schema = "KBAtoms"
+
+[artifact.MigrationLog]
+source = "activity"
+schema = "MigrationLog"
+
+[artifact.MigrationScript]
+source = "activity"
+schema = "MigrationScript"
+
+[artifact.MigrationTestReport]
+source = "activity"
+schema = "MigrationTestReport"
+
+[artifact.MitigationRecord]
+source = "activity"
+schema = "MitigationRecord"
+
+[artifact.MutationSummary]
+source = "activity"
+schema = "MutationSummary"
+
+[artifact.OpportunityMap]
+source = "activity"
+schema = "OpportunityMap"
+
+[artifact.OutcomeStatement]
+source = "activity"
+schema = "OutcomeStatement"
+
+[artifact.PRRReport]
+source = "activity"
+schema = "PRRReport"
+
+[artifact.Postmortem]
+source = "activity"
+schema = "Postmortem"
+
+[artifact.ProblemRecord]
+source = "activity"
+schema = "ProblemRecord"
+
+[artifact.ProblemStatement]
+source = "activity"
+schema = "ProblemStatement"
+
+[artifact.ProfileReport]
+source = "activity"
+status = "extended"   # no v0 producer (profiling deferred); --validate skips status = extended
+schema = "ProfileReport"
+keyed_by = "toolchain"
+
+[artifact.PrototypeFindings]
+source = "activity"
+schema = "PrototypeFindings"
+
+[artifact.ReleaseRecord]
+source = "activity"
+schema = "ReleaseRecord"
+
+[artifact.ReproCase]
+source = "activity"
+schema = "ReproCase"
+keyed_by = "toolchain"
+
+[artifact.RequirementsSet]
+source = "activity"
+schema = "RequirementsSet"
+
+[artifact.Retrospective]
+source = "activity"
+schema = "Retrospective"
+
+[artifact.ReviewVerdict]
+source = "activity"
+schema = "Verdict"
+
+[artifact.RiskRegister]
+source = "activity"
+schema = "RiskRegister"
+
+[artifact.RollbackRecord]
+source = "activity"
+schema = "RollbackReport"
+
+[artifact.RolloutPlan]
+source = "activity"
+schema = "RolloutPlan"
+
+[artifact.RootCause]
+source = "activity"
+schema = "RootCause"
+
+[artifact.SLOReport]
+source = "activity"
+schema = "SLOReport"
+
+[artifact.ScanReport]
+source = "activity"
+schema = "ScanReport"
+
+[artifact.SecurityRequirements]
+source = "activity"
+schema = "SecurityRequirements"
+
+[artifact.SecurityReviewVerdict]
+source = "activity"
+schema = "Verdict"
+
+[artifact.SessionNotes]
+source = "human"
+schema = "SessionNotes"
+
+[artifact.SliceSet]
+source = "activity"
+schema = "SliceSet"
+
+[artifact.SmokeResult]
+source = "activity"
+schema = "SmokeResult"
+
+[artifact.Spec]
+source = "activity"
+schema = "Spec"
+
+[artifact.SpikeCharter]
+source = "activity"
+schema = "SpikeCharter"
+
+[artifact.SpikePlan]
+source = "activity"
+schema = "SpikePlan"
+
+[artifact.SpikeReport]
+source = "activity"
+schema = "SpikeReport"
+
+[artifact.TestDesign]
+source = "activity"
+schema = "TestDesign"
+
+[artifact.TestReport]
+source = "activity"
+schema = "TestReport"
+keyed_by = "toolchain"
+
+[artifact.ThreatModel]
+source = "activity"
+schema = "ThreatModel"
+
+[artifact.UXDesign]
+source = "activity"
+schema = "UXDesign"
+
+[artifact.UseCaseSpec]
+source = "activity"
+schema = "UseCaseSpec"
+
+[artifact.VulnAssessment]
+source = "activity"
+schema = "VulnAssessment"

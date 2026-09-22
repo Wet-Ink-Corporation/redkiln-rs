@@ -1,0 +1,44 @@
+# reach: (story, implement, optional) with 'text' in change — generic text-change producer of ChangeSummary (PC7)
+# tech-pack specialisation: change-summary-ue (same rank; toolchain specificity wins on a mixed Node+UE item — F35 records
+#   that the mixed item then gets ONE ChangeSummary, not two, which is the PC7 shape question)
+[activity]
+id           = "change-summary"
+version      = 1
+stage        = "implement"
+provides     = ["ChangeSummary"]
+requires     = ["Changeset"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:docs", "kind:project"]
+applicable_if = "'text' in change"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 2, tokens = 20_000, wall_clock_secs = 600 }
+deviation_ok = []
+keywords     = ["change summary", "diff", "manifest", "text change"]
+rationale    = "The review stage's join key (adversarial-review requires ChangeSummary): a typed diff + manifest for text changes; binary/UE changes come from the tech pack's producer."
+
+[[step]]
+id      = "summarise"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "artifact:Changeset.sha" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "lint"
+kind    = "tool"
+run     = "toolchain:lint"
+inputs  = { diff = "${summarise.outputs.diff}" }
+outputs = "value:LintReport"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ChangeSummary = "${summarise.outputs}" }
+evidence  = ["${summarise}", "${lint}"]

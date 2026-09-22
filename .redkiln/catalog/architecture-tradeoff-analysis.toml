@@ -1,0 +1,59 @@
+# reach: (initiative, design, mandatory) with criticality >= high — require row → DesignEvaluation
+# design evaluation family: design-review-lightweight(10) < architecture-tradeoff-analysis(20)
+[activity]
+id           = "architecture-tradeoff-analysis"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "design"
+provides     = ["DesignEvaluation"]
+requires     = ["ArchitectureDescription", "Spec"]
+derived_from = ["ArchitectureDescription"]
+tags         = ["kind:initiative"]
+applicable_if = "criticality >= high"
+method_rank  = 20
+family       = "design-evaluation"
+min_rigor    = "mandatory"
+cost_class   = "L"
+evidence     = ["Findings", "HumanAnswer"]
+budget       = { attempts_total = 6, tokens = 500_000, wall_clock_secs = 7200 }
+deviation_ok = []
+keywords     = ["ATAM", "quality attribute scenarios", "sensitivity points", "tradeoffs"]
+rationale    = "SEI ATAM / SWEBOK ch.2 §4: scenario-based evaluation of a high-criticality initiative's architecture; a human accepts the recorded risks."
+
+[[step]]
+id      = "scenarios"
+kind    = "agent"
+role    = "architect"
+inputs  = { arch = "artifact:ArchitectureDescription", spec = "artifact:Spec" }
+outputs = "value:DesignEvaluation"
+timeout_secs = 1200
+retry   = { max = 1 }
+
+[[step]]
+id      = "evaluate"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { scenarios = "${scenarios.outputs}", arch = "artifact:ArchitectureDescription" }
+outputs = "value:Findings"
+timeout_secs = 1800
+retry   = { max = 1 }
+
+[[step]]
+id      = "consolidate"
+kind    = "agent"
+role    = "architect"
+inputs  = { scenarios = "${scenarios.outputs}", findings = "${evaluate.outputs}" }
+outputs = "value:DesignEvaluation"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "accept-risks"
+kind    = "gate"
+question = "atam.accept-risks"
+inputs  = { evaluation = "${consolidate.outputs}", findings = "${evaluate.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { DesignEvaluation = "${consolidate.outputs}" }
+evidence  = ["${evaluate}", "${accept-risks}"]

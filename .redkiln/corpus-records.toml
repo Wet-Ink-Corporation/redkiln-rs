@@ -1,0 +1,64 @@
+# The pinned corpus, beside the registry it scores (Step 7e, ADR-0093 decision 2).
+#
+# A SIDECAR, not rows inside facets.toml, and that is measured rather than chosen:
+# Checkpoint 7e line 138 is
+#   awk '/^source = "derived"/{d++} /^deriver = /{v++}' .redkiln/facets.toml
+# tested against "6 6", and every corpus row carries its own line-initial
+# `deriver = "R-..."`.  Measured 2026-09-21 with the rows inline: the gate read
+# "6 12".  The registry keeps its six derivers and the gate stays UNAMENDED.
+#
+# `redkiln lint --facet-provenance <FACETS_TOML> --pinned-corpus <PATH>` reads these rows
+# (Registry::pinned_corpus_from_str, crates/rk-kernel/src/registry.rs:478 -- the corpus
+# rows BESIDE THIS REGISTRY).  Checkpoint 7e passes this same file as
+# both arguments, which is the shape crates/rk-cli/tests/fixtures/facets/clean.toml
+# demonstrates and the only shape the CLI admits: the flag is REQUIRED and the code
+# refuses to default it (crates/rk-cli/src/verbs/lint.rs:117 -- "a path invented here
+# would be read as one that was decided").
+#
+# TRANSCRIBED from D:/repos/redkiln-corpus/results/p1-arm-d-panel-scored.json at
+# corpus_sha 47faec9f, NEVER REGENERATED.  Six rows for six derivers, reconciled by name
+# with the six `source = "derived"` facets above (ADR-0093 decision 2: "six derived
+# facets and six records -- reconciled by name, not eleven").
+
+# toolchain -- precision 0.73, STAYS [F39]
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-toolchain-extension-manifest-table"
+positives = 15
+interval = [0.4804911034231324, 0.8910272389681718]
+
+# change -- precision 0.72, STAYS [F39]
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-change-extension-and-numstat-marker"
+positives = 29
+interval = [0.5428252365556403, 0.8530141866149725]
+
+# ui -- precision 1.00, point >= 0.95 but interval does not clear [F39]
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-ui-path-and-diff-scan"
+positives = 7
+interval = [0.6456611570247934, 1.0]
+
+# flag_exists -- precision 0.00, STAYS [F39]
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-flag-exists-path-and-diff-scan"
+positives = 2
+interval = [0.0, 0.6576280471103807]
+
+# data_migration -- NOT MEASURABLE: 0 positives on 20 items across all three sources [F39 s4]
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-data-migration-path-and-diff-scan"
+positives = 0
+not_measurable = true
+
+# recent_deploy -- NOT MEASURABLE: the toolchain:deploy_log feed does not exist at this pin, so F39 could not score it -- the facet is ABSENT from the record entirely
+[[corpus_record]]
+path = "results/p1-arm-d-panel-scored.json"
+deriver = "R-recent-deploy-feed-absent"
+positives = 0
+not_measurable = true
+

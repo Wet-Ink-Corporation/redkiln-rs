@@ -1,0 +1,92 @@
+[activity]
+id           = "canary-release"
+version      = 3   # bumped 2026-09-08 (§9c.42)   # bumped 2026-09-08 (§9c.42)
+stage        = "release"
+provides     = ["ReleaseRecord"]
+requires     = ["ReviewVerdict", "RolloutPlan", "BuildArtifact"]
+derived_from = ["BuildArtifact", "RolloutPlan"]
+tags         = ["kind:story", "kind:project", "kind:bug", "kind:security-vuln", "kind:chore", "kind:tech-debt", "kind:docs"]   # 2026-09-08 family totality (lattice --validate)
+applicable_if = "blast_radius >= med"
+method_rank  = 30
+family       = "deploy-pattern"
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 6, tokens = 60_000, wall_clock_secs = 14400 }
+deviation_ok = ["downgrade"]
+keywords     = ["canary", "progressive delivery", "rollback"]
+rationale    = "Fowler canary release: expose a slice of traffic, watch the SLO signals, roll back on breach."
+
+[[step]]
+id      = "deploy-canary"
+kind    = "tool"
+run     = "toolchain:deploy"
+inputs  = { artifact = "artifact:BuildArtifact", percent = "artifact:RolloutPlan.steps[0]" }
+outputs = "value:DeployReport"
+timeout_secs = 1800
+retry   = { max = 2 }
+
+[[step]]
+id      = "observe"
+kind    = "tool"
+run     = "toolchain:canary_metrics"
+inputs  = { window_secs = "artifact:RolloutPlan.thresholds.window", thresholds = "artifact:RolloutPlan.thresholds" }
+outputs = "value:CanaryReport"
+timeout_secs = 3600
+retry   = { max = 1 }
+
+[[step]]
+id      = "healthy"
+kind    = "check"
+inputs  = { report = "${observe.outputs}" }
+expr    = "report.breached.len() == 0"
+on_false = "continue"
+
+[[step]]
+id      = "degraded"
+kind    = "gate"
+question = "canary.degraded"
+when    = "${observe.outputs.breached}.len() > 0"
+inputs  = { report = "${observe.outputs}" }
+
+[[step]]
+id      = "rollback"
+kind    = "tool"
+run     = "toolchain:rollback"
+when    = "${degraded.answer?} == 'rollback'"
+inputs  = { to = "artifact:ReleaseRecord.previous_sha" }
+outputs = "value:RollbackReport"
+timeout_secs = 1800
+retry   = { max = 2 }
+
+[[step]]
+id      = "proceed"
+kind    = "gate"
+when    = "rigor >= mandatory and ${observe.outputs.breached}.len() == 0"
+question = "canary.proceed"
+inputs  = { report = "${observe.outputs}" }
+
+[[step]]
+id      = "deploy-full"
+kind    = "tool"
+run     = "toolchain:deploy"
+when    = "${rollback.outputs?} == null and (${proceed.answer?} == 'proceed' or rigor < mandatory)"
+inputs  = { artifact = "artifact:BuildArtifact", percent = 100 }
+outputs = "value:DeployReport"
+timeout_secs = 3600
+retry   = { max = 2 }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:release_record"
+inputs  = { full = "${deploy-full.outputs?}", rollback = "${rollback.outputs?}", canary = "${deploy-canary.outputs}" }
+outputs = "value:ReleaseRecord"
+timeout_secs = 60
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReleaseRecord = "${record.outputs}" }
+evidence  = ["${observe}", "${degraded?}", "${proceed?}", "${rollback?}"]

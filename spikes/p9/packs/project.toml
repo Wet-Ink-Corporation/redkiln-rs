@@ -31,15 +31,14 @@ baseline = ["Spec"]
 [[stage.specification.require]]
 when = "external_dep"
 artifacts = ["APIContract"]
-[[stage.specification.require]]
-when = "auth"
-artifacts = ["SecurityRequirements"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.specification.require]] when = "auth", artifacts = ["SecurityRequirements"]. `auth` was withdrawn from the registry at Step 4a (ADR-0089 d2); a require row may never key on it, and `surfaces` may be authored in an applicable_if only (ADR-0093 d1)
 
 [stage.design]
 goal = "Architecture and design doc, decisions recorded"
 baseline = ["DesignDoc", "ArchitectureDescription"]
 [[stage.design.require]]
-when = "auth or data_migration or external_dep"
+# Step 7e (2026-09-21) -- NARROWED, the `auth` term removed. `auth` was withdrawn from the registry at Step 4a (ADR-0089 d2); a require row may never key on it, and `surfaces` may be authored in an applicable_if only (ADR-0093 d1)
+when = "data_migration or external_dep"
 artifacts = ["ThreatModel"]
 [[stage.design.require]]
 when = "data_migration"
@@ -99,9 +98,7 @@ rigor = "mandatory"
 [[stage.review.require]]
 when = "rigor >= recommended"
 artifacts = ["PRRReport"]
-[[stage.review.require]]
-when = "auth"
-artifacts = ["SecurityReviewVerdict"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.review.require]] when = "auth", artifacts = ["SecurityReviewVerdict"]. `auth` was withdrawn from the registry at Step 4a (ADR-0089 d2); a require row may never key on it, and `surfaces` may be authored in an applicable_if only (ADR-0093 d1)
 [[stage.review.require]]
 when = "blast_radius >= high"
 artifacts = ["ChangeRecord"]

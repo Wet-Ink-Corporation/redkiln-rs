@@ -1,0 +1,184 @@
+# Facet registry (PC8). Every predicate identifier must be a facet here, a step id, `rigor`, `item`, or a builtin.
+# source: one of FIVE closed tokens the loader recognises by name (ADR-0093 decision 1; AC-072):
+#   human    = label input, supplied or confirmed at the triage gate
+#   derived  = computed over the changeset by a named `deriver`, which must have a scored record (AC-520)
+#   kernel   = a projection of the kernel's own state; no `deriver`, no record, and carrying either fails load
+#   declared = read from a checked-in declaration map; unscored until S-FACET, so it may key no `require` row
+#   llm      = emitted by triage classification. **NO FACET CARRIES THIS ANY MORE** -- ADR-0090 (2026-09-12)
+#              re-sourced all seven (four ordinal axes + three booleans) to `human`, so AC-071 has nothing
+#              left to fail closed on. Re-introducing it needs a scored P1 stability record (AC-071).
+# deriver_class declares WHETHER THE COMPUTATION IS LEXICAL, by name (AC-520 as amended 2026-09-13):
+#   lexical    = its only computation is a scan of free text, file paths and diff lines included. Such a
+#                deriver does NOT satisfy PC8 rule 2 for `require`-row purposes whatever its record says,
+#                so the facet may be authored, linted and read -- and may key no `require` row.
+#   structural = it reads git metadata, a declared boundary map or a registered feed. No lexical bar.
+# deriver_record points at the scored precision record AC-520 requires: a Wilson 95% interval and a
+#   positive-instance count over a PINNED corpus. The path is corpus-relative and resolves through
+#   CORPUS_PIN, never through a working tree (AC-464). **[WILL EXIST]** -- see the note at the foot of
+#   this file; the record is Step 7b's to produce and nothing reads it before then.
+# nullable = true declares that a facet may ABSTAIN. `null` is "no evidence computed" and is NOT a member of
+#   the declared domain -- the three shapes (boolean, ordinal, set) are unchanged and a fourth fails load.
+#   A null read at selection step 2 emits gate_opened { reason: unknown_facet, axis }, counted once per read
+#   facet, and NEVER Unsatisfiable, which is step 4's (ADR-0103 decision 5; AC-079; AC-072 as amended).
+
+[facet.kind]
+values = ["initiative", "project", "story", "bug", "incident", "spike", "chore", "tech-debt", "security-vuln", "docs"]
+source = "human"          # rk:kind/*
+
+[facet.cos]
+values = ["expedite", "fixed-date", "standard", "intangible"]
+source = "human"          # rk:cos/*
+
+[facet.stage]
+values = ["triage", "discovery", "analysis", "specification", "design", "planning", "implement", "verify", "review", "release", "operate", "closeout"]
+source = "kernel"        # a projection of the item's own recorded stage (ADR-0093 decision 1); no deriver, no record
+
+[facet.rigor]
+ordered = true
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]   # ordered
+source = "kernel"        # a lookup over policy.<class>.stages, not a computation over a changeset (ADR-0093 decision 1)
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]   # ordered; unknown routes to a human
+source = "human"          # ADR-0090: supplied or confirmed at the triage gate (F36 identity 0.25/0.15/0.10/0.10 vs 0.80)
+
+[facet.novelty]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"          # ADR-0090: supplied or confirmed at the triage gate
+
+[facet.size]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"          # ADR-0090: supplied or confirmed at the triage gate
+
+[facet.blast_radius]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"          # ADR-0090: supplied or confirmed at the triage gate
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]   # set-valued per item (PC7); tech packs may extend values
+source = "derived"
+deriver = "R-toolchain-extension-manifest-table"   # git metadata only: canonical extension/manifest table
+deriver_class = "structural"        # git metadata, not a text scan
+deriver_record = "results/p1-arm-d-panel-scored.json"   # precision 0.73, 95% CI [0.48, 0.89], 15 positives, at 47faec9f [F39]
+set = true
+
+[facet.change]
+values = ["text", "binary", "generated"]   # set-valued per item
+source = "derived"
+deriver = "R-change-extension-and-numstat-marker"   # git metadata only: extension table + --numstat's binary marker
+deriver_class = "structural"        # git metadata, not a text scan
+deriver_record = "results/p1-arm-d-panel-scored.json"   # precision 0.72, 95% CI [0.54, 0.85], 29 positives, at 47faec9f [F39]
+set = true
+
+[facet.role]
+values = ["implementer", "reviewer", "investigator", "spec-author", "architect", "planner", "releaser", "operator"]
+source = "kernel"        # a projection of the step the kernel is dispatching (ADR-0093 decision 1)
+
+[facet.cost]
+ordered = true
+values = ["S", "M", "L", "XL"]
+source = "kernel"        # a projection of the activity's declared cost class (ADR-0093 decision 1)
+
+# ---- 2026-09-12, Step 4a (ADR-0089 decision 2; ADR-0093 decision 1) ----
+# The repo-wide `auth` boolean is WITHDRAWN, not retuned. Its deriver was an unanchored case-insensitive
+# regex over paths AND diff lines: precision 0.00 over 11 positives, 95% CI [0.00, 0.26] (0/12, [0.00, 0.24]
+# after the 2026-09-11 key fix scored all 140 cells -- ERRATA E-0089-2), marking auth = true on 14 of 20
+# items. NOT a threshold miss: the colliding vocabulary is the vocabulary of the instrument under test
+# (`auth` inside *authored* 40x, `token` inside a design token 36x, `oauth` inside *coauthor* 8x), so the
+# failure is CORRELATED and does not average out with more data [measured, F39 §1, §2; Halt 10].
+# Its replacement is a fact that is the INTERSECTION OF THE CHANGESET WITH A DECLARED BOUNDARY -- structural,
+# not lexical. A path covered by no glob contributes nothing; it does NOT imply false.
+#
+# `values` here is a PLACEHOLDER vocabulary, and is deliberately incomplete. ADR-0089 sources the real set
+# from a checked-in `surfaces.toml` mapping path globs to closed surface names -- a PER-TARGET-REPOSITORY
+# artefact that DOES NOT EXIST IN THIS TREE (PIA-003), extensible in values by a technology pack under
+# ADR-0030 rule 1, and seeded as a measured output of S-FACET. Two surface names the records name --
+# `auth` and `ui` -- are OMITTED here on purpose: `spikes/p9/lint.py:339` accepts any bare identifier that
+# matches a facet VALUE, so declaring `auth` as a surface value would make the three catalog predicates
+# still reading `applicable_if = "auth or ..."` parse as a bare literal in a boolean position and the lint
+# exit 0 with three broken predicates invisible. Measured both ways 2026-09-12: with `auth` among the values
+# the lint reports 0 errors; without it, 3. The errors are kept VISIBLE and are repaired by s7e §7e.2, which
+# owns the row dispositions -- a `require` row on `auth` becomes an `applicable_if` or is dropped, NEVER a
+# `require` on `surfaces`. Author the full vocabulary there, with that trap in mind.
+#
+# UNSCORED: `surfaces` may be authored and linted, and it may key NO `require` row on ADR-0089's strength
+# alone (ADR-0089 decision 2; ADR-0093 decision 1; AC-072, whose fixtures make such a row fail load).
+# S-FACET is the named spike that scores it; provenance is carried on the VALUE, not declared here, so a
+# require row may later demand `provenance in ["declared", "asked"]`.
+[facet.surfaces]
+values = ["auth", "flags", "migration", "payments", "secrets"]   # "auth" ADDED at Step 7e (2026-09-21): §7e.2 sends the withdrawn `auth` rows here and names this value.   # placeholder; the real set comes from surfaces.toml (above)
+source = "declared"
+set = true
+
+# boolean risk facets. All seven are TRI-VALUED at the context-vector level (ADR-0089 decision 3): they keep
+# the two-valued DOMAIN and declare `nullable = true` beside it. The registry line `values = [true, false]`
+# alone is what turned FOUR EMPTY DIFFS INTO SIXTEEN CONFIDENT BOOLEANS -- the panel returned `unknown` on all
+# 16 semantic cells of the 4 items that changed no code, and the script emitted a confident boolean on every
+# one [measured, F39 §4]. `recent_deploy` is the live precedent, not a new mechanism: it already emits `null`
+# under R-recent-deploy-feed-absent. An honest `null` and a silent `false` are different outcomes and may
+# never be summed; a `null` is never counted as a false negative in any scoring of a deriver.
+[facet.data_migration]
+values = [true, false]
+nullable = true
+source = "derived"
+deriver = "R-data-migration-path-and-diff-scan"
+deriver_class = "lexical"           # a scan over paths and diff lines — may key no require row (AC-520)
+deriver_record = "results/p1-arm-d-panel-scored.json"   # NOT MEASURABLE at 47faec9f: 0 positives on 20 items across all three sources, so precision is undefined and a perfect method scores identically [F39 §4]. BARRED TWICE, independently: lexical, and no positive instance
+[facet.external_dep]
+values = [true, false]
+nullable = true
+source = "human"          # ADR-0090 decision 2 (DECISIONS-2026-09-11 #2; PIA-003): supplied or confirmed at triage. F36 measured it collapsed to a constant, 200/200 false
+[facet.ui]
+values = [true, false]
+nullable = true
+source = "derived"
+deriver = "R-ui-path-and-diff-scan"
+deriver_class = "lexical"           # a scan over paths and diff lines — may key no require row (AC-520)
+deriver_record = "results/p1-arm-d-panel-scored.json"   # precision 1.00 over 7 positives, 95% CI [0.65, 1.00] at 47faec9f — the POINT clears 0.95 and the INTERVAL DOES NOT, and 73 all-correct positives are needed for a lower bound above 0.95 at z = 1.96, so no facet clears the bar at n = 20 [F39; Limits 1]. S-FACET gates its require rows
+[facet.market_facing]
+values = [true, false]
+nullable = true
+source = "human"          # ADR-0090 decision 2 (DECISIONS-2026-09-11 #2; PIA-003): supplied or confirmed at triage
+[facet.has_repro]
+values = [true, false]
+nullable = true
+source = "human"          # ADR-0090 decision 2 (DECISIONS-2026-09-11 #2; PIA-003): supplied or confirmed at triage. The kernel's rigor-monotonicity rule presumes this is a live selection input (s7b)
+[facet.flag_exists]
+values = [true, false]
+nullable = true
+source = "derived"
+deriver = "R-flag-exists-path-and-diff-scan"
+deriver_class = "lexical"           # a scan over paths and diff lines — may key no require row (AC-520)
+deriver_record = "results/p1-arm-d-panel-scored.json"   # precision 0.00 over 2 positives, 95% CI [0.00, 0.66] at 47faec9f [F39]. S-FACET arm 4 would match declared flag-SDK call sites on an AST NODE KIND rather than a substring, which is what would make it structural
+
+# ---- 2026-09-07 P6 authoring batch (third author): value additions only, no new facets ----
+# (none needed for discovery; see F34 for facets that were *wanted* and could not be added)
+
+# ---- 2026-09-08 decision 9 (schema §9c amendment 37): registry owner's addition, not the catalog's ----
+[facet.recent_deploy]
+values = [true, false]
+nullable = true
+source = "derived"        # from toolchain:deploy_log — anchor: a deploy touching the item's surface within the last 24 h
+deriver = "R-recent-deploy-feed-absent"
+deriver_class = "structural"        # it reads a registered feed, not free text — so NOT barred as lexical
+deriver_record = "results/p1-arm-d-panel-scored.json"   # NOT MEASURABLE at 47faec9f: the toolchain:deploy_log feed does not exist at this pin, so it emits `null` on every item and F39 could not score it. It may key NO require row — on the no-positive-instance clause, which is a DIFFERENT bar from the lexical one and is doing its own work here. The ABSTENTION PRECEDENT the seven booleans generalise (ADR-0067; ADR-0089 decision 3)
+
+# ---- AC-520's scored record: [WILL EXIST], and owed to Step 7b (recorded 2026-09-13) ----
+# Every `deriver_record` above names `results/p1-arm-d-panel-scored.json` in the pinned corpus, and
+# THAT FILE DOES NOT EXIST YET. Measured 2026-09-13: `spikes/p1/score-arm-d-panel.py` reads its five
+# inputs and PRINTS to stdout — it has no `--out` and persists nothing, so the Wilson intervals and
+# positive counts AC-520 requires to "exist, be pinned and be read" live only in terminal output. The
+# figures themselves are measured and are quoted per facet above, so nothing here is invented; what is
+# missing is the machine-readable artifact the lint reads.
+#
+# This is the THIRD undefined property in AC-520, found while closing the first two. Step 7b builds
+# `lint --facet-provenance`, so Step 7b produces the record: give the scorer an `--out`, write the
+# record into the corpus, and let the corpus pin move once with the rest of 7b's work rather than
+# twice. Nothing reads `deriver_record` before then, and AC-520's lint does not exist before then.
+# AC-071's sibling is in the same state by construction — its `--stability-record
+# spikes/results/p1/stability.json` is `[WILL EXIST]` AND now names a directory this repo no longer
+# has, since Step 2 moved `spikes/results/` to the corpus. Both paths are corpus-relative from here.

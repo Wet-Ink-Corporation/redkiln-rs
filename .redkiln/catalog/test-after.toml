@@ -1,0 +1,59 @@
+# reach: (chore, implement, optional) — Changeset for chore/docs; tdd does not tag them
+# implement loop family: test-after(10) < tdd-red-green-refactor(20) < bdd-outside-in(30)
+[activity]
+id           = "test-after"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["IntakeRecord", "Spec?"]   # P6 run1 fix: chore forbids specification
+derived_from = ["IntakeRecord", "Spec?"]
+tags         = ["kind:chore", "kind:docs", "change:text"]
+method_rank  = 10
+family       = "implement-loop"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["GreenAt", "ToolReport"]
+budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["test after", "trivial change", "chore"]
+rationale    = "Acceptable only where there is no behaviour to pin first (chores, docs); the affected suite must still be green."
+
+[[step]]
+id      = "implement"
+kind    = "agent"
+role    = "implementer"
+inputs  = { intake = "artifact:IntakeRecord", spec = "artifact:Spec?", last = "${verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green"
+kind    = "check"
+inputs  = { report = "${verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "implement", max = 2 }
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${implement.outputs}" }
+evidence  = ["${verify}"]

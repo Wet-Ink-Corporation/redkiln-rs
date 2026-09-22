@@ -1,0 +1,55 @@
+[activity]
+id           = "threat-model"
+version      = 1
+stage        = "design"
+provides     = ["ThreatModel"]
+requires     = ["Spec", "DesignDoc?"]
+derived_from = ["Spec", "DesignDoc?"]
+tags         = ["kind:project", "kind:story", "kind:initiative"]
+applicable_if = "'auth' in surfaces or (data_migration != null and data_migration) or external_dep"
+method_rank  = 10
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["Findings", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["STRIDE", "threat modeling", "OWASP", "security"]
+rationale    = "OWASP threat modeling; required once a change touches auth, data or an external dependency."
+
+[[step]]
+id      = "model"
+kind    = "agent"
+role    = "architect"
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?", kb = "kb:security-baseline", findings = "${review.outputs?}" }
+outputs = "value:ThreatModel"
+timeout_secs = 1200
+retry   = { max = 2 }
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { model = "${model.outputs}", spec = "artifact:Spec" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { findings = "${review.outputs}", model = "${model.outputs}" }
+expr    = "findings.none(evidence in ['Reproduced'])"
+on_false = { to = "model", max = 2 }
+
+[[step]]
+id      = "residual-gate"
+kind    = "gate"
+when    = "${model.outputs.residual}.len() > 0"
+question = "threat-model.accept-residual"
+inputs  = { residual = "${model.outputs.residual}", findings = "${review.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ThreatModel = "${model.outputs}" }
+evidence  = ["${review}", "${residual-gate?}"]

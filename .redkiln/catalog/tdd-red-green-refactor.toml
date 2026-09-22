@@ -1,0 +1,114 @@
+[activity]
+id           = "tdd-red-green-refactor"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "implement"
+provides     = ["Changeset", "ImplReport"]
+requires     = ["Spec"]
+derived_from = ["Spec"]
+tags         = ["kind:story", "kind:bug", "kind:tech-debt", "change:text"]
+method_rank  = 20   # implement loop family: test-after(10) < tdd(20) < bdd-outside-in(30) — P6 batch edit 2026-09-07, was 10
+family       = "implement-loop"
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["GreenAt", "ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 12, tokens = 800_000, wall_clock_secs = 10800 }
+deviation_ok = ["downgrade"]
+keywords     = ["tdd", "red green refactor", "failing test first"]
+rationale    = "Beck TDD: a failing test per AC pins the behaviour before the implementation exists."
+
+[[step]]
+id      = "red"
+kind    = "agent"
+role    = "implementer"
+for_each = "artifact:Spec.acceptance_criteria"
+inputs  = { ac = "${item}", spec = "artifact:Spec", last = "${red-verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "red-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "${red.outputs}" }   # list of ImplReport; tool flattens tests_added (schema gap: no flatten)
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "red-check"
+kind    = "check"
+inputs  = { report = "${red-verify.outputs}" }
+expr    = "report.failed > 0 and report.passed == 0"
+on_false = { to = "red", max = 2 }
+
+[[step]]
+id      = "green"
+kind    = "agent"
+role    = "implementer"
+inputs  = { spec = "artifact:Spec", red = "${red.outputs}", last = "${green-verify.outputs?}", hint = "${green-gate.answer?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+repeat  = { until = "${green-verify.outputs.status} == 'passing'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "tdd.green-exhausted" }
+
+[[step]]
+id      = "green-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "green-gate"
+kind    = "gate"
+question = "tdd.green-exhausted"
+when    = "${green-verify.outputs.status} != 'passing'"
+inputs  = { report = "${green-verify.outputs}", impl = "${green.outputs}" }
+
+[[step]]
+id      = "refactor"
+kind    = "agent"
+role    = "implementer"
+when    = "rigor >= recommended"
+inputs  = { impl = "${green.outputs}", kb = "kb:refactoring-catalog", last = "${refactor-verify.outputs?}" }
+outputs = "value:ImplReport"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "refactor-verify"
+kind    = "tool"
+run     = "toolchain:test"
+when    = "rigor >= recommended"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "still-green"
+kind    = "check"
+when    = "rigor >= recommended"
+inputs  = { report = "${refactor-verify.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "refactor", max = 2 }
+
+[[step]]
+id      = "summary"
+kind    = "tool"
+run     = "toolchain:change_summary"
+inputs  = { range = "baseline..HEAD" }
+outputs = "value:ChangeSummary"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { Changeset = "${summary.outputs}", ImplReport = "${green.outputs}" }
+evidence  = ["${green-verify}", "${refactor-verify?}", "${green-gate?}"]

@@ -7,7 +7,12 @@ provides     = ["SecurityReviewVerdict"]
 requires     = ["ChangeSummary", "ThreatModel?", "SecurityRequirements?", "ScanReport?"]
 derived_from = ["ChangeSummary", "ThreatModel?", "ScanReport?"]
 tags         = ["kind:story", "kind:project", "kind:security-vuln", "kind:bug"]
-applicable_if = "auth or kind == 'security-vuln'"
+# Step 7e (2026-09-21) -- the `auth` term is REMOVED, not rewritten to `surfaces`, in the SPIKE tree only.
+# `lattice.py` has no `surfaces` axis (BOOLS/ORDINALS carry none) and dies `KeyError: 'surfaces'`
+# on the rewritten form, so the instrument §7e.4 must run cannot read it. The installed copy at
+# `.redkiln/catalog/security-review.toml` DOES carry `'auth' in surfaces` -- doctor accepts it there (AC-072) and
+# that is the product's disposition. The divergence is deliberate and recorded in DISPOSITIONS.
+applicable_if = "kind == 'security-vuln'"
 method_rank  = 10
 min_rigor    = "optional"
 cost_class   = "M"

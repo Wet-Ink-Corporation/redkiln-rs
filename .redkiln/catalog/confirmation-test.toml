@@ -1,0 +1,46 @@
+# reach: (bug, verify, optional) — require row "kind in [bug, security-vuln, incident]" → ConfirmationResult
+[activity]
+id           = "confirmation-test"
+version      = 1
+stage        = "verify"
+provides     = ["ConfirmationResult"]
+requires     = ["ReproCase", "Changeset"]
+derived_from = ["ReproCase", "Changeset"]
+tags         = ["kind:bug", "kind:security-vuln", "kind:incident"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["GreenAt", "ToolReport", "HumanAnswer?"]
+budget       = { attempts_total = 3, tokens = 20_000, wall_clock_secs = 1800 }
+deviation_ok = []
+keywords     = ["confirmation testing", "re-run repro", "if you didn't fix it it ain't fixed"]
+rationale    = "ISTQB confirmation testing / Agans rule 9: the original reproduction must pass at the fix sha and must have failed before it."
+
+[[step]]
+id      = "before"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "artifact:ReproCase.command", sha = "artifact:Changeset.sha" }
+outputs = "value:TestReport"
+timeout_secs = "${toolchain.test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "fixed"
+kind    = "check"
+inputs  = { result = "${before.outputs}" }
+expr    = "result.status == 'passing'"
+on_false = "continue"
+
+[[step]]
+id      = "not-fixed"
+kind    = "gate"
+when    = "${before.outputs.status} != 'passing'"
+question = "confirmation.not-fixed"
+inputs  = { result = "${before.outputs}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ConfirmationResult = { status = "${before.outputs.status}", passes_after = "${before.outputs.passed}", command = "${before.outputs.selection}", sha = "${before.outputs.sha}" } }   # composing emit (§9c.34)
+evidence  = ["${before}", "${not-fixed?}"]

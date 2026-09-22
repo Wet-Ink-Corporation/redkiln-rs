@@ -1,0 +1,48 @@
+# reach: (story, release, optional) — require row → BuildArtifact (every deploy pattern requires it)
+[activity]
+id           = "build-package"
+version      = 1
+stage        = "release"
+provides     = ["BuildArtifact"]
+requires     = ["Changeset", "ReviewVerdict"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:incident", "kind:security-vuln", "kind:tech-debt", "kind:chore", "kind:docs", "kind:project"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 3, tokens = 20_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["build", "package", "reproducible build", "deployment pipeline"]
+rationale    = "Humble & Farley: one reproducible build artifact per release candidate, digested, built from the reviewed sha only."
+
+[[step]]
+id      = "build"
+kind    = "tool"
+run     = "toolchain:build"
+inputs  = { sha = "artifact:Changeset.sha" }
+outputs = "value:BuildReport"
+timeout_secs = "${toolchain.build_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "built"
+kind    = "check"
+inputs  = { report = "${build.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = "fail"
+
+[[step]]
+id      = "package"
+kind    = "tool"
+run     = "toolchain:package"
+inputs  = { sha = "artifact:Changeset.sha" }
+outputs = "value:BuildArtifact"
+timeout_secs = "${toolchain.build_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { BuildArtifact = "${package.outputs}" }
+evidence  = ["${build}", "${package}"]

@@ -1,0 +1,49 @@
+# reach: (incident, closeout, mandatory) — require row → ProblemRecord; the pack's [[stage.closeout.spawn]] row
+#   (§9b.17) spawns the follow-up initiative. Placed in closeout (raw table: operate) so the requiring stage can select it.
+[activity]
+id           = "problem-record"
+version      = 1
+stage        = "closeout"
+provides     = ["ProblemRecord"]
+requires     = ["Postmortem", "RootCause"]
+derived_from = ["Postmortem"]
+tags         = ["kind:incident", "kind:bug"]
+method_rank  = 10
+min_rigor    = "recommended"
+cost_class   = "S"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 1200 }
+deviation_ok = ["skip"]
+keywords     = ["problem record", "ITIL problem management", "known error"]
+rationale    = "ITIL incident/problem split: the incident closes, the underlying problem becomes its own initiative via the pack's spawn row."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "investigator"
+inputs  = { postmortem = "artifact:Postmortem", cause = "artifact:RootCause", backlog = "toolchain:backlog" }
+outputs = "value:ProblemRecord"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "owned"
+kind    = "check"
+inputs  = { record = "${draft.outputs}" }
+expr    = "record.owner != null and record.known_errors.len() > 0"
+on_false = "fail"
+
+[[step]]
+id      = "file"
+kind    = "tool"
+run     = "toolchain:item_create"
+inputs  = { record = "${draft.outputs}" }
+outputs = "value:ItemRefs"
+timeout_secs = 60
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ProblemRecord = "${draft.outputs}" }
+evidence  = ["${file}"]

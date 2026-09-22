@@ -1,0 +1,66 @@
+# reach: (story, design, recommended) with data_migration — require row → DataMigrationPlan
+[activity]
+id           = "data-migration-plan"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "design"
+provides     = ["DataMigrationPlan"]
+requires     = ["Spec", "DesignDoc?"]
+derived_from = ["Spec", "DesignDoc?"]
+tags         = ["kind:project", "kind:story", "kind:tech-debt", "kind:bug"]   # P6 run3 gap
+applicable_if = "data_migration != null and data_migration"
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 5, tokens = 250_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["expand migrate contract", "parallel change", "backfill", "dual write"]
+rationale    = "Fowler/Sato Parallel Change + DORA database change management: a schema change is planned in reversible phases before any script is written."
+
+[[step]]
+id      = "plan"
+kind    = "agent"
+role    = "architect"
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?", kb = "kb:migration-playbook", findings = "${adversary.outputs?}" }
+outputs = "value:DataMigrationPlan"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "architect"
+inputs  = { draft = "${plan.outputs}", checklist = "checklist:migration-safety" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { plan = "${plan.outputs}", spec = "artifact:Spec" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { plan = "${plan.outputs}", check = "${self-check.outputs}", findings = "${adversary.outputs?}" }
+expr    = "plan.reversible == true and check.failed == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "plan", max = 2 }
+
+[[step]]
+id      = "approve"
+kind    = "gate"
+when    = "rigor >= recommended or blast_radius >= high"
+question = "migration.approve"
+inputs  = { plan = "${plan.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { DataMigrationPlan = "${plan.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${approve?}"]

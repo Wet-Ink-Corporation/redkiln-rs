@@ -1,0 +1,73 @@
+# reach: (spike, closeout, optional) — baseline SpikeReport for the spike pack
+[activity]
+id           = "spike-report"
+version      = 1
+stage        = "closeout"
+provides     = ["SpikeReport", "DecisionRecord"]
+requires     = ["SpikeCharter", "ExperimentResults"]
+derived_from = ["SpikeCharter", "ExperimentResults"]
+tags         = ["kind:spike"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer"]
+budget       = { attempts_total = 5, tokens = 250_000, wall_clock_secs = 3600 }
+deviation_ok = []
+keywords     = ["spike report", "findings", "kill criteria", "decision"]
+rationale    = "This repo's F-series shape: answer the charter's question against its pre-registered kill criteria; the decision is a human's, recorded as a DecisionRecord."
+
+[[step]]
+id      = "write"
+kind    = "agent"
+role    = "investigator"
+inputs  = { charter = "artifact:SpikeCharter", results = "artifact:ExperimentResults", findings = "${adversary.outputs?}" }
+outputs = "value:SpikeReport"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "investigator"
+inputs  = { draft = "${write.outputs}", checklist = "checklist:spike-charter" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { report = "${write.outputs}", charter = "artifact:SpikeCharter" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", report = "${write.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and report.kill_hit != null and findings.none(severity in ['blocking'])"
+on_false = { to = "write", max = 2 }
+
+[[step]]
+id      = "decide"
+kind    = "gate"
+question = "spike.decision"
+inputs  = { report = "${write.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "record"
+kind    = "agent"
+role    = "planner"
+inputs  = { report = "${write.outputs}", decision = "${decide.answer}" }
+outputs = "value:DecisionRecord"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { SpikeReport = "${write.outputs}", DecisionRecord = "${record.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${decide}"]

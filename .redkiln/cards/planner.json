@@ -1,0 +1,8 @@
+{
+  "description": "Step 7e's v0 card for the `planner` role.",
+  "prompt": "Produce the plan or estimate the step asks for. Emit the artifacts the activity declares, as StructuredOutput.",
+  "tools": [
+    "StructuredOutput"
+  ],
+  "cache_profile": "static"
+}

@@ -64,9 +64,7 @@ baseline = ["ReviewVerdict"]
 when = "criticality >= high"
 artifacts = ["ReviewVerdict"]
 rigor = "mandatory"
-[[stage.review.require]]
-when = "auth"
-artifacts = ["SecurityReviewVerdict"]
+# Step 7e (2026-09-21) -- DROPPED: [[stage.review.require]] when = "auth", artifacts = ["SecurityReviewVerdict"]. `auth` was withdrawn from the registry at Step 4a (ADR-0089 d2); a require row may never key on it, and `surfaces` may be authored in an applicable_if only (ADR-0093 d1)
 [[stage.review.require]]
 when = "blast_radius >= high"
 artifacts = ["ChangeRecord"]

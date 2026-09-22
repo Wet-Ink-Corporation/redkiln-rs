@@ -1,0 +1,63 @@
+# reach: (story, design, recommended) with size >= high — require row → ArchitectureDescription
+# architecture description family: c4-context(10) < c4-container(20) < c4-component(30); all provide ArchitectureDescription,
+#   made disjoint by kind so no rank tie exists (F34 ambiguity B1)
+[activity]
+id           = "c4-component"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "design"
+provides     = ["ArchitectureDescription"]
+requires     = ["Spec"]
+derived_from = ["Spec"]
+tags         = ["kind:story", "kind:tech-debt"]
+applicable_if = "size >= high"
+method_rank  = 30
+family       = "architecture-description"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "Findings?"]
+budget       = { attempts_total = 4, tokens = 150_000, wall_clock_secs = 1800 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["c4", "component diagram", "inside a container"]
+rationale    = "C4 level 3: only a large story or debt item needs a component view; smaller ones inherit the container diagram."
+
+[[step]]
+id      = "draw"
+kind    = "agent"
+role    = "architect"
+inputs  = { spec = "artifact:Spec", kb = "kb:architecture-conventions", findings = "${adversary.outputs?}" }
+outputs = "value:ArchitectureDescription"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "architect"
+inputs  = { draft = "${draw.outputs}", checklist = "checklist:c4" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draw.outputs}", spec = "artifact:Spec" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "draw", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ArchitectureDescription = "${draw.outputs}" }
+evidence  = ["${self-check}", "${adversary?}"]

@@ -1,0 +1,67 @@
+# reach: (project, specification, recommended) with external_dep — require row → APIContract
+[activity]
+id           = "api-contract-spec"
+version      = 1
+stage        = "specification"
+provides     = ["APIContract"]
+requires     = ["Spec", "DesignDoc?"]
+derived_from = ["Spec", "DesignDoc?"]
+tags         = ["kind:project", "kind:story"]
+applicable_if = "external_dep or kind == project"
+method_rank  = 10
+min_rigor    = "recommended"
+cost_class   = "M"
+evidence     = ["ToolReport", "Findings?", "HumanAnswer?"]
+budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 3600 }
+human_source_ok = true
+deviation_ok = ["skip"]
+keywords     = ["openapi", "asyncapi", "contract first", "consumer driven contracts"]
+rationale    = "Contract-first: an interface consumed by another party is specified and linted before either side implements against it."
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "spec-author"
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?", lint = "${contract-lint.outputs?}", findings = "${adversary.outputs?}" }
+outputs = "value:APIContract"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "contract-lint"
+kind    = "tool"
+run     = "toolchain:contract_lint"
+inputs  = { document = "${draft.outputs.document}" }
+outputs = "value:LintReport"
+timeout_secs = 120
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { contract = "${draft.outputs}", spec = "artifact:Spec" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { lint = "${contract-lint.outputs}", contract = "${draft.outputs}", findings = "${adversary.outputs?}" }
+expr    = "lint.errors.len() == 0 and contract.uncovered_ac.len() == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id      = "signoff"
+kind    = "gate"
+when    = "rigor >= mandatory or ${draft.outputs.breaking_changes}.len() > 0"
+question = "api-contract.accept"
+inputs  = { contract = "${draft.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { APIContract = "${draft.outputs}" }
+evidence  = ["${contract-lint}", "${adversary?}", "${signoff?}"]

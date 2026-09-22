@@ -1,0 +1,55 @@
+# reach: (spike, review, optional) — require row "kind == spike" → ReviewVerdict (on the experiment vs the charter's kill criteria)
+[activity]
+id           = "spike-decision-review"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = ["ExperimentResults", "SpikeCharter"]
+derived_from = ["ExperimentResults", "SpikeCharter"]
+tags         = ["kind:spike"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings", "HumanAnswer?"]
+budget       = { attempts_total = 3, tokens = 200_000, wall_clock_secs = 2400 }
+deviation_ok = []
+keywords     = ["spike review", "kill criteria", "pre-registration", "evidence discipline"]
+rationale    = "This repo's evidence discipline: a reviewer checks the results against the pre-registered criteria before the report is written, so the report cannot move the goalposts."
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { results = "artifact:ExperimentResults", charter = "artifact:SpikeCharter" }
+outputs = "value:Findings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { findings = "${review.outputs}" }
+expr    = "findings.none(severity in ['blocking'])"
+on_false = "continue"
+
+[[step]]
+id      = "override"
+kind    = "gate"
+when    = "rigor >= recommended and ${review.outputs.items}.len() > 0"
+question = "review.blocking"
+inputs  = { findings = "${review.outputs}" }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { findings = "${review.outputs}", override = "${override.answer?}" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReviewVerdict = "${record.outputs}" }
+evidence  = ["${review}", "${override?}"]

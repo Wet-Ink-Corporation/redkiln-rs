@@ -1,0 +1,49 @@
+# reach: (story, verify, optional) with 'unreal' in toolchain — Unreal specialisation of unit-tests (PC7 ii): same rank,
+#   toolchain specificity wins on a mixed Node+UE item (then the Node tests are NOT run — F35 records it)
+[activity]
+id           = "unit-tests-ue"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "verify"
+provides     = ["TestReport"]
+requires     = ["Changeset", "Spec"]
+derived_from = ["Changeset"]
+tags         = ["kind:story", "kind:bug", "kind:tech-debt", "kind:project", "kind:security-vuln", "kind:chore", "toolchain:unreal"]   # run4
+method_rank  = 20
+min_rigor    = "optional"
+cost_class   = "L"
+evidence     = ["ToolReport"]
+budget       = { attempts_total = 4, tokens = 100_000, wall_clock_secs = 14400 }
+deviation_ok = ["add"]
+keywords     = ["unreal", "automation test", "cook", "functional test"]
+rationale    = "PC7: UE tests are cook + automation runs, not a unit-test command; budgeted at F21's 7200 s class twice over."
+
+[[step]]
+id      = "cook"
+kind    = "tool"
+run     = "toolchain:cook"
+inputs  = { sha = "artifact:Changeset.sha" }
+outputs = "value:CookReport"
+timeout_secs = "${toolchain.cook_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "cooked"
+kind    = "check"
+inputs  = { cook = "${cook.outputs}" }
+expr    = "cook.status == 'ok' and cook.errors.len() == 0"
+on_false = "fail"
+
+[[step]]
+id      = "automation"
+kind    = "tool"
+run     = "toolchain:ue_automation"
+inputs  = { cook = "${cook.outputs}", selection = "affected" }
+outputs = "value:AutomationReport"
+timeout_secs = "${toolchain.ue_test_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { TestReport = { status = "${automation.outputs.status}", passed = "${automation.outputs.passed}", failed = "${automation.outputs.failed}", selection = "${automation.outputs.tests}" } }   # composing emit (§9c.34)
+evidence  = ["${cook}", "${automation}"]

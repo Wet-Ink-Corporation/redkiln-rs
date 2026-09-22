@@ -1,0 +1,100 @@
+# reach: (initiative, discovery, mandatory) with novelty >= high — prototype family rank 40; selected only when
+#   prototype-test is inapplicable or by deviation add (F34 ambiguity B1: lowest-rank-wins)
+# prototype family: prototype-test(10) < design-sprint(40); discovery spine family rank 40 (inert)
+[activity]
+id           = "design-sprint"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "discovery"
+provides     = ["PrototypeFindings", "DecisionRecord"]
+requires     = ["ProblemStatement", "OutcomeStatement"]
+derived_from = ["ProblemStatement"]
+tags         = ["kind:initiative"]
+applicable_if = "novelty >= high and criticality >= high"
+method_rank  = 40
+family       = "prototype"
+min_rigor    = "mandatory"
+cost_class   = "L"
+evidence     = ["HumanAnswer", "ToolReport"]
+budget       = { attempts_total = 8, tokens = 600_000, wall_clock_secs = 432000 }
+deviation_ok = ["downgrade"]
+keywords     = ["design sprint", "GV", "map sketch decide prototype test"]
+rationale    = "Knapp/GV design sprint: five human-gated days; reserved for high-novelty, high-criticality initiatives where a week of humans is cheaper than a wrong quarter."
+
+[[step]]
+id      = "map"
+kind    = "agent"
+role    = "investigator"
+inputs  = { problem = "artifact:ProblemStatement", outcome = "artifact:OutcomeStatement" }
+outputs = "value:OpportunityMap"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "sketch"
+kind    = "agent"
+role    = "architect"
+inputs  = { map = "${map.outputs}" }
+outputs = "value:SketchSet"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "decide"
+kind    = "gate"
+question = "sprint.decide"
+inputs  = { sketches = "${sketch.outputs}" }
+
+[[step]]
+id      = "prototype"
+kind    = "agent"
+role    = "implementer"
+inputs  = { sketches = "${sketch.outputs}", chosen = "${decide.answer}", last = "${build-check.outputs?}" }
+outputs = "value:PrototypeBuild"
+timeout_secs = "${toolchain.implement_timeout}"
+retry   = { max = 2 }
+
+[[step]]
+id      = "build-check"
+kind    = "tool"
+run     = "toolchain:build"
+inputs  = { path = "${prototype.outputs.path}" }
+outputs = "value:BuildReport"
+timeout_secs = "${toolchain.build_timeout}"
+retry   = { max = 1 }
+
+[[step]]
+id      = "builds"
+kind    = "check"
+inputs  = { report = "${build-check.outputs}" }
+expr    = "report.status == 'passing'"
+on_false = { to = "prototype", max = 2 }
+
+[[step]]
+id      = "test"
+kind    = "gate"
+question = "sprint.test-results"
+inputs  = { build = "${prototype.outputs}" }
+
+[[step]]
+id      = "synthesise"
+kind    = "agent"
+role    = "investigator"
+inputs  = { build = "${prototype.outputs}", results = "${test.answer}", map = "${map.outputs}" }
+outputs = "value:PrototypeFindings"
+timeout_secs = 900
+retry   = { max = 1 }
+
+[[step]]
+id      = "record"
+kind    = "agent"
+role    = "planner"
+inputs  = { findings = "${synthesise.outputs}", chosen = "${decide.answer}" }
+outputs = "value:DecisionRecord"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { PrototypeFindings = "${synthesise.outputs}", DecisionRecord = "${record.outputs}" }
+evidence  = ["${decide}", "${test}", "${build-check}"]

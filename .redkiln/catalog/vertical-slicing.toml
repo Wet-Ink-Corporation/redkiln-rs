@@ -1,0 +1,79 @@
+[activity]
+id           = "vertical-slicing"
+version      = 1
+stage        = "planning"
+provides     = ["SliceSet", "DependencyDAG"]
+requires     = ["Spec", "DesignDoc?"]
+derived_from = ["Spec"]
+tags         = ["kind:project", "kind:initiative"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "M"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer"]
+budget       = { attempts_total = 6, tokens = 300_000, wall_clock_secs = 3600 }
+deviation_ok = ["downgrade"]
+keywords     = ["story map", "vertical slice", "decomposition", "dependency dag"]
+rationale    = "Every slice is independently shippable and mounted; the DAG is what parallel worktrees consume."
+
+[[step]]
+id      = "slice"
+kind    = "agent"
+role    = "planner"
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?", kb = "kb:slicing-heuristics", findings = "${adversary.outputs?}", answer = "${approve.answer?}" }
+outputs = "value:SliceSet"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "dag"
+kind    = "agent"
+role    = "planner"
+inputs  = { slices = "${slice.outputs.slices}", previous = "${dag.outputs?}" }
+outputs = "value:DependencyDAG"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "acyclic"
+kind    = "check"
+inputs  = { dag = "${dag.outputs}" }
+expr    = "dag.acyclic == true"
+on_false = { to = "dag", max = 2 }
+
+[[step]]
+id      = "coverage"
+kind    = "agent"
+role    = "planner"
+inputs  = { slices = "${slice.outputs}", spec = "artifact:Spec", checklist = "checklist:ac-coverage" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { slices = "${slice.outputs}", dag = "${dag.outputs}", spec = "artifact:Spec" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${coverage.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and findings.none(evidence in ['Reproduced'])"
+on_false = { to = "slice", max = 2 }
+
+[[step]]
+id      = "approve"
+kind    = "gate"
+question = "slicing.approve"
+inputs  = { slices = "${slice.outputs}", dag = "${dag.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { SliceSet = "${slice.outputs}", DependencyDAG = "${dag.outputs}" }
+evidence  = ["${coverage}", "${adversary?}", "${approve}"]

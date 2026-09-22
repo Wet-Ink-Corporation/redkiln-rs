@@ -1,0 +1,64 @@
+# reach: (initiative, discovery, recommended) — require row "kind == initiative" → DiscoveryReport
+[activity]
+id           = "discovery-report"
+version      = 1
+stage        = "discovery"
+provides     = ["DiscoveryReport"]
+requires     = ["ProblemStatement", "OutcomeStatement?", "AssumptionList?", "CompetitorAnalysis?", "PrototypeFindings?", "OpportunityMap?"]
+derived_from = ["ProblemStatement", "OutcomeStatement?", "AssumptionList?", "CompetitorAnalysis?", "PrototypeFindings?", "OpportunityMap?"]
+tags         = ["kind:initiative", "kind:project", "kind:spike"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["SelfCheck", "Findings?", "HumanAnswer"]
+budget       = { attempts_total = 5, tokens = 200_000, wall_clock_secs = 2400 }
+deviation_ok = []
+keywords     = ["discovery report", "go/no-go", "common vision"]
+rationale    = "DA 'Develop Common Vision': discovery ends in a recommendation a human decides on; the go/no-go is the stage gate, not the report."
+
+[[step]]
+id      = "synthesise"
+kind    = "agent"
+role    = "investigator"
+inputs  = { problem = "artifact:ProblemStatement", outcome = "artifact:OutcomeStatement?", assumptions = "artifact:AssumptionList?", competitors = "artifact:CompetitorAnalysis?", prototype = "artifact:PrototypeFindings?", map = "artifact:OpportunityMap?", findings = "${adversary.outputs?}" }
+outputs = "value:DiscoveryReport"
+timeout_secs = 900
+retry   = { max = 2 }
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "investigator"
+inputs  = { draft = "${synthesise.outputs}", checklist = "checklist:discovery-report" }
+outputs = "value:SelfCheck"
+timeout_secs = 300
+retry   = { max = 1 }
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${synthesise.outputs}", problem = "artifact:ProblemStatement" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}" }
+expr    = "check.failed == 0 and findings.none(severity in ['blocking'])"
+on_false = { to = "synthesise", max = 2 }
+
+[[step]]
+id      = "go-no-go"
+kind    = "gate"
+question = "discovery.go-no-go"
+inputs  = { report = "${synthesise.outputs}", findings = "${adversary.outputs?}" }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { DiscoveryReport = "${synthesise.outputs}" }
+evidence  = ["${self-check}", "${adversary?}", "${go-no-go}"]

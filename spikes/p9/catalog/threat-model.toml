@@ -6,7 +6,12 @@ provides     = ["ThreatModel"]
 requires     = ["Spec", "DesignDoc?"]
 derived_from = ["Spec", "DesignDoc?"]
 tags         = ["kind:project", "kind:story", "kind:initiative"]
-applicable_if = "auth or data_migration or external_dep"
+# Step 7e (2026-09-21) -- the `auth` term is REMOVED, not rewritten to `surfaces`, in the SPIKE tree only.
+# `lattice.py` has no `surfaces` axis (BOOLS/ORDINALS carry none) and dies `KeyError: 'surfaces'`
+# on the rewritten form, so the instrument §7e.4 must run cannot read it. The installed copy at
+# `.redkiln/catalog/threat-model.toml` DOES carry `'auth' in surfaces` -- doctor accepts it there (AC-072) and
+# that is the product's disposition. The divergence is deliberate and recorded in DISPOSITIONS.
+applicable_if = "data_migration or external_dep"
 method_rank  = 10
 min_rigor    = "recommended"
 cost_class   = "M"

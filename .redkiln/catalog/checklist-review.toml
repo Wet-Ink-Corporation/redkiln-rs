@@ -1,0 +1,50 @@
+# reach: (chore, review, optional) — require row → ReviewVerdict; also docs
+# review family: checklist-review(10) < code-review(20) < adversarial-review(30) < formal-inspection(40)
+[activity]
+id           = "checklist-review"
+version      = 2   # bumped 2026-09-08 (§9c.42)
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = ["ChangeSummary"]
+derived_from = ["ChangeSummary"]
+tags         = ["kind:chore", "kind:docs"]
+method_rank  = 10
+family       = "review"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings"]
+budget       = { attempts_total = 2, tokens = 60_000, wall_clock_secs = 900 }
+deviation_ok = []
+keywords     = ["checklist review", "informal review", "ISTQB review types"]
+rationale    = "ISTQB checklist-based review: enough for chores and docs, where there is no AC to break."
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { change = "artifact:ChangeSummary", checklist = "checklist:code-review" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { findings = "${review.outputs}" }
+expr    = "findings.none(severity in ['blocking'])"
+on_false = "continue"
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { findings = "${review.outputs}" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReviewVerdict = "${record.outputs}" }
+evidence  = ["${review}"]
