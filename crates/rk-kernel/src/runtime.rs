@@ -178,6 +178,7 @@ pub mod activity;
 pub mod advisory;
 pub mod ledger;
 pub mod marks;
+pub mod step;
 
 /// What a poisoned store lock means. **ADR-0118 clause 1**: *"the run stops at the poisoned
 /// acquisition. No `StepError` is constructed, nothing crosses a port boundary, no retry, no next

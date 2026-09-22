@@ -22,12 +22,27 @@ min_rigor    = "optional"
 cost_class   = "S"
 budget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 }
 
-# ONE `tool` step (§7d.13). `StepKind::from_token` accepts exactly agent | tool | check | gate | emit,
-# and `role` is transcribed here and refused later at `Pack::require_family_for_role` — which is why
-# pack.toml carries `[role.implementer] family`.
+# ONE `agent` step. `StepKind::from_token` accepts exactly agent | tool | check | gate | emit, and
+# `role` is transcribed here and refused later at `Pack::require_family_for_role` — which is why
+# pack.toml carries `[role.implementer] family`. `bind_nodes` reads the role off whichever step
+# nominates one, without regard to kind, so that check is exercised exactly as before.
+#
+# ⚠️ **THIS READ `kind = "tool"`, `run = "toolchain:test"` UNTIL `s7g`, AND IT WAS INCOHERENT.**
+# It was authored while `tool` steps had NO EXECUTOR: the runtime dispatched the whole ACTIVATION to
+# the `Harness` whatever its steps said, so a step declared `tool` was served by the model harness
+# and the declaration never had to mean anything. `s7g` gives each kind its own arm, and the
+# declaration stopped being free:
+#
+#   * `toolchain:test` returns a test COUNT (`Toolchain::test -> u32`), not an `ImplReport`, so
+#     `outputs = "value:ImplReport"` was never satisfiable through the toolchain port;
+#   * this step carries a `role`, a card and a schema, which are the AGENT arm's inputs — design
+#     §4.5 makes `agent` *"the only place a model runs"*, and a model is what this fixture runs.
+#
+# So the kind is corrected to what the fixture always meant, rather than the fixture being taught to
+# satisfy a port it never wanted. `tool`-step coverage is NOT lost: `s7g` covers the arm directly,
+# and the shipped pack carries 113 real `tool` steps.
 [[step]]
 id      = "check"
-kind    = "tool"
-run     = "toolchain:test"
+kind    = "agent"
 role    = "implementer"
 outputs = "value:ImplReport"

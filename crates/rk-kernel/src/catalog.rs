@@ -29,7 +29,16 @@ use std::path::Path;
 use crate::toml_subset::{self, Table, Value};
 
 /// The five step kinds of the activity-graph schema §1.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+///
+/// 🛑 **The serde derives serve the RUN RECORD, not a second catalog loader.** `s7g` (ADR-0138
+/// clause 5) puts an activation's transcribed step list in `inputs/specs.json` so a run can be read
+/// against a catalog that has since moved. The **only** path from a `.toml` activity to a [`Step`]
+/// remains this module's hand-written loader over `toml_subset`; `Deserialize` here reads back what
+/// this crate itself wrote, and adding a `serde`-driven TOML path would be a second parse of the
+/// catalog with its own acceptance surface.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub enum StepKind {
     Agent,
     Tool,
@@ -86,7 +95,10 @@ impl fmt::Display for Evidence {
 }
 
 /// One `[[step]]`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// The serde derives are the run record's — see [`StepKind`]'s note for why they are not a second
+/// catalog loader.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Step {
     pub id: String,
     pub kind: StepKind,

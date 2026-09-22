@@ -646,6 +646,13 @@ impl RuntimeContext {
 pub struct RecordedSpec {
     activity_id_at_version: String,
     spec: ActivitySpec,
+    /// **The activation's transcribed steps (ADR-0138).**
+    ///
+    /// `None` means *this caller transcribed none* — it is an explicit absence, not a default and
+    /// not an empty walk. The kernel's own machinery suites (dispatch, retry, commit races, AC-013
+    /// re-entry) have no catalog activity behind them and legitimately supply nothing; the
+    /// composition root, which holds the `catalog::Activity`, always supplies a list.
+    steps: Option<Vec<crate::catalog::Step>>,
 }
 
 impl RecordedSpec {
@@ -656,7 +663,31 @@ impl RecordedSpec {
         Self {
             activity_id_at_version: activity_id_at_version.to_owned(),
             spec,
+            steps: None,
         }
+    }
+
+    /// The same binding, **with the activity's steps transcribed** — ADR-0138.
+    ///
+    /// This is what the composition root uses. It holds the `catalog::Activity` and already reads
+    /// `activity.steps`; before `s7g` it read one field off them and discarded the rest.
+    #[must_use]
+    pub fn with_steps(
+        activity_id_at_version: &str,
+        spec: ActivitySpec,
+        steps: Vec<crate::catalog::Step>,
+    ) -> Self {
+        Self {
+            activity_id_at_version: activity_id_at_version.to_owned(),
+            spec,
+            steps: Some(steps),
+        }
+    }
+
+    /// The transcribed steps, or `None` when the caller supplied none.
+    #[must_use]
+    pub fn steps(&self) -> Option<&[crate::catalog::Step]> {
+        self.steps.as_deref()
     }
 
     /// The activation identity — the idempotency key's second part (ADR-0097 decision 2).
@@ -672,7 +703,7 @@ impl RecordedSpec {
     }
 
     fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
+        let mut out = serde_json::json!({
             "activity_id_at_version": self.activity_id_at_version,
             "card_digest": self.spec.card_digest.as_str(),
             "inputs": self
@@ -684,11 +715,34 @@ impl RecordedSpec {
             "schema": self.spec.schema.as_str(),
             "timeout_secs": self.spec.timeout_secs,
             "tools": self.spec.tools,
-        })
+        });
+        // 🛑 **AN ABSENT MEMBER, NEVER A `null` ONE — the `run_id` is a digest over these bytes.**
+        // Writing `"steps": null` unconditionally moved the recorded run_id of EVERY run ever
+        // recorded (measured at `s7g`: `implement-bf1d8cec3b22d288` -> `implement-48ef08f45b9e3417`,
+        // caught by `config.rs`'s `adr0083_…threaded_into_run_inputs`, which exists for exactly
+        // this). A binding that transcribed no steps must serialise byte-identically to how it
+        // serialised before `s7g` — D18-14's byte-stability precedent, the same one ADR-0131 keeps
+        // for the canonical digest. A binding that DID transcribe steps is a different run and its
+        // run_id moving is correct.
+        if let Some(steps) = self.steps.as_ref()
+            && let Some(map) = out.as_object_mut()
+        {
+            map.insert(
+                "steps".to_owned(),
+                serde_json::to_value(steps).unwrap_or(serde_json::Value::Null),
+            );
+        }
+        out
     }
 
     /// Read one binding back. **Every member is required**; none is defaulted, for the reason the
     /// type's own doc gives.
+    ///
+    /// `steps` is the one exception and it is not a defaulted member: an **absent or `null`**
+    /// `steps` reads back as `None`, which is the same explicit absence the field's own doc
+    /// describes. A record written before `s7g` carries no `steps` key and must still replay; a
+    /// required member would have made every such record malformed. A `steps` that is PRESENT and
+    /// malformed is still an error — absence and nonsense are not the same answer.
     fn from_json(node: &str, value: &serde_json::Value) -> Result<Self, ReplayError> {
         let bad = |detail: String| ReplayError::Malformed {
             path: "inputs/specs.json".to_owned(),
@@ -733,8 +787,16 @@ impl RecordedSpec {
                 Ok((name.to_owned(), value.clone()))
             })
             .collect::<Result<Vec<(String, serde_json::Value)>, ReplayError>>()?;
+        let steps = match value.get("steps") {
+            None | Some(serde_json::Value::Null) => None,
+            Some(raw) => Some(
+                serde_json::from_value::<Vec<crate::catalog::Step>>(raw.clone())
+                    .map_err(|e| bad(format!("`steps` is present but does not read back: {e}")))?,
+            ),
+        };
         Ok(Self {
             activity_id_at_version: text("activity_id_at_version")?,
+            steps,
             spec: ActivitySpec {
                 card_digest,
                 tools,
@@ -1321,11 +1383,17 @@ fn dispatch_through(
     now: JournaledNow,
 ) -> Result<Vec<Event>, ReplayError> {
     let before = rt.journal(&key.item)?.len();
-    let report = rt.run_activity(
-        &key.item,
-        &key.activity_id_at_version,
-        step_id,
-        binding.spec(),
+    // **`s7g`: the step walk, not the bare activation dispatch.** `run_activity_steps` falls
+    // through to `run_activity` unchanged when the binding transcribed no steps (ADR-0138), so a
+    // caller with no catalog activity behind it behaves exactly as it did before this stage.
+    let report = rt.run_activity_steps(
+        crate::runtime::step::Activation {
+            item: &key.item,
+            activity_id_at_version: &key.activity_id_at_version,
+            step_id,
+            spec: binding.spec(),
+        },
+        binding.steps(),
         cap,
         now,
     )?;

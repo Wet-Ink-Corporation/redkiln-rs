@@ -178,7 +178,22 @@ pub struct Resolved {
     /// The optional `[adapters] harness_binary` key (RT-49) — the program every dispatch spawns.
     /// `None` is the ordinary case and means the adapter's own default.
     pub harness_binary: Option<String>,
+    /// `[adapters] toolchains`, in the file's **declared order** — ADR-0137 clause 2 selects by
+    /// `detect()` in this order. Deliberately not the kernel `Config`'s copy, which `Config::new`
+    /// SORTS so the recorded digest is a function of the set rather than of the file's order.
+    pub toolchains: Vec<String>,
+    /// RT-49's per-toolchain program overrides.
+    pub toolchain_programs: Option<std::collections::BTreeMap<String, String>>,
+    /// ADR-0137 clause 5's construction-time backstop, in seconds.
+    pub toolchain_timeout_secs: u64,
 }
+
+/// **ADR-0137 clause 5.** The toolchain adapters' default construction-time backstop.
+///
+/// Measured at `s7g` over `.redkiln/catalog/`: the largest declared literal `timeout_secs` on any
+/// step is **3600**. The backstop may not be smaller than the largest step it could serve, or a
+/// declared step timeout would be capped without saying so — so the floor is measured, not chosen.
+pub const DEFAULT_TOOLCHAIN_TIMEOUT_SECS: u64 = 3600;
 
 /// The outer verb.
 ///
@@ -282,13 +297,22 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         }
     };
 
+    // **ADR-0137: the REAL toolchain, over the run-owned worktree.** Until `s7g` this slot held
+    // `FixtureToolchain::default()`, whose `Default` is `present: false` — a toolchain reporting
+    // itself absent, which is why AC-473's clause has never had a mechanism.
+    let toolchain = match real_toolchain(&resolved, env, &owned) {
+        Ok(toolchain) => toolchain,
+        Err(exit) => return Ok(exit),
+    };
+
     let ports = rk_ports::root::Ports {
         store,
         harness: Arc::new(harness),
-        // The three with no Phase-1 real (ADR-0094 decision 2).
+        // The two with no Phase-1 real (ADR-0094 decision 2; design:265-266 — GitHub and mdBook
+        // are Phase 3, which is ADR-0134's warrant for the port lint's expected-uncalled set).
         tracker: Arc::new(rk_ports::fakes::BoardTracker::default()),
         docs: Arc::new(rk_ports::fakes::RecordingDocs::default()),
-        toolchain: Arc::new(rk_ports::fakes::FixtureToolchain::default()),
+        toolchain,
     };
 
     // Every node the loop reaches was bound above; the supplier is the seam for a node first seen
@@ -612,6 +636,12 @@ pub fn through_step_seven(
         stage,
         config: kernel_config,
         harness_binary: config.adapters.harness_binary.clone(),
+        toolchains: config.adapters.toolchains.clone(),
+        toolchain_programs: config.adapters.toolchain_programs.clone(),
+        toolchain_timeout_secs: config
+            .adapters
+            .toolchain_timeout_secs
+            .unwrap_or(DEFAULT_TOOLCHAIN_TIMEOUT_SECS),
     })
 }
 
@@ -1350,6 +1380,176 @@ fn recreate_run_worktree(
 /// declares no constant for it (measured: no `DEFAULT_HARNESS_BINARY` in
 /// `rk-adapter-claude/src/config.rs`), and adding one would be an adapter `src` edit that
 /// re-opens Checkpoint 7c for a spelling — so the literal is here, named as what it is.
+/// **ADR-0139, narrowing ADR-0137 clause 8: the `Toolchain` a run gets when NONE detected.**
+///
+/// Clause 8 said the run refuses at startup. Measured at `s7g`, that broke **11** `rk-cli` tests
+/// whose fixture repositories carry neither a `Cargo.toml` nor a `package.json` and whose subject
+/// is the gate/answer path, not the toolchain — a run with no `tool` step was refused for lacking a
+/// capability it never reached.
+///
+/// So the refusal moves to the **point of use**. Every method refuses **by name**, naming the
+/// adapters tried and the project root; `detect` answers `Ok(false)`, which is the truth.
+///
+/// 🛑 **This is not the fixture fallback clause 8 forbids, and the difference is the one that
+/// matters.** `FixtureToolchain::test()` returns `Ok(selection.len())` — a SUCCESS, which is how a
+/// toolchain that verified nothing has been reporting green. Every method here returns `Err`. A run
+/// that never needs a toolchain proceeds; a run that reaches a `tool` step is refused, loudly, at
+/// the step that needed it.
+#[derive(Debug)]
+struct UndetectedToolchain {
+    root: String,
+    tried: String,
+}
+
+impl UndetectedToolchain {
+    fn refuse(&self, verb: &str) -> rk_types::error::StepError {
+        rk_types::error::StepError::Unsupported {
+            capability: format!(
+                "{verb}: no configured toolchain adapter detects a project at {} — {}",
+                self.root, self.tried
+            ),
+        }
+    }
+}
+
+impl rk_ports::toolchain::Toolchain for UndetectedToolchain {
+    fn detect(&self) -> Result<bool, rk_types::error::StepError> {
+        Ok(false)
+    }
+    fn build(&self) -> Result<(), rk_types::error::StepError> {
+        Err(self.refuse("build"))
+    }
+    fn test(&self, _selection: &[String]) -> Result<u32, rk_types::error::StepError> {
+        Err(self.refuse("test"))
+    }
+    fn lint(&self) -> Result<(), rk_types::error::StepError> {
+        Err(self.refuse("lint"))
+    }
+    fn classify(
+        &self,
+        _path: &str,
+    ) -> Result<rk_ports::toolchain::Classification, rk_types::error::StepError> {
+        Err(self.refuse("classify"))
+    }
+    fn change_summary(
+        &self,
+        _range: &str,
+    ) -> Result<rk_ports::toolchain::ChangeSummary, rk_types::error::StepError> {
+        Err(self.refuse("change_summary"))
+    }
+}
+
+/// **ADR-0137: build the real `Toolchain`, chosen by the port's own `detect()`.**
+///
+/// `[adapters] toolchains` in **declared order**, first success wins. Position would not do — the
+/// shipped order lists Node first and this tree is Rust — and `detect` is documented as *"Is this
+/// toolchain present for the project under test?"*, which is exactly the question. Before `s7g` it
+/// had no caller at all.
+///
+/// 🛑 **`project_root` is the RUN-OWNED WORKTREE, never the checkout a checkpoint is running in.**
+/// `s7c` §7c.14: a Rust adapter over `D:/repos/redkiln-rs` would re-enter `cargo test --workspace`
+/// from inside a checkpoint's own run, unbounded, on the same `target/`. The run-owned worktree is a
+/// separate checkout with its own target dir, and it is the tree the run is actually operating on.
+///
+/// 🛑 **No fixture fallback.** When nothing detects the run gets an [`UndetectedToolchain`], every
+/// one of whose methods refuses by name — **ADR-0139**, narrowing clause 8's startup refusal to the
+/// point of use. Falling back to `FixtureToolchain`, whose `test()` returns `Ok`, would restore the
+/// pre-`s7g` state under a new name on the path where a real failure is least visible.
+///
+/// # Errors
+/// [`Exit::ConfigError`] when an adapter's own construction is refused — a denylisted or incomplete
+/// child environment, a relative root, a zero bound. Those are configuration defects and are not
+/// deferred.
+fn real_toolchain(
+    resolved: &Resolved,
+    env: &Env,
+    project_root: &Path,
+) -> Result<Arc<dyn rk_ports::toolchain::Toolchain>, Exit> {
+    let root = project_root;
+    let scratch = resolved.common_dir.join("redkiln").join("tmp");
+    if let Err(e) = std::fs::create_dir_all(&scratch) {
+        eprintln!("redkiln: the toolchain scratch {} : {e}", scratch.display());
+        return Err(Exit::ConfigError);
+    }
+    let timeout = std::time::Duration::from_secs(resolved.toolchain_timeout_secs);
+    let child_env = env.as_map().clone();
+    let program_for = |name: &str, default: &str| -> PathBuf {
+        resolved
+            .toolchain_programs
+            .as_ref()
+            .and_then(|m| m.get(name))
+            .map_or_else(|| PathBuf::from(default), PathBuf::from)
+    };
+
+    let mut tried: Vec<String> = Vec::new();
+    for name in &resolved.toolchains {
+        // `adapters::AdapterSet::resolve` already refused any name outside the shipped two, so an
+        // unknown name here is a build defect rather than a configuration one — and it is reported
+        // as one instead of being skipped into a "nothing detected" refusal that would misname it.
+        let candidate: Arc<dyn rk_ports::toolchain::Toolchain> = match name.as_str() {
+            "rk-adapter-toolchain-rust" => {
+                let cfg = rk_adapter_toolchain_rust::Config::new(
+                    program_for(name, rk_adapter_toolchain_rust::DEFAULT_PROGRAM),
+                    timeout,
+                    root,
+                    child_env.clone(),
+                    scratch.clone(),
+                )
+                .map_err(|e| {
+                    eprintln!("redkiln: the {name} configuration was refused: {e}");
+                    Exit::ConfigError
+                })?;
+                Arc::new(
+                    rk_adapter_toolchain_rust::RustToolchain::new(cfg).map_err(|e| {
+                        eprintln!("redkiln: {name} could not be built: {e}");
+                        Exit::ConfigError
+                    })?,
+                )
+            }
+            "rk-adapter-toolchain-node" => {
+                let cfg = rk_adapter_toolchain_node::Config::new(
+                    program_for(name, rk_adapter_toolchain_node::DEFAULT_PROGRAM),
+                    timeout,
+                    root,
+                    child_env.clone(),
+                    scratch.clone(),
+                )
+                .map_err(|e| {
+                    eprintln!("redkiln: the {name} configuration was refused: {e}");
+                    Exit::ConfigError
+                })?;
+                Arc::new(
+                    rk_adapter_toolchain_node::NodeToolchain::new(cfg).map_err(|e| {
+                        eprintln!("redkiln: {name} could not be built: {e}");
+                        Exit::ConfigError
+                    })?,
+                )
+            }
+            other => {
+                eprintln!(
+                    "redkiln: `{other}` is a resolved toolchain adapter this binary cannot                      construct — `AdapterSet::resolve` and this match have drifted apart"
+                );
+                return Err(Exit::ConfigError);
+            }
+        };
+        match candidate.detect() {
+            Ok(true) => return Ok(candidate),
+            Ok(false) => tried.push(format!("{name}: not present")),
+            Err(e) => tried.push(format!("{name}: {e:?}")),
+        }
+    }
+    // **ADR-0139.** Not a startup refusal and not a fixture: a toolchain that refuses every verb
+    // by name, so a run needing none proceeds and a run reaching a `tool` step is refused there.
+    Ok(Arc::new(UndetectedToolchain {
+        root: root.display().to_string(),
+        tried: if tried.is_empty() {
+            "`[adapters] toolchains` is empty".to_owned()
+        } else {
+            tried.join("; ")
+        },
+    }))
+}
+
 fn real_harness_config(
     resolved: &Resolved,
     env: &Env,
@@ -1501,9 +1701,15 @@ fn bind_nodes(
         let activation = activity
             .id_at_version()
             .unwrap_or_else(|| activity.id.clone());
+        // **ADR-0138: the step list is TRANSCRIBED here, by the one place that holds the activity.**
+        // This loop already read `activity.steps` (for the role, just above) and discarded the
+        // rest; the runtime cannot re-derive them — `ActivitySpec` has no step list and
+        // `runtime.rs`'s residual 7 forbids loading the catalog from inside the runtime. The
+        // composition root is the only site with the value in hand, so it is the site that hands
+        // it over. `with_steps`, never `supplied`: the production path always transcribes.
         inputs = inputs.with_spec(
             &node.id,
-            rk_kernel::replay::RecordedSpec::supplied(&activation, spec),
+            rk_kernel::replay::RecordedSpec::with_steps(&activation, spec, activity.steps.clone()),
         );
     }
     Ok(inputs)

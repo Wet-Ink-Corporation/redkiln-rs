@@ -50,6 +50,14 @@ pub struct Adapters {
     pub harness_binary: Option<String>,
     /// RT-49: per-toolchain programs. Absent, each is resolved on the child's `PATH`.
     pub toolchain_programs: Option<BTreeMap<String, String>>,
+    /// **ADR-0137 clause 5**: the toolchain adapters' construction-time backstop, in seconds.
+    ///
+    /// The port carries no timeout parameter (ADR-0099 decision 2, RT-5), so this one bound
+    /// backstops every child an adapter spawns while a step's own `timeout_secs` stays the
+    /// kernel's. Absent, [`crate::verbs::run::DEFAULT_TOOLCHAIN_TIMEOUT_SECS`] — which is the
+    /// pack's LARGEST declared step timeout, because a backstop smaller than the largest step it
+    /// could serve would cap a declared timeout silently.
+    pub toolchain_timeout_secs: Option<u64>,
 }
 
 /// `[packs]`.
@@ -141,6 +149,7 @@ pub fn key_surface() -> Vec<String> {
             // surface would silently under-report exactly the two keys RT-49 routed.
             harness_binary: Some(String::new()),
             toolchain_programs: Some(BTreeMap::from([(String::new(), String::new())])),
+            toolchain_timeout_secs: Some(0),
         },
         packs: Packs {
             enabled: Vec::new(),

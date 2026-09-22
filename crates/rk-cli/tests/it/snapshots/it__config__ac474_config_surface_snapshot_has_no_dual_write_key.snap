@@ -7,6 +7,7 @@ adapters.harness
 adapters.harness_binary
 adapters.store
 adapters.toolchain_programs
+adapters.toolchain_timeout_secs
 adapters.toolchains
 doctor
 doctor.unread_window_runs

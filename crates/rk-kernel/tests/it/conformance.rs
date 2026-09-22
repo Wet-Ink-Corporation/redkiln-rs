@@ -8,18 +8,38 @@
 //!
 //! # The four, and what each pins
 //!
-//! | lint | closed set it reads | measured 2026-09-21 | discharged by |
+//! | lint | closed set it reads | measured 2026-09-21 | state at `s7g`'s close |
 //! | --- | --- | --- | --- |
-//! | [`conformance_every_step_kind_has_an_executor`] | design §4.5's five step kinds | **0** `StepKind` references in `runtime/` | `s7g` |
-//! | [`conformance_every_port_has_a_call_site`] | ADR-0003's port table | harness 1, store 1, **toolchain 0, tracker 0, docs 0** | `s7g` (toolchain), later (tracker/docs) |
-//! | [`conformance_every_trailer_key_has_a_producer`] | design §5.4's trailer grammar | `Gate` 2, **`Story` 0, `Slice-Verdict` 0** | `s7h` |
-//! | [`shipped_pack_loads`] | the product's own `.redkiln/` | GREEN from `s7f` §7f.2 | **this step** |
+//! | [`conformance_every_step_kind_has_an_executor`] | design §4.5's five step kinds | **0** `StepKind` references in `runtime/` | **DISCHARGED by `s7g`** — `runtime/step.rs` routes all five |
+//! | [`conformance_every_port_has_a_call_site`] | ADR-0003's port table | harness 1, store 1, **toolchain 0, tracker 0, docs 0** | **DISCHARGED by `s7g`**, narrowed by **ADR-0134** — see below |
+//! | [`conformance_every_trailer_key_has_a_producer`] | design §5.4's trailer grammar | `Gate` 2, **`Story` 0, `Slice-Verdict` 0** | still ARMED, `s7h` |
+//! | [`shipped_pack_loads`] | the product's own `.redkiln/` | GREEN from `s7f` §7f.2 | GREEN, 102 pinned |
 //!
 //! 🛑 **The `#[ignore]` reason spelling is load-bearing.** Checkpoint 7f greps each armed lint's
 //! reason for the literal `discharged by s7g` / `discharged by s7h`. An armed lint is coverage
 //! theatre unless something counts it, so the checkpoint counts all three **by name** and asserts
 //! each reason names the stage that discharges it. The ignore is removed by the landing that makes
 //! the lint pass, **in the same commit**.
+//!
+//! 🛑 **AND THAT CONVENTION NECESSARILY INVALIDATES CHECKPOINT 7F, WHICH IS NOT A DEFECT OF `s7g`.**
+//! Checkpoint 7f requires the literal `test result: ok. 0 passed; 0 failed; 3 ignored` and asserts
+//! three ARMED lints. Removing **any** `#[ignore]` breaks it, so *any* discharging stage invalidates
+//! it — the two-in-one-commit rule guarantees that. Checkpoint 7f is `s7g`'s **entry** gate only and
+//! nothing downstream requires it green; `00-preamble.md`'s maintenance rule already provides for a
+//! pass attesting a specific text at a specific time. Two of the three are discharged here, so that
+//! block is now historical; the one that remains still carries `discharged by s7h` verbatim.
+//!
+//! # ADR-0134: the port lint asserts an EQUALITY, because the emptiness was unsatisfiable
+//!
+//! [`conformance_every_port_has_a_call_site`] asserted `uncalled.is_empty()` over all five ports.
+//! `tracker` and `docs` have **no Phase-1 real adapter by design** — design:265 *"none in Phase 1
+//! (GitHub is Phase 3)"*, design:266 *"none in Phase 1 (mdBook is Phase 3)"*, AC-499 instantiated
+//! only for ports that have one, AC-507/AC-508/AC-510 Phase 3, and `s7a` §7a:198-199 authoring both
+//! argument types as contentless newtypes so no Phase-3 schema is invented early. So `s7f`'s *"later
+//! (tracker/docs)"* meant **Phase 3**, no stage in this runbook claims either port, and the
+//! emptiness form could only ever stay `#[ignore]`d. **An assertion that cannot become true is an
+//! assertion that never runs.** The equality form runs on every commit from `s7g` and fails in
+//! **both** directions.
 //!
 //! 🛑 **The first three lints scan CODE LINES ONLY — comments stripped AND string literals
 //! blanked.** A comment naming `StepKind`, a doc-comment naming a port, a grammar file naming a
@@ -282,7 +302,6 @@ fn the_comment_stripper_ignores_prose() {
 /// so by the kernel's own accounting 298 steps are attempt-bearing. What this lint asserts is
 /// narrower and is the thing that is false today: **only the agent kind reaches a port**.
 #[test]
-#[ignore = "ARMED: the runtime routes on no StepKind — 0 references in src/runtime/; discharged by s7g"]
 fn conformance_every_step_kind_has_an_executor() {
     let root = workspace_root();
     let runtime_dir = root.join("crates/rk-kernel/src/runtime");
@@ -307,13 +326,58 @@ fn conformance_every_step_kind_has_an_executor() {
         runtime_dir.display()
     );
 
-    // THE CLOSED SET. design §4.5, and `catalog.rs`'s `StepKind` carries exactly these five.
-    let five = ["Agent", "Tool", "Check", "Gate", "Emit"];
-    assert_eq!(five.len(), 5, "design §4.5 closes the set at five");
+    // THE CLOSED SET, PARSED FROM THE ENUM ITSELF — not a literal array.
+    //
+    // 🛑 **This was a hardcoded `["Agent", "Tool", "Check", "Gate", "Emit"]` until `s7g`, and its
+    // sibling lint below has parsed `Ports` from source since it was written.** The asymmetry was
+    // the weakness: a literal list is an inventory a fixture would have to edit, which is exactly
+    // what `rk-ports`' `source_parse.rs` refuses `include_str!` for, and it meant a SIXTH step kind
+    // could be added to `catalog.rs` and this lint would keep passing by never asking about it —
+    // the same vacuity shape as a `> 0` anchor on a pairwise lint (`shipped_pack_loads`'s 102 pin).
+    // The set is now read from `StepKind`'s own declaration, so a kind enters the question by
+    // existing rather than by being remembered.
+    let catalog_src = root.join("crates/rk-kernel/src/catalog.rs");
+    let catalog_text = std::fs::read_to_string(&catalog_src)
+        .unwrap_or_else(|e| panic!("{} is readable: {e}", catalog_src.display()));
+    let catalog_code = code_lines(&catalog_text);
+    assert!(
+        catalog_code.iter().any(|l| l.contains("pub enum StepKind")),
+        "`pub enum StepKind` is not in {}; this lint is reading the wrong file",
+        catalog_src.display()
+    );
+    let five: Vec<String> = catalog_code
+        .iter()
+        .skip_while(|l| !l.contains("pub enum StepKind"))
+        .skip(1)
+        .take_while(|l| !l.starts_with('}'))
+        .filter_map(|l| {
+            let t = l.trim().strip_suffix(',')?.trim();
+            (!t.is_empty()
+                && t.starts_with(|c: char| c.is_ascii_uppercase())
+                && t.chars().all(|c| c.is_ascii_alphanumeric()))
+            .then(|| t.to_owned())
+        })
+        .collect();
+
+    // ANCHORS ON THE PARSE, before it is used. A parse that dropped a variant would report that
+    // kind as executed by never asking about it — the port lint's `fields.len() == 5` guard, for
+    // the same reason.
+    assert_eq!(
+        five.len(),
+        5,
+        "design §4.5 closes the step kinds at five and `StepKind` parsed as {five:?} — a parse \
+         that drops a variant would report that kind as having an executor by never asking"
+    );
+    for expected in ["Agent", "Check", "Emit", "Gate", "Tool"] {
+        assert!(
+            five.iter().any(|k| k == expected),
+            "`StepKind` parsed as {five:?}, which is missing the {expected:?} variant"
+        );
+    }
 
     let missing: Vec<&str> = five
         .iter()
-        .copied()
+        .map(String::as_str)
         .filter(|k| {
             let pat = format!("StepKind::{k}");
             !lines.iter().any(|(_, l)| l.contains(&pat))
@@ -361,7 +425,6 @@ fn conformance_every_step_kind_has_an_executor() {
 /// classify`; `Toolchain::lint` collides with the four `*_lint` functions in `select/lints.rs`;
 /// `Toolchain::test` is hopeless. The receiver is mandatory.
 #[test]
-#[ignore = "ARMED: toolchain, tracker and docs have 0 call sites in the kernel; discharged by s7g"]
 fn conformance_every_port_has_a_call_site() {
     let root = workspace_root();
     let ports_src = root.join("crates/rk-ports/src/root.rs");
@@ -444,12 +507,63 @@ fn conformance_every_port_has_a_call_site() {
         .cloned()
         .collect();
 
-    assert!(
-        uncalled.is_empty(),
-        "ADR-0003's port table closes the set at five and {} of them are reached from the kernel \
-         — no call site for: {uncalled:?}. `ports.toolchain` is s7g's; `ports.tracker` and \
-         `ports.docs` are later.",
-        5 - uncalled.len()
+    // **ADR-0134: AN EQUALITY, NOT AN EMPTINESS — AND THE WARRANT IS PER ENTRY.**
+    //
+    // `uncalled.is_empty()` asserted a property Phase 1 is DESIGNED never to satisfy, so its only
+    // reachable state inside this phase was `#[ignore]`d — an assertion that cannot become true is
+    // an assertion that never runs, which is the coverage theatre this module's header exists to
+    // prevent. The two entries below have no Phase-1 real adapter BY DECISION, and their argument
+    // types are contentless newtypes so that no Phase-3 schema is invented early: there is no
+    // meaningful call to write, and one written to satisfy a substring scan is not a call site.
+    //
+    // The instrument is `runbook/tools/check-checkpoints.py`'s, whose allowlist is
+    // `flagged == allowed`, "never 'flagged is small'", enumerated with a reason per entry.
+    // Equality means this FAILS IN BOTH DIRECTIONS: if `toolchain` regresses to 0 after s7g, and
+    // if `tracker` or `docs` gains a call site while a record still says none exists. Moving an
+    // entry out belongs with the change that earns it, on `shipped_pack_loads`'s pinned-count
+    // precedent.
+    let expected_uncalled: [(&str, &str); 2] = [
+        (
+            "docs",
+            "no Phase-1 real adapter — design:266, `DocsSite` | … | \"none in Phase 1 (mdBook is \
+             Phase 3)\"; AC-510 is Phase 3; `s7a` §7a:198-199 authors `DocSet`'s companions as \
+             opaque newtypes so no Phase-3 schema is invented early",
+        ),
+        (
+            "tracker",
+            "no Phase-1 real adapter — design:265, `Tracker` | … | \"none in Phase 1 (GitHub is \
+             Phase 3)\"; AC-508's idempotency key is Phase 3 and `s7a` §7a:198-199 declines to \
+             design it; `ExternalRef` / `TypedInput` are `pub(crate) ()` newtypes with no field set",
+        ),
+    ];
+    let expected: BTreeSet<String> = expected_uncalled
+        .iter()
+        .map(|(name, _)| (*name).to_owned())
+        .collect();
+    // The expected set is itself checked against the parsed domain, so a renamed or removed port
+    // cannot sit in this list unnoticed and quietly excuse itself.
+    for (name, _) in &expected_uncalled {
+        assert!(
+            fields.contains(*name),
+            "the expected-uncalled entry {name:?} is not a port in `Ports` ({fields:?}) — the \
+             warrant list has drifted from ADR-0003's set"
+        );
+    }
+
+    let actual: BTreeSet<String> = uncalled.iter().cloned().collect();
+    assert_eq!(
+        actual,
+        expected,
+        "the kernel's unreached ports are {actual:?} and the warranted set is {expected:?}.\n  \
+         A port that LEFT the expected set has gained a call site while a record still says it has \
+         none — move the entry and its warrant in the same change (ADR-0134 clause 4).\n  \
+         A port that JOINED it has lost its call site — that is a regression, not a scope change.\n\
+         The warrants are:\n  {}",
+        expected_uncalled
+            .iter()
+            .map(|(n, why)| format!("{n}: {why}"))
+            .collect::<Vec<_>>()
+            .join("\n  ")
     );
 }
 

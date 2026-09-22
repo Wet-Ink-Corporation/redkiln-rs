@@ -1,0 +1,387 @@
+//! **The step executor — design §4.5's five closed step kinds, each executed as such.**
+//!
+//! `s7g` §7g.1. Until this module, the runtime dispatched an **activation** and implemented exactly
+//! one of the five kinds by handing the whole activity to the `Harness`. design §4.5 fixes the set:
+//! *"`agent` (the only place a model runs), `tool` (a toolchain verb through the port), `check` (a
+//! deterministic predicate in Rust; cannot dispatch), `gate` (the kernel writes the mark and **exits
+//! 0**, resuming into the same step), `emit` (binds outputs to `provides`; exactly one per kind
+//! provided; terminal)"*.
+//!
+//! Measured over the shipped pack at `s7g`'s open: **574 steps — 185 `agent`, 113 `tool`, 94
+//! `check`, 80 `gate`, 102 `emit`** — of which one kind executed.
+//!
+//! # What each arm reaches, and the one that reaches nothing
+//!
+//! | kind | arm | port |
+//! | --- | --- | --- |
+//! | `agent` | [`Runtime::run_activity`]'s retry loop, **unchanged** | `Harness` |
+//! | `tool` | the four-verb map (**ADR-0135**) | **`Toolchain`** |
+//! | `check` | `predicate::evaluate` | none |
+//! | `gate` | the mark, and the run exits 0 | none |
+//! | `emit` | terminal; the provided kind is the activation's | none |
+//!
+//! 🛑 **`check` cannot dispatch, and the compiler carries it rather than a comment.** design §4.5's
+//! parenthesis is a prohibition. [`check_verdict`] is a **free function taking no `&self`**, so it
+//! has no `Ports`, no store and no journal in scope: the `check` arm cannot reach a port because
+//! there is no path from it to one. A reviewer does not have to trust a docstring, and a later edit
+//! that wanted to dispatch from `check` would have to change the signature to do it.
+//!
+//! # AC-013's grain is per ACTIVATION and stays so
+//!
+//! **ADR-0138.** `RunState::is_committed(item, activity_id_at_version)` has no step component, and
+//! the walk happens **inside** an activation that is not yet committed. The activation commits
+//! atomically. The consequence is intended rather than tolerated: a run that dies mid-activation
+//! re-runs that activation's steps. Anything else breaks `kill_and_resume_n_step` and criterion (3).
+//!
+//! # The two refusals this module exists to make visible
+//!
+//! **ADR-0135** — 113 `tool` steps name **33** distinct verbs and only four name a port method
+//! (`test` 28, `change_summary` 11, `build` 4, `lint` 4). The other 29 are refused **by name**. A
+//! silent fallthrough would turn 66 of 113 steps into invisible non-events, and a run that executed
+//! nothing would be indistinguishable from one that worked.
+//!
+//! **ADR-0136** — 54 of the pack's 121 step guards carry a `${…}` reference that nothing on this
+//! tree resolves. Such a step **refuses by name**. `rigor.rs`'s `null_out_refs` is a *static lint's*
+//! treatment and is correct there; calling it here would not express uncertainty but manufacture the
+//! value the guard turns on, and under ADR-0103's three-valued connectives all 54 would be silently
+//! skipped while the run exited 0. That function is `pub(crate)` and one import away, which is why
+//! the prohibition is a record and not a review note.
+
+use rk_types::error::StepError;
+
+use super::activity::ActivityReport;
+use crate::catalog::{Step, StepKind};
+use crate::predicate::{self, Tri};
+use crate::workflow::breaker::JournaledNow;
+use crate::workflow::envelope::AttemptCap;
+
+/// The four values that identify one activation to the walk.
+///
+/// Bundled rather than passed loose because `run_activity_steps` would otherwise take eight
+/// arguments and trip `clippy::too_many_arguments` (denied here). The bundle is also the honest
+/// shape: these four always travel together and `run_activity` already threads all four.
+#[derive(Debug, Clone, Copy)]
+pub struct Activation<'a> {
+    /// The item the activation belongs to.
+    pub item: &'a str,
+    /// `activity_id@version` — the idempotency key's second part (ADR-0097 decision 2).
+    pub activity_id_at_version: &'a str,
+    /// The DAG node id, which is NOT a `[[step]]` id.
+    pub step_id: &'a str,
+    /// The spec the `Harness` port is handed.
+    pub spec: &'a rk_types::activity::ActivitySpec,
+}
+
+/// What one step's execution did to the walk.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StepVerdict {
+    /// The step ran (or was correctly skipped by its guard) and the walk continues.
+    Continue,
+    /// The step's guard was not [`Tri::True`], so the step did not run. Distinct from
+    /// [`StepVerdict::Continue`] so a caller can count what a run actually executed rather than
+    /// what it walked past — an executor that cannot tell the two apart reports a skipped activity
+    /// as a performed one.
+    Skipped,
+    /// **A `gate`.** The kernel writes the mark and the run **exits 0**, resuming into this same
+    /// step (design §4.5). The walk ends here and the activation does not commit.
+    Gate,
+    /// **An `emit`.** design §4.5 makes it terminal. The walk ends and the activation's provided
+    /// kind stands.
+    Emitted,
+    /// The step failed. The walk ends and this is the activation's error.
+    Failed(StepError),
+}
+
+/// The four catalog verbs that name a `Toolchain` port method — **ADR-0135**'s closed map.
+///
+/// The spelling is identical on both sides, which is why this is a map and not an invention. Every
+/// other verb is refused by name; `classify` and `detect` are port methods that **no** `tool` step
+/// names (measured: 0 run lines each), so they are deliberately absent — adding them would be
+/// inventing a demand to fit a supply.
+const MAPPED_VERBS: [&str; 4] = ["build", "change_summary", "lint", "test"];
+
+/// **ADR-0136.** Is this guard decidable on this tree, and does it hold?
+///
+/// Returns `Ok(true)` to run the step, `Ok(false)` to skip it, and `Err` when the guard carries a
+/// reference the evaluator cannot resolve. A step with no `when` always runs.
+///
+/// # Errors
+///
+/// [`StepError::Unsupported`] naming **the step id and the guard text**. `Unsupported` is the closed
+/// set's variant for *"this is not something I can do"*, which is exactly what an unresolved
+/// reference is — a failure to ask the question, not an answer to it. It is deliberately **not**
+/// [`Tri::Null`]: that is a decided policy for a *known absent* value (ADR-0032, AC-079), and
+/// routing a missing mechanism through it would fire the abstention gate 54 times a run for a reason
+/// no operator can act on.
+fn guard_holds(step: &Step) -> Result<bool, StepError> {
+    let Some(src) = step.when.as_deref() else {
+        return Ok(true);
+    };
+    let parsed = predicate::parse(src).map_err(|e| StepError::Unsupported {
+        capability: format!(
+            "the `when` guard of step `{}` does not parse ({e:?}): {src}",
+            step.id
+        ),
+    })?;
+    // **No `null_out_refs` here, deliberately** — see the module header. An unresolved reference
+    // reaches `evaluate` and comes back as an error, which is the honest answer.
+    let outcome = predicate::evaluate(&parsed.expr, &predicate::Context::new()).map_err(|e| {
+        StepError::Unsupported {
+            capability: format!(
+                "the `when` guard of step `{}` cannot be evaluated on this tree ({e:?}): {src} — \
+                 reference resolution is OWED (ADR-0136) and no stage in this runbook claims it",
+                step.id
+            ),
+        }
+    })?;
+    Ok(outcome.value == Tri::True)
+}
+
+/// **The `check` arm — a deterministic predicate in Rust, and it CANNOT DISPATCH.**
+///
+/// 🛑 **This is a free function and takes no `&self` on purpose.** design §4.5's *"cannot dispatch"*
+/// is a prohibition, and the structural form of a prohibition is an absent capability rather than a
+/// comment asking for restraint. With no receiver there is no `Ports`, no store and no journal in
+/// scope, so the arm has no path to a port at all. `conformance.rs`'s sibling lints exist because
+/// this programme has repeatedly been bitten by guards satisfied by the prose beside them; this one
+/// is satisfied by the type checker.
+///
+/// # Errors
+///
+/// [`StepError::Unsupported`] when the `expr` does not parse or cannot be evaluated — the same
+/// treatment [`guard_holds`] gives a `when`, for the same reason.
+fn check_verdict(step: &Step) -> Result<bool, StepError> {
+    let Some(src) = step.expr.as_deref() else {
+        // A `check` with no `expr` asserts nothing. It is not a silent pass: an executor that
+        // treated "no predicate" as "predicate held" would make every malformed check green.
+        return Err(StepError::Unsupported {
+            capability: format!(
+                "the `check` step `{}` carries no `expr` to evaluate",
+                step.id
+            ),
+        });
+    };
+    let parsed = predicate::parse(src).map_err(|e| StepError::Unsupported {
+        capability: format!(
+            "the `expr` of check step `{}` does not parse ({e:?}): {src}",
+            step.id
+        ),
+    })?;
+    let outcome = predicate::evaluate(&parsed.expr, &predicate::Context::new()).map_err(|e| {
+        StepError::Unsupported {
+            capability: format!(
+                "the `expr` of check step `{}` cannot be evaluated on this tree ({e:?}): {src} — \
+                 reference resolution is OWED (ADR-0136)",
+                step.id
+            ),
+        }
+    })?;
+    Ok(outcome.value == Tri::True)
+}
+
+impl super::Runtime {
+    /// **The `tool` arm — a toolchain verb through the port (ADR-0135).**
+    ///
+    /// The verb is parsed by `workflow::memo::verb_of`, the tree's existing parse, and routed
+    /// through [`MAPPED_VERBS`]. **Every other verb is refused by name.**
+    ///
+    /// 🛑 **`change_summary` reaches the port and receives the adapters' dated refusal, and that is
+    /// correct.** Both real adapters return `Unsupported` from a row dated `2026-09-18` whose probe
+    /// is `none`, citing S-BIN and ADR-0099 clause 5. The 11 such steps in the shipped pack are
+    /// **expected** to refuse and must not be "fixed" into a synthesised value. Note also that the
+    /// value is discarded without ever being bound: naming the type in this crate would trip
+    /// Checkpoint 5's ban, so the call is made and the `Ok` arm carries nothing.
+    ///
+    /// # Errors
+    ///
+    /// The port's own [`StepError`], or [`StepError::Unsupported`] naming an unmapped verb.
+    fn run_tool_step(&self, step: &Step) -> Result<(), StepError> {
+        let run = step.run.as_deref().unwrap_or_default();
+        let Some(verb) = crate::workflow::memo::verb_of(run) else {
+            return Err(StepError::Unsupported {
+                capability: format!(
+                    "the `tool` step `{}` names no toolchain verb (`run` = {run:?})",
+                    step.id
+                ),
+            });
+        };
+        if !MAPPED_VERBS.contains(&verb) {
+            // **ADR-0135 clause 2.** By name, so the journal says which of the 29 was reached.
+            return Err(StepError::Unsupported {
+                capability: verb.to_owned(),
+            });
+        }
+        // THE CALL BOUNDARY. `ports.toolchain` — the port's first non-test call site.
+        let toolchain = &self.ports().toolchain;
+        match verb {
+            "build" => toolchain.build(),
+            "lint" => toolchain.lint(),
+            "test" => toolchain.test(&[]).map(|_| ()),
+            // The one whose `Ok` is never constructible outside `rk-ports`. Mapped, called, and the
+            // value dropped — see the 🛑 above.
+            "change_summary" => toolchain.change_summary("").map(|_| ()),
+            other => Err(StepError::Unsupported {
+                capability: other.to_owned(),
+            }),
+        }
+    }
+
+    /// **Walk an activation's steps in declaration order — `s7g` §7g.1's unit of execution.**
+    ///
+    /// `steps` is `None` when the caller transcribed none. **That is not a default and it is not an
+    /// empty walk** (ADR-0138's forbids): it means *this caller has no catalog activity behind it*,
+    /// and the activation runs exactly as it did before `s7g` — the `agent` dispatch and its retry
+    /// loop. The kernel never derives, guesses or invents a list.
+    ///
+    /// 🛑 **The production path must always transcribe, and that is asserted rather than trusted.**
+    /// `None` is for the kernel's own machinery suites, which test dispatch, retry, commit races and
+    /// AC-013 re-entry and have no activity behind them. `rk-cli`'s composition root holds the
+    /// `catalog::Activity` and uses [`super::super::replay::RecordedSpec::with_steps`].
+    ///
+    /// # Errors
+    ///
+    /// [`super::RuntimeError`] from the store or the fold. A step's own failure is a **value** in
+    /// the report, never an error of this function (AC-032).
+    pub fn run_activity_steps(
+        &self,
+        act: Activation<'_>,
+        steps: Option<&[Step]>,
+        cap: AttemptCap,
+        now: JournaledNow,
+    ) -> Result<ActivityReport, super::RuntimeError> {
+        let Activation {
+            item,
+            activity_id_at_version,
+            step_id,
+            spec,
+        } = act;
+        let Some(steps) = steps else {
+            return self.run_activity(item, activity_id_at_version, step_id, spec, cap, now);
+        };
+        // An activation whose transcribed list is EMPTY is refused, not walked past. A zero-step
+        // walk reporting success is the vacuity this stage exists to end (ADR-0138's forbids).
+        if steps.is_empty() {
+            return Ok(ActivityReport::refused(
+                now,
+                StepError::Unsupported {
+                    capability: format!(
+                        "the activation `{activity_id_at_version}` transcribed an EMPTY step list; \
+                         an activity has at least one step and a zero-step walk is not a success"
+                    ),
+                },
+            ));
+        }
+
+        let mut dispatched: Option<ActivityReport> = None;
+        for step in steps {
+            let verdict = self.execute_step(step)?;
+            match verdict {
+                StepVerdict::Skipped => {}
+                StepVerdict::Continue => {
+                    if step.kind == StepKind::Agent {
+                        // **The `agent` arm.** The dispatch, its retry loop, AC-013's re-entry and
+                        // AC-012's commit race are `run_activity`'s, entered unchanged.
+                        let report = self.run_activity(
+                            item,
+                            activity_id_at_version,
+                            step_id,
+                            spec,
+                            cap,
+                            now,
+                        )?;
+                        let ended = !report.committed()
+                            && (report.outcome().is_some_and(Result::is_err)
+                                || report.mark().is_some());
+                        dispatched = Some(report);
+                        if ended {
+                            break;
+                        }
+                    }
+                }
+                // Both end the walk, for different reasons, and the distinction is carried by
+                // `StepVerdict` for the caller rather than by two identical bodies here. A `gate`
+                // writes the mark and the run EXITS 0, resuming into this same step (design §4.5;
+                // the mark is `workflow::gate`'s, written by `Runtime::step`'s `OpenGate` arm, and
+                // this walk authors no second path). An `emit` is terminal.
+                StepVerdict::Gate | StepVerdict::Emitted => break,
+                StepVerdict::Failed(e) => {
+                    return Ok(dispatched.unwrap_or_else(|| ActivityReport::refused(now, e)));
+                }
+            }
+        }
+
+        // The walk ended. If no `agent` step produced a value, the activation has nothing to
+        // commit, and it is REFUSED BY NAME rather than returning a report that reads as a success
+        // with no commit.
+        //
+        // Measured at `s7g`: 20 of the shipped pack's 102 activities carry no `role =` on any step.
+        // Binding `emit`'s declared outputs would need the reference resolver ADR-0136 records as
+        // OWED — and `catalog::Step` parses neither `emit`'s `artifacts` nor its `evidence` key, so
+        // there is no binding data on this tree to bind with.
+        Ok(dispatched.unwrap_or_else(|| {
+            ActivityReport::refused(
+                now,
+                StepError::Unsupported {
+                    capability: format!(
+                        "the activation `{activity_id_at_version}` walked its steps with no \
+                         `agent` step producing a value: an `emit` binds outputs to `provides` and \
+                         `catalog::Step` parses neither `artifacts` nor `evidence`, so the binding \
+                         needs the reference resolver ADR-0136 records as OWED"
+                    ),
+                },
+            )
+        }))
+    }
+
+    /// **Execute one step, and let its kind choose the arm.**
+    ///
+    /// The match is **total with no wildcard**, on this tree's established idiom
+    /// (`workflow/budget.rs`, `rigor.rs`; `retry.rs`'s `ac028_policy_match_has_no_wildcard` is the
+    /// precedent lint). A sixth kind would be `E0004` here rather than a silent default.
+    ///
+    /// # Errors
+    ///
+    /// [`super::RuntimeError`] only from the `agent` arm's store and fold. **A step's own failure is
+    /// a value** — [`StepVerdict::Failed`] — never an error of this function (AC-032's shape, which
+    /// [`super::Runtime::run_activity`] already follows).
+    pub fn execute_step(&self, step: &Step) -> Result<StepVerdict, super::RuntimeError> {
+        match guard_holds(step) {
+            Ok(false) => return Ok(StepVerdict::Skipped),
+            Err(e) => return Ok(StepVerdict::Failed(e)),
+            Ok(true) => {}
+        }
+        let verdict = match step.kind {
+            // The only place a model runs. The dispatch itself stays in `run_activity`'s retry
+            // loop, unchanged, so AC-013's re-entry and `kill_and_resume_n_step` are untouched;
+            // this arm names the kind and defers to it.
+            StepKind::Agent => StepVerdict::Continue,
+            StepKind::Tool => match self.run_tool_step(step) {
+                Ok(()) => StepVerdict::Continue,
+                Err(e) => StepVerdict::Failed(e),
+            },
+            StepKind::Check => match check_verdict(step) {
+                Ok(true) => StepVerdict::Continue,
+                // A `check` that does not hold ends the walk. `on_false`'s bounded re-entry table
+                // (ADR-0044) is parsed and linted and has no executor; routing to it is not this
+                // stage's, and inventing a destination would be worse than stopping.
+                Ok(false) => StepVerdict::Failed(StepError::Unsupported {
+                    capability: format!(
+                        "the `check` step `{}` did not hold, and `on_false` has no executor \
+                         (ADR-0044 parsed the table; nothing re-enters a step yet)",
+                        step.id
+                    ),
+                }),
+                Err(e) => StepVerdict::Failed(e),
+            },
+            // The kernel writes the mark and exits 0, resuming into the same step. The mark is
+            // `workflow::gate`'s and `runtime.rs`'s `gate_opened_event`; this arm does not author a
+            // second one.
+            StepKind::Gate => StepVerdict::Gate,
+            // Terminal (design §4.5). What a run provides is the activity's `provides`, which the
+            // composition root already binds to the spec's schema and which
+            // `run_activity` already checks the returned value against.
+            StepKind::Emit => StepVerdict::Emitted,
+        };
+        Ok(verdict)
+    }
+}

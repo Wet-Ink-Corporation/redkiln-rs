@@ -168,6 +168,20 @@ pub struct ActivityReport {
 impl ActivityReport {
     /// A report for a run that has not dispatched yet. **Private**: a report is produced by the
     /// loop and never minted beside it, so every count in one is a reading.
+    /// **The step walk's refusal**: an activation that never reached a dispatch because a step
+    /// refused before one (`super::step`).
+    ///
+    /// `pub(super)` rather than `pub`, and a *named* constructor rather than widening
+    /// [`ActivityReport::opened`], because the invariant above still holds: every count in the
+    /// report it returns is `0`, and that is a **reading** — nothing was dispatched, nothing
+    /// committed, nothing was appended. The outcome it carries is the step's own error, which
+    /// AC-032 makes a value rather than an error of the walk.
+    pub(super) fn refused(now: JournaledNow, error: StepError) -> Self {
+        let mut report = Self::opened(now);
+        report.outcome = Some(Err(error));
+        report
+    }
+
     const fn opened(now: JournaledNow) -> Self {
         Self {
             attempts: Vec::new(),
