@@ -1,7 +1,7 @@
 ---
 id: "0134"
 title: "`conformance_every_port_has_a_call_site` asserts an EQUALITY against a dated, warranted expected-uncalled set, not an emptiness — `tracker` and `docs` have **no Phase-1 real adapter** by design (design:265-266, AC-499's phase clause), so the whole-set form is unsatisfiable inside Phase 1 and the lint it produced could only ever stay `#[ignore]`d; the narrowed form runs on every commit from `s7g` and fails in BOTH directions"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: references/adr/0003 (the five-port inventory the lint reads); references/2026-09-08-architecture-design.md:265 (`Tracker`, Phase-1 real adapter *"none in Phase 1 (GitHub is Phase 3)"*) and :266 (`DocsSite`, *"none in Phase 1 (mdBook is Phase 3)"*); references/2026-09-08-acceptance-criteria.md:7506 (*"AC-499 instantiated only for ports that have a Phase-1 real adapter (ADR-0094)"*; AC-507/AC-508/AC-510 listed out of Phase-1 scope, Phase 3); runbook/phase-1/s7a-ports-and-fakes.md:47 and :198-199 (*"`Tracker` and `DocsSite` have a fake only until Phase 3"*); runbook/phase-1/s7f-conformance-and-records.md:50 (the armed table row, *"`s7g` (toolchain), later (tracker/docs)"*); crates/rk-kernel/tests/it/conformance.rs:363-454

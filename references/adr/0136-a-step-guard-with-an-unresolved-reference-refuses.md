@@ -1,7 +1,7 @@
 ---
 id: "0136"
 title: "A step's `when` guard is evaluated at execution time through `predicate::evaluate`, and a guard carrying a `${…}` reference **refuses the step by name** rather than being nulled out — `rigor.rs`'s `null_out_refs` is a STATIC lint's treatment and reproducing it at runtime would run or skip a step on an invented value; **54 of the shipped pack's 121 step guards carry such a reference**, and the reference resolver that would evaluate them is OWED and named here"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: references/2026-09-08-architecture-design.md §4.5 (the five closed step kinds); references/adr/0103 (the predicate grammar, three-valued connectives, `on_false`); references/adr/0032 (absent optional inputs are `null`); crates/rk-kernel/src/predicate/eval.rs:157-160 (`EvalError::UnresolvedRef` — *"A `${…}` reference reached the evaluator. Reference resolution is the selection function's step 2 … nothing in this slice resolves one."*); crates/rk-kernel/src/rigor.rs:69 and :405-422 (`null_out_refs`, and why the static lint must null); runbook/phase-1/s7g-step-executor.md §7g.1 (*"`when` consulted per step"*)

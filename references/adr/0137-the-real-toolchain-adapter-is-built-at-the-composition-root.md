@@ -1,7 +1,7 @@
 ---
 id: "0137"
 title: "`redkiln run` constructs a **real** `Toolchain` adapter at the composition root instead of `FixtureToolchain::default()` — chosen from `config.toml`'s `[adapters] toolchains` in declared order by the port's own `detect()`, over the **run-owned worktree** as `project_root` (§7c.14's isolation, never the workspace running the checkpoint), with the harness's already-captured child environment, a construction-time backstop bound, and `<common-dir>/redkiln/tmp` as scratch; **when no listed adapter detects, the run refuses** rather than falling back to a fixture that reports itself absent"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: references/adr/0094 decision 1 (Phase 1 ships Node and Rust `Toolchain` reals); references/adr/0003 (the five ports); references/2026-09-08-acceptance-criteria.md AC-473 (*"toolchain stage [to have] run through `rk-adapter-toolchain-rust` behind the `Toolchain` port"*), AC-217/AC-488/AC-509 (the child-environment denylist); references/adr/0099 decision 2 (*"the two Toolchain adapters run bounded commands under the same timeout without a token"*, RT-5); references/adr/0127 decision 3 (a `Command` is built and handed over, never spawned in the adapter); runbook/phase-1/s7c-adapters.md §7c.14 (the fixture-project rule); crates/rk-adapter-toolchain-rust/src/lib.rs:9-13 and :155-199; crates/rk-cli/src/verbs/run.rs:222-292; crates/rk-cli/src/adapters.rs:31,146-181

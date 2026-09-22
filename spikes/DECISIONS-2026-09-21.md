@@ -1,4 +1,10 @@
-# Decisions taken at Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open — 2026-09-21 and 2026-09-22 (D21-1 … D21-13), and what they license
+
+*(Title corrected 2026-09-22 at `s7g`'s open: it read "**Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6)**"
+while the file already carried **D21-7** and **D21-8** — `s7f`'s two flip lines, appended at its close on 2026-09-21 —
+so the heading had been one stage and two entries stale since that commit. It is now also two dates: the `D21` id space
+stays open across 2026-09-22's five entries rather than opening a `D22` space, because each dated line carries its own
+date and the space is numbered by where it was opened, not by when it is next appended to.)*
 
 Same shape as `DECISIONS-2026-09-20.md`. The entries below were taken **by the operator** (Ryan Britton) with the
 measured state of the tree in front of him, each **before** the thing it authorises was executed. Grounding is a
@@ -307,5 +313,166 @@ for this kind.
 **met**: it makes the batch delta *computable*, which is a different claim, and the renderer is still owed. And it
 does not license a vacuous rendering — D21-5's prohibition on an `n = 0` `low_sample` delta standing in for a
 green stands untouched.
+
+---
+
+## D21-9 · ADR-0134 flips to `accepted` — the port lint asserts an equality, because the emptiness it asserted was unsatisfiable inside Phase 1
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s open.** ADR-0134 is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**The operator was offered three exits and took the one the evidence had already narrowed to.** `s7f` armed
+`conformance_every_port_has_a_call_site` on `uncalled.is_empty()` and its own table split the debt
+*"`s7g` (toolchain), later (tracker/docs)"*. The stage-open pass measured what *"later"* meant: design:265 and
+:266 give `Tracker` and `DocsSite` the Phase-1 real adapter **"none in Phase 1"**, AC-499 is instantiated only
+for ports that have one, AC-507/AC-508/AC-510 are Phase 3, and `s7a` §7a:198-199 authors both argument types as
+contentless newtypes *"so no adapter and no kernel consumer of either type exists before Phase 3"*. No stage in
+this runbook claims either port. **"Later" is Phase 3, and the third option — widen `s7g` to wire all three —
+was withdrawn before it reached the operator as a live choice**, because there is no meaningful call to write.
+
+**What the equality buys, stated as a gain rather than a concession.** The emptiness form was never going to
+run: its only reachable state inside this phase was `#[ignore]`d, which is the condition the module's own
+docstring calls coverage theatre. The narrowed form runs on every commit from `s7g` and fails in **both**
+directions — a `toolchain` regression to zero, and a Phase-3 `Tracker` consumer landing while a record still
+says none exists. The instrument is `check-checkpoints.py`'s, whose allowlist is `flagged == allowed`,
+*"never 'flagged is small'"*, enumerated with a reason per entry.
+
+**The cost is not smoothed.** The lint no longer claims *"every port is reached"*. It claims *"exactly these
+two are unreached, and here is each one's warrant"*. That is a weaker headline and the only form that is both
+true and runnable in Phase 1.
+
+**And the consequence is recorded ahead of it rather than discovered.** Checkpoint 7f requires the literal
+`test result: ok. 0 passed; 0 failed; 3 ignored` and three ARMED lints, so **any** discharge invalidates it —
+under every option considered, including the two rejected ones, because the removed-in-the-same-commit
+convention is `s7f`'s own. Checkpoint 7f is `s7g`'s entry gate only; nothing downstream requires it green, and
+`00-preamble.md`'s maintenance rule already provides for a pass attesting a specific text at a specific time.
+
+---
+
+## D21-10 · ADR-0135 flips to `accepted` — four verbs route, twenty-nine refuse, and none is invented
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s open.** ADR-0135 is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**This settles `resolver.rs`'s OWED routing record for the `tool` arm, and only for it.** That module's header
+names the gap and forbids closing it by invention — *"inventing the channel … or a mapping from a `tool` step's
+`run = "toolchain:X"` — would be deciding what no record has"*. This is that record. The **agent** arm's
+`CapabilityNeed` routing remains OWED and is not touched.
+
+**The stage file described a resolution against something that does not exist.** §7g.2's *"resolved against the
+capability registry"* conflates three artifacts: the adapters' five-token `Capability` **probe** vocabulary,
+which has no `test`/`build`/`lint` row; the `[verb]` table, which lives only in `spikes/p9/registry.toml`, is
+not shipped, and maps a verb to an output type and a liveness flag rather than to a method; and the port's six
+methods. The operator took the four-verb map plus a typed refusal.
+
+**Two measurements decided it.** 113 `tool` steps across **33** distinct verbs — §7g.2's "12" is wrong and is
+corrected in the same stage — of which four name a port method (47 steps) and 29 do not (66 steps). A silent
+fallthrough would make 66 of 113 steps invisible non-events, and a run that executed nothing would be
+indistinguishable from one that worked.
+
+**What it declines.** It does not ship `registry.toml`, does not map the 29, and adds no port method — the count
+stays six, as Checkpoint 7a asserts. That the pack carries no verb registry at all, against design §4.5's
+five-registry row, is recorded as a gap and deliberately not filled.
+
+**`change_summary` reaching the port and receiving `Unsupported` is the correct behaviour and is licensed here
+explicitly**, so that no later pass reads those 11 refusals as a defect to repair. Checkpoint 5's RED is
+untouched, and the kernel names the `ChangeSummary` type in no position.
+
+---
+
+## D21-11 · ADR-0136 flips to `accepted` — an unresolvable guard refuses; it is not nulled, and it is not an abstention
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s open.** ADR-0136 is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**The measurement the operator decided on: 121 step-level `when` clauses in the shipped pack, 54 of them
+carrying a `${…}` reference that nothing on this tree resolves.** `predicate::eval`'s own `UnresolvedRef`
+variant says *"nothing in this slice resolves one"*.
+
+**The rejected option is the one that would have looked like reuse.** `rigor.rs` evaluates `when` with
+`null_out_refs` applied first, and is right to: it is a static lint and its docstring says a reference-bearing
+guard is not statically decidable. Calling the same function on the execution path would not express
+uncertainty — it would manufacture the value the guard turns on, and under ADR-0103's three-valued connectives
+all 54 guarded steps would be **silently skipped** while the run exited 0. The function is `pub(crate)` and one
+import away, which is why the prohibition is in a record rather than left to review.
+
+**The near-miss is recorded too, because it is the more plausible mistake.** Routing `UnresolvedRef` to
+`Tri::Null` and thence to AC-079's abstention gate would file a **missing mechanism** under a **decided
+policy**: the gate would fire 54 times per run for a reason no operator can act on, and the journal would show
+the kernel having asked a question it never asked. `Tri::Null`'s own routing (ADR-0032, AC-079) is untouched.
+
+**What this licenses and what it does not.** It licenses `s7g` shipping a step walk that cannot decide 45% of
+the pack's guards, provided each such step says so by name. It does **not** license a partial resolver — a
+lookup for `${x.answer}` but not `${x.outputs.y}` — and it does not make the resolver anyone's: it is OWED,
+named with what it must supply (an output-binding model, prior-step name resolution, and the `for_each` /
+`repeat.until` semantics `catalog.rs` parses and declines to evaluate), and **no stage in this runbook claims
+it**. That is a gap this line opens deliberately rather than closing by assertion.
+
+---
+
+## D21-12 · ADR-0137 flips to `accepted` — the run path stops shipping a toolchain that reports itself absent
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s open.** ADR-0137 is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**The operator chose the option that moves criterion (1), over the two that would not.** AC-473's clause is a
+claim about the binary — *"toolchain stage [to have] run through `rk-adapter-toolchain-rust` behind the
+`Toolchain` port"* — so a test-only observation would satisfy §7g.4's bullet and leave the criterion where it
+is, and a flag defaulting to the fixture would leave the default path unmeasured.
+
+**What was measured first.** `RustToolchain::new` has **zero** call sites in `rk-cli` or `rk-kernel`;
+`FixtureToolchain::default()` has exactly two non-test sites, and its `Default` gives `present: false` — so the
+live run path has shipped a toolchain **reporting itself absent**, which is why the gap has been invisible.
+
+**Four construction values had no decided source and each is now warranted rather than assumed.** The adapter is
+selected by the port's own `detect()` in `[adapters] toolchains`' declared order — position would not do, since
+the shipped order lists Node first and this tree is Rust, and `detect` has had no caller at all. `project_root`
+is the **run-owned worktree**: §7c.14 forbids the checkout a checkpoint is running in, and the adapter's own
+header already says *"the self-hosting run over `redkiln-rs` itself is Step 8's"*. The construction-time
+backstop may not be smaller than the largest step it could serve, and the pack's largest declared literal
+`timeout_secs` is **3600**, so that is the floor. Scratch is `<common-dir>/redkiln/tmp`, which exists.
+
+**The refusal is the point of clause 8.** When no listed adapter detects, the run refuses rather than falling
+back to a fixture — a fallback would restore today's state under a new name, on the path where a real failure
+is least visible. The narrowing that follows (a tree with neither Node nor Rust cannot run) is stated rather
+than discovered; Phase 1's subject is self-hosting over this repository.
+
+**A gap is opened, not closed:** 94 step lines carry `${toolchain.<key>}` timeout substitutions, and
+`[toolchain.timeouts]` names the eleven legal **keys** while carrying **no durations** for them — so those
+substitutions have no value source on this tree, in the shipped pack or the spike one.
+
+---
+
+## D21-13 · ADR-0138 flips to `accepted` — the step list is transcribed, on the warrant `RecordedSpec` already carries
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s open.** ADR-0138 is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**This is the one of the five the operator did not choose from options**, and the line says so. It was taken as
+an engineering call inside the plan approved on 2026-09-22, and it is recorded at the same grain as the other
+four rather than left in a commit message — because two of its three candidate routes are closed by existing
+records, and a reader who did not know that would read the choice as arbitrary.
+
+**The two closed routes.** `ActivitySpec` may not grow a sixth field: `rk-types` is Checkpoint 5's and
+ADR-0099:61 fixes the spec at `StepSpec`'s five. The catalog may not be loaded from inside the runtime:
+`runtime.rs`:22-27 carries residual 7 by name and asserts the absence structurally. What remains is
+transcription, and the only question is where it lands.
+
+**`RecordedSpec` is the type for exactly this, and its own docstring is the warrant.**
+`activity_id_at_version` sits there because the join *"has three candidate homes and choosing one is a decision
+this stage may not take; the binding transcribes it instead"*, and it is explicitly *"NOT a sixth spec field"*.
+A step list is the same kind of value from the same source — held by the composition root, not derivable by the
+kernel, and not the Harness port's business. `run.rs`:1423 already reads `activity.steps` at bind time and
+discards the rest.
+
+**Two things this line pins so they are not re-opened silently.** AC-013's idempotence grain stays **per
+activation** — `RunState::is_committed` has no step component — so the walk happens inside an activation that
+is not yet committed and commits atomically; a run that dies mid-activation re-runs that activation's steps,
+and that is the intended behaviour rather than a limitation to engineer around. And the `&[Step]`-parameter
+fallback stays available: clause 4 requires the switch to be recorded **with the measured fan-out that caused
+it**, so it cannot be made silently and cannot be used to reopen the two closed routes.
+
+**What stays OWED:** the record naming the home of the DAG-node ↔ `Activity::id_at_version` join, which
+`RecordedSpec`'s docstring already names and which now carries a second transcribed value.
 
 ---
