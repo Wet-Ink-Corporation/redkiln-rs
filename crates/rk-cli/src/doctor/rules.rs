@@ -263,6 +263,11 @@ pub static RULES: &[Rule] = &[
         severity: Severity::Error,
         check: verification_policy,
     },
+    Rule {
+        id: "RK-D-EXECUTED-LEDGER",
+        severity: Severity::Ok,
+        check: executed_ledger,
+    },
 ];
 
 /// Evaluate every rule in table order, into a [`super::Report`].
@@ -1888,4 +1893,127 @@ fn rebuilt_tier2(ctx: &Ctx) -> Vec<Finding> {
     } else {
         Vec::new()
     }
+}
+
+/// **`RK-D-EXECUTED-LEDGER`** — AC-532; ADR-0114 decision 2's `doctor` half.
+///
+/// > *"`redkiln doctor` prints the never-executed count and list per pack, and `redkiln lint`
+/// > warns — never fails"* (ADR-0114 `## Decision` clause 2).
+///
+/// # Why the row is built at Step 7e
+///
+/// `s7b-kernel.md` §7b.15's ARMED table routed the ledger's `doctor` half to **Step 7d**, and 7d
+/// did not build it. Measured 2026-09-21, before this row existed: a case-insensitive `executed`
+/// grep over all of `crates/rk-cli/` returned one hit — unrelated prose in a test — and
+/// [`rk_kernel::runtime::ledger::fold_executed`] had **zero** non-test callers in the workspace.
+/// Checkpoint 7e asserts that `doctor` prints a never-executed line, so the row lands here.
+///
+/// # 🛑 THE FOLD IS THE KERNEL'S, RE-USED AND NOT RE-IMPLEMENTED
+///
+/// [`super::Row`] exists because `rk_types::event::Event` implements no `Deserialize` and
+/// `rk-types` is a crate this stage may not edit — so a journal cannot be *parsed* into `Event`.
+/// It can still be *built* into one: `Event` carries two public fields and a `const fn new`. So
+/// this rule maps `Row -> Event` and calls the kernel's fold, rather than writing a second fold
+/// over `Row`. A second fold would agree with the kernel's today and drift from it silently — and
+/// the kernel's carries two readings a re-implementation would have to re-derive and could get
+/// wrong: `first`/`last` are **journal (append) order, not `at` order** (AC-532, D15-4(ii)), and a
+/// row missing `run_id`, `item` or `at` is **refused, never defaulted to a zero or an epoch**.
+///
+/// A row whose `kind` is outside the closed 38 is skipped here, not refused: `Row::kind` returns
+/// `None` for it, an unknown wire name is another rule's subject, and the ledger's subject is the
+/// `activity_committed` rows alone.
+///
+/// # 🛑 "PER PACK" IS REPORTED PER PACK OVER A CATALOG THAT IS NOT PARTITIONED BY PACK
+///
+/// ADR-0114 says *"per pack"*. The installed catalog is **one directory** every enabled pack draws
+/// on — `.redkiln/catalog/`, read once by `load_diagnostic_dir` — and no pack declares an activity
+/// *set*. So there is no per-pack partition of the catalog to report against, and this rule emits
+/// one finding **per enabled pack** naming that pack, each over the shared catalog. That is a
+/// reading, written into the code that takes it (the house model is `src/select.rs`:494-499), and
+/// the record that would fix the partition is **OWED**: nothing in the tree says which activities
+/// a pack owns.
+///
+/// # The severity is `Ok`, and the id deliberately omits "never-executed"
+///
+/// Never-executed is **not a defect** — ADR-0114: *"a doctor row, never a lint failure"* — and
+/// Checkpoint 7e requires `doctor` to exit **0** on a v0 tree where every shipped activity is
+/// unrun. `RK-D-REBUILT-TIER2` is the table's precedent for an `Ok` finding reporting an expected
+/// state.
+///
+/// The id is `RK-D-EXECUTED-LEDGER` and **not** `RK-D-NEVER-EXECUTED`: Checkpoint 7e greps
+/// `doctor`'s stdout for `never[- ]executed`, and the latter id would satisfy that grep from the
+/// bare `<id> ok` line a rule prints when it finds **nothing** — a gate satisfied by the name of
+/// what it means to measure. With this id the grep matches only a line the rule actually reported.
+///
+/// A fold refusal is `Warning`, not `Error`: this rule's subject is the ledger report, and failing
+/// the whole `doctor` run on a corrupt journal row belongs to a rule whose subject is journal
+/// integrity. It is reported here rather than swallowed.
+fn executed_ledger(ctx: &Ctx) -> Vec<Finding> {
+    const ID: &str = "RK-D-EXECUTED-LEDGER";
+
+    let events: Vec<rk_types::event::Event> = ctx
+        .journal
+        .iter()
+        .filter_map(|row| {
+            row.kind()
+                .map(|kind| rk_types::event::Event::new(kind, row.payload.clone()))
+        })
+        .collect();
+
+    let ledger = match rk_kernel::runtime::ledger::fold_executed(&events) {
+        Ok(ledger) => ledger,
+        Err(e) => {
+            return vec![finding(
+                ID,
+                Severity::Warning,
+                format!(
+                    "the executed ledger could not be folded and no never-executed count is \
+                     reported: {e}"
+                ),
+            )];
+        }
+    };
+
+    // An activity that declares no `version` has no `activity_id@version` key, so no
+    // `activity_committed` row can be keyed to it — it reads never-executed, which is what it is.
+    // The missing `version` is AC-010's subject, not this rule's.
+    let activities = ctx.catalog.catalog.activities();
+    let never: Vec<&str> = activities
+        .iter()
+        .filter(|a| {
+            !a.id_at_version()
+                .and_then(|key| ledger.get(&key).map(|e| !e.never()))
+                .unwrap_or(false)
+        })
+        .map(|a| a.id.as_str())
+        .collect();
+
+    // Nothing unrun is nothing to report: the rule stays silent over a tree whose every activity
+    // has executed, which is what keeps `doctor/clean/` clean and makes the fixture below a
+    // rejecting one rather than a second clean control.
+    if never.is_empty() {
+        return Vec::new();
+    }
+
+    let detail = |pack: &str| {
+        format!(
+            "{pack}{} of {} shipped activities never executed (`first` is None; \
+             ADR-0114 decision 2's ledger is kernel-written on `activity_committed`, so at v0 it \
+             is absent and this is the expected reading): {}",
+            never.len(),
+            activities.len(),
+            never.join(", ")
+        )
+    };
+
+    let packs = packs(ctx);
+    if packs.is_empty() {
+        // No enabled pack, so "per pack" has nothing to range over. The count is still reported —
+        // a silent rule here would be an absence reported as a pass.
+        return vec![finding(ID, Severity::Ok, detail(""))];
+    }
+    packs
+        .iter()
+        .map(|(name, _)| finding(ID, Severity::Ok, detail(&format!("pack `{name}`: "))))
+        .collect()
 }

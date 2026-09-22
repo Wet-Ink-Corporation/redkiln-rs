@@ -2530,3 +2530,55 @@ fn ac429_rebuild_writes_no_object_ref_or_file() {
          `Story:` mark's stage and writes nothing outside `.git/redkiln/`"
     );
 }
+
+/// **`RK-D-EXECUTED-LEDGER`** — AC-532, ADR-0114 decision 2's *"`redkiln doctor` prints the
+/// never-executed count and list per pack"*.
+///
+/// # Why this row exists at Step 7e and not at 7d
+///
+/// `s7b-kernel.md` §7b.15's ARMED table routed the ledger's `doctor` half to Step 7d and 7d never
+/// built it. Measured 2026-09-21 before this test was written: `grep -ic executed` over all of
+/// `crates/rk-cli/` returned **one** hit, and it was unrelated prose in `tests/it/surface.rs`;
+/// `rk_kernel::runtime::ledger::fold_executed` had **zero** non-test callers in the workspace. So
+/// Checkpoint 7e's *"doctor prints no never-executed line"* assertion could not pass, and the row
+/// is built here.
+///
+/// # 🛑 THE ID DOES NOT CONTAIN "NEVER-EXECUTED", AND THAT IS DELIBERATE
+///
+/// Checkpoint 7e asserts `doctor`'s stdout against `grep -qiE 'never[- ]executed'`. A rule named
+/// `RK-D-NEVER-EXECUTED` would satisfy that grep **from its own id**, on the `<id> ok` line a rule
+/// prints when it finds nothing — a gate satisfied by the name of the thing it is meant to
+/// measure. Named `RK-D-EXECUTED-LEDGER`, the grep matches only when the rule has actually
+/// reported, which is the assertion the checkpoint means to make.
+///
+/// # The severity is `Ok`, because never-executed is not a defect
+///
+/// ADR-0114 decision 2: *"`executed: never` is a warning, never a block"*, and Checkpoint 7e
+/// requires `doctor` to exit **0** on a tree where all 102 shipped activities are never-executed.
+/// `RK-D-REBUILT-TIER2` is the table's precedent for an `Ok` finding that reports an expected
+/// state rather than a defect.
+#[test]
+fn ac532_executed_ledger_reports_never_executed_activities() {
+    fires_over_its_fixture_and_not_over_clean("RK-D-EXECUTED-LEDGER", rk_cli::doctor::Severity::Ok);
+
+    // ---- the half the family helper cannot make: the finding carries the COUNT and the LIST.
+    // ADR-0114 decision 2 asks for both, and a row carrying only a count would let a reader see
+    // that something is unrun without being able to say what.
+    let found = findings("RK-D-EXECUTED-LEDGER", "RK-D-EXECUTED-LEDGER");
+    let detail = found
+        .iter()
+        .map(|f| f.detail.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(
+        detail.to_lowercase().contains("never executed"),
+        "the finding does not say `never executed`, which is the phrase Checkpoint 7e greps for \
+         (`never[- ]executed`). Detail was:\n{detail}"
+    );
+    assert!(
+        detail.contains("emit-report"),
+        "the finding names no activity. ADR-0114 decision 2 asks for the never-executed *list*, \
+         not only the count, and the fixture's one activity has no `activity_committed` row. \
+         Detail was:\n{detail}"
+    );
+}

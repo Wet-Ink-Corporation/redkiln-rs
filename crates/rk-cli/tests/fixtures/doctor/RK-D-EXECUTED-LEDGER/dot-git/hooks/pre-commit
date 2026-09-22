@@ -1,0 +1,9 @@
+#!/bin/sh
+# An OPERATOR hook: written by a human, owned by a human.
+#
+# It carries NO redkiln marker, and this comment deliberately does not spell the marker
+# out either -- the first draft explained the rule by quoting the token, so the file
+# contained the very string it exists not to contain and RK-D-HOOKS fired on the clean
+# run. The recogniser reads bytes, not intent (caught 2026-09-21 by the clean half).
+# fork-join
+exec make -j "$@"

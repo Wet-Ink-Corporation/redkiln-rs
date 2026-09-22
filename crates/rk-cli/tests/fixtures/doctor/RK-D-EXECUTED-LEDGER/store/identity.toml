@@ -1,0 +1,15 @@
+# 🛑 THE AC-413 POSITIVE CONTROL, and it lives here because every per-row test runs the
+# clean fixture second (s7d 7d.8).
+#
+# s7d 7d.14: `ac413_...` is *"red over a store whose `root_commit` is another
+# repository's and GREEN over one whose `common_dir` was RE-STAMPED BY A MOVE (the
+# three-field reading; a boot-id assertion is unauthorable and none is written)"*.
+#
+# `root_commit = "HEAD"` means this repository's own root commit, so the store belongs
+# here. `common_dir` names somewhere it is NOT — the repository was moved. Measured
+# 2026-09-21: `rk_store::identity::check` compares `root_commit` and `schema_version` and
+# NOT `common_dir`, so this store opens cleanly and `RK-D-STORE-ID` stays silent. Without
+# this file the clean run would carry no store at all and the row would be quiet for the
+# uninteresting reason.
+root_commit = "HEAD"
+common_dir = "/the/repository/was/moved/.git"

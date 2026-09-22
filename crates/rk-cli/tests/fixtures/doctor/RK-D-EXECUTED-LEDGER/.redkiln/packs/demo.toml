@@ -1,0 +1,44 @@
+# The fixture's process pack. `.redkiln/packs/<name>.toml` is a FLAT FILE (measured 2026-09-21,
+# `crates/rk-cli/src/verbs/run.rs`:553-555), not a directory; the shape follows
+# `crates/rk-cli/tests/fixtures/pack-min/pack.toml`, trimmed to what a doctor rule reads.
+gate_deadline_secs = 900
+
+[pack]
+id = "demo"
+applies = "kind == bug or kind == story"
+appetite = { points = 50, tokens = 200000 }
+
+[retry]
+attempts_cap = 1
+
+[breaker]
+consecutive_platform_failures = 3
+expiry_secs = 600
+
+[policy]
+stages = { triage = "mandatory", implement = "recommended", review = "mandatory" }
+
+[stage.implement]
+baseline = ["ImplReport"]
+
+[margins]
+five_hour = 10
+seven_day = 10
+
+[cache]
+prompt_ttl = "1h"
+subagent_prompt_ttl = "1h"
+
+# Every activity the catalog declares owes a `timeout_secs` (AC-097), and `RK-D-TIMEOUT` reads
+# it per activity. `pack-min/pack.toml` carries the same row for the same reason. ADDED
+# 2026-09-21 at cycle 5 batch 2: the clean run fired RK-D-TIMEOUT without it, which is the clean
+# half of every family test doing exactly what s7d 7d.8 keeps it for.
+[activity.emit-report]
+timeout_secs = 900
+
+# The role the card in `cards/` fulfils. Without it `RK-D-DANGLING-ROLE` fires on the
+# clean run, because a card fulfilling a role no enabled pack declares is exactly AC-420's
+# clause. `pack-min/pack.toml` declares `[role.implementer]` for the same reason.
+# ADDED 2026-09-21 at cycle 5 batch 3.
+[role.implementer]
+family = "claude"
