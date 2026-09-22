@@ -130,6 +130,7 @@ schema = "ImpactAssessment"
 [artifact.ImplReport]
 source = "activity"
 schema = "ImplReport"
+keyed_by = "toolchain"
 
 [artifact.IncidentLog]
 source = "activity"

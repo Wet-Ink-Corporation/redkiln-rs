@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: SCHEMA-43
 source: references/2026-09-07-activity-graph-schema.md §9c amendment 43
 supersedes: ["0029"]
-superseded_by: []
+superseded_by: ["0132"]
 related: ["0014", "0057"]
 evidence: ["F35 §1.3"]
 consumers: []

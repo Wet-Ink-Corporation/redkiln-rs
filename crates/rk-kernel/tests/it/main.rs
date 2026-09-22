@@ -280,6 +280,7 @@ mod breaker;
 mod budget;
 mod catalog_diagnostic;
 mod config;
+mod conformance;
 mod cross_process;
 mod dag;
 mod degradation;

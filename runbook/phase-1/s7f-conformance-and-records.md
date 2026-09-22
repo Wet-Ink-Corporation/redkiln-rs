@@ -19,7 +19,7 @@ not load. Under the two pack defects sat the finding this step and the three aft
 `toolchain:test`), **102 `emit`**, **94 `check`** and **80 `gate`** have no executor, and **102 of 102** activities
 carry at least one non-agent step.
 
-**None of it is undecided.** design §4.4 fixes the five closed step kinds and says `tool` is *"a toolchain verb
+**None of it is undecided.** design §4.5 fixes the five closed step kinds and says `tool` is *"a toolchain verb
 through the port"*; design §5's event table names `stage_transition` tier-1 *"(trailer)"*, produced by *"the kernel's
 FSM at a stage boundary"*, and `slice_sealed` by *"the lane's review stage"*; ADR-0105 decision 3 specifies the
 trailer plumbing; `INDEX.md` puts *"the runtime"* in **Step 7b's** scope. This is execution against accepted records.
@@ -46,7 +46,7 @@ The four, and what each pins:
 
 | lint | closed set it reads | measured 2026-09-21 | discharged by |
 | --- | --- | --- | --- |
-| `conformance_every_step_kind_has_an_executor` | design §4.4's five step kinds | **0** `StepKind` references in `runtime/` | `s7g` |
+| `conformance_every_step_kind_has_an_executor` | design §4.5's five step kinds | **0** `StepKind` references in `runtime/` | `s7g` |
 | `conformance_every_port_has_a_call_site` | ADR-0003's port table | harness 1, store 4, **toolchain 0, tracker 0, docs 0** | `s7g` (toolchain), later (tracker/docs) |
 | `conformance_every_trailer_key_has_a_producer` | design §5's event table | `Gate` 2, **`Story` 0, `Slice-Verdict` 0** | `s7h` |
 | `shipped_pack_loads` | the product's own `.redkiln/` | **RED** — `RankTie` over `ImplReport` | **this step**, §7f.2 |
@@ -68,9 +68,18 @@ cd D:/repos/redkiln-rs
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
 # The three ARMED lints must exist, be IGNORED, and name their discharging stage in the reason.
 # A PLAIN RUN, never `--list`. Measured 2026-09-21: `--list` prints `module::name: test` with NO
-# ignored marker, and `--ignored --list` returns the IDENTICAL set — `--list` does not honour it — so
-# a listing can count the lints and can never tell an ARMED one from a DISCHARGED one. A plain run
-# prints `test <name> ... ignored, <reason>` plus a result line carrying the counts.
+# ignored marker and NO reason text, so a listing can count the lints, can never tell an ARMED one
+# from a DISCHARGED one, and can never carry the `discharged by` reason the last guard below greps.
+# A plain run prints `test <name> ... ignored, <reason>` plus a result line carrying the counts.
+# CORRECTED 2026-09-21, at this stage's own execution, and the correction is recorded rather than
+# silently applied because the withdrawn sentence is what a later author would cite to revert to
+# `--list`: this read "`--ignored --list` returns the IDENTICAL set — `--list` does not honour it".
+# That INFERENCE IS FALSE. Measured on cargo 1.98.1 / rustc 1.98.1: `-p rk-kernel --test it --
+# --list` is 200 tests and `-- --ignored --list` is 4; `-p rk-cli` is 101 and 0. `--list` DOES
+# honour `--ignored`. The observation behind the claim was confounded by its filter — every test
+# matching `child` is ignored, so both listings were trivially equal; with a filter that straddles
+# the boundary they diverge (`-- ac0 --list` 34, `-- ac0 --ignored --list` 3). The OPERATIVE choice
+# is unchanged and is correct for the reason stated above; only the false premise is withdrawn.
 # TWO THINGS THE REHEARSAL OF THESE LINES FOUND, both measured 2026-09-21 against the four existing
 # ignored child entrypoints: (a) `\b` does NOT anchor to a test name — `_` is a word character, so
 # `^test .*\bchild` scored 4 by matching the word `child` in the REASON while
