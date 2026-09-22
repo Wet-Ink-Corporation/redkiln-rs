@@ -36,7 +36,9 @@ it executes it as a **SUPERSESSION IN PART** (`ADR-0132`), not an amendment — 
 ### 7f.1 The conformance gate — four assertions over closed sets, three of them ARMED
 
 **The house pattern is `live.rs`'s: authored, ARMED, not claimed.** Each of the first three lints asserts the
-**target** state and carries `#[ignore]` naming the debt and the stage that discharges it. The ignore is removed by
+**target** state and carries `#[ignore]` naming the debt and the stage that discharges it, **in the literal
+form `discharged by s7g` / `discharged by s7h`** — the blocks below grep the reason for it, so the spelling
+is load-bearing and is fixed here rather than left to each author. The ignore is removed by
 the landing that makes it pass, **in the same commit**, so no stage can claim a capability the lint does not see. An
 `#[ignore]`d test is coverage theatre unless something counts it, so Checkpoint 7f counts them **by name**.
 
@@ -64,10 +66,23 @@ and `tests/it/projection.rs`'s `stage_action_still_filters_to_tier_one` (Step 8)
 ```bash
 cd D:/repos/redkiln-rs
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
-# The three ARMED lints must exist, be ignored, and name their discharging stage in the reason.
-out=$(cargo test -p rk-kernel --test it -- conformance_ --list 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the conformance listing could not run (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-n=$(printf '%s\n' "$out" | grep -c 'conformance_'); [ "$n" -eq 3 ] || { echo "FAIL: expected exactly 3 conformance lints, found $n — an armed lint that is deleted reads as a discharged one"; exit 1; }
+# The three ARMED lints must exist, be IGNORED, and name their discharging stage in the reason.
+# A PLAIN RUN, never `--list`. Measured 2026-09-21: `--list` prints `module::name: test` with NO
+# ignored marker, and `--ignored --list` returns the IDENTICAL set — `--list` does not honour it — so
+# a listing can count the lints and can never tell an ARMED one from a DISCHARGED one. A plain run
+# prints `test <name> ... ignored, <reason>` plus a result line carrying the counts.
+# TWO THINGS THE REHEARSAL OF THESE LINES FOUND, both measured 2026-09-21 against the four existing
+# ignored child entrypoints: (a) `\b` does NOT anchor to a test name — `_` is a word character, so
+# `^test .*\bchild` scored 4 by matching the word `child` in the REASON while
+# `^test [A-Za-z0-9_:]*\bchild` scored 0; the pattern below anchors to the NAME position instead.
+# (b) `grep A | grep -v B; [ rc -eq 1 ]` is GREEN when grep A matches nothing, so the armed set is
+# counted before it is filtered. Both forms were checked in both directions.
+out=$(cargo test -p rk-kernel --test it -- conformance_ 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the conformance run could not complete (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+n=$(printf '%s\n' "$out" | grep -cE '^test [A-Za-z0-9_:]*conformance_'); [ "$n" -eq 3 ] || { echo "FAIL: expected exactly 3 conformance lints, found $n — an armed lint that is deleted reads as a discharged one"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 0 passed; 0 failed; 3 ignored' || { echo "FAIL: the three conformance lints are not all ARMED at this stage — s7f arms them and s7g/s7h discharge them"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
+armed=$(printf '%s\n' "$out" | grep -E '^test [A-Za-z0-9_:]*conformance_.*\.\.\. ignored,'); a=$(printf '%s\n' "$armed" | grep -c .); [ "$a" -eq 3 ] || { echo "FAIL: $a of 3 conformance lints are ARMED — a lint that RUNS here was discharged by a stage that has not happened"; exit 1; }
+printf '%s\n' "$armed" | grep -vE 'discharged by (s7g|s7h)'; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: an armed lint's #[ignore] reason does not name its discharging stage (rc=$rc) — the reason IS the debt record"; exit 1; }
 # And the one this step discharges must be GREEN, not ignored.
 out=$(cargo test -p rk-kernel --test it -- shipped_pack_loads 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the shipped pack does not load (rc=$rc) — §7f.2 is not done"; printf '%s\n' "$out" | tail -20; exit 1; }
@@ -162,10 +177,12 @@ spike=$(grep -c '^keyed_by = "toolchain"' spikes/p9/artifacts.toml); [ "$spike" 
 out=$(cargo test -p rk-kernel --test it -- shipped_pack_loads 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: shipped_pack_loads exited $rc — the product's pack does not load"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched shipped_pack_loads"; exit 1; }
-out=$(cargo test -p rk-kernel --test it -- conformance_ --list 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the conformance listing could not run (rc=$rc)"; exit 1; }
-n=$(printf '%s\n' "$out" | grep -c 'conformance_'); [ "$n" -eq 3 ] || { echo "FAIL: expected exactly 3 conformance lints, found $n"; exit 1; }
-armed=$(printf '%s\n' "$out" | grep -c 'conformance_.*: test'); [ "$armed" -eq 3 ] || { echo "FAIL: $armed of 3 conformance lints listed as tests"; exit 1; }
+out=$(cargo test -p rk-kernel --test it -- conformance_ 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the conformance run could not complete (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+n=$(printf '%s\n' "$out" | grep -cE '^test [A-Za-z0-9_:]*conformance_'); [ "$n" -eq 3 ] || { echo "FAIL: expected exactly 3 conformance lints, found $n"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 0 passed; 0 failed; 3 ignored' || { echo "FAIL: the three conformance lints are not all ARMED — a lint that RUNS here was discharged by a stage that has not happened"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
+armed=$(printf '%s\n' "$out" | grep -E '^test [A-Za-z0-9_:]*conformance_.*\.\.\. ignored,'); a=$(printf '%s\n' "$armed" | grep -c .); [ "$a" -eq 3 ] || { echo "FAIL: $a of 3 conformance lints are ARMED — a lint that RUNS here was discharged by a stage that has not happened"; exit 1; }
+printf '%s\n' "$armed" | grep -vE 'discharged by (s7g|s7h)'; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: an armed lint's #[ignore] reason does not name its discharging stage (rc=$rc)"; exit 1; }
 out=$(./target/debug/redkiln run rk-fix-doctor-test-count --lane fix 2>&1); rc=$?
 printf '%s\n' "$out" | grep -qE 'contains a cycle|RankTie' && { echo "FAIL: the run still refuses at catalog LOAD:"; printf '%s\n' "$out" | head -3; exit 1; }
 printf '%s\n' "$out" | head -3   # → READ: the run gets past load. A later refusal (schemas, cards, roles) is s7g's and is not this checkpoint's subject.
