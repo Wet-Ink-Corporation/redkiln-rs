@@ -192,9 +192,37 @@ n=$(printf '%s\n' "$out" | grep -cE '^test [A-Za-z0-9_:]*conformance_'); [ "$n" 
 printf '%s\n' "$out" | grep -qE 'test result: ok\. 0 passed; 0 failed; 3 ignored' || { echo "FAIL: the three conformance lints are not all ARMED — a lint that RUNS here was discharged by a stage that has not happened"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
 armed=$(printf '%s\n' "$out" | grep -E '^test [A-Za-z0-9_:]*conformance_.*\.\.\. ignored,'); a=$(printf '%s\n' "$armed" | grep -c .); [ "$a" -eq 3 ] || { echo "FAIL: $a of 3 conformance lints are ARMED — a lint that RUNS here was discharged by a stage that has not happened"; exit 1; }
 printf '%s\n' "$armed" | grep -vE 'discharged by (s7g|s7h)'; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: an armed lint's #[ignore] reason does not name its discharging stage (rc=$rc)"; exit 1; }
+# THE BINARY MUST EXIST AND EXECUTE BEFORE ANY ASSERTION ABOUT WHAT IT PRINTS.
+# CORRECTED 2026-09-21 at this stage's execution, and the hole was BLOCKING: `target/` is
+# gitignored, 0 tracked files live under it, and this block builds nothing — so with the binary
+# deleted the whole checkpoint ran to completion and printed CP7F-END-OF-BLOCK with rc=0
+# [measured]. A fresh clone, a CI runner or anyone who has run `cargo clean` passed Checkpoint 7f
+# with no product binary at all. The guard below captured `rc` and never tested it.
+test -f ./target/debug/redkiln || cargo build -p rk-cli --bin redkiln >/dev/null 2>&1
+test -f ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln is absent and could not be built — every guard below would be asserting over the empty string"; exit 1; }
+./target/debug/redkiln --version >/dev/null 2>&1 || { echo "FAIL: ./target/debug/redkiln does not execute"; exit 1; }
+runs_before=$(ls .git/redkiln/runs 2>/dev/null | wc -l)
 out=$(./target/debug/redkiln run rk-fix-doctor-test-count --lane fix 2>&1); rc=$?
+[ "$rc" -ne 127 ] || { echo "FAIL: the run did not execute (rc=127)"; exit 1; }
 printf '%s\n' "$out" | grep -qE 'contains a cycle|RankTie' && { echo "FAIL: the run still refuses at catalog LOAD:"; printf '%s\n' "$out" | head -3; exit 1; }
+# THE POSITIVE HALF. The guard above is a NEGATIVE assertion over a string that is EMPTY in the
+# passing case (a successful run prints 0 bytes on both streams, rc=0), so on its own it is also
+# satisfied by a nonexistent item id, an invalid --lane, and a missing .redkiln/ entirely — each
+# measured 2026-09-21. `dag_assembled` is emitted by selection step 5, which is REACHED ONLY AFTER
+# the catalog, the artifact registry and the facet registry have all loaded, so it is the smallest
+# honest witness that this step's externally visible effect actually happened.
+runs_after=$(ls .git/redkiln/runs 2>/dev/null | wc -l)
+[ "$runs_after" -gt "$runs_before" ] || { echo "FAIL: the run opened no run record ($runs_before -> $runs_after) — it did not get as far as selection"; exit 1; }
+newest=$(ls -1dt .git/redkiln/runs/*/ 2>/dev/null | head -1)
+grep -q 'dag_assembled' "${newest}events.jsonl" || { echo "FAIL: $newest carries no dag_assembled — the pack did not load, whatever the refusal text said"; exit 1; }
 printf '%s\n' "$out" | head -3   # → READ: the run gets past load. A later refusal (schemas, cards, roles) is s7g's and is not this checkpoint's subject.
+# AND DISARM THE HAZARD THIS BLOCK JUST ARMED. `run` creates a run-owned worktree that is a FULL
+# SECOND CHECKOUT of the workspace and can sit many commits behind HEAD; left registered, it makes
+# every later repo-root grep double-count against a stale tree (measured: `TrailerKey::` 38 from
+# root against 19 from `crates/`). The checkpoint cleans up after itself rather than leaving that
+# for the next reader.
+git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count >/dev/null 2>&1 || true
+git worktree prune
 echo "CP7F-END-OF-BLOCK reached"
 ```
 

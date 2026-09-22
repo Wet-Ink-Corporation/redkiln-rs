@@ -21,16 +21,23 @@
 //! each reason names the stage that discharges it. The ignore is removed by the landing that makes
 //! the lint pass, **in the same commit**.
 //!
-//! 🛑 **The first three lints scan CODE LINES ONLY.** A comment naming `StepKind`, a doc-comment
-//! naming a port or a grammar file naming a trailer key must not satisfy them — that is how a guard
-//! gets satisfied by the prose beside it, which this programme has been bitten by repeatedly. The
-//! kernel already carries such prose: `src/workflow/gate.rs` states *"Step 7b parsed and linted that
-//! form … and built no executor"*, and `src/catalog.rs` carries *"`outputs` was parsed for every
-//! `StepKind`"*. Both would satisfy a naive grep. [`code_lines`] is the stripper, and
-//! [`the_comment_stripper_ignores_prose`] is its **own control** — measured 2026-09-21, no
-//! `ports.<field>` pattern appears on a comment-only line anywhere in `rk-kernel/src/`, so a lint
-//! written without a stripper would pass identically today and nobody would learn it was broken
-//! until prose was added.
+//! 🛑 **The first three lints scan CODE LINES ONLY — comments stripped AND string literals
+//! blanked.** A comment naming `StepKind`, a doc-comment naming a port, a grammar file naming a
+//! trailer key, *or a string literal spelling any of them*, must not satisfy them — that is how a
+//! guard gets satisfied by the prose beside it, which this programme has been bitten by repeatedly.
+//! The kernel already carries such prose: `src/workflow/gate.rs` states *"Step 7b parsed and linted
+//! that form … and built no executor"*, and `src/catalog.rs` carries *"`outputs` was parsed for
+//! every `StepKind`"*. Both would satisfy a naive grep.
+//!
+//! **The first draft of this module was defeated three ways and each is now a committed case.** An
+//! adversarial pass turned all three armed lints GREEN without adding one line of behaviour: a
+//! **trailing** comment on a real code line (`const _X: () = (); // ports.toolchain`), which the
+//! line-based `retry.rs` filter keeps whole; a dead `const` of **string literals** naming the five
+//! step kinds; and two literals placed in `rk-cli`'s `doctor/rebuild.rs`, which is a trailer
+//! *reader*. So [`code_lines`] reuses the tree's real stripper —
+//! `rk_kernel::kernel_denylist::strip_comments`, block-aware and trailing-aware — and pairs it with
+//! [`blank_string_literals`], the shape `module_boundary.rs` already uses for the same reason.
+//! [`the_comment_stripper_ignores_prose`] is the **control**, and it carries all three regressions.
 //!
 //! # Why the source half walks rather than `include_str!`s
 //!
@@ -92,21 +99,73 @@ fn rs_files(dir: &Path) -> Vec<PathBuf> {
     out
 }
 
-/// `src`'s lines with every comment-only line removed.
+/// Blank the CONTENTS of every double-quoted string literal on one code line, keeping the quotes.
 ///
-/// The filter is `retry.rs`'s `retry_source_without_comments`, which this tree already relies on
-/// three times: a line whose first non-whitespace is `//`, `/*` or `*` is prose. It is
-/// deliberately line-based and therefore does **not** strip a trailing comment on a code line or a
-/// block comment opened mid-line; neither shape can manufacture a false positive for the patterns
-/// below, and a stripper that tried to parse Rust would be a second implementation of the thing
-/// under test.
-fn code_lines(src: &str) -> Vec<&str> {
-    src.lines()
-        .filter(|line| {
-            let t = line.trim_start();
-            !(t.starts_with("//") || t.starts_with("/*") || t.starts_with('*'))
-        })
-        .collect()
+/// This mirrors `crate::module_boundary`'s private `blank_string_literals`, whose warrant applies
+/// here unchanged: *"A call, a read or an extraction is code; the same spelling inside a string is
+/// a message or a key, and a rule that matched it would fire on its own violation text."*
+///
+/// 🛑 **Without this, every lint below is defeated by a dead `const` of string literals.** Measured
+/// 2026-09-21 against an earlier draft that stripped comments only: four lines naming the five
+/// kinds as `&str` turned `conformance_every_step_kind_has_an_executor` fully GREEN with nothing
+/// routed and no `StepKind` match arm anywhere; two literals in `rk-cli`'s `doctor/rebuild.rs` —
+/// a pure trailer *reader* — turned the trailer lint GREEN; and one literal turned `toolchain`
+/// into a "called" port. An armed lint that a comment cannot satisfy but a string literal can is
+/// not a source lint, and the shape is live rather than hypothetical: `module_boundary.rs` carries
+/// `"Tracker",` as a string literal on a code line in this very crate today.
+fn blank_string_literals(code: &str) -> String {
+    let mut out = String::with_capacity(code.len());
+    let mut chars = code.chars();
+    let mut in_str = false;
+    while let Some(c) = chars.next() {
+        if in_str {
+            match c {
+                '\\' => {
+                    chars.next();
+                }
+                '"' => {
+                    in_str = false;
+                    out.push('"');
+                }
+                _ => {}
+            }
+        } else {
+            out.push(c);
+            if c == '"' {
+                in_str = true;
+            }
+        }
+    }
+    out
+}
+
+/// `src`'s lines as CODE: comments removed and string-literal contents blanked.
+///
+/// The comment half is `rk_kernel::kernel_denylist::strip_comments`, the tree's own stripper,
+/// reused rather than re-implemented. It carries block-comment state across lines and removes a
+/// **trailing** comment on a code line, which the `retry.rs` line-based filter this module first
+/// copied does not.
+///
+/// 🛑 **The line-based filter was not enough and the measurement is recorded so it is not
+/// reintroduced.** `retry.rs`'s `retry_source_without_comments` drops a line whose first
+/// non-whitespace is `//`, `/*` or `*` — correct for its own single-file job, and defeated here by
+/// one trailing comment: `const _X: () = (); // ports.toolchain` moved `toolchain` out of
+/// `conformance_every_port_has_a_call_site`'s uncalled set [measured 2026-09-21]. Three lints read
+/// whole directories of other people's code, so the stripper has to be the real one.
+fn code_lines(src: &str) -> Vec<String> {
+    let mut in_block = false;
+    let mut out = Vec::new();
+    for raw in src.lines() {
+        let code = blank_string_literals(&rk_kernel::kernel_denylist::strip_comments(
+            raw,
+            &mut in_block,
+        ));
+        if code.trim().is_empty() {
+            continue;
+        }
+        out.push(code);
+    }
+    out
 }
 
 /// Every code line under `dir`, paired with the file it came from.
@@ -116,7 +175,7 @@ fn code_lines_under(dir: &Path) -> Vec<(PathBuf, String)> {
         let src = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()));
         for line in code_lines(&src) {
-            out.push((path.clone(), line.to_owned()));
+            out.push((path.clone(), line));
         }
     }
     out
@@ -126,10 +185,15 @@ fn code_lines_under(dir: &Path) -> Vec<(PathBuf, String)> {
 // The stripper's own control.
 // ---------------------------------------------------------------------------------------------
 
-/// **[`code_lines`] drops prose and keeps code.** Without this the stripper ships untested: it
-/// changes no answer on today's tree (measured 2026-09-21 — zero `ports.<field>` patterns sit on a
-/// comment-only line in `rk-kernel/src/`), so a broken stripper would be invisible until prose was
-/// added, which is precisely when it would matter.
+/// **[`code_lines`] drops prose and string contents, and keeps code.** Without this the stripper
+/// ships untested: it changes no answer on today's tree (measured 2026-09-21 — no `ports.<field>`
+/// pattern sits on a comment-only line in `rk-kernel/src/`), so a broken stripper would be
+/// invisible until prose was added, which is precisely when it would matter.
+///
+/// 🛑 **Three of these cases are regressions, not hypotheticals.** An adversarial pass over the
+/// first draft of this module defeated all three armed lints by exactly these shapes: a trailing
+/// comment on a real code line, a dead `const` of string literals, and a string literal inside a
+/// file that is a *reader* rather than a producer. Each is now a case here.
 #[test]
 fn the_comment_stripper_ignores_prose() {
     let src = concat!(
@@ -139,35 +203,52 @@ fn the_comment_stripper_ignores_prose() {
         "/* StepKind::Gate in a block comment\n",
         " * StepKind::Emit continued\n",
         " */\n",
+        "const _T: () = (); // ports.toolchain in a TRAILING comment\n",
+        "const _S: [&str; 2] = [\"StepKind::Emit\", \"TrailerKey::Story\"];\n",
         "let k = StepKind::Agent;\n",
     );
     let kept = code_lines(src);
-    // ONE line survives, and the closing `*/` is the reason to say so explicitly: it trims to a
-    // leading `*` and is therefore stripped by the same arm that strips a block comment's
-    // continuation lines. The stripper is correct here and the first draft of this control was
-    // not — it expected two.
-    assert_eq!(
-        kept.len(),
-        1,
-        "only the `let` line survives; ` */` trims to `*/` and is stripped as a continuation: \
-         {kept:?}"
-    );
+
+    // THE CODE SURVIVES.
     assert!(
-        kept.iter().any(|l| l.contains("let k = StepKind::Agent;")),
-        "the code line survives the stripper: {kept:?}"
+        kept.iter().any(|l| l.contains("StepKind::Agent")),
+        "the code line must survive the stripper: {kept:?}"
     );
+
+    // EVERY COMMENT SHAPE IS GONE, the trailing one included.
     for prose in [
         "in a line comment",
         "in a doc comment",
         "in an inner doc comment",
         "in a block comment",
         "continued",
+        "in a TRAILING comment",
     ] {
         assert!(
             !kept.iter().any(|l| l.contains(prose)),
             "the stripper kept a comment containing {prose:?}: {kept:?}"
         );
     }
+
+    // THE TRAILING COMMENT'S PAYLOAD IS GONE, not merely its prose. This is the case that defeated
+    // the first draft: the line is real code, so a line-based filter keeps it whole.
+    assert!(
+        !kept.iter().any(|l| l.contains("ports.toolchain")),
+        "a trailing comment's `ports.toolchain` survived and would satisfy the port lint: {kept:?}"
+    );
+
+    // STRING-LITERAL CONTENTS ARE BLANKED. A dead const of literals must satisfy no lint.
+    for payload in ["StepKind::Emit", "TrailerKey::Story"] {
+        assert!(
+            !kept.iter().any(|l| l.contains(payload)),
+            "a string literal containing {payload:?} survived and would satisfy a lint: {kept:?}"
+        );
+    }
+    // …and the line itself is still seen as code, quotes kept, so blanking is not deletion.
+    assert!(
+        kept.iter().any(|l| l.contains("const _S")),
+        "blanking must keep the line, not drop it: {kept:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -495,6 +576,9 @@ fn conformance_every_trailer_key_has_a_producer() {
 /// fail the build"*, and `load_lints` excludes it for that reason. No pack is needed here.
 #[test]
 fn shipped_pack_loads() {
+    // The shipped pack's activity count, pinned rather than floored — see the anchor below.
+    const SHIPPED_ACTIVITIES: usize = 102;
+
     let root = workspace_root();
     let pack_dir = root.join(".redkiln");
     let catalog_dir = pack_dir.join("catalog");
@@ -510,9 +594,19 @@ fn shipped_pack_loads() {
         .flatten()
         .filter(|e| e.path().extension().is_some_and(|x| x == "toml"))
         .count();
-    assert!(
-        activity_files > 0,
-        "{} holds no .toml activities; every assertion below would be vacuous",
+    // 🛑 A FLOOR OF ONE IS NOT AN ANCHOR HERE, and the counter-example is measured. `rank_lint`
+    // detects ties PAIRWISE, so a catalog holding a single activity can never tie: with
+    // `keyed_by` removed from `[artifact.ImplReport]` AND the catalog reduced to one file, an
+    // earlier draft of this test reported a clean load while carrying the exact defect it exists
+    // to catch [measured 2026-09-21, adversarial pass]. The shipped count is therefore PINNED, so
+    // that deleting the pack's contents fails loudly instead of passing quietly. Moving this
+    // number is a deliberate act that belongs with the pack change that moves it.
+    assert_eq!(
+        activity_files,
+        SHIPPED_ACTIVITIES,
+        "{} holds {activity_files} .toml activities and the shipped pack has \
+         {SHIPPED_ACTIVITIES}; a pairwise lint over a shrunken catalog is vacuously green, so this \
+         count is pinned rather than floored",
         catalog_dir.display()
     );
 
