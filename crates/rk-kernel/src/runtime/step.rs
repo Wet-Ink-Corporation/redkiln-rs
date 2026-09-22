@@ -26,6 +26,20 @@
 //! there is no path from it to one. A reviewer does not have to trust a docstring, and a later edit
 //! that wanted to dispatch from `check` would have to change the signature to do it.
 //!
+//! # A SECOND runnable `agent` step refuses (ADR-0143)
+//!
+//! `ActivitySpec` is **one spec per node** (ADR-0099:61), so a second `agent` step has no card,
+//! schema or inputs of its own, and AC-013's per-activation grain admits no second dispatch. This
+//! arm used to call `run_activity` anyway, get its **empty re-entry report** back, and store that
+//! **over the committed one** — so `dispatch_through` answered `NotCommitted { class: None }` for an
+//! activation that had committed, on a report whose `skipped()` was also `true`.
+//!
+//! Treating the later steps as *already served* was the other candidate and is measurably false:
+//! **63 of 102** activities declare more than one `agent` step and **43 of those use DIFFERENT
+//! roles** — `[spec-author, reviewer]`, `[architect, reviewer, architect]` — so a dispatch bound to
+//! the first role's card has not performed the reviewer's step. The refusal is keyed on a second
+//! **runnable** step, so a guarded-off one still costs nothing; per-step specs are OWED.
+//!
 //! # AC-013's grain is per ACTIVATION and stays so
 //!
 //! **ADR-0138.** `RunState::is_committed(item, activity_id_at_version)` has no step component, and
@@ -302,6 +316,47 @@ impl super::Runtime {
                 StepVerdict::Skipped => {}
                 StepVerdict::Continue => {
                     if step.kind == StepKind::Agent {
+                        // 🛑 **ADR-0143: A SECOND RUNNABLE `agent` STEP REFUSES, AND THE COMMITTED
+                        // REPORT IS NEVER OVERWRITTEN.**
+                        //
+                        // `ActivitySpec` is ONE SPEC PER NODE (ADR-0099:61; `bind_nodes`' own
+                        // header), so this step has no card digest, no schema and no inputs of its
+                        // own — the binding took its card from whichever step first nominated a
+                        // role. And AC-013's grain is per ACTIVATION, so `run_activity` would
+                        // answer with its re-entry report: `dispatches: 0`, `commit: None`,
+                        // `outcome: None`.
+                        //
+                        // Storing THAT over the committed one is what this arm used to do, and it
+                        // produced `NotCommitted { class: None }` for an activation that HAD
+                        // committed — the very hole Mechanism B exists to close, and a report for
+                        // which `skipped()` is `true`, so a failed walk read as a legitimate
+                        // AC-013 skip.
+                        //
+                        // Treating it as "already served" was the other candidate and is measurably
+                        // false: **43 of the 63** multi-agent activities use DIFFERENT roles
+                        // (`[spec-author, reviewer]`, `[architect, reviewer, architect]`), so a
+                        // dispatch bound to the first role's card has not performed the reviewer's
+                        // step. The refusal names the activation rather than dropping a review.
+                        if let Some(done) = dispatched.as_ref() {
+                            let cause = StepError::Unsupported {
+                                capability: format!(
+                                    "the activation `{activity_id_at_version}` reached a SECOND \
+                                     runnable `agent` step (`{}`), and `ActivitySpec` is one spec \
+                                     per node (ADR-0099:61): this step has no card, schema or \
+                                     inputs of its own, and AC-013's per-activation grain admits \
+                                     no second dispatch. Per-step specs are OWED (ADR-0143 \
+                                     clause 5). The first dispatch {} — its result is not \
+                                     discarded.",
+                                    step.id,
+                                    if done.committed() {
+                                        "COMMITTED"
+                                    } else {
+                                        "did not commit"
+                                    }
+                                ),
+                            };
+                            return Ok(ActivityReport::refused(now, cause));
+                        }
                         // **The `agent` arm.** The dispatch, its retry loop, AC-013's re-entry and
                         // AC-012's commit race are `run_activity`'s, entered unchanged.
                         let report = self.run_activity(

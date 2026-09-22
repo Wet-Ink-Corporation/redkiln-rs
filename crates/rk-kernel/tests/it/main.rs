@@ -319,6 +319,7 @@ mod review;
 mod review_confirm;
 mod rigor;
 mod runtime;
+mod second_agent;
 mod selection;
 mod short_circuit;
 mod support;
