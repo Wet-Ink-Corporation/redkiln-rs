@@ -243,16 +243,29 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo
 # `PROGRESS.md` row 37's "twelve" was right; the correction is recorded rather than smoothed,
 # because a mutation cycle whose export is not byte-faithful reports kills it did not make.
 #
-# TWO LINES BECAUSE THERE ARE TWO ROUTES, not one assertion written twice. `second_agent::` are the
-# only two tests in the workspace that call `run_activity_steps` BY NAME; `ac432` reaches it through
-# the composition root's `replay::resume`, which is its ONE production call site. A kernel-only line
-# would be satisfied by a walk no production path enters, which is this stage's own defect one level up.
+# TWO LINES BECAUSE THERE ARE TWO ROUTES, not one assertion written twice. The first names every test
+# module that calls `run_activity_steps` BY NAME; `ac432` reaches it through the composition root's
+# `replay::resume`, which is its ONE production call site. A kernel-only line would be satisfied by a
+# walk no production path enters, which is this stage's own defect one level up.
+#
+# ⚠️ CORRECTED THE SAME DAY, AND THE CORRECTION IS THE POINT. This comment read "`second_agent::` are
+# the only two tests in the workspace that call `run_activity_steps` BY NAME" and the line filtered on
+# `second_agent::` alone. That was TRUE when written and was made FALSE ninety minutes later BY THIS
+# SAME PASS, which added `post_commit_failure::` (2 call sites, ADR-0144) and `gate_step::` (4,
+# ADR-0145): the filter then selected 2 of 8. A guard whose scope is a fact about the tree goes stale
+# the moment the tree moves, and the three filters are listed BY NAME so a fourth module is a visible
+# omission rather than a silent one. Measured: `grep -rn 'run_activity_steps(' crates/ --include=*.rs`
+# outside `src/` returns 8 lines over 3 modules.
 #
 # The greps are PER-TEST (`^test ... ... ok$`), not the `test result: ok. N passed` form the guards
 # above use: with no `--test it` that form is satisfied by ANY target reporting ANY pass.
-out=$(cargo test -p rk-kernel --test it -- second_agent:: 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these are the only two tests that call run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE '^test .*\ba_second_runnable_agent_step_refuses_and_the_commit_survives\b.* \.\.\. ok$' || { echo "FAIL: a_second_runnable_agent_step_refuses_and_the_commit_survives did not run and pass -- a filter that matches nothing exits 0"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+out=$(cargo test -p rk-kernel --test it -- second_agent:: post_commit_failure:: gate_step:: 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these three modules are every test that calls run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
+for t in a_second_runnable_agent_step_refuses_and_the_commit_survives \
+         a_step_failing_after_a_committed_dispatch_refuses_by_name_and_keeps_the_commit \
+         a_gate_step_after_a_dispatch_writes_the_runtime_mark_and_keeps_the_commit; do
+  printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: $t did not run and pass -- a filter that matches nothing exits 0, and one module dropping out would otherwise be absorbed by the other two"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+done
 out=$(cargo test -p rk-cli --test it -- explain::ac432_explain_over_replayed_log_is_byte_identical 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the PRODUCTION route into the walk is red (rc=$rc) -- replay::resume no longer reaches run_activity_steps, or reaches it and breaks"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qE '^test .*\bac432_explain_over_replayed_log_is_byte_identical\b.* \.\.\. ok$' || { echo "FAIL: ac432 did not run and pass -- the composition-root route into the walk is asserted by nothing"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
