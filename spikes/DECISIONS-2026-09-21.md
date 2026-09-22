@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-17), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-18), and what they license
 
 *(Title corrected 2026-09-22 at `s7g`'s open: it read "**Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6)**"
 while the file already carried **D21-7** and **D21-8** — `s7f`'s two flip lines, appended at its close on 2026-09-21 —
@@ -658,5 +658,51 @@ defects stand — the second-`agent`-step report overwrite, the swallowed post-c
 `gate` arm — and **Step 7g remains BLOCKED**. It does not build step-output resolution, and it does not
 weaken ADR-0136's prohibition on nulling references, which is untouched and is not made safer by the
 context now being populated.
+
+---
+
+## D21-18 · ADR-0143 flips to `accepted` — the second of Step 7g's four blocking defects, and a measurement that closed the tempting fix
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s second executor repair.** ADR-0143 is confirmed as
+written and flips `proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**An engineering call inside the approved plan, like D21-13 through D21-17.**
+
+**The line exists because a measurement closed an option that would otherwise have been taken.** The
+obvious repair for *"the second agent step overwrites the committed report"* is to keep the first report
+and treat later agent steps as **already served by the one activation dispatch** — it is a one-line
+change, it makes the tests green, and it is defensible from `ActivitySpec`'s *one spec per node* contract.
+Measured, it is wrong for **43 of 63** activities: they declare agent steps under **different roles**
+(`[spec-author, reviewer]`, `[architect, reviewer, architect]`), and a dispatch bound to the spec-author's
+card has not performed the reviewer's step. That fix would have silently dropped a review in 43
+activities — the defect class `s7g` exists to end, reappearing one level up, and it would have shipped
+looking like a tidy-up.
+
+**What was actually wrong is smaller and worse than it looked.** AC-013's re-entry guard was doing its job
+perfectly: it returned its opened report for the second call. The walk then stored that report over the
+committed one, so an activation that HAD committed was reported as `NotCommitted { class: None }` —
+carrying no error class at all, which is the hole **Mechanism B** was added to close, and on a report
+whose `skipped()` is also `true`, so a failed walk read as a legitimate AC-013 skip. **Three separate
+instruments were telling the operator something false, and none of them was itself broken.**
+
+**Keyed on a RUNNABLE second step, not a declared count** — and that distinction is only a real one
+because **D21-17 landed an hour earlier**. Before ADR-0142 the guard on a second agent step could not be
+evaluated at all, so "runnable" and "declared" were the same thing. The two repairs compose rather than
+merely accumulating, and the control test asserts the composition.
+
+**What it buys, stated as honestly as the last one.** Nothing becomes executable. 63 of 102 activities
+refuse where they previously failed — the same outcome, now with a cause, delivered through Mechanism B's
+channel instead of bypassing it. That is the whole gain and the line does not dress it as more.
+
+**And the record declines to name the answer.** Per-step `ActivitySpec`s are the obvious next move and
+clause 5 records them as OWED **without** asserting they are right: 43 activities interleaving
+`spec-author` and `reviewer` may be describing two activities and a review gate rather than one activity
+needing three specs. That is a catalog question, and deciding it by implementing the spec change would be
+deciding it by accident.
+
+**What this does not license.** It does not widen AC-013's idempotence grain, which ADR-0138 pins and
+`kill_and_resume_n_step` asserts. It does not touch the `check` arm (ADR-0142 clause 4), the swallowed
+post-commit failures, or the no-op `gate` arm. **Step 7g remains BLOCKED**, with two blocking defects
+standing.
 
 ---

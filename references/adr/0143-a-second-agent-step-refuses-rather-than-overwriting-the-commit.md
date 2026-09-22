@@ -1,7 +1,7 @@
 ---
 id: "0143"
 title: "A **second runnable `agent` step** in one activation **refuses by name** rather than silently re-entering, and the committed report is **never overwritten**. `ActivitySpec` is ONE SPEC PER NODE (ADR-0099:61), so a second agent step has no spec, no card and no schema of its own; AC-013's per-activation grain then returns an EMPTY re-entry report which the walk was storing over the committed one, producing `NotCommitted { class: None }` — the exact hole Mechanism B exists to close. Measured: **63 of 102** activities declare more than one `agent` step and **43 of those 63 use DIFFERENT roles**, so one dispatch cannot honestly be said to cover them"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: references/adr/0099 decision 61's spec shape (`ActivitySpec` carries `StepSpec`'s five fields); references/adr/0138 (AC-013's grain stays per ACTIVATION; the step list is transcribed); references/adr/0142 (the guard context, and the same finding one level over); crates/rk-cli/src/verbs/run.rs (`bind_nodes` — *"🛑 ONE SPEC PER NODE, NOT PER STEP — THE RUNTIME DISPATCHES WHOLE ACTIVITIES"*, and the role taken from whichever step nominates one); crates/rk-kernel/src/runtime/activity.rs (AC-013's re-entry path returning an opened report); crates/rk-kernel/src/replay.rs (`dispatch_through`'s `NotCommitted`, and Mechanism B's `class`)
