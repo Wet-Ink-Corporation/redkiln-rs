@@ -12,7 +12,7 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 ---
 
 **Why this step exists.** `s7f` §7f.1 states the finding and arms the gate; this step discharges two thirds of it.
-design §4.4 fixes **five closed step kinds** and gives each its own execution — *"`agent` (the only place a model
+design §4.5 fixes **five closed step kinds** and gives each its own execution — *"`agent` (the only place a model
 runs), `tool` (a toolchain verb through the port), `check` (a deterministic predicate in Rust; cannot dispatch),
 `gate` (the kernel writes the mark and **exits 0**, resuming into the same step), `emit` (binds outputs to
 `provides`)"* — and the runtime implements one of them by dispatching the whole activation to the harness.
@@ -25,7 +25,7 @@ step kinds: `catalog::Step` carries `kind`, `run`, `output_type`, `role`, `when`
 execution point is missing**, which is why `ports.toolchain`, `ports.tracker` and `ports.docs` have zero non-test
 call sites.
 
-**This step takes no decision.** Every arm's behaviour is design §4.4's sentence for that kind.
+**This step takes no decision.** Every arm's behaviour is design §4.5's sentence for that kind.
 
 ### 7g.1 The executor walks the steps, and the kind chooses the arm
 
@@ -47,7 +47,7 @@ The five arms, each pinned to its own sentence:
 FSM's own predicate and the re-entry path reads it; a step walk that re-ran committed activations would break
 `kill_and_resume_n_step` and criterion (3). The walk happens **inside** an activation that is not yet committed.
 
-🛑 **`check` cannot dispatch, and that is asserted, not assumed.** design §4.4's parenthesis is a prohibition; the
+🛑 **`check` cannot dispatch, and that is asserted, not assumed.** design §4.5's parenthesis is a prohibition; the
 arm takes no `Ports` at all, so the compiler carries it.
 
 ### 7g.2 The Toolchain port's call site, and what AC-473 needs from it

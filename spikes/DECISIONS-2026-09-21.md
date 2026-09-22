@@ -100,7 +100,7 @@ built, tested and unreachable.
 built would make that milestone a label rather than a measurement. Rejected: re-scoping Phase 1 to exclude lane
 execution; narrowing the exit to one stage; re-planning the phase.
 
-**Grounding — it is execution, not design.** design §4.4 fixes the five closed step kinds and says `tool` is *"a
+**Grounding — it is execution, not design.** design §4.5 *(corrected 2026-09-22: this read §4.4; the `| Step kinds |` row sits under `### 4.5 The catalog v0`, and §4.4 is the seven-step selection function — the decision this paragraph grounds is unaffected)* fixes the five closed step kinds and says `tool` is *"a
 toolchain verb through the port"*; design §5's event table names `stage_transition` tier-1 *"(trailer)"* produced by
 *"the kernel's FSM at a stage boundary"* and `slice_sealed` by *"the lane's review stage"*; ADR-0105 decision 3
 fixes the trailer plumbing; `INDEX.md` puts *"the runtime"* in **Step 7b's** scope. And the kernel already reasons
