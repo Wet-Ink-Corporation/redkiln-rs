@@ -343,6 +343,29 @@ pub enum ReplayError {
         /// divergence rather than merely the absence.
         served_instead: Option<String>,
     },
+    /// **ADR-0144. The activation COMMITTED and a later step of its walk then REFUSED.**
+    ///
+    /// Distinct from [`ReplayError::NotCommitted`], which is its opposite and would be a false
+    /// statement here: the `activity_committed` row exists, the dispatch's value is in the journal,
+    /// and AC-013 will skip that activation on re-entry. What failed is a step the walk reached
+    /// *after* it.
+    ///
+    /// # Why it is an error at all, rather than a warning on a successful run
+    ///
+    /// **ADR-0135.** 113 `tool` steps name 33 verbs, 29 of which are refused by name *so that a run
+    /// which executed nothing is distinguishable from one that worked*. Returning `Ok` here — which
+    /// is what the walk's `Failed` arm caused until this record — made them indistinguishable
+    /// again, one level up and after the refusal had already been correctly raised.
+    ///
+    /// `class` is **not** `Option`, unlike `NotCommitted`'s: this variant is only constructible from
+    /// a step failure, so there is always exactly one, and the CLI maps it through the same
+    /// `impl From<&StepError> for Exit` — eleven arms, no wildcard. **No row of §7d.4's exit table
+    /// is added or moved**: the exit code is the class's own.
+    StepFailedAfterCommit {
+        step_id: String,
+        activity_id_at_version: String,
+        class: rk_types::error::StepError,
+    },
 }
 
 impl fmt::Display for ReplayError {
@@ -417,6 +440,20 @@ impl fmt::Display for ReplayError {
                 served_instead
                     .as_deref()
                     .map_or_else(|| "nothing further".to_owned(), |s| format!("`{s}`"))
+            ),
+            Self::StepFailedAfterCommit {
+                step_id,
+                activity_id_at_version,
+                class,
+            } => write!(
+                f,
+                "the activation `{activity_id_at_version}` COMMITTED and a later step of its walk \
+                 then failed (`{step_id}`). The commit stands — AC-013's grain is per activation \
+                 and the `activity_committed` row is in the journal — and the run refuses rather \
+                 than reporting a success it did not have: ADR-0135 refuses 29 of the 33 `tool` \
+                 verbs BY NAME so that a run which executed nothing is distinguishable from one \
+                 that worked, and returning `Ok` here made them indistinguishable again. Terminal \
+                 class: {class:?}"
             ),
         }
     }
@@ -1367,7 +1404,24 @@ fn derive(
         let binding = inputs.spec_for(step_id)?;
         let produced = match (&mut *results, dispatch_envelope) {
             (Results::Dispatched(rt), Some((cap, now))) => {
-                dispatch_through(rt, key, step_id, binding, &eval_ctx, cap, now)?
+                // **ADR-0145.** The three values a `gate` step needs, PASSED rather than
+                // re-derived: `fsm_context` built the tree hash and the deadline one line above,
+                // and `state` is this iteration's own fold. `rk-kernel` may read neither a clock
+                // nor a tree.
+                let gate = crate::runtime::step::GateSite {
+                    state: &state,
+                    tree_hash: ctx.tree_hash(),
+                    deadline: ctx.deadline(),
+                };
+                dispatch_through(
+                    rt,
+                    key,
+                    step_id,
+                    binding,
+                    &eval_ctx,
+                    gate,
+                    Envelope { cap, now },
+                )?
             }
             // Unreachable by construction: the envelope is `Some` exactly when the source is
             // `Dispatched`. Refused rather than unwrapped, because an `expect` here would be a
@@ -1391,14 +1445,27 @@ fn derive(
 /// here re-builds a `dispatch` or an `activity_committed` to match what `crate::runtime` writes:
 /// a recording that constructed its own copy of the rows would be the two-written-to-agree defect
 /// this module's header names, one level down.
+/// The dispatch envelope — **the pair `dispatch_envelope` already carries**.
+///
+/// Bundled when ADR-0145 gave [`dispatch_through`] its eighth argument and tripped
+/// `clippy::too_many_arguments` (denied here). These two have travelled together as
+/// `Option<(AttemptCap, JournaledNow)>` since Slice 3, so naming the pair is a reading of the code
+/// rather than a shape invented to satisfy a lint — the same warrant
+/// [`crate::runtime::step::Activation`] carries.
+#[derive(Debug, Clone, Copy)]
+struct Envelope {
+    cap: AttemptCap,
+    now: JournaledNow,
+}
+
 fn dispatch_through(
     rt: &Runtime,
     key: &IdempotencyKey,
     step_id: &str,
     binding: &RecordedSpec,
     ctx: &crate::predicate::Context,
-    cap: AttemptCap,
-    now: JournaledNow,
+    gate: crate::runtime::step::GateSite<'_>,
+    env: Envelope,
 ) -> Result<Vec<Event>, ReplayError> {
     let before = rt.journal(&key.item)?.len();
     // **`s7g`: the step walk, not the bare activation dispatch.** `run_activity_steps` falls
@@ -1413,9 +1480,40 @@ fn dispatch_through(
         },
         binding.steps(),
         ctx,
-        cap,
-        now,
+        gate,
+        env.cap,
+        env.now,
     )?;
+    // **ADR-0145. A GATE IS AN EXIT, NOT A FAILED DISPATCH — AND IT IS ASKED BEFORE `committed()`.**
+    //
+    // design §4.5: the kernel writes the mark and the run EXITS 0, resuming into this same step. A
+    // gated activation therefore does NOT commit, and the `!committed()` test below would refuse
+    // it as a failed dispatch — which is what happened to all 80 of the pack's `gate` steps until
+    // this record, for the 15 activities that reach one before dispatching.
+    //
+    // Nothing is returned specially: the appended `gate_opened` row is already in the journal
+    // delta below, the fold sees it, `awaiting_gate` answers with its token, `next_action` returns
+    // `AwaitGate`, this loop breaks on a non-`Dispatch` action, and `terminal_read` trailers the
+    // token and exits 0. The existing machinery composes once the row exists.
+    if report.gate_opened().is_some() {
+        return Ok(rt
+            .journal(&key.item)?
+            .into_iter()
+            .skip(before)
+            .collect::<Vec<Event>>());
+    }
+    // **ADR-0144.** Asked BEFORE `committed()`, because `committed()` is `true` on this report and
+    // the function would otherwise return `Ok` and the refusal would be gone. The activation did
+    // commit; a later step in its walk then refused, and that refusal is the only thing an operator
+    // can act on. It cannot arrive through `outcome()` — for a fresh commit that is
+    // `Some(Ok(typed))`, the dispatch's own value — so it travels on its own field.
+    if let Some(class) = report.step_error() {
+        return Err(ReplayError::StepFailedAfterCommit {
+            step_id: step_id.to_owned(),
+            activity_id_at_version: key.activity_id_at_version.clone(),
+            class: class.clone(),
+        });
+    }
     if !report.committed() {
         return Err(ReplayError::NotCommitted {
             step_id: step_id.to_owned(),
@@ -1672,7 +1770,21 @@ pub fn resume(
                     Some(binding) => binding,
                     None => supply_spec(step_id)?,
                 };
-                let produced = dispatch_through(&rt, key, step_id, &binding, &eval_ctx, cap, now)?;
+                // **ADR-0145.** Same three values, same warrant as `record`'s call site above.
+                let gate = crate::runtime::step::GateSite {
+                    state: &state,
+                    tree_hash: ctx.tree_hash(),
+                    deadline: ctx.deadline(),
+                };
+                let produced = dispatch_through(
+                    &rt,
+                    key,
+                    step_id,
+                    &binding,
+                    &eval_ctx,
+                    gate,
+                    Envelope { cap, now },
+                )?;
                 journal.extend(produced);
             }
             NextAction::OpenGate(_) => {

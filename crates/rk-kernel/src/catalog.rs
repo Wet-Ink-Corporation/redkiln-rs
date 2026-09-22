@@ -195,6 +195,18 @@ pub struct Step {
     /// shipped catalog by design** and the repairs are Step 7e's: 7b.12:970-977 forbids editing
     /// `spikes/p9/` to make a green.
     pub memo_declared: Option<bool>,
+    /// **ADR-0145.** `question = "<id>"` on a `gate` step — **the gate's KIND**, verbatim.
+    ///
+    /// Dropped at load until `s7g`'s fourth repair pass, which is why the 80 `gate` steps the
+    /// shipped pack declares had nothing to open a gate WITH: `GateRecord::derive_reach` digests a
+    /// `kind`, `QuestionRegistry::question_for` looks one up, and a step that reached neither
+    /// carried no identity at all. Measured over `.redkiln/catalog/`: **all 80** gate steps declare
+    /// a `question`, over **45** distinct values.
+    ///
+    /// `None` on every other kind. The value is **not** interpreted here — the question vocabulary
+    /// is the pack's, exactly as `role`'s is (ADR-0014), so an id this crate has never heard of is
+    /// carried and refused at resolution rather than at load.
+    pub question: Option<String>,
 }
 
 impl Step {
@@ -899,6 +911,12 @@ fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activ
                 retry_max,
                 repeat_max,
                 memo_declared,
+                // **ADR-0145.** The gate's kind, transcribed and not interpreted — `role`'s rule
+                // one field over. Read for EVERY kind rather than only `gate`, deliberately: a
+                // `question` on a non-gate step is a declaration this crate should be able to see
+                // in order to refuse it, and a key read only where it is expected is a key that
+                // goes missing silently everywhere else.
+                question: text(table, "question"),
             });
         }
     }

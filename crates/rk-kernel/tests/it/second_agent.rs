@@ -36,7 +36,9 @@ use rk_kernel::runtime::Runtime;
 use rk_kernel::runtime::step::Activation;
 use rk_ports::harness::Harness;
 
-use crate::runtime::{AID, CAP, ITEM, STAGE, STEP, at, counters, ok_typed, ports, spec, store};
+use crate::runtime::{
+    AID, CAP, ITEM, STAGE, STEP, at, counters, empty_state, gate_site, ok_typed, ports, spec, store,
+};
 
 fn agent_step(id: &str, when: Option<&str>) -> Step {
     Step {
@@ -51,6 +53,7 @@ fn agent_step(id: &str, when: Option<&str>) -> Step {
         retry_max: None,
         repeat_max: None,
         memo_declared: None,
+        question: None,
     }
 }
 
@@ -77,6 +80,10 @@ fn activation<'a>(spec: &'a rk_types::activity::ActivitySpec) -> Activation<'a> 
 /// **The defect: a second runnable agent step must refuse, naming the commit it did NOT discard.**
 #[test]
 fn a_second_runnable_agent_step_refuses_and_the_commit_survives() {
+    // ADR-0145: the walk now takes a `GateSite`. These tests reach no `gate` step, so the
+    // state is an EMPTY fold and the site is never used — but it is real rather than stubbed,
+    // so a test that later does reach a gate gets a true reach counter.
+    let state = empty_state();
     let (q, a) = counters();
     let db = store(&q, &a);
     // ONE scripted result: the second dispatch must never happen, and a second script entry would
@@ -97,6 +104,7 @@ fn a_second_runnable_agent_step_refuses_and_the_commit_survives() {
             activation(&sp),
             Some(&steps),
             &Context::new(),
+            gate_site(&state),
             rk_kernel::workflow::envelope::AttemptCap::declared(CAP),
             at(100),
         )
@@ -148,6 +156,10 @@ fn a_second_runnable_agent_step_refuses_and_the_commit_survives() {
 /// this distinguishable: before it, the guard itself would have failed on `UnknownField`.
 #[test]
 fn a_guarded_off_second_agent_step_refuses_nothing() {
+    // ADR-0145: the walk now takes a `GateSite`. These tests reach no `gate` step, so the
+    // state is an EMPTY fold and the site is never used — but it is real rather than stubbed,
+    // so a test that later does reach a gate gets a true reach counter.
+    let state = empty_state();
     let (q, a) = counters();
     let db = store(&q, &a);
     let harness = Arc::new(crate::runtime::CountingHarness::scripted(vec![ok_typed(
@@ -171,6 +183,7 @@ fn a_guarded_off_second_agent_step_refuses_nothing() {
             activation(&sp),
             Some(&steps),
             &ctx,
+            gate_site(&state),
             rk_kernel::workflow::envelope::AttemptCap::declared(CAP),
             at(100),
         )

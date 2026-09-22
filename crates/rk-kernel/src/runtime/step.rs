@@ -91,6 +91,27 @@ use crate::workflow::envelope::AttemptCap;
 /// Bundled rather than passed loose because `run_activity_steps` would otherwise take eight
 /// arguments and trip `clippy::too_many_arguments` (denied here). The bundle is also the honest
 /// shape: these four always travel together and `run_activity` already threads all four.
+/// **ADR-0145. What a `gate` step needs in order to open a gate, and nothing else.**
+///
+/// `GateRecord::derive_reach` digests `(kind, tree_hash, deadline, reach)`. None of the four is
+/// derivable inside this crate: `rk-kernel` may not read a clock (AC-001) and may not compute a
+/// tree hash (`workflow/gate.rs`'s header), and the reach is a fold over the journal. All three
+/// external values are already in hand at `replay`'s loop — `fsm_context` builds them one line
+/// above the dispatch — so they are **passed**, not re-derived, and this crate stays unable to
+/// invent any of them.
+///
+/// Bundled for the same reason [`Activation`] is: `run_activity_steps` is already at the
+/// `clippy::too_many_arguments` bound, and these three always travel together.
+#[derive(Debug, Clone, Copy)]
+pub struct GateSite<'a> {
+    /// The fold of this item's journal — `reaches(kind)` is the reach counter (AC-524, AC-246).
+    pub state: &'a crate::workflow::fsm::RunState,
+    /// The tree hash at THIS reach. `rk-git`'s, threaded through `RuntimeContext`.
+    pub tree_hash: &'a str,
+    /// The deadline at THIS reach. The caller's clock, never this crate's.
+    pub deadline: rk_types::time::Timestamp,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Activation<'a> {
     /// The item the activation belongs to.
@@ -283,6 +304,7 @@ impl super::Runtime {
         act: Activation<'_>,
         steps: Option<&[Step]>,
         ctx: &predicate::Context,
+        gate: GateSite<'_>,
         cap: AttemptCap,
         now: JournaledNow,
     ) -> Result<ActivityReport, super::RuntimeError> {
@@ -376,14 +398,108 @@ impl super::Runtime {
                         }
                     }
                 }
-                // Both end the walk, for different reasons, and the distinction is carried by
-                // `StepVerdict` for the caller rather than by two identical bodies here. A `gate`
-                // writes the mark and the run EXITS 0, resuming into this same step (design §4.5;
-                // the mark is `workflow::gate`'s, written by `Runtime::step`'s `OpenGate` arm, and
-                // this walk authors no second path). An `emit` is terminal.
-                StepVerdict::Gate | StepVerdict::Emitted => break,
+                // 🛑 **ADR-0145: THE GATE ARM WRITES THE MARK, AND IT IS THE SAME MARK.**
+                //
+                // This arm used to `break` beside `Emitted`, writing nothing — and the comment
+                // that stood here said the mark was *"written by `Runtime::step`'s `OpenGate`
+                // arm"*, which was FALSE for a catalog gate step. `OpenGate` is only ever reached
+                // from `selection.gates()` — the abstention, unsatisfiable and appetite gates —
+                // and nothing in the tree connected the pack's **80** `[[step]] kind = "gate"` to
+                // it. Measured: **55** activities had a gate silently skipped after their first
+                // agent step, **2** got the `emit` refusal below for a gate they reached BEFORE
+                // one, and **13** carry gates and no agent step at all.
+                //
+                // The record it mints is `GateRecord::derive_reach`'s, through
+                // `workflow::gate::reach` — the entry that module's own header calls *"the entry a
+                // loop executor calls"* and that had no `src/` caller until now. The row it
+                // appends is `runtime::gate_opened_event`, the SAME token-bearing row the
+                // selection-level path writes, so the fold cannot tell the two producers apart and
+                // does not have to: `awaiting_gate` answers, `next_action` returns `AwaitGate`, the
+                // resume loop breaks, and `terminal_read` trailers the token and exits 0.
+                //
+                // **No second path is authored.** That was true as an intention before this record
+                // and false as a fact; it is now true because this arm calls the first one.
+                StepVerdict::Gate => {
+                    let Some(kind) = step.question.as_deref() else {
+                        // A `gate` step with no `question` has no KIND, and a token derived over
+                        // an invented one would bind an answer to a gate nobody declared. Refused
+                        // by name — ADR-0135's discipline, one kind over. All 80 shipped gate
+                        // steps declare one, so this is a guard against a catalog that changes,
+                        // not a state the pack is in.
+                        return Ok(ActivityReport::refused(
+                            now,
+                            StepError::Unsupported {
+                                capability: format!(
+                                    "the `gate` step `{}` of activation \
+                                     `{activity_id_at_version}` declares no `question`, so it has \
+                                     no gate KIND to derive a token over (ADR-0145). An answer \
+                                     bound to an invented kind would be bound to a gate the \
+                                     catalog never declared",
+                                    step.id
+                                ),
+                            },
+                        ));
+                    };
+                    let ctx = crate::workflow::fsm::FsmContext::supplied(
+                        item,
+                        gate.tree_hash,
+                        gate.deadline,
+                        None,
+                    );
+                    // A `CanonError` here is a step's own failure and therefore a VALUE (AC-032),
+                    // not an error of this function — the same treatment `guard_holds` and
+                    // `check_verdict` give theirs. It is also unreachable on today's payload,
+                    // which is four strings and two integers; it is refused by name rather than
+                    // `expect`ed so that a later edit widening that payload fails loudly instead
+                    // of panicking inside a walk.
+                    let record = match crate::workflow::gate::reach(gate.state, kind, &ctx) {
+                        Ok(record) => record,
+                        Err(e) => {
+                            return Ok(ActivityReport::refused(
+                                now,
+                                StepError::Unsupported {
+                                    capability: format!(
+                                        "the `gate` step `{}` of activation \
+                                         `{activity_id_at_version}` could not derive a token for \
+                                         gate kind `{kind}` ({e:?})",
+                                        step.id
+                                    ),
+                                },
+                            ));
+                        }
+                    };
+                    let token = record.token().clone();
+                    self.append(super::gate_opened_event(&record))?;
+                    return Ok(match dispatched {
+                        Some(done) => done.with_gate(token),
+                        None => ActivityReport::gated(now, token),
+                    });
+                }
+                // An `emit` is terminal (design §4.5) and writes nothing.
+                StepVerdict::Emitted => break,
+                // 🛑 **ADR-0144: A STEP THAT FAILS AFTER A COMMITTED DISPATCH IS NOT DROPPED.**
+                //
+                // This arm read `dispatched.unwrap_or_else(|| refused(now, e))`, which discards
+                // `e` outright whenever a dispatch had already happened. The committed report
+                // answers `committed() == true`, `replay::dispatch_through`'s only question is
+                // exactly that, and the run therefore continued — or exited 0 — having executed
+                // NOTHING after the dispatch and said so nowhere.
+                //
+                // That is ADR-0135's refusal voided at the last step: the 29 unmapped `tool` verbs
+                // are refused BY NAME precisely so a run that executed nothing is distinguishable
+                // from one that worked, and this arm made them indistinguishable again. Measured
+                // over the shipped pack at this repair: **33 of 102** activities reach a `tool` or
+                // `check` step after their first agent step and before the walk ends, and **29**
+                // of those reach a step that CANNOT succeed on this tree today.
+                //
+                // The commit is kept. AC-013's grain is per ACTIVATION (ADR-0138) and the
+                // `activity_committed` row is already in the journal, so re-running it is not an
+                // option and pretending it did not happen would be the lie ADR-0143 refused.
                 StepVerdict::Failed(e) => {
-                    return Ok(dispatched.unwrap_or_else(|| ActivityReport::refused(now, e)));
+                    return Ok(match dispatched {
+                        Some(done) => done.with_step_failure(e),
+                        None => ActivityReport::refused(now, e),
+                    });
                 }
             }
         }
@@ -455,9 +571,14 @@ impl super::Runtime {
                 }),
                 Err(e) => StepVerdict::Failed(e),
             },
-            // The kernel writes the mark and exits 0, resuming into the same step. The mark is
-            // `workflow::gate`'s and `runtime.rs`'s `gate_opened_event`; this arm does not author a
-            // second one.
+            // The kernel writes the mark and exits 0, resuming into the same step (design §4.5).
+            //
+            // ⚠️ **This comment used to say the mark was `Runtime::step`'s `OpenGate` arm's, and
+            // that was FALSE for a catalog gate step** — `OpenGate` is only ever reached from
+            // `selection.gates()`. ADR-0145 makes it true by having `run_activity_steps` call
+            // `workflow::gate::reach` and append `runtime::gate_opened_event` itself. The MINTING
+            // is deliberately not here: this arm names the kind and has no `GateSite`, exactly as
+            // the `agent` arm names the kind and defers the dispatch to `run_activity`.
             StepKind::Gate => StepVerdict::Gate,
             // Terminal (design §4.5). What a run provides is the activity's `provides`, which the
             // composition root already binds to the spec's schema and which

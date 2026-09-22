@@ -48,6 +48,7 @@ fn build_step() -> Step {
         retry_max: None,
         repeat_max: None,
         memo_declared: None,
+        question: None,
     }
 }
 

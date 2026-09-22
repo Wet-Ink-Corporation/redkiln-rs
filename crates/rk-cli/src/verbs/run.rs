@@ -1212,6 +1212,28 @@ fn resume_and_read(
             };
             return Ok(Exit::from(class));
         }
+        // 🛑 **ADR-0144. AN EXPLICIT ARM, BECAUSE THE CATCH-ALL BELOW IS THE DEFECT.**
+        //
+        // `Err(e) => Exit::ConfigError` maps everything it is not told about to row `3`. That is
+        // exactly the *"all eleven rows arrived here as the SAME value"* failure Mechanism B was
+        // added to close, and a new variant left to fall through would re-open it silently — which
+        // is why this arm exists rather than a comment asking the next author to remember.
+        //
+        // The class is NOT optional on this variant: it is only constructible from a step failure.
+        // So there is no `None` branch to invent a row for, and `impl From<&StepError> for Exit`
+        // — eleven arms, no wildcard — is the one mapping, unchanged. **No row of §7d.4's table is
+        // added, moved or renumbered.**
+        Err(rk_kernel::replay::ReplayError::StepFailedAfterCommit {
+            step_id,
+            activity_id_at_version,
+            class,
+        }) => {
+            eprintln!(
+                "redkiln: the activation `{activity_id_at_version}` committed, and the later step \
+                 `{step_id}` of its walk then failed. The commit stands; the run does not."
+            );
+            return Ok(Exit::from(&class));
+        }
         Err(e) => {
             eprintln!("redkiln: {e}");
             return Ok(Exit::ConfigError);

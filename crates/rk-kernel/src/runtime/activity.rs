@@ -163,6 +163,25 @@ pub struct ActivityReport {
     appended: usize,
     schema_failures: u32,
     now: JournaledNow,
+    /// **ADR-0144.** A step that failed AFTER this activation's dispatch had already committed.
+    ///
+    /// Separate from [`ActivityReport::outcome`] and deliberately so: `outcome` is the
+    /// **dispatch's** result and for a committed activation it is `None` (the value went to the
+    /// journal). Writing the later step's error there would overwrite the dispatch's own reading
+    /// and reproduce ADR-0143's defect one field over. This is a *second* fact about the same
+    /// activation — *it committed, AND a later step in its walk refused* — and both halves are
+    /// needed: the commit stands (AC-013's grain is per activation, ADR-0138) and the refusal is
+    /// the one thing the operator can act on.
+    step_error: Option<StepError>,
+    /// **ADR-0145.** The token of the gate this activation's walk OPENED, when it reached one.
+    ///
+    /// A gate is neither a success nor a failure: design §4.5 has the kernel write the mark and the
+    /// run **exit 0**, resuming into the same step. So it can travel on neither `outcome` nor
+    /// `step_error`, and `commit` is `None` for a walk that gated before dispatching. It is the
+    /// token and not a `bool` because the token is what `terminal_read` trailers and what
+    /// `RunState::awaiting_gate` answers with — a reader that had to go looking for it in the
+    /// journal would be re-deriving a value the walk already held.
+    gate: Option<rk_types::digest::Digest>,
 }
 
 impl ActivityReport {
@@ -182,6 +201,50 @@ impl ActivityReport {
         report
     }
 
+    /// **ADR-0144: this activation COMMITTED, and a later step in its walk then failed.**
+    ///
+    /// Consumes the committed report and returns it carrying the step's error, so the commit is
+    /// **not** discarded and the failure is **not** dropped. Before this, `super::step`'s `Failed`
+    /// arm returned the committed report and threw `e` away, and `replay::dispatch_through` — whose
+    /// only question is `committed()` — answered `Ok`. A `tool` step naming one of the 29 verbs
+    /// ADR-0135 refuses by name therefore produced a run that exited **0** having executed nothing
+    /// after the dispatch: the invisible non-event ADR-0135 exists to make impossible.
+    ///
+    /// `pub(super)` and consuming, on [`ActivityReport::refused`]'s precedent: a report is still
+    /// produced by the loop and never minted beside it. Every count in the returned value is the
+    /// committed run's own reading, unchanged.
+    #[must_use]
+    pub(super) fn with_step_failure(mut self, error: StepError) -> Self {
+        self.step_error = Some(error);
+        self
+    }
+
+    /// **ADR-0145: this activation's walk reached a `gate` step and OPENED it.**
+    ///
+    /// The row is appended by `super::step`'s walk, not by this module, so `appended` is **not**
+    /// incremented — that counter's contract is *"events THIS MODULE appended"* and widening it
+    /// silently would make an existing reading false. The gate row is in the journal delta
+    /// `replay::dispatch_through` reads back, which is where every other boundary-written row is
+    /// counted from.
+    #[must_use]
+    pub(super) fn with_gate(mut self, token: rk_types::digest::Digest) -> Self {
+        self.gate = Some(token);
+        self
+    }
+
+    /// **ADR-0145.** A walk that reached a `gate` step **before** any dispatch.
+    ///
+    /// 13 of the shipped pack's activities carry gates and no `agent` step at all, and 2 more put a
+    /// gate before their first one. There is no dispatch report to attach the token to, and
+    /// [`ActivityReport::refused`] would be wrong: a gate is not a failure. Every count in this
+    /// report is `0` and that is a reading — nothing was dispatched and nothing committed, which is
+    /// exactly what design §4.5 says a gate does.
+    pub(super) fn gated(now: JournaledNow, token: rk_types::digest::Digest) -> Self {
+        let mut report = Self::opened(now);
+        report.gate = Some(token);
+        report
+    }
+
     const fn opened(now: JournaledNow) -> Self {
         Self {
             attempts: Vec::new(),
@@ -193,6 +256,8 @@ impl ActivityReport {
             appended: 0,
             schema_failures: 0,
             now,
+            step_error: None,
+            gate: None,
         }
     }
 
@@ -253,6 +318,34 @@ impl ActivityReport {
     #[must_use]
     pub const fn mark(&self) -> Option<&RetryAtMark> {
         self.mark.as_ref()
+    }
+
+    /// **ADR-0144.** The failure of a step that ran AFTER this activation's dispatch committed.
+    ///
+    /// `None` on every report this module's own loop produces — the loop walks no steps. It is
+    /// `Some` only for a report `super::step`'s walk handed back after a later step refused, and it
+    /// is the ONLY channel by which such a refusal reaches a caller.
+    ///
+    /// **It is a second field and not a reuse of [`ActivityReport::outcome`]**, because `outcome`
+    /// is the DISPATCH's own reading and is already spoken for in both shapes a committed report
+    /// takes: `Some(Ok(typed))` for a fresh commit (set beside `commit` on the success path) and
+    /// `None` for AC-013's re-entry. Writing a later step's error into either would destroy the
+    /// dispatch's reading to report the walk's — which is ADR-0143's defect one field over.
+    #[must_use]
+    pub const fn step_error(&self) -> Option<&StepError> {
+        self.step_error.as_ref()
+    }
+
+    /// **ADR-0145.** The token of the gate this activation's walk opened, when it reached one.
+    ///
+    /// `Some` means the run **exits 0 and does not commit this activation** (design §4.5): the
+    /// kernel wrote the mark, the fold will answer `awaiting_gate`, and `next_action` will return
+    /// `AwaitGate` rather than the same dispatch. A caller that checked only `committed()` would
+    /// read this as a failed dispatch, which is what `replay::dispatch_through` did before this
+    /// record and why all 80 of the pack's `gate` steps were silent.
+    #[must_use]
+    pub const fn gate_opened(&self) -> Option<&rk_types::digest::Digest> {
+        self.gate.as_ref()
     }
 
     /// How many events **this module** appended. The adapter's own journaling is not counted here

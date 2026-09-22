@@ -686,6 +686,26 @@ fn conformance_every_trailer_key_has_a_producer() {
 /// distrust.** So the assertion is over CODE LINES — comments stripped, string literals blanked by
 /// [`code_lines`] — and it is two-sided: the signature must take no receiver, AND the function body
 /// must name no port.
+///
+/// # 🛑 A THIRD HALF, added 2026-09-22: the ARM, not only the function
+///
+/// `PROGRESS.md` row 37's finding (13). The two assertions above are about `check_verdict` **and
+/// nothing else**, and the dispatch would not be written there. `execute_step`'s `StepKind::Check`
+/// arm is inside `impl Runtime`, so it has `&self`, and `&self` is one call from `run_tool_step`,
+/// which reaches `ports.toolchain`. Measured: adding `self.run_tool_step(step)` to that arm makes
+/// every `check` step dispatch a toolchain verb and leaves **both** halves above GREEN — the arm
+/// sits far past the column-0 `}` that ends `check_verdict`'s body scan, so it was never read.
+/// A prohibition asserted only at the function it names is not asserted at the site that breaks it.
+///
+/// # What this still does not close, stated rather than left to be found
+///
+/// It is a **spelling** check, like its siblings. An aliased import (`use …::Ports as Deps;`) or a
+/// `&Ports` parameter under another name defeats it — the hole `rk-cli`'s `transcription.rs` header
+/// already records, which is why that guard grew a behavioural half. And the region scans here
+/// inherit finding (8): [`blank_string_literals`] keeps no cross-line state, so a
+/// backslash-continued literal's continuation line is handed back as CODE. That shape is **live in
+/// the scanned region** — `check_verdict`'s own `Unsupported` message is continued across three
+/// lines — and is not repaired by this pass.
 #[test]
 fn the_check_arm_has_no_receiver_and_so_cannot_reach_a_port() {
     let root = workspace_root();
@@ -738,6 +758,103 @@ fn the_check_arm_has_no_receiver_and_so_cannot_reach_a_port() {
             !body.iter().any(|l| l.contains(forbidden)),
             "the `check` arm names {forbidden:?}, so it can dispatch: design §4.5's              \"cannot dispatch\" is a prohibition, not a convention.
   {body:?}"
+        );
+    }
+
+    // ---- (3) AND THE ARM THAT ROUTES TO IT NAMES NO PORT EITHER — finding (13). -----------------
+    //
+    // The region is delimited by the two `StepKind::` anchors around it rather than by a column-0
+    // `}`, deliberately: the column-0 form is what truncates under a multi-line string literal
+    // (finding (8)), and a match arm has no `}` in column 0 to end on anyway.
+    // 🛑 **THE REGION IS JOINED AND ITS WHITESPACE REMOVED BEFORE IT IS SCANNED, AND THAT IS NOT
+    // TIDINESS — THE LINE-BY-LINE FORM WAS MEASURED DEFEATED BY A LINE BREAK.** The first draft of
+    // this half banned `"self."` per line and went GREEN against a real, COMPILING mutant, because
+    // `rustfmt` puts the receiver and the call on separate lines:
+    //
+    //     StepKind::Check => match self
+    //         .run_tool_step(step)
+    //         .and_then(|()| check_verdict(step, ctx))
+    //
+    // No single line carries `self.`, so every per-line `contains` missed it. That is the
+    // substring-anchor family this module has already paid for twice (`fn bind_nodes` matching
+    // `fn bind_nodes_renamed(`), and the repair is the same: judge the region, not the line.
+    let arm_of = |kind: &str| -> (Vec<String>, String) {
+        let needle = format!("StepKind::{kind} =>");
+        let start = code
+            .iter()
+            .position(|l| l.contains(&needle))
+            .unwrap_or_else(|| {
+                panic!(
+                    "no `{needle}` arm in {} — `execute_step`'s routing was renamed or \
+                     restructured, so this scan is asserting nothing about it",
+                    src.display()
+                )
+            });
+        let end = code
+            .iter()
+            .enumerate()
+            .skip(start + 1)
+            .find(|(_, l)| l.contains("StepKind::"))
+            .map_or(code.len(), |(i, _)| i);
+        let arm: Vec<String> = code[start..end].to_vec();
+        assert!(
+            arm.len() > 1,
+            "the `StepKind::{kind}` arm parsed as {} line(s) — the region scan is vacuous",
+            arm.len()
+        );
+        let joined: String = arm
+            .concat()
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect();
+        assert!(
+            joined.len() > 40,
+            "the `StepKind::{kind}` arm joined to {} chars — the scan is vacuous",
+            joined.len()
+        );
+        (arm, joined)
+    };
+
+    // THE POSITIVE CONTROL FIRST, over the LIVE tree and not a fixture. The `StepKind::Tool` arm
+    // DOES reach a port, through `self.run_tool_step` — and it is written across two lines today,
+    // so it is also the control for the JOIN. If this scan cannot see that call, it cannot see one
+    // written into the `check` arm either, and the ban below is decorative.
+    let (tool_lines, tool_joined) = arm_of("Tool");
+    assert!(
+        tool_joined.contains("self.run_tool_step"),
+        "CONTROL: the joined `StepKind::Tool` arm does not contain `self.run_tool_step`. That arm \
+         is this file's one dispatching arm, so either the routing changed — in which case the ban \
+         below no longer describes what it guards — or the region scan has stopped seeing code:\n  \
+         {tool_lines:?}"
+    );
+
+    // ⚠️ **WHAT THIS CONTROL DOES NOT PROVE, stated rather than implied.** The `Tool` arm writes
+    // `self.run_tool_step(step)` on ONE line today, so it exercises the region scan but NOT the
+    // join across lines — the half that the surviving mutant was hiding behind. That half is
+    // evidenced by the recorded mutant cycle (`rustfmt`'s two-line receiver form, which the
+    // per-line draft passed and this one fails), not by any line of live code. If a control for it
+    // is wanted on the tree, it has to be a fixture, and this comment is the standing note that
+    // there is not one.
+
+    // AND THE BAN. Bare `self` — not `self.` — because in `impl Runtime` the RECEIVER is the path
+    // to a port, and the mutant that survived the first draft split it from its own call.
+    let (check_lines, check_joined) = arm_of("Check");
+    for forbidden in [
+        "self",
+        "Ports",
+        "ports.",
+        "ports()",
+        "dispatch",
+        "harness",
+        "toolchain",
+        "run_tool_step",
+    ] {
+        assert!(
+            !check_joined.contains(forbidden),
+            "`execute_step`'s `StepKind::Check` arm names {forbidden:?}. That arm has `&self`, and \
+             `&self` is one call from `run_tool_step` and so from `ports.toolchain` — design \
+             §4.5's \"cannot dispatch\" is a prohibition, not a convention, and it has to hold at \
+             the ROUTING SITE and not only inside `check_verdict`:\n  {check_lines:?}"
         );
     }
 }

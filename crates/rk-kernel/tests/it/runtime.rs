@@ -90,6 +90,36 @@ pub const fn at(secs: i64) -> JournaledNow {
     JournaledNow::from_journal(Timestamp::from_unix_seconds(secs))
 }
 
+/// **ADR-0145.** The tree hash a test walk opens its gates over.
+///
+/// A literal, because `rk-kernel` may not read a tree (`workflow/gate.rs`'s header) and a test that
+/// computed one would be exercising `rk-git` rather than the walk. It is 40 hex characters so it is
+/// the shape a real one has.
+pub const TREE_HASH: &str = "0123456789abcdef0123456789abcdef01234567";
+
+/// A [`rk_kernel::workflow::fsm::RunState`] over an EMPTY journal, for a walk whose gate — if it
+/// reaches one — is at reach 1.
+///
+/// `RunState::initial` is `pub(in crate::workflow)` and no integration test can call it, so the
+/// state is obtained the way production obtains it: by folding. Folding nothing is the honest way
+/// to say *"this item has no history"*, and it keeps the reach counter real rather than stubbed.
+#[must_use]
+pub fn empty_state() -> rk_kernel::workflow::fsm::RunState {
+    rk_kernel::workflow::fsm::fold(ITEM, STAGE, &[]).expect("an empty journal folds")
+}
+
+/// The three values a `gate` step needs, over `state`.
+#[must_use]
+pub const fn gate_site(
+    state: &rk_kernel::workflow::fsm::RunState,
+) -> rk_kernel::runtime::step::GateSite<'_> {
+    rk_kernel::runtime::step::GateSite {
+        state,
+        tree_hash: TREE_HASH,
+        deadline: Timestamp::from_unix_seconds(9_000),
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // The fakes. `rk-ports` ships five and neither of the two this file drives counts, so the counters
 // are declared here on `ReplayPorts.dispatches`' own model: the counter is the CALLER's and the
