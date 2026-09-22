@@ -2054,20 +2054,37 @@ no producer.
 *Verified by:* the lattice CI job with a thresholded exit; a fixture catalog above the line. The rate is pinned to the
 **pack-default rigor reading over the enabled pack set**, with item-level rigor overrides enumerated and reported but not
 thresholded, and the pack count and rigor mode recorded with every quoted rate (SM-026/SM-027; PIA-046; decision #20
-of 2026-09-11 — the METHOD-P keep/strike decision on the override mode stays with its registered owner). Baseline measured, **8 pre-registered
-packs, pack-default rigor**: 23.5% (pre-registered reading, fires the kill), 11.4%, and 0.3% after decisions 1–10; the
-all-12-pack series is 31.2% → 12.2% [measured, F35; series labelled 2026-09-11, PIA-076]. **The baseline is re-taken at
-runbook Step 7e** after `bisect.toml` gains `max_rigor = "recommended"` (P7-CEIL's ceiling branch, ADR-0093 decision
-5) and the lattice is re-run; that reading replaces these as the AC-101/AC-102/SM-026/SM-027 baseline.
+of 2026-09-11 — the METHOD-P keep/strike decision on the override mode stays with its registered owner). Baseline, **pre-ADR-0089/0093 and retained as history**: **8 pre-registered
+packs, pack-default rigor** 23.5% (pre-registered reading, fires the kill), 11.4%, and 0.3% after decisions 1–10; the
+all-12-pack series 31.2% → 12.2% [measured, F35; series labelled 2026-09-11, PIA-076].
+**THE LIVE BASELINE, re-taken at runbook Step 7e** after `bisect.toml` gained `max_rigor = "recommended"` (P7-CEIL's
+ceiling branch, ADR-0093 decision 5): at **pack-default rigor**, **0.2% (432/235872) over the twelve-pack `spikes/p9` tree** and
+**0.3% (432/155520) over the eight pre-registered packs** [measured 2026-09-21, `spikes/p9/results-p6-run10-post-adr-0093.txt`].
+**Two pack numbers, never one** (DECISIONS-2026-09-12 E7): the lattice is run over the **twelve**-pack spike tree,
+while the **installed** Phase-1 set is **two** — `bug-standard` and `story` (ADR-0011; E7) — and no rate is measured
+over the installed pair. The rate is **unmoved** from run9 by ADR-0089/0093 and the `bisect` ceiling; what those
+records moved is AC-102's dead count. Both readings sit far inside the >5% kill.
+**The re-run was blocked until Step 7e and that is why the figures were stale**: Step 4a withdrew the `auth` boolean
+from `facets.toml` without dispositioning the rows that key on it, so `lattice.py` — which resolves every predicate
+identifier against the registry — died `ValueError: identifier 'auth' is not a facet or facet value` on every run
+between Step 4a and Step 7e's disposition of those fifteen rows.
 
 **AC-102** — `rk-catalog` CI · evidence: F35; P6 dead-activity kill criterion · decisions: ADR-0027
 GIVEN a catalog change that raises the dead-activity fraction above the registered threshold (pre-registered: >20%)
 WHEN the lattice CI job runs
 THEN the build fails and the report lists every activity reachable from no enabled pack at any rigor.
-*Verified by:* the lattice CI job; a fixture. Baseline measured: 20.8% under the 8 pre-registered packs (fires by 0.8
-points), 14.9% under 12 packs, 5.9% post-decision — 6 of 102 activities [measured, F35]. The threshold is only
-meaningful with the pack count attached (see SM-027). Re-taken at runbook Step 7e with the `bisect` ceiling (ADR-0093
-decision 5), as AC-101.
+*Verified by:* the lattice CI job; a fixture. Baseline, **pre-ADR-0089/0093 and retained as history**: 20.8% under
+the 8 pre-registered packs (fires by 0.8 points), 14.9% under 12 packs, 5.9% post-decision — 6 of 102 activities
+[measured, F35]. The threshold is only meaningful with the pack count attached (see SM-027).
+**THE LIVE BASELINE, re-taken at runbook Step 7e** with the `bisect` ceiling (ADR-0093 decision 5), at **pack-default
+rigor** [measured 2026-09-21, `spikes/p9/results-p6-run10-post-adr-0093.txt`]: **6.9% = 7 of 102** over the twelve-pack
+`spikes/p9` tree and **13.7% = 14 of 102** over the eight pre-registered packs; the **installed** Phase-1 pack set is **two**
+(E7's second number). **The dead list, by id** — which ADR-0114 decision 1(a) makes a condition of the `redkiln-pack-v0`
+tag, not decoration: bdd-outside-in, bisect, design-sprint, failover, fault-tree-analysis, flag-progressive-rollout, property-based-testing. **All seven are deviation-reachable** (an admissible higher-rank candidate exists in some
+context); none is never-admissible-or-never-required. `bisect` is dead **by construction** — ADR-0093 decision 5's
+`max_rigor = "recommended"` is what removes it from the mandatory band — so its appearance here is the ceiling
+working, not a defect. Both readings clear the >20% kill; the twelve-pack reading also clears SM-027's ≤10% desired
+target and the eight-pack reading does not.
 
 **AC-103** — `rk-catalog` CI · evidence: F35 (rank ties 0, hard cycles 0); F35 §1.3 [measured] for the mixed-toolchain
 shape the `keyed_by = toolchain` rule (AC-049, ADR-0073) exists to catch — a tie-free, cycle-free catalog that is
