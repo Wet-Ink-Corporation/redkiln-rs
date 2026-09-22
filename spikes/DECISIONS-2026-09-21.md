@@ -1,10 +1,20 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open — 2026-09-21 and 2026-09-22 (D21-1 … D21-13), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-14), and what they license
 
 *(Title corrected 2026-09-22 at `s7g`'s open: it read "**Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6)**"
 while the file already carried **D21-7** and **D21-8** — `s7f`'s two flip lines, appended at its close on 2026-09-21 —
 so the heading had been one stage and two entries stale since that commit. It is now also two dates: the `D21` id space
-stays open across 2026-09-22's five entries rather than opening a `D22` space, because each dated line carries its own
+stays open across 2026-09-22's entries rather than opening a `D22` space, because each dated line carries its own
 date and the space is numbered by where it was opened, not by when it is next appended to.)*
+
+*(Corrected again 2026-09-22 at `s7g`'s build, when **D21-14** was appended — and the recurrence is recorded rather
+than smoothed, because it is the same failure the correction above had just repaired. That correction wrote
+"**D21-1 … D21-13**" and "**2026-09-22's five entries**"; appending a sixth entry two commits later made both stale,
+by exactly the mechanism the first note describes. **A heading that enumerates a range is stale the moment the range
+grows, and this file has now demonstrated that twice in one day — the second time within an hour of writing the
+first.** The count of entries is no longer restated above; the range is kept because `ADR-0126`'s route cites lines by
+`D21-n` and a reader needs to know the space is contiguous. **Whoever appends `D21-15` moves this heading in the same
+commit**, and that instruction is here rather than in a commit message because a commit message is not read by the
+next author.)*
 
 Same shape as `DECISIONS-2026-09-20.md`. The entries below were taken **by the operator** (Ryan Britton) with the
 measured state of the tree in front of him, each **before** the thing it authorises was executed. Grounding is a
@@ -474,5 +484,49 @@ it**, so it cannot be made silently and cannot be used to reopen the two closed 
 
 **What stays OWED:** the record naming the home of the DAG-node ↔ `Activity::id_at_version` join, which
 `RecordedSpec`'s docstring already names and which now carries a second transcribed value.
+
+---
+
+## D21-14 · ADR-0139 flips to `accepted` — a decision CORRECTED BY ITS OWN FIRST EXECUTION, one day after it was taken
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s build.** ADR-0139 is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-22` unchanged. ADR-0137 gains `superseded_by: ["0139"]`, stays
+`accepted` as a partial supersession requires, and both bodies record the scope.
+
+**Like D21-13, this was not an operator choice between options and the line says so.** It was an
+engineering call taken inside the plan approved on 2026-09-22, and it is recorded at the same grain as
+the operator's own because it **moves a `## Decision` sentence of an accepted record** — which ADR-0092
+rule 1 routes through supersession, not errata, whatever the record's age or authorship.
+
+**What makes this one worth a line rather than a commit message: the record it moves is one day old, and
+its own author moved it.** ADR-0137 clause 8 was written on 2026-09-22 and superseded in part on
+2026-09-22, between which it was executed for the first time. That is not a mistake to smooth over — it
+is the ordinary result of a decision taken **ahead of its first measurement**, which is exactly what
+`s7g`'s stage-open records had to be, because the port had no call site to measure. The register keeps
+both states rather than rewriting the first into the second.
+
+**The measurement, stated as the cause rather than the justification.** Clause 8 said the run refuses at
+startup when no adapter detects. Implemented verbatim it failed **11 of `rk-cli`'s 101 tests** — every
+one over a fixture repository carrying neither a `Cargo.toml` nor a `package.json`, every one about the
+**gate/answer** path, and one of them against a premise line reading *"opening the gate must exit 0
+(AC-403)"*. A run was refused for lacking a capability it never reached, which is the same class of
+miscommunication as a silent success, inverted.
+
+**What was kept is the half that was load-bearing, and the distinction is not one of degree.** Clause 8's
+prohibition — *"It does not fall back to a fixture"* — is **not withdrawn** and is the test the
+replacement had to pass. `FixtureToolchain::test()` returns `Ok(selection.len())`, a success derived from
+the length of its own argument; every `UndetectedToolchain` method returns `Err`, naming the verb, the
+project root and each adapter tried. A construction refusal — a denylisted child environment, a relative
+root, a zero bound, a registry that does not load — is **still not deferred**: those are configuration
+defects and refuse at startup, as ADR-0137's drivers require. Only *"nothing here to detect"* moved.
+
+**The rejected alternative is recorded because it was the tempting one.** Keeping the startup refusal and
+giving every fixture repository a `Cargo.toml` plus a toolchain-program override would have preserved the
+clause and coupled eleven tests to a capability none of them exercises, spawning a child per test to
+answer a question none of them asks. That is a larger change, and a less honest one.
+
+**What this does not license.** It does not make criterion (1) met — it keeps the mechanism ADR-0137
+clause 1 supplies reachable. It does not license a `tool` step succeeding without a toolchain: under
+ADR-0135 the verb is mapped and the port is called, and here the port refuses by name.
 
 ---

@@ -1,7 +1,7 @@
 ---
 id: "0139"
 title: "When no configured toolchain adapter detects, the run receives a `Toolchain` **every one of whose methods refuses by name** rather than being refused at startup — superseding **ADR-0137 clause 8 in part**, at that clause's `## Decision` sentence only. Clause 8's prohibition is untouched and is what this record keeps: there is still **no fixture fallback**, because a fixture's `test()` returns `Ok` and every method here returns `Err`. Measured: clause 8's startup refusal broke **11** `rk-cli` tests whose fixtures carry no project and whose subject is the gate/answer path — a run was refused for lacking a capability it never reached"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: references/adr/0137 decision 8 (the clause this record supersedes in part); references/adr/0092 rule 1 (a `## Decision` sentence moves by supersession, never by erratum); references/2026-09-08-acceptance-criteria.md AC-473; crates/rk-ports/src/toolchain.rs:44-64 (the port's six methods); crates/rk-ports/src/fakes.rs:313-371 (`FixtureToolchain`, whose `test()` returns `Ok(selection.len())` — the shape clause 8 forbids); crates/rk-cli/src/verbs/run.rs (`UndetectedToolchain`, `real_toolchain`)
