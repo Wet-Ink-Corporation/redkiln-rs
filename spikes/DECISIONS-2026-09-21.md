@@ -1,12 +1,13 @@
-# Decisions taken at Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-5), and what they license
+# Decisions taken at Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6), and what they license
 
 Same shape as `DECISIONS-2026-09-20.md`. The entries below were taken **by the operator** (Ryan Britton) with the
 measured state of the tree in front of him, each **before** the thing it authorises was executed. Grounding is a
 document clause or a measured number, never taste.
 
 **Numbering.** This carries a **`D21`-id** and opens a new space: `runbook/PROGRESS.md` §2 holds no `D21` row before
-this file. Cite as `DECISIONS-2026-09-21 D21-n`. The `RT-`, `O-` and `R-` spaces are untouched and continue from
-`RT-59`, `O-16` and `R-62` wherever they are next opened.
+this file. Cite as `DECISIONS-2026-09-21 D21-n`. The `RT-` and `O-` spaces are untouched and continue from `RT-59`
+and `O-16` wherever they are next opened. **The `R-` space is opened here**: D21-6 registers **R-64**, the
+highest `R-` id in the tree before it being `R-63` [measured 2026-09-21].
 
 **Precedence, stated once.** ADR-0092's: accepted ADRs > the AC register > the SM register > spike files > the
 runbook.
@@ -185,5 +186,48 @@ amended) — and what a reader may do with them is fixed by that record rather t
 **What this does not license.** No per-run headroom figure, ever (AC-373; F6). And no **vacuous** rendering: an item
 with no dispatches may not print a `low_sample` delta over `n = 0` and let criterion (7)'s grep read it as green —
 Step 8 declined to ship that shape and `s7i` may not reintroduce it.
+
+---
+
+## D21-6 · ADR-0131 is confirmed as written and flips to `accepted`; its sharpest open item becomes **R-64**
+
+**Confirmed 2026-09-21 (dated line, the operator's word).** ADR-0131 — the event store's selector as a **tag set**
+over a disjunction of kinds, with `ByItem` / `BySha` / `ByRun` re-expressed as the reserved keys `item`, `sha` and
+`run`; tags and the store-minted instant **outside `canonical_events`**; the three item-less tier-1 kinds gaining an
+`item` tag; `rk-adapter-happenstance` as the intended tier-2 adapter with git remaining the tier-1 authority and
+DCB's append condition explicitly declined; ADR-0109 decision 2, ADR-0105 clause 8, design §5.6 and AC-184 **not**
+re-opened; `rk-adapter-sqlite` retained; no crate edited; the typed per-kind payload record left OWED; and six
+things named as undecided — is **confirmed as written on this date, all ten decisions**, with no clause withdrawn
+and none added. It flips `proposed → accepted` in the commit this line licenses, `date: 2026-09-21` **unchanged**
+(ADR-0126's route; 0128, 0129 and 0130's precedent); `adr/README.md` takes its index-row status cell and its
+`proposed`-count sentence in the same commit. Its record BODY is not edited — 0128 and 0130 are both `accepted`
+and both still carry their own *"Committed `proposed`"* clause, which is a historical statement about how the
+record was committed and stands.
+
+**Grounding, measured rather than asserted.** The record edits no crate, so confirming it costs nothing that a
+later measurement could invalidate, and **decision 2 is what makes that true**: tags sit outside
+`canonical_events`, which stays `{kind, payload}` byte for byte, so no golden log moves, `CORPUS_PIN` does not
+move and `run_id` is untouched. Checked directly against the work that would have been at risk — Step 8's
+`rebuild_differential` and `stage_level_next_action` compare `StageAction` under `rk_store::canon` and are
+therefore unaffected — and decision 6 says in terms that AC-184 is not re-opened.
+
+**Clause 8's trigger is recorded here because it has half-fired.** *"The wiring lands after Checkpoint 8"* — and
+Checkpoint 8 **is** now recorded as passed, at `d6160ff`. The wiring is nonetheless still gated: **S-HS is unrun**
+(it appears only in this record and `references/2026-09-20-operator-surface-proposal.md` §12.6, with four kill
+criteria), and M5 — *"Redkiln-RS runs its own fix lane and authors a Phase-2 story"* — is Phase-1 exit criterion
+**(1)**, which Step 8 recorded **NOT SATISFIED** and which is now four stages away (`s7f`…`s7i`, D21-3). **No
+reader may take "Checkpoint 8 has passed" as licence to land the wiring.**
+
+**R-64 is opened by this line.** Decision 10's first bullet — *"Whether `doctor --rebuild` can re-derive every tag
+from git alone … if it cannot, the rebuild differential (AC-184) must exclude tags"* — is called by the record
+itself *"the sharpest open item this record leaves"* and *"where a later pass should press on"*, says *"Registered
+below"*, and receives **no id**: it is carried in prose at three sites and cannot be cited or tracked. It is
+registered here as **R-64**, UNMEASURED, and it bears directly on the `rebuild_differential` authored at Step 8.
+Opening the id changes nothing the record decides.
+
+**What this does not license.** It does not license landing any part of the wiring before S-HS reports against its
+four kill criteria (decision 8), nor reading decision 5 as licence to move tier-1 authority — decision 6 closes
+that in terms. It does not discharge the typed per-kind payload record (decision 9), and it decides none of
+decision 10's six named non-decisions.
 
 ---
