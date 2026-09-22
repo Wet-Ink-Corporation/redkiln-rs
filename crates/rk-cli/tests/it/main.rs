@@ -74,6 +74,7 @@ mod root;
 mod run;
 mod support;
 mod surface;
+mod toolchain;
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;

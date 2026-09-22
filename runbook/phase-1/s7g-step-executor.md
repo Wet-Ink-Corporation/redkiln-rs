@@ -25,7 +25,24 @@ step kinds: `catalog::Step` carries `kind`, `run`, `output_type`, `role`, `when`
 execution point is missing**, which is why `ports.toolchain`, `ports.tracker` and `ports.docs` have zero non-test
 call sites.
 
-**This step takes no decision.** Every arm's behaviour is design §4.5's sentence for that kind.
+~~**This step takes no decision.** Every arm's behaviour is design §4.5's sentence for that kind.~~
+**This step takes SIX decisions, and the sentence above was false when written** *(corrected 2026-09-22 at this
+stage's open, before any executor code was written)*. Every arm's *behaviour* is indeed design §4.5's
+sentence for that kind — that much stands. What design §4.5 does not settle, and what this stage
+cannot be built without settling, is:
+
+| # | what was owed | record |
+| --- | --- | --- |
+| 1 | the port call-site lint asserted a property Phase 1 is DESIGNED never to satisfy | **ADR-0134** |
+| 2 | no verb → port-method table exists anywhere; `resolver.rs` says a record is OWED | **ADR-0135** |
+| 3 | 54 of the pack's 121 step guards carry a `${…}` reference nothing resolves | **ADR-0136** |
+| 4 | the real toolchain adapter is never constructed on the run path | **ADR-0137** |
+| 5 | `ActivitySpec` carries no step list and the runtime may not load the catalog | **ADR-0138** |
+| 6 | clause 8 of ADR-0137, corrected by its own first execution | **ADR-0139** (supersedes 0137 in part) |
+
+All six are recorded **before** the code they authorise and flipped on their own dated lines **D21-9 … D21-14**.
+Four were settled by the operator; **0138** and **0139** were engineering calls taken inside the approved plan,
+and their dated lines say so rather than presenting them as operator choices they were not.
 
 ### 7g.1 The executor walks the steps, and the kind chooses the arm
 
@@ -58,9 +75,15 @@ AC-473 requires the self-hosting run's *"toolchain stage [to have] run through `
 the `Toolchain` port (ADR-0094 decision 1)"*, so until a `tool` step reaches the port that clause has no mechanism
 and criterion (1) cannot be satisfied however well the lane otherwise runs.
 
-The shipped catalog's `tool` steps, measured 2026-09-21 — **113** across 12 verbs, the largest being
+The shipped catalog's `tool` steps, **re-measured 2026-09-22** — **113** across **33** verbs, the largest being
 `toolchain:test` (**28**), `toolchain:change_summary` (11), `toolchain:verdict_record` (8), `toolchain:deploy` (6)
-and `toolchain:metrics` (6). The adapter selection is `config.toml`'s `[adapters] toolchains`, which already lists
+and `toolchain:metrics` (6). *(This line read **"12 verbs"** until 2026-09-22. The **113** was right and the 12
+was not: measured by `grep -hoE '^run += *"toolchain:[a-z_]+"'` over `.redkiln/catalog/*.toml`, deduplicated,
+there are **33** distinct verbs across 62 of the 102 activity files. The figure matters because it is the
+denominator of ADR-0135's gap — only **four** of the 33 name a `Toolchain` port method (`test` 28,
+`change_summary` 11, `build` 4, `lint` 4; **47** steps), so **29 verbs / 66 steps** have no port method at all
+and are refused by name. At 12 the gap reads as a rounding error; at 33 it is most of the catalog.)*
+The adapter selection is `config.toml`'s `[adapters] toolchains`, which already lists
 both adapters; which one serves an instance is ADR-0073's keyed expansion and is not re-decided here.
 
 **`change_summary` stays refused.** Both adapters return `Err(registry::refusal(...))` from a dated registry row,
@@ -80,6 +103,26 @@ baseline and `confirmation-test` / `smoke-test` are the verify stage's.
 twenty roles invented ahead of a run would be twenty unmeasured decisions, and `s7e`'s dispositions are the
 precedent for recording each one's warrant.
 
+**AND AT THIS STAGE'S CLOSE, SELECTION HAS DEMANDED NONE — so none is authored, and that measurement is the
+result.** `redkiln run rk-fix-doctor-test-count` was executed on this tree at `s7g`'s close, against the real
+composition root with the real toolchain adapter wired. It reached **`dag_assembled`** — the positive witness,
+emitted by selection step 5 and reachable only after the catalog, the artifact registry and the facet registry
+have all loaded, so the shipped pack now loads **on the run path** and not only inside `shipped_pack_loads`. The
+run then exited 0 having dispatched nothing, and the record says exactly why: the assembled DAG carries
+**`"nodes": []`** and **`"rows_fired": 0`**, with two `forbidden_stage` skips (`discovery`, `operate`).
+`inputs/specs.json` is `{}` because there was nothing to bind, not because binding failed.
+
+**So not one of §7g.3's four gaps was reached.** No `.redkiln/schemas/<Kind>.json` was read, no card's
+`permission_mode` was consulted, no `[role.*]` `model`/`effort` was wanted, and no activity's missing `role =`
+refused anything — because no activation was selected. Authoring them now would be precisely the twenty
+unmeasured decisions the paragraph above forbids, so this stage authors **zero** fills.
+
+🛑 **What this does NOT say.** It does not say the four gaps are closed or absent — all four remain
+measured and open, exactly as recorded above. It says only that the mechanism §7g.3 prescribes (*a fill is
+added when a run demands it and the refusal names it*) has not yet fired, and that the reason is upstream: an
+item that selects no activation at `triage`. **That is pack authoring's — `s7e`'s and Step 8's** — and Step 8
+already records criterion (1) NOT SATISFIED on pack-authoring grounds. It is carried forward, not absorbed here.
+
 ### 7g.4 Checkpoint 7g
 
 - **Two of the three ARMED conformance lints are GREEN**, their `#[ignore]` removed in the commit that made each
@@ -92,16 +135,68 @@ precedent for recording each one's warrant.
 
 ```bash
 cd D:/repos/redkiln-rs
-# Run this block as a script or in a subshell — every guard below ends in `exit 1`.
+# Run this block as a script or in a subshell -- every guard below ends in `exit 1`.
+#
+# 🛑 HARDENED 2026-09-22, BEFORE ITS FIRST RUN, AND THE REASONS ARE RECORDED RATHER THAN SMOOTHED.
+# As authored this block asserted THREE of the five bullets above: bullet 2 (a `tool` step reaches
+# `rk-adapter-toolchain-rust`, the ADAPTER observed) and bullet 3 (`check` cannot dispatch) had no
+# line at all. It also carried Checkpoint 7f's two defects -- no build step over a gitignored
+# `target/`, and guards that captured `rc` and then tested only `rc` -- and only ONE of its four
+# guards grepped a positive passed count, so the other three were satisfied by a filter matching
+# NOTHING. Amending a checkpoint that has never been run is legitimate; doing it silently is not.
+wt_before=$(git worktree list | grep -c .)
+
+# 🛑 BUILD-OR-FAIL. `target/` is gitignored, 0 tracked files live under it, and Checkpoint 7f
+# reached its end marker with rc=0 and NO PRODUCT BINARY on a fresh clone, because its only cargo
+# lines were two `cargo test`. A checkpoint that asserts on built behaviour builds first.
+out=$(cargo build --workspace 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the workspace does not build (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+bin=""
+for cand in target/debug/redkiln target/debug/redkiln.exe; do [ -f "$cand" ] && bin="$cand"; done
+[ -n "$bin" ] || { echo "FAIL: the build succeeded and no redkiln binary exists -- every assertion below would be about nothing"; exit 1; }
+
+# (1) BULLET 1a: every `StepKind` has an executor arm.
 out=$(cargo test -p rk-kernel --test it -- conformance_every_step_kind_has_an_executor 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the step-kind executor lint is red or absent (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched — the lint was deleted rather than discharged"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched -- the lint was deleted rather than discharged"; exit 1; }
+
+# (2) BULLET 1b: `ports.toolchain` has a non-test call site -- ADR-0134's equality form.
 out=$(cargo test -p rk-kernel --test it -- conformance_every_port_has_a_call_site 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the port call-site lint is red (rc=$rc) — Toolchain has no call site"; printf '%s\n' "$out" | tail -20; exit 1; }
+[ "$rc" -eq 0 ] || { echo "FAIL: the port call-site lint is red (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched the port lint -- a filter that matches nothing exits 0"; exit 1; }
+
+# (3) BULLET 2, WHICH HAD NO LINE: a `tool` step reaches `rk-adapter-toolchain-rust` through the
+# port, asserted by the ADAPTER BEING OBSERVED. The two lints above are SOURCE lints: they pass on a
+# `ports.toolchain` spelling existing and neither requires an adapter to have run. The test carries
+# its own positive control -- the same step through the same walk with the fixture in the port
+# SUCCEEDS, and with the real adapter over an absolute nonexistent program it FAILS.
+out=$(cargo test -p rk-cli --test it -- a_tool_step_reaches_the_rust_adapter_and_not_the_fixture 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: no tool step reaches the real toolchain adapter (rc=$rc) -- AC-473's clause has no mechanism"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched the adapter-observed assertion"; exit 1; }
+
+# (4) BULLET 3, WHICH HAD NO LINE: `check` cannot dispatch -- asserted structurally over CODE LINES
+# with comments stripped and string literals blanked, two-sided (no receiver AND no port named).
+out=$(cargo test -p rk-kernel --test it -- the_check_arm_has_no_receiver_and_so_cannot_reach_a_port 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the check arm can reach a port (rc=$rc) -- design's parenthesis is a prohibition"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched the cannot-dispatch assertion"; exit 1; }
+
+# (5) BULLET 4: AC-013's re-entry still holds -- criterion (3)'s asserted half.
 out=$(cargo test -p rk-kernel -- kill_and_resume_n_step 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: AC-013's re-entry broke under the step walk (rc=$rc) — criterion (3) regressed"; printf '%s\n' "$out" | tail -20; exit 1; }
+[ "$rc" -eq 0 ] || { echo "FAIL: AC-013's re-entry broke under the step walk (rc=$rc) -- criterion (3) regressed"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched kill_and_resume_n_step -- the AC-013 guard asserted nothing"; exit 1; }
+
+# (6) BULLET 5: the tier-1 projection did not move -- criterion (2).
 out=$(cargo test -p rk-kernel -- rebuild_differential 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the tier-1 projection moved under the step walk (rc=$rc) — criterion (2) regressed"; printf '%s\n' "$out" | tail -20; exit 1; }
+[ "$rc" -eq 0 ] || { echo "FAIL: the tier-1 projection moved under the step walk (rc=$rc) -- criterion (2) regressed"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched rebuild_differential -- criterion (2)'s guard asserted nothing"; exit 1; }
+
+# 🛑 DISARM THE HAZARD THIS BLOCK ARMS. `rk-cli`'s process-level tests spawn `redkiln run`, which
+# creates run-owned worktrees. A block that leaves registrations behind double-counts every later
+# repo-root grep against a stale second checkout -- measured at `s7f`, `TrailerKey::` returned 38
+# from the repo root against 19 from `crates/`.
+git worktree prune
+wt_after=$(git worktree list | grep -c .)
+[ "$wt_after" -le "$wt_before" ] || { echo "FAIL: worktree registrations grew $wt_before -> $wt_after and the prune did not clear them"; git worktree list; exit 1; }
 echo "CP7G-END-OF-BLOCK reached"
 ```
 

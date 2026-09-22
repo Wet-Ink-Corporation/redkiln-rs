@@ -663,6 +663,73 @@ fn conformance_every_trailer_key_has_a_producer() {
 // ---------------------------------------------------------------------------------------------
 // 4. The shipped pack loads.  GREEN from s7f §7f.2.
 // ---------------------------------------------------------------------------------------------
+/// **design §4.5's `check` arm CANNOT DISPATCH — asserted structurally, `s7g` §7g.4.**
+///
+/// §7g.4 states this as a bullet and its checkpoint block asserted nothing for it. The prohibition is
+/// carried by a **signature**: `runtime/step.rs`'s `check_verdict` is a FREE FUNCTION taking no
+/// `&self`, so it has no `Ports`, no store and no journal in scope and there is no path from the arm
+/// to a port. This test pins that shape, because "we wrote it as a free function" is a fact about
+/// today's source and nothing else was checking it.
+///
+/// 🛑 **A docstring saying `check` cannot dispatch is exactly the shape this module exists to
+/// distrust.** So the assertion is over CODE LINES — comments stripped, string literals blanked by
+/// [`code_lines`] — and it is two-sided: the signature must take no receiver, AND the function body
+/// must name no port.
+#[test]
+fn the_check_arm_has_no_receiver_and_so_cannot_reach_a_port() {
+    let root = workspace_root();
+    let src = root.join("crates/rk-kernel/src/runtime/step.rs");
+    let text = std::fs::read_to_string(&src)
+        .unwrap_or_else(|e| panic!("{} is readable: {e}", src.display()));
+    let code = code_lines(&text);
+
+    // ANCHOR FIRST. A renamed or deleted function must not read as a satisfied prohibition.
+    let sig = code
+        .iter()
+        .find(|l| l.contains("fn check_verdict"))
+        .unwrap_or_else(|| {
+            panic!(
+                "`fn check_verdict` is not in {} — the `check` arm was renamed or removed and this                  lint is now asserting nothing about it",
+                src.display()
+            )
+        });
+
+    // (1) NO RECEIVER. `&self`, `&mut self`, `self` in the parameter list would all give the arm a
+    // `Runtime`, and a `Runtime` is one field access from every port.
+    assert!(
+        !sig.contains("self"),
+        "design §4.5 makes `check` unable to dispatch and `check_verdict` now takes a receiver,          which puts `Ports` one field access away: {sig}"
+    );
+
+    // (2) AND THE BODY NAMES NO PORT. A free function could still be handed a `&Ports`.
+    let start = code
+        .iter()
+        .position(|l| l.contains("fn check_verdict"))
+        .unwrap_or_else(|| unreachable!("the anchor above found it"));
+    let body: Vec<&String> = code
+        .iter()
+        .skip(start)
+        .take_while(|l| !l.starts_with('}'))
+        .collect();
+    assert!(
+        body.len() > 1,
+        "`check_verdict`'s body did not parse as more than its signature — the scan is vacuous"
+    );
+    for forbidden in [
+        "Ports",
+        "ports.",
+        "ports()",
+        "dispatch",
+        "harness",
+        "toolchain",
+    ] {
+        assert!(
+            !body.iter().any(|l| l.contains(forbidden)),
+            "the `check` arm names {forbidden:?}, so it can dispatch: design §4.5's              \"cannot dispatch\" is a prohibition, not a convention.
+  {body:?}"
+        );
+    }
+}
 
 /// **The product's own `.redkiln/` passes every load-time lint.**
 ///

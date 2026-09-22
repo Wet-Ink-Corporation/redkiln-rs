@@ -47,7 +47,7 @@ The four, and what each pins:
 | lint | closed set it reads | measured 2026-09-21 | discharged by |
 | --- | --- | --- | --- |
 | `conformance_every_step_kind_has_an_executor` | design §4.5's five step kinds | **0** `StepKind` references in `runtime/` | `s7g` |
-| `conformance_every_port_has_a_call_site` | ADR-0003's port table | harness 1, store 4, **toolchain 0, tracker 0, docs 0** | `s7g` (toolchain), later (tracker/docs) |
+| `conformance_every_port_has_a_call_site` | ADR-0003's port table | harness 1, store **1** *(read `store 4` until 2026-09-22; the 4 counted `store_guard()`, a kernel-private helper, not the port — `conformance.rs`’s own module doc said 1 all along)*, **toolchain 0, tracker 0, docs 0** | `s7g` (toolchain), later (tracker/docs) |
 | `conformance_every_trailer_key_has_a_producer` | design §5's event table | `Gate` 2, **`Story` 0, `Slice-Verdict` 0** | `s7h` |
 | `shipped_pack_loads` | the product's own `.redkiln/` | **RED** — `RankTie` over `ImplReport` | **this step**, §7f.2 |
 
