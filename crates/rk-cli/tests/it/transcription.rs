@@ -33,34 +33,38 @@
 //! tree**, not a fixture — so if the docstring is ever reworded away, the control fails loudly and
 //! says the guard below has stopped being exercised, rather than quietly becoming decorative.
 //!
-//! # What this guard does NOT close, stated rather than left to be discovered
+//! # Two halves, because the source lint alone is a SPELLING check
 //!
-//! It is a **source lint over one spelling**, and this stage has already paid for believing such a
-//! thing is a capability check (`conformance.rs`'s check-arm lint was defeated by a `&Ports`
-//! parameter and by an aliased import). **The limits below are MEASURED, not assumed** — an
-//! unverified limitation is as much a claim as an unverified guarantee, and the first draft of this
-//! paragraph got one of them wrong in the guard's own favour.
+//! This stage has already paid for believing a source lint is a capability check —
+//! `conformance.rs`'s check-arm lint was defeated by a `&Ports` parameter and by an aliased import.
+//! So the lint has a second half beside it, and **the division of labour is measured, not assumed**:
 //!
-//! **An alias is caught in one form and not the other**, and the boundary is exactly where the
-//! two-sidedness reaches:
+//! | attack | source lint | [`the_spec_a_real_run_binds_carries_its_steps`] |
+//! | --- | --- | --- |
+//! | `bind_nodes` reaches for `supplied` by name | **KILLED** | killed |
+//! | the transcription is deleted outright | **KILLED** (required half) | killed |
+//! | the binder is renamed at both call sites | **KILLED** (after the anchor fix) | — |
+//! | the spelling in a leading or trailing comment | correctly **green** | — |
+//! | **an ALIAS, with a dead `with_steps` keeping the lint satisfied** | **GREEN — blind** | **KILLED** |
+//! | **`to_json` stops writing the key** | **GREEN — blind** | **KILLED** |
 //!
-//! - `use …RecordedSpec as RS;` **replacing** the sole `with_steps` call → **CAUGHT**
-//!   [measured], but by the REQUIRED half noticing the transcription vanished, *not* by detecting
-//!   `RS::supplied`. The guard is right for the wrong reason, which is worth knowing.
-//! - an aliased `supplied` **added alongside** a surviving `with_steps` → **NOT CAUGHT**
-//!   [measured: a second production binding compiled and the guard stayed green]. **This is the
-//!   shape a real regression takes**, and it is the open hole.
+//! The last two rows are the point. A source lint sees a spelling in one crate's `src/`; the
+//! behavioural half sees **what the composition root actually produced**, so an alias, a helper one
+//! call deep, a third constructor or a refactor nobody anticipated are all red there without the
+//! lint needing to know their shape. The lint earns its place by being *cheap and precise* — it
+//! names the offending file and line, and it runs with no process spawn.
 //!
-//! Also not caught: a **helper one call deep** — a private `fn bind_one(..) -> RecordedSpec` that
-//! calls `supplied` and is itself called from `bind_nodes` — and a future constructor yielding
-//! `None` under a third name (the `replay.rs` anchor fires if `RecordedSpec`'s two-constructor shape
-//! changes, but not if a third is added beside them).
+//! # What neither half closes, stated rather than left to be discovered
 //!
-//! The honest closure for all of these is a **behavioural** assertion that a `RecordedSpec` built by
-//! the production binder carries `Some`, and it is not written here because `bind_nodes` is private
-//! and its inputs (`Resolved`, a live `Binder`, a run-owned worktree) are not constructible from an
-//! integration test. That remains OWED, and it is recorded in `runbook/PROGRESS.md` §1's Step 7g
-//! row rather than implied to be done by this file.
+//! The behavioural half observes the binding **for the node `pack-min` selects** — one activity, one
+//! step. A `bind_nodes` that transcribed for some activities and not others would only be caught if
+//! this fixture exercised the branch that fails, and it binds a single node. Widening that means
+//! more fixtures, not a different instrument.
+//!
+//! It also depends on a **gate** run continuing to exit 0 and write a complete record. If that ever
+//! stops being true the PREMISE assertion fires rather than the test silently reading nothing — but
+//! the coverage would be gone until another committing path exists, which is criterion (1)'s
+//! business rather than this file's.
 
 use crate::{rs_files, src_dir};
 
@@ -250,4 +254,181 @@ fn the_comment_filter_is_doing_real_work_on_run_rs() {
         run_rs.display(),
         survivors.join("\n    ")
     );
+}
+
+/// **ADR-0141 clause 4's BEHAVIOURAL half: the spec a REAL RUN binds carries its steps.**
+///
+/// The source lint above asserts a *spelling* in production code, and its own docstring records two
+/// measured holes it cannot close — an aliased `supplied` added beside a surviving `with_steps`, and
+/// a helper one call deep. **This test closes both, because it does not care how the value was
+/// built.** It spawns the real binary, lets the composition root bind whatever it binds, and reads
+/// what came out the other end. An alias, a helper, a third constructor, a refactor nobody
+/// anticipated — all of them produce a `RecordedSpec` with no `steps` key, and all of them are red
+/// here.
+///
+/// # What makes the observation possible at all, and why it is a GATE run
+///
+/// `RecordedSpec::to_json` writes `steps` **only when `Some`** — the absent-not-null shape that
+/// keeps a step-less binding byte-identical to its pre-`s7g` serialisation, because the `run_id` is
+/// a digest over those bytes. So the key's presence in `inputs/specs.json` *is* the transcription,
+/// observed rather than inferred.
+///
+/// The run record is only written when the run completes, and **no fixture on this tree drives a
+/// committing dispatch through the real binary** — the three transcript cases under
+/// `tests/fixtures/exit/` are all failure cases, which is criterion (1)'s state showing through.
+/// A **gate** run is the way through: design §4.5 has the kernel write the mark and **exit 0**, so
+/// `gate-1` binds its node, opens its gate, exits 0 and writes a complete record. Measured at
+/// `s7g`'s repair pass: `bug-1` exits **10** (*"the dispatch of `emit-report` … did not commit"*)
+/// and writes **no** record at all, so the item choice here is load-bearing rather than incidental.
+///
+/// # 🛑 The anchors, and the one that matters most
+///
+/// **`specs.json` for a run that bound nothing is `{}`** — measured on this repository, where
+/// selection assembles `"nodes": []`. Over `{}`, *"every entry carries steps"* is **vacuously
+/// true**. The non-empty anchor below is therefore not a formality; without it this test would pass
+/// on a tree where the binder had stopped binding entirely.
+///
+/// The negative control is the committed **pre-`s7g`** record at
+/// `tests/fixtures/explain/two-activities/inputs/specs.json`: two nodes, same file format, and
+/// **no `steps` key on either**. It proves the key is something this format can lack, so its
+/// presence below discriminates rather than being an artefact of how the file is written.
+#[test]
+fn the_spec_a_real_run_binds_carries_its_steps() {
+    // ---- NEGATIVE CONTROL FIRST, over a record written before the transcription existed. --------
+    let pre_s7g: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(
+            crate::fixtures_dir()
+                .join("explain")
+                .join("two-activities")
+                .join("inputs")
+                .join("specs.json"),
+        )
+        .expect("the committed pre-s7g specs.json is readable"),
+    )
+    .expect("the committed pre-s7g specs.json parses");
+    let pre_nodes = pre_s7g
+        .as_object()
+        .expect("the committed record is a JSON object");
+    assert!(
+        !pre_nodes.is_empty(),
+        "the committed pre-s7g record binds no node, so it cannot control anything"
+    );
+    for (node, spec) in pre_nodes {
+        assert!(
+            spec.get("steps").is_none(),
+            "the committed PRE-`s7g` record already carries a `steps` key on `{node}`. That record \
+             predates the transcription, so either it was regenerated — in which case this control \
+             is dead and the assertion below no longer discriminates — or `steps` is written \
+             unconditionally, which would make the live check below pass on a binder that \
+             transcribes nothing."
+        );
+    }
+
+    // ---- THE LIVE RUN. --------------------------------------------------------------------------
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let root = repo.path();
+
+    // The fixture's one activity declares one step, and its id is read from the fixture rather than
+    // written here: if the fixture is re-authored, this anchor fires instead of the assertion below
+    // quietly weakening to a shape that matches anything.
+    let activity = std::fs::read_to_string(
+        root.join(".redkiln")
+            .join("catalog")
+            .join("emit-report.toml"),
+    )
+    .expect("the installed fixture activity is readable");
+    let declared: Vec<String> = activity
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("id"))
+        .filter_map(|r| r.split('"').nth(1).map(str::to_owned))
+        .collect();
+    assert!(
+        !declared.is_empty(),
+        "no step id parsed out of the fixture activity — the anchor below would compare against \
+         nothing:\n{activity}"
+    );
+
+    let out = crate::run::spawn_run(root, "gate-1", None);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "PREMISE: a gate run exits 0 (design §4.5, AC-403) and only a completed run writes its \
+         record. Without a record there is nothing to read and this test would assert nothing.\n\
+         stderr:\n{stderr}"
+    );
+
+    // ---- THE RECORD. ------------------------------------------------------------------------
+    let runs = crate::common_dir(root).join("redkiln").join("runs");
+    assert!(
+        runs.is_dir(),
+        "the run exited 0 and wrote no run-record directory at {}",
+        runs.display()
+    );
+    let mut specs_files: Vec<std::path::PathBuf> = std::fs::read_dir(&runs)
+        .expect("the runs directory is readable")
+        .flatten()
+        .map(|e| e.path().join("inputs").join("specs.json"))
+        .filter(|p| p.is_file())
+        .collect();
+    specs_files.sort();
+    assert_eq!(
+        specs_files.len(),
+        1,
+        "expected exactly one run record with an `inputs/specs.json`, found {}: {specs_files:?}",
+        specs_files.len()
+    );
+
+    let specs: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&specs_files[0]).expect("specs.json reads"))
+            .expect("specs.json parses");
+    let nodes = specs.as_object().expect("specs.json is a JSON object");
+
+    // 🛑 THE ANCHOR THAT CARRIES THIS TEST. `{}` is a real outcome — it is what this repository's
+    // own `redkiln run` produces, because selection assembles zero nodes — and over `{}` the loop
+    // below asserts nothing at all.
+    assert!(
+        !nodes.is_empty(),
+        "the run bound NO node, so `specs.json` is `{{}}` and the assertion below is vacuous. \
+         Either the fixture stopped selecting an activity, or the binder stopped binding."
+    );
+
+    // ---- EVERY BOUND NODE CARRIES ITS STEPS. -------------------------------------------------
+    for (node, spec) in nodes {
+        let steps = spec.get("steps").unwrap_or_else(|| {
+            panic!(
+                "ADR-0141 clause 4: the production binder bound node `{node}` with NO step list.\n  \
+                 `RecordedSpec::to_json` writes `steps` only when `Some`, so an absent key means \
+                 the composition root reached for `supplied` — by name, through an alias, or via a \
+                 helper. On that binding `run_activity_steps` falls through to the pre-`s7g` \
+                 activation dispatch and the runtime stops walking steps, silently.\n  \
+                 The recorded spec was: {spec}"
+            )
+        });
+        let steps = steps
+            .as_array()
+            .unwrap_or_else(|| panic!("`steps` on `{node}` is not an array: {steps}"));
+        assert!(
+            !steps.is_empty(),
+            "`steps` on `{node}` is an EMPTY array. `run_activity_steps` refuses an empty \
+             transcribed list by name, so this is not a working binding — and an empty array would \
+             satisfy a bare `is_some()` check, which is why the contents are asserted here."
+        );
+        for step in steps {
+            let id = step.get("id").and_then(serde_json::Value::as_str);
+            let kind = step.get("kind").and_then(serde_json::Value::as_str);
+            assert!(
+                id.is_some() && kind.is_some(),
+                "a recorded step on `{node}` carries no `id`/`kind` pair, so `steps` is present \
+                 without being a step list: {step}"
+            );
+            let id = id.unwrap_or_default();
+            assert!(
+                declared.iter().any(|d| d == id),
+                "node `{node}` recorded a step id {id:?} that the installed fixture activity does \
+                 not declare (it declares {declared:?}). The list was synthesised somewhere rather \
+                 than transcribed from the catalog."
+            );
+        }
+    }
 }
