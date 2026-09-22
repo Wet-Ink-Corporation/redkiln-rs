@@ -1367,19 +1367,6 @@ fn recreate_run_worktree(
     Ok(path)
 }
 
-/// The real harness's configuration, from the pack's margins and TTLs and the captured environment.
-///
-/// # 🛑 `harness_binary` IS THE ONE VALUE HERE WITH A FALLBACK, AND THE FALLBACK IS THE ADAPTER'S
-///
-/// AC-377's rule — *declared, never defaulted in code* — governs the pack-sourced values: the
-/// margins, the two TTLs and the per-activity timeout are read from the pack and a missing one is
-/// a refusal, not a default. `harness_binary` is **not** pack-sourced: it is RT-49's OPTIONAL
-/// `[adapters]` key, whose absence is the ordinary case, and whose documented default is the
-/// adapter's own program name. Spelling that default here is what makes the key optional; it is
-/// stated rather than silent so the AC-377 line above is not read as covering it. The adapter
-/// declares no constant for it (measured: no `DEFAULT_HARNESS_BINARY` in
-/// `rk-adapter-claude/src/config.rs`), and adding one would be an adapter `src` edit that
-/// re-opens Checkpoint 7c for a spelling — so the literal is here, named as what it is.
 /// **ADR-0139, narrowing ADR-0137 clause 8: the `Toolchain` a run gets when NONE detected.**
 ///
 /// Clause 8 said the run refuses at startup. Measured at `s7g`, that broke **11** `rk-cli` tests
@@ -1527,7 +1514,8 @@ fn real_toolchain(
             }
             other => {
                 eprintln!(
-                    "redkiln: `{other}` is a resolved toolchain adapter this binary cannot                      construct — `AdapterSet::resolve` and this match have drifted apart"
+                    "redkiln: `{other}` is a resolved toolchain adapter this binary cannot \
+                     construct — `AdapterSet::resolve` and this match have drifted apart"
                 );
                 return Err(Exit::ConfigError);
             }
@@ -1550,6 +1538,25 @@ fn real_toolchain(
     }))
 }
 
+/// The real harness's configuration, from the pack's margins and TTLs and the captured environment.
+///
+/// # 🛑 `harness_binary` IS THE ONE VALUE HERE WITH A FALLBACK, AND THE FALLBACK IS THE ADAPTER'S
+///
+/// AC-377's rule — *declared, never defaulted in code* — governs the pack-sourced values: the
+/// margins, the two TTLs and the per-activity timeout are read from the pack and a missing one is
+/// a refusal, not a default. `harness_binary` is **not** pack-sourced: it is RT-49's OPTIONAL
+/// `[adapters]` key, whose absence is the ordinary case, and whose documented default is the
+/// adapter's own program name. Spelling that default here is what makes the key optional; it is
+/// stated rather than silent so the AC-377 line above is not read as covering it. The adapter
+/// declares no constant for it (measured: no `DEFAULT_HARNESS_BINARY` in
+/// `rk-adapter-claude/src/config.rs`), and adding one would be an adapter `src` edit that
+/// re-opens Checkpoint 7c for a spelling — so the literal is here, named as what it is.
+///
+/// *(Restored 2026-09-22. `s7g` inserted `UndetectedToolchain` and `real_toolchain` immediately
+/// above this function and anchored the insertion on `fn real_harness_config`, so this entire
+/// docstring was absorbed onto the new struct: `cargo doc` rendered the AC-377 rationale as
+/// `UndetectedToolchain`'s, and this function was left with no documentation at all. An adversarial
+/// pass found it. Splicing above a `fn` splices into whatever docstring precedes it.)*
 fn real_harness_config(
     resolved: &Resolved,
     env: &Env,

@@ -16,9 +16,20 @@ min_rigor    = "optional"
 cost_class   = "S"
 budget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 }
 
+# ⚠️ **THIS READ `kind = "tool"`, `run = "toolchain:test"` UNTIL 2026-09-22, AND IT WAS INCOHERENT
+# IN EXACTLY THE WAY `emit-report.toml` WAS.** `Toolchain::test` returns a test COUNT (`u32`), so
+# `outputs = "value:ChangeSummary"` was never satisfiable through the port; the step carries a
+# `role`, which is the AGENT arm's input. It was served by the harness only because the runtime
+# dispatched whole ACTIVATIONS and ignored step kinds.
+#
+# 🛑 **`s7g` corrected `emit-report.toml` and MISSED THIS FILE — half the domain of its own
+# finding.** An adversarial pass found it. It was dormant only because the two tests that install
+# this pack variant (`root.rs`'s `ac485_…` and `run.rs`'s `ac401_…`) bind through
+# `RecordedSpec::supplied(..)`, whose `steps` is `None`, so they take the pre-`s7g` fall-through
+# and never walk the steps. The product path (`bind_nodes` -> `with_steps`) would route it to
+# `Toolchain::test`. Corrected here to what the fixture always meant, for the same reasons.
 [[step]]
 id      = "summarise"
-kind    = "tool"
-run     = "toolchain:test"
+kind    = "agent"
 role    = "implementer"
 outputs = "value:ChangeSummary"

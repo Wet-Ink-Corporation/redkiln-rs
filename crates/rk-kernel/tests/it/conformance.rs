@@ -32,8 +32,8 @@
 //! # ADR-0134: the port lint asserts an EQUALITY, because the emptiness was unsatisfiable
 //!
 //! [`conformance_every_port_has_a_call_site`] asserted `uncalled.is_empty()` over all five ports.
-//! `tracker` and `docs` have **no Phase-1 real adapter by design** — design:265 *"none in Phase 1
-//! (GitHub is Phase 3)"*, design:266 *"none in Phase 1 (mdBook is Phase 3)"*, AC-499 instantiated
+//! `tracker` and `docs` have **no Phase-1 real adapter by design** — design:**267** *"none in Phase 1
+//! (GitHub is Phase 3)"*, design:**268** *"none in Phase 1 (mdBook is Phase 3)"*, AC-499 instantiated
 //! only for ports that have one, AC-507/AC-508/AC-510 Phase 3, and `s7a` §7a:198-199 authoring both
 //! argument types as contentless newtypes so no Phase-3 schema is invented early. So `s7f`'s *"later
 //! (tracker/docs)"* meant **Phase 3**, no stage in this runbook claims either port, and the
@@ -523,17 +523,28 @@ fn conformance_every_port_has_a_call_site() {
     // entry out belongs with the change that earns it, on `shipped_pack_loads`'s pinned-count
     // precedent.
     let expected_uncalled: [(&str, &str); 2] = [
+        // 🛑 CITED BY QUOTATION, NOT BY LINE — corrected 2026-09-22, and the correction is the
+        // reason. These two warrants read `design:265` / `design:266` until an adversarial pass
+        // measured them: §3.3's port table runs EventStore 265, Harness 266, **Tracker 267,
+        // DocsSite 268**, Toolchain 269. So the warrant for "these two ports have no Phase-1 real
+        // adapter" pointed at the two rows that DO have one — the exact opposite — while the
+        // conclusion happened to survive, which is the E-0132-1 / E-0133-1 shape embedded in a
+        // lint that runs on every commit. `s7a`:199 carries the correct `design:267-268` cite and
+        // was two lines from the mistake. A line number into a live file is self-falsifying here,
+        // so what is load-bearing below is the QUOTED TEXT; the numbers are a convenience.
         (
             "docs",
-            "no Phase-1 real adapter — design:266, `DocsSite` | … | \"none in Phase 1 (mdBook is \
-             Phase 3)\"; AC-510 is Phase 3; `s7a` §7a:198-199 authors `DocSet`'s companions as \
-             opaque newtypes so no Phase-3 schema is invented early",
+            "no Phase-1 real adapter — design:268, `DocsSite` | … | \"none in Phase 1 (mdBook is \
+             Phase 3)\"; AC-510 is Phase 3; `s7a` §7a.4 authors `DocSet`'s companions as opaque \
+             newtypes — \"an opaque newtype declares the port shape without inventing a Phase-3 \
+             schema\" — so no Phase-3 schema is invented early",
         ),
         (
             "tracker",
-            "no Phase-1 real adapter — design:265, `Tracker` | … | \"none in Phase 1 (GitHub is \
-             Phase 3)\"; AC-508's idempotency key is Phase 3 and `s7a` §7a:198-199 declines to \
-             design it; `ExternalRef` / `TypedInput` are `pub(crate) ()` newtypes with no field set",
+            "no Phase-1 real adapter — design:267, `Tracker` | … | \"none in Phase 1 (GitHub is \
+             Phase 3)\"; AC-508's idempotency key is Phase 3 and `s7a` §7a.4 declines to design it \
+             — \"No field set is invented and no idempotency key is designed\"; `ExternalRef` / \
+             `TypedInput` are `pub(crate) ()` newtypes with no field set",
         ),
     ];
     let expected: BTreeSet<String> = expected_uncalled
