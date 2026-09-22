@@ -679,8 +679,20 @@ impl Iterator for Odometer<'_> {
     }
 }
 
-/// The context a predicate sees: the axis bindings plus `rigor` as an ordinal over ADR-0020's five.
-fn context_for(bindings: &[(String, Value)], rigor: Rigor, registry: &Registry) -> Context {
+/// **Bind `rigor` onto an existing context as an ordinal over ADR-0020's five.**
+///
+/// The one place the rigor ordinal is built. **ADR-0142 decision 1** requires the step executor to
+/// evaluate a guard against *the selection's own context* rather than a second one written for it,
+/// and 67 of the shipped pack's 121 step guards read `rigor` — so this had to become reachable from
+/// `runtime::step` rather than be re-derived there. Extracted from [`context_for`], which now calls
+/// it, so the static rigor pass and the executor cannot disagree about what `rigor >= recommended`
+/// compares against.
+///
+/// The domain comes from the facet registry when it carries one and falls back to [`Rigor::ALL`],
+/// which is what makes `criticality >= high`-style comparisons positional rather than guessed
+/// (see [`Value::Ordinal`]'s own note).
+#[must_use]
+pub fn with_rigor(base: Context, rigor: Rigor, registry: &Registry) -> Context {
     let domain: Vec<String> = registry.facet("rigor").map_or_else(
         || Rigor::ALL.iter().map(|r| r.as_str().to_owned()).collect(),
         |f| {
@@ -694,7 +706,18 @@ fn context_for(bindings: &[(String, Value)], rigor: Rigor, registry: &Registry) 
         .iter()
         .position(|d| d == rigor.as_str())
         .unwrap_or_default();
-    let mut ctx = Context::new().with("rigor", Value::Ordinal { domain, index });
+    base.with("rigor", Value::Ordinal { domain, index })
+}
+
+/// The context a predicate sees: the axis bindings plus `rigor` as an ordinal over ADR-0020's five.
+///
+/// 🛑 **The bindings are applied AFTER `rigor`, and that order is preserved from before the
+/// extraction above.** A binding named `rigor` therefore overrides the ordinal here. The executor's
+/// context (ADR-0142) binds in the opposite order, because there the authority is
+/// `Selection::rigor()` — step 1's, with the item's own `rigor_override` already folded in — and a
+/// stale facet of the same name must not displace it.
+fn context_for(bindings: &[(String, Value)], rigor: Rigor, registry: &Registry) -> Context {
+    let mut ctx = with_rigor(Context::new(), rigor, registry);
     for (name, value) in bindings {
         ctx.bind(name, value.clone());
     }

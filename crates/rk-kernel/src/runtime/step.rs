@@ -40,12 +40,29 @@
 //! silent fallthrough would turn 66 of 113 steps into invisible non-events, and a run that executed
 //! nothing would be indistinguishable from one that worked.
 //!
-//! **ADR-0136** — 54 of the pack's 121 step guards carry a `${…}` reference that nothing on this
-//! tree resolves. Such a step **refuses by name**. `rigor.rs`'s `null_out_refs` is a *static lint's*
-//! treatment and is correct there; calling it here would not express uncertainty but manufacture the
-//! value the guard turns on, and under ADR-0103's three-valued connectives all 54 would be silently
-//! skipped while the run exited 0. That function is `pub(crate)` and one import away, which is why
-//! the prohibition is a record and not a review note.
+//! **ADR-0136** — a step guard carrying a `${…}` reference nothing resolves **refuses by name**.
+//! `rigor.rs`'s `null_out_refs` is a *static lint's* treatment and is correct there; calling it here
+//! would not express uncertainty but manufacture the value the guard turns on, and under ADR-0103's
+//! three-valued connectives those guards would be silently skipped while the run exited 0. That
+//! function is `pub(crate)` and one import away, which is why the prohibition is a record and not a
+//! review note.
+//!
+//! ⚠️ **ADR-0136's COUNT was wrong and is corrected by E-0136-1 — it is not 54, and the cause was
+//! not references.** The executor shipped evaluating every guard against `Context::new()`, which
+//! binds nothing, so `eval.rs`'s unbound-path arm returned `UnknownField` and **all 121** guards
+//! failed — **67 of the 67 ref-free ones on `rigor`**, before any reference was reached. The refusal
+//! a reader saw therefore named the wrong cause.
+//!
+//! **ADR-0142** binds the selection's own context here — the item's facets with `rigor` as an
+//! ordinal, built in `replay` from values it already holds and **not** transcribed onto
+//! `RecordedSpec`. Measured after: **75 of 121** guards evaluate, the other **46** keep ADR-0136's
+//! refusal, and `StepVerdict::Skipped` becomes reachable for the first time (an adversarial pass
+//! found it unreachable by construction, because no parseable guard could answer `false` against an
+//! empty context).
+//!
+//! 🛑 **It repairs NONE of the 94 `check` exprs.** Every one reads a prior step's OUTPUT, which no
+//! context assembled from the item can bind — step-output resolution stays OWED, and the `check` arm
+//! stays the dominant reason a walk ends.
 
 use rk_types::error::StepError;
 
@@ -113,7 +130,7 @@ const MAPPED_VERBS: [&str; 4] = ["build", "change_summary", "lint", "test"];
 /// [`Tri::Null`]: that is a decided policy for a *known absent* value (ADR-0032, AC-079), and
 /// routing a missing mechanism through it would fire the abstention gate 54 times a run for a reason
 /// no operator can act on.
-fn guard_holds(step: &Step) -> Result<bool, StepError> {
+fn guard_holds(step: &Step, ctx: &predicate::Context) -> Result<bool, StepError> {
     let Some(src) = step.when.as_deref() else {
         return Ok(true);
     };
@@ -125,14 +142,12 @@ fn guard_holds(step: &Step) -> Result<bool, StepError> {
     })?;
     // **No `null_out_refs` here, deliberately** — see the module header. An unresolved reference
     // reaches `evaluate` and comes back as an error, which is the honest answer.
-    let outcome = predicate::evaluate(&parsed.expr, &predicate::Context::new()).map_err(|e| {
-        StepError::Unsupported {
-            capability: format!(
-                "the `when` guard of step `{}` cannot be evaluated on this tree ({e:?}): {src} — \
+    let outcome = predicate::evaluate(&parsed.expr, ctx).map_err(|e| StepError::Unsupported {
+        capability: format!(
+            "the `when` guard of step `{}` cannot be evaluated on this tree ({e:?}): {src} — \
                  reference resolution is OWED (ADR-0136) and no stage in this runbook claims it",
-                step.id
-            ),
-        }
+            step.id
+        ),
     })?;
     Ok(outcome.value == Tri::True)
 }
@@ -150,7 +165,7 @@ fn guard_holds(step: &Step) -> Result<bool, StepError> {
 ///
 /// [`StepError::Unsupported`] when the `expr` does not parse or cannot be evaluated — the same
 /// treatment [`guard_holds`] gives a `when`, for the same reason.
-fn check_verdict(step: &Step) -> Result<bool, StepError> {
+fn check_verdict(step: &Step, ctx: &predicate::Context) -> Result<bool, StepError> {
     let Some(src) = step.expr.as_deref() else {
         // A `check` with no `expr` asserts nothing. It is not a silent pass: an executor that
         // treated "no predicate" as "predicate held" would make every malformed check green.
@@ -167,11 +182,18 @@ fn check_verdict(step: &Step) -> Result<bool, StepError> {
             step.id
         ),
     })?;
-    let outcome = predicate::evaluate(&parsed.expr, &predicate::Context::new()).map_err(|e| {
+    // 🛑 **ADR-0142 clause 4: THE CONTEXT DOES NOT REPAIR THIS ARM, AND IT IS THREADED ANYWAY.**
+    // Measured over the shipped pack: **all 94** `check` exprs read a prior step's OUTPUT —
+    // `report.status` (22), `check.failed` (21), `findings` (11), `lint.errors` (4) and a tail of
+    // singletons. None is a facet, so no context assembled from the item can bind one. It is passed
+    // here so this arm evaluates against the SAME context as `when` rather than a second one, and
+    // so that an `expr` which does read a facet is not failed for a reason that is not its own.
+    let outcome = predicate::evaluate(&parsed.expr, ctx).map_err(|e| {
         StepError::Unsupported {
             capability: format!(
                 "the `expr` of check step `{}` cannot be evaluated on this tree ({e:?}): {src} — \
-                 reference resolution is OWED (ADR-0136)",
+                 a `check` reads a prior step's OUTPUT, and step-output resolution is OWED \
+                 (ADR-0136 clause 4; ADR-0142 clause 4 measures 94 of 94 shipped exprs reading one)",
                 step.id
             ),
         }
@@ -246,6 +268,7 @@ impl super::Runtime {
         &self,
         act: Activation<'_>,
         steps: Option<&[Step]>,
+        ctx: &predicate::Context,
         cap: AttemptCap,
         now: JournaledNow,
     ) -> Result<ActivityReport, super::RuntimeError> {
@@ -274,7 +297,7 @@ impl super::Runtime {
 
         let mut dispatched: Option<ActivityReport> = None;
         for step in steps {
-            let verdict = self.execute_step(step)?;
+            let verdict = self.execute_step(step, ctx)?;
             match verdict {
                 StepVerdict::Skipped => {}
                 StepVerdict::Continue => {
@@ -344,8 +367,12 @@ impl super::Runtime {
     /// [`super::RuntimeError`] only from the `agent` arm's store and fold. **A step's own failure is
     /// a value** — [`StepVerdict::Failed`] — never an error of this function (AC-032's shape, which
     /// [`super::Runtime::run_activity`] already follows).
-    pub fn execute_step(&self, step: &Step) -> Result<StepVerdict, super::RuntimeError> {
-        match guard_holds(step) {
+    pub fn execute_step(
+        &self,
+        step: &Step,
+        ctx: &predicate::Context,
+    ) -> Result<StepVerdict, super::RuntimeError> {
+        match guard_holds(step, ctx) {
             Ok(false) => return Ok(StepVerdict::Skipped),
             Err(e) => return Ok(StepVerdict::Failed(e)),
             Ok(true) => {}
@@ -359,7 +386,7 @@ impl super::Runtime {
                 Ok(()) => StepVerdict::Continue,
                 Err(e) => StepVerdict::Failed(e),
             },
-            StepKind::Check => match check_verdict(step) {
+            StepKind::Check => match check_verdict(step, ctx) {
                 Ok(true) => StepVerdict::Continue,
                 // A `check` that does not hold ends the walk. `on_false`'s bounded re-entry table
                 // (ADR-0044) is parsed and linted and has no executor; routing to it is not this

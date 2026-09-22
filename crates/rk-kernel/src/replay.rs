@@ -1339,6 +1339,23 @@ fn derive(
     // AC-008's *"the replay reaches the recorded terminal state with all N results served from the
     // journal, zero harness dispatches"* — as an architecture. The loop is the same in both
     // directions; only [`Results`] differs.
+    // 🛑 **ADR-0142: THE EXECUTOR EVALUATES A STEP GUARD AGAINST THE SELECTION'S OWN CONTEXT.**
+    //
+    // The item's facet bindings with `rigor` bound as an ordinal — the same value selection itself
+    // evaluated `applicable_if` and the `require` rows against. Built here rather than transcribed
+    // onto `RecordedSpec` (ADR-0142 decision 2) because both inputs are already in hand: `item`
+    // from `inputs.build()` and the effective rigor from `Selection::rigor()`, which is step 1's
+    // with the item's own `rigor_override` already folded in.
+    //
+    // **`rigor` is bound LAST, so it wins**, which is the opposite order from `rigor.rs`'s static
+    // `context_for` and deliberately so: there the caller's bindings are the authority, here
+    // `Selection::rigor()` is, and a stale item facet of the same name must not displace it.
+    //
+    // Before this, the walk evaluated against `Context::new()` and **all 121 of the shipped pack's
+    // step guards failed on `UnknownField`** — 67 of them on `rigor` alone, before any `${…}`
+    // reference was reached. Measured after: 75 of 121 evaluate; the other 46 keep ADR-0136's
+    // by-name refusal. It repairs none of the 94 `check` exprs, which read step outputs.
+    let eval_ctx = crate::rigor::with_rigor(item.context(), selection.rigor(), &facets);
     let activations = inputs.activations();
     loop {
         let state = fsm::fold(item.id(), &inputs.stage, &events)?;
@@ -1350,7 +1367,7 @@ fn derive(
         let binding = inputs.spec_for(step_id)?;
         let produced = match (&mut *results, dispatch_envelope) {
             (Results::Dispatched(rt), Some((cap, now))) => {
-                dispatch_through(rt, key, step_id, binding, cap, now)?
+                dispatch_through(rt, key, step_id, binding, &eval_ctx, cap, now)?
             }
             // Unreachable by construction: the envelope is `Some` exactly when the source is
             // `Dispatched`. Refused rather than unwrapped, because an `expect` here would be a
@@ -1379,6 +1396,7 @@ fn dispatch_through(
     key: &IdempotencyKey,
     step_id: &str,
     binding: &RecordedSpec,
+    ctx: &crate::predicate::Context,
     cap: AttemptCap,
     now: JournaledNow,
 ) -> Result<Vec<Event>, ReplayError> {
@@ -1394,6 +1412,7 @@ fn dispatch_through(
             spec: binding.spec(),
         },
         binding.steps(),
+        ctx,
         cap,
         now,
     )?;
@@ -1617,6 +1636,23 @@ pub fn resume(
         rt.append(event.clone())?;
     }
 
+    // 🛑 **ADR-0142: THE EXECUTOR EVALUATES A STEP GUARD AGAINST THE SELECTION'S OWN CONTEXT.**
+    //
+    // The item's facet bindings with `rigor` bound as an ordinal — the same value selection itself
+    // evaluated `applicable_if` and the `require` rows against. Built here rather than transcribed
+    // onto `RecordedSpec` (ADR-0142 decision 2) because both inputs are already in hand: `item`
+    // from `inputs.build()` and the effective rigor from `Selection::rigor()`, which is step 1's
+    // with the item's own `rigor_override` already folded in.
+    //
+    // **`rigor` is bound LAST, so it wins**, which is the opposite order from `rigor.rs`'s static
+    // `context_for` and deliberately so: there the caller's bindings are the authority, here
+    // `Selection::rigor()` is, and a stale item facet of the same name must not displace it.
+    //
+    // Before this, the walk evaluated against `Context::new()` and **all 121 of the shipped pack's
+    // step guards failed on `UnknownField`** — 67 of them on `rigor` alone, before any `${…}`
+    // reference was reached. Measured after: 75 of 121 evaluate; the other 46 keep ADR-0136's
+    // by-name refusal. It repairs none of the 94 `check` exprs, which read step outputs.
+    let eval_ctx = crate::rigor::with_rigor(item.context(), selection.rigor(), &facets);
     let activations = inputs.activations();
     loop {
         let state = fsm::fold(item.id(), &inputs.stage, &journal)?;
@@ -1636,7 +1672,7 @@ pub fn resume(
                     Some(binding) => binding,
                     None => supply_spec(step_id)?,
                 };
-                let produced = dispatch_through(&rt, key, step_id, &binding, cap, now)?;
+                let produced = dispatch_through(&rt, key, step_id, &binding, &eval_ctx, cap, now)?;
                 journal.extend(produced);
             }
             NextAction::OpenGate(_) => {

@@ -51,6 +51,16 @@ fn build_step() -> Step {
     }
 }
 
+/// An empty evaluation context, which is CORRECT here and would not be on a run path.
+///
+/// ADR-0142 gives the executor the selection's own context, because a guard evaluated against an
+/// empty one fails on `UnknownField`. [`build_step`] declares **no `when` and no `expr`**, so
+/// nothing in this test ever reads a binding: the context is threaded to satisfy the signature and
+/// is deliberately empty so the test stays about the `tool` arm reaching the port, not about facets.
+fn empty_context() -> rk_kernel::predicate::Context {
+    rk_kernel::predicate::Context::new()
+}
+
 fn runtime_with(toolchain: Arc<dyn Toolchain>) -> Runtime {
     let store: Arc<Mutex<dyn EventStore>> =
         Arc::new(Mutex::new(rk_ports::fakes::VecStore::default()));
@@ -77,7 +87,7 @@ fn a_tool_step_reaches_the_rust_adapter_and_not_the_fixture() {
     // Identical step, identical runtime shape, fixture in the port: the walk SUCCEEDS.
     let control = runtime_with(Arc::new(rk_ports::fakes::FixtureToolchain::default()));
     let control_verdict = control
-        .execute_step(&build_step())
+        .execute_step(&build_step(), &empty_context())
         .expect("the control walk completes");
     assert_eq!(
         control_verdict,
@@ -111,7 +121,7 @@ fn a_tool_step_reaches_the_rust_adapter_and_not_the_fixture() {
 
     let real = runtime_with(Arc::new(adapter));
     let verdict = real
-        .execute_step(&build_step())
+        .execute_step(&build_step(), &empty_context())
         .expect("the walk completes; a step's own failure is a VALUE, not an error (AC-032)");
 
     // 🛑 **THE ADAPTER WAS OBSERVED.** The identical step through the identical walk succeeded with

@@ -296,6 +296,7 @@ mod facet_stability;
 mod fsm;
 mod gates;
 mod grammar;
+mod guard_context;
 mod kernel_denylist;
 mod keywords;
 mod ledger;
