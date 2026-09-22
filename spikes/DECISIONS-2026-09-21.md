@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-14), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-16), and what they license
 
 *(Title corrected 2026-09-22 at `s7g`'s open: it read "**Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6)**"
 while the file already carried **D21-7** and **D21-8** — `s7f`'s two flip lines, appended at its close on 2026-09-21 —
@@ -528,5 +528,83 @@ answer a question none of them asks. That is a larger change, and a less honest 
 **What this does not license.** It does not make criterion (1) met — it keeps the mechanism ADR-0137
 clause 1 supplies reachable. It does not license a `tool` step succeeding without a toolchain: under
 ADR-0135 the verb is mapped and the port is called, and here the port refuses by name.
+
+---
+
+## D21-15 · ADR-0140 flips to `accepted` — the toolchain bound is the only bound, and the record that said otherwise was reproduced in code
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s repair pass.** ADR-0140 is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-22` unchanged. ADR-0137 keeps `superseded_by: ["0139", "0140"]`, stays
+`accepted`, and is now partially superseded at **two independent clauses**.
+
+**Like D21-13 and D21-14, an engineering call inside the approved plan rather than an operator choice among
+options — and, like them, it earns a line because it moves a `## Decision` sentence of an accepted record.**
+The operator's instruction at this pass was to correct the two wrong records and record the stage BLOCKED;
+which route a correction takes is ADR-0092 rule 1's answer, not a preference.
+
+**What the measurement actually was.** Clause 5 presupposed a per-step timeout in two places. `catalog::Step`
+carries eleven fields and none is a timeout; `catalog.rs`'s loader documents the omission in its own voice
+(*"It types only what the loader sees … The loader reads no `timeout_secs`"*). So the shipped pack's **298**
+`timeout_secs` declarations — 204 literal, 94 unresolvable `${toolchain.<key>}` substitutions — are read by
+nothing at all.
+
+**The sharper half, and the reason the erratum alone was not enough.** A `timeout_secs` *does* exist:
+`ActivitySpec`'s, bound per **activity** and handed to `Harness::dispatch`. Clause 5 conflated an
+activity-level **harness** bound with a step-level one that does not exist. A correction that said only "no
+timeout is applied" would have left that conflation in place; the record names both halves.
+
+**Why it is not cosmetic, stated as an operational consequence rather than a tidiness one.** A reader of
+clause 5 — or of either code docstring reproducing it — concludes that a `tool` step declaring
+`timeout_secs = 120` is cut off at 120 s and that 3600 is a distant outer fence. Measured, the step runs
+under 3600 s and **nothing else**, and `run_tool_step` calls `toolchain.test(&[])`, which the real adapter
+reads as `cargo test --workspace`. The practical reading is the inverse of the record's: the bound is not
+generous, it is the whole story, and lowering it shortens the only protection a `tool` step has.
+
+**What is kept, and what is opened.** The 3600 s value and the optional `[adapters] toolchain_timeout_secs`
+key stand — the number was right and only its justification moved. What is **opened**, deliberately, is that
+298 declared step timeouts are dead data: whether a step-level bound should exist, which port would apply
+it, and where the 94 substitutions get values are OWED and belong with ADR-0135's unshipped-`registry.toml`
+question. **This line does not license building one.**
+
+---
+
+## D21-16 · ADR-0141 flips to `accepted` — and it closes a route inconsistency the corpus opened against itself
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s repair pass.** ADR-0141 is confirmed as written and flips
+`proposed → accepted`, `date: 2026-09-22` unchanged. ADR-0138 takes `superseded_by: ["0141"]` and stays
+`accepted`, as a partial supersession requires.
+
+**This line's subject is not the step list. It is that the corpus applied two different routes to one rule
+in one morning, and only one of them was right.** ADR-0139 superseded ADR-0137 clause 8 at 11:28, citing
+ADR-0092 rule 1 in terms and noting that the rule holds *"even though the record being moved is … its own
+author is moving it"*. E-0138-1, written 15 minutes later against the identical shape, took the **erratum**
+route and justified it on the ground that clause 4's instruction *"stands and was followed"* — while its own
+body, two sentences earlier, recorded that the fallback the instruction names was **not taken**. An
+adversarial pass found the contradiction; the parenthetical is withdrawn in place and this record is the
+route it named.
+
+**The antecedent fired and the measurement is not in dispute.** Clause 4 conditioned on the transcription
+fanning out beyond *"the three sites that thread `RecordedSpec` today"*. Measured at the tree clause 1 was
+executed against: **17** `RecordedSpec::supplied` sites and **19** `run_activity` sites. The "three" counted
+the production thread and silently excluded every test call site — which is exactly the population a
+signature change is paid for in. E-0138-1 keeps that correction and is reduced to it.
+
+**Clause 1 stands, and saying so matters.** The step list really is carried on `RecordedSpec`; the route was
+right and is untouched. What the record never described is the **optionality**, and optionality is the whole
+reason 16 machinery call sites — dispatch, retry, commit races, AC-013 re-entry, none with a catalog
+activity behind it — survived untouched. `None` is an explicit absence in ADR-0032's sense, never an empty
+walk, and an explicitly empty list is refused by name, so ADR-0138's forbids bullet survives verbatim.
+
+**A gap is opened rather than closed, and it is the same shape this stage keeps finding.** The production
+path must always transcribe, and nothing enforces it: **one** `with_steps` call site against **16**
+`supplied`, with no guard. A convention that holds only because one person wrote both sites is the condition
+under which a source lint passes on code nothing calls. **A guard is OWED**, and the record says so rather
+than trusting the convention.
+
+**What neither this record nor ADR-0140 does.** Neither repairs one of the four blocking defects
+`runbook/PROGRESS.md` §1's Step 7g row records. The step executor is still measured at **0 of 102**
+activities completing a committing walk, and correct bookkeeping around a blocked stage is not progress on
+it. Both records say so in their own bodies, so that a reader who reaches them without the tracker cannot
+mistake a tidy register for a working executor.
 
 ---

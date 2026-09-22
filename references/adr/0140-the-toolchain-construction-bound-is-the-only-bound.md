@@ -1,7 +1,7 @@
 ---
 id: "0140"
 title: "The toolchain adapters' construction-time `timeout` is **the only bound** on any child they spawn, not a backstop behind a per-step one — superseding **ADR-0137 clause 5 in part**, at the sentence *\"while a step's own `timeout_secs` remains the kernel's\"* and the floor reasoning that rests on it. Measured: `catalog::Step` carries **no timeout field at all** and `catalog.rs`'s loader reads none, so the shipped pack's **298** `timeout_secs` declarations are read by nothing; the `timeout_secs` that does exist is `ActivitySpec`'s, per ACTIVITY and handed to the **Harness**, which no toolchain child ever sees. The 3600 s default and its optional key stand, re-grounded"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: references/adr/0137 decision 5 (the clause this record supersedes in part); references/adr/0092 rule 1 (a `## Decision` sentence moves by supersession, never by erratum); references/adr/0099 decision 2 and RT-5 (*"the two Toolchain adapters run bounded commands under the same timeout without a token"*); crates/rk-kernel/src/catalog.rs (the `Step` field list, and the loader doc *"It types only what the loader sees … The loader reads no `timeout_secs`"*); crates/rk-types/src/activity.rs (`ActivitySpec.timeout_secs`); crates/rk-cli/src/config.rs and crates/rk-cli/src/verbs/run.rs (the two docstrings that reproduce the withdrawn sentence); references/adr/ERRATA.md E-0137-1, which named this supersession as OWED

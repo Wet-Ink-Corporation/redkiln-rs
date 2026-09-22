@@ -39,8 +39,10 @@ cannot be built without settling, is:
 | 4 | the real toolchain adapter is never constructed on the run path | **ADR-0137** |
 | 5 | `ActivitySpec` carries no step list and the runtime may not load the catalog | **ADR-0138** |
 | 6 | clause 8 of ADR-0137, corrected by its own first execution | **ADR-0139** (supersedes 0137 in part) |
+| 7 | clause 5 of ADR-0137 — a per-step timeout nothing applies | **ADR-0140** (supersedes 0137 in part, a second clause) |
+| 8 | clause 4 of ADR-0138 — an if-then whose consequent was declined | **ADR-0141** (supersedes 0138 in part) |
 
-All six are recorded **before** the code they authorise and flipped on their own dated lines **D21-9 … D21-14**.
+The first six are recorded **before** the code they authorise; **0140** and **0141** are the two supersessions `s7g`'s own errata named as OWED, taken at the repair pass. All eight are flipped on their own dated lines **D21-9 … D21-16**.
 Four were settled by the operator; **0138** and **0139** were engineering calls taken inside the approved plan,
 and their dated lines say so rather than presenting them as operator choices they were not.
 

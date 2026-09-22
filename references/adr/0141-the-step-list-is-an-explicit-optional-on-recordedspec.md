@@ -1,7 +1,7 @@
 ---
 id: "0141"
 title: "The step list is carried on `RecordedSpec` as an **explicit `Option`** — `supplied` (none transcribed) and `with_steps` (transcribed) — superseding **ADR-0138 clause 4 in part**, at that clause's whole `## Decision` sentence. Clause 4 was an if-then whose antecedent FIRED (the fan-out is **17**, not three) and whose consequent — take the `&[Step]` fallback — was **declined**; a Decision sentence in that state does not stand, which is the route E-0138-1 named as owed after being corrected for taking the cheaper one. Clause 1 stands and is what was executed"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: references/adr/0138 decision 4 (the clause this record supersedes in part) and decision 1 (which stands); references/adr/0092 rule 1 (a `## Decision` sentence moves by supersession, never by erratum); references/adr/ERRATA.md E-0138-1, whose parenthetical claiming clause 4's instruction *"stands and was followed"* is withdrawn and which names this supersession as OWED; references/adr/0139 (the same route taken for the identical shape 53 minutes earlier, cited as the precedent this record follows); crates/rk-kernel/src/replay.rs (`RecordedSpec`, `supplied`, `with_steps`, `steps`); crates/rk-kernel/src/runtime/step.rs (`run_activity_steps`' fall-through and its empty-list refusal); crates/rk-cli/src/verbs/run.rs (`bind_nodes`, the one production transcription)
