@@ -1,7 +1,7 @@
 ---
 id: "0142"
 title: "A step's `when` guard is evaluated against **the selection's own context** — the item's facet bindings plus the effective rigor as an ordinal, built in the kernel from values `replay::resume` already holds and **not** transcribed onto `RecordedSpec`. Measured: the empty `Context` made **121 of 121** `when` guards and **94 of 94** `check` exprs fail on `UnknownField`; the selection's context takes `when` to **75 of 121 evaluable**, the remaining 46 keeping ADR-0136's refusal. It repairs **none** of the 94 `check` exprs, which read STEP OUTPUTS and need the resolver ADR-0136 already records as OWED"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: references/adr/0136 (the guard's refusal, and the reference resolver it records as OWED); references/adr/0020 (rigor as a deontic ordinal); references/adr/0089 and AC-079 (abstention; absence of evidence never resolves to `false`); crates/rk-kernel/src/predicate/eval.rs (the unbound-path arm returning `UnknownField`); crates/rk-kernel/src/select/item.rs (`Item::context`, the context vector *"as the evaluator sees it, with no narrowing"*); crates/rk-kernel/src/rigor.rs (`context_for`, the axis bindings plus `rigor` as an ordinal); crates/rk-kernel/src/select.rs (`Selection::rigor`, *"The rigor in force at this stage (step 1)"*); crates/rk-kernel/src/replay.rs (`resume`, which already destructures the item and runs `select`)

@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-16), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-17), and what they license
 
 *(Title corrected 2026-09-22 at `s7g`'s open: it read "**Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6)**"
 while the file already carried **D21-7** and **D21-8** — `s7f`'s two flip lines, appended at its close on 2026-09-21 —
@@ -606,5 +606,57 @@ than trusting the convention.
 activities completing a committing walk, and correct bookkeeping around a blocked stage is not progress on
 it. Both records say so in their own bodies, so that a reader who reaches them without the tracker cannot
 mistake a tidy register for a working executor.
+
+---
+
+## D21-17 · ADR-0142 flips to `accepted` — the first of Step 7g's four blocking defects is repaired, and it was a threading problem
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s first executor repair.** ADR-0142 is confirmed as written
+and flips `proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**An engineering call inside the approved plan, like D21-13, D21-14, D21-15 and D21-16** — and recorded at
+this grain because `runbook/PROGRESS.md` §1's Step 7g row had already named the record as OWED, and because
+what it settles is **where the executor's context comes from**, which is a routing question no earlier
+record answers.
+
+**The finding underneath is worth more than the fix.** The blocker read *"the executor evaluates against an
+empty `Context`"*, which sounds like a missing component. It was not: `Item::context()` and
+`rigor::context_for` both already existed, both are what **selection itself** evaluates against, and both
+were in scope in the two functions that drive the walk. Nothing had to be designed. The executor was simply
+never handed what the rest of the kernel already had, which is the same shape as `s7g`'s other three
+blockers and is worth naming as a pattern rather than as four coincidences.
+
+**What the operator gets, stated as a range rather than a headline.** `when` guards go from **0 of 121**
+evaluable to **75**. The remaining 46 keep ADR-0136's by-name refusal — and, for the first time, refuse for
+their **real** reason: they were previously dying on `UnknownField("rigor")` before ever reaching the
+`${…}` reference the refusal named, so the message an operator saw was wrong about its own cause.
+
+**And it repairs none of the 94 `check` exprs, which is the more important half of the record.** Every one
+reads a prior step's OUTPUT. A context assembled from the item cannot bind one, and no amount of facet
+plumbing will change that. The `check` arm therefore becomes the **dominant remaining reason a walk ends**,
+which is the correct next thing to look at and is now recorded as such rather than discovered later.
+
+**Two things this line pins so they are not re-opened silently.** First, **one definition**: the rigor
+ordinal is built in a single place (`rigor::with_rigor`, extracted from `context_for`, which now calls it),
+so the static rigor pass and the executor cannot disagree about what `rigor >= recommended` compares
+against — a divergence there would be invisible, because both sides would be internally consistent.
+Second, the context is **built, not transcribed**: ADR-0141's route was available and was declined, because
+the kernel already holds both inputs and carrying a derived value through the run record would add `serde`
+to `predicate::Value`, pin a registry-derived ordinal domain into every record, and create a second thing
+that can drift from selection.
+
+**A consequence neither the record nor the plan predicted, recorded because it is evidence the fix is
+real.** `StepVerdict::Skipped` was **unreachable by construction** — an adversarial pass established that
+`parser::operand` admits only a `${ref}`, a prefix call or an identifier path, with no bare literals, so no
+parseable guard could ever answer `false` against an empty context. The variant, its match arm and its
+docstring were dead code. Binding the context gives it a first reachable case, and the test asserts that
+case rather than only the affirmative one — because a guard that always answered `true` would also have
+"stopped erroring".
+
+**What this does not license.** It does not make any activity complete a committing walk. Three blocking
+defects stand — the second-`agent`-step report overwrite, the swallowed post-commit failures and the no-op
+`gate` arm — and **Step 7g remains BLOCKED**. It does not build step-output resolution, and it does not
+weaken ADR-0136's prohibition on nulling references, which is untouched and is not made safer by the
+context now being populated.
 
 ---
