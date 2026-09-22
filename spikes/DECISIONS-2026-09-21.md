@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-18), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-21), and what they license
 
 *(Title corrected 2026-09-22 at `s7g`'s open: it read "**Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6)**"
 while the file already carried **D21-7** and **D21-8** — `s7f`'s two flip lines, appended at its close on 2026-09-21 —
@@ -704,5 +704,162 @@ deciding it by accident.
 `kill_and_resume_n_step` asserts. It does not touch the `check` arm (ADR-0142 clause 4), the swallowed
 post-commit failures, or the no-op `gate` arm. **Step 7g remains BLOCKED**, with two blocking defects
 standing.
+
+---
+## D21-19 · Checkpoint 7g is amended a SECOND time, and the cannot-dispatch lint is widened — the instruments, not the executor
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s third repair pass.** No ADR is written for this line and
+that is the decision: `design` §4.5 already decides that `check` cannot dispatch, `halts.md` Halt 8
+already decides how a checkpoint line must be written, and ADR-0134 clause 4 already fixes the
+equality form. Amending the instruments to actually assert those is **execution order, not a new
+decision**, and reserving "a decision is owed" for real free residuals is what keeps that phrase
+meaningful.
+
+**The first hardening note does not cover this one, and is not stretched to.** It reads *"Amending a
+checkpoint that has never been run is legitimate; doing it silently is not."* Checkpoint 7g has now
+run, green, twice. So the second amendment carries its own dated warrant beside the first rather than
+editing it — a pass is evidence about a specific text at a specific time.
+
+**Finding (12), measured rather than argued.** A `panic!` on `run_activity_steps`' FIRST statement,
+applied in a throwaway export at `2ce5576`, leaves **all six** Checkpoint 7g guards GREEN. Guards (1),
+(2) and (4) are source lints that execute no runtime; (3) calls `Runtime::execute_step` directly; (5)
+calls `Runtime::run_activity` directly; (6) constructs no `Runtime` at all — so bullet 5 would pass
+identically if `runtime/step.rs` were deleted. Guard (7) is added: `second_agent::`, the only two tests
+in the workspace that call `run_activity_steps` by name, and `ac432`, which reaches it through
+`replay::resume`, its one production call site. Two lines because there are two routes; a kernel-only
+line would be satisfied by a walk no production path enters, which is this stage's own defect one
+level up. Guards (5) and (6) gained `--test it`, without which their pass-count grep is satisfied by
+any target in the package reporting any pass.
+
+**⚠️ AND THE COUNT WAS WRONG FOR A WHOLE HOUR, IN THE DIRECTION THAT FLATTERS THE FINDING.** The first
+reading said **14** tests catch that mutant and doubted row 37's "twelve". Two of the 14 —
+`config::adr0083_...` and `rigor::rigor_monotonicity` — fail in that clone at **pristine HEAD with no
+mutant applied**, because `git clone --local` checks out under `core.autocrlf=true` and rewrote **121
+of 143** `rk-kernel` fixture files LF→CRLF, moving a recorded `run_id` digest and breaking a fixture
+text anchor. Both pass on the working tree. **Row 37's twelve was right.** The line exists because a
+mutation cycle whose export is not byte-faithful reports kills it did not make — and the direction of
+that error is the dangerous one: it makes a guard look better than it is.
+
+**Finding (13).** The cannot-dispatch lint read only `check_verdict`'s own lines. A dispatch would be
+written in `execute_step`'s `StepKind::Check` arm, which is inside `impl Runtime`, has `&self`, and
+sits far past the column-0 `}` that ends the body scan. Measured: adding `self.run_tool_step(step)`
+there COMPILES, makes every `check` step dispatch a toolchain verb, and leaves the lint GREEN. The
+lint now scans that arm too.
+
+**And the repair's own first draft was measurably wrong.** It banned `"self."` per line and went GREEN
+against the same mutant, because `rustfmt` writes the receiver and the call on separate lines
+(`match self` / `.run_tool_step(step)`) and no single line carries `self.`. That is the
+substring-anchor family this programme has already paid for twice. The region is now joined and its
+whitespace removed before it is scanned, and the ban is on bare `self`. Both mutant shapes — the
+one-line form a person types and the multi-line form `rustfmt` produces — are RED, for the right
+reason, with the clean tree GREEN.
+
+**What this does not license.** It does not certify the executor's BEHAVIOUR; guard (7) asserts the
+walk is entered and refuses correctly, not that any of the 102 shipped activities completes. It does
+not repair finding (8) — `blank_string_literals` still keeps no cross-line state, the shape is live
+inside the very region this lint scans, and the test's docstring says so rather than leaving it to be
+found. **Step 7g remains BLOCKED.**
+
+---
+
+## D21-20 · ADR-0144 flips to `accepted` — a step that fails after a committed dispatch refuses by name
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s third repair pass.** ADR-0144 is confirmed as written
+and flips `proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**An engineering call inside the approved plan, like D21-13 through D21-19.**
+
+**The line exists because two smaller fixes were available and both are wrong.** The walk's `Failed`
+arm discarded the error whenever a dispatch had already committed. Returning `refused(now, e)`
+unconditionally is one line and carries the error — and reports `committed() == false` for an
+activation whose `activity_committed` row is in the journal, which is ADR-0143's lie with the sign
+reversed. Writing the error into `outcome` is also one line — and `outcome` is the DISPATCH's own
+reading in both of its shapes (`Some(Ok(typed))` on the success path, `None` on AC-013's re-entry), so
+that is ADR-0143's defect one field over. The failure travels on its own field because both of the
+fields it could have borrowed are already saying something true.
+
+**What was wrong is ADR-0135 voided at the last step.** 29 of 33 `tool` verbs are refused BY NAME for
+one stated reason — *"a run that executed nothing would be indistinguishable from one that worked."*
+`run_tool_step` raised that refusal correctly, `StepVerdict::Failed` carried it correctly, and the arm
+that received it threw it away; `dispatch_through` asks only `committed()`, which is `true`, so the run
+reported a success. The refusal was working the whole time and never reached anyone.
+
+**The population is re-measured, and row 37's number is superseded rather than repeated.** Row 37 says
+**38 of 102**, taken before ADR-0143 made a second runnable `agent` step end the walk. Re-derived:
+**82** activities carry a non-agent step after the first agent step, **33** reach a `tool` or `check`
+step before the walk ends, and **29** of those reach a step that CANNOT succeed on this tree today. The
+last figure is the one that matters — for 29 activities the dropped error was not hypothetical.
+
+**No exit row is added, moved or renumbered.** The class maps through
+`impl From<&StepError> for Exit` — eleven arms, no wildcard — and only the message differs. But
+`run.rs`'s `Err(e) => Exit::ConfigError` catch-all would have mapped the new variant to row `3`
+silently, which is the *"all eleven rows arrived here as the same value"* failure Mechanism B exists to
+close, so the arm is written explicitly rather than the next author asked to remember.
+
+**What it buys, stated as honestly as the last three.** Nothing becomes executable. **29 of 102**
+activities now fail where they previously reported success, carrying the cause they always had. That is
+the whole gain.
+
+**What this does not license.** It does not repair the `check` arm (ADR-0142 clause 4: 94 of 94 shipped
+`expr`s read a prior step's OUTPUT, and step-output resolution stays OWED). It does not touch the `gate`
+arm. It does not widen AC-013's idempotence grain, which ADR-0138 pins. **Step 7g remains BLOCKED.**
+
+---
+## D21-21 · ADR-0145 flips to `accepted` — a catalog `gate` step opens the gate the selection already opens
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s fourth repair pass.** ADR-0145 is confirmed as written
+and flips `proposed → accepted`, `date: 2026-09-22` unchanged.
+
+**An engineering call inside the approved plan, like D21-13 through D21-20.**
+
+**The line exists because the honest small answer was available and was WRONG.** Every other refusal in
+this stage — ADR-0135's 29 verbs, ADR-0136's unresolvable guards, ADR-0143's second agent step — is a
+by-name refusal recording an OWED mechanism, and that was the obvious shape for the `gate` arm too. It
+would have been wrong: **the mechanism was not missing.** `workflow::gate::reach` exists and its own
+header calls it *"the entry a loop executor calls"*; `runtime::gate_opened_event` writes the
+token-bearing row; `fsm::apply` already tells two producers of that row apart; `terminal_read` already
+trailers the token and exits 0. All of it was three call sites away, with **no `src/` caller**. Refusing
+by name would have recorded as OWED a thing that was already built, and 80 gate steps would still do
+nothing.
+
+**The comment that stood in the arm was false, and the falsehood is the finding.** It read *"the mark is
+`workflow::gate`'s, written by `Runtime::step`'s `OpenGate` arm, and this walk authors no second path."*
+The second clause was true; the first was not. `OpenGate` is reached only from `selection.gates()` —
+the abstention, unsatisfiable and appetite gates, keyed `"{reason}:{axis}"` — and nothing connected a
+catalog gate step to it. *"This walk authors no second path"* was an intention stated as a fact; it is
+now a fact, because the arm calls the first path.
+
+**What was measurably broken, in two populations rather than one.** **55** activities had a gate after
+their first agent step and it was silently skipped. **15** reach one before dispatching — 13 with no
+agent step at all, 2 with the gate ahead of one — and those fell through to the *"no `agent` step
+produced a value"* refusal, whose message is about `emit` binding outputs and the reference resolver.
+**A refusal naming a mechanism that has nothing to do with gates** sends an operator looking in the
+wrong place, which is worse than the silence. The two take different code branches and a fix for either
+alone leaves the other exactly as it was; both are asserted.
+
+**The subtle wrong fix is guarded against explicitly.** `select()`'s announcement rows share the
+`gate_opened` kind and carry `{reason, axis, site}` with **no token**, and the fold moves state only on
+the runtime-shaped row. An arm that appended the announcement shape would write a row, report a gate,
+pass a naive test and **gate nothing**. The guard asserts the row is token-bearing and that its token is
+the same value the report carries — not two independently derived values that happen to agree, which is
+the two-written-to-agree defect this programme has a standing rule about. That mutant is run and killed.
+
+**Four absences had to be closed and none was an oversight.** `catalog::Step` never parsed `question`,
+so 80 gate steps had no kind to derive a token over; `step.rs` had neither `tree_hash` nor `deadline`,
+both of which this crate may not compute (AC-001, and `gate.rs`'s own header); `ActivityReport` had no
+gate carrier, `mark()` being AC-030's rate-limit mark alone; and `dispatch_through` asked only
+`committed()`, which is `false` for a gate BY DESIGN.
+
+**🛑 This is the first repair in Step 7g that makes something EXECUTABLE rather than honestly refused.**
+D21-17 through D21-20 each ended *"nothing becomes executable"*. This one does not: a walk that reaches
+a gate now ends in `Exit::Success` with a `Gate:` trailer and an answerable token, which is a path
+criterion (1) needs. **It does not follow that any of the 102 activities completes**, and the record
+says so: the `check` arm still ends most walks (ADR-0142 clause 4), per-step `ActivitySpec`s stay OWED
+(ADR-0143 clause 5), and the `${…}` resolver stays OWED (ADR-0136 clause 4).
+
+**What this does not license.** It does not claim the gate a step opens is the gate an operator should
+be ASKED — `question_for` is not consulted, no question text is rendered, and the answer path is
+untouched. It does not widen AC-013's grain. It does not add a second gate-mark shape. **Step 7g remains
+BLOCKED**, and its Result/commit column remains EMPTY.
 
 ---

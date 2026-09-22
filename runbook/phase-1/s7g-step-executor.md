@@ -69,6 +69,30 @@ FSM's own predicate and the re-entry path reads it; a step walk that re-ran comm
 🛑 **`check` cannot dispatch, and that is asserted, not assumed.** design §4.5's parenthesis is a prohibition; the
 arm takes no `Ports` at all, so the compiler carries it.
 
+⚠️ **And the ARM THAT ROUTES TO IT is asserted too, since 2026-09-22.** `PROGRESS.md` row 37's finding
+(13): the lint pinned `check_verdict`'s receiverless signature and nothing else, while a dispatch would be
+written in `execute_step`'s `StepKind::Check` arm — which is inside `impl Runtime`, has `&self`, and sits
+past the column-0 `}` that ended the body scan. Adding `self.run_tool_step(step)` there COMPILES, reaches
+`ports.toolchain` from every `check` step, and left the lint GREEN. The lint now scans that arm as a joined,
+whitespace-stripped region — its first repair banned `"self."` per line and was defeated by `rustfmt`
+splitting `match self` from `.run_tool_step(step)`.
+
+🛑 **THE `gate` ROW OF THAT TABLE WAS A STATEMENT OF INTENT UNTIL 2026-09-22, AND IS NOW A FACT.**
+Finding (4), repaired by **ADR-0145** (D21-21). The arm `break`ed and wrote nothing, and the comment beside
+it named `Runtime::step`'s `OpenGate` arm as the writer — which is reached only from `selection.gates()`,
+never from a catalog `[[step]] kind = "gate"`. Measured: **55** of the pack's activities had a gate silently
+skipped after their first agent step, and **15** reached one before dispatching and were handed the `emit`
+refusal, *a message about a mechanism that has nothing to do with gates*. The arm now mints through
+`workflow::gate::reach` and appends `runtime::gate_opened_event` — the same token-bearing row, so the fold,
+the `AwaitGate` action and `terminal_read`'s exit 0 all compose unchanged. `catalog::Step` parses `question`
+for the first time, as the gate's KIND. **This is the first repair in this stage that makes something
+executable rather than honestly refused**, and it still does not make any of the 102 activities complete.
+
+⚠️ **Finding (3), repaired by ADR-0144** (D21-20): a step failing AFTER a committed dispatch had its error
+discarded, so the run reported a success having executed nothing past the dispatch — ADR-0135's by-name
+refusal voided at the last step, for a re-measured **29 of 102** activities that reach a step which cannot
+succeed on this tree at all. The commit stands and the failure now travels on its own field.
+
 ### 7g.2 The Toolchain port's call site, and what AC-473 needs from it
 
 `rk-adapter-toolchain-rust` implements the `Toolchain` port — `detect`, `build`, `test`, `lint`, `classify`,
@@ -131,9 +155,13 @@ already records criterion (1) NOT SATISFIED on pack-authoring grounds. It is car
   pass: every `StepKind` has an executor arm, and `ports.toolchain` has a non-test call site.
 - **A `tool` step reaches `rk-adapter-toolchain-rust`** through the `Toolchain` port, asserted by the adapter being
   observed rather than by the step being selected.
-- **`check` cannot dispatch** — asserted structurally.
+- **`check` cannot dispatch** — asserted structurally at `check_verdict` **and at `execute_step`'s
+  `StepKind::Check` arm**, which is where a dispatch would actually be written (finding (13)).
 - **AC-013's re-entry still holds**: `kill_and_resume_n_step` and criterion (3)'s asserted half stay green.
 - **Criterion (2) stays green** — the step walk must not move the tier-1 projection.
+- **The step walk is ENTERED, and by the PRODUCTION route** — `run_activity_steps` is reached both
+  directly and through `replay::resume`. Added 2026-09-22: finding (12) measured that a `panic!` on its
+  first statement left all six guards below GREEN, while **12** tests across `rk-kernel` and `rk-cli` failed.
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -146,6 +174,13 @@ cd D:/repos/redkiln-rs
 # `target/`, and guards that captured `rc` and then tested only `rc` -- and only ONE of its four
 # guards grepped a positive passed count, so the other three were satisfied by a filter matching
 # NOTHING. Amending a checkpoint that has never been run is legitimate; doing it silently is not.
+#
+# 🛑 HARDENED A SECOND TIME, 2026-09-22, AND THIS BLOCK HAD RUN GREEN IN BETWEEN -- so the
+# warrant above does NOT cover this amendment and is not stretched to. An adversarial pass measured
+# that the five bullets were certified by six filters none of which entered the step walk (finding
+# (12)) and that the `check` prohibition was asserted at the function but not at the arm that routes
+# to it (finding (13)). Guard (7) is new; guards (5) and (6) gained `--test it`, without which their
+# pass-count grep is satisfied by any target in the package; bullets 3 and 6 moved with them.
 wt_before=$(git worktree list | grep -c .)
 
 # 🛑 BUILD-OR-FAIL. `target/` is gitignored, 0 tracked files live under it, and Checkpoint 7f
@@ -183,15 +218,44 @@ out=$(cargo test -p rk-kernel --test it -- the_check_arm_has_no_receiver_and_so_
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched the cannot-dispatch assertion"; exit 1; }
 
 # (5) BULLET 4: AC-013's re-entry still holds -- criterion (3)'s asserted half.
-out=$(cargo test -p rk-kernel -- kill_and_resume_n_step 2>&1); rc=$?
+out=$(cargo test -p rk-kernel --test it -- kill_and_resume_n_step 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: AC-013's re-entry broke under the step walk (rc=$rc) -- criterion (3) regressed"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched kill_and_resume_n_step -- the AC-013 guard asserted nothing"; exit 1; }
 
 # (6) BULLET 5: the tier-1 projection did not move -- criterion (2).
-out=$(cargo test -p rk-kernel -- rebuild_differential 2>&1); rc=$?
+out=$(cargo test -p rk-kernel --test it -- rebuild_differential 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the tier-1 projection moved under the step walk (rc=$rc) -- criterion (2) regressed"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo "FAIL: 0 tests matched rebuild_differential -- criterion (2)'s guard asserted nothing"; exit 1; }
 
+# (7) BULLET 6, ADDED 2026-09-22 AFTER THIS BLOCK HAD ALREADY RUN GREEN -- AND THAT IS THE FINDING.
+# Measured in a throwaway `git clone --local` at `2ce5576`: a `panic!` on `run_activity_steps`'
+# FIRST statement leaves guards (1)-(6) ALL GREEN. (1), (2) and (4) are SOURCE lints that execute
+# no runtime; (3) calls `Runtime::execute_step` directly; (5) calls `Runtime::run_activity`
+# directly; and (6) constructs no `Runtime` at all, so bullet 5 would pass identically if
+# `runtime/step.rs` were DELETED. Measured on the same mutant: 14 tests across `rk-kernel` and
+# `rk-cli` fail, and the six filters select around every one of them.
+#
+# ⚠️ THAT COUNT IS 12 AND THE FIRST READING SAID 14 -- the two extra were RED FOR A REASON
+# THAT WAS NOT THE MUTANT. `git clone --local` checks out under `core.autocrlf=true`, which
+# rewrote 121 of 143 `rk-kernel` fixture files LF->CRLF, moving a recorded `run_id` digest
+# (`config::adr0083_...`) and breaking a fixture text anchor (`rigor::rigor_monotonicity`).
+# Both FAIL in that clone at pristine HEAD with no mutant applied, and both PASS on this tree.
+# `PROGRESS.md` row 37's "twelve" was right; the correction is recorded rather than smoothed,
+# because a mutation cycle whose export is not byte-faithful reports kills it did not make.
+#
+# TWO LINES BECAUSE THERE ARE TWO ROUTES, not one assertion written twice. `second_agent::` are the
+# only two tests in the workspace that call `run_activity_steps` BY NAME; `ac432` reaches it through
+# the composition root's `replay::resume`, which is its ONE production call site. A kernel-only line
+# would be satisfied by a walk no production path enters, which is this stage's own defect one level up.
+#
+# The greps are PER-TEST (`^test ... ... ok$`), not the `test result: ok. N passed` form the guards
+# above use: with no `--test it` that form is satisfied by ANY target reporting ANY pass.
+out=$(cargo test -p rk-kernel --test it -- second_agent:: 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these are the only two tests that call run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE '^test .*\ba_second_runnable_agent_step_refuses_and_the_commit_survives\b.* \.\.\. ok$' || { echo "FAIL: a_second_runnable_agent_step_refuses_and_the_commit_survives did not run and pass -- a filter that matches nothing exits 0"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+out=$(cargo test -p rk-cli --test it -- explain::ac432_explain_over_replayed_log_is_byte_identical 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the PRODUCTION route into the walk is red (rc=$rc) -- replay::resume no longer reaches run_activity_steps, or reaches it and breaks"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE '^test .*\bac432_explain_over_replayed_log_is_byte_identical\b.* \.\.\. ok$' || { echo "FAIL: ac432 did not run and pass -- the composition-root route into the walk is asserted by nothing"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 # 🛑 DISARM THE HAZARD THIS BLOCK ARMS. `rk-cli`'s process-level tests spawn `redkiln run`, which
 # creates run-owned worktrees. A block that leaves registrations behind double-counts every later
 # repo-root grep against a stale second checkout -- measured at `s7f`, `TrailerKey::` returned 38
