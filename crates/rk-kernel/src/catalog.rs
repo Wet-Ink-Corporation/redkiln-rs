@@ -879,6 +879,38 @@ fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activ
                     continue;
                 }
             };
+            // 🛑 **ADR-0146 clause 4. A `question` MAY NOT CARRY A COLON, and the refusal is here
+            // because this is where the value enters the tree.**
+            //
+            // `RunState::gates_by_kind` is keyed on the bare kind string, and a selection-level
+            // gate's kind is the synthesised `"{reason}:{axis}"` — `unknown_facet:has_repro` and
+            // the like (`fsm::next_action` clause 2). Since ADR-0145 a catalog `question` becomes
+            // a gate kind too, so a `question = "unknown_facet:has_repro"` lands in the SAME reach
+            // sequence as the abstention gate of that axis. Measured on a fixture: the step gate
+            // minted **reach 2 of the selection gate's sequence**, `latest_gate` then pointed at
+            // the step gate's token, and — because `fsm`'s clause 2 opens only when
+            // `reaches == 0` — the abstention gate of that axis **could no longer be opened at
+            // all**. A catalog edit that silently suppresses an abstention, unsatisfiable or
+            // appetite gate is a much larger hole than the one ADR-0145 set out to close.
+            //
+            // Zero of the shipped pack's 45 distinct questions contains a colon, so this refuses
+            // nothing that exists today; it is the guard that keeps it that way. A colon is banned
+            // rather than the exact `"{reason}:{axis}"` shape, because `GateReason` is a closed set
+            // that a later record may widen, and a ban that tracked its members would go stale the
+            // moment it did — `fsm.rs`'s own header warns that two gates differing only in axis
+            // must not collapse into one.
+            let question = text(table, "question");
+            if let Some(q) = question.as_deref()
+                && q.contains(':')
+            {
+                out.push(diagnose(shape(format!(
+                    "{id}/{step_id}: `question` is {q:?}, which carries a `:`. A gate step's \
+                     `question` IS its gate kind (ADR-0145), and the selection's own gates are \
+                     keyed `\"{{reason}}:{{axis}}\"` — so a colon admits a catalog step into an \
+                     abstention gate's reach sequence, where it can suppress that gate entirely"
+                ))));
+                continue;
+            }
             let retry_max = match bounded_max(table, "retry", &id, &shape) {
                 Ok(max) => max,
                 Err(error) => {
@@ -916,7 +948,7 @@ fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activ
                 // `question` on a non-gate step is a declaration this crate should be able to see
                 // in order to refuse it, and a key read only where it is expected is a key that
                 // goes missing silently everywhere else.
-                question: text(table, "question"),
+                question,
             });
         }
     }

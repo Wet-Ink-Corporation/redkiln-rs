@@ -33,11 +33,36 @@
 //!    `outcome` would satisfy (1) and (2) and destroy the dispatch's reading — ADR-0143's defect
 //!    one field over. `outcome()` must still be the `Ok(typed)` the harness returned.
 //!
-//! # What this does not cover
+//! # 🛑 What this does NOT cover, corrected 2026-09-22 — this header once claimed the opposite
 //!
-//! The walk is entered **directly**, as `second_agent.rs` enters it. The mapping from
-//! `ReplayError::StepFailedAfterCommit` to an exit row lives in `rk-cli` and is asserted there;
-//! nothing here spawns a binary.
+//! It read: *"The mapping from `ReplayError::StepFailedAfterCommit` to an exit row lives in
+//! `rk-cli` and **is asserted there**."* **It was not.** An adversarial pass measured that
+//! `StepFailedAfterCommit` appeared on four source lines and **zero test lines**, and that two of
+//! ADR-0144's three edits were protected by nothing:
+//!
+//! | mutation | workspace | exit |
+//! | --- | --- | --- |
+//! | delete `dispatch_through`'s `step_error()` check | **GREEN** | **0** |
+//! | the `run.rs` arm returns `Exit::ConfigError` | **GREEN** | **3** |
+//! | the pre-ADR-0144 `Failed` one-liner | RED — *this* file | 0 |
+//!
+//! **This file tests `ActivityReport` and nothing else.** The report may carry `step_error` and
+//! every caller may ignore it. A header sentence asserting coverage that does not exist is worse
+//! than silence, because it is exactly what a reader checks instead of the test list.
+//!
+//! The mapping **is** asserted now, end to end, by
+//! `rk-cli`'s `exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three` — written in
+//! the same change that corrected this sentence, which is the only honest order.
+//!
+//! The walk is still entered **directly** here, as `second_agent.rs` enters it; nothing in this
+//! file spawns a binary.
+//!
+//! ⚠️ **And one assertion of the three below is weaker than it reads.** The claim that each is
+//! satisfied by a wrong fix the other two reject is FALSE: an *attach-and-continue* fix — one that
+//! calls `with_step_failure` but does not `return` — passes all three, the control, and the whole
+//! workspace, because this walk is only two steps long and "return" and "fall through" are
+//! observationally identical at its end. `StepVerdict::Failed`'s own docstring says *"The walk ends
+//! and this is the activation's error"*; **nothing here asserts that it ends.**
 
 use std::sync::Arc;
 
@@ -155,7 +180,17 @@ fn a_step_failing_after_a_committed_dispatch_refuses_by_name_and_keeps_the_commi
         "run-post-commit-failure-2",
         STAGE,
     );
-    let steps = vec![agent_step("draft"), tool_step("publish-it", "publish")];
+    // 🛑 **THREE STEPS, NOT TWO, AND THE THIRD IS LOAD-BEARING.** With `[agent, tool]` the walk
+    // ends immediately after the failing step anyway, so `return` and `fall through` are
+    // OBSERVATIONALLY IDENTICAL and an attach-and-continue fix — one that calls
+    // `with_step_failure` without returning — passes every assertion below. Measured: it did.
+    // A second unmapped verb behind the first makes the difference visible, because a walk that
+    // did not end would reach it and OVERWRITE the error with `deploy`.
+    let steps = vec![
+        agent_step("draft"),
+        tool_step("publish-it", "publish"),
+        tool_step("deploy-it", "deploy"),
+    ];
     let report = rt2
         .run_activity_steps(
             activation(&sp),
@@ -182,6 +217,16 @@ fn a_step_failing_after_a_committed_dispatch_refuses_by_name_and_keeps_the_commi
         rendered.contains("publish"),
         "the refusal does not NAME the verb it refused, so the journal cannot say which of the 29 \
          was reached (ADR-0135 clause 2): {rendered}"
+    );
+    // (1b) AND THE WALK ENDED THERE. `StepVerdict::Failed`'s own docstring is "The walk ends and
+    // this is the activation's error"; without this the arm may attach the error and CONTINUE,
+    // which passes every other assertion in this test and is what an adversarial pass exploited.
+    assert!(
+        !rendered.contains("deploy"),
+        "the walk did NOT end at the failing step: it carried on to `deploy-it` and overwrote the \
+         error. `StepVerdict::Failed` means the walk ends — an executor that attaches a failure \
+         and keeps going reports the LAST failure instead of the first, and re-opens the gate-arm \
+         masking that `dispatch_through`'s ordering now guards against: {rendered}"
     );
 
     // (2) AND THE COMMIT SURVIVES.

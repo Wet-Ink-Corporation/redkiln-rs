@@ -1484,6 +1484,29 @@ fn dispatch_through(
         env.cap,
         env.now,
     )?;
+    // **ADR-0144. THE REFUSAL IS ASKED FIRST, BEFORE THE GATE AND BEFORE `committed()`.**
+    //
+    // `committed()` is `true` on this report, so asking it first would return `Ok` and the
+    // refusal would be gone. The activation did commit; a later step in its walk then refused,
+    // and that refusal is the only thing an operator can act on. It cannot arrive through
+    // `outcome()` — for a fresh commit that is `Some(Ok(typed))`, the dispatch's own value — so
+    // it travels on its own field.
+    //
+    // 🛑 **AND IT IS ASKED BEFORE THE GATE ARM, WHICH IT WAS NOT WHEN ADR-0145 LANDED.** An
+    // adversarial pass measured the hazard: a report carrying BOTH a gate token and a live
+    // `step_error` returns `Ok` from the gate arm below and the refusal is DISCARDED — the run
+    // exits 0 having failed. At HEAD the two are mutually exclusive because both arms of the
+    // walk `return` immediately, but **that is an invariant held in another file and asserted
+    // nowhere**: any future edit that makes a failed step recoverable, or calls
+    // `with_step_failure` anywhere but that arm, re-opens it silently. Ordering the refusal
+    // first removes the hazard rather than documenting it.
+    if let Some(class) = report.step_error() {
+        return Err(ReplayError::StepFailedAfterCommit {
+            step_id: step_id.to_owned(),
+            activity_id_at_version: key.activity_id_at_version.clone(),
+            class: class.clone(),
+        });
+    }
     // **ADR-0145. A GATE IS AN EXIT, NOT A FAILED DISPATCH — AND IT IS ASKED BEFORE `committed()`.**
     //
     // design §4.5: the kernel writes the mark and the run EXITS 0, resuming into this same step. A
@@ -1501,18 +1524,6 @@ fn dispatch_through(
             .into_iter()
             .skip(before)
             .collect::<Vec<Event>>());
-    }
-    // **ADR-0144.** Asked BEFORE `committed()`, because `committed()` is `true` on this report and
-    // the function would otherwise return `Ok` and the refusal would be gone. The activation did
-    // commit; a later step in its walk then refused, and that refusal is the only thing an operator
-    // can act on. It cannot arrive through `outcome()` — for a fresh commit that is
-    // `Some(Ok(typed))`, the dispatch's own value — so it travels on its own field.
-    if let Some(class) = report.step_error() {
-        return Err(ReplayError::StepFailedAfterCommit {
-            step_id: step_id.to_owned(),
-            activity_id_at_version: key.activity_id_at_version.clone(),
-            class: class.clone(),
-        });
     }
     if !report.committed() {
         return Err(ReplayError::NotCommitted {

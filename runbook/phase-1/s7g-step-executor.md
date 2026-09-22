@@ -244,9 +244,18 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo
 # because a mutation cycle whose export is not byte-faithful reports kills it did not make.
 #
 # TWO LINES BECAUSE THERE ARE TWO ROUTES, not one assertion written twice. The first names every test
-# module that calls `run_activity_steps` BY NAME; `ac432` reaches it through the composition root's
-# `replay::resume`, which is its ONE production call site. A kernel-only line would be satisfied by a
-# walk no production path enters, which is this stage's own defect one level up.
+# module that calls `run_activity_steps` BY NAME. The second drives `run_with` -- the REAL composition
+# root -- over a binding made with `with_steps`, dispatches for real, and asserts the exit code of a
+# failure raised INSIDE the walk: it cannot pass unless the walk body executed. A kernel-only line
+# would be satisfied by a walk no production path enters, which is this stage's own defect one level up.
+#
+# 🛑 THE SECOND LINE NAMED `ac432` UNTIL AN ADVERSARIAL PASS REFUTED IT THE SAME DAY. `explain.rs`
+# binds `RecordedSpec::supplied(..)`, which yields `steps: None`, so `run_activity_steps` RETURNS AT
+# THE FALL-THROUGH one line before the walk. Measured: a `panic!` placed after that `else` leaves
+# `ac432` GREEN and turns `second_agent::` RED. Guard (7b) proved the function was CALLED, not that the
+# walk was ENTERED -- finding (12)'s own defect, inside finding (12)'s repair, for the SECOND time in
+# one day. The first was the stale `only two tests` comment above. Both were found by re-deriving what
+# the line asserts instead of re-reading it.
 #
 # ⚠️ CORRECTED THE SAME DAY, AND THE CORRECTION IS THE POINT. This comment read "`second_agent::` are
 # the only two tests in the workspace that call `run_activity_steps` BY NAME" and the line filtered on
@@ -266,9 +275,9 @@ for t in a_second_runnable_agent_step_refuses_and_the_commit_survives \
          a_gate_step_after_a_dispatch_writes_the_runtime_mark_and_keeps_the_commit; do
   printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: $t did not run and pass -- a filter that matches nothing exits 0, and one module dropping out would otherwise be absorbed by the other two"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 done
-out=$(cargo test -p rk-cli --test it -- explain::ac432_explain_over_replayed_log_is_byte_identical 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the PRODUCTION route into the walk is red (rc=$rc) -- replay::resume no longer reaches run_activity_steps, or reaches it and breaks"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE '^test .*\bac432_explain_over_replayed_log_is_byte_identical\b.* \.\.\. ok$' || { echo "FAIL: ac432 did not run and pass -- the composition-root route into the walk is asserted by nothing"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+out=$(cargo test -p rk-cli --test it -- exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the PRODUCTION route into the WALK BODY is red (rc=$rc) -- run_with no longer reaches run_activity_steps with a transcribed list, or reaches it and breaks"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE '^test .*\badr0144_post_commit_step_failure_exits_the_class_row_not_three\b.* \.\.\. ok$' || { echo "FAIL: the end-to-end walk guard did not run and pass -- the composition-root route INTO THE WALK BODY is asserted by nothing"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 # 🛑 DISARM THE HAZARD THIS BLOCK ARMS. `rk-cli`'s process-level tests spawn `redkiln run`, which
 # creates run-owned worktrees. A block that leaves registrations behind double-counts every later
 # repo-root grep against a stale second checkout -- measured at `s7f`, `TrailerKey::` returned 38

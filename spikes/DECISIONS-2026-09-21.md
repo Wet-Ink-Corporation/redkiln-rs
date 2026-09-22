@@ -1,4 +1,4 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-21), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-22), and what they license
 
 *(Title corrected 2026-09-22 at `s7g`'s open: it read "**Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6)**"
 while the file already carried **D21-7** and **D21-8** — `s7f`'s two flip lines, appended at its close on 2026-09-21 —
@@ -861,5 +861,118 @@ says so: the `check` arm still ends most walks (ADR-0142 clause 4), per-step `Ac
 be ASKED — `question_for` is not consulted, no question text is rendered, and the answer path is
 untouched. It does not widen AC-013's grain. It does not add a second gate-mark shape. **Step 7g remains
 BLOCKED**, and its Result/commit column remains EMPTY.
+
+---
+## D21-22 · ADR-0146 flips to `accepted` — the adversarial pass refuted ADR-0145 on the day it was accepted, and it was right
+
+**Confirmed 2026-09-22 (dated line), at `s7g`'s adversarial pass.** ADR-0146 is confirmed as written
+and flips `proposed → accepted`, `date: 2026-09-22` unchanged. It **supersedes ADR-0145 clause 7 in
+part**; `0145` stays `accepted` and every other clause of it stands.
+
+**An engineering call inside the approved plan, like D21-13 through D21-21.**
+
+**The line exists because a record accepted four hours earlier was WRONG in a way its own author could
+not see.** ADR-0145's clause 7 reads *"The run resumes into the same step when the gate is answered"*
+— and there was no mechanism by which resuming into the same step could ever get PAST it. The
+`gate` arm called `gate::reach` unconditionally, and `gate::reach` mints at `reaches + 1`. So an
+**answered** gate re-opened at reach 2, then 3, for ever. **The clause is the defect, written down as
+the intent**, which is why this is a supersession and not an erratum: there was no misstatement to
+correct, the decision itself was wrong.
+
+**Measured through the REAL BINARY, three run→answer rounds:** three `gate_opened` rows, three
+distinct tokens, and **never a `Dispatch`**. The same harness over the pristine selection gate
+resumes past it on run 2 and reaches `Dispatch, DispatchCompleted, ActivityCommitted`. So ADR-0145's
+*"the fold cannot tell the two producers apart and does not have to"* is true of the **row shape** and
+false of the **gate lifecycle**.
+
+**The 15 were permanently unexecutable and the `answer` verb was a treadmill.** An activation that
+gates before dispatching never commits, so `is_committed` never skips its node, so every resume walked
+back to the same step. The 55 that gate after a commit were safe only because `is_committed` skips the
+node next time — **the defect was masked there, not absent**, which is the more dangerous half.
+
+**⚠️ WHY THE GUARDS COULD NOT SEE IT, and it is the same shape as finding (12).** All four of
+ADR-0145's tests pass `empty_state()`, where `reaches(kind) == 0` and the arm's only reachable branch
+is the one that opens. **A fixture set that sits entirely at reach 1 cannot observe a re-reach defect
+at all** — exactly as six checkpoint filters could not observe a walk they never entered. The repair
+adds a test at reach 2 over an answered history and a void control; ADR-0146 clause 5 makes the rule
+explicit.
+
+**And ADR-0145 OPENED a second hole that its predecessor could not have had.** Before it, a catalog
+`question` was dropped at load and could collide with nothing. After it, a `question` matching a
+selection gate's `"{reason}:{axis}"` lands in that gate's reach sequence: measured, the step gate
+minted **reach 2 of the abstention gate's sequence**, and because `fsm`'s clause 2 opens only when
+`reaches == 0`, **that abstention gate could no longer be opened at all**. A catalog edit silently
+suppressing an abstention, unsatisfiable or appetite gate is larger than anything ADR-0145 set out to
+close. Clause 4 bans a `:` in a `question` at LOAD, through the strict loader `run` uses.
+
+**🛑 THE ADVERSARIAL PASS ALSO REFUTED TWO CLAIMS OF ADR-0144, AND BOTH REFUTATIONS STAND.**
+
+1. **Its guard covered ONE of the three edits the record makes.** Deleting `dispatch_through`'s
+   `step_error()` check left the **whole workspace green** with the run exiting **0** — the exact
+   defect ADR-0144 closed. Mutating the `run.rs` arm to `Exit::ConfigError`, the shape clause 5
+   forbids by name, also left the whole workspace green. `StepFailedAfterCommit` appeared on four
+   source lines and **zero test lines**. An end-to-end guard now asserts exit **19**, and it is
+   mutant-tested against all three edits.
+2. **`post_commit_failure.rs`'s own header claimed that mapping "is asserted there".** It was not.
+   The sentence is corrected in the same change that makes it true — **a header asserting coverage
+   that does not exist is worse than silence, because it is what a reader checks instead of the test
+   list.**
+3. **ADR-0144's claim that each of its three assertions is satisfied by a wrong fix the other two
+   reject is FALSE.** An *attach-and-continue* fix passes all three, the control, and the whole
+   workspace, because the guard's walk was two steps long and `return` and `fall through` are
+   observationally identical at its end. A third step now makes the difference visible.
+4. **A latent masking hazard is closed rather than documented.** `dispatch_through` asked
+   `gate_opened()` before `step_error()`, so a report carrying both would have returned `Ok` and
+   discarded the refusal. At HEAD the two are mutually exclusive — **but only because both arms of
+   the walk `return`, an invariant held in another file and asserted nowhere**. The refusal is now
+   asked first.
+
+**What is OWED and is NOT closed here, named rather than left to be found.** A step gate's class is
+its `question`, and `run`'s `expiry_pass` refuses a class with no `[[gate_expiry]]` row. Measured:
+`grep -c gate_expiry .redkiln/packs/*.toml` → **0 and 0**. So a step gate that passes its deadline
+makes the next run exit **3**. ADR-0145 added 45 gate classes to the runtime's reachable set and no
+expiry rows for any of them; ADR-0146 does not add them either. Also OWED and unrepaired: the
+`Emitted` break arm drops every later step silently (unreachable on today's pack — 0 of 102
+activities have a step after their first `emit` — and `catalog.rs` does not enforce emit-is-last);
+and ADR-0143's second-agent arm mints a fresh `refused()` report, so `committed()` is `false` and
+`skipped()` is `true` for an activation whose `activity_committed` row is in the journal, while the
+message it carries says `COMMITTED` — the very shape ADR-0144's driver 2 forbids, in a sibling arm
+of the same `match`.
+
+**🛑 AND THE PASS REFUTED THE INSTRUMENTS AGAIN — GUARD (7b) WAS SATISFIED BY A WALK BODY THAT PANICS.**
+The line named `ac432`. `explain.rs` binds `RecordedSpec::supplied(..)`, which yields `steps: None`, so
+`run_activity_steps` **returns at the fall-through one line before the walk**. Measured: a `panic!`
+placed after that `else` leaves `ac432` GREEN and turns `second_agent::` RED. The guard proved the
+function was CALLED, not that the walk was ENTERED — **finding (12)'s own defect, inside finding
+(12)'s repair, for the second time in one day**; the first was the stale *"only two tests"* comment.
+It now names an end-to-end guard that drives `run_with` over a `with_steps` binding and asserts the
+exit code of a failure raised INSIDE the walk, so it cannot pass unless the body ran.
+
+**Eleven mutations survived the block at `ad2a58e`; six still survive it.** Guard (7a) and guard (3)
+are the only two that killed anything in seventeen attempts — guards (1), (2), (4), (5) and (6)
+killed **nothing**. Repaired here: the walk stopping after the first non-agent step (every fixture put
+its non-agent step LAST, so "stop" and "run on" were observationally identical — the same blindness
+as a gate fixture that only ever sits at reach 1). **NOT repaired, and recorded as findings:** the
+cannot-dispatch lint is defeated by a `&Runtime` parameter under another name, by a helper method
+whose name is on no ban list, and by finding (8)'s multi-line literal truncating the scanned region
+— *this stage's own docstring predicted the first and named the third, and both are now measured
+facts rather than hazards*. **A source lint cannot close it; a behavioural half is OWED.** Also
+unguarded anywhere: `emit`'s terminality, ADR-0138's empty-list forbid, and the `check` arm swallowing
+`Ok(false)`/`Err`.
+
+**⚠️ AND THIS PASS'S OWN EXPORT DISCIPLINE HAS THE CAUSALITY INVERTED FOR ONE TEST.** D21-19
+recorded that `config::adr0083_…` and `rigor::rigor_monotonicity` fail in an `autocrlf` clone and pass
+on this tree. For `rigor_monotonicity` that is right. For `adr0083` it is the wrong way round: the
+committed `run_id` is a digest **over the bytes of** `tests/fixtures/logs/…/inputs/catalog/*.toml`,
+`.gitattributes` does not carry a `-text` row for `crates/rk-kernel/tests/fixtures/logs/**`, and those
+five files are CRLF in this worktree. **The recorded digest pins CRLF.** The test passes here
+*because* `core.autocrlf=true` rewrote them, and fails on any LF checkout — including a Linux CI. So
+neither an all-LF nor an all-CRLF export is faithful; the recipe is *check out, then overlay the
+working-tree bytes*, and the real repair is a `.gitattributes` row. **OWED, not taken here.**
+
+**What this does not license.** It does not make any of the 102 activities complete. It does not widen
+AC-013's grain. It does not claim the gate a step opens is the gate an operator should be ASKED. It
+does not claim Checkpoint 7g now certifies the executor — six mutations still survive it.
+**Step 7g remains BLOCKED**, and its Result/commit column remains EMPTY.
 
 ---

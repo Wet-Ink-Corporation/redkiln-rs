@@ -457,3 +457,123 @@ fn ac438_poisoned_lock_halt_is_seventy_through_code_for() {
         "row 70 is absent from the closed table it belongs to"
     );
 }
+/// One `[[step]]`, for a walk this test transcribes itself.
+fn adr0144_step(
+    id: &str,
+    kind: rk_kernel::catalog::StepKind,
+    run: Option<&str>,
+    role: Option<&str>,
+) -> rk_kernel::catalog::Step {
+    rk_kernel::catalog::Step {
+        id: id.to_owned(),
+        kind,
+        run: run.map(ToOwned::to_owned),
+        output_type: None,
+        role: role.map(ToOwned::to_owned),
+        when: None,
+        expr: None,
+        for_each: None,
+        retry_max: None,
+        repeat_max: None,
+        memo_declared: None,
+        question: None,
+    }
+}
+
+/// **ADR-0144 END TO END: a step failing after a committed dispatch exits the CLASS's row, not 3.**
+///
+/// 🛑 **This exists because an adversarial pass measured that ADR-0144's kernel guard covered ONE of
+/// the three edits the record makes.** `post_commit_failure.rs` asserts over `ActivityReport` and
+/// nothing else — the report may carry `step_error` and every caller may ignore it. Measured on the
+/// tree as ADR-0144 first shipped it:
+///
+/// | mutation | workspace | exit |
+/// | --- | --- | --- |
+/// | delete `dispatch_through`'s six-line `step_error()` check | **GREEN** | **0** |
+/// | the `run.rs` arm returns `Exit::ConfigError` (clause 5's forbidden shape) | **GREEN** | **3** |
+/// | the pre-ADR-0144 `Failed` one-liner in `step.rs` | RED (the kernel guard) | 0 |
+///
+/// Two of the three edits were protected by nothing but the comment above them. `StepFailedAfterCommit`
+/// appeared on four source lines and **zero test lines**.
+///
+/// ⚠️ **And `post_commit_failure.rs`'s own header claimed this test already existed** — *"The mapping
+/// … lives in `rk-cli` and is asserted there"*. It did not. That sentence is corrected in the same
+/// change that makes it true, which is the only honest order.
+///
+/// # What makes it non-vacuous
+///
+/// The dispatch must really COMMIT — `harness.dispatches() == 1` is asserted, so an exit produced by
+/// a run that never dispatched cannot read as a pass. `toolchain:publish` is one of ADR-0135's 29
+/// refused verbs, so the failing step reaches no port and the class is `Unsupported` → row **19**,
+/// a pre-existing row. **No row is added, moved or renumbered** — clause 6.
+#[test]
+fn adr0144_post_commit_step_failure_exits_the_class_row_not_three() {
+    use std::sync::Arc;
+
+    use rk_kernel::catalog::StepKind;
+
+    let steps = vec![
+        adr0144_step("draft", StepKind::Agent, None, Some("implementer")),
+        adr0144_step(
+            "publish-it",
+            StepKind::Tool,
+            Some("toolchain:publish"),
+            None,
+        ),
+    ];
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
+    let (inputs, tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+    let inputs = inputs.with_spec(
+        "emit-report",
+        rk_kernel::replay::RecordedSpec::with_steps(
+            "emit-report@1",
+            crate::support::any_activity_spec(),
+            steps.clone(),
+        ),
+    );
+    let trace = crate::support::Trace::new();
+    let store = crate::support::counting_store(&trace);
+    let harness = Arc::new(crate::support::ScriptedHarness::scripted(vec![Ok(
+        crate::support::impl_report(),
+    )]));
+    let ports = crate::support::ports(
+        Arc::clone(&harness) as Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let token = rk_ports::cancel::CancelToken::new();
+    let spec2 = crate::support::any_activity_spec();
+    let steps2 = steps.clone();
+    let mut supply = move |_node: &str| {
+        Ok(rk_kernel::replay::RecordedSpec::with_steps(
+            "emit-report@1",
+            spec2.clone(),
+            steps2.clone(),
+        ))
+    };
+
+    let got = rk_cli::verbs::run::run_with(
+        &resolved,
+        &inputs,
+        crate::support::FIXED_NOW,
+        &tree_hash,
+        ports,
+        &mut supply,
+        &token,
+    );
+
+    assert_eq!(
+        got,
+        Ok(Exit::Unsupported),
+        "ADR-0144 clauses 3, 5 and 6. `Ok(Success)` here is the defect the record closed — a run \
+         that executed NOTHING after its dispatch reporting success, which is ADR-0135's by-name \
+         refusal voided at the last step. `Ok(ConfigError)` is the catch-all clause 5 forbids, and \
+         is what `run.rs` returns for every variant it is not explicitly told about. Got {got:?}"
+    );
+    assert_eq!(
+        harness.dispatches(),
+        1,
+        "the exit above is not a reading of a COMMITTED dispatch — with zero dispatches the walk \
+         never reached the failing step and this assertion is about nothing"
+    );
+}

@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: design §4.5 (*"`gate` (the kernel writes the mark and **exits 0**, resuming into the same step)"*); references/adr/0022 (the kernel takes no action until a gate is answered); references/adr/0144 (its sibling on the `Failed` arm, and the precedent for a second carrier on `ActivityReport`); crates/rk-kernel/src/workflow/gate.rs (`reach` — *"the entry a loop executor calls"*, with no `src/` caller until now); crates/rk-kernel/src/workflow/fsm.rs (`GateRecord::derive_reach`; the `GateOpened` fold arm, which tells two producers apart by `tree_hash`/`deadline`); crates/rk-kernel/src/runtime.rs (`gate_opened_event`, and `Runtime::step`'s `OpenGate` arm); crates/rk-kernel/src/catalog.rs (the hand-written `[[step]]` loader); crates/rk-cli/src/verbs/run.rs (`terminal_read`, which already exits 0 on a token-bearing row)
 supersedes: []
-superseded_by: []
+superseded_by: ["0146"]
 related: ["0022", "0044", "0135", "0136", "0138", "0142", "0143", "0144"]
 evidence: []
 consumers: []

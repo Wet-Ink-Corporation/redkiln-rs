@@ -86,11 +86,6 @@ use crate::predicate::{self, Tri};
 use crate::workflow::breaker::JournaledNow;
 use crate::workflow::envelope::AttemptCap;
 
-/// The four values that identify one activation to the walk.
-///
-/// Bundled rather than passed loose because `run_activity_steps` would otherwise take eight
-/// arguments and trip `clippy::too_many_arguments` (denied here). The bundle is also the honest
-/// shape: these four always travel together and `run_activity` already threads all four.
 /// **ADR-0145. What a `gate` step needs in order to open a gate, and nothing else.**
 ///
 /// `GateRecord::derive_reach` digests `(kind, tree_hash, deadline, reach)`. None of the four is
@@ -112,6 +107,11 @@ pub struct GateSite<'a> {
     pub deadline: rk_types::time::Timestamp,
 }
 
+/// The four values that identify one activation to the walk.
+///
+/// Bundled rather than passed loose because `run_activity_steps` would otherwise take eight
+/// arguments and trip `clippy::too_many_arguments` (denied here). The bundle is also the honest
+/// shape: these four always travel together and `run_activity` already threads all four.
 #[derive(Debug, Clone, Copy)]
 pub struct Activation<'a> {
     /// The item the activation belongs to.
@@ -446,6 +446,41 @@ impl super::Runtime {
                         gate.deadline,
                         None,
                     );
+                    // 🛑 **ADR-0146 clause 2: DOES THIS GATE NEED OPENING, OR HAS IT BEEN
+                    // ANSWERED? ASKED BEFORE MINTING, AND THE FIRST VERSION OF THIS ARM DID NOT
+                    // ASK.**
+                    //
+                    // As first written the arm called `gate::reach` unconditionally, and
+                    // `gate::reach` mints at `reaches(kind) + 1` — so an ANSWERED gate re-opened
+                    // at reach 2, then 3, for ever. Measured through the real binary over three
+                    // run→answer rounds: three `gate_opened` rows, three distinct tokens, and
+                    // **never a `Dispatch`**. The **15** activities that gate BEFORE any dispatch
+                    // never commit, so `is_committed` never skips their node, so every resume
+                    // walked back to the same gate step. They were permanently unexecutable and
+                    // the `answer` verb was a treadmill. (The 55 that gate AFTER a commit were
+                    // safe only because `is_committed` skips the node next time — the defect was
+                    // masked, not absent.)
+                    //
+                    // This mirrors `fsm::next_action`'s clause 2, which has had exactly this
+                    // discipline since 2026-09-17 and whose own comment records the same bug one
+                    // level up: *"a tree that moved after an answer would have re-opened an
+                    // answered gate on every call, and a void token could never re-open at all."*
+                    // Three dispositions, and the third is the one that was missing:
+                    //
+                    //   * never reached      -> open at reach 1;
+                    //   * latest is VOID     -> re-open at reach n+1 (AC-252);
+                    //   * otherwise          -> **PROCEED PAST IT**. An answered gate is done, and
+                    //     an EXPIRED one is the expiry policy's terminal path (ADR-0017, AC-257,
+                    //     AC-259) and is deliberately not re-opened here — `fsm` falls through to
+                    //     `Dispatch` on both, and so does this walk.
+                    let reaches = gate.state.reaches(kind);
+                    let void = gate
+                        .state
+                        .latest_gate(kind)
+                        .is_some_and(|t| gate.state.is_void(t));
+                    if reaches > 0 && !void {
+                        continue;
+                    }
                     // A `CanonError` here is a step's own failure and therefore a VALUE (AC-032),
                     // not an error of this function — the same treatment `guard_holds` and
                     // `check_verdict` give theirs. It is also unreachable on today's payload,

@@ -288,3 +288,77 @@ fn render(diagnostics: &[rk_kernel::catalog::CatalogDiagnostic]) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+/// A gate step whose `question` carries a `:` — the shape a selection-level gate kind has.
+const GATE_QUESTION_WITH_COLON: &str = concat!(
+    "[activity]\n",
+    "id = \"triage-repro\"\n",
+    "stage = \"triage\"\n",
+    "method_rank = 10\n",
+    "\n",
+    "[[step]]\n",
+    "id = \"confirm\"\n",
+    "kind = \"gate\"\n",
+    "question = \"unknown_facet:has_repro\"\n",
+);
+
+/// The same activity with an ordinary question — the positive control.
+const GATE_QUESTION_PLAIN: &str = concat!(
+    "[activity]\n",
+    "id = \"triage-repro\"\n",
+    "stage = \"triage\"\n",
+    "method_rank = 10\n",
+    "\n",
+    "[[step]]\n",
+    "id = \"confirm\"\n",
+    "kind = \"gate\"\n",
+    "question = \"repro.confirm\"\n",
+);
+
+/// **ADR-0146 clause 4: a `question` may not carry a colon, refused at LOAD.**
+///
+/// Since ADR-0145 a catalog `question` IS a gate kind, and `RunState::gates_by_kind` is keyed on the
+/// bare kind string. A selection-level gate's kind is the synthesised `"{reason}:{axis}"`
+/// (`fsm::next_action` clause 2), so `question = "unknown_facet:has_repro"` lands in the SAME reach
+/// sequence as that abstention gate.
+///
+/// 🛑 **Measured on a fixture before this refusal existed**: the step gate minted **reach 2 of the
+/// selection gate's sequence**, `latest_gate` then pointed at the step gate's token, and — because
+/// `fsm`'s clause 2 opens only when `reaches == 0` — the abstention gate of that axis could no
+/// longer be opened AT ALL. A catalog edit that silently suppresses an abstention, unsatisfiable or
+/// appetite gate is a far larger hole than the one ADR-0145 set out to close, and it is a hole this
+/// record's own change OPENED: before it, `question` was dropped at load and could collide with
+/// nothing.
+///
+/// Zero of the shipped pack's 45 distinct questions contains a colon, so this refuses nothing that
+/// exists — it is what keeps that true.
+#[test]
+fn adr0146_gate_question_may_not_carry_a_colon() {
+    let refused = Catalog::from_sources(&[("triage-repro.toml", GATE_QUESTION_WITH_COLON)])
+        .expect_err(
+            "ADR-0146 clause 4: a `question` carrying a `:` can join a selection gate's reach \
+             sequence and suppress it. The STRICT loader must refuse it — `run` loads through this \
+             path, so a diagnostic-only refusal would leave `run` loading the collision",
+        );
+    let CatalogError::Shape { source, detail } = &refused else {
+        panic!("the refusal is a `Shape` defect, as AC-409's is: {refused:?}")
+    };
+    assert_eq!(source, "triage-repro.toml");
+    for expected in ["confirm", "unknown_facet:has_repro"] {
+        assert!(
+            detail.contains(expected),
+            "the refusal does not name {expected:?}, so an operator cannot find the step: {detail}"
+        );
+    }
+
+    // ---- POSITIVE CONTROL: an ordinary question LOADS, and is still READ.
+    // A loader that refused every `question`, or that stopped parsing it to make this pass, is red
+    // on one of these two assertions.
+    let ok = Catalog::from_sources(&[("triage-repro.toml", GATE_QUESTION_PLAIN)])
+        .expect("a colon-free `question` is the schema's ordinary case");
+    assert_eq!(
+        ok.activities()[0].steps[0].question.as_deref(),
+        Some("repro.confirm"),
+        "the loader stopped READING `question` instead of refusing only the colliding shape — the \
+         gate arm derives its token from this value, so dropping it un-does ADR-0145 entirely"
+    );
+}
