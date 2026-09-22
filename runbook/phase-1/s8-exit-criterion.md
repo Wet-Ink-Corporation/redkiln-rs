@@ -131,7 +131,22 @@ test -f Cargo.toml && test -f clippy.toml || { echo "FAIL: no workspace-root Car
 cargo clippy --workspace --all-targets || { echo "FAIL: the clippy gate is red (never -D warnings on the CLI — ADR-0083; PIA-030)"; exit 1; }
 CLOCK_FIXTURE=rk-clock-read   # s5 §5.1a names it; a feature-gated workspace member (DECISIONS-2026-09-12 E4)
 cargo metadata --format-version 1 --no-deps | grep -q "\"$CLOCK_FIXTURE\"" || { echo "FAIL: $CLOCK_FIXTURE is not a workspace member — a missing fixture must never read as the pass"; exit 1; }
-cargo clippy -p "$CLOCK_FIXTURE"; rc=$?; [ "$rc" -ne 0 ] || { echo "FAIL: the clock-read fixture PASSED the lint — the fixture FAILING it is the pass (PIA-031)"; exit 1; }
+# REPAIRED 2026-09-21 (Step 8, operator decision). This ran `cargo clippy -p "$CLOCK_FIXTURE"` with
+# NO FEATURE, and under that invocation the fixture CANNOT FAIL: its offending call sits behind the
+# non-default `reintroduce` feature, which is the whole point of the feature-gated-member shape
+# (DECISIONS-2026-09-12 E4) -- with the feature off the default workspace gate stays green. So the
+# line clipped clean and fired its own "the fixture PASSED the lint" FAIL on a CORRECT tree
+# [measured 2026-09-21]. The fixture's own `tests/fixtures/rk-clock-read/Cargo.toml` spells the pair
+# verbatim, and this is now the second of them:
+#   green:  cargo clippy --workspace --all-targets
+#   RED:    cargo clippy --workspace --all-targets --features rk-clock-read/reintroduce
+# The workspace form is the one AC-001's Verified-by asks for -- *"checked under the same `cargo
+# clippy` invocation"* -- and `$CLOCK_FIXTURE` stays load-bearing as the feature's package.
+# AND THE REASON IS ASSERTED, NOT ONLY THE REDNESS (golden constraint 12): a fixture that failed to
+# compile for any other cause would satisfy a bare non-zero check while measuring nothing.
+out=$(cargo clippy --workspace --all-targets --features "$CLOCK_FIXTURE/reintroduce" 2>&1); rc=$?
+[ "$rc" -ne 0 ] || { echo "FAIL: the clock-read fixture PASSED the lint — the fixture FAILING it is the pass (PIA-031)"; exit 1; }
+printf '%s\n' "$out" | grep -q 'use of a disallowed method' || { echo "FAIL: the fixture is red for some OTHER reason than the determinism ban — a red for the wrong reason is not a pass (golden constraint 12)"; printf '%s\n' "$out" | tail -20; exit 1; }
 ```
 
 **(5) WITHDRAWN 2026-09-15.** It read *"The `--stay`-class error is unrepresentable — a `trybuild` must-fail
