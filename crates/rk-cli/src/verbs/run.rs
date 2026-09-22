@@ -188,11 +188,20 @@ pub struct Resolved {
     pub toolchain_timeout_secs: u64,
 }
 
-/// **ADR-0137 clause 5.** The toolchain adapters' default construction-time backstop.
+/// **ADR-0140, superseding ADR-0137 clause 5 in part.** The default for the **only** bound on any
+/// child a toolchain adapter spawns.
 ///
 /// Measured at `s7g` over `.redkiln/catalog/`: the largest declared literal `timeout_secs` on any
-/// step is **3600**. The backstop may not be smaller than the largest step it could serve, or a
-/// declared step timeout would be capped without saying so — so the floor is measured, not chosen.
+/// step is **3600**, and the floor is measured rather than chosen.
+///
+/// 🛑 **The REASON changed on 2026-09-22 even though the number did not.** This read *"the backstop
+/// may not be smaller than the largest step it could serve, or a declared step timeout would be
+/// capped without saying so"* — which presupposes a per-step bound that something applies. Nothing
+/// does: `catalog::Step` has no timeout field and `catalog.rs`'s loader says in terms that it reads
+/// none, so all 298 of the pack's declarations (204 literal, 94 unresolved `${toolchain.*}`
+/// substitutions) reach no executor. The floor is therefore: **this bound must not cut short a
+/// child doing work the pack declares it expects to take that long**, and 3600 is the best
+/// available proxy for that expectation. Nothing sits underneath it.
 pub const DEFAULT_TOOLCHAIN_TIMEOUT_SECS: u64 = 3600;
 
 /// The outer verb.

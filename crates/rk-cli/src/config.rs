@@ -50,13 +50,19 @@ pub struct Adapters {
     pub harness_binary: Option<String>,
     /// RT-49: per-toolchain programs. Absent, each is resolved on the child's `PATH`.
     pub toolchain_programs: Option<BTreeMap<String, String>>,
-    /// **ADR-0137 clause 5**: the toolchain adapters' construction-time backstop, in seconds.
+    /// **ADR-0140, superseding ADR-0137 clause 5 in part**: the **only** bound on any child a
+    /// toolchain adapter spawns, in seconds.
     ///
-    /// The port carries no timeout parameter (ADR-0099 decision 2, RT-5), so this one bound
-    /// backstops every child an adapter spawns while a step's own `timeout_secs` stays the
-    /// kernel's. Absent, [`crate::verbs::run::DEFAULT_TOOLCHAIN_TIMEOUT_SECS`] — which is the
-    /// pack's LARGEST declared step timeout, because a backstop smaller than the largest step it
-    /// could serve would cap a declared timeout silently.
+    /// The port carries no timeout parameter (ADR-0099 decision 2, RT-5), and **nothing finer
+    /// applies underneath**: `catalog::Step` carries no timeout field and this crate's loader reads
+    /// none, so the shipped pack's 298 `timeout_secs` declarations reach no executor. Absent,
+    /// [`crate::verbs::run::DEFAULT_TOOLCHAIN_TIMEOUT_SECS`].
+    ///
+    /// 🛑 **This read "a backstop … while a step's own `timeout_secs` stays the kernel's" until
+    /// 2026-09-22, and that was false.** There is no step timeout for it to sit behind. The
+    /// `timeout_secs` that does exist is `ActivitySpec`'s — per ACTIVITY, handed to the `Harness`,
+    /// and never in scope for a toolchain child. Lowering this value shortens the only bound a
+    /// `tool` step has; it is not an outer fence.
     pub toolchain_timeout_secs: Option<u64>,
 }
 

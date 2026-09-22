@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: references/adr/0094 decision 1 (Phase 1 ships Node and Rust `Toolchain` reals); references/adr/0003 (the five ports); references/2026-09-08-acceptance-criteria.md AC-473 (*"toolchain stage [to have] run through `rk-adapter-toolchain-rust` behind the `Toolchain` port"*), AC-217/AC-488/AC-509 (the child-environment denylist); references/adr/0099 decision 2 (*"the two Toolchain adapters run bounded commands under the same timeout without a token"*, RT-5); references/adr/0127 decision 3 (a `Command` is built and handed over, never spawned in the adapter); runbook/phase-1/s7c-adapters.md §7c.14 (the fixture-project rule); crates/rk-adapter-toolchain-rust/src/lib.rs:9-13 and :155-199; crates/rk-cli/src/verbs/run.rs:222-292; crates/rk-cli/src/adapters.rs:31,146-181
 supersedes: []
-superseded_by: ["0139"]
+superseded_by: ["0139", "0140"]
 related: ["0003", "0073", "0094", "0099", "0107", "0127"]
 evidence: []
 consumers: []
