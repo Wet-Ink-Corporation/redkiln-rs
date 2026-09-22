@@ -734,3 +734,260 @@ fn ac024_wall_clock_mark_outlives_the_process_that_wrote_it() {
         "and therefore no mark"
     );
 }
+
+// ---- AC-013 — Phase-1 exit criterion (3), across a REAL process boundary ------------------------
+
+/// The N-step fixture graph AC-013's *Verified by* names. **N = 3, and TWO of the three commit
+/// before the kill** — which is the whole of exit criterion (3)'s *"at MORE THAN ONE STEP"*, against
+/// F38's recorded state having held **exactly one**.
+const N_STEP_GRAPH: [(&str, &str); 3] = [
+    ("impl-report@1", "impl-report[node]"),
+    ("changeset@2", "changeset[node]"),
+    ("spec-authoring@1", "spec-authoring[node]"),
+];
+
+/// The child: commit two of three activations to a durable store, then **die mid-graph**.
+///
+/// `std::process::exit` rather than a return, a panic or a drop. Nothing unwinds, no destructor
+/// runs and nothing is flushed on the way out — the third activation is simply never attempted.
+/// `FileStore::append` `sync_all`s on every call, so the two rows that landed are on disk before
+/// the process stops existing, which is the same property a real `taskkill /T /F` leaves behind.
+///
+/// **`std::process::abort` is deliberately not used**: on the MSVC CRT it can raise an error dialog,
+/// and a harness that waits on a modal box is a hang rather than a test. `137` is `128 + SIGKILL`,
+/// the status a killed process carries on the platforms that have one.
+#[test]
+#[ignore = "child entrypoint for AC-013's kill-and-resume test; the parent invokes it by name"]
+fn ac013_child_commits_two_of_three_then_dies() {
+    use std::sync::{Arc, Mutex};
+
+    use rk_kernel::runtime::Runtime;
+    use rk_kernel::workflow::envelope::AttemptCap;
+    use rk_ports::harness::Harness;
+
+    use crate::runtime::{CAP, CountingHarness, ITEM, STAGE, at, ok_typed, ports, spec};
+
+    let path = child_store();
+    let case = child_case();
+    assert_eq!(
+        case, "commit-two-of-three",
+        "the parent sets this case and no other"
+    );
+
+    let db: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(FileStore::at(path)));
+    let harness = Arc::new(CountingHarness::scripted(vec![
+        ok_typed(serde_json::json!({ "step": 1 })),
+        ok_typed(serde_json::json!({ "step": 2 })),
+    ]));
+    let rt = Runtime::new(
+        ports(Arc::clone(&harness) as Arc<dyn Harness>, &db),
+        "run-pre-kill",
+        STAGE,
+    );
+    for (aid, step) in &N_STEP_GRAPH[..2] {
+        let report = rt
+            .run_activity(ITEM, aid, step, &spec(), AttemptCap::declared(CAP), at(100))
+            .expect("the pre-kill run resolves");
+        assert!(report.committed(), "{aid} committed before the kill");
+    }
+    assert_eq!(
+        harness.dispatches(),
+        2,
+        "the child dispatched exactly the two steps it committed"
+    );
+    println!("child: committed 2 of 3, about to die mid-graph with `spec-authoring@1` un-run");
+    std::io::stdout()
+        .flush()
+        .expect("the child's stdout flushes");
+
+    // THE KILL.
+    std::process::exit(137);
+}
+
+/// **AC-013 across a real process boundary, at more than one step** — Phase-1 exit criterion (3)'s
+/// asserted half.
+///
+/// > **AC-013** — GIVEN a run whose graph committed N steps and whose process was killed mid-graph /
+/// > WHEN `redkiln run <item>` re-enters (there is no `--resume` flag) / THEN no committed step
+/// > re-executes and every committed digest is byte-identical to its pre-kill value.
+/// > *Verified by:* a kill-and-resume integration test in `rk-kernel` over an N-step fixture graph
+/// > with the Harness fake, asserting digest equality and zero re-dispatch.
+///
+/// # What this adds over `runtime::ac013_re_entry_reexecutes_nothing`
+///
+/// That test's boundary is a **dropped `Runtime`**, and its own docstring reports the limit:
+/// ADR-0087 clause 2 says *"a reload that reads state back in-process is not a valid implementation
+/// of this decision and **is not evidence for it**."* Here the process that committed the steps
+/// **ceases to exist** — a different OS process reads the journal it left — so the clause is
+/// satisfied rather than disclosed around. D-8 routed AC-013 to Step 7d on the ground that *"the
+/// thing that re-enters is `redkiln run <item>`"*; 7d is closed and this is Step 8.
+///
+/// # 🛑 STILL ARMED, AND NOT COUNTED
+///
+/// 1. **AC-013 remains PROVISIONAL on P8** — *"3 of a pre-registered 27+3 runs, and its recorded
+///    state held exactly one step"* — and register §0 says a PROVISIONAL criterion may be
+///    implemented but **must not be counted as covered**. This test generalises to N what the spike
+///    measured at 1; it does not run the spike's missing arms.
+/// 2. **The re-entrant is a kernel `Runtime`, not `redkiln run`.** The kill is real and the boundary
+///    is real; the CLI re-entry AC-013's WHEN names is not exercised here, because exit criterion
+///    (1) is blocked and no `redkiln run` completes on this tree. That half stays ARMED.
+/// 3. The kill is `exit(137)`, not an external `taskkill /T /F` — the process is stopped by its own
+///    last instruction rather than by another one. What is common to both, and what the criterion
+///    turns on, is that no destructor runs and the graph is abandoned mid-flight.
+#[test]
+fn kill_and_resume_n_step() {
+    use std::sync::{Arc, Mutex};
+
+    use rk_kernel::runtime::Runtime;
+    use rk_kernel::runtime::activity::committed_result;
+    use rk_kernel::workflow::envelope::AttemptCap;
+    use rk_ports::harness::Harness;
+
+    use crate::runtime::{CAP, CountingHarness, ITEM, STAGE, at, ok_typed, ports, spec};
+
+    const CHILD: &str = "cross_process::ac013_child_commits_two_of_three_then_dies";
+
+    assert!(
+        N_STEP_GRAPH.len() >= 3,
+        "PREMISE: N >= 3, as the criterion's own fixture requires"
+    );
+
+    // ---- 1. the child commits two of three and is killed ---------------------------------------
+    let path = fresh_store("ac013-kill-and-resume");
+    let child = re_exec(CHILD, &path, "commit-two-of-three");
+    assert_ne!(
+        child.status.code(),
+        Some(0),
+        "PREMISE: the child must have DIED mid-graph, not finished. stdout:\n{}",
+        child.stdout
+    );
+    assert!(
+        child.stdout.contains("about to die mid-graph"),
+        "PREMISE: the child reached the kill after committing, rather than failing earlier.\n--- \
+         child stdout ---\n{}\n--- child stderr ---\n{}",
+        child.stdout,
+        child.stderr
+    );
+
+    // ---- 2. what survived the kill -------------------------------------------------------------
+    let db: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(FileStore::at(path)));
+    let before = db
+        .lock()
+        .expect("the store lock is not poisoned")
+        .query(Query::ByItem(ITEM.to_owned()))
+        .expect("the journal the dead process left is readable");
+    let committed_before = before
+        .iter()
+        .filter(|e| e.kind == EventKind::ActivityCommitted)
+        .count();
+    assert_eq!(
+        committed_before, 2,
+        "PREMISE: MORE THAN ONE step committed before the kill — F38 held exactly one, and \
+         criterion (3) is that this holds at more than one"
+    );
+    let pre_kill: Vec<String> = N_STEP_GRAPH[..2]
+        .iter()
+        .map(|(aid, _)| {
+            let v = committed_result(&before, ITEM, aid).expect("committed before the kill");
+            rk_store::canon::canonical_digest(v)
+                .expect("no floats")
+                .as_str()
+                .to_owned()
+        })
+        .collect();
+
+    // ---- 3. a DIFFERENT process re-enters over the same journal ---------------------------------
+    let harness = Arc::new(CountingHarness::scripted(vec![ok_typed(
+        serde_json::json!({ "step": 3 }),
+    )]));
+    let rt = Runtime::new(
+        ports(Arc::clone(&harness) as Arc<dyn Harness>, &db),
+        "run-re-entry",
+        STAGE,
+    );
+    let mut reports = Vec::new();
+    for (aid, step) in &N_STEP_GRAPH {
+        reports.push(
+            rt.run_activity(ITEM, aid, step, &spec(), AttemptCap::declared(CAP), at(200))
+                .expect("the re-entry resolves"),
+        );
+    }
+    assert!(
+        reports[0].skipped(),
+        "a step committed before the kill does not re-execute"
+    );
+    assert!(
+        reports[1].skipped(),
+        "nor does the second — this is the `more than one step` the criterion names"
+    );
+    assert!(reports[2].committed(), "the un-run step runs");
+    assert_eq!(
+        harness.dispatches(),
+        1,
+        "AC-013: ZERO re-dispatch of a committed step across a real process boundary"
+    );
+
+    // ---- 4. digest equality --------------------------------------------------------------------
+    let after = db
+        .lock()
+        .expect("the store lock is not poisoned")
+        .query(Query::ByItem(ITEM.to_owned()))
+        .expect("readable");
+    let post: Vec<String> = N_STEP_GRAPH[..2]
+        .iter()
+        .map(|(aid, _)| {
+            let v = committed_result(&after, ITEM, aid).expect("still committed");
+            rk_store::canon::canonical_digest(v)
+                .expect("no floats")
+                .as_str()
+                .to_owned()
+        })
+        .collect();
+    assert_eq!(
+        post, pre_kill,
+        "AC-013: every committed digest is byte-identical to its pre-kill value — this is the \
+         `output_digest` ADR-0128 decision 4 names, computed the way `explain` computes it"
+    );
+    assert_eq!(
+        after
+            .iter()
+            .filter(|e| e.kind == EventKind::ActivityCommitted)
+            .count(),
+        3,
+        "and exactly one new commit joined them"
+    );
+
+    // ---- 5. THE CONTROL ------------------------------------------------------------------------
+    // Without it, "the committed steps were skipped" is satisfied by a runtime that skips
+    // everything — including a step the graph never ran.
+    let control_harness = Arc::new(CountingHarness::scripted(vec![ok_typed(
+        serde_json::json!({ "step": 4 }),
+    )]));
+    let control_rt = Runtime::new(
+        ports(Arc::clone(&control_harness) as Arc<dyn Harness>, &db),
+        "run-control",
+        STAGE,
+    );
+    let never = control_rt
+        .run_activity(
+            ITEM,
+            "review@1",
+            "review[node]",
+            &spec(),
+            AttemptCap::declared(CAP),
+            at(300),
+        )
+        .expect("the control resolves");
+    assert!(!never.skipped());
+    assert_eq!(
+        control_harness.dispatches(),
+        1,
+        "CONTROL: an activation the killed graph never committed IS dispatched on re-entry"
+    );
+
+    println!(
+        "kill_and_resume_n_step: N={} committed_before_kill={committed_before} re_dispatches=1 \
+         digests={pre_kill:?}",
+        N_STEP_GRAPH.len()
+    );
+}

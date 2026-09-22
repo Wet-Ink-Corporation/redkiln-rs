@@ -45,7 +45,7 @@ fn committed_root() -> PathBuf {
 /// **Found rather than spelled**, because `run_id` is a content hash of the inputs and moves with
 /// them; a hard-coded directory name would turn a re-blessed fixture into a compile-time-looking
 /// failure in the wrong place.
-fn the_committed_run() -> PathBuf {
+pub fn the_committed_run() -> PathBuf {
     let mut runs: Vec<PathBuf> = std::fs::read_dir(committed_root())
         .expect("tests/fixtures/logs is readable")
         .map(|e| e.expect("a readable entry").path())

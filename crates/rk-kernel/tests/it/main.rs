@@ -305,6 +305,7 @@ mod on_false;
 mod pack_validation;
 mod probe_differential;
 mod producer;
+mod projection;
 mod quality_block;
 mod question;
 mod recorded_log;
