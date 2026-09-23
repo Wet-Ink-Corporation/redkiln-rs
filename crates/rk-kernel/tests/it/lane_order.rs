@@ -279,17 +279,31 @@ fn facets_src() -> String {
 /// Inputs at `triage` — a stage with no catalog activity, so the plan is empty and exhausted on the
 /// first iteration. `successor` is supplied by the caller, which is the whole variable under test.
 fn advance_inputs(successor: Option<&str>) -> RunInputs {
+    advance_inputs_at("triage", successor)
+}
+
+/// The same inputs at an arbitrary stage — what the lane loop builds per stage (ADR-0152).
+fn advance_inputs_at(stage: &str, successor: Option<&str>) -> RunInputs {
     let mut runtime = RuntimeContext::supplied(ADV_TREE, ADV_DEADLINE).results_at(ADV_RESULTS_AT);
     if let Some(to) = successor {
         runtime = runtime.advances_to(to);
     }
-    RunInputs::new("triage")
+    RunInputs::new(stage)
         .with_runtime(runtime)
         .with_pack("lane-advance.toml", LANE_PACK)
         .with_catalog(ADV_CATALOG)
         .with_artifacts("artifacts.toml", ARTIFACTS)
         .with_facets(&facets_src())
         .with_item(&Item::new(ADV_ITEM, "incident").with_toolchain("node", ["text"]))
+}
+
+/// The store's journal for the fixture item — what `rk-cli` hands `resume` as `prior` at step (9).
+fn journal_of(store: &Arc<Mutex<dyn EventStore>>) -> Vec<Event> {
+    store
+        .lock()
+        .expect("the fake store is not poisoned")
+        .query(rk_kernel::runtime::journal_query(ADV_ITEM))
+        .expect("the fake store queries")
 }
 
 fn advance_ports(store: &Arc<Mutex<dyn EventStore>>) -> Ports {
@@ -467,5 +481,99 @@ fn adr0157_a_second_run_advances_nowhere_and_appends_nothing() {
             .iter()
             .any(|(f, t)| f.is_some() && f == t),
         "no row may carry `from == to`"
+    );
+}
+
+/// **ADR-0161: a stage the lane has ENTERED is not entered again — the two-hop case.**
+///
+/// ADR-0157 guarded the advance arm on `to != state.stage`, and that is a PROXY for *"has this
+/// transition already been recorded"*. It is sufficient for a one-hop lane, which is the only lane
+/// the shipped tree can walk, so ADR-0157's own experiment could not tell the two guards apart. This
+/// fixture can: it walks TWO boundaries and then replays, which is what a second `redkiln run` does.
+///
+/// Under the `to != state.stage` guard this test appends a **backward**
+/// `{"from":"closeout","to":"implement"}` row and then re-advances forward, two tier-1 rows per run
+/// for ever — the unbounded append ADR-0157 claimed to have closed, one hop further out.
+///
+/// Found by this stage's own adversarial pass, not by the fixtures that shipped with ADR-0157.
+#[test]
+fn adr0161_a_stage_the_lane_has_entered_is_not_entered_again() {
+    let pack = Pack::from_toml("lane-advance.toml", LANE_PACK).expect("the fixture pack loads");
+    assert_eq!(pack.successor("triage"), Some("implement"));
+    assert_eq!(
+        pack.successor("implement"),
+        Some("closeout"),
+        "the fixture must be able to hop TWICE, or it cannot discriminate the guards"
+    );
+
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let refuse = &mut |n: &str| panic!("no node may be supplied: {n:?}");
+
+    // ---- HOP 1, as the lane loop does it: enter at the record's stage, advance.
+    let first = replay::resume(
+        &advance_inputs_at("triage", Some("implement")),
+        advance_ports(&store),
+        &[],
+        refuse,
+    )
+    .expect("hop 1");
+    assert_eq!(first.advanced_to(), Some("implement"));
+
+    // ---- HOP 2: the loop re-enters at the stage it advanced into, carrying the journal.
+    let prior = journal_of(&store);
+    let second = replay::resume(
+        &advance_inputs_at("implement", Some("closeout")),
+        advance_ports(&store),
+        &prior,
+        refuse,
+    )
+    .expect("hop 2");
+    assert_eq!(
+        second.advanced_to(),
+        Some("closeout"),
+        "the lane takes TWO boundaries"
+    );
+
+    let after_two = transitions(&journal_of(&store));
+    assert_eq!(
+        after_two,
+        vec![
+            (None, Some("triage".to_owned())),
+            (Some("triage".to_owned()), Some("implement".to_owned())),
+            (Some("implement".to_owned()), Some("closeout".to_owned())),
+        ],
+        "one entry row and two forward boundaries"
+    );
+
+    // ---- THE NEXT PROCESS. `inputs.stage` is the ITEM RECORD's stage again — it never moves — so
+    // the successor handed over is `implement`, while the fold's `state.stage` is now `closeout`.
+    // `to != state.stage` is TRUE here, which is exactly why that guard was not enough.
+    let third = replay::resume(
+        &advance_inputs_at("triage", Some("implement")),
+        advance_ports(&store),
+        &journal_of(&store),
+        refuse,
+    )
+    .expect("the next process resumes");
+
+    assert_eq!(
+        third.advanced_to(),
+        None,
+        "a stage the lane has already ENTERED must not be entered again: `implement` is in \
+         `stages_entered`, even though it differs from the fold's current stage"
+    );
+    assert_eq!(
+        transitions(&journal_of(&store)),
+        after_two,
+        "no further stage_transition row — and in particular no BACKWARD one"
+    );
+    assert!(
+        !transitions(&journal_of(&store))
+            .iter()
+            .any(|(f, t)| matches!(
+                (f.as_deref(), t.as_deref()),
+                (Some("closeout"), Some("implement"))
+            )),
+        "a backward transition is the specific row the old guard let through"
     );
 }

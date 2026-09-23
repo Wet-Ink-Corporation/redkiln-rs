@@ -6,8 +6,8 @@ date: 2026-09-22
 legacy_id: none
 source: crates/rk-kernel/src/workflow/fsm.rs (`next_action`'s advance arm — `from` is `state.stage`, the fold's; `to` is `ctx.successor`, the caller's); crates/rk-cli/src/verbs/run.rs (`base_inputs`, which resolves the successor from `resolved.stage`; the stage read at 550 — *"the stage is read once, from the record, and is not defaulted"*; the lane loop); crates/rk-kernel/src/replay.rs (`fsm::fold(item.id(), &inputs.stage, &journal)` — seeded with the input stage, then moved by the journal's own rows); references/2026-09-08-acceptance-criteria.md AC-518 (the orchestrator never writes the user's checkout); the measurement itself — three consecutive `./target/debug/redkiln run rk-fix-doctor-test-count --lane fix` invocations over a fresh store, 2026-09-22
 supersedes: []
-superseded_by: []
-related: ["0152", "0153", "0154", "0158"]
+superseded_by: ["0161"]
+related: ["0152", "0153", "0154", "0158", "0161"]
 evidence: []
 consumers: []
 ---

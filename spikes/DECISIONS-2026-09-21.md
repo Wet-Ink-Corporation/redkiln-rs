@@ -1122,9 +1122,15 @@ sentence cannot be executed. Every value the loop reads about "which stage" is b
 loop — `fsm::fold(item.id(), &inputs.stage, &journal)`. A `continue` re-folds the same exhausted stage,
 reads the same `Some(successor)`, and returns `AdvanceStage` again, without bound.
 
-**Measured rather than reasoned**: mutant M7 changes the arm's `break` to `continue` and the test
-**times out after 150s**, which turns the non-termination claim from something read off the code into
-something observed.
+**Measured rather than reasoned — and then corrected by this stage's own adversarial pass.** Mutant M7
+changes the arm's `break` to `continue`. Measured **before** ADR-0157's `to != state.stage` guard
+existed, it did not terminate and was killed at 150s. **Re-measured at the close, with the guard in
+place, it is GREEN in 11s**: the extra iteration re-folds, the arm declines to fire because the fold has
+already moved into the successor, and the loop reaches `Done`. So `break` and `continue` are now
+behaviourally **equivalent** at this seam, and the `break` rests on the run-record-grain argument —
+`run_id` is `format!("{}-{}", stage, &digest[..16])` — rather than on termination. ADR-0157's guard
+removed the symptom, not the reason. The non-termination reading was true of the code it was measured
+against and is not true of the code that ships.
 
 And the grain is in the identifier: `RunInputs::run_id` is `format!("{}-{}", self.stage, &digest[..16])`,
 so advancing inside one call would file a later stage's events under a record whose id names the first
@@ -1232,5 +1238,48 @@ That is ADR-0159's residual one arm along, and inventing an identity would disch
 lint with code no run reaches — the "source lint passes on code nothing calls" failure this programme
 has already paid for twice. So `s7h` records the axis ARMED, corrects the lint's reason and its now-false
 failure message, and names the route.
+
+---
+
+## D21-37 · ADR-0161 — the adversarial pass found THREE defects in this stage's own green code
+
+Every one of them was in the tree while nine records were accepted, seven lane fixtures were green,
+nine mutants were RED, four suites passed, fmt and clippy were clean, and Checkpoint 7h failed only on
+the bullet it records as OWED.
+
+**(1) ADR-0157's guard was insufficient, and its own experiment could not have seen it.** `to !=
+state.stage` is a PROXY for *"has this transition already been recorded"*. `apply` sets `state.stage` to
+the LAST transition's target while the composition root computes the successor from the item record's
+stage, which never moves — so a lane of `[triage, analysis, specification]` walked in one process
+appends a **BACKWARD** `{"from":"specification","to":"analysis"}` on its next run, then re-advances
+forward: two tier-1 rows per invocation, for ever. The sufficient test, `stages_entered`, already existed
+and was pushed by the same `apply` arm. ADR-0157 is superseded in part and keeps `status: accepted`.
+
+**(2) A non-zero exit alongside an advance was DISCARDED.** The lane loop read its exit only on the
+no-advance path, so all four of `story_trailer`'s refusals reached stderr while the process exited on
+the last stage's status. **ADR-0159's *"refuses by name"* could not fail a run.** A refusal nothing can
+observe is not a refusal.
+
+**(3) A `[project] name` containing `/` breaks the axis silently.** `split_qualified` takes the FIRST
+slash, so `acme/web` emits a mark that parses under project `acme` with slug `web/<item>`: the
+idempotence read can never match it, so it re-mints every run as `duplicate-story-trailer` drift, and
+`doctor --rebuild` reports the slug `unresolvable`. Refused at the mint now.
+
+**The instrument that was missing.** The fixture pack gains a third live stage so a lane can take TWO
+boundaries; the new test walks both and then replays, which is what a second `redkiln run` does. Mutant
+**M10** restores ADR-0157's guard exactly and the test is RED at `lane_order.rs:555`, `left:
+Some("implement")` against `right: None`. A one-hop fixture could not have told the two guards apart —
+which is why ADR-0157 shipped with the hole.
+
+**Five ERRATA the same pass raised**, all self-inflicted and all the same shape: `0152`, `0153`, `0154`,
+`0155` and `0159` carry file:line citations into files this stage kept editing. `0152`'s is contradicted
+by `0154`, its own batch-mate, which did the reordering; `0159`'s undated *"config.toml is thirteen lines
+… grep returns nothing"* was falsified by `0159`'s own decision. **Cite by quotation, not by line** —
+the dated blocks survived, the undated ones did not.
+
+**And a fourth finding this stage does not own:** `terminal_read` scans for any tokened `gate_opened` row
+with **no** answered/void/expired filter, unlike `RunState::awaiting_gate` which excludes all three, so
+after a gate is answered it re-commits a `Gate:` trailer for the dead token and prints that the gate is
+open. That is 7d's producer; recorded, not repaired.
 
 ---

@@ -57,8 +57,10 @@ loop into the next stage** rather than breaking.
 🛑 **NOT IMPLEMENTABLE, and ADR-0152 replaces it.** Everything the loop reads about *which stage* is
 bound before it from `inputs.stage` — including, INSIDE the loop, `fsm::fold(item.id(), &inputs.stage,
 &journal)`. A `continue` re-folds the same exhausted stage, reads the same `Some(successor)`, and fires
-again: mutant M7 makes exactly this change and the test **times out after 150s**. The arm steps and
-**breaks**, on the `OpenGate` model; the lane loop is `rk-cli`'s, one `resume` per stage. The existing `_ => break` stays for `Halt` and `Done`, which are
+again. The arm steps and **breaks**, on the `OpenGate` model; the lane loop is `rk-cli`'s, one
+`resume` per stage.
+
+⚠️ **M7's reading is CORRECTED, 2026-09-23, by this stage's own adversarial pass.** Mutant M7 changes the arm's `break` to `continue`. Measured **before** ADR-0157's `to != state.stage` guard existed, it did not terminate and was killed at 150s. **Re-measured at the close, with the guard in place, it is GREEN in 11s**: the extra iteration re-folds, the arm declines to fire because the fold has already moved into the successor, and the loop reaches `Done`. So `break` and `continue` are now behaviourally EQUIVALENT at this seam, and ADR-0152's `break` rests on the run-record-grain argument — `run_id` is `format!("{}-{}", stage, &digest[..16])` — rather than on termination. The non-termination reading was true of the code it was measured against and is not true of the code that ships; the guard removed the symptom, not the reason. The existing `_ => break` stays for `Halt` and `Done`, which are
 terminal by design.
 
 🛑 **The gate exit is unchanged and must stay so.** `OpenGate` breaks and `run` exits 0 — golden constraint 2,

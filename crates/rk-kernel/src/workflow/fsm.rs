@@ -1728,9 +1728,24 @@ pub fn next_action(
     //    `{"from":"analysis","to":"analysis"}` — a tier-1 row for a transition that is not one, and
     //    one more on every subsequent run [measured 2026-09-22 against the real binary].
     //
-    //    The equality IS the "already there" test: the journal has recorded this transition, so
-    //    there is nothing left to do and the action is `Done`.
+    //    🛑 **THE TEST IS `stages_entered`, NOT `to != state.stage` — ADR-0161, superseding ADR-0157
+    //    clause 1 in part.** The equality form was a PROXY for *"has this transition already been
+    //    recorded"*, and it is only sufficient for a lane that takes ONE boundary, which is the only
+    //    lane this tree can currently walk. `apply`'s `StageTransition` arm sets `state.stage` to the
+    //    LAST transition's target, while the composition root computes the successor from the item
+    //    record's stage, which never moves. So for a lane `[triage, analysis, specification]` walked
+    //    in one process: run 2 folds `state.stage == "specification"`, is handed the successor
+    //    `"analysis"`, and `"analysis" != "specification"` **passes** — appending a BACKWARD
+    //    `{"from":"specification","to":"analysis"}` row, then advancing forward again, two tier-1
+    //    rows per run for ever. That is the unbounded append ADR-0157 claimed to have closed, one hop
+    //    further out, and ADR-0157's own experiment could not have seen it because run 1 stops at
+    //    `analysis` with exit 3.
+    //
+    //    `stages_entered` is the state that answers the real question, and it already existed: the
+    //    same `StageTransition` arm pushes every target onto it. A stage the lane has entered is not
+    //    entered again.
     if let Some(to) = ctx.successor
+        && !state.stages_entered.iter().any(|s| s == to)
         && to != state.stage
     {
         return Ok(NextAction::AdvanceStage {

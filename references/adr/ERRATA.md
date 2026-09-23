@@ -394,6 +394,122 @@ written under a task that names this file alone.)*
 
 **E-0139-1 (2026-09-22, `s7g`'s own adversarial pass).** Six sites say the superseded record is *"one day"* old: `## Decision drivers` (*"even though the record being moved is one day old"*), the **Confidence** block (*"this record is one day younger than the one it moves"*), the README index row, and D21-14's heading and body. — **What is true:** **54 minutes.** ADR-0137 was committed `proposed` at `085d1aa`, 2026-09-22 **10:34**, and superseded in part at `fbf3c4c`/`305398c`, **11:27-11:28** the same morning. Both records carry `date: 2026-09-22`, and D21-14's own body says so two lines after the claim (*"written on 2026-09-22 and superseded in part on 2026-09-22"*), so the entry contradicts itself in place. **What this does not change:** the record's substance, its route, or its confidence — ADR-0092 rule 1 turns on whether a `## Decision` sentence moved, not on how old the record was, and the supersession is correct either way. **Why it matters:** the false half sits in the **Confidence** block, whose entire job is to state the record's limit honestly. It also *understates* the finding: a decision corrected inside one hour by its own first execution is a sharper instance of "taken ahead of its first measurement" than a one-day one, and the sharper reading is the true one.
 
+## ADR-0152 — the lane loop lives above `resume` and the advance arm breaks
+
+**E-0152-1 (2026-09-23, `s7h`'s own adversarial pass).** Three present-tense, unqualified citations in
+`## Context and problem` and `## Evidence and confidence`: *"`fsm::fold`'s second parameter at
+`replay.rs:1767`"*, *"`next_action`'s arm 4 (`fsm.rs:1700-1707`) tests `ctx.successor`"*, and
+*"`fsm_context` (`replay.rs:1546-1558`)"*. — **What is true:** all three were exact at `fc45eeb` and
+none is exact at this stage's close. `replay.rs:1767` is now a comment about `prior_len` (the `fold`
+call moved); `fsm.rs:1700-1707` is now the **halt** check, because **ADR-0154 — this record's own
+batch-mate — reordered the arms**, so the citation is contradicted by a decision taken the same day;
+and `fsm_context` moved. The dated block's figures moved too: the sole `AdvanceStage` construction is
+now at `fsm.rs:1736`, `base_inputs` moved off `run.rs:1047`, `run.rs` **does** chain `.advances_to(..)`,
+and `grep -rn "advances_to" crates/` returns **10** hits rather than four. [measured]
+**What this does not change:** every `## Decision` clause and every forbid. The mechanism the citations
+point at is unaltered — `inputs.stage` is still fixed before the loop, `fold` still reads it every
+iteration, and `run_id` is still stage-prefixed. **The lesson, recorded because it recurs:** a record
+that cites a line into a file its own stage is still editing has a self-falsifying citation. The dated
+figures at least say when they were true; the three above did not.
+
+## ADR-0153 — the lane order is a declared array
+
+**E-0153-1 (2026-09-23, `s7h`'s own adversarial pass).** Under *"The no-breakage claim was checked
+rather than assumed"*, present tense: *"`pack.rs` reads `policy` twice (`:212`, `:251`)"*, and in the
+same section *"`pack.rs:250-263` … the key-by-key insert"*. — **What is true:** at this stage's close
+`pack.rs` reads `policy` **three** times — and **this record's own key added the third**. The line
+numbers moved with it: `:212`/`:251` are now unrelated lines and `250-263` is the `[mutation]` reader.
+Both were exact at `fc45eeb`. The related claim *"`grep -n 'stage_order' .redkiln/packs/*.toml` returns
+nothing — the key does not exist yet"* is dated to `fc45eeb` and so remains honest; both packs now
+declare it. [measured]
+**What this does not change:** the decision, the forbids, or the no-breakage conclusion — there is
+still no unknown-key rejection in `select/pack.rs` or `pack_validation.rs`, and `doctor`'s
+`RK-D-DEAD-DEF` still reads `stages.keys()` alone. A record whose evidence counts occurrences of a
+thing it is itself adding must say which side of its own change it counted.
+
+## ADR-0154 — a recorded halt outranks a supplied successor
+
+**E-0154-1 (2026-09-23, `s7h`'s own adversarial pass).** *"`grep -rn \"advances_to\"
+crates/rk-kernel/tests/` returns two sites"*, and *"no third context exists"*. — **What is true:** there
+are now **three** call sites — `tests/it/replay.rs`, `tests/it/resume.rs` and
+`tests/it/lane_order.rs` — and the fsm order sweep now **does** carry a context supplying both a halt
+and a successor. [measured] This is stale **by design**: the record's own clause 4 says the new test is
+part of the decision, so the absence it measured is what the record then removed. It is logged so a
+reader who reproduces the grep and gets a different number knows why, rather than doubting the finding.
+**What this does not change:** nothing. The decision, the forbids and the mutant attribution all stand.
+
+## ADR-0155 — one `Story:` trailer per item per lane
+
+**E-0155-1 (2026-09-23, `s7h`'s own adversarial pass).** The title and clause 1 say *"one `Story:`
+trailer per item **per lane**"*. — **What is true:** the producer's idempotence read is
+`rk_git::reconcile::read_commits`, which is `git log --all` over every ref, matched on
+`(project, slug)` with **no lane, stage, run or time component**. So it is one trailer per item **for
+the lifetime of the repository**: a second lane over the same item mints nothing. The doc comment inside
+`story_trailer` is the accurate one — *"ONCE per item"*. [measured, the function's own read]
+**What this does not change:** the decision is unaffected and arguably stronger than its title:
+`reconcile` folds a repeated `(project, slug)` as `Drift::DuplicateStoryTrailer` **regardless of which
+lane wrote it**, so once-per-item-for-ever is the only cardinality that keeps that instrument green.
+The title's *"per lane"* is a narrower claim than the code makes and than the reader needs.
+
+## ADR-0158 — the tier-1 store layer has no writer on any axis
+
+**E-0158-1 (2026-09-23, `s7h`'s own adversarial pass).** The `source` line and the Evidence section
+both cite the live store as `t2_event` **30**. — **What is true:** the live
+`.git/redkiln/store.sqlite3` now holds **4** `t2_event` rows. The store was deleted and recreated
+several times during this stage's own lane experiments — it is untracked derived state under `.git/`
+— so the figure was true of the store that existed when the record was written and is not a stable
+quantity at all. [measured, read-only `sqlite3` open with `mode=ro&immutable=1`]
+**What this does not change:** the record's entire substance. The three t1 counts are **0, 0, 0** on
+every reading before and after, which is the claim; `t2_event`'s count was context, not evidence, and
+citing a mutable derived number as though it were a measurement is the error being corrected.
+**Also surfaced, and not a correction:** `rk_store::conn::Writer::transaction` is a generic escape
+hatch through which arbitrary SQL *is* reachable, so "no method a caller could use" is true of the
+`EventStore` port and not of `rk-store` as a whole. Its four non-test callers run the migration, read
+`PRAGMA`s, and append `t2_event` rows; none touches a t1 table. The claim stands as stated about the
+port. Decision unchanged.
+
+## ADR-0159 — the project component is declared and refused when absent
+
+**E-0159-1 (2026-09-23, `s7h`'s own adversarial pass).** In `## Evidence and confidence`, undated and
+in the present tense: *"`.redkiln/config.toml` is thirteen lines and declares `[adapters]`, `[packs]`
+and `[doctor]`; `grep -rn 'project' .redkiln/config.toml` returns nothing."* — **What is true:** the
+file is now **20 lines** and declares `[project] name = "redkiln-rs"` plus this record's own four-line
+comment, so the grep returns several hits. **This record's own decision is what falsified its own
+evidence line**, and unlike its batch-mates it carried no measurement date to protect it. Two smaller
+slips in the same section: the quoted *"the stage is read once, from the record, and is not defaulted"*
+is attributed to `run.rs:550` and is at **`run.rs:690`** at the close (it was at `:552-553`, not `:550`,
+even at `fc45eeb`); and the `bare_story_ids` insert is at `reconcile.rs:127-129`, not `126-128`.
+[measured]
+**What this does not change:** the decision, the forbids, or the silent-degradation mechanism —
+`split_qualified`'s `(!p.is_empty() && !s.is_empty())` still makes an empty project a `BareStory` that
+`reconcile` files under `bare_story_ids` and never treats as a transition, which is the whole warrant.
+**Also extended, not corrected:** ADR-0161 clause 3 adds that a name containing `/` is refused too — a
+constraint this record did not anticipate, found by the same pass.
+
+---
+
+## ADR-0160 — the `Slice-Verdict:` axis needs a slice identity nobody declares
+
+**E-0160-1 (2026-09-23, `s7h`'s own adversarial pass).** The title and Evidence absence (1) say
+`EventKind::SliceSealed` has *"exactly one construction in the whole workspace"*. — **What is true:**
+that is **overstated as worded**. `SliceSealed` is passed to `Event::new` at exactly one site in
+`crates/*/src` — `rk-cli/src/doctor/rebuild.rs:214` — which is the claim that matters and is the
+definition the tree's own lint uses (`rk-kernel/src/module_boundary.rs`'s
+`stage_exit_refused_single_site_rule`: *"a construction is the variant passed to `Event::new(` or
+written as an `Event {` literal"*). But the variant is also constructed at
+`rk-types/src/event_kind.rs:150`, inside `pub const ALL: [Self; 38]` — a literal in `src/`, not a test
+and not a match arm — and at two test sites (`rk-cli/tests/it/doctor.rs:2325`,
+`rk-kernel/tests/it/fsm.rs:476`); and `EventKind::from_wire("slice_sealed")` rehydrates it on **every**
+`EventStore::query`, so reading the store constructs `SliceSealed` values routinely.
+[measured, `rg 'SliceSealed|slice_sealed' crates/`]
+**What this does not change:** every clause of `## Decision` and every `**What this forbids**` bullet.
+The axis still has no **run-path producer**: the one `Event::new` site is the REBUILD path, `ALL` is an
+enumeration rather than an emission, and rehydration on read is not production. The record's reasoning
+turns on there being nothing that *writes* a seal during a run, which none of the above disturbs.
+**Why the wording mattered enough to correct:** "exactly one construction in the whole workspace" is
+the kind of absolute a reader can falsify in one `rg`, and a record whose headline is falsifiable by a
+single command invites the substance to be dismissed with it.
+
 ---
 
 *Later errata are appended under the record's heading with the next `E-NNNN-k` id. A heading with no entries is not

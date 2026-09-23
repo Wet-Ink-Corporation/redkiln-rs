@@ -398,6 +398,21 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
             &mut advanced,
         )?;
 
+        // 🛑 **A NON-ZERO EXIT ENDS THE LANE, EVEN WHEN THE STAGE ADVANCED.** Found by this stage's
+        // own adversarial pass, and it was a real hole rather than a theoretical one: the boundary is
+        // reported through `advanced` while the failure is reported through the return value, and the
+        // `let Some(next) = advanced else { return }` below reads `last_exit` **only on the
+        // no-advance path**. So every `Exit` a stage produced ALONGSIDE an advance was discarded and
+        // the loop advanced anyway — including all four of `story_trailer`'s refusals, which means
+        // ADR-0159's *"refuses by name"* was unobservable to any caller that reads an exit code: the
+        // message reached stderr and the process still exited on the LAST stage's status.
+        //
+        // Checked here rather than inside `run_with_advance` because the lane is this loop's
+        // invariant, not one stage's: a stage that failed has not earned a successor.
+        if last_exit != Exit::Success {
+            return Ok(last_exit);
+        }
+
         // A stage that took no boundary ends the lane: a gate (exit 0, golden constraint 2), a
         // halt, a refusal, or `Done` at the end of the order.
         let Some(next) = advanced else {
@@ -1469,6 +1484,27 @@ pub fn story_value(project: &str, item: &str) -> String {
 /// `authorise_tier1_write`. No new write path is introduced; the existing one gains a caller.
 fn story_trailer(resolved: &Resolved) -> Result<(), Exit> {
     let item = resolved.item.id();
+
+    // 🛑 **A PROJECT NAME CONTAINING `/` BREAKS THE AXIS SILENTLY, so it is refused.** Found by this
+    // stage's own adversarial pass. `split_qualified` splits the value on its **first** slash, so
+    // `[project] name = "acme/web"` emits `Story: acme/web/<item>` which parses as
+    // `project = "acme"`, `slug = "web/<item>"`. Two things then break at once: the idempotence read
+    // below looks up `state.projects.get("acme/web")` — a key `reconcile` can never produce — so the
+    // producer mints AGAIN on every boundary and every run, each one folding as
+    // `Drift::DuplicateStoryTrailer`, which is the exact state this function exists to prevent; and
+    // the slug `web/<item>` matches no `.redkiln/items/` stem, so `doctor --rebuild` reports it
+    // `unresolvable`. Both failures are invisible to a `grep '^Story:'`.
+    if let Some(p) = resolved.project.as_deref()
+        && p.contains('/')
+    {
+        eprintln!(
+            "redkiln: `.redkiln/config.toml`'s `[project] name` is {p:?}, which contains `/`. The \
+             trailer value is `<project>/<item>` and the reader splits on the FIRST slash, so this \
+             name would make every mark parse under a different project than it was written for, \
+             re-mint on every run, and fold as duplicate-story-trailer drift (ADR-0159)."
+        );
+        return Err(Exit::ConfigError);
+    }
 
     let Some(project) = resolved.project.as_deref() else {
         eprintln!(
