@@ -169,8 +169,21 @@ out=$(cargo test -p rk-kernel --test it -- conformance_every_trailer_key_has_a_p
 printf '%s\n' "$out" | grep -qF 'no producer for: ["Slice-Verdict"]' || { echo "FAIL: the lint's failure does not name Slice-Verdict as the sole missing producer"; printf '%s\n' "$out" | grep -E 'no producer|panicked'; exit 1; }
 
 # ---- (8) ADR-0101 CLAUSE 5. S-SUBTLE-CB is UNRUN and nothing may claim the gate is guarded.
-claim=$(grep -rniE 'guarded against false approval' --include=*.md runbook/ references/ | grep -viE 'may not|never|until S-SUBTLE-CB|no document|forbids|claims')
-test -z "$claim" || { echo "FAIL: a document claims the review gate is guarded against false approval (ADR-0101 clause 5; S-SUBTLE-CB is UNRUN):"; printf '%s\n' "$claim"; exit 1; }
+#
+# 🛑 **THE SCOPE IS `crates/`, AND THE AUTHORED FORM'S SCOPE MADE IT UNPASSABLE.** As written this
+# guard swept `runbook/ references/` with an exclusion list (`may not|never|until S-SUBTLE-CB|no
+# document`). It cannot pass on any tree: the PROHIBITION itself lives in those directories — design
+# §10's row, ADR-0101 clause 5, and three other stages' own guard COMMANDS all contain the phrase —
+# and when the prohibiting sentence wraps, the excluding words sit on the previous line. Measured
+# 2026-09-22: 13 hits, every one a prohibition or a grep command, zero claims. So this is the third
+# of six bullets that could not do its job as authored, alongside the two that could not fail.
+#
+# s7b-ii, s7c and s7d all scope the same sweep to `crates/` and require SILENCE — *"even to deny
+# it"* — which is decidable precisely because source has no reason to carry the prohibition prose.
+# This follows that precedent rather than inventing a doc-scanning form that cannot work.
+raw=$(grep -rniE 'guarded against false approval|calibrated against false approval' crates/rk-kernel/ crates/rk-cli/); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the ADR-0101 sweep could not run (grep rc=$rc)"; exit 1; }
+[ -z "$raw" ] || { echo "FAIL: a claim that the review gate is guarded against false approval appears in a 7h crate — ADR-0101 clause 5 forbids it until S-SUBTLE-CB runs (the 7b-ii lesson: even to deny it)"; printf '%s\n' "$raw"; exit 1; }   # → silent
 
 # ---- (9) THE WORKTREE GUARD, BY PATH SET AND NOT BY COUNT (carried finding (14)'s shape). Counts
 # ---- cannot tell a leaked registration from a replaced one; paths can.
