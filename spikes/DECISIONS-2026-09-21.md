@@ -1113,3 +1113,124 @@ front of the literal, both floors hold, the truncation is silent, and the source
 blind** while the behavioural half goes red. That is the measured result the closure rests on.
 
 ---
+
+## D21-28 · ADR-0152 flips to `accepted` — the lane's stage loop lives ABOVE `resume`, and the arm breaks
+
+`s7h` §7h.1 instructs `replay::resume`'s new arm to *"continue the loop into the next stage"*. That
+sentence cannot be executed. Every value the loop reads about "which stage" is bound before it, from
+`inputs.stage`: `run_id` and `Runtime`, the `selection`, the `stage_entry` row, and — **inside** the
+loop — `fsm::fold(item.id(), &inputs.stage, &journal)`. A `continue` re-folds the same exhausted stage,
+reads the same `Some(successor)`, and returns `AdvanceStage` again, without bound.
+
+**Measured rather than reasoned**: mutant M7 changes the arm's `break` to `continue` and the test
+**times out after 150s**, which turns the non-termination claim from something read off the code into
+something observed.
+
+And the grain is in the identifier: `RunInputs::run_id` is `format!("{}-{}", self.stage, &digest[..16])`,
+so advancing inside one call would file a later stage's events under a record whose id names the first
+— and that digest's bytes are what accepted ADR-0151 pins. The loop is therefore `rk-cli`'s, one
+`resume` per stage, and the arm steps and breaks on the `OpenGate` model.
+
+## D21-29 · ADR-0153 flips to `accepted` — the lane order is a DECLARED array, because a TOML table has none
+
+§7h.1 says the successor comes from *"the pack's own stage order — `[policy] stages`"*. That order does
+not exist, for three independent reasons: a TOML table is an unordered collection by specification;
+this tree's parser materialises every inline table as `BTreeMap` (`toml_subset.rs:37`), so the twelve
+declared stages come back **alphabetised**; and `parse_spans` cannot recover the textual order either,
+because the whole inline table sits on one line and spans are at line grain.
+
+`[policy] stage_order` is added to both shipped packs — an array, the only order-preserving shape in
+`toml_subset::Value` — and the two keys are cross-checked at load so they cannot drift. `Pack::to_json`
+deliberately does **not** carry it: that value is one of AC-041's four digests, steps 1-4 never read the
+lane order, and adding it would move every selection memo key for no change in any selection.
+
+## D21-30 · ADR-0154 flips to `accepted` — a recorded halt outranks a supplied successor
+
+`next_action` put `AdvanceStage` at 4 and `Halt` at 5, which was harmless only because `ctx.successor`
+was `None` on every real run. `s7h` supplies it, and from that commit a refused run whose plan is
+exhausted would have **advanced a stage** — writing a tier-1 `stage_transition` and handing the next
+stage a journal whose refusal nothing acted on. That is the outcome arm 5's own comment says the order
+exists to prevent.
+
+Nothing pinned the old order: the order sweep asserted `Halt` against the **no-successor** context, so
+every arm had a fixture and the pair had none. The new assertion is on the combination, and mutant M4
+— the two blocks physically swapped — is RED at `fsm.rs:778` reporting
+`left: AdvanceStage { from: "implement", to: "verify" }` against `right: Halt { Refused { class:
+"overage" } }`.
+
+## D21-31 · ADR-0155 flips to `accepted` — one `Story:` per item per lane, and the AC-162 residual is named
+
+Four requirements and not all four can hold: design §5.4 gives the value no stage slot; `reconcile`
+makes a repeat `DuplicateStoryTrailer` drift; `doctor --rebuild` already writes ONE row per item **and
+says why in its own comment**; and AC-162 wants a trailer per transition. The fourth gives.
+
+The load-bearing evidence is that the cardinality is not this stage's opinion — `rebuild.rs:165-169`
+decided it first, for a stated reason. Clauses 4 and 5 were amended once ADR-0158 measured that the
+tier-1 layer has no writer at all, so the residual is two residuals: N−1 boundaries with no trailer,
+and an AC-162 ordering that is **vacuous** rather than unmet.
+
+## D21-32 · ADR-0156 flips to `accepted` — the two axes split, and the shipped review stage is unreachable for SIX absences
+
+`triage` carries **0 of the 102** shipped activities and neither pack declares `[stage.triage]`, which
+is the mechanical cause of §7h's own premise that a landed run leaves zero commits — and the reason the
+advance is demonstrable today.
+
+The record was drafted at five blockers and **blocker (0) was found by running the binary**: `bind_nodes`
+reads a role's **card** before the kind's **schema**, so the missing `.redkiln/schemas/` had never been
+reached by anything. What a run stops at is **8 of 8** shipped cards carrying no `permission_mode`
+(AC-214). Clauses 2 and 3 were amended while the record was still `proposed`: they prescribed a fixture
+pack, and ADR-0160 then measured three absences no fixture pack answers.
+
+## D21-33 · ADR-0157 flips to `accepted` — a stage does not advance into itself, and a lane completes WITHIN ONE PROCESS
+
+Found by running the binary twice, after six lane fixtures, seven mutants, four suites, fmt and clippy
+were all green. Run two appended **`{"from":"analysis","to":"analysis"}`**, and run three would have
+appended another: `from` is the fold's stage and `to` is the supplied successor, and they diverge because
+the composition root computes the successor from the item record — which never moves — while the fold
+follows the rows the previous run wrote.
+
+No fixture could have caught it: every `AdvanceStage` fixture folds a journal that does not already
+contain a transition into the supplied successor. The repair is one conjunct; the test replays the first
+run's journal as `prior`, which is what `rk-cli` does at step (9).
+
+**The residual under it is named**: across processes the lane is idempotent and **stalled** — runs 2 and
+3 exit 0 and append nothing — because `inputs.stage` is the record's and AC-518 forbids writing the new
+stage back to the checkout. Exit 0 on a second invocation is not progress.
+
+## D21-34 · ADR-0158 flips to `accepted` — the tier-1 store layer has NO WRITER on any axis
+
+Found while deciding where the `Story:` write belongs, by asking what *"the store row for that
+transition"* actually is. It is a named table, and there are three of them, each with an `anchor_sha`
+column, under the header *"tier 1: git first — these rows never exist without their trailer commit"*.
+
+Measured: **zero** `INSERT INTO t1_*` in the workspace; all three tables **empty** in a live store after
+real runs; and the `EventStore` port carries only `append`/`query`/`snapshot`/`rebuild`, so no caller
+could write one. **`Gate:` is the control that makes it structural**: its trailer producer has existed
+since 7d and `t1_gate` is empty too. AC-160..AC-163 and AC-162 are therefore **vacuous on every axis** —
+not met, not violated, and saying which matters. Closing it is a port-surface change and is routed.
+
+## D21-35 · ADR-0159 flips to `accepted` — the `<project>` component is declared, and its absence refuses
+
+Nothing in the repository declared a project, and the failure mode of guessing is silent: an empty
+project makes `split_qualified` return `None`, `classify` produce `BareStory`, and `reconcile` file it
+under `bare_story_ids` — a real commit that records no transition and still passes `grep '^Story:'`. The
+four candidate sources are each wrong for a stated reason. `[project] name` is declared, whitespace-only
+counts as absent, and the refusal is at the mint rather than at startup.
+
+The round-trip test asserts both halves: the emitted value parses as a **qualified** story and reaches
+`stories_committed`; the empty-project value parses as `BareStory`, reaches no project, and is not even
+drift — while **both satisfy `grep '^Story:'` identically**.
+
+## D21-36 · ADR-0160 flips to `accepted` — the `Slice-Verdict:` axis needs a slice identity nobody declares
+
+Three absences, and none of them is the plumbing. `EventKind::SliceSealed` has **exactly one
+construction in the workspace and it is `doctor/rebuild.rs`** — the rebuild path, reading trailers back.
+`review::confirm` produces five event kinds and **no seal**, so wiring the review gate would still not
+seal a slice. And `<slice>` is declared nowhere: `ItemRecord` is `{id, kind, stage, [facets]}`.
+
+That is ADR-0159's residual one arm along, and inventing an identity would discharge a **substring**
+lint with code no run reaches — the "source lint passes on code nothing calls" failure this programme
+has already paid for twice. So `s7h` records the axis ARMED, corrects the lint's reason and its now-false
+failure message, and names the route.
+
+---

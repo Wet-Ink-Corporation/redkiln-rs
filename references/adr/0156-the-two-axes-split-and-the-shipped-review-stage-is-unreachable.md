@@ -1,13 +1,13 @@
 ---
 id: "0156"
-title: "The two axes are asserted over **two different corpora, for a measured reason**: `Story:` by a REAL `redkiln run` on the shipped tree — reachable because **`triage` has ZERO catalog activities** and `bug-standard` declares no `[stage.triage]` block, so the plan is empty, `bind_nodes` reads no schema and the first boundary is crossed with nothing in the way — and `Slice-Verdict:`, the `review`/`verify` call site and `Exit::FindingsBlock` over a **purpose-built fixture pack** whose review activity is `agent` + `emit` only. The shipped pack's review stage is unreachable for **six independent, measured absences**, one of which (`${…}` step-output resolution) the tracker records as OWED to another stage. And Checkpoint 7h's `grep -q '^Slice-Verdict:'` guard is **already GREEN on the untouched tree** — satisfied by wrapped PROSE in commit `ba46ed9` over a stale `rk-run/` branch that is 0 commits ahead of the build branch — so it is re-stated against git's own trailer parser and scoped to the run's own commits before it is ever run"
-status: proposed
+title: "The two axes are asserted over **two different corpora, for a measured reason**: `Story:` by a REAL `redkiln run` on the shipped tree — reachable because **`triage` has ZERO catalog activities** and `bug-standard` declares no `[stage.triage]` block, so the plan is empty, `bind_nodes` reads no schema and the first boundary is crossed with nothing in the way — and `Slice-Verdict:`, the `review`/`verify` call site and `Exit::FindingsBlock` **NOT AT ALL** — clauses 2 and 3 prescribed a fixture pack and were amended, while this record was still `proposed`, once ADR-0160 measured three absences no fixture pack answers. The shipped pack's review stage is unreachable for **six independent, measured absences**, one of which (`${…}` step-output resolution) the tracker records as OWED to another stage. And Checkpoint 7h's `grep -q '^Slice-Verdict:'` guard is **already GREEN on the untouched tree** — satisfied by wrapped PROSE in commit `ba46ed9` over a stale `rk-run/` branch that is 0 commits ahead of the build branch — so it is re-stated against git's own trailer parser and scoped to the run's own commits before it is ever run"
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: .redkiln/catalog/ (102 activities; the per-stage census, `triage` = 0); .redkiln/packs/bug-standard.toml (no `[stage.triage]` block; `[stage.review]` at 63-76); .redkiln/catalog/code-review.toml (24-58, the five steps) and adversarial-review.toml; crates/rk-cli/src/verbs/run.rs (`bind_nodes`'s schema read at 1735-1739; the stage read at 550; `terminal_read` at 1257-1331); crates/rk-kernel/src/runtime/step.rs (`MAPPED_VERBS` at 190, the refusal at 310-315); crates/rk-kernel/src/replay.rs (1760-1763, ADR-0142's measurement — 75 of 121 guards evaluable, the 94 `check` exprs untouched); crates/rk-kernel/src/review.rs and src/verify.rs (built, tested, zero `src/` callers); crates/rk-cli/src/exit.rs (44-46, `FindingsBlock = 4` and its *"its producer is the kernel's, built at 7b-ii"*); runbook/phase-1/s7h-lane-completes.md (§7h.4's block); references/adr/0101 (clause 5); references/adr/0147 (the instrument/executor split criterion)
 supersedes: []
 superseded_by: []
-related: ["0101", "0136", "0142", "0147", "0148", "0152", "0155", "0157", "0158"]
+related: ["0101", "0136", "0142", "0147", "0148", "0152", "0155", "0157", "0158", "0160"]
 evidence: []
 consumers: []
 ---
@@ -120,15 +120,23 @@ Both axes get a real producer and a real assertion; nothing is claimed of the sh
 `rk-fix-doctor-test-count`, crossing the `triage → analysis` boundary that `0153`'s declared order
 supplies.
 
-**2.** The `Slice-Verdict:` axis, the `review`/`verify` call site and `Exit::FindingsBlock` are asserted
-over a **fixture pack** whose review-stage activity declares **`agent` + `emit` steps only**: no `check`
-step (so no `${…}` reference, so blocker 5 is not in the path) and no `gate` step (so no `question`, and
-carried finding (22)'s missing `gate_expiry` class is not in the path either).
+⚠️ **CLAUSES 2 AND 3 WERE OVERTAKEN BY MEASUREMENT AND ARE AMENDED HERE, while this record was
+still `proposed` and had bound nothing.** They prescribed asserting the second axis over a fixture pack
+whose review activity is `agent` + `emit`. That plan addressed the blockers this record enumerates — and
+**ADR-0160 then measured three absences it did not know about**, none of which a fixture pack answers:
+`EventKind::SliceSealed` has exactly one construction in the workspace and it is `doctor/rebuild.rs`,
+the REBUILD path; `review::confirm` produces five event kinds and **no seal**; and `<slice>` is declared
+nowhere. A fixture pack would have exercised a call site into a module that does not seal a slice, using
+a slice identity invented in code. So:
 
-**3.** The wiring under test is the post-dispatch half: the agent result →
-`review::ingest::findings_from_result_event` → `review::confirm::confirm_with` → append
-`Confirmed::events` → the `Slice-Verdict:` trailer → `Exit::FindingsBlock` from `block_set()`. `review/`
-returns `Vec<Event>` and appends nothing itself, so the caller owns the append and the exit mapping.
+**2.** The `Slice-Verdict:` axis is **NOT delivered at `s7h`** — ADR-0160, which carries the three
+absences and the route out. The ARMED lint keeps its `#[ignore]`.
+
+**3.** The `review`/`verify` call site and `Exit::FindingsBlock` are **NOT delivered at `s7h`** either,
+and the reason is this record's own blocker list rather than ADR-0160's: the review stage is unreachable,
+blocker (0) being the one a real run stops at. No fixture pack is authored, because a fixture that
+exercised the wiring would assert a call site the shipped tree cannot reach, and this record's whole
+point is to keep those two claims apart.
 
 **4. The six blockers are recorded by number** as the reason the shipped review stage is unreachable, and
 **`0 of 102` shipped activities completing a committing walk stands unchanged** by this stage.

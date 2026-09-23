@@ -1,7 +1,7 @@
 ---
 id: "0152"
 title: "The lane's stage loop lives **above** `replay::resume`, in `rk-cli`: one `resume` per stage, one run record per stage, the successor supplied per stage — and `resume`'s new `AdvanceStage` arm **steps and breaks** rather than continuing into the next stage. `s7h` §7h.1's instruction to *\"continue the loop into the next stage\"* is not implementable as written: `inputs.stage` is fixed before the loop and is what `fsm::fold` reads on every iteration, so a `continue` re-folds the same exhausted stage with the same `Some(successor)` and the arm fires again — an unbounded append of `stage_transition` rows. The grain is not incidental but is in the identifier: `RunInputs::run_id` is `format!(\"{}-{}\", self.stage, &digest[..16])`, so advancing inside one call would file a later stage's events under a run record whose id names the FIRST stage, and that digest's bytes are what accepted `0151` pins"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: crates/rk-kernel/src/replay.rs (`resume`'s pre-loop bindings at 1693-1707 and the loop's `fsm::fold(item.id(), &inputs.stage, &journal)` at 1767; `RunInputs::run_id` at 1078-1087; `RuntimeContext::advances_to` at 616-622 — *"supplied, never invented"*; the `OpenGate` arm at 1801-1808, the model this arm copies); crates/rk-cli/src/verbs/run.rs (`base_inputs` at 1047-1080, which never chains `advances_to`; `resume_and_read` at 1091); crates/rk-kernel/src/workflow/fsm.rs (`next_action`'s arm 4 at 1700-1707); references/adr/0151 (the pinned run-record digest); references/adr/0083 (the `run_id` preimage)

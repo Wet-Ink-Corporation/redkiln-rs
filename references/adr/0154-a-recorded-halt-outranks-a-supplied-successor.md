@@ -1,7 +1,7 @@
 ---
 id: "0154"
 title: "A **recorded halt outranks a supplied successor**: `fsm::next_action`'s halt check moves above its `AdvanceStage` check, so a run whose plan is exhausted AND whose journal carries a refusal reports `Halt` rather than advancing a stage. The current order — `AdvanceStage` at 4, `Halt` at 5 — is harmless today only because `ctx.successor` is `None` on every real run; `s7h` supplies it, and from that commit a refused run would have ADVANCED, falsifying arm 5's own comment that it sits *\"BEFORE `Done`, so a refused run is not reported finished\"*. Nothing pins the present order: the halt assertion at `tests/it/fsm.rs:748-755` uses the NO-successor context, so the `halt + successor` combination has no fixture anywhere in the workspace — a fixture per function, not per branch"
-status: proposed
+status: accepted
 date: 2026-09-22
 legacy_id: none
 source: crates/rk-kernel/src/workflow/fsm.rs (the documented evaluation order at 1601-1613; the body's arm 4 at 1700-1707 and arm 5 at 1708-1713, whose comment states the intent this record restores; `NextAction` at 550-569); crates/rk-kernel/tests/it/fsm.rs (724-790 — the order sweep, which asserts `Halt` against `ctx_none` and `AdvanceStage` against `ctx_next`, never a context carrying both); crates/rk-kernel/src/replay.rs (`resume`'s `_ => break` at 1809, which is where a `Halt` lands); references/adr/0152 (which supplies the successor and therefore activates this)

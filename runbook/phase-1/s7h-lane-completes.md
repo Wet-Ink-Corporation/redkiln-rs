@@ -24,8 +24,21 @@ emitted **at** the boundary, so wiring the boundary is what mints the trailer. L
 `Slice-Verdict:` has producer *"the lane's review stage"*. ADR-0105 decision 3 fixes the plumbing:
 `git commit --allow-empty --trailer "<Key>: <value>"` through the wrapper with `-c trailer.ifexists=add`, on the
 run's branch. Measured 2026-09-21, `TrailerKey::Story` and `TrailerKey::SliceVerdict` occur **only in the parser**.
+⚠️ **Partly false, re-measured 2026-09-22:** true within `src/`, but `rk-cli/tests/it/doctor.rs:2058-2061`
+and `rk-git/tests/it/trailers.rs:178` already construct both and push them through
+`commit_with_trailers` — working test-side producers, and the template this stage's `Story:` producer
+was built from.
 
-**This step takes no decision.** Both producers and the plumbing are specified.
+🛑 **CORRECTED 2026-09-23 AT THIS STAGE'S OWN WORK. This read *"This step takes no decision. Both
+producers and the plumbing are specified."* and it was wrong nine times over.** The stage took
+**ADR-0152 … ADR-0160**. Re-deriving §7h's premise against HEAD rather than inheriting it found one
+instruction that cannot be executed (§7h.1's *"continue the loop"*), one ordering that does not exist
+(§7h.1's *"the pack's own stage order"*), one latent defect this stage ACTIVATES (a supplied successor
+outranking a recorded halt), one contradiction between four accepted requirements (the `Story:`
+cardinality), two free residuals nobody had declared (`<project>`, `<slice>`), and — by RUNNING the
+binary rather than by reading — a self-transition appended once per invocation and a tier-1 store layer
+with no writer on any axis. `s7g`'s file said the same sentence and took seventeen records; the lesson is
+recorded here rather than left for a third stage to learn.
 
 ### 7h.1 `ctx.successor`, and the stage boundary the FSM already knows how to take
 
@@ -33,9 +46,19 @@ run's branch. Measured 2026-09-21, `TrailerKey::Story` and `TrailerKey::SliceVer
 after `Dispatch` and before `Halt`. What is missing is its input: `RuntimeContext::successor`, which `base_inputs`
 never sets, so the arm is dead. The successor is the pack's own stage order — `[policy] stages` — filtered to the
 stages the pack does not mark `forbidden`, which `bug-standard` and `story` both declare.
+🛑 **FALSE, and ADR-0153 replaces it.** `[policy] stages` has no order to read: a TOML table is
+unordered by specification, `toml_subset::Table` is a `BTreeMap` so the twelve stages come back
+**alphabetised**, and `parse_spans` cannot recover the textual order because the whole inline table sits
+on one line and spans are at line grain. The order is now DECLARED, in a new `[policy] stage_order`
+array, cross-checked against `policy.stages` at load.
 
 `replay::resume` gains the `AdvanceStage` arm: append the transition, write its trailer commit, and **continue the
-loop into the next stage** rather than breaking. The existing `_ => break` stays for `Halt` and `Done`, which are
+loop into the next stage** rather than breaking.
+🛑 **NOT IMPLEMENTABLE, and ADR-0152 replaces it.** Everything the loop reads about *which stage* is
+bound before it from `inputs.stage` — including, INSIDE the loop, `fsm::fold(item.id(), &inputs.stage,
+&journal)`. A `continue` re-folds the same exhausted stage, reads the same `Some(successor)`, and fires
+again: mutant M7 makes exactly this change and the test **times out after 150s**. The arm steps and
+**breaks**, on the `OpenGate` model; the lane loop is `rk-cli`'s, one `resume` per stage. The existing `_ => break` stays for `Halt` and `Done`, which are
 terminal by design.
 
 🛑 **The gate exit is unchanged and must stay so.** `OpenGate` breaks and `run` exits 0 — golden constraint 2,
@@ -45,6 +68,11 @@ advancing past a gate.
 ### 7h.2 The two trailer axes, written where their producers are
 
 **`Story:` at the stage boundary** — value per design §5.4's grammar table, column-anchored, through the wrapper.
+🛑 **ONE PER ITEM PER LANE, AT THE *FIRST* BOUNDARY — ADR-0155.** One per boundary is not available:
+the value has no stage slot, `reconcile` makes a repeat `duplicate-story-trailer` DRIFT, and
+`doctor --rebuild` already writes ONE `stage_transition` per item **and its own comment says why**. The
+two axes have different cardinalities on purpose — `Slice-Verdict:` is many-per-slice (F12's rejection
+history) — and this sentence flattened them.
 **`Slice-Verdict:` from the lane's review stage** — `<project> "/" <slice> SP <verdict>`, exactly two
 whitespace-separated tokens, verdict in `approved | changes-requested` compared case-insensitively and stored
 lower-case, latest wins with commits folded oldest-first.
@@ -57,8 +85,23 @@ gives for free.
 Every write goes through `rk_git::trailer::write::commit_with_trailers` on the run-owned worktree, past
 `authorise_tier1_write` — which refuses unless the target is the store-recorded path on `rk-run/<item>` (AC-518,
 ADR-0105 clause 8). No new write path is introduced; the existing one gains two more callers.
+⚠️ **FALSE OF THE GUARD, re-measured 2026-09-22, and the distinction matters when choosing a caller
+shape.** `authorise_tier1_write` (`rk-git/src/worktree.rs:55-88`) checks normalised PATH EQUALITY against
+a **passed** `RunOwnership` and `HEAD == ownership.branch`. There is no `rk-run/` pattern anywhere in that
+crate; the spelling and the store lookup are CALLER properties, and the two existing callers disagree —
+`answer.rs` reads the pair from the store, `run.rs` reconstructs it by convention. **And it gains ONE
+caller, not two**: the `Slice-Verdict:` axis is not delivered (ADR-0160).
 
 ### 7h.3 The review and verify modules gain their call site
+
+🛑 **NOT DELIVERED AT THIS STAGE. ADR-0156 and ADR-0160 carry the reasons, and they are different
+reasons.** The call site is blocked by ADR-0156's **six** measured absences — blocker (0), found by
+running the binary, is that **8 of 8** shipped cards carry no `permission_mode` (AC-214), which is the
+exit 3 a real run now stops at one stage after the boundary it takes. The `Slice-Verdict:` axis is blocked
+by something else again (ADR-0160): `EventKind::SliceSealed` has exactly one construction in the
+workspace and it is `doctor/rebuild.rs`, the REBUILD path; `review::confirm` produces five event kinds and
+**no seal**; and `<slice>` is declared nowhere. Those are two tasks, not one done in sequence, and only
+the second is blocked on an identity.
 
 `rk_kernel::review` (10 files) and `rk_kernel::verify` (6 files) are built, tested, and have **no caller on the run
 path** — measured 2026-09-21. They are not written here; they are **wired**. The review stage's activities reach
