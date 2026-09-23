@@ -34,6 +34,24 @@ pub struct ConfigFile {
     pub packs: Packs,
     /// `doctor`'s own configuration.
     pub doctor: Doctor,
+    /// **`[project]` — ADR-0159.** The `<project>` component of every trailer value this system
+    /// mints.
+    ///
+    /// `Option` because the table is new and `redkiln init` leaves an existing file untouched
+    /// (ADR-0107 decision 2), and because `deny_unknown_fields` above means a config that does NOT
+    /// declare it must still load: a run that mints no trailer has no business failing on it. The
+    /// refusal is at the mint, not here — see `verbs::run`'s `story_trailer`.
+    pub project: Option<Project>,
+}
+
+/// `[project]` — ADR-0159.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Project {
+    /// The project name. **Never derived**: not from the pack, the lane, the item id, the worktree
+    /// path or the remote. An empty or whitespace-only value is the ABSENT case and not a value,
+    /// because `split_qualified` cannot tell `Story: /slug` from a missing project either.
+    pub name: String,
 }
 
 /// `[adapters]` — the four reals, and the two RT-49 test seams.
@@ -163,6 +181,11 @@ pub fn key_surface() -> Vec<String> {
         doctor: Doctor {
             unread_window_runs: 0,
         },
+        // Populated for the reason the comment above gives: an absent optional does not appear in
+        // the serialised form, and the surface would under-report the key ADR-0159 added.
+        project: Some(Project {
+            name: String::new(),
+        }),
     };
     let value = serde_json::to_value(&every).expect("ConfigFile serialises");
     let mut keys = Vec::new();

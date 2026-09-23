@@ -9,5 +9,12 @@ toolchains = ["rk-adapter-toolchain-node", "rk-adapter-toolchain-rust"]
 [packs]
 enabled = ["bug-standard", "story"]
 
+# ADR-0159: the `<project>` component of every trailer value this system mints. NEVER derived --
+# not from the pack, the lane, the item id, the worktree path or the remote -- because whatever is
+# emitted BECOMES the project as far as `doctor --rebuild` is concerned, and an empty one degrades
+# the trailer to a bare story id that records no transition.
+[project]
+name = "redkiln-rs"
+
 [doctor]
 unread_window_runs = 50

@@ -172,6 +172,12 @@ pub struct Resolved {
     /// The stage the item record carries (RT-50) — or, for the second stage of a lane onward, the
     /// stage the lane loop advanced INTO (ADR-0152).
     pub stage: String,
+    /// **`[project] name` — the `<project>` component of every trailer value (ADR-0159).**
+    ///
+    /// `None` when the key is absent, empty or whitespace-only — all three are the same absence,
+    /// because `split_qualified` cannot tell `Story: /slug` from a missing project. A run that mints
+    /// no trailer is unaffected; a run that would mint one refuses by name.
+    pub project: Option<String>,
     /// **The stage this one was entered FROM, for `RuntimeContext::entered_from` (ADR-0152).**
     ///
     /// `None` for a lane's first stage, which has no predecessor — the one case `stage_entry` says
@@ -774,6 +780,12 @@ pub fn through_step_seven(
         extras,
         item,
         stage,
+        // ADR-0159: an empty or whitespace-only name is the ABSENT case, not a value.
+        project: config
+            .project
+            .as_ref()
+            .map(|p| p.name.trim().to_owned())
+            .filter(|n| !n.is_empty()),
         // A lane's FIRST stage has no predecessor; the loop sets this for every stage after it.
         entered_from: None,
         config: kernel_config,
@@ -1413,7 +1425,114 @@ fn resume_and_read(
     // ADR-0152: the boundary the kernel took, reported to the lane loop before the terminal read.
     *advanced = recorded.advanced_to().map(ToOwned::to_owned);
 
+    // §7h.2: the `Story:` axis. As close to the boundary as the seams allow, and BEFORE the
+    // terminal read (ADR-0155 clause 4).
+    if advanced.is_some()
+        && let Err(exit) = story_trailer(resolved)
+    {
+        return Ok(exit);
+    }
+
     Ok(terminal_read(resolved, &recorded))
+}
+
+/// The `Story:` VALUE, as design §5.4's grammar fixes it: `<project> "/" <slug>` (ADR-0155).
+///
+/// A function rather than an inline `format!` so the round-trip test asserts the shape the producer
+/// actually emits. A test that re-spelled the format string would be asserting its own copy, and the
+/// failure this guards is precisely a value that LOOKS right and does not parse: `grep '^Story:'`
+/// passes on `Story: /item`, on `Story:item`, and on a project containing a space.
+#[must_use]
+pub fn story_value(project: &str, item: &str) -> String {
+    format!("{project}/{item}")
+}
+
+/// **§7h.2's first axis: mint `Story: <project>/<item>` — ONCE per item (ADR-0155).**
+///
+/// Called only when the run took a stage boundary. The value is `<project>/<item-id>` where the id is
+/// the `.redkiln/items/` file stem, because `doctor --rebuild` resolves `to` by looking that stem up
+/// and reports `unresolvable` for anything else.
+///
+/// 🛑 **IDEMPOTENT ACROSS RUNS, AND THAT IS NOT AN OPTIMISATION.** `reconcile` makes a second
+/// identical `Story:` value `Drift::DuplicateStoryTrailer` — *"counted, never a transition"* — so a
+/// producer that minted on every boundary would put the repository into drift by its second lane
+/// stage and make `doctor --rebuild` disagree with the store, which is what AC-427's differential
+/// exists to catch. `read_commits` reads every trailer-bearing commit reachable from ANY ref, so the
+/// check spans previous runs and previous lanes, not just this process.
+///
+/// 🛑 **A missing project REFUSES rather than emitting `Story: /<item>` (ADR-0159).** An empty
+/// project makes `split_qualified` return `None`, `classify` produce `BareStory`, and `reconcile`
+/// file it under `bare_story_ids` — a real commit that contributes to no state and still passes a
+/// `grep '^Story:'`.
+///
+/// Every write goes through `commit_with_trailers` on the run-owned worktree, past
+/// `authorise_tier1_write`. No new write path is introduced; the existing one gains a caller.
+fn story_trailer(resolved: &Resolved) -> Result<(), Exit> {
+    let item = resolved.item.id();
+
+    let Some(project) = resolved.project.as_deref() else {
+        eprintln!(
+            "redkiln: the lane advanced and no `Story:` trailer can be written for `{item}`:              `.redkiln/config.toml` declares no `[project] name`. The trailer value is              `<project>/<item>` (design §5.4) and an empty project degrades the trailer to a bare              story id that records no transition, so it is refused rather than written (ADR-0159)."
+        );
+        return Err(Exit::ConfigError);
+    };
+
+    // ---- ONCE PER ITEM. Read what git already carries before writing anything.
+    let commits =
+        rk_git::reconcile::read_commits(&resolved.exec, &resolved.worktree).map_err(|e| {
+            eprintln!("redkiln: the trailer history could not be read: {e:?}");
+            Exit::ConfigError
+        })?;
+    let (state, _drift) = rk_git::reconcile::reconcile(&commits);
+    if state
+        .projects
+        .get(project)
+        .is_some_and(|p| p.stories_committed.contains(item))
+    {
+        // Already minted, by this lane or an earlier one. Writing again is drift, not a record.
+        return Ok(());
+    }
+
+    let ownership = rk_git::worktree::RunOwnership {
+        worktree: resolved
+            .common_dir
+            .join("redkiln")
+            .join("worktrees")
+            .join(item),
+        branch: format!("rk-run/{item}"),
+    };
+    let owned =
+        rk_git::worktree::authorise_tier1_write(&resolved.exec, &ownership.worktree, &ownership)
+            .map_err(|e| {
+                eprintln!("redkiln: the `Story:` trailer write was refused: {e:?}");
+                Exit::ConfigError
+            })?;
+
+    let trailer = rk_git::trailer::grammar::Trailer {
+        key: rk_git::trailer::grammar::TrailerKey::Story,
+        value: story_value(project, item),
+    };
+    rk_git::trailer::write::commit_with_trailers(
+        &resolved.exec,
+        owned.path(),
+        // 🛑 **THE SUBJECT MAY NOT CONTAIN `": "`, AND THIS IS NOT STYLE.** `parse_body` splits
+        // every line at column 0 on `": "` and treats a whitespace-free left side as a trailer key,
+        // so a subject like `story(<item>): entered the lane` parses as
+        // `UnknownKey { key: "story(<item>)" }` and is COUNTED into `unknown_keys` — design §5.4's
+        // *"Unknown keys are ignored and counted"* — on every commit this producer writes. Found by
+        // the round-trip test, not by reading. `terminal_read`'s `Gate opened for <item>` is safe
+        // for the same reason: no colon.
+        &format!("story {item} entered the lane"),
+        std::slice::from_ref(&trailer),
+        true,
+    )
+    .map_err(|e| {
+        eprintln!("redkiln: the `Story:` trailer commit failed: {e:?}");
+        Exit::ConfigError
+    })?;
+
+    println!("story {project}/{item} recorded on rk-run/{item}");
+    Ok(())
 }
 
 /// Step (10): the terminal read.

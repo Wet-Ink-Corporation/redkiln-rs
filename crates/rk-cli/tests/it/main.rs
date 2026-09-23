@@ -73,6 +73,7 @@ mod lint;
 mod reconcile;
 mod root;
 mod run;
+mod story_axis;
 mod support;
 mod surface;
 mod toolchain;

@@ -13,3 +13,5 @@ doctor
 doctor.unread_window_runs
 packs
 packs.enabled
+project
+project.name
