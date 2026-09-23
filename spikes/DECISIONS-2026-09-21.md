@@ -976,3 +976,140 @@ does not claim Checkpoint 7g now certifies the executor — six mutations still 
 **Step 7g remains BLOCKED**, and its Result/commit column remains EMPTY.
 
 ---
+
+## D21-23 · ADR-0148 flips to `accepted` — `toolchain:test` refuses, because the tempting repair is a green from a toolchain that ran nothing
+
+`run_tool_step` called `toolchain.test(&[])`, and `rk-adapter-toolchain-rust` reads an EMPTY selection
+as `cargo test --workspace`. All **28** shipped `toolchain:test` steps were therefore whole-workspace
+runs under the 3600s bound on a shared target dir.
+
+**The measurement that closed the obvious fix.** `catalog::Step` drops the `inputs` key, so the
+declared selection is never parsed — and parsing it does not help. Measured over `.redkiln/catalog/`:
+all 28 declare `inputs.selection`, and it is `"affected"` (17), a `${…}` reference the resolver
+ADR-0136 clause 4 records as OWED (6), `artifact:…` (4) or `"e2e"` (1). **Not one is a test name.**
+`Toolchain::test` takes `&[String]` — test selectors. Passing `"affected"` through runs
+`cargo test affected`, which matches nothing and **exits 0**: a green from a toolchain that ran no
+tests, which is strictly worse than the over-broad run, because the over-broad run at least goes red
+when the tree is broken.
+
+So the verb refuses by name, on ADR-0135 clause 2's own precedent, and `catalog::Step` is **not**
+widened — a parsed-but-unusable value would leave the one-line change from *parsed* to *passed
+through* sitting there for anyone who had not read the record. **Supersedes ADR-0135 clause 1 in
+part**, at its `test` row only; `build`, `lint` and `change_summary` are untouched and `0135` stays
+`accepted` with `superseded_by: ["0148"]`.
+
+**Guard.** `tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port`,
+two instruments — a counting `Toolchain` that must not move, and the refusal's own text — with a
+positive control that the sibling verb `build` DOES reach the port. Mutant-tested: restoring
+`toolchain.test(&[])` turns it RED and leaves the other 218 tests green.
+
+---
+
+## D21-24 · ADR-0149 flips to `accepted` — `detect()` chooses, and node's required-env table stops gating Rust trees
+
+`real_toolchain` constructed and validated **every** listed adapter with `?` before `detect()` chose,
+so the first candidate whose `Config::new` refused ended the whole run at exit **3**.
+
+**This was the default ordering.** Every `.redkiln/config.toml` in the repository, shipped and fixture
+alike, declares `toolchains = ["rk-adapter-toolchain-node", "rk-adapter-toolchain-rust"]` — node
+first — and the required-env tables differ: node on Windows wants `SystemRoot` and `PATH`; rust wants
+`SystemDrive` and one of `TMP`/`TEMP`/`USERPROFILE`. An environment satisfying rust and not node
+refused a **Rust repository, naming Node**, before the question of which toolchain the project uses
+was ever asked.
+
+ADR-0137 clause 2 already said selection is by declared order and `detect()`; this makes the code
+honour it. A refused candidate is recorded in `tried` and walked past, and `tried` is what ADR-0139's
+`UndetectedToolchain` carries when nothing detects — so nothing is swallowed. An **unknown** adapter
+name still ends the run, because that is a drift between `AdapterSet::resolve` and the match: a build
+defect, not a configuration one.
+
+**Guard.** `adapter_selection::a_candidate_whose_config_is_refused_does_not_end_the_run_before_detect_chooses`,
+with **two controls** — asserted against the adapters' own `Config::new` — that this environment
+really does refuse node and really does satisfy rust, because *"the loop returned `Ok`"* is also what
+a loop that refused nothing returns. `real_toolchain` is now `pub`, and only so it can be observed.
+
+---
+
+## D21-25 · ADR-0150 flips to `accepted` — the commit grain stays, the residual is NAMED, and the module header that said otherwise is corrected
+
+`activity_committed` is appended when the `agent` step dispatches, so every later step in the walk
+runs inside an **already-committed** activation — and `RunState::is_committed` has no step component,
+so a process death after the commit skips the whole activation on re-entry and its remaining steps
+never run and never retry. Measured: **39** mapped `tool` steps across **23** activities sit after the
+first `agent` step (`test` 26, `change_summary` 9, `lint` 2, `build` 2).
+
+**The decision is to decline the change.** Moving the commit to the end of the walk would mean a crash
+after a successful dispatch re-dispatches the `agent` step — re-execution of work that already
+happened, which AC-013 forbids, `kill_and_resume_n_step` asserts, and criterion (3) is. ADR-0143 and
+ADR-0144 were each written to protect exactly that. The real repair is ADR-0143 clause 5's per-step
+`ActivitySpec`s, and building half of that here to close a crash window would leave the grain
+incoherent. **A decision is not taken by implementing it**, and this one is taken by recording it.
+
+🛑 **And the module header asserted the opposite.** It read *"the walk happens **inside** an activation
+that is not yet committed"* — true of the steps before the dispatch, false of every step after it,
+and already contradicted by ADR-0144's existence when it was written. It described the intent rather
+than the behaviour, which is ADR-0146's shape. Corrected in the same change, dated, saying what the
+old sentence got wrong.
+
+**The exposure is bounded and the bound is part of the decision**: under ADR-0148 `test` (26) now
+refuses and under ADR-0135 clause 4 `change_summary` (9) reaches the adapters' dated refusal, so
+**4** of the 39 — `lint` 2, `build` 2 — are steps that could succeed today and be lost to this window.
+
+---
+
+## D21-26 · ADR-0151 flips to `accepted` — the fixture's bytes are PINNED rather than normalised, because its directory name IS the digest
+
+`config::adr0083_…` recomputes the committed run record's `run_id` over the **bytes** of its inputs,
+and `replay::read_run` applies no newline normalisation. `.gitattributes` carried no row for
+`crates/rk-kernel/tests/fixtures/logs/**`, and `core.autocrlf=true` is set at **system scope only** —
+nothing in the repository recorded the setting the test's green depended on.
+
+**The finding understated it by one file and by a whole mechanism.** Measured: **SIX** preimage files
+were smudged, the five `inputs/catalog/*.toml` **and `inputs/pack/incident-deviation.toml`** — and
+`pack.src` is in the preimage. Meanwhile `inputs/facets.toml` (13,031 B), `artifacts.toml` and the
+four `.json` inputs were LF in **both** index and worktree. That mixture is why *neither* export
+direction was faithful: an `autocrlf=true` clone smudges `facets.toml` and moves the digest one way;
+an `autocrlf=false` checkout un-smudges the six and moves it the other. **22 of 143** kernel fixture
+files were CRLF in the tree, so a fresh clone rewrote the other **121** — the figure Checkpoint 7g's
+guard (7) comment already records from its own mutation cycle.
+
+**The repair pins rather than normalises, and that is the whole decision.** `RECORDED_RUN` is
+`"implement-bf1d8cec3b22d288"` and **the fixture directory is named that**. Normalising moves the
+digest and forces a rename of a directory named in **accepted ADR-0130**, in `s7b-kernel.md` and
+`s7c-adapters.md` (two CLOSED stages), in `.github/workflows/ci.yml`, in `crates/rk-kernel/src/replay.rs`
+and in two dated spike records. ADR-0092 decision 1 forbids editing an accepted record. Pinning gets
+the whole property and costs no record a correction.
+
+**Verified by construction, not asserted**: checked out under `core.autocrlf=true` and under
+`core.autocrlf=false` and compared to the working tree — **15 of 15 identical** under all three.
+
+---
+
+## D21-27 · ADR-0147 flips to `accepted` — Step 7g closes at its scope boundary, and the findings it is NOT closing are named by number
+
+The stage's scope — *"the step executor: design §4.5's five closed step kinds each executed as such,
+and the `Toolchain` port's first call site"* — was built at `fbf3c4c` and is now **asserted**. Every
+finding that is the executor's own semantics is repaired with a test that kills a mutant that was
+diffed and read: (20), (21a), (21b), (21c), and (6), (7), (5), (23) under ADR-0148 … ADR-0151.
+
+**The split is "is this the executor, or the thing that MEASURES the executor?"** The instrument-class
+findings — **(8)**, **(10)**, **(11)**, **(14)**, **(15)**, **(16)**, **(22)** — are carried into Step
+7h as recorded-OWED, by number, with their measurements intact. A scope boundary that does not
+enumerate what it excludes is a way of not counting it.
+
+**What closure does not claim.** **0 of 102** shipped activities complete a committing walk. That is
+criterion (1)'s business and 7h's, and it is stated in the closing row rather than left to be
+inferred. Two carried findings are load-bearing for this stage's own guards and that is said rather
+than discovered: **(8)** is the defeat that blinds the cannot-dispatch source lint — which is why
+(20)'s repair is a behavioural **backstop** and not a widened ban list — and **(15)** means Checkpoint
+7g's `flagged 0` is weaker evidence than it reads.
+
+🛑 **One mutant cycle in this stage produced a false reading, and it is recorded rather than smoothed.**
+The first attempt at finding (20)'s defeat (c) put the truncating literal on the arm's opening line.
+The lint went RED — but on `joined.len() > 40`, *"joined to 27 chars — the scan is vacuous"*, which is
+the **vacuity floor, not the ban**. That draft was a weaker mutant than the finding describes, and
+believing it would have credited the lint with catching something it cannot catch. With real code in
+front of the literal, both floors hold, the truncation is silent, and the source lint goes **green —
+blind** while the behavioural half goes red. That is the measured result the closure rests on.
+
+---

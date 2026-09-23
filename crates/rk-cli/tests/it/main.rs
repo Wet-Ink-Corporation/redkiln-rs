@@ -61,6 +61,7 @@
 //! [`rs_files`], [`code_lines`], [`assert_no_block_comment`]). [`support`] holds the *in-process
 //! seam* values only.
 
+mod adapter_selection;
 mod answer;
 mod catalog;
 mod config;

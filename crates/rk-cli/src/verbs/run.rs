@@ -1475,10 +1475,35 @@ impl rk_ports::toolchain::Toolchain for UndetectedToolchain {
 /// pre-`s7g` state under a new name on the path where a real failure is least visible.
 ///
 /// # Errors
-/// [`Exit::ConfigError`] when an adapter's own construction is refused — a denylisted or incomplete
-/// child environment, a relative root, a zero bound. Those are configuration defects and are not
-/// deferred.
-fn real_toolchain(
+///
+/// [`Exit::ConfigError`] for the toolchain scratch directory, and for a resolved adapter name this
+/// binary cannot construct — the `other =>` arm, which is a drift between `AdapterSet::resolve` and
+/// this match and so a build defect rather than a configuration one.
+///
+/// 🛑 **CORRECTED 2026-09-22 (ADR-0149), AND THE OLD TEXT SAID THE OPPOSITE OF THE CODE.** This
+/// section read *"[`Exit::ConfigError`] when an adapter's own construction is refused — a
+/// denylisted or incomplete child environment, a relative root, a zero bound. Those are
+/// configuration defects and **are not deferred**."* Every one of those three cases is now
+/// deferred: each reaches `tried.push(...)` and `continue`, and the loop asks the next candidate.
+/// The sentence was left standing when the code beneath it changed, which is the defect ADR-0150
+/// records one file over.
+///
+/// ⚠️ **What a deferral costs, named rather than left to be found.** A zero bound or a relative root
+/// is a defect of the *pack or the root*, not of one adapter, so it refuses **every** candidate and
+/// the loop falls through to [`UndetectedToolchain`]. A run that reaches no `tool` step then exits
+/// **0** where it previously exited 3, and a run that does reach one is refused with *"no configured
+/// toolchain adapter detects a project at …"* — which names detection when the truth is the bound.
+/// The refusals themselves are printed as they happen (see the loop), so the operator is not left
+/// without the cause; deciding whether a whole-root defect should out-rank a per-candidate deferral
+/// is left to the stage that owns `Config`, and is not taken here.
+///
+/// `pub` since 2026-09-22 (ADR-0149), and only so it can be OBSERVED. `rk-cli`'s tests are
+/// integration tests — a separate crate — so a private function's behaviour can be asserted only
+/// through a whole `redkiln run`, and every route to this one passes through steps (1)-(7) and out
+/// the far side into a dispatch. The property ADR-0149 decides is *"a candidate that cannot be
+/// configured does not end the run"*, which is a property OF THIS LOOP; asserting it two layers up
+/// would be asserting it of something else.
+pub fn real_toolchain(
     resolved: &Resolved,
     env: &Env,
     project_root: &Path,
@@ -1505,43 +1530,72 @@ fn real_toolchain(
         // unknown name here is a build defect rather than a configuration one — and it is reported
         // as one instead of being skipped into a "nothing detected" refusal that would misname it.
         let candidate: Arc<dyn rk_ports::toolchain::Toolchain> = match name.as_str() {
+            // **ADR-0149.** A candidate that cannot be CONFIGURED or BUILT is recorded in `tried`
+            // and the loop moves on; it is no longer a `?` that ends the whole run. Before this,
+            // every listed adapter was constructed AND validated before `detect()` chose, so
+            // `rk-adapter-toolchain-node`'s required-env table gated every run on a tree where
+            // Rust would have been selected — a refusal naming Node on a repository whose root has
+            // no `package.json`.
+            //
+            // 🛑 **THE REFUSAL IS PRINTED WHERE IT HAPPENS, AND THAT IS NOT BELT-AND-BRACES.** An
+            // earlier draft of this change pushed to `tried` and nothing else, with a comment
+            // claiming the reasons "reach the operator either way, because `UndetectedToolchain`
+            // carries `tried`". That is true of ONE of the two exits: if a later candidate DOES
+            // detect, the loop `return`s it and `tried` is dropped on the floor — never printed,
+            // never journaled. So a genuinely misconfigured Node adapter on a Rust tree, which is
+            // the exact case this record exists for, produced ZERO operator output. The `eprintln!`
+            // the `?` used to carry is restored at the push, so deferring a candidate costs the
+            // operator nothing it used to get.
             "rk-adapter-toolchain-rust" => {
-                let cfg = rk_adapter_toolchain_rust::Config::new(
+                let cfg = match rk_adapter_toolchain_rust::Config::new(
                     program_for(name, rk_adapter_toolchain_rust::DEFAULT_PROGRAM),
                     timeout,
                     root,
                     child_env.clone(),
                     scratch.clone(),
-                )
-                .map_err(|e| {
-                    eprintln!("redkiln: the {name} configuration was refused: {e}");
-                    Exit::ConfigError
-                })?;
-                Arc::new(
-                    rk_adapter_toolchain_rust::RustToolchain::new(cfg).map_err(|e| {
+                ) {
+                    Ok(cfg) => cfg,
+                    Err(e) => {
+                        eprintln!("redkiln: the {name} configuration was refused: {e}");
+                        tried.push(format!("{name}: the configuration was refused: {e}"));
+                        continue;
+                    }
+                };
+                match rk_adapter_toolchain_rust::RustToolchain::new(cfg) {
+                    Ok(built) => Arc::new(built),
+                    Err(e) => {
                         eprintln!("redkiln: {name} could not be built: {e}");
-                        Exit::ConfigError
-                    })?,
-                )
+                        tried.push(format!("{name}: could not be built: {e}"));
+                        continue;
+                    }
+                }
             }
+            // Same shape as the Rust arm above, and for the same reason (ADR-0149). This is the
+            // adapter the finding was measured on: its `Config::new` validates a required-env
+            // table, so on a Rust-only tree it was the arm that refused before `detect()` ran.
             "rk-adapter-toolchain-node" => {
-                let cfg = rk_adapter_toolchain_node::Config::new(
+                let cfg = match rk_adapter_toolchain_node::Config::new(
                     program_for(name, rk_adapter_toolchain_node::DEFAULT_PROGRAM),
                     timeout,
                     root,
                     child_env.clone(),
                     scratch.clone(),
-                )
-                .map_err(|e| {
-                    eprintln!("redkiln: the {name} configuration was refused: {e}");
-                    Exit::ConfigError
-                })?;
-                Arc::new(
-                    rk_adapter_toolchain_node::NodeToolchain::new(cfg).map_err(|e| {
+                ) {
+                    Ok(cfg) => cfg,
+                    Err(e) => {
+                        eprintln!("redkiln: the {name} configuration was refused: {e}");
+                        tried.push(format!("{name}: the configuration was refused: {e}"));
+                        continue;
+                    }
+                };
+                match rk_adapter_toolchain_node::NodeToolchain::new(cfg) {
+                    Ok(built) => Arc::new(built),
+                    Err(e) => {
                         eprintln!("redkiln: {name} could not be built: {e}");
-                        Exit::ConfigError
-                    })?,
-                )
+                        tried.push(format!("{name}: could not be built: {e}"));
+                        continue;
+                    }
+                }
             }
             other => {
                 eprintln!(

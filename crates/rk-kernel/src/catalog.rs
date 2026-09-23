@@ -217,6 +217,17 @@ impl Step {
         match self.kind {
             StepKind::Tool => {
                 out.insert(Evidence::ToolReport);
+                // 🛑 **ADR-0148 MADE THIS PROMISE UNKEEPABLE AT RUN TIME, AND NOTHING HERE CHANGES.**
+                // `GreenAt`'s condition includes *"and status is passing"* — a run-time fact — and
+                // this function mints it on the CATALOG half alone, because ADR-0081's premise is
+                // that `evidence(a)` is computable without running anything. Since 2026-09-22 a
+                // `toolchain:test` step refuses before reaching the port, so **no** such step can
+                // now reach a passing status: the run-time conjunct is structurally unsatisfiable
+                // until a selection resolver exists. The static projection is deliberately left
+                // alone — changing it would move rigor monotonicity and ADR-0081's comparison for a
+                // reason that is not about evidence — but a reader comparing this to a real run
+                // would otherwise find the gap themselves, so it is named here. No test asserts the
+                // run-time half, and that is the point.
                 if self.run.as_deref() == Some("toolchain:test") {
                     out.insert(Evidence::GreenAt);
                 }

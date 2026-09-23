@@ -41,8 +41,18 @@ cannot be built without settling, is:
 | 6 | clause 8 of ADR-0137, corrected by its own first execution | **ADR-0139** (supersedes 0137 in part) |
 | 7 | clause 5 of ADR-0137 — a per-step timeout nothing applies | **ADR-0140** (supersedes 0137 in part, a second clause) |
 | 8 | clause 4 of ADR-0138 — an if-then whose consequent was declined | **ADR-0141** (supersedes 0138 in part) |
+| 9 | the executor evaluated every guard against an EMPTY context, so 121 of 121 failed and `Skipped` was unreachable | **ADR-0142** |
+| 10 | a second `agent` step overwrote the committed report | **ADR-0143** |
+| 11 | a step failing AFTER a committed dispatch was dropped on the floor | **ADR-0144** |
+| 12 | the `gate` arm wrote no mark, and the pack's 80 gate steps were silent | **ADR-0145** |
+| 13 | an ANSWERED gate step re-opened for ever | **ADR-0146** (supersedes 0145 clause 7 in part) |
+| 14 | `toolchain.test(&[])` is `cargo test --workspace`, and the declared selection is not a test name | **ADR-0148** (supersedes 0135 clause 1 in part) |
+| 15 | every listed adapter was validated before `detect()` chose | **ADR-0149** |
+| 16 | the commit lands mid-walk and `is_committed` has no step component | **ADR-0150** (declines the change; names the residual) |
+| 17 | the run-record fixture's digest was pinned to an accident of checkout | **ADR-0151** |
+| 18 | what this stage CLOSES with, and the findings it does not close | **ADR-0147** |
 
-The first six are recorded **before** the code they authorise; **0140** and **0141** are the two supersessions `s7g`'s own errata named as OWED, taken at the repair pass. All eight are flipped on their own dated lines **D21-9 … D21-16**.
+The first six are recorded **before** the code they authorise; **0140** and **0141** are the two supersessions `s7g`'s own errata named as OWED, taken at the repair pass. **Eighteen** rows now, flipped on their own dated lines **D21-9 … D21-27**. *(Recounted 2026-09-22 at the stage close: this read "All eight are flipped … D21-9 … D21-16", which stopped being true the moment ADR-0142 was taken and was left standing through four further records. It is the exact staleness shape the checkpoint's own guard-(7) comment warns about, one heading away from it, and it is recounted off disk rather than incremented.)*
 Four were settled by the operator; **0138** and **0139** were engineering calls taken inside the approved plan,
 and their dated lines say so rather than presenting them as operator choices they were not.
 
@@ -158,6 +168,22 @@ already records criterion (1) NOT SATISFIED on pack-authoring grounds. It is car
 - **`check` cannot dispatch** — asserted structurally at `check_verdict` **and at `execute_step`'s
   `StepKind::Check` arm**, which is where a dispatch would actually be written (finding (13)).
 - **AC-013's re-entry still holds**: `kill_and_resume_n_step` and criterion (3)'s asserted half stay green.
+- **`check` cannot dispatch — and that is now asserted BEHAVIOURALLY as well as structurally.**
+  Finding (20): the source lint is a *spelling* check, defeated three measured ways — a `&Runtime`
+  parameter under another name, a helper on no ban list, and finding (8)'s multi-line literal
+  truncating `arm_of("Check")`'s region. A counting `Toolchain` bound into the port, driven over
+  seven `check` fixtures and over a walk placing a `check` step at six positions, reads **0**, with a
+  positive control that a `tool` step reads **1**. Measured: with the dispatch hidden behind the
+  truncating literal the **source lint goes GREEN — blind** and the behavioural half goes RED.
+- **`emit` is terminal and an EMPTY transcribed step list is refused by name** (design §4.5;
+  ADR-0138's forbids) — finding (21). Both survived the whole `rk-kernel` binary until this stage:
+  measured at 215 passed / 1 failed per mutant, the one failure being the new test.
+- **A step guard evaluates against the selection's own context and DECIDES, and the context does NOT
+  repair the `check` arm** (ADR-0142) — `Skipped` is reachable for the first time, a `check` expr
+  reading a step OUTPUT still refuses by name, and a `check` that does not hold refuses rather than
+  continuing the walk.
+- **`toolchain:test` refuses rather than running the empty selection** (ADR-0148), and **`detect()`
+  chooses before a candidate adapter is validated** (ADR-0149).
 - **Criterion (2) stays green** — the step walk must not move the tier-1 projection.
 - **The step walk is ENTERED, and by the PRODUCTION route** — `run_activity_steps` is reached both
   directly and through `replay::resume`. Added 2026-09-22: finding (12) measured that a `panic!` on its
@@ -262,22 +288,66 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo
 # `second_agent::` alone. That was TRUE when written and was made FALSE ninety minutes later BY THIS
 # SAME PASS, which added `post_commit_failure::` (2 call sites, ADR-0144) and `gate_step::` (4,
 # ADR-0145): the filter then selected 2 of 8. A guard whose scope is a fact about the tree goes stale
-# the moment the tree moves, and the three filters are listed BY NAME so a fourth module is a visible
+# the moment the tree moves, and the filters are listed BY NAME so a further module is a visible
 # omission rather than a silent one. Measured: `grep -rn 'run_activity_steps(' crates/ --include=*.rs`
-# outside `src/` returns 8 lines over 3 modules.
+# outside `src/` returns **17 lines over 5 modules**.
+#
+# 🛑 CORRECTED 2026-09-22 AT THE STAGE CLOSE, AND THE COMMENT PREDICTED ITS OWN STALENESS TWICE OVER.
+# This line read "8 lines over 3 modules". Re-measured at the START of the closing pass, before any
+# edit: **11 lines over 3** -- `gate_step::` had grown from the 4 call sites recorded above to 7, so
+# the numeral was already wrong and nothing had noticed. The closing pass then added
+# `check_cannot_dispatch::` (2) and `walk_semantics::` (4), taking it to 17 over 5. Recounted off
+# disk rather than incremented: incrementing 8 would have carried the earlier error forward, which
+# is the failure mode this very comment was written to warn about.
 #
 # The greps are PER-TEST (`^test ... ... ok$`), not the `test result: ok. N passed` form the guards
 # above use: with no `--test it` that form is satisfied by ANY target reporting ANY pass.
-out=$(cargo test -p rk-kernel --test it -- second_agent:: post_commit_failure:: gate_step:: 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these three modules are every test that calls run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
+out=$(cargo test -p rk-kernel --test it -- second_agent:: post_commit_failure:: gate_step:: check_cannot_dispatch:: walk_semantics:: 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these five modules are every test module that calls run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
 for t in a_second_runnable_agent_step_refuses_and_the_commit_survives \
          a_step_failing_after_a_committed_dispatch_refuses_by_name_and_keeps_the_commit \
-         a_gate_step_after_a_dispatch_writes_the_runtime_mark_and_keeps_the_commit; do
+         a_gate_step_after_a_dispatch_writes_the_runtime_mark_and_keeps_the_commit \
+         a_walk_of_check_steps_moves_the_toolchain_counter_exactly_once_and_that_once_is_the_tool_step \
+         an_emit_step_ends_the_walk_and_a_later_tool_step_never_runs \
+         an_empty_transcribed_step_list_is_refused_by_name_and_none_is_not_the_empty_case \
+         a_check_step_never_reaches_the_toolchain_port; do
   printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: $t did not run and pass -- a filter that matches nothing exits 0, and one module dropping out would otherwise be absorbed by the other two"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 done
 out=$(cargo test -p rk-cli --test it -- exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the PRODUCTION route into the WALK BODY is red (rc=$rc) -- run_with no longer reaches run_activity_steps with a transcribed list, or reaches it and breaks"; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qE '^test .*\badr0144_post_commit_step_failure_exits_the_class_row_not_three\b.* \.\.\. ok$' || { echo "FAIL: the end-to-end walk guard did not run and pass -- the composition-root route INTO THE WALK BODY is asserted by nothing"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+# (8) THE `check` ARM'S TWO REFUSAL PATHS, AND THE VERB MAP'S OWN BOUNDARY (ADR-0142, ADR-0148).
+#
+# 🛑 A SEPARATE LINE, NOT AN ADDITION TO (7a), AND THE REASON IS THE REASON (7a) EXISTS. Every test
+# named below calls `Runtime::execute_step` and NONE calls `run_activity_steps`. Folding them into
+# (7a)'s filter would falsify that line's own failure message -- "these five modules are every test
+# module that calls run_activity_steps by name" -- and its heading comment. That is exactly the
+# staleness (7a)'s own ⚠️ records being caught twice in one day, and it was proposed a third time at
+# this stage's close before being measured: `grep -c run_activity_steps guard_context.rs` -> 0.
+#
+# What it certifies: a step guard evaluates against the selection's own context and DECIDES, and the
+# context does NOT repair the `check` arm (ADR-0142); a `check` that does not hold refuses by name
+# (the `Ok(false)` arm, which NOTHING in the workspace asserted before this stage -- measured, by a
+# mutant that turned it into `Continue` and left all 216 tests green); and `toolchain:test` refuses
+# rather than running the empty selection (ADR-0148).
+out=$(cargo test -p rk-kernel --test it -- guard_context:: tool_verb_routing:: 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the check arm's refusal paths or the verb map's boundary are red (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+for t in a_rigor_guard_refuses_on_an_empty_context_and_decides_on_the_selections_one \
+         a_check_expr_reading_a_step_output_still_refuses_with_the_full_context \
+         a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port; do
+  printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: $t did not run and pass -- a filter that matches nothing exits 0"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+done
+
+# (9) BULLET 7, NEW: `detect()` CHOOSES BEFORE A CANDIDATE IS VALIDATED (ADR-0149).
+#
+# The one guard in this block that is about the COMPOSITION ROOT's adapter selection rather than the
+# executor. It carries two controls of its own -- that the fixture environment really does refuse
+# node's configuration and really does satisfy rust's -- because "the loop returned Ok" is also what
+# a loop that refused nothing returns.
+out=$(cargo test -p rk-cli --test it -- adapter_selection:: 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: a candidate adapter's refused configuration still ends the whole run (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qE '^test .*\ba_candidate_whose_config_is_refused_does_not_end_the_run_before_detect_chooses\b.* \.\.\. ok$' || { echo "FAIL: the adapter-selection guard did not run and pass"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+
 # 🛑 DISARM THE HAZARD THIS BLOCK ARMS. `rk-cli`'s process-level tests spawn `redkiln run`, which
 # creates run-owned worktrees. A block that leaves registrations behind double-counts every later
 # repo-root grep against a stale second checkout -- measured at `s7f`, `TrailerKey::` returned 38

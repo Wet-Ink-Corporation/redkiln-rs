@@ -252,20 +252,132 @@ impl EventStore for CountingStore {
     }
 }
 
+/// A `Toolchain` that **counts every method call** and performs none of them.
+///
+/// `rk_ports::fakes::FixtureToolchain` answers `build`/`lint` with `Ok(())` and counts nothing, so a
+/// walk that reached the port through it is indistinguishable from one that did not. This fake is
+/// declared here for the same reason [`CountingHarness`] and [`CountingStore`] are, and under the
+/// same doctrine: **the counter is the CALLER's**, and every count read off it is a READING rather
+/// than a literal the code under test printed about itself.
+///
+/// 🛑 **It is declared HERE and not in `rk-ports/src/fakes.rs`, and that is not a style preference.**
+/// Checkpoint 7a asserts an EXACT count of port impls in that crate —
+/// `grep -rhE '^impl (EventStore|Harness|Tracker|DocsSite|Toolchain) for ' crates/rk-ports/src/`
+/// counted into `[ "$n" -eq 5 ]`, *"one fake per port (ADR-0003)"*. A sixth column-0
+/// `impl Toolchain for` in that directory turns a DIFFERENT, already-closed checkpoint red.
+/// Measured 2026-09-22: the count is 5 today.
+///
+/// 🛑 **`change_summary` returns `Err`, and that is forced rather than lazy.** `ChangeSummary`'s only
+/// constructor is `pub(crate)` to `rk-ports` (ADR-0093 decision 4 keeps it an opaque non-finalised
+/// newtype until S-BIN reports), so a fake outside that crate **cannot** return `Ok`. The call is
+/// still COUNTED before it refuses — a fake that refused without counting would report 0 for a port
+/// that was reached, which is the exact failure this type exists to make impossible.
+///
+/// ⚠️ **The return type is written `rk_ports::toolchain::ChangeSummary` and the name is NOT
+/// imported. Do not "tidy" this into a `use`.** Checkpoint 5 bans the bare spelling everywhere under
+/// `crates/` except `rk-ports`, excluding only `::ChangeSummary`. A
+/// `use rk_ports::toolchain::{ChangeSummary, ..};` line reads as `::{ChangeSummary`, which that
+/// exclusion does **not** match, and would turn Checkpoint 5 red.
+#[derive(Debug, Default)]
+pub struct CountingToolchain {
+    calls: AtomicU32,
+}
+
+impl CountingToolchain {
+    /// How many times **any** method on the `Toolchain` port was reached.
+    ///
+    /// One counter and not six, deliberately: the property its callers assert is *"the `check` arm
+    /// reached the port AT ALL"*, and a per-method breakdown would let a dispatch through an
+    /// unwatched method read as zero.
+    #[must_use]
+    pub fn calls(&self) -> u32 {
+        self.calls.load(Ordering::SeqCst)
+    }
+
+    fn reached(&self) {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+    }
+}
+
+impl Toolchain for CountingToolchain {
+    fn detect(&self) -> Result<bool, StepError> {
+        self.reached();
+        Ok(true)
+    }
+
+    fn build(&self) -> Result<(), StepError> {
+        self.reached();
+        Ok(())
+    }
+
+    fn test(&self, _selection: &[String]) -> Result<u32, StepError> {
+        self.reached();
+        Ok(0)
+    }
+
+    fn lint(&self) -> Result<(), StepError> {
+        self.reached();
+        Ok(())
+    }
+
+    fn classify(&self, _path: &str) -> Result<rk_ports::toolchain::Classification, StepError> {
+        self.reached();
+        Ok(rk_ports::toolchain::Classification::Text)
+    }
+
+    fn change_summary(
+        &self,
+        _range: &str,
+    ) -> Result<rk_ports::toolchain::ChangeSummary, StepError> {
+        // COUNTED FIRST, then refused — see the 🛑 on the type.
+        self.reached();
+        Err(StepError::Unsupported {
+            capability: "change_summary".to_owned(),
+        })
+    }
+}
+
 /// Every port bound, with the two this file drives named and the three it does not bound to
 /// `rk-ports`' own fakes.
 ///
 /// **`Toolchain`, `Tracker` and `DocsSite` are bound and never called**, and that is structural
 /// rather than incidental: `rk_ports::root::Ports` holds five, and a `Runtime` cannot be constructed
 /// over four.
+///
+/// *(Corrected 2026-09-22, and the correction is the point. The sentence above was true of every
+/// caller of this function when it was written and is now false of the callers of
+/// [`ports_with_toolchain`]: `check_cannot_dispatch` and `walk_semantics` bind [`CountingToolchain`]
+/// and DO reach it — a `tool` step moving the counter is how those tests have a positive control at
+/// all, and a control that never reached the port would be no control. It stays true of `ports`
+/// itself, which still binds `FixtureToolchain`. `Tracker` and `DocsSite` are still bound and never
+/// called, and the structural reason is unchanged.)*
 #[must_use]
 pub fn ports(harness: Arc<dyn Harness>, store: &Arc<Mutex<dyn EventStore>>) -> Ports {
+    ports_with_toolchain(
+        harness,
+        store,
+        Arc::new(FixtureToolchain::default()) as Arc<dyn Toolchain>,
+    )
+}
+
+/// [`ports`], with the `Toolchain` supplied by the caller.
+///
+/// On `rk-cli`'s `toolchain::runtime_with` precedent — that file is the only other place in the
+/// workspace that hands a port set a toolchain rather than hard-binding one. [`ports`] delegates
+/// here so there is **one** port-set builder in this binary: a later sixth port cannot be added to
+/// one of two places and missed in the other.
+#[must_use]
+pub fn ports_with_toolchain(
+    harness: Arc<dyn Harness>,
+    store: &Arc<Mutex<dyn EventStore>>,
+    toolchain: Arc<dyn Toolchain>,
+) -> Ports {
     Ports {
         store: Arc::clone(store),
         harness,
         tracker: Arc::new(BoardTracker::default()) as Arc<dyn Tracker>,
         docs: Arc::new(RecordingDocs::default()) as Arc<dyn DocsSite>,
-        toolchain: Arc::new(FixtureToolchain::default()) as Arc<dyn Toolchain>,
+        toolchain,
     }
 }
 

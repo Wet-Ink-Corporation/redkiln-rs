@@ -43,9 +43,29 @@
 //! # AC-013's grain is per ACTIVATION and stays so
 //!
 //! **ADR-0138.** `RunState::is_committed(item, activity_id_at_version)` has no step component, and
-//! the walk happens **inside** an activation that is not yet committed. The activation commits
-//! atomically. The consequence is intended rather than tolerated: a run that dies mid-activation
-//! re-runs that activation's steps. Anything else breaks `kill_and_resume_n_step` and criterion (3).
+//! the activation commits atomically. A run that dies **before the dispatch** re-runs that
+//! activation's steps. Anything else breaks `kill_and_resume_n_step` and criterion (3).
+//!
+//! 🛑 **CORRECTED 2026-09-22 (ADR-0150), AND THE CORRECTION IS THE POINT.** This paragraph read
+//! *"the walk happens **inside** an activation that is not yet committed"*. That is true of the
+//! steps **before** the `agent` step and FALSE of every step after it: `run_activity` appends
+//! `activity_committed` when it dispatches, so the rest of the walk runs inside an
+//! already-committed activation. ADR-0144 exists precisely because a step can fail *after* a
+//! committed dispatch, so the tree already contradicted the sentence when it was written — it
+//! described the intent rather than the behaviour, which is ADR-0146's shape.
+//!
+//! The consequence, now named rather than implied: because `is_committed` has no step component, a
+//! process death **after** the commit and before the walk ends skips the whole activation on
+//! re-entry, and its remaining steps never run and never retry. Measured 2026-09-22: **39** mapped
+//! `tool` steps across **23** activities sit after the first `agent` step (`test` 26,
+//! `change_summary` 9, `lint` 2, `build` 2) — of which **4** could succeed today, since ADR-0148
+//! refuses `test` and ADR-0135 clause 4 routes `change_summary` to the adapters' dated refusal.
+//! ADR-0150 declines to move the commit: doing so would re-dispatch a committed `agent` step after
+//! a crash, which is the criterion-(3) regression ADR-0143 and ADR-0144 were each written to
+//! prevent. What is owed is an idempotency key whose identity includes the **step** reached — which
+//! is *larger* than ADR-0143 clause 5's per-agent-step specs and is **not** closed by them: clause 5
+//! is scoped to `agent` steps, and this residual is about the `tool` steps behind one. **No record
+//! routes it today.**
 //!
 //! # The two refusals this module exists to make visible
 //!
@@ -53,6 +73,14 @@
 //! (`test` 28, `change_summary` 11, `build` 4, `lint` 4). The other 29 are refused **by name**. A
 //! silent fallthrough would turn 66 of 113 steps into invisible non-events, and a run that executed
 //! nothing would be indistinguishable from one that worked.
+//!
+//! ⚠️ **AMENDED BY ADR-0148, 2026-09-22 — the paragraph above is left standing because it is
+//! true of ADR-0135 as taken, and it is no longer true of the tree.** `test`, the single largest
+//! verb in the pack, now refuses too: `toolchain.test(&[])` was `cargo test --workspace` to the
+//! real adapter, and the `inputs.selection` each of the 28 declares is not a test name in any of
+//! its four shapes. So the executing side is **three** verbs, not four, and **30 of 33** verbs and
+//! **94 of 113** steps refuse rather than 29 and 66. The refusals stay distinguishable: the 29 are
+//! refused with the bare verb string, `test` with a sentence naming its selection.
 //!
 //! **ADR-0136** — a step guard carrying a `${…}` reference nothing resolves **refuses by name**.
 //! `rigor.rs`'s `null_out_refs` is a *static lint's* treatment and is correct there; calling it here
@@ -146,10 +174,19 @@ pub enum StepVerdict {
 
 /// The four catalog verbs that name a `Toolchain` port method — **ADR-0135**'s closed map.
 ///
-/// The spelling is identical on both sides, which is why this is a map and not an invention. Every
-/// other verb is refused by name; `classify` and `detect` are port methods that **no** `tool` step
-/// names (measured: 0 run lines each), so they are deliberately absent — adding them would be
+/// The spelling is identical on both sides, which is why this is a map and not an invention. A verb
+/// outside this set is refused by name; `classify` and `detect` are port methods that **no** `tool`
+/// step names (measured: 0 run lines each), so they are deliberately absent — adding them would be
 /// inventing a demand to fit a supply.
+///
+/// 🛑 **`test` IS STILL IN THIS SET AND NO LONGER REACHES ITS PORT METHOD (ADR-0148), AND THAT IS
+/// DELIBERATE.** Membership is what keeps the two refusals distinguishable: a verb *outside* the set
+/// is refused with the bare verb string (ADR-0135 clause 2, so the journal names which of the 29 was
+/// reached), while `test` is refused with a sentence naming its unparsed `inputs.selection`. Moving
+/// it out would collapse the map's own boundary and make a journal unable to say which edge a run
+/// hit. This sentence read *"Every **other** verb is refused by name"* until 2026-09-22, which
+/// stopped being true the moment `test` began refusing; it is corrected rather than left, because a
+/// constant's docstring asserting the invariant its own change broke is how the tree learns to lie.
 const MAPPED_VERBS: [&str; 4] = ["build", "change_summary", "lint", "test"];
 
 /// **ADR-0136.** Is this guard decidable on this tree, and does it hold?
@@ -251,7 +288,15 @@ impl super::Runtime {
     ///
     /// # Errors
     ///
-    /// The port's own [`StepError`], or [`StepError::Unsupported`] naming an unmapped verb.
+    /// The port's own [`StepError`]; [`StepError::Unsupported`] naming an unmapped verb
+    /// (ADR-0135 clause 2, the bare verb string); or [`StepError::Unsupported`] naming
+    /// `inputs.selection` for the MAPPED verb `test`, which refuses rather than calling the
+    /// port with an empty selection (ADR-0148).
+    ///
+    /// *(Corrected 2026-09-22. This read "or [`StepError::Unsupported`] naming an unmapped
+    /// verb", a closed set of two outcomes, and ADR-0148 produced a third from INSIDE the
+    /// map. A `# Errors` section that does not list an error the function returns is worse
+    /// than none, because it reads as exhaustive.)*
     fn run_tool_step(&self, step: &Step) -> Result<(), StepError> {
         let run = step.run.as_deref().unwrap_or_default();
         let Some(verb) = crate::workflow::memo::verb_of(run) else {
@@ -273,7 +318,28 @@ impl super::Runtime {
         match verb {
             "build" => toolchain.build(),
             "lint" => toolchain.lint(),
-            "test" => toolchain.test(&[]).map(|_| ()),
+            // **ADR-0148, superseding ADR-0135's `test` row in part.** This read
+            // `toolchain.test(&[])` — an EMPTY selection, which `rk-adapter-toolchain-rust` reads
+            // as `cargo test --workspace`. All **28** shipped `toolchain:test` steps therefore
+            // became whole-workspace runs under the 3600s bound on a shared target dir.
+            //
+            // 🛑 **AND THE SELECTION THEY DECLARE CANNOT BE MADE INTO A TEST LIST HERE.** Measured
+            // over `.redkiln/catalog/` 2026-09-22: all 28 declare `inputs.selection`, and it is
+            // `"affected"` (17), a `${…}` reference the resolver ADR-0136 clause 4 records as OWED
+            // (6), `artifact:…` (4) and `"e2e"` (1). None is a test name. Parsing the key and
+            // passing the string through would run `cargo test affected`, which matches **no test
+            // and exits 0** — a green from a toolchain that ran nothing, which is strictly worse
+            // than the whole-workspace run it would replace. So the verb refuses BY NAME, on
+            // ADR-0135 clause 2's own precedent, until a selection resolver exists.
+            "test" => Err(StepError::Unsupported {
+                capability: format!(
+                    "the `tool` step `{}` names `toolchain:test`, whose declared \
+                     `inputs.selection` `catalog::Step` does not parse and this crate cannot \
+                     resolve. An empty selection is `cargo test --workspace` and the literal \
+                     matches no test at all, so neither is run",
+                    step.id
+                ),
+            }),
             // The one whose `Ok` is never constructible outside `rk-ports`. Mapped, called, and the
             // value dropped — see the 🛑 above.
             "change_summary" => toolchain.change_summary("").map(|_| ()),
