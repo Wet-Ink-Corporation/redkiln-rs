@@ -11,6 +11,13 @@ appetite = { points = 60 }
 
 [policy]
 stages = { triage = "mandatory", discovery = "forbidden", analysis = "optional", specification = "mandatory", design = "recommended", planning = "optional", implement = "mandatory", verify = "mandatory", review = "mandatory", release = "mandatory", operate = "optional", closeout = "optional" }
+# ADR-0153: the LANE ORDER, and the only ordered stage carrier. `stages` above is an inline
+# table, and a TOML table has no order -- `toml_subset`'s `Table` is a `BTreeMap`, so those
+# twelve keys come back alphabetised, and `parse_spans` cannot recover the textual order
+# either because the whole inline table sits on one line. An array is the only shape that
+# keeps it. This transcribes the order `stages` is written in; the two key sets must match
+# exactly or the pack refuses to load.
+stage_order = ["triage", "discovery", "analysis", "specification", "design", "planning", "implement", "verify", "review", "release", "operate", "closeout"]
 
 [stage.specification]
 goal = "Enumerated, testable acceptance criteria"

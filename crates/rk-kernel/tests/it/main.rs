@@ -301,6 +301,7 @@ mod grammar;
 mod guard_context;
 mod kernel_denylist;
 mod keywords;
+mod lane_order;
 mod ledger;
 mod memo;
 mod module_boundary;

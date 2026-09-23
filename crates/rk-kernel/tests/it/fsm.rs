@@ -761,6 +761,42 @@ fn ac008_terminal_state_and_the_next_action_grains() {
         NextAction::Done
     );
 
+    // 🛑 **ADR-0154: A RECORDED HALT OUTRANKS A SUPPLIED SUCCESSOR — asserted on the COMBINATION.**
+    //
+    // Every arm above has a fixture and the PAIR had none, which is why the defect survived: the
+    // halt assertion ten lines up passes `ctx_none`, so it cannot tell the old order (`Halt` below
+    // `AdvanceStage`) from the new one. Only a halted journal folded against a context that DOES
+    // supply a successor can, and before 7h nothing in the workspace built that combination —
+    // `advances_to` appears in exactly two test builders, both for gated runs that break before
+    // the plan is exhausted.
+    //
+    // Under the pre-ADR-0154 order this assertion reads `AdvanceStage { from: "implement", to:
+    // "verify" }`: a refused run writing a tier-1 `stage_transition` and handing the next stage a
+    // journal whose refusal nothing acted on. That is the outcome arm 5's own comment — *"BEFORE
+    // `Done`, so a refused run is not reported finished"* — exists to prevent, and it was silently
+    // false for every run with a successor.
+    assert_eq!(
+        next_action(&planned, &halted, &ctx_next).expect("computes"),
+        NextAction::Halt {
+            reason: HaltReason::Refused {
+                class: "overage".to_owned()
+            }
+        },
+        "a recorded halt must outrank a supplied successor (ADR-0154): with both present the FSM \
+         reported an advance, so a refused run advanced a stage"
+    );
+    // CONTROL, in the other direction: the successor still wins over `Done`. Without this, moving
+    // the halt check above the successor check could be satisfied by breaking `AdvanceStage`
+    // outright, and the assertion above would not notice.
+    assert_eq!(
+        next_action(&planned, &exhausted, &ctx_next).expect("computes"),
+        NextAction::AdvanceStage {
+            from: STAGE.to_owned(),
+            to: "verify".to_owned(),
+        },
+        "an exhausted plan with a successor and NO halt must still advance"
+    );
+
     // The six tags are six distinct strings, and six distinct canonical forms.
     let actions = [
         NextAction::OpenGate(opened.clone()),

@@ -1,0 +1,35 @@
+# Step 7h's fixture pack for `replay::resume`'s `AdvanceStage` arm (ADR-0152, ADR-0153).
+#
+# Why a fixture of its own rather than widening `resume-gate.toml`. The arm under test fires only
+# when the plan is EXHAUSTED and a successor is supplied, and the cheapest journal in which a plan
+# is exhausted is one where the plan was EMPTY: a stage with no catalog activity at all. That is not
+# a contrivance — it is the shipped tree's own `triage`, which carries **0 of the 102** shipped
+# activities and no `[stage.triage]` block in either shipped pack, and it is the mechanical reason
+# §7h's premise measured "a landed run leaves zero commits". Widening `resume-gate.toml` to also
+# serve this case would make a shared fixture stop meaning what its own test says it means, which
+# that file's own header warns about.
+#
+# `triage` therefore declares NO `[stage.<name>]` table: no `baseline`, no `require` rows, so step 2
+# mints no gate and step 4 assembles an empty plan. The first `next_action` is not a `Dispatch` and
+# not an `OpenGate`, which is exactly the state the arm exists for.
+#
+# `discovery` is `forbidden` and sits BETWEEN the two live stages on purpose: it makes
+# `Pack::successor("triage")` skip rather than stop, so the test observes the skip end to end
+# instead of asserting it only against `Pack` in isolation. Both shipped packs forbid a mid-order
+# stage the same way.
+[pack]
+id = "lane-advance-fixture"
+applies = "kind == incident"
+appetite = { points = 50 }
+
+[policy]
+stages = { triage = "mandatory", discovery = "forbidden", implement = "recommended" }
+# ADR-0153: the lane order, declared. The set must equal `stages`' keys exactly or the pack refuses
+# to load, and the order must not be alphabetical here or the fixture could not tell a declared
+# order from a `BTreeMap`'s.
+stage_order = ["triage", "discovery", "implement"]
+
+# AC-029's `N`, DECLARED and never defaulted in code — `resume` reads it before its loop, so a pack
+# without this row refuses every run.
+[retry]
+attempts_cap = 4

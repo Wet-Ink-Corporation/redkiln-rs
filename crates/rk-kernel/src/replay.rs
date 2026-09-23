@@ -1128,6 +1128,19 @@ pub struct RecordedRun {
     inputs_digest: String,
     terminal_state: String,
     next_action: String,
+    /// **ADR-0152: the stage this call ADVANCED TO, reported by the boundary that took it.**
+    ///
+    /// `Some(to)` exactly when [`resume`]'s loop executed its `AdvanceStage` arm; `None` for every
+    /// other terminal, `record` and `read_run` included.
+    ///
+    /// 🛑 **An explicit carrier, not an inference from the journal**, on ADR-0144's precedent. The
+    /// two candidate inferences both fail: [`Self::next_action`] is a POST-HOC re-fold and still
+    /// reads `AdvanceStage` after the advance (the plan is still exhausted and the successor is
+    /// still supplied), and a `stage_transition` row carrying `from` is ambiguous because
+    /// `stage_entry` also carries one once the lane loop starts setting `entered_from` for the
+    /// second stage onward. The lane loop must not have to guess whether the boundary it asked for
+    /// was taken.
+    advanced: Option<String>,
 }
 
 impl RecordedRun {
@@ -1151,6 +1164,15 @@ impl RecordedRun {
     #[must_use]
     pub fn next_action(&self) -> &str {
         &self.next_action
+    }
+
+    /// The stage this call advanced to, or `None` if it took no stage boundary (ADR-0152).
+    ///
+    /// The lane loop reads this to decide whether to enter another stage. `None` covers every
+    /// non-advance terminal — a gate, a halt, a refusal, `Done`, and both `record` and `read_run`.
+    #[must_use]
+    pub fn advanced_to(&self) -> Option<&str> {
+        self.advanced.as_deref()
     }
 
     /// The four-digest tuple AC-041 names, as the selection derived it.
@@ -1634,6 +1656,9 @@ pub fn record(inputs: &RunInputs, ports: Ports) -> Result<RecordedRun, ReplayErr
         events,
         terminal_state,
         next_action,
+        // `record`'s loop breaks on any non-`Dispatch` action and takes no stage boundary, so it
+        // never advances (ADR-0152).
+        advanced: None,
     })
 }
 
@@ -1763,6 +1788,8 @@ pub fn resume(
     // by-name refusal. It repairs none of the 94 `check` exprs, which read step outputs.
     let eval_ctx = crate::rigor::with_rigor(item.context(), selection.rigor(), &facets);
     let activations = inputs.activations();
+    // ADR-0152: set by the `AdvanceStage` arm alone, and reported out as `advanced_to()`.
+    let mut advanced: Option<String> = None;
     loop {
         let state = fsm::fold(item.id(), &inputs.stage, &journal)?;
         let ctx = fsm_context(runtime, &item, &activations);
@@ -1798,6 +1825,29 @@ pub fn resume(
                 )?;
                 journal.extend(produced);
             }
+            // **ADR-0152: the arm STEPS AND BREAKS — it does not continue into the next stage.**
+            //
+            // `s7h` §7h.1 asks for a `continue`, and that is not implementable here: every value
+            // this loop reads about "which stage" is bound BEFORE the loop from `inputs.stage` —
+            // `run_id` and `rt`, `selection`, the `stage_entry` row — and `fsm::fold` below reads
+            // `&inputs.stage` on every iteration. A `continue` would re-fold the SAME exhausted
+            // stage, read the same `Some(successor)` off the same context, and return
+            // `AdvanceStage` again: an unbounded append of `stage_transition` rows.
+            //
+            // The grain is not incidental, it is in the identifier: `RunInputs::run_id` is
+            // `format!("{}-{}", self.stage, &digest[..16])`, so one call's record is one stage's by
+            // construction, and advancing here would file a later stage's events under a record
+            // whose id names the first. The lane loop is the composition root's.
+            //
+            // The shape is `OpenGate`'s below, for its reason: the row is the boundary's, read back
+            // off the journal rather than rebuilt here to agree with it.
+            NextAction::AdvanceStage { to, .. } => {
+                let before = rt.journal(item.id())?.len();
+                rt.step(&action, None, cap, now)?;
+                journal.extend(rt.journal(item.id())?.into_iter().skip(before));
+                advanced = Some(to.clone());
+                break;
+            }
             NextAction::OpenGate(_) => {
                 // THE DIFFERENCE FROM `record`. The row is the boundary's, read back off the
                 // journal rather than rebuilt here to agree with it.
@@ -1818,6 +1868,7 @@ pub fn resume(
         events: journal,
         terminal_state,
         next_action,
+        advanced,
     })
 }
 
@@ -2281,6 +2332,11 @@ pub fn read_run(dir: &Path) -> Result<RecordedRun, ReplayError> {
         inputs_digest,
         terminal_state,
         next_action,
+        // `advanced` is NOT persisted to `run.json` and is not reconstructed here: it is the live
+        // lane loop's signal, and a replay compares `terminal_state` and `next_action` (AC-006,
+        // AC-008). Adding it to the record would change the run-record layout and move the digest
+        // accepted ADR-0151 pins, for a value no replay reads.
+        advanced: None,
     })
 }
 

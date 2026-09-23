@@ -1608,8 +1608,9 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
 /// 2. a gate the selection requires that the journal has not opened → [`NextAction::OpenGate`];
 /// 3. a node in step 6's topological order whose activation is not committed →
 ///    [`NextAction::Dispatch`];
-/// 4. the plan exhausted **and a successor supplied** → [`NextAction::AdvanceStage`];
-/// 5. a recorded halt → [`NextAction::Halt`];
+/// 4. a recorded halt → [`NextAction::Halt`] — **above the successor check, ADR-0154: a recorded
+///    halt outranks a supplied successor**, so a refused run is never reported as advancing;
+/// 5. the plan exhausted **and a successor supplied** → [`NextAction::AdvanceStage`];
 /// 6. otherwise [`NextAction::Done`].
 ///
 /// # Errors
@@ -1697,19 +1698,30 @@ pub fn next_action(
             step_id: node.id.clone(),
         });
     }
-    // 4. The successor is an ARGUMENT and is never invented here: this system models no stage
-    //    ordering (`spikes/p9/packs/incident.toml`:1-2).
+    // 4. A recorded halt, at design §3.2's own position in the order — AFTER the plan, so a run
+    //    with work still dispatchable does the work, and BEFORE `Done`, so a refused run is not
+    //    reported finished.
+    //
+    //    🛑 **AND BEFORE `AdvanceStage` (ADR-0154): a recorded halt OUTRANKS a supplied
+    //    successor.** It sat below the successor check until 7h, which was unobservable only
+    //    because `ctx.successor` was `None` on every real run — `base_inputs` never chained
+    //    `advances_to`. The moment 7h supplies one (ADR-0152), the old order made a refused run
+    //    with an exhausted plan ADVANCE A STAGE, writing a tier-1 `stage_transition` and leaving
+    //    the next stage to start from a journal whose refusal nothing acted on — the exact outcome
+    //    the "BEFORE `Done`" clause above exists to prevent. The test is on the COMBINATION: the
+    //    order sweep asserted `Halt` against the NO-successor context, so a fixture per arm did
+    //    not instrument the pair.
+    if let Some(reason) = state.halt.clone() {
+        return Ok(NextAction::Halt { reason });
+    }
+    // 5. The successor is an ARGUMENT and is never invented here: this system models no stage
+    //    ordering (`spikes/p9/packs/incident.toml`:1-2). Which stage it IS comes from the pack's
+    //    declared `[policy] stage_order` (ADR-0153), resolved by the composition root.
     if let Some(to) = ctx.successor {
         return Ok(NextAction::AdvanceStage {
             from: state.stage.clone(),
             to: to.to_owned(),
         });
-    }
-    // 5. A recorded halt, at design §3.2's own position in the order — AFTER the plan, so a run
-    //    with work still dispatchable does the work, and BEFORE `Done`, so a refused run is not
-    //    reported finished.
-    if let Some(reason) = state.halt.clone() {
-        return Ok(NextAction::Halt { reason });
     }
     // 6.
     Ok(NextAction::Done)

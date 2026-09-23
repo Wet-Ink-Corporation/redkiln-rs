@@ -157,6 +157,19 @@ pub struct Pack {
     /// constant. The key spelling is a reading — see [`Self::substitution_permitted`].
     substitution_permitted: Option<bool>,
     stage_rigor: BTreeMap<String, Rigor>,
+    /// **ADR-0153: `[policy] stage_order` — the lane order, and the ONLY ordered stage carrier.**
+    ///
+    /// A `Vec` because it is the only order-preserving shape available: `policy.stages` is an
+    /// inline table, `crate::toml_subset`'s `Table` is a `BTreeMap`, and the twelve declared
+    /// stages therefore come back ALPHABETISED. `parse_spans` cannot recover the textual order
+    /// either — an inline table nests within one line and spans are at line grain, so all twelve
+    /// share one span. A TOML table has no order to read, by specification; an array has one.
+    ///
+    /// An EMPTY vec is *"the pack declares no lane order"* and is neither an identity nor an
+    /// alphabetical fallback: [`Self::successor`] returns `None` for every stage against it, so
+    /// such a pack cannot advance. That is [`Self::rigor`]'s doctrine exactly — an absence is not
+    /// a value — and it is a refusal rather than a guess.
+    stage_order: Vec<String>,
     stages: BTreeMap<String, StageSpec>,
     /// **AC-455's policy row**: `[policy] verification_required = [<stages>]` — the stages at which
     /// every AC must carry a verification. An absent key is an EMPTY set: the pack requires none.
@@ -259,6 +272,45 @@ impl Pack {
                     stage.clone(),
                     read_rigor(format!("{name}: policy.stages.{stage}"), token)?,
                 );
+            }
+        }
+
+        // **ADR-0153.** `[policy] stage_order` is an ARRAY, because the lane order has to survive
+        // loading and nothing else here does: `policy.stages` above is an inline table read into a
+        // `BTreeMap`, so its declaration order is gone by this line.
+        //
+        // The two keys describe one set, so a disagreement is a LOAD ERROR naming the symmetric
+        // difference in both directions. Left silent, a stage in the order with no rigor (or the
+        // reverse) would make a lane skip or refuse a stage for a reason no source states.
+        let mut stage_order: Vec<String> = Vec::new();
+        if let Some(policy) = doc.get("policy").and_then(Value::as_table)
+            && let Some(order) = policy.get("stage_order")
+        {
+            let items = order
+                .as_array()
+                .ok_or_else(|| shape("policy.stage_order is not an array".to_owned()))?;
+            for item in items {
+                let stage = item
+                    .as_str()
+                    .ok_or_else(|| shape("policy.stage_order carries a non-string".to_owned()))?;
+                if stage_order.iter().any(|s| s == stage) {
+                    return Err(shape(format!(
+                        "{name}: policy.stage_order names {stage:?} twice; a lane visits a stage \
+                         once and a repeated entry makes the successor of {stage:?} ambiguous"
+                    )));
+                }
+                stage_order.push(stage.to_owned());
+            }
+            let ordered: BTreeSet<&str> = stage_order.iter().map(String::as_str).collect();
+            let declared: BTreeSet<&str> = stage_rigor.keys().map(String::as_str).collect();
+            if ordered != declared {
+                let missing: Vec<&str> = declared.difference(&ordered).copied().collect();
+                let extra: Vec<&str> = ordered.difference(&declared).copied().collect();
+                return Err(shape(format!(
+                    "{name}: policy.stage_order and policy.stages describe different sets — \
+                     in policy.stages but not in the order: {missing:?}; in the order but not in \
+                     policy.stages: {extra:?}. Two keys about one set may not disagree (ADR-0153)"
+                )));
             }
         }
 
@@ -370,6 +422,7 @@ impl Pack {
             // that absence fails.
             role_families: role_families(&doc, &shape)?,
             stage_rigor,
+            stage_order,
             stages,
             verification_required,
             mutation,
@@ -396,6 +449,38 @@ impl Pack {
     #[must_use]
     pub fn rigor(&self, stage: &str) -> Option<Rigor> {
         self.stage_rigor.get(stage).copied()
+    }
+
+    /// The pack's declared lane order, as declared (ADR-0153). EMPTY for a pack that declares none.
+    #[must_use]
+    pub fn stage_order(&self) -> &[String] {
+        &self.stage_order
+    }
+
+    /// **The next stage of this pack's lane after `stage`, skipping every `forbidden` entry.**
+    ///
+    /// `None` means *"this lane has no next stage"* — the end of the order, a pack that declares
+    /// none, or a stage the order does not contain. That is the same reading
+    /// [`crate::workflow::fsm::NextAction::Done`] already gives an absent successor: *"the stage is
+    /// finished and **no successor was supplied**, because this system models no stage ordering"*.
+    /// It is never an error, and a caller must not substitute one.
+    ///
+    /// 🛑 **Forbidden stages are SKIPPED, not stopped at.** `bug-standard` marks both `discovery`
+    /// and `operate` forbidden mid-order, so a successor that stopped at the first one would end
+    /// every lane at `triage`. `Rigor::Forbidden` is `crate::rigor`'s bottom (ADR-0020), and a
+    /// stage the order names but `policy.stages` does not cannot occur: the loader refuses that
+    /// pack (ADR-0153).
+    ///
+    /// This function reads the declared order and `Rigor::Forbidden`, and **nothing else** — not
+    /// the catalog, not a stage's activities, not its gates or artifacts. A stage with no
+    /// activities is still a stage of the lane; `triage` is exactly that on the shipped catalog.
+    #[must_use]
+    pub fn successor(&self, stage: &str) -> Option<&str> {
+        let at = self.stage_order.iter().position(|s| s == stage)?;
+        self.stage_order[at + 1..]
+            .iter()
+            .find(|s| self.rigor(s) != Some(Rigor::Forbidden))
+            .map(String::as_str)
     }
 
     /// `appetite.points`, or `None` when the pack declares none.
@@ -608,6 +693,16 @@ impl Pack {
         self.stages.get(stage)
     }
 
+    /// The pack as a canonical value, for `crate::select::canonical::inputs_digest`.
+    ///
+    /// 🛑 **`stage_order` is DELIBERATELY ABSENT, and adding it would move every selection memo
+    /// key.** This value is one of AC-041's four digests (ADR-0097's key), and
+    /// [`crate::select::canonical::catalog_json`]'s sibling rule states the test: it digests *"the
+    /// fields steps 1-4 actually read, so a catalog edit that cannot change a selection cannot
+    /// change the digest either"*. Steps 1-4 never read the lane order — it is the lane loop's,
+    /// above selection (ADR-0152, ADR-0153) — so a pack that gains or reorders `[policy]
+    /// stage_order` selects identically, and its memo key must not move. The omission is a
+    /// decision, not an oversight.
     pub(in crate::select) fn to_json(&self) -> serde_json::Value {
         serde_json::json!({
             "id": self.id,
