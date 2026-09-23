@@ -12,7 +12,7 @@
 //! | --- | --- | --- | --- |
 //! | [`conformance_every_step_kind_has_an_executor`] | design §4.5's five step kinds | **0** `StepKind` references in `runtime/` | **DISCHARGED by `s7g`** — `runtime/step.rs` routes all five |
 //! | [`conformance_every_port_has_a_call_site`] | ADR-0003's port table | harness 1, store 1, **toolchain 0, tracker 0, docs 0** | **DISCHARGED by `s7g`**, narrowed by **ADR-0134** — see below |
-//! | [`conformance_every_trailer_key_has_a_producer`] | design §5.4's trailer grammar | `Gate` 2, **`Story` 0, `Slice-Verdict` 0** | still ARMED, `s7h` |
+//! | [`conformance_every_trailer_key_has_a_producer`] | design §5.4's trailer grammar | `Gate` 2, **`Story` 0, `Slice-Verdict` 0** | **HALF discharged at `s7h.2`** — `Story` 1, `Slice-Verdict` still **0**; ARMED |
 //! | [`shipped_pack_loads`] | the product's own `.redkiln/` | GREEN from `s7f` §7f.2 | GREEN, 102 pinned |
 //!
 //! 🛑 **The `#[ignore]` reason spelling is load-bearing.** Checkpoint 7f greps each armed lint's
@@ -133,18 +133,23 @@ fn rs_files(dir: &Path) -> Vec<PathBuf> {
 /// into a "called" port. An armed lint that a comment cannot satisfy but a string literal can is
 /// not a source lint, and the shape is live rather than hypothetical: `module_boundary.rs` carries
 /// `"Tracker",` as a string literal on a code line in this very crate today.
-fn blank_string_literals(code: &str) -> String {
+/// 🛑 **`in_str` CROSSES LINES, and finding (8) is why.** Until Step 7h this function held its own
+/// `in_str` and was called once per line, so a string literal continued onto the next line handed
+/// that continuation to all three source lints **as code**. Any lint here could then be satisfied —
+/// or defeated — by the inside of a multi-line literal, which is precisely the class of defeat the
+/// header above records having already been paid for twice. The state is now the caller's, so a
+/// literal that opens on one line and closes on another is blank on every line it spans.
+fn blank_string_literals(code: &str, in_str: &mut bool) -> String {
     let mut out = String::with_capacity(code.len());
     let mut chars = code.chars();
-    let mut in_str = false;
     while let Some(c) = chars.next() {
-        if in_str {
+        if *in_str {
             match c {
                 '\\' => {
                     chars.next();
                 }
                 '"' => {
-                    in_str = false;
+                    *in_str = false;
                     out.push('"');
                 }
                 _ => {}
@@ -152,7 +157,7 @@ fn blank_string_literals(code: &str) -> String {
         } else {
             out.push(c);
             if c == '"' {
-                in_str = true;
+                *in_str = true;
             }
         }
     }
@@ -174,18 +179,88 @@ fn blank_string_literals(code: &str) -> String {
 /// whole directories of other people's code, so the stripper has to be the real one.
 fn code_lines(src: &str) -> Vec<String> {
     let mut in_block = false;
+    // Finding (8): the literal state is the FILE's, not the line's. A `\`-continued or multi-line
+    // string literal is blank on every line it spans, so no lint here can be satisfied by the
+    // inside of one.
+    let mut in_str = false;
     let mut out = Vec::new();
     for raw in src.lines() {
-        let code = blank_string_literals(&rk_kernel::kernel_denylist::strip_comments(
-            raw,
-            &mut in_block,
-        ));
+        let code = blank_string_literals(
+            &rk_kernel::kernel_denylist::strip_comments(raw, &mut in_block),
+            &mut in_str,
+        );
         if code.trim().is_empty() {
             continue;
         }
         out.push(code);
     }
     out
+}
+
+/// The variant NAMES of the enum whose declaration line contains `header`, from `code` lines.
+///
+/// 🛑 **FINDING (11), repaired at Step 7h: a NON-UNIT variant used to be dropped silently.** The
+/// previous parse was `l.trim().strip_suffix(',')?` followed by
+/// `t.chars().all(|c| c.is_ascii_alphanumeric())`, which rejects `Tool { verb: String },` and
+/// `Tool(String),` outright — and rejects the LAST variant too when it carries no trailing comma.
+/// A dropped variant is invisible in the worst way: the caller's `five.len() == 5` anchor still
+/// passes, and the lint then reports a step kind as executed **by never asking about it**.
+///
+/// So the name is taken as the leading identifier, and what follows it must be nothing (a unit
+/// variant) or the start of a payload — `{` for a struct variant, `(` for a tuple one. An `=`
+/// discriminant is deliberately NOT accepted here: `StepKind` has none, and accepting one would
+/// widen this past the thing it reads.
+fn enum_variants(code: &[String], header: &str) -> Vec<String> {
+    code.iter()
+        .skip_while(|l| !l.contains(header))
+        .skip(1)
+        .take_while(|l| !l.starts_with('}'))
+        .filter_map(|l| {
+            let t = l.trim().trim_end_matches(',').trim();
+            let ident: String = t.chars().take_while(char::is_ascii_alphanumeric).collect();
+            let rest = t[ident.len()..].trim_start();
+            (!ident.is_empty()
+                && ident.starts_with(|c: char| c.is_ascii_uppercase())
+                && (rest.is_empty() || rest.starts_with('{') || rest.starts_with('(')))
+            .then_some(ident)
+        })
+        .collect()
+}
+
+/// **[`enum_variants`] sees a non-unit variant and a comma-less last one — finding (11).**
+///
+/// The fixture is synthetic because the real `StepKind` is five unit variants, so the live corpus
+/// cannot discriminate the repaired parse from the broken one. Without this, the repair ships
+/// untested and the next kind added with a payload is dropped exactly as before.
+#[test]
+fn enum_variants_reads_payload_carrying_and_trailing_variants() {
+    let code: Vec<String> = [
+        "pub enum StepKind {",
+        "    Agent,",
+        "    Tool { verb: String },",
+        "    Check(Expr),",
+        "    Gate,",
+        "    Emit",
+        "}",
+    ]
+    .iter()
+    .map(|s| (*s).to_owned())
+    .collect();
+
+    assert_eq!(
+        enum_variants(&code, "pub enum StepKind"),
+        vec!["Agent", "Tool", "Check", "Gate", "Emit"],
+        "a struct variant, a tuple variant and a comma-less last variant must all be seen — a \
+         dropped variant leaves `len() == 5` passing while the lint never asks about that kind"
+    );
+
+    // CONTROL: the real enum still reads as exactly its five, so the repair widened the parse
+    // without loosening it into prose.
+    let unit: Vec<String> = ["pub enum K {", "    A,", "    B,", "}"]
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+    assert_eq!(enum_variants(&unit, "pub enum K"), vec!["A", "B"]);
 }
 
 /// Every code line under `dir`, paired with the file it came from.
@@ -225,9 +300,29 @@ fn the_comment_stripper_ignores_prose() {
         " */\n",
         "const _T: () = (); // ports.toolchain in a TRAILING comment\n",
         "const _S: [&str; 2] = [\"StepKind::Emit\", \"TrailerKey::Story\"];\n",
+        // FINDING (8), repaired at Step 7h: a literal CONTINUED onto the next line. Before the
+        // repair `in_str` was per line, so the continuation below was handed to every lint as CODE
+        // and `TrailerKey::SliceVerdict` inside it would have discharged the ARMED trailer lint —
+        // a string satisfying a source lint, which is the exact shape this test exists to refuse.
+        "const _C: &str = \"opens here \\\n",
+        "     TrailerKey::SliceVerdict and StepKind::Gate inside a continued literal\";\n",
         "let k = StepKind::Agent;\n",
     );
     let kept = code_lines(src);
+
+    // FINDING (8): the continuation line is STRING, not code, on every line the literal spans.
+    assert!(
+        !kept.iter().any(|l| l.contains("TrailerKey::SliceVerdict")),
+        "a `\\`-continued string literal's continuation was handed back as CODE — finding (8). A \
+         lint that a comment cannot satisfy but a multi-line literal can is not a source lint: \
+         {kept:?}"
+    );
+    assert!(
+        !kept
+            .iter()
+            .any(|l| l.contains("inside a continued literal")),
+        "the continued literal's prose must be blanked too: {kept:?}"
+    );
 
     // THE CODE SURVIVES.
     assert!(
@@ -345,19 +440,7 @@ fn conformance_every_step_kind_has_an_executor() {
         "`pub enum StepKind` is not in {}; this lint is reading the wrong file",
         catalog_src.display()
     );
-    let five: Vec<String> = catalog_code
-        .iter()
-        .skip_while(|l| !l.contains("pub enum StepKind"))
-        .skip(1)
-        .take_while(|l| !l.starts_with('}'))
-        .filter_map(|l| {
-            let t = l.trim().strip_suffix(',')?.trim();
-            (!t.is_empty()
-                && t.starts_with(|c: char| c.is_ascii_uppercase())
-                && t.chars().all(|c| c.is_ascii_alphanumeric()))
-            .then(|| t.to_owned())
-        })
-        .collect();
+    let five: Vec<String> = enum_variants(&catalog_code, "pub enum StepKind");
 
     // ANCHORS ON THE PARSE, before it is used. A parse that dropped a variant would report that
     // kind as executed by never asking about it — the port lint's `fields.len() == 5` guard, for
@@ -612,7 +695,7 @@ fn conformance_every_port_has_a_call_site() {
 /// commit accompanies it, while design §5.4's tier-1 rule is *"git first"* and AC-162 requires the
 /// trailer commit to exist before any store row for that transition is readable.
 #[test]
-#[ignore = "ARMED: Story and Slice-Verdict have 0 producers; only Gate is minted; discharged by s7h"]
+#[ignore = "ARMED: Slice-Verdict has 0 producers; Gate and Story are both minted as of s7h.2; discharged by s7h"]
 fn conformance_every_trailer_key_has_a_producer() {
     let root = workspace_root();
 
@@ -665,8 +748,10 @@ fn conformance_every_trailer_key_has_a_producer() {
     assert!(
         unproduced.is_empty(),
         "design §5.4 closes the trailer grammar at three keys and {} of them are minted — no \
-         producer for: {unproduced:?}. Only `Gate:` is ever written (run.rs, answer.rs); a stage \
-         advance appends `stage_transition` to the store with no `Story:` commit beside it.",
+         producer for: {unproduced:?}. `Gate:` is written by run.rs and answer.rs, and `Story:` by \
+         run.rs's `story_trailer` as of s7h.2 (ADR-0155). `Slice-Verdict:` needs a `slice_sealed` \
+         producer — the only construction of that kind today is doctor/rebuild.rs, the REBUILD \
+         path — and a declared `<slice>` component; see ADR-0160.",
         3 - unproduced.len()
     );
 }

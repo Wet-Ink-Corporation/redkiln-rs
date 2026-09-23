@@ -1777,7 +1777,7 @@ raw=$(grep -rnE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(critical
 # hit anywhere else under crates/ still halts.
 #
 # ---- AMENDED 2026-09-20 (Step 7d Slice 3 cycle 11, operator decision). THE EXCLUSION NAMES BOTH
-# ---- PRESCRIBED FIXTURE TREES, because there are two. §7d.13 prescribes an `rk-cli` fixture tree
+# ---- PRESCRIBED FIXTURE TREES, because there are two. s7d §7d.13 prescribes an `rk-cli` fixture tree
 # ---- of exactly the kind §7b.12 prescribes for `rk-kernel`, and `pack-min` exists to exercise the
 # ---- ABSTENTION GATE — whose one `[[stage.implement.require]]` row is `when = "has_repro"`, since
 # ---- an item omitting that facet is what makes the evaluator return `Tri::Null` and mint the gate.

@@ -14,6 +14,33 @@ is the hazard; a file removes it. The corpus-wide self-test below is the regress
 import re, glob, os, sys
 files = {f.replace(os.sep, '/'): open(f, encoding='utf-8').read()
          for f in glob.glob('runbook/**/*.md', recursive=True)}
+
+
+def outside_fences(s):
+    """`s` with every fenced block blanked, line count preserved.
+
+    Finding (16), carried into Step 7h and repaired here. `HEAD` below is `^#+ ` under `re.M`, which
+    matches a markdown heading -- and ALSO matches a `# ...` comment on the first column of a fenced
+    bash block, because a fence is not part of the regex's world. Measured 2026-09-22: the heading
+    corpus was **555**, of which only **140** were real headings; **415** were fenced bash comments.
+    That inflation is not cosmetic, it is a silent pass: a bare `<section>` ref resolves against any
+    heading whose number it prefixes, so 415 spurious "headings" resolve refs that name nothing. With
+    fences excluded, `0 unresolved` became **1** -- `phase-1/s7b-kernel.md`'s bare cite of another
+    stage's section, now qualified.
+
+    The lines are blanked rather than dropped so that the byte offsets a failure message reports stay
+    the file's own.
+    """
+    out, infence = [], False
+    for line in s.split('\n'):
+        if line.lstrip().startswith('```'):
+            infence = not infence
+            out.append('')
+            continue
+        out.append('' if infence else line)
+    return '\n'.join(out)
+
+
 HEAD = re.compile(r'^#+ .*?(\d+[a-z]?(?:\.\d+)?)', re.M)
 REF = re.compile(r'(?<![A-Za-z-])§(\d+[a-z]?\.\d+)')
 QUAL = re.compile(r'(design|METHOD[A-Za-z0-9-]*|README|brief|register|audit|charter|RFC'
@@ -22,7 +49,9 @@ QUAL = re.compile(r'(design|METHOD[A-Za-z0-9-]*|README|brief|register|audit|char
 CLAUSE = re.compile(r'[.!?][ \t\n]|\|[ \t]|\n[ \t]*[-*][ \t]|\n[ \t]*\n')
 bad, heads_total, refs_total = 0, 0, 0
 for f, s in sorted(files.items()):
-    heads = set(HEAD.findall(s))
+    # Finding (16): headings come from OUTSIDE fenced blocks. Refs are still read from the whole
+    # file, because a bare ref inside a fenced block is still a ref a reader has to resolve.
+    heads = set(HEAD.findall(outside_fences(s)))
     heads_total += len(heads)
     for m in REF.finditer(s):
         refs_total += 1
