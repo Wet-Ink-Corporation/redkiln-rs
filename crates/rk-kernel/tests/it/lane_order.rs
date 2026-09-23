@@ -397,3 +397,75 @@ fn adr0152_resume_takes_one_stage_boundary_and_breaks() {
          without one the FSM reports `Done` (it never invents a successor)"
     );
 }
+
+/// **ADR-0157: a stage does not advance into itself, and a second run appends nothing.**
+///
+/// The defect this pins was MEASURED against the real binary, not anticipated: `from` is the fold's
+/// stage and `to` is the supplied successor, and across runs they diverge because the composition
+/// root computes the successor from the item record (which never moves) while the fold follows the
+/// `stage_transition` rows the previous run wrote. Run two appended
+/// `{"from":"analysis","to":"analysis"}`, and run three would have appended another.
+///
+/// The fixture reproduces that by REPLAYING the first run's journal as `prior`, which is exactly what
+/// `rk-cli` does at step (9) — it hands `resume` the store's own rows.
+#[test]
+fn adr0157_a_second_run_advances_nowhere_and_appends_nothing() {
+    let pack = Pack::from_toml("lane-advance.toml", LANE_PACK).expect("the fixture pack loads");
+    let successor = pack.successor("triage").expect("triage has a successor");
+
+    // ---- Run one: the boundary is taken.
+    let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(VecStore::default()));
+    let inputs = advance_inputs(Some(successor));
+    let first = replay::resume(&inputs, advance_ports(&store), &[], &mut |n| {
+        panic!("no node may be supplied: {n:?}")
+    })
+    .expect("the first run advances");
+    assert_eq!(first.advanced_to(), Some("implement"));
+
+    // The journal the store now holds — what the next invocation is handed.
+    let prior = store
+        .lock()
+        .expect("not poisoned")
+        .query(rk_kernel::runtime::journal_query(ADV_ITEM))
+        .expect("queries");
+    let before = transitions(&prior);
+    assert_eq!(
+        before,
+        vec![
+            (None, Some("triage".to_owned())),
+            (Some("triage".to_owned()), Some("implement".to_owned())),
+        ],
+        "the first run's two rows"
+    );
+
+    // ---- Run two: SAME inputs, same supplied successor, the first run's journal as `prior`. This
+    // is the invocation that used to append `{"from":"implement","to":"implement"}`.
+    let second = replay::resume(&inputs, advance_ports(&store), &prior, &mut |n| {
+        panic!("no node may be supplied: {n:?}")
+    })
+    .expect("the second run resumes");
+
+    assert_eq!(
+        second.advanced_to(),
+        None,
+        "the second run must take NO boundary: the fold is already in the successor's stage"
+    );
+
+    let after = store
+        .lock()
+        .expect("not poisoned")
+        .query(rk_kernel::runtime::journal_query(ADV_ITEM))
+        .expect("queries");
+    assert_eq!(
+        transitions(&after),
+        before,
+        "the second run must append NO stage_transition row. A self-transition (`from == to`) is \
+         not a transition, and one per run grows without bound"
+    );
+    assert!(
+        !transitions(&after)
+            .iter()
+            .any(|(f, t)| f.is_some() && f == t),
+        "no row may carry `from == to`"
+    );
+}

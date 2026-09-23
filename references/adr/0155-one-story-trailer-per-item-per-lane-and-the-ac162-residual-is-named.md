@@ -7,7 +7,7 @@ legacy_id: none
 source: references/2026-09-08-architecture-design.md §5.4 (line 693, the `Story:` grammar row; line 688, F12's two-axis warrant); crates/rk-git/src/trailer/grammar.rs (`parse_body` at 143-162, `classify`'s `Story` arm at 166-171, `split_qualified` at 224-228 — first slash, no token count); crates/rk-git/src/reconcile.rs (116-124, `stories_committed.insert` and `Drift::DuplicateStoryTrailer`); crates/rk-cli/src/doctor/rebuild.rs (165-202, one row per item, anchored on the LAST mark, `to` from `stages.get(slug)`; 205-224, `Slice-Verdict:` per HISTORY entry); references/2026-09-08-acceptance-criteria.md AC-162 (3012-3018); references/adr/0105 (decision 3, the trailer plumbing; clause 8, ownership); references/adr/0109 (decision 3, three axes; AC-183, drift is never coerced)
 supersedes: []
 superseded_by: []
-related: ["0105", "0109", "0152", "0156"]
+related: ["0105", "0109", "0152", "0156", "0158"]
 evidence: ["F12"]
 consumers: []
 ---
@@ -116,13 +116,22 @@ A value whose slug is not an item stem is forbidden, because `rebuild.rs:186-193
 (`grammar.rs:143-162`) skips any line failing any of the three, and a skipped line is a trailer that
 silently does not exist.
 
-**4.** The trailer commit is written **before** the store row for that transition is readable, per AC-162
-and design §5.4's *"git first"*. It is therefore **not** written from `terminal_read`: that function runs
-after `resume` has already appended every minted row (`replay.rs:1744-1746`), which is the inverse order.
+**4.** The trailer commit is written as close to the boundary as the seams allow, and **not** from
+`terminal_read`: that function runs after `resume` has already appended every minted row
+(`replay.rs:1744-1746`), which is the inverse of *"git first"*.
 
-**5. The residual is recorded, not closed.** For a lane crossing *N* boundaries, **N−1** stage changes have
-a store row with no trailer commit beside them, so AC-162's *"before any store row"* is met for the first
-transition only. Route out: option 3 above. No document may state that AC-162 is met for this axis.
+⚠️ **AC-162's ordering cannot be satisfied by this record, and the reason is structural rather than
+this axis's.** *"Any store row for that transition"* is a named table — `t1_stage_transition`, whose own
+schema header says *"these rows never exist without their trailer commit"* — and **ADR-0158 measures that
+the whole tier-1 layer has no writer on any axis**: zero `INSERT INTO t1_*` in the workspace, all three
+tables empty in a live store, and no method on the `EventStore` port that could write one. So there is no
+tier-1 row to order the commit against, on this axis or on `Gate:`. The transition lands in `t2_event`,
+the tier-**2** table whose loss `doctor` classifies as telemetry-only.
+
+**5. The residual is recorded, not closed, and it is TWO residuals rather than one.**
+(a) For a lane crossing *N* boundaries, **N−1** stage changes carry no trailer commit at all; route out is
+option 3 above. (b) AC-162's ordering is **vacuous** — ADR-0158's finding, not a consequence of the
+cardinality chosen here. No document may state that AC-162 is met for this axis, or for any.
 
 **6.** `s7h` §7h.2's *"`Story:` at the stage boundary"* is corrected by errata to say *the first* stage
 boundary, and to record that the two axes have different cardinalities.

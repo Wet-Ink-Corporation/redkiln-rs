@@ -1,13 +1,13 @@
 ---
 id: "0156"
-title: "The two axes are asserted over **two different corpora, for a measured reason**: `Story:` by a REAL `redkiln run` on the shipped tree — reachable because **`triage` has ZERO catalog activities** and `bug-standard` declares no `[stage.triage]` block, so the plan is empty, `bind_nodes` reads no schema and the first boundary is crossed with nothing in the way — and `Slice-Verdict:`, the `review`/`verify` call site and `Exit::FindingsBlock` over a **purpose-built fixture pack** whose review activity is `agent` + `emit` only. The shipped pack's review stage is unreachable for **five independent, measured absences**, one of which (`${…}` step-output resolution) the tracker records as OWED to another stage. And Checkpoint 7h's `grep -q '^Slice-Verdict:'` guard is **already GREEN on the untouched tree** — satisfied by wrapped PROSE in commit `ba46ed9` over a stale `rk-run/` branch that is 0 commits ahead of the build branch — so it is re-stated against git's own trailer parser and scoped to the run's own commits before it is ever run"
+title: "The two axes are asserted over **two different corpora, for a measured reason**: `Story:` by a REAL `redkiln run` on the shipped tree — reachable because **`triage` has ZERO catalog activities** and `bug-standard` declares no `[stage.triage]` block, so the plan is empty, `bind_nodes` reads no schema and the first boundary is crossed with nothing in the way — and `Slice-Verdict:`, the `review`/`verify` call site and `Exit::FindingsBlock` over a **purpose-built fixture pack** whose review activity is `agent` + `emit` only. The shipped pack's review stage is unreachable for **six independent, measured absences**, one of which (`${…}` step-output resolution) the tracker records as OWED to another stage. And Checkpoint 7h's `grep -q '^Slice-Verdict:'` guard is **already GREEN on the untouched tree** — satisfied by wrapped PROSE in commit `ba46ed9` over a stale `rk-run/` branch that is 0 commits ahead of the build branch — so it is re-stated against git's own trailer parser and scoped to the run's own commits before it is ever run"
 status: proposed
 date: 2026-09-22
 legacy_id: none
 source: .redkiln/catalog/ (102 activities; the per-stage census, `triage` = 0); .redkiln/packs/bug-standard.toml (no `[stage.triage]` block; `[stage.review]` at 63-76); .redkiln/catalog/code-review.toml (24-58, the five steps) and adversarial-review.toml; crates/rk-cli/src/verbs/run.rs (`bind_nodes`'s schema read at 1735-1739; the stage read at 550; `terminal_read` at 1257-1331); crates/rk-kernel/src/runtime/step.rs (`MAPPED_VERBS` at 190, the refusal at 310-315); crates/rk-kernel/src/replay.rs (1760-1763, ADR-0142's measurement — 75 of 121 guards evaluable, the 94 `check` exprs untouched); crates/rk-kernel/src/review.rs and src/verify.rs (built, tested, zero `src/` callers); crates/rk-cli/src/exit.rs (44-46, `FindingsBlock = 4` and its *"its producer is the kernel's, built at 7b-ii"*); runbook/phase-1/s7h-lane-completes.md (§7h.4's block); references/adr/0101 (clause 5); references/adr/0147 (the instrument/executor split criterion)
 supersedes: []
 superseded_by: []
-related: ["0101", "0136", "0142", "0147", "0148", "0152", "0155"]
+related: ["0101", "0136", "0142", "0147", "0148", "0152", "0155", "0157", "0158"]
 evidence: []
 consumers: []
 ---
@@ -33,9 +33,22 @@ to open, and the plan is exhausted on the first iteration. **That is also the me
 §7h's own premise that a landed run leaves zero commits** — the premise was measured but its cause was
 not, and the cause is what makes `0152`'s advance demonstrable end to end.
 
-**The review half is not reachable, for five independent absences.** Each measured:
+**The review half is not reachable, for SIX independent absences.** Each measured, and ordered as a lane
+meets them.
 
-1. **`.redkiln/schemas/` does not exist.** `bind_nodes` reads
+⚠️ **This record was first drafted at FIVE, and blocker (0) was found by RUNNING the binary.** It is the
+one a lane hits first — `bind_nodes` reads a role's **card** before it reads the kind's **schema** — so
+the schema absence below is second, not first, and had never actually been reached by anything.
+
+0. **Every shipped card lacks `permission_mode`.** Measured: **8 of 8** files under `.redkiln/cards/`
+   (`architect`, `implementer`, `investigator`, `operator`, `planner`, `releaser`, `reviewer`,
+   `spec-author`) carry no such key, and the binder refuses by name — *"card investigator: no
+   `permission_mode` — `--permission-mode` takes an explicit value from the card and there is no
+   implicit default (AC-214)"*. This is the exit **3** a real `redkiln run` now stops at, one stage
+   after the boundary it takes, and it blocks **every** agent dispatch over the shipped pack, not only
+   the review stage's.
+1. **`.redkiln/schemas/` does not exist** — **not yet reached by any run**, because (0) fires first.
+   `bind_nodes` reads
    `.redkiln/schemas/<provides[0]>.json` (`run.rs:1735-1739`) and returns `Exit::ConfigError` if it
    cannot. `ls .redkiln/` lists eleven entries and `schemas` is not among them. The catalog would need
    **61** distinct kinds; the review stage alone needs five — `ChangeRecord`, `DesignVerdict`, `PRRReport`,
@@ -53,8 +66,9 @@ not, and the cause is what makes `0152`'s advance demonstrable end to end.
    step outputs"*. `code-review`'s `verdict` step is one of those 94. Step-output resolution is recorded
    as **OWED**, and not to this stage.
 
-Blockers 1–3 and 5 are absences of things `7h` was not scoped to author; 5 in particular is another
-stage's recorded debt, and taking it would be closing OWED work silently.
+Blockers 0–3 and 5 are absences of things `7h` was not scoped to author; 5 in particular is another
+stage's recorded debt, and taking it would be closing OWED work silently. Blocker 0 is the one a lane
+actually stops at, and it is authored registry content (eight card files), not code.
 
 **Separately, the checkpoint cannot currently fail.** With `FIX_ITEM=rk-fix-doctor-test-count`:
 
@@ -116,7 +130,7 @@ carried finding (22)'s missing `gate_expiry` class is not in the path either).
 `Confirmed::events` → the `Slice-Verdict:` trailer → `Exit::FindingsBlock` from `block_set()`. `review/`
 returns `Vec<Event>` and appends nothing itself, so the caller owns the append and the exit mapping.
 
-**4. The five blockers are recorded by number** as the reason the shipped review stage is unreachable, and
+**4. The six blockers are recorded by number** as the reason the shipped review stage is unreachable, and
 **`0 of 102` shipped activities completing a committing walk stands unchanged** by this stage.
 
 **5.** Checkpoint 7h's block is re-stated **before it is run**, under PIA-035:
@@ -140,7 +154,7 @@ since 7b-ii. `s7i`'s first blocker — *"zero `dispatch_completed` events becaus
 cleared for the fixture corpus and **not** for the shipped catalog, which is stated rather than implied.
 
 The cost is that the shipped pack's review stage remains unreached, so Phase-1 criterion (1) is not closed
-by this stage. The five blockers are now enumerated with the files and line numbers that produce them,
+by this stage. The six blockers are now enumerated with the files and line numbers that produce them,
 which is the difference between a blocked criterion and an unexplained one.
 
 **What this forbids**
@@ -161,7 +175,7 @@ which is the difference between a blocked criterion and an unexplained one.
 it sums to 102 over 11 stages with `triage` at 0. `grep -n '^\[stage\.' .redkiln/packs/bug-standard.toml`
 returns nine headers, beginning at `[stage.analysis]` — there is no `[stage.triage]`.
 
-**Each of the five blockers was reproduced at its own line, not inferred from a symptom.**
+**Each blocker was reproduced at its own line, not inferred from a symptom.**
 `ls -d .redkiln/schemas` → *No such file or directory*; `ls -A .redkiln/processes | wc -l` → **0**;
 `MAPPED_VERBS` is the four-element array quoted above; both shipped items' `stage =` values are `triage`
 and `specification`; and ADR-0142's own recorded measurement names the 94 `check` exprs it does not

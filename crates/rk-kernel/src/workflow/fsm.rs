@@ -1610,7 +1610,8 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
 ///    [`NextAction::Dispatch`];
 /// 4. a recorded halt → [`NextAction::Halt`] — **above the successor check, ADR-0154: a recorded
 ///    halt outranks a supplied successor**, so a refused run is never reported as advancing;
-/// 5. the plan exhausted **and a successor supplied** → [`NextAction::AdvanceStage`];
+/// 5. the plan exhausted, a successor supplied, **and that successor is not the stage the fold is
+///    already in** → [`NextAction::AdvanceStage`] (ADR-0157: a stage does not advance into itself);
 /// 6. otherwise [`NextAction::Done`].
 ///
 /// # Errors
@@ -1717,7 +1718,21 @@ pub fn next_action(
     // 5. The successor is an ARGUMENT and is never invented here: this system models no stage
     //    ordering (`spikes/p9/packs/incident.toml`:1-2). Which stage it IS comes from the pack's
     //    declared `[policy] stage_order` (ADR-0153), resolved by the composition root.
-    if let Some(to) = ctx.successor {
+    //
+    //    🛑 **A STAGE DOES NOT ADVANCE INTO ITSELF (ADR-0157), AND THIS WAS MEASURED, NOT
+    //    ANTICIPATED.** `from` is the FOLD's stage and `to` is the SUPPLIED successor, and the two
+    //    diverge across runs: the composition root computes the successor from the item record's
+    //    stage, which never moves, while the fold's `state.stage` follows the `stage_transition`
+    //    rows the previous run wrote. A second `redkiln run` over the shipped fix item therefore
+    //    folded `state.stage = "analysis"`, was handed the successor `"analysis"`, and appended
+    //    `{"from":"analysis","to":"analysis"}` — a tier-1 row for a transition that is not one, and
+    //    one more on every subsequent run [measured 2026-09-22 against the real binary].
+    //
+    //    The equality IS the "already there" test: the journal has recorded this transition, so
+    //    there is nothing left to do and the action is `Done`.
+    if let Some(to) = ctx.successor
+        && to != state.stage
+    {
         return Ok(NextAction::AdvanceStage {
             from: state.stage.clone(),
             to: to.to_owned(),

@@ -169,8 +169,15 @@ pub struct Resolved {
     pub extras: PackExtras,
     /// The item, rebuilt from its record.
     pub item: Item,
-    /// The stage the item record carries (RT-50).
+    /// The stage the item record carries (RT-50) — or, for the second stage of a lane onward, the
+    /// stage the lane loop advanced INTO (ADR-0152).
     pub stage: String,
+    /// **The stage this one was entered FROM, for `RuntimeContext::entered_from` (ADR-0152).**
+    ///
+    /// `None` for a lane's first stage, which has no predecessor — the one case `stage_entry` says
+    /// it cannot state. Set by the lane loop when it re-enters for a successor, and never read from
+    /// the item record: the record holds one stage and says nothing about how it was reached.
+    pub entered_from: Option<String>,
     /// The kernel's `Config`, **constructed once** at step (4) and threaded from here into
     /// `RunInputs::with_config` — ADR-0083's *"the composition root builds it; the kernel reads
     /// it and never makes one"*. See the 🛑 note at its one construction site.
@@ -280,54 +287,91 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
 
     // THE ONE WALL-CLOCK READ. Both derived values come off it — see `base_inputs`.
     let now = crate::clock::now().unix_seconds();
-    let (inputs, tree_hash) = match prepare_inputs(&resolved, now) {
-        Ok(pair) => pair,
-        Err(exit) => return Ok(exit),
-    };
 
-    let claude = match real_harness_config(&resolved, env) {
-        Ok(config) => config,
-        Err(exit) => return Ok(exit),
+    // ---- **ADR-0152: THE LANE LOOP LIVES HERE, ABOVE `resume`.** -------------------------------
+    //
+    // One `resume` per stage, one run record per stage, the successor supplied per stage. `resume`'s
+    // `AdvanceStage` arm steps the boundary and BREAKS; this loop is what re-enters for the stage it
+    // reported. The alternative — advancing inside `resume` — is not implementable and would move
+    // the run-record grain: `run_id` is `format!("{}-{}", stage, &digest[..16])`, so a later stage's
+    // events would be filed under a record whose id names the first (ADR-0152).
+    //
+    // Everything inside the loop is per-stage and is therefore rebuilt per iteration: the selection
+    // that `bind_nodes` walks, the cards it binds, the harness built over those cards, and the
+    // `RunInputs` whose `stage` is in its own digest. Only the store, the worktree and the cancel
+    // token outlive an iteration.
+    //
+    // 🛑 **THE BOUND IS THE PACK'S DECLARED ORDER, AND IT IS ASSERTED RATHER THAN TRUSTED.** A lane
+    // visits each stage at most once, so `stage_order().len()` is an upper bound on iterations. The
+    // guard is not decoration: `Pack::successor` returning a stage already visited would otherwise
+    // be an unbounded loop appending tier-1 rows, which is the exact failure ADR-0152 exists to
+    // prevent and which a mutant of that function can still produce.
+    let lane_bound = {
+        let pack = rk_kernel::select::Pack::from_toml(
+            &format!("{}.toml", resolved.pack_name),
+            &resolved.pack_src,
+        );
+        pack.map_or(1, |p| p.stage_order().len().max(1))
     };
-    let mut binder = rk_adapter_claude::binder::Binder::new(claude);
-    let inputs = match bind_nodes(&resolved, inputs, &mut binder, &owned) {
-        Ok(inputs) => inputs,
-        Err(exit) => return Ok(exit),
-    };
+    let mut resolved = resolved;
+    let mut visited: Vec<String> = Vec::new();
+    let mut last_exit;
 
-    // **ONLY THEN** the harness, over the config the bindings filled (§7d.5's own order):
-    // `ClaudeHarness::dispatch` refuses a `card_digest` its validated store does not hold, and
-    // `Binder::new(config).bind(..)` then `into_config()` is the one way that store is filled.
-    let harness = match rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone()) {
-        Ok(harness) => harness,
-        Err(e) => {
-            eprintln!("redkiln: the harness could not be built: {e}");
-            return Ok(Exit::ConfigError);
-        }
-    };
+    loop {
+        visited.push(resolved.stage.clone());
+        let (inputs, tree_hash) = match prepare_inputs(&resolved, now) {
+            Ok(pair) => pair,
+            Err(exit) => return Ok(exit),
+        };
 
-    // **ADR-0137: the REAL toolchain, over the run-owned worktree.** Until `s7g` this slot held
-    // `FixtureToolchain::default()`, whose `Default` is `present: false` — a toolchain reporting
-    // itself absent, which is why AC-473's clause has never had a mechanism.
-    let toolchain = match real_toolchain(&resolved, env, &owned) {
-        Ok(toolchain) => toolchain,
-        Err(exit) => return Ok(exit),
-    };
+        let claude = match real_harness_config(&resolved, env) {
+            Ok(config) => config,
+            Err(exit) => return Ok(exit),
+        };
+        let mut binder = rk_adapter_claude::binder::Binder::new(claude);
+        let inputs = match bind_nodes(&resolved, inputs, &mut binder, &owned) {
+            Ok(inputs) => inputs,
+            Err(exit) => return Ok(exit),
+        };
 
-    let ports = rk_ports::root::Ports {
-        store,
-        harness: Arc::new(harness),
-        // The two with no Phase-1 real (ADR-0094 decision 2; design:265-266 — GitHub and mdBook
-        // are Phase 3, which is ADR-0134's warrant for the port lint's expected-uncalled set).
-        tracker: Arc::new(rk_ports::fakes::BoardTracker::default()),
-        docs: Arc::new(rk_ports::fakes::RecordingDocs::default()),
-        toolchain,
-    };
+        // **ONLY THEN** the harness, over the config the bindings filled (§7d.5's own order):
+        // `ClaudeHarness::dispatch` refuses a `card_digest` its validated store does not hold, and
+        // `Binder::new(config).bind(..)` then `into_config()` is the one way that store is filled.
+        let harness =
+            match rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone()) {
+                Ok(harness) => harness,
+                Err(e) => {
+                    eprintln!("redkiln: the harness could not be built: {e}");
+                    return Ok(Exit::ConfigError);
+                }
+            };
 
-    // Every node the loop reaches was bound above; the supplier is the seam for a node first seen
-    // INSIDE the loop, and it refuses by name rather than silently binding nothing (RT-55).
-    let mut supply_spec =
-        |node: &str| -> Result<rk_kernel::replay::RecordedSpec, rk_kernel::replay::ReplayError> {
+        // **ADR-0137: the REAL toolchain, over the run-owned worktree.** Until `s7g` this slot held
+        // `FixtureToolchain::default()`, whose `Default` is `present: false` — a toolchain reporting
+        // itself absent, which is why AC-473's clause has never had a mechanism.
+        let toolchain = match real_toolchain(&resolved, env, &owned) {
+            Ok(toolchain) => toolchain,
+            Err(exit) => return Ok(exit),
+        };
+
+        let ports = rk_ports::root::Ports {
+            // Cloned per iteration: the STORE outlives a stage (one journal per item, across the whole
+            // lane), while every other port here is rebuilt for the stage's own bindings (ADR-0152).
+            store: Arc::clone(&store),
+            harness: Arc::new(harness),
+            // The two with no Phase-1 real (ADR-0094 decision 2; design:265-266 — GitHub and mdBook
+            // are Phase 3, which is ADR-0134's warrant for the port lint's expected-uncalled set).
+            tracker: Arc::new(rk_ports::fakes::BoardTracker::default()),
+            docs: Arc::new(rk_ports::fakes::RecordingDocs::default()),
+            toolchain,
+        };
+
+        // Every node the loop reaches was bound above; the supplier is the seam for a node first seen
+        // INSIDE the loop, and it refuses by name rather than silently binding nothing (RT-55).
+        let mut supply_spec = |node: &str| -> Result<
+            rk_kernel::replay::RecordedSpec,
+            rk_kernel::replay::ReplayError,
+        > {
             Err(rk_kernel::replay::ReplayError::Malformed {
                 path: "inputs/specs.json".to_owned(),
                 detail: format!(
@@ -336,15 +380,52 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
             })
         };
 
-    run_with(
-        &resolved,
-        &inputs,
-        now,
-        &tree_hash,
-        ports,
-        &mut supply_spec,
-        &token,
-    )
+        let mut advanced: Option<String> = None;
+        last_exit = run_with_advance(
+            &resolved,
+            &inputs,
+            now,
+            &tree_hash,
+            ports,
+            &mut supply_spec,
+            &token,
+            &mut advanced,
+        )?;
+
+        // A stage that took no boundary ends the lane: a gate (exit 0, golden constraint 2), a
+        // halt, a refusal, or `Done` at the end of the order.
+        let Some(next) = advanced else {
+            return Ok(last_exit);
+        };
+
+        // 🛑 A boundary into a stage this lane already visited is a DEFECT, not a lane. It is
+        // refused by name rather than followed, because following it is the unbounded append.
+        if visited.iter().any(|s| s == &next) {
+            eprintln!(
+                "redkiln: the lane advanced into `{next}`, which it has already visited                  ({}); the pack's `[policy] stage_order` does not describe a lane.",
+                visited.join(" -> ")
+            );
+            return Ok(Exit::ConfigError);
+        }
+        if visited.len() >= lane_bound {
+            eprintln!(
+                "redkiln: the lane visited {} stages and the pack declares {lane_bound};                  stopping rather than advancing again.",
+                visited.len()
+            );
+            return Ok(Exit::ConfigError);
+        }
+
+        println!(
+            "{} advanced {} -> {next}",
+            resolved.item.id(),
+            resolved.stage
+        );
+        resolved = Resolved {
+            entered_from: Some(resolved.stage.clone()),
+            stage: next,
+            ..resolved
+        };
+    }
 }
 
 /// The inner verb — the in-process twin every Slice-3 loop test drives.
@@ -389,6 +470,47 @@ pub fn run_with(
     >,
     token: &CancelToken,
 ) -> Result<Exit, Halt> {
+    run_with_advance(
+        resolved,
+        inputs,
+        now,
+        tree_hash,
+        ports,
+        supply_spec,
+        token,
+        &mut None,
+    )
+}
+
+/// [`run_with`], reporting the stage boundary it took (ADR-0152).
+///
+/// `advanced` is set to `Some(to)` exactly when `replay::resume` executed its `AdvanceStage` arm.
+/// It is an out-parameter rather than a changed return type because [`run_with`] is the seam every
+/// in-process `rk-cli` test drives — ten call sites — and widening the pair they all match on would
+/// be a mechanical edit across tests that are asserting something else. The lane loop in [`run`] is
+/// the only caller that passes anything but `&mut None`.
+///
+/// # Errors
+/// As [`run_with`].
+#[expect(
+    clippy::too_many_arguments,
+    reason = "as `run_with`, plus ADR-0152's out-parameter; see that function's own note"
+)]
+pub fn run_with_advance(
+    resolved: &Resolved,
+    inputs: &rk_kernel::replay::RunInputs,
+    now: i64,
+    tree_hash: &str,
+    ports: rk_ports::root::Ports,
+    supply_spec: &mut dyn FnMut(
+        &str,
+    ) -> Result<
+        rk_kernel::replay::RecordedSpec,
+        rk_kernel::replay::ReplayError,
+    >,
+    token: &CancelToken,
+    advanced: &mut Option<String>,
+) -> Result<Exit, Halt> {
     let store = Arc::clone(&ports.store);
     let store = &store;
     // §7d.5: "the root checks `token.is_cancelled()` at each step boundary and returns
@@ -416,7 +538,16 @@ pub fn run_with(
         return Ok(Exit::SignalOutsideDispatch);
     }
 
-    resume_and_read(resolved, inputs, now, tree_hash, ports, supply_spec, token)
+    resume_and_read(
+        resolved,
+        inputs,
+        now,
+        tree_hash,
+        ports,
+        supply_spec,
+        token,
+        advanced,
+    )
 }
 
 /// Steps (1)–(7), in §7d.5's order. `Err(Exit)` is a refusal; `Ok` hands step (8) its inputs.
@@ -643,6 +774,8 @@ pub fn through_step_seven(
         extras,
         item,
         stage,
+        // A lane's FIRST stage has no predecessor; the loop sets this for every stage after it.
+        entered_from: None,
         config: kernel_config,
         harness_binary: config.adapters.harness_binary.clone(),
         toolchains: config.adapters.toolchains.clone(),
@@ -1066,6 +1199,37 @@ fn base_inputs(
         .map(|(n, s)| (n.as_str(), s.as_str()))
         .collect();
     let deadline = now.saturating_add(resolved.extras.gate_deadline_secs);
+
+    // **ADR-0152 / ADR-0153: THE SUCCESSOR IS SUPPLIED HERE, AND THIS IS THE ONLY PLACE.**
+    //
+    // `RuntimeContext::advances_to`'s contract is *"supplied, never invented"*, and the kernel
+    // keeps that: `fsm::next_action`'s advance arm reads `ctx.successor` and consults no pack. So
+    // the composition root resolves the lane order and hands over the answer.
+    //
+    // Which stage it is comes from the pack's declared `[policy] stage_order`, skipping every
+    // `forbidden` entry — `Pack::successor`. `None` is the end of the lane and is NOT an error: the
+    // FSM then reports `Done`, exactly as it did before 7h.
+    //
+    // 🛑 The pack is parsed here rather than threaded from step (8) because `Resolved` carries the
+    // pack's BYTES (*"both parsers read these"*) and not a loaded `Pack`; a second parse of the same
+    // bytes cannot disagree with the first, and `bind_nodes`'s own parse is scoped to selection.
+    let pack = rk_kernel::select::Pack::from_toml(
+        &format!("{}.toml", resolved.pack_name),
+        &resolved.pack_src,
+    )
+    .map_err(|e| {
+        eprintln!("redkiln: {}.toml: {e}", resolved.pack_name);
+        Exit::ConfigError
+    })?;
+    let mut runtime =
+        rk_kernel::replay::RuntimeContext::supplied(tree_hash, deadline).results_at(now);
+    if let Some(to) = pack.successor(&resolved.stage) {
+        runtime = runtime.advances_to(to);
+    }
+    if let Some(from) = &resolved.entered_from {
+        runtime = runtime.entered_from(from);
+    }
+
     Ok(rk_kernel::replay::RunInputs::new(&resolved.stage)
         .with_pack(&format!("{}.toml", resolved.pack_name), &resolved.pack_src)
         .with_catalog(&borrowed)
@@ -1074,9 +1238,7 @@ fn base_inputs(
         .with_item(&resolved.item)
         // ONE `with_config`, over the value step (4) constructed — never a second `Config::new`.
         .with_config(resolved.config.clone())
-        .with_runtime(
-            rk_kernel::replay::RuntimeContext::supplied(tree_hash, deadline).results_at(now),
-        ))
+        .with_runtime(runtime))
 }
 
 /// Steps (9) and (10): the journal read, `replay::resume`, the run record, and the terminal read.
@@ -1101,6 +1263,7 @@ fn resume_and_read(
         rk_kernel::replay::ReplayError,
     >,
     token: &CancelToken,
+    advanced: &mut Option<String>,
 ) -> Result<Exit, Halt> {
     let item_id = resolved.item.id().to_owned();
     let store = Arc::clone(&ports.store);
@@ -1246,6 +1409,9 @@ fn resume_and_read(
         eprintln!("redkiln: the run record could not be written: {e}");
         return Ok(Exit::ConfigError);
     }
+
+    // ADR-0152: the boundary the kernel took, reported to the lane loop before the terminal read.
+    *advanced = recorded.advanced_to().map(ToOwned::to_owned);
 
     Ok(terminal_read(resolved, &recorded))
 }
