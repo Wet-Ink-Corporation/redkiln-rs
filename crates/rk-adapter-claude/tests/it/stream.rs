@@ -412,7 +412,7 @@ fn rate_limited_from_stream() {
 /// The transcript's reading is representable and NOT `allowed`, so it also pins ADR-0163 clause
 /// 2 on a refused dispatch: exactly one `rate_limit_reading` row, whose `windows` are that frame's
 /// 0.99 / 0.40. Red by: the reading append guarded on an `allowed` status or on success (zero
-/// rows); the windows read from another frame or re-keyed.
+/// rows); the windows re-keyed.
 #[test]
 fn ac523_text_marker_detection_disclosed() {
     let t = init_then(&[

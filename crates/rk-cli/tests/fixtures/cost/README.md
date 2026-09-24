@@ -64,15 +64,17 @@ are never validated.
   interleaving before validating would print `not attributable` and exit `0`; every owned reading
   is validated first.
 
-### The six cases the adversarial pass added
+### The seven cases the adversarial passes added
 
-Each `expected.stdout` was computed by hand from `cost.rs` and `throttle.rs`, then confirmed
-against the binary (they agreed on the first run).
+Six came from the first pass; `flat-unwindowed-other-type/` came from the second, which found two
+mutants of `unwindowed` that no case killed. Each `expected.stdout` was computed by hand from
+`cost.rs` and `throttle.rs`, then confirmed against the binary (they agreed on the first run).
 
 | case | journal | renders | red by |
 | --- | --- | --- | --- |
 | `empty-counts-dispatch-rows-only/` | a `bug-1` `dispatch`, a `memo_miss` carrying `item: bug-1`, a `dispatch_completed`; no reading | the empty line with `(1 dispatch rows)` | the empty case counting every row that carries the item (`2`) |
 | `flat-unwindowed/` | two owned flat readings (`windows: null`, `utilization` 7 then 8) whose `rate_limit_type` is `null` | the header, `five_hour: no sample`, `seven_day: no sample`, `unwindowed=2` | a reading naming no window dropped silently (no `unwindowed` line) or written into both windows |
+| `flat-unwindowed-other-type/` | ONE owned flat reading (`windows: null`, `utilization` 7) whose `rate_limit_type` is the string `"opus_weekly"` | the header (`1`), `five_hour: no sample`, `seven_day: no sample`, `unwindowed=1` | the line guarded on `N > 1` (a single unwindowed reading dropped); the neither-window test reduced to a `null` `rate_limit_type` (another string never counted) |
 | `foreign-adjacent-to-span/` | a `story-1` `dispatch` IMMEDIATELY before the first owned reading and another IMMEDIATELY after the last; three owned readings (ticks 20/50, 20/50, 21/50) | `n=3 … low_sample resolution_limited` in both windows — attributable | the span widened by one row at either edge (`not attributable`) |
 | `foreign-dispatch-no-reading/` | owned dispatch and reading, an owned dispatch, a `story-1` dispatch that produced NO reading, then the owned reading | `not attributable interleaving=1` | a foreign dispatch counted only when a reading follows it (draws render) |
 | `malformed-foreign-in-interleaved-span/` | an owned reading, a `story-1` reading whose `windows` is the string `"bad"`, an owned reading | exit `0`, `not attributable interleaving=1` | a foreign reading validated (exit `3`) |

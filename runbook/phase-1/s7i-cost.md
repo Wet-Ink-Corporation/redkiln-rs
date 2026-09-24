@@ -186,13 +186,17 @@ probe='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro"
 # Draws at n < 10 carry low_sample and NO delta; draws at n >= 10 carry no low_sample, and resolution_limited exactly
 # when the delta is 0 or 1 — what `throttle::batch_draw` can produce, and nothing else.
 EMPTY_TAIL=' nothing to attribute — no rate_limit_reading row in this store names this item \([0-9]+ dispatch rows\)$'
-EMPTY_RE='^cost [^ ]+:'"$EMPTY_TAIL"
-GRAMMAR="$EMPTY_RE"'|^cost [^ ]+: rate_limit_reading rows in span: [0-9]+, this store.s traffic only$|^not attributable interleaving=[1-9][0-9]*$|^(five_hour|seven_day): n=[1-9] resets_at=-?[0-9]+ low_sample( non_monotonic| resolution_limited)?$|^(five_hour|seven_day): n=[1-9][0-9]+ resets_at=-?[0-9]+( non_monotonic| delta_ticks=[01] resolution_limited| delta_ticks=([2-9]|[1-9][0-9]+))$|^(five_hour|seven_day): (unkeyed=[1-9][0-9]*|no sample)$|^unwindowed=[1-9][0-9]*$'
+EMPTY_RE='^cost [^[:space:]]+:'"$EMPTY_TAIL"
+GRAMMAR="$EMPTY_RE"'|^cost [^[:space:]]+: rate_limit_reading rows in span: [0-9]+, this store'"'"'s traffic only$|^not attributable interleaving=[1-9][0-9]*$|^(five_hour|seven_day): n=[1-9] resets_at=-?[0-9]+ low_sample( non_monotonic| resolution_limited)?$|^(five_hour|seven_day): n=[1-9][0-9]+ resets_at=-?[0-9]+( non_monotonic| delta_ticks=[01] resolution_limited| delta_ticks=([2-9]|[1-9][0-9]+))$|^(five_hour|seven_day): (unkeyed=[1-9][0-9]*|no sample)$|^unwindowed=[1-9][0-9]*$'
 pre=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$pre" ] || { echo "FAIL: the read-only store probe did not run (rc=$rc)"; exit 1; }
 read -r t2_before _ owned <<< "$pre"
 [ "$owned" = "0" ] || { echo "FAIL (PRECONDITION): rk-story-codex-adapter owns $owned readings — re-point the empty case at an item that owns none; this guard does not change case silently"; exit 1; }
 empty=$("$RK" cost rk-story-codex-adapter 2>&1); erc=$?
+# ⚠️ Git Bash's grep ignores a trailing CR, so a CRLF-terminated line would pass every regex below (found by this
+# stage's second adversarial round). The CR cannot be refused from `$empty` itself: Git Bash strips it inside `$(…)`,
+# and `grep -q $'\r'` also matched nothing on a CRLF line when probed. So the RAW bytes are read through `od -c`.
+if "$RK" cost rk-story-codex-adapter 2>&1 | od -c | grep -qF '\r'; then echo "FAIL: cost's empty output carries a CR byte"; exit 1; fi
 [ "$erc" -eq 0 ] || { echo "FAIL: cost exited $erc on an item with no readings"; printf '%s\n' "$empty"; exit 1; }
 test -n "$empty" || { echo "FAIL: cost printed NOTHING — silence is not the empty rendering (Halt 8)"; exit 1; }
 [ "$(printf '%s\n' "$empty" | grep -c .)" -eq 1 ] || { echo "FAIL: the empty case printed more than one line — anything beside the empty line is a rendering over n = 0"; printf '%s\n' "$empty"; exit 1; }
@@ -201,6 +205,7 @@ fx=$(python -c "$probe" "$store" "$FIX_ITEM"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$fx" ] || { echo "FAIL: the store probe did not run for $FIX_ITEM (rc=$rc)"; exit 1; }
 read -r _ _ fx_owned <<< "$fx"
 fout=$("$RK" cost "$FIX_ITEM" 2>&1); frc=$?
+if "$RK" cost "$FIX_ITEM" 2>&1 | od -c | grep -qF '\r'; then echo "FAIL: cost $FIX_ITEM's output carries a CR byte"; exit 1; fi
 [ "$frc" -eq 0 ] || { echo "FAIL: cost $FIX_ITEM exited $frc"; printf '%s\n' "$fout"; exit 1; }
 test -n "$fout" || { echo "FAIL: cost $FIX_ITEM printed nothing"; exit 1; }
 # EVERY line against the closed grammar — not only window lines: a per-run figure on its own line or in the header is
@@ -223,6 +228,10 @@ read -r t2_after _ _ <<< "$post"
 # ---- GRAMMAR. This grep is a FLOOR over CODE lines only, anchored to the `path:LINE:` prefix grep prints and dropping
 # ---- `//`, `/*` and doc-continuation `* ` leaders. A bare leading `*` is NOT dropped: `*run_headroom_cost.lock() = 3;`
 # ---- is a deref on a code line, and the first cut of this regex hid it (found by this stage's adversarial pass).
+# ---- ⚠️ IT STILL CANNOT SEE three CODE shapes, measured by the second round: a continuation line of a multiplication
+# ---- as rustfmt writes one (`        * headroom_for_run`, the default `binop_separator = Front`), code after a closing
+# ---- `*/` on the same line, and code after an opening `/* … */` on the same line. The floor is NECESSARY-not-
+# ---- sufficient for those as for renames; the closed-grammar test in (3) is what makes the pair sound.
 # ---- ⚠️ WHAT IT CANNOT SEE, said rather than claimed away: a RENAMED identifier — the AC register's own words, "a grep
 # ---- rule is defeated by renaming an identifier" — and one assembled by a macro or `concat!`. A mention inside a
 # ---- string or `#[doc = "…"]` is a code line to this grep and FAILS it, which is the safe direction.

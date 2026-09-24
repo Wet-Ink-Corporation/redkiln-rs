@@ -1,0 +1,4 @@
+cost bug-1: rate_limit_reading rows in span: 1, this store's traffic only
+five_hour: no sample
+seven_day: no sample
+unwindowed=1

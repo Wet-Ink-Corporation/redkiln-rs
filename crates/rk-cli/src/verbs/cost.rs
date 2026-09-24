@@ -4,9 +4,11 @@
 //! The ninth verb (ADR-0163 decision 1). It reads the store's `rate_limit_reading` rows — one per
 //! dispatch that went through the child, each carrying the `item` the composition root bound
 //! (ADR-0163 decisions 2–3) — and renders them through `rk_adapter_claude::throttle::attribute`,
-//! which until this module had no caller in any `src/`. It is **read-only**: it does not reconcile,
-//! appends nothing, and never calls the harness it is handed (AC-395: *"from the event store alone
-//! … it dispatches no model call"*).
+//! which until this module had no caller in any `src/`. It **appends no event and writes no journal
+//! row** (ADR-0163 decision 1): it does not reconcile, and never calls the harness it is handed
+//! (AC-395: *"from the event store alone … it dispatches no model call"*). It is not strictly
+//! read-only: opening the store through `SqliteStore::open` applies the schema and, on a repository
+//! with no store, creates and identity-stamps one — as `status` and `explain` already do.
 //!
 //! # What it renders, and the closed set of lines
 //!

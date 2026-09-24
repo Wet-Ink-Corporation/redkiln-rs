@@ -35,11 +35,12 @@ use crate::support::{
 use crate::{fixtures_dir, temp_repo};
 
 /// Every seeded case, in directory byte order — asserted equal to the on-disk set both ways.
-const CASES: [&str; 22] = [
+const CASES: [&str; 23] = [
     "empty",
     "empty-counts-dispatch-rows-only",
     "flat-reading",
     "flat-unwindowed",
+    "flat-unwindowed-other-type",
     "foreign-adjacent-to-span",
     "foreign-dispatch-no-reading",
     "foreign-only",
@@ -261,7 +262,9 @@ fn cost_after_a_real_run_renders_low_sample_through_the_binary() {
 /// segment (`null-splits-a-batch` renders one five-hour draw of `n=11`); the span widened by one
 /// row at either edge (`foreign-adjacent-to-span` reads `not attributable`); the empty case
 /// counting rows of other kinds that carry the item (`empty-counts-dispatch-rows-only` reads `2`);
-/// a flat reading naming no window dropped silently or extrapolated (`flat-unwindowed`); a foreign
+/// a flat reading naming no window dropped silently or extrapolated (`flat-unwindowed`), or
+/// counted only when there are two of it or only when its type is `null`
+/// (`flat-unwindowed-other-type`); a foreign
 /// reading validated (`malformed-foreign-in-interleaved-span` exits `3`).
 #[test]
 fn cost_fixture_corpus_binary_arm() {
@@ -708,7 +711,7 @@ fn in_grammar(line: &str) -> bool {
 }
 
 /// **The output grammar is closed** — AC-373: no per-run or per-dispatch figure, and no line
-/// outside ADR-0163 decision 4's six forms.
+/// outside the eight forms of ADR-0163 decision 4's closed grammar (the `cost.rs` module doc).
 ///
 /// Every line of every corpus `expected.stdout`, and every line `render` produces in-process over
 /// every corpus journal for the target item, the foreign one and an absent one, must match. The

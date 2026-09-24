@@ -4,7 +4,7 @@ title: "**`redkiln cost <ITEM>` is the ninth verb, and the reading it renders is
 status: proposed
 date: 2026-09-23
 legacy_id: none
-source: references/adr/0133 (decision clause 2 — *"The producer is the Harness adapter, once per reading"* and *"A reading is appended when the adapter's stream reader parses a `rate_limit_event` line"*; clause 3's `resets_at` bullet — *"`{ five_hour: <RFC 3339 | null>, seven_day: <RFC 3339 | null> }`"*; the forbids bullet *"Forbids a payload that drops `windows.five_hour` / `windows.seven_day` or renames them"*); references/adr/0110 (decision 1 — *"The named set is the account's complete dispatch sequence between the two readings"*); references/adr/0162 (the fixture-corpus route); runbook/phase-1/s7i-cost.md (§7i.1–§7i.3 as read at `76ae138`); runbook/phase-1/s7d-cli-and-migrate.md (§7d.3's *"and no others"*); and, each read at `76ae138` on 2026-09-23 — crates/rk-cli/src/cli.rs's module doc (*"a ninth is a decision, taken in a record, not a derive attribute"*), crates/rk-cli/src/verbs/run.rs's `BindRequest` (*"inputs: vec![(\"item\".to_owned(), serde_json::json!(resolved.item.id()))]"*), crates/rk-adapter-claude/src/throttle.rs (`BatchDraw.n`'s doc; `attribute`'s *"`owned[i]` says whether sample `i`'s dispatch belongs to the item"*), crates/rk-types/src/time.rs (`#[serde(transparent)] pub struct Timestamp(i64);`), crates/rk-types/src/event.rs (`Event { kind, payload }`), crates/rk-cli/src/doctor/mod.rs (`let journal = read_journal(&worktree.join("events.jsonl"));`), and the shipped store `.git/redkiln/store.sqlite3` opened read-only
+source: references/adr/0133 (decision clause 2 — *"The producer is the Harness adapter, once per reading"* and *"A reading is appended when the adapter's stream reader parses a `rate_limit_event` line"*; clause 3's `resets_at` bullet — *"`{ five_hour: <RFC 3339 | null>, seven_day: <RFC 3339 | null> }`"*; the forbids bullet *"Forbids a payload that drops `windows.five_hour` / `windows.seven_day` or renames them"*); references/adr/0110 (decision 1 — *"The named set is the account's complete dispatch sequence between the two readings"*); references/adr/0162 (the fixture-corpus route); references/adr/0131 (the first forbids bullet; the considered option *"put the correlation key in the payload"*; the drivers *"A tag is addressing metadata, not decision content"* and *"Waiting accretes nothing"*; decision 8), read 2026-09-24; runbook/phase-1/s7i-cost.md (§7i.1–§7i.3 as read at `76ae138`); runbook/phase-1/s7d-cli-and-migrate.md (§7d.3's *"and no others"*); and, each read at `76ae138` on 2026-09-23 — crates/rk-cli/src/cli.rs's module doc (*"a ninth is a decision, taken in a record, not a derive attribute"*), crates/rk-cli/src/verbs/run.rs's `BindRequest` (*"inputs: vec![(\"item\".to_owned(), serde_json::json!(resolved.item.id()))]"*), crates/rk-adapter-claude/src/throttle.rs (`BatchDraw.n`'s doc; `attribute`'s *"`owned[i]` says whether sample `i`'s dispatch belongs to the item"*), crates/rk-types/src/time.rs (`#[serde(transparent)] pub struct Timestamp(i64);`), crates/rk-types/src/event.rs (`Event { kind, payload }`), crates/rk-cli/src/doctor/mod.rs (`let journal = read_journal(&worktree.join("events.jsonl"));`), and the shipped store `.git/redkiln/store.sqlite3` opened read-only
 supersedes: ["0133", "0131"]
 superseded_by: []
 related: ["0110", "0126", "0131", "0133", "0162"]
@@ -83,7 +83,8 @@ and **0 of 102** shipped activities complete a committing walk, unchanged.
   sample, and may have drawn on the account all the same. (One refused before spawn drew nothing, and
   is counted anyway: the verb cannot tell the two apart from the journal, and errs toward
   `not attributable`.)
-- **The shipped registry cannot dispatch.** Measured at `e0802a5` on 2026-09-24: **0 of 8**
+- **The shipped registry cannot dispatch.** Measured on the working tree at `e0802a5` on 2026-09-24 (git tracks
+  no empty directory, so `.redkiln/processes/` exists only on disk): **0 of 8**
   `.redkiln/cards/*.json` carry `permission_mode` (`0156`'s blocker (0)); `.redkiln/schemas/` does not
   exist and `.redkiln/processes/` is empty; and **0** `model =` rows sit under the **16** `[role.*]`
   tables of the two shipped packs, which the binder refuses as `ConfigError::ModelUntraceable`
@@ -195,18 +196,29 @@ carries all six members, and a member the frame did not carry is `null`:
   reserved; the adapter reads it and does not remove it from the prompt, where it already is.
   **This supersedes `0131`'s first forbids bullet in part** — for `rate_limit_reading.item` alone,
   and only until `0131`'s `item` tag is wired, at which point the member moves to the tag and this
-  sentence lapses. `0131` gives **two** reasons for the bullet, and this record answers both rather
-  than the convenient one. The *cheap* one — its considered options: *"`canonical_events` hashes the
+  sentence lapses. `0131` gives **more than one** ground for the bullet, and this record answers each
+  rather than the convenient one. Its considered option opens *"Rejected, and it is the option most
+  likely to be reached for by accident because it needs no port change at all"* — and this is that
+  option, reached for deliberately, with the port closed by `0131` decision 8 until Checkpoint 8. The *cheap* one — its considered options: *"`canonical_events` hashes the
   payload, so every golden log's events change, the corpus regenerates, `CORPUS_PIN` moves and three
   checkpoints re-derive — for a fact that is not part of any decision"* — is **not incurred**: no golden
   log contains a `rate_limit_reading` row, because none had ever been written. The *substantive* one —
   its driver, bold markup dropped: *"A tag is addressing metadata, not decision content. Two runs that
   decided identically must produce identical canonical events even when one was tagged into a
   different initiative."* — **is** incurred in principle: two readings identical in every measured
-  member now differ by `item`. It is accepted as the interim cost because the tag cannot exist before
-  Checkpoint 8, because a reading is tier 2 and records no decision, and because the kernel's own
-  `dispatch` payload has carried `"item"` since `71b20c1` (2026-09-14), a week before `0131` was
-  written, without `0131` removing it — so this is the second such member, not the first. Every other
+  member now differ by `item`.
+  It is accepted as the interim cost because the tag cannot exist before Checkpoint 8 and because a
+  reading is tier 2 and records no decision. The same option names a third ground — *"D18-14 refused
+  the same shape for `Config` and stated the rule this option breaks"*, the rule being *"no kernel
+  event payload changes"* — which is not broken: no existing payload changes, and this kind is
+  written by the adapter, never by the kernel. And a fourth, the driver *"Waiting accretes nothing"*,
+  on which `0131` deferred its wiring, **is** broken by this record: one payload member and one verb
+  that addresses by it now exist before Checkpoint 8, and the tag's wiring inherits both. That is the
+  accretion `0131` said would not happen, and it is bounded by the forbids below — the member moves
+  to the tag, and no other key follows it. `cost` also reads `item` off the kernel's `dispatch`
+  rows to count foreign traffic; that member is not an addressing key placed for this purpose but a
+  component of the `IdempotencyKey` the kernel's activation key requires, so reading it places
+  nothing, and when `0131` decision 4's `item` tag exists `cost` reads the tag instead. Every other
   kind, and every other correlation key, stays under the bullet as written. The operator's decision of
   2026-09-24, taken when this stage's adversarial pass found the conflict.
 - **`cli_version`** — the dispatch's `DispatchRecord.cli_version`, serialised exactly as that row
@@ -329,7 +341,8 @@ through `sqlite3` with `?mode=ro`. The baseline was measured, not carried: Check
 `rk-cli` **115**, `rk-kernel` **238** (5 ignored), `rk-adapter-claude` **102**, `redkiln-migrate`
 **25**; `cargo fmt --all --check` rc=0; `cargo clippy --workspace --all-targets` **0 errors**.
 
-**The decisions of clauses 2 and 3 are the operator's, taken 2026-09-23** in the session that opened
+**The decisions of clauses 2 and 3 are the operator's, taken 2026-09-23, and the `0131` supersession in
+clause 3 on 2026-09-24** in the session that opened
 `s7i`, between the options above; clause 1's item source was chosen there over the reserved-key route
 on the measurement that `verbs/run.rs` already binds `"item"`.
 
