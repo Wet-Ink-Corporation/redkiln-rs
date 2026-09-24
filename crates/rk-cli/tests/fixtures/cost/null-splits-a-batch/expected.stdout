@@ -1,0 +1,5 @@
+cost bug-1: rate_limit_reading rows in span: 12, this store's traffic only
+five_hour: n=6 resets_at=1788370800 low_sample
+five_hour: n=5 resets_at=1788370800 low_sample
+five_hour: unkeyed=1
+seven_day: n=12 resets_at=1788408000 delta_ticks=2

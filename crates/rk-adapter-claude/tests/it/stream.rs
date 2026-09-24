@@ -408,6 +408,11 @@ fn rate_limited_from_stream() {
 ///
 /// RED (observed 2026-09-18) against the skeleton: `a text-marker detection is disclosed as
 /// TextMarker on the row: None`.
+///
+/// The transcript's reading is representable and NOT `allowed`, so it also pins ADR-0163 clause
+/// 2 on a refused dispatch: exactly one `rate_limit_reading` row, whose `windows` are that frame's
+/// 0.99 / 0.40. Red by: the reading append guarded on an `allowed` status or on success (zero
+/// rows); the windows read from another frame or re-keyed.
 #[test]
 fn ac523_text_marker_detection_disclosed() {
     let t = init_then(&[
@@ -438,6 +443,28 @@ fn ac523_text_marker_detection_disclosed() {
     assert_eq!(completed.len(), 1, "exactly one dispatch_completed row");
     let payload = &completed[0].payload;
     assert_eq!(payload["detected_by"], "text_marker");
+    // the representable NON-ALLOWED reading is journalled as exactly one rate_limit_reading row,
+    // carrying that frame's windows (0.99 / 0.40) — a refused dispatch still records its reading
+    // (ADR-0163 clause 2)
+    let readings = crate::support::reading_rows(&r.store);
+    assert_eq!(
+        readings.len(),
+        1,
+        "exactly one rate_limit_reading row for the non-allowed reading: {readings:?}"
+    );
+    // PREMISE, on the frame's own digits (never re-read through a float)
+    let text = crate::support::fixture("streams/rate-limit-non-allowed.scripted.ndjson");
+    assert!(
+        text.contains(r#""five_hour":{"resetsAt":1788370800,"utilization":0.99}"#)
+            && text.contains(r#""seven_day":{"resetsAt":1788408000,"utilization":0.40}"#),
+        "premise: the frame's utilisations are 0.99 / 0.40"
+    );
+    assert_eq!(
+        readings[0]["windows"],
+        serde_json::json!({ "five_hour": 99, "seven_day": 40 }),
+        "the row's windows are the non-allowed frame's: {}",
+        readings[0]
+    );
     // and an Ok row carries no detection
     let r = dispatch_replay(&crate::support::ok_transcript(), 30);
     assert_eq!(r.outcome.record.detected_by, None);

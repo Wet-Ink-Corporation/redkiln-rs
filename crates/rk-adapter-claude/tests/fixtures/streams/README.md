@@ -50,6 +50,7 @@ the CLI's)`).
 | `future-shaped-event.scripted.ndjson` | AC-201: a `system/thinking_tokens` line with a future field and a new top-level type |
 | `rate-limit-non-allowed.scripted.ndjson` | AC-523: `status: rejected`, `resetsAt 1788370800` — the `resets_at` source (unrecorded at the pin; [surface unverified]) |
 | `rate-limit-allowed-later.scripted.ndjson` | AC-523's *last NON-ALLOWED*: an `allowed` reading with a DIFFERENT `resetsAt` (1788388800) placed AFTER the non-allowed one — `resets_at` must still be the non-allowed reading's, and a stream of only `allowed` readings yields `None` (`resets_at_from_last_non_allowed_not_last_reading`) |
+| `rate-limit-no-type.scripted.ndjson` | ADR-0163 clause 3's `rate_limit_type` `null` arm: an `allowed` unified reading (five-hour 0.12, seven-day 0.34) whose `rate_limit_info` carries NO `rateLimitType` key — the journalled row's `rate_limit_type` is JSON `null`, never a default window (`reading::rate_limit_reading_type_absent_is_null`) |
 | `rate-limit-synthetic-digits.synthetic.ndjson` | AC-374's discriminating half: `0.10/0.20`, `0.09/0.29`, `0.57/0.58` — trailing-zero digits are unrecorded at the pin; `0.29/0.57/0.58` are red under a truncating `f64` path |
 | `rate-limit-utilization-in-string.synthetic.ndjson` | the scanner's own red: `"utilization":0.99` inside a STRING value beside the two real keys |
 | `rate-limit-flat-sdk.synthetic.ndjson` | AC-380's flat SDK shape — its key names are an assumption |

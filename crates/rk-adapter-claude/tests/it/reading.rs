@@ -176,6 +176,58 @@ fn rate_limit_reading_flat_shape_carries_no_windows() {
     assert_eq!(row["rate_limit_type"], "five_hour", "{row}");
 }
 
+/// ADR-0163 clause 3's *"`rate_limit_type` — verbatim, or `null`"*, the `null` half: a unified
+/// frame whose `rate_limit_info` carries no `rateLimitType` key journals `rate_limit_type` as JSON
+/// `null` — the key present, the value `null`, never a defaulted window name — beside the frame's
+/// own windows.
+///
+/// Kills: the member defaulted to a window (`"five_hour"`) when the frame names none; the key
+/// omitted from the payload when the value is absent (the fixed key set, and `cost`'s
+/// missing-member refusal, both need it present).
+#[test]
+fn rate_limit_reading_type_absent_is_null() {
+    const NO_TYPE: &str = "streams/rate-limit-no-type.scripted.ndjson";
+    // PREMISE: the frame carries no `rateLimitType`, and does carry both windows
+    let frame: serde_json::Value =
+        serde_json::from_str(fixture(NO_TYPE).trim_end()).expect("the fixture is one line");
+    let info = frame["rate_limit_info"]
+        .as_object()
+        .expect("premise: a rate_limit_info object");
+    assert!(
+        !info.contains_key("rateLimitType"),
+        "premise: the frame carries no rateLimitType: {frame}"
+    );
+    assert!(
+        info.contains_key("unifiedWindows"),
+        "premise: a unified reading: {frame}"
+    );
+
+    let r = dispatch_replay(&init_parts_ok(&[NO_TYPE]), 30);
+    assert!(r.outcome.result.is_ok(), "{:?}", r.outcome.result);
+    let rows = reading_rows(&r.store);
+    assert_eq!(
+        rows.len(),
+        1,
+        "exactly one rate_limit_reading row: {rows:?}"
+    );
+    let row = &rows[0];
+    let payload = row.as_object().expect("the payload is an object");
+    assert!(
+        payload.contains_key("rate_limit_type"),
+        "the key is present though the frame named no type: {row}"
+    );
+    assert_eq!(
+        row["rate_limit_type"],
+        serde_json::Value::Null,
+        "an absent rateLimitType is JSON null, never a defaulted window: {row}"
+    );
+    assert_eq!(
+        row["windows"],
+        serde_json::json!({ "five_hour": 12, "seven_day": 34 }),
+        "{row}"
+    );
+}
+
 /// No `rate_limit_event` in the stream → no reading row; the dispatch still journals its
 /// `dispatch_completed` row alone.
 ///

@@ -20,7 +20,26 @@
 //! - **Per window, a draw line** with `n`, the `resets_at` it is grouped by, the integer delta only
 //!   when `throttle` quotes one, and the `low_sample` / `non_monotonic` / `resolution_limited`
 //!   flags; a window whose readings carry ticks and a `null` `resets_at` says `unkeyed=<N>`; a window
-//!   with neither says `no sample`.
+//!   with neither says `no sample`. A draw at `n < 10` is always `low_sample` and never carries a
+//!   delta; a draw at `n >= 10` is never `low_sample` and carries a delta unless it is
+//!   `non_monotonic` (`throttle::batch_draw`).
+//! - **`unwindowed=<N>`** — after both windows, when `N >= 1` owned flat readings (`windows: null`)
+//!   carry a `rate_limit_type` naming neither window (`null`, or another string). Such a reading
+//!   answers for no window, so it forms no sample in either; it is counted here rather than dropped
+//!   silently, and never written into both windows (the extrapolation AC-374 forbids).
+//!
+//! The closed set, as regular expressions over each line:
+//!
+//! ```text
+//! ^cost \S+: nothing to attribute — no rate_limit_reading row in this store names this item \([0-9]+ dispatch rows\)$
+//! ^cost \S+: rate_limit_reading rows in span: [0-9]+, this store's traffic only$
+//! ^not attributable interleaving=[1-9][0-9]*$
+//! ^(five_hour|seven_day): n=[1-9] resets_at=-?[0-9]+ low_sample( non_monotonic| resolution_limited)?$
+//! ^(five_hour|seven_day): n=[1-9][0-9]+ resets_at=-?[0-9]+( non_monotonic| delta_ticks=[01] resolution_limited| delta_ticks=([2-9]|[1-9][0-9]+))$
+//! ^(five_hour|seven_day): unkeyed=[1-9][0-9]*$
+//! ^(five_hour|seven_day): no sample$
+//! ^unwindowed=[1-9][0-9]*$
+//! ```
 //!
 //! `first` and `last` are never printed — their difference is a delta, and printing both beside a
 //! withheld one would quote it at `n < 10` by subtraction. **Nothing is divided by anything**, so
@@ -41,6 +60,12 @@
 //! interactive `claude` use on the same account, draws on the same windows and never reaches this
 //! store. The header line says *"this store's traffic only"* so no reader assumes otherwise
 //! (ADR-0163 decision 4).
+//!
+//! The same boundary holds **inside** this store: interleaving is counted from the rows that lie in
+//! the span. A foreign dispatch whose `dispatch` row precedes the item's first owned reading and
+//! whose reading follows its last — one in flight across the whole span, from a second process —
+//! leaves no row inside the span and is **not counted**. "This store's traffic only" and "in the
+//! span" are the boundary; nothing outside the span is read as traffic ([`interleaving`]).
 
 use std::io::Write;
 use std::sync::{Arc, Mutex};
@@ -233,7 +258,34 @@ pub fn render(rows: &[Event], item: &str) -> Result<String, Malformed> {
     for window in [Window::FiveHour, Window::SevenDay] {
         render_window(&mut out, window, span, first)?;
     }
+    // Every reading in the span is owned here (any other was interleaving) and validated, so a
+    // `null` `windows` means a non-`null` integer `utilization`.
+    let unwindowed = span
+        .iter()
+        .filter(|r| r.kind == EventKind::RateLimitReading && unwindowed(r))
+        .count();
+    if unwindowed > 0 {
+        out.push_str(&format!("unwindowed={unwindowed}\n"));
+    }
     Ok(out)
+}
+
+/// Is `row` a flat reading (`windows: null`) whose `rate_limit_type` names neither window — `null`
+/// or any other string? It answers for no window, so [`ticks`] forms no sample from it in either;
+/// [`render`] counts it on the `unwindowed=<N>` line instead of dropping it (the module doc).
+fn unwindowed(row: &Event) -> bool {
+    if !row
+        .payload
+        .get("windows")
+        .is_some_and(serde_json::Value::is_null)
+    {
+        return false;
+    }
+    let kind = row
+        .payload
+        .get("rate_limit_type")
+        .and_then(serde_json::Value::as_str);
+    kind != Some(Window::FiveHour.as_str()) && kind != Some(Window::SevenDay.as_str())
 }
 
 /// How much foreign traffic lies inside the span — ADR-0163 decision 4's count.
@@ -241,10 +293,18 @@ pub fn render(rows: &[Event], item: &str) -> Result<String, Malformed> {
 /// Walked in journal order with one flag, `foreign_open`: a foreign (or `null`-item) kernel
 /// `dispatch` row whose reading has not been seen yet. Each such dispatch counts **once**, whether
 /// or not it produced a reading — a dispatch refused before spawn, or killed before its first
-/// `rate_limit_event`, never becomes a sample and drew all the same. A foreign reading that follows
-/// its own foreign dispatch is that dispatch's and is not counted again; a foreign or `null`-item
-/// reading that no counted dispatch accounts for counts once on its own. Every other kind —
-/// `dispatch_completed` included, which carries no item — is not traffic here.
+/// `rate_limit_event`, never becomes a sample and drew all the same. It is counted when the flag
+/// is closed: by the next `dispatch` row (any owner), or by the next reading (an owned reading
+/// after it counts it; a foreign reading after it is that dispatch's own and counts it once, not
+/// twice). A foreign or `null`-item reading that no open dispatch accounts for counts once on its
+/// own. Every other kind — `dispatch_completed` included, which carries no item — is not traffic
+/// here. The span always ends at an owned reading, which closes the flag, so no dispatch is left
+/// open when the walk ends.
+///
+/// **The named limit** (the module doc): only rows inside the span are traffic. A foreign dispatch
+/// whose `dispatch` row precedes the span and whose reading follows it — in flight across the whole
+/// span, from a second process — leaves no row inside the span and is not counted. "This store's
+/// traffic only" and "in the span" are the boundary.
 ///
 /// Errs toward `not attributable`: a foreign dispatch refused before spawn is counted though it
 /// drew nothing (ADR-0163 *"What is NOT asserted"*). **The count can over-count across
@@ -274,9 +334,13 @@ fn interleaving(span: &[Event], item: &str) -> u32 {
             _ => {}
         }
     }
-    if foreign_open {
-        count = count.saturating_add(1);
-    }
+    // `render` slices the span from the first owned reading to the last, so its final row is an
+    // owned `RateLimitReading`, whose arm above clears the flag. A trailing count here would be
+    // dead code; the assertion states the invariant instead.
+    debug_assert!(
+        !foreign_open,
+        "the span ends at an owned reading, which closes every open foreign dispatch"
+    );
     count
 }
 
@@ -289,8 +353,9 @@ fn interleaving(span: &[Event], item: &str) -> u32 {
 /// not only when `rate_limit_type` names a window; exactly one of the two is non-`null` (both or
 /// neither is malformed — a reading is one shape or the other); `resets_at` is an object whose two
 /// members are each integer seconds or `null`; `rate_limit_type` is a string or `null`; and
-/// `cli_version` is present (its value is not interpreted here). No member is ever read as a
-/// float (AC-374).
+/// `cli_version` is a serialised `CliVersion` — an object with exactly one key, `observed` or
+/// `pinned`, holding a string ([`is_cli_version`]); its version string is not interpreted here. No
+/// member is ever read as a float (AC-374).
 fn validate(row: &Event, at: usize) -> Result<(), Malformed> {
     let malformed = |what: String| Malformed { row: at, what };
     let Some(payload) = row.payload.as_object() else {
@@ -366,7 +431,27 @@ fn validate(row: &Event, at: usize) -> Result<(), Malformed> {
             "`rate_limit_type` is {kind:?}, neither a string nor null"
         )));
     }
+    let version = &row.payload["cli_version"];
+    if !is_cli_version(version) {
+        return Err(malformed(format!(
+            "`cli_version` is {version:?}, not a serialised CliVersion (one key, `observed` or \
+             `pinned`, holding a string)"
+        )));
+    }
     Ok(())
+}
+
+/// Is `v` an `rk_types::usage::CliVersion` as serde writes it — an object with exactly one key,
+/// the `snake_case` arm name (`observed` or `pinned`, the enum's only two variants), whose value
+/// is a string? Checked structurally rather than by deserialising, so no other shape is coerced.
+fn is_cli_version(v: &serde_json::Value) -> bool {
+    let Some(obj) = v.as_object() else {
+        return false;
+    };
+    obj.len() == 1
+        && ["observed", "pinned"]
+            .iter()
+            .any(|arm| obj.get(*arm).is_some_and(serde_json::Value::is_string))
 }
 
 /// One window's lines, appended to `out`.

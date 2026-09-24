@@ -1,13 +1,13 @@
 ---
 id: "0163"
-title: "**`redkiln cost <ITEM>` is the ninth verb, and the reading it renders is journalled ONCE PER DISPATCH, keyed by the item the composition root already binds.** `0133` decision clause 2's *\"once per reading\"* and clause 3's `<RFC 3339 | null>` spelling are **superseded in part**: `BatchDraw.n` is documented as *\"The number of dispatches in the set\"*, so a row per parsed frame would make `n` count frames under the same name; and the platform reports `resetsAt` as integer unix seconds, `Timestamp` is a transparent `i64`, and no crate in the workspace can format RFC 3339 — the spelling would be a derivation, not a measurement. The payload gains **`item`**, a member `0133` did not name, copied from the `\"item\"` input `verbs/run.rs` already binds rather than from a new reserved key; `cost` counts interleaving over **traffic**, not only over samples, because `throttle::attribute` sees only the samples it is given; and Checkpoint 7i's *\"an item with dispatches\"* is satisfied over a **fixture corpus**, `0162`'s route, because the shipped store holds zero `dispatch_completed` rows"
+title: "**`redkiln cost <ITEM>` is the ninth verb, and the reading it renders is journalled ONCE PER DISPATCH, keyed by the item the composition root already binds.** `0133` decision clause 2's *\"once per reading\"*, clause 3's `<RFC 3339 | null>` spelling and — for the flat shape only — its `windows` member and matching forbids bullet are **superseded in part**, and so is `0131`'s first forbids bullet, for this row's `item` alone and until `0131`'s `item` tag is wired: `BatchDraw.n` is documented as *\"The number of dispatches in the set\"*, so a row per parsed frame would make `n` count frames under the same name; and the platform reports `resetsAt` as integer unix seconds, `Timestamp` is a transparent `i64`, and no crate in the workspace can format RFC 3339 — the spelling would be a derivation, not a measurement. The payload gains **`item`**, a member `0133` did not name, copied from the `\"item\"` input `verbs/run.rs` already binds rather than from a new reserved key; `cost` counts interleaving over **traffic**, not only over samples, because `throttle::attribute` sees only the samples it is given; and Checkpoint 7i's *\"an item with dispatches\"* is satisfied over a **fixture corpus**, `0162`'s route, because the shipped store holds zero `dispatch_completed` rows"
 status: proposed
 date: 2026-09-23
 legacy_id: none
 source: references/adr/0133 (decision clause 2 — *"The producer is the Harness adapter, once per reading"* and *"A reading is appended when the adapter's stream reader parses a `rate_limit_event` line"*; clause 3's `resets_at` bullet — *"`{ five_hour: <RFC 3339 | null>, seven_day: <RFC 3339 | null> }`"*; the forbids bullet *"Forbids a payload that drops `windows.five_hour` / `windows.seven_day` or renames them"*); references/adr/0110 (decision 1 — *"The named set is the account's complete dispatch sequence between the two readings"*); references/adr/0162 (the fixture-corpus route); runbook/phase-1/s7i-cost.md (§7i.1–§7i.3 as read at `76ae138`); runbook/phase-1/s7d-cli-and-migrate.md (§7d.3's *"and no others"*); and, each read at `76ae138` on 2026-09-23 — crates/rk-cli/src/cli.rs's module doc (*"a ninth is a decision, taken in a record, not a derive attribute"*), crates/rk-cli/src/verbs/run.rs's `BindRequest` (*"inputs: vec![(\"item\".to_owned(), serde_json::json!(resolved.item.id()))]"*), crates/rk-adapter-claude/src/throttle.rs (`BatchDraw.n`'s doc; `attribute`'s *"`owned[i]` says whether sample `i`'s dispatch belongs to the item"*), crates/rk-types/src/time.rs (`#[serde(transparent)] pub struct Timestamp(i64);`), crates/rk-types/src/event.rs (`Event { kind, payload }`), crates/rk-cli/src/doctor/mod.rs (`let journal = read_journal(&worktree.join("events.jsonl"));`), and the shipped store `.git/redkiln/store.sqlite3` opened read-only
-supersedes: ["0133"]
+supersedes: ["0133", "0131"]
 superseded_by: []
-related: ["0110", "0126", "0133", "0162"]
+related: ["0110", "0126", "0131", "0133", "0162"]
 evidence: ["F6"]
 consumers: []
 ---
@@ -54,8 +54,10 @@ that holds no store, so "once per reading" is not reachable from where the store
 widening the runner — to produce a count this record would then have to undo.
 
 **3. `0133` clause 3's `<RFC 3339 | null>` is not expressible, and would be a derivation.** The
-platform reports `resetsAt` as an integer — the recorded `e1-smoke.L1-3.jsonl` frames carry
-`"resetsAt":1788370800` — `headroom.rs` reads it with `Timestamp::from_unix_seconds`, and
+platform reports `resetsAt` as an integer — the runner-journal records in `e1-smoke.L1-3.jsonl`, which
+re-serialise the captured `rate_limit_event` lines inside their `unknown_events` array, carry
+`"resetsAt":1788370800`, and the scripted stream fixtures under `crates/rk-adapter-claude/tests/fixtures/streams/`
+carry the same integer shape — `headroom.rs` reads it with `Timestamp::from_unix_seconds`, and
 `Timestamp` is `#[serde(transparent)] pub struct Timestamp(i64);`. No crate's `Cargo.toml` depends on
 `chrono` (the workspace table carries a row nobody uses) and nothing in the workspace formats RFC
 3339. `s7i` §7i.1 says *"A reading is a measurement, not a derivation. The row carries what the
@@ -77,11 +79,18 @@ and **0 of 102** shipped activities complete a committing walk, unchanged.
 - **An ownership key must fail safe.** A reading with no owner must count against attribution, never
   for it, so that a missing key produces `not attributable` rather than a false delta.
 - **`attribute` counts only the samples it is given.** A foreign dispatch that produced no reading —
-  refused before spawn, killed before the first `rate_limit_event`, or a reading the scanner refused
-  — never becomes a sample, and drew on the account all the same.
-- **The shipped registry cannot dispatch** for four measured blockers (`0156`'s list and
-  `ModelUntraceable`), and `0156` forbids authoring around them under a stage whose scope does not
-  name them. `s7i` §7i.1–§7i.2 do not.
+  killed before the first `rate_limit_event`, or one whose reading the scanner refused — never becomes a
+  sample, and may have drawn on the account all the same. (One refused before spawn drew nothing, and
+  is counted anyway: the verb cannot tell the two apart from the journal, and errs toward
+  `not attributable`.)
+- **The shipped registry cannot dispatch.** Measured at `e0802a5` on 2026-09-24: **0 of 8**
+  `.redkiln/cards/*.json` carry `permission_mode` (`0156`'s blocker (0)); `.redkiln/schemas/` does not
+  exist and `.redkiln/processes/` is empty; and **0** `model =` rows sit under the **16** `[role.*]`
+  tables of the two shipped packs, which the binder refuses as `ConfigError::ModelUntraceable`
+  (`crates/rk-adapter-claude/src/binder.rs`) — a refusal `0156`'s six-item list does not name. `0156`
+  forbade authoring `.redkiln/schemas/` or populating `.redkiln/processes/` *"under this stage's
+  scope"* — `s7h`'s — and `s7i` §7i.1–§7i.2 likewise name none of these, so this stage does not author
+  them either.
 - **`0162` already established the route** for a checkpoint bullet the shipped tree cannot satisfy:
   a fixture corpus under `crates/rk-cli/tests/fixtures/`, a behavioural guard over a real binary
   run, and the shipped tree left alone and said to be left alone.
@@ -100,10 +109,21 @@ move the prompt bytes of every existing binding for no information gained.
 ### Option — Ownership by journal position
 
 The kernel appends `dispatch{activity_id_at_version, attempt, item, step_id}` immediately before
-`harness.dispatch`, while holding the store guard, so within one process a reading's owner is the
-item of the nearest preceding `dispatch` row. No adapter change. **Rejected**: two processes over one
+`harness.dispatch` (under a guard `Runtime::append` releases before the dispatch's own guard is
+taken), so within one process a reading's owner is the item of the nearest preceding `dispatch` row. No adapter change. **Rejected**: two processes over one
 store interleave their rows, and position then attributes a reading to the wrong item *silently* —
 the one error `not attributable` exists to surface.
+
+### Option — `0131`'s `item` tag, outside the payload
+
+`0131` decided that addressing is a tag carried on the event and outside `canonical_events`, reserved
+`item` as a key, and forbade *"putting an item id, a run id, a commit SHA, … or any other correlation
+key **inside** `rk-types::Event.payload` for the purpose of addressing"*. That is the right home for
+this member, and `cost` does address readings by it. **Rejected for now, not in principle**: the tag
+does not exist — `Event` is `{ kind, payload }` — and `0131` decision 8 lands its wiring *"after
+Checkpoint 8"*, gated on **S-HS**, and forbids editing `rk-ports` or any closed crate for it before
+then. The only carriers available to `s7i` are the payload and journal position, and position is
+rejected above.
 
 ### Option — Once per reading, with `Drained` widened to a `Vec`
 
@@ -125,18 +145,23 @@ empty case and fail its grep — or worse, be rewritten until the empty case pas
 
 ### Option — The record's route (chosen)
 
-The existing `"item"` input on the reading, one row per dispatch, integer seconds, interleaving over
-traffic, and a fixture corpus for the dispatched case.
+The existing `"item"` input on the reading as an **interim** payload member that moves to `0131`'s tag
+when that wiring lands, one row per dispatch, integer seconds, interleaving over traffic, and a fixture
+corpus for the dispatched case.
 
 ## Decision
 
 **1. `redkiln cost <ITEM>` is the ninth verb.** This amends `s7d` §7d.3's *"and no others"* and
-discharges `cli.rs`'s *"a ninth is a decision, taken in a record"*. It is **read-only**: it does not
-reconcile, constructs no harness it calls, and appends nothing to the store (AC-395: *"from the event
-store alone … it dispatches no model call"*). It exits `0` on every rendering **including the empty
+discharges `cli.rs`'s *"a ninth is a decision, taken in a record"*. It **appends no event**: it does
+not reconcile, constructs no harness it calls, and writes no journal row (AC-395: *"from the event
+store alone … it dispatches no model call"*). It is not strictly read-only at the file level: opening
+the store through `SqliteStore::open` applies the schema and, on a repository with no store, creates
+and identity-stamps one — as `status` and `explain` already do. It exits `0` on every rendering **including the empty
 one**. A repository it cannot discover, a store it cannot open or read, or an **owned** row whose
 payload is malformed is `Exit::ConfigError` (`3`), as `explain` treats the same conditions.
-`Exit::NoRecord` (`5`) is not used: its own documentation calls it `explain`'s alone.
+`Exit::NoRecord` (`5`) is not used: `crates/rk-cli/src/verbs/status.rs`'s module doc calls it
+`explain`'s alone, and AC-432 gives it to *"an item with no recorded resolution"*, which is not a
+condition `cost` has.
 
 **2. `0133` decision clause 2 is superseded in part: the reading is appended ONCE PER DISPATCH.** The
 Claude adapter appends one `rate_limit_reading` row per dispatch that went **through the child**,
@@ -168,6 +193,22 @@ carries all six members, and a member the frame did not carry is `null`:
 - **`item`** — the `"item"` entry of the dispatch's `ActivitySpec.inputs` when it is a JSON string,
   otherwise `null`. A member `0133` did not name. The binder is not changed and the key is not
   reserved; the adapter reads it and does not remove it from the prompt, where it already is.
+  **This supersedes `0131`'s first forbids bullet in part** — for `rate_limit_reading.item` alone,
+  and only until `0131`'s `item` tag is wired, at which point the member moves to the tag and this
+  sentence lapses. `0131` gives **two** reasons for the bullet, and this record answers both rather
+  than the convenient one. The *cheap* one — its considered options: *"`canonical_events` hashes the
+  payload, so every golden log's events change, the corpus regenerates, `CORPUS_PIN` moves and three
+  checkpoints re-derive — for a fact that is not part of any decision"* — is **not incurred**: no golden
+  log contains a `rate_limit_reading` row, because none had ever been written. The *substantive* one —
+  its driver, bold markup dropped: *"A tag is addressing metadata, not decision content. Two runs that
+  decided identically must produce identical canonical events even when one was tagged into a
+  different initiative."* — **is** incurred in principle: two readings identical in every measured
+  member now differ by `item`. It is accepted as the interim cost because the tag cannot exist before
+  Checkpoint 8, because a reading is tier 2 and records no decision, and because the kernel's own
+  `dispatch` payload has carried `"item"` since `71b20c1` (2026-09-14), a week before `0131` was
+  written, without `0131` removing it — so this is the second such member, not the first. Every other
+  kind, and every other correlation key, stays under the bullet as written. The operator's decision of
+  2026-09-24, taken when this stage's adversarial pass found the conflict.
 - **`cli_version`** — the dispatch's `DispatchRecord.cli_version`, serialised exactly as that row
   serialises it. A member `0133` did not name, and owed by **AC-227** in terms: *"GIVEN any harness
   event written to the event store WHEN it is persisted THEN it carries the CLI version the dispatch
@@ -192,20 +233,25 @@ Exactly one of `windows` and `utilization` is non-`null`. No value in the payloa
   `utilization` non-`null`. An owned row that fails is refused with exit `3` — never skipped, which
   would shrink `n` silently, and never masked by a `not attributable` the rest of the span would
   have rendered. Foreign rows are not validated; they are only counted.
-- **Interleaving is counted over traffic in the span**, not only over samples: a foreign or
-  `null`-item kernel `dispatch` row counts whether or not it produced a reading, and a foreign or
-  `null`-item reading counts unless it immediately follows the foreign `dispatch` row it belongs
-  to. Any interleaving renders `not attributable` with the count. **The count is an indicator biased
+- **Interleaving is counted over traffic in the span**, not only over samples: each foreign or
+  `null`-item kernel `dispatch` row counts once whether or not it produced a reading, and a foreign or
+  `null`-item reading counts once unless it directly follows a foreign `dispatch` row with no
+  `dispatch` or reading row between them, in which case the pair counts once. Any interleaving renders `not attributable` with the count. **The count is an indicator biased
   upward, not an exact tally**: when two processes interleave so that a foreign dispatch and its
   reading straddle an owned reading, both are counted, and the count can exceed the number of
   foreign dispatches by one per such straddle. It errs toward `not attributable` and never reads
-  zero when foreign traffic is present.
+  zero when a foreign row lies **inside** the span. A foreign dispatch whose `dispatch` row precedes
+  the span and whose reading follows it — in flight across the whole span, from another process —
+  leaves no row inside it and is **not** counted; that is the edge of *"this store's traffic"*, below.
 - Otherwise, **per window**, a sample is formed from each owned reading that carries both that
   window's ticks and a non-`null` `resets_at`; a reading with ticks and a `null` `resets_at` splits
   the sequence and is never grouped under `0`. Each segment goes through `throttle::attribute`, and
   its draws are rendered with `n`, `resolution_limited` when set, `low_sample` with **no** delta when
   `n < 10`, and `non_monotonic` rather than a negative delta. `first` and `last` are never printed:
   their difference is a delta, and printing both would quote one at `n < 10` by subtraction.
+- An owned flat reading whose `rate_limit_type` names neither window yields no sample in either —
+  its utilisation is not written into both, which would be the extrapolation clause 3 refuses — and is
+  counted on one `unwindowed=<N>` line rather than dropped, so it cannot shrink `n` unseen.
 - Nothing is divided by anything. There is no per-run or per-dispatch figure (AC-373).
 
 **The named limit**: "the only traffic" means the only traffic **this store saw**. Another
@@ -219,8 +265,11 @@ per-activity breakdown — token counters, `total_cost_usd`, wall clock, cache c
 rendered**: those live on `dispatch_completed`, which carries no item, so they cannot be attributed
 without the same ownership key on a row `rk-types` owns, and `s7i` §7i.2 says *"nothing else"*. AC-372's
 `status` renderer and its *"doctor rule that a flagged reading is never rendered bare"* are not
-built. And `doctor` does not read the store at all — `Ctx::build` reads `events.jsonl` — so this
-producer does **not** make `RK-D-HEADROOM-MARGIN` fire on a shipped run (E-0133-3).
+built. And `doctor`'s journal never comes from the store's event rows — `Ctx::build` reads
+`events.jsonl` — so this producer does **not** make `RK-D-HEADROOM-MARGIN` fire on a shipped run
+(E-0133-3); and when it does read real rows, a flat reading as the last row has `windows: null` and
+silences the rule, whose reader is byte-compatible with the **unified** shape only. Both are
+carried, not repaired.
 
 **6. The dispatched case is proved over a fixture corpus, `0162`'s route.** A corpus under
 `crates/rk-cli/tests/fixtures/cost/`, byte-pinned by `.gitattributes`, carries both a synthetic
@@ -264,6 +313,9 @@ this record says the fixture proves the wiring, not the catalog.
   dispatches, or that `0 of 102` has moved.
 - Forbids reading item ownership off `dispatch_completed` rows, which carry none, or off journal
   position.
+- Forbids reading this record's `0131` supersession as licensing any other payload correlation key,
+  on any other kind, and forbids keeping `rate_limit_reading.item` in the payload once `0131`'s
+  `item` tag is wired.
 
 ## Evidence and confidence
 

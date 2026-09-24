@@ -31,7 +31,7 @@ already parsed and thrown away. `rk-adapter-claude`'s `headroom::read_rate_limit
 measure wearing the same name — F6's quantisation of `utilization` to 0.01 is precisely why the `resetsAt` grouping
 exists.
 
-**The calculator is already complete and has no caller.** `throttle::BatchDraw` carries `first`, `last`,
+**The calculator is already complete and has no caller** *(at `76ae138`; `cost` became its first `src/` caller at `e0802a5`, and the rendering strings below are now output there)*. `throttle::BatchDraw` carries `first`, `last`,
 `delta_ticks`, `n`, `resolution_limited`, `low_sample` and `non_monotonic`; `throttle::attribute` returns
 `Attributable(Vec<BatchDraw>)` or `NotAttributable { interleaving }`; `LOW_SAMPLE_BELOW` is 10 and `delta_ticks` is
 `None` when `low_sample`. Every one of ADR-0110's rules is encoded. What is missing is a **producer** for the
@@ -40,13 +40,12 @@ samples and a **renderer** for the draws — measured 2026-09-21, the strings `n
 
 **This step takes no decision**: `s7f` §7f.3 names the producer and §7f.4 settles RT-19's unit. ***Corrected
 2026-09-23 at this stage's open: it takes one record, `ADR-0163`***, *and this is the third consecutive stage whose file
-said this sentence and was wrong (`s7g` took seventeen, `s7h` eleven). Building the verb surfaced what `ADR-0133` did
+said this sentence and was wrong (`s7g` took eighteen — `0134`–`0151`, all dated 2026-09-22; `s7h`'s own row says seventeen and is one short — `s7h` eleven). Building the verb surfaced what `ADR-0133` did
 not settle: `cli.rs` says a ninth verb *"is a decision, taken in a record"*; nothing on the journal says which item a
 reading belongs to, and ADR-0110's `not attributable` is computed from exactly that; `ADR-0133` clause 2's "once per
 reading" would make `n` count frames where `BatchDraw.n` counts dispatches; and clause 3's `<RFC 3339 | null>` is not
 expressible — `Timestamp` is a transparent `i64` and no crate formats RFC 3339. `ADR-0163` supersedes clauses 2 and 3 in
-part, on the operator's decisions of 2026-09-23, and `ERRATA` E-0133-2 … E-0133-5 record four defects in `ADR-0133`'s
-own text.*
+part, on the operator's decisions of 2026-09-23, and — on the operator's decision of 2026-09-24, when the adversarial pass found the conflict — `ADR-0131`'s first forbids bullet for this row's `item` alone, as an interim member until `0131`'s tag is wired. `ERRATA` E-0133-2 … E-0133-5 record four defects in `ADR-0133`'s own text, and E-0133-6 corrects two of those four.*
 
 ### 7i.1 The producer — the reading stops being discarded
 
@@ -69,14 +68,14 @@ already enforces by returning `None` for the flat shape), and no synthesised `re
 `Sample` sequence, and renders through `throttle::attribute`. ***Corrected 2026-09-23 (`ADR-0163` decision 4):***
 *"the item's `dispatch_completed` rows" is unimplementable — `DispatchRecord` carries no `item` and the store's selector
 is inert. `cost` reads the whole journal, owns a reading by its `item` member, takes the span from the item's first
-owned reading to its last, and counts interleaving over the **traffic** in it — each foreign kernel `dispatch` row and
-each foreign or unowned reading — because `attribute` counts only the samples it is given. The span also renders
+owned reading to its last, and counts interleaving over the **traffic** in it — each foreign kernel `dispatch` row once, and each foreign or
+unowned reading once unless it directly follows a foreign `dispatch` row, when the pair counts once — because `attribute` counts only the samples it is given. The span also renders
 `non_monotonic`, a window with `unkeyed` readings (a `null` `resets_at`), and `no sample`; none quotes a delta.*
 ADR-0110's three, and the data condition of each:
 
 | rendering | condition |
 | --- | --- |
-| `not attributable`, **with the interleaving count** | any sample in the window is not the account's own |
+| `not attributable`, **with the interleaving count** | ~~any sample in the window is not the account's own~~ *(corrected 2026-09-24, ADR-0163 decision 4)* any foreign or `null`-item `dispatch` row or reading between the item's first and last owned reading — span-wide, not per window, and against the **item**'s own |
 | `low_sample`, **with no delta quoted** | `n < 10` |
 | the batch delta in **integer ticks**, with `n` and `resolution_limited` | otherwise; `resolution_limited` when the raw delta is ≤ 1 |
 
@@ -132,13 +131,13 @@ for cand in ./target/debug/redkiln ./target/debug/redkiln.exe; do [ -f "$cand" ]
 
 # ---- (2) A rate_limit_reading ROW IS JOURNALLED: once per dispatch, before dispatch_completed, with INTEGER resets_at
 # ---- per window, on a failed dispatch too, with the item copied or null — each asserted by name (ADR-0163 2–3).
-A_TESTS="reading::rate_limit_reading_row_carries_integer_resets_at_per_window reading::rate_limit_reading_flat_shape_carries_no_windows reading::rate_limit_reading_absent_writes_no_row reading::rate_limit_reading_refused_reading_writes_no_row reading::rate_limit_reading_is_journalled_on_a_failed_dispatch reading::rate_limit_reading_item_is_copied_from_spec_inputs_or_null reading::rate_limit_reading_once_per_dispatch_carries_the_last reading::ac368_reading_append_failure_is_warning dispatch::ac360_one_event_per_termination_path"
+A_TESTS="reading::rate_limit_reading_row_carries_integer_resets_at_per_window reading::rate_limit_reading_flat_shape_carries_no_windows reading::rate_limit_reading_absent_writes_no_row reading::rate_limit_reading_refused_reading_writes_no_row reading::rate_limit_reading_is_journalled_on_a_failed_dispatch reading::rate_limit_reading_item_is_copied_from_spec_inputs_or_null reading::rate_limit_reading_once_per_dispatch_carries_the_last reading::ac368_reading_append_failure_is_warning reading::rate_limit_reading_type_absent_is_null dispatch::ac360_one_event_per_termination_path"
 out=$(cargo test -p rk-adapter-claude --test it -- $A_TESTS --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the producer's selection did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
 for t in $A_TESTS; do
   printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok — renamed, deleted or not selected"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 done
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 9 passed; 0 failed' || { echo "FAIL: the producer selection did not run exactly 9 tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 10 passed; 0 failed' || { echo "FAIL: the producer selection did not run exactly 10 tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
 
 # ---- (3) `cost` EXISTS AND EXITS 0 ON AN ITEM WITH DISPATCHES — BEHAVIOURALLY. The shipped store holds ZERO
 # ---- dispatch_completed rows, so on this tree the bullet is met only by a real `redkiln run` over the fixture
@@ -161,64 +160,75 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. 7 passed; 0 failed' || { echo
 
 # ---- (4) CRITERION (2) HAS NOT REGRESSED — and the adversarial store carries a row of THIS kind, or the bullet would
 # ---- be about `Dispatch` noise and not about a reading. The count is a FLOOR beneath the test, not the assertion.
-n=$(grep -c 'EventKind::RateLimitReading' crates/rk-kernel/tests/it/projection.rs)
-[ "$n" -ge 1 ] || { echo "FAIL: rebuild_differential's adversarial store carries no rate_limit_reading noise row"; exit 1; }
+# ⚠️ ANCHORED to the construction line: a bare `grep -c 'EventKind::RateLimitReading'` also counts the test's own
+# PREMISE assertion (`.any(|e| e.kind == EventKind::RateLimitReading)`), so it stayed >= 1 with the noise row deleted
+# — a floor satisfied by an assertion's text (found by this stage's adversarial pass).
+n=$(grep -cxE '[[:space:]]*EventKind::RateLimitReading,[[:space:]]*' crates/rk-kernel/tests/it/projection.rs)
+[ "$n" -ge 1 ] || { echo "FAIL: rebuild_differential's adversarial store constructs no rate_limit_reading noise row"; exit 1; }
 out=$(cargo test -p rk-kernel --test it -- projection::rebuild_differential --exact 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the tier-1 projection moved when a tier-2 reading row was added (rc=$rc) — criterion (2) regressed"; printf '%s\n' "$out" | tail -20; exit 1; }
+[ "$rc" -eq 0 ] || { echo "FAIL: rebuild_differential is red (rc=$rc) — read the panic below: a moved tier-1 projection is criterion (2) regressing, a PREMISE panic is a missing noise row"; printf '%s\n' "$out" | grep -E 'panicked|PREMISE|left|right' | head -10; printf '%s\n' "$out" | tail -20; exit 1; }
 printf '%s\n' "$out" | grep -qxF 'test projection::rebuild_differential ... ok' || { echo "FAIL: rebuild_differential did not report ok"; exit 1; }
 printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo "FAIL: the criterion (2) selection did not run exactly one test"; exit 1; }
 
-# ---- (5) THE EMPTY CASE IS DISTINGUISHABLE, ON THE SHIPPED STORE, AND `cost` WRITES NOTHING. Asserted POSITIVELY:
-# ---- a `cost` that printed nothing, or an error, and exited 0 would satisfy an absence-only grep.
-# ---- `mode=ro` and NOT `immutable=1`: immutable ignores the WAL and could under-count.
+# ---- (5) THE EMPTY CASE IS DISTINGUISHABLE, ON THE SHIPPED STORE, AND `cost` APPENDS NOTHING. Asserted as ONE EXACT
+# ---- LINE, not a substring plus a deny-list: the adversarial pass drove a sabotaged binary that appended
+# ---- `five_hour: n=0 resets_at=0` (and, separately, a per-run figure) to the empty line, and the substring form
+# ---- passed both. `mode=ro` and NOT `immutable=1`: immutable ignores the WAL and could under-count.
 store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
 test -f "$store" || { echo "FAIL: no shipped store at $store"; exit 1; }
+test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM (rk-fix-doctor-test-count at this pin) — a bare <placeholder> is a bash redirect, not an argument"; exit 1; }
+# `cost` renders the empty case for ANY string, a misspelling included, so the items must be real.
+for it in rk-story-codex-adapter "$FIX_ITEM"; do
+  test -f ".redkiln/items/$it.toml" || { echo "FAIL: .redkiln/items/$it.toml does not exist — the empty case would be asserted over a misspelling"; exit 1; }
+done
 probe='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); t2=c.execute("SELECT COUNT(*) FROM t2_event").fetchone()[0]; rl=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",("rate_limit_reading",))]; print(t2,len(rl),sum(1 for r in rl if r.get("item")==sys.argv[2]))'
+# The CLOSED grammar of every line `cost` prints (ADR-0163 decision 4; `crates/rk-cli/src/verbs/cost.rs`'s module doc).
+# Draws at n < 10 carry low_sample and NO delta; draws at n >= 10 carry no low_sample, and resolution_limited exactly
+# when the delta is 0 or 1 — what `throttle::batch_draw` can produce, and nothing else.
+EMPTY_TAIL=' nothing to attribute — no rate_limit_reading row in this store names this item \([0-9]+ dispatch rows\)$'
+EMPTY_RE='^cost [^ ]+:'"$EMPTY_TAIL"
+GRAMMAR="$EMPTY_RE"'|^cost [^ ]+: rate_limit_reading rows in span: [0-9]+, this store.s traffic only$|^not attributable interleaving=[1-9][0-9]*$|^(five_hour|seven_day): n=[1-9] resets_at=-?[0-9]+ low_sample( non_monotonic| resolution_limited)?$|^(five_hour|seven_day): n=[1-9][0-9]+ resets_at=-?[0-9]+( non_monotonic| delta_ticks=[01] resolution_limited| delta_ticks=([2-9]|[1-9][0-9]+))$|^(five_hour|seven_day): (unkeyed=[1-9][0-9]*|no sample)$|^unwindowed=[1-9][0-9]*$'
 pre=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$pre" ] || { echo "FAIL: the read-only store probe did not run (rc=$rc)"; exit 1; }
-read -r t2_before rl_total owned <<< "$pre"
+read -r t2_before _ owned <<< "$pre"
 [ "$owned" = "0" ] || { echo "FAIL (PRECONDITION): rk-story-codex-adapter owns $owned readings — re-point the empty case at an item that owns none; this guard does not change case silently"; exit 1; }
 empty=$("$RK" cost rk-story-codex-adapter 2>&1); erc=$?
 [ "$erc" -eq 0 ] || { echo "FAIL: cost exited $erc on an item with no readings"; printf '%s\n' "$empty"; exit 1; }
 test -n "$empty" || { echo "FAIL: cost printed NOTHING — silence is not the empty rendering (Halt 8)"; exit 1; }
-printf '%s\n' "$empty" | grep -qF 'nothing to attribute' || { echo "FAIL: the empty case does not say there is nothing to attribute"; printf '%s\n' "$empty"; exit 1; }
-if printf '%s\n' "$empty" | grep -qE 'low_sample|resolution_limited|not attributable|delta'; then
-  echo "FAIL: an item with no readings renders a sampled shape — the vacuous green §7i.2 forbids"; printf '%s\n' "$empty"; exit 1
-fi
-test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM (rk-fix-doctor-test-count at this pin) — a bare <placeholder> is a bash redirect, not an argument"; exit 1; }
+[ "$(printf '%s\n' "$empty" | grep -c .)" -eq 1 ] || { echo "FAIL: the empty case printed more than one line — anything beside the empty line is a rendering over n = 0"; printf '%s\n' "$empty"; exit 1; }
+printf '%s\n' "$empty" | grep -qE "^cost rk-story-codex-adapter:$EMPTY_TAIL" || { echo "FAIL: the empty case is not the one empty line (§7i.2's vacuous green)"; printf '%s\n' "$empty"; exit 1; }
 fx=$(python -c "$probe" "$store" "$FIX_ITEM"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$fx" ] || { echo "FAIL: the store probe did not run for $FIX_ITEM (rc=$rc)"; exit 1; }
 read -r _ _ fx_owned <<< "$fx"
 fout=$("$RK" cost "$FIX_ITEM" 2>&1); frc=$?
 [ "$frc" -eq 0 ] || { echo "FAIL: cost $FIX_ITEM exited $frc"; printf '%s\n' "$fout"; exit 1; }
 test -n "$fout" || { echo "FAIL: cost $FIX_ITEM printed nothing"; exit 1; }
-# The closed grammar of a WINDOW line (ADR-0163 decision 4). A line outside it is a figure no record licenses.
-GRAMMAR='^(five_hour|seven_day): (n=[1-9][0-9]* resets_at=-?[0-9]+( delta_ticks=[0-9]+)?( low_sample)?( non_monotonic)?( resolution_limited)?|unkeyed=[1-9][0-9]*|no sample)$'
+# EVERY line against the closed grammar — not only window lines: a per-run figure on its own line or in the header is
+# what the grammar exists to refuse. ⚠️ At this pin the shipped store holds ZERO readings, so `$FIX_ITEM` renders the
+# empty case too and the sampled branch of this grammar has never run against the SHIPPED store; the sampled case is
+# asserted by (3) over the fixture corpus, whose `cost_output_grammar_is_closed` applies the same forms to every line.
+bad=$(printf '%s\n' "$fout" | grep -vE "$GRAMMAR" | grep .)
+[ -z "$bad" ] || { echo "FAIL: a line outside ADR-0163's closed grammar (AC-373):"; printf '%s\n' "$bad"; exit 1; }
 if [ "$fx_owned" = "0" ]; then
-  printf '%s\n' "$fout" | grep -qF 'nothing to attribute' || { echo "FAIL: $FIX_ITEM owns no reading and cost does not say so"; printf '%s\n' "$fout"; exit 1; }
-  if printf '%s\n' "$fout" | grep -qE 'low_sample|resolution_limited|not attributable|delta'; then
-    echo "FAIL: $FIX_ITEM owns no reading and renders a sampled shape"; printf '%s\n' "$fout"; exit 1
-  fi
-else
-  win=$(printf '%s\n' "$fout" | grep -E '^(five_hour|seven_day): ')
-  test -n "$win" || printf '%s\n' "$fout" | grep -qE '^not attributable interleaving=[1-9]' || { echo "FAIL: $FIX_ITEM owns $fx_owned readings and cost printed neither a window line nor not attributable"; exit 1; }
-  bad=$(printf '%s\n' "$win" | grep -vE "$GRAMMAR" | grep .)
-  [ -z "$bad" ] || { echo "FAIL: a window line outside ADR-0110's renderings (AC-373):"; printf '%s\n' "$bad"; exit 1; }
+  [ "$(printf '%s\n' "$fout" | grep -c .)" -eq 1 ] && printf '%s\n' "$fout" | grep -qE "^cost $FIX_ITEM:$EMPTY_TAIL" || { echo "FAIL: $FIX_ITEM owns no reading and cost does not print exactly the empty line"; printf '%s\n' "$fout"; exit 1; }
 fi
 post=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$post" ] || { echo "FAIL: the post-run store probe did not run (rc=$rc)"; exit 1; }
 read -r t2_after _ _ <<< "$post"
 [ "$t2_after" = "$t2_before" ] || { echo "FAIL: cost appended to the store ($t2_before -> $t2_after rows) — a read that writes, or a dispatch (AC-395)"; exit 1; }
+# ⚠️ This counts `t2_event` rows only. Opening the store applies its schema and, on a repository with none, creates
+# and identity-stamps one (ADR-0163 decision 1) — not a journal append, and not what this line asserts.
 
 # ---- (6) NO PER-RUN HEADROOM FIGURE (AC-373). The assertion is BEHAVIOURAL — (3)'s closed-grammar test and (5)'s
 # ---- GRAMMAR. This grep is a FLOOR over CODE lines only, anchored to the `path:LINE:` prefix grep prints and dropping
-# ---- `//`, `/*` and `*` leaders as `crates/rk-cli/tests/it/main.rs`'s `code_lines` does.
+# ---- `//`, `/*` and doc-continuation `* ` leaders. A bare leading `*` is NOT dropped: `*run_headroom_cost.lock() = 3;`
+# ---- is a deref on a code line, and the first cut of this regex hid it (found by this stage's adversarial pass).
 # ---- ⚠️ WHAT IT CANNOT SEE, said rather than claimed away: a RENAMED identifier — the AC register's own words, "a grep
 # ---- rule is defeated by renaming an identifier" — and one assembled by a macro or `concat!`. A mention inside a
 # ---- string or `#[doc = "…"]` is a code line to this grep and FAILS it, which is the safe direction.
 raw=$(grep -rnE 'headroom_for_run|run_headroom_cost' crates/*/src --include=*.rs); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the AC-373 floor could not run (grep rc=$rc)"; exit 1; }
-code=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | grep .)
+code=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
 [ -z "$code" ] || { echo "FAIL: a per-run headroom identifier on a CODE line (AC-373):"; printf '%s\n' "$code"; exit 1; }
 
 # ---- (7) THE WORKTREE PATH SET IS UNCHANGED, compared BEFORE any prune; the prune is a dry run and must find nothing.

@@ -64,5 +64,22 @@ are never validated.
   interleaving before validating would print `not attributable` and exit `0`; every owned reading
   is validated first.
 
+### The six cases the adversarial pass added
+
+Each `expected.stdout` was computed by hand from `cost.rs` and `throttle.rs`, then confirmed
+against the binary (they agreed on the first run).
+
+| case | journal | renders | red by |
+| --- | --- | --- | --- |
+| `empty-counts-dispatch-rows-only/` | a `bug-1` `dispatch`, a `memo_miss` carrying `item: bug-1`, a `dispatch_completed`; no reading | the empty line with `(1 dispatch rows)` | the empty case counting every row that carries the item (`2`) |
+| `flat-unwindowed/` | two owned flat readings (`windows: null`, `utilization` 7 then 8) whose `rate_limit_type` is `null` | the header, `five_hour: no sample`, `seven_day: no sample`, `unwindowed=2` | a reading naming no window dropped silently (no `unwindowed` line) or written into both windows |
+| `foreign-adjacent-to-span/` | a `story-1` `dispatch` IMMEDIATELY before the first owned reading and another IMMEDIATELY after the last; three owned readings (ticks 20/50, 20/50, 21/50) | `n=3 … low_sample resolution_limited` in both windows — attributable | the span widened by one row at either edge (`not attributable`) |
+| `foreign-dispatch-no-reading/` | owned dispatch and reading, an owned dispatch, a `story-1` dispatch that produced NO reading, then the owned reading | `not attributable interleaving=1` | a foreign dispatch counted only when a reading follows it (draws render) |
+| `malformed-foreign-in-interleaved-span/` | an owned reading, a `story-1` reading whose `windows` is the string `"bad"`, an owned reading | exit `0`, `not attributable interleaving=1` | a foreign reading validated (exit `3`) |
+| `null-splits-a-batch/` | twelve owned readings, five-hour ticks `10 10 11 11 12 12 13 13 14 14 15 15` keyed `1788370800` except the SEVENTH, whose five-hour `resets_at` is `null`; seven-day `40 ×6, 41 ×4, 42 ×2` keyed `1788408000` throughout | `five_hour: n=6 … low_sample` (10→12), `five_hour: n=5 … low_sample` (13→15), `five_hour: unkeyed=1`, `seven_day: n=12 … delta_ticks=2` | the `null` reading not closing its segment (one `n=11` draw with `delta_ticks=5`) |
+
+An owned reading's `cli_version` is validated too: it must be a serialised
+`rk_types::usage::CliVersion` — one key, `observed` or `pinned`, holding a string.
+
 `cost::cost_fixture_corpus_binary_arm` walks the case set and asserts it equals its own list in both
 directions, so a directory added or removed without the test moving is red.

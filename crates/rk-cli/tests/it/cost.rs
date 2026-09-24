@@ -35,12 +35,17 @@ use crate::support::{
 use crate::{fixtures_dir, temp_repo};
 
 /// Every seeded case, in directory byte order — asserted equal to the on-disk set both ways.
-const CASES: [&str; 16] = [
+const CASES: [&str; 22] = [
     "empty",
+    "empty-counts-dispatch-rows-only",
     "flat-reading",
+    "flat-unwindowed",
+    "foreign-adjacent-to-span",
+    "foreign-dispatch-no-reading",
     "foreign-only",
     "foreign-outside-span",
     "interleaved",
+    "malformed-foreign-in-interleaved-span",
     "malformed-owned-in-interleaved-span",
     "malformed-owned-missing-member",
     "n10-10-10",
@@ -49,6 +54,7 @@ const CASES: [&str; 16] = [
     "n9-low-sample",
     "non-monotonic",
     "null-resets-at",
+    "null-splits-a-batch",
     "own-noise-kinds",
     "reset-crossing",
     "single-owned",
@@ -250,7 +256,13 @@ fn cost_after_a_real_run_renders_low_sample_through_the_binary() {
 /// (`flat-reading`); the reset split lost (`reset-crossing`); a delta at `n < 10`; an owned reading
 /// missing a member rendered as "no sample" (`malformed-owned-missing-member` exits `0`); the
 /// owned-row validation moved after the interleaving check (`malformed-owned-in-interleaved-span`
-/// exits `0` with `not attributable`).
+/// exits `0` with `not attributable`); a foreign dispatch that produced no reading left uncounted
+/// (`foreign-dispatch-no-reading` renders draws); a `null` `resets_at` that does not close its
+/// segment (`null-splits-a-batch` renders one five-hour draw of `n=11`); the span widened by one
+/// row at either edge (`foreign-adjacent-to-span` reads `not attributable`); the empty case
+/// counting rows of other kinds that carry the item (`empty-counts-dispatch-rows-only` reads `2`);
+/// a flat reading naming no window dropped silently or extrapolated (`flat-unwindowed`); a foreign
+/// reading validated (`malformed-foreign-in-interleaved-span` exits `3`).
 #[test]
 fn cost_fixture_corpus_binary_arm() {
     let dir = cost_dir();
@@ -367,9 +379,13 @@ fn ac395_cost_dispatches_nothing_under_a_panicking_harness() {
 ///
 /// Over `single-owned` (which renders): each of the six members removed in turn, both `windows`
 /// and `utilization` non-`null`, both `null`, a float `utilization` beside a `null` `windows`
-/// under a `rate_limit_type` naming no window, and a non-integer `resets_at` member — every one is
-/// [`cost::Malformed`], never a rendering. The same mutations on a FOREIGN reading are not
-/// validated: the item that owns nothing still renders its empty line.
+/// under a `rate_limit_type` naming no window, a non-integer `resets_at` member (either window), a
+/// numeric `rate_limit_type`, a string or out-of-`u16` `windows.five_hour`, and a `cli_version`
+/// that is not a serialised `CliVersion` (`null`, a number, a bare string, a non-string arm, an
+/// unknown arm, two arms, `{}`) — every one is [`cost::Malformed`], never a rendering, and every
+/// one is still refused when replayed as the last owned reading of an interleaved journal. Both
+/// `CliVersion` arms as serde writes them are accepted. The same mutations on a FOREIGN reading
+/// are not validated: the item that owns nothing still renders its empty line.
 ///
 /// Red by: a missing key read as "no sample" (`utilization`, `rate_limit_type` or `cli_version`
 /// removed renders); `utilization` checked only when `rate_limit_type` names a window; the
@@ -439,10 +455,105 @@ fn render_refuses_an_owned_reading_that_is_not_the_six_member_shape() {
             );
         }),
     ));
+    cases.push((
+        "a string seven_day resets_at member".to_owned(),
+        mutate(&|p| {
+            p.insert(
+                "resets_at".to_owned(),
+                serde_json::json!({ "five_hour": 1_788_370_800_i64, "seven_day": "later" }),
+            );
+        }),
+    ));
+    cases.push((
+        "a numeric rate_limit_type".to_owned(),
+        mutate(&|p| {
+            p.insert("rate_limit_type".to_owned(), serde_json::json!(5));
+        }),
+    ));
+    cases.push((
+        "a string windows.five_hour".to_owned(),
+        mutate(&|p| {
+            p.insert(
+                "windows".to_owned(),
+                serde_json::json!({ "five_hour": "4", "seven_day": 37 }),
+            );
+        }),
+    ));
+    cases.push((
+        "windows.five_hour beyond u16".to_owned(),
+        mutate(&|p| {
+            p.insert(
+                "windows".to_owned(),
+                serde_json::json!({ "five_hour": 70_000, "seven_day": 37 }),
+            );
+        }),
+    ));
+    for (label, version) in [
+        ("null", serde_json::Value::Null),
+        ("a number", serde_json::json!(42)),
+        ("a bare string", serde_json::json!("2.1.278")),
+        ("an observed number", serde_json::json!({ "observed": 1 })),
+        ("an unknown arm", serde_json::json!({ "x": "y" })),
+        (
+            "two arms",
+            serde_json::json!({ "observed": "2.1.278", "pinned": "2.1.278" }),
+        ),
+        ("an empty object", serde_json::json!({})),
+    ] {
+        cases.push((
+            format!("cli_version {label}"),
+            mutate(&|p| {
+                p.insert("cli_version".to_owned(), version.clone());
+            }),
+        ));
+    }
     for (label, journal) in &cases {
         assert!(
             cost::render(journal, "bug-1").is_err(),
             "{label}: an owned reading off the six-member shape rendered"
+        );
+    }
+    // Each malformation replayed as the LAST owned reading of an interleaved journal — a valid
+    // owned reading, a foreign one, then the malformed one — is still refused: validation runs
+    // before interleaving is counted, so `not attributable` never masks a malformed owned row.
+    let mut foreign_reading = rows[at].clone();
+    foreign_reading
+        .payload
+        .as_object_mut()
+        .expect("the reading's payload is an object")
+        .insert("item".to_owned(), serde_json::json!("story-1"));
+    for (label, journal) in &cases {
+        let mut interleaved = rows.clone();
+        interleaved.push(foreign_reading.clone());
+        interleaved.push(journal[at].clone());
+        assert!(
+            cost::render(&interleaved, "bug-1").is_err(),
+            "{label}: a malformed owned reading inside an interleaved span rendered"
+        );
+    }
+    // PREMISE of the interleaved half: with a VALID last owned reading the same journal renders,
+    // and renders `not attributable` — so each refusal above is the malformation's.
+    let mut valid = rows.clone();
+    valid.push(foreign_reading);
+    valid.push(rows[at].clone());
+    let text = cost::render(&valid, "bug-1").expect("the valid interleaved journal renders");
+    assert!(
+        text.contains("not attributable interleaving=1\n"),
+        "premise: the interleaved journal interleaves:\n{text}"
+    );
+    // Both arms of `rk_types::usage::CliVersion`, serialised by serde itself, are accepted — the
+    // structural check matches the enum and not a hand-written guess at it.
+    for version in [
+        rk_types::usage::CliVersion::Observed("2.1.278".to_owned()),
+        rk_types::usage::CliVersion::Pinned("2.1.277".to_owned()),
+    ] {
+        let value = serde_json::to_value(&version).expect("a CliVersion serialises");
+        let journal = mutate(&|p| {
+            p.insert("cli_version".to_owned(), value.clone());
+        });
+        assert!(
+            cost::render(&journal, "bug-1").is_ok(),
+            "{version:?} serialised as {value} was refused"
         );
     }
     // `item` removed: the reading is no longer owned by anything, so it is not validated and
@@ -503,8 +614,25 @@ fn positive(s: &str) -> bool {
     digits(s) && !s.starts_with('0')
 }
 
-/// One line against the closed grammar of ADR-0163 decision 4 — the six forms, hand-matched
-/// because `rk-cli` carries no `regex` dependency.
+/// One line against the closed grammar of ADR-0163 decision 4, hand-matched because `rk-cli`
+/// carries no `regex` dependency. The forms, as `cost.rs`'s module doc states them:
+///
+/// ```text
+/// ^cost \S+: nothing to attribute — … \([0-9]+ dispatch rows\)$
+/// ^cost \S+: rate_limit_reading rows in span: [0-9]+, this store's traffic only$
+/// ^not attributable interleaving=[1-9][0-9]*$
+/// ^(five_hour|seven_day): n=[1-9] resets_at=-?[0-9]+ low_sample( non_monotonic| resolution_limited)?$
+/// ^(five_hour|seven_day): n=[1-9][0-9]+ resets_at=-?[0-9]+( non_monotonic| delta_ticks=[01] resolution_limited| delta_ticks=([2-9]|[1-9][0-9]+))$
+/// ^(five_hour|seven_day): unkeyed=[1-9][0-9]*$
+/// ^(five_hour|seven_day): no sample$
+/// ^unwindowed=[1-9][0-9]*$
+/// ```
+///
+/// The two draw forms encode what `throttle::batch_draw` makes true: below ten a draw is
+/// `low_sample` with no delta, and `resolution_limited` (a raw delta of `0` or `1`) excludes
+/// `non_monotonic` (no raw delta); at ten or more a draw is never `low_sample`, carries no delta
+/// exactly when it is `non_monotonic` (and then is not `resolution_limited`), and is
+/// `resolution_limited` exactly when its delta is `0` or `1`.
 fn in_grammar(line: &str) -> bool {
     if let Some(rest) = line.strip_prefix("cost ") {
         let Some((item, tail)) = rest.split_once(": ") else {
@@ -530,6 +658,9 @@ fn in_grammar(line: &str) -> bool {
     if let Some(n) = line.strip_prefix("not attributable interleaving=") {
         return positive(n);
     }
+    if let Some(n) = line.strip_prefix("unwindowed=") {
+        return positive(n);
+    }
     let Some(body) = line
         .strip_prefix("five_hour: ")
         .or_else(|| line.strip_prefix("seven_day: "))
@@ -551,23 +682,29 @@ fn in_grammar(line: &str) -> bool {
     if !positive(n) {
         return false;
     }
-    let (secs, mut flags) = rest.find(' ').map_or((rest, ""), |i| rest.split_at(i));
+    let (secs, flags) = rest.find(' ').map_or((rest, ""), |i| rest.split_at(i));
     if !digits(secs.strip_prefix('-').unwrap_or(secs)) {
         return false;
     }
-    if let Some(after) = flags.strip_prefix(" delta_ticks=") {
-        let (delta, tail) = after.find(' ').map_or((after, ""), |i| after.split_at(i));
-        if !digits(delta) {
-            return false;
-        }
-        flags = tail;
+    if n.len() == 1 {
+        // n < 10: `low_sample`, no delta, then at most one of the two exclusive flags.
+        return matches!(
+            flags,
+            " low_sample" | " low_sample non_monotonic" | " low_sample resolution_limited"
+        );
     }
-    for flag in [" low_sample", " non_monotonic", " resolution_limited"] {
-        if let Some(tail) = flags.strip_prefix(flag) {
-            flags = tail;
-        }
+    // n >= 10: never `low_sample`; `non_monotonic` alone, or a delta that is
+    // `resolution_limited` exactly when it is `0` or `1`.
+    if flags == " non_monotonic" {
+        return true;
     }
-    flags.is_empty()
+    let Some(after) = flags.strip_prefix(" delta_ticks=") else {
+        return false;
+    };
+    if let Some(delta) = after.strip_suffix(" resolution_limited") {
+        return delta == "0" || delta == "1";
+    }
+    positive(after) && after != "1"
 }
 
 /// **The output grammar is closed** — AC-373: no per-run or per-dispatch figure, and no line
@@ -579,8 +716,9 @@ fn in_grammar(line: &str) -> bool {
 /// arm and the pure function cannot drift apart.
 ///
 /// **Self-controlled first**: the matcher must accept one line of each form and reject a line
-/// quoting `first`/`last`, a zero `n`, a fractional delta, a flag out of order, and a per-run
-/// figure — or every acceptance below would be the matcher's, not the renderer's.
+/// quoting `first`/`last`, a zero `n`, a fractional delta, a flag out of order, a delta at
+/// `n < 10`, `low_sample` at `n >= 10`, a flag combination `throttle::batch_draw` cannot produce,
+/// and a per-run figure — or every acceptance below would be the matcher's, not the renderer's.
 #[test]
 fn cost_output_grammar_is_closed() {
     for good in [
@@ -593,6 +731,9 @@ fn cost_output_grammar_is_closed() {
         "five_hour: n=10 resets_at=1 non_monotonic",
         "seven_day: unkeyed=4",
         "five_hour: no sample",
+        "unwindowed=2",
+        "five_hour: n=12 resets_at=1 delta_ticks=0 resolution_limited",
+        "seven_day: n=3 resets_at=1 low_sample non_monotonic",
     ] {
         assert!(
             in_grammar(good),
@@ -609,6 +750,16 @@ fn cost_output_grammar_is_closed() {
         "per_run: 0.3",
         "cost bug-1: headroom_for_run=0.03",
         "cost bug-1: 3 readings in span, this store's traffic only",
+        "five_hour: n=3 resets_at=1 delta_ticks=4 low_sample",
+        "five_hour: n=3 resets_at=1 delta_ticks=4",
+        "five_hour: n=12 resets_at=1 low_sample",
+        "per-run headroom: 0.01",
+        "cost x: headroom_for_run=0.03",
+        "unwindowed=0",
+        "five_hour: n=3 resets_at=1 low_sample non_monotonic resolution_limited",
+        "five_hour: n=12 resets_at=1 delta_ticks=3 non_monotonic",
+        "five_hour: n=12 resets_at=1 delta_ticks=5 resolution_limited",
+        "five_hour: n=12 resets_at=1 delta_ticks=1",
     ] {
         assert!(
             !in_grammar(bad),
@@ -644,6 +795,15 @@ fn cost_output_grammar_is_closed() {
         );
         texts.push((format!("{name}/expected.stdout"), expected));
         for item in ["bug-1", "story-1", "absent-9"] {
+            if name == "malformed-foreign-in-interleaved-span" && item == "story-1" {
+                // The malformed reading is foreign to bug-1 and OWNED by story-1: for story-1 it
+                // is validated, and refused.
+                assert!(
+                    cost::render(&rows, item).is_err(),
+                    "{name}: story-1's own malformed reading rendered"
+                );
+                continue;
+            }
             let text = cost::render(&rows, item)
                 .unwrap_or_else(|e| panic!("{name} as {item}: the journal renders: {e}"));
             texts.push((format!("{name} rendered for {item}"), text));
