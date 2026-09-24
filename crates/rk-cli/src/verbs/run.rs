@@ -1727,6 +1727,14 @@ fn reference_worktree(
         ],
     )
     .map_err(|e| {
+        // 🛑 **THE REFUSAL CLEANS UP AFTER ITSELF, and the adversarial pass is why.** ADR-0162
+        // decision 10 says the reference worktree is removed *"on every path, including every
+        // refusal path"*, and this arm was the one path that did not: `git worktree add` can
+        // REGISTER the tree and then fail, and the caller's `Err` arm returns before the
+        // removal it relies on. A registration that outlives its run turns Checkpoint 7h
+        // guard (9) — which compares worktree PATH SETS across a prune — red, which is the
+        // failing guard this whole change exists to stop trading for another.
+        remove_reference_worktree(exec, repo, &path);
         eprintln!("redkiln: the review reference worktree could not be created: {e:?}");
         Exit::ConfigError
     })?;
@@ -1834,8 +1842,19 @@ fn review_pass(
             &reexecutor,
         );
 
+        let blocked = confirmed.block_set();
+
         // The rows reach the STORE, or `review_block` never lands in the journal that §7d.4 names
         // as exit 4's identity and `RK-D-SINK-COUNT` has nothing to read (decision 6).
+        //
+        // 🛑 **AND THE JOURNAL IS RE-READ. The adversarial pass found this half missing.** ADR-0162
+        // decision 6 says the rows are appended *"and the journal is re-read, by the `expiry_pass`
+        // idiom"* and quotes that idiom's own reason — *"a pass that wrote nowhere would be
+        // invisible to it, and reading it back is what makes the append observable rather than
+        // assumed"*. The first cut appended and then read `block_set()` off the IN-MEMORY
+        // `Confirmed`, so the record stated a behaviour the code did not implement and the exit
+        // rested on the store's `Ok` rather than on the journal. `append` returning `Ok` is the
+        // store's word for it; the query is the journal's.
         if !confirmed.events.is_empty() {
             let mut guard = crate::store::acquire(store, "the review")?;
             for event in confirmed.events.clone() {
@@ -1845,10 +1864,30 @@ fn review_pass(
                     return Ok(Some(Exit::ConfigError));
                 }
             }
+            let re_read = guard.query(rk_kernel::runtime::journal_query(resolved.item.id()));
             drop(guard);
+            let rows = match re_read {
+                Ok(rows) => rows,
+                Err(e) => {
+                    eprintln!("redkiln: the journal did not re-read after the review rows: {e:?}");
+                    return Ok(Some(Exit::ConfigError));
+                }
+            };
+            let readable = rows
+                .iter()
+                .filter(|e| e.kind == rk_types::event_kind::EventKind::ReviewBlock)
+                .count();
+            if readable < blocked.len() {
+                eprintln!(
+                    "redkiln: {} finding(s) blocked and only {readable} `review_block` row(s) read \
+                     back out of the journal — the verdict would be reported on an append nothing \
+                     can observe",
+                    blocked.len()
+                );
+                return Ok(Some(Exit::ConfigError));
+            }
         }
 
-        let blocked = confirmed.block_set();
         if blocked.is_empty() {
             return Ok(None);
         }

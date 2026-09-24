@@ -543,6 +543,23 @@ impl PackVariant {
     }
 }
 
+/// An `Env` with nothing in it — **the only `Env` a test may build**.
+///
+/// 🛑 **NO TEST CALLS `Env::capture()`** (§7d.5's AC-486 row, stated at
+/// `tests/it/config.rs`'s own `clean_env`): a test that read the real process environment would
+/// pass or fail on whatever this box happens to export, and on this box
+/// `ANTHROPIC_FOUNDRY_API_KEY` is persisted at user scope. It is not inert plumbing either —
+/// `verbs/run.rs` does `let child_env = env.as_map().clone()`, so a captured environment is handed
+/// to a spawned child.
+///
+/// This copy exists because `config.rs`'s is private to that module and ADR-0162's review pass
+/// threaded `env: &Env` through `run_with`, giving eleven call sites a parameter to satisfy. They
+/// were satisfied with `Env::capture()` and the adversarial pass caught it; the ADR-0083 env lint
+/// is scoped to `crates/rk-cli/src/` and would never have.
+pub fn clean_env() -> rk_cli::env::Env {
+    rk_cli::env::Env::from_map(std::collections::BTreeMap::new())
+}
+
 /// The `pack-min/` fixture directory, read in place and copied from.
 #[must_use]
 pub fn pack_min_dir() -> PathBuf {

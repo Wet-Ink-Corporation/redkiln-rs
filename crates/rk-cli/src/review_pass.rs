@@ -38,6 +38,12 @@ use rk_types::time::Timestamp;
 /// The row is selected by **schema**, not by stage name: `resolved.stage` is compared to no string
 /// literal anywhere in `crates/rk-cli/src/`, and ADR-0162 decision 5 does not introduce the first
 /// one — a stage-name match would bind the wiring to one pack's spelling of one stage.
+///
+/// 🛑 **MATCHED BY EXACT EQUALITY, AND THE NEAR MISS IS ALREADY ON THE TREE.** The shipped catalog
+/// provides **`PrototypeFindings`** (two activities, measured 2026-09-23), which a `contains`,
+/// `starts_with` or `ends_with` rule would match — firing the review pass over a prototype's
+/// output and confirming it as a review verdict. `==` is the whole guard against that, and
+/// relaxing it is not a tidy-up.
 pub const FINDINGS_SCHEMA: &str = "Findings";
 
 /// How the pass declined to produce a verdict. **Never a block**, and never an empty finding set

@@ -482,6 +482,34 @@ delivered — the two halves of one accepted record disagreeing about whether th
 blocks on was ever built. Checkpoint 7h is the instrument that surfaced it, by failing exactly where
 the record says it should.
 
+**E-0156-2 (2026-09-23, the same change's adversarial pass, correcting E-0156-1).** E-0156-1 says
+*"so `## Consequences` is **the only half that was not carried forward**."* — **What is true:** the
+pre-amendment plan survives in **four** places, not one. Besides `## Consequences`, ADR-0156's
+`## Decision drivers` still read *"a call site can be exercised without 61 schema files"* and *"A
+fixture pack is the tree's own established instrument for a run that cannot be driven off shipped
+content"*; its `## Considered options` **option 3, the chosen one**, reads *"**3. Split the corpora
+(chosen).** … plus the review call site plus `Exit::FindingsBlock` over a fixture pack built for
+it. Both axes get a real producer and a real assertion"*; and its `## Evidence and confidence`
+reads *"A fixture pack proves the wiring, not the catalog"*. [measured 2026-09-23 at `5e67ac0`,
+`git show HEAD:references/adr/0156-*.md`]
+**And the batch contradicted itself on it**, which is the shape this stage has now shipped twice:
+E-0156-1 says "only `## Consequences`" while **ADR-0162, written in the same commit**, says
+*"`0156`'s `## Consequences`, **its decision drivers** and two of its forbids bullets all still
+assume the fixture pack"*. The ADR's count is nearer the truth and is itself wrong on the bullets
+(E-0162-1 clause 3).
+**A second correction to E-0156-1, on the same reading:** it says *"and a `**What this forbids**`
+bullet reads…"*, singular, which is **right** — ADR-0156 has **seven** forbids bullets and exactly
+**one** mentions a fixture pack. ADR-0162's "two" is the error, not this.
+**What this does not change:** E-0156-1's core finding stands and is the reason ADR-0162 exists —
+`## Decision` clause 3 and `## Consequences` do contradict each other, textually and checkably.
+Only the *scope* of the un-carried-forward text was understated.
+**Format, recorded rather than silently fixed:** E-0156-1 carries no line numbers and no bracketed
+evidence tag, where this file's header asks for *"the frozen sentence quoted verbatim with its line
+at the pin it was read at … what is true, with the source, its fetch date and an evidence tag"*,
+and where its three 2026-09-23 neighbours all carry one. It also adds **bold emphasis inside
+quotations** (*"**No fixture pack is authored**"*, *"**the fixture pack's** review activity"*) that
+is not in ADR-0156, unmarked as added.
+
 ## ADR-0158 — the tier-1 store layer has no writer on any axis
 
 **E-0158-1 (2026-09-23, `s7h`'s own adversarial pass).** The `source` line and the Evidence section
@@ -545,3 +573,91 @@ single command invites the substance to be dismissed with it.
 
 *Later errata are appended under the record's heading with the next `E-NNNN-k` id. A heading with no entries is not
 created.*
+
+## ADR-0162 — the review call site is built over a fixture corpus and guard (10) becomes behavioural
+
+**E-0162-1 (2026-09-23, this record's own adversarial pass, before the stage closed).** Six
+corrections, all self-inflicted, and the first two are at the load-bearing joint.
+
+**(1) The supersession's stated warrant is false to the sentence it supersedes.** ADR-0162's title,
+its decision drivers, its README row and the `s7h` stage-file edit all say clause 3's sentence
+*"was reasoned from ADR-0160's SLICE-IDENTITY absences"*. — **What is true:** ADR-0156 clause 3 says
+the opposite, in terms: *"The `review`/`verify` call site and `Exit::FindingsBlock` are **NOT
+delivered at `s7h`** either, **and the reason is this record's own blocker list rather than
+ADR-0160's**: the review stage is unreachable, blocker (0) being the one a real run stops at."*
+ADR-0162 never quotes, cites or acknowledges that half-sentence anywhere.
+[measured 2026-09-23, `git show HEAD:references/adr/0156-*.md`]
+**What this does not change:** the supersession itself, which stands on its merits — ADR-0160 clause
+5 does say the call site is separable, the fixture pack was authored, and the producer a real run
+reaches now exists. What is corrected is the *warrant*: clause 3's own reason was ADR-0156's six
+blockers, and the honest argument is that a fixture corpus answers those blockers rather than that
+clause 3 was reasoned from something it says it was not.
+
+**(2) A load-bearing ellipsis.** ADR-0162 renders ADR-0160 clause 5 as *"§7h.3's call site is
+separable and is also not delivered **…** a review call site could exist without sealing a slice"*.
+— **What is true:** the elided words are *"**for ADR-0156's six blockers**. This record does not
+merge the two:"*. The ellipsis removes the clause that attributes non-delivery to ADR-0156's
+blockers — i.e. the very proposition correction (1) is about. E-0156-1 and the `s7h` edit repeat
+the same truncation. A quotation that omits the half that cuts against the argument it is cited for
+is the citation defect this programme errata'd five times one stage ago, in a new costume.
+
+**(3) "two of its forbids bullets" is a false count, and the batch disagreed with itself.**
+ADR-0162's title, its `## Considered options` and the commit message all say **two** of ADR-0156's
+forbids bullets assume the fixture pack. — **What is true:** ADR-0156 has **seven** forbids bullets
+and exactly **ONE** mentions a fixture pack (*"Giving the fixture pack's review activity a `check`
+or `gate` step…"*). The other bullet ADR-0162 carries forward — *"Authoring `.redkiln/schemas/`,
+populating `.redkiln/processes/`, or mapping `toolchain:verdict_record`…"* — presupposes no fixture
+pack at all. E-0156-1, its own batch-mate, says *"a bullet"*, singular, and is right.
+[measured 2026-09-23: 7 bullets, 1 matching `fixture pack`]
+
+**(4) An undated `source:` claim, falsified by this record's own decision.** The frontmatter carries,
+in the present tense and with **no date pin**: *"crates/rk-cli/tests/fixtures/pack-min/ (no
+`[stage.review]` block; two catalog activities, neither a review)"*. — **What is true:** at the
+commit that accepted this record, `pack-min/catalog/` holds **three** activities — `emit-report.toml`,
+`review-min.toml`, `second-activity.toml` — and `pack.review.toml` carries `[stage.review]`. Both
+were authored *by this record*. Every absence in the body is pinned to `f25440e`; this one was not.
+This is ADR-0159's failure verbatim — *"an undated claim falsified by its own decision"* — and the
+lesson that did survive is the one restated here: **cite by quotation and pin every measurement to
+a tree.**
+
+**(5) Decision 8 is not delivered.** It reads *"**8. The lane loop gains its first automated test.**
+… The call site added here sits on that same path and is not delivered without one"*, and
+`## Consequences` repeats *"The lane loop acquires its first automated test"*. — **What is true:**
+`grep -rln "verbs::run::run(" crates/*/tests` **still returns nothing** [measured 2026-09-23 at
+`5e67ac0`, rc=1]. The record's own named instrument is unmoved. What the change did add is one row
+to `ac438_table_driven_exit_codes_over_fixtures_binary_arm`, a test that already existed, and five
+`#[test]`s over the pass's PURE halves whose own module header says *"They do not run the binary,
+and a green module here is **not** evidence that a real `redkiln run` ever returns `4`."*
+**The debt ADR-0161 named therefore STANDS, and is carried forward rather than claimed closed** —
+ADR-0161's forbids bullet *"Describing the lane loop as covered by tests"* is what decision 8 sails
+close to. The call site IS covered by a binary run; the lane loop is not covered by anything.
+
+**(6) A misattributed quotation.** Decision 10 says *"the path-set form `0156` clause 5(d) required
+precisely because *"counts cannot tell a leaked registration from a replaced one"*"*. — **What is
+true:** ADR-0156 clause 5(d) reads in full *"(d) the worktree guard compares **path sets, not
+counts**, reading BEFORE any prune;"* and gives no reason. The quoted sentence is the **checkpoint's
+own** comment in `runbook/phase-1/s7h-lane-completes.md`: *"Counts cannot tell a leaked registration
+from a replaced one; paths can."* — reattributed here, with its capitalisation and its second clause
+restored.
+
+**AND TWO THINGS THE RECORD SHOULD HAVE SAID AND DID NOT, both about what the fixture proves.**
+`## Evidence and confidence`'s *"What is NOT asserted"* list is incomplete:
+
+- **The candidate and reference worktrees are checkouts of the SAME COMMIT.** `recreate_run_worktree`
+  adds `rk-run/<item>` at `HEAD` and `reference_worktree` adds `--detach` at `HEAD`, so there is no
+  change under review and the two trees are byte-identical. The `Flipped` that reaches
+  `policy::classify` is manufactured by the stub toolchain's check on whether its working
+  directory's last component ends `.review-ref` — not by any difference between the trees. The stub
+  says so in its own header (*"🛑 THIS FIXTURE IS RIGGED, AND SAYING SO IS THE POINT"*); the record
+  did not, and the record is what gets cited. **The wiring is real and the evidence is manufactured.**
+- **A second run over the same repository would exit 4 without dispatching.** `Runtime::run_activity`
+  short-circuits on `is_committed` (AC-013), so a re-run re-reads the memoised `activity_committed`
+  row out of `prior` and re-confirms it. The fixture is sound because `pack_min_repo` builds a fresh
+  `TempDir` per case — but *"the dispatch committed"* is a property of that freshness, not something
+  `review_pass` enforces.
+
+**What this does not change:** every sentence of `## Decision` except as clause (5) above records,
+and every `**What this forbids**` bullet. The producer exists, a real `redkiln run` exits `4`, and
+guard (10) is behavioural. **Decision 6 is not listed here because it was repaired in code rather
+than corrected in prose**: it said the rows are appended *"and the journal is re-read"* and the
+first cut did not re-read, so the re-read was implemented and the record left standing.

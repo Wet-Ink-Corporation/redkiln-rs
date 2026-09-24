@@ -399,7 +399,7 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
         crate::support::FIXED_NOW,
         &tree_hash,
         p1,
-        &rk_cli::env::Env::capture(),
+        &crate::support::clean_env(),
         &mut s1,
         &token,
     )
@@ -452,7 +452,7 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
         crate::support::FIXED_NOW,
         &tree_hash,
         p2,
-        &rk_cli::env::Env::capture(),
+        &crate::support::clean_env(),
         &mut s2,
         &token,
     )

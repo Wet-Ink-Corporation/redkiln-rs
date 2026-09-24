@@ -272,7 +272,12 @@ test -d crates/rk-cli/tests/fixtures/exit/findings-block || { echo "FAIL: the fi
 # carriage return, so on a checkout this box's `core.autocrlf=true` smudged, the comparison would be
 # `4\r` = `4` and this guard would go red for a reason unrelated to the producer. `.gitattributes`
 # carries a `-text` row for this fixture; the guard does not depend on it.
-exp=$(tr -d '\r\n' < crates/rk-cli/tests/fixtures/exit/findings-block/expected)
+#
+# ⚠️ **`[:space:]` AND NOT `\r\n`, because the guard must read this file the way the TEST does.**
+# `ac438`'s driver parses it with `.trim().parse()`. A first cut deleted CR and LF only, so an
+# `expected` of `4 ` or `\t4` made this guard RED while the test it guards stayed GREEN — the same
+# unrelated-reason red, one whitespace class over. Found by the adversarial pass.
+exp=$(tr -d '[:space:]' < crates/rk-cli/tests/fixtures/exit/findings-block/expected)
 [ "$exp" = "4" ] || { echo "FAIL: findings-block/expected reads '$exp', not 4"; exit 1; }
 out=$(cargo test -p rk-cli --test it -- run::ac438_table_driven_exit_codes_over_fixtures_binary_arm --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: AC-438's binary arm did not pass (rc=$rc) — a real `redkiln run` over the review fixture did not exit 4"; printf '%s\n' "$out" | tail -25; exit 1; }
@@ -280,9 +285,25 @@ out=$(cargo test -p rk-cli --test it -- run::ac438_table_driven_exit_codes_over_
 # ZERO tests and exits 0 — measured on this very line on 2026-09-23, which is trap (4) live.
 printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed' || { echo "FAIL: the exit-table selection did not run exactly one test — a filter that matches nothing is a green"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
 
-# (10b) THE SOURCE FLOOR, CODE LINES ONLY. `grep -rn` prints `path:LINE:content`, so a line whose
-# content begins with `//` (or `///`, or `//!`) is excluded and prose cannot satisfy this.
-prod=$(grep -rn 'Exit::FindingsBlock' crates/rk-cli/src/ --include=*.rs | grep -v 'exit.rs' | grep -vE ':[0-9]+:[[:space:]]*//' | grep -c .)
+# (10b) THE SOURCE FLOOR, CODE LINES ONLY — and it is a FLOOR, not the assertion. (10a) is the
+# assertion; this names a deleted call site at its own line instead of only by a changed exit code.
+#
+# 🛑 **THE FIRST CUT OF THIS LINE WAS STRICTLY WEAKER THAN THE REPO'S OWN `code_lines`, and the
+# adversarial pass broke it four ways.** It read `grep -v 'exit.rs' | grep -vE ':[0-9]+:[[:space:]]*//'`
+# and claimed *"prose cannot satisfy this"*. Measured 2026-09-23, all four hold:
+#   · a `/* Exit::FindingsBlock */` line SURVIVED — only `//` was dropped, while
+#     `crates/rk-cli/tests/it/main.rs`'s `code_lines` has always dropped `//`, `/*` AND `*`;
+#   · `grep -v 'exit.rs'` is UNANCHORED and `.` is a wildcard, so it matches CONTENT as well as path
+#     and would drop a real producer in `pre_exit.rs` or `verbs/exit.rs` — a false FAIL on a correct
+#     tree, and `crates/rk-kernel/src/verify/exit.rs` proves a second `exit.rs` is not fanciful;
+#   · the comment pattern was unanchored too, so a code line whose CONTENT held `:12: //` was dropped.
+# Both patterns are now anchored to the `path:LINE:` prefix grep actually prints.
+#
+# ⚠️ **WHAT THIS STILL CANNOT SEE, said plainly rather than claimed away:** a mention inside an
+# attribute or a string — `#[doc = "…"]`, or a wrapped `reason = "…"` continuation, of which this
+# crate has eight. Those are not comment leaders and no grep of this shape excludes them. The floor
+# is therefore NECESSARY-not-sufficient, and (10a)'s binary run is what makes the pair sound.
+prod=$(grep -rn 'Exit::FindingsBlock' crates/rk-cli/src/ --include=*.rs | grep -v '^crates/rk-cli/src/exit\.rs:' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | grep -c .)
 [ "$prod" -ge 1 ] || { echo "FAIL: no CODE line under crates/rk-cli/src/ outside exit.rs names Exit::FindingsBlock — the call site was deleted and only its doc comments remain"; exit 1; }
 
 echo "CP7H-END-OF-BLOCK reached"
