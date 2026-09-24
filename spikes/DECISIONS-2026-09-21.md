@@ -1531,3 +1531,82 @@ allocated in the order the records are written, from **0164**.
 **What this makes.** The sub-stages follow from these decisions and are authored next. At least five are expected:
 registry fills and the Checkpoint 5/7b/7f repairs; stage location and landing; the resolver and executor; verify,
 Slice-Verdict and the tier-1 writer; and the story lane. Real dispatch stays gated on D21-40 decision 2.
+
+---
+
+## D21-42 · Twenty-four further decisions: every open question on the Phase-1 exit path, taken one by one
+
+**Taken 2026-09-24, after D21-41, on the operator's instruction to avoid shortcuts and deferrals and to prefer
+long-term investment.** Three read-only research passes, all at `c617889`, produced the agenda. The first
+inventoried every open item on the exit path. The second found the full route for each of D21-41's deferrals.
+The third grounded the real-run environment. Each decision below was put to the operator with its context, the
+record text and a recommendation. **This entry supersedes D21-41 in part where it says so.** Where a decision moves
+an accepted `## Decision` sentence, it is written as a supersession-in-part record (ADR-0092 r1); ids are allocated
+from ADR-0164 in writing order.
+
+**Two of D21-41's premises were wrong, and the research measured both:**
+- **(d)'s "or not at all" branch for per-step agent specs is not live.** The mandatory implement stage's only
+  Changeset producer (`tdd-red-green-refactor`) and (f)'s `user-story-ac` both need a second runnable agent step.
+- **The resolver cannot evaluate the fix lane's checks against today's port.** 34 activities read tool
+  `status`/`failed`/`passed` (`outputs.status` ×43, `report.status` ×22), and `red-check` expects a red suite.
+
+| # | Question | Taken |
+| --- | --- | --- |
+| 1a | What `Toolchain::test` returns | **Widened to an outcome-bearing report** (`VerifyReport` plus passed/failed counts). A red suite is `Ok` with counts; `Err` is only cannot-run/timeout/killed (AC-331/AC-344). The method count stays six. **Supersedes D21-41(c)'s "through the port" register reading, which is withdrawn as unneeded.** RT-22's routing is reversed by record, and RT-6/RT-22/R-9 are discharged. `conformance.rs` gains `validate_report` per adapter (AC-329). |
+| 1b | How smoke, audit and package reach the adapter | **A registry-backed generic port method**, filling design §4.5's `registry.toml` verb table (D21-10's gap). This is a seventh method: it supersedes ADR-0162's forbids bullet and ADR-0135's "six" in part, and Checkpoint 7a is re-run. |
+| 2 | How `ChangeSummary` is produced | **Split the type now, and run S-BIN before exit.** The `Text` variant (typed diff plus manifest) is finalised now. The `Binary` variant stays sealed and non-constructible until **S-BIN runs as a Phase-1 sub-stage before Checkpoint 8** (about 10 Opus dispatches plus UE automation, METHOD-S §3/§7). Supersedes ADR-0099 cl.5 and ADR-0093 d4 in part, folded with (i)'s Checkpoint 5 record. |
+| 3a | How multi-agent activities run | **Step grain in the runtime.** Per-step specs are carried on `RecordedSpec` (ADR-0138's warrant), each agent step commits under its own key, and re-entry resumes at the first uncommitted step. Supersedes in part ADR-0143 d2/d4, ADR-0150 d1 and AC-013's per-activation grain; discharges ADR-0143 c5 and ADR-0150 c4. `kill_and_resume_n_step` is re-proven at step grain, and the card digest enters a per-step memo key. **Supersedes D21-41(d)'s "or not at all".** |
+| 3b | The step-grain key | `(item, activity@version, step_id, iteration path)`. The iteration path is the stack of for_each index, repeat count and loop-back count. |
+| 4a | Where `${toolchain.*}` values come from | **A per-toolchain table in the 1b registry.** Each value carries its measurement as its warrant; an unresolved key is refused by name. Discharges ADR-0140 c4's OWED item. |
+| 4b | Whether step `timeout_secs` is enforced | **Yes, as the tighter bound**: `min(step, construction)` is passed into the port call. Supersedes ADR-0140 c1 in part, and the 298 declarations become real. |
+| 4c | How `selection` maps | **`"affected"` is the package-level affected set**: touched crates plus their reverse-dependency closure via `cargo metadata`, falling back to whole-suite (AC-328) with `basis_reason` recorded. `artifact:` and `${…}` forms go through `selection_of` and the resolver; `"e2e"` is declared per adapter or refused. |
+| 4d | What a false check does after its step committed | **`on_false` is honoured as iteration.** A `{to,max}` loop-back runs under a new iteration path, keyword forms follow the schema, and exhaustion or no `on_false` refuses as `StepFailedAfterCommit` (ADR-0144). Committed steps stand. |
+| 5a | Register contradiction C2 | **Surface, then restore.** `reconcile` emits a `structured_drift` *event* (artifact, anchor, both digests), and the render then restores the section. No drift field on the artifact. A dated AC-478 amendment removes only *"no comparison … no drift state"*. One record owns rk-store's render/write path (layout C, digest-stamped sections, the AC-122 single write path, one `artifact.write` per write). |
+| 5b | Where rendered artifacts land | **Under the item's managed artifact directory in the run-owned worktree**, written only by rk-store. Decision (b)'s checkpoint commits them to `rk-run/<item>`. s8 (1b) asserts the `artifact.write` digest plus `git cat-file -e` on the run ref. |
+| 6a | D21-41's pack cuts | **Reversed for five demands:** SmokeResult, ConfirmationResult, ScanReport, BuildArtifact and DebtRegisterEntry. For ScanReport, unrated advisories are never counted as 0 and the advisory-DB commit is recorded. BuildArtifact is a release build plus binary sha256. DebtRegisterEntry is an rk-store item write with provenance; human-sourced facets are null and go to `unknown_facet`. **Supersedes D21-41(c)/(d)'s narrowings.** |
+| 6b | Release for a CLI | **A new `tag-release` activity.** ReleaseRecord is a release tag on the landed commit, plus the BuildArtifact digest and the rollback target (the previous release tag). The tag is local and never pushed by the run. It enters via ADR-0114 c3's one-run, one-activity trial. |
+| 7 | "Every lane stage" | **Every `stage_order` stage whose rigor is not `forbidden`** is entered and carries its trailer. An empty stage records `stage_empty { reason }`. s8 asserts set and order equality mechanically from the lane's own trailer commits; the human READ stays for quality. |
+| 8a | Git-first ordering | **The kernel owns it, through the journalled `GitOps` seam.** It commits (zero writes on replay), then appends the t1 and t2 rows with `anchor_sha`. `reconcile` heals a commit without a row. |
+| 8b | Gate kind in git | **The `Gate:` value is widened** to carry kind and reach. Supersedes design §5.4's grammar row and ADR-0105 cl.3's value delegation in part. |
+| 8c | Rebuilding t1 | **Moves into rk-adapter-sqlite** (`open_at` / `Capability::Rebuild`, the §7d.18 RAISED item). rk-cli's duplicated INSERT is retired, and criterion (2) is re-measured against ADR-0105 cl.9's real projection. |
+| 8d | R-63 / AC-529 | **A `worktree_assigned` row is written at run start.** Every tier-1 write is checked against it and refused with a typed rk-git error on mismatch. Defaults applied: the one stage-less `Story:` mark is admitted read-only; ADR-0109 d3 is not superseded. |
+| 9 | Landing staging | **The worktree diff plus named refusals.** Stage tracked changes and files the run created; the untracked baseline is snapshotted at worktree creation, and `.gitignore` is honoured. A secret-pattern or oversize path is refused by name with a gate-worthy exit. Committed through the `GitOps` seam, with a dated AC-245 reading note. The hand-off is the operator's merge of `rk-run/<item>`, which `explain` prints. |
+| 10a | D17-3 | **One spec/pack schema record** fixes the three spellings and adds `rk_types::AcceptanceCriterion` (with ADR-0104's mutation field) to `EXPORTED`. |
+| 10b | D17-4 | **Mint `verify_completed`**: report digest, selection with `basis_reason`, counts and adapter identity. It is AC-321's replay event and AC-473/AC-485's identity carrier. |
+| 10c | §7d.18's verify block | **Claimed whole**: AC-320/338/339/341/348/349/353/355/359, each with a named instrument. Any id that cannot be built names its reason. A cold `cargo test --workspace` wall time is measured first. |
+| 11a | adversarial-review's `continue` row | **Rewritten to re-execution**: *"no blocking finding survives re-execution"*, read from `review::confirm`. Version bump, changelog row, P6 lattice re-run with a non-zero pack count. Closes D21-2's RAISED reading. |
+| 11b | The one-member `['Reproduced']` rows | **In scope.** threat-model, user-story-ac, vertical-slicing and instrumented-trace-analysis are rewritten to bullet-2 re-execution quantities. |
+| 11c | ADR-0080 d3's threshold T | **Settled now, against the recommendation to owe it.** The severity vocabulary and T are fixed by record, and that record is built on a severity-labelling measurement over the F37/F39 review corpus rather than chosen without evidence. |
+| 12a | Criterion (7) on real data | **An honest rendering passes**, with two assertions: owned readings == `dispatch_completed` for the item, and no rendering over n = 0. This replaces s8's unreadable AC-394 READ line. |
+| 12b | AC-395 / AC-372 | **ADR-0163's interim key is extended** to `dispatch_completed` (`item`, `activity_id_at_version`), moving to ADR-0131's tag when that wiring lands. The per-activity breakdown and the status half are built now. ADR-0131's wiring stays the first self-hosted story, as its cl.8 intends. |
+| 12c | doctor's journal | **Read from the store before any real run**; fixture mode keeps `events.jsonl`. The flat-reading silencing of `RK-D-HEADROOM-MARGIN` is fixed too. |
+| 13a | Catalog-quality checks | **They run over `.redkiln/`** (rigor monotonicity, AC-527's d2-form lint, the lattice) and assert a non-zero count walked. `spikes/p9` remains only for tests that pin a historical measurement, named so. |
+| 13b | The P6 lattice | **Ported to Rust** as a kernel test and/or `redkiln lint --lattice`, run in CI. |
+| 14a | CI | **`ci.yml` green on the pushed branch, every job, both OS legs, is a Checkpoint 8 condition.** Each push is confirmed with the operator. |
+| 14b | Line endings | **`* text=auto eol=lf` as the first line of `.gitattributes`, done FIRST**, before any sub-stage. By record, with ADR-0151's `-text` pins preserved; then renormalize, a one-time re-checkout on a clean tree, and the full suite proven green in the main checkout and a fresh run worktree. |
+| 15a | Model identity | **Full model ids are pinned** through a pack `[models]` table. The id goes into `--model` and the card digest and memo key. `DispatchRecord` gets a typed `observed_model`, and the run refuses when the init-reported model differs from the requested one. |
+| 15b | Tiers | **D21-41(g)'s table is kept** and pinned to `claude-sonnet-5`, `claude-opus-5-5` and `claude-haiku-4-5-20251001`. `Tier` becomes the open set of `[models]` rows. |
+| 16 | CLI pin | **Moved once, at probe time**, to the installed version in D17-11's form (instrument re-tee, the constant with its prose and literal test, and a `live_dispatch_probe` re-run). **Auto-update is frozen for the whole real-run window.** `Refuse` stays. |
+| 17a | Launch | **A committed launcher script is the only entry to a real run.** It refuses `CLAUDECODE`/`CLAUDE_CODE_*` and denylisted names, sets `CLAUDE_CONFIG_DIR` explicitly, freezes auto-update and captures the version. The adapter refuses unless init reports `apiKeySource == "none"`. |
+| 17b | Account | **`~/.claude-personal`.** |
+| 18 | The fix item | **`rk-fix-doctor-test-count` stays the untouched fixture item**, prose defect included, with a dated note. The run-preparation sub-stage presents a shortlist of **at least three behavioural defects**: reproducible by a failing `cargo test`, one crate, not in machinery the run exercises, and not scheduled for a sub-stage fix. The operator picks one, it is reserved in the ledger, and a fresh item is minted. |
+| 19a | Caps | **The kernel enforces a per-item dispatch-count cap and token appetite**, refusing with a typed class. First values: 40 dispatches, and about 2× the happy-path token estimate. Both are revised and recorded from measurement. |
+| 19b | Staging | **The first real fix-lane invocation stops at the analysis → specification boundary** for the operator to review. |
+| 19c | RT-57 | **The scalar record is written and signed before any spend**, each value with a warrant, replacing the `NO RECORD` markers. |
+| 20 | Failure telemetry | **The kernel appends `StepError::event()` for every dispatch**, so fake and real harnesses behave alike, and AC-033's breaker counts those rows across processes. |
+| 21a | `gate_expiry` | **Drafted fail-closed** with exceptions justified; **the operator signs row by row** (AC-276). |
+| 21b | Settings isolation | **An explicit minimal `--setting-sources`**, with probe 2 asserting tools and mode from the init line. |
+| 21c | Guards | **Both built**: a doctor row refusing Bash/Web/MCP card grants, and ADR-0146's load-time lint. |
+| 21d | Reads outside the worktree | **Deny rules plus probe 1's assertion. If the CLI cannot enforce them, the work HALTS** and the gap is reported as a containment finding. |
+| 22 | Codex's phase | **Phase 4, after S-CODEX.** Supersedes ADR-0094 d2's phase clause in part toward ADR-0007 (accepted, unsuperseded), with dated corrections at design §10.5 and the two register sites. **E-0094-2 records that E12 was taken without ADR-0007's phase sentence in view.** |
+| 23 | ADR-0114 d1 | **Supersede d1's second sentence in part** over the shipped pack, folded with the 7b re-pin, plus a dated F42-DRAFT correction. **Also repair catalog-b's four defects**: quote `'security-vuln'`, and convert three bare `on_false` names to `{to, max = N}` with N warranted by sibling convention. |
+| 24a | ADR-0085 option headings | **Enforced by lint from ADR-0164 onward.** One dated erratum lists ADR-0132…0161 as non-conforming, and their accepted bodies are not edited. |
+| 24b–d | Placement | **L3** (`rk-store` `conn.rs`'s poison unwrap) is fixed in the tier-1 sub-stage before the writer builds on it. **`terminal_read`** is fixed in the stage-location sub-stage with the first FakeHarness end-to-end test of `verbs::run::run`. **Tracker upkeep** goes in one hygiene commit at the start of stage authoring. |
+
+**Order these impose.**
+1. 14b's line-ending normalisation comes first.
+2. The hygiene commit follows.
+3. Then the stage files are authored.
+
+The spend gates (the probes, the real runs and S-BIN's dispatches) remain behind D21-40 decision 2's fixture-proof
+condition, and each real run is still a separate operator go-ahead in the moment.
