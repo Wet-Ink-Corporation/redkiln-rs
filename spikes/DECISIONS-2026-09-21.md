@@ -1452,3 +1452,54 @@ and a CR check that could not see a CR. The third found **seven**, all in record
 round's findings moved no code and no guard, and the row says so rather than calling the pass dry.
 
 ---
+
+---
+
+## D21-40 · Step 8 re-opens: four operator decisions, the re-measurement they rest on, and row 40's "passed" corrected
+
+**Taken 2026-09-24, at `s8`'s re-open over HEAD `4c282d7`, each before the thing it authorised ran.** A read-only gap
+map (six mappers and a completeness critic, every claim tied to code or record text read at HEAD) was put to the
+operator with the measured state, and four decisions were taken:
+
+1. **Route: more sub-stages, on D21-3's precedent.** Criterion (1) is still not satisfiable at HEAD, and the reasons
+   are structural rather than pack defects: nothing stages or lands the harness's work (both `commit_with_trailers`
+   callers in `verbs/run.rs` pass `allow_empty` with no `git add`, and `GitOp::Integrate` has no caller); a lane does
+   not cross processes (ADR-0157 decision 4, where the current stage lives is *"named here as OWED"*); the verify stage
+   cannot walk (`toolchain:test` refused under ADR-0148, `toolchain:smoke` unmapped under ADR-0135); and the shipped
+   registry cannot bind a dispatch (0 of 8 cards carry `permission_mode`, all 8 grant only `StructuredOutput`, no
+   `.redkiln/schemas/`, 0 `model` rows). The owed decisions are put to the operator as a packet, and the new stages
+   are authored after that.
+2. **Spend: the real runs are authorised, gated on fixture proof.** The criterion-(1), (1b), (3)-operational and (7)
+   runs may dispatch against the real account **once the sub-stages' fixture proofs pass**, and not before. That
+   includes a FakeHarness end-to-end test of `verbs::run::run`, which does not exist today
+   (`grep -rn "verbs::run::run(" crates/*/tests` finds nothing). If a real run is refused unexpectedly, the next step
+   is to stop and report, not to spend again.
+3. **Row 40's "checkpoint passed `d6160ff`" is corrected, not left standing.** s8 defines Checkpoint 8 as *"All six
+   pass (with (1)'s two halves and (6)'s two lints), and the following remain true"*. What passed at `d6160ff` was
+   the **mechanical block**. **Checkpoint 8 has NOT passed, and M5 is not reached.** This also corrects this file's
+   own D21-6 passage, *"Clause 8's trigger is recorded here because it has half-fired … Checkpoint 8 **is** now
+   recorded as passed"*: the trigger has **not fired at all**. ADR-0131 clause 8's *"after Checkpoint 8"* and
+   ADR-0163's interim-key move both wait for the whole checkpoint. The D21-6 passage is not rewritten; this line
+   supersedes its reading.
+4. **Checkpoints 5, 7b and 7f are repaired before Phase 1 exits.** They are not carried as debt, even though none of
+   them is on `s8`'s entry chain.
+
+**The re-measurement, run from each stage file's own bytes** (extracted verbatim and run whole with Git Bash from the
+checkout; the store was backed up first and restored after (2)'s `doctor --rebuild`):
+
+| block | rc | result |
+| --- | --- | --- |
+| `cargo build --workspace` | 0 | |
+| (4) | 0 | clippy green, and the `rk-clock-read/reintroduce` arm is red for the named reason |
+| (2) | 0 | `rebuild_differential` + `stage_level_next_action` pass; `doctor --rebuild` exits 0 |
+| (3) | 1 | the asserted half passes (`kill_and_resume_n_step`); the block then stops at *"set ITEM"*, because the operational arm rides on (1) |
+| (6) both lints | 0, 0 | |
+| Checkpoint 8 mechanical block | 0 | its two `FAIL:` strings are grep hits on its own guard's text, not failures |
+| Checkpoint 5 | 1 | `ChangeSummary` is named outside rk-ports at **six** sites: four in the two adapters, and now two in `crates/rk-cli/tests/it/review_pass.rs` |
+| Checkpoint 7b | 1 | `grammar-probe.py` reports `predicates parsed 278/279; failed 1/279` against the pinned 285/287 |
+| Checkpoint 7f | 1 | *"the three conformance lints are not all ARMED"*: two now run and pass, because s7g and s7h discharged them. This is by design, as row 36 records |
+
+Two things were found in passing. The mechanical block's `grep -rn 'four questions on twenty items' --include=*.md .`
+also searches the run worktree under `.git/redkiln/worktrees/`, so a stale copy of `runbook/` is read as a hit.
+And (2) running before (7) means `doctor --rebuild` replaces the store that (7) reads. Both belong to the `s8`
+instrument amendments.

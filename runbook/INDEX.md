@@ -93,7 +93,7 @@ here; this table exists so an operator planning a session knows where it will bl
 
 | Owed | Since | What is owed | Where it is recorded | What proceeds without it |
 | --- | --- | --- | --- | --- |
-| **D-FIXCONSUMER countersignature** | Step 3a, 2026-09-12 | The runtime probe is `[WILL EXIST]` and could not run, so the Workflow runtime's behaviour is **UNVERIFIED**. A forced deferral, not an adjudicated one: countersign it, or schedule the dispatch. | `DECISIONS-2026-09-09 #39`; `PROGRESS.md` §1 | Steps 4–7e. **Step 8 check (1)** consumes the fix lane and is where it bites. |
+| ~~**D-FIXCONSUMER countersignature**~~ **COUNTERSIGNED 2026-09-13** (`PROGRESS.md` row 3; this row stood as owed until 2026-09-24, D21-40) | Step 3a, 2026-09-12 | The runtime probe is `[WILL EXIST]` and could not run, so the Workflow runtime's behaviour is **UNVERIFIED**. A forced deferral, not an adjudicated one: countersign it, or schedule the dispatch. | `DECISIONS-2026-09-09 #39`; `PROGRESS.md` §1 | Steps 4–7e. **Step 8 check (1)** consumes the fix lane and is where it bites. |
 | **Arm L labels** | Step 3b, by decision | Arm L is outstanding and is labelled later, at a new corpus pin (DECISIONS-2026-09-11 #6). It reports **DEFERRED** through the three-state form, never a pass. | `DECISIONS-2026-09-11 #6`; `s2` Checkpoint 2; `s3` §3b | Everything. It is a decision, not a blocker. |
 | **M-06 Part 2** | before Step 5 | The 30 seeded P2 operator labels. C-01 and C-02 each got a "Before this step, not after" paragraph at their consumer stage; this one is **tracker-enforced only**. | `PROGRESS.md` §2 / §5 | Step 5 does not gate on it. Read the tracker before starting Phase 1. |
 
