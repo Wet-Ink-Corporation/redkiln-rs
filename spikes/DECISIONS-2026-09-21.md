@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 and 2026-09-22 (D21-1 … D21-22), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-24 (D21-1 … D21-39), and what they license
+
+*(Title corrected 2026-09-24 at `s7i`'s close: it read **"2026-09-21 and 2026-09-22 (D21-1 … D21-22)"** while the file carried **D21-38** — sixteen entries and two dates stale, the third time this heading has gone stale by the mechanism its own note below describes, and despite that note's instruction to whoever appended `D21-15`. Moved with **D21-39**, in the same commit.)*
 
 *(Title corrected 2026-09-22 at `s7g`'s open: it read "**Step 8's close and Step 7f's open, 2026-09-21 (D21-1 … D21-6)**"
 while the file already carried **D21-7** and **D21-8** — `s7f`'s two flip lines, appended at its close on 2026-09-21 —
@@ -1407,5 +1409,46 @@ their blobs.
 sweep reported all 24 files differing — because `glob` returns backslash paths on Windows and
 `git show HEAD:a\b\c` silently returns empty. The instrument was broken, not the tree. *Verify the
 operation, not a proxy for it.*
+
+---
+
+## D21-39 · ADR-0163 flips to `accepted` — `redkiln cost` is the ninth verb, the reading is journalled once per dispatch, and ADR-0131's first forbids bullet yields for one member
+
+**Confirmed 2026-09-24 (dated line), at `s7i`'s close.** ADR-0163 flips `proposed → accepted`, `date: 2026-09-23`
+unchanged. It was committed `proposed` at `a811cea` and revised in place through three refuting rounds while it
+bound nothing; the text that flips is the one at the stage's close commit.
+
+**The operator's decisions it records, each taken before the thing it authorised was built.** On 2026-09-23, at the
+stage's open, between options put to the operator with the measured state in front of them: (1) a reading's owner is the `"item"`
+input `verbs/run.rs` already binds, copied onto the payload — overturning the reserved-key route pre-taken and never
+recorded at `s7h`'s close, on the measurement that the item already reaches the adapter; (2) **one row per
+dispatch**, so `n` counts dispatches as `BatchDraw.n`'s doc says it does — ADR-0133 clause 2's *"once per reading"*
+superseded in part; (3) `resets_at` as **integer unix seconds**, the value the platform sent — ADR-0133 clause 3's
+`<RFC 3339 | null>` spelling superseded in part. On 2026-09-24, when the stage's first adversarial pass found that
+ADR-0131 forbids *"putting an item id … inside `rk-types::Event.payload` for the purpose of addressing"*: (4) ADR-0163
+**supersedes ADR-0131's first forbids bullet in part**, for `rate_limit_reading.item` alone, as an interim member
+that moves to ADR-0131's reserved `item` tag when that wiring lands after Checkpoint 8 — with the record answering
+each of ADR-0131's grounds rather than the convenient one, and saying in terms that it breaks the driver *"Waiting
+accretes nothing"*.
+
+**What was not the operator's and is recorded as found.** The payload gained `cli_version` because AC-227 requires it
+of every harness event; `utilization` so that a flat reading is journalled rather than discarded; `windows: null` for
+the flat shape because AC-374 forbids extrapolating one utilisation into two windows. `cost` counts interleaving over
+**traffic** — foreign `dispatch` rows as well as foreign readings — because `throttle::attribute` sees only the
+samples it is given. And ADR-0133 carries five errata (E-0133-2 … E-0133-6), the last correcting two of the first four.
+
+**What the fixture proves and what it does not.** The shipped store holds **zero** `dispatch_completed` and **zero**
+`rate_limit_reading` rows; `cost` on both shipped items prints the one empty line and exits 0, and Checkpoint 7i
+asserts that line exactly. The dispatched case is a real `redkiln run` over a **synthetic** `rate_limit_event`
+transcript followed by a real `redkiln cost`, and 23 seeded journals rendered byte-for-byte — the wiring, not the
+account. **Phase-1 criterion (7) is computable and rendered over a fixture, and NOT met on the shipped tree**; `s8`'s
+block still needs an `ITEM` that owns readings, and the shipped registry does not dispatch.
+
+**Three refuting rounds, and the counts are the record.** The first found **thirty-six** defects in work that was
+committed, green, checkpoint-passing and seventeen-mutants-RED — ADR-0131's conflict the load-bearing one, thirteen
+surviving mutants, and a checkpoint grammar that let a delta through at `n < 10`. The second found **fourteen** in the
+first's repairs — a warrant that answered two of ADR-0131's grounds and omitted three, a counter half-repaired again,
+and a CR check that could not see a CR. The third found **seven**, all in record text. A fourth was not run: the third
+round's findings moved no code and no guard, and the row says so rather than calling the pass dry.
 
 ---
