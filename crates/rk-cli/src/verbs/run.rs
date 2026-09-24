@@ -393,6 +393,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
             now,
             &tree_hash,
             ports,
+            env,
             &mut supply_spec,
             &token,
             &mut advanced,
@@ -483,6 +484,7 @@ pub fn run_with(
     now: i64,
     tree_hash: &str,
     ports: rk_ports::root::Ports,
+    env: &Env,
     supply_spec: &mut dyn FnMut(
         &str,
     ) -> Result<
@@ -497,6 +499,7 @@ pub fn run_with(
         now,
         tree_hash,
         ports,
+        env,
         supply_spec,
         token,
         &mut None,
@@ -523,6 +526,11 @@ pub fn run_with_advance(
     now: i64,
     tree_hash: &str,
     ports: rk_ports::root::Ports,
+    // **ADR-0162.** Threaded for the review pass alone, which builds a SECOND `Toolchain` rooted in
+    // an ephemeral reference worktree. It is a parameter rather than a second `Env::capture()`
+    // because a run has one environment, captured once at entry, and a pass that re-captured it
+    // could disagree with the dispatch that produced the findings it is confirming.
+    env: &Env,
     supply_spec: &mut dyn FnMut(
         &str,
     ) -> Result<
@@ -565,6 +573,7 @@ pub fn run_with_advance(
         now,
         tree_hash,
         ports,
+        env,
         supply_spec,
         token,
         advanced,
@@ -1283,6 +1292,7 @@ fn resume_and_read(
     now: i64,
     tree_hash: &str,
     ports: rk_ports::root::Ports,
+    env: &Env,
     supply_spec: &mut dyn FnMut(
         &str,
     ) -> Result<
@@ -1294,6 +1304,9 @@ fn resume_and_read(
 ) -> Result<Exit, Halt> {
     let item_id = resolved.item.id().to_owned();
     let store = Arc::clone(&ports.store);
+    // Cloned before `ports` is moved into `resume`: the review pass's CANDIDATE arm is this same
+    // toolchain, rooted in the run-owned worktree (ADR-0162 decision 4).
+    let candidate_toolchain = Arc::clone(&ports.toolchain);
 
     // `prior` is the store's journal FOR THE ITEM, so the fold `next_action` reads is the recorded
     // one and a second `run` resumes past an applied answer instead of re-deriving `OpenGate` at
@@ -1445,6 +1458,20 @@ fn resume_and_read(
     if advanced.is_some()
         && let Err(exit) = story_trailer(resolved)
     {
+        return Ok(exit);
+    }
+
+    // **§7h.3's call site (ADR-0162).** After the boundary and the trailer, before the terminal
+    // read: a blocking verdict is this run's last word, and it travels on the return channel.
+    if let Some(exit) = review_pass(
+        resolved,
+        env,
+        &recorded,
+        &store,
+        &candidate_toolchain,
+        tree_hash,
+        now,
+    )? {
         return Ok(exit);
     }
 
@@ -1658,6 +1685,188 @@ fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun)
 // config the bindings filled. §7d.5 fixes that order in terms, and `ClaudeHarness::dispatch`
 // refuses a `card_digest` its validated store does not hold, so building the harness before the
 // bindings would refuse every dispatch with *"names no card in the validated store"*.
+
+/// The reference worktree for the review pass: a **detached** tree at the merge base.
+///
+/// 🛑 **THE MERGE BASE NEEDS NO COMPUTATION, AND THAT IS LOAD-BEARING.** `GitOp` is ADR-0105
+/// clause 5's CLOSED set and carries no `merge-base`; widening it for this would be a decision
+/// rather than an implementation. It does not have to be. [`recreate_run_worktree`] creates
+/// `rk-run/<item>` **at `HEAD`**, so the base of `HEAD` and that branch IS `HEAD` — which is what
+/// Checkpoint 7h's own `git merge-base HEAD "rk-run/$FIX_ITEM"` returns while the run branch is
+/// ahead of it. AC-518 keeps the checkout from moving during a run, so the reading is stable for
+/// the pass's lifetime.
+fn reference_worktree(
+    exec: &GitExec,
+    repo: &WorktreePath,
+    common_dir: &Path,
+    item: &str,
+) -> Result<PathBuf, Exit> {
+    let path = common_dir
+        .join("redkiln")
+        .join("worktrees")
+        .join(format!("{item}.review-ref"));
+
+    // A leftover from a killed run is removed rather than reused: its contents are not this run's,
+    // and a reference arm read off someone else's tree is a measurement of nothing.
+    remove_reference_worktree(exec, repo, &path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", parent.display());
+            Exit::ConfigError
+        })?;
+    }
+    exec.run(
+        rk_git::git_exec::GitOp::WorktreeAdd,
+        repo,
+        [
+            std::ffi::OsStr::new("worktree"),
+            std::ffi::OsStr::new("add"),
+            std::ffi::OsStr::new("--detach"),
+            path.as_os_str(),
+            std::ffi::OsStr::new("HEAD"),
+        ],
+    )
+    .map_err(|e| {
+        eprintln!("redkiln: the review reference worktree could not be created: {e:?}");
+        Exit::ConfigError
+    })?;
+    Ok(path)
+}
+
+/// Remove the reference worktree.
+///
+/// 🛑 **ADR-0162 decision 10 — called on EVERY path, including every refusal path.** Checkpoint 7h
+/// guard (9) compares the worktree **path set** across a `git worktree prune` and fails on any
+/// difference — the path-set form ADR-0156 clause 5(d) required because *"counts cannot tell a
+/// leaked registration from a replaced one"*. A pass that left this registration behind would turn
+/// guard (9) RED and trade one failing guard for another. This is deliberately **unlike** the
+/// run-owned worktree, which is recreated and never removed: that one is the run's output and is
+/// read after the run; this one is scratch and nothing outside the pass may depend on it.
+///
+/// A failure is ignored: a leaked scratch tree is an operator problem, never a verdict.
+fn remove_reference_worktree(exec: &GitExec, repo: &WorktreePath, path: &Path) {
+    let _ = exec.run(
+        rk_git::git_exec::GitOp::WorktreeRemove,
+        repo,
+        [
+            std::ffi::OsStr::new("worktree"),
+            std::ffi::OsStr::new("remove"),
+            std::ffi::OsStr::new("--force"),
+            path.as_os_str(),
+        ],
+    );
+    let _ = std::fs::remove_dir_all(path);
+}
+
+/// **The review pass — the producer of `Exit::FindingsBlock` (ADR-0162; §7h.3's call site).**
+///
+/// `Ok(None)` is *"this activation is not a review"*, which is the ordinary path for every other
+/// stage and is silent. `Ok(Some(exit))` is a verdict or a refusal, and it travels on the **return
+/// channel** rather than an out-parameter — ADR-0161 defect (2) was exactly a refusal that reached
+/// stderr on a channel the caller did not read.
+///
+/// 🛑 **No verdict is constructed here.** `policy::Block`'s members are private and it has no
+/// public constructor (AC-294), so the only route to a block is to read one back out of a
+/// `Confirmed` the kernel produced. This function assembles inputs and reads an answer.
+fn review_pass(
+    resolved: &Resolved,
+    env: &Env,
+    recorded: &rk_kernel::replay::RecordedRun,
+    store: &Arc<Mutex<dyn rk_ports::event_store::EventStore>>,
+    candidate: &Arc<dyn rk_ports::toolchain::Toolchain>,
+    tree_hash: &str,
+    now: i64,
+) -> Result<Option<Exit>, Halt> {
+    let findings = match crate::review_pass::findings_in(&recorded.events) {
+        Ok(findings) => findings,
+        // Not a review activation. Every non-review stage takes this path.
+        Err(crate::review_pass::PassSkipped::NoFindingsRow) => return Ok(None),
+        Err(crate::review_pass::PassSkipped::Malformed(e)) => {
+            eprintln!(
+                "redkiln: the review dispatch committed a result that is not a finding set: \
+                 {e:?} — an unreadable payload is a refusal, never an empty set (AC-282)"
+            );
+            return Ok(Some(Exit::ConfigError));
+        }
+    };
+
+    let pack = match rk_kernel::select::Pack::from_toml(
+        &format!("{}.toml", resolved.pack_name),
+        &resolved.pack_src,
+    ) {
+        Ok(pack) => pack,
+        Err(e) => {
+            eprintln!("redkiln: {}.toml: {e}", resolved.pack_name);
+            return Ok(Some(Exit::ConfigError));
+        }
+    };
+    // AC-302: the tier derives from the AUTHORED stage rigor and nothing else — there is no
+    // parameter a model-produced value could arrive through.
+    let weight = rk_kernel::review::policy::resolve_review_tier(pack.rigor(&resolved.stage));
+
+    let reference = match reference_worktree(
+        &resolved.exec,
+        &resolved.worktree,
+        &resolved.common_dir,
+        resolved.item.id(),
+    ) {
+        Ok(path) => path,
+        Err(exit) => return Ok(Some(exit)),
+    };
+
+    // Everything between here and the removal is fallible, and the removal must happen on EVERY
+    // path (decision 10) — so the body is a closure whose result is held until after it.
+    let verdict = (|| -> Result<Option<Exit>, Halt> {
+        let reference_toolchain = match real_toolchain(resolved, env, &reference) {
+            Ok(toolchain) => toolchain,
+            Err(exit) => return Ok(Some(exit)),
+        };
+        let reexecutor = crate::review_pass::ToolchainReExecutor {
+            candidate: candidate.as_ref(),
+            reference: reference_toolchain.as_ref(),
+        };
+        let confirmed = crate::review_pass::confirm(
+            &findings,
+            weight,
+            tree_hash,
+            resolved.item.id(),
+            rk_types::time::Timestamp::from_unix_seconds(now),
+            &reexecutor,
+        );
+
+        // The rows reach the STORE, or `review_block` never lands in the journal that §7d.4 names
+        // as exit 4's identity and `RK-D-SINK-COUNT` has nothing to read (decision 6).
+        if !confirmed.events.is_empty() {
+            let mut guard = crate::store::acquire(store, "the review")?;
+            for event in confirmed.events.clone() {
+                if let Err(e) = guard.append(event) {
+                    drop(guard);
+                    eprintln!("redkiln: a review row could not be written: {e:?}");
+                    return Ok(Some(Exit::ConfigError));
+                }
+            }
+            drop(guard);
+        }
+
+        let blocked = confirmed.block_set();
+        if blocked.is_empty() {
+            return Ok(None);
+        }
+        eprintln!(
+            "redkiln: the review blocks on {} finding(s): {}",
+            blocked.len(),
+            blocked
+                .iter()
+                .map(|r| r.ac.clone())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        Ok(Some(Exit::FindingsBlock))
+    })();
+
+    remove_reference_worktree(&resolved.exec, &resolved.worktree, &reference);
+    verdict
+}
 
 /// The run-owned worktree: `<common-dir>/redkiln/worktrees/<item>` on `rk-run/<item>`.
 ///

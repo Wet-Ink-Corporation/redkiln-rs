@@ -28,6 +28,17 @@ test = false
 bench = false
 doc = false
 
+# The review fixture's stub `cargo` (ADR-0162). Reached through
+# env!("CARGO_BIN_EXE_rk-fixture-toolchain") and installed into a fixture repository's
+# `[adapters] toolchain_programs`, which `src/config.rs` calls "the one way a process-level test
+# reaches the fixture child". Its own source says what it is rigged to do and why.
+[[bin]]
+name = "rk-fixture-toolchain"
+path = "tests/fixtures/bin/rk-fixture-toolchain.rs"
+test = false
+bench = false
+doc = false
+
 [features]
 # Corpus-bound tests, local-only (AC-464/PIA-002); run as `cargo test --workspace --features corpus`.
 corpus = []

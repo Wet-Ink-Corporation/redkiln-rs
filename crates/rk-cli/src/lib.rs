@@ -38,6 +38,7 @@ pub mod env;
 pub mod exit;
 pub mod no_dispatch;
 pub mod repo;
+pub mod review_pass;
 pub mod signal;
 pub mod store;
 pub mod verbs;

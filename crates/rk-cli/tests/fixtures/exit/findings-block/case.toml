@@ -1,0 +1,23 @@
+# Exit `4` — `FindingsBlock`, the review gate's block verdict surfaced by `run` (ADR-0162).
+#
+# The tenth row, and the first one added since GAP 21's set closed. It is here because the row
+# became REACHABLE: `exit.rs` has said *"its producer is the kernel's, built at 7b-ii"* since 7b-ii
+# and there was no producer, which is what Checkpoint 7h guard (10) failed on.
+#
+# 🛑 **WHAT MAKES THIS FOUR AND NOT ZERO, in order.** The item sits at `stage = "review"`
+# (ADR-0156 blocker (4), supplied here for the fixture corpus only); `pack.review.toml` is the one
+# variant with a `[stage.review]` block behind the `review = "mandatory"` every variant already
+# declared; `review-min.toml` is `agent`-only, because ADR-0156 forbids a `check` or `gate` step
+# and both would refuse before a finding set was committed; the transcript's `structured_output`
+# is a `Findings` payload that validates against `schemas/Findings.json`, so the dispatch commits
+# `Typed.schema == "Findings"` and `review_pass::findings_in` selects that row; the repro's command
+# carries a `--` selection, without which the re-executor returns `None` and nothing can block; and
+# the stub toolchain fails in the candidate worktree and is green in the reference one, which is
+# the ONLY data condition that reaches `four_cell(true, false)` -> `Flipped`. `review = "mandatory"`
+# makes the weight `Strict`, and `reproduced` + `Flipped` at `Strict` is a `Block`.
+#
+# Change any one of those and the expected code is not 4 — which is the fixture's real assertion.
+args = ["run", "review-1"]
+pack = "review"
+mode = "exit:0"
+transcript = "frames.jsonl"

@@ -451,6 +451,37 @@ the lifetime of the repository**: a second lane over the same item mints nothing
 lane wrote it**, so once-per-item-for-ever is the only cardinality that keeps that instrument green.
 The title's *"per lane"* is a narrower claim than the code makes and than the reader needs.
 
+## ADR-0156 — the two axes split and the shipped review stage is unreachable
+
+**E-0156-1 (2026-09-23, Checkpoint 7h's guard (10), read at `f25440e`).** `## Consequences` opens
+*"Both axes get their first producer, the ARMED lint `conformance_every_trailer_key_has_a_producer`
+is discharged with a behavioural assertion behind it rather than by a substring, and
+`Exit::FindingsBlock` gains the producer its own declaration has been promising since 7b-ii. `s7i`'s
+first blocker … is cleared for the fixture corpus"*, and a `**What this forbids**` bullet reads
+*"Giving **the fixture pack's** review activity a `check` or `gate` step …"*. — **What is true:**
+both sentences describe the **pre-amendment** plan. `## Decision` clauses 2 and 3 were *"OVERTAKEN BY
+MEASUREMENT AND … AMENDED HERE, while this record was still `proposed` and had bound nothing"*, and
+clause 3 as it stands reads *"The `review`/`verify` call site and `Exit::FindingsBlock` are **NOT
+delivered at `s7h`** … **No fixture pack is authored**"*. So on the record's own amended terms
+neither axis got a producer, `Exit::FindingsBlock` gained none, the ARMED lint kept its `#[ignore]`
+(clause 2), and there is no fixture pack for the forbids bullet to bind. The record's own **title**
+already carries the amendment — *"clauses 2 and 3 prescribed a fixture pack and were amended"* — so
+`## Consequences` is the only half that was not carried forward. Measured at `f25440e` on
+2026-09-23: `grep -rn 'Exit::FindingsBlock' crates/rk-cli/src/ --include=*.rs | grep -v 'exit.rs'`
+returns **0** — which is precisely the condition Checkpoint 7h's guard (10) fails on, citing this
+record; and `crates/rk-cli/tests/fixtures/pack-min/` declares `review = "mandatory"` under
+`[policy] stages` while carrying **no `[stage.review]` block** and exactly two catalog activities,
+`emit-report.toml` and `second-activity.toml`, neither of them a review.
+**What this does not change:** every sentence of `## Decision` stands, and every
+`**What this forbids**` bullet stands **as written** — the fixture-pack bullet is vacuous rather
+than wrong, and it binds the moment a fixture pack exists, which is how a later stage should read
+it. The six blockers, the `0 of 102` claim and `0101` clause 5 are untouched.
+**Why the wording mattered enough to correct:** guard (10) names this record as the reason it
+fails, so a reader who follows that citation lands in `## Consequences` and is told the producer was
+delivered — the two halves of one accepted record disagreeing about whether the thing the checkpoint
+blocks on was ever built. Checkpoint 7h is the instrument that surfaced it, by failing exactly where
+the record says it should.
+
 ## ADR-0158 — the tier-1 store layer has no writer on any axis
 
 **E-0158-1 (2026-09-23, `s7h`'s own adversarial pass).** The `source` line and the Evidence section

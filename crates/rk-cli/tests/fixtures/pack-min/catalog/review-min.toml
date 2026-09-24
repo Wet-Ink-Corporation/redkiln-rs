@@ -1,0 +1,43 @@
+# pack-min's REVIEW activity — the fixture corpus for `Exit::FindingsBlock` (ADR-0162).
+#
+# 🛑 **ONE `agent` STEP, AND NO `check` OR `gate` STEP.** ADR-0156's forbids bullet bars *"Giving
+# the fixture pack's review activity a `check` or `gate` step, which would route it through a
+# refusal this record explicitly stepped around rather than through the wiring under test"* — and
+# the refusals are measured, not hypothetical: a `check` step's `expr` reads a prior step's OUTPUT
+# and step-output resolution is OWED (ADR-0136 clause 4; 94 of 94 shipped exprs read one), and the
+# shipped review activities' `record` step runs `toolchain:verdict_record`, which is not in
+# `MAPPED_VERBS` and exits 19. Either would end the walk BEFORE the review pass had a committed
+# finding set to read, so the fixture would assert the refusal rather than the wiring.
+#
+# That bullet was vacuous until this file existed, because ADR-0156 decision clause 3 said no
+# fixture pack was authored while its own Consequences assumed one (ERRATA E-0156-1). ADR-0162
+# supersedes that sentence in part and this activity is what the bullet now binds.
+#
+# **`provides` is the selector.** `bind_nodes` reads `provides.first()` for the schema file, so the
+# dispatch validates against `schemas/Findings.json` and commits `Typed.schema == "Findings"` —
+# which is exactly what `review_pass::findings_in` selects the `activity_committed` row by. The
+# stage name is NEVER matched: `resolved.stage` is compared to no string literal anywhere in
+# `crates/rk-cli/src/` and ADR-0162 decision 5 does not introduce the first one.
+[activity]
+id           = "review-min"
+version      = 1
+stage        = "review"
+provides     = ["Findings"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 }
+
+# The role is `implementer` because pack-min carries exactly ONE card and `[role.implementer]` is
+# the only row declaring a `model` — `Binder::bind` refuses a role that declares none
+# (`ConfigError::ModelUntraceable`, AC-212 b), which is the defect 8 of 8 SHIPPED roles carry and
+# this fixture deliberately does not.
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "implementer"
+outputs = "value:Findings"

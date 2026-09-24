@@ -96,8 +96,16 @@ caller, not two**: the `Slice-Verdict:` axis is not delivered (ADR-0160).
 
 ### 7h.3 The review and verify modules gain their call site
 
-🛑 **NOT DELIVERED AT THIS STAGE. ADR-0156 and ADR-0160 carry the reasons, and they are different
-reasons.** The call site is blocked by ADR-0156's **six** measured absences — blocker (0), found by
+🛑 **HALF DELIVERED, AND THE TWO HALVES HAVE DIFFERENT REASONS — ADR-0156, ADR-0160 and ADR-0162.**
+⚠️ **Corrected 2026-09-23, when guard (10) was closed.** The `review`/`verify` **call site IS
+delivered**, over the fixture corpus (ADR-0162, which supersedes ADR-0156 clause 3's *"No fixture
+pack is authored"* in part — that sentence was reasoned from ADR-0160's slice-identity absences,
+and ADR-0160 clause 5 says in terms that *"a review call site could exist without sealing a
+slice"*). The **`Slice-Verdict:` axis is NOT delivered**, and Checkpoint 7h guards (6) and (7)
+REQUIRE it to stay that way: they assert the ARMED lint still names `Slice-Verdict` as the sole
+missing producer, so sealing a slice here would turn two green guards red. The rest of this
+section stands as written. ***Previously: NOT DELIVERED AT THIS STAGE. ADR-0156 and ADR-0160
+carry the reasons, and they are different reasons.*** The call site is blocked by ADR-0156's **six** measured absences — blocker (0), found by
 running the binary, is that **8 of 8** shipped cards carry no `permission_mode` (AC-214), which is the
 exit 3 a real run now stops at one stage after the boundary it takes. The `Slice-Verdict:` axis is blocked
 by something else again (ADR-0160): `EventKind::SliceSealed` has exactly one construction in the
@@ -151,8 +159,13 @@ passes on `Story: /item`, which `split_qualified` resolves to a `BareStory` that
 - **`Slice-Verdict:` has a producer.** ❌ **ADR-0160**: `slice_sealed` has no run-path producer (its
   one construction is `doctor/rebuild.rs`, the rebuild path), `review::confirm` produces no seal, and
   `<slice>` is declared nowhere.
-- **`Exit::FindingsBlock` has a producer.** ❌ **ADR-0156**: the review stage is unreachable for six
-  measured absences, the first being that **8 of 8** shipped cards carry no `permission_mode` (AC-214).
+- **`Exit::FindingsBlock` has a producer.** ✅ **ADR-0162**, over the **fixture corpus**: a real
+  `redkiln run review-1` exits `4`, driven by `exit/findings-block/` as AC-438's tenth row. The
+  producer is `review_pass`, wired into `resume_and_read` on the return channel; the finding set is
+  read from the journal off `activity_committed.result` (`Typed.value` verbatim, AC-009), so no
+  kernel seam was owed. ⚠️ **This says nothing about the shipped tree**: ADR-0156 clause 4's
+  blockers stand, the shipped review stage is still unreachable, and `0 of 102` shipped activities
+  completing a committing walk is unchanged.
 - **No document claims the review gate is guarded against false approval** (ADR-0101 clause 5;
   S-SUBTLE-CB is UNRUN). ✅
 
@@ -237,10 +250,40 @@ git worktree prune
 wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
 [ "$wt_before" = "$wt_after" ] || { echo "FAIL: the prune changed the worktree PATH SET:"; diff <(printf '%s\n' "$wt_before") <(printf '%s\n' "$wt_after"); exit 1; }
 
-# ---- (10) THE TWO BULLETS THIS STAGE DOES NOT DELIVER, asserted as the debt they are. Each names
-# ---- its record, so a later pass that closes one deletes a guard rather than editing a claim.
-prod=$(grep -rn 'Exit::FindingsBlock' crates/rk-cli/src/ --include=*.rs | grep -v 'exit.rs' | grep -c .)
-[ "$prod" -ge 1 ] || { echo "OWED (ADR-0156): Exit::FindingsBlock still has no producer outside its own declaration — the review stage is unreachable for six measured absences, the first being 8 of 8 shipped cards with no permission_mode (AC-214)"; exit 1; }
+# ---- (10) `Exit::FindingsBlock` HAS A PRODUCER A RUN REACHES (ADR-0162 decision 7).
+#
+# 🛑 **THE AUTHORED FORM OF THIS GUARD COULD BE SATISFIED BY A DOC COMMENT, and measurement caught
+# it in the act.** As written it was `grep -rn 'Exit::FindingsBlock' crates/rk-cli/src/ | grep -v
+# exit.rs | grep -c .` with a `-ge 1` test. The moment the producer landed that grep returned
+# **three** hits and **two were prose** — `review_pass.rs`'s module header and `run.rs`'s function
+# doc comment [measured 2026-09-23]. So the authored guard would have gone green on the strength of
+# two sentences about a producer, before any run reached one.
+#
+# That is the shape this programme has paid for twice and `0160` clause 4 forbids in terms: both
+# `s7g` source lints went green while `execute_step` had no caller, and `0158` measured three
+# declared tier-1 tables with zero writers. A grep over `src/` cannot tell a producer from a
+# mention of one. So the assertion is now a **binary run that exits 4**, and the grep stays only
+# as a floor — scoped to CODE lines — that names a deleted call site at its own line.
+
+# (10a) THE BEHAVIOURAL HALF. The fixture must exist and must expect 4 before the run is read: a
+# table-driven test over a missing directory asserts nothing (Halt 8's first shape).
+test -d crates/rk-cli/tests/fixtures/exit/findings-block || { echo "FAIL: the findings-block exit fixture is absent — AC-438's table would walk past the row this guard is about"; exit 1; }
+# 🛑 `tr -d` AND NOT `$(cat …)`. Command substitution strips trailing NEWLINES and NOT a trailing
+# carriage return, so on a checkout this box's `core.autocrlf=true` smudged, the comparison would be
+# `4\r` = `4` and this guard would go red for a reason unrelated to the producer. `.gitattributes`
+# carries a `-text` row for this fixture; the guard does not depend on it.
+exp=$(tr -d '\r\n' < crates/rk-cli/tests/fixtures/exit/findings-block/expected)
+[ "$exp" = "4" ] || { echo "FAIL: findings-block/expected reads '$exp', not 4"; exit 1; }
+out=$(cargo test -p rk-cli --test it -- run::ac438_table_driven_exit_codes_over_fixtures_binary_arm --exact 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: AC-438's binary arm did not pass (rc=$rc) — a real `redkiln run` over the review fixture did not exit 4"; printf '%s\n' "$out" | tail -25; exit 1; }
+# 🛑 THE NAME IS MODULE-QUALIFIED, AND THAT IS NOT STYLE. `--exact` on the BARE function name runs
+# ZERO tests and exits 0 — measured on this very line on 2026-09-23, which is trap (4) live.
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed' || { echo "FAIL: the exit-table selection did not run exactly one test — a filter that matches nothing is a green"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
+
+# (10b) THE SOURCE FLOOR, CODE LINES ONLY. `grep -rn` prints `path:LINE:content`, so a line whose
+# content begins with `//` (or `///`, or `//!`) is excluded and prose cannot satisfy this.
+prod=$(grep -rn 'Exit::FindingsBlock' crates/rk-cli/src/ --include=*.rs | grep -v 'exit.rs' | grep -vE ':[0-9]+:[[:space:]]*//' | grep -c .)
+[ "$prod" -ge 1 ] || { echo "FAIL: no CODE line under crates/rk-cli/src/ outside exit.rs names Exit::FindingsBlock — the call site was deleted and only its doc comments remain"; exit 1; }
 
 echo "CP7H-END-OF-BLOCK reached"
 ```

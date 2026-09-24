@@ -360,6 +360,7 @@ fn ac438_table_driven_exit_codes_over_fixtures() {
             crate::support::FIXED_NOW,
             &tree_hash,
             ports,
+            &rk_cli::env::Env::capture(),
             &mut supply,
             &token,
         );
@@ -558,6 +559,7 @@ fn adr0144_post_commit_step_failure_exits_the_class_row_not_three() {
         crate::support::FIXED_NOW,
         &tree_hash,
         ports,
+        &rk_cli::env::Env::capture(),
         &mut supply,
         &token,
     );

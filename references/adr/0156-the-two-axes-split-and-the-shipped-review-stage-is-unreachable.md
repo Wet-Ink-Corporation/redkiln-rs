@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: .redkiln/catalog/ (102 activities; the per-stage census, `triage` = 0); .redkiln/packs/bug-standard.toml (no `[stage.triage]` block; `[stage.review]` at 63-76); .redkiln/catalog/code-review.toml (24-58, the five steps) and adversarial-review.toml; crates/rk-cli/src/verbs/run.rs (`bind_nodes`'s schema read at 1735-1739; the stage read at 550; `terminal_read` at 1257-1331); crates/rk-kernel/src/runtime/step.rs (`MAPPED_VERBS` at 190, the refusal at 310-315); crates/rk-kernel/src/replay.rs (1760-1763, ADR-0142's measurement — 75 of 121 guards evaluable, the 94 `check` exprs untouched); crates/rk-kernel/src/review.rs and src/verify.rs (built, tested, zero `src/` callers); crates/rk-cli/src/exit.rs (44-46, `FindingsBlock = 4` and its *"its producer is the kernel's, built at 7b-ii"*); runbook/phase-1/s7h-lane-completes.md (§7h.4's block); references/adr/0101 (clause 5); references/adr/0147 (the instrument/executor split criterion)
 supersedes: []
-superseded_by: []
+superseded_by: ["0162"]
 related: ["0101", "0136", "0142", "0147", "0148", "0152", "0155", "0157", "0158", "0160"]
 evidence: []
 consumers: []

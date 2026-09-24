@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Findings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ac", "claim", "evidence", "rationale", "repro"],
+        "properties": {
+          "ac": { "type": "string" },
+          "claim": { "type": "string" },
+          "evidence": {
+            "type": "string",
+            "enum": ["reproduced", "mutation-survived", "narrowed-pin", "advisory"]
+          },
+          "rationale": { "type": "string" },
+          "repro": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "command", "expected", "observed", "expected_when_met"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["run", "mutate"] },
+              "command": { "type": "string" },
+              "expected": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "exit"],
+                "properties": {
+                  "kind": { "type": "string", "enum": ["exit"] },
+                  "exit": { "type": "integer" }
+                }
+              },
+              "observed": { "type": "string" },
+              "expected_when_met": { "type": "string" }
+            }
+          },
+          "files": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-# `exit/<name>/` — AC-438's binary arm, and the nine rows it now carries
+# `exit/<name>/` — AC-438's binary arm, and the ten rows it now carries
 
 One directory per expected code (§7d.13: *"one directory per expected code, with an `expected` file
 carrying the integer"*), plus a `case.toml` saying how the code is reached, so the fixture is
@@ -11,6 +11,7 @@ over an empty one.
 | `gate-open` | `0` | `gate-1` omits `has_repro`; the abstention gate opens and step (10) trailers it |
 | `resume-flag` | `2` | `--resume` is not in the parser tree; clap's usage code, kept (H-1) |
 | `no-pack` | `3` | the `init` scaffold's `enabled = []` — D18-8's refusal, before any lane derivation |
+| `findings-block` | `4` | `review-1` sits at `review`, `pack.review.toml` describes that stage, and the reviewed change fails the named case at the candidate tree and passes at the base (ADR-0162) |
 | `no-record` | `5` | a `pack-min` repository never run, so no `activity_committed` row resolves `gate-1` to a run id |
 | `transport-missing-binary` | `10` | `[adapters] harness_binary` names a program that is not there |
 | `schema-no-structured-output` | `11` | a result frame carrying **no** `structured_output` — F20 |
@@ -18,7 +19,12 @@ over an empty one.
 | `cancelled-timeout` | `13` | a `hold` child under `[activity.emit-report] timeout_secs = 1` |
 | `platform-is-error` | `18` | a result frame carrying `is_error: true` |
 
-That is GAP 21's set — `0, 2, 3, 5, 10, 11 (×2), 13, 18` — complete. **Never a `12`**: §7d.4 is
+That is GAP 21's set — `0, 2, 3, 5, 10, 11 (×2), 13, 18` — complete, **plus `4`, which was not
+in it**. Row `4` was RAISED and unreachable for the whole of 7d: `exit.rs` said *"its producer is
+the kernel's, built at 7b-ii"* and there was no producer, which is the absence Checkpoint 7h guard
+(10) failed on and ADR-0162 closes. It is a fixture-corpus row and says so in its own `case.toml`:
+the shipped review stage remains unreachable for ADR-0156 clause 4's blockers, and `0 of 102`
+shipped activities completing a committing walk is unchanged by it. **Never a `12`**: §7d.4 is
 explicit that the adapter classifies its timer arm `Cancelled { by: Timeout }`, *"so this fixture is
 the binary-level instance of row `13`, not `12`, and a fixture whose `expected` reads `12` is red on
 a correct binary"*. `70` is exercised in process only.

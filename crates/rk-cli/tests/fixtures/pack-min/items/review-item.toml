@@ -1,0 +1,16 @@
+# The item the REVIEW fixture runs (ADR-0162).
+#
+# `stage = "review"` is the point: ADR-0156 blocker (4) is that NO shipped item sits at review, so
+# the shipped review stage is unreachable for that reason among five others. This fixture supplies
+# the one data condition, for the fixture corpus only - it asserts nothing about the shipped tree,
+# where `0 of 102` activities still complete a committing walk.
+#
+# `has_repro` is DECLARED true so the `[[stage.implement.require]]` abstention gate cannot open on
+# this item: an `UnknownFacet` gate would end the walk at exit 0 with no dispatch, and the fixture
+# would assert a gate rather than a verdict.
+id    = "review-1"
+kind  = "bug"
+stage = "review"
+
+[facets]
+has_repro = true

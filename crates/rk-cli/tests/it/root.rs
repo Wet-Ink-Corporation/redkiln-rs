@@ -378,6 +378,7 @@ fn signal_outside_dispatch_exits_130_writes_nothing_partial() {
         crate::support::FIXED_NOW,
         &tree_hash,
         ports,
+        &rk_cli::env::Env::capture(),
         &mut supply,
         &token,
     )
@@ -465,6 +466,7 @@ fn adr0118_poisoned_store_lock_halts_run_exit_70() {
         crate::support::FIXED_NOW,
         &tree_hash,
         ports,
+        &rk_cli::env::Env::capture(),
         &mut supply,
         &token,
     );
@@ -763,6 +765,7 @@ fn adr0083_config_constructed_once_at_root_and_threaded() {
         crate::support::FIXED_NOW,
         &tree_hash,
         ports,
+        &rk_cli::env::Env::capture(),
         &mut supply,
         &token,
     )
@@ -839,6 +842,7 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
         crate::support::FIXED_NOW,
         &tree_hash,
         ports,
+        &rk_cli::env::Env::capture(),
         &mut supply,
         &token,
     );
@@ -962,6 +966,7 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
         crate::support::FIXED_NOW,
         &tree_hash2,
         ports2,
+        &rk_cli::env::Env::capture(),
         &mut supply2,
         &token,
     )
@@ -1122,6 +1127,7 @@ fn ac485_adapter_set_resolved_once_and_run_scoped() {
         crate::support::FIXED_NOW,
         &tree_hash,
         ports,
+        &rk_cli::env::Env::capture(),
         &mut supply,
         &token,
     )
@@ -1317,6 +1323,7 @@ fn signal_during_dispatch_is_cancelled_by_signal_exit_13() {
         crate::support::FIXED_NOW,
         &tree_hash,
         ports,
+        &rk_cli::env::Env::capture(),
         &mut supply,
         &token,
     )

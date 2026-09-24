@@ -399,6 +399,7 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
         crate::support::FIXED_NOW,
         &tree_hash,
         p1,
+        &rk_cli::env::Env::capture(),
         &mut s1,
         &token,
     )
@@ -451,6 +452,7 @@ fn ac401_second_run_issues_no_dispatch_for_memoised_step() {
         crate::support::FIXED_NOW,
         &tree_hash,
         p2,
+        &rk_cli::env::Env::capture(),
         &mut s2,
         &token,
     )
@@ -798,8 +800,9 @@ struct ExitCase {
               arm (s7d §7d.4)"
 )]
 fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
-    const CASES: [&str; 9] = [
+    const CASES: [&str; 10] = [
         "cancelled-timeout",
+        "findings-block",
         "gate-open",
         "no-pack",
         "no-record",
@@ -850,6 +853,9 @@ fn ac438_table_driven_exit_codes_over_fixtures_binary_arm() {
             }
             "base" => pack_min_repo(PackVariant::Base),
             "dispatch-1s" => pack_min_repo(PackVariant::DispatchOneSecond),
+            // ADR-0162: the one variant with a `[stage.review]` block behind the
+            // `review = "mandatory"` every other variant already declared.
+            "review" => pack_min_repo(PackVariant::Review),
             other => panic!("{name}/case.toml names an unknown pack {other:?}"),
         };
         let root = repo.path();

@@ -517,6 +517,13 @@ pub enum PackVariant {
     TwoActivities,
     /// `pack.gate-1s.toml` — `gate_deadline_secs = 1`, for the expiry tests.
     GateOneSecond,
+    /// `pack.review.toml` — a real `[stage.review]` block behind the `review = "mandatory"`
+    /// every variant already declared, plus the review activity's timeout (ADR-0162).
+    ///
+    /// 🛑 **The declaration was always there and the STAGE was not**, which is why `pack-min`
+    /// could not reach a review before this variant: `[policy] stages` names `review` in every
+    /// other file in the directory and none of them describes it.
+    Review,
     /// `pack.dispatch-1s.toml` — `[activity.emit-report] timeout_secs = 1`, which is
     /// the DISPATCH's bound and not the gate's. A `hold` child under it is killed by
     /// the adapter's own timer, which the adapter classifies `Cancelled { by: Timeout }`
@@ -531,6 +538,7 @@ impl PackVariant {
             Self::TwoActivities => "pack.two-activities.toml",
             Self::GateOneSecond => "pack.gate-1s.toml",
             Self::DispatchOneSecond => "pack.dispatch-1s.toml",
+            Self::Review => "pack.review.toml",
         }
     }
 }
@@ -645,6 +653,9 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
     if variant == PackVariant::TwoActivities {
         catalog.push("second-activity.toml");
     }
+    if variant == PackVariant::Review {
+        catalog.push("review-min.toml");
+    }
     for name in catalog {
         std::fs::copy(
             src.join("catalog").join(name),
@@ -681,7 +692,82 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
          on the refusal it is named for"
     );
 
+    if variant == PackVariant::Review {
+        install_review_toolchain(root);
+    }
+
     repo
+}
+
+/// The REVIEW variant's extra installation: a toolchain the two re-execution arms can disagree on.
+///
+/// 🛑 **TWO THINGS HAD TO BE TRUE AND NEITHER WAS.** ADR-0162 decision 4 reads AC-288's four cells
+/// off `Toolchain::test` at two trees, and `four_cell`'s only `Flipped` cell is `(true, false)`.
+/// On an unmodified fixture repository BOTH arms fail — `RustToolchain::detect` wants a
+/// `Cargo.toml` at the project root and `temp_repo` commits only a `README`, so every candidate is
+/// undetected and `UndetectedToolchain` refuses every method by name. Two failing arms are
+/// `Unverifiable { both_fail }`, which AC-287 forbids from blocking, so the fixture would have
+/// been vacuous in exactly the way this stage exists to prevent.
+///
+/// So: a **committed** `Cargo.toml`, because the two arms are git worktrees and an untracked file
+/// reaches neither; and `[adapters] toolchain_programs`, which `src/config.rs` calls *"the one way
+/// a process-level test reaches the fixture child"*. The stub's own source says what it is rigged
+/// to do.
+fn install_review_toolchain(root: &Path) {
+    // Committed, not merely written: `recreate_run_worktree` and the pass's reference worktree are
+    // both `git worktree add` at HEAD, and an untracked file is in neither of them.
+    std::fs::write(
+        root.join("Cargo.toml"),
+        b"# `RustToolchain::detect` requires this file at the project root; the stub `cargo` is what\n          # actually answers. Never built.\n[package]\nname = \"rk-review-fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n",
+    )
+    .expect("the fixture manifest writes");
+    crate::git(root, &["add", "Cargo.toml"]);
+    crate::git(
+        root,
+        &["commit", "--quiet", "-m", "the review fixture's manifest"],
+    );
+
+    let stub = fixture_toolchain();
+    let escaped = stub.display().to_string().replace('\\', "\\\\");
+    let path = root.join(".redkiln").join("config.toml");
+    let src = std::fs::read_to_string(&path).expect("the fixture configuration is readable");
+    let out = src
+        .lines()
+        .map(|l| {
+            if l.trim_start().starts_with("toolchains") {
+                // ONE candidate, so the arm that answers is not a property of adapter ORDER.
+                format!(
+                    "toolchains = [\"rk-adapter-toolchain-rust\"]\ntoolchain_programs = {{ \"rk-adapter-toolchain-rust\" = \"{escaped}\" }}"
+                )
+            } else {
+                l.to_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_ne!(
+        out, src,
+        "no `toolchains` row was rewritten — the review fixture would run against whatever \
+         adapter detected, and both re-execution arms would refuse by name"
+    );
+    std::fs::write(&path, out).expect("the review configuration installs");
+}
+
+/// The stub `cargo`, as the sibling of this test binary's own `redkiln`.
+///
+/// Located through `env!("CARGO_BIN_EXE_…")` and asserted present, for the reason
+/// `fixture_child` carries: a bare name is resolved by the OS against ambient state no test
+/// controls, and an absent program turns into a plausible-looking `Transport` refusal rather than
+/// a failure that names its own remedy.
+fn fixture_toolchain() -> PathBuf {
+    let path = PathBuf::from(env!("CARGO_BIN_EXE_rk-fixture-toolchain"));
+    assert!(
+        path.is_file(),
+        "the stub toolchain {} is not built; `cargo test -p rk-cli` builds it as a [[bin]] of this \
+         package",
+        path.display()
+    );
+    path
 }
 
 /// Rewrite `[packs] enabled` in a fixture repository's configuration.
