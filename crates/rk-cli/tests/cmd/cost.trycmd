@@ -1,0 +1,14 @@
+```console
+$ redkiln cost --help
+Report the headroom an item's dispatches drew, as a batch delta or the reason none is quoted
+
+Usage: redkiln cost [OPTIONS] <ITEM>
+
+Arguments:
+  <ITEM>  The item whose dispatches to report
+
+Options:
+  -C <PATH>   Act on the repository at this path instead of the working directory
+  -h, --help  Print help
+
+```

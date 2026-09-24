@@ -65,6 +65,7 @@ mod adapter_selection;
 mod answer;
 mod catalog;
 mod config;
+mod cost;
 mod doctor;
 mod exit;
 mod explain;

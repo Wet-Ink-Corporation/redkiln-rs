@@ -1,6 +1,8 @@
-//! **The eight verbs** — one per subcommand §7d.3 declares, and as of Step 7d Slice 4 cycle 2
-//! (2026-09-20) **none of them is a stub**: Slice 2 built `init`, Slice 3 built `run`, `answer`,
-//! `status`, `catalog`, `lint` and `explain`, and [`doctor`] is this slice's.
+//! **The nine verbs** — one per subcommand the router declares: §7d.3's eight, and [`cost`].
+//!
+//! [`cost`] is the ninth, which ADR-0163 decision 1 added at Step 7i (2026-09-23). As of Step 7d
+//! Slice 4 cycle 2 (2026-09-20) **none of the eight is a stub**: Slice 2 built `init`, Slice 3 built
+//! `run`, `answer`, `status`, `catalog`, `lint` and `explain`, and [`doctor`] is this slice's.
 //!
 //! **Corrected 2026-09-20.** The two sentences that stood here said *"`doctor` is the last stub"*
 //! and, at the foot, *"`doctor` still exits `3` and says so; it is Slice 4's"*. Slice 4 is this
@@ -32,6 +34,7 @@
 
 pub mod answer;
 pub mod catalog;
+pub mod cost;
 pub mod doctor;
 pub mod explain;
 pub mod init;
@@ -178,8 +181,9 @@ impl Startup<'static> {
 
 /// Route a parsed command line to its verb.
 ///
-/// Eight arms, one per subcommand, each a distinct call — the arms are not collapsed into one
-/// wildcard, so adding a ninth subcommand is `E0004` here rather than a silent fall-through.
+/// Nine arms, one per subcommand, each a distinct call — the arms are not collapsed into one
+/// wildcard, so adding a tenth subcommand is `E0004` here rather than a silent fall-through (the
+/// ninth, `cost`, arrived that way: ADR-0163).
 ///
 /// # Errors
 /// A [`Halt`], when a verb stops rather than returning a code. None of Slice 1's stubs does; the
@@ -190,6 +194,7 @@ pub fn dispatch(cli: &Cli, env: &Env) -> Result<Exit, Halt> {
         Command::Answer(args) => answer::run(cli, args, env, Startup::real()),
         Command::Status => status::run(cli, Startup::real()),
         Command::Explain(args) => explain::run(cli, args, Startup::real()),
+        Command::Cost(args) => cost::run(cli, args),
         Command::Doctor(args) => doctor_with_rebuild_reopen(cli, args, env),
         Command::Init => init::run(cli.cwd.as_deref()),
         Command::Catalog(args) => catalog::run(cli, &args.command),

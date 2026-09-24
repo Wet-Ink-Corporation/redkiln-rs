@@ -1,0 +1,2 @@
+cost bug-1: rate_limit_reading rows in span: 4, this store's traffic only
+not attributable interleaving=2

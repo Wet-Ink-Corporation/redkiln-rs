@@ -1,0 +1,3 @@
+cost bug-1: rate_limit_reading rows in span: 10, this store's traffic only
+five_hour: n=10 resets_at=1788370800 non_monotonic
+seven_day: n=10 resets_at=1788408000 delta_ticks=2

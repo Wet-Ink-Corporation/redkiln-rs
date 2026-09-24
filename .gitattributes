@@ -46,6 +46,11 @@ crates/redkiln-migrate/tests/fixtures/legacy-mini/** -text
 #     fresh clone at `core.autocrlf=true` smudges every unpinned one. No suite on any box can see
 #     that, which is exactly why the row is written rather than discovered.
 crates/rk-cli/tests/fixtures/exit/** -text
+# Step 7i, 2026-09-23 -- ADR-0163 decision 6 appends `redkiln cost`'s corpus. `run-frames.jsonl` is
+# replayed VERBATIM to the fixture child's stdout, and every `expected.stdout` is compared to the
+# binary's stdout BYTE FOR BYTE, so a CRLF smudge would fail the walker for a reason unrelated to
+# `cost`. Same rule as the rows above: the row lands with the change that lands the files.
+crates/rk-cli/tests/fixtures/cost/** -text
 # Step 7g, 2026-09-22 — `PROGRESS.md` row 37's finding (23), and the row this file's own header
 # predicted without noticing it was already owed: "a file whose bytes a test pins is protected from
 # the slice that lands it". `config::adr0083_config_type_declared_in_kernel_and_threaded_into_run_

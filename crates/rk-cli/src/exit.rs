@@ -168,7 +168,7 @@ impl From<&StepError> for Exit {
 /// process.
 ///
 /// Both members are `&'static str` because both sets are closed at compile time: the two locks
-/// clause 4 names, and the eight verbs the router declares.
+/// clause 4 names, and the nine verbs the router declares (ADR-0163 added `cost`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Halt {
     /// A lock was found poisoned — a writer panicked while holding it. The type is matched, never

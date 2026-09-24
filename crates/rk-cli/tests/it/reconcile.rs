@@ -153,7 +153,11 @@ fn ac402_status_and_explain_do_not_reconcile() {
     // `explain.rs` did not exist — correct then, and a silent pass the moment it did: a DELETED
     // `explain.rs` would have skipped the scan and reported green. Both files exist now, so a read
     // failure is a real failure.
-    for verb in ["status.rs", "explain.rs"] {
+    //
+    // `cost.rs` joined 2026-09-23: ADR-0163 decision 1 makes `cost` read-only and forbids it
+    // reconciling, so it is a read verb in exactly this list's sense. It is covered by the SCAN
+    // only — its `run_with` takes no reconciler, so there is no recorder half to drive for it.
+    for verb in ["status.rs", "explain.rs", "cost.rs"] {
         let path = src_dir().join("verbs").join(verb);
         let src = std::fs::read_to_string(&path).unwrap_or_else(|e| {
             panic!(

@@ -9,6 +9,7 @@ Commands:
   answer   Answer an open human gate, by the option its question declared
   status   Print the roll-up across every item the store knows
   explain  Print why an item reached the state it is in, from its recorded run
+  cost     Report the headroom an item's dispatches drew, as a batch delta or the reason none is quoted
   doctor   Report what is wrong with this repository's configuration and state
   init     Create this repository's `.redkiln/` scaffold
   catalog  Read the activity catalog

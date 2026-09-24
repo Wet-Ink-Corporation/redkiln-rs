@@ -1455,3 +1455,53 @@ pub fn marker_pid(dir: &Path) -> Option<u32> {
     }
     None
 }
+
+// ------------------------------------------------------------------ the `cost` corpus (ADR-0163)
+
+/// A `rows.jsonl` from `tests/fixtures/cost/<case>/`, as the events it seeds, in file order.
+///
+/// One `{"kind":"<wire name>","payload":{…}}` per line. An unknown wire name, or a line that is
+/// not that shape, panics naming the line: a seed that silently dropped a row would change `n` or
+/// the interleaving count and the case would assert over a journal it does not describe.
+///
+/// # Panics
+/// If the file will not read or a line is not a seedable row.
+#[must_use]
+pub fn cost_rows(path: &Path) -> Vec<Event> {
+    let text = std::fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()));
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| !line.is_empty())
+        .map(|(i, line)| {
+            let row: serde_json::Value = serde_json::from_str(line)
+                .unwrap_or_else(|e| panic!("{}:{}: not JSON: {e}", path.display(), i + 1));
+            let wire = row["kind"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{}:{}: no string `kind`", path.display(), i + 1));
+            let kind = EventKind::from_wire(wire).unwrap_or_else(|| {
+                panic!("{}:{}: `{wire}` is no EventKind", path.display(), i + 1)
+            });
+            Event::new(kind, row["payload"].clone())
+        })
+        .collect()
+}
+
+/// Append `rows` to the store of the repository at `root`, opened the way the verb opens it.
+///
+/// `SqliteStore::open` creates the store if absent, so a bare `temp_repo()` is enough: `cost`
+/// needs no pack and no `.redkiln/`, only a repository and its store.
+///
+/// # Panics
+/// If the repository will not discover, the store will not open, or an append is refused.
+pub fn seed_store(root: &Path, rows: &[Event]) {
+    let repo = rk_cli::repo::discover(Some(root))
+        .unwrap_or_else(|e| panic!("the repository under test discovers: {e}"));
+    let mut store = rk_adapter_sqlite::SqliteStore::open(&repo.exec, &repo.worktree)
+        .unwrap_or_else(|e| panic!("the store opens for seeding: {e}"));
+    for row in rows {
+        store
+            .append(row.clone())
+            .unwrap_or_else(|e| panic!("the seed row {row:?} appends: {e:?}"));
+    }
+}

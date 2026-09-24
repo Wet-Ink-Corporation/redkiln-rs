@@ -129,9 +129,9 @@ fn trycmd_files() -> Vec<PathBuf> {
     out.sort();
     assert_eq!(
         out.len(),
-        9,
-        "expected nine .trycmd files under {} — one per verb and one for the root (§7d.3) — found \
-         {}: {out:?}",
+        10,
+        "expected ten .trycmd files under {} — one per verb (§7d.3's eight plus ADR-0163's `cost`) \
+         and one for the root — found {}: {out:?}",
         dir.display(),
         out.len()
     );
@@ -158,7 +158,7 @@ fn tokens(text: &str) -> Vec<String> {
 /// them is ignored"* — so nine `.trycmd` files carrying bare `$ redkiln … --help` lines with no
 /// fence were each reported `... ignored` and the test went green having executed nothing. A
 /// `TestCases` run returns no result a caller can assert on, so the guard has to be over the
-/// committed bytes: nine files, ten captures, and every file holding real captured help. A case
+/// committed bytes: ten files, eleven captures, and every file holding real captured help. A case
 /// that is skipped leaves its block empty, and an empty block has no `Usage:` line.
 #[test]
 fn ac400_help_snapshot_every_verb() {
@@ -187,9 +187,10 @@ fn ac400_help_snapshot_every_verb() {
         captures += here;
     }
     assert_eq!(
-        captures, 10,
-        "expected ten `--help` captures across the nine files — one per verb, one for the root, and \
-         one more for `catalog search`, the nested sub-surface §7d.3 names"
+        captures, 11,
+        "expected eleven `--help` captures across the ten files — one per verb (ADR-0163 made `cost` \
+         the ninth), one for the root, and one more for `catalog search`, the nested sub-surface \
+         §7d.3 names"
     );
 
     trycmd::TestCases::new()

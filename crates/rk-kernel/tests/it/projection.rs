@@ -200,14 +200,39 @@ fn rebuild_differential() {
     //
     // AC-184 names an adversarial-store variant that must produce identical output. The adversary
     // available to this crate is a store that returns the same tier-1 rows buried in tier-2 traffic.
+    //
+    // Since Step 7i (ADR-0163 decision 2) the Claude adapter appends a `rate_limit_reading` row per
+    // dispatch through the child, so the noise carries one beside every `dispatch` row — Checkpoint
+    // 7i's *"a tier-2 row added per reading moves no tier-1 projection"*. The payload is ADR-0163
+    // decision 3's six-key shape (`cli_version` as `DispatchRecord` serialises it, AC-227), written
+    // as a literal: `rk-kernel` may not depend on `rk-adapter-claude` (AC-484), so the producer's
+    // `reading_payload` is not reachable from here.
     let mut adversarial: Vec<Event> = Vec::new();
     for event in &events {
         adversarial.push(Event::new(
             EventKind::Dispatch,
             serde_json::json!({ "item": ITEM, "activity_id_at_version": "noise@1", "attempt": 1, "step_id": "noise" }),
         ));
+        adversarial.push(Event::new(
+            EventKind::RateLimitReading,
+            serde_json::json!({
+                "windows": { "five_hour": 4, "seven_day": 37 },
+                "utilization": null,
+                "resets_at": { "five_hour": 1_788_370_800_i64, "seven_day": 1_788_408_000_i64 },
+                "rate_limit_type": "five_hour",
+                "item": ITEM,
+                "cli_version": { "observed": "2.1.278" },
+            }),
+        ));
         adversarial.push(event.clone());
     }
+    assert!(
+        adversarial
+            .iter()
+            .any(|e| e.kind == EventKind::RateLimitReading),
+        "PREMISE: the adversarial store carries no `rate_limit_reading` row, so the equality below \
+         would say nothing about the one tier-2 kind Step 7i added a producer for"
+    );
     let (adv_tier_one, _) = project(&adversarial);
     assert_eq!(
         adv_tier_one.len(),

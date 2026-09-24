@@ -5,8 +5,9 @@
 //! verb reads stdin (D-15), so nothing here takes an interactive flag and nothing here is a mode.
 //!
 //! **The subcommand set is closed.** §7d.3 lists eight and says *"and no others"*: a ninth is a
-//! decision, taken in a record, not a derive attribute. At this slice each of the eight resolves to
-//! a stub in [`crate::verbs`]; Slices 2–4 replace them one lane at a time.
+//! decision, taken in a record, not a derive attribute — and ADR-0163 decision 1 is that record. It
+//! took the ninth, `cost`, and amends §7d.3's *"and no others"* to nine. Every one of the nine
+//! resolves to a built verb in [`crate::verbs`]; a tenth is a record again.
 //!
 //! **What is NOT here, and is not an omission.** There is no `--resume`, no `--continue` and no
 //! `resume` verb: `redkiln run <item>` is the sole entry for a first run and for one taken up after
@@ -62,7 +63,7 @@ pub struct Cli {
     pub command: Command,
 }
 
-/// The eight verbs, and no others (§7d.3).
+/// The nine verbs, and no others — §7d.3's eight plus `cost`, which ADR-0163 decision 1 added.
 #[derive(Debug, clap::Subcommand)]
 pub enum Command {
     /// Take the next activity for an item and exit on what it decided.
@@ -73,6 +74,8 @@ pub enum Command {
     Status,
     /// Print why an item reached the state it is in, from its recorded run.
     Explain(ExplainArgs),
+    /// Report the headroom an item's dispatches drew, as a batch delta or the reason none is quoted
+    Cost(CostArgs),
     /// Report what is wrong with this repository's configuration and state.
     Doctor(DoctorArgs),
     /// Create this repository's `.redkiln/` scaffold.
@@ -189,6 +192,16 @@ pub struct ExplainArgs {
     // AC-432: an item with no recorded resolution is an ERROR rather than a recomputation — the
     // NoRecord row of the exit table, not a silent re-derivation.
     /// The item whose recorded run to read
+    #[arg(value_name = "ITEM")]
+    pub item: String,
+}
+
+/// `redkiln cost <ITEM>` — ADR-0163 decision 1.
+#[derive(Debug, clap::Args)]
+pub struct CostArgs {
+    // A positional, like every other verb's item. It names whose readings to render and filters
+    // nothing else: ADR-0163 decision 4 reads the whole journal.
+    /// The item whose dispatches to report
     #[arg(value_name = "ITEM")]
     pub item: String,
 }
