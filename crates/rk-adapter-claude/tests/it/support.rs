@@ -16,9 +16,12 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use rk_ports::cancel::CancelToken;
+use rk_ports::event_store::{EventStore, Query, Snapshot};
 use rk_ports::fakes::VecStore;
 use rk_ports::harness::{DispatchOutcome, Harness};
 use rk_types::activity::{ActivitySpec, DispatchRecord};
+use rk_types::error::{StepError, TransportKind};
+use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
 use rk_types::typed::SchemaId;
 
@@ -366,6 +369,21 @@ pub fn bind_probe(
     worktree: &Path,
     prompt: &str,
 ) -> (Config, ActivitySpec) {
+    bind_probe_with_inputs(config, timeout_secs, worktree, prompt, &[])
+}
+
+/// As [`bind_probe`], with `extra` inputs bound after the `"prompt"` entry (ADR-0163: the
+/// `"item"` input `verbs/run.rs` binds, carried here as a value the TEST writes).
+#[must_use]
+pub fn bind_probe_with_inputs(
+    config: Config,
+    timeout_secs: u64,
+    worktree: &Path,
+    prompt: &str,
+    extra: &[(&str, serde_json::Value)],
+) -> (Config, ActivitySpec) {
+    let mut inputs = vec![("prompt".to_owned(), serde_json::json!(prompt))];
+    inputs.extend(extra.iter().map(|(k, v)| ((*k).to_owned(), v.clone())));
     let card = catalog_card("probe");
     let r = role("haiku");
     let sch = schema();
@@ -378,7 +396,7 @@ pub fn bind_probe(
             schema: &sch,
             timeout_secs,
             worktree,
-            inputs: vec![("prompt".to_owned(), serde_json::json!(prompt))],
+            inputs,
         })
         .expect("the probe card binds");
     (binder.into_config(), spec)
@@ -407,6 +425,53 @@ pub fn completed_rows(store: &VecStore) -> Vec<DispatchRecord> {
         .collect()
 }
 
+/// The `rate_limit_reading` rows in a `VecStore`, as their payloads, in journal order
+/// (ADR-0163 clause 3's fixed key set).
+#[must_use]
+pub fn reading_rows(store: &VecStore) -> Vec<serde_json::Value> {
+    store
+        .events()
+        .iter()
+        .filter(|e| e.kind == EventKind::RateLimitReading)
+        .map(|e| e.payload.clone())
+        .collect()
+}
+
+/// The kinds a `VecStore` holds, in journal order.
+#[must_use]
+pub fn kinds(store: &VecStore) -> Vec<EventKind> {
+    store.events().iter().map(|e| e.kind).collect()
+}
+
+/// A store whose every `append` fails, counting the attempts (AC-368's fault-injecting fake).
+#[derive(Debug, Default)]
+pub struct FailingStore {
+    pub attempts: usize,
+}
+
+impl EventStore for FailingStore {
+    fn append(&mut self, _event: Event) -> Result<(), StepError> {
+        self.attempts += 1;
+        Err(StepError::Transport {
+            kind: TransportKind::Io,
+            detail: "disk full (injected)".to_owned(),
+        })
+    }
+    fn query(&self, _by: Query) -> Result<Vec<Event>, StepError> {
+        Ok(Vec::new())
+    }
+    fn snapshot(&self) -> Result<Snapshot, StepError> {
+        Err(StepError::Unsupported {
+            capability: "snapshot".to_owned(),
+        })
+    }
+    fn rebuild(&mut self, _snapshot: &Snapshot) -> Result<(), StepError> {
+        Err(StepError::Unsupported {
+            capability: "rebuild".to_owned(),
+        })
+    }
+}
+
 /// Everything one dispatch through the fixture child produced.
 pub struct Replayed {
     pub outcome: DispatchOutcome,
@@ -424,6 +489,30 @@ pub fn dispatch_replay(t: &Transcript, timeout_secs: u64) -> Replayed {
         timeout_secs,
         "hello",
     )
+}
+
+/// As [`dispatch_replay`], with `extra` inputs bound beside the prompt
+/// ([`bind_probe_with_inputs`]).
+#[must_use]
+pub fn dispatch_replay_with_inputs(
+    t: &Transcript,
+    timeout_secs: u64,
+    extra: &[(&str, serde_json::Value)],
+) -> Replayed {
+    let markers = Markers::new();
+    let worktree = tempfile::tempdir().expect("a temp worktree");
+    let config = spawn_config(&markers, &format!("replay:{}", t.path.display()));
+    let (config, spec) =
+        bind_probe_with_inputs(config, timeout_secs, worktree.path(), "hello", extra);
+    let h = harness(config);
+    let mut store = VecStore::default();
+    let outcome = h.dispatch(&spec, &mut store);
+    Replayed {
+        outcome,
+        store,
+        markers,
+        worktree,
+    }
 }
 
 /// As [`dispatch_replay`], with the fixture child in an arbitrary mode and a given prompt.

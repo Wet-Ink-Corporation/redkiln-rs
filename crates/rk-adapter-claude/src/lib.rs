@@ -1,7 +1,9 @@
 //! `rk-adapter-claude` — the real `Harness` row (design §9.1; ADR-0094 decision 1's first adapter;
 //! `s7c` §7c.2–§7c.12). **Slice 4 was part A, configuration time; Slice 5 is part B, the
 //! runtime** (§7c.20 items 4 and 5): the stream is consumed inside, every termination appends one
-//! row, and headroom is integer ticks.
+//! `dispatch_completed` row — preceded, on a dispatch through the child whose stream carried a
+//! representable reading, by one `rate_limit_reading` row (ADR-0163) — and headroom is integer
+//! ticks.
 //!
 //! **What this crate is** (ADR-0099: `dispatch(&self, spec: &ActivitySpec, store: &mut dyn
 //! EventStore) -> DispatchOutcome`, blocking to completion; the `CancelToken` cloned in at
@@ -30,7 +32,7 @@
 //! | [`init`] | `system/init` → effective config as SET DIGESTS; adoption on equality; the observed version against the pin | AC-202, AC-204, AC-386, AC-226, AC-385 |
 //! | [`classify`] | every termination onto the closed ELEVEN, exhaustively, keyed on the observation | AC-229, AC-218, AC-206, AC-208, AC-523, AC-225 |
 //! | [`ttl`] | the five-state TTL classifier over `usage.cache_creation` | ADR-0113 |
-//! | [`record`] | `dispatch_completed` on every path; `mismatch_warning` derived on read; the AC-368 warning counter; the journal's two principles | AC-360, AC-368, AC-385, AC-227 |
+//! | [`record`] | `dispatch_completed` on every path; `rate_limit_reading` once per dispatch through the child (ADR-0163); `mismatch_warning` derived on read; the AC-368 warning counter over both; the journal's two principles | AC-360, AC-368, AC-385, AC-227 |
 //! | [`runner`] | the lift from `runner/src/runner.rs`: the spawn through `rk-containment`, the drain, the three-way race, the kill through the group | AC-224, AC-225, AC-215, AC-232, AC-509, RT-13, RT-3 |
 //!
 //! **`dispatch`, path by path** ([`ClaudeHarness::dispatch`]; §7c.11's list, every one ending
@@ -51,7 +53,12 @@
 //! - **through the child** (`runner::run`): `Ok(Typed)`; `Schema`; `Transport { Io | Decode }`;
 //!   `NonZero`; `Platform`; `NotAdopted`; `NotIsolated`; `Cancelled { by: Signal | Timeout }` —
 //!   each with `cli_version: Observed(v)` when the init reported a version and `Pinned` when
-//!   none was read (a kill before init, an init with no version key — `init.rs`).
+//!   none was read (a kill before init, an init with no version key — `init.rs`). **This path
+//!   alone** also appends one `rate_limit_reading` row ([`record::append_reading`]) when
+//!   `Run::last_reading` is `Some`, immediately BEFORE its `dispatch_completed` row, whether or
+//!   not the dispatch succeeded, with `item` copied from the [`ITEM_KEY`] input (ADR-0163
+//!   clauses 2 and 3). A refused stream reading leaves `last_reading` `None` and writes no row;
+//!   the pre-spawn paths and the panic arm write none.
 //! - **a panic on the runtime path** (R5-6): `runner::run` and `classify` run on a scoped thread
 //!   (below); a panic there is caught at the join and becomes `Transport { kind: Decode }` with
 //!   its row, never an unwind out of `dispatch` that appends nothing (AC-360). The child: the
@@ -132,6 +139,14 @@ use crate::throttle::{Guard, Verdict};
 /// The input key carrying the user message (the module doc: routed, a record OWED).
 pub const PROMPT_KEY: &str = "prompt";
 
+/// The input key the `rate_limit_reading` row's `item` is copied from (ADR-0163 clause 3).
+///
+/// The `"item"` entry `rk-cli`'s `verbs/run.rs` already binds on every activity. **Read for
+/// attribution only**: it is not reserved (the binder is unchanged and refuses nothing over it),
+/// it is not removed from the prompt (where it already is), and a non-string value reads as no
+/// item — `null` on the row, owned by nothing.
+pub const ITEM_KEY: &str = "item";
+
 /// The real `Harness` row: one `claude -p` per dispatch, through `rk-containment`, consumed
 /// inside, one `dispatch_completed` per termination.
 pub struct ClaudeHarness {
@@ -203,7 +218,8 @@ impl ClaudeHarness {
         &self.registry
     }
 
-    /// The AC-368 warning counter: every `dispatch_completed` append the store refused.
+    /// The AC-368 warning counter: every tier-2 append the store refused — `dispatch_completed`
+    /// and `rate_limit_reading` alike.
     #[must_use]
     pub const fn append_warnings(&self) -> &AppendWarnings {
         &self.append_warnings
@@ -291,6 +307,14 @@ impl ClaudeHarness {
                 .then(|| v.as_str().map(PathBuf::from))
                 .flatten()
         })
+    }
+
+    /// The item from the spec's inputs (ADR-0163 clause 3): a string under [`ITEM_KEY`], or
+    /// `None` — string values only, as [`Self::worktree`] reads its key.
+    fn item(spec: &ActivitySpec) -> Option<&str> {
+        spec.inputs
+            .iter()
+            .find_map(|(k, v)| (k == ITEM_KEY).then(|| v.as_str()).flatten())
     }
 
     /// Why a worktree value is refused before spawn (S5-10): a relative path would be resolved
@@ -639,6 +663,20 @@ impl Harness for ClaudeHarness {
                 detected_by: run.detected_by,
             },
         );
+        // ADR-0163 clause 2: ONE rate_limit_reading per dispatch through the child, from the
+        // stream's last representable reading, BEFORE its dispatch_completed row; a refused
+        // append is an AC-368 warning, never the outcome. The row carries THIS record's
+        // cli_version (AC-227), the one its dispatch_completed row carries. This path only — no
+        // pre-spawn return and not the panic arm above.
+        if let Some(reading) = &run.last_reading {
+            let _ = record::append_reading(
+                store,
+                reading,
+                Self::item(spec),
+                &record.cli_version,
+                &self.append_warnings,
+            );
+        }
         self.finish(store, record, run.result)
     }
 }

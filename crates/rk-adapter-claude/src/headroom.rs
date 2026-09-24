@@ -55,7 +55,7 @@
 //! key (AC-375).
 
 use rk_types::time::Timestamp;
-use rk_types::usage::{CostUsd, WindowReading};
+use rk_types::usage::{CliVersion, CostUsd, WindowReading};
 
 use crate::config::Window;
 
@@ -197,6 +197,62 @@ impl RateLimitReading {
     pub fn is_allowed(&self) -> bool {
         self.status.as_deref() == Some("allowed")
     }
+}
+
+// ---------------------------------------------------------------- the journalled payload
+
+/// The `rate_limit_reading` row's payload for `reading`, with a fixed key set of six.
+///
+/// ADR-0163 decision clause 3, superseding `0133` clause 3 in part: every member is always
+/// present and a member the frame did not carry is JSON `null`, never omitted and never coerced.
+///
+/// - `windows` — `{ five_hour, seven_day }` in ticks for [`Shape::Unified`], byte-compatible
+///   with `doctor`'s reader; `null` for [`Shape::Flat`]. Read off the shape, **never through
+///   [`RateLimitReading::ticks`]**, whose flat arm answers for both windows when `rateLimitType`
+///   names none — writing that into a window pair is the extrapolation AC-374 and `s7i` §7i.1
+///   forbid.
+/// - `utilization` — the flat reading's ticks, verbatim; `null` for the unified shape.
+/// - `resets_at` — `{ five_hour, seven_day }`, each through [`RateLimitReading::resets_at`]
+///   exactly as `0133` clause 3 prescribes (so a flat reading falls back to the top-level value),
+///   as the **integer unix seconds** the platform reported — never a formatted date.
+/// - `rate_limit_type` — verbatim, or `null`.
+/// - `item` — the dispatch's `"item"` input when it was a string (the caller's lookup), or `null`:
+///   a reading with no owner counts against attribution, never for it (ADR-0163's drivers).
+/// - `cli_version` — the dispatch record's own `cli_version`, serialised exactly as
+///   `DispatchRecord` serialises it (`{"observed": v}` or `{"pinned": v}`): AC-227's *"any
+///   harness event … carries the CLI version the dispatch actually ran against"* holds for this
+///   row as it does for `dispatch_completed`, and it is the SAME value that dispatch's
+///   `dispatch_completed` row carries.
+///
+/// No value here is a float (AC-374): ticks are `u16`, seconds are `i64`.
+#[must_use]
+pub fn reading_payload(
+    reading: &RateLimitReading,
+    item: Option<&str>,
+    cli_version: &CliVersion,
+) -> serde_json::Value {
+    let (windows, utilization) = match &reading.shape {
+        Shape::Unified { windows, .. } => (
+            serde_json::json!({
+                "five_hour": windows.five_hour,
+                "seven_day": windows.seven_day,
+            }),
+            serde_json::Value::Null,
+        ),
+        Shape::Flat { utilization } => (serde_json::Value::Null, serde_json::json!(utilization)),
+    };
+    let resets = |window: Window| reading.resets_at(window).map(Timestamp::unix_seconds);
+    serde_json::json!({
+        "windows": windows,
+        "utilization": utilization,
+        "resets_at": {
+            "five_hour": resets(Window::FiveHour),
+            "seven_day": resets(Window::SevenDay),
+        },
+        "rate_limit_type": reading.rate_limit_type,
+        "item": item,
+        "cli_version": cli_version,
+    })
 }
 
 // ---------------------------------------------------------------- the structural walker

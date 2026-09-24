@@ -10,12 +10,10 @@ use std::sync::Arc;
 use std::thread;
 
 use rk_ports::cancel::CancelToken;
-use rk_ports::event_store::{EventStore, Query, Snapshot};
 use rk_ports::fakes::VecStore;
 use rk_ports::harness::Harness;
 use rk_types::activity::ActivitySpec;
 use rk_types::error::{CancelledBy, StepError, TransportKind};
-use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
 use rk_types::retention::Retained;
 use rk_types::usage::CliVersion;
@@ -28,10 +26,23 @@ use rk_adapter_claude::env_denylist::is_denylisted;
 use rk_adapter_claude::runner::EXIT_GRACE_MS;
 
 use crate::support::{
-    Markers, Part, bind_probe, completed_rows, dispatch_bounded, dispatch_mode, dispatch_replay,
-    harness, harness_with_token, marker_count_in, megabyte_prompt, ok_transcript,
+    FailingStore, Markers, Part, bind_probe, completed_rows, dispatch_bounded, dispatch_mode,
+    dispatch_replay, harness, harness_with_token, marker_count_in, megabyte_prompt, ok_transcript,
     orphan_holder_pid_in, spawn_config, spawn_values, transcript, values, wait_until,
 };
+
+/// The payload of the ONE `dispatch_completed` row in `store`, selected by KIND — never by
+/// position, since a dispatch through the child may journal a `rate_limit_reading` before it
+/// (ADR-0163 clause 2).
+fn completed_payload(store: &VecStore) -> serde_json::Value {
+    let mut rows = store
+        .events()
+        .iter()
+        .filter(|e| e.kind == EventKind::DispatchCompleted);
+    let row = rows.next().expect("a dispatch_completed row");
+    assert!(rows.next().is_none(), "exactly one dispatch_completed row");
+    row.payload.clone()
+}
 
 /// The variant name of an outcome, for the per-path table.
 fn variant(result: &Result<rk_types::typed::Typed, StepError>) -> String {
@@ -54,8 +65,9 @@ fn variant(result: &Result<rk_types::typed::Typed, StepError>) -> String {
 /// AC-360 (adapter half): *"exactly one dispatch event is appended … AND no dispatch path exists
 /// that can terminate without appending that event"* — every path §7c.11 lists, each induced
 /// through the real `dispatch` by the fixture child's mode, a replayed frame, a flipped payload
-/// or the token, asserting exactly one `dispatch_completed` row per return and `cli_version:
-/// Pinned` on the pre-spawn rows (the throttle's two, a spawn failure, and a token that fired
+/// or the token, asserting exactly one `dispatch_completed` row per return — at most one
+/// `rate_limit_reading` beside it and before it, none on a pre-spawn path (ADR-0163 clause 2) —
+/// and `cli_version: Pinned` on the pre-spawn rows (the throttle's two, a spawn failure, and a token that fired
 /// before `dispatch` was entered — R5-5). **Nine variants (`Transport` by three kinds) plus `Ok` are
 /// driven; `Unsupported` and `Timeout { after_secs }` are not** — the adapter produces neither
 /// (§7c.11) and their arms exist in `classify.rs` by exhaustiveness alone.
@@ -77,14 +89,32 @@ fn ac360_one_event_per_termination_path() {
         );
         let got = variant(&r.outcome.result);
         assert_eq!(got, want, "path {name}: {:?}", r.outcome.result);
+        // The adapter writes TWO kinds and no other (the kernel's step_*/rate_limited rows are
+        // the kernel's): exactly one dispatch_completed, at most one rate_limit_reading, and a
+        // reading — when there is one — BEFORE the completion (ADR-0163 clause 2).
+        let kinds = crate::support::kinds(&r.store);
+        let readings = kinds
+            .iter()
+            .filter(|k| **k == EventKind::RateLimitReading)
+            .count();
         assert!(
-            r.store
-                .events()
-                .iter()
-                .all(|e| e.kind == EventKind::DispatchCompleted),
-            "path {name}: the adapter writes ONE kind (the kernel's step_*/rate_limited rows are the \
-             kernel's): {:?}",
-            r.store.events().iter().map(|e| e.kind).collect::<Vec<_>>()
+            kinds.iter().all(|k| matches!(
+                k,
+                EventKind::DispatchCompleted | EventKind::RateLimitReading
+            )),
+            "path {name}: the adapter writes dispatch_completed and rate_limit_reading and no \
+             other kind: {kinds:?}"
+        );
+        assert!(
+            readings <= 1,
+            "path {name}: at most ONE rate_limit_reading per dispatch (ADR-0163 clause 2): \
+             {kinds:?}"
+        );
+        assert_eq!(
+            kinds.last(),
+            Some(&EventKind::DispatchCompleted),
+            "path {name}: a reading, when there is one, precedes the dispatch_completed row \
+             (ADR-0163 clause 2): {kinds:?}"
         );
         if pinned {
             assert_eq!(
@@ -93,6 +123,12 @@ fn ac360_one_event_per_termination_path() {
                 "path {name}: a pre-spawn row carries the pin as Pinned, never Observed (Halt 11)"
             );
             assert_eq!(r.markers.count(), 0, "path {name}: nothing spawned");
+            assert_eq!(
+                readings, 0,
+                "path {name}: a pre-spawn path journals no reading — the guard's is the PREVIOUS \
+                 dispatch's, and re-journalling it double-counts a sample (ADR-0163 clause 2): \
+                 {kinds:?}"
+            );
         } else {
             assert_eq!(
                 r.outcome.record, rows[0],
@@ -346,17 +382,30 @@ fn ac360_one_event_per_termination_path() {
 }
 
 /// AC-227: *"any harness event written to the event store … carries the CLI version the dispatch
-/// actually ran against"* — every row the ADAPTER appends (one kind, `dispatch_completed`)
-/// carries the non-optional `CliVersion`, `Observed(v)` where an init reported one and `Pinned`
-/// on the pre-spawn rows (a pre-spawn row written `Observed` is the red — the pin masquerading as
-/// a measurement, Halt 11).
+/// actually ran against"* — EVERY row the ADAPTER appends, of both kinds it writes
+/// (`dispatch_completed` and `rate_limit_reading`, ADR-0163), carries the non-optional
+/// `CliVersion`, `Observed(v)` where an init reported one and `Pinned` on the pre-spawn rows (a
+/// pre-spawn row written `Observed` is the red — the pin masquerading as a measurement, Halt 11).
+/// The Observed arm dispatches a stream that carries a reading, so both kinds are on the store and
+/// every row is iterated, whatever its kind.
+///
+/// Kills: `cli_version` dropped from the reading payload; the reading carrying a version other
+/// than its dispatch's (e.g. the pin where the init observed one).
 ///
 /// RED (observed 2026-09-18) against the skeleton: `the Ok path appended no dispatch_completed
 /// row to iterate (AC-227)`.
 #[test]
 fn ac227_every_harness_event_carries_cli_version() {
-    // an Observed row
-    let r = dispatch_replay(&ok_transcript(), 30);
+    // Observed rows, of BOTH adapter-written kinds: a stream carrying a reading
+    let r = dispatch_replay(
+        &transcript(&[
+            Part::File("streams/init.scripted.ndjson"),
+            Part::File("streams/rate-limit-seven-day-81.scripted.ndjson"),
+            Part::File("streams/result-ok.scripted.ndjson"),
+        ]),
+        30,
+    );
+    assert!(r.outcome.result.is_ok(), "{:?}", r.outcome.result);
     let rows = completed_rows(&r.store);
     assert!(
         !rows.is_empty(),
@@ -368,10 +417,23 @@ fn ac227_every_harness_event_carries_cli_version() {
             CliVersion::Observed("2.1.278".to_owned()),
             "an init that reported a version lands as Observed(v)"
         );
-        let payload = &r.store.events()[0].payload;
-        assert!(
-            payload.get("cli_version").is_some(),
-            "the serialised row carries cli_version: {payload}"
+    }
+    let observed = serde_json::to_value(CliVersion::Observed("2.1.278".to_owned()))
+        .expect("a CliVersion serialises");
+    let events = r.store.events();
+    let written: Vec<EventKind> = events.iter().map(|e| e.kind).collect();
+    assert_eq!(
+        written,
+        vec![EventKind::RateLimitReading, EventKind::DispatchCompleted],
+        "premise: both adapter-written kinds are on the store to iterate"
+    );
+    for event in events {
+        assert_eq!(
+            event.payload.get("cli_version"),
+            Some(&observed),
+            "every adapter-written row carries the dispatch's cli_version ({:?}): {}",
+            event.kind,
+            event.payload
         );
     }
     // a pre-spawn row (a spawn failure): Pinned, never Observed
@@ -834,7 +896,7 @@ fn ac210_both_ttl_vars_set_and_recorded() {
     );
     assert_eq!(rows[0].prompt_cache_ttl, CACHE_TTL);
     assert_eq!(rows[0].subagent_prompt_cache_ttl, CACHE_TTL);
-    let payload = &r.store.events()[0].payload;
+    let payload = &completed_payload(&r.store);
     assert_eq!(payload["prompt_cache_ttl"], CACHE_TTL);
     assert_eq!(payload["subagent_prompt_cache_ttl"], CACHE_TTL);
 }
@@ -949,35 +1011,6 @@ fn dispatch_cwd_is_the_spec_worktree_never_process_cwd() {
             completed_rows(&store)[0].cli_version,
             CliVersion::Pinned(TESTED_CLI_VERSION.to_owned())
         );
-    }
-}
-
-/// A store whose every `append` fails, counting the attempts (AC-368's fault-injecting fake).
-#[derive(Debug, Default)]
-struct FailingStore {
-    attempts: usize,
-}
-
-impl EventStore for FailingStore {
-    fn append(&mut self, _event: Event) -> Result<(), StepError> {
-        self.attempts += 1;
-        Err(StepError::Transport {
-            kind: TransportKind::Io,
-            detail: "disk full (injected)".to_owned(),
-        })
-    }
-    fn query(&self, _by: Query) -> Result<Vec<Event>, StepError> {
-        Ok(Vec::new())
-    }
-    fn snapshot(&self) -> Result<Snapshot, StepError> {
-        Err(StepError::Unsupported {
-            capability: "snapshot".to_owned(),
-        })
-    }
-    fn rebuild(&mut self, _snapshot: &Snapshot) -> Result<(), StepError> {
-        Err(StepError::Unsupported {
-            capability: "rebuild".to_owned(),
-        })
     }
 }
 

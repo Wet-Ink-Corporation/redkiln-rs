@@ -16,6 +16,7 @@ mod headroom;
 mod isolation;
 #[cfg(feature = "live")]
 mod live;
+mod reading;
 mod registry;
 mod stream;
 mod support;

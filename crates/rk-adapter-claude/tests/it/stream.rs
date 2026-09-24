@@ -426,7 +426,17 @@ fn ac523_text_marker_detection_disclosed() {
         "a text-marker detection is disclosed as TextMarker on the row: {:?}",
         r.outcome.record.detected_by
     );
-    let payload = &r.store.events()[0].payload;
+    // selected by KIND: the non-allowed reading in this transcript is representable, so the
+    // adapter journals a rate_limit_reading BEFORE the dispatch_completed row (ADR-0163 clause 2)
+    // and position 0 is the reading, not the record
+    let completed: Vec<_> = r
+        .store
+        .events()
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::DispatchCompleted)
+        .collect();
+    assert_eq!(completed.len(), 1, "exactly one dispatch_completed row");
+    let payload = &completed[0].payload;
     assert_eq!(payload["detected_by"], "text_marker");
     // and an Ok row carries no detection
     let r = dispatch_replay(&crate::support::ok_transcript(), 30);

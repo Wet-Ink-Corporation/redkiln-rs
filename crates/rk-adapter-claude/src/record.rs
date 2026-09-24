@@ -1,7 +1,16 @@
-//! The record and `dispatch_completed` — the one row the adapter appends on EVERY termination path.
+//! The record and `dispatch_completed` — the one row the adapter appends on EVERY termination path —
+//! and `rate_limit_reading`, the second row it appends on SOME.
 //!
 //! Through the store it was handed, and the warning derived from it on read
-//! (`s7c` §7c.11; ADR-0126; AC-360, AC-368, AC-385, AC-227).
+//! (`s7c` §7c.11; ADR-0126; ADR-0163 clauses 2 and 3; AC-360, AC-368, AC-385, AC-227).
+//!
+//! **The two kinds.** `dispatch_completed` is unconditional: exactly one per return of
+//! `dispatch`. `rate_limit_reading` ([`append_reading`]) is conditional: at most one per
+//! dispatch, only on the path that went **through the child**, only when the stream carried a
+//! representable reading (`Run::last_reading` is `Some`), and always **before** that dispatch's
+//! `dispatch_completed` row — never on a pre-spawn refusal (the guard holds only the *previous*
+//! reading, and re-journalling it would double-count a sample) and never on the panic path
+//! (ADR-0163 clause 2, superseding `0133` clause 2's *"once per reading"* in part).
 //!
 //! **Two principles from the runner's journal, as prose — no bytes lifted.** `runner/src/journal.rs`
 //! in `redkiln-corpus` at `61f590e51cbb00301c310e46aab615563a7787b8` (cited by the commit SHA
@@ -30,7 +39,8 @@
 //! failure, a kill before init.
 //!
 //! **AC-368 — a tier-2 append failure is a warning with a counter, never a `StepError`.** The
-//! append is ATTEMPTED on every path; when the store refuses it, the failure is counted and
+//! `dispatch_completed` append is ATTEMPTED on every path, and the `rate_limit_reading` append on
+//! every path that owes one; when the store refuses either, the failure is counted and
 //! typed on the adapter's [`AppendWarnings`] (the counter AC-368 names) and `dispatch` returns the
 //! outcome it had. That is exactly what both records permit today and no more: ADR-0126's forbids
 //! reads against a path that returns *"without appending"*, decision 6 says AC-368 and AC-360
@@ -56,6 +66,8 @@ use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
 use rk_types::usage::CliVersion;
 
+use crate::headroom::{self, RateLimitReading};
+
 /// AC-385's typed warning: the child's own version disagreed with the pin.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VersionMismatch {
@@ -78,15 +90,18 @@ pub fn mismatch_warning(record: &DispatchRecord) -> Option<VersionMismatch> {
     }
 }
 
-/// One failed `dispatch_completed` append, typed (AC-368's *"surfaced as a warning with a
-/// counter"*).
+/// One failed tier-2 append — a `dispatch_completed` row or a `rate_limit_reading` row — typed
+/// (AC-368's *"surfaced as a warning with a counter"*).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppendWarning {
     /// The error the store answered.
     pub error: StepError,
 }
 
-/// The adapter's warning counter: every tier-2 append the store refused, in order. Held by the
+/// The adapter's warning counter: every tier-2 append the store refused, in order.
+///
+/// Both kinds sit on one counter, so a dispatch through the child that carried a reading can
+/// count two (the reading's, then the completion's; ADR-0163 clause 2). Held by the
 /// harness behind a `Mutex` (the harness is `Sync`; a poisoned lock is a halt, never recovered —
 /// ADR-0118).
 #[derive(Debug, Default)]
@@ -152,7 +167,52 @@ pub fn append_completed(
     record: &DispatchRecord,
     warnings: &AppendWarnings,
 ) -> Result<(), StepError> {
-    match store.append(completed_event(record)) {
+    append_counted(store, completed_event(record), warnings)
+}
+
+/// The `rate_limit_reading` event for a reading and the dispatch's item: the payload is
+/// [`headroom::reading_payload`]'s fixed key set (ADR-0163 decision clause 3).
+///
+/// It carries `cli_version` — the dispatch record's own, so the row satisfies AC-227 as its
+/// `dispatch_completed` sibling does.
+#[must_use]
+pub fn reading_event(
+    reading: &RateLimitReading,
+    item: Option<&str>,
+    cli_version: &CliVersion,
+) -> Event {
+    Event::new(
+        EventKind::RateLimitReading,
+        headroom::reading_payload(reading, item, cli_version),
+    )
+}
+
+/// Append the `rate_limit_reading` row through `store`.
+///
+/// ONCE per dispatch that went through the child, from the stream's last representable reading,
+/// before that dispatch's `dispatch_completed` row (ADR-0163 decision clause 2). The caller
+/// decides WHETHER; this only appends.
+///
+/// A refused append is counted and typed on the SAME `warnings` counter a refused
+/// `dispatch_completed` append is (AC-368; ADR-0163 clause 2's *"exactly as"*) and returned for
+/// the caller's accounting — never a `StepError` that fails the activity.
+pub fn append_reading(
+    store: &mut dyn EventStore,
+    reading: &RateLimitReading,
+    item: Option<&str>,
+    cli_version: &CliVersion,
+    warnings: &AppendWarnings,
+) -> Result<(), StepError> {
+    append_counted(store, reading_event(reading, item, cli_version), warnings)
+}
+
+/// One tier-2 append with AC-368's accounting: a refusal is recorded on `warnings` and returned.
+fn append_counted(
+    store: &mut dyn EventStore,
+    event: Event,
+    warnings: &AppendWarnings,
+) -> Result<(), StepError> {
+    match store.append(event) {
         Ok(()) => Ok(()),
         Err(e) => {
             warnings.record(e.clone());

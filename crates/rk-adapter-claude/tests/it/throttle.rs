@@ -197,7 +197,9 @@ fn ac376_throttle_refuses_without_spawn_and_appends_row() {
             .iter()
             .all(|e| e.kind == EventKind::DispatchCompleted),
         "no rate_limited row was written by the ADAPTER — that kind is the kernel's one producer \
-         (§7c.8): {:?}",
+         (§7c.8) — and no rate_limit_reading either: a pre-spawn refusal holds only the PREVIOUS \
+         dispatch's reading, and re-journalling it double-counts a sample (ADR-0163 clause 2): \
+         {:?}",
         store.events().iter().map(|e| e.kind).collect::<Vec<_>>()
     );
     assert!(
@@ -356,7 +358,10 @@ fn ac378_overage_zero_attempts_no_spawn() {
         store
             .events()
             .iter()
-            .all(|e| e.kind == EventKind::DispatchCompleted)
+            .all(|e| e.kind == EventKind::DispatchCompleted),
+        "the refused dispatch journals only its dispatch_completed row — no rate_limit_reading on \
+         a pre-spawn path (ADR-0163 clause 2): {:?}",
+        store.events().iter().map(|e| e.kind).collect::<Vec<_>>()
     );
 }
 
