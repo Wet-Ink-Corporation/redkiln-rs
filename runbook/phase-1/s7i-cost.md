@@ -18,7 +18,13 @@ events** on the tree because no run completed, and, underneath that, **ADR-0110'
 the wire name `rate_limit_reading` and has **no producer anywhere**; `DispatchRecord`'s `headroom_before` /
 `headroom_after` are `WindowReading { five_hour, seven_day }`, which has no such field.
 
-The first blocker is cleared by `s7h`. The second is cleared here, and **not by amending ADR-0110**: the reading is
+The first blocker is cleared by `s7h`. ***Corrected 2026-09-23 at this stage's open, measured at `76ae138`: it is
+NOT.*** *`s7h` made the lane advance and made a **fixture** dispatch; the shipped store still holds **zero**
+`dispatch_completed` rows (`t2_event`: `dag_assembled` 1, `reconcile_started` 3, `stage_transition` 2, read
+`mode=ro`), and **0 of 102** shipped activities complete a committing walk — `PROGRESS.md` §1 row 38 says so in terms
+(*"`s7i`'s first blocker is NOT cleared: the lane advances and nothing dispatches"*). The dispatched case is therefore
+proved over a fixture corpus, `ADR-0162`'s route, and the shipped tree renders only the empty case (ADR-0163 decision
+6).* The second is cleared here, and **not by amending ADR-0110**: the reading is
 already parsed and thrown away. `rk-adapter-claude`'s `headroom::read_rate_limit_event` returns a
 `RateLimitReading` carrying `resets_at`, `five_hour_resets_at` and `seven_day_resets_at`, and
 `ClaudeHarness::last_reading()` exposes it. Redefining the delta over "readings in one run" would be a different
@@ -32,12 +38,24 @@ exists.
 samples and a **renderer** for the draws — measured 2026-09-21, the strings `not attributable`, `low_sample` and
 `resolution_limited` appear in **no `.rs` file as output**.
 
-**This step takes no decision**: `s7f` §7f.3 names the producer and §7f.4 settles RT-19's unit.
+**This step takes no decision**: `s7f` §7f.3 names the producer and §7f.4 settles RT-19's unit. ***Corrected
+2026-09-23 at this stage's open: it takes one record, `ADR-0163`***, *and this is the third consecutive stage whose file
+said this sentence and was wrong (`s7g` took seventeen, `s7h` eleven). Building the verb surfaced what `ADR-0133` did
+not settle: `cli.rs` says a ninth verb *"is a decision, taken in a record"*; nothing on the journal says which item a
+reading belongs to, and ADR-0110's `not attributable` is computed from exactly that; `ADR-0133` clause 2's "once per
+reading" would make `n` count frames where `BatchDraw.n` counts dispatches; and clause 3's `<RFC 3339 | null>` is not
+expressible — `Timestamp` is a transparent `i64` and no crate formats RFC 3339. `ADR-0163` supersedes clauses 2 and 3 in
+part, on the operator's decisions of 2026-09-23, and `ERRATA` E-0133-2 … E-0133-5 record four defects in `ADR-0133`'s
+own text.*
 
 ### 7i.1 The producer — the reading stops being discarded
 
 The Claude adapter journals a `rate_limit_reading` row per reading it parses, with the payload fields `s7f` §7f.3's
-record names, against design §5's event table. The kind is **tier 2** and the kernel's fold already classifies it as
+record names, against design §5's event table. ***Amended 2026-09-23 by `ADR-0163` decisions 2–3:*** *one row **per
+dispatch** that went through the child, from the stream's last representable reading, before that dispatch's
+`dispatch_completed` row — so `n` counts dispatches — carrying `windows` (`null` for a flat reading), `utilization`
+(flat only), `resets_at` per window as **integer unix seconds**, `rate_limit_type`, `item`, copied from the
+`"item"` input `verbs/run.rs` already binds, and `cli_version`, which AC-227 requires of every harness event.* The kind is **tier 2** and the kernel's fold already classifies it as
 non-state-moving in three places (`breaker`, `fsm`, `memo`), so no tier-1 projection moves and **criterion (2)
 cannot regress** — which Checkpoint 7i asserts rather than assumes.
 
@@ -48,7 +66,13 @@ already enforces by returning `None` for the flat shape), and no synthesised `re
 ### 7i.2 The verb — the three renderings and nothing else
 
 `redkiln cost <item>` reads the item's `dispatch_completed` rows and its `rate_limit_reading` rows, builds the
-`Sample` sequence, and renders through `throttle::attribute`. ADR-0110's three, and the data condition of each:
+`Sample` sequence, and renders through `throttle::attribute`. ***Corrected 2026-09-23 (`ADR-0163` decision 4):***
+*"the item's `dispatch_completed` rows" is unimplementable — `DispatchRecord` carries no `item` and the store's selector
+is inert. `cost` reads the whole journal, owns a reading by its `item` member, takes the span from the item's first
+owned reading to its last, and counts interleaving over the **traffic** in it — each foreign kernel `dispatch` row and
+each foreign or unowned reading — because `attribute` counts only the samples it is given. The span also renders
+`non_monotonic`, a window with `unkeyed` readings (a `null` `resets_at`), and `no sample`; none quotes a delta.*
+ADR-0110's three, and the data condition of each:
 
 | rendering | condition |
 | --- | --- |
@@ -67,25 +91,143 @@ asserts the empty case is distinguishable from the sampled one.
 
 ### 7i.3 Checkpoint 7i
 
-- **A `rate_limit_reading` row is journalled** and carries a `resets_at`, so ADR-0110's grouping key exists.
+- **A `rate_limit_reading` row is journalled** — once per dispatch, before `dispatch_completed`, on a failed dispatch
+  too — and carries `resets_at` per window as an integer, so ADR-0110's grouping key exists.
 - **`redkiln cost <item>` exists and exits 0** on an item with dispatches, rendering exactly one of the three.
 - **The empty case is distinguishable** — an item with no dispatches does not render a `low_sample` delta.
 - **No per-run headroom figure appears** (AC-373).
 - **Criterion (2) has not regressed** — a tier-2 row added per reading moves no tier-1 projection.
 
+🛑 **HARDENED 2026-09-23 AT THIS STAGE'S OPEN, BEFORE ITS FIRST RUN (PIA-035), AND THE REASONS ARE RECORDED RATHER THAN
+SMOOTHED.** As authored the block was weak in four places. It had **no build step** over a gitignored `target/` — the
+defect Checkpoint 7f shipped with. Its criterion (2) line asserted `rc` only, omitted `--test it`, and grepped no passed
+count, so a filter matching nothing would have been a green. Its "item with dispatches" bullet named `$FIX_ITEM` as
+*"an item whose lane ran and dispatched"*, and **no item on this tree has** — the shipped store holds zero
+`dispatch_completed` rows, so the bullet could only ever read the empty case, fail its own grep, and invite a rewrite
+until the empty case passed it. And its empty-case line asserted only the **absence** of `low_sample`, which a `cost`
+that printed nothing, or printed an error and exited 0, would satisfy — **a vacuous green indistinguishable from the one
+§7i.2 forbids in terms**. So the dispatched case is now asserted **behaviourally**, by named tests that run the real
+binary over a fixture corpus (ADR-0163 decision 6, `ADR-0162`'s route); the empty case is asserted **positively** and
+on the **shipped** store; and every grep over source is a floor beneath a behavioural assertion, never the assertion.
+
 ```bash
 cd D:/repos/redkiln-rs
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
-test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent — Checkpoint 7i NOT RUN (Halt 8)"; exit 1; }
-test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM to an item whose lane ran and dispatched"; exit 1; }
-out=$(./target/debug/redkiln cost "$FIX_ITEM" 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: redkiln cost exited $rc"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE 'resolution_limited|low_sample|not attributable' || { echo "FAIL: none of ADR-0110's three renderings — an unmeasurable laundered into a measurement"; exit 1; }
-empty=$(./target/debug/redkiln cost rk-story-codex-adapter 2>&1); erc=$?
-printf '%s\n' "$empty" | grep -q 'low_sample' && { echo "FAIL: an item with no dispatches renders a low_sample delta — a vacuous green (Halt 8)"; printf '%s\n' "$empty"; exit 1; }
-printf '%s\n' "$empty" | head -3   # → READ: the empty case says there is nothing to attribute, and says it differently (erc=$erc)
-out=$(cargo test -p rk-kernel -- rebuild_differential 2>&1); rc=$?
+#
+# Every cargo reading is `out=$(…); rc=$?`, never a pipe's status: under build-lock contention cargo exits 0 having run
+# ZERO tests. Every selection is `--test it`, MODULE-QUALIFIED and `--exact` — a bare name under `--exact` runs zero
+# tests and exits 0 (measured at `s7h` guard (10a)) — and asserts each test's own `... ok` line AND an exact count.
+
+# ---- (0) THE WORKTREE PATH SET, read FIRST — before any cargo run and before any prune. Counts cannot tell a leaked
+# ---- registration from a replaced one; paths can.
+wt_before=$(git worktree list --porcelain | grep '^worktree ' | sort)
+test -n "$wt_before" || { echo "FAIL: git worktree list printed no worktree — the path-set guard would compare two empty sets"; exit 1; }
+
+# ---- (1) BUILD-OR-FAIL. A stale binary has no `cost` verb, and its usage error must not be read as a rendering.
+out=$(cargo build --workspace 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: cargo build --workspace rc=$rc — Checkpoint 7i NOT RUN (Halt 8)"; printf '%s\n' "$out" | tail -20; exit 1; }
+RK=""
+for cand in ./target/debug/redkiln ./target/debug/redkiln.exe; do [ -f "$cand" ] && RK="$cand"; done
+[ -n "$RK" ] || { echo "FAIL: the build succeeded and no redkiln binary exists — every assertion below would be about nothing"; exit 1; }
+
+# ---- (2) A rate_limit_reading ROW IS JOURNALLED: once per dispatch, before dispatch_completed, with INTEGER resets_at
+# ---- per window, on a failed dispatch too, with the item copied or null — each asserted by name (ADR-0163 2–3).
+A_TESTS="reading::rate_limit_reading_row_carries_integer_resets_at_per_window reading::rate_limit_reading_flat_shape_carries_no_windows reading::rate_limit_reading_absent_writes_no_row reading::rate_limit_reading_refused_reading_writes_no_row reading::rate_limit_reading_is_journalled_on_a_failed_dispatch reading::rate_limit_reading_item_is_copied_from_spec_inputs_or_null reading::rate_limit_reading_once_per_dispatch_carries_the_last reading::ac368_reading_append_failure_is_warning dispatch::ac360_one_event_per_termination_path"
+out=$(cargo test -p rk-adapter-claude --test it -- $A_TESTS --exact 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the producer's selection did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
+for t in $A_TESTS; do
+  printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok — renamed, deleted or not selected"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+done
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 9 passed; 0 failed' || { echo "FAIL: the producer selection did not run exactly 9 tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
+
+# ---- (3) `cost` EXISTS AND EXITS 0 ON AN ITEM WITH DISPATCHES — BEHAVIOURALLY. The shipped store holds ZERO
+# ---- dispatch_completed rows, so on this tree the bullet is met only by a real `redkiln run` over the fixture
+# ---- transcript followed by a real `redkiln cost` (the first test below), and by the seeded corpus the binary renders
+# ---- byte-for-byte (the second). The corpus must exist and be byte-pinned BEFORE the walker is read: a table-driven
+# ---- test over a missing directory asserts nothing.
+test -f crates/rk-cli/tests/fixtures/cost/run-frames.jsonl || { echo "FAIL: the cost run transcript is absent"; exit 1; }
+test -d crates/rk-cli/tests/fixtures/cost/interleaved || { echo "FAIL: the cost fixture corpus is absent — the walker would assert over nothing"; exit 1; }
+grep -qxF 'crates/rk-cli/tests/fixtures/cost/** -text' .gitattributes || { echo "FAIL: no -text row pins the cost corpus — autocrlf would smudge expected.stdout"; exit 1; }
+drift=$(git status --porcelain -- crates/rk-cli/tests/fixtures/cost); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: git status could not read the cost corpus (rc=$rc)"; exit 1; }
+[ -z "$drift" ] || { echo "FAIL: the cost corpus differs from its committed bytes:"; printf '%s\n' "$drift"; exit 1; }
+C_TESTS="cost::cost_after_a_real_run_renders_low_sample_through_the_binary cost::cost_fixture_corpus_binary_arm cost::ac395_cost_dispatches_nothing_under_a_panicking_harness cost::render_empty_is_nothing_to_attribute_never_low_sample cost::cost_output_grammar_is_closed surface::ac400_help_snapshot_every_verb run::ac438_table_driven_exit_codes_over_fixtures_binary_arm"
+out=$(cargo test -p rk-cli --test it -- $C_TESTS --exact 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the cost selection did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
+for t in $C_TESTS; do
+  printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok — renamed, deleted or not selected"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+done
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 7 passed; 0 failed' || { echo "FAIL: the cost selection did not run exactly 7 tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
+
+# ---- (4) CRITERION (2) HAS NOT REGRESSED — and the adversarial store carries a row of THIS kind, or the bullet would
+# ---- be about `Dispatch` noise and not about a reading. The count is a FLOOR beneath the test, not the assertion.
+n=$(grep -c 'EventKind::RateLimitReading' crates/rk-kernel/tests/it/projection.rs)
+[ "$n" -ge 1 ] || { echo "FAIL: rebuild_differential's adversarial store carries no rate_limit_reading noise row"; exit 1; }
+out=$(cargo test -p rk-kernel --test it -- projection::rebuild_differential --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the tier-1 projection moved when a tier-2 reading row was added (rc=$rc) — criterion (2) regressed"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -qxF 'test projection::rebuild_differential ... ok' || { echo "FAIL: rebuild_differential did not report ok"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo "FAIL: the criterion (2) selection did not run exactly one test"; exit 1; }
+
+# ---- (5) THE EMPTY CASE IS DISTINGUISHABLE, ON THE SHIPPED STORE, AND `cost` WRITES NOTHING. Asserted POSITIVELY:
+# ---- a `cost` that printed nothing, or an error, and exited 0 would satisfy an absence-only grep.
+# ---- `mode=ro` and NOT `immutable=1`: immutable ignores the WAL and could under-count.
+store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
+test -f "$store" || { echo "FAIL: no shipped store at $store"; exit 1; }
+probe='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); t2=c.execute("SELECT COUNT(*) FROM t2_event").fetchone()[0]; rl=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",("rate_limit_reading",))]; print(t2,len(rl),sum(1 for r in rl if r.get("item")==sys.argv[2]))'
+pre=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$pre" ] || { echo "FAIL: the read-only store probe did not run (rc=$rc)"; exit 1; }
+read -r t2_before rl_total owned <<< "$pre"
+[ "$owned" = "0" ] || { echo "FAIL (PRECONDITION): rk-story-codex-adapter owns $owned readings — re-point the empty case at an item that owns none; this guard does not change case silently"; exit 1; }
+empty=$("$RK" cost rk-story-codex-adapter 2>&1); erc=$?
+[ "$erc" -eq 0 ] || { echo "FAIL: cost exited $erc on an item with no readings"; printf '%s\n' "$empty"; exit 1; }
+test -n "$empty" || { echo "FAIL: cost printed NOTHING — silence is not the empty rendering (Halt 8)"; exit 1; }
+printf '%s\n' "$empty" | grep -qF 'nothing to attribute' || { echo "FAIL: the empty case does not say there is nothing to attribute"; printf '%s\n' "$empty"; exit 1; }
+if printf '%s\n' "$empty" | grep -qE 'low_sample|resolution_limited|not attributable|delta'; then
+  echo "FAIL: an item with no readings renders a sampled shape — the vacuous green §7i.2 forbids"; printf '%s\n' "$empty"; exit 1
+fi
+test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM (rk-fix-doctor-test-count at this pin) — a bare <placeholder> is a bash redirect, not an argument"; exit 1; }
+fx=$(python -c "$probe" "$store" "$FIX_ITEM"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$fx" ] || { echo "FAIL: the store probe did not run for $FIX_ITEM (rc=$rc)"; exit 1; }
+read -r _ _ fx_owned <<< "$fx"
+fout=$("$RK" cost "$FIX_ITEM" 2>&1); frc=$?
+[ "$frc" -eq 0 ] || { echo "FAIL: cost $FIX_ITEM exited $frc"; printf '%s\n' "$fout"; exit 1; }
+test -n "$fout" || { echo "FAIL: cost $FIX_ITEM printed nothing"; exit 1; }
+# The closed grammar of a WINDOW line (ADR-0163 decision 4). A line outside it is a figure no record licenses.
+GRAMMAR='^(five_hour|seven_day): (n=[1-9][0-9]* resets_at=-?[0-9]+( delta_ticks=[0-9]+)?( low_sample)?( non_monotonic)?( resolution_limited)?|unkeyed=[1-9][0-9]*|no sample)$'
+if [ "$fx_owned" = "0" ]; then
+  printf '%s\n' "$fout" | grep -qF 'nothing to attribute' || { echo "FAIL: $FIX_ITEM owns no reading and cost does not say so"; printf '%s\n' "$fout"; exit 1; }
+  if printf '%s\n' "$fout" | grep -qE 'low_sample|resolution_limited|not attributable|delta'; then
+    echo "FAIL: $FIX_ITEM owns no reading and renders a sampled shape"; printf '%s\n' "$fout"; exit 1
+  fi
+else
+  win=$(printf '%s\n' "$fout" | grep -E '^(five_hour|seven_day): ')
+  test -n "$win" || printf '%s\n' "$fout" | grep -qE '^not attributable interleaving=[1-9]' || { echo "FAIL: $FIX_ITEM owns $fx_owned readings and cost printed neither a window line nor not attributable"; exit 1; }
+  bad=$(printf '%s\n' "$win" | grep -vE "$GRAMMAR" | grep .)
+  [ -z "$bad" ] || { echo "FAIL: a window line outside ADR-0110's renderings (AC-373):"; printf '%s\n' "$bad"; exit 1; }
+fi
+post=$(python -c "$probe" "$store" rk-story-codex-adapter); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$post" ] || { echo "FAIL: the post-run store probe did not run (rc=$rc)"; exit 1; }
+read -r t2_after _ _ <<< "$post"
+[ "$t2_after" = "$t2_before" ] || { echo "FAIL: cost appended to the store ($t2_before -> $t2_after rows) — a read that writes, or a dispatch (AC-395)"; exit 1; }
+
+# ---- (6) NO PER-RUN HEADROOM FIGURE (AC-373). The assertion is BEHAVIOURAL — (3)'s closed-grammar test and (5)'s
+# ---- GRAMMAR. This grep is a FLOOR over CODE lines only, anchored to the `path:LINE:` prefix grep prints and dropping
+# ---- `//`, `/*` and `*` leaders as `crates/rk-cli/tests/it/main.rs`'s `code_lines` does.
+# ---- ⚠️ WHAT IT CANNOT SEE, said rather than claimed away: a RENAMED identifier — the AC register's own words, "a grep
+# ---- rule is defeated by renaming an identifier" — and one assembled by a macro or `concat!`. A mention inside a
+# ---- string or `#[doc = "…"]` is a code line to this grep and FAILS it, which is the safe direction.
+raw=$(grep -rnE 'headroom_for_run|run_headroom_cost' crates/*/src --include=*.rs); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the AC-373 floor could not run (grep rc=$rc)"; exit 1; }
+code=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | grep .)
+[ -z "$code" ] || { echo "FAIL: a per-run headroom identifier on a CODE line (AC-373):"; printf '%s\n' "$code"; exit 1; }
+
+# ---- (7) THE WORKTREE PATH SET IS UNCHANGED, compared BEFORE any prune; the prune is a dry run and must find nothing.
+wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
+[ "$wt_before" = "$wt_after" ] || { echo "FAIL: this block changed the worktree PATH SET:"; diff <(printf '%s\n' "$wt_before") <(printf '%s\n' "$wt_after"); exit 1; }
+stale=$(git worktree prune --dry-run -v 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: git worktree prune --dry-run could not run (rc=$rc)"; exit 1; }
+[ -z "$stale" ] || { echo "FAIL: stale worktree registrations:"; printf '%s\n' "$stale"; exit 1; }
+
 echo "CP7I-END-OF-BLOCK reached"
 ```
 

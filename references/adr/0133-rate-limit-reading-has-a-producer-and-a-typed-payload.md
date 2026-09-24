@@ -6,7 +6,7 @@ date: 2026-09-21
 legacy_id: none
 source: references/adr/0110 decision 1 (*"A delta is computed only between readings sharing one `resetsAt`; a batch that crosses a reset is split per window"*) and decision 3 (*"The throttle consults only `unifiedWindows.five_hour` and `unifiedWindows.seven_day`"*) and decision 5 (Phase-1 exit criterion (7)); references/adr/0126 decision 6 (*"The typed per-kind payload record (`s7a` §7a.5: 'The typed-payload record, per kind, off a design §5 table that must first be given types, is OWED')"* — the deferral this record discharges); references/2026-09-08-architecture-design.md §5.4's event-kind table row *"`rate_limit_event` (as read) / headroom reading | 2 | `utilization` in integer ticks, `resetsAt`, window | the adapter's stream reader (AC-380)"*; references/2026-09-08-acceptance-criteria.md AC-380 (the sole headroom source), AC-372/AC-373/AC-395 (the batch delta, `n`, `resolution_limited`), AC-220 (`doctor`'s headroom margin); `crates/rk-types/src/event_kind.rs` — `RateLimitReading` is already one of the 38 variants and already carries the wire name `rate_limit_reading`; the operator's decision of 2026-09-21, recorded as `spikes/DECISIONS-2026-09-21.md` D21-5
 supersedes: []
-superseded_by: []
+superseded_by: ["0163"]
 related: ["0095", "0099", "0110", "0126"]
 evidence: ["F6", "F31"]
 consumers: []
