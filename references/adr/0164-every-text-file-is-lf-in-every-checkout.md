@@ -147,7 +147,26 @@ Measured 2026-09-24 in the main checkout at `decc8ae` plus this change:
   `cargo fmt --all --check` rc 0 · `cargo clippy --workspace --all-targets` rc 0 · `cargo test --workspace`
   rc 0, **740 passed, 0 failed, 9 ignored** over 44 `test result:` lines. This is the first run on this box whose
   working bytes equal the index for every unpinned path.
-- **The fresh-worktree verification (decision 6):** recorded at this record's flip.
+- **Fresh-worktree verification (decision 6)**, measured 2026-09-24. `git worktree add --detach D:/repos/rk-eolv
+  ac10470` ran under this box's `core.autocrlf=true`.
+  - Census: `i/lf w/lf attr/text=auto` **1,474** (the 1,473 plus this record), with the pinned rows unchanged
+    (340 / 9 / 3). `git status` was empty before and after the suite.
+  - `cargo fmt --all --check` rc 0 and `cargo clippy --workspace --all-targets` rc 0.
+  - `cargo test --workspace --no-fail-fast` rc 0: **740 passed, 0 failed, 9 ignored over 44 `test result:`
+    lines**, identical to the main checkout. That is the property this record exists for: a fresh checkout and a
+    long-lived one now test the same bytes.
+  - The worktree was then removed.
+  - An earlier attempt at a deeper path did not check out ADR-0114's 130-character filename, which exceeded
+    Windows' 260-character path limit (`w/` empty). That was a path-length artifact, not a line-ending one, and
+    the short-path worktree above has no such gap.
+- **A finding this verification surfaced, recorded here and not repaired here.** The first fresh-worktree run
+  failed **10** tests in `rk-adapter-toolchain-node`, all at `tests/it/support.rs`' preflight: *"run
+  `pnpm install --frozen-lockfile --dir …/tests/fixtures/project` ONCE before this suite"*. The fixture's
+  `node_modules/` is git-ignored by design (s7c §7c.14). The main checkout had it installed and a fresh tree does
+  not, so the suite is green only after that one-time install (pnpm 10.33.0, from the pinned lockfile).
+  **`.github/workflows/ci.yml` carries no `pnpm` step at all** (`grep -ci pnpm` → 0). The CI-green exit
+  condition (D21-42 decision 14a) therefore owes a pnpm setup and install step in every job that runs the
+  workspace suite, and without it CI fails these ten tests on its first run on either OS.
 
-Confidence is high on the mechanism. It is standard git semantics, and the measured before and after census
-agree with it. The two suite results are what the flip waits on.
+Confidence is high. The mechanism is standard git semantics. The before and after census agree with it. And the
+suite is identical in the long-lived checkout and a fresh one.
