@@ -133,7 +133,10 @@ Two more that F40 produced, and that this revision added because the P2 scoring 
     mandatory for `L`-class activities"*, while the same run measures the **fine scope as the worse of the two**:
     on the 33 rows both scopes scored, coarse marks **5** `Stale` and fine **15**, with **10 rows flipping
     `Present` → `Stale` and none the other way** [measured, F40 §3]. **The design consequence is OPEN and needs a
-    decision in its own record.** Golden constraint 11.
+    decision in its own record.** Golden constraint 11. *(Decided 2026-09-13 by **ADR-0117**: `stale_policy` stays
+    `rematerialise` at coarse scope for every cost class, and the prescribed remedy is NOT applied. The halt's rule stands
+    for any later criterion of the same shape. This sentence was still reading OPEN on 2026-09-24, when `s8`'s hygiene pass
+    noted it.)*
 
 13. **A label set with no positive class, met on a corpus you did not build for the question.** Before you read a
     precision figure, count the positives. **0 of 41** P2 rows are "should re-run", so every `Stale` is a false

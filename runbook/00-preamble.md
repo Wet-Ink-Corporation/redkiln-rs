@@ -215,7 +215,9 @@ These hold for every step below. They are not advice; each one is a measured fai
     marks **15**, and **10 rows flip `Present` → `Stale` going coarse to fine while none flips the other way**
     [measured, F40 §3]. A document that records the criterion as firing without recording that its own remedy is
     contraindicated has absorbed half the finding. **The design consequence is OPEN, and it needs a decision, not a
-    default.**
+    default.** *(Decided 2026-09-13 by **ADR-0117**: the value stays `rematerialise` at coarse scope, and the
+    contraindicated remedy is not applied. The constraint's rule stands for any later criterion of this shape. Noted 2026-09-24 at
+    `s8`'s hygiene pass; this sentence still read OPEN.)*
 
 12. **Production code is written test-first, and every criterion is discharged by a test that discriminates.**
     This is not a new rule — **ADR-0019** makes it the product's *normal* evidence standard and this runbook simply
