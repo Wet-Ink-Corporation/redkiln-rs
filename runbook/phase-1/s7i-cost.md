@@ -182,7 +182,10 @@ for it in rk-story-codex-adapter "$FIX_ITEM"; do
   test -f ".redkiln/items/$it.toml" || { echo "FAIL: .redkiln/items/$it.toml does not exist — the empty case would be asserted over a misspelling"; exit 1; }
 done
 probe='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); t2=c.execute("SELECT COUNT(*) FROM t2_event").fetchone()[0]; rl=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",("rate_limit_reading",))]; print(t2,len(rl),sum(1 for r in rl if r.get("item")==sys.argv[2]))'
-# The CLOSED grammar of every line `cost` prints (ADR-0163 decision 4; `crates/rk-cli/src/verbs/cost.rs`'s module doc).
+# The CLOSED grammar of every line `cost` prints (ADR-0163 decision 4's eight forms; `crates/rk-cli/src/verbs/cost.rs`'s
+# module doc). ⚠️ One gap against the Rust matcher, stated: `[^[:space:]]` in Git Bash does not class U+00A0 as space,
+# so an item carrying a no-break space would pass here and not in `in_grammar`. Unreachable in this block — both items
+# it renders are ASCII ids checked against `.redkiln/items/` — and recorded rather than claimed away.
 # Draws at n < 10 carry low_sample and NO delta; draws at n >= 10 carry no low_sample, and resolution_limited exactly
 # when the delta is 0 or 1 — what `throttle::batch_draw` can produce, and nothing else.
 EMPTY_TAIL=' nothing to attribute — no rate_limit_reading row in this store names this item \([0-9]+ dispatch rows\)$'

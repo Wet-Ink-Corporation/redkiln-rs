@@ -208,17 +208,19 @@ carries all six members, and a member the frame did not carry is `null`:
   different initiative."* — **is** incurred in principle: two readings identical in every measured
   member now differ by `item`.
   It is accepted as the interim cost because the tag cannot exist before Checkpoint 8 and because a
-  reading is tier 2 and records no decision. The same option names a third ground — *"D18-14 refused
-  the same shape for `Config` and stated the rule this option breaks"*, the rule being *"no kernel
-  event payload changes"* — which is not broken: no existing payload changes, and this kind is
-  written by the adapter, never by the kernel. And a fourth, the driver *"Waiting accretes nothing"*,
-  on which `0131` deferred its wiring, **is** broken by this record: one payload member and one verb
+  reading is tier 2 and records no decision. The same option also names D18-14 — *"D18-14 refused
+  the same shape for `Config` and stated the rule this option breaks"*, the rule, in `0131`'s drivers,
+  being *"no kernel event payload changes"* — which is not broken: no row already written changes (no
+  `rate_limit_reading` row had been), and this kind is written by the adapter, never by the kernel —
+  the reading `s7d`'s own D18-14 row takes when it lets the CLI-written `reconcile_started` row gain
+  members. And `0131`'s driver *"Waiting accretes nothing"* — a ground for **deferring** the tag's
+  wiring (decision 8), not for the forbids bullet — **is** broken by this record: one payload member and one verb
   that addresses by it now exist before Checkpoint 8, and the tag's wiring inherits both. That is the
   accretion `0131` said would not happen, and it is bounded by the forbids below — the member moves
   to the tag, and no other key follows it. `cost` also reads `item` off the kernel's `dispatch`
   rows to count foreign traffic; that member is not an addressing key placed for this purpose but a
   component of the `IdempotencyKey` the kernel's activation key requires, so reading it places
-  nothing, and when `0131` decision 4's `item` tag exists `cost` reads the tag instead. Every other
+  nothing, and when `0131` decision 1's reserved `item` key is wired `cost` reads the tag instead. Every other
   kind, and every other correlation key, stays under the bullet as written. The operator's decision of
   2026-09-24, taken when this stage's adversarial pass found the conflict.
 - **`cli_version`** — the dispatch's `DispatchRecord.cli_version`, serialised exactly as that row
@@ -265,6 +267,19 @@ Exactly one of `windows` and `utilization` is non-`null`. No value in the payloa
   its utilisation is not written into both, which would be the extrapolation clause 3 refuses — and is
   counted on one `unwindowed=<N>` line rather than dropped, so it cannot shrink `n` unseen.
 - Nothing is divided by anything. There is no per-run or per-dispatch figure (AC-373).
+- **The output grammar is closed.** Every line `cost` prints is one of these eight forms, and nothing
+  else — `crates/rk-cli/src/verbs/cost.rs`'s module doc carries them as regexes and
+  `cost_output_grammar_is_closed` holds every rendering to them:
+  1. `cost <ITEM>: nothing to attribute — no rate_limit_reading row in this store names this item (<d> dispatch rows)` — the empty case, alone;
+  2. `cost <ITEM>: rate_limit_reading rows in span: <k>, this store's traffic only` — the header;
+  3. `not attributable interleaving=<N>`, `N >= 1`;
+  4. `<w>: n=<N> resets_at=<secs> low_sample` with at most one of ` non_monotonic`/` resolution_limited`, for `N < 10` — never a delta;
+  5. `<w>: n=<N> resets_at=<secs>` then exactly one of ` non_monotonic`, ` delta_ticks=<0|1> resolution_limited`, ` delta_ticks=<D >= 2>`, for `N >= 10`;
+  6. `<w>: unkeyed=<N>`, `N >= 1`;
+  7. `<w>: no sample`;
+  8. `unwindowed=<N>`, `N >= 1`;
+  where `<w>` is `five_hour` or `seven_day`. Forms 4 and 5 are exactly the combinations
+  `throttle::batch_draw` can produce.
 
 **The named limit**: "the only traffic" means the only traffic **this store saw**. Another
 repository, or interactive `claude` use on the same account, draws on the same windows and is
@@ -341,9 +356,9 @@ through `sqlite3` with `?mode=ro`. The baseline was measured, not carried: Check
 `rk-cli` **115**, `rk-kernel` **238** (5 ignored), `rk-adapter-claude` **102**, `redkiln-migrate`
 **25**; `cargo fmt --all --check` rc=0; `cargo clippy --workspace --all-targets` **0 errors**.
 
-**The decisions of clauses 2 and 3 are the operator's, taken 2026-09-23, and the `0131` supersession in
-clause 3 on 2026-09-24** in the session that opened
-`s7i`, between the options above; clause 1's item source was chosen there over the reserved-key route
+**The decisions of clauses 2 and 3 are the operator's, taken 2026-09-23** in the session that opened
+`s7i`, between the options above; **the `0131` supersession in clause 3 is the operator's of 2026-09-24**,
+taken at the stage's first adversarial pass when the conflict was found; clause 1's item source was chosen there over the reserved-key route
 on the measurement that `verbs/run.rs` already binds `"item"`.
 
 **What is NOT asserted.** That one reading per dispatch is always the *right* reading — it is the
