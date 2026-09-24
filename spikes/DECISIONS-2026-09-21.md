@@ -1283,3 +1283,129 @@ after a gate is answered it re-commits a `Gate:` trailer for the dead token and 
 open. That is 7d's producer; recorded, not repaired.
 
 ---
+
+
+## D21-38 · ADR-0162 — the review call site is built, and the guard that asserts it could have been satisfied by a doc comment
+
+`Exit::FindingsBlock = 4` has carried the sentence *"its producer is the kernel's, built at 7b-ii"*
+since 7b-ii and had **no producer**. Checkpoint 7h ran whole and failed at guard (10), and only
+there. It now reaches `CP7H-END-OF-BLOCK reached` at `5e67ac0`.
+
+**The record that blocked the route disagreed with itself, and nobody had recorded it.** ADR-0156's
+`## Decision` clause 3 says *"No fixture pack is authored"*; its `## Consequences` says
+*"`Exit::FindingsBlock` gains the producer its own declaration has been promising since 7b-ii"* and
+*"cleared for the fixture corpus"*; and two of its `What this forbids` bullets bind *"the fixture
+pack's review activity"* — a thing clause 3 says does not exist. Clauses 2 and 3 were amended while
+the record was still `proposed`, and `## Consequences` was never carried forward with them; the
+record's own **title** already says *"clauses 2 and 3 prescribed a fixture pack and were amended"*.
+**E-0156-1** records the contradiction. ADR-0162 supersedes clause 3's one sentence **in part** —
+that sentence was reasoned from ADR-0160's SLICE-IDENTITY absences, and ADR-0160 clause 5 says in
+terms that *"§7h.3's call site is separable … a review call site could exist without sealing a
+slice"*, so the withdrawal reached further than its own reason. ADR-0156 keeps `status: accepted`;
+only `superseded_by` moved.
+
+🛑 **THE GUARD WAS SATISFIABLE BY PROSE, AND MEASUREMENT CAUGHT IT IN THE ACT.** The moment the
+producer landed, guard (10)'s grep returned **three** hits and **two were doc comments** —
+`review_pass.rs`'s module header and `run.rs`'s function doc. The authored guard would have gone
+green on two sentences *about* a producer, before any run reached one. That is ADR-0160 clause 4's
+prohibition, and the shape this programme has paid for twice: both `s7g` source lints went green
+while `execute_step` had no caller, and ADR-0158 measured three declared tier-1 tables with zero
+writers. Guard (10) is now **behavioural** — a real `redkiln run` exiting `4` — with the grep kept
+only as a floor scoped to CODE lines. It was proved able to fail: `expected` reads 5 → rc=1; the
+fixture absent → rc=1; **only doc comments remaining → `code lines: 0`, rc=1**; control rc=0 either
+side, tree restored.
+
+**§7h.3 said the modules *"are not written here; they are wired"*. True of the verdict machine,
+false of three things no record named** — `impl ReExecutor` existed at three sites, **all under
+`tests/`**; `resolved.stage` is compared to no string literal anywhere in `crates/rk-cli/src/`; and
+`pack-min` declared `review = "mandatory"` with **no `[stage.review]` block** behind it, a stage the
+policy demands and the pack never described, which is the mechanical reason the fixture could not
+reach a review. **A fourth turned out not to exist**: the finding set is read from the journal off
+`activity_committed.result`, which is `Typed.value` **verbatim** (AC-009), so no kernel seam and no
+new port method were owed and `dispatch_through`'s signature is untouched.
+
+**The tenth exit row, and `4` was not in GAP 21's set** — it was RAISED and unreachable for the whole
+of 7d. Six conditions have to hold together and `findings-block/case.toml` names all six, because
+changing any one changes the expected code. The re-executor runs AC-288's four cells at **two**
+trees — `four_cell`'s only `Flipped` cell is `(true, false)`, and a command that fails at both ends
+separates nothing — with the reference arm in an **ephemeral** worktree the pass creates and
+REMOVES on every path including every refusal path: guard (9) compares worktree PATH SETS across a
+prune, so a leaked registration would have traded one failing guard for another. The merge base
+needed no new `GitOp`: `recreate_run_worktree` branches `rk-run/<item>` at `HEAD`, so the base IS
+`HEAD` and ADR-0105 clause 5's closed write set stays closed. `kind = mutate` is refused **by
+name**, because no `Toolchain` method applies a patch and Checkpoint 7a counts exactly six on that
+port.
+
+**Two latent defects found on the way, both invisible until a checkout.** `core.autocrlf=true` and
+**no `.gitattributes` row covered `exit/`** — the directory is already MIXED in the working tree
+(`cancelled-timeout/expected` CRLF, `no-record/expected` LF), so the smudge is observed rather than
+hypothetical; and guard (10a) compared `"$(cat …/expected)"` to `"4"`, which strips trailing
+newlines and **not** a trailing `\r`. Fixed both ways — a `-text` row per `.gitattributes`'s own
+stated rule, and `tr -d` in the guard so it does not depend on that row. Verified by comparing
+worktree bytes to the committed blob: the three `findings-block` files round-trip identically;
+`pack.review.toml` is worktree-CRLF/blob-LF, which is exactly what its four `pack.*.toml` siblings
+do.
+
+**NOT delivered, and the checkpoint enforces it.** The `Slice-Verdict:` axis is untouched: guards
+(6) and (7) require the ARMED lint to keep naming `Slice-Verdict` as the **sole** missing producer,
+so sealing a slice here would turn two green guards RED. ADR-0160 stands whole.
+
+**What this asserts nothing about.** The shipped tree. ADR-0156 clause 4's blockers stand, the
+shipped review stage is still unreachable, and **`0 of 102`** shipped activities completing a
+committing walk is unchanged. A fixture proves the wiring, not the catalog. ADR-0101 clause 5
+holds: S-SUBTLE-CB is UNRUN and nothing here says anything about the gate's calibration.
+
+**AND THE ADVERSARIAL PASS FOUND TEN DEFECTS IN THIS CHANGE'S OWN WORK.** Three refuting verifiers
+ran at `5e67ac0` with the producer green, Checkpoint 7h passing whole, 115/238/102/25 clean, fmt and
+clippy clean and four mutants RED. Everything below was in the tree at that point.
+
+**Six in the records (`E-0162-1`), and the citation family is the one `s7h` shipped five errata
+for.** The supersession's **stated warrant is false to the sentence it supersedes**: ADR-0162 says
+in four places that clause 3 *"was reasoned from ADR-0160's slice-identity absences"*, and clause 3
+says *"and the reason is this record's own blocker list rather than ADR-0160's"*. A **load-bearing
+ellipsis** removed *"for ADR-0156's six blockers. This record does not merge the two:"* from the
+ADR-0160 clause 5 quotation — the clause that cuts against the argument it was cited for.
+*"Two of its forbids bullets"* is **one** of seven, and `E-0156-1` said "a bullet" and was right:
+the batch contradicting itself, again. An **undated `source:` claim** was falsified by this
+record's own decision. **Decision 8 is not delivered** — the lane loop's named instrument is
+unmoved and ADR-0161's debt **stands**. And a quotation was **misattributed** to a clause that
+gives no reason at all.
+
+**Two things the record should have said about what the fixture proves.** The candidate and
+reference worktrees are **checkouts of the same commit** — both `worktree add … HEAD` — so there is
+no change under review, and the `Flipped` that reaches `policy::classify` is **manufactured** by the
+stub's check on whether its working directory ends `.review-ref`. The stub says so in its own
+header; the record did not, and **the record is what gets cited**. The wiring is real; the evidence
+is manufactured. And a second run over the same repository would exit 4 **without dispatching**
+(`is_committed`, AC-013), so *"the dispatch committed"* is a property of the fixture's freshness
+rather than of the pass.
+
+**Four in the guard, which was strictly weaker than the repo's own `code_lines`.** (10b) dropped
+only `//`, so `/* Exit::FindingsBlock */` **survived** a guard whose own comment claimed *"prose
+cannot satisfy this"* — while `tests/it/main.rs` has dropped `//`, `/*` **and** `*` all along. Both
+patterns were **unanchored**, so `grep -v 'exit.rs'` matched content as well as path and would drop
+a real producer in `pre_exit.rs`. Both anchored now, and **what the floor still cannot see is
+stated rather than claimed away**. (10a) read `expected` on a different whitespace notion than the
+test it guards, so `4 ` went red while the test stayed green.
+
+**Three in the code, repaired rather than recorded.** `reference_worktree`'s refusal arm returned
+without removing a registration `git worktree add` may already have made — a leak that turns guard
+(9) red and trades one failing guard for another. `review_pass` read `block_set()` off the
+**in-memory** `Confirmed`, so decision 6's *"and the journal is re-read"* described a behaviour the
+code did not have; the re-read is implemented and refuses when fewer `review_block` rows read back
+than findings blocked. And the `env: &Env` parameter was satisfied at **eleven** test call sites
+with `Env::capture()`, breaking an invariant `tests/it/config.rs` states in terms — not inert,
+because `run.rs` hands that map to a spawned child, and the ADR-0083 env lint is scoped to `src/`.
+
+**And in the fixture bytes.** The `.gitattributes` row protected its own fixture and left three
+identically-replayed sibling `frames.jsonl` unpinned; its rationale measured the **working tree**
+and reported a property of the **directory**, when every index blob is LF and the "mixedness" was a
+local smudge artifact. Widened to `exit/**`, seven copies normalised, all 24 now byte-identical to
+their blobs.
+
+⚠️ **One of the close's own measurements was wrong before it was right.** The first byte-fidelity
+sweep reported all 24 files differing — because `glob` returns backslash paths on Windows and
+`git show HEAD:a\b\c` silently returns empty. The instrument was broken, not the tree. *Verify the
+operation, not a proxy for it.*
+
+---
