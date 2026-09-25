@@ -1808,3 +1808,48 @@ correct:**
   s8h's `wrap` mode for S-BIN's corpus runner.
 - Checkpoint 7e's backtick-executing FAIL message, the same defect as 7h's (10a), is fixed by dated amendment in
   **s8a**.
+
+---
+
+## D21-47 · The adversarial review of the eleven s8 stage files: five operator decisions and the rules the fix round applies
+
+**Taken 2026-09-24.** Twelve read-only refuters reviewed the files at `4a8c832`: one per file, plus a cross-file
+critic. Together they found **16 BLOCKERs, about 80 MAJOR and many MINOR findings**. Most are checkpoint lines that
+could pass vacuously or could never pass, hand-offs with no receiver, and spend that could happen before its gate.
+Every D21 decision has an executing file (the critic's coverage matrix). Five findings needed the operator:
+
+| # | Question | Taken |
+| --- | --- | --- |
+| V1 | The filter-driver refusal (s8d-ii) was inverted: it refused the working case | **Refuse only when pointer files would result.** That is, when a tracked path at the fork commit selects a filter whose driver is NOT effective at any scope, or smudge is skipped. Attributes are read from the fork commit. An installed, working driver (BrittonGames' system-scope LFS) is admitted silently. This **refines D21-46 R8**, whose intent was D21-45 W4's *"would yield pointer files"*. |
+| V2 | The spike.toml story breaks byte-pinned p9 tests at its own verify | **Every test pinning a historical `spikes/p9` measurement reads the p9 tree at its pinned commit via git**, never the working tree. This is what "a test pinning a historical measurement" (D21-42 13a) means, and it closes the breakage class. The story candidate (D21-41 f) stands. |
+| V3 | AC-102's >20% dead-activity kill line over the installed two-pack set | **The threshold applies to the registered pack set, with the pack count reported (SM-027).** The installed pair is reported with its count and does not fire the kill line; its unreachability is Phase-1 scope by design (ADR-0011, E7). |
+| V4 | adversarial-review's `verdict` (step 3) reads an outcome that `record` (step 5) produces | **`verdict` moves after `record`**, as an ADR-0072 edit with a version bump, a changelog row and a lattice re-run. |
+| V5 | ADR-0080 d2's *"something the **reviewer** varies"* against the replacements' loop-varied quantity | **Recorded as the operator's reading of d2:** a re-executed outcome that the reviewer's hypothesis drives satisfies "something the reviewer varies". Root-cause's derivation (s8b) is confirmed under it. |
+
+**Rules the fix round applies, taken by the lead from the review's evidence:**
+- **ADR-0105 clause 5 has one reading.** A git WRITE not on its closed list is a supersession in part. That covers
+  s8f's `commit-tree`/`update-ref`, s8g's `Tag`/`Apply`, and s8d-ii's lock, unlock, marker, reset and clean. A READ is not
+  a supersession; s8d-ii drops its reads from its supersession, and s8c's `LsFiles`/`CheckIgnore` stand as reads.
+- **`artifact.read` has exactly one emitter: rk-store's read seam (s8f).** s8d's kernel function calls a named,
+  non-emitting stub that s8f re-points. s8f's stage-open STOP is rewritten to match.
+- **The optional-`null` rule cites ADR-0032's own Decision** (*"Absent `?` inputs are `null`"*, still standing).
+  ADR-0103 decision 4 is predicate semantics. The consistency pass's re-point to 0103 d4 was wrong and is reverted
+  in s8c, s8d and s8f.
+- **Every checkpoint replay runs with a fake `claude` first on PATH that prints the pin**, as s8h's (10) does, as well
+  as the trap `CLAUDE_CONFIG_DIR` and an unset `REDKILN_LAUNCH_RECORD`. Replaying Checkpoint 7d's Halt 2 line is then
+  meaningful before the pin moves at s8j, and a spawned `claude` is proved absent rather than assumed. The same wrapper
+  covers each stage's own process-level cargo runs, because `CLAUDE_CONFIG_DIR` in this session is the operator's real
+  account.
+- **The canonical fixture harness is `rk-fixture-child-claude`** (the `pack-min` fixtures' `harness_binary`). A shell
+  replay points `[adapters] harness_binary` at `target/debug/rk-fixture-child-claude`.
+- **Checkpoint 7c's whole re-run at s8j is split.** Its suite portion runs OUTSIDE `wrap`: no launch record, the trap
+  config and the fake `claude`. Only its live-probe portion runs under `wrap`. Launch-gate tests build their `Env`
+  explicitly, enforced by a lint.
+- **Every real run gets its own block and its own go-ahead.** In s8, the fix-lane and story-lane runs are separate
+  blocks. Each launcher line is preceded by mechanical pre-spend checks: the frozen sha is the CI-green sha, HEAD
+  descends from it with the lane paths unchanged, the fixture-proofs evidence line exists, and RT-57 is `accepted`.
+- **Records are located by the id recorded at write time**, not by title phrase or "exactly one superseding X"
+  counts. Two records legitimately supersede the same ADR (for example, s8c's B and s8d's R1 both touch ADR-0140).
+- **A time-bound guard in an earlier checkpoint is amended by the stage that moves its premise, in the same commit.**
+  For example, s8e amends Checkpoint 8a guard (7) when it un-ignores the Slice-Verdict lint. The `RK_CP_NESTED` skip
+  wraps every card or permission precondition.
