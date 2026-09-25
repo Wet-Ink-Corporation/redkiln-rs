@@ -292,3 +292,11 @@ by both arms, two missed 0/3), so across 10 items it can separate nothing. It de
 - Stage 1 is a sample of whole dispatches, one per item; findings within a dispatch are not independent, so no
   per-finding interval here is quoted as a population rate.
 - S-SEV settles the labels' vocabulary and T; it does not show that a reviewer would emit those labels.
+
+## Amendments
+
+*Amendment 1 (2026-09-25, session executing s8b):* the stage-1 sheet was generated after this method was committed
+(`bbf809c`), by `python spikes/sev/make-sheet.py stage1 --out D:/repos/redkiln-sev`: 56 findings over 10 dispatches.
+**Stage-1 sealed key sha256:** `2a5dea380f2ecda763a19b6954aaf843427e0b6345ccacce1f1dc1d8d67423b5` (`key-stage1.SEALED.json`); the
+blank sheet's normalized sha256 is `06a4450b092a9cd3362b7add6ddcf59e4c8ed712a1cfa9b26e9baf979edd2d0e`. Recorded before any
+label exists; the registered `**Sealed key sha256:** ____` line above is not edited in place (§0).
