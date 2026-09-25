@@ -27,7 +27,9 @@ use rk_types::verify::{Basis, BasisReason};
 use rk_adapter_toolchain_rust::RustToolchain;
 use rk_adapter_toolchain_rust::registry::{self, Capability, Probe, Row};
 
-use crate::support::{GENEROUS, adapter, config_with, fixture_project, is_date, minimal_env};
+use crate::support::{
+    GENEROUS, adapter, binary_range_repo, config_with, fixture_project, is_date, minimal_env,
+};
 
 const BARE_ROW: &str = include_str!("../fixtures/registry/bare_row.json");
 const UNDATED_ROW: &str = include_str!("../fixtures/registry/undated_row.json");
@@ -141,27 +143,43 @@ fn ac489_capability_registry_dated() {
         other => panic!("the shipped change_summary row answers Unsupported; got {other:?}"),
     }
 
-    // ---- the adapter answers FROM the rows it holds.
-    let scratch = tempfile::tempdir().expect("scratch");
-    let tc = adapter(GENEROUS, scratch.path());
-    match tc.change_summary("HEAD~1..HEAD") {
-        Err(StepError::Unsupported { capability }) => assert_eq!(capability, rows[0].token()),
-        other => panic!("change_summary answers Unsupported from its registry row; got {other:?}"),
-    }
-    let empty = RustToolchain::new_over_registry(
-        config_with(
-            rk_adapter_toolchain_rust::DEFAULT_PROGRAM.into(),
-            GENEROUS,
-            &fixture_project(),
-            minimal_env(),
-            scratch.path(),
+    // ---- the change_summary row is re-dated and its reason narrowed to the sealed arm.
+    // *(amended 2026-09-24, s8a, ADR-0165: the row said "no Ok is constructible" of an opaque
+    // newtype. The Text arm is now produced; the row answers only what S-BIN still owns.)*
+    match &rows[0].probe {
+        Probe::None { reason } => assert!(
+            reason.contains("Binary arm") && reason.contains("ADR-0165"),
+            "the change_summary row's reason is narrowed to the sealed Binary arm and cites the \
+             record: {reason:?}"
         ),
-        Vec::new(),
-    );
+        other => panic!("the change_summary row stays explicitly probe-less: {other:?}"),
+    }
+
+    // ---- the adapter answers FROM the rows it holds.
+    // *(amended 2026-09-24, s8a, ADR-0165: this asserted that `change_summary("HEAD~1..HEAD")`
+    // over the fixture project answered Unsupported from the row -- true of every range while no
+    // `Ok` was constructible. The row now answers the BINARY case, so the assertion moves there:
+    // over a range carrying a `.uasset`, the refusal is the row's token naming the path, and over
+    // an EMPTY registry the same range is a decode failure naming the capability.)*
+    let scratch = tempfile::tempdir().expect("scratch");
+    let repo = binary_range_repo();
+    let tc = repo.adapter(scratch.path());
+    match tc.change_summary("HEAD~1..HEAD") {
+        Err(StepError::Unsupported { capability }) => assert!(
+            capability.starts_with(rows[0].token()) && capability.contains("Content/Hero.uasset"),
+            "a binary range answers Unsupported from the change_summary row, naming the path: \
+             {capability:?}"
+        ),
+        other => panic!(
+            "change_summary over a binary range answers Unsupported from its registry row; got \
+             {other:?}"
+        ),
+    }
+    let empty = RustToolchain::new_over_registry(repo.config(scratch.path()), Vec::new());
     decode_naming(
         &empty
             .change_summary("HEAD~1..HEAD")
-            .expect_err("no Ok is constructible"),
+            .expect_err("a binary range over an EMPTY registry is never Ok"),
         "change_summary",
         "change_summary over an EMPTY registry",
     );

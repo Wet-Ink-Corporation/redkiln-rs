@@ -36,7 +36,9 @@ use crate::cancel::CancelToken;
 use crate::docs_site::DocsSite;
 use crate::event_store::{EventStore, Query, Snapshot};
 use crate::harness::{DispatchOutcome, Harness};
-use crate::toolchain::{ChangeSummary, Classification, Toolchain};
+use crate::toolchain::{
+    ChangeKind, ChangeSummary, Classification, ManifestEntry, TextChangeSummary, Toolchain,
+};
 use crate::tracker::{ExternalRef, Tracker, TypedInput};
 
 /// The message every fake's own lock carries when it is poisoned.
@@ -310,9 +312,14 @@ impl DocsSite for RecordingDocs {
 /// **A path the fixture does not name classifies as `Text`.** The fixture drives what is *not*
 /// text, which is what AC-497 turns on — `Binary` is the discriminant its port shape carries
 /// (register :7109).
+///
+/// *(added 2026-09-24, s8a, ADR-0165)* **A range carries what [`Self::with_range`] scripted for
+/// it**, and `change_summary` answers from that: `Text` when every path classifies `Text` or
+/// `Generated`, a by-name refusal when one classifies `Binary`.
 #[derive(Debug, Default)]
 pub struct FixtureToolchain {
     fixture: Vec<(String, Classification)>,
+    ranges: Vec<(String, Vec<(String, ChangeKind)>)>,
     present: bool,
 }
 
@@ -325,8 +332,22 @@ impl FixtureToolchain {
                 .into_iter()
                 .map(|(path, class)| (path.to_owned(), class))
                 .collect(),
+            ranges: Vec::new(),
             present: true,
         }
+    }
+
+    /// Script what a range carries: its changed paths and how each changed.
+    #[must_use]
+    pub fn with_range(mut self, range: &str, paths: Vec<(&str, ChangeKind)>) -> Self {
+        self.ranges.push((
+            range.to_owned(),
+            paths
+                .into_iter()
+                .map(|(path, change)| (path.to_owned(), change))
+                .collect(),
+        ));
+        self
     }
 
     /// Script `detect` as reporting the toolchain absent.
@@ -363,9 +384,61 @@ impl Toolchain for FixtureToolchain {
         Ok(found.unwrap_or(Classification::Text))
     }
 
-    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {
-        // The BODY is not written at this step — that is 7c's, behind S-BIN (ADR-0093 decision 4).
-        // The Phase-1 fake returns the opaque newtype and no real adapter implements it yet.
-        Ok(ChangeSummary(()))
+    /// *(amended 2026-09-24, s8a, ADR-0165: this returned the opaque `ChangeSummary(())` for every
+    /// range.)* The range carries the paths [`FixtureToolchain::with_range`] scripted for it, each
+    /// classified by the fixture. Every path `Text` or `Generated` yields the `Text` arm with one
+    /// manifest row per path. A path that classifies `Binary` refuses **by name** -- the capability
+    /// token, the range and the path -- because the `Binary` arm is sealed until S-BIN and a
+    /// `Text` that silently omitted the path would be the AC-497 failure. An empty or blank range,
+    /// and a range nobody scripted, refuse **by name** -- the capability token and the range --
+    /// because ADR-0165 forbids *"returning an empty `Text`, or any `Ok`, for an empty or
+    /// unresolvable range"*, and the fake answers as the Rust adapter does (amended 2026-09-25, s8a
+    /// fix round 3: both yielded an empty `Text`, so the kernel's `change_summary("")` was an `Ok`
+    /// on every walk binding this fake). A range scripted with no paths changes nothing and refuses
+    /// the same way, as the Rust adapter refuses a change-less range (amended 2026-09-25, s8a fix
+    /// round 4: it answered `Ok(Text)` with an empty manifest). The fake's `diff` stays empty: it
+    /// reads no repository, so it has no diff to carry. The `sha` is the range's head token as
+    /// written -- `HEAD` for `HEAD~1..HEAD`, the whole string for a range with no `..` -- and never
+    /// a resolved 40-hex commit: a fake reads no repository (amended 2026-09-25, s8a fix round 1).
+    fn change_summary(&self, range: &str) -> Result<ChangeSummary, StepError> {
+        let paths = self
+            .ranges
+            .iter()
+            .find(|(scripted, _)| scripted == range)
+            .map(|(_, paths)| paths.as_slice())
+            .filter(|paths| !range.trim().is_empty() && !paths.is_empty())
+            .ok_or_else(|| StepError::Unsupported {
+                capability: format!(
+                    "change_summary: the range `{range}` is empty, was never scripted, or changes \
+                     nothing; an empty, unresolvable or change-less range never yields an empty \
+                     Text (ADR-0165)"
+                ),
+            })?;
+        let mut manifest = Vec::with_capacity(paths.len());
+        for (path, change) in paths {
+            let classification = self.classify(path)?;
+            if classification == Classification::Binary {
+                return Err(StepError::Unsupported {
+                    capability: format!(
+                        "change_summary: the range `{range}` carries `{path}`, which classifies \
+                         Binary; the Binary arm is sealed until S-BIN (ADR-0165, AC-497)"
+                    ),
+                });
+            }
+            manifest.push(ManifestEntry {
+                path: path.clone(),
+                classification,
+                change: *change,
+            });
+        }
+        let sha = range
+            .split_once("..")
+            .map_or(range, |(_, head)| head)
+            .to_owned();
+        Ok(ChangeSummary::Text(TextChangeSummary {
+            sha,
+            diff: String::new(),
+            manifest,
+        }))
     }
 }

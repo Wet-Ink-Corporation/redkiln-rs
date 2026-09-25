@@ -52,6 +52,8 @@ kind = "CargoMetadata"
 source = "activity"
 schema = "CargoMetadata"
 keyed_by = "toolchain"
+# [noted 2026-09-25, s8a, D21-51] a shape fixture with no producer: after ADR-0165 d9 neither `classify` nor the
+# `Text` arm reads `cargo metadata`, so nothing emits this kind. Whether a producer exists is s8c record T's.
 
 [[contribute.verify]]
 when = "'rust' in toolchains"

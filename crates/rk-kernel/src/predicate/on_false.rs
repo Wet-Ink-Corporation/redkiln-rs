@@ -15,6 +15,11 @@
 //! not this crate's** (ADR-0114 decision 1 counts exactly these five and repairs them there before
 //! the v0 tag). What this stage owes is the rule that catches them, and those three rows are its
 //! only live red fixtures.
+//!
+//! *(amended 2026-09-25, s8a §8a.4, ADR-0166: no longer live. `s7e` repaired only
+//! `packs/incident.toml`; `s8a` converted the three bare names to `{ to, max }` tables after the
+//! tag, and ADR-0166 supersedes ADR-0114 decision 1's "repaired at Step 7e before the tag"
+//! sentence in part. The three strings are historical fixtures, captured in `tests/it/on_false.rs`.)*
 
 use serde_json::Value as Json;
 
@@ -35,6 +40,8 @@ pub enum OnFalse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OnFalseError {
     /// A string that is neither `"continue"` nor `"fail"` — the three live `catalog-b` defects.
+    /// *(amended 2026-09-25, s8a §8a.4, ADR-0166: no longer live; `s8a` repaired all three after
+    /// the tag, and they survive as the historical fixtures in `tests/it/on_false.rs`.)*
     UnknownKeyword(String),
     /// A table whose key set is not `{to, max}` and whose `to` is not `"deviate"`.
     BadTable(Vec<String>),

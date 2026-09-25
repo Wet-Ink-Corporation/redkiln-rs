@@ -37,7 +37,7 @@ use rk_ports::conformance::{
     findings, spec,
 };
 use rk_ports::fakes::{BoardTracker, FakeHarness, FixtureToolchain, RecordingDocs, VecStore};
-use rk_ports::toolchain::Classification;
+use rk_ports::toolchain::{ChangeKind, Classification};
 use rk_types::drift::Drift;
 use rk_types::error::StepError;
 
@@ -187,8 +187,18 @@ fn port_conformance_fake_rows() {
         ("target/schema.json", Classification::Generated),
     ];
     // The fake's unselected `test(&[])` runs nothing and says so (0); it implements
-    // `change_summary` as the opaque newtype, so its capability arm is the Ok path.
-    let toolchain = FixtureToolchain::from_fixture(fixture.to_vec());
+    // `change_summary` as the opaque newtype, so its capability arm is the Ok path. (Amended
+    // 2026-09-25, s8a fix round 1, ADR-0165: the opaque newtype is gone; an unscripted range now
+    // yields an empty `Text`, which is still the Ok path.) (Amended 2026-09-25, s8a fix round 3:
+    // an unscripted range now refuses by name, ADR-0165's forbids, so the row scripts the body's
+    // `HEAD~1..HEAD` over its text and generated paths and the capability arm is still the Ok path.)
+    let toolchain = FixtureToolchain::from_fixture(fixture.to_vec()).with_range(
+        "HEAD~1..HEAD",
+        vec![
+            ("README.md", ChangeKind::Modified),
+            ("target/schema.json", ChangeKind::Added),
+        ],
+    );
     conform_toolchain(&toolchain, &fixture, 0, &[]);
     exercised.insert("Toolchain".to_owned());
 

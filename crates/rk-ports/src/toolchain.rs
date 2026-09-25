@@ -9,7 +9,14 @@
 //! `change_summary`'s range type — taken here as `&[String]` and `&str` rather than as two further
 //! opaque newtypes, because `s7a` §7a.3 fixes the cost at **four** opaque newtypes and a fifth and
 //! sixth would be two more undecided things to reverse — and whether `detect` reports a bool or a
-//! version. Each is a routing and Checkpoint 7a asserts none of them.
+//! version. Each is a routing and Checkpoint 7a asserts none of them. *(Noted 2026-09-25, s8a fix
+//! round 2, ADR-0165: "four" was `s7a`'s count. `ChangeSummary` is now an enum with a finalised
+//! `Text` arm and a sealed `Binary` arm, so the crate holds three opaque newtypes, as
+//! `event_store.rs` says.)* *(Corrected 2026-09-25, s8a fix round 3: four, not three. The sealed
+//! `Binary` arm's payload, [`BinaryChangeSummary`], has the same crate-private unit field and no
+//! public constructor, so the crate holds four opaque newtypes: `Snapshot`, `ExternalRef` and
+//! `TypedInput` with no record behind them, and `BinaryChangeSummary`, the sealed slot ADR-0165
+//! stands behind and `s8i` opens.)*
 
 use rk_types::error::StepError;
 
@@ -21,25 +28,128 @@ use rk_types::error::StepError;
 /// only consumer before 7c is this port's own fake while `rk-types`' *"typed artifacts"* row
 /// (design:1699) does not name it. **A record naming the home is OWED**, and Checkpoint 7a's
 /// re-declaration ban deliberately does not cover it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Classification {
     Text,
     Binary,
     Generated,
 }
 
-/// `change_summary` returns an opaque, non-finalised newtype until S-BIN reports (**ADR-0099
-/// clause 5**, :90-91).
+/// What `change_summary` returns: a **`Text`** arm, finalised, and a **`Binary`** arm whose payload
+/// is a sealed slot until S-BIN reports (D21-42 decision 2; ADR-0165).
 ///
-/// **This is the one site in `crates/` the name may appear** (ADR-0099's forbids bullet at :131),
-/// and Checkpoint 5's grep for its absence covers `crates/` minus exactly this declaration. The
-/// rule is about where the **type** lives, not about one textual occurrence: the shape necessarily
-/// carries the name on `change_summary`'s return type and on the fake's impl too.
+/// *(amended 2026-09-24, s8a, ADR-0165: this was `pub struct ChangeSummary(pub(crate) ());`, "an
+/// opaque, non-finalised newtype until S-BIN reports" under ADR-0099 clause 5, and its doc said
+/// "This is the one site in `crates/` the name may appear" and "no real adapter implements it at
+/// this stage". Both sentences are false from this commit: ADR-0165 supersedes ADR-0099 clause 5,
+/// ADR-0093 decision 4, ADR-0094 decision 1, ADR-0135 decisions 4 and 5 and ADR-0008 in part.)*
 ///
-/// **Its body is not written here.** That is 7c's, behind S-BIN (ADR-0093 decision 4): the
-/// Phase-1 fake returns `ChangeSummary(())` and no real adapter implements it at this stage.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ChangeSummary(pub(crate) ());
+/// **The rule now.** The type is DEFINED only here. No crate outside `rk-ports` defines, aliases,
+/// redefines or implements a trait for any `...ChangeSummary` type (Checkpoint 5's ban, as the
+/// record restates it). An implementor of [`Toolchain::change_summary`] may import the type and
+/// name it in that method's signature, and may construct the `Text` arm. `rk-kernel`'s production
+/// code still names it nowhere (the surviving half of ADR-0135's fourth forbids bullet).
+///
+/// **Serialised form.** Untagged: a `Text` value serialises as its payload's four members at the
+/// top level, because the shipped catalog reads them off the value itself
+/// (`artifact:ChangeSummary.sha`, `${summarise.outputs.diff}`, `artifact:Changeset.files`).
+/// *(Amended 2026-09-25, s8a fix round 10: this read "three members", before `files`.)* A `Binary` value cannot be
+/// serialised: its payload refuses by name until S-BIN decides what it carries.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(untagged)]
+pub enum ChangeSummary {
+    /// Every path in the range classifies `Text` or `Generated`: the typed diff plus a manifest.
+    Text(TextChangeSummary),
+    /// The range carries a `Binary` path. The payload is sealed: `s8i` (S-BIN) fills it.
+    Binary(BinaryChangeSummary),
+}
+
+/// The finalised `Text` arm (ADR-0165): the members the shipped catalog already reads.
+///
+/// - `sha` -- the range's head commit, 40 hex (`adversarial-review.toml`'s `clone` step reads
+///   `artifact:ChangeSummary.sha`). That is the real adapter's value; `FixtureToolchain` echoes the
+///   range's head token as written, unresolved (amended 2026-09-25, s8a fix round 1);
+/// - `diff` -- the textual diff over the range (`change-summary.toml`'s `lint` step reads
+///   `${summarise.outputs.diff}`);
+/// - `manifest` -- one row per changed path: the path, its `classify` result, its change kind;
+/// - `files` -- serialised only, derived from `manifest`: its paths, in manifest order
+///   (`mutation-testing.toml` reads `artifact:Changeset.files`, and `Changeset` is declared
+///   `schema = "ChangeSummary"`). *(Amended 2026-09-25, s8a fix round 10: the member list read
+///   `sha`, `diff` and `manifest` only, and missed the `Changeset` alias.)* It is not a stored
+///   field, so no implementor can construct a value whose `files` disagrees with its manifest.
+///
+/// Public members, because a `Toolchain` implementor constructs this arm. A value that misses a
+/// member the catalog reads is a value that resolves nothing, so none is optional.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextChangeSummary {
+    /// The range's head commit.
+    pub sha: String,
+    /// The textual diff over the range.
+    pub diff: String,
+    /// One row per changed path.
+    pub manifest: Vec<ManifestEntry>,
+}
+
+impl serde::Serialize for TextChangeSummary {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let files: Vec<&str> = self.manifest.iter().map(|e| e.path.as_str()).collect();
+        let mut s = serializer.serialize_struct("TextChangeSummary", 4)?;
+        s.serialize_field("sha", &self.sha)?;
+        s.serialize_field("diff", &self.diff)?;
+        s.serialize_field("files", &files)?;
+        s.serialize_field("manifest", &self.manifest)?;
+        s.end()
+    }
+}
+
+/// One manifest row: a changed path, what `classify` says about it, and how it changed.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct ManifestEntry {
+    /// The path, relative to the repository root, `/`-separated.
+    pub path: String,
+    /// `Toolchain::classify`'s answer for the path. *(Amended 2026-09-25, s8a fix round 15: for
+    /// the Rust adapter it is `classify`'s path rules with the bytes decided on the range's blobs
+    /// (`RangeEntry::binary`), never on the working tree (s8a fix round 14, ADR-0165 decisions 3
+    /// and 6), so it can differ from the `classify` verb's working-tree answer for the same path.)*
+    pub classification: Classification,
+    /// How the path changed over the range.
+    pub change: ChangeKind,
+}
+
+/// How a path changed over a range. Rename tracking is not requested, so a rename reads as a
+/// deletion and an addition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChangeKind {
+    /// The path exists at the head end only.
+    Added,
+    /// The path exists at the base end only.
+    Deleted,
+    /// The path exists at both ends with different content or mode.
+    Modified,
+}
+
+/// The `Binary` arm's payload: a **sealed slot** until S-BIN reports at `s8i` (ADR-0165).
+///
+/// The type is public so the enum can name it; its one field is `pub(crate)` and it has no
+/// public constructor, no `Default` and no `From`, so no crate outside `rk-ports` can build one
+/// (`tests/ui/change_summary_binary_not_constructible.rs` pins the privacy reason). Nothing inside
+/// `rk-ports` constructs it either: [`crate::fakes::FixtureToolchain`] refuses a range carrying a
+/// `Binary` path by name rather than answering this arm. **`s8i` supersedes this seal by name**
+/// when S-BIN finalises what the arm carries; a later record opens the slot.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryChangeSummary(pub(crate) ());
+
+impl serde::Serialize for BinaryChangeSummary {
+    fn serialize<S: serde::Serializer>(&self, _serializer: S) -> Result<S::Ok, S::Error> {
+        Err(serde::ser::Error::custom(
+            "the Binary arm of ChangeSummary is sealed until S-BIN reports (ADR-0165); it carries \
+             nothing to serialise",
+        ))
+    }
+}
 
 /// The build toolchain. The kernel knows no language.
 pub trait Toolchain: Send + Sync {
@@ -60,6 +170,13 @@ pub trait Toolchain: Send + Sync {
 
     /// What changed over a range, as the typed value a reviewer receives instead of a diff when a
     /// path classifies as `Binary` (AC-497).
+    ///
+    /// *(amended 2026-09-25, s8a fix round 11, ADR-0165: the sentence above describes only the
+    /// sealed `Binary` arm. Today the method answers [`ChangeSummary::Text`], which carries the
+    /// range's diff itself plus a per-path manifest, over a range whose paths classify `Text` or
+    /// `Generated`; a range carrying a `Binary` or LFS pointer path is refused naming the path
+    /// until S-BIN opens the `Binary` arm at `s8i`. AC-497's instead-of-a-diff value is that
+    /// sealed arm.)*
     fn change_summary(&self, range: &str) -> Result<ChangeSummary, StepError>;
 }
 

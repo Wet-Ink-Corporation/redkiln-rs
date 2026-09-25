@@ -6,7 +6,7 @@ date: 2026-09-11
 legacy_id: none
 source: references/2026-09-10-pre-implementation-audit.md PIA-004 (§3.2), PIA-072 (§4.1); references/adr/0002 :53; references/adr/0011 :47; references/2026-09-08-architecture-design.md §10.2 :246
 supersedes: ["0003"]
-superseded_by: []
+superseded_by: ["0165", "0167"]
 related: ["0002", "0010", "0011", "0029", "0073", "0076"]
 evidence: ["PIA-004", "PIA-072", "F12", "F19"]
 consumers: []

@@ -6,7 +6,7 @@ date: 2026-09-11
 legacy_id: none
 source: references/adr/0027 Decision (the two gating conditions); references/2026-09-08-architecture-design.md §4.6 :613 and §10.5 P6-PACKS (audit PIA-088); spikes/F35-DRAFT.md §1.6 (6 of 102 dead, run9); spikes/F42-DRAFT.md; spikes/DECISIONS-2026-09-09.md open work item (1); Ryan's decision of 2026-09-11 (AskUserQuestion)
 supersedes: ["0027"]
-superseded_by: []
+superseded_by: ["0166"]
 related: ["0072", "0081", "0103", "0093"]
 evidence: ["F35", "F42", "F37", "PIA-088"]
 consumers: []

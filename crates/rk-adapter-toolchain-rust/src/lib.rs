@@ -5,6 +5,9 @@
 //! --workspace` (or `cargo nextest run` where present, recorded on the report), `classify` and
 //! `change_summary` over `cargo metadata` and the changeset — `change_summary` remaining an
 //! opaque non-finalised newtype until S-BIN"*; design §9.1; `s7c` §7c.14).
+//! *(Noted 2026-09-25, s8a, D21-51: the quoted *"`classify` and `change_summary` over `cargo
+//! metadata` and the changeset"* is superseded in part by ADR-0165 decision 9, only as far as
+//! `classify` and the `Text` arm; the deviation paragraph below says what that settles.)*
 //!
 //! **What this crate is.** `impl rk_ports::toolchain::Toolchain for RustToolchain` — the six
 //! methods Checkpoint 7a counts and no seventh — over a **fixture project, never the workspace
@@ -50,6 +53,11 @@
 //! S-BIN is unrun). `change_summary(range)`: `Err(Unsupported { capability: "change_summary" })`
 //! **from the dated registry row** ([`registry`]; D17-9: *"the opaque newtypes stay opaque; real
 //! adapters return `Unsupported` from a dated registry entry"*) — the range is never read.
+//! *(amended 2026-09-24, s8a, ADR-0165: that sentence is superseded. `change_summary` reads the
+//! range through `rk_git::diff::range_diff` -- a gix read, so no git is spawned by this crate --
+//! and returns the finalised `Text` arm when every path classifies `Text` or `Generated`; a
+//! `Binary` or LFS pointer path is refused through the re-dated row naming the path, and an empty
+//! or unresolvable range by the capability's name. The `Binary` arm stays sealed until S-BIN.)*
 //!
 //! **A deviation from ADR-0094 decision 1, named (a routing, §7c.1; the Slice 6 commit body
 //! carries it as a dated note OWED against that record):** the decision puts `classify` *and*
@@ -60,7 +68,22 @@
 //! range, is S-BIN's and refuses from the registry. The `cargo metadata --format-version 1` read
 //! (through `serde_json`, §7c.14: no `cargo_metadata` crate) is deferred with `change_summary` to
 //! S-BIN; the pack fixture's contributed `CargoMetadata` kind names the artifact that read will
-//! produce and no producer emits today.
+//! produce and no producer emits today. *(amended 2026-09-24, s8a, ADR-0165: `change_summary`'s
+//! `Text` arm is built now, from the range read and [`classify`], still with no `cargo metadata`
+//! read; the deviation stands for the `Binary` arm, which S-BIN owns.)* *(Corrected 2026-09-25, s8a
+//! fix round 5, ADR-0165 decision 9: the deviation is not resolved for the `Text` arm either. That
+//! arm is built with no `cargo metadata` read, so the deviation now covers `classify`, the `Text`
+//! arm and the `Binary` arm, the deferral to S-BIN no longer explains it for `Text`, and the dated
+//! note against ADR-0094 decision 1 stays OWED.)*
+//! *(Amended 2026-09-25, s8a, D21-51: the operator settled it. ADR-0165 decision 9 supersedes
+//! ADR-0094 decision 1's clause in part, only as far as `classify` and the `Text` arm: `classify`
+//! is a function of the path and the bytes at it and spawns nothing, and the `Text` arm is a
+//! function of the range read by `rk-git`. For those two this is no longer a deviation, and the
+//! note OWED against ADR-0094 decision 1 is discharged for its `classify`/`change_summary` part.
+//! The sentence above that defers the read "with `change_summary` to S-BIN" no longer holds as
+//! stated: whether the `Binary` arm reads `cargo metadata` is S-BIN's (`s8i`), and what `cargo
+//! metadata` is read for at all is `s8c` record T's. The `CargoMetadata` kind is a shape fixture
+//! with no producer (the pack fixture's note).)*
 //!
 //! **The report** ([`report`]): `rk_types::verify::VerifyReport` by the INHERENT
 //! [`RustToolchain::verify_report`] (RT-6), counts from libtest's stable `--list` (RT-26), argv
@@ -80,8 +103,11 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use rk_containment::Outcome;
+use rk_git::diff::{ChangeKind as DiffChange, RangeError, range_diff};
 use rk_git::path::WorktreePath;
-use rk_ports::toolchain::{ChangeSummary, Classification, Toolchain};
+use rk_ports::toolchain::{
+    ChangeKind, ChangeSummary, Classification, ManifestEntry, TextChangeSummary, Toolchain,
+};
 use rk_types::digest::sha256;
 use rk_types::error::{StepError, TransportKind};
 use rk_types::verify::VerifyReport;
@@ -388,11 +414,139 @@ impl Toolchain for RustToolchain {
         ))
     }
 
-    /// `Unsupported` from the dated registry row (D17-9); the range is never read.
-    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {
-        Err(registry::refusal(
-            &self.registry,
-            registry::Capability::ChangeSummary,
-        ))
+    /// The `Text` arm, read from the range through `rk_git::diff::range_diff` (ADR-0165).
+    ///
+    /// *(amended 2026-09-24, s8a, ADR-0165: this read "`Unsupported` from the dated registry row
+    /// (D17-9); the range is never read", and answered that refusal for every range.)* Now:
+    ///
+    /// - every changed path classifies `Text` or `Generated` (this crate's own [`classify`]) and
+    ///   none is an LFS pointer (amended 2026-09-25, s8a fix round 15: "classifies" is
+    ///   [`classify::classify_by_path`] with the bytes decided on `RangeEntry::binary`, never on
+    ///   the working tree, since fix round 14; a manifest row can differ from the `classify`
+    ///   verb's answer for the same path):`Ok(ChangeSummary::Text(..))` with the head commit as `sha`,
+    ///   the per-path diffs concatenated in manifest order as `diff`, and one manifest row per
+    ///   changed path;
+    /// - a path classifies `Binary`, or its blob at either end is binary (`RangeEntry::binary`,
+    ///   decided on the range's blobs: amended 2026-09-25, s8a fix round 1) or a git-lfs
+    ///   pointer: refused
+    ///   through the re-dated `change_summary` row, NAMING the path
+    ///   ([`registry::refusal_naming`]) -- the `Binary` arm is sealed until S-BIN, and a `Text`
+    ///   that omitted the path, or carried a pointer's `oid`/`size` delta as its diff, would be
+    ///   the AC-497 failure;
+    /// - an empty, blank, malformed or unresolvable range, a project root that is no repository,
+    ///   or a range that changes nothing: refused by the capability's name from the same row
+    ///   ([`registry::refusal`]). The kernel calls `change_summary("")` today, and an `Ok` there
+    ///   would be a vacuous green. A read that fails on an object is `Transport { Io }` naming it:
+    ///   a store fault is not a capability answer. So is a repository that is there but does not
+    ///   open, such as one whose config does not parse: `rk_git` reads it as `RangeError::Read`, not
+    ///   `Open` (amended 2026-09-25, s8a fix round 7: it was the bare refusal `""` gets). So is a
+    ///   range changing a path that is not UTF-8, which `rk_git` refuses as `Read` naming the
+    ///   path's bytes rather than collapsing it (amended 2026-09-25, s8a fix round 8).
+    /// - a single revision (no `..`), such as the catalog's bound `artifact:Changeset.sha`: refused
+    ///   through the same row NAMING the revision and the `<base>..<head>` grammar, never a
+    ///   one-commit summary (added 2026-09-25, s8a, D21-51; ADR-0165 decisions 4 and 6).
+    fn change_summary(&self, range: &str) -> Result<ChangeSummary, StepError> {
+        let root = Path::new(self.config.project_root().as_str());
+        let read = match range_diff(root, range) {
+            Ok(read) => read,
+            Err(RangeError::Read { detail }) => {
+                return Err(StepError::Transport {
+                    kind: TransportKind::Io,
+                    detail: format!("change_summary could not read the range `{range}`: {detail}"),
+                });
+            }
+            // A single revision is not a range and refuses NAMING why (added 2026-09-25, s8a,
+            // D21-51; ADR-0165 decisions 4 and 6): under step-grain commits a changeset spans
+            // several commits, so reading `R^..R` for a bound `artifact:Changeset.sha` would
+            // answer a `Text` omitting the earlier ones. Only an input with no `..` at all is a
+            // single revision; `a..`, `..b` and `a...b` stay the bare refusal below.
+            Err(RangeError::Malformed { .. }) if !range.contains("..") => {
+                return Err(registry::refusal_naming(
+                    &self.registry,
+                    registry::Capability::ChangeSummary,
+                    &format!(
+                        "`{}` is a single revision, not a <base>..<head> range",
+                        range.trim()
+                    ),
+                ));
+            }
+            Err(
+                RangeError::Empty
+                | RangeError::Malformed { .. }
+                | RangeError::Open { .. }
+                | RangeError::Resolve { .. },
+            ) => {
+                return Err(registry::refusal(
+                    &self.registry,
+                    registry::Capability::ChangeSummary,
+                ));
+            }
+        };
+        if read.entries.is_empty() {
+            return Err(registry::refusal(
+                &self.registry,
+                registry::Capability::ChangeSummary,
+            ));
+        }
+        let mut manifest = Vec::with_capacity(read.entries.len());
+        for entry in &read.entries {
+            // The messages are joined from one-line literals, never continued with a trailing
+            // backslash. That was measured against Checkpoint 8a guard (6)'s call-site reader on
+            // 2026-09-24 (s8a), which lost its place on a continued literal; the reader was fixed
+            // at the stage's own build (2026-09-25, s8a: both string blanks read a backslash-escape
+            // as any character, newline included), so the one-line form is now a style choice
+            // only.
+            let carries = format!("the range `{range}` carries `{}`", entry.path);
+            if entry.lfs_pointer {
+                return Err(registry::refusal_naming(
+                    &self.registry,
+                    registry::Capability::ChangeSummary,
+                    &(carries
+                        + ", whose blob is a git-lfs pointer: its diff would be the pointer's"
+                        + " oid/size delta, so it enters the manifest as Binary, and the Binary"
+                        + " arm is sealed until S-BIN (ADR-0165)"),
+                ));
+            }
+            // `classify` reads the working tree for an extension in none of its tables and
+            // answers `Text` for an absent file, so a binary blob deleted in the range, or present
+            // only at a head the checkout is not on, is decided on the range's blobs as well
+            // (amended 2026-09-25, s8a fix round 1). The byte fallback is now the range's blobs
+            // ALONE: the path rules decide first, and `entry.binary` stands in for the
+            // working-tree read, so a dirty tree or a checkout at a third commit never moves a
+            // committed range's answer (amended 2026-09-25, s8a fix round 14).
+            let classification = if entry.binary {
+                Classification::Binary
+            } else {
+                classify::classify_by_path(&entry.path).unwrap_or(Classification::Text)
+            };
+            if classification == Classification::Binary {
+                return Err(registry::refusal_naming(
+                    &self.registry,
+                    registry::Capability::ChangeSummary,
+                    &(carries
+                        + ", which classifies Binary; the Binary arm is sealed until S-BIN"
+                        + " (ADR-0165, AC-497)"),
+                ));
+            }
+            manifest.push(ManifestEntry {
+                path: entry.path.clone(),
+                classification,
+                change: match entry.change {
+                    DiffChange::Added => ChangeKind::Added,
+                    DiffChange::Deleted => ChangeKind::Deleted,
+                    DiffChange::Modified => ChangeKind::Modified,
+                },
+            });
+        }
+        let diff = read
+            .entries
+            .iter()
+            .map(|entry| entry.diff.as_str())
+            .collect::<String>();
+        Ok(ChangeSummary::Text(TextChangeSummary {
+            sha: read.head,
+            diff,
+            manifest,
+        }))
     }
 }

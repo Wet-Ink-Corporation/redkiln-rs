@@ -175,7 +175,11 @@ fn ac360_one_event_per_termination_path() {
         };
         check("Transport{Spawn}", "Transport{Spawn}", &r, true);
     }
-    // Transport { Decode } — a non-JSON line where the result frame is required, exit 0
+    // Transport { Decode } — a non-JSON line where the result frame is required, exit 0.
+    // [amended 2026-09-25, s8a] The child READS stdin to EOF first (`wait-stdin-eof`): exit 0 with
+    // no frame is `Decode` only when the prompt write completed (classify step 8), and a `replay:`
+    // child that exits unread raced the write into `Transport { Io }` under the whole suite's load
+    // (os error 232, measured in Checkpoint 5's whole run at s8a; 30/30 green in isolation).
     let decode = transcript(&[
         Part::File("streams/init.scripted.ndjson"),
         Part::File("streams/malformed-where-result-required.scripted.ndjson"),
@@ -183,7 +187,11 @@ fn ac360_one_event_per_termination_path() {
     check(
         "Transport{Decode}",
         "Transport{Decode}",
-        &dispatch_replay(&decode, 30),
+        &dispatch_mode(
+            &format!("wait-stdin-eof:{}", decode.path.display()),
+            30,
+            "hello",
+        ),
         false,
     );
     // NonZero — exit 7, no result frame
@@ -1347,7 +1355,10 @@ fn result_without_system_init_never_ok() {
 #[test]
 fn spew_beyond_the_cap_is_capped_with_the_full_digest() {
     let n = 200_000usize;
-    let r = dispatch_mode(&format!("spew:{n}"), 30, "x");
+    // [amended 2026-09-25, s8a] `spew-after-stdin-eof`: the same race as the `Decode` path in
+    // `ac360_one_event_per_termination_path` — exit 0 with no frame is `Decode` only once the write
+    // completed.
+    let r = dispatch_mode(&format!("spew-after-stdin-eof:{n}"), 30, "x");
     let line = b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n";
     let mut expected = Vec::with_capacity(n);
     while expected.len() < n {

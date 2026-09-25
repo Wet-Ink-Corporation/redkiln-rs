@@ -515,6 +515,10 @@ or a filter that matched nothing.
   which the register calls *"checkable today, with no Codex adapter present"*. Red by hard-coding the adapter name at
   the gate evaluator. The **Codex-present half is excluded** (PROVISIONAL on S-CODEX; `rk-adapter-codex` is Phase 2 per
   ADR-0094 decision 2).
+  *(Noted 2026-09-24, s8a §8a.6, ADR-0167: the Codex adapter is **Phase 4**, after S-CODEX, as ADR-0007
+  places it. ADR-0167 supersedes ADR-0094 decision 2's phase clause in part, and E-0094-2 records that
+  DECISIONS-2026-09-12 E12 was taken with ADR-0007's phase sentence out of view. The exclusion stands; its
+  phase reason is corrected.)*
 - `ac455_policy_decides_not_the_type` — **two policy-table rows over one fixture spec**: a spec carrying an AC with
   `verification: None` under a pack policy that requires one is **refused with the AC id named, at zero model cost**,
   **and the same spec passes under a pack whose policy does not require it**. The second row is the must-pass control
@@ -860,6 +864,10 @@ claiming.)*
   per the register's 2026-09-11 phase note routing it to *"the runbook's 7b/7d acceptance sets (PIA-072)"*; the
   **Codex-present half is excluded** (`rk-adapter-codex` is Phase 2, ADR-0094 decision 2). `s7c`:193 also holds the
   id by a bare range sweep with no reason stated — raised below, not settled here.
+  *(Noted 2026-09-24, s8a §8a.6, ADR-0167: the Codex adapter is **Phase 4**, after S-CODEX, as ADR-0007
+  places it. ADR-0167 supersedes ADR-0094 decision 2's phase clause in part, and E-0094-2 records that
+  DECISIONS-2026-09-12 E12 was taken with ADR-0007's phase sentence out of view. The exclusion stands; its
+  phase reason is corrected.)*
 
 **ARMED, NOT DISCHARGED — by id and by reason.** Checkpoint 7b-ii may not be read as discharging any of the following,
 and each is recorded in `PROGRESS.md` §1 as carried forward:

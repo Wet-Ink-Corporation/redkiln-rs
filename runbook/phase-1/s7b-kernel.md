@@ -581,6 +581,11 @@ stage's**; ADR-0114 decision 1 counts exactly this five and repairs them there b
 names `spikes/p9/lint.py`'s `on_false_of` as the **reference behaviour** and `{ to = "deviate", … }` as ADR-0046's
 form — read both before writing the `on_false` branch. Those three rows are the **only live instances** of the
 closed-set rule, so they are its red fixtures.
+*(Noted 2026-09-25, s8a §8a.4, ADR-0166, `s8a` fix round 4: both sentences were true when written and are not now.
+Only `packs/incident.toml`'s defect was repaired before the v0 tag, at `s7e` §7e.2. `catalog-b`'s other four,
+including the three `on_false` rows, were repaired at `s8a`, after the tag, under D21-42 decision 23, and the probe
+now reads `on_false forms 99/99`. The three rows are **historical** fixtures, captured in
+`crates/rk-kernel/tests/it/on_false.rs`, not live instances.)*
 
 **Four further clauses the implementer cannot guess, and one this runbook has already got wrong once in prose:**
 
@@ -1138,7 +1143,9 @@ error or a filter that matched nothing.
 - `grammar_bare_identifier_is_a_literal` — red by treating an unquoted identifier as a field reference; **191 sites**
   read one way only because of this rule.
 - `grammar_comparisons_do_not_chain` / `grammar_field_to_field_needs_a_ref` — ADR-0103 decisions 1 and 2.
-- `on_false_closed_set` — the three `catalog-b` rows are the only live instances; red each.
+- `on_false_closed_set` — the three `catalog-b` rows are the only live instances; red each. *(Noted 2026-09-25,
+  s8a §8a.4, ADR-0166, `s8a` fix round 4: repaired at `s8a`; they are historical fixtures now, captured in
+  `on_false.rs`.)*
 - `predicate_null_arithmetic` — one must-fail case per arm: `null == null` true; `null == v`, `!=` and `in` yielding
   `null`; `not null` → `null`; three-valued `and`/`or`; and an ordering against a nullable facet a **load-time lint
   error** unless guarded by the one narrowing pattern (ADR-0069).
@@ -1839,15 +1846,22 @@ c=$(grep -rcniE 'leave[sd]? the model' references/ 2>/dev/null | awk -F: '{s+=$2
 
 # ---- the grammar probe, BOTH halves read and pinned. The probe reports rc=1 for ANY non-empty failure set
 # ---- (grammar-probe.py:253), so rc alone distinguishes nothing; and `[1-9][0-9]*/[0-9]+` accepts 1/287.
-# ---- THE THREE NUMBERS BELOW ARE VALID UNTIL s7e §7e.2 REPAIRS THE FIVE PACK DEFECTS, which is downstream
-# ---- of this stage: s7e:117 expects 287/287 afterwards. If any of them moves, RE-DERIVE from F42 and record
-# ---- the new reading — do not widen the pattern (golden constraint 9).
+# ---- [noted 2026-09-25, s8a fix round 9] The ":253" line cite is stale: s8a fix round 5 added two comment lines
+# ---- above the probe's open(...), so cite the rule by quotation, the probe's own `return 0 if not fails and not
+# ---- of_fail else 1`. The "1/287" denominator is historical; the repaired corpus has 279 predicates since dddcdbd.
+# ---- [amended 2026-09-24, s8a §8a.4, ADR-0166] RE-PINNED to the repaired corpus: 279/279, 0/279, 99/99 at rc 0.
+# ---- The old comment read "VALID UNTIL s7e §7e.2 REPAIRS THE FIVE PACK DEFECTS … s7e:117 expects 287/287
+# ---- afterwards", and it was stale twice over: s7e's edits at dddcdbd dropped eight when predicates (287 -> 279)
+# ---- and repaired only packs/incident.toml. s8a repaired catalog-b's other four defects (D21-42 decision 23), and
+# ---- ADR-0166 supersedes ADR-0114 decision 1 in part and folds this re-pin in. A clean probe exits 0, so the rc is
+# ---- -eq 0, no longer -le 1. If any number moves, RE-DERIVE and record the new reading — do not widen the pattern
+# ---- (golden constraint 9).
 test -f spikes/p9/grammar-probe.py || { echo "FAIL: spikes/p9/grammar-probe.py absent"; exit 1; }
 out=$(python spikes/p9/grammar-probe.py); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: grammar-probe did not run to completion (exit $rc)"; exit 1; }   # 0 = clean, 1 = the known pack defects (F42)
-printf '%s\n' "$out" | grep -qxF 'predicates parsed 285/287; failed 2/287' || { echo "FAIL: the probe's parse count moved off F42's 285/287 — read the FAIL lines before touching the grammar; the two known failures are exists(ProblemRecord) in packs/incident.toml and a bare hyphenated value in catalog-b"; printf '%s\n' "$out" | grep -E 'FAIL|ON_FALSE-FAIL'; exit 1; }
-printf '%s\n' "$out" | grep -qxF 'mixed unparenthesised and/or (precedence-dependent) 0/287' || { echo "FAIL: a precedence-dependent predicate now exists — §7b.6 claims 0 and the kernel parser's precedence rule has a live instance to disagree with"; exit 1; }
-printf '%s\n' "$out" | grep -qE '^on_false forms 96/99 in the closed set' || { echo "FAIL: the on_false count moved off F42's 96/99 — ADR-0103 clause 6's closed set is the SECOND rule the lint carries and the three known catalog-b defects are its only live instances"; exit 1; }
+[ "$rc" -eq 0 ] || { echo "FAIL: grammar-probe exited $rc — the repaired corpus is clean and exits 0 (s8a §8a.4, ADR-0166)"; printf '%s\n' "$out" | grep -E 'FAIL|ON_FALSE-FAIL'; exit 1; }   # [amended 2026-09-24, s8a §8a.4] was -le 1 (1 = the known pack defects, F42); all are repaired
+printf '%s\n' "$out" | grep -qxF 'predicates parsed 279/279; failed 0/279' || { echo "FAIL: the probe's parse count moved off 279/279 (re-pinned 2026-09-24, s8a §8a.4, ADR-0166: both F42 parse failures are repaired) — read the FAIL lines before touching the grammar"; printf '%s\n' "$out" | grep -E 'FAIL|ON_FALSE-FAIL'; exit 1; }
+printf '%s\n' "$out" | grep -qxF 'mixed unparenthesised and/or (precedence-dependent) 0/279' || { echo "FAIL: a precedence-dependent predicate now exists — §7b.6 claims 0 and the kernel parser's precedence rule has a live instance to disagree with"; exit 1; }
+printf '%s\n' "$out" | grep -qE '^on_false forms 99/99 in the closed set' || { echo "FAIL: the on_false count moved off 99/99 (re-pinned 2026-09-24, s8a §8a.4, ADR-0166: catalog-b's three bare step-name on_false defects are repaired) — ADR-0103 clause 6's closed set is the SECOND rule the lint carries"; printf '%s\n' "$out" | grep -E 'ON_FALSE-FAIL'; exit 1; }
 
 # ---- AC-104's per-(family, rigor) totality check, at lattice.py's OWN output strings. This file claimed
 # ---- "Checkpoint 7b runs it" of this instrument and of spikes/p9/lint.py and ran NEITHER until 2026-09-13.

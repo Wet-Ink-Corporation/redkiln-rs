@@ -3,6 +3,11 @@
 //! `{ to, max }` | `"continue"` | `"fail"` | `{ to = "deviate", … }`, and nothing else. The three
 //! `catalog-b` rows are the **only live instances** of the closed-set rule, so they are its red
 //! fixtures; the pack repairs themselves are `s7e` §7e.2's, not this stage's (ADR-0114 decision 1).
+//!
+//! *(amended 2026-09-24, s8a, ADR-0166: they are no longer live. `s7e` did not repair them; `s8a`
+//! §8a.4 converted the three bare `on_false` names to `{ to, max }` tables. This test pins F42's
+//! historical measurement over string LITERALS, not over the live files, so its assertions do not
+//! move: the three strings remain the closed-set rule's red fixtures as captured.)*
 
 use rk_kernel::predicate::{OnFalse, OnFalseError, classify_on_false};
 use serde_json::json;

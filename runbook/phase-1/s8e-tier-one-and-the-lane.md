@@ -151,7 +151,9 @@ because they meet at the same boundary act. **Measured at `ca8f387`, 2026-09-24,
   &repo.worktree, entry)`. So the `Reconciled<State>` ADR-0109 decision 1 makes the planner's only input is built on
   every entry and thrown away.
 - **`Slice-Verdict:` has no producer.** The ARMED lint still reads `#[ignore = "ARMED: Slice-Verdict has 0
-  producers; Gate and Story are both minted as of s7h.2; discharged by s7h"]`, and ADR-0160 names the route: *"declare
+  producers; Gate and Story are both minted as of s7h.2; discharged by s7h"]` *(noted 2026-09-25, s8a fix round 1:
+  since `s8a` §8a.5 (ADR-0160) that reason ends `discharged by s8e`, the tail §8e.13 reads)*, and ADR-0160 names the
+  route: *"declare
   the slice on the item record (or decide that a fix lane has exactly one, and say so), then a `slice_sealed`
   producer at the review stage's boundary, then the trailer through the same `commit_with_trailers` path `Story:` now
   uses."*

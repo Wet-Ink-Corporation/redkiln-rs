@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: crates/rk-kernel/src/resolver.rs:63-71 (*"nothing in this tree says which capability a given activity needs … a record routing the need from the catalog or the pack to the dispatch site is OWED"*); references/2026-09-08-architecture-design.md §4.5 (*"`tool` (a toolchain verb through the port)"*; the five registries row naming `registry.toml`); references/adr/0003 and references/adr/0094 decision 1 (the `Toolchain` port's six methods); references/adr/0093 decision 4 and references/adr/0099 clause 5 (`ChangeSummary` opaque until S-BIN); crates/rk-ports/src/toolchain.rs:44-64; crates/rk-kernel/src/workflow/memo.rs:948-959 (`verb_of`, the existing verb parse); crates/rk-adapter-toolchain-rust/src/registry.rs:62-75 (the five-token `Capability` vocabulary); runbook/phase-1/s7g-step-executor.md §7g.2
 supersedes: []
-superseded_by: ["0148"]
+superseded_by: ["0148", "0165"]
 related: ["0003", "0073", "0093", "0094", "0099"]
 evidence: []
 consumers: []

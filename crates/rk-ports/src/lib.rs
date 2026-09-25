@@ -1,5 +1,7 @@
 //! `rk-ports` — the five port traits, their fakes, the `CancelToken` and the `ChangeSummary`
-//! newtype (design:1704).
+//! newtype (design:1704). *(Noted 2026-09-25, s8a fix round 2, ADR-0165: `ChangeSummary` is no
+//! longer a newtype. It is an enum with a finalised `Text` arm and a sealed `Binary` arm, and
+//! S-BIN blocks the `Binary` arm only.)*
 //!
 //! Five named ports and no sixth: event store, harness, tracker, docs site, toolchain
 //! (**ADR-0003**:34). **Git is deliberately not a port** — trailers, worktrees, disposable clones

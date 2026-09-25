@@ -26,11 +26,18 @@
 //!
 //! **The Rust entries, named**: `change_summary` — `Probe::None`, S-BIN unrun, the opaque
 //! `rk_ports::ChangeSummary` has no decided contents and no `Ok` is constructible (D17-9;
-//! ADR-0099 decision 5's forbids) — and `affected-selection` — `Probe::None`, because **no
+//! ADR-0099 decision 5's forbids) *(amended 2026-09-24, s8a, ADR-0165: false from this commit.
+//! `ChangeSummary` is an enum whose `Text` arm is finalised and constructible by an implementor,
+//! and `RustToolchain::change_summary` answers it. The row is re-dated `2026-09-24` and its reason
+//! narrowed to the sealed `Binary` arm: it is what a range carrying a `Binary` or LFS pointer path
+//! is refused through, naming the path ([`refusal_naming`]), and what an empty or unresolvable
+//! range is refused by ([`refusal`]).)* — and `affected-selection` — `Probe::None`, because **no
 //! affected-selection probe result exists at any pin**, on the tree or in any record [measured
 //! 2026-09-17: `grep -rn` over `references/`, `runbook/`, `spikes/*.md` finds none; `s7c`
 //! §7c.14], and a row with an invented `verified_on`/`probe` is exactly what AC-489/AC-492
-//! refuse. Each `verified_on: "2026-09-18"`, the day this crate landed. [`refusal`] — pure over
+//! refuse. Each `verified_on: "2026-09-18"`, the day this crate landed *(amended 2026-09-25,
+//! s8a fix round 7, ADR-0165: false from s8a. The `change_summary` row is re-dated `2026-09-24`;
+//! only `affected-selection` still carries `2026-09-18`)*. [`refusal`] — pure over
 //! the rows the adapter was constructed over — is where `RustToolchain::change_summary` and
 //! `RustToolchain::select_affected` take their error from: the token in `StepError::Unsupported
 //! { capability }` is the **row's**; a registry carrying no such row, or one claiming a
@@ -54,6 +61,10 @@
 //! `cargo metadata` read S-BIN's `change_summary` will make through it is not built yet — the
 //! crate doc; a TOML reader would be a dependency for one file): a list of rows,
 //! `probe` externally tagged — `{"none": {"reason": …}}` / `{"recorded": {"source": …}}`.
+//! *(Noted 2026-09-25, s8a, D21-51: "the `cargo metadata` read S-BIN's `change_summary` will make"
+//! is no longer settled. ADR-0165 decision 9 takes `classify` and the `Text` arm off `cargo
+//! metadata`; whether the `Binary` arm reads it is S-BIN's, and what it is read for is `s8c` record
+//! T's.)*
 
 use serde::Deserialize;
 
@@ -127,12 +138,14 @@ impl Row {
     }
 }
 
-/// The Rust registry: the two rows, dated the day this crate landed, each explicitly probe-less.
+/// The Rust registry: the two rows, each explicitly probe-less. `affected-selection` is dated the
+/// day this crate landed and `change_summary` the day s8a re-dated it (amended 2026-09-25, s8a fix
+/// round 7, ADR-0165: this said both rows carried the landing date).
 const REGISTRY: &str = r#"[
   {
     "capability": "change_summary",
-    "verified_on": "2026-09-18",
-    "probe": { "none": { "reason": "S-BIN is unrun and rk_ports::ChangeSummary is an opaque newtype whose contents no record has decided (D17-9; ADR-0099 decision 5); no Ok is constructible and no probe exists" } }
+    "verified_on": "2026-09-24",
+    "probe": { "none": { "reason": "ADR-0165: the Text arm is answered from the range read; the Binary arm is sealed until S-BIN (s8i), so a range carrying a Binary or git-lfs pointer path is refused naming the path, and an empty, unresolvable or change-less range is refused by this capability's name; no probe exists for the Binary arm" } }
   },
   {
     "capability": "affected-selection",
@@ -160,6 +173,11 @@ pub fn rows() -> Result<Vec<Row>, serde_json::Error> {
 /// The tokens whose row carries `Probe::None` — what the adapter answers `Unsupported` for, and
 /// what the real conformance row hands `conform_toolchain` as its capability arm.
 ///
+/// *(Noted 2026-09-25, s8a fix round 2, ADR-0165: `change_summary`'s re-dated row keeps
+/// `Probe::None`, so it is still listed, but the adapter answers `Unsupported` for it only over an
+/// empty, unresolvable or unopenable range and over a range carrying a `Binary` or LFS pointer
+/// path; over a non-empty text range it answers `Ok(Text)`.)*
+///
 /// # Errors
 /// As [`load`].
 pub fn unsupported_tokens() -> Result<Vec<String>, serde_json::Error> {
@@ -180,12 +198,30 @@ pub fn unsupported_tokens() -> Result<Vec<String>, serde_json::Error> {
 /// over.
 #[must_use]
 pub fn refusal(rows: &[Row], capability: Capability) -> StepError {
+    derive(rows, capability, None)
+}
+
+/// [`refusal`], with the refusal **naming what it refuses** (ADR-0165): a probe-less row answers
+/// `Unsupported { capability: "<token>: <subject>" }` -- the row's token first, so the capability
+/// is still read off the front, then the path and the reason. A missing row, or one claiming a
+/// recorded probe, is the same decode failure [`refusal`] gives: the subject never turns a
+/// registry defect into an answer.
+#[must_use]
+pub fn refusal_naming(rows: &[Row], capability: Capability, subject: &str) -> StepError {
+    derive(rows, capability, Some(subject))
+}
+
+/// The one derivation both refusals share.
+fn derive(rows: &[Row], capability: Capability, subject: Option<&str>) -> StepError {
     match rows.iter().find(|r| r.capability == capability) {
         Some(Row {
             probe: Probe::None { .. },
             ..
         }) => StepError::Unsupported {
-            capability: capability.as_str().to_owned(),
+            capability: subject.map_or_else(
+                || capability.as_str().to_owned(),
+                |subject| format!("{}: {subject}", capability.as_str()),
+            ),
         },
         Some(Row {
             probe: Probe::Recorded { source },

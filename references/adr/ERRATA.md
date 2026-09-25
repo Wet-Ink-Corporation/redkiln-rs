@@ -179,6 +179,8 @@ for the NNNN convention. MADR's minimal cut keeps Considered Options and has no 
 Consequences/Confirmation, not a description of its status field. [documented, github.com/adr/madr; log4brains docs, fetched 2026-09-10]
 Decision unchanged (the format is this repository's; the citation was the overclaim).
 
+**E-0085-3 (2026-09-24, `s8a` §8a.7; D21-42 decision 24a).** Decision rule 1, line 62 at `b8e7aa9`: *"Each considered option is one `### Option — <name>` heading and must state why it lost."* — **What is true:** **thirty records**, ADR-0132 through ADR-0161, all `accepted`, do not conform to that sentence. Each of the thirty has a `## Considered options` section with **zero** `### Option — ` headings in it: 12 write their options as numbered items and 18 as bold lead-in paragraphs. ADR-0162, ADR-0163 and ADR-0164 carry **3**, **7** and **4** such headings, and conform. [measured 2026-09-24 at `b8e7aa9`: per file, the lines matching `^### Option — ` inside `## Considered options`, over `references/adr/0132`…`0164`] *(Noted 2026-09-25, `s8a` fix round 2: that measurement covered `0132`…`0164` only. Over every record from ADR-0085 on, two more `accepted` records have zero such headings: **ADR-0090** (dated 2026-09-12) and **ADR-0117** (dated 2026-09-13), each writing its options as bold lead-in paragraphs. They are outside D21-42 decision 24a's list, which this erratum carries, so the count here stays thirty. Their bodies are not edited either, and the lint does not reach them. Whether they join the list is the operator's to decide. [measured 2026-09-25: the same per-file count over `references/adr/0085`…`0167` → zero for 0090, 0117 and 0132…0161, thirty-two files])* **What this does not change:** the rule, which stands and is enforced by lint from ADR-0164 on (`runbook/tools/check-adr-options.py`, D21-42 decision 24a); the thirty accepted bodies, which are **not edited** (Checkpoint 8a compares each body, below its closing frontmatter `---`, byte for byte against `s8a`'s base commit); and every Decision and every forbids bullet of the thirty. Only the heading form is non-conforming; which options were weighed is unchanged. Raised by D21-42 decision 24a.
+
 ## ADR-0086 — No durable-execution framework; the memo table is built here
 
 **E-0086-1 (2026-09-11, PIA-074).** Lines 19, 36-37: "`temporalio-sdk` on `temporalio-sdk-core` v0.5.0, updated June
@@ -217,6 +219,8 @@ and with it Codex = Phase 2; `rk-adapter-codex` is out of Phase 1 under every re
 deferred; AC-496 stays PROVISIONAL on S-CODEX, which is unrun. Raised by the 2026-09-12 runbook alignment review,
 which found design :1905 carrying "Phase 4 is the earliest it ships" — a row dated 2026-09-08, three days older than
 this record and corrected the same day.
+
+**E-0094-2 (2026-09-24, `s8a` §8a.6; D21-42 decision 22).** DECISIONS-2026-09-12 **E12**, the warrant E-0094-1 above cites, took option A, *"Phase 2 — ADR-0094 decision 2 stands as written. No supersession"*, with **ADR-0007**'s phase sentence out of view. — **What is true:** ADR-0007's `## Decision` reads *"Per the phasing table (§7), the Codex adapter ships in Phase 4 ("reach"), and only after S-CODEX passes."* ADR-0007 is `accepted` and its `superseded_by` is `[]`. E12's question cites ADR-0094's Decision, ADR-0094's own Evidence sentence and design `:1905`, and its grounding cites ADR-0094 and the design. ADR-0007 appears in neither; E12's alternatives row names it only for its gate bar (*"ADR-0007's E3-shaped checks"*), not for its phase. So E12 left two accepted Decisions disagreeing on the Codex adapter's phase. [documented, spikes/DECISIONS-2026-09-12.md E12's three rows and references/adr/0007, read 2026-09-24] That conflict is between two `## Decision` sentences, so it is settled by supersession and not here: **ADR-0167** supersedes ADR-0094 decision 2's phase sentence in part, toward ADR-0007 (Phase 4, after S-CODEX). **What this does not change:** no Decision. This entry corrects the record of how E12 was taken; it moves no sentence of ADR-0094. E-0094-1's correction of ADR-0094's Evidence sentence stands, because the phase is decided, now by ADR-0007 through ADR-0167. *(Added 2026-09-25, `s8a` fix round 4.)* E-0094-1's closing clause does **not** stand as to the phase: its *"decision 2 stands verbatim, and with it Codex = Phase 2"* is superseded in part by ADR-0167, and the Codex adapter is Phase 4, after S-CODEX. Its *"`rk-adapter-codex` is out of Phase 1 under every reading"* still holds. ADR-0010's CI decision stays deferred, and AC-496 stays PROVISIONAL on S-CODEX, which is unrun. Raised by D21-41 (f); settled by D21-42 decision 22.
 
 ## ADR-0089 — Facet provenance, declared surfaces and abstention
 
@@ -403,6 +407,32 @@ written under a task that names this file alone.)*
 ## ADR-0139 — an undetected toolchain refuses at the port, not at startup
 
 **E-0139-1 (2026-09-22, `s7g`'s own adversarial pass).** Six sites say the superseded record is *"one day"* old: `## Decision drivers` (*"even though the record being moved is one day old"*), the **Confidence** block (*"this record is one day younger than the one it moves"*), the README index row, and D21-14's heading and body. — **What is true:** **54 minutes.** ADR-0137 was committed `proposed` at `085d1aa`, 2026-09-22 **10:34**, and superseded in part at `fbf3c4c`/`305398c`, **11:27-11:28** the same morning. Both records carry `date: 2026-09-22`, and D21-14's own body says so two lines after the claim (*"written on 2026-09-22 and superseded in part on 2026-09-22"*), so the entry contradicts itself in place. **What this does not change:** the record's substance, its route, or its confidence — ADR-0092 rule 1 turns on whether a `## Decision` sentence moved, not on how old the record was, and the supersession is correct either way. **Why it matters:** the false half sits in the **Confidence** block, whose entire job is to state the record's limit honestly. It also *understates* the finding: a decision corrected inside one hour by its own first execution is a sharper instance of "taken ahead of its first measurement" than a one-day one, and the sharper reading is the true one.
+
+## ADR-0151 — the run-record fixture's bytes are pinned, not normalised
+
+**E-0151-1 (2026-09-24, `s8a`'s stage open, D21-50).** The record's Consequences says *"only the run-record tree has
+bytes a digest commits to"* and *"this is a latent exposure and not a live defect"*. — **What is true:** the golden
+recording in `crates/rk-kernel/tests/it/replay.rs` (corpus-gated) digests the bytes of six sources outside that tree
+into `run_id`: five `crates/rk-kernel/tests/fixtures/catalog-select/*.toml` and
+`crates/rk-kernel/tests/fixtures/packs/incident-deviation.toml`. They were CRLF only because this box smudged them.
+Once ADR-0164's `eol=lf` made them LF, the recording derived `implement-87544dc047ecc61c` and nine corpus `replay::`
+tests failed at `b8e7aa9`, on every LF checkout, and no CI leg could see it. Each of the six is now pinned `-text`
+to its golden input's own git object (ADR-0164's dated correction). **What this does not change:** decisions 1–4
+and every forbids bullet stand, and so do the log tree's bytes, its digest and its directory name. It is a
+characterisation in Consequences that no Decision rests on, so it is an erratum and not a supersession. The title's
+*"pinning costs no record a correction"* no longer holds: it cost this one. *(Quotation and date corrected 2026-09-25,
+`s8a` fix round 1: this quoted the title as "it costs no record a correction", which is the `.gitattributes`
+comment's wording, and dated the erratum 2026-09-25, a day after the stage open D21-50 records.)*
+*(Added 2026-09-25, `s8a` fix round 4: why the forbids bullet *"Adding a `-text` row for part of the preimage only"*
+is not engaged, which the sentence above asserted without a reason.)* The recording has eight file inputs and six are
+pinned, so the bullet has to be answered. It is not breached, for two reasons. **Scope:** the bullet sits under
+decision 1 and rejected option (d), and the preimage it names is the `logs/` run-record fixture's (`pack.src`,
+`facets`, `artifacts`, … under `logs/**`). That row is unchanged. **Substance:** the bullet protects the property
+ADR-0151 states, that *"the bytes were not determined by the repository"* must stop being true. The two unpinned
+inputs, `spikes/p9/facets.toml` and `crates/rk-kernel/tests/fixtures/registries/artifacts/artifacts.toml`, are
+`i/lf w/lf attr/text=auto eol=lf` [measured 2026-09-25, `git ls-files --eol`]. Under ADR-0164's row 1, every checkout
+writes them LF, so the repository determines their bytes. ADR-0151 did not have that row. If this reading is
+contested, the bullet is superseded in part by a record, not by this erratum; that is an operator decision.
 
 ## ADR-0152 — the lane loop lives above `resume` and the advance arm breaks
 

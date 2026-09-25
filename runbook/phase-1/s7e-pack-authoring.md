@@ -49,7 +49,8 @@ n=$(ls -1 .redkiln/packs/*.toml | wc -l); test "${n:-0}" -eq 2 \
   || { echo "FAIL: ${n:-0} packs installed, expected exactly 2 (ADR-0011)"; exit 1; }
 # The enabled-pack list (DECISIONS-2026-09-12 E6): `init` scaffolded .redkiln/config.toml at Step 7d with an empty list;
 # this step fills it. Design §4.3 rule 3 reads cross-pack order off exactly this list.
-test -f .redkiln/config.toml || { echo "FAIL: .redkiln/config.toml absent — Step 7d's `init` did not run, or did not scaffold it (E6)"; exit 1; }
+# [amended 2026-09-24, s8a §8a.8] D21-46: the two backticks around init are removed — inside double quotes they ran init as a command on the FAIL path.
+test -f .redkiln/config.toml || { echo "FAIL: .redkiln/config.toml absent — Step 7d's init did not run, or did not scaffold it (E6)"; exit 1; }
 python - "$PWD/.redkiln/config.toml" <<'PY'
 import re, sys
 p = sys.argv[1]; t = open(p, encoding='utf-8').read()
@@ -61,7 +62,9 @@ PY
 ```
 
 `catalog-b/` (the unshipped extended file, ADR-0027) is **not** copied; its three `on_false` defects and one bare
-hyphenated value (F42) stay where they are until a Phase-2 pass. `spikes/p9/` is **not relocated** — it is the spike registry, it is cited by METHOD-P and the
+hyphenated value (F42) stay where they are until a Phase-2 pass. *(Noted 2026-09-25, s8a §8a.4, ADR-0166: the
+four `catalog-b` defects were repaired at `s8a`, in Phase 1, after the tag, under D21-42 decision 23; they did not
+wait for a Phase-2 pass. That they are not copied still holds.)* `spikes/p9/` is **not relocated** — it is the spike registry, it is cited by METHOD-P and the
 F-records **by path**, and Step 2 did not move it. That warrant is about *paths*, and Step 7e makes two in-place
 edits inside it, neither of which disturbs a path citation [amended 2026-09-21, operator decision]:
 **(a)** §7e.2's F42 predicate repair at `packs/incident.toml`:56 — the sentence read *"`spikes/p9/` itself is
@@ -102,7 +105,9 @@ exactly one of:
 of; rewrite as `${ProblemRecord?} != null`. (`catalog-b`'s three `on_false` bare strings and its hyphenated value are
 out of scope — not copied.) **This paragraph said "Two rows" and then named one** [corrected 2026-09-21]: the second
 is `catalog-b/blameless-postmortem.toml`'s hyphenated `-vuln` lex error, which the same sentence puts out of scope.
-F42's two parse failures are real; only one of them is in this step's scope.
+F42's two parse failures are real; only one of them is in this step's scope. *(Noted 2026-09-24, s8a §8a.4,
+ADR-0166: `catalog-b`'s hyphenated value and its three bare `on_false` names are repaired at `s8a`, after the tag,
+under D21-42 decision 23. They were never in a shipped pack, and this step's scope is unchanged.)*
 
 **A note on Checkpoint 7e line 146.** Its `grep -rn 'exists(' .redkiln/packs .redkiln/catalog` **cannot fail**:
 `incident.toml` is not one of the two packs §7e.1 installs, so no `exists(` predicate ever reaches `.redkiln/`. The
@@ -163,6 +168,10 @@ withdrawn-`auth` rows **drops eight `require` rows** from the spike packs, and e
 count settles at **278/279** — the one remaining failure being `catalog-b`'s. All three `on_false` defects are
 `catalog-b`'s too, so **96/99 is the ceiling** there. Checkpoint 7e's *assertion* is correct as written and needs no
 change: it greps for a `FAIL` naming `packs/` or `catalog/`, and `catalog-b/` matches neither.
+*(Noted 2026-09-24, s8a §8a.4, ADR-0166: **278/279 and 96/99 were true until `s8a`.** `s8a` repaired `catalog-b`'s
+four defects, and the probe now prints `predicates parsed 279/279; failed 0/279` and `on_false forms 99/99` at rc 0.
+The comment on this section's probe line still reads the old numbers: it is a bash byte, and `s8a` guard (9a) holds
+every bash byte of this file fixed. Checkpoint 7b carries the re-pin.)*
 
 **Then tag the v0 pack** (ADR-0114, partial successor to ADR-0027; DECISIONS-2026-09-11 #26/#27): the tag rests on the two
 conditions this step has just measured — P6 lint green at pack-default (the dead list reported by id, AC-102) and the F42

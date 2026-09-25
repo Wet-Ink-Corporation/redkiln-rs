@@ -38,7 +38,12 @@ pub enum Query {
 ///
 /// One of this crate's four opaque newtypes, and one of the three with no record behind them
 /// (`ChangeSummary` is ADR-0099 clause 5's). The cost is stated rather than smoothed in `s7a`
-/// §7a.3.
+/// §7a.3. *(amended 2026-09-25, s8a fix round 1, ADR-0165: `ChangeSummary` is no longer an opaque
+/// newtype but an enum with a finalised `Text` arm, so this is one of the crate's three opaque
+/// newtypes, none of them with a record behind it.)* *(Corrected 2026-09-25, s8a fix round 3: the
+/// crate still holds four. `ChangeSummary`'s sealed `Binary` payload, `BinaryChangeSummary`, is
+/// the fourth, and ADR-0165 stands behind it; this is one of the three with no record behind
+/// them, beside `ExternalRef` and `TypedInput`.)*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Snapshot(pub(crate) ());
 

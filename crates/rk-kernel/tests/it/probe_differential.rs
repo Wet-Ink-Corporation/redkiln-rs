@@ -32,6 +32,13 @@
 //! valid **until `s7e` §7e.2 repairs the five defects** (`s7e`:117 expects 287/287 afterwards). If
 //! one of them moves, the fixture is re-captured from the probe and the new reading recorded —
 //! never widened (golden constraint 9).
+//!
+//! *(amended 2026-09-24, s8a, ADR-0166: this test is a **historical capture**, and it stays one.
+//! `s7e` repaired only `packs/incident.toml`; the other four defects stayed in `spikes/p9/catalog-b/`
+//! until `s8a` §8a.4 repaired them, after which the live probe prints `predicates parsed 279/279`
+//! (never 287/287: `s7e` had dropped eight `when` predicates). The fixture and the literals here
+//! pin F42's measurement at its capture, over the captured verdict file and never over the live
+//! corpus, so no assertion moves; the live reading is Checkpoint 7b's.)*
 
 use rk_kernel::predicate::on_false::form_tag;
 use rk_kernel::predicate::{classify_on_false, mixed_unparenthesised, parse};

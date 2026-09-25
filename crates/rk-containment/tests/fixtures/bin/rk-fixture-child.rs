@@ -44,6 +44,7 @@
 //! | `close-stdin-early` | exit 0 without reading stdin — `std` cannot close an inherited stdin handle, and the exit closes it for the parent's ≥ 1 MiB write to fail on (`Transport { Io }`) |
 //! | `wait-stdin-eof:<file>` | read stdin to EOF, then replay `<file>` and exit 0 — a never-shut stdin hangs to the bound |
 //! | `spew:<bytes>` | write N bytes to stdout then exit 0 — N > 64 KiB deadlocks a pipe and only a file survives |
+//! | `spew-after-stdin-eof:<bytes>` | read stdin to EOF, then `spew:<bytes>` — for a parent that WRITES the prompt: exit 0 with no frame is `Transport { Decode }` only when the write completed, and a child that exits unread races the write into `Transport { Io }` (added 2026-09-25, s8a: `dispatch::ac360_one_event_per_termination_path` failed that race under the whole suite's load) |
 //! | `orphan` | **three-level** (§7c.10): spawn an intermediate (`orphan-mid`) that spawns the **holder** (`orphan-holder`, which writes its marker and holds) and exits; wait for the intermediate to exit and for the holder's marker to appear; print `READY holder_pid=<n>` and **hold** — so the direct child is alive when the token fires and the holder's parent is dead: a PID walk from the live child finds nothing, only the job holds the holder (AC-224's positive control) |
 //! | `breakaway` | the bin's OWN attempt to leave containment: spawn a holder with `creation_flags(0x0100_0000)` (`CREATE_BREAKAWAY_FROM_JOB`, a plain `u32` `std` takes); print `BREAKAWAY spawn=ok pid=<n>` or `BREAKAWAY spawn=err os=<code>`, record the same in the marker, and hold. Under a job that never grants `BREAKAWAY_OK` the attempt must fail at spawn or land inside the job (AC-224's negative control, O-2). On POSIX the analogue is `process_group(0)` — a new group `killpg` cannot reach — which the group cannot refuse; the POSIX line is a measurement of that, not a control |
 //! | `echo-env` | print every environment variable as `KEY=VALUE` in sorted order, then `CWD=<dir>` (AC-509; RT-21) |
@@ -124,6 +125,7 @@ fn main() -> ExitCode {
         "close-stdin-early" => Ok(ExitCode::SUCCESS),
         "wait-stdin-eof" => wait_stdin_eof(arg.as_deref()),
         "spew" => spew(arg.as_deref()),
+        "spew-after-stdin-eof" => spew_after_stdin_eof(arg.as_deref()),
         "orphan" => orphan(marker_dir.as_deref(), &argv),
         "orphan-mid" => orphan_mid(arg.as_deref()),
         "breakaway" => breakaway(&mut extra).map(|()| {
@@ -198,6 +200,14 @@ fn wait_stdin_eof(file: Option<&str>) -> io::Result<ExitCode> {
     let mut sink = Vec::new();
     io::stdin().lock().read_to_end(&mut sink)?;
     replay(file)
+}
+
+/// `spew-after-stdin-eof:<bytes>`: drain stdin to EOF, then [`spew`] — so a parent's prompt write always
+/// completes before the exit (added 2026-09-25, s8a).
+fn spew_after_stdin_eof(arg: Option<&str>) -> io::Result<ExitCode> {
+    let mut sink = Vec::new();
+    io::stdin().lock().read_to_end(&mut sink)?;
+    spew(arg)
 }
 
 fn spew(arg: Option<&str>) -> io::Result<ExitCode> {

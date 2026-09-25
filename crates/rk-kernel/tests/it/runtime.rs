@@ -272,12 +272,21 @@ impl EventStore for CountingStore {
 /// newtype until S-BIN reports), so a fake outside that crate **cannot** return `Ok`. The call is
 /// still COUNTED before it refuses — a fake that refused without counting would report 0 for a port
 /// that was reached, which is the exact failure this type exists to make impossible.
+/// *(amended 2026-09-24, s8a, ADR-0165: "forced" is no longer true. `ChangeSummary` is now an enum
+/// whose `Text` arm any `Toolchain` implementor may construct; this fake keeps refusing because the
+/// walks it serves assert that the port was REACHED, and a refusal is what both real adapters answer
+/// to the kernel's `change_summary("")`. The count-before-refuse rule stands.)*
 ///
 /// ⚠️ **The return type is written `rk_ports::toolchain::ChangeSummary` and the name is NOT
 /// imported. Do not "tidy" this into a `use`.** Checkpoint 5 bans the bare spelling everywhere under
 /// `crates/` except `rk-ports`, excluding only `::ChangeSummary`. A
 /// `use rk_ports::toolchain::{ChangeSummary, ..};` line reads as `::{ChangeSummary`, which that
 /// exclusion does **not** match, and would turn Checkpoint 5 red.
+/// *(amended 2026-09-24, s8a, ADR-0165: the exclusion this avoided is gone. Checkpoint 5's ban now
+/// fires on a `...ChangeSummary` definition, alias, trait impl, inherent impl or renaming import
+/// however it is spelled, path-qualified included, and admits an import and this method's
+/// signature in either spelling. The path-qualified return type is kept; it is no longer required,
+/// and a `use` would not turn Checkpoint 5 red.)*
 #[derive(Debug, Default)]
 pub struct CountingToolchain {
     calls: AtomicU32,

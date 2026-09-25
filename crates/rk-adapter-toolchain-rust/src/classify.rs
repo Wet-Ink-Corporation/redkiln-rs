@@ -20,12 +20,24 @@
 //!   ADR-0029 (i) asks for;
 //! - otherwise, when the file exists under the project root, **its bytes**: a NUL within the
 //!   first 8 KiB is git's own binary heuristic and answers `Binary`; no NUL, or no file (an
-//!   affected path may be a deletion), answers `Text`.
+//!   affected path may be a deletion), answers `Text`. *(amended 2026-09-25, s8a fix round 12:
+//!   git's window is 8000 bytes, not 8 KiB. This test read 8192, so a blob whose first NUL sat in
+//!   bytes 8000..8191 was `Binary` here and text to `rk-git`'s range read, and `change_summary`'s
+//!   answer moved with the checkout. It now reads `rk-git`'s own window, 8000 bytes.)*
+//!   *(Amended 2026-09-25, s8a fix round 14: that byte read is `classify`'s alone.
+//!   `change_summary` reads a committed range, so it takes the path rules (`classify_by_path`)
+//!   and decides the bytes on the range's blobs, never on the working tree.)*
 //!
 //! No spawn, no `cargo metadata` read: the classification is a property of the path and its
 //! bytes, and `change_summary` — the method that would read a range — is S-BIN's and answers
-//! `Unsupported` (D17-9). The tables are the implementer's (`s7c` §7c.1: no record fixes them)
-//! and are stated here so a reviewer can disagree with a row rather than with a guess.
+//! `Unsupported` (D17-9). *(amended 2026-09-24, s8a, ADR-0165: `change_summary` now reads the
+//! range through `rk-git` and classifies each changed path with THIS function; its `Text` arm is
+//! answered, and only the `Binary` arm is S-BIN's.)* *(Noted 2026-09-25, s8a, D21-51: "no spawn, no
+//! `cargo metadata` read" is now the decision, not an implementation choice. ADR-0165 decision 9
+//! supersedes ADR-0094 decision 1's clause in part for `classify`, and the adapter's
+//! `classify::classify_source_spawns_nothing` lints this file's code lines.)* The tables are the implementer's (`s7c`
+//! §7c.1: no record fixes them) and are stated here so a reviewer can disagree with a row rather
+//! than with a guess.
 
 use std::path::Path;
 
@@ -66,6 +78,38 @@ const TEXT_EXTS: &[&str] = &[
 /// Classify `path` (relative to `root`, or absolute) — the module doc's rule.
 #[must_use]
 pub fn classify(root: &Path, path: &str) -> Classification {
+    if let Some(by_path) = classify_by_path(path) {
+        return by_path;
+    }
+    let normalised = path.replace('\\', "/");
+    let candidate = Path::new(path);
+    let on_disk = if candidate.is_absolute() {
+        candidate.to_path_buf()
+    } else {
+        root.join(&normalised)
+    };
+    match std::fs::read(&on_disk) {
+        Ok(bytes)
+            if bytes
+                .iter()
+                .take(rk_git::diff::BINARY_SNIFF_BYTES)
+                .any(|b| *b == 0) =>
+        {
+            Classification::Binary
+        }
+        _ => Classification::Text,
+    }
+}
+
+/// The module doc's rule by the PATH alone, or `None` when only bytes can decide.
+///
+/// The `Generated`, `Binary` and `Text` tables decide here. `change_summary` calls this and lets the
+/// range's blob mark (`RangeEntry::binary`) stand in for the working-tree byte read, so a
+/// committed range's answer never moves with the checkout or a dirty tree. *(Added 2026-09-25,
+/// s8a fix round 14: `change_summary` called `classify`, whose byte read of the working tree
+/// refused a path that was text at both ends of the range.)*
+#[must_use]
+pub fn classify_by_path(path: &str) -> Option<Classification> {
     let normalised = path.replace('\\', "/");
     let components: Vec<&str> = normalised.split('/').filter(|c| !c.is_empty()).collect();
     let file = components.last().copied().unwrap_or("");
@@ -82,22 +126,13 @@ pub fn classify(root: &Path, path: &str) -> Classification {
         || GENERATED_FILES.contains(&file)
         || GENERATED_EXTS.contains(&ext.as_str())
     {
-        return Classification::Generated;
+        return Some(Classification::Generated);
     }
     if BINARY_EXTS.contains(&ext.as_str()) {
-        return Classification::Binary;
+        return Some(Classification::Binary);
     }
     if TEXT_EXTS.contains(&ext.as_str()) {
-        return Classification::Text;
+        return Some(Classification::Text);
     }
-    let candidate = Path::new(path);
-    let on_disk = if candidate.is_absolute() {
-        candidate.to_path_buf()
-    } else {
-        root.join(&normalised)
-    };
-    match std::fs::read(&on_disk) {
-        Ok(bytes) if bytes.iter().take(8192).any(|b| *b == 0) => Classification::Binary,
-        _ => Classification::Text,
-    }
+    None
 }

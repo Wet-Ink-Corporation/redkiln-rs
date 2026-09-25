@@ -41,6 +41,9 @@ form `discharged by s7g` / `discharged by s7h`** — the blocks below grep the r
 is load-bearing and is fixed here rather than left to each author. The ignore is removed by
 the landing that makes it pass, **in the same commit**, so no stage can claim a capability the lint does not see. An
 `#[ignore]`d test is coverage theatre unless something counts it, so Checkpoint 7f counts them **by name**.
+*(Amended 2026-09-24, s8a §8a.5: the trailer lint's reason now ends `discharged by s8e`, D21-41 (e)'s stage. Its old
+tail `discharged by s7h` was false, because `s7h` did not discharge it (ADR-0160). Checkpoint 7f's reason regex
+follows; the table below and this section's work block record the arming as it stood.)*
 
 The four, and what each pins:
 
@@ -169,6 +172,16 @@ The following remain true, and the four assertions of §7f.1 are run rather than
 
 - **The three ARMED conformance lints exist, by name, and each names the stage that discharges it.** A deleted
   armed lint reads exactly like a discharged one.
+  *(Amended 2026-09-24, s8a §8a.5: D21-9 executed. The block below asserts the **discharged** state that is true now:
+  exactly three `conformance_` lints; `conformance_every_step_kind_has_an_executor` and
+  `conformance_every_port_has_a_call_site` each `... ok`, both discharged by `s7g` in the commit that made them
+  pass (`fbf3c4c`; `s7h` removed no `#[ignore]` and only narrowed the trailer lint's reason — corrected 2026-09-25,
+  s8a fix round 1: this said "discharged by `s7g` and `s7h` in the commits that made them pass"); `conformance_every_trailer_key_has_a_producer` ignored with
+  `ARMED: Slice-Verdict has 0 producers`, its reason naming `discharged by s8e` (D21-41 (e)); and
+  `test result: ok. 2 passed; 0 failed; 1 ignored`. The reason's old tail `discharged by s7h` was false:
+  `s7h` did not discharge it (ADR-0160). The old text asserted `0 passed; 0 failed; 3 ignored`, stays
+  non-re-runnable as ADR-0134 decision clause 5 says, and is not reversed here: D21-43 N27, *"Re-scoping 7f is
+  execution, not supersession."* `s8e`'s Slice-Verdict commit moves this literal again.)*
 - **`shipped_pack_loads` is GREEN** — the product's own `.redkiln/` passes every load-time lint, not merely parses.
 - **`redkiln run` no longer refuses at catalog load**, which is this step's whole externally visible effect.
 - **`artifacts.toml` carries six toolchain-keyed kinds** and `spikes/p9/artifacts.toml` is unchanged.
@@ -189,9 +202,20 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo
 out=$(cargo test -p rk-kernel --test it -- conformance_ 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the conformance run could not complete (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
 n=$(printf '%s\n' "$out" | grep -cE '^test [A-Za-z0-9_:]*conformance_'); [ "$n" -eq 3 ] || { echo "FAIL: expected exactly 3 conformance lints, found $n"; exit 1; }
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 0 passed; 0 failed; 3 ignored' || { echo "FAIL: the three conformance lints are not all ARMED — a lint that RUNS here was discharged by a stage that has not happened"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
-armed=$(printf '%s\n' "$out" | grep -E '^test [A-Za-z0-9_:]*conformance_.*\.\.\. ignored,'); a=$(printf '%s\n' "$armed" | grep -c .); [ "$a" -eq 3 ] || { echo "FAIL: $a of 3 conformance lints are ARMED — a lint that RUNS here was discharged by a stage that has not happened"; exit 1; }
-printf '%s\n' "$armed" | grep -vE 'discharged by (s7g|s7h)'; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: an armed lint's #[ignore] reason does not name its discharging stage (rc=$rc)"; exit 1; }
+# [amended 2026-09-24, s8a §8a.5] D21-9 EXECUTED: re-scoped to the DISCHARGED state, so this block runs whole at
+# s8a's exit (D21-40 decision 4). s7g removed both #[ignore]s in the commit that made the two lints pass (fbf3c4c;
+# corrected 2026-09-25, s8a fix round 1: this said s7g and s7h each removed one; s7h removed none), which
+# is this file's own convention, so the old literal "0 passed; 0 failed; 3 ignored" went false at s7g. The trailer
+# lint is still ARMED on Slice-Verdict; its reason now names s8e (D21-41 (e)), because s7h did not discharge it
+# (ADR-0160). The old text stays non-re-runnable (ADR-0134 decision clause 5; D21-43 N27). s8e's Slice-Verdict commit
+# moves this literal again, by dated line, when it un-ignores the lint.
+for t in conformance::conformance_every_step_kind_has_an_executor conformance::conformance_every_port_has_a_call_site; do
+  printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: the discharged lint $t did not report '... ok' — it went red, was renamed, or was re-ignored"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
+done
+printf '%s\n' "$out" | grep -qF 'test conformance::conformance_every_trailer_key_has_a_producer ... ignored, ARMED: Slice-Verdict has 0 producers' || { echo "FAIL: the trailer lint is not ARMED naming Slice-Verdict — it was discharged, renamed or deleted, and s8e owns that move"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 2 passed; 0 failed; 1 ignored' || { echo "FAIL: the conformance selection is not exactly 2 passed, 0 failed, 1 ignored — the discharged state moved"; printf '%s\n' "$out" | grep -E '^test |^test result'; exit 1; }
+armed=$(printf '%s\n' "$out" | grep -E '^test [A-Za-z0-9_:]*conformance_.*\.\.\. ignored,'); a=$(printf '%s\n' "$armed" | grep -c .); [ "$a" -eq 1 ] || { echo "FAIL: $a conformance lints are ARMED, expected exactly 1 (the trailer lint, s8e's)"; exit 1; }
+printf '%s\n' "$armed" | grep -vE 'discharged by s8e'; rc=$?; [ "$rc" -eq 1 ] || { echo "FAIL: the armed lint's #[ignore] reason does not name s8e, the stage that discharges it (rc=$rc) — the reason IS the debt record"; exit 1; }
 # THE BINARY MUST EXIST AND EXECUTE BEFORE ANY ASSERTION ABOUT WHAT IT PRINTS.
 # CORRECTED 2026-09-21 at this stage's execution, and the hole was BLOCKING: `target/` is
 # gitignored, 0 tracked files live under it, and this block builds nothing — so with the binary

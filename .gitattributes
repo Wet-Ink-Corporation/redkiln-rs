@@ -86,3 +86,20 @@ crates/rk-cli/tests/fixtures/cost/** -text
 # every platform reproduce the preimage the digest already commits to, which is the property that was
 # missing, and it costs no record a correction.
 crates/rk-kernel/tests/fixtures/logs/** -text
+
+# 2026-09-24, s8a, D21-50 (ADR-0164's dated correction, E-0151-1). The golden recording in
+# crates/rk-kernel/tests/it/replay.rs compiles these six sources in with include_str! and folds their
+# bytes into run_id. The committed log implement-bf1d8cec3b22d288 was blessed over their CRLF-smudged
+# working bytes (the index blobs were always LF), so row 1 made them LF and the corpus suite failed
+# nine replay tests. Each source is now the SAME git object as its golden inputs/ copy, pinned
+# verbatim. The recording's other two file inputs (spikes/p9/facets.toml and
+# fixtures/registries/artifacts/artifacts.toml) are LF on both sides and stay under row 1. The
+# unfeatured guard recorded_log::the_recording_sources_are_the_committed_logs_inputs_byte_for_byte
+# holds all eight. Same header rule: a file whose bytes a test pins is protected from the slice that
+# lands it.
+crates/rk-kernel/tests/fixtures/catalog-select/impl-report.toml -text
+crates/rk-kernel/tests/fixtures/catalog-select/change-summary.toml -text
+crates/rk-kernel/tests/fixtures/catalog-select/change-summary-ue.toml -text
+crates/rk-kernel/tests/fixtures/catalog-select/changeset.toml -text
+crates/rk-kernel/tests/fixtures/catalog-select/spec-authoring.toml -text
+crates/rk-kernel/tests/fixtures/packs/incident-deviation.toml -text

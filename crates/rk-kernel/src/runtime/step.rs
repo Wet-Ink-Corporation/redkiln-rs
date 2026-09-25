@@ -286,6 +286,14 @@ impl super::Runtime {
     /// value is discarded without ever being bound: naming the type in this crate would trip
     /// Checkpoint 5's ban, so the call is made and the `Ok` arm carries nothing.
     ///
+    /// *(Noted 2026-09-25, s8a fix round 5, ADR-0165: "both real adapters return `Unsupported`
+    /// from a row dated `2026-09-18`" is no longer so. The Rust adapter's row is re-dated
+    /// `2026-09-24` and its method answers `Ok` with the finalised `Text` arm over a non-empty text
+    /// range; the Node adapter's row is unchanged. The call below passes `""`, and an empty range
+    /// still refuses by name in both, because ADR-0135 decision 4 stands for the empty range, so
+    /// this arm's behaviour does not move. The `Ok` is constructible by any implementor now, and
+    /// this crate still binds and names nothing from it.)*
+    ///
     /// # Errors
     ///
     /// The port's own [`StepError`]; [`StepError::Unsupported`] naming an unmapped verb
@@ -342,6 +350,9 @@ impl super::Runtime {
             }),
             // The one whose `Ok` is never constructible outside `rk-ports`. Mapped, called, and the
             // value dropped — see the 🛑 above.
+            // (Noted 2026-09-25, s8a fix round 5, ADR-0165: an implementor may now construct the
+            // `Ok`, the `Text` arm; the empty range passed here still refuses by name in both real
+            // adapters, and this crate still binds nothing from it.)
             "change_summary" => toolchain.change_summary("").map(|_| ()),
             other => Err(StepError::Unsupported {
                 capability: other.to_owned(),

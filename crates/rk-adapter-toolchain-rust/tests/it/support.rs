@@ -122,3 +122,181 @@ pub fn same_path(a: &str, b: &str) -> bool {
     a.replace('\\', "/")
         .eq_ignore_ascii_case(&b.replace('\\', "/"))
 }
+
+/// A throwaway git repository for `change_summary` (ADR-0165; `s8a` §8a.9): built through
+/// `rk-git`'s one wrapper (ADR-0077 -- no `Command` for git exists in this suite), isolated from
+/// the operator's configuration the way `rk-git`'s own fixtures are (an empty global config, no
+/// system config, `core.autocrlf=false`, no hooks, pinned identity and dates), so the range read
+/// under test is a property of the fixture and never of `~/.gitconfig`.
+pub struct FixtureRepo {
+    dir: tempfile::TempDir,
+}
+
+impl FixtureRepo {
+    /// `git init` a fresh repository.
+    pub fn new() -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::create_dir_all(dir.path().join("repo")).expect("mkdir repo");
+        std::fs::create_dir_all(dir.path().join("nohooks")).expect("mkdir nohooks");
+        std::fs::write(dir.path().join("empty.gitconfig"), b"").expect("write empty gitconfig");
+        let repo = Self { dir };
+        repo.git(&["init", "--quiet"]);
+        repo
+    }
+
+    /// The repository's root: the project root the adapter is constructed over.
+    pub fn root(&self) -> PathBuf {
+        self.dir.path().join("repo")
+    }
+
+    /// Run git in the repository, isolated; panics on failure (a fixture step that fails
+    /// silently builds a vacuous fixture).
+    pub fn git(&self, args: &[&str]) -> String {
+        let home = self.dir.path();
+        let mut all: Vec<String> = vec![
+            "-c".into(),
+            "core.autocrlf=false".into(),
+            "-c".into(),
+            format!("core.hooksPath={}", home.join("nohooks").display()),
+            "-c".into(),
+            "commit.gpgsign=false".into(),
+            "-c".into(),
+            "init.defaultBranch=main".into(),
+        ];
+        all.extend(args.iter().map(|s| (*s).to_owned()));
+        let env = [
+            ("GIT_CONFIG_NOSYSTEM", "1".to_owned()),
+            (
+                "GIT_CONFIG_GLOBAL",
+                home.join("empty.gitconfig").display().to_string(),
+            ),
+            ("GIT_AUTHOR_NAME", "rk".to_owned()),
+            ("GIT_COMMITTER_NAME", "rk".to_owned()),
+            ("GIT_AUTHOR_EMAIL", "rk@example.invalid".to_owned()),
+            ("GIT_COMMITTER_EMAIL", "rk@example.invalid".to_owned()),
+            ("GIT_AUTHOR_DATE", "1700000000 +0000".to_owned()),
+            ("GIT_COMMITTER_DATE", "1700000000 +0000".to_owned()),
+        ];
+        match rk_git::git_exec::run_with_env(&self.root(), &all, env) {
+            Ok(out) => out.stdout_trimmed(),
+            Err(e) => panic!("fixture git {args:?} failed: {e:?}"),
+        }
+    }
+
+    /// Write `bytes` at `path` (relative), creating parents.
+    pub fn write(&self, path: &str, bytes: &[u8]) {
+        let full = self.root().join(path);
+        if let Some(parent) = full.parent() {
+            std::fs::create_dir_all(parent).expect("mkdir parents");
+        }
+        std::fs::write(full, bytes).expect("write fixture file");
+    }
+
+    /// Remove `path` (relative).
+    pub fn remove(&self, path: &str) {
+        std::fs::remove_file(self.root().join(path)).expect("remove fixture file");
+    }
+
+    /// Stage everything and commit.
+    pub fn commit(&self, message: &str) {
+        self.git(&["add", "-A"]);
+        self.git(&["commit", "--quiet", "-m", message]);
+    }
+
+    /// The adapter over THIS repository as its project root, with the shipped registry.
+    pub fn adapter(&self, scratch: &Path) -> RustToolchain {
+        RustToolchain::new(self.config(scratch)).expect("the shipped registry loads")
+    }
+
+    /// A `Config` over this repository.
+    pub fn config(&self, scratch: &Path) -> Config {
+        config_with(
+            PathBuf::from(rk_adapter_toolchain_rust::DEFAULT_PROGRAM),
+            GENEROUS,
+            &self.root(),
+            minimal_env(),
+            scratch,
+        )
+    }
+}
+
+/// A git-lfs pointer blob, as git-lfs writes it.
+pub const LFS_POINTER: &[u8] = b"version https://git-lfs.github.com/spec/v1\noid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\nsize 12345\n";
+
+/// A two-commit repository whose second commit touches only text and generated paths: modifies
+/// `src/lib.rs` and `Cargo.lock`, adds `notes.md`, deletes `README.md`. *(Amended 2026-09-25, s8a,
+/// D21-51: the first commit also carries a `Cargo.toml` the range does not change, so the `Text`
+/// arm's git-as-authority case can mutate and delete it in the working tree.)*
+pub fn text_range_repo() -> FixtureRepo {
+    let repo = FixtureRepo::new();
+    repo.write(
+        "Cargo.toml",
+        b"[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+    );
+    repo.write("src/lib.rs", b"pub fn one() -> u32 {\n    1\n}\n");
+    repo.write("README.md", b"# fixture\n");
+    repo.write("Cargo.lock", b"version = 3\n");
+    repo.commit("one");
+    repo.write("src/lib.rs", b"pub fn one() -> u32 {\n    2\n}\n");
+    repo.write("Cargo.lock", b"version = 4\n");
+    repo.write("notes.md", b"a note\n");
+    repo.remove("README.md");
+    repo.commit("two");
+    repo
+}
+
+/// A two-commit repository whose second commit adds a `.uasset` (bytes, with NULs) beside a text
+/// change.
+pub fn binary_range_repo() -> FixtureRepo {
+    let repo = FixtureRepo::new();
+    repo.write("src/lib.rs", b"pub fn one() -> u32 {\n    1\n}\n");
+    repo.commit("one");
+    repo.write("src/lib.rs", b"pub fn one() -> u32 {\n    2\n}\n");
+    repo.write(
+        "Content/Hero.uasset",
+        b"\xC1\x83\x2A\x9E\x00\x00\x00\x01uasset\x00bytes",
+    );
+    repo.commit("two");
+    repo
+}
+
+/// A two-commit repository whose second commit adds `data/table.json` as a git-lfs pointer blob
+/// beside an ordinary `data/plain.json`.
+pub fn lfs_range_repo() -> FixtureRepo {
+    let repo = FixtureRepo::new();
+    repo.write("README.md", b"# fixture\n");
+    repo.commit("one");
+    repo.write("data/table.json", LFS_POINTER);
+    repo.write("data/plain.json", b"{\"rows\": [1, 2, 3]}\n");
+    repo.commit("two");
+    repo
+}
+
+/// A two-commit repository whose second commit DELETES an extensionless NUL-bearing blob
+/// (`assets/blob`) beside a text change: the working tree no longer holds the binary, so only the
+/// range's blobs can say it is one. *(Added 2026-09-25, s8a fix round 1.)*
+pub fn deleted_binary_range_repo() -> FixtureRepo {
+    let repo = FixtureRepo::new();
+    repo.write("a.txt", b"one\n");
+    repo.write("assets/blob", b"\x00\x01\x02binary\x00payload");
+    repo.commit("one");
+    repo.remove("assets/blob");
+    repo.write("a.txt", b"two\n");
+    repo.commit("two");
+    repo
+}
+
+/// A two-commit repository whose second commit ADDS an extensionless NUL-bearing `tool`, then
+/// checks the BASE commit out: the working tree is not on the head end. Returns the repository and
+/// the `<base>..<head>` range. *(Added 2026-09-25, s8a fix round 1.)*
+pub fn unchecked_out_binary_range_repo() -> (FixtureRepo, String) {
+    let repo = FixtureRepo::new();
+    repo.write("a.txt", b"one\n");
+    repo.commit("one");
+    let base = repo.git(&["rev-parse", "HEAD"]);
+    repo.write("tool", b"\x7fELF\x02\x01\x01\x00\x00\x00tool");
+    repo.commit("two");
+    let head = repo.git(&["rev-parse", "HEAD"]);
+    repo.git(&["checkout", "--quiet", &base]);
+    (repo, format!("{base}..{head}"))
+}

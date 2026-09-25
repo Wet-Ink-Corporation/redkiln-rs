@@ -10,6 +10,13 @@
 //! unsupported (`change_summary`, D17-9) and asserts `Err(Unsupported { capability })` naming it,
 //! where 7a's unchanged `.expect("change_summary(range)")` would panic on this row.
 //!
+//! *(Noted 2026-09-25, s8a fix round 2, ADR-0165: `change_summary` is no longer unsupported
+//! outright on this adapter. It answers `Ok(Text)` over a non-empty text range. The
+//! arm's `Err(Unsupported { capability })` holds on this row because the fixture project is not a
+//! git repository, so the range read refuses at `RangeError::Open`; the test asserts that premise,
+//! so a fixture that became a repository fails here by name rather than moving the arm silently.
+//! The `Text` arm is certified by `change_summary::*`, not by this row.)*
+//!
 //! **The spawn marker** (§7c.18: *"`Ok` without a spawn marker — the fixture project's tests write
 //! one"*): the map carries `RK_SPAWN_MARKER_DIR`, and the fixture's `passes_and_is_filterable`
 //! writes one file there per run, so an adapter that answered `Ok(2)` without running `cargo` is
@@ -34,6 +41,14 @@ fn port_conformance_real_row_rust() {
             markers.path().to_string_lossy().into_owned(),
         )],
         scratch.path(),
+    );
+
+    // PREMISE (2026-09-25, s8a fix round 2, ADR-0165): the arm's refusal is the no-repository
+    // path, so the fixture project must not be a git repository (the module doc).
+    assert!(
+        !crate::support::fixture_project().join(".git").exists(),
+        "PREMISE: the fixture project is not a git repository, so the shared body's \
+         `change_summary` arm is answered by the no-repository refusal (ADR-0165)"
     );
 
     // The tokens come from the registry the adapter answers from (D17-9), never a literal here.

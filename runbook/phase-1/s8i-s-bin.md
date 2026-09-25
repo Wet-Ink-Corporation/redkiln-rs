@@ -1014,7 +1014,11 @@ either taken in the record or named as owed with an owner.
 **The Rust — named, red first, each with its mutant.** `CS` below is the crate `s8a`'s record homes the type in
 (`rk-ports` at `ca8f387`; ADR-0099 clause 5). `s8a`'s own test that the slot is sealed —
 `change_summary::binary_arm_is_not_constructible_outside_rk_ports`, with its `trybuild` case — is **superseded by
-name** in the same commit, and so is Checkpoint 8a's guard that the sealed payload has no `pub` field. So is the same pin in
+name** in the same commit, and so is Checkpoint 8a's guard that the sealed payload has no `pub` field. *(Noted 2026-09-25, s8a fix round 8:
+so is guard (6)'s `sealed_open` floor, which `s8a` fix round 7 added. It asserts `OPEN impls=0 ctors=0 aliases=0` over
+`crates/rk-ports/src` *(amended 2026-09-25, s8a fix round 9: it read `OPEN impls=0 ctors=0`; an alias or a renaming
+`use` of the payload now counts)*, and the recorded constructor this stage writes is an impl block it fails on. `s8a`'s
+block takes its dated amendment for the floor in the same commit as the no-`pub`-field line.)* So is the same pin in
 Checkpoint 5's amended block: `s8a` §8a.3's *"the sealed payload type declares no `pub` field"*, which Checkpoint 8i
 re-runs. `s5`'s block takes its dated amendment in the same commit, naming the pin that replaces it: the record's
 construction rule, carried by the `trybuild` case below. Checkpoint 8a
@@ -1023,6 +1027,9 @@ takes a dated amendment. Checkpoint 8i then re-runs that amended block whole (gu
 pending re-run. Whether the Rust adapter's `change_summary::change_summary_refuses_a_range_carrying_a_binary_path`
 and `s8a`'s `change_summary::change_summary_refuses_a_range_carrying_an_lfs_pointer_path` stand follows the record's
 `Binary producers in Phase 1` line. With `none`, both stand unchanged.
+*(Noted 2026-09-25, `s8a` fix round 4: there are three such pins, not two. `s8a` fix round 1 added the Rust
+adapter's `change_summary::change_summary_refuses_a_binary_blob_the_working_tree_does_not_hold` (`s8a` §8a.9). Its
+fate follows the same `Binary producers in Phase 1` line, and with `none` all three stand unchanged.)*
 
 | test | where | red because | mutant |
 | --- | --- | --- | --- |

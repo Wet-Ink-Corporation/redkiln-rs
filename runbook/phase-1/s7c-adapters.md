@@ -1353,7 +1353,7 @@ libtest's one-line-per-test list, parsed by its `: test` suffix — not the pros
 ok. N passed; …`), which the adapter never reads. The `--list` route counts what would run, not what passed; a
 machine-readable per-test result on stable Rust is nextest's and is ARMED (§7c.22). `VerifyReport.argv` records the
 **run** vector; the count vectors are that vector plus `-- --list` / `-- --list --ignored`, and `ac325_…` asserts
-both were handed to the OS as recorded. `cargo metadata --format-version 1` is read through `serde_json`, not a `cargo_metadata` crate *(as built 2026-09-18 at Slice 6: NOT read at all — `classify` is per path over the extension/NUL heuristic and `change_summary` is `Unsupported` behind S-BIN (D17-9), so the `cargo metadata` read that ADR-0094 d1 names for both is deferred with `change_summary`; the pack's `CargoMetadata` kind has no producer today; a dated note against ADR-0094 d1 is OWED)* (no new
+both were handed to the OS as recorded. `cargo metadata --format-version 1` is read through `serde_json`, not a `cargo_metadata` crate *(as built 2026-09-18 at Slice 6: NOT read at all — `classify` is per path over the extension/NUL heuristic and `change_summary` is `Unsupported` behind S-BIN (D17-9), so the `cargo metadata` read that ADR-0094 d1 names for both is deferred with `change_summary`; the pack's `CargoMetadata` kind has no producer today; a dated note against ADR-0094 d1 is OWED)* *(discharged 2026-09-25 at `s8a`, D21-51, for its `classify`/`change_summary` part: ADR-0165 decision 9 supersedes ADR-0094 d1's clause in part, as far as `classify` and the `Text` arm. RT-26's `--list` note against the same decision stays owed)* (no new
 dep). `rustc -V` is recorded as `toolchain_version`; **`+1.98.1` is never hard-coded** — a third copy of the pin
 (ADR-0102/ADR-0083 keep it in `rust-toolchain.toml` and `rust-version`). The Node adapter's test argv is **the full
 vector `<npx.cmd|npx> vitest run --reporter=json --outputFile=<tmp> <file> [-t <pattern>]`, stated once** — the JSON
@@ -3101,6 +3101,10 @@ recorded in `PROGRESS.md` §1 as carried forward:
 - **AC-239** — **built and claimed at 7b-ii on its list-is-data half** (`ac239_gate_eligible_list_is_data`, `fdd9a4b`);
   its Codex half is Phase 2 (ADR-0094 decision 2). The 211-line file held it by bare range with no reason — **this is
   the reason-bearing note `s7b-ii` §7b-ii.14 said was OWED**; no second list is built here.
+  *(Noted 2026-09-24, s8a §8a.6, ADR-0167: the Codex adapter is **Phase 4**, after S-CODEX, as ADR-0007
+  places it. ADR-0167 supersedes ADR-0094 decision 2's phase clause in part, and E-0094-2 records that
+  DECISIONS-2026-09-12 E12 was taken with ADR-0007's phase sentence out of view. The exclusion stands; its
+  phase reason is corrected.)*
 - **AC-356** — PROVISIONAL on S-BIN; `change_summary`'s body waits (AC-497's `classify` is built).
 - **Kernel-owned rows swept in by the old bare ranges, each with its adapter share stated:** AC-222 (durable retry
   mark — AC-030's; the adapter emits `RateLimited` and never backs off), AC-230 (gate blocks on `Err` — the adapter's

@@ -298,6 +298,10 @@ type specifically: no review evidence of any kind exists for items whose change 
 set cannot be fixed. The crate ships every other artifact type. Historical change material is carried as opaque
 content with a migration-loss marker, and **no `ChangeSummary` value is synthesised** (AC-475). The five
 toolchain-keyed kinds (ADR-0073) are not finalised either.
+*(Amended 2026-09-24, s8a §8a.3, ADR-0165: this paragraph is true of Step 5 and is not true now. ADR-0165 splits
+`ChangeSummary` into an enum defined only in `rk-ports`: a `Text` arm (a typed diff plus a manifest) finalised at `s8a`,
+and a sealed `Binary` slot that S-BIN fills at `s8i`. "No value is synthesised" still holds for `redkiln-migrate`
+(AC-475). Checkpoint 5's `ChangeSummary` statements below are replaced to match.)*
 
 **The fixture existing does not move this.** Step 3c records that S-BIN's fixture is now identified — the real
 Unreal project at `D:/repos/BrittonGames`, UE 5.8, headless automation working, assets in Git LFS [measured, paths
@@ -404,39 +408,118 @@ one=$(grep -rnE 'oneOf' crates/rk-types/tests/it/snapshots/); [ -z "$one" ] || {
                                                           # anyOf is legal only as schemars' nullable form and
                                                           # never nested — the snapshot TEST asserts that, not a grep
 test -d crates/rk-types/src || { echo "FAIL: crates/rk-types/src absent"; exit 1; }
-# ChangeSummary — THE TYPE lives only as rk-ports' opaque newtype until S-BIN reports (ADR-0099 clause 5's Decision
-# text: "the grep for ITS absence" — the NEWTYPE's; design §9.2: S-BIN "gates the type and the port's change_summary
-# body, nothing else"). The artifact KIND named `ChangeSummary` is ADR-0073's — one of the five toolchain-keyed kinds
-# whose keyed expansion the kernel's selection tests exercise in string literals BY DESIGN — so the rule is "the name
-# in CODE, not in a string literal and not in a comment". String literals are stripped BEFORE the word is matched, so
-# a type use on a line that also carries a string is still caught. (Amended 2026-09-17, reading 2 of PROGRESS §1 row 5:
-# the bare `grep -rn 'ChangeSummary'` fired on 27 kernel hits — 22 string literals, 5 comment lines, ZERO in a type
-# position — all present since Step 7b, so this block could not pass from 7b to 2026-09-17 and no re-run noticed.
-# The pipe is SPLIT (halts.md shape (c)): the old `$(grep | grep -v)` read a missing crates/ as a clean tree.)
+# ChangeSummary — [amended 2026-09-24, s8a §8a.3, ADR-0165] THE STATEMENTS BELOW REPLACE THIS CHECKPOINT'S OLD
+# ChangeSummary LINES. ADR-0165 supersedes in part ADR-0099 clause 5 and its forbids bullet, ADR-0135 decisions 4-5
+# and its third and fourth forbids bullets, ADR-0093 decision 4, ADR-0094 decision 1 and ADR-0008: ChangeSummary is an
+# enum defined ONLY in rk-ports, with a finalised Text arm and a sealed Binary slot that S-BIN fills at s8i. An
+# implementor of Toolchain::change_summary, test doubles included, may import the type, name it in that method's
+# signature and construct the Text arm. Nothing outside rk-ports defines, aliases, renames or implements a trait for any
+# …ChangeSummary type, and rk-kernel's production code names it nowhere (ADR-0135's surviving forbids). The old line
+# banned the bare NAME outside rk-ports, minus ::ChangeSummary paths, and was RED at ca8f387 on six sites (eight
+# literal ones) that ADR-0094 decision 1 and D17-9 REQUIRE; it is not carried forward. The ::ChangeSummary exclusion is
+# DROPPED: a path-qualified definition, alias or impl fires like a bare one. String literals are blanked and comment
+# lines dropped BEFORE matching, as before (readings 2 and 3 of PROGRESS §1 row 5 stand for the vocabulary variant).
+# These lines are Checkpoint 8a guard (6)'s, copied from its bytes: the same CS_BAN, the same filter, the same
+# controls, with target/s8a-ctl re-homed to target/cp5-ctl. Stated limit: the ban reads one line at a time, so an impl
+# split with "for …ChangeSummary" on its own line is not seen; cargo fmt --check above holds the tree to rustfmt's
+# one-line form. The opacity pins are floors; the behavioural pin is the trybuild case
+# change_summary::binary_arm_is_not_constructible_outside_rk_ports. The sealed-slot pins are SUPERSEDED BY NAME at s8i.
+# [amended 2026-09-25, s8a fix round 3] Stated limit, corrected: the ban reads one PHYSICAL line at a time, and rustfmt
+# wraps any definition wider than its width, so fmt --check does NOT hold the tree to a one-line form for those. Measured
+# 2026-09-25: rustfmt writes a long alias as `pub type X =` then `    Result<…ChangeSummary, …>;`, and a long impl
+# header with `    for ChangeSummary` on its own line; the ban sees neither, alias or impl. A line-joined (statement)
+# reading is the fix, owed and not taken here.
+mkdir -p target/cp5-ctl || { echo "FAIL: cannot make target/cp5-ctl for the sealed-slot reader"; exit 1; }
+# [amended 2026-09-25, s8a fix round 1] The rename arm fired only on a capital or _ after `as`, so a lowercase
+# renaming import (`use …::ChangeSummary as summary;`, `{ChangeSummary as cs, …}`) passed, and rustc -D warnings
+# accepts one. Two arms are added: a renaming import on a `use` line, whatever the alias's case, and a line made only
+# of import-list items one of which renames …ChangeSummary. Controls 20-23 fire; 19 and 24 (numeric casts) are
+# admitted. Stated limit: a lowercase cast that is the whole of a list-item line (`X::ChangeSummary as u8,`) fires.
+# [amended 2026-09-25, s8a fix round 13] The impl arm took only a (path-qualified) name straight after `for`,
+# so `impl Render for &ChangeSummary`, `for &'a rk_ports::toolchain::ChangeSummary`, `for Box<ChangeSummary>` and
+# `for Option<…BinaryChangeSummary>` passed, and each compiles outside rk-ports under rustc -D warnings. The arm
+# now takes any text between `for` and the name on the line; no admitted control carries `impl`. Controls 27 and 28
+# (a reference and a Box<…>) fire. The one-physical-line limit above is unchanged.
+# [amended 2026-09-25, s8a fix round 14] The definition arm and the `impl … for` arm matched the name as
+# [A-Za-z_]*ChangeSummary, so a raw identifier (`pub struct r#ChangeSummary;`, a type literally named
+# ChangeSummary) and a digit in the prefix (`pub struct V2ChangeSummary;`, `impl Clone for Sha1ChangeSummary {`)
+# passed, and each compiles under rustc -D warnings. Both arms now take [A-Za-z0-9_]*, and the definition arm an
+# optional r# prefix. Controls 29, 30 and 31 fire.
+CS_BAN='\b(struct|enum|type|trait|union)[[:space:]]+(r#)?[A-Za-z0-9_]*ChangeSummary\b|\btype[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[^=]*=.*\b[A-Za-z_]*ChangeSummary\b|\bimpl\b.*\bfor[[:space:]]+.*\b[A-Za-z0-9_]*ChangeSummary\b|\bimpl(<[^>]*>)?[[:space:]]+([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*ChangeSummary\b|\b[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Z_]|\buse\b[^;]*\b[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Za-z_]|^[^:]+:[0-9]+:[[:space:]]*([A-Za-z_][A-Za-z0-9_:]*([[:space:]]+as[[:space:]]+[A-Za-z_][A-Za-z0-9_]*)?[[:space:]]*,[[:space:]]*)*([A-Za-z_][A-Za-z0-9_]*::)*[{]?[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(,.*)?$'
+# [amended 2026-09-25, s8a fix round 5] The string blank was `s/"([^"\]|\.)*"/""/g`: in ERE a backslash inside a
+# bracket is literal and `\.` is a literal dot, so a string holding a backslash escape ("a\n") was never blanked and
+# its closing quote paired with the NEXT string on the line, blanking the code between (a ChangeSummary impl, a
+# diff_tree_to_tree call). It is now escape-aware, `[^"\\]|\\.` (a non-quote non-backslash, or a backslash and any
+# byte), as sealed.py's \\[\s\S] has been since fix round 1. Planted controls carry a backslash-escaped string.
+cs_filter() { grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/"([^"\\]|\\.)*"/""/g' | grep -E "$CS_BAN"; }
 raw=$(grep -rn 'ChangeSummary' crates/ --include='*.rs'); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: the ChangeSummary search could not run (grep rc=$rc; 2 = no such path) — a count of 0 here would be a fake 0"; exit 1; }
-# (Amended 2026-09-18, reading 3 — PROGRESS §2 D17-1's follow-on, raised at Step 7c Slice 4's Checkpoint 5 re-run: the
-# statement fired on `enum Capability { …, ChangeSummary, … }` and its `Self::ChangeSummary` / `Capability::ChangeSummary`
-# arms in crates/rk-adapter-{sqlite,claude}/src/registry.rs — the capability VOCABULARY's variant for the port method
-# `change_summary` (s7c §7c.7, RT-24), an identifier that is not the rk-ports TYPE and names no shape. The ban is the
-# TYPE's (ADR-0099 clause 5); a guard scoped wrong blocks valid work (golden constraint 9). Two exclusions, both
-# anchored: a path-qualified variant use `::ChangeSummary` and a bare variant declaration line `ChangeSummary,`. A
-# type-position use — `: ChangeSummary`, `-> ChangeSummary`, `<ChangeSummary>`, `ChangeSummary(` — still fires; the
-# synthetic controls below prove both halves. The registry bodies' byte-equality is Checkpoint 7c's, not this line's.)
-cs=$(printf '%s\n' "$raw" | grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b' | grep -vE '::ChangeSummary\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*ChangeSummary,[[:space:]]*$')
-[ -z "$cs" ] || { echo "FAIL: the ChangeSummary TYPE is named in code outside rk-ports (ADR-0099 clause 5; blocked on S-BIN):"; printf '%s\n' "$cs"; exit 1; }   # → silent
-# POSITIVE CONTROL, in two halves. (1) The unfiltered search must still see rk-ports' own newtype, or the search is
-# looking at the wrong tree. (2) The FILTER must still let a code-position use through: run it over rk-ports' own
-# definition line and demand a hit — a filter that stripped too much would read every tree as clean.
-printf '%s\n' "$raw" | grep -q '^crates/rk-ports/src/toolchain.rs:[0-9]*:pub struct ChangeSummary(' || { echo "FAIL: rk-ports' own ChangeSummary newtype was not found by the search — the ban above is looking at the wrong tree (it was at crates/rk-ports/src/toolchain.rs:42 on 2026-09-17)"; exit 1; }
-ctl=$(printf '%s\n' "$raw" | grep '^crates/rk-ports/src/toolchain.rs:[0-9]*:pub struct ChangeSummary(' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b')
-[ -n "$ctl" ] || { echo "FAIL: the comment/string filter dropped rk-ports' own definition line — the filter is too wide and the ban above is vacuous"; exit 1; }
-# (3, added 2026-09-18 with reading 3) The two variant exclusions must NOT swallow a type-position use, and MUST admit a
-# path-qualified variant use: two synthetic lines in the grep's own `path:line:content` shape, through the SAME chain.
-syn=$(printf 'x.rs:1:fn f(a: ChangeSummary) -> ChangeSummary { ChangeSummary(()) }\n' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b' | grep -vE '::ChangeSummary\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*ChangeSummary,[[:space:]]*$')
-[ -n "$syn" ] || { echo "FAIL: the reading-3 exclusions swallowed a TYPE-position use of ChangeSummary — the ban is vacuous"; exit 1; }
-syn2=$(printf 'x.rs:2:            Self::ChangeSummary => "",\n' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*)' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E '\bChangeSummary\b' | grep -vE '::ChangeSummary\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*ChangeSummary,[[:space:]]*$')
-[ -z "$syn2" ] || { echo "FAIL: the reading-3 exclusion does not admit a path-qualified variant use — the registry files would fire again"; exit 1; }
+[ "$rc" -eq 0 ] || { echo "FAIL: the ChangeSummary search found nothing or could not run (rc=$rc) — rk-ports' own enum must be seen"; exit 1; }
+hits=$(printf '%s\n' "$raw" | cs_filter)
+[ -z "$hits" ] || { echo "FAIL: a ChangeSummary definition, alias or impl outside rk-ports:"; printf '%s\n' "$hits"; exit 1; }
+for ctl in 'F|x.rs:1:pub struct ChangeSummary;' 'F|x.rs:2:pub enum TextChangeSummary { A }' 'F|x.rs:3:type Cs = rk_ports::toolchain::ChangeSummary;' 'F|x.rs:4:impl Clone for ChangeSummary {' 'F|x.rs:5:impl rk_ports::toolchain::ChangeSummary {' 'F|x.rs:6:impl<T> From<T> for rk_ports::toolchain::BinaryChangeSummary {' 'F|x.rs:7:    let s = "x"; impl Copy for ChangeSummary {}' 'P|x.rs:8:use rk_ports::toolchain::{ChangeSummary, Classification, Toolchain};' 'P|x.rs:9:    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {' 'P|x.rs:10:    ) -> Result<rk_ports::toolchain::ChangeSummary, rk_types::error::StepError> {' 'P|x.rs:11:            Self::ChangeSummary => "change_summary",' 'P|x.rs:12:    ChangeSummary,' 'P|x.rs:13:        Ok(ChangeSummary::Text(text))' 'P|x.rs:14:    // impl Clone for ChangeSummary {}' 'P|x.rs:15:    let k = "impl Clone for ChangeSummary";' 'F|x.rs:16:use rk_ports::toolchain::ChangeSummary as Cs;' 'F|x.rs:17:    ChangeSummary as Summary,' 'F|x.rs:18:use rk_ports::toolchain::{ChangeSummary as _, Toolchain};' 'P|x.rs:19:    let n = Capability::ChangeSummary as usize;' 'F|x.rs:20:use rk_ports::toolchain::ChangeSummary as summary;' 'F|x.rs:21:use rk_ports::toolchain::{ChangeSummary as cs, Toolchain};' 'F|x.rs:22:    ChangeSummary as summary,' 'F|x.rs:23:    toolchain::{ChangeSummary as cs, Toolchain},' 'P|x.rs:24:        let n = kind as usize + Capability::ChangeSummary as usize;' 'F|x.rs:25:    const A: &str = "a\n"; impl Clone for ChangeSummary { fn n() -> &str { "z" } }' 'P|x.rs:26:    let k = "a\"impl Clone for ChangeSummary\"";' 'F|x.rs:27:impl Render for &ChangeSummary {' 'F|x.rs:28:impl Render for Box<rk_ports::toolchain::ChangeSummary> {' 'F|x.rs:29:pub struct r#ChangeSummary;' 'F|x.rs:30:pub struct V2ChangeSummary;' 'F|x.rs:31:impl Clone for Sha1ChangeSummary {'; do
+  want=${ctl%%|*}; line=${ctl#*|}; got=$(printf '%s\n' "$line" | cs_filter)
+  if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: control must FIRE and did not — the ban is vacuous for: $line"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: control must be ADMITTED and fired — the ban blocks what the record licenses: $line"; exit 1; }; fi
+done
+kraw=$(grep -rn 'ChangeSummary' crates/rk-kernel/src --include='*.rs'); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the rk-kernel search could not run (rc=$rc)"; exit 1; }
+k_filter() { grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/"([^"\\]|\\.)*"/""/g' | grep -E '\bChangeSummary\b'; }
+khits=$(printf '%s\n' "$kraw" | k_filter)
+[ -z "$khits" ] || { echo "FAIL: rk-kernel production code names the ChangeSummary type (ADR-0135's surviving forbids):"; printf '%s\n' "$khits"; exit 1; }
+kctl=$(printf 'crates/rk-kernel/src/x.rs:1:fn f(s: &str) -> Option<ChangeSummary> { None }\n' | k_filter)
+[ -n "$kctl" ] || { echo "FAIL: the rk-kernel ban's control did not fire"; exit 1; }
+kctl=$(printf '%s\n' 'crates/rk-kernel/src/x.rs:2:    let r = check("a\n", ChangeSummary::Text(t), "z");' | k_filter)
+[ -n "$kctl" ] || { echo "FAIL: the rk-kernel ban's control did not fire past a backslash-escaped string"; exit 1; }
+nenum=$(grep -cE '^pub enum ChangeSummary[[:space:]]*\{' crates/rk-ports/src/toolchain.rs)
+[ "$nenum" -eq 1 ] || { echo "FAIL: $nenum 'pub enum ChangeSummary {' in rk-ports, expected 1 — the split did not land"; exit 1; }
+# [amended 2026-09-25, s8a fix round 1] The string blank below reads a backslash-escape as \\[\s\S], as Checkpoint 8a
+# guard (6)'s sealed.py has since 2026-09-25; this copy kept \\. and so was not "copied from its bytes" until now.
+# [amended 2026-09-25, s8a fix round 6] ONE left-to-right pass strips comments and blanks strings, so a `//`
+# inside a string (a doc URL) no longer truncates the code after it; and the pub counter skips only a real
+# restriction, pub(crate|self|super|in …), where `(?!\s*\()` also skipped `pub ()` and `pub (u8, u8)` — the
+# direct way to open the slot read pubfields=0. Four more controls pin both; Checkpoint 8a guard (6) carries the same reader.
+cat > target/cp5-ctl/sealed.py <<'PY'
+import re, sys
+src = open(sys.argv[1], encoding="utf-8").read().replace(chr(13), "")
+src = re.sub(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\]|\\[\s\S])*"', lambda m: '""' if m.group(0)[0] == '"' else '', src, flags=re.S)
+decls = list(re.finditer(r"\bstruct\s+BinaryChangeSummary\b", src))
+pub = 0
+for m in decls:
+    i = m.end()
+    if src[i:].lstrip().startswith("<"):
+        i = src.index(">", i) + 1
+    rest = src[i:].lstrip()
+    if rest and rest[0] in "({":
+        close, depth, j = {"(": ")", "{": "}"}[rest[0]], 0, 0
+        for j, ch in enumerate(rest):
+            depth += ch in "({[" and 1 or 0
+            depth -= ch in ")}]" and 1 or 0
+            if depth == 0:
+                break
+        pub += len(re.findall(r"\bpub\b(?!\s*\(\s*(?:(?:crate|self|super)\s*\)|in\s))", rest[1:j]))
+print("SEALED decls=%d pubfields=%d" % (len(decls), pub))
+PY
+sealed() { python target/cp5-ctl/sealed.py "$1" 2>&1; }
+out=$(sealed crates/rk-ports/src/toolchain.rs); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the sealed-slot reader could not run (rc=$rc): $out"; exit 1; }
+[ "$out" = "SEALED decls=1 pubfields=0" ] || { echo "FAIL: rk-ports' sealed Binary payload reads '$out', expected one declaration with no pub field — none means the pin passes over nothing, a pub field means it is constructible"; exit 1; }
+for ctl in 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary { pub bytes: u64 }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub u64);' 'SEALED decls=1 pubfields=0|// pub struct BinaryChangeSummary(pub u64);  pub struct BinaryChangeSummary(pub(crate) ());' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary { bytes: u64, note: Vec<u8> }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub ());' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub (u8, u8));' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary(pub(in crate::toolchain) ());' 'SEALED decls=1 pubfields=1|#[doc = "spec: https://git-lfs.com"] pub struct BinaryChangeSummary { pub bytes: () }'; do
+  printf '%s\n' "${ctl#*|}" | sed 's/  pub struct/\npub struct/' > target/cp5-ctl/sealed_ctl.rs || { echo "FAIL: cannot write a sealed-slot control"; exit 1; }
+  out=$(sealed target/cp5-ctl/sealed_ctl.rs); rc=$?
+  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the sealed-slot reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }
+done
+# [amended 2026-09-25, s8a fix round 1] A fifth sealed-slot control: a line-continued string BEFORE the declaration,
+# with a later string. Under the old string blank (\\. for an escape) the quotes re-pair across the declaration and
+# the reader reports decls=0, losing the pub field that makes the payload constructible; this pins BOTH copies of
+# the reader (Checkpoint 8a guard (6) and Checkpoint 5), which cs_cont.rs below does not reach.
+# [amended 2026-09-25, s8a fix round 10] Since fix rounds 6 and 7 the reader is ONE re.sub pass under re.S, and
+# under re.S `.` matches a newline, so the escape arms \\. and \\[\s\S] are the same pattern: reverting the
+# blank alone leaves this control GREEN (measured: \\. with re.S reads decls=1 pubfields=1; [\s\S] without
+# re.S reads the same). It goes red only when the escape arm is \\. AND re.S is dropped (decls=0 pubfields=0).
+# So it pins that pair, not the blank; no input can tell \\. from \\[\s\S] under re.S, so no single-point
+# control on the escape arm exists.
+printf '%s\n' '#[error("a message \' '   continued")]' 'pub struct BinaryChangeSummary(pub u64);' 'const LATER: &str = "later";' > target/cp5-ctl/sealed_cont.rs || { echo "FAIL: cannot write the continued-string sealed-slot control"; exit 1; }
+out=$(sealed target/cp5-ctl/sealed_cont.rs); rc=$?
+[ "$rc" -eq 0 ] && [ "$out" = "SEALED decls=1 pubfields=1" ] || { echo "FAIL: CONTROL — a line-continued string before the declaration hid it from the sealed-slot reader: '$out' (want SEALED decls=1 pubfields=1)"; exit 1; }
 test -f Cargo.toml || { echo "FAIL: no root manifest"; exit 1; }
 meta=$(cargo metadata --format-version 1 --no-deps); rc=$?; [ "$rc" -eq 0 ] || { echo "FAIL: cargo metadata exited $rc"; exit 1; }
 printf '%s\n' "$meta" | python -c "import json,sys; m=json.load(sys.stdin); assert m['packages'], 'FAIL: metadata lists no packages'; allowed={'rk-cli','redkiln-migrate'}; bad=sorted(p['name'] for p in m['packages'] if p['name'] not in allowed and any(d['name']=='anyhow' for d in p['dependencies'])); print(bad); sys.exit(1 if bad else 0)" \
@@ -466,6 +549,8 @@ project with no snapshots at all. The `test -d` guard makes a missing snapshot d
 `ChangeSummary` line captures into `cs=$(…)` and tests `-z` for the same reason, though there the false pass was
 benign: the property being asserted is absence, and a missing `src/` is a different failure the build already
 catches. *(Corrected 2026-09-13: this sentence said the line was piped to `wc -l`, which it has not been.)*
+*(Amended 2026-09-24, s8a §8a.3, ADR-0165: the `cs=$(…)` line is gone. Its successor captures into `hits=$(…)` and
+tests `-z` the same way, and the positive half is now the raw search's demanded rc 0, the enum pin and the controls.)*
 
 `grep -L` without `-r`: the arguments are an explicit glob of files, so `-r` did nothing.
 
@@ -478,6 +563,32 @@ Counted mechanically off the block — backslash continuations joined, comments 
 The one line that changed was replaced by nine statements (a split pipe, a filter, the ban, two positive controls),
 and each of the three FAIL shapes was exercised before the count was taken: silent on the tree; red on a scratch
 type-position use beside a string literal; red on a renamed newtype (each control by its own message).
+*(Amended 2026-09-24, s8a §8a.3, ADR-0165: these counts describe the text before the amendment and are not
+re-counted here. The `ChangeSummary` statements are now Checkpoint 8a guard (6)'s, copied from its bytes: the new ban
+(nineteen controls, ten that fire and nine admitted), the `rk-kernel` production ban with its control, and the two
+opacity pins with four planted controls. Measured 2026-09-24: RED at `b8e7aa9` on the enum pin alone (`FAIL: 0 'pub
+enum ChangeSummary {' in rk-ports, expected 1 — the split did not land`), while the ban itself passes there on the
+six sites the old line fired on. Planted mutants each go red: a path-qualified alias, a renaming import, an
+`rk-kernel/src` use and a `pub` field on the sealed payload.)* *(Amended 2026-09-25, s8a fix round 1: the
+sealed-slot reader's string blank is Checkpoint 8a guard (6)'s `\\[\s\S]` again (this copy had kept `\\.`), the ban
+has twenty-four controls (fourteen fire, ten admitted: lowercase renaming imports on a `use` line and on an
+import-list line now fire), and a fifth sealed-slot control, a line-continued string before the declaration, pins
+the reader; reverting either copy's blank turns it red.)* *(Amended 2026-09-25, s8a fix round 6, recording fix
+round 5's controls, which the note above predates: the ban has twenty-six controls (fifteen fire, eleven
+admitted), the pair added at round 5 sitting past a backslash-escaped string; the `rk-kernel` production ban has
+two controls, the second past a backslash-escaped string. At round 6 the sealed-slot reader strips comments and
+blanks strings in one pass and counts `pub ()` and `pub (u8, u8)` as pub fields, with eight planted controls
+beside the continued-string one; reverting either half turns it red.)* *(Amended 2026-09-25, s8a fix round 10:
+"reverting either copy's blank turns it red" no longer holds, and "either half" does not reach the escape arm.
+Since rounds 6 and 7 the one pass runs under `re.S`, where `\\.` and `\\[\s\S]` are the same pattern, so the
+continued-string control stays green when the blank alone is reverted, and when `re.S` alone is dropped. It goes
+red only when both are reverted together (measured: `decls=0 pubfields=0`). No input separates the two escape
+arms under `re.S`, so no single-point control on the arm exists; the control pins the pair.)* *(Amended
+2026-09-25, s8a fix round 13: the `impl … for` arm now takes any text between `for` and the name, so a
+reference or a `Box<…>` after `for` fires; the ban has twenty-eight controls (seventeen fire, eleven admitted).)*
+*(Amended 2026-09-25, s8a fix round 14: the definition arm takes an optional `r#` and a digit in the name, and
+the `impl … for` arm a digit, so `pub struct r#ChangeSummary;`, `pub struct V2ChangeSummary;` and
+`impl Clone for Sha1ChangeSummary {` fire; the ban has thirty-one controls (twenty fire, eleven admitted).)*
 
 **Hardened 2026-09-13, at Step 5's own run.** Counted mechanically — backslash continuations joined, comments and
 blanks dropped — this block carried **33 statements**, of which **17** could stop execution and **16** could not.

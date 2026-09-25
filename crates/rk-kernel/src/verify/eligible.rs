@@ -10,6 +10,8 @@
 //! ADR-0007's forbids is the rule this enforces: no non-Claude adapter behind a review or
 //! verification gate until it passes E3-shaped checks. The Codex-present half (a gate evaluator
 //! fed a Codex-sourced result) waits on `rk-adapter-codex`, Phase 2 (ADR-0094 decision 2).
+//! *(Noted 2026-09-25, s8a §8a.6 fix round 12, ADR-0167: the Codex adapter is Phase 4, after
+//! S-CODEX, as ADR-0007 places it; the exclusion stands, its phase reason is corrected.)*
 
 use crate::toml_subset::{self, Value};
 

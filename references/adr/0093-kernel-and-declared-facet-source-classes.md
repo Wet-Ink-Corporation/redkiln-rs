@@ -6,7 +6,7 @@ date: 2026-09-11
 legacy_id: none
 source: references/2026-09-10-pre-implementation-audit.md PIA-001 (§3.1); spikes/p9/facets.toml at pin 47faec9f; spikes/F39-DRAFT.md
 supersedes: ["0089"]
-superseded_by: []
+superseded_by: ["0165"]
 related: ["0008", "0012", "0030", "0060", "0061", "0067", "0081"]
 evidence: ["PIA-001", "F39", "F36", "F35"]
 consumers: []

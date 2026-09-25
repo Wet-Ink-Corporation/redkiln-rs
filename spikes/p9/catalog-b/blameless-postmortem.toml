@@ -9,7 +9,7 @@ provides      = ["Postmortem", "ActionItems", "ProblemRecord"]
 requires      = ["IncidentTimeline", "RootCause", "ImpactAssessment"]
 derived_from  = ["IncidentTimeline", "RootCause", "ImpactAssessment"]
 tags          = ["kind:incident", "kind:security-vuln"]
-applicable_if = "kind in [incident, security-vuln] or (kind == bug and criticality >= high)"
+applicable_if = "kind in [incident, 'security-vuln'] or (kind == bug and criticality >= high)"
 method_rank   = 30                      # heaviest of the ordered ceremony list
 min_rigor     = "recommended"
 cost_class    = "M"
@@ -45,8 +45,7 @@ id      = "complete"
 kind    = "check"
 inputs  = { d = "${draft.outputs}", findings = "${blameless-check.outputs?}" }
 expr    = "len(d.action_items) >= 1 and len(d.unassigned_items) == 0 and findings.none(severity in [blocking])"
-on_false = "draft"
-max     = 2
+on_false = { to = "draft", max = 2 }
 
 # The human gate is the review meeting (PagerDuty Draft → In Review → Reviewed). Always live at this activity's rigor.
 [[step]]
@@ -60,8 +59,7 @@ id      = "reviewed"
 kind    = "check"
 inputs  = { answer = "${review-meeting.answer}" }
 expr    = "answer == 'approve'"
-on_false = "draft"
-max     = 1
+on_false = { to = "draft", max = 1 }
 
 # ITIL incident/problem split: the postmortem always leaves a problem record behind for the follow-up initiative.
 [[step]]

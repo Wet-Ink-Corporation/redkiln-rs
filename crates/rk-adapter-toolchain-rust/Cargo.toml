@@ -27,6 +27,9 @@ rk-ports = { path = "../rk-ports" }
 # drive-letter form, never `\?\`), the same type the SQLite adapter takes; no git is spawned by this
 # crate (ADR-0077 confines git to rk-git's one wrapper, and `change_summary` -- the one method that
 # would read a range -- answers Unsupported from the registry, D17-9).
+# [amended 2026-09-24, s8a, ADR-0165] `change_summary` now reads the range through
+# `rk_git::diff::range_diff`, a gix read (ADR-0077: "gix owns the read path"), so the first clause
+# stands: no git is spawned by this crate. Only the `Binary` arm still answers from the registry.
 rk-git = { path = "../rk-git" }
 # ADR-0127 decision 3: every child is spawned THROUGH rk-containment (run_bounded, the token-less
 # bounded run of decision 2); the adapter builds a Command and hands it over.
@@ -38,6 +41,14 @@ serde.workspace = true
 # path-and-bytes rule and `change_summary` -- the method ADR-0094 d1 puts "over cargo metadata and
 # the changeset" -- answers Unsupported until S-BIN (D17-9); when that body lands, `cargo metadata
 # --format-version 1` is read through THIS row, not a cargo_metadata crate (§7c.14: no new dep).
+# [amended 2026-09-25, s8a fix round 3, ADR-0165] `change_summary` no longer answers Unsupported
+# over a non-empty text range: its `Text` arm is built now from the rk-git range read and `classify`,
+# still with no `cargo metadata` read. Only the `Binary` arm waits for S-BIN; if its body reads
+# `cargo metadata`, it is read through this row.
+# [amended 2026-09-25, s8a, D21-51] ADR-0165 decision 9 supersedes ADR-0094 d1's "over cargo metadata and the
+# changeset" in part: `classify` (the path and its bytes, no spawn) and the `Text` arm (the range, read by rk-git)
+# read no `cargo metadata` by decision, not by deferral. "When that body lands" above no longer says who reads it:
+# whether the `Binary` arm does is S-BIN's (s8i), and what `cargo metadata` is read for is s8c record T's.
 serde_json.workspace = true
 # ADR-0102 decision 6: thiserror in every library, anyhow in none.
 thiserror.workspace = true

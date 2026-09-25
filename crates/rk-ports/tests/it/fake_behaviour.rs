@@ -14,7 +14,7 @@ use rk_ports::cancel::CancelToken;
 use rk_ports::event_store::{EventStore, Query};
 use rk_ports::fakes::{FakeHarness, FixtureToolchain, VecStore};
 use rk_ports::harness::Harness;
-use rk_ports::toolchain::{Classification, Toolchain};
+use rk_ports::toolchain::{ChangeKind, ChangeSummary, Classification, Toolchain};
 use rk_types::error::{CancelledBy, StepError, TransportKind};
 use rk_types::event_kind::EventKind;
 
@@ -57,14 +57,95 @@ fn toolchain_fake_classifies_binary() {
         Classification::Generated
     );
 
-    // What the reviewer receives INSTEAD of a diff: the typed, opaque value (AC-497's port shape,
-    // which the register says IS asserted -- "only the port shape below is asserted, never the
-    // type's contents", register :7107-7108). Its field set stays PROVISIONAL on S-BIN and its
-    // body is 7c's.
-    let summary = toolchain
-        .change_summary("HEAD~1..HEAD")
-        .expect("change_summary");
-    assert_eq!(format!("{summary:?}"), "ChangeSummary(())");
+    // What the reviewer receives INSTEAD of a diff (AC-497's port shape). *(amended 2026-09-24,
+    // s8a, ADR-0165: this asserted `format!("{summary:?}") == "ChangeSummary(())"` over the opaque
+    // newtype. `ChangeSummary` is now an enum whose `Text` arm is finalised and whose `Binary` arm
+    // is sealed until S-BIN, so the fake is asserted on both: a range carrying only text and
+    // generated paths yields `Text` with one manifest row per path, and a range carrying a
+    // `Binary` path refuses BY NAME -- never an empty `Text`, and never a `Text` that silently
+    // omits the path, AC-497.)*
+    let toolchain = toolchain
+        .with_range(
+            "HEAD~1..HEAD",
+            vec![
+                ("src/lib.rs", ChangeKind::Modified),
+                ("target/schema.json", ChangeKind::Added),
+            ],
+        )
+        .with_range(
+            "HEAD~2..HEAD~1",
+            vec![
+                ("src/lib.rs", ChangeKind::Modified),
+                ("assets/logo.png", ChangeKind::Added),
+            ],
+        );
+
+    match toolchain.change_summary("HEAD~1..HEAD") {
+        Ok(ChangeSummary::Text(text)) => {
+            let rows: Vec<(&str, Classification, ChangeKind)> = text
+                .manifest
+                .iter()
+                .map(|m| (m.path.as_str(), m.classification, m.change))
+                .collect();
+            assert_eq!(
+                rows,
+                vec![
+                    ("src/lib.rs", Classification::Text, ChangeKind::Modified),
+                    (
+                        "target/schema.json",
+                        Classification::Generated,
+                        ChangeKind::Added
+                    ),
+                ],
+                "a text range yields Text with one manifest row per scripted path, each carrying \
+                 the fixture's classification and the scripted change kind"
+            );
+        }
+        other => {
+            panic!("a range carrying only text and generated paths yields Text; got {other:?}")
+        }
+    }
+
+    match toolchain.change_summary("HEAD~2..HEAD~1") {
+        Err(StepError::Unsupported { capability }) => {
+            assert!(
+                capability.starts_with("change_summary") && capability.contains("assets/logo.png"),
+                "a range carrying a Binary path refuses BY NAME -- the capability token and the \
+                 path: {capability:?}"
+            );
+        }
+        other => panic!(
+            "a range carrying a Binary path refuses by name (the Binary arm is sealed until \
+             S-BIN); it must never yield a Text that omits the path. Got {other:?}"
+        ),
+    }
+
+    // An EMPTY range, and one nobody scripted, refuse by name: ADR-0165 forbids *"returning an
+    // empty `Text`, or any `Ok`, for an empty or unresolvable range"*, and the fake is held to it
+    // as the Rust adapter is. *(Added 2026-09-25, s8a fix round 3: both answered an empty `Text`,
+    // so the kernel's `change_summary("")` was an `Ok` on every walk binding this fake.)* The
+    // empty range is SCRIPTED here, so it refuses for being empty and not merely for being
+    // unscripted.
+    // A range SCRIPTED with no paths changes nothing, and refuses by name as the Rust adapter
+    // refuses a change-less range. *(Added 2026-09-25, s8a fix round 4: it answered `Ok(Text)`
+    // with an empty manifest, the empty `Text` ADR-0165 decision 6 forbids.)*
+    let toolchain = toolchain
+        .with_range("", vec![("src/lib.rs", ChangeKind::Modified)])
+        .with_range("HEAD~3..HEAD~2", vec![]);
+    for range in ["", "  ", "HEAD~9..HEAD~8", "HEAD~3..HEAD~2"] {
+        match toolchain.change_summary(range) {
+            Err(StepError::Unsupported { capability }) => assert!(
+                capability.starts_with("change_summary")
+                    && capability.contains(&format!("`{range}`")),
+                "an empty or unscripted range refuses BY NAME -- the capability token and the \
+                 range: {capability:?}"
+            ),
+            other => panic!(
+                "an empty or unscripted range `{range}` refuses by name, never an empty Text; got \
+                 {other:?}"
+            ),
+        }
+    }
 }
 
 /// AC-500's first clause (register :7149's *"an integration test on the fake"*): the scripted

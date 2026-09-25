@@ -26,7 +26,12 @@
 //!
 //! **The Node entries, named**: `change_summary` — `Probe::None`, S-BIN unrun, the opaque
 //! `rk_ports::ChangeSummary` has no decided contents and no `Ok` is constructible (D17-9;
-//! ADR-0099 decision 5's forbids) — and `affected-selection` — `Probe::None`, because **no
+//! ADR-0099 decision 5's forbids) *(amended 2026-09-24, s8a, ADR-0165: "no `Ok` is constructible"
+//! is false from this commit -- `ChangeSummary` is an enum whose `Text` arm an implementor may
+//! construct, and the Rust adapter answers it. This crate's row, body and registry tests are
+//! UNCHANGED: finalising a Node body is not in D21-42 decision 2, so `NodeToolchain::change_summary`
+//! still refuses from this row, and the row's own reason text is left as it was written.)* — and
+//! `affected-selection` — `Probe::None`, because **no
 //! affected-selection probe result exists at any pin**, on the tree or in any record [measured
 //! 2026-09-17: `grep -rn` over `references/`, `runbook/`, `spikes/*.md` finds none; `s7c`
 //! §7c.14] — a Node probe (`vitest --changed` / `related`) is OWED as the named spike S-SEL-NODE

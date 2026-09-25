@@ -1,4 +1,5 @@
 mod corpus_f12;
+mod diff;
 mod gitops;
 mod grammar;
 mod paths;

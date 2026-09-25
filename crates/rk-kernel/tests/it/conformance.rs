@@ -16,7 +16,9 @@
 //! | [`shipped_pack_loads`] | the product's own `.redkiln/` | GREEN from `s7f` §7f.2 | GREEN, 102 pinned |
 //!
 //! 🛑 **The `#[ignore]` reason spelling is load-bearing.** Checkpoint 7f greps each armed lint's
-//! reason for the literal `discharged by s7g` / `discharged by s7h`. An armed lint is coverage
+//! reason for the literal `discharged by s7g` / `discharged by s7h` *(amended 2026-09-25, s8a fix
+//! round 1: since `s8a` §8a.5, ADR-0160, the one armed reason ends `discharged by s8e` and Checkpoint
+//! 7f greps for that)*. An armed lint is coverage
 //! theatre unless something counts it, so the checkpoint counts all three **by name** and asserts
 //! each reason names the stage that discharges it. The ignore is removed by the landing that makes
 //! the lint pass, **in the same commit**.
@@ -27,7 +29,9 @@
 //! it — the two-in-one-commit rule guarantees that. Checkpoint 7f is `s7g`'s **entry** gate only and
 //! nothing downstream requires it green; `00-preamble.md`'s maintenance rule already provides for a
 //! pass attesting a specific text at a specific time. Two of the three are discharged here, so that
-//! block is now historical; the one that remains still carries `discharged by s7h` verbatim.
+//! block is now historical; the one that remains carried `discharged by s7h` verbatim until `s8a`
+//! §8a.5 corrected it to `discharged by s8e`, because s7h did not discharge it (ADR-0160; noted
+//! 2026-09-25, s8a fix round 1).
 //!
 //! # ADR-0134: the port lint asserts an EQUALITY, because the emptiness was unsatisfiable
 //!
@@ -662,7 +666,8 @@ fn conformance_every_port_has_a_call_site() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// 3. Every trailer key has a producer.  ARMED — discharged by s7h.
+// 3. Every trailer key has a producer.  ARMED — discharged by s8e (s8a §8a.5, ADR-0160; read s7h
+//    until 2026-09-25, s8a fix round 1).
 // ---------------------------------------------------------------------------------------------
 
 /// **design §5.4's trailer grammar names three keys and two of them are written by nothing.**
@@ -695,7 +700,7 @@ fn conformance_every_port_has_a_call_site() {
 /// commit accompanies it, while design §5.4's tier-1 rule is *"git first"* and AC-162 requires the
 /// trailer commit to exist before any store row for that transition is readable.
 #[test]
-#[ignore = "ARMED: Slice-Verdict has 0 producers; Gate and Story are both minted as of s7h.2; discharged by s7h"]
+#[ignore = "ARMED: Slice-Verdict has 0 producers; Gate and Story are both minted as of s7h.2; discharged by s8e"]
 fn conformance_every_trailer_key_has_a_producer() {
     let root = workspace_root();
 

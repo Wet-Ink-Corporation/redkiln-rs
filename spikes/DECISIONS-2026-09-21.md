@@ -1896,3 +1896,174 @@ gains the two card-stop amendments its premise move owes. The operator took the 
   - after s8c, plain `doctor` reports its unmeasured keys as Errors until later stages cite them;
   - `actions/checkout@v4` fetches depth 1, so s8b adds `fetch-depth: 0`, and s8j's first CI run measures git in the
     `rust:` image and `safe.directory`.
+
+---
+
+## D21-49 · A checkpoint that asserts `accepted` stays red until the operator's flip line, and the chain waits for it
+
+**Taken 2026-09-24 by the session, under the operator's standing AFK rule of 2026-09-24** (execute `s8a`…`s8j`; records
+stay `proposed`; never flip an ADR; never write a go-ahead line; stop when nothing further can proceed without the
+operator). It records how an s8 checkpoint is run and recorded while its own records are `proposed`. It flips nothing
+and requests three flips.
+
+**The measured premise.** Checkpoint 8a guard (3) asserts `grep -qxF 'status: accepted'` for each of its three records.
+Checkpoints 8d-ii, 8f, 8g, 8i and 8j assert the same (8c admits `^status: (proposed|accepted)$`). 8f also requires a
+ledger heading that flips each record, and 8h requires one record to *stay* `proposed`. Every later checkpoint re-runs
+the previous one whole as its entry gate, and `RK_CP_NESTED=1` skips only guard (11)'s whole re-runs, never guard
+(3). So while `s8a`'s three records are `proposed`, **every checkpoint from 8b onward is red at its entry gate**.
+
+**Options, each grounded against the full text** (a three-drafter, three-judge panel; the judges' lenses were hard-limit
+fidelity, Halt 8 and evidence quality, and the operator's long-term workflow):
+
+### Option — A: a faithful red plus a flip-simulated reading to proceed on
+Run each checkpoint twice: faithfully (red at guard (3)), and in an overlay whose record status lines read
+`accepted`, then proceed on the second. **Refuted.** A status-only simulation stays red at 8d-ii (the back-links move
+in the flip commit). A green 8f simulation needs a fabricated flip heading in this ledger, which is an operator line
+even in a throwaway tree, and every nested re-run from 8g onward inherits that need. A blanket flip reads falsely at
+8h. And "proceed on the simulated reading" makes a probe an entry gate over a tree that was never committed. Scores
+4.5 / 4 / 5.
+
+### Option — B: amend each guard to admit `proposed`
+**Refuted.** It widens an operator gate the stage files built on purpose (*"Checkpoint 8a asserts `accepted`, because
+every checkpoint amendment below rests on one of them"*). That is Halt 7's regex widening, and a WARN line that cannot
+fail is Halt 8's shape (f). Applied uniformly, it would also open s8j's pre-spend check that RT-57 is accepted. Scores
+1.5 / 1 / 2.
+
+### Option — C: execute and record, then stop at the flip (TAKEN, unanimously: 8 / 8 / 7)
+- `s8a`'s work is committed with its records at `proposed`.
+- Guard (2)'s literals are written, so the faithful run of Checkpoint 8a reaches guard (3) and fails there. It is
+  recorded as rc 1, the FAIL line quoted, and END-OF-BLOCK absent.
+- A **labelled DIAGNOSTIC** copy, with guard (3)'s status test alone neutralised, is run under the same wrapper in the
+  same overlay worktree to give the complete blocker list for guards (4)–(11). It is never recorded as the checkpoint
+  and never an entry gate.
+- The PROGRESS row reads BLOCKED on the operator's flip. It never reads passed or closed.
+- **No `s8b` work is committed before the flip**, because its entry gate replays 8a whole and would be red.
+
+**What the operator does next.**
+1. The dated ledger line flipping ADR-0165, ADR-0166 and ADR-0167, and the flip commit.
+2. Re-run Checkpoint 8a whole, from its stage file's bytes, in a fresh check-out-then-overlay worktree under
+   `runbook/tools/nodispatch.sh`. Guard (11)'s whole runs need no plain terminal: none of 7i, 5, 7a, 7b and 7f
+   carries a `CLAUDECODE` guard.
+3. The tracker row moves to passed, and `s8b` opens.
+
+**The same stop recurs**, and the operator may prefer to batch it:
+- at 8d-ii (status and back-links together in the flip commit);
+- at 8f (status plus the ledger heading 8f's guard reads);
+- at 8g;
+- at 8i and 8j, whose pre-spend checks also need RT-57 accepted.
+
+**A corpus inconsistency is reported, not resolved.** INDEX's human-needed list says of the s8 sub-stages that *"None
+of them names a person"*, but from 8b on every entry gate transitively waits on an operator flip.
+
+---
+
+## D21-50 · The corpus replay suite has been red since ADR-0164, and the six recording sources are pinned to the golden log's bytes
+
+**Taken 2026-09-24 by the session, under the operator's standing AFK rule of 2026-09-24**, at `s8a`'s stage open,
+before any `s8a` work. The BEFORE readings found something the stage file did not foresee.
+
+**Measured.**
+- Checkpoints 5 and 7b, each run whole under `nodispatch` at `b8e7aa9`, fail on `cargo test --workspace --features
+  corpus` exiting 101, before the lines `s8a` repairs.
+- rk-kernel fails **9** `replay::` tests. The recording derives run_id `implement-87544dc047ecc61c`, and the committed
+  golden log is `implement-bf1d8cec3b22d288`.
+- The recording `include_str!`s six sources (`crates/rk-kernel/tests/fixtures/catalog-select/{impl-report,
+  change-summary,change-summary-ue,changeset,spec-authoring}.toml` and `fixtures/packs/incident-deviation.toml`).
+  The log was blessed over their CRLF-smudged working bytes, while their index blobs were always LF. ADR-0164's
+  `* text=auto eol=lf` (`ac10470`) made them LF.
+- ADR-0164's evidence (740 / 0 / 9) was the **unfeatured** suite, and `ci.yml` never runs `--features corpus`
+  (*"The corpus-bound suite is NOT here"*). So no instrument saw it. *(This corrects the drafting premise that CI Linux
+  would always have been red: no CI leg runs this suite at all.)*
+- Probe: with the six restored to the recorded bytes, `cargo test --workspace --features corpus --no-fail-fast`
+  gives rc 0, **757 passed over 44 results**.
+
+### Option — A: pin the six sources to the golden inputs' own git objects (TAKEN, 8.5 / 8 / 8)
+Six `-text` rows go below ADR-0151's row, and each source's index entry is set to its golden input's blob id
+(`1682fd98`, `93f8f8c5`, `64784b9f`, `820d848f`, `fb1de1a4`, `7f8bcc55`), copied index to index, never from a
+smudged tree. `facets.toml` and `artifacts.toml` get **no** row: row 1 already fixes them as LF, and `-text` would
+stop normalising a CRLF edit to a production registry. A new **unfeatured** guard,
+`recorded_log::the_recording_sources_are_the_committed_logs_inputs_byte_for_byte`, holds all eight inputs byte-equal
+to the golden copies:
+- red at `b8e7aa9` (six differ, *"line terminators only"*);
+- green after the pin;
+- red again for a Python LF mutant of `changeset.toml`, and green after the restore from its blob.
+
+`git -c core.autocrlf=true` and `=false` `checkout-index` of the six are byte-identical, which is ADR-0151 decision
+4's method. No run_id, `RECORDED_RUN`, golden-log byte, CORPUS_PIN or production code moves.
+
+### Option — B: re-record the golden log from LF sources
+**Rejected.** It moves ADR-0151 decision 3 (*"The digest is NOT re-blessed and the directory is NOT renamed"*), which
+is a supersession, and it needs a second CORPUS_PIN move, which is the operator's. `committed_root()` is in-crate, so
+the corpus copy would go silently stale.
+
+### Option — C: normalise terminators inside the run_id derivation
+**Rejected here.** It is a schema decision (every run renames) and a supersession of ADR-0151, and it needs a pin
+move. Its concern is real and is **recorded as owed, not repaired**: `rk-cli` builds `RunInputs` from `read_to_string`
+of `.redkiln/*.toml` with no normalisation, so a CRLF editor moves a user's run id. That is a production exposure for a
+future record.
+
+**Records.**
+- ADR-0164 (still `proposed`) takes a dated in-place correction before acceptance. Its evidence gains the corpus
+  measurement, and its *"None exists today"* is corrected to name the six rows. No Decision clause or forbids bullet
+  moves.
+- ERRATA gains **E-0151-1**: ADR-0151's *"No other test digests bytes under that tree … this is a latent exposure and
+  not a live defect"* did not hold for the recording's sources.
+- **ADR-0164's flip must wait until its evidence carries the corpus-suite measurement**, which the correction supplies.
+
+---
+
+## D21-51 · ADR-0165 flips to `accepted` — `ChangeSummary` splits, and the operator settles the `cargo metadata` clause and the range grammar before it does
+
+**Confirmed 2026-09-25 by the operator, in the session executing `s8a`, at `s8a`'s close.** ADR-0165 flips
+`proposed → accepted`, `date: 2026-09-24` unchanged. It was written `proposed` at `s8a`'s build and revised in place
+through fifteen adversarial refuting rounds while it bound nothing; the text that flips is the one in `s8a`'s work
+commit. The operator reviewed a walk-through of all three `s8a` records before confirming, and asked that the run
+finish and the `cargo metadata` item be settled first. This lifts D21-49's stop for `s8a`.
+
+**Two settlements the operator took on 2026-09-25, folded into ADR-0165 before the flip.**
+
+1. **ADR-0094 decision 1's `cargo metadata` clause.** It says the Rust adapter does *"`classify` and
+   `change_summary` over `cargo metadata` and the changeset"*, and the adapter has read no `cargo metadata` since
+   `s7c` Slice 6, a deviation carried as a dated OWED note. A three-drafter, three-judge panel scored the options:
+   - **Option — supersede, narrowed (TAKEN, 8 / 8 / 8).** ADR-0165 decision 9 supersedes that clause in part, only
+     as far as `classify` (a function of the path and its bytes, which spawns nothing) and the `Text` arm (a
+     function of the range, read from the object store). It decides neither the `Binary` arm's inputs (S-BIN,
+     `s8i`) nor what `cargo metadata` is read for (`s8c`'s record T). The OWED note's `classify`/`change_summary`
+     half is discharged; RT-26's `--list` note is not.
+   - **Option — implement the read now (3 / 3 / 3).** Measured vacuous: `--no-deps` output carries no `OUT_DIR`, the
+     run route's `target_directory` is the adapter's scratch directory outside the project, `classify` already marks
+     `target/` Generated, and `cargo metadata` reads the working tree, not the range.
+   - **Option — split the two methods (5 / 5 / 5).** Its implemented half is the vacuous case above, and its
+     reversed form is the supersession plus a package attribution nothing reads yet.
+
+   Invariance tests (with and without a `Cargo.toml`; a mutated working tree after the commits) and a code-only spawn
+   lint over `classify.rs`, each shown red by a mutant, pin the record's claims.
+
+2. **The range grammar.** A range is exactly `<base>..<head>`. A single revision refuses by name: under step-grain
+   commits a changeset spans several commits, so reading `R` as `R^..R` would yield a `Text` that omits earlier
+   changes. `.redkiln/catalog/change-summary.toml` and `change-summary-ue.toml` bind `range = "artifact:Changeset.sha"`,
+   a single sha. Their catalog edit to a two-dot range (under ADR-0072) is **owed to `s8d`**, which owns the resolver
+   that binds it, and `s8d` carries a dated note naming it.
+
+**What stays open, named.** Fifteen refuting rounds applied about 105 fixes; no round came back dry (the last five
+found 7, 5, 2, 5 and 4, almost all minor). Declined as operator- or stage-level: a `Text` assertion in the shared
+conformance body; widening E-0085-3 to name ADR-0090 and ADR-0117; a joined-statement reader for the `ChangeSummary`
+ban; a sweep over ADR-0093 decision 4 lines, which would be time-bound; and the whole-suite floor, kept at the stage
+file's 749 while the suite reads more.
+
+---
+
+## D21-52 · ADR-0166 flips to `accepted` — the v0 pack's tag condition was met over the shipped pack
+
+**Confirmed 2026-09-25 by the operator, with D21-51.** ADR-0166 flips `proposed → accepted`, `date: 2026-09-24`
+unchanged. It supersedes ADR-0114 decision 1's *"The two F42 parse failures and three `on_false` defects are
+repaired at Step 7e before the tag"* in part: `redkiln-pack-v0` stands, `catalog-b`'s four remaining defects are
+repaired at `s8a`, and Checkpoint 7b is re-pinned to the probe's clean reading (279/279, 0/279, 99/99, rc 0).
+
+---
+
+## D21-53 · ADR-0167 flips to `accepted` — the Codex adapter is Phase 4, after S-CODEX
+
+**Confirmed 2026-09-25 by the operator, with D21-51.** ADR-0167 flips `proposed → accepted`, `date: 2026-09-24`
+unchanged. It supersedes ADR-0094 decision 2's *Codex is Phase 2* sentence in part, toward ADR-0007, and E-0094-2
+records that DECISIONS-2026-09-12 E12 was taken with ADR-0007's phase sentence out of view.

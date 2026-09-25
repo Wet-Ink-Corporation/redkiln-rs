@@ -529,6 +529,12 @@ fn collect_sig_keys(value: &serde_json::Value, out: &mut Vec<String>) {
 /// migration path before then — which is a real risk, because `redkiln-migrate` may not depend on
 /// `rk-ports` at all (AC-466), so the identifier could only arrive by someone re-declaring it.
 ///
+/// *(Noted 2026-09-25, s8a fix round 5, ADR-0165: the premise moved. The type is now an enum in
+/// `rk-ports` whose `Text` arm is finalised and constructed by `RustToolchain::change_summary`, so
+/// a value CAN exist and the second conjunct is a real constraint for `Text` values from `s8a`. It
+/// stays vacuous only for the sealed `Binary` arm, until S-BIN at `s8i`. The tripwire and its
+/// assertion do not move.)*
+///
 /// §7d.14's mutant list names **no declared mutant** for any migrator test. This one is
 /// negative-only, so its red is taken from its own stated failure mode rather than from a
 /// declared mutant, and the source-scan half is **self-controlled** first.

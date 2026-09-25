@@ -18,6 +18,7 @@
 //! `redkiln-migrate` (ADR-0102 decision 6), and CI asserts it over `cargo metadata`.
 
 pub mod clone;
+pub mod diff;
 pub mod error;
 pub mod git_exec;
 pub mod gitops;

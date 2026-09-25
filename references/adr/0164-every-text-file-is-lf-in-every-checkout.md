@@ -123,6 +123,32 @@ bytes are named here so that nobody reads them as a counterexample.
 A future file that genuinely needs CRLF on disk, such as a `.bat` script, needs its own row. None exists
 today. The four `.ps1` spike scripts run unchanged under LF.
 
+*(Corrected 2026-09-24 at `s8a`'s stage open, before acceptance, D21-50; date re-read 2026-09-25, `s8a` fix round 1. **"None exists today" was false when
+written.** Six test sources needed CRLF on disk, and this record's own evidence could not see them:
+`crates/rk-kernel/tests/it/replay.rs`' golden recording compiles
+`crates/rk-kernel/tests/fixtures/catalog-select/{impl-report,change-summary,change-summary-ue,changeset,spec-authoring}.toml`
+and `crates/rk-kernel/tests/fixtures/packs/incident-deviation.toml` in with `include_str!`, and their bytes enter
+`run_id`. The committed log `implement-bf1d8cec3b22d288` (ADR-0151) was blessed over their CRLF-smudged working
+bytes. Under row 1 the recording derived `implement-87544dc047ecc61c`, and `cargo test --workspace --features
+corpus` failed **9** `replay::` tests at `b8e7aa9`. Each of the six now has its own `-text` row, below ADR-0151's
+row, and its index entry IS its golden input's git object, copied index to index. That satisfies this record's
+forbids bullet *"Adding a CRLF-requiring file without its own row"* and does not breach *"The repair runs from the
+index to the tree, never the reverse"*: no working-tree byte was re-staged. The rejected option *"widen the `-text`
+pinning to every tree a test reads … It pins* whatever bytes are there*"* is not what this does: six named files
+are pinned to the preimage of a committed digest, taken from git objects. `spikes/p9/facets.toml` and
+`crates/rk-kernel/tests/fixtures/registries/artifacts/artifacts.toml`, the recording's other two file inputs, are
+LF on both sides and stay under row 1. The unfeatured guard
+`recorded_log::the_recording_sources_are_the_committed_logs_inputs_byte_for_byte` holds all eight. No Decision
+clause and no forbids bullet of this record moves. *(Added 2026-09-25, `s8a` fix round 9.)* The six
+paths' committed content does move: each index blob goes from the LF blob it held at `b8e7aa9` (0 CR bytes) to its
+golden input's all-CRLF blob (28, 29, 26, 27, 23 and 26 CR bytes, in the order listed above, one per line;
+`git diff --cached --stat` → 6 files, 159+/159-). Decision 2 and the title's *"Committed content does not move"*
+state what row 1's `--renormalize` did, which staged `.gitattributes` alone. That stays true, and it is why
+neither moves: the six moves are this correction's own act, under their own `-text` rows and outside row 1's
+reach, and the title is read with that scope. **A named residual, owed to a future record and not repaired
+here:** `run_id` is still terminator-sensitive. `rk-cli` builds `RunInputs` from `read_to_string` of
+`.redkiln/*.toml` with no normalisation, so a CRLF editor moves a user's run id.)*
+
 **What this forbids**
 
 - Moving the `* text=auto eol=lf` row below any `-text` row, or deleting it while any `-text` row exists.
@@ -167,6 +193,20 @@ Measured 2026-09-24 in the main checkout at `decc8ae` plus this change:
   **`.github/workflows/ci.yml` carries no `pnpm` step at all** (`grep -ci pnpm` → 0). The CI-green exit
   condition (D21-42 decision 14a) therefore owes a pnpm setup and install step in every job that runs the
   workspace suite, and without it CI fails these ten tests on its first run on either OS.
+- *(Added 2026-09-24 at `s8a`'s stage open, before acceptance, D21-50; date re-read 2026-09-25, `s8a` fix round 1.)* **The measurements above are the
+  UNFEATURED suite, and they were not the whole suite.** `.github/workflows/ci.yml` runs no `--features corpus`
+  (*"The corpus-bound suite is NOT here"*), and neither did this record's evidence. Measured through
+  `runbook/tools/nodispatch.sh`:
+  - at `b8e7aa9`, `cargo test --workspace --features corpus` exits 101, with rk-kernel at `231 passed; 9 failed`
+    (every failure a `replay::` test, the recording's run id `implement-87544dc047ecc61c`);
+  - with the six recording sources restored to the golden inputs' bytes, `--no-fail-fast` exits 0: **757 passed
+    over 44 `test result:` lines**;
+  - pinned census after the six rows: `i/crlf w/crlf attr/-text` **15** (was 9), `i/lf w/lf attr/-text` 340,
+    `i/none` 3.
+
+  `git -c core.autocrlf=true` and `=false` `checkout-index` of the six are byte-identical (ADR-0151 decision 4's
+  method), so every checkout compiles the same preimage. **This record's flip should wait until its evidence
+  carries this measurement**, which it now does.
 
 Confidence is high. The mechanism is standard git semantics. The before and after census agree with it. And the
 suite is identical in the long-lived checkout and a fresh one.

@@ -25,6 +25,18 @@
 //! about the adapters' return value, not the register's word, and **a dated register amendment is
 //! OWED** (`s7c` §7c.22).
 //!
+//! *(Noted 2026-09-25, s8a fix round 2, ADR-0165: "every real Phase-1 row answers those" is no
+//! longer true of `change_summary` on the Rust row. That adapter answers `Ok(ChangeSummary::Text)`
+//! over a non-empty range that changes only text, and refuses by name through its re-dated
+//! `Probe::None` row only for an empty, unresolvable or unopenable range and for a range carrying
+//! a `Binary` or LFS pointer path. The Rust row still hands this body `change_summary` as an
+//! unsupported token, because the re-dated row keeps `Probe::None` (§8a.2), and the arm below
+//! passes on that row because its fixture project is NOT a git repository: the refusal it
+//! certifies is the no-repository path (`RangeError::Open`), not an absent capability. The `Text`
+//! arm is certified by the adapter's own `change_summary::*` tests, not by this body. Giving the
+//! shared body a `Text` assertion needs an arm kind the registry's token list cannot express, and
+//! that is left to the stage that next moves AC-499's rows.)*
+//!
 //! **The Harness body is parameterised by a spec, not a registry** (RT-16 as amended again): the
 //! fake row passes [`spec`], and the live probe (`s7c` §7c.15) passes its bound probe-card spec and
 //! calls this body **before** its own prints. [`conform_harness`] prints `PROBE_RAN_CONFORMANCE=1`
@@ -309,7 +321,10 @@ pub fn conform_docs_site(docs: &dyn DocsSite, expect_drift: usize) {
 /// slow test are reachable only by selection), `0` for the fake. An adapter whose `build` / `test`
 /// / `lint` return `Ok` without spawning anything is red on the count. `unsupported` names the
 /// capability tokens the row's registry declares unsupported — `"change_summary"` on every real
-/// Phase-1 row (D17-9; S-BIN unrun) — and the fake passes `&[]`.
+/// Phase-1 row (D17-9; S-BIN unrun) — and the fake passes `&[]`. *(Noted 2026-09-25, s8a fix
+/// round 2, ADR-0165: on the Rust row the token now marks a partial refusal, not an absent
+/// capability, and the arm passes there only through the no-repository path; the module doc says
+/// why.)*
 pub fn conform_toolchain(
     toolchain: &dyn Toolchain,
     expected: &[(&str, Classification)],

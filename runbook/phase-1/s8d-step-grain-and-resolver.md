@@ -521,6 +521,8 @@ moved the function, for example beside `s8c`'s `Selection` in `rk-ports`, that h
 and the floor still holds. An unresolvable selection refuses by name and never reaches the port as an
 empty selection (ADR-0148's reason stands: *"`cargo test affected`, which matches **no test and exits 0**"*).
 
+**The change-summary range, OWED here** *(added 2026-09-25 at `s8a`, D21-51)*. ADR-0165 decision 4, as amended before acceptance, makes a range exactly `<base>..<head>`, and decision 6 refuses a single revision by name: under step-grain commits a changeset spans several commits, so `R^..R` would answer a `Text` omitting the earlier ones. `.redkiln/catalog/change-summary.toml` and `.redkiln/catalog/change-summary-ue.toml` bind `range = "artifact:Changeset.sha"`, a single sha, so once the resolver hands that value to the port it reaches the named refusal. **The catalog edit that binds a two-dot range** (for example `baseline..<sha>`) **is this stage's**, because this stage owns the resolver that binds it. It lands under ADR-0072: a version bump on each edited activity, a changelog row and a lattice re-run.
+
 ### 8d.4 `on_false` as iteration (4d)
 
 Measured over `.redkiln/catalog/*.toml` at `ca8f387`: **94** `on_false` values — `{ to = …, max = N }` **66**,

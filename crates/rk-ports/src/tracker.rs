@@ -17,7 +17,11 @@
 //! declares the port shape without inventing a Phase-3 schema, which is the treatment ADR-0099
 //! clause 5 gives the one other blocked type. **No field set is invented and no idempotency key is
 //! designed** — that is AC-508's, in Phase 3. **A record naming their home and their contents is
-//! OWED** before the GitHub adapter is written.
+//! OWED** before the GitHub adapter is written. *(Noted 2026-09-25, s8a fix round 2, ADR-0165:
+//! `ChangeSummary` is no longer an opaque newtype and ADR-0099 clause 5 is superseded in part. It
+//! is an enum with a finalised `Text` arm and a sealed `Binary` arm, so "the `ChangeSummary`
+//! shape" and "the one other blocked type" describe it as it was at `s7a`. These types keep the
+//! opaque-newtype treatment on their own account.)*
 
 use rk_types::error::StepError;
 

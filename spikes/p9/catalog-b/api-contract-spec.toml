@@ -73,8 +73,7 @@ id      = "policy"
 kind    = "check"
 inputs  = { lint = "${validate.outputs}", findings = "${adversary.outputs?}", c = "${assemble.outputs}" }
 expr    = "lint.status == 'passed' and len(c.uncovered_ac) == 0 and findings.none(severity in [blocking])"
-on_false = "assemble"
-max     = 2
+on_false = { to = "assemble", max = 2 }
 
 [[step]]
 id      = "signoff"

@@ -6,7 +6,7 @@ date: 2026-09-11
 legacy_id: none
 source: references/2026-09-10-pre-implementation-audit.md PIA-010 (§3.4), PIA-045 (§4.1), PIA-059 (§4.5), PIA-038; references/adr/0076 §Decision; spikes/runner/src/step.rs, runner.rs; Microsoft Rust guidelines M-DI-HIERARCHY / M-MOCKABLE-SYSCALLS / M-AVOID-WRAPPERS (fetched 2026-09-10)
 supersedes: ["0076"]
-superseded_by: ["0115", "0127"]
+superseded_by: ["0115", "0127", "0165"]
 related: ["0003", "0083", "0094", "0095", "0105"]
 evidence: ["PIA-010", "PIA-045", "PIA-059", "F22", "F38", "S-PORTS"]
 consumers: []

@@ -190,7 +190,10 @@ about where the **type** lives, not about one textual occurrence: the prescribed
 on `change_summary`'s return type and on the fake's impl too, so the checkpoint counts the **declaration** and not
 the string. **Its `change_summary` BODY is not written here** — that is 7c's, behind S-BIN (§7a.11; ADR-0093 decision
 4) — so the Phase-1 fake returns `ChangeSummary(())` and the trait method is declared and unimplemented by any real
-adapter at this stage.
+adapter at this stage. *(Amended 2026-09-24, s8a §8a.3, ADR-0165: this was true at Step 7a. ADR-0165
+supersedes ADR-0099 clause 5 in part. `ChangeSummary` is now an enum defined only in `rk-ports`, with a finalised
+`Text` arm and a sealed `Binary` slot. The Rust adapter's `change_summary` body returns `Text`, and implementors
+may name the type in that method's signature. Checkpoint 7a's declaration count follows.)*
 
 **`ExternalRef` and `TypedInput` are assigned to no crate by any record** — design:267 is their only occurrence in
 this corpus and design:1699's `rk-types` row lists `DocSet` and neither of them [measured 2026-09-13]. **They are not
@@ -1006,10 +1009,14 @@ n=$(printf '%s' "$out" | grep -c . | tr -d '[:space:]')
 # ---- §7a.2 is exactly such a line for CancelToken, while two comment lines quoting the newtype would
 # ---- make the ChangeSummary count 2 and halt the block on a correct crate.
 grep -rqE '^[[:space:]]*pub struct CancelToken' crates/rk-ports/src/ || { echo "FAIL: CancelToken is not DECLARED in rk-ports — design:1704's rk-ports row names the CancelToken as this crate's content; ADR-0099 decision 2 makes the composition root its owner, which is why it is never an adapter local, but it names no crate"; exit 1; }
-out=$(grep -rhE '^[[:space:]]*pub struct ChangeSummary\(pub\(crate\) \(\)\);' crates/rk-ports/src/); rc=$?
+# ---- [amended 2026-09-24, s8a §8a.3, ADR-0165] The declaration counted is now the ENUM. ADR-0165 supersedes ADR-0099
+# ---- clause 5 in part: ChangeSummary is `pub enum ChangeSummary {` in rk-ports, a finalised Text arm and a sealed
+# ---- Binary slot, and the opaque newtype `pub struct ChangeSummary(pub(crate) ());` this line counted is gone. The
+# ---- count stays exactly 1 and stays anchored on the declaration, so a comment quoting it cannot satisfy it.
+out=$(grep -rhE '^[[:space:]]*pub enum ChangeSummary[[:space:]]*\{' crates/rk-ports/src/); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the ChangeSummary grep errored (rc=$rc) — crates/rk-ports/src/ is unreadable, so a count of 0 would be a fake 0"; exit 1; }
 n=$(printf '%s' "$out" | grep -c . | tr -d '[:space:]')
-[ "${n:-0}" -eq 1 ] || { echo "FAIL: ${n:-0} 'pub struct ChangeSummary(pub(crate) ());' declarations, expected exactly 1 — ADR-0099 clause 5 (:90-91) decides the type is an opaque, non-finalised newtype in rk-ports and that this is the ONE site in crates/ the name may appear (:131); this exact SPELLING is not the record's but F41:20's and spikes/s-ports/src/lib.rs:163's, carried forward so the grep has one form to match"; exit 1; }
+[ "${n:-0}" -eq 1 ] || { echo "FAIL: ${n:-0} 'pub enum ChangeSummary {' declarations in rk-ports, expected exactly 1 — ADR-0165 (2026-09-24, superseding ADR-0099 clause 5 in part) defines ChangeSummary only in rk-ports, as an enum with a finalised Text arm and a sealed Binary slot"; exit 1; }
 
 # ---- AC-497's, AC-499's and AC-500's fake-side instruments, which a grep over a type declaration cannot see.
 # ---- HARDENED 2026-09-17 (Step 7c Slice 1, before the re-run this slice records — 00-preamble's "hardening lands
@@ -1219,6 +1226,10 @@ at the register. **The register is right and nothing is owed to it for the scope
   **Phase 2** per ADR-0094 decision 2, behind the CI decision ADR-0010 defers (register :7093-7098; ERRATA
   E-0094-1). Its config-time refusal and `doctor` row are implementable today and the register routes them to
   **7b/7d** (PIA-072); only the Codex-present half waits.
+  *(Noted 2026-09-24, s8a §8a.6, ADR-0167: the Codex adapter is **Phase 4**, after S-CODEX, as ADR-0007
+  places it. ADR-0167 supersedes ADR-0094 decision 2's phase clause in part, and E-0094-2 records that
+  DECISIONS-2026-09-12 E12 was taken with ADR-0007's phase sentence out of view. The exclusion stands; its
+  phase reason is corrected.)*
 - **AC-482** — human-gated: *"routed to a human gate; not machine-decidable"* (register :6949-6950); the
   machine-checkable half is AC-481 (:6951), which this step discharges **in part** — its number and its by-name
   message, with the PIA-059 fixture armed and not discharged (above).

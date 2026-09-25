@@ -10,6 +10,10 @@
 //! review evidence of any kind exists for items whose change is not a text diff, so its field set
 //! cannot be fixed. It lives only as `rk-ports`' opaque newtype at Step 7a (ADR-0099 clause 5,
 //! ADR-0093 decision 4), and Checkpoint 5 asserts the name appears nowhere under `crates/`.
+//! *(amended 2026-09-25, s8a fix round 1, ADR-0165: no longer so. `ChangeSummary` is an enum defined
+//! only in `rk-ports`, with a `Text` arm finalised now and a `Binary` slot sealed until S-BIN; an
+//! implementor may name it, and Checkpoint 5 bans a definition, alias, renaming import or impl of it
+//! outside `rk-ports`, not the name. Nothing of it is built here still.)*
 
 pub mod activity;
 pub mod artifact;

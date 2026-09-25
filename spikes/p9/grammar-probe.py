@@ -249,7 +249,9 @@ def main():
     json.dump({"strings": len(found), "by_kind": dict(by_kind), "parsed": ok, "failed": [list(x) for x in fails],
                "mixed_unparenthesised": [list(x) for x in mixed], "features": dict(feat),
                "on_false_ok": of_ok, "on_false_forms": dict(of_forms), "on_false_failed": [list(map(str, x)) for x in of_fail]},
-              open(os.path.join(root, "results-s-grammar.json"), "w", encoding="utf-8"), indent=1)
+              # newline="\n" (2026-09-25, s8a fix round 5): a text-mode write on Windows otherwise turns every
+              # terminator into CRLF, and the tracked file shows w/crlf on an unpinned path (ADR-0164 decision 6).
+              open(os.path.join(root, "results-s-grammar.json"), "w", encoding="utf-8", newline="\n"), indent=1)
     return 0 if not fails and not of_fail else 1
 
 if __name__ == "__main__":

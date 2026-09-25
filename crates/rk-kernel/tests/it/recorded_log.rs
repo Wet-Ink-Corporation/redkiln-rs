@@ -427,3 +427,85 @@ fn read_run_refuses_a_log_whose_config_json_is_invalid() {
     std::fs::remove_file(&config).expect("the scratch copy is writable");
     read_run(&dir).expect("an ABSENT config.json is None, and the log reads back");
 }
+
+/// **The recording's file inputs ARE the golden log's recorded inputs, byte for byte** (2026-09-24,
+/// s8a, D21-50). `tests/it/replay.rs`' recording — corpus-gated, so no CI leg runs it — compiles
+/// six sources in with `include_str!` and reads `spikes/p9/facets.toml` at run time, and every one
+/// of those bytes enters `run_id`'s preimage. The committed log `implement-bf1d8cec3b22d288` was
+/// blessed over their CRLF-smudged working bytes; ADR-0164's `eol=lf` made the six LF, the
+/// recording moved to `implement-87544dc047ecc61c`, and nine corpus `replay::` tests went red
+/// with nothing unfeatured to see it. `.gitattributes`' header rule: *"a file whose bytes a test
+/// pins is protected from the slice that lands it"*. The six are now `-text` rows holding the
+/// SAME git objects as their golden copies; the other two are LF on both sides under row 1.
+///
+/// A terminator-only difference is reported as such, because that is the failure this exists for.
+#[test]
+fn the_recording_sources_are_the_committed_logs_inputs_byte_for_byte() {
+    let run = the_committed_run();
+    let inputs = run.join("inputs");
+    let pairs: [(&str, &[u8], &str); 8] = [
+        (
+            "catalog-select/impl-report.toml",
+            include_bytes!("../fixtures/catalog-select/impl-report.toml"),
+            "catalog/impl-report.toml",
+        ),
+        (
+            "catalog-select/change-summary.toml",
+            include_bytes!("../fixtures/catalog-select/change-summary.toml"),
+            "catalog/change-summary.toml",
+        ),
+        (
+            "catalog-select/change-summary-ue.toml",
+            include_bytes!("../fixtures/catalog-select/change-summary-ue.toml"),
+            "catalog/change-summary-ue.toml",
+        ),
+        (
+            "catalog-select/changeset.toml",
+            include_bytes!("../fixtures/catalog-select/changeset.toml"),
+            "catalog/changeset.toml",
+        ),
+        (
+            "catalog-select/spec-authoring.toml",
+            include_bytes!("../fixtures/catalog-select/spec-authoring.toml"),
+            "catalog/spec-authoring.toml",
+        ),
+        (
+            "packs/incident-deviation.toml",
+            include_bytes!("../fixtures/packs/incident-deviation.toml"),
+            "pack/incident-deviation.toml",
+        ),
+        (
+            "registries/artifacts/artifacts.toml",
+            include_bytes!("../fixtures/registries/artifacts/artifacts.toml"),
+            "artifacts/artifacts.toml",
+        ),
+        (
+            "spikes/p9/facets.toml (read at run time)",
+            &[],
+            "facets.toml",
+        ),
+    ];
+    let facets =
+        std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../spikes/p9/facets.toml"))
+            .expect("spikes/p9/facets.toml is readable");
+    let mut bad = Vec::new();
+    for (name, source, golden) in pairs {
+        let source: &[u8] = if source.is_empty() { &facets } else { source };
+        let recorded = std::fs::read(inputs.join(golden))
+            .unwrap_or_else(|e| panic!("the golden input {golden} is unreadable: {e}"));
+        if source != recorded.as_slice() {
+            let lf = |b: &[u8]| String::from_utf8_lossy(b).replace("\r\n", "\n");
+            let why = if lf(source) == lf(&recorded) {
+                "line terminators only"
+            } else {
+                "content"
+            };
+            bad.push(format!("{name} differs from {} ({why})", golden));
+        }
+    }
+    assert!(
+        bad.is_empty(),
+        "the recording would not reproduce {}: {bad:#?}",
+        run.display()
+    );
+}
