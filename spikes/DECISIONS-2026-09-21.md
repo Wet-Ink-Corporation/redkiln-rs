@@ -1610,3 +1610,60 @@ from ADR-0164 in writing order.
 
 The spend gates (the probes, the real runs and S-BIN's dispatches) remain behind D21-40 decision 2's fixture-proof
 condition, and each real run is still a separate operator go-ahead in the moment.
+
+---
+
+## D21-43 · Twenty-eight decisions the stage authors surfaced, taken before any stage file is revised
+
+**Taken 2026-09-24, after the ten sub-stage files `s8a`…`s8j` were drafted (8,060 lines) and before any of them is
+revised or run.** Ten authors, each working against D21-40/41/42 and the tree at `ca8f387`, surfaced questions that no
+ledger line took. Two of them showed earlier premises to be false:
+
+- `user-story-ac` has `max_rigor = "recommended"`, so it is never admitted at the story pack's **mandatory**
+  specification stage. D21-41 (f) and D21-42 11b both named it.
+- Only two of the seven ADR-0080 rows have a lawful re-execution quantity. For the other five, 11b's wording would
+  have made the rewritten check constantly true.
+
+One is a possible architectural blocker. The run-owned worktree lives under `.git`, which Claude Code lists as a
+protected directory. Each question was put to the operator with its measured premise and a recommendation.
+
+| # | Question | Taken |
+| --- | --- | --- |
+| N1 | Can a `-p` child edit inside a worktree under `.git`? | **Probe now, as an explicit exception to D21-40 decision 2:** one haiku confinement probe plus its outside-`.git` control, before s8e–s8g are built. If edits are denied, run worktrees move out of `.git` by record. *The probe was prepared but NOT run: the session's permission layer refused to spawn the child from inside Claude Code. It is owed to the operator from a plain terminal, and s8e–s8g's revision waits on its result.* |
+| N2 | (1b)'s Spec producer | **"The Spec the story lane's mandatory specification stage selects"**, which is `bdd-scenarios` today. No catalog edit. **Supersedes D21-41 (f) and D21-42 11b's naming of `user-story-ac`.** |
+| N3 | `change` at triage, where no changeset exists | **`null` routes to AC-079's `unknown_facet` gate at triage, and the operator supplies it.** |
+| N4 | Per-test pass/fail on stable libtest, which has no JSON | **A strict parser over libtest's `test <name> ... ok\|FAILED` and `test result:` lines, pinned by a golden fixture per toolchain version.** Unparseable output is Unverifiable, never green. |
+| N5 | Two items in one store fold together | **An interim `item` key on every item-scoped event kind**, moving to ADR-0131's tag later as ADR-0163's interim key does; `query` honours `ByItem`. Supersedes ADR-0131's first forbids bullet in part, for those members. |
+| N6 | The gate lifecycle in git | **Every gate transition (opened, answered, expired, voided) is a git-first tier-1 event** with a `Gate:` trailer carrying its state. `t1_gate` is append-only and state is a fold. Extends D21-42 8b's record. |
+| N7 | The discarded reconcile, and replay's git journal | **The planner reads `reconcile()`'s output** (execution under ADR-0109 d1), and D21-41 (a)'s stage seed comes from its fold. **A tier-2 `git_op` row is minted** so replay serves git writes from the journal. Golden logs are read, by stated rule, as "no git writes". |
+| N8 | The deadline format | **Integer unix seconds.** Supersedes design §5.4's RFC 3339 spelling in part. |
+| N9 | The lane's end | **A terminal `Story: <project>/<item> closed` mark** carrying closeout's content checkpoint. |
+| N10 | A committed step's unlanded edits after a kill | **Land at every committed step that changed the worktree.** The commit and the content checkpoint are one boundary act. |
+| N11 | AC-127 against surface-then-restore | **`structured_drift` opens a drift gate that blocks the stage's exit until it is answered.** AC-125's "resolving" means answering that gate. |
+| N12 | Owners | **`artifact.read`** is emitted by s8d's resolver through s8f's rk-store read seam. **AC-159** goes to s8f. **AC-372's** unfireable doctor rule is read, by dated note, as a test of `cost`'s renderer, with AC-415's red case. |
+| N13 | tdd `red-verify`'s flatten | **A catalog edit to the existing `[*].tests_added` projection** (ADR-0035), under ADR-0072. |
+| N14 | `kb:`/`checklist:`/`toolchain:<feed>` sources | **Declared `[checklist.*]`, `[feed.*]` and `[kb.*]` tables in s8c's registry.** Undeclared keys are refused by name, and content is authored only for the keys the lanes reach. |
+| N15 | Step-grain key against ADR-0097 | **A separate commit key.** ADR-0097's memo key is untouched. |
+| N16 | The 185 agent-step timeouts | **Carried by each per-step spec** (3a), resolved through 4a's table and bounded by the activity budget. Owner: s8d. |
+| N17 | s8h Q1–Q4 | Q1: reuse `NotAdopted` and `NotIsolated { surface: Env }`; nothing superseded. Q2: `appetite.tokens` is the sum of `Usage`'s four counters, about 24M per pass at first. Q3: `Exit::Overage` (20). Q4: probe 2 is three dispatches, one per model id. |
+| N18 | The five rows without a re-execution quantity, and 11c's corpus | **(C)** re-point `confirm` at the discriminating test for `differential-debugging` and `instrumented-trace-analysis`. **(D)** keep `check.failed == 0` for `user-story-ac` and `vertical-slicing`, reading bullet 2 as illustrative. **(A)** a threshold at 11c's T for `threat-model`. **11c labels F37's 188 findings; E3's six are excluded**, because the operator has seen their filled sheet. **Supersedes D21-42 11b's "re-execution quantities" for these five rows.** |
+| N19 | S-BIN captures | **The operator captures by hand** on all five review trees through `/ue-verify`, with one procedure applied identically to clean and seeded trees. |
+| N20 | S-BIN review-tree contents | **Backlog and status prose stripped from all five trees identically**, and recorded. |
+| N21 | METHOD-S §3.4's two undecided outcomes | **Registered as undecided before dispatch.** If either occurs, the `Binary` variant takes the human-gate route. |
+| N22 | Seed 5; S-BIN's gate; the CLI version | Seed 5 is **replaced by the registered procedure** before dispatch. S-BIN is gated on Checkpoint 8h plus its zero-spend dry run, confirmed on the B1 line. The CLI is **frozen from S-BIN on**, and the set never spans a version. |
+| N23 | The five displaced TestReport activities | **Re-homed to the implement stage** as test-authoring activities under ADR-0072. Verify only measures. |
+| N24 | AC-139's default for a missing verification | **Block (fail-closed)**, recorded as the human decision AC-139 requires. |
+| N25 | Toolchain gaps | A per-toolchain **`setup` verb** at worktree creation (`pnpm install --frozen-lockfile --prefer-offline`, refused by name on failure). **`build` is widened to an outcome report** as 1a did for `test`. **`sca-scan` requires `unrated == 0`** or goes to `scan.accept-findings`. |
+| N26 | The lattice's axes; AC-018 | **`rust` and a `surfaces` binding are added** by a dated METHOD-P amendment, with the old axes kept for the parity goldens. **AC-018's memo lint runs over `.redkiln/`**, and its 14 activities are repaired under ADR-0072 in s8b. |
+| N27 | ADR-0134 clause 5 | **The reading is confirmed:** the clause is about 7f's old text. Re-scoping 7f is execution, not supersession. |
+| N28 | Checkpoint 7c's re-run | **s8j re-runs it whole**, from a plain terminal through the launcher, with the live probes. |
+
+**Integration calls taken by the lead under these decisions, and reported rather than asked:**
+- Question and process loading has one owner. The loader and `.redkiln/processes/` are **s8d**'s. The pack-declared
+  human-root questions are **s8j**'s. s8g's `.redkiln/questions.toml` is dropped in favour of s8d's loader.
+- AC-133's judgement-enum registry is built once, by **s8g**. s8h consumes it.
+- The Rust verb handlers are **s8c**'s record (V); the activities are **s8g**'s (R4).
+- RT-59 is **settled by R-48** (2026-09-20), and s8j cites it rather than re-taking it.
+- Every re-run of an old checkpoint that executes `redkiln run` (7f, 7g, 7h) is pointed at the fixture child
+  through `[adapters] harness_binary` once s8h lands, so no checkpoint can dispatch to a real account.
+- s8's three `redkiln run` sites go through s8h's launcher (s8j amendment).
