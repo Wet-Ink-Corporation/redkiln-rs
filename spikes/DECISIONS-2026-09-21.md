@@ -1709,3 +1709,55 @@ trouble. The N1b arm measured it writable. The sibling-directory alternative was
 
 `.gitignore` gains `.redkiln/worktrees/` in this entry's commit. That row is inert until s8e moves the root, and it
 stops a stray probe or run tree from ever reading as an untracked change.
+
+---
+
+## D21-45 · Claude Code's worktree conventions, read from its docs and its own code, and what redkiln adopts
+
+**Taken 2026-09-24, at the operator's request to ground D21-44 in what Claude Code has already learned.** Two
+read-only passes fed it. The first read the official docs (`code.claude.com/docs/en/worktrees.md`,
+`permission-modes.md`, `permissions.md`, `cli-reference.md`). The second read the installed CLI's own JavaScript,
+extracted from the Bun-compiled `claude.exe` at 2.1.281 without running it. Every point below marked **measured**
+was quoted from that code.
+
+**Why D21-44's placement works (measured).** `checkPathSafetyForAutoEdit` splits the absolute path into
+case-folded segments. The path is sensitive if ANY segment is one of
+`[".git",".vscode",".idea",".claude",".husky",".cargo",".devcontainer",".yarn",".mvn"]` or `.config/git`. The sole
+exemption is `.claude` followed by `worktrees`, at or below the working-directory root, and a second `.claude` inside
+that is protected again. This matches N1's DENIED arm and N1b's writable `.redkiln/worktrees/` exactly.
+**Standing limit:** inside a run worktree, `<wt>/.git`, `<wt>/.cargo/`, `<wt>/.claude/` and `<wt>/.husky/` stay
+protected. An implementer edit there is denied, and s8h's typed `permission_denials` failure names it as a known
+limit, not a defect.
+
+**What Claude Code does (measured)**
+- **Worktrees:** `.claude/worktrees/<name>`, on branch `worktree-<name>` with `/`→`+`. Created by `git worktree add
+  --no-track -B <branch> <path> <base>` from `origin/<default>` (or HEAD under `baseRef: head`), with `LC_ALL=C`.
+- **Name checks:** at most 64 characters; segments `^[a-zA-Z0-9._-]+$`; `.`, `..` and `.git` refused.
+- **Symlink guards:** it refuses when `.claude`, `.claude/worktrees` or the target is a symlink (*"A
+  repository-committed symlink at .claude … could redirect worktree creation outside the repository"*), and checks the
+  realpath after creating.
+- **Ownership:** a `CLAUDE_BASE` marker in the worktree's gitdir, plus `git worktree lock --reason "claude … (pid N
+  start T)"`. Locks held by dead PIDs are released.
+- **Removal:** only a clean tree with no commits beyond its base, carrying the marker and unlocked. Anything else is
+  kept with a reason (*"N changed file(s) would be lost"*). It never removes worktrees it did not create.
+- **Resume:** it verifies the worktree is still a separate checkout of this repo.
+- **Carrying files:** nothing by default. `.worktreeinclude` copies files that are both gitignored and matched,
+  skipping symlinks; `worktree.symlinkDirectories` is opt-in.
+- **Refusals and cleanup:** it refuses repo-local filter drivers and `includeIf` it cannot disable, since LFS
+  `--local` would yield pointer files. It writes a marked `# claude-code-runtime` block to `<commondir>/info/exclude`,
+  never to `.gitignore`. On Windows it removes a junction or symlink, never its target.
+
+| # | Question | Taken |
+| --- | --- | --- |
+| W1 | Claude's safety practices in redkiln's run-worktree lifecycle | **Adopt all:** item-id validation as a path and branch component (at most 64 characters, safe segments, no `.`, `..` or `.git`); symlink guards on `.redkiln`, `.redkiln/worktrees` and `<item>`, plus a post-create realpath check; an **`RK_BASE`** marker in the worktree's gitdir, so ownership is recoverable from git alone (ADR-0109 d4); `git worktree lock --reason "redkiln run <item> (pid N start T)"` with stale-lock release; a re-entry check (a separate checkout, registered to this repo); `LC_ALL=C` on every parsed git call; Windows removal never follows a junction, with a test. |
+| W2 | Re-entry | **Reuse, never force-remove.** Re-entry reuses the registered worktree when its HEAD equals the `rk-run/<item>` tip. Uncommitted in-flight changes are discarded explicitly and journalled, which is N10's semantics. A tree without `RK_BASE`, or with commits the run ref lacks, is **refused, never removed**. Removal happens only when the tree is clean, landed, marked and unlocked. **This replaces `recreate_run_worktree`'s `worktree remove --force` + `remove_dir_all` at every run start.** It deliberately does not copy Claude's `-B`, which resets an existing branch and would destroy a resumable run. `--no-track` is adopted. |
+| W3 | Ignored-but-needed files | **Honour the project's existing `.worktreeinclude`**, the same file with the same semantics (ignored ∩ matched, symlinks skipped), for files like `.env`. **Dependencies come through N25's per-toolchain `setup` verb.** No `node_modules` symlinks: they share mutable state across runs, and Claude leaves the feature off by default. |
+| W4 | Git hygiene | **Both.** Worktree creation is refused, with a diagnosis, when a repo-local filter driver (for example LFS via `--local`) or an `includeIf` would yield pointer files. **`redkiln init` writes an idempotent `# redkiln-runtime` block to `<commondir>/info/exclude`** for target repos, and this repo keeps its tracked `.gitignore` row. |
+
+**Where redkiln deliberately differs:** the branch prefix stays `rk-run/<item>`; runs fork from the frozen, CI-green
+HEAD rather than `origin/<default>`; removal is by run state, not by age (there is no `cleanupPeriodDays` analogue);
+and `settings.local.json` is not copied, because children run with isolated settings (s8h).
+
+**Ownership:** W1, W2 and W4's worktree half are **s8e**'s (with D21-44's move). W3 and W4's `init` half go to
+**s8c** (the `setup` verb and `.worktreeinclude` reading) and s8e (the carry at creation). `redkiln init`'s exclude
+block is `s8e`'s too, since `init` already writes the hooks marker (RT-51).
