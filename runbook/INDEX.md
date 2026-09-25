@@ -164,6 +164,9 @@ git grep -nE 'roughly \*\*60 positives\*\*|MCC \+0\.978|Today that is \*\*2\.1\.
 python runbook/tools/check-refs.py    # exit 0; prints the ref and heading counts it actually matched
 # 4. every checkpoint line can fail (Halt 8 shapes (a)-(h)), with the justified exceptions enumerated
 python runbook/tools/check-checkpoints.py    # exit 0; prints flagged-vs-allowed
+# 4b. every ADR from 0164 on writes each considered option as one "### Option — <name>" heading (added
+#     2026-09-25 at s8a, D21-42 decision 24a; ERRATA E-0085-3 lists the thirty earlier non-conforming records)
+python runbook/tools/check-adr-options.py    # exit 0; prints "scanned N records (>= 0164); flagged 0", N >= 4
 # 5. the checkpoint dry-run: every checkpoint line whose target exists today, executed, with its output
 #    recorded in PROGRESS.md §6. Still operator-driven — it has no single command, because "whose target
 #    exists today" moves with the tree. Record which lines you ran and which you could not, by stage.
