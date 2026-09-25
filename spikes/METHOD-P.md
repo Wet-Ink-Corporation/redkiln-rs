@@ -248,6 +248,20 @@ Essence Level-3 completeness as CI (catalog §2.6): every stage-exit artifact mu
   4 axes; `med` added because `canary-release` (keyed `>= med` between `< med` and `>= high` neighbours) was unreachable
   under two bands — a banding artefact, not a catalog gap (F35 §1.4). The {low, high} run is `results-p6-run3.txt` and
   stays the pre-registered reading; the three-band run will be `results-p6-run4.txt`.
+  *Amendment 19 (2026-09-25, D21-43 N26):* the toolchain sentence above is amended **for the `.redkiln/` reading
+  only**. `rk_kernel::lattice` (the Rust port of `lattice.py`, `runbook/phase-1/s8b-catalog-quality.md` §8b.2) reads
+  `.redkiln/` under `Axes::shipped()`: the four toolchain sets above plus a `rust` row, transcribed in `lattice.py`'s
+  own shape as `("rust", ({"rust"}, {"text"}))`, because Rust is the only toolchain Phase 1 ships and
+  `.redkiln/facets.toml` declares it; and a `surfaces` binding, registered here before the shipped reading is
+  recorded, as the empty set plus each value `.redkiln/facets.toml` declares as a singleton (`auth`, `flags`,
+  `migration`, `payments`, `secrets`), six rows. **The registered axes are unchanged** and stay the pre-registered
+  reading for the p9 goldens (`Axes::p6_registered()`), so every figure F35 and the register quote keeps its meaning.
+  The boolean covering array keeps its eight columns, `auth` included; `auth` is the boolean ADR-0089 decision 2
+  withdrew, `.redkiln/facets.toml` declares no such facet, and the column is inert over `.redkiln/`, guarded in code
+  (D21-56) *[inferred when written: this amendment precedes the first recorded Rust reading]*. It moves no kill
+  threshold; the kill lines apply to the registered pack set with the pack count reported (D21-47 V3). **When it was
+  made:** before the shipped reading was recorded or committed; the enumeration is the one `s8b` §8b.2 fixed on
+  2026-09-24, and the port's development run in a scratch worktree read `.redkiln/` under it without changing it.
 - **Engine:** the §2.5 selection function over the v0 packs — one per kind in `facets.toml`
   (`bug-standard`, `bug-expedite`, `story`, `story-ue`, `incident`, `spike`, `project`, `initiative`, and
   `chore`, `tech-debt`, `security-vuln`, `docs`) — steps 1, 2, 4, 5 with all artifacts `Missing`.

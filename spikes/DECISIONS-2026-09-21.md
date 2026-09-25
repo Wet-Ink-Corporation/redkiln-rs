@@ -2067,3 +2067,100 @@ repaired at `s8a`, and Checkpoint 7b is re-pinned to the probe's clean reading (
 **Confirmed 2026-09-25 by the operator, with D21-51.** ADR-0167 flips `proposed → accepted`, `date: 2026-09-24`
 unchanged. It supersedes ADR-0094 decision 2's *Codex is Phase 2* sentence in part, toward ADR-0007, and E-0094-2
 records that DECISIONS-2026-09-12 E12 was taken with ADR-0007's phase sentence out of view.
+
+---
+
+## D21-54 · S-SEV labels a pre-registered sequential sample of whole dispatches, not all 188 findings
+
+**Taken 2026-09-25 by the operator, in the session executing `s8b`, before `spikes/METHOD-SEV.md` exists.** The
+stage-open measurement put S-SEV's first pass at about 3.5–5 hours of hand labelling (188 findings, mean about 1,318
+characters each), plus a re-label of 38 at least 48 hours later. The operator: *"Spending 5 hours labelling doesn't
+sound like a productive use of my time"*. A judge panel (a grounder, three adversarial judges, a synthesis) set out four
+options.
+
+- **Taken:** a sequential sample, inside `s8b`. S-SEV (D21-42 11c, `s8b` §8b.6) labels F37's adversary findings by
+  **whole dispatch**, keyed `(run_key, step.attempt)`, because 33 dispatches share 31 `run_key`s and `step.identity` is
+  not unique.
+- **Stage 1** labels every finding of one dispatch per item: 10 dispatches, drawn by a seed recorded in
+  `spikes/METHOD-SEV.md` before the sheet exists.
+- **If stage 1 decides:** it shows variability on both A2 (at least one discordant finding, as §8b.6 defines it) and A3
+  (`0 < k < 10`). The variability question is then decided over the corpus by containment, because §8b.6 defines
+  inadmissibility as *"zero discordant findings in both directions"* and *"`k = 0` or `k = 33`"*.
+- **Otherwise:** the continuation, pre-registered in the same commit, labels the remaining 23 dispatches, and the
+  measurement is §8b.6's original 188. A stage-1 constancy result is never reported as constancy over the 188.
+- **A1's CANNOT-TELL bar** is a point rule on the labelled n, with its Wilson 95% interval reported. It is
+  pre-registered as decidable by that interval only at 0–1 of about 57 (golden constraint 10).
+- **The re-label stays at 38 findings**, drawn by a recorded seed from those labelled in stage 1, at least 48 hours
+  after stage 1. A1's κ half is therefore the ruled one.
+- **Supersedes D21-43 N18 in part: the n in *"11c labels F37's 188 findings"* only.** F37 as the corpus and the E3
+  exclusion stand. D21-42 11c stands whole: T is settled on a measurement, inside `s8b`, and `s8b` stays open until the
+  re-label.
+- **Why not the others:**
+  - "Owe the measurement" reversed 11c's *"now"* outright. It moved ADR-0080 d3 with no evidence, sent S-SEV to no
+    gated stage, and its guards broke the nested Checkpoint 8b replays in `s8c` and `s8d`.
+  - An inserted S-SEV stage before `s8h` would have bought calendar time by reversing 11c's *"now"* in part. The
+    operator objected to hours, not calendar time.
+- **Disclosed, not decided:** S-SEV measures the operator's normative labels, not the reviewer's emitted `severity`, so
+  it does not show that the shipped row varies at run time.
+
+---
+
+## D21-55 · AC-527's refusal 2 is evaluated per conjunct required for truth, over the two bindings it already makes
+
+**Taken 2026-09-25 by the operator, in the session executing `s8b`, before the rule was changed.** The stage-open
+measurement found a gap in §8b.4.
+- §8b.4 says *"Operands other than `findings` bind as they need to, so that `X and <falsified>` evaluates `false` under
+  ADR-0121's absorption"*. But `quality_block`'s context binds two names, and `eval.rs`'s `and` arm propagates a
+  left-hand error before absorption can act (`let left = self.truth(l, scope)?;`).
+- So the stage's own conjunct fixture, `check.failed == 0 and findings.none(evidence in ['Reproduced'])`, errors with
+  `UnknownField("check.failed")` under the witness. The stage never said what "bind as they need to" means.
+
+The ruling:
+- **Refusal 2 is evaluated per conjunct required for truth.** The walker that serves refusal 1 flattens the predicate's
+  top-level `and` nodes, looking through grouping but not through `or` or `not`.
+- Each conjunct that reads `findings` is evaluated **alone**, over the two bindings the rule already makes: `findings`
+  bound to a single-class witness `[{evidence: C}]` for C in {`Reproduced`, `MutationSurvived`}, and `rigor` across the
+  live levels. The predicate is refused if some such conjunct is `false` in some cell.
+- A conjunct that errors is not refused; it is counted as indeterminate. **No other operand is bound**, and the module's
+  recorded rejection of null-binding stands.
+- This is ADR-0121 decision 1's absorption, read as a rule about values: a false conjunct makes the conjunction false
+  for every value of the operands left unevaluated.
+
+Four corrections and follow-ons:
+- **A reason in §8b.4 is corrected.** It says *"a joint two-member witness does not refuse `findings.none(evidence in
+  ['Reproduced'])`"*. In this evaluator `none` is `any.not()`, so the joint set does refuse it. The per-class witness is
+  kept for a predicate that only a single-class set falsifies. A seventh fixture,
+  `findings.any(evidence in ['MutationSurvived']) or findings.none(evidence in ['Reproduced'])`, must FAIL, so that
+  mutants M2 and M3 are observable.
+- **No empty-set control.** Under this reading it would be dead logic that no fixture separates.
+- **The p9 control counts one refusal per step.**
+- **`findings == null`** (a non-empty witness list `== null` evaluates to `Tri::Null`) is carried to its own item and
+  is not decided here.
+
+What moves and what does not:
+- AC-527's dated amendment under ADR-0092 d2 item 2 transcribes refusal 2 at conjunct grain.
+- No accepted ADR's Decision sentence moves: ADR-0080 d2, ADR-0103 d4, ADR-0121 d1 and ADR-0136 d3 are all untouched.
+
+---
+
+## D21-56 · Axes::shipped() keeps lattice.py's inert `auth` boolean, guarded in code
+
+**Taken 2026-09-25 by the operator, in the session executing `s8b`, on the panel's recommendation.**
+- **The gap.** `lattice.py`'s `BOOLS` binds `auth` on every context. `.redkiln/facets.toml` says *"The repo-wide `auth`
+  boolean is WITHDRAWN, not retuned"* (ADR-0089 decision 2). `s8b` §8b.2 defines `Axes::shipped()` as the registered
+  set plus exactly `rust` and a `surfaces` binding, so the `.redkiln/` reading carries a withdrawn column.
+- **The ruling.** `Axes::shipped()` keeps the column. It is inert because no `.redkiln/` predicate reads it, and that
+  is guarded in code rather than asserted in prose. Inside
+  `lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged`:
+  - (i) the registry loaded from `.redkiln/facets.toml` declares no facet `auth`;
+  - (ii) a predicate reading bare `auth`, loaded through the entry point `lattice::p6_lattice_over_the_shipped_pack`
+    uses, is refused as an unregistered facet. It is neither evaluated nor resolved as the surfaces literal `'auth'`.
+- **Mutant M30** (the shipped-pack load path skips the facet-registry root check) must flip that test.
+- **Disclosure.** METHOD-P Amendment 19 discloses the column.
+- **What does not move.** No test is added or renamed, K_TESTS stays at 30, and no ADR Decision sentence or register
+  THEN moves.
+- **Declined:** dropping the column by projecting the transcribed eight-row covering array onto seven columns. It is
+  figure-neutral, but it subtracts from N26 and renames a checkpoint-pinned test.
+- **Raised, not decided:** `.redkiln/facets.toml` makes its seven booleans tri-valued, but no context in either axis
+  set binds a boolean to null. `lattice.py`'s `unknown` sweep ranges over the ordinals only. That arm is untested under
+  `Axes::shipped()`, and N26 did not rule on it.

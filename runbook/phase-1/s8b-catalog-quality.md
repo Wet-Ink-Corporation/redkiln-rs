@@ -115,6 +115,53 @@ four items). One line per edit:
   *"Concatenation in element order. Nothing is flattened implicitly anywhere else."* The sentence that said D21-46
   flags it for the operator's flip lines and does not decide now cites the decision. No test, count or floor moves.
 
+*Executed 2026-09-25 (the session running `s8b`; D21-54, D21-55, D21-56 the operator's rulings on what this file
+did not foresee).* One line per edit, measured at stage open over `f81e5b9` unless it says otherwise:
+
+- *Executed 2026-09-25:* the floor is re-derived from Checkpoint 8a's **recorded** count, 755 passed / 0 failed / 9
+  ignored over 44 results at `bf12a1c`: **755 + 25 = 780**, not the chain's 774 (computed from 8a's floor of 749).
+  Section (12)'s `FLOOR` is written by a dated edit.
+- *Executed 2026-09-25:* §8b.3's "the registries differ" did not move the figures. `rigor_monotonicity` over
+  `.redkiln/catalog` reads **(15, 2060, 1729)**, identical to p9's [measured from inside the test binary]. So the
+  pinned shape cannot tell the catalogs apart, and mutant M1 is observed through the catalog's own bytes:
+  `threat-model`'s `applicable_if` CODE line must read `surfaces`. A first draft read the whole file, and it was
+  satisfied by the p9 copy's comment quoting the shipped line; M1 stayed green until the check was narrowed.
+  `ac303` carries the same check.
+- *Executed 2026-09-25:* `spikes/p9` changed after `dddcdbd`. `bf12a1c` (`s8a`) edited `catalog-b/` and the grammar
+  probe. The lattice inputs did not change: `git diff --quiet ca8f387 --` over section (2)'s four paths exits 0.
+- *Executed 2026-09-25:* §8b.3's inventory gains two live readers of the working tree's `spikes/p9`, neither of them
+  a pin: `tests/it/recorded_log.rs` (`facets.toml`, added at `bf12a1c`), and
+  `pack_validation::tdd_red_verify_projects_tests_added_per_adr_0035` (`schemas.toml`, the `ImplReport` stand-in).
+- *Executed 2026-09-25:* the clause §8b.4 strikes as AC-527's THEN, *"or any predicate whose truth over an empty
+  findings set is `true`"*, sits in AC-527's GIVEN. *"never on the absence of findings"* is the THEN's. Both are
+  struck.
+- *Executed 2026-09-25:* the `--validate` baseline is `spikes/p9/results-p6-validate-run{1,2}.txt` (2026-09-07), not
+  run10, which carries no validate lines. run10's line 156 carries a cp1252 byte, so a UTF-8 golden differs from it
+  there beyond the tags.
+- *Executed 2026-09-25:* METHOD-P's highest amendment is 18, indented, and not the last in the file. The new one is
+  **Amendment 19**.
+- *Executed 2026-09-25:* `rk_kernel::catalog::Step` carries neither `inputs` nor `on_false`, and it derives the
+  `inputs/specs.json` transcription that the replay digests hash. So the (b), (c), tdd and sca tests read the TOML
+  through `toml_subset`, and `Step` is not widened.
+- *Executed 2026-09-25:* §8b.2 step 2 measured. `lattice.py` over a staged copy of `.redkiln/` exits 1 with
+  `KeyError: 'surfaces'` in `admissible`, so parity over `.redkiln/` is NOT MEASURABLE, and no 27th test joins.
+  Goldens were made with Python 3.14.6, taking **167 s** alongside a parallel cargo run. Their tags are
+  `cat:fdf842cca5b9` `fac+art:592fa138d68d` `pk:cfcaa966656b` (run10: `cat:2d7f63b432cc`), with every run10 figure
+  reproduced.
+- *Executed 2026-09-25:* `adversarial-review`'s spelling is `inputs = { record = "${record.outputs}" }`,
+  `expr = "record.blocking.len() == 0"`, which is the `Verdict` stand-in's `blocking` list (`Confirmed::block_set()`).
+  It loads, and `conformance::shipped_pack_loads` is green.
+- *D21-54 (2026-09-25):* §8b.6's corpus becomes a pre-registered sequential sample of whole dispatches. Stage 1 is one
+  dispatch per item; it continues to all 188 unless A2 and A3 both show variability. The re-label stays at 38. A1
+  and A3 are read at the labelled n. Section (9) reads the seed and the continuation rule from METHOD-SEV's add, and
+  the labelled n from the record.
+- *D21-55 (2026-09-25):* §8b.4's refusal 2 is evaluated per conjunct required for truth, over the rule's two bindings.
+  The joint-witness reason is corrected. A seventh fixture (`terminal_condition_witness_is_per_class`) makes M2 and M3
+  observable. The p9 control counts one refusal per step (**7**). Section (6)'s `ac527:` line gains its
+  `indeterminate=` field.
+- *D21-56 (2026-09-25):* `Axes::shipped()` keeps `lattice.py`'s inert `auth` boolean, guarded in code, with mutant
+  **M30**.
+
 ---
 
 **Why this step exists.** The product ships `.redkiln/`, and not one catalog-quality instrument on this tree reads it.
@@ -518,10 +565,17 @@ two things:
 2. **any predicate that a single-class witness set falsifies**. Each witness finding carries only an `evidence`
    field, in one blocking class, `Reproduced` or `MutationSurvived`, one witness per class. This is per class,
    because the packet's defect (3) is measured: a joint two-member witness does not refuse
-   `findings.none(evidence in ['Reproduced'])`, since a `{MutationSurvived}` set satisfies it.
+   `findings.none(evidence in ['Reproduced'])`, since a `{MutationSurvived}` set satisfies it. *(D21-55, 2026-09-25:
+   corrected. In this evaluator `none` is `any.not()`, so the joint set DOES refuse that predicate. The witness stays
+   per class for a predicate that only a single class falsifies, which the seventh fixture below carries.)*
 
 Operands other than `findings` bind as they need to, so that `X and <falsified>` evaluates `false` under ADR-0121's
-absorption. **Severity-only predicates read no `evidence` and stay lawful.** Re-pin the counts from inside the test
+absorption. *(D21-55, 2026-09-25: no. `and` computes its left side first and propagates an `UnknownField` before
+absorption can act. Refusal 2 is evaluated **per conjunct required for truth**: the top-level `and` is flattened
+through grouping, and not through `or` or `not`. Each conjunct that reads `findings` is evaluated alone over the rule's
+two bindings, `findings` as the witness and `rigor` across the live levels. Nothing else is bound, and a conjunct that
+errors is indeterminate, not refused. The walker is shared with refusal 1.)* **Severity-only predicates read no
+`evidence` and stay lawful.** Re-pin the counts from inside the test
 binary. The witness change moves them, so they are not inferred.
 
 **Fixtures, one per branch** (a fixture per function is not a fixture per branch), under
@@ -535,6 +589,7 @@ binary. The witness change moves them, so they are not inferred.
 | `terminal_condition_is_one_member_conjunct.toml` (new) | `check.failed == 0 and findings.none(evidence in ['Reproduced'])` | FAIL | the conjunct case. This is the shipped `user-story-ac` row, verbatim |
 | `terminal_condition_is_severity_only.toml` (new) | `findings.none(severity in ['blocking'])` | LOAD | that the rule does not over-reach. The old fixture 2 `findings.all(severity != 'blocking')` is the same predicate, which is why it is recast |
 | `terminal_condition_names_a_verify_result.toml` (fixture 3, kept) | unchanged | LOAD | unchanged |
+| `terminal_condition_witness_is_per_class.toml` (new, D21-55) | `findings.any(evidence in ['MutationSurvived']) or not findings.any(evidence in ['Reproduced'])` | FAIL | the per-class witness **alone**: a joint witness satisfies it. Its top-level node is `or`, so it is not the named form, and it is spelled without the named form's text, so section (4)'s exclusions do not grow |
 
 **Tests, red first.** Author each one, and watch it fail for the named reason before the rule changes:
 - `quality_block::d2_per_class_witness_refuses_one_member_rows`;
@@ -708,6 +763,12 @@ and committed **before** the sheet is generated. The spike id is **S-SEV**.
   it. `e3-severity-annotation-ryan.md` is *"Filled by the model at Ryan's direction, 2026-09-04. NOT BLIND."*,
   and its correction carries *"countersign: Ryan Britton, 2026-09-11"*. The operator has read a filled sheet, so his annotation of the preserved
   BLANK could not be blind. If he labels it anyway, it is reported as NOT BLIND, and E3-SEV-BLIND stays open.
+  *(D21-54, 2026-09-25:)* The unit is the whole dispatch, keyed `(run_key, step.attempt)`, because 33 dispatches
+  share 31 `run_key`s. **Stage 1** labels every finding of one dispatch per item, 10 dispatches, drawn by the seed on
+  METHOD-SEV's line ``**Stage-1 seed:** `<int>` `` (measured with the committed script: **56** findings). The
+  **continuation rule** sits on METHOD-SEV's line `**Continuation rule:** …`. Stage 1 decides only if A2 has at least
+  one discordant finding and A3 has `0 < k < 10`. Otherwise the remaining 23 dispatches are labelled and every
+  criterion is read over the 188. A stage-1 constancy result is never reported as constancy over the 188.
 - **Rater: the operator, alone.** Real dispatch is not permitted at this stage. A model-filled sheet would also repeat
   E3-SEV's forfeit: the same rig's model is not an independent rater. METHOD-SEV opens with a dated attestation that
   the operator has not read F37's findings individually.
@@ -721,9 +782,12 @@ and committed **before** the sheet is generated. The spike id is **S-SEV**.
 - **The question**, verbatim from E3's sheet, so that the two are comparable: *"should this finding have blocked the
   item?"*. The answers are `BLOCKING`, `ADVISORY` or `CANNOT-TELL`, against the reviewer card's quoted standard.
 - **Re-label for intra-rater agreement.** After at least 48 hours, 38 findings (20%, chosen by a recorded seed,
-  reshuffled and re-id'd) are labelled again blind to the first pass.
+  reshuffled and re-id'd) are labelled again blind to the first pass. *(D21-54, 2026-09-25: the 38 are drawn from
+  those labelled in stage 1, and the 48 hours run from the stage-1 labels commit.)*
 - **What counts, and the n each criterion needs, fixed before the data (golden constraint 10):**
-  - **A1, vocabulary usability.** `CANNOT-TELL` is at most 10% of 188, with its Wilson 95% interval reported, **and**
+  - **A1, vocabulary usability.** `CANNOT-TELL` is at most 10% of 188 *(D21-54: of the labelled n, as a point rule; at stage
+    1's n of 56 the interval decides this bar only at 0–1 CANNOT-TELL, and the record says so)*, with its Wilson 95%
+    interval reported, **and**
     intra-rater Cohen's κ on the 38 is at least 0.61. The 0.61 threshold is the Landis–Koch "substantial"
     convention, chosen here before the data and said to be a convention. If either fails, the vocabulary is **NOT
     SETTLED by this measurement**. The record says so under that fault name, and the stage STOPS for the operator.
@@ -734,7 +798,9 @@ and committed **before** the sheet is generated. The spike id is **S-SEV**.
     threshold *is* the evidence predicate renamed, and T over severity is **inadmissible**.
   - **A3, termination variability, which is the design's golden constraint 15, measured.** For each of the 33 dispatches, ask
     whether it carries no `BLOCKING`-labelled finding, and report `k/33` with its interval. **`k = 0` or `k = 33`
-    reproduces F37's constant-function result, and T = `blocking` is then inadmissible.** At `n = 33` this
+    reproduces F37's constant-function result, and T = `blocking` is then inadmissible.** *(D21-54, 2026-09-25: read
+    as `k/n_D` over the labelled dispatches; at `n_D = 10` constancy decides nothing and fires the continuation.)* At
+    `n = 33` this
     criterion can separate constancy from non-constancy, which is all it is asked to decide. It cannot estimate a
     rate precisely, and the record does not quote one as a rate.
   - **Report only, and powerless, so labelled:** whether `k` tracks F37's per-item root-cause correctness (10 items).
@@ -882,6 +948,9 @@ share one scratchpad. For each mutant, the driver:
 | M27 | `src/lattice.rs` | the totality check skipped at `mandatory` | `lattice::family_hole_at_mandatory_fails_totality` |
 | M28 | `tests/it/p9_pin.rs` | `materialise_at` copies the working tree's file instead of `cat-file blob` | `p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree` |
 | M29 | `.redkiln/catalog/adversarial-review.toml` | the `verdict` step block moved back before `override`, version left at 4 | `quality_block::adr0072_d2_edits_are_versioned_and_changelogged` |
+| M30 | `src/lattice.rs` | the shipped-pack load path skips the facet-registry root check (D21-56) | `lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged` |
+
+*(D21-55, 2026-09-25:)* M2 and M3 flip `d2_per_class_witness_refuses_one_member_rows` through the per-class fixture.
 
 ### 8b.9 Checkpoint 8b
 
@@ -919,7 +988,8 @@ share one scratchpad. For each mutant, the driver:
 - **Both recursive walks over `.redkiln/` exclude `worktrees/`**, which a planted control in a shaped scratch tree
   proves.
 - **11c's record exists, located by its recorded id.** Its measurement was pre-registered before the labels existed,
-  and the labels are read at the corpus commit that the record names.
+  and the labels are read at the corpus commit that the record names. It states the labelled n and which rule fired
+  (D21-54).
 - **AC-527 is amended to d2 in the register, and its contradicting clauses are struck.** Nothing claims the review
   gate's calibration, in the tree, the records or the commit messages.
 - The whole suite is green above a floor re-derived from Checkpoint 8a's recorded count, and fmt and clippy are green.
@@ -1171,7 +1241,7 @@ out=$(nodispatch cargo test -p rk-kernel --test it -- rigor::rigor_monotonicity 
 printf '%s\n' "$out" | grep -qE '^rigor_monotonicity: catalog=\.redkiln/catalog activities=102 families=[1-9][0-9]* contexts=[1-9][0-9]* ' || { echo "FAIL: rigor_monotonicity did not report reading .redkiln/catalog with a non-zero walk"; printf '%s\n' "$out" | grep -E '^rigor_monotonicity:'; exit 1; }
 out=$(nodispatch cargo test -p rk-kernel --test it -- quality_block::ac527_empty_set_terminal_condition --exact --nocapture 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the AC-527 lint failed over the shipped catalog (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE '^ac527: catalog=\.redkiln/catalog checks=[1-9][0-9]* refused=0 ' || { echo "FAIL: the AC-527 lint did not report .redkiln/catalog, a non-zero check count and refused=0"; printf '%s\n' "$out" | grep -E '^ac527:'; exit 1; }
+printf '%s\n' "$out" | grep -qE '^ac527: catalog=\.redkiln/catalog checks=[1-9][0-9]* refused=0 indeterminate=[0-9]+$' || { echo "FAIL: the AC-527 lint did not report .redkiln/catalog, a non-zero check count and refused=0"; printf '%s\n' "$out" | grep -E '^ac527:'; exit 1; }
 nd_check "sections (1) to (6)" || exit 1
 
 # ---- (7) THE PARITY GOLDENS: present, pinned, RE-DERIVED from the Python oracle at P9_PIN on this run (review B2 —
@@ -1255,6 +1325,14 @@ add=$(git log --diff-filter=A --format=%H -- spikes/METHOD-SEV.md); rc=$?
 [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$add" | grep -c .)" -eq 1 ] || { echo "FAIL: METHOD-SEV.md has no single committing add (rc=$rc) — an uncommitted pre-registration is not one"; exit 1; }
 pre_at=$(git show -s --format=%ct "$add"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$pre_at" ] || { echo "FAIL: the pre-registration's commit time could not be read (rc=$rc)"; exit 1; }
+# D21-54 (dated edit 2026-09-25): the sequential design is proven PRE-registered — read at the add commit, not today.
+msv=$(git show "$add":spikes/METHOD-SEV.md); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$msv" ] || { echo "FAIL: METHOD-SEV at its add commit could not be read (rc=$rc)"; exit 1; }
+seed_re='^\*\*Stage-1 seed:\*\* `[0-9]+`'; cont_re='^\*\*Continuation rule:\*\* '
+printf '%s\n' "$msv" | grep -qE "$seed_re" || { echo "FAIL: METHOD-SEV's pre-registration names no stage-1 seed (D21-54)"; exit 1; }
+printf '%s\n' "$msv" | grep -qE "$cont_re" || { echo "FAIL: METHOD-SEV's pre-registration states no continuation rule — a stage-1 constancy result would decide nothing (D21-54)"; exit 1; }
+syn=$(printf '%s\n' '# METHOD-SEV' '**Stage-1 seed:** ____' | grep -E "$seed_re")
+test -z "$syn" || { echo "FAIL: control — a METHOD-SEV with no numeric seed satisfies the seed guard; it is vacuous"; exit 1; }
 SSEV_ADR=____   # written by dated edit in the commit that writes the record, as ADR-<nnnn>: its id at write time
 case "$SSEV_ADR" in ADR-[0-9][0-9][0-9][0-9]) ;; *) echo "FAIL: SSEV_ADR is '$SSEV_ADR' — the record's id was not written here when it was written"; exit 1 ;; esac
 recs=$(find references/adr -maxdepth 1 -name "${SSEV_ADR#ADR-}-*.md"); rc=$?
@@ -1273,6 +1351,13 @@ git -C "$CREPO" cat-file -e "$lab_sha:results/sev-f37-labels.md" || { echo "FAIL
 if git -C "$CREPO" cat-file -e "$lab_sha^:results/sev-f37-labels.md" 2>/dev/null; then echo "FAIL: the labels already existed before $lab_sha — the record names a later commit, not the one that added them"; exit 1; fi
 lab_at=$(git -C "$CREPO" show -s --format=%ct "$lab_sha"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$lab_at" ] || { echo "FAIL: the labels commit's time could not be read (rc=$rc)"; exit 1; }
+nl_of() { sed -nE 's/^\*\*S-SEV labelled:\*\* n = ([0-9]+) findings over ([0-9]+) dispatches; rule: (stage-1 decided|continued to 188)$/\1 \2 \3/p'; }
+nl_ok() { awk '($3=="stage-1" && $2==10 && $1==56) || ($3=="continued" && $2==33 && $1==188) {ok=1} END {exit !ok}'; }
+nl=$(nl_of < "$recs")
+[ "$(printf '%s\n' "$nl" | grep -c .)" -eq 1 ] || { echo "FAIL: $recs does not state the labelled n and which rule fired on one line (D21-54)"; exit 1; }
+printf '%s\n' "$nl" | nl_ok || { echo "FAIL: the record's labelled n ($nl) is neither stage 1 (56 findings over 10 dispatches, measured with the committed script) nor the continuation (188 over 33)"; exit 1; }
+syn=$(printf '%s\n' '**S-SEV labelled:** n = 57 findings over 33 dispatches; rule: stage-1 decided' | nl_of)
+if printf '%s\n' "$syn" | nl_ok; then echo "FAIL: control — a mismatched labelled n passes the D21-54 guard; it is vacuous"; exit 1; fi
 [ "$pre_at" -lt "$lab_at" ] || { echo "FAIL: the labels were committed before the pre-registration ($lab_at <= $pre_at) — a method written after the data is not a pre-registration"; exit 1; }
 # Every METHOD-SEV commit AFTER the labels is append-only and adds a dated amendment: a post-data rewrite of a
 # pre-registration is not one.
@@ -1335,7 +1420,9 @@ test -n "$syn" || { echo "FAIL: the calibration pattern does not match a claim �
 # ---- count: 749 + 25 = 774 (749 = ADR-0164's 740 at 992d257 + s8a's 9; 25 is this stage's new tests — the 21 as
 # ---- drafted, D21-47's three lattice fixtures (review M9) and p9_pin's test (V2)). Write the re-derived value here, by
 # ---- a dated edit, before the first run. At least 44 result lines, as at 992d257.
-FLOOR=774
+# ---- Re-derived 2026-09-25 at stage open (dated edit): Checkpoint 8a RECORDED 755 passed / 0 failed / 9 ignored over
+# ---- 44 results at bf12a1c, so 755 + 25 = 780. The chain's 774 was computed from 8a's floor of 749, not its reading.
+FLOOR=780
 out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED|test result: FAILED' | head -20; exit 1; }
 passed=$(printf '%s\n' "$out" | awk '/^test result: / {for (i = 2; i <= NF; i++) if ($i == "passed;") s += $(i - 1)} END {print s + 0}')
