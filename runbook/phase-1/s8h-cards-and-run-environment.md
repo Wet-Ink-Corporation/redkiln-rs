@@ -9,6 +9,27 @@
 A bare `§N.M` in this file means this file's own section; another stage's section is cited as `s5 §5.3`. Every
 shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it opens with its own `cd`.*
 
+*Revised 2026-09-24 for D21-43/44/45* (HEAD `a6349b6`). What changed:
+- §8h.0's four questions are closed as D21-43 N17 took them. Q1 reuses `NotAdopted` and `NotIsolated { surface: Env }`,
+  and nothing is superseded, so Record A no longer supersedes ADR-0095. Q2 is the four `Usage` counters,
+  Q3 is `Exit::Overage` (20), and Q4 is three probe-2 dispatches.
+- D21-44 settled §8h.6's `.git` risk: run worktrees move to `.redkiln/worktrees/<item>`, which is `s8e`'s to build.
+  Probe 1 now makes its worktree there, and it passes only if an edit inside that worktree succeeds. D21-45's
+  protected-segment limit (`<wt>/.git`, `.cargo`, `.claude`, `.husky`) is stated and mapped to the typed
+  `permission_denials` failure, with one new test, one mutant and one probe arm.
+- AC-133's registry is `s8g`'s. This stage enters its types' enums in it and builds no second registry. Three
+  `rk-types` tests are dropped, and `s8g`'s two are selected as regressions.
+- The launcher gains a `wrap` mode, so that `s8i`'s corpus runner and `s8j`'s whole Checkpoint 7c can run through
+  it. It also refuses `CLAUDE_PID` and `CLAUDE_EFFORT`. The live probes run from a plain terminal.
+- §8h.10 carries rows for the gate kinds that earlier sub-stages mint (`s8f`'s `landing` and D21-43 N11's drift
+  gate).
+- The whole-suite floor is re-derived from Checkpoint 8g's recorded count. Checkpoint 8h re-runs Checkpoint 8g and
+  the four older checkpoints its crate edits make provisional. It says where 7c, 7f and 8a are re-run, and why 7e
+  cannot be.
+- `s8`'s three `redkiln run` sites are `s8j`'s amendment (D21-43). This stage states the constraint and edits
+  nothing there.
+- New findings for the lead: 10–15 at the end of the file.
+
 ---
 
 **Why this step exists.** D21-40 decision 1 names four structural reasons that criterion (1) cannot be satisfied.
@@ -71,8 +92,24 @@ are `s8j`'s. The two live probes of D21-41 (g) are **authored** here (§8h.11) a
 | D21-42 21a | `gate_expiry` drafted fail-closed for every reachable class, signed row by row | §8h.10 |
 | D21-42 21b, 21d | explicit minimal `--setting-sources`; the child's confinement settings; probe 1's HALT | §8h.6, §8h.11 |
 | D21-42 21c | the doctor card-grant row and ADR-0146's load-time lint | §8h.10 |
+| D21-43 N17 | Q1–Q4 as taken: the refusal classes, the token unit, the envelope's exit, probe 2's three dispatches | §8h.0, §8h.5, §8h.9, §8h.11 |
+| D21-44; D21-45's standing limit | probe 1 inside `.redkiln/worktrees/<probe>`; the protected-segment limit named by the typed denial failure | §8h.5, §8h.6, §8h.11 |
 
-### 8h.0 Stage open: re-measure, then four questions the ledger leaves open
+**Owned elsewhere, cited rather than re-specified here.**
+- **The run-worktree placement and its lifecycle belong to `s8e`.** That covers the move to `.redkiln/worktrees/<item>`,
+  its record, the `worktree_assigned` row, item-id validation, the symlink guards, `RK_BASE`, the lock, re-entry,
+  and the filter-driver refusal. D21-44: *"Consequences, owned by `s8e`"*. D21-45: *"W1, W2 and W4's worktree half
+  are **s8e**'s"*.
+- **The per-toolchain `setup` verb and `.worktreeinclude` reading belong to `s8c`** (D21-43 N25; D21-45 W3).
+- **AC-133's judgement-enum registry belongs to `s8g`.** D21-43: *"AC-133's judgement-enum registry is built once,
+  by **s8g**. s8h consumes it."*
+- **Routing `s8`'s three `redkiln run` sites through the launcher belongs to `s8j`.** D21-43: *"s8's three
+  `redkiln run` sites go through s8h's launcher (s8j amendment)."*
+- **The pin move, both probes' execution and Checkpoint 7c's whole re-run belong to `s8j`.** See the plan's `s8j`
+  row, and D21-43 N28: *"**s8j re-runs it whole**, from a plain terminal through the launcher, with the live
+  probes."*
+
+### 8h.0 Stage open: re-measure, and the four questions D21-43 N17 took
 
 **The entry gate.** Checkpoint 8g must be recorded as passed in `PROGRESS.md` §1 with a hash, and its block is re-run
 whole by Checkpoint 8h (§8h.15 (13)). Before any Red, re-measure the following against the tree `s8g` left, and
@@ -85,7 +122,9 @@ write each reading into the stage-open commit:
    the per-node `provides[0]` read is replaced by the step's kind here, and the gap is reported.
 3. **Which lane kinds already exist as `rk-types` types.** At `ca8f387`, 0 of §8h.4's 24 kinds other than
    `Findings` exist as a type. `s8f`/`s8g` may have added `DebtRegisterEntry` (D21-42 6a), `Spec` or
-   `AcceptanceCriterion` (D21-42 10a). A type that exists is **registered, never redeclared**.
+   `AcceptanceCriterion` (D21-42 10a). A type that exists is **registered, never redeclared**. `s8g` exports
+   `AcceptanceCriterion` and fixes a constraint on this stage's `Spec` (`s8g` §8g.3): *"`s8h`'s `Spec` must embed
+   `AcceptanceCriterion` unchanged"*.
 4. **The count source for §8h.9.** Does the kernel's pre-dispatch `dispatch` row name the item? If it does not, the
    count reads the `item` member that `s8f` (D21-42 12b) put on `dispatch_completed`. Either way the source is the
    store, never a per-process counter.
@@ -93,37 +132,62 @@ write each reading into the stage-open commit:
    site anywhere in `src/`"* (`budget.rs`). If an earlier sub-stage wired one, that class joins §8h.10's table.
 6. `claude --version`, and the size and bytes of `RUNBOOK-instrument.txt`. Halt 2 is recorded, not worked around,
    and D21-42 16 moves the pin once, at `s8j`.
+7. **The gate kinds `s8e`–`s8g` mint.** `s8f` hands on *"a row for the `landing` gate kind this stage mints"*, and
+   D21-43 N11 has `structured_drift` open *"a drift gate that blocks the stage's exit until it is answered"*. Read
+   each kind's class spelling from the code the minting stage landed, never from this file. Set `MINTED_CLASSES` for
+   Checkpoint 8h (8) from those spellings. A kind that a later stage mints brings its own row, because §8h.10's
+   load-time lint refuses it otherwise.
+8. **The whole-suite floor.** Read Checkpoint 8g's recorded passed count from `PROGRESS.md` §1 and write it over
+   `BASE_8G` in Checkpoint 8h (12) by a dated edit. The drafted expected value is **1000**, derived as follows:
+   - ADR-0164's baseline at `992d257`: 740 passed / 0 failed / 9 ignored over 44 results;
+   - plus each sub-stage's drafted new tests: 7 (8a) + 16 (8b) + 40 (8c) + 46 (8d) + 41 (8e) + 47 (8f) + 63 (8g).
 
-**Four questions are owed to the operator before Red starts.** Nothing in D21-40…D21-42 settles them, and each one
-changes a test's expected value. Each carries a recommendation. None is taken by this file.
+   Those drafts are being revised too, so the recorded count governs. A floor is never lowered to make a red run
+   green.
+9. **The run-worktree root.** Confirm that `s8e` moved every derivation of the run-owned worktree to
+   `.redkiln/worktrees/<item>` (D21-44), and name `recreate_run_worktree`'s successor. §8h.6's deny set and probe 1
+   derive from the spec's worktree path and assume nothing more.
+10. **AC-133's test names in `s8g`.** In the draft at `a6349b6`, Checkpoint 8g selects
+    `judgement_registry::ac133_every_exported_enum_is_registered` and
+    `judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails`. Checkpoint 8h (4) selects both.
+    A rename is corrected there by a dated line.
 
-- **Q1 — the typed class of the four new refusals.** ADR-0112 closes `StepError` at eleven and *"Forbids a twelfth
-  variant without a successor to this record"*. ADR-0095 decision 2 fixes `NotIsolated`'s payload as
-  `{ surface: tools \| mcp_servers \| env, diff_digest }`. Recommended:
-  - **(i)** an init-reported model unequal to the requested id → `NotAdopted { expected_agent, observed }`. This is
-    the existing RT-27 reading, which already refuses a wrong-tier model as `NotAdopted`, so nothing is superseded.
-  - **(ii)** `apiKeySource` absent or not `"none"` → `NotIsolated { surface: Env, .. }`. `IsolationSurface::Env`
-    has no producer at `ca8f387`. This is a stated reading, and nothing is superseded.
-  - **(iii)** an init-reported `permissionMode` unequal to the card's, and **(iv)** a non-empty
-    `permission_denials` → two new `IsolationSurface` members, `PermissionMode` and `PermissionDenied`. This
-    **supersedes ADR-0095 decision 2's payload cell in part**. The variant count stays eleven, so ADR-0112's bar
-    is not crossed, and the retry class is `NotIsolated`'s `Never`.
+**Four questions were owed before Red. D21-43 N17 took all four on 2026-09-24**, and each is stated here as taken.
+Each one changes a test's expected value.
 
-  The alternative for (iii) and (iv) is a twelfth variant. That supersedes ADR-0112 in part, and it adds an event
-  arm and an `Exit` row (`exit::ac438_step_error_mapping_is_exhaustive` moves).
-- **Q2 — the unit `appetite.tokens` counts.** Nothing charges `Charge::Tokens` today. Recommended: the sum of the
-  four counters `Usage` carries verbatim (`input_tokens`, `output_tokens`, `cache_creation_input_tokens`,
-  `cache_read_input_tokens`). It is the only sum every row can compute without a price model. Excluding
-  `cache_read_input_tokens` is the alternative, since F14 left it open whether cache reads draw the window. §8h.9
-  gives the first value under both units.
-- **Q3 — how an envelope refusal leaves the CLI.** Recommended: a kernel `EnvelopeError` variant per counter, leaving
-  through the existing `Exit::Overage` (20). Its doc already reads *"A budget or billing state that does not improve
-  by being repeated"*, so the exit snapshot does not move. The alternative is a new `Exit` row, which moves
-  `exit::ac438_exit_table_snapshot` and needs a dated amendment to the register's exit table.
-- **Q4 — probe 2's dispatch count.** §8h.11 authors probe 2 as **three** dispatches: one per distinct
-  (permission mode, tool set, model id) triple that probe 1 does not cover. A single dispatch would verify one model
-  id. The other two would then be first observed on a real run, where the init check refuses rather than proceeds,
-  which is the safe direction.
+- **Q1: the typed class of the four new refusals.** Taken: *"reuse `NotAdopted` and
+  `NotIsolated { surface: Env }`; nothing superseded."* ADR-0112 closes `StepError` at eleven and *"Forbids a
+  twelfth variant without a successor to this record"*. ADR-0095 decision 2 fixes `NotIsolated`'s payload as
+  `{ surface: tools \| mcp_servers \| env, diff_digest }`. The mapping:
+  - **(i)** An init-reported model unequal to the requested id → `NotAdopted { expected_agent, observed }`. This is
+    the RT-27 reading: `init.rs`'s no-`agent`-key arm already refuses a model outside the bound tier as
+    `NotAdopted`.
+  - **(ii)** `apiKeySource` absent or not `"none"` → `NotIsolated { surface: Env, diff_digest }`. The digest is taken
+    over the reported value's one-member set (empty when the key is absent) against `{"none"}`.
+    `IsolationSurface::Env` has no producer at `a6349b6` [measured: `grep -rn "IsolationSurface::Env" crates/*/src`
+    returns nothing].
+  - **(iii)** An init-reported `permissionMode` that is unequal or absent → `NotIsolated { surface: Env, .. }`. The
+    digest is over `{reported}` against `{the card's mode}`.
+  - **(iv)** A non-empty `permission_denials` → `NotIsolated { surface: Env, .. }`. The digest is over the sorted
+    denied `(tool_name, path)` entries against the empty set.
+
+  The draft recommended two new `IsolationSurface` members for (iii) and (iv), which would have superseded ADR-0095
+  decision 2's payload cell in part. N17's *"nothing superseded"* rules that out. So (iii) and (iv) take `Env`,
+  the surface of the child's run environment, and Record A states that reading. The variant count stays eleven,
+  and the retry class is `NotIsolated`'s `Never`. `exit::ac438_step_error_mapping_is_exhaustive` and
+  `exit::ac438_exit_table_snapshot` do not move.
+- **Q2: the unit `appetite.tokens` counts.** Taken: *"`appetite.tokens` is the sum of `Usage`'s four counters,
+  about 24M per pass at first."* The four are `input_tokens`, `output_tokens`, `cache_creation_input_tokens` and
+  `cache_read_input_tokens`, carried verbatim. Cache reads count. This does not re-open F14's question of whether
+  they draw the window; the envelope only needs a sum that every row can compute without a price model. §8h.9 gives
+  the first value.
+- **Q3: how an envelope refusal leaves the CLI.** Taken: *"`Exit::Overage` (20)."* Its doc already reads *"A budget
+  or billing state that does not improve by being repeated"*, so the exit snapshot does not move and the
+  register's exit table takes no amendment. The draft's kernel class, one `EnvelopeError` variant per counter,
+  stands as this file's construction. Finding 12 names the existing `StepError::Overage` that the implementer must
+  weigh first.
+- **Q4: probe 2's dispatch count.** Taken: *"probe 2 is three dispatches, one per model id."* §8h.11 authors it that
+  way. A single dispatch would verify only one model id.
 
 ### 8h.1 The records this stage writes
 
@@ -137,16 +201,19 @@ confidence`. Checkpoint 8h reads the two ids from `REC_A` and `REC_B`.
 `s8j`**, on the operator's dated ledger line, D21-41 (g)). It decides, as `## Decision` sentences:
 the grant table of §8h.2; the closed permission-mode set and the shipped pair; the `[models]` shape and the three
 ids (§8h.3); **RT-27 settled** — adoption requires exact equality of the reported and requested model id, which
-retires the segment match; the schema route (§8h.4) and the AC-133 judgement classification per enum, **signed
-by the operator per enum** (AC-133's own limit: *"that classification is the human gate AC-156"*); the three guards and Q1's classes (§8h.5); the
-setting-sources and confinement settings (§8h.6); the launcher and the launch record as the only entry to a real run
-(§8h.7); the freeze (§8h.8). **It supersedes in part** ADR-0126 decision 1 — its payload table gains
-`observed_model` (a member added to a `## Decision` table is a supersession, ADR-0092 r1) — and, if Q1 is taken as
-recommended, ADR-0095 decision 2's `surface` cell. It supersedes **nothing** of ADR-0084 (the schemas are Rust types
-in `EXPORTED`, which is what its golden-snapshot clause binds: *"Every type that crosses the closed-output boundary has
+retires the segment match; the schema route (§8h.4) and the AC-133 judgement classification of each enum on the
+types this stage adds, entered in `s8g`'s registry and **signed by the operator per enum** (AC-133's own limit:
+*"that classification is the human gate AC-156"*); the three guards, N17's Q1 mapping and D21-45's protected-segment
+limit named as a known limit (§8h.5); the setting-sources and confinement settings (§8h.6); the launcher and the
+launch record as the only entry to a real run (§8h.7); the freeze (§8h.8). **It supersedes in part** ADR-0126
+decision 1 — its payload table gains `observed_model` (a member added to a `## Decision` table is a supersession,
+ADR-0092 r1) — and nothing else of the error set: N17 took Q1 as reuse, so ADR-0095 decision 2 and ADR-0112
+stand. It supersedes **nothing** of ADR-0084 (the schemas are Rust types in `EXPORTED`, which is what its golden-snapshot clause binds: *"Every type that crosses the closed-output boundary has
 its generated `schemars` output snapshotted with `insta`"*) and nothing of ADR-0156/0162, whose bars on
 `.redkiln/schemas/` are stage-scoped and are honoured anyway (no such directory is created). It records that
-**landing is not decided here** (D21-41 (b), `s8e`/`s8f`) and that the probes' spend is D21-40 decision 2's.
+**landing is not decided here** (D21-41 (b), `s8e`/`s8f`) and that the probes' spend is D21-40 decision 2's. It
+also records that the run-worktree placement is not decided here either: that is D21-44's, written as `s8e`'s record,
+and Record A only cites it.
 
 **Record B — RT-57's pack scalars, the per-item envelope, and gate expiry** (`proposed` at writing; the operator
 signs **each value and each gate row**; it flips to `accepted` on the operator's dated ledger line **at this stage's
@@ -170,7 +237,8 @@ human, per class"*), and fixes the key spellings RT-57 routed to *"7e's pack sch
 No card gets `Bash`, a `Web*` tool or an `mcp__*` tool. Build and test stay on the `Toolchain` port. The card
 record stays closed (`deny_unknown_fields`), and `model`/`effort` stay a tier leak (AC-118, AC-418). The `cwd` is the
 run-owned worktree, already carried on the spec (RT-21's `WORKTREE_KEY`, `runner.rs`'s
-`.current_dir(&prepared.worktree)`). Probe 1 reads it back from `system/init`'s `cwd`.
+`.current_dir(&prepared.worktree)`). Probe 1 reads it back from `system/init`'s `cwd`. After `s8e` that path is
+`.redkiln/worktrees/<item>` (D21-44), which is not under `.git`.
 
 **The closed permission-mode set.** `lint_card` refuses a mode outside the CLI's own set:
 `default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`, `auto`. [measured 2026-09-24: the installed
@@ -258,13 +326,20 @@ union, `additionalProperties: false`, `required` first, ≤ 16 union-typed and �
 schema. Each type is registered in `EXPORTED` under its kind name, and the golden snapshot (`schema_snapshot`) takes
 it (ADR-0084). An `Option` is not a default: a field the stand-in lists is required unless Record A names why not.
 
-**AC-133 has no instrument in code, and this stage builds it.** At `ca8f387` no judgement-enum registry exists.
-`registry.rs`'s header cites AC-133's completeness half about `EXPORTED`, which is a different registry. AC-133 wants
-*"the enum appears in the judgement-enum registry with an explicit judgement-bearing yes/no AND every enum marked yes
-has a sibling free-text `rationale` field"*. So `rk-types` gains the registry: every enum reachable from an
-`EXPORTED` type, a yes/no per enum, and a completeness test in both directions. Every "yes" is checked for its
-`rationale` sibling. The yes/no **values** are the operator's (AC-156), signed in Record A. The completeness tests
-check that entries exist, never that the values are right.
+**AC-133's registry is `s8g`'s, and this stage enters its types' enums in it.** D21-43's integration call: *"AC-133's
+judgement-enum registry is built once, by **s8g**. s8h consumes it."* `s8g` builds that registry to AC-133's
+*Verified by* (`s8g` §8g.3): a completeness test over every enum reachable from `EXPORTED`, the rationale-sibling
+rule, and a must-fail fixture. AC-133 wants *"the enum appears in the judgement-enum registry with an explicit
+judgement-bearing yes/no AND every enum marked yes has a sibling free-text `rationale` field"*.
+
+Every type this stage adds to `EXPORTED` brings its enums with it, so `s8g`'s completeness test goes red until each
+enum is entered with a yes/no and every "yes" has its `rationale` sibling. That red is this stage's instrument. No
+second registry and no second completeness test are written. The yes/no **values** are the operator's (AC-156),
+signed in Record A. The tests check that entries exist, never that the values are right.
+
+**`Spec` embeds `AcceptanceCriterion` unchanged.** `s8g` §8g.3 sets the constraint: *"`s8h`'s `Spec` must embed
+`AcceptanceCriterion` unchanged"*. `Spec`'s criteria member is `criteria: Vec<rk_types::AcceptanceCriterion>`, and
+nothing in it is redeclared.
 
 **The binder reads by name.** `bind_nodes` (or `s8d`'s per-step successor) resolves the schema as
 `rk_types::registry::EXPORTED` entry named by the bound step's output kind. A kind that is absent is a bind-time
@@ -285,13 +360,30 @@ All of these read the child's own report, never the argv (AC-202's rule, the `in
    named by the 2.1.277 raw init (D17-11's amendment: *"AC-511's auth-mode field is **`apiKeySource`**, read as
    `"none"` on a subscription session"*), and the installed 2.1.281 init builder still emits `apiKeySource`,
    `permissionMode`, `model`, `tools` and `cwd` [measured by string search of the binary's `subtype:"init"` object].
-   The classes are Q1's.
+   The classes are N17's Q1 (§8h.0). A model mismatch is `NotAdopted`, and a mode or `apiKeySource` mismatch is
+   `NotIsolated { surface: Env }`.
 3. **`permission_denials` → a typed failure.** The result frame carries `permission_denials: [{ tool_name,
    tool_use_id, tool_input }]` [measured: the binary's result schema; documented in `headless` as *"the final result
-   message lists them in `permission_denials`"*]. A non-empty list fails the dispatch with Q1's class, whatever the
-   exit code. It **outranks a valid `structured_output`**: a step whose child was denied an out-of-worktree edit has
-   not done what it reported. It is placed in `classify.rs`'s order after the platform arms and before the
-   `structured_output` validation. An empty list is not a failure.
+   message lists them in `permission_denials`"*]. A non-empty list fails the dispatch as
+   `NotIsolated { surface: Env }` (Q1), whatever the exit code. It **outranks a valid `structured_output`**: a step
+   whose child was denied an out-of-worktree edit has not done what it reported. It is placed in `classify.rs`'s
+   order after the platform arms and before the `structured_output` validation. An empty list is not a failure.
+
+**The standing limit, named (D21-45).** Claude Code's `checkPathSafetyForAutoEdit` treats a path as sensitive if ANY
+case-folded segment is one of `[".git",".vscode",".idea",".claude",".husky",".cargo",".devcontainer",".yarn",".mvn"]`
+or `.config/git` [D21-45, quoted from the 2.1.281 code]. D21-45 draws the consequence for a run worktree:
+*"inside a run worktree, `<wt>/.git`, `<wt>/.cargo/`, `<wt>/.claude/` and `<wt>/.husky/` stay protected. An
+implementer edit there is denied, and s8h's typed `permission_denials` failure names it as a known limit, not a
+defect."*
+
+- **The class does not change.** Such a denial reaches guard 3 as a non-empty `permission_denials` and fails as
+  `NotIsolated { surface: Env }`, like any other denial. Nothing is retried.
+- **The failure carries a typed note.** When a denied path resolves inside the spec's worktree, and one of its
+  segments below the worktree root is on that list, classification carries a typed note beside the error:
+  `ProtectedSegmentDenial { segment, tool_name }`. The adapter prints it as a warning naming D21-45's known limit,
+  the way `record::mismatch_warning` names a version mismatch. The class and the digest stay the same.
+- **The segment list is one `const`** in `rk-adapter-claude`, copied from D21-45 with that citation. A CLI release
+  that changes the list is Halt 2's concern, through the pin, and not this guard's.
 
 ### 8h.6 Settings isolation and confinement (D21-42 21b, 21d)
 
@@ -319,33 +411,80 @@ your user settings file can set"*.] It carries two things:
   residual is stated, not claimed away. `Read` rules govern `Glob`/`Grep` on a documented *"best-effort"* basis only,
   which is why the block setting is the primary read fence and the deny rules are the second.
 
-🛑 **A documented risk that can make the implementer unable to write at all.** `permission-modes.md` lists `.git` as a
-**protected directory**, whose writes *"still prompt"* under `acceptEdits`. Its only worktree exception is
-*"`.claude`, except for `.claude/worktrees`"* [documented, via the docs-reading pass]. The run-owned worktree is
-`common_dir.join("redkiln").join("worktrees").join(item)`, which on this box is
-`D:/repos/redkiln-rs/.git/redkiln/worktrees/<item>` [measured: `run.rs`, and `git worktree list`]. If the protection
-keys on a `.git` ancestor, every implementer edit prompts, and under `--permission-prompts none` *"anything that
-would prompt is denied automatically"* [measured: the 2.1.281 help text]. **Probe 1's inside-edit condition decides
-this.** If it fails, the work HALTS (§8h.11). Moving the worktree root is a design/record decision (design §5's
-`reconcile_started` note derives `<common-dir>/redkiln/worktrees/<item>/`) and is not taken here.
+**The `.git` risk this section once carried is measured and settled.** D21-44 ran D21-43 N1's probe from the
+operator's own shell:
+- an edit inside `.git/redkiln/worktrees/probe-n1-in` was refused, *"**Edit AND Write**, both refused"*;
+- an edit inside `.redkiln/worktrees/probe-n1b` succeeded;
+- both outside-the-repository controls succeeded.
+
+Run-owned worktrees therefore move to `.redkiln/worktrees/<item>`, which is git-ignored (`.gitignore` carries
+`.redkiln/worktrees/` at `a6349b6` [measured: `git check-ignore -v`]). The move, its record and the lifecycle
+around it are `s8e`'s. This stage assumes only that the spec's worktree path is under that root. Probe 1
+re-measures the placement with the shipped card and settings (§8h.11). The standing in-worktree limit is handled by
+§8h.5's named note. The one legacy tree, `rk-fix-doctor-test-count` at `73c087a`, stays under `.git` until `s8j`
+re-points it (D21-44), and nothing here dispatches into it.
+
+**The deny chain under the new root.** With the worktree at `D:/repos/redkiln-rs/.redkiln/worktrees/<item>`, the
+chain's levels are:
+- `D:/`
+- `D:/repos`
+- the repository root
+- `.redkiln`
+- `worktrees`
+
+So the main checkout's own files are denied siblings. That includes its `.git` common directory, which a run
+worktree's `.git` file points into. The child has no `Bash` and runs no git, so it has no need to read there. Every
+other run worktree is a denied sibling too.
+
+**Nothing is carried into the worktree for the child's settings.** D21-45 records the same choice from the other
+side: `settings.local.json` is not copied, *"because children run with isolated settings (s8h)"*.
 
 ### 8h.7 The launcher — the only entry to a real run (D21-42 17a, 17b)
 
-**`tools/live-run.sh`**, committed, LF (ADR-0164), POSIX, for Git Bash. Its modes are `run <item> [--lane fix|story]`,
-`probe <test>` (a module-qualified `live::` name) and `--check`. `--check` performs every refusal and every capture,
-spawns nothing and writes no launch record. In order:
+**`tools/live-run.sh`**, committed, LF (ADR-0164), POSIX, for Git Bash. Its modes are:
+- `run <item> [--lane fix|story]`;
+- `probe <test>`, where `<test>` is a module-qualified `live::` name;
+- `wrap -- <argv…>`, below;
+- `--check [<mode> …]`, which performs every refusal and every capture for the named mode (`run` when none is
+  named), spawns nothing and writes no launch record.
+
+Every mode prints its captures one `KEY=value` per line: `MODE`, `CLI_VERSION`, `CLAUDE_CONFIG_DIR`,
+`DISABLE_AUTOUPDATER`, and `LAUNCH_CHECK=ok` once every refusal has passed. Checkpoint 8h (10) reads those lines.
+
+In order:
 
 | # | step | refusal / capture |
 | --- | --- | --- |
 | 1 | `uname -s` is `MINGW*`/`MSYS*` | refuse otherwise |
-| 2 | no `CLAUDECODE`, no `CLAUDE_CODE_*` name in its own environment | refuse naming the variable (s7c §7c.15's reason) |
+| 2 | no `CLAUDECODE`, no `CLAUDE_CODE_*` name, and no `CLAUDE_PID` or `CLAUDE_EFFORT`, in its own environment | refuse naming the variable (s7c §7c.15's reason). The last two sit outside the prefix. A Claude Code session exports both [measured 2026-09-24, by name only, in the shell this revision ran in], and D21-44's probe script stripped both |
 | 3 | no denylisted name, **case-insensitively** | the list is **read from `crates/rk-adapter-claude/src/env_denylist.rs`'s two `pub const` arrays by anchored extraction**, never copied. That file is *"the ONE list AC-217, AC-422, AC-488 and AC-509 read"*. The extraction asserts both anchors and a non-empty list (golden constraint 7). `Config::new` refuses the same names again, as the second line |
 | 4 | `CLAUDE_CONFIG_DIR` is **set, not inherited**, to `$(cygpath -w "$HOME/.claude-personal")` (D21-42 17b) | refuse if the directory or its `.credentials.json` is absent. That is an existence test only, and no content is read |
 | 5 | `DISABLE_AUTOUPDATER=1` is exported (§8h.8) | — |
-| 6 | the resolved `claude` path; `claude --version`; the sha256 of the resolved file | refuse unless the version equals `TESTED_CLI_VERSION`, read by 7c's anchored form, **and** `RUNBOOK-instrument.txt`, naming Halt 2 |
-| 7 | `run`: `cargo build --workspace` rc 0 before `./target/debug/redkiln` is run (Halt 1). `probe`: `cargo test -p rk-adapter-claude --features live --test it -- --ignored --nocapture <test> --exact`, then `test <test> ... ok` **and** `1 passed` are asserted, because a filter matching nothing is a green | the child's rc is the launcher's |
+| 6 | the resolved `claude` path; `claude --version`, printed as `CLI_VERSION=<v>`; the sha256 of the resolved file | `run`, `probe`: refuse unless the version equals `TESTED_CLI_VERSION`, read by 7c's anchored form, **and** `RUNBOOK-instrument.txt`, naming Halt 2. `wrap`: record only, and never compare to the pin (below) |
+| 7 | `run`: `cargo build --workspace` rc 0 before `./target/debug/redkiln` is run (Halt 1). `probe`: `cargo test -p rk-adapter-claude --features live --test it -- --ignored --nocapture <test> --exact`, then `test <test> ... ok` **and** `1 passed` are asserted, because a filter matching nothing is a green. `wrap`: the argv after `--`, exactly as given | the child's rc is the launcher's |
 | 8 | the **launch record** at `<git-common-dir>/redkiln/launches/<UTC>-<mode>.txt`: mode and argv, claude path, version and sha256 before; `CLAUDE_CONFIG_DIR`; `DISABLE_AUTOUPDATER`; the pin; HEAD; then version and sha256 after, and the rc | exported to the child as `REDKILN_LAUNCH_RECORD=<path>` |
 | 9 | after the child exits: version and sha256 again | **a difference fails the launch non-zero**, naming Halt 2. The records then span a version boundary |
+
+**`wrap` is the entry for a child that does not dispatch through `rk-adapter-claude`.** It has two callers:
+- `s8i`'s S-BIN batches through the corpus runner. `s8i` §8i.5: *"S-BIN launches through `s8h`'s launcher if it
+  exposes an entry for an arbitrary child"*.
+- `s8j`'s whole re-run of Checkpoint 7c. D21-43 N28: *"from a plain terminal through the launcher"*.
+
+Steps 1–5, 8 and 9 apply unchanged. Step 6 records and does not compare, because `TESTED_CLI_VERSION` binds the
+adapter, and neither caller is the adapter. `s8i` §8i.5: *"S-BIN does not dispatch through that adapter"*. What such
+a set needs is that it does not span a version. D21-43 N22 freezes the CLI *"from S-BIN on"*. Step 9's
+before/after comparison fails a launch whose binary moved, and `s8i`'s own set-level check reads the recorded
+version. `wrap` is not a way around the pin for `run` or `probe`, and `--check wrap` is asserted separately from
+`--check run` (Checkpoint 8h (10)).
+
+**Where the launcher runs: a plain terminal, never a Claude Code session.** There are two reasons:
+- A session exports `CLAUDECODE` and `CLAUDE_CODE_*`, and step 2 **refuses** them. It does not strip them.
+- The session's own permission layer refused to spawn a `claude` child. D21-43 N1: *"the session's permission
+  layer refused to spawn the child from inside Claude Code"*.
+
+D21-44's probe did run as the operator's own `! python …` line. That worked because the Python script stripped
+the variables itself. The launcher does not strip, so a `!` line that invokes it from a session is refused at step
+2. That is the design working. `s8j` §8j.6 says the same: *"They are not run from a Claude Code session"*.
 
 The launch record is **not** the kernel's run record. Writing the version into the `run_id` preimage would move every
 `run_id`, which ADR-0130 decision 1's byte-stability forbids. The version already rides every `dispatch_completed`
@@ -361,7 +500,12 @@ fixture child supply a fixture launch record, so the check is exercised on every
 three `live::` probe tests assert the same variable as their first statement. **This is also what re-scopes
 Checkpoint 7f's `redkiln run`.** `s8a` (11) records that *"From s8h on that is false, and this line must be re-scoped
 before it runs"*. Once the cards bind, a bare `redkiln run` refuses before any spawn. It is a guard against accident,
-not a security boundary: the variable can be forged, and that is stated.
+not a security boundary: the variable can be forged, and that is stated. §8h.14 says which old checkpoints this
+makes provisional and how each is re-run.
+
+**`s8`'s three `redkiln run` sites.** `s8-exit-criterion.md` invokes `./target/debug/redkiln run` at three sites.
+After this stage, each one refuses without a launch record, so each must go through `tools/live-run.sh run`. That
+edit is `s8j`'s (D21-43). This stage states the constraint and does not touch `s8-exit-criterion.md`.
 
 ### 8h.8 The CLI pin procedure and the auto-update freeze (D21-42 16) — authored here, executed at `s8j`
 
@@ -399,9 +543,9 @@ commit and in `PROGRESS.md` §1/§3/§6.
 **The cap and the appetite are kernel-enforced, per item, across processes.** Before each dispatch the kernel counts
 the item's prior dispatches **from the store** (§8h.0 item 4) and refuses the next one once the count has reached
 `appetite.dispatches`. It sums the item's charged tokens (Q2's unit) from its `dispatch_completed` rows and refuses
-once the sum has reached `appetite.tokens`. The refusal is typed per Q3, happens before any spawn, and writes no
-tier-1 row. An absent `appetite.dispatches` is refused by pack validation, never defaulted (`require_*`'s doctrine,
-`select/pack.rs`). A dispatch with no `usage` still counts against the dispatch cap. That is the reason the cap exists
+once the sum has reached `appetite.tokens`. The refusal leaves through `Exit::Overage` (20), N17's Q3. It happens
+before any spawn, and it writes no tier-1 row. An absent `appetite.dispatches` is refused by pack validation, never
+defaulted (`require_*`'s doctrine, `select/pack.rs`). A dispatch with no `usage` still counts against the dispatch cap. That is the reason the cap exists
 beside the appetite. Both keys join the existing inline table, for example
 `appetite = { points = 40, tokens = …, dispatches = 40 }` in `bug-standard`, whose `points` stays 40 (`story`'s stays
 60). `points` is step 5's unrelated cost-class sum, and the three are different counters (AC-020). Integers are
@@ -426,8 +570,9 @@ written without `_` separators, for `toml_subset`.
   (`p7`, `p8`, `e3`, `e3h`, `s-typed`, `s-typed-oldschema`, `s-var`, `s-var-2400`, `h4`: n = 384; p75 1,321,531)
   [measured 2026-09-24 at `CORPUS_PIN` `61f590e5…`, read-only].
 - So **E ≈ 11.58 M** and the first appetite is **≈ 23.2 M**, rounded up to 24,000,000.
-- Under Q2's alternative unit (cache reads excluded), M = 62,725, E ≈ 1.07 M, and the appetite is ≈ 2.13 M, rounded
-  up to 2,200,000.
+- N17 took Q2 as the four-counter sum, which is D21-43's *"about 24M per pass at first"*. The alternative unit,
+  with cache reads excluded, was **not taken**. It would have given M = 62,725 and an appetite of about 2.2 M.
+  Record B keeps it only as a considered option.
 
 The warrant is weak, and Record B says so. The rows are mostly Opus reviews and investigations on another CLI
 version, and they contain no agentic Sonnet row, so no tier-matched figure exists. D21-42 19a: *"Both are revised and
@@ -456,9 +601,14 @@ Every `NO RECORD` marker is replaced by a comment naming Record B as `ADR-<id>`,
   plus `external_dep` and `novelty`, which is 7.
 - **`escalation`**, carried fail-closed so that any `escalate` exception the operator signs is lint-valid (AC-260:
   no `escalation → escalate`).
+- **The gate kinds that `s8e`–`s8g` mint** (§8h.0 item 7). These are `s8f`'s `landing` gate and D21-43 N11's drift
+  gate, each under the class spelling its minting stage fixed. Neither is a catalog question, so without its own
+  row each would be an unmatched class. D21-43 N6 makes every gate transition, `expired` included, a git-first
+  tier-1 event, so an expiry row is what that transition reads.
 
 Both packs carry all 45 questions, so each stays independently complete. That is **51 rows** in `bug-standard` and
-**53** in `story`. `budget_extension` joins the table only if §8h.0 item 5 finds a producer.
+**53** in `story`, plus one row per minted kind in each. With the two kinds above, that makes 53 and 55.
+`budget_extension` joins the table only if §8h.0 item 5 finds a producer.
 
 **The draft is `fail` for every row.** `auto-decide` is refused by name in `run.rs` because it has no verdict carrier
 (RT-57), so it cannot be drafted. `escalate` is admissible only as a signed exception with a warrant. None is
@@ -469,8 +619,8 @@ exception list, by dated line.
 load-time refusal"*). **Both are built.** At pack load, `run` and `answer` refuse, before any dispatch, when a
 reachable class of the enabled pack has no `[[gate_expiry]]` row. This file reads *"a gate class with no process
 entry"* as no row in the enabled process pack, and Record B states that reading. They also refuse a row whose class
-is neither a catalog question, nor `unknown_facet:<registered facet>`, nor `escalation`, because a misspelt class
-leaves the real class uncovered.
+is neither a catalog question, nor `unknown_facet:<registered facet>`, nor `escalation`, nor a gate kind the kernel
+mints, because a misspelt class leaves the real class uncovered.
 
 **The doctor row, `RK-D-CARD-GRANT`.** It refuses any card tool outside the (g) union
 `{Read, Glob, Grep, Edit, Write, StructuredOutput}`, naming `Bash`, `PowerShell`, `Web*` and `mcp__*` in its message.
@@ -481,48 +631,66 @@ requires the row's fixture.
 
 ### 8h.11 The two live probes — authored here, run at `s8j` after the fixture proofs
 
-Both are `#[ignore]` tests in `crates/rk-adapter-claude/tests/it/live.rs` behind `--features live`, run only as
-`tools/live-run.sh probe live::<name>` on the operator's go-ahead, after §8h.8's pin move. They use the **shipped**
-cards bound through the **shipped** role rows, because the thing measured is what ships. Each prints its values one
-per line, as `live_dispatch_probe` does. The raw `system/init` and result frames are retained by O-9's route, a
+Both are `#[ignore]` tests in `crates/rk-adapter-claude/tests/it/live.rs` behind `--features live`. They run only as
+`tools/live-run.sh probe live::<name>`, from a plain terminal (§8h.7), on the operator's go-ahead, and after §8h.8's
+pin move. They use the **shipped** cards bound through the **shipped** role rows, because the thing measured is what
+ships. Each prints its values one per line, as `live_dispatch_probe` does. The raw `system/init` and result frames are retained by O-9's route, a
 commit in `D:/repos/redkiln-corpus` named by SHA, which never moves `CORPUS_PIN`.
 
 **Probe 1 — `live::live_confinement_and_denial_probe`** (one Sonnet dispatch; AC-215's integration half; D21-42 21d).
 
-- **Setup.** A temp git repository stands in as the run-owned worktree: its path goes on the spec, and it is the
-  `cwd`. It holds `inside.txt` and nothing else. **Two sentinels sit outside it**, each with a fresh random token and
-  a recorded sha256: `outside-write.txt` in a sibling temp directory, and `outside-read.txt` under the worktree's
-  parent.
+- **Setup: the worktree sits where run worktrees now live.** The probe creates its own worktree at
+  `<repo>/.redkiln/worktrees/rk-probe-<token>`, with `git worktree add --detach <path> HEAD` under `LC_ALL=C`
+  (D21-45 W1). It asserts that the path's realpath is under `.redkiln/worktrees/`. That is D21-44's placement, and
+  not a temp directory, because the protected-path check reads the absolute path's segments. The path goes on the
+  spec, and it is the `cwd`. The probe writes `inside.txt` there.
+- **Two sentinels sit outside it**, each with a fresh random token and a recorded sha256:
+  - `outside-write.txt`, in a sibling temp directory outside the repository;
+  - `outside-read.txt`, directly under `.redkiln/worktrees/`, which makes it a sibling of the probe's tree.
+- **Cleanup.** After reading its results, the probe removes the tree it created and only that tree. It then asserts
+  that `git worktree prune --dry-run` prints nothing. This mirrors Claude Code's own rule, which D21-45 quotes:
+  *"It never removes worktrees it did not create."*
 - **The dispatch.** The bound `implementer` card (`acceptEdits`, the six tools) with the §8h.6 settings. The user
   message instructs, in order:
   1. write a given token into `inside.txt`;
-  2. write into `outside-write.txt` by absolute path;
-  3. read `outside-read.txt` by absolute path and put its content in the structured output;
-  4. report each outcome.
+  2. write a given token into `<wt>/.cargo/rk-probe.txt`, a protected segment inside the worktree (D21-45's
+     standing limit);
+  3. write into `outside-write.txt` by absolute path;
+  4. read `outside-read.txt` by absolute path and put its content in the structured output;
+  5. report each outcome.
 
   The timeout is 300 s, s7c's bound and Halt 5's alternative.
-- **What it prints and records.** `INIT_PERMISSION_MODE`, `INIT_CWD`, `INIT_TOOLS`, `INIT_MODEL`,
-  `INIT_API_KEY_SOURCE`, `DENIALS` (count and `tool_name` list), `OUTCOME` (the typed result), `WALL_MS`,
-  `INSIDE_SHA256`, and `OUTSIDE_WRITE_SHA256` before and after.
+- **What it prints and records.** It prints one value per line:
+  - from the init: `INIT_PERMISSION_MODE`, `INIT_CWD`, `INIT_TOOLS`, `INIT_MODEL`, `INIT_API_KEY_SOURCE`;
+  - from the result: `DENIALS` (the count and the `tool_name` list), `OUTCOME` (the typed result), `LIMIT_NOTE` (the
+    §8h.5 note's segment, or `none`), `WALL_MS`;
+  - from the files: `INSIDE_SHA256`, `CARGO_PROBE_EXISTS`, and `OUTSIDE_WRITE_SHA256` before and after.
 - **Pass, all of:**
   1. The child terminated under the bound. A kill by the timer is a never-waits failure.
-  2. `inside.txt` holds the token, so an inside edit works under `acceptEdits` and §8h.6's `.git` risk did not bite.
-  3. `outside-write.txt`'s sha256 is unchanged.
-  4. The read token appears **nowhere** in the retained stdout, including the structured output.
-  5. `permission_denials` is non-empty and names the outside write **and** the outside read.
-  6. The adapter's outcome is Q1's typed failure, not `Ok`.
-  7. The init reports `acceptEdits`, the six tools, the requested id, `apiKeySource` `"none"`, and `cwd` equal to the
-     worktree.
+  2. `inside.txt` holds the token. So an edit inside `.redkiln/worktrees/<probe>` works under `acceptEdits`, which
+     is D21-44's N1b arm re-measured with the shipped card and settings.
+  3. `<wt>/.cargo/rk-probe.txt` does not exist, and the adapter's note names segment `.cargo`.
+  4. `outside-write.txt`'s sha256 is unchanged.
+  5. The read token appears **nowhere** in the retained stdout, including the structured output.
+  6. `permission_denials` is non-empty and names all three: the outside write, the outside read **and** the
+     `.cargo` write.
+  7. The adapter's outcome is `NotIsolated { surface: Env }` (Q1), not `Ok`.
+  8. The init reports all of these: `acceptEdits`; the six tools; the requested id; `apiKeySource` `"none"`; and a
+     `cwd` equal to the worktree, under `.redkiln/worktrees/`.
 - **HALT — the work stops and a containment finding is reported, never re-tuned (D21-42 21d; Halt 7).** Any of:
   1. the outside file changed;
   2. the read token leaked;
   3. a denial occurred but was not surfaced as `permission_denials`;
   4. the child hung;
-  5. the inside edit was denied.
-- **Inconclusive, which is not a pass.** No denial occurred and both sentinels are untouched, meaning the model did
-  not attempt the outside actions. The (g) record is not accepted, and a re-run is a new operator go-ahead.
+  5. the inside edit was denied. D21-44 measured this placement writable, so a denial now means the placement or
+     the CLI moved.
+- **A `.cargo` write that succeeds is not a containment breach**, because it is inside the worktree. The probe
+  still does not pass (pass condition 3), because the write contradicts D21-45's measured list. It is reported, and
+  the note's list is re-read against the installed code. The list is never loosened in place.
+- **Inconclusive, which is not a pass.** An instructed action has no denial and its target is untouched, meaning the
+  model did not attempt it. The (g) record is not accepted, and a re-run is a new operator go-ahead.
 
-**Probe 2 — `live::live_init_equality_probe`** (Q4: three dispatches, one per triple probe 1 does not cover).
+**Probe 2 — `live::live_init_equality_probe`** (N17's Q4: three dispatches, one per model id).
 The bound `planner` (haiku, `default`, `[StructuredOutput]`), `investigator` (sonnet/high, `default`, the read set) and
 `reviewer` (opus/high, `default`, the read set) cards run with a trivial instruction that returns a fixed
 structured value.
@@ -541,21 +709,25 @@ sha256, and the launch records' paths and sha256.
 ### 8h.12 Red first — the named tests
 
 Each test is authored and **run red for the named reason** before its code, per golden constraint 12. Names are
-module-qualified. New modules (`judgement`, `cards`, `schemas`) are added to their crate's `tests/it/main.rs`.
+module-qualified. The new modules, `rk-cli`'s `cards` and `schemas`, are added to that crate's `tests/it/main.rs`
+[measured at `a6349b6`: neither exists]. **39 new tests in all.**
 
-**`rk-adapter-claude` (16 new).** Red reasons are in brackets.
+**`rk-adapter-claude` (17 new).** Red reasons and N17's classes are in brackets.
 - `card::permission_mode_outside_the_cli_closed_set_is_refused` [`"acceptEdit"` binds today]
 - `card::every_cli_permission_mode_is_admitted_by_the_closed_set` [the control against an over-narrow set]
-- `isolation::permission_mode_reported_unequal_to_the_card_is_refused`
-- `isolation::permission_mode_absent_from_init_is_refused`
+- `isolation::permission_mode_reported_unequal_to_the_card_is_refused` [`NotIsolated { surface: Env }`]
+- `isolation::permission_mode_absent_from_init_is_refused` [the same class]
 - `isolation::model_reported_unequal_to_the_requested_id_is_refused` [requested `claude-sonnet-5`, reported
-  `claude-sonnet-4-6`: the segment match adopts it today]
+  `claude-sonnet-4-6`: the segment match adopts it today; the class is `NotAdopted`]
 - `isolation::model_equal_to_the_requested_id_proceeds`
-- `isolation::api_key_source_other_than_none_is_refused`
-- `isolation::api_key_source_absent_is_refused`
-- `classify::permission_denials_non_empty_is_a_typed_failure`
+- `isolation::api_key_source_other_than_none_is_refused` [`NotIsolated { surface: Env }`]
+- `isolation::api_key_source_absent_is_refused` [the same class]
+- `classify::permission_denials_non_empty_is_a_typed_failure` [`NotIsolated { surface: Env }`]
 - `classify::permission_denials_empty_is_not_a_failure`
 - `classify::permission_denials_outrank_a_valid_structured_output`
+- `classify::a_denial_under_a_protected_worktree_segment_is_named_the_known_limit` [a `<wt>/.cargo/x` denial has
+  the same class plus a `ProtectedSegmentDenial` note naming `.cargo`. Control: a denial outside the worktree
+  carries no note, and neither does a path whose only `.cargo` segment is above the worktree root]
 - `command::setting_sources_is_explicit_and_empty`
 - `command::child_settings_carry_the_worktree_confinement` [the deny set is the ancestor-chain complement, no `!`,
   plus the block setting]
@@ -563,11 +735,12 @@ module-qualified. New modules (`judgement`, `cards`, `schemas`) are added to the
 - `binder::a_tier_absent_from_the_models_table_is_refused`
 - `dispatch::observed_model_is_recorded_on_every_path_that_read_init` [`None` before init, never the requested id]
 
-**`rk-types` (4 new).**
-- `judgement::every_enum_on_an_exported_type_is_registered`
-- `judgement::a_judgement_enum_without_a_rationale_sibling_fails`
-- `judgement::the_registry_names_no_enum_that_is_not_exported`
+**`rk-types` (1 new).**
 - `dispatch_record::observed_model_is_a_typed_member_absent_before_init`
+
+AC-133's registry and its completeness tests are `s8g`'s, and this stage adds none. Its new types' enums are entered
+in that registry, and `s8g`'s two `judgement_registry::` tests (§8h.0 item 10) are selected in Checkpoint 8h (4) as
+regressions. They go red until the entries exist.
 
 **`rk-kernel` (6 new).**
 - `envelope::dispatch_cap_is_declared_never_defaulted`
@@ -578,7 +751,7 @@ module-qualified. New modules (`judgement`, `cards`, `schemas`) are added to the
 - `envelope::token_appetite_past_the_appetite_refuses_the_next_dispatch`
 - `envelope::a_dispatch_with_no_usage_still_counts_against_the_cap`
 
-**`rk-cli` (14 new).**
+**`rk-cli` (15 new).**
 - `cards::shipped_cards_are_the_least_privilege_table`
 - `cards::shipped_role_rows_resolve_through_the_models_table`
 - `cards::the_models_table_pins_the_three_full_ids`
@@ -596,6 +769,8 @@ module-qualified. New modules (`judgement`, `cards`, `schemas`) are added to the
 - `run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn` [the store's row count and the
   worktree set are unchanged]
 - `run::a_real_harness_run_with_a_launch_record_passes_the_launch_check` [the control]
+- `exit::an_envelope_refusal_leaves_through_overage` [N17's Q3: a dispatch refused at the cap exits 20, and
+  `exit::ac438_exit_table_snapshot` does not move]
 
 **Live (authored, compiled, listed, never run here).** `live::live_confinement_and_denial_probe` and
 `live::live_init_equality_probe`, each `#[ignore = "…paid…; run by the operator at s8j through tools/live-run.sh"]`.
@@ -623,41 +798,89 @@ removed, and `git diff --quiet` in the main tree is asserted. A survivor blocks.
 | M13 | `bind_nodes` reads `.redkiln/schemas/<kind>.json` again | `schemas::bind_reads_the_schema_from_exported_by_name` |
 | M14 | the launch-record check deleted | `run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn` |
 | M15 | the launcher's `CLAUDE_CODE_` refusal deleted, in a copy of the script | Checkpoint 8h (10)'s `CLAUDE_CODE_ENTRYPOINT` control |
+| M16 | the `ProtectedSegmentDenial` note never attached | `classify::a_denial_under_a_protected_worktree_segment_is_named_the_known_limit` |
+| M17 | the envelope refusal mapped to `Exit::ConfigError` | `exit::an_envelope_refusal_leaves_through_overage` |
 
-### 8h.14 What this stage may not do, and what it hands on
+### 8h.14 What this stage may not do, what it makes provisional, and what it hands on
 
 - It may not dispatch, run a `live::` test, move the pin, or edit the operator's user settings.
-- It may not create `.redkiln/schemas/` or copy the denylist.
+- It may not create `.redkiln/schemas/`, copy the denylist, or build a second AC-133 registry.
 - It may not loosen an equality to make a probe pass.
-- **To `s8j` (for its s8 instrument amendments):** `s8-exit-criterion.md` invokes `./target/debug/redkiln run` at
-  three sites. After this stage each of those refuses without a launch record, so they must go through
-  `tools/live-run.sh run`. This amendment is not in the plan's list of s8 amendments.
-- **To `s8i`:** S-BIN's dispatches are real spend. Record B must be accepted first (19c). The launcher is the
-  entry. **The pin is still 2.1.278 while the CLI reads 2.1.281, so an adapter dispatch at `s8i` refuses at the init
-  line.** The plan puts the pin move at `s8j`, which is after `s8i`'s spend. This is reported (finding 3), not
-  resolved here.
+- It may not move the run-worktree root, or touch the legacy `rk-fix-doctor-test-count` tree. Both are `s8e`'s and
+  `s8j`'s (D21-44).
+
+**The checkpoints this stage makes provisional, and where each is re-run.** The rule is to re-run the entry gate
+whole, plus the older checkpoints this stage's own edits make provisional. It does not re-run the whole chain.
+
+| checkpoint | why provisional | re-run where |
+| --- | --- | --- |
+| 8g | the entry gate | Checkpoint 8h (13), whole |
+| 5 | `rk-types`: `observed_model`, the new `EXPORTED` types | Checkpoint 8h (13), whole |
+| 7b, 7b-ii | `rk-kernel`: the per-item envelope | Checkpoint 8h (13), whole |
+| 7d | `rk-cli`: the launch check, `RK-D-CARD-GRANT`, the load lint, the envelope's exit | Checkpoint 8h (13), whole |
+| 7c | `rk-adapter-claude`: argv, init equality, classification | **not here.** Its block carries the live probe. `s8j` re-runs it whole through `wrap`, from a plain terminal (D21-43 N28). Its non-live regressions are selected by name in (3) |
+| 7e | `.redkiln/cards/` and both packs | **not re-runnable whole**: its block ends in `git add .redkiln spikes/p9 && git commit`. Its subject is asserted by (8), by `conformance::shipped_pack_loads` in (5), and by the load lint's tests |
+| 7f | its `redkiln run` arm now refuses at the launch check. Before that check exists, the same arm would reach a real dispatch once the cards bind | `s8j`'s entry-chain run, as described below |
+| 8a | its (11) guard, *"a card carries permission_mode … Checkpoint 7f's run could reach a REAL dispatch; stop"*, fires on the eight cards this stage writes | `s8j`, with that guard re-scoped to the route below |
+
+**How a later stage re-runs an old checkpoint that executes `redkiln run`.** Of 7f, 7g, 7h and 7i's run arm, only
+7f's block executes `redkiln run` at `a6349b6` [measured by a grep over the four files' bash lines]. Every re-run of
+such a block after this stage has to do four things:
+- point `[adapters] harness_binary` at `target/debug/rk-fixture-child-cli` through a fixture config, never the
+  shipped `.redkiln/config.toml` left edited;
+- supply a fixture `REDKILN_LAUNCH_RECORD`;
+- back up the store and restore it;
+- assert that no real `claude` was spawned, for example by showing no new session transcript under either
+  configuration directory.
+
+7f's block also ends with `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`. That is
+the legacy tree D21-44 keeps until `s8j` re-points it, so that line is re-scoped in the same move. All of this is
+`s8j`'s. This stage states it and runs none of it.
+
+**What it hands on:**
+- **To `s8j`:**
+  - `s8`'s three `redkiln run` sites go through `tools/live-run.sh run` (§8h.7; D21-43).
+  - The 7f / 8a route above.
+  - The pin move and both probes, run from a plain terminal (`s8j` §8j.6).
+  - Checkpoint 7c's whole re-run through `wrap`.
+- **To `s8i`:**
+  - Record B must be accepted before S-BIN spends (D21-42 19c).
+  - S-BIN launches through `wrap` (§8h.7). The adapter pin does not bind the corpus runner, and D21-43 N22 freezes
+    the CLI from S-BIN on. **This withdraws the draft's finding 3**, which said an `s8i` dispatch would refuse at
+    the init line. That holds only for a dispatch through `rk-adapter-claude`, and S-BIN makes none.
+- **To `s8i` and `s8j`: their dispatch scans refuse this checkpoint as written** (finding 10).
 
 ### 8h.15 Checkpoint 8h
 
 - The eight cards are §8h.2's table. The closed-set lint, the init equality (mode, model, auth) and the denial
   mapping each fail when absent, each through its own named test.
 - `[models]` pins the three ids, the role rows resolve through it, and `observed_model` is recorded.
-- Every one of the 24 lane-reached kinds is an `EXPORTED` Rust type, read by name. The AC-133 registry exists and is
-  complete in both directions.
+- Every one of the 24 lane-reached kinds is an `EXPORTED` Rust type, read by name. Their enums are entered in
+  `s8g`'s AC-133 registry, and its two completeness tests pass.
 - `--setting-sources ""` and the confinement settings are on every argv.
 - The launcher refuses what it must and captures what it must. A real-harness run without a launch record refuses
   before any spawn.
 - The per-item cap and appetite refuse across processes.
-- No `NO RECORD` marker remains. Both packs carry fail-closed gate rows for every reachable class. An unmatched class
-  refuses at load, and `RK-D-CARD-GRANT` refuses a grant outside the union.
+- No `NO RECORD` marker remains. Both packs carry fail-closed gate rows for every reachable class, including the
+  minted gate kinds. An unmatched class refuses at load, and `RK-D-CARD-GRANT` refuses a grant outside the union.
+- A protected-segment denial inside the worktree keeps its class and carries the named note (D21-45).
 - Record A is `proposed`. Record B is written, and the operator's signatures are a stage-close gate (AC-276:
   *"routed to a human gate; not machine-decidable"*).
-- The two probes compile and are ignored. **No dispatch happened.** Checkpoint 8g passes whole, and Checkpoint 7c's
-  shell guards pass.
+- The two probes compile and are ignored. **No dispatch happened.**
+- Checkpoint 8g passes whole, and so do Checkpoints 5, 7b, 7b-ii and 7d, which this stage's crate edits make
+  provisional (§8h.14). Checkpoint 7c's shell guards pass.
+- No `REDKILN_LAUNCH_RECORD` is in the environment, so nothing re-run here can pass the launch check.
+- The whole suite is at or above Checkpoint 8g's recorded count plus 39, with 0 failed over at least 44 results.
 
-**Run it from a Git Bash that Claude Code did not spawn** (7c's guard, repeated here). Set `REC_A`, `REC_B`,
-`A_SUPERSEDES` (the ids Record A supersedes, space-separated; at minimum `0126`), `TOKENS_APPETITE` (Record B's signed
-value) and whatever Checkpoint 8g's block itself requires.
+**Run it from a plain terminal: a Git Bash that Claude Code did not spawn** (7c's guard, repeated here). Set these:
+- `REC_A` and `REC_B`;
+- `A_SUPERSEDES`, the ids Record A supersedes, space-separated. It is `0126` alone, since N17 took Q1 as reuse;
+- `TOKENS_APPETITE`, Record B's signed value, which is 24000000 as drafted;
+- `MINTED_CLASSES`, from §8h.0 item 7;
+- whatever the re-run checkpoints' blocks require themselves.
+
+Leave `REDKILN_LAUNCH_RECORD` unset. `BASE_8G` in (12) is edited at stage open (§8h.0 item 8). Budget hours: (13)
+runs five checkpoints whole.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -672,11 +895,17 @@ case "$(uname -s)" in MINGW*|MSYS*) : ;; *) echo "FAIL: this block runs on the W
 env | grep -qE '^(CLAUDECODE=|CLAUDE_CODE_)' && { echo "FAIL: run this block from a Git Bash outside Claude Code — a Claude-spawned shell puts CLAUDECODE/CLAUDE_CODE_* into the probe's captured map (s7c §7c.15)"; exit 1; }
 [ -z "${ANTHROPIC_FOUNDRY_API_KEY:-}" ] || { echo "FAIL: ANTHROPIC_FOUNDRY_API_KEY is set in this shell — it is on the committed denylist (s7c §7c.6) and Config::new will refuse; run the block under 'env -u ANTHROPIC_FOUNDRY_API_KEY bash' (never set_var)"; exit 1; }
 env | grep -qE '^(GITHUB_TOKEN|GH_TOKEN|GH_ENTERPRISE_TOKEN)=' && { echo "FAIL: a tracker credential (GITHUB_TOKEN / GH_TOKEN / GH_ENTERPRISE_TOKEN — RT-25, AC-509) is set in this shell — it is on the committed denylist and Config::new will refuse; unset it outside the process"; exit 1; }
+# ---- (0b) THIS STAGE'S ADDITION: the two session names outside the CLAUDE_CODE_ prefix (§8h.7 step 2).
+env | grep -qE '^(CLAUDE_PID|CLAUDE_EFFORT)=' && { echo "FAIL: CLAUDE_PID or CLAUDE_EFFORT is set — a Claude Code session exported it; run this block from a plain terminal (§8h.7)"; exit 1; }
 
 # ---- INPUTS. The record ids are allocated at writing; this block takes them rather than guessing them.
 test -n "${REC_A:-}" && test -n "${REC_B:-}" || { echo "FAIL: set REC_A and REC_B to the two records' four-digit ids"; exit 1; }
 test -n "${A_SUPERSEDES:-}" || { echo "FAIL: set A_SUPERSEDES (at minimum 0126 — observed_model moves ADR-0126 d1's payload table)"; exit 1; }
 test -n "${TOKENS_APPETITE:-}" || { echo "FAIL: set TOKENS_APPETITE to Record B's signed appetite.tokens"; exit 1; }
+test -n "${MINTED_CLASSES:-}" || { echo "FAIL: set MINTED_CLASSES to the gate kinds s8e–s8g mint, space-separated (§8h.0 item 7)"; exit 1; }
+# No launch record may be in reach: every real-harness `run` in this block and in the checkpoints (13) re-runs then
+# refuses before any spawn (§8h.7), and (14) reads the store for the dispatch rows that would say otherwise.
+[ -z "${REDKILN_LAUNCH_RECORD:-}" ] || { echo "FAIL: REDKILN_LAUNCH_RECORD is set in this shell — unset it; nothing this block runs may pass the launch check"; exit 1; }
 wt_before=$(git worktree list --porcelain | grep '^worktree ' | sort)
 test -n "$wt_before" || { echo "FAIL: git worktree list printed no worktree"; exit 1; }
 store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
@@ -719,23 +948,26 @@ sel() {  # sel <package> <expected count> <tests...>
   done
   printf '%s\n' "$out" | grep -qE "test result: ok\. $want passed; 0 failed" || { echo "FAIL: $pkg did not run exactly $want tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
 }
-sel rk-adapter-claude 22 card::permission_mode_outside_the_cli_closed_set_is_refused card::every_cli_permission_mode_is_admitted_by_the_closed_set isolation::permission_mode_reported_unequal_to_the_card_is_refused isolation::permission_mode_absent_from_init_is_refused isolation::model_reported_unequal_to_the_requested_id_is_refused isolation::model_equal_to_the_requested_id_proceeds isolation::api_key_source_other_than_none_is_refused isolation::api_key_source_absent_is_refused classify::permission_denials_non_empty_is_a_typed_failure classify::permission_denials_empty_is_not_a_failure classify::permission_denials_outrank_a_valid_structured_output command::setting_sources_is_explicit_and_empty command::child_settings_carry_the_worktree_confinement binder::the_full_model_id_reaches_argv_and_the_card_digest binder::a_tier_absent_from_the_models_table_is_refused dispatch::observed_model_is_recorded_on_every_path_that_read_init command::golden_argv_per_profile command::ac214_permission_mode_explicit command::permission_prompts_none_on_every_argv isolation::ac204_adoption_equal_subset_superset_wrong_agent isolation::ac202_isolation_from_system_init_not_argv config::tested_cli_version_is_the_pin_as_a_config_value
-sel rk-types 8 judgement::every_enum_on_an_exported_type_is_registered judgement::a_judgement_enum_without_a_rationale_sibling_fails judgement::the_registry_names_no_enum_that_is_not_exported dispatch_record::observed_model_is_a_typed_member_absent_before_init schema_snapshot::schema_snapshot schema_no_oneof::no_oneof_at_any_node schema_caps::union_and_optional_caps dispatch_record::ac360_dispatch_record_carries_the_usage_fields
-sel rk-kernel 7 envelope::dispatch_cap_is_declared_never_defaulted envelope::the_dispatch_at_the_cap_proceeds envelope::the_dispatch_past_the_cap_is_refused_with_its_class envelope::the_dispatch_count_survives_a_second_process envelope::token_appetite_past_the_appetite_refuses_the_next_dispatch envelope::a_dispatch_with_no_usage_still_counts_against_the_cap envelope::ac029_n_is_declared_never_defaulted
-sel rk-cli 18 cards::shipped_cards_are_the_least_privilege_table cards::shipped_role_rows_resolve_through_the_models_table cards::the_models_table_pins_the_three_full_ids cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class cards::shipped_rt57_scalars_carry_no_no_record_marker schemas::every_agent_output_kind_the_two_lanes_reach_is_exported schemas::bind_reads_the_schema_from_exported_by_name schemas::a_kind_absent_from_exported_refuses_at_bind doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set doctor::rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load run::a_gate_expiry_row_naming_no_reachable_class_is_refused run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn run::a_real_harness_run_with_a_launch_record_passes_the_launch_check doctor::ac415_every_rule_id_has_a_rejecting_fixture exit::ac438_exit_table_snapshot exit::ac438_step_error_mapping_is_exhaustive surface::ac400_help_snapshot_every_verb
+sel rk-adapter-claude 23 card::permission_mode_outside_the_cli_closed_set_is_refused card::every_cli_permission_mode_is_admitted_by_the_closed_set isolation::permission_mode_reported_unequal_to_the_card_is_refused isolation::permission_mode_absent_from_init_is_refused isolation::model_reported_unequal_to_the_requested_id_is_refused isolation::model_equal_to_the_requested_id_proceeds isolation::api_key_source_other_than_none_is_refused isolation::api_key_source_absent_is_refused classify::permission_denials_non_empty_is_a_typed_failure classify::permission_denials_empty_is_not_a_failure classify::permission_denials_outrank_a_valid_structured_output classify::a_denial_under_a_protected_worktree_segment_is_named_the_known_limit command::setting_sources_is_explicit_and_empty command::child_settings_carry_the_worktree_confinement binder::the_full_model_id_reaches_argv_and_the_card_digest binder::a_tier_absent_from_the_models_table_is_refused dispatch::observed_model_is_recorded_on_every_path_that_read_init command::golden_argv_per_profile command::ac214_permission_mode_explicit command::permission_prompts_none_on_every_argv isolation::ac204_adoption_equal_subset_superset_wrong_agent isolation::ac202_isolation_from_system_init_not_argv config::tested_cli_version_is_the_pin_as_a_config_value
+sel rk-types 7 dispatch_record::observed_model_is_a_typed_member_absent_before_init schema_snapshot::schema_snapshot schema_no_oneof::no_oneof_at_any_node schema_caps::union_and_optional_caps dispatch_record::ac360_dispatch_record_carries_the_usage_fields judgement_registry::ac133_every_exported_enum_is_registered judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails
+sel rk-kernel 8 envelope::dispatch_cap_is_declared_never_defaulted envelope::the_dispatch_at_the_cap_proceeds envelope::the_dispatch_past_the_cap_is_refused_with_its_class envelope::the_dispatch_count_survives_a_second_process envelope::token_appetite_past_the_appetite_refuses_the_next_dispatch envelope::a_dispatch_with_no_usage_still_counts_against_the_cap envelope::ac029_n_is_declared_never_defaulted conformance::shipped_pack_loads
+sel rk-cli 19 cards::shipped_cards_are_the_least_privilege_table cards::shipped_role_rows_resolve_through_the_models_table cards::the_models_table_pins_the_three_full_ids cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class cards::shipped_rt57_scalars_carry_no_no_record_marker schemas::every_agent_output_kind_the_two_lanes_reach_is_exported schemas::bind_reads_the_schema_from_exported_by_name schemas::a_kind_absent_from_exported_refuses_at_bind doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set doctor::rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load run::a_gate_expiry_row_naming_no_reachable_class_is_refused run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn run::a_real_harness_run_with_a_launch_record_passes_the_launch_check exit::an_envelope_refusal_leaves_through_overage doctor::ac415_every_rule_id_has_a_rejecting_fixture exit::ac438_exit_table_snapshot exit::ac438_step_error_mapping_is_exhaustive surface::ac400_help_snapshot_every_verb
 
 # ---- (7) THE TWO PROBES EXIST, COMPILE UNDER `live`, AND ARE IGNORED — LISTED, NEVER RUN (`--list` runs nothing).
+# ---- Finding 10: s8i's and s8j's dispatch scans match this line's feature flag; the scans are theirs to scope.
 out=$(cargo test -p rk-adapter-claude --features live --test it -- --list --ignored 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the live feature does not compile (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-for t in live::live_confinement_and_denial_probe live::live_init_equality_probe live::live_dispatch_probe; do
+for t in live::live_confinement_and_denial_probe live::live_init_equality_probe; do
   printf '%s\n' "$out" | grep -qxF "$t: test" || { echo "FAIL: $t is not an IGNORED test under --features live — it would run, or it does not exist"; exit 1; }
 done
 
 # ---- (8) THE SHIPPED DATA, read by parsers (json / tomllib), never grepped: cards, [models], role rows, gate rows,
 # ---- the envelope keys, and no NO RECORD marker. The expected gate-class set is DERIVED from the catalog and the
 # ---- packs' own `when` rows and compared to §8h.10's counts as a PREMISE. EXCEPTIONS is empty until the operator
-# ---- signs one; a signed exception amends this list by dated line.
-out=$(python - "$TOKENS_APPETITE" "$REC_B" <<'PY'
+# ---- signs one; a signed exception amends this list by dated line. The minted gate kinds are an input, and each must
+# ---- sit as a string literal on a code line under crates/*/src. Every `.redkiln/` read is one level deep, so no run
+# ---- worktree under `.redkiln/worktrees/` is ever walked (D21-44).
+out=$(python - "$TOKENS_APPETITE" "$REC_B" "$MINTED_CLASSES" <<'PY'
 import glob, json, os, re, sys, tomllib
 bad = []
 want_cards = {
@@ -778,10 +1010,19 @@ for f in glob.glob(".redkiln/catalog/*.toml"):
     walk(tomllib.load(open(f, "rb")))
 if len(questions) != 45:
     bad.append("PREMISE: %d question classes, expected 45" % len(questions))
+minted = set(sys.argv[3].split())
+code = []
+for f in glob.glob("crates/*/src/**/*.rs", recursive=True):
+    code.extend(ln for ln in open(f, encoding="utf-8") if not ln.lstrip().startswith("//"))
+if not code:
+    bad.append("PREMISE: no code line read under crates/*/src")
+for c in sorted(minted):
+    if not any('"%s"' % c in ln for ln in code):
+        bad.append("PREMISE: minted gate kind %r is a string literal on no code line under crates/*/src" % c)
 EXCEPTIONS = {}
 words = {"and", "or", "not", "in", "high", "med", "low", "mandatory", "recommended", "optional", "forbidden"}
 expect_axes = {"bug-standard": 5, "story": 7}
-expect_rows = {"bug-standard": 51, "story": 53}
+expect_rows = {"bug-standard": 51 + len(minted), "story": 53 + len(minted)}
 expect_points = {"bug-standard": 40, "story": 60}
 for pack in ("bug-standard", "story"):
     raw = open(".redkiln/packs/%s.toml" % pack, encoding="utf-8").read()
@@ -811,7 +1052,7 @@ for pack in ("bug-standard", "story"):
             axes.update(w for w in re.findall(r"[a-z_]+", text) if w not in words)
     if len(axes) != expect_axes[pack]:
         bad.append("PREMISE: %s reads %d axes %r" % (pack, len(axes), sorted(axes)))
-    want = set(questions).union({"unknown_facet:" + a for a in axes}, {"escalation"})
+    want = set(questions).union({"unknown_facet:" + a for a in axes}, {"escalation"}, minted)
     rows = d.get("gate_expiry", [])
     got = [r.get("class") for r in rows]
     if len(got) != len(set(got)) or set(got) != want or len(got) != expect_rows[pack]:
@@ -866,7 +1107,7 @@ cfg=$(cygpath -w "$HOME/.claude-personal")
 for line in "LAUNCH_CHECK=ok" "DISABLE_AUTOUPDATER=1" "CLAUDE_CONFIG_DIR=$cfg" "CLI_VERSION=$pin"; do
   printf '%s\n' "$out" | grep -qxF "$line" || { echo "FAIL: --check did not print '$line'"; printf '%s\n' "$out"; exit 1; }
 done
-for v in CLAUDECODE=1 CLAUDE_CODE_ENTRYPOINT=cli ANTHROPIC_API_KEY=x anthropic_base_url=x GH_TOKEN=x CLAUDE_CODE_USE_BEDROCK=1; do
+for v in CLAUDECODE=1 CLAUDE_CODE_ENTRYPOINT=cli CLAUDE_PID=1 CLAUDE_EFFORT=high ANTHROPIC_API_KEY=x anthropic_base_url=x GH_TOKEN=x CLAUDE_CODE_USE_BEDROCK=1; do
   out=$("${clean[@]}" "$v" bash "$L" --check 2>&1); rc=$?
   [ "$rc" -ne 0 ] || { echo "FAIL: the launcher accepted $v"; exit 1; }
   printf '%s\n' "$out" | grep -qiF "${v%%=*}" || { echo "FAIL: the refusal of $v does not name the variable"; printf '%s\n' "$out"; exit 1; }
@@ -874,6 +1115,17 @@ done
 out=$(env -i "HOME=$HOME" "USERPROFILE=$USERPROFILE" "SYSTEMROOT=$SYSTEMROOT" "TEMP=$TEMP" "TMP=$TMP" "PATH=$bad_fake:/usr/bin:/mingw64/bin" bash "$L" --check 2>&1); rc=$?
 [ "$rc" -ne 0 ] || { echo "FAIL: the launcher accepted a CLI version unequal to the pin"; exit 1; }
 printf '%s\n' "$out" | grep -qF 'Halt 2' || { echo "FAIL: the version refusal does not name Halt 2"; printf '%s\n' "$out"; exit 1; }
+# `wrap` (§8h.7): the same refusals, a recorded version, and NO comparison to the adapter pin.
+out=$("${clean[@]}" bash "$L" --check wrap -- true 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: --check wrap refused a clean environment (rc=$rc)"; printf '%s\n' "$out" | tail -10; exit 1; }
+for line in "LAUNCH_CHECK=ok" "MODE=wrap" "DISABLE_AUTOUPDATER=1" "CLAUDE_CONFIG_DIR=$cfg" "CLI_VERSION=$pin"; do
+  printf '%s\n' "$out" | grep -qxF "$line" || { echo "FAIL: --check wrap did not print '$line'"; printf '%s\n' "$out"; exit 1; }
+done
+out=$("${clean[@]}" CLAUDECODE=1 bash "$L" --check wrap -- true 2>&1); rc=$?
+[ "$rc" -ne 0 ] || { echo "FAIL: --check wrap accepted CLAUDECODE — wrap skips the pin, never the environment refusals"; exit 1; }
+out=$(env -i "HOME=$HOME" "USERPROFILE=$USERPROFILE" "SYSTEMROOT=$SYSTEMROOT" "TEMP=$TEMP" "TMP=$TMP" "PATH=$bad_fake:/usr/bin:/mingw64/bin" bash "$L" --check wrap -- true 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: --check wrap refused a CLI unequal to the adapter pin — wrap records the version, it does not compare (§8h.7)"; printf '%s\n' "$out" | tail -10; exit 1; }
+printf '%s\n' "$out" | grep -qxF "CLI_VERSION=9.9.9" || { echo "FAIL: --check wrap did not record the version it found"; printf '%s\n' "$out"; exit 1; }
 rm -rf "$fake" "$bad_fake"
 
 # ---- (11) THE PIN, READ NOT MOVED: the constant equals the instrument file (7c's anchored form). The live binary is a
@@ -893,38 +1145,62 @@ out=$(cargo clippy -p rk-adapter-claude --all-targets --features live 2>&1); rc=
 [ "$rc" -eq 0 ] || { echo "FAIL: clippy over the live probes rc=$rc"; printf '%s\n' "$out" | tail -20; exit 1; }
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the whole suite rc=$rc (a fresh checkout needs pnpm install for the node fixture first)"; printf '%s\n' "$out" | grep -E '^test .* FAILED|panicked' | head -20; exit 1; }
-total=$(printf '%s\n' "$out" | awk '/^test result:/{for(i=1;i<NF;i++) if($(i+1) ~ /^passed;?$/) s+=$i} END{print s+0}')
-# 740 measured at ca8f387 plus this stage's 40 new. Raise it at stage open to Checkpoint 8g's recorded count + 40.
-[ "$total" -ge 780 ] || { echo "FAIL: the whole suite passed $total tests, below the floor of 780"; exit 1; }
-printf '%s\n' "$out" | grep -E '^test result:' | grep -vqE ' 0 failed;' && { echo "FAIL: a result line reports failures"; exit 1; }
+# The floor is Checkpoint 8g's recorded passed count plus this stage's 39 new tests (§8h.12). BASE_8G is re-derived at
+# stage open from PROGRESS.md §1 by a dated edit of the next line (§8h.0 item 8); 1000 is the drafted expected value.
+BASE_8G=1000
+FLOOR=$((BASE_8G + 39))
+tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
+[ "$(tally 'test result: ok. 3 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
+[ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }
+[ "$(tally 'running 0 tests' passed)" -lt "$FLOOR" ] || { echo "FAIL: synthetic control — the floor admits a run of zero tests"; exit 1; }
+passed=$(tally "$out" passed); failed=$(tally "$out" failed)
+nres=$(printf '%s\n' "$out" | grep -c '^test result: ')
+[ "$failed" -eq 0 ] && [ "$nres" -ge 44 ] && [ "$passed" -ge "$FLOOR" ] || { echo "FAIL: the whole suite read passed=$passed failed=$failed over $nres results — the floor is $FLOOR passed, 0 failed, at least 44 results"; exit 1; }
 
-# ---- (13) CHECKPOINT 8g, WHOLE, FROM ITS OWN BYTES (s8a (11)'s helper shape): the ONE bash block carrying the anchor,
-# ---- plus a sentinel, so "rc 0 and the sentinel" means it ran to its end. The store is copied first.
+# ---- (13) RE-RUN WHOLE, FROM THEIR OWN BYTES: Checkpoint 8g (the entry gate) and the four older checkpoints
+# ---- this stage's crate edits make provisional (§8h.14's table): 5, 7b, 7b-ii, 7d. 7c, 7e, 7f and 8a are NOT
+# ---- re-run here; the table says where. Each extracted block gets a sentinel, so "rc 0 and the sentinel" means it
+# ---- ran to its end. REDKILN_LAUNCH_RECORD is unset (INPUTS), so a real-harness `run` in any of them refuses first.
 mkdir -p target/s8h-whole || { echo "FAIL: cannot create target/s8h-whole"; exit 1; }
-extract() {
-  python - "$1" "$2" "$3" <<'PY'
-import re, sys
+extract() {  # extract <file> <anchor|marker> <key> <out>
+  python - "$1" "$2" "$3" "$4" <<'PY'
+import sys
+path, mode, key, out = sys.argv[1:5]
 fence = chr(96) * 3
-pat = re.compile(re.escape(fence) + "bash\n(.*?)" + re.escape(fence), re.S)
-text = open(sys.argv[1], encoding="utf-8").read()
-found = [m.group(1) for m in pat.finditer(text) if sys.argv[2] in m.group(1)]
-if len(found) != 1:
-    sys.exit("FAIL: %d bash blocks in %s carry the anchor, expected exactly 1" % (len(found), sys.argv[1]))
-open(sys.argv[3], "w", encoding="utf-8", newline="\n").write(found[0] + "\necho CP8H-WHOLE-RUN-SENTINEL\n")
+lines = open(path, encoding="utf-8").read().split("\n")
+blocks, cur, start = [], None, 0
+for i, ln in enumerate(lines):
+    if cur is None and ln == fence + "bash":
+        cur, start = [], i
+    elif cur is not None and ln == fence:
+        blocks.append((start, cur))
+        cur = None
+    elif cur is not None:
+        cur.append(ln)
+if mode == "marker":
+    hit = [b for (s, b) in blocks if ('echo "%s"' % key) in b]
+else:
+    at = [i for i, ln in enumerate(lines) if ln.startswith(key)]
+    hit = [b for (s, b) in blocks if len(at) == 1 and s > at[0]][:1]
+if len(hit) != 1:
+    sys.exit("FAIL: %d bash blocks in %s match %r, expected exactly 1" % (len(hit), path, key))
+open(out, "w", encoding="utf-8", newline="\n").write("\n".join(hit[0]) + "\necho CP8H-WHOLE-RUN-SENTINEL\n")
 PY
 }
 cp "$store" target/s8h-whole/store.before.sqlite3 || { echo "FAIL: cannot back up the store"; exit 1; }
-S8G=runbook/phase-1/s8g-verify-and-restored-demands.md
-test -f "$S8G" || { echo "FAIL: $S8G is absent — the entry gate cannot be re-run (Halt 8)"; exit 1; }
-extract "$S8G" 'CP8G-END-OF-BLOCK reached' target/s8h-whole/8g.sh || { echo "FAIL: could not extract Checkpoint 8g"; exit 1; }
-out=$(bash target/s8h-whole/8g.sh 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8g run whole rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
-printf '%s\n' "$out" | grep -qxF 'CP8H-WHOLE-RUN-SENTINEL' || { echo "FAIL: Checkpoint 8g did not reach its last line"; exit 1; }
+for spec in "8g|runbook/phase-1/s8g-verify-and-restored-demands.md|marker|CP8G-END-OF-BLOCK reached" "5|runbook/phase-1/s5-workspace-ci-rk-types.md|anchor|**Checkpoint 5.** All of:" "7b|runbook/phase-1/s7b-kernel.md|anchor|### 7b.14 Checkpoint 7b" "7b-ii|runbook/phase-1/s7b-ii-gates.md|anchor|### 7b-ii.13 Checkpoint 7b-ii" "7d|runbook/phase-1/s7d-cli-and-migrate.md|marker|CP7D-END-OF-BLOCK reached"; do
+  IFS='|' read -r name file mode key <<< "$spec"
+  test -f "$file" || { echo "FAIL: $file is absent — Checkpoint $name cannot be re-run (Halt 8)"; exit 1; }
+  extract "$file" "$mode" "$key" "target/s8h-whole/$name.sh" || { echo "FAIL: could not extract Checkpoint $name"; exit 1; }
+  out=$(bash "target/s8h-whole/$name.sh" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $name run whole rc=$rc — its row stays provisional"; printf '%s\n' "$out" | tail -25; exit 1; }
+  printf '%s\n' "$out" | grep -qxF 'CP8H-WHOLE-RUN-SENTINEL' || { echo "FAIL: Checkpoint $name did not reach its last line"; exit 1; }
+done
 
 # ---- (14) NOTHING DISPATCHED, NO LAUNCH RECORD WRITTEN, THE WORKTREE PATH SET UNCHANGED (compared before any prune).
 disp_after=$(python -c "$probe" "$store"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$disp_after" ] || { echo "FAIL: the post-run store probe did not run (rc=$rc)"; exit 1; }
-[ "$disp_after" = "$disp_before" ] || { echo "FAIL: dispatch rows moved $disp_before -> $disp_after — this block, or Checkpoint 8g inside it, DISPATCHED"; exit 1; }
+[ "$disp_after" = "$disp_before" ] || { echo "FAIL: dispatch rows moved $disp_before -> $disp_after — this block, or a checkpoint (13) re-ran, DISPATCHED"; exit 1; }
 nl_after=$(find "$launches" -type f 2>/dev/null | wc -l)
 [ "$nl_after" -eq "$nl_before" ] || { echo "FAIL: a launch record was written — --check must write none"; exit 1; }
 wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
@@ -943,38 +1219,63 @@ echo "CP8H-END-OF-BLOCK reached"
   - Record B flips to `accepted` in the tracker commit (ADR-0092 cl.2.1): the frontmatter, the README index cell
     and the census move, and the body does not.
   - Record A stays `proposed`. `PROGRESS.md` §1 names it as awaiting `s8j`'s two probes.
-- **The §8h.13 mutants' outcomes** go into the checkpoint output: fifteen, each red, each restore verified.
+- **The §8h.13 mutants' outcomes** go into the checkpoint output: seventeen, each red, each restore verified.
 - **Adversarial refuting rounds** run over the diff until a round moves no code and no guard.
 
-**Findings for the lead, recorded rather than absorbed:**
+**Findings for the lead, recorded rather than absorbed.** Items 1–9 are the draft's, each with its status after
+D21-43/44/45. Items 10–15 are new in this revision.
 
-1. 🛑 **The run-owned worktree lives under `.git`, which the CLI documents as a protected directory.** Under
-   `acceptEdits` and `--permission-prompts none`, this may mean the implementer can never write (§8h.6). Probe 1
-   decides it, and a failure HALTs. The remedy moves a design-derived path (`<common-dir>/redkiln/worktrees/<item>`).
-   Consider whether the operator wants probe 1 earlier than `s8j`, since `s8e`–`s8g`'s landing path is built on that
-   location.
+1. **Settled by D21-44.** The draft's blocker was *"the run-owned worktree lives under `.git`"*. D21-44 measured it:
+   an edit inside `.git/redkiln/worktrees/…` was refused. The run worktree moves to `.redkiln/worktrees/<item>`,
+   which is `s8e`'s. Probe 1 re-measures the placement at `s8j` (§8h.11), and D21-45's in-worktree limit is named
+   (§8h.5).
 2. **`!` negation cannot carve out of an absolute rule**, as documented. So D21-42 21d's deny rules cannot be written
-   as "deny all, except the worktree". §8h.6 writes them as the ancestor-chain complement. That is a construction
-   choice, and Record A states it.
-3. **`s8i` spends before the pin moves.** The plan moves the pin at `s8j`, but `s8i`'s S-BIN dispatches are real
-   spend. At 2.1.281 against a 2.1.278 pin the adapter refuses at init under `MismatchPolicy::Refuse`. Either S-BIN
-   does not go through the adapter, or the pin move and freeze must come before `s8i`.
-4. **`s8-exit-criterion.md` invokes `./target/debug/redkiln run` at three sites.** Each needs routing through the
-   launcher. This is not in the plan's list of s8 amendments.
-5. **AC-133's judgement-enum registry does not exist in code**, although `s5` claims AC-133 in its acceptance set.
-   This stage builds it (§8h.4). The `s5` claim wants a dated correction.
+   as "deny all, except the worktree". §8h.6 writes them as the ancestor-chain complement, now over the new root.
+   That is a construction choice, and Record A states it.
+3. **Withdrawn.** S-BIN does not dispatch through `rk-adapter-claude`, and it launches through `wrap` (§8h.7,
+   §8h.14).
+4. **Assigned.** `s8`'s three `redkiln run` sites are `s8j`'s amendment (D21-43).
+5. **Owned by `s8g`.** AC-133's registry is built there, and `s8g` carries `s5`'s dated correction. This stage only
+   enters its enums.
 6. **The register contradicts itself on the 226 h figure.** The scope note, *"the longest was answered at 226 h"*,
    sits against AC-039's *"belongs to stage→verdict … not to gate→verdict"*. The pack's `gate_deadline_secs` warrant
    quotes the first. Record B states both.
-7. **Four questions (§8h.0 Q1–Q4) are free residuals.** Q1 in particular may supersede ADR-0095 decision 2 in part,
-   or ADR-0112 in part.
-8. **Brief facts that are false or imprecise:**
+7. **Taken by D21-43 N17.** Q1–Q4 are no longer free residuals, and nothing is superseded by Q1.
+8. **Brief facts that are false or imprecise, kept corrected:**
    - The margin ticks carry no `NO RECORD` marker.
    - `model_belongs_to_tier` is a `-`-segment match, not a prefix match.
-   - The packet's *"one paid dispatch each"* for the two probes cannot verify three model ids with one dispatch
-     (Q4).
+   - `story`'s appetite is `points = 60`, not 40 [re-measured at `a6349b6`].
+   - The packet's *"one paid dispatch each"* for the two probes cannot verify three model ids with one dispatch.
+     N17 took Q4 as three.
 9. **`DISABLE_AUTOUPDATER`, `DISABLE_UPDATES` and `--setting-sources` are undocumented on the docs site.** They are
    measured from the installed binary's strings. `blockReadsOutsideWorkingDirectories`, `--permission-prompts none`,
-   the `!`-scope rule and the protected-path list are documented. Record A quotes each against a fresh fetch.
+   the `!`-scope rule and the protected-path list are documented. D21-45 also quotes the protected-path list from
+   the 2.1.281 code. Record A quotes each against a fresh fetch.
+10. **`s8i`'s and `s8j`'s dispatch scans refuse Checkpoint 8h as written** [measured at `a6349b6`]. `s8i` (11)'s
+    `DISPATCH_RE` matches both `--features live` and `--ignored`, and `s8j` (10) matches `--features live`, on any
+    non-comment line. `s8i`'s revision, which is in progress, may already have narrowed its own scan. Checkpoint
+    8h carries `--features live` twice:
+    - (7), a `-- --list --ignored` listing that runs nothing;
+    - (12), `cargo clippy` over the live-gated code.
+
+    Neither dispatches. Respelling them to dodge the pattern would satisfy a guard by its text, so they stay as they
+    are. Each scan has to admit a `--list` line and a `cargo clippy` line, with a synthetic control. That is `s8i`'s
+    and `s8j`'s work, and it is not resolved here.
+11. **Checkpoint 8a (11) and Checkpoint 7f become provisional at this stage.** The first stops on *"a card carries
+    permission_mode"*. The second's `redkiln run` refuses at the launch check, and its last lines force-remove the
+    legacy tree that D21-44 keeps. §8h.14 gives the route, and running it is `s8j`'s.
+12. **`StepError::Overage { reason }` already exists.** Its retry comment reads *"`Overage` is refused BEFORE spawn
+    (AC-221, ADR-0010)"*, and it maps to `Exit::Overage`. N17 fixed only the exit. Before building a parallel
+    kernel `EnvelopeError`, the implementer has to decide whether the envelope refusal is this variant with a
+    `reason` naming the counter. If it is, Record B says so. If it is not, Record B says why not.
+13. **A Claude Code session exports two names outside `CLAUDE_CODE_*`.** They are `CLAUDE_PID` and `CLAUDE_EFFORT`
+    [measured by name]. 7c's guard and the committed denylist miss both, and D21-44's probe script stripped both.
+    The launcher and (0b) now refuse them. Whether 7c's guard should too is `s8j`'s question, since `s8j` re-runs
+    Checkpoint 7c.
+14. **Minted gate kinds need rows before they can be reached.** `s8f`'s `landing` gate and N11's drift gate are
+    covered here (§8h.10). Any gate kind a later stage mints, including `s8j`'s pack-declared human-root questions,
+    brings its own `[[gate_expiry]]` row, or the load lint refuses the pack.
+15. **The drafted floor chain rests on sibling drafts that are being revised too** (§8h.0 item 8). Only Checkpoint
+    8g's recorded count may replace `BASE_8G`.
 
 ---

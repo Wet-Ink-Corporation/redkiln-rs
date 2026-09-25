@@ -1761,3 +1761,50 @@ and `settings.local.json` is not copied, because children run with isolated sett
 **Ownership:** W1, W2 and W4's worktree half are **s8e**'s (with D21-44's move). W3 and W4's `init` half go to
 **s8c** (the `setup` verb and `.worktreeinclude` reading) and s8e (the carry at creation). `redkiln init`'s exclude
 block is `s8e`'s too, since `init` already writes the hooks marker (RT-51).
+
+---
+
+## D21-46 · The revision round's decisions, two corrections to this ledger, and the integration calls
+
+**Taken 2026-09-24, after the ten stage files were revised for D21-43/44/45.** The revision moved the files from
+8,060 to about 11,300 lines, and all three runbook checkers pass. The revisers surfaced eight decisions for the
+operator, two errors in this ledger's own entries, and cross-file conflicts that fall to the lead.
+
+| # | Question | Taken |
+| --- | --- | --- |
+| R1 | s8e at 1,592 lines | **Split.** A new stage **`s8d-ii`, "Run worktrees"**, sits between s8d and s8e (the `7b-ii` precedent). It carries D21-44's relocation and D21-45 W1/W2/W4. Its checkpoint is s8e's entry gate. |
+| R2 | `t1_gate`'s schema against N6's append-only lifecycle | **(A) A forward migration to an append-only transitions table.** The store is disposable by design (ADR-0131 d6; the deleted-database test), so old stores rebuild from git. |
+| R3 | N5's interim `item` key against the golden logs' canonical bytes | **Carried outside the canonical digest**, as ADR-0131 places its tag set. Digests and golden logs are unchanged, and `query` still uses the key. |
+| R4 | `tag-release`'s ADR-0114 c3 trial on both lane items | **Two trials, confirmed.** Each is one run of one activity, which is the clause's constraint. |
+| R5 | Agent steps left at verify (AC-347) | **`integration-tests`' test-writing steps are re-homed to implement**, as N23. `migration-dry-run` stays a named residual, because no Phase-1 lane reaches it (`data_migration` is NOT MEASURABLE). |
+| R6 | `smoke-test` has no check | **A check on `status == 'passing'` with `on_false = "fail"`**, as an ADR-0072 edit in s8g. |
+| R7 | Unproduced inputs | **s8f builds the `toolchain:backlog` producer** (a store-route read of items) and **AC-127's vouched-root half** (ADR-0025 advisory drift, plus a doctor row distinguishing the two drift kinds). Unprovided feeds refuse by name, and the walk table records each activity that stops on one. |
+| R8 | W4's filter-driver scope | **The effective config at every scope.** Refuse with a diagnosis naming the scope. BrittonGames' LFS filter is system-scope and would have passed a repo-local check. |
+
+**Two corrections to this ledger, found by the revisers and recorded here rather than by editing the entries they
+correct:**
+- **D21-44 named the wrong records to supersede.** ADR-0018 and ADR-0105 name no worktree path. The literal
+  `<common-dir>/redkiln/worktrees/<item>` is **ADR-0137 decision 3's**. What also moves in ADR-0105 is **clause 6** and its
+  "reused worktree" bullet (D21-45 W2), and **clause 5**'s closed git-op list (the new lock and marker operations).
+  s8d-ii's placement record supersedes those, not ADR-0018.
+- **D21-45's premise that "`init` already writes the hooks marker (RT-51)" is false.** `init` writes no hook, and
+  `# redkiln-hook` exists only as doctor's recogniser. The `info/exclude` runtime block is therefore `init`'s first
+  write into a target repo's git admin area, and s8d-ii's record says so.
+
+**Flagged for the operator's flip lines, not decided here:**
+- ADR-0035's `[*].field` over a list-valued field is read as **concatenation in element order** (s8d R2; N13 assumes
+  it).
+- The run-worktree root must be git-ignored before creation proceeds, which makes AC-518's instrument depend on an
+  ignore row. That is a behaviour no earlier line names (s8d-ii).
+
+**Integration calls taken by the lead:**
+- **One re-run convention.** `RK_CP_NESTED=1` means "running as another checkpoint's entry gate: skip your own nested
+  whole re-runs". s8e's `RK_CP_ENTRY_ONLY` is folded into it, and every file adopts it.
+- **One no-dispatch guard for replays.** `CLAUDE_CONFIG_DIR` points at an empty trap directory that must stay empty
+  (s8g's form), and `REDKILN_LAUNCH_RECORD` is unset, so s8h's gate refuses before spawn.
+- **The whole-suite floor chain** is recomputed once, stage by stage. Each file states its expected value as
+  re-derived at stage open from its entry checkpoint's recorded count.
+- s8h's launcher gains an **`answer` mode**, so s8j's hold answer is not refused for want of a launch record. s8i uses
+  s8h's `wrap` mode for S-BIN's corpus runner.
+- Checkpoint 7e's backtick-executing FAIL message, the same defect as 7h's (10a), is fixed by dated amendment in
+  **s8a**.

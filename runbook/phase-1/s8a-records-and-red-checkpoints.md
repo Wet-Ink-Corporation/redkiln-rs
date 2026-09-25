@@ -9,6 +9,25 @@
 A bare `§N.M` in this file means this file's own section; another stage's section is cited as `s5 §5.3`. Every
 shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it opens with its own `cd`.*
 
+*Revised 2026-09-24 for D21-43/44/45* (re-measured at `a6349b6`). What changed:
+
+- **ADR-0134 clause 5.** D21-43 N27 confirms this file's reading: the clause is about 7f's old text, and the
+  re-scope is execution, not supersession. §8a.5 and finding (3) now say so.
+- **Checkpoint 7c.** It is provisional after the `ac489` amendment, and its whole re-run is `s8j`'s (D21-43 N28).
+  This stage does not re-run it (§8a.8; finding (5) is settled).
+- **`s8i` supersedes two of this stage's pins by name** when it finalises `Binary`: the sealed-slot test and
+  Checkpoint 8a's no-`pub`-field guard (§8a.2, §8a.8, guard (6)).
+- **An LFS pointer path is `Binary`** in the `Text` variant's manifest, whatever its extension says. This was checked
+  against D21-45 W4 (§8a.2). There are two new tests, so the stage adds nine.
+- **No accidental dispatch.** The card guard now runs before **both** whole runs that can reach `redkiln run` (7i and
+  7f), and guard (11) asserts that no `dispatch_completed` row was added. The rule for a re-run after `s8h` is stated
+  in §8a.9.
+- **D21-44.** This stage derives no run-worktree path of its own. Checkpoint 7f's whole run removes the one legacy
+  tree, `rk-fix-doctor-test-count` at `73c087a`, which must stay put until `s8j` re-points it. Guard (11) therefore
+  restores that tree and asserts its ref is unmoved (finding (8)).
+- **Floors.** The whole-suite floor is re-derived from the entry gate's reading and asserts the result-line count too.
+  Only the entry gate and the checkpoints this stage's edits touch are re-run.
+
 ---
 
 **Why this step exists.** `spikes/DECISIONS-2026-09-21.md` D21-40 decision 4 reads *"Checkpoints 5, 7b and 7f are
@@ -62,6 +81,19 @@ premise forward. `s7h` and `s7i` both paid for carrying a premise forward.
 Back up `.git/redkiln/store.sqlite3` before the first whole run. Checkpoint 7f's block runs `redkiln run`, which
 appends to the store.
 
+**What this stage re-runs whole, and what it does not.** It re-runs its entry gate (7i) and the four checkpoints its
+own edits repair or move: 5, 7a, 7b and 7f. It does **not** re-run the rest of the chain. Checkpoint 7c is made
+provisional here, but its re-run is `s8j`'s (§8a.8).
+
+**The legacy run worktree.** `git worktree list` at `a6349b6` shows
+`.git/redkiln/worktrees/rk-fix-doctor-test-count` at `73c087a [rk-run/rk-fix-doctor-test-count]`, and it is clean.
+D21-44 keeps it *"where it is"* until `s8j` re-points it. Checkpoint 7f's run removes it twice. The first time is
+`recreate_run_worktree`'s `worktree remove --force` + `remove_dir_all` at run start. The second is 7f's own
+cleanup line, `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`, and after that line
+nothing re-adds the tree. The ref itself does not move, because the `Story:` mint returns early for an item already
+recorded (`// Already minted, by this lane or an earlier one. Writing again is drift, not a record.`). Guard (11)
+records both before the whole runs, then restores the registration and asserts the ref.
+
 ### 8a.2 `ChangeSummary` splits: a finalised `Text` variant and a sealed `Binary` slot (D21-42 decision 2)
 
 **The record** (a new record, next free id at writing; `0165` at authoring) is D21-41 (i)'s Checkpoint 5 record
@@ -80,12 +112,42 @@ with D21-42 decision 2 folded into it, and it uses `## Considered options` with 
    - A `Toolchain` implementor may construct the `Text` arm.
    - `rk-kernel`'s production code still names the type nowhere. The surviving half of ADR-0135's fourth forbids
      bullet stands for `crates/rk-kernel/src/`.
+   - **The sealed slot is temporary by design, and `s8i` ends it.** When S-BIN finalises `Binary`, `s8i`
+     supersedes **by name** two pins this stage writes:
+     `change_summary::binary_arm_is_not_constructible_outside_rk_ports`, with its `trybuild` case, and Checkpoint
+     8a's guard (6) line that asserts the sealed payload declares no `pub` field. `s8i`'s file already says that
+     both are *"superseded by name"* and that row 8a becomes `passed <hash>, re-run pending`. The record states
+     that the slot opens by a later record once S-BIN reports. ADR-0092 rule 1 then decides whether `s8i`'s
+     record supersedes this one in part.
 2. **The serialised `Text` value carries the members the shipped catalog already reads:**
    - `sha` — `adversarial-review.toml`'s `clone` step reads `inputs = { sha = "artifact:ChangeSummary.sha" }`;
    - `diff` — `change-summary.toml`'s `lint` step reads `inputs = { diff = "${summarise.outputs.diff}" }`;
    - `manifest` — per path: the path, its `classify` result, and its change kind.
 
    A field set that misses a member the catalog reads is a value that resolves nothing.
+
+   **2a. An LFS pointer path is `Binary`, whatever `classify` answers.** The `Text` variant's diff is read from the
+   object store. For an LFS-tracked path the object store holds a pointer blob, whatever the checkout's smudge
+   config is, so the "diff" is the pointer's `oid`/`size` delta and says nothing about the content. That makes
+   `text_diff` undecidable from git, as `s8i`'s author flagged. `classify` cannot see this. It decides by extension
+   first (`TEXT_EXTS` holds `"json"`, `"svg"` and `"csv"`), and otherwise by the working-tree bytes (*"a NUL within
+   the first 8 KiB is git's own binary heuristic"*), and a pointer file has no NUL. So the rule is written into
+   the range read:
+   - A path is an **LFS pointer path** when its blob at either end of the range has the git-lfs pointer form: under
+     1024 bytes, with the first line `version https://git-lfs.github.com/spec/v1`. `rk-git`'s range read marks the
+     path so. The read is decided on the blob and not on `.gitattributes`, because an attribute can be absent at
+     one end or unset locally.
+   - Such a path enters the manifest as **`Binary`**. The range then refuses through the re-dated `change_summary`
+     row, as any `Binary` path does, and the refusal names the path. It never yields a `Text` whose `diff` is a
+     pointer delta. What an LFS asset's summary carries (for example its size read from the pointer) is `Binary`'s
+     content, and so `s8i`'s.
+   - **This was checked against D21-45 W4, and W4 does not make the rule redundant.** W4 refuses to *create* a run
+     worktree when *"a repo-local filter driver (for example LFS via `--local`) or an `includeIf` would yield
+     pointer files"*. That protects the **working tree's** bytes. The range diff reads **blobs**, which are pointers
+     under every filter configuration. The two rules agree: neither treats a pointer as a view of the content. W4
+     is `s8e`'s, and this rule does not re-specify it.
+   - This repository tracks nothing through LFS (`.gitattributes` has no `filter=lfs` row, measured at `a6349b6`),
+     so the rule is proved on a fixture repository (§8a.8).
 3. **Ratification.** The record ratifies PROGRESS §2's D17-1 readings 2 and 3: a string literal, a comment and the
    `Capability::ChangeSummary` vocabulary variant do not name the type. It names **D17-9** as the root of the
    conflict. D17-9 chose adapter implementors while it declared *"ADR-0099 decision 5's forbids, unchanged"*, and
@@ -129,6 +191,7 @@ forbids** bullet, so each is a supersession in part, never an erratum.
   `Text` or `Generated`.
   - A range that carries a `Binary` path refuses through the registry's dated `change_summary` row. The row is
     re-dated, and its `reason` is narrowed to the sealed arm.
+  - A range that carries an LFS pointer path (item 2a) refuses the same way, naming the path.
   - An empty or unresolvable range refuses by name. It never returns an empty `Text`. ⚠️ **This matters today:**
     `crates/rk-kernel/src/runtime/step.rs` calls `"change_summary" => toolchain.change_summary("").map(|_| ())`.
     The kernel passes an **empty** range and discards the value until `s8d`'s resolver binds `artifact:Changeset.sha`.
@@ -228,8 +291,9 @@ repair, makes the measured reading 279/279. This stage pins what the probe print
 
 D21-9 already decided the disposition, and ADR-0134 decision clause 5 named the consequence (*"**Checkpoint 7f
 becomes non-re-runnable at that commit.**"*). That sentence is about the text 7f carried then, and that text stays
-non-re-runnable. The re-scope below is a new, dated text, not a reversal of the clause (finding (3)). Executing D21-9
-has two parts:
+non-re-runnable. The re-scope below is a new, dated text, not a reversal of the clause. **D21-43 N27 confirmed
+this reading on 2026-09-24:** *"the clause is about 7f's old text. Re-scoping 7f is execution, not supersession."*
+No record supersedes ADR-0134 here (finding (3)). Executing D21-9 has two parts:
 
 1. **The tracker.** `PROGRESS.md` row 7f's *"RE-RUN PENDING"* becomes a terminal disposition that quotes D21-9, so
    that it does not read as dropping the preamble's re-run obligation. The `79e0ef4` pass stands as evidence about
@@ -251,6 +315,12 @@ has two parts:
 ⚠️ **Packet (i) option A read D21-9 as "a PROGRESS cell edit only … no checkpoint edit".** This stage does both,
 because D21-40 decision 4 and this stage's brief require 7f to run whole at the exit (finding (3)). `s8e`'s
 Slice-Verdict commit moves this literal again, together with `s7h` guards (6) and (7).
+
+**7f's block runs `redkiln run`, so its whole re-run is a dispatch hazard once the cards bind.** At this stage
+the hazard is closed. **0 of 8** shipped cards carry `permission_mode`, and `CardFile`'s load refuses before any
+spawn (`.ok_or_else(|| ConfigError::PermissionModeAbsent { card: card() })?;`). Guard (11) asserts that condition
+before either whole run and asserts afterwards that no `dispatch_completed` row appeared. From `s8h` on the cards
+bind, so a later stage that re-runs 7f whole must follow §8a.9's rule.
 
 ### 8a.6 Codex's phase (D21-42 decision 22)
 
@@ -310,21 +380,27 @@ matches nothing) before the code that turns it green.
 | `rk-ports` | `fake_behaviour::toolchain_fake_classifies_binary` *(amended)* | its `assert_eq!(format!("{summary:?}"), "ChangeSummary(())")` becomes: a text range yields `Text`, and a binary range refuses by name |
 | `rk-git` | `diff::range_diff_lists_every_changed_path_with_its_change_kind` | no range read exists |
 | `rk-git` | `diff::range_diff_refuses_an_unresolvable_range` | same |
+| `rk-git` | `diff::range_diff_marks_an_lfs_pointer_path` | same. Over a fixture whose commit adds `data/table.json` as a git-lfs pointer blob, the path must come back marked as a pointer, and an ordinary `.json` beside it must not |
 | `rk-adapter-toolchain-rust` | `change_summary::change_summary_text_variant_from_git_diff` | the body answers `Unsupported` from the registry. Over a two-commit fixture repository it must return `Text` with one manifest row per changed path |
 | `rk-adapter-toolchain-rust` | `change_summary::change_summary_refuses_a_range_carrying_a_binary_path` | a `.uasset` in the range must refuse through the re-dated row and never yield a `Text` that silently omits the path (AC-497) |
 | `rk-adapter-toolchain-rust` | `change_summary::change_summary_refuses_an_empty_range` | the kernel passes `""` today (§8a.2), and an `Ok` there is a vacuous green |
+| `rk-adapter-toolchain-rust` | `change_summary::change_summary_refuses_a_range_carrying_an_lfs_pointer_path` | `classify` answers `Text` for `data/table.json`. The range must refuse naming the path, never yield a `Text` whose `diff` is the pointer's `oid`/`size` delta (§8a.2 item 2a) |
 | `rk-adapter-toolchain-rust` | `registry::ac489_capability_registry_dated` *(amended)* | its *"change_summary answers Unsupported from its registry row"* over `HEAD~1..HEAD` moves to the binary case |
 
-That is seven new tests and two amended ones. Unchanged, and asserted as regression pins:
+That is nine new tests and two amended ones. Unchanged, and asserted as regression pins:
 
 - `rk-adapter-toolchain-node`'s `registry::ac489_capability_registry_dated` (Node still refuses);
 - `rk-kernel`'s `probe_differential::grammar_agrees_with_the_s_grammar_probe` and `on_false::on_false_closed_set`;
 - `redkiln-migrate`'s `output::ac475_zero_change_summary_values_in_output`.
 
-⚠️ **Checkpoint 7c becomes provisional.** Its named `ac489_capability_registry_dated` is amended here. Its block must
-run from a shell outside Claude Code, and it makes a paid haiku probe, so it cannot be re-run before `s8i`.
-`PROGRESS.md` row 7c is marked *"passed …, re-run pending `s8a`'s `change_summary` body"*, and the re-run belongs
-with `s8j`'s probes. The stage plan does not list it there (finding (5)).
+**`s8i` supersedes two of these pins by name** (§8a.2 item 1): `binary_arm_is_not_constructible_outside_rk_ports`
+and guard (6)'s no-`pub`-field line. That is expected. It is not drift, and nobody should restore the pins.
+
+⚠️ **Checkpoint 7c becomes provisional, and this stage does NOT re-run it.** Its named
+`ac489_capability_registry_dated` is amended here. Its block must run from a shell outside Claude Code, and it
+makes a paid haiku probe. **D21-43 N28 gives the whole re-run to `s8j`:** *"s8j re-runs it whole, from a plain
+terminal through the launcher, with the live probes."* `PROGRESS.md` row 7c is marked *"passed …, re-run pending
+`s8j` (D21-43 N28) — `s8a` amended `ac489_capability_registry_dated`"*. Finding (5) is settled by N28.
 
 ### 8a.9 Checkpoint 8a
 
@@ -338,8 +414,29 @@ with `s8j`'s probes. The stage plan does not list it there (finding (5)).
   unchanged by the re-run (compared as parsed JSON, not with `git diff` under autocrlf).
 - **Checkpoint 7f's discharged state is asserted by name.**
 - **The Codex phase sites carry their dated corrections, and E-0094-2 exists.**
-- **The whole suite is green** above its floor, and fmt and clippy are green.
-- **Checkpoints 7i (entry), 5, 7a, 7b and 7f each run whole from their own bytes and reach their last line.**
+- **The whole suite is green** above its floor, and fmt and clippy are green. The floor is re-derived at stage
+  open from the entry gate's recorded reading. The expected value is ADR-0164's **740 passed / 0 failed / 9
+  ignored over 44 results** (`992d257`, on the tree Checkpoint 7i passed) plus this stage's nine new tests, which
+  gives **749**. If the reading at open differs, the literal in (10) is amended by dated note before the first run.
+- **Checkpoints 7i (entry), 5, 7a, 7b and 7f each run whole from their own bytes and reach their last line.** No
+  other checkpoint is re-run. 7c is `s8j`'s (D21-43 N28).
+- **Neither whole run that can reach `redkiln run` dispatched.** No shipped card carries `permission_mode`, and
+  the store and every run journal hold the same number of `dispatch_completed` rows after the runs as before.
+- **The legacy run worktree is back where it was**, at `73c087a`, clean, with `rk-run/rk-fix-doctor-test-count`
+  unmoved (D21-44; D21-42 18).
+
+🛑 **The rule for any whole re-run of Checkpoint 7f after `s8h` lands** (and of 7g and 7h, which D21-43's integration
+calls name, and of 7i's run arm). Once the cards bind, guard (11)'s card
+condition is false, and this block **refuses** rather than run 7f bare. A stage that re-runs 7f whole from then on
+does two things:
+- it runs 7f against a fixture config whose `[adapters] harness_binary` names the `rk-fixture-child-claude` binary,
+  which `s7d`'s `ConfigFile` row (RT-49) calls *"the one way a process-level test reaches `rk-fixture-child-claude`"*;
+- it asserts that no real `claude` was spawned. The minimum is guard (11)'s before/after `dispatch_completed`
+  equality, re-read as "every added row came from the fixture child".
+
+`s8h` §8h.7's launch-record refusal makes a bare `redkiln run` refuse before any spawn. That is a second guard
+against accident, not a substitute, and `s8h` says of it that *"the variable can be forged"*. The re-running stage
+says in its own file which of these it does.
 
 🛑 **ADR-0164's flip is not this stage's act.** It is `proposed` and flips only on the operator's ledger line. This
 block does not read its status.
@@ -350,6 +447,7 @@ cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Run it AFTER `git add` of the work: (5), (8) and Checkpoint 7a read the index and the tracked set.
 # Every cargo reading is `out=$(…); rc=$?`, never a pipe's status. Every selection is `--test it`,
 # MODULE-QUALIFIED and `--exact`, and asserts each `test <name> ... ok` line AND an exact count.
+# Re-runs ONLY the entry gate (7i) and 5, 7a, 7b, 7f, which this stage's edits touch. 7c is s8j's (D21-43 N28).
 
 # ---- (1) BUILD-OR-FAIL, FIRST. A stale binary makes every later whole run a statement about old code.
 out=$(cargo build --workspace 2>&1); rc=$?
@@ -427,6 +525,7 @@ kctl=$(printf 'crates/rk-kernel/src/x.rs:1:fn f(s: &str) -> Option<ChangeSummary
 [ -n "$kctl" ] || { echo "FAIL: the rk-kernel ban's control did not fire"; exit 1; }
 nenum=$(grep -cE '^pub enum ChangeSummary[[:space:]]*\{' crates/rk-ports/src/toolchain.rs)
 [ "$nenum" -eq 1 ] || { echo "FAIL: $nenum 'pub enum ChangeSummary {' in rk-ports, expected 1 — the split did not land"; exit 1; }
+# The sealed-slot pins below (nbin, npub) are SUPERSEDED BY NAME at s8i when S-BIN finalises Binary (§8a.2 item 1).
 nbin=$(grep -cE 'struct BinaryChangeSummary\b' crates/rk-ports/src/toolchain.rs)
 [ "$nbin" -eq 1 ] || { echo "FAIL: $nbin sealed Binary payload declarations in rk-ports, expected 1 — the pin below would pass over nothing"; exit 1; }
 npub=$(grep -cE 'struct BinaryChangeSummary[[:space:]]*\([[:space:]]*pub[[:space:]]*[^(]' crates/rk-ports/src/toolchain.rs)
@@ -446,8 +545,8 @@ run_named() {  # $1 = package, $2 = exact count, then the module-qualified names
   printf '%s\n' "$out" | grep -qE "test result: ok\. $want passed; 0 failed" || { echo "FAIL: $pkg's selection did not run exactly $want tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
 }
 run_named rk-ports 3 change_summary::text_variant_serialises_sha_diff_and_manifest change_summary::binary_arm_is_not_constructible_outside_rk_ports fake_behaviour::toolchain_fake_classifies_binary
-run_named rk-git 2 diff::range_diff_lists_every_changed_path_with_its_change_kind diff::range_diff_refuses_an_unresolvable_range
-run_named rk-adapter-toolchain-rust 4 change_summary::change_summary_text_variant_from_git_diff change_summary::change_summary_refuses_a_range_carrying_a_binary_path change_summary::change_summary_refuses_an_empty_range registry::ac489_capability_registry_dated
+run_named rk-git 3 diff::range_diff_lists_every_changed_path_with_its_change_kind diff::range_diff_refuses_an_unresolvable_range diff::range_diff_marks_an_lfs_pointer_path
+run_named rk-adapter-toolchain-rust 5 change_summary::change_summary_text_variant_from_git_diff change_summary::change_summary_refuses_a_range_carrying_a_binary_path change_summary::change_summary_refuses_an_empty_range change_summary::change_summary_refuses_a_range_carrying_an_lfs_pointer_path registry::ac489_capability_registry_dated
 run_named rk-adapter-toolchain-node 1 registry::ac489_capability_registry_dated
 run_named rk-kernel 4 conformance::conformance_every_step_kind_has_an_executor conformance::conformance_every_port_has_a_call_site probe_differential::grammar_agrees_with_the_s_grammar_probe on_false::on_false_closed_set
 run_named redkiln-migrate 1 output::ac475_zero_change_summary_values_in_output
@@ -483,7 +582,8 @@ c_filter() { grep -vF "ADR-$CODEX_ADR"; }
 [ -z "$(printf '%s\n' "$craw" | c_filter | grep .)" ] || { echo "FAIL: a register line still says Codex is Phase 2 with no dated correction citing ADR-$CODEX_ADR"; printf '%s\n' "$craw" | c_filter; exit 1; }
 [ -n "$(printf 'x.md:1:the Codex adapter is Phase 2\n' | c_filter)" ] || { echo "FAIL: the Codex sweep's control did not fire"; exit 1; }
 
-# ---- (10) FMT, CLIPPY, AND THE WHOLE SUITE above its floor (740 measured at ca8f387 plus this stage's 7 new).
+# ---- (10) FMT, CLIPPY, AND THE WHOLE SUITE above its floor. Re-derived at stage open from the entry gate's reading:
+# ---- ADR-0164's 740 passed / 0 failed / 9 ignored over 44 results (992d257), plus this stage's 9 new = 749.
 out=$(cargo fmt --all --check 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo fmt --check rc=$rc"; printf '%s\n' "$out" | head -20; exit 1; }
 out=$(cargo clippy --workspace --all-targets 2>&1); rc=$?
@@ -491,7 +591,9 @@ out=$(cargo clippy --workspace --all-targets 2>&1); rc=$?
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the whole suite rc=$rc (a fresh checkout needs pnpm install for the node fixture first)"; printf '%s\n' "$out" | grep -E '^test .* FAILED|panicked' | head -20; exit 1; }
 total=$(printf '%s\n' "$out" | awk '/^test result:/{for(i=1;i<NF;i++) if($(i+1) ~ /^passed;?$/) s+=$i} END{print s+0}')
-[ "$total" -ge 747 ] || { echo "FAIL: the whole suite passed $total tests, below the floor of 747"; exit 1; }
+[ "$total" -ge 749 ] || { echo "FAIL: the whole suite passed $total tests, below the floor of 749"; exit 1; }
+nres=$(printf '%s\n' "$out" | grep -cE '^test result:')
+[ "$nres" -ge 44 ] || { echo "FAIL: $nres test result lines, below the 44 of the entry reading — a target stopped being built or run"; exit 1; }
 printf '%s\n' "$out" | grep -E '^test result:' | grep -vqE ' 0 failed;' && { echo "FAIL: a result line reports failures"; exit 1; }
 
 # ---- (11) THE ENTRY GATE AND FOUR OTHER CHECKPOINTS, WHOLE, FROM THEIR OWN BYTES. The helper copies the ONE bash
@@ -514,19 +616,72 @@ whole() {  # $1 = label, $2 = stage file, $3 = anchor
   [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $1 run whole rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
   printf '%s\n' "$out" | grep -qxF 'CP8A-WHOLE-RUN-SENTINEL' || { echo "FAIL: Checkpoint $1 did not reach its last line"; exit 1; }
 }
-store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
+common=$(LC_ALL=C git rev-parse --path-format=absolute --git-common-dir); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$common" ] || { echo "FAIL: cannot resolve the git common dir (rc=$rc)"; exit 1; }
+store="$common/redkiln/store.sqlite3"
 cp "$store" target/s8a-whole/store.before.sqlite3 || { echo "FAIL: cannot back up the store before the whole runs"; exit 1; }
+# 7i and 7f can reach `redkiln run`. Neither may dispatch: every shipped card lacks permission_mode, so the card
+# load refuses before any spawn. From s8h on that is false, and this line must be re-scoped before it runs —
+# through §8a.9's rule (a fixture config naming rk-fixture-child-claude as [adapters] harness_binary), never bare.
+set -- .redkiln/cards/*.json
+[ "$#" -eq 8 ] && [ -f "$1" ] || { echo "FAIL: expected 8 shipped cards"; exit 1; }
+pm=$(grep -l 'permission_mode' "$@"); rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc) — 7i's or 7f's run could reach a REAL dispatch; stop and re-run through §8a.9's rule (D21-40 decision 2)"; exit 1; }
+# NO-DISPATCH, MEASURED: dispatch_completed rows in the store AND in every run journal, before and after.
+dcount() {  # $1 = store path; prints "<store rows> <journal rows>"
+  python - "$1" "$(dirname "$1")/runs" <<'PY'
+import glob, os, sqlite3, sys
+db, runs = sys.argv[1], sys.argv[2]
+c = sqlite3.connect("file:" + db.replace(os.sep, "/") + "?mode=ro", uri=True)
+s = c.execute("select count(*) from t2_event where kind = 'dispatch_completed'").fetchone()[0]
+j = 0
+for f in glob.glob(os.path.join(runs, "*", "events.jsonl")):
+    j += sum(1 for line in open(f, encoding="utf-8") if '"kind":"dispatch_completed"' in line)
+print(s, j)
+PY
+}
+d_before=$(dcount "$store"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$d_before" ] || { echo "FAIL: cannot count dispatch_completed before the whole runs (rc=$rc)"; exit 1; }
+mkdir -p target/s8a-ctl/dstore/runs/r1 || { echo "FAIL: cannot make the dispatch-count control"; exit 1; }
+python - target/s8a-ctl/dstore/store.sqlite3 <<'PY' || { echo "FAIL: cannot seed the dispatch-count control store"; exit 1; }
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+c.execute("create table if not exists t2_event (id integer primary key, kind text, payload text, anchor_sha text)")
+c.execute("delete from t2_event")
+c.execute("insert into t2_event (kind, payload) values ('dispatch_completed', '{}')")
+c.commit()
+PY
+printf '{"kind":"dispatch_completed","payload":{}}\n' > target/s8a-ctl/dstore/runs/r1/events.jsonl || { echo "FAIL: cannot seed the control journal"; exit 1; }
+[ "$(dcount target/s8a-ctl/dstore/store.sqlite3)" = "1 1" ] || { echo "FAIL: the dispatch counter's control did not read 1 1 — the no-dispatch guard is blind"; exit 1; }
+# THE LEGACY TREE (D21-44: it stays put until s8j). 7f's run and 7f's cleanup both remove it; record it first.
+legacy="$common/redkiln/worktrees/rk-fix-doctor-test-count"
+lref=$(git rev-parse --verify --quiet 'refs/heads/rk-run/rk-fix-doctor-test-count^{commit}'); lpin=$(git rev-parse --verify --quiet '73c087a^{commit}')
+[ -n "$lref" ] && [ -n "$lpin" ] && [ "$lref" = "$lpin" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count is '$lref', not 73c087a ('$lpin') — the untouched fixture item moved before this stage ran (D21-42 18)"; exit 1; }
+wtl=$(LC_ALL=C git worktree list --porcelain); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: git worktree list rc=$rc"; exit 1; }
+lreg=0; printf '%s\n' "$wtl" | grep -qxF "worktree $legacy" && lreg=1
 whole 7i runbook/phase-1/s7i-cost.md 'CP7I-END-OF-BLOCK reached'
 whole 5 runbook/phase-1/s5-workspace-ci-rk-types.md 'FAIL: deny.toml absent'
 whole 7a runbook/phase-1/s7a-ports-and-fakes.md 'FAIL: cargo test -p rk-ports exited'
 whole 7b runbook/phase-1/s7b-kernel.md 'spikes/p9/grammar-probe.py absent'
-# 7f runs `redkiln run` on the fix item. It must be unable to dispatch: every shipped card lacks permission_mode, so
-# lint_card refuses before any spawn. From s8h on that is false, and this line must be re-scoped before it runs.
-set -- .redkiln/cards/*.json
-[ "$#" -eq 8 ] && [ -f "$1" ] || { echo "FAIL: expected 8 shipped cards"; exit 1; }
-pm=$(grep -l 'permission_mode' "$@"); rc=$?
-[ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc) — Checkpoint 7f's run could reach a REAL dispatch; stop (D21-40 decision 2)"; exit 1; }
 whole 7f runbook/phase-1/s7f-conformance-and-records.md 'CP7F-END-OF-BLOCK reached'
+d_after=$(dcount "$store"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$d_after" ] || { echo "FAIL: cannot count dispatch_completed after the whole runs (rc=$rc)"; exit 1; }
+[ "$d_after" = "$d_before" ] || { echo "FAIL: dispatch_completed moved '$d_before' -> '$d_after' (store, journals) — a whole run DISPATCHED (D21-40 decision 2)"; exit 1; }
+lnow=$(git rev-parse --verify --quiet 'refs/heads/rk-run/rk-fix-doctor-test-count^{commit}')
+[ "$lnow" = "$lref" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count moved '$lref' -> '$lnow' during the whole runs"; exit 1; }
+if [ "$lreg" -eq 1 ]; then
+  wtl=$(LC_ALL=C git worktree list --porcelain); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: git worktree list rc=$rc after the whole runs"; exit 1; }
+  if ! printf '%s\n' "$wtl" | grep -qxF "worktree $legacy"; then
+    out=$(LC_ALL=C git worktree add "$legacy" rk-run/rk-fix-doctor-test-count 2>&1); rc=$?
+    [ "$rc" -eq 0 ] || { echo "FAIL: cannot restore the legacy run worktree at $legacy (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
+  fi
+  lh=$(LC_ALL=C git -C "$legacy" rev-parse HEAD); rc=$?
+  [ "$rc" -eq 0 ] && [ "$lh" = "$lref" ] || { echo "FAIL: the legacy run worktree is at '$lh', not $lref"; exit 1; }
+  lst=$(LC_ALL=C git -C "$legacy" status --porcelain); rc=$?
+  [ "$rc" -eq 0 ] && [ -z "$lst" ] || { echo "FAIL: the restored legacy run worktree is not clean (rc=$rc)"; exit 1; }
+fi
 
 echo "CP8A-END-OF-BLOCK reached"
 ```
@@ -553,14 +708,25 @@ Adversarial refuting rounds run over the diff until a round moves no code and no
 3. **Packet (i) A(3) says Checkpoint 7f takes no checkpoint edit.** This stage's brief asks for a re-scope, and
    D21-40 decision 4 requires 7f to be repaired. §8a.5 does both. `s8e` must move the literal again. ADR-0134
    decision clause 5 says, in its `## Decision`, that 7f *"becomes non-re-runnable at that commit"*. This file reads
-   that sentence as being about the old text, so the re-scope does not supersede it. Confirm that reading, or route
-   the re-scope as a supersession in part.
+   that sentence as being about the old text, so the re-scope does not supersede it. **Settled by D21-43 N27**
+   (2026-09-24): *"The reading is confirmed."* No supersession.
 4. **The design's phase-bearing S-CODEX row is §10.4's, not §10.5's**, and there are six register sites, not two.
-5. **Checkpoint 7c becomes provisional here**, and its re-run needs a paid probe. The plan does not list it under
-   `s8j`.
+5. **Checkpoint 7c becomes provisional here**, and its re-run needs a paid probe. **Settled by D21-43 N28:**
+   `s8j` re-runs it whole, from a plain terminal through the launcher, with the live probes. This stage does not.
 6. **The kernel passes `change_summary("")` today.** A Text body that accepts an empty range would be a vacuous
    green over eleven shipped steps. The empty-range refusal is named as a test.
 7. **The stage plan's "via git diff" must not be read as a shell-out from the adapter.** The adapter's own manifest
    comment confines git to `rk-git`.
+8. **Checkpoint 7f's whole run removes the legacy run worktree, which D21-44 says stays put** (2026-09-24
+   revision). Both `recreate_run_worktree`'s `worktree remove --force` and 7f's own cleanup line remove it, and
+   nothing re-adds it. This stage restores it in guard (11). **For `s8e`:** once the root moves to
+   `.redkiln/worktrees/<item>`, 7f's cleanup line still names `.git/redkiln/worktrees/rk-fix-doctor-test-count`.
+   A whole re-run of 7f would then remove the legacy tree and leave the new one registered. That is the hazard
+   the cleanup line was written to disarm (*"makes every later repo-root grep double-count against a stale tree"*),
+   and D21-44 asks every recursive walk over `.redkiln/` to exclude `worktrees/`. Whoever next re-runs 7f whole
+   owns re-pointing that line, and under W2's *"refused, never removed"* it may have to stop removing at all.
+9. **An LFS pointer path would have made the `Text` variant lie** (2026-09-24 revision). `classify` answers
+   `Text` for a pointer file with a text extension, or with no NUL, and the object-store diff of an LFS path is a
+   pointer delta. §8a.2 item 2a classifies it `Binary` on the blob, with two named tests.
 
 ---

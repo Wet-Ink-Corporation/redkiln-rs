@@ -9,6 +9,30 @@
 A bare `§N.M` in this file means this file's own section; another stage's section is cited as `s5 §5.3`. Every
 shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it opens with its own `cd`.*
 
+*Revised 2026-09-24 for D21-43/44/45* (re-measured at `a6349b6`). What changed:
+
+- **The operator's four S-BIN decisions are taken** (D21-43 N19–N22), so §8i.2 records them and no longer offers
+  options. Captures are taken by hand through `/ue-verify` on all five trees, by one procedure (N19; §8i.2 item 2,
+  §8i.4). Backlog and status prose are stripped identically from all five (N20; item 3). The two undecided outcomes
+  are registered as undecided and take the human-gate route (N21; item 9, §8i.8). Seed 5 is replaced by the
+  registered procedure before dispatch (N22; new item 12). The gate is Checkpoint 8h plus the dry run, confirmed on
+  the B1 line (N22; §8i.1). The CLI is frozen from S-BIN on (N22; §8i.5).
+- **`/ue-verify` is a Claude Code command, not a script** (§8i.0 item 11, measured). Each capture is an interactive
+  session on the account, with the editor open. So the five capture sessions sit in B1, under its go-ahead, and they
+  are recorded.
+- **Two items the brief assigned here**: AC-475's lift criterion (§8i.8), and `spikes/FINDINGS.md`'s missing F41/F42
+  rows (§8i.7). Both are in the work commit, and Checkpoint 8i asserts both.
+- **The "four of five" design sentence** gets its dated correction at both of its lines. Guard (9) asserts it.
+- **The Checkpoint 8h re-run could not have run as drafted.** Its dispatch scan refused s8h's own `--list --ignored`
+  and `clippy --features live` lines. The scan now refuses only shapes that execute, and each pattern has a
+  synthetic control. The inputs the re-run blocks read are checked by name first (guard (11)).
+- **Re-runs**: 8h whole (the entry gate), plus 8a and 5, which this stage's edits make provisional. Nothing else is
+  re-run directly. The nested cost is stated. The block runs with no launch record, so any nested `redkiln run`
+  refuses before it spawns (s8h §8h.7). The tripwire watches both account roots.
+- **Floor**: re-derived from Checkpoint 8h's recorded count, plus this stage's 6 + N.
+- **LFS** is s8a §8a.2 item 2a's rule, cited and not re-specified. **D21-44/45**: no run-worktree path appears in this
+  file. W4 was measured against BrittonGames (§8i.0 item 12).
+
 ---
 
 **Why this step exists.** D21-42 decision 2 took the `ChangeSummary` question in two halves: *"**Split the type now,
@@ -42,6 +66,7 @@ to the ledger before the batch starts.
 
 The facts brief and the stage plan were right about the question, the cost and the fixture's registration. Ten things
 they say or imply are not what the tree holds, and each would have cost a dispatch or a record had it been carried in.
+Items 11 and 12 were added at the 2026-09-24 revision, measured at `a6349b6`.
 
 1. **There is no `spikes/runner` in this repository, and the runner has no S-BIN driver.** Step 2 moved the runner to
    `D:/repos/redkiln-corpus/runner` (ADR-0013; `s2`'s *"pinned SHA, fixtures, JSONL and the spike runner all live
@@ -69,7 +94,8 @@ they say or imply are not what the tree holds, and each would have cost a dispat
    specifically."* That spec was added by `2b0814f78` (2026-08-31, *"close 8.5.6"*), which is **not an ancestor of
    `bf9c499a1`** [measured, `git merge-base --is-ancestor`]. The same entry's corrected instrument reviews *"each item
    … at its own commit"*, so the greenness check for seed 5 is the whole `OurGame.*` suite as it stood at
-   `bf9c499a1`. Recorded in the amendment, not dropped silently.
+   `bf9c499a1`. Recorded in the amendment, not dropped silently. D21-43 N22 then took the consequence: *"Seed 5 is
+   **replaced by the registered procedure** before dispatch"* (§8i.2 item 12).
 6. **No capture of any item's own subject is tracked at any item's commit.** `_workspace/runbooks/_captures/` holds
    11 PNGs at the commits of items 1, 2, 4 and 5 and 17 at item 3's, every one a `CameraFidelity_*` or an
    `InventoryGym_*` station capture [measured, `git ls-tree -r`]. Item 4's own commit says where its captures went:
@@ -80,23 +106,50 @@ they say or imply are not what the tree holds, and each would have cost a dispat
    the tree at `a71265925` carries it: `_workspace/backlog/game_foundation_backlog.json` reads *"**Known open at
    hand-off: `WBP_LoadoutScreen`’s `LoadoutFill` alpha is 0.10 where 0.97 was intended, so the left column is
    translucent**"* [measured, `git show a71265925:_workspace/backlog/game_foundation_backlog.json`]. A reviewer with
-   `Read` in that tree reads it. The registration scoped `text_diff` and `spec.md` and left the tree.
+   `Read` in that tree reads it. The registration scoped `text_diff` and `spec.md` and left the tree. Re-measured at
+   `a6349b6`: at `a71265925`, `LoadoutFill` occurs in text files only under `_workspace/backlog/`, once in
+   `epics/E8_Inventory/E8_Backlog.md` and three times in the backlog JSON [measured, `git grep -c LoadoutFill
+   a71265925 -- '*.md' '*.json' '*.cpp' '*.h' '*.py'`]. `CLAUDE.md` does not name it, but it carries a status table
+   whose *Progress* row items 1 and 3 move [measured, `git show --numstat`]. D21-43 N20 strips both kinds of prose
+   (§8i.2 item 3).
 8. **Halt 2 is live.** `claude --version` reads `2.1.281 (Claude Code)`; `RUNBOOK-instrument.txt` reads
-   `2.1.278 (Claude Code)` [measured 2026-09-24]. §8i.5 says what this stage does about it.
+   `2.1.278 (Claude Code)` [measured 2026-09-24]. §8i.5 says what this stage does about it. D21-43 N22 freezes the
+   CLI from S-BIN on.
 9. **The registered decision rule is not total.** METHOD-S §3.4's three branches cover *"2/2 detection and ≤1/3 false
    positive"*, *"A seed missed and its finding would have needed a field the summary lacks"*, and *"Both seeds missed
    with the summary fields cited but not the asset"*. Two outcomes reach none of them: **2/2 detection with ≥ 2/3
    false positives**, and **a seed missed where the reviewer names no missing field and cites no summary field**.
    Golden constraint 10: a bar that cannot decide an outcome is reported as not deciding it, and that is registered
-   before the data (§8i.2 item 9).
+   before the data (§8i.2 item 9). D21-43 N21 registers both as undecided: if either occurs, the `Binary` variant
+   takes the human-gate route.
 10. **`spikes/FINDINGS.md`'s index stops at F40** although `F41-DRAFT.md` and `F42-DRAFT.md` exist, and the index says
-    *"A later F-number is added here the day its draft is written."* Not this stage's to repair; reported so the S-BIN
-    row is not the third missing one.
+    *"A later F-number is added here the day its draft is written."* **The 2026-09-24 revision brief assigns the
+    repair to this stage**, since it writes a FINDINGS row. The work commit adds F41's and F42's rows beside S-BIN's
+    (§8i.7), and guard (2) asserts that every draft is indexed.
+11. **`/ue-verify` is a Claude Code slash command that drives the running editor through Monolith MCP. It is not a
+    script.** BrittonGames' `.claude/commands/ue-verify.md` opens: *"Verify OurGame in the running UE 5.8 editor via
+    Monolith MCP — load key assets, run PIE, scan logs, screenshot"*. Its precondition is *"the editor must be open on
+    OurGame with the Monolith server up"*, and its capture step is *"`editor_query("capture_scene_preview", …)` for a
+    visual"*. Its defaults are animation assets, and *"If `$ARGUMENTS` names specific assets or a map, verify those
+    instead of the defaults."* The plugin (`OurGame/Plugins/Monolith/`) and `.mcp.json` are tracked at all five item
+    commits, and the command file's last change before each item is `70c4a5214` (2026-07-25) [measured, `git
+    ls-tree -r` and `git log -1 <item> -- .claude/commands/ue-verify.md`]. That has three consequences. Each capture
+    is an **interactive session on the account**: it spends, and it writes a transcript. It runs with the editor
+    **open**, while `verify_headless.ps1` needs it closed. And Monolith listens on one port, so only one editor can
+    run at a time. **Unmeasured:** whether `capture_scene_preview` shows a widget blueprint's subject (items 1, 4 and
+    5 are UMG widgets). §8i.6 makes a "no" a stop.
+12. **D21-45 W4 would not refuse BrittonGames.** W4 refuses a run worktree when *"a repo-local filter driver (for
+    example LFS via `--local`) or an `includeIf` would yield pointer files"*. BrittonGames carries its LFS filter at
+    **system** scope (`filter.lfs.clean`, `.smudge`, `.process`, `required true`). `git config --local
+    --get-regexp '^filter\.'` and `'^includeif'` both return rc 1 [measured]. S-BIN's review trees are fresh
+    repositories (§8i.4) and not redkiln run worktrees, so W4 does not govern them. The fact matters for the
+    `Binary` record's Phase-2 producer (§8i.8).
 
 What the brief got right, re-measured: the BrittonGames pin `041ead2cb284afd3004d07c2826f31d05b2799fd` is HEAD of
 `D:/repos/BrittonGames`, with exactly the two modified paths the entry names (`AnimationGym.umap`,
 `OurGame.uproject`); the five item commits and both seed parents resolve (`a71265925^` = `cc0cf2d01…`, `bf9c499a1^`
-= `b0cff782d…`); every LFS object both seeds need is **present locally** under `.git/lfs/objects`; the engine's
+= `b0cff782d…`); every LFS object both registered seeds need is **present locally** under `.git/lfs/objects` (seed 5
+is replaced, §8i.2 item 12, and its replacement's objects are measured in B0); the engine's
 `UnrealEditor-Cmd.exe` is installed at `C:\Program Files\Epic Games\UE_5.8`; `verify_headless.ps1` exists at every
 item commit; and the project's last recorded report reads `succeeded 849`, `succeededWithWarnings 180`, `failed 0`,
 `notRun 0` over 1029 tests, SHA-256 `c3dae80254299b8400149388d38df91b2885a4cf5c11ac0f8faf534b5d7e6bc6` [all
@@ -114,12 +167,12 @@ measured 2026-09-24, read-only].
   closing paragraph: *"The spend gates (the probes, the real runs and S-BIN's dispatches) remain behind D21-40
   decision 2's fixture-proof condition"*. D21-40 decision 2: *"The criterion-(1), (1b), (3)-operational and (7) runs
   may dispatch against the real account **once the sub-stages' fixture proofs pass**, and not before. That includes a
-  FakeHarness end-to-end test of `verbs::run::run`"*. The stage plan puts S-BIN before `s8j`'s lane proofs. **The
-  reading this file takes:** S-BIN does not dispatch through `redkiln` — no lane, no kernel, no harness adapter — so
-  the proofs that gate it are (i) Checkpoint 8h, which stands on every sub-stage proof through `s8h` including `s8e`'s
-  FakeHarness end-to-end test, and (ii) S-BIN's own zero-spend dry run (§8i.3). **If the operator reads the
-  condition as `s8j`'s lane proofs, this stage stops after B0** and the order is re-cut by a ledger line, never by an
-  edit to this file.
+  FakeHarness end-to-end test of `verbs::run::run`"*. The stage plan puts S-BIN before `s8j`'s lane proofs. **Taken
+  by D21-43 N22:** *"S-BIN is gated on Checkpoint 8h plus its zero-spend dry run, confirmed on the B1 line."* S-BIN
+  does not dispatch through `redkiln`: no lane, no kernel, no harness adapter. So the proofs that gate it are (i)
+  Checkpoint 8h, which stands on every sub-stage proof through `s8h`, including `s8e`'s FakeHarness end-to-end test,
+  and (ii) S-BIN's own zero-spend dry run (§8i.3). The B1 go-ahead line names both, by hash (§8i.5), and Checkpoint 8i
+  reads it.
 - **Operator present, foreground.** D17-5's form: *"In this session, foreground, operator present"*. Every UE
   automation run is the operator's hand (§8i.4).
 
@@ -129,22 +182,45 @@ One dated entry appended to METHOD-S §7, opening with the literal text **`s8i p
 lead (Checkpoint 8i finds its commit by that string), committed to this repository **before B1**. Like the 2026-09-09
 entry it changes nothing in METHOD-S §3 — *"the question, the decision rule, the prediction and the sizing stand
 exactly as registered"* — and Checkpoint 8i asserts that §3's bytes at HEAD equal §3's bytes at the amendment's
-commit, and that every S-BIN record post-dates it. Items marked **(operator)** are fixture decisions the entry left
-open or the measurement exposed; this file states the options and a recommendation and takes none of them.
+commit, and that every S-BIN record post-dates it. Four items were **(operator)** fixture decisions that the entry
+left open or the measurement exposed. The operator took all four on 2026-09-24 (D21-43 N19–N22). The amendment
+records each decision and cites its ledger line. It does not re-argue them.
 
 1. **Corrections 4 and 5 of §8i.0**, recorded as measured, with the commands.
-2. **(operator) The captures producer** — the decision the entry says in terms it *"does not take"*. (a) `captures`
-   empty on every item, recorded as *no producer at the item's commit* (§8i.0 item 6); (b) the operator takes
-   captures by hand on each of the five review trees through the project's `/ue-verify` route, before B2, by one
-   written procedure applied identically to clean and seeded trees — a seeded tree's capture shows the seed, which is
-   exactly what a real `Binary` summary would carry; (c) UE's automation screenshot comparison, which the entry
-   measured as *"has never run"* and which would first need its own greenness. Recommended: (b), because it is the
-   producer the project uses; (a) if the operator will not take ten perceptual captures by hand.
-3. **(operator) What the review tree holds besides the change** (§8i.0 item 7). (a) The tree as the commit has it,
-   with the leak recorded as a named threat; (b) the backlog and status prose (`_workspace/backlog/`, and item 1's
-   gotchas file) removed from **all five** trees identically, and recorded. Recommended: (b) — the METHOD-S §7 entry already
-   excluded the same files from `text_diff` *"because leaving them in would decide §3.5's prediction by fixture
-   construction rather than by the reviewer"*, and the tree is the same hazard one directory over.
+2. **The captures producer. Taken, D21-43 N19:** *"**The operator captures by hand** on all five review trees through
+   `/ue-verify`, with one procedure applied identically to clean and seeded trees."* The entry said it *"does not
+   take"* this decision, and the operator has now taken it. The amendment registers the procedure in writing
+   before B1. It states five things:
+   - The tree the editor opens is the stripped review tree (item 3).
+   - `/ue-verify`'s `$ARGUMENTS` are derived for every item by **one rule**: the item's own changed asset paths, plus
+     the map that places them if the rule needs one. They are never chosen per tree.
+   - The capture step is `capture_scene_preview`. Its file is written to `_s-bin/captures/` inside the tree, at the
+     same relative path on all five trees, and copied to `results/s-bin/captures/item-<n>/`.
+   - `monolith_status()` must report the tree's own project before anything is captured. The editor is closed and
+     no `UnrealEditor` process survives before the next tree (Halt 6).
+   - The session's model and its cost are noted per session in `results/s-bin/captures/procedure-log.txt`, with the
+     operator's yes/no on whether the capture shows the item's subject.
+
+   Only the capture file reaches the reviewer. The session's own report does not. A seeded tree's capture shows the
+   seed, which is exactly what a real `Binary` summary would carry. §8i.0 item 11 is why the sessions run in B1
+   (§8i.5): they are interactive sessions on the account. They run after the greenness runs and before any
+   rendering is hashed, so before B2, as the revision brief states N19.
+3. **What the review tree holds besides the change. Taken, D21-43 N20:** *"**Backlog and status prose stripped from
+   all five trees identically**, and recorded."* The amendment registers **one** set, and strips it from all five
+   trees before each tree's one commit. The set is:
+   - `_workspace/backlog/`, whole (18 files at every item commit [measured, `git ls-tree -r --name-only <item>
+     _workspace/backlog`]);
+   - `_workspace/references/UE58_Editor_And_MCP_Gotchas.md`;
+   - `CLAUDE.md`'s status table (its *Focus*, *Tier*, *Verify* and *Progress* rows), removed by a byte-level rule
+     that the amendment writes down.
+
+   `fixture.json` records the set per tree, and it must be one set across the five
+   (`stripped_path_set_is_identical_across_all_five_trees`). The amendment also registers, per seeded item, the
+   **leak tokens** that no non-asset file of any stripped tree may contain. For item 4 that is at least `LoadoutFill`
+   (§8i.0 item 7). For seed 5's replacement it is the tokens its own diagnosis uses. The fixture asserts zero hits
+   over all five trees (`review_tree_carries_no_registered_leak_token`). The reason is the one the METHOD-S §7 entry
+   gave for `text_diff`: *"because leaving them in would decide §3.5's prediction by fixture construction rather
+   than by the reviewer"*. The tree is the same hazard one directory over.
 4. **The fix is unreachable** (F17; METHOD-S §0's `fix_unreachable` pre-flight). F17's measured failure: a reviewer
    with `Bash` *"checked the fix out, reviewed the **real** code"*. So each review tree is a **fresh single-commit
    repository** holding only that tree: a neutral commit message, no remote, no other ref, and neither the fixed
@@ -165,15 +241,35 @@ open or the measurement exposed; this file states the options and a recommendati
    in shape, size the ceiling against the slow one"*), never below 3600 s, and the same for every dispatch.
 8. **Order.** Pass 1 is items 1–5 in order; pass 2 is items 1–5 in order; strictly sequential, one UE process at a
    time (Halt 6).
-9. **(operator) The two outcomes the rule does not decide** (§8i.0 item 9). Registered here as *"not decided by the
-   registered rule"*, reported as exactly that, and handed to the record with that stated. Recommended: for the
-   `Binary` variant an undecided pass takes the **human-gate route** (§8i.8) — the conservative direction, since an
-   automated verdict on a class with no evidence is what design §0.1 forbids.
+9. **The two outcomes the rule does not decide. Taken, D21-43 N21:** *"**Registered as undecided before dispatch.** If
+   either occurs, the `Binary` variant takes the human-gate route."* The amendment names both outcomes (§8i.0
+   item 9). `undecided-fp` is 2/2 detection with ≥ 2/3 false positives. `undecided-silent` is a seed missed, with no
+   missing field named and no summary field cited. Each is reported as *"not decided by the registered rule"*. The
+   finding's pins carry each pass's outcome (§8i.7), and Checkpoint 8i asserts that the record's route follows from
+   them (§8i.8).
 10. **The caps and the void rule** (§8i.5): one retry per `(pass, item)` at the same ceiling, resume keyed per
     `(arm, item, pass)`.
-11. **The CLI version** (§8i.5): recorded on every record; the set runs under one version or is reported per version.
+11. **The CLI version** (§8i.5): recorded on every record. D21-43 N22: *"The CLI is **frozen from S-BIN on**, and the set
+    never spans a version."* So a version move halts the set. It is not reported per version.
+12. **Seed 5 is replaced. Taken, D21-43 N22:** *"Seed 5 is **replaced by the registered procedure** before dispatch."*
+    The registered procedure is the entry's: *"If a seed goes red it is replaced from the remaining 27 asset-only
+    commits and this amendment is extended, never quietly edited."* The amendment registers the selection rule
+    **before any candidate is examined**. A candidate must meet all of these:
+    - It is an asset-only commit from the entry's pool of 29, and not one of the five items' commits.
+    - Its own message states the defect it fixes. The seed reverts its own asset or assets to its immediate parent,
+      in a tree at that commit, as seeds 4 and 5 did.
+    - It shares the registered seeds' selection basis, a perceptual defect. METHOD-S §7's selection threat applies
+      unchanged and is restated.
+    - Its constructed `spec.md` has a clause that the seeded state violates, and the clause is named before
+      dispatch. That rules out the defect the entry found in seed 5: *"Seed 5 violates no registered AC of 8.5.5g"*.
+    - It is green at its own commit (§8i.4), and every LFS object it needs is present locally.
 
-A seed that goes red at its greenness check is handled as registered: *"If a seed goes red it is replaced from the
+    The operator picks among the candidates that meet the rule. The amendment lists every candidate examined, with
+    the reason each was passed over, and the command that enumerated the pool. The pool must count 29, or the
+    difference is recorded. Item 5 is then that commit, reviewed at that commit. `bf9c499a1` is recorded as
+    replaced, and §8i.0 item 5 is the reason.
+
+A seed that goes red at its greenness check, the replacement included, is handled as registered: *"If a seed goes red it is replaced from the
 remaining 27 asset-only commits and this amendment is extended, never quietly edited."* Extension happens before B2;
 after the first Opus dispatch no seed, item, rendering or ceiling moves. A change that turns out to be needed after
 that point discards the set, as METHOD-S's own 2026-09-05 entry did (*"after 10 dispatches, all of which are
@@ -209,6 +305,9 @@ is authored and run **from Python, never the shell**, and must flip its test.
 | `the_dispatch_cap_refuses_before_spawning` | §8i.5 caps | check the cap after the child is spawned |
 | `resume_is_keyed_per_arm_item_pass` | METHOD-S §0 | key on `item` alone |
 | `a_surviving_unreal_process_halts_before_the_next_dispatch` | Halt 6 | skip the process check |
+| `stripped_path_set_is_identical_across_all_five_trees` | §8i.2 item 3 (D21-43 N20) | strip each tree by its own item's diff |
+| `review_tree_carries_no_registered_leak_token` | §8i.2 item 3 | scan `_workspace/backlog/` only |
+| `every_item_carries_a_capture_reference_or_rendering_refuses` | §8i.2 item 2 (D21-43 N19) | render captures for the seeded items only |
 
 **The audit.** `results/audit-s.py` gains a `bin` subcommand: per pass and per item, detection on each seed (strong,
 under strict), approval on each clean item, the fields cited, whether the reviewer ran the automation itself, and
@@ -219,8 +318,10 @@ before it reads a real one.
 **The zero-spend dry run — S-BIN's fixture proof.** The driver runs end to end over item 1's real review tree with the
 runner's global `--claude-bin` pointed at a stub that replays a recorded stream; the record it writes carries
 `"dry_run": true`, goes to `results/s-bin/dry-run.jsonl` and **never** to `results/s-bin.jsonl`, and the audit reads
-it. Golden constraint 4 is the reason: *"A rig that compiles and passes its unit tests has NOT been run."* The test
-run's full output is kept as `results/s-bin/driver-tests.txt`.
+it. Golden constraint 4 is the reason: *"A rig that compiles and passes its unit tests has NOT been run."* The captures
+do not exist yet, because they are taken in B1. So the dry run renders item 1 with a synthetic capture reference,
+and its record marks that it did. The test run's full output is kept as `results/s-bin/driver-tests.txt`. Its
+sha256 is named on the B1 line (§8i.5).
 
 ### 8i.4 The fixture — five review trees, two seeds, and the operator's UE runs
 
@@ -235,15 +336,17 @@ change, the materialised file's SHA-256 equals the `oid` in its pointer. Then ap
 ```bash
 # item 4, in a tree at a71265925 (registered 2026-09-09; METHOD-S §7)
 #   git checkout a71265925^ -- OurGame/Content/UI/Inventory/WBP_LoadoutScreen.uasset
-# item 5, in a tree at bf9c499a1
-#   git checkout bf9c499a1^ -- OurGame/Content/UI/Inventory/WBP_LoadoutScreen.uasset OurGame/Content/UI/Inventory/WBP_StashPanel.uasset
+# item 5: REPLACED before dispatch (D21-43 N22; §8i.2 item 12). In a tree at the replacement commit R:
+#   git checkout R^ -- <each asset R changed>
 ```
 
-— apply §8i.2 item 3's decision identically to all five, and commit each tree as the **only** commit of a fresh
-repository (§8i.2 item 4). Confirm each seed by blob oid (`git rev-parse <seed>^:<path>` against the fresh
+— strip §8i.2 item 3's registered set identically from all five and scan each for the registered leak tokens. Then
+commit each tree as the **only** commit of a fresh repository (§8i.2 item 4). Confirm each seed by blob oid (`git rev-parse <seed>^:<path>` against the fresh
 repository's `git rev-parse HEAD:<path>`), and confirm the fix unreachable (the fixed pointer blob absent from the
 object store, its LFS object absent from `.git/lfs/objects`, `git rev-list --all --count` = 1). Write all of it to
-`results/s-bin/fixture.json`.
+`results/s-bin/fixture.json`, keyed `items.<n>`. Each item carries at least `stripped` (the path set removed),
+`leak_hits` (the registered-token scan's count) and `captures` (tree-relative paths and SHA-256). `captures` is filled
+after B1 and before any rendering is hashed. Checkpoint 8i reads these three keys.
 
 **The operator's hand, with the editor closed** (`verify_headless.ps1`: *"When the editor is RUNNING, do not use this
 script"*):
@@ -256,18 +359,32 @@ script"*):
 3. Each tree's `index.json` and `headless.log` are copied to `results/s-bin/greenness/item-<n>/` and hashed; that
    report is the item's `tests.report_ref`.
 4. The build and suite wall clock of each run is recorded; the slowest sets §8i.2 item 7's ceiling.
-5. If §8i.2 item 2 took (b), the captures are taken now, by the written procedure, on each tree.
+5. The captures are **not** taken here. Each is an interactive session on the account (§8i.0 item 11), so they run in
+   B1, under its go-ahead (below).
 6. The pin's own 2026-09-05 report is copied as registered (*"Before dispatch it is copied into the spike's own
    results directory with its SHA-256 recorded"*) to `results/s-bin/pin-report-2026-09-05/index.json`; its SHA-256
    must be the `c3dae802…6bc6` measured at authoring (§8i.0), or it was overwritten after 2026-09-05 and the copy is
    not the registered report.
 
+**The captures, in B1: the operator's hand, the editor open, one tree at a time** (D21-43 N19; §8i.2 item 2's
+registered procedure). For items 1 to 5 in order:
+
+1. Open the editor on the tree's `OurGame/OurGame.uproject`.
+2. From the §8i.5 shell (frozen CLI, the account's `CLAUDE_CONFIG_DIR`), start a Claude Code session in the tree.
+3. Run `/ue-verify` with the registered `$ARGUMENTS`. Confirm that `monolith_status()` reports this tree's project.
+4. Confirm that the capture landed at the registered path. Copy it to `results/s-bin/captures/item-<n>/` and hash it.
+5. Write the procedure-log line: the tree, the session's model and cost, the capture's sha256, and the operator's
+   yes/no on whether it shows the item's subject. That is a judgement on framing, never on the defect.
+6. Close the session and the editor. No `UnrealEditor` process survives (Halt 6).
+
+A "no" on a seeded tree is a stop (§8i.6). It never falls back to empty captures.
+
 ### 8i.5 Spend — the batches, the caps, the environment, the version
 
 | batch | what | model spend | gate |
 | --- | --- | --- | --- |
-| **B0** | driver and audit built test-first (§8i.3); dry run; five review trees, seeds by blob oid, fix unreachable (§8i.4); the operator's five UE runs; captures if chosen; the amendment committed | none | operator go-ahead for the corpus writes |
-| **B1** | at most **3 haiku** flag probes on a throwaway tree — the card adopted with `Read`+`Bash` under `--json-schema` (F20's measured hazard: *"an agent card's `tools` allowlist silently disables `--json-schema`"*), `apiKeySource` `none`, the init tool set equal to the card's. Not S-BIN records. | ≤ 3 haiku | **go-ahead B1**, which also confirms §8i.1's fixture-proof reading |
+| **B0** | driver and audit built test-first (§8i.3); dry run; seed 5's replacement selected under the registered rule (§8i.2 item 12); five stripped review trees, seeds by blob oid, fix unreachable (§8i.4); the operator's five UE runs; the amendment committed | none | operator go-ahead for the corpus writes |
+| **B1** | at most **3 haiku** flag probes on a throwaway tree: the card adopted with `Read`+`Bash` under `--json-schema` (F20's measured hazard: *"an agent card's `tools` allowlist silently disables `--json-schema`"*), `apiKeySource` `none`, and the init tool set equal to the card's. **Then the five `/ue-verify` capture sessions** (§8i.4, D21-43 N19). None of these is an S-BIN record. | ≤ 3 haiku + 5 operator sessions | **go-ahead B1**, whose line names the fixture proofs it rests on (D21-43 N22) |
 | **B2** | pass 1: items 1–5 | 5 Opus | **go-ahead B2** |
 | **B3** | pass 2: items 1–5, after pass 1's audit has been read | 5 Opus | **go-ahead B3** |
 | retries | a void retried once at the same ceiling, inside its batch; each named in the ledger | ≤ 4 Opus in all | inside B2/B3's go-ahead |
@@ -275,22 +392,28 @@ script"*):
 
 **The caps, enforced by the driver before it spawns** (`the_dispatch_cap_refuses_before_spawning`): **18 Opus
 dispatches** and **3 haiku**, counting voids, and **$90 API-equivalent** summed over every S-BIN record's
-`total_cost_usd`, probes included. The warrant: METHOD-S §3.6 sizes S-BIN at *"**10 dispatches**, ~$30 plus UE
+`total_cost_usd`, probes included. The capture sessions are not the driver's to count, because it does not spawn
+them. The operator adds their noted cost to the running total, and the B2 line's *caps used so far* includes it.
+The warrant: METHOD-S §3.6 sizes S-BIN at *"**10 dispatches**, ~$30 plus UE
 automation wall clock"*; S-TYPED's median was *"$3.03/review"* (METHOD-S §7, 2026-09-11 item 3), and a reviewer that
 builds and runs a UE suite is slower, so 18 × ~$5 bounds it. Reaching either cap halts the stage; raising one is a
 ledger line, never an edit here. Throttle margins are the runner's (METHOD-S §0, *"throttle margins honoured"*).
 
 **The go-ahead line.** Before each batch the operator writes, in the ledger entry this stage opens (next free D21 id at
-writing), one dated line of the fixed form `S-BIN go-ahead B<n> <UTC time> — <scope>, <caps used so far>`.
-Checkpoint 8i reads them. D21-40 decision 2 binds every batch: *"If a real run is refused unexpectedly, the next step
+writing), one dated line of the fixed form `S-BIN go-ahead B<n> <UTC time> — <scope>, <caps used so far>`. The B1
+line carries one more clause, `; fixture proofs: Checkpoint 8h <hash>, dry run <sha256 of results/s-bin/dry-run.jsonl>`,
+which is D21-43 N22's *"confirmed on the B1 line"*. Checkpoint 8i reads all of them. D21-40 decision 2 binds every batch: *"If a real run is refused unexpectedly, the next step
 is to stop and report, not to spend again."*
 
 **The environment.** D21-42 17a: *"A committed launcher script is the only entry to a real run. It refuses
 `CLAUDECODE`/`CLAUDE_CODE_*` and denylisted names, sets `CLAUDE_CONFIG_DIR` explicitly, freezes auto-update and
-captures the version. The adapter refuses unless init reports `apiKeySource == "none"`."* S-BIN launches through
-`s8h`'s launcher if it exposes an entry for an arbitrary child; if it does not, the operator's shell applies the same
-refusals first, and the driver enforces the `apiKeySource` half itself
-(`api_key_source_other_than_none_voids_before_scoring`). The account is D21-42 17b's: *"`~/.claude-personal`."*
+captures the version. The adapter refuses unless init reports `apiKeySource == "none"`."* **S-BIN does not launch
+through `s8h`'s launcher, and this was measured against s8h's text.** Its modes are `run <item>`, `probe <test>` and
+`--check` (s8h §8h.7), and none of them is for an arbitrary child. Its step 6 also refuses *"unless the version equals
+`TESTED_CLI_VERSION`"*, and that pin moves only at `s8j` (D21-42 16), while the installed CLI is already past it
+(§8i.0 item 8). So the operator's shell applies the same refusals first, as below, and the driver enforces the
+`apiKeySource` half itself (`api_key_source_other_than_none_voids_before_scoring`). The account is D21-42 17b's:
+*"`~/.claude-personal`."*
 
 ```bash
 # The operator's shell before B1..B4 — a Git Bash OUTSIDE Claude Code (s7c §7c.15's rule). Refusals, never strips.
@@ -300,17 +423,29 @@ for v in ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL ANTHROPIC_FOU
 done
 export CLAUDE_CONFIG_DIR="$HOME/.claude-personal"
 test -d "$CLAUDE_CONFIG_DIR" || { echo "FAIL: no $CLAUDE_CONFIG_DIR — D21-42 17b's account is not on this box"; exit 1; }
+# D21-43 N22: the CLI is frozen from S-BIN on. s8h §8h.8's mechanism: the child's environment, AND the account's settings.
+export DISABLE_AUTOUPDATER=1
+grep -q '"DISABLE_AUTOUPDATER"' "$CLAUDE_CONFIG_DIR/settings.json" || { echo "FAIL: $CLAUDE_CONFIG_DIR/settings.json has no DISABLE_AUTOUPDATER env row — the freeze (s8h §8h.8) is not in place before B1"; exit 1; }
 ver=$(claude --version 2>&1); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$ver" ] || { echo "FAIL: claude --version did not run (rc=$rc)"; exit 1; }
-echo "S-BIN instrument version at this batch: $ver — every record carries it; a move since the set's first record HALTS (Halt 2)"
+cbin=$(command -v claude); rc=$?
+[ "$rc" -eq 0 ] && [ -f "$cbin" ] || { echo "FAIL: claude does not resolve to a file (rc=$rc)"; exit 1; }
+csha=$(sha256sum "$cbin"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$csha" ] || { echo "FAIL: could not hash $cbin (rc=$rc)"; exit 1; }
+echo "S-BIN instrument at this batch: $ver, ${csha%% *} — every record carries the version; a move since the set's first record HALTS (Halt 2)"
 ```
 
-**The version, and why the pin does not move here.** Halt 2 fires at this stage's open (§8i.0 item 8): *"Record it; do
-not silently continue."* It is recorded — in `PROGRESS.md`, in every record, in the finding. `TESTED_CLI_VERSION`
-is `rk-adapter-claude`'s pin, and S-BIN does not dispatch through that adapter; D21-42 16 moves it *"**once**, at probe
-time"*, which is `s8j`. What S-BIN needs is that its own set does not straddle a version: auto-update is frozen by
-the launcher's mechanism from B1 to the last dispatch, and `a_version_move_between_dispatches_halts_the_set` enforces
-it (*"Any set that spans a version boundary is reported per-version or it is not reported"*).
+**The version: frozen from S-BIN on, and the pin still moves only at `s8j`.** D21-43 N22: *"The CLI is **frozen from
+S-BIN on**, and the set never spans a version."* The mechanism is s8h §8h.8's: `DISABLE_AUTOUPDATER=1` in the
+child's environment, and in the account's `settings.json` `env` block. s8h's text puts the settings row in place
+before `s8j`'s procedure. N22 moves it forward to **before B1**, and it stays through `s8`. The operator writes it,
+because it is user configuration. The shell above refuses without it, and the before-and-after sha256 is the
+detector. Halt 2 fires at this stage's open (§8i.0 item 8): *"Record it; do not silently continue."* It is recorded
+in `PROGRESS.md`, in every record, and in the finding. `TESTED_CLI_VERSION` is `rk-adapter-claude`'s pin, and S-BIN
+does not dispatch through that adapter. D21-42 16 moves the pin *"**once**, at probe time"*, which is `s8j`.
+**Handed on to `s8j`:** with the freeze in place from B1, the version `s8j` pins must be the S-BIN pins block's
+`cli_version`. If it is not, the freeze failed, and that is `s8j`'s Halt 2 to report. Inside the set,
+`a_version_move_between_dispatches_halts_the_set` enforces the rule.
 
 ### 8i.6 Kill and abort conditions
 
@@ -320,8 +455,12 @@ dated line, and nothing resumes without a new go-ahead.
 - **The runner does not build** (Halt 1), or a driver test is not observed red first.
 - **The dry run fails, or any B1 probe shows** `--json-schema` inert, a tool set unequal to the card's, or
   `apiKeySource` other than `none` (Halt 3; F20). No Opus dispatch follows a failed B1.
-- **A seed is caught by the suite** and no replacement from the 27 asset-only commits passes greenness — the spike
-  cannot run as registered.
+- **A seed is caught by the suite** and no replacement from the 27 asset-only commits passes greenness, or **no
+  candidate meets seed 5's registered replacement rule** (§8i.2 item 12). Either way the spike cannot run as
+  registered.
+- **A capture session cannot show the item's subject on a seeded tree**, or `monolith_status()` reports another
+  tree's project. Then N19's producer cannot run as decided. The stage stops for a ledger line, and it never falls
+  back to empty captures silently.
 - **A fix is reachable** in any review tree, or a seed's blob oid does not match.
 - **The CLI version moves** between the set's first record and any later dispatch (Halt 2).
 - **A UE process survives a dispatch** (Halt 6); the tree it held is rebuilt before any further dispatch.
@@ -342,20 +481,22 @@ decision in the ledger — it would supersede that half of D21-42 decision 2 —
 `results/s-bin.jsonl` (append-only; every record, voids included); `results/s-bin/raw/` (each dispatch's stdout,
 verbatim); `results/s-bin/rendered/item-<n>.txt`; `results/s-bin/greenness/item-<n>/`; `results/s-bin/fixture.json`;
 `results/s-bin/pin-report-2026-09-05/index.json`; `results/s-bin/dry-run.jsonl`; `results/s-bin/driver-tests.txt`;
-`results/s-bin/audit.txt`; `runner/src/sbin.rs`; `results/audit-s.py`.
+`results/s-bin/audit.txt`; `results/s-bin/captures/item-<n>/` and `results/s-bin/captures/procedure-log.txt`
+(D21-43 N19); `runner/src/sbin.rs`; `results/audit-s.py`.
 
 **Every S-BIN record** carries, beside the digest: `spike` = `"s-bin"`, `pass`, `item`, `arm`, `void` (`null` or the
 named reason), `rerun` (B4 only), `dry_run`, `cli_version`, `observed_model`, `api_key_source`, `fix_unreachable`,
 `seed_blob_verified` (`null` on a clean item), `ceiling_secs`, `started_at` (unix seconds), `wall_secs`,
-`total_cost_usd`, `ran_automation`, `cited_fields`, `detected` (`null` on a clean item), and `policy_verdict`
-(strict).
+`total_cost_usd`, `ran_automation`, `cited_fields`, `capture_refs`, `detected` (`null` on a clean item), and
+`policy_verdict` (strict).
 
 **In this repository:** the METHOD-S §7 amendment (§8i.2), and B4's if one is needed; the finding draft
 `spikes/F<next>-DRAFT.md` (next free F id at writing), headed `## F<n> — S-BIN …`, in F31's form — *Established by*
 (dispatches, dates, arm, model, CLI version, corpus commit, cost), each pass's table with its detection, false
 positives and cited fields, METHOD-S §3.4 evaluated **per pass**, §3.5's prediction against the outcome, the voids
-named, and the limits (§3.6: *"n=5 is a type-design sample, not a rate"*; the entry's perceptual-seed selection) —
-**and a pins block**, which Checkpoint 8i parses, of exactly this form:
+named, and the limits (§3.6: *"n=5 is a type-design sample, not a rate"*; the entry's perceptual-seed selection;
+seed 5's replacement and why). It also carries a section headed `### AC-475's lift share`, with the measurement and
+its command (§8i.8), **and a pins block**, which Checkpoint 8i parses, of exactly this form:
 
 ```text
 <!-- s-bin-pins
@@ -364,12 +505,20 @@ cli_version=<x.y.z>
 observed_model=<the one model id every valid record's init reported>
 ceiling_secs=<n>
 review_root=<the absolute directory the review trees were built under>
+rule_outcome_pass1=<branch1|branch2-detected|branch3|undecided-fp|undecided-silent>
+rule_outcome_pass2=<the same five>
+ac475_lift_share=<k>/<n>
 file=<corpus-relative path> sha256=<64 hex>
 -->
 ```
 
-with one `file=` line per corpus file listed above and per raw transcript. Also: a row in `spikes/FINDINGS.md`'s
-index; the ledger entry with every go-ahead; the `Binary` record (§8i.8); the dated notes (§8i.8); and the tracker rows.
+with one `file=` line per corpus file listed above, per raw transcript and per capture. Also in this repository:
+- **Three rows in `spikes/FINDINGS.md`'s index**, in its own `| F | draft | spike | headline |` form: **F41**
+  (`S-PORTS`) and **F42** (`S-GRAMMAR`), missing since their drafts were written (§8i.0 item 10; assigned here by the
+  2026-09-24 revision brief), and the S-BIN row. Each headline is condensed from the draft's own `## F<n> —` line.
+- The ledger entry with every go-ahead.
+- The `Binary` record and the dated notes, AC-475's replacement among them (§8i.8).
+- The tracker rows.
 
 ### 8i.8 From the finding to the `Binary` variant
 
@@ -388,6 +537,11 @@ it. Its `## Decision` carries three lines Checkpoint 8i parses:
 It must also say, by name, what evidence a `binary`-class AC gets. The design refused to switch the per-AC mutation
 norm off for a whole class blind (*"a substantive gate decision"*), and AC-356's struck clause left it on *"AC-337's
 `not-feasible(reason)` route until S-BIN reports"*. The record either keeps that route or changes it, and says which.
+It also names where a Phase-2 `Binary` producer's run worktree comes from under D21-45 W4, or names that as owed. On
+BrittonGames, W4 would not refuse (§8i.0 item 12). What an LFS path's summary carries is already assigned: s8a §8a.2
+item 2a makes an LFS pointer path `Binary` in the `Text` variant's manifest, and says *"What an LFS asset's summary
+carries (for example its size read from the pointer) is `Binary`'s content, and so `s8i`'s."* §8i.2 item 6's
+`assets[].size`, read from the pointer, is that content. This stage does not re-specify the pointer rule.
 
 **How the finding maps to the record** — per pass, never pooled:
 
@@ -397,7 +551,18 @@ norm off for a whole class blind (*"a substantive gate decision"*), and AC-356's
 | branch 2 in a pass | the field the reviewer's own prose names is added (B4); if the re-run detects, **route: reviewer** with it; if not, the pass is read as branch 3 |
 | branch 3 in a pass (*"binary review needs a *rendered* representation … recorded as a requirement"*) | **the variant is not dropped.** It keeps the manifest and test fields the reviewers did cite, and **route: human gate** — an item with a `Binary`-classified path cannot receive an automated review verdict; the review stage opens a human gate carrying the typed summary (AC-357's shape) until a producer of the rendered representation exists. The requirement is recorded against ADR-0008's Phase-2 Unreal adapter |
 | the passes disagree | the more conservative route, and the disagreement reported as a stability finding |
-| an outcome the rule does not decide | as the amendment registered (§8i.2 item 9), stated as such |
+| an outcome the rule does not decide (`undecided-fp`, `undecided-silent`) | **route: human gate** (D21-43 N21: *"If either occurs, the `Binary` variant takes the human-gate route."*), with the outcome reported as *"not decided by the registered rule"* |
+
+**The route, mechanically.** The pins carry `rule_outcome_pass1` and `rule_outcome_pass2`. Each is one of five
+values:
+- `branch1`;
+- `branch2-detected`, where B4's re-run detected;
+- `branch3`, which includes a branch 2 whose re-run missed;
+- `undecided-fp`;
+- `undecided-silent`.
+
+The route is `reviewer` exactly when both passes are `branch1` or `branch2-detected`. Otherwise it is `human gate`.
+Guard (7) asserts that the record's route line agrees.
 
 **If the answer is "no, the reviewer cannot verify without a diff"**, the design has already written the falsifier,
 and the record answers it clause by clause rather than by silence: *"`ChangeSummary` is not a type problem but an
@@ -411,9 +576,10 @@ either taken in the record or named as owed with an owner.
 `change_summary::binary_arm_is_not_constructible_outside_rk_ports`, with its `trybuild` case — is **superseded by
 name** in the same commit, and so is Checkpoint 8a's guard that the sealed payload has no `pub` field. Checkpoint 8a
 names both, so row 8a becomes `passed <hash>, re-run pending` (the preamble's maintenance rule) and `s8a`'s block
-takes a dated amendment. Whether the Rust adapter's
-`change_summary::change_summary_refuses_a_range_carrying_a_binary_path` stands follows the record's `Binary producers
-in Phase 1` line: with `none` it stands unchanged.
+takes a dated amendment. Checkpoint 8i then re-runs that amended block whole (guard (11)), and that discharges the
+pending re-run. Whether the Rust adapter's `change_summary::change_summary_refuses_a_range_carrying_a_binary_path`
+and `s8a`'s `change_summary::change_summary_refuses_a_range_carrying_an_lfs_pointer_path` stand follows the record's
+`Binary producers in Phase 1` line. With `none`, both stand unchanged.
 
 | test | where | red because | mutant |
 | --- | --- | --- | --- |
@@ -440,12 +606,26 @@ note first. Mutant cycles run **from Python, never the shell**.
 - **AC-497** — its *"the reviewer receives a typed `ChangeSummary` value"* holds on the reviewer route; on the
   human-gate route the register amends the recipient to the gate node, and the `ac497_*` test asserts the amended
   wording.
-- **AC-475** — S-BIN reported, but its note says *"When S-BIN settles the type, this criterion is replaced by a lift
-  criterion with its own measured share"*. That measurement is not this stage's and has no owner; it stays
-  PROVISIONAL with that said, and the owed lift criterion is raised in the tracker.
+- **AC-475 is this stage's.** It had no owner, and the 2026-09-24 revision brief assigns it here. Its note says:
+  *"When S-BIN settles the type, this criterion is replaced by a lift criterion with its own measured share; until
+  then any criterion asserting a `ChangeSummary` lift rate would be invented."* The share is measured here, at zero
+  model cost, before the replacement is written. The corpus is the pinned one (`CORPUS_PIN`'s `CORPUS_SHA`, read
+  through the object store).
+  - The denominator *n* is the diff-prose sections that `redkiln-migrate` carries as `LiftedWithLoss` with a marker
+    naming a diff-prose section. That is the carry `diff_prose_carried_opaque_with_loss_marker` pins on its fixture.
+  - The numerator *k* is those sections whose carried content the record's `Text` variant accepts as a patch.
+
+  The finding records the share under `### AC-475's lift share`, with its command, and the pins block records it as
+  `ac475_lift_share=<k>/<n>`. The register then replaces the criterion by dated amendment. The replacement is a lift
+  criterion stating `lift share <k>/<n>` and asserting at least that share, with the remainder carried opaque with a
+  marker. The same note says two things. Its corpus-scale verification is Phase 2's, where E13 placed the
+  loss-marker half. And the tripwire `ac475_zero_change_summary_values_in_output` stands until a lift is built.
+  **If *n* = 0**, the note says the corpus holds no diff-prose section to lift, and asserts no rate. F40's index
+  line is the precedent: *"recall has no denominator"*.
 - **AC-049** — not moved: its own note scopes S-BIN to *"the `ChangeSummary` type design only (ADR-0093 decision 4)"*.
 
-Each of the three criteria's blocks gains a note in exactly this form, which Checkpoint 8i finds:
+Each of the four criteria's blocks (AC-154, AC-356, AC-497, AC-475) gains a note in exactly this form, which
+Checkpoint 8i finds:
 `*Amended <date> (s8i, S-BIN reported — F<n>):* …`. And **every line** of the design and the register that states
 S-BIN's pending state — at `ca8f387`, **21** design lines and **17** register lines carry `S-BIN` beside one of
 `unrun`, `UNRUN`, `not been run`, `NOT been run`, `until S-BIN`, `before S-BIN`, `S-BIN reports` or `BLOCKED`
@@ -453,6 +633,14 @@ S-BIN's pending state — at `ca8f387`, **21** design lines and **17** register 
 design §0.1's `ChangeSummary` row, the status line's *"Four spikes gate that label — **S-BIN**, …"* (S-BIN leaves the
 design-final gate; the other three stay), the §10 register rows, register §0.3's row 3, and the design sentence §8i.0
 item 4 corrects.
+
+**The "four of five" sentence also gets a dated correction of its own, because it is false and not merely pending.**
+Both design lines that carry it (*"four of the five carry a source/test `text_diff` scoped per METHOD-S §7
+(2026-09-09) and only item 2 is diff-free"*, and §10's *"Four of the five items carry a source/test `text_diff`"*)
+gain `[Corrected <date> (s8i): under the registered scoping every item's text_diff is empty — s8i §8i.0 item 4]`,
+and each line keeps its words. The note on §10's line also records seed 5's replacement. At `a6349b6`, exactly two
+design lines carry `only item 2 is diff-free` [measured, `grep -c`]. Guard (9) asserts that every such line carries
+the correction.
 
 **Two guards whose condition lapses here, and whose they are.** Checkpoint 5's `ChangeSummary` line bans the type
 outside its home *"until S-BIN reports"* (ADR-0099 clause 5's words, as `s8a`'s record restated them): if `s8a`'s
@@ -465,19 +653,34 @@ included. So this stage's record commit amends that bullet and guard by dated no
 
 ### 8i.9 Checkpoint 8i
 
-- **The S-BIN records exist and are pinned** — the finding draft, its pins, every pinned corpus file byte-for-byte at
-  the pinned commit on the corpus's `main`, ten valid records one per `(pass, item)`, one CLI version, one model,
-  `apiKeySource` `none`, the fix unreachable and the seeds verified on every one, the caps not exceeded, and the
-  amendment committed before the first record with METHOD-S §3 unchanged since.
-- **The driver's tests pass at the pinned corpus commit**, rebuilt from the object store, not from a working tree.
-- **The `Binary` variant is constructible only as the record says** — the record exists and is accepted, and its
-  named tests pass in the counts its field set implies; no `Binary` construction appears on a code line outside the
-  type's crate except where the record names a producer.
-- **AC-154, AC-356 and AC-497 carry their dated notes**, and no design or register line still states S-BIN as pending
-  without one.
-- **The whole suite is green**, fmt and clippy clean, and Checkpoints 8h and 5 re-run whole and green.
-- **This block dispatches nothing**: it spawns no `claude` of its own, it refuses to run an extracted block that
-  carries a dispatch shape, and it fails if a new session transcript appears in the account while it runs.
+- **The S-BIN records exist and are pinned.**
+  - The finding draft and its pins exist.
+  - Every pinned corpus file matches byte-for-byte at the pinned commit on the corpus's `main`.
+  - There are ten valid records, one per `(pass, item)`, with one CLI version, one model and `apiKeySource` `none`.
+    The fix is unreachable and the seeds are verified on every one, and the caps were not exceeded.
+  - The amendment was committed before the first record, and METHOD-S §3 is unchanged since.
+  - The captures are pinned for all five items. The stripped set is one set across the five, and no registered
+    leak token is left.
+  - The B1 line names Checkpoint 8h and the pinned dry run (D21-43 N19, N20, N22).
+- **The driver's eighteen tests pass at the pinned corpus commit**, rebuilt from the object store, not from a working
+  tree.
+- **The `Binary` variant is constructible only as the record says.** The record exists and is accepted. Its named
+  tests pass in the counts its field set implies. No `Binary` construction appears on a code line outside the type's
+  crate, except where the record names a producer. Its route is the one the pinned per-pass outcomes give (D21-43
+  N21).
+- **The notes are in place.**
+  - AC-154, AC-356, AC-497 and AC-475 carry their dated notes. AC-475's states the measured lift share.
+  - Both "four of five" design lines carry their dated correction.
+  - No design or register line still states S-BIN as pending without a note.
+  - Every finding draft has its index row, F41 and F42 included.
+- **The whole suite is green**, over the floor re-derived from Checkpoint 8h's recorded count plus this stage's 6 + N,
+  and fmt and clippy are clean. **Checkpoint 8h** (the entry gate) and **Checkpoints 8a and 5** (made provisional by
+  this stage's edits) re-run whole and green. No other checkpoint is re-run directly. ⚠️ 8h's own chain nests: 8h
+  re-runs 8g, and so on down through 8a and 5, and 8a's run reaches 7f and 7i. That costs hours, and it is stated
+  here rather than avoided.
+- **This block dispatches nothing.** It spawns no `claude` of its own. It refuses an extracted block that carries a
+  shape that executes a dispatch. It runs with no launch record, so a nested `redkiln run` refuses before it spawns.
+  And it fails if a new session transcript appears under either account root while it runs.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -493,10 +696,24 @@ T=$(mktemp -d); rc=$?
 # ---- runs — a test, an extracted checkpoint — starts a session whose transcript is a NEW *.jsonl under the account.
 wt_before=$(git worktree list --porcelain | grep '^worktree ' | sort)
 test -n "$wt_before" || { echo "FAIL: git worktree list printed no worktree"; exit 1; }
-CFG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-test -d "$CFG/projects" || { echo "FAIL: no $CFG/projects — the tripwire would compare two empty listings"; exit 1; }
-sess_before=$(find "$CFG/projects" -type f -name '*.jsonl' | sort)
+# Both account roots are watched: D21-42 17b's ~/.claude-personal, and the default ~/.claude a stray child would use.
+CFGS=""
+for c in "$HOME/.claude-personal" "$HOME/.claude"; do [ -d "$c/projects" ] && CFGS="$CFGS $c/projects"; done
+[ -n "$CFGS" ] || { echo "FAIL: neither ~/.claude-personal/projects nor ~/.claude/projects exists — the tripwire would compare two empty listings"; exit 1; }
+sess_before=$(find $CFGS -type f -name '*.jsonl' | sort)
 test -n "$sess_before" || { echo "FAIL: the account holds no session transcript — the tripwire has no baseline"; exit 1; }
+# No launch record in this shell, so any nested `redkiln run` refuses before any spawn (s8h §8h.7). How the nested
+# 7f/7h/7i runs point at the fixture child is their re-running stages' (s8a, s8e, s8f), and is not re-specified here.
+[ -z "${REDKILN_LAUNCH_RECORD:-}" ] || { echo "FAIL: REDKILN_LAUNCH_RECORD is set — a nested redkiln run could reach the real harness; unset it"; exit 1; }
+# The inputs this block's direct re-runs read (guard (11)), checked by name here rather than failing late inside them.
+# The list is s8h's and s8a's at this revision; re-read both blocks' INPUTS at stage open.
+for v in REC_A REC_B A_SUPERSEDES TOKENS_APPETITE FIX_ITEM CS_ADR PACK_ADR CODEX_ADR S8A_BASE; do
+  [ -n "${!v:-}" ] || { echo "FAIL: $v is unset — Checkpoint 8h or 8a reads it"; exit 1; }
+done
+# THE FLOOR's base (guard (10)), re-derived at stage open from Checkpoint 8h's recorded count by a dated edit to these
+# two values. 780 is s8h's drafted floor (740 at ca8f387 plus its 40), the expected value; 44 is the result-line floor.
+FLOOR_8H_PASSED=780
+FLOOR_8H_RESULTS=44
 
 # ---- (1) BUILD-OR-FAIL.
 out=$(cargo build --workspace 2>&1); rc=$?
@@ -510,6 +727,13 @@ DRAFT=$drafts
 SBIN_F=$(sed -n 's/^## \(F[0-9][0-9]*\) — S-BIN.*/\1/p' "$DRAFT")
 [ -n "$SBIN_F" ] && [ "spikes/$SBIN_F-DRAFT.md" = "$DRAFT" ] || { echo "FAIL: the headline id '$SBIN_F' does not name its own file $DRAFT"; exit 1; }
 grep -qF "| $SBIN_F | " spikes/FINDINGS.md || { echo "FAIL: spikes/FINDINGS.md's index has no $SBIN_F row"; exit 1; }
+# Every finding draft is indexed. F41 and F42 were missing at authoring, and their rows are this stage's (§8i.7).
+BAR=$(printf '\174')   # the index's column bar, built so that no literal bar sits on this code line
+idx_missing() { for d in spikes/F[0-9]*-DRAFT.md; do n=${d#spikes/}; n=${n%-DRAFT.md}; grep -qF "$BAR $n $BAR \`$d\` $BAR" "$1" || printf '%s\n' "$n"; done; }
+miss=$(idx_missing spikes/FINDINGS.md)
+[ -z "$miss" ] || { echo "FAIL: spikes/FINDINGS.md's index has no row for:"; printf '%s\n' "$miss"; exit 1; }
+printf '| F | draft | spike | headline |\n' > "$T/idx"
+[ -n "$(idx_missing "$T/idx")" ] || { echo "FAIL: the index check cannot see a synthetic index with no rows — it is vacuous"; exit 1; }
 pins=$(sed -n '/^<!-- s-bin-pins$/,/^-->$/p' "$DRAFT")
 [ -n "$pins" ] || { echo "FAIL: $DRAFT carries no s-bin-pins block (§8i.7)"; exit 1; }
 pin() { printf '%s\n' "$pins" | sed -n "s/^$1=//p"; }
@@ -518,6 +742,8 @@ printf '%s\n' "$SBIN_CORPUS" | grep -qxE '[0-9a-f]{40}' || { echo "FAIL: corpus_
 printf '%s\n' "$SBIN_CLI" | grep -qxE '[0-9]+\.[0-9]+\.[0-9]+' || { echo "FAIL: cli_version is not exactly one version: '$SBIN_CLI'"; exit 1; }
 [ -n "$SBIN_MODEL" ] && [ -n "$SBIN_ROOT" ] || { echo "FAIL: observed_model or review_root is not pinned"; exit 1; }
 [ "$SBIN_CEIL" -ge 3600 ] 2>/dev/null || { echo "FAIL: ceiling_secs '$SBIN_CEIL' is not a number >= 3600 (§8i.2 item 7)"; exit 1; }
+SBIN_O1=$(pin rule_outcome_pass1); SBIN_O2=$(pin rule_outcome_pass2); SBIN_SHARE=$(pin ac475_lift_share)
+printf '%s\n' "$SBIN_SHARE" | grep -qxE '[0-9]+/[0-9]+' || { echo "FAIL: ac475_lift_share is not exactly one k/n: '$SBIN_SHARE' (§8i.8)"; exit 1; }
 
 # ---- (3) EVERY PINNED FILE, BYTE-FOR-BYTE, FROM THE CORPUS OBJECT STORE — never from its working tree (AC-464's rule).
 CORPUS_REPO=$(sed -n 's/^CORPUS_REPO=//p' CORPUS_PIN)
@@ -525,13 +751,14 @@ test -d "$CORPUS_REPO/.git" || { echo "FAIL: CORPUS_PIN names no repository ('$C
 git -C "$CORPUS_REPO" cat-file -e "$SBIN_CORPUS^{commit}" || { echo "FAIL: corpus commit $SBIN_CORPUS does not exist"; exit 1; }
 git -C "$CORPUS_REPO" merge-base --is-ancestor "$SBIN_CORPUS" main || { echo "FAIL: $SBIN_CORPUS is not on the corpus's main — a dangling commit is not a record"; exit 1; }
 files=$(printf '%s\n' "$pins" | sed -n 's/^file=//p')
-for req in results/s-bin.jsonl results/s-bin/fixture.json results/s-bin/driver-tests.txt results/s-bin/dry-run.jsonl results/s-bin/audit.txt results/s-bin/pin-report-2026-09-05/index.json runner/src/sbin.rs results/audit-s.py; do
+for req in results/s-bin.jsonl results/s-bin/fixture.json results/s-bin/driver-tests.txt results/s-bin/dry-run.jsonl results/s-bin/audit.txt results/s-bin/pin-report-2026-09-05/index.json results/s-bin/captures/procedure-log.txt runner/src/sbin.rs results/audit-s.py; do
   printf '%s\n' "$files" | grep -q "^$req sha256=" || { echo "FAIL: the pins block does not pin $req"; exit 1; }
 done
 for n in 1 2 3 4 5; do
   for req in "results/s-bin/greenness/item-$n/index.json" "results/s-bin/rendered/item-$n.txt"; do
     printf '%s\n' "$files" | grep -q "^$req sha256=" || { echo "FAIL: the pins block does not pin $req"; exit 1; }
   done
+  printf '%s\n' "$files" | grep -qE "^results/s-bin/captures/item-$n/[^ ]+ sha256=" || { echo "FAIL: no capture pinned for item $n — D21-43 N19 captures all five trees"; exit 1; }
 done
 nraw=$(printf '%s\n' "$files" | grep -c '^results/s-bin/raw/')
 [ "$nraw" -ge 10 ] || { echo "FAIL: $nraw raw transcripts pinned; ten dispatches retain ten"; exit 1; }
@@ -577,6 +804,24 @@ rv() { printf '%s\n' "$pv" | sed -n "s/^$1 //p"; }
 [ "$(rv unreach)" = "True" ] && [ "$(rv seed)" = "True" ] || { echo "FAIL: a valid record with the fix reachable or a seed unverified"; exit 1; }
 [ "$(rv ceil)" = "$SBIN_CEIL" ] || { echo "FAIL: the records ran under ceilings '$(rv ceil)', pinned $SBIN_CEIL"; exit 1; }
 [ "$(rv opus)" -le 18 ] && [ "$(rv cost)" -le 90 ] || { echo "FAIL: a cap was exceeded — $(rv opus) Opus dispatches, \$$(rv cost) (§8i.5)"; exit 1; }
+# The fixture says what N19 and N20 decided: one stripped set across all five, no leak token left, captures on all five.
+git -C "$CORPUS_REPO" cat-file blob "$SBIN_CORPUS:results/s-bin/fixture.json" > "$T/fixture.json"; rc=$?
+[ "$rc" -eq 0 ] && [ -s "$T/fixture.json" ] || { echo "FAIL: results/s-bin/fixture.json is absent or empty at the pinned commit"; exit 1; }
+fx='import json,sys
+f=json.load(open(sys.argv[1],encoding="utf-8"))
+it={int(k):v for k,v in f["items"].items()}
+sets={tuple(sorted(v["stripped"])) for v in it.values()}
+print("items", ",".join(str(i) for i in sorted(it)))
+print("stripped", "ok" if len(sets)==1 and len(next(iter(sets)))>0 else "BAD")
+print("leaks", sum(int(v["leak_hits"]) for v in it.values()))
+print("caps", ",".join(str(i) for i in sorted(it) if it[i].get("captures")))'
+fv=$(python -c "$fx" "$T/fixture.json"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$fv" ] || { echo "FAIL: the fixture probe did not run (rc=$rc)"; exit 1; }
+fvv() { printf '%s\n' "$fv" | sed -n "s/^$1 //p"; }
+[ "$(fvv items)" = "1,2,3,4,5" ] || { echo "FAIL: fixture.json does not hold exactly items 1-5: '$(fvv items)'"; exit 1; }
+[ "$(fvv stripped)" = "ok" ] || { echo "FAIL: the stripped path set is not one non-empty set across all five trees (D21-43 N20)"; exit 1; }
+[ "$(fvv leaks)" = "0" ] || { echo "FAIL: $(fvv leaks) registered leak-token hits remain in the stripped trees (§8i.2 item 3)"; exit 1; }
+[ "$(fvv caps)" = "1,2,3,4,5" ] || { echo "FAIL: captures recorded for items '$(fvv caps)', not all five (D21-43 N19)"; exit 1; }
 
 # ---- (5) THE AMENDMENT CAME FIRST, AND METHOD-S §3 HAS NOT MOVED SINCE.
 acs=$(git log --reverse --format='%H %ct' -S 's8i pre-dispatch amendment' -- spikes/METHOD-S.md); rc=$?
@@ -594,6 +839,12 @@ ledger=$(grep -hoE 'S-BIN go-ahead B[0-4]' spikes/DECISIONS-*.md); rc=$?
 for b in B0 B1 B2 B3; do
   printf '%s\n' "$ledger" | grep -qx "S-BIN go-ahead $b" || { echo "FAIL: no go-ahead line for $b"; exit 1; }
 done
+# D21-43 N22: the gate (Checkpoint 8h plus the zero-spend dry run) is "confirmed on the B1 line", by hash.
+DRY_SHA=$(printf '%s\n' "$files" | sed -n 's/^results\/s-bin\/dry-run\.jsonl sha256=//p')
+b1=$(grep -hE 'S-BIN go-ahead B1 ' spikes/DECISIONS-*.md); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$b1" ] && [ -n "$DRY_SHA" ] || { echo "FAIL: no B1 go-ahead line (rc=$rc), or no pinned dry run"; exit 1; }
+printf '%s\n' "$b1" | grep -qE 'fixture proofs: Checkpoint 8h [0-9a-f]{7,40}' || { echo "FAIL: the B1 line does not name Checkpoint 8h's hash (D21-43 N22)"; exit 1; }
+printf '%s\n' "$b1" | grep -qF "dry run $DRY_SHA" || { echo "FAIL: the B1 line does not name the pinned dry run's sha256 $DRY_SHA (D21-43 N22)"; exit 1; }
 
 # ---- (6) THE DRIVER'S TESTS, RE-RUN AT THE PINNED CORPUS COMMIT — rebuilt from `git archive`, so the corpus's own
 # ---- working tree (detached, and not this block's to move) is never read or written.
@@ -603,13 +854,13 @@ tar -xf "$T/runner.tar" -C "$T"; rc=$?
 [ "$rc" -eq 0 ] && [ -f "$T/runner/src/sbin.rs" ] || { echo "FAIL: the archived runner has no src/sbin.rs"; exit 1; }
 out=$(cd "$T/runner" && cargo build 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the runner does not build at the pinned commit (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
-SB_TESTS="sbin::tests::seed_is_confirmed_by_blob_oid_not_by_file_count sbin::tests::review_repo_holds_one_commit_and_no_fix_object sbin::tests::text_diff_carries_source_and_test_paths_only sbin::tests::asset_size_is_read_from_the_lfs_pointer sbin::tests::warned_and_not_run_fold_into_passed_with_the_raw_report_referenced sbin::tests::a_digest_failing_the_typed_schema_is_void_schema_not_a_miss sbin::tests::exit_zero_without_structured_output_is_void_not_success sbin::tests::strong_detection_needs_a_blocking_finding_naming_the_seeded_path sbin::tests::cited_fields_are_extracted_mechanically_from_the_digest sbin::tests::an_out_of_tree_read_voids_the_record sbin::tests::api_key_source_other_than_none_voids_before_scoring sbin::tests::a_version_move_between_dispatches_halts_the_set sbin::tests::the_dispatch_cap_refuses_before_spawning sbin::tests::resume_is_keyed_per_arm_item_pass sbin::tests::a_surviving_unreal_process_halts_before_the_next_dispatch"
+SB_TESTS="sbin::tests::seed_is_confirmed_by_blob_oid_not_by_file_count sbin::tests::review_repo_holds_one_commit_and_no_fix_object sbin::tests::text_diff_carries_source_and_test_paths_only sbin::tests::asset_size_is_read_from_the_lfs_pointer sbin::tests::warned_and_not_run_fold_into_passed_with_the_raw_report_referenced sbin::tests::a_digest_failing_the_typed_schema_is_void_schema_not_a_miss sbin::tests::exit_zero_without_structured_output_is_void_not_success sbin::tests::strong_detection_needs_a_blocking_finding_naming_the_seeded_path sbin::tests::cited_fields_are_extracted_mechanically_from_the_digest sbin::tests::an_out_of_tree_read_voids_the_record sbin::tests::api_key_source_other_than_none_voids_before_scoring sbin::tests::a_version_move_between_dispatches_halts_the_set sbin::tests::the_dispatch_cap_refuses_before_spawning sbin::tests::resume_is_keyed_per_arm_item_pass sbin::tests::a_surviving_unreal_process_halts_before_the_next_dispatch sbin::tests::stripped_path_set_is_identical_across_all_five_trees sbin::tests::review_tree_carries_no_registered_leak_token sbin::tests::every_item_carries_a_capture_reference_or_rendering_refuses"
 out=$(cd "$T/runner" && cargo test --bin redkiln-spike-runner -- $SB_TESTS --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the driver's tests did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
 for t in $SB_TESTS; do
   printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok — renamed, deleted or not selected"; exit 1; }
 done
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 15 passed; 0 failed' || { echo "FAIL: the driver selection did not run exactly 15 tests"; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 18 passed; 0 failed' || { echo "FAIL: the driver selection did not run exactly 18 tests"; exit 1; }
 
 # ---- (7) THE RECORD: exactly one ADR whose evidence names this finding, accepted, in ADR-0085's form, with its three
 # ---- machine-read lines (§8i.8).
@@ -626,6 +877,12 @@ NFIELDS=$(sed -n 's/.*Binary field set (\([0-9][0-9]*\) fields).*/\1/p' "$ADR")
 [ -n "$NFIELDS" ] && [ "$(printf '%s\n' "$NFIELDS" | grep -c .)" -eq 1 ] && [ "$NFIELDS" -ge 1 ] || { echo "FAIL: $ADR states no single 'Binary field set (N fields)'"; exit 1; }
 ROUTE=$(sed -n 's/.*Binary review route: \(reviewer\|human gate\)\b.*/\1/p' "$ADR")
 [ "$ROUTE" = "reviewer" ] || [ "$ROUTE" = "human gate" ] || { echo "FAIL: $ADR states no single Binary review route: '$ROUTE'"; exit 1; }
+# The route follows the pinned per-pass outcomes (§8i.8's mapping; D21-43 N21 sends an undecided pass to the human gate).
+route_for() { r=reviewer; for o in "$@"; do case "$o" in branch1|branch2-detected) : ;; branch3|undecided-fp|undecided-silent) r="human gate" ;; *) echo "BAD:$o"; return 0 ;; esac; done; echo "$r"; }
+[ "$(route_for branch1 undecided-fp)" = "human gate" ] && [ "$(route_for branch1 branch2-detected)" = "reviewer" ] && [ "$(route_for branch1 nonsense)" = "BAD:nonsense" ] || { echo "FAIL: the route mapping fails its synthetic controls"; exit 1; }
+want=$(route_for "$SBIN_O1" "$SBIN_O2")
+case "$want" in BAD:*) echo "FAIL: a pinned rule outcome is not one of the five registered (§8i.8): $want"; exit 1;; esac
+[ "$ROUTE" = "$want" ] || { echo "FAIL: $ADR's route is '$ROUTE'; the pinned outcomes ($SBIN_O1, $SBIN_O2) give '$want' (§8i.8)"; exit 1; }
 PRODUCERS=$(sed -n 's/^.*Binary producers in Phase 1: //p' "$ADR")
 [ -n "$PRODUCERS" ] && [ "$(printf '%s\n' "$PRODUCERS" | grep -c .)" -eq 1 ] || { echo "FAIL: $ADR states no single 'Binary producers in Phase 1' line"; exit 1; }
 
@@ -670,12 +927,25 @@ fi
 syn=$(printf 'crates/x/src/y.rs:1:    let s = ChangeSummary::Binary(b);\n' | grep -E "$BIN_RE" | grep -v "^crates/$CS_CRATE/" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))')
 [ -n "$syn" ] || { echo "FAIL: the floor's exclusions swallow a synthetic construction — the floor is vacuous"; exit 1; }
 
-# ---- (9) STATUSES, HONESTLY: the three criteria carry the dated note, and no line states S-BIN pending without one.
-for ac in AC-154 AC-356 AC-497; do
-  blk=$(awk -v id="**$ac**" 'index($0,id)==1{p=1;print;next} p&&/^\*\*AC-[0-9]+\*\*/{p=0} p' references/2026-09-08-acceptance-criteria.md)
+# ---- (9) STATUSES, HONESTLY: the four criteria carry the dated note, AC-475 its measured share, the "four of five"
+# ---- lines their correction, and no line states S-BIN pending without a note.
+acblk() { awk -v id="**$1**" 'index($0,id)==1{p=1;print;next} p&&/^\*\*AC-[0-9]+\*\*/{p=0} p' references/2026-09-08-acceptance-criteria.md; }
+for ac in AC-154 AC-356 AC-497 AC-475; do
+  blk=$(acblk "$ac")
   [ -n "$blk" ] || { echo "FAIL: $ac's block was not found in the register"; exit 1; }
   printf '%s\n' "$blk" | grep -qF "(s8i, S-BIN reported — $SBIN_F)" || { echo "FAIL: $ac carries no dated s8i note naming $SBIN_F"; exit 1; }
 done
+blk=$(acblk AC-475)
+printf '%s\n' "$blk" | grep -qF "lift share $SBIN_SHARE" || { echo "FAIL: AC-475's replacement does not state the measured lift share $SBIN_SHARE (§8i.8)"; exit 1; }
+grep -qxF "### AC-475's lift share" "$DRAFT" || { echo "FAIL: $DRAFT has no '### AC-475's lift share' section"; exit 1; }
+ff=$(grep -nF 'only item 2 is diff-free' references/2026-09-08-architecture-design.md); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: no design line carries 'only item 2 is diff-free' — the two lines were rewritten, not corrected"; exit 1; }
+[ "$(printf '%s\n' "$ff" | grep -c .)" -ge 2 ] || { echo "FAIL: fewer than the two 'four of five' design lines measured at a6349b6"; exit 1; }
+COR_RE='\[Corrected [0-9]{4}-[0-9]{2}-[0-9]{2} \(s8i\)'
+unc=$(printf '%s\n' "$ff" | grep -vE "$COR_RE")
+[ -z "$unc" ] || { echo "FAIL: a 'four of five' design line carries no dated s8i correction (§8i.8):"; printf '%s\n' "$unc" | cut -c1-160; exit 1; }
+syn=$(printf '610:| x | only item 2 is diff-free |\n' | grep -vE "$COR_RE")
+[ -n "$syn" ] || { echo "FAIL: the correction guard cannot see a synthetic uncorrected line — it is vacuous"; exit 1; }
 STALE='unrun|UNRUN|not been run|NOT been run|until S-BIN|before S-BIN|S-BIN reports|BLOCKED'
 for doc in references/2026-09-08-architecture-design.md:21 references/2026-09-08-acceptance-criteria.md:17; do
   f=${doc%%:*}; floor=${doc##*:}
@@ -689,7 +959,8 @@ done
 syn=$(printf '22:| ChangeSummary | BLOCKED | S-BIN registered and unrun |\n' | grep -E "$STALE" | grep -vF '[S-BIN reported (s8i)')
 [ -n "$syn" ] || { echo "FAIL: the stale-line guard cannot see a synthetic stale line — it is vacuous"; exit 1; }
 
-# ---- (10) THE WHOLE SUITE, fmt, clippy. 740 passed at ca8f387 (0 failed, 9 ignored, 44 results); later stages only add.
+# ---- (10) THE WHOLE SUITE, fmt, clippy. The floor is Checkpoint 8h's recorded count (set in (0)) plus this stage's
+# ---- 3 CS + NFIELDS per-field + 2 render + 2 review_pass tests, less s8a's superseded sealed-slot test: 6 + NFIELDS.
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|panicked' | head -20; exit 1; }
 res=$(printf '%s\n' "$out" | grep -E '^test result: ')
@@ -698,28 +969,43 @@ bad=$(printf '%s\n' "$res" | grep -vE '^test result: ok\. [0-9]+ passed; 0 faile
 [ -z "$bad" ] || { echo "FAIL: a result line is not ok with 0 failed:"; printf '%s\n' "$bad"; exit 1; }
 total=$(printf '%s\n' "$res" | awk '{s+=$4} END{print s+0}')
 nres=$(printf '%s\n' "$res" | grep -c .)
-[ "$total" -ge 740 ] && [ "$nres" -ge 44 ] || { echo "FAIL: $total passed over $nres results — below the ca8f387 floor of 740 over 44"; exit 1; }
+floor=$((FLOOR_8H_PASSED + 6 + NFIELDS))
+[ "$total" -ge "$floor" ] && [ "$nres" -ge "$FLOOR_8H_RESULTS" ] || { echo "FAIL: $total passed over $nres results — below the floor of $floor over $FLOOR_8H_RESULTS (Checkpoint 8h's $FLOOR_8H_PASSED + 6 + $NFIELDS)"; exit 1; }
 out=$(cargo fmt --all --check 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo fmt --all --check rc=$rc"; printf '%s\n' "$out" | head -20; exit 1; }
 out=$(cargo clippy --workspace --all-targets 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo clippy --workspace --all-targets rc=$rc (the gate is its exit code — ADR-0102 decision 5)"; printf '%s\n' "$out" | tail -20; exit 1; }
 
-# ---- (11) CHECKPOINTS 8h AND 5, RE-RUN WHOLE from their own stage files' bytes — each scanned FIRST, over code lines,
-# ---- for a dispatch shape, and refused rather than run if it carries one (this block may not dispatch, even by proxy).
+# ---- (11) CHECKPOINT 8h (the entry gate) AND CHECKPOINTS 8a AND 5 (made provisional by this stage's edits), RE-RUN
+# ---- WHOLE from their own stage files' bytes. Nothing else is re-run directly. ⚠️ 8h's own chain nests (8h -> 8g ->
+# ---- ... -> 8a -> 7f, 7i; 8g -> 5): it costs hours. Each block is scanned FIRST, over code lines, for a shape that
+# ---- EXECUTES a dispatch, and is refused rather than run if it carries one. Listing ignored tests (`--list`) or
+# ---- compiling with the live feature does not execute one; s8h's block does both, so both stay admissible.
 FENCE=$(printf '\140\140\140')
-DISPATCH_RE='claude[[:space:]]+(-p|--print)([[:space:]]|$)|--features[[:space:]]+live|live_dispatch_probe|--ignored|redkiln-spike-runner|review-probe|(redkiln|\$RK"?)[[:space:]]+run([[:space:]]|$)'
-# The synthetic control is a `claude -p` line, NOT the live-probe spelling: s8j's re-run of this block refuses any
-# block whose text carries that spelling, comments included, so this block must never quote it.
+DISPATCH_RE='claude[[:space:]]+(-p|--print)([[:space:]]|$)|redkiln-spike-runner|review-probe|(redkiln(\.exe)?|\$RK"?|\$\{RK\}"?)[[:space:]]+run([[:space:]]|$)|(live-run\.sh|\$L)"?[[:space:]]+(run|probe)([[:space:]]|$)'
+TESTRUN_RE='cargo[[:space:]]+test[^;|]*(--features[[:space:]]+live|--ignored|--include-ignored)'
+# The synthetic controls never spell a live run literally: s8j's re-run of this block refuses a CODE line carrying
+# the live-feature spelling, the ignored-test flag after `--`, or a push, so the controls are assembled by printf.
 syn=$(printf 'claude -p "review this"\n' | grep -E "$DISPATCH_RE")
-[ -n "$syn" ] || { echo "FAIL: the dispatch scan cannot see a synthetic dispatch line — it is vacuous"; exit 1; }
-awk -v f="$FENCE" -v s='echo "CP8H-END-OF-BLOCK reached"' '$0==f"bash"{inb=1;buf="";has=0;next} inb&&$0==f{inb=0;if(has){printf "%s",buf;n++};next} inb{buf=buf $0 "\n";if($0==s)has=1} END{exit n==1?0:1}' runbook/phase-1/s8h-cards-and-run-environment.md > "$T/cp8h.sh"; rc=$?
+[ -n "$syn" ] || { echo "FAIL: the dispatch scan cannot see a synthetic claude -p line — it is vacuous"; exit 1; }
+syn=$(printf 'bash "$L" %s live::x\n' probe | grep -E "$DISPATCH_RE")
+[ -n "$syn" ] || { echo "FAIL: the dispatch scan cannot see a synthetic launcher probe — it is vacuous"; exit 1; }
+syn=$(printf 'cargo test -p x --features %s --test it -- %s live::x\n' live --ignored | grep -E "$TESTRUN_RE" | grep -v -- '--list')
+[ -n "$syn" ] || { echo "FAIL: the dispatch scan cannot see a synthetic ignored-test run — it is vacuous"; exit 1; }
+syn=$(printf 'out=$(cargo test -p x --features %s --test it -- --list %s 2>&1)\n' live --ignored | grep -E "$TESTRUN_RE" | grep -v -- '--list')
+[ -z "$syn" ] || { echo "FAIL: the dispatch scan refuses a --list line — s8h's block could never be re-run"; exit 1; }
+xmark() { awk -v f="$FENCE" -v s="echo \"$2-END-OF-BLOCK reached\"" '$0==f"bash"{inb=1;buf="";has=0;next} inb&&$0==f{inb=0;if(has){printf "%s",buf;n++};next} inb{buf=buf $0 "\n";if($0==s)has=1} END{exit n==1?0:1}' "$1"; }
+xmark runbook/phase-1/s8h-cards-and-run-environment.md CP8H > "$T/cp8h.sh"; rc=$?
 [ "$rc" -eq 0 ] && [ -s "$T/cp8h.sh" ] || { echo "FAIL: exactly one Checkpoint 8h block ending in its CP8H sentinel was not found in s8h"; exit 1; }
+xmark runbook/phase-1/s8a-records-and-red-checkpoints.md CP8A > "$T/cp8a.sh"; rc=$?
+[ "$rc" -eq 0 ] && [ -s "$T/cp8a.sh" ] || { echo "FAIL: exactly one Checkpoint 8a block ending in its CP8A sentinel was not found in s8a"; exit 1; }
 awk -v f="$FENCE" 'index($0,"**Checkpoint 5.** All of:")==1{armed=1;next} armed&&$0==f"bash"{inb=1;next} inb&&$0==f{exit} inb{print}' runbook/phase-1/s5-workspace-ci-rk-types.md > "$T/cp5.sh"; rc=$?
 [ "$rc" -eq 0 ] && [ "$(grep -c . "$T/cp5.sh")" -ge 20 ] || { echo "FAIL: the Checkpoint 5 block was not extracted from s5"; exit 1; }
 printf '\necho "CP5-END-OF-BLOCK reached"\n' >> "$T/cp5.sh"
-for blk in cp8h cp5; do
+for blk in cp8h cp8a cp5; do
   hit=$(grep -vE '^[[:space:]]*#' "$T/$blk.sh" | grep -nE "$DISPATCH_RE")
-  [ -z "$hit" ] || { echo "FAIL: the extracted $blk block carries a dispatch shape and is NOT run — establish the guard's scope (golden constraint 9):"; printf '%s\n' "$hit"; exit 1; }
+  hit2=$(grep -vE '^[[:space:]]*#' "$T/$blk.sh" | grep -nE "$TESTRUN_RE" | grep -v -- '--list')
+  [ -z "$hit$hit2" ] || { echo "FAIL: the extracted $blk block carries a shape that executes a dispatch and is NOT run — establish the guard's scope (golden constraint 9):"; printf '%s\n' "$hit" "$hit2"; exit 1; }
   out=$(bash "$T/$blk.sh" 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: $blk re-run exited $rc"; printf '%s\n' "$out" | tail -25; exit 1; }
   last=$(printf '%s\n' "$out" | grep . | tail -1)
@@ -744,8 +1030,11 @@ echo "CP8I-END-OF-BLOCK reached"
 ```
 
 ⚠️ **What this block cannot see, said rather than claimed away.** The tripwire in (0)/(12) sees a dispatch that
-**starts a session in the account named by `CLAUDE_CONFIG_DIR`**; a dispatch under another config directory, or one
-that writes no transcript, is invisible to it, which is why (11) also refuses an extracted block by its text. The
+**starts a session under `~/.claude-personal` or `~/.claude`**. A dispatch under another config directory, or one
+that writes no transcript, is invisible to it. That is why (11) also refuses an extracted block by its text. The
+text scan reads only the three blocks it extracts, not the blocks they extract in turn. The nested 7f/7h/7i
+`redkiln run`s are covered by the missing launch record, which makes them refuse before any spawn (s8h §8h.7), and
+by the tripwire. The
 construction floor in (8) matches `ChangeSummary::Binary`, `ChangeSummary::binary` and a `BinaryChangeSummary`
 literal, `::new` or tuple construction (the payload name `s8a`'s file uses); if `s8a`'s record names the
 variant, its payload or its constructor otherwise, the regex takes a dated amendment first, and a construction assembled by a
@@ -757,12 +1046,14 @@ field, and the finding says whether one was run.
 
 The two-commit close (`00-preamble.md`'s legend: *"(1) the work and its checkpoint outputs, then (2) a tracker commit
 writing that commit's own hash into §1"*). The work commit carries the METHOD-S amendment's successor notes if any,
-the finding and its index row, the ledger lines, the `Binary` record with its README index cell, census and the
-preamble's record count, the Rust and its golden files with their `-text` rows, the register and design notes, the
+the finding and the three index rows (F41, F42, S-BIN), the ledger lines, the `Binary` record with its README index cell, census and the
+preamble's record count, the Rust and its golden files with their `-text` rows, the register and design notes
+(AC-475's replacement and the "four of five" corrections among them), the
 `s5` Checkpoint 5 amendment if its condition lapsed, `s8a`'s dated amendment for the superseded sealed-slot test,
 `s8`'s bullet and guard amended to the record's construction rule, and
 Checkpoint 8i's output. The record flips from `proposed` only on the operator's dated ledger line, which precedes the
-checkpoint run. The tracker commit writes the hash, marks row 8a `passed <hash>, re-run pending` if its block names the
-superseded test, and raises the two owed items this stage found and does not own: AC-475's lift criterion, and the F41/F42 gap in
-`spikes/FINDINGS.md`'s index. Adversarial refuting rounds
+checkpoint run. The tracker commit writes the hash. It records row 8a as re-run and passed at this commit, because
+Checkpoint 8i re-ran 8a's amended block whole (guard (11)), and it records row 5 the same way. AC-475's lift
+criterion and the F41/F42 index gap are no longer raised as owed. The revision brief assigned both here, and both
+are in the work commit. Adversarial refuting rounds
 over this file and its checkpoint continue until a round moves no code and no guard.
