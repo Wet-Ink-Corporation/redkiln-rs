@@ -2,7 +2,7 @@
 
 | stage | phase | entry gate | exit checkpoint | previous | next |
 | --- | --- | --- | --- | --- | --- |
-| `s8d` | Phase 1 | Checkpoint 8c | Checkpoint 8d | `s8c` | `s8e` |
+| `s8d` | Phase 1 | Checkpoint 8c | Checkpoint 8d | `s8c` | `s8d-ii` |
 
 *Part of `runbook/` — the index is `runbook/INDEX.md`, the tracker `runbook/PROGRESS.md`, the shared preamble
 (golden constraints, tool preflight, legend) `runbook/00-preamble.md`, the halt conditions `runbook/halts.md`.
@@ -34,6 +34,20 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - **D21-44/D21-45.** No run-worktree path appears in this file, and no walk here recurses over `.redkiln/` as a whole
   (§8d.11). Checkpoint 8d re-runs only its entry gate and the one older checkpoint its edits make provisional. It
   asserts that no re-run can reach a real dispatch (§8d.11, §8d.12). The floor is re-derived (§8d.12 (11)).
+
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **The next stage is `s8d-ii`** (D21-46 R1: *"A new stage **`s8d-ii`, "Run worktrees"**, sits between s8d and
+  s8e"*). This checkpoint is `s8d-ii`'s entry gate.
+- **The walk table is re-claimed at 11 of 15 and 9 of 13.** At Checkpoint 8d, `toolchain:backlog` is declared
+  `unprovided` (`s8c` §8c.4) and `closure-record`'s `audit` reads it as a mandatory input, so `closure-record` refuses
+  by name in both lanes. D21-46 R7 gives the producer to `s8f`, whose close flips both rows back to **walks** by dated
+  line (`s8f` §8f.7, §8f.10). The verify rows' re-homing at `s8g` (D21-43 N23; D21-46 R5) is noted under the tables.
+- **Checkpoint 8d (13) adopts D21-46's re-run convention and replay guard**: it skips its whole re-runs of 8c and 7g
+  under `RK_CP_NESTED=1`, and otherwise launches both with `RK_CP_NESTED=1`, `REDKILN_LAUNCH_RECORD` unset and
+  `CLAUDE_CONFIG_DIR` at an empty trap.
+- **The floor chain is recomputed once**: Checkpoint 8c's 833 + this stage's 52 = **885**, not the drafted 832.
+- **Citations.** The resolver's optional-`null` rule cites ADR-0103 decision 4, which supersedes ADR-0032, and the
+  sentence *"an unresolved key is refused by name"* is D21-42 4a's, quoted as the ledger's.
 
 ---
 
@@ -165,8 +179,8 @@ step id on `RecordedSpec`, *"beside"* the activation's, which is the warrant ADR
 through 4a's table and bounded by the activity budget. Owner: s8d."* Measured over `.redkiln/catalog/*.toml` at
 `a6349b6`: **185** of the 298 `timeout_secs` declarations sit on `agent` steps, and every one of the 185 agent steps
 declares one. **152** are literals and **33** are `${toolchain.*}` substitutions. All 102 activities declare
-`budget.wall_clock_secs`. The binder resolves a substitution through `s8c`'s 4a table (*"an unresolved key is refused
-by name"*). It sets the per-step spec's `timeout_secs` to `min(step, budget.wall_clock_secs)`. No literal exceeds its
+`budget.wall_clock_secs`. The binder resolves a substitution through `s8c`'s 4a table (D21-42 4a: *"an unresolved key is
+refused by name"*). It sets the per-step spec's `timeout_secs` to `min(step, budget.wall_clock_secs)`. No literal exceeds its
 activity's budget today (0 of 152), so the bound bites only on a substituted value or a later edit. The test pins
 both arms. ADR-0140 decision 5 says of `ActivitySpec.timeout_secs`: *"A future per-step bound may not be built by
 overloading it."* This is exactly such a bound, carried on the spec the Harness receives. So R1 supersedes that
@@ -209,14 +223,14 @@ or it is absent."*). R2's resolver supplies, for every step it reaches:
 
 | form | resolves to | absent / unresolvable |
 | --- | --- | --- |
-| `${<step>.outputs[.path]}`, `${<step>}`, `.len()` | the prior step's bound output in this activation, at the **current** iteration path | a mandatory ref to a step that has not run refuses by name (step id + reference); `${…?}` is `null` (ADR-0032) |
+| `${<step>.outputs[.path]}`, `${<step>}`, `.len()` | the prior step's bound output in this activation, at the **current** iteration path | a mandatory ref to a step that has not run refuses by name (step id + reference); `${…?}` is `null` (ADR-0103 decision 4, which supersedes ADR-0032) |
 | `${<this-step>.outputs?}` inside a loop | the **previous** iteration's output, `null` on the first pass (ADR-0055) | — |
 | `${<gate>.answer}`, `${<gate>.attachments.<Kind>}` | the `gate_answered` row's option / admitted attachment (ADR-0045; ADR-0129 decision 4) | `.outputs` on a gate refuses by name (ADR-0045) |
 | `${item}` | the current `for_each` element (schema: *"runs one copy per element with `${item}` bound"*) | outside a `for_each`, refuses by name |
 | `${step.outputs[*].field}` | ADR-0035's projection over a fan-out's list, one value per element in element order. Over a list-valued field, R2 states the value (below) | any other projection refuses by name. A bare `${step.outputs}` of a fan-out is never flattened into a test list (N13) |
-| `${toolchain.<key>}` | `s8c`'s 4a table (*"an unresolved key is refused by name"*) | refused by name |
+| `${toolchain.<key>}` | `s8c`'s 4a table (D21-42 4a: *"an unresolved key is refused by name"*) | refused by name |
 | `artifact:Kind[.field]` | the committed `emit` binding of the activation that produced `Kind` for this item, read from the journal (tier 2), with **one** `artifact.read` row per resolved input (N12, below). `s8f` renders the bytes; this stage reads the binding | mandatory: refuses by name; `?`: `null`. Neither emits a read |
-| `kb:<atom>`, `checklist:<id>`, `toolchain:<feed>[?]` | the key's row in `s8c`'s `[kb.*]`, `[checklist.*]` or `[feed.*]` table (N14). An atom or checklist resolves to its content with its content digest (ADR-0097 component 6 for `kb:`). A feed resolves by calling the producing verb its row names, through `s8c`'s registry method | an undeclared key refuses by name, and so does a declared key with no content; `?` is `null` (ADR-0032) |
+| `kb:<atom>`, `checklist:<id>`, `toolchain:<feed>[?]` | the key's row in `s8c`'s `[kb.*]`, `[checklist.*]` or `[feed.*]` table (N14). An atom or checklist resolves to its content with its content digest (ADR-0097 component 6 for `kb:`). A feed resolves by calling the producing verb its row names, through `s8c`'s registry method | an undeclared key refuses by name, and so does a declared key with no content (a mandatory `unprovided` feed among them); `?` is `null` (ADR-0103 decision 4, which supersedes ADR-0032) |
 | literals | themselves | — |
 
 🛑 **Unchanged, and each is asserted:** `null_out_refs` is never called on the execution path; `UnresolvedRef` is
@@ -242,7 +256,7 @@ presupposes. If the operator's flip line reads it otherwise, the three activitie
 
 **`check` evaluation.** A `check` step's `expr` is evaluated against a `Context` built from **its own `inputs`
 table** — `red-check`'s `report` is `${red-verify.outputs}` — through the same `predicate::evaluate`, never a second
-evaluator (ADR-0136 decision 1). `Tri::True` continues; `Tri::False` goes to §8d.4; `Tri::Null` keeps ADR-0032/AC-079;
+evaluator (ADR-0136 decision 1). `Tri::True` continues; `Tri::False` goes to §8d.4; `Tri::Null` keeps ADR-0103/AC-079;
 an `EvalError` refuses by name and is **never** read as false. `build-package`'s `built` check,
 `report.status == 'passing'` over `${build.outputs}`, reads `s8c`'s widened `build` report (N25). A red build is
 therefore a report whose status fails the check, and `on_false = "fail"` refuses by name. Before N25 that arm was
@@ -452,10 +466,12 @@ and tags (plus the packet's hand application), not a run.
 | `verify` | mandatory | `equivalence-boundary`, `confirmation-test`, `smoke-test`, `sca-scan` | `equivalence-boundary`, `confirmation-test` and `sca-scan` **walk** (`sca-scan`'s `toolchain:sbom?` is an optional feed); `smoke-test` refuses | `smoke-test`: its `smoke` step's `checklist:smoke` has no content until `s8g` (*"the shipped `smoke` checklist is `s8g`'s"*, `s8c`). `sca-scan`'s `clean` is `s8b`'s `unrated == 0` form (N25) |
 | `review` | mandatory | `adversarial-review` (`code-review` is not admitted: `max_rigor = "recommended"`) | **walks** | `verdict` is `s8b`'s re-execution form (D21-42 11a); `clone` and `record` route by §8d.6's rows |
 | `release` | recommended | `build-package`, `rolling-deploy` | `build-package` **walks**; `rolling-deploy` refuses | `build-package`: `built` reads `s8c`'s widened `build` outcome (N25), and `package`'s handler is `s8c`'s record V. `rolling-deploy`: `deploy` has no registry row and is refused by bare name; it is replaced by `s8g`'s `tag-release` (6b) |
-| `closeout` | recommended | `debt-logging`, `closure-record`, `lightweight-retro` | `closure-record` and `lightweight-retro` **walk**; `debt-logging` refuses | `debt-logging`: `item_create` — `s8f` (6a). `closure-record` reads `toolchain:backlog` and `checklist:closure`, and `lightweight-retro` reads `kb:retro-format` and `checklist:retro` (N14) |
+| `closeout` | recommended | `debt-logging`, `closure-record`, `lightweight-retro` | `lightweight-retro` **walks**; `debt-logging` and `closure-record` refuse | `debt-logging`: `item_create` — `s8f` (6a). `closure-record`: `audit` reads `toolchain:backlog` as a mandatory input, and the feed is `unprovided` until `s8f` builds its producer (D21-46 R7; `s8f` §8f.7), so it refuses by name; it also reads `checklist:closure`. `lightweight-retro` reads `kb:retro-format` and `checklist:retro` (N14) |
 
-**Claimed: 12 of 15 walk, and 3 refuse by name** (`smoke-test`, `rolling-deploy`, `debt-logging`). Each refusal is
-owned above: `s8g`, `s8g` and `s8f`.
+**Claimed: 11 of 15 walk, and 4 refuse by name** (`smoke-test`, `rolling-deploy`, `debt-logging`, `closure-record`).
+Each refusal is owned above: `s8g`, `s8g`, `s8f` and `s8f`. *Re-claimed 2026-09-24 (consistency pass; D21-46 R7):*
+the draft's 12 of 15 counted `closure-record` as walking over an `unprovided` mandatory feed, which is the silent
+`null` N14 forbids. `s8f`'s close flips its row back to **walks** by dated line (`s8f` §8f.10).
 
 **The story lane** — `story`, item `kind = "story"`, entered at `triage`, `cos = "standard"`, low facets,
 `external_dep = false`, `novelty = low`, and `change = ["text"]` from the triage gate's answer (N3), for a story whose
@@ -472,12 +488,19 @@ change touches `spikes/p9/packs/spike.toml`:
 | `review` | mandatory | `adversarial-review` | **walks** | — |
 | `release` | mandatory | `build-package`, `rolling-deploy` | as the fix lane | as the fix lane |
 | `operate` | optional | none (`SLOReport` keyed on `blast_radius >= high`) | — | — |
-| `closeout` | optional | `closure-record`, `debt-logging` | `closure-record` **walks**; `debt-logging` refuses | as the fix lane |
+| `closeout` | optional | `closure-record`, `debt-logging` | both refuse | as the fix lane: `debt-logging` on `item_create`, `closure-record` on the `unprovided` `toolchain:backlog` feed, both `s8f`'s |
 
-**Claimed: 10 of 13 walk** (`bdd-scenarios`, `t-shirt-sizing`, `tdd-red-green-refactor`, `change-summary`,
-`docs-update`, `equivalence-boundary`, `sca-scan`, `adversarial-review`, `build-package`, `closure-record`), and **3
-refuse by name**, the same three as the fix lane with the same owners. Neither lane walks end to end after this
-stage, and the tables say why by owner. That is the result, not a failure of the stage.
+**Claimed: 9 of 13 walk** (`bdd-scenarios`, `t-shirt-sizing`, `tdd-red-green-refactor`, `change-summary`,
+`docs-update`, `equivalence-boundary`, `sca-scan`, `adversarial-review`, `build-package`), and **4 refuse by name**,
+the same four as the fix lane with the same owners (*re-claimed 2026-09-24, consistency pass; D21-46 R7*). Neither
+lane walks end to end after this stage, and the tables say why by owner. That is the result, not a failure of the
+stage.
+
+**These tables are Checkpoint 8d's, and two later stages move rows by dated line.** `s8f`'s close flips both
+`closure-record` rows to **walks** once its `backlog` producer lands (D21-46 R7). `s8g` re-homes `equivalence-boundary`
+from `verify` to the `implement` stage (D21-43 N23), with `integration-tests` beside it (D21-46 R5), so the verify
+rows above read as they stand at this stage and the implement rows gain them there. Each move takes a dated line in
+this section and moves the two `lane_walk` tests' expectations in the same commit.
 
 ### 8d.10 Tests, red first, and the mutants that must die
 
@@ -607,7 +630,9 @@ asserted half is re-run inside Checkpoint 8d.
 **Nested re-runs cost hours, so Checkpoint 8d re-runs only these.** It re-runs its entry gate (8c) and the one older
 checkpoint its own renames make provisional (7g). It also re-runs s8's criterion (3) asserted half, which this stage
 re-proves. It does not re-run 8a, 8b or any other checkpoint. What 8c's own edits made provisional is 8c's block's
-business.
+business. **D21-46's one re-run convention applies**: 8c and 7g are launched with `RK_CP_NESTED=1`, so 8c skips its own
+whole re-runs of 8b, 7a and 5, and when this block is itself run with `RK_CP_NESTED=1`, as `s8d-ii`'s entry gate, it
+re-runs neither. The criterion (3) half is a named selection, not a whole checkpoint, and it runs either way.
 
 **No re-run here can reach a real dispatch.** Checkpoint 7g's block runs `rk-cli`'s process-level tests, and those
 spawn `redkiln run`. At this stage's time the shipped cards carry no `permission_mode`: 0 of the 8 files under
@@ -647,8 +672,10 @@ processes are `s8e`'s; rendering and landing are `s8f`'s; the verify record and 
   them, a `null` `change` at triage opens AC-079's gate and its answer binds the facet, and the `change` deriver is
   the only source of `change`.
 - **The walk table holds** — both lanes, exactly.
-- **Nothing regressed**: the executor guards `s7g` built stay green, Checkpoints 8c and 7g re-run whole, the whole
-  suite passes above its floor, and `fmt` and `clippy` are clean. No re-run can reach a real dispatch.
+- **Nothing regressed**: the executor guards `s7g` built stay green, Checkpoints 8c and 7g re-run whole (with
+  `RK_CP_NESTED=1`, `REDKILN_LAUNCH_RECORD` unset and `CLAUDE_CONFIG_DIR` at an empty trap, D21-46; neither under
+  `RK_CP_NESTED=1`), the whole suite passes above its floor, and `fmt` and `clippy` are clean. No re-run can reach a
+  real dispatch.
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -827,12 +854,11 @@ hit=$(codeonly "$raw")
 n=$(printf '%s\n' "$hit" | grep -c 'fn selection_of')
 [ "$n" -eq 1 ] || { echo "FAIL: $n CODE-line definitions of fn selection_of under crates/*/src, not exactly one — the kernel wrote a second parser, or the function is gone (§8d.3):"; printf '%s\n' "$hit"; exit 1; }
 
-# ---- (11) BULLET 9: THE WHOLE SUITE, `--no-fail-fast`, rc 0, zero failed, above a FLOOR. RE-DERIVED at stage open
-# ---- from Checkpoint 8c's recorded whole-suite passed count + 52 (§8d.10's net new tests), and the derivation is
-# ---- recorded. The expected value is 832: Checkpoint 8c's drafted floor of 780 (740 at `992d257`, 0 failed, 9
-# ---- ignored, 44 results, plus its 40) + 52. If 8c recorded more, the floor rises with it. It is never lowered to
-# ---- make a red run green.
-FLOOR=832
+# ---- (11) BULLET 9: THE WHOLE SUITE, `--no-fail-fast`, rc 0, zero failed, above a FLOOR. Expected value, re-derived
+# ---- at stage open from Checkpoint 8c's recorded count: 833 + 52 = 885 (833 = 740 at `992d257`, ADR-0164's evidence,
+# ---- + s8a 9 + s8b 21 + s8c 63; 52 is §8d.10's net new tests). The derivation is recorded. If 8c recorded more, the
+# ---- floor rises with it. It is never lowered to make a red run green. At least 44 result lines, as at 992d257.
+FLOOR=885
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }
@@ -868,22 +894,40 @@ grep -qF '"permission_mode"' "$tmpd/card.json" || { echo "FAIL: synthetic contro
 
 # ---- (13) THE ENTRY CHECKPOINT AND THE EXECUTOR CHECKPOINT, RE-RUN WHOLE FROM THEIR OWN BYTES — and ONLY these two
 # ---- (§8d.11: nested re-runs cost hours). 8c is the entry gate; 7g is provisional on this stage's renames. 7a rides
-# ---- inside 8c's own block. The fence string is built from octal escapes so this block carries no literal fence.
+# ---- inside 8c's own block, at 8c's own close. The fence string is built from octal escapes so this block carries no
+# ---- literal fence. D21-46: SKIPPED under RK_CP_NESTED=1 (this block is s8d-ii's entry gate); otherwise both run with
+# ---- RK_CP_NESTED=1, REDKILN_LAUNCH_RECORD unset and CLAUDE_CONFIG_DIR at an empty trap that must stay empty.
 fence=$(printf '\140\140\140')
 test -n "$fence" || { echo "FAIL: the fence string is empty — extract_block would match every line"; exit 1; }
 extract_block() {
   awk -v f="$fence" -v m="$2" '$0 == f "bash" {inb=1; buf=""; next} inb && $0 == f {inb=0; if (index(buf, m)) {printf "%s", buf; n++}; next} inb {buf = buf $0 "\n"} END {exit (n == 1) ? 0 : 1}' "$1"
 }
-for pair in "runbook/phase-1/s8c-toolchain-port-and-verbs.md:CP8C" "runbook/phase-1/s7g-step-executor.md:CP7G"; do
-  file=${pair%%:*}; tag=${pair##*:}
-  test -f "$file" || { echo "FAIL: $file absent — Checkpoint $tag cannot be re-run (Halt 8)"; exit 1; }
-  extract_block "$file" "$tag-END-OF-BLOCK reached" > "$tmpd/$tag.sh"; rc=$?
-  [ "$rc" -eq 0 ] && [ -s "$tmpd/$tag.sh" ] || { echo "FAIL: exactly one $tag block was not found in $file"; exit 1; }
-  out=$(bash "$tmpd/$tag.sh" 2>&1); rc=$?
-  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $tag, re-run whole, rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
-  printf '%s\n' "$out" | grep -qxF "$tag-END-OF-BLOCK reached" || { echo "FAIL: Checkpoint $tag exited 0 without reaching its end marker"; exit 1; }
-  echo "ok: Checkpoint $tag re-run whole"
-done
+if [ "${RK_CP_NESTED:-0}" = 1 ]; then
+  echo "CP8D (13) SKIPPED: RK_CP_NESTED=1 — this block is another checkpoint's entry gate; its re-runs of 8c and 7g ran at Checkpoint 8d's own close"
+else
+  trap_dir="$PWD/target/cp8d-claude-config-trap"
+  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  # Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
+  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
+  for pair in "runbook/phase-1/s8c-toolchain-port-and-verbs.md:CP8C" "runbook/phase-1/s7g-step-executor.md:CP7G"; do
+    file=${pair%%:*}; tag=${pair##*:}
+    test -f "$file" || { echo "FAIL: $file absent — Checkpoint $tag cannot be re-run (Halt 8)"; exit 1; }
+    extract_block "$file" "$tag-END-OF-BLOCK reached" > "$tmpd/$tag.sh"; rc=$?
+    [ "$rc" -eq 0 ] && [ -s "$tmpd/$tag.sh" ] || { echo "FAIL: exactly one $tag block was not found in $file"; exit 1; }
+    out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$tmpd/$tag.sh" 2>&1); rc=$?
+    [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $tag, re-run whole, rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
+    printf '%s\n' "$out" | grep -qxF "$tag-END-OF-BLOCK reached" || { echo "FAIL: Checkpoint $tag exited 0 without reaching its end marker"; exit 1; }
+    echo "ok: Checkpoint $tag re-run whole"
+  done
+  left=$(find "$trap_dir" -mindepth 1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the re-runs (rc=$rc)"; exit 1; }
+  [ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the re-runs — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
+fi
 # SYNTHETIC CONTROL: a file with no marked block must make extract_block fail, or the loop above proves nothing.
 printf 'no fenced block here\n' > "$tmpd/none.md"
 if extract_block "$tmpd/none.md" 'CP8C-END-OF-BLOCK reached' > "$tmpd/none.sh"; then echo "FAIL: synthetic control — extract_block succeeded on a file with no block"; exit 1; fi

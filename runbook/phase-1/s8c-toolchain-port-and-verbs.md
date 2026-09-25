@@ -23,7 +23,8 @@ three entries. What changed:
 - **N14.** `registry.toml` gains declared `[checklist.*]`, `[kb.*]` and `[feed.*]` tables, and an undeclared key is
   refused by name. The 14 keys the two lanes reach are enumerated. Their content is authored here, except
   `checklist:smoke`, which is `s8g`'s (§8c.4).
-- **D21-45 W3.** This stage builds the `.worktreeinclude` reader, and `s8e` calls it at creation (§8c.4).
+- **D21-45 W3.** This stage builds the `.worktreeinclude` reader, and `s8d-ii` calls it at creation (§8c.4; D21-46 R1
+  moved the carry out of `s8e`).
 - **N16.** The 185 agent-step bounds are `s8d`'s (§8c.6).
 - **`RK-D-TIMEOUT`** resolves `${toolchain.*}` through 4a's table (§8c.6).
 - **`s8b`'s hand-ons.** The `smoke` row is `live = true`, and AC-018 is re-proven over the shipped catalog and
@@ -41,6 +42,22 @@ three entries. What changed:
 - **Settled items.** Eight items the draft handed on as unassigned are settled, and §8c.12 says by what. One new
   finding is handed on in their place: the `backlog` feed has no producer. A second sibling-file note is added: the
   review stub's doc names the old worktree path.
+
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **The run-worktree caller is `s8d-ii`, not `s8e`** (D21-46 R1). Every sentence here that named `s8e` as the stage
+  that moves the root, calls `setup` and does the `.worktreeinclude` carry at creation, or sets `LC_ALL=C`, now names
+  `s8d-ii`.
+- **The optional-`null` rule cites ADR-0103 decision 4**, which supersedes ADR-0032 (ADR-0032's `superseded_by:
+  ["0103"]`; `s8f` §8f.7 raised it).
+- **The `backlog` feed has an owner** (D21-46 R7): `s8f` builds its producer and flips `[feed.*.backlog]`. §8c.4's row
+  and §8c.12's handed-on item 3 say so, and the item is marked settled.
+- **Checkpoint 8c (15) adopts D21-46's re-run convention and replay guard**: it skips its whole re-runs under
+  `RK_CP_NESTED=1`, and otherwise launches 8b, 7a and 5 with `RK_CP_NESTED=1`, `REDKILN_LAUNCH_RECORD` unset and
+  `CLAUDE_CONFIG_DIR` at an empty trap.
+- **The floor chain is recomputed once**: Checkpoint 8b's 770 + this stage's 63 = **833**, not the drafted 831, and
+  (13) gains the at-least-44-result-lines guard.
+- **Sibling notes settled**: `s8g`'s entry table reads the seven-method count, and the stub's path correction is
+  `s8d-ii`'s.
 
 ---
 
@@ -120,7 +137,7 @@ there. It does not decide.**
 | `sca-scan`'s check reading `unrated` | `s8b` (D21-43 N25: *"**`sca-scan` requires `unrated == 0`** or goes to `scan.accept-findings`"*, a catalog edit) |
 | Enforcing the 185 agent-step `timeout_secs` | `s8d` (D21-43 N16: *"**Carried by each per-step spec** (3a), resolved through 4a's table and bounded by the activity budget. Owner: s8d."*) |
 | Resolving `checklist:` / `kb:` / `toolchain:<feed>` inputs through the tables this stage declares | `s8d` (N14, its S3) |
-| The run-worktree root `.redkiln/worktrees/<item>`, calling `setup` and the `.worktreeinclude` carry at creation, the filter-driver refusal and `redkiln init`'s exclude block | `s8e` (D21-44; D21-45 W1, W2, W4, and W3's carry: *"W3 and W4's `init` half go to **s8c** (the `setup` verb and `.worktreeinclude` reading) and s8e (the carry at creation). `redkiln init`'s exclude block is `s8e`'s too"*) |
+| The run-worktree root `.redkiln/worktrees/<item>`, calling `setup` and the `.worktreeinclude` carry at creation, the filter-driver refusal and `redkiln init`'s exclude block | `s8d-ii` (D21-46 R1 moved all of it out of `s8e`: *"It carries D21-44's relocation and D21-45 W1/W2/W4"*; D21-44; D21-45 W1, W2, W4, and W3's carry: *"W3 and W4's `init` half go to **s8c** (the `setup` verb and `.worktreeinclude` reading) and s8e (the carry at creation). `redkiln init`'s exclude block is `s8e`'s too"*) |
 | `item_create`'s rk-store write | `s8f` (the stage plan: *"DebtRegisterEntry's rk-store item write (6a)"*) |
 | Any dispatch to a real account | nobody before `s8i` (D21-40 decision 2) — **this stage dispatches nothing** |
 
@@ -395,7 +412,7 @@ Every row declares:
 | `smoke` | `toolchain` | `SmokeResult` | **yes**, Rust: build, then run each declared checklist row against the built binary | `smoke-test` — `s8g`. `checklist:smoke` resolution is `s8d`'s; the shipped `smoke` checklist is `s8g`'s |
 | `sca_scan` | `toolchain` | `ScanReport` | **yes**, Rust | `sca-scan` — `s8g` |
 | `package` | `toolchain` | `BuildArtifact` | **yes**, Rust: `cargo build --release --locked --message-format=json`, then the sha256 of each **declared** shipped binary — never a glob, because a release build also links `rk-fixture-toolchain` and the other fixture `[[bin]]`s | `build-package` — `s8g`, which writes this repository's declared set (`redkiln`, `redkiln-migrate`) into the per-toolchain table |
-| `setup` | `toolchain` | `SetupResult` | **yes**, Rust: the install over the declared project set (below) | none. No catalog step runs it. `s8e` calls it at run-worktree creation (D21-45 W3) |
+| `setup` | `toolchain` | `SetupResult` | **yes**, Rust: the install over the declared project set (below) | none. No catalog step runs it. `s8d-ii` calls it at run-worktree creation (D21-45 W3; D21-46 R1) |
 | `item_create` | `store` | `ItemRefs` | **no**. Refused naming the route until `s8f` | `debt-logging` — the write is `s8f`'s |
 | `release_tag` | `git` | `ReleaseTag` | **no**. Refused naming the route until `s8g` | `tag-release` (new, via ADR-0114 clause 3's trial) — `s8g`. Local, never pushed (D21-42 6b) |
 | `shallow_clone`, `verdict_record` | — | — | not here | `s8d` |
@@ -490,7 +507,8 @@ that nobody reads a green Checkpoint 8c as *"smoke runs in the lane"*. It does n
 
 - `build` has an outcome (N25; §8c.2), so `build-package`'s `on_false = "fail"` arm is live.
 - Feeds have a declared table (N14; below). `sca-scan`'s `sbom = "toolchain:sbom?"` resolves through
-  `[feed.rust.sbom]`, which is declared `unprovided`, so the optional input is `null` (ADR-0032).
+  `[feed.rust.sbom]`, which is declared `unprovided`, so the optional input is `null` (ADR-0103 decision 4, which
+  supersedes ADR-0032).
 
 **The `setup` verb (D21-43 N25; D21-45 W3).** N25 reads: *"A per-toolchain **`setup` verb** at worktree creation
 (`pnpm install --frozen-lockfile --prefer-offline`, refused by name on failure)"*. W3 reads: *"**Dependencies come
@@ -498,7 +516,7 @@ through N25's per-toolchain `setup` verb.** No `node_modules` symlinks"*. Record
 proposal:
 
 - **The row.** `setup` takes the `toolchain` route, outputs `SetupResult`, is `live = true`, and its timeout is
-  `setup_timeout` (§8c.5). `s8e` calls it through `run_verb` once per run worktree, at creation, with the resolved
+  `setup_timeout` (§8c.5). `s8d-ii` calls it through `run_verb` once per run worktree, at creation, with the resolved
   bound.
 - **What it installs.** The project set is a declaration row, `setup_projects`, in the per-toolchain table (§8c.5).
   In this repository `[toolchain.rust]` lists one project, `crates/rk-adapter-toolchain-node/tests/fixtures/project`,
@@ -534,7 +552,7 @@ is authored only for the keys the lanes reach."* ADR-0040's grammar names the th
 - An **undeclared** key is refused by name, even when the input is optional (`?`). An undeclared key is a typo or
   an unowned demand, never an absence.
 - An `unauthored` or `unprovided` key is refused by name when the input is mandatory, and is `null` when it is
-  optional (ADR-0032).
+  optional (ADR-0103 decision 4, which supersedes ADR-0032).
 
 *Loading.* The loader refuses at load, naming the entry, in three cases:
 
@@ -569,7 +587,7 @@ and the story lane's selected activities. `rolling-deploy` is included until `s8
 | kb | `refactoring-catalog` | `tdd-red-green-refactor/refactor` | `path`, authored here |
 | kb | `estimation-history` | `t-shirt-sizing/size` | `path`, authored here |
 | kb | `retro-format` | `lightweight-retro/note` | `path`, authored here |
-| feed | `backlog` | `closure-record/audit` (mandatory) | `unprovided` on both toolchains. Its only honest producer is a `store`-route read of the item tree, which no stage builds (§8c.12) |
+| feed | `backlog` | `closure-record/audit` (mandatory) | `unprovided` on both toolchains at this stage. Its only honest producer is a `store`-route read of the item tree, which `s8f` builds under D21-46 R7 and which flips both rows to `verb = "backlog"` (§8c.12) |
 | feed | `logs?` | `root-cause/hypothesise` (optional) | `unprovided`, so `null` |
 | feed | `sbom?` | `sca-scan/scan` (optional) | `unprovided`, so `null`. No SBOM tool is installed, and no record names one |
 
@@ -589,7 +607,7 @@ The census test (§8c.9) counts the table, so a move cannot be silent.
 
 **The `.worktreeinclude` reader (D21-45 W3).** W3 reads: *"**Honour the project's existing `.worktreeinclude`**,
 the same file with the same semantics (ignored ∩ matched, symlinks skipped), for files like `.env`."* This stage
-builds the reader. `s8e` does the copy, at creation. The reader is
+builds the reader. `s8d-ii` does the copy, at creation (D21-46 R1). The reader is
 `rk_git::worktree_include::carry_set(exec, repo_root) -> Result<CarrySet, GitError>`, in a new
 `crates/rk-git/src/worktree_include.rs`.
 
@@ -613,8 +631,8 @@ builds the reader. `s8e` does the copy, at creation. The reader is
 - **A pure core.** The selection is `select_carry(matched, ignored, kinds) -> Result<CarrySet, CarryRefusal>` over
   lists already read. So the symlink and escape cases are tested without creating an OS symlink, which on Windows
   needs a privilege this box may not grant. The OS-level case is not asserted here, and §8c.11 says so.
-- **`LC_ALL=C`** on these calls is W1's rule, which is `s8e`'s. The reader goes through `GitExec` and inherits
-  whatever `s8e` sets there.
+- **`LC_ALL=C`** on these calls is W1's rule, which is `s8d-ii`'s. The reader goes through `GitExec` and inherits
+  whatever `s8d-ii` sets there.
 
 ### 8c.5 The per-toolchain value table (D21-42 4a), and the measurement that is its warrant
 
@@ -661,7 +679,7 @@ seeing which value it makes convenient.** A value above the construction bound i
 construction bound win, and the record says so rather than clamping the value.
 
 **What "cold" must mean.** It is the condition the adapter meets in a run-owned worktree, which lives at
-`.redkiln/worktrees/<item>` from `s8e` on (D21-44). That condition has three parts:
+`.redkiln/worktrees/<item>` from `s8d-ii` on (D21-44; D21-46 R1). That condition has three parts:
 
 - a fresh detached worktree;
 - its own empty `CARGO_TARGET_DIR`;
@@ -678,7 +696,7 @@ bounds each child it spawns (ADR-0140 decision 2), not the call.
 `tests/it/support.rs`' preflight. The draft handed that on as unassigned. D21-43 N25 and D21-45 W3 settle it:
 
 - the `setup` verb built here installs the dependencies;
-- `s8e` calls it at creation;
+- `s8d-ii` calls it at creation;
 - `s8g` asserts that the verify pass's whole suite in a run worktree has its Node fixture dependencies.
 
 The measurement below runs the same command, so it times the suite a run will meet.
@@ -807,8 +825,9 @@ never an erratum** (ADR-0092 rule 1). An accepted body is never edited.
   *"no field of the report is obtained by parsing prose or markdown"* still holds for every member AC-329 lists.
   The note reads the criterion. It does not amend it.
 
-The 7a "exactly six" erratum stands as drafted. `s8g`'s entry table still checks *"the six-method count"*, and that
-correction is made in `s8g`'s own file. It is not made here.
+The 7a "exactly six" erratum stands as drafted. `s8g`'s entry table, which the draft found checking the six-method
+count, now reads the seven-method count after record V (*corrected in `s8g`'s own file; consistency pass
+2026-09-24*). It is not made here.
 
 ### 8c.8 Order of work
 
@@ -1057,10 +1076,12 @@ Each is claimed only for the clause named:
   resolves a substitution through the same table.
 - **The three records exist and move what §8c.7 says.** ADR-0135's, ADR-0140's, ADR-0162's and ADR-0094's
   frontmatter carry the new `superseded_by`.
-- **The whole suite is green** above the floor re-derived from Checkpoint 8b's recorded count, and fmt and clippy
-  are rc 0.
+- **The whole suite is green** above the floor re-derived from Checkpoint 8b's recorded count (770 + 63 = 833 as
+  drafted), over at least 44 result lines, and fmt and clippy are rc 0.
 - **Checkpoint 8b (the entry gate), Checkpoint 7a and Checkpoint 5 re-run whole and pass.** 7a and 5 are the two
-  checkpoints this stage's own edits make provisional. No run here can reach a real dispatch.
+  checkpoints this stage's own edits make provisional. No run here can reach a real dispatch. Each runs with
+  `RK_CP_NESTED=1`, `REDKILN_LAUNCH_RECORD` unset and `CLAUDE_CONFIG_DIR` at an empty trap (D21-46), and under
+  `RK_CP_NESTED=1` this block re-runs none of them.
 
 ```bash
 cd D:/repos/redkiln-rs
@@ -1239,15 +1260,16 @@ inparser=$(printf '%s\n' "$raw" | grep -vE "$cl" | grep -E "$home")
 [ -n "$inparser" ] || { echo "FAIL: the pinned parser names no summary line on a code line — the counts are not read where N4 says"; exit 1; }
 grep -rqE '"--list"' crates/rk-adapter-toolchain-rust/src --include=*.rs || { echo "FAIL: the Rust adapter no longer names \"--list\" — Checkpoint 7c's RT-26 line would go red"; exit 1; }
 
-# ---- (13) THE WHOLE SUITE, --no-fail-fast, rc 0, no FAILED line, and a passed FLOOR. The floor is RE-DERIVED at stage
-# ---- open from Checkpoint 8b's RECORDED whole-suite count plus the 63 tests §8c.9 names as new, and the derivation
-# ---- is recorded. The drafted expected value is Checkpoint 8b's drafted FLOOR=768 (its chain starts from 740 passed /
-# ---- 0 failed / 9 ignored at 992d257, ADR-0164's evidence) + 63 = 831. Write the re-derived value here before the
-# ---- first run. A floor, not a pin, and never lowered to make a red run green.
-FLOOR=831
+# ---- (13) THE WHOLE SUITE, --no-fail-fast, rc 0, no FAILED line, and a passed FLOOR. Expected value, re-derived at
+# ---- stage open from Checkpoint 8b's recorded count: 770 + 63 = 833 (770 = 740 at 992d257, ADR-0164's evidence, + s8a's
+# ---- 9 + s8b's 21; 63 is §8c.9's new tests). Write the re-derived value here, by a dated edit, before the first run.
+# ---- A floor, not a pin, and never lowered to make a red run green. At least 44 result lines, as at 992d257.
+FLOOR=833
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .*FAILED|^test result:' | tail -30; exit 1; }
 if printf '%s\n' "$out" | grep -qE '^test result: FAILED'; then echo "FAIL: a test binary reported FAILED under rc 0"; exit 1; fi
+nres=$(printf '%s\n' "$out" | grep -c '^test result: ')
+[ "$nres" -ge 44 ] || { echo "FAIL: $nres test result lines, below the 44 of 992d257 — a target stopped being built or run"; exit 1; }
 total=$(printf '%s\n' "$out" | sed -n 's/^test result: ok\. \([0-9]*\) passed.*/\1/p' | awk '{s+=$1} END {print s+0}')
 [ "$total" -ge "$FLOOR" ] || { echo "FAIL: the whole suite passed $total tests, below the floor of $FLOOR"; exit 1; }
 out=$(cargo test -p rk-ports --features conformance 2>&1); rc=$?
@@ -1263,12 +1285,26 @@ out=$(cargo clippy -p rk-ports --all-targets --features conformance 2>&1); rc=$?
 
 # ---- (15) THE ENTRY GATE, AND THE OLDER CHECKPOINTS THIS STAGE'S OWN EDITS MAKE PROVISIONAL, RE-RUN WHOLE from their
 # ---- own files' bytes: 8b (the entry gate), 7a (rk-ports: the seventh method, D21-42 1b) and 5 (rk-types: the new
-# ---- structs). Nothing older is re-run from here. Whatever 8b's own block re-runs is 8b's cost, and 7c's whole re-run
-# ---- is s8j's (D21-43 N28). The extractor refuses a needle that selects zero or two blocks, and that refusal is
-# ---- proved first. No literal triple backtick appears here: this file's own fence would close on it.
+# ---- structs). Nothing older is re-run from here. 8b runs with RK_CP_NESTED=1, so it skips its own re-run of 8a, and
+# ---- 7c's whole re-run is s8j's (D21-43 N28). The extractor refuses a needle that selects zero or two blocks, and that
+# ---- refusal is proved first. No literal triple backtick appears here: this file's own fence would close on it.
+# ---- D21-46: SKIPPED under RK_CP_NESTED=1 (this block is another checkpoint's entry gate); otherwise every replay runs
+# ---- with RK_CP_NESTED=1, REDKILN_LAUNCH_RECORD unset and CLAUDE_CONFIG_DIR at an empty trap that must stay empty.
 xb='import re,sys; f=chr(96)*3; t=open(sys.argv[1],encoding="utf-8").read(); bs=[b for b in re.findall(f+"bash\n(.*?)"+f,t,re.S) if sys.argv[2] in b]; len(bs)==1 or sys.exit("need exactly one bash block holding "+repr(sys.argv[2])+" in "+sys.argv[1]+"; found "+str(len(bs))); open(sys.argv[3],"w",encoding="utf-8",newline="\n").write(re.sub(r"(?m)^> ?","",bs[0]))'
 out=$(python -c "$xb" runbook/phase-1/s7a-ports-and-fakes.md 'NO-SUCH-NEEDLE-8C' "$scratch/none.sh" 2>&1); rc=$?
 [ "$rc" -ne 0 ] || { echo "FAIL: SYNTHETIC CONTROL — the extractor accepted a needle that selects no block"; exit 1; }
+if [ "${RK_CP_NESTED:-0}" = 1 ]; then
+  echo "CP8C (15) SKIPPED: RK_CP_NESTED=1 — this block is another checkpoint's entry gate; its re-runs ran at Checkpoint 8c's own close"
+else
+trap_dir="$PWD/target/cp8c-claude-config-trap"
+rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+# Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
+: > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+[ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+[ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
 # NO ACCIDENTAL DISPATCH. If 8b's chain still reaches Checkpoint 7f through 8a, 7f runs `redkiln run` on the fix item.
 # Before s8h no shipped card carries permission_mode, so lint_card refuses before any spawn. That is proved here, with
 # a control. From s8h on it is false: a re-run from then points [adapters] harness_binary at the fixture child.
@@ -1281,21 +1317,25 @@ pm=$(grep -l 'permission_mode' "$@"); rc=$?
 [ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc: $pm) — a whole re-run reaching redkiln run could dispatch for real; stop (D21-40 decision 2)"; exit 1; }
 out=$(python -c "$xb" runbook/phase-1/s8b-catalog-quality.md 'CP8B-END-OF-BLOCK reached' "$scratch/cp8b.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8b's block could not be extracted: $out"; exit 1; }
-out=$(bash "$scratch/cp8b.sh" 2>&1); rc=$?
+out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp8b.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the entry gate, Checkpoint 8b, re-run WHOLE, exited $rc (set any variable it refuses by name, and re-run)"; printf '%s\n' "$out" | tail -30; exit 1; }
 printf '%s\n' "$out" | grep -qxF 'CP8B-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 8b exited 0 without reaching its last line"; exit 1; }
 out=$(python -c "$xb" runbook/phase-1/s7a-ports-and-fakes.md 'trybuild_pins_the_reason_each_port_fixture_fails' "$scratch/cp7a.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7a's block could not be extracted: $out"; exit 1; }
 printf '\necho "CP7A-END-OF-BLOCK reached"\n' >> "$scratch/cp7a.sh" || { echo "FAIL: could not append 7a's end marker"; exit 1; }
-out=$(bash "$scratch/cp7a.sh" 2>&1); rc=$?
+out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp7a.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7a, re-run WHOLE over the seven-method port (D21-42 1b), exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
 printf '%s\n' "$out" | grep -qxF 'CP7A-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 7a exited 0 without reaching its last line"; exit 1; }
 out=$(python -c "$xb" runbook/phase-1/s5-workspace-ci-rk-types.md 'FAIL: deny.toml absent' "$scratch/cp5.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 5's block could not be extracted: $out"; exit 1; }
 printf '\necho "CP5-END-OF-BLOCK reached"\n' >> "$scratch/cp5.sh" || { echo "FAIL: could not append 5's end marker"; exit 1; }
-out=$(bash "$scratch/cp5.sh" 2>&1); rc=$?
+out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp5.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 5, re-run WHOLE over the new rk-types structs, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
 printf '%s\n' "$out" | grep -qxF 'CP5-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 5 exited 0 without reaching its last line"; exit 1; }
+left=$(find "$trap_dir" -mindepth 1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the re-runs (rc=$rc)"; exit 1; }
+[ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the re-runs — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
+fi
 
 # ---- (16) THE WORKTREE PATH SET IS UNCHANGED, compared BEFORE any prune; the prune is a dry run and finds nothing.
 wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
@@ -1352,7 +1392,7 @@ commit.** A pass is evidence about a specific text.
 | draft item | settled by | where it now lives |
 | --- | --- | --- |
 | where the 185 agent-step `timeout_secs` are enforced | D21-43 N16 | `s8d` (§8c.6) |
-| a run-owned worktree runs this repository's suite red, with no `node_modules` | D21-43 N25; D21-45 W3 | the `setup` verb here; `s8e` calls it at creation; `s8g` asserts the Node deps (§8c.5) |
+| a run-owned worktree runs this repository's suite red, with no `node_modules` | D21-43 N25; D21-45 W3 | the `setup` verb here; `s8d-ii` calls it at creation; `s8g` asserts the Node deps (§8c.5) |
 | `build` has no outcome | D21-43 N25 | here (§8c.2) |
 | `[toolchain.feeds]` is not shipped | D21-43 N14 | the `[feed.*]` table here (§8c.4) |
 | `sca-scan`'s check passes with `unrated > 0` | D21-43 N25 | `s8b`'s catalog edit |
@@ -1373,14 +1413,18 @@ commit.** A pass is evidence about a specific text.
      (`item_create`), so the candidate owner is `s8f`.
    - Until an owner builds the read, the feed is declared `unprovided`, and `closure-record` refuses by name, as it
      does today.
+   - *Settled by D21-46 R7 (consistency pass 2026-09-24):* *"s8f builds the `toolchain:backlog` producer (a
+     store-route read of items)"*. `s8f` §8f.7 builds it and flips `[feed.rust.backlog]` and `[feed.node.backlog]` to
+     `verb = "backlog"`. Between Checkpoint 8c and Checkpoint 8f, `closure-record` refuses by name at `audit`, and
+     `s8d` §8d.9's walk table counts it among the refusals.
 
 **Sibling files that disagree with this one:**
 
-- **`s8g`'s entry table** checks *"the six-method count"*. After record V the port has seven. The correction is
-  `s8g`'s, in its own file, and it is named here so that nobody runs the entry check against six.
+- **`s8g`'s entry table** checked the six-method count in the draft. After record V the port has seven. *Settled:*
+  `s8g`'s revised entry table reads *"the **seven**-method count after `s8c`'s record V"*.
 - **The rigged stub's doc** (`rk-fixture-toolchain.rs`) names the candidate arm's directory as
   *"`…/worktrees/<item>`"*. Under D21-44 the run worktree moves to `.redkiln/worktrees/<item>`. The stub decides by
   the `.review-ref` suffix, so its behaviour does not move. The doc sentence is corrected with the path move, which
-  is `s8e`'s.
+  is `s8d-ii`'s (D21-46 R1; `s8d-ii`'s attendant edits list it).
 
 ---

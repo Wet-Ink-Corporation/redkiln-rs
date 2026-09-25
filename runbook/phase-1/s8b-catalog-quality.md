@@ -28,6 +28,14 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   no-dispatch rule are stated.
 - D21-45 (W1–W4) changes nothing else here. This stage creates, re-enters and removes no worktree.
 
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **Section (0) adopts D21-46's re-run convention and replay guard.** It skips its whole re-run of Checkpoint 8a
+  under `RK_CP_NESTED=1`, and otherwise launches 8a with `RK_CP_NESTED=1`, `REDKILN_LAUNCH_RECORD` unset and
+  `CLAUDE_CONFIG_DIR` at an empty trap that must start and stay empty.
+- **The floor chain is recomputed once** (D21-46): Checkpoint 8a's 749 + this stage's 21 = **770**, not the drafted
+  768, and (12) gains the at-least-44-result-lines guard.
+- **`s8c` §8c.12's AC-018 row is re-quoted** from its current bytes.
+
 ---
 
 **Why this step exists.** The product ships `.redkiln/`, and not one catalog-quality instrument on this tree reads it.
@@ -61,8 +69,8 @@ data.
   executed by hand for the twenty-two activities §8b.5 edits, and asserted by two named tests over them, which is not
   AC-111's instrument;
 - **AC-018's liveness clause over a SHIPPED verb registry**: `.redkiln/` ships no verb registry until `s8c`, whose
-  §8c.12 reads *"AC-018's `live_verb_memo_rule` finally has a shipped registry to read, and nothing wires it over
-  `.redkiln/`"*. After §8b.5's repair no shipped step declares `memo` at all. Clause 1 needs
+  §8c.12 settles the row *"AC-018's `live_verb_memo_rule` has a shipped registry and nothing runs it over
+  `.redkiln/`"* with `verb_registry::ac018_holds_over_the_shipped_catalog_and_registry`. After §8b.5's repair no shipped step declares `memo` at all. Clause 1 needs
   `step.memo_declared == Some(true)` and clause 2 fires on `if step.memo_declared.is_some() {`, so both are silent over
   `.redkiln/catalog` whatever registry is passed. The re-proof against the shipped registry is `s8c`'s;
 - AC-101's and AC-102's **kill-line verdicts over the installed pair**: they are measured and recorded with the
@@ -606,8 +614,8 @@ share one scratchpad. For each mutant, the driver:
 
 ### 8b.9 Checkpoint 8b
 
-- **Checkpoint 8a holds**, re-run whole from its own stage file's bytes. That is the only checkpoint this block
-  re-runs whole. Checkpoint 7b selects two names this stage re-points, `rigor_monotonicity` and
+- **Checkpoint 8a holds**, re-run whole from its own stage file's bytes, with `RK_CP_NESTED=1` and under D21-46's
+  replay trap. That is the only checkpoint this block re-runs whole, and under `RK_CP_NESTED=1` it re-runs none. Checkpoint 7b selects two names this stage re-points, `rigor_monotonicity` and
   `ac527_empty_set_terminal_condition`, and section (5) runs both, so no older checkpoint is made provisional here.
 - **No real dispatch can happen.** If Checkpoint 8a's block reaches Checkpoint 7f's `redkiln run`, then at this stage
   no card carries `permission_mode`, and `s8a`'s own guard refuses if one does. Once `s8h` lands, a whole re-run of this
@@ -640,16 +648,35 @@ cd D:/repos/redkiln-rs
 # ---- It is the ONLY checkpoint re-run whole here: 7b's two names this stage re-points run in (5) by module-qualified
 # ---- name. No dispatch: if 8a's block reaches 7f's `redkiln run`, no card carries permission_mode at this stage and
 # ---- s8a's guard refuses if one does. After s8h lands, point [adapters] harness_binary at the fixture child first.
-S8A=runbook/phase-1/s8a-records-and-red-checkpoints.md
-test -f "$S8A" || { echo "FAIL: $S8A is absent — Checkpoint 8a cannot be re-run (Halt 8)"; exit 1; }
-cp8a=$(mktemp) || { echo "FAIL: mktemp could not create the extraction file"; exit 1; }
-awk '/^### 8a\.[0-9]+ Checkpoint 8a/ {f=1} f && /^[`][`][`]bash/ {b=1; body=""; next} b && /^[`][`][`]/ {b=0; last=body; next} b {body = body $0 "\n"} END {printf "%s", last}' "$S8A" > "$cp8a" || { echo "FAIL: Checkpoint 8a could not be extracted"; exit 1; }
-test -s "$cp8a" || { echo "FAIL: no bash block follows Checkpoint 8a's heading — nothing would be re-run"; exit 1; }
-grep -qxF 'echo "CP8A-END-OF-BLOCK reached"' "$cp8a" || { echo "FAIL: the extracted block does not end in CP8A's marker — it is not Checkpoint 8a"; exit 1; }
-out=$(bash "$cp8a" 2>&1); rc=$?
-rm -f "$cp8a"
-[ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8a, re-run whole, exited $rc — the entry gate does not hold"; printf '%s\n' "$out" | tail -25; exit 1; }
-printf '%s\n' "$out" | grep -qxF 'CP8A-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 8a exited 0 without reaching its end marker"; exit 1; }
+# ---- D21-46's ONE RE-RUN CONVENTION: SKIPPED under RK_CP_NESTED=1 (this block is another checkpoint's entry gate), and
+# ---- 8a is launched with RK_CP_NESTED=1, so it skips its own nested whole re-runs. D21-46's ONE NO-DISPATCH GUARD FOR
+# ---- REPLAYS (s8g's form): REDKILN_LAUNCH_RECORD unset, CLAUDE_CONFIG_DIR at an empty trap that must stay empty.
+if [ "${RK_CP_NESTED:-0}" = 1 ]; then
+  echo "CP8B (0) SKIPPED: RK_CP_NESTED=1 — this block is another checkpoint's entry gate; its re-run of 8a ran at Checkpoint 8b's own close"
+else
+  S8A=runbook/phase-1/s8a-records-and-red-checkpoints.md
+  test -f "$S8A" || { echo "FAIL: $S8A is absent — Checkpoint 8a cannot be re-run (Halt 8)"; exit 1; }
+  mkdir -p target/cp8b || { echo "FAIL: cannot create target/cp8b"; exit 1; }
+  cp8a=target/cp8b/cp8a.sh
+  awk '/^### 8a\.[0-9]+ Checkpoint 8a/ {f=1} f && /^[`][`][`]bash/ {b=1; body=""; next} b && /^[`][`][`]/ {b=0; last=body; next} b {body = body $0 "\n"} END {printf "%s", last}' "$S8A" > "$cp8a" || { echo "FAIL: Checkpoint 8a could not be extracted"; exit 1; }
+  test -s "$cp8a" || { echo "FAIL: no bash block follows Checkpoint 8a's heading — nothing would be re-run"; exit 1; }
+  grep -qxF 'echo "CP8A-END-OF-BLOCK reached"' "$cp8a" || { echo "FAIL: the extracted block does not end in CP8A's marker — it is not Checkpoint 8a"; exit 1; }
+  trap_dir="$PWD/target/cp8b/claude-config-trap"
+  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  # Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
+  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$cp8a" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8a, re-run whole, exited $rc — the entry gate does not hold"; printf '%s\n' "$out" | tail -25; exit 1; }
+  printf '%s\n' "$out" | grep -qxF 'CP8A-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 8a exited 0 without reaching its end marker"; exit 1; }
+  left=$(find "$trap_dir" -mindepth 1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the re-run (rc=$rc)"; exit 1; }
+  [ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the re-run — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
+fi
 
 # ---- (1) BUILD-OR-FAIL.
 out=$(cargo build --workspace 2>&1); rc=$?
@@ -820,14 +847,16 @@ raw=$(cal_walk); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the calibration sweep could not run (grep rc=$rc)"; exit 1; }
 [ -z "$raw" ] || { echo "FAIL: a calibration claim — S-SUBTLE-CB is UNRUN:"; printf '%s\n' "$raw"; exit 1; }
 
-# ---- (12) THE WHOLE SUITE, with a passed FLOOR. FLOOR is re-derived at stage open from Checkpoint 8a's RECORDED
-# ---- passed count plus this stage's 21 new tests. 768 is the drafted expectation: 8a's drafted floor 747 (740 at
-# ---- 992d257, ADR-0164's evidence, plus s8a's 7) plus 21. Write the re-derived value here before the first run.
-FLOOR=768
+# ---- (12) THE WHOLE SUITE, with a passed FLOOR. Expected value, re-derived at stage open from Checkpoint 8a's recorded
+# ---- count: 749 + 21 = 770 (749 = ADR-0164's 740 at 992d257 + s8a's 9; 21 is this stage's new tests). Write the
+# ---- re-derived value here, by a dated edit, before the first run. At least 44 result lines, as at 992d257.
+FLOOR=770
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED|test result: FAILED' | head -20; exit 1; }
 passed=$(printf '%s\n' "$out" | awk '/^test result: / {for (i = 2; i <= NF; i++) if ($i == "passed;") s += $(i - 1)} END {print s + 0}')
 [ "$passed" -ge "$FLOOR" ] || { echo "FAIL: the workspace passed $passed tests, below the floor of $FLOOR — tests were lost or not run"; exit 1; }
+nres=$(printf '%s\n' "$out" | grep -c '^test result: ')
+[ "$nres" -ge 44 ] || { echo "FAIL: $nres test result lines, below the 44 of 992d257 — a target stopped being built or run"; exit 1; }
 out=$(cargo fmt --all --check 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo fmt --check rc=$rc"; printf '%s\n' "$out" | head -20; exit 1; }
 out=$(cargo clippy --workspace --all-targets 2>&1); rc=$?
@@ -849,7 +878,8 @@ echo "CP8B-END-OF-BLOCK reached"
   trap as the backstop. It relies on D21-44's `.gitignore` row `.redkiln/worktrees/`, and it asserts that row with
   `git check-ignore`. It never touches a run worktree, because the name carries the `s8b-plant-` prefix and the pid.
 - Section (0) reaches Checkpoint 7f only through Checkpoint 8a. After `s8h` lands, a whole re-run of this block needs
-  the fixture child in `[adapters] harness_binary` first (§8b.9).
+  the fixture child in `[adapters] harness_binary` first (§8b.9). Section (0) launches 8a with `RK_CP_NESTED=1`, so
+  8a skips its own whole re-runs (7i, 5, 7a, 7b, 7f), and under D21-46's trap.
 - The (C) rows' `discriminating_test` binding is refused by name until `s8h` types the field (§8b.5). No section of
   this block evaluates it, so it cannot turn this block red or green.
 

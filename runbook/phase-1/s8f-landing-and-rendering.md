@@ -20,8 +20,8 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   clause is read, by dated note, as a test of `cost`'s renderer with AC-415's red case (§8f.8).
 - **N5.** The general interim `item` key is `s8e`'s record, and this file cites it. The telemetry-key record keeps
   `activity_id_at_version` and the cost breakdown (§8f.8).
-- **D21-44 / D21-45 W2.** The run-owned worktree is `.redkiln/worktrees/<item>`, and re-entry reuses it (`s8e`
-  owns both). The re-entry rules in §8f.4 are rewritten over reuse.
+- **D21-44 / D21-45 W2.** The run-owned worktree is `.redkiln/worktrees/<item>`, and re-entry reuses it (`s8d-ii`
+  owns both since D21-46 R1). The re-entry rules in §8f.4 are rewritten over reuse.
 - **Settled residuals.** Where the canonical typed value lives (§8f.5), the managed path (§8f.6), and how
   `activity_id_at_version` reaches the adapter (§8f.8) are stated as the records' decisions, not left open.
 - **Handed on.** The `landing` and drift gate classes each need a `gate_expiry` row, in `s8h`'s table (§8f.1).
@@ -45,6 +45,21 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - **Found in revision (R7):** `s8c` §8c.4 cites ADR-0032 for an optional unprovided feed's `null`, and ADR-0032's
   frontmatter reads `superseded_by: ["0103"]`. The rule stands. Re-pointing the citation is `s8c`'s (§8f.7).
 
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **The run worktree's path, reuse and refusal are `s8d-ii`'s** (D21-46 R1). `s8e` keeps `worktree_assigned` and the
+  discard's journal row. Every sentence that gave all of it to `s8e` now names the split.
+- **The telemetry-key record, restated under R3** (§8f.3, §8f.8). `dispatch_completed`'s `item` is `s8e` §8e.10's
+  interim key, carried **beside** the payload and outside the canonical digest, which supersedes nothing (D21-46 R3).
+  `activity_id_at_version` stays a **payload** member on D21-42 12b's ADR-0163 route, so the record still supersedes
+  ADR-0131's first forbids bullet in part for that one member, and ADR-0163's bullet with it.
+- **After R2 the gate table is `t1_gate_transition`**: §8f.5's stage-exit fold and Checkpoint 8f (1b)/(8)'s store probe
+  read it, because `s8e`'s `0002` migration drops `t1_gate`.
+- **Checkpoint 8f (9) adopts D21-46's re-run convention and replay guard**: it skips its whole re-runs of 8e and 7i
+  under `RK_CP_NESTED=1`, and otherwise launches both with `RK_CP_NESTED=1`, `REDKILN_LAUNCH_RECORD` unset and
+  `CLAUDE_CONFIG_DIR` at an empty trap.
+- **The floor chain is recomputed once**: Checkpoint 8e's 984 + this stage's 79 = **1063**, not the drafted 969.
+- **`s8c` §8c.4's re-pointed citation and `s8d` §8d.9's re-claimed walk table** are quoted from their current bytes.
+
 ---
 
 **Why this step exists.** AC-473 asks for *"every lane stage from intake to a landed commit"*, and nothing on the tree
@@ -59,7 +74,7 @@ revision. §8f.2 re-takes each one at Checkpoint 8e's close, because `s8a`–`s8
 - **Re-entry destroys what was not committed.** `recreate_run_worktree` runs `["worktree", "remove", "--force",
   path]` and then `std::fs::remove_dir_all(&path)` before it re-adds the branch. Its comment says *"The teardown's
   failure is ignored ON PURPOSE"*. Commits on the branch survive this, and nothing else does. D21-45 W2 replaces it
-  with reuse (*"Reuse, never force-remove"*), and that work is `s8e`'s.
+  with reuse (*"Reuse, never force-remove"*), and that work is `s8d-ii`'s (D21-46 R1).
 - **The gate binds the wrong tree.** `prepare_inputs` hashes `&resolved.worktree` (the invoking checkout) with
   `rk_git::tree::TreeBasis::WorkingState`, at stage start and before any dispatch. `terminal_read` copies that value
   into the `Gate:` trailer. `answer` hashes the run-owned worktree.
@@ -124,7 +139,8 @@ not re-specify it:
   through it.
 - **The lane's end** is N9's terminal `Story: <project>/<item> closed` mark (`s8e`).
 - **The run-owned worktree** lives at `.redkiln/worktrees/<item>` (D21-44), and it is reused rather than
-  re-created (D21-45 W2). `s8e` owns the path, `worktree_assigned`, the reuse and the journalled discard.
+  re-created (D21-45 W2). `s8d-ii` owns the path and the reuse (D21-46 R1), and `s8e` owns `worktree_assigned` and
+  the discard's journal row.
 - **The interim `item` key** on every item-scoped event kind (N5) is `s8e`'s record.
 
 From `s8d` (Checkpoint 8d) this stage takes the resolved emit binding, step-grain commits and re-entry (D21-42
@@ -146,8 +162,8 @@ names this stage as the candidate owner of its read (`s8c` §8c.12 item 3). D21-
   `s8-exit-criterion.md`.
 - **`s8d`'s walk table (D21-46 R7).** §8f.7's feed-to-activity list goes to `s8d` §8d.9 by citation. At Checkpoint
   8d, `closure-record` stops at `audit` in both lanes, refused by name on `toolchain:backlog`, and its owner is this
-  stage. `s8d`'s drafted rows say it walks. The correction is `s8d`'s, in its own file. This stage's close flips the
-  rows back to **walks** by dated line (§8f.10).
+  stage. `s8d` §8d.9 now records it as refusing (consistency pass 2026-09-24). This stage's close flips the rows back
+  to **walks** by dated line (§8f.10).
 
 **Order.** (i) The stage-open measurements (§8f.2). (ii) The three records, written `proposed` before any code they
 authorise. (iii) The landing: `rk-git`'s primitive, then the kernel wiring on `s8e`'s seam (the step-grain act and
@@ -201,11 +217,12 @@ Each is read-only. A 🛑 line is a STOP. The stage does not choose around it: t
    `item_create`, `status`, `doctor_journal`, `doctor_artifact` and `doctor_drift`. If a predecessor stage created one of them, the tests go into it. The
    module-qualified names in §8f.12 stay as they are.
 9. **The whole-suite floor, re-derived at stage open from Checkpoint 8e's recorded count.** Checkpoint 8f's
-   `FLOOR` is Checkpoint 8e's recorded passed count plus this stage's **79** new tests. The drafted chain gives the
-   expected value. `ca8f387`'s whole suite measured 740 passed, 0 failed and 9 ignored over 44 results (ADR-0164's
-   evidence, `992d257`). The drafted floors then add `s8a` 7, `s8b` 16, `s8c` 40, `s8d` 46 and `s8e` 41, which gives
-   890 at Checkpoint 8e and **969** here: 64 before D21-46 R7, plus its 15. Replace 969 with the recorded count
-   plus 79, by a dated edit of that line, before the block's first run. The floor is a lower bound, and it must not be a stale one.
+   `FLOOR` is Checkpoint 8e's recorded passed count plus this stage's **79** new tests (64, plus D21-46 R7's 15). The
+   chain, recomputed once under D21-46, gives the expected value. `ca8f387`'s whole suite measured 740 passed, 0
+   failed and 9 ignored over 44 results (ADR-0164's evidence, `992d257`). The stages then add `s8a` 9, `s8b` 21, `s8c`
+   63, `s8d` 52, `s8d-ii` 32 and `s8e` 67, which gives 984 at Checkpoint 8e and 984 + 79 = **1063** here. Replace
+   1063 with the recorded count plus 79, by a dated edit of that line, before the block's first run. The floor is a
+   lower bound, and it must not be a stale one.
 10. 🛑 **Where `s8d`'s `artifact:` arm reads, and whether it already emits.** N12: *"`artifact.read` is emitted by
     s8d's resolver through s8f's rk-store read seam"*. `s8d` closes before this stage, so the seam does not exist
     when `s8d`'s resolver is built. As drafted, `s8d` §8d.3's `artifact:` row reads the committed `emit` binding
@@ -244,9 +261,9 @@ phrase.
 
 | record | title carries | decides | relation to the accepted set |
 | --- | --- | --- | --- |
-| **the landing record** | `landed commit` | §8f.4 whole: what "landed" means; the step-grain boundary act (N10) and the boundary checkpoint; how a step checkpoint names its key for `reconcile`'s heal; the staging rule and its baseline; the denylist, the size limit and the form of the refusal; how each commit is made; the gate's tree; no integration; the hand-off; the discarded set at re-entry | Execution under ADR-0105 clauses 3–5 and ADR-0109 decision 2, as D21-41 (b) says, as D21-43 N10 widens it. It records that N10 replaces (b)'s *one* content checkpoint per boundary. It must **state its reading** of ADR-0105's forbids bullet *"forbids including untracked files in it"*. It must also state its reading of clause 3's *"plumbing is `commit-tree` + `update-ref` where the wrapper needs an exact parent"* as the warrant for the two `GitOp` variants §8f.4 needs. If writing finds that a `## Decision` sentence moves, that is a supersession, and the record says so (ADR-0092 rule 1). Clause 6's *"re-created, never reused"* is `s8e`'s D21-44/W2 record's to supersede, and this record cites it |
+| **the landing record** | `landed commit` | §8f.4 whole: what "landed" means; the step-grain boundary act (N10) and the boundary checkpoint; how a step checkpoint names its key for `reconcile`'s heal; the staging rule and its baseline; the denylist, the size limit and the form of the refusal; how each commit is made; the gate's tree; no integration; the hand-off; the discarded set at re-entry | Execution under ADR-0105 clauses 3–5 and ADR-0109 decision 2, as D21-41 (b) says, as D21-43 N10 widens it. It records that N10 replaces (b)'s *one* content checkpoint per boundary. It must **state its reading** of ADR-0105's forbids bullet *"forbids including untracked files in it"*. It must also state its reading of clause 3's *"plumbing is `commit-tree` + `update-ref` where the wrapper needs an exact parent"* as the warrant for the two `GitOp` variants §8f.4 needs. If writing finds that a `## Decision` sentence moves, that is a supersession, and the record says so (ADR-0092 rule 1). Clause 6's *"re-created, never reused"* is `s8d-ii`'s D21-44/W2 record's to supersede (D21-46 R1), and this record cites it |
 | **the render record** | `render and write path` | §8f.5–§8f.7 and §8f.9's AC-159 rule: layout-C rendering, section stamps, prose, the drift pass (C2) and its drift gate (N11), where the canonical typed value is kept, the managed directory, the write seam, the read seam (N12), one `artifact.write` per write and one `artifact.read` per read, `.redkiln/items/` as a managed tree, and the unrecorded-mutation rule. Under D21-46 R7 it also decides the `backlog` read and its output shape (§8f.7), the vouched root's store and its advisory drift (§8f.5), the carrier of an attach's path (§8f.2 item 12) and `RK-D-DRIFT-KIND` (§8f.9) | It owns AC-411, AC-477 and AC-478, which are RAISED with no owner record. ADR-0005/0006 (as refined by ADR-0075) and ADR-0116 stand. It drives dated register amendments (§8f.10). It states N11's reading of AC-125 and records that AC-127 holds unamended (§8f.5). It states its reading of ADR-0025 for a vouched root's own change, and ADR-0025 stands unamended (§8f.5) |
-| **the telemetry-key record** | `dispatch_completed carries` | §8f.8–§8f.9: the `activity_id_at_version` member and its carrier, the breakdown grammar, the `status` renderer, AC-372's doctor clause read as a renderer test (N12), and `doctor`'s journal source and five-hour reading | **Supersedes in part:** ADR-0131's first forbids bullet, for `dispatch_completed.activity_id_at_version` alone, until 0131's tag is wired. The `item` member is N5's and rests on `s8e`'s record, which this record cites. It also supersedes in part ADR-0163 decision 4's closed-grammar sentence, decision 5's not-delivered list and its sentence on `doctor`'s journal, and ADR-0163's bullet on *"any other payload correlation key"* for this one member (§8f.8) |
+| **the telemetry-key record** | `dispatch_completed carries` | §8f.8–§8f.9: the `activity_id_at_version` member and its carrier, the breakdown grammar, the `status` renderer, AC-372's doctor clause read as a renderer test (N12), and `doctor`'s journal source and five-hour reading | **Supersedes in part:** ADR-0131's first forbids bullet, for `dispatch_completed.activity_id_at_version` alone, until 0131's tag is wired: that member is a **payload** member on D21-42 12b's ADR-0163 route. The `item` key is N5's, carried beside the payload by `s8e`'s record under D21-46 R3, which supersedes nothing; this record cites it. It also supersedes in part ADR-0163 decision 4's closed-grammar sentence, decision 5's not-delivered list and its sentence on `doctor`'s journal, and ADR-0163's bullet on *"any other payload correlation key"* for this one member (§8f.8) |
 
 ### 8f.4 The landing checkpoint (D21-41 (b); D21-42 9; D21-43 N10)
 
@@ -290,7 +307,7 @@ that a replay is served the recorded set. It is journalled so that a later proce
 now that the worktree is reused across processes (D21-45 W2). Standard excludes are honoured, and an ignored file is
 never a candidate. Staged text is normalised by `.gitattributes`: its first row is `* text=auto eol=lf` (ADR-0164),
 so a landing's tree is the same on every box. **One function computes this set.** The landing stages from it, and
-`s8e`'s re-entry discards exactly it (below).
+`s8d-ii`'s re-entry discards exactly it (below).
 
 **What is refused, and how.** Every path to be staged is checked, run-created or tracked, before anything is written.
 - **The denylist.** A path is refused if it matches `.env`, `.env.*`, `*.pem`, `*.key` or `id_*`, or one of the
@@ -318,7 +335,7 @@ replaces with a stated reason:
 A new exit-table row was considered and rejected: AC-438's table is a closed, snapshotted set, and a gate uses the
 one answer channel (ADR-0009) without waiting.
 
-**The cost is stated, not hidden.** The refused step did not commit. At the next entry `s8e`'s reuse discards its
+**The cost is stated, not hidden.** The refused step did not commit. At the next entry `s8d-ii`'s reuse discards its
 in-flight edits (W2), and the step re-dispatches with the exclusion in force. The record weighs one more option:
 salvage the refused landing against its recorded tree.
 
@@ -368,8 +385,9 @@ design §5.5). A squashed hand-off would orphan every trailer the run wrote.
 `recreate_run_worktree`'s teardown and left a void route open. Both premises are gone. The worktree is
 `.redkiln/worktrees/<item>`, and W2 decides re-entry: *"Re-entry reuses the registered worktree when its HEAD equals
 the `rk-run/<item>` tip. Uncommitted in-flight changes are discarded explicitly and journalled, which is N10's
-semantics. A tree without `RK_BASE`, or with commits the run ref lacks, is **refused, never removed**."* `s8e` owns
-the reuse, the refusal and the discard's journal row. This stage owns what lands, so it fixes three things:
+semantics. A tree without `RK_BASE`, or with commits the run ref lacks, is **refused, never removed**."* `s8d-ii`
+owns the reuse and the refusal, and `s8e` the discard's journal row (D21-46 R1). This stage owns what lands, so it
+fixes three things:
 1. **The discarded set is the staging set.** What re-entry discards is exactly what a landing would have staged at
    that moment: tracked modifications, plus untracked files less the baseline, honouring ignores. One function
    computes it (above), and it is printed path by path. It is never silent.
@@ -397,7 +415,7 @@ commits it. So the value survives the deleted-database test (ADR-0109 decision 2
 store, not from the markdown"* (AC-477). Parsing it out of the `.md` stays forbidden (ADR-0005). A store table was
 considered and rejected: after a deleted database no git fact could rebuild it.
 
-**C2 — surface, restore, and gate (D21-42 5a; D21-43 N11).** At every entry, after `s8e`'s re-entry discard and
+**C2 — surface, restore, and gate (D21-42 5a; D21-43 N11).** At every entry, after `s8d-ii`'s re-entry discard and
 `reconcile_at_entry`, `rk-store` passes over the item's managed directory in the run-owned worktree. It does this for
 each structured section and for the typed frontmatter:
 - It locates the section by anchor (the locator's byte range) and compares the bytes on disk with the rendering of
@@ -409,7 +427,8 @@ each structured section and for the typed frontmatter:
 - **Then the kernel opens a drift gate** of class `render.structured-drift`, git-first (N6). Its `Gate:` commit is the
   checkpoint that lands the restore. N11: *"`structured_drift` opens a drift gate that blocks the stage's exit until
   it is answered."* The stage's steps continue to dispatch, because the typed value is already whole. What is blocked
-  is the boundary: `s8e`'s stage advance folds `t1_gate` (N6) and refuses to leave the stage while a drift gate for
+  is the boundary: `s8e`'s stage advance folds the gate transitions (`t1_gate_transition`, D21-46 R2; N6)
+  and refuses to leave the stage while a drift gate for
   the item is unanswered. When the stage has nothing left to run, `run` exits `0` at the gate, like any gate. The
   class needs a `gate_expiry` row in `s8h`'s table (§8f.1).
 - A prose section edited on disk is accepted whole as the field's new value, with no drift record and no gate
@@ -603,7 +622,7 @@ as a mandatory input (`backlog = "toolchain:backlog"`), and so does `problem-rec
 **The unprovided feeds, and which activities stop on each (D21-46 R7).** R7 reads: *"Unprovided feeds refuse by name,
 and the walk table records each activity that stops on one."* `s8c` §8c.4's resolution rule is read as it stands:
 *"An `unauthored` or `unprovided` key is refused by name when the input is mandatory, and is `null` when it is optional
-(ADR-0032)."* R7 does not turn an optional `?` input into a refusal. So an activity **stops** on a feed exactly when
+(ADR-0103 decision 4, which supersedes ADR-0032)."* R7 does not turn an optional `?` input into a refusal. So an activity **stops** on a feed exactly when
 it reaches an `unprovided` feed through a mandatory input.
 
 The measurement is over the step `inputs` of the 102 files in `.redkiln/catalog/` at `c5d19d7`. The three feeds
@@ -621,12 +640,12 @@ column reads `s8d` §8d.9's drafted walk tables.
 
 **Handed to the walk table's owner, by citation.** `s8d` §8d.9 owns the walk table, and this list is handed to it.
 `s8d` closes before this stage, so at Checkpoint 8d **`closure-record` stops at `audit` in both lanes**. It is refused
-by name on `toolchain:backlog`, and its owner is this stage. `s8d` §8d.9's drafted rows say it walks: *"`closure-record`
-and `lightweight-retro` **walk**"* in the fix lane, and *"`closure-record` **walks**"* in the story lane. Its claims
-read *"12 of 15"* and *"10 of 13"*. Under the rule above they read 11 of 15 and 9 of 13 at Checkpoint 8d, with a
-fourth refusal owned by `s8f`.
-- The correction is `s8d`'s, in its own file. It is named here so that nobody bends `lane_walk::…` to the drafted
-  row.
+by name on `toolchain:backlog`, and its owner is this stage. `s8d` §8d.9's drafted rows said it walked, and its claims
+read 12 of 15 and 10 of 13. Under the rule above they read 11 of 15 and 9 of 13 at Checkpoint 8d, with a fourth
+refusal owned by `s8f`.
+- The correction is `s8d`'s, in its own file, and it is made (consistency pass 2026-09-24): `s8d` §8d.9 now claims
+  *"11 of 15 walk, and 4 refuse by name"* for the fix lane and *"9 of 13 walk"* for the story lane. It is named here
+  so that nobody bends `lane_walk::…` to the drafted row.
 - This stage's close flips the two rows back to **walks** by dated line. The two `lane_walk` tests' expected
   verdicts move in the same commit (§8f.10).
 - After this stage **no lane activity stops on a feed**.
@@ -635,20 +654,25 @@ fourth refusal owned by `s8f`.
   a mandatory reach of an `unprovided` feed fails it by name.
 
 **Found in revision (R7).** `s8c` §8c.4 cites ADR-0032 for the optional `null`, and ADR-0032's frontmatter reads
-`superseded_by: ["0103"]`. The rule is unchanged here, and re-pointing the citation is `s8c`'s.
+`superseded_by: ["0103"]`. The rule is unchanged here, and re-pointing the citation is `s8c`'s. *Settled in the
+consistency pass 2026-09-24:* `s8c` now cites ADR-0103 decision 4, and the quotation above reads its current bytes.
 
 ### 8f.8 `dispatch_completed`'s interim members, AC-395's breakdown and AC-372's `status` half (D21-42 12b)
 
-**The two members, and whose record each rests on.** `dispatch_completed`'s payload carries `item` and
-`activity_id_at_version`, each a string or `null`.
+**The two members, and whose record each rests on.** `dispatch_completed` carries `item` beside its payload and
+`activity_id_at_version` in its payload, each a string or `null` (restated 2026-09-24 under D21-46 R3).
 - **`item` is N5's** (D21-43): *"An interim `item` key on every item-scoped event kind, moving to ADR-0131's tag
   later as ADR-0163's interim key does; `query` honours `ByItem`."* 12b's `item` is one case of it.
-  `s8e`'s record supersedes ADR-0131's first forbids bullet for it, and this file cites that record and does not
-  re-specify it. If Checkpoint 8e's item-scoped kinds do not include `dispatch_completed`, this stage adds the
-  member under `s8e`'s record, and it copies it exactly as the reading's is copied: from `ActivitySpec.inputs`'
-  `"item"` (`ITEM_KEY`, whose doc says the key is *"Read for attribution only"*).
-- **`activity_id_at_version` is this stage's.** It is interim too. When ADR-0131's tag is wired it moves to a tag,
-  and the sentences allowing it lapse, on ADR-0163's own clause. The telemetry-key record therefore supersedes in part:
+  D21-46 R3 fixes where it lives: *"**Carried outside the canonical digest**, as ADR-0131 places its tag set."*
+  `s8e` §8e.10 carries it beside the event, outside `payload`, so its record supersedes nothing of ADR-0131 (`s8e`
+  finding 12), and this file cites that record and does not re-specify it. If Checkpoint 8e's item-scoped kinds do
+  not include `dispatch_completed`, this stage adds the key on `s8e`'s carrier, taking its value as the reading's
+  is taken: from `ActivitySpec.inputs`' `"item"` (`ITEM_KEY`, whose doc says the key is *"Read for attribution
+  only"*).
+- **`activity_id_at_version` is this stage's.** It is interim too, and it is a **payload** member, as D21-42 12b
+  extends ADR-0163's interim key (*"ADR-0163's interim key is extended to `dispatch_completed`"*). R3 moves N5's
+  `item` only. When ADR-0131's tag is wired it moves to a tag, and the sentences allowing it lapse, on ADR-0163's own
+  clause. The telemetry-key record therefore supersedes in part:
   - ADR-0131's first forbids bullet (*"Forbids putting an item id, a run id, … inside `rk-types::Event.payload` for
     the purpose of addressing"*), for this one member alone;
   - ADR-0163's bullet *"Forbids reading this record's `0131` supersession as licensing any other payload correlation
@@ -781,7 +805,7 @@ a note inside them would read as the criterion.
 **No longer owed, and why.** Three rows the draft carried are dropped:
 - **AC-127** holds as written (N11). D21-46 R7 builds its other half, and that needs no note either.
 - **AC-013** needs no note, because N10 leaves no committed step with a void tree (§8f.4).
-- **AC-518's and AC-529's path wording** are `s8e`'s notes under D21-44.
+- **AC-518's and AC-529's path wording** are `s8d-ii`'s notes under D21-44 (D21-46 R1).
 
 ### 8f.11 Acceptance set
 
@@ -1001,8 +1025,9 @@ table-driven, each arm has its own row (*a fixture per function is not a fixture
 - **This block leaves the shipped store unchanged.** It re-runs only its entry gate, Checkpoint 8e, whole. It also
   re-runs Checkpoint 7i whole, because §8f.10 amends `s7i` and that makes 7i provisional. It re-runs nothing else.
   Both reach their end markers. The worktree path set is unchanged, and the checkout is clean.
-- **Nested cost and dispatch, stated.** A whole re-run of 8e runs whatever 8e's own block re-runs. That is the
-  cross-cutting rule's depth, and the stage records the wall time it measured rather than skipping a line. No real
+- **Nested cost and dispatch, stated.** 8e and 7i are launched with `RK_CP_NESTED=1` (D21-46), so 8e skips its own
+  whole re-runs, and under `RK_CP_NESTED=1` this block re-runs neither. Each replay runs with `REDKILN_LAUNCH_RECORD`
+  unset and `CLAUDE_CONFIG_DIR` at an empty trap that must stay empty. The stage records the wall time it measured. No real
   `claude` can be spawned by this block at this stage. `s8h` has not landed, and at `a6349b6` **0** of the 8 shipped
   cards carry `permission_mode`, which `card::lint_card` refuses as `PermissionModeAbsent` at bind. 7i's run arm is a
   `cargo test` over a fixture transcript. After `s8h` lands, a later whole re-run of this block (from `s8j`) passes
@@ -1032,7 +1057,8 @@ test -d crates/rk-adapter-toolchain-node/tests/fixtures/project/node_modules || 
 # ---- (immutable ignores the WAL). The nested re-runs in (9) are AFTER the after-read and assert their own stores.
 store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
 test -f "$store" || { echo "FAIL: no shipped store at $store"; exit 1; }
-rows='import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(" ".join(str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]) for t in ("t2_event","t1_stage_transition","t1_gate","t1_slice_seal")))'
+# After s8e's 0002 migration (D21-46 R2) the gate table is t1_gate_transition; t1_gate no longer exists.
+rows='import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(" ".join(str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]) for t in ("t2_event","t1_stage_transition","t1_gate_transition","t1_slice_seal")))'
 store_before=$(python -c "$rows" "$store"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$store_before" ] || { echo "FAIL: the read-only store probe did not run (rc=$rc)"; exit 1; }
 
@@ -1110,11 +1136,10 @@ run_sel rk-kernel 7 emit::every_activity_output_appends_one_artifact_write emit:
 run_sel rk-adapter-claude 2 dispatch::dispatch_completed_carries_activity_id_at_version_or_null dispatch::ac360_one_event_per_termination_path
 run_sel rk-cli 40 landing::fake_harness_edit_lands_on_the_run_ref_and_survives_a_second_run landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it landing::the_user_checkout_is_unchanged_across_a_landing_lane landing::only_the_run_ref_moves_across_a_lane landing::a_refused_path_stops_the_lane_at_a_landing_gate_with_nothing_landed landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit landing::reentry_names_every_discarded_path landing::emitted_artifact_digest_matches_its_bytes_on_the_run_ref landing::the_lane_end_lands_the_final_stages_work landing::a_drift_gate_blocks_the_stage_exit_until_it_is_answered landing::answering_the_drift_gate_either_way_releases_the_stage_exit landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile explain::explain_prints_the_landed_commit_and_the_merge_command item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run cost::per_activity_breakdown_from_owned_dispatch_completed_rows cost::per_activity_cost_sums_decimals_verbatim_and_absent_is_never_zero cost::no_breakdown_for_an_item_that_owns_no_dispatch_completed_row cost::a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected status::status_prints_every_flag_beside_its_reading status::status_prints_no_headroom_line_for_an_item_with_no_reading run::no_cli_flag_skips_the_entry_reconcile doctor_journal::a_present_store_is_the_journal doctor_journal::events_jsonl_is_read_only_in_fixture_mode doctor_journal::headroom_margin_fires_on_a_flat_last_reading doctor_journal::headroom_margin_reads_the_latest_five_hour_bearing_reading doctor_journal::the_doctor_verb_never_selects_the_fixture_source doctor_artifact::an_out_of_band_structured_edit_is_reported_as_an_unrecorded_mutation doctor_artifact::a_rewrite_through_the_store_is_not_reported doctor_artifact::a_prose_edit_accepted_by_reconcile_is_not_reported doctor_artifact::an_unassigned_copy_under_redkiln_worktrees_is_never_read cost::cost_output_grammar_is_closed cost::render_empty_is_nothing_to_attribute_never_low_sample run::ac438_table_driven_exit_codes_over_fixtures_binary_arm doctor::ac415_every_rule_id_has_a_rejecting_fixture landing::closure_record_walks_past_audit_on_the_backlog_feed landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it doctor_artifact::a_vouched_root_edit_is_not_reported_as_an_unrecorded_mutation doctor_drift::an_advisory_that_opened_a_blocking_gate_is_reported doctor_drift::a_structured_drift_with_no_drift_gate_is_reported doctor_drift::a_lane_journal_carrying_both_kinds_correctly_is_clean
 
-# ---- (5) THE WHOLE SUITE, and the two lint gates. FLOOR is §8f.2 item 9's, RE-DERIVED AT STAGE OPEN from Checkpoint
-# ---- 8e's recorded passed count + this stage's 79 new tests, by a dated edit of the line below before the first run.
-# ---- The drafted value is 969: 740 (992d257; ADR-0164's evidence) + s8a 7 + s8b 16 + s8c 40 + s8d 46 + s8e 41 = 890,
-# ---- + 79 (64, plus D21-46 R7's 15). A filtered green can select around every catching test; the whole suite cannot.
-FLOOR=969
+# ---- (5) THE WHOLE SUITE, and the two lint gates. FLOOR is §8f.2 item 9's expected value, re-derived at stage open from
+# ---- Checkpoint 8e's recorded count: 984 + 79 = 1063 (79 = 64, plus D21-46 R7's 15), by a dated edit of the line below
+# ---- before the first run. A filtered green can select around every catching test; the whole suite cannot.
+FLOOR=1063
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|^test result:' | head -30; exit 1; }
 results=$(printf '%s\n' "$out" | grep -c '^test result: ')
@@ -1180,7 +1205,7 @@ python -c "$blk_of" runbook/phase-1/s7i-cost.md 'NO-SUCH-NEEDLE-S8F' >/dev/null 
 # ---- (8) THIS BLOCK LEFT THE SHIPPED STORE ALONE. Every test above ran in its own temporary repository.
 store_after=$(python -c "$rows" "$store"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$store_after" ] || { echo "FAIL: the post-run store probe did not run (rc=$rc)"; exit 1; }
-[ "$store_after" = "$store_before" ] || { echo "FAIL: this block moved the shipped store ($store_before -> $store_after; t2_event, t1_stage_transition, t1_gate, t1_slice_seal)"; exit 1; }
+[ "$store_after" = "$store_before" ] || { echo "FAIL: this block moved the shipped store ($store_before -> $store_after; t2_event, t1_stage_transition, t1_gate_transition, t1_slice_seal)"; exit 1; }
 
 # ---- (8b) THE WORKTREE PATH SET IS UNCHANGED BY THIS BLOCK'S OWN SECTIONS, compared BEFORE the nested re-runs, since
 # ---- a nested block may perform a REAL `git worktree prune` (Checkpoint 7h's guard (9) does, if 8e re-runs 7h).
@@ -1192,18 +1217,36 @@ wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
 # ---- The extractor writes BYTES (Python's text-mode stdout would turn every LF into CRLF on this box, and `bash -c`
 # ---- would then read a CR at the end of every command). A block that exits 0 without its end marker did not finish.
 # ---- No real `claude` is reachable at this stage: s8h has not landed and no shipped card carries permission_mode.
-f8e=runbook/phase-1/s8e-tier-one-and-the-lane.md
-test -f "$f8e" || { echo "FAIL: $f8e is absent — the entry checkpoint cannot be re-run (Halt 8)"; exit 1; }
-blk=$(python -c "$blk_of" "$f8e" 'echo "CP8E-END-OF-BLOCK reached"'); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$blk" ] || { echo "FAIL: Checkpoint 8e's block could not be extracted (rc=$rc) — its end marker is not CP8E-END-OF-BLOCK, or two blocks carry it"; exit 1; }
-out=$(FIX_ITEM=rk-fix-doctor-test-count bash -c "$blk" 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8e, re-run whole, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
-printf '%s\n' "$out" | grep -qxF 'CP8E-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 8e exited 0 without reaching its end marker"; printf '%s\n' "$out" | tail -10; exit 1; }
-blk=$(python -c "$blk_of" runbook/phase-1/s7i-cost.md 'echo "CP7I-END-OF-BLOCK reached"'); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$blk" ] || { echo "FAIL: Checkpoint 7i's block could not be extracted (rc=$rc)"; exit 1; }
-out=$(FIX_ITEM=rk-fix-doctor-test-count bash -c "$blk" 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7i, re-run whole, exited $rc — read §8f.10's s7i row: its GRAMMAR and its owns-no-reading branch are amended at this stage"; printf '%s\n' "$out" | tail -30; exit 1; }
-printf '%s\n' "$out" | grep -qxF 'CP7I-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 7i exited 0 without reaching its end marker"; printf '%s\n' "$out" | tail -10; exit 1; }
+# ---- D21-46: SKIPPED under RK_CP_NESTED=1 (this block is s8g's entry gate); otherwise both replays run with
+# ---- RK_CP_NESTED=1, REDKILN_LAUNCH_RECORD unset and CLAUDE_CONFIG_DIR at an empty trap that must stay empty.
+if [ "${RK_CP_NESTED:-0}" = 1 ]; then
+  echo "CP8F (9) SKIPPED: RK_CP_NESTED=1 — this block is another checkpoint's entry gate; its re-runs of 8e and 7i ran at Checkpoint 8f's own close"
+else
+  trap_dir="$PWD/target/cp8f-claude-config-trap"
+  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  # Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
+  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
+  f8e=runbook/phase-1/s8e-tier-one-and-the-lane.md
+  test -f "$f8e" || { echo "FAIL: $f8e is absent — the entry checkpoint cannot be re-run (Halt 8)"; exit 1; }
+  blk=$(python -c "$blk_of" "$f8e" 'echo "CP8E-END-OF-BLOCK reached"'); rc=$?
+  [ "$rc" -eq 0 ] && [ -n "$blk" ] || { echo "FAIL: Checkpoint 8e's block could not be extracted (rc=$rc) — its end marker is not CP8E-END-OF-BLOCK, or two blocks carry it"; exit 1; }
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" FIX_ITEM=rk-fix-doctor-test-count bash -c "$blk" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8e, re-run whole, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
+  printf '%s\n' "$out" | grep -qxF 'CP8E-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 8e exited 0 without reaching its end marker"; printf '%s\n' "$out" | tail -10; exit 1; }
+  blk=$(python -c "$blk_of" runbook/phase-1/s7i-cost.md 'echo "CP7I-END-OF-BLOCK reached"'); rc=$?
+  [ "$rc" -eq 0 ] && [ -n "$blk" ] || { echo "FAIL: Checkpoint 7i's block could not be extracted (rc=$rc)"; exit 1; }
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" FIX_ITEM=rk-fix-doctor-test-count bash -c "$blk" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7i, re-run whole, exited $rc — read §8f.10's s7i row: its GRAMMAR and its owns-no-reading branch are amended at this stage"; printf '%s\n' "$out" | tail -30; exit 1; }
+  printf '%s\n' "$out" | grep -qxF 'CP7I-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 7i exited 0 without reaching its end marker"; printf '%s\n' "$out" | tail -10; exit 1; }
+  left=$(find "$trap_dir" -mindepth 1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the re-runs (rc=$rc)"; exit 1; }
+  [ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the re-runs — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
+fi
 
 # ---- (10) NO STALE REGISTRATION after the nested blocks: a dry-run prune must find nothing.
 stale=$(git worktree prune --dry-run -v 2>&1); rc=$?

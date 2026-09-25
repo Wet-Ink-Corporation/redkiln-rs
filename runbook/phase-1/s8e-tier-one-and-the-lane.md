@@ -21,8 +21,17 @@ adopted.* What changed:
   route (A)/(B) discussion is gone, and AC-180 is claimed here (§8e.14).
 - **R3.** The interim `item` key is carried outside the canonical digest (§8e.10). The golden-log STOP that §8e.0
   carried is gone, and a test pins the golden logs' digests.
-- **One re-run convention and one replay guard.** `RK_CP_NESTED` replaces `RK_CP_ENTRY_ONLY`. Every replay runs with
-  `CLAUDE_CONFIG_DIR` at an empty trap directory and `REDKILN_LAUNCH_RECORD` unset (§8e.15).
+- **One re-run convention and one replay guard.** `RK_CP_NESTED` replaces this file's own draft variable for an
+  entry-gate run. Every replay runs with `CLAUDE_CONFIG_DIR` at an empty trap directory and `REDKILN_LAUNCH_RECORD`
+  unset (§8e.15).
+
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **The floor chain is recomputed once**: Checkpoint 8d-ii's 917 + this stage's 67 = **984**, not the drafted 931
+  (§8e.0 item 7).
+- **The legacy registration survives `s8a`**, whose guard (11) restores it (§8e.0 item 1).
+- **Finding 10 places the `init` backtick line where `s8a` found it**, in `s7e` §7e.1's work block, not Checkpoint
+  7e's. Finding 15's citations are reconciled in the sibling files.
+- **The trap** asserts that it starts empty, in `s8g`'s form.
 
 *Revised 2026-09-24 for D21-43/44/45, at `a6349b6`.* What changed, and where (section numbers as they now stand):
 - **D21-44 and D21-45:** now `s8d-ii`'s, by the note above.
@@ -160,8 +169,9 @@ Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and 
 1. **Where the legacy tree is registered.** At `c5d19d7`, `git worktree list` lists
    `D:/repos/redkiln-rs/.git/redkiln/worktrees/rk-fix-doctor-test-count` at `73c087a`. `s8a` runs Checkpoint 7f whole,
    and 7f's block, as `s8a` leaves it, ends with `git worktree remove --force
-   .git/redkiln/worktrees/rk-fix-doctor-test-count`. So by this stage's open the registration may already be gone
-   (`s8d-ii` §8d-ii.9, finding 4). Record which. Checkpoint 8e asserts the ref and its mark, never the registration.
+   .git/redkiln/worktrees/rk-fix-doctor-test-count`. `s8a` guard (11) restores the registration after that run, so it
+   should still be present (`s8d-ii` §8d-ii.9, finding 4). Record which. Checkpoint 8e asserts the ref and its mark,
+   never the registration.
 2. 🛑 **The shipped store, and every checked-in store, before R2's migration.** Read `rk_identity.schema_version` and
    the row count per table and per `t2_event` kind, `mode=ro`. At `c5d19d7` the shipped `.git/redkiln/store.sqlite3`
    stamps version **1** and holds `t1_stage_transition` 0, `t1_gate` 0, `t1_slice_seal` 0 and `t2_event` **6**
@@ -183,12 +193,12 @@ Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and 
    `slice_verdict` and `worktree_assigned`. It extends `rk-git` `trailers`, `rk-store` `store`, `rk-kernel` `replay`,
    `lane_order` and `fsm`, and `rk-cli` `answer` and `doctor`. If a predecessor created one of the new modules, the
    tests go into it. The module-qualified names in §8e.12 stay as they are.
-7. **The whole-suite floor.** It is re-derived at stage open from Checkpoint 8d-ii's recorded passed count, plus this
-   stage's **67**: 66 new tests, plus the one ARMED lint un-ignored. The expected value at drafting is **931**:
-   `s8d`'s own drafted `FLOOR=832`, plus `s8d-ii`'s 32 (`s8d-ii` §8d-ii.0 item 8), plus 67. (This file's earlier
-   drafting summed a different chain to 944, taking 851 for Checkpoint 8d.) Replace 931 in Checkpoint 8e's `FLOOR=`
-   line with the re-derived value, by a dated edit, before the block's first run. It is never lowered to make a red
-   run green.
+7. **The whole-suite floor.** The expected value is **re-derived at stage open from Checkpoint 8d-ii's recorded
+   count**, plus this stage's **67**: 66 new tests, plus the one ARMED lint un-ignored. 917 + 67 = **984**. The chain
+   from ADR-0164's 740 (`992d257`) is 740 + 9 (8a) + 21 (8b) + 63 (8c) + 52 (8d) + 32 (8d-ii) = 917 at Checkpoint
+   8d-ii, recomputed once under D21-46 (the drafted 931 rested on `s8d`'s stale 832, and an earlier draft's 944 on
+   851). Replace 984 in Checkpoint 8e's `FLOOR=` line with the re-derived value, by a dated edit, before the block's
+   first run. It is never lowered to make a red run green.
 
 ### 8e.1 L3 first — the writer mutex halts, and is never recovered (D21-42 24b)
 
@@ -953,7 +963,8 @@ shipped store and `redkiln cost`.
 **Findings from the D21-43/44/45 revision.** Its findings 10 to 13 and 15 to 17 were about the run worktree, and they
 moved to `s8d-ii` §8d-ii.9 with the work they describe. The two that stay are renumbered:
 
-10. **Checkpoint 7e has the same backtick defect as 7h (10a).** At `a6349b6`, `s7e-pack-authoring.md`'s FAIL message
+10. **`s7e` §7e.1's work block has the same backtick defect as 7h (10a).** It is not in Checkpoint 7e's own block
+    (`s8a` finding (10), found by content). At `a6349b6`, `s7e-pack-authoring.md`'s FAIL message
     reads `"… Step 7d's `init` did not run …"`, inside double quotes, so its FAIL path runs `init`. A quote-aware scan
     of every `runbook/` bash block found exactly these two. D21-46 assigns 7e's fix to `s8a` (*"is fixed by dated
     amendment in **s8a**"*). This stage fixes 7h's only.
@@ -980,6 +991,8 @@ moved to `s8d-ii` §8d-ii.9 with the work they describe. The two that stay are r
     number (now §8e.13 plus `s8d-ii` §8d-ii.7). `s8c` names `s8e` as the caller of `setup` at creation, which is now
     `s8d-ii`. `s8f`'s Checkpoint 8f runs this block without `RK_CP_NESTED` and without the trap, and its `FLOOR=954`
     was drafted from this file's former 944. Each is the lead's to reconcile under D21-46's integration calls.
+    *Settled in the consistency pass 2026-09-24:* `s8j` and `s8c` cite the moved sections, and `s8f` (9) replays this
+    block with `RK_CP_NESTED=1` under the trap over the recomputed floor chain.
 
 ### 8e.14 Acceptance set
 
@@ -1177,9 +1190,9 @@ test -f runbook/phase-1/s7h-lane-completes.md || { echo "FAIL: s7h's file is abs
 hits=$(grep -nF 'a real `redkiln run` over the review fixture' runbook/phase-1/s7h-lane-completes.md); rc=$?
 [ "$rc" -eq 1 ] || { echo "FAIL: 7h guard (10a)'s FAIL message still carries backticks inside double quotes (grep rc=$rc):"; printf '%s\n' "$hits"; exit 1; }
 
-# ---- (8) THE WHOLE SUITE, no fail-fast, with a floor. FLOOR is re-derived at stage open (section 8e.0 item 7):
-# ---- Checkpoint 8d-ii's recorded passed count + this stage's 67. 931 is the drafted expectation; replace it by a dated edit.
-FLOOR=931
+# ---- (8) THE WHOLE SUITE, no fail-fast, with a floor. Expected value, re-derived at stage open from Checkpoint 8d-ii's
+# ---- recorded count (section 8e.0 item 7): 917 + 67 = 984. Replace it by a dated edit before the first run.
+FLOOR=984
 tally() { printf '%s\n' "$1" | awk '/^test result:/ { p += $4; f += $6; i += $8; n += 1 } END { print p+0, f+0, i+0, n+0 }'; }
 # CONTROL: a run of zero tests tallies below the floor.
 read -r cp cf ci cn <<< "$(tally 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out')"
@@ -1297,7 +1310,14 @@ if [ "${RK_CP_NESTED:-0}" = "1" ]; then
 else
   # THE TRAP: an empty CLAUDE_CONFIG_DIR every replay inherits. A real claude writes into it; nothing else does.
   trap_dir="$(pwd)/$scratch/claude-config-trap"
-  mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  # Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
+  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
   # (10a) CHECKPOINT 8d-ii, the entry gate, whole. Under RK_CP_NESTED=1 it skips its own nested 8d and 7f re-runs.
   ext runbook/phase-1/s8d-ii-run-worktrees.md 'echo "CP8D-II-END-OF-BLOCK reached"' "$scratch/cp8dii.sh"
   out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp8dii.sh" 2>&1); rc=$?

@@ -48,6 +48,13 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   listing was never the two account roots that (0) read. It now reads `$CFGS` and asserts a non-empty listing. (11)'s
   dispatch scan did not match the launcher's `wrap` mode. It now does, with a synthetic control each way.
 
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **§8i.5 re-quotes `s8h` §8h.7's restated `wrap` guarantee.** The sentence it quoted, which ended
+  "neither caller is the adapter", is no longer in `s8h`'s file. The substance is unchanged: `wrap` records the
+  version and never compares it to the adapter pin.
+- **The floor chain is recomputed once**: Checkpoint 8h's 1168 + this stage's 6 + N, in place of the drafted 780.
+- **The trap in (11)** asserts that it starts empty, and (0) names `s8d-ii` among the stages that re-run 7f.
+
 ---
 
 **Why this step exists.** D21-42 decision 2 took the `ChangeSummary` question in two halves: *"**Split the type now,
@@ -431,9 +438,11 @@ corpus runner."* The draft of this section said *"S-BIN launches through `s8h`'s
 an arbitrary child"*, and routed through the operator's shell because the launcher then had no such entry and
 refused at step 6 on the pin. s8h at `c5d19d7` answers both, so that route is withdrawn.
 
-**What `wrap` does with the version, in s8h's words** (§8h.7, read at `c5d19d7`). Its step 6 row: *"`wrap`: record
-only, and never compare to the pin (below)"*. And below it: *"Steps 1–5, 8 and 9 apply unchanged. Step 6 records and
-does not compare, because `TESTED_CLI_VERSION` binds the adapter, and neither caller is the adapter."* Step 8's launch
+**What `wrap` does with the version, in s8h's words** (§8h.7, re-read 2026-09-24 in the consistency pass). Its step
+6 row: *"`wrap`: record only, and never compare to the pin (below)"*. And below it, the restated guarantee: *"At step
+6 it records and does not compare."*, because *"`wrap` does **not** guarantee that the child's CLI equals the adapter
+pin, because `TESTED_CLI_VERSION` binds the adapter, and the launcher does not know whether its child dispatches
+through it."* S-BIN's runner dispatches through no adapter, so nothing pins it but S-BIN's own guards. Step 8's launch
 record holds the claude path, *"version and sha256 before"*, and *"then version and sha256 after, and the rc"*. Step
 9: *"a difference fails the launch non-zero"*, naming Halt 2. So `wrap` **records the CLI version before and after
 each launch, and does not compare it to the adapter pin.** The installed 2.1.281 against the pin's 2.1.278 (§8i.0
@@ -752,7 +761,8 @@ included. So this stage's record commit amends that bullet and guard by dated no
   - Both "four of five" design lines carry their dated correction.
   - No design or register line still states S-BIN as pending without a note.
   - Every finding draft has its index row, F41 and F42 included.
-- **The whole suite is green**, over the floor re-derived from Checkpoint 8h's recorded count plus this stage's 6 + N,
+- **The whole suite is green**, over the floor re-derived from Checkpoint 8h's recorded count (1168 as drafted) plus
+  this stage's 6 + N,
   and fmt and clippy are clean. **Checkpoint 8h** (the entry gate) and **Checkpoints 8a and 5** (made provisional by
   this stage's edits) re-run whole and green. No other checkpoint is re-run directly. Each replay runs with
   `RK_CP_NESTED=1` (D21-46), which tells a block that honours it to skip its own nested whole re-runs. When this block
@@ -785,16 +795,17 @@ for c in "$HOME/.claude-personal" "$HOME/.claude"; do [ -d "$c/projects" ] && CF
 sess_before=$(find $CFGS -type f -name '*.jsonl' | sort)
 test -n "$sess_before" || { echo "FAIL: the account holds no session transcript — the tripwire has no baseline"; exit 1; }
 # No launch record in this shell, so any nested `redkiln run` refuses before any spawn (s8h §8h.7). How the nested
-# 7f/7h/7i runs point at the fixture child is their re-running stages' (s8a, s8e, s8f), and is not re-specified here.
+# 7f/7h/7i runs point at the fixture child is their re-running stages' (s8a, s8d-ii, s8e, s8f), and is not re-specified here.
 [ -z "${REDKILN_LAUNCH_RECORD:-}" ] || { echo "FAIL: REDKILN_LAUNCH_RECORD is set — a nested redkiln run could reach the real harness; unset it"; exit 1; }
 # The inputs this block's direct re-runs read (guard (11)), checked by name here rather than failing late inside them.
 # The list is s8h's and s8a's at this revision; re-read both blocks' INPUTS at stage open.
 for v in REC_A REC_B A_SUPERSEDES TOKENS_APPETITE FIX_ITEM CS_ADR PACK_ADR CODEX_ADR S8A_BASE; do
   [ -n "${!v:-}" ] || { echo "FAIL: $v is unset — Checkpoint 8h or 8a reads it"; exit 1; }
 done
-# THE FLOOR's base (guard (10)), re-derived at stage open from Checkpoint 8h's recorded count by a dated edit to these
-# two values. 780 is s8h's drafted floor (740 at ca8f387 plus its 40), the expected value; 44 is the result-line floor.
-FLOOR_8H_PASSED=780
+# THE FLOOR's base (guard (10)). Expected value, re-derived at stage open from Checkpoint 8h's recorded count: 1168
+# (740 at 992d257, ADR-0164's evidence, + 9 + 21 + 63 + 52 + 32 + 67 + 79 + 64 + 41 over 8a..8h), so the floor is
+# 1168 + 6 + NFIELDS. Edit these two values by a dated edit before the first run; 44 is the result-line floor.
+FLOOR_8H_PASSED=1168
 FLOOR_8H_RESULTS=44
 
 # ---- (1) BUILD-OR-FAIL.
@@ -1103,6 +1114,8 @@ rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the
 n=$(find "$trap_dir" -mindepth 1 | grep -c .)
 [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
 rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+[ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
 for blk in cp8h cp8a cp5; do
   hit=$(grep -vE '^[[:space:]]*#' "$T/$blk.sh" | grep -nE "$DISPATCH_RE")
   hit2=$(grep -vE '^[[:space:]]*#' "$T/$blk.sh" | grep -nE "$TESTRUN_RE" | grep -v -- '--list')

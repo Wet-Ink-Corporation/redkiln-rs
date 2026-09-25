@@ -20,7 +20,7 @@ revision changes the following:
   human-root questions. RT-59 is cited as settled by R-48, and it leaves this stage's record.
 - **D21-44** (§8j.1(c), §8j.1(d), §8j.4, §8j.8, §8j.10):
   - the legacy run worktree moves from `.git/redkiln/worktrees/` to `.redkiln/worktrees/`, with its ref kept, where
-    `s8e`'s re-entry refuses it;
+    `s8d-ii`'s re-entry refuses it (D21-46 R1 moved W2 out of `s8e`);
   - Checkpoints 7h and 7i are re-pointed at named fixture items;
   - the lane fixture and every recursive walk over `.redkiln/` in `s8` skip `.redkiln/worktrees/`.
 - **N28 and the probes** (§8j.6):
@@ -35,7 +35,7 @@ revision changes the following:
   - the quoted-predicate guard is `s8b`'s form, adopted here and not re-specified;
   - `verify_completed`'s `item` and `adapter` members are bound from `s8g`;
   - `s8e`'s anchored rebuild differential joins `s8`'s (2), and `s8`'s walks over `.redkiln/` skip `worktrees/`
-    (`s8e` §8e.9, §8e.10);
+    (`s8e` §8e.9; `s8d-ii` §8d-ii.1);
   - AC-114's `curation.decision` lint is this stage's by `s8g`'s assignment, and it is owed with the promotion.
 - **The proofs' module** (§8j.4) is `lane_proof`, because `s8e` owns `lane_e2e` and its fixture-toolchain lane.
 - **The gates this stage adds** (§8j.2, §8j.3) each take a `[[gate_expiry]]` row in `s8h`'s table.
@@ -73,6 +73,28 @@ revision changes the following:
   six that must not are five of Checkpoint 8h's shapes and 7h's non-live ignored run.
 - **The floor's drafted base** (§8j.10 (11)) is `s8i`'s drafted floor, 780 + 6 + N, and no longer 780. N is not
   known at authoring.
+
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **Cross-references after the split.** The `.redkiln/` walk rule is `s8d-ii` §8d-ii.1's, 7f's cleanup-line deletion is
+  `s8d-ii` §8d-ii.7's, W2's re-entry refusal is `s8d-ii`'s, and `s8e`'s 7h/7f section is §8e.13. `s8h`'s launch check
+  on `answer` and its `wrap` guarantee are re-quoted from §8h.7's current bytes, and `s8g`'s binding sentence from
+  §8g.4's.
+- **`verify_completed`'s and `dispatch_completed`'s `item` is read from `t2_event.item`**, the column `s8e` §8e.10
+  carries it in beside the payload under D21-46 R3 (A1, A4, and the `lane_proof` row). `rate_limit_reading.item`
+  stays a payload member, as ADR-0163 put it. The store probes read `t1_gate_transition`, because `s8e`'s `0002`
+  migration drops `t1_gate` (D21-46 R2).
+- **The last gate before spend** (lead decision in the consistency pass). Checkpoint 8j's chain also re-runs whole
+  every older checkpoint an `s8` stage made provisional: 5, 6, 7a, 7b, 7b-ii, 7d, 7f and 7g (7h and 7i were already
+  in it; 7c is §8j.6's live run, N28; 7e cannot be re-run whole). Each runs nested, under the trap and the screen.
+  Budget: twenty whole checkpoint runs, most carrying a whole suite.
+- **The pin rule is carried here**: the adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned `cli_version`
+  (§8j.6; Checkpoint 8j (6)).
+- **The three gate classes are spelt** (`human_root:BugReport`, `human_root:IntakeRecord`, `hold:specification`, as
+  drafts the records may re-spell), and their fail-closed `[[gate_expiry]]` rows land in both packs; `s8h` §8h.10's
+  table names them. Checkpoint 8j (3) asserts the rows.
+- **The probe session runs from a plain terminal only** (§8j.6): the `! python …` alternative is withdrawn, because
+  `s8h` §8h.7's launcher refuses a session's `!` line at step 2.
+- **The floor chain is recomputed once**: Checkpoint 8i's 1168 + 6 + N, plus this stage's 13 = 1187 + N.
 
 ---
 
@@ -256,16 +278,16 @@ worktree, `rk-fix-doctor-test-count` at `73c087a`, stays where it is. It is the 
 18), and its re-point is s8j's."* The checkout is moved to the new root, and it is not removed. There are three
 reasons:
 
-- **At the new root it guards the item.** It carries no `RK_BASE` marker, because it predates D21-45 W1. So `s8e`'s
-  re-entry refuses any run of the item by name. D21-45 W2: *"A tree without `RK_BASE`, or with commits the run ref
-  lacks, is **refused, never removed**"*. With the registration gone, `s8e` §8e.15 records the opposite outcome:
+- **At the new root it guards the item.** It carries no `RK_BASE` marker, because it predates D21-45 W1. So
+  `s8d-ii`'s re-entry refuses any run of the item by name. D21-45 W2: *"A tree without `RK_BASE`, or with commits the run ref
+  lacks, is **refused, never removed**"*. With the registration gone, `s8e` §8e.13 records the opposite outcome:
   *"If it is gone …, the run creates `.redkiln/worktrees/rk-fix-doctor-test-count` on the existing branch and mints
   stage-bearing marks"*, which breaks 7h.
 - **Nothing that reads the fixture depends on the checkout's path.** Checkpoint 7h reads the ref and
   `.git/redkiln/runs/`. Checkpoint 7i reads the store. The ref stays at `73c087a`.
 - **It removes the last registration under `.git/redkiln/worktrees/`.** That is the placement D21-44 measured
   unwritable, and the one in which D21-40 found the doc screen reading a stale `runbook/` copy. At the new root, every
-  walk over `.redkiln/` skips it (§8j.8 A5.3, A5.5; `s8e` §8e.10), and `.gitignore`'s `.redkiln/worktrees/` row keeps
+  walk over `.redkiln/` skips it (§8j.8 A5.3, A5.5; `s8d-ii` §8d-ii.1), and `.gitignore`'s `.redkiln/worktrees/` row keeps
   it out of `git status` [measured at `a6349b6`].
 
 The re-point is `git worktree move .git/redkiln/worktrees/rk-fix-doctor-test-count
@@ -285,9 +307,10 @@ root is 204 characters: 64 for the prefix, plus 140 for ADR-0114's file name, wh
 This interacts with two other stages:
 
 - Checkpoint 7f's old cleanup line is `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`.
-  It is deleted by `s8e`'s 7f amendment (`s8e` §8e.15). That file's finding 13 notes that `s8a` runs 7f first, and
-  that `s8a`'s block restores the registration afterwards. So reads 1–3 are taken at this stage, not trusted from
-  the measurement at `a6349b6`.
+  It is deleted by `s8d-ii`'s 7f amendment (`s8d-ii` §8d-ii.7), which also moved 7f's run arm into a throwaway clone.
+  That file's finding 4 notes that `s8a` runs 7f first, and that `s8a`'s block restores the registration afterwards.
+  So reads 1–3 are taken at this stage, not trusted from the measurement at `a6349b6`. From `s8d-ii` on, no stage's
+  run of 7f touches either location.
 - `s8a`'s Checkpoint 8a restores the old registration only if it was present when its block began. After the
   re-point it was not, so a chain re-run leaves the moved tree alone.
 
@@ -367,7 +390,12 @@ loader."*
 4. **Each new gate class has an expiry row.** `s8h` refuses a run at load when a reachable gate class has no
    `[[gate_expiry]]` row (its `run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load`). So each of the
    two questions' gate classes gets a fail-closed row in `s8h`'s table, which the operator signs row by row like the
-   others (D21-42 21a; AC-276). This stage drafts the rows and does not sign them.
+   others (D21-42 21a; AC-276). This stage drafts the rows and does not sign them. The classes are spelt here, as
+   drafts the record may re-spell by a dated correction: **`human_root:BugReport`** and **`human_root:IntakeRecord`**
+   (the step-4 gate's reason, then the human kind, on `unknown_facet:<axis>`'s pattern). Their rows land in **both**
+   packs, `action = "fail"`, in the change that mints the classes, and `s8h` §8h.10's table names them. When this
+   stage re-runs Checkpoint 8h, `MINTED_CLASSES` gains both spellings. Checkpoint 8j (3) asserts one row per class
+   per pack.
 
 **The human-root files the real runs attach are committed now**, so that `s8`'s attach can be reproduced:
 
@@ -376,9 +404,11 @@ loader."*
 
 **In `s8`, each root is attached through the launcher's `answer` mode**, as `tools/live-run.sh answer <item>
 <option> --attach <file>`, with the option §8j.2's record fixes. The arguments after the mode are `redkiln answer`'s
-own (ADR-0129 decision 1), passed through unchanged. D21-46 adds the mode to `s8h`'s launcher. `s8h` §8h.7 has
-`ClaudeHarness` refuse at entry without a launch record in *"`run`, and `answer` where it continues the lane"*. A bare
-`redkiln answer` from a plain terminal would therefore be refused.
+own (ADR-0129 decision 1), passed through unchanged. D21-46 adds the mode to `s8h`'s launcher. `s8h` §8h.7 makes
+the binary's `answer` refuse without a launch record: *"Two binary composition roots refuse at entry with
+`Exit::ConfigError` unless the captured `Env` carries `REDKILN_LAUNCH_RECORD` naming an existing file"*, and the second
+of them is *"`answer::run`, the binary's `answer` (D21-46)"*. A bare `redkiln answer` from a plain terminal would
+therefore be refused.
 
 `.redkiln/intake/` is a new directory that no reader scans. The record states the path convention, and Checkpoint
 8j's whole-suite line proves the new directory disturbs nothing.
@@ -449,7 +479,10 @@ nothing writes the item record.
 **The hold's gate is a gate like any other.** Its transitions follow `s8e`'s git-first gate lifecycle. D21-43 N6:
 *"Every gate transition (opened, answered, expired, voided) is a git-first tier-1 event"*, and the hold changes
 nothing about that. Its gate class takes a fail-closed `[[gate_expiry]]` row in `s8h`'s table, as §8j.2's two do.
-Without the row, `s8h`'s load lint refuses every run of the item.
+Without the row, `s8h`'s load lint refuses every run of the item. The class is spelt **`hold:specification`**, the
+held stage behind the cause, as a draft the record may re-spell. Its row lands in both packs, because a hold is
+item-level and either pack's item can carry one, and `MINTED_CLASSES` gains it when this stage re-runs Checkpoint
+8h.
 
 **The record** (next free id at writing, `proposed`) covers four things:
 
@@ -508,7 +541,7 @@ refutation.
   the support code asserts that no directory named `worktrees` exists under the destination `.redkiln/`. A copy
   taken after `s8`'s runs would otherwise nest whole repositories into every proof;
 - the repository is initialised through the product's own `init` path. Its `<commondir>/info/exclude` therefore
-  carries the `# redkiln-runtime` block that `s8e` writes (D21-45 W4). AC-518's porcelain assertion below then
+  carries the `# redkiln-runtime` block that `s8d-ii` writes (D21-45 W4; D21-46 R1). AC-518's porcelain assertion below then
   measures the product's own exclusion of `.redkiln/worktrees/`, not a `.gitignore` written for the test;
 - the two lane items, carrying the real items' facets, `slice`, `hold_before` (fix only) and `[trial]` declaration
   (§8j.1(e)).
@@ -540,7 +573,7 @@ the fixture's `.git` is a registered worktree.
 | --- | --- |
 | `lane_proof::fix_lane_reaches_a_landed_content_commit_under_fake_harness` | From `triage`, the fix lane reaches a kernel-made content checkpoint commit on `rk-run/<item>` (D21-41 (b)). The commit's tree differs from the fork point under the crate's `src/`. The run-owned worktree is `<fixture>/.redkiln/worktrees/<item>` (D21-44). AC-518: the fixture's own checkout is unchanged. `git status --porcelain` is empty, `git diff-index --quiet HEAD` passes, and HEAD has not moved. |
 | `lane_proof::fix_lane_trailers_every_non_forbidden_stage_in_order` | Git's own parser reads the stage tokens of the `Story:` trailers on `<fork>..rk-run/<item>`, oldest first (`%(trailers:key=Story,valueonly=true)` with `--reverse`), taking the last whitespace token of each value. Those tokens equal `bug-standard`'s `stage_order` filtered to `stages[s] != "forbidden"`, followed by the terminal `closed` token of D21-43 N9's *"`Story: <project>/<item> closed` mark"*. The comparison is set **and** order, and it includes a `stage_empty` stage (D21-42 7). |
-| `lane_proof::fix_lane_verify_completed_names_the_rust_adapter` | At least one `verify_completed` row carries the item in its `item` member, and every such row's `adapter` member is `rk-adapter-toolchain-rust`. The member names are `s8g`'s (D21-42 10b). |
+| `lane_proof::fix_lane_verify_completed_names_the_rust_adapter` | At least one `verify_completed` row is scoped to the item by its interim `item` key, which `s8e` §8e.10 carries beside the payload (D21-46 R3), and every such row's `adapter` payload member is `rk-adapter-toolchain-rust`. The names are `s8g`'s (D21-42 10b; `s8g` §8g.4). |
 | `lane_proof::story_lane_spec_is_landed_and_journalled` | The story lane's `Spec` is written by `rk-store` under the item's managed artifact directory (D21-42 5b). `git cat-file -e` finds it on `rk-run/<item>`. The item's **last** `artifact.write` row with `kind = "Spec"` carries a `digest` equal to the sha256 of the landed blob. That is ADR-0116 decision 3, *"not tree membership"*. The producing activity is read from the run's own record of what the specification stage selected, and never typed. It is `bdd-scenarios` at authoring (D21-43 N2), and the test does not name it. |
 | `lane_proof::story_lane_trailers_every_non_forbidden_stage_in_order` | As the fix-lane twin, over `story`'s order. The whole lane runs, not only up to the Spec. (1b) asserts *"every story-lane stage"*, and a proof that stopped at `specification` would leave `implement`, `verify`, `review` and `release` unproven for the story pack. |
 | `lane_proof::human_root_is_attached_through_the_pack_question_on_both_lanes` | The first invocation stops at the step-4 gate on BugReport or IntakeRecord and exits 0. `answer --attach` through §8j.2's question succeeds. The re-invocation classifies the root as Present. |
@@ -656,7 +689,8 @@ lower-confidence caveat, and C4 carries its re-check against `s8f`'s file.
 decision 2 authorises the spend *"once the sub-stages' fixture proofs pass, and not before."*
 
 🛑 **Who runs it, and where.** The operator runs every step below in one sitting, the probe session. They run from a
-plain terminal, or through the operator's own `! python …` invocation, and never from a shell an agent spawned.
+plain terminal, never from a Claude Code session or a shell an agent spawned. The operator's own `! python …` line is
+not an alternative here: `s8h` §8h.7 says *"a `!` line that invokes it from a session is refused at step 2"*.
 Every dispatch goes through the committed launcher `s8h` authored, `tools/live-run.sh` (D21-42 17a: *"A committed
 launcher script is the only entry to a real run"*), against `~/.claude-personal` (17b). A Claude Code session
 exports `CLAUDECODE`, `CLAUDE_CODE_*`, `CLAUDE_PID` and `CLAUDE_EFFORT`, and the launcher refuses each of them
@@ -678,17 +712,21 @@ offers no entry for a dispatch below, **STOP and raise it**. Do not run the disp
    - `PERMISSION_PROMPTS_FLOOR` asserted below the pin.
 
    If `claude --version` already equals `TESTED_CLI_VERSION` (`"2.1.278"` at `a6349b6` [measured]), the move is
-   recorded as unneeded. The mismatch policy stays `MismatchPolicy::Refuse`, hard-coded in `real_harness_config`
+   recorded as unneeded. **The adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned `cli_version`**: `s8i` §8i.5
+   hands this on (*"The adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned `cli_version`."*), because D21-43 N22
+   froze the CLI from S-BIN on. If the installed version differs from S-BIN's pin, the freeze failed, and that is
+   Halt 2 to report, not a pin to move. Checkpoint 8j (6) asserts the equality. The mismatch policy stays
+   `MismatchPolicy::Refuse`, hard-coded in `real_harness_config`
    (`crates/rk-cli/src/verbs/run.rs` [measured]). That is why the pin moves before any dispatch. Under D17-11's
    amendment, *"the adapter refused all three dispatches at the init line"*.
    **Spend: none.**
 2. **Operator go-ahead, then Checkpoint 7c, run whole and unamended, as the launcher's `wrap` child (D21-43 N28).**
    `s8a` makes 7c provisional and says *"its whole re-run is `s8j`'s (D21-43 N28)"*. D21-43 N28: *"**s8j re-runs it
-   whole**, from a plain terminal through the launcher, with the live probes."* `s8h` §8h.7 built the entry for
-   exactly this: *"`wrap` is the entry for a child that does not dispatch through `rk-adapter-claude`"*. Its second
-   caller is named there, *"`s8j`'s whole re-run of Checkpoint 7c"*. 7c's probe does dispatch through the adapter,
-   but `s8h` §8h.7 names it a `wrap` caller anyway. Two things still bind the version: the adapter's own `Refuse` policy,
-   and the block's pin guard.
+   whole**, from a plain terminal through the launcher, with the live probes."* `s8h` §8h.7 names this run as `wrap`'s
+   second caller, *"`s8j`'s whole re-run of Checkpoint 7c"*, and states the guarantee by what the launcher does, not by
+   what the child is: *"A `wrap` child that dispatches through `rk-adapter-claude` is pinned by its own means, never
+   by the launcher."* 7c's probe does dispatch through the adapter, so two things bind the version: the adapter's own
+   `Refuse` policy, and the block's pin guard.
    - The block is extracted verbatim from `runbook/phase-1/s7c-adapters.md`, the last fenced block that echoes
      `CP7C-END-OF-BLOCK reached`, into a file under `target/`.
    - It runs as `tools/live-run.sh wrap -- bash <that file>`.
@@ -797,8 +835,9 @@ the launcher, as `tools/live-run.sh answer` (§8j.2, §8j.3). Once that lands, `
 the launcher refuses a Claude-spawned shell. At this stage's execution each replacement is applied to
 `runbook/phase-1/s8-exit-criterion.md` with a dated comment, and Checkpoint 8j proves it landed. This file does not edit `s8` while it is being authored.
 
-**Bindings.** `verify_completed`'s two members are bound here, from `s8g`: *"The two member names, `item` and
-`adapter`, are **fixed here** so `s8j`'s probe binds to them rather than to a guess."* One set of names is still
+**Bindings.** `verify_completed`'s two names are bound here, from `s8g`: *"The two names, the `item` key and the
+`adapter` member, are **fixed here** so `s8j`'s probe binds to them rather than to a guess"*. The `item` key is read
+from `t2_event.item`, where `s8e` §8e.10 carries it beside the payload (D21-46 R3), and `adapter` from the payload. One set of names is still
 unknown at authoring: the catalog tests over `.redkiln/` that `s8b` names. Its draft names
 `rigor::rigor_monotonicity`, `quality_block::d2_named_form_refuses_any_member_list`,
 `lattice::p6_lattice_over_the_shipped_pack` and `lattice::p6_validate_over_the_shipped_pack`, among others. The set
@@ -837,7 +876,8 @@ cd D:/repos/redkiln-rs
 out=$(cargo build --workspace 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo build --workspace rc=$rc — criterion (1) NOT RUN (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
 test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent after a green build — criterion (1) NOT RUN (Halt 8)"; exit 1; }
-# verify_completed's member names, fixed by s8g (D21-42 10b): `item` scopes a row, `adapter` names the chosen adapter.
+# verify_completed's names, fixed by s8g (D21-42 10b; s8g §8g.4): the interim `item` key scopes a row and is carried
+# beside the payload in the t2_event.item column (s8e §8e.10; D21-46 R3); the `adapter` payload member names the adapter.
 VC_ITEM_KEY=item
 VC_ADAPTER_KEY=adapter
 test -f tools/live-run.sh || { echo "FAIL: tools/live-run.sh is absent — s8h's launcher is the only entry to a real run (D21-42 17a)"; exit 1; }
@@ -880,7 +920,7 @@ why=$(lane_check "$FIX_ITEM" .redkiln/packs/bug-standard.toml); rc=$?
 base=$(git merge-base HEAD "rk-run/$FIX_ITEM") || { echo "FAIL: no merge base"; exit 1; }
 git diff --quiet "$base" "rk-run/$FIX_ITEM" -- crates; rc=$?
 [ "$rc" -eq 1 ] || { echo "FAIL (1): the run landed no content change under crates/ (rc=$rc) — trailers without a landed commit (D21-41 (b))"; exit 1; }
-vc='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); r=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",("verify_completed",))]; a=sorted({str(x.get(sys.argv[4])) for x in r if x.get(sys.argv[3])==sys.argv[2]}); print(" ".join(a))'
+vc='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); r=[json.loads(p) for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=? AND "+sys.argv[3]+"=?",("verify_completed",sys.argv[2]))]; a=sorted({str(x.get(sys.argv[4])) for x in r}); print(" ".join(a))'
 ids=$(python -c "$vc" "$store" "$FIX_ITEM" "$VC_ITEM_KEY" "$VC_ADAPTER_KEY"); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the verify_completed probe did not run (rc=$rc)"; exit 1; }
 [ "$ids" = "rk-adapter-toolchain-rust" ] || { echo "FAIL (1): the verify stage's toolchain identity is '$ids', not exactly rk-adapter-toolchain-rust (AC-473; D21-42 10b)"; exit 1; }
@@ -923,7 +963,7 @@ store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
 test -f "$store" || { echo "FAIL: no store at $store"; exit 1; }
 STORE_BAK="$store.s8-bak"
 bk='import sqlite3,sys; s=sqlite3.connect(sys.argv[1]); d=sqlite3.connect(sys.argv[2]); s.backup(d); d.close(); s.close()'
-rows='import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(" ".join(str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]) for t in ("t1_stage_transition","t1_gate","t1_slice_seal","t2_event")))'
+rows='import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(" ".join(str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]) for t in ("t1_stage_transition","t1_gate_transition","t1_slice_seal","t2_event")))'   # t1_gate_transition: s8e's 0002 migration (D21-46 R2)
 before=$(python -c "$rows" "$store"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$before" ] || { echo "FAIL: could not count the store's rows (rc=$rc)"; exit 1; }
 python -c "$bk" "$store" "$STORE_BAK" || { echo "FAIL: the store could not be backed up — doctor --rebuild NOT RUN"; exit 1; }
@@ -945,7 +985,8 @@ out=$(cargo build --workspace 2>&1); rc=$?   # AMENDED at s8j (s8j §8j.8 A3): g
 
 **A4 — (7), the whole fenced block.** D21-42 12a: *"An honest rendering passes, with two assertions: owned readings
 == `dispatch_completed` for the item, and no rendering over n = 0. This replaces s8's unreadable AC-394 READ line."*
-The `item` member on `dispatch_completed` is D21-42 12b's interim key, which is *"extended to `dispatch_completed`"*.
+`dispatch_completed`'s `item` is N5's interim key, carried beside the payload in `t2_event.item` (`s8e` §8e.10; D21-46
+R3). `rate_limit_reading.item` stays in its payload, where ADR-0163 put it. The probe reads each where it lives.
 
 ```bash
 # AMENDED at s8j (s8j §8j.8 A4): built first; AC-394 asserted as owned readings == dispatch_completed (D21-42 12a).
@@ -955,7 +996,7 @@ test -x ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln absent �
 test -n "$ITEM" || { echo "FAIL: set ITEM to the item whose cost rows are being read"; exit 1; }
 store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
 test -f "$store" || { echo "FAIL: no store at $store"; exit 1; }
-own='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); n=lambda k: sum(1 for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",(k,)) if json.loads(p).get("item")==sys.argv[2]); print(n("rate_limit_reading"), n("dispatch_completed"))'
+own='import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); rd=sum(1 for (p,) in c.execute("SELECT payload FROM t2_event WHERE kind=?",("rate_limit_reading",)) if json.loads(p).get("item")==sys.argv[2]); dc=c.execute("SELECT COUNT(*) FROM t2_event WHERE kind=? AND item=?",("dispatch_completed",sys.argv[2])).fetchone()[0]; print(rd, dc)'   # readings: payload item (ADR-0163); dispatches: the interim key's column (s8e; D21-46 R3)
 cnt=$(python -c "$own" "$store" "$ITEM"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$cnt" ] || { echo "FAIL: the ownership probe did not run (rc=$rc)"; exit 1; }
 read -r owned dc <<< "$cnt"
@@ -1057,10 +1098,11 @@ The bullet list gains two bullets:
 Its count sentence *"Those seventeen are not read, they are run."* becomes *"Those nineteen are not read, they are
 run."*.
 
-*A5.5 — no recursive walk over `.redkiln/` enters a run worktree (D21-44).* D21-44 gives the rule to `s8e`:
-*"Every recursive walk over `.redkiln/` as a whole excludes `worktrees/`, each with a synthetic control, because a run
-worktree is a full repository copy. This includes Checkpoint 8's `grep -r … .redkiln/` lines"*. `s8e` §8e.10 hands
-`s8`'s share to this stage: *"`s8-exit-criterion.md`'s recursive greps over `crates/ .redkiln/` are `s8j`'s"*. Three walks in the block are affected:
+*A5.5 — no recursive walk over `.redkiln/` enters a run worktree (D21-44).* D21-44 gave the rule to `s8e`, and
+D21-46 R1 moved it to `s8d-ii`: *"Every recursive walk over `.redkiln/` as a whole excludes `worktrees/`, each with a
+synthetic control, because a run worktree is a full repository copy. This includes Checkpoint 8's `grep -r …
+.redkiln/` lines"*. `s8d-ii` §8d-ii.1 hands `s8`'s share to this stage: *"`s8-exit-criterion.md`'s recursive greps
+over `crates/ .redkiln/` belong to `s8j`, which owns every `s8` amendment"*. Three walks in the block are affected:
 
 - the line that opens `raw=$(grep -rnE 'require.*\b(criticality|`;
 - the line that opens `grep -rnE 'append(_route)? *= *true'`;
@@ -1072,7 +1114,7 @@ Each gains `--exclude-dir=worktrees` after `-rnE`. Insert the stanza below immed
 stanza's first guard keeps that true, and its control proves the skip drops a run-worktree copy and keeps a pack.
 
 ```bash
-# AMENDED at s8j (s8j §8j.8 A5.5; D21-44, whose walk rule is s8e's): the three walks over .redkiln/ below skip every
+# AMENDED at s8j (s8j §8j.8 A5.5; D21-44, whose walk rule is s8d-ii's): the three walks over .redkiln/ below skip every
 # directory named worktrees — a run worktree under .redkiln/worktrees/<item> is a full repository copy.
 WALKED='require.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b|append(_route)? *= *true|findings\.none\(evidence in \[|quality_shorthand *='
 lost=$(git ls-files | grep -E '(^|/)worktrees/' | while IFS= read -r wf; do grep -lE "$WALKED" "$wf"; done)
@@ -1164,31 +1206,40 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo
   - The Codex item is gone.
   - The empty-case item exists, and Checkpoint 7i names it.
   - The fixture item's non-comment lines and ref are untouched. Its checkout is re-pointed to `.redkiln/worktrees/`,
-    clean and without an `RK_BASE` marker, so `s8e`'s re-entry refuses it.
+    clean and without an `RK_BASE` marker, so `s8d-ii`'s re-entry refuses it.
+  - Both packs carry one fail-closed `[[gate_expiry]]` row for each of this stage's three gate classes.
   - The reserved fix item exists with its hold, slice, trial declaration, BugReport and repro pair. It has no run
     ref.
   - The reserved defect **is still red** at HEAD, in a throwaway tree.
 - **`spike.toml` is untouched** since `ca8f387`.
 - **Checkpoints 7h and 7i read named fixture items**, and neither reads `$FIX_ITEM`.
-- **The pin, the instrument record, Checkpoint 7c's whole run and both probe results agree.** Each run has its
-  launch record. The (g) record is `accepted` only with both probes recorded as passing.
+- **The pin, the instrument record, Checkpoint 7c's whole run and both probe results agree**, and the pin equals
+  S-BIN's pinned `cli_version`. Each run has its launch record. The (g) record is `accepted` only with both probes
+  recorded as passing.
 - **CI is green on the recorded run**: every job, both legs, and no code change since.
 - **`s8`'s amendments landed**:
   - no `BIND:`;
   - no `test -x` before a build;
   - no bare `redkiln run` or `redkiln answer`, since each goes through the launcher;
   - every selected test exists.
-- **The entry chain re-runs once, link by link, and Checkpoints 7h and 7i re-run whole.** The links are
-  Checkpoints 8a, 8b, 8c, 8d, 8d-ii, 8e, 8f, 8g, 8h and 8i. Each runs whole with `RK_CP_NESTED=1` (D21-46), and each
-  reaches its end marker. Each is fenced against a real dispatch by an unset launch record and an empty
-  `CLAUDE_CONFIG_DIR` trap. When Checkpoint 8j is itself run with `RK_CP_NESTED=1`, it re-runs none of them.
+- **The entry chain re-runs once, link by link, and so does every older checkpoint an `s8` stage made
+  provisional.** The links are Checkpoints 8a, 8b, 8c, 8d, 8d-ii, 8e, 8f, 8g, 8h and 8i. The older set, read from
+  each `s8` file's "made provisional" statements, is 5, 6, 7a, 7b, 7b-ii, 7d, 7f, 7g, 7h and 7i: `s8a` (5, 7a, 7b,
+  7f), `s8c` (5, 7a), `s8d` (7g), `s8d-ii` (7f), `s8e` (7a, 7f, 7h, 7i), `s8f` (7i), `s8g` (5, 6, 7b, 7b-ii, 7d),
+  `s8h` (5, 7b, 7b-ii, 7d, 7f), `s8i` (5), and this stage (7h, 7i). 7c is §8j.6's live whole run (D21-43 N28), and 7e
+  cannot be re-run whole (its block commits and tags). Each runs whole with `RK_CP_NESTED=1` (D21-46), and each
+  reaches its end marker. Each is fenced against a real dispatch by an unset launch record, the screen and an empty
+  `CLAUDE_CONFIG_DIR` trap; 7f by `s8h` §8h.14's fixture route as well. When Checkpoint 8j is itself run with
+  `RK_CP_NESTED=1`, it re-runs none of them.
 - **The whole suite, fmt and clippy are green, and the three runbook checkers pass.**
 - **This block dispatched nothing, and it changed no store row, no `rk-run/*` ref and no launch record.**
 
 **Run it from a Git Bash that Claude Code did not spawn.** Checkpoints 8h and 8i refuse a Claude-spawned shell, and
 this block re-runs them. Set every input the chain's blocks name at their tops (8h's `REC_A`, `REC_B`,
-`A_SUPERSEDES` and `TOKENS_APPETITE`, 8i's own, and so on). Each block refuses by name when one is missing. Budget
-hours: (10) re-runs twelve checkpoints, most of them with a whole suite.
+`A_SUPERSEDES` and `TOKENS_APPETITE`, 8i's own, and so on). `MINTED_CLASSES` for 8h's re-run carries this stage's
+three gate classes too. Each block refuses by name when one is missing. Budget hours: (10) re-runs twenty checkpoints
+whole, most of them with a whole `cargo test --workspace`. At one cold-suite wall time each (`s8c` §8c.5 measures the
+run child), that is about twenty whole-suite runs plus each block's named selections, a working day or more.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -1204,7 +1255,8 @@ test -n "$wt_before" || { echo "FAIL: git worktree list printed no worktree"; ex
 gcd=$(git rev-parse --git-common-dir) || { echo "FAIL: git rev-parse --git-common-dir failed"; exit 1; }
 store="$gcd/redkiln/store.sqlite3"
 test -f "$store" || { echo "FAIL: no store at $store"; exit 1; }
-rows='import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(" ".join(str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]) for t in ("t1_stage_transition","t1_gate","t1_slice_seal","t2_event")), c.execute("SELECT COUNT(*) FROM t2_event WHERE kind IN (?,?,?)",("dispatch","dispatch_completed","rate_limit_reading")).fetchone()[0])'
+# After s8e's 0002 migration (D21-46 R2) the gate table is t1_gate_transition; t1_gate no longer exists.
+rows='import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(" ".join(str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]) for t in ("t1_stage_transition","t1_gate_transition","t1_slice_seal","t2_event")), c.execute("SELECT COUNT(*) FROM t2_event WHERE kind IN (?,?,?)",("dispatch","dispatch_completed","rate_limit_reading")).fetchone()[0])'
 rows_before=$(python -c "$rows" "$store"); rc=$?
 [ "$rc" -eq 0 ] && [ -n "$rows_before" ] || { echo "FAIL: the read-only store probe did not run (rc=$rc)"; exit 1; }
 refs_before=$(git for-each-ref --format='%(refname) %(objectname)' refs/heads/rk-run/); rc=$?
@@ -1288,7 +1340,7 @@ new=$(grep -vE '^[[:space:]]*(#|$)' .redkiln/items/rk-fix-doctor-test-count.toml
 r_now=$(git rev-parse --verify --quiet refs/heads/rk-run/rk-fix-doctor-test-count); r_pin=$(git rev-parse --verify --quiet "73c087a^{commit}")
 [ -n "$r_now" ] && [ -n "$r_pin" ] && [ "$r_now" = "$r_pin" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count is '$r_now', not 73c087a ('$r_pin') — Checkpoints 7h and 7i read it; two empty reads never compare equal here"; exit 1; }
 # D21-44: the legacy checkout is re-pointed from .git/redkiln/worktrees/ to .redkiln/worktrees/, its ref kept, and it
-# carries no RK_BASE marker, so s8e's re-entry refuses any run of the item (D21-45 W2; §8j.1(d)).
+# carries no RK_BASE marker, so s8d-ii's re-entry refuses any run of the item (D21-45 W2; D21-46 R1; §8j.1(d)).
 wtl=$(git worktree list --porcelain); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: git worktree list failed (rc=$rc)"; exit 1; }
 if printf '%s\n' "$wtl" | grep -qE '^worktree .*/\.git/redkiln/worktrees/'; then echo "FAIL: a worktree is still registered under .git/redkiln/worktrees/ — the legacy placement was not re-pointed (s8j §8j.1(d); D21-44)"; exit 1; fi
@@ -1301,10 +1353,22 @@ lst=$(git -C "$lwt" status --porcelain); rc=$?
 [ "$rc" -eq 0 ] && [ -z "$lst" ] || { echo "FAIL: the re-pointed checkout is not clean (rc=$rc)"; exit 1; }
 lgd=$(git -C "$lwt" rev-parse --absolute-git-dir); rc=$?
 [ "$rc" -eq 0 ] && [ -d "$lgd" ] || { echo "FAIL: the re-pointed checkout's gitdir could not be read (rc=$rc)"; exit 1; }
-test ! -e "$lgd/RK_BASE" || { echo "FAIL: the legacy checkout carries an RK_BASE marker — s8e's re-entry would ADOPT it instead of refusing it"; exit 1; }
+test ! -e "$lgd/RK_BASE" || { echo "FAIL: the legacy checkout carries an RK_BASE marker — s8d-ii's re-entry would ADOPT it instead of refusing it"; exit 1; }
 git check-ignore -q .redkiln/worktrees/rk-fix-doctor-test-count || { echo "FAIL: .redkiln/worktrees/ is not ignored — the re-pointed checkout dirties git status (AC-518)"; exit 1; }
 test ! -e "$gcd/redkiln/worktrees/rk-fix-doctor-test-count" || { echo "FAIL: the old checkout directory is still on disk under .git"; exit 1; }
 grep -qE '^legacy-worktree-repointed rk-fix-doctor-test-count 73c087a [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$ev" || { echo "FAIL: the re-point is not recorded in $ev"; exit 1; }
+# §8j.2's and §8j.3's three gate classes each carry ONE fail-closed [[gate_expiry]] row in BOTH packs (s8h §8h.10).
+# The spellings are drafts the records may re-spell: edit S8J_GATE_CLASSES by a dated line when they do.
+S8J_GATE_CLASSES="human_root:BugReport human_root:IntakeRecord hold:specification"
+ge='import sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); rows=d.get("gate_expiry",[]); print(" ".join(c+"="+str(sum(1 for r in rows if r.get("class")==c and r.get("action")=="fail")) for c in sys.argv[2:]))'
+want=$(for c in $S8J_GATE_CLASSES; do printf '%s=1 ' "$c"; done); want=${want% }
+for p in bug-standard story; do
+  got=$(python -c "$ge" ".redkiln/packs/$p.toml" $S8J_GATE_CLASSES); rc=$?
+  [ "$rc" -eq 0 ] && [ "$got" = "$want" ] || { echo "FAIL: $p.toml's gate rows for this stage's classes read '$got' (rc=$rc), expected '$want' — s8h's load lint would refuse every run that reaches one"; exit 1; }
+done
+printf '[[gate_expiry]]\nclass = "a"\naction = "fail"\n' > "$tdir/ge-ctl.toml" || { echo "FAIL: could not write the gate-row control"; exit 1; }
+v=$(python -c "$ge" "$tdir/ge-ctl.toml" a b); rc=$?
+[ "$rc" -eq 0 ] && [ "$v" = "a=1 b=0" ] || { echo "FAIL: the gate-row reader read '$v' (rc=$rc) over one row for a and none for b — it is vacuous"; exit 1; }
 # The story is the lane's to author: this stage did not touch spike.toml.
 test -f spikes/p9/packs/spike.toml || { echo "FAIL: spikes/p9/packs/spike.toml is gone"; exit 1; }
 git diff --quiet ca8f387 HEAD -- spikes/p9/packs/spike.toml || { echo "FAIL: spike.toml changed since ca8f387 — the story lane would have nothing to author"; exit 1; }
@@ -1355,6 +1419,14 @@ inst=$(tr -d '\r\n' < spikes/results/instrument-checks/RUNBOOK-instrument.txt)
 ver=${inst%% *}
 pin=$(sed -nE 's/^pub const TESTED_CLI_VERSION: &str = "([0-9]+\.[0-9]+\.[0-9]+)";$/\1/p' crates/rk-adapter-claude/src/config.rs)
 [ -n "$ver" ] && [ "$ver" = "$pin" ] || { echo "FAIL: the instrument record says '$ver' and TESTED_CLI_VERSION says '$pin' (Halt 2; D21-42 16)"; exit 1; }
+# The adapter pin equals S-BIN's pinned cli_version (s8i §8i.5; D21-43 N22 froze the CLI from S-BIN on).
+sbin=$(grep -lE '^## F[0-9]+ — S-BIN' spikes/F*-DRAFT.md); rc=$?
+[ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$sbin" | grep -c .)" -eq 1 ] || { echo "FAIL: not exactly one S-BIN finding draft (rc=$rc) — the pin has no S-BIN version to equal"; exit 1; }
+sbin_pins() { sed -n '/^<!-- s-bin-pins$/,/^-->$/p' "$1" | sed -n 's/^cli_version=//p'; }
+sbin_cli=$(sbin_pins "$sbin")
+[ -n "$sbin_cli" ] && [ "$sbin_cli" = "$pin" ] || { echo "FAIL: TESTED_CLI_VERSION is '$pin' and S-BIN pinned cli_version '$sbin_cli' — the freeze failed between S-BIN and the pin move (Halt 2)"; exit 1; }
+printf '%s\n' '<!-- s-bin-pins' 'cli_version=9.9.9' '-->' > "$tdir/sbin-ctl.md" || { echo "FAIL: could not write the S-BIN pins control"; exit 1; }
+[ "$(sbin_pins "$tdir/sbin-ctl.md")" = "9.9.9" ] || { echo "FAIL: the S-BIN pins reader did not read a planted cli_version — it is vacuous"; exit 1; }
 grep -qxF "    assert_eq!(TESTED_CLI_VERSION, \"$pin\");" crates/rk-adapter-claude/tests/it/config.rs || { echo "FAIL: the literal pin test does not carry $pin"; exit 1; }
 out=$(cargo test -p rk-adapter-claude --test it -- config::tested_cli_version_is_the_pin_as_a_config_value --exact 2>&1); rc=$?
 [ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo "FAIL: the pin test did not pass exactly once (rc=$rc)"; exit 1; }
@@ -1512,11 +1584,14 @@ out=$(python runbook/tools/check-bash-syntax.py 2>&1); rc=$?
 
 # ---- (10) RE-RUN, WHOLE: THE ENTRY CHAIN ONCE, LINK BY LINK, AND THE TWO CHECKPOINTS THIS STAGE EDITED.
 # D21-46's ONE RE-RUN CONVENTION: RK_CP_NESTED=1 means "running as another checkpoint's entry gate: skip your own
-# nested whole re-runs" (s8e's RK_CP_ENTRY_ONLY is folded into it). One run of 8i therefore no longer carries the
-# chain, and this block runs each link ONCE, directly, with RK_CP_NESTED=1: 8a, 8b, 8c, 8d, 8d-ii (D21-46 R1), 8e,
-# 8f, 8g, 8h and 8i, the entry gate. 7h and 7i run directly as well, because §8j.1(c) edits both. The older
-# checkpoints the links made provisional (5, 6, 7a, 7b, 7b-ii, 7d, 7f) were closed by each link's own un-nested run,
-# as PROGRESS.md records. This stage edits none of them, so they are not re-run here. When THIS block is itself run
+# nested whole re-runs" (the one entry-only variable s8e drafted is folded into it). One run of 8i therefore no longer
+# carries the chain, and this block runs each link ONCE, directly, with RK_CP_NESTED=1: 8a, 8b, 8c, 8d, 8d-ii
+# (D21-46 R1), 8e, 8f, 8g, 8h and 8i, the entry gate. 7h and 7i run directly as well, because §8j.1(c) edits both.
+# THE LAST GATE BEFORE SPEND (consistency pass 2026-09-24, lead decision): every older checkpoint an s8 stage made
+# provisional runs whole here too, nested and under the same guards: 5, 6, 7a, 7b, 7b-ii, 7d, 7f and 7g. 7c is §8j.6's
+# live whole run (D21-43 N28); 7e cannot be re-run whole. 7f runs by s8h §8h.14's fixture route: its run arm, already
+# in a throwaway clone (s8d-ii §8d-ii.7), is pointed at the fixture child by this stage's dated 7f amendment, made at
+# stage open; if that amendment needs a code line the screen refuses, STOP for the lead. When THIS block is itself run
 # with RK_CP_NESTED=1 (as s8's entry gate), it re-runs nothing.
 # NO ACCIDENTAL DISPATCH (D21-46's one no-dispatch guard for replays):
 #   · PREVENTION. Each block runs with REDKILN_LAUNCH_RECORD, FIX_ITEM, STORY_ITEM and ITEM unset, so s8h's gate
@@ -1558,10 +1633,12 @@ open(sys.argv[3],"w",encoding="utf-8",newline="\n").write(hits[-1])'
   n=$(find "$trap_dir" -mindepth 1 | grep -c .)
   [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written — its silence afterwards would prove nothing"; exit 1; }
   rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
   d2=$(ls runbook/phase-1/s8d-ii-*.md 2>/dev/null)
   [ "$(printf '%s\n' "$d2" | grep -c .)" = "1" ] || { echo "FAIL: not exactly one runbook/phase-1/s8d-ii-*.md ('$d2') — Checkpoint 8d-ii cannot be re-run (D21-46 R1; Halt 8)"; exit 1; }
   d2=$(basename "$d2" .md)
-  CHAIN="s8a-records-and-red-checkpoints:CP8A s8b-catalog-quality:CP8B s8c-toolchain-port-and-verbs:CP8C s8d-step-grain-and-resolver:CP8D $d2:CP8D-II s8e-tier-one-and-the-lane:CP8E s8f-landing-and-rendering:CP8F s8g-verify-and-restored-demands:CP8G s8h-cards-and-run-environment:CP8H s8i-s-bin:CP8I s7h-lane-completes:CP7H s7i-cost:CP7I"
+  CHAIN="s8a-records-and-red-checkpoints:CP8A s8b-catalog-quality:CP8B s8c-toolchain-port-and-verbs:CP8C s8d-step-grain-and-resolver:CP8D $d2:CP8D-II s8e-tier-one-and-the-lane:CP8E s8f-landing-and-rendering:CP8F s8g-verify-and-restored-demands:CP8G s8h-cards-and-run-environment:CP8H s8i-s-bin:CP8I s7h-lane-completes:CP7H s7i-cost:CP7I s7d-cli-and-migrate:CP7D s7f-conformance-and-records:CP7F s7g-step-executor:CP7G"
   # Every block is extracted and screened before ANY of them runs.
   for pair in $CHAIN; do
     sf="runbook/phase-1/${pair%%:*}.md"; mk="${pair##*:}-END-OF-BLOCK reached"; blk="$tdir/${pair%%:*}.sh"
@@ -1571,11 +1648,33 @@ open(sys.argv[3],"w",encoding="utf-8",newline="\n").write(hits[-1])'
     hit=$(screen "$blk")
     [ -z "$hit" ] || { echo "FAIL: $sf's checkpoint would launch, forge a launch record, push or run a live test on a code line — this block runs nothing that does:"; printf '%s\n' "$hit"; exit 1; }
   done
+  # The older checkpoints whose blocks carry no end marker: extracted by a needle unique to the block, then given a
+  # sentinel, so "rc 0 and the sentinel last" means the block ran to its end. stem|needle|label.
+  n_old=0
+  for spec in "s5-workspace-ci-rk-types|FAIL: deny.toml absent|CP5" "s6-store-and-git|the five CI gates, each guarded|CP6" "s7a-ports-and-fakes|FAIL: cargo test -p rk-ports exited|CP7A" "s7b-kernel|spikes/p9/grammar-probe.py absent|CP7B" "s7b-ii-gates|BEFORE: no gate fixtures yet|CP7B-II"; do
+    IFS='|' read -r stem needle label <<< "$spec"
+    sf="runbook/phase-1/$stem.md"; blk="$tdir/$stem.sh"
+    test -f "$sf" || { echo "FAIL: $sf does not exist — its checkpoint cannot be re-run (Halt 8)"; exit 1; }
+    python -c "$xblk" "$sf" "$needle" "$blk"; rc=$?
+    [ "$rc" -eq 0 ] && test -s "$blk" || { echo "FAIL: no block in $sf carries '$needle' (rc=$rc)"; exit 1; }
+    printf '\necho "%s-END-OF-BLOCK reached"\n' "$label" >> "$blk" || { echo "FAIL: could not append $label's sentinel"; exit 1; }
+    hit=$(screen "$blk")
+    [ -z "$hit" ] || { echo "FAIL: $sf's checkpoint would launch, forge a launch record, push or run a live test on a code line:"; printf '%s\n' "$hit"; exit 1; }
+    n_old=$((n_old + 1))
+  done
+  [ "$n_old" -eq 5 ] || { echo "FAIL: $n_old of the five marker-less older checkpoints were extracted"; exit 1; }
   for pair in $CHAIN; do
     sf="runbook/phase-1/${pair%%:*}.md"; mk="${pair##*:}-END-OF-BLOCK reached"; blk="$tdir/${pair%%:*}.sh"
     out=$(env -u REDKILN_LAUNCH_RECORD -u FIX_ITEM -u STORY_ITEM -u ITEM RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$blk" 2>&1); rc=$?
     last=$(printf '%s\n' "$out" | grep . | tail -1)
     [ "$rc" -eq 0 ] && [ "$last" = "$mk" ] || { echo "FAIL: $sf's checkpoint rc=$rc, last line '$last'"; printf '%s\n' "$out" | tail -25; exit 1; }
+  done
+  for spec in "s5-workspace-ci-rk-types|CP5" "s6-store-and-git|CP6" "s7a-ports-and-fakes|CP7A" "s7b-kernel|CP7B" "s7b-ii-gates|CP7B-II"; do
+    IFS='|' read -r stem label <<< "$spec"
+    blk="$tdir/$stem.sh"; mk="$label-END-OF-BLOCK reached"
+    out=$(env -u REDKILN_LAUNCH_RECORD -u FIX_ITEM -u STORY_ITEM -u ITEM RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$blk" 2>&1); rc=$?
+    last=$(printf '%s\n' "$out" | grep . | tail -1)
+    [ "$rc" -eq 0 ] && [ "$last" = "$mk" ] || { echo "FAIL: $stem's checkpoint rc=$rc, last line '$last'"; printf '%s\n' "$out" | tail -25; exit 1; }
   done
   left=$(find "$trap_dir" -mindepth 1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the re-runs (rc=$rc)"; exit 1; }
@@ -1583,11 +1682,12 @@ open(sys.argv[3],"w",encoding="utf-8",newline="\n").write(hits[-1])'
 fi
 
 # ---- (11) THE WHOLE SUITE, NO FAIL-FAST, WITH A FLOOR; fmt; clippy.
-# The floor is RE-DERIVED AT STAGE OPEN from Checkpoint 8i's recorded passed count (PROGRESS.md row 8i), plus this
-# stage's 13 new tests (D21-46: each file re-derives from its entry checkpoint's recorded count). The drafted base is
-# s8i's drafted floor, Checkpoint 8h's 780 plus s8i's 6 + N, where N is the Binary field count s8i's record fixes. N is
-# unknown at authoring, so 786 is a lower bound. Edit the literal to 8i's recorded count, with a date, at stage open.
-CP8I_PASSED=786
+# Expected value, re-derived at stage open from Checkpoint 8i's recorded count (PROGRESS.md row 8i), plus this stage's
+# 13 new tests (D21-46: each file re-derives from its entry checkpoint's recorded count). 8i's expected count is
+# 1168 + 6 + N (Checkpoint 8h's 1168 = 740 at 992d257 + 9 + 21 + 63 + 52 + 32 + 67 + 79 + 64 + 41; N is the Binary
+# field count s8i's record fixes), so the floor is 1187 + N. N is unknown at authoring, so 1174 is a lower bound for
+# 8i's count. Edit the literal to 8i's recorded count, with a date, at stage open.
+CP8I_PASSED=1174
 floor=$((CP8I_PASSED + 13))
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|test result:' | tail -30; exit 1; }

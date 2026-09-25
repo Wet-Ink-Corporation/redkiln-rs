@@ -22,7 +22,7 @@ What changed:
   R4 cites `s8c`'s record V for the three verb handlers, so the eight handler tests have left this file and its four
   handler mutants are replaced by activity-level ones (§8g.6, §8g.9).
 - **The entry table** reads the seven-method count after record V. It gains N25's `setup` verb and widened `build`,
-  `s8d`'s loader and `s8e`'s run-worktree root (D21-44).
+  `s8d`'s loader and `s8d-ii`'s run-worktree root (D21-44; D21-46 R1 moved it out of `s8e`).
 - **N25**: the `sca-scan` edit (`unrated == 0`) is `s8b`'s catalog edit, and `setup_projects` is `s8c`'s row. Both
   are cited, not re-specified. The pass's whole suite meets a tree `setup` has prepared, including the Node
   fixture's dependencies, and a test asserts it (§8g.2, §8g.6).
@@ -54,6 +54,18 @@ own records R1–R5 (§8g.8). The last bullet of the list above is superseded by
   Checkpoint 8g (2), (5), (7c) and (7g) read the new shape.
 - **The floor**: the drafted `PREV` is **954**, `s8f`'s drafted Checkpoint 8f `FLOOR`, in place of 939. It is still
   re-derived at stage open from Checkpoint 8f's recorded count (§8g.10).
+
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **The run worktree is `s8d-ii`'s** (D21-46 R1): its root, the `setup` call and the carry at creation. Every
+  sentence that named `s8e` for them now names `s8d-ii`.
+- **`verify_completed`'s `item` rides `s8e`'s interim key, beside the payload** (§8g.4). D21-46 R3 fixes N5's key
+  *"outside the canonical digest"*, and `s8e`'s record supersedes nothing of ADR-0131 because the key is not in any
+  payload. A payload `item` here would be the addressing member ADR-0131's first forbids bullet names. The two names
+  `s8j` binds to are unchanged: the `item` key and the `adapter` payload member.
+- **(12) adds `REDKILN_LAUNCH_RECORD` unset** to every replay (D21-46's one replay guard), and the trap asserts that it
+  starts empty.
+- **The floor chain is recomputed once**: Checkpoint 8f's 1063 + this stage's 64 = **1127**, not the drafted 954 + 64,
+  and (9) gains the at-least-44-result-lines guard.
 
 ---
 
@@ -91,7 +103,7 @@ sentence.
 | `s8d` (D21-42 3a, 4c, 4d) | step-grain commits and the complete reference resolver: output binding, iteration, check evaluation, emit binding and test-selection resolution; `"affected"` is the package-level affected set, falling back to whole-suite with `basis_reason` | a fixture activity of shape `[tool, check, emit]` walks to an `artifact.write` |
 | `s8d` (its R5) | the question loader, used by `run` and `answer`, over `.redkiln/processes/`, holding the lanes' ten gate questions, `confirmation.not-fixed` and `scan.accept-findings` among them | `answer` no longer passes `&QuestionRegistry::default()`; each of the two ids is declared once under `.redkiln/processes/`; whether `s8d`'s loader test pins the total at ten (§8g.6) |
 | `s8e` (D21-42 24c) | the first FakeHarness end-to-end test of `verbs::run::run` | `grep -rn "verbs::run::run(" crates/*/tests` is non-empty |
-| `s8e` (D21-44; D21-45 W1–W3) | run-owned worktrees at `.redkiln/worktrees/<item>`, with `setup` run at creation | no code line under `crates/rk-cli/src` joins the common dir with `redkiln/worktrees` |
+| `s8d-ii` (D21-44; D21-45 W1–W3; D21-46 R1) | run-owned worktrees at `.redkiln/worktrees/<item>`, with `setup` run at creation | no code line under `crates/rk-cli/src` joins the common dir with `redkiln/worktrees` |
 | `s8f` (D21-42 5a, 5b) | rk-store's render/write path, one `artifact.write` per write, under the item's managed artifact directory in the run-owned worktree | the one write path's call site |
 | `s8b` (D21-42 11a) | the pack changelog at `.redkiln/CHANGELOG.md` | the file exists |
 | `s8b` (D21-43 N25) | `sca-scan`'s check requires `unrated == 0` or routes to `scan.accept-findings` | the check's expression names `report.unrated` |
@@ -119,8 +131,8 @@ It does **not** own the following. It cites each owner rather than re-specifying
   producer walk reads the edited activity and does not edit it again.
 - **Question loading.** The loader and `.redkiln/processes/` are `s8d`'s R5. The pack-declared human-root questions
   are `s8j`'s.
-- **The run-owned worktree.** Its root, `.redkiln/worktrees/<item>`, and the carry at creation are `s8e`'s (D21-44;
-  D21-45 W1–W3).
+- **The run-owned worktree.** Its root, `.redkiln/worktrees/<item>`, and the carry at creation are `s8d-ii`'s (D21-44;
+  D21-45 W1–W3; D21-46 R1).
 - **Card grants, the `Spec` schema and the AC-133 classification.** The card grants, the `Spec` type's schema and the
   per-enum AC-133 classification the operator signs are `s8h`'s (D21-41 g).
 - **The story lane, the real trial and AC-114.** The story lane is `s8j`'s (D21-41 f). So are the tag-release real
@@ -147,7 +159,8 @@ at ten, the question this stage adds moves it. In that case the test takes a dat
 Checkpoint 8d joins (12)'s list by a dated edit.
 
 **The re-runs are bounded**, because nested re-runs cost hours. (12) re-runs the entry gate, 8f, and the provisional
-rows above, each whole, with `RK_CP_NESTED=1` in its environment. When this block is itself run with `RK_CP_NESTED=1`,
+rows above, each whole, with `RK_CP_NESTED=1` and without `REDKILN_LAUNCH_RECORD` in its environment, under the
+trap (D21-46). When this block is itself run with `RK_CP_NESTED=1`,
 as `s8h` replays it, (12) says that it is skipped and replays nothing. A replayed block that does not honour the
 variable still runs its own replays. That costs time, not correctness.
 
@@ -245,8 +258,8 @@ N23 moved the four:
 **What the pass does, in order** (`crates/rk-cli/src/verify_pass.rs`, beside `review_pass.rs`, on its shape):
 
 1. **Meet a set-up tree.** The pass runs in the run-owned worktree, which is at `.redkiln/worktrees/<item>` after
-   `s8e`'s D21-44 move. The whole suite it requests includes the Node fixture tests. `s8c`'s `setup` verb has run
-   there at creation (the carry is `s8e`'s). If it failed, creation refused by name (N25: *"refused by name on
+   `s8d-ii`'s D21-44 move. The whole suite it requests includes the Node fixture tests. `s8c`'s `setup` verb has run
+   there at creation (the carry is `s8d-ii`'s). If it failed, creation refused by name (N25: *"refused by name on
    failure"*), so no pass reaches a tree that was not set up.
    `verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree` checks this over a counting `Toolchain`
    double on a fresh run. It asserts that `setup` comes before the pass's one `test` call, and that a failed `setup`
@@ -360,17 +373,22 @@ same change** (ADR-0116 decision 5). Its row:
 
 | Kind | Tier | Payload fields | Producing step |
 | --- | --- | --- | --- |
-| `verify_completed` | 2 | `item`, `report_digest`, `selection`, `basis`, `basis_reason`, `passed`, `failed`, `selected_test_count`, `adapter`, `range: { base, head }`, `paths: [changed paths]`, `toolchain_version` | the kernel, once per **completed** `Toolchain::test` port call, whatever activity or pass made it |
+| `verify_completed` | 2 | `report_digest`, `selection`, `basis`, `basis_reason`, `passed`, `failed`, `selected_test_count`, `adapter`, `range: { base, head }`, `paths: [changed paths]`, `toolchain_version`; and the interim `item` key **beside** the payload, on `s8e` §8e.10's carrier | the kernel, once per **completed** `Toolchain::test` port call, whatever activity or pass made it |
 
 - **10b's four members plus AC-321's three.** D21-42 10b names *"report digest, selection with `basis_reason`, counts
   and adapter identity"*. AC-321's THEN adds *"the range endpoints, the resolved path list and the toolchain version
   are read back from the run event verbatim"* — so `range`, `paths` and `toolchain_version` are carried **as
   members**, not only inside the digest. That is AC-321's text, not a new decision.
-- **`item`, because the store cannot scope a row any other way.** The store's selector is inert and ADR-0163
-  decision 4 carries `item` as a payload member for exactly that reason; `s8j`'s fixture proof reads the item's
-  `verify_completed` rows by this member and asserts `adapter` on every one. The two member names, `item` and
-  `adapter`, are **fixed here** so `s8j`'s probe binds to them rather than to a guess. D21-43 N5 has since made this
-  the rule for every item-scoped kind: *"An interim `item` key on every item-scoped event kind"*.
+- **`item`, because the store cannot scope a row any other way, carried beside the payload.** When this was drafted
+  the store's selector was inert, and ADR-0163 decision 4 carried `item` as a payload member for that reason. D21-43
+  N5 has since made an interim key the rule for every item-scoped kind (*"An interim `item` key on every item-scoped
+  event kind"*), and D21-46 R3 fixes where it lives: *"**Carried outside the canonical digest**, as ADR-0131 places
+  its tag set."* `s8e` §8e.10 carries it beside the event, in the `t2_event.item` column, and `query(ByItem)` honours
+  it. So `verify_completed` takes the key on that carrier and not in its payload, which moves no ADR-0131 bullet, and
+  `s8e`'s `fsm::every_item_scoped_kind_carries_the_interim_item_key` covers the new kind. `s8j`'s fixture proof reads
+  the item's `verify_completed` rows by that key and asserts `adapter` on every one. The two names, the `item` key and
+  the `adapter` member, are **fixed here** so `s8j`'s probe binds to them rather than to a guess (*restated
+  2026-09-24, consistency pass*).
 - **Tier 2**, by ADR-0109 decision 2's deleted-database test: the report is recomputable by re-running the suite, and
   the next action does not move without the row. No trailer.
 - **Completed only.** A run that timed out, was killed or could not spawn writes **no** `verify_completed`; its
@@ -402,7 +420,7 @@ floor.**
 | **AC-320** | `verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call` | a counting `Toolchain` double: zero calls, zero gate rows | its *Verified by* names *"zero `process_spawned` events"*, and **no such kind exists** (`grep -c process_spawned crates/rk-types/src/event_kind.rs` → **0** at `ca8f387`). The record carries a dated *Verified by* note substituting the port-call count — no spawn is possible without a port call — rather than minting a kind for one assertion |
 | **AC-321** | `verify::ac321_replay_reads_the_path_list_from_verify_completed_alone`; `verify::ac321_replay_property_over_100_synthetic_ranges` | §8g.4's payload; the replay reads no working tree | — |
 | **AC-338** | `verify_pass::ac338_restored_mutation_is_unverifiable` | the mutation harness below; a fixture suite that restores the mutated file mid-run (F17's shape); the post-run content hash of the mutated region compared to the applied mutation | — |
-| **AC-339** | `verify_pass::ac339_mutation_runs_in_a_disposable_worktree` | an ephemeral worktree created and **removed on every path** (ADR-0162 decision 10's precedent). It sits beside the review pass's `<item>.review-ref` tree, at whatever root `s8e`'s D21-44 move gives that tree, and **never inside the run-owned worktree at `.redkiln/worktrees/<item>`**. The run-owned worktree's `tree_hash` is equal before and after, and `git status --porcelain` is empty | the patch is applied by the kernel through `GitOp::Apply` and never by a `-p` child, so Claude Code's protected-segment rule (D21-45: *"The path is sensitive if ANY segment is one of"* …) does not bear on where the tree sits |
+| **AC-339** | `verify_pass::ac339_mutation_runs_in_a_disposable_worktree` | an ephemeral worktree created and **removed on every path** (ADR-0162 decision 10's precedent). It sits beside the review pass's `<item>.review-ref` tree, at whatever root `s8d-ii`'s D21-44 move gives that tree, and **never inside the run-owned worktree at `.redkiln/worktrees/<item>`**. The run-owned worktree's `tree_hash` is equal before and after, and `git status --porcelain` is empty | the patch is applied by the kernel through `GitOp::Apply` and never by a `-p` child, so Claude Code's protected-segment rule (D21-45: *"The path is sensitive if ANY segment is one of"* …) does not bear on where the tree sits |
 | **AC-341** | `verify_pass::ac341_the_pass_calls_no_tracker_method` (a counting `Tracker` in `Ports`, which `run.rs` already builds as `tracker: Arc::new(rk_ports::fakes::BoardTracker::default())`); the static half stays `verify_reads_no_suite_verdict_rule`'s, inside `ac335_…` | the port-call assertion | **the *"CI is green and verify is `Err`"* integration half cannot be constructed**: the `Tracker` port has `project` and `inbox` and no status surface, and its module says *"Fake-only in Phase 1; GitHub is Phase 3"*. Named in the record as Phase 3's (AC-508), not claimed. **R1 carries a dated register note on AC-341 that says so**, so the half is recorded as Phase 3's rather than dropped silently |
 | **AC-348** | `selection::ac348_selection_is_byte_identical_over_200_change_sets` (Rust adapter); `verify_pass::ac348_selection_is_recomputed_from_verify_completed` | `s8c`'s affected-set function over a pinned `cargo metadata` fixture — **it must be a pure function of (change set, metadata, policy version)**; if `s8c` built it impure, stop (AC-347 requires *"a pure function"*) | — |
 | **AC-349** | `verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both`; `doctor::ac349_equal_specificity_claim_is_a_doctor_row` | a claims binder over each configured toolchain's declared path claims — a `claims` column the verify record adds to `s8c`'s per-toolchain table; the doctor row `RK-D-TOOLCHAIN-CLAIM-TIE` | — |
@@ -544,7 +562,7 @@ come through N25's per-toolchain `setup` verb"*). This stage depends on it namin
 `crates/rk-adapter-toolchain-node/tests/fixtures/project`. This repository's Rust suite includes the Node adapter's
 tests, and a fresh run worktree without that fixture's `node_modules` fails ten of them at preflight (`s8c`'s draft
 at `a1d35ac`: *"A fresh run-owned worktree runs this repository's suite RED"*). The verb and the row are `s8c`'s, and
-running it at creation is `s8e`'s. This stage asserts that the pass's whole suite meets a tree that has been set up
+running it at creation is `s8d-ii`'s. This stage asserts that the pass's whole suite meets a tree that has been set up
 (§8g.2, step 1), and (7e) reads the row as an entry precondition.
 
 **The gate questions load through `s8d`'s registry, and this stage writes no `.redkiln/questions.toml`.**
@@ -731,12 +749,11 @@ and each must turn its named test red. A survivor blocks the close.
 **Checkpoint 7c is not re-run here.** Its live probe is `s8j`'s (§8g.1).
 
 **The floor is re-derived at stage open.** (9)'s `PREV` is Checkpoint 8f's recorded passed count. It is written in by
-a dated edit before the block's first run and never lowered to make a red run green. The drafted expected value is
-**954**, which is `s8f`'s drafted Checkpoint 8f `FLOOR` at `c5d19d7` (`s8f` §8f.2 item 9: *"which gives 890 at
-Checkpoint 8e and **954** here"*). That chain is ADR-0164's 740 passed at `992d257`, plus `s8a` 7, `s8b` 16, `s8c`
-40, `s8d` 46, `s8e` 41 and `s8f` 64. The drafts do not agree with each other: `s8e`'s own block carries `FLOOR=944`
-where `s8f`'s chain has 890 at 8e, and `s8d-ii` (D21-46 R1) is not drafted yet. So the recorded count governs, as
-D21-46's floor-chain call says. (9)'s floor is `PREV` plus this stage's 64.
+a dated edit before the block's first run and never lowered to make a red run green. The expected value,
+**re-derived at stage open from Checkpoint 8f's recorded count**, is PREV = **1063**, `s8f`'s Checkpoint 8f `FLOOR`
+(`s8f` §8f.2 item 9: *"which gives 984 at Checkpoint 8e and 984 + 79 = **1063** here"*), so (9)'s floor is 1063 + 64
+= **1127**. The chain, recomputed once under D21-46's floor-chain call, is ADR-0164's 740 passed at `992d257`, plus
+`s8a` 9, `s8b` 21, `s8c` 63, `s8d` 52, `s8d-ii` 32, `s8e` 67 and `s8f` 79. The recorded count governs.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -948,15 +965,15 @@ test -n "$secs" || { echo "FAIL: the verify record carries no cold slowest-child
 [ "$secs" -lt 3600 ] || { echo "FAIL: a cold child takes $secs s, at or over ADR-0140's 3600 s — every cold verify pass would be Unverifiable (golden constraint 6; halt)"; exit 1; }
 
 # ---- (9) THE WHOLE SUITE, --no-fail-fast, rc 0, every result line green, and a FLOOR: Checkpoint 8f's recorded
-# ---- passed count plus this stage's 64. PREV is RE-DERIVED at stage open from Checkpoint 8f's recorded count by a
-# ---- dated edit of the next line; 954 is the drafted expected value (s8f's drafted FLOOR). A lower bound, never an
-# ---- equality.
-PREV=954
+# ---- passed count plus this stage's 64. Expected value, re-derived at stage open from Checkpoint 8f's recorded count:
+# ---- PREV = 1063, so the floor is 1063 + 64 = 1127. Edit PREV by a dated edit of the next line before the first run.
+# ---- A lower bound, never an equality. At least 44 result lines, as at 992d257.
+PREV=1063
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the workspace suite is red (rc=$rc)"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|panicked' | head -20; exit 1; }
 results=$(printf '%s\n' "$out" | grep -c '^test result:')
 greens=$(printf '%s\n' "$out" | grep -cE '^test result: ok\. [0-9]+ passed; 0 failed')
-[ "$results" -ge 1 ] && [ "$results" -eq "$greens" ] || { echo "FAIL: $greens of $results result lines are green"; exit 1; }
+[ "$results" -ge 44 ] && [ "$results" -eq "$greens" ] || { echo "FAIL: $greens of $results result lines are green, over a floor of 44 result lines"; exit 1; }
 passed=$(printf '%s\n' "$out" | sed -n 's/^test result: ok\. \([0-9][0-9]*\) passed.*/\1/p' | awk '{s+=$1} END {print s+0}')
 [ "$passed" -ge $((PREV + NEW)) ] || { echo "FAIL: $passed passed, under the floor of $((PREV + NEW)) (Checkpoint 8f's $PREV + this stage's $NEW)"; exit 1; }
 
@@ -978,7 +995,8 @@ tags_after=$(git tag -l 'rk-release/*'); rc=$?
 # ---- handling around `doctor --rebuild` is each block's own (the s8 amendment), and nothing below reads the store.
 # ---- BOUNDED: every replay runs with RK_CP_NESTED=1, and when THIS block runs under RK_CP_NESTED=1 it replays
 # ---- nothing. NO DISPATCH: a replayed block that invokes `redkiln run` on a code line must name harness_binary, and
-# ---- every replay runs with CLAUDE_CONFIG_DIR at an empty trap directory that must still be empty afterwards.
+# ---- every replay runs with REDKILN_LAUNCH_RECORD unset and CLAUDE_CONFIG_DIR at an empty trap directory that must
+# ---- still be empty afterwards (D21-46's one no-dispatch guard for replays).
 if [ "${RK_CP_NESTED:-0}" = 1 ]; then
   echo "CP8G (12) SKIPPED: this block is itself a replay (RK_CP_NESTED=1); its re-runs ran at Checkpoint 8g's own close"
 else
@@ -990,6 +1008,8 @@ else
   n=$(find "$trap_dir" -mindepth 1 | grep -c .)
   [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
   rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
   RUNPAT='(\$RK|\$BIN|redkiln(\.exe)?)"?[[:space:]]+run([[:space:]]|$)'
   n=$(printf '%s\n' '"$RK" run "$ITEM" --lane fix' '# "$RK" run in a comment' | grep -vE '^[[:space:]]*#' | grep -cE "$RUNPAT")
   [ "$n" -eq 1 ] || { echo "FAIL: the run-invocation pattern's control matched $n of the one code line"; exit 1; }
@@ -1026,7 +1046,7 @@ print("EXTRACTED", len(hit[0]))'
     runs=$(grep -vE '^[[:space:]]*#' "target/cp8g/$name.sh" | grep -E "$RUNPAT")
     [ -z "$runs" ] || grep -qF 'harness_binary' "target/cp8g/$name.sh" || { echo "FAIL: Checkpoint $name invokes redkiln run and names no harness_binary — its replay could dispatch to a real account:"; printf '%s\n' "$runs"; exit 1; }
     printf '\necho "CP8G-REPLAY-%s-END reached"\n' "$name" >> "target/cp8g/$name.sh" || { echo "FAIL: could not append $name's marker"; exit 1; }
-    out=$(RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "target/cp8g/$name.sh" 2>&1); rc=$?
+    out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "target/cp8g/$name.sh" 2>&1); rc=$?
     [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $name re-run whole exited $rc — its row stays provisional"; printf '%s\n' "$out" | grep -E 'FAIL' | head -10; printf '%s\n' "$out" | tail -15; exit 1; }
     printf '%s\n' "$out" | grep -qxF "CP8G-REPLAY-$name-END reached" || { echo "FAIL: Checkpoint $name exited 0 without reaching its last line"; exit 1; }
   done
@@ -1054,7 +1074,8 @@ echo "CP8G-END-OF-BLOCK reached"
   shape it cannot read fails, which is the safe direction.
 - **(9)'s floor is a lower bound.** It cannot tell a deleted older test from a new one. The named lists are what pin
   this stage's tests.
-- **(12) replays with the environment the operator gives this block, plus the two variables it sets.** If 8f needs a
+- **(12) replays with the environment the operator gives this block, plus the two variables it sets and the one it
+  unsets.** If 8f needs a
   variable, its own guard names it and this block fails, which is the right direction.
 - **(12)'s trap has limits.** It catches a real `claude` that inherits `CLAUDE_CONFIG_DIR`. A child launched with that
   variable set explicitly escapes it. From `s8h` on, that path is closed by `s8h`'s launch-record check: a real-harness run

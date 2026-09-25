@@ -13,7 +13,8 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - §8h.0's four questions are closed as D21-43 N17 took them. Q1 reuses `NotAdopted` and `NotIsolated { surface: Env }`,
   and nothing is superseded, so Record A no longer supersedes ADR-0095. Q2 is the four `Usage` counters,
   Q3 is `Exit::Overage` (20), and Q4 is three probe-2 dispatches.
-- D21-44 settled §8h.6's `.git` risk: run worktrees move to `.redkiln/worktrees/<item>`, which is `s8e`'s to build.
+- D21-44 settled §8h.6's `.git` risk: run worktrees move to `.redkiln/worktrees/<item>`, which is `s8d-ii`'s to build
+  (D21-46 R1 moved it out of `s8e`).
   Probe 1 now makes its worktree there, and it passes only if an edit inside that worktree succeeds. D21-45's
   protected-segment limit (`<wt>/.git`, `.cargo`, `.claude`, `.husky`) is stated and mapped to the typed
   `permission_denials` failure, with one new test, one mutant and one probe arm.
@@ -49,6 +50,19 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   *"One re-run convention"* and *"One no-dispatch guard for replays"*.
 - The counts move to 41 new tests (was 39), 17 new in `rk-cli` (was 15), and twenty mutants (was seventeen). New
   findings for the lead are 16–19.
+
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **The run-worktree placement and lifecycle are `s8d-ii`'s** (D21-46 R1), and `s8e` keeps the `worktree_assigned`
+  row. Every sentence that gave the placement to `s8e` now names `s8d-ii`.
+- **§8h.0 item 4's count source** is `s8e` §8e.10's interim `item` key, carried beside `dispatch_completed`'s payload
+  under D21-46 R3.
+- **§8h.0 item 8's floor** is recomputed once: Checkpoint 8g's 1127 + this stage's 41 = **1168**, not the drafted
+  1000 + 41. Its `63 (8g)` is `s8g`'s 64.
+- **§8h.10 names `s8j`'s three gate classes by the spellings `s8j` drafts** (`s8j` §8j.2, §8j.3).
+- **§8h.14's 7f route** reads 7f as `s8d-ii` §8d-ii.7 left it: the run arm is in a throwaway clone and the cleanup line
+  is gone, so the legacy tree is not re-scoped there. The 8a row quotes `s8a`'s guard from its current bytes.
+- **Findings 16 and 17 are settled**: `s8i` §8i.5 and `s8j` §8j.6 re-quote §8h.7's current `wrap` text, and `s8j`'s
+  screen matches the `answer` mode. The trap in (13) asserts that it starts empty.
 
 ---
 
@@ -117,10 +131,11 @@ are `s8j`'s. The two live probes of D21-41 (g) are **authored** here (§8h.11) a
 | D21-46's integration calls | the launcher's `answer` mode; `wrap`'s guarantee; one explicit row per minted gate class; `RK_CP_NESTED` and the replay trap | §8h.7, §8h.10, §8h.15 |
 
 **Owned elsewhere, cited rather than re-specified here.**
-- **The run-worktree placement and its lifecycle belong to `s8e`.** That covers the move to `.redkiln/worktrees/<item>`,
+- **The run-worktree placement and its lifecycle belong to `s8d-ii`** (D21-46 R1: *"It carries D21-44's relocation and
+  D21-45 W1/W2/W4"*), and the `worktree_assigned` row stays `s8e`'s. That covers the move to `.redkiln/worktrees/<item>`,
   its record, the `worktree_assigned` row, item-id validation, the symlink guards, `RK_BASE`, the lock, re-entry,
-  and the filter-driver refusal. D21-44: *"Consequences, owned by `s8e`"*. D21-45: *"W1, W2 and W4's worktree half
-  are **s8e**'s"*.
+  and the filter-driver refusal. D21-44 wrote *"Consequences, owned by `s8e`"*, and D21-45 *"W1, W2 and W4's worktree
+  half are **s8e**'s"*, before D21-46 R1 split them into `s8d-ii`.
 - **The per-toolchain `setup` verb and `.worktreeinclude` reading belong to `s8c`** (D21-43 N25; D21-45 W3).
 - **AC-133's judgement-enum registry belongs to `s8g`.** D21-43: *"AC-133's judgement-enum registry is built once,
   by **s8g**. s8h consumes it."*
@@ -147,8 +162,8 @@ write each reading into the stage-open commit:
    `AcceptanceCriterion` and fixes a constraint on this stage's `Spec` (`s8g` §8g.3): *"`s8h`'s `Spec` must embed
    `AcceptanceCriterion` unchanged"*.
 4. **The count source for §8h.9.** Does the kernel's pre-dispatch `dispatch` row name the item? If it does not, the
-   count reads the `item` member that `s8f` (D21-42 12b) put on `dispatch_completed`. Either way the source is the
-   store, never a per-process counter.
+   count reads `dispatch_completed` by its interim `item` key, which `s8e` §8e.10 carries beside the payload
+   (D21-43 N5; D21-46 R3), through `query(ByItem)`. Either way the source is the store, never a per-process counter.
 5. **Whether `budget_extension` has gained a producer.** At `ca8f387` `wall_clock_expiry_mark`'s write has *"no call
    site anywhere in `src/`"* (`budget.rs`). If an earlier sub-stage wired one, that class joins §8h.10's table.
 6. `claude --version`, and the size and bytes of `RUNBOOK-instrument.txt`. Halt 2 is recorded, not worked around,
@@ -164,13 +179,16 @@ write each reading into the stage-open commit:
    - A class that a later stage mints brings its own row in the change that mints it, because §8h.10's load-time
      lint refuses a row whose class nothing mints. §8h.10 names `s8j`'s three.
 8. **The whole-suite floor.** Read Checkpoint 8g's recorded passed count from `PROGRESS.md` §1 and write it over
-   `BASE_8G` in Checkpoint 8h (12) by a dated edit. The drafted expected value is **1000**, derived as follows:
+   `BASE_8G` in Checkpoint 8h (12) by a dated edit. The expected value, **re-derived at stage open from Checkpoint
+   8g's recorded count**, is BASE_8G = **1127**, so the floor is 1127 + 41 = **1168**. It is derived as follows
+   (D21-46's one recomputation):
    - ADR-0164's baseline at `992d257`: 740 passed / 0 failed / 9 ignored over 44 results;
-   - plus each sub-stage's drafted new tests: 7 (8a) + 16 (8b) + 40 (8c) + 46 (8d) + 41 (8e) + 47 (8f) + 63 (8g).
+   - plus each sub-stage's new tests: 9 (8a) + 21 (8b) + 63 (8c) + 52 (8d) + 32 (8d-ii) + 67 (8e) + 79 (8f) +
+     64 (8g) = 387, which gives 1127.
 
    Those drafts are being revised too, so the recorded count governs. A floor is never lowered to make a red run
    green.
-9. **The run-worktree root.** Confirm that `s8e` moved every derivation of the run-owned worktree to
+9. **The run-worktree root.** Confirm that `s8d-ii` moved every derivation of the run-owned worktree to
    `.redkiln/worktrees/<item>` (D21-44), and name `recreate_run_worktree`'s successor. §8h.6's deny set and probe 1
    derive from the spec's worktree path and assume nothing more.
 10. **AC-133's test names in `s8g`.** In the draft at `a6349b6`, Checkpoint 8g selects
@@ -243,7 +261,7 @@ stand. It supersedes **nothing** of ADR-0084 (the schemas are Rust types in `EXP
 its generated `schemars` output snapshotted with `insta`"*) and nothing of ADR-0156/0162, whose bars on
 `.redkiln/schemas/` are stage-scoped and are honoured anyway (no such directory is created). It records that
 **landing is not decided here** (D21-41 (b), `s8e`/`s8f`) and that the probes' spend is D21-40 decision 2's. It
-also records that the run-worktree placement is not decided here either: that is D21-44's, written as `s8e`'s record,
+also records that the run-worktree placement is not decided here either: that is D21-44's, written as `s8d-ii`'s record,
 and Record A only cites it.
 
 **Record B — RT-57's pack scalars, the per-item envelope, and gate expiry** (`proposed` at writing; the operator
@@ -268,7 +286,7 @@ human, per class"*), and fixes the key spellings RT-57 routed to *"7e's pack sch
 No card gets `Bash`, a `Web*` tool or an `mcp__*` tool. Build and test stay on the `Toolchain` port. The card
 record stays closed (`deny_unknown_fields`), and `model`/`effort` stay a tier leak (AC-118, AC-418). The `cwd` is the
 run-owned worktree, already carried on the spec (RT-21's `WORKTREE_KEY`, `runner.rs`'s
-`.current_dir(&prepared.worktree)`). Probe 1 reads it back from `system/init`'s `cwd`. After `s8e` that path is
+`.current_dir(&prepared.worktree)`). Probe 1 reads it back from `system/init`'s `cwd`. After `s8d-ii` that path is
 `.redkiln/worktrees/<item>` (D21-44), which is not under `.git`.
 
 **The closed permission-mode set.** `lint_card` refuses a mode outside the CLI's own set:
@@ -450,7 +468,7 @@ operator's own shell:
 
 Run-owned worktrees therefore move to `.redkiln/worktrees/<item>`, which is git-ignored (`.gitignore` carries
 `.redkiln/worktrees/` at `a6349b6` [measured: `git check-ignore -v`]). The move, its record and the lifecycle
-around it are `s8e`'s. This stage assumes only that the spec's worktree path is under that root. Probe 1
+around it are `s8d-ii`'s. This stage assumes only that the spec's worktree path is under that root. Probe 1
 re-measures the placement with the shipped card and settings (§8h.11). The standing in-worktree limit is handled by
 §8h.5's named note. The one legacy tree, `rk-fix-doctor-test-count` at `73c087a`, stays under `.git` until `s8j`
 re-points it (D21-44), and nothing here dispatches into it.
@@ -564,7 +582,7 @@ human roots with `answer --attach`. Both must pass the launch check below, so bo
 
 D21-44's probe did run as the operator's own `! python …` line. That worked because the Python script stripped
 the variables itself. The launcher does not strip, so a `!` line that invokes it from a session is refused at step
-2. That is the design working. `s8j` §8j.6 says the same: *"They are not run from a Claude Code session"*.
+2. That is the design working. `s8j` §8j.6 says the same: *"never from a Claude Code session"*.
 
 The launch record is **not** the kernel's run record. Writing the version into the `run_id` preimage would move every
 `run_id`, which ADR-0130 decision 1's byte-stability forbids. The version already rides every `dispatch_completed`
@@ -699,14 +717,14 @@ Every `NO RECORD` marker is replaced by a comment naming Record B as `ADR-<id>`,
 | `landing.refused-path` | `s8f` §8f.4, the landing's refused-path gate | a kernel-minted class | here, in both packs | yes |
 | `render.structured-drift` | `s8f` §8f.5, D21-43 N11's drift gate | a kernel-minted class | here, in both packs | yes |
 | `unknown_facet:change` | `s8d` §8d.7's R6 triage gate, answered with the `facet.change` question (`s8d` §8d.6) | `unknown_facet:<registered facet>` | here, in both packs, as one of the axis rows (both packs read `change`) | no. (8) asserts it by name, because R6 opens it whatever the `require` rows read |
-| the BugReport human-root gate | `s8j` §8j.2, bound to the question `root.bug-report` | a kernel-minted class | at `s8j`, in the change that mints it, in both packs | yes, from `s8j` |
-| the IntakeRecord human-root gate | `s8j` §8j.2, bound to the question `root.intake-record` | a kernel-minted class | at `s8j`, in the change that mints it, in both packs | yes, from `s8j` |
-| the analysis → specification hold | `s8j` §8j.3, item-level (`hold_before`) | a kernel-minted class | at `s8j`, in the change that mints it, in both packs, because a hold is item-level and either pack's item can carry one | yes, from `s8j` |
+| `human_root:BugReport` (drafted by `s8j`) | `s8j` §8j.2, bound to the question `root.bug-report` | a kernel-minted class | at `s8j`, in the change that mints it, in both packs | yes, from `s8j` |
+| `human_root:IntakeRecord` (drafted by `s8j`) | `s8j` §8j.2, bound to the question `root.intake-record` | a kernel-minted class | at `s8j`, in the change that mints it, in both packs | yes, from `s8j` |
+| `hold:specification` (drafted by `s8j`), the analysis → specification hold | `s8j` §8j.3, item-level (`hold_before`) | a kernel-minted class | at `s8j`, in the change that mints it, in both packs, because a hold is item-level and either pack's item can carry one | yes, from `s8j` |
 
 `facet.change`, `root.bug-report` and `root.intake-record` are **question ids, not gate classes**. A row keys on the
 class the gate carries, and the question is how that gate is answered. `s8j`'s records fix the class that the step-4
 gate binds under (`s8j` §8j.2: *"the gate-kind name the step-4 gate binds under"*) and the hold's gate cause (`s8j`
-§8j.3), so this file drafts no spelling for either.
+§8j.3). The spellings in the table are `s8j`'s drafts, and this file drafts none of its own.
 
 Their rows cannot land here. The misspelt-class half of the lint below refuses a row whose class nothing mints yet,
 so a row drafted ahead of its minting code would turn this stage's own checkpoint red. `s8j` drafts the three rows
@@ -921,7 +939,7 @@ removed, and `git diff --quiet` in the main tree is asserted. A survivor blocks.
 - It may not dispatch, run a `live::` test, move the pin, or edit the operator's user settings.
 - It may not create `.redkiln/schemas/`, copy the denylist, or build a second AC-133 registry.
 - It may not loosen an equality to make a probe pass.
-- It may not move the run-worktree root, or touch the legacy `rk-fix-doctor-test-count` tree. Both are `s8e`'s and
+- It may not move the run-worktree root, or touch the legacy `rk-fix-doctor-test-count` tree. Both are `s8d-ii`'s and
   `s8j`'s (D21-44).
 
 **The checkpoints this stage makes provisional, and where each is re-run.** The rule is to re-run the entry gate
@@ -936,7 +954,7 @@ whole, plus the older checkpoints this stage's own edits make provisional. It do
 | 7c | `rk-adapter-claude`: argv, init equality, classification | **not here.** Its block carries the live probe. `s8j` re-runs it whole through `wrap`, from a plain terminal (D21-43 N28). Its non-live regressions are selected by name in (3) |
 | 7e | `.redkiln/cards/` and both packs | **not re-runnable whole**: its block ends in `git add .redkiln spikes/p9 && git commit`. Its subject is asserted by (8), by `conformance::shipped_pack_loads` in (5), and by the load lint's tests |
 | 7f | its `redkiln run` arm now refuses at the launch check. Before that check exists, the same arm would reach a real dispatch once the cards bind | `s8j`'s entry-chain run, as described below |
-| 8a | its (11) guard, *"a card carries permission_mode … Checkpoint 7f's run could reach a REAL dispatch; stop"*, fires on the eight cards this stage writes | `s8j`, with that guard re-scoped to the route below |
+| 8a | its (11) guard, *"a card carries permission_mode (rc=$rc) — 7i's or 7f's run could reach a REAL dispatch; stop"*, fires on the eight cards this stage writes | `s8j`, with that guard re-scoped to the route below |
 
 **How a later stage re-runs an old checkpoint that executes `redkiln run`.** Of 7f, 7g, 7h and 7i's run arm, only
 7f's block executes `redkiln run` at `a6349b6` [measured by a grep over the four files' bash lines]. Every re-run of
@@ -948,9 +966,9 @@ such a block after this stage has to do four things:
 - assert that no real `claude` was spawned, for example by showing no new session transcript under either
   configuration directory.
 
-7f's block also ends with `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`. That is
-the legacy tree D21-44 keeps until `s8j` re-points it, so that line is re-scoped in the same move. All of this is
-`s8j`'s. This stage states it and runs none of it.
+7f's block no longer touches the legacy tree. `s8d-ii` §8d-ii.7 moved its run arm into a throwaway clone and deleted
+its `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count` line, so the four things above apply
+inside that clone. All of this is `s8j`'s. This stage states it and runs none of it.
 
 **What it hands on:**
 - **To `s8j`:**
@@ -1295,9 +1313,10 @@ out=$(cargo clippy -p rk-adapter-claude --all-targets --features live 2>&1); rc=
 [ "$rc" -eq 0 ] || { echo "FAIL: clippy over the live probes rc=$rc"; printf '%s\n' "$out" | tail -20; exit 1; }
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the whole suite rc=$rc (a fresh checkout needs pnpm install for the node fixture first)"; printf '%s\n' "$out" | grep -E '^test .* FAILED|panicked' | head -20; exit 1; }
-# The floor is Checkpoint 8g's recorded passed count plus this stage's 41 new tests (§8h.12). BASE_8G is re-derived at
-# stage open from PROGRESS.md §1 by a dated edit of the next line (§8h.0 item 8); 1000 is the drafted expected value.
-BASE_8G=1000
+# The floor is Checkpoint 8g's recorded passed count plus this stage's 41 new tests (§8h.12). Expected value, re-derived
+# at stage open from Checkpoint 8g's recorded count (§8h.0 item 8): BASE_8G = 1127, floor 1127 + 41 = 1168. Edit the
+# next line by a dated edit before the first run.
+BASE_8G=1127
 FLOOR=$((BASE_8G + 41))
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
@@ -1326,6 +1345,8 @@ rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the
 n=$(find "$trap_dir" -mindepth 1 | grep -c .)
 [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
 rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+[ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
 extract() {  # extract <file> <anchor|marker> <key> <out>
   python - "$1" "$2" "$3" "$4" <<'PY'
 import sys
@@ -1395,7 +1416,7 @@ D21-43/44/45. Items 10–15 are new in that revision, and items 16–19 are new 
 
 1. **Settled by D21-44.** The draft's blocker was *"the run-owned worktree lives under `.git`"*. D21-44 measured it:
    an edit inside `.git/redkiln/worktrees/…` was refused. The run worktree moves to `.redkiln/worktrees/<item>`,
-   which is `s8e`'s. Probe 1 re-measures the placement at `s8j` (§8h.11), and D21-45's in-worktree limit is named
+   which is `s8d-ii`'s (D21-46 R1). Probe 1 re-measures the placement at `s8j` (§8h.11), and D21-45's in-worktree limit is named
    (§8h.5).
 2. **`!` negation cannot carve out of an absolute rule**, as documented. So D21-42 21d's deny rules cannot be written
    as "deny all, except the worktree". §8h.6 writes them as the ancestor-chain complement, now over the new root.
@@ -1430,8 +1451,9 @@ D21-43/44/45. Items 10–15 are new in that revision, and items 16–19 are new 
     are. Each scan has to admit a `--list` line and a `cargo clippy` line, with a synthetic control. That is `s8i`'s
     and `s8j`'s work, and it is not resolved here.
 11. **Checkpoint 8a (11) and Checkpoint 7f become provisional at this stage.** The first stops on *"a card carries
-    permission_mode"*. The second's `redkiln run` refuses at the launch check, and its last lines force-remove the
-    legacy tree that D21-44 keeps. §8h.14 gives the route, and running it is `s8j`'s.
+    permission_mode"*. The second's `redkiln run` refuses at the launch check. Its force-removing cleanup line is gone
+    since `s8d-ii` §8d-ii.7, which also moved its run arm into a throwaway clone. §8h.14 gives the route, and running
+    it is `s8j`'s.
 12. **`StepError::Overage { reason }` already exists.** Its retry comment reads *"`Overage` is refused BEFORE spawn
     (AC-221, ADR-0010)"*, and it maps to `Exit::Overage`. N17 fixed only the exit. Before building a parallel
     kernel `EnvelopeError`, the implementer has to decide whether the envelope refusal is this variant with a
@@ -1453,11 +1475,13 @@ D21-43/44/45. Items 10–15 are new in that revision, and items 16–19 are new 
     no pin comparison, and `s8j` needs 7c's own pin check. Each quotation is re-pointed at §8h.7's restated guarantee
     by its own stage's revision. The row-6 cell *"`wrap`: record only, and never compare to the pin (below)"* and the
     sentence *"`wrap` is not a way around the pin for `run` or `probe`"* are unchanged, so those quotations still
-    resolve.
+    resolve. *Settled in the consistency pass 2026-09-24:* both quotations are re-pointed at §8h.7's restated text.
 17. **`s8j` §8j.3 step 5 and §8j.2's attach still spell a bare `redkiln answer`.** After this stage, a bare binary
     `answer` refuses without a launch record (§8h.7), so each goes through `tools/live-run.sh answer`. That edit is
     `s8j`'s. `s8j`'s dispatch screen `SCREEN='tools/live-run\.sh[[:space:]]+(run|probe)|…'` does not match the
-    `answer` mode, and `answer` spawns no `claude`. Whether the screen should see it is `s8j`'s question.
+    `answer` mode, and `answer` spawns no `claude`. Whether the screen should see it is `s8j`'s question. *Settled:*
+    `s8j`'s revised screen matches the launcher's `answer` and `wrap` modes, and §8j.2 and §8j.3 route every answer
+    through `tools/live-run.sh answer`.
 18. **The launch check on `answer` reaches every binary-level `answer` test** (§8h.0 item 11). That includes the
     spawn helper in `rk-cli`'s `tests/it/answer.rs` and `s8e`'s `lane_e2e` binary arm. Each is given a fixture
     launch record in its shared helper, not an exemption. If a checkpoint between `s8e` and `s8g` spawns `answer` from

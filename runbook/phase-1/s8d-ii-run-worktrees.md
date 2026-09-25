@@ -21,6 +21,15 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   D21-45's `init` premise, **R8** (the filter-driver check reads the effective config at every scope), its flag on
   the ignore row, the `RK_CP_NESTED` convention and the replay no-dispatch guard.
 
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
+- **The legacy registration survives `s8a`.** `s8a` guard (11) restores the tree 7f's whole run removes and asserts
+  its ref (§8d-ii.0 item 1), so finding 4 is settled by `s8a`, not left to the lead.
+- **Checkpoint 8d now honours `RK_CP_NESTED=1`**, so (7a)'s replay of it skips 8d's own re-runs of 8c and 7g. The
+  trap asserts that it starts empty, in `s8g`'s form.
+- **The floor chain is recomputed once**: Checkpoint 8d's 885 + this stage's 32 = **917**, not the drafted 864.
+- **Finding 11's sibling edits are made** in `s8c`, `s8d` and `s8j`. `INDEX.md`'s and `PROGRESS.md`'s rows stay the
+  lead's.
+
 ---
 
 **Why this is a stage and not two sections.** D21-46 R1: *"**Split.** A new stage **`s8d-ii`, "Run worktrees"**, sits
@@ -137,7 +146,8 @@ Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and 
 1. **Where the legacy tree is registered.** At `c5d19d7`, `git worktree list` lists
    `D:/repos/redkiln-rs/.git/redkiln/worktrees/rk-fix-doctor-test-count` at `73c087a`. `s8a` runs Checkpoint 7f
    whole at its exit, and 7f's block, as `s8a` leaves it, ends with `git worktree remove --force
-   .git/redkiln/worktrees/rk-fix-doctor-test-count`. So by this stage's open the registration may already be gone
+   .git/redkiln/worktrees/rk-fix-doctor-test-count`. `s8a` guard (11) restores the registration after that run and
+   asserts the ref unmoved (`s8a` finding (8)), so at this stage's open the registration should still be present
    (§8d-ii.9, finding 4). Record which. Checkpoint 8d-ii asserts the ref and its mark, never the registration.
 2. **The worst-case run-tree path (D21-44's last consequence).** At `c5d19d7` the longest tracked path is 140
    characters, `references/adr/0114-the-executed-once-gate-moves-to-extended-to-shipped-promotion-and-the-v0-pack-tags-on-lint-parse-and-a-visible-ledger.md`.
@@ -173,10 +183,11 @@ Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and 
 7. **The test module names are free.** This stage extends `rk-git` `worktree` and `gitops` and `rk-cli` `init`, and it
    adds `rk-cli` `run_worktree`. If a predecessor created `run_worktree`, the tests go into it. The module-qualified
    names in §8d-ii.8 stay as they are.
-8. **The whole-suite floor.** It is re-derived at stage open from Checkpoint 8d's recorded passed count, plus this
-   stage's **32** new tests (§8d-ii.8). The expected value at drafting is **864**: `s8d`'s own drafted floor of
-   `FLOOR=832`, plus 32. Replace 864 in Checkpoint 8d-ii's `FLOOR=` line with the re-derived value, by a dated edit,
-   before the block's first run. It is never lowered to make a red run green.
+8. **The whole-suite floor.** The expected value is **re-derived at stage open from Checkpoint 8d's recorded
+   count**, plus this stage's **32** new tests (§8d-ii.8): 885 + 32 = **917**. The chain from ADR-0164's 740
+   (`992d257`) is 740 + 9 (8a) + 21 (8b) + 63 (8c) + 52 (8d) = 885 at Checkpoint 8d (D21-46's one recomputation;
+   the drafted 864 took `s8d`'s stale 832). Replace 917 in Checkpoint 8d-ii's `FLOOR=` line with the re-derived value,
+   by a dated edit, before the block's first run. It is never lowered to make a red run green.
 
 ### 8d-ii.1 The run worktree moves to `.redkiln/worktrees/<item>` (D21-44)
 
@@ -544,10 +555,11 @@ split's own:
    carries ADR-0137 decision 3 and ADR-0105 clauses 5 and 6, each verified by quotation, and ADR-0018 is cited only.
 3. **W1, W2 and W4 need `GitOp` variants outside ADR-0105 clause 5's list.** *Made explicit* (§8d-ii.6). R8 adds two
    reads to that list, `config --show-scope` and `check-attr`.
-4. 🛑 **Checkpoint 7f's cleanup line removes the legacy tree before `s8j` can re-point it.** `s8a` runs 7f whole at its
+4. **Checkpoint 7f's cleanup line removes the legacy tree before `s8j` can re-point it.** `s8a` runs 7f whole at its
    exit, before this stage, and 7f's last lines remove the registration. This stage deletes the line (§8d-ii.7), but
-   `s8a`'s run comes first. Owner: `s8a` (or the lead), before `s8a` runs 7f. `s8j` then finds either outcome, and
-   §8d-ii.0 item 1 records which.
+   `s8a`'s run comes first. *Settled by `s8a` (consistency pass 2026-09-24):* `s8a` guard (11) records the
+   registration before its whole runs and restores it afterwards, asserting the ref unmoved (`s8a` finding (8)). From
+   this stage on the amended 7f never touches the legacy tree. §8d-ii.0 item 1 still records what it finds.
 5. **AC-518's instrument now depends on an ignore row.** *Flagged by D21-46 for the operator's flip line*, and stated
    as a refusal in §8d-ii.1.
 6. **The review reference tree shares the item namespace.** `<item>.review-ref` sits beside `<item>`, so the validator
@@ -564,10 +576,12 @@ split's own:
    about the store path, not the common dir as a whole. §8d-ii.5 quotes both as they stand.
 10. **The discard is journalled one stage late.** W2's *"discarded explicitly and journalled"* has no journal row until
     `s8e` mints `worktree_assigned`. This file states the interval and reports on stderr in the meantime (§8d-ii.3).
-11. **Files this split leaves stale, which this stage does not edit** (D21-46 R1's integration is the lead's):
+11. **Files this split leaves stale, which this stage does not edit** (D21-46 R1's integration is the lead's). *The
+    three `s8` sibling edits below were made in the consistency pass 2026-09-24; the `INDEX.md` and `PROGRESS.md` rows
+    remain the lead's:*
     - `INDEX.md`'s stage table and `PROGRESS.md`'s tracker gain the `s8d-ii` row;
     - `s8d`'s header `next` becomes `s8d-ii`;
-    - `s8c`'s ownership row and its `setup` row name `s8e` as the caller at creation, and its *"from `s8e` on"* names
+    - `s8c`'s ownership row and its `setup` row named `s8e` as the caller at creation, and its "from `s8e` on" named
       the root move's stage. Both now read `s8d-ii`;
     - `s8j` cites `s8e` §8e.10 for the `.redkiln/` walk exclusion and `s8e` §8e.15 for the 7f amendment. The first is
       now §8d-ii.1, and the second is §8d-ii.7 here plus `s8e` §8e.13.
@@ -603,8 +617,8 @@ and adds the dated notes. AC-518's instrument is a lane run (`s8e`'s `lane_e2e`)
   provisional (§8d-ii.7).** Nothing older is re-run. 7h and 7i are not amended here, and their witnesses are the two
   existing tests selected in (2). The block skips both nested re-runs when it is itself run with `RK_CP_NESTED=1`, the
   D21-46 convention: *"running as another checkpoint's entry gate: skip your own nested whole re-runs"*. It sets the
-  same variable for the checkpoints it calls. `s8d`'s block does not read the variable, so it still runs its own
-  nested re-runs: correct, only slower.
+  same variable for the checkpoints it calls. `s8d`'s block honours the variable (consistency pass 2026-09-24), so it
+  skips its own re-runs of 8c and 7g when this block replays it.
 - **No replay can reach a real `claude`.** Every replay runs with `CLAUDE_CONFIG_DIR` at an empty trap directory that
   must still be empty afterwards, and with `REDKILN_LAUNCH_RECORD` unset (D21-46's replay guard).
 - **`rk-run/rk-fix-doctor-test-count` and its legacy mark are unchanged**, and `.redkiln/worktrees/` is unchanged, so
@@ -763,9 +777,9 @@ raw=$(grep -nF '# redkiln-runtime' crates/rk-cli/src/verbs/init.rs); rc=$?
 code=$(printf '%s\n' "$raw" | grep -vE "$LINE_ONLY" | grep .)
 [ -n "$code" ] || { echo "FAIL: init.rs carries no # redkiln-runtime marker on a code line — W4's exclude block is absent"; exit 1; }
 
-# ---- (4) THE WHOLE SUITE, no fail-fast, with a floor. FLOOR is re-derived at stage open (section 8d-ii.0 item 8):
-# ---- Checkpoint 8d's recorded passed count + this stage's 32. 864 is the drafted expectation; replace it by a dated edit.
-FLOOR=864
+# ---- (4) THE WHOLE SUITE, no fail-fast, with a floor. Expected value, re-derived at stage open from Checkpoint 8d's
+# ---- recorded count (section 8d-ii.0 item 8): 885 + 32 = 917. Replace it by a dated edit before the first run.
+FLOOR=917
 tally() { printf '%s\n' "$1" | awk '/^test result:/ { p += $4; f += $6; i += $8; n += 1 } END { print p+0, f+0, i+0, n+0 }'; }
 # CONTROL: a run of zero tests tallies below the floor, and a failed count is read.
 read -r cp cf ci cn <<< "$(tally 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out')"
@@ -844,12 +858,19 @@ else
   grep -qF '"permission_mode"' "$scratch/card.json" || { echo "FAIL: CONTROL — the card-mode probe cannot see a planted permission_mode"; exit 1; }
   # THE TRAP: an empty CLAUDE_CONFIG_DIR every replay inherits. A real claude writes into it; nothing else does.
   trap_dir="$(pwd)/$scratch/claude-config-trap"
-  mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  # Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
+  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
   replay() {
     out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" "$@" 2>&1); rc=$?
   }
 
-  # (7a) CHECKPOINT 8d, the entry gate, whole. s8d's block does not read RK_CP_NESTED, so it re-runs 8c and 7g itself.
+  # (7a) CHECKPOINT 8d, the entry gate, whole. s8d's block honours RK_CP_NESTED=1 and skips its own re-runs of 8c and 7g.
   ext runbook/phase-1/s8d-step-grain-and-resolver.md 'echo "CP8D-END-OF-BLOCK reached"' "$scratch/cp8d.sh"
   replay bash "$scratch/cp8d.sh"
   [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8d, re-run whole, exited $rc — this stage's entry gate no longer holds"; printf '%s\n' "$out" | tail -30; exit 1; }

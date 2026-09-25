@@ -45,6 +45,17 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   records, errata, tests and whole re-runs are unchanged: three records, two errata, nine new tests, and five
   whole re-runs (7i, 5, 7a, 7b, 7f).
 
+*Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-40…D21-46 the
+authority). What changed:
+
+- **Cross-references.** `s8e`'s 7h (10a) amendment is `s8e` §8e.13 after D21-46 R1's renumbering, and W4 is
+  `s8d-ii`'s. The line-number citation of the `s7e` line is dropped: the line is cited by its content only.
+- **Finding (8) is settled by `s8d-ii` §8d-ii.7**, and finding (12) by `s8b` guard (0) and `s8i` (11), which now launch
+  this block with `RK_CP_NESTED=1` under the trap.
+- **The trap** asserts that it starts empty before any whole run, as every `s8` trap now does.
+- **The floor** is labelled as the chain states it: re-derived at stage open from Checkpoint 7i's recorded count,
+  740 + 9 = 749.
+
 ---
 
 **Why this step exists.** `spikes/DECISIONS-2026-09-21.md` D21-40 decision 4 reads *"Checkpoints 5, 7b and 7f are
@@ -163,7 +174,7 @@ with D21-42 decision 2 folded into it, and it uses `## Considered options` with 
      worktree when *"a repo-local filter driver (for example LFS via `--local`) or an `includeIf` would yield
      pointer files"*. That protects the **working tree's** bytes. The range diff reads **blobs**, which are pointers
      under every filter configuration. The two rules agree: neither treats a pointer as a view of the content. W4
-     is `s8e`'s, and this rule does not re-specify it.
+     is `s8d-ii`'s (D21-46 R1 moved it out of `s8e`), and this rule does not re-specify it.
    - This repository tracks nothing through LFS (`.gitattributes` has no `filter=lfs` row, measured at `a6349b6`),
      so the rule is proved on a fixture repository (§8a.9).
 3. **Ratification.** The record ratifies PROGRESS §2's D17-1 readings 2 and 3: a string literal, a comment and the
@@ -389,12 +400,11 @@ stage's base commit. All three of this stage's records are written in the confor
 ### 8a.8 Checkpoint 7e's FAIL message: a backtick inside double quotes, amended (D21-46)
 
 D21-46's integration calls read: *"Checkpoint 7e's backtick-executing FAIL message, the same defect as 7h's (10a),
-is fixed by dated amendment in **s8a**."* `s8e` found it and left it here. Its finding 14 says *"7e's is not this
-stage's to amend. It is reported."* This is the execution of an operator decision, not a new one, so there is no
-record.
+is fixed by dated amendment in **s8a**."* `s8e` found it and left it here. Its finding 10 says *"This stage fixes
+7h's only."* This is the execution of an operator decision, not a new one, so there is no record.
 
-**The line, found by its content** at `c5d19d7`. `s8e` cites it as *"line 52"*. It is the enabled-pack guard in
-`s7e` §7e.1's block:
+**The line, found by its content** at `c5d19d7`, never by a line number. It is the enabled-pack guard in `s7e`
+§7e.1's block:
 
 ```text
 test -f .redkiln/config.toml || { echo "FAIL: .redkiln/config.toml absent — Step 7d's `init` did not run, or did not scaffold it (E6)"; exit 1; }
@@ -406,8 +416,8 @@ before it echoes. Git Bash has no `init`, so it prints `command not found` on st
 prints a message that is wrong.
 
 ⚠️ **The line is not in Checkpoint 7e's block** (finding (10)). Checkpoint 7e's block is the one under
-*"**Checkpoint 7e.** All thirteen"*, and it has no hit. D21-46 and `s8e` both call the line Checkpoint 7e's. The
-amendment is the same either way. What changes is the tracker: no byte of Checkpoint 7e moves, so PROGRESS row 7e
+*"**Checkpoint 7e.** All thirteen"*, and it has no hit. D21-46 calls the line Checkpoint 7e's. The amendment is
+the same either way. What changes is the tracker: no byte of Checkpoint 7e moves, so PROGRESS row 7e
 does not move.
 
 **The amendment**, dated and made in the same commit as §8a.4's `s7e` notes. The two backticks are removed and no
@@ -460,7 +470,7 @@ reads **99 blocks and 2 hits**: this line and 7h's (10a). Its controls:
   backticks, must all pass;
 - a file with no bash block must be refused (rc 2), because a scan over zero blocks reads as a green.
 
-**7h's identical defect is `s8e`'s to fix, and it is admitted by name until then.** `s8e` §8e.15 amends 7h guard
+**7h's identical defect is `s8e`'s to fix, and it is admitted by name until then.** `s8e` §8e.13 amends 7h guard
 (10a)'s FAIL message: *"The dated amendment removes the two backticks and changes no other byte of the line."*
 Checkpoint 8e guard (7c) asserts that the old string is gone. This stage runs before `s8e`, so the scan admits
 exactly one hit that is not this stage's: a `BT-HIT` in `s7h-lane-completes.md` on the line that reads `binary arm
@@ -513,10 +523,10 @@ terminal through the launcher, with the live probes."* `PROGRESS.md` row 7c is m
   unchanged by the re-run (compared as parsed JSON, not with `git diff` under autocrlf).
 - **Checkpoint 7f's discharged state is asserted by name.**
 - **The Codex phase sites carry their dated corrections, and E-0094-2 exists.**
-- **The whole suite is green** above its floor, and fmt and clippy are green. The floor is re-derived at stage
-  open from the entry gate's recorded reading. The expected value is ADR-0164's **740 passed / 0 failed / 9
-  ignored over 44 results** (`992d257`, on the tree Checkpoint 7i passed) plus this stage's nine new tests, which
-  gives **749**. If the reading at open differs, the literal in (10) is amended by dated note before the first run.
+- **The whole suite is green** above its floor, and fmt and clippy are green. The expected value is
+  **re-derived at stage open from Checkpoint 7i's recorded count**: ADR-0164's **740 passed / 0 failed / 9 ignored
+  over 44 results** (`992d257`, on the tree Checkpoint 7i passed) plus this stage's nine new tests, 740 + 9 =
+  **749**. If the reading at open differs, the literal in (10) is amended by dated note before the first run.
 - **Checkpoint 7e's FAIL message is amended (§8a.8).** The backticked bytes are gone from `s7e`, no other bash byte
   of `s7e` moved since `S8A_BASE`, and the amended line, run from its own bytes, fails without running `init`.
   No `runbook/` bash block carries a backtick that bash would execute, apart from 7h (10a)'s, which `s8e` removes.
@@ -897,8 +907,9 @@ other=$(printf '%s\n' "$out" | grep -E '^BT-(HIT|OPEN) ' | grep -vE '^BT-HIT run
 [ -z "$other" ] || { echo "FAIL: a runbook bash block carries a backtick bash would execute (only 7h (10a)'s is admitted, until s8e):"; printf '%s\n' "$other"; exit 1; }
 echo "backtick scan: $nb blocks; $(printf '%s\n' "$out" | grep -c '^BT-HIT ') hit(s), all admitted (7h (10a), s8e's to remove)"
 
-# ---- (10) FMT, CLIPPY, AND THE WHOLE SUITE above its floor. Re-derived at stage open from the entry gate's reading:
-# ---- ADR-0164's 740 passed / 0 failed / 9 ignored over 44 results (992d257), plus this stage's 9 new = 749.
+# ---- (10) FMT, CLIPPY, AND THE WHOLE SUITE above its floor. Expected value, re-derived at stage open from Checkpoint
+# ---- 7i's recorded count: 740 + 9 = 749 (740 passed / 0 failed / 9 ignored over 44 results is ADR-0164's evidence,
+# ---- 992d257; 9 is this stage's new tests). The 44-result floor stays.
 out=$(cargo fmt --all --check 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo fmt --check rc=$rc"; printf '%s\n' "$out" | head -20; exit 1; }
 out=$(cargo clippy --workspace --all-targets 2>&1); rc=$?
@@ -991,6 +1002,8 @@ PY
   n=$(find "$trap_dir" -mindepth 1 | grep -c .)
   [ "$n" -eq 1 ] || { echo "FAIL: CONTROL — the trap's emptiness reading saw $n entries where one was written"; exit 1; }
   rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
   lr=REDKILN_LAUNCH_RECORD
   got=$(env "$lr=planted" env -u "$lr" sh -c 'printf "%s" "${REDKILN_LAUNCH_RECORD-unset}"'); rc=$?
   [ "$rc" -eq 0 ] && [ "$got" = unset ] || { echo "FAIL: CONTROL — env -u left a planted $lr in the child (got '$got', rc=$rc); a whole run would inherit a launch record"; exit 1; }
@@ -1057,18 +1070,20 @@ Adversarial refuting rounds run over the diff until a round moves no code and no
    comment confines git to `rk-git`.
 8. **Checkpoint 7f's whole run removes the legacy run worktree, which D21-44 says stays put** (2026-09-24
    revision). Both `recreate_run_worktree`'s `worktree remove --force` and 7f's own cleanup line remove it, and
-   nothing re-adds it. This stage restores it in guard (11). **For `s8e`:** once the root moves to
-   `.redkiln/worktrees/<item>`, 7f's cleanup line still names `.git/redkiln/worktrees/rk-fix-doctor-test-count`.
+   nothing re-adds it. This stage restores it in guard (11). **For `s8d-ii`** (D21-46 R1 moved the root out of
+   `s8e`): once the root moves to `.redkiln/worktrees/<item>`, 7f's cleanup line still names
+   `.git/redkiln/worktrees/rk-fix-doctor-test-count`.
    A whole re-run of 7f would then remove the legacy tree and leave the new one registered. That is the hazard
    the cleanup line was written to disarm (*"makes every later repo-root grep double-count against a stale tree"*),
-   and D21-44 asks every recursive walk over `.redkiln/` to exclude `worktrees/`. Whoever next re-runs 7f whole
-   owns re-pointing that line, and under W2's *"refused, never removed"* it may have to stop removing at all.
+   and D21-44 asks every recursive walk over `.redkiln/` to exclude `worktrees/`. *Settled by `s8d-ii` §8d-ii.7
+   (consistency pass 2026-09-24):* 7f's run arm moves to a throwaway clone and the cleanup line is deleted, in the
+   commit that moves the root. This stage's restore covers the one 7f run that precedes it.
 9. **An LFS pointer path would have made the `Text` variant lie** (2026-09-24 revision). `classify` answers
    `Text` for a pointer file with a text extension, or with no NUL, and the object-store diff of an LFS path is a
    pointer delta. §8a.2 item 2a classifies it `Binary` on the blob, with two named tests.
 10. **The backtick defect D21-46 assigns to "Checkpoint 7e" is not in Checkpoint 7e's block** (2026-09-24, D21-46
     revision). The line *"FAIL: .redkiln/config.toml absent — Step 7d's `init` did not run"* is in `s7e` §7e.1's
-    work block, which `s8e` cites as *"line 52"*. Checkpoint 7e's block, under *"**Checkpoint 7e.** All
+    work block, cited here by its content and never by a line number. Checkpoint 7e's block, under *"**Checkpoint 7e.** All
     thirteen"*, has no hit. The fix is the same wherever the line sits (§8a.8), but PROGRESS row 7e does not move
     and does not become provisional, because no byte of its block changes. Guard (9a) asserts that. Neither block
     can be re-run whole: Checkpoint 7e's commits and tags an existing tag, and `s7e` §7e.1's runs `init` over the live
@@ -1077,12 +1092,14 @@ Adversarial refuting rounds run over the diff until a round moves no code and no
     quote-aware scan of all 99 bash blocks reports four hits. Two are real (7e's line and 7h's (10a)). Two are
     false, in `s8f` and `s8j`, where a single-quoted Python program spanning several lines carries backticks in
     its own strings. Guard (9a)'s scan carries quote state across lines and reports exactly the two real hits,
-    which agrees with `s8e` finding 14. `s8e` guard (10)'s scan is per-line, but it reads only the blocks `s8e`
+    which agrees with `s8e` finding 10 (its finding 14 before D21-46 R1's renumbering). `s8e` guard (10)'s scan is per-line, but it reads only the blocks `s8e`
     re-runs, and none of those has a multi-line single-quoted string with a backtick. If it is ever widened to the
     corpus, it needs the same change.
 12. **`RK_CP_NESTED` is adopted here for guard (11), and the two stages that re-run this block whole do not set
     it yet** (2026-09-24). `s8b` guard (0) runs it with `out=$(bash "$cp8a" 2>&1)`, and `s8i` runs it with
     `out=$(bash "$T/$blk.sh" 2>&1)`. Neither passes `RK_CP_NESTED=1`, so each still repeats the five whole runs.
-    D21-46 says *"every file adopts it"*. Those two edits belong to those files, not to this one.
+    D21-46 says *"every file adopts it"*. Those two edits belong to those files, not to this one. *Settled in the
+    consistency pass 2026-09-24:* both now launch this block with `RK_CP_NESTED=1`, `REDKILN_LAUNCH_RECORD` unset and
+    `CLAUDE_CONFIG_DIR` at an empty trap.
 
 ---
