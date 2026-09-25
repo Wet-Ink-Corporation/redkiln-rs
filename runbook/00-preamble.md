@@ -297,5 +297,5 @@ operator meets them:
   hash into §1 (`a64f1f2`, `8a2b5a3`, `54b61d8`; Step 0 differed — `bf5086a` touches `PROGRESS.md` alone). A §1 row
   is hashless only between the two. Any cleanliness assertion in a checkpoint must tolerate the tracker row being
   unstaged at the moment it runs.
-- **Execution order** — `0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7a → 7b → 7b-ii → 7c → 7d → 7e → 7f → 7g → 7h → 7i → 8`; Step 2 runs sixth (its
+- **Execution order** — `0 → 1 → 3 → 4 → 4a → 2 → 5 → 6 → 7a → 7b → 7b-ii → 7c → 7d → 7e → 7f → 7g → 7h → 7i → 8a → 8b → 8c → 8d → 8d-ii → 8e → 8f → 8g → 8h → 8i → 8j → 8` *(the eleven `s8` sub-stages `8a`–`8j` were inserted before `8` on 2026-09-24, D21-40; INDEX.md)*; Step 2 runs sixth (its
   ORDER banner); Step 9 is rollback and may run at any point.
