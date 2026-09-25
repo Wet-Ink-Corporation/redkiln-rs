@@ -1,4 +1,4 @@
-# Step 8j — Fixture proof of both lanes, CI green, and the run preparation (Phase 1, part 8, tenth sub-stage)
+# Step 8j — Fixture proof of both lanes, CI green, and the run preparation (Phase 1, part 8, eleventh sub-stage)
 
 | stage | phase | entry gate | exit checkpoint | previous | next |
 | --- | --- | --- | --- | --- | --- |
@@ -47,9 +47,36 @@ revision changes the following:
   - the whole-suite floor is re-derived from Checkpoint 8i's recorded count;
   - the block runs from a plain terminal.
 
+*Revised again 2026-09-24 for D21-46.* This pass changes five things:
+
+- **R4 is confirmed** (§8j.1(e)). The two `tag-release` trials, one per lane item, were a reading this file flagged for
+  the operator. D21-46 R4 takes it: *"**Two trials, confirmed.** Each is one run of one activity, which is the
+  clause's constraint."* The flag and its one-trial fallback are withdrawn.
+- **`s8d-ii` joins the chain** (§8j.10). D21-46 R1 adds a stage, *"`s8d-ii`, "Run worktrees"*, between `s8d` and
+  `s8e`. The entry gate stays Checkpoint 8i. Checkpoint 8j's re-run list gains Checkpoint 8d-ii, and this stage is
+  now the eleventh sub-stage.
+- **The launcher's `answer` mode** (§8j.2, §8j.3, §8j.8 A1). D21-46 gives `s8h`'s launcher an `answer` mode *"so
+  s8j's hold answer is not refused for want of a launch record"*. The hold answer and both human-root answers go
+  through `tools/live-run.sh answer`, and Checkpoint 8j (8) refuses a bare `redkiln answer` in `s8`.
+- **One re-run convention and one no-dispatch guard** (§8j.10 (10)). Under D21-46's `RK_CP_NESTED=1`, one run of
+  Checkpoint 8i no longer carries the chain. Checkpoint 8j therefore runs each link once, directly, as a nested
+  entry gate, and skips all of it when it is itself run nested. Every re-run has `CLAUDE_CONFIG_DIR` at an empty trap
+  directory that must stay empty, and `REDKILN_LAUNCH_RECORD` unset.
+- **The dispatch screen** (§8j.10 (10)) refuses only shapes that execute something. `s8h` reported that this file's
+  screen matched Checkpoint 8h's lines that list ignored live tests and run clippy with `--features live`. Measured
+  over Checkpoint 8h's block as it stands at `c5d19d7`, the drafted screen matched **none** of them: zero hits. It is
+  widened here to the launcher's `answer` and `wrap` modes, the `$L` spelling, and a test run with the live feature
+  and without `--list`. The widened screen has zero hits on each of the eleven blocks that exist today (8d-ii's does
+  not). A first widening also refused `--ignored` without the live feature, and it hit Checkpoint 7h's
+  `conformance_every_trailer_key_has_a_producer --ignored` line, which runs no live test. It was narrowed to the live
+  feature. The screen carries synthetic controls both ways: six shapes that must match, and six that must not. The
+  six that must not are five of Checkpoint 8h's shapes and 7h's non-live ignored run.
+- **The floor's drafted base** (§8j.10 (11)) is `s8i`'s drafted floor, 780 + 6 + N, and no longer 780. N is not
+  known at authoring.
+
 ---
 
-**Why this stage exists.** `s8a`…`s8i` build what criterion (1) and (1b) need. Nothing before this stage proves the
+**Why this stage exists.** `s8a`…`s8i`, with `s8d-ii` (D21-46 R1), build what criterion (1) and (1b) need. Nothing before this stage proves the
 parts work **together, as a lane, through the entry point the real runs will use**. D21-40 decision 2 authorises the
 real runs *"once the sub-stages' fixture proofs pass, and not before. That includes a FakeHarness end-to-end test of
 `verbs::run::run`"*. `s8e` wrote the first such test (D21-42 24c). This stage writes the proofs that the spend gate
@@ -96,7 +123,7 @@ entries in `spikes/DECISIONS-2026-09-21.md`, the file that D21-40…D21-42 exten
 - the fix-item reservation;
 - the note on the fixture item;
 - the re-point of the legacy checkout (D21-44);
-- the reading of ADR-0114 decision 3 behind the `tag-release` trial declarations (§8j.1(e));
+- the `tag-release` trial declarations, citing D21-46 R4, which confirms two trials (§8j.1(e));
 - the (g) flip, which is the operator's.
 
 ---
@@ -280,10 +307,11 @@ cannot sit between them. This file therefore takes the following route:
 - **AC-114's promotion is not an act of this stage.** It follows `s8`'s fix-lane run and cites that run's id. It
   moves `.redkiln/catalog` only after `s8`'s runs, so no fork straddles it.
 
-🛑 **This is a reading of ADR-0114 decision 3, not something the decision states, and the ledger row says so.** The
-decision's *"a one-run, one-activity trial the operator declares"* is read here as admitting one declaration per
-lane item. If the operator reads it as one trial in all, the story item's declaration is dropped. The promotion then
-moves ahead of the story run, with a CI re-run in between (§8j.7).
+**Two trials, confirmed by D21-46 R4.** ADR-0114 decision 3 speaks of *"a one-run, one-activity trial the operator
+declares"*. The draft read that as admitting one declaration per lane item, and flagged the reading for the operator.
+D21-46 R4 takes it: *"**Two trials, confirmed.** Each is one run of one activity, which is the clause's constraint."*
+The ledger row cites R4 and states no reading of its own. The draft's fallback is withdrawn. It dropped the story
+item's declaration and moved the promotion ahead of the story run.
 
 **AC-114's residue lint is this stage's, and it is owed with the promotion.** `s8g` §8g.7 assigns it here: *"AC-114's
 residue lint does not exist, and its owner is `s8j`."* It gives two reasons:
@@ -292,7 +320,7 @@ residue lint does not exist, and its owner is `s8j`."* It gives two reasons:
 - Built earlier, it *"would either fail all 102 shipped activities, none of which carries a `curation.decision` id,
   or ship with a grandfather rule that no record takes"*. `s8g` reports that backfill as *"a decision owed upward"*.
 
-On this repository the real trial is `s8`'s run and not this stage's, as shown above. So this stage takes the
+On this repository the real trials are `s8`'s runs and not this stage's, as shown above. So this stage takes the
 ownership but builds the lint in the promotion's commit, after `s8`'s fix-lane run. It builds the lint only once the
 operator has taken the backfill decision. The ledger row names the lint, its owner and both preconditions. Until
 then no line of this file claims AC-114.
@@ -346,6 +374,12 @@ loader."*
 - `.redkiln/intake/rk-story-harden-spike-pack.IntakeRecord.md` states the intent from §8j.1(a) and nothing more;
 - `.redkiln/intake/<fix-item>.BugReport.md` is written once §8j.5's pick is made.
 
+**In `s8`, each root is attached through the launcher's `answer` mode**, as `tools/live-run.sh answer <item>
+<option> --attach <file>`, with the option §8j.2's record fixes. The arguments after the mode are `redkiln answer`'s
+own (ADR-0129 decision 1), passed through unchanged. D21-46 adds the mode to `s8h`'s launcher. `s8h` §8h.7 has
+`ClaudeHarness` refuse at entry without a launch record in *"`run`, and `answer` where it continues the lane"*. A bare
+`redkiln answer` from a plain terminal would therefore be refused.
+
 `.redkiln/intake/` is a new directory that no reader scans. The record states the path convention, and Checkpoint
 8j's whole-suite line proves the new directory disturbs nothing.
 
@@ -392,8 +426,10 @@ not a loader mutation. It must turn `processes::the_two_human_root_questions_loa
 3. `run` exits 0. Golden constraint 2, `run` never waits, and ADR-0128's *"a run that STOPS AT A GATE exits 0"* both
    hold unchanged.
 4. The operator reads the analysis stage's outputs through `redkiln explain <item>`.
-5. The operator answers with `redkiln answer <item> approve --explain-sufficed <yes|no> --toml-opened <yes|no>`
-   (ADR-0129 decision 1's grammar). The answer is spent (`gate_answer_spent`, ADR-0123).
+5. The operator answers through the launcher's `answer` mode: `tools/live-run.sh answer <item> approve
+   --explain-sufficed <yes|no> --toml-opened <yes|no>`. The arguments after the mode are `redkiln answer`'s, in
+   ADR-0129 decision 1's grammar. D21-46 adds the mode to `s8h`'s launcher *"so s8j's hold answer is not refused for
+   want of a launch record"*. The answer is spent (`gate_answer_spent`, ADR-0123).
 6. The next `redkiln run <item>` enters `specification`. In `s8` that run goes through `tools/live-run.sh run`
    (§8j.8 A1). It is a new process, so the first real invocation also crosses a process boundary on purpose, under
    the record `s8e` wrote for D21-41 (a).
@@ -560,7 +596,7 @@ the ledger, and a fresh item is minted."*
    - `s8f`'s render path puts `rk_store::locator` on the run path. At every entry, the drift pass in `s8f` §8f.5
      *"locates the section by anchor (the locator's byte range)"*. So C2 and C6 are **excluded** under this rule.
      Once `s8f` has landed, the callers of every remaining `rk-store` candidate are walked again.
-2. **Exclude what is scheduled.** Drop any candidate whose file or function is named by `s8a`…`s8i`, or listed among
+2. **Exclude what is scheduled.** Drop any candidate whose file or function is named by `s8a`…`s8i` (`s8d-ii` included), or listed among
    their owned decisions in the plan. For example, doctor's journal source and `RK-D-HEADROOM-MARGIN` are D21-42 12c,
    and rk-store's `conn.rs` poison unwrap is L3.
 3. **Reproduce in a throwaway tree, and never in the crate.** Extract HEAD into `target/` (`git archive`), append the
@@ -756,8 +792,9 @@ same sha as their frozen sha. The tracker commit that records them changes no co
 
 This stage owns the plan's list of `s8` amendments, and this section is the deliverable. It also takes one
 amendment the plan does not list, which `s8h` §8h.7 hands on: every `redkiln run` in `s8` goes through
-`tools/live-run.sh run` (A1, A7). Once that lands, `s8` runs from a plain terminal, because the launcher refuses
-a Claude-spawned shell. At this stage's execution each replacement is applied to
+`tools/live-run.sh run` (A1, A7). By D21-46, every gate answer the operator gives during `s8` also goes through
+the launcher, as `tools/live-run.sh answer` (§8j.2, §8j.3). Once that lands, `s8` runs from a plain terminal, because
+the launcher refuses a Claude-spawned shell. At this stage's execution each replacement is applied to
 `runbook/phase-1/s8-exit-criterion.md` with a dated comment, and Checkpoint 8j proves it landed. This file does not edit `s8` while it is being authored.
 
 **Bindings.** `verify_completed`'s two members are bound here, from `s8g`: *"The two member names, `item` and
@@ -773,10 +810,11 @@ things: `s8` carries no `BIND:` anywhere, and every test name `s8` selects exist
 **A0 — the header row.** Replace `` | `s8` | Phase 1 | Checkpoint 7i | Checkpoint 8 | `s7i` | — | `` with
 `` | `s8` | Phase 1 | Checkpoint 8j | Checkpoint 8 | `s8j` | — | ``.
 
-**A1 — criteria (1) and (1b), the whole fenced block.** This one replacement covers seven items:
+**A1 — criteria (1) and (1b), the whole fenced block.** This one replacement covers eight items:
 
 - build first;
 - both run lines through `tools/live-run.sh run` (`s8h` §8h.7; D21-42 17a);
+- the gate answer that a gated lane's FAIL message asks for, through `tools/live-run.sh answer` (D21-46);
 - the run's trailers scoped to its own fork, which descends from the frozen sha;
 - every lane stage asserted as **set and order** equality (D21-42 7), ending in D21-43 N9's terminal `closed` mark;
 - the toolchain identity read from `verify_completed` (D21-42 10b);
@@ -828,7 +866,7 @@ lane_check() {   # $1 item  $2 pack file — prints nothing on success, the defe
   bad=$(printf '%s\n' "$lg" | awk -v want="redkiln-rs/$1" 'NF && ($1!=want || NF!=2)')
   [ -z "$bad" ] || { echo "Story: values not of the form redkiln-rs/$1 <stage>: $bad"; return 1; }
   got=$(printf '%s\n' "$lg" | awk 'NF {printf "%s%s", sep, $NF; sep=" "}')
-  [ "$got" = "$exp" ] || { echo "stages: expected '$exp', the run's trailers say '$got' — if explain shows an open gate, answer it and re-run this block (s8j §8j.3's hold is the first); a gated lane is not failed, and it is not a pass"; return 1; }
+  [ "$got" = "$exp" ] || { echo "stages: expected '$exp', the run's trailers say '$got' — if explain shows an open gate, answer it through the launcher's answer mode (tools/live-run.sh answer; D21-46) and re-run this block (s8j §8j.3's hold is the first); a gated lane is not failed, and it is not a pass"; return 1; }
 }
 
 # (1) — AC-473, the fix lane
@@ -1138,17 +1176,19 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. 1 passed; 0 failed' || { echo
 - **`s8`'s amendments landed**:
   - no `BIND:`;
   - no `test -x` before a build;
-  - no bare `redkiln run`, since every run goes through the launcher;
+  - no bare `redkiln run` or `redkiln answer`, since each goes through the launcher;
   - every selected test exists.
-- **The entry chain re-runs once, through Checkpoint 8i, and Checkpoints 7h and 7i re-run whole.** Each reaches its
-  end marker, fenced against a real dispatch.
+- **The entry chain re-runs once, link by link, and Checkpoints 7h and 7i re-run whole.** The links are
+  Checkpoints 8a, 8b, 8c, 8d, 8d-ii, 8e, 8f, 8g, 8h and 8i. Each runs whole with `RK_CP_NESTED=1` (D21-46), and each
+  reaches its end marker. Each is fenced against a real dispatch by an unset launch record and an empty
+  `CLAUDE_CONFIG_DIR` trap. When Checkpoint 8j is itself run with `RK_CP_NESTED=1`, it re-runs none of them.
 - **The whole suite, fmt and clippy are green, and the three runbook checkers pass.**
 - **This block dispatched nothing, and it changed no store row, no `rk-run/*` ref and no launch record.**
 
 **Run it from a Git Bash that Claude Code did not spawn.** Checkpoints 8h and 8i refuse a Claude-spawned shell, and
 this block re-runs them. Set every input the chain's blocks name at their tops (8h's `REC_A`, `REC_B`,
 `A_SUPERSEDES` and `TOKENS_APPETITE`, 8i's own, and so on). Each block refuses by name when one is missing. Budget
-hours: (10) re-runs the chain.
+hours: (10) re-runs twelve checkpoints, most of them with a whole suite.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -1411,7 +1451,8 @@ print("; ".join(bad) if bad else "ok %d blocks" % len(blocks))
 sys.exit(1 if bad or not blocks else 0)'
 v=$(python -c "$txchk" runbook/phase-1/s8-exit-criterion.md); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: an s8 block runs the binary before building it: $v"; exit 1; }
-# D21-42 17a in every s8 block: no bare `redkiln run` on a code line, and the launcher at all three run sites (A1, A7).
+# D21-42 17a in every s8 block: no bare `redkiln run` or `redkiln answer` (D21-46) on a code line, and the launcher at
+# all three run sites (A1, A7).
 rnchk='import re,sys
 t=open(sys.argv[1],encoding="utf-8").read()
 f=chr(96)*3
@@ -1420,7 +1461,7 @@ for i,b in enumerate(re.findall(f+"bash\n(.*?)"+f,t,re.S)):
     for ln in b.split("\n"):
         s=ln.strip()
         if s.startswith("#"): continue
-        if re.search(r"(target/debug/redkiln(\.exe)?|\$\{?RK\}?)\"?\s+run(\s|$)", s): bad.append("block %d: a bare run: %s" % (i, s[:80]))
+        if re.search(r"(target/debug/redkiln(\.exe)?|\$\{?RK\}?)\"?\s+(run|answer)(\s|$)", s): bad.append("block %d: a bare run or answer: %s" % (i, s[:80]))
         if re.match(r"tools/live-run\.sh run ", s): n+=1
 if n < int(sys.argv[2]): bad.append("%d launcher run lines, expected at least %s" % (n, sys.argv[2]))
 print("; ".join(bad) if bad else "ok %d launcher runs" % n)
@@ -1436,13 +1477,18 @@ v=$(python -c "$txchk" "$tdir/s8-syn-red.md"); rc=$?
 [ "$rc" -eq 1 ] || { echo "FAIL: the build-first checker accepted a test -x with no build before it (rc=$rc: $v) — it is vacuous"; exit 1; }
 v=$(python -c "$txchk" "$tdir/s8-syn-green.md"); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the build-first checker refused a correctly ordered block (rc=$rc: $v) — it cannot pass"; exit 1; }
-printf '%s\n' "$bt""bash" './target/debug/redkiln run "$X" --lane fix || exit 1' "$bt" > "$tdir/run-red.md" || { echo "FAIL: could not write the bare-run control"; exit 1; }
-printf '%s\n' "$bt""bash" 'tools/live-run.sh run "$X" --lane fix || exit 1' "$bt" > "$tdir/run-green.md" || { echo "FAIL: could not write the launcher-run control"; exit 1; }
+# The run and answer controls take the verb from a variable, so no code line of this block spells a launch.
+m=run; a=answer
+printf '%s\n' "$bt""bash" "./target/debug/redkiln $m \"\$X\" --lane fix || exit 1" "$bt" > "$tdir/run-red.md" || { echo "FAIL: could not write the bare-run control"; exit 1; }
+printf '%s\n' "$bt""bash" "./target/debug/redkiln $a \"\$X\" approve || exit 1" "$bt" > "$tdir/answer-red.md" || { echo "FAIL: could not write the bare-answer control"; exit 1; }
+printf '%s\n' "$bt""bash" "tools/live-run.sh $m \"\$X\" --lane fix || exit 1" "$bt" > "$tdir/run-green.md" || { echo "FAIL: could not write the launcher-run control"; exit 1; }
 printf '%s\n' "$bt""bash" 'raw=$(grep -rnE x crates/ .redkiln/); rc=$?' "$bt" > "$tdir/walk-red.md" || { echo "FAIL: could not write the walk control"; exit 1; }
 v=$(python -c "$s8chk" "$tdir/walk-red.md"); rc=$?
 [ "$rc" -eq 1 ] && printf '%s\n' "$v" | grep -qF 'without --exclude-dir=worktrees' || { echo "FAIL: the amendment checker accepted a walk over .redkiln/ with no worktrees skip (rc=$rc) — the A5.5 check is vacuous"; exit 1; }
 v=$(python -c "$rnchk" "$tdir/run-red.md" 0); rc=$?
-[ "$rc" -eq 1 ] || { echo "FAIL: the run-site checker accepted a bare redkiln run (rc=$rc: $v) — it is vacuous"; exit 1; }
+[ "$rc" -eq 1 ] || { echo "FAIL: the run-site checker accepted a bare run of the binary (rc=$rc: $v) — it is vacuous"; exit 1; }
+v=$(python -c "$rnchk" "$tdir/answer-red.md" 0); rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: the run-site checker accepted a bare redkiln answer (rc=$rc: $v) — the D21-46 half is vacuous"; exit 1; }
 v=$(python -c "$rnchk" "$tdir/run-green.md" 1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the run-site checker refused a launcher run (rc=$rc: $v) — it cannot pass"; exit 1; }
 # Every test name s8 selects through a *_TESTS variable exists.
@@ -1464,54 +1510,84 @@ out=$(python runbook/tools/check-refs.py 2>&1); rc=$?
 out=$(python runbook/tools/check-bash-syntax.py 2>&1); rc=$?
 [ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -qE ' 0 failed$' || { echo "FAIL: check-bash-syntax rc=$rc"; printf '%s\n' "$out" | tail -10; exit 1; }
 
-# ---- (10) RE-RUN, WHOLE: THE ENTRY CHAIN ONCE, THROUGH ITS HEAD, AND THE TWO CHECKPOINTS THIS STAGE EDITED.
-# THE CHAIN, ONCE, AND SAID SO. Every sub-stage checkpoint re-runs its own entry gate whole: 8i re-runs 8h, 8h re-runs
-# 8g, and so on down to 8a, which re-runs 7i. Each also re-runs the older checkpoints its own edits made provisional,
-# as its own file names them (8a: 5, 7a, 7b, 7f; 8e: 7h, 7f; 8f: 7i; 8i: 5; at authoring). ONE run of Checkpoint 8i is one
-# run of the whole chain. Running 8a…8h separately here as well would repeat the chain once per link, and it is not
-# done. 7h and 7i ARE run directly as well: §8j.1(c) edits both after every link that nests them was written. A nested
-# run reads the file as it stands, so the chain runs the edited text too, and the direct runs are what name their
-# markers in this block. The duplicate costs minutes. The chain costs hours.
-# NO ACCIDENTAL DISPATCH (the brief's rule for every re-run of a checkpoint that executes `redkiln run` once s8h has
-# landed — 7f inside 8a, 7h's and 7i's binary arms, and whatever else the chain carries):
-#   · PREVENTION. Each block runs with REDKILN_LAUNCH_RECORD, FIX_ITEM, STORY_ITEM and ITEM unset. After s8h, a run
-#     whose composition root chose the REAL harness refuses at entry without a launch record, "before
-#     `reconcile_started` is appended and before any worktree operation" (s8h §8h.7). So no chain line can reach a real
-#     spawn unless it forges the variable or calls the launcher, and the screen below refuses both on a code line.
-#     Pointing a re-scoped checkpoint's own `run` at the fixture child through `[adapters] harness_binary` or a fixture
-#     config is that checkpoint's owner's work (7f is s8a's), and this block does not re-do it.
-#   · DETECTION. (12) asserts that the store's dispatch rows, every rk-run/* ref, the launch records and the session
-#     transcripts are unchanged.
-xblk='import re,sys
+# ---- (10) RE-RUN, WHOLE: THE ENTRY CHAIN ONCE, LINK BY LINK, AND THE TWO CHECKPOINTS THIS STAGE EDITED.
+# D21-46's ONE RE-RUN CONVENTION: RK_CP_NESTED=1 means "running as another checkpoint's entry gate: skip your own
+# nested whole re-runs" (s8e's RK_CP_ENTRY_ONLY is folded into it). One run of 8i therefore no longer carries the
+# chain, and this block runs each link ONCE, directly, with RK_CP_NESTED=1: 8a, 8b, 8c, 8d, 8d-ii (D21-46 R1), 8e,
+# 8f, 8g, 8h and 8i, the entry gate. 7h and 7i run directly as well, because §8j.1(c) edits both. The older
+# checkpoints the links made provisional (5, 6, 7a, 7b, 7b-ii, 7d, 7f) were closed by each link's own un-nested run,
+# as PROGRESS.md records. This stage edits none of them, so they are not re-run here. When THIS block is itself run
+# with RK_CP_NESTED=1 (as s8's entry gate), it re-runs nothing.
+# NO ACCIDENTAL DISPATCH (D21-46's one no-dispatch guard for replays):
+#   · PREVENTION. Each block runs with REDKILN_LAUNCH_RECORD, FIX_ITEM, STORY_ITEM and ITEM unset, so s8h's gate
+#     refuses a real-harness `run` or `answer` "before `reconcile_started` is appended and before any worktree
+#     operation" (s8h §8h.7). Each also runs with CLAUDE_CONFIG_DIR at an empty trap directory (s8g's form).
+#   · SCREEN. Before anything runs, each block's code lines are refused if they carry a shape that EXECUTES what the
+#     prevention exists for: the launcher in a running mode (run, probe, answer, wrap), a forged launch record, a
+#     push, or a test run with the live feature, without which no live probe compiles. Five shapes are not refused:
+#     listing ignored tests (`--list`), linting the live feature, the launcher's `--check` modes, a probe's name in a
+#     string, and an ignored test run WITHOUT the live feature. Checkpoint 8h carries the first four, and 7h the fifth. The screen is a FLOOR: a block that assembles another at run time is screened by
+#     its own parent, and the trap and (12) cover it.
+#   · DETECTION. The trap below, and (12)'s store, ref, launch-record and transcript readings.
+if [ "${RK_CP_NESTED:-0}" = 1 ]; then
+  echo "CP8J (10) SKIPPED: this block is itself an entry-gate re-run (RK_CP_NESTED=1); the chain ran at Checkpoint 8j's own close"
+else
+  xblk='import re,sys
 t=open(sys.argv[1],encoding="utf-8").read()
 f=chr(96)*3
 hits=[b for b in re.findall(f+"bash\n(.*?)"+f,t,re.S) if sys.argv[2] in b]
 if not hits: sys.exit(3)
 open(sys.argv[3],"w",encoding="utf-8",newline="\n").write(hits[-1])'
-SCREEN='tools/live-run\.sh[[:space:]]+(run|probe)|REDKILN_LAUNCH_RECORD=|git[[:space:]]+push'
-syn=$(printf 'out=$(tools/live-run.sh probe live::x 2>&1)\n' | grep -E "$SCREEN"); test -n "$syn" || { echo "FAIL: the dispatch screen cannot see a launcher probe line — it is vacuous"; exit 1; }
-# The screen reads every chain block its own file marks, before anything runs. It is a FLOOR: a nested block that a
-# parent assembles at run time (5's, 7a's, 7b's) is screened by that parent, and (12)'s detectors cover all of them.
-for pair in s7d-cli-and-migrate:CP7D s7f-conformance-and-records:CP7F s7h-lane-completes:CP7H s7i-cost:CP7I s8a-records-and-red-checkpoints:CP8A s8b-catalog-quality:CP8B s8c-toolchain-port-and-verbs:CP8C s8d-step-grain-and-resolver:CP8D s8e-tier-one-and-the-lane:CP8E s8f-landing-and-rendering:CP8F s8g-verify-and-restored-demands:CP8G s8h-cards-and-run-environment:CP8H s8i-s-bin:CP8I; do
-  sf="runbook/phase-1/${pair%%:*}.md"; mk="${pair##*:}-END-OF-BLOCK reached"; blk="$tdir/${pair%%:*}.sh"
-  test -f "$sf" || { echo "FAIL: $sf does not exist — its checkpoint cannot be re-run (Halt 8)"; exit 1; }
-  python -c "$xblk" "$sf" "echo \"$mk\"" "$blk"; rc=$?
-  [ "$rc" -eq 0 ] && test -s "$blk" || { echo "FAIL: no block in $sf echoes '$mk' (rc=$rc)"; exit 1; }
-  hit=$(grep -vE '^[[:space:]]*#' "$blk" | grep -nE "$SCREEN")
-  [ -z "$hit" ] || { echo "FAIL: $sf's checkpoint would launch, forge a launch record or push on a code line — this block runs nothing that does:"; printf '%s\n' "$hit"; exit 1; }
-done
-for pair in s7h-lane-completes:CP7H s7i-cost:CP7I s8i-s-bin:CP8I; do
-  sf="runbook/phase-1/${pair%%:*}.md"; mk="${pair##*:}-END-OF-BLOCK reached"; blk="$tdir/${pair%%:*}.sh"
-  out=$(env -u REDKILN_LAUNCH_RECORD -u FIX_ITEM -u STORY_ITEM -u ITEM bash "$blk" 2>&1); rc=$?
-  last=$(printf '%s\n' "$out" | grep . | tail -1)
-  [ "$rc" -eq 0 ] && [ "$last" = "$mk" ] || { echo "FAIL: $sf's checkpoint rc=$rc, last line '$last'"; printf '%s\n' "$out" | tail -25; exit 1; }
-done
+  RUN_RE='(tools/live-run\.sh|\$L|\$\{L\})"?[[:space:]]+(run|probe|answer|wrap)([[:space:]]|$)|REDKILN_LAUNCH_RECORD[=][^[:space:];)]|git[[:space:]]+push([[:space:]]|$)'
+  TESTRUN_RE="cargo[[:space:]]+test[^;|\"']*((--features|-F)[[:space:]=]+live|--all-features)"
+  screen() { c=$(grep -vE '^[[:space:]]*#' "$1"); printf '%s\n' "$c" | grep -nE "$RUN_RE"; printf '%s\n' "$c" | grep -nE "$TESTRUN_RE" | grep -v -- '--list'; }
+  # SYNTHETIC CONTROLS, both ways. Each is assembled by printf, so no code line of this block spells what it screens.
+  for s in "$(printf 'bash "$L" %s live::x' probe)" "$(printf 'tools/live-run.sh %s "$ITEM" approve' answer)" "$(printf 'tools/live-run.sh %s -- bash x.sh' wrap)" "$(printf 'REDKILN_%s=/x/y.txt cargo test' LAUNCH_RECORD)" "$(printf 'git %s origin HEAD' push)" "$(printf 'cargo test -p x --features %s --test it -- %s live::x' live --ignored)"; do
+    printf '%s\n' "$s" > "$tdir/screen-ctl.sh" || { echo "FAIL: could not write a screen control"; exit 1; }
+    [ -n "$(screen "$tdir/screen-ctl.sh")" ] || { echo "FAIL: the dispatch screen does not refuse '$s' — it is vacuous for that shape"; exit 1; }
+  done
+  # Checkpoint 8h's own shapes list, compile, lint, check or name, and run nothing. 7h's last one runs an ignored test
+  # that is not a live one (no live feature, so no probe compiles). Each must pass.
+  for s in "$(printf 'out=$(cargo test -p x --features %s --test it -- --list %s 2>&1); rc=$?' live --ignored)" "$(printf 'out=$(cargo clippy -p x --all-targets --features %s 2>&1); rc=$?' live)" "$(printf 'out=$("${clean[@]}" bash "$L" --check %s -- true 2>&1); rc=$?' wrap)" "$(printf '[ -z "${REDKILN_%s:-}" ] || exit 1' LAUNCH_RECORD)" "$(printf 'n=$(grep -c %s x.rs)' live_dispatch_probe)" "$(printf 'out=$(cargo test -p x --test it -- y %s 2>&1); rc=$?' --ignored)"; do
+    printf '%s\n' "$s" > "$tdir/screen-ctl.sh" || { echo "FAIL: could not write a screen control"; exit 1; }
+    [ -z "$(screen "$tdir/screen-ctl.sh")" ] || { echo "FAIL: the dispatch screen refuses '$s', which runs nothing — a checkpoint that carries it could never be re-run"; exit 1; }
+  done
+  trap_dir="$PWD/$tdir/claude-config-trap"
+  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written — its silence afterwards would prove nothing"; exit 1; }
+  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  d2=$(ls runbook/phase-1/s8d-ii-*.md 2>/dev/null)
+  [ "$(printf '%s\n' "$d2" | grep -c .)" = "1" ] || { echo "FAIL: not exactly one runbook/phase-1/s8d-ii-*.md ('$d2') — Checkpoint 8d-ii cannot be re-run (D21-46 R1; Halt 8)"; exit 1; }
+  d2=$(basename "$d2" .md)
+  CHAIN="s8a-records-and-red-checkpoints:CP8A s8b-catalog-quality:CP8B s8c-toolchain-port-and-verbs:CP8C s8d-step-grain-and-resolver:CP8D $d2:CP8D-II s8e-tier-one-and-the-lane:CP8E s8f-landing-and-rendering:CP8F s8g-verify-and-restored-demands:CP8G s8h-cards-and-run-environment:CP8H s8i-s-bin:CP8I s7h-lane-completes:CP7H s7i-cost:CP7I"
+  # Every block is extracted and screened before ANY of them runs.
+  for pair in $CHAIN; do
+    sf="runbook/phase-1/${pair%%:*}.md"; mk="${pair##*:}-END-OF-BLOCK reached"; blk="$tdir/${pair%%:*}.sh"
+    test -f "$sf" || { echo "FAIL: $sf does not exist — its checkpoint cannot be re-run (Halt 8)"; exit 1; }
+    python -c "$xblk" "$sf" "echo \"$mk\"" "$blk"; rc=$?
+    [ "$rc" -eq 0 ] && test -s "$blk" || { echo "FAIL: no block in $sf echoes '$mk' (rc=$rc)"; exit 1; }
+    hit=$(screen "$blk")
+    [ -z "$hit" ] || { echo "FAIL: $sf's checkpoint would launch, forge a launch record, push or run a live test on a code line — this block runs nothing that does:"; printf '%s\n' "$hit"; exit 1; }
+  done
+  for pair in $CHAIN; do
+    sf="runbook/phase-1/${pair%%:*}.md"; mk="${pair##*:}-END-OF-BLOCK reached"; blk="$tdir/${pair%%:*}.sh"
+    out=$(env -u REDKILN_LAUNCH_RECORD -u FIX_ITEM -u STORY_ITEM -u ITEM RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$blk" 2>&1); rc=$?
+    last=$(printf '%s\n' "$out" | grep . | tail -1)
+    [ "$rc" -eq 0 ] && [ "$last" = "$mk" ] || { echo "FAIL: $sf's checkpoint rc=$rc, last line '$last'"; printf '%s\n' "$out" | tail -25; exit 1; }
+  done
+  left=$(find "$trap_dir" -mindepth 1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the re-runs (rc=$rc)"; exit 1; }
+  [ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the re-runs — a claude process ran under it (8h's non-dispatching claude --version reading is the one expected claude process: read what was written before calling it a dispatch):"; printf '%s\n' "$left" | head -10; exit 1; }
+fi
 
 # ---- (11) THE WHOLE SUITE, NO FAIL-FAST, WITH A FLOOR; fmt; clippy.
 # The floor is RE-DERIVED AT STAGE OPEN from Checkpoint 8i's recorded passed count (PROGRESS.md row 8i), plus this
-# stage's 13 new tests. 780 is the drafted expectation: s8h's drafted floor (Checkpoint 8g's count + 40), with no
-# workspace test added in s8i's draft. Edit the literal, with a date, when 8i's recorded count differs.
-CP8I_PASSED=780
+# stage's 13 new tests (D21-46: each file re-derives from its entry checkpoint's recorded count). The drafted base is
+# s8i's drafted floor, Checkpoint 8h's 780 plus s8i's 6 + N, where N is the Binary field count s8i's record fixes. N is
+# unknown at authoring, so 786 is a lower bound. Edit the literal to 8i's recorded count, with a date, at stage open.
+CP8I_PASSED=786
 floor=$((CP8I_PASSED + 13))
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|test result:' | tail -30; exit 1; }

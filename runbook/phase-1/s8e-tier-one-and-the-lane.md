@@ -1,31 +1,41 @@
-# Step 8e — Tier-1 writes git-first, the lane across processes, `Slice-Verdict:`, and the run worktree (Phase 1, part 8e)
+# Step 8e — Tier-1 writes git-first, the lane across processes, and `Slice-Verdict:` (Phase 1, part 8e)
 
 | stage | phase | entry gate | exit checkpoint | previous | next |
 | --- | --- | --- | --- | --- | --- |
-| `s8e` | Phase 1 | Checkpoint 8d | Checkpoint 8e | `s8d` | `s8f` |
+| `s8e` | Phase 1 | Checkpoint 8d-ii | Checkpoint 8e | `s8d-ii` | `s8f` |
 
 *Part of `runbook/` — the index is `runbook/INDEX.md`, the tracker `runbook/PROGRESS.md`, the shared preamble
 (golden constraints, tool preflight, legend) `runbook/00-preamble.md`, the halt conditions `runbook/halts.md`.
 A bare `§N.M` in this file means this file's own section; another stage's section is cited as `s7h §7h.2`. Every
 shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it opens with its own `cd`.*
 
-*Revised 2026-09-24 for D21-43/44/45, at `a6349b6`.* What changed, and where:
-- **D21-44:** the run worktree moves to `.redkiln/worktrees/<item>`. The record and every derivation it moves are in
-  §8e.10. The walks over `.redkiln/` and their controls are in §8e.10 too, and the worst-case path length is
-  measured in §8e.0.
-- **D21-45:** W1 (all), W2 (reuse, never force-remove, which replaces `recreate_run_worktree`) and W4 (the
-  filter-driver refusal, plus `init`'s `# redkiln-runtime` exclude block) are in §8e.11. That section also holds W3's
-  carry at creation, which calls `s8c`'s reader and `setup` verb.
-- **N5:** the interim `item` key, with `query` honouring `ByItem`, is §8e.12. **N6:** every gate transition is
+*Revised 2026-09-24 for D21-46, at `c5d19d7`: the stage is split, two decisions are applied, and one convention is
+adopted.* What changed:
+- **R1, the split.** D21-44's relocation and D21-45 W1, W2 and W4, with W3's carry, moved to a new stage, `s8d-ii`
+  ("Run worktrees"). Its Checkpoint 8d-ii is this stage's entry gate. The former sections numbered 8e.10 and 8e.11
+  are gone, and the sections after them are renumbered §8e.10 to §8e.15. The records-table row, 30 named tests, the
+  mutants, seven findings and the checkpoint lines that asserted that work moved with it. Where this stage's tier-1
+  work depends on the new root, the one derivation, `RK_BASE`, the lock or the discard list, it cites `s8d-ii`. The
+  surviving `S8E-` mutant names are kept, so their numbering has gaps.
+- **R2.** `t1_gate`'s friction takes route (A), a forward migration to an append-only transitions table (§8e.2). The
+  route (A)/(B) discussion is gone, and AC-180 is claimed here (§8e.14).
+- **R3.** The interim `item` key is carried outside the canonical digest (§8e.10). The golden-log STOP that §8e.0
+  carried is gone, and a test pins the golden logs' digests.
+- **One re-run convention and one replay guard.** `RK_CP_NESTED` replaces `RK_CP_ENTRY_ONLY`. Every replay runs with
+  `CLAUDE_CONFIG_DIR` at an empty trap directory and `REDKILN_LAUNCH_RECORD` unset (§8e.15).
+
+*Revised 2026-09-24 for D21-43/44/45, at `a6349b6`.* What changed, and where (section numbers as they now stand):
+- **D21-44 and D21-45:** now `s8d-ii`'s, by the note above.
+- **N5:** the interim `item` key, with `query` honouring `ByItem`, is §8e.10. **N6:** every gate transition is
   git-first, and the `Gate:` value carries its state (§8e.7, §8e.3). **N7:** the planner reads the fold, and the
   `git_op` row settles the replay-journal residual (§8e.3, §8e.5). **N8:** the deadline is integer unix seconds
   (§8e.7). **N9:** the terminal `closed` mark (§8e.6). **N10:** the boundary seam a content checkpoint rides (§8e.3),
   with the staging rule cited to `s8f`.
 - **Made explicit:** the extra supersessions this file found (the records table). **Fixed:** the 7h guard (10a)
-  backtick defect (§8e.15). **Re-measured:** the `fsm.rs` comment and the `story_trailer` subject claim (§8e.15).
-- **Checkpoint 8e:** re-runs only its entry gate plus the checkpoints this stage's own edits make provisional (7a, 7h
-  and 7f). It skips its nested re-runs when a later checkpoint calls it as an entry gate (§8e.17). Its floor is
-  re-derived at stage open.
+  backtick defect (§8e.13). **Re-measured:** the `fsm.rs` comment and the `story_trailer` subject claim (§8e.13).
+- **Checkpoint 8e:** re-runs only its entry gate plus the checkpoints this stage's own edits make provisional. It
+  skips its nested re-runs when a later checkpoint calls it as an entry gate (§8e.15). Its floor is re-derived at
+  stage open.
 
 ---
 
@@ -57,52 +67,48 @@ because they meet at the same boundary act. **Measured at `ca8f387`, 2026-09-24,
   the slice on the item record (or decide that a fix lane has exactly one, and say so), then a `slice_sealed`
   producer at the review stage's boundary, then the trailer through the same `commit_with_trailers` path `Story:` now
   uses."*
-- **The run worktree cannot be edited by the implementer, and it is destroyed at every run start.** D21-44 measured
-  it: a `-p` child with `--permission-mode acceptEdits --permission-prompts none` left `probe.txt` reading
-  **`original`** under `.git/redkiln/worktrees/probe-n1-in`, with *"**Edit AND Write**, both refused"*, while the same
-  dispatch under `.redkiln/worktrees/probe-n1b` wrote it. And `recreate_run_worktree` opens with
-  `["worktree", "remove", "--force", path]` and then `let _ = std::fs::remove_dir_all(&path);` on every run. So a
-  resumed run's tree never survives to be resumed, which D21-45 W2 reverses.
+- **The run worktree was missing too, and it is now `s8d-ii`'s.** D21-44 measured that a `-p` child could not edit
+  a tree under `.git/redkiln/worktrees/`, and `recreate_run_worktree` destroyed the tree at every run start. By this
+  stage's open, Checkpoint 8d-ii has moved it to `.redkiln/worktrees/<item>`, derived in one place, guarded by W1,
+  and reused rather than re-created (W2). This stage records it (§8e.4) and keys its removal to the lane's end
+  (§8e.6).
 - **The lane loop has no automated test.** `grep -rn "verbs::run::run(" crates/*/tests` returns nothing. ADR-0161
   names the cost: two of its three defects *"are in the seam between the kernel's report and the composition root's
   loop — which no unit fixture in either crate covers"*.
 
 **This step takes decisions, and they were already taken.** The operator took them in D21-41 (a) and (e), D21-42 7,
-8a–8d, 24b and 24c, D21-43 N5–N10, D21-44, and D21-45 W1, W2 and W4 (`spikes/DECISIONS-2026-09-21.md`). They are
+8a–8d, 24b and 24c, D21-43 N5–N10, and D21-46 R2 and R3 (`spikes/DECISIONS-2026-09-21.md`). They are
 written as records at this stage, and each record takes **the next free id at writing** — this file assigns none.
 Where a decision moves a `## Decision` sentence or a forbids bullet of an accepted record, the record is a supersession
 in part (ADR-0092 rule 1), never an erratum. Every record is written `proposed` and flips only on the operator's dated
-ledger line. Where this file found a residual the decisions do not name, it says so in §8e.15 rather than taking it
+ledger line. Where this file found a residual the decisions do not name, it says so in §8e.13 rather than taking it
 silently.
 
-**What this step owns** (the plan's row for `s8e`, widened by the three later entries):
+**What this step owns** (the plan's row for `s8e`, widened by the later entries, and narrowed by D21-46 R1):
 - D21-41 **a**, and **e** in both halves — `Slice-Verdict:` AND the tier-1 writer.
 - D21-42 **7**, **8a**, **8b**, **8c**, **8d**, **24b** (L3) and **24c** (`terminal_read` plus the first FakeHarness
   end-to-end test of `verbs::run::run`).
 - D21-43 **N5**, **N6**, **N7**, **N8** and **N9**, and **N10**'s seam (the staging rule is `s8f`'s).
-- **D21-44** whole (its *"Consequences, owned by `s8e`"*).
-- D21-45 **W1**, **W2**, **W4** (the worktree half and `init`'s exclude block, *"`redkiln init`'s exclude block is
-  `s8e`'s too"*), and **W3's carry at creation**.
+- D21-46 **R2** (the forward migration to an append-only gate-transitions table) and **R3** (the interim `item` key,
+  outside the canonical digest).
 
 **What it does not own, and who does.** ADR-0164's flip (the operator's ledger line).
-- **`s8c`:** the `.worktreeinclude` reader and the per-toolchain `setup` verb (D21-45 W3; D21-43 N25). This stage
-  calls both at creation and re-specifies neither.
+- **`s8d-ii`:** the run worktree whole (D21-44; D21-45 W1, W2, W4 and W3's carry; D21-46 R8). That is the root
+  `.redkiln/worktrees/<item>` and its one derivation, the item-id validator, the symlink guards, `RK_BASE`, the lock,
+  the re-entry check, reuse and the discard, the removal rule, the filter-driver refusal at every scope, `init`'s
+  exclude block, `LC_ALL=C`, the ignore rows and Checkpoint 7f's run arm and cleanup line. This stage **consumes** it:
+  §8e.4's `worktree_assigned` row journals the path, `reused` and the discard list `s8d-ii`'s lifecycle function
+  returns, and §8e.6's `closed` mark is the trigger for `s8d-ii`'s removal rule.
 - **`s8f`:** the landing checkpoint commit and its staging rule (D21-41 b; D21-42 9; D21-43 N10). This stage builds
   the seam the content act rides (§8e.3) and says what it guarantees. `s8f` also owns `dispatch_completed`'s
-  `activity_id_at_version` and the cost breakdown (D21-42 12b), and cites §8e.12 for the general `item` key.
+  `activity_id_at_version` and the cost breakdown (D21-42 12b), and cites §8e.10 for the general `item` key.
 - **`s8g`:** the verify record and `verify_completed`.
 - **`s8h`:** cards, models, the launcher and the run environment. That includes the `gate_expiry` table (D21-42 21a), to
-  which this stage adds no row because it mints no gate kind (§8e.7). It also includes the live probe's edit inside
-  `.redkiln/worktrees/<probe>`, and the protected-segment limit (`<wt>/.git`, `.cargo`, `.claude`, `.husky`) mapped
-  to the typed `permission_denials` failure (D21-45).
-- **`s8a`:** how the `Text` variant classifies an LFS pointer path. §8e.11's filter-driver refusal is what it
-  verifies against.
-- **`s8b`:** its own catalog-quality walks over `.redkiln/`, which exclude `worktrees/` (D21-44).
+  which this stage adds no row because it mints no gate kind (§8e.7).
 - **`s8j`:** the fresh fix item and the story item (D21-42 18; D21-41 f), each carrying `slice` (§8e.8) and
-  `[project] name`. `s8j` also re-points or retires the legacy `rk-fix-doctor-test-count` tree (D21-44) and re-points
-  Checkpoints 7h and 7i to fixture items. And it owns every amendment to `s8-exit-criterion.md`: the mechanical
-  set-and-order assertion D21-42 7 puts on criterion (1), the anchored differential in (2) (§8e.9), `s8`'s
-  `grep -r … .redkiln/` lines excluding `worktrees/` (§8e.10), and the three `redkiln run` sites through the launcher.
+  `[project] name`. `s8j` also re-points Checkpoints 7h and 7i to fixture items. And it owns every amendment to
+  `s8-exit-criterion.md`: the mechanical set-and-order assertion D21-42 7 puts on criterion (1), the anchored
+  differential in (2) (§8e.9), and the three `redkiln run` sites through the launcher.
 
 **No stage before `s8i` dispatches to a real account, and this one dispatches nothing.** Every run in it is over a
 fixture repository, a scripted `FakeHarness`, or the fixture child.
@@ -110,14 +116,14 @@ fixture repository, a scripted `FakeHarness`, or the fixture child.
 **Order of work, and why.**
 1. §8e.0's measurements, before any code.
 2. §8e.1: D21-42 24b says L3 is fixed *"before the writer builds on it"*.
-3. The run worktree's placement and lifecycle (§8e.10, §8e.11). §8e.4's `worktree_assigned` row records the path, so
-   the path must be final first.
-4. The writer (§8e.2), the kernel-owned order (§8e.3) and the ownership row (§8e.4). Every mark written after that
-   goes through them.
-5. The interim `item` key (§8e.12), because §8e.4 and the fold read by item.
+3. Nothing of the run worktree. `s8d-ii` made its path final at this stage's entry gate, which is why §8e.4's
+   `worktree_assigned` row can record it.
+4. The writer and R2's migration (§8e.2), the kernel-owned order (§8e.3) and the ownership row (§8e.4). Every mark
+   written after that goes through them.
+5. The interim `item` key (§8e.10), because §8e.4 and the fold read by item.
 6. The three axes and the terminal mark (§8e.5–§8e.8), then the rebuild (§8e.9).
 
-The end-to-end tests (§8e.13) are written **first, red**, and they go green last.
+The end-to-end tests (§8e.11) are written **first, red**, and they go green last.
 
 ## Records this step writes
 
@@ -128,73 +134,61 @@ the ones this file found beyond the ledger's list.
 
 | record | executes | supersedes in part | cites without superseding |
 | --- | --- | --- | --- |
-| **the stage lives on the run ref** | D21-41 a; D21-42 8d's two defaults; D21-43 N7 (the planner reads the fold) and N9 (the terminal mark) | ADR-0105 clause 3 (the `Story:` value delegation to design §5.4's row); ADR-0155 decisions 1, 2 and 5(a), and its bullets *"A second `Story:` trailer for one `(project, slug)`, in one lane or across lanes."* and *"A `Story:` value carrying a stage, a boundary, or any third token, until the grammar is widened by a record that supersedes `0105` clause 3."*; ADR-0157 decisions 4 and 5, and its bullets *"Describing a lane as resumable across processes, or a lane's completion as anything other than within-one-process."* and *"Reading a second invocation's exit 0 as progress, or as evidence that the lane finished."*; ADR-0161's bullet *"Describing the lane loop as covered by tests, or reading a green suite as evidence about it."*, and only once §8e.13's tests pass | ADR-0109 decisions 1 (N7 is execution under it), 3 (**NOT superseded**: resume reads all three axes once `Slice-Verdict:` lands) and 4; ADR-0161 decision 1 (`stages_entered` keeps replays idempotent); ADR-0159 |
-| **the tier-1 writer, git-first, owned by the kernel** | D21-41 e (second half); D21-42 8a, 8c, 24b's placement; D21-43 N7 (the `git_op` journal) and N10 (the seam a content act rides) | ADR-0158 decision 3 (*"No document, record or checkpoint may state that AC-162 is met, that a tier-1 row is written, or that a failed git write leaves zero store rows"*) and its bullet *"Claiming AC-160, AC-161, AC-162 or AC-163 is met, on any axis"* — **only** for the criteria this stage measures (§8e.16); ADR-0155 decision 5(b) (*"No document may state that AC-162 is met for this axis, or for any."*) and its bullet *"Stating or implying that AC-162 is satisfied for stage changes 2..N of a lane"*, on the same condition | ADR-0003 (the port **count** stays five; a method is a surface change); ADR-0105 clauses 1 (N7 executes it), 2, 4, 8 and 9; ADR-0109 decision 2; ADR-0118 clause 4 |
-| **`Gate:` carries kind, reach and state** | D21-42 8b; D21-43 N6 (which *"Extends D21-42 8b's record"*) and N8 | design §5.4's `Gate:` grammar row, and its *"RFC 3339"* deadline spelling (N8); ADR-0105 clause 3's value delegation, for `Gate:`; design §5's `gate_answer_void` row's tier (`2`) and producer (*"`reconcile()`"*) | ADR-0105 clause 10 (a fresh mark per re-reach); ADR-0109 decision 1 (a void answer re-opens the gate) and decision 2 (its parenthetical read as illustrative — §8e.7 says why); AC-174; `s7d` §7d.18's RAISED widening item, which this discharges |
+| **the stage lives on the run ref** | D21-41 a; D21-42 8d's two defaults; D21-43 N7 (the planner reads the fold) and N9 (the terminal mark) | ADR-0105 clause 3 (the `Story:` value delegation to design §5.4's row); ADR-0155 decisions 1, 2 and 5(a), and its bullets *"A second `Story:` trailer for one `(project, slug)`, in one lane or across lanes."* and *"A `Story:` value carrying a stage, a boundary, or any third token, until the grammar is widened by a record that supersedes `0105` clause 3."*; ADR-0157 decisions 4 and 5, and its bullets *"Describing a lane as resumable across processes, or a lane's completion as anything other than within-one-process."* and *"Reading a second invocation's exit 0 as progress, or as evidence that the lane finished."*; ADR-0161's bullet *"Describing the lane loop as covered by tests, or reading a green suite as evidence about it."*, and only once §8e.11's tests pass | ADR-0109 decisions 1 (N7 is execution under it), 3 (**NOT superseded**: resume reads all three axes once `Slice-Verdict:` lands) and 4; ADR-0161 decision 1 (`stages_entered` keeps replays idempotent); ADR-0159 |
+| **the tier-1 writer, git-first, owned by the kernel** | D21-41 e (second half); D21-42 8a, 8c, 24b's placement; D21-43 N7 (the `git_op` journal) and N10 (the seam a content act rides) | ADR-0158 decision 3 (*"No document, record or checkpoint may state that AC-162 is met, that a tier-1 row is written, or that a failed git write leaves zero store rows"*) and its bullet *"Claiming AC-160, AC-161, AC-162 or AC-163 is met, on any axis"* — **only** for the criteria this stage measures (§8e.14); ADR-0155 decision 5(b) (*"No document may state that AC-162 is met for this axis, or for any."*) and its bullet *"Stating or implying that AC-162 is satisfied for stage changes 2..N of a lane"*, on the same condition | ADR-0003 (the port **count** stays five; a method is a surface change); ADR-0105 clauses 1 (N7 executes it), 2, 4, 8 and 9; ADR-0109 decision 2; ADR-0118 clause 4 |
+| **`Gate:` carries kind, reach and state** | D21-42 8b; D21-43 N6 (which *"Extends D21-42 8b's record"*) and N8; D21-46 R2 (the `0002` forward migration to an append-only `t1_gate_transition` table, §8e.2) | design §5.4's `Gate:` grammar row, and its *"RFC 3339"* deadline spelling (N8); ADR-0105 clause 3's value delegation, for `Gate:`; design §5's `gate_answer_void` row's tier (`2`) and producer (*"`reconcile()`"*) | ADR-0105 clause 10 (a fresh mark per re-reach); ADR-0109 decision 1 (a void answer re-opens the gate) and decision 2 (its parenthetical read as illustrative — §8e.7 says why); ADR-0131 decision 6 (the store is disposable, which is R2's ground); AC-174; AC-180 (the migration is explicit, never in place); `s7d` §7d.18's RAISED widening item, which this discharges |
 | **the slice is declared, and sealed on both outcomes** | D21-41 e (first half) | **nothing**. It honours ADR-0160's first bullet **in full** — *"Emitting a `Slice-Verdict:` trailer whose `<slice>` is the item id, the project, the stage, the run id, or any value not declared as a slice."* — and §8e.8 refuses each of those five by name | ADR-0160 decision 6; ADR-0162 decision 2 (scoped to its own work, so re-stated here, not superseded); ADR-0161 decisions 1–2; ADR-0159 (the refusal pattern) |
-| **the run worktree lives at `.redkiln/worktrees/<item>`, is reused, and is guarded** | D21-44; D21-45 W1, W2, W4, and W3's carry | ADR-0105 clause 6's *"A worktree is **re-created**, never reused, per run"*, and the *"a reused worktree"* member of its bullet *"Forbids a wrapper write not on clause 5's list, a `\\?\` path handed to git, and a reused worktree."*; ADR-0105 clause 5's enumerated write set, for the variants §8e.11 names; ADR-0137 decision 3's path literal *"`<common-dir>/redkiln/worktrees/<item>`"* — its rule, *"`project_root` is the run-owned worktree"*, stands | ADR-0018 (nothing of it moves — §8e.10 says why); ADR-0105 clause 8; ADR-0109 decision 4; AC-518 and AC-529 (dated notes); Halt 6 |
-| **the interim `item` key** | D21-43 N5 | ADR-0131's first forbids bullet (*"Forbids putting an item id, a run id, a commit SHA, a stage, … inside `rk-types::Event.payload` for the purpose of addressing"*) in part, for the item-scoped members §8e.12 lists, as ADR-0163 did for `rate_limit_reading.item` | ADR-0163 (the precedent, and the move to ADR-0131's tag); ADR-0131 clause 8 |
+| **the interim `item` key** | D21-43 N5; D21-46 R3 (*"**Carried outside the canonical digest**, as ADR-0131 places its tag set"*) | **nothing.** The key is carried beside the event, outside `payload` and outside `canonical_events`, so ADR-0131's first forbids bullet (*"Forbids putting an item id, a run id, a commit SHA, a stage, … **inside** `rk-types::Event.payload` for the purpose of addressing"*) is honoured, not superseded. N5's *"Supersedes ADR-0131's first forbids bullet in part"* is overtaken by R3 (§8e.13, finding 12) | ADR-0131 decision 1 (the reserved `item` key), decision 2 (*"Tags are carried on the event and are OUTSIDE `canonical_events`"*, the placement R3 follows), its second forbids bullet (honoured: `canonical_events` stays `{kind, payload}`) and decision 8 (not engaged: this is an interim carrier, not ADR-0131's wiring); ADR-0163 (the precedent; `rate_limit_reading.item` stays where ADR-0163 put it) |
 | **`worktree_assigned`**, **`stage_empty`** and **`git_op`**, three kinds | D21-42 8d; D21-42 7; D21-43 N7 | nothing — minted by ADR-0116's route: *"The table row and the `rk-types` variant land in the same change."* | ADR-0105 clauses 1 and 8; AC-529; the design §5 `reconcile_started` row's RT-47 members (§8e.4 says what happens to them) |
 
 **Attendant edits, each dated and each in the commit that makes it true:**
 - design §5.4's `Story:` and `Gate:` rows;
-- design §5's event table: three new rows, the `gate_answer_void` row, and the interim `item` member per §8e.12;
-- design §5's `reconcile_started` row, whose recomputation clause names *"`<common-dir>/redkiln/worktrees/<item>/`"*;
+- design §5's event table: three new rows, the `gate_answer_void` row, and a note that the interim `item` key sits
+  beside the payload per §8e.10;
 - design §3.3's `EventStore` row (a dated note naming the tier-1 method);
 - dated register notes on **AC-444** (its drift counts are pinned to the grammar table, and it is corpus-bound
-  Phase-2, so the note re-pins nothing Phase 1 asserts), **AC-518** and **AC-529** (§8e.10);
-- dated notes on `s7d` §7d.5's two tables that name the old path;
+  Phase-2, so the note re-pins nothing Phase 1 asserts) and **AC-180** (its fixture's `N−1` is now version 1, and the
+  explicit migration is the rebuild, §8e.2);
 - a dated re-amendment of `s7h` §7h.2, whose ADR-0155 decision-6 erratum says *"the first stage boundary"*;
-- the dated amendments to Checkpoints 7h and 7f that §8e.15 spells out;
+- the dated amendments to Checkpoints 7h and 7f that §8e.13 spells out;
 - a ledger entry.
 
-### 8e.0 Stage-open measurements — re-taken at Checkpoint 8d's close, before any code
+### 8e.0 Stage-open measurements — re-taken at Checkpoint 8d-ii's close, before any code
 
 Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and the stage does not choose around it.
 
-1. **Where the legacy tree is registered.** `git worktree list --porcelain` at `a6349b6` lists
-   `D:/repos/redkiln-rs/.git/redkiln/worktrees/rk-fix-doctor-test-count` at `73c087a`. Checkpoint 7f's block ends
-   with `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`, and `s8a` runs 7f whole. So by
-   this stage's open the registration may already be gone (§8e.15, finding 13). Record which. Checkpoint 8e asserts
-   the ref and its mark, never the registration.
-2. **The worst-case run-tree path (D21-44's last consequence).** At `a6349b6` the longest tracked path is 140
-   characters, `references/adr/0114-the-executed-once-gate-moves-to-extended-to-shipped-promotion-and-the-v0-pack-tags-on-lint-parse-and-a-visible-ledger.md`.
-   `D:/repos/redkiln-rs/.redkiln/worktrees/` is 39 characters. The derived review tree is named
-   `<item>.review-ref` (`reference_worktree`'s `format!("{item}.review-ref")`), so the worst case is 39 + 64 + 11 +
-   1 + 140 = **255**. Windows' 260-character `MAX_PATH` leaves 259 usable. `git config --get core.longpaths` prints
-   nothing on this box. Under the old root (43 characters) the same sum was **259**, at the limit. The worktree
-   record states the bound and the rule for exceeding it (§8e.11). Checkpoint 8e recomputes the sum from the tree.
-3. 🛑 **Golden logs and pinned fixtures that hold an item-scoped kind (N5).** §8e.12 adds `item` to the payload of
-   every item-scoped kind. ADR-0131's cost ground is *"every golden log's canonical events change, the corpus
-   regenerates, `CORPUS_PIN` moves"*. ADR-0163 escaped it because *"no golden log contains a `rate_limit_reading`
-   row"*. This stage's kinds (`stage_transition`, `gate_opened` and more) almost certainly do appear in golden logs.
-   Read every golden log under `CORPUS_PIN` and every `-text`-pinned fixture in `.gitattributes`, and count the rows
-   per kind. If any row would move, STOP and put the cost to the operator: either regenerate and move `CORPUS_PIN`
-   by record, or have the replay read a missing interim key as absent rather than as divergence, with that rule
-   stated.
+1. **Where the legacy tree is registered.** At `c5d19d7`, `git worktree list` lists
+   `D:/repos/redkiln-rs/.git/redkiln/worktrees/rk-fix-doctor-test-count` at `73c087a`. `s8a` runs Checkpoint 7f whole,
+   and 7f's block, as `s8a` leaves it, ends with `git worktree remove --force
+   .git/redkiln/worktrees/rk-fix-doctor-test-count`. So by this stage's open the registration may already be gone
+   (`s8d-ii` §8d-ii.9, finding 4). Record which. Checkpoint 8e asserts the ref and its mark, never the registration.
+2. 🛑 **The shipped store, and every checked-in store, before R2's migration.** Read `rk_identity.schema_version` and
+   the row count per table and per `t2_event` kind, `mode=ro`. At `c5d19d7` the shipped `.git/redkiln/store.sqlite3`
+   stamps version **1** and holds `t1_stage_transition` 0, `t1_gate` 0, `t1_slice_seal` 0 and `t2_event` **6**
+   (`dag_assembled` 1, `reconcile_started` 3, `stage_transition` 2). `git ls-files` lists no `.sqlite3` file, because
+   every test store is created at open. These six tier-2 rows are what the migration's rebuild drops (§8e.2), and the
+   record lists them. If a `t1_*` row is found anywhere, STOP: §8e.2 drops `t1_gate` on the precondition that it is
+   empty.
+3. **The golden logs' canonical digests (R3).** Read every golden log under `CORPUS_PIN` and every `-text`-pinned
+   fixture in `.gitattributes`. Count the rows per item-scoped kind, and record each golden log's canonical digest.
+   R3 carries the key outside the digest, so none may move, and
+   `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key` pins the recorded values (§8e.10).
+   This is a baseline, not a STOP. A digest that moves is a defect in the carrier, not a cost to put to the operator.
 4. **The tier-1 tables are empty everywhere.** `s8f` §8f.2 measured `t1_*` at 0 rows in the shipped store at
-   `ca8f387`. Re-read it `mode=ro`. §8e.2's writer-side resolutions rely on no existing row having to migrate.
-5. **Checkpoint 7f's current literal and run arm**, as `s8a` left them: the ignored-lint reason, the exact result
-   line, and the `redkiln run rk-fix-doctor-test-count --lane fix` over the product repository. §8e.15 amends all three.
-6. **No code walks `.redkiln/` recursively.** At `a6349b6`, every `read_dir` under `crates/*/src` that touches
-   `.redkiln/` reads one named subdirectory, one level deep: `ctx.redkiln().join("cards")` and
-   `.join("specs")` in `doctor/rules.rs`, `redkiln_dir.join("skills")` in `doctor/roles.rs`,
-   `root.join(".redkiln").join("catalog")` in `run.rs`'s `catalog_sources`, and `Catalog::from_dir` over a directory
-   it is handed. `init`'s `preexisting_rk_names` is *"Top level only"*. Re-measure
-   it. A recursive walk found here takes the exclusion and its control in the same commit (§8e.10).
-7. **`init` writes no hook.** D21-45 says *"`init` already writes the hooks marker (RT-51)"*. At `a6349b6`,
-   `crates/rk-cli/src/verbs/init.rs` writes `.redkiln/config.toml` and opens the store, and nothing else. The only
-   `# redkiln-hook` on the tree is `doctor`'s recogniser, `const MARKER: &str = "# redkiln-hook";`. So the exclude
-   block is `init`'s **first** write into the common directory (§8e.11; §8e.15, finding 10).
-8. **The test module names are free.** This stage adds `rk-kernel` `tier_one`, and `rk-cli` `lane_e2e`,
-   `slice_verdict`, `worktree_assigned` and `run_worktree`. It extends `rk-git` `trailers`, `worktree` and `gitops`,
-   `rk-cli` `init`, `answer` and `doctor`, and `rk-kernel` `lane_order` and `fsm`. If a predecessor created one of the
-   new modules, the tests go into it. The module-qualified names in §8e.14 stay as they are.
-9. **The whole-suite floor.** It is re-derived at stage open from Checkpoint 8d's recorded passed count, plus this
-   stage's **93**: 92 new tests, plus the one ARMED lint un-ignored. The expected value at drafting is **944**. That
-   is ADR-0164's 740 (`992d257`) plus the drafted new-test counts of `s8a` (9), `s8b` (16), `s8c` (40) and `s8d` (46),
-   which give 851, plus 93. Replace 944 in Checkpoint 8e's `FLOOR=` line with the re-derived value, by a dated edit,
-   before the block's first run.
+   `ca8f387`, and item 2 re-reads it. §8e.2's writer-side resolutions, and the migration's drop of `t1_gate`, rely on
+   no existing row having to migrate.
+5. **Checkpoint 7f's current literal and run arm**, as `s8a` and `s8d-ii` left them: the ignored-lint reason, the exact
+   result line, and the run arm, which `s8d-ii` §8d-ii.7 moved into a throwaway clone. §8e.13 amends the literal.
+6. **The test module names are free.** This stage adds `rk-kernel` `tier_one`, and `rk-cli` `lane_e2e`,
+   `slice_verdict` and `worktree_assigned`. It extends `rk-git` `trailers`, `rk-store` `store`, `rk-kernel` `replay`,
+   `lane_order` and `fsm`, and `rk-cli` `answer` and `doctor`. If a predecessor created one of the new modules, the
+   tests go into it. The module-qualified names in §8e.12 stay as they are.
+7. **The whole-suite floor.** It is re-derived at stage open from Checkpoint 8d-ii's recorded passed count, plus this
+   stage's **67**: 66 new tests, plus the one ARMED lint un-ignored. The expected value at drafting is **931**:
+   `s8d`'s own drafted `FLOOR=832`, plus `s8d-ii`'s 32 (`s8d-ii` §8d-ii.0 item 8), plus 67. (This file's earlier
+   drafting summed a different chain to 944, taking 851 for Checkpoint 8d.) Replace 931 in Checkpoint 8e's `FLOOR=`
+   line with the re-derived value, by a dated edit, before the block's first run. It is never lowered to make a red
+   run green.
 
 ### 8e.1 L3 first — the writer mutex halts, and is never recovered (D21-42 24b)
 
@@ -251,8 +245,8 @@ pass renames it, the tests, the lint in §8e.3 and Checkpoint 8e rename in the s
   Checkpoint 8e asserts that no code line under any `crates/*/src/` outside `crates/rk-store/src/` names a `t1_`
   table.
 
-**The schema frictions, resolved at the writer and not by a migration.** The brief measured two, and this file found
-a third:
+**The schema frictions.** The brief measured two, and this file found a third. Two are resolved at the writer, and
+the third takes D21-46 R2's migration:
 
 1. **`t1_stage_transition.tree_hash TEXT NOT NULL`.** Resolved by ADR-0105 clause 4, whose first sentence already
    answers it: *"When a checkpoint commit is due, the recorded tree is that commit's tree."* The anchor is the trailer
@@ -262,24 +256,40 @@ a third:
    `from`, and `stage_entry`'s own doc says so. **Resolution: `t1_stage_transition` holds boundaries — rows with a
    `from` — and a lane entry is not a transition between two stages.** The entry mark's tier-1 durability is its
    `Story:` trailer plus the anchored `t2_event` row, and the rebuild reproduces exactly that split (§8e.9).
-   **Rejected: a `0002` migration relaxing the column.** `rk-store`'s `SCHEMA_VERSION` is `1`, and the identity check
-   refuses a store stamped lower with *"A migration from {} to {} is required; there is no implicit in-place
-   migration"* (AC-180). A bump would refuse the shipped `.git/redkiln/store.sqlite3` and every fixture store, and it
-   would break Checkpoint 7i's `redkiln cost` over the shipped store (§8e.15). If the record takes the migration
-   anyway, it owns an explicit AC-180 migration and the 7i re-point in the same stage.
-3. **`t1_gate.token TEXT NOT NULL UNIQUE` beside `answered INTEGER NOT NULL DEFAULT 0`** — found here, and now bound
-   by N6: *"`t1_gate` is append-only and state is a fold."* The `answered` column can only be written by an `UPDATE`,
-   which AC-364 and N6 both forbid. `UNIQUE` on `token` forbids a second row for one token, so the v1 table cannot
-   hold one row per transition either. **This file's route (B): `t1_gate` holds each token's OPENING row, appended
-   once and never updated. Each later transition (answered, expired, voided) is tier 1 through its state-bearing
-   `Gate:` trailer (§8e.7) plus its anchored `t2_event` row. A gate's state is the fold over its opening and its
-   anchored transitions.** That keeps schema version 1 and every consequence friction 2 lists. The record states that
-   `answered` is never written, and design §5 carries a dated note saying so. A fresh token per re-reach (ADR-0105
-   clause 10) keeps `UNIQUE` satisfiable. **Route (A), which the record may take instead:** a `0002` migration that
-   re-creates `t1_gate` as one row per transition, with a `state` column and without `UNIQUE` or `answered`. It carries
-   friction 2's costs whole (an explicit AC-180 migration of every store, and the 7i re-point). (B) reads N6's
-   *"`t1_gate` is append-only"* literally and its *"state is a fold"* as a fold over the gate's tier-1 rows in both
-   tables. **The record names the route, and the operator's ledger line confirms that reading** (§8e.15, finding 2).
+   **Not relaxed by the migration.** R2's `0002` migration (friction 3) could relax the column too. It does not,
+   because the resolution above is a meaning, not a workaround.
+3. **`t1_gate.token TEXT NOT NULL UNIQUE` beside `answered INTEGER NOT NULL DEFAULT 0`** — found here, bound by N6
+   (*"`t1_gate` is append-only and state is a fold."*), and **settled by D21-46 R2**: *"**(A) A forward migration to
+   an append-only transitions table.** The store is disposable by design (ADR-0131 d6; the deleted-database test), so
+   old stores rebuild from git."* The `answered` column can only be written by an `UPDATE`, which AC-364 and N6 both
+   forbid, and `UNIQUE` on `token` forbids a second row for one token. So:
+   - **The migration.** `rk-store` gains `migrations/0002_gate_transitions.sql` and its `.keys` file. That is the
+     schema lint's form: *"each migration is a pair"*, and `schema_lint.rs`'s list of shipped migrations gains the
+     pair. It creates **`t1_gate_transition`**, one row per transition: `token`, `state` (`opened`, `answered`,
+     `expired` or `voided`), `tree_hash`, `deadline`, `kind`, `reach`, the answered form's option where §8e.7's record
+     puts it in git, and `anchor_sha`. It carries `UNIQUE (token, state)`, and it has no column a later write could
+     update. Its `.keys` declares `t1_gate_transition.tree_hash = tree` and `t1_gate_transition.anchor_sha = sha`
+     (AC-166). It **drops `t1_gate`**, whose rows are 0 in every store (§8e.0 items 2 and 4). A table named as tier 1
+     that nothing writes is exactly what ADR-0158 found misleading. It also adds the interim `item` column beside the
+     payload (§8e.10). `SCHEMA_VERSION` becomes **2**.
+   - **A gate's state is the fold over its transition rows.** Each row is written by §8e.3's boundary function, beside
+     its state-bearing `Gate:` trailer (§8e.7). A fresh token per re-reach (ADR-0105 clause 10) keeps
+     `(token, state)` unique.
+   - **Old stores are rebuilt, never migrated in place (AC-180).** The identity check still refuses a version-1 store
+     with *"A migration from {} to {} is required; there is no implicit in-place migration"*. The explicit migration is
+     `doctor --rebuild`, which re-derives a version-2 store from git into a staging file (§8e.9's `open_at`) **without
+     first opening the old one through the identity check**, and then swaps it in. The store is disposable (ADR-0131
+     decision 6: *"the store stays disposable under the deleted-database test"*), so what the rebuild drops is tier 2
+     by definition, and the record lists it. The test is
+     `doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two`. `rk-store`'s AC-180
+     test, `store::an_older_schema_is_refused_and_no_migration_happens`, is written against `SCHEMA_VERSION - 1`, so it
+     moves to version 1 with no edit.
+   - **The shipped store is rebuilt in the migration's commit.** At `c5d19d7` it stamps version 1 and holds six
+     `t2_event` rows and no tier-1 row (§8e.0 item 2). The operator backs it up, runs `doctor --rebuild`, and records
+     the before and after counts in the commit body. Checkpoint 7i reads the shipped store through `redkiln cost` and a
+     `mode=ro` probe, so the rebuild makes 7i provisional, and Checkpoint 8e re-runs it (§8e.13).
+   - **The record states that `answered` is never written again**, because the column no longer exists. Design §5
+     carries no `t1_*` column list, so the note is the record's and the migration header's.
 
 ### 8e.3 Git-first, owned by the kernel (D21-42 8a; D21-43 N6, N7 and N10's seam)
 
@@ -318,7 +328,7 @@ anchored to the one commit. The seam guarantees three things `s8f` builds on:
   the run ref (`tier_one::an_act_with_neither_trailer_nor_content_is_refused`). A trailer-less act with content is the
   shape N10's per-step checkpoint takes, and `s8f` builds and tests it.
 - **The heal below covers tier-1 marks only.** A content commit whose step row never reached the store is `s8f`'s
-  landing record's to settle, and §8e.15 names it for that record.
+  landing record's to settle, and §8e.13 names it for that record.
 
 **Every tier-1 act on the tree routes through it:**
 
@@ -365,7 +375,7 @@ converse is a crash between step 2 and step 4: a trailer commit on `rk-run/<item
 entry, after `reconcile_at_entry`, the kernel's `tier_one::heal` appends the missing rows for every reconciled mark
 whose anchor is reachable from `rk-run/<item>` and absent from the store. This is git → store, the direction ADR-0109
 decision 1 permits, and it writes nothing to git (AC-174). A mark whose anchor is unreachable heals nothing, and a
-separate test covers that branch (§8e.14).
+separate test covers that branch (§8e.12).
 
 **AC-162's instruments, all three, named by the register.** *"a fault-injection test with a git backend that fails
 the commit, asserting zero store rows afterwards; a second fault-injection fixture installing a hook that rewrites the
@@ -386,22 +396,25 @@ refused with a typed rk-git error on mismatch."*
 Today the two verbs disagree, which is R-63. `answer`'s `recorded_ownership` reads the pair off the last
 `reconcile_started` row (RT-47, *"ROUTED, not decided"*). `run`'s `story_trailer` and `terminal_read` **rebuild it by
 convention**: `resolved.common_dir.join("redkiln").join("worktrees").join(item)` on `format!("rk-run/{item}")`.
-That convention also moves (§8e.10), which is one more reason no reader may keep it.
+`s8d-ii` routed that convention through `rk_git::worktree`'s one derivation, under the new root (`s8d-ii` §8d-ii.1).
+A derivation is still a convention, so no reader may resolve ownership from it.
 
 - **The kind.** `worktree_assigned { item, worktree, branch, reused, discarded }` is minted by ADR-0116's route: a
   design §5 row and the `rk-types` variant in one change, with `tier()`, `ALL`, the completeness and snapshot tests,
   and the no-catch-all arms in `fsm.rs`, `breaker.rs` and `memo.rs`. It is written at **every** run start, on a
   created tree and on a reused one. `reused` says which, and `discarded` lists every in-flight path the re-entry threw
-  away (§8e.11, W2's *"discarded explicitly and journalled"*).
+  away. `s8d-ii`'s lifecycle function returns that list (`s8d-ii` §8d-ii.3), and until this row exists `run` prints
+  it on stderr. This row is where W2's *"discarded explicitly and journalled"* is finally journalled.
 - **The deleted-database question, answered in terms by the record.** If the database is deleted, `answer` finds no
-  row and refuses (fail-closed) until a `run` writes one. Under W2 that `run` re-enters the registered, marked tree
+  row and refuses (fail-closed) until a `run` writes one. Under W2 (`s8d-ii` §8d-ii.3) that `run` re-enters the
+  registered, marked tree
   and writes the row without re-creating anything. The record states whether that is a tier-2 disposal or a
   next-action change.
 - **It carries the item, and every reader filters by it.** `recorded_ownership` filters by kind alone, and
   `SqliteStore::query` ignores its selector — `fn query(&self, _by: Query)` runs `"SELECT kind, payload FROM t2_event
   ORDER BY id"` (RT-4). With two items in one store, `answer` would take the last pair of **either** item. The target
   and the ownership would then both come from that one row, so `authorise_tier1_write`'s comparison would pass for
-  the wrong run. §8e.12 makes `query` honour `ByItem`, and this reader goes through it.
+  the wrong run. §8e.10 makes `query` honour `ByItem`, and this reader goes through it.
 - **Every tier-1 write resolves its `RunOwnership` from this row**, through §8e.3's function, and never from `cwd` or
   a path convention. A mismatch is the existing typed `GitError::ForeignWorktree { target_path, target_branch,
   owned_path, owned_branch }`, which already names all four values AC-529 asks for.
@@ -457,7 +470,7 @@ seeding `through_step_seven` so `run` and `answer` both see it."* N7 adds *"The 
 **The two forbids bullets the first draft raised rather than took are now listed in the records table** (ADR-0157's
 *"Reading a second invocation's exit 0 as progress, or as evidence that the lane finished."* and ADR-0161's
 *"Describing the lane loop as covered by tests, or reading a green suite as evidence about it."*). A second invocation
-**does** progress once this lands, and §8e.13's tests exist to contradict the second. Under ADR-0092 rule 1, moving
+**does** progress once this lands, and §8e.11's tests exist to contradict the second. Under ADR-0092 rule 1, moving
 either one is a supersession, and the stage-location record takes both.
 
 ### 8e.6 Every stage the lane may enter is entered and trailered; an empty one says so; the end is marked (D21-42 7; D21-43 N9)
@@ -480,7 +493,8 @@ empty stage records `stage_empty { reason }`."*
   `Story: <project>/<item> closed` through §8e.3's function, with the empty content arm at Checkpoint 8e. `s8f`'s
   landed arm makes it carry closeout's content checkpoint. The fold reads `closed` as the item's latest state. A
   `run` on a closed item reports that it is closed, exits 0, and mints nothing. That exit 0 is **Done**, read from
-  git, and it is not ADR-0157's stall. Removal of the run tree (§8e.11) is keyed to this mark.
+  git, and it is not ADR-0157's stall. Removal of the run tree is keyed to this mark. `s8d-ii` §8d-ii.3 built the
+  rule (clean, landed, marked, unlocked, and never `--force`), and this stage wires its trigger.
 - **What `s8` gains, and what it does not.** D21-42 7 says *"s8 asserts set and order equality mechanically from the
   lane's own trailer commits"*. That amendment is `s8j`'s. This stage proves the property over a fixture lane
   (`lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order`), with no pack literal: the
@@ -526,8 +540,8 @@ deleted database, and AC-161's *"the gate records the trailers carry"* has nothi
   `as_i64`, and `answer.rs` builds `record.deadline().unix_seconds()`. ADR-0163 already found that *"no crate formats
   RFC 3339"*. The row is amended to match, and an RFC 3339 deadline in a `Gate:` value is malformed drift
   (`trailers::an_rfc3339_gate_deadline_is_malformed_drift`). `rk-git`'s `grammar` test that feeds
-  `Gate: tok-1 {sha} 2026-09-13T00:00:00Z` is re-pointed in the same commit. `t1_gate.deadline` is `TEXT` and holds the
-  decimal.
+  `Gate: tok-1 {sha} 2026-09-13T00:00:00Z` is re-pointed in the same commit. `t1_gate_transition.deadline` is
+  `TEXT` and holds the decimal.
 - **`terminal_read` stops committing and reads the fold.** Its scan (`e.kind == …GateOpened &&
   e.payload.get("token").is_some_and(|t| !t.is_null())`) has *"no answered/void/expired filter"* (ADR-0161's recorded
   fourth finding). It re-commits a `Gate:` for a dead token and prints that the gate is open. After §8e.3 the commit
@@ -535,7 +549,7 @@ deleted database, and AC-161's *"the gate records the trailers carry"* has nothi
   returns over the recorded journal, which excludes answered, void and expired tokens. A re-run after an answer
   therefore mints no second opening and prints no open gate.
 - **The rebuild now writes gates.** `events_from_trailers`'s `Gate:` arm stops listing every mark unresolvable. It
-  emits each gate's opening into `t1_gate` and each later transition as its anchored row, from the state tokens. That
+  emits every transition, the opening included, into `t1_gate_transition` as its anchored row, from the state tokens. That
   discharges `s7d` §7d.18's RAISED widening item.
 - **Every new gate state needs a `gate_expiry` row only where it opens a gate.** The table is `s8h`'s (D21-42 21a).
   This stage mints no new gate **kind**, so it adds no row. `s8f`'s `drift` and `landing` kinds are `s8f`'s to hand on.
@@ -585,7 +599,7 @@ deleted database, and AC-161's *"the gate records the trailers carry"* has nothi
   The `#[ignore = "ARMED: …"]` line is deleted in that commit. No erratum is owed for it, because it is source and
   not a record. ADR-0162 decision 2 (*"The `Slice-Verdict:` axis is NOT touched, and the checkpoint enforces that"*)
   was scoped to that record's work. The slice record cites it and re-states Checkpoint 7h guards (6) and (7), as
-  §8e.15 spells out.
+  §8e.13 spells out.
 - 🛑 **No document claims the review gate is guarded against false approval** (ADR-0101 clause 5; S-SUBTLE-CB is
   UNRUN). A seal records a verdict. It says nothing about the verdict's calibration.
 
@@ -597,7 +611,7 @@ bracketed `[s7d]` is inserted into the quotation here: the ledger's bare referen
 
 - **The duplicated statement goes.** `rebuild.rs` carries *"🛑 THE SECOND COPY OF `SqliteStore::append`'s
   STATEMENT"*. `rk-adapter-sqlite` gains `SqliteStore::open_at(path)`, which targets the staging file, and the rebuild
-  writes through it. It writes the `t1_*` rows (boundaries, gate openings and seals, each anchored to its own
+  writes through it. It writes the `t1_*` rows (boundaries, every gate transition and seals, each anchored to its own
   trailer commit) and the anchored `t2_event` rows of tier-1 kinds, through `rk-store`'s `tier_one` statements. The
   git read and the item-record fallback stay in `rk-cli`, because the order *"git → store, never the reverse"* is
   the doctor's. Checkpoint 8e asserts that no `INSERT INTO` code line remains under `crates/rk-cli/src/`.
@@ -621,219 +635,50 @@ bracketed `[s7d]` is inserted into the quotation here: the ledger's bare referen
   and its header gains a dated line naming the anchored test as the half that measures the route. Adding the anchored
   test to `s8` (2)'s own block is `s8j`'s instrument amendment, and it is listed there rather than made here.
 
-### 8e.10 The run worktree moves to `.redkiln/worktrees/<item>` (D21-44)
+### 8e.10 The interim `item` key, outside the canonical digest, and `query` honours `ByItem` (D21-43 N5; D21-46 R3)
 
-**The decision:** *"Run-owned worktrees move to **`.redkiln/worktrees/<item>`**, git-ignored. This mirrors Claude
-Code's own `.claude/worktrees/<name>` convention"*. N1b measured it writable: *"`.redkiln/worktrees/probe-n1b`
-(Claude-style, in-repo) | **`edited`** | **none**"*. D21-45 explains why: `checkPathSafetyForAutoEdit` treats a path
-as sensitive if *"ANY segment"* is one of its list, and `.git` is on it while `.redkiln` is not.
-
-**What the record supersedes, measured rather than taken from the ledger's summary.** D21-44 says *"A record
-superseding in part ADR-0018's and ADR-0105's common-dir worktree placement"*. Read against the records:
-- **ADR-0018 names no worktree path.** Its `## Decision` says the kernel *"resolves the repository's common dir
-  (`git rev-parse --git-common-dir`) and refuses to write when the current worktree's HEAD is not the run's branch"*.
-  Its context places **the store** at the common dir: *"One store per repository lives at `git rev-parse
-  --git-common-dir`/redkiln/"*. The store does not move. So the record cites ADR-0018 and supersedes none of it.
-- **ADR-0105 names no path either.** Clause 6 is about re-creation, and that is superseded — by W2, not by the move
-  (§8e.11).
-- **The path literal lives in ADR-0137 decision 3:** *"**`project_root` is the run-owned worktree** — `<common-dir>/redkiln/worktrees/<item>`"*.
-  That is `## Decision` text, so under ADR-0092 rule 1 the record supersedes the literal in part, and the rule stands.
-  The same path appears in design §5's `reconcile_started` row (*"the worktree and branch rebuild deterministically
-  from the item id (`<common-dir>/redkiln/worktrees/<item>/` on `rk-run/<item>`)"*) and in `s7d` §7d.5's tables. Each
-  takes a dated note.
-
-**Every derivation moves to one function.** At `a6349b6` the old root is derived at **four** code sites in
-`crates/rk-cli/src/verbs/run.rs`: `story_trailer`, `terminal_read`, `reference_worktree` (`format!("{item}.review-ref")`)
-and `recreate_run_worktree` (`common_dir.join("redkiln").join("worktrees").join(item)`). There are **six** test code
-sites in `crates/rk-cli/tests/it/run.rs` and `answer.rs`. After this stage, `rk_git::worktree` owns the one
-derivation. It takes the repository root and a validated item (§8e.11's W1) and returns the path and the branch
-together. `story_trailer` and `terminal_read`'s commit are deleted (§8e.3). `run`, `reference_worktree` and every test
-support helper call the function. Checkpoint 8e's code-line floor asserts that no code line outside
-`crates/rk-git/src/worktree.rs` names a `"worktrees"` directory. The one exception is `doctor`'s
-`ctx.common_dir.join("worktrees")`, which is **git's own** administrative directory and does not move.
-
-**The ignore rows are load-bearing, not tidy.** A run tree is now a full checkout inside the checkout's own directory.
-Without an ignore, `git status --porcelain` in the user's checkout lists it, and AC-518's instrument
-(*"`git status --porcelain` empty, `git diff-index --quiet HEAD` clean, and HEAD unmoved"*) fails on a correct run.
-- **This repository:** `.gitignore` already carries `.redkiln/worktrees/`. D21-44 says of that row that it *"is inert
-  until s8e moves the root"*.
-- **A target repository:** `init` writes the exclude block (§8e.11, W4).
-- **Every fixture repository a lane runs in** gains the ignore, in the commit that moves the root. That is the same
-  kind of forced edit as `[project] name`, and the one most likely to be missed.
-- **Creation refuses by name** when `git check-ignore` does not report `.redkiln/worktrees/<item>` as ignored
-  (`worktree::creation_refuses_when_the_worktree_root_is_not_ignored`). The alternative is a run that dirties the
-  user's checkout by existing. This refusal is the worktree record's to confirm (§8e.15, finding 15).
-
-**The dated register notes.**
-- **AC-518**'s THEN reads *"refused unless its target is a run-owned worktree or the store under the resolved common
-  dir"*. The note records that the run-owned worktree now sits inside the checkout's directory and is a separate
-  checkout. It records that the instrument's `git status --porcelain` holds through the ignore rows. And it records
-  that `lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it` is the instrument's run.
-- **AC-529** carries no path. Its Verified-by reads *"the store's worktree row and not `std::env::current_dir`"*. The
-  note names that row as `worktree_assigned` (§8e.4). It records the move, and D21-44's *"Ownership stays with the
-  store row, so AC-529 stays real wherever the path is"*.
-
-**Every recursive walk over `.redkiln/` excludes `worktrees/`, with a control.** A run tree carries a full copy of
-`.redkiln/`, so any walker that recurses would read a second catalog, a second set of cards, and stale runbook text.
-- **In the code this stage owns, the walk count is zero** (§8e.0 item 6). The guard is behavioural, not a promise.
-  `run_worktree::no_redkiln_reader_sees_a_planted_run_worktree` plants
-  `.redkiln/worktrees/planted/.redkiln/{catalog,cards,specs,items}` with **invalid** contents. It asserts that
-  `doctor`'s findings, the catalog load and the item resolution are byte-equal with and without the planted tree. Its
-  synthetic control is mutant `S8E-M32`, which makes `doctor`'s card reader recursive and must turn it RED.
-- **Outside this stage's code, each owner applies the exclusion:**
-  - `s8-exit-criterion.md`'s recursive greps over `crates/ .redkiln/` are `s8j`'s (`s8j` owns every `s8` amendment).
-    At `a6349b6` they are the `require.*\b(criticality|…)\b` search, the `append(_route)? *= *true` search, and the
-    `findings\.none\(evidence in \[Reproduced, MutationSurvived\]\)` search. So is the mechanical block's
-    `grep -rn … .`, which D21-40 found reading `.git/redkiln/worktrees/`. It would now read `.redkiln/worktrees/`, so
-    excluding `.git/` alone no longer suffices.
-  - `s8b`'s catalog-quality walks are `s8b`'s.
-  - `s8j`'s own greps are `s8j`'s.
-- **This stage's own checkpoint** walks nothing under `.redkiln/` recursively.
-
-### 8e.11 The run-worktree lifecycle: Claude Code's safety practices (D21-45 W1, W2, W4; W3's carry)
-
-**The decisions.** W1: *"**Adopt all**"*. W2: *"**Reuse, never force-remove.** … **This replaces
-`recreate_run_worktree`'s `worktree remove --force` + `remove_dir_all` at every run start.**"* W4: *"**Both.**
-Worktree creation is refused, with a diagnosis, when a repo-local filter driver … or an `includeIf` would yield
-pointer files. **`redkiln init` writes an idempotent `# redkiln-runtime` block to `<commondir>/info/exclude`**"*.
-W3's carry: *"**Honour the project's existing `.worktreeinclude`**"* and *"**Dependencies come through N25's
-per-toolchain `setup` verb.**"*
-
-**W1 — the guards, each a named test in `rk-git`'s `worktree` module.**
-- **The item id is validated as a path component and a branch component, once, in the derivation §8e.10 names.**
-  The rules are:
-  - at most 64 characters;
-  - the one segment matches `^[a-zA-Z0-9._-]+$`;
-  - it is not `.`, `..` or `.git` (case-folded, because Windows is);
-  - it has no leading `.`, and no `.lock` suffix (git's ref rules for `rk-run/<item>`);
-  - it has no `.review-ref` suffix. That one is found here: `reference_worktree` names its tree `<item>.review-ref`
-    in the same directory, so an item id ending that way would collide with another item's reference tree.
-
-  One table-driven test asserts each row's own refusal reason.
-- **Symlink guards.** Creation refuses when `.redkiln`, `.redkiln/worktrees` or `<item>` is a symlink, or on Windows
-  a junction. After `git worktree add`, the created tree's canonical path must lie under the canonical
-  `.redkiln/worktrees/`, or the tree is refused and the refusal names both paths. Claude Code's reason is the one
-  quoted in D21-45: *"A repository-committed symlink at .claude … could redirect worktree creation outside the
-  repository"*.
-- **The `RK_BASE` marker.** At creation, `RK_BASE` is written into the tree's own gitdir (`git rev-parse --git-dir`
-  from inside it). It holds the fork sha and the item id, so ownership is recoverable from git alone (ADR-0109
-  decision 4). Redkiln never removes a tree without it.
-- **The lock.** `git worktree lock --reason "redkiln run <item> (pid N start T)"` at every run start, and unlocked at
-  the run's end. A lock whose pid `rk_containment::is_alive` reports dead is released. A lock held by a live pid
-  refuses the run by name. `is_alive` reads the pid alone, and its own doc names *"the documented ambiguity of this
-  API"*. So a reused pid reads as alive, and the run refuses. That is fail-closed, and the record says so.
-- **The re-entry check.** A registered tree is reused only if it is a separate checkout **of this repository**:
-  `git rev-parse --git-common-dir` from inside it equals the repository's, and `git worktree list --porcelain` lists
-  its path.
-- **`LC_ALL=C` on every parsed git call.** `GitExec`'s child environment sets it, at the one process-exec site
-  (`run_with_env`'s `Command::new("git")`), so no parse depends on the operator's locale
-  (`gitops::every_git_child_runs_with_lc_all_c`).
-- **Windows removal never follows a junction.** `worktree::removal_never_follows_a_junction` puts an ignored junction
-  inside a tree that points at a sentinel directory outside it. It removes the tree, and asserts the sentinel's
-  contents survive. On a platform without junctions the arm is a symlink, and the test says which it ran.
-
-**W2 — reuse, never force-remove.** This replaces `recreate_run_worktree` whole, and its doc's *"**Re-created, never
-reused** (ADR-0105 clause 6…)"* with it.
-- **First creation:** `git worktree add --no-track -b rk-run/<item> <path> HEAD`. The fork is the frozen,
-  CI-green `HEAD`, not `origin/<default>` (D21-45's *"Where redkiln deliberately differs"*).
-- **The branch exists but no tree is registered:** `git worktree add <path> rk-run/<item>`. That happens after a
-  landed removal, or after a deleted tree. **Never `-B`**, which *"resets an existing branch and would destroy a
-  resumable run"* (`worktree::an_existing_run_branch_is_never_reset`).
-- **Re-entry:** the registered tree is reused when it carries `RK_BASE`, passes the re-entry check, and its `HEAD`
-  equals the `rk-run/<item>` tip. In-flight changes are read first, path by path, through `GitOp::Status`
-  (`--porcelain=v1 -z --untracked-files=all`). They are discarded explicitly (`reset --hard HEAD`, then `clean -fd`),
-  and listed on that run's `worktree_assigned.discarded` (§8e.4). That is N10's semantics: what was not landed at a
-  committed step is not work. `clean` runs **without `-x`**, so ignored files survive re-entry: W3's carried files and
-  the `setup` verb's `node_modules` stay (`worktree::reentry_keeps_ignored_files`).
-- **Refused, never removed:** a tree with no `RK_BASE`, a tree registered to another repository, and a tree whose
-  `HEAD` has commits the run ref lacks. Each refusal names the path and the reason.
-- **Removal** happens only when the tree is clean, landed (`HEAD` equals the run-ref tip), marked and unlocked. It is
-  keyed to the lane's `closed` mark (§8e.6), and it uses `git worktree remove` **without `--force`**. Anything else is
-  kept, with a reason in Claude Code's form (*"N changed file(s) would be lost"*). Redkiln never removes a tree it did
-  not create. The review reference tree follows the same rule. It is detached and read-only by D21-41 (g)'s grants, so
-  it is clean unless something wrote to it, and then it is kept and named.
-- **Halt 6 is answered, not overridden.** Halt 6: *"If a fixture tree will not delete, that is the handle, and reusing
-  the tree corrupts the next arm."* Reuse here is of a run's **own** tree, by the same item, only when its `HEAD` is
-  the run ref's tip, and only after an explicit, journalled discard. A tree that will not delete is kept and named,
-  and it is never handed to another item. The record states this, and it answers ADR-0105's rejected option
-  *"reuse worktrees across runs"* (*"a fresh worktree per run is the only state the kernel can assert"*) in the same
-  terms. The asserted state is now `RK_BASE` + `HEAD` = tip + an empty status after the discard.
-- **Removal is by run state, never by age.** There is no `cleanupPeriodDays` analogue.
-
-**W3's carry, at creation only.** After `git worktree add` and before the lock is released to the run, creation:
-1. calls `s8c`'s `.worktreeinclude` reader (ignored ∩ matched, symlinks skipped, escapes refused) and copies what it
-   returns;
-2. then runs `s8c`'s per-toolchain `setup` verb (`pnpm install --frozen-lockfile --prefer-offline` for each declared
-   Node fixture project).
-
-A `setup` failure is `s8c`'s by-name refusal, and the run surfaces it and stops
-(`run_worktree::a_failed_setup_refuses_by_name`). `settings.local.json` is not copied, because children run with
-isolated settings (`s8h`). No `node_modules` symlink is made (W3: *"they share mutable state across runs"*). A reused
-tree is not re-carried: its ignored files survived the discard.
-
-**W4 — git hygiene.**
-- **The filter-driver refusal.** Before `git worktree add`, creation reads the repository-local config:
-  `git config --local --get-regexp` over `^filter\.` and over `^includeif\.`. It refuses, with a diagnosis naming each
-  key, when a repo-local filter driver or an `includeIf` exists, because either would yield pointer files in the run
-  tree (D21-45: *"LFS `--local` would yield pointer files"*). Three tests: the filter, the `includeIf`, and a control
-  repository with neither that creates. **This refusal is what `s8a`'s `Text` variant verifies an LFS pointer path
-  against**, so a run tree never materialises pointers through a local filter.
-- **`init` writes the `# redkiln-runtime` block.** `init` appends to `<commondir>/info/exclude`, creating the file if
-  git's template did not:
-
-  ```
-  # redkiln-runtime
-  /.redkiln/worktrees/
-  # end redkiln-runtime
-  ```
-
-  The write is idempotent. A second `init` finds the marker and leaves the file byte-identical, which extends
-  ADR-0107 decision 2's *"A second `init` leaves this file untouched"* to this file. Lines the operator wrote are
-  never touched. `.gitignore` is never written (D21-45: *"never to `.gitignore`"*). This repository keeps its tracked
-  `.gitignore` row as well. The block is written in the common directory, beside the store, which AC-531's manifest
-  lists *"separately and unlinted"*, so `CreatedNames` is unchanged.
-
-**The `GitOp` variants this takes, named because *"adding a variant is that decision made visible"*** (`git_exec.rs`).
-ADR-0105 clause 5 enumerates the wrapper's write set and says *"Anything not listed is a successor"*. So the worktree
-record supersedes clause 5 in part, for:
-- the writes: `worktree lock`, `worktree unlock`, `reset --hard HEAD` and `clean -fd`, the last two on the owned
-  tree only;
-- the reads: `worktree list --porcelain`, `config --local --get-regexp` and `check-ignore`.
-
-Every one of them runs through `GitOps` (N7's `git_op` row), and on replay none of them runs.
-
-**The worst-case path (§8e.0 item 2).** The record states the bound: `len(root) + 20 + 64 + 11 + 1 +` the longest
-tracked path, measured **255** of **259** at `a6349b6`, with no `core.longpaths`. It also states the rule. This file
-recommends that creation refuse by name when the computed worst case exceeds 259 and `core.longpaths` is not `true`,
-rather than check out a partial tree (`worktree::creation_refuses_a_path_past_the_platform_limit_by_name`).
-
-### 8e.12 The interim `item` key, and `query` honours `ByItem` (D21-43 N5)
-
-**The decision:** *"An interim `item` key on every item-scoped event kind, moving to ADR-0131's tag later as
+**The decisions.** N5: *"An interim `item` key on every item-scoped event kind, moving to ADR-0131's tag later as
 ADR-0163's interim key does; `query` honours `ByItem`. Supersedes ADR-0131's first forbids bullet in part, for those
-members."* It settles the first draft's finding 7. `stage_transition_event` carried no item, `SqliteStore::query`
-ignored its selector, and a second item's `run` in the same store would fold the first item's transitions.
-`stages_entered` could then refuse its advance. `s8` runs a fix item **and** a story item in one repository.
+members."* R3 then fixes where the key lives: *"**Carried outside the canonical digest**, as ADR-0131 places its tag
+set. Digests and golden logs are unchanged, and `query` still uses the key."* Together they settle the first draft's
+finding 7. `stage_transition_event` carried no item, `SqliteStore::query` ignored its selector, and a second item's
+`run` in the same store would fold the first item's transitions. `stages_entered` could then refuse its advance. `s8`
+runs a fix item **and** a story item in one repository.
 
-- **The members.** The record enumerates every item-scoped kind and adds `item` to each payload, in the shape
-  ADR-0163 gave `rate_limit_reading.item`. A kind it judges not item-scoped is listed by name with its reason.
-  `fsm::every_item_scoped_kind_carries_the_interim_item_key` iterates `EventKind::ALL` against that list, so a kind
-  added later without a decision fails it. `dispatch_completed`'s `item` is one of these members. `s8f` cites this
-  record for it and keeps `activity_id_at_version` and the breakdown (D21-42 12b).
-- **`query(ByItem(x))` returns only rows whose `item` is `x`**, in `rk-store`'s SQL over the payload, and in
+- **Where the key lives: beside the event, not in it.** ADR-0131 decision 2 is the placement R3 cites: *"Tags are
+  carried on the event and are OUTSIDE `canonical_events`. `canonical_events` stays `{kind, payload}`, byte for
+  byte."* So the key is a member carried beside the event, outside `payload`, `canonical_events` and `event_json`. The
+  store persists it in the `t2_event.item` column that §8e.2's `0002` migration adds, as it persists `anchor_sha`. The
+  record fixes the Rust carrier. It honours ADR-0131's second forbids bullet (*"Forbids `canonical_events` or
+  `event_json` gaining any member beyond `kind` and `payload`"*). Because the key is not in the payload, it does not
+  move the first bullet either (§8e.13, finding 12).
+- **The members.** The record enumerates every item-scoped kind and sets the key on each. A kind it judges not
+  item-scoped is listed by name with its reason. `fsm::every_item_scoped_kind_carries_the_interim_item_key` iterates
+  `EventKind::ALL` against that list, so a kind added later without a decision fails it. `dispatch_completed` is one of
+  these kinds. `s8f` cites this record for it and keeps `activity_id_at_version` and the breakdown (D21-42 12b).
+  `rate_limit_reading.item` stays in the payload where ADR-0163 put it, and the record says whether that kind carries
+  the key beside it as well.
+- **`query(ByItem(x))` returns only rows whose `item` is `x`**, in `rk-store`'s SQL over the `item` column, and in
   `VecStore`. The conformance arm asserts it for both rows. Every reader that folds one item reads through it: the
   kernel's fold input, `answer`'s ownership read (§8e.4), and `explain`. `BySha` and `ByRun` stay as they are, and the
   record says whether they are still inert.
 - **What an item-less row does under `ByItem`.** A row written before this stage carries no `item`. The record fixes
   whether `ByItem` excludes it or reads it as the one item the store has ever held, and says which. This file
   recommends exclusion plus a named `doctor` finding, because a guess about ownership is the defect N5 exists to end.
-- **The cost, stated as ADR-0163 stated it.** The key breaks ADR-0131's *"Waiting accretes nothing"* for these
-  members, and it moves to ADR-0131's reserved `item` tag when that wiring lands. §8e.0 item 3 is the STOP on the
-  golden-log cost.
+- **The golden logs do not move (R3), and a test says so.** With the key outside `canonical_events`, no golden log's
+  canonical events change, `CORPUS_PIN` does not move, and `run_id` is untouched, which is ADR-0131 decision 2's own
+  consequence list. `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key` pins it in two arms.
+  The first: every committed golden log's canonical digest equals the value §8e.0 item 3 recorded. The second: one
+  event with the key and the same event without it have the same canonical digest. Mutant S8E-M35, which writes the
+  key into `payload`, must redden the second arm.
+- **The cost, stated as ADR-0163 stated it.** ADR-0131's decision driver *"Waiting accretes nothing"* is broken for
+  these members in one respect: a carrier exists before ADR-0131's tag wiring does. It moves to ADR-0131's reserved
+  `item` tag when that wiring lands, and the column's meaning does not change. The golden-log cost that §8e.0 used to
+  STOP on does not arise.
 - `lane_e2e::two_items_in_one_store_do_not_fold_together` runs two items' lanes in one fixture repository and one
   store. It asserts each item's stage, gates and `stages_entered` are its own.
 
-### 8e.13 The first end-to-end tests of `verbs::run::run` (D21-42 24c; D21-40 decision 2)
+### 8e.11 The first end-to-end tests of `verbs::run::run` (D21-42 24c; D21-40 decision 2)
 
 **The seam is one field, and the code says so in advance.** `run()` always builds
 `rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone())`, so no test can hand it a
@@ -852,9 +697,11 @@ assertion.
 - a review stage over `review-min`.
 
 It also gains an item with a `slice`. Its `config.toml`, and every fixture repository a lane runs in, gains `[project]
-name` and the `.redkiln/worktrees/` ignore (§8e.10). **Those edits are forced, and they are the ones most likely to be
-missed.** Entry now mints a `Story:` mark (§8e.6), and ADR-0159 decision 2 refuses at the mint. Creation refuses an
-un-ignored root. So every existing binary fixture that runs a stage would change its exit from its row to `3`:
+name`. The `.redkiln/worktrees/` ignore is already there for every fixture repository a run creates a worktree in,
+because `s8d-ii` added it with the root (`s8d-ii` §8d-ii.1), and the new lane variant takes it too. **The `[project]
+name` edit is forced, and it is the one most likely to be missed.** Entry now mints a `Story:` mark (§8e.6), and
+ADR-0159 decision 2 refuses at the mint. So every existing binary fixture that runs a stage would change its exit from
+its row to `3`:
 AC-438's table, `cost`'s run, and `exit/findings-block/`. Checkpoints 7h (10a) and 7i (3) are the witnesses. For the
 same reason, the item that `exit/findings-block/` runs gains a `slice`, or its seal refuses and exit 4 becomes 3.
 
@@ -883,28 +730,29 @@ same reason, the item that `exit/findings-block/` runs gains a `slice`, or its s
 - `lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered` (N6; AC-161).
 - `lane_e2e::two_items_in_one_store_do_not_fold_together` (N5).
 - `lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it` (D21-44; AC-518's instrument:
-  `git status --porcelain` empty, `git diff-index --quiet HEAD` clean, `HEAD` unmoved).
-- `lane_e2e::a_second_invocation_reuses_the_run_worktree` (W2 on the run path). The tree's inode-level identity is
-  not observable portably, so the test plants an **ignored** file after invocation 1 and asserts it is still there
-  after invocation 2, which a re-creation would delete.
+  `git status --porcelain` empty, `git diff-index --quiet HEAD` clean, `HEAD` unmoved), over `s8d-ii`'s root and
+  ignore rows. It is the first full-lane run of that instrument, and `s8d-ii` §8d-ii.10 claims nothing ahead of it.
+- `lane_e2e::a_second_invocation_reuses_the_run_worktree` (W2 on the run path). `s8d-ii` §8d-ii.3 built the reuse,
+  and this is its first lane-level run. The tree's inode-level identity is not observable portably, so the test plants
+  an **ignored** file after invocation 1 and asserts it is still there after invocation 2, which a re-creation would
+  delete.
 
-### 8e.14 Named tests, red first, and the mutants
+### 8e.12 Named tests, red first, and the mutants
 
 **Every test of a NEW behaviour is written before the code it covers and watched RED for the reason in its row.** A
-test first seen green is not evidence (PIA-035). **Five rows are pins over behaviour that must NOT move, or that no
+test first seen green is not evidence (PIA-035). **Three rows are pins over behaviour that must NOT move, or that no
 code violates today**:
 - `projection::rebuild_differential`;
 - `lane_order::adr0161_…`;
-- `doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record`;
-- `run_worktree::no_redkiln_reader_sees_a_planted_run_worktree`;
-- `worktree::a_repo_with_no_local_filter_or_include_if_creates`, the control.
+- `doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record`.
 
 They are green at entry by design, and each is shown able to fail by the mutant named for it:
 - ADR-0161's `M10` for the lane-order pin;
 - `projection.rs`'s own source lint for the tier filter;
-- `S8E-M18` for the legacy rule;
-- `S8E-M32` for the planted tree;
-- `S8E-M23`'s inverse for the control. It makes the filter check refuse always, and the control must go RED.
+- `S8E-M18` for the legacy rule.
+
+The two run-worktree pins this list used to carry (the planted tree and the filter control) moved to `s8d-ii` with
+their work (`s8d-ii` §8d-ii.8).
 
 Each test is selected in Checkpoint 8e by its module-qualified name with `--exact`. A bare function name under
 `--exact` runs zero tests and exits 0.
@@ -922,33 +770,10 @@ Each test is selected in Checkpoint 8e by its module-qualified name with `--exac
 | `rk-git` | `trailers::the_closed_mark_parses_as_the_lanes_end` | `closed` parses as a stage |
 | `rk-git` | `trailers::reconcile_folds_a_gates_latest_state_per_token` | no state token |
 | `rk-git` | `trailers::an_rfc3339_gate_deadline_is_malformed_drift` | any deadline token parses |
-| `rk-git` | `worktree::an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused` | no validator |
-| `rk-git` | `worktree::a_symlinked_redkiln_or_worktrees_directory_is_refused` | no symlink guard |
-| `rk-git` | `worktree::a_created_worktree_whose_realpath_leaves_the_root_is_refused` | no post-create check |
-| `rk-git` | `worktree::creation_refuses_when_the_worktree_root_is_not_ignored` | no ignore check |
-| `rk-git` | `worktree::creation_refuses_a_path_past_the_platform_limit_by_name` | no length rule |
-| `rk-git` | `worktree::creation_writes_rk_base_into_the_worktree_gitdir` | no marker |
-| `rk-git` | `worktree::creation_locks_the_worktree_with_the_pid_and_start_reason` | no lock |
-| `rk-git` | `worktree::a_lock_held_by_a_dead_pid_is_released` | no lock |
-| `rk-git` | `worktree::a_lock_held_by_a_live_pid_refuses_by_name` | no lock |
-| `rk-git` | `worktree::reentry_reuses_the_registered_tree_when_head_equals_the_run_ref_tip` | re-created by force |
-| `rk-git` | `worktree::reentry_discards_in_flight_changes_and_reports_each_path` | removed silently |
-| `rk-git` | `worktree::reentry_keeps_ignored_files` | the tree is deleted |
-| `rk-git` | `worktree::a_tree_without_rk_base_is_refused_and_never_removed` (renamed from `an_existing_worktree_path_is_refused_not_reused`, whose refusal is kept) | no marker check |
-| `rk-git` | `worktree::a_tree_with_commits_the_run_ref_lacks_is_refused_and_never_removed` | force-removed |
-| `rk-git` | `worktree::a_tree_registered_to_another_repository_is_refused` | no re-entry check |
-| `rk-git` | `worktree::an_existing_run_branch_is_never_reset` | no reuse path to observe it |
-| `rk-git` | `worktree::a_dirty_tree_is_kept_with_its_reason` | no removal rule |
-| `rk-git` | `worktree::a_locked_tree_is_not_removed` | no lock |
-| `rk-git` | `worktree::a_clean_landed_marked_unlocked_tree_is_removed` | no removal rule |
-| `rk-git` | `worktree::removal_never_follows_a_junction` | no guarded removal |
-| `rk-git` | `worktree::a_repo_local_filter_driver_refuses_creation_with_a_diagnosis` | no config read |
-| `rk-git` | `worktree::an_include_if_refuses_creation_with_a_diagnosis` | no config read |
-| `rk-git` | `worktree::a_repo_with_no_local_filter_or_include_if_creates` | green — the control; no refusal to observe |
-| `rk-git` | `gitops::every_git_child_runs_with_lc_all_c` | no `LC_ALL` |
 | `rk-store` | `store::writer_poison_is_a_halt_and_never_recovered` | `into_inner` recovers |
 | `rk-store` | `store::tier_one_statements_insert_a_stage_transition_with_its_anchor_and_tree` | no statement exists |
-| `rk-store` | `store::t1_gate_takes_one_opening_row_per_token_and_is_never_updated` | no statement exists |
+| `rk-store` | `store::t1_gate_transition_appends_one_row_per_transition_and_is_never_updated` | no table exists |
+| `rk-store` | `store::migration_0002_adds_the_transitions_table_and_the_item_column_and_stamps_version_two` | `SCHEMA_VERSION` is 1 and no `0002` exists |
 | `rk-ports` | `event_store_port::ac364_event_store_port_has_no_update_or_delete` (asserts five) | the method count is four |
 | `rk-ports` | `fake_behaviour::vec_store_append_tier1_is_queryable_with_its_anchor` | no method |
 | `rk-ports` | `fake_behaviour::vec_store_query_by_item_returns_only_that_items_rows` | the selector is ignored |
@@ -977,7 +802,8 @@ Each test is selected in Checkpoint 8e by its module-qualified name with `--exac
 | `rk-kernel` | `lane_order::adr0161_a_stage_the_lane_has_entered_is_not_entered_again` | green — the regression witness for the seed change |
 | `rk-kernel` | `lane_order::a_pack_stage_named_closed_is_refused_at_load` | `closed` is an ordinary name |
 | `rk-kernel` | `fsm::every_item_scoped_kind_carries_the_interim_item_key` | no `item` member |
-| `rk-cli` | the thirteen `lane_e2e::…` tests in §8e.13 | `verbs::run::run(` has no FakeHarness seam |
+| `rk-kernel` | `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key` | no key carrier; its first arm alone is a pin, and its second cannot be written |
+| `rk-cli` | the thirteen `lane_e2e::…` tests in §8e.11 | `verbs::run::run(` has no FakeHarness seam |
 | `rk-cli` | `slice_verdict::approved_is_sealed_on_the_advance_path` | no seal |
 | `rk-cli` | `slice_verdict::changes_requested_is_sealed_on_the_findings_block_path` | no seal |
 | `rk-cli` | `slice_verdict::an_absent_slice_is_refused_by_name` | no key |
@@ -985,32 +811,27 @@ Each test is selected in Checkpoint 8e by its module-qualified name with `--exac
 | `rk-cli` | `worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed` | no row kind |
 | `rk-cli` | `worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds` | no row kind |
 | `rk-cli` | `worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention` | convention path |
-| `rk-cli` | `run_worktree::the_run_worktree_is_created_under_dot_redkiln_worktrees` | the common-dir root |
-| `rk-cli` | `run_worktree::no_redkiln_reader_sees_a_planted_run_worktree` | green — the pin; `S8E-M32` shows it can fail |
-| `rk-cli` | `run_worktree::creation_carries_worktreeinclude_files_and_runs_setup` | no carry |
-| `rk-cli` | `run_worktree::a_failed_setup_refuses_by_name` | no `setup` call |
-| `rk-cli` | `init::init_writes_the_redkiln_runtime_exclude_block_once` | `init` writes no exclude |
-| `rk-cli` | `init::init_leaves_the_operators_exclude_lines_untouched` | `init` writes no exclude |
 | `rk-cli` | `answer::a_failed_answer_commit_leaves_zero_rows` | `answer` appends first |
 | `rk-cli` | `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows` | no `t1_*` rows |
 | `rk-cli` | `doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value` | gates unresolvable |
 | `rk-cli` | `doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record` | green today — the legacy rule's pin |
+| `rk-cli` | `doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two` | `SCHEMA_VERSION` is 1 |
 | `rk-cli` | `root::adr0118_a_poisoned_writer_mutex_halts_exit_70` | the writer recovers |
 
-**The count.** 97 names: `rk-git` 35, `rk-store` 3, `rk-ports` 3, `rk-adapter-sqlite` 4, `rk-kernel` 21, `rk-cli` 31.
-Four already exist: the AC-364 parse, the ARMED lint, `rebuild_differential` and the ADR-0161 pin. One is a rename. So
-92 are new, and with the un-ignored lint the suite gains **93** passed (§8e.0 item 9).
+**The count.** 70 names: `rk-git` 11, `rk-store` 4, `rk-ports` 3, `rk-adapter-sqlite` 4, `rk-kernel` 22, `rk-cli` 26.
+Four already exist: the AC-364 parse, the ARMED lint, `rebuild_differential` and the ADR-0161 pin. So 66 are new, and
+with the un-ignored lint the suite gains **67** passed (§8e.0 item 7). The earlier count was 97 names. The 30
+run-worktree names, one of them a rename, moved to `s8d-ii` (`s8d-ii` §8d-ii.8), and R2 and R3 added three.
 
 The existing `story_axis::adr0155_…` tests and `doctor::ac427_…`'s synthetic repository are **re-pointed** in the
 record's commit, and none is deleted. `story_value` gains the stage, and the old single-mark assertions become the
-legacy-mark fixture. The six test sites that derive the old root (§8e.10) are re-pointed through the one derivation.
-The same goes for `rk-git`'s `worktree::control_a_worktree_can_be_created_and_removed`, whose removal now needs a
-clean, marked, unlocked tree.
+legacy-mark fixture. The six test sites that derived the old root were re-pointed by `s8d-ii` (`s8d-ii` §8d-ii.1).
 
 **The mutants.** Each mutant is applied and restored **from Python, never the shell**: a backtick once swallowed a
 restore, and the next backup captured the mutant. Each diff is read. Each must turn the named test RED **for the
 named reason**, printed and read, not merely "the suite went red". Names carry an `S8E-` prefix, because `M7` and
-`M10` are already taken by `s7h`.
+`M10` are already taken by `s7h`. S8E-M19, M21 to M24 and M30 to M33, and the `rk-git` half of M20, moved to
+`s8d-ii` as `S8D-II-M1` to `S8D-II-M10` (`s8d-ii` §8d-ii.8). The names that stay are kept, so the numbering has gaps.
 
 | mutant | change | must redden |
 | --- | --- | --- |
@@ -1032,27 +853,21 @@ named reason**, printed and read, not merely "the suite went red". Names carry a
 | S8E-M16 | `reconcile` keeps the first stage mark, not the latest | `trailers::reconcile_folds_the_latest_stage_mark_per_item` |
 | S8E-M17 | a legacy mark resets the stage | `trailers::a_legacy_mark_after_a_stage_mark_does_not_reset_the_stage` |
 | S8E-M18 | the rebuild drops the item-record fallback for a stage-less mark | `doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record` |
-| S8E-M19 | the run-tree root derived under the common dir again | `run_worktree::the_run_worktree_is_created_under_dot_redkiln_worktrees` |
-| S8E-M20 | re-entry force-removes and re-creates (`recreate_run_worktree` restored) | `worktree::reentry_reuses_the_registered_tree_when_head_equals_the_run_ref_tip`, `lane_e2e::a_second_invocation_reuses_the_run_worktree` |
-| S8E-M21 | a tree without `RK_BASE` is removed rather than refused | `worktree::a_tree_without_rk_base_is_refused_and_never_removed` |
-| S8E-M22 | the discard is silent (no paths on the row) | `worktree::reentry_discards_in_flight_changes_and_reports_each_path` |
-| S8E-M23 | the filter-driver read skipped | `worktree::a_repo_local_filter_driver_refuses_creation_with_a_diagnosis` (and its inverse, refuse always, reddens the control) |
-| S8E-M24 | `init` appends the block on every run | `init::init_writes_the_redkiln_runtime_exclude_block_once` |
+| S8E-M20 | the run path re-creates the tree on re-entry (the `rk-git` half is `s8d-ii`'s `S8D-II-M2`) | `lane_e2e::a_second_invocation_reuses_the_run_worktree` |
 | S8E-M25 | `query` ignores `ByItem` again | `store::query_by_item_returns_only_that_items_rows`, `lane_e2e::two_items_in_one_store_do_not_fold_together` |
 | S8E-M26 | `answer` appends `gate_answered` before its commit | `answer::a_failed_answer_commit_leaves_zero_rows`, `tier_one::a_gate_answer_is_committed_before_its_row` |
 | S8E-M27 | the answer's `Gate:` mark written with state `opened` | `lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered` |
 | S8E-M28 | no `closed` mark at the lane's end | `lane_e2e::the_lane_end_mints_a_terminal_closed_mark` |
 | S8E-M29 | the live `GitOps` journal writes no `git_op` row | `tier_one::the_boundary_journals_a_git_op_row_per_invocation`, `tier_one::replay_serves_the_boundary_from_its_git_op_rows` |
-| S8E-M30 | `LC_ALL` not set on the child | `gitops::every_git_child_runs_with_lc_all_c` |
-| S8E-M31 | a dead pid's lock is never released | `worktree::a_lock_held_by_a_dead_pid_is_released` |
-| S8E-M32 | `doctor`'s card reader made recursive | `run_worktree::no_redkiln_reader_sees_a_planted_run_worktree` |
-| S8E-M33 | `clean -fdx` in the discard | `worktree::reentry_keeps_ignored_files` |
+| S8E-M34 | the gate-transition writer updates one row per token instead of appending one per transition | `store::t1_gate_transition_appends_one_row_per_transition_and_is_never_updated` |
+| S8E-M35 | the interim key written into `payload` | `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key` (its second arm) |
+| S8E-M36 | `doctor --rebuild` opens the old store through the identity check before rebuilding | `doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two` |
 
 A mutant that survives is not waved through. It is either an **unobservable property**, which moves to a source lint
 with its reason written down, as `projection.rs`'s tier filter did, or a **missing fixture branch**. Both are recorded
 by the mutant's name.
 
-### 8e.15 What moves in other checkpoints, how 7h and 7i stay runnable, and what this file found
+### 8e.13 What moves in other checkpoints, how 7h and 7i stay runnable, and what this file found
 
 **Checkpoint 7h is amended, dated, in the commit that un-ignores the lint, and re-run at Checkpoint 8e.** Guards (6)
 and (7) assert the lint is ARMED and names `Slice-Verdict` alone. After §8e.8 both are RED by design. That is the
@@ -1073,18 +888,13 @@ that changed after it passed is provisional"* applies: 7h's §1 row becomes `pas
 
 **Checkpoint 7f is amended, dated, in the same commit, and re-run at Checkpoint 8e.** After `s8a` its literal expects
 the lint ignored, with `test result: ok. 2 passed; 0 failed; 1 ignored` (`s8a` §8a.5). `s8a` says in terms that
-*"`s8e`'s Slice-Verdict commit moves this literal again"*. Three edits:
+*"`s8e`'s Slice-Verdict commit moves this literal again"*. One edit is this stage's, and `s8d-ii` made the other two:
 1. **The literal:** `3 passed; 0 failed; 0 ignored`, each of the three lints `... ok`, and the `ARMED:` reason absent.
    `s7f`'s reason regex follows.
-2. **The run arm moves to a throwaway clone.** 7f's block runs `./target/debug/redkiln run rk-fix-doctor-test-count
-   --lane fix` in **this** repository. Under this stage's binary that run would either mint stage-bearing marks on the
-   untouched fixture item (D21-42 18), or refuse at W2's re-entry check. The first breaks 7h's (2) and (3). The second
-   fails 7f's own positive half. So the arm runs in a `git clone` of `HEAD` under 7f's own scratch directory, and it
-   reads that clone's `.git/redkiln/runs`. ADR-0164's `* text=auto eol=lf` row is what makes a fresh checkout test the
-   same bytes (`992d257`: *"a new checkout under autocrlf=true tests the same bytes"*). The clone's `rk-run/` refs and
-   store are its own, so nothing in this repository moves.
-3. **The cleanup line is deleted:** `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`. It
-   force-removes the legacy tree D21-44 keeps for `s8j`, and W2 forbids a forced removal.
+2. **The run arm in a throwaway clone** and 3. **the deleted cleanup line** are `s8d-ii`'s (`s8d-ii` §8d-ii.7),
+   because its binary is the one that would break 7f without them. This stage's binary adds a reason. Run in this
+   repository, 7f's arm would mint stage-bearing marks on the untouched fixture item (D21-42 18), which breaks 7h's
+   (2) and (3). Checkpoint 8e re-asserts both amendments on the extracted bytes before it re-runs 7f.
 
 The arm still cannot dispatch at this stage, because 0 shipped cards carry `permission_mode`. Checkpoint 8e asserts
 that before it re-runs 7f. From `s8h` on, the brief's no-accidental-dispatch rule applies: 7f's arm runs only through
@@ -1099,31 +909,32 @@ shipped store and `redkiln cost`.
   legacy mark is exactly what §8e.5 admits read-only. Checkpoint 8e asserts the ref's sha and the mark's value at its
   start and at its end.
 - 🛑 **Running `redkiln run rk-fix-doctor-test-count` in this repository under this stage's binary would break 7h on its
-  own.** If the legacy registration still holds the branch, W2 refuses. If it is gone (§8e.0 item 1), the run
+  own.** If the legacy registration still holds the branch, W2's re-entry check refuses (`s8d-ii` §8d-ii.3). If it
+  is gone (§8e.0 item 1), the run
   creates `.redkiln/worktrees/rk-fix-doctor-test-count` on the existing branch and mints stage-bearing marks. 7h's (2)
   would then count more than one, and (3)'s slug would carry a stage token. D21-42 18 keeps that item *"the untouched
   fixture item"*, and `s8j` re-points 7h and 7i when it mints the fresh item. Until then nobody runs it.
-- **The shipped store keeps schema version 1**, because §8e.2's frictions are resolved at the writer (route (B)). So
-  `redkiln cost` still opens it, and 7i's `mode=ro` probe reads the same `t2_event`. Checkpoint 8e backs up and
-  restores `.git/redkiln/store.sqlite3` (with its WAL, its SHM and the `rebuilt` sidecar) around `s8` (2)'s
-  `doctor --rebuild`, and it byte-compares the restore.
-- **The binary fixtures 7h (10a) and 7i (3) run get `[project] name`, the ignore and, for `findings-block`, a
-  `slice`**, in the commit that makes entry mint (§8e.13). Their exits do not move.
+- **The shipped store moves to schema version 2**, by the explicit rebuild §8e.2 describes (R2). `redkiln cost` then
+  opens it, and 7i's `mode=ro` probe reads its `t2_event`, which now holds what the rebuild re-derived. That makes 7i
+  provisional, and Checkpoint 8e re-runs it whole. Checkpoint 8e asserts the shipped store stamps version 2 before any
+  re-run. It backs up and restores `.git/redkiln/store.sqlite3` (with its WAL, its SHM and the `rebuilt` sidecar)
+  around `s8` (2)'s `doctor --rebuild`, and it byte-compares the restore.
+- **The binary fixtures 7h (10a) and 7i (3) run get `[project] name` and, for `findings-block`, a `slice`**, in the
+  commit that makes entry mint (§8e.11). `s8d-ii` already gave them the ignore. Their exits do not move.
 
 **Findings made while authoring this file, each measured** (1–9 from the first draft, and their disposition now):
 
 1. **`gate_expired` is tier 1 with no trailer axis.** *Settled by N6*: it is a `Gate: … expired` mark (§8e.7).
-2. **`t1_gate` implies an `UPDATE` AC-364 forbids.** *Bound by N6* (*"append-only"*). **Still owed: the operator's
-   line confirming route (B)'s reading** of *"state is a fold"*, or taking route (A) and its migration (§8e.2,
-   friction 3).
+2. **`t1_gate` implies an `UPDATE` AC-364 forbids.** *Bound by N6* (*"append-only"*), and *settled by D21-46 R2*:
+   route (A), the forward migration to `t1_gate_transition` (§8e.2, friction 3).
 3. **Claiming AC-162 needs more than D21-41 e names.** *Made explicit*: ADR-0155 decision 5(b) and its bullet, and
    ADR-0158 decision 3 and its bullet, are in the records table.
 4. **Two forbids bullets the stage-location decision does not list.** *Made explicit*: ADR-0157's exit-0 bullet and
    ADR-0161's lane-loop bullet are in the records table.
 5. **An answered gate is indistinguishable from an open one in git.** *Settled by N6*'s state token (§8e.7).
 6. **The `deadline` spelling.** *Settled by N8*: integer unix seconds (§8e.7).
-7. **A multi-item store folds items together.** *Settled by N5* (§8e.12), and the golden-log cost is §8e.0 item 3's
-   STOP.
+7. **A multi-item store folds items together.** *Settled by N5* (§8e.10), and its golden-log cost by *R3*: the key
+   is outside the canonical digest, and a test pins the digests.
 8. **D21-42 18 versus the packet's "added to the shipped items".** Unchanged: no shipped item gains a key here, and
    `s8j`'s fresh item carries its slice.
 9. **Two stale comments, re-measured at `a6349b6`** (hygiene):
@@ -1139,41 +950,45 @@ shipped store and `redkiln cost`.
      therefore harmless to `reconcile`. The boundary function keeps colon-free subjects anyway: git's own
      `%(trailers)` reads a one-paragraph message's last paragraph, and the cost is nothing.
 
-**New findings from this revision:**
+**Findings from the D21-43/44/45 revision.** Its findings 10 to 13 and 15 to 17 were about the run worktree, and they
+moved to `s8d-ii` §8d-ii.9 with the work they describe. The two that stay are renumbered:
 
-10. **D21-45's premise *"`init` already writes the hooks marker (RT-51)"* is false** (§8e.0 item 7). `init` writes no
-    hook, and the `# redkiln-hook` marker exists only as `doctor`'s recogniser. W4's ownership stands. The exclude
-    block is `init`'s first write into the common directory, so its idempotence is new, not inherited.
-11. **D21-44's supersession targets are not where it says** (§8e.10). ADR-0018 and ADR-0105 name no worktree path.
-    The literal is ADR-0137 decision 3's. And the decision that actually moves in ADR-0105 is clause 6 plus its
-    *"reused worktree"* bullet, which D21-45 W2 moves and neither ledger entry names.
-12. **W1, W2 and W4 need `GitOp` variants outside ADR-0105 clause 5's list** (§8e.11). So clause 5 is superseded in
-    part too.
-13. 🛑 **Checkpoint 7f's cleanup line removes the legacy tree before `s8j` can re-point it.** 7f ends with
-    `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`, and `s8a` runs 7f whole at its
-    exit, before this stage. D21-44 says that tree *"stays where it is"* until `s8j`. This file deletes the line at
-    §8e.15's 7f amendment, but `s8a`'s run comes first. Owner: `s8a` (or the lead), before `s8a` runs 7f.
-14. **Checkpoint 7e has the same backtick defect as 7h (10a).** At `a6349b6`, `s7e-pack-authoring.md` line 52's FAIL
-    message is `"… Step 7d's `init` did not run …"`, inside double quotes, so its FAIL path runs `init`. A quote-aware
-    scan of every `runbook/` bash block finds exactly these two. 7e's is not this stage's to amend. It is reported.
-15. **AC-518's instrument now depends on an ignore row** (§8e.10). Every fixture repository needs one, and creation
-    refuses a root that is not ignored. That refusal is a behaviour no ledger line names, so the worktree record takes
-    it explicitly or says why not.
-16. **The review reference tree shares the item namespace.** `<item>.review-ref` sits beside `<item>`, so the
-    validator refuses an item id with that suffix (§8e.11).
-17. **The worst-case path is 255 of 259 at `a6349b6`, and it was 259 under the old root** (§8e.0 item 2). The margin
-    is four characters on this repository, and a target repository with a longer root or deeper paths has less.
-18. **A content commit whose step row never reached the store is not covered by the tier-1 heal** (§8e.3). A kill
-    between `s8f`'s landed commit and its step row leaves the run ref ahead of the journal, and W2's re-entry then
-    reuses a tree whose `HEAD` already holds the step's effect. `s8f`'s landing record settles how that step is read.
+10. **Checkpoint 7e has the same backtick defect as 7h (10a).** At `a6349b6`, `s7e-pack-authoring.md`'s FAIL message
+    reads `"… Step 7d's `init` did not run …"`, inside double quotes, so its FAIL path runs `init`. A quote-aware scan
+    of every `runbook/` bash block found exactly these two. D21-46 assigns 7e's fix to `s8a` (*"is fixed by dated
+    amendment in **s8a**"*). This stage fixes 7h's only.
+11. **A content commit whose step row never reached the store is not covered by the tier-1 heal** (§8e.3). A kill
+    between `s8f`'s landed commit and its step row leaves the run ref ahead of the journal. W2's re-entry (`s8d-ii`
+    §8d-ii.3) then reuses a tree whose `HEAD` already holds the step's effect. `s8f`'s landing record settles how that
+    step is read.
 
-### 8e.16 Acceptance set
+**Findings from this split (D21-46):**
+
+12. **R3 overtakes N5's supersession.** N5 says the interim key *"Supersedes ADR-0131's first forbids bullet in
+    part"*. That bullet forbids the key **inside** `payload`. R3 carries it outside, so the record supersedes nothing
+    of ADR-0131, and it says so rather than taking a supersession it no longer needs. `s8f` cites §8e.10 for
+    `dispatch_completed`'s `item`, and its text should be read against the carrier R3 fixed.
+13. **R2's rebuild drops the shipped store's tier-2 rows, and it makes 7i provisional.** At `c5d19d7` those are six
+    rows (`dag_assembled` 1, `reconcile_started` 3, `stage_transition` 2). Nothing reads them as authority, and the
+    store is disposable, but Checkpoint 7i reads this store. So 7i joins this stage's re-run set (§8e.15).
+14. **The removal trigger has no lane-level test.** `s8d-ii`'s `rk-git` tests pin the removal rule. No test here runs a
+    lane to its `closed` mark and asserts that a clean, landed tree is then removed and a dirty one kept. The
+    behaviour is §8e.6's. The record names it, and the adversarial pass decides whether it needs a
+    `lane_e2e` row.
+15. **Citations of this file's old section numbers, which this stage does not edit.** `s8j` cites `s8e` for the
+    `.redkiln/` walk exclusion under its old number (now `s8d-ii` §8d-ii.1), and for the 7f amendment under its old
+    number (now §8e.13 plus `s8d-ii` §8d-ii.7). `s8c` names `s8e` as the caller of `setup` at creation, which is now
+    `s8d-ii`. `s8f`'s Checkpoint 8f runs this block without `RK_CP_NESTED` and without the trap, and its `FLOOR=954`
+    was drafted from this file's former 944. Each is the lead's to reconcile under D21-46's integration calls.
+
+### 8e.14 Acceptance set
 
 **Claimed: AC-161, AC-162, AC-163, AC-184 (re-measured), AC-529, AC-172 (the reconciled state now reaches the
 planner), AC-174 (reconcile still writes nothing to git: the void is minted by the kernel), AC-183 (a malformed
-`Story:` or `Gate:` value is drift, never coerced), AC-364 (the append-only port with five methods), and AC-518 (every
-commit is on `rk-run/<item>`, and the user's checkout is unchanged with the tree inside it).** AC-161 and AC-162 are
-claimed **over fixture repositories, as measured**, and only once the supersessions in the records table are accepted.
+`Story:` or `Gate:` value is drift, never coerced), AC-364 (the append-only port with five methods), AC-518 (every
+commit is on `rk-run/<item>`, and the user's checkout is unchanged with `s8d-ii`'s tree inside it), and AC-180 (R2's
+migration is explicit: a version-1 store is refused by name and rebuilt, never migrated in place).** AC-161 and AC-162
+are claimed **over fixture repositories, as measured**, and only once the supersessions in the records table are accepted.
 Until the operator's ledger line flips those records, no document states that either is met. AC-161 now covers
 answered, expired and voided gates as well as open ones (N6).
 
@@ -1181,14 +996,12 @@ answered, expired and voided gates as well as open ones (N6).
 
 - **AC-160**, the `trybuild` tier-annotation fixture: not this stage's, and it does not depend on `t1_*`.
 - **AC-164**, whose truncation is `s8` (2)'s kernel half, unchanged here.
-- **AC-180**: not triggered, because the schema stays at version 1 under route (B). It becomes this stage's if the
-  record takes route (A).
 - **AC-444**, corpus-bound and Phase-2: the dated note only.
 - **AC-473 and AC-521**: `s8`'s, over real runs.
 - **AC-245**'s gate `tree_hash`: `s7b-ii`'s, cited for clause 4's derivation only. Its untracked-file reading is
   `s8f`'s.
 
-### 8e.17 Checkpoint 8e
+### 8e.15 Checkpoint 8e
 
 - **The writer mutex halts** (ADR-0118 clause 3), and no poison recovery remains in `rk-store`. *(24b)*
 - **`EventStore` has five methods**, the fake and both conformance rows exercise the tier-1 arm, `query` honours
@@ -1202,17 +1015,21 @@ answered, expired and voided gates as well as open ones (N6).
 - **`Slice-Verdict:` is sealed on both outcomes by a real fixture run**, and the ARMED lint is discharged.
   *(D21-41 e)*
 - **A foreign-worktree tier-1 write is refused, typed, with ownership read from the store.** *(8d; AC-529)*
-- **The run tree lives at `.redkiln/worktrees/<item>`, derived in one place, reused and never force-removed**, guarded
-  by W1's checks, refused over a repo-local filter or `includeIf`, and ignored through `init`'s block. The worst-case
-  path is within the limit. *(D21-44; W1; W2; W4)*
+- **The gate's transitions are append-only rows under schema version 2, and the shipped store stamps 2.** *(R2;
+  AC-180)*
+- **The interim `item` key moves no golden log's canonical digest.** *(N5; R3)*
 - **The anchored differential holds**, and the whole suite, fmt and clippy are green. *(8c)*
-- **Checkpoint 8d (the entry gate) re-runs whole. So do the three checkpoints this stage's edits make provisional:
-  7a (the port surface), 7h and 7f (both amended).** `s8` (2) runs with the store restored byte-for-byte around the
-  rebuild, which is D21-42 8c's re-measurement. So does `s8` (3)'s asserted half, the kill-and-resume property the
-  seed change touches. Nothing older is re-run: 7b, 7c, 7g and 7i are not this stage's provisional set. The block skips
-  all of these nested re-runs when a later checkpoint calls it as an entry gate with `RK_CP_ENTRY_ONLY=1`, and it sets
-  the same variable for the checkpoints it calls. A checkpoint that does not honour the variable still runs correctly,
-  only slower.
+- **Checkpoint 8d-ii (the entry gate) re-runs whole. So do the four checkpoints this stage's edits make provisional:
+  7a (the port surface), 7h and 7f (both amended), and 7i (the shipped store it reads moved to schema version 2).**
+  `s8` (2) runs with the store restored byte-for-byte around the rebuild, which is D21-42 8c's re-measurement. So does
+  `s8` (3)'s asserted half, the kill-and-resume property the seed change touches. Nothing older is re-run: 7b, 7c and
+  7g are not this stage's provisional set. The block skips all of these nested re-runs when it is itself run with
+  `RK_CP_NESTED=1`, D21-46's one convention (*"running as another checkpoint's entry gate: skip your own nested whole
+  re-runs"*). It sets the same variable for the checkpoints it calls. A checkpoint that does not honour the variable
+  still runs correctly, only slower.
+- **No replay can reach a real `claude`.** Every replay runs with `CLAUDE_CONFIG_DIR` at an empty trap directory that
+  must still be empty afterwards, and with `REDKILN_LAUNCH_RECORD` unset, so `s8h`'s gate refuses before spawn once it
+  exists (D21-46's replay guard).
 - **`rk-run/rk-fix-doctor-test-count` and its legacy mark are unchanged**, so 7h and 7i stay runnable.
 
 **BEFORE (PIA-035): on the entry tree these lines FAIL:**
@@ -1222,10 +1039,10 @@ answered, expired and voided gates as well as open ones (N6).
 - (5), because the port has four methods;
 - (6), because nothing calls the writer;
 - (7)'s `rk-cli` `INSERT` line, because of `rebuild.rs`;
-- (7b)'s root and `recreate_run_worktree` floors, because of `run.rs`'s four derivations and its `"--force"`;
+- (7b), because no `0002` migration exists and the shipped store stamps schema version 1;
 - (7c), because 7h's backtick is present.
 
-A block that passed on `a6349b6` would be asserting nothing.
+A block that passed on `c5d19d7` would be asserting nothing.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -1241,6 +1058,7 @@ cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # written without a single backslash, because a heredoc on this box has eaten one before.
 scratch=.git/cp8e-scratch
 rm -rf "$scratch" && mkdir -p "$scratch/store-backup" || { echo "FAIL: the scratch directory $scratch could not be made"; exit 1; }
+# The run-worktree floors, the ignore row and the worst-case path are Checkpoint 8d-ii's; (10a) re-runs it whole.
 CODE_ONLY='^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))'
 
 # ---- (0) BEFORE READINGS, taken before any cargo run and before any prune.
@@ -1248,7 +1066,7 @@ wt_before=$(git worktree list --porcelain | grep '^worktree ' | sort)
 test -n "$wt_before" || { echo "FAIL: git worktree list printed no worktree — the path-set guard would compare two empty sets"; exit 1; }
 rw_before=$(ls -A .redkiln/worktrees 2>/dev/null)
 ref_before=$(git rev-parse --verify --quiet refs/heads/rk-run/rk-fix-doctor-test-count); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$ref_before" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count is absent — Checkpoints 7h and 7i read it (see this file's section 8e.15)"; exit 1; }
+[ "$rc" -eq 0 ] && [ -n "$ref_before" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count is absent — Checkpoints 7h and 7i read it (see this file's section 8e.13)"; exit 1; }
 case "$ref_before" in
   73c087a*) ;;
   *) echo "FAIL: rk-run/rk-fix-doctor-test-count is at $ref_before, not 73c087a — something ran the untouched fixture item (D21-42 18) and 7h guards (2)/(3) will not hold"; exit 1 ;;
@@ -1258,30 +1076,6 @@ legacy=$(git log -1 --format='%(trailers:key=Story,valueonly=true)' "$ref_before
 legacy=$(printf '%s\n' "$legacy" | grep .)
 [ "$legacy" = "redkiln-rs/rk-fix-doctor-test-count" ] || { echo "FAIL: the one real Story: mark reads '$legacy', not the stage-less legacy value this stage admits read-only"; exit 1; }
 test -d crates/rk-adapter-toolchain-node/tests/fixtures/project/node_modules || { echo "FAIL: the node fixture has no node_modules — run pnpm install --frozen-lockfile --dir crates/rk-adapter-toolchain-node/tests/fixtures/project first, or 10 node tests fail for a reason unrelated to this stage"; exit 1; }
-# D21-44: the run-tree root is ignored in THIS repository, or every run tree reads as untracked (AC-518).
-git check-ignore -q .redkiln/worktrees/cp8e-probe; rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: .redkiln/worktrees/ is not ignored here (check-ignore rc=$rc) — D21-44's .gitignore row is missing"; exit 1; }
-# CONTROL: a tracked file is NOT ignored, so the line above can go red.
-git check-ignore -q Cargo.toml; rc=$?
-[ "$rc" -eq 1 ] || { echo "FAIL: CONTROL — check-ignore called a tracked file ignored (rc=$rc), so the ignore guard cannot fail"; exit 1; }
-
-# ---- (0b) THE WORST-CASE RUN-TREE PATH (D21-44; section 8e.0 item 2): root + /.redkiln/worktrees/ + a 64-character
-# ---- item + .review-ref + / + the longest tracked path, against the 259 characters MAX_PATH leaves.
-top=$(git rev-parse --show-toplevel); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$top" ] || { echo "FAIL: git rev-parse --show-toplevel failed (rc=$rc)"; exit 1; }
-files=$(git ls-files); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$files" ] || { echo "FAIL: git ls-files failed or listed nothing (rc=$rc)"; exit 1; }
-longest=$(printf '%s\n' "$files" | awk '{ if (length($0) > m) m = length($0) } END { print m + 0 }')
-[ "$longest" -gt 0 ] || { echo "FAIL: the longest tracked path read as $longest — the length guard would be about nothing"; exit 1; }
-prefix="$top/.redkiln/worktrees/"
-worst=$(( ${#prefix} + 64 + 11 + 1 + longest ))
-lp=$(git config --get core.longpaths); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: git config could not be read (rc=$rc)"; exit 1; }
-[ "$worst" -le 259 ] || [ "$lp" = "true" ] || { echo "FAIL: the worst-case run-tree path is $worst characters (longest tracked path $longest) and core.longpaths is not true — the worktree record's length rule must refuse this at creation"; exit 1; }
-# CONTROL: the same sum over a 200-character path exceeds the limit, so the line above can go red.
-ctl=$(( ${#prefix} + 64 + 11 + 1 + 200 ))
-[ "$ctl" -gt 259 ] || { echo "FAIL: CONTROL — a 200-character path summed to $ctl, within the limit, so the length guard cannot fail"; exit 1; }
-echo "worst-case run-tree path: $worst characters (longest tracked path $longest; the limit is 259 without core.longpaths)"
 
 # ---- (1) BUILD-OR-FAIL, before any binary is read (Halt 1).
 out=$(cargo build --workspace 2>&1); rc=$?
@@ -1306,12 +1100,12 @@ out=$(cargo test -p rk-git --test it -- trailers::s8e_control_no_such_test --exa
 [ "$rc" -eq 0 ] || { echo "FAIL: the zero-match control did not run (rc=$rc)"; exit 1; }
 printf '%s\n' "$out" | grep -qE 'test result: ok\. 0 passed; 0 failed' || { echo "FAIL: CONTROL — a zero-match filter did not report 0 passed, so this block cannot tell it from a real run"; exit 1; }
 
-sel rk-git 35 trailers::story_value_with_a_stage_parses_as_a_stage_bearing_mark trailers::the_stage_less_legacy_mark_parses_and_carries_no_stage trailers::a_story_value_with_three_tokens_is_malformed_drift trailers::the_widened_gate_value_carries_kind_reach_and_state trailers::a_gate_value_without_kind_reach_and_state_is_legacy_drift trailers::reconcile_folds_the_latest_stage_mark_per_item trailers::a_repeated_identical_stage_mark_is_duplicate_story_drift trailers::a_legacy_mark_after_a_stage_mark_does_not_reset_the_stage trailers::the_closed_mark_parses_as_the_lanes_end trailers::reconcile_folds_a_gates_latest_state_per_token trailers::an_rfc3339_gate_deadline_is_malformed_drift worktree::an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused worktree::a_symlinked_redkiln_or_worktrees_directory_is_refused worktree::a_created_worktree_whose_realpath_leaves_the_root_is_refused worktree::creation_refuses_when_the_worktree_root_is_not_ignored worktree::creation_refuses_a_path_past_the_platform_limit_by_name worktree::creation_writes_rk_base_into_the_worktree_gitdir worktree::creation_locks_the_worktree_with_the_pid_and_start_reason worktree::a_lock_held_by_a_dead_pid_is_released worktree::a_lock_held_by_a_live_pid_refuses_by_name worktree::reentry_reuses_the_registered_tree_when_head_equals_the_run_ref_tip worktree::reentry_discards_in_flight_changes_and_reports_each_path worktree::reentry_keeps_ignored_files worktree::a_tree_without_rk_base_is_refused_and_never_removed worktree::a_tree_with_commits_the_run_ref_lacks_is_refused_and_never_removed worktree::a_tree_registered_to_another_repository_is_refused worktree::an_existing_run_branch_is_never_reset worktree::a_dirty_tree_is_kept_with_its_reason worktree::a_locked_tree_is_not_removed worktree::a_clean_landed_marked_unlocked_tree_is_removed worktree::removal_never_follows_a_junction worktree::a_repo_local_filter_driver_refuses_creation_with_a_diagnosis worktree::an_include_if_refuses_creation_with_a_diagnosis worktree::a_repo_with_no_local_filter_or_include_if_creates gitops::every_git_child_runs_with_lc_all_c
-sel rk-store 3 store::writer_poison_is_a_halt_and_never_recovered store::tier_one_statements_insert_a_stage_transition_with_its_anchor_and_tree store::t1_gate_takes_one_opening_row_per_token_and_is_never_updated
+sel rk-git 11 trailers::story_value_with_a_stage_parses_as_a_stage_bearing_mark trailers::the_stage_less_legacy_mark_parses_and_carries_no_stage trailers::a_story_value_with_three_tokens_is_malformed_drift trailers::the_widened_gate_value_carries_kind_reach_and_state trailers::a_gate_value_without_kind_reach_and_state_is_legacy_drift trailers::reconcile_folds_the_latest_stage_mark_per_item trailers::a_repeated_identical_stage_mark_is_duplicate_story_drift trailers::a_legacy_mark_after_a_stage_mark_does_not_reset_the_stage trailers::the_closed_mark_parses_as_the_lanes_end trailers::reconcile_folds_a_gates_latest_state_per_token trailers::an_rfc3339_gate_deadline_is_malformed_drift
+sel rk-store 4 store::writer_poison_is_a_halt_and_never_recovered store::tier_one_statements_insert_a_stage_transition_with_its_anchor_and_tree store::t1_gate_transition_appends_one_row_per_transition_and_is_never_updated store::migration_0002_adds_the_transitions_table_and_the_item_column_and_stamps_version_two
 sel rk-ports 3 event_store_port::ac364_event_store_port_has_no_update_or_delete fake_behaviour::vec_store_append_tier1_is_queryable_with_its_anchor fake_behaviour::vec_store_query_by_item_returns_only_that_items_rows
 sel rk-adapter-sqlite 4 conformance::sqlite_store_conforms_including_the_tier_one_arm store::append_tier1_writes_the_t1_row_and_the_anchored_t2_row_in_one_transaction store::open_at_targets_a_staging_file_and_rebuild_writes_anchored_tier_one_rows store::query_by_item_returns_only_that_items_rows
-sel rk-kernel 21 tier_one::a_failed_commit_leaves_zero_store_rows tier_one::a_hook_rewriting_the_message_has_no_effect_on_the_trailer_commit tier_one::the_commit_exists_before_any_row_is_readable tier_one::the_tier_one_writer_is_called_only_from_the_boundary tier_one::replay_of_a_boundary_performs_zero_git_writes tier_one::a_commit_without_a_row_is_healed_at_entry tier_one::a_heal_writes_no_row_for_an_unreachable_anchor tier_one::a_gate_kind_with_whitespace_is_refused_at_the_mint tier_one::a_gate_answer_is_committed_before_its_row tier_one::a_gate_expiry_is_committed_before_its_row tier_one::a_gate_void_is_committed_before_its_row tier_one::a_boundary_anchors_every_row_of_the_act_to_its_commit tier_one::an_act_with_neither_trailer_nor_content_is_refused tier_one::the_boundary_journals_a_git_op_row_per_invocation tier_one::replay_serves_the_boundary_from_its_git_op_rows tier_one::a_journal_without_git_op_rows_replays_as_no_git_writes conformance::conformance_every_trailer_key_has_a_producer projection::rebuild_differential lane_order::adr0161_a_stage_the_lane_has_entered_is_not_entered_again lane_order::a_pack_stage_named_closed_is_refused_at_load fsm::every_item_scoped_kind_carries_the_interim_item_key
-sel rk-cli 31 lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order lane_e2e::an_empty_stage_records_stage_empty_with_its_reason lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted lane_e2e::terminal_read_reports_only_an_awaited_gate lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child lane_e2e::the_lane_end_mints_a_terminal_closed_mark lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered lane_e2e::two_items_in_one_store_do_not_fold_together lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it lane_e2e::a_second_invocation_reuses_the_run_worktree slice_verdict::approved_is_sealed_on_the_advance_path slice_verdict::changes_requested_is_sealed_on_the_findings_block_path slice_verdict::an_absent_slice_is_refused_by_name slice_verdict::a_slice_equal_to_the_item_id_is_refused worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention run_worktree::the_run_worktree_is_created_under_dot_redkiln_worktrees run_worktree::no_redkiln_reader_sees_a_planted_run_worktree run_worktree::creation_carries_worktreeinclude_files_and_runs_setup run_worktree::a_failed_setup_refuses_by_name init::init_writes_the_redkiln_runtime_exclude_block_once init::init_leaves_the_operators_exclude_lines_untouched answer::a_failed_answer_commit_leaves_zero_rows doctor::ac184_rebuild_differential_over_anchored_tier_one_rows doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record root::adr0118_a_poisoned_writer_mutex_halts_exit_70
+sel rk-kernel 22 tier_one::a_failed_commit_leaves_zero_store_rows tier_one::a_hook_rewriting_the_message_has_no_effect_on_the_trailer_commit tier_one::the_commit_exists_before_any_row_is_readable tier_one::the_tier_one_writer_is_called_only_from_the_boundary tier_one::replay_of_a_boundary_performs_zero_git_writes tier_one::a_commit_without_a_row_is_healed_at_entry tier_one::a_heal_writes_no_row_for_an_unreachable_anchor tier_one::a_gate_kind_with_whitespace_is_refused_at_the_mint tier_one::a_gate_answer_is_committed_before_its_row tier_one::a_gate_expiry_is_committed_before_its_row tier_one::a_gate_void_is_committed_before_its_row tier_one::a_boundary_anchors_every_row_of_the_act_to_its_commit tier_one::an_act_with_neither_trailer_nor_content_is_refused tier_one::the_boundary_journals_a_git_op_row_per_invocation tier_one::replay_serves_the_boundary_from_its_git_op_rows tier_one::a_journal_without_git_op_rows_replays_as_no_git_writes conformance::conformance_every_trailer_key_has_a_producer projection::rebuild_differential lane_order::adr0161_a_stage_the_lane_has_entered_is_not_entered_again lane_order::a_pack_stage_named_closed_is_refused_at_load fsm::every_item_scoped_kind_carries_the_interim_item_key replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key
+sel rk-cli 26 lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order lane_e2e::an_empty_stage_records_stage_empty_with_its_reason lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted lane_e2e::terminal_read_reports_only_an_awaited_gate lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child lane_e2e::the_lane_end_mints_a_terminal_closed_mark lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered lane_e2e::two_items_in_one_store_do_not_fold_together lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it lane_e2e::a_second_invocation_reuses_the_run_worktree slice_verdict::approved_is_sealed_on_the_advance_path slice_verdict::changes_requested_is_sealed_on_the_findings_block_path slice_verdict::an_absent_slice_is_refused_by_name slice_verdict::a_slice_equal_to_the_item_id_is_refused worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention answer::a_failed_answer_commit_leaves_zero_rows doctor::ac184_rebuild_differential_over_anchored_tier_one_rows doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two root::adr0118_a_poisoned_writer_mutex_halts_exit_70
 
 # ---- (3) THE ARMED LINT IS DISCHARGED — its ignore reason is gone, not reworded (ADR-0160's bullet; D21-41 e).
 test -f crates/rk-kernel/tests/it/conformance.rs || { echo "FAIL: conformance.rs is absent (Halt 8)"; exit 1; }
@@ -1358,48 +1152,34 @@ raw=$(grep -nF 'awaiting_gate(' crates/rk-cli/src/verbs/run.rs); rc=$?
 code=$(printf '%s\n' "$raw" | grep -vE '^[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
 [ -n "$code" ] || { echo "FAIL: no code line in run.rs calls awaiting_gate — terminal_read still scans for any tokened gate_opened (ADR-0161's fourth finding)"; exit 1; }
 
-# ---- (7b) THE RUN TREE (D21-44; D21-45 W1, W2, W4). CODE-LINE floors beneath section 8e.14's behavioural tests.
-test -f crates/rk-git/src/worktree.rs && test -f crates/rk-cli/src/verbs/run.rs && test -f crates/rk-git/src/git_exec.rs && test -f crates/rk-cli/src/verbs/init.rs || { echo "FAIL: a source file these floors read is absent (Halt 8)"; exit 1; }
-# One derivation of the root: no code line outside rk-git's worktree module names a "worktrees" directory, except
-# doctor's read of git's OWN administrative directory, <common-dir>/worktrees, which does not move.
-raw=$(grep -rnF '"worktrees"' crates/*/src --include=*.rs); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: the root search could not run (grep rc=$rc)"; exit 1; }
-DOCTOR_ADMIN='^crates/rk-cli/src/doctor/rules\.rs:[0-9]+:.*common_dir\.join\("worktrees"\)'
-code=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep -v '^crates/rk-git/src/worktree\.rs:' | grep -vE "$DOCTOR_ADMIN" | grep .)
-[ -z "$code" ] || { echo "FAIL: a code line outside rk-git's worktree module derives a worktrees directory — the run-tree root is derived in one place (D21-44):"; printf '%s\n' "$code"; exit 1; }
-own=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep '^crates/rk-git/src/worktree\.rs:')
-[ -n "$own" ] || { echo "FAIL: rk-git's worktree module names no worktrees directory on a code line — the one derivation does not exist"; exit 1; }
-# CONTROL: a run.rs code line is KEPT; the doctor admin-dir line and a comment are DROPPED.
-ctl=$(printf '%s\n' 'crates/rk-cli/src/verbs/run.rs:9:    let p = common.join("redkiln").join("worktrees").join(item);' 'crates/rk-cli/src/doctor/rules.rs:12:    let Ok(e) = std::fs::read_dir(ctx.common_dir.join("worktrees")) else {' 'crates/rk-cli/src/verbs/run.rs:10:    // the old root joined "worktrees" under the common dir' | grep -vE "$CODE_ONLY" | grep -v '^crates/rk-git/src/worktree\.rs:' | grep -vE "$DOCTOR_ADMIN" | grep -c .)
-[ "$ctl" -eq 1 ] || { echo "FAIL: CONTROL — the root filter kept $ctl of one derivation, one admin-dir read and one comment"; exit 1; }
-# W2: recreate_run_worktree is gone, and run.rs forces no removal.
-raw=$(grep -rn 'recreate_run_worktree' crates/*/src --include=*.rs); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: the recreate search could not run (grep rc=$rc)"; exit 1; }
-code=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep .)
-[ -z "$code" ] || { echo "FAIL: recreate_run_worktree is still on a code line — D21-45 W2 replaces it:"; printf '%s\n' "$code"; exit 1; }
-raw=$(grep -nE '"--force"|remove_dir_all' crates/rk-cli/src/verbs/run.rs); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: the force-removal search could not run (grep rc=$rc)"; exit 1; }
-code=$(printf '%s\n' "$raw" | grep -vE '^[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
-[ -z "$code" ] || { echo "FAIL: run.rs still forces a removal on a code line — W2 is never force-remove:"; printf '%s\n' "$code"; exit 1; }
-# W1: LC_ALL=C at the one git exec site. W4: init's exclude marker.
-raw=$(grep -nF 'LC_ALL' crates/rk-git/src/git_exec.rs); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: the LC_ALL search could not run (grep rc=$rc)"; exit 1; }
-code=$(printf '%s\n' "$raw" | grep -vE '^[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
-[ -n "$code" ] || { echo "FAIL: no code line in git_exec.rs sets LC_ALL — W1's locale pin is absent"; exit 1; }
-raw=$(grep -nF '# redkiln-runtime' crates/rk-cli/src/verbs/init.rs); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: the exclude-marker search could not run (grep rc=$rc)"; exit 1; }
-code=$(printf '%s\n' "$raw" | grep -vE '^[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
-[ -n "$code" ] || { echo "FAIL: init.rs carries no # redkiln-runtime marker on a code line — W4's exclude block is absent"; exit 1; }
+# ---- (7b) R2: THE FORWARD MIGRATION EXISTS AS A PAIR, NOTHING UPDATES A GATE ROW, AND THE SHIPPED STORE STAMPS 2.
+# ---- Floors beneath section 8e.12's migration and rebuild tests (D21-46 R2; AC-180).
+mig=crates/rk-store/src/migrations/0002_gate_transitions
+test -f "$mig.sql" && test -f "$mig.keys" || { echo "FAIL: the 0002 migration is not a .sql/.keys pair — the schema lint's form (D21-46 R2)"; exit 1; }
+grep -qF 't1_gate_transition' "$mig.sql" || { echo "FAIL: 0002 does not create t1_gate_transition"; exit 1; }
+grep -qE '^t1_gate_transition\.anchor_sha[[:space:]]*=[[:space:]]*sha' "$mig.keys" || { echo "FAIL: 0002's .keys does not declare t1_gate_transition.anchor_sha = sha (AC-166)"; exit 1; }
+raw=$(grep -rniE 'UPDATE[[:space:]]+t1_' crates/rk-store/src --include=*.rs --include=*.sql); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the UPDATE search could not run (grep rc=$rc)"; exit 1; }
+code=$(printf '%s\n' "$raw" | grep -vE "$CODE_ONLY" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*--' | grep .)
+[ -z "$code" ] || { echo "FAIL: a code line UPDATEs a t1_ table — the gate's lifecycle is append-only (N6; AC-364):"; printf '%s\n' "$code"; exit 1; }
+# CONTROL: the filter KEEPS an UPDATE statement and DROPS an SQL comment naming one.
+ctl=$(printf '%s\n' 'crates/rk-store/src/tier_one.rs:4:    tx.execute("UPDATE t1_gate SET answered = 1", [])?;' 'crates/rk-store/src/migrations/0002_gate_transitions.sql:2:-- no UPDATE t1_ ever' | grep -vE "$CODE_ONLY" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*--' | grep -c .)
+[ "$ctl" -eq 1 ] || { echo "FAIL: CONTROL — the UPDATE filter kept $ctl of one statement and one SQL comment"; exit 1; }
+# The shipped store stamps schema version 2 (read-only; mode=ro, not immutable=1, so the WAL is read).
+store="$(git rev-parse --git-common-dir)/redkiln/store.sqlite3"
+test -f "$store" || { echo "FAIL: no shipped store at $store"; exit 1; }
+ver=$(python -c 'import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(c.execute("SELECT schema_version FROM rk_identity WHERE id = 1").fetchone()[0])' "$store"); rc=$?
+[ "$rc" -eq 0 ] && [ "$ver" = "2" ] || { echo "FAIL: the shipped store stamps schema version '$ver' (rc=$rc), not 2 — R2's explicit rebuild was not run in the migration's commit"; exit 1; }
 
-# ---- (7c) CHECKPOINT 7h's (10a) FAIL MESSAGE NO LONGER EXECUTES `redkiln run` (section 8e.15). The quote-aware scan
+# ---- (7c) CHECKPOINT 7h's (10a) FAIL MESSAGE NO LONGER EXECUTES `redkiln run` (section 8e.13). The quote-aware scan
 # ---- over every re-run block is in (10); this is the named defect, by its exact bytes.
 test -f runbook/phase-1/s7h-lane-completes.md || { echo "FAIL: s7h's file is absent (Halt 8)"; exit 1; }
 hits=$(grep -nF 'a real `redkiln run` over the review fixture' runbook/phase-1/s7h-lane-completes.md); rc=$?
 [ "$rc" -eq 1 ] || { echo "FAIL: 7h guard (10a)'s FAIL message still carries backticks inside double quotes (grep rc=$rc):"; printf '%s\n' "$hits"; exit 1; }
 
-# ---- (8) THE WHOLE SUITE, no fail-fast, with a floor. FLOOR is re-derived at stage open (section 8e.0 item 9):
-# ---- Checkpoint 8d's recorded passed count + this stage's 93. 944 is the drafted expectation; replace it by a dated edit.
-FLOOR=944
+# ---- (8) THE WHOLE SUITE, no fail-fast, with a floor. FLOOR is re-derived at stage open (section 8e.0 item 7):
+# ---- Checkpoint 8d-ii's recorded passed count + this stage's 67. 931 is the drafted expectation; replace it by a dated edit.
+FLOOR=931
 tally() { printf '%s\n' "$1" | awk '/^test result:/ { p += $4; f += $6; i += $8; n += 1 } END { print p+0, f+0, i+0, n+0 }'; }
 # CONTROL: a run of zero tests tallies below the floor.
 read -r cp cf ci cn <<< "$(tally 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out')"
@@ -1420,12 +1200,13 @@ wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
 stale=$(git worktree prune --dry-run -v 2>&1); rc=$?
 [ "$rc" -eq 0 ] && [ -z "$stale" ] || { echo "FAIL: stale worktree registrations (rc=$rc):"; printf '%s\n' "$stale"; exit 1; }
 
-# ---- (10) RE-RUN FROM THEIR OWN BYTES: the entry gate (8d) and the three checkpoints this stage's edits make
-# ---- provisional (7a, 7h, 7f), plus s8 (2) (D21-42 8c's re-measurement) and s8 (3)'s asserted half (the seed
-# ---- change). Nothing older. SKIPPED WHOLE when a later checkpoint re-runs this one as its entry gate and sets
-# ---- RK_CP_ENTRY_ONLY=1; set for every block this one calls. The extractor takes the ONE bash block of a file that
-# ---- contains a needle, and refuses on zero or two. The fence string is built from chr(96), so no triple backtick
-# ---- appears inside this block.
+# ---- (10) RE-RUN FROM THEIR OWN BYTES: the entry gate (8d-ii) and the four checkpoints this stage's edits make
+# ---- provisional (7a, 7h, 7f, and 7i, whose shipped store R2 rebuilt), plus s8 (2) (D21-42 8c's re-measurement) and
+# ---- s8 (3)'s asserted half (the seed change). Nothing older. SKIPPED WHOLE under RK_CP_NESTED=1 (D21-46: running as
+# ---- another checkpoint's entry gate), and set for every block this one calls. Every replay runs under the
+# ---- no-dispatch guard: CLAUDE_CONFIG_DIR at an empty trap directory that must stay empty, REDKILN_LAUNCH_RECORD unset.
+# ---- The extractor takes the ONE bash block of a file that contains a needle, and refuses on zero or two. The fence
+# ---- string is built from chr(96), so no triple backtick appears inside this block.
 cat > "$scratch/extract.py" <<'PY'
 import sys
 src, needle, dst = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -1511,30 +1292,33 @@ ext() {
   [ "$rc" -eq 0 ] || { echo "FAIL: the block in $1 carries a backtick bash would execute:"; printf '%s\n' "$out"; exit 1; }
 }
 
-if [ "${RK_CP_ENTRY_ONLY:-0}" = "1" ]; then
-  echo "CP8E: nested re-runs skipped — RK_CP_ENTRY_ONLY=1 was set by the checkpoint re-running this one as its entry gate"
+if [ "${RK_CP_NESTED:-0}" = "1" ]; then
+  echo "CP8E: nested re-runs skipped — RK_CP_NESTED=1 was set by the checkpoint re-running this one as its entry gate"
 else
-  # (10a) CHECKPOINT 8d, the entry gate, whole. If it needs an environment variable, set it as s8d says; this block does not guess.
-  ext runbook/phase-1/s8d-step-grain-and-resolver.md 'echo "CP8D-END-OF-BLOCK reached"' "$scratch/cp8d.sh"
-  out=$(RK_CP_ENTRY_ONLY=1 bash "$scratch/cp8d.sh" 2>&1); rc=$?
-  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8d, re-run whole, exited $rc — this stage's entry gate no longer holds"; printf '%s\n' "$out" | tail -30; exit 1; }
-  printf '%s\n' "$out" | grep -qxF 'CP8D-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 8d exited 0 without reaching its end marker"; exit 1; }
+  # THE TRAP: an empty CLAUDE_CONFIG_DIR every replay inherits. A real claude writes into it; nothing else does.
+  trap_dir="$(pwd)/$scratch/claude-config-trap"
+  mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  # (10a) CHECKPOINT 8d-ii, the entry gate, whole. Under RK_CP_NESTED=1 it skips its own nested 8d and 7f re-runs.
+  ext runbook/phase-1/s8d-ii-run-worktrees.md 'echo "CP8D-II-END-OF-BLOCK reached"' "$scratch/cp8dii.sh"
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp8dii.sh" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 8d-ii, re-run whole, exited $rc — this stage's entry gate no longer holds"; printf '%s\n' "$out" | tail -30; exit 1; }
+  printf '%s\n' "$out" | grep -qxF 'CP8D-II-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 8d-ii exited 0 without reaching its end marker"; exit 1; }
 
   # (10b) CHECKPOINT 7a whole — the gate on the port surface this stage changed. Its block has no end marker, so one is appended.
   ext runbook/phase-1/s7a-ports-and-fakes.md 'pub store: Arc<Mutex<dyn EventStore>>' "$scratch/cp7a.sh"
   printf '\necho "CP7A-EXTRACTED-END reached"\n' >> "$scratch/cp7a.sh" || { echo "FAIL: the 7a end marker could not be appended"; exit 1; }
-  out=$(RK_CP_ENTRY_ONLY=1 bash "$scratch/cp7a.sh" 2>&1); rc=$?
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp7a.sh" 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7a, re-run whole, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
   printf '%s\n' "$out" | grep -qxF 'CP7A-EXTRACTED-END reached' || { echo "FAIL: Checkpoint 7a stopped before its last line"; exit 1; }
 
-  # (10c) CHECKPOINT 7h whole, AS AMENDED BY THIS STAGE (section 8e.15). Its guards (6)/(7) are the discharge's
+  # (10c) CHECKPOINT 7h whole, AS AMENDED BY THIS STAGE (section 8e.13). Its guards (6)/(7) are the discharge's
   # witnesses, and ext() has already refused a block that still carries (10a)'s backtick.
   ext runbook/phase-1/s7h-lane-completes.md 'echo "CP7H-END-OF-BLOCK reached"' "$scratch/cp7h.sh"
-  out=$(RK_CP_ENTRY_ONLY=1 FIX_ITEM=rk-fix-doctor-test-count bash "$scratch/cp7h.sh" 2>&1); rc=$?
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" FIX_ITEM=rk-fix-doctor-test-count bash "$scratch/cp7h.sh" 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7h, re-run whole, exited $rc — if guard (6) or (7) names ARMED, the dated amendment did not land"; printf '%s\n' "$out" | tail -30; exit 1; }
   printf '%s\n' "$out" | grep -qxF 'CP7H-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 7h exited 0 without reaching its end marker"; exit 1; }
 
-  # (10d) CHECKPOINT 7f whole, AS AMENDED (section 8e.15): its run arm is in a throwaway clone, and it can reach no
+  # (10d) CHECKPOINT 7f whole, AS AMENDED (section 8e.13 and s8d-ii's 8d-ii.7): its run arm is in a throwaway clone, and it can reach no
   # dispatch. Refused outright once a shipped card carries permission_mode (s8h has landed; no-accidental-dispatch).
   cards=$(ls .redkiln/cards/*.json 2>/dev/null)
   [ -n "$cards" ] || { echo "FAIL: no shipped card under .redkiln/cards — the dispatch precondition would be about nothing (Halt 8)"; exit 1; }
@@ -1544,7 +1328,7 @@ else
   grep -qF 'git clone' "$scratch/cp7f.sh" || { echo "FAIL: Checkpoint 7f's run arm is not re-pointed to a throwaway clone — run here, it would advance the untouched fixture item (D21-42 18)"; exit 1; }
   hits=$(grep -nF 'worktree remove --force .git/redkiln/worktrees/' "$scratch/cp7f.sh"); rc=$?
   [ "$rc" -eq 1 ] || { echo "FAIL: Checkpoint 7f still force-removes the legacy run tree (grep rc=$rc) — D21-44 keeps it for s8j:"; printf '%s\n' "$hits"; exit 1; }
-  out=$(RK_CP_ENTRY_ONLY=1 bash "$scratch/cp7f.sh" 2>&1); rc=$?
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp7f.sh" 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7f, re-run whole, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
   printf '%s\n' "$out" | grep -qxF 'CP7F-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 7f exited 0 without reaching its end marker"; exit 1; }
 
@@ -1558,7 +1342,7 @@ else
   done
   ext runbook/phase-1/s8-exit-criterion.md 'echo "(2) asserted: AC-184 differential' "$scratch/cp8-2.sh"
   printf '\necho "CP8-2-EXTRACTED-END reached"\n' >> "$scratch/cp8-2.sh" || { echo "FAIL: the (2) end marker could not be appended"; exit 1; }
-  out2=$(bash "$scratch/cp8-2.sh" 2>&1); rc2=$?
+  out2=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp8-2.sh" 2>&1); rc2=$?
   for f in store.sqlite3 store.sqlite3-wal store.sqlite3-shm rebuilt; do
     rm -f "$sd/$f"
     if [ -f "$scratch/store-backup/$f" ]; then cp -p "$scratch/store-backup/$f" "$sd/$f" || { echo "FAIL: RESTORE of $f failed — restore it by hand from $scratch/store-backup before anything else runs"; exit 1; }; fi
@@ -1572,11 +1356,25 @@ else
   # (10f) s8 CRITERION (3), ASSERTED HALF — the block is run whole with ITEM UNSET. Its asserted half must pass, and it
   # must then stop at exactly one FAIL, the operational arm's `set ITEM` (D21-40's re-measurement reads the same).
   ext runbook/phase-1/s8-exit-criterion.md 'echo "(3) asserted: AC-013' "$scratch/cp8-3.sh"
-  out=$(env -u ITEM bash "$scratch/cp8-3.sh" 2>&1); rc=$?
+  out=$(env -u ITEM -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$scratch/cp8-3.sh" 2>&1); rc=$?
   [ "$rc" -eq 1 ] || { echo "FAIL: s8 (3) with ITEM unset exited $rc, expected 1 at the operational arm"; printf '%s\n' "$out" | tail -20; exit 1; }
   printf '%s\n' "$out" | grep -qxF '(3) asserted: AC-013 N-step kill-and-resume, digest equality, zero re-dispatch' || { echo "FAIL: s8 (3)'s asserted half did not report — kill_and_resume_n_step is red or unselected"; printf '%s\n' "$out" | tail -20; exit 1; }
   fails=$(printf '%s\n' "$out" | grep '^FAIL')
   [ "$fails" = "FAIL: set ITEM to the item the run is on" ] || { echo "FAIL: s8 (3) stopped somewhere other than the operational arm:"; printf '%s\n' "$fails"; exit 1; }
+
+  # (10g) CHECKPOINT 7i whole — provisional because R2 rebuilt the shipped store it reads (section 8e.13). Run after
+  # (10e), so it reads the restored version-2 store.
+  ext runbook/phase-1/s7i-cost.md 'echo "CP7I-END-OF-BLOCK reached"' "$scratch/cp7i.sh"
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" FIX_ITEM=rk-fix-doctor-test-count bash "$scratch/cp7i.sh" 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7i, re-run whole over the rebuilt shipped store, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
+  printf '%s\n' "$out" | grep -qxF 'CP7I-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 7i exited 0 without reaching its end marker"; exit 1; }
+
+  # THE TRAP IS STILL EMPTY — no replay spawned a real claude. CONTROL first: the emptiness read sees a planted file.
+  mkdir -p "$scratch/trap-control" && : > "$scratch/trap-control/planted" || { echo "FAIL: the trap control could not be planted"; exit 1; }
+  ctl=$(ls -A "$scratch/trap-control")
+  [ -n "$ctl" ] || { echo "FAIL: CONTROL — the emptiness read did not see a planted file"; exit 1; }
+  left=$(ls -A "$trap_dir")
+  [ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the replays — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
 fi
 
 # ---- (11) AFTER: the fixture item's ref and mark are untouched, and no lane ran in this repository.

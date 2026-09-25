@@ -30,6 +30,26 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   nothing there.
 - New findings for the lead: 10–15 at the end of the file.
 
+*Revised 2026-09-24 for D21-46* (HEAD `c5d19d7`; D21-46 is the authority). What changed:
+- **The launcher gains an `answer` mode.** D21-46's integration call: *"s8h's launcher gains an **`answer` mode**, so
+  s8j's hold answer is not refused for want of a launch record"*. §8h.7 specifies it: `run`'s environment refusals,
+  `run`'s pin comparison, argument refusals of its own, and the same launch record. The launch check's scope on
+  `answer` is restated precisely. The draft's *"`answer` where it continues the lane"* named a condition that no code
+  has, because `verbs/answer.rs` names no harness at `c5d19d7` [measured: `grep -n -i 'harness'
+  crates/rk-cli/src/verbs/answer.rs` prints nothing]. Two `rk-cli` tests and three mutants are added.
+- **`wrap`'s guarantee is stated once, which resolves the self-contradiction `s8j` §8j.6 found.** The draft called
+  `wrap` the entry for a child that does not dispatch through `rk-adapter-claude`, and then named Checkpoint 7c, whose
+  probe does, as a caller. `wrap` now guarantees the refusals, the launch record and before/after version equality,
+  and it never compares to the adapter pin. A `wrap` child that dispatches through the adapter carries its own pin
+  check, as 7c's block does.
+- **§8h.10's table names every gate class the `s8` stages mint, one explicit row each.** That is `s8f`'s two,
+  `s8d`'s `unknown_facet:change`, `s8j`'s two human-root question gates, and `s8j`'s hold gate. `MINTED_CLASSES` is
+  still re-read at stage open from the code.
+- **`RK_CP_NESTED=1` and the replay no-dispatch guard are adopted** in Checkpoint 8h (13), in `s8g`'s form. D21-46:
+  *"One re-run convention"* and *"One no-dispatch guard for replays"*.
+- The counts move to 41 new tests (was 39), 17 new in `rk-cli` (was 15), and twenty mutants (was seventeen). New
+  findings for the lead are 16–19.
+
 ---
 
 **Why this step exists.** D21-40 decision 1 names four structural reasons that criterion (1) cannot be satisfied.
@@ -94,6 +114,7 @@ are `s8j`'s. The two live probes of D21-41 (g) are **authored** here (§8h.11) a
 | D21-42 21c | the doctor card-grant row and ADR-0146's load-time lint | §8h.10 |
 | D21-43 N17 | Q1–Q4 as taken: the refusal classes, the token unit, the envelope's exit, probe 2's three dispatches | §8h.0, §8h.5, §8h.9, §8h.11 |
 | D21-44; D21-45's standing limit | probe 1 inside `.redkiln/worktrees/<probe>`; the protected-segment limit named by the typed denial failure | §8h.5, §8h.6, §8h.11 |
+| D21-46's integration calls | the launcher's `answer` mode; `wrap`'s guarantee; one explicit row per minted gate class; `RK_CP_NESTED` and the replay trap | §8h.7, §8h.10, §8h.15 |
 
 **Owned elsewhere, cited rather than re-specified here.**
 - **The run-worktree placement and its lifecycle belong to `s8e`.** That covers the move to `.redkiln/worktrees/<item>`,
@@ -132,11 +153,16 @@ write each reading into the stage-open commit:
    site anywhere in `src/`"* (`budget.rs`). If an earlier sub-stage wired one, that class joins §8h.10's table.
 6. `claude --version`, and the size and bytes of `RUNBOOK-instrument.txt`. Halt 2 is recorded, not worked around,
    and D21-42 16 moves the pin once, at `s8j`.
-7. **The gate kinds `s8e`–`s8g` mint.** `s8f` hands on *"a row for the `landing` gate kind this stage mints"*, and
-   D21-43 N11 has `structured_drift` open *"a drift gate that blocks the stage's exit until it is answered"*. Read
-   each kind's class spelling from the code the minting stage landed, never from this file. Set `MINTED_CLASSES` for
-   Checkpoint 8h (8) from those spellings. A kind that a later stage mints brings its own row, because §8h.10's
-   load-time lint refuses it otherwise.
+7. **The gate classes `s8d`–`s8g` mint** (§8h.10's table lists every `s8` class, one row each). `s8f` mints two,
+   drafted as `landing.refused-path` (`s8f` §8f.4) and `render.structured-drift` (`s8f` §8f.5). `s8f`'s landing and
+   render records fix the spellings. `s8d`'s R6 opens `gate_opened { reason: unknown_facet, axis: "change" }` at
+   triage, and the gate is answered with the `facet.change` question (`s8d` §8d.6, §8d.7), so its class is
+   `unknown_facet:change`. Read each spelling from the code the minting stage landed, never from this file.
+   - Set `MINTED_CLASSES` for Checkpoint 8h (8) to the kernel-minted classes only. At this stage that is `s8f`'s two.
+   - Confirm that R6's gate carries `unknown_facet:change`. That class is an axis row, not a minted one, and (8)
+     asserts it by name.
+   - A class that a later stage mints brings its own row in the change that mints it, because §8h.10's load-time
+     lint refuses a row whose class nothing mints. §8h.10 names `s8j`'s three.
 8. **The whole-suite floor.** Read Checkpoint 8g's recorded passed count from `PROGRESS.md` §1 and write it over
    `BASE_8G` in Checkpoint 8h (12) by a dated edit. The drafted expected value is **1000**, derived as follows:
    - ADR-0164's baseline at `992d257`: 740 passed / 0 failed / 9 ignored over 44 results;
@@ -151,6 +177,11 @@ write each reading into the stage-open commit:
     `judgement_registry::ac133_every_exported_enum_is_registered` and
     `judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails`. Checkpoint 8h (4) selects both.
     A rename is corrected there by a dated line.
+11. **Every binary-level `answer` spawn** (D21-46). List the tests that run the `redkiln` binary's `answer` verb. That
+    includes `rk-cli`'s shared helper in `tests/it/answer.rs` [measured at `c5d19d7`: `pub(crate) fn spawn_answer(`],
+    `s8e`'s `lane_e2e` binary arm, and any other. §8h.7's launch check on `answer` refuses each of them unless it
+    carries a fixture launch record. The record is supplied in the shared helper, so every such test exercises the
+    check and none bypasses it. The list goes into the stage-open commit.
 
 **Four questions were owed before Red. D21-43 N17 took all four on 2026-09-24**, and each is stated here as taken.
 Each one changes a test's expected value.
@@ -445,6 +476,7 @@ side: `settings.local.json` is not copied, *"because children run with isolated 
 - `run <item> [--lane fix|story]`;
 - `probe <test>`, where `<test>` is a module-qualified `live::` name;
 - `wrap -- <argv…>`, below;
+- `answer <item> <option> [<flag>…]`, below (D21-46);
 - `--check [<mode> …]`, which performs every refusal and every capture for the named mode (`run` when none is
   named), spawns nothing and writes no launch record.
 
@@ -460,22 +492,70 @@ In order:
 | 3 | no denylisted name, **case-insensitively** | the list is **read from `crates/rk-adapter-claude/src/env_denylist.rs`'s two `pub const` arrays by anchored extraction**, never copied. That file is *"the ONE list AC-217, AC-422, AC-488 and AC-509 read"*. The extraction asserts both anchors and a non-empty list (golden constraint 7). `Config::new` refuses the same names again, as the second line |
 | 4 | `CLAUDE_CONFIG_DIR` is **set, not inherited**, to `$(cygpath -w "$HOME/.claude-personal")` (D21-42 17b) | refuse if the directory or its `.credentials.json` is absent. That is an existence test only, and no content is read |
 | 5 | `DISABLE_AUTOUPDATER=1` is exported (§8h.8) | — |
-| 6 | the resolved `claude` path; `claude --version`, printed as `CLI_VERSION=<v>`; the sha256 of the resolved file | `run`, `probe`: refuse unless the version equals `TESTED_CLI_VERSION`, read by 7c's anchored form, **and** `RUNBOOK-instrument.txt`, naming Halt 2. `wrap`: record only, and never compare to the pin (below) |
-| 7 | `run`: `cargo build --workspace` rc 0 before `./target/debug/redkiln` is run (Halt 1). `probe`: `cargo test -p rk-adapter-claude --features live --test it -- --ignored --nocapture <test> --exact`, then `test <test> ... ok` **and** `1 passed` are asserted, because a filter matching nothing is a green. `wrap`: the argv after `--`, exactly as given | the child's rc is the launcher's |
+| 6 | the resolved `claude` path; `claude --version`, printed as `CLI_VERSION=<v>`; the sha256 of the resolved file | `run`, `probe`, `answer`: refuse unless the version equals `TESTED_CLI_VERSION`, read by 7c's anchored form, **and** `RUNBOOK-instrument.txt`, naming Halt 2. `wrap`: record only, and never compare to the pin (below) |
+| 7 | `run`: `cargo build --workspace` rc 0 before `./target/debug/redkiln` is run (Halt 1). `probe`: `cargo test -p rk-adapter-claude --features live --test it -- --ignored --nocapture <test> --exact`, then `test <test> ... ok` **and** `1 passed` are asserted, because a filter matching nothing is a green. `wrap`: the argv after `--`, exactly as given. `answer`: `cargo build --workspace` rc 0, then `./target/debug/redkiln answer <item> <option> [<flag>…]`, exactly as given | the child's rc is the launcher's |
 | 8 | the **launch record** at `<git-common-dir>/redkiln/launches/<UTC>-<mode>.txt`: mode and argv, claude path, version and sha256 before; `CLAUDE_CONFIG_DIR`; `DISABLE_AUTOUPDATER`; the pin; HEAD; then version and sha256 after, and the rc | exported to the child as `REDKILN_LAUNCH_RECORD=<path>` |
 | 9 | after the child exits: version and sha256 again | **a difference fails the launch non-zero**, naming Halt 2. The records then span a version boundary |
 
-**`wrap` is the entry for a child that does not dispatch through `rk-adapter-claude`.** It has two callers:
-- `s8i`'s S-BIN batches through the corpus runner. `s8i` §8i.5: *"S-BIN launches through `s8h`'s launcher if it
-  exposes an entry for an arbitrary child"*.
-- `s8j`'s whole re-run of Checkpoint 7c. D21-43 N28: *"from a plain terminal through the launcher"*.
+**What `wrap` guarantees, and what it does not** (restated 2026-09-24 for D21-46). The draft opened this paragraph
+with *"`wrap` is the entry for a child that does not dispatch through `rk-adapter-claude`"* and then named Checkpoint
+7c as a caller. 7c's `live_dispatch_probe` does dispatch through that adapter, and `s8j` §8j.6 step 2 found the
+contradiction. The guarantee is stated here by what the launcher does, not by what the child is.
 
-Steps 1–5, 8 and 9 apply unchanged. Step 6 records and does not compare, because `TESTED_CLI_VERSION` binds the
-adapter, and neither caller is the adapter. `s8i` §8i.5: *"S-BIN does not dispatch through that adapter"*. What such
-a set needs is that it does not span a version. D21-43 N22 freezes the CLI *"from S-BIN on"*. Step 9's
-before/after comparison fails a launch whose binary moved, and `s8i`'s own set-level check reads the recorded
-version. `wrap` is not a way around the pin for `run` or `probe`, and `--check wrap` is asserted separately from
-`--check run` (Checkpoint 8h (10)).
+- **It guarantees** steps 1–5 unchanged: every environment refusal, the config directory and the freeze. It also
+  guarantees step 8, the launch record with `REDKILN_LAUNCH_RECORD` exported to the child, and step 9. Before the
+  child starts, the resolved `claude`'s version and sha256 are recorded. After it exits they are read again, and a
+  difference fails the launch naming Halt 2. So a `wrap` child never spans a CLI version.
+- **At step 6 it records and does not compare.** The version is not compared to `TESTED_CLI_VERSION` and not to
+  `RUNBOOK-instrument.txt`. `wrap` does **not** guarantee that the child's CLI equals the adapter pin, because
+  `TESTED_CLI_VERSION` binds the adapter, and the launcher does not know whether its child dispatches through it.
+- **A `wrap` child that dispatches through `rk-adapter-claude` is pinned by its own means, never by the launcher.**
+  Two such means exist. One is the adapter's `MismatchPolicy::Refuse` at the init line, which `real_harness_config`
+  hard-codes. The other is the child's own pin guard.
+
+Its two callers rely on exactly this:
+- **`s8i`'s S-BIN batches through the corpus runner.** D21-46: *"s8i uses s8h's `wrap` mode for S-BIN's corpus
+  runner"*. The runner makes no adapter dispatch. It relies on `wrap` **not** refusing the installed 2.1.281 against
+  the adapter pin 2.1.278, which moves only at `s8j` (D21-42 16). What the set needs is that it does not span a
+  version, and D21-43 N22 freezes the CLI *"from S-BIN on"*. Step 9 fails a launch whose binary moved, and `s8i`'s
+  own set-level check reads the recorded version.
+- **`s8j`'s whole re-run of Checkpoint 7c** (D21-43 N28: *"from a plain terminal through the launcher"*). Its
+  `live_dispatch_probe` does dispatch through the adapter, and the block carries its own pin check ahead of that
+  dispatch. It compares `claude --version` to `RUNBOOK-instrument.txt`, failing with *"FAIL: Halt 2 — claude
+  --version is '$live' and the pinned instrument is '$pin'"*, and requires `config.rs` to declare
+  `pub const TESTED_CLI_VERSION` equal to it (`s7c` §7c.21). `s8j` runs it after the pin move (`s8j` §8j.6 step 1),
+  so the block's check, the adapter's policy and `wrap`'s before/after all see one version.
+
+`wrap` is not a way around the pin for `run` or `probe`, nor for `answer`. `--check wrap` is asserted separately from
+`--check run` and `--check answer`, including the control that it accepts a CLI unequal to the pin (Checkpoint 8h
+(10); mutant M19).
+
+**`answer` is the entry for a gate answer inside a real run** (D21-46). `s8j` §8j.3 answers its hold with
+`redkiln answer <item> approve --explain-sufficed <yes|no> --toml-opened <yes|no>`, and `s8j` §8j.2 attaches its
+human roots with `answer --attach`. Both must pass the launch check below, so both go through
+`tools/live-run.sh answer`.
+
+- **Its refusals.** First come its own argument refusals, before step 1. An absent `<item>`, an `<item>` beginning
+  with `-`, and no `<option>` after the item each refuse, naming `answer` and the usage. The launcher does not
+  validate the option or the flags, because `answer`'s own grammar does (ADR-0129 decision 1). Then steps 1–4 apply
+  unchanged: the platform, the session names, the case-insensitive denylist, and the config directory.
+- **Step 6 compares the version to the pin, as `run` does, naming Halt 2.** `answer` spawns no `claude`. But an answer
+  is spent irrevocably (`gate_answer_spent`, ADR-0123), and it sits between two `run`s of one window. A pin mismatch
+  means the next `run` refuses, so the answer is refused first rather than spent into a window that cannot continue.
+- **What it records.** The launch record is `<UTC>-answer.txt`. It carries step 8's members, with the item and the
+  full answer argv as the argv:
+  - the mode;
+  - the resolved `claude` path, and its version and sha256 before and after;
+  - `CLAUDE_CONFIG_DIR` and `DISABLE_AUTOUPDATER`;
+  - the pin and HEAD;
+  - the rc.
+
+  Step 9 fails the launch non-zero when the binary moved. The record's path is exported as `REDKILN_LAUNCH_RECORD`,
+  so `answer::run` passes its launch check.
+- **Its tests.** Checkpoint 8h (10) first drives `--check answer` in a clean environment, which is the control:
+  `LAUNCH_CHECK=ok`, `MODE=answer`, and the pin as `CLI_VERSION`. It then drives four session or denylisted names, a
+  CLI unequal to the pin, and three malformed argument lists. Each must refuse and name what it refused. §8h.12
+  gives `run::`'s launch-check pair an `answer::` twin. Mutants M18 and M20 (§8h.13) must turn them red.
 
 **Where the launcher runs: a plain terminal, never a Claude Code session.** There are two reasons:
 - A session exports `CLAUDECODE` and `CLAUDE_CODE_*`, and step 2 **refuses** them. It does not strip them.
@@ -491,12 +571,18 @@ The launch record is **not** the kernel's run record. Writing the version into t
 row as `instrument_version` and `cli_version`. The launch record adds the binary's sha256 and the freeze state, which
 no row carries.
 
-**"The only entry" is made mechanical.** Every verb whose composition root has chosen the **real**
-`ClaudeHarness` (`run`, and `answer` where it continues the lane) refuses at entry with `Exit::ConfigError` unless
-the captured `Env` carries `REDKILN_LAUNCH_RECORD` naming an existing file. The refusal comes **before
-`reconcile_started` is appended and before any worktree operation**. The name is read through `env.rs`, the one
-read (ADR-0083). A fake-harness path is not subject to it. Binary-level tests that drive the real harness at the
-fixture child supply a fixture launch record, so the check is exercised on every such test and bypassed by none. The
+**"The only entry" is made mechanical.** Two binary composition roots refuse at entry with `Exit::ConfigError`
+unless the captured `Env` carries `REDKILN_LAUNCH_RECORD` naming an existing file:
+- `run::run`, whose composition root has chosen the **real** `ClaudeHarness`;
+- `answer::run`, the binary's `answer` (D21-46). It spawns no harness. It is subject because an answer to a real
+  run's gate belongs to that run's launched window. Its in-process twin `answer::run_with` is not subject, just as a
+  fake-harness path is not.
+
+The refusal comes **before `reconcile_started` is appended and before any worktree operation**. For `answer` that
+means before `run::through_step_seven`. The name is read through `env.rs`, the one read (ADR-0083). A fake-harness
+path is not subject to it. Binary-level tests that drive the real harness at the fixture child, and every
+binary-level `answer` test (§8h.0 item 11), supply a fixture launch record. So the check is exercised on every such
+test and bypassed by none. The
 three `live::` probe tests assert the same variable as their first statement. **This is also what re-scopes
 Checkpoint 7f's `redkiln run`.** `s8a` (11) records that *"From s8h on that is false, and this line must be re-scoped
 before it runs"*. Once the cards bind, a bare `redkiln run` refuses before any spawn. It is a guard against accident,
@@ -505,7 +591,9 @@ makes provisional and how each is re-run.
 
 **`s8`'s three `redkiln run` sites.** `s8-exit-criterion.md` invokes `./target/debug/redkiln run` at three sites.
 After this stage, each one refuses without a launch record, so each must go through `tools/live-run.sh run`. That
-edit is `s8j`'s (D21-43). This stage states the constraint and does not touch `s8-exit-criterion.md`.
+edit is `s8j`'s (D21-43). This stage states the constraint and does not touch `s8-exit-criterion.md`. The same holds
+for every `redkiln answer` the real runs need, `s8j` §8j.3's hold answer and §8j.2's attach included. Each goes
+through `tools/live-run.sh answer`, and that edit is `s8j`'s too (D21-46).
 
 ### 8h.8 The CLI pin procedure and the auto-update freeze (D21-42 16) — authored here, executed at `s8j`
 
@@ -601,14 +689,34 @@ Every `NO RECORD` marker is replaced by a comment naming Record B as `ADR-<id>`,
   plus `external_dep` and `novelty`, which is 7.
 - **`escalation`**, carried fail-closed so that any `escalate` exception the operator signs is lint-valid (AC-260:
   no `escalation → escalate`).
-- **The gate kinds that `s8e`–`s8g` mint** (§8h.0 item 7). These are `s8f`'s `landing` gate and D21-43 N11's drift
-  gate, each under the class spelling its minting stage fixed. Neither is a catalog question, so without its own
-  row each would be an unmatched class. D21-43 N6 makes every gate transition, `expired` included, a git-first
-  tier-1 event, so an expiry row is what that transition reads.
+- **Every gate class an `s8` stage mints, one explicit row each** (§8h.0 item 7; enumerated 2026-09-24 for D21-46
+  from `s8d`, `s8f` and `s8j` at `c5d19d7`). None is a catalog question, so without its own row each would be an
+  unmatched class. D21-43 N6 makes every gate transition, `expired` included, a git-first tier-1 event, so an expiry
+  row is what that transition reads. The spellings are the drafts', and the minting stage's code replaces them.
+
+| class (drafted spelling) | minted by | the class guard admits it as | its rows land | in `MINTED_CLASSES` |
+| --- | --- | --- | --- | --- |
+| `landing.refused-path` | `s8f` §8f.4, the landing's refused-path gate | a kernel-minted class | here, in both packs | yes |
+| `render.structured-drift` | `s8f` §8f.5, D21-43 N11's drift gate | a kernel-minted class | here, in both packs | yes |
+| `unknown_facet:change` | `s8d` §8d.7's R6 triage gate, answered with the `facet.change` question (`s8d` §8d.6) | `unknown_facet:<registered facet>` | here, in both packs, as one of the axis rows (both packs read `change`) | no. (8) asserts it by name, because R6 opens it whatever the `require` rows read |
+| the BugReport human-root gate | `s8j` §8j.2, bound to the question `root.bug-report` | a kernel-minted class | at `s8j`, in the change that mints it, in both packs | yes, from `s8j` |
+| the IntakeRecord human-root gate | `s8j` §8j.2, bound to the question `root.intake-record` | a kernel-minted class | at `s8j`, in the change that mints it, in both packs | yes, from `s8j` |
+| the analysis → specification hold | `s8j` §8j.3, item-level (`hold_before`) | a kernel-minted class | at `s8j`, in the change that mints it, in both packs, because a hold is item-level and either pack's item can carry one | yes, from `s8j` |
+
+`facet.change`, `root.bug-report` and `root.intake-record` are **question ids, not gate classes**. A row keys on the
+class the gate carries, and the question is how that gate is answered. `s8j`'s records fix the class that the step-4
+gate binds under (`s8j` §8j.2: *"the gate-kind name the step-4 gate binds under"*) and the hold's gate cause (`s8j`
+§8j.3), so this file drafts no spelling for either.
+
+Their rows cannot land here. The misspelt-class half of the lint below refuses a row whose class nothing mints yet,
+so a row drafted ahead of its minting code would turn this stage's own checkpoint red. `s8j` drafts the three rows
+fail-closed for the operator's row-by-row signature (`s8j` §8j.2 item 4). When it re-runs Checkpoint 8h, it adds
+their spellings to `MINTED_CLASSES`.
 
 Both packs carry all 45 questions, so each stays independently complete. That is **51 rows** in `bug-standard` and
-**53** in `story`, plus one row per minted kind in each. With the two kinds above, that makes 53 and 55.
-`budget_extension` joins the table only if §8h.0 item 5 finds a producer.
+**53** in `story`, plus one row per kernel-minted class in each. At this stage's close that means `s8f`'s two, for 53
+and 55. After `s8j`'s three the totals are 56 and 58. `budget_extension` joins the table only if §8h.0 item 5 finds
+a producer.
 
 **The draft is `fail` for every row.** `auto-decide` is refused by name in `run.rs` because it has no verdict carrier
 (RT-57), so it cannot be drafted. `escalate` is admissible only as a signed exception with a warrant. None is
@@ -710,7 +818,7 @@ sha256, and the launch records' paths and sha256.
 
 Each test is authored and **run red for the named reason** before its code, per golden constraint 12. Names are
 module-qualified. The new modules, `rk-cli`'s `cards` and `schemas`, are added to that crate's `tests/it/main.rs`
-[measured at `a6349b6`: neither exists]. **39 new tests in all.**
+[measured at `a6349b6`: neither exists]. **41 new tests in all.** D21-46's `answer` mode added two to the draft's 39.
 
 **`rk-adapter-claude` (17 new).** Red reasons and N17's classes are in brackets.
 - `card::permission_mode_outside_the_cli_closed_set_is_refused` [`"acceptEdit"` binds today]
@@ -751,7 +859,7 @@ regressions. They go red until the entries exist.
 - `envelope::token_appetite_past_the_appetite_refuses_the_next_dispatch`
 - `envelope::a_dispatch_with_no_usage_still_counts_against_the_cap`
 
-**`rk-cli` (15 new).**
+**`rk-cli` (17 new).**
 - `cards::shipped_cards_are_the_least_privilege_table`
 - `cards::shipped_role_rows_resolve_through_the_models_table`
 - `cards::the_models_table_pins_the_three_full_ids`
@@ -769,6 +877,10 @@ regressions. They go red until the entries exist.
 - `run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn` [the store's row count and the
   worktree set are unchanged]
 - `run::a_real_harness_run_with_a_launch_record_passes_the_launch_check` [the control]
+- `answer::a_binary_answer_without_a_launch_record_refuses_before_any_row` [D21-46: the binary's `answer`, driven
+  through the shared spawn helper with its fixture record withheld. The store's row count is unchanged and the gate
+  is still open]
+- `answer::a_binary_answer_with_a_launch_record_passes_the_launch_check` [the control: the same gate is answered]
 - `exit::an_envelope_refusal_leaves_through_overage` [N17's Q3: a dispatch refused at the cap exits 20, and
   `exit::ac438_exit_table_snapshot` does not move]
 
@@ -800,6 +912,9 @@ removed, and `git diff --quiet` in the main tree is asserted. A survivor blocks.
 | M15 | the launcher's `CLAUDE_CODE_` refusal deleted, in a copy of the script | Checkpoint 8h (10)'s `CLAUDE_CODE_ENTRYPOINT` control |
 | M16 | the `ProtectedSegmentDenial` note never attached | `classify::a_denial_under_a_protected_worktree_segment_is_named_the_known_limit` |
 | M17 | the envelope refusal mapped to `Exit::ConfigError` | `exit::an_envelope_refusal_leaves_through_overage` |
+| M18 | `answer::run`'s launch-record check deleted | `answer::a_binary_answer_without_a_launch_record_refuses_before_any_row` |
+| M19 | `wrap` given `run`'s pin comparison at step 6, in a copy of the script | Checkpoint 8h (10)'s `--check wrap` control over a CLI unequal to the pin |
+| M20 | `answer`'s pin comparison deleted at step 6, in a copy of the script | Checkpoint 8h (10)'s `--check answer` Halt 2 control |
 
 ### 8h.14 What this stage may not do, what it makes provisional, and what it hands on
 
@@ -842,7 +957,11 @@ the legacy tree D21-44 keeps until `s8j` re-points it, so that line is re-scoped
   - `s8`'s three `redkiln run` sites go through `tools/live-run.sh run` (§8h.7; D21-43).
   - The 7f / 8a route above.
   - The pin move and both probes, run from a plain terminal (`s8j` §8j.6).
-  - Checkpoint 7c's whole re-run through `wrap`.
+  - Checkpoint 7c's whole re-run through `wrap`. `wrap` does not compare to the pin, and 7c's block does (§8h.7).
+  - `s8j`'s answers go through `tools/live-run.sh answer`, both §8j.3 step 5's hold answer and §8j.2's attach
+    (D21-46). The mode exists here, and the edit to those lines is `s8j`'s.
+  - The rows for its three gate classes, landed in the change that mints them (§8h.10). Their spellings join
+    `MINTED_CLASSES` when it re-runs Checkpoint 8h.
 - **To `s8i`:**
   - Record B must be accepted before S-BIN spends (D21-42 19c).
   - S-BIN launches through `wrap` (§8h.7). The adapter pin does not bind the corpus runner, and D21-43 N22 freezes
@@ -858,8 +977,8 @@ the legacy tree D21-44 keeps until `s8j` re-points it, so that line is re-scoped
 - Every one of the 24 lane-reached kinds is an `EXPORTED` Rust type, read by name. Their enums are entered in
   `s8g`'s AC-133 registry, and its two completeness tests pass.
 - `--setting-sources ""` and the confinement settings are on every argv.
-- The launcher refuses what it must and captures what it must. A real-harness run without a launch record refuses
-  before any spawn.
+- The launcher refuses what it must and captures what it must, in each of `run`, `wrap` and `answer`. Only `wrap`
+  skips the pin comparison. A real-harness run, or a binary `answer`, without a launch record refuses before any row.
 - The per-item cap and appetite refuse across processes.
 - No `NO RECORD` marker remains. Both packs carry fail-closed gate rows for every reachable class, including the
   minted gate kinds. An unmatched class refuses at load, and `RK-D-CARD-GRANT` refuses a grant outside the union.
@@ -870,7 +989,9 @@ the legacy tree D21-44 keeps until `s8j` re-points it, so that line is re-scoped
 - Checkpoint 8g passes whole, and so do Checkpoints 5, 7b, 7b-ii and 7d, which this stage's crate edits make
   provisional (§8h.14). Checkpoint 7c's shell guards pass.
 - No `REDKILN_LAUNCH_RECORD` is in the environment, so nothing re-run here can pass the launch check.
-- The whole suite is at or above Checkpoint 8g's recorded count plus 39, with 0 failed over at least 44 results.
+- The whole suite is at or above Checkpoint 8g's recorded count plus 41, with 0 failed over at least 44 results.
+- Under `RK_CP_NESTED=1`, (13) replays nothing. Otherwise every replay runs with no launch record and with
+  `CLAUDE_CONFIG_DIR` at an empty trap directory that must still be empty afterwards (D21-46).
 
 **Run it from a plain terminal: a Git Bash that Claude Code did not spawn** (7c's guard, repeated here). Set these:
 - `REC_A` and `REC_B`;
@@ -880,7 +1001,7 @@ the legacy tree D21-44 keeps until `s8j` re-points it, so that line is re-scoped
 - whatever the re-run checkpoints' blocks require themselves.
 
 Leave `REDKILN_LAUNCH_RECORD` unset. `BASE_8G` in (12) is edited at stage open (§8h.0 item 8). Budget hours: (13)
-runs five checkpoints whole.
+runs five checkpoints whole, unless `RK_CP_NESTED=1` is set, in which case it runs none (D21-46).
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -902,7 +1023,7 @@ env | grep -qE '^(CLAUDE_PID|CLAUDE_EFFORT)=' && { echo "FAIL: CLAUDE_PID or CLA
 test -n "${REC_A:-}" && test -n "${REC_B:-}" || { echo "FAIL: set REC_A and REC_B to the two records' four-digit ids"; exit 1; }
 test -n "${A_SUPERSEDES:-}" || { echo "FAIL: set A_SUPERSEDES (at minimum 0126 — observed_model moves ADR-0126 d1's payload table)"; exit 1; }
 test -n "${TOKENS_APPETITE:-}" || { echo "FAIL: set TOKENS_APPETITE to Record B's signed appetite.tokens"; exit 1; }
-test -n "${MINTED_CLASSES:-}" || { echo "FAIL: set MINTED_CLASSES to the gate kinds s8e–s8g mint, space-separated (§8h.0 item 7)"; exit 1; }
+test -n "${MINTED_CLASSES:-}" || { echo "FAIL: set MINTED_CLASSES to the kernel-minted gate classes read at stage open, space-separated (§8h.0 item 7; §8h.10's table)"; exit 1; }
 # No launch record may be in reach: every real-harness `run` in this block and in the checkpoints (13) re-runs then
 # refuses before any spawn (§8h.7), and (14) reads the store for the dispatch rows that would say otherwise.
 [ -z "${REDKILN_LAUNCH_RECORD:-}" ] || { echo "FAIL: REDKILN_LAUNCH_RECORD is set in this shell — unset it; nothing this block runs may pass the launch check"; exit 1; }
@@ -951,7 +1072,7 @@ sel() {  # sel <package> <expected count> <tests...>
 sel rk-adapter-claude 23 card::permission_mode_outside_the_cli_closed_set_is_refused card::every_cli_permission_mode_is_admitted_by_the_closed_set isolation::permission_mode_reported_unequal_to_the_card_is_refused isolation::permission_mode_absent_from_init_is_refused isolation::model_reported_unequal_to_the_requested_id_is_refused isolation::model_equal_to_the_requested_id_proceeds isolation::api_key_source_other_than_none_is_refused isolation::api_key_source_absent_is_refused classify::permission_denials_non_empty_is_a_typed_failure classify::permission_denials_empty_is_not_a_failure classify::permission_denials_outrank_a_valid_structured_output classify::a_denial_under_a_protected_worktree_segment_is_named_the_known_limit command::setting_sources_is_explicit_and_empty command::child_settings_carry_the_worktree_confinement binder::the_full_model_id_reaches_argv_and_the_card_digest binder::a_tier_absent_from_the_models_table_is_refused dispatch::observed_model_is_recorded_on_every_path_that_read_init command::golden_argv_per_profile command::ac214_permission_mode_explicit command::permission_prompts_none_on_every_argv isolation::ac204_adoption_equal_subset_superset_wrong_agent isolation::ac202_isolation_from_system_init_not_argv config::tested_cli_version_is_the_pin_as_a_config_value
 sel rk-types 7 dispatch_record::observed_model_is_a_typed_member_absent_before_init schema_snapshot::schema_snapshot schema_no_oneof::no_oneof_at_any_node schema_caps::union_and_optional_caps dispatch_record::ac360_dispatch_record_carries_the_usage_fields judgement_registry::ac133_every_exported_enum_is_registered judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails
 sel rk-kernel 8 envelope::dispatch_cap_is_declared_never_defaulted envelope::the_dispatch_at_the_cap_proceeds envelope::the_dispatch_past_the_cap_is_refused_with_its_class envelope::the_dispatch_count_survives_a_second_process envelope::token_appetite_past_the_appetite_refuses_the_next_dispatch envelope::a_dispatch_with_no_usage_still_counts_against_the_cap envelope::ac029_n_is_declared_never_defaulted conformance::shipped_pack_loads
-sel rk-cli 19 cards::shipped_cards_are_the_least_privilege_table cards::shipped_role_rows_resolve_through_the_models_table cards::the_models_table_pins_the_three_full_ids cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class cards::shipped_rt57_scalars_carry_no_no_record_marker schemas::every_agent_output_kind_the_two_lanes_reach_is_exported schemas::bind_reads_the_schema_from_exported_by_name schemas::a_kind_absent_from_exported_refuses_at_bind doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set doctor::rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load run::a_gate_expiry_row_naming_no_reachable_class_is_refused run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn run::a_real_harness_run_with_a_launch_record_passes_the_launch_check exit::an_envelope_refusal_leaves_through_overage doctor::ac415_every_rule_id_has_a_rejecting_fixture exit::ac438_exit_table_snapshot exit::ac438_step_error_mapping_is_exhaustive surface::ac400_help_snapshot_every_verb
+sel rk-cli 21 cards::shipped_cards_are_the_least_privilege_table cards::shipped_role_rows_resolve_through_the_models_table cards::the_models_table_pins_the_three_full_ids cards::shipped_gate_expiry_rows_are_fail_closed_for_every_reachable_class cards::shipped_rt57_scalars_carry_no_no_record_marker schemas::every_agent_output_kind_the_two_lanes_reach_is_exported schemas::bind_reads_the_schema_from_exported_by_name schemas::a_kind_absent_from_exported_refuses_at_bind doctor::rk_d_card_grant_refuses_a_tool_outside_the_least_privilege_set doctor::rk_d_card_grant_refuses_a_mode_outside_the_shipped_pair run::a_reachable_gate_class_without_an_expiry_row_refuses_at_load run::a_gate_expiry_row_naming_no_reachable_class_is_refused run::a_real_harness_run_without_a_launch_record_refuses_before_any_spawn run::a_real_harness_run_with_a_launch_record_passes_the_launch_check answer::a_binary_answer_without_a_launch_record_refuses_before_any_row answer::a_binary_answer_with_a_launch_record_passes_the_launch_check exit::an_envelope_refusal_leaves_through_overage doctor::ac415_every_rule_id_has_a_rejecting_fixture exit::ac438_exit_table_snapshot exit::ac438_step_error_mapping_is_exhaustive surface::ac400_help_snapshot_every_verb
 
 # ---- (7) THE TWO PROBES EXIST, COMPILE UNDER `live`, AND ARE IGNORED — LISTED, NEVER RUN (`--list` runs nothing).
 # ---- Finding 10: s8i's and s8j's dispatch scans match this line's feature flag; the scans are theirs to scope.
@@ -1011,6 +1132,11 @@ for f in glob.glob(".redkiln/catalog/*.toml"):
 if len(questions) != 45:
     bad.append("PREMISE: %d question classes, expected 45" % len(questions))
 minted = set(sys.argv[3].split())
+if len(minted) < 2:
+    bad.append("PREMISE: MINTED_CLASSES names %d classes; s8f mints two (§8h.10's table)" % len(minted))
+for c in sorted(minted):
+    if c in questions or c.startswith("unknown_facet:") or c == "escalation":
+        bad.append("PREMISE: MINTED_CLASSES lists %r, which already has a row of another kind; it would be counted twice" % c)
 code = []
 for f in glob.glob("crates/*/src/**/*.rs", recursive=True):
     code.extend(ln for ln in open(f, encoding="utf-8") if not ln.lstrip().startswith("//"))
@@ -1052,9 +1178,13 @@ for pack in ("bug-standard", "story"):
             axes.update(w for w in re.findall(r"[a-z_]+", text) if w not in words)
     if len(axes) != expect_axes[pack]:
         bad.append("PREMISE: %s reads %d axes %r" % (pack, len(axes), sorted(axes)))
-    want = set(questions).union({"unknown_facet:" + a for a in axes}, {"escalation"}, minted)
+    if "change" not in axes:
+        bad.append("PREMISE: %s's require rows no longer read change; s8d's R6 still opens unknown_facet:change at triage, so the row count below is wrong" % pack)
+    want = set(questions).union({"unknown_facet:" + a for a in axes}, {"unknown_facet:change", "escalation"}, minted)
     rows = d.get("gate_expiry", [])
     got = [r.get("class") for r in rows]
+    if "unknown_facet:change" not in got:
+        bad.append("%s carries no unknown_facet:change row (s8d's R6 triage gate, §8h.10)" % pack)
     if len(got) != len(set(got)) or set(got) != want or len(got) != expect_rows[pack]:
         bad.append("%s gate rows: %d rows, missing %r, extra %r" % (pack, len(got), sorted(want.difference(got)), sorted(set(got).difference(want))))
     for r in rows:
@@ -1126,6 +1256,26 @@ out=$("${clean[@]}" CLAUDECODE=1 bash "$L" --check wrap -- true 2>&1); rc=$?
 out=$(env -i "HOME=$HOME" "USERPROFILE=$USERPROFILE" "SYSTEMROOT=$SYSTEMROOT" "TEMP=$TEMP" "TMP=$TMP" "PATH=$bad_fake:/usr/bin:/mingw64/bin" bash "$L" --check wrap -- true 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: --check wrap refused a CLI unequal to the adapter pin — wrap records the version, it does not compare (§8h.7)"; printf '%s\n' "$out" | tail -10; exit 1; }
 printf '%s\n' "$out" | grep -qxF "CLI_VERSION=9.9.9" || { echo "FAIL: --check wrap did not record the version it found"; printf '%s\n' "$out"; exit 1; }
+# `answer` (§8h.7, D21-46): run's refusals, run's pin comparison, and its own argument refusals. The first call is the
+# control: the same launcher, the same clean environment and a well-formed argv must pass.
+out=$("${clean[@]}" bash "$L" --check answer rk-fix-check-only approve 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: --check answer refused a clean environment (rc=$rc)"; printf '%s\n' "$out" | tail -10; exit 1; }
+for line in "LAUNCH_CHECK=ok" "MODE=answer" "DISABLE_AUTOUPDATER=1" "CLAUDE_CONFIG_DIR=$cfg" "CLI_VERSION=$pin"; do
+  printf '%s\n' "$out" | grep -qxF "$line" || { echo "FAIL: --check answer did not print '$line'"; printf '%s\n' "$out"; exit 1; }
+done
+for v in CLAUDECODE=1 CLAUDE_CODE_ENTRYPOINT=cli CLAUDE_PID=1 ANTHROPIC_API_KEY=x; do
+  out=$("${clean[@]}" "$v" bash "$L" --check answer rk-fix-check-only approve 2>&1); rc=$?
+  [ "$rc" -ne 0 ] || { echo "FAIL: --check answer accepted $v — answer takes run's environment refusals"; exit 1; }
+  printf '%s\n' "$out" | grep -qiF "${v%%=*}" || { echo "FAIL: --check answer's refusal of $v does not name the variable"; printf '%s\n' "$out"; exit 1; }
+done
+out=$(env -i "HOME=$HOME" "USERPROFILE=$USERPROFILE" "SYSTEMROOT=$SYSTEMROOT" "TEMP=$TEMP" "TMP=$TMP" "PATH=$bad_fake:/usr/bin:/mingw64/bin" bash "$L" --check answer rk-fix-check-only approve 2>&1); rc=$?
+[ "$rc" -ne 0 ] || { echo "FAIL: --check answer accepted a CLI unequal to the pin — an answer is spent irrevocably, so it is pinned as run is (§8h.7)"; exit 1; }
+printf '%s\n' "$out" | grep -qF 'Halt 2' || { echo "FAIL: --check answer's version refusal does not name Halt 2"; printf '%s\n' "$out"; exit 1; }
+for argv in "" "-x approve" "rk-fix-check-only"; do
+  out=$("${clean[@]}" bash "$L" --check answer $argv 2>&1); rc=$?
+  [ "$rc" -ne 0 ] || { echo "FAIL: --check answer accepted the argument list '$argv' — an item and an option are required"; exit 1; }
+  printf '%s\n' "$out" | grep -qF 'answer' || { echo "FAIL: the refusal of '$argv' does not name answer's usage"; printf '%s\n' "$out"; exit 1; }
+done
 rm -rf "$fake" "$bad_fake"
 
 # ---- (11) THE PIN, READ NOT MOVED: the constant equals the instrument file (7c's anchored form). The live binary is a
@@ -1145,10 +1295,10 @@ out=$(cargo clippy -p rk-adapter-claude --all-targets --features live 2>&1); rc=
 [ "$rc" -eq 0 ] || { echo "FAIL: clippy over the live probes rc=$rc"; printf '%s\n' "$out" | tail -20; exit 1; }
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the whole suite rc=$rc (a fresh checkout needs pnpm install for the node fixture first)"; printf '%s\n' "$out" | grep -E '^test .* FAILED|panicked' | head -20; exit 1; }
-# The floor is Checkpoint 8g's recorded passed count plus this stage's 39 new tests (§8h.12). BASE_8G is re-derived at
+# The floor is Checkpoint 8g's recorded passed count plus this stage's 41 new tests (§8h.12). BASE_8G is re-derived at
 # stage open from PROGRESS.md §1 by a dated edit of the next line (§8h.0 item 8); 1000 is the drafted expected value.
 BASE_8G=1000
-FLOOR=$((BASE_8G + 39))
+FLOOR=$((BASE_8G + 41))
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }
@@ -1161,7 +1311,21 @@ nres=$(printf '%s\n' "$out" | grep -c '^test result: ')
 # ---- this stage's crate edits make provisional (§8h.14's table): 5, 7b, 7b-ii, 7d. 7c, 7e, 7f and 8a are NOT
 # ---- re-run here; the table says where. Each extracted block gets a sentinel, so "rc 0 and the sentinel" means it
 # ---- ran to its end. REDKILN_LAUNCH_RECORD is unset (INPUTS), so a real-harness `run` in any of them refuses first.
+# ---- BOUNDED (D21-46's one re-run convention): every replay runs with RK_CP_NESTED=1, and when THIS block runs under
+# ---- RK_CP_NESTED=1, as a later checkpoint's entry gate, it replays nothing. NO DISPATCH (D21-46's one guard for
+# ---- replays, s8g's form): every replay runs with REDKILN_LAUNCH_RECORD removed from its environment and with
+# ---- CLAUDE_CONFIG_DIR at an empty trap directory, which must still be empty afterwards.
+if [ "${RK_CP_NESTED:-0}" = 1 ]; then
+  echo "CP8H (13) SKIPPED: this block is itself a replay (RK_CP_NESTED=1); its re-runs ran at Checkpoint 8h's own close"
+else
 mkdir -p target/s8h-whole || { echo "FAIL: cannot create target/s8h-whole"; exit 1; }
+trap_dir="$PWD/target/s8h-whole/claude-config-trap"
+rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+# Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
+: > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+[ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
 extract() {  # extract <file> <anchor|marker> <key> <out>
   python - "$1" "$2" "$3" "$4" <<'PY'
 import sys
@@ -1192,10 +1356,14 @@ for spec in "8g|runbook/phase-1/s8g-verify-and-restored-demands.md|marker|CP8G-E
   IFS='|' read -r name file mode key <<< "$spec"
   test -f "$file" || { echo "FAIL: $file is absent — Checkpoint $name cannot be re-run (Halt 8)"; exit 1; }
   extract "$file" "$mode" "$key" "target/s8h-whole/$name.sh" || { echo "FAIL: could not extract Checkpoint $name"; exit 1; }
-  out=$(bash "target/s8h-whole/$name.sh" 2>&1); rc=$?
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "target/s8h-whole/$name.sh" 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $name run whole rc=$rc — its row stays provisional"; printf '%s\n' "$out" | tail -25; exit 1; }
   printf '%s\n' "$out" | grep -qxF 'CP8H-WHOLE-RUN-SENTINEL' || { echo "FAIL: Checkpoint $name did not reach its last line"; exit 1; }
 done
+left=$(find "$trap_dir" -mindepth 1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the replays (rc=$rc)"; exit 1; }
+[ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the replays — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
+fi
 
 # ---- (14) NOTHING DISPATCHED, NO LAUNCH RECORD WRITTEN, THE WORKTREE PATH SET UNCHANGED (compared before any prune).
 disp_after=$(python -c "$probe" "$store"); rc=$?
@@ -1219,11 +1387,11 @@ echo "CP8H-END-OF-BLOCK reached"
   - Record B flips to `accepted` in the tracker commit (ADR-0092 cl.2.1): the frontmatter, the README index cell
     and the census move, and the body does not.
   - Record A stays `proposed`. `PROGRESS.md` §1 names it as awaiting `s8j`'s two probes.
-- **The §8h.13 mutants' outcomes** go into the checkpoint output: seventeen, each red, each restore verified.
+- **The §8h.13 mutants' outcomes** go into the checkpoint output: twenty, each red, each restore verified.
 - **Adversarial refuting rounds** run over the diff until a round moves no code and no guard.
 
 **Findings for the lead, recorded rather than absorbed.** Items 1–9 are the draft's, each with its status after
-D21-43/44/45. Items 10–15 are new in this revision.
+D21-43/44/45. Items 10–15 are new in that revision, and items 16–19 are new in the D21-46 revision.
 
 1. **Settled by D21-44.** The draft's blocker was *"the run-owned worktree lives under `.git`"*. D21-44 measured it:
    an edit inside `.git/redkiln/worktrees/…` was refused. The run worktree moves to `.redkiln/worktrees/<item>`,
@@ -1274,8 +1442,31 @@ D21-43/44/45. Items 10–15 are new in this revision.
     Checkpoint 7c.
 14. **Minted gate kinds need rows before they can be reached.** `s8f`'s `landing` gate and N11's drift gate are
     covered here (§8h.10). Any gate kind a later stage mints, including `s8j`'s pack-declared human-root questions,
-    brings its own `[[gate_expiry]]` row, or the load lint refuses the pack.
+    brings its own `[[gate_expiry]]` row, or the load lint refuses the pack. *Updated 2026-09-24 for D21-46:* §8h.10
+    now lists all six `s8` classes by row, and says why `s8j`'s three land at `s8j`.
 15. **The drafted floor chain rests on sibling drafts that are being revised too** (§8h.0 item 8). Only Checkpoint
     8g's recorded count may replace `BASE_8G`.
+16. **Two sibling files quote the `wrap` text this revision replaced.** `s8i` §8i.5 quotes *"Step 6 records and does
+    not compare, because `TESTED_CLI_VERSION` binds the adapter, and neither caller is the adapter"* [read at
+    `c5d19d7`]. `s8j` §8j.6 step 2 quotes *"`wrap` is the entry for a child that does not dispatch through
+    `rk-adapter-claude`"*. Neither sentence is in this file any more. Both callers' substance still holds: `s8i` needs
+    no pin comparison, and `s8j` needs 7c's own pin check. Each quotation is re-pointed at §8h.7's restated guarantee
+    by its own stage's revision. The row-6 cell *"`wrap`: record only, and never compare to the pin (below)"* and the
+    sentence *"`wrap` is not a way around the pin for `run` or `probe`"* are unchanged, so those quotations still
+    resolve.
+17. **`s8j` §8j.3 step 5 and §8j.2's attach still spell a bare `redkiln answer`.** After this stage, a bare binary
+    `answer` refuses without a launch record (§8h.7), so each goes through `tools/live-run.sh answer`. That edit is
+    `s8j`'s. `s8j`'s dispatch screen `SCREEN='tools/live-run\.sh[[:space:]]+(run|probe)|…'` does not match the
+    `answer` mode, and `answer` spawns no `claude`. Whether the screen should see it is `s8j`'s question.
+18. **The launch check on `answer` reaches every binary-level `answer` test** (§8h.0 item 11). That includes the
+    spawn helper in `rk-cli`'s `tests/it/answer.rs` and `s8e`'s `lane_e2e` binary arm. Each is given a fixture
+    launch record in its shared helper, not an exemption. If a checkpoint between `s8e` and `s8g` spawns `answer` from
+    a bash line rather than through a test, it refuses at its next whole run. No such line exists at `c5d19d7`
+    [measured: a scan of every fenced `bash` block in `runbook/phase-1/*.md` for `redkiln`, `$RK` or `$BIN` followed
+    by `answer` on a non-comment line finds none].
+19. **`s8j`'s three gate classes have no fixed spelling anywhere yet.** `s8j` §8j.2 leaves *"the gate-kind name the
+    step-4 gate binds under"* to its record, and §8j.3 leaves *"the gate cause"*. `GateReason` has one variant,
+    `UnknownFacet`, at `c5d19d7` [measured: `crates/rk-kernel/src/select/step2.rs`]. §8h.10 lists them by what they
+    are and leaves their rows to `s8j`, so that the misspelt-class lint cannot refuse a row drafted before its code.
 
 ---

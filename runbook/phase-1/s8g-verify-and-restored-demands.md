@@ -36,6 +36,25 @@ What changed:
 - **New findings**: `smoke-test` has no check, and R4 decides it (§8g.6). `integration-tests` and `migration-dry-run`
   keep agent steps at verify, and that residual is named (§8g.5).
 
+*Revised again 2026-09-24 for D21-46* (HEAD `c5d19d7`, against that ledger's `## D21-46`). Its R5 and R6 are this
+stage's. They are cited as **D21-46 R5** and **D21-46 R6** throughout, so they cannot be confused with this stage's
+own records R1–R5 (§8g.8). The last bullet of the list above is superseded by both. What changed:
+
+- **D21-46 R5, first half**: *"`integration-tests`' test-writing steps are re-homed to implement, as N23"*. The
+  activity moves to the implement stage whole, as N23 moved the four, over the same test-authoring kind. It takes a
+  version bump (2 → 3) and a changelog row, `story.toml`'s `external_dep` → `IntegrationReport` row moves with it,
+  and the P6 lattice re-run covers it (§8g.2).
+- **D21-46 R5, second half**: `migration-dry-run` is AC-347's **single** named residual. That no Phase-1 lane reaches
+  it is verified by quotation, not asserted (§8g.5). The AC-347 lint's residual set is now that one activity, and a
+  selection test asserts the unreachability.
+- **D21-46 R6**: `smoke-test` gains a `passing` check, `smoke.status == 'passing'` with `on_false = "fail"`, as an
+  ADR-0072 edit (1 → 2) with a changelog row. The option framing in §8g.6 is replaced by the decision. Its test is
+  renamed `demands::a_failing_smoke_result_fails_the_stage` and proves both arms.
+- **Counts**: **sixty-four** new tests (`rk-kernel` 9 → 11), and twenty-three mutants (M20–M23 added, §8g.9).
+  Checkpoint 8g (2), (5), (7c) and (7g) read the new shape.
+- **The floor**: the drafted `PREV` is **954**, `s8f`'s drafted Checkpoint 8f `FLOOR`, in place of 939. It is still
+  re-derived at stage open from Checkpoint 8f's recorded count (§8g.10).
+
 ---
 
 **Why this step exists.** The fix lane's verify stage demands three artifacts and its release stage two, and at
@@ -84,7 +103,9 @@ against a guessed port is the `s7g` shape (a lint green over code nothing calls)
 ### 8g.1 What this stage owns, and what it may not decide
 
 It owns **D21-41 (c) as superseded by D21-42 1a, and D21-42 6a, 6b, 10a, 10b and 10c** (the plan's row). From D21-43
-it owns **N23** (the displaced `TestReport` providers re-homed) and **N24** (AC-139's default recorded). It builds **AC-133's judgement-enum registry** once, for every
+it owns **N23** (the displaced `TestReport` providers re-homed) and **N24** (AC-139's default recorded). From D21-46
+it owns **R5** (`integration-tests` re-homed, and `migration-dry-run` pinned as AC-347's single residual) and **R6**
+(`smoke-test`'s check). It builds **AC-133's judgement-enum registry** once, for every
 later stage. D21-43's integration call reads *"AC-133's judgement-enum registry is built once, by **s8g**. s8h
 consumes it."*
 
@@ -118,7 +139,7 @@ pending s8g <crate>` in `PROGRESS.md` §1, in the commit that lands the edit. Th
 | `rk-kernel` | the verify runner; `KindSource::Pass`; the ledger reads `rk_types::AcceptanceCriterion` | Checkpoints 7b and 7b-ii | Checkpoint 8g (12), whole |
 | `rk-adapter-toolchain-rust` | **tests only**: `selection::ac348_…` and `selection::ac355_…`, both over `s8c`'s affected-set function. No source line changes, because the handlers are record V's | none | Checkpoint 7c's whole re-run, with its live probe, is `s8j`'s (D21-43 N28: *"s8j re-runs it whole, from a plain terminal through the launcher, with the live probes"*) |
 | `rk-cli` | `verify_pass.rs`, the `release_tag` git-route handler, the release write, the trial route | Checkpoint 7d | Checkpoint 8g (12), whole |
-| `.redkiln/` | the four re-homed activities and the moved escalation row (N23); `smoke-test`'s check (R4); two `[policy]` rows (N24); the goal amendments; `tag-release` in `catalog-extended/`; `verify.ac-discriminates` in `s8d`'s registry; this repository's `package_binaries` and `claims` rows in `s8c`'s table | Checkpoint 8b. Its shipped-pack lattice *"pins the measured shape"*, and the re-homing moves that shape | Checkpoint 8g (12), whole |
+| `.redkiln/` | the four re-homed activities and the moved escalation row (N23); `integration-tests` re-homed and `story.toml`'s `IntegrationReport` row moved with it (D21-46 R5); `smoke-test`'s check (D21-46 R6, recorded in R4); two `[policy]` rows (N24); the goal amendments; `tag-release` in `catalog-extended/`; `verify.ac-discriminates` in `s8d`'s registry; this repository's `package_binaries` and `claims` rows in `s8c`'s table | Checkpoint 8b. Its shipped-pack lattice *"pins the measured shape"*, and the re-homing moves that shape | Checkpoint 8g (12), whole |
 
 **Checkpoint 8d is conditional, and it is measured at stage open, not assumed.** Its (9) asserts that each of its ten
 ids is declared exactly once, and an eleventh id leaves that true. If `s8d`'s loader test pins the registry's total
@@ -184,14 +205,42 @@ also dropped at 7e (`story.toml`: *"DROPPED: [[stage.verify.require]] when = 'da
   20% line. `s8b`'s shipped-pack lattice test *"pins the measured shape"*, so its pin takes a dated edit in this
   stage's work commit, and Checkpoint 8b is re-run whole (§8g.1).
 
-⚠️ **Two things N23 does not settle. Both are named in R1 and reported upward (§8g.11):**
+⚠️ **Two things N23 does not settle. The first is named in R1 and reported upward (§8g.11). D21-46 R5 settles the
+second:**
 
 - **`unit-tests-ue` authors nothing.** Its steps are two tool steps (`cook`, `automation`), a check and an emit, with
   no agent step. It is re-homed by N23's letter, and the record says so.
 - **Two agent-bearing activities stay at verify.** `integration-tests` (`IntegrationReport`, one agent step, reachable
   in the story lane under `external_dep`) and `migration-dry-run` (one agent step, unreachable since 7e) remain at
-  verify. So N23's *"Verify only measures"* does not yet hold over the shipped catalog. AC-347's shipped-catalog lint
-  pins exactly those two as the named residual (§8g.5), so a third one turns it red.
+  verify after N23, so its *"Verify only measures"* did not hold over the shipped catalog. D21-46 R5 reads
+  *"**`integration-tests`' test-writing steps are re-homed to implement**, as N23. `migration-dry-run` stays a named
+  residual, because no Phase-1 lane reaches it (`data_migration` is NOT MEASURABLE)."* The first half is executed
+  below. The second is executed in §8g.5, where AC-347's shipped-catalog lint pins `migration-dry-run` alone.
+
+**`integration-tests` is re-homed as N23 re-homed the four (D21-46 R5).** Its test-writing step is `write`
+(*"`kind    = "agent"`"*, *"`role    = "implementer"`"*), and its `green` check loops back to it (*"`on_false = { to =
+"write", max = 2 }`"*). A step cannot sit in a different stage from its activity, so R1 moves the activity whole, as
+N23 moved the four:
+
+- **`stage = "implement"`, and the test-authoring kind is listed first.** `provides` becomes `[<K>,
+  "IntegrationReport"]`, where `<K>` is the one kind R1 names for the four. The emit binds `<K>` beside the
+  `IntegrationReport` it already composes. `IntegrationReport` stays, because no other activity provides it and
+  `story.toml` requires it.
+- **The version moves 2 → 3, with a changelog row.** `.redkiln/CHANGELOG.md` takes `integration-tests@3` in `s8b`'s
+  form (`s8b` §8b.5: *"`<id>@<new version>`, the date, and the ledger line"*, quoting the old and new text). The
+  ledger line is D21-46 R5.
+- **The require row moves with it, for N23's reason.** `story.toml`'s *"`when = "external_dep"`"* → *"`artifacts =
+  ["IntegrationReport"]`"* row moves from `[stage.verify]` to `[stage.implement]`. A verify-stage row over a kind
+  whose only producer sits at implement selects nothing. `bug-standard.toml` has no such row: measured at
+  `c5d19d7`, `grep -rn IntegrationReport .redkiln/packs` finds `story.toml` alone.
+- **Verify still measures the integration tests.** The tests that `write` authors are in the workspace, so the verify
+  pass's whole suite (below) runs them. Only the authoring leaves verify.
+- **The rejected alternative is named.** Splitting the activity into an implement-stage authoring activity and an
+  agent-free verify measurement would mint a 103rd shipped activity. That moves `s8b`'s pinned count of 102 and the
+  `curation.decision` backfill (§8g.7), and N23's precedent moves activities whole.
+- **The lattice re-run above covers it**, and its dead count is reported by id with the four.
+  `selection::integration_tests_selects_at_implement_under_external_dep` asserts the outcome: over `story.toml`, with
+  `external_dep = true`, `integration-tests` is selected at implement and at no other stage.
 
 **What the pass does, in order** (`crates/rk-cli/src/verify_pass.rs`, beside `review_pass.rs`, on its shape):
 
@@ -367,10 +416,32 @@ AC-344's `cannot_run` mapping (`verify_pass::ac344_missing_binary_is_cannot_run`
 
 **AC-347's lint runs over the shipped catalog** (`verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual`).
 It walks every `.redkiln/catalog` activity with `stage = "verify"` and asserts a non-zero count walked, which is D21-42
-13a's rule. It then asserts that the set carrying an agent step is **exactly** `integration-tests` and
-`migration-dry-run`, the residual N23 leaves (§8g.2). A new agent step at verify turns the test red, and so does
-removing the residual without updating the test. The test states the residual. It does not hide it. **Still ARMED,
-unchanged**: AC-350 (a composite `Toolchain`, R-8), AC-317 (Step 8).
+13a's rule. It then asserts that the set carrying an agent step is **exactly** `{migration-dry-run}`, the single
+residual D21-46 R5 names (§8g.2). A new agent step at verify turns the test red. So does `integration-tests` back at
+verify, and so does removing the residual without updating the test. The test states the residual. It does not hide
+it. **Still ARMED, unchanged**: AC-350 (a composite `Toolchain`, R-8), AC-317 (Step 8).
+
+**Why no Phase-1 lane reaches `migration-dry-run`, by quotation** (D21-46 R5: *"no Phase-1 lane reaches it
+(`data_migration` is NOT MEASURABLE)"*). Each line below was read at `c5d19d7`:
+
+- **The facet may key no demand.** `.redkiln/facets.toml`'s `[facet.data_migration]` reads *"`deriver_class =
+  "lexical"           # a scan over paths and diff lines — may key no require row (AC-520)`"*. Its `deriver_record`
+  comment reads *"NOT MEASURABLE at 47faec9f: 0 positives on 20 items across all three sources"*.
+  `.redkiln/corpus-records.toml` says the same: *"`# data_migration -- NOT MEASURABLE: 0 positives on 20 items across
+  all three sources [F39 s4]`"*.
+- **The one demand for its kind was dropped at 7e.** `story.toml` reads *"DROPPED: [[stage.verify.require]] when =
+  'data_migration', artifacts = ["MigrationTestReport"]"*. `grep -rn MigrationTestReport .redkiln/packs` finds that
+  comment line and no row.
+- **Its one consumer is unreached as well.** `migration-expand-execute` `requires` `MigrationTestReport` and provides
+  `MigrationLog`. Both packs dropped `MigrationLog`'s release row at 7e (*"DROPPED: [[stage.release.require]] when =
+  'data_migration', artifacts = ["MigrationLog"]"*), and no pack row names either kind.
+
+So `migration-dry-run`'s `applicable_if` (*"`data_migration != null and data_migration`"*) is never consulted,
+because selection never looks for a `MigrationTestReport` producer.
+`selection::migration_dry_run_is_selected_on_no_shipped_lane` asserts the outcome. It selects both shipped packs over
+every lattice cell, with `data_migration = true` forced on the fixture item, and asserts that `migration-dry-run` is
+selected in none. The AC-347 lint cannot see reachability, so this test is the one that fails if a later row makes
+the residual reachable (M22). A reachable residual is no longer a named exception. It is AC-347's breach.
 
 **The mutation harness AC-338 and AC-339 need is ADR-0104 decision 1's, built here** — *"The harness applies the
 patch at the candidate SHA, runs the suite, reverts, and records the outcome. It is deterministic and dispatches
@@ -420,17 +491,23 @@ is a version bump with a row in `.redkiln/CHANGELOG.md` (ADR-0072).
 - **`smoke` is live.** The spike registry marks it *"`live = true`"*, and the design's rule is that a live verb
   *"implies `memo = false` on every step using it"*.
 
-🛑 **A finding, decided in R4: `smoke-test` has no check.** At `a6349b6` its steps are `build`, `smoke` and `emit`,
-so a `SmokeResult` with `failed ≥ 1` is emitted and the stage completes on it. `s8c`'s draft reads *"The catalog reads
-`smoke.status == 'passing'`"*, but no step does.
+🛑 **A finding, decided by D21-46 R6: `smoke-test` has no check.** At `c5d19d7` its steps are `build`, `smoke` and
+`emit`, and its version is 1. So a `SmokeResult` with `failed ≥ 1` is emitted and the stage completes on it. `s8c`'s
+draft reads *"The catalog reads `smoke.status == 'passing'`"*, but no step does. D21-46 R6 reads *"**A check on
+`status == 'passing'` with `on_false = "fail"`**, as an ADR-0072 edit in s8g."* R4 records it:
 
-- **Option (a)**: add a `passing` check, `smoke.status == 'passing'`, with `on_false = "fail"`, a version bump and a
-  changelog row.
-- **Option (b)**: keep the activity emit-only and let a later stage read the status. Rejected, because no stage-exit
-  rule reads a `SmokeResult`'s status, and a measurement whose verdict nobody reads is not a gate.
-
-Recommended: (a). The test asserts the outcome, not the mechanism:
-`demands::a_failing_smoke_result_fails_the_smoke_test_activity`.
+- **The step.** A check step with `id = "passing"` sits between `smoke` and `emit`. It has `kind = "check"`, `inputs =
+  { smoke = "${smoke.outputs}" }`, `expr = "smoke.status == 'passing'"` and `on_false = "fail"`.
+- **ADR-0072.** The version moves 1 → 2, and `.redkiln/CHANGELOG.md` takes a row `smoke-test@2` in `s8b`'s form: the
+  date, the ledger line (D21-46 R6), and the old and new text quoted.
+- **The rejected alternative stays named.** Keeping the activity emit-only, so that a later stage reads the status,
+  was rejected. No stage-exit rule reads a `SmokeResult`'s status, and a measurement whose verdict nobody reads is
+  not a gate.
+- **The test asserts the outcome, on both arms.** `demands::a_failing_smoke_result_fails_the_stage` walks
+  `smoke-test` twice over a `Toolchain` double. With `status = 'passing'`, it emits one `SmokeResult`
+  `artifact.write`. With `failed = 1`, the activity fails, no `SmokeResult` is written, and the verify stage does not
+  complete, because its baseline `SmokeResult` demand is unmet. M15 deletes the check and M23 inverts it, and each
+  arm kills one of them.
 
 **ConfirmationResult — `confirmation-test`.** `toolchain:test` with *"`selection = "artifact:ReproCase.command"`"* goes
 through `selection_of` (ADR-0162) and the resolver. The check reads *"`result.status == 'passing'`"*, and a
@@ -568,10 +645,10 @@ number:
 
 | | slug | decides | supersedes, amends |
 | --- | --- | --- | --- |
-| R1 | `the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed` | §8g.2, §8g.4, §8g.5: the pass and its composition, `setup` before the whole suite; `KindSource::Pass`; D21-43 N23's re-homing of the four displaced providers to a test-authoring kind at implement, with the escalation row, and the AC-347 residual named; `verify_completed`; the verify block's routing, each id's instrument or reason; the cold slowest-child figure cited from `s8c`; the claims column; the mutation harness | ADR-0162's patch clause in part (§8g.5's condition); R-9 and RT-6 discharged; register: AC-473 *Verified by* (10b); dated notes on AC-320, AC-485, and AC-341 (its CI-green half is Phase 3's); design §5's table row; D17-4 closed |
+| R1 | `the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed` | §8g.2, §8g.4, §8g.5: the pass and its composition, `setup` before the whole suite; `KindSource::Pass`; D21-43 N23's re-homing of the four displaced providers to a test-authoring kind at implement, with the escalation row; D21-46 R5's re-homing of `integration-tests` with `story.toml`'s `IntegrationReport` row, and `migration-dry-run` named as AC-347's single residual, its unreachability quoted; `verify_completed`; the verify block's routing, each id's instrument or reason; the cold slowest-child figure cited from `s8c`; the claims column; the mutation harness | ADR-0162's patch clause in part (§8g.5's condition); R-9 and RT-6 discharged; register: AC-473 *Verified by* (10b); dated notes on AC-320, AC-485, and AC-341 (its CI-green half is Phase 3's); design §5's table row; D17-4 closed |
 | R2 | `the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion` | §8g.3, including AC-139's default: block, fail-closed, recorded as the human decision (D21-43 N24) and shipped as `verification_required = ["verify"]` in both packs; the AC-133 registry, which `s8h` consumes | D17-3 closed; AC-139 dated note; `PROGRESS.md` row 5 corrected in the tracker commit |
 | R3 | `the-rk-git-write-set-gains-tag-and-apply` | `GitOp::Tag`, `GitOp::Apply`, each with its scope | **ADR-0105 clause 5 in part**; ADR-0105 keeps `status: accepted` and gains this id in `superseded_by` |
-| R4 | `the-four-verify-and-release-demands-have-producers` | §8g.6: the activities (`smoke-test`'s check; the producer walks), the smoke checklist's home and shape, and this repository's `package_binaries` row. **The three verb handlers and their semantics are `s8c`'s record V, and `sca-scan`'s `unrated` edit is `s8b`'s; each is cited by id and not decided again** | executes D21-42 6a (which supersedes D21-41 (c)/(d)'s narrowings) |
+| R4 | `the-four-verify-and-release-demands-have-producers` | §8g.6: the activities (`smoke-test`'s `passing` check, as D21-46 R6 decided; the producer walks), the smoke checklist's home and shape, and this repository's `package_binaries` row. **The three verb handlers and their semantics are `s8c`'s record V, and `sca-scan`'s `unrated` edit is `s8b`'s; each is cited by id and not decided again** | executes D21-42 6a (which supersedes D21-41 (c)/(d)'s narrowings) |
 | R5 | `tag-release-is-the-cli-release-and-enters-by-trial` | §8g.7: ReleaseRecord's shape, the tag name and rollback target, the `release_tag` git-route handler (`s8c`'s row), the extended directory, the item-record trial, the selection mechanism, the goal amendment, AC-114's lint named as `s8j`'s | executes D21-42 6b under ADR-0114 decision 3 |
 
 🛑 **A change to a `## Decision` sentence or a forbids bullet is a supersession, never an erratum** (ADR-0092 rule 1).
@@ -581,8 +658,8 @@ and stated by quotation.
 ### 8g.9 Red first — the named tests and the mutants
 
 Every test below is authored, run, and **watched fail for its own reason** before the code that makes it pass —
-golden constraint 12 — and the red output is quoted in the commit that lands it. **Sixty-two new tests**, all under
-`--test it`: `rk-types` 9, `rk-kernel` 9, `rk-git` 4, `rk-adapter-toolchain-rust` 2, `rk-cli` 38. Checkpoint 8g
+golden constraint 12 — and the red output is quoted in the commit that lands it. **Sixty-four new tests**, all under
+`--test it`: `rk-types` 9, `rk-kernel` 11, `rk-git` 4, `rk-adapter-toolchain-rust` 2, `rk-cli` 38. Checkpoint 8g
 asserts each by its module-qualified name and asserts the exact count per crate; the lists are there and are not
 repeated here. The draft's eight handler tests (`registry::`, `sca::`, `package::`, `smoke::` in the Rust adapter)
 left this list because the handlers are `s8c`'s record V, and `s8c`'s own `verbs::` tests pin them.
@@ -606,11 +683,15 @@ and each must turn its named test red. A survivor blocks the close.
 | M12 | the patch applied in the run-owned worktree | `verify_pass::ac339_mutation_runs_in_a_disposable_worktree` |
 | M13 | an equal-specificity tie resolved to the first claim | `verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both` |
 | M14 | the affected set built by iterating a `HashMap` | `selection::ac348_selection_is_byte_identical_over_200_change_sets` (its generator permutes input order) |
-| M15 | `smoke-test`'s `passing` check deleted | `demands::a_failing_smoke_result_fails_the_smoke_test_activity` |
+| M15 | `smoke-test`'s `passing` check deleted | `demands::a_failing_smoke_result_fails_the_stage` |
 | M16 | `KindSource::Pass` read as `Activity` by the selector | `selection::a_pass_sourced_kind_selects_no_catalog_producer` |
 | M17 | the pass calls `test` on a fresh run worktree without `setup` having run | `verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree` |
 | M18 | `unit-tests` restored to `stage = "verify"` | `selection::the_rehomed_test_authoring_activities_select_at_implement` |
 | M19 | an agent step added to `smoke-test` | `verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual` |
+| M20 | `integration-tests` restored to `stage = "verify"` | `verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual` |
+| M21 | `story.toml`'s `external_dep` → `IntegrationReport` row moved back to `[stage.verify]` | `selection::integration_tests_selects_at_implement_under_external_dep` |
+| M22 | a `[[stage.verify.require]]` row `when = "external_dep"`, `artifacts = ["MigrationTestReport"]` added to `story.toml` | `selection::migration_dry_run_is_selected_on_no_shipped_lane` |
+| M23 | `smoke-test`'s `passing` expression inverted to `smoke.status != 'passing'` | `demands::a_failing_smoke_result_fails_the_stage` (its passing arm) |
 
 ### 8g.10 Checkpoint 8g
 
@@ -627,9 +708,12 @@ and each must turn its named test red. A survivor blocks the close.
 - **The verify pass is the one TestReport route.** It is reached by `verbs::run::run`, selected by kind, and runs
   whole-suite through the port over a tree `setup` has prepared. Every id of the verify block has its named test.
 - **The re-homing and the policy rows.** The four displaced providers are re-homed to implement over one
-  test-authoring kind, and the escalation row moved with them. Both packs ship `verification_required = ["verify"]`.
+  test-authoring kind, and the escalation row moved with them. `integration-tests` is re-homed over the same kind,
+  and `story.toml`'s `IntegrationReport` row moved with it (D21-46 R5). `migration-dry-run` is AC-347's single
+  residual, and no shipped lane selects it. Both packs ship `verification_required = ["verify"]`.
 - **The four demands have producers**, and each writes one `artifact.write`. The producer walk over `s8b`'s `sca-scan` reads `unrated`. The gate
-  questions load from `s8d`'s registry, and there is no `.redkiln/questions.toml`.
+  questions load from `s8d`'s registry, and there is no `.redkiln/questions.toml`. `smoke-test` fails on a
+  `SmokeResult` that is not passing (D21-46 R6).
 - **`tag-release`** sits in the extended directory and trials under the fixture harness with zero dispatches. **No
   `rk-release/*` tag appears in this repository** as a side effect of the block.
 - **The whole suite, fmt and clippy are green.** Checkpoints 5, 6, 7b, 7b-ii, 7d, 8b and 8f re-run whole from their
@@ -641,13 +725,18 @@ and each must turn its named test red. A survivor blocks the close.
 - (3) finds no `verify_completed` row, and no dated note on AC-341 or AC-139.
 - (4) finds **17** `SpecAc` sites (re-measured at `a6349b6`).
 - (7) finds four `TestReport` providers at `stage = "verify"` and no `verification_required` row.
+- (7g) finds `integration-tests` at `stage = "verify"` and version 2, and `smoke-test` at version 1 with no `passing`
+  step.
 
 **Checkpoint 7c is not re-run here.** Its live probe is `s8j`'s (§8g.1).
 
 **The floor is re-derived at stage open.** (9)'s `PREV` is Checkpoint 8f's recorded passed count. It is written in by
 a dated edit before the block's first run and never lowered to make a red run green. The drafted expected value is
-**939**. That is ADR-0164's 740 passed at `992d257`, plus the sibling drafts' new tests at `a1d35ac`: `s8a` 9, `s8b`
-16, `s8c` 40, `s8d` 46, `s8e` 40 plus one un-ignored lint, and `s8f` 47.
+**954**, which is `s8f`'s drafted Checkpoint 8f `FLOOR` at `c5d19d7` (`s8f` §8f.2 item 9: *"which gives 890 at
+Checkpoint 8e and **954** here"*). That chain is ADR-0164's 740 passed at `992d257`, plus `s8a` 7, `s8b` 16, `s8c`
+40, `s8d` 46, `s8e` 41 and `s8f` 64. The drafts do not agree with each other: `s8e`'s own block carries `FLOOR=944`
+where `s8f`'s chain has 890 at 8e, and `s8d-ii` (D21-46 R1) is not drafted yet. So the recorded count governs, as
+D21-46's floor-chain call says. (9)'s floor is `PREV` plus this stage's 64.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -692,8 +781,9 @@ vf="$1"
 grep -qF 'applying a mutation patch from `rk-cli`' "$vf" || { echo "FAIL: the verify record does not quote ADR-0162's patch clause — its disposition is stated nowhere (s8g §8g.5)"; exit 1; }
 grep -qF 'Re-homed to the implement stage' "$vf" || { echo "FAIL: the verify record does not quote D21-43 N23 — the displaced providers' re-homing is executed nowhere (s8g §8g.2)"; exit 1; }
 for a in integration-tests migration-dry-run; do
-  grep -qF "$a" "$vf" || { echo "FAIL: the verify record does not name $a in AC-347's residual (s8g §8g.5)"; exit 1; }
+  grep -qF "$a" "$vf" || { echo "FAIL: the verify record does not name $a — D21-46 R5 re-homes the one and names the other as AC-347's residual (s8g §8g.2, §8g.5)"; exit 1; }
 done
+grep -qF 'no Phase-1 lane reaches it' "$vf" || { echo "FAIL: the verify record does not quote D21-46 R5 — migration-dry-run's residual carries no reason (s8g §8g.5)"; exit 1; }
 set -- references/adr/[0-9][0-9][0-9][0-9]-the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion.md
 grep -qF 'Block (fail-closed)' "$1" || { echo "FAIL: the schema record does not quote D21-43 N24 — AC-139's human decision is recorded nowhere (s8g §8g.3)"; exit 1; }
 
@@ -730,12 +820,12 @@ ctl=$(printf '%s\n%s\n' 'crates/x/src/a.rs:1:pub struct SpecAc {' 'crates/x/src/
 
 # ---- (5) THE NAMED TESTS, per crate, each by its own `... ok` line and an EXACT count.
 T_TYPES="event_kinds::verify_completed_is_tier_two_and_wired verify_types::verify_completed_payload_refuses_an_absent_member acceptance_criterion::ac137_criterion_without_gwt_or_verification_is_accepted acceptance_criterion::mutation_declaration_round_trips_declared_and_not_feasible acceptance_criterion::a_prose_only_mutation_is_refused_at_ingest acceptance_criterion::acceptance_criterion_is_in_the_exported_registry judgement_registry::ac133_every_exported_enum_is_registered judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails judgement_registry::the_registry_names_no_enum_that_is_not_exported"
-T_KERNEL="verify::verify_completed_is_journalled_once_per_completed_test_port_call verify::no_verify_completed_for_a_run_that_did_not_complete verify::ac321_replay_reads_the_path_list_from_verify_completed_alone verify::ac321_replay_property_over_100_synthetic_ranges verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual verify::the_ledger_reads_rk_types_acceptance_criterion selection::a_pass_sourced_kind_selects_no_catalog_producer selection::the_rehomed_test_authoring_activities_select_at_implement"
+T_KERNEL="verify::verify_completed_is_journalled_once_per_completed_test_port_call verify::no_verify_completed_for_a_run_that_did_not_complete verify::ac321_replay_reads_the_path_list_from_verify_completed_alone verify::ac321_replay_property_over_100_synthetic_ranges verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual verify::the_ledger_reads_rk_types_acceptance_criterion selection::a_pass_sourced_kind_selects_no_catalog_producer selection::the_rehomed_test_authoring_activities_select_at_implement selection::integration_tests_selects_at_implement_under_external_dep selection::migration_dry_run_is_selected_on_no_shipped_lane"
 T_GIT="gitops::tag_is_on_the_enumerated_write_set gitops::apply_is_on_the_enumerated_write_set gitops::the_write_set_has_no_push gitops::tag_refuses_a_target_off_the_run_owned_branch"
 T_RUST="selection::ac348_selection_is_byte_identical_over_200_change_sets selection::ac355_lockfile_change_is_whole_suite_and_one_file_is_affected"
-T_CLI="verify_pass::selected_by_required_kind_not_stage_name verify_pass::writes_one_keyed_test_report_with_one_artifact_write verify_pass::verify_completed_names_the_adapter_detect_chose verify_pass::node_detected_fixture_records_the_node_adapter verify_pass::red_suite_is_a_failed_verify_never_green verify_pass::ac331_timeout_and_kill_are_unverifiable verify_pass::ac344_missing_binary_is_cannot_run verify_pass::ac347_the_pass_dispatches_nothing verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call verify_pass::ac338_restored_mutation_is_unverifiable verify_pass::ac339_mutation_runs_in_a_disposable_worktree verify_pass::ac341_the_pass_calls_no_tracker_method verify_pass::ac348_selection_is_recomputed_from_verify_completed verify_pass::ac353_killed_verify_resumes_to_the_same_decision verify_pass::ac359_drift_voids_the_answer_and_recomputes_the_ledger verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter verify_pass::the_lane_reaches_the_pass_through_verbs_run_run verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree verify_pass::ac139_shipped_packs_block_a_missing_verification verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry demands::smoke_result_is_produced_through_the_registry_verb demands::a_failing_smoke_result_fails_the_smoke_test_activity demands::confirmation_result_passes_at_the_fix_sha demands::confirmation_not_fixed_opens_its_gate demands::scan_high_finding_opens_scan_accept_findings demands::scan_unrated_advisory_opens_scan_accept_findings demands::scan_clean_emits_without_a_gate demands::build_artifact_carries_release_digests demands::every_restored_demand_writes_one_artifact_write tag_release::release_record_tags_the_landed_commit_locally tag_release::rollback_target_is_the_previous_release_tag tag_release::first_release_names_its_rollback_target_as_none tag_release::release_record_carries_the_build_artifact_digest tag_release::the_tag_is_never_pushed tag_release::trial_runs_one_activity_with_zero_dispatches tag_release::an_enabled_pack_referencing_the_extended_activity_is_refused tag_release::selection_picks_tag_release_over_the_deploy_patterns doctor::ac349_equal_specificity_claim_is_a_doctor_row"
+T_CLI="verify_pass::selected_by_required_kind_not_stage_name verify_pass::writes_one_keyed_test_report_with_one_artifact_write verify_pass::verify_completed_names_the_adapter_detect_chose verify_pass::node_detected_fixture_records_the_node_adapter verify_pass::red_suite_is_a_failed_verify_never_green verify_pass::ac331_timeout_and_kill_are_unverifiable verify_pass::ac344_missing_binary_is_cannot_run verify_pass::ac347_the_pass_dispatches_nothing verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call verify_pass::ac338_restored_mutation_is_unverifiable verify_pass::ac339_mutation_runs_in_a_disposable_worktree verify_pass::ac341_the_pass_calls_no_tracker_method verify_pass::ac348_selection_is_recomputed_from_verify_completed verify_pass::ac353_killed_verify_resumes_to_the_same_decision verify_pass::ac359_drift_voids_the_answer_and_recomputes_the_ledger verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter verify_pass::the_lane_reaches_the_pass_through_verbs_run_run verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree verify_pass::ac139_shipped_packs_block_a_missing_verification verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry demands::smoke_result_is_produced_through_the_registry_verb demands::a_failing_smoke_result_fails_the_stage demands::confirmation_result_passes_at_the_fix_sha demands::confirmation_not_fixed_opens_its_gate demands::scan_high_finding_opens_scan_accept_findings demands::scan_unrated_advisory_opens_scan_accept_findings demands::scan_clean_emits_without_a_gate demands::build_artifact_carries_release_digests demands::every_restored_demand_writes_one_artifact_write tag_release::release_record_tags_the_landed_commit_locally tag_release::rollback_target_is_the_previous_release_tag tag_release::first_release_names_its_rollback_target_as_none tag_release::release_record_carries_the_build_artifact_digest tag_release::the_tag_is_never_pushed tag_release::trial_runs_one_activity_with_zero_dispatches tag_release::an_enabled_pack_referencing_the_extended_activity_is_refused tag_release::selection_picks_tag_release_over_the_deploy_patterns doctor::ac349_equal_specificity_claim_is_a_doctor_row"
 NEW=0
-for spec in "rk-types@9@$T_TYPES" "rk-kernel@9@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@38@$T_CLI"; do
+for spec in "rk-types@9@$T_TYPES" "rk-kernel@11@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@38@$T_CLI"; do
   crate=${spec%%@*}; rest=${spec#*@}; want=${rest%%@*}; names=${rest#*@}
   got=$(printf '%s\n' $names | grep -c .)
   [ "$got" -eq "$want" ] || { echo "FAIL: $crate's list carries $got names, this file says $want — the list and the prose disagree"; exit 1; }
@@ -747,7 +837,7 @@ for spec in "rk-types@9@$T_TYPES" "rk-kernel@9@$T_KERNEL" "rk-git@4@$T_GIT" "rk-
   printf '%s\n' "$out" | grep -qE "test result: ok\. $want passed; 0 failed" || { echo "FAIL: $crate's selection did not run exactly $want tests — a filter that matches nothing is a green"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
   NEW=$((NEW + want))
 done
-[ "$NEW" -eq 62 ] || { echo "FAIL: $NEW named tests ran, §8g.9 says sixty-two"; exit 1; }
+[ "$NEW" -eq 64 ] || { echo "FAIL: $NEW named tests ran, §8g.9 says sixty-four"; exit 1; }
 
 # ---- (6) NO STAGE-NAME LITERAL IN rk-cli/src (ADR-0162 decision 5) — a FLOOR over CODE lines beneath the
 # ---- behavioural `selected_by_required_kind_not_stage_name` above, whose fixture names its verify stage `check`.
@@ -786,6 +876,9 @@ test -f .redkiln/CHANGELOG.md || { echo "FAIL: s8b's pack changelog is absent �
 for w in tag-release 'tagged for release' smoke-test unit-tests-ue equivalence-boundary property-based-testing verification_required; do
   grep -qiF "$w" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming '$w' (ADR-0072; R1, R2, R4, R5)"; exit 1; }
 done
+for pair in integration-tests@3 smoke-test@2; do
+  grep -qF "$pair" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming $pair in s8b's <id>@<new version> form (ADR-0072; D21-46 R5, R6)"; exit 1; }
+done
 # (7d) N23: the four displaced providers, re-homed to implement over ONE test-authoring kind listed first.
 kinds=""
 for a in unit-tests unit-tests-ue equivalence-boundary property-based-testing; do
@@ -823,6 +916,31 @@ grep -qF 'crates/rk-adapter-toolchain-node/tests/fixtures/project' .redkiln/regi
 grep -qE '^\[artifact\.TestReport\]' .redkiln/artifacts.toml || { echo "FAIL: artifacts.toml has no TestReport row"; exit 1; }
 tr_row=$(awk '/^\[artifact\.TestReport\]/{p=1;next} /^\[/{p=0} p' .redkiln/artifacts.toml)
 printf '%s\n' "$tr_row" | grep -qxF 'source = "pass"' || { echo "FAIL: TestReport is not pass-sourced — the catalog's providers would still be selected beside the pass (two routes)"; printf '%s\n' "$tr_row"; exit 1; }
+# (7g) D21-46 R5: integration-tests re-homed to implement over the SAME test-authoring kind $K, IntegrationReport kept,
+# and story.toml's IntegrationReport row moved with it. D21-46 R6: smoke-test's passing check, in step order.
+f=.redkiln/catalog/integration-tests.toml
+test -f "$f" || { echo "FAIL: $f is absent — D21-46 R5 re-homes the activity, it does not delete it"; exit 1; }
+grep -qxE 'stage[[:space:]]*=[[:space:]]*"implement"([[:space:]]*#.*)?' "$f" || { echo "FAIL: integration-tests is not re-homed to the implement stage (D21-46 R5)"; exit 1; }
+grep -qE '^version[[:space:]]*=[[:space:]]*3([[:space:]]|$)' "$f" || { echo "FAIL: integration-tests is not at version 3 (ADR-0072; D21-46 R5)"; exit 1; }
+prov=$(grep -E '^provides[[:space:]]*=' "$f")
+k=$(printf '%s\n' "$prov" | sed -n 's/^provides[[:space:]]*=[[:space:]]*\["\([A-Za-z0-9]*\)".*/\1/p')
+[ "$k" = "$K" ] || { echo "FAIL: integration-tests lists '$k' first, not the test-authoring kind $K (D21-46 R5, as N23): $prov"; exit 1; }
+printf '%s\n' "$prov" | grep -qF '"IntegrationReport"' || { echo "FAIL: integration-tests no longer provides IntegrationReport — story.toml's external_dep row would have no producer"; exit 1; }
+imp=$(awk '/^\[\[?stage\.implement(\.require)?\]\]?$/{p=1;next} /^\[/{p=0} p' .redkiln/packs/story.toml)
+printf '%s\n' "$imp" | grep -qxF 'artifacts = ["IntegrationReport"]' || { echo "FAIL: story.toml's implement stage carries no IntegrationReport row — the require row did not move with its activity (D21-46 R5)"; exit 1; }
+vrf=$(awk '/^\[\[?stage\.verify(\.require)?\]\]?$/{p=1;next} /^\[/{p=0} p' .redkiln/packs/story.toml)
+test -n "$vrf" || { echo "FAIL: story.toml's verify stage could not be read"; exit 1; }
+n=$(printf '%s\n' "$vrf" | grep -cxF 'artifacts = ["IntegrationReport"]')
+[ "$n" -eq 0 ] || { echo "FAIL: story.toml's verify stage still requires IntegrationReport, whose only producer now sits at implement (D21-46 R5)"; exit 1; }
+f=.redkiln/catalog/smoke-test.toml
+grep -qE '^version[[:space:]]*=[[:space:]]*2([[:space:]]|$)' "$f" || { echo "FAIL: smoke-test is not at version 2 (ADR-0072; D21-46 R6)"; exit 1; }
+order=$(sed -n 's/^id[[:space:]]*=[[:space:]]*"\([A-Za-z0-9_-]*\)".*/\1/p' "$f" | tr '\n' ' ')
+[ "$order" = "smoke-test build smoke passing emit " ] || { echo "FAIL: smoke-test's ids read '$order', not the activity then build, smoke, passing, emit (D21-46 R6)"; exit 1; }
+stp=$(awk '/^\[\[step\]\]$/{p=0} /^id[[:space:]]*=[[:space:]]*"passing"/{p=1} p' "$f")
+test -n "$stp" || { echo "FAIL: smoke-test's passing step could not be read"; exit 1; }
+printf '%s\n' "$stp" | grep -qE '^kind[[:space:]]*=[[:space:]]*"check"' || { echo "FAIL: smoke-test's passing step is not a check"; exit 1; }
+printf '%s\n' "$stp" | grep -qF "\"smoke.status == 'passing'\"" || { echo "FAIL: smoke-test's passing check does not read smoke.status == 'passing' (D21-46 R6)"; exit 1; }
+printf '%s\n' "$stp" | grep -qE '^on_false[[:space:]]*=[[:space:]]*"fail"' || { echo "FAIL: smoke-test's passing check does not fail on false (D21-46 R6)"; exit 1; }
 
 # ---- (8) THE COLD SLOWEST-CHILD FIGURE IS IN THE VERIFY RECORD, cited from s8c, and under ADR-0140's bound.
 secs=$(sed -n 's/.*cold cargo test --workspace slowest child: \([0-9][0-9]*\) s.*/\1/p' "$vf" | head -1)
@@ -830,9 +948,10 @@ test -n "$secs" || { echo "FAIL: the verify record carries no cold slowest-child
 [ "$secs" -lt 3600 ] || { echo "FAIL: a cold child takes $secs s, at or over ADR-0140's 3600 s — every cold verify pass would be Unverifiable (golden constraint 6; halt)"; exit 1; }
 
 # ---- (9) THE WHOLE SUITE, --no-fail-fast, rc 0, every result line green, and a FLOOR: Checkpoint 8f's recorded
-# ---- passed count plus this stage's 62. PREV is RE-DERIVED at stage open from Checkpoint 8f's recorded count by a
-# ---- dated edit of the next line; 939 is the drafted expected value. A lower bound, never an equality.
-PREV=939
+# ---- passed count plus this stage's 64. PREV is RE-DERIVED at stage open from Checkpoint 8f's recorded count by a
+# ---- dated edit of the next line; 954 is the drafted expected value (s8f's drafted FLOOR). A lower bound, never an
+# ---- equality.
+PREV=954
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the workspace suite is red (rc=$rc)"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|panicked' | head -20; exit 1; }
 results=$(printf '%s\n' "$out" | grep -c '^test result:')
@@ -954,7 +1073,7 @@ echo "CP8G-END-OF-BLOCK reached"
   `s8j`'s 14a).
 - **AC-341** on the port-call half. Its static half is cross-listed to 7b-ii.
 - **Beside the block**: AC-331; AC-344's `cannot_run` mapping; AC-347's zero-dispatch half and its shipped-catalog
-  lint, with the lint's two-activity residual named.
+  lint, with the lint's single residual, `migration-dry-run`, named and its unreachability asserted (D21-46 R5).
 - **AC-137.**
 - **AC-133.** Its instrument is built here for the first time. `s5`'s claim is corrected, not re-claimed, and `s8h`
   registers into the same registry.
@@ -970,6 +1089,7 @@ echo "CP8G-END-OF-BLOCK reached"
 | AC-139 | HUMAN GATE, **decided 2026-09-24** by D21-43 N24 (*"Block (fail-closed)"*). R2 records it, and both packs ship it as a `[policy]` row. A human decision is recorded, never claimed by a test |
 | AC-350 and AC-317 | ARMED, as before |
 | AC-473 and AC-521 | Step 8's release checks. This stage moves AC-473's *Verified by* and claims neither |
+| AC-347 over `migration-dry-run` | the single named residual (D21-46 R5): one agent step at verify, on an activity no Phase-1 lane reaches (§8g.5). A row that makes it reachable turns `selection::migration_dry_run_is_selected_on_no_shipped_lane` red |
 
 **Cross-listed:**
 
@@ -983,8 +1103,10 @@ echo "CP8G-END-OF-BLOCK reached"
 
 - **The `curation.decision` backfill for the 102 shipped activities.** None of them carries a decision id, and
   AC-114's lint (`s8j`'s) will meet them on its first run (§8g.7).
-- **N23's *"Verify only measures"* does not yet hold over the shipped catalog.** `integration-tests` and
-  `migration-dry-run` keep agent steps at verify (§8g.2, §8g.5).
+- **N23's *"Verify only measures"* holds over every reachable verify activity, and not over the shipped catalog.**
+  D21-46 R5 re-homed `integration-tests` and left `migration-dry-run` as the named residual, unreachable while
+  `data_migration` is NOT MEASURABLE (§8g.5). Making that facet measurable, or adding any row that requires
+  `MigrationTestReport`, reopens the question for whichever stage does it.
 - **`unit-tests-ue` authors nothing.** It is re-homed as a test-authoring activity by N23's letter (§8g.2).
 - **`s8h`'s `Spec` must embed `AcceptanceCriterion` unchanged** (§8g.3).
 

@@ -30,6 +30,21 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - **Found in revision:** `item_create`'s refusal of an existing id would refuse its own re-execution (§8f.7).
   `artifact.read`'s seam lands after the stage that emits through it (§8f.2 item 10).
 
+*Revised 2026-09-24 for D21-46 R7, at `c5d19d7`.* What changed:
+- **R7 (1): the `toolchain:backlog` producer.** A `store`-route read, `backlog`, over the item records the store
+  names. Each record is read by its exact path, never by a walk of `.redkiln/` (§8f.7). `[feed.rust.backlog]` and
+  `[feed.node.backlog]` move from `unprovided` to `verb = "backlog"`. `s8c` §8c.12's handed-on item 3 closes here.
+- **R7 (2): AC-127's vouched-root half.** The attached root is stored at the next entry, and a change to it is
+  advisory drift under ADR-0025 (§8f.5). `doctor` gains `RK-D-DRIFT-KIND`, the row that tells the two drift kinds
+  apart (§8f.9). AC-127 is claimed whole, and the exclusion that RAISED it with no owner is removed (§8f.11).
+- **R7 (3): the unprovided feeds.** The feed-to-activity list is measured over `.redkiln/catalog/` and handed to
+  `s8d`'s walk table by citation (§8f.7). It finds that `s8d` §8d.9's `closure-record` rows cannot hold at
+  Checkpoint 8d.
+- **Counts.** New tests go from 64 to **79**, and mutants M32–M43 are added (§8f.12). The drafted floor goes from 954
+  to **969**, still re-derived at stage open (§8f.2 item 9). `doctor`'s rule table goes from 39 ids to **41**.
+- **Found in revision (R7):** `s8c` §8c.4 cites ADR-0032 for an optional unprovided feed's `null`, and ADR-0032's
+  frontmatter reads `superseded_by: ["0103"]`. The rule stands. Re-pointing the citation is `s8c`'s (§8f.7).
+
 ---
 
 **Why this step exists.** AC-473 asks for *"every lane stage from intake to a landed commit"*, and nothing on the tree
@@ -73,7 +88,7 @@ revision. §8f.2 re-takes each one at Checkpoint 8e's close, because `s8a`–`s8
 takes no decision"* and were each corrected at their own work. `s7i`'s correction reads *"this is the third
 consecutive stage whose file said this sentence and was wrong"*. The decisions this stage executes are taken:
 D21-41 (b); D21-42 5a, 5b, 6a (this stage's half), 9, 12b and 12c; and D21-43 N10, N11, N12, and N5 for the member
-this stage keeps. The ledger is `spikes/DECISIONS-2026-09-21.md`. What those decisions leave free is named in §8f.3
+this stage keeps; and D21-46 R7. The ledger is `spikes/DECISIONS-2026-09-21.md`. What those decisions leave free is named in §8f.3
 as each record's to settle. Nothing here is left for the implementer to settle. **No record number is
 pre-assigned**: each record takes the next free id at writing, because several `s8` sub-stages write records and
 their order is not fixed. On 2026-09-24, `references/adr/README.md` gives **`0165`** as the next free id.
@@ -92,6 +107,9 @@ their order is not fixed. On 2026-09-24, `references/adr/README.md` gives **`016
 | D21-42 6a (this stage's half) | `DebtRegisterEntry`'s in-repo item write, through `rk-store`, with provenance | §8f.7 |
 | D21-42 12b; D21-43 N5 (cited), N12 (AC-372) | `dispatch_completed` gains `activity_id_at_version`, and its `item` is `s8e`'s N5 key. AC-395's per-activity breakdown and AC-372's `status` half are built | §8f.8 |
 | D21-42 12c; D21-43 N12 (AC-159) | `doctor` reads the store's journal. The flat-reading silencing of `RK-D-HEADROOM-MARGIN` is fixed. AC-159's rule is built | §8f.9 |
+| D21-46 R7 (1) | The `toolchain:backlog` producer: a `store`-route read of the item records the store names, each by its exact path. `[feed.*.backlog]` moves from `unprovided` to `verb = "backlog"` | §8f.7 |
+| D21-46 R7 (2) | AC-127's vouched-root half: the attached root is stored at the next entry, and its change is advisory drift (ADR-0025). `doctor`'s `RK-D-DRIFT-KIND` tells the two drift kinds apart | §8f.5, §8f.9 |
+| D21-46 R7 (3) | Unprovided feeds refuse by name where the input is mandatory. The feed-to-activity list goes to `s8d`'s walk table | §8f.7 |
 
 **Built on, not rebuilt.** Checkpoint 8e is the entry gate. It delivers D21-42 8a: *"The kernel owns it, through the
 journalled `GitOps` seam. It commits (zero writes on replay), then appends the t1 and t2 rows with `anchor_sha`."*
@@ -112,7 +130,8 @@ not re-specify it:
 From `s8d` (Checkpoint 8d) this stage takes the resolved emit binding, step-grain commits and re-entry (D21-42
 3a/3b). It gives the emit arm its effect, and it gives the resolver's `artifact:` arm the read seam N12 names. From
 `s8c` it takes the verb registry's `store` route. `s8c` lands the `item_create` row as *"Refused naming the route
-until `s8f`"*, and this stage builds its handler (§8f.7).
+until `s8f`"*, and this stage builds its handler (§8f.7). `s8c` also declares `[feed.*.backlog]` `unprovided` and
+names this stage as the candidate owner of its read (`s8c` §8c.12 item 3). D21-46 R7 makes it this stage's (§8f.7).
 
 **Handed on, by name.**
 - `s8g` builds the other four producers in 6a.
@@ -125,12 +144,18 @@ until `s8f`"*, and this stage builds its handler (§8f.7).
 - `s8j` makes `s8`'s instrument amendments: (1)'s non-empty diff, and (1b)'s `artifact.write` digest plus
   `git cat-file -e` on the run ref. This stage supplies the mechanisms those lines read (§8f.6), and it does not edit
   `s8-exit-criterion.md`.
+- **`s8d`'s walk table (D21-46 R7).** §8f.7's feed-to-activity list goes to `s8d` §8d.9 by citation. At Checkpoint
+  8d, `closure-record` stops at `audit` in both lanes, refused by name on `toolchain:backlog`, and its owner is this
+  stage. `s8d`'s drafted rows say it walks. The correction is `s8d`'s, in its own file. This stage's close flips the
+  rows back to **walks** by dated line (§8f.10).
 
 **Order.** (i) The stage-open measurements (§8f.2). (ii) The three records, written `proposed` before any code they
 authorise. (iii) The landing: `rk-git`'s primitive, then the kernel wiring on `s8e`'s seam (the step-grain act and
 the boundary act), then the `rk-cli` end-to-end tests. (iv) The render, write and read paths, then the drift gate,
-then the emit producer and the resolver's read, then the item write. (v) The `activity_id_at_version` member, then
-`cost` and `status`. (vi) `doctor`'s journal, then AC-159's rule. (vii) The dated notes (§8f.10). (viii) Checkpoint
+then the vouched-root store and its advisory, then the emit producer and the resolver's read, then the item write,
+then the `backlog` read and the two feed rows. (v) The `activity_id_at_version` member, then
+`cost` and `status`. (vi) `doctor`'s journal, then AC-159's rule, then
+`RK-D-DRIFT-KIND`. (vii) The dated notes (§8f.10). (viii) Checkpoint
 8f.
 
 ### 8f.2 Stage-open measurements — re-taken at Checkpoint 8e's close, before any code
@@ -171,22 +196,43 @@ Each is read-only. A 🛑 line is a STOP. The stage does not choose around it: t
    denylist globs (1,826 at `ca8f387`). The largest tracked file is still **1,439,568 bytes**
    (`references/audit/2026-09-10/GROUNDING-MERGED.json`). Any limit the landing record declares is read against that
    number.
-8. **The test module names are free.** This stage adds these modules: `rk-git` `landing`; `rk-store` `render` and
-   `item_write`; `rk-kernel` `emit` and `step_landing`; and `rk-cli` `landing`, `item_create`, `status`,
-   `doctor_journal` and `doctor_artifact`. If a predecessor stage created one of them, the tests go into it. The
+8. **The test module names are free.** This stage adds these modules: `rk-git` `landing`; `rk-store` `render`,
+   `item_write`, `backlog` and `vouched`; `rk-kernel` `emit`, `step_landing` and `feed`; and `rk-cli` `landing`,
+   `item_create`, `status`, `doctor_journal`, `doctor_artifact` and `doctor_drift`. If a predecessor stage created one of them, the tests go into it. The
    module-qualified names in §8f.12 stay as they are.
 9. **The whole-suite floor, re-derived at stage open from Checkpoint 8e's recorded count.** Checkpoint 8f's
-   `FLOOR` is Checkpoint 8e's recorded passed count plus this stage's **64** new tests. The drafted chain gives the
+   `FLOOR` is Checkpoint 8e's recorded passed count plus this stage's **79** new tests. The drafted chain gives the
    expected value. `ca8f387`'s whole suite measured 740 passed, 0 failed and 9 ignored over 44 results (ADR-0164's
    evidence, `992d257`). The drafted floors then add `s8a` 7, `s8b` 16, `s8c` 40, `s8d` 46 and `s8e` 41, which gives
-   890 at Checkpoint 8e and **954** here. Replace 954 with the recorded count plus 64, by a dated edit of that line,
-   before the block's first run. The floor is a lower bound, and it must not be a stale one.
+   890 at Checkpoint 8e and **969** here: 64 before D21-46 R7, plus its 15. Replace 969 with the recorded count
+   plus 79, by a dated edit of that line, before the block's first run. The floor is a lower bound, and it must not be a stale one.
 10. 🛑 **Where `s8d`'s `artifact:` arm reads, and whether it already emits.** N12: *"`artifact.read` is emitted by
     s8d's resolver through s8f's rk-store read seam"*. `s8d` closes before this stage, so the seam does not exist
     when `s8d`'s resolver is built. As drafted, `s8d` §8d.3's `artifact:` row reads the committed `emit` binding
     *"from the journal (tier 2)"*. Measure the arm at Checkpoint 8d's close. If it calls a stub or a named function,
     this stage re-points that one call site to the seam. If it already appends `artifact.read` itself, STOP: that is
     a second producer outside the seam, and the owner must be settled before either is kept.
+11. 🛑 **The feed rows, the `store` route and the resolver's feed path, as Checkpoint 8e leaves them (D21-46 R7).**
+    Read `.redkiln/registry.toml`. `[feed.rust.*]` and `[feed.node.*]` should each declare `backlog`, `logs` and
+    `sbom` as `unprovided` (`s8c` §8c.4), and `item_create`'s row should be on the `store` route. Then read how
+    `s8d`'s resolver resolves a feed that declares `verb`.
+    - If the resolver has no path from a feed's `verb` to a `store`-route handler, the producer has no call site.
+      STOP: the resolver is `s8d`'s.
+    - Read what Checkpoint 8d's two `lane_walk` tests measured for `closure-record`. If a test records it as walking
+      over an `unprovided` mandatory feed, the resolver served a mandatory absence as a value, which is the silent
+      `null` N14 forbids. STOP.
+    - Read whether Checkpoint 8e's `lane_e2e` reaches `closeout`. If it does, its expectation for `closure-record`
+      moves in this stage's commit, by the same dated line as `s8d`'s (§8f.10).
+    - Read whether an `s8c` census test pins `backlog` as `unprovided`. If one does, it moves by that dated line too.
+12. 🛑 **Where an attached root's bytes can be read at the next entry (D21-46 R7).** At `c5d19d7`, `answer.rs`'s
+    `store_attachments` journals `kind`, `item`, `schema_version` and `digest`, and nothing names the attached
+    path. The render record names the carrier that brings the path to the next entry (§8f.5). This file's route is
+    one repo-relative `path` member on the attach's row. Read the golden logs under `CORPUS_PIN` and every
+    `-text`-pinned fixture for an attach `artifact.write` row, as item 4 does for `dispatch_completed`. If one holds
+    such a row, the carrier moves it. STOP and put the cost to the operator.
+13. **The `doctor` rule table's size.** At `c5d19d7`, `crates/rk-cli/src/doctor/` names **39** distinct `RK-D-` ids.
+    This stage adds two, `RK-D-ARTIFACT-MUTATION` and `RK-D-DRIFT-KIND` (§8f.9). Re-count at open. A
+    predecessor's rule moves the base, and it does not move the two.
 
 ### 8f.3 The three records
 
@@ -199,7 +245,7 @@ phrase.
 | record | title carries | decides | relation to the accepted set |
 | --- | --- | --- | --- |
 | **the landing record** | `landed commit` | §8f.4 whole: what "landed" means; the step-grain boundary act (N10) and the boundary checkpoint; how a step checkpoint names its key for `reconcile`'s heal; the staging rule and its baseline; the denylist, the size limit and the form of the refusal; how each commit is made; the gate's tree; no integration; the hand-off; the discarded set at re-entry | Execution under ADR-0105 clauses 3–5 and ADR-0109 decision 2, as D21-41 (b) says, as D21-43 N10 widens it. It records that N10 replaces (b)'s *one* content checkpoint per boundary. It must **state its reading** of ADR-0105's forbids bullet *"forbids including untracked files in it"*. It must also state its reading of clause 3's *"plumbing is `commit-tree` + `update-ref` where the wrapper needs an exact parent"* as the warrant for the two `GitOp` variants §8f.4 needs. If writing finds that a `## Decision` sentence moves, that is a supersession, and the record says so (ADR-0092 rule 1). Clause 6's *"re-created, never reused"* is `s8e`'s D21-44/W2 record's to supersede, and this record cites it |
-| **the render record** | `render and write path` | §8f.5–§8f.7 and §8f.9's AC-159 rule: layout-C rendering, section stamps, prose, the drift pass (C2) and its drift gate (N11), where the canonical typed value is kept, the managed directory, the write seam, the read seam (N12), one `artifact.write` per write and one `artifact.read` per read, `.redkiln/items/` as a managed tree, and the unrecorded-mutation rule | It owns AC-411, AC-477 and AC-478, which are RAISED with no owner record. ADR-0005/0006 (as refined by ADR-0075) and ADR-0116 stand. It drives dated register amendments (§8f.10). It states N11's reading of AC-125 and records that AC-127 holds unamended (§8f.5) |
+| **the render record** | `render and write path` | §8f.5–§8f.7 and §8f.9's AC-159 rule: layout-C rendering, section stamps, prose, the drift pass (C2) and its drift gate (N11), where the canonical typed value is kept, the managed directory, the write seam, the read seam (N12), one `artifact.write` per write and one `artifact.read` per read, `.redkiln/items/` as a managed tree, and the unrecorded-mutation rule. Under D21-46 R7 it also decides the `backlog` read and its output shape (§8f.7), the vouched root's store and its advisory drift (§8f.5), the carrier of an attach's path (§8f.2 item 12) and `RK-D-DRIFT-KIND` (§8f.9) | It owns AC-411, AC-477 and AC-478, which are RAISED with no owner record. ADR-0005/0006 (as refined by ADR-0075) and ADR-0116 stand. It drives dated register amendments (§8f.10). It states N11's reading of AC-125 and records that AC-127 holds unamended (§8f.5). It states its reading of ADR-0025 for a vouched root's own change, and ADR-0025 stands unamended (§8f.5) |
 | **the telemetry-key record** | `dispatch_completed carries` | §8f.8–§8f.9: the `activity_id_at_version` member and its carrier, the breakdown grammar, the `status` renderer, AC-372's doctor clause read as a renderer test (N12), and `doctor`'s journal source and five-hour reading | **Supersedes in part:** ADR-0131's first forbids bullet, for `dispatch_completed.activity_id_at_version` alone, until 0131's tag is wired. The `item` member is N5's and rests on `s8e`'s record, which this record cites. It also supersedes in part ADR-0163 decision 4's closed-grammar sentence, decision 5's not-delivered list and its sentence on `doctor`'s journal, and ADR-0163's bullet on *"any other payload correlation key"* for this one member (§8f.8) |
 
 ### 8f.4 The landing checkpoint (D21-41 (b); D21-42 9; D21-43 N10)
@@ -382,6 +428,56 @@ note records that (§8f.10). **AC-127 holds unamended**, since *"the same change
 does block until resolved"* is now true. Uncommitted edits never reach this pass, because re-entry discards them
 first (§8f.4).
 
+**AC-127's vouched-root half (D21-46 R7).** AC-127 reads: *"GIVEN a human-supplied (vouched-root) artifact whose
+content has changed since it was vouched / WHEN the store reconciles it / THEN the change is recorded as advisory drift
+and does not block the stage / AND the same change on a store-rendered structured section does block until
+resolved."* Its *Verified by* reads: *"a table-driven test over {vouched root, rendered section} × {changed,
+unchanged} asserting the four outcomes; a `doctor` rule-table row distinguishing the two drift kinds."* The C2 pass
+above is the second clause, and this is the first. ADR-0025's decision reads: *"a human-supplied artifact is recorded
+with `derived_from = []`, and this **never blocks or re-runs**. When an upstream artifact in the same stage
+subsequently changes, the *next* gate the item reaches carries an advisory note"*. Its forbids block reads:
+*"Blocking or re-running work on a human-supplied artifact purely because `derived_from` is empty or because an
+upstream changed"*, and *"Silently doing nothing when an upstream a human artifact depended on changes — the advisory
+is mandatory, even though it does not block."*
+
+**The reading the render record states.** ADR-0025's decision names an *upstream* change. AC-127's GIVEN names the
+root's *own* content, and it cites ADR-0025 as its decision. `rk-types` already carries the variant, and its doc reads
+*"A human-supplied (vouched-root) artifact changed since vouching. **Advisory: does not block** (AC-127)"*. So the
+record reads ADR-0025's rule as governing both changes: the drift never blocks, never re-runs and is never silent. The
+upstream half is AC-525's, built at `s7b` in `rk-kernel`'s `runtime/advisory.rs`. This stage builds the own-change
+half on that module, and it does not re-claim AC-525.
+
+- **The root is stored at the next entry.** ADR-0129 decision 4 reads *"accepted and stored as a human-supplied
+  root"*. Today `answer`'s `store_attachments` journals the digest and stores no file. `answer` does not land
+  (§8f.4), so the store happens at the next `run`'s entry, as `move-to-prose` does. `rk-store`'s writer reads the
+  attached bytes at the path the attach recorded (§8f.2 item 12 measures the carrier's cost). It checks that their
+  digest equals the attach's, then writes them into the item's managed directory as the root's file, with one
+  `artifact.write`. A mismatch is **refused by name**, naming the kind, the path and both digests, and nothing is
+  stored. The entry's boundary lands the file (§8f.4). The **vouched digest** is the attach's, and nothing else
+  moves it.
+- **The pass.** It runs in the same entry pass as C2, after `reconcile_at_entry`. For each vouched root in the managed
+  directory it compares the file's digest with the vouched digest. A vouched root is not layout C: it has no section,
+  and the locator never reads it, so here the whole file is the instrument. That is the opposite of AC-159's rule,
+  which is why §8f.9 scopes vouched roots out of it.
+- **Changed.** The pass appends one `drift_advisory` in AC-525's four-field shape, `{ root, upstream, old_digest,
+  new_digest }`. `upstream` is `null`, which marks the root's own change. `old_digest` is the vouched digest and
+  `new_digest` the file's: `Drift::Advisory`'s `vouched` and `observed`. Design §5.4's row also names *"the causing
+  commit"*, and the render record states whether this case carries it. The advisory goes through `AdvisorySink`, so
+  it is appended once per `(root, null, new_digest)` per run (AC-525's amendment (3)). The next `gate_opened` in the
+  run carries it through `carried_by_gate`, which is ADR-0025's *"the next gate the item reaches"*. **Nothing else
+  happens.** Nothing is restored or rewritten, no gate opens, no step re-runs, and the root stays `Present`
+  (AC-067). `s8e`'s stage advance refuses only on an unanswered `render.structured-drift` gate, so the stage exit
+  is not blocked.
+- **Unchanged.** Nothing is appended.
+- **Re-vouching is an attach.** The advisory does not move the vouched digest. So a later run over the same change
+  appends one more advisory, which is the run-scoped cost AC-525's amendment (3) states. To re-vouch, the operator
+  attaches again through `answer`.
+- **Readers.** A root has no `emit` binding, so the read seam's check against a committed `emit` digest does not
+  apply to it. The seam serves the root's bytes on the run ref with their digest, and it appends its one
+  `artifact.read` as for any kind.
+- **Which edits reach the pass.** An edit to the root is a commit on `rk-run/<item>`, as §8f.4's re-entry item 3
+  says of any run artifact. An uncommitted edit is discarded at re-entry, before this pass runs.
+
 **No artifact type carries a drift field or a signature-comparison field.** AC-478's *Verified by* keeps that
 assertion. The one clause of AC-478 that falls is *"AND no comparison of stored-vs-regenerated rendering is
 performed, so no drift state exists to report"*, by a dated amendment (§8f.10). The drift gate is a gate row, not an
@@ -436,7 +532,7 @@ runs a `FakeHarness` lane through `verbs::run::run`. It asserts that the emitted
 equals the `rk-types` digest of the bytes at `rk-run/<item>:<path>`. Those are D21-42 5b's two halves, and `s8j`
 writes them into (1b).
 
-### 8f.7 `DebtRegisterEntry`: the in-repo item write (D21-42 6a, this stage's half)
+### 8f.7 `DebtRegisterEntry`: the in-repo item write (D21-42 6a, this stage's half), and the `backlog` read (D21-46 R7)
 
 `debt-logging` runs `extract` (an agent) and then `file`, with `run = "toolchain:item_create"` and
 `inputs = { items = "${extract.outputs.items}" }`. D21-42 6a: *"DebtRegisterEntry is an rk-store item write with
@@ -464,7 +560,82 @@ provenance; human-sourced facets are null and go to `unknown_facet`."*
   declared facet the record does not carry, as an abstention"*). So when a minted item is run, the selection
   abstains and opens an `unknown_facet` gate. `item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run`
   asserts it through the binary.
-- **No artifact kind is minted.** `ItemRefs` is a value, and the registry is not widened.
+- **No artifact kind is minted.** `ItemRefs` is a value, and the artifact registry is not widened.
+
+**The `toolchain:backlog` producer (D21-46 R7).** R7 reads: *"s8f builds the `toolchain:backlog` producer (a
+store-route read of items)"*. `s8c` §8c.12 handed it on: *"Its only honest producer is a `store`-route READ of the
+item tree, and no stage in `s8a`–`s8j` builds a store-route read handler."* `closure-record`'s `audit` step reads it
+as a mandatory input (`backlog = "toolchain:backlog"`), and so does `problem-record`'s `draft`.
+
+- **The verb row.** `backlog` takes the `store` route. It outputs `BacklogSnapshot`, declares no `inputs`, and is
+  `live = true`, because what it reads moves. Its other columns follow `item_create`'s row, which is the route's
+  first. `s8c`'s route set is closed, and it describes the `store` arm as *"an rk-store write"*. This row is the
+  arm's first read, and record V's class of handlers takes it as it takes `item_create` (above). No route is added.
+- **The feed rows.** `[feed.rust.backlog]` and `[feed.node.backlog]` change from `unprovided = "…"` to
+  `verb = "backlog"`. `s8c`'s loader refuses a feed `verb` that is not a registry row, so the verb row and the two
+  feed entries land in one commit. The value does not depend on the toolchain, and no `Toolchain` adapter is
+  called, because the `store` route is the kernel's.
+- **What it reads: the item records the store names, and nothing else.** An id is named when a tier-1
+  stage-transition row carries it as `item`, or when a journalled `ItemRefs` output of an `item_create` step lists
+  it (the write above). Each named id is read at `.redkiln/items/<id>.toml` in the run-owned worktree **by its exact
+  path**. That is `doctor --rebuild`'s precedent in `rebuild.rs`: *"Read `.redkiln/items/<slug>.toml`'s `stage` for
+  every slug the trailers committed."* The producer **never walks** `.redkiln/` or `.redkiln/items/`. So a file that
+  no row names is not in the feed, and D21-44's `worktrees/` exclusion holds by construction, as it does for
+  AC-159's rule (§8f.9). The read goes through `rk-store`, so the item tree's one reader lives in its one writer's
+  crate.
+- **The output shape.** `BacklogSnapshot` is a value in `rk-types`, serialised through `rk_store::canon::canonical`.
+  - `items` is a list of entries ordered by `id`. Each entry carries `id`, `kind`, `stage`, `facets`, `provenance`,
+    `record_digest` and `named_by`.
+  - `facets` is the record's `[facets]` table verbatim. An absent facet stays absent and is never defaulted.
+  - `provenance` is the `[provenance]` table the write above adds, or `null`.
+  - `record_digest` is the `rk-types` digest of the record's bytes.
+  - `named_by` is a sorted subset of `stage_transition` and `item_write`.
+  - `absent` is a list, ordered by `id`, of every named id with no record in this worktree, each with its
+    `named_by`. A named id is **listed absent, never dropped**. An item minted on another lane's run ref is absent
+    here until the operator merges that ref (§8f.4), and the audit reads that as a fact, not as an error.
+- **What it costs, stated.** A journalled `ItemRefs` output is tier 2. After the deleted-database test, an item that
+  was minted and never run drops out of the feed until it is run. Tier-1 names survive, because `doctor --rebuild`
+  refolds them from `Story:` trailers. The render record states this cost.
+- **What it does not do.** An item record is not an artifact kind, so the read appends no `artifact.read`, and
+  `RK-D-UNREAD` never reads it. On replay the step's resolved input is served from the journal, as `s8d` serves
+  every resolved input, and the read touches no file.
+
+**The unprovided feeds, and which activities stop on each (D21-46 R7).** R7 reads: *"Unprovided feeds refuse by name,
+and the walk table records each activity that stops on one."* `s8c` §8c.4's resolution rule is read as it stands:
+*"An `unauthored` or `unprovided` key is refused by name when the input is mandatory, and is `null` when it is optional
+(ADR-0032)."* R7 does not turn an optional `?` input into a refusal. So an activity **stops** on a feed exactly when
+it reaches an `unprovided` feed through a mandatory input.
+
+The measurement is over the step `inputs` of the 102 files in `.redkiln/catalog/` at `c5d19d7`. The three feeds
+`s8c` declares are reached **six** times, in six activities, and **two** of the reaches are mandatory. The lane
+column reads `s8d` §8d.9's drafted walk tables.
+
+| feed | activity/step | input | selected in a Phase-1 lane | stops on it before this stage | after this stage |
+| --- | --- | --- | --- | --- | --- |
+| `backlog` | `closure-record/audit` | mandatory | the fix lane's and the story lane's `closeout` | **yes**, in both lanes: refused by name at `audit`, naming `toolchain:backlog` and its `unprovided` reason | resolves through `backlog`, and the activity walks past `audit` |
+| `backlog` | `problem-record/draft` | mandatory | neither | it would, if selected | resolves through `backlog` |
+| `logs` | `root-cause/hypothesise` | optional (`logs?`) | the fix lane's `analysis` | no: `null` | unchanged: `unprovided`, so `null` |
+| `sbom` | `sca-scan/scan` | optional (`sbom?`) | both lanes' `verify` | no: `null` | unchanged |
+| `sbom` | `exploitability-analysis/sca` | optional (`sbom?`) | neither | no | unchanged |
+| `sbom` | `dependency-update/rescan` | optional (`sbom?`) | neither | no | unchanged |
+
+**Handed to the walk table's owner, by citation.** `s8d` §8d.9 owns the walk table, and this list is handed to it.
+`s8d` closes before this stage, so at Checkpoint 8d **`closure-record` stops at `audit` in both lanes**. It is refused
+by name on `toolchain:backlog`, and its owner is this stage. `s8d` §8d.9's drafted rows say it walks: *"`closure-record`
+and `lightweight-retro` **walk**"* in the fix lane, and *"`closure-record` **walks**"* in the story lane. Its claims
+read *"12 of 15"* and *"10 of 13"*. Under the rule above they read 11 of 15 and 9 of 13 at Checkpoint 8d, with a
+fourth refusal owned by `s8f`.
+- The correction is `s8d`'s, in its own file. It is named here so that nobody bends `lane_walk::…` to the drafted
+  row.
+- This stage's close flips the two rows back to **walks** by dated line. The two `lane_walk` tests' expected
+  verdicts move in the same commit (§8f.10).
+- After this stage **no lane activity stops on a feed**.
+  `landing::closure_record_walks_past_audit_on_the_backlog_feed` proves it through `verbs::run::run`.
+- `feed::every_shipped_unprovided_feed_is_reached_only_as_optional` pins the list. A later catalog edit that makes
+  a mandatory reach of an `unprovided` feed fails it by name.
+
+**Found in revision (R7).** `s8c` §8c.4 cites ADR-0032 for the optional `null`, and ADR-0032's frontmatter reads
+`superseded_by: ["0103"]`. The rule is unchanged here, and re-pointing the citation is `s8c`'s.
 
 ### 8f.8 `dispatch_completed`'s interim members, AC-395's breakdown and AC-372's `status` half (D21-42 12b)
 
@@ -550,7 +721,8 @@ nobody "unifies" the two later.
   the write record"*. The report is an unrecorded artifact mutation that names the artifact, both digests and the
   last recorded write.
 - **Scope.** A prose-only edit is not a mutation (AC-152). A whole-file digest is not the instrument (PIA-043's
-  amendment).
+  amendment). A vouched root is out of scope. It is not layout C, and its change is `drift_advisory`'s (§8f.5).
+  Reporting it here would report every advisory as a mutation.
 - **No walk.** The rule **never walks** `.redkiln/` recursively. D21-44's `worktrees/` exclusion therefore holds by
   construction, and a synthetic control proves it (§8f.12).
 - **Its rejecting fixture.** `ac415_every_rule_id_has_a_rejecting_fixture` joins rule ids to
@@ -558,11 +730,30 @@ nobody "unifies" the two later.
   managed file edited out-of-band. Its control is a file rewritten *through* the store (AC-159's *Verified by*). The
   fixture is data, and it adds no `#[test]` to `doctor.rs`.
 
-**The tests go in new modules, `doctor_journal` and `doctor_artifact`.** They do not go in `tests/it/doctor.rs`.
+**AC-127's doctor row: the two drift kinds (D21-46 R7).** AC-127's *Verified by* asks for *"a `doctor` rule-table row
+distinguishing the two drift kinds"*. A new rule id, `RK-D-DRIFT-KIND`, is added, and the render record fixes the
+spelling.
+- **What it reads.** It reads the store's journal (the source above): every `structured_drift`, every
+  `drift_advisory` and every `gate_opened`, in append order.
+- **How it tells them apart.** It reads the blocking property from `rk_types::drift::Drift::blocks()`, whose doc says
+  *"AC-127 is the criterion this encodes"*. It never reads it from a second table. A structured drift blocks, and an
+  advisory does not.
+- **What it reports.** It reports two crossings, and each finding names the drift kind, the artifact or root, and
+  the digests.
+  - **(a)** A `drift_advisory` followed in the same entry by a `render.structured-drift` gate naming its root. That
+    is an advisory promoted to a blocking gate, which ADR-0025's first forbids bullet rules out, as does AC-067's
+    *"no advisory can promote itself to `Stale` or to a blocking gate"*.
+  - **(b)** A `structured_drift` with no `render.structured-drift` gate naming its artifact opened after it in the
+    same entry. That is a blocking drift that did not block (N11).
+- **Its rejecting fixture.** One journal under `crates/rk-cli/tests/fixtures/doctor/RK-D-DRIFT-KIND/` trips arm
+  (a). A lane journal that carries both kinds, each handled correctly, is the control. Each arm has its own named
+  test in `doctor_drift`, because a fixture per function is not a fixture per branch.
+
+**The tests go in new modules, `doctor_journal`, `doctor_artifact` and `doctor_drift`.** They do not go in `tests/it/doctor.rs`.
 D21-42 18 keeps `rk-fix-doctor-test-count` as *"the untouched fixture item, prose defect included"*. Its defect is
 `doctor.rs`'s prose count (*"thirty-eight"*) against its **39** `#[test]` functions (re-counted at `a6349b6`). A test
-added to that file would move the number the fixture item is about. The new rule does move the rule table from 39
-ids to 40. `doctor.rs`'s prose *"The table is thirty-eight"* was already stale, and it is left alone for the same
+added to that file would move the number the fixture item is about. The two new rules do move the rule table from
+39 ids to 41. `doctor.rs`'s prose *"The table is thirty-eight"* was already stale, and it is left alone for the same
 reason.
 
 ### 8f.10 Register, design and runbook notes this stage owes
@@ -581,12 +772,14 @@ a note inside them would read as the criterion.
 | AC register §0.3 row C2, and the section's two "only C2 remains" sentences | C2 is resolved, on D21-42 5a, D21-43 N11 and the render record | `resolved` in the row |
 | AC-196, AC-197 | A dated disposition: Phase 2's `rk-git` merge-queue stage (design §10.2's Phase-2 scope) | `Phase 2` in each entry |
 | AC-372 | *Verified by*'s doctor-rule clause is read as a test of `cost`'s renderer, which `status` shares, with AC-415's red case (D21-43 N12; §8f.8) | ``test of `cost` `` in the entry |
-| design §5.4 | The tier-1 row: a checkpoint at every committed step that changed the tree (N10) and at every boundary when due. The `structured_drift` row: its payload, and that it opens a drift gate. The `artifact.write` and `artifact.read` rows: their producers exist. The `dispatch_completed` row: `activity_id_at_version` (the `item` note is `s8e`'s, under N5) | read at the adversarial pass |
+| design §5.4 | The tier-1 row: a checkpoint at every committed step that changed the tree (N10) and at every boundary when due. The `structured_drift` row: its payload, and that it opens a drift gate. The `artifact.write` and `artifact.read` rows: their producers exist. The `dispatch_completed` row: `activity_id_at_version` (the `item` note is `s8e`'s, under N5). Under D21-46 R7: the `drift_advisory` row gains its second producing case, a vouched root's own change with `upstream = null` (§8f.5), and the `artifact.write` row gains the attach's path carrier as the render record fixes it | read at the adversarial pass |
+| `s8c` | `s8c` §8c.4's `backlog` feed row and `s8c` §8c.12's handed-on item 3 take a dated note: the producer is built at `s8f` (D21-46 R7), and `[feed.*.backlog]` reads `verb = "backlog"` (§8f.7) | read at the adversarial pass |
+| `s8d` | `s8d` §8d.9's two `closure-record` rows and the lanes' claimed counts take a dated line: `closure-record` **walks** once this stage's producer lands. The two `lane_walk` tests' expected verdicts move in the same commit (§8f.7). Checkpoint 8d's block is not amended, so it is not made provisional | the two `lane_walk` tests in Checkpoint 8f (5)'s whole suite |
 | `s7i` | `s7i` (5)'s `GRAMMAR` widens to the breakdown forms. Its "owns no reading" branch also requires zero owned `dispatch_completed` rows, because after §8f.8 an item with dispatches and no reading prints more than one line. `s7i` §7i.2's *"nothing else"* takes a dated note | Checkpoint 7i re-run whole (Checkpoint 8f (9)) |
 | `s7d` | `s7d` §7d.7's *"prints **from the recorded resolution only**"* takes a dated note for the landing block (§8f.4) | read at the adversarial pass |
 
 **No longer owed, and why.** Three rows the draft carried are dropped:
-- **AC-127** holds as written (N11).
+- **AC-127** holds as written (N11). D21-46 R7 builds its other half, and that needs no note either.
 - **AC-013** needs no note, because N10 leaves no committed step with a void tree (§8f.4).
 - **AC-518's and AC-529's path wording** are `s8e`'s notes under D21-44.
 
@@ -599,7 +792,10 @@ a note inside them would read as the criterion.
 - AC-125: the restore, the drift gate as the only resolution, and no drift text reaching a deserializer.
 - AC-126: the read seam refuses before the entry's reconcile. A lane's replay shows every `artifact.read` after
   its entry's reconcile record. `run` has no skip flag.
-- AC-127, the rendered-section clause: a structured drift blocks the stage's exit until it is answered.
+- AC-127, whole. A structured drift blocks the stage's exit until it is answered. A changed vouched root is recorded
+  as advisory drift and does not block (D21-46 R7). `RK-D-DRIFT-KIND` is the doctor row that distinguishes the two
+  kinds.
+- AC-067, held: no advisory promotes itself to a blocking gate (`RK-D-DRIFT-KIND` arm (a)).
 - AC-159: `RK-D-ARTIFACT-MUTATION`, with its rejecting fixture and its through-the-store control.
 - AC-163, the landing's empty commit.
 - AC-220, the `doctor` half.
@@ -614,9 +810,7 @@ a note inside them would read as the criterion.
 
 **Excluded, each by name:**
 - **AC-121's cross-OS half**: it needs CI on both OS legs (D21-42 14a, `s8j`).
-- **AC-127's vouched-root half, and its *Verified by*'s "`doctor` rule-table row distinguishing the two drift
-  kinds"**: advisory drift on a human-supplied root (ADR-0025) is not built here. **No stage owns it.** It is
-  RAISED to the lead, and it is not claimed.
+- **AC-525**: built at `s7b`. The own-change advisory reuses its sink and does not re-claim it.
 - **AC-128**: no template V+1 exists in Phase 1. The stamp carries the version, so it is buildable later.
 - **AC-153**: its CLI-only mutation channel is not built here.
 - **AC-196, AC-197**: Phase 2.
@@ -626,7 +820,8 @@ a note inside them would read as the criterion.
 ### 8f.12 Tests, red first, and the mutants that must flip them
 
 Every test is written first and **watched fail for the right reason**: the behaviour is absent, not a compile error,
-a typo'd filter or a missing fixture (golden constraint 12). Names are module-qualified. **64 new tests.**
+a typo'd filter or a missing fixture (golden constraint 12). Names are module-qualified. **79 new tests**: 64, plus
+D21-46 R7's 15.
 
 - **`rk-git` `landing` (9):**
   - `landing::run_created_file_is_staged_and_an_ignored_file_is_not`
@@ -660,6 +855,19 @@ a typo'd filter or a missing fixture (golden constraint 12). Names are module-qu
   - `item_write::human_sourced_facets_are_never_written_and_are_named`
   - `item_write::an_existing_item_id_is_refused_never_overwritten` (a DIFFERING file)
   - `item_write::a_byte_identical_re_execution_is_served_and_writes_nothing`
+- **`rk-store` `backlog` (3), D21-46 R7:**
+  - `backlog::reads_only_the_items_the_store_names_each_by_exact_path` (the fixture holds an unnamed
+    `.redkiln/items/stray.toml` and a named id's copy under `.redkiln/worktrees/x/.redkiln/items/`, and neither
+    appears)
+  - `backlog::a_named_item_with_no_record_is_listed_absent_never_dropped`
+  - `backlog::the_snapshot_is_canonical_ordered_by_id_and_byte_identical_twice`
+- **`rk-store` `vouched` (4), D21-46 R7:**
+  - `vouched::ac127_four_outcomes_over_root_and_section_by_changed_and_unchanged` (a table with one row per arm:
+    root changed, root unchanged, section changed, section unchanged)
+  - `vouched::the_attached_root_is_stored_at_the_next_entry_under_its_vouched_digest` (a row with mismatching bytes
+    is refused by name, and nothing is stored)
+  - `vouched::a_changed_root_is_never_restored_rewritten_or_gated`
+  - `vouched::one_advisory_per_run_for_one_observed_digest`
 - **`rk-kernel` `emit` (3):**
   - `emit::every_activity_output_appends_one_artifact_write`
   - `emit::an_emit_replayed_writes_nothing_and_serves_its_recorded_digest`
@@ -667,7 +875,13 @@ a typo'd filter or a missing fixture (golden constraint 12). Names are module-qu
 - **`rk-kernel` `step_landing` (2):**
   - `step_landing::a_committed_step_that_changed_the_tree_lands_before_its_commit_row`
   - `step_landing::a_committed_step_that_changed_nothing_makes_no_commit`
-- **`rk-cli` `landing` (12)**. Each is a `FakeHarness` lane through `verbs::run::run`, on the harness `s8e`'s
+- **`rk-kernel` `feed` (2), D21-46 R7:**
+  - `feed::closure_record_audit_resolves_toolchain_backlog_through_the_store_route` (over the shipped catalog and
+    registry)
+  - `feed::every_shipped_unprovided_feed_is_reached_only_as_optional` (a census over the shipped catalog and
+    registry that pins §8f.7's list. Its red case is a synthetic mandatory reach of an `unprovided` feed, refused by
+    name, naming the feed and the activity/step)
+- **`rk-cli` `landing` (14)**. Each is a `FakeHarness` lane through `verbs::run::run`, on the harness `s8e`'s
   `lane_e2e` tests built:
   - `landing::fake_harness_edit_lands_on_the_run_ref_and_survives_a_second_run`
   - `landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it`
@@ -682,7 +896,9 @@ a typo'd filter or a missing fixture (golden constraint 12). Names are module-qu
   - `landing::answering_the_drift_gate_either_way_releases_the_stage_exit` (table: `confirm-restore`,
     `move-to-prose`)
   - `landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile` (AC-126's replay assertion)
-- **`rk-cli`, the rest (18):**
+  - `landing::closure_record_walks_past_audit_on_the_backlog_feed` (D21-46 R7)
+  - `landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it` (D21-46 R7)
+- **`rk-cli`, the rest (22):**
   - `explain::explain_prints_the_landed_commit_and_the_merge_command`
   - `item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run`
   - `cost::per_activity_breakdown_from_owned_dispatch_completed_rows`
@@ -704,11 +920,15 @@ a typo'd filter or a missing fixture (golden constraint 12). Names are module-qu
   - `doctor_artifact::a_prose_edit_accepted_by_reconcile_is_not_reported`
   - `doctor_artifact::an_unassigned_copy_under_redkiln_worktrees_is_never_read` (the synthetic control for D21-44's
     exclusion: a mutated copy no `worktree_assigned` row names)
+  - `doctor_artifact::a_vouched_root_edit_is_not_reported_as_an_unrecorded_mutation` (D21-46 R7)
+  - `doctor_drift::an_advisory_that_opened_a_blocking_gate_is_reported` (arm (a); D21-46 R7)
+  - `doctor_drift::a_structured_drift_with_no_drift_gate_is_reported` (arm (b); D21-46 R7)
+  - `doctor_drift::a_lane_journal_carrying_both_kinds_correctly_is_clean` (the control; D21-46 R7)
 - **`rk-adapter-claude` `dispatch` (1):**
   - `dispatch::dispatch_completed_carries_activity_id_at_version_or_null`
 
 `cost::cost_output_grammar_is_closed` is **amended**, not added. `doctor::ac415_every_rule_id_has_a_rejecting_fixture`
-gains a fixture directory, not a test.
+gains two fixture directories, `RK-D-ARTIFACT-MUTATION` and `RK-D-DRIFT-KIND`, and no test.
 
 **Mutants.** Each is authored, run and **must flip the named test**. A survivor blocks (golden constraint 12). The
 mutant cycles run **from Python**, never the shell: a backtick once swallowed a restore, and the next backup
@@ -749,6 +969,18 @@ table-driven, each arm has its own row (*a fixture per function is not a fixture
 | M29 | `item_create` refuses a byte-identical re-execution | `item_write::a_byte_identical_re_execution_is_served_and_writes_nothing` |
 | M30 | a step that changed nothing still makes an (empty) commit | `step_landing::a_committed_step_that_changed_nothing_makes_no_commit` |
 | M31 | `move-to-prose` reads the drifted bytes from the event rather than the causing commit | `render::move_to_prose_appends_the_drifted_bytes_from_the_causing_commit` |
+| M32 | the `backlog` producer walks `.redkiln/items/` (`read_dir`) instead of reading the named ids | `backlog::reads_only_the_items_the_store_names_each_by_exact_path` |
+| M33 | a named id with no record is dropped from the snapshot | `backlog::a_named_item_with_no_record_is_listed_absent_never_dropped` |
+| M34 | `[feed.rust.backlog]` is left `unprovided` | `feed::closure_record_audit_resolves_toolchain_backlog_through_the_store_route`; `landing::closure_record_walks_past_audit_on_the_backlog_feed` |
+| M35 | an `unprovided` mandatory feed resolves to `null` instead of refusing | `feed::every_shipped_unprovided_feed_is_reached_only_as_optional` (its red case) |
+| M36 | a vouched root's change is classed blocking and opens a `render.structured-drift` gate | `vouched::ac127_four_outcomes_over_root_and_section_by_changed_and_unchanged` (the root-changed row); `landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it` |
+| M37 | a vouched root's change appends nothing | `vouched::ac127_four_outcomes_over_root_and_section_by_changed_and_unchanged` (the root-changed row) |
+| M38 | a changed root is restored to its vouched bytes | `vouched::a_changed_root_is_never_restored_rewritten_or_gated` |
+| M39 | the advisory is appended at every entry pass, with no run-scoped de-duplication | `vouched::one_advisory_per_run_for_one_observed_digest` |
+| M40 | the stored root's digest is not checked against the attach's | `vouched::the_attached_root_is_stored_at_the_next_entry_under_its_vouched_digest` |
+| M41 | `RK-D-DRIFT-KIND`'s arm (a) is removed | `doctor_drift::an_advisory_that_opened_a_blocking_gate_is_reported`; `doctor::ac415_every_rule_id_has_a_rejecting_fixture` |
+| M42 | `RK-D-DRIFT-KIND`'s arm (b) is removed | `doctor_drift::a_structured_drift_with_no_drift_gate_is_reported` |
+| M43 | `RK-D-ARTIFACT-MUTATION` reads vouched roots | `doctor_artifact::a_vouched_root_edit_is_not_reported_as_an_unrecorded_mutation` |
 
 ### 8f.13 Checkpoint 8f
 
@@ -758,11 +990,14 @@ table-driven, each arm has its own row (*a fixture per function is not a fixture
 - **The register carries every note §8f.10 names.** These notes are the BEFORE assertions (PIA-035). Each was
   measured **false** on the untouched tree. The AC-125 and AC-372 needles were re-measured at `a6349b6`: 0 hits for
   `drift gate` and 0 for ``test of `cost` `` in the whole register.
-- **All 64 named tests pass, plus the amended grammar test and four existing guards.** Each is selected by its
+- **All 79 named tests pass, plus the amended grammar test and four existing guards.** Each is selected by its
   module-qualified name, with its own `... ok` line and an exact count.
 - **The whole suite passes.** `--no-fail-fast`, rc 0, `passed >= FLOOR`, zero failed. fmt and clippy are green.
 - **No integration and no float.** These are code-lines-only floors beneath the behavioural tests, and each has a
   synthetic control that drives it red.
+- **The feeds are as §8f.7 lists them, and the `backlog` producer never walks (D21-46 R7).** A registry probe with a
+  synthetic control reads the three feeds on both toolchains. A code-lines-only floor sits beneath
+  `backlog::reads_only_the_items_the_store_names_each_by_exact_path`.
 - **This block leaves the shipped store unchanged.** It re-runs only its entry gate, Checkpoint 8e, whole. It also
   re-runs Checkpoint 7i whole, because §8f.10 amends `s7i` and that makes 7i provisional. It re-runs nothing else.
   Both reach their end markers. The worktree path set is unchanged, and the checkout is clean.
@@ -870,16 +1105,16 @@ run_sel() {     # $1 crate  $2 exact count  $3.. module-qualified names
   check_sel "$crate" "$want" "$out" "$@"
 }
 run_sel rk-git 9 landing::run_created_file_is_staged_and_an_ignored_file_is_not landing::baseline_untracked_file_is_never_staged landing::tracked_modification_and_deletion_are_staged landing::not_due_makes_an_empty_commit_and_due_makes_one_content_commit landing::denylisted_path_is_refused_by_name_and_no_ref_moves landing::blob_at_the_limit_lands_and_one_byte_over_is_refused landing::the_trailer_tree_is_the_commits_own_tree landing::replay_serves_the_journal_and_performs_zero_writes landing::a_repository_hook_does_not_run_on_a_landing_commit
-run_sel rk-store 19 render::layout_c_renders_frontmatter_stamped_sections_and_prose render::render_is_a_function_of_value_and_template_only render::render_is_byte_identical_twice_and_lf_only render::structured_edit_emits_structured_drift_then_restores render::prose_edit_is_accepted_with_no_drift_record render::one_artifact_write_per_write_carrying_the_rk_types_digest render::no_artifact_type_carries_a_drift_or_signature_field render::typed_value_reads_back_from_the_store_never_from_the_markdown render::machine_only_kind_reads_its_sidecar_and_survives_md_deletion render::ac122_a_sibling_crate_cannot_write_a_managed_path render::replay_performs_zero_writes render::move_to_prose_appends_the_drifted_bytes_from_the_causing_commit render::drift_text_never_reaches_a_deserializer render::read_appends_one_artifact_read_naming_kind_and_id render::a_read_before_the_entrys_reconcile_is_refused item_write::debt_item_is_written_under_items_with_its_provenance item_write::human_sourced_facets_are_never_written_and_are_named item_write::an_existing_item_id_is_refused_never_overwritten item_write::a_byte_identical_re_execution_is_served_and_writes_nothing
-run_sel rk-kernel 5 emit::every_activity_output_appends_one_artifact_write emit::an_emit_replayed_writes_nothing_and_serves_its_recorded_digest emit::every_artifact_input_resolution_appends_one_artifact_read step_landing::a_committed_step_that_changed_the_tree_lands_before_its_commit_row step_landing::a_committed_step_that_changed_nothing_makes_no_commit
+run_sel rk-store 26 render::layout_c_renders_frontmatter_stamped_sections_and_prose render::render_is_a_function_of_value_and_template_only render::render_is_byte_identical_twice_and_lf_only render::structured_edit_emits_structured_drift_then_restores render::prose_edit_is_accepted_with_no_drift_record render::one_artifact_write_per_write_carrying_the_rk_types_digest render::no_artifact_type_carries_a_drift_or_signature_field render::typed_value_reads_back_from_the_store_never_from_the_markdown render::machine_only_kind_reads_its_sidecar_and_survives_md_deletion render::ac122_a_sibling_crate_cannot_write_a_managed_path render::replay_performs_zero_writes render::move_to_prose_appends_the_drifted_bytes_from_the_causing_commit render::drift_text_never_reaches_a_deserializer render::read_appends_one_artifact_read_naming_kind_and_id render::a_read_before_the_entrys_reconcile_is_refused item_write::debt_item_is_written_under_items_with_its_provenance item_write::human_sourced_facets_are_never_written_and_are_named item_write::an_existing_item_id_is_refused_never_overwritten item_write::a_byte_identical_re_execution_is_served_and_writes_nothing backlog::reads_only_the_items_the_store_names_each_by_exact_path backlog::a_named_item_with_no_record_is_listed_absent_never_dropped backlog::the_snapshot_is_canonical_ordered_by_id_and_byte_identical_twice vouched::ac127_four_outcomes_over_root_and_section_by_changed_and_unchanged vouched::the_attached_root_is_stored_at_the_next_entry_under_its_vouched_digest vouched::a_changed_root_is_never_restored_rewritten_or_gated vouched::one_advisory_per_run_for_one_observed_digest
+run_sel rk-kernel 7 emit::every_activity_output_appends_one_artifact_write emit::an_emit_replayed_writes_nothing_and_serves_its_recorded_digest emit::every_artifact_input_resolution_appends_one_artifact_read step_landing::a_committed_step_that_changed_the_tree_lands_before_its_commit_row step_landing::a_committed_step_that_changed_nothing_makes_no_commit feed::closure_record_audit_resolves_toolchain_backlog_through_the_store_route feed::every_shipped_unprovided_feed_is_reached_only_as_optional
 run_sel rk-adapter-claude 2 dispatch::dispatch_completed_carries_activity_id_at_version_or_null dispatch::ac360_one_event_per_termination_path
-run_sel rk-cli 34 landing::fake_harness_edit_lands_on_the_run_ref_and_survives_a_second_run landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it landing::the_user_checkout_is_unchanged_across_a_landing_lane landing::only_the_run_ref_moves_across_a_lane landing::a_refused_path_stops_the_lane_at_a_landing_gate_with_nothing_landed landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit landing::reentry_names_every_discarded_path landing::emitted_artifact_digest_matches_its_bytes_on_the_run_ref landing::the_lane_end_lands_the_final_stages_work landing::a_drift_gate_blocks_the_stage_exit_until_it_is_answered landing::answering_the_drift_gate_either_way_releases_the_stage_exit landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile explain::explain_prints_the_landed_commit_and_the_merge_command item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run cost::per_activity_breakdown_from_owned_dispatch_completed_rows cost::per_activity_cost_sums_decimals_verbatim_and_absent_is_never_zero cost::no_breakdown_for_an_item_that_owns_no_dispatch_completed_row cost::a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected status::status_prints_every_flag_beside_its_reading status::status_prints_no_headroom_line_for_an_item_with_no_reading run::no_cli_flag_skips_the_entry_reconcile doctor_journal::a_present_store_is_the_journal doctor_journal::events_jsonl_is_read_only_in_fixture_mode doctor_journal::headroom_margin_fires_on_a_flat_last_reading doctor_journal::headroom_margin_reads_the_latest_five_hour_bearing_reading doctor_journal::the_doctor_verb_never_selects_the_fixture_source doctor_artifact::an_out_of_band_structured_edit_is_reported_as_an_unrecorded_mutation doctor_artifact::a_rewrite_through_the_store_is_not_reported doctor_artifact::a_prose_edit_accepted_by_reconcile_is_not_reported doctor_artifact::an_unassigned_copy_under_redkiln_worktrees_is_never_read cost::cost_output_grammar_is_closed cost::render_empty_is_nothing_to_attribute_never_low_sample run::ac438_table_driven_exit_codes_over_fixtures_binary_arm doctor::ac415_every_rule_id_has_a_rejecting_fixture
+run_sel rk-cli 40 landing::fake_harness_edit_lands_on_the_run_ref_and_survives_a_second_run landing::gate_tree_hash_is_its_own_commits_tree_and_answer_does_not_void_it landing::the_user_checkout_is_unchanged_across_a_landing_lane landing::only_the_run_ref_moves_across_a_lane landing::a_refused_path_stops_the_lane_at_a_landing_gate_with_nothing_landed landing::a_kill_after_a_committed_writer_step_resumes_over_its_landed_edit landing::reentry_names_every_discarded_path landing::emitted_artifact_digest_matches_its_bytes_on_the_run_ref landing::the_lane_end_lands_the_final_stages_work landing::a_drift_gate_blocks_the_stage_exit_until_it_is_answered landing::answering_the_drift_gate_either_way_releases_the_stage_exit landing::every_artifact_read_in_a_lane_follows_its_entrys_reconcile explain::explain_prints_the_landed_commit_and_the_merge_command item_create::a_minted_debt_item_opens_an_unknown_facet_gate_when_run cost::per_activity_breakdown_from_owned_dispatch_completed_rows cost::per_activity_cost_sums_decimals_verbatim_and_absent_is_never_zero cost::no_breakdown_for_an_item_that_owns_no_dispatch_completed_row cost::a_flagged_reading_is_never_rendered_bare_and_a_bare_rendering_is_rejected status::status_prints_every_flag_beside_its_reading status::status_prints_no_headroom_line_for_an_item_with_no_reading run::no_cli_flag_skips_the_entry_reconcile doctor_journal::a_present_store_is_the_journal doctor_journal::events_jsonl_is_read_only_in_fixture_mode doctor_journal::headroom_margin_fires_on_a_flat_last_reading doctor_journal::headroom_margin_reads_the_latest_five_hour_bearing_reading doctor_journal::the_doctor_verb_never_selects_the_fixture_source doctor_artifact::an_out_of_band_structured_edit_is_reported_as_an_unrecorded_mutation doctor_artifact::a_rewrite_through_the_store_is_not_reported doctor_artifact::a_prose_edit_accepted_by_reconcile_is_not_reported doctor_artifact::an_unassigned_copy_under_redkiln_worktrees_is_never_read cost::cost_output_grammar_is_closed cost::render_empty_is_nothing_to_attribute_never_low_sample run::ac438_table_driven_exit_codes_over_fixtures_binary_arm doctor::ac415_every_rule_id_has_a_rejecting_fixture landing::closure_record_walks_past_audit_on_the_backlog_feed landing::a_changed_vouched_root_does_not_block_the_stage_exit_and_the_next_gate_carries_it doctor_artifact::a_vouched_root_edit_is_not_reported_as_an_unrecorded_mutation doctor_drift::an_advisory_that_opened_a_blocking_gate_is_reported doctor_drift::a_structured_drift_with_no_drift_gate_is_reported doctor_drift::a_lane_journal_carrying_both_kinds_correctly_is_clean
 
 # ---- (5) THE WHOLE SUITE, and the two lint gates. FLOOR is §8f.2 item 9's, RE-DERIVED AT STAGE OPEN from Checkpoint
-# ---- 8e's recorded passed count + this stage's 64 new tests, by a dated edit of the line below before the first run.
-# ---- The drafted value is 954: 740 (992d257; ADR-0164's evidence) + s8a 7 + s8b 16 + s8c 40 + s8d 46 + s8e 41 = 890,
-# ---- + 64. A filtered green can select around every catching test; the whole suite cannot.
-FLOOR=954
+# ---- 8e's recorded passed count + this stage's 79 new tests, by a dated edit of the line below before the first run.
+# ---- The drafted value is 969: 740 (992d257; ADR-0164's evidence) + s8a 7 + s8b 16 + s8c 40 + s8d 46 + s8e 41 = 890,
+# ---- + 79 (64, plus D21-46 R7's 15). A filtered green can select around every catching test; the whole suite cannot.
+FLOOR=969
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|^test result:' | head -30; exit 1; }
 results=$(printf '%s\n' "$out" | grep -c '^test result: ')
@@ -906,12 +1141,32 @@ raw=$(grep -rnwE 'f32|f64' crates/rk-cli/src/verbs/cost.rs crates/rk-cli/src/ver
 code=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
 [ -z "$code" ] || { echo "FAIL: a binary float on a CODE line of cost, status or rk-store (ADR-0133 clause 5; AC-374):"; printf '%s\n' "$code"; exit 1; }
 
+# ---- (6b) THE FEEDS (D21-46 R7). The probe reads the three feeds s8c declares, on both toolchains: `backlog` is
+# ---- provided by the `backlog` verb, and `logs` / `sbom` stay `unprovided` (§8f.7's list). It reads the TOML on stdin,
+# ---- because git-bash's /tmp is invisible to Windows Python. The control comes first. The no-walk floor is CODE lines
+# ---- only, beneath backlog::reads_only_the_items_the_store_names_each_by_exact_path — never the assertion.
+fd='import sys,tomllib; f=tomllib.load(sys.stdin.buffer).get("feed",{}); print(" ".join(c+"."+k+"="+("verb:"+str(v["verb"]) if "verb" in v else ("unprovided" if "unprovided" in v else "neither")) for c in ("node","rust") for k,v in sorted(f.get(c,{}).items()) if k in ("backlog","logs","sbom")))'
+want='node.backlog=verb:backlog node.logs=unprovided node.sbom=unprovided rust.backlog=verb:backlog rust.logs=unprovided rust.sbom=unprovided'
+ctl_src=$(printf '[feed.rust.backlog]\nunprovided = "no producer"\n')
+ctl=$(python -c "$fd" <<<"$ctl_src"); rc=$?
+[ "$rc" -eq 0 ] && [ "$ctl" = 'rust.backlog=unprovided' ] || { echo "FAIL (control): the feed probe read '$ctl' (rc=$rc) over an unprovided backlog — it could not go red"; exit 1; }
+test -f .redkiln/registry.toml || { echo "FAIL: .redkiln/registry.toml is absent — the feed probe would read nothing"; exit 1; }
+got=$(python -c "$fd" < .redkiln/registry.toml); rc=$?
+[ "$rc" -eq 0 ] && [ "$got" = "$want" ] || { echo "FAIL: the feed rows read '$got' (rc=$rc), expected '$want' — the backlog producer is not declared, or §8f.7's list moved without its dated line"; exit 1; }
+test -f crates/rk-store/src/backlog.rs || { echo "FAIL: crates/rk-store/src/backlog.rs is absent — the no-walk floor would grep nothing"; exit 1; }
+raw=$(grep -HnE 'read_dir|WalkDir|walkdir|glob::' crates/rk-store/src/backlog.rs); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the no-walk floor could not run (grep rc=$rc)"; exit 1; }
+code=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
+[ -z "$code" ] || { echo "FAIL: the backlog producer walks a directory on a CODE line — it reads the ids the store names, by exact path (§8f.7):"; printf '%s\n' "$code"; exit 1; }
+
 # ---- (7) SYNTHETIC CONTROLS — every helper above is driven RED once, or its green means nothing.
 ( check_sel ctl 1 'test a::b ... ok' a::b ) >/dev/null 2>&1 && { echo "FAIL (control): check_sel accepted an output with no test result line"; exit 1; }
 ( check_sel ctl 1 "$(printf 'test a::b ... ok\ntest result: ok. 12 passed; 0 failed')" a::b ) >/dev/null 2>&1 && { echo "FAIL (control): check_sel accepted 12 passed as 1"; exit 1; }
 ( check_sel ctl 1 "$(printf 'test a::c ... ok\ntest result: ok. 1 passed; 0 failed')" a::b ) >/dev/null 2>&1 && { echo "FAIL (control): check_sel accepted a run that did not select a::b"; exit 1; }
 ctl=$(printf '%s\n' 'crates/x/src/a.rs:3:    // GitOp::Integrate' 'crates/x/src/a.rs:4:    let op = GitOp::Integrate;' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
 [ "$ctl" = 'crates/x/src/a.rs:4:    let op = GitOp::Integrate;' ] || { echo "FAIL (control): the code-line filter did not keep the code line and drop the comment: $ctl"; exit 1; }
+ctl=$(printf '%s\n' 'crates/rk-store/src/backlog.rs:3:    // never read_dir here' 'crates/rk-store/src/backlog.rs:9:    let d = std::fs::read_dir(p)?;' | grep -E 'read_dir|WalkDir|walkdir|glob::' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
+[ "$ctl" = 'crates/rk-store/src/backlog.rs:9:    let d = std::fs::read_dir(p)?;' ] || { echo "FAIL (control): the no-walk floor did not keep the walking code line and drop the comment: $ctl"; exit 1; }
 blk_of='import re,sys
 q=chr(96)*3
 t=open(sys.argv[1],encoding="utf-8").read()

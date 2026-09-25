@@ -33,6 +33,21 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - **LFS** is s8a §8a.2 item 2a's rule, cited and not re-specified. **D21-44/45**: no run-worktree path appears in this
   file. W4 was measured against BrittonGames (§8i.0 item 12).
 
+*Revised again 2026-09-24 for D21-46* (s8h read at `c5d19d7`). What changed:
+
+- **S-BIN launches through `s8h`'s launcher.** D21-46's integration call: *"s8i uses s8h's `wrap` mode for S-BIN's
+  corpus runner"*. Every runner invocation in B1–B4 is a `tools/live-run.sh wrap -- <argv…>` child, and so is each
+  B1 capture session (§8i.5). The operator-shell route is withdrawn. S-BIN's own guards stay, as a second layer: the
+  dispatch cap, the CLI freeze, the `apiKeySource` check and the transcript tripwire. `wrap` records the CLI version
+  before and after each launch and does not compare it to the adapter pin. §8i.5 quotes s8h for both.
+- **One re-run convention, `RK_CP_NESTED=1`** (D21-46). Checkpoint 8i's (11) replays 8h, 8a and 5 with it set. When
+  the block is itself run with it set, (11) replays nothing.
+- **One no-dispatch guard for replays** (D21-46, in s8g's form). (11)'s replays run with `CLAUDE_CONFIG_DIR` at an
+  empty trap directory that must still be empty afterwards, and with `REDKILN_LAUNCH_RECORD` unset.
+- **Two checkpoint defects fixed.** (12)'s tripwire listed `$CFG/projects`, and nothing sets `$CFG`, so its "after"
+  listing was never the two account roots that (0) read. It now reads `$CFGS` and asserts a non-empty listing. (11)'s
+  dispatch scan did not match the launcher's `wrap` mode. It now does, with a synthetic control each way.
+
 ---
 
 **Why this step exists.** D21-42 decision 2 took the `ChangeSummary` question in two halves: *"**Split the type now,
@@ -370,7 +385,9 @@ script"*):
 registered procedure). For items 1 to 5 in order:
 
 1. Open the editor on the tree's `OurGame/OurGame.uproject`.
-2. From the §8i.5 shell (frozen CLI, the account's `CLAUDE_CONFIG_DIR`), start a Claude Code session in the tree.
+2. From the §8i.5 plain terminal, after its second-layer pre-check, start the Claude Code session in the tree as a
+   `wrap` child (§8i.5). The launcher sets the account's `CLAUDE_CONFIG_DIR` and the freeze, and records the version
+   before and after the session.
 3. Run `/ue-verify` with the registered `$ARGUMENTS`. Confirm that `monolith_status()` reports this tree's project.
 4. Confirm that the capture landed at the registered path. Copy it to `results/s-bin/captures/item-<n>/` and hash it.
 5. Write the procedure-log line: the tree, the session's model and cost, the capture's sha256, and the operator's
@@ -384,7 +401,7 @@ A "no" on a seeded tree is a stop (§8i.6). It never falls back to empty capture
 | batch | what | model spend | gate |
 | --- | --- | --- | --- |
 | **B0** | driver and audit built test-first (§8i.3); dry run; seed 5's replacement selected under the registered rule (§8i.2 item 12); five stripped review trees, seeds by blob oid, fix unreachable (§8i.4); the operator's five UE runs; the amendment committed | none | operator go-ahead for the corpus writes |
-| **B1** | at most **3 haiku** flag probes on a throwaway tree: the card adopted with `Read`+`Bash` under `--json-schema` (F20's measured hazard: *"an agent card's `tools` allowlist silently disables `--json-schema`"*), `apiKeySource` `none`, and the init tool set equal to the card's. **Then the five `/ue-verify` capture sessions** (§8i.4, D21-43 N19). None of these is an S-BIN record. | ≤ 3 haiku + 5 operator sessions | **go-ahead B1**, whose line names the fixture proofs it rests on (D21-43 N22) |
+| **B1** | at most **3 haiku** flag probes on a throwaway tree: the card adopted with `Read`+`Bash` under `--json-schema` (F20's measured hazard: *"an agent card's `tools` allowlist silently disables `--json-schema`"*), `apiKeySource` `none`, and the init tool set equal to the card's. **Then the five `/ue-verify` capture sessions** (§8i.4, D21-43 N19), each a `wrap` child. None of these is an S-BIN record. | ≤ 3 haiku + 5 operator sessions | **go-ahead B1**, whose line names the fixture proofs it rests on (D21-43 N22) |
 | **B2** | pass 1: items 1–5 | 5 Opus | **go-ahead B2** |
 | **B3** | pass 2: items 1–5, after pass 1's audit has been read | 5 Opus | **go-ahead B3** |
 | retries | a void retried once at the same ceiling, inside its batch; each named in the ledger | ≤ 4 Opus in all | inside B2/B3's go-ahead |
@@ -407,44 +424,104 @@ is to stop and report, not to spend again."*
 
 **The environment.** D21-42 17a: *"A committed launcher script is the only entry to a real run. It refuses
 `CLAUDECODE`/`CLAUDE_CODE_*` and denylisted names, sets `CLAUDE_CONFIG_DIR` explicitly, freezes auto-update and
-captures the version. The adapter refuses unless init reports `apiKeySource == "none"`."* **S-BIN does not launch
-through `s8h`'s launcher, and this was measured against s8h's text.** Its modes are `run <item>`, `probe <test>` and
-`--check` (s8h §8h.7), and none of them is for an arbitrary child. Its step 6 also refuses *"unless the version equals
-`TESTED_CLI_VERSION`"*, and that pin moves only at `s8j` (D21-42 16), while the installed CLI is already past it
-(§8i.0 item 8). So the operator's shell applies the same refusals first, as below, and the driver enforces the
-`apiKeySource` half itself (`api_key_source_other_than_none_voids_before_scoring`). The account is D21-42 17b's:
-*"`~/.claude-personal`."*
+captures the version. The adapter refuses unless init reports `apiKeySource == "none"`."* **Every S-BIN dispatch
+batch launches through `s8h`'s launcher, in its `wrap` mode.** D21-46: *"s8i uses s8h's `wrap` mode for S-BIN's
+corpus runner"*. s8h §8h.7 names this stage as one of `wrap`'s two callers: *"`s8i`'s S-BIN batches through the
+corpus runner."* The draft of this section said *"S-BIN launches through `s8h`'s launcher if it exposes an entry for
+an arbitrary child"*, and routed through the operator's shell because the launcher then had no such entry and
+refused at step 6 on the pin. s8h at `c5d19d7` answers both, so that route is withdrawn.
+
+**What `wrap` does with the version, in s8h's words** (§8h.7, read at `c5d19d7`). Its step 6 row: *"`wrap`: record
+only, and never compare to the pin (below)"*. And below it: *"Steps 1–5, 8 and 9 apply unchanged. Step 6 records and
+does not compare, because `TESTED_CLI_VERSION` binds the adapter, and neither caller is the adapter."* Step 8's launch
+record holds the claude path, *"version and sha256 before"*, and *"then version and sha256 after, and the rc"*. Step
+9: *"a difference fails the launch non-zero"*, naming Halt 2. So `wrap` **records the CLI version before and after
+each launch, and does not compare it to the adapter pin.** The installed 2.1.281 against the pin's 2.1.278 (§8i.0
+item 8) does not refuse a `wrap` launch, and S-BIN relies on no comparison to `TESTED_CLI_VERSION`. Checkpoint 8h (10)
+asserts that `--check wrap` accepts a CLI unequal to the pin. s8h also says *"`wrap` is not a way around the pin for
+`run` or `probe`"*. If a later revision of s8h makes `wrap` compare to the pin, a B1–B4 launch refuses at step 6. The
+stage then stops for a ledger line (§8i.6), and it does not fall back to a shell route unrecorded.
+
+**What launches through `wrap`.** Every runner invocation that can spawn `claude` does: B1's haiku probes, B2, B3,
+the retries inside them, and B4. B1's five capture sessions do too (§8i.4). Each invocation is one launch with one
+launch record. B0 spends nothing and launches nothing. Its dry run spawns only the stub (§8i.3), which is the one
+place `--claude-bin` is passed. Every wrapped invocation resolves `claude` from the PATH that the launcher resolved
+and recorded. The launcher runs **from a plain terminal, never a Claude Code session** (s8h §8h.7: its step 2
+*"refuses"* a session's variables and *"does not strip them"*), and from `D:/repos/redkiln-rs`, so the launch record
+lands under this repository's git common dir. The child changes into the directory it needs itself. The account is
+D21-42 17b's, *"`~/.claude-personal`"*, which the launcher sets at its step 4.
+
+**S-BIN's own guards stay, as a second layer.** None of them is delegated to the launcher, and the launcher does
+none of them:
+- **The dispatch cap**, enforced by the driver before it spawns (`the_dispatch_cap_refuses_before_spawning`). The
+  launcher counts nothing.
+- **The CLI freeze.** The launcher exports `DISABLE_AUTOUPDATER=1` to its child (step 5), and it does not read the
+  account's `settings.json`. The pre-check below reads that row. `wrap`'s step 9 sees a move inside one launch only.
+  A move between two launches is caught by the driver's set-level
+  `a_version_move_between_dispatches_halts_the_set`, which compares every record to the set's first version. Every
+  record's `cli_version` must also equal the `CLI_VERSION` of its launch record.
+- **The `apiKeySource` check**, the driver's own (`api_key_source_other_than_none_voids_before_scoring`). The
+  launcher reads no init line.
+- **The transcript tripwire**, Checkpoint 8i (0) and (12), over both account roots.
 
 ```bash
-# The operator's shell before B1..B4 — a Git Bash OUTSIDE Claude Code (s7c §7c.15's rule). Refusals, never strips.
-env | grep -qE '^(CLAUDECODE=|CLAUDE_CODE_)' && { echo "FAIL: a Claude-spawned shell — CLAUDECODE/CLAUDE_CODE_* would reach the child (s7c §7c.15)"; exit 1; }
+# Before each of B1..B4, in a Git Bash OUTSIDE Claude Code (s7c §7c.15; s8h §8h.7). The launcher is the route, and
+# these lines are S-BIN's second layer. Refusals, never strips.
+cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
+L=tools/live-run.sh
+test -f "$L" || { echo "FAIL: $L is absent — Checkpoint 8h builds it, and S-BIN has no other route (D21-46)"; exit 1; }
+env | grep -qE '^(CLAUDECODE=|CLAUDE_CODE_)' && { echo "FAIL: a Claude-spawned shell — the launcher refuses it at step 2 (s8h §8h.7)"; exit 1; }
+[ -z "${REDKILN_LAUNCH_RECORD:-}" ] || { echo "FAIL: REDKILN_LAUNCH_RECORD is already set — this shell is inside a launch; open a fresh terminal"; exit 1; }
 for v in ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL ANTHROPIC_FOUNDRY_API_KEY GITHUB_TOKEN GH_TOKEN GH_ENTERPRISE_TOKEN; do
   [ -z "${!v:-}" ] || { echo "FAIL: $v is set — a denylisted name (s7c §7c.6); unset it outside the process, never strip it"; exit 1; }
 done
-export CLAUDE_CONFIG_DIR="$HOME/.claude-personal"
-test -d "$CLAUDE_CONFIG_DIR" || { echo "FAIL: no $CLAUDE_CONFIG_DIR — D21-42 17b's account is not on this box"; exit 1; }
-# D21-43 N22: the CLI is frozen from S-BIN on. s8h §8h.8's mechanism: the child's environment, AND the account's settings.
-export DISABLE_AUTOUPDATER=1
-grep -q '"DISABLE_AUTOUPDATER"' "$CLAUDE_CONFIG_DIR/settings.json" || { echo "FAIL: $CLAUDE_CONFIG_DIR/settings.json has no DISABLE_AUTOUPDATER env row — the freeze (s8h §8h.8) is not in place before B1"; exit 1; }
-ver=$(claude --version 2>&1); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$ver" ] || { echo "FAIL: claude --version did not run (rc=$rc)"; exit 1; }
-cbin=$(command -v claude); rc=$?
-[ "$rc" -eq 0 ] && [ -f "$cbin" ] || { echo "FAIL: claude does not resolve to a file (rc=$rc)"; exit 1; }
-csha=$(sha256sum "$cbin"); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$csha" ] || { echo "FAIL: could not hash $cbin (rc=$rc)"; exit 1; }
-echo "S-BIN instrument at this batch: $ver, ${csha%% *} — every record carries the version; a move since the set's first record HALTS (Halt 2)"
+acct="$HOME/.claude-personal"
+test -d "$acct" || { echo "FAIL: no $acct — D21-42 17b's account is not on this box"; exit 1; }
+# D21-43 N22: the CLI is frozen from S-BIN on. s8h §8h.8's mechanism is the child's environment AND the account's
+# settings. The launcher does the first; this reads the second.
+grep -q '"DISABLE_AUTOUPDATER"' "$acct/settings.json" || { echo "FAIL: $acct/settings.json has no DISABLE_AUTOUPDATER env row — the freeze (s8h §8h.8) is not in place before B1"; exit 1; }
+# The launcher's own refusals, for this mode: --check spawns nothing and writes no launch record (s8h §8h.7).
+out=$(bash "$L" --check wrap -- true 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the launcher refused wrap in this shell (rc=$rc) — fix what it names; S-BIN never routes around it"; printf '%s\n' "$out" | tail -10; exit 1; }
+for line in "LAUNCH_CHECK=ok" "MODE=wrap" "DISABLE_AUTOUPDATER=1"; do
+  printf '%s\n' "$out" | grep -qxF "$line" || { echo "FAIL: --check wrap did not print '$line'"; printf '%s\n' "$out"; exit 1; }
+done
+ver=$(printf '%s\n' "$out" | sed -n 's/^CLI_VERSION=//p')
+[ -n "$ver" ] || { echo "FAIL: --check wrap recorded no CLI_VERSION"; printf '%s\n' "$out"; exit 1; }
+echo "S-BIN instrument at this batch: CLI_VERSION=$ver — wrap records it and does not compare it to the adapter pin; a move since the set's first record HALTS (Halt 2)"
 ```
+
+```bash
+# Then each launch of the batch, from the same terminal and directory. The argv after `--` runs exactly as given
+# (s8h §8h.7 step 7), and the launcher's rc is the child's. IN_DIR changes into the directory the child needs, so the
+# launch record stays under this repository. SBIN_ARGV is the driver's subcommand and arguments, as the amendment
+# registers them (§8i.2 item 5). No --claude-bin is passed.
+IN_DIR='cd "$1" && shift && exec "$@"'
+[ "${#SBIN_ARGV[@]}" -gt 0 ] || { echo "FAIL: SBIN_ARGV is empty — name the registered subcommand and its arguments"; exit 1; }
+out=$(cd D:/repos/redkiln-corpus/runner && cargo build 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the runner does not build (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
+bash "$L" wrap -- bash -c "$IN_DIR" in-dir D:/repos/redkiln-corpus runner/target/debug/redkiln-spike-runner "${SBIN_ARGV[@]}"; rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the wrapped runner exited $rc — stop and report, never spend again (D21-40 decision 2); a version move is Halt 2 (s8h §8h.7 step 9)"; exit 1; }
+# B1's capture sessions (§8i.4): one interactive wrap child per review tree, TREE naming it.
+test -d "${TREE:-}" || { echo "FAIL: TREE does not name a review tree"; exit 1; }
+bash "$L" wrap -- bash -c "$IN_DIR" in-dir "$TREE" claude; rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the wrapped capture session exited $rc — stop for a ledger line (§8i.6)"; exit 1; }
+```
+
+**Unmeasured, and a stop rather than a fallback:** s8h does not say whether `wrap` hands the terminal through to an
+interactive child, and `--check wrap` cannot show it. If the first capture session cannot be driven under `wrap`,
+the stage stops for a ledger line (§8i.6). It is not re-routed through a bare shell.
 
 **The version: frozen from S-BIN on, and the pin still moves only at `s8j`.** D21-43 N22: *"The CLI is **frozen from
 S-BIN on**, and the set never spans a version."* The mechanism is s8h §8h.8's: `DISABLE_AUTOUPDATER=1` in the
 child's environment, and in the account's `settings.json` `env` block. s8h's text puts the settings row in place
 before `s8j`'s procedure. N22 moves it forward to **before B1**, and it stays through `s8`. The operator writes it,
-because it is user configuration. The shell above refuses without it, and the before-and-after sha256 is the
-detector. Halt 2 fires at this stage's open (§8i.0 item 8): *"Record it; do not silently continue."* It is recorded
+because it is user configuration. The pre-check above refuses without it. The detectors are `wrap`'s before-and-after
+version and sha256 within each launch, and the driver's set-level check across launches. Halt 2 fires at this stage's open (§8i.0 item 8): *"Record it; do not silently continue."* It is recorded
 in `PROGRESS.md`, in every record, and in the finding. `TESTED_CLI_VERSION` is `rk-adapter-claude`'s pin, and S-BIN
-does not dispatch through that adapter. D21-42 16 moves the pin *"**once**, at probe time"*, which is `s8j`.
+does not dispatch through that adapter. That is why `wrap` does not compare to it. D21-42 16 moves the pin *"**once**, at probe time"*, which is `s8j`.
 **Handed on to `s8j`:** with the freeze in place from B1, the version `s8j` pins must be the S-BIN pins block's
-`cli_version`. If it is not, the freeze failed, and that is `s8j`'s Halt 2 to report. Inside the set,
+`cli_version`. The adapter pin `TESTED_CLI_VERSION` equals S-BIN's pinned `cli_version`. If it is not, the freeze failed, and that is `s8j`'s Halt 2 to report. Inside the set,
 `a_version_move_between_dispatches_halts_the_set` enforces the rule.
 
 ### 8i.6 Kill and abort conditions
@@ -467,6 +544,8 @@ dated line, and nothing resumes without a new go-ahead.
 - **The same item voids twice** in one pass — a fixture defect, not noise.
 - **A cap is reached** (§8i.5).
 - **The account is refused unexpectedly** (D21-40 decision 2).
+- **The launcher refuses** at `--check wrap` or at a launch, its step 9 fails a launch on a version move, or a capture
+  session cannot be driven as a `wrap` child. S-BIN never routes around the launcher (D21-46).
 - **Anything in METHOD-S §3, a seed, an item, the rendering or the ceiling would have to change after the first Opus
   dispatch** — the set is discarded, re-registered, and re-run under a new go-ahead.
 
@@ -675,12 +754,15 @@ included. So this stage's record commit amends that bullet and guard by dated no
   - Every finding draft has its index row, F41 and F42 included.
 - **The whole suite is green**, over the floor re-derived from Checkpoint 8h's recorded count plus this stage's 6 + N,
   and fmt and clippy are clean. **Checkpoint 8h** (the entry gate) and **Checkpoints 8a and 5** (made provisional by
-  this stage's edits) re-run whole and green. No other checkpoint is re-run directly. ⚠️ 8h's own chain nests: 8h
-  re-runs 8g, and so on down through 8a and 5, and 8a's run reaches 7f and 7i. That costs hours, and it is stated
-  here rather than avoided.
+  this stage's edits) re-run whole and green. No other checkpoint is re-run directly. Each replay runs with
+  `RK_CP_NESTED=1` (D21-46), which tells a block that honours it to skip its own nested whole re-runs. When this block
+  is itself run with `RK_CP_NESTED=1`, it replays nothing. ⚠️ A replayed block that does not yet honour the variable
+  still runs its own chain (8h re-runs 8g, and so on down through 8a and 5, and 8a's run reaches 7f and 7i). That
+  costs hours, not correctness, and it is stated here rather than avoided.
 - **This block dispatches nothing.** It spawns no `claude` of its own. It refuses an extracted block that carries a
   shape that executes a dispatch. It runs with no launch record, so a nested `redkiln run` refuses before it spawns.
-  And it fails if a new session transcript appears under either account root while it runs.
+  Its replays run with `CLAUDE_CONFIG_DIR` at an empty trap directory that must still be empty afterwards (D21-46,
+  s8g's form). And it fails if a new session transcript appears under either account root while it runs.
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -977,12 +1059,15 @@ out=$(cargo clippy --workspace --all-targets 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo clippy --workspace --all-targets rc=$rc (the gate is its exit code — ADR-0102 decision 5)"; printf '%s\n' "$out" | tail -20; exit 1; }
 
 # ---- (11) CHECKPOINT 8h (the entry gate) AND CHECKPOINTS 8a AND 5 (made provisional by this stage's edits), RE-RUN
-# ---- WHOLE from their own stage files' bytes. Nothing else is re-run directly. ⚠️ 8h's own chain nests (8h -> 8g ->
-# ---- ... -> 8a -> 7f, 7i; 8g -> 5): it costs hours. Each block is scanned FIRST, over code lines, for a shape that
-# ---- EXECUTES a dispatch, and is refused rather than run if it carries one. Listing ignored tests (`--list`) or
-# ---- compiling with the live feature does not execute one; s8h's block does both, so both stay admissible.
+# ---- WHOLE from their own stage files' bytes. Nothing else is re-run directly. BOUNDED (D21-46): every replay runs
+# ---- with RK_CP_NESTED=1, and when THIS block runs under RK_CP_NESTED=1 it replays nothing. ⚠️ A replayed block that
+# ---- does not honour the variable still runs its own chain (8h -> 8g -> ... -> 8a -> 7f, 7i; 8g -> 5): hours. Each
+# ---- block is scanned FIRST, over code lines, for a shape that EXECUTES a dispatch, and is refused rather than run if
+# ---- it carries one. Listing ignored tests (`--list`) or compiling with the live feature does not execute one; s8h's
+# ---- block does both, so both stay admissible. NO DISPATCH (D21-46, s8g's form): every replay runs with
+# ---- CLAUDE_CONFIG_DIR at an empty trap directory that must still be empty afterwards, and REDKILN_LAUNCH_RECORD unset.
 FENCE=$(printf '\140\140\140')
-DISPATCH_RE='claude[[:space:]]+(-p|--print)([[:space:]]|$)|redkiln-spike-runner|review-probe|(redkiln(\.exe)?|\$RK"?|\$\{RK\}"?)[[:space:]]+run([[:space:]]|$)|(live-run\.sh|\$L)"?[[:space:]]+(run|probe)([[:space:]]|$)'
+DISPATCH_RE='claude[[:space:]]+(-p|--print)([[:space:]]|$)|redkiln-spike-runner|review-probe|(redkiln(\.exe)?|\$RK"?|\$\{RK\}"?)[[:space:]]+run([[:space:]]|$)|(live-run\.sh|\$L)"?[[:space:]]+(run|probe|wrap)([[:space:]]|$)'
 TESTRUN_RE='cargo[[:space:]]+test[^;|]*(--features[[:space:]]+live|--ignored|--include-ignored)'
 # The synthetic controls never spell a live run literally: s8j's re-run of this block refuses a CODE line carrying
 # the live-feature spelling, the ignored-test flag after `--`, or a push, so the controls are assembled by printf.
@@ -990,10 +1075,17 @@ syn=$(printf 'claude -p "review this"\n' | grep -E "$DISPATCH_RE")
 [ -n "$syn" ] || { echo "FAIL: the dispatch scan cannot see a synthetic claude -p line — it is vacuous"; exit 1; }
 syn=$(printf 'bash "$L" %s live::x\n' probe | grep -E "$DISPATCH_RE")
 [ -n "$syn" ] || { echo "FAIL: the dispatch scan cannot see a synthetic launcher probe — it is vacuous"; exit 1; }
+syn=$(printf 'bash "$L" %s -- bash -c x\n' wrap | grep -E "$DISPATCH_RE")
+[ -n "$syn" ] || { echo "FAIL: the dispatch scan cannot see a synthetic wrap launch — S-BIN's route (D21-46) would pass it"; exit 1; }
+syn=$(printf 'out=$("${clean[@]}" bash "$L" --check %s -- true 2>&1)\n' wrap | grep -E "$DISPATCH_RE")
+[ -z "$syn" ] || { echo "FAIL: the dispatch scan refuses a --check wrap line — s8h's block spawns nothing there and could never be re-run"; exit 1; }
 syn=$(printf 'cargo test -p x --features %s --test it -- %s live::x\n' live --ignored | grep -E "$TESTRUN_RE" | grep -v -- '--list')
 [ -n "$syn" ] || { echo "FAIL: the dispatch scan cannot see a synthetic ignored-test run — it is vacuous"; exit 1; }
 syn=$(printf 'out=$(cargo test -p x --features %s --test it -- --list %s 2>&1)\n' live --ignored | grep -E "$TESTRUN_RE" | grep -v -- '--list')
 [ -z "$syn" ] || { echo "FAIL: the dispatch scan refuses a --list line — s8h's block could never be re-run"; exit 1; }
+if [ "${RK_CP_NESTED:-0}" = 1 ]; then
+  echo "CP8I (11) SKIPPED: this block is itself a replay (RK_CP_NESTED=1); its re-runs ran at Checkpoint 8i's own close"
+else
 xmark() { awk -v f="$FENCE" -v s="echo \"$2-END-OF-BLOCK reached\"" '$0==f"bash"{inb=1;buf="";has=0;next} inb&&$0==f{inb=0;if(has){printf "%s",buf;n++};next} inb{buf=buf $0 "\n";if($0==s)has=1} END{exit n==1?0:1}' "$1"; }
 xmark runbook/phase-1/s8h-cards-and-run-environment.md CP8H > "$T/cp8h.sh"; rc=$?
 [ "$rc" -eq 0 ] && [ -s "$T/cp8h.sh" ] || { echo "FAIL: exactly one Checkpoint 8h block ending in its CP8H sentinel was not found in s8h"; exit 1; }
@@ -1002,19 +1094,33 @@ xmark runbook/phase-1/s8a-records-and-red-checkpoints.md CP8A > "$T/cp8a.sh"; rc
 awk -v f="$FENCE" 'index($0,"**Checkpoint 5.** All of:")==1{armed=1;next} armed&&$0==f"bash"{inb=1;next} inb&&$0==f{exit} inb{print}' runbook/phase-1/s5-workspace-ci-rk-types.md > "$T/cp5.sh"; rc=$?
 [ "$rc" -eq 0 ] && [ "$(grep -c . "$T/cp5.sh")" -ge 20 ] || { echo "FAIL: the Checkpoint 5 block was not extracted from s5"; exit 1; }
 printf '\necho "CP5-END-OF-BLOCK reached"\n' >> "$T/cp5.sh"
+# The trap sits under target/, which Windows processes can see (Git Bash's /tmp is invisible to them).
+mkdir -p target/cp8i || { echo "FAIL: could not create target/cp8i"; exit 1; }
+trap_dir="$PWD/target/cp8i/claude-config-trap"
+rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+# Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
+: > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+[ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
 for blk in cp8h cp8a cp5; do
   hit=$(grep -vE '^[[:space:]]*#' "$T/$blk.sh" | grep -nE "$DISPATCH_RE")
   hit2=$(grep -vE '^[[:space:]]*#' "$T/$blk.sh" | grep -nE "$TESTRUN_RE" | grep -v -- '--list')
   [ -z "$hit$hit2" ] || { echo "FAIL: the extracted $blk block carries a shape that executes a dispatch and is NOT run — establish the guard's scope (golden constraint 9):"; printf '%s\n' "$hit" "$hit2"; exit 1; }
-  out=$(bash "$T/$blk.sh" 2>&1); rc=$?
+  out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "$T/$blk.sh" 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: $blk re-run exited $rc"; printf '%s\n' "$out" | tail -25; exit 1; }
   last=$(printf '%s\n' "$out" | grep . | tail -1)
   case "$last" in *END-OF-BLOCK\ reached) : ;; *) echo "FAIL: $blk did not reach its end-of-block sentinel (last line: $last)"; exit 1;; esac
 done
+left=$(find "$trap_dir" -mindepth 1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the replays (rc=$rc)"; exit 1; }
+[ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the replays — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
+fi
 
 # ---- (12) NOTHING DISPATCHED, NOTHING LEAKED: no new session transcript, the worktree path set unchanged, no stale
 # ---- registration, and no review tree left registered in BrittonGames or left on disk (Halt 6).
-sess_after=$(find "$CFG/projects" -type f -name '*.jsonl' | sort)
+sess_after=$(find $CFGS -type f -name '*.jsonl' | sort)
+test -n "$sess_after" || { echo "FAIL: the after-listing of $CFGS is empty — the tripwire compared nothing"; exit 1; }
 new=$(comm -13 <(printf '%s\n' "$sess_before") <(printf '%s\n' "$sess_after"))
 [ -z "$new" ] || { echo "FAIL: a new session transcript appeared while this block ran — something dispatched (or you started a Claude session; re-run without one):"; printf '%s\n' "$new"; exit 1; }
 wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
@@ -1034,7 +1140,9 @@ echo "CP8I-END-OF-BLOCK reached"
 that writes no transcript, is invisible to it. That is why (11) also refuses an extracted block by its text. The
 text scan reads only the three blocks it extracts, not the blocks they extract in turn. The nested 7f/7h/7i
 `redkiln run`s are covered by the missing launch record, which makes them refuse before any spawn (s8h §8h.7), and
-by the tripwire. The
+by the tripwire, and a real `claude` that inherits a replay's environment writes into (11)'s trap. A child launched
+with `CLAUDE_CONFIG_DIR` set explicitly escapes the trap (s8g states the same limit); the launcher sets it at its step
+4, which is why (11) refuses a launcher line by its text. The
 construction floor in (8) matches `ChangeSummary::Binary`, `ChangeSummary::binary` and a `BinaryChangeSummary`
 literal, `::new` or tuple construction (the payload name `s8a`'s file uses); if `s8a`'s record names the
 variant, its payload or its constructor otherwise, the regex takes a dated amendment first, and a construction assembled by a

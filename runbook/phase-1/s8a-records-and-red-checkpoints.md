@@ -14,19 +14,36 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - **ADR-0134 clause 5.** D21-43 N27 confirms this file's reading: the clause is about 7f's old text, and the
   re-scope is execution, not supersession. §8a.5 and finding (3) now say so.
 - **Checkpoint 7c.** It is provisional after the `ac489` amendment, and its whole re-run is `s8j`'s (D21-43 N28).
-  This stage does not re-run it (§8a.8; finding (5) is settled).
+  This stage does not re-run it (§8a.9; finding (5) is settled).
 - **`s8i` supersedes two of this stage's pins by name** when it finalises `Binary`: the sealed-slot test and
-  Checkpoint 8a's no-`pub`-field guard (§8a.2, §8a.8, guard (6)).
+  Checkpoint 8a's no-`pub`-field guard (§8a.2, §8a.9, guard (6)).
 - **An LFS pointer path is `Binary`** in the `Text` variant's manifest, whatever its extension says. This was checked
   against D21-45 W4 (§8a.2). There are two new tests, so the stage adds nine.
 - **No accidental dispatch.** The card guard now runs before **both** whole runs that can reach `redkiln run` (7i and
   7f), and guard (11) asserts that no `dispatch_completed` row was added. The rule for a re-run after `s8h` is stated
-  in §8a.9.
+  in §8a.10.
 - **D21-44.** This stage derives no run-worktree path of its own. Checkpoint 7f's whole run removes the one legacy
   tree, `rk-fix-doctor-test-count` at `73c087a`, which must stay put until `s8j` re-points it. Guard (11) therefore
   restores that tree and asserts its ref is unmoved (finding (8)).
 - **Floors.** The whole-suite floor is re-derived from the entry gate's reading and asserts the result-line count too.
   Only the entry gate and the checkpoints this stage's edits touch are re-run.
+
+*Revised again 2026-09-24 for D21-46* (re-measured at `c5d19d7`). What changed:
+
+- **Checkpoint 7e's FAIL message is amended here**, as D21-46's integration calls assign it: *"Checkpoint 7e's
+  backtick-executing FAIL message, the same defect as 7h's (10a), is fixed by dated amendment in **s8a**."* The new
+  §8a.8 gives the line, its replacement and how it is verified without a whole re-run. Guard (9a) asserts it and
+  scans every `runbook/` bash block for a backtick bash would execute. Sections 8a.8 and 8a.9 become 8a.9 and 8a.10.
+- **The line is not in Checkpoint 7e's block.** It is in `s7e` §7e.1's work block (finding (10)). So PROGRESS row 7e
+  does not move, and guard (9a) asserts that no other bash byte of `s7e` changed.
+- **`RK_CP_NESTED=1`** (D21-46's one re-run convention). When it is set, guard (11)'s whole re-runs are skipped, and
+  every whole run guard (11) makes is launched with it.
+- **The replay no-dispatch trap** (D21-46). Guard (11)'s whole runs get `CLAUDE_CONFIG_DIR` at an empty trap
+  directory that must stay empty, and `REDKILN_LAUNCH_RECORD` unset. It is a third guard beside the card condition
+  and the `dispatch_completed` count.
+- **Counts.** Checkpoint 8a has twelve guards: (1) to (11) plus (9a). There are twelve findings, up from nine. The
+  records, errata, tests and whole re-runs are unchanged: three records, two errata, nine new tests, and five
+  whole re-runs (7i, 5, 7a, 7b, 7f).
 
 ---
 
@@ -67,7 +84,7 @@ is committed `proposed` and flips only on the operator's dated ledger line. Chec
 because every checkpoint amendment below rests on one of them.
 
 🛑 **No real dispatch in this stage.** D21-40 decision 2 gates spend on the fixture proofs. The first stage that
-dispatches to a real account is `s8i`. §8a.9 guards the one place this stage's exit runs `redkiln run`.
+dispatches to a real account is `s8i`. §8a.10 guards the one place this stage's exit runs `redkiln run`.
 
 ### 8a.1 The entry gate, and the three reds read before anything moves
 
@@ -83,7 +100,8 @@ appends to the store.
 
 **What this stage re-runs whole, and what it does not.** It re-runs its entry gate (7i) and the four checkpoints its
 own edits repair or move: 5, 7a, 7b and 7f. It does **not** re-run the rest of the chain. Checkpoint 7c is made
-provisional here, but its re-run is `s8j`'s (§8a.8).
+provisional here, but its re-run is `s8j`'s (§8a.9). The line this stage amends in `s7e` is not re-run either,
+because its block and Checkpoint 7e's both change the tree. §8a.8 says how it is verified instead.
 
 **The legacy run worktree.** `git worktree list` at `a6349b6` shows
 `.git/redkiln/worktrees/rk-fix-doctor-test-count` at `73c087a [rk-run/rk-fix-doctor-test-count]`, and it is clean.
@@ -147,7 +165,7 @@ with D21-42 decision 2 folded into it, and it uses `## Considered options` with 
      under every filter configuration. The two rules agree: neither treats a pointer as a view of the content. W4
      is `s8e`'s, and this rule does not re-specify it.
    - This repository tracks nothing through LFS (`.gitattributes` has no `filter=lfs` row, measured at `a6349b6`),
-     so the rule is proved on a fixture repository (§8a.8).
+     so the rule is proved on a fixture repository (§8a.9).
 3. **Ratification.** The record ratifies PROGRESS §2's D17-1 readings 2 and 3: a string literal, a comment and the
    `Capability::ChangeSummary` vocabulary variant do not name the type. It names **D17-9** as the root of the
    conflict. D17-9 chose adapter implementors while it declared *"ADR-0099 decision 5's forbids, unchanged"*, and
@@ -174,7 +192,7 @@ forbids** bullet, so each is a supersession in part, never an erratum.
 - **The README.** The index rows and back-link cells, the census, and the *"next free number"* sentence. The same
   sentence also appears in `00-preamble.md`.
 
-**The code.** Write the tests first (§8a.8). Then make these changes:
+**The code.** Write the tests first (§8a.9). Then make these changes:
 
 - **`crates/rk-ports/src/toolchain.rs`.**
   - The enum replaces `pub struct ChangeSummary(pub(crate) ());`.
@@ -218,7 +236,7 @@ fires like a bare one. The amendment contains:
   `\bChangeSummary\b`.
 - **The opacity pin inside `rk-ports`.** The ban excludes `rk-ports`, so this pin is what guards opacity there.
   `rk-ports` declares exactly one `pub enum ChangeSummary`, and the sealed payload type declares no `pub` field. The
-  **behavioural** pin is the `trybuild` case in §8a.8, because a grep cannot prove non-constructibility.
+  **behavioural** pin is the `trybuild` case in §8a.9, because a grep cannot prove non-constructibility.
 - **Synthetic controls, through the same chain, one line at a time.** A combined control would pass on a single
   hit. These must fire: a definition, a `Text…` redefinition, a path-qualified alias, a trait impl, a path-qualified
   inherent impl, a generic impl on the sealed type, and an impl on a line that also carries a string. These must be
@@ -320,7 +338,7 @@ Slice-Verdict commit moves this literal again, together with `s7h` guards (6) an
 the hazard is closed. **0 of 8** shipped cards carry `permission_mode`, and `CardFile`'s load refuses before any
 spawn (`.ok_or_else(|| ConfigError::PermissionModeAbsent { card: card() })?;`). Guard (11) asserts that condition
 before either whole run and asserts afterwards that no `dispatch_completed` row appeared. From `s8h` on the cards
-bind, so a later stage that re-runs 7f whole must follow §8a.9's rule.
+bind, so a later stage that re-runs 7f whole must follow §8a.10's rule.
 
 ### 8a.6 Codex's phase (D21-42 decision 22)
 
@@ -368,7 +386,88 @@ ADR-0132 through ADR-0161, **thirty records**, as non-conforming to *"Each consi
 3, 7 and 4. **Their accepted bodies are not edited**, and Checkpoint 8a asserts that byte for byte against the
 stage's base commit. All three of this stage's records are written in the conforming form.
 
-### 8a.8 Red first — the named tests
+### 8a.8 Checkpoint 7e's FAIL message: a backtick inside double quotes, amended (D21-46)
+
+D21-46's integration calls read: *"Checkpoint 7e's backtick-executing FAIL message, the same defect as 7h's (10a),
+is fixed by dated amendment in **s8a**."* `s8e` found it and left it here. Its finding 14 says *"7e's is not this
+stage's to amend. It is reported."* This is the execution of an operator decision, not a new one, so there is no
+record.
+
+**The line, found by its content** at `c5d19d7`. `s8e` cites it as *"line 52"*. It is the enabled-pack guard in
+`s7e` §7e.1's block:
+
+```text
+test -f .redkiln/config.toml || { echo "FAIL: .redkiln/config.toml absent — Step 7d's `init` did not run, or did not scaffold it (E6)"; exit 1; }
+```
+
+Backticks inside double quotes are command substitution. When the guard fires, bash runs `init` as a command
+before it echoes. Git Bash has no `init`, so it prints `command not found` on stderr and then a message reading
+*"Step 7d's  did not run"*. A Linux host resolves `/sbin/init`. So the FAIL path runs a command nobody wrote and
+prints a message that is wrong.
+
+⚠️ **The line is not in Checkpoint 7e's block** (finding (10)). Checkpoint 7e's block is the one under
+*"**Checkpoint 7e.** All thirteen"*, and it has no hit. D21-46 and `s8e` both call the line Checkpoint 7e's. The
+amendment is the same either way. What changes is the tracker: no byte of Checkpoint 7e moves, so PROGRESS row 7e
+does not move.
+
+**The amendment**, dated and made in the same commit as §8a.4's `s7e` notes. The two backticks are removed and no
+other byte changes. This is `s8e`'s form for 7h (10a):
+
+```text
+test -f .redkiln/config.toml || { echo "FAIL: .redkiln/config.toml absent — Step 7d's init did not run, or did not scaffold it (E6)"; exit 1; }
+```
+
+The fix removes the backticks. It does not switch to single quotes or escape them. The message contains an
+apostrophe (`7d's`), so single quotes would need a `'"'"'` splice. An escaped backtick only stays safe until someone
+re-quotes the line. The directly preceding line in the same block gets a dated comment, and the comment contains no
+backtick:
+
+```text
+# [amended 2026-09-24, s8a §8a.8] D21-46: the two backticks around init are removed — inside double quotes they ran init as a command on the FAIL path.
+```
+
+**Neither block can be re-run whole, so the amendment is verified another way.** Checkpoint 7e's block ends in
+`git add … && git commit` and `git tag -a redkiln-pack-v0`. The tag already exists, so a whole re-run fails on its
+last line even on an unchanged tree, and a run that got further would mint a commit. `s7e` §7e.1's block runs `init` and
+copies files over the live `.redkiln/`. Guard (9a) verifies the amendment in four other ways:
+
+1. **Static.** The backticked bytes are gone from `s7e`, the new line appears exactly once, and the dated comment is
+   present.
+2. **No other bash byte moved.** Every bash block of `s7e` is compared with its counterpart in `S8A_BASE`. The block
+   count must match. After the old line is mapped to the new one and the dated comment is dropped, every line must
+   match. That covers Checkpoint 7e's block too. §8a.4's `s7e` notes are prose outside every block. If one lands
+   inside a block, this comparison fails, and that is correct. **Control:** the same comparison, run without
+   dropping the dated comment, must fail.
+3. **Behavioural, from the file's own bytes.** The amended line is taken from `s7e` and run in an empty scratch
+   directory with no `.redkiln/config.toml`, so the guard fires. A trap `init` that writes a marker comes first on
+   `PATH`. The run must exit 1, print the message verbatim with `init` in it, and leave no marker. **Control:** the
+   old line, taken from `S8A_BASE`'s bytes and run the same way, must leave the marker. Without that control, an
+   amended run that left no marker would prove nothing, because the trap might simply never have been reached on
+   `PATH`.
+4. **Syntax.** `check-bash-syntax.py` passes over the corpus.
+
+**The corpus-wide scan.** Guard (9a) also reads every bash block in `runbook/` for a backtick that bash would
+execute: one outside quotes, one inside double quotes, or one in the body of a heredoc whose delimiter is unquoted.
+It scans code only, so comments, single-quoted strings and the bodies of quoted-delimiter heredocs are skipped.
+Quote state carries across lines, as it does in bash. ⚠️ A scan that works one line at a time, which is `s8e`
+guard (10)'s form, reports two false hits at `c5d19d7`: one in `s8f` and one in `s8j`. In each, a single-quoted
+Python program spanning several lines has backticks inside its own strings (finding (11)). At `c5d19d7` this scan
+reads **99 blocks and 2 hits**: this line and 7h's (10a). Its controls:
+
+- a planted bash block whose double-quoted `echo` message carries a backticked word must go red;
+- `S8A_BASE`'s copy of `s7e` must go red on the `config.toml` line;
+- a single-quoted needle, a comment, a multi-line single-quoted string and a quoted-heredoc body, each carrying
+  backticks, must all pass;
+- a file with no bash block must be refused (rc 2), because a scan over zero blocks reads as a green.
+
+**7h's identical defect is `s8e`'s to fix, and it is admitted by name until then.** `s8e` §8e.15 amends 7h guard
+(10a)'s FAIL message: *"The dated amendment removes the two backticks and changes no other byte of the line."*
+Checkpoint 8e guard (7c) asserts that the old string is gone. This stage runs before `s8e`, so the scan admits
+exactly one hit that is not this stage's: a `BT-HIT` in `s7h-lane-completes.md` on the line that reads `binary arm
+did not pass`. Any other hit fails. Once `s8e` lands, that hit is gone and the scan reads 0 hits, and a re-run of
+this block passes unchanged.
+
+### 8a.9 Red first — the named tests
 
 Each test is watched red for the **right** reason (the absent behaviour, not a compile error or a filter that
 matches nothing) before the code that turns it green.
@@ -402,7 +501,7 @@ makes a paid haiku probe. **D21-43 N28 gives the whole re-run to `s8j`:** *"s8j 
 terminal through the launcher, with the live probes."* `PROGRESS.md` row 7c is marked *"passed …, re-run pending
 `s8j` (D21-43 N28) — `s8a` amended `ac489_capability_registry_dated`"*. Finding (5) is settled by N28.
 
-### 8a.9 Checkpoint 8a
+### 8a.10 Checkpoint 8a
 
 - **The three records exist and are `accepted`.** Each carries its supersession back-links, and each uses `### Option
   — ` headings. The two errata exist. The thirty non-conforming bodies are byte-unchanged.
@@ -418,10 +517,16 @@ terminal through the launcher, with the live probes."* `PROGRESS.md` row 7c is m
   open from the entry gate's recorded reading. The expected value is ADR-0164's **740 passed / 0 failed / 9
   ignored over 44 results** (`992d257`, on the tree Checkpoint 7i passed) plus this stage's nine new tests, which
   gives **749**. If the reading at open differs, the literal in (10) is amended by dated note before the first run.
+- **Checkpoint 7e's FAIL message is amended (§8a.8).** The backticked bytes are gone from `s7e`, no other bash byte
+  of `s7e` moved since `S8A_BASE`, and the amended line, run from its own bytes, fails without running `init`.
+  No `runbook/` bash block carries a backtick that bash would execute, apart from 7h (10a)'s, which `s8e` removes.
 - **Checkpoints 7i (entry), 5, 7a, 7b and 7f each run whole from their own bytes and reach their last line.** No
-  other checkpoint is re-run. 7c is `s8j`'s (D21-43 N28).
+  other checkpoint is re-run. 7c is `s8j`'s (D21-43 N28). Under `RK_CP_NESTED=1`, when another checkpoint runs
+  this block as its entry gate, guard (11) skips these runs and says so (D21-46).
 - **Neither whole run that can reach `redkiln run` dispatched.** No shipped card carries `permission_mode`, and
-  the store and every run journal hold the same number of `dispatch_completed` rows after the runs as before.
+  the store and every run journal hold the same number of `dispatch_completed` rows after the runs as before. Each
+  run had `CLAUDE_CONFIG_DIR` at an empty trap directory, which is still empty, and had `REDKILN_LAUNCH_RECORD`
+  unset (D21-46).
 - **The legacy run worktree is back where it was**, at `73c087a`, clean, with `rk-run/rk-fix-doctor-test-count`
   unmoved (D21-44; D21-42 18).
 
@@ -438,6 +543,13 @@ does two things:
 against accident, not a substitute, and `s8h` says of it that *"the variable can be forged"*. The re-running stage
 says in its own file which of these it does.
 
+**Nesting and the no-dispatch trap (D21-46's integration calls).** When this block runs with `RK_CP_NESTED=1`, as
+another checkpoint's entry gate, guard (11) skips its whole re-runs and prints that it did. Every other guard
+runs. Each whole run that guard (11) does make is launched with `RK_CP_NESTED=1`, with `CLAUDE_CONFIG_DIR` at an
+empty trap directory that must still be empty afterwards, and with `REDKILN_LAUNCH_RECORD` unset. From `s8h` on,
+that makes the launch-record gate refuse before spawn. The trap uses `s8g`'s form, with its synthetic control.
+It is a third guard beside the card condition and the `dispatch_completed` count, and it replaces neither.
+
 🛑 **ADR-0164's flip is not this stage's act.** It is `proposed` and flips only on the operator's ledger line. This
 block does not read its status.
 
@@ -448,6 +560,8 @@ cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Every cargo reading is `out=$(…); rc=$?`, never a pipe's status. Every selection is `--test it`,
 # MODULE-QUALIFIED and `--exact`, and asserts each `test <name> ... ok` line AND an exact count.
 # Re-runs ONLY the entry gate (7i) and 5, 7a, 7b, 7f, which this stage's edits touch. 7c is s8j's (D21-43 N28).
+# Under RK_CP_NESTED=1 (this block is another checkpoint's entry gate) guard (11)'s whole re-runs are skipped;
+# every other guard runs (D21-46). Checkpoint 7e is amended, not re-run: guard (9a).
 
 # ---- (1) BUILD-OR-FAIL, FIRST. A stale binary makes every later whole run a statement about old code.
 out=$(cargo build --workspace 2>&1); rc=$?
@@ -582,6 +696,207 @@ c_filter() { grep -vF "ADR-$CODEX_ADR"; }
 [ -z "$(printf '%s\n' "$craw" | c_filter | grep .)" ] || { echo "FAIL: a register line still says Codex is Phase 2 with no dated correction citing ADR-$CODEX_ADR"; printf '%s\n' "$craw" | c_filter; exit 1; }
 [ -n "$(printf 'x.md:1:the Codex adapter is Phase 2\n' | c_filter)" ] || { echo "FAIL: the Codex sweep's control did not fire"; exit 1; }
 
+# ---- (9a) CHECKPOINT 7e's BACKTICK DEFECT, AMENDED (§8a.8; D21-46), AND NO RUNBOOK BASH BLOCK EXECUTES A BACKTICK.
+# ---- Checkpoint 7e is NOT re-run whole: its block commits and tags. The amendment is verified statically, by a
+# ---- no-other-bash-byte comparison with S8A_BASE, and by running the amended line from s7e's own bytes against a
+# ---- trap init. No code line below carries a backtick; the scripts build one from chr(96) or printf.
+S7E=runbook/phase-1/s7e-pack-authoring.md
+test -f "$S7E" || { echo "FAIL: $S7E is absent (Halt 8)"; exit 1; }
+mkdir -p target/s8a-ctl || { echo "FAIL: cannot make target/s8a-ctl"; exit 1; }
+bt=$(printf '\140'); [ "${#bt}" -eq 1 ] || { echo "FAIL: could not build a backtick for the old-bytes probe"; exit 1; }
+grep -qF "7d's ${bt}init${bt} did not run" "$S7E"; rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: s7e still carries the backticked init in its FAIL message (grep rc=$rc) — the §8a.8 amendment did not land"; exit 1; }
+new7e='test -f .redkiln/config.toml || { echo "FAIL: .redkiln/config.toml absent — Step 7d'"'"'s init did not run, or did not scaffold it (E6)"; exit 1; }'
+n=$(grep -cxF "$new7e" "$S7E"); rc=$?
+[ "$rc" -le 1 ] && [ "$n" -eq 1 ] || { echo "FAIL: the amended 7e line appears '${n:-none}' times in s7e (rc=$rc), expected exactly 1"; exit 1; }
+note7e='D21-46: the two backticks around init are removed'
+grep -qF "$note7e" "$S7E" || { echo "FAIL: s7e carries no dated note for the amendment ('$note7e')"; exit 1; }
+cat > target/s8a-ctl/s7e_same.py <<'PY'
+import subprocess, sys
+BT, NL, CR = chr(96), chr(10), chr(13)
+F = BT * 3
+def blocks(t):
+    out, cur = [], None
+    for l in t.replace(CR + NL, NL).split(NL):
+        if cur is None and l == F + "bash":
+            cur = []
+        elif cur is not None and l == F:
+            out.append(cur)
+            cur = None
+        elif cur is not None:
+            cur.append(l)
+    return out
+base_ref, path, new, note = sys.argv[1:5]
+old = new.replace("7d's init did", "7d's " + BT + "init" + BT + " did")
+if old == new:
+    sys.exit("S7E-SAME-FAIL: the old line could not be derived from the new one")
+r = subprocess.run(["git", "show", base_ref + ":" + path], capture_output=True)
+if r.returncode != 0:
+    sys.exit("S7E-SAME-FAIL: git show %s:%s rc=%d" % (base_ref, path, r.returncode))
+a = blocks(r.stdout.decode("utf-8"))
+b = blocks(open(path, encoding="utf-8").read())
+if sum(blk.count(old) for blk in a) != 1:
+    sys.exit("S7E-SAME-FAIL: S8A_BASE's s7e does not carry the old backticked line exactly once")
+if len(a) != len(b):
+    sys.exit("S7E-SAME-FAIL: %d bash blocks at S8A_BASE, %d now" % (len(a), len(b)))
+a2 = [[new if l == old else l for l in blk] for blk in a]
+b2 = [[l for l in blk if note not in l] for blk in b]
+bad = [i + 1 for i in range(len(a2)) if a2[i] != b2[i]]
+if bad:
+    sys.exit("S7E-SAME-FAIL: bash block(s) %s of s7e differ from S8A_BASE beyond the one line and its dated note" % bad)
+print("S7E-SAME-OK blocks=%d" % len(a))
+PY
+test -s target/s8a-ctl/s7e_same.py || { echo "FAIL: the s7e comparison script was not written"; exit 1; }
+out=$(python target/s8a-ctl/s7e_same.py "$S8A_BASE" "$S7E" "$new7e" "$note7e" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -qE '^S7E-SAME-OK blocks=[1-9]' || { echo "FAIL: s7e's bash moved beyond the §8a.8 amendment (rc=$rc):"; printf '%s\n' "$out"; exit 1; }
+out=$(python target/s8a-ctl/s7e_same.py "$S8A_BASE" "$S7E" "$new7e" 'S8A-CONTROL-NO-SUCH-NOTE' 2>&1); rc=$?
+[ "$rc" -ne 0 ] || { echo "FAIL: CONTROL — the s7e comparison passed with the dated note left in; it cannot see an added line"; exit 1; }
+# BEHAVIOURAL: the amended line, from s7e's own bytes, takes its FAIL path and runs nothing. CONTROL: the old line,
+# from S8A_BASE's bytes, runs the trap init, or the trap proves nothing.
+p7e="$PWD/target/s8a-ctl/bt7e"
+rm -rf "$p7e" && mkdir -p "$p7e/bin" "$p7e/cwd" || { echo "FAIL: cannot make the 7e probe dirs"; exit 1; }
+printf '#!/bin/sh\n: > "%s/INIT-RAN"\n' "$p7e" > "$p7e/bin/init" && chmod +x "$p7e/bin/init" || { echo "FAIL: cannot write the trap init"; exit 1; }
+git show "$S8A_BASE:$S7E" > "$p7e/base.md"; rc=$?
+[ "$rc" -eq 0 ] && [ -s "$p7e/base.md" ] || { echo "FAIL: cannot read s7e at S8A_BASE (rc=$rc)"; exit 1; }
+grep -F 'test -f .redkiln/config.toml ||' "$p7e/base.md" > "$p7e/old.sh"; rc=$?
+[ "$rc" -eq 0 ] && [ "$(grep -c . "$p7e/old.sh")" -eq 1 ] || { echo "FAIL: S8A_BASE's s7e does not carry exactly one config.toml guard line (rc=$rc)"; exit 1; }
+grep -xF "$new7e" "$S7E" > "$p7e/new.sh"; rc=$?
+[ "$rc" -eq 0 ] && [ -s "$p7e/new.sh" ] || { echo "FAIL: cannot take the amended line from s7e (rc=$rc)"; exit 1; }
+out=$(cd "$p7e/cwd" && PATH="$p7e/bin:$PATH" bash "$p7e/old.sh" 2>&1); rc=$?
+[ "$rc" -eq 1 ] && [ -f "$p7e/INIT-RAN" ] || { echo "FAIL: CONTROL — the old 7e line did not run the trap init (rc=$rc); the probe cannot see a substitution"; printf '%s\n' "$out"; exit 1; }
+rm -f "$p7e/INIT-RAN" || { echo "FAIL: cannot clear the trap marker"; exit 1; }
+out=$(cd "$p7e/cwd" && PATH="$p7e/bin:$PATH" bash "$p7e/new.sh" 2>&1); rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: the amended 7e line did not take its FAIL path with no config.toml (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
+[ ! -e "$p7e/INIT-RAN" ] || { echo "FAIL: the amended 7e FAIL message still ran init as a command"; exit 1; }
+printf '%s\n' "$out" | grep -qxF 'FAIL: .redkiln/config.toml absent — Step 7d'"'"'s init did not run, or did not scaffold it (E6)' || { echo "FAIL: the amended 7e line did not print its message verbatim:"; printf '%s\n' "$out"; exit 1; }
+# THE CORPUS SCAN: every runbook bash block, code only, quote state carried across lines as bash carries it.
+cat > target/s8a-ctl/bt.py <<'PY'
+import glob, os, sys
+BT, SQ, DQ, BS, NL, CR, TAB = chr(96), chr(39), chr(34), chr(92), chr(10), chr(13), chr(9)
+F = BT * 3
+def heredoc(line):
+    i = line.find("<<")
+    while i >= 0:
+        rest = line[i + 2:]
+        if rest[:1] == "<":
+            i = line.find("<<", i + 3)
+            continue
+        rest = rest.lstrip("-").lstrip()
+        if rest[:1] in (SQ, DQ):
+            end = rest.find(rest[0], 1)
+            if end > 1:
+                return rest[1:end], False
+        elif rest[:1] == BS and len(rest) > 1:
+            return rest[1:].split()[0], False
+        else:
+            w = ""
+            for ch in rest:
+                if ch.isalnum() or ch == "_":
+                    w += ch
+                else:
+                    break
+            if w:
+                return w, True
+        i = line.find("<<", i + 2)
+    return None
+def scan(body):
+    state, hd = None, None
+    for k, line in enumerate(body, 1):
+        if hd is not None:
+            if line.strip() == hd[0]:
+                hd = None
+            elif hd[1] and BT in line:
+                yield k
+            continue
+        j, hit = 0, False
+        while j < len(line):
+            c = line[j]
+            if state is None:
+                if c == "#" and (j == 0 or line[j - 1] in " ;(" + TAB):
+                    break
+                if c == BS:
+                    j += 2
+                    continue
+                if c in (SQ, DQ):
+                    state = c
+                elif c == BT:
+                    hit = True
+            elif state == SQ:
+                if c == SQ:
+                    state = None
+            else:
+                if c == BS:
+                    j += 2
+                    continue
+                if c == DQ:
+                    state = None
+                elif c == BT:
+                    hit = True
+            j += 1
+        if hit:
+            yield k
+        if state is None:
+            h = heredoc(line.split(" #")[0])
+            if h:
+                hd = h
+    if state is not None or hd is not None:
+        yield -len(body)
+def blocks(text):
+    lines = [l.rstrip(CR) for l in text.split(NL)]
+    i = 0
+    while i < len(lines):
+        if lines[i] == F + "bash":
+            j = i + 1
+            while j < len(lines) and lines[j] != F:
+                j += 1
+            yield i + 1, lines[i + 1:j]
+            i = j + 1
+        else:
+            i += 1
+paths = sys.argv[1:] or sorted(glob.glob("runbook/**/*.md", recursive=True))
+n, nb = 0, 0
+for path in paths:
+    p = path.replace(os.sep, "/")
+    for start, body in blocks(open(path, encoding="utf-8").read()):
+        nb += 1
+        for k in scan(body):
+            n += 1
+            if k < 0:
+                print("BT-OPEN %s:%d the block ends inside a quote or a heredoc" % (p, start - k))
+            else:
+                print("BT-HIT %s:%d %s" % (p, start + k, body[k - 1].strip()[:160]))
+print("BT-SCAN blocks=%d hits=%d" % (nb, n))
+sys.exit(1 if n else (2 if nb == 0 else 0))
+PY
+test -s target/s8a-ctl/bt.py || { echo "FAIL: the backtick scan was not written"; exit 1; }
+ctl=target/s8a-ctl/btctl
+rm -rf "$ctl" && mkdir -p "$ctl" || { echo "FAIL: cannot make the scan's control dir"; exit 1; }
+python - "$ctl" <<'PY' || { echo "FAIL: cannot write the scan's controls"; exit 1; }
+import os, sys
+B = chr(96); F = B * 3; d = sys.argv[1]
+def w(name, lines):
+    open(os.path.join(d, name), "w", encoding="utf-8", newline=chr(10)).write(chr(10).join([F + "bash"] + lines + [F, ""]))
+w("bad.md", ['echo "FAIL: a planted ' + B + 'init' + B + ' ran"; exit 1'])
+w("good.md", ["grep -qF 'a " + B + "quoted" + B + " needle' f", "# a comment naming " + B + "init" + B,
+              "x='multi", "line " + B + "literal" + B + "'", "cat > f <<'EOT'", 's = "' + B + 'a' + B + '"', "EOT"])
+open(os.path.join(d, "none.md"), "w", encoding="utf-8", newline=chr(10)).write("no fenced block here" + chr(10))
+PY
+out=$(python target/s8a-ctl/bt.py "$ctl/bad.md" 2>&1); rc=$?
+[ "$rc" -eq 1 ] && printf '%s\n' "$out" | grep -qF 'a planted' || { echo "FAIL: CONTROL — the scan passed a planted backtick inside a double-quoted echo (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
+out=$(python target/s8a-ctl/bt.py "$p7e/base.md" 2>&1); rc=$?
+[ "$rc" -eq 1 ] && printf '%s\n' "$out" | grep -qF 'config.toml absent' || { echo "FAIL: CONTROL — the scan passed S8A_BASE's s7e, which carries the defect (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
+out=$(python target/s8a-ctl/bt.py "$ctl/good.md" 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: CONTROL — the scan flagged a backtick bash does not execute (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
+out=$(python target/s8a-ctl/bt.py "$ctl/none.md" 2>&1); rc=$?
+[ "$rc" -eq 2 ] || { echo "FAIL: CONTROL — the scan did not refuse a file with no bash block (rc=$rc); zero blocks would read as a green"; exit 1; }
+out=$(python target/s8a-ctl/bt.py 2>&1); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the corpus scan could not run (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
+nb=$(printf '%s\n' "$out" | sed -nE 's/^BT-SCAN blocks=([0-9]+) hits=[0-9]+$/\1/p')
+[ -n "$nb" ] && [ "$nb" -ge 99 ] || { echo "FAIL: the corpus scan read '${nb:-none}' bash blocks, below the 99 measured at c5d19d7"; exit 1; }
+other=$(printf '%s\n' "$out" | grep -E '^BT-(HIT|OPEN) ' | grep -vE '^BT-HIT runbook/phase-1/s7h-lane-completes\.md:[0-9]+ .*binary arm did not pass')
+[ -z "$other" ] || { echo "FAIL: a runbook bash block carries a backtick bash would execute (only 7h (10a)'s is admitted, until s8e):"; printf '%s\n' "$other"; exit 1; }
+echo "backtick scan: $nb blocks; $(printf '%s\n' "$out" | grep -c '^BT-HIT ') hit(s), all admitted (7h (10a), s8e's to remove)"
+
 # ---- (10) FMT, CLIPPY, AND THE WHOLE SUITE above its floor. Re-derived at stage open from the entry gate's reading:
 # ---- ADR-0164's 740 passed / 0 failed / 9 ignored over 44 results (992d257), plus this stage's 9 new = 749.
 out=$(cargo fmt --all --check 2>&1); rc=$?
@@ -598,8 +913,14 @@ printf '%s\n' "$out" | grep -E '^test result:' | grep -vqE ' 0 failed;' && { ech
 
 # ---- (11) THE ENTRY GATE AND FOUR OTHER CHECKPOINTS, WHOLE, FROM THEIR OWN BYTES. The helper copies the ONE bash
 # ---- block that carries an anchor and appends a sentinel, so "rc 0 and the sentinel" means the block ran to its end.
-extract() {
-  python - "$1" "$2" "$3" <<'PY'
+# ---- SKIPPED WHOLE under RK_CP_NESTED=1 (D21-46's one re-run convention): a checkpoint that re-runs this one as its
+# ---- entry gate makes its own whole runs. Every run below is launched with RK_CP_NESTED=1, with CLAUDE_CONFIG_DIR at
+# ---- an empty trap directory that must still be empty afterwards, and with the launch-record variable unset.
+if [ "${RK_CP_NESTED:-0}" = 1 ]; then
+  echo "CP8A (11) SKIPPED: RK_CP_NESTED=1 — this block is another checkpoint's entry gate; its whole re-runs ran at Checkpoint 8a's own close"
+else
+  extract() {
+    python - "$1" "$2" "$3" <<'PY'
 import re, sys
 fence = chr(96) * 3
 pat = re.compile(re.escape(fence) + "bash\n(.*?)" + re.escape(fence), re.S)
@@ -609,27 +930,27 @@ if len(found) != 1:
     sys.exit("FAIL: %d bash blocks in %s carry the anchor, expected exactly 1" % (len(found), sys.argv[1]))
 open(sys.argv[3], "w", encoding="utf-8", newline="\n").write(found[0] + "\necho CP8A-WHOLE-RUN-SENTINEL\n")
 PY
-}
-whole() {  # $1 = label, $2 = stage file, $3 = anchor
-  extract "$2" "$3" "target/s8a-whole/$1.sh" || { echo "FAIL: could not extract Checkpoint $1"; exit 1; }
-  out=$(bash "target/s8a-whole/$1.sh" 2>&1); rc=$?
-  [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $1 run whole rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
-  printf '%s\n' "$out" | grep -qxF 'CP8A-WHOLE-RUN-SENTINEL' || { echo "FAIL: Checkpoint $1 did not reach its last line"; exit 1; }
-}
-common=$(LC_ALL=C git rev-parse --path-format=absolute --git-common-dir); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$common" ] || { echo "FAIL: cannot resolve the git common dir (rc=$rc)"; exit 1; }
-store="$common/redkiln/store.sqlite3"
-cp "$store" target/s8a-whole/store.before.sqlite3 || { echo "FAIL: cannot back up the store before the whole runs"; exit 1; }
-# 7i and 7f can reach `redkiln run`. Neither may dispatch: every shipped card lacks permission_mode, so the card
-# load refuses before any spawn. From s8h on that is false, and this line must be re-scoped before it runs —
-# through §8a.9's rule (a fixture config naming rk-fixture-child-claude as [adapters] harness_binary), never bare.
-set -- .redkiln/cards/*.json
-[ "$#" -eq 8 ] && [ -f "$1" ] || { echo "FAIL: expected 8 shipped cards"; exit 1; }
-pm=$(grep -l 'permission_mode' "$@"); rc=$?
-[ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc) — 7i's or 7f's run could reach a REAL dispatch; stop and re-run through §8a.9's rule (D21-40 decision 2)"; exit 1; }
-# NO-DISPATCH, MEASURED: dispatch_completed rows in the store AND in every run journal, before and after.
-dcount() {  # $1 = store path; prints "<store rows> <journal rows>"
-  python - "$1" "$(dirname "$1")/runs" <<'PY'
+  }
+  whole() {  # $1 = label, $2 = stage file, $3 = anchor
+    extract "$2" "$3" "target/s8a-whole/$1.sh" || { echo "FAIL: could not extract Checkpoint $1"; exit 1; }
+    out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "target/s8a-whole/$1.sh" 2>&1); rc=$?
+    [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $1 run whole rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
+    printf '%s\n' "$out" | grep -qxF 'CP8A-WHOLE-RUN-SENTINEL' || { echo "FAIL: Checkpoint $1 did not reach its last line"; exit 1; }
+  }
+  common=$(LC_ALL=C git rev-parse --path-format=absolute --git-common-dir); rc=$?
+  [ "$rc" -eq 0 ] && [ -n "$common" ] || { echo "FAIL: cannot resolve the git common dir (rc=$rc)"; exit 1; }
+  store="$common/redkiln/store.sqlite3"
+  cp "$store" target/s8a-whole/store.before.sqlite3 || { echo "FAIL: cannot back up the store before the whole runs"; exit 1; }
+  # 7i and 7f can reach `redkiln run`. Neither may dispatch: every shipped card lacks permission_mode, so the card
+  # load refuses before any spawn. From s8h on that is false, and this line must be re-scoped before it runs —
+  # through §8a.10's rule (a fixture config naming rk-fixture-child-claude as [adapters] harness_binary), never bare.
+  set -- .redkiln/cards/*.json
+  [ "$#" -eq 8 ] && [ -f "$1" ] || { echo "FAIL: expected 8 shipped cards"; exit 1; }
+  pm=$(grep -l 'permission_mode' "$@"); rc=$?
+  [ "$rc" -eq 1 ] || { echo "FAIL: a card carries permission_mode (rc=$rc) — 7i's or 7f's run could reach a REAL dispatch; stop and re-run through §8a.10's rule (D21-40 decision 2)"; exit 1; }
+  # NO-DISPATCH, MEASURED: dispatch_completed rows in the store AND in every run journal, before and after.
+  dcount() {  # $1 = store path; prints "<store rows> <journal rows>"
+    python - "$1" "$(dirname "$1")/runs" <<'PY'
 import glob, os, sqlite3, sys
 db, runs = sys.argv[1], sys.argv[2]
 c = sqlite3.connect("file:" + db.replace(os.sep, "/") + "?mode=ro", uri=True)
@@ -639,11 +960,11 @@ for f in glob.glob(os.path.join(runs, "*", "events.jsonl")):
     j += sum(1 for line in open(f, encoding="utf-8") if '"kind":"dispatch_completed"' in line)
 print(s, j)
 PY
-}
-d_before=$(dcount "$store"); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$d_before" ] || { echo "FAIL: cannot count dispatch_completed before the whole runs (rc=$rc)"; exit 1; }
-mkdir -p target/s8a-ctl/dstore/runs/r1 || { echo "FAIL: cannot make the dispatch-count control"; exit 1; }
-python - target/s8a-ctl/dstore/store.sqlite3 <<'PY' || { echo "FAIL: cannot seed the dispatch-count control store"; exit 1; }
+  }
+  d_before=$(dcount "$store"); rc=$?
+  [ "$rc" -eq 0 ] && [ -n "$d_before" ] || { echo "FAIL: cannot count dispatch_completed before the whole runs (rc=$rc)"; exit 1; }
+  mkdir -p target/s8a-ctl/dstore/runs/r1 || { echo "FAIL: cannot make the dispatch-count control"; exit 1; }
+  python - target/s8a-ctl/dstore/store.sqlite3 <<'PY' || { echo "FAIL: cannot seed the dispatch-count control store"; exit 1; }
 import sqlite3, sys
 c = sqlite3.connect(sys.argv[1])
 c.execute("create table if not exists t2_event (id integer primary key, kind text, payload text, anchor_sha text)")
@@ -651,38 +972,54 @@ c.execute("delete from t2_event")
 c.execute("insert into t2_event (kind, payload) values ('dispatch_completed', '{}')")
 c.commit()
 PY
-printf '{"kind":"dispatch_completed","payload":{}}\n' > target/s8a-ctl/dstore/runs/r1/events.jsonl || { echo "FAIL: cannot seed the control journal"; exit 1; }
-[ "$(dcount target/s8a-ctl/dstore/store.sqlite3)" = "1 1" ] || { echo "FAIL: the dispatch counter's control did not read 1 1 — the no-dispatch guard is blind"; exit 1; }
-# THE LEGACY TREE (D21-44: it stays put until s8j). 7f's run and 7f's cleanup both remove it; record it first.
-legacy="$common/redkiln/worktrees/rk-fix-doctor-test-count"
-lref=$(git rev-parse --verify --quiet 'refs/heads/rk-run/rk-fix-doctor-test-count^{commit}'); lpin=$(git rev-parse --verify --quiet '73c087a^{commit}')
-[ -n "$lref" ] && [ -n "$lpin" ] && [ "$lref" = "$lpin" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count is '$lref', not 73c087a ('$lpin') — the untouched fixture item moved before this stage ran (D21-42 18)"; exit 1; }
-wtl=$(LC_ALL=C git worktree list --porcelain); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: git worktree list rc=$rc"; exit 1; }
-lreg=0; printf '%s\n' "$wtl" | grep -qxF "worktree $legacy" && lreg=1
-whole 7i runbook/phase-1/s7i-cost.md 'CP7I-END-OF-BLOCK reached'
-whole 5 runbook/phase-1/s5-workspace-ci-rk-types.md 'FAIL: deny.toml absent'
-whole 7a runbook/phase-1/s7a-ports-and-fakes.md 'FAIL: cargo test -p rk-ports exited'
-whole 7b runbook/phase-1/s7b-kernel.md 'spikes/p9/grammar-probe.py absent'
-whole 7f runbook/phase-1/s7f-conformance-and-records.md 'CP7F-END-OF-BLOCK reached'
-d_after=$(dcount "$store"); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$d_after" ] || { echo "FAIL: cannot count dispatch_completed after the whole runs (rc=$rc)"; exit 1; }
-[ "$d_after" = "$d_before" ] || { echo "FAIL: dispatch_completed moved '$d_before' -> '$d_after' (store, journals) — a whole run DISPATCHED (D21-40 decision 2)"; exit 1; }
-lnow=$(git rev-parse --verify --quiet 'refs/heads/rk-run/rk-fix-doctor-test-count^{commit}')
-[ "$lnow" = "$lref" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count moved '$lref' -> '$lnow' during the whole runs"; exit 1; }
-if [ "$lreg" -eq 1 ]; then
+  printf '{"kind":"dispatch_completed","payload":{}}\n' > target/s8a-ctl/dstore/runs/r1/events.jsonl || { echo "FAIL: cannot seed the control journal"; exit 1; }
+  [ "$(dcount target/s8a-ctl/dstore/store.sqlite3)" = "1 1" ] || { echo "FAIL: the dispatch counter's control did not read 1 1 — the no-dispatch guard is blind"; exit 1; }
+  # THE LEGACY TREE (D21-44: it stays put until s8j). 7f's run and 7f's cleanup both remove it; record it first.
+  legacy="$common/redkiln/worktrees/rk-fix-doctor-test-count"
+  lref=$(git rev-parse --verify --quiet 'refs/heads/rk-run/rk-fix-doctor-test-count^{commit}'); lpin=$(git rev-parse --verify --quiet '73c087a^{commit}')
+  [ -n "$lref" ] && [ -n "$lpin" ] && [ "$lref" = "$lpin" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count is '$lref', not 73c087a ('$lpin') — the untouched fixture item moved before this stage ran (D21-42 18)"; exit 1; }
   wtl=$(LC_ALL=C git worktree list --porcelain); rc=$?
-  [ "$rc" -eq 0 ] || { echo "FAIL: git worktree list rc=$rc after the whole runs"; exit 1; }
-  if ! printf '%s\n' "$wtl" | grep -qxF "worktree $legacy"; then
-    out=$(LC_ALL=C git worktree add "$legacy" rk-run/rk-fix-doctor-test-count 2>&1); rc=$?
-    [ "$rc" -eq 0 ] || { echo "FAIL: cannot restore the legacy run worktree at $legacy (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
+  [ "$rc" -eq 0 ] || { echo "FAIL: git worktree list rc=$rc"; exit 1; }
+  lreg=0; printf '%s\n' "$wtl" | grep -qxF "worktree $legacy" && lreg=1
+  # THE NO-DISPATCH TRAP (s8g's form; D21-46's one no-dispatch guard for replays). CLAUDE_CONFIG_DIR points at an empty
+  # directory that must still be empty afterwards, and the launch-record variable is unset, so from s8h on its gate
+  # refuses before spawn. A third guard beside the card condition and the dispatch_completed count, not a substitute:
+  # a child launched with CLAUDE_CONFIG_DIR set explicitly escapes the trap (s8g's stated limit).
+  trap_dir="$PWD/target/s8a-ctl/claude-config-trap"
+  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
+  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
+  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
+  [ "$n" -eq 1 ] || { echo "FAIL: CONTROL — the trap's emptiness reading saw $n entries where one was written"; exit 1; }
+  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
+  lr=REDKILN_LAUNCH_RECORD
+  got=$(env "$lr=planted" env -u "$lr" sh -c 'printf "%s" "${REDKILN_LAUNCH_RECORD-unset}"'); rc=$?
+  [ "$rc" -eq 0 ] && [ "$got" = unset ] || { echo "FAIL: CONTROL — env -u left a planted $lr in the child (got '$got', rc=$rc); a whole run would inherit a launch record"; exit 1; }
+  whole 7i runbook/phase-1/s7i-cost.md 'CP7I-END-OF-BLOCK reached'
+  whole 5 runbook/phase-1/s5-workspace-ci-rk-types.md 'FAIL: deny.toml absent'
+  whole 7a runbook/phase-1/s7a-ports-and-fakes.md 'FAIL: cargo test -p rk-ports exited'
+  whole 7b runbook/phase-1/s7b-kernel.md 'spikes/p9/grammar-probe.py absent'
+  whole 7f runbook/phase-1/s7f-conformance-and-records.md 'CP7F-END-OF-BLOCK reached'
+  d_after=$(dcount "$store"); rc=$?
+  [ "$rc" -eq 0 ] && [ -n "$d_after" ] || { echo "FAIL: cannot count dispatch_completed after the whole runs (rc=$rc)"; exit 1; }
+  [ "$d_after" = "$d_before" ] || { echo "FAIL: dispatch_completed moved '$d_before' -> '$d_after' (store, journals) — a whole run DISPATCHED (D21-40 decision 2)"; exit 1; }
+  left=$(find "$trap_dir" -mindepth 1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the whole runs (rc=$rc)"; exit 1; }
+  [ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the whole runs — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
+  lnow=$(git rev-parse --verify --quiet 'refs/heads/rk-run/rk-fix-doctor-test-count^{commit}')
+  [ "$lnow" = "$lref" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count moved '$lref' -> '$lnow' during the whole runs"; exit 1; }
+  if [ "$lreg" -eq 1 ]; then
+    wtl=$(LC_ALL=C git worktree list --porcelain); rc=$?
+    [ "$rc" -eq 0 ] || { echo "FAIL: git worktree list rc=$rc after the whole runs"; exit 1; }
+    if ! printf '%s\n' "$wtl" | grep -qxF "worktree $legacy"; then
+      out=$(LC_ALL=C git worktree add "$legacy" rk-run/rk-fix-doctor-test-count 2>&1); rc=$?
+      [ "$rc" -eq 0 ] || { echo "FAIL: cannot restore the legacy run worktree at $legacy (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
+    fi
+    lh=$(LC_ALL=C git -C "$legacy" rev-parse HEAD); rc=$?
+    [ "$rc" -eq 0 ] && [ "$lh" = "$lref" ] || { echo "FAIL: the legacy run worktree is at '$lh', not $lref"; exit 1; }
+    lst=$(LC_ALL=C git -C "$legacy" status --porcelain); rc=$?
+    [ "$rc" -eq 0 ] && [ -z "$lst" ] || { echo "FAIL: the restored legacy run worktree is not clean (rc=$rc)"; exit 1; }
   fi
-  lh=$(LC_ALL=C git -C "$legacy" rev-parse HEAD); rc=$?
-  [ "$rc" -eq 0 ] && [ "$lh" = "$lref" ] || { echo "FAIL: the legacy run worktree is at '$lh', not $lref"; exit 1; }
-  lst=$(LC_ALL=C git -C "$legacy" status --porcelain); rc=$?
-  [ "$rc" -eq 0 ] && [ -z "$lst" ] || { echo "FAIL: the restored legacy run worktree is not clean (rc=$rc)"; exit 1; }
 fi
-
 echo "CP8A-END-OF-BLOCK reached"
 ```
 
@@ -691,7 +1028,8 @@ commit updates `PROGRESS.md`:
 
 - rows 5, 7b and 7f move to their passed hashes;
 - row 7a is re-run;
-- row 7c is marked provisional (§8a.8);
+- row 7c is marked provisional (§8a.9);
+- row 7e does **not** move: the §8a.8 amendment changes no byte of Checkpoint 7e's block (guard (9a); finding (10));
 - a new `s8a` row is added.
 
 Adversarial refuting rounds run over the diff until a round moves no code and no guard.
@@ -728,5 +1066,23 @@ Adversarial refuting rounds run over the diff until a round moves no code and no
 9. **An LFS pointer path would have made the `Text` variant lie** (2026-09-24 revision). `classify` answers
    `Text` for a pointer file with a text extension, or with no NUL, and the object-store diff of an LFS path is a
    pointer delta. §8a.2 item 2a classifies it `Binary` on the blob, with two named tests.
+10. **The backtick defect D21-46 assigns to "Checkpoint 7e" is not in Checkpoint 7e's block** (2026-09-24, D21-46
+    revision). The line *"FAIL: .redkiln/config.toml absent — Step 7d's `init` did not run"* is in `s7e` §7e.1's
+    work block, which `s8e` cites as *"line 52"*. Checkpoint 7e's block, under *"**Checkpoint 7e.** All
+    thirteen"*, has no hit. The fix is the same wherever the line sits (§8a.8), but PROGRESS row 7e does not move
+    and does not become provisional, because no byte of its block changes. Guard (9a) asserts that. Neither block
+    can be re-run whole: Checkpoint 7e's commits and tags an existing tag, and `s7e` §7e.1's runs `init` over the live
+    `.redkiln/`.
+11. **A backtick scan that works line by line reports false hits** (2026-09-24). At `c5d19d7`, a per-line
+    quote-aware scan of all 99 bash blocks reports four hits. Two are real (7e's line and 7h's (10a)). Two are
+    false, in `s8f` and `s8j`, where a single-quoted Python program spanning several lines carries backticks in
+    its own strings. Guard (9a)'s scan carries quote state across lines and reports exactly the two real hits,
+    which agrees with `s8e` finding 14. `s8e` guard (10)'s scan is per-line, but it reads only the blocks `s8e`
+    re-runs, and none of those has a multi-line single-quoted string with a backtick. If it is ever widened to the
+    corpus, it needs the same change.
+12. **`RK_CP_NESTED` is adopted here for guard (11), and the two stages that re-run this block whole do not set
+    it yet** (2026-09-24). `s8b` guard (0) runs it with `out=$(bash "$cp8a" 2>&1)`, and `s8i` runs it with
+    `out=$(bash "$T/$blk.sh" 2>&1)`. Neither passes `RK_CP_NESTED=1`, so each still repeats the five whole runs.
+    D21-46 says *"every file adopts it"*. Those two edits belong to those files, not to this one.
 
 ---
