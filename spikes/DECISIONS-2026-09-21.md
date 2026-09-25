@@ -1667,3 +1667,45 @@ protected directory. Each question was put to the operator with its measured pre
 - Every re-run of an old checkpoint that executes `redkiln run` (7f, 7g, 7h) is pointed at the fixture child
   through `[adapters] harness_binary` once s8h lands, so no checkpoint can dispatch to a real account.
 - s8's three `redkiln run` sites go through s8h's launcher (s8j amendment).
+
+---
+
+## D21-44 · N1 measured: a `-p` child cannot edit a worktree under `.git`, so run worktrees move to `.redkiln/worktrees/<item>`
+
+**Measured 2026-09-24 by the operator, from the operator's own shell, on D21-43 N1's authorisation.** The lead had
+prepared the probe but could not run it: the session's permission layer refused to spawn a `claude` child from inside
+Claude Code. Both runs used the same script. Each made one haiku dispatch per arm (`claude-haiku-4-5-20251001`) with
+`--permission-mode acceptEdits --permission-prompts none --allowedTools Read,Edit --output-format json`, with every
+`CLAUDECODE` / `CLAUDE_CODE_*` variable stripped, `CLAUDE_CONFIG_DIR=~/.claude-personal`, and a throwaway worktree
+at HEAD holding `probe.txt = original`.
+
+| run | arm | worktree | file after | `permission_denials` | cost |
+| --- | --- | --- | --- | --- | --- |
+| N1 | in | `.git/redkiln/worktrees/probe-n1-in` (**today's run-owned placement**) | **`original`** | **Edit AND Write**, both refused: *"this session has no approval surface for permission prompts"* | $0.0405 |
+| N1 | out | `D:/repos/rk-probe-n1-out` (control) | `edited` | none | $0.0274 |
+| N1b | redkiln | `.redkiln/worktrees/probe-n1b` (Claude-style, in-repo) | **`edited`** | **none** | $0.0274 |
+| N1b | out | `D:/repos/rk-probe-n1b-out` (control) | `edited` | none | $0.0278 |
+
+**What it means.** Claude Code treats `.git` as a protected directory, and under `--permission-prompts none` a prompt
+becomes a denial. So **the implementer could never edit a file in any run-owned worktree as placed today**, and
+every real run would have failed at implement. Each control succeeding in the same run rules out the probe
+itself as the cause. Total spend: $0.123.
+
+**The placement, the operator's choice on 2026-09-24.** Run-owned worktrees move to **`.redkiln/worktrees/<item>`**,
+git-ignored. This mirrors Claude Code's own `.claude/worktrees/<name>` convention, which the operator has used without
+trouble. The N1b arm measured it writable. The sibling-directory alternative was offered and declined.
+
+**Consequences, owned by `s8e`**, which already owns D21-42 8d's `worktree_assigned` row that records the path:
+- A record superseding in part ADR-0018's and ADR-0105's common-dir worktree placement, with dated notes on AC-518
+  and AC-529's path wording. Ownership stays with the store row, so AC-529 stays real wherever the path is.
+- `recreate_run_worktree` and every derivation of `<common-dir>/redkiln/worktrees/<item>` move to the new root.
+  The one existing run-owned worktree, `rk-fix-doctor-test-count` at `73c087a`, stays where it is. It is the
+  undispatched fixture item (D21-42 18), and its re-point is s8j's.
+- Every recursive walk over `.redkiln/` as a whole excludes `worktrees/`, each with a synthetic control, because a run
+  worktree is a full repository copy. This includes Checkpoint 8's `grep -r … .redkiln/` lines, the pack/catalog
+  loaders if they recurse, and `doctor`.
+- The worst-case path length is measured under the new root before the record is accepted, since ADR-0114's filename
+  is about 130 characters.
+
+`.gitignore` gains `.redkiln/worktrees/` in this entry's commit. That row is inert until s8e moves the root, and it
+stops a stray probe or run tree from ever reading as an untracked change.

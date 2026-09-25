@@ -62,3 +62,7 @@ spikes/results/instrument-checks/*
 # so without this row a foreign tool dirties the tree between a stage's two close commits.
 # [Step 8, 2026-09-21]
 .redkiln/telemetry/
+
+# D21-44 (2026-09-24): run-owned worktrees live at .redkiln/worktrees/<item>, mirroring Claude Code's
+# .claude/worktrees/ -- a -p child was measured DENIED edits under .git/redkiln/worktrees/.
+.redkiln/worktrees/
