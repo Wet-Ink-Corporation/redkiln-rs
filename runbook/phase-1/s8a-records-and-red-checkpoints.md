@@ -54,7 +54,80 @@ authority). What changed:
   this block with `RK_CP_NESTED=1` under the trap.
 - **The trap** asserts that it starts empty before any whole run, as every `s8` trap now does.
 - **The floor** is labelled as the chain states it: re-derived at stage open from Checkpoint 7i's recorded count,
-  740 + 9 = 749.
+  740 + 9 = 749. *(Label corrected 2026-09-24, D21-47, review item 7: 740 is ADR-0164's evidence, not a count
+  Checkpoint 7i records. The number is unchanged. See §8a.10.)*
+
+*Adversarial-review fixes 2026-09-24 (D21-47)* (the review of this file at `4a8c832`, and the cross-file items
+D21-47's assignment gives it, applied at `fc80687`). Each finding, and what fixed it:
+
+- **1 (BLOCKER), guards (3) and (5) could not both pass.** (5) now compares only the **body** below the closing
+  frontmatter `---`. It reads the staged blob against `S8A_BASE`'s blob with `fm_body.py`. A self-test proves that a
+  back-link-only change passes, a one-byte body edit fails, and a file with no frontmatter is refused. Measured
+  2026-09-24: 30 compared, 0 differ, against both `HEAD` and `4a8c832`.
+- **2 (BLOCKER), the git-spawn floor was blind to `run::run_program`.** Guard (6) now bans a `"git"` or
+  `"git.exe"` literal on every code line of the adapter's `src`. Four controls check it, one of them the
+  `run_program(…, Path::new("git"), …)` form. It also asserts **positively** that `change_summary`'s own body calls
+  `range_diff(` and that the crate names `rk_git::diff`. A mutant whose body names `range_diff` only in a comment
+  and a string must fail. The adapter's `src` carries no such literal today (`grep` rc 1).
+- **3 (MAJOR), an exec range read contradicts ADR-0077.** §8a.2 now reads the range **through gix**:
+  `rk_git::diff::range_diff`, over `Repository::diff_tree_to_tree`. Measured: gix 0.87.1's default `basic` feature
+  carries `blob-diff`, and the function exists at the pin. No `GitOp` variant is added, so neither ADR-0077 nor
+  ADR-0105 clause 5 moves. Guard (6) asserts that `GitOp` is byte-identical to `S8A_BASE`'s and that `diff.rs`
+  names no exec type. If gix cannot do the read, the stage halts.
+- **4 (MAJOR), ADR-0008 was never cited.** It is now a fifth supersession in part in §8a.2's table: its Decision
+  sentence and first forbids bullet, only as far as the two-arm shape and the `Text` arm. Guard (3)'s loop covers
+  0008. Finding (13) is new.
+- **5 (MAJOR), guard (7) is time-bound; cross-file item 2.** Guard (7) stays pinned. §8a.5 and the guard's comment
+  state that **`s8e`'s Slice-Verdict commit amends it by dated line** (`1 passed`, ARMED absent) and lists 8a as
+  provisional, under D21-47's time-bound rule. Guard (5)'s half is fixed by item 1. Guard (3)'s ADR-0099 back-link
+  now admits a later stage's append.
+- **6, the store and the legacy tree on a failure.** The store is **kept**, and §8a.1 says why. The legacy
+  restore is now the idempotent `legacy_restore`, installed as an `EXIT` trap before the whole runs and called
+  explicitly after them.
+- **7, the floor's label.** Corrected in §8a.10, in guard (10)'s comment and above. 740 is ADR-0164's evidence.
+- **8, R8 beside W4.** §8a.2 item 2a now cites D21-46 R8 and D21-47 V1 beside W4.
+- **9, `as` aliases; multi-line impls.** `CS_BAN` gains a renaming-import arm, with three firing controls and one
+  admitted numeric cast. §8a.3 states the one-line limit. (Removing the arm makes the first new control fail:
+  measured.)
+- **10, the `nbin`/`npub` floors.** Replaced by `sealed.py`. It reads code only, and it reads both the tuple and
+  the brace field-list forms. Four planted controls check it. §8a.3 cites the `trybuild` case as the behavioural pin.
+- **11, the BEFORE readings.** §8a.1 now runs them under guard (0)'s wrapper, with the card condition checked first.
+- **12, unasserted edits.** Guard (3) now asserts the README's index rows and its census at both sites. Guard (5)
+  asserts the erratum as **one** `E-0085-n` paragraph (n ≥ 3) naming ADR-0132, ADR-0161 and "thirty", and it
+  asserts E-0094-2 inside ADR-0094's section. Guard (9) asserts the `s7a`/`s7b-ii`/`s7c` notes, and every
+  "non-finalised newtype" line in the design and the register (10 at `fc80687`). §8a.2 names those ten as owed.
+- **13, the 7e comment.** §8a.8 now says the comment is a new line inserted before the amended line.
+- **D21-47's replay rule.** A new **guard (0)** builds the wrapper `rkw`: a fake `claude` that prints the pin first
+  on `PATH`, `REDKILN_LAUNCH_RECORD` unset, and `CLAUDE_CONFIG_DIR` at an empty trap under `target/s8a-wrap/`,
+  outside `target/s8a-ctl/`, which guard (4) deletes. Controls prove the fake answers, the trap starts empty, and
+  `rkw` both unsets a planted launch record and sets the trap. Removing either half of `rkw` fails its control:
+  measured. Every cargo run in (1), (7) and (10), and every whole run in (11), goes through `rkw`. The trap is
+  re-checked at the block's end on both `RK_CP_NESTED` branches. Guard (11)'s card condition was already inside the
+  non-nested branch. Finding (14) states the wrapper's Windows limit.
+- **Cross-file item 13, the fixture child's name.** No change was needed. This file already names
+  `rk-fixture-child-claude`, the `[[bin]]` in `crates/rk-adapter-claude/Cargo.toml` and D21-47's canonical harness.
+- **Counts.** Checkpoint 8a has **thirteen** guards: (0) to (11) plus (9a). The records and errata are unchanged:
+  three records and two errata. The ChangeSummary record now supersedes five records in part, not four. **Nine new
+  tests**, and the floor is still 749. There are fifteen findings.
+
+*Final consistency pass 2026-09-24* (the `s8` files read against each other after the D21-47 fix round; the brief's
+four items). One line per edit:
+
+- *Final consistency pass 2026-09-24:* guard (0) sources the shared `runbook/tools/nodispatch.sh` (`nd_setup`) in
+  place of its own `sh` fake and trap; `rkw` is gone.
+- *Final consistency pass 2026-09-24:* every cargo run in (1), (7) and (10) and every whole run in (11) goes through
+  `nodispatch`, and `nd_check` follows each of them and closes the block.
+- *Final consistency pass 2026-09-24:* whole runs launch as `nodispatch env RK_CP_NESTED=1 bash …`; a re-runner's
+  wrapper is reused (`ND_ACTIVE=1`), not rebuilt.
+- *Final consistency pass 2026-09-24:* §8a.1's BEFORE readings, §8a.10's wrapper bullet and nesting paragraph, and
+  finding (14) now describe the compiled fake; (14)'s limit is settled.
+- *Final consistency pass 2026-09-24:* guard (2) carries `CS_ADR`, `PACK_ADR`, `CODEX_ADR` and `S8A_BASE` as literals
+  (`____` until written by dated edit) and refuses a placeholder; re-runners supply none.
+- *Final consistency pass 2026-09-24:* guard (2) sets `FIX_ITEM=rk-fix-doctor-test-count` as a literal (§8a.1's item),
+  so no re-runner supplies it and none leaks its own item into 7i's run.
+- *Final consistency pass 2026-09-24:* the stage header states where each record's id is written (guard (2)).
+- *Final consistency pass 2026-09-24:* floor re-checked: §8a.9's table gives nine new tests, so 740 + 9 = **749**
+  stands; no literal changed.
 
 ---
 
@@ -92,7 +165,10 @@ files each said they took none, and each was wrong. This stage writes **three re
 decides nothing that D21-41 or D21-42 did not already decide. None of the three is pre-numbered. Each one is *"a new
 record (next free id at writing; `0165` at the time this file was authored)"*, allocated in writing order. Each one
 is committed `proposed` and flips only on the operator's dated ledger line. Checkpoint 8a asserts `accepted`,
-because every checkpoint amendment below rests on one of them.
+because every checkpoint amendment below rests on one of them. *(added 2026-09-24, final consistency pass; D21-47:
+"Records are located by the id recorded at write time")* Each record's id is written into Checkpoint 8a guard (2) as a
+literal, by a dated edit in the commit that writes the record, and so is `S8A_BASE`, the commit the stage opened on,
+at stage open. The block refuses while a `____` placeholder remains, and nobody who re-runs it supplies an id.
 
 🛑 **No real dispatch in this stage.** D21-40 decision 2 gates spend on the fixture proofs. The first stage that
 dispatches to a real account is `s8i`. §8a.10 guards the one place this stage's exit runs `redkiln run`.
@@ -106,8 +182,20 @@ stage's **BEFORE** readings (PIA-035), and all three must be rc=1 with the reaso
 already green means the tree has moved since `ca8f387`. In that case stop and re-measure; do not carry this file's
 premise forward. `s7h` and `s7i` both paid for carrying a premise forward.
 
+*(amended 2026-09-24, D21-47)* **The BEFORE readings run under the same wrapper as guard (11)'s whole runs**, never
+bare: guard (0)'s fake `claude` first on `PATH` (it prints the pin), `REDKILN_LAUNCH_RECORD` unset, and
+`CLAUDE_CONFIG_DIR` at guard (0)'s empty trap directory, which must still be empty afterwards. *(re-pointed
+2026-09-24, final consistency pass)* That wrapper is the shared `runbook/tools/nodispatch.sh`: run each reading as
+`nodispatch env RK_CP_NESTED=1 bash <extracted block>` after `nd_setup`, and `nd_check` after each. Guard (11)'s card
+condition (no shipped card carries `permission_mode`) is checked before the first of them. In this session
+`CLAUDE_CONFIG_DIR` is the operator's real account, so a bare BEFORE run of 7i or 7f is the accident D21-47's
+replay rule exists to prevent.
+
 Back up `.git/redkiln/store.sqlite3` before the first whole run. Checkpoint 7f's block runs `redkiln run`, which
-appends to the store.
+appends to the store. *(amended 2026-09-24, D21-47)* **The backup is for recovery by hand, and the store is kept,
+not restored.** The rows 7i's and 7f's runs append are the record of those runs, and guard (11) asserts that none
+of them is a `dispatch_completed`. Copying the backup over the live store would erase that record, and any row
+written beside it.
 
 **What this stage re-runs whole, and what it does not.** It re-runs its entry gate (7i) and the four checkpoints its
 own edits repair or move: 5, 7a, 7b and 7f. It does **not** re-run the rest of the chain. Checkpoint 7c is made
@@ -121,7 +209,9 @@ D21-44 keeps it *"where it is"* until `s8j` re-points it. Checkpoint 7f's run re
 cleanup line, `git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count`, and after that line
 nothing re-adds the tree. The ref itself does not move, because the `Story:` mint returns early for an item already
 recorded (`// Already minted, by this lane or an earlier one. Writing again is drift, not a record.`). Guard (11)
-records both before the whole runs, then restores the registration and asserts the ref.
+records both before the whole runs, then restores the registration and asserts the ref. *(amended 2026-09-24,
+D21-47)* The restore is also an `EXIT` trap, so a whole run that fails after 7f's cleanup line still leaves the
+tree registered.
 
 ### 8a.2 `ChangeSummary` splits: a finalised `Text` variant and a sealed `Binary` slot (D21-42 decision 2)
 
@@ -172,8 +262,11 @@ with D21-42 decision 2 folded into it, and it uses `## Considered options` with 
      content, and so `s8i`'s.
    - **This was checked against D21-45 W4, and W4 does not make the rule redundant.** W4 refuses to *create* a run
      worktree when *"a repo-local filter driver (for example LFS via `--local`) or an `includeIf` would yield
-     pointer files"*. That protects the **working tree's** bytes. The range diff reads **blobs**, which are pointers
-     under every filter configuration. The two rules agree: neither treats a pointer as a view of the content. W4
+     pointer files"*. *(amended 2026-09-24, D21-47)* W4 as it now stands is W4 **as D21-46 R8 re-scoped it**
+     (*"The effective config at every scope"*) **and as D21-47 V1 refined R8**: *"Refuse only when pointer files
+     would result"*, with attributes read from the fork commit and a working installed driver admitted silently.
+     Under every one of those readings, W4 protects the **working tree's** bytes. The range diff reads **blobs**, which are pointers
+     under every filter configuration, so V1's admission of a working driver changes nothing here. The two rules agree: neither treats a pointer as a view of the content. W4
      is `s8d-ii`'s (D21-46 R1 moved it out of `s8e`), and this rule does not re-specify it.
    - This repository tracks nothing through LFS (`.gitattributes` has no `filter=lfs` row, measured at `a6349b6`),
      so the rule is proved on a fixture repository (§8a.9).
@@ -191,6 +284,7 @@ forbids** bullet, so each is a supersession in part, never an erratum.
 | **ADR-0135** decision 4, decision 5, and the third and fourth forbids bullets | *"**It must not be "fixed" into a synthesised value.**"*; *"Checkpoint 5's grep bans the bare type outside `crates/rk-ports/`, after blanking string literals and excluding `::ChangeSummary` paths."* and *"**Checkpoint 5's RED is untouched by this record.**"*; *"Forbids synthesising a `change_summary` value … and forbids editing either adapter's `change_summary` row to make the step succeed."*; *"Forbids naming the `ChangeSummary` **type** anywhere in `rk-kernel`"*, **only** as far as a test double's impl signature under `tests/` | The map, decisions 1–3 and 6, and the ban on production `rk-kernel`. Back-link: `["0148", <id>]`. |
 | **ADR-0093** decision 4 | *"S-BIN blocks the design of `ChangeSummary` (AC-497, AC-356) and the Toolchain port's `change_summary` method body"*. S-BIN now blocks the `Binary` arm and its body only. | Decision 4's scope rule, and its forbids bullet unchanged. |
 | **ADR-0094** decision 1 | *"`change_summary` remaining an opaque non-finalised newtype until S-BIN (ADR-0093 decision 4)"*. ⚠️ **D21-42 decision 2 does not name this sentence**, but it is a `## Decision` sentence that the split moves, so rule 1 makes it a supersession too (finding (1) below). | Every other clause of decision 1. |
+| **ADR-0008** `## Decision` and its first forbids bullet *(added 2026-09-24, D21-47)* | *"`ChangeSummary` is designed against it"* and *"`ChangeSummary` may not be designed and locked purely against a synthetic or paper fixture; it must be designed against the real UE project's actual artefacts."* These move **only** as far as the enum's two-arm shape and the `Text` arm, which this record finalises now, over a two-commit fixture repository, before S-BIN runs. ⚠️ **D21-42 decision 2 does not name ADR-0008 either**, and rule 1 makes it a supersession for the same reason (finding (13)). | The `Binary` arm's payload is designed against the real UE project's artefacts at `s8i` (S-BIN) and stays sealed until then. The UE fixture sentence, the Phase-2 adapter sentence and the second forbids bullet stand. Back-link: `superseded_by: [<id>]`. |
 
 **Owed beside the record, by dated note and not by rewrite.**
 
@@ -200,6 +294,10 @@ forbids** bullet, so each is a supersession in part, never an erratum.
   clause 5)"*.
 - **Register.** AC-497 (*"an **opaque, non-finalised newtype in `rk-ports`**"*). AC-154 and AC-356 stay PROVISIONAL
   on the `Binary` half only.
+- *(added 2026-09-24, D21-47)* **Every other line that says the same thing.** At `fc80687`,
+  `grep -cF 'non-finalised newtype'` reads **7** in the design and **3** in the acceptance-criteria register. The
+  two design sites and AC-497 above are three of those ten. Each of the ten takes a dated note citing the record, because each
+  says a thing the split makes false. Guard (9)'s sweep asserts it, as it does for the Codex phase lines.
 - **The README.** The index rows and back-link cells, the census, and the *"next free number"* sentence. The same
   sentence also appears in `00-preamble.md`.
 
@@ -211,11 +309,23 @@ forbids** bullet, so each is a supersession in part, never an erratum.
     at this stage"* are corrected, with dates.
   - `FixtureToolchain` returns `Text` for text paths it was scripted with. It refuses by name, never with an empty
     `Text`, for a range that carries a `Binary` path.
-- **The range's diff is read by `rk-git`.** The Rust adapter's `Cargo.toml` says *"no git is spawned by this crate
-  (ADR-0077 confines git to rk-git's one wrapper…)"*, and that stands. The read uses the crate's existing read
-  convention: `GitOp`'s reads section already holds `RevParse`, `Status` and `Log`. It is not a write, so ADR-0105
-  clause 5's enumerated write set does not move. If the read needs anything that clause or ADR-0077 forbids, halt.
-  Do not shell out from the adapter.
+- **The range's diff is read by `rk-git`, through gix.** The Rust adapter's `Cargo.toml` says *"no git is spawned
+  by this crate (ADR-0077 confines git to rk-git's one wrapper…)"*, and that stands. *(amended 2026-09-24, D21-47:
+  this bullet said the read would use `GitOp`'s exec reads. ADR-0077's `## Decision` reads **"gix owns the read
+  path"**, and ADR-0091 decision 1 confirmed gix as the read owner at the pin, so an exec read would move ADR-0077.)*
+  - The range read is **`rk_git::diff::range_diff`**, in a new `crates/rk-git/src/diff.rs`. It resolves both ends of
+    the range, takes the changed paths and their change kinds from `Repository::diff_tree_to_tree`, and reads each
+    changed blob by object id for the LFS pointer check (item 2a) and the text diff. **Measured 2026-09-24:** the
+    workspace pins `gix = "=0.87.1"` with default features. Its `basic` default carries `blob-diff`, and
+    `gix-0.87.1/src/repository/diff.rs` declares `pub fn diff_tree_to_tree`. If the implementation names the
+    function otherwise, guard (6)'s patterns follow it in the same commit.
+  - **No `GitOp` variant is added**, and `diff.rs` names neither `GitOp` nor `GitExec`. So ADR-0077 does not move,
+    and neither does ADR-0105 clause 5. Under D21-47's clause-5 rule a read is never a supersession of that clause
+    anyway. Guard (6) asserts that `GitOp`'s declaration is byte-identical to `S8A_BASE`'s.
+  - If the pinned gix cannot produce this read, **halt.** An exec read would need a record that supersedes ADR-0077's
+    read-path sentence in part, and that is a decision this stage does not hold. Do not shell out from the adapter.
+  - `RustToolchain::change_summary`'s own body calls `range_diff(…)` directly. Guard (6) asserts that call
+    positively, because a ban on spawning git alone passes on a body that reads nothing.
 - **`RustToolchain::change_summary` returns `Ok(ChangeSummary::Text(…))`** when every path in the range classifies
   `Text` or `Generated`.
   - A range that carries a `Binary` path refuses through the registry's dated `change_summary` row. The row is
@@ -242,17 +352,30 @@ fires like a bare one. The amendment contains:
 
 - **The ban.** `crates/` minus `rk-ports`, code lines only, string literals blanked. It rejects any
   `struct`/`enum`/`type`/`trait`/`union` named `…ChangeSummary`, any `type X = …ChangeSummary` alias, any
-  `impl … for …ChangeSummary`, and any inherent `impl …ChangeSummary`.
+  `impl … for …ChangeSummary`, and any inherent `impl …ChangeSummary`. *(amended 2026-09-24, D21-47)* It also
+  rejects a renaming import, `…ChangeSummary as X`, whether on a `use` line or on one item line of a multi-line
+  `use { … }`. The rule is a capital or `_` after `as`, so a numeric cast such as `Capability::ChangeSummary as
+  usize` is admitted. At `fc80687`, `grep -rn 'ChangeSummary[[:space:]]*as' crates/` finds nothing.
+  **Stated limit:** the ban reads one line at a time. An `impl` split so that `for …ChangeSummary` starts a new line
+  after `impl Trait` is not seen. `rustfmt` keeps `impl Trait for Type {` on one line unless it exceeds the width,
+  and guard (10)'s `cargo fmt --check` holds the tree to that. A line-joined reading is the fix if one ever
+  appears.
 - **The `rk-kernel` production ban.** `crates/rk-kernel/src`, code lines only, strings blanked: no
   `\bChangeSummary\b`.
 - **The opacity pin inside `rk-ports`.** The ban excludes `rk-ports`, so this pin is what guards opacity there.
   `rk-ports` declares exactly one `pub enum ChangeSummary`, and the sealed payload type declares no `pub` field. The
   **behavioural** pin is the `trybuild` case in §8a.9, because a grep cannot prove non-constructibility.
+  *(amended 2026-09-24, D21-47)* The two textual pins read **code only**, with comments stripped, so a commented-out
+  declaration is not counted. They read the payload's field list in **both** forms, tuple `(…)` and brace `{ … }`,
+  so a brace struct with a `pub` field is caught. Planted sources check each case. The pins are floors beneath
+  the `trybuild` case, never a replacement for it.
 - **Synthetic controls, through the same chain, one line at a time.** A combined control would pass on a single
   hit. These must fire: a definition, a `Text…` redefinition, a path-qualified alias, a trait impl, a path-qualified
-  inherent impl, a generic impl on the sealed type, and an impl on a line that also carries a string. These must be
+  inherent impl, a generic impl on the sealed type, an impl on a line that also carries a string, and *(added
+  2026-09-24)* a `use … as` rename, a braced-item rename and an `as _` import. These must be
   admitted: the `use` line, both signature spellings, `Self::ChangeSummary =>`, a bare `ChangeSummary,` variant
-  line, a `Text` construction, a comment, and a string.
+  line, a `Text` construction, a comment, a string, and *(added 2026-09-24)* a numeric cast of the vocabulary
+  variant.
 
 The positive control `pub struct ChangeSummary(` in `s5` no longer matches, and the same line appears in two other
 places. Each one moves in the same commit, by dated amendment citing the record:
@@ -345,6 +468,15 @@ No record supersedes ADR-0134 here (finding (3)). Executing D21-9 has two parts:
 because D21-40 decision 4 and this stage's brief require 7f to run whole at the exit (finding (3)). `s8e`'s
 Slice-Verdict commit moves this literal again, together with `s7h` guards (6) and (7).
 
+*(added 2026-09-24, D21-47; cross-file review item 2)* **Checkpoint 8a's own guard (7) pins the same armed state,
+and it stays pinned here.** It asserts `ignored, ARMED: Slice-Verdict has 0 producers`, `discharged by s8e` and
+`0 passed; 0 failed; 1 ignored`. That is true until `s8e` un-ignores the lint, and it is false from then on. So
+every later replay of this block (`s8b` guard (0), `s8i`, `s8j`) would fail on it. D21-47's time-bound rule gives
+the amendment to the stage that moves the premise, in the same commit. **`s8e`'s Slice-Verdict commit amends
+Checkpoint 8a guard (7) by dated line** to `1 passed` with the ARMED reason absent, and it lists 8a as
+provisional. This stage does not pre-empt that. A guard made conditional on the `#[ignore]` being present would
+pass whether or not the lint was ever discharged.
+
 **7f's block runs `redkiln run`, so its whole re-run is a dispatch hazard once the cards bind.** At this stage
 the hazard is closed. **0 of 8** shipped cards carry `permission_mode`, and `CardFile`'s load refuses before any
 spawn (`.ok_or_else(|| ConfigError::PermissionModeAbsent { card: card() })?;`). Guard (11) asserts that condition
@@ -429,8 +561,11 @@ test -f .redkiln/config.toml || { echo "FAIL: .redkiln/config.toml absent — St
 
 The fix removes the backticks. It does not switch to single quotes or escape them. The message contains an
 apostrophe (`7d's`), so single quotes would need a `'"'"'` splice. An escaped backtick only stays safe until someone
-re-quotes the line. The directly preceding line in the same block gets a dated comment, and the comment contains no
-backtick:
+re-quotes the line. A dated comment goes in as **a new line inserted directly before the amended line**, in the same
+block. No existing line is turned into the comment. The comment contains no backtick. *(Wording corrected
+2026-09-24, D21-47: this said "the directly preceding line … gets a dated comment", which could be read as editing
+that line. Guard (9a)'s comparison drops the note line and requires every other line to match, so only an
+inserted line passes.)*
 
 ```text
 # [amended 2026-09-24, s8a §8a.8] D21-46: the two backticks around init are removed — inside double quotes they ran init as a command on the FAIL path.
@@ -514,19 +649,28 @@ terminal through the launcher, with the live probes."* `PROGRESS.md` row 7c is m
 ### 8a.10 Checkpoint 8a
 
 - **The three records exist and are `accepted`.** Each carries its supersession back-links, and each uses `### Option
-  — ` headings. The two errata exist. The thirty non-conforming bodies are byte-unchanged.
+  — ` headings. The two errata exist. The README's index rows, census and next-free sentence are updated. The thirty non-conforming records' **bodies**, the bytes
+  below the closing frontmatter `---`, are unchanged since `S8A_BASE`. *(amended 2026-09-24, D21-47: this compared
+  the whole files. That contradicted guard (3), which requires a back-link on ADR-0135, one of the thirty. It would
+  also have broken on any later stage's back-link to one of them, such as `s8c`'s and `s8d`'s to ADR-0140. A
+  back-link is frontmatter, and an accepted body is what ADR-0092 keeps immutable.)*
 - **`ChangeSummary` is split.** `Text` is finalised and `Binary` is sealed. The Rust adapter produces `Text` through
-  `rk-git`, and refuses a binary path and an empty range by name.
+  `rk-git`, and refuses a binary path and an empty range by name. *(amended 2026-09-24, D21-47)* Its
+  `change_summary` body calls `rk_git::diff::range_diff`, and that read is a gix read: `GitOp` is byte-unchanged and
+  `diff.rs` names no exec type. The adapter's source carries no `"git"` literal on any code line, so it spawns
+  git by no route, `run::run_program` included.
 - **Checkpoint 5's new ban holds**, including the `rk-kernel` production ban and the opacity pin. Every control
   fires or is admitted as designed.
 - **`catalog-b` is repaired**, the probe prints 279/279, 0/279 and 99/99 at rc 0, and the committed JSON is
   unchanged by the re-run (compared as parsed JSON, not with `git diff` under autocrlf).
 - **Checkpoint 7f's discharged state is asserted by name.**
 - **The Codex phase sites carry their dated corrections, and E-0094-2 exists.**
-- **The whole suite is green** above its floor, and fmt and clippy are green. The expected value is
-  **re-derived at stage open from Checkpoint 7i's recorded count**: ADR-0164's **740 passed / 0 failed / 9 ignored
-  over 44 results** (`992d257`, on the tree Checkpoint 7i passed) plus this stage's nine new tests, 740 + 9 =
-  **749**. If the reading at open differs, the literal in (10) is amended by dated note before the first run.
+- **The whole suite is green** above its floor, and fmt and clippy are green. The expected value is **re-derived
+  at stage open from the last whole-suite reading before this stage**. That reading is **ADR-0164's evidence**:
+  **740 passed / 0 failed / 9 ignored over 44 results**, committed at `992d257`, measured on the tree Checkpoint 7i
+  passed. Add this stage's nine new tests: 740 + 9 = **749**. *(Label corrected 2026-09-24, D21-47: this said
+  "Checkpoint 7i's recorded count". Checkpoint 7i's block runs no whole-suite count, and 740 is ADR-0164's
+  number.)* If the reading at open differs, the literal in (10) is amended by dated note before the first run.
 - **Checkpoint 7e's FAIL message is amended (§8a.8).** The backticked bytes are gone from `s7e`, no other bash byte
   of `s7e` moved since `S8A_BASE`, and the amended line, run from its own bytes, fails without running `init`.
   No `runbook/` bash block carries a backtick that bash would execute, apart from 7h (10a)'s, which `s8e` removes.
@@ -537,6 +681,14 @@ terminal through the launcher, with the live probes."* `PROGRESS.md` row 7c is m
   the store and every run journal hold the same number of `dispatch_completed` rows after the runs as before. Each
   run had `CLAUDE_CONFIG_DIR` at an empty trap directory, which is still empty, and had `REDKILN_LAUNCH_RECORD`
   unset (D21-46).
+- *(added 2026-09-24, D21-47; re-pointed 2026-09-24, final consistency pass)* **Every process-level run in this
+  block uses one wrapper**, the shared `runbook/tools/nodispatch.sh`, set up by guard (0)'s `nd_setup`. That covers
+  the build (1), the named selections (7), the whole suite (10) and the whole re-runs (11). The wrapper puts a
+  **compiled** fake `claude` (`claude.exe` on Windows) first on `PATH`: it prints the pin for `--version`, and logs
+  and refuses with 97 any other call. It drops every other `PATH` directory that holds a `claude`, unsets
+  `REDKILN_LAUNCH_RECORD`, and points `CLAUDE_CONFIG_DIR` at an empty trap. `nd_check` asserts after each run, and
+  again at the block's end on both `RK_CP_NESTED` branches, that the trap is still empty and that the fake logged no
+  call. Because the fake is compiled, a Rust `Command::new("claude")` resolves it too, which settles finding (14).
 - **The legacy run worktree is back where it was**, at `73c087a`, clean, with `rk-run/rk-fix-doctor-test-count`
   unmoved (D21-44; D21-42 18).
 
@@ -559,6 +711,9 @@ runs. Each whole run that guard (11) does make is launched with `RK_CP_NESTED=1`
 empty trap directory that must still be empty afterwards, and with `REDKILN_LAUNCH_RECORD` unset. From `s8h` on,
 that makes the launch-record gate refuse before spawn. The trap uses `s8g`'s form, with its synthetic control.
 It is a third guard beside the card condition and the `dispatch_completed` count, and it replaces neither.
+*(re-pointed 2026-09-24, final consistency pass)* The trap and its control now come from the shared
+`runbook/tools/nodispatch.sh`. When a re-runner already runs this block under that wrapper (`ND_ACTIVE=1`), guard (0)
+verifies and reuses the enclosing wrapper rather than building a second one.
 
 🛑 **ADR-0164's flip is not this stage's act.** It is `proposed` and flips only on the operator's ledger line. This
 block does not read its status.
@@ -572,16 +727,45 @@ cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Re-runs ONLY the entry gate (7i) and 5, 7a, 7b, 7f, which this stage's edits touch. 7c is s8j's (D21-43 N28).
 # Under RK_CP_NESTED=1 (this block is another checkpoint's entry gate) guard (11)'s whole re-runs are skipped;
 # every other guard runs (D21-46). Checkpoint 7e is amended, not re-run: guard (9a).
+# [amended 2026-09-24, s8a D21-47] Every cargo run and every whole re-run below goes through guard (0)'s rkw wrapper.
+# [amended 2026-09-24, final consistency pass] That wrapper is now the shared runbook/tools/nodispatch.sh: rkw became
+# nodispatch, and nd_check follows every cargo run and every whole run.
+
+# ---- (0) THE NO-DISPATCH WRAPPER (D21-47): the shared runbook/tools/nodispatch.sh. [re-pointed 2026-09-24, final
+# ---- consistency pass: it replaces this guard's own sh fake and trap.] A COMPILED fake claude first on PATH (claude.exe
+# ---- on Windows, which a Rust Command::new("claude") resolves) prints the pin for --version and logs, then refuses
+# ---- with 97, any other call. Every other PATH dir holding a claude is dropped, REDKILN_LAUNCH_RECORD is unset, and
+# ---- CLAUDE_CONFIG_DIR is an empty trap. nd_setup runs the helper's own controls; under an enclosing wrapper
+# ---- (ND_ACTIVE=1, a re-runner's nodispatch) it verifies and reuses that one. In this session CLAUDE_CONFIG_DIR is the
+# ---- operator's real account.
+test -f runbook/tools/nodispatch.sh || { echo "FAIL: runbook/tools/nodispatch.sh is absent — the no-dispatch wrapper cannot be built"; exit 1; }
+. runbook/tools/nodispatch.sh || { echo "FAIL: could not source runbook/tools/nodispatch.sh"; exit 1; }
+nd_setup "$PWD/target/s8a-nd" || exit 1   # NOT under target/s8a-ctl: (4) removes that
+# A stage control beyond the helper's: a PLANTED launch record is removed, and a child sees the trap.
+got=$(REDKILN_LAUNCH_RECORD=planted nodispatch sh -c 'printf "%s|%s" "${REDKILN_LAUNCH_RECORD-unset}" "$CLAUDE_CONFIG_DIR"'); rc=$?
+[ "$rc" -eq 0 ] && [ "$got" = "unset|$ND_TRAP_NATIVE" ] || { echo "FAIL: CONTROL — nodispatch did not unset a planted REDKILN_LAUNCH_RECORD and point CLAUDE_CONFIG_DIR at the trap (got '$got', rc=$rc)"; exit 1; }
+nd_check "guard (0)" || exit 1
 
 # ---- (1) BUILD-OR-FAIL, FIRST. A stale binary makes every later whole run a statement about old code.
-out=$(cargo build --workspace 2>&1); rc=$?
+out=$(nodispatch cargo build --workspace 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo build --workspace rc=$rc — Checkpoint 8a NOT RUN (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
+nd_check "the build" || exit 1
 test -f ./target/debug/redkiln || test -f ./target/debug/redkiln.exe || { echo "FAIL: the build succeeded and no redkiln binary exists"; exit 1; }
 
-# ---- (2) INPUTS. The ids are allocated at writing, so this block takes them rather than guessing them.
-test -n "$FIX_ITEM" || { echo "FAIL: set FIX_ITEM=rk-fix-doctor-test-count — Checkpoint 7i's whole run needs it"; exit 1; }
-test -n "$CS_ADR" && test -n "$PACK_ADR" && test -n "$CODEX_ADR" || { echo "FAIL: set CS_ADR, PACK_ADR and CODEX_ADR to the ids of the ChangeSummary, ADR-0114 and Codex-phase records"; exit 1; }
-test -n "$S8A_BASE" && git rev-parse --verify --quiet "$S8A_BASE^{commit}" >/dev/null || { echo "FAIL: set S8A_BASE to the commit this stage opened on — the erratum's untouched-bodies guard compares against it"; exit 1; }
+# ---- (2) INPUTS, RECORDED AT WRITE TIME (D21-47: "Records are located by the id recorded at write time").
+# ---- [amended 2026-09-24, final consistency pass] These were environment inputs every re-runner had to supply. Each
+# ---- id is now written into its line below by a dated edit in the commit that writes its record, and S8A_BASE by a
+# ---- dated edit at stage open. The block refuses while a ____ placeholder remains. FIX_ITEM is §8a.1's item, a literal,
+# ---- so a re-runner's own FIX_ITEM (s8j's lane item) never reaches 7i's run.
+CS_ADR=____      # the ChangeSummary record (§8a.2)
+PACK_ADR=____    # the ADR-0114 record (§8a.4)
+CODEX_ADR=____   # the Codex-phase record (§8a.6)
+S8A_BASE=____    # the commit this stage opened on
+FIX_ITEM=rk-fix-doctor-test-count
+for kv in "CS_ADR=$CS_ADR" "PACK_ADR=$PACK_ADR" "CODEX_ADR=$CODEX_ADR"; do
+  printf '%s\n' "${kv#*=}" | grep -qxE '0[0-9]{3}' || { echo "FAIL: ${kv%%=*} is '${kv#*=}' in guard (2) — write the record's four-digit id here by dated edit the day it is written"; exit 1; }
+done
+printf '%s\n' "$S8A_BASE" | grep -qxE '[0-9a-f]{7,40}' && git rev-parse --verify --quiet "$S8A_BASE^{commit}" >/dev/null || { echo "FAIL: S8A_BASE is '$S8A_BASE' in guard (2) — write the commit this stage opened on here by dated edit; the untouched-bodies guard compares against it"; exit 1; }
 export FIX_ITEM
 
 # ---- (3) THE THREE RECORDS: one file each, accepted, supersessions declared, back-links present (ADR-0092 r1).
@@ -592,11 +776,13 @@ for id in "$CS_ADR" "$PACK_ADR" "$CODEX_ADR"; do
   grep -qxF 'status: accepted' "$1" || { echo "FAIL: $1 is not accepted — the checkpoint amendments rest on it; a proposed record flips only on the operator's dated line"; exit 1; }
 done
 cs_f=$(ls references/adr/"$CS_ADR"-*.md); pk_f=$(ls references/adr/"$PACK_ADR"-*.md); cx_f=$(ls references/adr/"$CODEX_ADR"-*.md)
-for t in 0093 0094 0099 0135; do
+# [amended 2026-09-24, s8a D21-47] 0008 joins the loop (its Decision and first forbids bullet move, §8a.2). 0099's
+# back-link may be followed by a later stage's append; the three before it are what this stage wrote.
+for t in 0008 0093 0094 0099 0135; do
   grep -qE '^supersedes: \[.*"'"$t"'"' "$cs_f" || { echo "FAIL: the ChangeSummary record does not declare it supersedes $t in part"; exit 1; }
   grep -qE '^superseded_by: \[.*"'"$CS_ADR"'"' references/adr/"$t"-*.md || { echo "FAIL: ADR-$t carries no back-link to $CS_ADR"; exit 1; }
 done
-grep -qE '^superseded_by: \["0115", "0127", "'"$CS_ADR"'"\]' references/adr/0099-*.md || { echo "FAIL: ADR-0099's back-link is not an APPEND to [0115, 0127]"; exit 1; }
+grep -qE '^superseded_by: \["0115", "0127", "'"$CS_ADR"'"(, "[0-9]{4}")*\]$' references/adr/0099-*.md || { echo "FAIL: ADR-0099's back-link is not an APPEND to [0115, 0127]"; exit 1; }
 grep -qE '^supersedes: \[.*"0114"' "$pk_f" && grep -qE '^superseded_by: \[.*"'"$PACK_ADR"'"' references/adr/0114-*.md || { echo "FAIL: the ADR-0114 supersession or its back-link is missing"; exit 1; }
 grep -qE '^supersedes: \[.*"0094"' "$cx_f" && grep -qE '^superseded_by: \[.*"'"$CODEX_ADR"'"' references/adr/0094-*.md || { echo "FAIL: the ADR-0094 d2 supersession or its back-link is missing"; exit 1; }
 grep -qF 'D17-9' "$cs_f" || { echo "FAIL: the ChangeSummary record does not root the conflict in D17-9 by name"; exit 1; }
@@ -604,6 +790,12 @@ set -- references/adr/[0-9][0-9][0-9][0-9]-*.md
 n=$#; last=$(basename "${!n}"); last=${last%%-*}; next=$(printf '%04d' $((10#$last + 1)))
 [ "$((10#$last))" -eq "$n" ] || { echo "FAIL: $n records but the last id is $last — the set is not contiguous"; exit 1; }
 grep -qF "next free number is **\`$next\`**" references/adr/README.md && grep -qF "next free number is **\`$next\`**" runbook/00-preamble.md || { echo "FAIL: README or the preamble does not name $next as the next free number"; exit 1; }
+# [added 2026-09-24, s8a D21-47] The README's index rows for the three records, and its census at both sites.
+for id in "$CS_ADR" "$PACK_ADR" "$CODEX_ADR"; do
+  grep -qE "^\| \[$id\]\($id-[^)]*\.md\) \|" references/adr/README.md || { echo "FAIL: the README index has no row for $id"; exit 1; }
+done
+grep -qE "^\*\*Purpose:\*\*.* \*\*$n records\*\*" references/adr/README.md || { echo "FAIL: the README's purpose line does not read **$n records**"; exit 1; }
+grep -qF "The set is $n records over \`0001\`–\`$last\`" references/adr/README.md || { echo "FAIL: the README's census does not read $n records over 0001–$last"; exit 1; }
 
 # ---- (4) ADR-0085 OPTION HEADINGS FROM 0164 ON, and the lint can go red: a mutated copy, and an empty dir.
 out=$(python runbook/tools/check-adr-options.py 2>&1); rc=$?
@@ -621,22 +813,74 @@ out=$(python runbook/tools/check-adr-options.py --dir target/s8a-ctl/empty 2>&1)
 [ "$rc" -eq 1 ] || { echo "FAIL: the lint passed over ZERO records (rc=$rc)"; exit 1; }
 
 # ---- (5) THE TWO ERRATA, and the thirty bodies byte-unchanged since the stage opened.
-sec=$(awk '/^## ADR-0085 /{f=1;next} /^## ADR-/{f=0} f' references/adr/ERRATA.md)
-printf '%s\n' "$sec" | grep -q 'ADR-0132' && printf '%s\n' "$sec" | grep -q 'ADR-0161' || { echo "FAIL: no ADR-0085 erratum lists ADR-0132 through ADR-0161"; exit 1; }
-grep -q 'E-0094-2' references/adr/ERRATA.md || { echo "FAIL: E-0094-2 (E12 taken without ADR-0007's phase sentence) is absent"; exit 1; }
+# [amended 2026-09-24, s8a D21-47] The erratum is ONE paragraph, E-0085-n with n >= 3, that names ADR-0132, ADR-0161 and
+# "thirty"; E-0094-2 sits in ADR-0094's section and names ADR-0007 and E12. The thirty are compared on their BODIES
+# (below the closing frontmatter ---), staged blob against S8A_BASE's blob: guard (3) itself requires a back-link on
+# 0135, one of the thirty, and later stages add back-links (s8c's and s8d's to 0140). Whole-file equality was rc 1.
+cat > target/s8a-ctl/errata.py <<'PY'
+import re, sys
+t = open("references/adr/ERRATA.md", encoding="utf-8").read().replace(chr(13), "")
+def section(num):
+    m = re.search(r"(?ms)^## ADR-" + num + r" .*?(?=^## ADR-|\Z)", t)
+    return m.group(0) if m else ""
+def paras(sec):
+    return [p for p in re.split(r"\n\s*\n", sec) if p.strip()]
+ok85 = [p for p in paras(section("0085")) if re.search(r"\*\*E-0085-([3-9]|[1-9][0-9])\b", p)
+        and "ADR-0132" in p and "ADR-0161" in p and re.search(r"\bthirty\b", p, re.I)]
+ok94 = [p for p in paras(section("0094")) if "E-0094-2" in p and "ADR-0007" in p and "E12" in p]
+print("ERRATA e0085=%d e0094_2=%d" % (len(ok85), len(ok94)))
+sys.exit(0 if len(ok85) == 1 and len(ok94) == 1 else 1)
+PY
+out=$(python target/s8a-ctl/errata.py 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the two errata are not each one paragraph in their section (E-0085-n naming ADR-0132, ADR-0161 and thirty; E-0094-2 naming ADR-0007 and E12): $out"; exit 1; }
 set -- references/adr/013[2-9]-*.md references/adr/01[45][0-9]-*.md references/adr/016[01]-*.md
 [ "$#" -eq 30 ] || { echo "FAIL: $# files in 0132..0161, expected 30"; exit 1; }
-git diff --quiet "$S8A_BASE" -- "$@"; rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: an accepted body in 0132..0161 differs from S8A_BASE (git diff rc=$rc) — the erratum lists them, it does not rewrite them"; exit 1; }
+cat > target/s8a-ctl/fm_body.py <<'PY'
+import subprocess, sys
+NL = b"\n"
+def body(b):
+    if not b.startswith(b"---" + NL):
+        return None
+    end = b.find(NL + b"---" + NL, 3)
+    return None if end < 0 else b[end + 5:]
+def blob(spec):
+    r = subprocess.run(["git", "cat-file", "blob", spec], capture_output=True)
+    if r.returncode != 0:
+        sys.exit("FM-BODY-FAIL: git cat-file blob %s rc=%d" % (spec, r.returncode))
+    return r.stdout
+if sys.argv[1] == "--selftest":
+    raw = blob(sys.argv[2] + ":" + sys.argv[3])
+    fm_only = raw.replace(b"superseded_by: [", b'superseded_by: ["9999", ', 1)
+    body_edit = raw[:-2] + (b"X" if raw[-2:-1] != b"X" else b"Y") + raw[-1:]
+    checks = [(body(raw) is not None, "the base file has a frontmatter"),
+              (fm_only != raw and body(fm_only) == body(raw), "a back-link-only change passes"),
+              (body(body_edit) != body(raw), "a one-byte body edit fails"),
+              (body(b"no frontmatter" + NL) is None, "a file with no frontmatter is refused")]
+    bad = [why for ok, why in checks if not ok]
+    print("FM-BODY-SELFTEST " + ("OK" if not bad else "FAIL: " + "; ".join(bad)))
+    sys.exit(1 if bad else 0)
+base, paths = sys.argv[1], sys.argv[2:]
+diff = []
+for p in paths:
+    a, b = body(blob(base + ":" + p)), body(blob(":" + p))
+    if a is None or b is None or a != b:
+        diff.append(p)
+print("FM-BODY compared=%d differ=%d %s" % (len(paths), len(diff), " ".join(diff)))
+sys.exit(1 if diff or not paths else 0)
+PY
+out=$(python target/s8a-ctl/fm_body.py --selftest "$S8A_BASE" "$(ls references/adr/0135-*.md)" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -qxF 'FM-BODY-SELFTEST OK' || { echo "FAIL: CONTROL — the body comparison cannot tell a back-link from a body edit: $out"; exit 1; }
+out=$(python target/s8a-ctl/fm_body.py "$S8A_BASE" "$@" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -qE '^FM-BODY compared=30 differ=0 ' || { echo "FAIL: an accepted BODY in 0132..0161 differs from S8A_BASE (rc=$rc) — the erratum lists them, it does not rewrite them: $out"; exit 1; }
 
 # ---- (6) CHECKPOINT 5'S NEW BAN (the record's rule), code lines only, strings blanked, NO ::ChangeSummary escape.
-CS_BAN='\b(struct|enum|type|trait|union)[[:space:]]+[A-Za-z_]*ChangeSummary\b|\btype[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[^=]*=.*\b[A-Za-z_]*ChangeSummary\b|\bimpl\b.*\bfor[[:space:]]+([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*ChangeSummary\b|\bimpl(<[^>]*>)?[[:space:]]+([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*ChangeSummary\b'
+CS_BAN='\b(struct|enum|type|trait|union)[[:space:]]+[A-Za-z_]*ChangeSummary\b|\btype[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[^=]*=.*\b[A-Za-z_]*ChangeSummary\b|\bimpl\b.*\bfor[[:space:]]+([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*ChangeSummary\b|\bimpl(<[^>]*>)?[[:space:]]+([A-Za-z_][A-Za-z0-9_]*::)*[A-Za-z_]*ChangeSummary\b|\b[A-Za-z_]*ChangeSummary[[:space:]]+as[[:space:]]+[A-Z_]'
 cs_filter() { grep -v '^crates/rk-ports/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/"([^"\]|\.)*"/""/g' | grep -E "$CS_BAN"; }
 raw=$(grep -rn 'ChangeSummary' crates/ --include='*.rs'); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the ChangeSummary search found nothing or could not run (rc=$rc) — rk-ports' own enum must be seen"; exit 1; }
 hits=$(printf '%s\n' "$raw" | cs_filter)
 [ -z "$hits" ] || { echo "FAIL: a ChangeSummary definition, alias or impl outside rk-ports:"; printf '%s\n' "$hits"; exit 1; }
-for ctl in 'F|x.rs:1:pub struct ChangeSummary;' 'F|x.rs:2:pub enum TextChangeSummary { A }' 'F|x.rs:3:type Cs = rk_ports::toolchain::ChangeSummary;' 'F|x.rs:4:impl Clone for ChangeSummary {' 'F|x.rs:5:impl rk_ports::toolchain::ChangeSummary {' 'F|x.rs:6:impl<T> From<T> for rk_ports::toolchain::BinaryChangeSummary {' 'F|x.rs:7:    let s = "x"; impl Copy for ChangeSummary {}' 'P|x.rs:8:use rk_ports::toolchain::{ChangeSummary, Classification, Toolchain};' 'P|x.rs:9:    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {' 'P|x.rs:10:    ) -> Result<rk_ports::toolchain::ChangeSummary, rk_types::error::StepError> {' 'P|x.rs:11:            Self::ChangeSummary => "change_summary",' 'P|x.rs:12:    ChangeSummary,' 'P|x.rs:13:        Ok(ChangeSummary::Text(text))' 'P|x.rs:14:    // impl Clone for ChangeSummary {}' 'P|x.rs:15:    let k = "impl Clone for ChangeSummary";'; do
+for ctl in 'F|x.rs:1:pub struct ChangeSummary;' 'F|x.rs:2:pub enum TextChangeSummary { A }' 'F|x.rs:3:type Cs = rk_ports::toolchain::ChangeSummary;' 'F|x.rs:4:impl Clone for ChangeSummary {' 'F|x.rs:5:impl rk_ports::toolchain::ChangeSummary {' 'F|x.rs:6:impl<T> From<T> for rk_ports::toolchain::BinaryChangeSummary {' 'F|x.rs:7:    let s = "x"; impl Copy for ChangeSummary {}' 'P|x.rs:8:use rk_ports::toolchain::{ChangeSummary, Classification, Toolchain};' 'P|x.rs:9:    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {' 'P|x.rs:10:    ) -> Result<rk_ports::toolchain::ChangeSummary, rk_types::error::StepError> {' 'P|x.rs:11:            Self::ChangeSummary => "change_summary",' 'P|x.rs:12:    ChangeSummary,' 'P|x.rs:13:        Ok(ChangeSummary::Text(text))' 'P|x.rs:14:    // impl Clone for ChangeSummary {}' 'P|x.rs:15:    let k = "impl Clone for ChangeSummary";' 'F|x.rs:16:use rk_ports::toolchain::ChangeSummary as Cs;' 'F|x.rs:17:    ChangeSummary as Summary,' 'F|x.rs:18:use rk_ports::toolchain::{ChangeSummary as _, Toolchain};' 'P|x.rs:19:    let n = Capability::ChangeSummary as usize;'; do
   want=${ctl%%|*}; line=${ctl#*|}; got=$(printf '%s\n' "$line" | cs_filter)
   if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: control must FIRE and did not — the ban is vacuous for: $line"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: control must be ADMITTED and fired — the ban blocks what the record licenses: $line"; exit 1; }; fi
 done
@@ -650,23 +894,109 @@ kctl=$(printf 'crates/rk-kernel/src/x.rs:1:fn f(s: &str) -> Option<ChangeSummary
 nenum=$(grep -cE '^pub enum ChangeSummary[[:space:]]*\{' crates/rk-ports/src/toolchain.rs)
 [ "$nenum" -eq 1 ] || { echo "FAIL: $nenum 'pub enum ChangeSummary {' in rk-ports, expected 1 — the split did not land"; exit 1; }
 # The sealed-slot pins below (nbin, npub) are SUPERSEDED BY NAME at s8i when S-BIN finalises Binary (§8a.2 item 1).
-nbin=$(grep -cE 'struct BinaryChangeSummary\b' crates/rk-ports/src/toolchain.rs)
-[ "$nbin" -eq 1 ] || { echo "FAIL: $nbin sealed Binary payload declarations in rk-ports, expected 1 — the pin below would pass over nothing"; exit 1; }
-npub=$(grep -cE 'struct BinaryChangeSummary[[:space:]]*\([[:space:]]*pub[[:space:]]*[^(]' crates/rk-ports/src/toolchain.rs)
-[ "$npub" -eq 0 ] || { echo "FAIL: the sealed Binary payload has a pub field — it is constructible"; exit 1; }
-graw=$(grep -rnE 'Command::new\([[:space:]]*"git"' crates/rk-adapter-toolchain-rust/src --include='*.rs'); rc=$?
-[ "$rc" -le 1 ] || { echo "FAIL: the git-spawn floor could not run (rc=$rc)"; exit 1; }
-g_filter() { grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))'; }
-[ -z "$(printf '%s\n' "$graw" | g_filter | grep .)" ] || { echo "FAIL: the Rust adapter spawns git itself — the range is read through rk-git (ADR-0077)"; exit 1; }
-[ -n "$(printf 'x.rs:1:    let c = Command::new("git");\n' | g_filter)" ] || { echo "FAIL: the git-spawn floor's control did not fire"; exit 1; }
+# [amended 2026-09-24, s8a D21-47] Read over CODE only (comments stripped) and over BOTH field-list forms, tuple (…)
+# and brace { … }: the old grep counted a commented-out declaration and missed a brace struct's pub field. These are
+# floors beneath the trybuild case (§8a.9), which is the behavioural pin.
+cat > target/s8a-ctl/sealed.py <<'PY'
+import re, sys
+src = open(sys.argv[1], encoding="utf-8").read().replace(chr(13), "")
+src = re.sub(r"(?s)/\*.*?\*/", "", src)
+src = re.sub(r"(?m)//.*$", "", src)
+src = re.sub(r'"(?:[^"\\]|\\.)*"', '""', src)
+decls = list(re.finditer(r"\bstruct\s+BinaryChangeSummary\b", src))
+pub = 0
+for m in decls:
+    i = m.end()
+    if src[i:].lstrip().startswith("<"):
+        i = src.index(">", i) + 1
+    rest = src[i:].lstrip()
+    if rest and rest[0] in "({":
+        close, depth, j = {"(": ")", "{": "}"}[rest[0]], 0, 0
+        for j, ch in enumerate(rest):
+            depth += ch in "({[" and 1 or 0
+            depth -= ch in ")}]" and 1 or 0
+            if depth == 0:
+                break
+        pub += len(re.findall(r"\bpub\b(?!\s*\()", rest[1:j]))
+print("SEALED decls=%d pubfields=%d" % (len(decls), pub))
+PY
+sealed() { python target/s8a-ctl/sealed.py "$1" 2>&1; }
+out=$(sealed crates/rk-ports/src/toolchain.rs); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the sealed-slot reader could not run (rc=$rc): $out"; exit 1; }
+[ "$out" = "SEALED decls=1 pubfields=0" ] || { echo "FAIL: rk-ports' sealed Binary payload reads '$out', expected one declaration with no pub field — none means the pin passes over nothing, a pub field means it is constructible"; exit 1; }
+for ctl in 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary { pub bytes: u64 }' 'SEALED decls=1 pubfields=1|pub struct BinaryChangeSummary(pub u64);' 'SEALED decls=1 pubfields=0|// pub struct BinaryChangeSummary(pub u64);  pub struct BinaryChangeSummary(pub(crate) ());' 'SEALED decls=1 pubfields=0|pub struct BinaryChangeSummary { bytes: u64, note: Vec<u8> }'; do
+  printf '%s\n' "${ctl#*|}" | sed 's/  pub struct/\npub struct/' > target/s8a-ctl/sealed_ctl.rs || { echo "FAIL: cannot write a sealed-slot control"; exit 1; }
+  out=$(sealed target/s8a-ctl/sealed_ctl.rs); rc=$?
+  [ "$rc" -eq 0 ] && [ "$out" = "${ctl%%|*}" ] || { echo "FAIL: CONTROL — the sealed-slot reader read '$out' for: ${ctl#*|} (want ${ctl%%|*})"; exit 1; }
+done
+# [amended 2026-09-24, s8a D21-47] NO GIT FROM THE ADAPTER, BY ANY ROUTE. The adapter spawns through
+# run::run_program(config, dir, tag, program: &Path, args), so a Command::new("git") grep passes a
+# run_program(…, Path::new("git"), …) call. The ban is a "git" or "git.exe" string literal on ANY code line of the
+# adapter's src. Stated limit: a name assembled at run time (concat!, format!) is not seen, which is why the positive
+# assertion below exists: change_summary's own body must call rk-git's range read.
+g_filter() { grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep -E '"git(\.exe)?"'; }
+graw=$(grep -rnE '"git(\.exe)?"' crates/rk-adapter-toolchain-rust/src --include='*.rs'); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the git-literal ban could not run (rc=$rc)"; exit 1; }
+ghits=$(printf '%s\n' "$graw" | g_filter)
+[ -z "$ghits" ] || { echo "FAIL: the Rust adapter names git as a program — the range is read through rk-git (ADR-0077):"; printf '%s\n' "$ghits"; exit 1; }
+for ctl in 'F|x.rs:1:    let r = run::run_program(config, dir, "diff", Path::new("git"), &args)?;' 'F|x.rs:2:    let c = Command::new("git.exe");' 'P|x.rs:3:    // run_program(config, dir, "diff", Path::new("git"), &args) is what this crate must not do' 'P|x.rs:4:            if name == ".git" || name == "target" {'; do
+  want=${ctl%%|*}; got=$(printf '%s\n' "${ctl#*|}" | g_filter)
+  if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: CONTROL — the git-literal ban did not fire on: ${ctl#*|}"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: CONTROL — the git-literal ban fired on: ${ctl#*|}"; exit 1; }; fi
+done
+cat > target/s8a-ctl/cs_calls.py <<'PY'
+import glob, re, sys
+files = sys.argv[1:]
+code = {}
+for f in files:
+    s = open(f, encoding="utf-8").read().replace(chr(13), "")
+    s = re.sub(r"(?s)/\*.*?\*/", "", s)
+    s = re.sub(r"(?m)//.*$", "", s)
+    code[f] = re.sub(r'"(?:[^"\\]|\\.)*"', '""', s)
+bodies = []
+for f, s in code.items():
+    for m in re.finditer(r"\bfn\s+change_summary\s*\(", s):
+        i = s.index("{", m.end())
+        depth = 0
+        for j in range(i, len(s)):
+            depth += (s[j] == "{") - (s[j] == "}")
+            if depth == 0:
+                break
+        bodies.append(s[i:j + 1])
+imports = any(re.search(r"\brk_git::diff\b", s) for s in code.values())
+calls = [b for b in bodies if re.search(r"\brange_diff\s*\(", b)]
+print("CS-CALLS bodies=%d calling=%d rk_git_diff=%d" % (len(bodies), len(calls), int(imports)))
+sys.exit(0 if len(bodies) == 1 and len(calls) == 1 and imports else 1)
+PY
+set -- crates/rk-adapter-toolchain-rust/src/*.rs
+out=$(python target/s8a-ctl/cs_calls.py "$@" 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: RustToolchain::change_summary does not call rk_git::diff::range_diff in its own body ($out) — a ban on spawning git passes on a body that reads nothing"; exit 1; }
+printf '%s\n' 'use rk_git::diff::range_diff;' 'fn change_summary(&self, range: &str) -> Result<ChangeSummary, StepError> {' '    // range_diff(&self.root, range)' '    Err(StepError::Unsupported { capability: "range_diff(" })' '}' > target/s8a-ctl/cs_mutant.rs || { echo "FAIL: cannot write the call-site mutant"; exit 1; }
+out=$(python target/s8a-ctl/cs_calls.py target/s8a-ctl/cs_mutant.rs 2>&1); rc=$?
+[ "$rc" -eq 1 ] || { echo "FAIL: MUTANT — a change_summary whose body names range_diff only in a comment and a string passed the call-site check (rc=$rc): $out"; exit 1; }
+printf '%s\n' 'use rk_git::diff::range_diff;' 'fn change_summary(&self, range: &str) -> Result<ChangeSummary, StepError> {' '    let d = range_diff(&self.root, range)?;' '    Ok(ChangeSummary::Text(d.into()))' '}' > target/s8a-ctl/cs_good.rs || { echo "FAIL: cannot write the call-site control"; exit 1; }
+out=$(python target/s8a-ctl/cs_calls.py target/s8a-ctl/cs_good.rs 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: CONTROL — the call-site check rejected a body that calls range_diff (rc=$rc): $out"; exit 1; }
+# The range read is a gix read: GitOp is byte-identical to S8A_BASE's (no exec op added) and diff.rs names no exec type.
+test -f crates/rk-git/src/diff.rs || { echo "FAIL: crates/rk-git/src/diff.rs is absent — the range read has no home"; exit 1; }
+ge_base=$(git show "$S8A_BASE:crates/rk-git/src/git_exec.rs"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$ge_base" ] || { echo "FAIL: cannot read git_exec.rs at S8A_BASE (rc=$rc)"; exit 1; }
+op_base=$(printf '%s\n' "$ge_base" | tr -d '\r' | sed -n '/^pub enum GitOp {/,/^}/p')
+op_now=$(tr -d '\r' < crates/rk-git/src/git_exec.rs | sed -n '/^pub enum GitOp {/,/^}/p')
+[ -n "$op_base" ] && [ "$op_now" = "$op_base" ] || { echo "FAIL: GitOp moved since S8A_BASE (or could not be read) — a range read on the exec wrapper moves ADR-0077's read path"; exit 1; }
+dx=$(grep -nE '\b(GitOp|GitExec)\b|Command::new' crates/rk-git/src/diff.rs); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the exec-type search over diff.rs could not run (rc=$rc)"; exit 1; }
+dxc=$(printf '%s\n' "$dx" | grep -vE '^[0-9]+:[[:space:]]*//' | grep .)
+[ -z "$dxc" ] || { echo "FAIL: rk-git's range read names an exec type — it is a gix read (ADR-0077):"; printf '%s\n' "$dxc"; exit 1; }
+grep -qE '\bdiff_tree_to_tree\b' crates/rk-git/src/diff.rs || { echo "FAIL: crates/rk-git/src/diff.rs does not call gix's diff_tree_to_tree"; exit 1; }
 
 # ---- (7) THE NAMED TESTS, per crate, each `... ok` and an exact count.
 run_named() {  # $1 = package, $2 = exact count, then the module-qualified names
   pkg=$1; want=$2; shift 2
-  out=$(cargo test -p "$pkg" --test it -- "$@" --exact 2>&1); rc=$?
+  out=$(nodispatch cargo test -p "$pkg" --test it -- "$@" --exact 2>&1); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: $pkg's named selection rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
   for t in "$@"; do printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $pkg: $t did not report ok — renamed, deleted or not selected"; exit 1; }; done
   printf '%s\n' "$out" | grep -qE "test result: ok\. $want passed; 0 failed" || { echo "FAIL: $pkg's selection did not run exactly $want tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
+  nd_check "$pkg's named selection" || exit 1
 }
 run_named rk-ports 3 change_summary::text_variant_serialises_sha_diff_and_manifest change_summary::binary_arm_is_not_constructible_outside_rk_ports fake_behaviour::toolchain_fake_classifies_binary
 run_named rk-git 3 diff::range_diff_lists_every_changed_path_with_its_change_kind diff::range_diff_refuses_an_unresolvable_range diff::range_diff_marks_an_lfs_pointer_path
@@ -674,7 +1004,11 @@ run_named rk-adapter-toolchain-rust 5 change_summary::change_summary_text_varian
 run_named rk-adapter-toolchain-node 1 registry::ac489_capability_registry_dated
 run_named rk-kernel 4 conformance::conformance_every_step_kind_has_an_executor conformance::conformance_every_port_has_a_call_site probe_differential::grammar_agrees_with_the_s_grammar_probe on_false::on_false_closed_set
 run_named redkiln-migrate 1 output::ac475_zero_change_summary_values_in_output
-out=$(cargo test -p rk-kernel --test it -- conformance::conformance_every_trailer_key_has_a_producer --exact 2>&1); rc=$?
+# PINNED ARMED, and TIME-BOUND (D21-47; cross-file item 2): s8e's Slice-Verdict commit un-ignores this lint and, in that
+# same commit, amends THIS guard by dated line to "1 passed" with the ARMED reason absent and lists 8a as provisional.
+# Until then it stays pinned; a guard conditional on the #[ignore] would pass whether or not the lint was discharged.
+out=$(nodispatch cargo test -p rk-kernel --test it -- conformance::conformance_every_trailer_key_has_a_producer --exact 2>&1); rc=$?
+nd_check "the armed trailer lint's selection" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: the armed trailer lint's selection rc=$rc"; exit 1; }
 printf '%s\n' "$out" | grep -qF 'test conformance::conformance_every_trailer_key_has_a_producer ... ignored, ARMED: Slice-Verdict has 0 producers' || { echo "FAIL: the trailer lint is not ARMED naming Slice-Verdict"; exit 1; }
 printf '%s\n' "$out" | grep -qF 'discharged by s8e' || { echo "FAIL: the armed reason still names a stage that did not discharge it (ADR-0160)"; exit 1; }
@@ -705,6 +1039,22 @@ craw=$(grep -nE 'Codex[^|]*\bPhase 2\b' references/2026-09-08-acceptance-criteri
 c_filter() { grep -vF "ADR-$CODEX_ADR"; }
 [ -z "$(printf '%s\n' "$craw" | c_filter | grep .)" ] || { echo "FAIL: a register line still says Codex is Phase 2 with no dated correction citing ADR-$CODEX_ADR"; printf '%s\n' "$craw" | c_filter; exit 1; }
 [ -n "$(printf 'x.md:1:the Codex adapter is Phase 2\n' | c_filter)" ] || { echo "FAIL: the Codex sweep's control did not fire"; exit 1; }
+# [added 2026-09-24, s8a D21-47] The runbook's Codex exclusion notes (s7a one site, s7b-ii two, s7c one) cite the record.
+for spec in 's7a-ports-and-fakes.md 1' 's7b-ii-gates.md 2' 's7c-adapters.md 1'; do
+  f=runbook/phase-1/${spec% *}; want=${spec#* }
+  test -f "$f" || { echo "FAIL: $f is absent"; exit 1; }
+  got=$(grep -cF "ADR-$CODEX_ADR" "$f"); rc=$?
+  [ "$rc" -le 1 ] && [ "$got" -ge "$want" ] || { echo "FAIL: $f carries $got line(s) citing ADR-$CODEX_ADR, expected >= $want — its 'Phase 2' Codex exclusion reason has no dated note"; exit 1; }
+done
+# [added 2026-09-24, s8a D21-47] Every design and register line saying ChangeSummary is a "non-finalised newtype" carries
+# a dated note citing the ChangeSummary record (§8a.2: 7 design + 3 register lines at fc80687, AC-497 among them).
+nraw=$(grep -nF 'non-finalised newtype' references/2026-09-08-architecture-design.md references/2026-09-08-acceptance-criteria.md); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the non-finalised-newtype sweep could not run (rc=$rc)"; exit 1; }
+n_filter() { grep -vF "ADR-$CS_ADR"; }
+[ -z "$(printf '%s\n' "$nraw" | n_filter | grep .)" ] || { echo "FAIL: a design or register line still calls ChangeSummary a non-finalised newtype with no dated note citing ADR-$CS_ADR:"; printf '%s\n' "$nraw" | n_filter | cut -c1-160; exit 1; }
+[ -n "$(printf 'x.md:1:ChangeSummary is an opaque non-finalised newtype\n' | n_filter)" ] || { echo "FAIL: the newtype sweep's control did not fire"; exit 1; }
+nlines=$(printf '%s\n' "$nraw" | grep -c .)
+[ "$nlines" -ge 10 ] || { echo "FAIL: the newtype sweep read $nlines line(s), below the 10 measured at fc80687 — a site was rewritten rather than noted"; exit 1; }
 
 # ---- (9a) CHECKPOINT 7e's BACKTICK DEFECT, AMENDED (§8a.8; D21-46), AND NO RUNBOOK BASH BLOCK EXECUTES A BACKTICK.
 # ---- Checkpoint 7e is NOT re-run whole: its block commits and tags. The amendment is verified statically, by a
@@ -907,15 +1257,17 @@ other=$(printf '%s\n' "$out" | grep -E '^BT-(HIT|OPEN) ' | grep -vE '^BT-HIT run
 [ -z "$other" ] || { echo "FAIL: a runbook bash block carries a backtick bash would execute (only 7h (10a)'s is admitted, until s8e):"; printf '%s\n' "$other"; exit 1; }
 echo "backtick scan: $nb blocks; $(printf '%s\n' "$out" | grep -c '^BT-HIT ') hit(s), all admitted (7h (10a), s8e's to remove)"
 
-# ---- (10) FMT, CLIPPY, AND THE WHOLE SUITE above its floor. Expected value, re-derived at stage open from Checkpoint
-# ---- 7i's recorded count: 740 + 9 = 749 (740 passed / 0 failed / 9 ignored over 44 results is ADR-0164's evidence,
-# ---- 992d257; 9 is this stage's new tests). The 44-result floor stays.
-out=$(cargo fmt --all --check 2>&1); rc=$?
+# ---- (10) FMT, CLIPPY, AND THE WHOLE SUITE above its floor. Expected value, re-derived at stage open from the last
+# ---- whole-suite reading before this stage, ADR-0164's evidence (740 passed / 0 failed / 9 ignored over 44 results,
+# ---- 992d257; Checkpoint 7i's block records no suite count): 740 + 9 = 749, 9 being this stage's new tests.
+# ---- The 44-result floor stays. [label corrected 2026-09-24, s8a D21-47]
+out=$(nodispatch cargo fmt --all --check 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo fmt --check rc=$rc"; printf '%s\n' "$out" | head -20; exit 1; }
-out=$(cargo clippy --workspace --all-targets 2>&1); rc=$?
+out=$(nodispatch cargo clippy --workspace --all-targets 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: clippy rc=$rc"; printf '%s\n' "$out" | tail -20; exit 1; }
-out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
+out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the whole suite rc=$rc (a fresh checkout needs pnpm install for the node fixture first)"; printf '%s\n' "$out" | grep -E '^test .* FAILED|panicked' | head -20; exit 1; }
+nd_check "fmt, clippy and the whole suite" || exit 1
 total=$(printf '%s\n' "$out" | awk '/^test result:/{for(i=1;i<NF;i++) if($(i+1) ~ /^passed;?$/) s+=$i} END{print s+0}')
 [ "$total" -ge 749 ] || { echo "FAIL: the whole suite passed $total tests, below the floor of 749"; exit 1; }
 nres=$(printf '%s\n' "$out" | grep -cE '^test result:')
@@ -944,17 +1296,18 @@ PY
   }
   whole() {  # $1 = label, $2 = stage file, $3 = anchor
     extract "$2" "$3" "target/s8a-whole/$1.sh" || { echo "FAIL: could not extract Checkpoint $1"; exit 1; }
-    out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "target/s8a-whole/$1.sh" 2>&1); rc=$?
+    out=$(nodispatch env RK_CP_NESTED=1 bash "target/s8a-whole/$1.sh" 2>&1); rc=$?
     [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $1 run whole rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
     printf '%s\n' "$out" | grep -qxF 'CP8A-WHOLE-RUN-SENTINEL' || { echo "FAIL: Checkpoint $1 did not reach its last line"; exit 1; }
+    nd_check "Checkpoint $1's whole run" || exit 1
   }
   common=$(LC_ALL=C git rev-parse --path-format=absolute --git-common-dir); rc=$?
   [ "$rc" -eq 0 ] && [ -n "$common" ] || { echo "FAIL: cannot resolve the git common dir (rc=$rc)"; exit 1; }
   store="$common/redkiln/store.sqlite3"
   cp "$store" target/s8a-whole/store.before.sqlite3 || { echo "FAIL: cannot back up the store before the whole runs"; exit 1; }
   # 7i and 7f can reach `redkiln run`. Neither may dispatch: every shipped card lacks permission_mode, so the card
-  # load refuses before any spawn. From s8h on that is false, and this line must be re-scoped before it runs —
-  # through §8a.10's rule (a fixture config naming rk-fixture-child-claude as [adapters] harness_binary), never bare.
+  # load refuses before any spawn. From s8h on that is false: s8h §8h.14 re-scopes this guard in its own work commit
+  # (all cards carry a mode, and the launch-check refusal test runs by name), by D21-47's time-bound rule.
   set -- .redkiln/cards/*.json
   [ "$#" -eq 8 ] && [ -f "$1" ] || { echo "FAIL: expected 8 shipped cards"; exit 1; }
   pm=$(grep -l 'permission_mode' "$@"); rc=$?
@@ -992,21 +1345,22 @@ PY
   wtl=$(LC_ALL=C git worktree list --porcelain); rc=$?
   [ "$rc" -eq 0 ] || { echo "FAIL: git worktree list rc=$rc"; exit 1; }
   lreg=0; printf '%s\n' "$wtl" | grep -qxF "worktree $legacy" && lreg=1
-  # THE NO-DISPATCH TRAP (s8g's form; D21-46's one no-dispatch guard for replays). CLAUDE_CONFIG_DIR points at an empty
-  # directory that must still be empty afterwards, and the launch-record variable is unset, so from s8h on its gate
-  # refuses before spawn. A third guard beside the card condition and the dispatch_completed count, not a substitute:
-  # a child launched with CLAUDE_CONFIG_DIR set explicitly escapes the trap (s8g's stated limit).
-  trap_dir="$PWD/target/s8a-ctl/claude-config-trap"
-  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
-  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
-  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
-  [ "$n" -eq 1 ] || { echo "FAIL: CONTROL — the trap's emptiness reading saw $n entries where one was written"; exit 1; }
-  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
-  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
-  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
-  lr=REDKILN_LAUNCH_RECORD
-  got=$(env "$lr=planted" env -u "$lr" sh -c 'printf "%s" "${REDKILN_LAUNCH_RECORD-unset}"'); rc=$?
-  [ "$rc" -eq 0 ] && [ "$got" = unset ] || { echo "FAIL: CONTROL — env -u left a planted $lr in the child (got '$got', rc=$rc); a whole run would inherit a launch record"; exit 1; }
+  # [amended 2026-09-24, s8a D21-47] THE RESTORE IS AN EXIT TRAP TOO: a whole run that fails after 7f's cleanup line
+  # exits through it, so the legacy tree is re-registered on every exit path. Idempotent; the explicit call below
+  # and the trap cannot both add it. The store is KEPT, not restored (§8a.1): its backup is for recovery by hand.
+  legacy_restore() {
+    [ "$lreg" -eq 1 ] || return 0
+    wl=$(LC_ALL=C git worktree list --porcelain) || { echo "FAIL: git worktree list failed during the legacy restore"; return 1; }
+    printf '%s\n' "$wl" | grep -qxF "worktree $legacy" && return 0
+    o=$(LC_ALL=C git worktree add "$legacy" rk-run/rk-fix-doctor-test-count 2>&1) || { echo "FAIL: cannot restore the legacy run worktree at $legacy"; printf '%s\n' "$o"; return 1; }
+  }
+  trap 'legacy_restore || { echo "FAIL: the legacy run worktree was NOT re-registered on exit — restore it by hand (D21-44)"; exit 1; }' EXIT
+  # THE NO-DISPATCH TRAP (s8g's form; D21-46; D21-47). guard (0) made it, proved it empty by a control, and every
+  # whole run below goes through nodispatch: CLAUDE_CONFIG_DIR at the trap, the launch-record variable unset, the
+  # compiled fake claude first on PATH. A third guard beside the card condition and the dispatch_completed count, not a
+  # substitute: a child launched with CLAUDE_CONFIG_DIR set explicitly escapes the trap (s8g's stated limit).
+  # [re-pointed 2026-09-24, final consistency pass] The emptiness readings are the shared helper's nd_check.
+  nd_check "before the whole runs" || exit 1
   whole 7i runbook/phase-1/s7i-cost.md 'CP7I-END-OF-BLOCK reached'
   whole 5 runbook/phase-1/s5-workspace-ci-rk-types.md 'FAIL: deny.toml absent'
   whole 7a runbook/phase-1/s7a-ports-and-fakes.md 'FAIL: cargo test -p rk-ports exited'
@@ -1015,24 +1369,22 @@ PY
   d_after=$(dcount "$store"); rc=$?
   [ "$rc" -eq 0 ] && [ -n "$d_after" ] || { echo "FAIL: cannot count dispatch_completed after the whole runs (rc=$rc)"; exit 1; }
   [ "$d_after" = "$d_before" ] || { echo "FAIL: dispatch_completed moved '$d_before' -> '$d_after' (store, journals) — a whole run DISPATCHED (D21-40 decision 2)"; exit 1; }
-  left=$(find "$trap_dir" -mindepth 1); rc=$?
-  [ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the whole runs (rc=$rc)"; exit 1; }
-  [ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the whole runs — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
+  nd_check "after the whole runs" || exit 1
   lnow=$(git rev-parse --verify --quiet 'refs/heads/rk-run/rk-fix-doctor-test-count^{commit}')
   [ "$lnow" = "$lref" ] || { echo "FAIL: rk-run/rk-fix-doctor-test-count moved '$lref' -> '$lnow' during the whole runs"; exit 1; }
   if [ "$lreg" -eq 1 ]; then
-    wtl=$(LC_ALL=C git worktree list --porcelain); rc=$?
-    [ "$rc" -eq 0 ] || { echo "FAIL: git worktree list rc=$rc after the whole runs"; exit 1; }
-    if ! printf '%s\n' "$wtl" | grep -qxF "worktree $legacy"; then
-      out=$(LC_ALL=C git worktree add "$legacy" rk-run/rk-fix-doctor-test-count 2>&1); rc=$?
-      [ "$rc" -eq 0 ] || { echo "FAIL: cannot restore the legacy run worktree at $legacy (rc=$rc)"; printf '%s\n' "$out"; exit 1; }
-    fi
+    legacy_restore; rc=$?
+    [ "$rc" -eq 0 ] || { echo "FAIL: the legacy run worktree could not be re-registered after the whole runs (rc=$rc)"; exit 1; }
     lh=$(LC_ALL=C git -C "$legacy" rev-parse HEAD); rc=$?
     [ "$rc" -eq 0 ] && [ "$lh" = "$lref" ] || { echo "FAIL: the legacy run worktree is at '$lh', not $lref"; exit 1; }
     lst=$(LC_ALL=C git -C "$legacy" status --porcelain); rc=$?
     [ "$rc" -eq 0 ] && [ -z "$lst" ] || { echo "FAIL: the restored legacy run worktree is not clean (rc=$rc)"; exit 1; }
   fi
+  trap - EXIT
 fi
+# [added 2026-09-24, s8a D21-47] THE TRAP, ONCE MORE, ON BOTH BRANCHES: every cargo run above went through the wrapper
+# too. [re-pointed 2026-09-24, final consistency pass] nd_check: the trap is empty and the fake logged no call.
+nd_check "the block's end" || exit 1
 echo "CP8A-END-OF-BLOCK reached"
 ```
 
@@ -1101,5 +1453,24 @@ Adversarial refuting rounds run over the diff until a round moves no code and no
     D21-46 says *"every file adopts it"*. Those two edits belong to those files, not to this one. *Settled in the
     consistency pass 2026-09-24:* both now launch this block with `RK_CP_NESTED=1`, `REDKILN_LAUNCH_RECORD` unset and
     `CLAUDE_CONFIG_DIR` at an empty trap.
+13. **ADR-0008 is also moved by the split, and D21-42 decision 2 does not name it** (2026-09-24, D21-47 fix round).
+    Its forbids bullet reads *"`ChangeSummary` may not be designed and locked purely against a synthetic or paper
+    fixture"*. This stage finalises the `Text` arm and the two-arm shape over a two-commit fixture repository before
+    S-BIN runs. Rule 1 makes that a supersession in part, as in finding (1). The `Binary` payload is still designed
+    against the UE project, at `s8i`. §8a.2's table carries the row, and guard (3) checks the back-link.
+14. **The fake `claude` shadows shell callers only** (2026-09-24, D21-47 fix round). D21-47's replay rule puts a
+    fake `claude` that prints the pin first on `PATH`. On Windows, Rust's `Command::new("claude")` resolves
+    `claude.exe` and nothing else, and this box has both `~/.local/bin/claude` and `claude.exe`. A `sh` script
+    named `claude` is therefore invisible to a Rust-spawned child. That child would find the real `claude.exe`
+    further down `PATH`. For Rust children, the guards are the trap `CLAUDE_CONFIG_DIR`, the unset launch record
+    (which from `s8h` on refuses before spawn), the card condition and the `dispatch_completed` count. **For the
+    lead:** if D21-47 means the fake to shadow Rust children too, it has to be a `claude.exe`, for example a copy of
+    a built fixture binary that prints the pin. Every `s8` file that states this rule inherits the same limit.
+    *Settled in the final consistency pass 2026-09-24:* the lead built that fake, compiled from
+    `runbook/tools/fake-claude.rs` by `runbook/tools/nodispatch.sh`, and guard (0) now uses it.
+15. **The range read is a gix read, measured rather than assumed** (2026-09-24, D21-47 fix round). The earlier
+    text said the read would use `GitOp`'s exec reads. Those are `RevParse`, `Status` and `Log`, which the hybrid
+    already keeps on the executable, although ADR-0077's Decision names gix as the owner of rev-parse and status.
+    That existing drift is not this stage's to settle. This stage adds no exec read to it.
 
 ---

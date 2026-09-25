@@ -51,9 +51,11 @@ own records R1–R5 (§8g.8). The last bullet of the list above is superseded by
   ADR-0072 edit (1 → 2) with a changelog row. The option framing in §8g.6 is replaced by the decision. Its test is
   renamed `demands::a_failing_smoke_result_fails_the_stage` and proves both arms.
 - **Counts**: **sixty-four** new tests (`rk-kernel` 9 → 11), and twenty-three mutants (M20–M23 added, §8g.9).
-  Checkpoint 8g (2), (5), (7c) and (7g) read the new shape.
-- **The floor**: the drafted `PREV` is **954**, `s8f`'s drafted Checkpoint 8f `FLOOR`, in place of 939. It is still
-  re-derived at stage open from Checkpoint 8f's recorded count (§8g.10).
+  Checkpoint 8g (2), (5), (7c) and (7g) read the new shape. *(Superseded 2026-09-24 by the D21-47 fixes below:
+  sixty-six new tests and twenty-five mutants.)*
+- **The floor**: the drafted `PREV` was **954**, `s8f`'s drafted Checkpoint 8f `FLOOR`, in place of 939. *(Stale.
+  The consistency pass below supersedes it: `PREV` is **1063**, and the final consistency pass **1105**.)* It is
+  still re-derived at stage open from Checkpoint 8f's recorded count (§8g.10).
 
 *Consistency pass 2026-09-24* (the eleven `s8` files read against each other at `c9e7b6e`; D21-46 the authority):
 - **The run worktree is `s8d-ii`'s** (D21-46 R1): its root, the `setup` call and the carry at creation. Every
@@ -65,7 +67,105 @@ own records R1–R5 (§8g.8). The last bullet of the list above is superseded by
 - **(12) adds `REDKILN_LAUNCH_RECORD` unset** to every replay (D21-46's one replay guard), and the trap asserts that it
   starts empty.
 - **The floor chain is recomputed once**: Checkpoint 8f's 1063 + this stage's 64 = **1127**, not the drafted 954 + 64,
-  and (9) gains the at-least-44-result-lines guard.
+  and (9) gains the at-least-44-result-lines guard. *(With the two tests the D21-47 fixes add: 1063 + 66 = **1129**.
+  Superseded by the final consistency pass: 1105 + 66 = **1171**.)*
+
+*Adversarial-review fixes 2026-09-24 (D21-47)* (the review of this file at `4a8c832`, fixed at HEAD `fc80687`;
+`spikes/DECISIONS-2026-09-21.md`'s `## D21-47` is the authority). Each finding id, then its fix:
+
+- **B1** (the no-dispatch guard's `harness_binary` side read comments): (12)'s guard is now a Python scan over code
+  lines only. A `redkiln run` line passes only after a code line that writes `harness_binary` at
+  `rk-fixture-child-claude`, or as a listed refusal-only line. Three synthetic controls prove it can go red: a
+  comment-only name, an armed run, and a wrong exit code.
+- **M2** (Checkpoint 7d's two refusal-only run lines): a named, quoted refusal-only list, each line admitted only when
+  its next line asserts rc 2 or rc 3. No comment was added to 7d. Measured against 7d's block as it stands: both
+  lines are admitted with the list, and both are refused without it.
+- **M3** (process-level runs outside the trap): (1a) builds D21-47's wrapper before any cargo test run. The wrapper is
+  a fake `claude` first on `PATH` that prints the pin, `REDKILN_LAUNCH_RECORD` unset, and the trap `CLAUDE_CONFIG_DIR`,
+  with controls for all three. (5), (9) and (12) run under it, and the trap is asserted empty after each.
+- **M4** (`verify_completed` had no origin): `origin` and `stage` members (§8g.4). AC-473's amendment reads only
+  `origin = "pass"` rows. `verify::verify_completed_carries_its_origin_and_stage` and mutant M24 were added, and (3)
+  asserts `origin` in AC-473's block.
+- **M5** (N24's row against agent-authored `Spec`s): §8g.3's warning. R2 names the gap and its owners, `s8h` and
+  `s8j`, and §8g.11 reports it upward.
+- **M6** (D21-46 R4's two trials): §8g.7 puts the declaration on each lane item and cites R4. The promotion follows
+  the trials, and the draft's *"must precede"* sentence is withdrawn. `tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item`
+  and mutant M25 were added.
+- **M7** (unexecuted hand-offs): §8g.1 makes Checkpoints 8d, 8d-ii and 8e provisional, unconditionally, and spells
+  out the three moves. It states what the low-facet lanes select: implement is unchanged, and `equivalence-boundary`
+  is selected nowhere. (12) replays all three.
+- **M8** (the mutation tree was unnamed): the tree is `<item>.mut` (§8g.5). `s8d-ii`'s validator gains the suffix by
+  dated line (move 3), and (0a) recomputes the worst-case sum. It measured 255 of 259 at `fc80687`.
+- **M9** (AC-137 overclaimed): only the type half is claimed. The render half is routed to `s8f`'s `render::`
+  renderer over `s8h`'s `Spec` template, and it is reported upward.
+- **m10** (clause 5): R3 cites `s8d-ii`'s and `s8f`'s clause-5 records by their recorded ids, and states the
+  consolidated write set. (2) asserts the set.
+- **m11**: (2) asserts R1 and ADR-0162's `supersedes` and `superseded_by` in both directions.
+- **m12**: (7c) reads `<id>@<version>` pairs for all six edited activities and an `IntegrationReport` row. (7d)
+  asserts version exactly 3, the moved row's `when` and `rigor`, and that each emit binds the test-authoring kind and
+  not `TestReport`.
+- **m13**: (3) asserts dated AC-320 and AC-485 notes, and AC-473's dated line.
+- **m14**: the whole-activity move is flagged for R1's flip line (§8g.2, R1), and (2) checks the quotation.
+- **m15**: the member name is `acceptance_criteria`, which the shipped catalog reads. `s8h`'s `criteria` must follow,
+  and this is reported upward.
+- **m16**: §8g.11 counts the verify block's seven whole ids correctly. AC-321 sits beside the block.
+- **Cross-file 6**: §8g.1, move 1 (smoke-test, `rolling-deploy` → `tag-release`, `equivalence-boundary`,
+  `integration-tests`), with Checkpoint 8d provisional.
+- **Cross-file 7**: `verify.ac-discriminates`'s expiry row and `MINTED_CLASSES` entry are handed to `s8h` (§8g.6,
+  §8g.11).
+- **Cross-file 18**: the stale `PREV` 954 line is marked superseded.
+- **Cross-file 19**: the ADR-0162 patch-clause supersession is unconditional (§8g.5, §8g.8).
+- **D21-47's rules, as they fall here**:
+  - Records are located by the id recorded at write time, through (2)'s `R<n>_ID` lines.
+  - Clause 5 has one reading.
+  - The wrapper covers the replays and this block's own cargo runs.
+  - This block has no card or permission precondition, so the `RK_CP_NESTED` rule has no site in it.
+  - The optional-`null` rule has no site in this file.
+- **Counts**: **sixty-six** new tests (`rk-kernel` 12, `rk-cli` 39), twenty-five mutants, and a floor of 1063 + 66 =
+  **1129**. *(Floor superseded by the final consistency pass below: 1105 + 66 = **1171**.)*
+
+*Final consistency pass 2026-09-24* (the eleven `s8` files read against each other after the D21-47 fix round, at
+`fc80687` plus that round's edits; D21-47 and the pass's brief the authority):
+- *Final consistency pass 2026-09-24:* **The shared no-dispatch wrapper.** The block's inline wrapper, (1a), is
+  replaced by the shared helper, sourced at **(0b)** before the build: `runbook/tools/nodispatch.sh`'s `nd_setup`.
+  `wrap` becomes `nodispatch`, and `trap_empty` becomes `nd_check`, which also fails on a logged call to the fake. The
+  build (1), (5), (9), fmt and clippy (10), and each replay in (12) now run under it, with `nd_check` after each. The
+  shell-script fake is gone: a Rust `Command::new("claude")` on Windows resolves only `claude.exe`, so the helper
+  compiles its fake. The planted-launch-record control stays, as this block's own assertion. (12)'s static guard's
+  variable is renamed `RUN_GUARD`, so it cannot be read as the helper's `nodispatch`.
+- *Final consistency pass 2026-09-24:* **Record ids.** The five `R<n>_ID` lines were already literals written at
+  writing, refusing while empty. No re-runner supplies an id, and none of (12)'s replays needs one under
+  `RK_CP_NESTED=1`.
+- *Final consistency pass 2026-09-24:* **The floor.** Checkpoint 8f's expected value is `s8f`'s 1021 + 84 = **1105**,
+  so this block's is 1105 + 66 = **1171** (§8g.10, (9)). This stage's 66 agrees with §8g.9's lists and (5).
+- *Final consistency pass 2026-09-24:* **`[checklist.smoke]` flips here** (`s8c`'s hand-off, its review finding 7).
+  R4's commit replaces the entry's `unauthored` with `path = "checklists/smoke.toml"` in `.redkiln/registry.toml`,
+  and (7h) asserts it with a control. Mutant M26 leaves it `unauthored` (§8g.6, §8g.9).
+- *Final consistency pass 2026-09-24:* **R3's consolidated write set** includes `s8f`'s third write, `read-tree HEAD`
+  on the run-owned worktree's own index, and (2) checks for it (§8g.5).
+- *Final consistency pass 2026-09-24:* **Two hand-offs are received.** `s8h` §8h.4 names `Spec`'s member
+  `acceptance_criteria` and refuses an authored criterion without a `verification`, and `s8j`'s lane proofs assert
+  every AC carries one. §8g.3 and §8g.11 record both as settled.
+- *Final consistency pass 2026-09-24:* **The walk-table claims after this stage** are stated: **14 of 14** (fix lane)
+  and **12 of 12** (story lane), read from the rows as `s8f` and this stage leave them (§8g.1, move 1).
+
+*D21-48 (2026-09-24)* (the operator's answers to the questions the s8 files left open; `spikes/DECISIONS-2026-09-21.md`'s
+`## D21-48` is the authority):
+- *D21-48 (2026-09-24):* **X9 decides the whole-activity move.** D21-48 X9: *"**The whole activity moves to implement**, because stage membership is per activity."*
+  §8g.2's *"Flagged for R1's flip line"* bullet is replaced by the decision, and the records table's R1 row records
+  it rather than flagging it. Checkpoint 8g (2)'s quotation check is re-aimed: the verify record must quote X9's
+  *"stage membership is per activity"* as well as D21-46 R5's *"test-writing steps"*, the letter X9 reads, and a
+  synthetic control proves the letter alone cannot satisfy it. No test, mutant or count moves: this stage stays at
+  **66**. The m14 line above is superseded by this one.
+- *D21-48 (2026-09-24):* **The floor follows `s8f`.** `s8f` gains one test under D21-48 X11 (84 → 85), so Checkpoint
+  8f's expected value is 1021 + 85 = **1106**, and this block's `PREV` is 1106 and its floor 1106 + 66 = **1172**
+  (§8g.10, (9)). Still re-derived at stage open from Checkpoint 8f's recorded count.
+- *D21-48 (2026-09-24), floor propagation:* the predecessors now state `s8c` **78**, `s8d` **62**, `s8d-ii` **50** and `s8f` **85**, so Checkpoint
+  8f's expected value is 1038 + 85 = **1123**, this block's `PREV` is 1123 and its floor 1123 + 66 = **1189**
+  (§8g.10, (9)). The 1106 / 1172 above is superseded, and §8g.10 re-quotes `s8f` §8f.2 item 9 as it now reads.
+- *D21-48 (2026-09-24), cross-file pass:* `s8c` hands on that the port now runs nextest (X15) and that whether
+  `verify_completed` journals `runner` is this stage's. §8g.4 takes X15's letter: the runner is on the report and
+  reaches the row through `report_digest`. No member, test or count moves.
 
 ---
 
@@ -152,15 +252,62 @@ pending s8g <crate>` in `PROGRESS.md` §1, in the commit that lands the edit. Th
 | `rk-adapter-toolchain-rust` | **tests only**: `selection::ac348_…` and `selection::ac355_…`, both over `s8c`'s affected-set function. No source line changes, because the handlers are record V's | none | Checkpoint 7c's whole re-run, with its live probe, is `s8j`'s (D21-43 N28: *"s8j re-runs it whole, from a plain terminal through the launcher, with the live probes"*) |
 | `rk-cli` | `verify_pass.rs`, the `release_tag` git-route handler, the release write, the trial route | Checkpoint 7d | Checkpoint 8g (12), whole |
 | `.redkiln/` | the four re-homed activities and the moved escalation row (N23); `integration-tests` re-homed and `story.toml`'s `IntegrationReport` row moved with it (D21-46 R5); `smoke-test`'s check (D21-46 R6, recorded in R4); two `[policy]` rows (N24); the goal amendments; `tag-release` in `catalog-extended/`; `verify.ac-discriminates` in `s8d`'s registry; this repository's `package_binaries` and `claims` rows in `s8c`'s table | Checkpoint 8b. Its shipped-pack lattice *"pins the measured shape"*, and the re-homing moves that shape | Checkpoint 8g (12), whole |
+| `rk-kernel` tests, and `s8d`'s walk tables | the two `lane_walk::` tests' expectations and `s8d` §8d.9's rows, by dated line (move 1 below) | Checkpoint 8d | Checkpoint 8g (12), whole |
+| `rk-kernel` tests, and `s8e`'s interim-key record | `verify_completed` named item-scoped in the list `fsm::every_item_scoped_kind_carries_the_interim_item_key` reads (move 2 below) | Checkpoint 8e | Checkpoint 8g (12), whole |
+| `rk-git`, and `s8d-ii`'s validator rules | the item-id validator refuses a `.mut` suffix (move 3 below) | Checkpoint 8d-ii | Checkpoint 8g (12), whole |
 
-**Checkpoint 8d is conditional, and it is measured at stage open, not assumed.** Its (9) asserts that each of its ten
-ids is declared exactly once, and an eleventh id leaves that true. If `s8d`'s loader test pins the registry's total
-at ten, the question this stage adds moves it. In that case the test takes a dated edit in the work commit, and
-Checkpoint 8d joins (12)'s list by a dated edit.
+**Checkpoints 8d, 8d-ii and 8e are provisional, unconditionally** (D21-47; the review's cross-file finding 6 and its
+finding 7). A line this stage's work commit writes moves each of them, and D21-47's rule is *"A time-bound guard in an
+earlier checkpoint is amended by the stage that moves its premise, in the same commit."* Each move below is a dated
+line in the earlier stage's file, in that commit:
+
+1. **`s8d` §8d.9's walk tables, and the two `lane_walk` tests' expectations.** `s8d` asks for exactly this: *"Each
+   move takes a dated line in this section and moves the two `lane_walk` tests' expectations in the same commit."*
+   Both lanes carry low facets and `external_dep = false`. The rows move as follows:
+   - **`verify`.** `equivalence-boundary` leaves the row, because `TestReport` is pass-sourced (§8g.2) and the
+     selector selects no catalog producer for it. `smoke-test` flips from refusing to **walks**: its checklist exists
+     (§8g.6) and its `passing` check reads the result (D21-46 R6). The fix lane then reads `confirmation-test`,
+     `smoke-test` and `sca-scan`, all walking. The story lane reads `smoke-test` and `sca-scan`, both walking.
+   - **`implement` is unchanged, and the dated line says why.** The test-design escalation moved to
+     `[stage.implement]` under *"`when = "criticality >= high"`"*, and both lanes carry `criticality = low`. So no
+     re-homed activity is selected there, and `equivalence-boundary` is selected at no stage of either lane. The same
+     line corrects `s8d`'s closing sentence, *"the implement rows gain them there"*: on these two lanes they gain
+     nothing.
+   - **`integration-tests` is in neither table.** Its only demand is `story.toml`'s `external_dep` row, and both lanes
+     read `external_dep = false`. The line names it, so that its absence is recorded and not silent.
+   - **`release`.** `tag-release` replaces `rolling-deploy`. It is admitted from `.redkiln/catalog-extended/` by the
+     lane item's `[trial]` declaration and selected by R5's mechanism (§8g.7). The `lane_walk` fixtures carry that
+     declaration, as `s8j`'s lane items do. `build-package` and `tag-release` both **walk**.
+   - **The claims lines** are recomputed from the rows as they stand at this stage's open, after `s8f`'s closeout
+     flips, and restated by the same dated line. If a test measures a different row, the table is corrected by a
+     dated line, and the test is not bent to the table (`s8d`'s rule). *Expected, read from the rows (final
+     consistency pass 2026-09-24):* `s8f`'s close leaves **13 of 15** and **11 of 13**, with `smoke-test` and
+     `rolling-deploy` refusing in each lane (`s8f` §8f.7). This stage takes `equivalence-boundary` out of both tables,
+     flips `smoke-test` to **walks**, and replaces `rolling-deploy` with `tag-release`, which walks. The claims then
+     read **14 of 14** (fix lane) and **12 of 12** (story lane). Checkpoint 8d's (6a) floors of 11 and 9 hold.
+2. **`s8e`'s interim-key list.** `fsm::every_item_scoped_kind_carries_the_interim_item_key` *"iterates
+   `EventKind::ALL` against that list, so a kind added later without a decision fails it"*. `verify_completed` is such
+   a kind, so this stage's variant turns the test red until the list names it. R1 names the kind item-scoped, with its
+   reason (§8g.4). The list the test reads gains it in the work commit, and `s8e`'s record takes a dated line naming
+   R1.
+3. **`s8d-ii`'s item-id validator.** The mutation tree is `<item>.mut` (§8g.5). An item id ending `.mut` would collide
+   with another item's mutation tree, as one ending `.review-ref` would with its reference tree. `s8d-ii`
+   §8d-ii.2's rules gain *"no `.mut` suffix"* by a dated line, and its table-driven test
+   `worktree::an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused` gains the row.
+
+**The question registry is a fourth move, and it is still measured at stage open.** Checkpoint 8d's (9) asserts that
+each of its ten ids is declared exactly once, and an eleventh id leaves that true. If `s8d`'s loader test pins the
+registry's total at ten, the question this stage adds moves it, and that test takes a dated edit in the same commit.
 
 **The re-runs are bounded**, because nested re-runs cost hours. (12) re-runs the entry gate, 8f, and the provisional
 rows above, each whole, with `RK_CP_NESTED=1` and without `REDKILN_LAUNCH_RECORD` in its environment, under the
-trap (D21-46). When this block is itself run with `RK_CP_NESTED=1`,
+trap (D21-46), and with a fake `claude` first on `PATH` that prints the pin (D21-47: *"Every checkpoint replay runs
+with a fake `claude` first on PATH that prints the pin"*). The wrapper is the shared helper
+`runbook/tools/nodispatch.sh`, whose fake is compiled, so it is the `claude.exe` a Rust `Command::new("claude")`
+resolves on Windows (final consistency pass 2026-09-24). The same wrapper covers this block's own process-level
+cargo runs, (1), (5), (9) and (10), because *"`CLAUDE_CONFIG_DIR` in this session is the operator's real account"*
+(D21-47).
+When this block is itself run with `RK_CP_NESTED=1`,
 as `s8h` replays it, (12) says that it is skipped and replays nothing. A replayed block that does not honour the
 variable still runs its own replays. That costs time, not correctness.
 
@@ -254,6 +401,11 @@ N23 moved the four:
 - **The lattice re-run above covers it**, and its dead count is reported by id with the four.
   `selection::integration_tests_selects_at_implement_under_external_dep` asserts the outcome: over `story.toml`, with
   `external_dep = true`, `integration-tests` is selected at implement and at no other stage.
+- **Decided: the whole activity moves** (D21-48 X9, 2026-09-24; it answers D21-47 review finding 14). D21-46 R5's
+  letter re-homes *"`integration-tests`' test-writing steps"*. The operator took the reading: *"**The whole activity moves to implement**, because stage membership is per activity."*
+  So R1 moves the whole activity, its `run` and `green` measurement steps with `write`. R1 quotes both D21-46 R5's
+  letter and X9's decision, and the split this section names stays rejected. Checkpoint 8g (2) asserts both
+  quotations. *(D21-48 (2026-09-24): replaces the flag for R1's flip line.)*
 
 **What the pass does, in order** (`crates/rk-cli/src/verify_pass.rs`, beside `review_pass.rs`, on its shape):
 
@@ -329,6 +481,23 @@ they are read today**, so nothing on the tree moves but its warrant:
     id. It then asserts that the same spec passes under a copy of the pack with the row removed. That is AC-138's
     *"computed from the policy table row, not from a constant in the type"*.
 
+⚠️ **The row refuses every AC whose `verification` is `None`, and nothing yet makes a lane's `Spec` fill it** (D21-47
+review, finding 5). The `Spec` on each `s8` lane is agent-authored: `fix-spec` writes it at the fix lane's
+specification stage, and `bdd-scenarios` at the story lane's. `AcceptanceCriterion` keeps `verification:
+Option<Text>`, because AC-137's THEN accepts a criterion with none, so the type cannot be what supplies it. Under
+N24's block default, a lane whose `Spec` leaves one AC's `verification` empty refuses at verify. R2 names the gap and
+its two owners, and does not close it here:
+
+- **`s8h`**, whose `Spec` schema and specifying cards are D21-41 (g)'s. Every AC a specifying activity emits carries
+  an authored, non-empty `verification`. The card's output contract says what to write, and `s8h`'s schema check
+  refuses an authored `Spec` without it. That check is over the authored value; `AcceptanceCriterion` itself is
+  embedded unchanged. AC-137 makes `verification` *"an authored field from the first CLI write"*, and this is that.
+- **`s8j`**, whose fixture proof walks both lanes. It asserts that every AC of each lane's `Spec` carries a non-empty
+  `verification` before verify runs, so that a gap reads as that line and not as a verify refusal.
+- **Both files now carry it** (re-read 2026-09-24, final consistency pass). `s8h` §8h.4 refuses an authored `Spec`
+  whose criterion lacks a `verification`, by `classify::a_spec_criterion_without_an_authored_verification_is_a_schema_failure`.
+  `s8j`'s lane proofs *"assert every AC carries a `verification`"*.
+
 **`rk_types::AcceptanceCriterion`** (AC-137's GIVEN/THEN; ADR-0104 decision 1's field): `id`, `criterion: Text`,
 `gwt: Option<Gwt>` (*"`Gwt { given: Text, when: Text, then: Text, and: Vec<Text> }`"*), `verification:
 Option<Text>`, and `mutation: Option<MutationDeclaration>`, where `MutationDeclaration` is
@@ -362,8 +531,20 @@ build a second registry.**
 
 ⚠️ **A cross-stage constraint on `s8h`.** The pass reads the item's ACs off the committed `Spec` artifact. The `Spec`
 type's schema is `s8h`'s (D21-41 g: schemas are Rust types in `EXPORTED`). Until then this stage's fixtures carry a
-`Spec` whose one typed member is `criteria: Vec<rk_types::AcceptanceCriterion>`, and **`s8h`'s `Spec` must embed
-`AcceptanceCriterion` unchanged** — named here so the second author does not re-invent it.
+`Spec` whose one typed member is `acceptance_criteria: Vec<rk_types::AcceptanceCriterion>`, and **`s8h`'s `Spec`
+must embed `AcceptanceCriterion` unchanged, under that member name**. It is named here so the second author does not
+re-invent it.
+
+**The member is `acceptance_criteria`, not `criteria`** (D21-47 review, finding 15), because the shipped catalog
+already reads that name:
+
+- `fix-spec.toml`'s check reads *"`spec.acceptance_criteria.len() > 0`"*;
+- `tdd-red-green-refactor.toml` and `mutation-testing.toml` iterate *"`for_each = "artifact:Spec.acceptance_criteria"`"*;
+- `spikes/p9/schemas.toml`'s `[value.Spec]` lists `"acceptance_criteria"`.
+
+`s8h`'s sentence named the member `criteria`, and it was reported upward as a cross-file finding. *Settled
+2026-09-24 (final consistency pass):* `s8h` §8h.4 now reads *"`Spec`'s criteria member is
+`acceptance_criteria: Vec<rk_types::AcceptanceCriterion>`, and nothing in it is redeclared"*.
 
 ### 8g.4 `verify_completed` — AC-321's replay event and the identity carrier (D21-42 10b)
 
@@ -373,22 +554,39 @@ same change** (ADR-0116 decision 5). Its row:
 
 | Kind | Tier | Payload fields | Producing step |
 | --- | --- | --- | --- |
-| `verify_completed` | 2 | `report_digest`, `selection`, `basis`, `basis_reason`, `passed`, `failed`, `selected_test_count`, `adapter`, `range: { base, head }`, `paths: [changed paths]`, `toolchain_version`; and the interim `item` key **beside** the payload, on `s8e` §8e.10's carrier | the kernel, once per **completed** `Toolchain::test` port call, whatever activity or pass made it |
+| `verify_completed` | 2 | `report_digest`, `selection`, `basis`, `basis_reason`, `passed`, `failed`, `selected_test_count`, `adapter`, `range: { base, head }`, `paths: [changed paths]`, `toolchain_version`, `origin`, `stage`; and the interim `item` key **beside** the payload, on `s8e` §8e.10's carrier | the kernel, once per **completed** `Toolchain::test` port call, whatever activity or pass made it |
 
 - **10b's four members plus AC-321's three.** D21-42 10b names *"report digest, selection with `basis_reason`, counts
   and adapter identity"*. AC-321's THEN adds *"the range endpoints, the resolved path list and the toolchain version
   are read back from the run event verbatim"* — so `range`, `paths` and `toolchain_version` are carried **as
   members**, not only inside the digest. That is AC-321's text, not a new decision.
+- **The runner is on the report, not a member** (*D21-48 (2026-09-24)*, X15). `s8c` now runs `cargo nextest` where
+  it is installed, beside a doctest companion, and records the runner on the report (`TestOutcome.runner`, `s8c`
+  §8c.2). X15's letter is *"records on the report which runner ran"*, so the row carries it through
+  `report_digest` and gains no `runner` member. `passed` and `failed` do not move with the runner, because `s8c`
+  §8c.2's invariant (passed + failed equals the `--list` count) holds on both paths. No reading in this stage names
+  `cargo test` in a port call's argv.
+- **`origin` and `stage`, because the pass is not the kind's only writer** (D21-47 review, finding 4). Every
+  completed `Toolchain::test` port call journals the row (*One site*, below), so implement-stage calls journal it too:
+  the `toolchain:test` runs of N23's re-homed activities, and `tdd-red-green-refactor`'s `red-verify`. Without a
+  member saying which call wrote the row, AC-473's identity reading could be satisfied by an implement row.
+  - `origin` is `"pass"` for the verify pass's call, and `"<activity>@<version>/<step>"` for a catalog step's call.
+  - `stage` is the node's stage name. It is carried as data, and the kernel never compares it. ADR-0162 decision 5
+    bars a stage literal in selection, and this is not selection.
+  - AC-473's register amendment reads only the rows whose `origin` is `pass`.
+  - `verify::verify_completed_carries_its_origin_and_stage` asserts both arms. A pass call and a `tdd` `red-verify`
+    call each journal one row, with their own `origin` and `stage`.
 - **`item`, because the store cannot scope a row any other way, carried beside the payload.** When this was drafted
   the store's selector was inert, and ADR-0163 decision 4 carried `item` as a payload member for that reason. D21-43
   N5 has since made an interim key the rule for every item-scoped kind (*"An interim `item` key on every item-scoped
   event kind"*), and D21-46 R3 fixes where it lives: *"**Carried outside the canonical digest**, as ADR-0131 places
   its tag set."* `s8e` §8e.10 carries it beside the event, in the `t2_event.item` column, and `query(ByItem)` honours
-  it. So `verify_completed` takes the key on that carrier and not in its payload, which moves no ADR-0131 bullet, and
-  `s8e`'s `fsm::every_item_scoped_kind_carries_the_interim_item_key` covers the new kind. `s8j`'s fixture proof reads
-  the item's `verify_completed` rows by that key and asserts `adapter` on every one. The two names, the `item` key and
-  the `adapter` member, are **fixed here** so `s8j`'s probe binds to them rather than to a guess (*restated
-  2026-09-24, consistency pass*).
+  it. So `verify_completed` takes the key on that carrier and not in its payload, which moves no ADR-0131 bullet.
+  `s8e`'s `fsm::every_item_scoped_kind_carries_the_interim_item_key` covers the new kind once the list it reads names
+  it, which this stage's work commit adds (§8g.1, move 2). `s8j`'s fixture proof reads the item's `verify_completed`
+  rows by that key and asserts `adapter` on every one whose `origin` is `pass`. The four names, the `item` key and the
+  `adapter`, `origin` and `stage` members, are **fixed here** so `s8j`'s probe binds to them rather than to a guess
+  (*restated 2026-09-24, consistency pass; `origin` and `stage` added 2026-09-24, D21-47*).
 - **Tier 2**, by ADR-0109 decision 2's deleted-database test: the report is recomputable by re-running the suite, and
   the next action does not move without the row. No trailer.
 - **Completed only.** A run that timed out, was killed or could not spawn writes **no** `verify_completed`; its
@@ -403,7 +601,8 @@ same change** (ADR-0116 decision 5). Its row:
 
 **The identity carrier moves, and the register moves with it.** AC-473's *Verified by* reads *"an adapter-identity
 assertion on the toolchain stage's dispatch record"* — and no dispatch record carries a toolchain. The verify record
-carries the dated register amendment D21-42 10b authorises: the assertion reads the item's `verify_completed` rows.
+carries the dated register amendment D21-42 10b authorises: the assertion reads the item's `verify_completed` rows
+whose `origin` is `pass`.
 AC-485's PROVISIONAL identity half (`s7d` §7d.18: *"the dispatch-event identity half has no `DispatchRecord` field to
 read and the carrier is routed, RT-41"*) is discharged **for the toolchain adapter** by the same row, and a dated note
 on AC-485 says so; its harness half stays with RT-41's carrier. **`s8`'s own sentence** *"the verify stage's
@@ -420,7 +619,7 @@ floor.**
 | **AC-320** | `verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call` | a counting `Toolchain` double: zero calls, zero gate rows | its *Verified by* names *"zero `process_spawned` events"*, and **no such kind exists** (`grep -c process_spawned crates/rk-types/src/event_kind.rs` → **0** at `ca8f387`). The record carries a dated *Verified by* note substituting the port-call count — no spawn is possible without a port call — rather than minting a kind for one assertion |
 | **AC-321** | `verify::ac321_replay_reads_the_path_list_from_verify_completed_alone`; `verify::ac321_replay_property_over_100_synthetic_ranges` | §8g.4's payload; the replay reads no working tree | — |
 | **AC-338** | `verify_pass::ac338_restored_mutation_is_unverifiable` | the mutation harness below; a fixture suite that restores the mutated file mid-run (F17's shape); the post-run content hash of the mutated region compared to the applied mutation | — |
-| **AC-339** | `verify_pass::ac339_mutation_runs_in_a_disposable_worktree` | an ephemeral worktree created and **removed on every path** (ADR-0162 decision 10's precedent). It sits beside the review pass's `<item>.review-ref` tree, at whatever root `s8d-ii`'s D21-44 move gives that tree, and **never inside the run-owned worktree at `.redkiln/worktrees/<item>`**. The run-owned worktree's `tree_hash` is equal before and after, and `git status --porcelain` is empty | the patch is applied by the kernel through `GitOp::Apply` and never by a `-p` child, so Claude Code's protected-segment rule (D21-45: *"The path is sensitive if ANY segment is one of"* …) does not bear on where the tree sits |
+| **AC-339** | `verify_pass::ac339_mutation_runs_in_a_disposable_worktree` | an ephemeral worktree named **`<item>.mut`**, created and **removed on every path** (ADR-0162 decision 10's precedent). It sits beside the review pass's `<item>.review-ref` tree under `.redkiln/worktrees/`, the root `s8d-ii`'s D21-44 move gives that tree, and **never inside the run-owned worktree at `.redkiln/worktrees/<item>`**. The name is fixed (D21-47 review, finding 8). Its 4-character suffix fits inside the 11 characters `s8d-ii`'s worst-case sum already reserves for `.review-ref` (255 of 259 at `c5d19d7`). `s8d-ii`'s validator refuses an item id ending `.mut` (§8g.1, move 3), and Checkpoint 8g (0a) recomputes the sum. The test asserts the tree's path, that the run-owned worktree's `tree_hash` is equal before and after, and that `git status --porcelain` is empty | the patch is applied by the kernel through `GitOp::Apply` and never by a `-p` child, so Claude Code's protected-segment rule (D21-45: *"The path is sensitive if ANY segment is one of"* …) does not bear on where the tree sits |
 | **AC-341** | `verify_pass::ac341_the_pass_calls_no_tracker_method` (a counting `Tracker` in `Ports`, which `run.rs` already builds as `tracker: Arc::new(rk_ports::fakes::BoardTracker::default())`); the static half stays `verify_reads_no_suite_verdict_rule`'s, inside `ac335_…` | the port-call assertion | **the *"CI is green and verify is `Err`"* integration half cannot be constructed**: the `Tracker` port has `project` and `inbox` and no status surface, and its module says *"Fake-only in Phase 1; GitHub is Phase 3"*. Named in the record as Phase 3's (AC-508), not claimed. **R1 carries a dated register note on AC-341 that says so**, so the half is recorded as Phase 3's rather than dropped silently |
 | **AC-348** | `selection::ac348_selection_is_byte_identical_over_200_change_sets` (Rust adapter); `verify_pass::ac348_selection_is_recomputed_from_verify_completed` | `s8c`'s affected-set function over a pinned `cargo metadata` fixture — **it must be a pure function of (change set, metadata, policy version)**; if `s8c` built it impure, stop (AC-347 requires *"a pure function"*) | — |
 | **AC-349** | `verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both`; `doctor::ac349_equal_specificity_claim_is_a_doctor_row` | a claims binder over each configured toolchain's declared path claims — a `claims` column the verify record adds to `s8c`'s per-toolchain table; the doctor row `RK-D-TOOLCHAIN-CLAIM-TIE` | — |
@@ -469,11 +668,23 @@ nothing."* Two records bar the obvious build and are moved by record, not worked
   not listed, and `crates/rk-git/src/git_exec.rs` says *"Anything not here is a successor record, and adding a
   variant is that decision made visible"*. **R3 (§8g.8) supersedes clause 5 in part** to add `apply` (and `tag`,
   §8g.7). The patch is applied **only** in the pass's ephemeral worktree, never the run-owned one.
+  - **R3 is the third record to supersede clause 5 in part, and it cites the other two.** D21-47 gives clause 5 one
+    reading: *"A git WRITE not on its closed list is a supersession in part"*, and *"A READ is not a supersession"*.
+    `s8d-ii`'s worktree record adds the writes `worktree lock`, `worktree unlock`, the `RK_BASE` marker write,
+    `reset --hard` and `clean -fd`. Its reads are not part of the supersession. `s8f`'s landing record adds
+    `commit-tree`, `update-ref` and `read-tree HEAD` on the run-owned worktree's own index (`s8f` §8f.3; the third
+    added 2026-09-24 by the final consistency pass).
+  - R3 cites each of the two records by the id that stage recorded when it wrote the record, never by a title phrase
+    (D21-47: *"Records are located by the id recorded at write time"*).
+  - R3 then states the consolidated write set: clause 5's list plus the three records' additions. A reader of ADR-0105
+    then finds one enumeration and not three partial ones.
 - ADR-0162's forbids bullet includes *"forbids applying a mutation patch from `rk-cli`; `ReproKind::Mutate` is refused
-  by name until a record adds the capability"*. `s8c`'s 1b record supersedes that bullet's seventh-method half. The
-  verify record states the disposition of the patch clause by quotation: **if `s8c`'s record did not reach it, R1
-  supersedes it in part for the verify gate's declared AC mutations alone**; the review pass's `ReproKind::Mutate`
-  arm stays refused by name either way, and the record says so.
+  by name until a record adds the capability"*. `s8c`'s 1b records supersede that bullet's seventh-method half and do
+  not reach the patch clause. `s8c`'s record V says so: *"The patch half stands here, and `s8g`'s verify record may
+  move it for the verify gate's declared AC mutations alone"*. **R1 supersedes the patch clause in part,
+  unconditionally, for the verify gate's declared AC mutations alone** (D21-47 review, cross-file finding 19). The
+  review pass's `ReproKind::Mutate` arm stays refused by name, and the record says so. ADR-0162 keeps `status:
+  accepted` and gains R1's id in `superseded_by`, and Checkpoint 8g (2) asserts both directions.
 
 ### 8g.6 The four demands restored (D21-42 6a)
 
@@ -494,6 +705,13 @@ is a version bump with a row in `.redkiln/CHANGELOG.md` (ADR-0072).
 
 - **The checklist is this stage's**, at `.redkiln/checklists/smoke.toml`. Its id is already on the design's checklist
   registry: `spikes/p9/registry.toml`'s `[checklists]` carries `"smoke"`.
+- **The registry entry flips with the file** (final consistency pass 2026-09-24; `s8c`'s hand-off). `s8c` declares
+  `[checklist.smoke]` in `.redkiln/registry.toml` as `unauthored`, naming this section as the stage that replaces it
+  with `path = "checklists/smoke.toml"`. `s8c` reports the gap: *"No line of `s8g` edits the registry entry, so
+  `checklist:smoke` would still refuse by name after `s8g`"*. R4's commit makes that replacement beside the file, so
+  `checklist:smoke` resolves. `s8c`'s source-table floor (each entry declares exactly one of `path` and `unauthored`,
+  and a path names a non-empty file) holds over the flipped entry, and its census counts declared keys, so Checkpoint
+  8c does not move. (7h) asserts the entry, and M26 leaves it `unauthored`.
 - **Each item takes the form record V reads**: `argv`, `cwd`, `expect_exit` and one stdout predicate. **No item
   dispatches**: no `run`, no network.
 - **The first cut.** Each expectation is measured on the built binary before it is written down:
@@ -574,7 +792,12 @@ running it at creation is `s8d-ii`'s. This stage asserts that the pass's whole s
   same form, in the file `s8d`'s R5 fixes. `s8d`'s loader loads it on both `run` and `answer`.
 - **A test asserts it.** `verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry` answers
   an AC-359 gate through `answer`'s production path, not through `run_with`'s registry parameter.
-- **Checkpoint 8d may become provisional** if `s8d`'s loader test pins the total (§8g.1).
+- **Its gate class needs an expiry row, and that row is `s8h`'s** (D21-47 review, cross-file finding 7). The kernel
+  mints the AC-359 gate the pass opens. No catalog step opens it. So `s8h` §8h.10's table carries a
+  `verify.ac-discriminates` row in both packs, and `s8h`'s `MINTED_CLASSES` names it, in the spelling this stage's
+  minting code fixes. It is handed to `s8h` by name (§8g.11).
+- **Checkpoint 8d is provisional** in any case (§8g.1). If `s8d`'s loader test pins the total, that test also takes a
+  dated edit.
 
 ### 8g.7 `tag-release` — a CLI's release, entered by ADR-0114's trial (D21-42 6b)
 
@@ -613,20 +836,33 @@ with `rk-plugin-gen`)."* So:
 - **`tag-release` is authored into `.redkiln/catalog-extended/`**, not `.redkiln/catalog/`. AC-110 is unchanged: an
   enabled pack referencing it, or selection reaching it, is a load-time configuration error, and the extended
   directory contributes **zero** entries to the resolved catalog.
-- **The trial declaration is data on an item record, not a CLI flag** — `[trial] activity = "tag-release"` on a
-  dedicated trial item; `run` admits exactly that one extended activity for exactly that item's one run, and the
-  AC-400 help snapshot does not move. R5 records this as the Phase-1 form of the route ADR-0114 placed in Phase 2,
-  with its limits stated.
+- **The trial declaration is data on an item record, not a CLI flag.** It is `[trial] activity = "tag-release"` on
+  **each lane item**, as D21-46 R4 confirms: *"**Two trials, confirmed.** Each is one run of one activity, which is
+  the clause's constraint."* The draft's *dedicated trial item* is withdrawn (D21-47 review, finding 6).
+  - `run` admits exactly that one extended activity, at the release stage, for exactly the declaring item's one run.
+  - A run on an item without the declaration never admits it (AC-110).
+  - The AC-400 help snapshot does not move.
+  - `s8j`'s two lane items carry the declaration (`s8j` §8j.1(e)).
+  - R5 records this as the Phase-1 form of the route ADR-0114 placed in Phase 2, with its limits stated.
 - **The ledger entry exists already**: AC-532's executed ledger folds `activity_committed` rows into
   `executed: { first, last }` *"per `activity_id@version`, each stamp holding all three of `{ run_id, item, at }`"*.
-- **At this stage the trial runs under the fixture harness only** —
-  `tag_release::trial_runs_one_activity_with_zero_dispatches`, in a temporary repository, asserting one activation,
-  zero `dispatch` and `dispatch_completed` rows, a ReleaseRecord `artifact.write`, and a local tag the fixture's bare
-  "remote" never receives.
-- **The trial's REAL run on this repository is DEFERRED to `s8j`, explicitly.** It needs a landed commit and a
-  journalled BuildArtifact for its item, which only a lane run produces, and it creates a tag in the operator's
-  repository — an operator moment, like a push. **The promotion that follows is AC-114's HUMAN GATE**, and it must
-  precede any lane run whose release stage is to select `tag-release`.
+- **At this stage the trial runs under the fixture harness only**, in two tests:
+  - `tag_release::trial_runs_one_activity_with_zero_dispatches` runs in a temporary repository. It asserts one
+    activation, zero `dispatch` and `dispatch_completed` rows, a ReleaseRecord `artifact.write`, and a local tag the
+    fixture's bare "remote" never receives.
+  - `tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item` runs a fixture lane over two
+    items in one temporary repository, under the fixture harness. The item that declares the trial selects and runs
+    `tag-release` once at release. The other item's run admits no extended activity.
+- **The trial's REAL run on this repository is DEFERRED past this stage, explicitly.** It needs a landed commit and a
+  journalled BuildArtifact for its item, which only a lane run produces. It also creates a tag in the operator's
+  repository, which is an operator moment, like a push. The real trials are `s8`'s two lane runs, prepared by `s8j`
+  (`s8j` §8j.1(e)).
+- **The promotion that follows is AC-114's HUMAN GATE. It follows the trials, and it does not precede them.** The
+  trial runs are the lane runs themselves (D21-46 R4), so no promotion can come before them. It cites the fix-lane
+  run's id, and it moves `.redkiln/catalog` only after `s8`'s runs (`s8j` §8j.1(e): *"It moves `.redkiln/catalog`
+  only after `s8`'s runs, so no fork straddles it"*). Until it lands, a lane selects `tag-release` only on an item
+  whose `[trial]` declaration names it. The draft's sentence, that the promotion *"must precede any lane run whose
+  release stage is to select `tag-release`"*, is withdrawn (D21-47 review, finding 6).
 - **AC-114's residue lint does not exist, and its owner is `s8j`.** The residue reads *"the file carries a non-empty
   `curation.decision` id resolving to a record in the catalog's decision log"*. Re-measured at `a6349b6`, `grep -rln
   curation .redkiln crates` finds nothing. It goes to `s8j` with the promotion it checks, for two reasons:
@@ -657,27 +893,32 @@ its row there too.
 
 ### 8g.8 The records this stage writes
 
-Each at the next free id **at writing**, `proposed`, in ADR-0085's form with `### Option — <name>` headings (D21-42
-24a), a `## Consequences` carrying **What this forbids**, and a slug fixed here so the checkpoint can find it without a
-number:
+Each is written at the next free id **at writing**, `proposed`, in ADR-0085's form with `### Option — <name>`
+headings (D21-42 24a), and a `## Consequences` carrying **What this forbids**. Each takes the slug fixed here. **The id
+each record takes is recorded when it is written**, by a dated edit of the five `R<n>_ID` lines in Checkpoint 8g (2),
+and the checkpoint locates each record by that id and then checks its slug. D21-47: *"Records are located by the id
+recorded at write time"*. The table:
 
 | | slug | decides | supersedes, amends |
 | --- | --- | --- | --- |
-| R1 | `the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed` | §8g.2, §8g.4, §8g.5: the pass and its composition, `setup` before the whole suite; `KindSource::Pass`; D21-43 N23's re-homing of the four displaced providers to a test-authoring kind at implement, with the escalation row; D21-46 R5's re-homing of `integration-tests` with `story.toml`'s `IntegrationReport` row, and `migration-dry-run` named as AC-347's single residual, its unreachability quoted; `verify_completed`; the verify block's routing, each id's instrument or reason; the cold slowest-child figure cited from `s8c`; the claims column; the mutation harness | ADR-0162's patch clause in part (§8g.5's condition); R-9 and RT-6 discharged; register: AC-473 *Verified by* (10b); dated notes on AC-320, AC-485, and AC-341 (its CI-green half is Phase 3's); design §5's table row; D17-4 closed |
-| R2 | `the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion` | §8g.3, including AC-139's default: block, fail-closed, recorded as the human decision (D21-43 N24) and shipped as `verification_required = ["verify"]` in both packs; the AC-133 registry, which `s8h` consumes | D17-3 closed; AC-139 dated note; `PROGRESS.md` row 5 corrected in the tracker commit |
-| R3 | `the-rk-git-write-set-gains-tag-and-apply` | `GitOp::Tag`, `GitOp::Apply`, each with its scope | **ADR-0105 clause 5 in part**; ADR-0105 keeps `status: accepted` and gains this id in `superseded_by` |
-| R4 | `the-four-verify-and-release-demands-have-producers` | §8g.6: the activities (`smoke-test`'s `passing` check, as D21-46 R6 decided; the producer walks), the smoke checklist's home and shape, and this repository's `package_binaries` row. **The three verb handlers and their semantics are `s8c`'s record V, and `sca-scan`'s `unrated` edit is `s8b`'s; each is cited by id and not decided again** | executes D21-42 6a (which supersedes D21-41 (c)/(d)'s narrowings) |
-| R5 | `tag-release-is-the-cli-release-and-enters-by-trial` | §8g.7: ReleaseRecord's shape, the tag name and rollback target, the `release_tag` git-route handler (`s8c`'s row), the extended directory, the item-record trial, the selection mechanism, the goal amendment, AC-114's lint named as `s8j`'s | executes D21-42 6b under ADR-0114 decision 3 |
+| R1 | `the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed` | §8g.2, §8g.4, §8g.5: the pass and its composition, `setup` before the whole suite; `KindSource::Pass`; D21-43 N23's re-homing of the four displaced providers to a test-authoring kind at implement, with the escalation row; D21-46 R5's re-homing of `integration-tests` with `story.toml`'s `IntegrationReport` row, and `migration-dry-run` named as AC-347's single residual, its unreachability quoted; `verify_completed`; the verify block's routing, each id's instrument or reason; the cold slowest-child figure cited from `s8c`; the claims column; the mutation harness | **ADR-0162's patch clause in part, unconditionally** (§8g.5; ADR-0162 gains this id in `superseded_by`); R-9 and RT-6 discharged; register: AC-473 *Verified by* (10b), reading only `origin = "pass"` rows; dated notes on AC-320, AC-485, and AC-341 (its CI-green half is Phase 3's); design §5's table row; `verify_completed` named item-scoped for `s8e`'s list; D17-4 closed. It moves `integration-tests` whole, where D21-46 R5's letter names its *"test-writing steps"*, on D21-48 X9's decision *"**The whole activity moves to implement**, because stage membership is per activity."*, quoting both (§8g.2; D21-48 (2026-09-24), which replaces the flag for its flip line) |
+| R2 | `the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion` | §8g.3, including AC-139's default: block, fail-closed, recorded as the human decision (D21-43 N24) and shipped as `verification_required = ["verify"]` in both packs; the AC-133 registry, which `s8h` consumes | D17-3 closed; AC-139 dated note; `PROGRESS.md` row 5 corrected in the tracker commit. **It names the `verification` gap** that N24's row opens over agent-authored `Spec`s, and its owners, `s8h` and `s8j` (§8g.3) |
+| R3 | `the-rk-git-write-set-gains-tag-and-apply` | `GitOp::Tag`, `GitOp::Apply`, each with its scope; the consolidated clause-5 write set | **ADR-0105 clause 5 in part**; ADR-0105 keeps `status: accepted` and gains this id in `superseded_by`. It cites `s8d-ii`'s worktree record and `s8f`'s landing record, the other two partial supersessions of clause 5, by their recorded ids (§8g.5) |
+| R4 | `the-four-verify-and-release-demands-have-producers` | §8g.6: the activities (`smoke-test`'s `passing` check, as D21-46 R6 decided; the producer walks), the smoke checklist's home and shape and its registry entry's flip from `unauthored` to its `path`, and this repository's `package_binaries` row. **The three verb handlers and their semantics are `s8c`'s record V, and `sca-scan`'s `unrated` edit is `s8b`'s; each is cited by id and not decided again** | executes D21-42 6a (which supersedes D21-41 (c)/(d)'s narrowings) |
+| R5 | `tag-release-is-the-cli-release-and-enters-by-trial` | §8g.7: ReleaseRecord's shape, the tag name and rollback target, the `release_tag` git-route handler (`s8c`'s row), the extended directory, the item-record trial on each lane item, the promotion after the trials, the selection mechanism, the goal amendment, AC-114's lint named as `s8j`'s | executes D21-42 6b under ADR-0114 decision 3, and D21-46 R4's two trials |
 
 🛑 **A change to a `## Decision` sentence or a forbids bullet is a supersession, never an erratum** (ADR-0092 rule 1).
-R3 is the only record here that moves an accepted Decision sentence outright; R1's ADR-0162 disposition is conditional
-and stated by quotation.
+Two records here supersede in part. R3 moves ADR-0105 clause 5, and R1 moves ADR-0162's patch-clause forbids bullet.
+Each supersession is recorded in both directions, and Checkpoint 8g (2) asserts all four links. *(Amended 2026-09-24,
+D21-47: R1's disposition was conditional, and is now unconditional.)*
 
 ### 8g.9 Red first — the named tests and the mutants
 
 Every test below is authored, run, and **watched fail for its own reason** before the code that makes it pass —
-golden constraint 12 — and the red output is quoted in the commit that lands it. **Sixty-four new tests**, all under
-`--test it`: `rk-types` 9, `rk-kernel` 11, `rk-git` 4, `rk-adapter-toolchain-rust` 2, `rk-cli` 38. Checkpoint 8g
+golden constraint 12 — and the red output is quoted in the commit that lands it. **Sixty-six new tests**, all under
+`--test it`: `rk-types` 9, `rk-kernel` 12, `rk-git` 4, `rk-adapter-toolchain-rust` 2, `rk-cli` 39. *(Amended
+2026-09-24, D21-47: `verify::verify_completed_carries_its_origin_and_stage` and
+`tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item` added.)* Checkpoint 8g
 asserts each by its module-qualified name and asserts the exact count per crate; the lists are there and are not
 repeated here. The draft's eight handler tests (`registry::`, `sca::`, `package::`, `smoke::` in the Rust adapter)
 left this list because the handlers are `s8c`'s record V, and `s8c`'s own `verbs::` tests pin them.
@@ -710,17 +951,22 @@ and each must turn its named test red. A survivor blocks the close.
 | M21 | `story.toml`'s `external_dep` → `IntegrationReport` row moved back to `[stage.verify]` | `selection::integration_tests_selects_at_implement_under_external_dep` |
 | M22 | a `[[stage.verify.require]]` row `when = "external_dep"`, `artifacts = ["MigrationTestReport"]` added to `story.toml` | `selection::migration_dry_run_is_selected_on_no_shipped_lane` |
 | M23 | `smoke-test`'s `passing` expression inverted to `smoke.status != 'passing'` | `demands::a_failing_smoke_result_fails_the_stage` (its passing arm) |
+| M24 | `verify_completed`'s `origin` written as `"pass"` for every call | `verify::verify_completed_carries_its_origin_and_stage` (its `red-verify` arm) |
+| M25 | the trial admission ignores the item, and admits `tag-release` on any run | `tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item` |
+| M26 | `[checklist.smoke]` left `unauthored` in `.redkiln/registry.toml` (final consistency pass 2026-09-24) | `demands::smoke_result_is_produced_through_the_registry_verb` (its `smoke` step refuses by name on `checklist:smoke`) |
 
 ### 8g.10 Checkpoint 8g
 
 **What this checkpoint asserts:**
 
 - **Five records exist, each once, in ADR-0085's form.**
-  - R3's supersession of ADR-0105 is recorded in both directions.
+  - Each is located by the id recorded when it was written, and then checked by its slug (D21-47).
+  - R3's supersession of ADR-0105 is recorded in both directions, and R3 states the consolidated clause-5 write set.
+  - R1's supersession of ADR-0162's patch clause is recorded in both directions.
   - R1 executes N23's re-homing and names the AC-347 residual.
   - R2 records AC-139's fail-closed decision.
-- **`verify_completed` is a tier-2 kind** in `rk-types` and in design §5's table, and AC-473's *Verified by* names it.
-  AC-341 and AC-139 carry their dated notes.
+- **`verify_completed` is a tier-2 kind** in `rk-types` and in design §5's table. AC-473's *Verified by* names it, on
+  a dated line, and reads only its `origin = "pass"` rows. AC-320, AC-341, AC-139 and AC-485 carry their dated notes.
 - **The schema.** `AcceptanceCriterion` is exported and snapshotted, AC-133's registry exists and covers it, and
   `SpecAc` is gone.
 - **The verify pass is the one TestReport route.** It is reached by `verbs::run::run`, selected by kind, and runs
@@ -729,31 +975,39 @@ and each must turn its named test red. A survivor blocks the close.
   test-authoring kind, and the escalation row moved with them. `integration-tests` is re-homed over the same kind,
   and `story.toml`'s `IntegrationReport` row moved with it (D21-46 R5). `migration-dry-run` is AC-347's single
   residual, and no shipped lane selects it. Both packs ship `verification_required = ["verify"]`.
-- **The four demands have producers**, and each writes one `artifact.write`. The producer walk over `s8b`'s `sca-scan` reads `unrated`. The gate
+- **The four demands have producers**, and each writes one `artifact.write`. `[checklist.smoke]` names its file by
+  `path` (final consistency pass 2026-09-24). The producer walk over `s8b`'s `sca-scan` reads `unrated`. The gate
   questions load from `s8d`'s registry, and there is no `.redkiln/questions.toml`. `smoke-test` fails on a
   `SmokeResult` that is not passing (D21-46 R6).
 - **`tag-release`** sits in the extended directory and trials under the fixture harness with zero dispatches. **No
   `rk-release/*` tag appears in this repository** as a side effect of the block.
-- **The whole suite, fmt and clippy are green.** Checkpoints 5, 6, 7b, 7b-ii, 7d, 8b and 8f re-run whole from their
-  stage files' own bytes. The re-runs are bounded, and none of them spawns a real `claude`.
+- **The whole suite, fmt and clippy are green.** Checkpoints 5, 6, 7b, 7b-ii, 7d, 8b, 8d, 8d-ii, 8e and 8f re-run
+  whole from their stage files' own bytes. The re-runs are bounded. They and this block's own cargo test runs go
+  through D21-47's no-dispatch wrapper, and none of them spawns a real `claude`.
 
 **BEFORE** (PIA-035). Each of these fails on the untouched tree:
 
-- (2) finds no record.
-- (3) finds no `verify_completed` row, and no dated note on AC-341 or AC-139.
+- (0a) finds no code line naming the mutation tree `{item}.mut`.
+- (2) finds no recorded id: the five `R<n>_ID` lines are empty.
+- (3) finds no `verify_completed` row, and no dated note on AC-473, AC-320, AC-341, AC-139 or AC-485.
 - (4) finds **17** `SpecAc` sites (re-measured at `a6349b6`).
 - (7) finds four `TestReport` providers at `stage = "verify"` and no `verification_required` row.
 - (7g) finds `integration-tests` at `stage = "verify"` and version 2, and `smoke-test` at version 1 with no `passing`
   step.
+- (7h) finds `[checklist.smoke]` declared `unauthored` (`s8c`'s entry).
 
 **Checkpoint 7c is not re-run here.** Its live probe is `s8j`'s (§8g.1).
 
 **The floor is re-derived at stage open.** (9)'s `PREV` is Checkpoint 8f's recorded passed count. It is written in by
 a dated edit before the block's first run and never lowered to make a red run green. The expected value,
-**re-derived at stage open from Checkpoint 8f's recorded count**, is PREV = **1063**, `s8f`'s Checkpoint 8f `FLOOR`
-(`s8f` §8f.2 item 9: *"which gives 984 at Checkpoint 8e and 984 + 79 = **1063** here"*), so (9)'s floor is 1063 + 64
-= **1127**. The chain, recomputed once under D21-46's floor-chain call, is ADR-0164's 740 passed at `992d257`, plus
-`s8a` 9, `s8b` 21, `s8c` 63, `s8d` 52, `s8d-ii` 32, `s8e` 67 and `s8f` 79. The recorded count governs.
+**re-derived at stage open from Checkpoint 8f's recorded count**, is PREV = **1123**, `s8f`'s Checkpoint 8f `FLOOR`
+(`s8f` §8f.2 item 9: *"That gives 740 + 9 + 25 + 78 + 62 + 50 + 74 = 1038 at Checkpoint 8e, and 1038 + 85 =
+**1123** here"*), so (9)'s floor is 1123 + 66 = **1189**. The chain, recomputed once, is ADR-0164's 740 passed at
+`992d257`, plus `s8a` 9, `s8b` 25, `s8c` 78, `s8d` 62, `s8d-ii` 50, `s8e` 74 and `s8f` 85, each as its file now states
+its new tests. The recorded count governs. *(Final consistency pass 2026-09-24. It supersedes PREV = 1063 and a floor
+of 1129, which took the predecessors' counts before their D21-47 fixes. D21-48 (2026-09-24): `s8f`'s X11 test moves
+PREV from 1105 to 1106 and the floor from 1171 to 1172. *D21-48 (2026-09-24), floor propagation:* `s8c`'s 78, `s8d`'s
+62 and `s8d-ii`'s 50 move PREV from 1106 to 1123 and the floor from 1172 to 1189.)*
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
@@ -770,48 +1024,112 @@ tags_before=$(git tag -l 'rk-release/*'); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: git tag -l could not run (rc=$rc)"; exit 1; }
 test -d crates/rk-adapter-toolchain-node/tests/fixtures/project/node_modules || { echo "FAIL: run 'pnpm install --frozen-lockfile --dir crates/rk-adapter-toolchain-node/tests/fixtures/project' first — ten node tests fail at preflight without it and the whole-suite line would be red for a reason unrelated to this stage"; exit 1; }
 
-# ---- (1) BUILD-OR-FAIL, before anything reads target/ (Halt 1).
-out=$(cargo build --workspace 2>&1); rc=$?
+# ---- (0a) THE MUTATION TREE'S NAME AND ITS WORST-CASE PATH (§8g.5; D21-47 review, finding 8). The tree is
+# ---- `<item>.mut`, beside `<item>.review-ref` under the run-worktree root, so the longer of the two suffixes bounds
+# ---- the sum Checkpoint 8d-ii (0b) takes. The name sweep is a floor over CODE lines beneath ac339's path assertion.
+raw=$(grep -rnF '{item}.mut' crates --include=*.rs); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the mutation-tree name sweep could not run (grep rc=$rc)"; exit 1; }
+code=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | grep .)
+test -n "$code" || { echo "FAIL: no code line under crates/ names the mutation tree '{item}.mut' — the name s8g section 8g.5 fixes is not the one built"; exit 1; }
+top=$(git rev-parse --show-toplevel); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$top" ] || { echo "FAIL: git rev-parse --show-toplevel failed (rc=$rc)"; exit 1; }
+files=$(git ls-files); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$files" ] || { echo "FAIL: git ls-files failed or listed nothing (rc=$rc)"; exit 1; }
+longest=$(printf '%s\n' "$files" | awk '{ if (length($0) > m) m = length($0) } END { print m + 0 }')
+[ "$longest" -gt 0 ] || { echo "FAIL: the longest tracked path read as $longest — the length guard would be about nothing"; exit 1; }
+mut_sfx=.mut; ref_sfx=.review-ref
+sfx=${#ref_sfx}; [ "${#mut_sfx}" -le "$sfx" ] || sfx=${#mut_sfx}
+[ "$sfx" -le 11 ] || { echo "FAIL: the longest sibling-tree suffix is $sfx characters, past the 11 that s8d-ii's worst-case sum reserves"; exit 1; }
+prefix="$top/.redkiln/worktrees/"
+worst=$(( ${#prefix} + 64 + sfx + 1 + longest ))
+lp=$(git config --get core.longpaths); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: git config could not be read (rc=$rc)"; exit 1; }
+[ "$worst" -le 259 ] || [ "$lp" = "true" ] || { echo "FAIL: the worst-case mutation-tree path is $worst characters (longest tracked path $longest) and core.longpaths is not true"; exit 1; }
+# CONTROL: the same sum over a 200-character path exceeds the limit, so the line above can go red.
+ctl=$(( ${#prefix} + 64 + sfx + 1 + 200 ))
+[ "$ctl" -gt 259 ] || { echo "FAIL: CONTROL — a 200-character path summed to $ctl, within the limit, so the length guard cannot fail"; exit 1; }
+
+# ---- (0b) THE NO-DISPATCH WRAPPER (D21-47), set up BEFORE any process-level cargo run and used by every one below —
+# ---- the build (1), the named selections (5), the whole suite (9), fmt and clippy (10) — and by (12)'s replays. It is
+# ---- the shared helper, sourced, never retyped (final consistency pass 2026-09-24): nd_setup compiles a fake `claude`
+# ---- (claude.exe on Windows: a Rust Command::new("claude") resolves only claude.exe, so a shell-script fake would
+# ---- leave the real binary to answer) that prints the pin for --version and logs and refuses anything else; strips
+# ---- every other PATH directory holding a claude; unsets REDKILN_LAUNCH_RECORD; points CLAUDE_CONFIG_DIR at an empty
+# ---- trap; and runs its own controls, checking resolution before the fake's first call. In this session
+# ---- CLAUDE_CONFIG_DIR is the operator's real account. Inside an enclosing wrapper (this block replayed by s8h) it
+# ---- reuses that one. It carries no card or permission precondition, so it is set up whether or not RK_CP_NESTED is.
+mkdir -p target/cp8g || { echo "FAIL: could not create target/cp8g"; exit 1; }
+. runbook/tools/nodispatch.sh || { echo "FAIL: runbook/tools/nodispatch.sh could not be sourced from the repo root"; exit 1; }
+nd_setup "$PWD/target/cp8g/nd" || exit 1
+# This block's own control, beyond the helper's: a planted launch record does not reach a wrapped process.
+got=$(REDKILN_LAUNCH_RECORD=planted nodispatch sh -c 'printf %s "${REDKILN_LAUNCH_RECORD-unset}"'); rc=$?
+[ "$rc" -eq 0 ] && [ "$got" = unset ] || { echo "FAIL: CONTROL — the wrapper passed REDKILN_LAUNCH_RECORD through ('$got', rc=$rc)"; exit 1; }
+nd_check "the wrapper's controls" || exit 1
+
+# ---- (1) BUILD-OR-FAIL, before anything reads target/ (Halt 1), under (0b)'s wrapper.
+out=$(nodispatch cargo build --workspace 2>&1); rc=$?
+nd_check "(1)'s build" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo build --workspace rc=$rc — Checkpoint 8g NOT RUN (Halt 1)"; printf '%s\n' "$out" | tail -20; exit 1; }
 RK=""
 for cand in ./target/debug/redkiln ./target/debug/redkiln.exe; do [ -f "$cand" ] && RK="$cand"; done
 [ -n "$RK" ] || { echo "FAIL: the build succeeded and no redkiln binary exists"; exit 1; }
 
-# ---- (2) THE FIVE RECORDS, EACH EXACTLY ONCE, EACH IN ADR-0085's FORM (D21-42 24a). Found by SLUG, because
-# ---- this file pre-assigns no number. BEFORE: every glob matches nothing on the untouched tree.
-for slug in the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion the-rk-git-write-set-gains-tag-and-apply the-four-verify-and-release-demands-have-producers tag-release-is-the-cli-release-and-enters-by-trial; do
+# ---- (2) THE FIVE RECORDS, EACH LOCATED BY THE ID RECORDED WHEN IT WAS WRITTEN (D21-47), THEN CHECKED BY ITS SLUG,
+# ---- EACH EXACTLY ONCE AND IN ADR-0085's FORM (D21-42 24a). This file pre-assigns no number: each R<n>_ID line
+# ---- below takes a dated edit when its record is written. BEFORE: all five are empty, and the loop fails on the first.
+R1_ID=""
+R2_ID=""
+R3_ID=""
+R4_ID=""
+R5_ID=""
+for spec in "R1@$R1_ID@the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed" "R2@$R2_ID@the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion" "R3@$R3_ID@the-rk-git-write-set-gains-tag-and-apply" "R4@$R4_ID@the-four-verify-and-release-demands-have-producers" "R5@$R5_ID@tag-release-is-the-cli-release-and-enters-by-trial"; do
+  r=${spec%%@*}; rest=${spec#*@}; num=${rest%%@*}; slug=${rest#*@}
+  case "$num" in [0-9][0-9][0-9][0-9]) ;; *) echo "FAIL: ${r}_ID is '$num', not a four-digit id — record $r's id was not recorded when it was written (s8g section 8g.8)"; exit 1 ;; esac
+  f="references/adr/$num-$slug.md"
+  test -f "$f" || { echo "FAIL: record $r's recorded id $num does not carry the slug $slug (no $f)"; exit 1; }
   set -- references/adr/[0-9][0-9][0-9][0-9]-"$slug".md
-  [ "$#" -eq 1 ] && [ -f "$1" ] || { echo "FAIL: no single record carries the slug $slug"; exit 1; }
-  num=${1#references/adr/}; num=${num%%-*}
-  grep -qxF "id: \"$num\"" "$1" || { echo "FAIL: $1's frontmatter id is not $num"; exit 1; }
-  grep -qxE 'status: (proposed|accepted)' "$1" || { echo "FAIL: $1 is neither proposed nor accepted"; exit 1; }
-  n=$(grep -c '^### Option — ' "$1")
-  [ "$n" -ge 2 ] || { echo "FAIL: $1 carries $n '### Option — ' headings; ADR-0085 and D21-42 24a need the considered options in that form"; exit 1; }
-  grep -qF '**What this forbids**' "$1" || { echo "FAIL: $1 has no What this forbids block"; exit 1; }
+  [ "$#" -eq 1 ] && [ "$1" = "$f" ] || { echo "FAIL: the slug $slug is carried by more than one record, or not by $num alone: $*"; exit 1; }
+  grep -qxF "id: \"$num\"" "$f" || { echo "FAIL: $f's frontmatter id is not $num"; exit 1; }
+  grep -qxE 'status: (proposed|accepted)' "$f" || { echo "FAIL: $f is neither proposed nor accepted"; exit 1; }
+  n=$(grep -c '^### Option — ' "$f")
+  [ "$n" -ge 2 ] || { echo "FAIL: $f carries $n '### Option — ' headings; ADR-0085 and D21-42 24a need the considered options in that form"; exit 1; }
+  grep -qF '**What this forbids**' "$f" || { echo "FAIL: $f has no What this forbids block"; exit 1; }
 done
-set -- references/adr/[0-9][0-9][0-9][0-9]-the-rk-git-write-set-gains-tag-and-apply.md
-wnum=${1#references/adr/}; wnum=${wnum%%-*}
-grep -qE '^supersedes: \[.*"0105".*\]$' "$1" || { echo "FAIL: the write-set record does not list 0105 in supersedes — a new wrapper write without one is ADR-0105's forbids bullet broken"; exit 1; }
-grep -qE "^superseded_by: \[.*\"$wnum\".*\]$" references/adr/0105-rk-git-and-rk-store-contracts-as-rules.md || { echo "FAIL: ADR-0105's superseded_by does not carry $wnum — the supersession is recorded in one direction only"; exit 1; }
-set -- references/adr/[0-9][0-9][0-9][0-9]-the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed.md
-vf="$1"
+wf="references/adr/$R3_ID-the-rk-git-write-set-gains-tag-and-apply.md"
+vf="references/adr/$R1_ID-the-verify-pass-is-the-one-test-report-route-and-journals-verify-completed.md"
+grep -qE '^supersedes: \[.*"0105".*\]$' "$wf" || { echo "FAIL: the write-set record does not list 0105 in supersedes — a new wrapper write without one is ADR-0105's forbids bullet broken"; exit 1; }
+grep -qE "^superseded_by: \[.*\"$R3_ID\".*\]$" references/adr/0105-rk-git-and-rk-store-contracts-as-rules.md || { echo "FAIL: ADR-0105's superseded_by does not carry $R3_ID — the supersession is recorded in one direction only"; exit 1; }
+# R3 states the consolidated clause-5 write set: its own two writes and the other two records' (D21-47's one reading).
+for w in 'commit-tree' 'update-ref' 'read-tree' 'worktree lock' 'worktree unlock' 'reset --hard' 'clean -fd'; do
+  grep -qF "$w" "$wf" || { echo "FAIL: the write-set record does not state the consolidated clause-5 write set: '$w' is absent (s8g section 8g.5; D21-47)"; exit 1; }
+done
+grep -qE '^supersedes: \[.*"0162".*\]$' "$vf" || { echo "FAIL: the verify record does not list 0162 in supersedes — ADR-0162's patch clause is superseded unconditionally (s8g section 8g.5; D21-47)"; exit 1; }
+grep -qE "^superseded_by: \[.*\"$R1_ID\".*\]$" references/adr/0162-the-review-call-site-is-built-over-a-fixture-corpus-and-guard-10-becomes-behavioural.md || { echo "FAIL: ADR-0162's superseded_by does not carry $R1_ID — the supersession is recorded in one direction only"; exit 1; }
 grep -qF 'applying a mutation patch from `rk-cli`' "$vf" || { echo "FAIL: the verify record does not quote ADR-0162's patch clause — its disposition is stated nowhere (s8g §8g.5)"; exit 1; }
+# D21-48 X9 (2026-09-24) decided the whole-activity move: the record quotes the decision AND the letter it reads.
+grep -qF 'test-writing steps' "$vf" || { echo "FAIL: the verify record does not quote D21-46 R5's 'test-writing steps' — the letter D21-48 X9 reads is not stated (s8g section 8g.2)"; exit 1; }
+X9_NEEDLE='stage membership is per activity'
+grep -qF "$X9_NEEDLE" "$vf" || { echo "FAIL: the verify record does not quote D21-48 X9 ('$X9_NEEDLE') — its whole-activity move of integration-tests cites no decision (s8g section 8g.2)"; exit 1; }
+# CONTROLS: the ledger's own X9 row satisfies the needle (a mistyped needle would make the guard unsatisfiable), and a
+# record quoting only R5's letter, with the old flag, does not.
+grep -F '| X9 |' spikes/DECISIONS-2026-09-21.md | grep -qF "$X9_NEEDLE" || { echo "FAIL: CONTROL — D21-48's X9 row does not carry the needle '$X9_NEEDLE', so the guard above cannot be satisfied by a faithful quotation"; exit 1; }
+ctl=$(printf '%s\n' "D21-46 R5 re-homes the test-writing steps; flagged for the flip line." | grep -cF "$X9_NEEDLE")
+[ "$ctl" -eq 0 ] || { echo "FAIL: CONTROL — R5's letter alone satisfied D21-48 X9's needle"; exit 1; }
 grep -qF 'Re-homed to the implement stage' "$vf" || { echo "FAIL: the verify record does not quote D21-43 N23 — the displaced providers' re-homing is executed nowhere (s8g §8g.2)"; exit 1; }
 for a in integration-tests migration-dry-run; do
   grep -qF "$a" "$vf" || { echo "FAIL: the verify record does not name $a — D21-46 R5 re-homes the one and names the other as AC-347's residual (s8g §8g.2, §8g.5)"; exit 1; }
 done
 grep -qF 'no Phase-1 lane reaches it' "$vf" || { echo "FAIL: the verify record does not quote D21-46 R5 — migration-dry-run's residual carries no reason (s8g §8g.5)"; exit 1; }
-set -- references/adr/[0-9][0-9][0-9][0-9]-the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion.md
-grep -qF 'Block (fail-closed)' "$1" || { echo "FAIL: the schema record does not quote D21-43 N24 — AC-139's human decision is recorded nowhere (s8g §8g.3)"; exit 1; }
+sf="references/adr/$R2_ID-the-spec-and-pack-schema-fixes-three-spellings-and-exports-acceptance-criterion.md"
+grep -qF 'Block (fail-closed)' "$sf" || { echo "FAIL: the schema record does not quote D21-43 N24 — AC-139's human decision is recorded nowhere (s8g §8g.3)"; exit 1; }
 
-# ---- (3) verify_completed: THE DESIGN ROW, AND AC-473's VERIFIED-BY NAMES IT (ADR-0116 decision 5; D21-42 10b).
-# ---- Then the two dated register notes: AC-341's CI-green half is Phase 3's, and AC-139 names N24. The marker and a
-# ---- date must sit on ONE line of the AC's own block, so a date elsewhere in the block cannot satisfy it.
+# ---- (3) verify_completed: THE DESIGN ROW (ADR-0116 decision 5), then the dated register notes. AC-473's Verified by
+# ---- names the kind (D21-42 10b) and reads only its origin = "pass" rows (D21-47 review, finding 4). AC-320's note
+# ---- substitutes the port-call count, AC-341's CI-green half is Phase 3's, AC-139 names N24, and AC-485's toolchain
+# ---- half reads verify_completed. The marker and a date must sit on ONE line of the AC's own block, so a date
+# ---- elsewhere in the block cannot satisfy it.
 grep -qE '^\| `verify_completed` \| 2 \|' references/2026-09-08-architecture-design.md || { echo "FAIL: design §5's event table has no tier-2 verify_completed row — the variant and the row land in one change"; exit 1; }
-blk=$(awk '/^\*\*AC-473\*\* /{p=1} p&&/^\*\*AC-521\*\*/{exit} p' references/2026-09-08-acceptance-criteria.md)
-test -n "$blk" || { echo "FAIL: AC-473's block could not be read from the register"; exit 1; }
-printf '%s\n' "$blk" | grep -qF 'verify_completed' || { echo "FAIL: AC-473 still asserts identity on a dispatch record no toolchain writes (D21-42 10b's register amendment is missing)"; exit 1; }
-for spec in "341@Phase 3" "139@N24"; do
+for spec in "473@verify_completed" "320@port-call" "341@Phase 3" "139@N24" "485@verify_completed"; do
   ac=${spec%%@*}; want=${spec#*@}
   blk=$(awk -v s="**AC-$ac** " 'index($0,s)==1{p=1;print;next} p&&/^\*\*AC-[0-9]+\*\* /{exit} p' references/2026-09-08-acceptance-criteria.md)
   test -n "$blk" || { echo "FAIL: AC-$ac's block could not be read from the register"; exit 1; }
@@ -819,6 +1137,9 @@ for spec in "341@Phase 3" "139@N24"; do
   test -n "$hit" || { echo "FAIL: AC-$ac's block carries no line naming '$want' (s8g §8g.3, §8g.5)"; exit 1; }
   printf '%s\n' "$hit" | grep -qE '20[0-9]{2}-[0-9]{2}-[0-9]{2}' || { echo "FAIL: AC-$ac's '$want' line is undated — a register amendment carries its date"; exit 1; }
 done
+blk=$(awk -v s="**AC-473** " 'index($0,s)==1{p=1;print;next} p&&/^\*\*AC-[0-9]+\*\* /{exit} p' references/2026-09-08-acceptance-criteria.md)
+test -n "$blk" || { echo "FAIL: AC-473's block could not be read from the register"; exit 1; }
+printf '%s\n' "$blk" | grep -qF 'origin' || { echo "FAIL: AC-473's amendment does not restrict its identity reading to origin = pass rows — an implement-stage row could satisfy it (s8g section 8g.4)"; exit 1; }
 
 # ---- (4) THE SCHEMA: AcceptanceCriterion exported, snapshotted and tracked; AC-133's registry; SpecAc GONE.
 snap=crates/rk-types/tests/it/snapshots/exported__AcceptanceCriterion.snap
@@ -837,16 +1158,17 @@ ctl=$(printf '%s\n%s\n' 'crates/x/src/a.rs:1:pub struct SpecAc {' 'crates/x/src/
 
 # ---- (5) THE NAMED TESTS, per crate, each by its own `... ok` line and an EXACT count.
 T_TYPES="event_kinds::verify_completed_is_tier_two_and_wired verify_types::verify_completed_payload_refuses_an_absent_member acceptance_criterion::ac137_criterion_without_gwt_or_verification_is_accepted acceptance_criterion::mutation_declaration_round_trips_declared_and_not_feasible acceptance_criterion::a_prose_only_mutation_is_refused_at_ingest acceptance_criterion::acceptance_criterion_is_in_the_exported_registry judgement_registry::ac133_every_exported_enum_is_registered judgement_registry::ac133_a_judgement_enum_without_a_rationale_sibling_fails judgement_registry::the_registry_names_no_enum_that_is_not_exported"
-T_KERNEL="verify::verify_completed_is_journalled_once_per_completed_test_port_call verify::no_verify_completed_for_a_run_that_did_not_complete verify::ac321_replay_reads_the_path_list_from_verify_completed_alone verify::ac321_replay_property_over_100_synthetic_ranges verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual verify::the_ledger_reads_rk_types_acceptance_criterion selection::a_pass_sourced_kind_selects_no_catalog_producer selection::the_rehomed_test_authoring_activities_select_at_implement selection::integration_tests_selects_at_implement_under_external_dep selection::migration_dry_run_is_selected_on_no_shipped_lane"
+T_KERNEL="verify::verify_completed_is_journalled_once_per_completed_test_port_call verify::no_verify_completed_for_a_run_that_did_not_complete verify::ac321_replay_reads_the_path_list_from_verify_completed_alone verify::ac321_replay_property_over_100_synthetic_ranges verify::ac349_equal_specificity_claims_are_a_configuration_error_naming_both verify::ac347_verify_stage_agent_steps_are_exactly_the_named_residual verify::the_ledger_reads_rk_types_acceptance_criterion verify::verify_completed_carries_its_origin_and_stage selection::a_pass_sourced_kind_selects_no_catalog_producer selection::the_rehomed_test_authoring_activities_select_at_implement selection::integration_tests_selects_at_implement_under_external_dep selection::migration_dry_run_is_selected_on_no_shipped_lane"
 T_GIT="gitops::tag_is_on_the_enumerated_write_set gitops::apply_is_on_the_enumerated_write_set gitops::the_write_set_has_no_push gitops::tag_refuses_a_target_off_the_run_owned_branch"
 T_RUST="selection::ac348_selection_is_byte_identical_over_200_change_sets selection::ac355_lockfile_change_is_whole_suite_and_one_file_is_affected"
-T_CLI="verify_pass::selected_by_required_kind_not_stage_name verify_pass::writes_one_keyed_test_report_with_one_artifact_write verify_pass::verify_completed_names_the_adapter_detect_chose verify_pass::node_detected_fixture_records_the_node_adapter verify_pass::red_suite_is_a_failed_verify_never_green verify_pass::ac331_timeout_and_kill_are_unverifiable verify_pass::ac344_missing_binary_is_cannot_run verify_pass::ac347_the_pass_dispatches_nothing verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call verify_pass::ac338_restored_mutation_is_unverifiable verify_pass::ac339_mutation_runs_in_a_disposable_worktree verify_pass::ac341_the_pass_calls_no_tracker_method verify_pass::ac348_selection_is_recomputed_from_verify_completed verify_pass::ac353_killed_verify_resumes_to_the_same_decision verify_pass::ac359_drift_voids_the_answer_and_recomputes_the_ledger verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter verify_pass::the_lane_reaches_the_pass_through_verbs_run_run verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree verify_pass::ac139_shipped_packs_block_a_missing_verification verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry demands::smoke_result_is_produced_through_the_registry_verb demands::a_failing_smoke_result_fails_the_stage demands::confirmation_result_passes_at_the_fix_sha demands::confirmation_not_fixed_opens_its_gate demands::scan_high_finding_opens_scan_accept_findings demands::scan_unrated_advisory_opens_scan_accept_findings demands::scan_clean_emits_without_a_gate demands::build_artifact_carries_release_digests demands::every_restored_demand_writes_one_artifact_write tag_release::release_record_tags_the_landed_commit_locally tag_release::rollback_target_is_the_previous_release_tag tag_release::first_release_names_its_rollback_target_as_none tag_release::release_record_carries_the_build_artifact_digest tag_release::the_tag_is_never_pushed tag_release::trial_runs_one_activity_with_zero_dispatches tag_release::an_enabled_pack_referencing_the_extended_activity_is_refused tag_release::selection_picks_tag_release_over_the_deploy_patterns doctor::ac349_equal_specificity_claim_is_a_doctor_row"
+T_CLI="verify_pass::selected_by_required_kind_not_stage_name verify_pass::writes_one_keyed_test_report_with_one_artifact_write verify_pass::verify_completed_names_the_adapter_detect_chose verify_pass::node_detected_fixture_records_the_node_adapter verify_pass::red_suite_is_a_failed_verify_never_green verify_pass::ac331_timeout_and_kill_are_unverifiable verify_pass::ac344_missing_binary_is_cannot_run verify_pass::ac347_the_pass_dispatches_nothing verify_pass::ac320_unresolved_inputs_refuse_before_any_port_call verify_pass::ac338_restored_mutation_is_unverifiable verify_pass::ac339_mutation_runs_in_a_disposable_worktree verify_pass::ac341_the_pass_calls_no_tracker_method verify_pass::ac348_selection_is_recomputed_from_verify_completed verify_pass::ac353_killed_verify_resumes_to_the_same_decision verify_pass::ac359_drift_voids_the_answer_and_recomputes_the_ledger verify_pass::ac485_config_edit_mid_run_does_not_move_the_verify_adapter verify_pass::the_lane_reaches_the_pass_through_verbs_run_run verify_pass::setup_precedes_the_whole_suite_in_a_fresh_run_worktree verify_pass::ac139_shipped_packs_block_a_missing_verification verify_pass::verify_ac_discriminates_answers_through_the_loaded_processes_registry demands::smoke_result_is_produced_through_the_registry_verb demands::a_failing_smoke_result_fails_the_stage demands::confirmation_result_passes_at_the_fix_sha demands::confirmation_not_fixed_opens_its_gate demands::scan_high_finding_opens_scan_accept_findings demands::scan_unrated_advisory_opens_scan_accept_findings demands::scan_clean_emits_without_a_gate demands::build_artifact_carries_release_digests demands::every_restored_demand_writes_one_artifact_write tag_release::release_record_tags_the_landed_commit_locally tag_release::rollback_target_is_the_previous_release_tag tag_release::first_release_names_its_rollback_target_as_none tag_release::release_record_carries_the_build_artifact_digest tag_release::the_tag_is_never_pushed tag_release::trial_runs_one_activity_with_zero_dispatches tag_release::a_lane_run_admits_the_trial_activity_only_on_the_declaring_item tag_release::an_enabled_pack_referencing_the_extended_activity_is_refused tag_release::selection_picks_tag_release_over_the_deploy_patterns doctor::ac349_equal_specificity_claim_is_a_doctor_row"
 NEW=0
-for spec in "rk-types@9@$T_TYPES" "rk-kernel@11@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@38@$T_CLI"; do
+for spec in "rk-types@9@$T_TYPES" "rk-kernel@12@$T_KERNEL" "rk-git@4@$T_GIT" "rk-adapter-toolchain-rust@2@$T_RUST" "rk-cli@39@$T_CLI"; do
   crate=${spec%%@*}; rest=${spec#*@}; want=${rest%%@*}; names=${rest#*@}
   got=$(printf '%s\n' $names | grep -c .)
   [ "$got" -eq "$want" ] || { echo "FAIL: $crate's list carries $got names, this file says $want — the list and the prose disagree"; exit 1; }
-  out=$(cargo test -p "$crate" --test it -- $names --exact 2>&1); rc=$?
+  out=$(nodispatch cargo test -p "$crate" --test it -- $names --exact 2>&1); rc=$?
+  nd_check "(5)'s $crate selection" || exit 1
   [ "$rc" -eq 0 ] || { echo "FAIL: $crate's named selection did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
   for t in $names; do
     printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $crate: $t did not report ok — renamed, deleted or not selected"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
@@ -854,7 +1176,7 @@ for spec in "rk-types@9@$T_TYPES" "rk-kernel@11@$T_KERNEL" "rk-git@4@$T_GIT" "rk
   printf '%s\n' "$out" | grep -qE "test result: ok\. $want passed; 0 failed" || { echo "FAIL: $crate's selection did not run exactly $want tests — a filter that matches nothing is a green"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
   NEW=$((NEW + want))
 done
-[ "$NEW" -eq 64 ] || { echo "FAIL: $NEW named tests ran, §8g.9 says sixty-four"; exit 1; }
+[ "$NEW" -eq 66 ] || { echo "FAIL: $NEW named tests ran, §8g.9 says sixty-six"; exit 1; }
 
 # ---- (6) NO STAGE-NAME LITERAL IN rk-cli/src (ADR-0162 decision 5) — a FLOOR over CODE lines beneath the
 # ---- behavioural `selected_by_required_kind_not_stage_name` above, whose fixture names its verify stage `check`.
@@ -888,13 +1210,15 @@ for p in bug-standard story; do
   test -n "$pol" || { echo "FAIL: $p.toml has no [policy] table to read"; exit 1; }
   printf '%s\n' "$pol" | grep -qxF 'verification_required = ["verify"]' || { echo "FAIL: $p.toml's [policy] does not ship AC-139's fail-closed default (D21-43 N24; R2)"; exit 1; }
 done
-# (7c) The changelog (s8b's), with a row for every activity and pack edit this stage makes (ADR-0072).
+# (7c) The changelog (s8b's), with a row for every activity and pack edit this stage makes (ADR-0072). Each edited
+# activity is read in s8b's <id>@<new version> form, so a bare id cannot be satisfied by a longer one (unit-tests by
+# unit-tests-ue). The IntegrationReport row names story.toml's require-row move (D21-46 R5).
 test -f .redkiln/CHANGELOG.md || { echo "FAIL: s8b's pack changelog is absent — ADR-0072's row for this stage's pack and catalog edits has nowhere to go"; exit 1; }
-for w in tag-release 'tagged for release' smoke-test unit-tests-ue equivalence-boundary property-based-testing verification_required; do
-  grep -qiF "$w" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming '$w' (ADR-0072; R1, R2, R4, R5)"; exit 1; }
+for w in tag-release 'tagged for release' verification_required IntegrationReport; do
+  grep -qiF "$w" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming '$w' (ADR-0072; R1, R2, R5; D21-46 R5)"; exit 1; }
 done
-for pair in integration-tests@3 smoke-test@2; do
-  grep -qF "$pair" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming $pair in s8b's <id>@<new version> form (ADR-0072; D21-46 R5, R6)"; exit 1; }
+for pair in unit-tests@3 unit-tests-ue@3 equivalence-boundary@3 property-based-testing@3 integration-tests@3 smoke-test@2; do
+  grep -qF "$pair" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming $pair in s8b's <id>@<new version> form (ADR-0072; D21-43 N23; D21-46 R5, R6)"; exit 1; }
 done
 # (7d) N23: the four displaced providers, re-homed to implement over ONE test-authoring kind listed first.
 kinds=""
@@ -907,7 +1231,7 @@ for a in unit-tests unit-tests-ue equivalence-boundary property-based-testing; d
   n=$(printf '%s\n' "$prov" | grep -cF '"TestReport"')
   [ "$n" -eq 0 ] || { echo "FAIL: $a still provides TestReport beside the pass — two routes (s8g §8g.2)"; exit 1; }
   ver=$(sed -n 's/^version[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$f")
-  [ -n "$ver" ] && [ "$ver" -ge 3 ] || { echo "FAIL: $a's version is '$ver', not bumped past 2 (ADR-0072: an edited activity is a new version)"; exit 1; }
+  [ -n "$ver" ] && [ "$ver" -eq 3 ] || { echo "FAIL: $a's version is '$ver', not 3 — N23's edit bumps it 2 -> 3 (ADR-0072: an edited activity is a new version)"; exit 1; }
   k=$(printf '%s\n' "$prov" | sed -n 's/^provides[[:space:]]*=[[:space:]]*\["\([A-Za-z0-9]*\)".*/\1/p')
   test -n "$k" || { echo "FAIL: $a's first provided kind could not be read from: $prov"; exit 1; }
   kinds="$kinds $k"
@@ -917,9 +1241,26 @@ n=$(printf '%s\n' $kinds | sort -u | grep -c .)
 K=$(printf '%s\n' $kinds | sort -u)
 row=$(awk -v h="[artifact.$K]" '$0==h{p=1;next} /^\[/{p=0} p' .redkiln/artifacts.toml)
 printf '%s\n' "$row" | grep -qxF 'source = "activity"' || { echo "FAIL: the test-authoring kind $K has no source = \"activity\" row in artifacts.toml"; exit 1; }
+# Each re-homed activity's emit binds $K and no longer binds TestReport: its own test runs are step evidence (s8g section 8g.2).
+for a in unit-tests unit-tests-ue equivalence-boundary property-based-testing integration-tests; do
+  f=.redkiln/catalog/$a.toml
+  em=$(awk '/^\[\[step\]\]$/{p=0} /^id[[:space:]]*=[[:space:]]*"emit"/{p=1} p' "$f")
+  test -n "$em" || { echo "FAIL: $a's emit step could not be read"; exit 1; }
+  n=$(printf '%s\n' "$em" | grep -cF 'TestReport')
+  [ "$n" -eq 0 ] || { echo "FAIL: $a's emit still binds TestReport — two routes (s8g section 8g.2)"; exit 1; }
+  printf '%s\n' "$em" | grep -qE "^artifacts[[:space:]]*=.*[{,][[:space:]]*$K[[:space:]]*=" || { echo "FAIL: $a's emit does not bind the test-authoring kind $K (s8g section 8g.2)"; exit 1; }
+done
 for p in bug-standard story; do
   imp=$(awk '/^\[\[?stage\.implement(\.require)?\]\]?$/{p=1;next} /^\[/{p=0} p' ".redkiln/packs/$p.toml")
   printf '%s\n' "$imp" | grep -qxF "artifacts = [\"$K\"]" || { echo "FAIL: $p.toml's implement stage carries no require row over $K — the test-design escalation did not move with its activities (N23)"; exit 1; }
+  # The moved row keeps its when and its rigor: one [[stage.implement.require]] entry over $K, read whole.
+  ents=$(awk '/^\[\[stage\.implement\.require\]\]$/{if(e!="")print e; e="@";p=1;next} /^\[/{if(p&&e!="")print e; e="";p=0;next} p{e=e $0 "@"} END{if(p&&e!="")print e}' ".redkiln/packs/$p.toml"); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: $p.toml's implement require entries could not be read (rc=$rc)"; exit 1; }
+  ent=$(printf '%s\n' "$ents" | grep -F "@artifacts = [\"$K\"]@")
+  n=$(printf '%s\n' "$ent" | grep -c .)
+  [ "$n" -eq 1 ] || { echo "FAIL: $p.toml carries $n [[stage.implement.require]] entries over $K, not one"; exit 1; }
+  case "$ent" in *'@when = "criticality >= high"@'*) ;; *) echo "FAIL: $p.toml's implement row over $K is not keyed when = \"criticality >= high\" — the escalation moved without its condition (N23)"; exit 1 ;; esac
+  case "$ent" in *'@rigor = "mandatory"@'*) ;; *) echo "FAIL: $p.toml's implement row over $K does not carry rigor = \"mandatory\" — the escalation moved without its floor (N23)"; exit 1 ;; esac
   vrf=$(awk '/^\[\[?stage\.verify(\.require)?\]\]?$/{p=1;next} /^\[/{p=0} p' ".redkiln/packs/$p.toml")
   test -n "$vrf" || { echo "FAIL: $p.toml's verify stage could not be read"; exit 1; }
   n=$(printf '%s\n' "$vrf" | grep -cxF 'artifacts = ["TestReport"]')
@@ -958,6 +1299,15 @@ test -n "$stp" || { echo "FAIL: smoke-test's passing step could not be read"; ex
 printf '%s\n' "$stp" | grep -qE '^kind[[:space:]]*=[[:space:]]*"check"' || { echo "FAIL: smoke-test's passing step is not a check"; exit 1; }
 printf '%s\n' "$stp" | grep -qF "\"smoke.status == 'passing'\"" || { echo "FAIL: smoke-test's passing check does not read smoke.status == 'passing' (D21-46 R6)"; exit 1; }
 printf '%s\n' "$stp" | grep -qE '^on_false[[:space:]]*=[[:space:]]*"fail"' || { echo "FAIL: smoke-test's passing check does not fail on false (D21-46 R6)"; exit 1; }
+# (7h) s8c's hand-off (final consistency pass 2026-09-24): [checklist.smoke] names the file by path and is no longer
+# declared unauthored. The probe reads the TOML on stdin (Git Bash's /tmp is invisible to Windows Python); its
+# control, an unauthored entry, comes first.
+sm='import sys,tomllib; e=tomllib.load(sys.stdin.buffer).get("checklist",{}).get("smoke",{}); print(("path="+str(e["path"]) if "path" in e else "")+("|unauthored" if "unauthored" in e else ""))'
+ctl=$(printf '[checklist.smoke]\nunauthored = "s8g"\n' | python -c "$sm"); rc=$?
+[ "$rc" -eq 0 ] && [ "$ctl" = '|unauthored' ] || { echo "FAIL: CONTROL — the smoke-entry probe read '$ctl' (rc=$rc) over an unauthored entry, so it could not go red"; exit 1; }
+got=$(python -c "$sm" < .redkiln/registry.toml); rc=$?
+[ "$rc" -eq 0 ] && [ "$got" = 'path=checklists/smoke.toml' ] || { echo "FAIL: .redkiln/registry.toml's [checklist.smoke] reads '$got' (rc=$rc), not path = \"checklists/smoke.toml\" alone — checklist:smoke would still refuse by name (s8c §8c.12; s8g §8g.6)"; exit 1; }
+test -s .redkiln/checklists/smoke.toml || { echo "FAIL: .redkiln/checklists/smoke.toml is empty — the entry would name no content"; exit 1; }
 
 # ---- (8) THE COLD SLOWEST-CHILD FIGURE IS IN THE VERIFY RECORD, cited from s8c, and under ADR-0140's bound.
 secs=$(sed -n 's/.*cold cargo test --workspace slowest child: \([0-9][0-9]*\) s.*/\1/p' "$vf" | head -1)
@@ -965,11 +1315,14 @@ test -n "$secs" || { echo "FAIL: the verify record carries no cold slowest-child
 [ "$secs" -lt 3600 ] || { echo "FAIL: a cold child takes $secs s, at or over ADR-0140's 3600 s — every cold verify pass would be Unverifiable (golden constraint 6; halt)"; exit 1; }
 
 # ---- (9) THE WHOLE SUITE, --no-fail-fast, rc 0, every result line green, and a FLOOR: Checkpoint 8f's recorded
-# ---- passed count plus this stage's 64. Expected value, re-derived at stage open from Checkpoint 8f's recorded count:
-# ---- PREV = 1063, so the floor is 1063 + 64 = 1127. Edit PREV by a dated edit of the next line before the first run.
-# ---- A lower bound, never an equality. At least 44 result lines, as at 992d257.
-PREV=1063
-out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
+# ---- passed count plus this stage's 66. Expected value, re-derived at stage open from Checkpoint 8f's recorded count:
+# ---- PREV = 1123 (1038 + 85), so the floor is 1123 + 66 = 1189 (final consistency pass 2026-09-24; D21-48 2026-09-24:
+# ---- s8f's X11 test, then the floor propagation of s8c 78, s8d 62 and s8d-ii 50; it was 1106 / 1172). Edit PREV by a dated edit of the next line before the first run. A lower bound, never an equality.
+# ---- At least 44 result lines,
+# ---- as at 992d257. Under (0b)'s wrapper (D21-47).
+PREV=1123
+out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
+nd_check "(9)'s whole suite" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: the workspace suite is red (rc=$rc)"; printf '%s\n' "$out" | grep -E '^test .* FAILED$|panicked' | head -20; exit 1; }
 results=$(printf '%s\n' "$out" | grep -c '^test result:')
 greens=$(printf '%s\n' "$out" | grep -cE '^test result: ok\. [0-9]+ passed; 0 failed')
@@ -977,10 +1330,12 @@ greens=$(printf '%s\n' "$out" | grep -cE '^test result: ok\. [0-9]+ passed; 0 fa
 passed=$(printf '%s\n' "$out" | sed -n 's/^test result: ok\. \([0-9][0-9]*\) passed.*/\1/p' | awk '{s+=$1} END {print s+0}')
 [ "$passed" -ge $((PREV + NEW)) ] || { echo "FAIL: $passed passed, under the floor of $((PREV + NEW)) (Checkpoint 8f's $PREV + this stage's $NEW)"; exit 1; }
 
-# ---- (10) fmt AND clippy, each by its own exit code.
-out=$(cargo fmt --all --check 2>&1); rc=$?
+# ---- (10) fmt AND clippy, each by its own exit code, under (0b)'s wrapper.
+out=$(nodispatch cargo fmt --all --check 2>&1); rc=$?
+nd_check "(10)'s fmt" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo fmt --all --check rc=$rc"; printf '%s\n' "$out" | head -20; exit 1; }
-out=$(cargo clippy --workspace --all-targets 2>&1); rc=$?
+out=$(nodispatch cargo clippy --workspace --all-targets 2>&1); rc=$?
+nd_check "(10)'s clippy" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo clippy rc=$rc"; printf '%s\n' "$out" | grep -E '^error' | head -20; exit 1; }
 
 # ---- (11) NO RELEASE TAG WAS MADE IN THIS REPOSITORY BY THE BLOCK — the tag tests run in temporary repositories.
@@ -989,30 +1344,61 @@ tags_after=$(git tag -l 'rk-release/*'); rc=$?
 [ "$tags_before" = "$tags_after" ] || { echo "FAIL: the block created or removed an rk-release tag in the operator's repository:"; diff <(printf '%s\n' "$tags_before") <(printf '%s\n' "$tags_after"); exit 1; }
 
 # ---- (12) THE ENTRY GATE AND THE PROVISIONAL CHECKPOINTS, RE-RUN WHOLE FROM THEIR STAGE FILES' OWN BYTES (§8g.1):
-# ---- 5 (rk-types), 6 (rk-git), 7b and 7b-ii (rk-kernel), 7d (rk-cli), 8b (.redkiln/), and 8f, the entry gate.
+# ---- 5 (rk-types), 6 (rk-git), 7b and 7b-ii (rk-kernel), 7d (rk-cli), 8b (.redkiln/), 8d (the walk tables), 8d-ii
+# ---- (the item-id validator), 8e (the interim-key list), and 8f, the entry gate.
 # ---- Extracted, never retyped. A block with no end marker gets one appended, so rc=0 can be told apart from a block
 # ---- that stopped early. The extractor writes under target/ — Git Bash's /tmp is invisible to Windows Python. Store
 # ---- handling around `doctor --rebuild` is each block's own (the s8 amendment), and nothing below reads the store.
 # ---- BOUNDED: every replay runs with RK_CP_NESTED=1, and when THIS block runs under RK_CP_NESTED=1 it replays
-# ---- nothing. NO DISPATCH: a replayed block that invokes `redkiln run` on a code line must name harness_binary, and
-# ---- every replay runs with REDKILN_LAUNCH_RECORD unset and CLAUDE_CONFIG_DIR at an empty trap directory that must
-# ---- still be empty afterwards (D21-46's one no-dispatch guard for replays).
+# ---- nothing. NO DISPATCH (D21-46; D21-47): every replay runs under (0b)'s wrapper, and nd_check follows each one
+# ---- (the trap still empty, the fake uncalled). Before a replay runs, every `redkiln run` on a CODE line of its block must either follow a code line
+# ---- that writes `harness_binary` at the fixture child rk-fixture-child-claude, or be a listed refusal-only
+# ---- invocation whose NEXT line asserts its refusal exit code. A comment line counts for neither. The refusal-only
+# ---- list is quoted whole below, and it holds Checkpoint 7d's two lines (rc 2 from the parser, rc 3 from config).
 if [ "${RK_CP_NESTED:-0}" = 1 ]; then
   echo "CP8G (12) SKIPPED: this block is itself a replay (RK_CP_NESTED=1); its re-runs ran at Checkpoint 8g's own close"
 else
-  mkdir -p target/cp8g || { echo "FAIL: could not create target/cp8g"; exit 1; }
-  trap_dir="$PWD/target/cp8g/claude-config-trap"
-  rm -rf "$trap_dir" && mkdir -p "$trap_dir" || { echo "FAIL: could not create the CLAUDE_CONFIG_DIR trap"; exit 1; }
-  # Synthetic control: the emptiness reading sees one file, or its silence afterwards proves nothing.
-  : > "$trap_dir/control" || { echo "FAIL: could not write the trap's control file"; exit 1; }
-  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
-  [ "$n" -eq 1 ] || { echo "FAIL: the trap's emptiness reading saw $n entries where one was written"; exit 1; }
-  rm -f "$trap_dir/control" || { echo "FAIL: could not clear the trap's control file"; exit 1; }
-  n=$(find "$trap_dir" -mindepth 1 | grep -c .)
-  [ "$n" -eq 0 ] || { echo "FAIL: the trap does not start empty ($n entries) — its emptiness afterwards would prove nothing"; exit 1; }
-  RUNPAT='(\$RK|\$BIN|redkiln(\.exe)?)"?[[:space:]]+run([[:space:]]|$)'
-  n=$(printf '%s\n' '"$RK" run "$ITEM" --lane fix' '# "$RK" run in a comment' | grep -vE '^[[:space:]]*#' | grep -cE "$RUNPAT")
-  [ "$n" -eq 1 ] || { echo "FAIL: the run-invocation pattern's control matched $n of the one code line"; exit 1; }
+  printf '%s\n' \
+    'out=$(cd "$TMP1" && D:/repos/redkiln-rs/target/debug/redkiln run --resume </dev/null 2>&1); rc=$?' '[ "$rc" -eq 2 ]' \
+    'out=$(cd "$TMP1" && D:/repos/redkiln-rs/target/debug/redkiln run some-item </dev/null 2>&1); rc=$?' '[ "$rc" -eq 3 ]' \
+    > target/cp8g/refusal-only.txt || { echo "FAIL: could not write the refusal-only list"; exit 1; }
+  RUN_GUARD='import re, sys
+src, allow = sys.argv[1], sys.argv[2]
+run = re.compile(r"(\$RK|\$BIN|redkiln(\.exe)?)\"?[ \t]+run([ \t]|$)")
+armer = re.compile(r"harness_binary[ \t]*=.*rk-fixture-child-claude")
+al = open(allow, encoding="utf-8").read().split("\n")
+refusal = {}
+for i in range(0, len(al) - 1, 2):
+    if al[i].strip():
+        refusal[al[i].strip()] = al[i + 1].strip()
+lines = open(src, encoding="utf-8").read().split("\n")
+armed = False
+bad = []
+for n, l in enumerate(lines):
+    s = l.strip()
+    if not s or s.startswith("#"):
+        continue
+    if armer.search(s):
+        armed = True
+    if run.search(s):
+        nxt = lines[n + 1].strip() if n + 1 < len(lines) else ""
+        if s in refusal and nxt.startswith(refusal[s]):
+            continue
+        if not armed:
+            bad.append("%d: %s" % (n + 1, s))
+for b in bad:
+    print("UNGUARDED", b)
+print("RUN-LINES-CHECKED")
+sys.exit(4 if bad else 0)'
+  # SYNTHETIC CONTROLS: a harness_binary named only in a comment arms nothing; a code line that writes it arms the run
+  # after it; a listed refusal-only line whose next line asserts another exit code is not admitted.
+  printf '%s\n' '# harness_binary = "target/debug/rk-fixture-child-claude"' '"$RK" run x' > target/cp8g/ctl-comment.sh || { echo "FAIL: could not write a control"; exit 1; }
+  printf '%s\n' 'harness_binary = "target/debug/rk-fixture-child-claude"' '"$RK" run x' > target/cp8g/ctl-armed.sh || { echo "FAIL: could not write a control"; exit 1; }
+  printf '%s\n' 'out=$(cd "$TMP1" && D:/repos/redkiln-rs/target/debug/redkiln run some-item </dev/null 2>&1); rc=$?' '[ "$rc" -eq 0 ]' > target/cp8g/ctl-wrongrc.sh || { echo "FAIL: could not write a control"; exit 1; }
+  for c in comment:4 armed:0 wrongrc:4; do
+    out=$(python -c "$RUN_GUARD" "target/cp8g/ctl-${c%%:*}.sh" target/cp8g/refusal-only.txt 2>&1); rc=$?
+    [ "$rc" -eq "${c#*:}" ] || { echo "FAIL: CONTROL — the no-dispatch guard exited $rc on its ${c%%:*} control, expected ${c#*:}"; printf '%s\n' "$out"; exit 1; }
+  done
   EXTRACT='import sys
 F = chr(96) * 3
 src, mode, key, out = sys.argv[1:5]
@@ -1038,22 +1424,22 @@ if len(hit) != 1:
     sys.exit(3)
 open(out, "w", encoding="utf-8", newline="\n").write("\n".join(hit[0]) + "\n")
 print("EXTRACTED", len(hit[0]))'
-  for spec in "cp5@runbook/phase-1/s5-workspace-ci-rk-types.md@anchor@**Checkpoint 5.** All of:" "cp6@runbook/phase-1/s6-store-and-git.md@anchor@**Checkpoint 6.** All of:" "cp7b@runbook/phase-1/s7b-kernel.md@anchor@### 7b.14 Checkpoint 7b" "cp7bii@runbook/phase-1/s7b-ii-gates.md@anchor@### 7b-ii.13 Checkpoint 7b-ii" "cp7d@runbook/phase-1/s7d-cli-and-migrate.md@marker@CP7D-END-OF-BLOCK reached" "cp8b@runbook/phase-1/s8b-catalog-quality.md@marker@CP8B-END-OF-BLOCK reached" "cp8f@runbook/phase-1/s8f-landing-and-rendering.md@marker@CP8F-END-OF-BLOCK reached"; do
+  for spec in "cp5@runbook/phase-1/s5-workspace-ci-rk-types.md@anchor@**Checkpoint 5.** All of:" "cp6@runbook/phase-1/s6-store-and-git.md@anchor@**Checkpoint 6.** All of:" "cp7b@runbook/phase-1/s7b-kernel.md@anchor@### 7b.14 Checkpoint 7b" "cp7bii@runbook/phase-1/s7b-ii-gates.md@anchor@### 7b-ii.13 Checkpoint 7b-ii" "cp7d@runbook/phase-1/s7d-cli-and-migrate.md@marker@CP7D-END-OF-BLOCK reached" "cp8b@runbook/phase-1/s8b-catalog-quality.md@marker@CP8B-END-OF-BLOCK reached" "cp8d@runbook/phase-1/s8d-step-grain-and-resolver.md@marker@CP8D-END-OF-BLOCK reached" "cp8dii@runbook/phase-1/s8d-ii-run-worktrees.md@marker@CP8D-II-END-OF-BLOCK reached" "cp8e@runbook/phase-1/s8e-tier-one-and-the-lane.md@marker@CP8E-END-OF-BLOCK reached" "cp8f@runbook/phase-1/s8f-landing-and-rendering.md@marker@CP8F-END-OF-BLOCK reached"; do
     name=${spec%%@*}; rest=${spec#*@}; file=${rest%%@*}; rest=${rest#*@}; mode=${rest%%@*}; key=${rest#*@}
     test -f "$file" || { echo "FAIL: $file does not exist — Checkpoint $name cannot be re-run (Halt 8)"; exit 1; }
     ex=$(python -c "$EXTRACT" "$file" "$mode" "$key" "target/cp8g/$name.sh" 2>&1); rc=$?
     [ "$rc" -eq 0 ] || { echo "FAIL: could not extract exactly one block for $name: $ex"; exit 1; }
-    runs=$(grep -vE '^[[:space:]]*#' "target/cp8g/$name.sh" | grep -E "$RUNPAT")
-    [ -z "$runs" ] || grep -qF 'harness_binary' "target/cp8g/$name.sh" || { echo "FAIL: Checkpoint $name invokes redkiln run and names no harness_binary — its replay could dispatch to a real account:"; printf '%s\n' "$runs"; exit 1; }
+    out=$(python -c "$RUN_GUARD" "target/cp8g/$name.sh" target/cp8g/refusal-only.txt 2>&1); rc=$?
+    [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $name invokes redkiln run with no fixture harness_binary written before it, on a line that is not a listed refusal-only invocation — its replay could dispatch to a real account:"; printf '%s\n' "$out"; exit 1; }
+    printf '%s\n' "$out" | grep -qxF 'RUN-LINES-CHECKED' || { echo "FAIL: the no-dispatch guard did not finish over $name"; printf '%s\n' "$out"; exit 1; }
     printf '\necho "CP8G-REPLAY-%s-END reached"\n' "$name" >> "target/cp8g/$name.sh" || { echo "FAIL: could not append $name's marker"; exit 1; }
-    out=$(env -u REDKILN_LAUNCH_RECORD RK_CP_NESTED=1 CLAUDE_CONFIG_DIR="$trap_dir" bash "target/cp8g/$name.sh" 2>&1); rc=$?
+    out=$(nodispatch env RK_CP_NESTED=1 bash "target/cp8g/$name.sh" 2>&1); rc=$?
+    nd_check "Checkpoint $name's replay" || exit 1
     [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint $name re-run whole exited $rc — its row stays provisional"; printf '%s\n' "$out" | grep -E 'FAIL' | head -10; printf '%s\n' "$out" | tail -15; exit 1; }
     printf '%s\n' "$out" | grep -qxF "CP8G-REPLAY-$name-END reached" || { echo "FAIL: Checkpoint $name exited 0 without reaching its last line"; exit 1; }
   done
-  left=$(find "$trap_dir" -mindepth 1); rc=$?
-  [ "$rc" -eq 0 ] || { echo "FAIL: the trap directory could not be read after the replays (rc=$rc)"; exit 1; }
-  [ -z "$left" ] || { echo "FAIL: something wrote into the trap CLAUDE_CONFIG_DIR during the replays — a real claude was spawned:"; printf '%s\n' "$left" | head -10; exit 1; }
 fi
+nd_check "the end of the wrapped runs" || exit 1
 
 # ---- (13) THE WORKTREE PATH SET IS UNCHANGED, compared BEFORE any prune; the prune is a dry run and finds nothing.
 wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
@@ -1074,13 +1460,24 @@ echo "CP8G-END-OF-BLOCK reached"
   shape it cannot read fails, which is the safe direction.
 - **(9)'s floor is a lower bound.** It cannot tell a deleted older test from a new one. The named lists are what pin
   this stage's tests.
-- **(12) replays with the environment the operator gives this block, plus the two variables it sets and the one it
-  unsets.** If 8f needs a
-  variable, its own guard names it and this block fails, which is the right direction.
+- **(12) replays with the environment the operator gives this block, plus what the wrapper sets and unsets.** It sets
+  `RK_CP_NESTED`, `CLAUDE_CONFIG_DIR` and the fake first on `PATH`, strips every other `PATH` directory holding a
+  `claude`, and unsets `REDKILN_LAUNCH_RECORD`. If a
+  replayed checkpoint needs a variable, its own guard names it and this block fails, which is the right direction.
 - **(12)'s trap has limits.** It catches a real `claude` that inherits `CLAUDE_CONFIG_DIR`. A child launched with that
-  variable set explicitly escapes it. From `s8h` on, that path is closed by `s8h`'s launch-record check: a real-harness run
-  without a launch record refuses before it spawns anything (`s8h`'s launcher; the exact sentence is `s8h`'s to fix). The static `harness_binary` guard reads
-  code lines only, so a run assembled from a variable passes it.
+  variable set explicitly escapes it. From `s8h` on, `s8h`'s launch-record check closes that path: a real-harness run
+  without a launch record refuses before it spawns anything (`s8h`'s launcher; the exact sentence is `s8h`'s to fix).
+- **The fake `claude` is compiled, not a script** (final consistency pass 2026-09-24). A Windows process that
+  resolves `claude.exe` by itself skips an extensionless script on `PATH`, which is why the draft's shell-script fake
+  was replaced: the helper's fake is a `claude.exe`, first on `PATH`, and every other `PATH` directory holding a
+  `claude` is stripped. A process that resolves `claude` by an absolute path escapes both, and the trap and the unset
+  launch record are what cover it. `nd_setup` checks resolution before it runs the fake, so the block never runs a
+  real `claude`, not even for `--version`.
+- **(12)'s static guard reads code lines only.** A run assembled from a variable passes it. So does a run after a
+  `harness_binary` line written into a config the run does not read, because one armed line arms every later run in
+  the block. The refusal-only list admits a line only when the line after it asserts that exact exit code.
+- **(0a)'s name sweep is a floor.** A tree name assembled another way passes it. `ac339_…`'s assertion on the tree's
+  path is the assertion.
 - **`setup` is not exercised end to end here.** It runs for real on a fresh run worktree only in `s8j`'s fixture
   proof of the lane, where a whole verify runs inside a real run worktree. Here, (5)'s `setup_precedes_…` asserts the
   order over a double, and (7e) asserts the declaration.
@@ -1089,13 +1486,17 @@ echo "CP8G-END-OF-BLOCK reached"
 
 **Claimed here, each by the named test in §8g.10 (5):**
 
-- **The verify block**: AC-320 (with its dated *Verified by* note), AC-321, AC-338, AC-339, AC-348, AC-349, AC-353
-  and AC-359, which is **seven of the verify block whole**, and AC-355 on its fixtures (its *"held in CI"* clause is
-  `s8j`'s 14a).
+- **The verify block, seven of its nine ids whole**: AC-320 (with its dated *Verified by* note), AC-338, AC-339,
+  AC-348, AC-349, AC-353 and AC-359. AC-355 is claimed on its fixtures (its *"held in CI"* clause is `s8j`'s 14a), and
+  AC-341 on its port-call half (below). *(Corrected 2026-09-24, D21-47 review, finding 16: the list named eight ids
+  as seven, and AC-321 is not in `s7d` §7d.18's block.)*
+- **AC-321, beside the block**: D17-4's replay event, by `verify::ac321_…`'s two tests.
 - **AC-341** on the port-call half. Its static half is cross-listed to 7b-ii.
 - **Beside the block**: AC-331; AC-344's `cannot_run` mapping; AC-347's zero-dispatch half and its shipped-catalog
   lint, with the lint's single residual, `migration-dry-run`, named and its unreachability asserted (D21-46 R5).
-- **AC-137.**
+- **AC-137's type half**: a criterion with no `gwt` and no `verification` is accepted and stored
+  (`acceptance_criterion::ac137_criterion_without_gwt_or_verification_is_accepted`). Its render and authoring halves
+  are not claimed (below).
 - **AC-133.** Its instrument is built here for the first time. `s5`'s claim is corrected, not re-claimed, and `s8h`
   registers into the same registry.
 - **AC-485's toolchain identity half.**
@@ -1109,6 +1510,7 @@ echo "CP8G-END-OF-BLOCK reached"
 | AC-114 | HUMAN GATE. The promotion and its `curation.decision` lint are `s8j`'s |
 | AC-139 | HUMAN GATE, **decided 2026-09-24** by D21-43 N24 (*"Block (fail-closed)"*). R2 records it, and both packs ship it as a `[policy]` row. A human decision is recorded, never claimed by a test |
 | AC-350 and AC-317 | ARMED, as before |
+| AC-137's render and authoring halves | The rendered `spec.md` that *"shows the criterion with its GWT and verification slots visibly empty, not fabricated"*, and its golden render fixture, go through `s8f`'s rk-store renderer (`render::`) over the `Spec` template, which is `s8h`'s. *"authored fields from the first CLI write"* is `s8h`'s card (§8g.3). Reported upward (D21-47 review, finding 9) |
 | AC-473 and AC-521 | Step 8's release checks. This stage moves AC-473's *Verified by* and claims neither |
 | AC-347 over `migration-dry-run` | the single named residual (D21-46 R5): one agent step at verify, on an activity no Phase-1 lane reaches (§8g.5). A row that makes it reachable turns `selection::migration_dry_run_is_selected_on_no_shipped_lane` red |
 
@@ -1129,10 +1531,25 @@ echo "CP8G-END-OF-BLOCK reached"
   `data_migration` is NOT MEASURABLE (§8g.5). Making that facet measurable, or adding any row that requires
   `MigrationTestReport`, reopens the question for whichever stage does it.
 - **`unit-tests-ue` authors nothing.** It is re-homed as a test-authoring activity by N23's letter (§8g.2).
-- **`s8h`'s `Spec` must embed `AcceptanceCriterion` unchanged** (§8g.3).
+- **`s8h`'s `Spec` must embed `AcceptanceCriterion` unchanged, as `acceptance_criteria`** (§8g.3). *Settled
+  2026-09-24 (final consistency pass):* `s8h` §8h.4 now names the member `acceptance_criteria`.
+- **The `verification` gap under N24's block default** (§8g.3). A lane whose agent-authored `Spec` leaves one AC's
+  `verification` empty refuses at verify. `s8h`'s schema and cards, and `s8j`'s fixture proof, are named as its
+  owners. *Settled 2026-09-24 (final consistency pass):* both files now carry it (§8g.3).
+- **AC-137's render half** (the empty-slot golden render over `s8f`'s renderer and `s8h`'s `Spec` template), which no
+  stage claims yet.
 
 **Handed to `s8j`, by name:**
 
 - the tag-release real trial, AC-114's promotion and its lint (§8g.7);
 - Checkpoint 7c's whole re-run (D21-43 N28; §8g.1);
-- `verify_completed`'s `item` and `adapter` member names, for its fixture proof (§8g.4).
+- `verify_completed`'s `item` key and its `adapter`, `origin` and `stage` member names, for its fixture proof, which
+  reads identity only from `origin = "pass"` rows (§8g.4);
+- the assertion that every AC of each lane's `Spec` carries a `verification` (§8g.3).
+
+**Handed to `s8h`, by name:**
+
+- a `verify.ac-discriminates` row in `s8h` §8h.10's gate-expiry table for both packs, and the class in `MINTED_CLASSES`
+  (§8g.6; the review's cross-file finding 7);
+- `Spec`'s member name, `acceptance_criteria`, and a required, authored `verification` on every AC a specifying
+  activity emits (§8g.3).

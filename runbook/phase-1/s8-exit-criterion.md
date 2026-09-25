@@ -2,7 +2,10 @@
 
 | stage | phase | entry gate | exit checkpoint | previous | next |
 | --- | --- | --- | --- | --- | --- |
-| `s8` | Phase 1 | Checkpoint 7i | Checkpoint 8 | `s7i` | — |
+| `s8` | Phase 1 | Checkpoint 8j | Checkpoint 8 | `s8j` | — |
+
+*Header re-pointed 2026-09-24 (D21-40; `s8j` A0, made at insertion): the entry gate read Checkpoint 7i and `previous` read
+`s7i` until the eleven `s8` sub-stages `s8a`–`s8j` were inserted before this stage.*
 
 *Part of `runbook/` — the index is `runbook/INDEX.md`, the tracker `runbook/PROGRESS.md`, the shared preamble
 (golden constraints, tool preflight, legend) `runbook/00-preamble.md`, the halt conditions `runbook/halts.md`.

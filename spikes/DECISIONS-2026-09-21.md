@@ -1853,3 +1853,46 @@ Every D21 decision has an executing file (the critic's coverage matrix). Five fi
 - **A time-bound guard in an earlier checkpoint is amended by the stage that moves its premise, in the same commit.**
   For example, s8e amends Checkpoint 8a guard (7) when it un-ignores the Slice-Verdict lint. The `RK_CP_NESTED` skip
   wraps every card or permission precondition.
+
+---
+
+## D21-48 · The final consistency pass, and the sixteen questions the s8 files left for the operator
+
+**Taken 2026-09-24, after the D21-47 fix round and a final consistency pass over the eleven `s8` stage files.** The
+pass adopted one shared no-dispatch wrapper for every checkpoint (`runbook/tools/nodispatch.sh`, with a compiled
+fake `claude` from `runbook/tools/fake-claude.rs`), put every record id into its own checkpoint block as a literal,
+recomputed the whole-suite floor chain once (740 → 749 → 774 → 843 → 901 → 947 → 1021 → 1105 → 1171 → 1222 →
+1228+N → 1242+N, before this entry's changes), and inserted the eleven sub-stages into `INDEX.md` (rows 19–29,
+Step 8 → row 30, entry gate Checkpoint 8j) and `PROGRESS.md`. A cross-file critic then found eight defects, which
+the lead fixed. Among them, s8j A11 is reduced to a citation because s8h already amends Checkpoint 8a (11), and A10
+gains the two card-stop amendments its premise move owes. The operator took the sixteen owed questions:
+
+| # | Question | Taken |
+| --- | --- | --- |
+| X1 | s8d-ii: creation when `.redkiln/worktrees/` is not git-ignored | **Refuse by name.** This answers D21-46's flip-line flag. |
+| X2 | s8d-ii finding 15: an effective filter driver whose command is not installed still yields pointer files | **A post-checkout scan.** After creation, the paths the filter selects are scanned for LFS pointer headers; any hit refuses by name and removes the fresh worktree. This completes V1's *"refuse only when pointer files would result"* by observation. |
+| X3 | s8i: one seed missed, summary fields cited, no missing field named (no METHOD-S §3.4 branch) | **Registered before dispatch as a third undecided outcome, `undecided-partial`**, routed to the human gate, as D21-43 N21 routes the other two. |
+| X4 | s8c: `implement_timeout` and `repro_timeout` have no dispatch-duration record | **4,800 s each, cited to F31/S-TYPED's slowest agent dispatch (4,561 s) as a borrowed class.** The record says so. Every fixture-proof and real dispatch records its duration, and the record names the rule that re-derives each key from its own class's recorded maximum once one exists. |
+| X5 | s8d R2: ADR-0035's `[*]` projection over a list-valued field | **Concatenation in element order.** Nothing is flattened implicitly anywhere else. |
+| X6 | s8d R2: `repeat.until` reading a later-declared step | **The repeat body runs from the repeating step through the last step `until` references**, in declaration order, one `repeat` frame per pass, and `until` is evaluated after the body's last step. The record names it as a schema finding. |
+| X7 | s8d R3: `on_false = { to = "deviate" }` (0 shipped uses) | **Refused by name, naming ADR-0046's route OWED.** R3 states the narrowing of D21-42 4d. |
+| X8 | s8d R2: 14 shipped forward refs are licensed by neither ADR-0042's Decision nor a repeat body | **R2's record supersedes ADR-0042's Decision in part:** an escalate gate whose re-entry resumes into the referencing step also licenses the ref. The lint widens to match. Any ref still unlicensed is a lint error, fixed in the catalog in s8d. |
+| X9 | s8g R1: D21-46 R5 re-homes *"`integration-tests`' test-writing steps"* | **The whole activity moves to implement**, because stage membership is per activity. |
+| X10 | s8e: ADR-0158's *"Writing `t1_*` rows from `rk-cli`"* against `doctor --rebuild` | **"From `rk-cli`" names where the write runs.** The adapter's `Capability::Rebuild` owns the SQL, so there is no supersession. The record states the reading. |
+| X11 | s8e/s8f: a rebuilt gate `opened` row has `run_id = null` (the `Gate:` trailer does not carry it) | **Accepted as a stated residual.** RK-D-UNREAD reads null as an unknown run, never as a match. The `Gate:` grammar does not widen. |
+| X12 | s8h: the argv spelling of D21-41 (g)'s read-only mode (`--help` on 2.1.281 lists `manual`; the binary maps it to `default`) | **The adapter emits the spelling the PINNED CLI's `--help` lists**, fixed at s8j's pin move (`manual` on 2.1.281). Cards keep `default`, and the init comparison reads `default`. The golden argv snapshots move once, at the pin move. Probe 0 confirms rather than decides. |
+| X13 | s8c record B: the step bound's supersession breadth | **Record B supersedes, each in part and each quoted:** ADR-0140 decision 1, decision 2's sentence, decision 4, the first two forbids bullets, and ADR-0099 decision 2's *"under the same timeout"*. |
+| X14 | s8c/s8d-ii: the owner of D21-45 W3's `.worktreeinclude` carry | **Confirmed:** s8c builds the reader, and s8d-ii calls it at creation. |
+| X15 | s8c: `cargo nextest` (ADR-0094 decision 1: *"where present, recorded on the report"*) | **Install it and support it now.** s8c installs cargo-nextest on this box and in CI, parses nextest's output beside `cargo test`'s, and records on the report which runner ran. The install is s8c's act, at stage open. |
+| X16 | s8i: no existing kernel gate path can carry `review_input`'s refusal without naming `ChangeSummary` | **A type-neutral gate path.** The kernel gains a gate request with a closed reason (`automated-verdict-refused`) and the summary as an opaque attachment it never types. ADR-0135's forbids bullet and Checkpoint 8a's ban stand. |
+
+**Integration calls taken by the lead, recorded here:**
+- `run::every_binary_spawn_withholds_or_supplies_the_launch_record` (s8h, mutant M26) is the single launch-record
+  lint. s8j removed its duplicate.
+- Checkpoint 8a (11)'s card guard is s8h's to amend (D21-47's time-bound rule). s8j A11 cites it.
+- 8d-ii's and 8e (10d)'s card-mode stops are amended by s8j A10's commit, because A10 moves their premise.
+- **Awareness only, no decision:**
+  - a refused landing leaves an unreferenced loose object (s8f);
+  - after s8c, plain `doctor` reports its unmeasured keys as Errors until later stages cite them;
+  - `actions/checkout@v4` fetches depth 1, so s8b adds `fetch-depth: 0`, and s8j's first CI run measures git in the
+    `rust:` image and `safe.directory`.
