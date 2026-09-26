@@ -1,0 +1,25 @@
+# checklist:risk-register — read by t-shirt-sizing/self-check (s8c §8c.4; ADR-0170 decision 8, proposed).
+# Authored 2026-09-26 from the passage named in `source`. The self-check reads it over an estimate, so the
+# items ask after the risks the estimate carries.
+
+source = "references/research/2026-09-07-activity-catalog-raw.md, the risk-register row: 'Enumerate risks with likelihood/impact/owner/response', lineage 'DA Address Risk goal; PMBOK risk; SWEBOK ch.9'"
+
+[[item]]
+id   = "risks-enumerated"
+text = "The risks the estimate carries are enumerated, one per entry."
+
+[[item]]
+id   = "likelihood"
+text = "Each risk states its likelihood."
+
+[[item]]
+id   = "impact"
+text = "Each risk states its impact."
+
+[[item]]
+id   = "owner"
+text = "Each risk names its owner."
+
+[[item]]
+id   = "response"
+text = "Each risk states its response."

@@ -1715,8 +1715,32 @@ pub fn resume(
     prior: &[Event],
     supply_spec: &mut dyn FnMut(&str) -> Result<RecordedSpec, ReplayError>,
 ) -> Result<RecordedRun, ReplayError> {
+    resume_routed(
+        inputs,
+        ports,
+        crate::runtime::step::ToolRouting::default(),
+        prior,
+        supply_spec,
+    )
+}
+
+/// **[`resume`], with the `tool` arm's routing bound.**
+///
+/// s8c §8c.4-§8c.6; records V and B, proposed. `rk-cli`'s run loop is the caller: it loads `.redkiln/registry.toml` and selects
+/// the chosen adapter's value table, and hands both here as one value. [`resume`] binds none, so
+/// its `tool` steps refuse by bare verb name.
+///
+/// # Errors
+/// As [`resume`].
+pub fn resume_routed(
+    inputs: &RunInputs,
+    ports: Ports,
+    routing: crate::runtime::step::ToolRouting,
+    prior: &[Event],
+    supply_spec: &mut dyn FnMut(&str) -> Result<RecordedSpec, ReplayError>,
+) -> Result<RecordedRun, ReplayError> {
     let run_id = inputs.run_id()?;
-    let rt = Runtime::new(ports, &run_id, &inputs.stage);
+    let rt = Runtime::new(ports, &run_id, &inputs.stage).with_tool_routing(routing);
     let runtime = inputs.runtime()?;
 
     let (pack, catalog, artifacts, facets, item) = inputs.build()?;

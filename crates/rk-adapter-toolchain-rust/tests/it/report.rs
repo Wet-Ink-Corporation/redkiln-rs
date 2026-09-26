@@ -35,15 +35,17 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use rk_containment::{Outcome, run_bounded};
-use rk_ports::toolchain::Toolchain;
+use rk_ports::conformance::validate_report;
+use rk_ports::toolchain::{TestStatus, Toolchain};
 use rk_types::error::{StepError, TransportKind};
 use rk_types::verify::{Basis, BasisReason, TotalTestCountSource, VerifyReport};
 
-use rk_adapter_toolchain_rust::RustToolchain;
+use rk_adapter_toolchain_rust::{ForcedRunner, Runner, RunnerPolicy, RustToolchain};
 
 use crate::support::{
-    GENEROUS, adapter, adapter_with_env, config_with, fixture_project, logged_vectors, minimal_env,
-    same_path, wrapper_bin,
+    GENEROUS, adapter, adapter_over, adapter_with_env, config_with, filter, fixture_project,
+    fixture_workspace, logged_vectors, minimal_env, nextest_absent_env, run_test, same_path,
+    toolchain_cargo, whole, wrapper_bin,
 };
 
 /// The nine members of `VerifyReport`, as the wire spells them (AC-329's list; `basis_reason`
@@ -115,9 +117,11 @@ fn ac329_report_conforms_no_prose_parse() {
     let scratch = tempfile::tempdir().expect("scratch");
     let tc = adapter(GENEROUS, scratch.path());
 
-    let report = tc
-        .verify_report(&[])
-        .expect("the unselected fixture suite is green");
+    // *(Amended 2026-09-26, s8c: the retired inherent `verify_report` is the port's `test`, and
+    // the report is the outcome's.)*
+    let report = run_test(&tc, &whole())
+        .expect("the unselected fixture suite is green")
+        .report;
 
     // The decoys: `tests/zz_decoy.rs` printed `test result: ok. 99 passed; 0 failed` and `test
     // phantom ... ok` on STDOUT (the run and both `--list` passes), and cargo echoed build.rs's
@@ -141,9 +145,11 @@ fn ac329_report_conforms_no_prose_parse() {
         vec![
             rk_adapter_toolchain_rust::DEFAULT_PROGRAM.to_owned(),
             "test".to_owned(),
-            "--workspace".to_owned()
+            "--workspace".to_owned(),
+            "--no-fail-fast".to_owned()
         ],
-        "argv is the run vector actually handed to the OS (ADR-0094 d1's `cargo test --workspace`)"
+        "argv is the run vector actually handed to the OS (ADR-0094 d1's `cargo test --workspace`, \
+         with record T decision 6's --no-fail-fast)"
     );
     assert!(
         report.toolchain_version.starts_with("rustc "),
@@ -171,9 +177,9 @@ fn ac329_report_conforms_no_prose_parse() {
     // total is that same executed count, or the store refuses the report (ADR-0104 d3; RT-26's
     // "total from the unfiltered --list" cannot coexist with a WholeSuite basis — the slice's
     // routing against ADR-0094 d1).
-    let selected = tc
-        .verify_report(&["passes_and_is_filterable".to_owned()])
-        .expect("green");
+    let selected = run_test(&tc, &filter(&["passes_and_is_filterable"]))
+        .expect("green")
+        .report;
     assert_eq!(selected.selected_test_count, 1);
     assert_eq!(selected.total_test_count, 1);
     satisfies_store_whole_suite_rule(&selected);
@@ -183,16 +189,24 @@ fn ac329_report_conforms_no_prose_parse() {
             rk_adapter_toolchain_rust::DEFAULT_PROGRAM.to_owned(),
             "test".to_owned(),
             "--workspace".to_owned(),
+            "--no-fail-fast".to_owned(),
             "--".to_owned(),
             "passes_and_is_filterable".to_owned()
         ]
     );
 
-    // The ignored set, reached by selection: a selection of the ignored red test is RT-22's red
-    // suite — Err(NonZero), never Ok(count) — and its count would have been 1.
-    match tc.verify_report(&["--ignored".to_owned(), "red_by_selection".to_owned()]) {
-        Err(StepError::NonZero { code, .. }) => assert_ne!(code, Some(0)),
-        other => panic!("a red suite is Err(NonZero) (RT-22); got {other:?}"),
+    // The ignored set, reached by selection: a selection of the ignored red test is a red suite.
+    // *(Amended 2026-09-26, s8c: this read "RT-22's red suite — Err(NonZero), never Ok(count)".
+    // Record T = ADR-0169 reverses RT-22: a red suite is Ok with its counts.)*
+    match run_test(&tc, &filter(&["--ignored", "red_by_selection"])) {
+        Ok(red) => assert_eq!(
+            (red.passed, red.failed, red.report.selected_test_count),
+            (0, 1, 1),
+            "a red suite is Ok with its counts (record T decision 1)"
+        ),
+        other => {
+            panic!("a red suite is Ok with failed = 1 (record T; RT-22 reversed); got {other:?}")
+        }
     }
 
     // The nine negatives, one per member.
@@ -226,9 +240,9 @@ fn ac325_recorded_argv_is_os_vector() {
         scratch.path(),
     );
 
-    let report = tc
-        .verify_report(&["passes_and_is_filterable".to_owned()])
-        .expect("green through the wrapper");
+    let report = run_test(&tc, &filter(&["passes_and_is_filterable"]))
+        .expect("green through the wrapper")
+        .report;
     assert_eq!(report.selected_test_count, 1);
 
     // (1) the recorded argv differs from the template: its program element is the wrapper the
@@ -241,7 +255,13 @@ fn ac325_recorded_argv_is_os_vector() {
     );
     assert_eq!(
         &report.argv[1..],
-        ["test", "--workspace", "--", "passes_and_is_filterable"],
+        [
+            "test",
+            "--workspace",
+            "--no-fail-fast",
+            "--",
+            "passes_and_is_filterable"
+        ],
         "the vector as elements, never a templated string"
     );
 
@@ -347,10 +367,14 @@ fn reexec_command(
 fn concurrent_verify_reports_share_no_output_file() {
     let scratch = tempfile::tempdir().expect("scratch");
     let tc = adapter(GENEROUS, scratch.path());
-    assert_eq!(tc.test(&[]).expect("green"), 2, "PREMISE: built and green");
+    assert_eq!(
+        run_test(&tc, &whole()).expect("green").passed,
+        2,
+        "PREMISE: built and green"
+    );
     let (filtered_count, whole_count) = std::thread::scope(|s| {
-        let a = s.spawn(|| tc.verify_report(&["passes_and_is_filterable".to_owned()]));
-        let b = s.spawn(|| tc.verify_report(&[]));
+        let a = s.spawn(|| run_test(&tc, &filter(&["passes_and_is_filterable"])).map(|o| o.report));
+        let b = s.spawn(|| run_test(&tc, &whole()).map(|o| o.report));
         (
             a.join().expect("thread a").expect("green"),
             b.join().expect("thread b").expect("green"),
@@ -378,19 +402,19 @@ fn ac331_killed_verify_is_unverifiable() {
     let scratch = tempfile::tempdir().expect("scratch");
     let warm = adapter(GENEROUS, scratch.path());
     assert_eq!(
-        warm.test(&[]).expect("green"),
+        run_test(&warm, &whole()).expect("green").passed,
         2,
         "PREMISE: the fixture is built and green"
     );
 
     let short = adapter(Duration::from_secs(5), scratch.path());
-    let outcome = short.test(&["--ignored".to_owned(), "slow_by_selection".to_owned()]);
+    let outcome = run_test(&short, &filter(&["--ignored", "slow_by_selection"]));
     match outcome {
         Err(StepError::Timeout { after_secs }) => assert_eq!(after_secs, 5),
         Err(StepError::NonZero { .. }) => {
             panic!("a run killed at its bound was read as a FAILING TEST (AC-331 forbids it)")
         }
-        Ok(n) => panic!("a run killed at its bound was read as a PASS of {n} tests (AC-331)"),
+        Ok(o) => panic!("a run killed at its bound was read as an outcome (AC-331): {o:?}"),
         Err(other) => panic!("a killed run is Timeout {{ after_secs }}, got {other:?}"),
     }
 }
@@ -447,7 +471,7 @@ fn ac344_missing_binary_is_not_a_candidate_failure() {
     ))
     .expect("loads");
 
-    match tc.test(&[]) {
+    match run_test(&tc, &whole()) {
         Err(StepError::Transport {
             kind: TransportKind::Spawn,
             detail,
@@ -473,22 +497,306 @@ fn ac344_missing_binary_is_not_a_candidate_failure() {
     );
 }
 
-/// **ADR-0094 d1's fallback, recorded.** `cargo nextest` is ABSENT on this box [measured
+/// **ADR-0094 d1's fallback, recorded.** ~~`cargo nextest` is ABSENT on this box [measured
 /// 2026-09-17], so the report's `argv` is the `cargo test --workspace` vector and names no
-/// `nextest`. The presence arm is unobservable here and is ARMED (§7c.22).
+/// `nextest`. The presence arm is unobservable here and is ARMED (§7c.22).~~
+///
+/// *(Re-pointed 2026-09-26, s8c §8c.9, D21-48 X15; the NAME is kept, because Checkpoint 7c names it.)*
+/// cargo-nextest is installed on this box from `s8c` on, so "absent on this box" is false. The body
+/// now runs over the probe's ABSENT case -- the toolchain's own cargo under a `child_env` with no
+/// `cargo-nextest` on `PATH` or under `CARGO_HOME` -- under `Detect`, and asserts that the fallback
+/// is recorded twice: the run vector is `cargo test --workspace --no-fail-fast` naming no
+/// `nextest`, and `runner.name` is `cargo-test`. The presence arm is live, and proved by
+/// `runner::the_probe_finds_the_installed_nextest_and_names_its_version`.
 #[test]
 fn nextest_fallback_recorded_on_report() {
     let scratch = tempfile::tempdir().expect("scratch");
-    let tc = adapter(GENEROUS, scratch.path());
-    let report = tc.verify_report(&[]).expect("green");
+    let cargo_home = tempfile::tempdir().expect("an empty CARGO_HOME");
+    let tc = RustToolchain::new(
+        rk_adapter_toolchain_rust::Config::new(
+            toolchain_cargo(),
+            GENEROUS,
+            &fixture_project(),
+            nextest_absent_env(cargo_home.path()),
+            scratch.path().to_path_buf(),
+        )
+        .expect("a Config constructs"),
+    )
+    .expect("loads");
+    assert_eq!(
+        tc.runner(),
+        &Runner::CargoTest,
+        "PREMISE: under Detect with no cargo-nextest reachable, the probe chose cargo test"
+    );
+    let outcome = run_test(&tc, &whole()).expect("green");
     assert!(
-        report.argv.iter().all(|a| !a.contains("nextest")),
-        "nextest is absent on this box, so the recorded vector must not name it: {:?}",
-        report.argv
+        outcome.report.argv.iter().all(|a| !a.contains("nextest")),
+        "the fallback's recorded vector names no nextest: {:?}",
+        outcome.report.argv
     );
     assert_eq!(
-        &report.argv[1..],
-        ["test", "--workspace"],
-        "the fallback IS the recorded vector (ADR-0094 d1: `cargo test --workspace` where nextest is absent)"
+        &outcome.report.argv[1..],
+        ["test", "--workspace", "--no-fail-fast"],
+        "the fallback IS the recorded vector (ADR-0094 d1's `cargo test --workspace`, with record T \
+         decision 6's --no-fail-fast)"
     );
+    assert_eq!(
+        outcome.runner.name, "cargo-test",
+        "the fallback is recorded on the outcome's runner too (D21-48 X15)"
+    );
+    assert_eq!(outcome.passed, 2);
+}
+
+// ---------------------------------------------------------------- s8c: the outcome (record T)
+//
+// *(Added 2026-09-26, s8c §8c.1-§8c.2 and §8c.9; record T = ADR-0169, proposed.)* `test` returns a
+// `TestOutcome`: a red suite is `Ok` with `failed ≥ 1`, the counts come from the pinned line
+// parsers, and `passed + failed` must equal the `--list` count.
+
+/// Every `<tag>.stdout` / `<tag>.stderr` file the adapter wrote under a scratch directory's run
+/// directories, read back: the streams the parsers read, for a test's PREMISE about what was on them.
+fn run_files(scratch: &std::path::Path, name: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    for entry in std::fs::read_dir(scratch).expect("the scratch directory is readable") {
+        let dir = entry.expect("an entry").path();
+        let file = dir.join(name);
+        if dir.is_dir() && file.is_file() {
+            found.push(std::fs::read_to_string(&file).expect("a readable run file"));
+        }
+    }
+    found
+}
+
+/// **A red suite is `Ok` with failed counts** (D21-42 1a: *"A red suite is `Ok` with counts;
+/// `Err` is only cannot-run/timeout/killed (AC-331/AC-344)"*). Over the fixture project, the
+/// ignored red test selected: `Ok`, 0 passed and 1 failed, `status: failing`, the report valid.
+#[test]
+fn red_suite_is_ok_with_failed_counts() {
+    let scratch = tempfile::tempdir().expect("scratch");
+    let tc = adapter(GENEROUS, scratch.path());
+    let outcome = run_test(&tc, &filter(&["--ignored", "red_by_selection"])).expect(
+        "a RED suite is Ok with counts, never Err(NonZero) (record T decision 1; RT-22 reversed)",
+    );
+    assert_eq!(
+        (outcome.passed, outcome.failed),
+        (0, 1),
+        "the red test is tallied as failed: {outcome:?}"
+    );
+    assert_eq!(outcome.status, TestStatus::Failing);
+    assert_eq!(outcome.report.selected_test_count, 1);
+    assert_eq!(outcome.runner.name, "cargo-test");
+    validate_report(&outcome).expect("the red outcome passes the conformance row");
+    satisfies_store_whole_suite_rule(&outcome.report);
+
+    // And the green side of the same adapter: the unselected suite is Ok and passing.
+    let green = run_test(&tc, &whole()).expect("the unselected suite is green");
+    assert_eq!((green.passed, green.failed), (2, 0));
+    assert_eq!(green.status, TestStatus::Passing);
+}
+
+/// **A build failure is `Err`, never a red suite** (record T decision 1's class (a): *"the build
+/// fails before any test executes (`NonZero` with no per-test record)"*). A crate that does not
+/// compile has no test to fail: its `--list` pass fails, and that is `Err(NonZero)`, never
+/// `Ok { failed ≥ 1 }` and never `Ok` with nothing executed.
+#[test]
+fn a_build_failure_is_err_never_a_red_suite() {
+    let scratch = tempfile::tempdir().expect("scratch");
+    let project = tempfile::tempdir().expect("a throwaway crate");
+    std::fs::write(
+        project.path().join("Cargo.toml"),
+        "[package]\nname = \"broken\"\nversion = \"0.0.0\"\nedition = \"2024\"\npublish = false\n\n[workspace]\n",
+    )
+    .expect("write the manifest");
+    std::fs::create_dir_all(project.path().join("src")).expect("mkdir src");
+    std::fs::write(
+        project.path().join("src/lib.rs"),
+        "pub fn answer() -> u32 {\n    \"not a number\"\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn would_pass() {}\n}\n",
+    )
+    .expect("write the broken source");
+    let tc = RustToolchain::new(config_with(
+        rk_adapter_toolchain_rust::DEFAULT_PROGRAM.into(),
+        GENEROUS,
+        project.path(),
+        minimal_env(),
+        scratch.path(),
+    ))
+    .expect("loads");
+    match run_test(&tc, &whole()) {
+        Err(StepError::NonZero { code, .. }) => {
+            assert_ne!(code, Some(0), "a build that fails is a non-zero cargo exit");
+        }
+        Ok(outcome) => panic!(
+            "a crate that does not COMPILE ran no test, so it is cannot-run (Err), never a red or \
+             an empty suite (record T decision 1): {outcome:?}"
+        ),
+        Err(other) => panic!("a build failure before any test is NonZero; got {other:?}"),
+    }
+}
+
+/// **`passed + failed` is the executed count, and it survives both decoys** (AC-329; record T
+/// decision 3). The fixture's `zz_decoy` prints `test phantom ... ok` and `test result: ok. 99
+/// passed` on the RUN child's stdout, the stream the libtest parser reads; `build.rs` prints the
+/// same on stderr. The parser counts records only inside a `running N tests` block, so the tally is
+/// 2 -- never 99, never 3 -- and it equals the `--list` count.
+#[test]
+fn passed_plus_failed_is_the_executed_count_and_survives_both_decoys() {
+    let scratch = tempfile::tempdir().expect("scratch");
+    let tc = adapter(GENEROUS, scratch.path());
+    let outcome = run_test(&tc, &whole()).expect("the unselected fixture suite is green");
+    assert_eq!(
+        (outcome.passed, outcome.failed),
+        (2, 0),
+        "the tally is the two real tests: not the decoy's 99, not 2 + the phantom record"
+    );
+    assert_eq!(
+        outcome.passed + outcome.failed,
+        outcome.report.selected_test_count,
+        "passed + failed is the --list count (record T decision 1's invariant)"
+    );
+    // PREMISE: the decoy WAS on the stream the parser read, or the 2 above proves nothing.
+    let stdouts = run_files(scratch.path(), "run.stdout");
+    assert!(
+        stdouts
+            .iter()
+            .any(|s| s.contains("test phantom ... ok") && s.contains("99 passed")),
+        "PREMISE: the run child's stdout carried zz_decoy's phantom record and summary"
+    );
+}
+
+/// **A red test in an early binary still tallies every binary** (record T decision 6: the run
+/// child passes `--no-fail-fast`). Over §8c.3's workspace with its red test selected in, the red
+/// sits in package `a`'s unit-test binary, the FIRST binary cargo runs; every later block is still
+/// run and tallied, so `passed + failed` equals the `--list` count (the golden's 4 / 1 over 6
+/// blocks).
+#[test]
+fn a_red_test_in_an_early_binary_still_tallies_every_binary() {
+    let scratch = tempfile::tempdir().expect("scratch");
+    let tc = adapter_over(
+        &fixture_workspace(),
+        RunnerPolicy::Force(ForcedRunner::CargoTest),
+        scratch.path(),
+    );
+    let outcome = run_test(&tc, &filter(&["--include-ignored"]))
+        .expect("a red suite in an early binary is Ok, and every binary is tallied");
+    assert_eq!(
+        (outcome.passed, outcome.failed),
+        (4, 1),
+        "every block tallied: a's red plus the four passing tests (two unit, one integration, one \
+         doctest): {outcome:?}"
+    );
+    assert_eq!(
+        outcome.passed + outcome.failed,
+        outcome.report.selected_test_count,
+        "passed + failed is the --list count"
+    );
+    assert!(
+        outcome.report.argv.iter().any(|a| a == "--no-fail-fast"),
+        "the run child carries --no-fail-fast (record T decision 6): {:?}",
+        outcome.report.argv
+    );
+    let stdouts = run_files(scratch.path(), "run.stdout");
+    let headers = stdouts
+        .iter()
+        .map(|s| s.lines().filter(|l| l.starts_with("running ")).count())
+        .max()
+        .unwrap_or(0);
+    assert_eq!(
+        headers, 6,
+        "PREMISE: all six binaries' blocks were printed after the first one failed"
+    );
+}
+
+/// **The nextest path records its runner and tallies a red suite as `Ok`** (D21-48 X15; record T
+/// decision 4). *(Re-pointed by D21-62 B: from "over the fixture project red" to §8c.3's workspace
+/// red in package `a`, because the fixture project's `zz_decoy` does not answer nextest's
+/// `--list`.)* Under `Force(nextest)`: `argv` names `nextest`, `runner` is cargo-nextest at the pin,
+/// and the red suite is `Ok` with `failed ≥ 1`.
+#[test]
+fn the_nextest_path_records_its_runner_and_tallies_a_red_suite_as_ok() {
+    let scratch = tempfile::tempdir().expect("scratch");
+    let tc = adapter_over(
+        &fixture_workspace(),
+        RunnerPolicy::Force(ForcedRunner::Nextest),
+        scratch.path(),
+    );
+    let outcome = run_test(&tc, &filter(&["--include-ignored"]))
+        .expect("a red suite under nextest is Ok with counts");
+    assert!(
+        outcome.report.argv.iter().any(|a| a == "nextest"),
+        "the recorded run vector names nextest exactly when nextest ran (AC-325): {:?}",
+        outcome.report.argv
+    );
+    assert_eq!(outcome.runner.name, "cargo-nextest");
+    assert!(
+        rk_adapter_toolchain_rust::nextest_lines::NEXTEST_PINNED
+            .contains(&outcome.runner.version.as_str()),
+        "the runner names its pinned version: {:?}",
+        outcome.runner
+    );
+    assert!(outcome.failed >= 1, "the red test is tallied: {outcome:?}");
+    assert_eq!(outcome.status, TestStatus::Failing);
+    validate_report(&outcome).expect("the nextest outcome passes the conformance row");
+}
+
+/// **The nextest path runs the doctests beside it, so the count matches `--list`** (record T
+/// decision 5). `cargo nextest run` runs no doctests, and `--list` lists them: without the
+/// `cargo test --doc` companion the invariant refuses. Over the green workspace: the companion's
+/// vector carries `--doc`, the doctest is tallied, and `passed + failed` is the `--list` count.
+#[test]
+fn the_nextest_path_runs_doctests_beside_it_so_the_count_matches_list() {
+    let scratch = tempfile::tempdir().expect("scratch");
+    let tc = adapter_over(
+        &fixture_workspace(),
+        RunnerPolicy::Force(ForcedRunner::Nextest),
+        scratch.path(),
+    );
+    let outcome = run_test(&tc, &whole()).expect("the green workspace under nextest");
+    let companion = outcome
+        .runner
+        .companion_argv
+        .clone()
+        .expect("package a has a doctest-bearing library, so the companion ran");
+    assert!(
+        companion.iter().any(|a| a == "--doc"),
+        "the companion is the doctest child: {companion:?}"
+    );
+    assert_eq!(
+        (outcome.passed, outcome.failed),
+        (4, 0),
+        "three tests under nextest plus a's one doctest under the companion: {outcome:?}"
+    );
+    assert_eq!(
+        outcome.passed + outcome.failed,
+        outcome.report.selected_test_count,
+        "passed + failed is the --list count, which lists the doctest"
+    );
+    assert_eq!(outcome.status, TestStatus::Passing);
+}
+
+/// **A nextest list failure is Unverifiable, never green** (D21-62 B, provisional; record T
+/// decision 4). The fixture project's `zz_decoy` (`harness = false`) prints prose on `--list`, so
+/// `cargo-nextest 0.9.146` exits 104 *"creating test list failed"* with no status line. Under
+/// `Force(nextest)` that is `Transport { Decode }` naming `ListFailed` and the version -- never a
+/// tally, and nothing falls back to `cargo test`.
+#[test]
+fn a_nextest_list_failure_is_unverifiable_never_green() {
+    let scratch = tempfile::tempdir().expect("scratch");
+    let tc = adapter_over(
+        &fixture_project(),
+        RunnerPolicy::Force(ForcedRunner::Nextest),
+        scratch.path(),
+    );
+    match run_test(&tc, &whole()) {
+        Err(StepError::Transport {
+            kind: TransportKind::Decode,
+            detail,
+        }) => assert!(
+            detail.contains("ListFailed") && detail.contains("0.9.146"),
+            "the refusal names ListFailed and the version: {detail}"
+        ),
+        other => panic!(
+            "a nextest list failure is Transport {{ Decode }} naming ListFailed, never a tally or \
+             a fall back; got {other:?}"
+        ),
+    }
 }

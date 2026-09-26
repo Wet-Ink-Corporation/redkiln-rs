@@ -36,6 +36,7 @@
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 use rk_cli::env::Env;
@@ -139,5 +140,184 @@ fn a_candidate_whose_config_is_refused_does_not_end_the_run_before_detect_choose
          project — so the loop fell through to ADR-0139's `UndetectedToolchain` rather than \
          selecting rust, and this test would pass on a tree where node's refusal HAD ended the run \
          for every candidate"
+    );
+}
+
+// ================================================================================================
+// s8c §8c.5 / §8c.9: the chosen adapter's value table reaches the kernel WITHOUT its name.
+// ================================================================================================
+
+/// A `Toolchain` that records the bound each step-reached call is handed, and refuses the rest.
+#[derive(Default)]
+struct BoundRecorder {
+    bounds: std::sync::Mutex<Vec<rk_ports::toolchain::StepBound>>,
+}
+
+impl BoundRecorder {
+    fn record(&self, bound: rk_ports::toolchain::StepBound) {
+        self.bounds.lock().expect("unpoisoned").push(bound);
+    }
+    fn refuse(what: &str) -> rk_types::error::StepError {
+        rk_types::error::StepError::Unsupported {
+            capability: what.to_owned(),
+        }
+    }
+}
+
+impl rk_ports::toolchain::Toolchain for BoundRecorder {
+    fn detect(&self) -> Result<bool, rk_types::error::StepError> {
+        Ok(true)
+    }
+    fn build(
+        &self,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_types::verb_output::BuildReport, rk_types::error::StepError> {
+        self.record(bound);
+        Ok(rk_types::verb_output::BuildReport {
+            argv: vec!["recorder".to_owned()],
+            toolchain_version: "recorder".to_owned(),
+            wall_secs: 0,
+            errors: 0,
+            status: rk_types::verb_output::BuildStatus::Passing,
+        })
+    }
+    fn test(
+        &self,
+        _selection: &rk_ports::toolchain::Selection,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_ports::toolchain::TestOutcome, rk_types::error::StepError> {
+        self.record(bound);
+        Err(Self::refuse("test"))
+    }
+    fn lint(
+        &self,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<(), rk_types::error::StepError> {
+        self.record(bound);
+        Err(Self::refuse("lint"))
+    }
+    fn classify(
+        &self,
+        _path: &str,
+    ) -> Result<rk_ports::toolchain::Classification, rk_types::error::StepError> {
+        Err(Self::refuse("classify"))
+    }
+    fn change_summary(
+        &self,
+        _range: &str,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_ports::toolchain::ChangeSummary, rk_types::error::StepError> {
+        self.record(bound);
+        Err(Self::refuse("change_summary"))
+    }
+    fn run_verb(
+        &self,
+        call: &rk_ports::toolchain::VerbCall<'_>,
+    ) -> Result<rk_ports::toolchain::VerbOutput, rk_types::error::StepError> {
+        self.record(call.bound);
+        Err(Self::refuse(call.verb))
+    }
+}
+
+/// **§8c.5 (AC-487): `rk-cli`, which holds the name `real_toolchain`'s loop chose, selects that
+/// adapter's value table and hands the kernel a flat `ToolchainValues`; the kernel never sees
+/// `rust`.** The two tables differ in the one key the step reads, so the wrong table is a wrong
+/// NUMBER at the port, and the value handed over is read for any adapter name.
+#[test]
+fn the_chosen_adapters_value_table_reaches_the_kernel_without_its_name() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    std::fs::write(
+        repo.path().join("Cargo.toml"),
+        "[package]\nname = \"fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n",
+    )
+    .expect("the fixture manifest is writable");
+    let pin = "0123456789abcdef0123456789abcdef01234567";
+    // rust: 60 s slowest → 120 s by ADR-0170 decision 10's rule; node: 300 s → 600 s.
+    let registry = format!(
+        "[verb]\nbuild = {{ outputs = \"BuildReport\", live = false, timeout = \"build_timeout\", \
+         inputs = [], route = \"port\" }}\n\
+         [toolchain.node]\nbuild_timeout = {{ secs = 600, measured = [300], rule = \"r\", pin = \
+         \"{pin}\", command = \"tsc\" }}\n\
+         [toolchain.rust]\nbuild_timeout = {{ secs = 120, measured = [60], rule = \"r\", pin = \
+         \"{pin}\", command = \"cargo build\" }}\n"
+    );
+    std::fs::write(repo.path().join(".redkiln").join("registry.toml"), registry)
+        .expect("the registry is writable");
+
+    let resolved = resolved_over_pack_min(repo.path(), "bug-1");
+    let mut reports = Vec::new();
+    let chosen = rk_cli::verbs::run::choose_toolchain(
+        &rk_cli::verbs::run::ToolchainCandidates::of(&resolved),
+        &Env::from_map(env_that_refuses_node_and_satisfies_rust()),
+        repo.path(),
+        &mut |line| reports.push(line.to_owned()),
+    )
+    .expect("selection runs");
+    // PREMISE: rust was CHOSEN (node, listed first, is refused by this environment).
+    assert_eq!(
+        chosen.adapter.as_deref(),
+        Some("rk-adapter-toolchain-rust"),
+        "PREMISE: the loop did not choose rust: {reports:?}"
+    );
+
+    let routing = rk_cli::verbs::run::tool_routing(repo.path(), chosen.adapter.as_deref())
+        .expect("the registry loads");
+    assert_eq!(
+        routing
+            .values()
+            .resolve("build_timeout")
+            .map(std::num::NonZeroU64::get),
+        Ok(120),
+        "the value table handed over is not the CHOSEN adapter's (rust: 120 s; node: 600 s)"
+    );
+    let rendered = format!("{:?}", routing.values());
+    for name in ["rust", "node", "rk-adapter"] {
+        assert!(
+            !rendered.contains(name),
+            "the value table the kernel is handed names `{name}` (AC-487): {rendered}"
+        );
+    }
+
+    // AND THE KERNEL RESOLVES IT: a `${toolchain.build_timeout}` step hands the port 120 s.
+    let recorder = Arc::new(BoundRecorder::default());
+    let store: Arc<std::sync::Mutex<dyn rk_ports::event_store::EventStore>> =
+        Arc::new(std::sync::Mutex::new(rk_ports::fakes::VecStore::default()));
+    let rt = rk_kernel::runtime::Runtime::new(
+        rk_ports::root::Ports {
+            store,
+            harness: Arc::new(rk_ports::fakes::FakeHarness::scripted(Vec::new())),
+            tracker: Arc::new(rk_ports::fakes::BoardTracker::default()),
+            docs: Arc::new(rk_ports::fakes::RecordingDocs::default()),
+            toolchain: Arc::clone(&recorder) as Arc<dyn rk_ports::toolchain::Toolchain>,
+        },
+        "run-value-table",
+        "implement",
+    )
+    .with_tool_routing(routing);
+    let step = rk_kernel::catalog::Step {
+        id: "build".to_owned(),
+        kind: rk_kernel::catalog::StepKind::Tool,
+        run: Some("toolchain:build".to_owned()),
+        output_type: None,
+        role: None,
+        when: None,
+        expr: None,
+        for_each: None,
+        retry_max: None,
+        repeat_max: None,
+        memo_declared: None,
+        question: None,
+        timeout_secs: Some(rk_kernel::catalog::StepTimeout::Toolchain(
+            "build_timeout".to_owned(),
+        )),
+    };
+    let verdict = rt
+        .execute_step(&step, &rk_kernel::predicate::Context::new())
+        .expect("a value");
+    assert_eq!(verdict, rk_kernel::runtime::step::StepVerdict::Continue);
+    assert_eq!(
+        *recorder.bounds.lock().expect("unpoisoned"),
+        vec![rk_ports::toolchain::StepBound::secs(120).expect("non-zero")],
+        "the kernel did not hand the port the chosen table's value"
     );
 }

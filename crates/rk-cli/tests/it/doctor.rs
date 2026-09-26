@@ -550,6 +550,128 @@ fn ac419_missing_or_non_numeric_timeout_rejected() {
     );
 }
 
+/// **`RK-D-TIMEOUT`'s third arm** — s8c §8c.6, record V = ADR-0170 decision 12, proposed.
+///
+/// A `${toolchain.<key>}`, in a pack activity table or on a catalog step, resolves through the
+/// value table `run` would hand the kernel, **selected by `run`'s own loop**. The fixture is
+/// `doctor/clean/` made into a Rust project (a `Cargo.toml` at its root) with a `registry.toml`
+/// and three substitutions: a RESOLVED key on the pack's activity table (silent), an `unmeasured`
+/// key on a step (one `Error` naming its reason) and an ABSENT key on a step (one `Error`,
+/// `Unresolved`). The node table declares the resolved key `unmeasured`, so a wrong selection is a
+/// third finding. Built at test time because rust's `detect()` spawns the real `cargo`, and the
+/// environment is the process's own for the same reason. Then the `Cargo.toml` is removed: no
+/// adapter detects, and that is ONE `Error`, with no key guessed (M19: an absent key read as
+/// numeric turns the count red).
+#[test]
+fn rk_d_timeout_resolves_a_toolchain_substitution_through_the_value_table() {
+    let rule = RULES
+        .iter()
+        .find(|r| r.id == "RK-D-TIMEOUT")
+        .expect("RK-D-TIMEOUT is in RULES");
+    let dir = materialise("clean");
+    let root = dir.path();
+    let redkiln = root.join(".redkiln");
+    std::fs::write(
+        root.join("Cargo.toml"),
+        "[package]\nname = \"fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n",
+    )
+    .expect("write");
+    let pack = std::fs::read_to_string(redkiln.join("packs/demo.toml")).expect("the pack");
+    let pack = pack.replace(
+        "[activity.emit-report]\ntimeout_secs = 900\n",
+        "[activity.emit-report]\ntimeout_secs = \"${toolchain.build_timeout}\"\n",
+    );
+    assert!(
+        pack.contains("\"${toolchain.build_timeout}\""),
+        "PREMISE: the clean pack's activity row moved; rebuild the substitution"
+    );
+    std::fs::write(redkiln.join("packs/demo.toml"), pack).expect("write");
+    let catalog = std::fs::read_to_string(redkiln.join("catalog/emit-report.toml")).expect("cat");
+    let catalog = format!(
+        "{catalog}\n[[step]]\nid = \"deploy\"\nkind = \"tool\"\nrun = \"toolchain:deploy\"\n\
+         timeout_secs = \"${{toolchain.deploy_timeout}}\"\n\n[[step]]\nid = \"gone\"\nkind = \
+         \"tool\"\nrun = \"toolchain:build\"\ntimeout_secs = \"${{toolchain.gone_timeout}}\"\n"
+    );
+    std::fs::write(redkiln.join("catalog/emit-report.toml"), catalog).expect("write");
+    let pin = "0123456789abcdef0123456789abcdef01234567";
+    std::fs::write(
+        redkiln.join("registry.toml"),
+        format!(
+            "[verb]\nbuild = {{ outputs = \"BuildReport\", live = false, timeout = \
+             \"build_timeout\", inputs = [], route = \"port\" }}\n\
+             [toolchain.rust]\nbuild_timeout = {{ secs = 120, measured = [60], rule = \"r\", pin \
+             = \"{pin}\", command = \"cargo build\" }}\ndeploy_timeout = {{ unmeasured = \"no \
+             Phase-1 Rust verb deploys\" }}\n\
+             [toolchain.node]\nbuild_timeout = {{ unmeasured = \"node is all unmeasured\" }}\n"
+        ),
+    )
+    .expect("write");
+
+    let ctx = |root: &std::path::Path| {
+        let config_src =
+            std::fs::read_to_string(root.join(".redkiln").join("config.toml")).expect("config");
+        let config = rk_cli::config::parse(&config_src).expect("the ConfigFile parses");
+        rk_cli::doctor::Ctx::build(
+            root.to_path_buf(),
+            root.join(".git"),
+            config,
+            rk_cli::env::Env::from_map(std::env::vars().collect()),
+            None,
+            Box::new(StubProbe::read(root)),
+            NOW,
+        )
+    };
+
+    let built = ctx(root);
+    assert!(
+        matches!(built.timeout_table, rk_cli::doctor::TimeoutTable::Values(_)),
+        "PREMISE: a table was selected: {:?}",
+        built.timeout_table
+    );
+    let found = (rule.check)(&built);
+    assert_eq!(
+        found.len(),
+        2,
+        "a resolved key is silent and the unmeasured and absent keys are one Error each: {found:?}"
+    );
+    for f in &found {
+        assert_eq!(f.id, "RK-D-TIMEOUT");
+        assert_eq!(f.severity, rk_cli::doctor::Severity::Error);
+    }
+    assert!(
+        found
+            .iter()
+            .any(|f| f.detail.contains("${toolchain.deploy_timeout}")
+                && f.detail.contains("no Phase-1 Rust verb deploys")),
+        "the unmeasured key's finding does not name its declared reason: {found:?}"
+    );
+    assert!(
+        found
+            .iter()
+            .any(|f| f.detail.contains("${toolchain.gone_timeout}")
+                && f.detail.contains("Unresolved")),
+        "the absent key is not reported as Unresolved: {found:?}"
+    );
+    assert!(
+        !found.iter().any(|f| f.detail.contains("build_timeout")),
+        "the resolved key fired — the table is not rust's, or the pack arm read it NonNumeric: \
+         {found:?}"
+    );
+
+    // NO ADAPTER DETECTS: one finding, and no key guessed.
+    std::fs::remove_file(root.join("Cargo.toml")).expect("remove");
+    let found = (rule.check)(&ctx(root));
+    assert_eq!(
+        found.len(),
+        1,
+        "no adapter detected must be ONE Error: {found:?}"
+    );
+    assert!(
+        found[0].detail.contains("no toolchain adapter detects"),
+        "the one finding does not say that no adapter detects: {found:?}"
+    );
+}
+
 /// **AC-423 / AC-526 / D-11** — the installed CLI's version, and the pack's declared cache TTLs.
 ///
 /// Two ids in one family because §7d.8's table puts them in one row. They read different things —

@@ -71,6 +71,7 @@ fn rigor_guarded_step() -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 
@@ -174,6 +175,7 @@ fn a_check_expr_reading_a_step_output_still_refuses_with_the_full_context() {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     };
 
     let full = rk_kernel::rigor::with_rigor(Context::new(), Rigor::Mandatory, &shipped_registry());

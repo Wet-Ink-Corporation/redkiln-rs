@@ -63,6 +63,7 @@ fn agent_step(id: &str) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 
@@ -81,6 +82,7 @@ fn gate_step(id: &str, question: &str, when: Option<&str>) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: Some(question.to_owned()),
+        timeout_secs: None,
     }
 }
 
@@ -574,6 +576,7 @@ fn guarded_tool(id: &str, verb: &str, when: &str) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 

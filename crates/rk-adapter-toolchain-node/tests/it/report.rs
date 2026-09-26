@@ -27,7 +27,8 @@
 use std::time::Duration;
 
 use rk_containment::{Outcome, run_bounded};
-use rk_ports::toolchain::Toolchain;
+use rk_ports::conformance::validate_report;
+use rk_ports::toolchain::{TestStatus, Toolchain};
 use rk_types::error::{StepError, TransportKind};
 use rk_types::verify::{Basis, BasisReason, TotalTestCountSource, VerifyReport};
 
@@ -35,7 +36,7 @@ use rk_adapter_toolchain_node::NodeToolchain;
 
 use crate::support::{
     GENEROUS, SUITE_FILE, adapter, adapter_with_env, config_with, fixture_project, logged_vectors,
-    minimal_env, reporter_counts, same_path, wrapper_bin,
+    minimal_env, reporter_counts, run_test, same_path, wrapper_bin,
 };
 
 /// The nine members of `VerifyReport`, as the wire spells them (AC-329's list; `basis_reason`
@@ -146,8 +147,8 @@ fn ac329_report_conforms_no_prose_parse() {
     let scratch = tempfile::tempdir().expect("scratch");
     let tc = adapter(GENEROUS, scratch.path());
 
-    let report = tc
-        .verify_report(&[])
+    let report = run_test(&tc, &[])
+        .map(|o| o.report)
         .expect("the unselected fixture suite is green");
 
     // Under `--reporter=json` no prose reaches the adapter (the decoy is inert; the module doc):
@@ -199,16 +200,26 @@ fn ac329_report_conforms_no_prose_parse() {
     satisfies_store_whole_suite_rule(&report);
 
     // A `-t` selection narrows the executed count; the total follows it (the store's rule).
-    let selected = tc.verify_report(&filtered("filterable")).expect("green");
+    let selected = run_test(&tc, &filtered("filterable"))
+        .map(|o| o.report)
+        .expect("green");
     assert_eq!(selected.selected_test_count, 1);
     assert_eq!(selected.total_test_count, 1);
     satisfies_store_whole_suite_rule(&selected);
     assert_eq!(&selected.argv[5..], [SUITE_FILE, "-t", "filterable"]);
 
-    // The skip-marked red test, reached by `-t`: RT-22's red suite is Err(NonZero), never Ok.
-    match tc.verify_report(&filtered("red_by_selection")) {
-        Err(StepError::NonZero { code, .. }) => assert_ne!(code, Some(0)),
-        other => panic!("a red suite is Err(NonZero) (RT-22); got {other:?}"),
+    // The skip-marked red test, reached by `-t`: a red suite. *(Amended 2026-09-26, s8c: this read
+    // "RT-22's red suite is Err(NonZero), never Ok". Record T = ADR-0169 reverses RT-22: a red
+    // suite is Ok with its counts.)*
+    match run_test(&tc, &filtered("red_by_selection")) {
+        Ok(red) => assert_eq!(
+            (red.passed, red.failed),
+            (0, 1),
+            "a red suite is Ok with its counts (record T decision 1)"
+        ),
+        other => {
+            panic!("a red suite is Ok with failed = 1 (record T; RT-22 reversed); got {other:?}")
+        }
     }
 
     // The nine negatives, one per member.
@@ -230,8 +241,8 @@ fn concurrent_verify_reports_share_no_output_file() {
     let scratch = tempfile::tempdir().expect("scratch");
     let tc = adapter(GENEROUS, scratch.path());
     let (filtered_count, whole_count) = std::thread::scope(|s| {
-        let a = s.spawn(|| tc.verify_report(&filtered("filterable")));
-        let b = s.spawn(|| tc.verify_report(&[]));
+        let a = s.spawn(|| run_test(&tc, &filtered("filterable")).map(|o| o.report));
+        let b = s.spawn(|| run_test(&tc, &[]).map(|o| o.report));
         (
             a.join().expect("thread a").expect("green"),
             b.join().expect("thread b").expect("green"),
@@ -259,7 +270,9 @@ fn concurrent_verify_reports_share_no_output_file() {
 fn d34_vitest_invoked_directly_never_pnpm_forwarded() {
     let scratch = tempfile::tempdir().expect("scratch");
     let tc = adapter(GENEROUS, scratch.path());
-    let report = tc.verify_report(&filtered("filterable")).expect("green");
+    let report = run_test(&tc, &filtered("filterable"))
+        .map(|o| o.report)
+        .expect("green");
     assert!(
         report
             .argv
@@ -325,8 +338,8 @@ fn ac325_recorded_argv_is_os_vector() {
         scratch.path(),
     );
 
-    let report = through_wrapper
-        .verify_report(&filtered("filterable"))
+    let report = run_test(&through_wrapper, &filtered("filterable"))
+        .map(|o| o.report)
         .expect("green through the wrapper");
 
     // (1) the recorded argv differs from the template: its program element is the wrapper.
@@ -349,8 +362,8 @@ fn ac325_recorded_argv_is_os_vector() {
     );
     let control = adapter(GENEROUS, scratch.path());
     assert_eq!(
-        control
-            .verify_report(&filtered("filterable"))
+        run_test(&control, &filtered("filterable"))
+            .map(|o| o.report)
             .expect("green")
             .selected_test_count,
         1,
@@ -420,12 +433,12 @@ fn reexec_command(
 fn ac331_killed_verify_is_unverifiable() {
     let scratch = tempfile::tempdir().expect("scratch");
     let short = adapter(Duration::from_secs(8), scratch.path());
-    match short.test(&filtered("slow_by_selection")) {
+    match run_test(&short, &filtered("slow_by_selection")) {
         Err(StepError::Timeout { after_secs }) => assert_eq!(after_secs, 8),
         Err(StepError::NonZero { .. }) => {
             panic!("a run killed at its bound was read as a FAILING TEST (AC-331 forbids it)")
         }
-        Ok(n) => panic!("a run killed at its bound was read as a PASS of {n} tests (AC-331)"),
+        Ok(o) => panic!("a run killed at its bound was read as an outcome (AC-331): {o:?}"),
         Err(other) => panic!("a killed run is Timeout {{ after_secs }}, got {other:?}"),
     }
 }
@@ -483,7 +496,7 @@ fn ac344_missing_binary_is_not_a_candidate_failure() {
     ))
     .expect("loads");
 
-    match tc.test(&[]) {
+    match run_test(&tc, &[]) {
         Err(StepError::Transport {
             kind: TransportKind::Spawn,
             detail,
@@ -502,4 +515,26 @@ fn ac344_missing_binary_is_not_a_candidate_failure() {
             .expect("detect never fails on an absent program"),
         "detect answers false: the toolchain is not present"
     );
+}
+
+/// **A red suite is `Ok` with failed counts** (D21-42 1a; record T = ADR-0169 decision 1, proposed).
+/// The skip-marked red test reached by `-t`: vitest's JSON reporter file says 0 passed and 1 failed,
+/// and the port answers `Ok` with those counts and `status: failing` -- never `Err(NonZero)`.
+///
+/// *(Added 2026-09-26, s8c §8c.9.)*
+#[test]
+fn red_suite_is_ok_with_failed_counts() {
+    let scratch = tempfile::tempdir().expect("scratch");
+    let tc = adapter(GENEROUS, scratch.path());
+    let outcome = run_test(&tc, &filtered("red_by_selection"))
+        .expect("a RED suite is Ok with counts, never Err(NonZero) (record T; RT-22 reversed)");
+    assert_eq!(
+        (outcome.passed, outcome.failed),
+        (0, 1),
+        "the red test is tallied as failed from the reporter file: {outcome:?}"
+    );
+    assert_eq!(outcome.status, TestStatus::Failing);
+    assert_eq!(outcome.runner.name, "vitest");
+    validate_report(&outcome).expect("the red outcome passes the conformance row");
+    satisfies_store_whole_suite_rule(&outcome.report);
 }

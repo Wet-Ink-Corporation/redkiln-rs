@@ -3,8 +3,11 @@
 //! and Rust (`Toolchain`)"*; design §9.1's crate table — the name is the design's, not the
 //! runbook's older `rk-adapter-node` (ADR-0099's context); `s7c` §7c.14).
 //!
-//! **What this crate is.** `impl rk_ports::toolchain::Toolchain for NodeToolchain` — the six
-//! methods Checkpoint 7a counts and no seventh — over a **fixture project, never the workspace
+//! **What this crate is.** `impl rk_ports::toolchain::Toolchain for NodeToolchain` — ~~the six
+//! methods Checkpoint 7a counts and no seventh~~ *(corrected 2026-09-26, s8c §8c.7: Checkpoint 7a
+//! counts no method -- it floors two NAMES, E-0162-2 -- and under record V = ADR-0170, proposed,
+//! the port has SEVEN methods, the seventh `run_verb`, which this adapter refuses for every verb
+//! at this stage)* — over a **fixture project, never the workspace
 //! running the checkpoint** (§7c.14, §7c.17), and, behind the `corpus` feature's test module, over
 //! the predecessor checkout for AC-334's real row (the F25 fixture is a vitest suite, so its
 //! real-row run is THIS adapter's). Every child it spawns goes through
@@ -40,13 +43,13 @@
 //! polling"* (#31) needs a place to put the file and this crate reads no `TEMP` from the process
 //! environment (the AC-217 ban).
 //!
-//! **What the six port methods do.** `detect`: the project root carries a `package.json`,
+//! **What the six port methods do.** *(Dated 2026-09-26, s8c: seven since record V = ADR-0170, proposed; the seventh, `run_verb`, refuses every verb by name here; see the amended paragraph below.)* `detect`: the project root carries a `package.json`,
 //! `vitest` is installed locally ([`env::local_bin`] — `npx` without it would fetch from the
 //! registry or prompt on a closed stdin, so this adapter never spawns `npx <name>` for a name
 //! that is not a local bin), and `<program> --version` starts and exits 0 — an absent program is
 //! `Ok(false)`, not an error. `build`: `<program> tsc --noEmit` — the type-check, the Node
 //! lane's compile step (the predecessor's own `typecheck` script), over the project's
-//! `tsconfig.json`; `tsc` must be a local bin. `test(selection)`: [`NodeToolchain::verify_report`]'s
+//! `tsconfig.json`; `tsc` must be a local bin. `test(selection)`: `NodeToolchain::verify_report` (retired 2026-09-26, s8c; [`report::verify_report`] is `test`'s body now)'s
 //! count — one spawn path, `Ok(selected_test_count)` on a green suite and `Err(NonZero { code,
 //! stderr_digest })` on a red one (RT-22), `Err(Timeout { after_secs })` / `Err(Transport { Io })`
 //! on a run the bound or the OS killed (AC-331: never a pass, never a failing test),
@@ -57,8 +60,15 @@
 //! `change_summary(range)`: `Err(Unsupported { capability: "change_summary" })` **from the dated
 //! registry row** ([`registry`]; D17-9) — the range is never read.
 //!
+//! *(Amended 2026-09-26, s8c §8c.2; records T, V and B = ADR-0169/0170/0171, proposed.)* `test`
+//! returns a `TestOutcome` (a red suite is `Ok`, RT-22 reversed), `build` a `BuildReport` (at
+//! this slice exit 0 is `passing` and any other exit still `NonZero`; the pinned `tsc` exit
+//! mapping of D21-62 D lands with the build slice), every step-reached method takes a
+//! `StepBound` (enforced with the bound slice), and `run_verb` refuses every verb by name.
+//!
 //! **The report** ([`report`]): `rk_types::verify::VerifyReport` by the INHERENT
-//! [`NodeToolchain::verify_report`] (RT-6), counts from vitest's JSON reporter file, argv the OS
+//! `NodeToolchain::verify_report` (RT-6) *(retired 2026-09-26, s8c: RT-6 is discharged by record
+//! T; [`report::verify_report`] is `test`'s body)*, counts from vitest's JSON reporter file, argv the OS
 //! vector (AC-325), `basis: WholeSuite` always (AC-328; [`NodeToolchain::select_affected`] refuses
 //! from the registry row; the Node probe S-SEL-NODE is owed). No member is obtained by parsing
 //! prose (AC-329; the block's ban over this `src/`).
@@ -75,10 +85,13 @@ use std::time::Duration;
 
 use rk_containment::Outcome;
 use rk_git::path::WorktreePath;
-use rk_ports::toolchain::{ChangeSummary, Classification, Toolchain};
+use rk_ports::toolchain::{
+    ChangeSummary, Classification, Selection, StepBound, TestOutcome, Toolchain, VerbCall,
+    VerbOutput,
+};
 use rk_types::digest::sha256;
 use rk_types::error::{StepError, TransportKind};
-use rk_types::verify::VerifyReport;
+use rk_types::verb_output::{BuildReport, BuildStatus};
 
 pub mod classify;
 pub mod env;
@@ -225,6 +238,38 @@ impl Config {
     pub fn scratch(&self) -> &Path {
         &self.scratch
     }
+
+    /// **The bound one call runs under: `min(step, construction)`** (record B = ADR-0171 decision
+    /// 4, proposed; s8c §8c.6). An `Undeclared` step bound leaves the construction bound alone.
+    /// Every child the call spawns runs under the returned `Config`'s timeout, and every
+    /// `Timeout { after_secs }` the call answers carries it: the bound that fired. *(Added
+    /// 2026-09-26, s8c build, P5.)*
+    #[must_use]
+    pub fn bounded(&self, bound: StepBound) -> Self {
+        let mut config = self.clone();
+        if let Some(step) = bound.as_secs() {
+            config.timeout = config.timeout.min(Duration::from_secs(step));
+        }
+        config
+    }
+}
+
+/// The count of `tsc`'s `error TS<n>` diagnostic lines (D21-62 D: *"`errors` is the count of
+/// `error TS<n>` diagnostic lines, with a floor of 1 under exit 2"*): a line carrying `error TS`
+/// followed by a digit. *(Added 2026-09-26, s8c build, P5.)*
+fn tsc_errors(stdout: &str) -> u32 {
+    let n = stdout
+        .lines()
+        .filter(|line| {
+            line.match_indices("error TS").any(|(i, m)| {
+                line[i + m.len()..]
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_digit())
+            })
+        })
+        .count();
+    u32::try_from(n).unwrap_or(u32::MAX)
 }
 
 /// The real Node toolchain: a [`Config`] and the registry rows it answers `Unsupported` from.
@@ -294,14 +339,6 @@ impl NodeToolchain {
         &self.registry
     }
 
-    /// The report (RT-6: an inherent method; the port stays six methods) — [`report`].
-    ///
-    /// # Errors
-    /// As [`report::verify_report`].
-    pub fn verify_report(&self, selection: &[String]) -> Result<VerifyReport, StepError> {
-        report::verify_report(self, selection)
-    }
-
     /// The locally installed bin `name`, or the typed refusal that keeps `npx` from fetching or
     /// prompting: `Transport { kind: Spawn }` naming the install step (the `env` module doc).
     ///
@@ -340,10 +377,13 @@ impl NodeToolchain {
     /// Run `<program> <args>` bounded and map its outcome: `Ok(())` on exit 0, `NonZero`
     /// otherwise, `Timeout` / `Transport { Io }` on a killed run, `Transport { Spawn }` on no
     /// program.
-    fn launch(&self, tag: &str, args: &[&str]) -> Result<(), StepError> {
+    ///
+    /// *(Amended 2026-09-26, s8c build, P5: under `cfg`, the call's bounded `Config`, so a
+    /// `Timeout` names the bound that fired; record B.)*
+    fn launch(&self, cfg: &Config, tag: &str, args: &[&str]) -> Result<(), StepError> {
         let args: Vec<String> = args.iter().map(|s| (*s).to_owned()).collect();
         let dir = self.run_dir()?;
-        let run = run::run(&self.config, &dir, tag, &args)?;
+        let run = run::run(cfg, &dir, tag, &args)?;
         match run.outcome {
             Outcome::Exited(status) if status.success() => Ok(()),
             Outcome::Exited(status) => Err(StepError::NonZero {
@@ -351,7 +391,7 @@ impl NodeToolchain {
                 stderr_digest: sha256(&run.stderr_bytes()?),
             }),
             Outcome::TimedOut => Err(StepError::Timeout {
-                after_secs: self.config.timeout().as_secs(),
+                after_secs: cfg.timeout().as_secs(),
             }),
             Outcome::OsKilled => Err(report::os_killed(&run.argv)),
         }
@@ -366,7 +406,7 @@ impl Toolchain for NodeToolchain {
         if !root.join("package.json").is_file() || env::local_bin(root, "vitest").is_none() {
             return Ok(false);
         }
-        match self.launch("detect", &["--version"]) {
+        match self.launch(&self.config, "detect", &["--version"]) {
             Ok(()) => Ok(true),
             Err(
                 StepError::Transport {
@@ -380,20 +420,99 @@ impl Toolchain for NodeToolchain {
     }
 
     /// `<program> tsc --noEmit` — the Node lane's compile step (the module doc).
-    fn build(&self) -> Result<(), StepError> {
+    ///
+    /// *(Amended 2026-09-26, s8c: this returned `Result<(), StepError>`.)* ~~At this slice exit 0 is
+    /// `Ok(BuildReport { status: passing, errors: 0 })` and any other exit is still `NonZero`; the
+    /// pinned `tsc 5.9.3` mapping (0 passing, 2 failing, 1 or other `Err(NonZero)`: D21-62 D,
+    /// record T decision 8) lands with the build slice. `toolchain_version` names the launcher
+    /// and the checker, `<program> tsc`; reading `tsc --version` lands with that slice too.~~
+    ///
+    /// *(Dated 2026-09-26, s8c build, P5; D21-62 D, provisional; record T = ADR-0169 decision 8,
+    /// proposed.)* The pinned `tsc 5.9.3`'s own exit statuses, through the `npx` launcher (never
+    /// pnpm, which collapses every failure to 1; DECISIONS-2026-09-09 #34 extended to `build` by
+    /// record T): `0` is `Ok(passing)` with `errors = 0`; `2` is `Ok(failing)`, `errors` the count
+    /// of `error TS<n>` diagnostic lines on its stdout with a floor of 1, and it covers config
+    /// errors, so **a broken `tsconfig.json` reads as a failing build, never a passing one** (a
+    /// known flaw record T states); `1` (nothing was checked: no `tsconfig.json`, an unknown option,
+    /// `-p` to a missing project) and any other non-zero status are `Err(NonZero)`, cannot-run.
+    /// `toolchain_version` is `<program> tsc --version`'s answer. Every child runs under
+    /// `min(step, construction)` (record B).
+    fn build(&self, bound: StepBound) -> Result<BuildReport, StepError> {
+        let cfg = self.config.bounded(bound);
         self.require_local_bin("tsc")?;
-        self.launch("build", &["tsc", "--noEmit"])
+        let dir = self.run_dir()?;
+        let version = run::run(
+            &cfg,
+            &dir,
+            "tsc-version",
+            &["tsc".to_owned(), "--version".to_owned()],
+        )?;
+        let toolchain_version = match version.outcome {
+            Outcome::Exited(status) if status.success() => {
+                String::from_utf8_lossy(&version.stdout_bytes()?)
+                    .trim()
+                    .to_owned()
+            }
+            Outcome::Exited(status) => {
+                return Err(StepError::NonZero {
+                    code: status.code(),
+                    stderr_digest: sha256(&version.stderr_bytes()?),
+                });
+            }
+            Outcome::TimedOut => {
+                return Err(StepError::Timeout {
+                    after_secs: cfg.timeout().as_secs(),
+                });
+            }
+            Outcome::OsKilled => return Err(report::os_killed(&version.argv)),
+        };
+        let args = ["tsc".to_owned(), "--noEmit".to_owned()];
+        let run = run::run(&cfg, &dir, "build", &args)?;
+        let report = |status: BuildStatus, errors: u32, run: run::Run| BuildReport {
+            toolchain_version: toolchain_version.clone(),
+            argv: run.argv,
+            wall_secs: run.wall.as_secs(),
+            errors,
+            status,
+        };
+        match run.outcome {
+            Outcome::Exited(status) => match status.code() {
+                Some(0) => Ok(report(BuildStatus::Passing, 0, run)),
+                Some(2) => {
+                    let errors = tsc_errors(&String::from_utf8_lossy(&run.stdout_bytes()?)).max(1);
+                    Ok(report(BuildStatus::Failing, errors, run))
+                }
+                code => Err(StepError::NonZero {
+                    code,
+                    stderr_digest: sha256(&run.stderr_bytes()?),
+                }),
+            },
+            Outcome::TimedOut => Err(StepError::Timeout {
+                after_secs: cfg.timeout().as_secs(),
+            }),
+            Outcome::OsKilled => Err(report::os_killed(&run.argv)),
+        }
     }
 
-    /// The report's count (RT-22: `Ok(count)` only on a green suite).
-    fn test(&self, selection: &[String]) -> Result<u32, StepError> {
-        self.verify_report(selection).map(|r| r.selected_test_count)
+    /// The outcome ([`report::verify_report`], record T = ADR-0169 decisions 1-7, proposed): a red
+    /// suite is `Ok` with `failed ≥ 1`. *(Amended 2026-09-26, s8c: this was the report's count,
+    /// `Ok` only on a green suite -- RT-22, now reversed.)* The bound is taken here and enforced
+    /// with the bound slice (record B).
+    ///
+    /// *(Dated 2026-09-26, s8c build, P5: the bound is enforced; every child runs under
+    /// `min(step, construction)`, record B.)*
+    fn test(&self, selection: &Selection, bound: StepBound) -> Result<TestOutcome, StepError> {
+        report::verify_report(self, selection, bound)
     }
 
-    /// `<program> prettier --check .` (the module doc).
-    fn lint(&self) -> Result<(), StepError> {
+    /// `<program> prettier --check .` (the module doc), under `min(step, construction)`.
+    fn lint(&self, bound: StepBound) -> Result<(), StepError> {
         self.require_local_bin("prettier")?;
-        self.launch("lint", &["prettier", "--check", "."])
+        self.launch(
+            &self.config.bounded(bound),
+            "lint",
+            &["prettier", "--check", "."],
+        )
     }
 
     /// Per path (ADR-0029 i; AC-497's classify half).
@@ -405,10 +524,18 @@ impl Toolchain for NodeToolchain {
     }
 
     /// `Unsupported` from the dated registry row (D17-9); the range is never read.
-    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {
+    fn change_summary(&self, _range: &str, _bound: StepBound) -> Result<ChangeSummary, StepError> {
         Err(registry::refusal(
             &self.registry,
             registry::Capability::ChangeSummary,
         ))
+    }
+
+    /// The seventh method (record V = ADR-0170 decision 2, proposed): *"The Node adapter
+    /// implements none at this stage"*, so every verb is refused by its bare name.
+    fn run_verb(&self, call: &VerbCall<'_>) -> Result<VerbOutput, StepError> {
+        Err(StepError::Unsupported {
+            capability: call.verb.to_owned(),
+        })
     }
 }

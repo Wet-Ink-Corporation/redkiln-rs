@@ -282,7 +282,11 @@ over the run child's stdout FILE. It never reads stderr, so the `build.rs` decoy
    `^test (.+) has been running for over 60 seconds$`, which it prints inside the region for a test that runs past
    60 s. The name it carries must be one the same block records. If it is not, the block refuses. The self-hosting
    suite has tests that run that long, so without this line the parser would refuse on every run of this repository.
-   Any other non-empty line in the region refuses. The block closes on the
+   ~~Any other non-empty line in the region refuses.~~ *(dated 2026-09-26, s8c build; D21-62 A, provisional; record T = ADR-0169
+   decision 3)* Any other non-empty line in the region is FOREIGN: it is skipped, never counted, and tallied in
+   `Tally.foreign_lines`, with the first one's line number and text kept as evidence. A header or a full summary
+   inside the region is a protocol line and refuses. The header count (this rule), rule 3, rule 5 and rule 6 carry
+   the fail-closed guarantee, and a leaked empty line still closes the region early and refuses. The block closes on the
    full summary grammar:
    `^test result: (ok|FAILED)\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out; finished in [0-9.]+s$`.
    The lines between the region and the summary are skipped: libtest's `failures:` section and captured test output.
@@ -308,6 +312,13 @@ over the run child's stdout FILE. It never reads stderr, so the `build.rs` decoy
 
    `zz_decoy` exits 0, so it moves no count, and the golden records that.
 
+*(dated 2026-09-26, s8c build, P3; D21-62 A.)* **Built.** `libtest_lines.rs` holds `parse`, `PINNED = ["1.98.1"]`, `Tally { passed,
+failed, ignored, blocks, foreign_lines, first_foreign }` and `ParseRefusal` (with `name()`, for the adapter's
+`Transport { Decode }` detail). The grammars are matched by hand, character for character, so the crate takes no
+`regex` dependency. Rule 5 is the adapter's check, because `parse` has no `--list` count, and carrying
+`foreign_lines` onto `TestOutcome.runner` is the adapter's too (record T decision 1). The nextest parser shares
+`Tally` and `ParseRefusal`, is unaffected by D21-62 A, and stays strict.
+
 **A refusal is Unverifiable.** The adapter maps every `ParseRefusal` to `Err(Transport { Decode })`, naming the
 refusal and the version. This is §8c.2's error class (c):
 
@@ -327,6 +338,11 @@ run-child stdout files, each with its expected tally beside it:
 - **this repository's own** `cargo test --workspace --no-fail-fast` stdout at the stage's pin, so that the parser is
   proved over the output the self-hosting run meets. If the parser refuses it, the stage stops. In that case the
   parser is wrong, not the golden.
+  *(dated 2026-09-26, s8c build; D21-62 A.)* The capture at the pin carries 39 foreign `RK-D-<rule> ok` lines from the rk-cli
+  `it` binary, the first at line 287 (*"RK-D-GATE-OUTPUTS ok"*). Rule 2 as first written refused it at that line,
+  and the stage stopped as this bullet directs; D21-62 A ruled the parser wrong. The tally is 784 passed, 0 failed,
+  9 ignored over 44 blocks with `foreign_lines` 39, Checkpoint 8b's reading, and `this-repository.tally.json` pins
+  it with `first_foreign_line` 287. The golden is committed as captured.
 
 They are captured once, on the pinned toolchain, and committed LF under ADR-0164. **They are parsed by the tests,
 never compared byte for byte with a fresh run**, because `finished in` varies. The capture command and its
@@ -355,6 +371,23 @@ needs no further question. Record T fixes the shape, and this is the proposal:
   `Force(runner)`, for a test that pins one path's vector. The runner that ran is recorded twice. `VerifyReport.argv`
   is the run vector as handed to the OS (AC-325), so it names `nextest` exactly when nextest ran. `TestOutcome.runner`
   (§8c.2) names the runner and its version. `VerifyReport` gains no member.
+  *(dated 2026-09-26, s8c build, P4.)* **Built.** `Config` gains `with_runner(RunnerPolicy)`; `Config::new` defaults to
+  `Detect`, so `real_toolchain` is unchanged. The probe runs once, at construction
+  (`RustToolchain::new` and `new_over_registry`), bounded like every child; `Force(CargoTest)` spawns no
+  probe, and `Force(Nextest)` still probes for the version and, where none answers, makes every `test`
+  call refuse as `Transport { Spawn }` naming the probe's answer, never a fall back. The probe's absent case
+  is the real toolchain `cargo` (`env!("CARGO")`, beside its `rustc`) under a `child_env` whose `PATH` is
+  that directory and the system directory and whose `CARGO_HOME` is empty, as record T's evidence measured,
+  so no stub program was needed. The companion runs when a workspace member has a doctest-bearing library
+  target, read from `cargo metadata --format-version 1 --no-deps` (a `lib`/`rlib`/`dylib`/`proc-macro` kind
+  with `doctest: true`; the fixture project's `[lib] doctest = false` has none). An unpinned version is
+  refused as `StepError::Unsupported { capability: "<parser>@<version>" }` (rule 1's own spelling), and
+  every other `ParseRefusal` as `Transport { Decode }` naming the refusal and the version. Every `Config` the
+  adapter's `tests/it/support.rs` builds over the fixture project pins `Force(CargoTest)` (D21-62 B E).
+  **Measured while building, reported:** over a crate outside this repository, where no
+  `rust-toolchain.toml` applies, this box's rustup default is `1.97.1`, so the libtest parser refuses the run
+  by name (`libtest-lines@1.97.1`, seen in mutant MB's key line). That is rule 1 failing closed, as designed;
+  a run worktree of this repository inherits the pinned `1.98.1`.
 - **The nextest parser.** `crates/rk-adapter-toolchain-rust/src/nextest_lines.rs` holds one pure function,
   `parse(stream, exit_code, version) -> Result<Tally, ParseRefusal>`, beside `libtest_lines::parse`. It returns the
   same `Tally`, so `test` returns the same `TestOutcome` whichever runner ran. Its rules are N4's, carried over:
@@ -384,11 +417,22 @@ needs no further question. Record T fixes the shape, and this is the proposal:
   run whose doctests were dropped therefore refuses as `Transport { Decode }`. It never reads as a smaller green
   suite.
 - **The goldens.** `crates/rk-adapter-toolchain-rust/tests/fixtures/nextest/<version>/` holds, for the installed
-  version, three captured status streams, each with its expected tally beside it: the fixture project green (with
-  `zz_decoy`), the same project red under `red_by_selection`, and §8c.3's workspace red in package `a`. Package `a`
+  version, three captured status streams, each with its expected tally beside it: ~~the fixture project green (with
+  `zz_decoy`), the same project red under `red_by_selection`, and~~ §8c.3's workspace red in package `a`. Package `a`
   carries one doctest, so the workspace golden also proves the companion. The goldens are committed LF under
   ADR-0164 and **parsed, never compared byte for byte**, like the libtest ones. The capture commands and the version
   go into record T's evidence.
+  *(dated 2026-09-26, s8c build, P3; D21-62 B, provisional.)* nextest `0.9.146` exits 104 listing the fixture project, because
+  `zz_decoy` (`harness = false`) prints prose on `--list`, so the two struck project streams cannot be tallies. The
+  `0.9.146` set is: `workspace-red-in-a.stderr` (a tally, rc 100) with its `.doc.stdout` companion;
+  `project-green.list-failed.stderr` and `project-red.list-failed.stderr` (expected `ParseRefusal::ListFailed`, exit
+  104, mapped to `Transport { Decode }`); and `project-green.filtered.stderr` and `project-red.filtered.stderr`
+  (parse-only, captured with `-E 'not binary(zz_decoy)'`, carrying `build.rs`'s decoy on the status stream, never
+  counted). `captures.json` records each argv; the two filtered argvs are reconstructed from P1's evidence line, and
+  it says so. The parser refuses exit 104 over the pinned line *"error: creating test list failed"* with no status
+  line as `ListFailed`, and any other exit than 0 or 100 as `UnexpectedExit`, never tallied (an empty selection
+  exits 4). Nothing falls back to `cargo test`, under `Detect` or `Force`. Record T carries the ruling and the open
+  alternatives.
 
 The Node adapter needs no parser. `report.rs` already reads *"`numPassedTests`, `numFailedTests`,
 `numPendingTests`, `numTotalTests`"* from vitest's JSON reporter file.
@@ -455,6 +499,22 @@ every double.
   - any other non-zero status is `Err(NonZero)`.
 
   **Measure that mapping on the pinned `tsc` before relying on it**, and record the reading in record T's evidence.
+
+  *(dated 2026-09-26, s8c build, P5; the panel ruling on the P1 measurement, D21-62 D, provisional.)* On the pinned
+  `tsc 5.9.3` through `DEFAULT_PROGRAM`: `0` is `Ok(passing)`; `2` is `Ok(failing)` and covers config errors (a
+  tsconfig that is not JSON, an unknown tsconfig option, no inputs), so a broken tsconfig reads as a failing build;
+  `1` is `Err(NonZero)`, cannot-run (unknown CLI option, `-p` to a missing project, no `tsconfig.json`: tsc prints help
+  and checks nothing); any other non-zero status is `Err(NonZero)`. ~~The '`1` … (diagnostics present)' premise
+  above~~ is falsified for `1`. Through pnpm, every failure collapses to `1`, which fails closed to `Err`; the launcher
+  is `DEFAULT_PROGRAM`, never pnpm (DECISIONS-2026-09-09 #34, extended to `build` by record T). Record T carries the
+  mapping and the evidence. **Built**, in the Node adapter's `build` (one match on the exit status); `errors` counts
+  the `error TS<n>` lines of tsc's stdout with a floor of 1 under exit `2`, and `toolchain_version` is `<program> tsc
+  --version`'s answer. The four fixtures D21-62 D names are throwaway projects under this repository's git-ignored
+  `target/`, each with a `node_modules/.bin/tsc` shim onto the Node fixture's own installed `tsc` (so `npx` resolves
+  it locally, and no `tsconfig.json` sits above case (d)): (a) clean → `Ok(passing)`, (b) a type error →
+  `Ok(failing)` with `errors` 2, (c) a tsconfig that is not JSON → `Ok(failing)`, (d) no `tsconfig.json` →
+  `Err(NonZero { code: Some(1) })`. All four sit inside `build::a_type_error_is_ok_with_status_failing`, so the count
+  of new tests does not move; D21-62 D's mutant row (exit `1` read as `Ok(failing)`) is MND in §8c.9.
 - **Downstream.** `build-package`'s `built` check (`report.status == 'passing'`) can now see a red build. The
   resolver side of that check is `s8d`'s.
 
@@ -492,6 +552,47 @@ is that instrument, so the register takes no amendment.
 - no hit may read `is_ok()`, `is_err()` or `?` as a verdict. §8c.9 (11) keeps a code-line floor on the
 one site whose regression is silent: `review_pass.rs`.
 
+*(dated 2026-09-26, s8c build, P4.)* **Built, and the sweep read.** `rk_ports::toolchain` holds `TestOutcome` (public members,
+constructed through `TestOutcome::new`, which derives `status` with `TestStatus::of` and refuses a broken
+invariant as `Transport { Decode }` naming both numbers), `TestStatus` (serde `passing` / `failing` /
+`empty`), `TestRunner { name, version, companion_argv, foreign_lines }`, `Selection`, `RecordedWholeSuite`,
+`StepBound`, `VerbCall` and `VerbOutput`; `rk_ports::conformance::validate_report` runs inside
+`conform_toolchain`, which now also requires the row's build to read `passing` and its outcome `failed = 0`.
+Every row of the table above moved in the one slice. The `impl … for` count in `crates/rk-ports/src/` is 5.
+Three readings this package took, each failing closed and each named for the operator:
+- **The re-executor reads an EMPTY arm as no record**, like an `Err` arm (`Unverifiable { cannot_run }`):
+  a selection that executed nothing separates nothing, and AC-332 forbids reading an empty run as a pass.
+  Record T decision 2 names only the `Err` case; this is the stricter of the two readings, and it can never
+  produce a block.
+- **The kernel's `run_tool_step` reads `build`'s `status`**: until `s8d` binds the typed output, the step's
+  only verdict channel is its `Result`, so a `failing` report is `NonZero { code: None }` with the digest of
+  the report's JSON, never a walked step. Every step-reached call there passes `StepBound::Undeclared` until
+  the routing slice resolves the step's bound.
+- **Both adapters' `build` keep the pre-N25 reading at this slice** (exit 0 is `passing`, any other exit
+  `NonZero`), and neither enforces its `StepBound` yet: the `--message-format=json` read, the `tsc` mapping
+  (D21-62 D) and `min(step, construction)` land with their own slices, whose tests go red on this reading.
+The Node adapter keeps one class-(a) case: a non-zero exit whose reporter file names no failed test is
+still `Err(NonZero)` (nothing it can attribute failed, so the suite could not run).
+The grep sweep at build time had 34 hits. Toolchain `test` hits: `review_pass.rs` (reads `failed` and
+`status`), `conformance.rs` (`validate_report`, `passed`, `failed`), both adapters' test-support helpers, the
+Node `cancel.rs` (reads `Err(Timeout)` only) and the Rust `registry.rs` hit, which now reads `failed`.
+Toolchain `build` hits: `runtime/step.rs` (`build_verdict` reads `status`), `conformance.rs` (reads
+`status`) and the fakes' tests. The rest are not the port: `RunInputs::build` (`explain.rs`, `run.rs`,
+`replay.rs`, `resume.rs`), `DocsSite::build`, tokio's runtime `Builder::build`, and history comments that
+quote `toolchain.test(&[])`. No hit reads `is_ok()`, `is_err()` or `?` as a verdict.
+
+*(dated 2026-09-26, s8c build, P5.)* **Both adapters' `build` outcomes are built**, and the P4 note's third reading
+(*"Both adapters' `build` keep the pre-N25 reading at this slice"*) is history. The Rust adapter runs `cargo build
+--workspace --message-format=json` and reads the stream in `crates/rk-adapter-toolchain-rust/src/build.rs`
+(`read_build_stream`): `status` is the `build-finished` message's `success`, `errors` the `compiler-message` records at
+level `error`; no `build-finished` message, a `success` that disagrees with the exit code, or a line that is not
+cargo's JSON is `Transport { Decode }`. The same module reads the stream's `compiler-artifact` executables for the
+`smoke` and `package` handlers. The Node mapping is D21-62 D's (above). Reds, each run first against the pre-P5
+reading: `build::a_compile_error_is_ok_with_status_failing` failed on *"… never Err (record T decision 8):
+NonZero { code: Some(101), … }"*; `build::a_build_stream_without_build_finished_is_err` on *"… is Transport { Decode }
+… got Err(NonZero { code: Some(101), … })"*; the Node `build::a_type_error_is_ok_with_status_failing` on
+*"… never Err … NonZero { code: Some(2), … }"*.
+
 ### 8c.3 A selection is a type, and `"affected"` is the package-level affected set (D21-42 4c, adapter side)
 
 `test`'s selection is `&[String]` today. `s7a` §7a.3 calls that a routing (*"`test`'s selection type … is a
@@ -504,6 +605,47 @@ matches nothing and **exits 0**"*). Record T replaces the slice with a closed `r
 | `Filter(Vec<String>)` | libtest / vitest arguments. What `review_pass::selection_of` already produces from a repro's `--` tail (ADR-0162) | `-- <args>` as today | `-t` / file as today |
 | `Affected { changed: Vec<String>, recorded: Option<RecordedWholeSuite> }` | the change set, plus the most recent recorded whole-suite count (`run_id`, `toolchain_version`, `count`) the caller read from the store | below | refused by name: `Unsupported { capability: "affected-selection" }` from its `Probe::None` row (AC-328) |
 | `Named(String)` | a selection the adapter DECLARES | a name it does not declare is refused by name | same |
+
+*(dated 2026-09-26, s8c build, P4.)* The closed `Selection` is built in `rk-ports`, with every caller moved. At this slice both real
+adapters run `WholeSuite { reason }` (recording `reason`) and `Filter`, refuse `Affected` from their
+`affected-selection` registry row (both rows are still `Probe::None`) and refuse `Named` by name, `"e2e"`
+included. The Rust `Affected` rules below, the `Recorded` probe row and the fixture workspace's closure tests
+land with the affected-selection slice.
+
+*(dated 2026-09-26, s8c build, P5.)* **The Rust `Affected` rules are built**, in order, in
+`crates/rk-adapter-toolchain-rust/src/report.rs` over the pure `crates/rk-adapter-toolchain-rust/src/affected.rs`:
+- **Rule 1.** The shipped `affected-selection` row is re-dated `2026-09-26` and carries `Recorded { source }` naming
+  `crates/rk-adapter-toolchain-rust/tests/fixtures/workspace` and
+  `affected::affected_set_is_touched_crates_plus_reverse_dependency_closure`; `registry::gate` admits only a
+  `Recorded` row, a probe-less row refusing from the row (AC-328) and no row being the decode failure. Nothing
+  compares `verified_on`: the absent half holds, the stale half is not claimed (both facts, as rule 1 says).
+- **Rule 2** refuses an empty change set as `Unsupported` naming `affected-selection` and the empty set, before any
+  spawn. **Rule 3** reads `cargo metadata --format-version 1` (record T's own read) and maps each path to the member
+  whose manifest directory is its longest prefix **by path component**; the root `Cargo.toml`, `Cargo.lock`,
+  `rust-toolchain*` and `.cargo/` force the whole suite whatever member the root holds, as does any path in no member,
+  an absolute path or one with `..`. **Rule 4** follows every `resolve.nodes` edge kind, dev included, restricted to
+  workspace members, into `-p` flags in place of `--workspace` (the doctest companion over the `-p` set runs only over
+  the packages that carry a doctest-bearing library, since `cargo test --doc -p <bin-only>` refuses). **Rules 5-7** as
+  written; the recorded-version comparison is string equality with this call's `rustc -V`.
+- **The pure function** is `affected_packages(changed: &[String], metadata: &Metadata, policy_version: &str) ->
+  AffectedSet`, over `Metadata::parse(&serde_json::Value, project_root)` (also pure). `policy_version` is the rule
+  set's own version, `AFFECTED_POLICY = "rust-affected/1"`, which the set carries, so a set names the rules it was
+  computed by; the spelling is this build's, no record fixes it.
+- **`BasisReason::PolicyForced`'s note** is written in `crates/rk-types/src/verify.rs` with record T's reading, as a
+  plain `//` comment under the doc line, not a `///` line: a doc line is the exported schema's description, and a
+  changed description would move `schema_snapshot::schema_snapshot` and Checkpoint 5 for a note.
+- **`registry::ac328_affected_selection_unsupported_without_probe` keeps its name** and runs over a controlled
+  probe-less registry: `select_affected` refuses from the row, an `Affected` selection through the port is refused
+  from the row before any spawn, and the empty registry is still the decode failure. Its invented-probe half is
+  struck, not weakened: rule 1 honours any `Recorded` row, so that half asserted what record T now decides otherwise.
+  `registry::ac489_capability_registry_dated` reads `change_summary` probe-less and `affected-selection` `Recorded`
+  naming the workspace and the test, and `unsupported_tokens()` is `["change_summary"]`.
+- `select_affected` (inherent) now returns the `AffectedSet` over rules 1-4 under the construction bound.
+
+Reds: the four `affected::` rule tests failed first on the pre-P5 reading's `Unsupported { capability:
+"affected-selection" }` from the probe-less row (the closure test on the stub's *"not yet implemented: … the metadata
+reader is not built yet"*). `affected::a_named_selection_the_adapter_does_not_declare_is_refused_by_name` held on the
+pre-P5 reading (P4 built the `Named` refusal), and takes its red from mutant MA7.
 
 **The Rust `Affected` rules, in order.** Record T fixes them. The reasons come from the closed six (AC-352), and
 **no seventh is minted**.
@@ -521,12 +663,19 @@ matches nothing and **exits 0**"*). Record T replaces the slice with a closed `r
    *(Noted 2026-09-25 at `s8a`, D21-51: after ADR-0165 decision 9, ADR-0094 decision 1 still names the
    `cargo metadata` read for the adapter, but no longer for `classify` or the `Text` arm, so it no longer
    carries this rule alone. Record T's Decision must state the `cargo metadata --format-version 1` read itself.)*
+   *(dated 2026-09-26, s8c build: done. ADR-0169, record T, `proposed`, decision 7 rule 3 states the read itself,
+   and says this rule rests on that record rather than on ADR-0094 decision 1's clause.)*
    **A path in no package** — the root `Cargo.toml`, `Cargo.lock`, `rust-toolchain*`, `.cargo/` or any non-crate
    path — forces the whole suite. Record T picks the reason from the six and states why: the proposal is
    `PolicyForced`, with this rule as the adapter's declared policy. `PolicyForced`'s own doc in `rk-types` reads
    *"The pack's policy demanded the whole suite regardless"*. That names the PACK's policy, not an adapter's. Record T
    states its reading against that doc, and the doc takes a dated note with the record. This file does not choose
    further.
+   *(dated 2026-09-26, s8c build.)* ADR-0169 decision 7 rule 3 takes `PolicyForced` and states its reading: the
+   doc's *"The pack's policy demanded the whole suite regardless"* is read as *a declared policy demanded the whole
+   suite regardless*, with this rule declared as the Rust adapter's own policy, because of the six it is the only
+   reason meaning "a rule, not a probe or a count, forced the whole suite". The reading is flagged for the operator's
+   flip. The `rk-types` doc's dated note lands with the code that lands the rule; it is not written with the records.
 4. The affected set is the touched packages plus their **reverse-dependency closure** over the workspace's
    `resolve.nodes`, **including dev-dependencies**, because a test in `b` that dev-depends on `a` is affected by a
    change to `a`. The set becomes `-p <pkg>` flags in place of `--workspace`. **That is a deviation from ADR-0094
@@ -569,6 +718,21 @@ verbs and feeds; a verb's `live = true` implies `memo = false` on every step usi
 **One parser, not two.** `rk_kernel::workflow::memo::VerbRegistry` already parses `spikes/p9/registry.toml`'s
 `[verb]` shape for AC-018, refuses a row without a boolean `live`, and refuses an empty table. It is **extended**.
 Writing a second verb-table reader would give the same file two meanings.
+
+*(dated 2026-09-26, s8c build, P7.)* **Built** in `crates/rk-kernel/src/workflow/memo.rs`: `VerbRegistry` reads `[verb]` FIRST (a
+document with none is still `no_verb_table`, so AC-018's `[toolchain.feeds]` case is unchanged), then the
+source tables and the value tables; any other top-level table is refused (`unknown_table`). Every row
+must carry exactly the five columns (`Shape`, naming the verb, otherwise; `live` is still checked
+first). `timeout` is the bare key name, as `spikes/p9/registry.toml` spells it (`timeout =
+"test_timeout"`); `inputs` is an array of strings, `[]` when empty. `route` parses into the closed
+`Route { Port(PortMethod), Toolchain, Store, Git }`: a `port` row must name one of the four methods by
+its verb and declare that method's kind (`BuildReport`, `TestReport`, `LintReport`, `ChangeSummary`), or
+it is refused at load. `VerbEntry.outputs` is now a required `String` (it was `Option<String>`).
+Three entry points: `from_toml(src)` (refuses a `path` source entry by name, because it has no
+`.redkiln/` to check it against), `from_toml_at(src, redkiln_dir)` and `load_file(path)`. The two AC-018
+fixtures under `crates/rk-kernel/tests/fixtures/registries/verbs/` gain `inputs` and `route` by a dated
+header note (`deploy`/`metrics` `toolchain`, `test`/`lint` `port`); nothing else in them moved, and
+`memo::ac018_live_verb_may_not_memoise` is green over them.
 
 Every row declares:
 
@@ -628,6 +792,13 @@ fixes what `smoke`, `sca_scan` and `package` do, and `s8g` does not decide it ag
 - **`run_verb` is not a patch applier.** ADR-0162's refusal of `ReproKind::Mutate` stands, and no `mutate` row
   lands. Record V says so, because that forbids bullet (*"forbids applying a mutation patch from `rk-cli`"*) is the
   one a generic method would make tempting.
+- *(dated 2026-09-26, s8c build, P4.)* **Built.** The trait declares seven methods, in this order: `detect`, `build`, `test`, `lint`,
+  `classify`, `change_summary`, `run_verb` (`source_parse::toolchain_port_declares_exactly_seven_methods`;
+  Checkpoint 8c (4) reads 7 and its control 6). Every double implements it: `FixtureToolchain` answers the
+  verbs `with_verb` scripted and refuses the rest by bare name; `UndetectedToolchain`, `ScriptedToolchain`
+  and both real adapters refuse every verb by name at this slice; `CountingToolchain` counts it, and records
+  the `StepBound` of every step-reached call. The verb handlers and the kernel's decode table land with their
+  own slices.
 
 **Typed outputs.** `BuildReport` (§8c.2), `SmokeResult`, `ScanReport`, `BuildArtifact`, `SetupResult`, `ItemRefs` and
 `ReleaseTag` are added as
@@ -652,6 +823,17 @@ Keep them `oneOf`-free anyway, because Checkpoint 5 greps the snapshot directory
     removal that fails is `Err` naming the path, never a silent leak. The handler runs no git itself, so ADR-0105
     clause 5's write set is untouched. If an item needs the directory to be a repository, making it one is that
     checklist row's own argv, which is `s8g`'s.
+  - *(dated 2026-09-26, s8c build, P5.)* **Built.** The handler runs `cargo build --workspace
+    --message-format=json` (a build that does not compile is `NonZero`, cannot-run), then each row against the
+    executable that build produced, found by target name in the stream's `compiler-artifact` messages; a row naming a
+    binary the build did not produce is `Transport { Spawn }` naming it. The scratch directory is
+    `<scratch>/smoke-<pid>-<n>`, `<scratch>` the adapter's `Config` scratch, which `rk-cli` sets to ADR-0137 clause 6's
+    `<git-common-dir>/redkiln/tmp`; created fresh per call and removed on every path, success, failing row and `Err`
+    alike. **The item form the handler reads** is `{ id, argv, cwd, expect_exit, stdout_contains }`, the one stdout
+    predicate being *the row's stdout contains this text*: record V fixes the four-part form and leaves the
+    predicate's spelling to the handler, and `s8g` §8g.6 authors its items in it. `cwd` admits `scratch` only.
+    `.git/redkiln/tmp` held the same entries before and after the P5 runs (listed; no `smoke-*` there), and the tests
+    assert no `smoke-*` directory survives under their own scratch on either path.
 - **`ScanReport`**: `critical`, `high`, `medium`, `low` and **`unrated`**, each required; one entry per advisory
   (id, package, version, severity or none); and, **per tool**, the tool's name and version, its advisory database's
   local path and **that database's commit** (D21-42 6a). `cargo audit` and `cargo deny` keep separate databases, so
@@ -668,15 +850,39 @@ Keep them `oneOf`-free anyway, because Checkpoint 5 greps the snapshot directory
   this stage amends. The commit that lands the `package` handler's HEAD read either amends guard (6)'s allowlist
   by a dated note in `s8a`, or places the read where the allowlist already admits it, and records the choice here.
   `s8e`, `s8i` and `s8j` re-run Checkpoint 8a whole, so leaving the pin unamended turns them red.)*
+  *(dated 2026-09-26, s8c build, P5; D21-62 C, provisional; the choice this note asks to be recorded.)* **The
+  allowlist is amended**, the first of the two choices: the `sca_scan` database `HEAD` reads and the `package`
+  handler's `HEAD` read share ONE `rk_git` read, `rk_git::head::head_commit` (`crates/rk-git/src/head.rs`, a gix read
+  that opens the repository AT the directory and spawns nothing), and one dated amendment of guard (6) in `s8a` admits
+  it on its code line (`sed -E 's/\brk_git::(diff|path|head)\b//g'`), adds a pass control for the head read and a fail
+  control beside it, and holds `head.rs` to the same exec-route ban as `diff.rs` and `path.rs`. Measured: the
+  amended bans, extracted from `s8a`'s own bytes, pass over the tree (rc 0); the same ban with the pre-amendment
+  allowlist fires on the two `rk_git::head::head_commit` code lines in `verbs.rs` (rc 1).
 - **`SetupResult`**: one row per declared project (its path, the argv run, and the sha256 of the lockfile it
   installed from), plus the toolchain it ran for. It has no `status`, because a failed install is never `Ok`
   (below).
+- *(dated 2026-09-26, s8c build, P4.)* **Built** in `crates/rk-types/src/verb_output.rs`, with `BuildStatus` and `SmokeStatus` as plain
+  lowercase string sets and `Severity` as the four bands; an `Option` member (an advisory's `severity`) is
+  required PRESENT through `deserialize_with = "Option::deserialize"`, because serde otherwise reads a
+  missing `Option` as `None`. `verb_outputs::every_verb_output_refuses_unknown_fields_and_has_no_default`
+  asserts, for all seven, an unknown member refused and every member required at every object, no
+  `Default` on a code line, none in `EXPORTED`, and no `oneOf` in the derived schema. **Not fixed by any
+  record, and named rather than decided:** the member sets of `ItemRefs` (`ids`) and `ReleaseTag` (`tag`,
+  `target`, `rollback_target`), the smallest `s8f` §8f.7 and `s8g` §8g.6 read; each owner widens its own by
+  record.
 
 **The scan's semantics are the ones `s8g` §8g.6 reads, and record V fixes them so that the two files agree.** Both
 `cargo audit --json` and `cargo deny check advisories` run. Severity maps each advisory's CVSS base score onto the
 CVSS v3 qualitative bands: `critical` ≥ 9.0, `high` 7.0–8.9, `medium` and `low` below. An advisory with no CVSS is
 `unrated`. The database commit is read from the report's own database member, and **if the installed tool emits no
-such member, the scan refuses by name** rather than record an unknown database. The verb runs **offline, against a
+such member, the scan refuses by name** rather than record an unknown database. *(dated 2026-09-26, s8c build, P5;
+D21-62 C, provisional: that rule is superseded in-stage by record V = ADR-0170, proposed. P1 measured: audit, *"Under
+--no-fetch: last-commit = null, last-updated = null (real db and fixture db alike; also with --stale)"*; deny, *"NO
+database member at all"*. The adapter passes each tool an explicit database (audit `--db`; deny a generated config
+whose `db-path` holds exactly one child, verified against deny's pinned `-L debug` line *"Opening advisory database at
+'<path>'"*), reads that database's `HEAD` through the shared `rk_git::head` read before and after the tool runs, and
+refuses by name on `database-not-a-checkout`, `database-moved-mid-scan`, `database-member-disagrees`,
+`deny-db-path-children` and `deny-db-path-line`, recording no `ScanReport`.)* The verb runs **offline, against a
 pinned local database** (`--no-fetch` or its equivalent), because a scan whose database moved mid-lane is two
 instruments (golden constraint 8). **The two databases are two pins.** On this box on 2026-09-24, `cargo audit` reads
 `~/.cargo/advisory-db` and `cargo deny` reads `~/.cargo/advisory-dbs/advisory-db-<hash>`. Each is its own git
@@ -688,6 +894,28 @@ before and after the replay. **Measure first, before the handler is written:**
 - that both tools emit the database member and a per-advisory CVSS on 0.22.2 and 0.20.2;
 - whether scoring a CVSS vector needs a new dependency. If it does, that is a `deny.toml` licence question, and
   record V names the crate.
+
+*(dated 2026-09-26, s8c build, P5.)* **MEASURED** (P1): the database member is FALSE for both tools (audit's is null
+offline; deny has none); a per-advisory `cvss` is TRUE for both (a vector string or null, null counting as unrated).
+Scoring a vector needs a scorer; record V names the RustSec `cvss` crate (MIT OR Apache-2.0) or in-tree code. **In-tree
+code landed**: `verbs::severity_of` computes the CVSS v3.1 base equations and `Roundup` (v3.0 vectors scored by the
+same equations), so no dependency, no `Cargo.lock` change and no `deny.toml` question. **One case record V does not
+settle, flagged for the operator:** 63 of the RustSec database's vectors are `CVSS:4.0` (measured at stage open,
+`grep` over `~/.cargo/advisory-db/crates`: 335 v3.1, 33 v3.0, 63 v4.0). The in-tree scorer scores v3 only, and a
+matched advisory carrying a v4.0 vector refuses the scan by name (`cvss-unscorable`), fail-closed, rather than be
+counted `unrated` (it has a CVSS) or banded by a guess. Only matched advisories are scored, and none of the fixture's
+is v4.0. The two readings the operator may prefer instead: the `cvss` crate's v4.0 scorer (a new dependency), or
+counting an unscorable vector as `unrated` (which `sca-scan` already routes to `scan.accept-findings`).
+**Built** in `crates/rk-adapter-toolchain-rust/src/verbs.rs`: both tools run offline under the call's bound; the
+tools' `vulnerabilities` are the advisories, merged by `(id, package, version)` and sorted; their informational
+`warnings` (unmaintained, yanked) are not advisories with a severity and are not counted. `ScanReport.tools` is
+`[cargo-audit, cargo-deny]`, each with its version (the last word of `cargo <tool> --version`), the database path the
+adapter gave it and the commit the adapter read. The tests git-initialise two copies of the fixture database with
+DIFFERENT commits (audit's `--db`; the only child, `advisory-db-3157b0e258782691`, of deny's `db-path`) and compare
+against an independent `git rev-parse HEAD` through the git CLI. **Refusal (b) is asserted over the comparator
+`verbs::db_unmoved` only**: no seam that moves `HEAD` between the adapter's two reads is added, so the end-to-end
+mid-scan move is not claimed. The handler's inputs are `audit_db` and `deny_db` (absolute paths): the adapter reads no
+environment (AC-217), so the default database locations are the resolver's to supply (`s8d`), not the adapter's.
 
 The tests use a fixture database under `crates/rk-adapter-toolchain-rust/tests/fixtures/advisory-db/`. It holds one
 advisory with a severity and one without, and it matches a crate in a fixture lockfile.
@@ -709,6 +937,26 @@ checks, and **only then** is the step's bound resolved (§8c.6). So `rolling-dep
 bare verb name, as ADR-0135 clause 2 requires, and never by its key. That step's verb has no row, and its
 `timeout_secs` is the `unmeasured` `${toolchain.deploy_timeout}`.
 `tool_verb_routing::a_verb_with_no_row_refuses_by_its_bare_name_before_its_bound_is_resolved` pins the order.
+
+*(dated 2026-09-26, s8c build, P7.)* **Built** in `crates/rk-kernel/src/runtime/step.rs`. `MAPPED_VERBS` is gone; `run_tool_step` runs
+(1) the lookup (no row: `Unsupported { capability: "<verb>" }`, bare), (2) ADR-0148's sentence for the
+`port` `test` row, (3) the route match (exhaustive, no wildcard; a `toolchain` row with any declared input
+refuses naming the verb and its FIRST input; `store` refuses naming the route and `s8f`, `git` the route
+and `s8g`), (4) `resolve_bound` (record B), (5) the port. A `toolchain` row calls `run_verb` with empty
+inputs and the resolved bound, and `decode_verb_output(row.outputs, &output)` is the closed decode table:
+a kind other than the row's is `Transport { Decode }` naming both; the table decodes `BuildReport`,
+`SmokeResult`, `ScanReport`, `BuildArtifact`, `SetupResult`, `ItemRefs` and `ReleaseTag` into their
+`rk-types` structs, a value that does not decode is `Decode` naming the kind, and any other kind is
+`Decode` naming it as having no entry. The routing reaches the kernel as a value:
+`runtime::step::ToolRouting { registry, values }`, bound by `Runtime::with_tool_routing` and threaded by
+the new `replay::resume_routed`; `Runtime::new` and `replay::resume` bind NONE, so a runtime without a
+registry refuses every verb, the four port verbs included, by its bare name (no built-in table stands
+behind the registry). Three existing test files bind a test-only registry for that reason:
+`check_cannot_dispatch.rs`, `walk_semantics.rs` (kernel) and `toolchain.rs` (rk-cli).
+**Flagged, not decided by any record:** until `s8d` binds step outputs, the decoded value's only channel is
+the step's `Result`, so a `failing` `BuildReport` (as `build_verdict` already did) and a `SmokeResult`
+whose `status` is not `passing` (`failing` or `empty`) fail the step as `NonZero { code: None }` with the
+report's digest; the other five kinds are typed and dropped.
 
 ⚠️ **On the shipped catalog, therefore, nothing new walks at `s8c`.** The three verb implementations are proved
 over fixtures, through the port, by the adapter's own tests (§8c.9 (7)). The positive control that the executor
@@ -741,6 +989,22 @@ proposal:
 - **The Node adapter** refuses `setup` by name at this stage, as it refuses every verb, and `[toolchain.node]` is all
   `unmeasured`. An install over a Node project's own root is owed with the first Node self-hosting run. It is not
   built here.
+- *(dated 2026-09-26, s8c build, P5.)* **Built.** The Rust handler takes `projects` (paths relative to the project
+  root; an absolute path or one with `..` is refused) and runs `pnpm install --frozen-lockfile --prefer-offline --dir
+  <project>` in the project root per project, in order; a non-zero install is `Unsupported` naming `setup`, the
+  vector, the project and the exit code; an empty set is `Ok` and spawns nothing. `pnpm` is
+  `Config::tool_program("pnpm", DEFAULT_PNPM)`, set with `Config::with_tool_program`; `DEFAULT_PNPM` is `pnpm.cmd` on
+  Windows (where `std` resolves a bare name to `.exe` only) and `pnpm` elsewhere. **Not wired, and owed to the
+  routing slice or `s8d-ii`:** `rk-cli`'s `real_toolchain` does not yet pass `resolved.toolchain_programs["pnpm"]`
+  to `with_tool_program`, so a configured pnpm is not honoured until it does; nothing calls `setup` with real inputs
+  before `s8d-ii`. The Node adapter refuses `setup` by name (`verbs::an_undeclared_verb_is_refused_by_name`, Node).
+  *(dated 2026-09-26, s8c build, P7.)* ~~*"`rk-cli`'s `real_toolchain` does not yet pass `resolved.toolchain_programs["pnpm"]`"*~~: wired. The
+  selection loop (`verbs::run::choose_toolchain`) calls `with_tool_program("pnpm", …)` on the Rust
+  adapter's `Config` when `[adapters] toolchain_programs` carries a `pnpm` key; absent, `DEFAULT_PNPM` stands.
+  No test drives a configured `pnpm` through `rk-cli`; nothing calls `setup` with real inputs before `s8d-ii`.
+- *(dated 2026-09-26, s8c build, P5.)* **Every other verb** is refused by its bare name on the Rust adapter
+  (`item_create`, `release_tag`, `mutate`, `release_record`, the port verbs `test` and `build` when asked through
+  `run_verb`, and the empty name), and every verb on the Node adapter.
 
 **The source tables: `[checklist.*]`, `[kb.*]` and `[feed.*]` (D21-43 N14).** N14 reads: *"**Declared
 `[checklist.*]`, `[feed.*]` and `[kb.*]` tables in s8c's registry.** Undeclared keys are refused by name, and content
@@ -774,6 +1038,17 @@ is authored only for the keys the lanes reach."* ADR-0040's grammar names the th
 
 The loader reads declared paths only. It does not walk `.redkiln/` recursively, so D21-44's exclusion of
 `worktrees/` has no site in the loader. The `.worktreeinclude` reader below is this stage's one site for it.
+
+*(dated 2026-09-26, s8c build, P7.)* **Built** in the same `VerbRegistry`. Load refusals are `VerbRegistryError::Source { entry, detail }`,
+the entry named as `checklist.<id>`, `kb.<atom>` or `feed.<toolchain>.<name>`: both forms or neither
+(an empty string counts as absent), a key other than the two forms, a `path` that is not plain-relative
+(any `..`, root or prefix component), a `path` that does not exist, a checklist with no `[[item]]` or an
+empty atom (*"holds no item"*), and a feed `verb` that is not a row. Resolution is
+`VerbRegistry::resolve_source(toolchain, input)` over `checklist:<id>`, `kb:<atom>` and
+`toolchain:<feed>`, a trailing `?` marking the input optional; it returns `Path`, `FeedVerb` or `Null`,
+or refuses `Undeclared` (optional or not), `Unauthored` / `Unprovided` (mandatory only) or `NotASource`.
+The feed table is chosen by the `toolchain` argument, the item's `toolchain` facet value, which is data
+the resolver (`s8d`) holds; the kernel compares it against no adapter identity.
 
 **Which keys, measured** over the step `inputs` of the 102 files in `.redkiln/catalog/` at `a6349b6`. There are
 **50** distinct keys:
@@ -817,6 +1092,32 @@ this table, each by a dated line:
 
 The census test (§8c.9) counts the table, so a move cannot be silent.
 
+*(dated 2026-09-26, s8c build, P8.)* **Shipped.** `.redkiln/registry.toml` declares the fourteen keys above and no
+other: six `[checklist.*]` and four `[kb.*]` entries with a `path`, `[checklist.smoke]` `unauthored` naming `s8g`
+§8g.6, and `[feed.rust.*]` / `[feed.node.*]` `backlog`, `logs` and `sbom`, each `unprovided` with its reason. The ten
+content files are authored under `.redkiln/checklists/` (`closure`, `docs-diataxis`, `fix-scope`, `gherkin-quality`,
+`retro`, `risk-register`, each a top-level `source` and `[[item]]` rows of `id` / `text`) and `.redkiln/kb/`
+(`spec-conventions`, `refactoring-catalog`, `estimation-history`, `retro-format`, each with a `source:` line). Every
+`source` names its passage: the activity's row in `references/research/2026-09-07-activity-catalog-raw.md` (the raw
+catalog the process-catalog proposal was seeded from) and the activity's own rationale and policy step in
+`.redkiln/catalog/`. `kb/estimation-history.md` says plainly that no estimate has been recorded, because no run has
+sized an item. Re-measured at `6f70e47` (P8): 101 source inputs, 51 spellings, 50 keys (27 / 12 / 11), unchanged
+from `a6349b6`; `source_registry::the_catalog_source_census_is_fifty_with_fourteen_declared` asserts the walk against
+a text census and the 14 / 36 split on both toolchains.
+**The rows landed** (`[verb]`, the five columns, no `side_effecting`): `test` (`port`, `TestReport`, `test_timeout`,
+`["selection"]`), `build` (`port`, `BuildReport`, `build_timeout`, `[]`), `lint` (`port`, `LintReport`, `scan_timeout`,
+`[]`), `change_summary` (`port`, `ChangeSummary`, `build_timeout`, `["range"]`), `smoke` (`toolchain`, `SmokeResult`,
+**`live = true`**, `deploy_timeout`, `["checklist"]`), `sca_scan` (`toolchain`, `ScanReport`, `scan_timeout`,
+`["audit_db", "deny_db"]`), `package` (`toolchain`, `BuildArtifact`, `build_timeout`, `["sha", "binaries"]`), `setup`
+(`toolchain`, `SetupResult`, **`live = true`**, `setup_timeout`, `["projects"]`), `item_create` (`store`, `ItemRefs`,
+`build_timeout`, `[]`) and `release_tag` (`git`, `ReleaseTag`, `build_timeout`, `[]`). `outputs`, `live` and `timeout`
+are `spikes/p9/registry.toml`'s own for the verbs it carries. **Flagged, not decided by any record:** `release_tag`
+has no spike row, so its `timeout = "build_timeout"` (the key the spike gives `release_record` and `verdict_record`)
+and `live = false` are P8's choices; the `toolchain` rows' `inputs` are the names P5's handlers read (P5's flag
+above); the `store` / `git` rows declare `[]`, the names being their builders'. `smoke`'s row timeout is the spike's
+`deploy_timeout`, `unmeasured` on both toolchains; every shipped `smoke` step carries a literal `timeout_secs = 600`,
+so no step resolves the row's key.
+
 **The `.worktreeinclude` reader (D21-45 W3).** W3 reads: *"**Honour the project's existing `.worktreeinclude`**,
 the same file with the same semantics (ignored ∩ matched, symlinks skipped), for files like `.env`."* This stage
 builds the reader. `s8d-ii` does the copy, at creation (D21-46 R1). The reader is
@@ -847,6 +1148,32 @@ builds the reader. `s8d-ii` does the copy, at creation (D21-46 R1). The reader i
   needs a privilege this box may not grant. The OS-level case is not asserted here, and §8c.11 says so.
 - **`LC_ALL=C`** on these calls is W1's rule, which is `s8d-ii`'s. The reader goes through `GitExec` and inherits
   whatever `s8d-ii` sets there.
+- *(dated 2026-09-26, s8c build, P6.)* **Built** in `crates/rk-git/src/worktree_include.rs`, as specified above:
+  `carry_set(exec: &GitExec, repo_root: &Path) -> Result<CarrySet, GitError>` and the pure core
+  `select_carry(matched, ignored, kinds: &Kinds) -> Result<CarrySet, CarryRefusal>`. `Kinds` holds the canonical root
+  and one `EntryKind` per candidate (`File { canonical }`, `Symlink`, `ReparsePoint`, `NotAFile`), read with
+  `symlink_metadata` and never followed. On Windows a reparse point is read from `FILE_ATTRIBUTE_REPARSE_POINT`
+  (`0x400`). `CarrySet { carried, skipped }` is in byte order, and each `Skipped` names its path and its reason
+  (`symlink`, `reparse-point`, `not-a-regular-file`, the last for a directory or a vanished file). The escape refusals are
+  named `carry-path-absolute`, `carry-path-prefixed`, `carry-path-parent-component` and `carry-path-outside-root`. Two
+  more cover inputs that should not occur: `carry-path-unstatted` (a candidate with no kind) and `carry-path-non-utf8`.
+  Components are read before `is_absolute`, so `C:/x` on Windows is named *prefixed*.
+  Three changes outside the new module, each flagged because no record names it:
+  1. **`GitError` gains `CarryRefused { refusal }`.** The signature above requires a `GitError`, and the enum's doc
+     says *"Closed; extended only by a successor record."* `is_precondition()` is `true` for it. No record names this
+     variant; it is flagged for the operator beside `LsFiles` and `CheckIgnore` (*"stand as reads under clause 5"*).
+  2. **`GitExec::run_with_stdin`.** `check-ignore --stdin` needs a stdin, and the wrapper had none. The one
+     `std::process::Command::new("git")` literal moved from `run_with_env`'s body into a private `spawn`. `run_with_env`
+     now calls `spawn` with `None`. The literal is still the workspace's only code-line hit, and the Checkpoint 6 greps
+     read 1 code line, `hooksPath` ≥ 1 and `ifexists` ≥ 1. The stdin is written from a scoped thread while the output is
+     read. A broken pipe under a non-zero exit is reported as the exit (`NonZeroExit`), not as a spawn fault.
+  3. **`s8d-ii`'s wording.** It names the literal's site as `run_with_env`; a dated note there points at `spawn`. Its
+     `LC_ALL` grep reads the whole of `git_exec.rs`, so it is unaffected.
+
+  `check-ignore`'s exit 1 is read from the exit code, never stderr (ADR-0077:70). **That arm, where no listed path is
+  ignored, is not exercised by the five tests:** each of their repositories has at least one ignored match. An
+  `.worktreeinclude` that is present but a directory, or a symlink, is handed to git as it stands. W1's symlink guards
+  are `s8d-ii`'s.
 
 ### 8c.5 The per-toolchain value table (D21-42 4a), and the measurement that is its warrant
 
@@ -862,6 +1189,33 @@ absent key by name** (§8c.6).
 *"`rk-kernel` contains no comparison against an adapter identity"*. So `rk-cli`, which already holds the name
 `real_toolchain` chose, selects the table for that adapter's toolchain. It hands the kernel a flat
 `ToolchainValues` (key → seconds, or key → `unmeasured`). The kernel never sees `rust`.
+
+*(dated 2026-09-26, s8c build, P7.)* **Built.** `rk_kernel::workflow::memo::ToolchainValues` maps key → `ToolchainValue::{Secs(NonZeroU64),
+Unmeasured { reason }}` and carries no name; `ToolchainValues::unselected(reason)` is the table-less
+case, under which every key refuses naming the reason. `VerbRegistry::values_for(<facet value>)` builds
+one from `[toolchain.<name>]`. The loader (`VerbRegistryError::Value`, naming `toolchain.<name>.<key>`)
+admits, per key, exactly: `{ unmeasured = "<non-empty>" }`; a value with exactly `secs` (a positive
+integer), `measured` (a non-empty list of non-negative numbers, or inline tables each carrying a numeric
+`secs`, so a network reading can be labelled), `rule`, `pin` (40 lowercase hex) and exactly one of
+`command` / `source`; or, for the three named declaration rows (`setup_projects`, `package_binaries`,
+`claims`) only, exactly `{ value = <any>, source = "<non-empty>" }` (the row's shape, which P8 writes
+the shipped `setup_projects` in). Declaration rows are not in `ToolchainValues`. **Beyond the letter of
+this section, flagged:** for a `command` (measured) value the loader also recomputes ADR-0170 decision 10's
+rule, `60 × ⌈2 × max(measured) / 60⌉`, and refuses a `secs` that differs (the record forbids *"a warrant
+whose `rule` is not decision 10's"*); a `source` (cited) value is not recomputed, because X4's 4,800 s
+is the operator's value and not the rule's. In `rk-cli`, `verbs::run::choose_toolchain` is ADR-0137's
+selection loop (ADR-0149's per-candidate reports handed to a callback; `real_toolchain` is that loop
+printing them, as before) and returns the chosen adapter's NAME with the toolchain;
+`verbs::run::toolchain_of` maps `rk-adapter-toolchain-rust` → `rust` and `rk-adapter-toolchain-node` →
+`node` (a closed match, the one place a name meets a table); `verbs::run::tool_routing(worktree,
+adapter)` loads `<worktree>/.redkiln/registry.toml` (the worktree the catalog is read from) and hands the
+kernel `ToolRouting` through `run_with_advance` → `resume_and_read` → `replay::resume_routed`. **An absent
+`registry.toml` binds no registry**, so every `tool` step refuses by its bare verb name; a registry that
+does not load exits `ConfigError` naming it. That absent-file reading is flagged: it is the honest state
+of a tree with no verb table (the `pack-min` fixtures carry no `tool` step), and it stops mattering here
+when P8 ships `.redkiln/registry.toml`. `run_with` (the in-process seam) binds none. Also wired here,
+owed by P5 to *"the routing slice"*: the Rust adapter's `Config` is given `toolchain_programs["pnpm"]`
+through `with_tool_program` when the map carries one.
 
 **What each key's warrant is, for `[toolchain.rust]`:**
 
@@ -887,6 +1241,8 @@ from its own class's recorded maximum once one exists."* Record V names the rule
 - **Until then 4,800 s stands.** It is never re-derived from a median, or from a class other than the key's own.
 - **This stage dispatches nothing, so it records no duration.** The stages that run the fixture proofs and the real
   dispatches record each one's duration. §8c.12 reports that obligation to them.
+- *(dated 2026-09-26, s8c build.)* ADR-0170 decision 11 carries this re-derivation rule as written above, with
+  decision 10's rule as *the same `rule`*.
 
 **The table also admits declaration rows beside the timeouts.** A declaration row is a fact about the toolchain
 that is not a duration, so it carries a `source` rather than a `measured` list. Three are expected:
@@ -906,6 +1262,16 @@ example, *twice the slowest reading, rounded up to the minute*). Golden constrai
 against the slow one"*. **Write the rule into the record before the readings are taken, and never choose it after
 seeing which value it makes convenient.** A value above the construction bound is legal. §8c.6's `min` makes the
 construction bound win, and the record says so rather than clamping the value.
+
+*(dated 2026-09-26, s8c build, written before any §8c.5 reading exists: the measurement script below has not run.)*
+**The rule is ADR-0170 decision 10**: `secs = 60 × ⌈(2 × max(measured)) / 60⌉`, twice the slowest reading (over every
+pass and, where a call spawns several children, every child of every pass), rounded up to the next whole minute;
+never a median or a mean. It is this section's own example, adopted verbatim so that no reading informed the choice.
+The whole-suite wall times P1 recorded while capturing the goldens (170.5 s under `cargo test`, 90.2 s under nextest,
+warm, in the main checkout) are not §8c.5 readings, and no value is derived from them. Applied to the cited keys,
+the rule gives `review_timeout` 9,180 s from AC-223's 4,561 s; `implement_timeout` and `repro_timeout` keep X4's
+4,800 s, the operator's value, which the rule over the same borrowed reading would put at 9,180 s. ADR-0170 states
+the two side by side for the flip.
 
 **What "cold" must mean.** It is the condition the adapter meets in a run-owned worktree, which lives at
 `.redkiln/worktrees/<item>` from `s8d-ii` on (D21-44; D21-46 R1). That condition has three parts:
@@ -974,17 +1340,33 @@ t4=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-test" cargo nextest run --man
 [ "$rc" -eq 0 ] || { echo "FAIL: the run child is RED (rc=$rc) — a red suite's wall time is not the warrant for a green one"; printf '%s\n' "$out" | tail -20; git worktree remove --force "$mw"; exit 1; }
 t12=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-test" cargo test --manifest-path "$mw/Cargo.toml" --workspace --doc --no-fail-fast 2>&1); rc=$?; t13=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the doctest companion child is RED (rc=$rc)"; printf '%s\n' "$out" | tail -20; git worktree remove --force "$mw"; exit 1; }
-t6=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-build" cargo build --manifest-path "$mw/Cargo.toml" --workspace 2>&1); rc=$?; t7=$(date +%s)
+# (dated 2026-09-26, s8c build, P8) the port's `build` runs `cargo build --workspace --message-format=json` (ADR-0169;
+# the Rust adapter's `build`), so the build child is timed on that argv. The struck line is the one it replaces:
+# ~~t6=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-build" cargo build --manifest-path "$mw/Cargo.toml" --workspace 2>&1); rc=$?; t7=$(date +%s)~~
+t6=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-build" cargo build --manifest-path "$mw/Cargo.toml" --workspace --message-format=json 2>&1); rc=$?; t7=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the cold build rc=$rc"; printf '%s\n' "$out" | tail -20; git worktree remove --force "$mw"; exit 1; }
-t8=$(date +%s); out=$(cargo audit --file "$mw/Cargo.lock" --no-fetch --json 2>&1); rc=$?; t9=$(date +%s)
+# (dated 2026-09-26, s8c build, P8) record V = ADR-0170 decision 5 (D21-62 C) fixes the verb's two commands: audit is
+# given `--db`, and deny is given a generated config whose `[advisories] db-path` is the parent holding exactly one
+# database, with `-L debug --format json … --audit-compatible-output`. §8c.5's own rule (*"take the reading again
+# with the command the verb runs"*) moves both scan children onto those argvs; the databases are the two this box's
+# tools read by default, and each HEAD is printed. The struck audit line is the one it replaces:
+# ~~t8=$(date +%s); out=$(cargo audit --file "$mw/Cargo.lock" --no-fetch --json 2>&1); rc=$?; t9=$(date +%s)~~
+adb="$HOME/.cargo/advisory-db"; dparent="$HOME/.cargo/advisory-dbs"; dcfg="$mw/.s8c-measure-deny.toml"
+adb_head=$(git -C "$adb" rev-parse HEAD 2>&1) || { echo "FAIL: the audit database $adb is not a checkout"; git worktree remove --force "$mw"; exit 1; }
+ddb_head=$(git -C "$(ls -d "$dparent"/advisory-db-*/ | head -1)" rev-parse HEAD 2>&1) || { echo "FAIL: the deny database under $dparent is not a checkout"; git worktree remove --force "$mw"; exit 1; }
+[ "$(ls -d "$dparent"/advisory-db-*/ | wc -l)" -eq 1 ] || { echo "FAIL: $dparent holds other than one database (refusal d)"; git worktree remove --force "$mw"; exit 1; }
+printf '[advisories]\ndb-path = "%s"\n' "$(cygpath -m "$dparent")" > "$dcfg" || { echo "FAIL: could not write the deny config"; git worktree remove --force "$mw"; exit 1; }
+t8=$(date +%s); out=$(cargo audit --json --no-fetch --db "$(cygpath -m "$adb")" --file "$mw/Cargo.lock" 2>&1); rc=$?; t9=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the offline audit scan rc=$rc — no local advisory database, or advisories on this tree; read it"; printf '%s\n' "$out" | tail -10; git worktree remove --force "$mw"; exit 1; }
 # (dated 2026-09-26, s8c build) cargo-deny 0.20.2 has no `check --disable-fetch` (measured at stage open: its
 # offline switch is the top-level `--offline`). The struck line is the proposal's; the verb runs the line after it.
 # ~~t10=$(date +%s); out=$(cargo deny --manifest-path "$mw/Cargo.toml" check --disable-fetch advisories 2>&1); rc=$?; t11=$(date +%s)~~
-t10=$(date +%s); out=$(cargo deny --offline --manifest-path "$mw/Cargo.toml" check advisories 2>&1); rc=$?; t11=$(date +%s)
+# (dated 2026-09-26, s8c build, P8) ~~t10=$(date +%s); out=$(cargo deny --offline --manifest-path "$mw/Cargo.toml" check advisories 2>&1); rc=$?; t11=$(date +%s)~~ is struck for the verb's form (above).
+t10=$(date +%s); out=$(cargo deny --offline -L debug --format json --manifest-path "$mw/Cargo.toml" --config "$dcfg" check advisories --audit-compatible-output 2>&1); rc=$?; t11=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the offline deny scan rc=$rc — no local advisory database, or advisories on this tree; read it"; printf '%s\n' "$out" | tail -10; git worktree remove --force "$mw"; exit 1; }
 # (dated 2026-09-26, s8c build) the line now names the runner and prints the companion child's time (`doc`).
-echo "MEASURED pin=$pin path_len=${#mw} runner='$runner' setup=$((ts1-ts0)) setup_downloaded=${dl:-none-reported} list_cold=$((t1-t0)) list_ignored=$((t3-t2)) run=$((t5-t4)) doc=$((t13-t12)) build_cold=$((t7-t6)) scan=$((t9-t8+t11-t10)) (audit=$((t9-t8)) deny=$((t11-t10)))"
+# (dated 2026-09-26, s8c build, P8) and each advisory database's HEAD, read before the scan children.
+echo "MEASURED pin=$pin path_len=${#mw} runner='$runner' setup=$((ts1-ts0)) setup_downloaded=${dl:-none-reported} list_cold=$((t1-t0)) list_ignored=$((t3-t2)) run=$((t5-t4)) doc=$((t13-t12)) build_cold=$((t7-t6)) scan=$((t9-t8+t11-t10)) (audit=$((t9-t8)) deny=$((t11-t10))) audit_db=$adb_head deny_db=$ddb_head"
 out=$(git worktree remove --force "$mw" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the measurement worktree did not remove (rc=$rc) — Halt 6 if a handle holds it"; printf '%s\n' "$out"; exit 1; }
 wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
@@ -1001,6 +1383,32 @@ warrant for the wrong thing.
 
 `s8g`'s D21-42 10c says *"A cold `cargo test --workspace` wall time is measured first"*. This is that measurement,
 and `s8g` cites it rather than repeating it.
+
+*(dated 2026-09-26, s8c build, P8.)* **MEASURED, n = 3**, the script above run three times from the stage file's own
+bytes (`scratchpad/s8c/p8-measure.sh`, logs `p8-runs/measure-pass-{1,2,3}.log`), each rc 0 with the worktree path set
+unchanged and `nd_check` passing. Before the first pass the script was amended by dated edit so that the build child
+runs the port's `--message-format=json` argv and the two scan children run record V decision 5's argvs (this
+section's own rule: *"take the reading again with the command the verb runs"*). The three lines:
+
+```
+MEASURED pin=6f70e47786474cce0466369a6e0f5e282321af1c path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=2 setup_downloaded=0 list_cold=93 list_ignored=3 run=146 doc=2 build_cold=58 scan=1 (audit=0 deny=1) audit_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01 deny_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01
+MEASURED pin=6f70e47786474cce0466369a6e0f5e282321af1c path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=8 setup_downloaded=0 list_cold=88 list_ignored=3 run=142 doc=3 build_cold=58 scan=1 (audit=0 deny=1) audit_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01 deny_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01
+MEASURED pin=6f70e47786474cce0466369a6e0f5e282321af1c path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=4 setup_downloaded=0 list_cold=88 list_ignored=3 run=142 doc=3 build_cold=56 scan=1 (audit=1 deny=0) audit_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01 deny_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01
+```
+
+No reading fetched (`downloaded` 0 on every pass), so none is labelled a network reading. Record V's rule, written
+before these readings, gives `test_timeout` **300** (slowest child 146 s, pass 1's nextest run), `build_timeout`
+**120** (58 s), `scan_timeout` **60** (1 s) and `setup_timeout` **60** (8 s); the cited keys are `review_timeout`
+9180 (AC-223's 4,561 s under the same rule) and X4's 4800 for `implement_timeout` and `repro_timeout`.
+`.redkiln/registry.toml` ships them with their warrants, each reading labelled with its pass and child; record V's
+evidence carries the table, the rule's arithmetic and both path lengths (`path_len=24` is the RELATIVE
+`.git/redkiln/tmp/c<HHMMSS>`; absolute 44; `.redkiln/worktrees/rk-fix-doctor-test-count` absolute 63). Three caveats,
+said rather than hidden: the measured tree is HEAD `6f70e47`, without this stage's uncommitted work (about eighty
+tests, several of which build fixture projects), so the next whole reading at the work commit may be slower; the
+children ran at `CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`, the no-dispatch helper's setting, which is slower than
+cargo's default and so errs long; and `git worktree remove --force` left each pass's pnpm `node_modules` junction
+skeleton (114 dangling links, 0 files) under `.git/redkiln/tmp/`, invisible to the path-set check. The skeletons were
+removed by hand (§8c.12 hands the fact on to `s8d-ii`).
 
 ### 8c.6 A step's `timeout_secs` is the tighter bound (D21-42 4b)
 
@@ -1019,6 +1427,18 @@ Record B fixes this, and this is the proposal:
   - `detect` does not take one: it is adapter selection at construction (ADR-0137 clause 2), not a step.
   - `classify` does not take one: it spawns nothing.
   - `StepBound` is either undeclared or `Secs(n)`, and `n = 0` is refused (RT-5: *"a zero bound is no bound"*).
+  - *(dated 2026-09-26, s8c build, P4.)* Built as `StepBound::{Undeclared, Secs(NonZeroU64)}`, so `Secs(0)` is unrepresentable and
+    `StepBound::secs(0)` refuses as `Unsupported` naming `timeout_secs = 0` and RT-5. The five step-reached
+    methods take it on every double and both adapters; `detect` and `classify` do not. Enforcing
+    `min(step, construction)` and `Timeout` naming the bound that fired land with the bound slice.
+  - *(dated 2026-09-26, s8c build, P5.)* **Enforced** on both adapters: `Config::bounded(StepBound)` returns the
+    call's `Config` with `timeout = min(step, construction)` (an `Undeclared` bound leaves it alone), every child the
+    call spawns runs under it (`build`, `test` and its `--list`, run, doctest and metadata children, `lint`, and each
+    verb handler's), and every `Timeout { after_secs }` the call answers carries that value, the bound that fired.
+    `change_summary` spawns nothing. Reds: `bound::a_step_bound_tighter_than_construction_fires_first` failed on both
+    adapters against the pre-P5 reading (*"left: 60 right: 5"*; Node *"left: 60 right: 8"*);
+    `bound::the_construction_bound_caps_a_larger_step_bound` holds on that reading too (the construction bound was the
+    only one) and takes its red from M5.
 - **The adapter enforces `min(step, construction)`** on every child it spawns for the call. `Timeout { after_secs }`
   carries **the bound that fired**, so a journal can tell a step's own bound from the construction bound.
   ADR-0140 decision 3's 3600 s default and its optional key stand.
@@ -1036,6 +1456,18 @@ s8d."* This stage gives the 33 substituted agent-step keys their **values** (§8
 **`rk-cli`'s two docstrings must be corrected in the same commit.** They say what ADR-0140 decision 2 made them
 say: `config.rs` and `run.rs` describe the construction timeout as the only bound. Record B's supersession is what
 licenses the change (§8c.7).
+
+*(dated 2026-09-26, s8c build, P7.)* **Done.** `crates/rk-cli/src/config.rs` (`Adapters::toolchain_timeout_secs`) and
+`crates/rk-cli/src/verbs/run.rs` (`DEFAULT_TOOLCHAIN_TIMEOUT_SECS`) each carry a dated correction citing
+record B = ADR-0171 (proposed): the value is the construction bound, the cap behind a `tool` step's
+declared bound and the whole bound of a step that declares none; the `s7g` paragraphs are left as written
+beneath it, and stand for `agent` steps until `s8d`. **The step side, built:** `catalog::Step` gains
+`timeout_secs: Option<StepTimeout>` (`Literal(u64)` or `Toolchain(key)`, serialised only when present);
+the loader reads it through `StepTimeout::from_value` (a non-negative integer, or a string of the exact
+form `${toolchain.<[a-z0-9_]+>}`) and refuses anything else as a `Shape` naming the step, never dropping
+it. `runtime::step::resolve_bound` makes the `StepBound`: none is `Undeclared`, a literal goes through
+`StepBound::secs` (zero refuses naming RT-5), and a key resolves through `ToolchainValues`, an absent,
+`unmeasured` or table-less key refusing as `Unsupported` naming `${toolchain.<key>}` and why.
 
 **`RK-D-TIMEOUT` resolves `${toolchain.*}` through the same table (D21-42 4a).** Today the row reads
 `[activity.<id>] timeout_secs` as a TOML value, and a string is reported *"which is not an integer (NonNumeric)"*
@@ -1060,6 +1492,19 @@ in `.redkiln/packs/` are integer literals, and all 94 substitutions sit on catal
   - AC-419's two-case fixture still yields exactly two findings (`doctor::ac419_missing_or_non_numeric_timeout_rejected`,
     re-proven).
   - AC-330's p95 half stays unclaimed (§8c.10). §8c.5's n = 3 readings are a wall's first recording, not a p95.
+
+*(dated 2026-09-26, s8c build, P7.)* **Built.** `doctor::Ctx` gains `timeout_table: TimeoutTable { NotNeeded, Values(ToolchainValues),
+NoTable(reason) }`, built in `Ctx::build` by `run`'s own `choose_toolchain` over the `ConfigFile`'s
+`[adapters]` and then `toolchain_values`, so the two cannot disagree. Selection runs **only when the tree
+declares a substitution** (a catalog step's `Toolchain` timeout, or `${toolchain.` in an enabled pack
+file): constructing the adapters spawns their probes, and a tree with nothing to resolve has no reason to.
+The row: a pack activity value of the exact form joins the steps' substitutions (it no longer falls to
+`NonNumeric`; any other string still does); each resolves through the table, a resolved key silent, an
+absent or `unmeasured` key one `Error` each naming `${toolchain.<key>}` and, for `unmeasured`, its reason
+(the absent case's text carries `Unresolved`). **One** `Error` covers every substitution when no table can
+be selected: no `registry.toml`, a registry that does not load, no adapter detected, or no table for the
+detected adapter's toolchain. `doctor::ac419_missing_or_non_numeric_timeout_rejected` still reads exactly
+two findings (its fixture declares no substitution, so nothing is selected).
 
 ### 8c.7 The records this stage writes
 
@@ -1113,6 +1558,24 @@ The 7a "exactly six" erratum stands as drafted. `s8g`'s entry table, which the d
 count, now reads the seven-method count after record V (*corrected in `s8g`'s own file; consistency pass
 2026-09-24*). It is not made here.
 
+*(dated 2026-09-26, s8c build.)* **The ids, recorded at write time (D21-47):** record T = **ADR-0169**, record V =
+**ADR-0170**, record B = **ADR-0171**, all three `proposed`; errata **E-0162-2** and **E-0135-1**. Records T and V
+carry D21-62's provisional rulings (A, B and D in T; C in V). The `superseded_by` back-links on ADR-0094, 0099,
+0135, 0140 and 0162 (frontmatter only), the ADR README (index rows, supersession rows, censuses, next free `0172`)
+and the preamble's census and next-free sentence moved in the same change, with D21-10's dated note, `s7a` §7a.3's
+seven-method note, design §3.3's `Toolchain`-row note, AC-329's register note, `s7c`'s D21-48 X15 notes and (3)'s
+`REC_T`, `REC_V` and `REC_B` lines. **Not written with the records, owed to the code slices that land them:** the
+in-code corrections of the false count (`rk-ports/src/toolchain.rs`, both adapters' crate docs and `report.rs`
+module docs, `review_pass.rs` and `tests/it/review_pass.rs`), and `BasisReason::PolicyForced`'s dated doc note.
+
+*(dated 2026-09-26, s8c build, P4.)* **The in-code corrections are made**, each dated, with the old sentence struck or quoted:
+`rk-ports/src/toolchain.rs` (the `MutationFeasibility` doc's *"Checkpoint 7a counts exactly six on this
+port"*, and the module doc's selection-type routing), both adapters' crate docs (*"the six methods Checkpoint
+7a counts and no seventh"*, and *"What the six port methods do"*), both `report.rs` module docs (*"RT-6: the
+port stays six methods"*, struck), the retired inherent `verify_report` docs (removed with the methods),
+`review_pass.rs`'s `run` doc and `tests/it/review_pass.rs`'s mutate message. `BasisReason::PolicyForced`'s
+dated doc note is still owed to the slice that lands `Affected` rule 3.
+
 ### 8c.8 Order of work
 
 Each slice is red first (golden constraint 12). A test is authored and watched fail **for the right reason**
@@ -1135,6 +1598,8 @@ before the code that turns it green, and a filter that selects nothing is not re
 
    The named tests this stage moves in Checkpoints 7b, 7c and 7d's crates are re-proven by name in Checkpoint 8c
    (5)–(10).
+   *(dated 2026-09-26, s8c build, P4.)* The three rows moved in `PROGRESS.md` §1: 5 and 7a are marked RE-RUN PENDING and 7c PROVISIONAL,
+   each by a dated lead on its status cell.
 3. **The Rust adapter**:
    - the parser over its goldens, and the red suite;
    - the runner probe, the nextest parser over its goldens, and the doctest companion (§8c.1; D21-48 X15);
@@ -1144,18 +1609,32 @@ before the code that turns it green, and a filter that selects nothing is not re
 
    Then the Node adapter's `build` outcome, after its `tsc` exit-status measurement.
 4. **`rk-git`**: the `.worktreeinclude` reader, and its two read `GitOp` variants.
+   *(dated 2026-09-26, s8c build, P6.)* Done: `worktree_include.rs`, `GitOp::LsFiles` / `GitOp::CheckIgnore`
+   (`is_write()` false; the `is_write` match gains them on its read arm, so ADR-0105 clause 5's write arm is
+   byte-unchanged), `GitExec::run_with_stdin` and `GitError::CarryRefused` (§8c.4's P6 note). `rk-git` reads 75
+   passed / 0 failed / 3 ignored (70/0/3 before, plus the five).
 5. **The kernel**:
    - `catalog::Step.timeout_secs` and `ToolchainValues`;
    - `VerbRegistry`, extended with the source tables;
    - `run_tool_step` through the registry, and the output decode table.
+
+   *(dated 2026-09-26, s8c build, P7.)* Done (§8c.4, §8c.5 and §8c.6's P7 notes). `rk-kernel` reads 271 passed / 0 failed / 5 ignored in
+   its `it` binary (257 before, plus the fourteen) and 11 in its unit binary.
 6. **`rk-cli`**:
    - the value table handed over;
    - `review_pass` reading `failed`;
    - the stub program;
    - `RK-D-TIMEOUT`'s third arm;
    - the docstrings.
+
+   *(dated 2026-09-26, s8c build, P7.)* Done: the value table handed over, `RK-D-TIMEOUT`'s third arm and the docstrings. `review_pass`
+   reading `failed` and the stub program were P4's. `rk-cli` reads 124 passed / 0 failed / 0 ignored in its
+   `it` binary (122 before, plus the two).
 7. **§8c.5's measurement** (n = 3). Then `.redkiln/registry.toml`, with its warrants and source tables, and the ten
    content files §8c.4 enumerates: six checklists and four atoms.
+   *(dated 2026-09-26, s8c build, P8.)* Done: three passes, each rc 0 (§8c.5's P8 note; record V's evidence), then
+   `.redkiln/registry.toml` (ten rows, both value tables, the source tables) and the ten content files (§8c.4's P8
+   note). The five shipped-registry tests were red first on the absent file and are green (§8c.9's P8 note).
 8. **The close.** The mutants (§8c.9), then Checkpoint 8c whole, then the adversarial rounds. The rounds continue
    **until one moves no code and no guard**.
 
@@ -1202,6 +1681,13 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
     - `libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally`, over the sixth golden
     - `libtest_lines::a_slow_test_notice_inside_a_block_is_skipped_never_refused`. A notice naming a test that the
       block never records still refuses.
+    - *(dated 2026-09-26, s8c build, P3; D21-62 A.)* D21-62 A's five parser cases sit inside the named tests above, so the count of
+      new tests does not move. (1) The sixth golden parses with `foreign_lines` 39 in
+      `this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally`. (2) A leaked extra record and (4) a leaked
+      empty line refuse by count, beside a foreign-line control, in
+      `a_block_whose_record_count_differs_from_its_header_is_unverifiable`. (3) A corrupted `FAILED` record beside a
+      leaked `ok` record refuses by rule 3 in `a_summary_that_disagrees_with_its_records_is_unverifiable`. (5) A
+      notice naming an unrecorded test refuses in `a_slow_test_notice_inside_a_block_is_skipped_never_refused`.
     - `build::a_compile_error_is_ok_with_status_failing`
     - `build::a_build_stream_without_build_finished_is_err`
     - `bound::a_step_bound_tighter_than_construction_fires_first`
@@ -1220,6 +1706,13 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
     - `verbs::a_failing_setup_is_refused_naming_the_project`
     - `verbs::an_empty_setup_set_is_ok_with_no_projects`
     - `verbs::an_undeclared_verb_is_refused_by_name`
+    - *(dated 2026-09-26, s8c build, P5; D21-62 C.)* Three named refusal tests beside the `sca_scan` pair, as the
+      ruling requires, each red first on the pre-P5 reading (`Unsupported { capability: "sca_scan" }`, the comparator
+      on its stub): `verbs::sca_scan_refuses_a_non_git_database` (refusal (a)),
+      `verbs::sca_scan_refuses_a_deny_db_path_with_other_than_one_database` (refusal (d), two children and none), and
+      `verbs::sca_scan_refuses_a_database_moved_mid_scan` (refusal (b), over the comparator only, as record V permits
+      and says). They are not among the 78; Checkpoint 8c (7)'s list and `want` do not name them yet (the checkpoint
+      package's).
     - *D21-48 (2026-09-24), X15:* the nine below. Each is red first, for the reason in brackets.
     - `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` [red: no `nextest_lines` module and
       no golden under `tests/fixtures/nextest/`]. It also asserts that the installed `cargo nextest --version` is in
@@ -1229,6 +1722,9 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
       shape, a parser that trusts `Summary`]
     - `nextest_lines::a_nonzero_exit_with_no_fail_line_is_unverifiable_never_green` [red: no parser]
     - `nextest_lines::a_retry_or_timeout_line_is_unverifiable_never_counted` [red: no parser; later, M30's shape]
+    - *(dated 2026-09-26, s8c build, P3; D21-62 B.)* `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` also
+      parses the two filtered goldens to their tallies, neither decoy counted, and reads the two list-failed goldens
+      as `ListFailed { version: "0.9.146", exit: 104 }`.
     - `runner::the_probe_finds_the_installed_nextest_and_names_its_version` [red: the adapter has no probe and always
       runs `cargo test`]
     - `runner::the_probe_falls_back_to_cargo_test_where_nextest_is_absent` [red: no probe]. Its `child_env` holds no
@@ -1241,6 +1737,13 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
     - `report::the_nextest_path_runs_doctests_beside_it_so_the_count_matches_list` [red: no companion child; later,
       M26's shape, which drops it and refuses on the count]. Over §8c.3's workspace, the companion's argv carries
       `--doc`, the doctest is tallied, and `passed + failed` equals the `--list` count.
+    - *(dated 2026-09-26, s8c build, P4.)* `report::the_nextest_path_records_its_runner_and_tallies_a_red_suite_as_ok` is re-pointed as D21-62 B C
+      rules: ~~*"over the fixture project red"*~~ over §8c.3's workspace red in package `a`
+      (`-- --include-ignored`).
+    - *(dated 2026-09-26, s8c build, P4.)* `report::a_nextest_list_failure_is_unverifiable_never_green` (D21-62 B D) [red: no `ListFailed`
+      refusal reaches the port]. Under `Force(nextest)` over the fixture project: `Transport { Decode }` naming
+      `ListFailed` and `0.9.146`. It is not among the 78, and Checkpoint 8c (7)'s list does not name it yet: the
+      checkpoint's lists are owed by the checkpoint package.
   - **Re-proven**: `report::ac329_report_conforms_no_prose_parse`, `report::ac325_recorded_argv_is_os_vector`,
     `report::ac331_killed_verify_is_unverifiable`, `report::ac344_missing_binary_is_not_a_candidate_failure`,
     `conformance::port_conformance_real_row_rust`, `registry::ac328_affected_selection_unsupported_without_probe`,
@@ -1377,6 +1880,208 @@ Parallel agents share one scratchpad, so the driver's filename carries this stag
 | M29 | a nextest version absent from `NEXTEST_PINNED` is parsed anyway | `nextest_lines::an_unpinned_nextest_version_is_refused_by_name` |
 | M30 | a `TRY` or `TIMEOUT` line is counted as a record | `nextest_lines::a_retry_or_timeout_line_is_unverifiable_never_counted` |
 | M31 | the shipped `implement_timeout` is `secs = 3600` (*D21-48 (2026-09-24)*, X4 undone) | `verb_registry::the_shipped_rust_value_table_is_exactly_the_declared_key_map` |
+| M32 | *(dated 2026-09-26, s8c build, P3; D21-62 A)* the libtest parser drops the header-count check | `libtest_lines::a_block_whose_record_count_differs_from_its_header_is_unverifiable` |
+| M33 | *(dated 2026-09-26, s8c build, P3; D21-62 A)* the libtest parser drops the summary-agreement check and keeps the records' tally | `libtest_lines::a_summary_that_disagrees_with_its_records_is_unverifiable` |
+| M34 | *(dated 2026-09-26, s8c build, P3; D21-62 A)* a foreign line is counted as a passed record | `libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally` |
+| M35 | *(dated 2026-09-26, s8c build, P3; D21-62 B)* the nextest parser tallies a zero-status-line exit-104 stream as `Ok(0/0)` | `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` (the list-failed goldens) AND `report::a_nextest_list_failure_is_unverifiable_never_green` (the report package's) |
+
+*(dated 2026-09-26, s8c build, P3.)* **Parser mutants, run from `scratchpad/s8c/p3_mutants.py`** (anchor asserted once, tmp + `os.replace`,
+restored in `finally` and the sha256 re-checked; the two parser files are new, so the restore writes the recorded bytes
+rather than `git checkout`). Each named test ran by its module-qualified `--exact` name, `running 1 test`, and each
+kill is rc 101 with the test's own `FAILED` line. M11's libtest half, M12, M13, M14, M28, M29, M30, M32, M33, M34 and
+M35's parser half: KILLED. M25: KILLED by `a_slow_test_notice_inside_a_block_is_skipped_never_refused`; over
+`this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally` it SURVIVED, because the sixth golden holds no
+slow notice (P1: none occurs in the capture), so that arm is unobservable over it. M34 also turned
+`a_block_whose_record_count_differs_from_its_header_is_unverifiable` red (its foreign-line control). The panel's
+stated red for the sixth golden, rule 2 as first written, was run the same way and refused at line 287. M11's second
+half (`report::passed_plus_failed_is_the_executed_count_and_survives_both_decoys`) and M35's report half are owed by
+the report package.
+
+*(dated 2026-09-26, s8c build, P4.)* **The port slice's reds and mutants**, from `scratchpad/s8c/p4_red_harness.py` and
+`scratchpad/s8c/p4_mutants.py` (anchor asserted once, the recorded bytes restored in `finally` and the sha256
+re-checked, because the targets carry this stage's uncommitted work and `git checkout` would destroy it). Each
+test ran by its module-qualified `--exact` name, `running 1 test`, and each kill is rc 101 with the test's own
+`FAILED` line.
+- **Reds.** The rk-types, rk-ports and rk-cli tests were written first and failed to compile or failed for
+  their stated reason (`toolchain_port_declares_exactly_seven_methods`: *"left: [... 6 names]"*;
+  `a_candidate_that_cannot_run_is_unverifiable_never_a_flip`: *"… never a flip or a cell: Some(Flipped)"*;
+  `four_cells_over_two_arms_and_both_fail_is_not_a_flip`: *"left: DidNotFlip right: Flipped"*;
+  `run::ac438_…`'s findings-block row: *"exited Some(0), not the 4"* against the unchanged stub). The Node
+  `red_suite_is_ok_with_failed_counts` failed on `NonZero { code: Some(1) }`. The Rust adapter's ten were run
+  by the red harness against the pre-s8c reading restored under the new signature (red suite `Err`, no
+  parser, no `--no-fail-fast`, no nextest path, probe absent): eight failed for their stated reasons; the two
+  that hold under the old reading too, `a_build_failure_is_err_never_a_red_suite` and
+  `passed_plus_failed_is_the_executed_count_and_survives_both_decoys`, take their reds from MB and M11.
+- **Mutants: 13 of 13 killed.** M1 (`red_suite_is_ok_with_failed_counts`); M2 (both
+  `a_candidate_that_cannot_run_is_unverifiable_never_a_flip` and `four_cells_over_two_arms_and_both_fail_is_not_a_flip`);
+  M3 (`test_outcome_is_passing_only_with_executed_tests_and_no_failures`); M11's second half
+  (`passed_plus_failed_…`: *"passed + failed (3 + 0) is not the report's selected_test_count (2)"*); M21
+  (`a_red_test_in_an_early_binary_…`: *"(1 + 1) … (5)"*); M26 (`the_nextest_path_runs_doctests_…`: *"(3 + 0) …
+  (4)"*); M27 (`the_probe_finds_the_installed_nextest_…`); M35's report half
+  (`a_nextest_list_failure_is_unverifiable_never_green`, killed by the count invariant, *"(0 + 0) … (2)"*).
+  Three extra mutants give the regression guards their reds: MB, a failed `--list` read as an empty listing
+  (`a_build_failure_is_err_never_a_red_suite`); MNX, `Force(nextest)` running `cargo test`
+  (`the_nextest_path_records_its_runner_…`); MFB, a probe that always answers nextest
+  (`runner::the_probe_falls_back_…` and `report::nextest_fallback_recorded_on_report`).
+
+*(dated 2026-09-26, s8c build, P5.)* **The adapter slice's mutants: 20 of 20 killed**, from
+`scratchpad/s8c/p5/p5_mutants.py` (anchors asserted once over LF files, applied by tmp + `os.replace`, `git diff
+--stat` read, the recorded bytes restored in `finally` and the sha256 re-checked; each named test by its
+module-qualified `--exact` name, `running 1 test` (`running 2 tests` for MSD), and each kill rc 101 with the test's own
+`FAILED` line; logs and `p5-mutants-all.json` under `scratchpad/s8c/p5/p5-mutant-runs/`). The six rows above:
+- **M4** (the adapter ignores `StepBound`): `bound::a_step_bound_tighter_than_construction_fires_first`, *"left: 60
+  right: 5"*.
+- **M5** (`max` for `min`): `bound::the_construction_bound_caps_a_larger_step_bound`, *"left: 30 right: 5"*.
+- **M6** (no reverse-dependency closure): `affected::affected_set_is_touched_crates_plus_reverse_dependency_closure`,
+  *"packages: ["a"]"* against `["a", "b", "c"]`.
+- **M8** (unrated counted `low`): `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero`, *"low: 1,
+  unrated: 0"*.
+- **M15** (a compile error back to `Err(NonZero)`): `build::a_compile_error_is_ok_with_status_failing`.
+- **M16** (`Ok` over a failed install): `verbs::a_failing_setup_is_refused_naming_the_project`, *"VerbOutput { kind:
+  "SetupResult", … "projects": Array [] }"*.
+
+Fourteen more, named as P4 named its extras, give the reds to the tests that held on the pre-P5 reading and cover
+D21-62 C's and D's rows: **MV** (a wildcard routes an unknown verb to a handler; the Rust
+`verbs::an_undeclared_verb_is_refused_by_name`); **MA7** (a `Named` selection runs the whole suite;
+`affected::a_named_selection_…`); **MG** (the gate admits a probe-less row; the re-pointed
+`registry::ac328_affected_selection_unsupported_without_probe`); **MR5** (rule 5 ignores the recorded version;
+`affected::no_recorded_whole_suite_…`); **MR6** (rule 6 never escalates; `affected::a_package_set_that_lists_no_test_…`);
+**MSD** (smoke leaves its scratch directory; both `smoke` tests); **MSC** (the mid-scan comparator passes a move;
+`verbs::sca_scan_refuses_a_database_moved_mid_scan`); **MDC** (deny's `db-path` may hold several databases;
+`verbs::sca_scan_refuses_a_deny_db_path_with_other_than_one_database`); **MSW** (the two tools' commits swapped;
+`verbs::sca_scan_records_the_advisory_database_commit`); **MPH** (no `sha`/`HEAD` check;
+`verbs::package_digests_only_…`); **MBS** (the build reader accepts `success: false` under exit 0;
+`build::a_build_stream_without_build_finished_is_err`); **MNB** (the Node adapter ignores `StepBound`; Node
+`bound::…`, *"left: 60 right: 8"*); **MND**, D21-62 D's row (Node exit `1` read as `Ok(failing)`; Node
+`build::a_type_error_is_ok_with_status_failing`, case (d)); **MNS** (the Node adapter answers `setup`; Node
+`verbs::an_undeclared_verb_is_refused_by_name`). No survivor.
+
+*(dated 2026-09-26, s8c build, P6.)* **The reader's reds and its two mutants.**
+- **Reds.** All five `worktree_include::` tests were run first against a naive reader with the final API. That reader
+  had no absent-file check, no exclude pathspec and no `check-ignore`, and it carried every matched path. The run read
+  `0 passed; 5 failed`, each failing for its stated reason:
+  - `carries_only_…` carried `"other.local"`, which is matched but not ignored;
+  - `an_absent_file_…` returned `Err(NonZeroExit { op: "ls-files", code: Some(128), … })` (*"fatal: cannot use
+    .worktreeinclude as an exclude file"*);
+  - `a_file_under_a_run_worktree_…` carried `".redkiln/worktrees/x/.env"`;
+  - `a_symlink_…` carried `"junction.env"` and `"link.env"`;
+  - `a_path_that_escapes_…` read `../outside.env escaped the root and was not refused: Ok(…)`.
+- **Greens.** Each test then ran green by `--exact`, `1 passed; 0 failed`.
+- **Mutants**, from `scratchpad/s8c/p6_mutants.py` (anchor asserted once; tmp + `os.replace`; restored in `finally`
+  and the sha256 re-checked; each killing test green on the unmutated tree first, at `1 passed`). Logs and
+  `p6-mutants.json` are under `scratchpad/s8c/p6-runs/`.
+  - **M17** replaces `check-ignore`'s result with the matched list. It is killed by
+    `worktree_include::carries_only_files_both_ignored_and_matched` (rc 101, `0 passed; 1 failed`, *"left: … "other.local"
+    …"*).
+  - **M24** drops the `:(exclude).redkiln/worktrees` pathspec. It is killed by
+    `worktree_include::a_file_under_a_run_worktree_is_never_carried` (rc 101, *"left: [".env",
+    ".redkiln/worktrees/x/.env"]"*).
+  - No survivor.
+
+*(dated 2026-09-26, s8c build, P7.)* **The kernel and `rk-cli` slice's reds and mutants**, from `scratchpad/s8c/p7_reds_and_mutants.py`
+(anchors asserted once, tmp + `os.replace`, `git diff --stat` read, the recorded bytes restored in `finally` and
+the sha256 re-checked, because the targets carry this stage's uncommitted work; each test by its module-qualified
+`--exact` name, `running 1 test`, and each red or kill rc 101 with the test's own `FAILED` line; logs and
+`p7-reds-mutants-main.json` under `scratchpad/s8c/p7-runs/`). All sixteen new tests were green by `--exact`
+before the harness ran.
+- **Reds, on the pre-P7 reading restored under the new API.** RED-R1 put ADR-0135's `MAPPED_VERBS` routing back
+  into `run_tool_step` (no registry, every call `Undeclared`): all six new `tool_verb_routing::` tests and all
+  four `step_bound::` tests failed. For `a_row_whose_route_…` the failure is its stated reason (*"`item_create`
+  must refuse naming the `store` route and `s8f`: Unsupported { capability: "item_create" }"*), and for the four
+  `step_bound::` tests too (*"the literal did not reach the port as the call's bound"*; *"an unresolved bound did
+  not refuse by name (Continue); bounds handed to the port: [Undeclared]"*); for the other five `tool_verb_routing::`
+  tests the old reading fails their CONTROL (a rowed `smoke` refused by bare name), so each also takes a mutant
+  red below (M10, M9, M23; MIN; `a_registry_verb_with_no_inputs_…` fails its own assertion, *"a `toolchain` row
+  with no inputs did not walk: Failed(Unsupported { capability: "smoke" })"*). RED-W (any `secs` loads, no
+  warrant): `verb_registry::a_value_without_a_warrant_is_refused`, *"a value with secs alone was not refused"*.
+  RED-S (the source tables not read, the pre-P7 reader): `source_registry::an_unprovided_feed_…` (*"an optional
+  `unprovided` feed is null"*) and `source_registry::a_malformed_entry_…` (*"`checklist.ghost` (does not exist)
+  was not refused at load"*). RED-D (no third arm: the substitution string read `NonNumeric`, steps unread):
+  `doctor::rk_d_timeout_…` (*"a resolved key is silent and the unmeasured and absent keys are one Error each"*,
+  one finding). RED-A (no table handed over): `adapter_selection::the_chosen_adapters_…` (*"the value table
+  handed over is not the CHOSEN adapter's (rust: 120 s; node: 600 s)"*).
+  `source_registry::an_undeclared_…` takes its red from M18.
+- **Mutants: 6 of 6 killed, plus one extra.** **M7** (an unresolved key falls back to the construction bound):
+  `step_bound::an_unresolved_toolchain_key_is_refused_by_name`, *"did not refuse by name (Continue); bounds handed
+  to the port: [Undeclared]"*. **M9** (no output-kind check): `tool_verb_routing::an_output_of_the_wrong_kind_…`,
+  *"the step did not fail: Continue"*. **M10** (an unrowed verb routed to `run_verb`):
+  `tool_verb_routing::a_verb_with_no_registry_row_…`, *"the step did not fail: Continue"*. **M18** (an undeclared
+  optional key is `null`): `source_registry::an_undeclared_…`, *"`checklist:risk-register?` is undeclared and must
+  refuse by name"*. **M19** (an absent key read as numeric): `doctor::rk_d_timeout_…`, one finding where two are
+  owed. **M23** (the bound resolved before the lookup): `tool_verb_routing::a_verb_with_no_row_refuses_…`, the
+  refusal named the key. **MIN**, extra (a `toolchain` row's inputs not checked):
+  `tool_verb_routing::a_registry_verb_whose_inputs_…`, *"the refusal must name the verb and its FIRST unresolved
+  input: Transport { kind: Decode, … }"* (the port was reached). No survivor.
+
+*(dated 2026-09-26, s8c build, P8.)* **The shipped-registry slice's reds and mutants**, from
+`scratchpad/s8c/p8_five.sh` and `scratchpad/s8c/p8_mutants.py` (anchor asserted once, tmp + `os.replace`, the
+recorded bytes restored in `finally` and the sha256 re-checked, because `.redkiln/registry.toml` is new and untracked;
+each killing test green on the unmutated file first, `running 1 test`; each kill rc 101 with the test's own `FAILED`
+line; logs and `p8-mutants.json` under `scratchpad/s8c/p8-runs/`).
+- **Reds, on the absent file** (`five-red.log`, `0 passed; 5 failed`): the three `verb_registry::` tests that load
+  through `shipped()` failed *"the shipped registry … does not load — design §4.5's verb table is not shipped (D21-10's
+  gap): … The system cannot find the file specified"*; `the_shipped_rust_value_table_…` failed *"the shipped registry
+  is readable: Os { code: 2, kind: NotFound …"*; `source_registry::the_catalog_source_census_…` passed its census
+  (50 keys, 27 / 12 / 11, 51 spellings) and then failed *"the shipped registry loads, its declared paths checked: Io {
+  … }"*. **Greens** (`five-green.log`, `5 passed; 0 failed`), printing `ac018 (shipped): activities=102 steps=573
+  tool_steps_on_a_rowed_verb=57`, `source census: inputs=101 spellings=51 keys=50`, `substitutions: walked=94
+  census=94`, `[toolchain.rust]: resolved=80 refused_by_name=24` and `[toolchain.node]: resolved=0
+  refused_by_name=104`.
+- **Checkpoint 8c (11)**, extracted from this file's bytes and run standalone (`scratchpad/s8c/p8-cp11.sh`): each
+  synthetic control went red as written (the key map read `,build_timeout,…` over its control and the pin reader
+  read the 40-a pin; the borrowed-class floor read `,repro_timeout,`; the source tables read `1 1 [checklist.ghost
+  feed.rust.x]`), then the shipped file read `,,`, pin `6f70e47786474cce0466369a6e0f5e282321af1c` passed `git
+  cat-file -e <pin>^{commit}`, the borrowed class read `,,` and the source tables `11 6 []`; rc 0.
+- **Mutants: 3 of 3 killed.** **M20** (`smoke` `live = false`): `verb_registry::ac018_holds_…`, *"the shipped `smoke`
+  row must be `live = true` (s8b §8b.5's hand-on)"*. **M22** (`test_timeout` deleted from `[toolchain.rust]`):
+  `verb_registry::the_shipped_rust_value_table_…`, *"[toolchain.rust] has no `test_timeout` (a measured key,
+  §8c.5)"*. **M31** (`implement_timeout` `secs = 3600`): the same test, *"`implement_timeout` is X4's 4,800 s"*.
+
+*(dated 2026-09-26, s8c build, P8.)* **The closing sweep: every mutant M1–M35, collected from the packages' drivers**
+(`scratchpad/s8c/p{3,4,5,6,7,8}*`; each kill rc 101 with the named test's `FAILED` line under `running 1 test`):
+
+| id | result | killed by |
+| --- | --- | --- |
+| M1 | KILLED (P4) | `report::red_suite_is_ok_with_failed_counts` |
+| M2 | KILLED (P4) | `review_pass::a_candidate_that_cannot_run_is_unverifiable_never_a_flip` AND `review_pass::four_cells_over_two_arms_and_both_fail_is_not_a_flip` |
+| M3 | KILLED (P4) | `fake_behaviour::test_outcome_is_passing_only_with_executed_tests_and_no_failures` |
+| M4 | KILLED (P5) | `bound::a_step_bound_tighter_than_construction_fires_first` (Rust) |
+| M5 | KILLED (P5) | `bound::the_construction_bound_caps_a_larger_step_bound` |
+| M6 | KILLED (P5) | `affected::affected_set_is_touched_crates_plus_reverse_dependency_closure` |
+| M7 | KILLED (P7) | `step_bound::an_unresolved_toolchain_key_is_refused_by_name` |
+| M8 | KILLED (P5) | `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero` |
+| M9 | KILLED (P7) | `tool_verb_routing::an_output_of_the_wrong_kind_is_refused_naming_both_kinds` |
+| M10 | KILLED (P7) | `tool_verb_routing::a_verb_with_no_registry_row_is_refused_by_its_bare_name` |
+| M11 | KILLED, both halves (P3, P4) | `libtest_lines::a_record_line_outside_a_block_is_never_counted` AND `report::passed_plus_failed_is_the_executed_count_and_survives_both_decoys` |
+| M12 | KILLED (P3) | `libtest_lines::a_summary_that_disagrees_with_its_records_is_unverifiable` |
+| M13 | KILLED (P3) | `libtest_lines::an_unpinned_toolchain_version_is_refused_by_name` |
+| M14 | KILLED (P3) | `libtest_lines::a_nonzero_exit_with_no_failed_record_is_unverifiable_never_green` |
+| M15 | KILLED (P5) | `build::a_compile_error_is_ok_with_status_failing` |
+| M16 | KILLED (P5) | `verbs::a_failing_setup_is_refused_naming_the_project` |
+| M17 | KILLED (P6) | `worktree_include::carries_only_files_both_ignored_and_matched` |
+| M18 | KILLED (P7) | `source_registry::an_undeclared_checklist_kb_or_feed_key_is_refused_by_name` |
+| M19 | KILLED (P7) | `doctor::rk_d_timeout_resolves_a_toolchain_substitution_through_the_value_table` |
+| M20 | KILLED (P8) | `verb_registry::ac018_holds_over_the_shipped_catalog_and_registry` |
+| M21 | KILLED (P4) | `report::a_red_test_in_an_early_binary_still_tallies_every_binary` |
+| M22 | KILLED (P8) | `verb_registry::the_shipped_rust_value_table_is_exactly_the_declared_key_map` |
+| M23 | KILLED (P7) | `tool_verb_routing::a_verb_with_no_row_refuses_by_its_bare_name_before_its_bound_is_resolved` |
+| M24 | KILLED (P6) | `worktree_include::a_file_under_a_run_worktree_is_never_carried` |
+| M25 | KILLED by the synthetic test (P3); SURVIVED the golden test | `libtest_lines::a_slow_test_notice_inside_a_block_is_skipped_never_refused` kills it. Over `libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally` it survives **because the arm is unobservable there**: the sixth golden holds no slow notice (P1's capture), so no mutant of the notice arm can move that tally. The row asks to record which test killed it; the synthetic one did, and no guard is owed elsewhere |
+| M26 | KILLED (P4) | `report::the_nextest_path_runs_doctests_beside_it_so_the_count_matches_list` |
+| M27 | KILLED (P4) | `runner::the_probe_finds_the_installed_nextest_and_names_its_version` |
+| M28 | KILLED (P3) | `nextest_lines::a_summary_that_disagrees_with_its_status_lines_is_unverifiable` |
+| M29 | KILLED (P3) | `nextest_lines::an_unpinned_nextest_version_is_refused_by_name` |
+| M30 | KILLED (P3) | `nextest_lines::a_retry_or_timeout_line_is_unverifiable_never_counted` |
+| M31 | KILLED (P8) | `verb_registry::the_shipped_rust_value_table_is_exactly_the_declared_key_map` |
+| M32 | KILLED (P3) | `libtest_lines::a_block_whose_record_count_differs_from_its_header_is_unverifiable` |
+| M33 | KILLED (P3) | `libtest_lines::a_summary_that_disagrees_with_its_records_is_unverifiable` |
+| M34 | KILLED (P3) | `libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally` (and the header-count test) |
+| M35 | KILLED, both halves (P3, P4) | `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` AND `report::a_nextest_list_failure_is_unverifiable_never_green` |
+
+Beyond the table, every extra mutant the packages ran was killed: P3's R3 (rule 2 strict), P4's MB, MFB and MNX, P5's
+MV, MA7, MG, MR5, MR6, MSD, MSC, MDC, MSW, MPH, MBS, MNB, MND and MNS, and P7's MIN. **One survivor in all, M25 over the
+golden, and it is unobservable there, not a weak guard.** This list is for the checkpoint output; it is not a run of
+Checkpoint 8c.
 
 **If a mutant survives, read it before strengthening anything.** A surviving mutant can mean that the property is
 unobservable from the seam the test watches. If so, the guard moves; it is not weakened. Record every result, kills
@@ -1515,9 +2220,10 @@ d=$(git -C "$PRED" status --porcelain); [ -z "$d" ] || { echo "FAIL: $PRED is di
 # ---- records legitimately supersede one ADR: record B and s8d's R1 both touch ADR-0140, and Checkpoint 8d replays
 # ---- this block. Each id is written into its line below by a dated edit when its record is written (§8c.7). Each
 # ---- record's supersedes list must then CONTAIN its §8c.7 set, and each superseded ADR's superseded_by must name it.
-REC_T=unrecorded
-REC_V=unrecorded
-REC_B=unrecorded
+# (dated 2026-09-26, s8c build) the ids recorded at write time (D21-47); each line read ~~unrecorded~~ until then.
+REC_T=0169
+REC_V=0170
+REC_B=0171
 has='import re,sys; t=open(sys.argv[1],encoding="utf-8").read(); m=re.search(r"(?m)^supersedes:\s*\[(.*?)\]",t); got=set(re.findall(r"\"(\d{4})\"",m.group(1))) if m else set(); print(" ".join(sorted(set(sys.argv[2:])-got)))'
 printf '%s\n' '---' 'supersedes: ["0140"]' '---' > "$scratch/ctl-adr.md" || { echo "FAIL: could not write the control"; exit 1; }
 ctl=$(python -c "$has" "$scratch/ctl-adr.md" 0140 0099); rc=$?
@@ -1831,13 +2537,19 @@ On the untouched tree these guards are RED, as a guard that can pass only after 
   Record ids and commit shas are never such a variable. Under D21-47 each block carries its own as literals, written
   by dated edit, so no re-run supplies one (final consistency pass 2026-09-24).
 - **The libtest goldens** prove the parser against one version's captured output. They do not prove it against a
-  test that writes to an inherited stdout mid-block. Such a test refuses (§8c.1, rule 2), which is fail-closed. It
-  is not proved absent.
+  test that writes to an inherited stdout mid-block. ~~Such a test refuses (§8c.1, rule 2), which is fail-closed. It
+  is not proved absent.~~ *(dated 2026-09-26, s8c build; D21-62 A.)* Such output is skipped as foreign, counted in `foreign_lines`, and
+  bound by count, summary and exit agreement. The self-hosting golden proves the skip over 39 real leaked lines. A
+  leaked line that corrupts a record, or a leaked empty line, refuses (fail-closed). A leaked `ok` record beside a
+  corrupted `ok` record balances and leaves the tally true; that case is reasoned in record T, not tested.
 - **(2) compares `ci.yml`'s nextest pin with this box's install** (*D21-48 (2026-09-24)*). It does not see what CI
   actually installed. CI's log of its `install cargo-nextest` step is that evidence, read at the first CI run after
   this stage. The nextest goldens prove the parser against the one pinned version only, as the libtest ones do.
 - **The `.worktreeinclude` reader's OS-level symlink case** is not exercised. The pure core carries the symlink and
   escape tests (§8c.4). Creating a symlink on this Windows box needs a privilege it may not grant.
+  *(dated 2026-09-26, s8c build, P6.)* Confirmed at build: no test creates an OS symlink or junction, and neither
+  `kind_of`'s `symlink_metadata` read nor its reparse-attribute read is asserted over a real one. `check-ignore`'s exit-1
+  arm (no match ignored) is not exercised either (§8c.4's P6 note).
 - **(11)'s `11 6 []`** is the shape of the enumeration, not its truth. That the 14 keys are the ones the lanes reach
   rests on `s8d`'s lane-walk tests, which run later (§8c.4).
 
@@ -1873,6 +2585,20 @@ commit.** A pass is evidence about a specific text.
 **Handed on, unassigned. Each is reported here, not decided here:**
 
 1. **`"e2e"` is refused.** If `s8j`'s story candidate selects `walking-skeleton`, the declaration becomes owed there.
+2. *(dated 2026-09-26, s8c build; D21-62 A.)* **rk-cli verbs write through `std::io::stdout()` directly.** `catalog`, `cost`,
+   `doctor`, `explain`, `lint` and `status` do. One test, `crates/rk-cli/tests/it/doctor.rs`'s
+   `ac402_reconcile_called_on_run_answer_doctor`, calls `verbs::doctor::run` in-process and leaks 39 lines into
+   libtest's stdout. It is s7d hygiene (a writer seam), not fixed here, and the parser no longer depends on it.
+3. *(dated 2026-09-26, s8c build, P8.)* **`git worktree remove --force` leaves pnpm's junctions behind on Windows.**
+   Each of §8c.5's three measurement worktrees was deregistered and emptied of regular files, and each left its
+   `node_modules` junction skeleton (114 dangling links on passes 2 and 3) under `.git/redkiln/tmp/`. `git worktree
+   list`, the path-set check, cannot see it. A run worktree that `setup` installed into will do the same at
+   `.redkiln/worktrees/<item>`, so this is `s8d-ii`'s to meet at removal. It is reported, not decided.
+4. *(dated 2026-09-26, s8c build, P8.)* **The measured tree is `6f70e47`, not the work commit.** §8c.5's script
+   measures `HEAD`, and the stage's uncommitted work (about eighty tests, several of which build fixture projects) was
+   not in it. The rule's factor of two covers the gap by construction, but it is not measured. A re-reading at the
+   work commit replaces the four values by dated record edit under decision 10's rule; whether one is taken is the
+   operator's.
 
 *D21-48 (2026-09-24):* the revision's handed-on items 1 and 3, record B's breadth and the two agent-step keys, are settled by X13
 and X4. They now sit in the table above.

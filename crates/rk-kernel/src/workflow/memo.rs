@@ -757,21 +757,335 @@ pub fn activity_key_rule(reachable_card_digests: &[Digest]) -> Result<Digest, Me
 }
 
 // ---- AC-018's verb registry and rule ------------------------------------------------------------
+//
+// *(Extended 2026-09-26, s8c §8c.4-§8c.6, records V and B = ADR-0170/0171, proposed.)* ONE parser,
+// not two (§8c.4): the reader AC-018 already used is the reader `run_tool_step`, `rk-cli` and
+// `doctor` load `.redkiln/registry.toml` through. It now reads, besides `[verb]`, the three source
+// tables (`[checklist.*]`, `[kb.*]`, `[feed.*.*]`, D21-43 N14) and the per-toolchain value tables
+// (`[toolchain.<name>]`, D21-42 4a), and every row carries the five columns record V decision 1
+// fixes. A column that is missing or malformed is refused at load, naming the verb or the entry;
+// nothing is defaulted.
 
-/// One `[verb]` entry of `spikes/p9/registry.toml`'s shape.
+/// The closed route set (record V decision 1; ADR-0135 clause 1's idiom).
+///
+/// **Matched exhaustively, with no wildcard, wherever it is read**: a fifth route is a record's act (`s8d`'s, for
+/// `verdict_record`), and it becomes `E0004` at every match rather than a silent default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Route {
+    /// One of the four existing port methods. The verb's name picks the method, so a `port` row
+    /// on any other verb is refused at load.
+    Port(PortMethod),
+    /// The seventh port method, `Toolchain::run_verb` (record V decision 2).
+    Toolchain,
+    /// An rk-store write. No executor at `s8c`: `s8f` builds it.
+    Store,
+    /// Through the journalled `GitOps` seam. No executor at `s8c`: `s8g` builds it.
+    Git,
+}
+
+impl Route {
+    /// The route's spelling in `registry.toml`.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Port(_) => "port",
+            Self::Toolchain => "toolchain",
+            Self::Store => "store",
+            Self::Git => "git",
+        }
+    }
+}
+
+/// The four port methods a `port` row reaches (ADR-0135's map, now the registry's `port` rows).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PortMethod {
+    Build,
+    Test,
+    Lint,
+    ChangeSummary,
+}
+
+impl PortMethod {
+    /// The method a `port` row's verb names, or `None` for a verb that names none.
+    #[must_use]
+    pub fn from_verb(verb: &str) -> Option<Self> {
+        match verb {
+            "build" => Some(Self::Build),
+            "test" => Some(Self::Test),
+            "lint" => Some(Self::Lint),
+            "change_summary" => Some(Self::ChangeSummary),
+            _ => None,
+        }
+    }
+
+    /// The `outputs` kind the row must declare: the spike's own (`spikes/p9/registry.toml`).
+    #[must_use]
+    pub const fn output_kind(self) -> &'static str {
+        match self {
+            Self::Build => "BuildReport",
+            Self::Test => "TestReport",
+            Self::Lint => "LintReport",
+            Self::ChangeSummary => "ChangeSummary",
+        }
+    }
+}
+
+/// One `[verb]` row (record V decision 1).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VerbEntry {
-    pub outputs: Option<String>,
+    /// The typed output kind. *(Was `Option<String>` until 2026-09-26: a row without one is now
+    /// refused at load, because the kernel's decode table reads it.)*
+    pub outputs: String,
     /// `live = true` ⇒ the verb's results are never memoised. The registry's own header says so:
     /// *"`live` (⇒ memo = false on every step using it)"*.
     pub live: bool,
+    /// The row's `${toolchain.*}` timeout key, spelled bare as the spike spells it
+    /// (`timeout = "test_timeout"`). A catalog step's own `timeout_secs` is its bound (record B);
+    /// this is the row's, for a call no catalog step makes (`setup`, `s8d-ii`).
+    pub timeout: String,
+    /// The input names the call carries, in declaration order.
+    pub inputs: Vec<String>,
+    /// The route, from the closed set.
+    pub route: Route,
 }
 
-/// The verb half of the tool registry. **Only the `[verb]` table is read** — `[toolchain.feeds]`,
-/// the timeouts and the checklists belong to rules this module does not carry.
+/// A `[checklist.<id>]` or `[kb.<atom>]` entry: exactly one of two forms (record V decision 8).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SourceEntry {
+    /// `path`, relative to `.redkiln/`, checked at load to exist and hold an item.
+    Path(String),
+    /// `unauthored = "<reason, naming the owner>"`.
+    Unauthored(String),
+}
+
+/// A `[feed.<toolchain>.<name>]` entry: exactly one of two forms (record V decision 8).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FeedEntry {
+    /// `verb = "<a registry verb>"`, the producing verb, checked at load to be a row.
+    Verb(String),
+    /// `unprovided = "<reason>"`.
+    Unprovided(String),
+}
+
+/// One `${toolchain.<key>}` value as the kernel reads it: seconds, or a declared absence.
+///
+/// Record V decision 9. **Flat and adapter-name-free**: the warrant stays in the file, which the
+/// loader has already checked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ToolchainValue {
+    /// A value that carried its warrant at load.
+    Secs(std::num::NonZeroU64),
+    /// `unmeasured = "<reason>"`.
+    Unmeasured { reason: String },
+}
+
+/// **The value table `rk-cli` hands the kernel** (§8c.5, AC-487).
+///
+/// Key → seconds, or key → `unmeasured`. It carries no toolchain or adapter name, so the kernel resolves a key without
+/// ever seeing which adapter the table is for.
+///
+/// `Default` is the EMPTY table: every key is absent, and resolution refuses each one by name. It
+/// is never a fallback to a bound (record B decision 2).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ToolchainValues {
+    entries: BTreeMap<String, ToolchainValue>,
+    /// Set when no table could be selected (no adapter detected, or no registry): every key then
+    /// refuses naming this reason rather than as an absent key.
+    unselected: Option<String>,
+}
+
+/// Why a `${toolchain.<key>}` did not resolve (record B decision 2). **None is a fallback.**
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ValueRefusal {
+    /// The table declares no such key (`Unresolved`).
+    Absent { key: String },
+    /// The table declares the key `unmeasured`.
+    Unmeasured { key: String, reason: String },
+    /// No table was selected, for the reason given.
+    Unselected { key: String, reason: String },
+}
+
+impl ValueRefusal {
+    /// The key, spelled as the catalog spells it: `${toolchain.<key>}`.
+    #[must_use]
+    pub fn placeholder(&self) -> String {
+        let key = match self {
+            Self::Absent { key } | Self::Unmeasured { key, .. } | Self::Unselected { key, .. } => {
+                key
+            }
+        };
+        format!("${{toolchain.{key}}}")
+    }
+}
+
+impl fmt::Display for ValueRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let placeholder = self.placeholder();
+        match self {
+            Self::Absent { .. } => write!(
+                f,
+                "{placeholder} is absent from the value table (Unresolved): no value and no \
+                 declared `unmeasured`, and it never falls back to the construction bound \
+                 (ADR-0171 decision 2)"
+            ),
+            Self::Unmeasured { reason, .. } => write!(
+                f,
+                "{placeholder} is declared `unmeasured`: {reason}. An unmeasured key refuses by \
+                 name and never falls back to the construction bound (ADR-0171 decision 2)"
+            ),
+            Self::Unselected { reason, .. } => write!(
+                f,
+                "{placeholder} has no value table to resolve through: {reason}. No key is \
+                 guessed (ADR-0170 decision 12)"
+            ),
+        }
+    }
+}
+
+impl ToolchainValues {
+    /// A table over the given entries.
+    #[must_use]
+    pub const fn new(entries: BTreeMap<String, ToolchainValue>) -> Self {
+        Self {
+            entries,
+            unselected: None,
+        }
+    }
+
+    /// No table: every key refuses naming `reason`.
+    #[must_use]
+    pub fn unselected(reason: &str) -> Self {
+        Self {
+            entries: BTreeMap::new(),
+            unselected: Some(reason.to_owned()),
+        }
+    }
+
+    /// Resolve one key.
+    ///
+    /// # Errors
+    /// [`ValueRefusal`] for an absent or `unmeasured` key, or when no table was selected.
+    pub fn resolve(&self, key: &str) -> Result<std::num::NonZeroU64, ValueRefusal> {
+        if let Some(reason) = &self.unselected {
+            return Err(ValueRefusal::Unselected {
+                key: key.to_owned(),
+                reason: reason.clone(),
+            });
+        }
+        match self.entries.get(key) {
+            Some(ToolchainValue::Secs(secs)) => Ok(*secs),
+            Some(ToolchainValue::Unmeasured { reason }) => Err(ValueRefusal::Unmeasured {
+                key: key.to_owned(),
+                reason: reason.clone(),
+            }),
+            None => Err(ValueRefusal::Absent {
+                key: key.to_owned(),
+            }),
+        }
+    }
+
+    /// The entries, for a caller that reports them.
+    #[must_use]
+    pub const fn entries(&self) -> &BTreeMap<String, ToolchainValue> {
+        &self.entries
+    }
+}
+
+/// A declaration row in a per-toolchain table: a fact about the toolchain that is not a duration
+/// (§8c.5), `{ value = <any>, source = "<string>" }`, admitted from its named set only.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Declaration {
+    pub value: Value,
+    pub source: String,
+}
+
+/// The declaration rows a per-toolchain table admits (§8c.5; Checkpoint 8c (11)'s `D`).
+pub const DECLARATION_ROWS: [&str; 3] = ["setup_projects", "package_binaries", "claims"];
+
+/// One `[toolchain.<name>]` table, as loaded.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ValueTable {
+    values: BTreeMap<String, ToolchainValue>,
+    declarations: BTreeMap<String, Declaration>,
+}
+
+impl ValueTable {
+    /// The declaration rows.
+    #[must_use]
+    pub const fn declarations(&self) -> &BTreeMap<String, Declaration> {
+        &self.declarations
+    }
+}
+
+/// What a source input resolved to (record V decision 8's resolution rules; the resolver that
+/// calls it is `s8d`'s).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SourceValue {
+    /// A declared `path`, relative to `.redkiln/`.
+    Path(String),
+    /// A declared feed's producing verb.
+    FeedVerb(String),
+    /// An optional (`?`) input whose key is declared `unauthored` or `unprovided`: `null`
+    /// (ADR-0032's Decision: *"Absent `?` inputs are `null`"*).
+    Null,
+}
+
+/// Why a source input did not resolve. **Each names the key.**
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SourceRefusal {
+    /// The input is not `checklist:`, `kb:` or `toolchain:<feed>`.
+    NotASource { input: String },
+    /// No entry declares the key. Refused **even when the input is optional**: an undeclared key is
+    /// a typo or an unowned demand, never an absence (N14).
+    Undeclared { key: String },
+    /// A mandatory input whose key is declared `unauthored`.
+    Unauthored { key: String, reason: String },
+    /// A mandatory input whose feed is declared `unprovided`.
+    Unprovided { key: String, reason: String },
+}
+
+impl fmt::Display for SourceRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotASource { input } => write!(
+                f,
+                "`{input}` is not a `checklist:`, `kb:` or `toolchain:<feed>` source"
+            ),
+            Self::Undeclared { key } => write!(
+                f,
+                "`{key}` is not declared in registry.toml. An undeclared source is refused by \
+                 name even when the input is optional (D21-43 N14; ADR-0170 decision 8)"
+            ),
+            Self::Unauthored { key, reason } => {
+                write!(
+                    f,
+                    "`{key}` is mandatory and declared `unauthored`: {reason}"
+                )
+            }
+            Self::Unprovided { key, reason } => {
+                write!(
+                    f,
+                    "`{key}` is mandatory and declared `unprovided`: {reason}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for SourceRefusal {}
+
+/// The tool registry: the verb rows, the source tables and the per-toolchain value tables.
+///
+/// *(The doc read "the verb half of the tool registry. **Only the `[verb]` table is read**" until
+/// 2026-09-26; ADR-0170, proposed, extends this reader to the whole file.)*
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct VerbRegistry {
     verbs: BTreeMap<String, VerbEntry>,
+    checklists: BTreeMap<String, SourceEntry>,
+    kbs: BTreeMap<String, SourceEntry>,
+    /// `(toolchain, name)` → entry.
+    feeds: BTreeMap<(String, String), FeedEntry>,
+    toolchains: BTreeMap<String, ValueTable>,
 }
 
 /// What stopped a verb-registry read.
@@ -783,13 +1097,35 @@ pub enum VerbRegistryError {
     /// No `[verb]` table at all. **An empty registry is an error, not an empty success**: a rule
     /// that finds no live verb passes, which is Halt 8's *"a filter that matches nothing exits 0"*.
     NoVerbTable,
-    /// An entry that does not declare `live`, or declares it as something other than a boolean.
+    /// An entry that does not declare `live`, or declares it as something other than a boolean;
+    /// *(2026-09-26)* or any other column of the row missing or malformed.
     ///
     /// Refused at **load**, and that is fail-closed rather than strict: if liveness is unknown the
     /// memo rule cannot say whether memoising is lawful, and the alternative — defaulting to
     /// `false` — silently permits it.
     Shape {
         verb: String,
+        detail: String,
+    },
+    /// *(2026-09-26.)* A source-table entry that is malformed: both forms or neither, a `path`
+    /// that does not exist or holds no item, a feed `verb` that is not a row. Names the entry.
+    Source {
+        entry: String,
+        detail: String,
+    },
+    /// *(2026-09-26.)* A per-toolchain value without its warrant, or otherwise malformed. Names
+    /// the table and the key.
+    Value {
+        entry: String,
+        detail: String,
+    },
+    /// *(2026-09-26.)* A top-level table this reader does not know.
+    UnknownTable {
+        name: String,
+    },
+    /// *(2026-09-26.)* The file could not be read.
+    Io {
+        path: String,
         detail: String,
     },
 }
@@ -802,6 +1138,10 @@ impl VerbRegistryError {
             Self::Toml { .. } => "toml",
             Self::NoVerbTable => "no_verb_table",
             Self::Shape { .. } => "shape",
+            Self::Source { .. } => "source",
+            Self::Value { .. } => "value",
+            Self::UnknownTable { .. } => "unknown_table",
+            Self::Io { .. } => "io",
         }
     }
 }
@@ -815,21 +1155,82 @@ impl fmt::Display for VerbRegistryError {
                  rule that finds no live verb reports green over a registry it could not read",
             ),
             Self::Shape { verb, detail } => write!(f, "verb `{verb}`: {detail}"),
+            Self::Source { entry, detail } => write!(f, "source entry `{entry}`: {detail}"),
+            Self::Value { entry, detail } => write!(f, "value `{entry}`: {detail}"),
+            Self::UnknownTable { name } => write!(
+                f,
+                "the registry declares `[{name}]`, which is not `verb`, `checklist`, `kb`, `feed` \
+                 or `toolchain`"
+            ),
+            Self::Io { path, detail } => write!(f, "{path}: {detail}"),
         }
     }
 }
 
 impl std::error::Error for VerbRegistryError {}
 
+/// The top-level tables the registry admits.
+const REGISTRY_TABLES: [&str; 5] = ["verb", "checklist", "kb", "feed", "toolchain"];
+
+/// A non-empty string member, or `None`.
+fn nonempty_str<'a>(table: &'a toml_subset::Table, key: &str) -> Option<&'a str> {
+    table
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|s| !s.trim().is_empty())
+}
+
+/// A key the value table and the catalog's `${toolchain.<key>}` can both spell.
+fn is_key(s: &str) -> bool {
+    !s.is_empty()
+        && s.bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+}
+
 impl VerbRegistry {
-    /// Read `[verb]` from a registry document.
+    /// Read a registry document that declares NO `path` source entry.
+    ///
+    /// A `path` entry is checked against the `.redkiln/` directory it is relative to, which a bare
+    /// document does not have, so this refuses one by name rather than skip the check: use
+    /// [`Self::from_toml_at`] or [`Self::load_file`].
     ///
     /// # Errors
     ///
-    /// [`VerbRegistryError`] for a document outside the TOML subset, a missing `[verb]` table, or
-    /// an entry without a boolean `live`.
+    /// [`VerbRegistryError`] for a document outside the TOML subset, a missing `[verb]` table, a
+    /// row missing or malforming any of its five columns, a malformed source entry or value.
     pub fn from_toml(src: &str) -> Result<Self, VerbRegistryError> {
+        Self::parse(src, None)
+    }
+
+    /// Read a registry document whose `path` entries are relative to `redkiln_dir`.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::from_toml`], and a `path` that does not exist or holds no item.
+    pub fn from_toml_at(
+        src: &str,
+        redkiln_dir: &std::path::Path,
+    ) -> Result<Self, VerbRegistryError> {
+        Self::parse(src, Some(redkiln_dir))
+    }
+
+    /// Read `registry.toml` from disk; its `path` entries are relative to its own directory.
+    ///
+    /// # Errors
+    ///
+    /// [`VerbRegistryError::Io`] when the file cannot be read, otherwise as [`Self::from_toml_at`].
+    pub fn load_file(path: &std::path::Path) -> Result<Self, VerbRegistryError> {
+        let src = std::fs::read_to_string(path).map_err(|e| VerbRegistryError::Io {
+            path: path.display().to_string(),
+            detail: e.to_string(),
+        })?;
+        let dir = path.parent().unwrap_or_else(|| std::path::Path::new(""));
+        Self::from_toml_at(&src, dir)
+    }
+
+    fn parse(src: &str, redkiln_dir: Option<&std::path::Path>) -> Result<Self, VerbRegistryError> {
         let doc = toml_subset::parse(src).map_err(|error| VerbRegistryError::Toml { error })?;
+        // `[verb]` FIRST: a document with no verb table is `no_verb_table`, whatever else it holds.
         let table = doc
             .get("verb")
             .and_then(Value::as_table)
@@ -837,35 +1238,22 @@ impl VerbRegistry {
         if table.is_empty() {
             return Err(VerbRegistryError::NoVerbTable);
         }
+        if let Some(name) = doc.keys().find(|k| !REGISTRY_TABLES.contains(&k.as_str())) {
+            return Err(VerbRegistryError::UnknownTable { name: name.clone() });
+        }
         let mut verbs = BTreeMap::new();
         for (name, value) in table {
-            let entry = value.as_table().ok_or_else(|| VerbRegistryError::Shape {
-                verb: name.clone(),
-                detail: "is not a table".to_owned(),
-            })?;
-            // `live` is REFUSED rather than defaulted: see the variant's own doc. A missing flag
-            // defaulted to `false` would report every step using this verb as lawfully memoisable.
-            let live = entry.get("live").and_then(Value::as_bool).ok_or_else(|| {
-                VerbRegistryError::Shape {
-                    verb: name.clone(),
-                    detail: "declares no boolean `live`. Liveness is the verb registry's flag and \
-                             nothing else (ADR-0059); an absent one is refused rather than \
-                             defaulted, because either default decides a value the registry owes"
-                        .to_owned(),
-                }
-            })?;
-            verbs.insert(
-                name.clone(),
-                VerbEntry {
-                    outputs: entry
-                        .get("outputs")
-                        .and_then(Value::as_str)
-                        .map(ToOwned::to_owned),
-                    live,
-                },
-            );
+            verbs.insert(name.clone(), verb_row(name, value)?);
         }
-        Ok(Self { verbs })
+        let mut registry = Self {
+            verbs,
+            ..Self::default()
+        };
+        registry.checklists = source_table(&doc, "checklist", redkiln_dir, SourceKind::Checklist)?;
+        registry.kbs = source_table(&doc, "kb", redkiln_dir, SourceKind::Kb)?;
+        registry.feeds = feed_tables(&doc, &registry.verbs)?;
+        registry.toolchains = value_tables(&doc)?;
+        Ok(registry)
     }
 
     /// `Some(true)` for a live verb, `Some(false)` for a declared non-live one, `None` for a verb
@@ -891,6 +1279,511 @@ impl VerbRegistry {
     pub fn is_empty(&self) -> bool {
         self.verbs.is_empty()
     }
+
+    /// The flat value table for the toolchain `rk-cli` selected (§8c.5), or `None` when the
+    /// registry declares no `[toolchain.<name>]` for it. The name is the caller's: this crate
+    /// compares against no adapter identity (AC-487).
+    #[must_use]
+    pub fn values_for(&self, toolchain: &str) -> Option<ToolchainValues> {
+        self.toolchains
+            .get(toolchain)
+            .map(|t| ToolchainValues::new(t.values.clone()))
+    }
+
+    /// The loaded `[toolchain.<name>]` table, declarations included.
+    #[must_use]
+    pub fn table(&self, toolchain: &str) -> Option<&ValueTable> {
+        self.toolchains.get(toolchain)
+    }
+
+    /// **Resolve one source input** (record V decision 8). `toolchain` names the feed table a
+    /// `toolchain:<feed>` input reads — the item's `toolchain` facet value, data the caller holds.
+    ///
+    /// An **undeclared** key is refused by name, even when the input is optional. An
+    /// `unauthored` / `unprovided` key is refused when mandatory and is [`SourceValue::Null`] when
+    /// optional.
+    ///
+    /// # Errors
+    /// [`SourceRefusal`], naming the key.
+    pub fn resolve_source(
+        &self,
+        toolchain: &str,
+        input: &str,
+    ) -> Result<SourceValue, SourceRefusal> {
+        let (bare, optional) = input
+            .strip_suffix('?')
+            .map_or((input, false), |b| (b, true));
+        if let Some(id) = bare.strip_prefix("checklist:") {
+            return resolve_entry(self.checklists.get(id), bare, optional);
+        }
+        if let Some(atom) = bare.strip_prefix("kb:") {
+            return resolve_entry(self.kbs.get(atom), bare, optional);
+        }
+        if let Some(feed) = bare.strip_prefix("toolchain:") {
+            let key = format!("feed.{toolchain}.{feed}");
+            return match self.feeds.get(&(toolchain.to_owned(), feed.to_owned())) {
+                None => Err(SourceRefusal::Undeclared { key }),
+                Some(FeedEntry::Verb(verb)) => Ok(SourceValue::FeedVerb(verb.clone())),
+                Some(FeedEntry::Unprovided(_)) if optional => Ok(SourceValue::Null),
+                Some(FeedEntry::Unprovided(reason)) => Err(SourceRefusal::Unprovided {
+                    key,
+                    reason: reason.clone(),
+                }),
+            };
+        }
+        Err(SourceRefusal::NotASource {
+            input: input.to_owned(),
+        })
+    }
+}
+
+fn resolve_entry(
+    entry: Option<&SourceEntry>,
+    key: &str,
+    optional: bool,
+) -> Result<SourceValue, SourceRefusal> {
+    match entry {
+        None => Err(SourceRefusal::Undeclared {
+            key: key.to_owned(),
+        }),
+        Some(SourceEntry::Path(path)) => Ok(SourceValue::Path(path.clone())),
+        Some(SourceEntry::Unauthored(_)) if optional => Ok(SourceValue::Null),
+        Some(SourceEntry::Unauthored(reason)) => Err(SourceRefusal::Unauthored {
+            key: key.to_owned(),
+            reason: reason.clone(),
+        }),
+    }
+}
+
+/// One `[verb]` row, all five columns required (record V decision 1).
+fn verb_row(name: &str, value: &Value) -> Result<VerbEntry, VerbRegistryError> {
+    let shape = |detail: String| VerbRegistryError::Shape {
+        verb: name.to_owned(),
+        detail,
+    };
+    let entry = value
+        .as_table()
+        .ok_or_else(|| shape("is not a table".to_owned()))?;
+    // `live` is REFUSED rather than defaulted: see the variant's own doc. A missing flag
+    // defaulted to `false` would report every step using this verb as lawfully memoisable.
+    let live = entry.get("live").and_then(Value::as_bool).ok_or_else(|| {
+        shape(
+            "declares no boolean `live`. Liveness is the verb registry's flag and nothing \
+             else (ADR-0059); an absent one is refused rather than defaulted, because either \
+             default decides a value the registry owes"
+                .to_owned(),
+        )
+    })?;
+    for key in entry.keys() {
+        if !["outputs", "live", "timeout", "inputs", "route"].contains(&key.as_str()) {
+            return Err(shape(format!(
+                "declares `{key}`, which is not one of the five columns (outputs, live, timeout, \
+                 inputs, route; ADR-0170 decision 1)"
+            )));
+        }
+    }
+    let outputs = nonempty_str(entry, "outputs")
+        .ok_or_else(|| shape("declares no `outputs` kind".to_owned()))?
+        .to_owned();
+    let timeout = nonempty_str(entry, "timeout")
+        .filter(|t| is_key(t))
+        .ok_or_else(|| {
+            shape("declares no `timeout` key (a bare `${toolchain.*}` key name)".to_owned())
+        })?
+        .to_owned();
+    let inputs = entry
+        .get("inputs")
+        .and_then(Value::as_array)
+        .ok_or_else(|| shape("declares no `inputs` array (an empty one is `[]`)".to_owned()))?
+        .iter()
+        .map(|v| {
+            v.as_str()
+                .filter(|s| !s.trim().is_empty())
+                .map(ToOwned::to_owned)
+                .ok_or_else(|| shape("an `inputs` member is not a non-empty string".to_owned()))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let route_token =
+        nonempty_str(entry, "route").ok_or_else(|| shape("declares no `route`".to_owned()))?;
+    let route = match route_token {
+        "port" => {
+            let method = PortMethod::from_verb(name).ok_or_else(|| {
+                shape(
+                    "takes the `port` route, which reaches only the four existing methods \
+                     (build, test, lint, change_summary)"
+                        .to_owned(),
+                )
+            })?;
+            if outputs != method.output_kind() {
+                return Err(shape(format!(
+                    "takes the `port` route and declares `outputs = {outputs:?}`; the port \
+                     method's kind is `{}`",
+                    method.output_kind()
+                )));
+            }
+            Route::Port(method)
+        }
+        "toolchain" => Route::Toolchain,
+        "store" => Route::Store,
+        "git" => Route::Git,
+        other => {
+            return Err(shape(format!(
+                "declares `route = {other:?}`, outside the closed set (port, toolchain, store, \
+                 git). A route is added by record, not by a registry row (ADR-0170 decision 1)"
+            )));
+        }
+    };
+    Ok(VerbEntry {
+        outputs,
+        live,
+        timeout,
+        inputs,
+        route,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SourceKind {
+    Checklist,
+    Kb,
+}
+
+/// `[checklist.*]` or `[kb.*]`: exactly one of `path` / `unauthored` per entry.
+fn source_table(
+    doc: &toml_subset::Table,
+    form: &str,
+    redkiln_dir: Option<&std::path::Path>,
+    kind: SourceKind,
+) -> Result<BTreeMap<String, SourceEntry>, VerbRegistryError> {
+    let mut out = BTreeMap::new();
+    let Some(table) = doc.get(form) else {
+        return Ok(out);
+    };
+    let table = table.as_table().ok_or_else(|| VerbRegistryError::Source {
+        entry: form.to_owned(),
+        detail: "is not a table".to_owned(),
+    })?;
+    for (id, value) in table {
+        let name = format!("{form}.{id}");
+        let refuse = |detail: &str| VerbRegistryError::Source {
+            entry: name.clone(),
+            detail: detail.to_owned(),
+        };
+        let entry = value.as_table().ok_or_else(|| refuse("is not a table"))?;
+        if entry.keys().any(|k| k != "path" && k != "unauthored") {
+            return Err(refuse("declares a key other than `path` or `unauthored`"));
+        }
+        let parsed = match (
+            nonempty_str(entry, "path"),
+            nonempty_str(entry, "unauthored"),
+        ) {
+            (Some(_), Some(_)) => {
+                return Err(refuse("declares BOTH `path` and `unauthored`; exactly one"));
+            }
+            (None, None) => {
+                return Err(refuse(
+                    "declares NEITHER a non-empty `path` nor a non-empty `unauthored`; exactly one",
+                ));
+            }
+            (Some(path), None) => {
+                check_path(path, redkiln_dir, kind).map_err(|d| refuse(&d))?;
+                SourceEntry::Path(path.to_owned())
+            }
+            (None, Some(reason)) => SourceEntry::Unauthored(reason.to_owned()),
+        };
+        out.insert(id.clone(), parsed);
+    }
+    Ok(out)
+}
+
+/// A `path` exists under `.redkiln/` and holds an item. Declared paths only: nothing is walked.
+fn check_path(
+    path: &str,
+    redkiln_dir: Option<&std::path::Path>,
+    kind: SourceKind,
+) -> Result<(), String> {
+    let rel = std::path::Path::new(path);
+    if !rel
+        .components()
+        .all(|c| matches!(c, std::path::Component::Normal(_)))
+    {
+        return Err(format!(
+            "`path = {path:?}` is not a plain relative path under `.redkiln/`"
+        ));
+    }
+    let Some(dir) = redkiln_dir else {
+        return Err(format!(
+            "`path = {path:?}` cannot be checked without the `.redkiln/` it is relative to; \
+             load the registry from its file (`VerbRegistry::load_file` / `from_toml_at`)"
+        ));
+    };
+    let full = dir.join(rel);
+    let text = std::fs::read_to_string(&full)
+        .map_err(|e| format!("`path = {path:?}` does not exist or cannot be read ({e})"))?;
+    let holds_item = match kind {
+        SourceKind::Kb => !text.trim().is_empty(),
+        SourceKind::Checklist => toml_subset::parse(&text)
+            .ok()
+            .and_then(|d| {
+                d.get("item")
+                    .and_then(Value::as_array)
+                    .map(|a| !a.is_empty())
+            })
+            .unwrap_or(false),
+    };
+    if holds_item {
+        Ok(())
+    } else {
+        Err(format!(
+            "`path = {path:?}` holds no item (a checklist needs at least one `[[item]]`; an atom \
+             is not empty)"
+        ))
+    }
+}
+
+/// `[feed.<toolchain>.<name>]`: exactly one of `verb` / `unprovided`, and a `verb` is a row.
+fn feed_tables(
+    doc: &toml_subset::Table,
+    verbs: &BTreeMap<String, VerbEntry>,
+) -> Result<BTreeMap<(String, String), FeedEntry>, VerbRegistryError> {
+    let mut out = BTreeMap::new();
+    let Some(feed) = doc.get("feed") else {
+        return Ok(out);
+    };
+    let refuse = |entry: String, detail: &str| VerbRegistryError::Source {
+        entry,
+        detail: detail.to_owned(),
+    };
+    let feed = feed
+        .as_table()
+        .ok_or_else(|| refuse("feed".to_owned(), "is not a table"))?;
+    for (toolchain, table) in feed {
+        let table = table.as_table().ok_or_else(|| {
+            refuse(
+                format!("feed.{toolchain}"),
+                "is not a table of `[feed.<toolchain>.<name>]` entries",
+            )
+        })?;
+        for (name, value) in table {
+            let entry_name = format!("feed.{toolchain}.{name}");
+            let entry = value
+                .as_table()
+                .ok_or_else(|| refuse(entry_name.clone(), "is not a table"))?;
+            if entry.keys().any(|k| k != "verb" && k != "unprovided") {
+                return Err(refuse(
+                    entry_name,
+                    "declares a key other than `verb` or `unprovided`",
+                ));
+            }
+            let parsed = match (
+                nonempty_str(entry, "verb"),
+                nonempty_str(entry, "unprovided"),
+            ) {
+                (Some(_), Some(_)) => {
+                    return Err(refuse(
+                        entry_name,
+                        "declares BOTH `verb` and `unprovided`; exactly one",
+                    ));
+                }
+                (None, None) => {
+                    return Err(refuse(
+                        entry_name,
+                        "declares NEITHER a non-empty `verb` nor a non-empty `unprovided`; \
+                         exactly one",
+                    ));
+                }
+                (Some(verb), None) => {
+                    if !verbs.contains_key(verb) {
+                        return Err(refuse(
+                            entry_name,
+                            &format!("declares `verb = {verb:?}`, which is not a registry row"),
+                        ));
+                    }
+                    FeedEntry::Verb(verb.to_owned())
+                }
+                (None, Some(reason)) => FeedEntry::Unprovided(reason.to_owned()),
+            };
+            out.insert((toolchain.clone(), name.clone()), parsed);
+        }
+    }
+    Ok(out)
+}
+
+/// `secs = 60 × ⌈(2 × max(measured)) / 60⌉` — ADR-0170 decision 10's rule, checked on every
+/// `command` (measured-here) value. A cited (`source`) value may be the operator's (X4), so it is
+/// not recomputed.
+fn rule_secs(max_measured: f64) -> Option<u64> {
+    let minutes = (2.0 * max_measured / 60.0).ceil();
+    if !minutes.is_finite() || minutes < 0.0 || minutes > 1.0e12 {
+        return None;
+    }
+    // Checked finite, non-negative and bounded above, so the cast neither truncates a fraction
+    // (it was `ceil`ed) nor wraps.
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "finite, non-negative, integral and bounded, checked on the line above"
+    )]
+    let minutes = minutes as u64;
+    minutes.checked_mul(60)
+}
+
+/// A reading in `measured`: a number, or an inline table carrying a numeric `secs` (so a network
+/// reading can be labelled, §8c.5).
+fn reading(v: &Value) -> Option<f64> {
+    let n = match v {
+        Value::Table(t) => t.get("secs")?.as_f64()?,
+        other => other.as_f64()?,
+    };
+    (n.is_finite() && n >= 0.0).then_some(n)
+}
+
+/// `[toolchain.<name>]`: every value with its warrant, every `unmeasured` with its reason, and
+/// the named declaration rows (record V decision 9).
+fn value_tables(
+    doc: &toml_subset::Table,
+) -> Result<BTreeMap<String, ValueTable>, VerbRegistryError> {
+    let mut out = BTreeMap::new();
+    let Some(toolchains) = doc.get("toolchain") else {
+        return Ok(out);
+    };
+    let toolchains = toolchains
+        .as_table()
+        .ok_or_else(|| VerbRegistryError::Value {
+            entry: "toolchain".to_owned(),
+            detail: "is not a table".to_owned(),
+        })?;
+    for (toolchain, table) in toolchains {
+        let refuse = |key: &str, detail: String| VerbRegistryError::Value {
+            entry: format!("toolchain.{toolchain}.{key}"),
+            detail,
+        };
+        let table = table
+            .as_table()
+            .ok_or_else(|| refuse("", "is not a table of keys".to_owned()))?;
+        let mut loaded = ValueTable::default();
+        for (key, value) in table {
+            let without = |what: &str| {
+                refuse(
+                    key,
+                    format!(
+                        "{what}. Every value carries its warrant (`secs`, `measured`, `rule`, \
+                         `pin`, and exactly one of `command` / `source`), or is declared \
+                         `unmeasured = \"<reason>\"` (ADR-0170 decision 9)"
+                    ),
+                )
+            };
+            let Some(entry) = value.as_table() else {
+                return Err(without("is a bare value, not a warrant"));
+            };
+            let keys: BTreeSet<&str> = entry.keys().map(String::as_str).collect();
+            if DECLARATION_ROWS.contains(&key.as_str()) {
+                let source = nonempty_str(entry, "source");
+                match (keys == BTreeSet::from(["value", "source"]), source) {
+                    (true, Some(source)) => {
+                        let value = entry.get("value").cloned().unwrap_or(Value::Bool(false));
+                        loaded.declarations.insert(
+                            key.clone(),
+                            Declaration {
+                                value,
+                                source: source.to_owned(),
+                            },
+                        );
+                        continue;
+                    }
+                    _ => {
+                        return Err(refuse(
+                            key,
+                            "is a declaration row and declares exactly `value` and a non-empty \
+                             `source` (§8c.5)"
+                                .to_owned(),
+                        ));
+                    }
+                }
+            }
+            if keys == BTreeSet::from(["unmeasured"]) {
+                let reason = nonempty_str(entry, "unmeasured")
+                    .ok_or_else(|| without("declares an empty `unmeasured` reason"))?;
+                loaded.values.insert(
+                    key.clone(),
+                    ToolchainValue::Unmeasured {
+                        reason: reason.to_owned(),
+                    },
+                );
+                continue;
+            }
+            let has_command = keys.contains("command");
+            let has_source = keys.contains("source");
+            let expected: BTreeSet<&str> = ["secs", "measured", "rule", "pin"]
+                .into_iter()
+                .chain(has_command.then_some("command"))
+                .chain(has_source.then_some("source"))
+                .collect();
+            if has_command == has_source {
+                return Err(without(if has_command {
+                    "declares BOTH `command` and `source`"
+                } else {
+                    "declares neither `command` nor `source`"
+                }));
+            }
+            if keys != expected {
+                return Err(without(&format!(
+                    "declares {keys:?}, not exactly {expected:?}"
+                )));
+            }
+            let secs = entry
+                .get("secs")
+                .and_then(Value::as_int)
+                .and_then(|s| u64::try_from(s).ok())
+                .and_then(std::num::NonZeroU64::new)
+                .ok_or_else(|| without("declares no positive integer `secs`"))?;
+            let readings = entry
+                .get("measured")
+                .and_then(Value::as_array)
+                .filter(|a| !a.is_empty())
+                .ok_or_else(|| without("declares no non-empty `measured` list"))?
+                .iter()
+                .map(reading)
+                .collect::<Option<Vec<f64>>>()
+                .ok_or_else(|| {
+                    without("carries a `measured` reading that is not a non-negative number")
+                })?;
+            nonempty_str(entry, "rule").ok_or_else(|| without("declares an empty `rule`"))?;
+            let pin = entry.get("pin").and_then(Value::as_str).unwrap_or("");
+            if pin.len() != 40
+                || !pin
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            {
+                return Err(without(&format!(
+                    "declares `pin = {pin:?}`, not a 40-hex commit of this repository"
+                )));
+            }
+            let origin = if has_command { "command" } else { "source" };
+            nonempty_str(entry, origin)
+                .ok_or_else(|| without(&format!("declares an empty `{origin}`")))?;
+            if has_command {
+                let max = readings.iter().copied().fold(0.0_f64, f64::max);
+                if rule_secs(max) != Some(secs.get()) {
+                    return Err(refuse(
+                        key,
+                        format!(
+                            "declares `secs = {secs}` over a slowest reading of {max} s; \
+                             ADR-0170 decision 10's rule, `60 × ⌈(2 × max(measured)) / 60⌉`, \
+                             gives {:?}. A measured value follows the rule written before its \
+                             readings",
+                            rule_secs(max)
+                        ),
+                    ));
+                }
+            }
+            loaded
+                .values
+                .insert(key.clone(), ToolchainValue::Secs(secs));
+        }
+        out.insert(toolchain.clone(), loaded);
+    }
+    Ok(out)
 }
 
 /// One violation of AC-018. Collected, **never short-circuited** (house Shape B).

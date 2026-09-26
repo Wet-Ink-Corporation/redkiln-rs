@@ -1,0 +1,30 @@
+warning: rk-toolchain-rust-fixture@0.0.0: test result: ok. 99 passed; 0 failed
+warning: rk-toolchain-rust-fixture@0.0.0: test phantom ... ok
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+────────────
+ Nextest run ID 01975024-ca4a-44f6-ab9a-b3b64d67e3c7 with nextest profile: default
+    Starting 1 test across 2 binaries (3 tests and 1 binary skipped)
+        FAIL [   0.009s] (1/1) rk-toolchain-rust-fixture::suite red_by_selection
+  stdout ───
+
+    running 1 test
+    test red_by_selection ... FAILED
+
+    failures:
+
+    failures:
+        red_by_selection
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'red_by_selection' (21480) panicked at tests\suite.rs:37:5:
+    assertion `left == right` failed: this test is the fixture's red
+      left: 4
+     right: 5
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.010s] 1 test run: 0 passed, 1 failed, 3 skipped
+error: test run failed

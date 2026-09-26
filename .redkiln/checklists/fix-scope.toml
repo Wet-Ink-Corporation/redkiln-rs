@@ -1,0 +1,24 @@
+# checklist:fix-scope — read by fix-spec/self-check (s8c §8c.4; ADR-0170 decision 8, proposed).
+# Authored 2026-09-26 from the passages named in `source`.
+
+source = "references/research/2026-09-07-activity-catalog-raw.md, the fix-spec row: 'For a bug: expected behaviour, regression test intent, scope of fix', input 'RootCause'; .redkiln/catalog/fix-spec.toml's rationale: 'A bug's spec is the expected behaviour plus the regression test that pins it; it is derived from the cause, not from a story.'; and its policy step's 'spec.acceptance_criteria.len() > 0'"
+
+[[item]]
+id   = "expected-behaviour"
+text = "The spec states the expected behaviour."
+
+[[item]]
+id   = "regression-test-intent"
+text = "The spec states the intent of the regression test that pins the expected behaviour."
+
+[[item]]
+id   = "scope-of-fix"
+text = "The spec states the scope of the fix."
+
+[[item]]
+id   = "derived-from-cause"
+text = "The spec is derived from the root cause, not from a story."
+
+[[item]]
+id   = "has-acceptance-criteria"
+text = "The spec carries at least one acceptance criterion."

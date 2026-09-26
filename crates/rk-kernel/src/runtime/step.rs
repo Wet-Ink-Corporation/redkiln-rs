@@ -106,13 +106,21 @@
 //! context assembled from the item can bind — step-output resolution stays OWED, and the `check` arm
 //! stays the dominant reason a walk ends.
 
-use rk_types::error::StepError;
+use std::collections::BTreeMap;
+
+use rk_ports::toolchain::{StepBound, VerbCall, VerbOutput};
+use rk_types::error::{StepError, TransportKind};
+use rk_types::verb_output::{
+    BuildArtifact, BuildReport, BuildStatus, ItemRefs, ReleaseTag, ScanReport, SetupResult,
+    SmokeResult, SmokeStatus,
+};
 
 use super::activity::ActivityReport;
-use crate::catalog::{Step, StepKind};
+use crate::catalog::{Step, StepKind, StepTimeout};
 use crate::predicate::{self, Tri};
 use crate::workflow::breaker::JournaledNow;
 use crate::workflow::envelope::AttemptCap;
+use crate::workflow::memo::{PortMethod, Route, ToolchainValues, VerbRegistry};
 
 /// **ADR-0145. What a `gate` step needs in order to open a gate, and nothing else.**
 ///
@@ -172,22 +180,160 @@ pub enum StepVerdict {
     Failed(StepError),
 }
 
-/// The four catalog verbs that name a `Toolchain` port method — **ADR-0135**'s closed map.
+/// **What the `tool` arm routes through** — the verb registry and the value table.
 ///
-/// The spelling is identical on both sides, which is why this is a map and not an invention. A verb
-/// outside this set is refused by name; `classify` and `detect` are port methods that **no** `tool`
-/// step names (measured: 0 run lines each), so they are deliberately absent — adding them would be
-/// inventing a demand to fit a supply.
+/// s8c §8c.4-§8c.6; records V and B = ADR-0170/0171, proposed. *(Replaced ADR-0135's `MAPPED_VERBS` on
+/// 2026-09-26: the four-verb map is now the registry's four `port` rows, and the other routes are
+/// the registry's closed set.)*
 ///
-/// 🛑 **`test` IS STILL IN THIS SET AND NO LONGER REACHES ITS PORT METHOD (ADR-0148), AND THAT IS
-/// DELIBERATE.** Membership is what keeps the two refusals distinguishable: a verb *outside* the set
-/// is refused with the bare verb string (ADR-0135 clause 2, so the journal names which of the 29 was
-/// reached), while `test` is refused with a sentence naming its unparsed `inputs.selection`. Moving
-/// it out would collapse the map's own boundary and make a journal unable to say which edge a run
-/// hit. This sentence read *"Every **other** verb is refused by name"* until 2026-09-22, which
-/// stopped being true the moment `test` began refusing; it is corrected rather than left, because a
-/// constant's docstring asserting the invariant its own change broke is how the tree learns to lie.
-const MAPPED_VERBS: [&str; 4] = ["build", "change_summary", "lint", "test"];
+/// `Default` binds **no registry**, so every verb has no row and refuses by its bare name
+/// (ADR-0135 clause 2, unchanged). It is never a built-in table: a second verb table in code would
+/// give `registry.toml` two meanings (§8c.4, *"One parser, not two"*).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ToolRouting {
+    registry: Option<VerbRegistry>,
+    values: ToolchainValues,
+}
+
+impl ToolRouting {
+    /// Bind a loaded registry and the value table `rk-cli` selected for the chosen adapter. The
+    /// table carries no adapter name (AC-487).
+    #[must_use]
+    pub const fn new(registry: VerbRegistry, values: ToolchainValues) -> Self {
+        Self {
+            registry: Some(registry),
+            values,
+        }
+    }
+
+    /// The registry, when one was bound.
+    #[must_use]
+    pub const fn registry(&self) -> Option<&VerbRegistry> {
+        self.registry.as_ref()
+    }
+
+    /// The value table.
+    #[must_use]
+    pub const fn values(&self) -> &ToolchainValues {
+        &self.values
+    }
+}
+
+/// What a `tool` step's route check leaves to call, once its bound is resolved.
+#[derive(Debug, Clone, Copy)]
+enum ToolCall {
+    Port(PortMethod),
+    Verb,
+}
+
+/// ADR-0148's sentence for `toolchain:test`, **unchanged** (`s8d` reverses it).
+fn test_refusal(step: &Step) -> StepError {
+    StepError::Unsupported {
+        capability: format!(
+            "the `tool` step `{}` names `toolchain:test`, whose declared \
+             `inputs.selection` `catalog::Step` does not parse and this crate cannot \
+             resolve. An empty selection is `cargo test --workspace` and the literal \
+             matches no test at all, so neither is run",
+            step.id
+        ),
+    }
+}
+
+/// **Record B decision 2.** The step's bound.
+///
+/// Undeclared, a literal, or a `${toolchain.<key>}` resolved through the value table. An absent or `unmeasured` key refuses by name and **never
+/// falls back to the construction bound**; a zero refuses (RT-5).
+///
+/// # Errors
+/// [`StepError::Unsupported`] naming `${toolchain.<key>}` and why, or naming RT-5 for a zero.
+pub fn resolve_bound(step: &Step, values: &ToolchainValues) -> Result<StepBound, StepError> {
+    match &step.timeout_secs {
+        None => Ok(StepBound::Undeclared),
+        Some(StepTimeout::Literal(secs)) => StepBound::secs(*secs),
+        Some(StepTimeout::Toolchain(key)) => {
+            values
+                .resolve(key)
+                .map(StepBound::Secs)
+                .map_err(|refusal| StepError::Unsupported {
+                    capability: format!("the `tool` step `{}`'s timeout_secs: {refusal}", step.id),
+                })
+        }
+    }
+}
+
+/// **The closed decode table** (record V decision 2).
+///
+/// A `run_verb` output is typed at the boundary, as `verify::report_at_boundary` types a `VerifyReport`. An output whose `kind` is not
+/// the row's `outputs` is refused naming BOTH kinds; a value that does not decode is refused naming
+/// the kind; a kind with no entry here is refused naming it.
+///
+/// The typed value binds nothing yet (`s8d` binds step outputs). Until then this function's only
+/// channel is the step's `Result`, so a report that carries a verdict is read for it, as
+/// [`build_verdict`] reads `build`'s: a `failing` `BuildReport` and a `SmokeResult` that is not
+/// `passing` are not a walked step.
+///
+/// # Errors
+/// [`StepError::Transport`] with [`TransportKind::Decode`], or the verdict's `NonZero`.
+pub fn decode_verb_output(expected: &str, output: &VerbOutput) -> Result<(), StepError> {
+    let decode = |detail: String| StepError::Transport {
+        kind: TransportKind::Decode,
+        detail,
+    };
+    if output.kind != expected {
+        return Err(decode(format!(
+            "the verb's registry row declares `outputs = {expected:?}` and the adapter returned \
+             kind {:?}; an output of the wrong kind never reaches the kernel as a typed value \
+             (ADR-0170 decision 2)",
+            output.kind
+        )));
+    }
+    let value = output.value.clone();
+    let undecodable =
+        |e: serde_json::Error| decode(format!("the `{expected}` value does not decode: {e}"));
+    match expected {
+        "BuildReport" => {
+            build_verdict(&serde_json::from_value::<BuildReport>(value).map_err(undecodable)?)
+        }
+        "SmokeResult" => {
+            let smoke: SmokeResult = serde_json::from_value(value).map_err(undecodable)?;
+            match smoke.status {
+                SmokeStatus::Passing => Ok(()),
+                SmokeStatus::Failing | SmokeStatus::Empty => Err(StepError::NonZero {
+                    code: None,
+                    stderr_digest: report_digest(&smoke),
+                }),
+            }
+        }
+        "ScanReport" => serde_json::from_value::<ScanReport>(value)
+            .map(|_| ())
+            .map_err(undecodable),
+        "BuildArtifact" => serde_json::from_value::<BuildArtifact>(value)
+            .map(|_| ())
+            .map_err(undecodable),
+        "SetupResult" => serde_json::from_value::<SetupResult>(value)
+            .map(|_| ())
+            .map_err(undecodable),
+        "ItemRefs" => serde_json::from_value::<ItemRefs>(value)
+            .map(|_| ())
+            .map_err(undecodable),
+        "ReleaseTag" => serde_json::from_value::<ReleaseTag>(value)
+            .map(|_| ())
+            .map_err(undecodable),
+        other => Err(decode(format!(
+            "the kind `{other}` has no entry in the kernel's closed decode table (ADR-0170 \
+             decision 2); an entry is added with its `rk-types` struct"
+        ))),
+    }
+}
+
+/// The digest of a report's canonical JSON, so a journal names what was read.
+fn report_digest<T: serde::Serialize>(report: &T) -> rk_types::digest::Digest {
+    rk_types::digest::sha256(
+        serde_json::to_string(report)
+            .unwrap_or_else(|e| format!("unserialisable report: {e}"))
+            .as_bytes(),
+    )
+}
 
 /// **ADR-0136.** Is this guard decidable on this tree, and does it hold?
 ///
@@ -277,7 +423,15 @@ impl super::Runtime {
     /// **The `tool` arm — a toolchain verb through the port (ADR-0135).**
     ///
     /// The verb is parsed by `workflow::memo::verb_of`, the tree's existing parse, and routed
-    /// through [`MAPPED_VERBS`]. **Every other verb is refused by name.**
+    /// through the verb registry's row for it. **A verb with no row is refused by its bare name.**
+    ///
+    /// *(Amended 2026-09-26, s8c §8c.4; record V = ADR-0170 decision 3, proposed.)* This read
+    /// *"routed through `MAPPED_VERBS`"*. The four-verb map is replaced by the registry lookup, in
+    /// a fixed order: the lookup, then ADR-0148's `test` refusal, then the route and input checks,
+    /// and only then the step's bound (record B = ADR-0171 decision 2), then the port. Each
+    /// refusal is tellable from the others in the journal: the bare verb name (no row), ADR-0148's
+    /// sentence (`test`), the verb and its first input (a `toolchain` row the resolver must
+    /// supply), the route and its stage (`store`, `git`), and `${toolchain.<key>}` (the bound).
     ///
     /// 🛑 **`change_summary` reaches the port and receives the adapters' dated refusal, and that is
     /// correct.** Both real adapters return `Unsupported` from a row dated `2026-09-18` whose probe
@@ -296,10 +450,13 @@ impl super::Runtime {
     ///
     /// # Errors
     ///
-    /// The port's own [`StepError`]; [`StepError::Unsupported`] naming an unmapped verb
-    /// (ADR-0135 clause 2, the bare verb string); or [`StepError::Unsupported`] naming
-    /// `inputs.selection` for the MAPPED verb `test`, which refuses rather than calling the
-    /// port with an empty selection (ADR-0148).
+    /// The port's own [`StepError`]; [`StepError::Unsupported`] naming a verb with no registry
+    /// row (ADR-0135 clause 2, the bare verb string); [`StepError::Unsupported`] naming
+    /// `inputs.selection` for `test`, which refuses rather than calling the port with an empty
+    /// selection (ADR-0148); [`StepError::Unsupported`] naming a `toolchain` row's first input,
+    /// or a `store` / `git` route and its stage; [`StepError::Unsupported`] naming an unresolved
+    /// `${toolchain.<key>}` (record B); or [`StepError::Transport`] `Decode` for a `run_verb`
+    /// output of the wrong kind or one that does not decode (record V decision 2).
     ///
     /// *(Corrected 2026-09-22. This read "or [`StepError::Unsupported`] naming an unmapped
     /// verb", a closed set of two outcomes, and ADR-0148 produced a third from INSIDE the
@@ -315,51 +472,88 @@ impl super::Runtime {
                 ),
             });
         };
-        if !MAPPED_VERBS.contains(&verb) {
-            // **ADR-0135 clause 2.** By name, so the journal says which of the 29 was reached.
+        let routing = self.tool_routing();
+        // ---- (1) THE REGISTRY LOOKUP, FIRST (ADR-0170 decision 3). -------------------------------
+        // **ADR-0135 clause 2, unchanged.** No row: refused by the BARE verb name, so the journal
+        // says which verb was reached, and before anything else about the step is read -- its
+        // bound included (`rolling-deploy`'s `deploy` refuses by its name, never by its key).
+        let Some(entry) = routing.registry().and_then(|r| r.entry(verb)) else {
             return Err(StepError::Unsupported {
                 capability: verb.to_owned(),
             });
+        };
+        // ---- (2) ADR-0148's `test` refusal, unchanged (`s8d` reverses it). ----------------------
+        if entry.route == Route::Port(PortMethod::Test) {
+            return Err(test_refusal(step));
         }
-        // THE CALL BOUNDARY. `ports.toolchain` — the port's first non-test call site.
+        // ---- (3) THE ROUTE AND INPUT CHECKS. The match is exhaustive with NO wildcard: a route
+        // is added by record, and a fifth is `E0004` here (ADR-0170 decision 1). --------------------
+        let call = match entry.route {
+            Route::Port(method) => ToolCall::Port(method),
+            Route::Toolchain => {
+                // The resolver is `s8d`'s. A row that declares inputs cannot be supplied here, so
+                // it refuses BEFORE the port, naming the verb and the first input.
+                if let Some(input) = entry.inputs.first() {
+                    return Err(StepError::Unsupported {
+                        capability: format!(
+                            "the `tool` step `{}` names `toolchain:{verb}`, whose registry row \
+                             declares the input `{input}`; the input resolver is `s8d`'s, so the \
+                             step cannot supply it and the port is not called",
+                            step.id
+                        ),
+                    });
+                }
+                ToolCall::Verb
+            }
+            Route::Store => {
+                return Err(StepError::Unsupported {
+                    capability: format!(
+                        "`{verb}` takes the `store` route, which has no executor until `s8f` \
+                         builds it (ADR-0170 decision 1)"
+                    ),
+                });
+            }
+            Route::Git => {
+                return Err(StepError::Unsupported {
+                    capability: format!(
+                        "`{verb}` takes the `git` route, which has no executor until `s8g` builds \
+                         it (ADR-0170 decision 1)"
+                    ),
+                });
+            }
+        };
+        // ---- (4) ONLY THEN THE STEP'S BOUND (record B decision 2): absent or unmeasured refuses
+        // by name, and nothing falls back to the construction bound. -------------------------------
+        let bound = resolve_bound(step, routing.values())?;
+        // ---- (5) THE CALL BOUNDARY. `ports.toolchain` -- the port's first non-test call site. ----
         let toolchain = &self.ports().toolchain;
-        match verb {
-            "build" => toolchain.build(),
-            "lint" => toolchain.lint(),
-            // **ADR-0148, superseding ADR-0135's `test` row in part.** This read
-            // `toolchain.test(&[])` — an EMPTY selection, which `rk-adapter-toolchain-rust` reads
-            // as `cargo test --workspace`. All **28** shipped `toolchain:test` steps therefore
-            // became whole-workspace runs under the 3600s bound on a shared target dir.
-            //
-            // 🛑 **AND THE SELECTION THEY DECLARE CANNOT BE MADE INTO A TEST LIST HERE.** Measured
-            // over `.redkiln/catalog/` 2026-09-22: all 28 declare `inputs.selection`, and it is
-            // `"affected"` (17), a `${…}` reference the resolver ADR-0136 clause 4 records as OWED
-            // (6), `artifact:…` (4) and `"e2e"` (1). None is a test name. Parsing the key and
-            // passing the string through would run `cargo test affected`, which matches **no test
-            // and exits 0** — a green from a toolchain that ran nothing, which is strictly worse
-            // than the whole-workspace run it would replace. So the verb refuses BY NAME, on
-            // ADR-0135 clause 2's own precedent, until a selection resolver exists.
-            "test" => Err(StepError::Unsupported {
-                capability: format!(
-                    "the `tool` step `{}` names `toolchain:test`, whose declared \
-                     `inputs.selection` `catalog::Step` does not parse and this crate cannot \
-                     resolve. An empty selection is `cargo test --workspace` and the literal \
-                     matches no test at all, so neither is run",
-                    step.id
-                ),
-            }),
-            // The one whose `Ok` is never constructible outside `rk-ports`. Mapped, called, and the
-            // value dropped — see the 🛑 above.
-            // (Noted 2026-09-25, s8a fix round 5, ADR-0165: an implementor may now construct the
-            // `Ok`, the `Text` arm; the empty range passed here still refuses by name in both real
-            // adapters, and this crate still binds nothing from it.)
-            "change_summary" => toolchain.change_summary("").map(|_| ()),
-            other => Err(StepError::Unsupported {
-                capability: other.to_owned(),
-            }),
+        match call {
+            // A red build is `Ok` with `status: failing`; [`build_verdict`] reads it (§8c.2).
+            ToolCall::Port(PortMethod::Build) => toolchain
+                .build(bound)
+                .and_then(|report| build_verdict(&report)),
+            ToolCall::Port(PortMethod::Lint) => toolchain.lint(bound),
+            // Refused at (2); kept so the match stays total without a wildcard.
+            ToolCall::Port(PortMethod::Test) => Err(test_refusal(step)),
+            // The one whose `Ok` this crate never binds (ADR-0135 clause 5 as ADR-0165 left it):
+            // called, and the value dropped. The empty range still refuses by name in both real
+            // adapters (ADR-0135 decision 4 stands for the empty range).
+            ToolCall::Port(PortMethod::ChangeSummary) => {
+                toolchain.change_summary("", bound).map(|_| ())
+            }
+            // **The seventh method** (record V decision 2): a row with no inputs, its output typed
+            // at the boundary through the closed decode table.
+            ToolCall::Verb => {
+                let inputs = BTreeMap::new();
+                let output = toolchain.run_verb(&VerbCall {
+                    verb,
+                    inputs: &inputs,
+                    bound,
+                })?;
+                decode_verb_output(&entry.outputs, &output)
+            }
         }
     }
-
     /// **Walk an activation's steps in declaration order — `s7g` §7g.1's unit of execution.**
     ///
     /// `steps` is `None` when the caller transcribed none. **That is not a default and it is not an
@@ -698,5 +892,23 @@ impl super::Runtime {
             StepKind::Emit => StepVerdict::Emitted,
         };
         Ok(verdict)
+    }
+}
+
+/// `build`'s verdict for a `tool` step whose only channel is its `Result` (s8c §8c.2; record T =
+/// ADR-0169 decision 8, proposed). A `passing` report is `Ok(())`. A `failing` one is a red build:
+/// the step did not succeed, so it is `NonZero` with no exit code (the build ran and reported;
+/// no status was lost) and the digest of the report's canonical JSON, so the journal names what
+/// was read. This is the interim reading until `s8d` binds the typed output to
+/// `${step.outputs}` and the catalog's own `status == 'passing'` check reads it.
+///
+/// *(Added 2026-09-26, s8c.)*
+fn build_verdict(report: &BuildReport) -> Result<(), StepError> {
+    match report.status {
+        BuildStatus::Passing => Ok(()),
+        BuildStatus::Failing => Err(StepError::NonZero {
+            code: None,
+            stderr_digest: report_digest(report),
+        }),
     }
 }

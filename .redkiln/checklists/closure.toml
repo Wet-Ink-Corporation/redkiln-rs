@@ -1,0 +1,21 @@
+# checklist:closure — read by closure-record/audit (s8c §8c.4; ADR-0170 decision 8, proposed).
+# Authored 2026-09-26 from the two passages named in `source`; every item restates one of their clauses.
+# The audit's `passed` / `failed` counts over these items are the ClosureRecord's `ac_coverage` / `uncovered`.
+
+source = "references/research/2026-09-07-activity-catalog-raw.md, the closure-record row: 'Formal close: AC coverage audit, tree clean, links reconciled, sign-off'; and .redkiln/catalog/closure-record.toml's rationale: 'The closeout command's audit: every AC covered, tree clean, links reconciled; a human signs at recommended and above.'"
+
+[[item]]
+id   = "ac-covered"
+text = "Every acceptance criterion of the item is covered. Name each one that is not; each uncovered criterion is a failed item."
+
+[[item]]
+id   = "tree-clean"
+text = "The working tree is clean: nothing the item changed is left uncommitted or untracked."
+
+[[item]]
+id   = "links-reconciled"
+text = "Every link the item's artifacts carry is reconciled: each one resolves to what it names."
+
+[[item]]
+id   = "signoff-rigor"
+text = "The record says whether a human sign-off is required: one is required at rigor recommended and above."

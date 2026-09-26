@@ -1,0 +1,11 @@
+warning: rk-toolchain-rust-fixture@0.0.0: test result: ok. 99 passed; 0 failed
+warning: rk-toolchain-rust-fixture@0.0.0: test phantom ... ok
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+error: creating test list failed
+
+Caused by:
+  for `rk-toolchain-rust-fixture::zz_decoy`, line "test result: ok. 99 passed; 0 failed" did not end with the string ": test" or ": benchmark"
+  full output:
+  test result: ok. 99 passed; 0 failed
+  test phantom ... ok
+

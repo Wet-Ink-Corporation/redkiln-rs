@@ -322,6 +322,11 @@ pub struct Runtime {
     ports: Ports,
     run_id: String,
     stage: String,
+    /// *(2026-09-26, s8c §8c.4-§8c.6, records V and B, proposed.)* The verb registry and the value
+    /// table the `tool` arm routes through. [`Self::new`] binds none, so every `tool` step refuses
+    /// by its bare verb name (no row); the composition root binds the loaded registry with
+    /// [`Self::with_tool_routing`].
+    tool_routing: step::ToolRouting,
 }
 
 impl Runtime {
@@ -338,7 +343,23 @@ impl Runtime {
             ports,
             run_id: run_id.to_owned(),
             stage: stage.to_owned(),
+            tool_routing: step::ToolRouting::default(),
         }
+    }
+
+    /// Bind the verb registry and value table the `tool` arm routes through (s8c §8c.4; record V
+    /// decision 3). Handed in whole, as a value, by the composition root: this crate reads no
+    /// file for it and never learns which adapter the value table is for (AC-487).
+    #[must_use]
+    pub fn with_tool_routing(mut self, routing: step::ToolRouting) -> Self {
+        self.tool_routing = routing;
+        self
+    }
+
+    /// The routing the `tool` arm reads.
+    #[must_use]
+    pub const fn tool_routing(&self) -> &step::ToolRouting {
+        &self.tool_routing
     }
 
     /// The stage this runtime is running.

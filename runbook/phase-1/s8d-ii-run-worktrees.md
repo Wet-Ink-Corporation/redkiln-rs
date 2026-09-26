@@ -484,6 +484,10 @@ junction, with a test."*
 - **`LC_ALL=C` on every parsed git call.** `GitExec`'s child environment sets it at the one process-exec site,
   `run_with_env`'s `std::process::Command::new("git")`, in the call form `.env("LC_ALL", "C")`, so no parse depends
   on the operator's locale (`gitops::every_git_child_runs_with_lc_all_c`).
+  *(dated 2026-09-26, s8c build, P6.)* The literal is now in `git_exec.rs`'s private `spawn`, which `run_with_env`
+  calls with no stdin and `GitExec::run_with_stdin` calls with one (s8c §8c.4, the `.worktreeinclude` reader's
+  `check-ignore --stdin`). It is still the one process-exec site, and the `.env("LC_ALL", "C")` belongs on its
+  `cmd` builder there. The floor's grep reads the whole file, so it is unaffected.
 - **Windows removal never follows a junction.** `worktree::removal_never_follows_a_junction` puts an ignored junction
   inside a tree, pointing at a sentinel directory outside it. It removes the tree and asserts the sentinel's contents
   survive. On a platform without junctions the arm is a symlink, and the test says which it ran.

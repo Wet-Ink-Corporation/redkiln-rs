@@ -1,0 +1,20 @@
+# checklist:retro — read by lightweight-retro/self-check (s8c §8c.4; ADR-0170 decision 8, proposed).
+# Authored 2026-09-26 from the passages named in `source`.
+
+source = "references/research/2026-09-07-activity-catalog-raw.md, the lightweight-retro row: 'Short what-went-well/what-to-change note', input 'ImplementationReport'; and .redkiln/catalog/lightweight-retro.toml's rationale: 'A one-shot note per small item; the structured form is reserved for projects and initiatives.'"
+
+[[item]]
+id   = "what-went-well"
+text = "The note says what went well."
+
+[[item]]
+id   = "what-to-change"
+text = "The note says what to change."
+
+[[item]]
+id   = "short-one-shot"
+text = "The note is short and one-shot; it does not run the structured retrospective, which is reserved for projects and initiatives."
+
+[[item]]
+id   = "from-the-reports"
+text = "The note is drawn from the implementation report and, where present, the review verdict."

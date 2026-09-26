@@ -37,9 +37,12 @@ use crate::docs_site::DocsSite;
 use crate::event_store::{EventStore, Query, Snapshot};
 use crate::harness::{DispatchOutcome, Harness};
 use crate::toolchain::{
-    ChangeKind, ChangeSummary, Classification, ManifestEntry, TextChangeSummary, Toolchain,
+    ChangeKind, ChangeSummary, Classification, ManifestEntry, Selection, StepBound, TestOutcome,
+    TestRunner, TextChangeSummary, Toolchain, VerbCall, VerbOutput,
 };
 use crate::tracker::{ExternalRef, Tracker, TypedInput};
+use rk_types::verb_output::{BuildReport, BuildStatus};
+use rk_types::verify::{Basis, BasisReason, TotalTestCountSource, VerifyReport};
 
 /// The message every fake's own lock carries when it is poisoned.
 ///
@@ -316,11 +319,24 @@ impl DocsSite for RecordingDocs {
 /// *(added 2026-09-24, s8a, ADR-0165)* **A range carries what [`Self::with_range`] scripted for
 /// it**, and `change_summary` answers from that: `Text` when every path classifies `Text` or
 /// `Generated`, a by-name refusal when one classifies `Binary`.
+///
+/// *(added 2026-09-26, s8c §8c.2, records T and V, proposed)* **`test` and `build` return
+/// outcomes.** `test` executes as many tests as a `Filter` selection names (`passed` = that
+/// length, `failed = 0`) unless [`Self::failing`] scripts `n` of them red, which is `Ok` with
+/// `failed = n`: a red suite is never `Err` (D21-42 1a). A `WholeSuite` selection executes none,
+/// so its status is `empty`, never `passing` (AC-332). `Affected` and `Named` are refused by name:
+/// the fake declares neither. `build` is `passing` unless [`Self::build_failing`] scripts it red,
+/// which is `Ok` with `status: failing`. The report members are non-empty fixture values and the
+/// runner is `fixture`. `run_verb` answers the verbs [`Self::with_verb`] scripted and refuses
+/// every other one BY its bare name.
 #[derive(Debug, Default)]
 pub struct FixtureToolchain {
     fixture: Vec<(String, Classification)>,
     ranges: Vec<(String, Vec<(String, ChangeKind)>)>,
     present: bool,
+    failing: u32,
+    build_failing: bool,
+    verbs: Vec<(String, VerbOutput)>,
 }
 
 impl FixtureToolchain {
@@ -334,6 +350,9 @@ impl FixtureToolchain {
                 .collect(),
             ranges: Vec::new(),
             present: true,
+            failing: 0,
+            build_failing: false,
+            verbs: Vec::new(),
         }
     }
 
@@ -356,6 +375,29 @@ impl FixtureToolchain {
         self.present = false;
         self
     }
+
+    /// Script `n` of the selected tests red: `test` answers `Ok` with `failed = n` (capped at
+    /// the executed count), never `Err` (D21-42 1a).
+    #[must_use]
+    pub const fn failing(mut self, n: u32) -> Self {
+        self.failing = n;
+        self
+    }
+
+    /// Script the build red: `build` answers `Ok` with `status: failing` and one error, never
+    /// `Err` (D21-43 N25).
+    #[must_use]
+    pub const fn build_failing(mut self) -> Self {
+        self.build_failing = true;
+        self
+    }
+
+    /// Script what `run_verb` answers for `verb`. Every verb not scripted is refused by name.
+    #[must_use]
+    pub fn with_verb(mut self, verb: &str, output: VerbOutput) -> Self {
+        self.verbs.push((verb.to_owned(), output));
+        self
+    }
 }
 
 impl Toolchain for FixtureToolchain {
@@ -363,15 +405,62 @@ impl Toolchain for FixtureToolchain {
         Ok(self.present)
     }
 
-    fn build(&self) -> Result<(), StepError> {
-        Ok(())
+    fn build(&self, _bound: StepBound) -> Result<BuildReport, StepError> {
+        let (status, errors) = if self.build_failing {
+            (BuildStatus::Failing, 1)
+        } else {
+            (BuildStatus::Passing, 0)
+        };
+        Ok(BuildReport {
+            argv: vec!["fixture".to_owned(), "build".to_owned()],
+            toolchain_version: "fixture".to_owned(),
+            wall_secs: 0,
+            errors,
+            status,
+        })
     }
 
-    fn test(&self, selection: &[String]) -> Result<u32, StepError> {
-        Ok(u32::try_from(selection.len()).unwrap_or(u32::MAX))
+    fn test(&self, selection: &Selection, _bound: StepBound) -> Result<TestOutcome, StepError> {
+        let (args, reason): (&[String], BasisReason) = match selection {
+            Selection::WholeSuite { reason } => (&[], *reason),
+            Selection::Filter(args) => (args.as_slice(), BasisReason::ProbeUnverified),
+            Selection::Affected { .. } => {
+                return Err(StepError::Unsupported {
+                    capability: "affected-selection".to_owned(),
+                });
+            }
+            Selection::Named(name) => {
+                return Err(StepError::Unsupported {
+                    capability: format!(
+                        "selection `{name}`: the fixture declares no named selection"
+                    ),
+                });
+            }
+        };
+        let executed = u32::try_from(args.len()).unwrap_or(u32::MAX);
+        let failed = self.failing.min(executed);
+        let mut argv = vec!["fixture".to_owned(), "test".to_owned()];
+        argv.extend(args.iter().cloned());
+        let report = VerifyReport {
+            basis: Basis::WholeSuite,
+            argv,
+            selected_test_count: executed,
+            total_test_count: executed,
+            total_test_count_source: TotalTestCountSource::OwnExecutedCount,
+            wall_secs: 0,
+            toolchain_version: "fixture".to_owned(),
+            suite_sha: "fixture".to_owned(),
+            basis_reason: Some(reason),
+        };
+        TestOutcome::new(
+            report,
+            executed - failed,
+            failed,
+            TestRunner::named("fixture", "0"),
+        )
     }
 
-    fn lint(&self) -> Result<(), StepError> {
+    fn lint(&self, _bound: StepBound) -> Result<(), StepError> {
         Ok(())
     }
 
@@ -400,7 +489,7 @@ impl Toolchain for FixtureToolchain {
     /// reads no repository, so it has no diff to carry. The `sha` is the range's head token as
     /// written -- `HEAD` for `HEAD~1..HEAD`, the whole string for a range with no `..` -- and never
     /// a resolved 40-hex commit: a fake reads no repository (amended 2026-09-25, s8a fix round 1).
-    fn change_summary(&self, range: &str) -> Result<ChangeSummary, StepError> {
+    fn change_summary(&self, range: &str, _bound: StepBound) -> Result<ChangeSummary, StepError> {
         let paths = self
             .ranges
             .iter()
@@ -440,5 +529,17 @@ impl Toolchain for FixtureToolchain {
             diff: String::new(),
             manifest,
         }))
+    }
+
+    /// The scripted verbs answer their output; every other verb is refused by its bare name
+    /// (record V decision 2; ADR-0135 clause 2's shape).
+    fn run_verb(&self, call: &VerbCall<'_>) -> Result<VerbOutput, StepError> {
+        self.verbs
+            .iter()
+            .find(|(verb, _)| verb == call.verb)
+            .map(|(_, output)| output.clone())
+            .ok_or_else(|| StepError::Unsupported {
+                capability: call.verb.to_owned(),
+            })
     }
 }

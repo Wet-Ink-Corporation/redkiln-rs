@@ -54,6 +54,7 @@ fn agent_step(id: &str, when: Option<&str>) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 

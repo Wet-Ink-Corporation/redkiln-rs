@@ -14,7 +14,7 @@ use rk_ports::cancel::CancelToken;
 use rk_ports::event_store::{EventStore, Query};
 use rk_ports::fakes::{FakeHarness, FixtureToolchain, VecStore};
 use rk_ports::harness::Harness;
-use rk_ports::toolchain::{ChangeKind, ChangeSummary, Classification, Toolchain};
+use rk_ports::toolchain::{ChangeKind, ChangeSummary, Classification, StepBound, Toolchain};
 use rk_types::error::{CancelledBy, StepError, TransportKind};
 use rk_types::event_kind::EventKind;
 
@@ -80,7 +80,7 @@ fn toolchain_fake_classifies_binary() {
             ],
         );
 
-    match toolchain.change_summary("HEAD~1..HEAD") {
+    match toolchain.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Ok(ChangeSummary::Text(text)) => {
             let rows: Vec<(&str, Classification, ChangeKind)> = text
                 .manifest
@@ -106,7 +106,7 @@ fn toolchain_fake_classifies_binary() {
         }
     }
 
-    match toolchain.change_summary("HEAD~2..HEAD~1") {
+    match toolchain.change_summary("HEAD~2..HEAD~1", StepBound::Undeclared) {
         Err(StepError::Unsupported { capability }) => {
             assert!(
                 capability.starts_with("change_summary") && capability.contains("assets/logo.png"),
@@ -133,7 +133,7 @@ fn toolchain_fake_classifies_binary() {
         .with_range("", vec![("src/lib.rs", ChangeKind::Modified)])
         .with_range("HEAD~3..HEAD~2", vec![]);
     for range in ["", "  ", "HEAD~9..HEAD~8", "HEAD~3..HEAD~2"] {
-        match toolchain.change_summary(range) {
+        match toolchain.change_summary(range, StepBound::Undeclared) {
             Err(StepError::Unsupported { capability }) => assert!(
                 capability.starts_with("change_summary")
                     && capability.contains(&format!("`{range}`")),
@@ -311,4 +311,182 @@ fn step_error_is_matched_exhaustively_with_one_event_arm_each() {
             "{error:?} maps to {expected:?}, never to another family's arm"
         );
     }
+}
+
+// ---------------------------------------------------------------- s8c: outcomes, bounds, run_verb
+//
+// *(Added 2026-09-26, s8c §8c.2, §8c.4, §8c.6; records T, V and B = ADR-0169/0170/0171,
+// proposed.)* `test` and `build` return OUTCOMES: a red suite and a red build are `Ok`, and `Err`
+// means only cannot-run, killed or unreadable (D21-42 1a; D21-43 N25).
+
+/// **A red suite is `Ok` with failed counts** (D21-42 1a: *"A red suite is `Ok` with counts;
+/// `Err` is only cannot-run/timeout/killed"*). The fake scripts `failing(n)` over a selection.
+#[test]
+fn toolchain_fake_red_suite_is_ok_with_failed_counts() {
+    use rk_ports::toolchain::{Selection, StepBound, TestStatus};
+    let selection = Selection::Filter(vec!["a".to_owned(), "b".to_owned(), "c".to_owned()]);
+
+    let green = FixtureToolchain::from_fixture(vec![]);
+    let outcome = green
+        .test(&selection, StepBound::Undeclared)
+        .expect("a green fake suite is Ok");
+    assert_eq!((outcome.passed, outcome.failed), (3, 0));
+    assert_eq!(outcome.status, TestStatus::Passing);
+
+    let red = FixtureToolchain::from_fixture(vec![]).failing(1);
+    let outcome = red
+        .test(&selection, StepBound::Undeclared)
+        .expect("a RED suite is Ok with counts, never Err (D21-42 1a)");
+    assert_eq!(
+        (outcome.passed, outcome.failed),
+        (2, 1),
+        "failing(1) over three selected tests: two passed, one failed"
+    );
+    assert_eq!(outcome.status, TestStatus::Failing);
+    assert_eq!(
+        outcome.passed + outcome.failed,
+        outcome.report.selected_test_count,
+        "the invariant: passed + failed == the report's selected count"
+    );
+    assert_eq!(
+        outcome.runner.name, "fixture",
+        "the fake's runner names itself"
+    );
+    outcome
+        .report
+        .validate_shape()
+        .expect("the fake's report members are non-empty fixture values");
+}
+
+/// **`status` is `passing` only with executed tests and no failures** (AC-332: *"'zero tests
+/// executed' is never rendered as green"*). `status` is DERIVED from the counts, and its serde
+/// form is the catalog's vocabulary.
+#[test]
+fn test_outcome_is_passing_only_with_executed_tests_and_no_failures() {
+    use rk_ports::toolchain::{Selection, StepBound, TestOutcome, TestRunner, TestStatus};
+    assert_eq!(
+        TestStatus::of(0, 0),
+        TestStatus::Empty,
+        "nothing executed is EMPTY, never passing"
+    );
+    assert_eq!(TestStatus::of(1, 0), TestStatus::Passing);
+    assert_eq!(TestStatus::of(0, 1), TestStatus::Failing);
+    assert_eq!(TestStatus::of(4, 2), TestStatus::Failing);
+    for (status, wire) in [
+        (TestStatus::Passing, "passing"),
+        (TestStatus::Failing, "failing"),
+        (TestStatus::Empty, "empty"),
+    ] {
+        assert_eq!(
+            serde_json::to_value(status).expect("serialises"),
+            serde_json::json!(wire)
+        );
+    }
+
+    // Through the fake: an empty selection executes nothing and is EMPTY.
+    let fake = FixtureToolchain::from_fixture(vec![]);
+    let empty = fake
+        .test(&Selection::Filter(vec![]), StepBound::Undeclared)
+        .expect("Ok");
+    assert_eq!(
+        empty.status,
+        TestStatus::Empty,
+        "an empty run is never passing"
+    );
+    let one = fake
+        .test(
+            &Selection::Filter(vec!["x".to_owned()]),
+            StepBound::Undeclared,
+        )
+        .expect("Ok");
+    assert_eq!(one.status, TestStatus::Passing);
+
+    // The invariant is checked at construction: a count that disagrees with the report is
+    // Transport { Decode } naming both numbers, never a corrected count.
+    let report = one.report.clone();
+    match TestOutcome::new(report, 5, 0, TestRunner::named("fixture", "0")) {
+        Err(StepError::Transport {
+            kind: TransportKind::Decode,
+            detail,
+        }) => assert!(
+            detail.contains('5') && detail.contains('1'),
+            "the refusal names both numbers: {detail}"
+        ),
+        other => {
+            panic!("passed + failed != selected_test_count must refuse as Decode; got {other:?}")
+        }
+    }
+    // The serialised outcome carries the derived status beside the counts.
+    let wire = serde_json::to_value(&one).expect("serialises");
+    assert_eq!(wire["status"], serde_json::json!("passing"));
+    assert_eq!(wire["passed"], serde_json::json!(1));
+}
+
+/// **A red build is `Ok` with `status: failing`** (D21-43 N25: *"`build` is widened to an outcome
+/// report as 1a did for `test`"*).
+#[test]
+fn toolchain_fake_red_build_is_ok_with_status_failing() {
+    use rk_ports::toolchain::StepBound;
+    use rk_types::verb_output::BuildStatus;
+    let green = FixtureToolchain::from_fixture(vec![])
+        .build(StepBound::Undeclared)
+        .expect("a green build is Ok");
+    assert_eq!((green.status, green.errors), (BuildStatus::Passing, 0));
+    let red = FixtureToolchain::from_fixture(vec![])
+        .build_failing()
+        .build(StepBound::Undeclared)
+        .expect("a RED build is Ok with status failing, never Err");
+    assert_eq!(red.status, BuildStatus::Failing);
+    assert!(
+        red.errors >= 1,
+        "a failing build names at least one error: {red:?}"
+    );
+    assert!(!red.argv.is_empty() && !red.toolchain_version.is_empty());
+}
+
+/// **`run_verb` refuses a verb the adapter does not implement BY NAME** (record V decision 2:
+/// *"An adapter implements the verbs it can and refuses every other one by name"*).
+#[test]
+fn toolchain_fake_run_verb_refuses_an_undeclared_verb_by_name() {
+    use rk_ports::toolchain::{StepBound, VerbCall, VerbOutput};
+    let inputs = std::collections::BTreeMap::new();
+    let call = |verb| VerbCall {
+        verb,
+        inputs: &inputs,
+        bound: StepBound::Undeclared,
+    };
+    let fake = FixtureToolchain::from_fixture(vec![]).with_verb(
+        "smoke",
+        VerbOutput {
+            kind: "SmokeResult".to_owned(),
+            value: serde_json::json!({"scripted": true}),
+        },
+    );
+    match fake.run_verb(&call("sca_scan")) {
+        Err(StepError::Unsupported { capability }) => assert_eq!(
+            capability, "sca_scan",
+            "the refusal is the bare verb name (ADR-0135 clause 2's shape)"
+        ),
+        other => panic!("an undeclared verb refuses by name; got {other:?}"),
+    }
+    let out = fake
+        .run_verb(&call("smoke"))
+        .expect("a scripted verb answers its scripted output");
+    assert_eq!(out.kind, "SmokeResult");
+}
+
+/// **A zero step bound is refused** (RT-5: *"a zero bound is no bound"*; record B decision 3).
+#[test]
+fn step_bound_zero_is_refused() {
+    use rk_ports::toolchain::StepBound;
+    match StepBound::secs(0) {
+        Err(StepError::Unsupported { capability }) => assert!(
+            capability.contains("timeout_secs = 0") && capability.contains("RT-5"),
+            "the refusal names the zero bound and RT-5: {capability}"
+        ),
+        other => panic!("a zero bound is refused; got {other:?}"),
+    }
+    let five = StepBound::secs(5).expect("a positive bound constructs");
+    assert_eq!(five.as_secs(), Some(5));
+    assert_eq!(StepBound::Undeclared.as_secs(), None);
 }

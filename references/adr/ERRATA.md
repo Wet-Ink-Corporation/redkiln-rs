@@ -392,6 +392,25 @@ written under a task that names this file alone.)*
 
 **Second, in the same entry.** Four quotations are attributed to *"`s7a` §7a:198-199"*; measured, they are at **200** (*"so no adapter and no kernel consumer of either type exists before Phase 3"*), **202** (`pub struct ExternalRef(pub(crate) ());`), **203** (*"deliberately: an opaque newtype declares the port shape…"*) and **204** (*"No field set is invented and no idempotency key is designed"*). Lines 198-199 carry the routing sentence — and line 199 is the one holding the correct `design:267-268` citation the first half of this erratum got wrong. The source warrants now cite `s7a` §7a.4 and quote the text.
 
+## ADR-0135 — tool steps route four verbs to the port and refuse the rest
+
+**E-0135-1 (2026-09-26, `s8c`'s build, written with ADR-0170 at `proposed`).** `## Considered options`, option 3's
+rejection rationale: *"… and a sixth, seventh and thirtieth method on a port whose method count Checkpoint 7a asserts
+at six."* — **What is true:** Checkpoint 7a asserts no method count. Its only method-level group is a floor over
+NAMES: its block loops `for m in 'fn project' 'fn inbox' 'fn check_links' 'fn drift' 'fn detect' 'fn lint'` and
+requires each to be present, and `s7a` §7a.3 says so in terms: *"The floor pins **names**, never a signature"*. Its
+counts are five `Send + Sync` port traits and five `impl … for` lines in `crates/rk-ports/src/`, so a re-run of
+Checkpoint 7a passes over six methods, seven or seventy. [measured 2026-09-26 at `6f70e47`, Checkpoint 7a's block in
+`runbook/phase-1/s7a-ports-and-fakes.md` read whole; the `s8c` stage file's premise note measured the same at
+`ca8f387`]
+**What this does not change:** option 3's rejection, which stands on its other reason (*"minting port surface the
+design does not have — precisely what `resolver.rs:63-71` forbids"*). An option's rationale is not a Decision sentence,
+so it takes this erratum. The same false count sits in two places an erratum may not touch, and both move with
+ADR-0170's supersession in part, not here: the `## Decision` sentence *"It adds no method to the `Toolchain` port: the
+count stays **six**, as Checkpoint 7a asserts"*, and the forbids bullet's second sentence *"The port's six are
+ADR-0003's and ADR-0094's, and Checkpoint 7a counts them"*. After ADR-0170 the exact count (seven) is asserted by
+`source_parse::toolchain_port_declares_exactly_seven_methods` and Checkpoint 8c (4).
+
 ## ADR-0136 — a step guard with an unresolved reference refuses
 
 **E-0136-1 (2026-09-22, `s7g`'s own adversarial pass).** `## Context and problem` and the `title`: *"**121 step-level `when` clauses, of which 54 carry a `${…}` reference**"*, and the framing throughout that the 54 are what refuse. — **What is true:** the counts are right and the SCOPE they imply is badly wrong. **All 121 guards refuse, and all 94 `check` exprs with them.** `guard_holds` and `check_verdict` evaluate against `predicate::Context::new()`, which binds nothing, and `eval.rs:457` maps any unbound path to `EvalError::UnknownField`. Measured over the shipped pack: of the 67 ref-free guards, **67 read `rigor`** (plus `blast_radius` ×2 and `criticality` ×1, co-occurring), so every one of them errors before any reference is reached; 9 of the 54 ref-bearing guards die on `UnknownField("rigor")` rather than `UnresolvedRef`, because `rigor >= mandatory` is the left conjunct. [measured 2026-09-22, every `when`/`expr` in `.redkiln/catalog/*.toml` driven through the real `parse`+`evaluate`: 215 lines, **zero** `Ok`] **What this does not change:** clauses 1-5 say what to do with a guard carrying an unresolvable reference, and what they say is still right. **What it does change, and it is not small:** the record presents the gap as bounded by reference resolution, and the gap is the whole guard language — nothing on this tree ever binds a facet into the executor's `Context`, so the reference resolver clause 4 records as OWED would not by itself make one guard evaluable. **The executor's resulting behaviour is a defect and is recorded as such** in `runbook/PROGRESS.md` §1's Step 7g row rather than repaired here: `execute_step` maps the error to `StepVerdict::Failed` and the walk hard-stops, so every guarded step and every `check` step ends its activation.
@@ -701,3 +720,17 @@ and every `**What this forbids**` bullet. The producer exists, a real `redkiln r
 guard (10) is behavioural. **Decision 6 is not listed here because it was repaired in code rather
 than corrected in prose**: it said the rows are appended *"and the journal is re-read"* and the
 first cut did not re-read, so the re-read was implemented and the record left standing.
+
+**E-0162-2 (2026-09-26, `s8c`'s build, written with ADR-0169 and ADR-0170 at `proposed`).** `## Decision drivers`:
+*"**Checkpoint 7a counts exactly six methods on the `Toolchain` port.** A seventh — an `apply_patch` — would re-open it
+for a fixture, which is the cost `s7d` refused for `Pack`."* The `title` repeats it: *"Checkpoint 7a counts **exactly
+six** methods on that port"*. — **What is true:** Checkpoint 7a counts no method. Its only method-level group is a
+floor over NAMES (`for m in 'fn project' 'fn inbox' 'fn check_links' 'fn drift' 'fn detect' 'fn lint'`, each required
+present), and `s7a` §7a.3 says so in terms: *"The floor pins **names**, never a signature"*. Its counts are five
+`Send + Sync` port traits and five `impl … for` lines in `crates/rk-ports/src/`. [measured 2026-09-26 at `6f70e47`,
+the same reading as E-0135-1] A driver is not a Decision sentence, so it takes this erratum. **What this does not
+change:** no Decision sentence and no forbids bullet moves here. Decision 4's *"a port Checkpoint 7a counts at six"* is
+a Decision sentence, and it rides in ADR-0169's supersession in part of decision 4. The forbids bullet's seventh-method
+half moves with ADR-0170, and its patch half stands. The refusal of `kind = mutate` stands on its remaining reason, the
+title's *"no port method applies a patch"*. The exact count is now asserted by
+`source_parse::toolchain_port_declares_exactly_seven_methods` and Checkpoint 8c (4), not by Checkpoint 7a.

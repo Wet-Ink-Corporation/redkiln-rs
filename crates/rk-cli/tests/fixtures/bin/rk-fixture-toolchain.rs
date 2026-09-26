@@ -29,6 +29,23 @@
 //! `rustc -V` is spawned separately by `toolchain_version` and is the REAL `rustc` — this program
 //! is not asked for it, because the adapter looks for a `rustc` sibling of the configured program
 //! and falls back to the one on `PATH`.
+//!
+//! *(Amended 2026-09-26, s8c §8c.2; record T = ADR-0169, proposed.)* `Toolchain::test` no longer
+//! reads the exit status alone: RT-22 is reversed, a red suite is `Ok` with its counts, and the
+//! counts come from the pinned libtest-line parser (§8c.1), which refuses anything outside its
+//! grammar as `Transport { Decode }` -- and the re-executor reads either arm's `Err` as
+//! `Unverifiable { cannot_run }`. So the run vector must print ONE WHOLE §8c.1 BLOCK for its one
+//! test: the `running 1 test` header, the record, the empty line that closes the record region,
+//! and the full-grammar summary with its `finished in` tail. `FAILED` in the candidate tree and
+//! `ok` in `…review-ref`; its exit code agrees (101 red, 0 green). If it did not, the candidate
+//! would read as cannot-run and AC-438's `exit/findings-block/` row (code 4) would silently
+//! become exit 0, because this fixture is the ONLY data condition that reaches
+//! `four_cell(true, false)`. The version is the REAL `rustc -V`, so the parser's `PINNED` holds
+//! it. Two vectors change: the run vector now carries `--no-fail-fast` (record T decision 6),
+//! which this program ignores; and the runner probe `nextest --version`, which the Rust adapter
+//! spawns at construction under `Detect` (record T decision 4), is answered as cargo answers an
+//! unknown subcommand -- exit 101, *"error: no such command: `nextest`"* on stderr, as measured
+//! at stage open -- so the adapter runs the `cargo test` vectors this table describes.
 
 use std::path::Path;
 
@@ -40,6 +57,12 @@ const REFERENCE_SUFFIX: &str = ".review-ref";
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+
+    // The runner probe (record T decision 4): answered as cargo answers an unknown subcommand.
+    if args.first().is_some_and(|a| a == "nextest") {
+        eprintln!("error: no such command: `nextest`");
+        std::process::exit(101);
+    }
 
     // `detect()`: a version probe. Answered by every tree, so both arms choose this adapter.
     if args.iter().any(|a| a == "--version" || a == "-V") {
@@ -62,13 +85,20 @@ fn main() {
         eprintln!("rk-fixture-toolchain: no working directory: {e}");
         std::process::exit(2);
     });
+    // ONE WHOLE §8c.1 BLOCK per arm (the module doc): header, record, the empty line that closes
+    // the record region, and the full-grammar summary.
     if is_reference(&cwd) {
-        println!("running 1 test\ntest rk_fixture::the_reviewed_case ... ok");
-        println!("test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out");
+        println!("\nrunning 1 test\ntest rk_fixture::the_reviewed_case ... ok\n");
+        println!(
+            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n"
+        );
         return;
     }
-    println!("running 1 test\ntest rk_fixture::the_reviewed_case ... FAILED");
-    println!("test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out");
+    println!("\nrunning 1 test\ntest rk_fixture::the_reviewed_case ... FAILED\n");
+    println!("failures:\n\nfailures:\n    rk_fixture::the_reviewed_case\n");
+    println!(
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n"
+    );
     eprintln!(
         "rk-fixture-toolchain: the reviewed change breaks the suite in {} (the fixture's one data \
          condition; the reference tree is green)",

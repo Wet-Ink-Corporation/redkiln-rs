@@ -17,10 +17,15 @@
 //! **What the Rust entries are**: exactly `change_summary` (S-BIN unrun) and `affected-selection`
 //! (no probe exists at any pin — §7c.14 [measured 2026-09-17]), each dated and each **explicitly
 //! probe-less** (`Probe::None { reason }`).
+//!
+//! *(Amended 2026-09-26, s8c build, P5; record T = ADR-0169 decision 7 rule 1, proposed: the
+//! `affected-selection` row now carries a dated `Probe::Recorded { source }` naming the fixture
+//! workspace and the `affected::` test that exercises it; `change_summary` alone stays probe-less.
+//! `ac328_…` keeps its name and runs over a controlled probe-less registry.)*
 
 use std::path::Path;
 
-use rk_ports::toolchain::Toolchain;
+use rk_ports::toolchain::{Selection, StepBound, Toolchain};
 use rk_types::error::{StepError, TransportKind};
 use rk_types::verify::{Basis, BasisReason};
 
@@ -28,7 +33,7 @@ use rk_adapter_toolchain_rust::RustToolchain;
 use rk_adapter_toolchain_rust::registry::{self, Capability, Probe, Row};
 
 use crate::support::{
-    GENEROUS, adapter, binary_range_repo, config_with, fixture_project, is_date, minimal_env,
+    GENEROUS, binary_range_repo, config_with, fixture_project, is_date, minimal_env,
 };
 
 const BARE_ROW: &str = include_str!("../fixtures/registry/bare_row.json");
@@ -89,6 +94,10 @@ fn ac489_capability_registry_dated() {
     );
 
     // ---- the shipped registry: exactly the two rows, dated, explicitly probe-less.
+    // *(Amended 2026-09-26, s8c build, P5; record T = ADR-0169 decision 7 rule 1, proposed: "explicitly
+    // probe-less" holds for `change_summary` only. The `affected-selection` row carries a dated
+    // `Recorded { source }` naming the fixture workspace and the test that exercises it; that
+    // row's behaviour is proved by the `affected::` tests.)*
     let rows = registry::rows().expect("the shipped registry loads");
     let tokens: Vec<&str> = rows.iter().map(Row::token).collect();
     assert_eq!(
@@ -103,21 +112,32 @@ fn ac489_capability_registry_dated() {
             row.token(),
             row.verified_on
         );
-        match &row.probe {
-            Probe::None { reason } => assert!(
+        match (&row.probe, row.capability) {
+            (Probe::None { reason }, Capability::ChangeSummary) => assert!(
                 !reason.trim().is_empty(),
                 "row {} says Probe::None with no reason",
                 row.token()
             ),
-            Probe::Recorded { source } => panic!(
-                "row {} claims a recorded probe ({source:?}) — S-BIN is unrun and no affected-selection probe exists at any pin",
+            (Probe::Recorded { source }, Capability::AffectedSelection) => assert!(
+                source.contains("tests/fixtures/workspace")
+                    && source.contains(
+                        "affected::affected_set_is_touched_crates_plus_reverse_dependency_closure"
+                    ),
+                "the affected-selection row's recorded probe names the fixture workspace and the \
+                 test that exercises it (record T decision 7 rule 1): {source:?}"
+            ),
+            (probe, _) => panic!(
+                "row {} carries {probe:?}: change_summary stays probe-less (S-BIN is unrun) and \
+                 affected-selection is Recorded from s8c on",
                 row.token()
             ),
         }
     }
     assert_eq!(
         registry::unsupported_tokens().expect("loads"),
-        vec!["change_summary".to_owned(), "affected-selection".to_owned()]
+        vec!["change_summary".to_owned()],
+        "only change_summary is answered Unsupported from its row (amended 2026-09-26, s8c: \
+         affected-selection is Recorded)"
     );
 
     // ---- the derivation, as a pure function over rows (D17-9: "from a dated registry entry").
@@ -164,7 +184,7 @@ fn ac489_capability_registry_dated() {
     let scratch = tempfile::tempdir().expect("scratch");
     let repo = binary_range_repo();
     let tc = repo.adapter(scratch.path());
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Unsupported { capability }) => assert!(
             capability.starts_with(rows[0].token()) && capability.contains("Content/Hero.uasset"),
             "a binary range answers Unsupported from the change_summary row, naming the path: \
@@ -178,7 +198,7 @@ fn ac489_capability_registry_dated() {
     let empty = RustToolchain::new_over_registry(repo.config(scratch.path()), Vec::new());
     decode_naming(
         &empty
-            .change_summary("HEAD~1..HEAD")
+            .change_summary("HEAD~1..HEAD", StepBound::Undeclared)
             .expect_err("a binary range over an EMPTY registry is never Ok"),
         "change_summary",
         "change_summary over an EMPTY registry",
@@ -240,21 +260,38 @@ fn ac492_unknown_capability_token_fails() {
 /// against and no record fixes one at 7c (`registry.rs`'s doc); the comparison and the
 /// expired-date fixture are the `CapabilityClaim` bridge's at 7d. This test covers the ABSENT
 /// half of *"absent or stale"* only.
+///
+/// *(Amended 2026-09-26, s8c build, P5; record T = ADR-0169 decision 7 rule 1, proposed. This test
+/// KEEPS ITS NAME -- Checkpoint 7c's loop names it -- and is RE-POINTED at a controlled probe-less
+/// registry: the shipped row now carries `Probe::Recorded`, and its behaviour is proved by the
+/// `affected::` tests. Over the probe-less row, selection is still refused from the row, and an
+/// `Affected` selection through the port is refused the same way, so no `basis: affected` record
+/// is produced. The invented-probe half is dropped, not weakened: rule 1 honours ANY `Recorded`
+/// row, and nothing compares a row's provenance or its `verified_on` (record T states both facts;
+/// the bridge is OWED). The missing-row half stands.)*
 #[test]
 fn ac328_affected_selection_unsupported_without_probe() {
-    let rows = registry::rows().expect("loads");
-    let row = rows
-        .iter()
-        .find(|r| r.capability == Capability::AffectedSelection)
-        .expect("the affected-selection row is present (AC-328: an entry, never an absence)");
-    assert!(is_date(&row.verified_on));
-    assert!(
-        matches!(&row.probe, Probe::None { reason } if reason.contains("AC-328")),
-        "the affected-selection row is explicitly probe-less and says why (no probe at any pin): {row:?}"
-    );
+    let rows = vec![Row {
+        capability: Capability::AffectedSelection,
+        verified_on: "2026-09-18".to_owned(),
+        probe: Probe::None {
+            reason: "AC-328: a controlled probe-less row (the shape this row shipped with to s8c)"
+                .to_owned(),
+        },
+    }];
+    assert!(is_date(&rows[0].verified_on));
 
     let scratch = tempfile::tempdir().expect("scratch");
-    let tc = adapter(GENEROUS, scratch.path());
+    let tc = RustToolchain::new_over_registry(
+        config_with(
+            rk_adapter_toolchain_rust::DEFAULT_PROGRAM.into(),
+            GENEROUS,
+            &fixture_project(),
+            minimal_env(),
+            scratch.path(),
+        ),
+        rows,
+    );
     match tc.select_affected(&["src/lib.rs"]) {
         Err(StepError::Unsupported { capability }) => assert_eq!(capability, "affected-selection"),
         other => panic!(
@@ -264,9 +301,16 @@ fn ac328_affected_selection_unsupported_without_probe() {
 
     // No run — unselected or selected — emits a `basis: affected` record.
     for selection in [vec![], vec!["passes_and_is_filterable".to_owned()]] {
-        let report = tc
-            .verify_report(&selection)
-            .expect("the fixture suite is green under this selection");
+        // *(Amended 2026-09-26, s8c: the retired inherent `verify_report` is the port's `test`.)*
+        // `Ok` is no longer "green" (record T), so the verdict is read off `failed`.
+        let outcome = tc
+            .test(&Selection::Filter(selection.clone()), StepBound::Undeclared)
+            .expect("the fixture suite runs under this selection");
+        assert_eq!(
+            outcome.failed, 0,
+            "the fixture suite is green under {selection:?}"
+        );
+        let report = outcome.report;
         assert_eq!(
             report.basis,
             Basis::WholeSuite,
@@ -282,25 +326,26 @@ fn ac328_affected_selection_unsupported_without_probe() {
             .expect("the report's own invariants hold");
     }
 
-    // An invented probe on the row is refused (a decode failure naming the row), never a basis.
-    let invented = registry::load(INVENTED_PROBE).expect("well-formed, so it loads");
-    let over_invented = RustToolchain::new_over_registry(
-        config_with(
-            rk_adapter_toolchain_rust::DEFAULT_PROGRAM.into(),
-            GENEROUS,
-            &fixture_project(),
-            minimal_env(),
-            scratch.path(),
+    // An `Affected` selection through the port, over the probe-less row, is refused from the row
+    // before anything is spawned: no `basis: affected` record (AC-328).
+    // *(Added 2026-09-26, s8c build, P5.)*
+    match tc.test(
+        &Selection::Affected {
+            changed: vec!["src/lib.rs".to_owned()],
+            recorded: None,
+        },
+        StepBound::Undeclared,
+    ) {
+        Err(StepError::Unsupported { capability }) => assert_eq!(capability, "affected-selection"),
+        other => panic!(
+            "an Affected selection over a probe-less row is refused from the row (AC-328); got {other:?}"
         ),
-        invented,
-    );
-    decode_naming(
-        &over_invented
-            .select_affected(&["src/lib.rs"])
-            .expect_err("an invented probe is not a selection basis"),
-        "affected-selection",
-        "select_affected over a row claiming a recorded probe nobody ran",
-    );
+    }
+    // ~~An invented probe on the row is refused (a decode failure naming the row), never a
+    // basis.~~ *(Struck 2026-09-26, s8c build, P5: record T decision 7 rule 1 honours any
+    // `Recorded` row, and nothing compares its provenance; the `INVENTED_PROBE` fixture still
+    // loads, which is all it now shows.)*
+    registry::load(INVENTED_PROBE).expect("well-formed, so it loads");
     // And no row at all is the missing-row failure, not a default.
     let over_empty = RustToolchain::new_over_registry(
         config_with(

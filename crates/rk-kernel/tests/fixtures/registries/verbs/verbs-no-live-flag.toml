@@ -9,7 +9,10 @@
 #
 # So the registry refuses at LOAD and names the verb. `test` is declared completely, so the refusal
 # is demonstrably about `deploy` and not about the file.
+#
+# (dated 2026-09-26, s8c section 8c.4; record V decision 1, proposed) Both rows now carry `inputs` and
+# `route`, so the one missing column is still `live` and the refusal is still about `deploy`.
 
 [verb]
-deploy = { outputs = "DeployReport", timeout = "deploy_timeout" }
-test   = { outputs = "TestReport", live = false, timeout = "test_timeout" }
+deploy = { outputs = "DeployReport", timeout = "deploy_timeout", inputs = [], route = "toolchain" }
+test   = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port" }

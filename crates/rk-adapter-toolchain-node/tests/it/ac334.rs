@@ -45,7 +45,7 @@ use rk_types::digest::sha256;
 
 use rk_adapter_toolchain_node::NodeToolchain;
 
-use crate::support::{GENEROUS, config_with, minimal_env};
+use crate::support::{GENEROUS, config_with, minimal_env, run_test};
 
 /// The `corpus`-feature constant: the predecessor checkout, relative to the repository root.
 const PREDECESSOR: &str = "target/predecessor-f21f55fc";
@@ -232,9 +232,11 @@ fn ac334_flip_predicate_real_toolchain() {
     .expect("loads");
 
     // The baseline: the recorded "2 passed" under the filter, through the real adapter.
-    let baseline = tc
-        .verify_report(&selection)
-        .expect("the baseline suite is green at F21");
+    // *(Amended 2026-09-26, s8c §8c.2: the retired inherent `verify_report` is the port's `test`;
+    // the report is the outcome's.)*
+    let baseline = run_test(&tc, &selection)
+        .expect("the baseline suite is green at F21")
+        .report;
     assert_eq!(
         baseline.selected_test_count, 2,
         "the record's `-> 2 passed`"
@@ -258,26 +260,30 @@ fn ac334_flip_predicate_real_toolchain() {
             text.contains(inverted_text),
             "PREMISE: the inversion is applied"
         );
-        let mutant = tc.verify_report(&selection);
+        let mutant = run_test(&tc, &selection);
+        // *(Amended 2026-09-26, s8c §8c.2, record T = ADR-0169 decision 1, proposed: this arm read
+        // `Err(StepError::NonZero { .. }) => (false, None)`, RT-22's "a red suite is Err" -- exactly
+        // the reading D21-42 1a reverses. A red suite is now `Ok` with `failed > 0`, so the arm is a
+        // `failed > 0` read, and its reporter file is readable like a green one's. Every `Err` is
+        // cannot-run, killed or unreadable, and is no pass and no failing suite.)*
         let (suite_green, mutant_status) = match &mutant {
-            Ok(report) => {
-                let status = assertion_status(&report.argv, named);
+            Ok(outcome) => {
+                let status = assertion_status(&outcome.report.argv, named);
                 println!(
-                    "AC334_MUTANT_SELECTED={} named_assertion={status}",
-                    report.selected_test_count
+                    "AC334_MUTANT_SELECTED={} failed={} named_assertion={status}",
+                    outcome.report.selected_test_count, outcome.failed
                 );
-                (true, Some(status))
+                (outcome.failed == 0, Some(status))
             }
-            // A red suite has no `Ok` report to read the reporter file's path from; the
-            // named assertion's status is then unread, and `assert!(suite_green)` below is
-            // what fires (F25's record: the suite stays green).
-            Err(rk_types::error::StepError::NonZero { .. }) => (false, None),
             Err(other) => panic!("the mutant run must be a pass or a failing suite, got {other:?}"),
         };
         let still_present = std::fs::read_to_string(&target)
             .expect("readable")
             .contains(inverted_text);
-        let count = mutant.as_ref().map(|r| r.selected_test_count).unwrap_or(0);
+        let count = mutant
+            .as_ref()
+            .map(|o| o.report.selected_test_count)
+            .unwrap_or(0);
         drop(guard);
         (suite_green, still_present, count, mutant_status)
     };

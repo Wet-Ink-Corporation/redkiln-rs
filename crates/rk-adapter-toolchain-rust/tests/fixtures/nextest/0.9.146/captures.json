@@ -51,9 +51,117 @@
       "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/workspace",
       "exit_code": 0,
       "stream": "stdout"
+    },
+    "project-green.list-failed.stderr": {
+      "what": "D21-62 B refusal golden: the fixture project green, unfiltered; zz_decoy (harness = false) does not speak --list, so nextest exits 104 'creating test list failed' with no status line. Expected: ParseRefusal::ListFailed, never a tally.",
+      "argv": [
+        "cargo",
+        "nextest",
+        "run",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/project/Cargo.toml",
+        "--workspace",
+        "--no-fail-fast",
+        "--retries",
+        "0",
+        "--color",
+        "never",
+        "--status-level",
+        "pass",
+        "--final-status-level",
+        "none"
+      ],
+      "exit_code": 104,
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/project",
+      "stream": "stderr"
+    },
+    "project-red.list-failed.stderr": {
+      "what": "D21-62 B refusal golden: the fixture project red under red_by_selection, unfiltered; exit 104 as above. Expected: ParseRefusal::ListFailed.",
+      "argv": [
+        "cargo",
+        "nextest",
+        "run",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/project/Cargo.toml",
+        "--workspace",
+        "--no-fail-fast",
+        "--retries",
+        "0",
+        "--color",
+        "never",
+        "--status-level",
+        "pass",
+        "--final-status-level",
+        "none",
+        "--",
+        "--ignored",
+        "red_by_selection"
+      ],
+      "exit_code": 104,
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/project",
+      "stream": "stderr"
+    },
+    "project-green.filtered.stderr": {
+      "what": "D21-62 B parse-only golden: the fixture project green with zz_decoy filtered out by -E; build.rs's decoy lines (cargo:warning=) sit on the status stream and are never counted. Parsed, never re-run.",
+      "argv": [
+        "cargo",
+        "nextest",
+        "run",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/project/Cargo.toml",
+        "--workspace",
+        "-E",
+        "not binary(zz_decoy)",
+        "--no-fail-fast",
+        "--retries",
+        "0",
+        "--color",
+        "never",
+        "--status-level",
+        "pass",
+        "--final-status-level",
+        "none"
+      ],
+      "exit_code": 0,
+      "argv_source": "reconstructed from P1's evidence ('with `-E 'not binary(zz_decoy)'` the project runs green'); P1 wrote no meta file for this capture",
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/project",
+      "stream": "stderr"
+    },
+    "project-red.filtered.stderr": {
+      "what": "D21-62 B parse-only golden: the fixture project red under red_by_selection with zz_decoy filtered out by -E; the decoy lines are never counted. Parsed, never re-run.",
+      "argv": [
+        "cargo",
+        "nextest",
+        "run",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/project/Cargo.toml",
+        "--workspace",
+        "-E",
+        "not binary(zz_decoy)",
+        "--no-fail-fast",
+        "--retries",
+        "0",
+        "--color",
+        "never",
+        "--status-level",
+        "pass",
+        "--final-status-level",
+        "none",
+        "--",
+        "--ignored",
+        "red_by_selection"
+      ],
+      "exit_code": 100,
+      "argv_source": "reconstructed from P1's evidence, as for project-green.filtered.stderr",
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/project",
+      "stream": "stderr"
     }
   },
   "not_captured": {
-    "project-green, project-red": "BLOCKED (P1): nextest 0.9.146 cannot list the fixture project; zz_decoy (harness = false) answers --list with non-list lines and nextest exits 104 'creating test list failed'. Awaiting a ruling."
+    "project-green, project-red (as tallies)": "(dated 2026-09-26, s8c build, P3) resolved by D21-62 B, provisional: nextest 0.9.146 cannot list the fixture project (zz_decoy, harness = false, answers --list with non-list lines; exit 104). The unfiltered streams are committed as ListFailed refusal goldens and the -E-filtered streams as parse-only goldens. Record T (ADR-0169) carries the ruling."
   }
 }

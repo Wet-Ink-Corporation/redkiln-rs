@@ -478,6 +478,7 @@ fn adr0144_step(
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 

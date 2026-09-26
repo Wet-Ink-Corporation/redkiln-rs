@@ -47,6 +47,14 @@
 //! capability (`dispatch`) and the store ones (`snapshot`, `rebuild`) are **absent** from this
 //! registry, not `Probe::None`: a toolchain claims no dispatch or store capability (§7c.7).
 //!
+//! *(Amended 2026-09-26, s8c build, P5; record T = ADR-0169 decision 7 rule 1, proposed: the
+//! `affected-selection` entry above is false from this commit. The row is re-dated `2026-09-26`
+//! and carries `Probe::Recorded { source }` naming the fixture workspace and
+//! `affected::affected_set_is_touched_crates_plus_reverse_dependency_closure`; the adapter runs an
+//! `Affected` selection from it through [`gate`], and [`refusal`] is still what a probe-less row
+//! or a missing row answers. `ac328_…` keeps its name and is re-pointed at a controlled
+//! probe-less registry.)*
+//!
 //! **What `verified_on` is compared against — nothing yet, and that is stated, not hidden.**
 //! AC-328's *"absent or stale"* and its Verified-by's *"a fixture adapter with an expired
 //! `verified_on` that must produce `Unsupported`"* need a pin the date is compared to, and no
@@ -141,6 +149,12 @@ impl Row {
 /// The Rust registry: the two rows, each explicitly probe-less. `affected-selection` is dated the
 /// day this crate landed and `change_summary` the day s8a re-dated it (amended 2026-09-25, s8a fix
 /// round 7, ADR-0165: this said both rows carried the landing date).
+///
+/// *(Amended 2026-09-26, s8c build, P5; record T = ADR-0169 decision 7 rule 1, proposed: "each
+/// explicitly probe-less" is false from this commit. The `affected-selection` row carries a dated
+/// `Recorded { source }` naming the fixture workspace and the test that exercises it, and
+/// `RustToolchain::test` produces `basis: Affected` from it through [`gate`]; only `change_summary`
+/// stays `Probe::None`.)*
 const REGISTRY: &str = r#"[
   {
     "capability": "change_summary",
@@ -149,10 +163,30 @@ const REGISTRY: &str = r#"[
   },
   {
     "capability": "affected-selection",
-    "verified_on": "2026-09-18",
-    "probe": { "none": { "reason": "AC-328: no affected-selection probe result exists at any pin, on the tree or in any record (measured 2026-09-17); selection is refused and no basis: affected record is produced until one is recorded" } }
+    "verified_on": "2026-09-26",
+    "probe": { "recorded": { "source": "crates/rk-adapter-toolchain-rust/tests/fixtures/workspace (a <- b <- c, c dev-depends on b), exercised by affected::affected_set_is_touched_crates_plus_reverse_dependency_closure (s8c §8c.3; record T = ADR-0169 decision 7 rule 1, proposed)" } }
   }
 ]"#;
+
+/// **Rule 1 of the Rust `Affected` rules** (record T = ADR-0169 decision 7, proposed).
+///
+/// An affected selection runs only from a row carrying `Probe::Recorded`. A probe-less row refuses with
+/// `Unsupported { capability: "affected-selection" }` from the row (AC-328, unchanged), and no row
+/// is the decode failure [`refusal`] gives. Nothing compares the row's `verified_on` (the OWED
+/// bridge the module doc names): AC-328's *absent* half holds here, and its *stale* half is not
+/// claimed. *(Added 2026-09-26, s8c build, P5.)*
+///
+/// # Errors
+/// The row's refusal when it is probe-less, or the decode failure when there is no row.
+pub fn gate(rows: &[Row], capability: Capability) -> Result<(), StepError> {
+    match rows.iter().find(|r| r.capability == capability) {
+        Some(Row {
+            probe: Probe::Recorded { .. },
+            ..
+        }) => Ok(()),
+        Some(_) | None => Err(refusal(rows, capability)),
+    }
+}
 
 /// Load a registry from its JSON text.
 ///

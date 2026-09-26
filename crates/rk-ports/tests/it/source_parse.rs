@@ -142,3 +142,48 @@ impl Source {
         self.impls.intersection(&self.traits).cloned().collect()
     }
 }
+
+/// **The `Toolchain` port declares exactly seven methods** (record V = ADR-0170 decision 2,
+/// proposed: *"The port has **seven** methods"*). Checkpoint 7a counts none -- it floors two NAMES
+/// (`s7a` §7a.3: *"The floor pins **names**, never a signature"*) -- so this is the exact count. It
+/// parses `pub trait Toolchain` from CODE lines of `src/toolchain.rs` (comment lines dropped first,
+/// so a commented-out method is not counted) and names each method.
+///
+/// *(Added 2026-09-26, s8c §8c.9.)*
+#[test]
+fn toolchain_port_declares_exactly_seven_methods() {
+    let src = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/toolchain.rs"))
+        .expect("rk-ports/src/toolchain.rs is readable");
+    let code: Vec<&str> = src
+        .lines()
+        .filter(|l| !l.trim_start().starts_with("//"))
+        .collect();
+    let start = code
+        .iter()
+        .position(|l| l.starts_with("pub trait Toolchain"))
+        .expect("`pub trait Toolchain` is declared at column 0 on a code line");
+    let end = code[start..]
+        .iter()
+        .position(|l| *l == "}")
+        .map(|i| start + i)
+        .expect("the trait body closes at column 0");
+    let names: Vec<String> = code[start + 1..end]
+        .iter()
+        .filter_map(|l| l.trim_start().strip_prefix("fn "))
+        .filter_map(|rest| rest.split(['(', '<']).next())
+        .map(|n| n.trim().to_owned())
+        .collect();
+    assert_eq!(
+        names,
+        [
+            "detect",
+            "build",
+            "test",
+            "lint",
+            "classify",
+            "change_summary",
+            "run_verb"
+        ],
+        "pub trait Toolchain declares exactly these seven methods, in this order (record V)"
+    );
+}

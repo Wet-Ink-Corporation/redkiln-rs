@@ -287,9 +287,22 @@ impl EventStore for CountingStore {
 /// however it is spelled, path-qualified included, and admits an import and this method's
 /// signature in either spelling. The path-qualified return type is kept; it is no longer required,
 /// and a `use` would not turn Checkpoint 5 red.)*
+///
+/// *(amended 2026-09-26, s8c §8c.2 and §8c.6, records T, V and B = ADR-0169/0170/0171, proposed:
+/// the port gained a seventh method, `run_verb`, which this fake COUNTS like the other six; and
+/// every step-reached method -- `build`, `test`, `lint`, `change_summary`, `run_verb` -- takes a
+/// `StepBound`, which this fake RECORDS, in call order, so a kernel test can read the bound the
+/// step handed the port ([`Self::bounds`]). `test` answers an EMPTY outcome (nothing executed,
+/// never `passing`) and `build` a `passing` report; `run_verb` refuses the verb by its bare name,
+/// counted first.)*
 #[derive(Debug, Default)]
 pub struct CountingToolchain {
     calls: AtomicU32,
+    bounds: Mutex<Vec<rk_ports::toolchain::StepBound>>,
+    /// *(2026-09-26, s8c §8c.4, the routing slice.)* What `run_verb` answers once counted: `None`
+    /// refuses the verb by its bare name, as before; `Some` is a scripted output, so a kernel test
+    /// can watch a `toolchain`-route row reach the port and its output go through the decode table.
+    verb_output: Option<rk_ports::toolchain::VerbOutput>,
 }
 
 impl CountingToolchain {
@@ -306,6 +319,33 @@ impl CountingToolchain {
     fn reached(&self) {
         self.calls.fetch_add(1, Ordering::SeqCst);
     }
+
+    /// Counted, and the bound recorded.
+    fn reached_with(&self, bound: rk_ports::toolchain::StepBound) {
+        self.reached();
+        self.bounds
+            .lock()
+            .expect("a poisoned lock halts the run; it is never recovered (ADR-0118)")
+            .push(bound);
+    }
+
+    /// A counting fake whose `run_verb` answers `output` (s8c §8c.4).
+    #[must_use]
+    pub fn with_verb_output(output: rk_ports::toolchain::VerbOutput) -> Self {
+        Self {
+            verb_output: Some(output),
+            ..Self::default()
+        }
+    }
+
+    /// Every `StepBound` a step-reached method was handed, in call order (s8c §8c.6).
+    #[must_use]
+    pub fn bounds(&self) -> Vec<rk_ports::toolchain::StepBound> {
+        self.bounds
+            .lock()
+            .expect("a poisoned lock halts the run; it is never recovered (ADR-0118)")
+            .clone()
+    }
 }
 
 impl Toolchain for CountingToolchain {
@@ -314,18 +354,46 @@ impl Toolchain for CountingToolchain {
         Ok(true)
     }
 
-    fn build(&self) -> Result<(), StepError> {
-        self.reached();
-        Ok(())
+    fn build(
+        &self,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_types::verb_output::BuildReport, StepError> {
+        self.reached_with(bound);
+        Ok(rk_types::verb_output::BuildReport {
+            argv: vec!["counting".to_owned(), "build".to_owned()],
+            toolchain_version: "counting".to_owned(),
+            wall_secs: 0,
+            errors: 0,
+            status: rk_types::verb_output::BuildStatus::Passing,
+        })
     }
 
-    fn test(&self, _selection: &[String]) -> Result<u32, StepError> {
-        self.reached();
-        Ok(0)
+    fn test(
+        &self,
+        _selection: &rk_ports::toolchain::Selection,
+        bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_ports::toolchain::TestOutcome, StepError> {
+        self.reached_with(bound);
+        rk_ports::toolchain::TestOutcome::new(
+            rk_types::verify::VerifyReport {
+                basis: rk_types::verify::Basis::WholeSuite,
+                argv: vec!["counting".to_owned(), "test".to_owned()],
+                selected_test_count: 0,
+                total_test_count: 0,
+                total_test_count_source: rk_types::verify::TotalTestCountSource::OwnExecutedCount,
+                wall_secs: 0,
+                toolchain_version: "counting".to_owned(),
+                suite_sha: "counting".to_owned(),
+                basis_reason: Some(rk_types::verify::BasisReason::ProbeUnverified),
+            },
+            0,
+            0,
+            rk_ports::toolchain::TestRunner::named("counting", "0"),
+        )
     }
 
-    fn lint(&self) -> Result<(), StepError> {
-        self.reached();
+    fn lint(&self, bound: rk_ports::toolchain::StepBound) -> Result<(), StepError> {
+        self.reached_with(bound);
         Ok(())
     }
 
@@ -337,12 +405,26 @@ impl Toolchain for CountingToolchain {
     fn change_summary(
         &self,
         _range: &str,
+        bound: rk_ports::toolchain::StepBound,
     ) -> Result<rk_ports::toolchain::ChangeSummary, StepError> {
         // COUNTED FIRST, then refused — see the 🛑 on the type.
-        self.reached();
+        self.reached_with(bound);
         Err(StepError::Unsupported {
             capability: "change_summary".to_owned(),
         })
+    }
+
+    /// COUNTED FIRST, then refused by the verb's bare name (record V decision 2).
+    fn run_verb(
+        &self,
+        call: &rk_ports::toolchain::VerbCall<'_>,
+    ) -> Result<rk_ports::toolchain::VerbOutput, StepError> {
+        self.reached_with(call.bound);
+        self.verb_output
+            .clone()
+            .ok_or_else(|| StepError::Unsupported {
+                capability: call.verb.to_owned(),
+            })
     }
 }
 

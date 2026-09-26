@@ -1,0 +1,17 @@
+# checklist:docs-diataxis — read by docs-update/write and docs-update/self-check (s8c §8c.4; ADR-0170
+# decision 8, proposed). Authored 2026-09-26 from the passages named in `source`. Broken references are the
+# `lint` step's, not this checklist's (the activity's rationale divides the two).
+
+source = "references/research/2026-09-07-activity-catalog-raw.md, the docs-update row: 'Update tutorial/how-to/reference/explanation as applicable', output 'Docs (Diátaxis quadrant)'; the docs-review row: 'Check docs land in the right Diátaxis quadrant and are accurate'; and .redkiln/catalog/docs-update.toml's rationale: 'Diátaxis: every change lands its docs in the right quadrant; the lint catches broken references, the checklist catches the wrong quadrant.'"
+
+[[item]]
+id   = "right-quadrant"
+text = "Each changed page sits in the one Diátaxis quadrant its content belongs to: tutorial, how-to, reference or explanation."
+
+[[item]]
+id   = "as-applicable"
+text = "Every quadrant the change affects is updated, as applicable; a quadrant left unchanged is one the change does not affect."
+
+[[item]]
+id   = "accurate"
+text = "The docs are accurate to the behaviour the change ships."

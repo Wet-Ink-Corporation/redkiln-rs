@@ -50,6 +50,14 @@ pub enum GitError {
     /// `git worktree remove` failed — on Windows, typically a handle no `Stop-Process` releases
     /// (Halt 6). A typed error and a `doctor` orphans row, never a retry into a reused tree.
     WorktreeRemoveFailed { path: PathBuf, stderr: Vec<u8> },
+
+    /// The `.worktreeinclude` reader refused the whole carry (s8c §8c.4, D21-45 W3): a listed
+    /// path was absolute, prefixed, carried a `..` component, or canonicalised outside the
+    /// canonical repository root. Whole, not per path, because an escaping entry means the listing
+    /// is not what the reader thinks it is. *(Added 2026-09-26, s8c build, P6.)*
+    CarryRefused {
+        refusal: crate::worktree_include::CarryRefusal,
+    },
 }
 
 impl GitError {
@@ -62,7 +70,8 @@ impl GitError {
             | Self::VersionBelowFloor { .. }
             | Self::VersionUnparsable { .. }
             | Self::ExtendedLengthPath { .. }
-            | Self::ForeignWorktree { .. } => true,
+            | Self::ForeignWorktree { .. }
+            | Self::CarryRefused { .. } => true,
             Self::Spawn { .. } | Self::NonZeroExit { .. } | Self::WorktreeRemoveFailed { .. } => {
                 false
             }

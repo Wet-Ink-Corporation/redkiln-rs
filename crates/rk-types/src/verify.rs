@@ -52,6 +52,14 @@ pub enum BasisReason {
     /// The filter was inert: the executed count met the recorded whole-suite count (AC-326).
     SelectionIneffective,
     /// The pack's policy demanded the whole suite regardless.
+    // *(Noted 2026-09-26, s8c build, P5; record T = ADR-0169 decision 7 rule 3, proposed.)* Record T
+    // reads this reason as "a declared policy demanded the whole suite regardless", and declares
+    // the Rust adapter's rule 3 (a changed path in no workspace package -- the root Cargo.toml,
+    // Cargo.lock, rust-toolchain*, .cargo/ or any non-crate path -- forces the whole suite) as
+    // the adapter's own policy, because of the six it is the only reason meaning "a rule, not a
+    // probe or a count, forced the whole suite". The reading is flagged for the operator's flip;
+    // rejecting it mints nothing (AC-352) and picks another of the six by record. This note is a
+    // plain comment, not a doc line, so the exported schema's description is unchanged.
     PolicyForced,
     /// The claiming toolchain has no verify adapter.
     ToolchainUnsupported,

@@ -14,4 +14,5 @@ mod schema_snapshot;
 mod step_error_is_total;
 mod support;
 mod usage;
+mod verb_outputs;
 mod verify_types;

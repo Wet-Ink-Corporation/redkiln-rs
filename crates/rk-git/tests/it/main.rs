@@ -13,3 +13,4 @@ mod trailers;
 mod tree;
 mod version;
 mod worktree;
+mod worktree_include;

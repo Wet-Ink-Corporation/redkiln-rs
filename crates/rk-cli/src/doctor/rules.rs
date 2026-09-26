@@ -580,9 +580,19 @@ fn table<'a>(pack: &'a toml::Value, name: &str) -> Option<&'a toml::Table> {
 /// declaration that is absent and a declaration that is empty are the same absence to a run that
 /// needs the number. The two arms the row distinguishes are absent and *present but not an
 /// integer*, which is what the loader's type could not tell apart.
+///
+/// *(2026-09-26, s8c §8c.6; record V = ADR-0170 decision 12, proposed.)* **A third arm.** A value of
+/// the exact form `${toolchain.<key>}`, in a pack activity table or on a catalog step, is resolved
+/// through the value table `run` would hand the kernel ([`super::TimeoutTable`], selected by `run`'s
+/// own loop): a resolved key is silent; an absent key is an `Error` naming `${toolchain.<key>}`
+/// (`Unresolved`); an `unmeasured` key is an `Error` naming its declared reason; and when no table
+/// can be selected, ONE `Error` says why and no key is guessed. A string of any other form keeps
+/// the `NonNumeric` arm.
 fn timeout(ctx: &Ctx) -> Vec<Finding> {
     let packs = packs(ctx);
-    ctx.catalog
+    let mut substitutions: Vec<(String, String)> = Vec::new();
+    let mut found: Vec<Finding> = ctx
+        .catalog
         .catalog
         .activities()
         .iter()
@@ -590,6 +600,10 @@ fn timeout(ctx: &Ctx) -> Vec<Finding> {
             let declared = packs
                 .iter()
                 .find_map(|(_, pack)| table(pack, "activity")?.get(&a.id)?.get("timeout_secs"));
+            if let Some(key) = declared.and_then(toml::Value::as_str).and_then(toolchain_key) {
+                substitutions.push((format!("activity `{}`", a.id), key));
+                return None;
+            }
             match declared {
                 None => Some(finding(
                     "RK-D-TIMEOUT",
@@ -610,7 +624,62 @@ fn timeout(ctx: &Ctx) -> Vec<Finding> {
                 Some(_) => None,
             }
         })
-        .collect()
+        .collect();
+    for a in ctx.catalog.catalog.activities() {
+        for s in &a.steps {
+            if let Some(rk_kernel::catalog::StepTimeout::Toolchain(key)) = &s.timeout_secs {
+                substitutions.push((format!("step `{}/{}`", a.id, s.id), key.clone()));
+            }
+        }
+    }
+    if substitutions.is_empty() {
+        return found;
+    }
+    match &ctx.timeout_table {
+        super::TimeoutTable::Values(values) => {
+            for (site, key) in &substitutions {
+                if let Err(refusal) = values.resolve(key) {
+                    found.push(finding(
+                        "RK-D-TIMEOUT",
+                        Severity::Error,
+                        format!(
+                            "{site} declares `timeout_secs = \"${{toolchain.{key}}}\"`: {refusal}"
+                        ),
+                    ));
+                }
+            }
+        }
+        super::TimeoutTable::NoTable(reason) => found.push(finding(
+            "RK-D-TIMEOUT",
+            Severity::Error,
+            format!(
+                "{} `${{toolchain.*}}` substitution(s) cannot be resolved: {reason}",
+                substitutions.len()
+            ),
+        )),
+        // Unreachable while `Ctx::build` selects whenever a substitution exists; a `Ctx` built
+        // otherwise has no table to resolve through, which is the no-table case.
+        super::TimeoutTable::NotNeeded => found.push(finding(
+            "RK-D-TIMEOUT",
+            Severity::Error,
+            format!(
+                "{} `${{toolchain.*}}` substitution(s) and no value table was selected",
+                substitutions.len()
+            ),
+        )),
+    }
+    found
+}
+
+/// The key of an exact `${toolchain.<key>}` string, by the catalog loader's own reading
+/// (`rk_kernel::catalog::StepTimeout::from_value`), so the two cannot disagree about the form.
+fn toolchain_key(s: &str) -> Option<String> {
+    match rk_kernel::catalog::StepTimeout::from_value(&rk_kernel::toml_subset::Value::Str(
+        s.to_owned(),
+    )) {
+        Some(rk_kernel::catalog::StepTimeout::Toolchain(key)) => Some(key),
+        Some(rk_kernel::catalog::StepTimeout::Literal(_)) | None => None,
+    }
 }
 
 /// **`RK-D-CLI-VERSION`** — AC-423, D-11: the version of the harness binary **as installed on this

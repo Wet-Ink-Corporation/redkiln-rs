@@ -91,6 +91,7 @@ fn agent_step(id: &str) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 
@@ -110,6 +111,7 @@ fn tool_step(id: &str, verb: &str) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 

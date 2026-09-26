@@ -820,6 +820,13 @@ terminal through the launcher, with the live probes."* `PROGRESS.md` row 7c is m
   holds. `s8c` owns the pin: the commit that lands that HEAD read amends guard (6)'s allowlist by a dated note, or
   places the read where the allowlist already admits it, and `s8c` records which. Until then a whole re-run of
   this block after `s8c` is red on that line by design, not by drift.)*
+  *(dated 2026-09-26, s8c build, P5; D21-62 C, provisional; record V = ADR-0170 decision 6, proposed.)* `s8c` took
+  the first choice: guard (6)'s allowlist is AMENDED, by a dated note on its code line, to admit `rk_git::head`, the
+  one shared read-only HEAD read (`crates/rk-git/src/head.rs`, `head_commit`, a gix open-at-the-directory read that
+  spawns nothing). The Rust adapter's `sca_scan` handler reads each advisory database's commit through it before and
+  after its tool runs, and its `package` handler reads the project root's `HEAD` through it, so one amendment covers
+  both reads. `head.rs` joins `diff.rs` and `path.rs` under the exec-route ban, and a pass control admits the
+  `rk_git::head` import while a fail control beside it still fires on `rk_git::gitops`. `s8c` §8c.4 records the choice.
 - **Checkpoint 5's new ban holds**, including the `rk-kernel` production ban and the opacity pin. Every control
   fires or is admitted as designed.
 - **`catalog-b` is repaired**, the probe prints 279/279, 0/279 and 99/99 at rc 0, and the committed JSON is
@@ -1210,12 +1217,19 @@ done
 # [amended 2026-09-25, s8a fix round 15] This allowlist is a time-bound pin owned by s8c: its record V's package
 # handler reads the project root's HEAD through rk-git, which neither rk_git::diff nor rk_git::path holds. The s8c
 # commit that lands that read amends this line by a dated note (or places the read inside the allowlist) and says which.
-r_filter() { grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/\brk_git::(diff|path)\b//g' | grep -E '\brk_git\b|\bgit_exec\b'; }
+# [amended 2026-09-26, s8c build, P5; D21-62 C; record V = ADR-0170 decision 6, proposed] s8c takes the first of the
+# two choices the round-15 note offers: the allowlist is AMENDED to admit rk_git::head, the ONE shared read-only HEAD
+# read (crates/rk-git/src/head.rs, head_commit, a gix open-at-the-directory read that spawns nothing) through which the
+# Rust adapter's sca_scan handler reads each advisory database's commit before and after its tool runs and its package
+# handler reads the project root's HEAD. One amendment covers both reads. head.rs joins diff.rs and path.rs under the
+# exec-route ban below, and a P control admits the head import while the F controls still fire. s8c §8c.4 records the
+# choice. Was: sed -E 's/\brk_git::(diff|path)\b//g'.
+r_filter() { grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))' | sed -E 's/\brk_git::(diff|path|head)\b//g' | grep -E '\brk_git\b|\bgit_exec\b'; }
 rraw=$(grep -rnE '\brk_git\b|\bgit_exec\b' crates/rk-adapter-toolchain-rust/src --include='*.rs'); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the rk_git route search could not run (rc=$rc)"; exit 1; }
 rhits=$(printf '%s\n' "$rraw" | r_filter)
 [ -z "$rhits" ] || { echo "FAIL: the Rust adapter reaches rk-git beyond its range read and path type — a route to git (ADR-0077):"; printf '%s\n' "$rhits"; exit 1; }
-for ctl in 'F|x.rs:1:    let o = rk_git::git_exec::run(dir, ["diff", "--name-status", range])?;' 'F|x.rs:2:use rk_git::{diff, git_exec};' 'F|x.rs:3:use rk_git::gitops;' 'F|x.rs:4:    let d = rk_git::diff::range_diff(root, r)?; let o = rk_git::git_exec::run(root, ["x"])?;' 'F|x.rs:5:    let o = git_exec::run_with_env(dir, args, env)?;' 'P|x.rs:6:use rk_git::diff::{ChangeKind as DiffChange, RangeError, range_diff};' 'P|x.rs:7:use rk_git::path::WorktreePath;' 'P|x.rs:8://! `rk_git::git_exec::run` is not called here'; do
+for ctl in 'F|x.rs:1:    let o = rk_git::git_exec::run(dir, ["diff", "--name-status", range])?;' 'F|x.rs:2:use rk_git::{diff, git_exec};' 'F|x.rs:3:use rk_git::gitops;' 'F|x.rs:4:    let d = rk_git::diff::range_diff(root, r)?; let o = rk_git::git_exec::run(root, ["x"])?;' 'F|x.rs:5:    let o = git_exec::run_with_env(dir, args, env)?;' 'P|x.rs:6:use rk_git::diff::{ChangeKind as DiffChange, RangeError, range_diff};' 'P|x.rs:7:use rk_git::path::WorktreePath;' 'P|x.rs:8://! `rk_git::git_exec::run` is not called here' 'P|x.rs:9:    let head = rk_git::head::head_commit(root)?;' 'F|x.rs:10:    let head = rk_git::head::head_commit(root)?; let o = rk_git::gitops::status(root)?;'; do
   want=${ctl%%|*}; got=$(printf '%s\n' "${ctl#*|}" | r_filter)
   if [ "$want" = F ]; then [ -n "$got" ] || { echo "FAIL: CONTROL — the rk_git route ban did not fire on: ${ctl#*|}"; exit 1; }; else [ -z "$got" ] || { echo "FAIL: CONTROL — the rk_git route ban fired on: ${ctl#*|}"; exit 1; }; fi
 done
@@ -1331,7 +1345,9 @@ op_bad=$(op_check "$op_base" "$op_now")
 # gains a `process::{` arm, which fires on the import line; the `C::new(prog)` call line itself is still not seen.
 dx_pat='\b(GitOp|GitExec|git_exec)\b|Command::new|\b(crate|super)::|\bstd::process\b|\bprocess::Command\b|\bprocess::\{|\bgix::command\b|"git(\.exe)?"'
 dx_filter() { grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | sed -E 's/\bcrate::error\b//g' | grep -E "$dx_pat"; }
-dx=$(grep -nHE "$dx_pat" crates/rk-git/src/diff.rs crates/rk-git/src/path.rs); rc=$?
+# [amended 2026-09-26, s8c build, P5] head.rs, the shared HEAD read the rk_git allowlist above now admits, is held to
+# the same exec-route ban as diff.rs and path.rs.
+dx=$(grep -nHE "$dx_pat" crates/rk-git/src/diff.rs crates/rk-git/src/path.rs crates/rk-git/src/head.rs); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the exec-type search over diff.rs and path.rs could not run (rc=$rc)"; exit 1; }
 dxc=$(printf '%s\n' "$dx" | dx_filter)
 [ -z "$dxc" ] || { echo "FAIL: rk-git's range read or path type reaches an exec route — the read is a gix read (ADR-0077):"; printf '%s\n' "$dxc"; exit 1; }

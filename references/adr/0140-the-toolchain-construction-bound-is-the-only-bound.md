@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: references/adr/0137 decision 5 (the clause this record supersedes in part); references/adr/0092 rule 1 (a `## Decision` sentence moves by supersession, never by erratum); references/adr/0099 decision 2 and RT-5 (*"the two Toolchain adapters run bounded commands under the same timeout without a token"*); crates/rk-kernel/src/catalog.rs (the `Step` field list, and the loader doc *"It types only what the loader sees … The loader reads no `timeout_secs`"*); crates/rk-types/src/activity.rs (`ActivitySpec.timeout_secs`); crates/rk-cli/src/config.rs and crates/rk-cli/src/verbs/run.rs (the two docstrings that reproduce the withdrawn sentence); references/adr/ERRATA.md E-0137-1, which named this supersession as OWED
 supersedes: ["0137"]
-superseded_by: []
+superseded_by: ["0171"]
 related: ["0094", "0099", "0127", "0137", "0139"]
 evidence: []
 consumers: []

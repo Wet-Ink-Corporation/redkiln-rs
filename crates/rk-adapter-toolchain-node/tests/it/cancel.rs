@@ -138,11 +138,16 @@ fn s_cancel_win_vitest_arm() {
         )],
         scratch.path(),
     );
-    let outcome = tc.test(&[
-        SUITE_FILE.to_owned(),
-        "-t".to_owned(),
-        "slow_by_selection".to_owned(),
-    ]);
+    // *(Amended 2026-09-26, s8c §8c.2: the port's `test` takes a closed `Selection` and a
+    // `StepBound`; a killed run is still `Err(Timeout)`, and this file has no `NonZero` arm.)*
+    let outcome = tc.test(
+        &rk_ports::toolchain::Selection::Filter(vec![
+            SUITE_FILE.to_owned(),
+            "-t".to_owned(),
+            "slow_by_selection".to_owned(),
+        ]),
+        rk_ports::toolchain::StepBound::Undeclared,
+    );
     match outcome {
         Err(StepError::Timeout { after_secs }) => assert_eq!(after_secs, BOUND_SECS),
         other => {

@@ -61,6 +61,7 @@ fn agent_step(id: &str) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 
@@ -84,6 +85,7 @@ fn build_step(id: &str) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 
@@ -107,6 +109,7 @@ fn emit_step(id: &str) -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 
@@ -139,7 +142,14 @@ fn rt_with_counters(run_id: &str) -> (Runtime, Arc<CountingHarness>, Arc<Countin
         ),
         run_id,
         STAGE,
-    );
+    )
+    // *(2026-09-26, s8c §8c.4, record V, proposed.)* `MAPPED_VERBS` is replaced by the verb
+    // registry, and a runtime with none bound refuses every verb by its bare name; this walk's
+    // `toolchain:build` reaches the port through ADR-0135's four verbs as test-only `port` rows.
+    .with_tool_routing(rk_kernel::runtime::step::ToolRouting::new(
+        crate::tool_verb_routing::registry("", ""),
+        rk_kernel::workflow::memo::ToolchainValues::default(),
+    ));
     (rt, harness, tc)
 }
 

@@ -4,5 +4,7 @@
   "ignored": 9,
   "blocks": 44,
   "exit_code": 0,
-  "note": "§8c.1 rule 2 AS WRITTEN REFUSES this golden: unexpected line in record region at 287: 'RK-D-GATE-OUTPUTS ok'. The 39 'RK-D-<rule> ok' lines are rk-cli's doctor table, written to std::io::stdout() (which libtest does not capture) by rk-cli tests/it/doctor.rs ac402_reconcile_called_on_run_answer_doctor, and they land inside the rk-cli `it` binary's record region. The tally below skips exactly those lines; it equals Checkpoint 8b's recorded 784/0/9 over 44. Blocked for a ruling (P1)."
+  "foreign_lines": 39,
+  "first_foreign_line": 287,
+  "note": "(dated 2026-09-26, s8c build, P3; D21-62 A, provisional) The 39 'RK-D-<rule> ok' lines are rk-cli's doctor table, written to std::io::stdout() (which libtest does not capture) by rk-cli tests/it/doctor.rs ac402_reconcile_called_on_run_answer_doctor; they sit inside the rk-cli `it` binary's record region. Under D21-62 A they are FOREIGN lines: skipped, never counted, tallied in foreign_lines (the first at line 287, 'RK-D-GATE-OUTPUTS ok'). The tally equals Checkpoint 8b's recorded 784/0/9 over 44. The golden is committed as captured. Superseded note: ~~§8c.1 rule 2 AS WRITTEN REFUSES this golden ... Blocked for a ruling (P1).~~"
 }

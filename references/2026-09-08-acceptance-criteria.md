@@ -5354,6 +5354,16 @@ the most recent recorded whole-suite count at that pin and the report names the 
 AND no field of the report is obtained by parsing prose or markdown (brief §C.5 forbids parsing JSON out of prose).
 *Verified by:* schema conformance test over every adapter's fixture reports; a negative fixture missing each field in
 turn; a lint forbidding markdown parsing in the toolchain adapters.
+*(Dated register note 2026-09-26, `s8c` build, under ADR-0169's flip line; ADR-0169 is `proposed` until the
+operator's dated ledger line. The note reads this criterion and does not amend it.)* D21-43 N4's parser reads
+libtest's line protocol, and under D21-48 X15 cargo-nextest's, for `TestOutcome`'s `passed` and `failed`. Those are
+fields of the port's outcome, not members of the report: `VerifyReport` gains no member. The lines are a versioned
+protocol pinned by a golden per toolchain version, not prose, and unparseable output is Unverifiable
+(`Transport { Decode }`), never green. *"No field of the report is obtained by parsing prose or markdown"* still
+holds for every member this criterion lists: `basis`, `basis_reason`, `argv`, `selected_test_count`,
+`total_test_count`, `wall_secs`, `toolchain_version` and `suite_sha` are produced as before. ADR-0169 decision 3
+also skips, and counts, libtest lines foreign to the protocol (D21-62 A, provisional); a foreign line contributes to
+no count.
 
 **AC-330** — `rk-doctor` · evidence: brief §D timeout history (900 → 2,400 → 3,600 → one 5,400 s retry; the 900 s default
 was written for the fast condition and cost a CLEAN record [documented]) · decisions: ADR-0029

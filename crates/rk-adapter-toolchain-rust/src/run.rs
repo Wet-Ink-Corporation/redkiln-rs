@@ -134,6 +134,31 @@ pub fn run_program(
     program: &Path,
     args: &[String],
 ) -> Result<Run, StepError> {
+    run_in(
+        config,
+        dir,
+        tag,
+        program,
+        args,
+        Path::new(config.project_root().as_str()),
+    )
+}
+
+/// As [`run_program`], in an explicit working directory.
+///
+/// The `smoke` handler runs a checklist row in its scratch directory, never the project root (record V = ADR-0170 decision 4, proposed).
+/// Everything else (environment, files, bound) is the same. *(Added 2026-09-26, s8c build, P5.)*
+///
+/// # Errors
+/// As [`run`].
+pub fn run_in(
+    config: &Config,
+    dir: &Path,
+    tag: &str,
+    program: &Path,
+    args: &[String],
+    cwd: &Path,
+) -> Result<Run, StepError> {
     let stdout = dir.join(format!("{tag}.stdout"));
     let stderr = dir.join(format!("{tag}.stderr"));
     let out = std::fs::File::create(&stdout).map_err(|e| io_err("stdout", &stdout, &e))?;
@@ -143,7 +168,7 @@ pub fn run_program(
     argv.push(program.to_string_lossy().into_owned());
     argv.extend(args.iter().cloned());
 
-    let cmd = build_command(config, program, args, out, err);
+    let cmd = build_command(config, program, args, cwd, out, err);
     #[expect(
         clippy::disallowed_methods,
         reason = "AC-001 bans the clock on the WORKFLOW side; this is the FIRST of the adapter's two \
@@ -177,7 +202,8 @@ fn io_err(which: &str, path: &Path, e: &std::io::Error) -> StepError {
     }
 }
 
-/// The one `Command` construction site: program, args, cwd = the project root, `env_clear()` +
+/// The one `Command` construction site: program, args, cwd (the project root, or the smoke
+/// handler's scratch directory: [`run_in`]), `env_clear()` +
 /// the captured map + `CARGO_TARGET_DIR`, stdout/stderr = the files. stdin is `run_bounded`'s
 /// (null); the creation flags / process group are `spawn_into_job`'s.
 #[expect(
@@ -190,12 +216,13 @@ fn build_command(
     config: &Config,
     program: &Path,
     args: &[String],
+    cwd: &Path,
     out: std::fs::File,
     err: std::fs::File,
 ) -> std::process::Command {
     let mut cmd = std::process::Command::new(program);
     cmd.args(args)
-        .current_dir(config.project_root().as_str())
+        .current_dir(cwd)
         .env_clear()
         .envs(config.child_env())
         .env(crate::env::CARGO_TARGET_DIR, config.target_dir())

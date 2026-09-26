@@ -368,6 +368,15 @@ convention is `s7f`'s own. Checkpoint 7f is `s7g`'s entry gate only; nothing dow
 **Confirmed 2026-09-22 (dated line), at `s7g`'s open.** ADR-0135 is confirmed as written and flips
 `proposed → accepted`, `date: 2026-09-22` unchanged.
 
+*(Noted 2026-09-26, `s8c` build, under the flip line above; the entry is not rewritten.)* This entry's *"adds no
+port method — the count stays six, as Checkpoint 7a asserts"* is false in its warrant, and its substance moves.
+Checkpoint 7a counts no method: its only method-level group is a floor over names (`s7a` §7a.3: *"The floor pins
+**names**, never a signature"*). ADR-0170 (`s8c`'s record V, `proposed`) adds a seventh method, `run_verb`, under
+D21-42 1b, and supersedes ADR-0135's six-method `## Decision` sentence and one forbids bullet in part; E-0135-1
+corrects option 3's rationale. The exact count is asserted by
+`source_parse::toolchain_port_declares_exactly_seven_methods` and Checkpoint 8c (4). The pack's missing
+`registry.toml`, which this entry records as a gap, ships under ADR-0170.
+
 **This settles `resolver.rs`'s OWED routing record for the `tool` arm, and only for it.** That module's header
 names the gap and forbids closing it by invention — *"inventing the channel … or a mapping from a `tool` step's
 `run = "toolchain:X"` — would be deciding what no record has"*. This is that record. The **agent** arm's

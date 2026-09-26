@@ -1,7 +1,7 @@
 //! The `VerifyReport`, produced by an inherent method from structured sources only.
 //!
 //! The `VerifyReport` — `rk_types::verify::VerifyReport`, produced by an INHERENT method
-//! (`NodeToolchain::verify_report`, RT-6: the port stays six methods) from **structured sources
+//! (`NodeToolchain::verify_report`, ~~RT-6: the port stays six methods~~ *(struck 2026-09-26, s8c §8c.7: RT-6 is discharged and the port has seven methods under record V; the dated paragraph below)*) from **structured sources
 //! only** (AC-329's adapter half, `s7c` §7c.14).
 //!
 //! **The count source is vitest's JSON reporter FILE.** The test argv is *"the full vector
@@ -62,16 +62,33 @@
 //! wall time (the two `Instant::now` sites in [`crate::run`]). `basis` is **always `WholeSuite`**
 //! with `basis_reason: ProbeUnverified` — AC-328: no `affected-selection` probe is recorded at
 //! any pin (S-SEL-NODE is owed), so no `basis: affected` record can be produced by this adapter.
+//!
+//! *(Amended 2026-09-26, s8c §8c.2; record T = ADR-0169, proposed. Read this paragraph as the
+//! current contract; the text above stays as the record of what was.)* The INHERENT
+//! `NodeToolchain::verify_report` is RETIRED (RT-6 discharged): [`verify_report`] here is
+//! `Toolchain::test`'s body, and returns a `rk_ports::toolchain::TestOutcome` -- the unchanged
+//! report plus `passed` / `failed` from the SAME reporter file (`numPassedTests`,
+//! `numFailedTests`), the derived `status`, and `runner` = `vitest` at `vitest --version`'s
+//! answer. *"RT-6: the port stays six methods"* is false twice over: RT-6 is discharged, and
+//! under record V = ADR-0170 the port has SEVEN methods (Checkpoint 7a counts none; E-0162-2).
+//! **RT-22 is REVERSED: a red suite is `Ok`** with `failed ≥ 1`. A non-zero exit whose reporter
+//! file names NO failed test is still `Err(NonZero)`: nothing the file can attribute failed, so
+//! the suite could not run (a collection or import error), record T decision 1's class (a). The
+//! exit and the file's `success` must still agree, and a zero exit whose file names a failure
+//! is `Transport { Decode }` too. The selection is the closed `Selection`: `WholeSuite` and
+//! `Filter` run as before (the reason travels with the first), `Affected` is refused from the
+//! `Probe::None` registry row (AC-328), and a `Named` selection by name.
 
 use std::path::{Path, PathBuf};
 
 use rk_containment::Outcome;
+use rk_ports::toolchain::{Selection, StepBound, TestOutcome, TestRunner};
 use rk_types::digest::{Sha256Stream, sha256};
 use rk_types::error::{StepError, TransportKind};
 use rk_types::verify::{Basis, BasisReason, TotalTestCountSource, VerifyReport};
 
-use crate::NodeToolchain;
 use crate::run::{self, Run};
+use crate::{Config, NodeToolchain, registry};
 
 /// The reporter file's name under the call's run directory.
 ///
@@ -197,15 +214,15 @@ fn expect_green(run: &Run, timeout_secs: u64) -> Result<(), StepError> {
 }
 
 /// `<program> vitest --version`, read from the run's stdout file.
-fn toolchain_version(tc: &NodeToolchain, dir: &Path) -> Result<String, StepError> {
+fn toolchain_version(tc: &NodeToolchain, cfg: &Config, dir: &Path) -> Result<String, StepError> {
     tc.require_local_bin("vitest")?;
     let run = run::run(
-        tc.config(),
+        cfg,
         dir,
         "vitest-version",
         &["vitest".to_owned(), "--version".to_owned()],
     )?;
-    expect_green(&run, tc.config().timeout().as_secs())?;
+    expect_green(&run, cfg.timeout().as_secs())?;
     let version = String::from_utf8_lossy(&run.stdout_bytes()?)
         .trim()
         .to_owned();
@@ -295,27 +312,63 @@ fn collect_sources(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), StepError> 
     Ok(())
 }
 
-/// The report for one selection (the module doc).
+/// The selection's vitest arguments and the basis reason it records (record T decision 7).
 ///
 /// # Errors
-/// `NonZero` on a red suite (RT-22); `Timeout { after_secs }` on a run killed at the bound and
-/// `Transport { Io }` on one the OS ended (AC-331); `Transport { Spawn }` when the program cannot
-/// start or `vitest` is not installed locally (AC-344); `Transport { Decode }` when the reporter
-/// file is absent, unparseable or disagrees with the exit status.
-pub fn verify_report(tc: &NodeToolchain, selection: &[String]) -> Result<VerifyReport, StepError> {
+/// `Affected` refused from the `affected-selection` registry row (AC-328; its `Probe::None` row);
+/// `Named` refused by name.
+fn arguments(
+    tc: &NodeToolchain,
+    selection: &Selection,
+) -> Result<(Vec<String>, BasisReason), StepError> {
+    match selection {
+        Selection::WholeSuite { reason } => Ok((Vec::new(), *reason)),
+        Selection::Filter(args) => Ok((args.clone(), BasisReason::ProbeUnverified)),
+        Selection::Affected { .. } => Err(registry::refusal(
+            tc.registry(),
+            registry::Capability::AffectedSelection,
+        )),
+        Selection::Named(name) => Err(StepError::Unsupported {
+            capability: format!(
+                "the named selection `{name}`: the Node adapter declares no named selection, so it \
+                 is refused by name (record T decision 7)"
+            ),
+        }),
+    }
+}
+
+/// `Toolchain::test`'s body (the module doc): the outcome for one selection.
+///
+/// # Errors
+/// `Timeout { after_secs }` on a run killed at the bound and `Transport { Io }` on one the OS
+/// ended (AC-331); `Transport { Spawn }` when the program cannot start or `vitest` is not installed
+/// locally (AC-344); `NonZero` when the run exited non-zero and the reporter file names no failed
+/// test (it could not run); `Transport { Decode }` when the reporter file is absent, unparseable or
+/// disagrees with the exit status; `Unsupported` for an `Affected` or `Named` selection. **Never
+/// `Err` for a red suite.**
+///
+/// *(Amended 2026-09-26, s8c build, P5: every child runs under `min(step, construction)`, record B
+/// = ADR-0171 decision 4, proposed, and a `Timeout` names the bound that fired.)*
+pub fn verify_report(
+    tc: &NodeToolchain,
+    selection: &Selection,
+    bound: StepBound,
+) -> Result<TestOutcome, StepError> {
+    let (args, reason) = arguments(tc, selection)?;
     tc.require_local_bin("vitest")?;
+    let cfg = tc.config().bounded(bound);
     let dir = tc.run_dir()?;
-    let toolchain_version = toolchain_version(tc, &dir)?;
+    let toolchain_version = toolchain_version(tc, &cfg, &dir)?;
     let root = Path::new(tc.config().project_root().as_str());
 
     // The reporter file lives in this call's fresh run directory, so no stale file from a
     // previous run — this adapter's or a concurrent call's — can be read as this run's.
     let reporter = dir.join(REPORTER_FILE);
-    let args = run_args(&reporter, selection);
-    let run = run::run(tc.config(), &dir, "run", &args)?;
+    let run_argv = run_args(&reporter, &args);
+    let run = run::run(&cfg, &dir, "run", &run_argv)?;
     // A killed run has no report to read — the reporter file was never written — and is
     // returned before any structured source is consulted (AC-331).
-    let verdict = match verdict(&run, tc.config().timeout().as_secs())? {
+    let verdict = match verdict(&run, cfg.timeout().as_secs())? {
         Verdict::Killed(e) => return Err(e),
         other => other,
     };
@@ -344,20 +397,40 @@ pub fn verify_report(tc: &NodeToolchain, selection: &[String]) -> Result<VerifyR
             });
         }
     }
-    if let Verdict::Red(e) = verdict {
-        return Err(e);
+    match verdict {
+        // A non-zero exit whose file names no failed test: nothing ran that could fail, so the
+        // suite could not run (record T decision 1, class (a)) -- never a red suite, never green.
+        Verdict::Red(e) if counts.failed == 0 => return Err(e),
+        Verdict::Green if counts.failed > 0 => {
+            return Err(StepError::Transport {
+                kind: TransportKind::Decode,
+                detail: format!(
+                    "the run exited 0 but the reporter file {} names {} failed tests — no \
+                     verdict is read from a disagreement",
+                    reporter.display(),
+                    counts.failed
+                ),
+            });
+        }
+        Verdict::Green | Verdict::Red(_) | Verdict::Killed(_) => {}
     }
     let executed = counts.executed();
 
-    Ok(VerifyReport {
+    let report = VerifyReport {
         basis: Basis::WholeSuite,
         argv: run.argv,
         selected_test_count: executed,
         total_test_count: executed,
         total_test_count_source: TotalTestCountSource::OwnExecutedCount,
         wall_secs: run.wall.as_secs(),
-        toolchain_version,
+        toolchain_version: toolchain_version.clone(),
         suite_sha: suite_sha(root)?,
-        basis_reason: Some(BasisReason::ProbeUnverified),
-    })
+        basis_reason: Some(reason),
+    };
+    TestOutcome::new(
+        report,
+        counts.passed,
+        counts.failed,
+        TestRunner::named("vitest", &toolchain_version),
+    )
 }

@@ -28,7 +28,9 @@ use rk_types::verify::{Basis, BasisReason};
 use rk_adapter_toolchain_node::NodeToolchain;
 use rk_adapter_toolchain_node::registry::{self, Capability, Probe, Row};
 
-use crate::support::{GENEROUS, adapter, config_with, fixture_project, is_date, minimal_env};
+use crate::support::{
+    GENEROUS, adapter, config_with, fixture_project, is_date, minimal_env, run_test,
+};
 
 const BARE_ROW: &str = include_str!("../fixtures/registry/bare_row.json");
 const UNDATED_ROW: &str = include_str!("../fixtures/registry/undated_row.json");
@@ -145,7 +147,7 @@ fn ac489_capability_registry_dated() {
     // ---- the adapter answers FROM the rows it holds.
     let scratch = tempfile::tempdir().expect("scratch");
     let tc = adapter(GENEROUS, scratch.path());
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", rk_ports::toolchain::StepBound::Undeclared) {
         Err(StepError::Unsupported { capability }) => assert_eq!(capability, rows[0].token()),
         other => panic!("change_summary answers Unsupported from its registry row; got {other:?}"),
     }
@@ -161,7 +163,7 @@ fn ac489_capability_registry_dated() {
     );
     decode_naming(
         &empty
-            .change_summary("HEAD~1..HEAD")
+            .change_summary("HEAD~1..HEAD", rk_ports::toolchain::StepBound::Undeclared)
             .expect_err("no Ok is constructible"),
         "change_summary",
         "change_summary over an EMPTY registry",
@@ -254,8 +256,8 @@ fn ac328_affected_selection_unsupported_without_probe() {
             "filterable".to_owned(),
         ],
     ] {
-        let report = tc
-            .verify_report(&selection)
+        let report = run_test(&tc, &selection)
+            .map(|o| o.report)
             .expect("the fixture suite is green under this selection");
         assert_eq!(
             report.basis,

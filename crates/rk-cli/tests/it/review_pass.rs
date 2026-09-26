@@ -12,47 +12,95 @@
 
 use rk_cli::review_pass::{PassSkipped, ToolchainReExecutor, findings_in, selection_of};
 use rk_kernel::review::reexec::{ReExecution, ReExecutor, Unverifiable};
-use rk_ports::toolchain::{ChangeSummary, Classification, Toolchain};
+use rk_ports::toolchain::{
+    ChangeSummary, Classification, Selection, StepBound, TestOutcome, TestRunner, Toolchain,
+    VerbCall, VerbOutput,
+};
 use rk_types::artifact::findings::{EvidenceLabel, Finding};
-use rk_types::error::StepError;
+use rk_types::error::{StepError, TransportKind};
 use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
 use rk_types::repro::{Expected, Repro, ReproKind};
 use rk_types::text::Text;
 
+/// How one arm's `test` answers (s8c §8c.2, record T = ADR-0169, proposed). *(Amended 2026-09-26,
+/// s8c: this was a `green: bool`, with red as `Err(NonZero)` under RT-22's *"`Ok(count)` only on a
+/// green suite"*. RT-22 is reversed: **red is no longer `Err`**, so the fake has three modes.)*
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Arm {
+    /// `Ok`, every selected test passed.
+    Green,
+    /// `Ok`, one selected test failed: a red suite.
+    Red,
+    /// `Err(Transport { Spawn })`: the program cannot start (AC-344's cannot-run).
+    CannotRun,
+}
+
 /// A toolchain whose `test` answer is scripted per arm. Every other method refuses: this fake
 /// stands in for exactly one capability and says so by failing on the rest.
 struct ScriptedToolchain {
-    green: bool,
+    arm: Arm,
+}
+
+impl ScriptedToolchain {
+    const fn green(green: bool) -> Self {
+        Self {
+            arm: if green { Arm::Green } else { Arm::Red },
+        }
+    }
 }
 
 impl Toolchain for ScriptedToolchain {
     fn detect(&self) -> Result<bool, StepError> {
         Ok(true)
     }
-    fn build(&self) -> Result<(), StepError> {
+    fn build(&self, _bound: StepBound) -> Result<rk_types::verb_output::BuildReport, StepError> {
         Err(refusal("build"))
     }
-    /// RT-22's contract: `Ok(count)` ONLY on a green suite, so `Err` **is** "fails".
-    fn test(&self, selection: &[String]) -> Result<u32, StepError> {
-        if self.green {
-            Ok(u32::try_from(selection.len()).unwrap_or(0))
-        } else {
-            Err(StepError::NonZero {
-                code: Some(101),
-                stderr_digest: rk_types::digest::Digest::from_hex(&"a".repeat(64))
-                    .expect("a 64-hex digest"),
-            })
-        }
+    /// Record T's contract: `Ok` with counts, green OR red; `Err` only when the suite cannot run.
+    fn test(&self, selection: &Selection, _bound: StepBound) -> Result<TestOutcome, StepError> {
+        let Selection::Filter(args) = selection else {
+            return Err(refusal("a selection other than a filter"));
+        };
+        let executed = u32::try_from(args.len()).unwrap_or(0);
+        let failed = match self.arm {
+            Arm::Green => 0,
+            Arm::Red => 1.min(executed),
+            Arm::CannotRun => {
+                return Err(StepError::Transport {
+                    kind: TransportKind::Spawn,
+                    detail: "the scripted arm cannot start its program".to_owned(),
+                });
+            }
+        };
+        TestOutcome::new(
+            rk_types::verify::VerifyReport {
+                basis: rk_types::verify::Basis::WholeSuite,
+                argv: vec!["scripted".to_owned(), "test".to_owned()],
+                selected_test_count: executed,
+                total_test_count: executed,
+                total_test_count_source: rk_types::verify::TotalTestCountSource::OwnExecutedCount,
+                wall_secs: 0,
+                toolchain_version: "scripted".to_owned(),
+                suite_sha: "scripted".to_owned(),
+                basis_reason: Some(rk_types::verify::BasisReason::ProbeUnverified),
+            },
+            executed - failed,
+            failed,
+            TestRunner::named("scripted", "0"),
+        )
     }
-    fn lint(&self) -> Result<(), StepError> {
+    fn lint(&self, _bound: StepBound) -> Result<(), StepError> {
         Err(refusal("lint"))
     }
     fn classify(&self, _path: &str) -> Result<Classification, StepError> {
         Err(refusal("classify"))
     }
-    fn change_summary(&self, _range: &str) -> Result<ChangeSummary, StepError> {
+    fn change_summary(&self, _range: &str, _bound: StepBound) -> Result<ChangeSummary, StepError> {
         Err(refusal("change_summary"))
+    }
+    fn run_verb(&self, call: &VerbCall<'_>) -> Result<VerbOutput, StepError> {
+        Err(refusal(call.verb))
     }
 }
 
@@ -246,12 +294,8 @@ fn four_cells_over_two_arms_and_both_fail_is_not_a_flip() {
     ];
 
     for (candidate_green, reference_green, expected, why) in cases {
-        let candidate = ScriptedToolchain {
-            green: candidate_green,
-        };
-        let reference = ScriptedToolchain {
-            green: reference_green,
-        };
+        let candidate = ScriptedToolchain::green(candidate_green);
+        let reference = ScriptedToolchain::green(reference_green);
         let reexec = ToolchainReExecutor {
             candidate: &candidate,
             reference: &reference,
@@ -282,8 +326,8 @@ fn mutate_and_selectionless_repros_produce_no_record() {
     };
     let selectionless = finding("AC-603", run_repro("cargo test"));
 
-    let candidate = ScriptedToolchain { green: false };
-    let reference = ScriptedToolchain { green: true };
+    let candidate = ScriptedToolchain::green(false);
+    let reference = ScriptedToolchain::green(true);
     let reexec = ToolchainReExecutor {
         candidate: &candidate,
         reference: &reference,
@@ -291,9 +335,8 @@ fn mutate_and_selectionless_repros_produce_no_record() {
 
     assert!(
         reexec.run(&mutate, "sha").is_none(),
-        "a `mutate` repro is refused BY NAME: no `Toolchain` method applies a patch, Checkpoint \
-         7a counts exactly six methods on that port, and a seventh for a fixture is the cost s7d \
-         refused for `Pack`"
+        "a `mutate` repro is refused BY NAME: no `Toolchain` method applies a patch (ADR-0162's \
+         remaining reason; record V's `run_verb` is not a patch applier)"
     );
     assert!(
         reexec.run(&selectionless, "sha").is_none(),
@@ -306,5 +349,82 @@ fn mutate_and_selectionless_repros_produce_no_record() {
     assert!(
         reexec.run(&ok, "sha").is_some(),
         "the fixture arms are live — a selection-naming `run` repro still produces a record"
+    );
+}
+
+/// **A candidate that cannot run is `Unverifiable { cannot_run }`, never a flip** (AC-344:
+/// *"both-fail or cannot-run resolves to `Unverifiable { both_fail | cannot_run }` … never to a
+/// block"*; record T = ADR-0169 decision 2, proposed, superseding ADR-0162 decision 4's
+/// *"`is_err()` **is** "fails""* in part).
+///
+/// Before s8c the re-executor computed `four_cell(candidate.is_err(), reference.is_err())`, so a
+/// candidate whose program cannot start (`Err(Transport { Spawn })`) beside a green reference was
+/// `(true, false)` -- `Flipped`, a BLOCK. Now either arm's `Err` returns no record, which
+/// `confirm_with` reads as `Unverifiable { cannot_run }`; and a red candidate's `observed` names its
+/// counts, so it can never read as the repro's `expected_when_met`.
+///
+/// *(Added 2026-09-26, s8c §8c.9.)*
+#[test]
+fn a_candidate_that_cannot_run_is_unverifiable_never_a_flip() {
+    let f = finding("AC-601", run_repro("cargo test -- ac601"));
+    let sha = "0123456789abcdef0123456789abcdef01234567";
+    let cannot = ScriptedToolchain {
+        arm: Arm::CannotRun,
+    };
+    let green = ScriptedToolchain { arm: Arm::Green };
+    let red = ScriptedToolchain { arm: Arm::Red };
+
+    for (candidate, reference, why) in [
+        (
+            &cannot,
+            &green,
+            "a candidate that cannot start beside a green reference",
+        ),
+        (
+            &cannot,
+            &red,
+            "a candidate that cannot start beside a red reference",
+        ),
+        (
+            &red,
+            &cannot,
+            "a red candidate beside a reference that cannot start",
+        ),
+    ] {
+        let reexec = ToolchainReExecutor {
+            candidate,
+            reference,
+        };
+        assert!(
+            reexec.run(&f, sha).is_none(),
+            "{why} produces NO record (Unverifiable {{ cannot_run }}), never a flip or a cell: {:?}",
+            reexec.run(&f, sha).map(|r| r.outcome)
+        );
+    }
+
+    // PREMISE, or the assertions above are satisfied by a re-executor that never records at all:
+    // a red candidate beside a green reference IS the flip, and its observation names its counts.
+    let reexec = ToolchainReExecutor {
+        candidate: &red,
+        reference: &green,
+    };
+    let record = reexec
+        .run(&f, sha)
+        .expect("two runnable arms produce a record");
+    assert_eq!(record.outcome, ReExecution::Flipped);
+    let rk_kernel::review::classify::Observation::Run(observed) = &record.observation else {
+        panic!(
+            "a run repro's observation is a Run: {:?}",
+            record.observation
+        );
+    };
+    assert_ne!(
+        observed.observed, f.repro.expected_when_met,
+        "a red candidate never reads as the repro's expected_when_met"
+    );
+    assert!(
+        observed.observed.contains("1 failed"),
+        "a red candidate's observation names its counts: {:?}",
+        observed.observed
     );
 }

@@ -12,6 +12,9 @@
 //! | `registry` | `ac489_capability_registry_dated`, `ac492_unknown_capability_token_fails`, `ac328_affected_selection_unsupported_without_probe` | the dated rows behind `change_summary` (D17-9) and `affected-selection` (AC-328; S-SEL-NODE owed), RT-24 |
 //! | `classify` | `ac497_classify_binary_paths` | `classify` per path, honest for non-Node paths (ADR-0029 i), PROVISIONAL (S-BIN unrun) |
 //! | `cancel` | `s_cancel_win_vitest_arm` | S-CANCEL-WIN's vitest arm (O-10; §7c.16): a mid-vitest victim under the job — alive mid-run by its own started/finished markers — killed by `run_bounded`'s timeout, Halt 6's own fixture tree, `TempDir::close()` after, the removal and listing lags read and the result in design §10.5's row |
+//! | `build` | `a_type_error_is_ok_with_status_failing` | the pinned `tsc 5.9.3` exit mapping over four throwaway projects: clean, a type error, a tsconfig that is not JSON, no tsconfig (s8c §8c.2, D21-62 D, record T = ADR-0169 decision 8; *added 2026-09-26, s8c P5*) |
+//! | `bound` | `a_step_bound_tighter_than_construction_fires_first` | `min(step, construction)` and `Timeout` naming the bound that fired (§8c.6, record B = ADR-0171 decision 4; *added 2026-09-26, s8c P5*) |
+//! | `verbs` | `an_undeclared_verb_is_refused_by_name` | every verb, `setup` included, refused by its bare name (§8c.4, record V = ADR-0170 decisions 2 and 7; *added 2026-09-26, s8c P5*) |
 //! | `ac334` (`--features corpus`) | `ac334_flip_predicate_real_toolchain` | AC-334's real row over the predecessor checkout: the F25 inversion applied with `git apply`, the suite run through the real adapter, reverted in a `Drop` guard, the checkout asserted clean, the flip predicate driven over what was measured |
 //!
 //! **The process environment is read ONCE, at `support`'s edge** (`std::env::vars()` projected to
@@ -22,9 +25,12 @@
 
 #[cfg(feature = "corpus")]
 mod ac334;
+mod bound;
+mod build;
 mod cancel;
 mod classify;
 mod conformance;
 mod registry;
 mod report;
 mod support;
+mod verbs;

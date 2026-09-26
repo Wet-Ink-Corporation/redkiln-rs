@@ -68,8 +68,19 @@ pub struct Adapters {
     pub harness_binary: Option<String>,
     /// RT-49: per-toolchain programs. Absent, each is resolved on the child's `PATH`.
     pub toolchain_programs: Option<BTreeMap<String, String>>,
-    /// **ADR-0140, superseding ADR-0137 clause 5 in part**: the **only** bound on any child a
-    /// toolchain adapter spawns, in seconds.
+    /// **ADR-0140, superseding ADR-0137 clause 5 in part**: the construction bound on every child
+    /// a toolchain adapter spawns, in seconds.
+    ///
+    /// *(Corrected 2026-09-26, s8c §8c.6, under record B = ADR-0171 decisions 1-4 and 7, proposed,
+    /// which supersedes for `tool` steps ADR-0140 decision 2's sentence, decision 4 and its first
+    /// two forbids bullets.)* This read *"the **only** bound"*, and the two paragraphs below say
+    /// `catalog::Step` carries no timeout field. Both are no longer so for a `tool` step:
+    /// `catalog::Step` carries `timeout_secs`, the kernel resolves it through the value table (an
+    /// absent or `unmeasured` key refuses by name, never falling back to this value), and the
+    /// adapter enforces `min(step, construction)` on every child, its `Timeout` naming the bound
+    /// that fired. This value is the cap behind a step's declared bound, and the whole bound of a
+    /// step that declares none. For an `agent` step the paragraphs below stand until `s8d` (D21-43
+    /// N16). They are left as written.
     ///
     /// The port carries no timeout parameter (ADR-0099 decision 2, RT-5), and **nothing finer
     /// applies underneath**: `catalog::Step` carries no timeout field and this crate's loader reads

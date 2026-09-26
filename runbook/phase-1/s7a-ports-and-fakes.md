@@ -152,6 +152,13 @@ spike — and why Checkpoint 7a now carries a **method floor** (the group after 
 six design-named methods the spike does not have and refuses the two spike methods design:267-268 replaced. The floor
 pins **names**, never a signature: a checkpoint that pinned a signature would read as a decision, and no record fixes
 one for the four non-Harness ports.
+*(Noted 2026-09-26, `s8c` build.)* The `Toolchain` port has **seven** methods under ADR-0170 (`s8c`'s record V,
+`proposed`): `detect`, `build`, `test`, `lint`, `classify`, `change_summary` and `run_verb`. Under ADR-0169 (record T,
+`proposed`) `test` takes a closed `Selection` and returns a `TestOutcome`, and `build` returns a `BuildReport`; under
+ADR-0171 (record B, `proposed`) every step-reached method takes a `StepBound`. The exact count is asserted by
+`source_parse::toolchain_port_declares_exactly_seven_methods` and by Checkpoint 8c (4), **not** by this checkpoint's
+floor, which pins names only. The records that said Checkpoint 7a counts six are corrected by E-0135-1 and E-0162-2
+and superseded in part by ADR-0169 and ADR-0170.
 
 **The table fixes the method NAMES; everything below the names is a ROUTING, not a decision, and is reversible by
 the record that is owed** (§7a.1's rule). Design §3.3's Responsibility column is prose for all five rows and

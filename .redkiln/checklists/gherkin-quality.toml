@@ -1,0 +1,17 @@
+# checklist:gherkin-quality — read by bdd-scenarios/self-check (s8c §8c.4; ADR-0170 decision 8, proposed).
+# Authored 2026-09-26 from the passages named in `source`. Syntax is the `gherkin-lint` step's, not this
+# checklist's.
+
+source = "references/research/2026-09-07-activity-catalog-raw.md, the bdd-scenarios row: 'Given/When/Then executable examples as spec', input 'Spec(Story)', lineage 'ISTQB CTFL v4 Collaboration-based test approaches (BDD/ATDD)'; and .redkiln/catalog/bdd-scenarios.toml's rationale: 'ISTQB CTFL v4 collaboration-based approaches: executable examples double as the acceptance test'"
+
+[[item]]
+id   = "given-when-then"
+text = "Each scenario is written as Given/When/Then."
+
+[[item]]
+id   = "executable-example"
+text = "Each scenario is an executable example, concrete enough to double as the acceptance test."
+
+[[item]]
+id   = "traces-to-intake"
+text = "Each scenario traces to the intake record (and the problem statement, where present) it was derived from."

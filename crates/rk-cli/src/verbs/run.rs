@@ -201,8 +201,16 @@ pub struct Resolved {
     pub toolchain_timeout_secs: u64,
 }
 
-/// **ADR-0140, superseding ADR-0137 clause 5 in part.** The default for the **only** bound on any
-/// child a toolchain adapter spawns.
+/// **ADR-0140, superseding ADR-0137 clause 5 in part.** The default for the construction bound on
+/// every child a toolchain adapter spawns.
+///
+/// *(Corrected 2026-09-26, s8c §8c.6, under record B = ADR-0171 decisions 4 and 7, proposed, which
+/// supersedes ADR-0140 decision 2's sentence in part for `tool` steps.)* This read *"the **only**
+/// bound"*, and for a `tool` step that is no longer so: `catalog::Step` carries `timeout_secs`, the
+/// kernel resolves it (a literal, or a `${toolchain.<key>}` through the value table), and the
+/// adapter enforces `min(step, construction)` on every child, with a `Timeout` naming the bound that
+/// fired. This value is the construction bound, the cap behind a step's declared bound; a step that
+/// declares none runs under it alone. The paragraph below is left as written at `s7g`.
 ///
 /// Measured at `s7g` over `.redkiln/catalog/`: the largest declared literal `timeout_secs` on any
 /// step is **3600**, and the floor is measured rather than chosen.
@@ -355,10 +363,30 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         // **ADR-0137: the REAL toolchain, over the run-owned worktree.** Until `s7g` this slot held
         // `FixtureToolchain::default()`, whose `Default` is `present: false` — a toolchain reporting
         // itself absent, which is why AC-473's clause has never had a mechanism.
-        let toolchain = match real_toolchain(&resolved, env, &owned) {
-            Ok(toolchain) => toolchain,
+        //
+        // *(2026-09-26, s8c §8c.5; records V and B, proposed.)* The same selection, keeping the
+        // chosen adapter's NAME here: it selects the value table, and the kernel is handed the
+        // table without it (AC-487). The registry is read from the worktree the catalog is.
+        let chosen = match choose_toolchain(
+            &ToolchainCandidates::of(&resolved),
+            env,
+            &owned,
+            &mut |line| eprintln!("redkiln: {line}"),
+        ) {
+            Ok(chosen) => chosen,
             Err(exit) => return Ok(exit),
         };
+        let routing = match tool_routing(
+            Path::new(resolved.worktree.as_str()),
+            chosen.adapter.as_deref(),
+        ) {
+            Ok(routing) => routing,
+            Err(e) => {
+                eprintln!("redkiln: the verb registry was refused: {e}");
+                return Ok(Exit::ConfigError);
+            }
+        };
+        let toolchain = chosen.toolchain;
 
         let ports = rk_ports::root::Ports {
             // Cloned per iteration: the STORE outlives a stage (one journal per item, across the whole
@@ -393,6 +421,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
             now,
             &tree_hash,
             ports,
+            routing,
             env,
             &mut supply_spec,
             &token,
@@ -493,12 +522,14 @@ pub fn run_with(
     >,
     token: &CancelToken,
 ) -> Result<Exit, Halt> {
+    // The in-process seam binds no verb registry: its fixtures (`pack-min`) carry no `tool` step.
     run_with_advance(
         resolved,
         inputs,
         now,
         tree_hash,
         ports,
+        rk_kernel::runtime::step::ToolRouting::default(),
         env,
         supply_spec,
         token,
@@ -526,6 +557,8 @@ pub fn run_with_advance(
     now: i64,
     tree_hash: &str,
     ports: rk_ports::root::Ports,
+    // *(2026-09-26, s8c §8c.4.)* The verb registry and value table the `tool` arm routes through.
+    routing: rk_kernel::runtime::step::ToolRouting,
     // **ADR-0162.** Threaded for the review pass alone, which builds a SECOND `Toolchain` rooted in
     // an ephemeral reference worktree. It is a parameter rather than a second `Env::capture()`
     // because a run has one environment, captured once at entry, and a pass that re-captured it
@@ -573,6 +606,7 @@ pub fn run_with_advance(
         now,
         tree_hash,
         ports,
+        routing,
         env,
         supply_spec,
         token,
@@ -1292,6 +1326,7 @@ fn resume_and_read(
     now: i64,
     tree_hash: &str,
     ports: rk_ports::root::Ports,
+    routing: rk_kernel::runtime::step::ToolRouting,
     env: &Env,
     supply_spec: &mut dyn FnMut(
         &str,
@@ -1378,7 +1413,13 @@ fn resume_and_read(
         }
     };
 
-    let recorded = match rk_kernel::replay::resume(inputs, ports, &prior, supply_spec) {
+    let recorded = match rk_kernel::replay::resume_routed(
+        inputs,
+        ports,
+        routing,
+        &prior,
+        supply_spec,
+    ) {
         Ok(run) => run,
         // 🛑 A FAILED DISPATCH IS NOT A CONFIGURATION ERROR, AND THE CLASS NOW ARRIVES ON THIS VALUE.
         //
@@ -2003,13 +2044,23 @@ impl rk_ports::toolchain::Toolchain for UndetectedToolchain {
     fn detect(&self) -> Result<bool, rk_types::error::StepError> {
         Ok(false)
     }
-    fn build(&self) -> Result<(), rk_types::error::StepError> {
+    fn build(
+        &self,
+        _bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_types::verb_output::BuildReport, rk_types::error::StepError> {
         Err(self.refuse("build"))
     }
-    fn test(&self, _selection: &[String]) -> Result<u32, rk_types::error::StepError> {
+    fn test(
+        &self,
+        _selection: &rk_ports::toolchain::Selection,
+        _bound: rk_ports::toolchain::StepBound,
+    ) -> Result<rk_ports::toolchain::TestOutcome, rk_types::error::StepError> {
         Err(self.refuse("test"))
     }
-    fn lint(&self) -> Result<(), rk_types::error::StepError> {
+    fn lint(
+        &self,
+        _bound: rk_ports::toolchain::StepBound,
+    ) -> Result<(), rk_types::error::StepError> {
         Err(self.refuse("lint"))
     }
     fn classify(
@@ -2021,8 +2072,17 @@ impl rk_ports::toolchain::Toolchain for UndetectedToolchain {
     fn change_summary(
         &self,
         _range: &str,
+        _bound: rk_ports::toolchain::StepBound,
     ) -> Result<rk_ports::toolchain::ChangeSummary, rk_types::error::StepError> {
         Err(self.refuse("change_summary"))
+    }
+    /// *(Added 2026-09-26, s8c §8c.2, record V = ADR-0170, proposed.)* The seventh method refuses
+    /// by name like the other six: no adapter detected, so no verb runs.
+    fn run_verb(
+        &self,
+        call: &rk_ports::toolchain::VerbCall<'_>,
+    ) -> Result<rk_ports::toolchain::VerbOutput, rk_types::error::StepError> {
+        Err(self.refuse(call.verb))
     }
 }
 
@@ -2077,24 +2137,90 @@ pub fn real_toolchain(
     env: &Env,
     project_root: &Path,
 ) -> Result<Arc<dyn rk_ports::toolchain::Toolchain>, Exit> {
+    choose_toolchain(
+        &ToolchainCandidates::of(resolved),
+        env,
+        project_root,
+        &mut |line| eprintln!("redkiln: {line}"),
+    )
+    .map(|chosen| chosen.toolchain)
+}
+
+/// What adapter selection reads from `[adapters]` (s8c §8c.5).
+///
+/// The candidates in declared order, the construction bound, the RT-49 programs and the common dir. `doctor` builds one from its
+/// `ConfigFile` and `run` from its [`Resolved`], so the two select by ONE loop and cannot disagree
+/// about which adapter's value table a `${toolchain.*}` key resolves through (record V decision
+/// 12).
+#[derive(Debug, Clone, Copy)]
+pub struct ToolchainCandidates<'a> {
+    /// `[adapters] toolchains`, in declared order.
+    pub toolchains: &'a [String],
+    /// The construction bound, in seconds (ADR-0140 decision 3; record B decision 4).
+    pub timeout_secs: u64,
+    /// RT-49's per-toolchain programs.
+    pub programs: Option<&'a BTreeMap<String, String>>,
+    /// The git common directory, under which the toolchain scratch lives (ADR-0137 clause 6).
+    pub common_dir: &'a Path,
+}
+
+impl<'a> ToolchainCandidates<'a> {
+    /// The candidates a run resolved.
+    #[must_use]
+    pub fn of(resolved: &'a Resolved) -> Self {
+        Self {
+            toolchains: &resolved.toolchains,
+            timeout_secs: resolved.toolchain_timeout_secs,
+            programs: resolved.toolchain_programs.as_ref(),
+            common_dir: &resolved.common_dir,
+        }
+    }
+}
+
+/// The toolchain [`choose_toolchain`] selected, and the NAME of the adapter behind it.
+///
+/// The name stays in `rk-cli`: it picks the value table ([`tool_routing`]), and the kernel is
+/// handed the table without it (AC-487).
+pub struct ChosenToolchain {
+    /// The port object.
+    pub toolchain: Arc<dyn rk_ports::toolchain::Toolchain>,
+    /// The adapter that detected the project, or `None` when nothing did ([`UndetectedToolchain`]).
+    pub adapter: Option<String>,
+}
+
+/// **ADR-0137's selection loop**, with its reports handed to `report` rather than printed.
+///
+/// So `doctor` can run the same selection as `run` (s8c §8c.6, `RK-D-TIMEOUT`'s third arm).
+/// [`real_toolchain`] is this loop with `report` printing each line to stderr, as before.
+///
+/// # Errors
+/// As [`real_toolchain`].
+pub fn choose_toolchain(
+    candidates: &ToolchainCandidates<'_>,
+    env: &Env,
+    project_root: &Path,
+    report: &mut dyn FnMut(&str),
+) -> Result<ChosenToolchain, Exit> {
     let root = project_root;
-    let scratch = resolved.common_dir.join("redkiln").join("tmp");
+    let scratch = candidates.common_dir.join("redkiln").join("tmp");
     if let Err(e) = std::fs::create_dir_all(&scratch) {
-        eprintln!("redkiln: the toolchain scratch {} : {e}", scratch.display());
+        report(&format!(
+            "the toolchain scratch {} : {e}",
+            scratch.display()
+        ));
         return Err(Exit::ConfigError);
     }
-    let timeout = std::time::Duration::from_secs(resolved.toolchain_timeout_secs);
+    let timeout = std::time::Duration::from_secs(candidates.timeout_secs);
     let child_env = env.as_map().clone();
     let program_for = |name: &str, default: &str| -> PathBuf {
-        resolved
-            .toolchain_programs
-            .as_ref()
+        candidates
+            .programs
             .and_then(|m| m.get(name))
             .map_or_else(|| PathBuf::from(default), PathBuf::from)
     };
 
     let mut tried: Vec<String> = Vec::new();
-    for name in &resolved.toolchains {
+    for name in candidates.toolchains {
         // `adapters::AdapterSet::resolve` already refused any name outside the shipped two, so an
         // unknown name here is a build defect rather than a configuration one — and it is reported
         // as one instead of being skipped into a "nothing detected" refusal that would misname it.
@@ -2125,15 +2251,22 @@ pub fn real_toolchain(
                 ) {
                     Ok(cfg) => cfg,
                     Err(e) => {
-                        eprintln!("redkiln: the {name} configuration was refused: {e}");
+                        report(&format!("the {name} configuration was refused: {e}"));
                         tried.push(format!("{name}: the configuration was refused: {e}"));
                         continue;
                     }
                 };
+                // *(2026-09-26, s8c §8c.4, owed by P5 to the routing slice.)* The `setup` verb's
+                // `pnpm` is resolved through `toolchain_programs`, as `cargo` is (record V decision
+                // 7); absent, the adapter's own `DEFAULT_PNPM` stands.
+                let cfg = match candidates.programs.and_then(|m| m.get("pnpm")) {
+                    Some(pnpm) => cfg.with_tool_program("pnpm", PathBuf::from(pnpm)),
+                    None => cfg,
+                };
                 match rk_adapter_toolchain_rust::RustToolchain::new(cfg) {
                     Ok(built) => Arc::new(built),
                     Err(e) => {
-                        eprintln!("redkiln: {name} could not be built: {e}");
+                        report(&format!("{name} could not be built: {e}"));
                         tried.push(format!("{name}: could not be built: {e}"));
                         continue;
                     }
@@ -2152,7 +2285,7 @@ pub fn real_toolchain(
                 ) {
                     Ok(cfg) => cfg,
                     Err(e) => {
-                        eprintln!("redkiln: the {name} configuration was refused: {e}");
+                        report(&format!("the {name} configuration was refused: {e}"));
                         tried.push(format!("{name}: the configuration was refused: {e}"));
                         continue;
                     }
@@ -2160,36 +2293,115 @@ pub fn real_toolchain(
                 match rk_adapter_toolchain_node::NodeToolchain::new(cfg) {
                     Ok(built) => Arc::new(built),
                     Err(e) => {
-                        eprintln!("redkiln: {name} could not be built: {e}");
+                        report(&format!("{name} could not be built: {e}"));
                         tried.push(format!("{name}: could not be built: {e}"));
                         continue;
                     }
                 }
             }
             other => {
-                eprintln!(
-                    "redkiln: `{other}` is a resolved toolchain adapter this binary cannot \
+                report(&format!(
+                    "`{other}` is a resolved toolchain adapter this binary cannot \
                      construct — `AdapterSet::resolve` and this match have drifted apart"
-                );
+                ));
                 return Err(Exit::ConfigError);
             }
         };
         match candidate.detect() {
-            Ok(true) => return Ok(candidate),
+            Ok(true) => {
+                return Ok(ChosenToolchain {
+                    toolchain: candidate,
+                    adapter: Some(name.clone()),
+                });
+            }
             Ok(false) => tried.push(format!("{name}: not present")),
             Err(e) => tried.push(format!("{name}: {e:?}")),
         }
     }
     // **ADR-0139.** Not a startup refusal and not a fixture: a toolchain that refuses every verb
     // by name, so a run needing none proceeds and a run reaching a `tool` step is refused there.
-    Ok(Arc::new(UndetectedToolchain {
-        root: root.display().to_string(),
-        tried: if tried.is_empty() {
-            "`[adapters] toolchains` is empty".to_owned()
-        } else {
-            tried.join("; ")
+    Ok(ChosenToolchain {
+        toolchain: Arc::new(UndetectedToolchain {
+            root: root.display().to_string(),
+            tried: if tried.is_empty() {
+                "`[adapters] toolchains` is empty".to_owned()
+            } else {
+                tried.join("; ")
+            },
+        }),
+        adapter: None,
+    })
+}
+
+/// The `toolchain` facet value an adapter serves.
+///
+/// s8c §8c.5: `registry.toml`'s per-toolchain tables are *"keyed by the `toolchain` facet's value"*). A closed match over the two adapters this build
+/// ships; any other name has no table. **This is the one place the name meets the table**, and it
+/// is `rk-cli`'s: the kernel never sees either (AC-487).
+#[must_use]
+pub fn toolchain_of(adapter: &str) -> Option<&'static str> {
+    match adapter {
+        "rk-adapter-toolchain-rust" => Some("rust"),
+        "rk-adapter-toolchain-node" => Some("node"),
+        _ => None,
+    }
+}
+
+/// `.redkiln/registry.toml`, under a worktree root.
+#[must_use]
+pub fn registry_path(worktree: &Path) -> PathBuf {
+    worktree.join(".redkiln").join("registry.toml")
+}
+
+/// **The routing `run` hands the kernel** (s8c §8c.4-§8c.5; records V and B, proposed).
+///
+/// The verb registry loaded from `<worktree>/.redkiln/registry.toml`, and the value table for the chosen
+/// adapter's toolchain as a flat, name-free `ToolchainValues`.
+///
+/// - **No `registry.toml`** binds no registry: every `tool` step then refuses by its bare verb name
+///   (ADR-0135 clause 2), which is what a tree with no verb table can honestly do.
+/// - **A registry that does not load** is `Err`, naming the file and the refusal: a run over a
+///   malformed verb table is refused rather than run with part of it.
+/// - **No adapter detected**, or no table for its toolchain: the values are unselected, so every
+///   `${toolchain.*}` bound refuses naming why, and no key is guessed.
+///
+/// # Errors
+/// The loader's refusal, rendered.
+pub fn tool_routing(
+    worktree: &Path,
+    adapter: Option<&str>,
+) -> Result<rk_kernel::runtime::step::ToolRouting, String> {
+    let path = registry_path(worktree);
+    if !path.is_file() {
+        return Ok(rk_kernel::runtime::step::ToolRouting::default());
+    }
+    let registry = rk_kernel::workflow::memo::VerbRegistry::load_file(&path)
+        .map_err(|e| format!("{}: {e}", path.display()))?;
+    let values = toolchain_values(&registry, adapter);
+    Ok(rk_kernel::runtime::step::ToolRouting::new(registry, values))
+}
+
+/// The chosen adapter's value table (s8c §8c.5), or an unselected one naming why. The reasons name
+/// no adapter, so the value the kernel receives carries none (AC-487).
+#[must_use]
+pub fn toolchain_values(
+    registry: &rk_kernel::workflow::memo::VerbRegistry,
+    adapter: Option<&str>,
+) -> rk_kernel::workflow::memo::ToolchainValues {
+    adapter.and_then(toolchain_of).map_or_else(
+        || {
+            rk_kernel::workflow::memo::ToolchainValues::unselected(
+                "no toolchain adapter detected a project, so no value table was selected",
+            )
         },
-    }))
+        |toolchain| {
+            registry.values_for(toolchain).unwrap_or_else(|| {
+                rk_kernel::workflow::memo::ToolchainValues::unselected(
+                    "registry.toml declares no value table for the detected adapter's toolchain",
+                )
+            })
+        },
+    )
 }
 
 /// The real harness's configuration, from the pack's margins and TTLs and the captured environment.

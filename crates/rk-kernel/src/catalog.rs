@@ -218,6 +218,50 @@ pub struct Step {
     /// is the pack's, exactly as `role`'s is (ADR-0014), so an id this crate has never heard of is
     /// carried and refused at resolution rather than at load.
     pub question: Option<String>,
+    /// **Record B = ADR-0171 decision 1, proposed (s8c §8c.6).** `timeout_secs`, a literal or a
+    /// `${toolchain.<key>}` substitution. The loader read none until 2026-09-26 (ADR-0140's
+    /// evidence: *"The loader reads no `timeout_secs`"*), so the pack's 298 declarations reached no
+    /// executor. A `tool` step's is now its bound, resolved by the kernel after the registry lookup
+    /// and the route and input checks (ADR-0170 decision 3's order); an `agent` step's is carried
+    /// and enforced by `s8d` (D21-43 N16). `inputs` is still not parsed (ADR-0148's forbids bullet
+    /// stands until `s8d`).
+    ///
+    /// Skipped from the run record when `None`, so a step that declares none serialises as it did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout_secs: Option<StepTimeout>,
+}
+
+/// A step's declared `timeout_secs` (record B decision 1).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum StepTimeout {
+    /// `timeout_secs = <n>`. A zero is carried and refused at resolution (RT-5), where the bound is
+    /// made, rather than dropped here.
+    Literal(u64),
+    /// `timeout_secs = "${toolchain.<key>}"`, the key resolved through `ToolchainValues`.
+    Toolchain(String),
+}
+
+impl StepTimeout {
+    /// Read one `timeout_secs` value: a non-negative integer, or a string of the EXACT form
+    /// `${toolchain.<key>}` with a key of `[a-z0-9_]+`. Anything else is `None`, which the loader
+    /// refuses naming the step.
+    #[must_use]
+    pub fn from_value(value: &Value) -> Option<Self> {
+        match value {
+            Value::Int(n) => u64::try_from(*n).ok().map(Self::Literal),
+            Value::Str(s) => s
+                .strip_prefix("${toolchain.")
+                .and_then(|rest| rest.strip_suffix('}'))
+                .filter(|key| {
+                    !key.is_empty()
+                        && key
+                            .bytes()
+                            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+                })
+                .map(|key| Self::Toolchain(key.to_owned())),
+            _ => None,
+        }
+    }
 }
 
 impl Step {
@@ -616,6 +660,9 @@ impl Catalog {
 /// So the accumulation is inside the activity walk, and both loader modes read the same walk:
 /// [`Catalog::from_sources`] takes its first diagnostic, this keeps them all.
 ///
+/// *(dated 2026-09-26, s8c: the loader now reads each STEP's `timeout_secs` (record B), refusing
+/// a malformed one as a `Shape`; `RK-D-TIMEOUT` still reads the pack's `[activity.<id>]` values
+/// itself, and reads these steps for its third arm.)*
 /// **It types only what the loader sees** (§7d.8). The loader reads no `timeout_secs` and validates
 /// no facet, so `RK-D-TIMEOUT` and the three `RK-D-FACET-*` rows are `rk-cli`'s own and no widening
 /// happens here; the one row this maps is [`DiagnosticKind::GateOutputs`] → `RK-D-GATE-OUTPUTS`.
@@ -933,6 +980,22 @@ fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activ
                 ))));
                 continue;
             }
+            // **Record B decision 1.** A `timeout_secs` that is neither a non-negative integer nor
+            // an exact `${toolchain.<key>}` is refused, never dropped: a dropped declaration reads
+            // as a step that declared none, and would hand the port an undeclared bound.
+            let timeout_secs = match table.get("timeout_secs") {
+                None => None,
+                Some(v) => {
+                    if let Some(t) = StepTimeout::from_value(v) {
+                        Some(t)
+                    } else {
+                        out.push(diagnose(shape(format!(
+                            "{id}/{step_id}: `timeout_secs` is neither a non-negative integer nor                              an exact `${{toolchain.<key>}}` substitution (ADR-0171 decision 1)"
+                        ))));
+                        continue;
+                    }
+                }
+            };
             let retry_max = match bounded_max(table, "retry", &id, &shape) {
                 Ok(max) => max,
                 Err(error) => {
@@ -971,6 +1034,7 @@ fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activ
                 // in order to refuse it, and a key read only where it is expected is a key that
                 // goes missing silently everywhere else.
                 question,
+                timeout_secs,
             });
         }
     }

@@ -13,7 +13,7 @@
 //! Every test runs over a throwaway two-commit repository (`support::FixtureRepo`), never over the
 //! workspace running the suite.
 
-use rk_ports::toolchain::{ChangeKind, ChangeSummary, Classification, Toolchain};
+use rk_ports::toolchain::{ChangeKind, ChangeSummary, Classification, StepBound, Toolchain};
 use rk_types::error::{StepError, TransportKind};
 
 use crate::support::{
@@ -30,7 +30,7 @@ fn change_summary_text_variant_from_git_diff() {
     let scratch = tempfile::tempdir().expect("scratch");
     let tc = repo.adapter(scratch.path());
 
-    let summary = tc.change_summary("HEAD~1..HEAD");
+    let summary = tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared);
     let answer = format!("{summary:?}");
     let text = match summary {
         Ok(ChangeSummary::Text(text)) => text,
@@ -103,14 +103,20 @@ fn change_summary_text_variant_from_git_diff() {
     repo.write("Cargo.toml", b"[package\0 this is not a manifest\n");
     repo.write("src/lib.rs", b"pub fn one() -> u32 {\n    99\n}\n\0");
     assert_eq!(
-        format!("{:?}", tc.change_summary("HEAD~1..HEAD")),
+        format!(
+            "{:?}",
+            tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared)
+        ),
         answer,
         "a mutated working-tree Cargo.toml and changed path never move the range's answer"
     );
     repo.remove("Cargo.toml");
     repo.remove("src/lib.rs");
     assert_eq!(
-        format!("{:?}", tc.change_summary("HEAD~1..HEAD")),
+        format!(
+            "{:?}",
+            tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared)
+        ),
         answer,
         "a deleted working-tree Cargo.toml and changed path never move the range's answer"
     );
@@ -129,7 +135,7 @@ fn change_summary_refuses_a_range_carrying_a_binary_path() {
         Classification::Binary,
         "PREMISE: the adapter's own classify answers Binary for the .uasset"
     );
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Unsupported { capability }) => assert!(
             capability.starts_with("change_summary") && capability.contains("Content/Hero.uasset"),
             "the refusal carries the capability token and names the Binary path: {capability:?}"
@@ -157,13 +163,13 @@ fn change_summary_refuses_an_empty_range() {
 
     assert!(
         matches!(
-            tc.change_summary("HEAD~1..HEAD"),
+            tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared),
             Ok(ChangeSummary::Text(_))
         ),
         "CONTROL: the real range answers Text, or the refusals below prove nothing"
     );
     for range in ["", "   ", "HEAD..HEAD", "HEAD~1..no-such-rev"] {
-        match tc.change_summary(range) {
+        match tc.change_summary(range, StepBound::Undeclared) {
             Err(StepError::Unsupported { capability }) => assert_eq!(
                 capability, "change_summary",
                 "range {range:?} is refused by the capability's name, from the registry row"
@@ -182,7 +188,7 @@ fn change_summary_refuses_an_empty_range() {
     // `""` gets, and never a one-commit summary. `HEAD` was in the loop above until this round.
     let head = repo.git(&["rev-parse", "HEAD"]);
     for rev in ["HEAD", head.as_str()] {
-        match tc.change_summary(rev) {
+        match tc.change_summary(rev, StepBound::Undeclared) {
             Err(StepError::Unsupported { capability }) => assert_eq!(
                 capability,
                 format!("change_summary: `{rev}` is a single revision, not a <base>..<head> range"),
@@ -202,7 +208,7 @@ fn change_summary_refuses_an_empty_range() {
     let mut broken = saved_config.clone();
     broken.extend_from_slice(b"[core\n  broken = ");
     std::fs::write(&config, &broken).expect("break the config");
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Transport {
             kind: TransportKind::Io,
             detail,
@@ -242,7 +248,7 @@ fn change_summary_refuses_an_empty_range() {
     // fails the read before any blob is reached.
     let blob = repo.git(&["rev-parse", "HEAD~1:src/lib.rs"]);
     delete_loose(&blob);
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Transport {
             kind: TransportKind::Io,
             detail,
@@ -255,7 +261,7 @@ fn change_summary_refuses_an_empty_range() {
         }
     }
     delete_loose(&tree);
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Transport {
             kind: TransportKind::Io,
             detail,
@@ -270,7 +276,7 @@ fn change_summary_refuses_an_empty_range() {
     // The same for `HEAD~1`'s commit (added 2026-09-25, s8a fix round 6): the end is reached by
     // walking a parent, and the commit it reaches is gone, so it is Transport naming the commit.
     delete_loose(&commit);
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Transport {
             kind: TransportKind::Io,
             detail,
@@ -298,7 +304,7 @@ fn change_summary_refuses_a_range_carrying_an_lfs_pointer_path() {
         Classification::Text,
         "PREMISE: classify cannot see a pointer -- it answers Text for data/table.json"
     );
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Unsupported { capability }) => {
             assert!(
                 capability.starts_with("change_summary") && capability.contains("data/table.json"),
@@ -336,7 +342,7 @@ fn change_summary_refuses_a_binary_blob_the_working_tree_does_not_hold() {
         Classification::Text,
         "PREMISE: the path is gone from the working tree and classify answers Text"
     );
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Unsupported { capability }) => assert!(
             capability.starts_with("change_summary") && capability.contains("assets/blob"),
             "the refusal names the deleted binary path: {capability:?}"
@@ -351,7 +357,7 @@ fn change_summary_refuses_a_binary_blob_the_working_tree_does_not_hold() {
         Classification::Text,
         "PREMISE: the checkout is on the base end and classify answers Text"
     );
-    match tc.change_summary(&range) {
+    match tc.change_summary(&range, StepBound::Undeclared) {
         Err(StepError::Unsupported { capability }) => assert!(
             capability.starts_with("change_summary") && capability.contains("`tool`"),
             "the refusal names the binary path added at the head end: {capability:?}"
@@ -375,9 +381,9 @@ fn change_summary_refuses_a_binary_blob_the_working_tree_does_not_hold() {
     let head = late.git(&["rev-parse", "HEAD"]);
     let range = format!("{base}..{head}");
     let tc = late.adapter(scratch.path());
-    let at_head = format!("{:?}", tc.change_summary(&range));
+    let at_head = format!("{:?}", tc.change_summary(&range, StepBound::Undeclared));
     late.git(&["checkout", "--quiet", &base]);
-    let at_base = format!("{:?}", tc.change_summary(&range));
+    let at_base = format!("{:?}", tc.change_summary(&range, StepBound::Undeclared));
     assert_eq!(
         at_head, at_base,
         "the same committed range answers the same whichever end is checked out"
@@ -401,7 +407,7 @@ fn change_summary_refuses_a_binary_blob_the_working_tree_does_not_hold() {
         Classification::Text,
         "PREMISE: classify answers Text by the `.txt` extension"
     );
-    match tc.change_summary("HEAD~1..HEAD") {
+    match tc.change_summary("HEAD~1..HEAD", StepBound::Undeclared) {
         Err(StepError::Unsupported { capability }) => assert!(
             capability.starts_with("change_summary") && capability.contains("`notes.txt`"),
             "the refusal names the non-UTF-8 path: {capability:?}"
@@ -422,20 +428,20 @@ fn change_summary_refuses_a_binary_blob_the_working_tree_does_not_hold() {
     let head = third.git(&["rev-parse", "HEAD"]);
     let range = format!("{base}..{head}");
     let tc = third.adapter(scratch.path());
-    let clean = format!("{:?}", tc.change_summary(&range));
+    let clean = format!("{:?}", tc.change_summary(&range, StepBound::Undeclared));
     assert!(
         clean.starts_with("Ok(Text(") && clean.contains("classification: Text"),
         "PREMISE: the range is text at both ends: {clean}"
     );
     third.write("run", b"x\0y");
-    let dirty = format!("{:?}", tc.change_summary(&range));
+    let dirty = format!("{:?}", tc.change_summary(&range, StepBound::Undeclared));
     assert_eq!(
         dirty, clean,
         "a dirty working tree never moves a committed range's answer"
     );
     third.write("run", b"bin\0ary");
     third.commit("three");
-    let later = format!("{:?}", tc.change_summary(&range));
+    let later = format!("{:?}", tc.change_summary(&range, StepBound::Undeclared));
     assert_eq!(
         later, clean,
         "a checkout at a third commit never moves a committed range's answer"

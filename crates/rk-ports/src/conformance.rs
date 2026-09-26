@@ -68,8 +68,10 @@ use rk_types::usage::CliVersion;
 use crate::docs_site::DocsSite;
 use crate::event_store::{EventStore, Query, Snapshot};
 use crate::harness::Harness;
-use crate::toolchain::{Classification, Toolchain};
+use crate::toolchain::{Classification, Selection, StepBound, TestOutcome, TestStatus, Toolchain};
 use crate::tracker::Tracker;
+use rk_types::verb_output::BuildStatus;
+use rk_types::verify::BasisReason;
 
 /// The run key every body queries by.
 ///
@@ -301,8 +303,60 @@ pub fn conform_docs_site(docs: &dyn DocsSite, expect_drift: usize) {
     }
 }
 
+/// **AC-329 as a port conformance row** (record T = ADR-0169 decision 9, proposed).
+///
+/// What a `TestOutcome` must satisfy whoever produced it: its report's own shape
+/// (`VerifyReport::validate_shape`), the count invariant `passed + failed ==
+/// report.selected_test_count`, a `status` that agrees with the counts ([`TestStatus::of`]), and a
+/// runner that names itself. It does NOT duplicate the store's whole-suite rule:
+/// `rk_store::artifacts::verify_report::validate_report` stays the boundary validator (ADR-0104
+/// decision 3), and `rk-ports` cannot depend on `rk-store`.
+///
+/// *(Added 2026-09-26, s8c §8c.2.)*
+///
+/// # Errors
+///
+/// A message naming the rule the outcome breaks.
+pub fn validate_report(outcome: &TestOutcome) -> Result<(), String> {
+    outcome
+        .report
+        .validate_shape()
+        .map_err(|e| format!("the outcome's report fails its own shape: {e}"))?;
+    let executed = outcome.passed.checked_add(outcome.failed);
+    if executed != Some(outcome.report.selected_test_count) {
+        return Err(format!(
+            "passed + failed ({} + {}) is not the report's selected_test_count ({}) (record T \
+             decision 1's invariant)",
+            outcome.passed, outcome.failed, outcome.report.selected_test_count
+        ));
+    }
+    let derived = TestStatus::of(outcome.passed, outcome.failed);
+    if outcome.status != derived {
+        return Err(format!(
+            "status {:?} disagrees with the counts ({} passed, {} failed), which fix {derived:?}: \
+             status is derived, never stored independently",
+            outcome.status, outcome.passed, outcome.failed
+        ));
+    }
+    if outcome.runner.name.trim().is_empty() {
+        return Err(
+            "the outcome's runner has an empty name (D21-48 X15: the report records which \
+                    runner ran)"
+                .to_owned(),
+        );
+    }
+    Ok(())
+}
+
 /// `Toolchain`: a required core over five of design:269's methods, and a capability arm over the
 /// sixth.
+///
+/// *(Amended 2026-09-26, s8c §8c.2: `test` is called with `Selection::WholeSuite` and returns a
+/// `TestOutcome`, whose `passed` is read against the row's count and which must pass
+/// [`validate_report`]; `build` returns a `BuildReport`, which must read `passing` over the row's
+/// green project. Every step-reached method is handed `StepBound::Undeclared`. `run_verb`, the
+/// seventh method, is not in this body: which verbs a row implements is the row's, and each
+/// adapter's own `verbs::` tests assert them.)*
 ///
 /// The **core** is `detect` + `classify` over the row's `(path, classification)` pairs plus
 /// `build` / `test` / `lint` over the row's project **with a count assertion the row
@@ -336,14 +390,34 @@ pub fn conform_toolchain(
         toolchain.detect().expect("detect"),
         "a conformance row runs over a project whose toolchain is PRESENT: `detect` answered false"
     );
-    toolchain.build().expect("build");
-    let ran = toolchain.test(&[]).expect("test(selection)");
+    let built = toolchain.build(StepBound::Undeclared).expect("build");
     assert_eq!(
-        ran, expected_test_count,
-        "the unselected `test(&[])` must report the count the row declares ({expected_test_count}); \
-         it reported {ran}"
+        built.status,
+        BuildStatus::Passing,
+        "a conformance row's project builds green: {built:?}"
     );
-    toolchain.lint().expect("lint");
+    let outcome = toolchain
+        .test(
+            &Selection::WholeSuite {
+                reason: BasisReason::ProbeUnverified,
+            },
+            StepBound::Undeclared,
+        )
+        .expect("test(selection)");
+    validate_report(&outcome).unwrap_or_else(|e| {
+        panic!("the row's TestOutcome fails validate_report (AC-329 as a conformance row): {e}")
+    });
+    assert_eq!(
+        outcome.passed, expected_test_count,
+        "the unselected whole-suite `test` must report the passed count the row declares \
+         ({expected_test_count}); it reported {}",
+        outcome.passed
+    );
+    assert_eq!(
+        outcome.failed, 0,
+        "a conformance row's project is green: {outcome:?}"
+    );
+    toolchain.lint(StepBound::Undeclared).expect("lint");
 
     assert!(
         !expected.is_empty(),
@@ -362,12 +436,12 @@ pub fn conform_toolchain(
     if unsupported.contains(&"change_summary") {
         assert_unsupported(
             "change_summary",
-            toolchain.change_summary("HEAD~1..HEAD"),
+            toolchain.change_summary("HEAD~1..HEAD", StepBound::Undeclared),
             "change_summary",
         );
     } else {
         toolchain
-            .change_summary("HEAD~1..HEAD")
+            .change_summary("HEAD~1..HEAD", StepBound::Undeclared)
             .expect("change_summary(range)");
     }
 }

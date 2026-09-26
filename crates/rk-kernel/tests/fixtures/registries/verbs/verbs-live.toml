@@ -20,9 +20,16 @@
 # `timeout` is carried verbatim from the shipped shape and is read by NOTHING here: the timeout
 # routing is the harness's (Step 7c) and a reader should be able to see that this fixture did not
 # quietly become a timeout fixture.
+#
+# (dated 2026-09-26, s8c section 8c.4; record V = ADR-0170 decision 1, proposed) Every row now declares
+# the five columns the one registry reader requires -- `outputs`, `live`, `timeout`, `inputs` and a
+# `route` from the closed set -- because `VerbRegistry` is extended rather than duplicated, and a row
+# missing a column is refused at load. `route` and `inputs` are added; nothing else moved. `test`
+# and `lint` take the `port` route (their outputs are the port methods' kinds); `deploy` and
+# `metrics` take `toolchain`, the only other route a verb with no store or git write could take.
 
 [verb]
-deploy  = { outputs = "DeployReport", live = true, timeout = "deploy_timeout" }
-metrics = { outputs = "TelemetryReport", live = true, timeout = "deploy_timeout" }
-test    = { outputs = "TestReport", live = false, timeout = "test_timeout" }
-lint    = { outputs = "LintReport", live = false, timeout = "scan_timeout" }
+deploy  = { outputs = "DeployReport", live = true, timeout = "deploy_timeout", inputs = [], route = "toolchain" }
+metrics = { outputs = "TelemetryReport", live = true, timeout = "deploy_timeout", inputs = [], route = "toolchain" }
+test    = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port" }
+lint    = { outputs = "LintReport", live = false, timeout = "scan_timeout", inputs = [], route = "port" }

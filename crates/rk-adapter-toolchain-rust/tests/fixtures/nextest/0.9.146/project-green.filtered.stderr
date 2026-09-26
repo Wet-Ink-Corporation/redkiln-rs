@@ -1,0 +1,10 @@
+warning: rk-toolchain-rust-fixture@0.0.0: test result: ok. 99 passed; 0 failed
+warning: rk-toolchain-rust-fixture@0.0.0: test phantom ... ok
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+────────────
+ Nextest run ID f992d24b-f450-43c0-82ba-527ea9cdb8ea with nextest profile: default
+    Starting 2 tests across 2 binaries (2 tests and 1 binary skipped)
+        PASS [   0.009s] (1/2) rk-toolchain-rust-fixture::suite passes_and_prints_the_decoy
+        PASS [   0.015s] (2/2) rk-toolchain-rust-fixture::suite passes_and_is_filterable
+────────────
+     Summary [   0.016s] 2 tests run: 2 passed, 2 skipped

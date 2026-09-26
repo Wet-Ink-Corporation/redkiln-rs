@@ -26,7 +26,7 @@ use rk_kernel::review::classify::{Observation, RunObservation};
 use rk_kernel::review::confirm::{ConfirmInput, Confirmed, confirm_with};
 use rk_kernel::review::policy::ReviewWeight;
 use rk_kernel::review::reexec::{ReExecutionRecord, ReExecutor, four_cell};
-use rk_ports::toolchain::Toolchain;
+use rk_ports::toolchain::{Selection, StepBound, TestStatus, Toolchain};
 use rk_types::artifact::findings::{Finding, Findings, IngestError};
 use rk_types::event::Event;
 use rk_types::event_kind::EventKind;
@@ -123,32 +123,63 @@ pub struct ToolchainReExecutor<'a> {
 impl ReExecutor for ToolchainReExecutor<'_> {
     /// Re-run the repro's selection at both ends.
     ///
-    /// `Toolchain::test`'s contract is *"`Ok(count)` only on a green suite"* (RT-22), so `is_err()`
-    /// **is** "fails" and no output parsing is needed or done.
+    /// ~~`Toolchain::test`'s contract is *"`Ok(count)` only on a green suite"* (RT-22), so `is_err()`
+    /// **is** "fails" and no output parsing is needed or done.~~ *(Amended 2026-09-26, s8c §8c.2:
+    /// record T = ADR-0169 decision 2, proposed, reverses RT-22 and supersedes ADR-0162 decision 4's
+    /// *"`is_err()` **is** "fails""* in part. `test` now returns `Ok(TestOutcome)` for a red suite
+    /// too, so a cell reads `failed > 0` on each arm when BOTH are `Ok`. **If either arm is `Err`
+    /// -- cannot run, killed, unreadable -- there is no record**, which `confirm_with` reads as
+    /// `Unverifiable { cannot_run }` (AC-344: *"both-fail or cannot-run resolves to `Unverifiable {
+    /// both_fail | cannot_run }` … never to a block"*). Before this, a candidate whose program could
+    /// not start beside a green reference was `four_cell(true, false)`, a BLOCK. A run that
+    /// executed NOTHING on either arm (`status: empty`) is read the same way: a selection that ran no
+    /// test separates nothing, and an empty suite is never read as a pass (AC-332) -- the stricter
+    /// of the two readings record T leaves open, and it can never produce a block.)*
     ///
     /// Returns `None` — which `confirm_with` reads as `Unverifiable { cannot_run }` (AC-287) — for
     /// a `mutate` repro and for a command naming no selection. **`mutate` is refused by name**: no
-    /// `Toolchain` method applies a patch, Checkpoint 7a counts exactly six methods on that port,
-    /// and inventing a seventh for a fixture is the cost `s7d` refused for `Pack`.
+    /// `Toolchain` method applies a patch, ~~Checkpoint 7a counts exactly six methods on that port,
+    /// and inventing a seventh for a fixture is the cost `s7d` refused for `Pack`~~ *(corrected
+    /// 2026-09-26, s8c §8c.7: Checkpoint 7a counts no method (E-0162-2), and the port's seventh
+    /// method, record V's `run_verb`, is not a patch applier; ADR-0162's refusal stands on its
+    /// remaining reason, "no port method applies a patch")*.
     fn run(&self, finding: &Finding, sha: &str) -> Option<ReExecutionRecord> {
         if finding.repro.kind != ReproKind::Run {
             return None;
         }
         let selection = selection_of(&finding.repro.command)?;
 
-        let candidate = self.candidate.test(&selection);
-        let reference = self.reference.test(&selection);
-        let outcome = four_cell(candidate.is_err(), reference.is_err());
+        let selection = Selection::Filter(selection);
+        let candidate = self.candidate.test(&selection, StepBound::Undeclared);
+        let reference = self.reference.test(&selection, StepBound::Undeclared);
+        // Either arm that could not run, was killed or was unreadable: no cell (AC-344).
+        let (Ok(candidate), Ok(reference)) = (candidate, reference) else {
+            return None;
+        };
+        // Either arm that executed nothing: no cell either (AC-332; the doc above).
+        if candidate.status == TestStatus::Empty || reference.status == TestStatus::Empty {
+            return None;
+        }
+        let outcome = four_cell(candidate.failed > 0, reference.failed > 0);
 
         // What the gate SAW, which the classifier reads against the repro's own two strings. A
         // green candidate is reported AS the repro's `expected_when_met`, which is what
         // `review::classify` compares for equality — so a suite that passes classifies `advisory`
-        // and cannot block, and a suite that fails carries the refusal verbatim.
-        let observed = match &candidate {
-            Ok(_) => finding.repro.expected_when_met.clone(),
-            // `StepError` carries no `Display` — deliberately, so a refusal is never rendered as
-            // prose a reader could mistake for a message. The debug form is the whole value.
-            Err(e) => format!("{e:?}"),
+        // and cannot block. A RED candidate names its counts, so it can never equal
+        // `expected_when_met` (record T decision 2); a repro that happened to spell those exact
+        // words is told apart by the marker appended below rather than read as green.
+        let observed = if candidate.failed == 0 {
+            finding.repro.expected_when_met.clone()
+        } else {
+            let counts = format!(
+                "red suite: {} passed, {} failed ({} {})",
+                candidate.passed, candidate.failed, candidate.runner.name, candidate.runner.version
+            );
+            if counts == finding.repro.expected_when_met {
+                format!("{counts} [observed, not the expected-when-met string]")
+            } else {
+                counts
+            }
         };
 
         Some(ReExecutionRecord {

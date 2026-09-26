@@ -138,3 +138,16 @@ pub fn reporter_counts(argv: &[String]) -> (u64, u64) {
         v["numFailedTests"].as_u64().expect("numFailedTests"),
     )
 }
+
+/// `tc.test(Filter(selection))` with no step bound: the port's `test`, which the retired inherent
+/// `verify_report` was (s8c §8c.2; record T = ADR-0169 decision 2, proposed). *(Added 2026-09-26.)*
+pub fn run_test(
+    tc: &rk_adapter_toolchain_node::NodeToolchain,
+    selection: &[String],
+) -> Result<rk_ports::toolchain::TestOutcome, rk_types::error::StepError> {
+    use rk_ports::toolchain::Toolchain;
+    tc.test(
+        &rk_ports::toolchain::Selection::Filter(selection.to_vec()),
+        rk_ports::toolchain::StepBound::Undeclared,
+    )
+}

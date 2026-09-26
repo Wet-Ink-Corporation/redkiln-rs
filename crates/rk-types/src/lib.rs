@@ -36,5 +36,8 @@ pub mod typed;
 /// The dispatch record's usage-adjacent types (Step 7c Slice 1; ADR-0126 decision 2): `Usage`,
 /// `CacheCreation`, the window reading, the timings, the two-armed CLI version, the cost string.
 pub mod usage;
+/// The toolchain verbs' typed outputs (s8c; records T and V, proposed): the seven structs a
+/// `run_verb` output or a `build` outcome decodes to. Not in `EXPORTED`.
+pub mod verb_output;
 /// The verify gate's record type (Step 7b-ii): the adapter's report with its closed basis and reason.
 pub mod verify;

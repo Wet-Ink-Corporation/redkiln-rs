@@ -237,6 +237,29 @@ pub struct Ctx {
     /// whole journal"* is the only reading either source supports, and a rule written against a
     /// filtered one would be asserting over a selector that does not exist.
     pub journal: Vec<Row>,
+    /// *(2026-09-26, s8c §8c.6; record V = ADR-0170 decision 12, proposed.)* The value table a
+    /// `${toolchain.<key>}` resolves through for `RK-D-TIMEOUT`'s third arm, **selected by `run`'s
+    /// own loop** (`verbs::run::choose_toolchain`, then `verbs::run::toolchain_values`), so `doctor`
+    /// and `run` cannot disagree about a key. Selected only when the tree declares a substitution;
+    /// see [`TimeoutTable`].
+    pub timeout_table: TimeoutTable,
+}
+
+/// The value table `RK-D-TIMEOUT` resolves `${toolchain.<key>}` through (s8c §8c.6).
+///
+/// Built by [`Ctx::build`] only when an enabled pack's activity table or a catalog step declares a
+/// `${toolchain.*}` substitution: selecting a toolchain constructs and probes the adapters, and a
+/// tree with nothing to resolve has no reason to. **Not a refusal either way** — both non-table
+/// arms are values the row reports as ONE `Error` finding, and no key is guessed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TimeoutTable {
+    /// Nothing on the tree needs a table.
+    NotNeeded,
+    /// The chosen adapter's value table, flat and name-free.
+    Values(rk_kernel::workflow::memo::ToolchainValues),
+    /// No table could be selected: no adapter detected, no `registry.toml`, a registry that did not
+    /// load, or no table for the detected adapter's toolchain.
+    NoTable(String),
 }
 
 /// One journal row as `doctor` reads it.
@@ -326,6 +349,8 @@ impl Ctx {
             .ok()
             .and_then(|src| Registry::from_toml(&src).ok());
         let journal = read_journal(&worktree.join("events.jsonl"));
+        let timeout_table =
+            timeout_table(&worktree, &common_dir, &config, &env, &catalog, &pack_files);
 
         Self {
             config,
@@ -344,7 +369,87 @@ impl Ctx {
             probe,
             now,
             journal,
+            timeout_table,
         }
+    }
+}
+
+/// Does the tree declare any `${toolchain.*}` substitution a `RK-D-TIMEOUT` arm resolves?
+fn declares_substitution(catalog: &CatalogLoad, pack_files: &BTreeMap<String, PathBuf>) -> bool {
+    let on_a_step = catalog.catalog.activities().iter().any(|a| {
+        a.steps.iter().any(|s| {
+            matches!(
+                s.timeout_secs,
+                Some(rk_kernel::catalog::StepTimeout::Toolchain(_))
+            )
+        })
+    });
+    on_a_step
+        || pack_files.values().any(|path| {
+            std::fs::read_to_string(path).is_ok_and(|text| text.contains("${toolchain."))
+        })
+}
+
+/// **`run`'s selection, run for `doctor`** (s8c §8c.6; record V decision 12): the same candidate
+/// loop over the same `[adapters]`, then the same table choice. The loop's per-candidate reports are
+/// collected into the no-table reason, never printed.
+fn timeout_table(
+    worktree: &Path,
+    common_dir: &Path,
+    config: &ConfigFile,
+    env: &Env,
+    catalog: &CatalogLoad,
+    pack_files: &BTreeMap<String, PathBuf>,
+) -> TimeoutTable {
+    if !declares_substitution(catalog, pack_files) {
+        return TimeoutTable::NotNeeded;
+    }
+    let registry_path = crate::verbs::run::registry_path(worktree);
+    if !registry_path.is_file() {
+        return TimeoutTable::NoTable(format!(
+            "{} does not exist, so no `${{toolchain.*}}` value table is declared",
+            registry_path.display()
+        ));
+    }
+    let registry = match rk_kernel::workflow::memo::VerbRegistry::load_file(&registry_path) {
+        Ok(registry) => registry,
+        Err(e) => {
+            return TimeoutTable::NoTable(format!(
+                "{} does not load: {e}",
+                registry_path.display()
+            ));
+        }
+    };
+    let candidates = crate::verbs::run::ToolchainCandidates {
+        toolchains: &config.adapters.toolchains,
+        timeout_secs: config
+            .adapters
+            .toolchain_timeout_secs
+            .unwrap_or(crate::verbs::run::DEFAULT_TOOLCHAIN_TIMEOUT_SECS),
+        programs: config.adapters.toolchain_programs.as_ref(),
+        common_dir,
+    };
+    let mut reports: Vec<String> = Vec::new();
+    let chosen = crate::verbs::run::choose_toolchain(&candidates, env, worktree, &mut |line| {
+        reports.push(line.to_owned());
+    });
+    match chosen {
+        Ok(chosen) if chosen.adapter.is_some() => TimeoutTable::Values(
+            crate::verbs::run::toolchain_values(&registry, chosen.adapter.as_deref()),
+        ),
+        Ok(chosen) => TimeoutTable::NoTable(format!(
+            "no toolchain adapter detects a project at {} ({}), so no value table is selected",
+            worktree.display(),
+            match chosen.toolchain.detect() {
+                Err(e) => format!("{e:?}"),
+                Ok(_) if reports.is_empty() => "every candidate answered not present".to_owned(),
+                Ok(_) => reports.join("; "),
+            }
+        )),
+        Err(_) => TimeoutTable::NoTable(format!(
+            "toolchain selection could not run: {}",
+            reports.join("; ")
+        )),
     }
 }
 

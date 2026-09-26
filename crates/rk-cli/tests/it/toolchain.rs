@@ -49,6 +49,7 @@ fn build_step() -> Step {
         repeat_max: None,
         memo_declared: None,
         question: None,
+        timeout_secs: None,
     }
 }
 
@@ -77,6 +78,19 @@ fn runtime_with(toolchain: Arc<dyn Toolchain>) -> Runtime {
         "run-toolchain-observed",
         "implement",
     )
+    // *(2026-09-26, s8c §8c.4; record V = ADR-0170 decision 3, proposed.)* `MAPPED_VERBS` is
+    // replaced by the verb registry, and a runtime with none bound refuses every verb by its bare
+    // name, so both halves bind the same test-only `build` row: the step still reaches whichever
+    // adapter the port holds, and only the adapter differs between them.
+    .with_tool_routing(rk_kernel::runtime::step::ToolRouting::new(
+        rk_kernel::workflow::memo::VerbRegistry::from_toml(
+            "[verb]
+build = { outputs = \"BuildReport\", live = false, timeout = \"build_timeout\",              inputs = [], route = \"port\" }
+",
+        )
+        .expect("the test-only build row loads"),
+        rk_kernel::workflow::memo::ToolchainValues::default(),
+    ))
 }
 
 /// **AC-473's mechanism, exercised: the `tool` arm reaches the REAL adapter.**

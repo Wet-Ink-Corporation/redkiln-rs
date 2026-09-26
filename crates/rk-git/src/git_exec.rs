@@ -49,6 +49,13 @@ pub enum GitOp {
     RevParse,
     Status,
     Log,
+    /// `ls-files -z --others --ignored --exclude-from=.worktreeinclude` — the `.worktreeinclude`
+    /// reader's first read (s8c §8c.4, D21-45 W3). A read: ADR-0105 clause 5's write set is
+    /// untouched. *(Added 2026-09-26, s8c build, P6.)*
+    LsFiles,
+    /// `check-ignore -z --stdin --no-index` — the reader's second read, over the first's list.
+    /// Exit 1 means *none ignored*, not failure. *(Added 2026-09-26, s8c build, P6.)*
+    CheckIgnore,
 }
 
 impl GitOp {
@@ -67,6 +74,8 @@ impl GitOp {
             Self::RevParse => "rev-parse",
             Self::Status => "status",
             Self::Log => "log",
+            Self::LsFiles => "ls-files",
+            Self::CheckIgnore => "check-ignore",
         }
     }
 
@@ -84,7 +93,7 @@ impl GitOp {
             | Self::PatchId
             | Self::Integrate
             | Self::CloneRemove => true,
-            Self::RevParse | Self::Status | Self::Log => false,
+            Self::RevParse | Self::Status | Self::Log | Self::LsFiles | Self::CheckIgnore => false,
         }
     }
 
@@ -188,6 +197,38 @@ impl GitExec {
         all.extend(args.into_iter().map(|a| a.as_ref().to_os_string()));
         run_labelled(op, Path::new(cwd.as_str()), all)
     }
+
+    /// Run `op` in `cwd` with `stdin` written to the child's standard input — the form
+    /// `check-ignore --stdin` needs (s8c §8c.4, the `.worktreeinclude` reader). The same `-c`
+    /// prelude as [`GitExec::run`] applies; no op that writes a trailer is routed here.
+    /// *(Added 2026-09-26, s8c build, P6.)*
+    ///
+    /// # Errors
+    /// [`GitError::Spawn`] if the child cannot start or its stdin cannot be written,
+    /// [`GitError::NonZeroExit`] otherwise.
+    pub fn run_with_stdin<I, S>(
+        &self,
+        op: GitOp,
+        cwd: &WorktreePath,
+        args: I,
+        stdin: &[u8],
+    ) -> Result<GitOutput, GitError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        let mut all = self.config_prelude(op);
+        all.extend(args.into_iter().map(|a| a.as_ref().to_os_string()));
+        relabel(
+            op,
+            spawn(
+                Path::new(cwd.as_str()),
+                all,
+                std::iter::empty::<(&OsStr, &OsStr)>(),
+                Some(stdin),
+            ),
+        )
+    }
 }
 
 /// Run `git` with `args` in `cwd`, unlabelled. Used by the startup probe, which necessarily runs
@@ -208,7 +249,14 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    match run_with_env(cwd, args, std::iter::empty::<(&OsStr, &OsStr)>()) {
+    relabel(
+        op,
+        run_with_env(cwd, args, std::iter::empty::<(&OsStr, &OsStr)>()),
+    )
+}
+
+fn relabel(op: GitOp, r: Result<GitOutput, GitError>) -> Result<GitOutput, GitError> {
+    match r {
         Err(GitError::NonZeroExit { code, stderr, .. }) => Err(GitError::NonZeroExit {
             op: op.as_str(),
             code,
@@ -229,12 +277,6 @@ where
 ///
 /// # Errors
 /// [`GitError::Spawn`] if the child cannot start, [`GitError::NonZeroExit`] otherwise.
-#[expect(
-    clippy::disallowed_types,
-    reason = "ADR-0077:70 and ADR-0105 clause 5: this is the single process-exec site in the \
-              workspace through which git is invoked. clippy.toml's disallowed-types has no path \
-              scoping, so the exemption is stated at the narrowest item that needs it."
-)]
 pub fn run_with_env<I, S, E, K, V>(cwd: &Path, args: I, env: E) -> Result<GitOutput, GitError>
 where
     I: IntoIterator<Item = S>,
@@ -243,14 +285,77 @@ where
     K: AsRef<OsStr>,
     V: AsRef<OsStr>,
 {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .envs(env)
-        .current_dir(cwd)
-        .output()
-        .map_err(|e| GitError::Spawn {
-            detail: e.to_string(),
-        })?;
+    spawn(cwd, args, env, None)
+}
+
+/// The one process-exec site (the doc on [`run_with_env`] says why it is a literal). `stdin`,
+/// when given, is written to the child from a scoped thread while its output is read, so neither
+/// pipe can fill and deadlock the other. *(The site moved here from `run_with_env`'s body on
+/// 2026-09-26, s8c build, P6, when `check-ignore --stdin` needed a stdin; `run_with_env` calls it
+/// with `None`, and the `Command` literal is still the only one in the workspace.)*
+///
+/// # Errors
+/// [`GitError::Spawn`] if the child cannot start or its stdin cannot be written,
+/// [`GitError::NonZeroExit`] otherwise.
+#[expect(
+    clippy::disallowed_types,
+    reason = "ADR-0077:70 and ADR-0105 clause 5: this is the single process-exec site in the \
+              workspace through which git is invoked. clippy.toml's disallowed-types has no path \
+              scoping, so the exemption is stated at the narrowest item that needs it."
+)]
+fn spawn<I, S, E, K, V>(
+    cwd: &Path,
+    args: I,
+    env: E,
+    stdin: Option<&[u8]>,
+) -> Result<GitOutput, GitError>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+    E: IntoIterator<Item = (K, V)>,
+    K: AsRef<OsStr>,
+    V: AsRef<OsStr>,
+{
+    let mut cmd = std::process::Command::new("git");
+    cmd.args(args).envs(env).current_dir(cwd);
+    let spawn_err = |e: std::io::Error| GitError::Spawn {
+        detail: e.to_string(),
+    };
+    let out = match stdin {
+        None => cmd.output().map_err(spawn_err)?,
+        Some(input) => {
+            let mut child = cmd
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .map_err(spawn_err)?;
+            let mut pipe = child.stdin.take().ok_or_else(|| GitError::Spawn {
+                detail: "the child's stdin was not piped".into(),
+            })?;
+            std::thread::scope(|s| {
+                let writer = s.spawn(move || {
+                    use std::io::Write as _;
+                    // Dropping `pipe` at the end of this closure closes the child's stdin.
+                    pipe.write_all(input)
+                });
+                let out = child.wait_with_output().map_err(spawn_err)?;
+                // A child that exits non-zero may close its stdin early, so the writer's broken
+                // pipe is not the fault then: the exit is, and it is reported below as
+                // `NonZeroExit`. Only a child that SUCCEEDED over a short write is refused here.
+                match writer.join() {
+                    Ok(Ok(())) => Ok(out),
+                    _ if !out.status.success() => Ok(out),
+                    Ok(Err(e)) => Err(GitError::Spawn {
+                        detail: format!("writing the child's stdin failed: {e}"),
+                    }),
+                    Err(_) => Err(GitError::Spawn {
+                        detail: "the stdin writer thread panicked".into(),
+                    }),
+                }
+            })?
+        }
+    };
 
     if out.status.success() {
         Ok(GitOutput {
