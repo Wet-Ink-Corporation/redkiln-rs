@@ -81,7 +81,8 @@ grammar, `redkiln run <item> [--lane fix|story]`, superseding ADR-0107 decision 
 part** (every other clause of 0107 stands), and `0129` fixes the `answer` grammar and the ADR-0063 question registry,
 superseding ADR-0009's literal `approve|changes-requested` sentence **in part** (its CLI-only channel clause stands). Both
 were forced by the C-01 pass: each grammar sat in a Decision sentence, so ADR-0092 allowed neither an erratum nor a
-runbook choice. The next free number is **`0168`**.
+runbook choice. The next free number is **`0169`**.
+*(Corrected 2026-09-26 at `s8b`: this read **`0168`** until `0168` — the S-SEV record, the severity vocabulary and T — was written the same day, at `proposed`; Checkpoint 8a's guard caught it at Checkpoint 8b's formal run.)*
 *(Corrected 2026-09-24 at `s8a`: this read **`0165`** until `0165`, `0166` and `0167` were written the same day, all three at `proposed`.)*
 *(Corrected 2026-09-24: this read **`0164`** until `0164` was written the same day.)*
 *(Corrected 2026-09-24 at `s8`'s re-open, D21-40: this read **`0132`**, stale since ADR-0132 was written at `s7f`; `0131`–`0163` are all written.)*
