@@ -2590,3 +2590,39 @@ tests and their mutant rows; Checkpoint 8c's named selection; s8g's `sca-scan` (
 bounded edit to a proposed record, one code branch and its tests.
 
 **Owed:** the operator's confirmation or reversal of A, B, C and D (AFK review packet, confirm list).
+
+---
+
+## D21-63 · An advisory whose CVSS vector the scorer cannot score refuses the scan by name (`cvss-unscorable`); the `cvss` crate's v4 scorer is the named durable remedy
+
+**TAKEN PROVISIONALLY under the AFK rule of 2026-09-26, pending the operator's confirmation.** Same rule and method as
+D21-62: three lensed judges and a synthesiser; the full panel text is `spikes/afk-panels/D21-63-s8c.md`. Carried by
+record V (ADR-0170, `proposed`), so no accepted Decision moves.
+
+**Why.** Record V decision 5 bands *"the CVSS base score"* on the v3 qualitative bands and counts an advisory with no
+CVSS as `unrated`; it says nothing about a vector the scorer cannot score. The local advisory database holds 335
+`CVSS:3.1`, 33 `CVSS:3.0` and **63 `CVSS:4.0`** vectors [measured 2026-09-26 over `~/.cargo/advisory-db/crates`]. P5
+scored v3.x in-tree, with no new crate. Only advisories matching the lockfile are scored; at `5561afa` this
+repository's lockfile matches none (`vulnerabilities = []`), so nothing is blocked today.
+
+**Taken provisionally.**
+- **Option (1), as built at `5561afa`:** a MATCHED advisory whose vector is `CVSS:4.0`, malformed, or any other
+  version refuses the whole scan by name, `cvss-unscorable`, naming the vector. It is never counted `unrated` (it has a
+  CVSS) and never banded by a guess.
+- The refusal's text names its two remedies, so an AFK halt is one operator decision away: score it with the `cvss`
+  crate's v4 scorer, or rule it `unrated` so `sca-scan` routes to `scan.accept-findings`.
+- Red-first tests: a matched `CVSS:4.0` fixture advisory refuses naming its vector; a malformed vector refuses the same
+  way; a mutant that turns the refusal into `Ok(None)` (count as unrated) must be killed.
+- Record V decision 5 gains the sentence, and its forbids block gains *"Counting an advisory whose vector could not be
+  scored as `unrated`, or banding it by a guess."*
+- **Downstream precondition (`s8g`):** before §8g.6 runs `sca-scan` over the real database, `s8g`'s open lists every
+  matched advisory's vector version (`cargo audit --json --no-fetch --file Cargo.lock`); a non-3.x vector is a NAMED,
+  expected halt, and (3') is ruled then.
+
+**The durable remedy the panel prefers, (3'), not built:** `cvss = { version = "=2.2.0", default-features = false,
+features = ["std", "v3", "v4"] }` (the version rustsec 0.33 parses the database with; MIT OR Apache-2.0), v4.0 vectors
+scored and banded on V's same thresholds (FIRST CVSS v4.0 §6 uses the v3 qualitative scale), `cvss-unscorable` kept
+for anything the crate rejects, a differential test pinning the in-tree v3 scorer against `cvss::v3`, and V's
+`cargo deny check licenses`/`bans` readings. Reversal of (1) into (3') is one dependency line and one match arm.
+
+**Owed:** the operator's confirmation of (1), or the choice of (3') or (2) (AFK review packet, confirm list).
