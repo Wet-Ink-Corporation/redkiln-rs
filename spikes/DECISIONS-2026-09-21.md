@@ -2242,8 +2242,23 @@ had been opened.
   - Its confidence is TypeSafe's spread statistic, not a calibrated probability.
 
 **Declined.**
-- Shortening the operator's re-label: κ would be weaker, and likely inflated by memory.
+- Shortening the operator's re-label: κ would be weaker, and likely inflated by memory. *(dated 2026-09-26, `s8b`
+  refuting rounds 8–9: the option stands declined as the operator declined it; only the reason is qualified. With a
+  constant first pass, κ at any re-label length was 0 or undefined, so "weaker" did not describe it; see the
+  disclosure below.)*
 - A richer-context Jev arm, with the item's spec and ACs added: offered, not taken now.
+
+**Disclosure** *(dated 2026-09-26, `s8b` refuting round 8; a fact about the ruling's timing, not a new ruling)*.
+The operator's first pass was **constant**: all 188 answers are `BLOCKING` (56 at corpus `a2f4fab`, 132 at
+`1b3e102`, both committed before this entry's commit `c04b316`). METHOD-SEV §5 draws the re-label *"from those
+labelled in stage 1"*, so under the method as registered at `bbf809c` the intra-rater κ had p_e = p_o: κ = 0 if any
+re-label answer differed from `BLOCKING`, and undefined otherwise. §6.1 reads *"A κ that is undefined … has not been
+shown ≥ 0.61, and A1 fails"* and *"If either half fails, the vocabulary is **NOT SETTLED by this measurement** … the
+stage STOPS"*. So when this entry was taken, the registered method could end only in a NOT SETTLED STOP, and the rater
+change moved the outcome from that STOP to ADR-0168's Branch 2. Amendment 5 was committed before any of Jev's answers was
+opened (Jev's runs were written unread, Amendment 4), but it was **not** blind to the operator's. The reasons given above are the
+operator's; this disclosure does not replace them. **Owed:** the operator's dated confirmation that the switch stands
+with this known (AFK review packet, confirm list).
 
 ---
 

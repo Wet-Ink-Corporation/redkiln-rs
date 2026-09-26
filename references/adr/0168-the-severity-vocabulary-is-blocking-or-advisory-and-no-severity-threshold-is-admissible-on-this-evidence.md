@@ -98,8 +98,14 @@ This was §8b.6's *"Rater: the operator, alone"* and D21-54's re-label of 38. **
 - he doubts the accuracy of his labels;
 - the stage could not sit idle for the 48-hour gap.
 
-His labels are kept, committed and reported below. On them A1's κ half was never computed, so they could not have
-passed A1 as registered.
+His labels are kept, committed and reported below. ~~On them A1's κ half was never computed, so they could not have
+passed A1 as registered.~~ *(dated 2026-09-26, `s8b` refuting round 8)* On them A1's κ half **could not pass**: all
+188 of his answers are `BLOCKING`, so any re-label drawn from stage 1 (METHOD-SEV §5) gives p_e = p_o, and κ is 0 or
+undefined; §6.1 fails A1 on either. Under the method as registered at `bbf809c` this measurement could end only in a
+NOT SETTLED STOP. Both label commits (`a2f4fab`, `1b3e102`) predate D21-58's commit (`c04b316`), so the rater change
+was made after that outcome was fixed in committed data, and it moved the result from STOP to Branch 2. Amendment 5 was
+committed before Jev's answers were opened, but not before the operator's were. D21-58 carries the same disclosure, and the operator's confirmation
+that the switch stands with this known is owed before this record is accepted.
 
 ### Option — read T off the high-confidence subset only
 
@@ -300,7 +306,9 @@ of the corpus checkout's HEADs.
   not rates.
 - [measured] **A3:** dispatches with no `BLOCKING`-labelled finding: **0/33**, [0.000, 0.104]. There is no variability,
   which makes it constant. With `CANNOT-TELL` counted as `BLOCKING` (report only): 0/33.
-- [measured] **Branch, printed by the committed scoring:** *"BRANCH 2 — A1 passes, A2 or A3 shows no variability:
+- [measured] **Branch, printed by Amendment 5's analysis driver:** *(re-worded 2026-09-26, refuting round 8: the
+  driver and the Jev runners are not committed; their committed output is `results/sev-f37-result.txt` at `285e011`,
+  and the committed `score.py` alone prints PENDING over Jev's sheets, having no stability arm)* *"BRANCH 2 — A1 passes, A2 or A3 shows no variability:
   vocabulary fixed; T = "no admissible severity threshold on this evidence; bullet 2 governs"; the record supersedes
   ADR-0080 d2 bullet 1 in part"*.
 - [measured] **Sensitivity, deciding nothing** (Jev first-run confidence ≥ its median 0.95; 98 findings). Execution
@@ -310,8 +318,9 @@ of the corpus checkout's HEADs.
 - [measured] **Report only, powerless:** dispatches by (no `BLOCKING` label, run root-cause correct): (False, False) 8
   and (False, True) 25. No dispatch lacks a `BLOCKING` label, whether its run's root cause was right or wrong.
 - [measured] **The operator's labels** (reported; he labelled against his own stricter standard, not the card's, and
-  doubts them: METHOD-SEV Amendment 2, D21-58). All 188 are `BLOCKING`. A2: 0/147 and 41/41. A3: 0/33. His A1 is
-  pending, because no re-label was supplied. Agreement with Jev: 0.9096 over 188 (171 both `BLOCKING`; 17 operator
+  doubts them: METHOD-SEV Amendment 2, D21-58). All 188 are `BLOCKING`. A2: 0/147 and 41/41. A3: 0/33. ~~His A1 is
+  pending, because no re-label was supplied.~~ *(dated 2026-09-26, refuting round 8)* His A1's κ half could not pass:
+  with a constant first pass any re-label gives κ = 0 or undefined (see the first-registered option above). Agreement with Jev: 0.9096 over 188 (171 both `BLOCKING`; 17 operator
   `BLOCKING`, Jev `ADVISORY`). κ is 0.0000, because the operator's labels have no variance, so p_o = p_e. The κ of
   zero reflects that constancy and is no finding about disagreement.
 - [measured] **The instrument.** 752 requests, 188 first-run plus 564 stability (188 each of `r1`, `r2`, `perm`).

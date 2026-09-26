@@ -341,7 +341,7 @@ criterion (3) operational arm diffs. A first divergence across the kill is **Hal
 
 ### 8d.3 The complete reference resolver (D21-11)
 
-*D21-60 (2026-09-26, from `s8b`):* ADR-0042's later-step-ref licence is enforced nowhere today. `s8b`'s control mutant D59b restored `threat-model`'s `model` input `findings = "${review.outputs?}"` (`threat-model` v2 has no `on_false`/`repeat` targeting `model`, D21-59), and it survived the whole workspace. `forward_ref_lint` therefore gains one more must-refuse fixture of that shape, and one mutant row: *D59b, `.redkiln/catalog/threat-model.toml`, `model`'s back-ref restored, version left at 2*, which must flip `forward_ref_lint::every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (`unlicensed` rises by one). This stage's floor and K_TESTS count do not move for it: the fixture joins an existing test.
+*D21-60 (2026-09-26, from `s8b`):* ADR-0042's later-step-ref licence is enforced nowhere today. `s8b`'s control mutant D59b restored `threat-model`'s `model` input `findings = "${review.outputs?}"` (`threat-model` v2 has no `on_false`/`repeat` targeting `model`, D21-59), and it survived the whole workspace. `forward_ref_lint` therefore gains one more must-refuse fixture of that shape, and one mutant row: *D59b, `.redkiln/catalog/threat-model.toml`, `model`'s back-ref restored, version left at 2*, which must flip `forward_ref_lint::every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (`unlicensed` rises by one). This stage's floor and K_TESTS count do not move for it: the fixture joins an existing test. *(dated 2026-09-26, `s8b` refuting round 8)* D21-59 deleted one letter-licensed back-ref (`threat-model`'s `model` input), so the census figures recorded in this file (81 total, 64 by ADR-0042's letter) were taken before it and are stale by one on the letter-licensed side; re-measure them at stage open and write the new figures by dated edit. The row is in §8d.10's mutant table as **D59b**.
 
 *D21-57 (2026-09-25):* AC-303's confirm rule (`rigor::confirm_step_monotonicity_rule`, which reads raw `inputs` through `toml_subset` because `catalog::Step` is not widened) moves onto R2's parsed-`inputs` carrier when R2 lands, and §8d.3's widened licence lint must keep the `${adversary.outputs?}` back-edges that the localisation and spec-form chains depend on.
 
@@ -832,7 +832,9 @@ Every test below is authored, run, and **watched fail for the right reason** bef
   (fixture catalogs under `crates/rk-kernel/tests/fixtures/forward_refs/`. One per licence loads. Three refuse at
   load by name, naming the activity, the step and the ref: an approval-gate answer read after the only loop, which is
   `adr-record`'s shape; an escalating step whose later gate carries another question; and a ref past the end of a
-  repeat body) [red: the load has no licence check, so the three unlicensed fixtures load],
+  repeat body; *(dated 2026-09-26, D21-60)* and a fourth, D59b's shape: an optional later-step ref on a step that no
+  `on_false`/`repeat` targets, as `threat-model` v1's `model` input was) [red: the load has no licence check, so the
+  ~~three~~ four unlicensed fixtures load],
   `every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (over `.redkiln/catalog`. It prints
   `FORWARD_REFS total=<n> letter=<a> repeat=<b> escalate=<c> unlicensed=<d>` once, from inside the test binary, and
   asserts `n > 0`, `n = a + b + c + d` and `d = 0`, over a non-zero count of activities walked — D21-42 13a's rule)
@@ -929,8 +931,9 @@ must turn the named test red for the stated reason. A survivor blocks the close.
 | M30 | a registry row with no `side_effecting` value loads as `false` | `verb_registry::every_row_declares_side_effecting_and_the_writing_verbs_are_marked` |
 | M31 | the licence check drops the escalate arm, so only ADR-0042's letter and the repeat body license (D21-48 X8) | `forward_ref_lint::a_forward_ref_is_licensed_by_a_back_edge_a_repeat_body_or_an_escalate_re_entry_and_otherwise_refused_by_name` (the escalate fixture refuses), `forward_ref_lint::every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (`unlicensed` becomes 10) |
 | M32 | the escalate arm admits any later `gate` step, whatever its question | `forward_ref_lint::a_forward_ref_is_licensed_by_a_back_edge_a_repeat_body_or_an_escalate_re_entry_and_otherwise_refused_by_name` (the other-question fixture loads) |
-| M33 | the licence check is skipped at load, so every `?` forward ref loads | `forward_ref_lint::a_forward_ref_is_licensed_by_a_back_edge_a_repeat_body_or_an_escalate_re_entry_and_otherwise_refused_by_name` (all three unlicensed fixtures load) |
+| M33 | the licence check is skipped at load, so every `?` forward ref loads | `forward_ref_lint::a_forward_ref_is_licensed_by_a_back_edge_a_repeat_body_or_an_escalate_re_entry_and_otherwise_refused_by_name` (all three unlicensed fixtures load; *(dated 2026-09-26, D21-60)* four, with D21-60's) |
 | M34 | `.redkiln/catalog/vertical-slicing.toml`: `slice`'s `answer = "${approve.answer?}"` restored, version left at 3 | `forward_ref_lint::every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (`unlicensed=1`), `forward_ref_lint::the_four_unlicensed_refs_are_removed_versioned_and_changelogged` |
+| D59b | *(dated 2026-09-26, D21-60; added at `s8b` refuting round 8)* `.redkiln/catalog/threat-model.toml`: `model`'s `findings = "${review.outputs?}"` restored, version left at 2 | `forward_ref_lint::every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (`unlicensed=1`); the fourth must-refuse fixture's own kill is M33's (a fixture test never reads `.redkiln/catalog`) |
 | M35 | an escalate re-entry binds `null` for a later tool step's output on the resumed pass | `reference_resolver::an_escalate_re_entry_binds_a_later_steps_previous_frame_value_and_is_null_first` |
 
 ### 8d.11 What this stage makes provisional, and what it does not claim

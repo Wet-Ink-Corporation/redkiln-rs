@@ -169,7 +169,9 @@ did not foresee).* One line per edit, measured at stage open over `f81e5b9` unle
   A2 and A3 are unchanged on Jev's labels, and confidence feeds a sensitivity analysis. The 48 h re-label is
   withdrawn. Section (9)'s re-label guard becomes a guard on the stability commit, and the record's
   `**S-SEV re-label commit:**` line becomes `**S-SEV stability commit:**`. Supersedes §8b.6's *"Rater: the operator,
-  alone"*.
+  alone"*. *(dated 2026-09-26, refuting round 8)* Disclosed in D21-58 and ADR-0168: the operator's first pass was
+  constant (188/188 `BLOCKING`), so under the method as registered A1's κ half could not pass, and the rater change
+  moved the outcome from a NOT SETTLED STOP to Branch 2. The operator's confirmation that the switch stands is owed.
 - *D21-59 (2026-09-26):* ADR-0168 (S-SEV, Branch 2) settled no admissible severity T, so §8b.5's `threat-model` (A)
   edit had nothing to bind and the stage stopped. The operator ruled that `threat-model` **declines the quality
   block** under ADR-0080 d4: v1 → v2, its `policy` step deleted and `model`'s `findings = "${review.outputs?}"`
@@ -1364,8 +1366,10 @@ survives** the selection and the whole workspace (`cargo test --workspace --no-f
 passed, 0 failed, 9 ignored; scratchpad `d59_d59b_ws.py`). Investigated for unobservability: nothing in `crates/`
 enforces ADR-0042's later-step-ref licence (no loader or lint names it), and an optional `${review.outputs?}` input
 on a step no `on_false` targets resolves absent without refusing. The D21-59 edit is correct without it; the
-survivor is recorded here and, under this section's rule, blocks the stage until the operator rules whether a
-loader check for ADR-0042 is owed (and by which stage) or D59b is accepted as unobservable. No test is added here.
+survivor is recorded here ~~and, under this section's rule, blocks the stage until the operator rules whether a
+loader check for ADR-0042 is owed (and by which stage) or D59b is accepted as unobservable~~. No test is added here.
+*(dated 2026-09-26, refuting round 8)* **D21-60 has ruled:** the check is owed to `s8d`'s `forward_ref_lint` (a fourth
+must-refuse fixture and mutant row D59b in s8d §8d.10), and D59b does not block this stage.
 
 *(dated 2026-09-25, refuting round 1:)* M-A1..M-A3 run a selection that includes their must-flip tests: the four
 D21-57 tests are in section (5)'s `K_TESTS`.
@@ -2031,6 +2035,9 @@ Each stays open here until a stage or ruling takes it; none is decided by `s8b`,
   **a `false` cell outranks an error** (in another cell or another conjunct) and the tests pin it (§8b.4, §8b.8
   M-W1a/M-W1b). It is the code's reading of the ruling, recorded here so that the operator can overrule it; it is not
   a new ruling. Source: refuting round 5.
+- *(dated 2026-09-26, refuting round 9)* **The operator's confirmation of D21-58's rater switch** with the round-8
+  disclosure known (the operator's registered A1 could not pass; the switch moved the outcome from a NOT SETTLED STOP
+  to Branch 2). Owed before ADR-0168 flips. Source: D21-58's **Disclosure**; receiver: the AFK review packet.
 
 ---
 
@@ -2102,4 +2109,28 @@ rather than fixed. None of them moves a checkpoint section, a ruling or a floor.
 - (records) §8b.4's round-6 note says every test other than quality_block.rs reads the forbidden form from a fixture file; evaluator.rs spells it as literals, and §8b.7 exempts it
 - (records) D21-57's AC-303 register amendment is read by no Checkpoint 8b section, including section (11)'s widened calibration sweep
 - (records) Section (9)'s 'continued to 188' arm reads none of the continuation labels; only the stage-1 file is proven to exist and to postdate the pre-registration
+
+**Round 8** *(dated 2026-09-26, over the delta since round 7, `d6acfba..62b634a`: the S-SEV path, ADR-0168, D21-58..D21-60, `threat-model` v2 and the `quality_block` re-pins; five finders, two refuters per blocker/major)*. Two majors confirmed and FIXED: (1) the S-SEV rater switch was taken after the registered A1 was certain to fail (the operator's 188 labels are all `BLOCKING`), and no record said so; now disclosed in D21-58, ADR-0168 and this file's D21-58 note, with the operator's confirmation owed (§8b.10); (2) `check-refs.py` was red on a bare `§8b.6` in PROGRESS's D21-58 row; qualified. Recorded, not fixed:
+- (ssev-method) The Branch 2 line and the stability κ were printed by an uncommitted script, not by "the committed scoring". The Jev runners are committed nowhere, and the perm option order is recorded only in them.
+- (adr-0168-ledger) ADR-0168 says it does not answer D21-57's question, but its Decision and forbids answer it, and §8b.10 names no receiver for the 39 rows (refuted to minor by both refuters)
+- (adr-0168-ledger) The superseded re-label text is still live in §8b.6 and in Checkpoint 8b's prose, with no dated note beside it (D21-58)
+- (adr-0168-ledger) PROGRESS's 8b row still describes the pre-labelling state
+- (adr-0168-ledger) ADR-0168's 'what stands' list omits ADR-0080 d2's first sentence, and the README's 0080→0111 row still says 'Decisions 1–4 stand'
+- (threat-model) s8d §8d.3's forward-ref census (81 total, 64 by ADR-0042's letter) is stale by one at HEAD: threat-model's letter-licensed back-ref was deleted, and the D21-60 note does not restate the figure
+- (threat-model) Round-5 bullet still says 'The seven shipped rows stay green (threat-model's evidence…)' although condition (c) now iterates six SHIPPED_D2_ROWS
+- (threat-model) D21-59's heading says a richer-context Jev arm is 'the only road back', but its body and the PROGRESS row name two re-entry routes
+- (quality-block-tests) ac527_empty_set_terminal_condition's doc now puts the 2026-09-26 figure (93) inside the sentence dated round 4, instead of striking the old figure and adding a new dated edit
+- (checkpoint-crossfile) The D21-60 note in s8d sits in the design section §8d.3; §8d.10's test list and mutant table, which s8d builds and kills from, do not carry the fixture or the D59b row (refuted to minor by both refuters)
+- (checkpoint-crossfile) The §8b.9 Checkpoint prose still claims a re-label check that section (9) no longer runs
+- (checkpoint-crossfile) PROGRESS §1's s8b status row is stale after the delta
+- (checkpoint-crossfile) s8d's recorded forward-ref census (81 total / 64 letter) predates D21-59's removal of a letter-licensed ref
+
+**Round 9** *(dated 2026-09-26, the same delta plus round 8's fixes)*: **no blocker or major**, so the rounds stop here. The minors that round 8's own edits introduced were fixed (s8d's D59b kill column and "three refuse", the owed confirmation in §8b.10, the disclosure's ground for Amendment 5's blindness, and the D21-58 strike restored to a qualified reason). Recorded, not fixed:
+- (ssev-method) Jev's recorded `confidence` is not `(3 × top probability − 1) / 2`, although METHOD-SEV Amendment 4 and ADR-0168 both say it is
+- (adr-0168-ledger) ADR-0168's Context and closing confidence paragraph still cite the operator as corroborating the branch, which the new disclosure contradicts
+- (adr-0168-ledger) ADR-0168 clause 2 limits terminal conditions to bullet 2, although clause 3 keeps bullet 1's confidence arm standing
+- (threat-model) The records say the reviewer's findings reach the human through residual-gate, but that gate only opens when a residual exists
+- (threat-model) §8b.5's list of ledger lines a changelog row may cite leaves out D21-59
+- (quality-block-tests) §8b.8's M-D1 paragraph keeps a sentence about 'the refused row' after the D21-59 edit made the reading refused=0
+- (quality-block-tests) Two earlier-round bullets in §8b still cite the pre-D21-59 test pin and constant name with no dated note
 
