@@ -797,12 +797,17 @@ impl Route {
 }
 
 /// The four port methods a `port` row reaches (ADR-0135's map, now the registry's `port` rows).
+///
+/// *(Renamed 2026-09-26, s8c refuting round 1: the fourth variant was `ChangeSummary`, and Checkpoint 5's
+/// rk-kernel ban, with its copy in Checkpoint 8a guard (6), reads any code line naming that word as the type
+/// ADR-0135's surviving forbids keep out of production `rk-kernel`. The verb (`change_summary`) and the
+/// output kind's string are unchanged.)*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PortMethod {
     Build,
     Test,
     Lint,
-    ChangeSummary,
+    SummariseChanges,
 }
 
 impl PortMethod {
@@ -813,7 +818,7 @@ impl PortMethod {
             "build" => Some(Self::Build),
             "test" => Some(Self::Test),
             "lint" => Some(Self::Lint),
-            "change_summary" => Some(Self::ChangeSummary),
+            "change_summary" => Some(Self::SummariseChanges),
             _ => None,
         }
     }
@@ -825,7 +830,7 @@ impl PortMethod {
             Self::Build => "BuildReport",
             Self::Test => "TestReport",
             Self::Lint => "LintReport",
-            Self::ChangeSummary => "ChangeSummary",
+            Self::SummariseChanges => "ChangeSummary",
         }
     }
 }

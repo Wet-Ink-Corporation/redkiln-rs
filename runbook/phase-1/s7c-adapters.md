@@ -2034,7 +2034,10 @@ one for each.
 `expected_test_count` of 2, or `Ok` without a spawn marker — the fixture project's tests write one — and by
 `.expect("change_summary")` on the unchanged body; the row supplies its own `(path, classification)` pairs, so a
 disagreement with the fake's table is not something this body observes); `ac328_affected_selection_unsupported_without_probe`
-(red by a `basis: affected` record under `Probe::None`, or by a row carrying an invented `Probe::Recorded`);
+(red by a `basis: affected` record under `Probe::None`, ~~or by a row carrying an invented `Probe::Recorded`~~ *(dated
+2026-09-26, s8c build, refuting round 1: the struck clause holds for the Node crate only. In the Rust crate, `s8c` P5 re-pointed the test at a controlled probe-less registry and struck its
+invented-probe half, because record T = ADR-0169 decision 7 rule 1 (proposed) honours any `Recorded` row; its red
+there is a `basis: affected` record, or an `Affected` selection that is not refused, under `Probe::None`)*);
 `ac329_report_conforms_no_prose_parse` (nine negatives, one per member; red by the decoy — the Rust fixture's
 `build.rs` emits `cargo:warning=test result: ok. 99 passed; 0 failed` and `cargo:warning=test phantom ... ok` on
 every build, the Node fixture's test prints `Tests  99 passed`; a summary parser reports 99, an unanchored `... ok`

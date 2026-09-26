@@ -253,7 +253,11 @@ fn ac492_unknown_capability_token_fails() {
 
 /// **AC-328.** The `affected-selection` row is present, dated and probe-less; selection is
 /// refused with `Unsupported("affected-selection")` from it; no run produces `basis: affected`;
-/// a row with an invented probe is refused, never honoured.
+/// ~~a row with an invented probe is refused, never honoured.~~ *(Struck 2026-09-26, s8c refuting
+/// round 1: the P5 amendment below dropped that half, and this summary still stated it. Under
+/// record T = ADR-0169 decision 7 rule 1, proposed, the Rust adapter honours any `Recorded` row,
+/// so no assertion here refuses an invented probe. The Node crate's test of the same name keeps
+/// its invented-probe half.)*
 ///
 /// **Not discharged here, and said so:** the Verified-by's *"a fixture adapter with an expired
 /// `verified_on` that must produce `Unsupported`"*. Staleness needs a pin the date is compared

@@ -734,6 +734,16 @@ fixtures under `crates/rk-kernel/tests/fixtures/registries/verbs/` gain `inputs`
 header note (`deploy`/`metrics` `toolchain`, `test`/`lint` `port`); nothing else in them moved, and
 `memo::ac018_live_verb_may_not_memoise` is green over them.
 
+*(dated 2026-09-26, s8c build, refuting round 1.)* **The fourth `PortMethod` variant is `SummariseChanges`, not `ChangeSummary`.** As first built it was
+spelled `PortMethod::ChangeSummary`, and Checkpoint 5's rk-kernel ban (its `k_filter`, *"code lines only, strings
+blanked"*, matching `\bChangeSummary\b`) and its verbatim copy in Checkpoint 8a guard (6) fired on four code lines:
+the variant, its `from_verb` and `output_kind` arms in `memo.rs`, and the executor's arm in `runtime/step.rs`. The
+ban reads the word, not the type, and ADR-0135's surviving forbids keep the type out of production `rk-kernel`, so
+the variant was renamed and neither guard was amended. The verb (`change_summary`) and the output kind's string
+(`"ChangeSummary"`, blanked by the filter) are unchanged. Both checkpoints' non-cargo portions, extracted from the
+stage files' bytes, pass on the renamed tree, and their nine identical ban lines fail on a scratch copy of
+`crates/rk-kernel/src` with the old name restored at the executor's arm (`scratchpad/s8c/r1fix_red.py`).
+
 Every row declares:
 
 - `outputs`, the typed output kind;
@@ -1532,7 +1542,7 @@ never an erratum** (ADR-0092 rule 1). An accepted body is never edited.
 | label | executes | supersedes IN PART — the sentence, quoted | stands, and is said to stand |
 | --- | --- | --- | --- |
 | **T** — the outcome and the selection | D21-42 1a, 4c (adapter side); D21-43 N4 (§8c.1's parser) and N25's `build` outcome (§8c.2); D21-48 X15 (nextest installed and supported, §8c.1); discharges RT-6, reverses RT-22, discharges R-9's transport and RT-26's OWED note against ADR-0094 decision 1 | **ADR-0162 decision 4**: *"`toolchain.test(selection)` is the boolean, because its contract is *"`Ok(count)` only on a green suite"* (RT-22) — so `is_err()` **is** "fails""*. **ADR-0094 decision 1**: *"`test` = `cargo test --workspace`"*, in three respects only: an `Affected` run's `-p` set, `--no-fail-fast` on every run child (§8c.1 rule 4), and, where nextest runs, the doctest companion child beside `cargo nextest run`, which runs no doctests (§8c.1; *D21-48 (2026-09-24)*, X15). Record T's evidence names the installed nextest version, which is the pin | ADR-0094 decision 1's *"(or `cargo nextest run` where present, recorded on the report)"*, which T executes and does not supersede (D21-48 X15); ADR-0162's four cells, the both-fail cell, the `--` selection rule and the ephemeral reference worktree; ADR-0094's whole-suite package set, and its *"`build` = `cargo build --workspace`"* (`--message-format=json` changes the stream that is read, not what is built); ADR-0148 whole (`s8d`'s) |
-| **V** — the verb registry and the value table | D21-42 1b, 4a; D21-43 N14 (the source tables) and N25's `setup` verb; `RK-D-TIMEOUT`'s resolution (§8c.6); fills D21-10's gap. It owns the Rust verb handlers, and `s8g`'s R4 cites it | **ADR-0135 clause 1**: *"The map is closed and holds exactly four entries"*. **Clause 6**: *"The 29 unmapped verbs are recorded as an open gap, owned by no stage in this phase"*, for the five rows landed. The `## Decision` sentence *"It adds no method to the `Toolchain` port: the count stays **six**, as Checkpoint 7a asserts"*. The forbids bullet *"Forbids adding a port method to satisfy a catalog verb"*, **for the one generic method only**, together with that bullet's second sentence, *"The port's six are ADR-0003's and ADR-0094's, and Checkpoint 7a counts them"*: the count moves, and *"Checkpoint 7a counts them"* is measured false. **ADR-0162's forbids bullet** *"Forbids a seventh method on the `Toolchain` port, and forbids applying a mutation patch from `rk-cli`"*: **its seventh-method half only**, likewise. The patch half stands here, and `s8g`'s verify record may move it for the verify gate's declared AC mutations alone | ADR-0135 clause 2 (the bare-name refusal), clause 4 (`change_summary` is never synthesised) and clause 5 *(noted 2026-09-25, s8a fix round 2, ADR-0165: clauses 4 and 5 stand only as ADR-0165 left them. Decision 4 stands for the Node adapter, and for the Rust adapter's refusal of an empty or unresolvable range and of a range carrying a `Binary` or LFS pointer path. Decision 5 stands without its Checkpoint 5 grep sentences. Record V's what-stands cell cites ADR-0165 for both)* *(noted 2026-09-25, s8a fix round 8: ADR-0165 decision 9 was narrowed after round 2, and the restatement above is superseded by it. At round 5 decision 5's bold lead, *"**The kernel names `ChangeSummary` in no type position.**"*, and its clause *"without the type ever appearing in a signature or a binding in `rk-kernel`"* moved with the fourth forbids bullet, in part and only as far as a test double's impl signature under `tests/`. At round 6 decision 4's *"Both real adapters return … from a row dated `2026-09-18` …"* was superseded in part for the Rust adapter as a whole, and stands for the Node adapter only. Record V states what stands from ADR-0165 decision 9, not from this cell's round-2 wording)*, and its bullet *"Forbids reading the adapters' `Capability` enum as a verb table, or extending it with catalog verbs"*: **the verb table is `registry.toml`, and the five-token `Capability` enum is untouched**. Checkpoint 7c digests its four byte-equal bodies |
+| **V** — the verb registry and the value table | D21-42 1b, 4a; D21-43 N14 (the source tables) and N25's `setup` verb; `RK-D-TIMEOUT`'s resolution (§8c.6); fills D21-10's gap. It owns the Rust verb handlers, and `s8g`'s R4 cites it | **ADR-0135 clause 1**: *"The map is closed and holds exactly four entries"*. **Clause 6**: *"The 29 unmapped verbs are recorded as an open gap, owned by no stage in this phase"*, for the five rows landed. The `## Decision` sentence *"It adds no method to the `Toolchain` port: the count stays **six**, as Checkpoint 7a asserts"*. The forbids bullet *"Forbids adding a port method to satisfy a catalog verb"*, **for the one generic method only**, together with that bullet's second sentence, *"The port's six are ADR-0003's and ADR-0094's, and Checkpoint 7a counts them"*: the count moves, and *"Checkpoint 7a counts them"* is measured false. **ADR-0162's forbids bullet** *"Forbids a seventh method on the `Toolchain` port, and forbids applying a mutation patch from `rk-cli`"*: **its seventh-method half only**, likewise. The patch half stands here, and `s8g`'s verify record may move it for the verify gate's declared AC mutations alone. *(dated 2026-09-26, s8c build, refuting round 1.)* **ADR-0137's `## Decision` sentence** *"It does not add or remove a port method; the count stays six."*: the count moves to seven, and the sentence sits under `## Decision`, so ADR-0092 rule 1 makes it a supersession in part, not an erratum (E-0137-1's own reading). Back-link `superseded_by: ["0139", "0140", "0170"]` | ADR-0135 clause 2 (the bare-name refusal), clause 4 (`change_summary` is never synthesised) and clause 5 *(noted 2026-09-25, s8a fix round 2, ADR-0165: clauses 4 and 5 stand only as ADR-0165 left them. Decision 4 stands for the Node adapter, and for the Rust adapter's refusal of an empty or unresolvable range and of a range carrying a `Binary` or LFS pointer path. Decision 5 stands without its Checkpoint 5 grep sentences. Record V's what-stands cell cites ADR-0165 for both)* *(noted 2026-09-25, s8a fix round 8: ADR-0165 decision 9 was narrowed after round 2, and the restatement above is superseded by it. At round 5 decision 5's bold lead, *"**The kernel names `ChangeSummary` in no type position.**"*, and its clause *"without the type ever appearing in a signature or a binding in `rk-kernel`"* moved with the fourth forbids bullet, in part and only as far as a test double's impl signature under `tests/`. At round 6 decision 4's *"Both real adapters return … from a row dated `2026-09-18` …"* was superseded in part for the Rust adapter as a whole, and stands for the Node adapter only. Record V states what stands from ADR-0165 decision 9, not from this cell's round-2 wording)*, and its bullet *"Forbids reading the adapters' `Capability` enum as a verb table, or extending it with catalog verbs"*: **the verb table is `registry.toml`, and the five-token `Capability` enum is untouched**. Checkpoint 7c digests its four byte-equal bodies |
 | **B** — the step bound | D21-42 4b; discharges ADR-0140 decision 4's OWED item for **tool** steps | *D21-48 (2026-09-24):* X13 took the breadth: *"**Record B supersedes, each in part and each quoted:** ADR-0140 decision 1, decision 2's sentence, decision 4, the first two forbids bullets, and ADR-0099 decision 2's *"under the same timeout"*."* Each moves for tool steps. **ADR-0140 decision 1**: its withdrawal of ADR-0137 clause 5's *"while a step's own `timeout_secs` remains the kernel's"*, which it says *"is **withdrawn as false**"*. For a tool step that clause is true again under 4b. **Decision 2's sentence**: *"It is not a backstop, because there is nothing behind it"*. **Decision 4**: *"The catalog's `timeout_secs` declarations are recorded as UNREAD"*. **The first two forbids bullets**: *"Forbids describing the construction-time `timeout` as a *backstop*, a *ceiling behind* another bound, or an *outer fence*"* and *"Forbids any prose, docstring or record asserting that a step's declared `timeout_secs` is applied, enforced or honoured by the kernel or by a toolchain adapter"*. **ADR-0099 decision 2**: *"the two Toolchain adapters run bounded commands under the same timeout"*, because a per-call step bound is not the same timeout. D21-42 4b listed decision 1 alone, and X13 settles the other sites | ADR-0140 decision 3 (the 3600 s default), decision 5, and its bullets on lowering the default and on `ActivitySpec`. Decision 5 stands **here**. `s8d`'s R1 supersedes it in part for per-step specs (*"A future per-step bound may not be built by overloading it"*, and its forbids bullet *"forbids repurposing it as one"*), and record B says so, so that the two records read as one. ADR-0099 decision 2's no-token half (*"without a token"*) stands |
 
 **Errata and dated corrections, in the same work commit:**
@@ -1589,8 +1599,12 @@ module docs, `review_pass.rs` and `tests/it/review_pass.rs`), and `BasisReason::
 port"*, and the module doc's selection-type routing), both adapters' crate docs (*"the six methods Checkpoint
 7a counts and no seventh"*, and *"What the six port methods do"*), both `report.rs` module docs (*"RT-6: the
 port stays six methods"*, struck), the retired inherent `verify_report` docs (removed with the methods),
-`review_pass.rs`'s `run` doc and `tests/it/review_pass.rs`'s mutate message. `BasisReason::PolicyForced`'s
-dated doc note is still owed to the slice that lands `Affected` rule 3.
+`review_pass.rs`'s `run` doc and `tests/it/review_pass.rs`'s mutate message. ~~`BasisReason::PolicyForced`'s
+dated doc note is still owed to the slice that lands `Affected` rule 3.~~ *(dated 2026-09-26, s8c build, refuting
+round 1: not owed. P5, the slice that landed `Affected` rule 3, wrote it, and it is in `5561afa`: a dated note above
+`PolicyForced` in `crates/rk-types/src/verify.rs`, beginning *"(Noted 2026-09-26, s8c build, P5; record T = ADR-0169
+decision 7 rule 3, proposed.)"*. It is a plain `//` comment, not a `///` doc line, so the exported schema's
+description is unchanged.)*
 
 *(dated 2026-09-26, s8c build, D63.)* **Record V (ADR-0170, still `proposed`) gains, by edit to a proposed record:**
 decision 5's sentence on `cvss-unscorable` (D21-63, provisional) and the forbids line *"Counting an advisory whose
@@ -2148,6 +2162,36 @@ runs. In the same pass, through the no-dispatch wrapper:
 - `cargo test --workspace --no-fail-fast` rc 0: **866 passed / 0 failed / 9 ignored over 44 result lines** (floor 862).
 This is a diagnostic reading. It is not the formal Checkpoint 8c.
 
+*(dated 2026-09-26, s8c build, refuting round 1.)* **Two conjunct-deletion mutants in `check_summary`, run from `scratchpad/s8c/r1fix_mutants_libtest.py`**
+(anchor asserted exactly once, tmp + `os.replace`, restored in `finally`, sha256 `a7759454…` re-checked), each over
+`libtest_lines::a_summary_that_disagrees_with_its_records_is_unverifiable` by `--exact` with the executed count
+asserted at 1. **R1-passed** (`s.passed == block.passed` → `true`) and **R1-failed** (`s.failed == block.failed` →
+`true`) both SURVIVED on the test as committed at `f6501ef`: its case (a) moved `passed`, `failed` and the verdict at
+once, so any one conjunct refused. Two cases were added to the same test, (f) with `passed` alone disagreeing and (g)
+with `failed` alone disagreeing, and both mutants were then KILLED at rc 101, R1-passed at case (f) (*"left:
+Ok(Tally { passed: 2, failed: 0, …"*) and R1-failed at case (g) (*"left: Ok(Tally { passed: 1, failed: 1, …"*). They
+are extra mutants beyond the table; the named test and the checkpoint's list are unchanged.
+
+*(dated 2026-09-26, s8c build, WHOLE pass after refuting round 1.)* **Every table mutant re-run over the tree carrying
+round 1's fix** (the `PortMethod::SummariseChanges` rename in `memo.rs`/`step.rs`, cases (f)/(g)), uncommitted on
+`f6501ef`. The drivers that last killed each row were copied to `scratchpad/s8c/whole4_{p3,p4,p4b,p5,p6,p7,p8,d63,r1fix}_mutants.py`
+with only their output directories, tmp suffixes and labels changed, and run in sequence by `whole4_runall.py`.
+Results are under `scratchpad/s8c/whole4-mut/`. **M1–M37 all KILLED again**, each at rc 101 with the named test's own
+`FAILED` line and its executed count asserted. M25 is killed by the synthetic test and survives the golden, which is
+unobservable there, as above. The extras were killed again as well: P3's R3, P4's MB/MNX/MFB, P5's fourteen, P7's
+RED-R1/W/S/D/A reds, and R1-passed/R1-failed. `whole4_p4` stops at M26's moved anchor (anchor count 0), as `whole2_p4` did;
+`whole4_p4b` carries the re-cut M26. P7's MIN has no driver case and was not re-run. A sha256 snapshot of
+`crates/` and `.redkiln/` (1,397 files) showed 0 differences before and after. In the same pass, through the
+no-dispatch wrapper:
+- `cargo fmt --all -- --check` rc 0;
+- `cargo clippy --workspace --all-targets` rc 0 (warn-level only), and the same over `-p rk-ports --all-targets
+  --features conformance` rc 0. `-D warnings` is not the gate, and under it clippy fails with 18 errors in `rk-types`
+  (nursery lints; ci.yml and ADR-0102 decision 5 forbid promoting them);
+- Checkpoint 8c (5)–(10), extracted from this file's bytes: all 119 named tests exist by their exact module path in
+  their crate's `--test it -- --list`, and the extracted block passes;
+- `cargo test --workspace --no-fail-fast` rc 0: **869 passed / 0 failed / 9 ignored over 44 result lines** (floor 862).
+This is a diagnostic reading. It is not the formal Checkpoint 8c.
+
 **If a mutant survives, read it before strengthening anything.** A surviving mutant can mean that the property is
 unobservable from the seam the test watches. If so, the guard moves; it is not weakened. Record every result, kills
 and survivors alike, in the checkpoint output.
@@ -2207,7 +2251,7 @@ Each is claimed only for the clause named:
   resolves a substitution through the same table.
 - **The three records exist and move what §8c.7 says.** Each is located by the id recorded at write time
   (D21-47). ADR-0135's, ADR-0140's, ADR-0162's, ADR-0094's and ADR-0099's frontmatter carry the new
-  `superseded_by`.
+  `superseded_by` *(dated 2026-09-26, s8c build, refuting round 1: and ADR-0137's, for record V)*.
 - **The whole suite is green** above the floor re-derived from Checkpoint 8b's recorded count (~~774 + 78 = 852: the
   final consistency pass's 843, plus D21-48 X15's nine~~ *(dated 2026-09-26, s8c build)* 784 + 78 = 862: Checkpoint 8b's recorded 784 at
   `83d1268`, plus §8c.9's 78), over at least 44 result lines, and fmt and clippy are rc 0.
@@ -2293,7 +2337,9 @@ has='import re,sys; t=open(sys.argv[1],encoding="utf-8").read(); m=re.search(r"(
 printf '%s\n' '---' 'supersedes: ["0140"]' '---' > "$scratch/ctl-adr.md" || { echo "FAIL: could not write the control"; exit 1; }
 ctl=$(python -c "$has" "$scratch/ctl-adr.md" 0140 0099); rc=$?
 [ "$rc" -eq 0 ] && [ "$ctl" = "0099" ] || { echo "FAIL: SYNTHETIC CONTROL — the supersedes reader reported '$ctl' missing, not 0099 (rc=$rc)"; exit 1; }
-for rec in "T:$REC_T:0162 0094" "V:$REC_V:0162 0135" "B:$REC_B:0140 0099"; do
+# (dated 2026-09-26, s8c build, refuting round 1) record V's set gains 0137 (its Decision sentence "the count stays
+# six", §8c.7); the V entry read "V:$REC_V:0162 0135" until then.
+for rec in "T:$REC_T:0162 0094" "V:$REC_V:0162 0135 0137" "B:$REC_B:0140 0099"; do
   lab=${rec%%:*}; rest=${rec#*:}; id=${rest%%:*}; want=${rest#*:}
   case "$id" in [0-9][0-9][0-9][0-9]) ;; *) echo "FAIL: record $lab's id reads '$id' — write it into (3) by a dated edit when the record is written (D21-47)"; exit 1 ;; esac
   set -- references/adr/$id-*.md

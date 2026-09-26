@@ -295,6 +295,35 @@ fn a_summary_that_disagrees_with_its_records_is_unverifiable() {
         Err(ParseRefusal::SummaryDisagrees { line: 4 })
     );
 
+    // (f) *(added 2026-09-26, s8c refuting round 1)* `passed` ALONE disagrees: the verdict, `failed`
+    // and `ignored` all agree, so only the `passed` conjunct can refuse. (a) moved three members at
+    // once and could not tell a deleted conjunct from a kept one.
+    let s = lines(&[
+        "running 2 tests",
+        "test a ... ok",
+        "test b ... ok",
+        "",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    ]);
+    assert_eq!(
+        parse(&s, 0, PIN),
+        Err(ParseRefusal::SummaryDisagrees { line: 5 })
+    );
+
+    // (g) *(added 2026-09-26, s8c refuting round 1)* `failed` ALONE disagrees: one failed record, a
+    // FAILED summary claiming two, `passed` and `ignored` equal, so only the `failed` conjunct refuses.
+    let s = lines(&[
+        "running 2 tests",
+        "test a ... ok",
+        "test b ... FAILED",
+        "",
+        "test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    ]);
+    assert_eq!(
+        parse(&s, 101, PIN),
+        Err(ParseRefusal::SummaryDisagrees { line: 5 })
+    );
+
     // (e) a summary without a header, and a header without a summary.
     assert_eq!(
         parse(&lines(&["", SUMMARY_OK_1]), 0, PIN),

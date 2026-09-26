@@ -379,8 +379,12 @@ streams sat in the session scratchpad, which is not durable, so the load-bearing
   --no-fail-fast --retries 0 --color never --status-level pass --final-status-level none -- --include-ignored`, rc
   100, `Starting 4`, 3 passed, 1 failed) and its companion `workspace-red-in-a.doc.stdout` (`cargo test
   --manifest-path …/workspace/Cargo.toml --workspace --doc --no-fail-fast -- --include-ignored`, rc 0, 1 passed over
-  2 blocks): 4 passed, 1 failed in total, the libtest golden's 4 / 1. *(D21-62 B.)* Owed beside them, from P1's raw
-  captures: `project-green.list-failed.stderr` and `project-red.list-failed.stderr` (the unfiltered vector over the
+  2 blocks): 4 passed, 1 failed in total, the libtest golden's 4 / 1. *(D21-62 B.)* ~~Owed beside them, from P1's raw
+  captures:~~ *(dated 2026-09-26, s8c build, refuting round 1: they are not owed. All four were committed at
+  `5561afa`, cut from P1's raw captures, each with its expected reading beside it
+  (`project-{green,red}.list-failed.expected.json`, `project-{green,red}.filtered.tally.json`), and
+  `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` reads them.)* Beside them, committed:
+  `project-green.list-failed.stderr` and `project-red.list-failed.stderr` (the unfiltered vector over the
   fixture project, rc 104, *"error: creating test list failed"* then *"for `rk-toolchain-rust-fixture::zz_decoy`, line
   "test result: ok. 99 passed; 0 failed" did not end with the string ": test" or ": benchmark""*), and
   `project-green.filtered.stderr` / `project-red.filtered.stderr` (the same with `-E 'not binary(zz_decoy)'`, parse-only:

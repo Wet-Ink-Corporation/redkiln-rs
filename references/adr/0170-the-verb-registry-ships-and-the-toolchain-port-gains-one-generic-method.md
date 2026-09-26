@@ -1,11 +1,11 @@
 ---
 id: "0170"
-title: "**The verb registry ships, and the `Toolchain` port gains one generic method.** `.redkiln/registry.toml` fills design §4.5's verb table (D21-10's gap): every row declares `outputs`, `live`, `timeout`, `inputs` and a `route` from a closed set, and a `toolchain` row reaches the seventh port method, `run_verb(&VerbCall) -> Result<VerbOutput, StepError>`, whose output the kernel types at the boundary. The Rust adapter's `smoke`, `sca_scan`, `package` and `setup` handlers are fixed here; the registry also declares the `[checklist.*]`, `[kb.*]` and `[feed.*]` source tables and a per-toolchain value table whose every value carries its warrant under ONE rule written before any reading. Supersedes, each in part and quoted, `0135` clause 1, clause 6, its Decision sentence on the six-method count and one forbids bullet with its second sentence, and `0162`'s seventh-method forbids half; carries `D21-62` C (the advisory-database commit is read by the adapter, before and after the scan)"
+title: "**The verb registry ships, and the `Toolchain` port gains one generic method.** `.redkiln/registry.toml` fills design §4.5's verb table (D21-10's gap): every row declares `outputs`, `live`, `timeout`, `inputs` and a `route` from a closed set, and a `toolchain` row reaches the seventh port method, `run_verb(&VerbCall) -> Result<VerbOutput, StepError>`, whose output the kernel types at the boundary. The Rust adapter's `smoke`, `sca_scan`, `package` and `setup` handlers are fixed here; the registry also declares the `[checklist.*]`, `[kb.*]` and `[feed.*]` source tables and a per-toolchain value table whose every value carries its warrant under ONE rule written before any reading. Supersedes, each in part and quoted, `0135` clause 1, clause 6, its Decision sentence on the six-method count and one forbids bullet with its second sentence, `0162`'s seventh-method forbids half, and `0137`'s Decision sentence that the count stays six (added 2026-09-26, refuting round 1); carries `D21-62` C (the advisory-database commit is read by the adapter, before and after the scan)"
 status: proposed
 date: 2026-09-26
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-42 decisions 1b, 4a and 6a, D21-43 N14, N25 and the integration call (*"The Rust verb handlers are **s8c**'s record (V); the activities are **s8g**'s (R4)."*), D21-45 W3, D21-48 X4 and D21-62 C (TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-62-s8c.md); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.4–§8c.6 and §8c.7 (the proposal this record fixes); references/adr/0135 and references/adr/0162 (the sentences superseded in part); references/2026-09-08-architecture-design.md §4.5 (*"`registry.toml` (toolchain verbs and feeds; a verb's `live = true` implies `memo = false` on every step using it)"*); crates/rk-kernel/src/workflow/memo.rs (`VerbRegistry`, the one parser this record extends)
-supersedes: ["0135", "0162"]
+source: spikes/DECISIONS-2026-09-21.md D21-42 decisions 1b, 4a and 6a, D21-43 N14, N25 and the integration call (*"The Rust verb handlers are **s8c**'s record (V); the activities are **s8g**'s (R4)."*), D21-45 W3, D21-48 X4 and D21-62 C (TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-62-s8c.md); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.4–§8c.6 and §8c.7 (the proposal this record fixes); references/adr/0135, references/adr/0162 and references/adr/0137 (the sentences superseded in part); references/2026-09-08-architecture-design.md §4.5 (*"`registry.toml` (toolchain verbs and feeds; a verb's `live = true` implies `memo = false` on every step using it)"*); crates/rk-kernel/src/workflow/memo.rs (`VerbRegistry`, the one parser this record extends)
+supersedes: ["0135", "0162", "0137"]
 superseded_by: []
 related: ["0032", "0040", "0072", "0105", "0137", "0140", "0148", "0165", "0169", "0171"]
 evidence: []
@@ -327,6 +327,12 @@ two findings.
 - **ADR-0162's forbids bullet** *"Forbids a seventh method on the `Toolchain` port, and forbids applying a mutation
   patch from `rk-cli`"*, **its seventh-method half only**. The patch half stands here; `s8g`'s verify record may move
   it for the verify gate's declared AC mutations alone.
+- *(dated 2026-09-26, s8c build, refuting round 1)* **ADR-0137's `## Decision` sentence** *"It does not add or remove a port method; the count
+  stays six."*, in its closing paragraph *"What this record does NOT decide"*. The count moves to seven. The
+  sentence sits under `## Decision`, so ADR-0092 rule 1 routes it here and not to an erratum, as E-0137-1 routed
+  clause 5's false sentence. The rest of that paragraph (the artifact-kind sentence, the 29 unmapped verbs and
+  criterion (1)) and every clause and forbids bullet of ADR-0137, as `0139` and `0140` left them, stand. Back-link:
+  `superseded_by: ["0139", "0140", "0170"]`.
 
 **What stands.** ADR-0135 clause 2 (the bare-name refusal); clause 3 (`classify` and `detect` are not routed); and
 clauses 4 and 5 **only as ADR-0165 decision 9 left them**: decision 4 stands for the Node adapter, and for the Rust

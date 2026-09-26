@@ -538,7 +538,7 @@ impl super::Runtime {
             // The one whose `Ok` this crate never binds (ADR-0135 clause 5 as ADR-0165 left it):
             // called, and the value dropped. The empty range still refuses by name in both real
             // adapters (ADR-0135 decision 4 stands for the empty range).
-            ToolCall::Port(PortMethod::ChangeSummary) => {
+            ToolCall::Port(PortMethod::SummariseChanges) => {
                 toolchain.change_summary("", bound).map(|_| ())
             }
             // **The seventh method** (record V decision 2): a row with no inputs, its output typed
