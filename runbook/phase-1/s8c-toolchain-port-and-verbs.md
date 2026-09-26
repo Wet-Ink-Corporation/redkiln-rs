@@ -3254,3 +3254,67 @@ The draft's third item, `toolchain:backlog`'s producer, is settled by D21-46 R7 
   and 4.0); `s8g` §8g.6's precondition carries the narrowing by its own dated notes.
 
 ---
+
+### 8c.13 The refuting rounds, and the minors they leave named *(dated 2026-09-26, s8c build)*
+
+Seven adversarial refuting rounds ran over this stage's work, as a workflow, on the model of `s8b` §8b.11. Each
+round had five finder dimensions (spec conformance, tests and mutants, records, the checkpoint, and cross-file
+safety), and every blocker or major went to two refuters. The stopping rule is the one `s8b` used: *until a round
+finds no blocker or major, with the remaining minors recorded as named findings*. Round 7 found no blocker or major,
+so the rounds stopped there. The confirmed blockers and majors, by round (one defect reported by several dimensions
+counts once):
+
+| round | confirmed | the defect | fixed at |
+| --- | --- | --- | --- |
+| 1 | 1 blocker | The kernel's new `PortMethod::ChangeSummary` variant tripped Checkpoint 5's `rk-kernel` `ChangeSummary` ban, and Checkpoint 8a guard (6)'s copy of it, so Checkpoint 8c (15)'s replay of Checkpoint 5 failed. The variant is now `PortMethod::SummariseChanges`. | `088e35f` |
+| 2 | 2 majors | `rk_ports::conformance::validate_report` went red in no test (mutant M38, now killed). The pinned libtest parser tripped Checkpoint 7c's AC-329 prose-parse ban, now amended in `s7c` by dated note to admit that one file (§8c.12's sibling notes). | `3309dd2` |
+| 3 | 3 majors | ADR-0169 still called the writer-seam option not taken and D21-62's rulings provisional after D21-64. `s8d` §8d.3a (b)'s receiver note collided with the same stage's X8 bump and left out Checkpoint 8b (3)'s `migration-dry-run:3` pin. `s8g` §8g.2's `lattice.py` cross-check could not run as written (`--packs` takes pack ids, not a path). A fourth finding, that D21-65 and D21-66 described flip-time edits never made, was confirmed at minor and fixed as well (E-0168-1 and dated ledger corrections). | `3e4b260`, `5e67c82` |
+| 4 | 2 majors | No test covered `build_verdict`'s `Failing` arm, the kernel's only reading of a red build (M46–M48). Checkpoint 7b's two facet-predicate bans were red when run whole, on test strings `s8b` added; now amended in `s7b` by dated note (§8c.12's sibling notes). | `91fab97` |
+| 5 | 1 blocker | Mutant M29 (`if false && !NEXTEST_PINNED.contains(&version)`) leaked into commit `91fab97`: the nextest version pin was disabled, so an unpinned version parsed on trust, and the whole suite and Checkpoint 8c (7) and (13) were red. The pin was restored. | `b4b8f5d` |
+| 6 | 1 major | No test covered `decode_verb_output`'s `SmokeStatus::Empty` arm, so an empty smoke result could walk (M51). A second finding, that the closed decode table's refusals were observed for `SmokeResult` only, was refuted to minor by both refuters and fixed as well (M52, M53a–e). | `cf2f17c` |
+| 7 | **0** | Dry. The rounds stop here. | — |
+
+Every blocker and major was fixed. The fix commits carry the red-first readings, and §8c.9's mutant table carries
+the kills. The minors below were **recorded, not fixed**. Each is one line, with the reason it was recorded rather
+than fixed. None of them moves a checkpoint section, a ruling or a floor.
+
+**Still open:**
+
+- (round 2, spec conformance) `scan_timeout`'s warrant timed `cargo audit` and `cargo deny` only, and it also bounds
+  `tech-debt-assessment`'s clippy `lint` step. Reason: a lint site's own key or a clippy-timed warrant is a new
+  measurement no later stage file names; reported as §8c.12's handed-on item 5, shipped value unchanged.
+- (round 2, spec conformance and cross-file safety) CI provisions no pnpm or node, so the `setup` test and the Node
+  adapter's suite fail their preflight on a hosted runner. The audit tooling half was fixed at `3309dd2`. Reason:
+  the pnpm step is `s8j`'s under D21-42 14a; reported as §8c.12's handed-on item 6.
+- (round 3, records and the checkpoint) The re-measure pin `2f3f6ab` is reachable only through the local ref
+  `refs/redkiln/pins/s8c-remeasure`, which a clone does not fetch. Documented at `3e4b260` (§8c.5, record V's
+  evidence, the registry comment). Reason: the remedy is to push the ref (an operator act; no push is made under the
+  AFK rule) or to re-pin the four rows by dated edit; the choice is owed before the close and is not taken here.
+- (round 4, records) The re-measure pin predates `crates/` changes (D67's package `e84d094` and round 4's fix).
+  Disclosed in record V's evidence at `91fab97`, and the value is kept on that reading (slowest child 161 s against
+  the 180 s that would move `test_timeout`). Reason: whether a re-take at the close commit is owed is the
+  operator's, as D21-64 ruling 8 left it.
+- (round 4, cross-file safety) `s8a`'s dated P5 note beside Checkpoint 8a guard (6)'s allowlist amendment still
+  reads *"D21-62 C, provisional"*, with no *"confirmed by D21-64"* beside it. The PROGRESS rows the same finding named
+  were fixed at `4f3ce71`. Reason: the sentence is in another stage's closed file, outside this stage's fix scope;
+  it is a one-line dated note for whichever package next edits `s8a`.
+- (round 7, tests) No test checks a CVSS band boundary (`critical` ≥ 9.0, `high` 7.0, `medium` 4.0): a scorer or
+  band table off by one tenth at a boundary survives. Reason: a new test with its mutants is source work, past the
+  stopping rule; record V's thresholds and the scorer's differential test against `cvss::v3` stand.
+
+**Fixed in this package** (dated notes, no source change): the ADR README's open-questions sentence and its `0169`
+and `0170` index rows no longer call D21-62's rulings provisional, and the sentence names D21-64 ruling 9 as the flip
+condition (rounds 4, 5, 6 and 7); `0168`'s index row carries `(errata)` for E-0168-1, and the *"Errata live in"*
+enumeration names `0168`, recounted off disk at **41** headings, 40 records plus AC-520 (rounds 4, 5 and 6); and
+ADR-0171's source list cites D21-64 ruling 9, the flip condition ADR-0169 and ADR-0170 cite (round 5).
+
+**Fixed earlier, not repeated here:** round 1's minors at `088e35f` (the libtest summary's `passed` and `failed`
+conjuncts pinned, the AC-328 test doc and Checkpoint 7c's invented-probe red struck, ADR-0137's *"the count stays
+six"* superseded in part by record V, the P4 note's *"still owed"*, ADR-0169's *"Owed"* goldens); round 2's at
+`3309dd2` (the loader's `timeout_secs` message, the README purpose line's `0137`, controls for Checkpoint 8c (3) and
+(12), the audit tooling before CI's `test`); round 3's at `3e4b260` (the CVSS hand-on notes in `s8g` and §8c.12, the
+v4.0 test's 7.7, (15)'s advisory-database reading before the 7a replay); round 4's at `91fab97` and `4f3ce71` (the
+`lint` row's construction-bound claim struck, the v3 scorer's unknown-metric refusal M49, the re-executor's `Empty`
+arm M50, D21-62's and D21-63's owed lines, `s8j`'s receiver notes); and round 6's at `cf2f17c` (nextest's exit-96
+argument rejection a named refusal M54, Checkpoint 8c's provisional-checkpoints bullet, the stale `MAPPED_VERBS`
+comments).

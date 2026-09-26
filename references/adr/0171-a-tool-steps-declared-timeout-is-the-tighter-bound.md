@@ -4,7 +4,7 @@ title: "**A `tool` step's declared `timeout_secs` is the tighter bound.** `catal
 status: proposed
 date: 2026-09-26
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-42 decision 4b (*"`min(step, construction)` is passed into the port call. Supersedes ADR-0140 c1 in part, and the 298 declarations become real."*), D21-43 N16 and D21-48 X13 (the supersession's breadth); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.6 and §8c.7 (the proposal this record fixes); references/adr/0140 and references/adr/0099 decision 2 (the sentences superseded in part); references/adr/0137 clause 5 (the clause ADR-0140 decision 1 withdrew); crates/rk-kernel/src/catalog.rs, crates/rk-cli/src/config.rs and crates/rk-cli/src/verbs/run.rs at `6f70e47`
+source: spikes/DECISIONS-2026-09-21.md D21-42 decision 4b (*"`min(step, construction)` is passed into the port call. Supersedes ADR-0140 c1 in part, and the 298 declarations become real."*), D21-43 N16 and D21-48 X13 (the supersession's breadth); *(dated 2026-09-26, s8c refuting round 5 minor)* D21-64 ruling 9 (this record's flip condition, *"Records T, V and B (ADR-0169, 0170, 0171) flip at `s8c`'s close if the formal Checkpoint 8c passes whole and a refuting round finds no blocker or major"*, the condition ADR-0169 and ADR-0170 cite); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.6 and §8c.7 (the proposal this record fixes); references/adr/0140 and references/adr/0099 decision 2 (the sentences superseded in part); references/adr/0137 clause 5 (the clause ADR-0140 decision 1 withdrew); crates/rk-kernel/src/catalog.rs, crates/rk-cli/src/config.rs and crates/rk-cli/src/verbs/run.rs at `6f70e47`
 supersedes: ["0140", "0099"]
 superseded_by: []
 related: ["0137", "0139", "0148", "0169", "0170"]
