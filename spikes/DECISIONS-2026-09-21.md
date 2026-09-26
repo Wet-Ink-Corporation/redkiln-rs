@@ -2330,3 +2330,200 @@ refuses.
 
 **Declined:** moving `forward_ref_lint` forward into `s8b`. The operator first ruled "fix it in s8b"; then, shown that
 `s8d` already carries the whole design, chose this.
+
+---
+
+## D21-61 · `s8b` closes D21-2's RAISED reading: the catalog's quality instruments read `.redkiln/`, the lattice is Rust, and ADR-0080 d2 is executed
+
+**Taken 2026-09-26 by the session executing `s8b`, at the stage's close, as `s8b` §8b.7 prescribes.** It records and
+cites. It re-takes no ruling, flips no record and writes no go-ahead line. Every figure below is quoted from the stage
+file's recorded readings, the tree or the committed records; none is new here.
+
+S-SEV record: ADR-0168
+
+**Why.** D21-2 left a reading open: *"whether an `expr` on a `kind = "check"` step carrying `on_false` is the
+*terminal condition* ADR-0080 decision 2 forbids is a reading of the record, RAISED and not taken"*. D21-41 (h)
+executed ADR-0080 d2 *"as written, in any quoting"* and left `adversarial-review`'s `continue` rows *"an open, named
+reading"*. D21-42 11a rewrote that row to re-execution and *"Closes D21-2's RAISED reading"*; 11b brought the
+one-member rows into scope, and D21-43 N18 ruled the five rows that have no re-execution quantity. (D21-42 11c is the
+separate ruling on ADR-0080 d3's threshold T, recorded below.) `s8b` executed those rulings over the shipped pack. The stage's BEFORE reading was 7 live `expr` rows carrying
+`findings.none(evidence in [` in `.redkiln/catalog`, and no catalog-quality instrument on the tree read `.redkiln/`.
+
+**Recorded — D21-2's RAISED reading, closed.**
+- An `expr` on a `kind = "check"` step that carries `on_false` **is** the terminal condition ADR-0080 d2 forbids. The
+  reading is settled by ADR-0103 d3, by ADR-0080's Context, and by design §1.2's *"P7's policy predicate"* row. It is
+  not a new ruling.
+- **`adversarial-review`'s disposition is (i), taken by D21-42 11a:** *"no blocking finding survives re-execution"*,
+  read from `review::confirm`'s outcome. `verdict` reads `record.blocking.len() == 0` over `${record.outputs}`
+  (`Confirmed::block_set()`), and `on_false = "continue"` is unchanged. `adversarial-review` 3 → 4.
+- **The one-member rows are refused under the forbids bullet's `findings.none(evidence in [...])`.** These are the
+  four `['Reproduced']` rows of D21-42 11b: `instrumented-trace-analysis`, `threat-model`, `user-story-ac` and
+  `vertical-slicing`. **Disclosure, as the packet asked:** this **extends F37's measurement**, which was of the
+  two-member predicate on one graph. AC-527's refusal 2 carries the extension (D21-55's per-class witness). It was not
+  measured on the one-member rows' own graphs.
+
+**Recorded — D21-43's rulings on §8b.1's four questions, cited and not re-taken.**
+- Q1 and Q2 were closed by **N18**. The corpus is F37's 188 findings, with E3's six excluded (D21-54 then made it a
+  sequential sample; it continued to 188). The five rows took N18's letters: (C) for `differential-debugging` and
+  `instrumented-trace-analysis`, (D) for `user-story-ac` and `vertical-slicing`, and (A) for `threat-model`, which
+  D21-59 has since superseded for that row.
+- **The (D) rows read d2 bullet 2's dash list as illustrative**, as N18 requires this entry to record.
+  `check.failed == 0` is `SelfCheck`'s count, over a self-check step that reads the loop-back target's outputs. It
+  is neither a loop-back count, a re-execution outcome nor a findings delta, and it meets condition (a) only on that
+  reading.
+- Q3 and Q4 were closed by **N26**. `rust` and a `surfaces` binding are added for the `.redkiln/` reading by a dated
+  METHOD-P amendment (below), and the memo lint runs over `.redkiln/` after its 14 activities are repaired.
+
+**Recorded — `root-cause` detached from F37's artefact.** `root-cause` goes 4 → 5: `policy` binds
+`{ report = "${confirm.outputs}", findings = "${adversary.outputs?}" }` with `expr = "report.failed > 0"`. The quantity
+is bullet 2's re-execution outcome: `confirm` re-runs `${hypothesise.outputs.discriminating_test}`, and `hypothesise`
+is the loop-back target. The changelog row reads *"Detached from F37's pinned artefact `306b58ba7504` (v4); F37's
+measurements are of v4."*
+
+**Recorded — the parity figures, and the Python's demotion.**
+- `rk_kernel::lattice` ports `lattice.py` v2 (D21-42 13b). `lattice::p6_lattice_parity_over_the_p9_tree` and
+  `lattice::p6_validate_parity_over_the_p9_tree` run the port over `p9_pin::root()` on `Axes::p6_registered()`. They
+  assert equality, byte for byte and digest tags included, with the goldens `p9-run.txt` (298 lines) and
+  `p9-validate.txt` (17 lines).
+- The goldens were re-derived from the Python at `P9_PIN` (`ca8f3874ed9185b419b00b21b33713ba128de217`) with Python
+  3.14.6. Their tags are `cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b`, where run10 reads
+  `cat:2d7f63b432cc`, because ADR-0164 renormalised line endings and the tags hash raw bytes. Every run10 figure is
+  reproduced:
+  - prereg-8 / all-12 `pack-default` unsat `432/155520 (0.3%)` / `432/235872 (0.2%)`;
+  - `dead=7/102`, and `dead=14/102` under the eight pre-registered packs;
+  - ties `none`;
+  - `validate: no errors` and `validate errors=0`.
+- **The six named divergences** are `crates/rk-kernel/tests/fixtures/lattice/divergences.tsv`, rows `p9-run.txt`
+  lines 113–118. They are the six `soft` cycle-example lines: `incident` (`hotfix -> build-package -> rolling-deploy
+  -> rollback-mitigation -> hotfix`), `initiative` and `tech-debt` (`design-doc -> adr-record -> design-doc`), and
+  `project`, `story` and `story-ue` (`design-doc -> data-migration-plan -> design-doc`).
+  - Each row is held to the soft-cycle assertion: the same pack, the same kind (`soft`), and a closed cycle over
+    optional-inclusive edges of activities that pack selected. The rows are not held to bytes.
+  - Four of the six match byte for byte today.
+  - The only assertion kind built is the soft-cycle example. A `HARD` example row or a figure divergence has no
+    weaker assertion.
+- **The Python is demoted, not deleted.** From the parity commit on, the instrument of record for AC-101–AC-104 is
+  `rk_kernel::lattice`. AC-101 and AC-102 carry dated register notes naming the tests. `lattice.py` is not edited: it
+  stays the oracle from which Checkpoint 8b section (7) re-derives both goldens on every run. Parity over `.redkiln/`
+  is **NOT MEASURABLE** by this oracle: over a staged copy, `lattice.py` exits 1 with `KeyError: 'surfaces'` in
+  `admissible`, so no 27th test joined.
+
+**Recorded — METHOD-P Amendment 19** (`spikes/METHOD-P.md`, *"Amendment 19 (2026-09-25, D21-43 N26)"*, committed at
+`bbf809c`). It amends the toolchain sentence **for the `.redkiln/` reading only**. `Axes::shipped()` is the four
+registered toolchain sets plus `("rust", ({"rust"}, {"text"}))`, and a `surfaces` binding registered before the
+shipped reading was recorded. **The `surfaces` enumeration is the empty set plus each value `.redkiln/facets.toml`
+declares, as a singleton (`auth`, `flags`, `migration`, `payments`, `secrets`): six rows.** The registered axes are
+unchanged for the p9 goldens. The covering array keeps its eight columns, including the inert `auth` column, which is
+guarded in code (D21-56). The amendment moves no kill threshold.
+
+**Recorded — the Rust lattice's wall time (SM-025).** [measured 2026-09-26 at `83d1268`, after Checkpoint 8b's formal
+run, warm debug build, through `nodispatch`] `lattice::p6_lattice_over_the_shipped_pack` (the installed pair, all four
+modes, `Axes::shipped()`), three runs by libtest's own *"finished in"*: **48.82 s, 49.00 s, 50.36 s** (median
+**49.00 s**; wall including cargo's start-up 50.2–51.7 s, against 1.4 s for an empty filter). This is a DEBUG-profile
+test run over the shipped pack, not SM-025's instrument (`lattice_run_completed { duration_ms, … }`, not built) and not
+the same input as the Python's figures, which the stage file records over the pinned p9 tree: about **2 min 10 s**
+[2026-09-24] and **167 s** alongside a parallel cargo run [2026-09-25]. SM-025's stamped figure (Step 7e's Python
+**97.3 s**) is not replaced by it; the instrument stays owed.
+
+**Recorded — the three further edits, and the three hand-offs.**
+- **N26:** the 19 `memo = false` lines in 14 activities are deleted (ADR-0097 d3). The 14 bumps are
+  `blue-green-deploy`@3, `failover`@3, `feature-flag-kill`@4, `flag-progressive-rollout`@3, `incident-command`@2,
+  `instrumented-trace-analysis`@3 (one bump, shared with its N18 edit), `migration-dry-run`@3,
+  `migration-expand-execute`@3, `rate-limit-shed`@3, `rollback-mitigation`@3, `rollback`@2, `rolling-deploy`@3,
+  `rolling-restart`@3 and `slo-monitoring`@3. `memo::ac018_live_verb_may_not_memoise` reads `.redkiln/catalog` and
+  prints `activities=102 … violations=0`. `memo::ac018_frozen_p9_catalog_is_red` keeps 19 violations at `P9_PIN`.
+- **N13:** `tdd-red-green-refactor` 2 → 3. `red-verify`'s `selection = "${red.outputs[*].tests_added}"` is read as
+  concatenation in element order (D21-48 X5).
+- **N25:** `sca-scan` 1 → 2. `clean` adds `and report.unrated == 0`, and the `exception` gate's `when` adds
+  `or ${scan.outputs.unrated} > 0`.
+- All told, twenty-two activities move `version`, one bump each, with 22 rows in the new `.redkiln/CHANGELOG.md`.
+- **Hand-off 1, to `s8c`:** the `live` flag for the twelve verbs the deleted lines ran (`smoke`, `failover`, `metrics`,
+  `flag_set`, `flag_rollout`, `trace_collect`, `migrate_dry_run`, `migrate`, `rate_limit`, `rollback`, `restart`,
+  `slo_query`). The changelog lists them.
+- **Hand-off 2, to `s8h`:** `RootCause.discriminating_test` (cross-file finding 5), which the (C) rows' `confirm`
+  binds.
+- **Hand-off 3, to `s8h`:** the `severity` field on `rk_types` `Finding` (cross-file finding 4). ADR-0168 names `s8h`
+  its owner.
+
+**Recorded — D21-47's readings as this stage applied them.**
+- **V2.** The five tests that pin a historical p9 measurement read the p9 tree at `P9_PIN` through `p9_pin`, from the
+  object store:
+  - `rigor::rigor_monotonicity_p9_historical_2026_09_13`;
+  - `memo::ac018_frozen_p9_catalog_is_red`;
+  - `quality_block::ac527_frozen_p9_catalog_is_red`;
+  - the two lattice parity tests.
+
+  Every other reader of `spikes/p9` is inventoried in §8b.3, including the two readers the inventory
+  gained at the stage's open: `tests/it/recorded_log.rs` (`facets.toml`, added at `bf12a1c`, `s8a`) and
+  `pack_validation::tdd_red_verify_projects_tests_added_per_adr_0035` (`schemas.toml`). Neither is a pin.
+  `ci.yml`'s checkouts take `fetch-depth: 0`. **Open item:** the inaccurate `SHIPPED_FACETS` name in
+  `facet_registry.rs` and `selection.rs`, which point at `spikes/p9/facets.toml`, is left as it is.
+- **V3.** The kill lines are thresholded over the eight pre-registered packs:
+  - AC-101 at `pack-default` is 432/155520 (0.3%), inside the >5% line.
+  - AC-102, pooled over all four rigor modes as its THEN reads, is 14/102 (13.7%), inside the >20% line. The
+    `pack-default`-only reading is 17/102.
+  - The installed pair is reported with `packs=2` and not thresholded: `pack-default` unsat 1296/279936 (0.46%), dead
+    56/102 over all modes, and ties and hard cycles 0 (AC-103's zero tolerance holds over the pair).
+  - The pair's list of 56 is not yet printed, as SM-027's pointer note discloses.
+- **V4.** `adversarial-review`'s `verdict` follows `record`, giving the step order `clone`, `review`, `override`,
+  `record`, `verdict`, `emit`. `quality_block::adr0072_d2_edits_are_versioned_and_changelogged` asserts the order
+  (mutant M29), and so does Checkpoint 8b section (3d).
+- **V5.** Condition (c)'s *"the loop"* is read as *"something the reviewer varies"*, and `root-cause`'s derivation
+  above is confirmed under it. D21-57 extends the same reading to ADR-0081 d1's "consumes" (`forward=16 back_edge=4`
+  over `.redkiln/catalog`).
+
+**Recorded — D21-59, cited and not re-taken.** `threat-model` declines the `adversary → policy` block under ADR-0080
+d4.
+- It goes v1 → v2: the `policy` step is deleted, and `model`'s `findings = "${review.outputs?}"` back-ref goes with it
+  (ADR-0042).
+- It supersedes D21-43 N18 (A), and D21-42 11b's *"In scope. threat-model … rewritten"*, for that row.
+- ADR-0080 d1 is read as retaining the construct. Re-entry is by record and by measurement only.
+- The disclosure §8b.7 once owed on (A)'s dropped *"survives re-execution"* is moot, because the (A) form was never
+  written.
+- The binary prints `ac527: catalog=.redkiln/catalog checks=93 refused=0 indeterminate=39` and `d2-constancy: rows=6
+  walked=66 valued=52`.
+- D59b is owed to `s8d`'s `forward_ref_lint` (D21-60) and is not an `s8b` survivor.
+
+**Recorded — the Python oracle's non-determinism.** `cycles()` iterates a `set` of strings, so the six `soft … ->`
+example lines follow hash randomisation. A fresh run printed `soft project design-doc -> data-migration-plan ->
+design-doc`, where run10 has `data-migration-plan -> design-doc -> data-migration-plan` [measured 2026-09-24]. Every
+Python run now sets **`PYTHONHASHSEED=0`**, and `python --version` is recorded beside the goldens
+(`p9-python-version.txt`: `Python 3.14.6`), because string hashing is a property of the interpreter. The six lines
+are the six named divergences above.
+
+**Recorded — ADR-0168 and the S-SEV path.**
+- ADR-0168 is **`proposed`, and on the operator's flip list**. It records Branch 2: the vocabulary is
+  `blocking | advisory`, and *"no admissible severity threshold on this evidence; bullet 2 governs"*.
+- It supersedes ADR-0080 d2 bullet 1 in part, and it names `s8h` as the owner of `Finding.severity`.
+- Its required lines read `**S-SEV labelled:** n = 188 findings over 33 dispatches; rule: continued to 188`, with the
+  labels commit `a2f4fab` and the stability commit `285e011`. Checkpoint 8b section (9)'s `SSEV_ADR` is `ADR-0168`.
+- **The D21-58 disclosure (refuting round 8).** The operator's first pass was constant: 188/188 `BLOCKING`. So under
+  METHOD-SEV as registered, A1's κ half could not pass, and the rater switch moved the outcome from a NOT SETTLED STOP
+  to Branch 2. Amendment 5 was committed before any of Jev's answers was opened, but it was not blind to the
+  operator's answers.
+- **Owed:** the operator's dated confirmation that the switch stands with this known, before ADR-0168 flips (§8b.10;
+  the AFK review packet's confirm list).
+
+**Recorded — the refuting rounds (§8b.11).** Refuting rounds **1–9** ran. Rounds 1–7 each had five finder
+dimensions, and every finding went to two refuters. Round 8 had five finders and sent each blocker or major to two
+refuters; round 9 re-read the same delta plus round 8's fixes the same way.
+- Rounds 1–7 ran over the stage's work, with majors by round of 3, 2, 2, 2, 2, 1 and 0.
+- Rounds 8 and 9 ran over the S-SEV delta `d6acfba..62b634a`. Round 8 found two majors, both fixed.
+- **Round 9 was dry: no blocker and no major.** The remaining minors are named in §8b.11, recorded and not fixed, and
+  §8b.10's open items stay open with their sources.
+
+**The guard form `s8j` adopts** is Checkpoint 8b section (4), run here: ADR-0080 d2's named form in any quoting and
+with any member list, on a CODE line, anywhere in `crates/` or `.redkiln/`. The `.redkiln/` walk excludes
+`worktrees/` (D21-44), and the `crates/` walk does not. The by-path exclusions and their reasons are those of §8b.7.
+This entry does not edit `s8`.
+
+**The floor.** The named selection is 34 tests (`K_TESTS`). The whole-suite floor is 784 (Checkpoint 8a's recorded
+755, plus 25 new tests, plus D21-57's four).
+
+Checkpoint 8b: formal whole run from the stage file's bytes (extracted block sha256 `66d21ba404b77224…`, 504 lines)
+at `83d1268`, in the main checkout, under `nodispatch`, with `CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`: **rc=0, FAIL 0,
+`CP8B-END-OF-BLOCK reached`**, Checkpoint 8a re-run whole inside it (section (0)). The first two runs stopped at
+section (0), each on one of Checkpoint 8a's ADR-census guards that ADR-0168's writing had left stale in the preamble
+(the next-free number and the census); both were corrected by dated edits (`5a40990`, `83d1268`). Companion
+whole-suite reading at `83d1268`: **784 passed / 0 failed / 9 ignored over 44 results** (the block asserts the
+floor of 784 and ≥ 44 results but prints no count). This is the count the next stage's floor is re-derived from.
