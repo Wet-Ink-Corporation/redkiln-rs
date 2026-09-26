@@ -172,7 +172,12 @@ repository makes it one in its own argv, which is `s8g`'s.
   vector needs a scorer, and this record names it: the RustSec **`cvss`** crate, licensed MIT OR Apache-2.0, both
   already on `deny.toml`'s allow list, so no licence amendment is needed. The alternative is in-tree CVSS v3.1
   base-score code. The builder records which landed and, if the crate, the `cargo deny check licenses` reading over
-  it and its transitive dependencies.
+  it and its transitive dependencies. *(dated 2026-09-26, s8c build; D21-63, provisional.)* In-tree CVSS v3.1
+  base-score code landed (v3.0 vectors scored by the same equations). A matched advisory whose vector that scorer
+  cannot score (a CVSS v4.0 vector, or a malformed one) refuses the scan by name (`cvss-unscorable`, naming the
+  vector); it is never counted `unrated`, since it has a CVSS, and never banded by a guess. Provisional under D21-63;
+  the named alternative is the `cvss` crate's v4 scorer banded on these same bands (FIRST CVSS v4.0 §6 uses the v3
+  qualitative scale), which reverses this clause as one dependency line and one match arm.
 - **`ScanReport`** carries `critical`, `high`, `medium`, `low` and **`unrated`**, each required; one entry per
   advisory (id, package, version, severity or none); and, **per tool**, the tool's name and version, its database's
   local path and **that database's commit** (D21-42 6a: *"the advisory-DB commit is recorded"*). **The two databases
@@ -354,6 +359,7 @@ at `run` and is an `Error` at `doctor`. Nothing new walks the shipped catalog at
 - An output whose `kind` differs from its row's `outputs` reaching the kernel as a typed value.
 - A `smoke` handler that runs an installed `redkiln`, or that leaves its scratch directory behind without an error.
 - Counting an advisory with no CVSS as `low` or none, or dropping it.
+- Counting an advisory whose vector could not be scored as `unrated`, or banding it by a guess.
 - Recording a `ScanReport` whose database commit the adapter did not read, before and after the tool, from the path
   it passed that tool; or reading the commit from deny's log line.
 - A scan that fetches.
@@ -430,6 +436,71 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
   Windows run-worktree removal fact for `s8d-ii`, handed on in the stage file's §8c.12 note.
   **Shipped**: `.redkiln/registry.toml`'s `[toolchain.rust]` carries these readings, each labelled with its pass and
   child, under `command` warrants at the pin above.
+- *(dated 2026-09-26, s8c build, CPREP.)* **The build's readings, stated here as proposed text.** Each was first
+  written in a dated note of `runbook/phase-1/s8c-toolchain-port-and-verbs.md` (§8c.4, §8c.5) by the package that
+  built it; this record now carries it, so the flip reads the record and not the stage file.
+  - **Which scorer landed (decision 5 asks the builder to record it).** In-tree code, not the `cvss` crate:
+    `verbs::severity_of` in `crates/rk-adapter-toolchain-rust/src/verbs.rs` computes the CVSS v3.1 base equations and
+    `Roundup`, and scores v3.0 vectors by the same equations. No dependency was added, `Cargo.lock` did not move, and
+    no `deny.toml` licence question arises. How a vector this scorer cannot score is treated is the subject of a
+    separate ruling and is not recorded by this line.
+  - **Refusal (b) is covered by a comparator unit test, not end to end.** Decision 5 permits it. No seam that moves
+    `HEAD` between the adapter's two reads was added, so `verbs::sca_scan_refuses_a_database_moved_mid_scan` asserts
+    the comparator `verbs::db_unmoved` only, and the end-to-end mid-scan move is not claimed. Refusal (a) is
+    `verbs::sca_scan_refuses_a_non_git_database` and refusal (d) is
+    `verbs::sca_scan_refuses_a_deny_db_path_with_other_than_one_database` (two children, and none). The three are
+    among the tests Checkpoint 8c (7) names.
+  - **The input names the handlers read**, which are the shipped rows' `inputs`: `smoke` reads `checklist`, a list
+    of items each `{ id, argv, cwd, expect_exit, stdout_contains }`, the one stdout predicate being *the row's stdout
+    contains this text*, and `cwd` admits `scratch` only; `sca_scan` reads `audit_db` (the database audit is given by
+    `--db`) and `deny_db` (the parent directory deny's generated `db-path` names, which must hold exactly one child),
+    each an absolute path, because the adapter reads no environment (AC-217) and the default locations are the
+    resolver's to supply (`s8d`); `package` reads `sha` and `binaries` (a non-empty list of target names); `setup`
+    reads `projects` (paths relative to the project root; an absolute path, or one with `..`, is refused).
+  - **`BuildArtifact`'s binary paths are relative to the adapter's cargo target directory** (for example
+    `release/<name>`), not to the project root. `verbs::package_digests_only_the_declared_binaries_of_a_locked_release_build`
+    asserts that reading, and `rk_types::verb_output::ArtifactBinary`'s doc, which said *"relative to the project
+    root"*, was corrected to it (CPREP). ~~**Flagged, not decided:** the handler's `strip_prefix(&target).unwrap_or(exe)`
+    records the absolute path, silently, for an executable outside that directory; cargo does not produce one under the
+    adapter's own target directory, and no test reaches that arm.~~ *(dated 2026-09-26, s8c build, D63.)* **Fixed:**
+    that fail-open is gone. `verbs::binary_path` refuses a binary outside the target directory by name,
+    `package-binary-outside-target`, naming both paths, and never records an absolute path.
+    `verbs::a_package_binary_outside_the_target_dir_is_refused_by_name` asserts it over `verbs::binary_path` only, and
+    says so: cargo produces no executable outside its own `CARGO_TARGET_DIR` and no seam makes it, so the end-to-end
+    case is not claimed (as with refusal (b)). A mutant restoring `unwrap_or(exe)` was killed by that test.
+  - **The decode table's interim verdicts.** Until `s8d` binds step outputs, the decoded value's only channel is the
+    step's `Result`. So a `failing` `BuildReport`, and a `SmokeResult` whose `status` is not `passing` (`failing` or
+    `empty`), fail the step as `NonZero { code: None }` carrying the report's digest; the other five kinds are typed
+    and dropped. No record names this reading; it is proposed here.
+  - **No registry means a bare-name refusal.** `runtime::step::ToolRouting { registry, values }` is bound by
+    `Runtime::with_tool_routing` and threaded by `replay::resume_routed`; `Runtime::new` and `replay::resume` bind
+    none. A runtime without a registry refuses every verb, the four `port` verbs included, by its bare name: no
+    built-in table stands behind the registry. In `rk-cli`, an absent `<worktree>/.redkiln/registry.toml` binds none,
+    and a registry that does not load exits `ConfigError` naming it.
+  - **The loader recomputes decision 10's rule on every `command` value** (`60 × ⌈2 × max(measured) / 60⌉`) and
+    refuses a `secs` that differs, because the record forbids *"a warrant whose `rule` is not decision 10's"*. A
+    `source` (cited) value is not recomputed, because X4's 4,800 s is the operator's value and not the rule's output.
+  - **Declaration rows are exactly `{ value, source }`**, admitted for the three named rows `setup_projects`,
+    `package_binaries` and `claims` only, and they are not in `ToolchainValues`. The shipped `setup_projects` is
+    written in that shape.
+  - **`release_tag`'s row choices.** It has no spike row, so its `timeout = "build_timeout"` (the key
+    `spikes/p9/registry.toml` gives `release_record` and `verdict_record`) and `live = false` were the builder's
+    choices; the `store` and `git` rows declare `inputs = []`, the names being their builders'. `smoke`'s row timeout
+    is the spike's `deploy_timeout`, `unmeasured` on both toolchains, and every shipped `smoke` step carries a literal
+    `timeout_secs = 600`, so no shipped step resolves the row's key.
+  - **Two `rk-git` additions the `.worktreeinclude` reader needed (D21-45 W3, this record's decision 7 source), named
+    here as proposed text because no record names them.** `GitError` gains `CarryRefused { refusal }`
+    (`is_precondition()` is `true`); the enum's doc reads *"Closed; extended only by a successor record."*
+    `GitExec::run_with_stdin` writes a stdin to the child (`check-ignore --stdin` needs one), and the workspace's one
+    `std::process::Command::new("git")` literal moved from `run_with_env`'s body into a private `spawn`. The two read
+    variants `GitOp::LsFiles` and `GitOp::CheckIgnore` are reads, and ADR-0105 clause 5's write set is untouched; that
+    enum's doc reads *"Anything not here is a successor record, and adding a variant is that decision made visible."*
+    As proposed, this record is the successor record both docs name, for these four and nothing else.
+  - **Where and how §8c.5's values were measured.** At `6f70e47`, without the stage's uncommitted work (about eighty
+    tests, several of which build fixture projects), in a fresh detached worktree, with the no-dispatch helper's
+    `CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`, which is slower than cargo's default and so errs long. The rule's factor of
+    two covers the gap by construction, and the gap is not measured. **Whether to re-measure at the work commit is the
+    operator's call**; a re-reading replaces the four values by dated record edit under decision 10's rule.
 
 **Confidence.** High on the route shape, the seventh method and the refusal order, which D21-42 1b, N14 and N25 force.
 Medium on decision 5's provisional hardening (D21-62 C): it keeps every binding (the per-tool commit, offline, refuse

@@ -207,6 +207,7 @@ sentence.
 | `s8f` (D21-42 5a, 5b) | rk-store's render/write path, one `artifact.write` per write, under the item's managed artifact directory in the run-owned worktree | the one write path's call site |
 | `s8b` (D21-42 11a) | the pack changelog at `.redkiln/CHANGELOG.md` | the file exists |
 | `s8b` (D21-43 N25) | `sca-scan`'s check requires `unrated == 0` or routes to `scan.accept-findings` | the check's expression names `report.unrated` |
+| `s8c` (D21-63, provisional; *dated 2026-09-26, s8c build*) | `sca_scan` refuses `cvss-unscorable` on a MATCHED advisory whose vector is not CVSS v3 (record V decision 5) | at open, `cargo audit --json --no-fetch --file Cargo.lock` against the pinned real database, listing every matched advisory's vector version; any non-`CVSS:3.x` vector is a named, expected halt (*"sca-scan would refuse cvss-unscorable; rule (3') per D21-63"*) before §8g.6 runs |
 
 🛑 **If `s8c` or `s8d` delivered a different shape than this table names, this stage stops and reports rather than
 re-deriving the shape** — the producers below are thin *because* those stages are thick, and a producer written
@@ -755,7 +756,17 @@ passing result emits, and a result that does not pass opens the gate and emits n
 
 - **The handler's semantics are record V's.** That covers both tools, the CVSS v3 bands, `unrated`, the advisory
   database's commit (or a refusal by name) and the pinned offline database. `s8c` also takes the first measurement of
-  the tools' database member.
+  the tools' database member. *(dated 2026-09-26, s8c build; D21-63, provisional.)* It includes the `cvss-unscorable`
+  refusal: a MATCHED advisory whose vector the in-tree v3 scorer cannot score (`CVSS:4.0`, malformed, any other
+  version) refuses the whole scan by name, naming the vector and its two remedies. That refusal is not `unrated` and
+  is not routed to `scan.accept-findings`, so D21-43 N25's pass-or-gate routing holds only while no matched advisory
+  carries a non-3.x vector. **Precondition, at this stage's open and before this section runs `sca-scan` over the
+  real (non-fixture) advisory database:** run `cargo audit --json --no-fetch --file Cargo.lock` against the pinned
+  real database and list every MATCHED advisory's vector version (the `cvss` member's `CVSS:<v>/` prefix, or null).
+  If any is not `CVSS:3.x`, stop with a NAMED, expected halt, *"sca-scan would refuse cvss-unscorable; rule (3') per
+  D21-63"*, before §8g.6 runs, and D21-63's (3') (the `cvss` =2.2.0 v4 scorer on the same bands, `cvss-unscorable`
+  kept for rejected vectors) is ruled then. Measured 2026-09-26 at `5561afa`: `vulnerabilities = []`, so no vector
+  reached the scorer then; the reading is taken again at the open, never carried forward.
 - **The activity edit is `s8b`'s, and this stage cites it.** D21-43 N25 reads *"**`sca-scan` requires `unrated ==
   0`** or goes to `scan.accept-findings`"*. As shipped, the check reads *"`report.critical == 0 and report.high ==
   0`"*, which passes with `unrated > 0` (`s8c`'s draft at `a1d35ac`: *"As shipped, that check passes with `unrated >

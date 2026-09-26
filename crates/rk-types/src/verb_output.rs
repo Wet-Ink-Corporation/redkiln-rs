@@ -164,7 +164,8 @@ pub struct ScanReport {
 pub struct ArtifactBinary {
     /// The declared binary's name.
     pub name: String,
-    /// Its path relative to the project root.
+    /// Its path relative to the adapter's cargo target directory (e.g. `release/<name>`), as the
+    /// Rust handler records it (record V = ADR-0170 decision 6, proposed).
     pub path: String,
     /// `rk_types::digest::sha256` over its bytes, the plain hash an independent `sha256sum` agrees
     /// with.

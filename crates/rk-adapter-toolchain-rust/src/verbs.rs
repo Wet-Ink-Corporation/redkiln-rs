@@ -45,7 +45,8 @@
 //! 4.0-6.9, `low` 0.0-3.9. **An advisory with no CVSS is `unrated`**, never `low`, never dropped.
 //! A vector this scorer cannot score (a CVSS v4.0 vector: 63 of the RustSec database's vectors are
 //! v4.0 at stage open) refuses the scan by name, `cvss-unscorable`, rather than be counted as
-//! unrated or scored as something else: fail-closed, flagged for the operator with record V.
+//! unrated or scored as something else: fail-closed, and the refusal names its two remedies (the
+//! `cvss` crate's v4 scorer, or ruling it `unrated`) — D21-63, provisional; record V decision 5.
 //!
 //! **`package`** (decision 6). The input `sha` must equal the project root's `HEAD`, read through
 //! the same shared `rk_git::head` read (Checkpoint 8a guard (6)'s allowlist admits it by a dated
@@ -53,7 +54,8 @@
 //! `rk_types::digest::sha256` of each DECLARED binary (`binaries`, a non-empty list of target
 //! names), never a glob. Refused by name: `undeclared-binary-set`, `sha-head-mismatch`,
 //! `head-unreadable`, `binary-not-built`. Each binary's path is recorded relative to the target
-//! directory.
+//! directory, and a binary outside it is refused, `package-binary-outside-target`, never recorded
+//! as an absolute path.
 //!
 //! **`setup`** (decision 7). For each declared project (`projects`, paths relative to the project
 //! root), in order, `pnpm install --frozen-lockfile --prefer-offline --dir <project>` in the project
@@ -444,13 +446,21 @@ fn cvss3_tenths(vector: &str) -> Result<u32, String> {
 /// An advisory's band, or `None` (unrated) when it carries no CVSS (record V decision 5).
 ///
 /// # Errors
-/// `cvss-unscorable` naming a vector this scorer cannot score (a v4.0 vector, a malformed one).
+/// `cvss-unscorable` naming a vector this scorer cannot score (a v4.0 vector, a malformed one),
+/// and its two remedies, so the halt is one operator decision away (D21-63, provisional).
 pub fn severity_of(vector: Option<&str>) -> Result<Option<Severity>, StepError> {
     let Some(vector) = vector else {
         return Ok(None);
     };
-    let tenths = cvss3_tenths(vector)
-        .map_err(|d| refuse("sca_scan", "cvss-unscorable", &format!("`{vector}`: {d}")))?;
+    let tenths = cvss3_tenths(vector).map_err(|d| {
+        refuse(
+            "sca_scan",
+            "cvss-unscorable",
+            &format!(
+                "`{vector}`: {d}; score it with the RustSec `cvss` crate's v4 scorer (record V decision 5), or rule it `unrated` so sca-scan routes to scan.accept-findings"
+            ),
+        )
+    })?;
     Ok(Some(match tenths {
         90.. => Severity::Critical,
         70..=89 => Severity::High,
@@ -753,6 +763,27 @@ fn sca_scan(
 
 // ------------------------------------------------------------------------------------ package
 
+/// A built binary's `BuildArtifact` path: relative to the adapter's cargo target directory,
+/// forward-slashed (record V decision 6).
+///
+/// # Errors
+/// `package-binary-outside-target` naming both paths, for a binary outside the target directory:
+/// it is never recorded as an absolute path (the fail-open record V flagged; s8c build, D63).
+pub fn binary_path(target: &Path, exe: &Path) -> Result<String, StepError> {
+    let relative = exe.strip_prefix(target).map_err(|_| {
+        refuse(
+            "package",
+            "package-binary-outside-target",
+            &format!(
+                "the built binary {} is not under the adapter's target directory {}, so it has no path relative to it",
+                exe.display(),
+                target.display()
+            ),
+        )
+    })?;
+    Ok(relative.to_string_lossy().replace('\\', "/"))
+}
+
 fn package(
     tc: &RustToolchain,
     cfg: &Config,
@@ -810,11 +841,7 @@ fn package(
                 exe.display()
             ))
         })?;
-        let path = exe
-            .strip_prefix(&target)
-            .unwrap_or(exe)
-            .to_string_lossy()
-            .replace('\\', "/");
+        let path = binary_path(&target, exe)?;
         binaries.push(ArtifactBinary {
             name: name.clone(),
             path,

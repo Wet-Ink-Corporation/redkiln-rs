@@ -19,7 +19,7 @@
 
 use std::path::{Path, PathBuf};
 
-use rk_adapter_toolchain_rust::verbs::{db_unmoved, severity_of};
+use rk_adapter_toolchain_rust::verbs::{binary_path, db_unmoved, severity_of};
 use rk_adapter_toolchain_rust::{
     Config, DEFAULT_PROGRAM, ForcedRunner, RunnerPolicy, RustToolchain,
 };
@@ -338,6 +338,72 @@ fn sca_scan_refuses_a_database_moved_mid_scan() {
     );
 }
 
+/// The two git-initialised scan databases with one advisory from `tests/fixtures/advisory-unscorable/`
+/// added under `crates/itoa/` in BOTH copies and re-committed, so both tools match it beside the
+/// fixture's `critical` and `unrated` pair.
+fn scan_databases_with(tmp: &Path, advisory: &str) -> (PathBuf, PathBuf) {
+    let (audit, deny_parent, _, _) = scan_databases(tmp);
+    let source = advisory_fixture()
+        .with_file_name("advisory-unscorable")
+        .join(advisory);
+    let home = tmp.join("gh");
+    for db in [
+        audit.clone(),
+        deny_parent.join(crate::support::DENY_DB_CHILD),
+    ] {
+        std::fs::copy(&source, db.join("crates").join("itoa").join(advisory))
+            .expect("the unscorable advisory copies in");
+        git_commit_all(&home, &db, "an unscorable advisory");
+    }
+    (audit, deny_parent)
+}
+
+/// The refusal's remedies, which D21-63 requires the `cvss-unscorable` detail to name so an AFK
+/// halt is one operator decision away.
+const CVSS_REMEDIES: [&str; 3] = [
+    "the RustSec `cvss` crate's v4 scorer",
+    "record V decision 5",
+    "rule it `unrated` so sca-scan routes to scan.accept-findings",
+];
+
+/// **A matched advisory carrying a CVSS v4.0 vector refuses the scan by name** (record V = ADR-0170
+/// decision 5; D21-63, provisional): `cvss-unscorable`, naming the vector and its two remedies, and
+/// no `ScanReport`. Never counted `unrated` (it has a CVSS), never banded by a guess. The vector is
+/// CVE-2025-47273's, as the `cvss` 2.2.0 crate's own regression test spells it.
+#[test]
+fn a_matched_v4_vector_refuses_the_scan_by_name() {
+    let tmp = tempfile::tempdir().expect("tmp");
+    let (audit, deny_parent) = scan_databases_with(tmp.path(), "RUSTSEC-2099-0003.md");
+    let tc = scan_adapter(&tmp.path().join("scratch"));
+    let err = run_verb(&tc, "sca_scan", &scan_inputs(&audit, &deny_parent)).expect_err(
+        "a matched CVSS v4.0 advisory refuses the scan; no ScanReport, never counted unrated",
+    );
+    let mut needles = vec![
+        "cvss-unscorable",
+        "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N/E:P",
+    ];
+    needles.extend(CVSS_REMEDIES);
+    refused_naming(&err, &needles, "a matched v4.0 vector");
+}
+
+/// **A matched advisory carrying a malformed vector refuses the scan the same way** (D21-63): a
+/// `CVSS:3.1` vector missing its base metric `A`, which both tools carry through verbatim.
+#[test]
+fn a_matched_malformed_vector_refuses_the_scan_by_name() {
+    let tmp = tempfile::tempdir().expect("tmp");
+    let (audit, deny_parent) = scan_databases_with(tmp.path(), "RUSTSEC-2099-0004.md");
+    let tc = scan_adapter(&tmp.path().join("scratch"));
+    let err = run_verb(&tc, "sca_scan", &scan_inputs(&audit, &deny_parent))
+        .expect_err("a matched malformed vector refuses the scan; no ScanReport");
+    let mut needles = vec![
+        "cvss-unscorable",
+        "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H",
+        "the base metric `A` is missing",
+    ];
+    needles.extend(CVSS_REMEDIES);
+    refused_naming(&err, &needles, "a matched malformed vector");
+}
+
 // ---------------------------------------------------------------- package
 
 /// A git copy of the workspace fixture, committed; returns its root and `HEAD`.
@@ -420,6 +486,34 @@ fn package_digests_only_the_declared_binaries_of_a_locked_release_build() {
         serde_json::json!({ "sha": head }),
         &["undeclared-binary-set"],
         "no declared set at all",
+    );
+}
+
+/// **A built binary outside the adapter's target directory is refused by name**
+/// (`package-binary-outside-target`), never recorded as an absolute path (record V decision 6:
+/// `BuildArtifact`'s paths are relative to the target directory). Asserted over the path function
+/// `verbs::binary_path` only, and said so: cargo produces no executable outside its own
+/// `CARGO_TARGET_DIR`, and the adapter carries no seam that makes it, so the end-to-end case is not
+/// claimed. The inside case is the one the end-to-end `package` test reads (`release/<exe>`).
+#[test]
+fn a_package_binary_outside_the_target_dir_is_refused_by_name() {
+    let target = Path::new("D:/scratch/target");
+    assert_eq!(
+        binary_path(target, &target.join("release").join("wsbin.exe")).expect("inside"),
+        "release/wsbin.exe",
+        "a binary inside the target directory is recorded relative to it"
+    );
+    let outside = Path::new("D:/elsewhere/release/wsbin.exe");
+    let err = binary_path(target, outside)
+        .expect_err("a binary outside the target directory is refused, not recorded absolute");
+    refused_naming(
+        &err,
+        &[
+            "package-binary-outside-target",
+            "D:/elsewhere/release/wsbin.exe",
+            "D:/scratch/target",
+        ],
+        "a binary outside the target directory",
     );
 }
 

@@ -404,6 +404,11 @@ streams sat in the session scratchpad, which is not durable, so the load-bearing
   probe: rc 1, help text, nothing checked.
 - **The false count.** Checkpoint 7a's only method-level group is a floor over the NAMES `fn detect` and `fn lint`
   (`s7a` §7a.3: *"The floor pins **names**, never a signature"*), so it counts no method.
+- *(dated 2026-09-26, s8c build, CPREP.)* **The affected set's policy version, stated here as proposed text.**
+  `affected_packages(changed, &metadata, policy_version)` is called with `AFFECTED_POLICY = "rust-affected/1"`, and
+  the `AffectedSet` carries it, so a set names the rules it was computed by (decision 7). The spelling was the
+  builder's (§8c.3's dated note: *"the spelling is this build's, no record fixes it"*); this line proposes it. A change
+  to the rules in decision 7 moves the version.
 
 **Confidence.** High on the shapes that are forced (the three `Err` classes, the invariant, the parser rules N4 names,
 the pin). Medium on the four places a judgment was taken and is flagged for the operator's flip: the foreign-line

@@ -153,6 +153,27 @@ declarations have values but no enforcement until `s8d`.
 - [documented] `crates/rk-kernel/src/catalog.rs`'s loader doc at `6f70e47`: the loader reads no `timeout_secs`, which is
   what decision 1 changes.
 - No measurement bears on the bound's value: the values are ADR-0170's, each with its warrant.
+- *(dated 2026-09-26, s8c build, CPREP.)* **The build's readings, stated here as proposed text** (first written in
+  `runbook/phase-1/s8c-toolchain-port-and-verbs.md` §8c.6's dated notes):
+  - **The step side.** The loader reads `timeout_secs` through `StepTimeout::from_value`: a non-negative integer, or
+    a string of the exact form `${toolchain.<[a-z0-9_]+>}`; anything else is refused as a `Shape` naming the step,
+    never dropped. `runtime::step::resolve_bound` makes the `StepBound`: no declaration is `Undeclared`, a literal
+    goes through `StepBound::secs` (zero refuses naming RT-5), and a key resolves through `ToolchainValues`.
+  - **A table-less key refuses too.** `ToolchainValues::unselected(reason)` is the case where no table can be
+    selected; under it every key refuses as `Unsupported` naming `${toolchain.<key>}` and the reason, as an absent or
+    `unmeasured` key does (decision 2). It never falls back.
+  - **The order.** `run_tool_step` runs the registry lookup, ADR-0148's `test` sentence, the route match and its
+    input check, and only then `resolve_bound`. A runtime bound to no registry refuses every verb by its bare name,
+    so it never reaches the bound (record V's evidence).
+    `tool_verb_routing::a_verb_with_no_row_refuses_by_its_bare_name_before_its_bound_is_resolved` pins the order.
+  - **Enforcement, decision 4.** `Config::bounded(StepBound)` returns the call's `Config` with `timeout = min(step,
+    construction)` (an `Undeclared` bound leaves it alone) on both adapters, and every child the call spawns runs
+    under it: `build`, `test` and its `--list`, run, doctest and metadata children, `lint`, and each verb handler's.
+    Every `Timeout { after_secs }` the call answers carries that value. `change_summary` spawns nothing.
+  - **Decision 6, done.** `crates/rk-cli/src/config.rs` (`Adapters::toolchain_timeout_secs`) and
+    `crates/rk-cli/src/verbs/run.rs` (`DEFAULT_TOOLCHAIN_TIMEOUT_SECS`) each carry a dated correction citing this
+    record (proposed). The `s7g` paragraphs are left as written beneath it, and they stand for `agent` steps until
+    `s8d`.
 
 **Confidence.** High. The shape is forced by D21-42 4b and the breadth by D21-48 X13; the only proposal here is the
 `StepBound` type and the `Timeout` payload, both of which the tests in §8c.9 pin (`bound::…`, `step_bound::…`).
