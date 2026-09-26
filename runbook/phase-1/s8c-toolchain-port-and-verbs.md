@@ -343,6 +343,11 @@ run-child stdout files, each with its expected tally beside it:
   and the stage stopped as this bullet directs; D21-62 A ruled the parser wrong. The tally is 784 passed, 0 failed,
   9 ignored over 44 blocks with `foreign_lines` 39, Checkpoint 8b's reading, and `this-repository.tally.json` pins
   it with `first_foreign_line` 287. The golden is committed as captured.
+  *(dated 2026-09-26, s8c build, D67; D21-67 ruling 8.)* **The golden stays as captured, deliberately.** Its 39
+  foreign lines predate the leak fix (D21-64 ruling 3: `rk_cli`'s in-process verbs take a writer, so a capture at
+  HEAD would carry none). They are kept as M34's instrument: a parser that counts a foreign line as a passed record is
+  observable over this repository's own stdout only because they are there. `this-repository.tally.json` carries the
+  same note (member `note_d21_67`), and still pins `foreign_lines` 39 and `first_foreign_line` 287.
 
 They are captured once, on the pinned toolchain, and committed LF under ADR-0164. **They are parsed by the tests,
 never compared byte for byte with a fresh run**, because `finished in` varies. The capture command and its
@@ -943,6 +948,15 @@ scan.accept-findings"*. The `Cargo.lock` change is one package, `cvss 2.2.0`, wi
 evidence). **Flagged, not decided:** the crate scores a v4.0 vector as written, so a vector carrying `E:` is scored
 CVSS-BT (CVE-2025-47273: 7.7; base-only 8.7, both `high`), where record V says *"the CVSS base score"*; 2 of
 the database's 63 v4.0 vectors carry a threat metric. Tests and mutants in §8c.9.
+*(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* **~~Flagged, not decided~~ — decided and built: a `CVSS:4.0`
+vector is scored base-only (CVSS-B).** `verbs::cvss4_tenths` (now `pub`) parses the vector as written first, so a
+malformed vector or an unknown metric still refuses `cvss-unscorable` and is never stripped into a score; it then
+keeps exactly the eleven base metrics `AV AC AT PR UI VC VI VA SC SI SA` (compared case-insensitively, as the crate
+reads them) and scores that. CVE-2025-47273's vector now scores 8.7 (`high`). Measured on the database at
+`e2111519`: of the two v4.0 vectors carrying a threat metric, RUSTSEC-2026-0066 (`…/E:U`) moves from 1.7 (`low`) as
+written to 6.3 (`medium`) base-only, and RUSTSEC-2025-0138 (`…/E:P`) from 5.5 to 6.9 (`medium` both); none of the 63
+carries an environmental or supplemental metric. Record V decision 5 carries the sentence (§8c.7); tests and mutants
+M41–M45 in §8c.9.
 *(dated 2026-09-26, s8c build, D63.)* **`package`'s fail-open fixed:** a built binary outside the adapter's target
 directory is refused by name, `package-binary-outside-target`, in `verbs::binary_path`, and is never recorded as an
 absolute path (record V's evidence had flagged `strip_prefix(&target).unwrap_or(exe)`).
@@ -1659,6 +1673,15 @@ in-tree v3 score that differs from `cvss::v3`'s on the fixture); and three dated
 and the deny readings, the v4.0 readings with the CVSS-BT flag, and the differential fixture). The evidence line
 *"No dependency was added, `Cargo.lock` did not move …"* is struck.
 
+*(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* **Record V (still `proposed`) gains, by edit to a proposed
+record:** decision 5's sentence *"The crate scores a v4.0 vector **as written** … the ruling fixed CVE-2025-47273's
+7.7)"* struck in place, and a dated sentence making *"the CVSS base score"* explicit for v4.0 (CVSS-B: the eleven
+base metrics alone, the vector parsed as written first so nothing the crate rejects is scored); a dated forbids
+bullet (scoring a v4.0 vector with any threat, environmental or supplemental metric in it, and stripping a metric the
+crate rejects); and a dated evidence item (the base-only readings, the band-changing vector that kills M41, and the
+database's two threat-metric vectors, one of whose bands moves). The evidence item that flagged the question gains a
+dated line saying it is decided.
+
 ### 8c.8 Order of work
 
 Each slice is red first (golden constraint 12). A test is authored and watched fail **for the right reason**
@@ -1830,6 +1853,18 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
       asserted) [red: *"error[E0603]: function `cvss3_tenths` is private"*, the pre-change item replayed by
       `scratchpad/s8c/cvss_mutants.py RED-DIFF`]. The malformed-vector test is kept, its needles updated to the new
       remedies. Checkpoint 8c (7) names all three; its `want` reads 57. The crate's suite reads 68 passed, 0 failed.
+    - *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* One more, beyond the 78, so FLOOR (13) does not move:
+      `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` (a v4.0 vector is scored CVSS-B: each
+      case asserts its band first, then its tenths; `…VC:H/VI:H/VA:H/SC:N/SI:N/SA:N` with `E:P` stays `critical`
+      9.3, CVE-2025-47273's base with `e:u`, with `MVC:H` and with every kind at once stays `high` 8.7, a lower-case
+      vector keeps its base metrics, and an unknown metric still refuses `cvss-unscorable` naming the remedies) [red,
+      against the as-written scorer, the assertion order then being tenths first: *"scored base-only (CVSS-B): CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P — left: Ok(89)
+      right: Ok(93)"*; with the band asserted first, the same scorer is M43, whose red is the band line
+      *"left: Some(High) right: Some(Critical)"*]. `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated`
+      gains `cvss4_tenths(CVE-2025-47273) == Ok(87)` [red: *"CVE-2025-47273's v4.0 vector is scored base-only: 8.7,
+      never the 7.7 its `E:P` makes it as written — left: Ok(77) right: Ok(87)"*]. Both green after the change.
+      The lower-case case was added after green; M45 is its control. Checkpoint 8c (7) names the new test; its
+      `want` reads 58. The crate's suite reads 69 passed, 0 failed.
     - *D21-48 (2026-09-24), X15:* the nine below. Each is red first, for the reason in brackets.
     - `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` [red: no `nextest_lines` module and
       no golden under `tests/fixtures/nextest/`]. It also asserts that the installed `cargo nextest --version` is in
@@ -2006,6 +2041,11 @@ Parallel agents share one scratchpad, so the driver's filename carries this stag
 | M38 | *(dated 2026-09-26, s8c build, refuting round 2)* `rk_ports::conformance::validate_report` answers `Ok(())` whatever it is handed (an early `return Ok(())`) | `fake_behaviour::validate_report_refuses_an_inconsistent_outcome` |
 | M39 | *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7)* the in-tree v3 scorer drifts: `AC:H` weighs 0.45, not 0.44 | `verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample`; the control `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero` (the band table) stays `ok` under it, so the differential test is the only instrument |
 | M40 | *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7)* a v4.0 score of 0.0 is refused as unscorable instead of counted `low` | `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` |
+| M41 | *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7)* the threat metric `E` is kept in the scored vector (`"E"` added to `CVSS4_BASE_METRICS`) | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` by a BAND change (`…VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P`: `critical` 9.3 base-only, `high` 8.9 with `E:P` kept) AND `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` (its tenths); `verbs::a_matched_v4_vector_is_scored_and_banded_high` stays `ok` under it (CVE-2025-47273 is `high` both ways) |
+| M42 | *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7)* the environmental `M…` metrics are kept | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` (`…/MVC:H`: `critical` if kept) |
+| M43 | *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7)* nothing is stripped: the vector is scored as written (the pre-D67 scorer) | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` AND `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` |
+| M44 | *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7)* the as-written parse is skipped, so an unknown metric is stripped away and the vector scored | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` (its `expect_err`) |
+| M45 | *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7)* the metric comparison is case-sensitive, so a lower-case base metric is stripped | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` (the lower-case case refuses) |
 
 *(dated 2026-09-26, s8c build, P3.)* **Parser mutants, run from `scratchpad/s8c/p3_mutants.py`** (anchor asserted once, tmp + `os.replace`,
 restored in `finally` and the sha256 re-checked; the two parser files are new, so the restore writes the recorded bytes
@@ -2204,6 +2244,11 @@ line; logs and `p8-mutants.json` under `scratchpad/s8c/p8-runs/`).
 | M38 | KILLED (R2FIX; re-run in WHOLE pass 5) | `fake_behaviour::validate_report_refuses_an_inconsistent_outcome`; `conformance::port_conformance_fake_rows` stayed `ok` under it (round 2's finding). Per-rule extras M38a–M38d also KILLED |
 | M39 | KILLED (CVSS) | `verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample`; `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero` SURVIVED it, as expected (no vector in its band table moves) |
 | M40 | KILLED (CVSS) | `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` |
+| M41 | KILLED (D67) | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band`, its band line: *"banded on its base score alone: CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P — left: Some(High) right: Some(Critical)"*; also `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` (Ok(77) for Ok(87)). `verbs::a_matched_v4_vector_is_scored_and_banded_high` SURVIVED it, as expected: CVE-2025-47273 bands `high` either way, so the band change is observable only over the constructed vector |
+| M42 | KILLED (D67) | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band`: *"… SA:N/MVC:H — left: Some(Critical) right: Some(High)"* |
+| M43 | KILLED (D67) | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` AND `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` |
+| M44 | KILLED (D67) | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` (the unknown metric scored instead of refusing) |
+| M45 | KILLED (D67) | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` (the lower-case vector refused as unscorable) |
 
 Beyond the table, every extra mutant the packages ran was killed: P3's R3 (rule 2 strict), P4's MB, MFB and MNX, P5's
 MV, MA7, MG, MR5, MR6, MSD, MSC, MDC, MSW, MPH, MBS, MNB, MND and MNS, and P7's MIN. **One survivor in all, M25 over the
@@ -2301,6 +2346,33 @@ pass, through the no-dispatch wrapper:
   exist by their exact module path in their crate's `--test it -- --list` (with each call's features), and the
   extracted block passes (`CP8C-5-10-PASS`);
 - `cargo test --workspace --no-fail-fast` rc 0: **870 passed / 0 failed / 9 ignored over 44 result lines** (floor 862);
+  the store's sha256 `f7db6eba…` was unchanged across the run.
+This is a diagnostic reading. It is not the formal Checkpoint 8c.
+
+*(dated 2026-09-26, s8c build, WHOLE pass 6 after D21-64 rulings 3/7/8 and D67.)* **Every table mutant re-run over the
+tree carrying D67's uncommitted edits on `2816192`** (`verbs.rs`'s base-only v4.0 scorer and its tests). The whole5
+drivers for p3, p4b, p5, p6, p7, p8, r1fix, m38 and m38br were copied to `scratchpad/s8c/wholepass6_*_mutants.py` by
+`wholepass6_mkdrivers.py` (only output directories, labels and tmp suffixes changed, each substitution's hit count
+asserted). `whole5_p4` was not copied: `whole5_p4b` carries every p4 mutant, including the re-cut M26. The d63 copy
+carries M37 only: M36's old anchor and its test were replaced at the CVSS package by M36a/b/c, which ran from the
+copy of `cvss_mutants.py` (it now prints its executed count). M39/M40 ran from the same copy and M41–M45 from a copy of
+`d67_mutants.py`. `wholepass6_runall.py` ran them in sequence; results are under `scratchpad/s8c/wholepass6-mut/`.
+**M1–M45 all KILLED**, each at rc 101 with the named test's own `FAILED` line and its executed count asserted
+(M32/M33/M34 as p3's A1/A2/A3, M35 as B1 and M35r; M36 as M36a/b/c). The expected survivors are unchanged:
+- M25 is killed by the synthetic test and survives the golden, which is unobservable there, as above.
+- M39 survives `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero`, its control.
+- M41 survives `verbs::a_matched_v4_vector_is_scored_and_banded_high`, since CVE-2025-47273 is `high` both ways.
+
+The extras were killed again: P3's R3, P4's MB/MNX/MFB, P5's fourteen, P7's RED-R1/W/S/D/A reds, R1-passed/R1-failed and
+M38a–M38d; M38's green control is `ok`. P7's MIN still has no driver case. A sha256 snapshot of `crates/` and
+`.redkiln/` (1,398 files) showed 0 differences before and after. In the same pass, through the no-dispatch wrapper:
+- `cargo fmt --all -- --check` rc 0;
+- `cargo clippy --workspace --all-targets` rc 0 and `cargo clippy -p rk-ports --all-targets --features conformance`
+  rc 0, both warn-level only (as above);
+- Checkpoint 8c (5)–(10), extracted from this file's bytes: all **123** named tests (6 + 8 + 58 + 13 + 1 + 5 + 23 + 9)
+  exist by their exact module path in their crate's `--test it -- --list` (with each call's features), and every
+  call's `want` equals its list's length;
+- `cargo test --workspace --no-fail-fast` rc 0: **873 passed / 0 failed / 9 ignored over 44 result lines** (floor 862);
   the store's sha256 `f7db6eba…` was unchanged across the run.
 This is a diagnostic reading. It is not the formal Checkpoint 8c.
 
@@ -2528,7 +2600,9 @@ run_named rk-ports "--features conformance" 8 conformance::port_conformance_fake
 # verbs::a_matched_v4_vector_is_scored_and_banded_high, and the list gains verbs::a_v4_vector_scoring_zero_counts_low_never_unrated
 # and verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample. ~~want 55~~ is struck: 55 - 1 + 1 + 2 = 57.
 # The two added are beyond §8c.9's 78, so FLOOR (13) is unmoved.
-run_named rk-adapter-toolchain-rust "" 57 report::red_suite_is_ok_with_failed_counts report::a_build_failure_is_err_never_a_red_suite \
+# (dated 2026-09-26, s8c build, D67; D21-67 ruling 7) the list gains verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band.
+# ~~want 57~~ is struck: 57 + 1 = 58. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
+run_named rk-adapter-toolchain-rust "" 58 report::red_suite_is_ok_with_failed_counts report::a_build_failure_is_err_never_a_red_suite \
   report::a_red_test_in_an_early_binary_still_tallies_every_binary report::concurrent_verify_reports_share_no_output_file report::nextest_fallback_recorded_on_report \
   libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally libtest_lines::a_slow_test_notice_inside_a_block_is_skipped_never_refused \
   report::passed_plus_failed_is_the_executed_count_and_survives_both_decoys report::ac329_report_conforms_no_prose_parse \
@@ -2554,7 +2628,7 @@ run_named rk-adapter-toolchain-rust "" 57 report::red_suite_is_ok_with_failed_co
   verbs::sca_scan_refuses_a_deny_db_path_with_other_than_one_database verbs::sca_scan_refuses_a_database_moved_mid_scan \
   verbs::a_matched_v4_vector_is_scored_and_banded_high verbs::a_matched_malformed_vector_refuses_the_scan_by_name \
   verbs::a_v4_vector_scoring_zero_counts_low_never_unrated verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample \
-  verbs::a_package_binary_outside_the_target_dir_is_refused_by_name
+  verbs::a_package_binary_outside_the_target_dir_is_refused_by_name verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band
 run_named rk-adapter-toolchain-node "" 13 report::red_suite_is_ok_with_failed_counts report::ac329_report_conforms_no_prose_parse \
   report::ac325_recorded_argv_is_os_vector report::concurrent_verify_reports_share_no_output_file report::d34_vitest_invoked_directly_never_pnpm_forwarded \
   report::ac331_killed_verify_is_unverifiable report::ac344_missing_binary_is_not_a_candidate_failure conformance::port_conformance_real_row_node \

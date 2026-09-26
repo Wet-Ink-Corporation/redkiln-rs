@@ -23,4 +23,9 @@ longer unscorable: a scan that matches it counts it `high`
 `cvss-unscorable`, naming the vector and the two remedies left (correct the vector, or rule it
 `unrated`). The directory keeps its name so the fixture path the tests read does not move.
 
+*(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* The adapter scores a `CVSS:4.0` vector
+base-only (CVSS-B): every non-base metric is stripped before scoring. `RUSTSEC-2099-0003.md`'s vector
+therefore scores 8.7, not the crate's 7.7 for the vector as written (CVSS-BT, it carries `E:P`); it is
+`high` either way, so no tally here moves.
+
 Everything here is LF under ADR-0164.

@@ -43,7 +43,8 @@
 //! equations and `Roundup`), pinned against `cvss::v3` by a differential test; a `CVSS:4.0` vector
 //! is scored by the RustSec `cvss` crate's v4 scorer (`cvss::v4`, pinned `=2.2.0`: D21-64 ruling 7,
 //! which moves D21-63 from option (1) to (3'); 63 of the RustSec database's vectors are v4.0 at
-//! stage open). Both are banded by [`severity_of`] on record V's one set of thresholds (FIRST CVSS
+//! stage open), **base-only** (CVSS-B): every non-base metric is stripped before scoring, so a
+//! threat, environmental or supplemental metric never moves a band (D21-67 ruling 7). Both are banded by [`severity_of`] on record V's one set of thresholds (FIRST CVSS
 //! v4.0 §6 uses the v3 qualitative scale): `critical` >= 9.0, `high` 7.0-8.9, `medium` 4.0-6.9,
 //! `low` 0.0-3.9. **An advisory with no CVSS is `unrated`**, never `low`, never dropped. A vector
 //! neither scorer accepts (malformed, or a version other than 3.0, 3.1 and 4.0) refuses the scan
@@ -452,14 +453,38 @@ pub fn cvss3_tenths(vector: &str) -> Result<u32, String> {
     u32::try_from(tenths).map_err(|_| format!("the score {tenths} is out of range"))
 }
 
-/// A `CVSS:4.0` vector's score in tenths, from the RustSec `cvss` crate's v4 scorer
-/// (`cvss::v4::Vector::from_str(..).score().value()`; D21-64 ruling 7, D21-63 option (3')). The
-/// crate scores the vector as written: a vector that carries threat metrics (`E:`) is scored as
-/// CVSS-BT, as FIRST CVSS v4.0 §2 names it, which is how CVE-2025-47273's vector reaches 7.7.
-fn cvss4_tenths(vector: &str) -> Result<u32, String> {
-    let parsed: cvss::v4::Vector = vector
-        .parse()
-        .map_err(|e: cvss::Error| format!("the `cvss` crate's v4 scorer rejects it: {e}"))?;
+/// The eleven CVSS v4.0 base metrics (FIRST CVSS v4.0 §2), the only ones a CVSS-B score reads.
+const CVSS4_BASE_METRICS: &[&str] = &[
+    "AV", "AC", "AT", "PR", "UI", "VC", "VI", "VA", "SC", "SI", "SA",
+];
+
+/// A `CVSS:4.0` vector's **base** score (CVSS-B) in tenths, from the RustSec `cvss` crate's v4
+/// scorer (`cvss::v4::Vector::from_str(..).score().value()`; D21-64 ruling 7, D21-63 option (3')).
+///
+/// The vector is first parsed as written, so a malformed vector or an unknown metric is rejected,
+/// never stripped away. Then every metric that is not one of [`CVSS4_BASE_METRICS`] (the threat
+/// `E`, the environmental `CR`/`IR`/`AR`/`M…` and the supplemental `S`/`AU`/`R`/`V`/`RE`/`U`),
+/// in any case, is dropped and the rest is scored. *(dated 2026-09-26, s8c build, D67; D21-67
+/// ruling 7.)* The crate scores a vector as written, so before this a vector carrying `E:` was
+/// scored CVSS-BT: CVE-2025-47273's read 7.7, where record V's *"the CVSS base score"* is 8.7.
+///
+/// # Errors
+/// A description of why the `cvss` crate's v4 scorer rejects the vector.
+pub fn cvss4_tenths(vector: &str) -> Result<u32, String> {
+    let reject = |e: cvss::Error| format!("the `cvss` crate's v4 scorer rejects it: {e}");
+    let _as_written: cvss::v4::Vector = vector.parse().map_err(reject)?;
+    let base_only: Vec<&str> = vector
+        .split('/')
+        .enumerate()
+        .filter(|(i, component)| {
+            *i == 0
+                || component.split_once(':').is_some_and(|(metric, _)| {
+                    CVSS4_BASE_METRICS.contains(&metric.to_ascii_uppercase().as_str())
+                })
+        })
+        .map(|(_, component)| component)
+        .collect();
+    let parsed: cvss::v4::Vector = base_only.join("/").parse().map_err(reject)?;
     let tenths = (parsed.score().value() * 10.0).round();
     if !(0.0..=100.0).contains(&tenths) {
         return Err(format!("the score {tenths} tenths is out of range"));

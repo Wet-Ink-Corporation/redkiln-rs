@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-26 (D21-1 … D21-66), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-26 (D21-1 … D21-67), and what they license
+
+*(Title corrected 2026-09-26 at `s8c`, package D67: it read **"(D21-1 … D21-66)"** while the file carried **D21-67** — one entry stale. `D21-67` was appended without moving it; no entry is added with this correction. Measured: `grep -c '^## D21-'` over this file → 67, the last `D21-67`.)*
 
 *(Title corrected 2026-09-26 at `s8c`: it read **"2026-09-21 … 2026-09-25 (D21-1 … D21-57)"** while the file carried **D21-64** — seven entries and one date stale. `D21-58` … `D21-64` were appended without moving it; `D21-65` and `D21-66` are appended with this correction and move it. The stage list at the head of the title is left as written, as the correction below also left it.)*
 

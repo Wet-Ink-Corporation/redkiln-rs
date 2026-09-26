@@ -187,9 +187,16 @@ repository makes it one in its own argv, which is `s8g`'s.
   distinct v3 vector in the RustSec database. A vector neither scorer accepts (malformed, or any other version)
   refuses the scan by name (`cvss-unscorable`, naming the vector and the two remedies left: correct the vector, or
   rule it `unrated` so `sca-scan` routes to `scan.accept-findings`); it is never counted `unrated` and never banded
-  by a guess. The crate scores a v4.0 vector **as written**: one that carries threat metrics (`E:`) is scored as
+  by a guess. ~~The crate scores a v4.0 vector **as written**: one that carries threat metrics (`E:`) is scored as
   CVSS-BT under FIRST v4.0's nomenclature, not CVSS-B, so for such a vector *"the CVSS base score"* above reads as
-  the crate's score of the whole vector (flagged in the evidence; the ruling fixed CVE-2025-47273's 7.7).
+  the crate's score of the whole vector (flagged in the evidence; the ruling fixed CVE-2025-47273's 7.7).~~
+  *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* **For a `CVSS:4.0` vector, *"the CVSS base score"* is
+  explicit: it is CVSS-B**, the score of the vector's eleven base metrics (`AV AC AT PR UI VC VI VA SC SI SA`) alone.
+  The vector is first parsed as written by the pinned crate, so a malformed vector or an unknown metric still
+  refuses by name (`cvss-unscorable`) and is never stripped into a score; then every non-base metric (the threat
+  `E`, the environmental `CR`/`IR`/`AR`/`M…` and the supplemental `S`/`AU`/`R`/`V`/`RE`/`U`), in any case, is removed
+  and the rest is scored by the same crate (`verbs::cvss4_tenths`). This matches the v3 path, which scores base
+  metrics only. CVE-2025-47273's vector scores 8.7 (`high`), not the 7.7 the crate gives it as written.
 - **`ScanReport`** carries `critical`, `high`, `medium`, `low` and **`unrated`**, each required; one entry per
   advisory (id, package, version, severity or none); and, **per tool**, the tool's name and version, its database's
   local path and **that database's commit** (D21-42 6a: *"the advisory-DB commit is recorded"*). **The two databases
@@ -381,6 +388,9 @@ at `run` and is an `Error` at `doctor`. Nothing new walks the shipped catalog at
 - *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* Refusing, or counting `unrated`, a `CVSS:4.0` vector the
   pinned `cvss` crate's v4 scorer scores; scoring a v4.0 vector by any other scorer; and an in-tree v3 score that
   differs from `cvss::v3`'s on a vector of the differential fixture.
+- *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* Scoring a `CVSS:4.0` vector with any threat,
+  environmental or supplemental metric in the scored vector (CVSS-BT, CVSS-BE or CVSS-BTE in place of CVSS-B); and
+  stripping a metric the pinned crate rejects so that a vector it refuses as written is scored.
 - Recording a `ScanReport` whose database commit the adapter did not read, before and after the tool, from the path
   it passed that tool; or reading the commit from deny's log line.
 - A scan that fetches.
@@ -532,7 +542,19 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
     the crate's score of the vector as written (7.7 for CVE-2025-47273). The two can differ in band only for a
     vector carrying non-base metrics; a threat metric can only lower the score (FIRST v4.0 scores `E:X` as `E:A`,
     the worst case), so scoring as written can band such a vector lower. Scoring base-only is one filter over the
-    vector's metrics before the parse.
+    vector's metrics before the parse. *(dated 2026-09-26, s8c build, D67.)* Decided: D21-67 ruling 7 scores a v4.0
+    vector base-only (CVSS-B), in decision 5 above.
+  - *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* **The base-only readings.** Measured on `cvss` 2.2.0 in a
+    Rust probe of the pinned crate (`cargo run --offline`, the scratch crate depending on `cvss = "=2.2.0"` with the
+    three features) and in the test binary (`verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band`,
+    `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated`): CVE-2025-47273's vector scores **8.7** base-only;
+    `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N` scores 9.3 (`critical`) base-only and 8.9
+    (`high`) with `E:P` kept, which is the band change that kills the mutant keeping `E:`; CVE-2025-47273's base
+    with `MVC:H` scores 9.3 (`critical`) if the environmental metric were kept. The database's two v4.0 vectors that
+    carry a threat metric (`~/.cargo/advisory-db` at `e2111519ba6d14a5da59a7b2e5c8083ae8a37c01`): RUSTSEC-2026-0066
+    (`astral-tokio-tar`, `…/VI:L/…/E:U`) scores 1.7 (`low`) as written and **6.3 (`medium`) base-only**, so its
+    band moves; RUSTSEC-2025-0138 (`deno`, `…/E:P`) scores 5.5 as written and 6.9 base-only, `medium` both. None of
+    the 63 carries an environmental or supplemental metric.
   - *(dated 2026-09-26, s8c build, CVSS.)* **The differential fixture**:
     `crates/rk-adapter-toolchain-rust/tests/fixtures/cvss/v3-vectors.txt`, the 92 distinct `CVSS:3.0`/`CVSS:3.1`
     vectors in `~/.cargo/advisory-db` at `e2111519ba6d14a5da59a7b2e5c8083ae8a37c01` (335 v3.1 and 33 v3.0

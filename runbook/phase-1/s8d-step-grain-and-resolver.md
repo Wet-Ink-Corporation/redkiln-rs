@@ -225,6 +225,11 @@ ADR-0140 in part.
 | R5 | **Two verb-registry rows and the question registry**: `shallow_clone` → the retained review clone, `verdict_record` → `review::confirm`; `.redkiln/processes/` populated and loaded | `shallow_clone` does **not** take `s8c`'s `git` route, which runs *"through the journalled `GitOps` seam"*: `prepare_review_clone` is a gix write outside `GitOps` (ADR-0098 decision 2). R5 adds a distinct `review_clone` route to the closed set **by record** (M7). `verdict_record` takes a second route added the same way, as `s8c` provides: *"`s8d`'s record may add a route for `verdict_record`. It does so by record, not by editing the match."* R5 states that the clone is journalled as a side-effecting tool step's commit (R1), not as a `git_op` row. It also states that the clone is not an ADR-0105 clause-5 wrapper write, because clause 5 names the review clone and lists its removal (§8d.6); lifts nothing ADR-0156 or ADR-0162 forbid, because both scope their bar — *"under this stage's scope"*, *"under this record's scope"*; executes ADR-0129 decision 3's *"Pack-declared questions … are Step 7e's, loaded into the same type"*, whose loader was never built. The loader and `.redkiln/processes/` belong to this stage alone (D21-43: *"The loader and `.redkiln/processes/` are **s8d**'s."*). `s8j` authors the human-root questions into that directory, and `s8g` loads through this loader |
 | R6 | **The `change` deriver's call site in `build_item`** (ADR-0093 decision 2, AC-520) | carries D21-43 N3's route: a `null` `change` at triage opens AC-079's `unknown_facet` gate, which the operator answers (§8d.7). It takes a dated AC-079 reading note and no supersession. Its scored record already exists — *"`change` (0.72 [0.54, 0.85], 29)"* at pin `47faec9f` (ADR-0093 decision 2) |
 
+*(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 2.)* **An ENTRY PREREQUISITE, before any code of §8d.3's `check`
+evaluation: the null-literal presence record** (R7, written `proposed`; *"a comparison against the literal `null` is
+a definite presence test"*), superseding ADR-0103 decision 4 and ADR-0121 decision 3 in part. It lands first, with
+its evaluator change and test; §8d.3a (a) specifies it, and the stage's other D21-67 rulings (1, 3, 4) follow it there.
+
 **The five questions the draft raised, each now taken by D21-43** (2026-09-24). The draft stopped on S1 and S2 and
 reported S3–S5. The ledger took all five, so none is a STOP. Each premise below was measured by the draft and is kept.
 Each ruling is quoted.
@@ -542,6 +547,133 @@ empty selection (ADR-0148's reason stands: *"`cargo test affected`, which matche
 
 **The change-summary range, OWED here** *(added 2026-09-25 at `s8a`, D21-51)*. ADR-0165 decision 4, as amended before acceptance, makes a range exactly `<base>..<head>`, and decision 6 refuses a single revision by name: under step-grain commits a changeset spans several commits, so `R^..R` would answer a `Text` omitting the earlier ones. `.redkiln/catalog/change-summary.toml` and `.redkiln/catalog/change-summary-ue.toml` bind `range = "artifact:Changeset.sha"`, a single sha, so once the resolver hands that value to the port it reaches the named refusal. **The catalog edit that binds a two-dot range** (for example `baseline..<sha>`) **is this stage's**, because this stage owns the resolver that binds it. It lands under ADR-0072: a version bump on each edited activity, a changelog row and a lattice re-run.
 
+### 8d.3a D21-67's rulings this stage carries *(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67.)*
+
+D21-67 names this stage the receiver of four rulings: *"**Receivers.** `s8d` (1, 2, 3, and 4's lib.rs sentence)"*.
+Each is executed here, in this order, and each is quoted from the ledger. Every test named below is new, red first
+for the reason in brackets, module-qualified in its crate's `--test it` binary, and **beyond §8d.10's 63**; the
+counts, Checkpoint 8d's selections and `want`s, and (11)'s floor take them by dated edit at stage open, where the floor
+is re-derived from Checkpoint 8c's RECORDED count. The mutants join §8d.10's table as D67-1 … D67-5 and run from
+Python like the rest.
+
+**(a) ENTRY PREREQUISITE — ruling 2, the null-literal presence record. It lands before §8d.3's `check` evaluation.**
+The ruling: *"A new record, written `proposed` and carried as an **`s8d` entry prerequisite** that lands before
+`s8d`'s `check` evaluation, supersedes ADR-0103 decision 4 and ADR-0121 decision 3 in part: **a comparison against the
+literal `null` is a definite presence test** (`x == null` is true when x is absent, false when present; `x != null` the
+reverse). A comparison between a null field and a non-null value stays null. No catalog row is edited; `s8d`
+re-measures `SHIPPED_UNSAT`/`SHIPPED_DEAD` and fixture 3's comment is corrected. It flips at `s8d`'s close under D21-64
+ruling 10."*
+- **The record** (R7 of this stage, id recorded at write time by a dated line here). It supersedes in part ADR-0103
+  decision 4's *"`null == v` and `v == null` for non-null `v` are **`null`**, as are `!=` and `in` against `null`"*, as
+  to a comparison whose operand is the **literal** `null` (`==` and `!=` only; `in` against `null` is not the ruling's
+  and stands), and ADR-0121 decision 3's first bullet, which re-affirms the same rule (*"`null == v` and `v == null` for
+  non-null `v` are `null`; `!=` and `in` against `null` are `null`"*), in the same part. Both stay `accepted` and gain
+  the record in `superseded_by`; the README gains two supersession rows. `null == null` is `true` under both readings.
+  ADR-0103's narrowing pattern (`x != null and <ordering on x>`) stands as a lint rule; it now also lets the ordering
+  run on a present `x`, which is the residual `evaluator::predicate_null_arithmetic` records as *"RAISED, NOT
+  SETTLED"*. The ruling folds in `s8b` §8b.10's tri-valued boolean null arm (D21-56's *"Raised, not decided"*).
+- **The change**, in `crates/rk-kernel/src/predicate/eval.rs`'s `compare`: when either operand EXPRESSION is
+  `Expr::Lit(Literal::Null)`, `CmpOp::Eq` answers `Tri::from_bool(other.is_null())` and `CmpOp::Ne` its negation, before
+  `equality` is consulted; `equality` itself (a null field against a non-null value) is unchanged, and so is the
+  module header's reading 1, whose `null != null` it subsumes (that header takes a dated line).
+- **Measured at `s8c` (package D67), before any s8d code:** the reading above was applied to `compare` as a probe
+  (`scratchpad/s8c/d67_nullprobe.py`: anchor asserted once, tmp + `os.replace`, eval.rs restored and its sha256
+  re-checked) and the whole workspace run `--no-fail-fast` through the no-dispatch wrapper: **872 passed, 1 failed,
+  9 ignored over 44 result lines**, the one failure `evaluator::predicate_null_arithmetic`, at *"assertion `left ==
+  right` failed: v == null — left: False, right: Null"*. That test stops at its first failed assertion, so the three
+  assertions the record flips are counted by reading, not by run: *"v == null"* (`Null` → `False`), *"v != null"*
+  (`Null` → `True`) and the guarded pattern on a present axis (`Null` → `True`; the *"RAISED, NOT SETTLED"* block,
+  which this record settles) [the second and third inferred]. They are rewritten by dated edit citing the record, never
+  deleted. **`lattice::p6_lattice_over_the_shipped_pack` stayed green under the probe, so `SHIPPED_UNSAT` (1 296) and
+  `SHIPPED_DEAD` (56) did not move**, and every `quality_block::` test stayed green [measured]; the stage still
+  re-measures both constants after the real change, as the ruling says, and records the reading either way.
+- **Fixture 3's comment** (`crates/rk-kernel/tests/fixtures/activities/terminal_condition_names_a_verify_result.toml`,
+  its *"(dated 2026-09-25, s8b refuting round 4) This exemplar can never be TRUE"* paragraph, and the matching row of
+  `tests/it/quality_block.rs`'s module table) takes a dated correction: under the record `verify.green_at != null` is
+  `true` for a present `green_at`, so the predicate can be true. No catalog row is edited; the eight shipped `x != null
+  and x` rows become satisfiable without an edit, which the lattice re-measure reports.
+- **Test:** `rk-kernel`'s `evaluator::a_comparison_against_the_literal_null_is_a_presence_test` [red: today `novelty == null` over a present
+  `novelty` reads `Null`, not `False`]: `x == null` and `x != null` over an absent and a present `x`, both operand
+  orders; `null == null`; a null field against a non-null value stays `null`; and a tri-valued boolean bound to `null`,
+  `true` and `false` under `data_migration != null and data_migration` (`false`, `true`, `false`, never `null`).
+  **Mutant D67-1:** the literal-null arm removed (the pre-record `equality`), killed by that test and by
+  `evaluator::predicate_null_arithmetic` as rewritten.
+
+**(b) Ruling 1 — the 39 severity-only rows, disposed of by class.** The ruling: *"a severity-only row without
+re-execution does not conform to ADR-0080 d2 as ADR-0168 left it. The rows are disposed of by class, and **`s8d` carries
+the edits** (39 version bumps and 39 `.redkiln/CHANGELOG.md` rows under ADR-0072), before `s8h` types `severity` and
+makes them live"*. The 39 rows, measured at `s8c` (package D67) by `grep -rn "severity in \['blocking'\]"
+.redkiln/catalog`: 39 lines in 39 files, each `activity@version` below as it stands:
+- **Class A, six review-family `verdict` rows** — `checklist-review@2`, `code-review@2`, `design-review@1`,
+  `design-review-lightweight@2`, `security-review@1`, `spike-decision-review@1`, each `verdict` a `check` with
+  `on_false = "continue"` that today sits BEFORE `record`. Target form, `adversarial-review@4`'s: `verdict` moves after
+  `record`, its input becomes `{ record = "${record.outputs}" }` and its `expr` `record.blocking.len() == 0` (*"the
+  policy table's re-execution-aware blocking set"*); `on_false` unchanged. `${record.outputs}` is then a prior-step
+  reference, bound by this stage's resolver (§8d.3's first row). *"each rewritten row's constancy is measured"*: the
+  stage records, per row, whether `record.blocking.len() == 0` varies over the verdict_record outcomes its fixtures
+  reach, and a constant row is reported upward, not fixed silently.
+- **Class B, `migration-dry-run@3`**: its `policy` step (`findings.none(severity in ['blocking'])`, `on_false =
+  "fail"`) is deleted; *"its `ok` step already carries the re-execution outcome, and the adversary's findings stay
+  evidence"* (`emit`'s `evidence` keeps `${adversary?}`).
+- **Class C, 32 looping `policy` conjuncts**, each a `policy` check with an `on_false = { to = … }` loop-back:
+  `api-contract-spec@1`, `bdd-scenarios@3`, `blameless-postmortem@2`, `c4-component@2`, `c4-container@2`,
+  `c4-context@2`, `data-migration-plan@2`, `design-doc@1`, `discovery-report@1`, `equivalence-boundary@2`,
+  `exploitability-analysis@1`, `fault-tree-analysis@2`, `fishbone-analysis@2`, `five-whys@2`, `fix-design@1`,
+  `fix-spec@1`, `knowledge-harvest@1`, `opportunity-solution-tree@1`, `outcome-definition@1`, `problem-framing@1`,
+  `production-readiness-review@1`, `relative-estimation@2`, `risk-register@1`, `schema-migration-script@3`,
+  `security-requirements@1`, `spike-report@1`, `structured-nl-requirements@2`, `structured-retrospective@2`,
+  `tech-debt-assessment@1`, `timeline-reconstruction@1`, `use-case-spec@3`, `ux-flow-design@1`. In each, the trailing
+  `and findings.none(severity in ['blocking'])` conjunct is removed, and the step's `findings` input with it where
+  nothing else in the `expr` reads it; the remaining conjuncts (self-check, shape) stay. Each changelog row records
+  the activity *"declining the block under ADR-0080 decision 4, as D21-59 did for `threat-model`"*.
+- **Every row**: `version` + 1 (to the version above plus one) and one `.redkiln/CHANGELOG.md` row `| <id>@<new> |`
+  naming `from v<old>` (ADR-0072; the form `quality_block::assert_versioned` reads). **A pin moves:**
+  `quality_block::adr0072_s8b_repairs_are_versioned_and_changelogged` pins `("migration-dry-run", 2, 3)`, and the bump
+  to 4 moves its premise, so that test takes a dated amendment in the same commit (D21-47's time-bound rule) and
+  **Checkpoint 8b is re-run whole** inside Checkpoint 8d, as X8's `vertical-slicing` bump already requires (§8d.11).
+- **Re-measured, by dated edit, in the same commit:** the lattice (`lattice::p6_lattice_over_the_shipped_pack`'s pins)
+  and the AC-527 count, `quality_block::ac527_empty_set_terminal_condition`'s `checks=93` (*"93 → its new figure"*;
+  predicted 92, one `check` step deleted, and `indeterminate` from 39 toward 0 [inferred, not run]). §8d.9's
+  *"The `severity` dependency"* paragraph takes a dated line: after this edit no shipped `expr` reads `severity`.
+  `review::ac303_*` must stay green: each class A `verdict` still consumes the reviewer's Findings by data dependence,
+  through `record` (D21-57's rule), and the survey's dependence class for each is reported.
+- **Test:** `rk-kernel`'s `quality_block::the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged` [red: 39 shipped
+  `expr`s read `severity`]: zero shipped `expr`s read `severity`; each class A `verdict` follows `record` and reads
+  `record.blocking.len() == 0`; `migration-dry-run` has no `policy` step; and all 39 are at their bumped versions with
+  their changelog rows. **Mutants:** D67-2, one class A row left on its old `expr` with its version bumped; D67-3,
+  `migration-dry-run`'s `policy` step restored at version 4; D67-4, one class C changelog row deleted — each killed by
+  that test.
+- `s8h`'s severity test re-points to a fixture (*"`s8h`'s severity test re-points to a fixture"*); the pointer is in
+  `s8h` §8h.4, and nothing here types `severity`.
+
+**(c) Ruling 3 — `findings == null` and AC-527's refusal 2.** The ruling: *"Refusal 2 widens from *"`false` in some
+cell"* to **"not `true` in some cell"**, matching the runtime `check` arm (`== Tri::True`); errors stay indeterminate
+(D21-55 unchanged there). Two must-refuse fixtures (`findings == null`; `findings == null or …`) and one mutant
+restoring `== Tri::False`; a dated AC-527 amendment under ADR-0092 d2 item 2. Carried by **`s8d`**. No shipped count
+moves."* The change is `crates/rk-kernel/src/quality_block.rs`'s `if outcome.value == Tri::False {` becoming a refusal
+on any evaluated value that is not `Tri::True` (an `Err` stays indeterminate). **Flagged, for this stage to measure,
+not decided here:** ruling 2 lands FIRST (item (a)), and under it `findings == null` over the one-finding witness is
+`false`, not `null`, so the first fixture is refused by today's `== Tri::False` arm as well, and the mutant may be
+unobservable over it. Before the fixtures are written, the stage evaluates each fixture's conjunct cell by cell under
+the post-record evaluator and records the values; at least one must-refuse fixture must reach a `null` cell (for
+example an `or` whose other disjunct is `null` over a bound operand), or the survivor is recorded as unobservable per
+the programme's rule and the ruling's residual is reported upward. **Tests:** the two fixtures under
+`tests/fixtures/activities/`, asserted by `rk-kernel`'s `quality_block::a_findings_conjunct_that_is_not_true_in_some_cell_is_refused`
+[red: both LOAD under the `== Tri::False` arm, or, if (a)'s record makes the first `false`, only the `null`-cell
+fixture does]. **Mutant D67-5:** the refusal restored to `== Tri::False`, killed by that test. **AC-527** takes a
+dated in-place amendment (ADR-0092 decision 2 item 2) replacing GIVEN (2)'s *"that a single-class blocking witness
+falsifies"* by *"that is not `true` under a single-class blocking witness in some cell"*, errors still indeterminate.
+No shipped count moves.
+
+**(d) Ruling 4 — D21-55's "errors" against "false".** The ruling: *"the code's reading is confirmed — a `false` cell
+refuses even when other cells or other conjuncts error; "errors" means errors with no `false` cell anywhere.
+`rk-kernel`'s unqualified lib.rs sentence is corrected"*. The sentence is `crates/rk-kernel/src/lib.rs`'s *"A conjunct
+that errors is indeterminate, never refused."* in the quality-block paragraph. It takes a dated in-place correction
+stating the precedence: a conjunct that errors in every cell is indeterminate; a `false` cell (after (c), a not-`true`
+cell) refuses the predicate even when other cells or other conjuncts error (D21-67 ruling 4; `s8b` §8b.4, M-W1a/M-W1b
+already pin it). No test, mutant or count moves for (d): the reading is already pinned by `s8b`'s
+M-W1a/M-W1b.
+
 ### 8d.4 `on_false` as iteration (4d)
 
 Measured over `.redkiln/catalog/*.toml` at `ca8f387`: **94** `on_false` values — `{ to = …, max = N }` **66**,
@@ -763,6 +895,11 @@ the same four as the fix lane with the same owners (*re-claimed 2026-09-24, cons
 lane walks end to end after this stage, and the tables say why by owner. That is the result, not a failure of the
 stage.
 
+*(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 1.)* The paragraph below is superseded in this stage: §8d.3a (b)
+removes every shipped `severity` read (six rows rewritten, one step deleted, 32 conjuncts removed), so the three
+lane rows it names (`fix-spec`, `bdd-scenarios`, `equivalence-boundary`, all class C) walk over any findings list,
+and the `lane_walk` fixtures' comment takes a dated line.
+
 **The `severity` dependency (D21-47; cross #4).** 39 catalog `expr`s, one in each of 39 activities, read
 `findings.none(severity in ['blocking'])`. Three sit on the lanes' walk, each in a `policy` check step: `fix-spec`'s,
 `bdd-scenarios`' and `equivalence-boundary`'s (measured at `fc80687`). `rk-types`' `Finding` has no `severity` field until `s8h` adds
@@ -892,6 +1029,14 @@ registry column. It also moved the timeout test from `rk-kernel` to `rk-cli`. He
 *D21-48 (2026-09-24):* X8 adds four to `rk-kernel`: the three `forward_ref_lint` tests and the escalate re-entry's
 resolver test. **New test names are now 63**: 50 in `rk-kernel` (46 + 4) and 13 in `rk-cli`, which is **62 net** of
 the removal. Checkpoint 8d (11)'s floor rises by the four.
+*(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 rulings 1-3.)* Three more, beyond the 63, specified in §8d.3a:
+`evaluator::a_comparison_against_the_literal_null_is_a_presence_test` (ruling 2, the entry prerequisite),
+`quality_block::the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged` (ruling 1) and
+`quality_block::a_findings_conjunct_that_is_not_true_in_some_cell_is_refused` (ruling 3), all in `rk-kernel`. They
+move the counts to 66 new names (53 in `rk-kernel`, 13 in `rk-cli`), **65 net**, and Checkpoint 8d (11)'s floor by
+three, by dated edit at stage open. `evaluator::predicate_null_arithmetic`,
+`quality_block::adr0072_s8b_repairs_are_versioned_and_changelogged` and `quality_block::ac527_empty_set_terminal_condition`
+are amended, not added.
 
 **Mutants** — each authored, run from **Python** in a throwaway export that is checked out and then overlaid with
 the working tree's bytes (a clone under `core.autocrlf=true` is not byte-faithful), each diffed and read, and each
@@ -935,6 +1080,11 @@ must turn the named test red for the stated reason. A survivor blocks the close.
 | M34 | `.redkiln/catalog/vertical-slicing.toml`: `slice`'s `answer = "${approve.answer?}"` restored, version left at 3 | `forward_ref_lint::every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (`unlicensed=1`), `forward_ref_lint::the_four_unlicensed_refs_are_removed_versioned_and_changelogged` |
 | D59b | *(dated 2026-09-26, D21-60; added at `s8b` refuting round 8)* `.redkiln/catalog/threat-model.toml`: `model`'s `findings = "${review.outputs?}"` restored, version left at 2 | `forward_ref_lint::every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (`unlicensed=1`); the fourth must-refuse fixture's own kill is M33's (a fixture test never reads `.redkiln/catalog`) |
 | M35 | an escalate re-entry binds `null` for a later tool step's output on the resumed pass | `reference_resolver::an_escalate_re_entry_binds_a_later_steps_previous_frame_value_and_is_null_first` |
+| D67-1 | *(dated 2026-09-26, `s8c` build, D67; D21-67 ruling 2)* `compare`'s literal-null arm removed, so `x == null` over a present `x` is `null` again | `evaluator::a_comparison_against_the_literal_null_is_a_presence_test`, `evaluator::predicate_null_arithmetic` (as rewritten) |
+| D67-2 | *(dated 2026-09-26, `s8c` build, D67; D21-67 ruling 1)* one class A `verdict` left on `findings.none(severity in ['blocking'])`, its version bumped | `quality_block::the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged` |
+| D67-3 | *(dated 2026-09-26, `s8c` build, D67; D21-67 ruling 1)* `migration-dry-run`'s `policy` step restored at version 4 | `quality_block::the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged` |
+| D67-4 | *(dated 2026-09-26, `s8c` build, D67; D21-67 ruling 1)* one class C row's `.redkiln/CHANGELOG.md` row deleted | `quality_block::the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged` |
+| D67-5 | *(dated 2026-09-26, `s8c` build, D67; D21-67 ruling 3)* refusal 2 restored to `outcome.value == Tri::False` | `quality_block::a_findings_conjunct_that_is_not_true_in_some_cell_is_refused` (its `null`-cell fixture; see §8d.3a (c)'s flag) |
 
 ### 8d.11 What this stage makes provisional, and what it does not claim
 

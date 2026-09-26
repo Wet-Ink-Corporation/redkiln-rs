@@ -633,6 +633,18 @@ The member is built as follows:
 Once the member lands, a `severity` row over a non-empty findings list reads the typed member instead of failing with
 `UnknownField`. Over an empty list the row stays true without reading it, which is `s8b`'s corrected 39-row
 statement.
+*(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 1.)* **The 39 rows are
+disposed of in `s8d`, before this stage types `severity`.** D21-67 ruling 1 answers D21-57: *"a severity-only row
+without re-execution does not conform"* to ADR-0080 d2, and *"`s8d` carries the edits (39 version bumps and 39
+`.redkiln/CHANGELOG.md` rows under ADR-0072), before `s8h` types `severity` and makes them live"*: six review-family
+`verdict` rows rewritten to `adversarial-review@4`'s `record.blocking.len() == 0` form, `migration-dry-run`'s
+`policy` step deleted, and 32 looping `policy` conjuncts' severity conjunct removed under ADR-0080 decision 4. So at
+this stage's open no shipped `expr` reads `severity`, and *"39 shipped `expr` rows read `severity`"* above is
+history; re-measure it at open (`grep -rn "severity in" .redkiln/catalog`, expected 0). **The ruling re-points this
+stage's severity test to a fixture:** *"`s8h`'s severity test re-points to a fixture"*.
+`quality_block::a_severity_row_reads_the_typed_member_over_a_non_empty_list` (§8h.12) reads a fixture activity
+carrying `findings.none(severity in [...])` (`rk-kernel`'s `tests/fixtures/activities/`, beside
+`terminal_condition_is_severity_only.toml`), never a shipped row. Its name and its place in the counts do not move.
 
 **`RootCause` carries `discriminating_test`** (D21-47 cross #5). `s8b` §8b.5's (C) rows bind
 `${compare.outputs.discriminating_test}` and `${analyse.outputs.discriminating_test}`. Both steps output `RootCause`,

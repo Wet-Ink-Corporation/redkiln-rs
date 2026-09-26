@@ -365,6 +365,34 @@ also dropped at 7e (`story.toml`: *"DROPPED: [[stage.verify.require]] when = 'da
   13b), is re-run with the new source and stage, and its dead count is reported **by id** against AC-102's registered
   20% line. `s8b`'s shipped-pack lattice test *"pins the measured shape"*, so its pin takes a dated edit in this
   stage's work commit, and Checkpoint 8b is re-run whole (§8g.1).
+  *(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 6.)* **A named precondition of
+  this re-run: the unsat report's five unexercised branches are pinned first.** The ruling reads: *"The five
+  unexercised unsat-report branches of the ported P6 lattice: a hand-derived `report-branches` lattice fixture with
+  one test and five killed mutants, cross-checked by one quoted `lattice.py` run over the same tree, **carried by
+  `s8g`** as a named precondition of its lattice re-run."* The five are `s8b` §8b.10's (refuting round 5):
+  `lattice.rs`'s `forbidden_stage` test (rendered `forbidden-stage=`), the `unsat_other_stage` counter (rendered
+  `wrong-stage-producer=`), the example's `other_stage` list, the keyed render `format!("{kind}{suffix}")` and the
+  transitive entry `format!("{}:transitive@{s}", u.kind)`. None is pinned by a golden byte or a fixture today (34 of
+  34 unsat lines in `p9-run.txt` at zero and `[]`, measured 2026-09-25). Before the re-run above:
+  - **The fixture.** `crates/rk-kernel/tests/fixtures/lattice/report-branches/` (beside `unsatisfiable/`, sharing
+    `common/`), hand-derived so that one lattice run reaches all five: a required kind whose only producer sits at a
+    forbidden stage; a producer at another, non-forbidden stage (the wrong-stage count and the `other_stage` list); a
+    keyed kind (`{inst}` suffix); and a required kind unsatisfied only because its producer's own requirement is (the
+    transitive entry). The expected unsat lines are derived by hand from the fixture and written into the test before
+    it is run, never copied from its output.
+  - **One test**, `rk-kernel`'s `lattice::the_report_branches_fixture_exercises_every_unsat_branch`, red first (the fixture absent),
+    asserting each of the five renders by its exact bytes.
+  - **Five mutants**, run from Python (anchor asserted once, tmp + `os.replace`, sha256 restored), each killed by that
+    test: RB1 `forbidden_stage` always `false`; RB2 `unsat_other_stage` never incremented; RB3 the example's
+    `other_stage` list rendered empty; RB4 the keyed render drops `{suffix}`; RB5 the transitive entry is never pushed.
+    A survivor is first investigated for unobservability over the fixture, then the fixture is widened; it is never
+    accepted.
+  - **One quoted `lattice.py` cross-check** over the same tree: `python spikes/p9/lattice.py --packs <fixture>/packs
+    --catalog <fixture>/catalog`, its unsat lines quoted in the test's doc and here beside the Rust ones. The run's
+    own output must show a non-zero pack and cell count before any line is compared: a `--packs` path that matches
+    nothing prints a baseline over zero packs and exits 0.
+  - **Counts.** The one test joins §8g.9's list and Checkpoint 8g (5)'s `rk-kernel` selection and `want`, and the
+    floor chain, by dated edit at this stage's open (floors re-derived from the entry checkpoint's recorded count).
 
 ⚠️ **Two things N23 does not settle. The first is named in R1 and reported upward (§8g.11). D21-46 R5 settles the
 second:**
@@ -941,6 +969,10 @@ golden constraint 12 — and the red output is quoted in the commit that lands i
 asserts each by its module-qualified name and asserts the exact count per crate; the lists are there and are not
 repeated here. The draft's eight handler tests (`registry::`, `sca::`, `package::`, `smoke::` in the Rust adapter)
 left this list because the handlers are `s8c`'s record V, and `s8c`'s own `verbs::` tests pin them.
+*(dated 2026-09-26, `s8c` build, D67; D21-67 ruling 6.)* One more is owed here, not yet counted in the sixty-six:
+`rk-kernel`'s `lattice::the_report_branches_fixture_exercises_every_unsat_branch` and its five mutants RB1–RB5 (§8g.2's
+named precondition of the lattice re-run). This stage's open adds it to the count, the table below and Checkpoint 8g
+(5) by dated edit.
 
 **The mutants**, each authored, run **from Python and never from the shell** (a backtick once swallowed a restore),
 and each must turn its named test red. A survivor blocks the close.

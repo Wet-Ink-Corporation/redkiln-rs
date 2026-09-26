@@ -2005,21 +2005,33 @@ echo "CP8B-END-OF-BLOCK reached"
 Each stays open here until a stage or ruling takes it; none is decided by `s8b`, and none blocks this stage's close.
 - **`findings == null`** is refused by neither refusal (a one-finding witness makes it `null`, not `false`). Source:
   D21-55, *"carried to its own item and is not decided here"*.
+  *(dated 2026-09-26, `s8c` build, D67.)* **Closed by D21-67 ruling 3:** refusal 2 widens to *"not `true` in some
+  cell"*, with two must-refuse fixtures and one mutant, carried by `s8d` (`s8d` §8d.3a).
 - **The null arm of `.redkiln/facets.toml`'s seven tri-valued booleans** is untested under `Axes::shipped()`: no
   context binds a boolean to null, and `lattice.py`'s `unknown` sweep ranges over the ordinals only. Source: D21-56,
   *"Raised, not decided"*.
+  *(dated 2026-09-26, `s8c` build, D67.)* **Closed by D21-67 ruling 2** (*"the tri-valued booleans' null arm, folded
+  in"*): a comparison against the literal `null` becomes a definite presence test, by a new record that is an `s8d`
+  entry prerequisite (`s8d` §8d.3a).
 - **Whether a severity-only row without re-execution conforms to d2 bullet 1** (`findings.none(severity in
   ['blocking'])` in code-review, checklist-review ~~and, after §8b.5, `threat-model`~~). Source: D21-57, *"Raised, not
   ruled (open)"*. *(dated 2026-09-26, D21-59)* `threat-model` declines the block, so it carries no such row.
+  *(dated 2026-09-26, `s8c` build, D67.)* **Closed by D21-67 ruling 1:** *"a severity-only row without re-execution
+  does not conform"*; the 39 rows are disposed of by class (six rewritten, one step deleted, 32 conjuncts removed),
+  carried by `s8d` (`s8d` §8d.3a) before `s8h` types `severity`.
 - **The eight shipped `x != null and x` predicates**, which can never be true under the product evaluator (ADR-0103
   reading 1): `flag-progressive-rollout`, `data-migration-plan`, `migration-dry-run`, `migration-expand-execute`,
   `schema-migration-script`, `ux-flow-design`, `feature-flag-kill`, and `threat-model`'s middle disjunct. Source: this
   file's header, *"Executed 2026-09-25, a finding raised and not fixed here"*.
+  *(dated 2026-09-26, `s8c` build, D67.)* **Closed by D21-67 ruling 2:** *"a comparison against the literal `null` is
+  a definite presence test"*, by a new record (an `s8d` entry prerequisite); no catalog row is edited (`s8d` §8d.3a).
 - *(dated 2026-09-25, refuting round 4)* **AC-527's LOAD exemplar is in the same class.** Fixture 3,
   `terminal_condition_names_a_verify_result`, carries `verify.status == 'passing' and verify.green_at != null`, and
   `verify.green_at != null` is null for any present `green_at` (`CmpOp::Ne` negates `equality`, which returns null
   when either side is null), so the predicate can never be true. The amended AC-527 cites it as the lawful form (a
   `GreenAt(sha)` verify result). Its LOAD proves only that the rule does not refuse it. Source: refuting round 4.
+  *(dated 2026-09-26, `s8c` build, D67.)* **Closed by D21-67 ruling 2:** under the presence record fixture 3's
+  predicate can be true, and *"fixture 3's comment is corrected"* in `s8d` (`s8d` §8d.3a).
 - *(dated 2026-09-25, refuting round 5)* **Five branches of the ported unsat report are ported by reading only and are
   unobserved by parity.** Every one of the 34 unsat lines in `p9-run.txt` carries `forbidden-stage=    0
   wrong-stage-producer=    0` and `other_stage=[]`, none carries a keyed `{inst}` suffix, and none a `:transitive`
@@ -2030,16 +2042,27 @@ Each stays open here until a stage or ruling takes it; none is decided by `s8b`,
   golden byte and no fixture [measured 2026-09-25 over `p9-run.txt`: 34 of 34 unsat lines at zero and `[]`, none
   with a `{` in its kind, none with `transitive`], and a mutant on any of them would survive the 12 lattice tests
   [inferred, not run]. No fixture is added here. Source: refuting round 5.
+  *(dated 2026-09-26, `s8c` build, D67.)* **Closed by D21-67 ruling 6:** a hand-derived `report-branches` lattice
+  fixture, one test and five killed mutants, cross-checked by one quoted `lattice.py` run, carried by `s8g` as a named
+  precondition of its lattice re-run (`s8g` §8g.2).
 - *(dated 2026-09-25, refuting round 5)* **D21-55's reading where "errors" meets "false".** D21-55 says both "a
   conjunct that errors is not refused" and "refused if some such conjunct is `false` in some cell". The code reads
   **a `false` cell outranks an error** (in another cell or another conjunct) and the tests pin it (§8b.4, §8b.8
   M-W1a/M-W1b). It is the code's reading of the ruling, recorded here so that the operator can overrule it; it is not
   a new ruling. Source: refuting round 5.
+  *(dated 2026-09-26, `s8c` build, D67.)* **Closed by D21-67 ruling 4:** *"the code's reading is confirmed — a
+  `false` cell refuses even when other cells or other conjuncts error"*. `rk-kernel`'s unqualified `lib.rs` sentence
+  is corrected in `s8d` (`s8d` §8d.3a).
 - *(dated 2026-09-26, refuting round 9)* **The operator's confirmation of D21-58's rater switch** with the round-8
   disclosure known (the operator's registered A1 could not pass; the switch moved the outcome from a NOT SETTLED STOP
   to Branch 2). Owed before ADR-0168 flips. Source: D21-58's **Disclosure**; receiver: the AFK review packet.
   *(dated 2026-09-26, s8c build)* Discharged: the operator confirmed it by D21-64 ruling 1, and ADR-0168 flipped
   `accepted` on D21-65 with the limit in its text.
+  *(dated 2026-09-26, `s8c` build, D67.)* **Closed** by D21-64 ruling 1 and D21-65, as the line above says; D21-67
+  ruling 5 also closes ADR-0168 clause 5 (the labels against the policy table's cells) with nothing moving.
+
+*(dated 2026-09-26, `s8c` build, D67.)* **Every item above is closed** by the dated line beneath it, each pointing to
+its ruling in `spikes/DECISIONS-2026-09-21.md` D21-67 (or D21-64/D21-65 for D21-58's). None was decided by `s8b`.
 
 ---
 

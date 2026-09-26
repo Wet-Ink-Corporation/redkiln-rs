@@ -19,7 +19,9 @@
 
 use std::path::{Path, PathBuf};
 
-use rk_adapter_toolchain_rust::verbs::{binary_path, cvss3_tenths, db_unmoved, severity_of};
+use rk_adapter_toolchain_rust::verbs::{
+    binary_path, cvss3_tenths, cvss4_tenths, db_unmoved, severity_of,
+};
 use rk_adapter_toolchain_rust::{
     Config, DEFAULT_PROGRAM, ForcedRunner, RunnerPolicy, RustToolchain,
 };
@@ -294,6 +296,8 @@ fn the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample() {
 
 /// The CVSS v4.0 vector of CVE-2025-47273, as the `cvss` 2.2.0 crate's own regression test spells
 /// it (base score 7.7) and `tests/fixtures/advisory-unscorable/RUSTSEC-2099-0003.md` carries it.
+/// *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* The crate's 7.7 is the vector as written,
+/// CVSS-BT (it carries `E:P`); the adapter scores base-only (CVSS-B), so it reads 8.7, still `high`.
 const CVE_2025_47273_V4: &str = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N/E:P/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X";
 
 /// **A CVSS v4.0 vector is scored by the RustSec `cvss` crate's v4 scorer and banded on record V's
@@ -314,7 +318,12 @@ fn a_v4_vector_scoring_zero_counts_low_never_unrated() {
     assert_eq!(
         severity_of(Some(CVE_2025_47273_V4)).expect("a v4.0 vector scores"),
         Some(Severity::High),
-        "CVE-2025-47273's v4.0 base score is 7.7"
+        "CVE-2025-47273's v4.0 base score is 8.7 (D21-67 ruling 7: CVSS-B, not the 7.7 CVSS-BT)"
+    );
+    assert_eq!(
+        cvss4_tenths(CVE_2025_47273_V4),
+        Ok(87),
+        "CVE-2025-47273's v4.0 vector is scored base-only: 8.7, never the 7.7 its `E:P` makes it as written"
     );
     let bad = "CVSS:4.0/AV:N/AC:L";
     let err = severity_of(Some(bad))
@@ -322,6 +331,57 @@ fn a_v4_vector_scoring_zero_counts_low_never_unrated() {
     let mut needles = vec!["cvss-unscorable", bad];
     needles.extend(CVSS_REMEDIES);
     refused_naming(&err, &needles, "a rejected v4.0 vector");
+}
+
+/// **A CVSS v4.0 vector is scored base-only, CVSS-B** (record V = ADR-0170 decision 5, *"the CVSS
+/// base score"*; D21-67 ruling 7). Every non-base metric (threat `E:`, the environmental `CR`/`IR`/
+/// `AR`/`M…` and the supplemental ones) is stripped before scoring, whatever its case, so none can
+/// move a band. Each vector below is chosen so that its BAND changes if one kind is kept, measured on
+/// the `cvss` 2.2.0 crate in a probe of the same crate: `…VC:H/VI:H/VA:H/SC:N/SI:N/SA:N` scores 9.3
+/// (`critical`) base-only and 8.9 (`high`) with `E:P` kept; CVE-2025-47273's base scores 8.7 (`high`)
+/// and 6.6 (`medium`) with `e:u` kept, 9.3 (`critical`) with `MVC:H` kept. A vector the crate
+/// rejects as written (an unknown metric) still refuses by name: stripping never launders it.
+///
+/// *(Added 2026-09-26, s8c build, D67; D21-67 ruling 7.)*
+#[test]
+fn a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band() {
+    let critical_base = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N";
+    let high_base = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N";
+    let cases: [(String, u32, Severity); 7] = [
+        (critical_base.to_owned(), 93, Severity::Critical),
+        (format!("{critical_base}/E:P"), 93, Severity::Critical),
+        (high_base.to_owned(), 87, Severity::High),
+        (format!("{high_base}/e:u"), 87, Severity::High),
+        (format!("{high_base}/MVC:H"), 87, Severity::High),
+        (
+            format!("{high_base}/E:U/CR:H/MVC:H/S:P/U:Red"),
+            87,
+            Severity::High,
+        ),
+        (
+            high_base.to_ascii_lowercase().replacen("cvss", "CVSS", 1) + "/e:u",
+            87,
+            Severity::High,
+        ),
+    ];
+    for (vector, tenths, band) in &cases {
+        assert_eq!(
+            severity_of(Some(vector)).expect("a v4.0 vector scores"),
+            Some(*band),
+            "banded on its base score alone: {vector}"
+        );
+        assert_eq!(
+            cvss4_tenths(vector),
+            Ok(*tenths),
+            "scored base-only (CVSS-B): {vector}"
+        );
+    }
+    let unknown = format!("{high_base}/FOO:X");
+    let err = severity_of(Some(&unknown))
+        .expect_err("an unknown v4.0 metric refuses by name; stripping never launders it");
+    let mut needles = vec!["cvss-unscorable", unknown.as_str()];
+    needles.extend(CVSS_REMEDIES);
+    refused_naming(&err, &needles, "a v4.0 vector with an unknown metric");
 }
 
 /// **The scan records each tool's database commit, read by the adapter** (D21-42 6a; D21-62 C):
@@ -444,7 +504,8 @@ const CVSS_REMEDIES: [&str; 4] = [
 /// **A matched advisory carrying a CVSS v4.0 vector is scored and banded** (record V = ADR-0170
 /// decision 5; D21-64 ruling 7, which moves D21-63 from option (1) to (3')): CVE-2025-47273's vector,
 /// as the `cvss` 2.2.0 crate's own regression test spells it, scores 7.7 on the crate's v4 scorer and
-/// is counted `high` beside the fixture's `critical` and `unrated` pair. It is never refused, never
+/// is counted `high` beside the fixture's `critical` and `unrated` pair. *(dated 2026-09-26, s8c
+/// build, D67; D21-67 ruling 7.)* ~~scores 7.7~~: it is scored base-only, 8.7, still `high`. It is never refused, never
 /// `unrated` (it has a CVSS), and never banded by a guess.
 ///
 /// *(Replaces `a_matched_v4_vector_refuses_the_scan_by_name`, 2026-09-26, s8c build, CVSS.)*
@@ -465,7 +526,7 @@ fn a_matched_v4_vector_is_scored_and_banded_high() {
             report.unrated
         ),
         (1, 1, 0, 0, 1),
-        "CVE-2025-47273's v4.0 vector scores 7.7 and counts high: {report:?}"
+        "CVE-2025-47273's v4.0 vector scores 8.7 base-only and counts high: {report:?}"
     );
     let ids: Vec<(&str, Option<Severity>)> = report
         .advisories
