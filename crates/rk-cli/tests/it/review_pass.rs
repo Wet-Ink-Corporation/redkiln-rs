@@ -34,6 +34,10 @@ enum Arm {
     Red,
     /// `Err(Transport { Spawn })`: the program cannot start (AC-344's cannot-run).
     CannotRun,
+    /// `Ok` with nothing executed, `status: Empty` (the filter matched no test). *(dated
+    /// 2026-09-26, s8c refuting round 4: without it the re-executor's EMPTY-arm guard was
+    /// unobservable, since every other mode executes one test per selected name.)*
+    Empty,
 }
 
 /// A toolchain whose `test` answer is scripted per arm. Every other method refuses: this fake
@@ -62,9 +66,13 @@ impl Toolchain for ScriptedToolchain {
         let Selection::Filter(args) = selection else {
             return Err(refusal("a selection other than a filter"));
         };
-        let executed = u32::try_from(args.len()).unwrap_or(0);
+        let executed = if self.arm == Arm::Empty {
+            0
+        } else {
+            u32::try_from(args.len()).unwrap_or(0)
+        };
         let failed = match self.arm {
-            Arm::Green => 0,
+            Arm::Green | Arm::Empty => 0,
             Arm::Red => 1.min(executed),
             Arm::CannotRun => {
                 return Err(StepError::Transport {
@@ -426,5 +434,66 @@ fn a_candidate_that_cannot_run_is_unverifiable_never_a_flip() {
         observed.observed.contains("1 failed"),
         "a red candidate's observation names its counts: {:?}",
         observed.observed
+    );
+}
+
+/// **An arm that executed nothing is no record, never a cell** (AC-332: an empty run is never a
+/// pass; s8c §8c.2's P4 note, *"The re-executor reads an EMPTY arm as no record, like an `Err`
+/// arm"*). A candidate whose filter matches nothing (say the change deleted the repro's test)
+/// beside a green reference would otherwise be `four_cell(false, false)`, and its `observed` the
+/// repro's `expected_when_met`: an empty run recorded as green.
+///
+/// *(Added 2026-09-26, s8c refuting round 4; M50 deletes the guard.)*
+#[test]
+fn an_empty_arm_is_no_record_never_a_flip() {
+    let f = finding("AC-601", run_repro("cargo test -- ac601"));
+    let sha = "0123456789abcdef0123456789abcdef01234567";
+    let empty = ScriptedToolchain { arm: Arm::Empty };
+    let green = ScriptedToolchain { arm: Arm::Green };
+    let red = ScriptedToolchain { arm: Arm::Red };
+
+    // PREMISE: the empty arm's outcome IS `Empty`, so the cases below reach the guard.
+    let outcome = empty
+        .test(
+            &Selection::Filter(vec!["ac601".to_owned()]),
+            StepBound::Undeclared,
+        )
+        .expect("an empty arm is Ok");
+    assert_eq!(outcome.status, rk_ports::toolchain::TestStatus::Empty);
+
+    for (candidate, reference, why) in [
+        (
+            &empty,
+            &green,
+            "an empty candidate beside a green reference",
+        ),
+        (&empty, &red, "an empty candidate beside a red reference"),
+        (
+            &green,
+            &empty,
+            "a green candidate beside an empty reference",
+        ),
+        (&red, &empty, "a red candidate beside an empty reference"),
+    ] {
+        let reexec = ToolchainReExecutor {
+            candidate,
+            reference,
+        };
+        let got = reexec.run(&f, sha);
+        assert!(
+            got.is_none(),
+            "{why} produces NO record, never a cell: {:?}",
+            got.map(|r| r.outcome)
+        );
+    }
+
+    // CONTROL: the same two runnable non-empty arms DO produce a record.
+    let reexec = ToolchainReExecutor {
+        candidate: &red,
+        reference: &green,
+    };
+    assert!(
+        reexec.run(&f, sha).is_some(),
+        "CONTROL: red beside green is a record"
     );
 }

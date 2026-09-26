@@ -547,6 +547,9 @@ fn a_matched_v4_vector_is_scored_and_banded_high() {
 
 /// **A matched advisory carrying a malformed vector refuses the scan the same way** (D21-63): a
 /// `CVSS:3.1` vector missing its base metric `A`, which both tools carry through verbatim.
+/// *(dated 2026-09-26, s8c refuting round 4: and, through `severity_of`, a v3.1 vector carrying a
+/// component outside the v3.x metric set, beside a control that the temporal and environmental
+/// metrics still score base-only; M49 kills on it.)*
 #[test]
 fn a_matched_malformed_vector_refuses_the_scan_by_name() {
     let tmp = tempfile::tempdir().expect("tmp");
@@ -561,6 +564,29 @@ fn a_matched_malformed_vector_refuses_the_scan_by_name() {
     ];
     needles.extend(CVSS_REMEDIES);
     refused_naming(&err, &needles, "a matched malformed vector");
+
+    // *(dated 2026-09-26, s8c refuting round 4.)* A component outside the CVSS v3.x metric set (FIRST
+    // CVSS v3.1 §2-§4: the eight base, three temporal and eleven environmental metrics) is malformed,
+    // as `cvss::v3` reads it (`UnknownMetric`), and refuses; it is never skipped and the rest scored.
+    let base = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H";
+    // CONTROL: a v3.x temporal or environmental metric is in the set and is ignored (base-only).
+    for known in ["E:P", "RL:O", "RC:C", "CR:H", "MAV:L", "MA:N"] {
+        assert_eq!(
+            cvss3_tenths(&format!("{base}/{known}")),
+            Ok(98),
+            "CONTROL: `{known}` is a v3.x metric; the vector is scored on its base metrics"
+        );
+    }
+    let unknown = format!("{base}/XX:Y");
+    let err = severity_of(Some(&unknown))
+        .expect_err("a component outside the v3.x metric set refuses; it is never scored");
+    let mut needles = vec![
+        "cvss-unscorable",
+        unknown.as_str(),
+        "`XX` is not a CVSS v3.x metric",
+    ];
+    needles.extend(CVSS_REMEDIES);
+    refused_naming(&err, &needles, "an unknown v3 metric");
 }
 
 // ---------------------------------------------------------------- package

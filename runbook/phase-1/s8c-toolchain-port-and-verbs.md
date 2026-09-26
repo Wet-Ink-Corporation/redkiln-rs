@@ -1277,7 +1277,7 @@ through `with_tool_program` when the map carries one.
 | --- | --- |
 | `test_timeout` (29) | **measured here** (below): the slowest child of a cold `test` call **on the runner the port selects** — after X15's install, `cargo nextest run` with its `--doc` companion, each child timed — n = 3 (*D21-48 (2026-09-24), lead:* a warrant measured on `cargo test` alone would bound a stand-in for what runs) |
 | `build_timeout` (5) | **measured here**: a cold `cargo build --workspace`, n = 3 |
-| `scan_timeout` (4) | **measured here**: the offline scan over the pinned database, n = 3. *(dated 2026-09-26, s8c build, refuting round 2.)* Of the four catalog sites, three are `sca_scan` steps and one is `tech-debt-assessment`'s `toolchain:lint` step, and the registry's `lint` row also names `scan_timeout` as its construction bound. The lint verb runs `cargo clippy --workspace --all-targets`, which no reading timed, so **the value does not warrant the lint sites** (this section's own rule: *"A warrant timed on a command the verb does not run is a warrant for the wrong thing."*). Record V's evidence says so; the lint sites' own key or warrant is handed on, unassigned, in §8c.12 item 5 |
+| `scan_timeout` (4) | **measured here**: the offline scan over the pinned database, n = 3. *(dated 2026-09-26, s8c build, refuting round 2.)* Of the four catalog sites, three are `sca_scan` steps and one is `tech-debt-assessment`'s `toolchain:lint` step~~, and the registry's `lint` row also names `scan_timeout` as its construction bound~~ *(dated 2026-09-26, s8c build, refuting round 4: struck. The `lint` row's `timeout` column is declared but not read by the executor: no code under `crates/*/src` reads `VerbEntry.timeout` (only the `verb_registry` tests do), a `tool` step's bound is its own `timeout_secs` (record B), and the construction bound that caps it is `[adapters] toolchain_timeout_secs`, 3600 s by default (`rk-cli`'s `DEFAULT_TOOLCHAIN_TIMEOUT_SECS`). So the one lint site `scan_timeout` bounds is that catalog step.)*. The lint verb runs `cargo clippy --workspace --all-targets`, which no reading timed, so **the value does not warrant the lint sites** (this section's own rule: *"A warrant timed on a command the verb does not run is a warrant for the wrong thing."*). Record V's evidence says so; the lint sites' own key or warrant is handed on, unassigned, in §8c.12 item 5 |
 | `setup_timeout` (no catalog site; the `setup` row's own) | **measured here**: `setup`'s install over `setup_projects` in the fresh worktree, n = 3 |
 | `implement_timeout` (27), `review_timeout` (4), `repro_timeout` (2) | these sit on **agent** steps, and the lanes reach all three [measured over `.redkiln/catalog/` at `fc80687`]. `implement_timeout` is on `tdd-red-green-refactor`'s `red`, `green` and `refactor`, `equivalence-boundary/write` and `docs-update/write`. `repro_timeout` is on `minimal-repro/attempt`, and `review_timeout` on `adversarial-review/review`. **So none of them may be `unmeasured`.** An `unmeasured` key refuses by name, and `s8d`'s walk would stop at the first of them. Each is **cited**: a dispatch-duration record for the key's activity class, with `source` naming it. AC-223 sets the floor: *"at least the recorded slow-condition figure for that class (its recorded maximum, not its median)"*. `review_timeout`'s candidate is AC-223's own evidence line, F31/S-TYPED *"CLEAN review median 1,071 s, slowest 4,561 s"*. **For `implement_timeout` and `repro_timeout` this file found no such record** (it searched `references/2026-09-08-evidence-brief.md` and AC-223's evidence line). *D21-48 (2026-09-24):* the operator took the value, X4: *"**4,800 s each, cited to F31/S-TYPED's slowest agent dispatch (4,561 s) as a borrowed class.** The record says so."* So each carries `secs = 4800`, `measured = [4561]`, a `source` naming F31/S-TYPED and the words *borrowed class*, and a `rule` naming the re-derivation below. This stage takes no free decision |
 | `deploy_timeout` (11), `migration_timeout` (3), `cook_timeout` (5), `ue_test_timeout` (3), `mutation_timeout` (1) | `unmeasured`, each with its reason. No Phase-1 Rust verb deploys, migrates, cooks, runs Unreal automation or mutates |
@@ -1464,7 +1464,7 @@ cargo's default and so errs long; and `git worktree remove --force` left each pa
 skeleton (114 dangling links, 0 files) under `.git/redkiln/tmp/`, invisible to the path-set check. The skeletons were
 removed by hand (§8c.12 hands the fact on to `s8d-ii`).
 
-*(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* **RE-MEASURED, n = 3, at the tree holding all of `s8c`'s work.** D21-64 ruling 8:
+*(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* **RE-MEASURED, n = 3, at the tree holding ~~all of `s8c`'s work~~ `s8c`'s work through `366543a` plus the uncommitted leak and `cvss` packages.** *(dated 2026-09-26, s8c build, refuting round 4: the struck words overstate it. `git diff --stat 2f3f6ab 3e4b260 -- crates Cargo.lock Cargo.toml` prints 5 files, all D67's (`e84d094`): the Rust adapter's CVSS scoring in `verbs.rs`, its tests (+1 test), two scan fixtures and the libtest tally golden; R4FIX then adds a kernel test, an `rk-cli` re-executor test (and its fake's empty mode), a CVSS v3 metric-set check and its test lines. None of it is on a measured child's command path (setup, build, the scans' argvs, the runner): it changes what a scan scores and adds in-process tests to the suite the `run` child times, which read 161 s against the 180 s at which the rule's 360 s would move. The values are kept on that reading; a re-take at the close commit is the operator's, as ruling 8 left it.)* D21-64 ruling 8:
 *"`s8c`'s value table is re-measured at the stage's work commit, three passes, and re-derived by record V's rule
 (written before any reading), by dated edit."* The work commit did not exist yet, so the pin is a commit object made
 from a temporary index over the working tree (`2f3f6ab257c4b21c1bd16bcd4781f97475f958f5`, parent `366543a`, ~~on no
@@ -1874,6 +1874,30 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
       never the 7.7 its `E:P` makes it as written — left: Ok(77) right: Ok(87)"*]. Both green after the change.
       The lower-case case was added after green; M45 is its control. Checkpoint 8c (7) names the new test; its
       `want` reads 58. The crate's suite reads 69 passed, 0 failed.
+    - *(dated 2026-09-26, s8c build, refuting round 4.)* Two more, beyond the 78, so FLOOR (13) does not move, and one extended:
+      - `tool_verb_routing::a_failing_build_report_is_not_a_walked_step` (rk-kernel). A rowed `build` port step
+        over `CountingToolchain::with_failing_build()` (`Ok`, `status: failing`, `errors: 1`), and a `toolchain`
+        row whose `outputs` is `BuildReport` answered through `run_verb` with the same failing report, each fail
+        the step as `NonZero { code: None, stderr_digest }`, the digest being the report's JSON; a passing report
+        walks on each path (the control). Before it, every double that handed the kernel a build was `passing`, so
+        M46, M47 and M48 each SURVIVED the whole workspace suite (873 passed, 0 failed, 9 ignored over 44 result
+        lines, rc 0; `scratchpad/s8c/r4fix_mutants.py whole`) [red, under each of M46/M47/M48: *"the step did not
+        fail: Continue"*]. Green on the unmutated tree.
+      - `review_pass::an_empty_arm_is_no_record_never_a_flip` (rk-cli). `ScriptedToolchain` gains `Arm::Empty`
+        (`Ok`, nothing executed, `status: Empty`), and an empty arm beside a green or red other arm, either way
+        round, gives `run(..) == None`, beside a red/green control that records. Before it the re-executor's
+        EMPTY-arm guard was UNOBSERVABLE with the scripted fake (every mode executed one test per selected name):
+        M50 SURVIVED all six review_pass tests that existed (`running 6 tests`, rc 0) [red, under M50: *"an empty
+        candidate beside a green reference produces NO record, never a cell: Some(DidNotFlip)"*]. Green unmutated.
+      - `verbs::a_matched_malformed_vector_refuses_the_scan_by_name` is extended, not added: through `severity_of`,
+        `CVSS:3.1/…/A:H/XX:Y` refuses `cvss-unscorable` naming *"`XX` is not a CVSS v3.x metric"* and the
+        remedies, beside a control that `E:P`, `RL:O`, `RC:C`, `CR:H`, `MAV:L` and `MA:N` still score 98 (base-only)
+        [red: *"a component outside the v3.x metric set refuses; it is never scored: Some(Critical)"*]. The metric
+        set chosen is the v3.1 specification's (eight base, three temporal, eleven environmental names), not
+        exactly what `cvss::v3` accepts (the eight base only): record V decision 5 refuses *"a vector neither
+        scorer accepts (malformed …)"*, and a v3.1 vector carrying temporal or environmental metrics is well formed
+        and scored base-only, as the v4.0 path is (D21-67 ruling 7), while an unknown name is malformed on both
+        paths. Checkpoint 8c (9) names the two new tests; its `want`s read 24 and 10.
     - *D21-48 (2026-09-24), X15:* the nine below. Each is red first, for the reason in brackets.
     - `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` [red: no `nextest_lines` module and
       no golden under `tests/fixtures/nextest/`]. It also asserts that the installed `cargo nextest --version` is in
@@ -2055,6 +2079,11 @@ Parallel agents share one scratchpad, so the driver's filename carries this stag
 | M43 | *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7)* nothing is stripped: the vector is scored as written (the pre-D67 scorer) | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` AND `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` |
 | M44 | *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7)* the as-written parse is skipped, so an unknown metric is stripped away and the vector scored | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` (its `expect_err`) |
 | M45 | *(dated 2026-09-26, s8c build, D67; D21-67 ruling 7)* the metric comparison is case-sensitive, so a lower-case base metric is stripped | `verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band` (the lower-case case refuses) |
+| M46 | (dated 2026-09-26, s8c build, refuting round 4.) `build_verdict`'s `Failing` arm reads as `Ok(())`, so a red build walks | `tool_verb_routing::a_failing_build_report_is_not_a_walked_step` |
+| M47 | (dated 2026-09-26, s8c build, refuting round 4.) the `build` port call drops its verdict (its `and_then` into `build_verdict` becomes a `map` to unit) | `tool_verb_routing::a_failing_build_report_is_not_a_walked_step` |
+| M48 | (dated 2026-09-26, s8c build, refuting round 4.) `decode_verb_output`'s `BuildReport` arm decodes and drops the verdict | `tool_verb_routing::a_failing_build_report_is_not_a_walked_step` |
+| M49 | (dated 2026-09-26, s8c build, refuting round 4.) the in-tree v3 scorer's metric-set check is disabled, so an unknown component is skipped and the vector scored | `verbs::a_matched_malformed_vector_refuses_the_scan_by_name` |
+| M50 | (dated 2026-09-26, s8c build, refuting round 4.) the re-executor's EMPTY-arm guard is deleted | `review_pass::an_empty_arm_is_no_record_never_a_flip` |
 
 *(dated 2026-09-26, s8c build, P3.)* **Parser mutants, run from `scratchpad/s8c/p3_mutants.py`** (anchor asserted once, tmp + `os.replace`,
 restored in `finally` and the sha256 re-checked; the two parser files are new, so the restore writes the recorded bytes
@@ -2419,6 +2448,22 @@ In the same pass, through the no-dispatch wrapper:
 
 This is a diagnostic reading. It is not the formal Checkpoint 8c.
 
+*(dated 2026-09-26, s8c build, refuting round 4.)* **M46–M50, from `scratchpad/s8c/r4fix_mutants.py`** (with `r4fix_mutants_extra.py`; anchor asserted
+exactly once, tmp + `os.replace`, `git diff --stat` read, restored in `finally`, sha256 re-checked; each through the
+no-dispatch helper; logs under `scratchpad/s8c/r4fix-mut/`).
+- **Before the test existed**, `whole` mode (`cargo test --workspace --no-fail-fast` under the mutant): M46, M47
+  and M48 each SURVIVED, rc 0, **873 passed / 0 failed / 9 ignored over 44 result lines**, no `FAILED` line. That
+  is round 4's finding measured: no test in the workspace could read a red build.
+- **M50 before its test**: SURVIVED all six pre-existing `review_pass` tests by `--exact` (`running 6 tests`, rc
+  0): the EMPTY-arm guard was unobservable with the scripted fake, so the fake gained `Arm::Empty` (a trivial
+  mode) rather than the guard being recorded as owed.
+- **After**: M46, M47, M48 KILLED by `tool_verb_routing::a_failing_build_report_is_not_a_walked_step`; M49 KILLED
+  by `verbs::a_matched_malformed_vector_refuses_the_scan_by_name` and, as expected, SURVIVED
+  `verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample` (every database vector is well
+  formed); M50 KILLED by `review_pass::an_empty_arm_is_no_record_never_a_flip`. Each kill rc 101 with the named
+  test's own `FAILED` line and its executed count asserted. The readings were re-taken after `cargo fmt` and the
+  clippy fix (`scratchpad/s8c/r4fix-final-named.log`).
+
 **If a mutant survives, read it before strengthening anything.** A surviving mutant can mean that the property is
 unobservable from the seam the test watches. If so, the guard moves; it is not weakened. Record every result, kills
 and survivors alike, in the checkpoint output.
@@ -2681,7 +2726,9 @@ run_named rk-adapter-toolchain-node "--features corpus" 1 ac334::ac334_flip_pred
 run_named rk-git "" 5 worktree_include::carries_only_files_both_ignored_and_matched worktree_include::an_absent_file_carries_nothing \
   worktree_include::a_file_under_a_run_worktree_is_never_carried \
   worktree_include::a_symlink_is_skipped_and_named worktree_include::a_path_that_escapes_the_root_is_refused_by_name
-run_named rk-kernel "" 23 tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port \
+# (dated 2026-09-26, s8c build, refuting round 4) the rk-kernel list gains tool_verb_routing::a_failing_build_report_is_not_a_walked_step
+# (M46-M48 kill on it). ~~want 23~~ is struck: 23 + 1 = 24. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
+run_named rk-kernel "" 24 tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port \
   verb_registry::the_shipped_rust_value_table_is_exactly_the_declared_key_map tool_verb_routing::a_verb_with_no_row_refuses_by_its_bare_name_before_its_bound_is_resolved \
   tool_verb_routing::a_verb_with_no_registry_row_is_refused_by_its_bare_name tool_verb_routing::a_registry_verb_with_no_inputs_reaches_run_verb \
   tool_verb_routing::a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port tool_verb_routing::a_row_whose_route_has_no_executor_refuses_naming_the_route \
@@ -2692,12 +2739,16 @@ run_named rk-kernel "" 23 tool_verb_routing::a_toolchain_test_step_refuses_by_na
   step_bound::an_unresolved_toolchain_key_is_refused_by_name step_bound::a_step_without_timeout_secs_passes_an_undeclared_bound \
   memo::ac018_live_verb_may_not_memoise verify::ac332_empty_selection_is_never_green kernel_denylist::ac487_kernel_denylist \
   source_registry::the_catalog_source_census_is_fifty_with_fourteen_declared source_registry::an_undeclared_checklist_kb_or_feed_key_is_refused_by_name \
-  source_registry::an_unprovided_feed_is_null_when_optional_and_refused_when_mandatory source_registry::a_malformed_entry_is_refused_at_load_naming_it
-run_named rk-cli "" 9 review_pass::four_cells_over_two_arms_and_both_fail_is_not_a_flip review_pass::a_candidate_that_cannot_run_is_unverifiable_never_a_flip \
+  source_registry::an_unprovided_feed_is_null_when_optional_and_refused_when_mandatory source_registry::a_malformed_entry_is_refused_at_load_naming_it \
+  tool_verb_routing::a_failing_build_report_is_not_a_walked_step
+# (dated 2026-09-26, s8c build, refuting round 4) the rk-cli list gains review_pass::an_empty_arm_is_no_record_never_a_flip
+# (M50 kills on it). ~~want 9~~ is struck: 9 + 1 = 10. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
+run_named rk-cli "" 10 review_pass::four_cells_over_two_arms_and_both_fail_is_not_a_flip review_pass::a_candidate_that_cannot_run_is_unverifiable_never_a_flip \
   review_pass::mutate_and_selectionless_repros_produce_no_record review_pass::selection_is_the_double_dash_tail_or_nothing \
   run::ac438_table_driven_exit_codes_over_fixtures_binary_arm toolchain::a_tool_step_reaches_the_rust_adapter_and_not_the_fixture \
   adapter_selection::the_chosen_adapters_value_table_reaches_the_kernel_without_its_name \
-  doctor::ac419_missing_or_non_numeric_timeout_rejected doctor::rk_d_timeout_resolves_a_toolchain_substitution_through_the_value_table
+  doctor::ac419_missing_or_non_numeric_timeout_rejected doctor::rk_d_timeout_resolves_a_toolchain_substitution_through_the_value_table \
+  review_pass::an_empty_arm_is_no_record_never_a_flip
 nd_check "(5)-(10) named selections" || exit 1
 # The findings-block row's fixture must still expect 4: a table-driven test over a changed `expected` asserts a
 # different row. `[:space:]`, as s7h (10a) reads it, because the driver parses it with `.trim().parse()`.
@@ -3026,8 +3077,8 @@ commit.** A pass is evidence about a specific text.
    uncommitted leak and cvss packages) moved `test_timeout` 300 → 360 (slowest child 146 s → 161 s); the other three
    values are unchanged (§8c.5's re-measure note; record V's evidence).
 5. *(dated 2026-09-26, s8c build, refuting round 2.)* **`scan_timeout` bounds a clippy `lint` site it was not measured
-   on.** `tech-debt-assessment`'s `toolchain:lint` step declares `timeout_secs = "${toolchain.scan_timeout}"`, and the
-   registry's `lint` row names `scan_timeout` as its construction bound; the warrant timed `cargo audit` and `cargo
+   on.** `tech-debt-assessment`'s `toolchain:lint` step declares `timeout_secs = "${toolchain.scan_timeout}"`~~, and the
+   registry's `lint` row names `scan_timeout` as its construction bound~~ *(dated 2026-09-26, s8c build, refuting round 4: struck. The `lint` row's `timeout` column is declared but not read by the executor: no code under `crates/*/src` reads `VerbEntry.timeout` (only the `verb_registry` tests do), a `tool` step's bound is its own `timeout_secs` (record B), and the construction bound that caps it is `[adapters] toolchain_timeout_secs`, 3600 s by default (`rk-cli`'s `DEFAULT_TOOLCHAIN_TIMEOUT_SECS`). The item rests on that one catalog step, which does bound clippy at 60 s.)*; the warrant timed `cargo audit` and `cargo
    deny` only. The value does not warrant the lint sites (§8c.5's row, record V's evidence). No later stage file names
    the activity or a lint timeout, so the lint sites' own key (a measured `lint_timeout`, say) or a clippy-timed
    warrant is reported here and not assigned; the shipped value is unchanged.
@@ -3079,6 +3130,27 @@ The draft's third item, `toolchain:backlog`'s producer, is settled by D21-46 R7 
   control goes red under a widened (`^crates/rk-adapter-toolchain-rust/src/`) and an empty exclusion. The 7c
   statement census gains a dated note (+8: 216 can stop, 144 cannot, 360). **`s8j` says Checkpoint 7c is re-run
   *"whole and unamended"*;** it now runs over this amendment, and PROGRESS's 7c row says so.
+  *(dated 2026-09-26, s8c build, refuting round 4.)* `s8j` now carries the receiver note at both sites (its head
+  and §8j.6 step 2).
+- *(dated 2026-09-26, s8c build, refuting round 4.)* **Checkpoint 7b was RED when run whole from `d6acfba` (`s8b`)
+  until this stage's amendment.** Its two facet-predicate bans, clause 1 (LLM-ordinal) and clause 2
+  (lexical-deriver), fired on string literals `s8b` added to `crates/rk-kernel/tests/it/lattice.rs` (:661 for
+  clause 1; :297, :325, :354 and :382 for clause 2: the lattice parity tests' expected origin text and the D21-56
+  (ii) `auth` probes) and `crates/rk-kernel/tests/it/p9_pin.rs:126` (both clauses: the threat-model text at
+  `b66ba53`, which D21-47 V2 has the test read through git). No hit is a predicate the kernel evaluates as
+  authored. Nobody saw it because `s8a`'s guard (11) last ran 7b whole at `bf12a1c`, before `d6acfba`, and every
+  later run of Checkpoint 8a (8b's, 8c's (15)) was nested (`RK_CP_NESTED=1`), which skips (11). **Amended in
+  `s7b-kernel.md` by dated note**, as 7b's own 2026-09-20 amendment rules (*"The EXCLUSION is widened rather than
+  the PATTERN narrowed"*): one `X7B` exclusion both bans read admits exactly
+  `^crates/rk-kernel/tests/it/(lattice|p9_pin)\.rs:`, and each ban gains a synthetic control. The same lines,
+  planted at a `src/` file of the same basename, at `tests/it/lattice_more.rs` and at another crate's
+  `tests/it/p9_pin.rs`, must survive the filters, and the admitted files' lines must not. `s7b`'s §7b.14 count
+  gains a dated re-count, 154 / 91 / 63. Executed from `s7b`'s bytes (`scratchpad/s8c/r4fix_7b_clauses.py`):
+  the amended clauses PASS on the tree; a file planted under `crates/` with lattice.rs:661's line FAILS clause
+  1, and one with lattice.rs:297's line FAILS clause 2; `X7B` widened to all of `tests/it/` FAILS the synthetic
+  control; and the struck exclusion FAILS on the tree at lattice.rs:661 and p9_pin.rs:126, which is the trip
+  reproduced. **`s8e`, `s8i` and `s8j` re-run Checkpoint 8a whole**, and 8a's guard (11) runs 7b whole: those
+  runs now meet the amended bans. PROGRESS's 7b row carries the trip.
 - *D21-48 (2026-09-24):* **The verify pass and the lanes call `Toolchain::test`, and on this box it now runs nextest**
   plus the doctest companion. `s8g`'s verify pass and its `verify_completed` row, `s8d`'s `red-check` read and
   `s8j`'s runs select tests through the port, so their argv readings name `nextest`. Their counts do not move,

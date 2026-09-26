@@ -471,10 +471,10 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
   **Shipped**: `.redkiln/registry.toml`'s `[toolchain.rust]` ~~carries these readings, each labelled with its pass and
   child, under `command` warrants at the pin above.~~ *(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* carried these readings until the re-measure
   below replaced them; they stay in the registry as dated comments.
-  *(dated 2026-09-26, s8c build, refuting round 2.)* **`scan_timeout` also bounds a clippy `lint` site.** `scan_timeout` is read at two sites that run no scan. `.redkiln/catalog/tech-debt-assessment.toml`'s step on
+  *(dated 2026-09-26, s8c build, refuting round 2.)* **`scan_timeout` also bounds a clippy `lint` site.** `scan_timeout` is read at ~~two sites~~ one site that runs no scan *(dated 2026-09-26, s8c build, refuting round 4: one, the catalog step below; the registry row is not a read, as struck below)*. `.redkiln/catalog/tech-debt-assessment.toml`'s step on
   `run = "toolchain:lint"` declares `timeout_secs = "${toolchain.scan_timeout}"` (one of the four catalog sites the
-  §8c.5 table counts; the other three are `sca_scan` steps), and `.redkiln/registry.toml`'s `lint` row names
-  `timeout = "scan_timeout"` as its construction bound. The Rust adapter's `lint` runs `cargo clippy --workspace
+  §8c.5 table counts; the other three are `sca_scan` steps), ~~and `.redkiln/registry.toml`'s `lint` row names
+  `timeout = "scan_timeout"` as its construction bound~~ *(dated 2026-09-26, s8c build, refuting round 4: struck. The `lint` row's `timeout` column is declared but not read by the executor: no code under `crates/*/src` reads `VerbEntry.timeout` (only the `verb_registry` tests do), a `tool` step's bound is its own `timeout_secs` (record B), and the construction bound that caps it is `[adapters] toolchain_timeout_secs`, 3600 s by default (`rk-cli`'s `DEFAULT_TOOLCHAIN_TIMEOUT_SECS`).)*. The Rust adapter's `lint` runs `cargo clippy --workspace
   --all-targets`. The warrant's readings timed `cargo audit` and `cargo deny` only (1 s, so 60 s under decision 10's
   rule); no reading timed clippy. **The value does not warrant the lint sites**: under record B's min(step,
   construction) that step's clippy child is bounded at 60 s by a reading of another command. No later stage file
@@ -490,7 +490,7 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
   did not yet exist, so the measured tree is a commit object made from a temporary index over the working tree,
   `2f3f6ab257c4b21c1bd16bcd4781f97475f958f5` (parent `366543a`, tree `4ba5d20f78ee72b095d0cd20a8444c11155dbc39`: every
   `s8c` package through `366543a`, plus the uncommitted leak fix of ruling 3 and the `cvss` crate of ruling 7). It is
-  on no ref. §8c.5's script was extracted from the stage file's bytes with one substitution, its pin line (`git
+  on no ref. *(dated 2026-09-26, s8c build, refuting round 4.)* The heading's *"all of `s8c`'s work"* overstates the pin: `crates/` changed after it, in D67's package (`e84d094`: the Rust adapter's CVSS v4.0 base-only scoring, one test, two scan fixtures and the libtest tally golden; `git diff --stat 2f3f6ab 3e4b260 -- crates Cargo.lock Cargo.toml`, 5 files) and in refuting round 4's fix (a kernel test, an `rk-cli` re-executor test and its fake's empty mode, the CVSS v3 metric-set refusal and its test lines). None of it changes a measured child's command (setup, build, either scan's argv, the runner); it changes what a scan scores and adds in-process tests to the suite the `run` child times. The value is kept on that reading, the slowest child being 161 s against the 180 s at which decision 10's rule would move `test_timeout` above 360 s. Whether a re-take at the close commit is owed is the operator's, as ruling 8 left it. §8c.5's script was extracted from the stage file's bytes with one substitution, its pin line (`git
   rev-parse HEAD` → that commit), and otherwise byte-identical to P8's extraction; each pass ran through the session's
   no-dispatch helper and `runbook/tools/nodispatch.sh` (`CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`), in
   `.git/redkiln/tmp/c<HHMMSS>` (`path_len=24`, as before), each with its own empty `CARGO_TARGET_DIR`. Runner:

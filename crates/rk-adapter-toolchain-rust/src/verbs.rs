@@ -357,11 +357,22 @@ fn db_head(tool: &str, db: &Path) -> Result<String, StepError> {
     })
 }
 
+/// The CVSS v3.x metric names (FIRST CVSS v3.1 §2-§4): eight base, three temporal and eleven
+/// environmental. *(s8c refuting round 4.)*
+const CVSS3_METRICS: &[&str] = &[
+    "AV", "AC", "PR", "UI", "S", "C", "I", "A", "E", "RL", "RC", "CR", "IR", "AR", "MAV", "MAC",
+    "MPR", "MUI", "MS", "MC", "MI", "MA",
+];
+
 /// The CVSS v3 base score in tenths.
 ///
 /// The CVSS v3.1 specification's base equations and its `Roundup`, which v3.0 vectors are scored
 /// by too. Only the eight base metrics are read; any other metric (temporal, environmental) is
 /// ignored, and a base metric missing, repeated or out of its set is refused.
+/// *(dated 2026-09-26, s8c refuting round 4.)* A component whose name is not in the v3.x metric set
+/// ([`CVSS3_METRICS`]) is refused too, never skipped: `cvss::v3` rejects it (`UnknownMetric`), and
+/// record V decision 5 refuses *"a vector neither scorer accepts (malformed …)"*, as the v4 path
+/// already does. A temporal or environmental metric stays ignored (base-only, as v4.0 is scored).
 ///
 /// `pub` so the differential test (`verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample`)
 /// can pin it against `cvss::v3` over real advisory vectors (D21-64 ruling 7).
@@ -378,6 +389,11 @@ pub fn cvss3_tenths(vector: &str) -> Result<u32, String> {
         let (k, v) = part
             .split_once(':')
             .ok_or_else(|| format!("the metric `{part}` has no value"))?;
+        if !CVSS3_METRICS.contains(&k) {
+            return Err(format!(
+                "`{k}` is not a CVSS v3.x metric (FIRST CVSS v3.1 §2-§4), so the vector is malformed"
+            ));
+        }
         if ["AV", "AC", "PR", "UI", "S", "C", "I", "A"].contains(&k) && m.insert(k, v).is_some() {
             return Err(format!("the base metric `{k}` is repeated"));
         }

@@ -29,7 +29,7 @@ revision changes the following:
   - Checkpoint 7c is re-run whole and unamended, from a plain terminal, as the child of the launcher's `wrap`
     mode. That run is also the `live_dispatch_probe` re-run *(split since 2026-09-24 by D21-47: the suite portion
     runs outside `wrap`, and only the live portion runs under it; §8j.6 step 2; and amended only by A12's `-H`
-    since the final consistency pass, 2026-09-24)*. *D21-48 (2026-09-24), cross-file pass:* after `s8c`'s
+    since the final consistency pass, 2026-09-24)*. *(dated 2026-09-26, s8c build, refuting round 4, receiver note.)* *"Unamended"* and *"only by A12's `-H`"* are no longer true: `s8c` amended Checkpoint 7c's AC-329 `rk_absent` line by dated note in `s7c-adapters.md` (D21-43 N4; ADR-0169, record T), admitting exactly `crates/rk-adapter-toolchain-rust/src/libtest_lines.rs` with a pass and a fail control, +8 statements (`s8c` §8c.12, *Sibling files*). The amendment sits in 7c's suite portion, before the split's cut line, so the whole re-run runs over it outside `wrap`; A12's `-H` does not collide with it. *D21-48 (2026-09-24), cross-file pass:* after `s8c`'s
     cargo-nextest install (X15), 7c's `nextest_fallback_recorded_on_report` line still passes, because the test keeps
     its name over a controlled nextest-absent probe (`s8c` §8c.9). Its description *"nextest ABSENT on this box"*
     and `s7c` §7c.22's ARMED presence-arm row are stale, and the run is read against `s8c` §8c.12's note. Neither is
@@ -1015,7 +1015,7 @@ echo "fixture-proofs $head recorded, with $(printf '%s\n' $S8J_MUTANTS | grep -c
    trap config and the fake `claude`. Only its live-probe portion runs under `wrap`. Launch-gate tests build their
    `Env` explicitly, enforced by a lint."* The lint is `s8h`'s `run::every_binary_spawn_withholds_or_supplies_the_launch_record`
    (§8j.4). The whole of 7c still runs, and nothing in `s7c-adapters.md` is edited except A12's `-H` (§8j.8), which
-   moves no reading:
+   moves no reading *(dated 2026-09-26, s8c build, refuting round 4, receiver note: nor `s8c`'s dated AC-329 exclusion amendment to 7c's `rk_absent` line, which this stage does not edit either and which moves no reading of the split; see the note at the head of this file)*:
    - **The split.** The block is extracted verbatim from `runbook/phase-1/s7c-adapters.md`, as the last fenced
      block that echoes `CP7C-END-OF-BLOCK reached`, into a file under `target/`. It is cut at its line that opens
      `# ---- THE FIFTEENTH LINE, as statements.` The **suite portion** is everything above that line, with a sentinel

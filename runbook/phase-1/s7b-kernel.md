@@ -1325,8 +1325,8 @@ and blanks dropped, backslash continuations joined. **The rule that produces the
 a *statement that can stop the block* is one carrying its own `exit 1`. That is the unit `PROGRESS.md` records, and it
 is named here because **the same number in no unit is this checkpoint's own recorded defect, twice** — it read
 *"eighteen … nine"* and then *"All twenty (eleven … three … six)"*, and neither reconciled off the block (Halt 7:
-*"the SECOND undercount of the same number, by the same route: not counting it off the script"*). **149 non-comment
-statements, of which 89 can stop the block and 60 cannot** — re-counted 2026-09-13 after the `DENY_AT` and
+*"the SECOND undercount of the same number, by the same route: not counting it off the script"*). ~~**149 non-comment
+statements, of which 89 can stop the block and 60 cannot**~~ *(dated 2026-09-26, s8c build, refuting round 4: **154 non-comment statements, of which 91 can stop the block and 63 cannot**, re-counted off the block by the same rule after the facet-predicate bans' amendment. It added one `X7B=` exclusion both bans read, and per ban one `ctl=` capture and the control guard below it: +5, +2 that can stop, +3 that cannot. The 63 are the 60 decomposed here, the two `ctl=` capture halves and the `X7B=` assignment.)* — re-counted 2026-09-13 after the `DENY_AT` and
 `"resolve"` repairs below, which replaced one stopping statement (the redundant `workflow` pairing grep, now folded
 into the `DENY_AT` selection itself) with one capture (`DENY_AT`'s fallback half), leaving the total unchanged. The 60 that cannot are not unguarded assertions and the
 decomposition reproduces: **3** BEFORE readings (PIA-035 — prints for comparison, not assertions); **40** `out=` /
@@ -1807,7 +1807,24 @@ raw=$(grep -rnE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(critical
 # after the exclusion: after Step 4a NO facet is `source = "llm"` (0 hits for `source = "llm"` in
 # spikes/p9/facets.toml) and `has_repro` is `source = "human"` (facets.toml:149; ADR-0090 decision
 # 2), so no hit this pattern can produce over crates/ is a true instance of clause 1 today.
-hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/(rk-kernel|rk-cli)/tests/fixtures/')
+#
+# ---- AMENDED 2026-09-26 (dated 2026-09-26, s8c build, refuting round 4). THE EXCLUSION ADMITS TWO `s8b` TEST FILES,
+# ---- by anchored path and nothing wider: crates/rk-kernel/tests/it/lattice.rs and crates/rk-kernel/tests/it/p9_pin.rs.
+# ---- `s8b`'s d6acfba added string literals there that both bans match. At 3e4b260 this clause read exactly two:
+# ---- lattice.rs:661, the lattice parity test `unsatisfiable_fixture_names_its_cell` asserting the report's origin
+# ---- text for its fixture's row, `when = "size >= high"` (the fixture itself is under tests/fixtures/, excluded
+# ---- above); and p9_pin.rs:126, which quotes spikes/p9/catalog/threat-model.toml AS IT READ AT b66ba53, the pinned
+# ---- historical text D21-47 V2 has every such test read through git. The clause below read lattice.rs:297, :325,
+# ---- :354 and :382, the probe activities through which `shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged`
+# ---- proves D21-56 (ii), that the shipped load path REFUSES an `auth` root, and p9_pin.rs:126 again. None is a
+# ---- predicate the kernel evaluates as authored: each is a test's input or expected text. So this block was RED from
+# ---- d6acfba until this amendment, unnoticed because s8a's guard (11) last ran 7b whole at bf12a1c, before
+# ---- d6acfba, and every later run of Checkpoint 8a was nested (RK_CP_NESTED=1). As the 2026-09-20 amendment
+# ---- rules, the EXCLUSION is widened rather than the PATTERN narrowed; the synthetic control after each ban proves
+# ---- the same lines still halt when planted anywhere else under crates/. Recorded at s8c §8c.12.
+# ~~hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/(rk-kernel|rk-cli)/tests/fixtures/')~~
+X7B='^crates/(rk-kernel|rk-cli)/tests/fixtures/|^crates/rk-kernel/tests/it/(lattice|p9_pin)\.rs:'
+hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE "$X7B")
 [ -z "$hits" ] || { echo "FAIL: an LLM-ordinal predicate exists on a non-comment line outside the prescribed fixture tree — golden constraint 1, ADR-0090 clauses 1 and 2, AC-071, design §10.2's 'may not' column. READ each hit (golden constraint 9); do not silence the grep"; printf '%s\n' "$hits"; exit 1; }   # → silent
 # POSITIVE CONTROL, because the line above passes on ABSENCE and a pattern that silently stopped matching
 # would read as a clean tree. The corpus is the control: the SAME alternation over spikes/p9/ returns 103
@@ -1816,6 +1833,19 @@ hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep
 # zero the pattern broke, not the tree. It is asserted as >= 1, never as 103: the corpus is s7e's to repair.
 c=$(grep -rcE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b' spikes/p9/ --include=*.toml 2>/dev/null | awk -F: '{s+=$2} END{print s+0}')
 [ "${c:-0}" -ge 1 ] || { echo "FAIL: the LLM-ordinal pattern matches NOTHING in spikes/p9/, where it matched 103 lines on 2026-09-13 — the pattern is broken, and the ban above is vacuous rather than satisfied"; exit 1; }   # → 103
+# (dated 2026-09-26, s8c build, refuting round 4) SYNTHETIC CONTROL for the widened exclusion: the same lines, planted
+# under any other path, still halt. Three plants must survive the filters (a src/ file of the same basename, a
+# tests/it/ file whose name only EXTENDS an admitted one, another crate's file of the admitted name) and the two
+# admitted paths' own lines must not. The lines run through clause 1's own pattern first, so a pattern that stopped
+# matching them reads as a control failure too.
+ctl=$(printf '%s\n' \
+  'crates/rk-kernel/src/lattice.rs:1:        Some("story: stage.specification.require[0] when = \"size >= high\""),' \
+  'crates/rk-kernel/tests/it/lattice_more.rs:1:        Some("story: stage.specification.require[0] when = \"size >= high\""),' \
+  'crates/rk-cli/tests/it/p9_pin.rs:1:    const OLD: &str = "applicable_if = \"auth or data_migration or external_dep\"";' \
+  'crates/rk-kernel/tests/it/lattice.rs:661:        Some("story: stage.specification.require[0] when = \"size >= high\""),' \
+  'crates/rk-kernel/tests/it/p9_pin.rs:126:    const OLD: &str = "applicable_if = \"auth or data_migration or external_dep\"";' \
+  | grep -E '(require|requires|applicable_if|when)[[:space:]]*=.*\b(criticality|novelty|size|blast_radius|market_facing|external_dep|has_repro)\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE "$X7B")
+[ "$(printf '%s\n' "$ctl" | grep -c .)" -eq 3 ] && ! printf '%s\n' "$ctl" | grep -qE '^crates/rk-kernel/tests/it/(lattice|p9_pin)\.rs:' || { echo "FAIL: SYNTHETIC CONTROL — clause 1's widened exclusion did not keep exactly the three planted lines outside the two admitted s8b test files; the ban could not go red there"; printf '%s\n' "$ctl"; exit 1; }
 # THE SECOND PROHIBITION, WHICH THIS BLOCK OMITTED ENTIRELY UNTIL 2026-09-13. design §10.2 principle
 # 3 forbids, SEPARATELY, "authoring one — `require` row or `applicable_if` alike — keyed on `auth`,
 # `ui`, `flag_exists` or `data_migration` as computed by the lexical deriver, until S-FACET reports"
@@ -1826,12 +1856,27 @@ c=$(grep -rcE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(criticalit
 # which is the clause-4 fixture, and its single in-crate hit is that file's `when = "ui"`.
 raw=$(grep -rnE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(auth|ui|flag_exists|data_migration)\b' crates/ --include=*.toml --include=*.rs); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the lexical-deriver search could not run (grep rc=$rc; 2 = no such path) — design §10.2 principle 3's SECOND clause, as a command"; exit 1; }
-hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/(rk-kernel|rk-cli)/tests/fixtures/')
+# (dated 2026-09-26, s8c build, refuting round 4) the same widened exclusion, $X7B, set at clause 1 above:
+# ~~hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE '^crates/(rk-kernel|rk-cli)/tests/fixtures/')~~
+hits=$(printf '%s\n' "$raw" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE "$X7B")
 [ -z "$hits" ] || { echo "FAIL: a predicate keyed on a lexical-deriver facet exists on a non-comment line outside the prescribed fixture tree — design §10.2 principle 3's SECOND clause, ADR-0089, ADR-0093; S-FACET is UNRUN and auth scores 0/12 [0.00, 0.24], every positive false. READ each hit (golden constraint 9); do not silence the grep"; printf '%s\n' "$hits"; exit 1; }   # → silent
 # ITS OWN POSITIVE CONTROL, for the same reason the LLM-ordinal ban has one: the line above passes
 # on ABSENCE, so a pattern that silently stopped matching would read as a clean tree.
 c=$(grep -rcE '(require|requires|applicable_if|when)[[:space:]]*=.*\b(auth|ui|flag_exists|data_migration)\b' spikes/p9/ --include=*.toml 2>/dev/null | awk -F: '{s+=$2} END{print s+0}')
 [ "${c:-0}" -ge 1 ] || { echo "FAIL: the lexical-deriver pattern matches NOTHING in spikes/p9/, where it matched 44 lines on 2026-09-13 — the pattern is broken, and the ban above is vacuous"; exit 1; }   # → 44
+# (dated 2026-09-26, s8c build, refuting round 4) SYNTHETIC CONTROL for the widened exclusion: the same lines, planted
+# under any other path, still halt. Three plants must survive the filters (a src/ file of the same basename, a
+# tests/it/ file whose name only EXTENDS an admitted one, another crate's file of the admitted name) and the two
+# admitted paths' own lines must not. The lines run through clause 2's own pattern first, so a pattern that stopped
+# matching them reads as a control failure too.
+ctl=$(printf '%s\n' \
+  'crates/rk-kernel/src/lattice.rs:1:         method_rank = 99\ncost_class = \"S\"\napplicable_if = \"auth\"\n",' \
+  'crates/rk-kernel/tests/it/lattice_more.rs:1:         method_rank = 99\ncost_class = \"S\"\napplicable_if = \"auth\"\n",' \
+  'crates/rk-cli/tests/it/p9_pin.rs:1:    const OLD: &str = "applicable_if = \"auth or data_migration or external_dep\"";' \
+  'crates/rk-kernel/tests/it/lattice.rs:297:         method_rank = 99\ncost_class = \"S\"\napplicable_if = \"auth\"\n",' \
+  'crates/rk-kernel/tests/it/p9_pin.rs:126:    const OLD: &str = "applicable_if = \"auth or data_migration or external_dep\"";' \
+  | grep -E '(require|requires|applicable_if|when)[[:space:]]*=.*\b(auth|ui|flag_exists|data_migration)\b' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|#)' | grep -vE "$X7B")
+[ "$(printf '%s\n' "$ctl" | grep -c .)" -eq 3 ] && ! printf '%s\n' "$ctl" | grep -qE '^crates/rk-kernel/tests/it/(lattice|p9_pin)\.rs:' || { echo "FAIL: SYNTHETIC CONTROL — clause 2's widened exclusion did not keep exactly the three planted lines outside the two admitted s8b test files; the ban could not go red there"; printf '%s\n' "$ctl"; exit 1; }
 # WIDENED to leave[sd]?, because METHOD-P:150 and ADR-0079:240 both say "leave the model" and s8:275-276
 # already carries the wider form. Comment lines are NOT excluded here, deliberately: the prohibition is about
 # what a document SAYS, so a doc comment quoting METHOD-P §1.4 as licence is exactly the hit this exists to catch.

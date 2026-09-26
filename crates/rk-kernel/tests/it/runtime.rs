@@ -295,6 +295,9 @@ impl EventStore for CountingStore {
 /// step handed the port ([`Self::bounds`]). `test` answers an EMPTY outcome (nothing executed,
 /// never `passing`) and `build` a `passing` report; `run_verb` refuses the verb by its bare name,
 /// counted first.)*
+///
+/// *(dated 2026-09-26, s8c refuting round 4: [`Self::with_failing_build`] makes `build` answer a
+/// `failing` report instead, the only double here that hands the kernel a red build.)*
 #[derive(Debug, Default)]
 pub struct CountingToolchain {
     calls: AtomicU32,
@@ -303,6 +306,9 @@ pub struct CountingToolchain {
     /// refuses the verb by its bare name, as before; `Some` is a scripted output, so a kernel test
     /// can watch a `toolchain`-route row reach the port and its output go through the decode table.
     verb_output: Option<rk_ports::toolchain::VerbOutput>,
+    /// *(2026-09-26, s8c refuting round 4.)* `build` answers a `failing` report (`errors: 1`) when
+    /// set, so a kernel test can watch `build_verdict` read a red build; unset, it is `passing`.
+    build_failing: bool,
 }
 
 impl CountingToolchain {
@@ -338,6 +344,16 @@ impl CountingToolchain {
         }
     }
 
+    /// A counting fake whose `build` answers a red build: `Ok`, `status: failing`, one error
+    /// (record T = ADR-0169, proposed: a red build is `Ok`, never `Err`). *(s8c refuting round 4.)*
+    #[must_use]
+    pub fn with_failing_build() -> Self {
+        Self {
+            build_failing: true,
+            ..Self::default()
+        }
+    }
+
     /// Every `StepBound` a step-reached method was handed, in call order (s8c §8c.6).
     #[must_use]
     pub fn bounds(&self) -> Vec<rk_ports::toolchain::StepBound> {
@@ -363,8 +379,12 @@ impl Toolchain for CountingToolchain {
             argv: vec!["counting".to_owned(), "build".to_owned()],
             toolchain_version: "counting".to_owned(),
             wall_secs: 0,
-            errors: 0,
-            status: rk_types::verb_output::BuildStatus::Passing,
+            errors: u32::from(self.build_failing),
+            status: if self.build_failing {
+                rk_types::verb_output::BuildStatus::Failing
+            } else {
+                rk_types::verb_output::BuildStatus::Passing
+            },
         })
     }
 

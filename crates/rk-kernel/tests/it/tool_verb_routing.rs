@@ -531,3 +531,106 @@ fn a_verb_with_no_row_refuses_by_its_bare_name_before_its_bound_is_resolved() {
     );
     assert_eq!(tc.calls(), 0);
 }
+
+/// A `toolchain` row whose output kind is `BuildReport`, the verb path's twin of the `build` port row.
+const BUILD_VERB_ROW: &str = r#"rebuild = { outputs = "BuildReport", live = false, timeout = "build_timeout", inputs = [], route = "toolchain" }"#;
+
+/// The report [`CountingToolchain`] answers for `build`, passing or failing.
+fn build_report(failing: bool) -> rk_types::verb_output::BuildReport {
+    rk_types::verb_output::BuildReport {
+        argv: vec!["counting".to_owned(), "build".to_owned()],
+        toolchain_version: "counting".to_owned(),
+        wall_secs: 0,
+        errors: u32::from(failing),
+        status: if failing {
+            rk_types::verb_output::BuildStatus::Failing
+        } else {
+            rk_types::verb_output::BuildStatus::Passing
+        },
+    }
+}
+
+/// **A `failing` `BuildReport` is not a walked step, on either path** (s8c §8c.2's P4 note; record
+/// T = ADR-0169 decision 8, proposed). A red build is `Ok` with `status: failing` at the port, so the
+/// kernel's `build_verdict` is the ONLY place a red build stops a step. It is read twice: after a
+/// rowed `build` port call, and in `decode_verb_output`'s `BuildReport` arm for a `run_verb` output.
+/// Each reads a failing report as `NonZero` with no exit code and the digest of the report's JSON.
+///
+/// *(Added 2026-09-26, s8c refuting round 4: before it, every double handing the kernel a build was
+/// `passing`, so M46 (the `Failing` arm read as `Ok`), M47 (the port call's verdict dropped) and M48
+/// (the verb arm's verdict dropped) each survived the whole workspace suite, 873 passed.)*
+#[test]
+fn a_failing_build_report_is_not_a_walked_step() {
+    let ctx = Context::new();
+    let digest_of = |failing: bool| {
+        rk_types::digest::sha256(
+            serde_json::to_string(&build_report(failing))
+                .expect("a report serialises")
+                .as_bytes(),
+        )
+    };
+
+    // ---- The port path: ADR-0135's `build` row.
+    let port = |tc: CountingToolchain| {
+        let (rt, tc) = rt_routed(
+            "build-port",
+            tc,
+            ToolRouting::new(registry("", ""), ToolchainValues::default()),
+        );
+        let v = rt
+            .execute_step(&tool_step("b", "build"), &ctx)
+            .expect("a value");
+        assert_eq!(
+            tc.calls(),
+            1,
+            "the port's `build` was not reached exactly once"
+        );
+        v
+    };
+    // CONTROL: a passing report walks, so the red below is about the status alone.
+    assert_eq!(
+        port(CountingToolchain::default()),
+        StepVerdict::Continue,
+        "CONTROL: a passing build must walk"
+    );
+    let e = failed(port(CountingToolchain::with_failing_build()));
+    assert_eq!(
+        e,
+        StepError::NonZero {
+            code: None,
+            stderr_digest: digest_of(true),
+        },
+        "a failing build at the port must fail the step as NonZero, no code, the report's digest"
+    );
+
+    // ---- The verb path: a `toolchain` row whose `outputs` is `BuildReport`.
+    let verb = |failing: bool| {
+        let (rt, tc) = rt_routed(
+            "build-verb",
+            CountingToolchain::with_verb_output(VerbOutput {
+                kind: "BuildReport".to_owned(),
+                value: serde_json::to_value(build_report(failing)).expect("a report serialises"),
+            }),
+            ToolRouting::new(registry(BUILD_VERB_ROW, ""), ToolchainValues::default()),
+        );
+        let v = rt
+            .execute_step(&tool_step("rb", "rebuild"), &ctx)
+            .expect("a value");
+        assert_eq!(tc.calls(), 1, "`run_verb` was not reached exactly once");
+        v
+    };
+    assert_eq!(
+        verb(false),
+        StepVerdict::Continue,
+        "CONTROL: a passing BuildReport verb output must walk"
+    );
+    let e = failed(verb(true));
+    assert_eq!(
+        e,
+        StepError::NonZero {
+            code: None,
+            stderr_digest: digest_of(true),
+        },
+        "a failing BuildReport verb output must fail the step as NonZero, no code, the report's digest"
+    );
+}
