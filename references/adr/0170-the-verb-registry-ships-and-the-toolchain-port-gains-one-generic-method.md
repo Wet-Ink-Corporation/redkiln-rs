@@ -174,10 +174,22 @@ repository makes it one in its own argv, which is `s8g`'s.
   base-score code. The builder records which landed and, if the crate, the `cargo deny check licenses` reading over
   it and its transitive dependencies. *(dated 2026-09-26, s8c build; D21-63, provisional.)* In-tree CVSS v3.1
   base-score code landed (v3.0 vectors scored by the same equations). A matched advisory whose vector that scorer
-  cannot score (a CVSS v4.0 vector, or a malformed one) refuses the scan by name (`cvss-unscorable`, naming the
-  vector); it is never counted `unrated`, since it has a CVSS, and never banded by a guess. Provisional under D21-63;
+  cannot score (~~a CVSS v4.0 vector, or~~ a malformed one) refuses the scan by name (`cvss-unscorable`, naming the
+  vector); it is never counted `unrated`, since it has a CVSS, and never banded by a guess. ~~Provisional under D21-63;
   the named alternative is the `cvss` crate's v4 scorer banded on these same bands (FIRST CVSS v4.0 §6 uses the v3
-  qualitative scale), which reverses this clause as one dependency line and one match arm.
+  qualitative scale), which reverses this clause as one dependency line and one match arm.~~
+  *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7, which replaces D21-63 option (1) with its (3').)* Both
+  scorers landed. A `CVSS:3.0` or `CVSS:3.1` vector is scored by the in-tree code, and a `CVSS:4.0` vector by the
+  RustSec `cvss` crate's v4 scorer, `cvss = { version = "=2.2.0", default-features = false, features = ["std",
+  "v3", "v4"] }` in `rk-adapter-toolchain-rust` (the version rustsec 0.33 parses the database with). Both are
+  banded on these same thresholds (FIRST CVSS v4.0 §6 uses the v3 qualitative scale), and a v4.0 score of exactly
+  0.0 counts `low`, as v3's does. A differential test pins the in-tree v3 scorer against `cvss::v3` over every
+  distinct v3 vector in the RustSec database. A vector neither scorer accepts (malformed, or any other version)
+  refuses the scan by name (`cvss-unscorable`, naming the vector and the two remedies left: correct the vector, or
+  rule it `unrated` so `sca-scan` routes to `scan.accept-findings`); it is never counted `unrated` and never banded
+  by a guess. The crate scores a v4.0 vector **as written**: one that carries threat metrics (`E:`) is scored as
+  CVSS-BT under FIRST v4.0's nomenclature, not CVSS-B, so for such a vector *"the CVSS base score"* above reads as
+  the crate's score of the whole vector (flagged in the evidence; the ruling fixed CVE-2025-47273's 7.7).
 - **`ScanReport`** carries `critical`, `high`, `medium`, `low` and **`unrated`**, each required; one entry per
   advisory (id, package, version, severity or none); and, **per tool**, the tool's name and version, its database's
   local path and **that database's commit** (D21-42 6a: *"the advisory-DB commit is recorded"*). **The two databases
@@ -366,6 +378,9 @@ at `run` and is an `Error` at `doctor`. Nothing new walks the shipped catalog at
 - A `smoke` handler that runs an installed `redkiln`, or that leaves its scratch directory behind without an error.
 - Counting an advisory with no CVSS as `low` or none, or dropping it.
 - Counting an advisory whose vector could not be scored as `unrated`, or banding it by a guess.
+- *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* Refusing, or counting `unrated`, a `CVSS:4.0` vector the
+  pinned `cvss` crate's v4 scorer scores; scoring a v4.0 vector by any other scorer; and an in-tree v3 score that
+  differs from `cvss::v3`'s on a vector of the differential fixture.
 - Recording a `ScanReport` whose database commit the adapter did not read, before and after the tool, from the path
   it passed that tool; or reading the commit from deny's log line.
 - A scan that fetches.
@@ -440,8 +455,9 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
   regular file, but left pnpm's `node_modules` skeleton behind (114 dangling junctions and 0 files on passes 2 and 3;
   pass 1's, removed before it was counted, held no regular file either), which the path-set check (`git worktree list`) does not see. They were removed by hand. This is a
   Windows run-worktree removal fact for `s8d-ii`, handed on in the stage file's §8c.12 note.
-  **Shipped**: `.redkiln/registry.toml`'s `[toolchain.rust]` carries these readings, each labelled with its pass and
-  child, under `command` warrants at the pin above.
+  **Shipped**: `.redkiln/registry.toml`'s `[toolchain.rust]` ~~carries these readings, each labelled with its pass and
+  child, under `command` warrants at the pin above.~~ *(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* carried these readings until the re-measure
+  below replaced them; they stay in the registry as dated comments.
   *(dated 2026-09-26, s8c build, refuting round 2.)* **`scan_timeout` also bounds a clippy `lint` site.** `scan_timeout` is read at two sites that run no scan. `.redkiln/catalog/tech-debt-assessment.toml`'s step on
   `run = "toolchain:lint"` declares `timeout_secs = "${toolchain.scan_timeout}"` (one of the four catalog sites the
   §8c.5 table counts; the other three are `sca_scan` steps), and `.redkiln/registry.toml`'s `lint` row names
@@ -455,14 +471,72 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
   selects it is not measured here. Giving
   the lint sites their own key (for example a measured `lint_timeout`) or a warrant taken on clippy is handed on,
   unassigned, in the stage file's §8c.12 (item 5); it is not decided here, and the shipped value is not changed.
+- *(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* **§8c.5's readings re-taken at the tree holding all of `s8c`'s work, n = 3.**
+  The operator took the re-measure (D21-64 ruling 8: *"`s8c`'s value table is re-measured at the stage's work commit,
+  three passes, and re-derived by record V's rule (written before any reading), by dated edit."*). The work commit
+  did not yet exist, so the measured tree is a commit object made from a temporary index over the working tree,
+  `2f3f6ab257c4b21c1bd16bcd4781f97475f958f5` (parent `366543a`, tree `4ba5d20f78ee72b095d0cd20a8444c11155dbc39`: every
+  `s8c` package through `366543a`, plus the uncommitted leak fix of ruling 3 and the `cvss` crate of ruling 7). It is
+  on no ref. §8c.5's script was extracted from the stage file's bytes with one substitution, its pin line (`git
+  rev-parse HEAD` → that commit), and otherwise byte-identical to P8's extraction; each pass ran through the session's
+  no-dispatch helper and `runbook/tools/nodispatch.sh` (`CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`), in
+  `.git/redkiln/tmp/c<HHMMSS>` (`path_len=24`, as before), each with its own empty `CARGO_TARGET_DIR`. Runner:
+  `cargo-nextest 0.9.146 (8af696ddc 2026-09-21)`. Seconds:
+
+  | pass | setup (downloaded) | `--list` cold | `--list --ignored` | nextest run | `--doc` companion | build cold | scan (audit + deny) |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | 1 (15:05:21Z) | 1 (0) | 99 | 3 | 152 | 3 | 57 | 2 (1 + 1) |
+  | 2 (15:11:03Z) | 2 (0) | 86 | 3 | 152 | 3 | 58 | 1 (0 + 1) |
+  | 3 (15:16:40Z) | 4 (0) | 87 | 3 | 161 | 3 | 57 | 2 (1 + 1) |
+
+  pnpm's `downloaded` count read 0 on every pass, so no reading is a network reading. Both advisory databases read
+  `e2111519ba6d14a5da59a7b2e5c8083ae8a37c01` on every pass. Every pass exited 0, the worktree path set was unchanged
+  and `nd_check` passed. **Decision 10's rule applied** (unchanged, written before any reading): `test_timeout` = 60 ×
+  ⌈2 × 161 / 60⌉ = **360** (the slowest child, pass 3's nextest run; ~~300~~ at `6f70e47`); `build_timeout` = 60 ×
+  ⌈2 × 58 / 60⌉ = **120**, `scan_timeout` = 60 × ⌈2 × 2 / 60⌉ = **60** and `setup_timeout` = 60 × ⌈2 × 4 / 60⌉ =
+  **60**, each unchanged. `.redkiln/registry.toml`'s four measured rows now carry these readings at this pin, with the
+  `6f70e47` readings kept as dated comments above them. The cited keys are not re-taken (`review_timeout` 9180, and
+  X4's 4800 for `implement_timeout` and `repro_timeout`, keep their pin). **Two facts said, not hidden:** the pin is
+  unreachable from any ref, so it resolves (Checkpoint 8c (11)'s `git cat-file -e`) only until a prune removes it,
+  unless the commit that lands this work adopts it or the value is re-pinned by dated edit; and each pass again left
+  its pnpm `node_modules` skeleton (114 dangling junctions, 0 files, 66 directories) under `.git/redkiln/tmp/`, removed
+  by hand after the three passes.
 - *(dated 2026-09-26, s8c build, CPREP.)* **The build's readings, stated here as proposed text.** Each was first
   written in a dated note of `runbook/phase-1/s8c-toolchain-port-and-verbs.md` (§8c.4, §8c.5) by the package that
   built it; this record now carries it, so the flip reads the record and not the stage file.
   - **Which scorer landed (decision 5 asks the builder to record it).** In-tree code, not the `cvss` crate:
     `verbs::severity_of` in `crates/rk-adapter-toolchain-rust/src/verbs.rs` computes the CVSS v3.1 base equations and
-    `Roundup`, and scores v3.0 vectors by the same equations. No dependency was added, `Cargo.lock` did not move, and
-    no `deny.toml` licence question arises. How a vector this scorer cannot score is treated is the subject of a
+    `Roundup`, and scores v3.0 vectors by the same equations. ~~No dependency was added, `Cargo.lock` did not move, and
+    no `deny.toml` licence question arises.~~ How a vector this scorer cannot score is treated is the subject of a
     separate ruling and is not recorded by this line.
+  - *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* **Both, now: the in-tree code for v3.x and the `cvss`
+    crate for v4.0.** The in-tree v3 code is now `verbs::cvss3_tenths` (made `pub` for the differential test), and
+    `verbs::severity_of` sends a `CVSS:4.0/` vector to `cvss::v4::Vector::from_str(..).score().value()`. The crate's
+    feature names at 2.2.0 are exactly `std`, `v3` and `v4` (its defaults are the same three; `serde` is its one
+    optional dependency and stays off). `Cargo.lock` gains one package, `cvss 2.2.0` (checksum
+    `f7fb220d3ce1b565af39cee5b89e47fd8dd1dab162900ee4363c8ee4169ee8a2`), with no dependencies of its own, and one
+    edge from `rk-adapter-toolchain-rust`. **The deny readings** (cargo-deny 0.20.2, cargo-audit 0.22.2, through
+    `runbook/tools/nodispatch.sh`, after the dependency landed): `cargo deny check licenses` rc 0, *"licenses ok"*,
+    listing `cvss@2.2.0 (2): Apache-2.0, MIT`; its one warning is `license-not-encountered` for `MIT-0`, an
+    allowance `cvss` cannot affect. `cargo deny check bans` rc 0, *"bans ok"*, 8 `duplicate` warnings (none
+    names `cvss`, which has no dependencies). Checkpoint 5's advisories halves, run offline so neither database
+    moved: `cargo deny --offline check advisories` rc 0, *"advisories ok"*; `cargo audit --no-fetch --deny
+    unmaintained` rc 0 (one allowed `unsound` warning, RUSTSEC-2026-0306). Checkpoint 5's must-fail line,
+    `cargo deny --all-features check bans`, still exits non-zero naming `banned` (rc 2).
+  - *(dated 2026-09-26, s8c build, CVSS.)* **The v4.0 readings.** CVE-2025-47273's vector (the `cvss` crate's
+    own regression vector, carrying `E:P` and every other metric `X`) scores **7.7, CVSS-BT**; the same vector with
+    its threat and environmental metrics removed scores **8.7, CVSS-B** [measured 2026-09-26 by a probe inside the
+    test binary, then removed]. Both band `high`. Of the RustSec database's 63 `CVSS:4.0` vectors, **2 carry a
+    threat metric** (`E:U` and `E:P`) and the other 61 carry base metrics only, so for 61 the crate's score is the
+    base score. **Flagged, not decided here:** record V says *"the CVSS base score"*, and D21-64 ruling 7 fixed
+    the crate's score of the vector as written (7.7 for CVE-2025-47273). The two can differ in band only for a
+    vector carrying non-base metrics; a threat metric can only lower the score (FIRST v4.0 scores `E:X` as `E:A`,
+    the worst case), so scoring as written can band such a vector lower. Scoring base-only is one filter over the
+    vector's metrics before the parse.
+  - *(dated 2026-09-26, s8c build, CVSS.)* **The differential fixture**:
+    `crates/rk-adapter-toolchain-rust/tests/fixtures/cvss/v3-vectors.txt`, the 92 distinct `CVSS:3.0`/`CVSS:3.1`
+    vectors in `~/.cargo/advisory-db` at `e2111519ba6d14a5da59a7b2e5c8083ae8a37c01` (335 v3.1 and 33 v3.0
+    lines). The in-tree scorer and `cvss::v3` agree on all 92, in tenths.
   - **Refusal (b) is covered by a comparator unit test, not end to end.** Decision 5 permits it. No seam that moves
     `HEAD` between the adapter's two reads was added, so `verbs::sca_scan_refuses_a_database_moved_mid_scan` asserts
     the comparator `verbs::db_unmoved` only, and the end-to-end mid-scan move is not claimed. Refusal (a) is
@@ -520,6 +594,8 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
     `CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`, which is slower than cargo's default and so errs long. The rule's factor of
     two covers the gap by construction, and the gap is not measured. **Whether to re-measure at the work commit is the
     operator's call**; a re-reading replaces the four values by dated record edit under decision 10's rule.
+    *(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* Taken: the re-reading at `2f3f6ab` (the evidence item above) found the
+    slowest child 161 s against 146 s, so `test_timeout` moves 300 → 360; the other three values are unchanged.
 
 **Confidence.** High on the route shape, the seventh method and the refusal order, which D21-42 1b, N14 and N25 force.
 Medium on decision 5's provisional hardening (D21-62 C): it keeps every binding (the per-tool commit, offline, refuse

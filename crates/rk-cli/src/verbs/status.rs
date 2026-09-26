@@ -62,7 +62,16 @@ use crate::{repo, store};
 /// # Errors
 /// [`Halt::PoisonedLock`] from [`crate::store::acquire`]. Every repository and store refusal is
 /// exit `3` and is returned as a value, not a halt.
-pub fn run(cli: &Cli, _startup: Startup<'_>) -> Result<Exit, Halt> {
+pub fn run(cli: &Cli, startup: Startup<'_>) -> Result<Exit, Halt> {
+    run_to(cli, startup, &mut std::io::stdout())
+}
+
+/// *(dated 2026-09-26, s8c build; D21-64 ruling 3.)* [`run`] with the writer handed in; an
+/// in-process caller passes its own, so nothing it renders reaches libtest's stdout.
+///
+/// # Errors
+/// As [`run`].
+pub fn run_to(cli: &Cli, _startup: Startup<'_>, out: &mut dyn Write) -> Result<Exit, Halt> {
     let repo = match repo::discover(cli.cwd.as_deref()) {
         Ok(repo) => repo,
         Err(e) => {
@@ -80,13 +89,12 @@ pub fn run(cli: &Cli, _startup: Startup<'_>) -> Result<Exit, Halt> {
         }
     };
     let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(opened));
-    let mut out = std::io::stdout();
     run_with(
         &crate::verbs::RealReconciler,
         &repo.exec,
         &repo.worktree,
         &store,
-        &mut out,
+        out,
     )
 }
 

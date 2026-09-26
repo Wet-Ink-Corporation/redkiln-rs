@@ -50,6 +50,14 @@ serde.workspace = true
 # read no `cargo metadata` by decision, not by deferral. "When that body lands" above no longer says who reads it:
 # whether the `Binary` arm does is S-BIN's (s8i), and what `cargo metadata` is read for is s8c record T's.
 serde_json.workspace = true
+# ADDED 2026-09-26 (s8c build, CVSS; D21-64 ruling 7, D21-63 option (3'); record V = ADR-0170 decision 5, proposed):
+# the RustSec CVSS scorer. `sca_scan` scores a `CVSS:4.0` vector with `cvss::v4`; v3.x vectors stay on the in-tree
+# scorer (`verbs::cvss3_tenths`), which a differential test pins against `cvss::v3`. Exact-pinned (ADR-0100 decision
+# 2's rule for a new dependency) to the version rustsec 0.33 parses the advisory database with, so the adapter's
+# scorer is the parser that accepted the vectors the tools loaded. Defaults off; `std`, `v3` and `v4` are the three
+# features cvss 2.2.0 declares (its defaults are the same three, and `serde` stays off). MIT OR Apache-2.0, both on
+# deny.toml's allow list. Written directly, as `tempfile` is: no other member uses it.
+cvss = { version = "=2.2.0", default-features = false, features = ["std", "v3", "v4"] }
 # ADR-0102 decision 6: thiserror in every library, anyhow in none.
 thiserror.workspace = true
 

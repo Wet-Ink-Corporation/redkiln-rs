@@ -16,4 +16,11 @@ both load each advisory from a git-initialised copy and carry its vector verbati
 (`verbs::severity_of`) scores CVSS v3 only; each refuses the scan by name, `cvss-unscorable`, naming
 the vector and its two remedies (record V = ADR-0170 decision 5; D21-63, provisional).
 
+*(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7, which moves D21-63 to option (3').)* The scorer
+now scores a `CVSS:4.0` vector with the `cvss` 2.2.0 crate's v4 scorer, so `RUSTSEC-2099-0003.md` is no
+longer unscorable: a scan that matches it counts it `high`
+(`verbs::a_matched_v4_vector_is_scored_and_banded_high`). `RUSTSEC-2099-0004.md` still refuses by name,
+`cvss-unscorable`, naming the vector and the two remedies left (correct the vector, or rule it
+`unrated`). The directory keeps its name so the fixture path the tests read does not move.
+
 Everything here is LF under ADR-0164.

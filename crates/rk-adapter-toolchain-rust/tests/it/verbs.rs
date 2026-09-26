@@ -19,7 +19,7 @@
 
 use std::path::{Path, PathBuf};
 
-use rk_adapter_toolchain_rust::verbs::{binary_path, db_unmoved, severity_of};
+use rk_adapter_toolchain_rust::verbs::{binary_path, cvss3_tenths, db_unmoved, severity_of};
 use rk_adapter_toolchain_rust::{
     Config, DEFAULT_PROGRAM, ForcedRunner, RunnerPolicy, RustToolchain,
 };
@@ -245,11 +245,83 @@ fn sca_scan_counts_an_unrated_advisory_as_unrated_never_zero() {
         None,
         "no CVSS is unrated"
     );
-    let v4 = severity_of(Some(
-        "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
-    ))
-    .expect_err("a CVSS v4.0 vector is refused by name, never scored as unrated or low");
-    refused_naming(&v4, &["CVSS:4.0"], "a v4 vector");
+    // (dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7) the v4.0 half moved to
+    // `a_v4_vector_scoring_zero_counts_low_never_unrated`: a v4.0 vector is scored, not refused.
+}
+
+/// **The in-tree CVSS v3 scorer agrees with `cvss::v3` over every distinct v3 vector in the RustSec
+/// database** (D21-64 ruling 7, D21-63 option (3')): the two scorers cannot drift apart silently.
+/// The fixture `tests/fixtures/cvss/v3-vectors.txt` is the 92 distinct `CVSS:3.0`/`CVSS:3.1`
+/// vectors copied from `~/.cargo/advisory-db` at `e2111519`; each must score the same base score in
+/// tenths on `verbs::cvss3_tenths` and on `cvss::v3::Base` (=2.2.0). The count is asserted, so an
+/// empty or truncated fixture is not a green.
+///
+/// *(Added 2026-09-26, s8c build, CVSS.)*
+#[test]
+fn the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample() {
+    let path = advisory_fixture()
+        .with_file_name("cvss")
+        .join("v3-vectors.txt");
+    let text = std::fs::read_to_string(&path).expect("the v3 vector fixture reads");
+    let vectors: Vec<&str> = text
+        .lines()
+        .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
+        .collect();
+    assert_eq!(
+        vectors.len(),
+        92,
+        "the fixture holds the 92 distinct v3 vectors"
+    );
+    let mut disagree = Vec::new();
+    for v in &vectors {
+        let ours = cvss3_tenths(v).unwrap_or_else(|e| panic!("the in-tree scorer scores {v}: {e}"));
+        let base: cvss::v3::Base = v
+            .parse()
+            .unwrap_or_else(|e| panic!("cvss::v3 parses {v}: {e}"));
+        let theirs = (base.score().value() * 10.0).round() as u32;
+        if ours != theirs {
+            disagree.push(format!("{v}: in-tree {ours}, cvss::v3 {theirs}"));
+        }
+    }
+    assert!(
+        disagree.is_empty(),
+        "the two v3 scorers disagree on {} of {} vectors:\n{}",
+        disagree.len(),
+        vectors.len(),
+        disagree.join("\n")
+    );
+}
+
+/// The CVSS v4.0 vector of CVE-2025-47273, as the `cvss` 2.2.0 crate's own regression test spells
+/// it (base score 7.7) and `tests/fixtures/advisory-unscorable/RUSTSEC-2099-0003.md` carries it.
+const CVE_2025_47273_V4: &str = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N/E:P/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X";
+
+/// **A CVSS v4.0 vector is scored by the RustSec `cvss` crate's v4 scorer and banded on record V's
+/// same thresholds** (record V = ADR-0170 decision 5; D21-64 ruling 7, D21-63 option (3')). A vector
+/// whose v4.0 base score is exactly 0.0 counts `low`, as record V already says of v3's *None* band:
+/// it was scored, so it is never `unrated`. CVE-2025-47273's vector bands `high` (7.7), and a
+/// `CVSS:4.0` vector the crate rejects still refuses by name.
+///
+/// *(Added 2026-09-26, s8c build, CVSS.)*
+#[test]
+fn a_v4_vector_scoring_zero_counts_low_never_unrated() {
+    let zero = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N";
+    assert_eq!(
+        severity_of(Some(zero)).expect("a v4.0 vector scores"),
+        Some(Severity::Low),
+        "a v4.0 base score of 0.0 counts low, never unrated: {zero}"
+    );
+    assert_eq!(
+        severity_of(Some(CVE_2025_47273_V4)).expect("a v4.0 vector scores"),
+        Some(Severity::High),
+        "CVE-2025-47273's v4.0 base score is 7.7"
+    );
+    let bad = "CVSS:4.0/AV:N/AC:L";
+    let err = severity_of(Some(bad))
+        .expect_err("a v4.0 vector the crate rejects refuses by name, never unrated or low");
+    let mut needles = vec!["cvss-unscorable", bad];
+    needles.extend(CVSS_REMEDIES);
+    refused_naming(&err, &needles, "a rejected v4.0 vector");
 }
 
 /// **The scan records each tool's database commit, read by the adapter** (D21-42 6a; D21-62 C):
@@ -359,31 +431,56 @@ fn scan_databases_with(tmp: &Path, advisory: &str) -> (PathBuf, PathBuf) {
 }
 
 /// The refusal's remedies, which D21-63 requires the `cvss-unscorable` detail to name so an AFK
-/// halt is one operator decision away.
-const CVSS_REMEDIES: [&str; 3] = [
-    "the RustSec `cvss` crate's v4 scorer",
+/// halt is one operator decision away. *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* The
+/// `cvss` crate's v4 scorer is no longer a remedy: it now scores every `CVSS:4.0` vector, so the
+/// detail names both scorers as the ones that could not score it, and the two remedies left.
+const CVSS_REMEDIES: [&str; 4] = [
+    "neither the in-tree CVSS v3 scorer nor the RustSec `cvss` crate's v4 scorer can score it",
     "record V decision 5",
+    "correct the advisory's vector",
     "rule it `unrated` so sca-scan routes to scan.accept-findings",
 ];
 
-/// **A matched advisory carrying a CVSS v4.0 vector refuses the scan by name** (record V = ADR-0170
-/// decision 5; D21-63, provisional): `cvss-unscorable`, naming the vector and its two remedies, and
-/// no `ScanReport`. Never counted `unrated` (it has a CVSS), never banded by a guess. The vector is
-/// CVE-2025-47273's, as the `cvss` 2.2.0 crate's own regression test spells it.
+/// **A matched advisory carrying a CVSS v4.0 vector is scored and banded** (record V = ADR-0170
+/// decision 5; D21-64 ruling 7, which moves D21-63 from option (1) to (3')): CVE-2025-47273's vector,
+/// as the `cvss` 2.2.0 crate's own regression test spells it, scores 7.7 on the crate's v4 scorer and
+/// is counted `high` beside the fixture's `critical` and `unrated` pair. It is never refused, never
+/// `unrated` (it has a CVSS), and never banded by a guess.
+///
+/// *(Replaces `a_matched_v4_vector_refuses_the_scan_by_name`, 2026-09-26, s8c build, CVSS.)*
 #[test]
-fn a_matched_v4_vector_refuses_the_scan_by_name() {
+fn a_matched_v4_vector_is_scored_and_banded_high() {
     let tmp = tempfile::tempdir().expect("tmp");
     let (audit, deny_parent) = scan_databases_with(tmp.path(), "RUSTSEC-2099-0003.md");
     let tc = scan_adapter(&tmp.path().join("scratch"));
-    let err = run_verb(&tc, "sca_scan", &scan_inputs(&audit, &deny_parent)).expect_err(
-        "a matched CVSS v4.0 advisory refuses the scan; no ScanReport, never counted unrated",
+    let out = run_verb(&tc, "sca_scan", &scan_inputs(&audit, &deny_parent))
+        .expect("a matched CVSS v4.0 advisory is scored, and the scan answers a ScanReport");
+    let report: ScanReport = serde_json::from_value(out.value).expect("decodes");
+    assert_eq!(
+        (
+            report.critical,
+            report.high,
+            report.medium,
+            report.low,
+            report.unrated
+        ),
+        (1, 1, 0, 0, 1),
+        "CVE-2025-47273's v4.0 vector scores 7.7 and counts high: {report:?}"
     );
-    let mut needles = vec![
-        "cvss-unscorable",
-        "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N/E:P",
-    ];
-    needles.extend(CVSS_REMEDIES);
-    refused_naming(&err, &needles, "a matched v4.0 vector");
+    let ids: Vec<(&str, Option<Severity>)> = report
+        .advisories
+        .iter()
+        .map(|a| (a.id.as_str(), a.severity))
+        .collect();
+    assert_eq!(
+        ids,
+        [
+            ("RUSTSEC-2099-0001", Some(Severity::Critical)),
+            ("RUSTSEC-2099-0002", None),
+            ("RUSTSEC-2099-0003", Some(Severity::High)),
+        ],
+        "one entry per advisory; the v4.0 one banded high"
+    );
 }
 
 /// **A matched advisory carrying a malformed vector refuses the scan the same way** (D21-63): a

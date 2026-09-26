@@ -929,6 +929,20 @@ detail names the remedies; fixture advisories under `tests/fixtures/advisory-uns
 a time to git-initialised copies of the fixture database so the existing tallies do not move. **Measured** (package
 D63): `cargo audit 0.22.2` and `cargo deny 0.20.2` both load each and carry the vector verbatim in `cvss`, the
 malformed one included, so both reach the scorer end to end. Tests and mutant in §8c.9.
+*(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* **~~RULED PROVISIONALLY: option (1)~~ is replaced by (3'), built.** The operator's
+ruling D21-64 7 moves D21-63 to its (3'): `rk-adapter-toolchain-rust` depends on `cvss = { version = "=2.2.0",
+default-features = false, features = ["std", "v3", "v4"] }` (the three feature names cvss 2.2.0 declares, as
+written), and `verbs::severity_of` sends a `CVSS:4.0/` vector to `cvss::v4`, banded on record V's same thresholds
+(0.0 counts `low`). v3.x vectors stay on the in-tree scorer, now `pub fn verbs::cvss3_tenths`, and a differential
+test pins it against `cvss::v3` over the 92 distinct v3 vectors in the RustSec database (copied to
+`tests/fixtures/cvss/v3-vectors.txt`). `cvss-unscorable` stays for any vector neither scorer accepts, and its detail
+no longer names the crate as a remedy: *"neither the in-tree CVSS v3 scorer nor the RustSec `cvss` crate's v4
+scorer can score it (record V decision 5): correct the advisory's vector, or rule it `unrated` so sca-scan routes to
+scan.accept-findings"*. The `Cargo.lock` change is one package, `cvss 2.2.0`, with no dependencies of its own.
+`cargo deny check licenses` and `cargo deny check bans` read rc 0 after it landed (readings in record V's
+evidence). **Flagged, not decided:** the crate scores a v4.0 vector as written, so a vector carrying `E:` is scored
+CVSS-BT (CVE-2025-47273: 7.7; base-only 8.7, both `high`), where record V says *"the CVSS base score"*; 2 of
+the database's 63 v4.0 vectors carry a threat metric. Tests and mutants in §8c.9.
 *(dated 2026-09-26, s8c build, D63.)* **`package`'s fail-open fixed:** a built binary outside the adapter's target
 directory is refused by name, `package-binary-outside-target`, in `verbs::binary_path`, and is never recorded as an
 absolute path (record V's evidence had flagged `strip_prefix(&target).unwrap_or(exe)`).
@@ -1436,6 +1450,29 @@ cargo's default and so errs long; and `git worktree remove --force` left each pa
 skeleton (114 dangling links, 0 files) under `.git/redkiln/tmp/`, invisible to the path-set check. The skeletons were
 removed by hand (§8c.12 hands the fact on to `s8d-ii`).
 
+*(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* **RE-MEASURED, n = 3, at the tree holding all of `s8c`'s work.** D21-64 ruling 8:
+*"`s8c`'s value table is re-measured at the stage's work commit, three passes, and re-derived by record V's rule
+(written before any reading), by dated edit."* The work commit did not exist yet, so the pin is a commit object made
+from a temporary index over the working tree (`2f3f6ab257c4b21c1bd16bcd4781f97475f958f5`, parent `366543a`, on no
+ref; the real index and `HEAD` untouched). The script above was extracted from this file's bytes with one substitution,
+its `pin=$(git rev-parse HEAD)` line pointed at that commit, and was otherwise byte-identical to P8's extraction
+(`scratchpad/s8c/remeasure-measure.sh`, logs `remeasure-runs/measure-pass-{1,2,3}.log`). Same runner, same
+concurrency (`CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`), same databases; each pass rc 0, the path set unchanged,
+`nd_check` passing:
+
+```
+MEASURED pin=2f3f6ab257c4b21c1bd16bcd4781f97475f958f5 path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=1 setup_downloaded=0 list_cold=99 list_ignored=3 run=152 doc=3 build_cold=57 scan=2 (audit=1 deny=1) audit_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01 deny_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01
+MEASURED pin=2f3f6ab257c4b21c1bd16bcd4781f97475f958f5 path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=2 setup_downloaded=0 list_cold=86 list_ignored=3 run=152 doc=3 build_cold=58 scan=1 (audit=0 deny=1) audit_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01 deny_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01
+MEASURED pin=2f3f6ab257c4b21c1bd16bcd4781f97475f958f5 path_len=24 runner='cargo-nextest 0.9.146 (8af696ddc 2026-09-21)' setup=4 setup_downloaded=0 list_cold=87 list_ignored=3 run=161 doc=3 build_cold=57 scan=2 (audit=1 deny=1) audit_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01 deny_db=e2111519ba6d14a5da59a7b2e5c8083ae8a37c01
+```
+
+Record V's rule gives `test_timeout` ~~**300**~~ **360** (slowest child 161 s, pass 3's nextest run), and leaves
+`build_timeout` **120** (58 s), `scan_timeout` **60** (2 s) and `setup_timeout` **60** (4 s) unchanged.
+`.redkiln/registry.toml`'s four measured rows carry the new readings at the new pin, the P8 readings kept as dated
+comments; record V's evidence carries the table. The pin is unreachable from any ref: it resolves until a prune, so
+the commit that lands this work should adopt it, or the four rows are re-pinned by dated edit. Each pass again left
+its 114-junction pnpm skeleton under `.git/redkiln/tmp/`; all three were removed by hand.
+
 ### 8c.6 A step's `timeout_secs` is the tighter bound (D21-42 4b)
 
 Record B fixes this, and this is the proposal:
@@ -1614,6 +1651,14 @@ vector could not be scored as `unrated`, or banding it by a guess"*; and its evi
 `strip_prefix(&target).unwrap_or(exe)` is struck and replaced by the `package-binary-outside-target` fix. The D21-63
 ledger entry is `spikes/DECISIONS-2026-09-21.md`'s, and its panel text is `spikes/afk-panels/D21-63-s8c.md`.
 
+*(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* **Record V (still `proposed`) gains, by edit to a proposed record:** decision 5's
+~~(a CVSS v4.0 vector, or~~ and ~~Provisional under D21-63; the named alternative …~~ struck in place, and a dated
+sentence stating both scorers, the pin, the bands, the differential test and the remaining `cvss-unscorable` case;
+a dated forbids bullet (refusing or counting `unrated` a v4.0 vector the crate scores, another v4.0 scorer, and an
+in-tree v3 score that differs from `cvss::v3`'s on the fixture); and three dated evidence items (the lock change
+and the deny readings, the v4.0 readings with the CVSS-BT flag, and the differential fixture). The evidence line
+*"No dependency was added, `Cargo.lock` did not move …"* is struck.
+
 ### 8c.8 Order of work
 
 Each slice is red first (golden constraint 12). A test is authored and watched fail **for the right reason**
@@ -1772,6 +1817,19 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
       seam makes it, so the end-to-end case is not claimed) [red: *"a binary outside the target directory is
       refused, not recorded absolute: "D:/elsewhere/release/wsbin.exe""*, the fail-open's absolute path]. Checkpoint
       8c (7) names all three; its `want` reads 55.
+    - *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* `verbs::a_matched_v4_vector_refuses_the_scan_by_name` is REPLACED
+      by `verbs::a_matched_v4_vector_is_scored_and_banded_high` (the same fixture advisory; a `ScanReport` counting it
+      `high`, tallies `(1, 1, 0, 0, 1)`) [red: *"a matched CVSS v4.0 advisory is scored, and the scan answers a
+      ScanReport: Transport { kind: Decode, detail: "sca_scan refused (cvss-unscorable): `CVSS:4.0/…`: not a CVSS
+      v3.0 or v3.1 vector …"*]. Two more, beyond the 78, so FLOOR (13) does not move:
+      `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` (a v4.0 vector scoring 0.0 counts `low`;
+      CVE-2025-47273's vector bands `high`; `CVSS:4.0/AV:N/AC:L` refuses `cvss-unscorable` naming the remedies) [red:
+      *"a v4.0 vector scores: … sca_scan refused (cvss-unscorable): `CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/
+      VA:N/SC:N/SI:N/SA:N`: not a CVSS v3.0 or v3.1 vector"*]; and
+      `verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample` (the 92-vector fixture, count
+      asserted) [red: *"error[E0603]: function `cvss3_tenths` is private"*, the pre-change item replayed by
+      `scratchpad/s8c/cvss_mutants.py RED-DIFF`]. The malformed-vector test is kept, its needles updated to the new
+      remedies. Checkpoint 8c (7) names all three; its `want` reads 57. The crate's suite reads 68 passed, 0 failed.
     - *D21-48 (2026-09-24), X15:* the nine below. Each is red first, for the reason in brackets.
     - `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` [red: no `nextest_lines` module and
       no golden under `tests/fixtures/nextest/`]. It also asserts that the installed `cargo nextest --version` is in
@@ -1943,9 +2001,11 @@ Parallel agents share one scratchpad, so the driver's filename carries this stag
 | M33 | *(dated 2026-09-26, s8c build, P3; D21-62 A)* the libtest parser drops the summary-agreement check and keeps the records' tally | `libtest_lines::a_summary_that_disagrees_with_its_records_is_unverifiable` |
 | M34 | *(dated 2026-09-26, s8c build, P3; D21-62 A)* a foreign line is counted as a passed record | `libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally` |
 | M35 | *(dated 2026-09-26, s8c build, P3; D21-62 B)* the nextest parser tallies a zero-status-line exit-104 stream as `Ok(0/0)` | `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` (the list-failed goldens) AND `report::a_nextest_list_failure_is_unverifiable_never_green` (the report package's) |
-| M36 | *(dated 2026-09-26, s8c build, D63; D21-63)* the `cvss-unscorable` branch in `severity_of` becomes `Ok(None)`, so an unscorable vector is counted `unrated` | `verbs::a_matched_v4_vector_refuses_the_scan_by_name` |
+| M36 | *(dated 2026-09-26, s8c build, D63; D21-63)* the `cvss-unscorable` branch in `severity_of` becomes `Ok(None)`, so an unscorable vector is counted `unrated` | ~~`verbs::a_matched_v4_vector_refuses_the_scan_by_name`~~ *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7)* re-stated as three: **M36a** the v4.0 arm refuses (every vector to the v3 scorer, option (1) restored) and **M36b** the v4.0 arm answers `Ok(None)` (counted `unrated`), each killed by `verbs::a_matched_v4_vector_is_scored_and_banded_high` AND `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated`; **M36c** the reading above, killed by `verbs::a_matched_malformed_vector_refuses_the_scan_by_name` AND `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` |
 | M37 | *(dated 2026-09-26, s8c build, D63)* `binary_path`'s `package-binary-outside-target` refusal becomes `strip_prefix(target).unwrap_or(exe)` again, recording an absolute path | `verbs::a_package_binary_outside_the_target_dir_is_refused_by_name` |
 | M38 | *(dated 2026-09-26, s8c build, refuting round 2)* `rk_ports::conformance::validate_report` answers `Ok(())` whatever it is handed (an early `return Ok(())`) | `fake_behaviour::validate_report_refuses_an_inconsistent_outcome` |
+| M39 | *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7)* the in-tree v3 scorer drifts: `AC:H` weighs 0.45, not 0.44 | `verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample`; the control `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero` (the band table) stays `ok` under it, so the differential test is the only instrument |
+| M40 | *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7)* a v4.0 score of 0.0 is refused as unscorable instead of counted `low` | `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` |
 
 *(dated 2026-09-26, s8c build, P3.)* **Parser mutants, run from `scratchpad/s8c/p3_mutants.py`** (anchor asserted once, tmp + `os.replace`,
 restored in `finally` and the sha256 re-checked; the two parser files are new, so the restore writes the recorded bytes
@@ -2139,9 +2199,11 @@ line; logs and `p8-mutants.json` under `scratchpad/s8c/p8-runs/`).
 | M33 | KILLED (P3) | `libtest_lines::a_summary_that_disagrees_with_its_records_is_unverifiable` |
 | M34 | KILLED (P3) | `libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally` (and the header-count test) |
 | M35 | KILLED, both halves (P3, P4) | `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` AND `report::a_nextest_list_failure_is_unverifiable_never_green` |
-| M36 | KILLED (D63) | `verbs::a_matched_v4_vector_refuses_the_scan_by_name` (its `expect_err`); also red: `verbs::a_matched_malformed_vector_refuses_the_scan_by_name` and `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero` (its unit v4 assertion) |
+| M36 | KILLED (D63) | `verbs::a_matched_v4_vector_refuses_the_scan_by_name` (its `expect_err`); also red: `verbs::a_matched_malformed_vector_refuses_the_scan_by_name` and `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero` (its unit v4 assertion). *(dated 2026-09-26, s8c build, CVSS)* Re-stated as M36a/b/c, all KILLED from `scratchpad/s8c/cvss_mutants.py` (anchor once, tmp + `os.replace`, sha256 restored): M36a and M36b by both v4.0 tests, M36c by the malformed-vector test and the zero test |
 | M37 | KILLED (D63) | `verbs::a_package_binary_outside_the_target_dir_is_refused_by_name`; `verbs::package_digests_only_the_declared_binaries_of_a_locked_release_build` stayed green (the inside path is unchanged) |
 | M38 | KILLED (R2FIX; re-run in WHOLE pass 5) | `fake_behaviour::validate_report_refuses_an_inconsistent_outcome`; `conformance::port_conformance_fake_rows` stayed `ok` under it (round 2's finding). Per-rule extras M38a–M38d also KILLED |
+| M39 | KILLED (CVSS) | `verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample`; `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero` SURVIVED it, as expected (no vector in its band table moves) |
+| M40 | KILLED (CVSS) | `verbs::a_v4_vector_scoring_zero_counts_low_never_unrated` |
 
 Beyond the table, every extra mutant the packages ran was killed: P3's R3 (rule 2 strict), P4's MB, MFB and MNX, P5's
 MV, MA7, MG, MR5, MR6, MSD, MSC, MDC, MSW, MPH, MBS, MNB, MND and MNS, and P7's MIN. **One survivor in all, M25 over the
@@ -2462,7 +2524,11 @@ run_named rk-ports "--features conformance" 8 conformance::port_conformance_fake
 # malformed-vector twin and verbs::a_package_binary_outside_the_target_dir_is_refused_by_name. ~~want 52~~ is struck:
 # 52 + 3 = 55. The v4 test is thereby asserted to exist and run (its own `... ok` line and the exact count), never a
 # zero-match filter. The three are beyond §8c.9's 78, so FLOOR (13) is unmoved.
-run_named rk-adapter-toolchain-rust "" 55 report::red_suite_is_ok_with_failed_counts report::a_build_failure_is_err_never_a_red_suite \
+# (dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7) verbs::a_matched_v4_vector_refuses_the_scan_by_name is REPLACED by
+# verbs::a_matched_v4_vector_is_scored_and_banded_high, and the list gains verbs::a_v4_vector_scoring_zero_counts_low_never_unrated
+# and verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample. ~~want 55~~ is struck: 55 - 1 + 1 + 2 = 57.
+# The two added are beyond §8c.9's 78, so FLOOR (13) is unmoved.
+run_named rk-adapter-toolchain-rust "" 57 report::red_suite_is_ok_with_failed_counts report::a_build_failure_is_err_never_a_red_suite \
   report::a_red_test_in_an_early_binary_still_tallies_every_binary report::concurrent_verify_reports_share_no_output_file report::nextest_fallback_recorded_on_report \
   libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally libtest_lines::a_slow_test_notice_inside_a_block_is_skipped_never_refused \
   report::passed_plus_failed_is_the_executed_count_and_survives_both_decoys report::ac329_report_conforms_no_prose_parse \
@@ -2486,7 +2552,8 @@ run_named rk-adapter-toolchain-rust "" 55 report::red_suite_is_ok_with_failed_co
   report::the_nextest_path_runs_doctests_beside_it_so_the_count_matches_list \
   report::a_nextest_list_failure_is_unverifiable_never_green verbs::sca_scan_refuses_a_non_git_database \
   verbs::sca_scan_refuses_a_deny_db_path_with_other_than_one_database verbs::sca_scan_refuses_a_database_moved_mid_scan \
-  verbs::a_matched_v4_vector_refuses_the_scan_by_name verbs::a_matched_malformed_vector_refuses_the_scan_by_name \
+  verbs::a_matched_v4_vector_is_scored_and_banded_high verbs::a_matched_malformed_vector_refuses_the_scan_by_name \
+  verbs::a_v4_vector_scoring_zero_counts_low_never_unrated verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample \
   verbs::a_package_binary_outside_the_target_dir_is_refused_by_name
 run_named rk-adapter-toolchain-node "" 13 report::red_suite_is_ok_with_failed_counts report::ac329_report_conforms_no_prose_parse \
   report::ac325_recorded_argv_is_os_vector report::concurrent_verify_reports_share_no_output_file report::d34_vitest_invoked_directly_never_pnpm_forwarded \
@@ -2607,6 +2674,8 @@ code=$(printf '%s\n' "$raw" | grep -vE "$cl" | grep .)
 [ -n "$code" ] || { echo "FAIL: the Rust adapter names no \"--doc\" on a code line — a nextest run would drop the doctests (D21-48 X15)"; exit 1; }
 # (dated 2026-09-26, s8c build, D63; D21-63) the cvss-unscorable refusal is named on a CODE line of verbs.rs. A floor
 # beneath (7)'s verbs::a_matched_v4_vector_refuses_the_scan_by_name, never the assertion. Both halves proved first.
+# (dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7) that test is replaced (a v4.0 vector is now scored); the floor now
+# sits beneath (7)'s verbs::a_matched_malformed_vector_refuses_the_scan_by_name and verbs::a_v4_vector_scoring_zero_counts_low_never_unrated.
 printf 'crates/rk-adapter-toolchain-rust/src/verbs.rs:9:    // "cvss-unscorable",\ncrates/rk-adapter-toolchain-rust/src/verbs.rs:10:            "cvss-unscorable",\n' > "$scratch/ctl-cvss.txt" || { echo "FAIL: could not write the control"; exit 1; }
 ctl=$(grep -vE "$cl" "$scratch/ctl-cvss.txt" | grep -F '"cvss-unscorable"')
 [ "$ctl" = 'crates/rk-adapter-toolchain-rust/src/verbs.rs:10:            "cvss-unscorable",' ] || { echo "FAIL: SYNTHETIC CONTROL — the cvss-unscorable filter read '$ctl'"; exit 1; }
@@ -2807,7 +2876,16 @@ commit.** A pass is evidence about a specific text.
 2. *(dated 2026-09-26, s8c build; D21-62 A.)* **rk-cli verbs write through `std::io::stdout()` directly.** `catalog`, `cost`,
    `doctor`, `explain`, `lint` and `status` do. One test, `crates/rk-cli/tests/it/doctor.rs`'s
    `ac402_reconcile_called_on_run_answer_doctor`, calls `verbs::doctor::run` in-process and leaks 39 lines into
-   libtest's stdout. It is s7d hygiene (a writer seam), not fixed here, and the parser no longer depends on it.
+   libtest's stdout. ~~It is s7d hygiene (a writer seam), not fixed here,~~ and the parser no longer depends on it.
+   *(dated 2026-09-26, s8c build; D21-64 ruling 3: "`rk_cli`'s verbs that write through `std::io::stdout()`
+   in-process (doctor, catalog, cost, explain, lint, status) take a writer, so the 39 `RK-D-…` lines stop
+   leaking".)* **Done; no longer handed on.** Each of the six verbs has a `run_to(…, out: &mut dyn Write)`, and
+   `run` delegates to it with the process's stdout. `doctor --rebuild`'s two `println!` lines write to the same
+   `out`. `ac402_reconcile_called_on_run_answer_doctor` calls `doctor::run_to` with a `Vec<u8>` and asserts that
+   an `RK-D-` row landed in it. Measured with `cargo test -p rk-cli --test it -- --test-threads=1` through the
+   no-dispatch helper, counting stdout: before, 39 lines containing `RK-D-` (38 at line start; one follows
+   libtest's `test … ... ` prefix); after, 0. Both runs: 124 passed. The committed
+   `this-repository.stdout` golden is not re-captured, and its tally still pins `foreign_lines` 39.
 3. *(dated 2026-09-26, s8c build, P8.)* **`git worktree remove --force` leaves pnpm's junctions behind on Windows.**
    Each of §8c.5's three measurement worktrees was deregistered and emptied of regular files, and each left its
    `node_modules` junction skeleton (114 dangling links on passes 2 and 3) under `.git/redkiln/tmp/`. `git worktree
@@ -2819,6 +2897,9 @@ commit.** A pass is evidence about a specific text.
    work commit replaces the four values by dated record edit under decision 10's rule; whether one is taken is the
    operator's.
    *(dated 2026-09-26, s8c build, CPREP.)* Record V's evidence now carries this caveat, and the concurrency, as proposed text.
+   *(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* **Taken** (D21-64 ruling 8): the re-reading at `2f3f6ab` (366543a plus the
+   uncommitted leak and cvss packages) moved `test_timeout` 300 → 360 (slowest child 146 s → 161 s); the other three
+   values are unchanged (§8c.5's re-measure note; record V's evidence).
 5. *(dated 2026-09-26, s8c build, refuting round 2.)* **`scan_timeout` bounds a clippy `lint` site it was not measured
    on.** `tech-debt-assessment`'s `toolchain:lint` step declares `timeout_secs = "${toolchain.scan_timeout}"`, and the
    registry's `lint` row names `scan_timeout` as its construction bound; the warrant timed `cargo audit` and `cargo

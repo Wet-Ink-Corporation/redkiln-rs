@@ -41,6 +41,15 @@ use crate::repo;
 /// # Errors
 /// Never halts — every refusal is a value on the table.
 pub fn run(cli: &Cli, args: &LintArgs) -> Result<Exit, Halt> {
+    run_to(cli, args, &mut std::io::stdout())
+}
+
+/// *(dated 2026-09-26, s8c build; D21-64 ruling 3.)* [`run`] with the writer handed in; an
+/// in-process caller passes its own, so nothing it renders reaches libtest's stdout.
+///
+/// # Errors
+/// As [`run`].
+pub fn run_to(cli: &Cli, args: &LintArgs, out: &mut dyn Write) -> Result<Exit, Halt> {
     let repo = match repo::discover(cli.cwd.as_deref()) {
         Ok(repo) => repo,
         Err(e) => {
@@ -49,8 +58,7 @@ pub fn run(cli: &Cli, args: &LintArgs) -> Result<Exit, Halt> {
         }
     };
     let root = Path::new(repo.worktree.as_str()).to_path_buf();
-    let mut out = std::io::stdout();
-    Ok(run_with(args, &root, &mut out))
+    Ok(run_with(args, &root, out))
 }
 
 /// The inner verb — the in-process twin `lint_wraps_kernel_facet_rules_and_exits_by_table` drives.

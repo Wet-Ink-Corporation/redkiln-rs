@@ -69,6 +69,24 @@ use crate::{adapters, repo};
 /// read the handle rather than the journal through it. The signature matches the other verbs so the
 /// router's arms are one shape.
 pub fn run(cli: &Cli, args: &DoctorArgs, env: &Env, startup: Startup<'_>) -> Result<Exit, Halt> {
+    run_to(cli, args, env, startup, &mut std::io::stdout())
+}
+
+/// [`run`] with the writer handed in: every line `doctor` renders, the rebuild's included, goes to
+/// `out`. Refusals stay on stderr.
+///
+/// *(dated 2026-09-26, s8c build; D21-64 ruling 3.)* `run` passed `std::io::stdout()` inline, so
+/// `ac402_reconcile_called_on_run_answer_doctor` leaked the rule table into libtest's stdout.
+///
+/// # Errors
+/// As [`run`].
+pub fn run_to(
+    cli: &Cli,
+    args: &DoctorArgs,
+    env: &Env,
+    startup: Startup<'_>,
+    out: &mut dyn Write,
+) -> Result<Exit, Halt> {
     let repo = match repo::discover(cli.cwd.as_deref()) {
         Ok(repo) => repo,
         Err(e) => {
@@ -115,6 +133,7 @@ pub fn run(cli: &Cli, args: &DoctorArgs, env: &Env, startup: Startup<'_>) -> Res
             &repo.worktree,
             &repo.common_dir,
             &root,
+            out,
         ));
     }
 
@@ -131,8 +150,7 @@ pub fn run(cli: &Cli, args: &DoctorArgs, env: &Env, startup: Startup<'_>) -> Res
         crate::clock::now().unix_seconds(),
     );
 
-    let mut out = std::io::stdout();
-    Ok(evaluate_and_render(&ctx, &mut out))
+    Ok(evaluate_and_render(&ctx, out))
 }
 
 /// Run the rebuild and print what it could and could not resolve.
@@ -151,15 +169,17 @@ fn rebuild_and_report(
     worktree: &rk_git::path::WorktreePath,
     common_dir: &Path,
     root: &Path,
+    out: &mut dyn Write,
 ) -> Exit {
     match rebuild::run(exec, worktree, common_dir, root) {
         Ok(outcome) => {
-            println!(
+            let _ = writeln!(
+                out,
                 "rebuilt {} tier-1 row(s) from git at {}",
                 outcome.events_written, outcome.head
             );
             for mark in &outcome.unresolvable {
-                println!("unresolvable-from-git-alone {mark}");
+                let _ = writeln!(out, "unresolvable-from-git-alone {mark}");
             }
             Exit::Success
         }

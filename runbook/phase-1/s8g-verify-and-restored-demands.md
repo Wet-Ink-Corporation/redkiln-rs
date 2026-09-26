@@ -207,7 +207,7 @@ sentence.
 | `s8f` (D21-42 5a, 5b) | rk-store's render/write path, one `artifact.write` per write, under the item's managed artifact directory in the run-owned worktree | the one write path's call site |
 | `s8b` (D21-42 11a) | the pack changelog at `.redkiln/CHANGELOG.md` | the file exists |
 | `s8b` (D21-43 N25) | `sca-scan`'s check requires `unrated == 0` or routes to `scan.accept-findings` | the check's expression names `report.unrated` |
-| `s8c` (D21-63, provisional; *dated 2026-09-26, s8c build*) | `sca_scan` refuses `cvss-unscorable` on a MATCHED advisory whose vector is not CVSS v3 (record V decision 5) | at open, `cargo audit --json --no-fetch --file Cargo.lock` against the pinned real database, listing every matched advisory's vector version; any non-`CVSS:3.x` vector is a named, expected halt (*"sca-scan would refuse cvss-unscorable; rule (3') per D21-63"*) before §8g.6 runs |
+| `s8c` (D21-63, provisional; *dated 2026-09-26, s8c build*) | `sca_scan` refuses `cvss-unscorable` on a MATCHED advisory whose vector is not CVSS v3 (record V decision 5) | at open, `cargo audit --json --no-fetch --file Cargo.lock` against the pinned real database, listing every matched advisory's vector version; any non-`CVSS:3.x` vector is a named, expected halt (*"sca-scan would refuse cvss-unscorable; rule (3') per D21-63"*) before §8g.6 runs. *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* (3') is ruled and built at `s8c`: `CVSS:4.0` vectors are scored by the pinned `cvss` crate, so ~~any non-`CVSS:3.x` vector~~ reads *any matched vector that is neither `CVSS:3.0`, `CVSS:3.1` nor a `CVSS:4.0` vector the crate parses*, and the halt's text ~~rule (3') per D21-63~~ becomes *"sca-scan would refuse cvss-unscorable naming `<vector>`"* |
 
 🛑 **If `s8c` or `s8d` delivered a different shape than this table names, this stage stops and reports rather than
 re-deriving the shape** — the producers below are thin *because* those stages are thick, and a producer written
@@ -767,6 +767,14 @@ passing result emits, and a result that does not pass opens the gate and emits n
   D21-63"*, before §8g.6 runs, and D21-63's (3') (the `cvss` =2.2.0 v4 scorer on the same bands, `cvss-unscorable`
   kept for rejected vectors) is ruled then. Measured 2026-09-26 at `5561afa`: `vulnerabilities = []`, so no vector
   reached the scorer then; the reading is taken again at the open, never carried forward.
+  *(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* (3') is no longer ruled here: the operator ruled it, and
+  `s8c` built it. A `CVSS:4.0` vector is now scored by the `cvss` =2.2.0 crate's v4 scorer on record V's bands and is
+  routed like any other scored advisory, so it no longer halts this stage. **The precondition stays, narrowed:** at
+  the open, list every matched advisory's vector; the named, expected halt now fires only for a vector neither
+  scorer accepts (malformed, or a version other than 3.0, 3.1 and 4.0), with the text *"sca-scan would refuse
+  cvss-unscorable naming `<vector>`"*, and the operator rules that vector (correct it, or rule it `unrated`).
+  Record V's evidence flags one open reading this stage may meet: a v4.0 vector carrying threat metrics (`E:`) is
+  scored as written (CVSS-BT), not base-only.
 - **The activity edit is `s8b`'s, and this stage cites it.** D21-43 N25 reads *"**`sca-scan` requires `unrated ==
   0`** or goes to `scan.accept-findings`"*. As shipped, the check reads *"`report.critical == 0 and report.high ==
   0`"*, which passes with `unrated > 0` (`s8c`'s draft at `a1d35ac`: *"As shipped, that check passes with `unrated >

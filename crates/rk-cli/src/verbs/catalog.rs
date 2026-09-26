@@ -29,6 +29,15 @@ use crate::repo;
 /// Never halts — every refusal is a value. The signature matches the other verbs so the router's
 /// arms are one shape.
 pub fn run(cli: &Cli, command: &CatalogCommand) -> Result<Exit, Halt> {
+    run_to(cli, command, &mut std::io::stdout())
+}
+
+/// *(dated 2026-09-26, s8c build; D21-64 ruling 3.)* [`run`] with the writer handed in; an
+/// in-process caller passes its own, so nothing it renders reaches libtest's stdout.
+///
+/// # Errors
+/// As [`run`].
+pub fn run_to(cli: &Cli, command: &CatalogCommand, out: &mut dyn Write) -> Result<Exit, Halt> {
     let repo = match repo::discover(cli.cwd.as_deref()) {
         Ok(repo) => repo,
         Err(e) => {
@@ -51,9 +60,8 @@ pub fn run(cli: &Cli, command: &CatalogCommand) -> Result<Exit, Halt> {
         // See the header: the refusal `from_dir` would raise here is `run`'s, not this verb's.
         rk_kernel::catalog::Catalog::default()
     };
-    let mut out = std::io::stdout();
     match command {
-        CatalogCommand::Search(args) => Ok(search(&catalog, &args.query, &mut out)),
+        CatalogCommand::Search(args) => Ok(search(&catalog, &args.query, out)),
     }
 }
 

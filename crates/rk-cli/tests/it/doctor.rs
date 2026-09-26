@@ -2065,13 +2065,27 @@ fn ac402_reconcile_called_on_run_answer_doctor() {
     };
     let env = rk_cli::env::Env::from_map(std::collections::BTreeMap::new());
 
-    let exit = rk_cli::verbs::doctor::run(
+    // *(dated 2026-09-26, s8c build; D21-64 ruling 3.)* The verb writes into a sink, not the
+    // process's stdout: through `run` its rule table leaked 39 `RK-D-` lines into libtest's own
+    // stdout, which is the stream `s8c`'s libtest parser reads.
+    let mut sink: Vec<u8> = Vec::new();
+    let exit = rk_cli::verbs::doctor::run_to(
         &cli,
         &rk_cli::cli::DoctorArgs { rebuild: false },
         &env,
         startup,
+        &mut sink,
     )
     .expect("doctor does not halt");
+
+    // The sink is where the table went. A `run_to` that still wrote to the process's stdout would
+    // leave it empty and leak again, which this assertion is here to catch.
+    let rendered = String::from_utf8(sink).expect("doctor renders UTF-8");
+    assert!(
+        rendered.lines().any(|line| line.starts_with("RK-D-")),
+        "`doctor::run_to` wrote no `RK-D-` row into the writer it was handed; the rule table went \
+         somewhere else: {rendered:?}"
+    );
 
     // The exit code is not this test's subject and is deliberately not pinned: `RK-D-CLI-VERSION`
     // reads the INSTALLED harness binary, so the code depends on the operator's machine rather

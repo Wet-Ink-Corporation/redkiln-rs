@@ -38,15 +38,17 @@
 //! the comparator [`db_unmoved`] only**: the adapter carries no seam that moves `HEAD` between its
 //! two reads, so the end-to-end case is not claimed. Advisories are the tools' `vulnerabilities`,
 //! merged by `(id, package, version)`; the tools' informational `warnings` (unmaintained, yanked)
-//! are not advisories with a severity and are not counted here. **Severity**: the CVSS v3 base
-//! score, computed in-tree by [`severity_of`] (the CVSS v3.1 specification's base equations and
-//! `Roundup`; record V names the RustSec `cvss` crate or in-tree code, and in-tree code landed, so
-//! no dependency and no `deny.toml` question), banded `critical` >= 9.0, `high` 7.0-8.9, `medium`
-//! 4.0-6.9, `low` 0.0-3.9. **An advisory with no CVSS is `unrated`**, never `low`, never dropped.
-//! A vector this scorer cannot score (a CVSS v4.0 vector: 63 of the RustSec database's vectors are
-//! v4.0 at stage open) refuses the scan by name, `cvss-unscorable`, rather than be counted as
-//! unrated or scored as something else: fail-closed, and the refusal names its two remedies (the
-//! `cvss` crate's v4 scorer, or ruling it `unrated`) — D21-63, provisional; record V decision 5.
+//! are not advisories with a severity and are not counted here. **Severity**: a v3.x vector's CVSS
+//! v3 base score is computed in-tree by [`cvss3_tenths`] (the CVSS v3.1 specification's base
+//! equations and `Roundup`), pinned against `cvss::v3` by a differential test; a `CVSS:4.0` vector
+//! is scored by the RustSec `cvss` crate's v4 scorer (`cvss::v4`, pinned `=2.2.0`: D21-64 ruling 7,
+//! which moves D21-63 from option (1) to (3'); 63 of the RustSec database's vectors are v4.0 at
+//! stage open). Both are banded by [`severity_of`] on record V's one set of thresholds (FIRST CVSS
+//! v4.0 §6 uses the v3 qualitative scale): `critical` >= 9.0, `high` 7.0-8.9, `medium` 4.0-6.9,
+//! `low` 0.0-3.9. **An advisory with no CVSS is `unrated`**, never `low`, never dropped. A vector
+//! neither scorer accepts (malformed, or a version other than 3.0, 3.1 and 4.0) refuses the scan
+//! by name, `cvss-unscorable`, rather than be counted as unrated or scored as something else:
+//! fail-closed, naming the vector and its remedies — record V decision 5.
 //!
 //! **`package`** (decision 6). The input `sha` must equal the project root's `HEAD`, read through
 //! the same shared `rk_git::head` read (Checkpoint 8a guard (6)'s allowlist admits it by a dated
@@ -354,11 +356,18 @@ fn db_head(tool: &str, db: &Path) -> Result<String, StepError> {
     })
 }
 
-/// The CVSS v3 base score in tenths (the CVSS v3.1 specification's base equations and its
-/// `Roundup`, which v3.0 vectors are scored by too). Only the eight base metrics are read; any
-/// other metric (temporal, environmental) is ignored, and a base metric missing, repeated or out
-/// of its set is refused.
-fn cvss3_tenths(vector: &str) -> Result<u32, String> {
+/// The CVSS v3 base score in tenths.
+///
+/// The CVSS v3.1 specification's base equations and its `Roundup`, which v3.0 vectors are scored
+/// by too. Only the eight base metrics are read; any other metric (temporal, environmental) is
+/// ignored, and a base metric missing, repeated or out of its set is refused.
+///
+/// `pub` so the differential test (`verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample`)
+/// can pin it against `cvss::v3` over real advisory vectors (D21-64 ruling 7).
+///
+/// # Errors
+/// A description of why the vector is not a scorable CVSS v3.0 or v3.1 base vector.
+pub fn cvss3_tenths(vector: &str) -> Result<u32, String> {
     let rest = vector
         .strip_prefix("CVSS:3.1/")
         .or_else(|| vector.strip_prefix("CVSS:3.0/"))
@@ -443,21 +452,45 @@ fn cvss3_tenths(vector: &str) -> Result<u32, String> {
     u32::try_from(tenths).map_err(|_| format!("the score {tenths} is out of range"))
 }
 
+/// A `CVSS:4.0` vector's score in tenths, from the RustSec `cvss` crate's v4 scorer
+/// (`cvss::v4::Vector::from_str(..).score().value()`; D21-64 ruling 7, D21-63 option (3')). The
+/// crate scores the vector as written: a vector that carries threat metrics (`E:`) is scored as
+/// CVSS-BT, as FIRST CVSS v4.0 §2 names it, which is how CVE-2025-47273's vector reaches 7.7.
+fn cvss4_tenths(vector: &str) -> Result<u32, String> {
+    let parsed: cvss::v4::Vector = vector
+        .parse()
+        .map_err(|e: cvss::Error| format!("the `cvss` crate's v4 scorer rejects it: {e}"))?;
+    let tenths = (parsed.score().value() * 10.0).round();
+    if !(0.0..=100.0).contains(&tenths) {
+        return Err(format!("the score {tenths} tenths is out of range"));
+    }
+    // The range check above makes the cast exact: a one-decimal score in [0.0, 10.0].
+    Ok(tenths as u32)
+}
+
 /// An advisory's band, or `None` (unrated) when it carries no CVSS (record V decision 5).
 ///
+/// A `CVSS:4.0` vector is scored by the `cvss` crate's v4 scorer and every other vector by the
+/// in-tree v3 scorer; both are banded on the same thresholds, a score of 0.0 counting `low`.
+///
 /// # Errors
-/// `cvss-unscorable` naming a vector this scorer cannot score (a v4.0 vector, a malformed one),
-/// and its two remedies, so the halt is one operator decision away (D21-63, provisional).
+/// `cvss-unscorable` naming a vector neither scorer accepts (malformed, or an unknown version),
+/// and its remedies, so the halt is one operator decision away (record V decision 5).
 pub fn severity_of(vector: Option<&str>) -> Result<Option<Severity>, StepError> {
     let Some(vector) = vector else {
         return Ok(None);
     };
-    let tenths = cvss3_tenths(vector).map_err(|d| {
+    let scored = if vector.starts_with("CVSS:4.0/") {
+        cvss4_tenths(vector)
+    } else {
+        cvss3_tenths(vector)
+    };
+    let tenths = scored.map_err(|d| {
         refuse(
             "sca_scan",
             "cvss-unscorable",
             &format!(
-                "`{vector}`: {d}; score it with the RustSec `cvss` crate's v4 scorer (record V decision 5), or rule it `unrated` so sca-scan routes to scan.accept-findings"
+                "`{vector}`: {d}; neither the in-tree CVSS v3 scorer nor the RustSec `cvss` crate's v4 scorer can score it (record V decision 5): correct the advisory's vector, or rule it `unrated` so sca-scan routes to scan.accept-findings"
             ),
         )
     })?;
