@@ -1686,13 +1686,13 @@ round 1: not owed. P5, the slice that landed `Affected` rule 3, wrote it, and it
 decision 7 rule 3, proposed.)"*. It is a plain `//` comment, not a `///` doc line, so the exported schema's
 description is unchanged.)*
 
-*(dated 2026-09-26, s8c build, D63.)* **Record V (ADR-0170, still `proposed`) gains, by edit to a proposed record:**
+*(dated 2026-09-26, s8c build, D63.)* **Record V (ADR-0170, still `proposed` *(dated 2026-09-26, s8c close: accepted on D21-70)*) gains, by edit to a proposed record:**
 decision 5's sentence on `cvss-unscorable` (D21-63, provisional) and the forbids line *"Counting an advisory whose
 vector could not be scored as `unrated`, or banding it by a guess"*; and its evidence line that flagged
 `strip_prefix(&target).unwrap_or(exe)` is struck and replaced by the `package-binary-outside-target` fix. The D21-63
 ledger entry is `spikes/DECISIONS-2026-09-21.md`'s, and its panel text is `spikes/afk-panels/D21-63-s8c.md`.
 
-*(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* **Record V (still `proposed`) gains, by edit to a proposed record:** decision 5's
+*(dated 2026-09-26, s8c build, CVSS; D21-64 ruling 7.)* **Record V (still `proposed` *(dated 2026-09-26, s8c close: accepted on D21-70)*) gains, by edit to a proposed record:** decision 5's
 ~~(a CVSS v4.0 vector, or~~ and ~~Provisional under D21-63; the named alternative …~~ struck in place, and a dated
 sentence stating both scorers, the pin, the bands, the differential test and the remaining `cvss-unscorable` case;
 a dated forbids bullet (refusing or counting `unrated` a v4.0 vector the crate scores, another v4.0 scorer, and an
@@ -1700,7 +1700,7 @@ in-tree v3 score that differs from `cvss::v3`'s on the fixture); and three dated
 and the deny readings, the v4.0 readings with the CVSS-BT flag, and the differential fixture). The evidence line
 *"No dependency was added, `Cargo.lock` did not move …"* is struck.
 
-*(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* **Record V (still `proposed`) gains, by edit to a proposed
+*(dated 2026-09-26, s8c build, D67; D21-67 ruling 7.)* **Record V (still `proposed` *(dated 2026-09-26, s8c close: accepted on D21-70)*) gains, by edit to a proposed
 record:** decision 5's sentence *"The crate scores a v4.0 vector **as written** … the ruling fixed CVE-2025-47273's
 7.7)"* struck in place, and a dated sentence making *"the CVSS base score"* explicit for v4.0 (CVSS-B: the eleven
 base metrics alone, the vector parsed as written first so nothing the crate rejects is scored); a dated forbids
@@ -3109,7 +3109,8 @@ The stage closes **in two commits** (`00-preamble.md`):
    `s8j` (§8c.8).
 
 The three records stay `proposed` until the operator's dated ledger line. **Re-run Checkpoint 8c after the flip
-commit.** A pass is evidence about a specific text.
+commit.** *(dated 2026-09-26, s8c close: they flipped `accepted` on D21-69, D21-70 and D21-71, under D21-64
+ruling 9.)* A pass is evidence about a specific text.
 
 **Settled since the draft, each by the entry cited. These are no longer handed on:**
 

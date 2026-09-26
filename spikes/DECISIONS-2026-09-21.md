@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-26 (D21-1 … D21-67), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-26 (D21-1 … D21-71), and what they license
+
+*(Title corrected 2026-09-26 at `s8c`'s close: it read **"(D21-1 … D21-67)"**. `D21-68` … `D21-71` are appended with this correction and move it. Measured: `grep -c '^## D21-'` over this file → 71, the last `D21-71`.)*
 
 *(Title corrected 2026-09-26 at `s8c`, package D67: it read **"(D21-1 … D21-66)"** while the file carried **D21-67** — one entry stale. `D21-67` was appended without moving it; no entry is added with this correction. Measured: `grep -c '^## D21-'` over this file → 67, the last `D21-67`.)*
 
@@ -2775,3 +2777,286 @@ reasoning each ruling rests on is restated below.
 
 **Receivers.** `s8d` (1, 2, 3, and 4's lib.rs sentence), `s8g` (6), `s8c`'s close (7, 8). Each receiving stage file
 gets a dated note naming its item. §8b.10's items close by dated lines pointing here.
+
+---
+
+## D21-68 · `s8c` closes: `Toolchain::test` returns an outcome, the port has seven methods, verbs route through the shipped registry, and a `tool` step's declared bound is the tighter one
+
+**Taken 2026-09-26 by the session executing `s8c`, at the stage's close.** It records and cites. It re-takes no ruling
+and writes no go-ahead line. Records T, V and B flip under D21-64 ruling 9 by the operator's dated ledger line, not by
+this entry. `s8c` names no D-entry section of its own (the word appears nowhere in its file; `s8b` had §8b.7), so this
+entry takes D21-61's form, and what it records is what `s8c` §8c.7, §8c.12 and §8c.13 record. Every figure below is
+quoted from the stage file's recorded readings, the tree or the committed records; none is new here.
+
+Records: T = ADR-0169, V = ADR-0170, B = ADR-0171
+
+**Recorded — the three records, and how they flip.**
+- The ids were recorded at write time (D21-47), §8c.7: *"record T = **ADR-0169**, record V = **ADR-0170**, record B =
+  **ADR-0171**, all three `proposed`; errata **E-0162-2** and **E-0135-1**."* Each is `status: proposed` at
+  `4ab7c67`, with `supersedes` `["0162", "0094"]`, `["0135", "0162", "0137"]` and `["0140", "0099"]`. The ADR README's
+  next free number reads **`0172`**.
+- **T** (`Toolchain::test` returns an outcome; a selection is a closed type) supersedes in part ADR-0162 decision 4
+  and ADR-0094 decision 1's *"`test` = `cargo test --workspace`"* in three respects. **V** (the verb registry ships;
+  the port gains one generic method) supersedes in part ADR-0135 clauses 1 and 6, its six-count Decision sentence and
+  one forbids bullet with its second sentence, ADR-0162's seventh-method forbids half, and, added at refuting round
+  1, ADR-0137's *"It does not add or remove a port method; the count stays six."* **B** (a `tool` step's declared
+  `timeout_secs` is the tighter bound) supersedes in part, for tool steps (D21-48 X13), ADR-0140 decision 1's
+  withdrawal, decision 2's sentence, decision 4 and its first two forbids bullets, and ADR-0099 decision 2's *"under
+  the same timeout"*.
+- **They flip at this close under D21-64 ruling 9:** *"Records T, V and B (ADR-0169, 0170, 0171) flip at `s8c`'s
+  close if the formal Checkpoint 8c passes whole and a refuting round finds no blocker or major; Checkpoint 8c is
+  re-run after the flip commit, as the stage requires."* Refuting round 7 was dry (below); the formal reading is the
+  last paragraph of this entry. Ruling 9 names no form for the flip line. §8c.12: *"The three records stay `proposed` until
+  the operator's dated ledger line. **Re-run Checkpoint 8c after the flip commit.**"* One dated line per record would
+  follow the D21-65/D21-66 precedent, and ruling 10's *"each with its own dated ledger line citing this entry"*, which
+  governs *"`s8d` onward"*, not this stage.
+
+- **Errata and dated corrections (§8c.7).** **E-0162-2** corrects ADR-0162's drivers sentence *"Checkpoint 7a counts
+  exactly six methods on the `Toolchain` port"*; **E-0135-1** corrects ADR-0135 option 3's *"a port whose method count
+  Checkpoint 7a asserts at six"*. In the same change as the records: *"D21-10's dated note, `s7a` §7a.3's seven-method
+  note, design §3.3's `Toolchain`-row note, AC-329's register note, `s7c`'s D21-48 X15 notes"*. At P4 the in-code
+  corrections of the false six-count, each dated: `rk-ports/src/toolchain.rs`, both adapters' crate docs and
+  `report.rs` module docs, `review_pass.rs` and `tests/it/review_pass.rs`. `BasisReason::PolicyForced`'s dated note
+  was written by P5 and is in `5561afa` (`crates/rk-types/src/verify.rs`, a plain `//` comment).
+
+**Recorded — the provisional AFK rulings, and how the operator's rulings disposed of them.**
+- **D21-62** (taken provisionally at `6f70e47`; panel `spikes/afk-panels/D21-62-s8c.md`): A, foreign lines in a
+  libtest record region are skipped and counted (`foreign_lines`); B, nextest's list failure (rc 104 over `zz_decoy`)
+  is a named refusal, `ParseRefusal::ListFailed`, never green, no fallback; C, the adapter passes each advisory tool
+  an explicit database path and reads that path's HEAD itself, before and after; D, tsc 0 passing, 2 failing, 1 or
+  other `Err(NonZero)`. **All four confirmed by D21-64 rulings 3–6.** Ruling 3 also took the leak fix: *"`rk_cli`'s
+  verbs that write through `std::io::stdout()` in-process (doctor, catalog, cost, explain, lint, status) take a
+  writer"*. D21-62's **Owed** line is discharged by dated note (`4f3ce71`).
+- **D21-63** (taken provisionally at `f93c126`; panel `spikes/afk-panels/D21-63-s8c.md`): option (1), a matched
+  advisory whose vector is `CVSS:4.0`, malformed or another version refuses the scan by name, `cvss-unscorable`.
+  **Moved from option (1) to its own named option (3') by D21-64 ruling 7** (*"D21-63 moves from option (1) to (3'),
+  built at `s8c`'s close"*), the RustSec `cvss` crate pinned `=2.2.0`; **D21-67 ruling 7** then fixed v4.0 scoring
+  as base-only (CVSS-B). `cvss-unscorable` stays for any vector
+  neither scorer accepts. D21-63's **Owed** line is discharged by dated note (`4f3ce71`).
+- **D21-64 ruling 8** (re-measure the value table) and **D21-67 ruling 8** (the `this-repository.stdout` golden stays
+  as captured, M34's instrument) were executed here; see below.
+
+**Recorded — what was built** (`ec30bfa` stage open and P1, `5561afa` P2–P8, `f6501ef`, `d2c2def`, `e84d094`, and
+the refuting-round fixes).
+- **The seven-method port.** `Toolchain::test` takes a closed `Selection` and returns a `TestOutcome` (a red suite is
+  `Ok` with `failed ≥ 1`; `Err` is cannot-run, killed or unreadable); `build` returns a `BuildReport`; every
+  step-reached method takes a `StepBound`; the seventh method is `run_verb`. The fakes and `rk_ports::conformance`'s
+  `validate_report` moved in the same slice. Checkpoint 8c (4) counts **7** methods (control `6`), and
+  `source_parse::toolchain_port_declares_exactly_seven_methods` is the exact count. The kernel's fourth `PortMethod`
+  variant is `SummariseChanges` (refuting round 1).
+- **The parsers.** A strict libtest line parser (D21-43 N4, `libtest_lines.rs`, the one file admitted to name
+  libtest's summary line) and a strict nextest parser (`nextest_lines.rs`), each pinned per version over committed
+  goldens. The self-hosting golden's tally pins 784/0/9/44 and `foreign_lines` 39. Nextest's exit-96 argument
+  rejection is a named refusal (`ArgumentsRejected`, refuting round 6).
+- **Runner selection.** cargo-nextest was installed at stage open (D21-48 X15); the pin is **`0.9.146`**
+  (*"`cargo-nextest 0.9.146 (8af696ddc 2026-09-21)`"*), installed at that pin in `ci.yml`'s gates job before its
+  `test` step. Where the probe finds it the Rust adapter runs `cargo nextest run` with a `cargo test --doc`
+  companion, because nextest runs no doctests; every run child carries `--no-fail-fast`.
+- **`Affected` selection.** `"affected"` is the touched packages plus their reverse-dependency closure over `cargo
+  metadata --format-version 1` (§8c.3), with the recorded `affected-selection` probe. AC-328's stale half stays
+  excluded: the `verified_on` staleness comparison is OWED (§8c.3 rule 1).
+- **The verb registry and its handlers.** `VerbRegistry` with a closed `Route { Port(PortMethod), Toolchain, Store,
+  Git }`; the Rust adapter's four handlers, `smoke`, `sca_scan`, `package` and `setup`; the Node adapter's `build`
+  outcome after its tsc exit-status measurement. `package` refuses a binary outside the target dir by name
+  (`package-binary-outside-target`).
+- **The `.worktreeinclude` reader** (D21-45 W3; D21-48 X14), `rk-git`'s `worktree_include.rs` with the read
+  `GitOp::LsFiles` / `GitOp::CheckIgnore` variants (`is_write()` false), `GitExec::run_with_stdin` and
+  `GitError::CarryRefused`. `s8d-ii` calls it at creation. Not exercised: an OS-level symlink, and `check-ignore`'s
+  exit-1 arm (§8c.11).
+- **Registry routing.** `MAPPED_VERBS` is gone from `run_tool_step`; the executor looks each verb up in the registry,
+  refuses a verb with no row by its bare name before its bound is resolved, resolves `timeout_secs` through the value
+  table (record B), and types the output through a closed decode table.
+- **The shipped registry.** `.redkiln/registry.toml`: ten rows (`test`, `build`, `lint`, `change_summary`, `smoke`
+  with **`live = true`**, `sca_scan`, `package`, `setup`, `item_create`, `release_tag`), the source tables (7
+  checklists + 4 atoms = 11; 3 feeds × 2 toolchains = 6), and the ten content files (six checklists, four atoms).
+  AC-018's re-proof over `.redkiln/` is `verb_registry::ac018_holds_over_the_shipped_catalog_and_registry`.
+- **The value table, re-measured (D21-64 ruling 8).** Three passes at pin **`2f3f6ab257c4b21c1bd16bcd4781f97475f958f5`**
+  (parent `366543a`, *"`s8c`'s work through `366543a` plus the uncommitted leak and `cvss` packages"*), each rc 0,
+  runner `cargo-nextest 0.9.146`, at `CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`. Record V's rule, written before any
+  reading, gives `test_timeout` ~~300~~ **360** (slowest child **161 s**, pass 3's nextest run; P8's reading at
+  `6f70e47` was 146 s), `build_timeout` **120** (58 s), `scan_timeout` **60** (2 s) and `setup_timeout` **60** (4 s);
+  the cited keys are `review_timeout` 9180 and D21-48 X4's 4800 for `implement_timeout` and `repro_timeout`. **The pin
+  is held only by the LOCAL ref `refs/redkiln/pins/s8c-remeasure`** (it resolves to `2f3f6ab` at this writing), which
+  a clone does not fetch (below, open minors).
+- **The `cvss` crate.** `rk-adapter-toolchain-rust` depends on `cvss = { version = "=2.2.0", default-features = false,
+  features = ["std", "v3", "v4"] }`; the `Cargo.lock` change is one package with no dependencies of its own; `cargo
+  deny check licenses` and `bans` read rc 0 after it landed. v4.0 vectors are scored **base-only** (D21-67 ruling 7):
+  CVE-2025-47273 bands `high`. The in-tree v3 scorer is pinned against `cvss::v3` over the 92 distinct v3 vectors in
+  the RustSec database, and refuses an unknown metric (M49).
+- **The `rk-cli` writer seam** (D21-64 ruling 3). Each of `catalog`, `cost`, `doctor`, `explain`, `lint` and `status`
+  has a `run_to(…, out: &mut dyn Write)`, and `run` delegates to it with the process's stdout. Measured over `cargo
+  test -p rk-cli --test it -- --test-threads=1`: *"before, 39 lines containing `RK-D-` …; after, 0. Both runs: 124
+  passed."* The committed golden is not re-captured (D21-67 ruling 8).
+
+**Recorded — Checkpoint 8c's stated limits (§8c.11), carried and not closed.**
+- **(2) compares `ci.yml`'s nextest pin with this box's install.** §8c.11: *"It does not see what CI actually
+  installed. CI's log of its `install cargo-nextest` step is that evidence, read at the first CI run after this
+  stage."* That reading is owed.
+- **The libtest goldens.** *"A leaked `ok` record beside a corrupted `ok` record balances and leaves the tally true;
+  that case is reasoned in record T, not tested."*
+- **The `.worktreeinclude` reader.** No test creates an OS symlink or junction, and `check-ignore`'s exit-1 arm (no
+  match ignored) is not exercised.
+- **(11)'s `11 6 []`** *"is the shape of the enumeration, not its truth"*; that the 14 keys are the ones the lanes
+  reach *"rests on `s8d`'s lane-walk tests, which run later"*.
+
+**Recorded — the amendments this stage made to OTHER checkpoints, and who re-runs them.**
+- **Checkpoint 8a guard (6)** (`s8a`, dated P5 note): the allowlist admits `rk_git::head` beside `rk_git::diff` and
+  `rk_git::path` (*"`sed -E 's/\brk_git::(diff|path|head)\b//g'`"*); the `sca_scan` database HEAD reads and the
+  `package` handler's HEAD read share ONE read, `rk_git::head::head_commit` (`crates/rk-git/src/head.rs`, gix, spawns
+  nothing), held to the same exec-route ban as `diff.rs` and `path.rs`, with a pass and a fail control. The
+  pre-amendment allowlist fires on the two `head_commit` code lines in `verbs.rs` (rc 1). **Re-run whole by `s8e`,
+  `s8i` and `s8j`** (Checkpoint 8a).
+- **Checkpoint 7c's AC-329 `rk_absent` line** (`s7c`, dated note, refuting round 2): admits exactly
+  `^crates/rk-adapter-toolchain-rust/src/libtest_lines\.rs:`, with a pass and a fail control; the 7c statement census
+  gains +8 (*"216 can stop, 144 cannot, 360"*). **Re-run whole by `s8j`** (D21-43 N28), now over this amendment;
+  `s8j` carries the receiver note at its head and §8j.6 step 2.
+- **Checkpoint 7b's two facet-predicate bans** (`s7b`, dated note, refuting round 4): one `X7B` exclusion admits
+  exactly `^crates/rk-kernel/tests/it/(lattice|p9_pin)\.rs:` (`s8b`'s lattice parity and D21-56 (ii) `auth` strings in
+  lattice.rs, and p9_pin.rs:126's threat-model text at `b66ba53`), with a synthetic control per ban; §7b.14's count is
+  re-counted *"154 / 91 / 63"*. 7b was RED when run whole from `d6acfba` until then, unseen because every later
+  Checkpoint 8a run was nested. **Re-run whole through Checkpoint 8a guard (11), by `s8e`, `s8i` and `s8j`.**
+- **Checkpoint 5: unaffected, not amended.** The round-1 blocker was fixed by renaming the variant to
+  `PortMethod::SummariseChanges`; *"the variant was renamed and neither guard was amended"*, and both checkpoints'
+  non-cargo portions pass on the renamed tree. Checkpoints **8b, 7a and 5** are re-run whole from their own bytes by
+  Checkpoint 8c (15) (8b with `RK_CP_NESTED=1`). PROGRESS §1's 5 and 7a rows read RE-RUN PENDING and 7c's PROVISIONAL,
+  from the port slice (§8c.8 step 2).
+
+**Recorded — the refuting rounds (§8c.13).** Seven rounds, each with five finder dimensions (spec conformance, tests
+and mutants, records, the checkpoint, cross-file safety), every blocker or major to two refuters, stopping when a
+round finds no blocker or major.
+- Round 1: 1 blocker, `PortMethod::ChangeSummary` tripped Checkpoint 5's `rk-kernel` ban and 8a guard (6)'s copy;
+  renamed (`088e35f`).
+- Round 2: 2 majors, `validate_report` red in no test (M38), and the pinned parser tripped 7c's AC-329 ban (`3309dd2`).
+- Round 3: 3 majors, ADR-0169's stale provisional wording, `s8d` §8d.3a's receiver collision, `s8g` §8g.2's
+  `lattice.py` cross-check that could not run as written; plus D21-65/D21-66's never-made flip-time edits, confirmed at
+  minor and fixed (E-0168-1 and dated corrections) (`3e4b260`, `5e67c82`).
+- Round 4: 2 majors, no test read `build_verdict`'s `Failing` arm (M46–M48), and Checkpoint 7b red when run whole
+  (`91fab97`).
+- **Round 5: 1 blocker. Mutant M29 (`if false && !NEXTEST_PINNED.contains(&version)`) leaked into commit `91fab97`:**
+  the nextest version pin was disabled, so an unpinned version parsed on trust, and the whole suite and Checkpoint 8c
+  (7) and (13) were red. **Restored at `b4b8f5d`.**
+- Round 6: 1 major, `decode_verb_output`'s `SmokeStatus::Empty` arm unobserved (M51); the decode table's other kinds,
+  refuted to minor and fixed as well (M52, M53a–e) (`cf2f17c`).
+- **Round 7: dry.** No blocker, no major.
+- **Mutants.** M1–M54 all KILLED at WHOLE pass 9 (over round 6's fixes on `b4b8f5d`), each at rc 101 with the named
+  test's own `FAILED` line and its executed count asserted. The expected survivors, each read and none a weak guard:
+  M25 over the golden (the notice arm is unobservable there; the synthetic test kills it), M39 over its control, M41
+  over CVE-2025-47273 (`high` either way), and M49 over the v3 database sample (every vector well formed).
+
+**Recorded — the minors left open (§8c.13), each recorded and not fixed.**
+- `scan_timeout`'s warrant timed `cargo audit` and `cargo deny` only, and it also bounds `tech-debt-assessment`'s
+  clippy `lint` step (round 2; §8c.12 item 5).
+- CI provisions no pnpm or node, so the `setup` test and the Node adapter's suite fail their preflight on a hosted
+  runner; the pnpm step is `s8j`'s under D21-42 14a (round 2; §8c.12 item 6).
+- **The re-measure pin `2f3f6ab` is reachable only through the local ref `refs/redkiln/pins/s8c-remeasure`**, which a
+  clone does not fetch, so Checkpoint 8c (11)'s `git cat-file -e` passes in this object store only. The remedy is to
+  push the ref (an operator act; no push is made under the AFK rule) or re-pin the four rows by dated edit. §8c.13
+  says *"the choice is owed before the close and is not taken here"*; **it is owed to the operator** (round 3).
+- The re-measure pin predates `crates/` changes (`e84d094` and round 4's fix); the value is kept on the reading
+  (slowest child 161 s against the 180 s that would move `test_timeout`); a re-take is the operator's, as D21-64
+  ruling 8 left it (round 4).
+- `s8a`'s P5 note beside guard (6)'s amendment still reads *"D21-62 C, provisional"*, with no *"confirmed by
+  D21-64"*; a one-line dated note for whichever package next edits `s8a` (round 4).
+- No test checks a CVSS band boundary (`critical` ≥ 9.0, `high` 7.0, `medium` 4.0) (round 7).
+
+**Recorded — the hand-ons (§8c.12), reported and not decided.**
+1. **`"e2e"` is refused.** If `s8j`'s story candidate selects `walking-skeleton`, the declaration is owed there.
+2. The rk-cli stdout leak: **done, no longer handed on** (D21-64 ruling 3; above).
+3. **`git worktree remove --force` leaves pnpm's junctions behind on Windows** (114 dangling links on passes 2 and 3,
+   under `.git/redkiln/tmp/`, invisible to `git worktree list`); `s8d-ii`'s to meet at removal.
+4. The measured tree: **taken** by D21-64 ruling 8, the re-reading at `2f3f6ab` (above).
+5. **`scan_timeout` bounds a clippy `lint` site it was not measured on**; the lint sites' own key or a clippy-timed
+   warrant is unassigned, the shipped value unchanged.
+6. **CI provisions no pnpm or node**; `s8j` carries the pnpm step (D21-42 14a); node is provisioned by no step.
+
+Also carried in §8c.12's sibling notes: `s8g` §8g.6 owns the `[checklist.smoke]` flip (settled, M26); the rigged
+stub's doc path moves with `s8d-ii`; `s7c`'s `nextest_fallback_recorded_on_report` description is stale after the
+install and `s8j` reads it against §8c.12; the verify pass and the lanes now run nextest plus the doctest companion
+through the port; X4's duration records are owed by the stages that run the dispatches; `s8g` still lists the matched
+advisory vectors at its open, and its halt fires only for a vector neither scorer accepts.
+
+**Acceptance set (§8c.10), each for the clause named there.** Claimed: AC-018, AC-324, AC-325, AC-326, AC-328,
+AC-329, AC-330, AC-331, AC-332, AC-344, AC-352, AC-487 and AC-499. Excluded, with §8c.10's reasons: AC-473 and AC-521
+(`s8`), AC-485 and the verify block (`s8g`), AC-330's p95 half, AC-326's `selection_ineffective`, AC-328's stale half
+and AC-289's mutate half.
+
+**The floor.** Checkpoint 8c (13)'s FLOOR is **862** (the stage header: *"RECORDED whole-suite count at `83d1268`
+(784 passed / 0 failed / 9 ignored over 44 results): 784 + 78 = **862**"*), at least 44 result lines. The named
+selections (5)–(10) are **127** tests (6 + 8 + 59 + 13 + 1 + 5 + 25 + 10). The last diagnostic whole-suite reading
+recorded in the stage file, WHOLE pass 9 before its mutant runs, was **877 passed / 0 failed / 9 ignored over 44
+result lines**; it is not the formal Checkpoint 8c. The next stage's floor is re-derived from the formal reading below.
+
+Checkpoint 8c: **passed whole at `4ab7c67`**, the formal reading, run from the main checkout under D21-47's
+no-dispatch wrapper (`runbook/tools/nodispatch.sh`, which the block sources at (0b)). A first run at
+`CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4` was reaped by memory pressure before
+it finished, with 0 `FAIL` lines printed before the kill; it is recorded here and is not a reading. The formal run,
+at `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`: rc 0, 0 `FAIL`, `CP8C-END-OF-BLOCK` reached; the extracted block is 428
+lines, sha256 `93350a5f89969d1872c8b870b1143da34aa0a3c822d251c711fd78e48dda74af`; the advisory databases read
+`e2111519ba6d14a5da59a7b2e5c8083ae8a37c01` before 7a, before 5 and after 5. The companion whole-suite reading at
+`4ab7c67`: **877 passed / 0 failed / 9 ignored over 44 result lines**. Checkpoint 8c is re-run after the flip
+commit (D21-64 ruling 9).
+
+---
+
+## D21-69 · ADR-0169 flips to `accepted` — `Toolchain::test` returns an outcome, and a selection is a closed type
+
+**Confirmed 2026-09-26 by the operator, in the session executing `s8c`, under D21-64 ruling 9.** ADR-0169 (`s8c`'s
+record T) flips `proposed → accepted`, `date: 2026-09-26` unchanged. It was written `proposed` at `s8c`'s build and
+revised in place during that stage while it bound nothing. The ruling reads:
+*"Records T, V and B (ADR-0169, 0170, 0171) flip at `s8c`'s close if the formal Checkpoint 8c passes
+whole and a refuting round finds no blocker or major; Checkpoint 8c is re-run after the flip commit, as the
+stage requires."*
+
+Both conditions hold. The formal Checkpoint 8c passed whole at `4ab7c67` (D21-68, its last paragraph: rc 0,
+0 `FAIL`, `CP8C-END-OF-BLOCK` reached, the extracted block 428 lines; the companion whole-suite reading 877 passed
+/ 0 failed / 9 ignored over 44). Refuting round 7 (`s8c` §8c.13) was dry: no blocker, no major.
+
+The text that flips is the one at `4ab7c67`; the flip commit changes only its `status` line. No Decision clause and
+no forbids bullet moves. The supersession in part of ADR-0162 decision 4 and of ADR-0094 decision 1's *"`test` =
+`cargo test --workspace`"*, in three respects, is now in force; both stay `accepted`, and each `superseded_by` already
+names `0169`. D21-62 A, B and D, which it carries, were confirmed by D21-64 rulings 3, 4 and 6. **Checkpoint 8c is
+re-run after this flip commit.**
+
+---
+
+## D21-70 · ADR-0170 flips to `accepted` — the verb registry ships, and the `Toolchain` port gains one generic method
+
+**Confirmed 2026-09-26 by the operator, in the session executing `s8c`, under D21-64 ruling 9.** ADR-0170 (`s8c`'s
+record V) flips `proposed → accepted`, `date: 2026-09-26` unchanged. It was written `proposed` at `s8c`'s build and
+revised in place during that stage while it bound nothing. The ruling reads:
+*"Records T, V and B (ADR-0169, 0170, 0171) flip at `s8c`'s close if the formal Checkpoint 8c passes
+whole and a refuting round finds no blocker or major; Checkpoint 8c is re-run after the flip commit, as the
+stage requires."*
+
+Both conditions hold. The formal Checkpoint 8c passed whole at `4ab7c67` (D21-68, its last paragraph: rc 0,
+0 `FAIL`, `CP8C-END-OF-BLOCK` reached, the extracted block 428 lines; the companion whole-suite reading 877 passed
+/ 0 failed / 9 ignored over 44). Refuting round 7 (`s8c` §8c.13) was dry: no blocker, no major.
+
+The text that flips is the one at `4ab7c67`; the flip commit changes only its `status` line. No Decision clause and
+no forbids bullet moves. The supersession in part of ADR-0135 clauses 1 and 6, its six-count Decision sentence and one
+forbids bullet with its second sentence, of ADR-0162's seventh-method forbids half, and of ADR-0137's *"It does not
+add or remove a port method; the count stays six."* is now in force; all three stay `accepted`, and each
+`superseded_by` already names `0170`. Errata E-0135-1 and E-0162-2, written with it, stand. D21-62 C, which it
+carries, was confirmed by D21-64 ruling 5; its CVSS scoring is D21-64 ruling 7's option (3'), with v4.0 vectors scored
+base-only under D21-67 ruling 7. **Checkpoint 8c is re-run after this flip commit.**
+
+---
+
+## D21-71 · ADR-0171 flips to `accepted` — a `tool` step's declared `timeout_secs` is the tighter bound
+
+**Confirmed 2026-09-26 by the operator, in the session executing `s8c`, under D21-64 ruling 9.** ADR-0171 (`s8c`'s
+record B) flips `proposed → accepted`, `date: 2026-09-26` unchanged. It was written `proposed` at `s8c`'s build and
+revised in place during that stage while it bound nothing. The ruling reads:
+*"Records T, V and B (ADR-0169, 0170, 0171) flip at `s8c`'s close if the formal Checkpoint 8c passes
+whole and a refuting round finds no blocker or major; Checkpoint 8c is re-run after the flip commit, as the
+stage requires."*
+
+Both conditions hold. The formal Checkpoint 8c passed whole at `4ab7c67` (D21-68, its last paragraph: rc 0,
+0 `FAIL`, `CP8C-END-OF-BLOCK` reached, the extracted block 428 lines; the companion whole-suite reading 877 passed
+/ 0 failed / 9 ignored over 44). Refuting round 7 (`s8c` §8c.13) was dry: no blocker, no major.
+
+The text that flips is the one at `4ab7c67`; the flip commit changes only its `status` line. No Decision clause and
+no forbids bullet moves. The supersession in part, for `tool` steps (D21-48 X13), of ADR-0140 decision 1's withdrawal,
+decision 2's sentence, decision 4 and its first two forbids bullets, and of ADR-0099 decision 2's *"under the same
+timeout"*, is now in force; both stay `accepted`, each `superseded_by` already names `0171`, and ADR-0140 decision 5
+stands. **Checkpoint 8c is re-run after this flip commit.**
