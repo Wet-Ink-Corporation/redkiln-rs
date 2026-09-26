@@ -1,10 +1,10 @@
 ---
 id: "0169"
-title: "**`Toolchain::test` returns an outcome, and a selection is a closed type.** A red suite is `Ok(TestOutcome { failed ≥ 1, status: Failing, … })`; `Err` means only cannot-run, killed or unreadable. `build` returns a `BuildReport` the same way. The per-test counts come from two strict line parsers pinned per version, libtest's (D21-43 N4) and cargo-nextest's (D21-48 X15, installed at `0.9.146`), and the Rust adapter runs nextest where the probe finds it, with a `cargo test --doc` companion because nextest runs no doctests. `\"affected\"` is the touched packages plus their reverse-dependency closure over `cargo metadata --format-version 1`. Supersedes, each in part and quoted, `0162` decision 4 (its reading that `is_err()` is a failing suite) and `0094` decision 1's *\"`test` = `cargo test --workspace`\"* in three respects; carries three of `D21-62`'s four provisional rulings (A, B and D)"
+title: "**`Toolchain::test` returns an outcome, and a selection is a closed type.** A red suite is `Ok(TestOutcome { failed ≥ 1, status: Failing, … })`; `Err` means only cannot-run, killed or unreadable. `build` returns a `BuildReport` the same way. The per-test counts come from two strict line parsers pinned per version, libtest's (D21-43 N4) and cargo-nextest's (D21-48 X15, installed at `0.9.146`), and the Rust adapter runs nextest where the probe finds it, with a `cargo test --doc` companion because nextest runs no doctests. `\"affected\"` is the touched packages plus their reverse-dependency closure over `cargo metadata --format-version 1`. Supersedes, each in part and quoted, `0162` decision 4 (its reading that `is_err()` is a failing suite) and `0094` decision 1's *\"`test` = `cargo test --workspace`\"* in three respects; carries three of `D21-62`'s four ~~provisional~~ rulings (A, B and D), confirmed by `D21-64` rulings 3, 4 and 6 *(dated 2026-09-26, s8c refuting round 3)*"
 status: proposed
 date: 2026-09-26
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-42 decisions 1a and 4c, D21-43 N4 and N25, D21-48 X15, D21-51 (the `cargo metadata` clause left to this record) and D21-62 (the four stage-open blockers, TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-62-s8c.md); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.1–§8c.3 and §8c.7 (the proposal this record fixes); references/adr/0162 decision 4 and references/adr/0094 decision 1 (the sentences superseded in part); crates/rk-ports/src/toolchain.rs and crates/rk-adapter-toolchain-rust/src/report.rs at `6f70e47` (the signatures and `RUN_ARGS` this record moves); crates/rk-adapter-toolchain-rust/tests/fixtures/libtest/1.98.1/ and tests/fixtures/nextest/0.9.146/ (the goldens, with their `captures.json`)
+source: spikes/DECISIONS-2026-09-21.md D21-42 decisions 1a and 4c, D21-43 N4 and N25, D21-48 X15, D21-51 (the `cargo metadata` clause left to this record) and D21-62 (the four stage-open blockers, TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-62-s8c.md); *(dated 2026-09-26, s8c refuting round 3)* D21-64 rulings 3, 4, 6 and 9 (the operator's confirmation of D21-62 A, B and D, the rk-cli writer fix taken with A, and this record's flip condition) and D21-67 ruling 8 (the self-hosting golden kept as captured); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.1–§8c.3 and §8c.7 (the proposal this record fixes); references/adr/0162 decision 4 and references/adr/0094 decision 1 (the sentences superseded in part); crates/rk-ports/src/toolchain.rs and crates/rk-adapter-toolchain-rust/src/report.rs at `6f70e47` (the signatures and `RUN_ARGS` this record moves); crates/rk-adapter-toolchain-rust/tests/fixtures/libtest/1.98.1/ and tests/fixtures/nextest/0.9.146/ (the goldens, with their `captures.json`)
 supersedes: ["0162", "0094"]
 superseded_by: []
 related: ["0003", "0019", "0093", "0104", "0137", "0140", "0148", "0164", "0165", "0170", "0171"]
@@ -43,6 +43,10 @@ is s8c's act, at stage open."*
 
 At stage open four measurements contradicted the stage file's proposal, and D21-62 ruled on each provisionally under
 the AFK rule of 2026-09-26. Three of the rulings are this record's (A, B and D); the fourth (C) is ADR-0170's.
+*(dated 2026-09-26, `s8c` refuting round 3; `spikes/DECISIONS-2026-09-21.md` D21-64 rulings 3, 4 and 6.)* The operator has since confirmed all three:
+*"D21-62 A is confirmed, and the leak is fixed as well"*, *"D21-62 B is confirmed"* and *"D21-62 D is confirmed"*.
+Each *provisional* tag below records how its ruling was first taken; none is provisional now. Ruling 3 also took the
+writer option this record first left open (below).
 
 ## Decision drivers
 
@@ -54,8 +58,10 @@ the AFK rule of 2026-09-26. Three of the rulings are this record's (A, B and D);
 - A parser that trusts one version's output on another version is two instruments (golden constraint 8).
 - One report path. Two paths that each produce a report (the port method and an inherent `verify_report`) can
   disagree, and nothing would say which one the lane read (RT-6).
-- Every reversal below must be one clause of a proposed record and one code branch, because every D21-62 ruling is
-  provisional until the operator confirms it.
+- Every reversal below must be one clause of a proposed record and one code branch, because ~~every D21-62 ruling is
+  provisional until the operator confirms it~~ *(dated 2026-09-26, `s8c` refuting round 3; D21-64 rulings 3, 4 and 6.)* A, B
+  and D were provisional until the operator confirmed them, which D21-64 did. The driver is kept as the reason each
+  clause is shaped as one clause and one branch.
 
 ## Considered options
 
@@ -76,16 +82,26 @@ what the summary must agree with.
 
 ### Option — Keep §8c.1 rule 2 strict and give `rk_cli::verbs::doctor::run` a writer (D21-62 A, dissent)
 
-Not taken, and left open. It moves a crate this record does not otherwise touch, re-captures the self-hosting golden,
+~~Not taken, and left open.~~ It moves a crate this record does not otherwise touch, re-captures the self-hosting golden,
 and leaves every future in-process verb test able to make every libtest self-hosting run Unverifiable. The panel's
-reversibility judge preferred it; the writer seam is compatible with the ruling taken, and is handed on as a hygiene
-item (§8c.12).
+reversibility judge preferred it; the writer seam is compatible with the ruling taken, ~~and is handed on as a hygiene
+item (§8c.12)~~.
+*(dated 2026-09-26, `s8c` refuting round 3; `spikes/DECISIONS-2026-09-21.md` D21-64 ruling 3.)* **Taken, in addition to the skip-and-count rule, not in
+place of it.** The ruling reads *"D21-62 A is confirmed, and the leak is fixed as well. The libtest parser keeps its
+skip-and-count rule for foreign lines. In addition, `rk_cli`'s verbs that write through `std::io::stdout()`
+in-process (doctor, catalog, cost, explain, lint, status) take a writer, so the 39 `RK-D-…` lines stop leaking"*.
+Built at `s8c` (commit `d2c2def`): each of the six verbs has a `run_to(…, out: &mut dyn Write)` beside its `run`,
+which passes `&mut std::io::stdout()`. So §8c.1 rule 2 is **not** restored to strict: decision 3's foreign-line skip
+stands, and the hygiene hand-on is withdrawn (the stage file struck its own: *"~~It is s7d hygiene (a writer seam),
+not fixed here,~~"*). The golden is not re-captured: it stays as captured, 39 foreign lines, by D21-67 ruling 8.
 
 ### Option — On nextest's list failure, fall back to `cargo test` under `Detect` (D21-62 B option 2)
 
 Not taken, and left open. It adds a run-time runner switch that §8c.1's selection rule does not have, and it is the
 hardest of the three to remove. It can be layered on this record later, because the `ListFailed` refusal stays its
 trigger.
+*(dated 2026-09-26, `s8c` refuting round 3; D21-64 ruling 4.)* The operator confirmed B without it: *"A fallback to `cargo test` is revisited only
+when a real target repository needs it."*
 
 ### Option — A fixture `.config/nextest.toml` default filter over `zz_decoy` (D21-62 B option 3)
 
@@ -140,7 +156,8 @@ never reads stderr, so s7c's `build.rs` decoy cannot reach it.
 2. **Block-framed.** A block opens on `^running (\d+) tests?$`. Its record region runs to the first empty line.
    A record is `^test (.+) \.\.\. (ok|FAILED|ignored(, .*)?)$`, and the region must hold exactly as many records as
    the header states. libtest's slow notice, `^test (.+) has been running for over 60 seconds$`, is skipped, and the
-   name it carries must be one the block records, or the block refuses. *(D21-62 A, provisional.)* **Any other
+   name it carries must be one the block records, or the block refuses. *(D21-62 A, ~~provisional~~; dated 2026-09-26,
+   s8c refuting round 3: confirmed, D21-64 ruling 3.)* **Any other
    non-empty line in the region is FOREIGN: it is skipped, never counted, and tallied.** The block closes on
    `^test result: (ok|FAILED)\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out; finished in [0-9.]+s$`.
    Lines between the region and the summary (the `failures:` section, captured output) are skipped. **A
@@ -171,6 +188,11 @@ rk-cli `it` binary's record region (the first at line 287, *"RK-D-GATE-OUTPUTS o
 `rk_cli::verbs::doctor::run` writing through `std::io::stdout()` in-process. §8c.1 rule 2 as proposed (*"Any other
 non-empty line in the region refuses."*) refused it; with those 39 skipped the tally is 784 passed, 0 failed, 9
 ignored over 44 blocks, Checkpoint 8b's reading.
+*(dated 2026-09-26, `s8c` refuting round 3; D21-64 ruling 3, D21-67 ruling 8.)* The operator did not reject this reading: *"The libtest parser keeps
+its skip-and-count rule for foreign lines."* The leak that made it necessary is fixed as well (the writer option
+above), so a fresh self-hosting capture carries no `RK-D-…` line; the committed golden is kept as captured, and its
+tally still pins `foreign_lines` 39 (*"The `this-repository.stdout` golden stays as captured (39 foreign lines,
+predating the leak fix)"*).
 
 **4. Runner selection, and the nextest parser (D21-48 X15).** ADR-0094 decision 1 admits *"`cargo nextest run` where
 present, recorded on the report"*, and this record executes that clause. It does not supersede it.
@@ -208,14 +230,16 @@ present, recorded on the report"*, and this record executes that clause. It does
   and `Summary`'s run, passed and failed must equal the tally; **a `REFUSE` line refuses**, because a retried test is
   two runs of one test and a timed-out one is a kill, not a failure (AC-331); exit-code agreement is N4's rule 6
   (exit 0 green, 100 test failure).
-- *(D21-62 B, provisional.)* **A list failure is a named refusal.** Over a project whose `harness = false` target does
+- *(D21-62 B, ~~provisional~~; dated 2026-09-26, s8c refuting round 3: confirmed, D21-64 ruling 4.)* **A list failure is a named refusal.** Over a project whose `harness = false` target does
   not speak `--list` (s7c's `zz_decoy`), `0.9.146` exits **104** with the line *"error: creating test list failed"*
   and no status line. That is `ParseRefusal::ListFailed { version, exit: 104 }`, mapped to `Err(Transport { Decode })`
   naming `ListFailed` and `0.9.146`. More generally, **any exit other than 0 or 100 with zero `PASS`/`FAIL` lines
   refuses and is never tallied**. Under `Detect` and under `Force(nextest)` alike nothing falls back. The known
   limitation is stated: on a box where nextest is installed, `Detect` over a repository with a non-listing
   `harness = false` target is Unverifiable, although `cargo test` could run it. That fails closed; it is never a
-  false green. Options 2 and 3 above stay open for the operator.
+  false green. ~~Options 2 and 3 above stay open for the operator.~~ *(dated 2026-09-26, `s8c` refuting round 3; D21-64 ruling 4.)* The operator
+  ruled: *"a nextest list failure is a named refusal, never green, with no fallback."* Options 2 and 3 stay recorded,
+  and a fallback is revisited only when a real target repository needs it.
 - **Selection arguments** (measured on `0.9.146`, passed after `--`): `--exact`, `--ignored`, `--include-ignored`,
   `--skip <name>` and a bare name filter (`review_pass::selection_of`'s shape) are all accepted with libtest's
   meaning. An argument the installed nextest does not accept refuses by name; it is never dropped. An empty selection
@@ -286,7 +310,7 @@ means for a Cargo workspace, and D21-42 4c allows *"declared per adapter or refu
   `Ok(BuildReport { status: failing, errors ≥ 1 })`. A non-zero exit with no `build-finished` message, or a stream
   that disagrees with its exit code, is `Err(Transport { Decode })`. ADR-0094 decision 1's *"`build` = `cargo build
   --workspace`"* **stands**: the flag changes the stream that is read, not what is built.
-- *(D21-62 D, provisional.)* **Node**, `<program> tsc --noEmit` with `program` the adapter's `DEFAULT_PROGRAM`
+- *(D21-62 D, ~~provisional~~; dated 2026-09-26, s8c refuting round 3: confirmed, D21-64 ruling 6.)* **Node**, `<program> tsc --noEmit` with `program` the adapter's `DEFAULT_PROGRAM`
   (`npx.cmd` on Windows, `npx` elsewhere), on the pinned `tsc 5.9.3`: exit `0` is `Ok(passing)`, `errors = 0`; exit
   `2` is `Ok(failing)`, `errors` = the count of `error TS<n>` lines with a floor of 1; exit `1` and any other non-zero
   status are `Err(NonZero)`, cannot-run. **A broken `tsconfig.json` reads as a failing build, never a passing one**:
@@ -419,3 +443,6 @@ the pin). Medium on the four places a judgment was taken and is flagged for the 
 reading of N4 (D21-62 A), the list-failure refusal without fallback (B), the `tsc` exit mapping (D), and the reading
 of `PolicyForced` (decision 7, rule 3). None of them can produce a false green; each fails closed, and each is undone
 by one clause here and one code branch.
+*(dated 2026-09-26, `s8c` refuting round 3; D21-64 rulings 3, 4 and 6.)* Three of the four are now the operator's: the foreign-line reading (A), the
+list-failure refusal without fallback (B) and the `tsc` exit mapping (D) were confirmed. The reading of
+`PolicyForced` is the one still flagged for the flip; D21-64 does not rule on it.

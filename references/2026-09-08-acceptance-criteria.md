@@ -5362,8 +5362,14 @@ protocol pinned by a golden per toolchain version, not prose, and unparseable ou
 (`Transport { Decode }`), never green. *"No field of the report is obtained by parsing prose or markdown"* still
 holds for every member this criterion lists: `basis`, `basis_reason`, `argv`, `selected_test_count`,
 `total_test_count`, `wall_secs`, `toolchain_version` and `suite_sha` are produced as before. ADR-0169 decision 3
-also skips, and counts, libtest lines foreign to the protocol (D21-62 A, provisional); a foreign line contributes to
-no count.
+also skips, and counts, libtest lines foreign to the protocol (D21-62 A, ~~provisional~~ confirmed, dated below); a
+foreign line contributes to no count.
+*(Dated register note 2026-09-26, `s8c` refuting round 3; `spikes/DECISIONS-2026-09-21.md` D21-64 ruling 3 and D21-67
+ruling 8. It reads this criterion and does not amend it.)* D21-64 ruling 3 confirmed D21-62 A (*"D21-62 A is
+confirmed, and the leak is fixed as well"*) and took the writer option in addition to the skip: `rk_cli`'s in-process
+verbs (doctor, catalog, cost, explain, lint, status) take a writer, so no `RK-D-…` line leaks into a record region any
+more. The foreign-line skip stays, and the committed self-hosting golden stays as captured with its 39 foreign lines
+(D21-67 ruling 8). No member this criterion lists moves.
 
 **AC-330** — `rk-doctor` · evidence: brief §D timeout history (900 → 2,400 → 3,600 → one 5,400 s retry; the 900 s default
 was written for the fast condition and cost a CLEAN record [documented]) · decisions: ADR-0029

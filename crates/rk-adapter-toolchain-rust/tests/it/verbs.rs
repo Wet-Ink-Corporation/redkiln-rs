@@ -303,7 +303,8 @@ const CVE_2025_47273_V4: &str = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:
 /// **A CVSS v4.0 vector is scored by the RustSec `cvss` crate's v4 scorer and banded on record V's
 /// same thresholds** (record V = ADR-0170 decision 5; D21-64 ruling 7, D21-63 option (3')). A vector
 /// whose v4.0 base score is exactly 0.0 counts `low`, as record V already says of v3's *None* band:
-/// it was scored, so it is never `unrated`. CVE-2025-47273's vector bands `high` (7.7), and a
+/// it was scored, so it is never `unrated`. CVE-2025-47273's vector bands `high` ~~(7.7)~~
+/// (8.7 base-only, D21-67 ruling 7; dated 2026-09-26, s8c refuting round 3), and a
 /// `CVSS:4.0` vector the crate rejects still refuses by name.
 ///
 /// *(Added 2026-09-26, s8c build, CVSS.)*

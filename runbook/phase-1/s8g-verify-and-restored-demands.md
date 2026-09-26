@@ -387,10 +387,31 @@ also dropped at 7e (`story.toml`: *"DROPPED: [[stage.verify.require]] when = 'da
     `other_stage` list rendered empty; RB4 the keyed render drops `{suffix}`; RB5 the transitive entry is never pushed.
     A survivor is first investigated for unobservability over the fixture, then the fixture is widened; it is never
     accepted.
-  - **One quoted `lattice.py` cross-check** over the same tree: `python spikes/p9/lattice.py --packs <fixture>/packs
-    --catalog <fixture>/catalog`, its unsat lines quoted in the test's doc and here beside the Rust ones. The run's
+  - **One quoted `lattice.py` cross-check** over the same tree: ~~`python spikes/p9/lattice.py --packs <fixture>/packs
+    --catalog <fixture>/catalog`~~, its unsat lines quoted in the test's doc and here beside the Rust ones. The run's
     own output must show a non-zero pack and cell count before any line is compared: a `--packs` path that matches
     nothing prints a baseline over zero packs and exits 0.
+    *(dated 2026-09-26, `s8c` refuting round 3.)* **The struck command cannot read the fixture.** `lattice.py`'s
+    argparse takes `--packs` as a comma list of pack IDS that filters its own packs, *"`pack_paths =
+    sorted(glob.glob(os.path.join(HERE, "packs", "*.toml")))`"* then *"`if args.packs: packs = [p for p in packs if
+    p.id in args.packs.split(",")]`"*, and it reads `facets.toml` and `artifacts.toml` from `HERE` (*"`HERE =
+    os.path.dirname(os.path.abspath(__file__))`"*), never from `--catalog`'s tree. A path in `--packs` selects zero of
+    `spikes/p9`'s packs, so the struck run always trips the guard above. `lattice.py` may not be edited: Checkpoint 8b
+    (2) runs `git diff --quiet ca8f387 -- … spikes/p9/lattice.py`. **The cross-check uses `s8b` §8b.2 step 2's
+    staged-copy method instead:** (i) make a scratch directory under `target/` and name it by a RELATIVE path (`s8b`
+    §8b.2: an absolute `/c/…` path reaches Python unconverted); (ii) write `lattice.py` at `P9_PIN` into it, `git show
+    "$P9_PIN:spikes/p9/lattice.py" > "$X/lattice.py"` (`P9_PIN` is `crates/rk-kernel/tests/it/p9_pin.rs`'s const,
+    `ca8f3874ed9185b419b00b21b33713ba128de217`); (iii) copy the fixture's `catalog/` and `packs/` into it, and
+    `common/facets.toml` and `common/artifacts.toml` to its top level, the layout `HERE` expects; (iv) run it there with
+    NO `--packs` and no `--catalog` (both then default to the staged tree), `(cd "$X" && PYTHONHASHSEED=0
+    PYTHONIOENCODING=utf-8 python lattice.py) > "$X/run.txt"; rc=$?`, and assert `rc` 0. **Guards, before any unsat line
+    is compared:** the first line, *"`P6 lattice run; catalog=<n> activities; packs=[…]; pack digests: …`"*, names
+    `<n>` > 0 and the fixture's own pack ids, never `packs=[]`; each per-pack line's *"`prereg pairs=`"* count is
+    > 0 (the cells); and the digest tag every line opens with, *"`cat:<12> fac+art:<12> pk:<12> |`"*, shows the
+    fixture's `fac+art:`, never `spikes/p9`'s `fac+art:592fa138d68d` (`p9-run.txt`'s). Measured 2026-09-26 at `s8c`
+    refuting round 3, the method over the existing `unsatisfiable/` fixture: rc 0, *"`packs=['story']`"*, *"`prereg
+    pairs=  2592`"* per mode, and the tag `fac+art:1cd93c6cef11` (the shared `common/`'s; it moves only if `common/`
+    does, and the new tag is then recorded).
   - **Counts.** The one test joins §8g.9's list and Checkpoint 8g (5)'s `rk-kernel` selection and `want`, and the
     floor chain, by dated edit at this stage's open (floors re-derived from the entry checkpoint's recorded count).
 
@@ -801,8 +822,13 @@ passing result emits, and a result that does not pass opens the gate and emits n
   the open, list every matched advisory's vector; the named, expected halt now fires only for a vector neither
   scorer accepts (malformed, or a version other than 3.0, 3.1 and 4.0), with the text *"sca-scan would refuse
   cvss-unscorable naming `<vector>`"*, and the operator rules that vector (correct it, or rule it `unrated`).
-  Record V's evidence flags one open reading this stage may meet: a v4.0 vector carrying threat metrics (`E:`) is
-  scored as written (CVSS-BT), not base-only.
+  ~~Record V's evidence flags one open reading this stage may meet: a v4.0 vector carrying threat metrics (`E:`) is
+  scored as written (CVSS-BT), not base-only.~~
+  *(dated 2026-09-26, `s8c` refuting round 3; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 7.)* That reading is
+  closed: *"CVSS v4.0 vectors are scored base-only (CVSS-B): every non-base metric (threat, environmental,
+  supplemental) is stripped before scoring"*, built at `s8c`'s close (`verbs::cvss4_tenths`; record V decision 5,
+  *"For a `CVSS:4.0` vector, "the CVSS base score" is explicit: it is CVSS-B"*). An `E:` metric no longer moves a
+  band, and the halt above still fires only for a vector neither scorer accepts.
 - **The activity edit is `s8b`'s, and this stage cites it.** D21-43 N25 reads *"**`sca-scan` requires `unrated ==
   0`** or goes to `scan.accept-findings`"*. As shipped, the check reads *"`report.critical == 0 and report.high ==
   0`"*, which passes with `unrated > 0` (`s8c`'s draft at `a1d35ac`: *"As shipped, that check passes with `unrated >
@@ -1268,6 +1294,11 @@ test -f .redkiln/CHANGELOG.md || { echo "FAIL: s8b's pack changelog is absent �
 for w in tag-release 'tagged for release' verification_required IntegrationReport; do
   grep -qiF "$w" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming '$w' (ADR-0072; R1, R2, R5; D21-46 R5)"; exit 1; }
 done
+# (dated 2026-09-26, s8c refuting round 3; D21-67 ruling 1) s8d's class C disposition bumps equivalence-boundary 2->3 and
+# writes an `equivalence-boundary@3` changelog row, so this stage's N23 edit takes it 3->4. At s8g's open, amend by dated
+# line: this loop's `equivalence-boundary@3` becomes `equivalence-boundary@4`, and (7d)'s exact-version check for
+# equivalence-boundary reads 4, not 3. Otherwise s8d's row satisfies this grep before s8g writes anything (a vacuous
+# pass). Measure the version on disk at s8g's open first; the note is owed, not yet applied.
 for pair in unit-tests@3 unit-tests-ue@3 equivalence-boundary@3 property-based-testing@3 integration-tests@3 smoke-test@2; do
   grep -qF "$pair" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming $pair in s8b's <id>@<new version> form (ADR-0072; D21-43 N23; D21-46 R5, R6)"; exit 1; }
 done

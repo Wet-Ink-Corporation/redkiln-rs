@@ -1467,8 +1467,8 @@ removed by hand (§8c.12 hands the fact on to `s8d-ii`).
 *(dated 2026-09-26, s8c build, re-measure; D21-64 ruling 8.)* **RE-MEASURED, n = 3, at the tree holding all of `s8c`'s work.** D21-64 ruling 8:
 *"`s8c`'s value table is re-measured at the stage's work commit, three passes, and re-derived by record V's rule
 (written before any reading), by dated edit."* The work commit did not exist yet, so the pin is a commit object made
-from a temporary index over the working tree (`2f3f6ab257c4b21c1bd16bcd4781f97475f958f5`, parent `366543a`, on no
-ref; the real index and `HEAD` untouched). The script above was extracted from this file's bytes with one substitution,
+from a temporary index over the working tree (`2f3f6ab257c4b21c1bd16bcd4781f97475f958f5`, parent `366543a`, ~~on no
+ref~~ held since by the local ref `refs/redkiln/pins/s8c-remeasure`, dated below; the real index and `HEAD` untouched). The script above was extracted from this file's bytes with one substitution,
 its `pin=$(git rev-parse HEAD)` line pointed at that commit, and was otherwise byte-identical to P8's extraction
 (`scratchpad/s8c/remeasure-measure.sh`, logs `remeasure-runs/measure-pass-{1,2,3}.log`). Same runner, same
 concurrency (`CARGO_BUILD_JOBS=4 RUST_TEST_THREADS=4`), same databases; each pass rc 0, the path set unchanged,
@@ -1483,9 +1483,18 @@ MEASURED pin=2f3f6ab257c4b21c1bd16bcd4781f97475f958f5 path_len=24 runner='cargo-
 Record V's rule gives `test_timeout` ~~**300**~~ **360** (slowest child 161 s, pass 3's nextest run), and leaves
 `build_timeout` **120** (58 s), `scan_timeout` **60** (2 s) and `setup_timeout` **60** (4 s) unchanged.
 `.redkiln/registry.toml`'s four measured rows carry the new readings at the new pin, the P8 readings kept as dated
-comments; record V's evidence carries the table. The pin is unreachable from any ref: it resolves until a prune, so
-the commit that lands this work should adopt it, or the four rows are re-pinned by dated edit. Each pass again left
+comments; record V's evidence carries the table. ~~The pin is unreachable from any ref: it resolves until a prune, so
+the commit that lands this work should adopt it, or the four rows are re-pinned by dated edit.~~ Each pass again left
 its 114-junction pnpm skeleton under `.git/redkiln/tmp/`; all three were removed by hand.
+*(dated 2026-09-26, `s8c` refuting round 3.)* **The pin is held by a LOCAL ref.** `git for-each-ref refs/redkiln/pins/` reads
+`2f3f6ab257c4b21c1bd16bcd4781f97475f958f5 commit refs/redkiln/pins/s8c-remeasure`, and no branch or tag contains the
+commit [measured 2026-09-26]. The ref was made by the re-measure's package, named in commit `d2c2def`'s message,
+in the form `git update-ref refs/redkiln/pins/s8c-remeasure 2f3f6ab257c4b21c1bd16bcd4781f97475f958f5` [inferred: no
+reflog is kept for a ref outside `refs/heads/`]. `remote.origin.fetch` is `+refs/heads/*:refs/remotes/origin/*`, so a
+clone or fetch does not bring the ref, and Checkpoint 8c (11)'s `git cat-file -e "$p^{commit}"` passes in this object
+store only. Owed before the close, and not chosen here: push the ref with the branch (an operator act; no push is
+made under the AFK rule), or re-pin the four measured rows to a commit a branch reaches, by dated edit. Record V's
+evidence and `.redkiln/registry.toml`'s `[toolchain.rust]` comment say the same.
 
 ### 8c.6 A step's `timeout_secs` is the tighter bound (D21-42 4b)
 
@@ -2376,6 +2385,40 @@ M38a–M38d; M38's green control is `ok`. P7's MIN still has no driver case. A s
   the store's sha256 `f7db6eba…` was unchanged across the run.
 This is a diagnostic reading. It is not the formal Checkpoint 8c.
 
+*(dated 2026-09-26, s8c build, WHOLE pass 7 after refuting round 3.)* **Every table mutant re-run over the tree carrying
+round 3's uncommitted R3FIX edits on `5e67c82`.** Against pass 6's snapshot, only two files under `crates/` and
+`.redkiln/` differ: a doc comment in `crates/rk-adapter-toolchain-rust/tests/it/verbs.rs` and a comment in
+`.redkiln/registry.toml`. Every wholepass6 driver was copied to `scratchpad/s8c/wholepass7_*_mutants.py` by
+`wholepass7_mkdrivers.py`. Only the string `wholepass6` changed, and each copy's hit count was asserted. The copies were
+run by `wholepass7_runall.py`, and the results are under `scratchpad/s8c/wholepass7-mut/`.
+
+**M1–M45 all KILLED**, each at rc 101 with the named test's own `FAILED` line and its executed count asserted. One
+incident, recorded:
+- p7's `finally` restore of `crates/rk-cli/src/verbs/run.rs`, after its RED-A case, hit `PermissionError: [WinError 5]
+  Access is denied` on `os.replace`. That left the RED-A reversion in `run.rs` and the original bytes in
+  `run.rs.wholepass7mut`, and the driver stopped before M7/M9/M10/M18/M19/M23.
+- The leftover's sha256 matched the pre-run snapshot (`f9da1905…`). It was restored by `wholepass7_restore_runrs.py`
+  (os.replace, sha256 re-checked) while the run continued. The drivers that ran in the meantime (p8, d63, r1fix, m38,
+  m38br, cvss) select tests in `rk-kernel`, `rk-ports` and the Rust adapter, none of which depends on `rk-cli`.
+- The six remaining p7 mutants were re-run from `wholepass7_p7b_mutants.py`, the same cases with `os.replace` retried on
+  `PermissionError`. All six were KILLED, and the snapshot showed 0 differences before and after.
+- runall's closing snapshot showed 0 differences, the store's sha256 `f7db6eba…` was unchanged, and no `*.wholepass7mut`
+  file remains.
+
+The expected survivors are unchanged: M25 over the golden (unobservable there), M39 over its control, and M41 over
+CVE-2025-47273. The extras were killed again.
+
+In the same pass, through the no-dispatch wrapper:
+- `cargo fmt --all -- --check` rc 0;
+- `cargo clippy --workspace --all-targets` rc 0 and `cargo clippy -p rk-ports --all-targets --features conformance`
+  rc 0, both warn-level only, as above;
+- all **123** of Checkpoint 8c (5)–(10)'s named tests exist by their exact module path in their crate's
+  `--test it -- --list`, every `want` equals its list's length, and `ac334::ac334_flip_predicate_real_toolchain` under
+  `--features corpus` is `ok`;
+- `cargo test --workspace --no-fail-fast` rc 0: **873 passed / 0 failed / 9 ignored over 44 result lines** (floor 862).
+
+This is a diagnostic reading. It is not the formal Checkpoint 8c.
+
 **If a mutant survives, read it before strengthening anything.** A surviving mutant can mean that the property is
 unobservable from the seam the test watches. If so, the guard moves; it is not weakened. Record every result, kills
 and survivors alike, in the checkpoint output.
@@ -2820,6 +2863,12 @@ out=$(nodispatch env RK_CP_NESTED=1 bash "$scratch/cp8b.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the entry gate, Checkpoint 8b, re-run WHOLE, exited $rc (read its FAIL line: record ids are literals in its own block, and none is supplied from here)"; printf '%s\n' "$out" | tail -30; exit 1; }
 printf '%s\n' "$out" | grep -qxF 'CP8B-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 8b exited 0 without reaching its last line"; exit 1; }
 nd_check "Checkpoint 8b replay" || exit 1
+# (dated 2026-09-26, s8c refuting round 3) Checkpoint 7a's replay carries the same two FETCHING lines as Checkpoint 5's
+# (`cargo audit --deny unmaintained`, `cargo deny check bans advisories licenses`), so the databases are read before it
+# as well: a move made by 7a's fetch is a recorded fact, and the pair below brackets both fetching replays. dbs() moved
+# up here, unchanged, from its old place above db_before. Checkpoint 8b's block runs neither tool.
+dbs() { for d in "$HOME/.cargo/advisory-db" "$HOME"/.cargo/advisory-dbs/*/; do [ -d "$d" ] || continue; h=$(git -C "$d" rev-parse HEAD 2>/dev/null); printf '%s=%s ' "$d" "${h:-none}"; done; }
+db_before_7a=$(dbs)
 out=$(python -c "$xb" runbook/phase-1/s7a-ports-and-fakes.md 'trybuild_pins_the_reason_each_port_fixture_fails' "$scratch/cp7a.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 7a's block could not be extracted: $out"; exit 1; }
 printf '\necho "CP7A-END-OF-BLOCK reached"\n' >> "$scratch/cp7a.sh" || { echo "FAIL: could not append 7a's end marker"; exit 1; }
@@ -2829,7 +2878,8 @@ printf '%s\n' "$out" | grep -qxF 'CP7A-END-OF-BLOCK reached' || { echo "FAIL: Ch
 nd_check "Checkpoint 7a replay" || exit 1
 # Checkpoint 5's cargo audit and cargo deny lines FETCH their advisory databases. Record both databases' commits
 # around the replay, so that a moved database is a recorded fact and not a silent second instrument (§8c.4).
-dbs() { for d in "$HOME/.cargo/advisory-db" "$HOME"/.cargo/advisory-dbs/*/; do [ -d "$d" ] || continue; h=$(git -C "$d" rev-parse HEAD 2>/dev/null); printf '%s=%s ' "$d" "${h:-none}"; done; }
+# (dated 2026-09-26, s8c refuting round 3) the struck line below is the definition that moved above the 7a replay, unchanged:
+# ~~dbs() { for d in "$HOME/.cargo/advisory-db" "$HOME"/.cargo/advisory-dbs/*/; do [ -d "$d" ] || continue; h=$(git -C "$d" rev-parse HEAD 2>/dev/null); printf '%s=%s ' "$d" "${h:-none}"; done; }~~
 db_before=$(dbs)
 out=$(python -c "$xb" runbook/phase-1/s5-workspace-ci-rk-types.md 'FAIL: deny.toml absent' "$scratch/cp5.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 5's block could not be extracted: $out"; exit 1; }
@@ -2838,6 +2888,7 @@ out=$(nodispatch env RK_CP_NESTED=1 bash "$scratch/cp5.sh" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: Checkpoint 5, re-run WHOLE over the new rk-types structs, exited $rc"; printf '%s\n' "$out" | tail -30; exit 1; }
 printf '%s\n' "$out" | grep -qxF 'CP5-END-OF-BLOCK reached' || { echo "FAIL: Checkpoint 5 exited 0 without reaching its last line"; exit 1; }
 nd_check "Checkpoint 5 replay" || exit 1
+echo "ADVISORY-DBS before CP7A: $db_before_7a"
 echo "ADVISORY-DBS before CP5: $db_before"
 echo "ADVISORY-DBS after CP5:  $(dbs)"
 fi
@@ -3038,8 +3089,13 @@ The draft's third item, `toolchain:backlog`'s producer, is settled by D21-46 R7 
 - *D21-48 (2026-09-24):* **The floor chain moves by nine.** Checkpoint 8c's expected count is ~~852~~, not 843, so every
   later stage's floor re-derived from it moves by nine. *(dated 2026-09-26, s8c build)* Re-derived from Checkpoint 8b's recorded 784 at
   `83d1268`: the expected count is 862.
-- *(dated 2026-09-26, s8c build, D63.)* **To `s8g`:** `sca-scan` refuses `cvss-unscorable` on any matched non-v3
+- *(dated 2026-09-26, s8c build, D63.)* **To `s8g`:** ~~`sca-scan` refuses `cvss-unscorable` on any matched non-v3
   vector (D21-63, provisional); `s8g` measures the matched vectors at its open and halts by name before §8g.6 if any is
-  not `CVSS:3.x`, and D21-63's (3') is ruled then (the precondition is a dated note in `s8g` §8g.6).
+  not `CVSS:3.x`, and D21-63's (3') is ruled then~~ (the precondition is a dated note in `s8g` §8g.6).
+  *(dated 2026-09-26, `s8c` refuting round 3; D21-64 ruling 7, D21-67 ruling 7.)* Superseded: D21-64 ruling 7 took (3') and `s8c` built it
+  (§8c.4), so a matched `CVSS:4.0` vector is scored by the pinned `cvss` =2.2.0 crate, base-only (CVSS-B) under
+  D21-67 ruling 7, and banded like any other; it is not refused. `s8g` still lists the matched vectors at its open,
+  and its named halt now fires only for a vector neither scorer accepts (malformed, or a version other than 3.0, 3.1
+  and 4.0); `s8g` §8g.6's precondition carries the narrowing by its own dated notes.
 
 ---

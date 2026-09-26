@@ -631,6 +631,37 @@ makes them live"*. The 39 rows, measured at `s8c` (package D67) by `grep -rn "se
   `quality_block::adr0072_s8b_repairs_are_versioned_and_changelogged` pins `("migration-dry-run", 2, 3)`, and the bump
   to 4 moves its premise, so that test takes a dated amendment in the same commit (D21-47's time-bound rule) and
   **Checkpoint 8b is re-run whole** inside Checkpoint 8d, as X8's `vertical-slicing` bump already requires (§8d.11).
+- *(dated 2026-09-26, `s8c` refuting round 3.)* **Two pins this list missed, and a collision with this stage's own X8 edit.**
+  - **Checkpoint 8b (3)'s `PAIRS` entry `migration-dry-run:3` moves too.** It is read by the same exact grep,
+    *"`^version[[:space:]]*=[[:space:]]*${v}([[:space:]]|$)`"*, so the bump to 4 turns Checkpoint 8b's re-run inside
+    Checkpoint 8d red at (3). This stage's (b) commit amends that entry by a dated line in `s8b-catalog-quality.md`,
+    in the same commit as the `quality_block` amendment above and the way X8 amends `vertical-slicing:2` (§8d.3: the
+    version read as **at least** the new value, and the changelog row `migration-dry-run@4` still required).
+  - **`structured-nl-requirements` is edited twice by this stage.** X8's table (§8d.3) moves it 2 → 3 for the
+    `resolution = "${conflicts.answer?}"` removal; Checkpoint 8d (6c) pins `structured-nl-requirements|3` with an exact
+    version grep; and `forward_ref_lint::the_four_unlicensed_refs_are_removed_versioned_and_changelogged` pins its
+    `(id, old, new)` triple, 2 → 3. The class C list above names the same activity at `@2`, and *"`version` + 1"*
+    also makes it 3. **Taken: one bump and one changelog row.** Both edits to `structured-nl-requirements.toml` (X8's
+    input removal and class C's conjunct removal) land together in whichever of the two catalog commits comes first.
+    The version moves 2 → 3 once, with ONE `.redkiln/CHANGELOG.md` row `| structured-nl-requirements@3 |` naming `from
+    v2`, *"D21-48 X8"* with the old and new `inputs` line, and D21-67 ruling 1 with the activity *"declining the block
+    under ADR-0080 decision 4"*. That is the form `s8b` §8b.5 already used (*"`instrumented-trace-analysis` 2 → 3 (one
+    bump, shared with its N18 edit, and one changelog row naming both)"*). No pin moves for it: Checkpoint 8d (6c)'s
+    row, the `forward_ref_lint` triple and this section's *"`version` + 1"* all read 3, and the class C test counts it
+    among the 39 at 3. It is taken because it edits no guard, and undoing either half is a one-file edit that leaves
+    the version at 3. **If the two edits cannot share a commit** (X8's catalog commit already landed at 3 when (b) is
+    built), the fallback is sequential, and (b)'s commit moves three pins by dated line: the file goes 3 → 4 with its
+    own `structured-nl-requirements@4` row; Checkpoint 8d (6c)'s row reads `structured-nl-requirements|4|…`; the
+    `forward_ref_lint` triple reads the version as at least 3, with the X8 row `@3` still required; and this section's
+    class C entry reads `@3`. The builder records which one landed.
+  - **A later stage's premise moves: `s8g`.** Class C bumps `equivalence-boundary` 2 → 3 here. `s8g` re-homes the same
+    activity under N23 and bumps it, expecting 2 → 3: Checkpoint 8g (7c) greps `equivalence-boundary@3` in the
+    changelog, which this stage's row satisfies before `s8g` writes anything, and (7d) asserts *"`[ "$ver" -eq 3 ]`"*.
+    After this stage `s8g`'s edit is 3 → 4, so (7c) and (7d) read `@4` and 4 by dated line at `s8g`'s open, and a
+    dated receiver note in `s8g` is owed with (b)'s commit. No other shipped version pin names one of the 39 [measured
+    2026-09-26: `(<id>)(:|@|\|)<n>` over `runbook/` for the 39 ids, outside this section, hits only
+    `migration-dry-run:3`, `structured-nl-requirements|3` and `equivalence-boundary@3`; over `crates/`, one triple,
+    `("migration-dry-run", 2, 3)`].
 - **Re-measured, by dated edit, in the same commit:** the lattice (`lattice::p6_lattice_over_the_shipped_pack`'s pins)
   and the AC-527 count, `quality_block::ac527_empty_set_terminal_condition`'s `checks=93` (*"93 → its new figure"*;
   predicted 92, one `check` step deleted, and `indeterminate` from 39 toward 0 [inferred, not run]). §8d.9's

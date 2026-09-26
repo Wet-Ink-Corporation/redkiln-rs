@@ -4,7 +4,7 @@ title: "**The verb registry ships, and the `Toolchain` port gains one generic me
 status: proposed
 date: 2026-09-26
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-42 decisions 1b, 4a and 6a, D21-43 N14, N25 and the integration call (*"The Rust verb handlers are **s8c**'s record (V); the activities are **s8g**'s (R4)."*), D21-45 W3, D21-48 X4 and D21-62 C (TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-62-s8c.md); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.4–§8c.6 and §8c.7 (the proposal this record fixes); references/adr/0135, references/adr/0162 and references/adr/0137 (the sentences superseded in part); references/2026-09-08-architecture-design.md §4.5 (*"`registry.toml` (toolchain verbs and feeds; a verb's `live = true` implies `memo = false` on every step using it)"*); crates/rk-kernel/src/workflow/memo.rs (`VerbRegistry`, the one parser this record extends)
+source: spikes/DECISIONS-2026-09-21.md D21-42 decisions 1b, 4a and 6a, D21-43 N14, N25 and the integration call (*"The Rust verb handlers are **s8c**'s record (V); the activities are **s8g**'s (R4)."*), D21-45 W3, D21-48 X4 and D21-62 C (TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-62-s8c.md); *(dated 2026-09-26, s8c refuting round 3)* D21-63 (the `cvss-unscorable` refusal, TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-63-s8c.md), D21-64 rulings 5, 7, 8 and 9 (D21-62 C confirmed; D21-63 moved to its (3'), the `cvss` crate; the value table re-measured; this record's flip condition) and D21-67 ruling 7 (a CVSS v4.0 vector scored base-only); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.4–§8c.6 and §8c.7 (the proposal this record fixes); references/adr/0135, references/adr/0162 and references/adr/0137 (the sentences superseded in part); references/2026-09-08-architecture-design.md §4.5 (*"`registry.toml` (toolchain verbs and feeds; a verb's `live = true` implies `memo = false` on every step using it)"*); crates/rk-kernel/src/workflow/memo.rs (`VerbRegistry`, the one parser this record extends)
 supersedes: ["0135", "0162", "0137"]
 superseded_by: []
 related: ["0032", "0040", "0072", "0105", "0137", "0140", "0148", "0165", "0169", "0171"]
@@ -53,7 +53,10 @@ refuse every scan.
 - Golden constraint 6: *"size the ceiling against the slow one"*. A value's rule must be fixed before the reading it
   turns into a value, or the rule is chosen to fit.
 - Golden constraint 8: a scan whose advisory database moved mid-lane is two instruments.
-- Every D21-62 ruling is provisional, so its clause here must be undoable as one clause and one code branch.
+- Every D21-62 ruling ~~is~~ was provisional, so its clause here must be undoable as one clause and one code branch.
+  *(dated 2026-09-26, `s8c` refuting round 3; D21-64 ruling 5.)* C is confirmed: *"D21-62 C is confirmed: the adapter reads each advisory
+  database's HEAD itself, before and after the scan."* The driver is kept as the reason decision 5's clause is shaped
+  this way.
 
 ## Considered options
 
@@ -202,7 +205,7 @@ repository makes it one in its own argv, which is `s8g`'s.
   local path and **that database's commit** (D21-42 6a: *"the advisory-DB commit is recorded"*). **The two databases
   are two pins.** On this box `cargo audit` reads `~/.cargo/advisory-db` and `cargo deny` reads
   `~/.cargo/advisory-dbs/advisory-db-<hash>`, each its own git checkout.
-- *(D21-62 C, provisional.)* **The adapter reads each database's commit itself.** It never relies on a tool's default
+- *(D21-62 C, ~~provisional~~; dated 2026-09-26, s8c refuting round 3: confirmed, D21-64 ruling 5.)* **The adapter reads each database's commit itself.** It never relies on a tool's default
   location. Audit is given `--db <audit_db>`. Deny is given a generated config whose `[advisories] db-path` is a
   dedicated parent directory, written with forward slashes, that must hold **exactly one** child; deny opens
   `<db-path>/advisory-db-<url-hash>` there, so the adapter does not compute the hash. For each database the adapter
@@ -507,10 +510,22 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
   **60**, each unchanged. `.redkiln/registry.toml`'s four measured rows now carry these readings at this pin, with the
   `6f70e47` readings kept as dated comments above them. The cited keys are not re-taken (`review_timeout` 9180, and
   X4's 4800 for `implement_timeout` and `repro_timeout`, keep their pin). **Two facts said, not hidden:** the pin is
-  unreachable from any ref, so it resolves (Checkpoint 8c (11)'s `git cat-file -e`) only until a prune removes it,
+  ~~unreachable from any ref~~ (held since by a local ref; the dated note below), so it resolves (Checkpoint 8c (11)'s `git cat-file -e`) only until a prune removes it,
   unless the commit that lands this work adopts it or the value is re-pinned by dated edit; and each pass again left
   its pnpm `node_modules` skeleton (114 dangling junctions, 0 files, 66 directories) under `.git/redkiln/tmp/`, removed
   by hand after the three passes.
+  *(dated 2026-09-26, `s8c` refuting round 3.)* **The pin is held by a ref, and the ref is local.** `git for-each-ref refs/redkiln/pins/` reads
+  `2f3f6ab257c4b21c1bd16bcd4781f97475f958f5 commit refs/redkiln/pins/s8c-remeasure`, and no branch or tag contains the
+  commit (`git branch --contains` and `git tag --contains` print nothing) [measured 2026-09-26]. The ref was made by
+  the package that landed the re-measure and is named in commit `d2c2def`'s message (*"pin 2f3f6ab kept by
+  refs/redkiln/pins/s8c-remeasure"*); the form is `git update-ref refs/redkiln/pins/s8c-remeasure
+  2f3f6ab257c4b21c1bd16bcd4781f97475f958f5` [inferred: git keeps no reflog for a ref outside `refs/heads/`, so the
+  invocation is not on record]. **A clone does not get it:** `remote.origin.fetch` is
+  `+refs/heads/*:refs/remotes/origin/*`, so neither a clone nor a fetch brings `refs/redkiln/pins/*`, and nothing has
+  been pushed (no push is made under the AFK rule). Checkpoint 8c (11)'s `git cat-file -e` therefore resolves the
+  pin in this object store only. Before `s8c` closes, one of two things is owed and this record does not choose:
+  the ref is pushed with the branch (`git push origin refs/redkiln/pins/s8c-remeasure`, an operator act), or the
+  four measured rows are re-pinned to a commit a branch reaches, by dated edit under decision 10.
 - *(dated 2026-09-26, s8c build, CPREP.)* **The build's readings, stated here as proposed text.** Each was first
   written in a dated note of `runbook/phase-1/s8c-toolchain-port-and-verbs.md` (§8c.4, §8c.5) by the package that
   built it; this record now carries it, so the flip reads the record and not the stage file.
@@ -622,5 +637,6 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
 **Confidence.** High on the route shape, the seventh method and the refusal order, which D21-42 1b, N14 and N25 force.
 Medium on decision 5's provisional hardening (D21-62 C): it keeps every binding (the per-tool commit, offline, refuse
 on an unknown or moving database) and changes only where the commit comes from, and its deny path check is a
-per-version pin. The rule in decision 10 is a proposal the operator may replace by record before its readings are
+per-version pin. *(dated 2026-09-26, `s8c` refuting round 3; D21-64 ruling 5.)* The hardening is no longer provisional: the operator
+confirmed D21-62 C. The rule in decision 10 is a proposal the operator may replace by record before its readings are
 taken; after they are taken, replacing it is itself a record that says why.
