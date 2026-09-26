@@ -2626,3 +2626,41 @@ for anything the crate rejects, a differential test pinning the in-tree v3 score
 `cargo deny check licenses`/`bans` readings. Reversal of (1) into (3') is one dependency line and one match arm.
 
 **Owed:** the operator's confirmation of (1), or the choice of (3') or (2) (AFK review packet, confirm list).
+
+---
+
+## D21-64 · The operator's rulings of 2026-09-26 on the open decisions: D21-58 confirmed with a limit, ADR-0168 and ADR-0164 flip, D21-62 confirmed, D21-63 moves to the `cvss` crate, s8c re-measures, and a standing flip authority
+
+**Taken 2026-09-26 by the operator, in the session executing `s8c`, on a briefing of every open decision with
+grounded options and a recommendation for each.** Every ruling below took the recommended option.
+
+**Ruled.**
+1. **D21-58 is confirmed, with the round-8 disclosure known, and ADR-0168 gains a limit before it flips.** The
+   switch to Jev stands. ADR-0168 states that its vocabulary is settled on an amended, not pre-registered,
+   measurement: the operator's constant first pass meant the registered A1 could not pass, and the switch moved the
+   outcome from a NOT SETTLED STOP to Branch 2. It also states that A3 (0/33 dispatches without a `BLOCKING` label)
+   holds under both raters, so the no-admissible-T conclusion does not depend on the switch. **ADR-0168 flips
+   `proposed → accepted`**, `date` unchanged, with that sentence in the text that flips.
+2. **ADR-0164 flips `proposed → accepted`** (every text file is LF in every checkout). It has governed the tree since
+   `ac10470`.
+3. **D21-62 A is confirmed, and the leak is fixed as well.** The libtest parser keeps its skip-and-count rule for
+   foreign lines. In addition, `rk_cli`'s verbs that write through `std::io::stdout()` in-process (doctor, catalog,
+   cost, explain, lint, status) take a writer, so the 39 `RK-D-…` lines stop leaking; the committed golden stays as
+   captured, and its tally still pins `foreign_lines` 39.
+4. **D21-62 B is confirmed:** a nextest list failure is a named refusal, never green, with no fallback. A fallback to
+   `cargo test` is revisited only when a real target repository needs it.
+5. **D21-62 C is confirmed:** the adapter reads each advisory database's HEAD itself, before and after the scan.
+6. **D21-62 D is confirmed:** tsc 0 passing, 2 failing, 1 or other `Err(NonZero)`.
+7. **D21-63 moves from option (1) to (3'), built at `s8c`'s close:** the RustSec `cvss` crate pinned `=2.2.0`
+   (`default-features = false`, features `std`, `v3`, `v4`) scores `CVSS:4.0` vectors, banded on record V's existing
+   thresholds; `cvss-unscorable` stays for any vector the crate rejects; a differential test pins the in-tree v3
+   scorer against `cvss::v3`; `cargo deny check licenses` and `bans` are read after the dependency lands.
+8. **`s8c`'s value table is re-measured** at the stage's work commit, three passes, and re-derived by record V's rule
+   (written before any reading), by dated edit.
+9. **Records T, V and B (ADR-0169, 0170, 0171) flip at `s8c`'s close** if the formal Checkpoint 8c passes whole and a
+   refuting round finds no blocker or major; Checkpoint 8c is re-run after the flip commit, as the stage requires.
+10. **Standing authority for the rest of this session (`s8d` onward):** each stage's own records flip at that stage's
+    close under the same two conditions, each with its own dated ledger line citing this entry. This lifts D21-49's
+    flip-stops for those records. Provisional D-entries taken under the AFK rule still come to the operator.
+
+**Supersedes** the AFK rule 1 (*"Never flip an ADR"*) for the records named in rulings 1, 2, 9 and 10 only.
