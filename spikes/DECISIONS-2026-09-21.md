@@ -2594,7 +2594,7 @@ summarised in the panel file]:
 tests and their mutant rows; Checkpoint 8c's named selection; s8g's `sca-scan` (C). Reversal of any one is a
 bounded edit to a proposed record, one code branch and its tests.
 
-**Owed:** the operator's confirmation or reversal of A, B, C and D (AFK review packet, confirm list).
+**Owed:** the operator's confirmation or reversal of A, B, C and D (AFK review packet, confirm list). *(Discharged 2026-09-26: A, B, C and D confirmed by the operator in session, D21-64 rulings 3–6; A also took the leak fix.)*
 
 ---
 
@@ -2630,7 +2630,7 @@ scored and banded on V's same thresholds (FIRST CVSS v4.0 §6 uses the v3 qualit
 for anything the crate rejects, a differential test pinning the in-tree v3 scorer against `cvss::v3`, and V's
 `cargo deny check licenses`/`bans` readings. Reversal of (1) into (3') is one dependency line and one match arm.
 
-**Owed:** the operator's confirmation of (1), or the choice of (3') or (2) (AFK review packet, confirm list).
+**Owed:** the operator's confirmation of (1), or the choice of (3') or (2) (AFK review packet, confirm list). *(Discharged 2026-09-26: the operator chose (3'), D21-64 ruling 7, built at `s8c`; v4.0 scored base-only, D21-67 ruling 7.)*
 
 ---
 
