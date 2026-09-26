@@ -2707,3 +2707,58 @@ The text that flips is the one at `366543a`. It carries D21-50's dated correctio
 wait for (*"This record's flip should wait until its evidence carries this measurement, which it now does"*). A dated
 note beside that sentence names this line. No Decision clause and no forbids bullet moves. ADR-0151 stands and is not
 superseded. The named residual (*"`run_id` is still terminator-sensitive"*) stays owed to a future record.
+
+---
+
+## D21-67 · The operator's rulings of 2026-09-26 on `s8b` §8b.10's open items, ADR-0168 clause 5, and CVSS v4.0 base-only scoring
+
+**Taken 2026-09-26 by the operator, in the session executing `s8c`, on grounded briefs of each item (options and a
+recommendation each); every ruling took the recommended option.** The briefs are in this session's scratchpad; the
+reasoning each ruling rests on is restated below.
+
+**Ruled.**
+1. **The 39 shipped rows that read `findings.none(severity in ['blocking'])` (ADR-0168 clause 4's open question;
+   D21-57).** D21-57 is answered: **a severity-only row without re-execution does not conform** to ADR-0080 d2 as
+   ADR-0168 left it. The rows are disposed of by class, and **`s8d` carries the edits** (39 version bumps and 39
+   `.redkiln/CHANGELOG.md` rows under ADR-0072), before `s8h` types `severity` and makes them live:
+   - **Class A, six review-family `verdict` rows** (`checklist-review`, `code-review`, `design-review`,
+     `design-review-lightweight`, `security-review`, `spike-decision-review`): rewritten to `adversarial-review@4`'s
+     form, `verdict` after `record`, reading `record.blocking.len() == 0` (the policy table's re-execution-aware
+     blocking set). `s8d`'s resolver binds `${record.outputs}`; each rewritten row's constancy is measured.
+   - **Class B, `migration-dry-run`**: its `policy` step is deleted; its `ok` step already carries the re-execution
+     outcome, and the adversary's findings stay evidence.
+   - **Class C, 32 looping `policy` conjuncts**: the severity conjunct (and a `findings` input nothing else reads) is
+     removed, recorded as each activity **declining the block under ADR-0080 decision 4**, as D21-59 did for
+     `threat-model`; the remaining conjuncts (self-check, shape) stay.
+   - `s8h`'s severity test re-points to a fixture; `s8d` re-runs the lattice and the AC-527 count (93 → its new
+     figure) and moves every pin that reads these rows by dated edit.
+2. **`x != null` can never be true (the eight selection rows, eleven `check` expressions, AC-527 fixture 3; and the
+   tri-valued booleans' null arm, folded in).** A new record, written `proposed` and carried as an **`s8d` entry
+   prerequisite** that lands before `s8d`'s `check` evaluation, supersedes ADR-0103 decision 4 and ADR-0121 decision 3
+   in part: **a comparison against the literal `null` is a definite presence test** (`x == null` is true when x is
+   absent, false when present; `x != null` the reverse). A comparison between a null field and a non-null value stays
+   null. No catalog row is edited; `s8d` re-measures `SHIPPED_UNSAT`/`SHIPPED_DEAD` and fixture 3's comment is
+   corrected. It flips at `s8d`'s close under D21-64 ruling 10.
+3. **`findings == null` evades AC-527.** Refusal 2 widens from *"`false` in some cell"* to **"not `true` in some
+   cell"**, matching the runtime `check` arm (`== Tri::True`); errors stay indeterminate (D21-55 unchanged there).
+   Two must-refuse fixtures (`findings == null`; `findings == null or …`) and one mutant restoring `== Tri::False`;
+   a dated AC-527 amendment under ADR-0092 d2 item 2. Carried by **`s8d`**. No shipped count moves.
+4. **D21-55's "errors" vs "false": the code's reading is confirmed** — a `false` cell refuses even when other cells or
+   other conjuncts error; "errors" means errors with no `false` cell anywhere. `rk-kernel`'s unqualified lib.rs
+   sentence is corrected; the §8b.10 item closes.
+5. **ADR-0168 clause 5 (the labels vs the policy table's `narrowed-pin`/`advisory` cells): closed, nothing moves.**
+   The cells decide *"block iff flipped"* after re-execution and neither rater saw a re-execution outcome; both raters
+   are near-constant (Jev 171/188, the operator 188/188 `BLOCKING`); and 12 of Jev's 17 `ADVISORY` labels fall on
+   the `advisory` class, agreeing with the table. **Reopened only by** a labelled measurement in which the rater sees
+   each finding's re-execution outcome, through a new record.
+6. **The five unexercised unsat-report branches of the ported P6 lattice:** a hand-derived `report-branches` lattice
+   fixture with one test and five killed mutants, cross-checked by one quoted `lattice.py` run over the same tree,
+   **carried by `s8g`** as a named precondition of its lattice re-run.
+7. **CVSS v4.0 vectors are scored base-only (CVSS-B):** every non-base metric (threat, environmental, supplemental)
+   is stripped before scoring, matching record V's *"the CVSS base score"* and the v3 path; CVE-2025-47273's vector
+   bands at 8.7 (high); a mutant that keeps `E:` is killed by a vector whose band changes. Built at `s8c`'s close.
+8. **The `this-repository.stdout` golden stays as captured** (39 foreign lines, predating the leak fix), with a dated
+   note that it is kept deliberately as M34's instrument.
+
+**Receivers.** `s8d` (1, 2, 3, and 4's lib.rs sentence), `s8g` (6), `s8c`'s close (7, 8). Each receiving stage file
+gets a dated note naming its item. §8b.10's items close by dated lines pointing here.
