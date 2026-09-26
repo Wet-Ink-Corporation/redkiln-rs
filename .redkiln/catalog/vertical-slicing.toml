@@ -1,6 +1,6 @@
 [activity]
 id           = "vertical-slicing"
-version      = 1
+version      = 2   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "planning"
 provides     = ["SliceSet", "DependencyDAG"]
 requires     = ["Spec", "DesignDoc?"]
@@ -63,7 +63,7 @@ retry   = { max = 1 }
 id      = "policy"
 kind    = "check"
 inputs  = { check = "${coverage.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and findings.none(evidence in ['Reproduced'])"
+expr    = "check.failed == 0"
 on_false = { to = "slice", max = 2 }
 
 [[step]]

@@ -1,0 +1,8 @@
+[activity]
+id          = "patch-b"
+version     = 1
+stage       = "implement"
+provides    = ["Patch"]
+method_rank = 10
+cost_class  = "S"
+family      = "patching"

@@ -1,0 +1,61 @@
+# AC-303 fixture (D21-57), T4: the localisation shape. The confirm check reads only `report`;
+# `report` comes from `run`, `run` from `hypothesise`, and `hypothesise` reads the reviewer's
+# findings through `${review.outputs?}` -- a step declared AFTER it, so that edge is a back-edge
+# (the findings of the previous iteration). The dependence counts under D21-47 V5 and is reported
+# as `back-edge`, never as `forward`.
+[activity]
+id           = "ac303-upper"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = ["ChangeSummary"]
+derived_from = ["ChangeSummary"]
+method_rank  = 20
+family       = "ac303-fixture"
+min_rigor    = "mandatory"
+cost_class   = "M"
+evidence     = ["Findings"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 600 }
+deviation_ok = []
+keywords     = ["ac303 fixture upper back edge"]
+rationale    = "AC-303 fixture: the upper member, whose check reaches the reviewer only across a loop."
+
+[[step]]
+id      = "hypothesise"
+kind    = "agent"
+role    = "investigator"
+inputs  = { change = "artifact:ChangeSummary", findings = "${review.outputs?}" }
+outputs = "value:HypothesisLog"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "run"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { log = "${hypothesise.outputs}" }
+outputs = "value:TestReport"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { log = "${hypothesise.outputs}", report = "${run.outputs}" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "policy"
+kind    = "check"
+inputs  = { report = "${run.outputs}" }
+expr    = "report.failed > 0"
+on_false = { to = "hypothesise", max = 2 }
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReviewVerdict = "${hypothesise.outputs}" }
+evidence  = ["${review}"]

@@ -143,6 +143,11 @@
 //! count, so the debt is pinned by a number rather than by a sentence, and the day 7e repairs it
 //! that assertion goes red and says which number moved.
 //!
+//! *(dated 2026-09-25, s8b, D21-43 N26; noted at s8b refuting round 2)* **No longer red.** The
+//! repair was `s8b`'s, not Step 7e's: the nineteen lines are deleted from `.redkiln/catalog`, and
+//! `ac018_live_verb_may_not_memoise` now asserts **zero** violations there. The nineteen live on
+//! only in the frozen p9 control, `ac018_frozen_p9_catalog_is_red`, read at `P9_PIN`.
+//!
 //! # What is NOT here: anything that appends, dispatches or executes
 //!
 //! [`recorded_residue`] projects a decision sequence into the events the runtime **will** append at

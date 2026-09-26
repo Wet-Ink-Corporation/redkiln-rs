@@ -1,0 +1,7 @@
+[activity]
+id          = "orphan-maker"
+version     = 1
+stage       = "implement"
+provides    = ["Orphan"]
+method_rank = 20
+cost_class  = "S"

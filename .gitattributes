@@ -103,3 +103,8 @@ crates/rk-kernel/tests/fixtures/catalog-select/change-summary-ue.toml -text
 crates/rk-kernel/tests/fixtures/catalog-select/changeset.toml -text
 crates/rk-kernel/tests/fixtures/catalog-select/spec-authoring.toml -text
 crates/rk-kernel/tests/fixtures/packs/incident-deviation.toml -text
+#
+# ADDED 2026-09-25 at s8b (§8b.2 step 3), on ADR-0151's route: the P6 lattice goldens are the Python oracle's own
+# bytes at P9_PIN, and the parity tests compare the Rust port's report to them byte for byte. Checkpoint 8b reads
+# them raw with `od -c`, because Git Bash cannot see a CR inside `$(...)`.
+crates/rk-kernel/tests/fixtures/lattice/** -text

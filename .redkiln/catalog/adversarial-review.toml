@@ -1,6 +1,6 @@
 [activity]
 id           = "adversarial-review"
-version      = 3   # bumped 2026-09-08 (§9c.42)
+version      = 4   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "review"
 provides     = ["ReviewVerdict"]
 requires     = ["ImplReport", "ChangeSummary", "Spec?"]   # P6 run3 gap: incidents forbid specification
@@ -35,13 +35,6 @@ timeout_secs = "${toolchain.review_timeout}"
 retry   = { max = 1 }
 
 [[step]]
-id      = "verdict"
-kind    = "check"
-inputs  = { findings = "${review.outputs}" }
-expr    = "findings.none(evidence in ['Reproduced', 'MutationSurvived']) and (rigor < mandatory or findings.none(evidence in ['NarrowedPin']))"
-on_false = "continue"
-
-[[step]]
 id      = "override"
 kind    = "gate"
 when    = "rigor >= mandatory and ${review.outputs.items}.len() > 0"
@@ -56,6 +49,13 @@ inputs  = { findings = "${review.outputs}", override = "${override.answer?}" }
 outputs = "value:Verdict"
 timeout_secs = 30
 retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { record = "${record.outputs}" }
+expr    = "record.blocking.len() == 0"
+on_false = "continue"
 
 [[step]]
 id      = "emit"

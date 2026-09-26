@@ -1,6 +1,14 @@
 //! **AC-495** — pack validation over two fixture packs, asserting the **span location** on the
 //! failing one and clean validation on the routed one.
 //!
+//! *(dated 2026-09-25, s8b refuting round 4)* **Not AC-495 only since `s8b`.** Two catalog tests sit
+//! here too, and neither reads a pack: `tdd_red_verify_projects_tests_added_per_adr_0035` (D21-43
+//! **N13**) and `sca_scan_blocks_on_unrated_or_routes_to_accept_findings` (D21-43 **N25**). Each
+//! reads the edited activity from `.redkiln/catalog`, versioned under **ADR-0072**. The N13 test
+//! also reads the working tree's `spikes/p9/schemas.toml` as the schema stand-in. That read is live,
+//! not a pin to `P9_PIN`: it measures no historical p9 figure, and `s8b` §8b.3 inventories it as a
+//! non-pin reader. The AC-495 tables below cover the AC-495 tests only.
+//!
 //! > **AC-495** — GIVEN a process pack whose only route through a stage requires a capability no
 //! > configured adapter claims / WHEN the pack is validated at startup / THEN validation fails with
 //! > a span pointing at the requiring row, before any activity runs / AND a pack that declares an
@@ -27,6 +35,7 @@
 //! | AC-029's / AC-033's pack-validation halves | **not touched** — `Pack::require_attempt_cap` and `require_breaker_threshold` are Slice 4b's and this rule neither calls nor duplicates them | |
 
 use rk_kernel::pack_validation::{RoutingViolation, Span, pack_capability_routing_rule};
+use rk_kernel::predicate::{Context, Expr, Tri, Value as PValue, evaluate, parse};
 use rk_kernel::resolver::{CapabilityClaim, ClaimedCapabilities};
 use rk_kernel::toml_subset;
 
@@ -632,5 +641,161 @@ fn no_shipped_pack_declares_a_capability_and_every_one_of_them_routes() {
                 "{name} is a must-fail loader fixture, not a routing failure: {violations:?}"
             ),
         }
+    }
+}
+
+// ---- s8b §8b.5 items 2 and 3: two ADR-0072 catalog edits over `.redkiln/catalog` ---------------------
+
+/// One shipped activity's TOML, read raw. `rk_kernel::catalog::Step` carries neither `inputs` nor
+/// `on_false` (and derives the `inputs/specs.json` transcription the replay digests hash), so these
+/// two tests read the file through `toml_subset` rather than widen that type.
+fn shipped_activity(id: &str) -> toml_subset::Table {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../.redkiln/catalog")
+        .join(format!("{id}.toml"));
+    let src = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()));
+    toml_subset::parse(&src).unwrap_or_else(|e| panic!("{id}.toml parses: {e:?}"))
+}
+
+/// The `[[step]]` table whose `id` is `step`.
+fn shipped_step<'a>(activity: &'a toml_subset::Table, step: &str) -> &'a toml_subset::Table {
+    activity
+        .get("step")
+        .and_then(toml_subset::Value::as_array)
+        .expect("the activity declares [[step]] tables")
+        .iter()
+        .filter_map(toml_subset::Value::as_table)
+        .find(|t| t.get("id").and_then(toml_subset::Value::as_str) == Some(step))
+        .unwrap_or_else(|| panic!("no step `{step}`"))
+}
+
+/// **D21-43 N13, under ADR-0072:** *"A catalog edit to the existing `[*].tests_added` projection"*.
+/// ADR-0035: *"Fan-out outputs are projected with `${step.outputs[*].field}`."* `red` fans out over the
+/// Spec's acceptance criteria, so `red-verify` selects the concatenation of every iteration's
+/// `tests_added`, in element order (D21-48 X5: *"Concatenation in element order. Nothing is flattened
+/// implicitly anywhere else."*). Resolving the projection at run time is `s8d`'s resolver; this is the
+/// catalog text, and the two premises that make it well-formed.
+#[test]
+fn tdd_red_verify_projects_tests_added_per_adr_0035() {
+    let tdd = shipped_activity("tdd-red-green-refactor");
+    let verify = shipped_step(&tdd, "red-verify");
+    let selection = verify
+        .get("inputs")
+        .and_then(toml_subset::Value::as_table)
+        .and_then(|i| i.get("selection"))
+        .and_then(toml_subset::Value::as_str);
+    assert_eq!(
+        selection,
+        Some("${red.outputs[*].tests_added}"),
+        "red-verify must select the [*].tests_added projection, not the unprojected list of \
+         ImplReports that its old comment said the tool would flatten"
+    );
+    let red = shipped_step(&tdd, "red");
+    assert!(
+        red.get("for_each")
+            .and_then(toml_subset::Value::as_str)
+            .is_some_and(|f| !f.is_empty()),
+        "the projection's source step must fan out — `[*]` over a single output projects nothing"
+    );
+    let schemas = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../spikes/p9/schemas.toml"),
+    )
+    .expect("the schema stand-in is readable");
+    let schemas = toml_subset::parse(&schemas).expect("the schema stand-in parses");
+    let lists: Vec<&str> = schemas
+        .get("value")
+        .and_then(toml_subset::Value::as_table)
+        .and_then(|v| v.get("ImplReport"))
+        .and_then(toml_subset::Value::as_table)
+        .and_then(|t| t.get("lists"))
+        .and_then(toml_subset::Value::as_array)
+        .expect("ImplReport's stand-in declares `lists`")
+        .iter()
+        .filter_map(toml_subset::Value::as_str)
+        .collect();
+    assert!(
+        lists.contains(&"tests_added"),
+        "`tests_added` must be a LIST field of ImplReport for the projection to concatenate: {lists:?}"
+    );
+}
+
+/// `${a.b}` / `${a.b?}` references become the paths they name. Reference resolution is `s8d`'s
+/// resolver (ADR-0136 evaluates `when` through `predicate::evaluate` after it); here the scan's
+/// three counts are bound by path, and nothing else is rewritten.
+fn refs_to_paths(e: Expr) -> Expr {
+    let b = |x: Box<Expr>| Box::new(refs_to_paths(*x));
+    match e {
+        Expr::Ref(r) => Expr::Path(
+            r.trim_start_matches("${")
+                .trim_end_matches('}')
+                .trim_end_matches('?')
+                .to_owned(),
+        ),
+        Expr::Or(l, r) => Expr::Or(b(l), b(r)),
+        Expr::And(l, r) => Expr::And(b(l), b(r)),
+        Expr::Not(x) => Expr::Not(b(x)),
+        Expr::Group(x) => Expr::Group(b(x)),
+        Expr::Cmp { op, left, right } => Expr::Cmp {
+            op,
+            left: b(left),
+            right: b(right),
+        },
+        other => other,
+    }
+}
+
+/// **D21-43 N25:** *"`sca-scan` requires `unrated == 0` or goes to `scan.accept-findings`."* Both
+/// predicates are evaluated through `rk_kernel::predicate` over three reports — all zero, one unrated
+/// advisory alone, one high alone — and `clean` must be true, and the `exception` gate's `when` false,
+/// for the first report ONLY. Before the edit the unrated report passed `clean` and never opened the
+/// gate, which is the defect: an advisory nobody rated was passed silently.
+#[test]
+fn sca_scan_blocks_on_unrated_or_routes_to_accept_findings() {
+    let sca = shipped_activity("sca-scan");
+    let clean = shipped_step(&sca, "clean")
+        .get("expr")
+        .and_then(toml_subset::Value::as_str)
+        .expect("`clean` carries an expr");
+    let exception = shipped_step(&sca, "exception");
+    assert_eq!(
+        exception
+            .get("question")
+            .and_then(toml_subset::Value::as_str),
+        Some("scan.accept-findings"),
+        "the gate an unrated advisory goes to"
+    );
+    let when = exception
+        .get("when")
+        .and_then(toml_subset::Value::as_str)
+        .expect("the exception gate is guarded");
+    let clean = parse(clean).expect("`clean` parses").expr;
+    let when = refs_to_paths(parse(when).expect("`when` parses").expr);
+    let reports = [
+        ("all zero", 0, 0, 0),
+        ("unrated alone", 0, 0, 1),
+        ("high alone", 0, 1, 0),
+    ];
+    assert_eq!(reports.len(), 3, "three reports are walked");
+    for (i, (label, critical, high, unrated)) in reports.into_iter().enumerate() {
+        let mut ctx = Context::new();
+        for root in ["report", "scan.outputs"] {
+            ctx.bind(&format!("{root}.critical"), PValue::Int(critical));
+            ctx.bind(&format!("{root}.high"), PValue::Int(high));
+            ctx.bind(&format!("{root}.unrated"), PValue::Int(unrated));
+        }
+        let c = evaluate(&clean, &ctx).unwrap_or_else(|e| panic!("{label}: clean errs: {e}"));
+        let w = evaluate(&when, &ctx).unwrap_or_else(|e| panic!("{label}: when errs: {e}"));
+        let first = i == 0;
+        assert_eq!(
+            c.value,
+            if first { Tri::True } else { Tri::False },
+            "{label}: `clean` must pass the all-zero report and no other"
+        );
+        assert_eq!(
+            w.value,
+            if first { Tri::False } else { Tri::True },
+            "{label}: the exception gate must open on every report but the all-zero one"
+        );
     }
 }

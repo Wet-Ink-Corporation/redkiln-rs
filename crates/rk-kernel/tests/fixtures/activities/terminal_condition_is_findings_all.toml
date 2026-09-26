@@ -1,17 +1,18 @@
-# AC-527, red fixture 2 of 3 — **THE DISCRIMINATOR**, and it must FAIL for the same reason as
-# fixture 1 while sharing none of its text.
+# AC-527, must-FAIL fixture 2 — **recast 2026-09-25 (s8b §8b.4, D21-41 (h), D21-55)**: THE WITNESS ALONE.
 #
-# 🛑 ADR-0080's own spelling does not occur anywhere in this file — not in the predicate and not in
-# this comment, which is asserted by the test over these very bytes. A lint that matches that
-# spelling, or any denylist of spellings, passes fixture 1 and fixture 3 and still admits this one;
-# §7b.13:1047-1051 names exactly that failure and calls this case "the discrimination", because a
-# lint matching the forbidden string alone passes it, and the rule is on the **form**, not the
-# string.
+# It reads "every finding this reviewer raised is outside the blocking classes", which one
+# `Reproduced` finding falsifies. It carries no `none(` quantifier at all, so neither a string match
+# nor a match on the quantifier can catch it: only evaluating it over a single-class blocking witness
+# does. ADR-0080's own spelling does not occur anywhere in this file, and the test asserts that over
+# these very bytes.
 #
-# The form: `all` over an empty list is **true** (ADR-0103 decision 4 — the same clause that makes
-# `none` true, which is why one rule reaches both). So "every finding this reviewer raised is
-# non-blocking" terminates the block when the reviewer raised nothing — the identical defect,
-# authored the way an author who had read only the forbidden *string* would write it.
+# Before the recast this fixture was `findings.all(severity != 'blocking')`. That is a severity-only
+# predicate, the same shape as `terminal_condition_is_severity_only.toml`, which the amended rule
+# LOADS, because it reads no `evidence`. So the old fixture 2 could no longer be red.
+# (dated 2026-09-25, s8b refuting round 5: the paraphrase "d2's bullet 1 is a threshold over
+# severity" is dropped. d2 bullet 1 reads "no finding at or above threshold T survives
+# re-execution", in d2's "a threshold over severity or confidence"; whether a severity-only row
+# without re-execution conforms to it is OPEN, D21-57.)
 
 [activity]
 id           = "ac527-all-over-empty"
@@ -41,13 +42,12 @@ when    = "rigor >= recommended"
 inputs  = { draft = "${draft.outputs}" }
 outputs = "value:Findings"
 
-# THE TERMINAL CONDITION. `all` over an empty list is TRUE, so this reads "the reviewer found
-# nothing blocking" and is satisfied identically by "the reviewer found nothing".
+# THE TERMINAL CONDITION.
 [[step]]
 id       = "policy"
 kind     = "check"
 inputs   = { findings = "${adversary.outputs?}" }
-expr     = "findings.all(severity != 'blocking')"
+expr     = "findings.all(not (evidence in ['Reproduced', 'MutationSurvived']))"
 on_false = { to = "draft", max = 2 }
 
 [[step]]

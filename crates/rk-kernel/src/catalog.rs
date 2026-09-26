@@ -145,6 +145,12 @@ pub struct Step {
     /// carry it, and a loader that refused it would move AC-527's THEN (*"lint fails **naming the
     /// activity and the predicate**"*) into a `CatalogError` that names neither.
     ///
+    /// *(dated 2026-09-25, s8b refuting round 2; D21-55)* No longer "over an empty findings set":
+    /// under the amended AC-527 the rule matches ADR-0080 d2's named form on the parse tree, and
+    /// evaluates each conjunct required for truth that reads `findings` over a one-finding witness
+    /// carrying only `evidence`, one blocking class at a time. It still does not parse or evaluate
+    /// the predicate here.
+    ///
     /// Carried on **every** step kind and not only on `check`, because the field is transcribed and
     /// not interpreted: the schema puts `expr` on `check` alone, and a step of another kind that
     /// declares one is a schema defect this loader must not hide by dropping the key. **Ninety-four
@@ -194,6 +200,11 @@ pub struct Step {
     /// `grep -rln 'memo' spikes/p9/catalog/ | wc -l` -> 14]. So the rule is **red against the
     /// shipped catalog by design** and the repairs are Step 7e's: 7b.12:970-977 forbids editing
     /// `spikes/p9/` to make a green.
+    ///
+    /// *(dated 2026-09-25, s8b, D21-43 N26)* The repair was `s8b`'s, not Step 7e's: the nineteen
+    /// `memo = false` lines are deleted from `.redkiln/catalog`, which now declares none, and
+    /// `memo::ac018_live_verb_may_not_memoise` asserts zero there. The nineteen live on only in the
+    /// frozen p9 control, `memo::ac018_frozen_p9_catalog_is_red`, read at `P9_PIN`.
     pub memo_declared: Option<bool>,
     /// **ADR-0145.** `question = "<id>"` on a `gate` step — **the gate's KIND**, verbatim.
     ///

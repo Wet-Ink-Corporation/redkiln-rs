@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-24 (D21-1 … D21-39), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-25 (D21-1 … D21-57), and what they license
+
+*(Title corrected 2026-09-25 at `s8b`'s refuting round 6: it read **"2026-09-21 … 2026-09-24 (D21-1 … D21-39)"** while the file carried **D21-57** — eighteen entries and one date stale. `D21-40` … `D21-53` were appended without moving it, and so were `s8b`'s `D21-54` … `D21-56`; `D21-57` is appended with this stage and moves it, per the note below. The stage list at the head of the title still names only the stages through `s7g`; it is left as written, because this correction moves only the range and the date span.)*
 
 *(Title corrected 2026-09-24 at `s7i`'s close: it read **"2026-09-21 and 2026-09-22 (D21-1 … D21-22)"** while the file carried **D21-38** — sixteen entries and two dates stale, the third time this heading has gone stale by the mechanism its own note below describes, and despite that note's instruction to whoever appended `D21-15`. Moved with **D21-39**, in the same commit.)*
 
@@ -2141,6 +2143,11 @@ What moves and what does not:
 - AC-527's dated amendment under ADR-0092 d2 item 2 transcribes refusal 2 at conjunct grain.
 - No accepted ADR's Decision sentence moves: ADR-0080 d2, ADR-0103 d4, ADR-0121 d1 and ADR-0136 d3 are all untouched.
 
+*(dated 2026-09-25, `s8b` refuting round 1)* The seventh fixture (`terminal_condition_witness_is_per_class`) is spelled
+`findings.any(evidence in ['MutationSurvived']) or not findings.any(evidence in ['Reproduced'])`. It is logically the
+per-class shape named above (`none` is `any.not()` in this evaluator), without the named form's text, so that Checkpoint
+8b section (4)'s d2-guard exclusions do not grow. The ruling is unchanged.
+
 ---
 
 ## D21-56 · Axes::shipped() keeps lattice.py's inert `auth` boolean, guarded in code
@@ -2164,3 +2171,40 @@ What moves and what does not:
 - **Raised, not decided:** `.redkiln/facets.toml` makes its seven booleans tri-valued, but no context in either axis
   set binds a boolean to null. `lattice.py`'s `unknown` sweep ranges over the ordinals only. That arm is untested under
   `Axes::shipped()`, and N26 did not rule on it.
+
+---
+
+## D21-57 · AC-303's confirm half is the check that consumes the reviewer's Findings by data dependence, not by naming `findings`
+
+**Taken 2026-09-25 by the operator, in the session executing `s8b`, on a judge panel's recommendation.**
+
+**What was found.** After the ADR-0080 d2 rewrites, `review::ac303_confirm_step_survives_escalation` is red over
+`.redkiln/catalog`: in the review family, code-review → adversarial-review loses `verdict`. The localisation family is
+silently blind, because all three members dropped to zero confirm checks together. Spec-form is green for the wrong
+reason. The cause is `rigor.rs`: it identifies a review block's confirm half by `quality_block::reads_findings` over the
+check's `expr`, but ADR-0081 d1 says *"the `check` step that consumes it"*. A d2 remedy consumes the reviewer's
+Findings through a re-execution outcome, one or more steps removed, so the instrument tested a name where the record
+says consumption.
+
+**Ruled.**
+- A `check` step is a review-confirm step when some binding its `expr` reads is bound to a `${<step>.outputs…}`
+  reference, and that step reaches a `kind = agent`, `role = reviewer`, `outputs = value:Findings` step through a chain
+  of `${<step>.outputs…}` input references.
+- The walk covers the whole declared graph, back-edges included. An `artifact:` or `toolchain:` input breaks the chain,
+  and a binding that is declared but not read does not count.
+- Dependence reached only through a back-edge counts, under D21-47 V5's reading, which this row extends to ADR-0081
+  d1's "consumes". The survey reports each confirm step's dependence class, `forward` or `back-edge`, so the looseness
+  that back-edges bring stays visible.
+- **Carrier.**
+  - The rule reads the activity TOML through `toml_subset`, and `catalog::Step` is not widened, because of ADR-0148's
+    forbids bullet on `inputs` and s8c's fence until `s8d`.
+  - When `s8d`'s R2 routes parsed `inputs` onto the kernel, the rule moves onto R2's carrier.
+  - `s8d`'s licence lint must keep the `${adversary.outputs?}` back-edges that the localisation and spec-form chains
+    depend on.
+- **The register.** AC-303's owed dated amendment (ADR-0092 d2 item 2) is written in `s8b` and names this rule. Its
+  GIVEN/WHEN/THEN does not move.
+- **Tests and floor.** Four tests join (T1–T4), with T1 shown red first, and three mutants. The floor moves by four.
+
+**Raised, not ruled (open).** code-review's and checklist-review's `findings.none(severity in ['blocking'])` involves
+no re-execution. ADR-0080 d2 bullet 1 reads *"no finding at or above threshold T survives re-execution"*, not "no
+finding exists". Whether those rows conform to d2 is its own question, and nothing in `s8b` depends on it.

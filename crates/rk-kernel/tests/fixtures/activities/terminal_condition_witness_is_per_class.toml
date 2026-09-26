@@ -1,0 +1,49 @@
+# AC-527, must-FAIL fixture (s8b §8b.4, D21-55, 2026-09-25): THE PER-CLASS WITNESS ALONE.
+#
+# One `Reproduced` finding falsifies it: the left disjunct is false and the right is `not true`. A
+# JOINT witness carrying both classes does not: its `MutationSurvived` member makes the left disjunct
+# true. So only a witness per class refuses this predicate, and it is the fixture that makes mutants
+# M2 (no blocking witness) and M3 (one joint witness) observable. It is not the named form — its
+# top-level node is `or` — and it is spelled without the named form's text on purpose.
+
+[activity]
+id           = "ac527-per-class-witness"
+version      = 1
+stage        = "build"
+provides     = ["ReviewNote"]
+requires     = ["Diff"]
+tags         = ["kind:bug"]
+method_rank  = 20
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "author"
+inputs  = { diff = "artifact:Diff" }
+outputs = "value:ReviewDraft"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}" }
+expr     = "findings.any(evidence in ['MutationSurvived']) or not findings.any(evidence in ['Reproduced'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ReviewNote = "${draft.outputs.note}" }
+evidence  = ["${adversary?}"]

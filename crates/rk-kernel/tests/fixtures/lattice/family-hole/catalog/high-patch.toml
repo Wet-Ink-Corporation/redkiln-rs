@@ -1,0 +1,10 @@
+[activity]
+id          = "high-patch"
+version     = 1
+stage       = "implement"
+provides    = ["Patch"]
+method_rank = 20
+cost_class  = "S"
+family      = "patching"
+min_rigor   = "mandatory"
+applicable_if = "size >= med"

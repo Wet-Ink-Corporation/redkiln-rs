@@ -1630,6 +1630,15 @@ about **what** each instrument walked, so the walked-count readings come too. Th
   `rigor::rigor_monotonicity` with its `^rigor_monotonicity: catalog=\.redkiln/catalog` guard, and
   `quality_block::ac527_empty_set_terminal_condition` with its `^ac527: catalog=\.redkiln/catalog` guard.
 
+*(dated 2026-09-25, `s8b` refuting round 6: the premise quoted above moved during `s8b`'s execution.)* Checkpoint 8b
+section (5)'s `K_TESTS` now names **thirty-four** (`s8b`'s round 1 added D21-57's four AC-303 tests to D21-47's
+thirty), asserted by `[ "$nk" -eq 34 ]` and `test result: ok\. 34 passed; 0 failed`. Section (6) now carries **five**
+walked-count readings: the three above, `memo::ac018_live_verb_may_not_memoise` with its `^ac018: catalog=` guard
+(`s8b` round 4) and `review::ac303_confirm_step_survives_escalation` with its `^ac303: catalog=` guard (`s8b` round 5).
+`s8`'s copy takes all five, because `s8b` §8b.9 claims every re-pointed catalog-quality instrument prints the path it
+read, and Checkpoint 8j (8)'s `s8chk` keys are extended to `^ac018: catalog=` and `^ac303: catalog=` to match. The
+copy is still verbatim from `s8b`'s file as landed, so the counts above are read there, not retyped.
+
 Checkpoint 8j (8) reads `s8b`'s file at check time and asserts that its `K_TESTS=` line and the three walked-count
 lines are present verbatim on `s8`'s code lines, and that every name `s8` selects exists in `cargo test --workspace --
 --list`.
@@ -2430,7 +2439,8 @@ if "| `s8` | Phase 1 | Checkpoint 8j | Checkpoint 8 | `s8j` | — |" not in t: b
 if "BIND:" in t: bad.append("an unbound BIND: slot")
 code=code_lines(t); cs=set(code); jc="\n".join(code)
 b8c=code_lines(b8,"CP8B-END-OF-BLOCK reached")
-keys=("EXCL=","D2=","two_walk() {","K_TESTS=","^lattice-shipped: packs=","^rigor_monotonicity: catalog=","^ac527: catalog=")
+# (dated 2026-09-25, s8b refuting round 6) section (6) of Checkpoint 8b carries five readings; the ac018: and ac303: guards join (A5.1).
+keys=("EXCL=","D2=","two_walk() {","K_TESTS=","^lattice-shipped: packs=","^rigor_monotonicity: catalog=","^ac527: catalog=","^ac018: catalog=","^ac303: catalog=")
 for k in keys:
     ls=[l for l in b8c if l.startswith(k) or (k.startswith("^") and k in l)]
     if not ls: bad.append("s8b carries no "+k+" line to copy")

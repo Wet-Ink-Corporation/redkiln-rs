@@ -1,0 +1,20 @@
+# Red fixture (AC-101): the require row below has no producer anywhere in the catalog.
+[pack]
+id = "story"
+applies = "kind == story"
+
+[policy]
+stages = { triage = "mandatory", specification = "recommended" }
+
+[stage.specification]
+baseline = ["Spec"]
+[[stage.specification.require]]
+when = "size >= high"
+artifacts = ["ThreatModel"]
+# I4 (M11): a row may RAISE the rigor of what it requires, never lower it. This row asks for
+# TestResult at "optional" under a stage at "recommended"; its only producer stops at
+# max_rigor = "optional", so at every mode above optional the demand must be unsatisfiable.
+[[stage.specification.require]]
+when = "kind == story"
+artifacts = ["TestResult"]
+rigor = "optional"

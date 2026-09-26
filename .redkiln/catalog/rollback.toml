@@ -2,7 +2,7 @@
 #   operate-stage mitigation is rollback-mitigation, F34 ambiguity B2)
 [activity]
 id           = "rollback"
-version      = 1
+version      = 2   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "release"
 provides     = ["RollbackRecord"]
 requires     = ["ReleaseRecord"]
@@ -42,7 +42,6 @@ inputs  = { rollback = "${roll.outputs}", checklist = "checklist:smoke" }
 outputs = "value:SmokeResult"
 timeout_secs = 600
 retry   = { max = 1 }
-memo    = false
 
 [[step]]
 id      = "emit"

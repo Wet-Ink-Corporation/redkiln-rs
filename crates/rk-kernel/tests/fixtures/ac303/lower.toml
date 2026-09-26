@@ -1,0 +1,42 @@
+# AC-303 fixture (D21-57): the LOWER member of a two-member family. Its confirm check reads the
+# reviewer's findings directly, so it is a review-confirm step under the old name rule and the new
+# chain rule alike. Selected at optional and recommended; the ceiling hands mandatory to the upper.
+[activity]
+id           = "ac303-lower"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = ["ChangeSummary"]
+derived_from = ["ChangeSummary"]
+method_rank  = 10
+family       = "ac303-fixture"
+max_rigor    = "recommended"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 600 }
+deviation_ok = []
+keywords     = ["ac303 fixture lower"]
+rationale    = "AC-303 fixture: the lower member, whose check reads findings by name."
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { change = "artifact:ChangeSummary" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { findings = "${review.outputs}" }
+expr    = "findings.none(severity in ['blocking'])"
+on_false = "continue"
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReviewVerdict = "${review.outputs}" }
+evidence  = ["${review}"]

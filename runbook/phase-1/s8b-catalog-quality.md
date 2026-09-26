@@ -24,7 +24,7 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
   read and `rk_types` `Finding` lacks.
 - Checkpoint 8b: both recursive walks over `.redkiln/` exclude `worktrees/` (D21-44), with a planted control, and the
   exclusion is scoped so that it cannot skip `crates/`' own `worktrees` fixture directories. The
-  named selection is 26 tests (30 after the D21-47 fixes below). The floor is re-derived from Checkpoint 8a's recorded count. The re-run scope and the
+  named selection is 26 tests (30 after the D21-47 fixes below; 34 after refuting round 1, dated 2026-09-25). The floor is re-derived from Checkpoint 8a's recorded count. The re-run scope and the
   no-dispatch rule are stated.
 - D21-45 (W1–W4) changes nothing else here. This stage creates, re-enters and removes no worktree.
 
@@ -90,7 +90,7 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
     divergences (§8b.2).
   - `actions/checkout@v4` fetches depth 1, so V2's pin would be absent in CI without `fetch-depth: 0`.
 - **New tests: 25** (the 21 as drafted, three lattice fixtures, and `p9_pin`'s test). **Named selection: 30.**
-  **Floor: 749 + 25 = 774.**
+  **Floor: 749 + 25 = 774.** *(dated 2026-09-25, refuting round 1: named selection 34, floor 784.)*
 
 *Final consistency pass 2026-09-24* (the `s8` files read against each other after the D21-47 fix round; the brief's
 four items). One line per edit:
@@ -108,7 +108,8 @@ four items). One line per edit:
 - *Final consistency pass 2026-09-24:* §8b.9's wrapper bullet and the block's dependency notes describe the compiled
   fake.
 - *Final consistency pass 2026-09-24:* floor re-checked: 30 named tests, five of them pre-existing, so 25 new; 749 +
-  25 = **774** stands.
+  25 = **774** stands. *(dated 2026-09-25, refuting round 1: 34 named, floor 784; see the Executed and refuting-round
+  lines below.)*
 
 *D21-48 (2026-09-24)* (the operator's answers to the questions the `s8` files left open):
 - *D21-48 (2026-09-24):* §8b.5 item 2's `[*]` projection over a list-valued field is **settled by D21-48 X5**:
@@ -161,6 +162,256 @@ did not foresee).* One line per edit, measured at stage open over `f81e5b9` unle
   `indeterminate=` field.
 - *D21-56 (2026-09-25):* `Axes::shipped()` keeps `lattice.py`'s inert `auth` boolean, guarded in code, with mutant
   **M30**.
+- *D21-57 (2026-09-25):* the d2 rewrites turned `review::ac303_confirm_step_survives_escalation` red, because
+  `rigor.rs` identified a review block's confirm check by whether its `expr` names `findings`. The review family went
+  red, localisation went blind and spec-form went green for the wrong reason. The confirm check is now the one whose
+  read bindings reach the reviewer's `Findings` through `${step.outputs…}` chains. Back-edges count under V5, and the
+  survey reports each check's class: over `.redkiln/catalog`, `forward=16 back_edge=4`. The rule reads raw TOML, and
+  `Step` is not widened. AC-303 is amended. Four tests are added (`review::ac303_multi_hop_confirm_is_seen`, red
+  first; `ac303_twin_broken_chain_is_lost`; `ac303_read_binding_is_strict`;
+  `ac303_back_edge_counts_and_is_reported`), with mutants M-A1..M-A3. **Floor: 780 + 4 = 784.**
+- *Executed 2026-09-25:* M11 was investigated and found unobservable over every shipped pack, because every require
+  row is `rigor = "mandatory"`, the top of the order. A fixture row now makes the branch observable (§8b.8).
+- *Executed 2026-09-25, a finding raised and not fixed here:* under the product evaluator (ADR-0103 reading 1),
+  `x != null` is null for any present `x`. So the eight shipped predicates written `x != null and x` can never be true.
+  They are `flag-progressive-rollout`, `data-migration-plan`, `migration-dry-run`, `migration-expand-execute`,
+  `schema-migration-script`, `ux-flow-design` and `feature-flag-kill`, plus `threat-model`'s middle disjunct. It was
+  measured by the Rust lattice (`flag_exists != null and flag_exists` evaluated null 18,072 times in the shipped run).
+
+*Refuting round 1 (dated 2026-09-25)* (the adversarial review of this stage's uncommitted work; each edit below is
+also marked in place):
+- *(dated 2026-09-25, refuting round 1)* §8b.8's M11 row names `lattice::unsatisfiable_fixture_names_its_cell` as its
+  must-flip test, not the p9 parity test. M11 is unobservable over every shipped pack (the Executed line above), and
+  the mutant run recorded the fixture test as its only flip.
+- *(dated 2026-09-25, refuting round 1)* section (5)'s `K_TESTS` gains D21-57's four AC-303 tests
+  (`review::ac303_multi_hop_confirm_is_seen`, `review::ac303_twin_broken_chain_is_lost`,
+  `review::ac303_read_binding_is_strict`, `review::ac303_back_edge_counts_and_is_reported`), so the named selection is
+  **34**, not 30. The floor stays **784**: those four are already counted in it (780 + 4). M-A2's and M-A3's must-flip
+  tests are now in the selection the §8b.8 driver runs.
+- *(dated 2026-09-25, refuting round 1)* `review::ac303_confirm_step_survives_escalation` pins the class figures over
+  `.redkiln/catalog`, `forward == 16` and `back_edge == 4`, in place of an assertion that held by construction.
+- *(dated 2026-09-25, refuting round 1)* section (7)'s divergences comment is reworded: a row is a soft-cycle example
+  line whose choice is Python set order, whether or not the port happens to match it. Four of the six match today.
+- *(dated 2026-09-25, refuting round 1)* §8b.4's Verified-by names seven fixtures, plus the fail-closed
+  `does_not_parse`; §8b.3's inventory body and section (2b)'s comment name the two readers the Executed line above
+  added.
+- *(dated 2026-09-25, refuting round 1)* D21-55's seventh fixture is spelled `findings.any(evidence in
+  ['MutationSurvived']) or not findings.any(evidence in ['Reproduced'])`, not the ledger's `… or findings.none(…)`: the
+  same predicate without the named form's text, so section (4)'s exclusions do not grow. The ledger carries a dated
+  note under D21-55. `sca-scan`'s `rationale` edit is recorded (§8b.5 item 3) and `root-cause@5`'s changelog ledger
+  cell reads `D21-41 (h); D21-47 V5`.
+
+*Refuting round 2 (dated 2026-09-25)* (the second adversarial review of this stage's uncommitted work; each edit below
+is also marked in place; no test is added or renamed, so the named selection stays **34** and the floor **784**):
+- *(dated 2026-09-25, refuting round 2)* **AC-101, narrowed rather than built.** AC-101's register note, §8b.2's red
+  fixture line and the acceptance-set list now say what is built: the first unsatisfiable cell per (pack, stage,
+  kind), with its facet vector, rigor and require row, on `Report::unsat_examples()`, asserted by
+  `lattice::unsatisfiable_fixture_names_its_cell`. The rendered report keeps `lattice.py`'s one-example-per-key lines
+  for parity and prints no row. "Each cell" and the printed row are recorded NOT BUILT beside the AC-116 exclusion.
+- *(dated 2026-09-25, refuting round 2)* **AC-527's THEN states d2's rule.** The positive-evidence clause is struck
+  inside the same dated amendment, and the THEN now reads: the lint fails naming the activity and the predicate, and a
+  terminal condition is decidable over something the reviewer varies, by d2 bullet 1's threshold or bullet 2's
+  different quantity, with the three examples kept as examples. The two previously struck phrases stay struck (section
+  (10) passes, by hand). §8b.4 gains a dated note that the refusals went into the GIVEN and that *"lint fails naming…"*
+  is AC-527's own text.
+- *(dated 2026-09-25, refuting round 2)* **Severity-only is not settled as bullet 1's form.** AC-527's severity-only
+  line, §8b.4's table row and body, §8b.5's `threat-model` row, `src/quality_block.rs`'s module doc,
+  `tests/it/quality_block.rs`'s table and test doc, and the `is_severity_only` and `is_findings_all` fixtures now say:
+  a severity-only predicate reads no `evidence` and this rule does not refuse it; whether a severity-only row without
+  re-execution conforms to d2 bullet 1 is OPEN (D21-57).
+- *(dated 2026-09-25, refuting round 2)* Refusal 1's two unpinned branches are pinned inside
+  `quality_block::d2_named_form_refuses_any_member_list`: `report.none(evidence in ['Reproduced'])` (another source)
+  and the named form's own tree with its list replaced by a path (the grammar cannot spell a non-list `in`). Each is
+  red under a mutant that drops its check, anchor-once and sha-restored (scratchpad `r2_mut_refusal1.py`).
+- *(dated 2026-09-25, refuting round 2)* `quality_block::ac527_frozen_p9_catalog_is_red` pins the refused
+  (activity, step) set to `D2_ROWS`, not only its size.
+- *(dated 2026-09-25, refuting round 2)* Docs corrected: `lattice::load`'s errors (an empty pack directory is `run`'s
+  `NoPacks`); `AuthBinding::SurfacesMember` (D21-56 declined the seven-column projection, not this binding); the
+  lattice fixtures' `facets.toml` header; `catalog::Step::expr` (no empty-set evaluation since D21-55);
+  `rigor::confirm_step_monotonicity_rule` (distinct source names are assumed, not checked); `tests/it/rigor.rs`'s
+  `SHIPPED_CATALOG` (ten files at `ca8f387`) and the historical test's tree (`P9_PIN` includes `dddcdbd`'s three
+  edits); `tests/it/evaluator.rs`'s assertion message; the AC-527 fixture headers (`does_not_parse`,
+  `names_a_verify_result`, `is_findings_none`); AC-018's red-by-design passages in `tests/it/memo.rs`,
+  `src/workflow/memo.rs`, `src/catalog.rs`, `src/lib.rs` and `tests/it/main.rs`.
+- *(dated 2026-09-25, refuting round 2)* Records: `sca-scan@2`'s changelog row and §8b.5 item 3 (no resolver before
+  `s8d`; the value is unbound until `s8c`'s record V and `s8d`'s resolver); the SM-026/027 cross-reference cells
+  credit the registered and twelve-pack figures to the Python oracle at `P9_PIN` and the parity test; the SM
+  register's SM-026 and SM-027 bodies gain dated pointer notes; §8b.3's two "unchanged since `dddcdbd`" sentences are
+  corrected; `runbook/PROGRESS.md`'s row 8b reads *in progress (2026-09-25)*.
+
+*Refuting round 3 (dated 2026-09-25)* (the third adversarial review of this stage's uncommitted work; each edit below
+is also marked in place; no test is added or renamed, so the named selection stays **34** and the floor **784**):
+- *(dated 2026-09-25, refuting round 3)* **AC-527's decided arm is observed.** `quality_block::d2_severity_only_predicates_load`
+  swaps `findings.any(evidence in ['Reproduced', 'MutationSurvived'])` into fixture 3 and asserts it loads with
+  `reads_findings == 1`, `decided == 1`, `refused == 0`. Mutant **M-D1** (§8b.8: `walk`'s `Ok(None)` arm refuses)
+  turns it red; scratchpad `r3_mut_decided.py`, anchor once, sha256 restored. The test file's fixture table gains the
+  row.
+- *(dated 2026-09-25, refuting round 3)* **Checkpoint 8b section (9) checks the S-SEV re-label (D21-54).** The record
+  names ``**S-SEV re-label commit:** `<40 hex>` `` on one line; that commit must carry METHOD-SEV §8's
+  `results/sev-f37-relabel.md`, its parent must not, and its commit time must be at least 172800 s after `lab_at`.
+  Controls: a record with no such line fails the line-count guard, a well-formed line is read, and `gap_ok` (the
+  function the guard calls) refuses 172799 s and accepts 172800 s. §8b.6 and §8b.9 carry the matching sentence.
+- *(dated 2026-09-25, refuting round 3)* Docs: `AuthBinding`'s round-1 sentence replaced, not appended to
+  (`src/lattice.rs`); `src/rigor.rs`'s module doc re-points ADR-0081 clause 2's owed item at
+  `rk_kernel::lattice::validate`, and §8b.2 says the port leaves clause 2 open; `FINDINGS`' doc regains its p9 scope
+  and date, with a note on the rewritten rows that read no `findings` (`src/quality_block.rs`); `src/lib.rs` scopes the
+  null-binding measurement to the retired rule; `tests/it/p9_pin.rs` no longer says no checkout is faithful (ADR-0164)
+  and says the pin exists because the working tree may move (V2), and its growth in `target/tmp` is documented.
+- *(dated 2026-09-25, refuting round 3)* Tests and prose: §8b.3's and `p9_pin`'s "the two agree" is narrowed to the
+  paths the five tests read; `ac303_confirm_step_survives_escalation` asserts its count walked before its verdict;
+  §8b.8's M1 row credits the `threat-model` `applicable_if` code-line check.
+- *(dated 2026-09-25, refuting round 3)* Records: the `adversarial-review@4`, `differential-debugging@3` and
+  `instrumented-trace-analysis@3` changelog rows, §8b.5's two sentences, the checkpoint's Dependencies bullet on the (C) rows and
+  `s8h`'s quoted interim no longer say a resolver refuses by name under ADR-0136: no resolver exists before `s8d`,
+  `confirm` is refused by the tool arm (ADR-0148) and `verdict` by the check arm (ADR-0142 clause 4). AC-527's THEN
+  drops "a human gate answer" from d2's examples, inside the same dated amendment (section (10) still passes, by
+  hand). **§8b.10** records four open items with their sources: D21-55's `findings == null`, D21-56's tri-valued null
+  arm, D21-57's severity-only question, and the eight `x != null and x` predicates.
+
+*Refuting round 4 (dated 2026-09-25)* (the fourth adversarial review of this stage's uncommitted work; each edit below
+is also marked in place; no test is added or renamed, so the named selection stays **34** and the floor **784**):
+- *(dated 2026-09-25, refuting round 4)* **D21-56's root check walks METHOD-FORM quantifier bodies** (`src/lattice.rs`).
+  A method-form body binds no name, and the evaluator puts an element's fields in scope only when the element is a
+  Record; no lattice context value is one, so a body path such as `surfaces.any(auth)`'s `auth` fell through to the
+  context and read the inert covering column, and loaded. Every method-form body root is now checked as a top-level
+  root is (less the enclosing variables). `lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged`
+  gains `surfaces.any(auth)` as a second must-refuse probe through the same entry point: RED against the old code
+  (*"`surfaces.any(auth)` loaded through the shipped entry point"*), green after. Mutant **M30b** (the body walk
+  dropped) flips it (§8b.8). No predicate the shipped `.redkiln/` or the p9 tree reaches is a method-form quantifier,
+  so the shipped load and p9 parity do not move (the 12 lattice tests stay green).
+- *(dated 2026-09-25, refuting round 4)* **`p9_pin::root()`'s binding to `P9_PIN` is observable.**
+  `p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree` asserts that `root()` carries
+  `catalog-b/api-contract-spec.toml` as `P9_PIN`'s blob (read through `rk_git::git_exec::run` `cat-file blob`), that
+  those bytes differ from the working tree's (the file changed at `bf12a1c`), and that `root()` lies under
+  `CARGO_TARGET_TMPDIR`. Mutant **M28b** (`root()` returns the working tree's `spikes/p9`) turns it red (§8b.8).
+- *(dated 2026-09-25, refuting round 4)* **AC-102's registered figure is all modes.** `lattice.py`'s *"under the eight
+  pre-registered packs only: dead="* line pools optional, recommended, mandatory and `pack-default`; the
+  `pack-default`-only reading is **17/102** [measured with `lattice.py --only-mode pack-default`], and the golden's
+  **14/102** is the pooled one. AC-102 is thresholded as its THEN reads it (reachable from no enabled pack at any
+  rigor), so section (7)'s kill logic stays and its echo says `all modes`; §8b.2, the acceptance set, §8b.9, AC-102's
+  `s8b` register note and the SM-027 cell carry dated notes. AC-101's `unsat` stays a `pack-default` reading. Section
+  (6)'s echo of the installed pair's `dead` says `all modes` too: the register already records that 56/102 is counted
+  over all four modes, while the test's `lattice-shipped:` line (unchanged) prints `rigor=pack-default` for AC-101.
+- *(dated 2026-09-25, refuting round 4)* **AC-527's decided/indeterminate buckets follow D21-55 literally.** A findings-reading
+  conjunct that errors in ANY witness cell and is false in none is `indeterminate`, not `decided`
+  (*"A conjunct that errors is not refused; it is counted as indeterminate"*); the code followed "errors in every
+  cell" and the module doc the ruling. The code is brought to the ruling (`src/quality_block.rs`: `cells`, the
+  `Cells` variants, the report's field docs, `blocking_witness`'s Errors doc and the module doc).
+  `d2_severity_only_predicates_load` pins the case with a swap, `findings.any(evidence in ['Reproduced']) or
+  check.failed == 0` (`indeterminate == 1`): RED against the old code (`decided: 1`), green after; its decided-arm
+  assertion (M-D1) stays green. The shipped reading does not move (`checks=94 refused=1 indeterminate=39` before and
+  after, the `refused=1` being the `threat-model` row this round does not touch).
+- *(dated 2026-09-25, refuting round 4)* **Section (6)'s readings no longer depend on libtest's thread count.** Under one test
+  thread libtest prints `test <name> ... ` before the test's stdout on the same line, so the `^lattice-shipped:`,
+  `^ac018:`, `^rigor_monotonicity:` and `^ac527:` greps failed. Each reading is first cut out with
+  `grep -oE '<name>: .*'`, and the same anchored regex is applied to that; every field check is kept. Verified with
+  `RUST_TEST_THREADS=1` and `=4` over the three selections.
+- *(dated 2026-09-25, refuting round 4)* **CI's lattice step is named for what it runs,** and it runs
+  `lattice::p6_validate_over_the_shipped_pack` as a second asserted `--exact` run: *"P6 lattice and validate over the
+  shipped pack (AC-103, AC-104; AC-101/AC-102 reported, V3)"*. No CI step thresholds AC-101 or AC-102. Section (8)'s
+  two greps are unchanged and still match.
+- *(dated 2026-09-25, refuting round 4)* Docs: `FINDINGS`' p9 premise excepts `docs-update`'s policy, which never read `findings`,
+  and round 3's note no longer files it under `s8b`'s rewrites; the `NamesForbiddenForm` message quotes d2 (*"a
+  threshold over severity or confidence … no finding at or above threshold T survives re-execution"*, then bullet 2's
+  quantities); `ac527_empty_set_terminal_condition` pins `checks == 94` (the doc's "every check step"); fixture 1 is
+  linted as its own activity (refused once, by the named form) and its `expr` is pinned verbatim; fixture 2's absence
+  check regains its positive control; `tests/it/rigor.rs`'s header names `rk_kernel::lattice::validate` as AC-104's
+  instrument; `tests/it/pack_validation.rs`'s module doc names the N13 and N25 tests; the `does_not_parse` header says
+  "the other seven fixtures" and cites `catalog.rs` by quotation.
+- *(dated 2026-09-25, refuting round 4)* Records: the `adversarial-review@4`, `differential-debugging@3`,
+  `instrumented-trace-analysis@3` and `sca-scan@2` changelog rows, §8b.5's two notes, §8b.9's Dependencies bullet and
+  `s8h`'s interim note say where the walk stops today (read from `runtime/step.rs`, not run): `differential-debugging`
+  at `stuck`'s `when` (ADR-0136), `instrumented-trace-analysis` at `collect` (unmapped `trace_collect`),
+  `adversarial-review` at `clone` (unmapped `shallow_clone`), `sca-scan` at `scan` (unmapped `sca_scan`); round 3's
+  arms are kept as "were it reached". §8b.4's conjunct row says "the pre-s8b shipped row"; §8b.10 adds fixture 3's
+  `verify.green_at != null` conjunct to the never-true class; `s8c` and `s8d` carry dated notes that their floor
+  chains take `s8b`'s recorded close figure, not 774.
+
+*Refuting round 5 (dated 2026-09-25)* (the fifth adversarial review of this stage's uncommitted work; each edit below
+is also marked in place; no test is added or renamed, so the named selection stays **34** and the floor **784**):
+- *(dated 2026-09-25, refuting round 5)* **D21-55's "false in some cell refuses, even where other cells or conjuncts
+  error" is pinned, and the reading recorded.** Where D21-55's two sentences meet ("a conjunct that errors is not
+  refused" and "refused if some such conjunct is `false` in some cell"), the code takes **a `false` cell outranks an
+  error**, in another cell of the same conjunct and in another conjunct (§8b.4, §8b.10).
+  `quality_block::d2_per_class_witness_refuses_one_member_rows` swaps two predicates into fixture 3 and asserts each
+  REFUSED by the witness: `not (findings.any(evidence in ['MutationSurvived']) or check.failed == 0)` errors in every
+  `Reproduced` cell (the `or` reads the unbound `check.failed`) and is false in every `MutationSurvived` cell, witness
+  (`MutationSurvived`, `optional`); `findings.none(severity in ['blocking']) and findings.len() == 0` has a first
+  conjunct that errors in every cell and a second that is false in every cell, witness (`Reproduced`, `optional`).
+  Each premise (which cells error, which are false) is asserted through the evaluator first. Mutants **M-W1a**
+  (`cells` returns on its first error) and **M-W1b** (`blocking_witness` returns on its first indeterminate
+  conjunct) turn it red (§8b.8).
+- *(dated 2026-09-25, refuting round 5)* **The rigor axis is pinned.** The same test swaps in
+  `rigor < mandatory or not findings.any(evidence in ['Reproduced'])` and `rigor > optional or not
+  findings.any(evidence in ['Reproduced'])`, each false at one live level only (asserted per level), and asserts each
+  REFUSED with the witness naming `mandatory` and `optional` respectively; and `rigor != discouraged or
+  findings.any(evidence in ['NarrowedPin'])`, false only at the reserved `discouraged` level, LOADS as decided.
+  Mutants **M-W2a** and **M-W2b** (the rigor loop visits only `optional`, only `mandatory`) turn it red (§8b.8). The
+  only change to `src/quality_block.rs`'s code is three anchor comments (`// M-W1a`, `// M-W1b`, `// M-W2`); each
+  mutant is a single-anchor replacement, so nothing was restructured.
+- *(dated 2026-09-25, refuting round 5)* **Condition (c) reads quantifier bodies.** The evaluator lets a body path
+  that is no element field fall through to the context (the lattice's M30b blind spot). The per-row check is factored
+  into `loop_row_check` (a helper, not a test), a body root that names one of the check's own input bindings is
+  checked like a top-level read, and the test runs a crafted `root-cause` row, `report.failed > 0 and
+  report.cases.none(limit.level > 0)` with `limit = "artifact:Threshold"`, which must be refused. The seven shipped
+  rows stay green (`threat-model`'s `evidence` is an element field, not an input). Mutant **M-C1** (the body reads
+  dropped) turns it red. Condition (b)'s `walked > 0` is replaced by exact counts: `walked == 72` combinations and
+  `valued == 54` evaluations that yielded a value, printed as `d2-constancy: rows=7 walked=72 valued=54`.
+- *(dated 2026-09-25, refuting round 5)* **Checkpoint 8b.** Section (6) also reads AC-303's `ac303:` line (cut with
+  `grep -oE`, `catalog=.redkiln/catalog`, `families>0`, `comparisons>0`, `violations=0`, `forward=16`,
+  `back_edge=4`), so §8b.9's "every catalog-quality instrument … prints the path it read" is true of the five
+  re-pointed instruments; section (8) also greps round 4's validate run and its `... ok` assertion on CODE lines, with
+  its own YAML-comment control. Both were run by hand from the block's bytes: (8) green, and red over a `ci.yml`
+  copy without the validate lines; (6) green under `RUST_TEST_THREADS=1` and `=4` with two stated neutralisations,
+  the `threat-model` row's `ac527` red (D21-54) and review N7's commit-order check, which needs the stage committed.
+- *(dated 2026-09-25, refuting round 5)* Docs and records: §8b.2 says the only built divergence assertion kind is the
+  soft-cycle example; §8b.10 records the unsat report branches parity does not observe; `lattice::load`'s Errors
+  names `StageOrder` and `UnregisteredFacet`; AC-527's GIVEN (2), the module and crate summaries regain D21-55's "that
+  reads `findings`" scope (inside the same dated register amendment; section (10) still passes, by hand); §8b.8's
+  round-3 note is corrected to the printed `refused=1 indeterminate=39`; `src/predicate/eval.rs`'s "load-bearing for
+  AC-527" clause gets a dated note; the severity-only test doc and the `is_findings_all` and `is_severity_only`
+  fixtures drop the "bullet 1 is a threshold over severity" paraphrase (OPEN, D21-57), and the severity-only rows say
+  refusal 2 reaches it and finds it indeterminate; the `differential-debugging@3` and `instrumented-trace-analysis@3`
+  changelog rows, §8b.5's round-4 note, the Dependencies bullet and `s8h`'s interim note say the walk reaches `stuck` / `collect` only if
+  the first agent dispatch commits; the SM register's SM-027 gets the all-modes pointer (14/102 pooled, 17/102
+  `pack-default`); §8b.6 specifies the record's `**S-SEV labelled:**` and `**S-SEV re-label commit:**` lines.
+
+*Refuting round 6 (dated 2026-09-25)* (the sixth adversarial review of this stage's uncommitted work; each edit below
+is also marked in place; no test is added or renamed, so the named selection stays **34** and the floor **784**):
+- *(dated 2026-09-25, refuting round 6)* **D21-55's "only a conjunct that reads `findings` is evaluated" is pinned.**
+  Nothing observed `blocking_witness`' `reads_findings` skip: every predicate that reached it had no findings-free
+  conjunct that comes out `false` with only `findings` and `rigor` bound. `quality_block::d2_per_class_witness_refuses_one_member_rows`
+  now swaps `rigor < mandatory and findings.none(severity in ['blocking'])` into fixture 3, asserts through the
+  evaluator first that its first conjunct alone is `false` at `mandatory` (true at the other live levels) and its
+  second errors in every cell, and asserts that it LOADS with `(reads_findings, decided, refused, indeterminate) ==
+  (1, 0, 0, 1)`. Mutant **M-W3** (the skip removed, anchor `// M-W3`) turns it red, the witness naming `Reproduced`
+  at `mandatory` (§8b.8).
+- *(dated 2026-09-25, refuting round 6)* **The lattice's prefix-form quantifier arm is pinned.**
+  `lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged` adds a third must-refuse probe,
+  `applicable_if = "any(s in surfaces, auth)"` (`UnregisteredFacet { facet: "auth" }`), and a must-load control,
+  `any(s in surfaces, s == 'auth')` (the bound variable is not a facet root; 103 activities). Mutant **M30c** (the
+  `Some(v)` arm skips the body walk, anchor `// M30c`) turns it red (§8b.8).
+- *(dated 2026-09-25, refuting round 6)* **Checkpoint 8b section (6)** also reads the SM register: the SM-026 and
+  SM-027 bodies in `references/2026-09-08-success-measures.md` must each carry a dated `s8b` pointer naming
+  `lattice::p6_lattice_over_the_shipped_pack` and D21-47 V3, and SM-027 its round-5 all-modes pointer, with a
+  synthetic no-pointer control. Run by hand from the block's bytes: section (6) green (with round 5's two stated
+  neutralisations), and the new guard, cut verbatim, red over register copies with either round-2 pointer deleted.
+  Sections (8) and (10) green, by hand; `bash -n` over the block clean.
+- *(dated 2026-09-25, refuting round 6)* Code and docs: `loop_row_check`'s condition-(c) message regains its lost
+  string continuation (it carried 18 literal spaces); `lattice::validate`'s and `lattice::run`'s `# Errors` name
+  `Shape` (and `run`'s the `cost_class` and `Predicate` cases); the lattice module doc names a third un-emulated order,
+  `sdiff`'s stage set on the `STAGE` lines; `FINDINGS`' doc corrects its binding clause (twelve p9 policy steps bind
+  `findings` without `?`, and `docs-update` binds none); fixture 1's pin says ADR-0080's Context spelling, not decision
+  2's predicate verbatim; `p9_pin`'s round-4 comment says what M28b rules out (the working tree and commits at or after
+  `bf12a1c`, not a pre-pin commit); `tests/it/quality_block.rs`'s module doc and §8b.4 scope "reads predicates from
+  fixture files" to the forbidden form.
+- *(dated 2026-09-25, refuting round 6)* Records: §8b.2's AC-104 bullet says the vector is on `Hole.vector`, not in the
+  rendered report; AC-527's register amendment no longer calls its fixtures "one per branch" and names the swaps that
+  pin refusal (2)'s other branches (inside the same dated amendment; section (10) still passes, by hand); `s8j` A5.1
+  gets a dated note (34 tests, five section-(6) readings, `s8` takes the `ac018:` and `ac303:` guards, and its `s8chk`
+  keys are extended); the ledger title moves to `D21-1 … D21-57` and 2026-09-25 with a dated correction line;
+  `.redkiln/CHANGELOG.md`'s preamble names the seventeen 2026-09-08 (§9c.42) bumps the replaced version-line comments
+  carried, row shapes unchanged.
 
 ---
 
@@ -191,6 +442,11 @@ data.
 **Acceptance set.** AC-018 (over `.redkiln/catalog`, D21-43 N26), AC-101–AC-105, AC-303 and AC-527 (as amended by
 §8b.4), minus:
 - **AC-116**: the diagnostic on AC-104's failing report is not ported, because `lattice.py` has no such output;
+- *(dated 2026-09-25, refuting round 2)* **AC-101's "each cell" and its printed row**: the port keeps the first
+  unsatisfiable cell per (pack, stage, kind), with its facet vector, rigor and require row, on
+  `Report::unsat_examples()`, and `lattice::unsatisfiable_fixture_names_its_cell` asserts it. Naming *each*
+  unsatisfiable cell, and printing the require row in the rendered report, are NOT BUILT here: the report keeps
+  `lattice.py`'s one-example-per-key lines for parity with the Python goldens (§8b.2);
 - **AC-111 and AC-117**: the CI job that joins digests to versions and changelog rows is not built here. ADR-0072 is
   executed by hand for the twenty-two activities §8b.5 edits, and asserted by two named tests over them, which is not
   AC-111's instrument;
@@ -202,7 +458,10 @@ data.
 - AC-101's and AC-102's **kill-line verdicts over the installed pair** (D21-47 **V3**). The kill lines apply to the
   registered pack set, the eight pre-registered `spikes/p9` packs at `pack-default` rigor, and Checkpoint 8b section
   (7) thresholds that reading. The installed pair is measured and reported with its pack count (SM-027). It does not
-  fire the kill line, because its unreachability is Phase-1 scope by design (ADR-0011, E7).
+  fire the kill line, because its unreachability is Phase-1 scope by design (ADR-0011, E7). *(dated 2026-09-25, refuting round 4)* `pack-default`
+  is AC-101's rigor only. AC-102's registered figure (**14/102**) pools all four rigor modes, as `lattice.py` counts it
+  and as AC-102's THEN reads it (*reachable from no enabled pack at any rigor*); the `pack-default`-only reading is
+  **17/102** [measured with `lattice.py --only-mode pack-default`], also inside 20%.
 
 ### 8b.1 Before anything moves: the inventory, the BEFORE readings, and the four questions D21-43 closed
 
@@ -369,6 +628,13 @@ Three things the port must get right, each a measured trap:
      (`HARD` or `soft`) and a closed cycle over edges of that pack's selected graph. It does not assert Python's
      rotation. Both parity tests read the file, and they skip no line that it does not name. The file is committed
      even when it holds only the six rows, and Checkpoint 8b section (7) pins its row count.
+     *(dated 2026-09-25, refuting round 5)* **As built, the only assertion kind is the soft-cycle example.**
+     `p6_lattice_parity_over_the_p9_tree` requires every row's reason to start `soft-cycle example:` and asserts it
+     through `assert_soft_cycle_equivalent`, which panics on any line that is not a `soft` cycle example, and
+     `p6_validate_parity_over_the_p9_tree` panics on any named row. A `HARD` example row or a figure divergence has
+     no weaker assertion and fails parity until one is built; "parity is then claimed on every figure except the
+     ones named" describes a mechanism for figures that is not built. Today every golden cycle line is `soft`, so
+     nothing reaches the gap.
    - **The story does not move the goldens (D21-47 V2).** The parity tests and the goldens read the p9 tree at
      `P9_PIN`. When the story lane hardens `spikes/p9/packs/spike.toml` in the working tree (D21-41 f, `s8j`), no tag
      moves and no golden is regenerated, and the lane's whole-suite verify stays green. The Python is demoted and not
@@ -378,6 +644,10 @@ Three things the port must get right, each a measured trap:
    Rust reading over `.redkiln/` with **its pack count (2) and rigor mode (`pack-default`)**, beside the retained
    twelve-pack p9 figures (DECISIONS-2026-09-12 E7's two numbers), and the same reading is recorded against
    SM-026/SM-027. `lattice.py` is not edited. It stays the oracle for regenerating the p9 goldens.
+   *(dated 2026-09-25, refuting round 3)* The port leaves ADR-0081 clause 2's obligation open: `lattice --validate`
+   *"must check block monotonicity"*, and `rk_kernel::lattice::validate`, which now plays that role, carries no
+   monotonicity check (`grep -ci monoton crates/rk-kernel/src/lattice.rs` → 0). The owed item in `src/rigor.rs`'s
+   module doc is re-pointed: either `lattice::validate` gains the check, or the erratum against clause 2 is written.
 
 **Over `.redkiln/`, on the axes D21-43 N26 fixes.** `rk_kernel::lattice` carries two axis sets:
 - **`Axes::p6_registered()`** is `lattice.py`'s set as it stands: the four toolchains and no `surfaces`. Every parity
@@ -410,6 +680,11 @@ line; its unreachability is Phase-1 scope by design (ADR-0011, E7)."*
   over the eight pre-registered packs at `pack-default` rigor. That is the reading the kill lines were
   pre-registered against. Checkpoint 8b section (7) parses both figures from the golden it has just re-derived from
   the Python, and exits 1 naming the AC if either line fires. The twelve-pack figures are reported beside them.
+  *(dated 2026-09-25, refuting round 4)* AC-102 is thresholded over all modes, as its THEN reads: reachable from no enabled pack at any rigor.
+  The golden's eight-pack line (`under the eight pre-registered packs only: dead=14/102`) is `lattice.py`'s
+  `selected_ever` over optional, recommended, mandatory and `pack-default`; the pack-default-only reading is 17/102
+  [measured with `lattice.py --only-mode pack-default`]. "At `pack-default` rigor" above is AC-101's reading
+  (`TOTAL prereg-8 pack-default`) only, and section (7)'s echo labels the two figures so.
 - **The installed pair is reported, not thresholded.** `lattice::p6_lattice_over_the_shipped_pack` prints its
   unsatisfiable and dead counts, and section (6) echoes them with `packs=2` and the label *not thresholded (V3)*.
   Two packs of twelve select from a 102-activity catalog, so a dead fraction above 20% is the likely reading
@@ -423,12 +698,20 @@ the `rk-ports conformance bodies` step. It runs
 asserts `grep -qxF 'test lattice::p6_lattice_over_the_shipped_pack ... ok'` over the capture, because a filter that
 matches nothing exits 0. The same commit gives the `gates` job's checkout and the no-egress job's checkout
 `fetch-depth: 0` (§8b.3, V2). **Pushing is not this stage's.** D21-42 14a makes every push an operator question at
-`s8j`.
+`s8j`. *(dated 2026-09-25, refuting round 4)* The step was named *"(AC-101..AC-104)"* and ran one test, which thresholds nothing and runs no
+validate. It is renamed *"P6 lattice and validate over the shipped pack (AC-103, AC-104; AC-101/AC-102 reported, V3)"*
+and runs `lattice::p6_validate_over_the_shipped_pack` as a second `--exact` run with its own `... ok` assertion. No CI
+step thresholds AC-101 or AC-102; the registered-set kill lines are Checkpoint 8b section (7)'s.
 
 **The red fixtures the thresholds need** (the Verified-by of AC-101 to AC-104), under
 `crates/rk-kernel/tests/fixtures/lattice/`:
 - `lattice::unsatisfiable_fixture_names_its_cell` (AC-101): a fixture catalog whose require row has no producer. The
-  report names the (facet-vector × rigor) cell and the row.
+  report names the (facet-vector × rigor) cell and the row. *(dated 2026-09-25, refuting round 2: narrowed to what
+  is built. The port keeps the **first** unsatisfiable cell per (pack, stage, kind), with its facet vector, rigor and
+  require row (`UnsatExample.vector`, `.rigor`, `.origin`), exposed on `Report::unsat_examples()` and asserted by this
+  test; later cells under the key are counted, not kept. The rendered report keeps `lattice.py`'s
+  one-example-per-key lines for parity and prints no require row. "Each cell" and the printed row are NOT BUILT, and
+  the acceptance set records them beside the AC-116 exclusion.)*
 - `lattice::rank_tie_fixture_is_an_error` (AC-103): two family members at one `method_rank`.
 - `lattice::hard_cycle_fixture_is_an_error` (AC-103's injected cycle): two activities in one stage, each
   unconditionally requiring a kind that only the other provides. The report is an error that names both activities
@@ -438,6 +721,11 @@ matches nothing exits 0. The same commit gives the `gates` job's checkout and th
   (`> 20%`) fires on it and does not fire on `1/5`.
 - `lattice::family_hole_at_mandatory_fails_totality` (AC-104): a fixture family whose members at `mandatory` leave one
   facet vector with no member. `--validate`'s totality check names the family, the rigor and the vector.
+  *(dated 2026-09-25, refuting round 6: the rendered report does not name the vector.)* The first hole vector per
+  (rigor, kind, toolchain) is kept on the `Hole.vector` field, and the test asserts it there
+  (`hole.vector.contains("size=low")`). The rendered `validate` report prints the family's error line (family, rigor,
+  kind, toolchain and a context count) and `validate errors=N`, and no facet vector. Naming the member and the vector
+  in the failing report is AC-116's diagnostic, which the acceptance set excludes.
 
 ### 8b.3 Every catalog-quality instrument over `.redkiln/` (D21-42 13a)
 
@@ -450,7 +738,8 @@ matches nothing exits 0. The same commit gives the `gates` job's checkout and th
 - **`rigor::rigor_monotonicity_p9_historical_2026_09_13`** keeps `(15, 2060, 1729)` over `spikes/p9` read at
   `P9_PIN` through `p9_pin::root()` (below). Its doc names it a historical measurement and cites the date it was
   taken. The working tree's `spikes/p9` has not changed since `dddcdbd`, so the pinned bytes are the ones today's test
-  reads.
+  reads. *(dated 2026-09-25, refuting round 2: not so. `spikes/p9` changed at `bf12a1c` (`s8a`: `catalog-b/`, the
+  grammar probe and its results). The lattice and rigor inputs are unchanged since `ca8f387`, as section (2)'s diff asserts.)*
 - **`review::ac303_confirm_step_survives_escalation`** is re-pointed to `.redkiln/`. It keeps its floors.
 - **`quality_block::ac527_empty_set_terminal_condition`** is re-pointed, per §8b.4.
 - **`memo::ac018_live_verb_may_not_memoise`** reads `.redkiln/catalog` (D21-43 N26). After §8b.5's repair it asserts
@@ -462,13 +751,17 @@ matches nothing exits 0. The same commit gives the `gates` job's checkout and th
   every one `per_step_memo_declaration`, across 14 activities. It is a control over a frozen tree, and its name says
   so.
 - **Every re-pointed test asserts a non-zero count walked** (activities, families, contexts, or check steps
-  evaluated) **before** it asserts its verdict. A green verdict over zero is Halt 8's shape.
+  evaluated) **before** it asserts its verdict. A green verdict over zero is Halt 8's shape. *(dated 2026-09-25,
+  refuting round 3: `review::ac303_confirm_step_survives_escalation` asserted its green verdict first; its
+  families/comparisons floor now precedes `violations.is_empty()`.)*
 
 **The frozen p9 subject is read at its pinned commit, never from the working tree (D21-47 V2).** V2: *"Every test
 pinning a historical `spikes/p9` measurement reads the p9 tree at its pinned commit via git, never the working
 tree."* The pin is `P9_PIN = ca8f3874ed9185b419b00b21b33713ba128de217` (`ca8f387`), the commit at which this file's p9
 measurements were taken. `spikes/p9` last changed at `dddcdbd`, so its bytes there equal the working tree's at stage
-open. Five tests pin such a measurement:
+open. *(dated 2026-09-25, refuting round 2: not so. `spikes/p9` changed at `bf12a1c` (`catalog-b/`, the grammar
+probe and its results); the lattice and rigor inputs are unchanged since `ca8f387`, as section (2)'s diff asserts.)* Five tests pin
+such a measurement:
 - `rigor::rigor_monotonicity_p9_historical_2026_09_13`;
 - `memo::ac018_frozen_p9_catalog_is_red`;
 - `quality_block::ac527_frozen_p9_catalog_is_red`;
@@ -494,7 +787,14 @@ How they read it:
   `applicable_if = "data_migration or external_dep"`, because Step 7e removed the term [measured 2026-09-24]. The
   test asserts that the materialised file carries the first line and that the working-tree file does not, so a
   helper that read the working tree fails it. At `P9_PIN` the working tree and the pin agree, so no other test can see
-  the difference (mutant M28).
+  the difference (mutant M28). *(dated 2026-09-25, refuting round 3: they agree on the paths the five pinned tests
+  read — `catalog/`, `facets.toml`, `artifacts.toml` and `packs/` — not on `spikes/p9` as a whole, which changed at
+  `bf12a1c` (`git diff --stat ca8f387 -- spikes/p9`: four files, `catalog-b/` and the grammar probe). The helper's
+  module doc says the same, and it no longer says that no checkout is byte-faithful: ADR-0164 made checkouts faithful,
+  and the pin reads the object store because the working tree may move.)* *(dated 2026-09-25, refuting round 4)* The helper test now also
+  sees `root()`'s own binding: `catalog-b/api-contract-spec.toml` differs between `P9_PIN` and the working tree, and
+  the test asserts `root()`'s copy is the pin's blob, not the working tree's, and that `root()` lies under
+  `CARGO_TARGET_TMPDIR` (mutant M28b).
 - **CI.** `actions/checkout@v4` fetches one commit by default, and a depth-1 clone holds no `P9_PIN`. So the
   `gates` job and the no-egress job both gain `with: fetch-depth: 0` on their checkout step, in the same commit as the
   helper. Pushing is `s8j`'s, so whether the pinned `rust:` image carries `git` is first measured there *[inferred: it
@@ -519,6 +819,10 @@ fixture or a live property of the spike tree:
   lane's verify should catch.
 - **`review.rs`'s `SHIPPED_CATALOG` and `SHIPPED_FACETS` constants** belong to `ac303`, and this stage re-points both
   to `.redkiln/`.
+- *(dated 2026-09-25, refuting round 1, per the header's Executed line)* **`spikes/p9/facets.toml`, read live:**
+  `tests/it/recorded_log.rs` (added at `bf12a1c`). Not a pin.
+- *(dated 2026-09-25, refuting round 1, per the header's Executed line)* **`spikes/p9/schemas.toml`, the `ImplReport`
+  stand-in:** `pack_validation::tdd_red_verify_projects_tests_added_per_adr_0035`. Not a pin.
 
 Checkpoint 8b section (2b) guards the split. No code line in the four files holding the five tests names a
 `"spikes/p9` literal, and `P9_PIN` is declared once.
@@ -568,14 +872,21 @@ two things:
    `findings.none(evidence in ['Reproduced'])`, since a `{MutationSurvived}` set satisfies it. *(D21-55, 2026-09-25:
    corrected. In this evaluator `none` is `any.not()`, so the joint set DOES refuse that predicate. The witness stays
    per class for a predicate that only a single class falsifies, which the seventh fixture below carries.)*
+   *(dated 2026-09-25, refuting round 5)* Only a conjunct **that reads `findings`** is evaluated (D21-55); a
+   findings-free conjunct is skipped, never refused. AC-527's GIVEN (2) carries the scope.
 
 Operands other than `findings` bind as they need to, so that `X and <falsified>` evaluates `false` under ADR-0121's
 absorption. *(D21-55, 2026-09-25: no. `and` computes its left side first and propagates an `UnknownField` before
 absorption can act. Refusal 2 is evaluated **per conjunct required for truth**: the top-level `and` is flattened
 through grouping, and not through `or` or `not`. Each conjunct that reads `findings` is evaluated alone over the rule's
 two bindings, `findings` as the witness and `rigor` across the live levels. Nothing else is bound, and a conjunct that
-errors is indeterminate, not refused. The walker is shared with refusal 1.)* **Severity-only predicates read no
-`evidence` and stay lawful.** Re-pin the counts from inside the test
+errors is indeterminate, not refused. The walker is shared with refusal 1.)* *(dated 2026-09-25, refuting round 5:
+where D21-55's "a conjunct that errors is not refused" meets "refused if some such conjunct is `false` in some cell",
+the code takes **a `false` cell outranks an error**, in another cell of the same conjunct and in another conjunct.
+Pinned by swaps in `d2_per_class_witness_refuses_one_member_rows` (M-W1a, M-W1b); the rigor axis is pinned there too
+(M-W2).)* **Severity-only predicates read no
+`evidence` and stay lawful.** *(dated 2026-09-25, refuting round 2: "lawful" means not refused by this rule. Whether a
+severity-only row without re-execution conforms to d2 bullet 1 is OPEN, D21-57.)* Re-pin the counts from inside the test
 binary. The witness change moves them, so they are not inferred.
 
 **Fixtures, one per branch** (a fixture per function is not a fixture per branch), under
@@ -584,11 +895,11 @@ binary. The witness change moves them, so they are not inferred.
 | fixture | expr | must | discriminates |
 | --- | --- | --- | --- |
 | `terminal_condition_is_findings_none.toml` (fixture 1, kept) | the quoted two-member form | FAIL | both branches |
-| `terminal_condition_is_findings_all.toml` (fixture 2, **recast**) | `findings.all(not (evidence in ['Reproduced', 'MutationSurvived']))` | FAIL | the witness **alone**: it contains no `none(`, so a string or quantifier matcher cannot catch it |
+| `terminal_condition_is_findings_all.toml` (fixture 2, **recast**) | `findings.all(not (evidence in ['Reproduced', 'MutationSurvived']))` | FAIL | the witness **alone**: it contains no `none(`, so a string or quantifier matcher cannot catch it *(dated 2026-09-25, refuting round 2: its predicate has no `none` quantifier, and the file has no `findings.none(`, which the test asserts over its bytes; the file's own comment does contain `none(`)* |
 | `terminal_condition_names_any_member_list.toml` (new) | `findings.none(evidence in ['NarrowedPin'])` | FAIL | the named form **alone**: no blocking-class witness falsifies it |
-| `terminal_condition_is_one_member_conjunct.toml` (new) | `check.failed == 0 and findings.none(evidence in ['Reproduced'])` | FAIL | the conjunct case. This is the shipped `user-story-ac` row, verbatim |
-| `terminal_condition_is_severity_only.toml` (new) | `findings.none(severity in ['blocking'])` | LOAD | that the rule does not over-reach. The old fixture 2 `findings.all(severity != 'blocking')` is the same predicate, which is why it is recast |
-| `terminal_condition_names_a_verify_result.toml` (fixture 3, kept) | unchanged | LOAD | unchanged |
+| `terminal_condition_is_one_member_conjunct.toml` (new) | `check.failed == 0 and findings.none(evidence in ['Reproduced'])` | FAIL | the conjunct case. This is ~~the shipped `user-story-ac` row, verbatim~~ *(dated 2026-09-25, refuting round 4)* the pre-s8b shipped `user-story-ac` row (HEAD `d9eb2a8`), verbatim; §8b.5 rewrote the shipped row to `check.failed == 0` |
+| `terminal_condition_is_severity_only.toml` (new) | `findings.none(severity in ['blocking'])` | LOAD | that the rule does not over-reach. The old fixture 2 `findings.all(severity != 'blocking')` is the same predicate, which is why it is recast. *(dated 2026-09-25, refuting round 2: it loads because a severity-only predicate reads no `evidence`, so neither refusal reaches it. Whether a severity-only row without re-execution conforms to d2 bullet 1 is OPEN, D21-57.)* *(dated 2026-09-25, refuting round 5: "neither refusal reaches it" is wrong; refusal 1 does not match it, and refusal 2 reaches it and finds it indeterminate, as the test asserts with `reads_findings == 1` and `indeterminate == 1`.)* |
+| `terminal_condition_names_a_verify_result.toml` (fixture 3, kept) | unchanged | LOAD | unchanged. *(dated 2026-09-25, refuting round 4)* Its `verify.green_at != null` conjunct is never true (§8b.10), so its LOAD proves only that the rule does not refuse it |
 | `terminal_condition_witness_is_per_class.toml` (new, D21-55) | `findings.any(evidence in ['MutationSurvived']) or not findings.any(evidence in ['Reproduced'])` | FAIL | the per-class witness **alone**: a joint witness satisfies it. Its top-level node is `or`, so it is not the named form, and it is spelled without the named form's text, so section (4)'s exclusions do not grow |
 
 **Tests, red first.** Author each one, and watch it fail for the named reason before the rule changes:
@@ -603,13 +914,25 @@ binary. The witness change moves them, so they are not inferred.
 
 Rust tests read predicates from fixture files (`include_str!`) and do not spell them as string literals. The
 existing literals in `tests/it/quality_block.rs` are why §8b.7's guard excludes that one file. No second file joins
-it.
+it. *(dated 2026-09-25, refuting round 6: scoped to the forbidden form.)* Read "predicates" as "the forbidden form":
+every other test that needs it reads it from a fixture file. Other predicates are spelled as literals, in
+`tests/it/quality_block.rs`'s round 3–6 swaps and in `tests/it/lattice.rs`'s `applicable_if` probes.
 
 **The register amendment** is dated and in place under ADR-0092 d2 item 2, and it is not an erratum:
 - **AC-527's THEN** becomes d2's rule, *"lint fails naming the activity and the predicate"*, applied to the two
   refusals above on any `check` step. The clause *"or any predicate whose truth over an **empty** findings set is
   `true`"* and *"never on the absence of findings"* are struck, with the amendment's date and D21-41 (h) beside them.
-- **Its Verified-by** names the six fixtures above in place of *"a red fixture with `findings.all(...)` over an empty
+  *(dated 2026-09-25, refuting round 2: as executed, the two refusals were written into AC-527's **GIVEN**, not its
+  THEN, and *"lint fails naming the activity and the predicate"* is AC-527's own THEN text, not d2's; d2's own lint
+  sentence is *"Lint rejects a policy predicate whose satisfaction requires an empty finding set"*. The THEN's
+  remaining clause, *"a quality block terminates on a positive evidence record (…)"*, is now struck too, and the THEN
+  states d2's rule: a terminal condition decidable over something the reviewer varies, by bullet 1's threshold or
+  bullet 2's different quantity, with the three examples kept as examples.)* *(dated 2026-09-25, refuting round 3:
+  two of them. "A human gate answer" is dropped inside the same dated amendment, because it is none of d2's
+  quantities and the reviewer does not vary it.)*
+- **Its Verified-by** names the six fixtures above *(dated 2026-09-25, refuting round 1: seven, since D21-55 added
+  `terminal_condition_witness_is_per_class`; AC-527 also names the fail-closed `terminal_condition_does_not_parse`,
+  so eight in all)* in place of *"a red fixture with `findings.all(...)` over an empty
   set, which must also fail"*.
 - The `rk-catalog` CLI surface stays **ARMED**, and the amendment says so. A kernel test over `.redkiln/catalog` is
   not `rk-catalog lint`.
@@ -646,7 +969,7 @@ it.
 | `adversarial-review` | `verdict` | 3 → 4 | `"findings.none(evidence in ['Reproduced', 'MutationSurvived']) and (rigor < mandatory or findings.none(evidence in ['NarrowedPin']))"` | D21-42 11a verbatim: *"no blocking finding survives re-execution"*, read from `review::confirm`'s outcome. **D21-47 V4 moves `verdict` after `record`**, because `record` produces the outcome `verdict` reads. The step order becomes `clone`, `review`, `override`, `record`, `verdict`, `emit`. `verdict`'s input binds `${record.outputs}` for this activation, and the `expr` is over its block set (`Confirmed::block_set()`). `on_false = "continue"` is unchanged. The reorder rides the same ADR-0072 edit (one bump, and one changelog row naming both), and the lattice re-run below covers it | ledger-specified; order D21-47 V4; binding spelling measured, see below |
 | `differential-debugging` | `policy` | 2 → 3 | the same two-member form | **(C).** `confirm`'s inputs become `{ selection = "${compare.outputs.discriminating_test}" }`, replacing `artifact:ReproCase.command`, which the loop does not vary. `policy` becomes inputs `{ report = "${confirm.outputs}", findings = "${adversary.outputs?}" }`, `expr = "report.failed > 0"`, as `root-cause`'s. `compare` is the loop-back target | D21-43 N18 (C); the field is owed (below) |
 | `instrumented-trace-analysis` | `policy` | 2 → 3 | `"cause.confidence == 'high' and findings.none(evidence in ['Reproduced'])"` | **(C).** `confirm`'s inputs become `{ selection = "${analyse.outputs.discriminating_test}" }`. `policy` keeps its `cause` conjunct and binds `report = "${confirm.outputs}"`, giving `expr = "cause.confidence == 'high' and report.failed > 0"`. The same bump carries `collect`'s `memo` repair (N26) | D21-43 N18 (C); the field is owed (below) |
-| `threat-model` | `policy` | 1 → 2 | `"findings.none(evidence in ['Reproduced'])"` | **(A), after §8b.6.** With T = `blocking`, `expr = "findings.none(severity in ['blocking'])"`. That is bullet 1's severity-only form, which §8b.4's rule loads. The draft's reason for not reading "survives re-execution" here stands: there is no tool step, and `review::confirm` gives `Unverifiable::CannotRun` for a repro with no `--` selection (ADR-0162 d4). **If §8b.6 settles no admissible T, (A) has nothing to bind and the stage STOPS for the operator.** That is a real free residual | D21-43 N18 (A); waits on §8b.6 |
+| `threat-model` | `policy` | 1 → 2 | `"findings.none(evidence in ['Reproduced'])"` | **(A), after §8b.6.** With T = `blocking`, `expr = "findings.none(severity in ['blocking'])"`. That is bullet 1's severity-only form, which §8b.4's rule loads. *(dated 2026-09-25, refuting round 2: the rule loads it because it reads no `evidence`; that it is bullet 1's form is not settled here. Whether a severity-only row without re-execution conforms to bullet 1 is OPEN, D21-57, and N18 (A) prescribes the threshold.)* The draft's reason for not reading "survives re-execution" here stands: there is no tool step, and `review::confirm` gives `Unverifiable::CannotRun` for a repro with no `--` selection (ADR-0162 d4). **If §8b.6 settles no admissible T, (A) has nothing to bind and the stage STOPS for the operator.** That is a real free residual | D21-43 N18 (A); waits on §8b.6 |
 | `user-story-ac` | `policy` | 2 → 3 | `"check.failed == 0 and findings.none(evidence in ['Reproduced'])"` | **(D).** `expr = "check.failed == 0"`, inputs unchanged. `check` is `self-check`'s `SelfCheck`, and `self-check` reads `${draft.outputs}`, the loop-back target. It meets (a) only on the reading N18 records | D21-43 N18 (D) |
 | `vertical-slicing` | `policy` | 1 → 2 | `"check.failed == 0 and findings.none(evidence in ['Reproduced'])"` | **(D)**, as `user-story-ac`. `check` is `coverage`'s `SelfCheck`, which reads `${slice.outputs}`, the loop-back target | D21-43 N18 (D) |
 
@@ -663,7 +986,20 @@ stage's. Typing the field is `s8h`'s, whose §8h.4 transcribes every reached kin
 and list flags are the transcription source."* **`s8h` carries it** (D21-47, cross-file finding 5). Its
 transcription adds `discriminating_test` to `RootCause` and to the stand-in, with a test. This stage cites that and does
 not type the field. Until `s8h` lands, the resolver refuses `confirm`'s binding by name (ADR-0136) and never runs an
-absent selection. The D-entry records the hand-off to `s8h`.
+absent selection. *(dated 2026-09-25, refuting round 3: not so. No resolver exists before `s8d`, and ADR-0136 governs
+only a `when` guard's `${…}`; `confirm` carries no `when`. The binding is unresolved until `s8h` types the field and
+`s8d`'s resolver binds it. Before `s8d`, `confirm` is refused by the runtime's tool arm, because its `toolchain:test`
+`inputs.selection` is not parsed (ADR-0148); from `s8d` until `s8h`, `s8d`'s resolver has no field to bind. Either
+way no absent selection is run. The changelog rows carry the same correction.)* *(dated 2026-09-25, refuting round 4)* Round 3 named the arm
+that would refuse `confirm`, not the step the walk stops at today. Read from `runtime/step.rs` (`run_activity_steps`
+returns at the first failed step; `execute_step` evaluates `guard_holds` first), not run: `differential-debugging`'s
+walk stops at `stuck`, whose `when` reads `${compare.outputs.confidence}`, which nothing resolves (ADR-0136), and
+`instrumented-trace-analysis`'s at `collect`, whose verb `trace_collect` is unmapped and refused by name (ADR-0135).
+Neither reaches `confirm`; were it reached, the tool arm would refuse it (ADR-0148). The changelog rows say the same. *(dated 2026-09-25, refuting round 5)* Qualified: each walk reaches that step only if its first step's agent
+dispatch (`compare`, `instrument`) commits, because `run_activity_steps` ends the walk on a failed or marked report;
+otherwise it ends at `compare` / `instrument`. `confirm` is unreached on every path. The changelog rows carry the same
+qualification.
+The D-entry records the hand-off to `s8h`.
 
 **`adversarial-review`'s binding.** Today the review pass runs in `rk-cli` after the activity commits (ADR-0162
 d3/d6), so no step output carries `Confirmed` during the walk.
@@ -674,7 +1010,12 @@ d3/d6), so no step output carries `Confirmed` during the walk.
   loads without a resolver change, the spelling goes back to the operator as a new question: V4 ruled the order, and
   neither N18 nor V4 ruled the spelling.
 - **Until the binding resolves,** ADR-0136 refuses the step by name. The check never evaluates an absent value as
-  true.
+  true. *(dated 2026-09-25, refuting round 3: not ADR-0136, which governs only a `when` guard's `${…}`, and `verdict`
+  carries no `when`. The binding is unresolved until `s8d`'s resolver binds `${record.outputs}`; before `s8d` the
+  runtime's check arm refuses `verdict`, because step-output resolution is OWED (ADR-0142 clause 4).)*
+  *(dated 2026-09-25, refuting round 4)* Read from `runtime/step.rs`, not run: the walk stops at the first step, `clone`, whose verb
+  `shallow_clone` is unmapped and refused by name (ADR-0135), and never reaches `verdict`; were it reached, the check
+  arm would refuse it (ADR-0142 clause 4). The changelog row says the same.
 - `quality_block::adr0072_d2_edits_are_versioned_and_changelogged` also asserts the step order, `record` before
   `verdict` (mutant M29), and Checkpoint 8b section (3d) reads it from the file.
 
@@ -723,6 +1064,13 @@ edit: it bumps `version` and takes a changelog row.
    `pack_validation::sca_scan_blocks_on_unrated_or_routes_to_accept_findings` evaluates both predicates
    through `rk_kernel::predicate` over three reports: all zero, `unrated = 1` alone, and `high = 1` alone. `clean`
    must be true, and `when` false, for the first report only.
+   *(dated 2026-09-25, refuting round 1)* The same bump also edited `sca-scan`'s `rationale` (*"critical/high
+   findings"* → *"critical, high or unrated findings"*); the `sca-scan@2` changelog row quotes both texts and
+   discloses that, until `s8c`'s record V types `unrated`, the resolver refuses the binding by name.
+   *(dated 2026-09-25, refuting round 2: corrected, here and in the row. There is no resolver before `s8d`'s R2, which
+   follows `s8c`. Until `s8c`'s record V, `unrated` is not a `ScanReport` member and its value is unbound; until
+   `s8d`'s resolver binds it, no run evaluates either predicate. ADR-0136 does not govern `clean`'s `report.unrated`,
+   a field read inside an `expr`; only the `exception` gate's `${scan.outputs.unrated}` is a reference.)*
 
 **ADR-0072, executed.** *"Edits to shipped activities made for catalog coherence bump `version` and are listed in
 the pack changelog. The P6 lattice is the test that such an edit did not break reachability."*
@@ -835,7 +1183,10 @@ and committed **before** the sheet is generated. The spike id is **S-SEV**.
   commit, without moving `CORPUS_PIN`. That is O-9's precedent, and AC-465 bars tracked
   spike results under `spikes/results/`. The record names that commit's full sha on one line of the form
   ``**S-SEV labels commit:** `<40 hex>` ``, which Checkpoint 8b section (9) reads, and it never names the corpus
-  checkout's HEAD.
+  checkout's HEAD. *(dated 2026-09-25, refuting round 3, D21-54: the record also names the re-label's corpus commit
+  on one line of the form ``**S-SEV re-label commit:** `<40 hex>` ``. Section (9) requires that commit to add
+  METHOD-SEV §8's `results/sev-f37-relabel.md` (present there, absent at its parent) and to be at least 48 h
+  (172800 s) after the labels commit, because `s8b` stays open until the re-label and κ is A1's ruled half.)*
 
 **The record.** A new ADR at the next free id at writing, `status: proposed`, with `evidence: ["S-SEV", "F37"]`,
 ADR-0085's `### Option — ` headings (D21-42 24a), and a **What this forbids** block.
@@ -851,6 +1202,13 @@ ADR-0085's `### Option — ` headings (D21-42 24a), and a **What this forbids** 
 - It makes no claim about the review gate's calibration (ADR-0101 clause 5). It cites that clause by number and does
   not quote its sentence, so that section (11)'s widened walk can read the record without tripping on the rule's own
   prose.
+- *(dated 2026-09-25, refuting round 5)* **Its required lines, each alone on a line, in exactly these shapes**, because
+  Checkpoint 8b section (9) reads them by pattern and a correct value in other words fails it:
+  - ``**S-SEV labels commit:** `<40 hex>` `` (above);
+  - ``**S-SEV re-label commit:** `<40 hex>` `` (above, D21-54);
+  - ``**S-SEV labelled:** n = <N> findings over <D> dispatches; rule: stage-1 decided`` or
+    ``**S-SEV labelled:** n = <N> findings over <D> dispatches; rule: continued to 188``, with nothing after the rule.
+    Section (9) admits only `n = 56 … over 10 … stage-1 decided` and `n = 188 … over 33 … continued to 188` (D21-54).
 
 ### 8b.7 The D-entry, and the guard form `s8j` adopts
 
@@ -919,7 +1277,7 @@ share one scratchpad. For each mutant, the driver:
 
 | # | file | mutation | must flip |
 | --- | --- | --- | --- |
-| M1 | `tests/it/rigor.rs` | the primary's catalog constant back to `"spikes/p9/catalog"` | `rigor::rigor_monotonicity` (pinned `.redkiln` shape) |
+| M1 | `tests/it/rigor.rs` | the primary's catalog constant back to `"spikes/p9/catalog"` | `rigor::rigor_monotonicity` (~~pinned `.redkiln` shape~~ *(dated 2026-09-25, refuting round 3)* the `threat-model` `applicable_if` code-line check, which must read `surfaces`; the pinned shape `(15, 2060, 1729)` is identical over both catalogs and cannot tell them apart) |
 | M2 | `src/quality_block.rs` | witness set reduced to empty/absent only | `quality_block::d2_per_class_witness_refuses_one_member_rows` |
 | M3 | `src/quality_block.rs` | per-class witnesses replaced by one joint `{Reproduced, MutationSurvived}` set | `quality_block::d2_per_class_witness_refuses_one_member_rows` |
 | M4 | `src/quality_block.rs` | witness findings also carry `severity: blocking` | `quality_block::d2_severity_only_predicates_load` |
@@ -929,7 +1287,7 @@ share one scratchpad. For each mutant, the driver:
 | M8 | `src/lattice.rs` | pack selection over zero packs returns an empty report | `lattice::zero_packs_is_refused_not_reported` |
 | M9 | `src/lattice.rs` | rank-tie detection removed | `lattice::rank_tie_fixture_is_an_error` |
 | M10 | `src/lattice.rs` | stage order taken from the map's key order | `lattice::p6_lattice_parity_over_the_p9_tree` |
-| M11 | `src/lattice.rs` | I4's *"row rigor raises, never lowers"* removed | `lattice::p6_lattice_parity_over_the_p9_tree` |
+| M11 | `src/lattice.rs` | I4's *"row rigor raises, never lowers"* removed | `lattice::unsatisfiable_fixture_names_its_cell` *(dated 2026-09-25, refuting round 1: was `lattice::p6_lattice_parity_over_the_p9_tree`. M11 is unobservable over every shipped pack, because every require row is `rigor = "mandatory"`; it is killed by the `unsatisfiable` fixture's `rigor = "optional"` row, per the Executed line in the header)* |
 | M12 | `src/lattice.rs` | the `unknown` sweep skipped | `lattice::p6_lattice_parity_over_the_p9_tree` |
 | M13 | `.redkiln/catalog/root-cause.toml` | `expr` reverted to the two-member form, version left at 5 | `quality_block::ac527_empty_set_terminal_condition` |
 | M14 | `.redkiln/catalog/user-story-ac.toml` | version reverted 3 → 2 | `quality_block::adr0072_d2_edits_are_versioned_and_changelogged` |
@@ -946,11 +1304,60 @@ share one scratchpad. For each mutant, the driver:
 | M25 | `src/lattice.rs` | hard-cycle detection removed | `lattice::hard_cycle_fixture_is_an_error` |
 | M26 | `src/lattice.rs` | the dead-activity list left empty | `lattice::dead_activity_fixture_is_listed` |
 | M27 | `src/lattice.rs` | the totality check skipped at `mandatory` | `lattice::family_hole_at_mandatory_fails_totality` |
-| M28 | `tests/it/p9_pin.rs` | `materialise_at` copies the working tree's file instead of `cat-file blob` | `p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree` |
+| M28 | `tests/it/p9_pin.rs` | `materialise_at` copies the working tree's file instead of `cat-file blob` | `p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree` *(dated 2026-09-25, refuting round 4)* (M28 reaches `materialise_at` only; `root()`'s binding to `P9_PIN` is M28b's) |
+| M28b | `tests/it/p9_pin.rs` | `root()` returns the working tree's `spikes/p9` instead of the `P9_PIN` materialisation *(dated 2026-09-25, refuting round 4)* | `p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree` (its `catalog-b/api-contract-spec.toml` bytes assertion) |
 | M29 | `.redkiln/catalog/adversarial-review.toml` | the `verdict` step block moved back before `override`, version left at 4 | `quality_block::adr0072_d2_edits_are_versioned_and_changelogged` |
 | M30 | `src/lattice.rs` | the shipped-pack load path skips the facet-registry root check (D21-56) | `lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged` |
+| M30b | `src/lattice.rs` | `roots()` drops the method-form quantifier body walk (anchor `// M30b`) *(dated 2026-09-25, refuting round 4)* | `lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged` (its `surfaces.any(auth)` probe) |
+| M30c | `src/lattice.rs` | `roots()`' prefix-form arm (`Some(v)`) skips the body walk: `roots(body, &inner, out); // M30c` becomes `let _ = &inner;` *(dated 2026-09-25, refuting round 6)* | `lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged` (its `any(s in surfaces, auth)` probe) |
+| M-A1 | `.redkiln/catalog/adversarial-review.toml` | `record`'s `findings = "${review.outputs}"` becomes an `artifact:` value (D21-57) | `review::ac303_confirm_step_survives_escalation` |
+| M-A2 | `src/rigor.rs` | the read-name filter dropped, so every declared binding counts | `review::ac303_read_binding_is_strict` |
+| M-A3 | `src/rigor.rs` | back-edge following disabled | `review::ac303_back_edge_counts_and_is_reported` |
+| M-D1 | `src/quality_block.rs` | `walk`'s `Ok(None) => report.decided += 1` arm refuses (counts the step refused and pushes a violation) *(dated 2026-09-25, refuting round 3)* | `quality_block::d2_severity_only_predicates_load` (its fixture-free decided assertion) |
+| M-W1a | `src/quality_block.rs` | `cells`' `Err(e) => first_error = first_error.or(Some(e)),` becomes `Err(e) => return Cells::NoValue(e),` (marked `// M-W1a`; the anchor is the code line) *(dated 2026-09-25, refuting round 5)* | `quality_block::d2_per_class_witness_refuses_one_member_rows` (its error-then-false-across-cells swap) |
+| M-W1b | `src/quality_block.rs` | `blocking_witness`' `Cells::NoValue(e) => indeterminate = indeterminate.or(Some(e)),` becomes `Cells::NoValue(e) => return Err(e),` (marked `// M-W1b`; the anchor is the code line) *(dated 2026-09-25, refuting round 5)* | `quality_block::d2_per_class_witness_refuses_one_member_rows` (its error-then-false-across-conjuncts swap) |
+| M-W2 | `src/quality_block.rs` | the rigor loop `for rigor in LIVE_RIGOR_LEVELS {` visits one live level: (a) `[LIVE_RIGOR_LEVELS[0]]`, (b) `[LIVE_RIGOR_LEVELS[2]]` (marked `// M-W2`; the anchor is the code line) *(dated 2026-09-25, refuting round 5)* | `quality_block::d2_per_class_witness_refuses_one_member_rows` (its rigor-axis swaps: (a) at `mandatory`, (b) at `optional`) |
+| M-C1 | `tests/it/quality_block.rs` | `loop_row_check` drops the quantifier-body reads (`read.extend(in_bodies…)` becomes `let _ = &in_bodies;`) *(dated 2026-09-25, refuting round 5)* | `quality_block::d2_rewritten_rows_read_a_quantity_the_loop_varies` (its crafted `limit = "artifact:Threshold"` row) |
+| M-W3 | `src/quality_block.rs` | `blocking_witness` evaluates every conjunct: its `if !reads_findings(c) {` skip becomes `if !reads_findings(c) && false {` (marked `// M-W3`; the anchor is the code line) *(dated 2026-09-25, refuting round 6)* | `quality_block::d2_per_class_witness_refuses_one_member_rows` (its `rigor < mandatory and findings.none(severity in ['blocking'])` swap, (d)) |
 
 *(D21-55, 2026-09-25:)* M2 and M3 flip `d2_per_class_witness_refuses_one_member_rows` through the per-class fixture.
+
+*(dated 2026-09-25, refuting round 1:)* M-A1..M-A3 run a selection that includes their must-flip tests: the four
+D21-57 tests are in section (5)'s `K_TESTS`.
+
+*(dated 2026-09-25, refuting round 3:)* M-D1 is the rule's decided arm, which no fixture and no walked catalog
+reached (over `.redkiln/catalog` the test binary prints `refused=0` with every findings-reading row indeterminate, and
+at `P9_PIN` every non-severity findings row is refused). *(dated 2026-09-25, refuting round 5: not the printed reading, then or
+now. The binary prints `ac527: catalog=.redkiln/catalog checks=94 refused=1 indeterminate=39`, the refused row being
+`threat-model`'s, which waits on §8b.6 (D21-54); after (A) binds it the reading is `refused=0`. The refused row reads
+`findings` and is not indeterminate. The decided arm is unreached either way, so M-D1's rationale stands.)* `d2_severity_only_predicates_load` now swaps
+`findings.any(evidence in ['Reproduced', 'MutationSurvived'])` into fixture 3 and asserts it loads with
+`reads_findings == 1`, `decided == 1`, `refused == 0`: no single-class witness falsifies it, and it yields a value in
+every cell. No test is added or renamed, so `K_TESTS` stays **34** and the floor **784**. Executed: scratchpad
+`r3_mut_decided.py`, anchor once, `test quality_block::d2_severity_only_predicates_load ... FAILED` under the mutant
+(`must LOAD: [NamesForbiddenForm { … }]`), restored sha256 equal to the original's.
+
+*(dated 2026-09-25, refuting round 4)* M30b and M28b, executed from uniquely named drivers over the shared cycle (anchor once, restore sha256
+verified): scratchpad `r4fix_m30b.py`, `test lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged
+... FAILED` at the `surfaces.any(auth)` probe's *"loaded through the shipped entry point"*; `r4fix_m28b.py`, `test
+p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree ... FAILED` at *"root()'s
+`catalog-b/api-contract-spec.toml` is not P9_PIN's blob"*. Both restored to the original sha256. No test is added or
+renamed, so `K_TESTS` stays **34** and the floor **784**.
+
+*(dated 2026-09-25, refuting round 5)* M-W1a, M-W1b, M-W2 (a) and (b), and M-C1, executed from one uniquely named
+driver, scratchpad `r5fix_mutants.py` (log `r5fix_mutants.log`): each anchor asserted once, the must-flip test run by
+module-qualified `--exact` name through the no-dispatch wrapper, restored sha256 equal to the original's, and both
+unmutated must-flip tests green first. Each flipped: M-W1a at *"across_cells.toml must FAIL lint"* (`indeterminate:
+1`); M-W1b at *"across_conjuncts.toml must FAIL lint"* (`indeterminate: 1`); M-W2 (a) and (b) each at
+*"rigor_axis.toml must FAIL lint"* (`decided: 1`); M-C1 at *"a body that reads an `artifact:` binding reads a quantity
+the loop does not vary"*. No test is added or renamed, so `K_TESTS` stays **34** and the floor **784**.
+
+*(dated 2026-09-25, refuting round 6)* M-W3 and M30c, executed from one uniquely named driver, scratchpad
+`r6_mutants.py` (log `r6_mutants.log`): each anchor asserted once, the must-flip test run by module-qualified
+`--exact` name through the no-dispatch wrapper, restored sha256 equal to the original's, and both unmutated must-flip
+tests green first. Each flipped: M-W3 at *"a findings-free conjunct is skipped, never refused"*, the witness naming
+`Reproduced` at `mandatory` and the conjunct `rigor < mandatory`; M30c at *"`any(s in surfaces, auth)` loaded through
+the shipped entry point"*. No test is added or renamed, so `K_TESTS` stays **34** and the floor **784**.
 
 ### 8b.9 Checkpoint 8b
 
@@ -975,7 +1382,8 @@ share one scratchpad. For each mutant, the driver:
   every run. It runs over `.redkiln/` with **2** packs walked, on the axes the dated METHOD-P amendment adds (`rust`
   and `surfaces`), and in CI by name.
 - **AC-101's and AC-102's kill lines hold over the registered pack set** (eight packs, `pack-default`). The installed
-  pair's figures are reported with their count and are not thresholded (D21-47 V3).
+  pair's figures are reported with their count and are not thresholded (D21-47 V3). *(dated 2026-09-25, refuting round 4)* `pack-default` is
+  AC-101's rigor; AC-102's registered figure pools all four modes, as its THEN reads.
 - **Every catalog-quality instrument reads `.redkiln/`** and prints the path it read from inside the test binary.
   The five tests that pin a historical p9 measurement read `P9_PIN` from the object store (D21-47 V2), and every other
   reader of `spikes/p9` is inventoried in §8b.3.
@@ -989,7 +1397,9 @@ share one scratchpad. For each mutant, the driver:
   proves.
 - **11c's record exists, located by its recorded id.** Its measurement was pre-registered before the labels existed,
   and the labels are read at the corpus commit that the record names. It states the labelled n and which rule fired
-  (D21-54).
+  (D21-54). *(dated 2026-09-25, refuting round 3, D21-54)* It names the re-label's corpus commit, which adds
+  `results/sev-f37-relabel.md` at least 48 h after the labels commit; section (9) checks both, with a synthetic control
+  for each.
 - **AC-527 is amended to d2 in the register, and its contradicting clauses are struck.** Nothing claims the review
   gate's calibration, in the tree, the records or the commit messages.
 - The whole suite is green above a floor re-derived from Checkpoint 8a's recorded count, and fmt and clippy are green.
@@ -1065,6 +1475,8 @@ printf '%s\n' "$src" | grep -qF "findings.none(evidence in ['Reproduced', 'Mutat
 # ---- (2b) THE V2 SPLIT (D21-47 V2; review M11). The four files holding the five tests that pin a historical p9
 # ---- measurement name no "spikes/p9 literal on a CODE line: they read the pinned tree through p9_pin, the one helper,
 # ---- whose P9_PIN is the literal above. Every other reader of spikes/p9 is inventoried in §8b.3 and is not a pin.
+# ---- (dated 2026-09-25, refuting round 1) That inventory includes tests/it/recorded_log.rs (facets.toml) and
+# ---- pack_validation::tdd_red_verify_projects_tests_added_per_adr_0035 (schemas.toml), added at stage execution.
 for f in crates/rk-kernel/tests/it/rigor.rs crates/rk-kernel/tests/it/memo.rs crates/rk-kernel/tests/it/quality_block.rs crates/rk-kernel/tests/it/lattice.rs; do
   test -f "$f" || { echo "FAIL: $f is absent (Halt 8)"; exit 1; }
   raw=$(grep -nE '"(\.\./\.\./)?spikes/p9' "$f"); rc=$?
@@ -1185,24 +1597,31 @@ test -z "$syn" || { echo "FAIL: the changelog's quotation of the old text is not
 syn=$(printf '%s\n' ".redkiln/catalog/CHANGELOG.md:9:findings.none(evidence in [" | code_only | grep -vE "$EXCL")
 test -n "$syn" || { echo "FAIL: the changelog exclusion reaches beyond .redkiln/CHANGELOG.md"; exit 1; }
 
-# ---- (5) THE NAMED SELECTION: thirty tests, each by its own `... ok` line, and exactly thirty.
-K_TESTS="lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged memo::ac018_live_verb_may_not_memoise memo::ac018_frozen_p9_catalog_is_red quality_block::adr0072_s8b_repairs_are_versioned_and_changelogged pack_validation::tdd_red_verify_projects_tests_added_per_adr_0035 pack_validation::sca_scan_blocks_on_unrated_or_routes_to_accept_findings lattice::p6_lattice_parity_over_the_p9_tree lattice::p6_validate_parity_over_the_p9_tree lattice::p6_lattice_over_the_shipped_pack lattice::p6_validate_over_the_shipped_pack lattice::zero_packs_is_refused_not_reported lattice::covering_array_is_pairwise_and_matches_the_python_rows lattice::unsatisfiable_fixture_names_its_cell lattice::rank_tie_fixture_is_an_error lattice::hard_cycle_fixture_is_an_error lattice::dead_activity_fixture_is_listed lattice::family_hole_at_mandatory_fails_totality p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree rigor::rigor_monotonicity rigor::rigor_monotonicity_p9_historical_2026_09_13 review::ac303_confirm_step_survives_escalation quality_block::ac527_empty_set_terminal_condition quality_block::ac527_frozen_p9_catalog_is_red quality_block::d2_per_class_witness_refuses_one_member_rows quality_block::d2_named_form_refuses_any_member_list quality_block::d2_severity_only_predicates_load quality_block::d2_rewritten_rows_are_not_constant_over_their_quantity quality_block::d2_rewritten_rows_read_a_quantity_the_loop_varies quality_block::adr0072_d2_edits_are_versioned_and_changelogged conformance::shipped_pack_loads"
+# ---- (5) THE NAMED SELECTION: thirty-four tests, each by its own `... ok` line, and exactly thirty-four.
+# ---- (dated 2026-09-25, refuting round 1) 30 -> 34: D21-57's four AC-303 tests join by name (M-A2's and M-A3's
+# ---- must-flip tests among them), so that they are not guarded by the floor alone. The floor stays 784.
+K_TESTS="lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged memo::ac018_live_verb_may_not_memoise memo::ac018_frozen_p9_catalog_is_red quality_block::adr0072_s8b_repairs_are_versioned_and_changelogged pack_validation::tdd_red_verify_projects_tests_added_per_adr_0035 pack_validation::sca_scan_blocks_on_unrated_or_routes_to_accept_findings lattice::p6_lattice_parity_over_the_p9_tree lattice::p6_validate_parity_over_the_p9_tree lattice::p6_lattice_over_the_shipped_pack lattice::p6_validate_over_the_shipped_pack lattice::zero_packs_is_refused_not_reported lattice::covering_array_is_pairwise_and_matches_the_python_rows lattice::unsatisfiable_fixture_names_its_cell lattice::rank_tie_fixture_is_an_error lattice::hard_cycle_fixture_is_an_error lattice::dead_activity_fixture_is_listed lattice::family_hole_at_mandatory_fails_totality p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree rigor::rigor_monotonicity rigor::rigor_monotonicity_p9_historical_2026_09_13 review::ac303_confirm_step_survives_escalation review::ac303_multi_hop_confirm_is_seen review::ac303_twin_broken_chain_is_lost review::ac303_read_binding_is_strict review::ac303_back_edge_counts_and_is_reported quality_block::ac527_empty_set_terminal_condition quality_block::ac527_frozen_p9_catalog_is_red quality_block::d2_per_class_witness_refuses_one_member_rows quality_block::d2_named_form_refuses_any_member_list quality_block::d2_severity_only_predicates_load quality_block::d2_rewritten_rows_are_not_constant_over_their_quantity quality_block::d2_rewritten_rows_read_a_quantity_the_loop_varies quality_block::adr0072_d2_edits_are_versioned_and_changelogged conformance::shipped_pack_loads"
 nk=$(printf '%s\n' $K_TESTS | grep -c .)
-[ "$nk" -eq 30 ] || { echo "FAIL: K_TESTS names $nk tests, not 30"; exit 1; }
+[ "$nk" -eq 34 ] || { echo "FAIL: K_TESTS names $nk tests, not 34"; exit 1; }
 out=$(nodispatch cargo test -p rk-kernel --test it -- $K_TESTS --exact 2>&1); rc=$?
 nd_check "the named selection" || exit 1
 [ "$rc" -eq 0 ] || { echo "FAIL: the stage's named selection did not pass (rc=$rc)"; printf '%s\n' "$out" | tail -25; exit 1; }
 for t in $K_TESTS; do
   printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: $t did not report ok — renamed, deleted or not selected"; printf '%s\n' "$out" | grep -E '^test ' | tail -25; exit 1; }
 done
-printf '%s\n' "$out" | grep -qE 'test result: ok\. 30 passed; 0 failed' || { echo "FAIL: the named selection did not run exactly 30 tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
+printf '%s\n' "$out" | grep -qE 'test result: ok\. 34 passed; 0 failed' || { echo "FAIL: the named selection did not run exactly 34 tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
 
 # ---- (6) WHAT EACH INSTRUMENT READ, PRINTED FROM INSIDE THE TEST BINARY — not inferred from a green, and not probed
 # ---- in another language. The installed pair's AC-101/AC-102 figures are REPORTED with their pack count and NOT
 # ---- thresholded (D21-47 V3); AC-103's zero tolerance is not a rate and holds over the pair too.
+# (dated 2026-09-25, refuting round 4) Every reading below is first CUT OUT of its line with `grep -oE '<name>: .*'`,
+# and the anchored regex is applied to that cut. Under ONE test thread libtest prints `test <name> ... ` before the
+# test's stdout on the same line, so a `^`-anchored grep over the raw capture failed for a reason unrelated to the
+# instrument. Every field check is kept. Checked under RUST_TEST_THREADS=1 and =4. (dated 2026-09-25, refuting
+# round 5) AC-303's `ac303:` line is read the same way, last in this section.
 out=$(nodispatch cargo test -p rk-kernel --test it -- lattice::p6_lattice_over_the_shipped_pack --exact --nocapture 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the shipped-pack lattice run failed (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-line=$(printf '%s\n' "$out" | grep -E '^lattice-shipped: packs=[0-9]+ rigor=pack-default contexts=[0-9]+ pairs=[0-9]+ unsat=[0-9]+ dead=[0-9]+/102 ties=[0-9]+ hard_cycles=[0-9]+ ')
+line=$(printf '%s\n' "$out" | grep -oE 'lattice-shipped: .*' | grep -E '^lattice-shipped: packs=[0-9]+ rigor=pack-default contexts=[0-9]+ pairs=[0-9]+ unsat=[0-9]+ dead=[0-9]+/102 ties=[0-9]+ hard_cycles=[0-9]+ ')
 test -n "$line" || { echo "FAIL: the shipped-pack lattice printed no reading of the agreed shape — nothing says what it walked"; exit 1; }
 [ "$(printf '%s\n' "$line" | grep -c .)" -eq 1 ] || { echo "FAIL: the shipped-pack lattice printed more than one reading"; exit 1; }
 field() { printf '%s\n' "$line" | sed -E "s/^.* $1=([0-9]+)[ /].*$/\1/"; }
@@ -1210,7 +1629,7 @@ packs=$(field packs); ctx=$(field contexts); pairs=$(field pairs); unsat=$(field
 [ "$packs" -eq 2 ] || { echo "FAIL: the lattice walked $packs packs over .redkiln/, not the installed 2"; exit 1; }
 [ "$ctx" -gt 0 ] && [ "$pairs" -gt 0 ] || { echo "FAIL: the lattice walked zero contexts or pairs — a report over nothing (Halt 8)"; exit 1; }
 [ "$ties" -eq 0 ] && [ "$hc" -eq 0 ] || { echo "FAIL: AC-103 over the installed pair: ties=$ties hard_cycles=$hc — the tolerance is zero"; exit 1; }
-echo "CP8B (6) AC-101/AC-102 over the INSTALLED pair, reported and NOT thresholded (D21-47 V3; ADR-0011, E7): packs=$packs rigor=pack-default unsat=$unsat/$pairs dead=$dead/102"
+echo "CP8B (6) AC-101/AC-102 over the INSTALLED pair, reported and NOT thresholded (D21-47 V3; ADR-0011, E7): packs=$packs rigor=pack-default unsat=$unsat/$pairs dead=$dead/102 (all modes, as lattice.py counts it)"
 printf '%s\n' "$line" | grep -qE ' toolchains=([^ ]*,)?rust(,[^ ]*)? surfaces=[1-9][0-9]*$' || { echo "FAIL: the shipped-pack lattice did not walk the rust toolchain and a non-empty surfaces binding (D21-43 N26)"; printf '%s\n' "$line"; exit 1; }
 grep -qE '^[[:space:]-]*\*Amendment [0-9]+ \(2026-[0-9]{2}-[0-9]{2}, D21-43 N26\):\*' spikes/METHOD-P.md || { echo "FAIL: METHOD-P carries no dated amendment citing D21-43 N26 — the axes moved without the record"; exit 1; }
 # Review N7: the amendment was COMMITTED before the shipped reading existed — its commit is a strict ancestor of the
@@ -1233,15 +1652,34 @@ for s in SM-026 SM-027; do
   [ "$rc" -eq 0 ] || { echo "FAIL: $s's row was not found (rc=$rc)"; exit 1; }
   printf '%s\n' "$row" | grep -qF 'lattice::p6_lattice_over_the_shipped_pack' || { echo "FAIL: $s records no reading from the Rust lattice with its pack count"; exit 1; }
 done
+# (dated 2026-09-25, refuting round 6) The SM register OWNS the measures (ADR-0092 d2 item 3), so the dated s8b pointers
+# in the SM-026 and SM-027 BODIES are read too, not only the AC register's cross-reference cells above. Each body is cut
+# from its `**SM-0nn — ` heading to the next `**SM-` heading; SM-027 also carries round 5's all-modes pointer. The
+# synthetic control is a body with no pointer, which the same cut and the same check must refuse.
+smbody() { awk -v k="**$1 — " 'index($0, k) == 1 {f=1; print; next} f && /^\*\*SM-/ {f=0} f'; }
+smptr() { grep -F '*[pointer added 2026-09-25, `s8b` refuting round' | grep -F 'lattice::p6_lattice_over_the_shipped_pack' | grep -qF 'D21-47 V3'; }
+for s in SM-026 SM-027; do
+  body=$(smbody "$s" < references/2026-09-08-success-measures.md)
+  test -n "$body" || { echo "FAIL: $s's body was not found in the SM register (Halt 8)"; exit 1; }
+  printf '%s\n' "$body" | smptr || { echo "FAIL: $s's SM-register body carries no dated s8b pointer naming lattice::p6_lattice_over_the_shipped_pack and D21-47 V3"; exit 1; }
+done
+smbody SM-027 < references/2026-09-08-success-measures.md | grep -qF '*[pointer added 2026-09-25, `s8b` refuting round 5:]*' || { echo "FAIL: SM-027's body lost round 5's all-modes pointer"; exit 1; }
+syn=$(printf '%s\n' '**SM-026 — Catalog unsatisfiability rate**' '- **Baseline:** no rate is measured over it.' '**SM-027 — Dead activities**' | smbody SM-026)
+test -n "$syn" || { echo "FAIL: control — the SM-body cut found nothing in a synthetic register; the guard above is vacuous"; exit 1; }
+if printf '%s\n' "$syn" | smptr; then echo "FAIL: control — the SM pointer check passed a body with no pointer; it is satisfiable by nothing"; exit 1; fi
 out=$(nodispatch cargo test -p rk-kernel --test it -- memo::ac018_live_verb_may_not_memoise --exact --nocapture 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the AC-018 lint failed over the shipped catalog (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE '^ac018: catalog=\.redkiln/catalog activities=102 steps=[1-9][0-9]* violations=0 registry=tests/fixtures/registries/verbs/verbs-live\.toml$' || { echo "FAIL: the AC-018 lint did not report .redkiln/catalog, 102 activities, a non-zero step count, zero violations and the FIXTURE registry it read"; printf '%s\n' "$out" | grep -E '^ac018'; exit 1; }
+printf '%s\n' "$out" | grep -oE 'ac018: .*' | grep -qE '^ac018: catalog=\.redkiln/catalog activities=102 steps=[1-9][0-9]* violations=0 registry=tests/fixtures/registries/verbs/verbs-live\.toml$' || { echo "FAIL: the AC-018 lint did not report .redkiln/catalog, 102 activities, a non-zero step count, zero violations and the FIXTURE registry it read"; printf '%s\n' "$out" | grep -oE 'ac018: .*'; exit 1; }
 out=$(nodispatch cargo test -p rk-kernel --test it -- rigor::rigor_monotonicity --exact --nocapture 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: rigor_monotonicity failed (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE '^rigor_monotonicity: catalog=\.redkiln/catalog activities=102 families=[1-9][0-9]* contexts=[1-9][0-9]* ' || { echo "FAIL: rigor_monotonicity did not report reading .redkiln/catalog with a non-zero walk"; printf '%s\n' "$out" | grep -E '^rigor_monotonicity:'; exit 1; }
+printf '%s\n' "$out" | grep -oE 'rigor_monotonicity: .*' | grep -qE '^rigor_monotonicity: catalog=\.redkiln/catalog activities=102 families=[1-9][0-9]* contexts=[1-9][0-9]* ' || { echo "FAIL: rigor_monotonicity did not report reading .redkiln/catalog with a non-zero walk"; printf '%s\n' "$out" | grep -oE 'rigor_monotonicity: .*'; exit 1; }
 out=$(nodispatch cargo test -p rk-kernel --test it -- quality_block::ac527_empty_set_terminal_condition --exact --nocapture 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the AC-527 lint failed over the shipped catalog (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -qE '^ac527: catalog=\.redkiln/catalog checks=[1-9][0-9]* refused=0 indeterminate=[0-9]+$' || { echo "FAIL: the AC-527 lint did not report .redkiln/catalog, a non-zero check count and refused=0"; printf '%s\n' "$out" | grep -E '^ac527:'; exit 1; }
+printf '%s\n' "$out" | grep -oE 'ac527: .*' | grep -qE '^ac527: catalog=\.redkiln/catalog checks=[1-9][0-9]* refused=0 indeterminate=[0-9]+$' || { echo "FAIL: the AC-527 lint did not report .redkiln/catalog, a non-zero check count and refused=0"; printf '%s\n' "$out" | grep -oE 'ac527: .*'; exit 1; }
+# (dated 2026-09-25, refuting round 5) AC-303's reading too, so that every re-pointed instrument's printed path is read.
+out=$(nodispatch cargo test -p rk-kernel --test it -- review::ac303_confirm_step_survives_escalation --exact --nocapture 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: AC-303's confirm rule failed over the shipped catalog (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
+printf '%s\n' "$out" | grep -oE 'ac303: .*' | grep -qE '^ac303: catalog=\.redkiln/catalog families=[1-9][0-9]* contexts=[1-9][0-9]* comparisons=[1-9][0-9]* violations=0 forward=16 back_edge=4$' || { echo "FAIL: AC-303 did not report .redkiln/catalog, a non-zero walk, zero violations and forward=16 back_edge=4"; printf '%s\n' "$out" | grep -oE 'ac303: .*'; exit 1; }
 nd_check "sections (1) to (6)" || exit 1
 
 # ---- (7) THE PARITY GOLDENS: present, pinned, RE-DERIVED from the Python oracle at P9_PIN on this run (review B2 —
@@ -1277,9 +1715,11 @@ PYTHONHASHSEED=0 PYTHONIOENCODING=utf-8 python -c "import sys,runpy; sys.stdout.
 [ "$rc" -eq 0 ] || { echo "FAIL: lattice.py --validate exited $rc at P9_PIN"; exit 1; }
 cmp -s target/cp8b/p9-run.fresh.txt "$G/p9-run.txt" || { echo "FAIL: the committed p9-run.txt is not what the Python prints at P9_PIN — the golden was not made by the oracle"; exit 1; }
 cmp -s target/cp8b/p9-validate.fresh.txt "$G/p9-validate.txt" || { echo "FAIL: the committed p9-validate.txt is not what the Python prints at P9_PIN"; exit 1; }
-# Named divergences (§8b.2): one committed row per golden line the port does not reproduce byte for byte, read by both
-# parity tests. NDIV is written here by dated edit when the port is traced, and is at least the six `soft` cycle-example
-# lines whose choice is Python set order.
+# Named divergences (§8b.2): one committed row per `soft` cycle-example golden line whose choice is Python set order,
+# whether or not the port happens to reproduce it byte for byte, read by both parity tests (dated 2026-09-25, refuting
+# round 1: was "per golden line the port does not reproduce byte for byte"; four of the six match today, and those rows
+# are held to the soft-cycle assertion, not to bytes). NDIV is written here by dated edit when the port is traced, and
+# is at least the six `soft` cycle-example lines.
 NDIV=6
 test -f "$G/divergences.tsv" || { echo "FAIL: $G/divergences.tsv is absent — divergences must be named, never absorbed"; exit 1; }
 ndiv=$(grep -c . "$G/divergences.tsv"); rc=$?
@@ -1291,6 +1731,10 @@ grep -qF 'dead=7/102 (6.9%)' "$G/p9-run.txt" || { echo "FAIL: the golden's dead 
 grep -qxF 'validate errors=0' "$G/p9-validate.txt" || { echo "FAIL: the validate golden does not end in validate errors=0 (AC-104)"; exit 1; }
 # D21-47 V3: THE KILL LINES APPLY TO THE REGISTERED PACK SET — the eight pre-registered packs at pack-default rigor —
 # with the pack count reported (SM-027). A fired line exits 1 naming its AC. `kill_fires N D P` is N/D > P%.
+# (dated 2026-09-25, refuting round 4) pack-default is AC-101's rigor only. The golden's eight-pack dead line pools all
+# four rigor modes (lattice.py's selected_ever), which is AC-102's THEN: reachable from no enabled pack at ANY rigor.
+# The pack-default-only reading is 17/102 (lattice.py --only-mode pack-default). The kill logic is unchanged; the
+# labels below say which reading each figure is.
 kill_fires() { [ $(( $1 * 100 )) -gt $(( $2 * $3 )) ]; }
 kill_fires 7777 155520 5 || { echo "FAIL: control — 7777/155520 (5.0006%) must fire AC-101's >5% line"; exit 1; }
 if kill_fires 7776 155520 5; then echo "FAIL: control — exactly 5% must not fire a >5% line"; exit 1; fi
@@ -1302,10 +1746,11 @@ d_line=$(grep -E '\| under the eight pre-registered packs only: dead=[0-9]+/[0-9
 d_num=$(printf '%s\n' "$d_line" | sed -E 's/^.* dead=([0-9]+)\/([0-9]+) .*$/\1/'); d_den=$(printf '%s\n' "$d_line" | sed -E 's/^.* dead=([0-9]+)\/([0-9]+) .*$/\2/')
 [ "$u_den" -gt 0 ] && [ "$d_den" -eq 102 ] || { echo "FAIL: the registered-set readings did not parse (unsat=$u_num/$u_den dead=$d_num/$d_den)"; exit 1; }
 if kill_fires "$u_num" "$u_den" 5; then echo "FAIL: AC-101's kill line FIRES over the registered pack set: unsat=$u_num/$u_den > 5% (8 packs, pack-default)"; exit 1; fi
-if kill_fires "$d_num" "$d_den" 20; then echo "FAIL: AC-102's kill line FIRES over the registered pack set: dead=$d_num/$d_den > 20% (8 packs, pack-default)"; exit 1; fi
-echo "CP8B (7) AC-101/AC-102 over the REGISTERED set (D21-47 V3): packs=8 rigor=pack-default unsat=$u_num/$u_den dead=$d_num/$d_den — inside both kill lines"
+if kill_fires "$d_num" "$d_den" 20; then echo "FAIL: AC-102's kill line FIRES over the registered pack set: dead=$d_num/$d_den > 20% (8 packs, all modes, as lattice.py counts it)"; exit 1; fi
+echo "CP8B (7) AC-101/AC-102 over the REGISTERED set (D21-47 V3): packs=8 rigor=pack-default unsat=$u_num/$u_den dead=$d_num/$d_den (all modes, as lattice.py counts it) — inside both kill lines"
 
-# ---- (8) CI RUNS THE LATTICE BY NAME, --exact, and asserts its ok line (review N7). CODE lines of ci.yml, not YAML
+# ---- (8) CI RUNS THE LATTICE (and, dated 2026-09-25 refuting round 5, THE VALIDATE) BY NAME, --exact, and asserts
+# ---- each ok line (review N7). CODE lines of ci.yml, not YAML
 # ---- comments. The checkouts fetch whole history, or P9_PIN is absent from CI's clone (D21-47 V2).
 ci=$(grep -nF 'cargo test -p rk-kernel --test it -- lattice::p6_lattice_over_the_shipped_pack --exact' .github/workflows/ci.yml | grep -vE '^[0-9]+:[[:space:]]*#' | grep .)
 test -n "$ci" || { echo "FAIL: ci.yml runs no module-qualified --exact lattice step — a workspace-wide filter would not say the lattice ran"; exit 1; }
@@ -1313,6 +1758,14 @@ ok=$(grep -nF "grep -qxF 'test lattice::p6_lattice_over_the_shipped_pack ... ok'
 test -n "$ok" || { echo "FAIL: ci.yml does not assert the lattice step's ... ok line — a filter matching nothing exits 0"; exit 1; }
 syn=$(printf '%s\n' '40:          # cargo test -p rk-kernel --test it -- lattice::p6_lattice_over_the_shipped_pack --exact' | grep -vE '^[0-9]+:[[:space:]]*#' | grep .)
 test -z "$syn" || { echo "FAIL: the YAML-comment exclusion let a comment through — this guard is satisfiable by prose"; exit 1; }
+# (dated 2026-09-25, refuting round 5) Round 4's validate half, which the step's AC-104 label rests on: its --exact run
+# and its own ... ok assertion, on CODE lines, with the same YAML-comment exclusion and its own control.
+civ=$(grep -nF 'cargo test -p rk-kernel --test it -- lattice::p6_validate_over_the_shipped_pack --exact' .github/workflows/ci.yml | grep -vE '^[0-9]+:[[:space:]]*#' | grep .)
+test -n "$civ" || { echo "FAIL: ci.yml runs no module-qualified --exact validate step — the step's AC-104 label is unearned"; exit 1; }
+okv=$(grep -nF "grep -qxF 'test lattice::p6_validate_over_the_shipped_pack ... ok'" .github/workflows/ci.yml | grep -vE '^[0-9]+:[[:space:]]*#' | grep .)
+test -n "$okv" || { echo "FAIL: ci.yml does not assert the validate run's ... ok line — a filter matching nothing exits 0"; exit 1; }
+syn=$(printf '%s\n' "41:          # grep -qxF 'test lattice::p6_validate_over_the_shipped_pack ... ok'" | grep -vE '^[0-9]+:[[:space:]]*#' | grep .)
+test -z "$syn" || { echo "FAIL: the YAML-comment exclusion let a validate comment through — this guard is satisfiable by prose"; exit 1; }
 fd=$(grep -nE '^[[:space:]]*fetch-depth:[[:space:]]*0[[:space:]]*$' .github/workflows/ci.yml); rc=$?
 [ "$rc" -le 1 ] || { echo "FAIL: the fetch-depth sweep could not run (rc=$rc)"; exit 1; }
 [ "$(printf '%s\n' "$fd" | grep -c .)" -ge 2 ] || { echo "FAIL: ci.yml's gates and no-egress checkouts do not both fetch whole history — P9_PIN is absent from a depth-1 clone"; exit 1; }
@@ -1359,6 +1812,24 @@ printf '%s\n' "$nl" | nl_ok || { echo "FAIL: the record's labelled n ($nl) is ne
 syn=$(printf '%s\n' '**S-SEV labelled:** n = 57 findings over 33 dispatches; rule: stage-1 decided' | nl_of)
 if printf '%s\n' "$syn" | nl_ok; then echo "FAIL: control — a mismatched labelled n passes the D21-54 guard; it is vacuous"; exit 1; fi
 [ "$pre_at" -lt "$lab_at" ] || { echo "FAIL: the labels were committed before the pre-registration ($lab_at <= $pre_at) — a method written after the data is not a pre-registration"; exit 1; }
+# D21-54 (dated edit 2026-09-25, s8b refuting round 3): s8b stays open until the re-label, and kappa is A1's ruled half.
+# The record names the re-label's corpus commit on one line; that commit ADDS METHOD-SEV §8's results/sev-f37-relabel.md,
+# and it is at least 48 h (172800 s) after the stage-1 labels commit. Read at the commit the record names, never HEAD.
+rl_of() { sed -nE 's/^\*\*S-SEV re-label commit:\*\* `([0-9a-f]{40})`.*$/\1/p'; }
+gap_ok() { [ $(( $2 - $1 )) -ge 172800 ]; }   # gap_ok <labels commit time> <re-label commit time>
+rl_sha=$(rl_of < "$recs")
+[ "$(printf '%s\n' "$rl_sha" | grep -c .)" -eq 1 ] || { echo "FAIL: $recs does not name exactly one S-SEV re-label commit (D21-54) — s8b stays open until the re-label"; exit 1; }
+git -C "$CREPO" cat-file -e "$rl_sha:results/sev-f37-relabel.md" || { echo "FAIL: the re-label is not at the corpus commit the record names ($rl_sha)"; exit 1; }
+if git -C "$CREPO" cat-file -e "$rl_sha^:results/sev-f37-relabel.md" 2>/dev/null; then echo "FAIL: the re-label already existed before $rl_sha — the record names a later commit, not the one that added it"; exit 1; fi
+rl_at=$(git -C "$CREPO" show -s --format=%ct "$rl_sha"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$rl_at" ] || { echo "FAIL: the re-label commit's time could not be read (rc=$rc)"; exit 1; }
+gap_ok "$lab_at" "$rl_at" || { echo "FAIL: the re-label was committed $((rl_at - lab_at)) s after the labels, under 48 h (172800 s) — METHOD-SEV §5's timing (D21-54)"; exit 1; }
+syn=$(printf '%s\n' '# ADR-0000' '**S-SEV labels commit:** `0123456789abcdef0123456789abcdef01234567`' | rl_of)
+if [ "$(printf '%s\n' "$syn" | grep -c .)" -eq 1 ]; then echo "FAIL: control — a record with no re-label line passes the re-label line guard; it is vacuous"; exit 1; fi
+syn=$(printf '%s\n' '**S-SEV re-label commit:** `0123456789abcdef0123456789abcdef01234567`' | rl_of)
+[ "$(printf '%s\n' "$syn" | grep -c .)" -eq 1 ] || { echo "FAIL: control — a well-formed re-label line is not read; the guard can never pass"; exit 1; }
+if gap_ok 1000000 1172799; then echo "FAIL: control — a re-label 172799 s after the labels passes the 48 h guard; it is vacuous"; exit 1; fi
+gap_ok 1000000 1172800 || { echo "FAIL: control — a re-label exactly 48 h after the labels fails the guard; it can never pass at the bound"; exit 1; }
 # Every METHOD-SEV commit AFTER the labels is append-only and adds a dated amendment: a post-data rewrite of a
 # pre-registration is not one.
 git log --format='%H %ct' -- spikes/METHOD-SEV.md > target/cp8b/method-sev-log.txt || { echo "FAIL: METHOD-SEV's history could not be read"; exit 1; }
@@ -1422,7 +1893,8 @@ test -n "$syn" || { echo "FAIL: the calibration pattern does not match a claim �
 # ---- a dated edit, before the first run. At least 44 result lines, as at 992d257.
 # ---- Re-derived 2026-09-25 at stage open (dated edit): Checkpoint 8a RECORDED 755 passed / 0 failed / 9 ignored over
 # ---- 44 results at bf12a1c, so 755 + 25 = 780. The chain's 774 was computed from 8a's floor of 749, not its reading.
-FLOOR=780
+# ---- D21-57 (dated edit 2026-09-25): four AC-303 tests join, so 780 + 4 = 784.
+FLOOR=784
 out=$(nodispatch cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace rc=$rc"; printf '%s\n' "$out" | grep -E '^test .* FAILED|test result: FAILED' | head -20; exit 1; }
 passed=$(printf '%s\n' "$out" | awk '/^test result: / {for (i = 2; i <= NF; i++) if ($i == "passed;") s += $(i - 1)} END {print s + 0}')
@@ -1464,9 +1936,122 @@ echo "CP8B-END-OF-BLOCK reached"
   `target/debug/rk-fixture-child-claude` in `[adapters] harness_binary` first (§8b.9). Section (0) launches 8a with
   `RK_CP_NESTED=1`, so 8a skips its own whole re-runs (7i, 5, 7a, 7b, 7f), and it launches it under (W)'s wrapper.
 - The (C) rows' `discriminating_test` binding is refused by name until `s8h` carries the field (§8b.5). No section of
-  this block evaluates it, so it cannot turn this block red or green.
+  this block evaluates it, so it cannot turn this block red or green. *(dated 2026-09-25, refuting round 3: it is
+  unresolved until `s8h` types the field and `s8d`'s resolver binds it; before `s8d` the tool arm refuses `confirm`
+  under ADR-0148, not a resolver under ADR-0136.)* *(dated 2026-09-25, refuting round 4)* Before `s8d` the walk never reaches `confirm`: it
+  stops at `differential-debugging`'s `stuck` (`when` refused, ADR-0136) and `instrumented-trace-analysis`'s
+  `collect` (unmapped `trace_collect`, ADR-0135); the tool arm is what would refuse `confirm` were it reached (§8b.5). *(dated 2026-09-25, refuting round 5)* Each reaches that step only if its first agent dispatch (`compare`,
+  `instrument`) commits; otherwise the walk ends there. `confirm` is unreached on every path.
 - **A further parity test** (`lattice::p6_lattice_parity_over_the_shipped_pack`, review N3's "27th", if §8b.2 step
   2's Python run over `.redkiln/` completes) joins `K_TESTS`. The `30` in section (5) and the floor in section (12) then move by one, by a
-  dated edit in the same commit (review N3). The predicted branch is NOT MEASURABLE, which adds nothing.
+  dated edit in the same commit (review N3). *(dated 2026-09-25, refuting round 1: section (5)'s count is now `34`,
+  after D21-57's four AC-303 tests joined `K_TESTS`; the floor is 784.)* The predicted branch is NOT MEASURABLE, which adds nothing.
+
+### 8b.10 Open items this stage records
+
+*(dated 2026-09-25, refuting round 3.)* Items the ledger or this stage raised and "carried" without naming a receiver.
+Each stays open here until a stage or ruling takes it; none is decided by `s8b`, and none blocks this stage's close.
+- **`findings == null`** is refused by neither refusal (a one-finding witness makes it `null`, not `false`). Source:
+  D21-55, *"carried to its own item and is not decided here"*.
+- **The null arm of `.redkiln/facets.toml`'s seven tri-valued booleans** is untested under `Axes::shipped()`: no
+  context binds a boolean to null, and `lattice.py`'s `unknown` sweep ranges over the ordinals only. Source: D21-56,
+  *"Raised, not decided"*.
+- **Whether a severity-only row without re-execution conforms to d2 bullet 1** (`findings.none(severity in
+  ['blocking'])` in code-review, checklist-review and, after §8b.5, `threat-model`). Source: D21-57, *"Raised, not
+  ruled (open)"*.
+- **The eight shipped `x != null and x` predicates**, which can never be true under the product evaluator (ADR-0103
+  reading 1): `flag-progressive-rollout`, `data-migration-plan`, `migration-dry-run`, `migration-expand-execute`,
+  `schema-migration-script`, `ux-flow-design`, `feature-flag-kill`, and `threat-model`'s middle disjunct. Source: this
+  file's header, *"Executed 2026-09-25, a finding raised and not fixed here"*.
+- *(dated 2026-09-25, refuting round 4)* **AC-527's LOAD exemplar is in the same class.** Fixture 3,
+  `terminal_condition_names_a_verify_result`, carries `verify.status == 'passing' and verify.green_at != null`, and
+  `verify.green_at != null` is null for any present `green_at` (`CmpOp::Ne` negates `equality`, which returns null
+  when either side is null), so the predicate can never be true. The amended AC-527 cites it as the lawful form (a
+  `GreenAt(sha)` verify result). Its LOAD proves only that the rule does not refuse it. Source: refuting round 4.
+- *(dated 2026-09-25, refuting round 5)* **Five branches of the ported unsat report are ported by reading only and are
+  unobserved by parity.** Every one of the 34 unsat lines in `p9-run.txt` carries `forbidden-stage=    0
+  wrong-stage-producer=    0` and `other_stage=[]`, none carries a keyed `{inst}` suffix, and none a `:transitive`
+  entry; no lattice fixture has a producer at a forbidden stage, a keyed kind or a transitive failure. So
+  `lattice.rs`'s `forbidden_stage` test (rendered `forbidden-stage=`), the `unsat_other_stage` counter (rendered
+  `wrong-stage-producer=`), the example's `other_stage` list, the
+  `format!("{kind}{suffix}")` keyed render and the `format!("{}:transitive@{s}", u.kind)` entry are pinned by no
+  golden byte and no fixture [measured 2026-09-25 over `p9-run.txt`: 34 of 34 unsat lines at zero and `[]`, none
+  with a `{` in its kind, none with `transitive`], and a mutant on any of them would survive the 12 lattice tests
+  [inferred, not run]. No fixture is added here. Source: refuting round 5.
+- *(dated 2026-09-25, refuting round 5)* **D21-55's reading where "errors" meets "false".** D21-55 says both "a
+  conjunct that errors is not refused" and "refused if some such conjunct is `false` in some cell". The code reads
+  **a `false` cell outranks an error** (in another cell or another conjunct) and the tests pin it (§8b.4, §8b.8
+  M-W1a/M-W1b). It is the code's reading of the ruling, recorded here so that the operator can overrule it; it is not
+  a new ruling. Source: refuting round 5.
 
 ---
+
+### 8b.11 The refuting rounds, and the minors they leave named *(dated 2026-09-25)*
+
+Seven adversarial refuting rounds ran over this stage's work, as a workflow. Each round had five finder
+dimensions (lattice, rules, tests, catalog, records and the checkpoint), and every finding went to two refuters.
+The operator's stopping rule was *until a round finds no blocker or major, with the remaining minors recorded as
+named findings*. Majors by round: 3, 2, 2, 2, 2, 1, **0**. Round 7 found no blocker or major, so the rounds stopped
+there. Every major was fixed and shown red first where it was a guard; the fixes are listed in the "Refuting round
+1…6" header blocks. The minors below were **recorded, not fixed**. Each is one line, with the reason it was recorded
+rather than fixed. None of them moves a checkpoint section, a ruling or a floor.
+
+**Round 1** (recorded open by its fix round):
+
+- (lattice) Soft-cycle assertion checks membership over `Report::selected_in` (union over all modes/contexts), not one run's selected graph. Reason: needs a new `Report` field (per-pack first-example run's selected set) and a re-traced parity test; a design change, not a wording fix.
+- (lattice) `AuthBinding::SurfacesMember` stays a public, never-constructed variant. Reason: its doc now cites D21-56 and names it declined and unreachable from `Axes::shipped()`; removing it moves the `bool_value` arm and M30's surroundings, which is code work past this round.
+- (lattice/records) `p9-covering-array.txt` has no recorded provenance and section (7) does not re-derive it from `covering_array(len(BOOLS))` at P9_PIN (two findings). Reason: needs a new Python re-derivation in Checkpoint 8b section (7) next to the protected goldens; M6 is still killed by parity, and the rows match today.
+- (lattice) `lattice-shipped:` line labels `dead`/`ties`/`hard_cycles` as pack-default though they count all four modes; section (6) echoes the same label. Reason: fixing it changes the printed line and section (6)'s regex together; a checkpoint-shape change to make with the test, not a doc edit.
+- (lattice) `reason()` renders `min_rigor=optional` where Python renders `min_rigor=None` for an absent key. Reason: unobservable today (all 102 activities declare `min_rigor`); needs an `Option<String>` carried from raw TOML.
+- (lattice) `p6_validate_over_the_shipped_pack` fails only on totality errors; D2 `requires:`, `artifacts.toml:`, duplicate-rank and primary-kind errors are printed but not asserted. Reason: the shipped run prints `validate errors=0` today; tightening to `errors.is_empty()` is a test-behaviour change to review with its mutant.
+- (rules) Refusal 2 depends on operand order inside a quantifier body (`or`/`and` short-circuit before an `UnknownField`), so equivalent spellings get different verdicts. Reason: the fix is either a known-limit fixture pair or commutative evaluation, and the latter needs an operator ruling (D21-55 follow-on).
+- (rules) Bound-variable quantifier form: `names_forbidden_form`'s `Some(v)` arm is unpinned, and refusal 2 cannot resolve `f.evidence` on a bound variable. Reason: needs a new must-match case in `d2_named_form_refuses_any_member_list` plus a module-doc limit; test work past this round.
+- (tests) Checkpoint (2b)'s sweep misses the `include_str!("../../../../spikes/p9…")` depth and a split `.join("spikes").join("p9")`; its control covers one spelling. Reason: the four files are clean today; widening the pattern needs new synthetic controls in the checkpoint block.
+- (catalog) Checkpoint (3) matches `id@v` anywhere in `.redkiln/CHANGELOG.md`, not a `| id@v |` row. Reason: every id@v appears only in its row today; anchoring needs a new synthetic control in the block.
+- (catalog) Alternative ledger cell `D21-41 (h); D21-42 11b; D21-47 V5` for root-cause@5 (records finding). Reason: the operator's instruction fixed the cell as `D21-41 (h); D21-47 V5`; 11b's "derived here" is left to §8b.5's prose.
+- (records) §8b.6's re-label "38 findings (20%, …)" is stale under D21-54 (38 of stage 1's 56 is about 68%). Reason: §8b.6 is the S-SEV section, which waits on the operator's labels and SSEV_ADR; the percentage is settled with that record.
+- (records) `ac018`'s `registry=` field prints a separate constant, not the path `include_str!` read; section (6) treats it as the path read. Reason: needs a shared macro/constant for both, or a section (6) wording change; a small code refactor past this round.
+- (records) `.github/workflows/ci.yml`'s lattice step (and the rk-ports step) `out=$(…); rc=$?` aborts under GitHub's `bash -eo pipefail`, so the tail and named FAIL line never print. Reason: the step still goes red; the fix (`&& rc=0 || rc=$?`) is a CI change best made with s8j's push, which is when CI first runs this.
+
+**Round 2** (recorded open by its fix round):
+
+- (rules) `confirm_step_monotonicity_rule` does not refuse a repeated source name; only its doc was corrected (it now says distinct names are assumed and not checked). Reason: a code refusal needs its own test, which moves the named-selection/floor records (34 / 784); every caller today, all in `tests/it/review.rs`, passes distinct names.
+- (records) Checkpoint 8b section (10)'s struck-phrase loop still checks only the two original phrases, not the newly struck "a quality block terminates on a positive evidence record" (the finding's optional add). Reason: it changes the checkpoint's guard set and needs its ca8f387 control re-read; the register text is fixed and section (10) passes by hand over it.
+- (records) AC-527's header still carries "F29 ... so the empty set is not evidence" in its evidence line. Reason: it is a cited measurement in the evidence field, not the THEN; the named form it justifies is still forbidden. Recast only if the operator wants the header reconciled with d2's rule too.
+- (records) SM-027's installed-pair dead list (56 ids) is still not printed from inside the test binary, and SM-027's Kill line text ("above 20% at the declared pack set") is not amended; the SM register got a dated pointer note that states V3's reading and discloses that the list is unreported. Reason: printing the list changes `p6_lattice_over_the_shipped_pack`'s output next to section (6)'s one-line reading; amending the Kill line is the SM register owner's amendment (ADR-0092 d2 item 3), not a pointer.
+- (tests) `tests/it/evaluator.rs` still says "AC-527's whole premise leans on `none`" at the non-empty discrimination comment. Reason: still true of the amended rule (both refusals turn on `none`/`any` behaviour over non-empty lists); only the empty-set assertion's message was wrong, and it is fixed.
+
+**Round 3** (recorded open by its fix round):
+
+
+**Round 4** (recorded open by its fix round):
+
+
+**Round 5** (recorded open by its fix round):
+
+
+**Round 6** (recorded open by its fix round):
+
+
+**Round 7** (the dry round: nineteen confirmed minors, none fixed, by the stopping rule):
+
+- (lattice) Several ported report and validate branches are empty or zero in both goldens and reached by no fixture, so no test can catch a broken port of them, and §8b.10 does not list them
+- (lattice) The `toolchains=` and `surfaces=` fields the shipped test and Checkpoint section (6) read as proof of what was "walked" are copies of the Axes argument, not counts from the enumeration
+- (lattice) The lattice binds `rigor` through `rigor::with_rigor`, which takes its domain from the loaded registry and silently falls back to index 0 (`forbidden`); lattice.py uses its fixed RIGOR list
+- (rules) Round-5 scope fix is partial: the FalsifiedByBlockingWitness variant doc, its Display message and the module's WHAT-IS-MEASURED row still describe refusal 2 without D21-55's 'reads findings' scope and without round 6's skip pin
+- (rules) lib.rs's round-3/5 rewrite states without qualification that 'A conjunct that errors is indeterminate, never refused', which the M-W1a reading (a false cell outranks an erroring cell) contradicts
+- (rules) quality_block.rs module doc still says the module 'implements the amended THEN' and then lists the two refusals, which the register placed in AC-527's GIVEN (round 2's correction reached §8b.4 only)
+- (rules) Fixture 3's terminal-condition comment still claims 'A reviewer doing its job can terminate it', which round 4's own note in the same file says is impossible
+- (rules) confirm_step_monotonicity_rule's `# Errors` names only two of RigorError::Source's four causes, and the Source Display calls a catalog-load failure an 'input graph' failure
+- (rules) §8b.4 still heads its fixture table 'Fixtures, one per branch' after round 6 withdrew that claim in the register
+- (tests) Partial fix: tests/it/main.rs's AC-527 summary still drops D21-55's 'that reads findings' scope, which round 6 now pins with M-W3
+- (tests) Fixture 3's predicate reads `verify`, but its check binds only `report`; the header's 'the step the predicate names really is a verify result' is false
+- (tests) conformance.rs still says every SHIPPED_CATALOG/SHIPPED_FACETS constant in tests/it/ points at spikes/p9/; s8b re-pointed six of the eight
+- (tests) §8b.4 says the d2 guard excludes 'that one file' and that 'no second file joins it', but section (4)'s EXCL and §8b.7 also exempt tests/it/evaluator.rs
+- (tests) Fixture 1's header still says the shipped catalog writes the forbidden form, and calls itself 'red fixture 1 of 3'
+- (catalog) Round 5's qualification of the (C) rows is itself too broad: a dispatch that does not commit does not always end the walk
+- (records) Round 6's s8j A5.1 fix is partial and misattributes the ac018 guard: the next sentence still says 'three walked-count lines', and the ac018 reading was in section (6) before A5.1 was written
+- (records) §8b.4's round-6 note says every test other than quality_block.rs reads the forbidden form from a fixture file; evaluator.rs spells it as literals, and §8b.7 exempts it
+- (records) D21-57's AC-303 register amendment is read by no Checkpoint 8b section, including section (11)'s widened calibration sweep
+- (records) Section (9)'s 'continued to 188' arm reads none of the continuation labels; only the stage-1 file is proven to exist and to postdate the pre-registration
+

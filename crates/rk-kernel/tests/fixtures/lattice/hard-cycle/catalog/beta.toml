@@ -1,0 +1,8 @@
+[activity]
+id          = "beta"
+version     = 1
+stage       = "implement"
+provides    = ["KindY"]
+method_rank = 10
+cost_class  = "S"
+requires    = ["KindX"]

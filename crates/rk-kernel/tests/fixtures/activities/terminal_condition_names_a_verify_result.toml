@@ -17,6 +17,18 @@
 # Its truth over an empty findings set is **not** `true`: `verify.status` is unknown at lint time,
 # so the predicate is `null`, and `null` is not `true`. That is the whole of AC-527's THEN, and it
 # is why this file loads while the two above it do not.
+#
+# (dated 2026-09-25, s8b refuting round 2; D21-41 (h), D21-55) The THEN quoted above is the
+# unamended one: its "never on the absence of findings" is struck, and the amended THEN states
+# ADR-0080 d2's rule. The empty-set reasoning is retired too. This file loads under the amended rule
+# because its predicate reads no `findings` at all (`reads_findings == 0`, which the test asserts),
+# so neither refusal has a subject in it.
+#
+# (dated 2026-09-25, s8b refuting round 4) This exemplar can never be TRUE. Under the product
+# evaluator (ADR-0103 reading 1) `x != null` is null for any present `x`, so the `verify.green_at`
+# conjunct below is null whatever `green_at` holds and the conjunction is never true: the same
+# never-true class as the eight shipped `x != null and x` rows (`s8b` §8b.10). Its LOAD proves only
+# that the rule does not refuse it, not that it is a terminal condition a block can reach.
 
 [activity]
 id           = "ac527-verify-result"

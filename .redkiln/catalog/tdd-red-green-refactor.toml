@@ -1,6 +1,6 @@
 [activity]
 id           = "tdd-red-green-refactor"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "implement"
 provides     = ["Changeset", "ImplReport"]
 requires     = ["Spec"]
@@ -30,7 +30,7 @@ retry   = { max = 1 }
 id      = "red-verify"
 kind    = "tool"
 run     = "toolchain:test"
-inputs  = { selection = "${red.outputs}" }   # list of ImplReport; tool flattens tests_added (schema gap: no flatten)
+inputs  = { selection = "${red.outputs[*].tests_added}" }
 outputs = "value:TestReport"
 timeout_secs = "${toolchain.test_timeout}"
 retry   = { max = 1 }

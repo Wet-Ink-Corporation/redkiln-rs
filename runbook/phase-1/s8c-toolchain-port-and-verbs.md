@@ -152,6 +152,10 @@ the review's). **New tests: 63 → 69.**
 - *D21-48 (2026-09-24):* **The floor.** Re-derived at stage open from Checkpoint 8b's recorded count:
   774 + 78 = **852** (§8c.11, (13)). Every later stage's floor moves by nine with it. That is reported to the later
   files under §8c.12's sibling notes, not edited here.
+- *(dated 2026-09-25, `s8b` refuting round 4)* **The 774 is stale.** It took `s8b`'s count as 25 on 740 + `s8a`'s 9.
+  `s8a` closed at a recorded 755, and D21-57 added four tests to `s8b` (29 new, floor **784**). This chain, here and in
+  (13)'s comment, takes Checkpoint 8b's recorded close figure, not 774; the 852 is not recomputed here and is
+  re-derived at stage open, as the line above says.
 
 ---
 

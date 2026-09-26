@@ -25,6 +25,19 @@
 #
 # The activity around it is authored rather than copied, on the other three fixtures' warrant:
 # §7b.12:972-976 forbids editing `spikes/p9/` to make a red case.
+#
+# (dated 2026-09-25, s8b refuting round 2; D21-55) Two sentences above are stale. The report has no
+# `errored` field: its buckets are `refused`, `decided` and `indeterminate`, and a conjunct that
+# errors over the witness is counted `indeterminate`. And the "true over an empty findings set"
+# reasoning is retired with the amended AC-527. This fixture is refused as
+# `TerminalConditionViolation::PredicateDoesNotParse`: the rule cannot match or evaluate what does
+# not parse, so it fails closed.
+#
+# (dated 2026-09-25, s8b refuting round 4) Two more are stale. "The other three fixtures' warrant"
+# reads "the other seven fixtures' warrant": AC-527 now has eight fixtures (fixture 1's header counts
+# itself "fixture 1 of eight"). And the line cite into `catalog.rs` above is read by quotation: `Step`
+# declares `pub expr: Option<String>,` under the doc "`expr = "…"` on a `check` step, verbatim",
+# and `catalog.rs` still names no `crate::predicate` [measured 2026-09-25: 0 hits].
 
 [activity]
 id           = "ac527-does-not-parse"

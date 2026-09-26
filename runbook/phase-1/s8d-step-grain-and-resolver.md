@@ -148,6 +148,21 @@ each decision is cited by quotation where it lands):
   count is 774 + 78 = **852**, and this stage's floor is 852 + 62 = **914** ((11)). The 843 + 62 = 905 above is
   superseded. Still re-derived at stage open from Checkpoint 8c's recorded count.
 
+*D21-57 (2026-09-25)* *(dated 2026-09-25, `s8b` refuting round 1: listed here, since the line it indexes sits in the
+§8d.3 body)*:
+- *D21-57 (2026-09-25):* AC-303's confirm rule (`rigor::confirm_step_monotonicity_rule`) moves onto R2's
+  parsed-`inputs` carrier when R2 lands, and §8d.3's widened licence lint must keep the `${adversary.outputs?}`
+  back-edges that the localisation and spec-form chains depend on. How this stage verifies it: `forward_ref_lint`'s
+  census must keep the `root-cause`, `differential-debugging`, `instrumented-trace-analysis` and `user-story-ac`
+  back-edges licensed, and `review::ac303_*` (Checkpoint 8b section (5), which 8d's (13) re-runs) must stay green. No
+  test, mutant or count of this stage moves for it yet; the stage that executes s8d re-derives that.
+  *(dated 2026-09-25, `s8b` refuting round 4)* "No count moves" is this stage's own tests and mutants only. D21-57
+  moved `s8b`'s floor by four: `s8b`'s contribution to the chain is now 29 new tests (25 + D21-57's 4), on top of
+  `s8a`'s recorded 755, so `s8b`'s floor is **784**. The chain written above (774 + 78 = 852 for Checkpoint 8c, then
+  852 + 62 = 914 here) starts from 774 and is stale by that difference. It is not recomputed here: as the D21-48 lines
+  say, both floors are re-derived at stage open from the recorded counts, and that chain takes Checkpoint 8b's
+  recorded close figure, not 774.
+
 ---
 
 **Why this step exists.** The step executor `s7g` built walks the five closed step kinds and completes nothing:
@@ -325,6 +340,8 @@ prints one `output_digest` per committed **step activation** (ADR-0128 decision 
 criterion (3) operational arm diffs. A first divergence across the kill is **Halt 4**, not a retry.
 
 ### 8d.3 The complete reference resolver (D21-11)
+
+*D21-57 (2026-09-25):* AC-303's confirm rule (`rigor::confirm_step_monotonicity_rule`, which reads raw `inputs` through `toml_subset` because `catalog::Step` is not widened) moves onto R2's parsed-`inputs` carrier when R2 lands, and §8d.3's widened licence lint must keep the `${adversary.outputs?}` back-edges that the localisation and spec-form chains depend on.
 
 **One mechanism with one record, or absent** (ADR-0136's forbids: *"The resolver is one mechanism with one record,
 or it is absent."*). R2's resolver supplies, for every step it reaches:

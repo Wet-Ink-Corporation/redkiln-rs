@@ -29,6 +29,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        # s8b (D21-47 V2): the frozen p9 tests read `spikes/p9` at P9_PIN from the object store, and a depth-1
+        # clone holds no such commit. Whole history, so the pin is present; the helper refuses by name otherwise.
+        with:
+          fetch-depth: 0
 
       # NO toolchain action, deliberately. `rust-toolchain.toml` pins an exact channel and rustup
       # honours it on the first cargo invocation, installing the `components` it names. An action
@@ -78,6 +82,27 @@ jobs:
           test "$rc" -eq 0 || { echo "FAIL: rk-ports port_conformance_fake_rows exited $rc under --features conformance"; exit 1; }
           printf '%s\n' "$out" | grep -qE '^test .*\bport_conformance_fake_rows\b.* \.\.\. ok$' \
             || { echo "FAIL: no test named port_conformance_fake_rows ran and passed -- the filter matched nothing, or the module was not compiled"; exit 1; }
+
+      # s8b (D21-42 13b): the P6 lattice, ported to Rust as `rk_kernel::lattice`, runs over the SHIPPED pack by name.
+      # A filter that matches nothing exits 0 (Halt 8 shape (g)), so the test's own `... ok` line is asserted, not the
+      # exit code alone. The workspace-wide run above also runs it; this step is what says that it ran.
+      # (dated 2026-09-25, s8b refuting round 4) Named for what it asserts: AC-103's zero ties and hard cycles, and
+      # AC-104's family totality through lattice::p6_validate_over_the_shipped_pack, a second asserted --exact run. The
+      # installed pair's AC-101/AC-102 figures are REPORTED and not thresholded (D21-47 V3). No CI step thresholds
+      # AC-101 or AC-102: the registered-set kill lines are read by Checkpoint 8b section (7) over the Python golden.
+      - name: P6 lattice and validate over the shipped pack (AC-103, AC-104; AC-101/AC-102 reported, V3)
+        shell: bash
+        run: |
+          out=$(cargo test -p rk-kernel --test it -- lattice::p6_lattice_over_the_shipped_pack --exact 2>&1); rc=$?
+          printf '%s\n' "$out" | tail -5
+          test "$rc" -eq 0 || { echo "FAIL: the shipped-pack lattice exited $rc"; exit 1; }
+          printf '%s\n' "$out" | grep -qxF 'test lattice::p6_lattice_over_the_shipped_pack ... ok' \
+            || { echo "FAIL: lattice::p6_lattice_over_the_shipped_pack did not run and pass -- the filter matched nothing"; exit 1; }
+          out=$(cargo test -p rk-kernel --test it -- lattice::p6_validate_over_the_shipped_pack --exact 2>&1); rc=$?
+          printf '%s\n' "$out" | tail -5
+          test "$rc" -eq 0 || { echo "FAIL: the shipped-pack validate exited $rc"; exit 1; }
+          printf '%s\n' "$out" | grep -qxF 'test lattice::p6_validate_over_the_shipped_pack ... ok' \
+            || { echo "FAIL: lattice::p6_validate_over_the_shipped_pack did not run and pass -- the filter matched nothing"; exit 1; }
 
       - name: install audit tooling
         run: |
@@ -155,6 +180,10 @@ jobs:
       RUSTUP_VOLUME: rk-egress-rustup
     steps:
       - uses: actions/checkout@v4
+        # s8b (D21-47 V2): the frozen p9 tests read `spikes/p9` at P9_PIN from the object store, and a depth-1
+        # clone holds no such commit. Whole history, so the pin is present; the helper refuses by name otherwise.
+        with:
+          fetch-depth: 0
 
       - name: the image tag matches rust-toolchain.toml's pin
         run: |

@@ -3,7 +3,7 @@
 # deploy pattern family: rolling-deploy(10) < blue-green-deploy(20) < canary-release(30) < flag-progressive-rollout(40)
 [activity]
 id           = "flag-progressive-rollout"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "release"
 provides     = ["ReleaseRecord"]
 requires     = ["BuildArtifact", "ReviewVerdict", "FlagRecord", "RolloutPlan"]
@@ -38,7 +38,6 @@ inputs  = { step = "${item}", flag = "artifact:FlagRecord.flag" }
 outputs = "value:RolloutLog"
 timeout_secs = 3600
 retry   = { max = 1 }
-memo    = false
 
 [[step]]
 id      = "within"

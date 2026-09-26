@@ -641,6 +641,15 @@ and its stand-in lacks the field.
 - The stand-in's `[value.RootCause]` row gains it, with a dated comment. The edit to `spikes/p9/schemas.toml` is safe
   under D21-47 V2, because every test that pins a historical p9 measurement reads the p9 tree at its pinned commit.
 - Until the field lands, the resolver refuses those bindings by name (ADR-0136). That is `s8b`'s stated interim.
+  *(dated 2026-09-25, s8b refuting round 3: `s8b` §8b.5 corrects that interim. No resolver exists before `s8d`, and
+  ADR-0136 governs only a `when` guard's `${…}`; before `s8d` the runtime's tool arm refuses `confirm` under ADR-0148,
+  and from `s8d` until this field lands `s8d`'s resolver has no field to bind.)* *(dated 2026-09-25, s8b refuting
+  round 4: before `s8d` the walk never reaches `confirm`. Read from `runtime/step.rs`, not run, it stops at
+  `differential-debugging`'s `stuck` (its `when` reads an unresolved `${…}`, ADR-0136) and at
+  `instrumented-trace-analysis`'s `collect` (unmapped verb `trace_collect`, ADR-0135). The tool arm is what would
+  refuse `confirm` under ADR-0148 were it reached; `s8b` §8b.5 carries the same note.)* *(dated 2026-09-25, s8b
+  refuting round 5: each walk reaches that step only if its first agent dispatch, `compare` or `instrument`, commits;
+  otherwise it ends there. `confirm` is unreached on every path.)*
 
 **The binder reads by name.** `bind_nodes` (or `s8d`'s per-step successor) resolves the schema as
 `rk_types::registry::EXPORTED` entry named by the bound step's output kind. A kind that is absent is a bind-time

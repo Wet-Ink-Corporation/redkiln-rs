@@ -1,0 +1,7 @@
+[activity]
+id          = "spec-writer"
+version     = 1
+stage       = "specification"
+provides    = ["Spec"]
+method_rank = 10
+cost_class  = "S"

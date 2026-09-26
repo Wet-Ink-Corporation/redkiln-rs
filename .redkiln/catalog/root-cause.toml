@@ -1,6 +1,6 @@
 [activity]
 id           = "root-cause"
-version      = 4   # bumped 2026-09-08 (§9c.42)
+version      = 5   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["RootCause"]
 requires     = ["ReproCase"]
@@ -58,8 +58,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { findings = "${adversary.outputs?}" }
-expr    = "findings.none(evidence in ['Reproduced', 'MutationSurvived'])"
+inputs  = { report = "${confirm.outputs}", findings = "${adversary.outputs?}" }
+expr    = "report.failed > 0"
 on_false = { to = "hypothesise", max = 2 }
 
 [[step]]

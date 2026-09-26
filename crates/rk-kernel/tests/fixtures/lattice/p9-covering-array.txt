@@ -1,0 +1,9 @@
+# auth data_migration external_dep ui market_facing has_repro flag_exists recent_deploy
+1 0 1 0 0 0 1 0
+0 1 0 1 1 0 0 1
+0 0 1 1 0 1 0 0
+1 1 0 0 1 1 1 1
+1 1 1 1 1 0 1 0
+1 0 0 0 0 0 0 1
+0 0 1 0 1 0 1 1
+1 1 0 1 0 1 0 0

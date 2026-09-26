@@ -1,0 +1,50 @@
+# AC-303 fixture (D21-57), T2 -- the twin of upper-multi-hop.toml: the same upper member, with
+# `record`'s findings read from an `artifact:` input. An `artifact:` input breaks the chain, so the
+# check no longer consumes the reviewer's findings and the escalation loses the confirm half.
+[activity]
+id           = "ac303-upper"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = ["ChangeSummary"]
+derived_from = ["ChangeSummary"]
+method_rank  = 20
+family       = "ac303-fixture"
+min_rigor    = "mandatory"
+cost_class   = "M"
+evidence     = ["Findings"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 600 }
+deviation_ok = []
+keywords     = ["ac303 fixture upper broken chain"]
+rationale    = "AC-303 fixture: the upper member, whose check's chain is broken by an artifact input."
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { change = "artifact:ChangeSummary" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { findings = "artifact:Findings" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { record = "${record.outputs}" }
+expr    = "record.blocking.len() == 0"
+on_false = "continue"
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReviewVerdict = "${record.outputs}" }
+evidence  = ["${review}"]

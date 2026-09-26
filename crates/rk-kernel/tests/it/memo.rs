@@ -9,7 +9,7 @@
 //! | **AC-015** | a `memo_miss` **then** a re-execution, in that order, over the projection; the resolved-atom-set reading; the unchanged-activation **control** | the real append. Nothing in `rk-kernel::workflow` appends; Slice 4h's boundary does. **ARMED** |
 //! | **AC-016** | all three instruments, the third one first: the activity key is **unchanged** when a step's resolved inputs change | nothing. This is the one criterion in the file whose every named instrument is here |
 //! | **AC-017** | two iterations, byte-identical inputs, two keys **and** two executions, with the same-iteration control | nothing beyond the projection caveat AC-015 carries |
-//! | **AC-018** | the two clauses, the three fixtures (**two must-fail, one must-load**) and the shipped catalog's **nineteen** live violations | the CLI surface (`rk-cli`, Step 7d) and the repairs (Step 7e). The rule is **red against `spikes/p9/catalog/` by design** and this file asserts that by number |
+//! | **AC-018** | the two clauses, the three fixtures (**two must-fail, one must-load**), **zero** violations over `.redkiln/catalog` after s8b's ADR-0072 repair (D21-43 N26, 2026-09-25), and the frozen p9 catalog's **nineteen** as a control at its pinned commit | the CLI surface (`rk-cli`, Step 7d), and the re-proof against a SHIPPED verb registry, which is `s8c`'s: the shipped half here reads a FIXTURE registry, and says so in its printed line |
 //! | **AC-019** (1/2) | the nine JSON members of `memo_hit`'s payload and every value | 🛑 the register's *"event-schema test asserting the field set"*. `Event.payload` is an untyped `serde_json::Value` and the typed-payload record is **OWED** (`crates/rk-types/src/event.rs`:46-59); the assertion is over **JSON keys** and nothing stronger. **ARMED** (residual 10j) |
 //! | **AC-019** (2/2) | the identity `executed steps + memo_hit events == step activations`, over a graph whose activations outnumber its static steps for **both** of the register's reasons, with four adverse journals proving it can fail | the identity over a **dispatched** run. The journal is a projection; a run with real dispatches needs Slice 4h |
 //! | **AC-043** | nothing | its `Evicted` decision is not built. ADR-0119 clause 7 owes the register a dated amendment for the third state and `00-preamble.md`:55 forbids a stage taking it |
@@ -57,9 +57,17 @@ use rk_types::typed::SchemaId;
 use serde_json::json;
 
 /// The shipped catalog, relative to the workspace root. On a non-comment line deliberately, for
-/// `tests/it/rigor.rs`:41-43's reason: *"passes on the catalog as shipped"* asserted over a fixture
-/// of the implementer's choosing is not that claim.
-const SHIPPED_CATALOG: &str = "spikes/p9/catalog";
+/// `tests/it/rigor.rs`'s reason: *"passes on the catalog as shipped"* asserted over a fixture of the
+/// implementer's choosing is not that claim.
+///
+/// **Re-pointed 2026-09-25 (s8b; D21-43 N26):** *"AC-018's memo lint runs over `.redkiln/`, and its
+/// 14 activities are repaired under ADR-0072 in s8b."* The p9 debt count is kept as a frozen control,
+/// [`ac018_frozen_p9_catalog_is_red`], read at its pinned commit (D21-47 V2).
+const SHIPPED_CATALOG: &str = ".redkiln/catalog";
+/// The verb registry the shipped half reads. **It is a FIXTURE**: `.redkiln/` ships no verb registry
+/// until `s8c`, whose `verb_registry::ac018_holds_over_the_shipped_catalog_and_registry` re-proves
+/// this rule against the shipped one. The path is printed so that no reader takes it for the product's.
+const FIXTURE_VERBS_PATH: &str = "tests/fixtures/registries/verbs/verbs-live.toml";
 
 const FIXTURE_VERBS: &str = include_str!("../fixtures/registries/verbs/verbs-live.toml");
 const FIXTURE_VERBS_NO_LIVE: &str =
@@ -852,10 +860,12 @@ fn ac015_kb_atom_edit_misses_the_memo() {
 /// live verb memoised; a step declaring `memo = false`); **a positive fixture where a non-live verb
 /// memoises**."*
 ///
-/// 🛑 **The rule is RED against the shipped catalog and that is the design.** Nineteen shipped steps
-/// across fourteen activities declare the key ADR-0097 decision 3 withdrew. §7b.12:970-977 forbids
-/// editing `spikes/p9/` to make a green, so the count is asserted instead: the debt is pinned by a
-/// number, and the day Step 7e repairs it this assertion goes red and says which number moved.
+/// *(dated 2026-09-25, s8b refuting round 2; D21-43 N26)* **The shipped half asserts zero.** This
+/// paragraph said the rule was RED against the shipped catalog by design, with nineteen violations
+/// pinned for Step 7e to repair. The repair was `s8b`'s: the nineteen `memo = false` lines are
+/// deleted from `.redkiln/catalog`, and this test reads that catalog, asserts a non-zero count of
+/// steps walked, and then asserts zero violations. The nineteen are kept as the frozen control
+/// [`ac018_frozen_p9_catalog_is_red`], over the p9 catalog at `P9_PIN`.
 #[test]
 fn ac018_live_verb_may_not_memoise() {
     let registry = verbs();
@@ -982,46 +992,70 @@ fn ac018_live_verb_may_not_memoise() {
          both must-fail assertions above are satisfied by a rule that refuses every catalog"
     );
 
-    // ---- 🛑 THE SHIPPED CATALOG: RED BY DESIGN, and the repairs are Step 7e's ------------------
+    // ---- THE SHIPPED CATALOG, after s8b's ADR-0072 repair (D21-43 N26) ------------------------
+    // The nineteen `memo    = false` lines in fourteen activities are deleted, each activity bumped
+    // and changelogged in `.redkiln/CHANGELOG.md`. After the repair NO shipped step declares `memo`, so
+    // clause 1 (`memo_declared == Some(true)`) and clause 2 (`memo_declared.is_some()`) are both silent
+    // over `.redkiln/catalog` whatever registry is passed: the re-proof against the SHIPPED registry is
+    // `s8c`'s. What is asserted here is the count walked, and then zero.
     let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
-        .expect("the shipped catalog loads through the new per-step `memo` parse path");
+        .expect("the shipped catalog loads through the per-step `memo` parse path");
     assert_eq!(
         shipped.len(),
         102,
         "premise: this is the shipped catalog and not a subset of it"
     );
-    let shipped_violations =
-        live_verb_memo_rule(&shipped, &registry).expect_err("AC-018 is red against the artefacts");
-    assert_eq!(
-        shipped_violations.len(),
-        19,
-        "nineteen shipped steps declare the withdrawn `memo` key [measured 2026-09-14: \
-         `grep -rn 'memo' spikes/p9/catalog/ | wc -l`]. §7b.12:970-977 forbids editing the shipped \
-         artefacts to make a green, so the debt is pinned by this number. If Step 7e has repaired \
-         them, this assertion is the notification"
+    let steps: usize = shipped.activities().iter().map(|a| a.steps.len()).sum();
+    assert!(
+        steps > 0,
+        "a rule over zero steps reports zero violations — the count walked is asserted first"
+    );
+    let shipped_violations = live_verb_memo_rule(&shipped, &registry)
+        .err()
+        .unwrap_or_default();
+    println!(
+        "ac018: catalog={SHIPPED_CATALOG} activities={} steps={steps} violations={} \
+         registry={FIXTURE_VERBS_PATH}",
+        shipped.len(),
+        shipped_violations.len()
     );
     assert!(
-        shipped_violations
+        shipped_violations.is_empty(),
+        "AC-018 over `.redkiln/catalog`: {} shipped step(s) still declare `memo` or memoise a live \
+         verb (ADR-0097 decision 3): {shipped_violations:#?}",
+        shipped_violations.len()
+    );
+}
+
+/// **A frozen control, named so** (D21-47 V2). The spike catalog at `P9_PIN` still carries the
+/// nineteen `memo    = false` declarations in fourteen activities that `.redkiln/catalog` carried until
+/// s8b repaired it, so AC-018's rule must stay RED over it: the day this goes green, the rule stopped
+/// firing, not the catalog stopped offending. Read through [`crate::p9_pin::root`], never the working
+/// tree.
+#[test]
+fn ac018_frozen_p9_catalog_is_red() {
+    let registry = verbs();
+    let p9 = Catalog::from_dir(&crate::p9_pin::root().join("catalog"))
+        .expect("the pinned p9 catalog loads");
+    assert_eq!(p9.len(), 102, "premise: the whole pinned catalog");
+    let violations = live_verb_memo_rule(&p9, &registry)
+        .expect_err("AC-018 is red against the frozen p9 catalog");
+    assert_eq!(
+        violations.len(),
+        19,
+        "nineteen p9 steps declare the withdrawn `memo` key [measured 2026-09-14]"
+    );
+    assert!(
+        violations
             .iter()
             .all(|v| v.clause() == "per_step_memo_declaration"),
-        "every one of the nineteen is `memo = false` — not one shipped step declares `memo = true`, \
-         so the liveness clause fires nowhere in the shipped catalog and the fixture above is the \
-         only thing that reaches it"
+        "every one of the nineteen is `memo = false`: {violations:#?}"
     );
-    let activities: BTreeSet<&str> = shipped_violations
-        .iter()
-        .map(MemoViolation::activity)
-        .collect();
+    let activities: BTreeSet<&str> = violations.iter().map(MemoViolation::activity).collect();
     assert_eq!(
         activities.len(),
         14,
-        "across fourteen activities [measured 2026-09-14: `grep -rln 'memo' spikes/p9/catalog/`]"
-    );
-    println!(
-        "ac018_live_verb_may_not_memoise: shipped_activities={} violations={} activities_affected={}",
-        shipped.len(),
-        shipped_violations.len(),
-        activities.len()
+        "across fourteen activities [measured 2026-09-14]"
     );
 }
 

@@ -64,6 +64,11 @@ kind     = "check"
 inputs   = { findings = "${adversary.outputs?}" }
 expr     = "findings.none(evidence in ['Reproduced', 'MutationSurvived'])"
 on_false = { to = "hypothesise", max = 2 }
+# (dated 2026-09-25, s8b refuting round 2; D21-41 (h), D21-55) Under the amended AC-527 this is
+# fixture 1 of eight (six refused, two that load), not red fixture 1 of 3, and it is NOT refused for
+# its truth over an empty set: that rule is retired. It is refused by both refusals: it is the named form, and a one-finding `Reproduced`
+# witness falsifies it. The note sits below the predicate so that the line cited in
+# runbook/phase-1/s8-exit-criterion.md does not move.
 
 [[step]]
 id       = "signoff"

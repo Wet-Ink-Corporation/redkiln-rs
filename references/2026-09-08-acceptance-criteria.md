@@ -2087,6 +2087,26 @@ records moved is AC-102's dead count. Both readings sit far inside the >5% kill.
 from `facets.toml` without dispositioning the rows that key on it, so `lattice.py` — which resolves every predicate
 identifier against the registry — died `ValueError: identifier 'auth' is not a facet or facet value` on every run
 between Step 4a and Step 7e's disposition of those fifteen rows.
+*(amended 2026-09-25, `s8b` §8b.2; D21-42 13b; D21-47 V3; a dated in-place note, not an erratum:)* **The instrument of
+record is `rk_kernel::lattice`**, the Rust port of `lattice.py` v2. The Python is demoted, not deleted: it stays the
+oracle from which the p9 goldens are re-derived. Parity is `lattice::p6_lattice_parity_over_the_p9_tree`, byte for
+byte against the Python at `P9_PIN` on the registered axes, except six named soft-cycle example lines that Python
+picks by set order. The shipped reading is `lattice::p6_lattice_over_the_shipped_pack`, which CI runs by name. The
+report's cell-and-row naming is `lattice::unsatisfiable_fixture_names_its_cell`. *(narrowed 2026-09-25, `s8b`
+refuting round 2:)* What is built is narrower than the THEN. For each unsatisfiable (pack, stage, kind), the port keeps
+the **first** unsatisfiable cell, with its facet vector, rigor and require row (`UnsatExample.vector`, `.rigor`,
+`.origin`), exposed on `Report::unsat_examples()` and asserted by `lattice::unsatisfiable_fixture_names_its_cell`. Every
+later cell under that key is counted, not kept. The rendered report keeps `lattice.py`'s one-example-per-key lines for
+byte parity with the Python goldens, and prints no require row. **NOT BUILT here:** naming *each* unsatisfiable cell,
+and the require row in the printed report (`s8b`'s acceptance set records both beside the AC-116 exclusion).
+**Over the installed pair, reported with its count (SM-027): packs=2, rigor `pack-default`, unsat = 1296/279936
+(0.46%)** [measured 2026-09-25, from inside the test binary, on the axes METHOD-P Amendment 19 registers, before and
+after s8b's twenty-one ADR-0072 edits — no figure moved]. So "no rate is measured over the installed pair" no longer
+holds, and the reading is recorded rather than thresholded. **D21-47 V3:** *"The threshold applies to the registered
+pack set, with the pack count reported (SM-027). The installed pair is reported with its count and does not fire the
+kill line; its unreachability is Phase-1 scope by design (ADR-0011, E7)."* The registered reading, re-derived from the
+Python at `P9_PIN`, is **8 packs, `pack-default`: 432/155520 (0.3%)**, inside the >5% line. The twelve-pack figure,
+432/235872 (0.2%), is reported beside it.
 
 **AC-102** — `rk-catalog` CI · evidence: F35; P6 dead-activity kill criterion · decisions: ADR-0027
 GIVEN a catalog change that raises the dead-activity fraction above the registered threshold (pre-registered: >20%)
@@ -2104,6 +2124,22 @@ context); none is never-admissible-or-never-required. `bisect` is dead **by cons
 `max_rigor = "recommended"` is what removes it from the mandatory band — so its appearance here is the ceiling
 working, not a defect. Both readings clear the >20% kill; the twelve-pack reading also clears SM-027's ≤10% desired
 target and the eight-pack reading does not.
+*(amended 2026-09-25, `s8b` §8b.2; D21-42 13b; D21-47 V3; a dated in-place note, not an erratum:)* **The instrument of
+record is `rk_kernel::lattice`**. The parity test is `lattice::p6_lattice_parity_over_the_p9_tree`, and it reproduces
+the p9 dead list above byte for byte. The shipped reading is `lattice::p6_lattice_over_the_shipped_pack`. The listing
+and the `> 20%` kill function are `lattice::dead_activity_fixture_is_listed` (it fires on 2/5, not on 1/5).
+**Over the installed pair, reported with its count and NOT thresholded (D21-47 V3): packs=2, dead = 56/102** [measured
+2026-09-25, from inside the test binary, counted over all four rigor modes as `lattice.py` counts them; unchanged by
+s8b's twenty-one ADR-0072 edits]. Two packs of twelve select from a 102-activity catalog, so most activities are
+reachable from no installed pack. That is Phase-1 scope (ADR-0011, E7), and it is never quoted as a pass of AC-102 or
+replaced by the twelve-pack figure. The kill line applies to the registered set: **14/102 (13.7%) under the eight
+pre-registered packs**, re-derived from the Python at `P9_PIN`, inside the >20% line.
+*(dated 2026-09-25, `s8b` refuting round 4)* AC-102 is thresholded over **all** rigor modes, as its THEN reads
+(reachable from no enabled pack at any rigor): the 14/102 is `lattice.py`'s eight-pack line, which pools optional,
+recommended, mandatory and `pack-default`, not a `pack-default` reading. The `pack-default`-only reading is **17/102
+(16.7%)** [measured with `lattice.py --only-mode pack-default`], also inside the >20% line. The Step-7e baseline's
+"at **pack-default rigor**" above holds for the twelve-pack 7/102 (the `pack-default`-only twelve-pack reading is also
+7/102, same run) and not for the eight-pack 13.7%.
 
 **AC-103** — `rk-catalog` CI · evidence: F35 (rank ties 0, hard cycles 0); F35 §1.3 [measured] for the mixed-toolchain
 shape the `keyed_by = toolchain` rule (AC-049, ADR-0073) exists to catch — a tie-free, cycle-free catalog that is
@@ -2236,14 +2272,56 @@ a quality block's terminal condition") [documented]; F29 — a reproduced regres
 empty set is not evidence [measured] · decisions: ADR-0080, ADR-0028, ADR-0103 (the quantifier semantics: `none` over an
 empty list is true, which is exactly why the form cannot terminate a block)
 GIVEN an activity whose quality block's terminal condition is `findings.none(evidence in [Reproduced,
-MutationSurvived])`, or any predicate whose truth over an **empty** findings set is `true`
+MutationSurvived])`, ~~or any predicate whose truth over an **empty** findings set is `true`~~ — or, on any `check`
+step, (1) the named form `findings.none(evidence in [...])` in any quoting and with any member list, alone or as a
+conjunct required for truth, matched on the parse tree; or (2) a predicate with a conjunct required for truth that
+reads `findings` and that a single-class blocking witness falsifies (one finding carrying only `evidence`, in `Reproduced` or `MutationSurvived`,
+each conjunct evaluated alone over `findings` and `rigor` and nothing else bound)
 WHEN lint runs
-THEN lint fails naming the activity and the predicate — a quality block terminates on a positive evidence record (a
-`GreenAt(sha)` verify result, a reproduced-and-flipped finding set, a human gate answer), never on the absence of
-findings.
-*Verified by:* a lint rule with a red fixture activity carrying that predicate verbatim, which must fail; a red fixture
-with `findings.all(...)` over an empty set, which must also fail; a positive fixture whose terminal condition names a
+THEN lint fails naming the activity and the predicate — ~~a quality block terminates on a positive evidence record (a
+`GreenAt(sha)` verify result, a reproduced-and-flipped finding set, a human gate answer)~~ ~~, never on the absence of
+findings~~ a quality block's terminal condition is decidable over something the reviewer varies (ADR-0080 decision 2):
+either a threshold, "no finding at or above threshold T survives re-execution" (d2 bullet 1), or a different quantity
+entirely, "a bounded loop-back count, a re-execution outcome, or a delta against the previous iteration's findings"
+(d2 bullet 2) — for example a `GreenAt(sha)` verify result or a reproduced-and-flipped finding set.
+*Verified by:* a lint rule with a red fixture activity carrying that predicate verbatim, which must fail; ~~a red fixture
+with `findings.all(...)` over an empty set, which must also fail;~~ a positive fixture whose terminal condition names a
 verify result, which must load. *(PIA-029 named ADR-0080's forbids clause as one no criterion covered.)*
+*(amended 2026-09-25, `s8b` §8b.4, under ADR-0092 decision 2 item 2 — a dated in-place amendment, not an erratum —
+bringing this criterion to ADR-0080 decision 2 as D21-41 (h) took it: "Execute ADR-0080 d2 as written, in any
+quoting". The struck GIVEN clause and the struck THEN clause refused what d2 permits: bullet 1's own form, "no finding
+at or above threshold T survives re-execution", is true over an empty finding set. ADR-0092 decision 2 item 1: a
+criterion that contradicts an accepted ADR is the defect. The THEN's positive-evidence clause is struck too, and the
+THEN now states d2's own rule, a terminal condition decidable over something the reviewer varies, in d2's two bullets;
+two of the struck clause's three examples are kept as examples [revised in place 2026-09-25, `s8b` refuting round 2:
+the positive-evidence clause had been left standing, and d2 bullet 1's threshold is not a positive evidence record;
+revised in place again 2026-09-25, `s8b` refuting round 3: "a human gate answer" is dropped from the examples, because
+it is none of d2's quantities and the reviewer does not vary it; revised in place again 2026-09-25, `s8b` refuting
+round 5: GIVEN (2) regains D21-55's scope, a conjunct "that reads `findings`" (a findings-free conjunct is skipped,
+never refused), and the severity-only fixture's note says refusal 2 reaches it and finds it indeterminate, where it
+said "neither refusal reaches them"; revised in place again 2026-09-25, `s8b` refuting round 6: the fixtures were
+called "one per branch", but refusal (2)'s error-versus-false and rigor-axis branches, and its findings-free-conjunct
+skip, are pinned by swaps inside tests and not by fixtures, which the closing sentence now names]. The two refusals
+sit in the GIVEN. Refusal (2) is evaluated per conjunct required for truth (D21-55). The fixtures, which cover
+refusal (1), the witness and the load cases, under `crates/rk-kernel/tests/fixtures/activities/`:
+`terminal_condition_is_findings_none` (FAIL, both refusals); `terminal_condition_is_findings_all`, recast to
+`findings.all(not (evidence in ['Reproduced', 'MutationSurvived']))` (FAIL, the witness alone);
+`terminal_condition_names_any_member_list` (FAIL, the named form alone); `terminal_condition_is_one_member_conjunct`
+(FAIL, the conjunct case); `terminal_condition_witness_is_per_class` (FAIL, only a witness per class falsifies it);
+`terminal_condition_is_severity_only` (LOAD — severity-only predicates read no `evidence`, so refusal 1 does not match
+them and refusal 2 finds them indeterminate, and this rule does not refuse them; whether a severity-only row without re-execution conforms to d2 bullet 1 is
+OPEN, D21-57); `terminal_condition_names_a_verify_result` (LOAD); and `terminal_condition_does_not_parse` (refused, fail closed). The
+tests are `rk-kernel`'s `quality_block::d2_per_class_witness_refuses_one_member_rows`,
+`d2_named_form_refuses_any_member_list`, `d2_severity_only_predicates_load`, `ac527_empty_set_terminal_condition`
+(over `.redkiln/catalog`) and `ac527_frozen_p9_catalog_is_red`. Refusal (2)'s remaining branches have no fixture;
+each is a predicate swapped into the verify-result fixture inside a test. In
+`quality_block::d2_per_class_witness_refuses_one_member_rows`: a `false` cell outranks an erroring cell of the same
+conjunct and an indeterminate conjunct; the rigor axis (a conjunct false at one live level only is refused naming it,
+and one false only at the reserved `discouraged` level loads); and a findings-free conjunct is skipped, never refused
+(`rigor < mandatory and findings.none(severity in ['blocking'])` loads, indeterminate). In
+`quality_block::d2_severity_only_predicates_load`: the decided arm, and a conjunct valued in some cells and erroring
+in another, which is indeterminate. **The `rk-catalog` CLI surface stays ARMED**: a kernel test over
+`.redkiln/catalog` is not `rk-catalog lint`.)*
 
 ### 4.6 What the selection block does and does not license
 
@@ -2365,8 +2443,8 @@ reader reads the note as stale rather than reading this criterion as misfiled.
 | id | measure | note carried from the area file |
 | --- | --- | --- |
 | SM-025 | Whole-catalog lattice CI runtime | — |
-| SM-026 | Catalog unsatisfiability rate | — |
-| SM-027 | Dead activities | — |
+| SM-026 | Catalog unsatisfiability rate | *(2026-09-25, s8b)* installed pair, read by `lattice::p6_lattice_over_the_shipped_pack` (Rust, instrument of record): packs=2 `pack-default` 1296/279936 (0.46%), not thresholded (D21-47 V3); registered 8 packs `pack-default` 432/155520 (0.3%) and twelve packs 432/235872 (0.2%), from the Python oracle at `P9_PIN`, reproduced byte for byte by `lattice::p6_lattice_parity_over_the_p9_tree` [credit corrected 2026-09-25, s8b refuting round 2: the shipped-pack test reads the installed pair only]; body: the SM register |
+| SM-027 | Dead activities | *(2026-09-25, s8b)* installed pair, read by `lattice::p6_lattice_over_the_shipped_pack` (Rust, instrument of record) with the pack count: packs=2 dead 56/102, not thresholded (D21-47 V3); registered 8 packs 14/102 (13.7%, pooled over all four rigor modes as `lattice.py` counts it; `pack-default` only 17/102 [measured with `lattice.py --only-mode pack-default`; dated 2026-09-25, s8b refuting round 4]) and twelve packs 7/102 (6.9%), from the Python oracle at `P9_PIN`, reproduced byte for byte by `lattice::p6_lattice_parity_over_the_p9_tree` [credit corrected 2026-09-25, s8b refuting round 2: the shipped-pack test reads the installed pair only]; body: the SM register |
 | SM-028 | Configuration defects caught at configuration time vs at dispatch time | saturating; no baseline |
 | SM-029 | Lint precision and silent guesses | — |
 | SM-030 | First-run lint errors per activity file (authoring ergonomics) | — |
@@ -4899,6 +4977,25 @@ the issue-77 `recommended` r1 single run; 3.66× = $9.857 / $2.693, the `recomme
 `mandatory` figure is n = 1 and stays so until S-P7B (ADR-0111). This criterion does not depend on either number. The
 shipped catalog's `bisect` rung is repaired by ceiling (`max_rigor = "recommended"`, ADR-0093 decision 5), so the
 regression row now asserts the ceiling holds.
+*(amended 2026-09-25, `s8b`, `DECISIONS-2026-09-21` **D21-57**, under ADR-0092 decision 2 item 2 — a dated in-place
+amendment, not an erratum; the GIVEN/WHEN/THEN above does not move. The *Verified by:* gains two things. **(1) What a
+review-confirm step is.** It is the review block ADR-0081 decision 1 names: the reviewer agent (`kind = agent`,
+`role = reviewer`, `outputs = value:Findings`) and the `check` step that **consumes** its Findings. A `check` consumes
+them when some binding its `expr` reads (the root names of its parse, minus `rigor`) is bound in its `inputs` to a
+`${<step>.outputs…}` reference whose step reaches such a reviewer step through a chain of `${<step>.outputs…}` input
+references. The walk covers the whole declared graph, back-edges included. An `artifact:` or `toolchain:` input breaks
+the chain, and a binding that is declared but not read does not count. The check that consumed them is identified by
+data dependence, not by naming `findings`: the ADR-0080 d2 rewrites read a re-execution outcome one or more steps
+removed, and a name test made the review family red and the localisation family blind. **(2) The dependence-class
+report.** The lint reports each review-confirm check's class. It is `forward` when some chain to the reviewer uses only
+edges to earlier-declared steps (same iteration). It is `back-edge` when every chain crosses an edge to a step declared
+at or after the one naming it (a previous iteration's `${adversary.outputs?}`). A `back-edge` dependence counts, under
+D21-47 V5's reading as D21-57 extends it to ADR-0081 d1's "consumes", and is reported so that looseness stays visible.
+The instrument is `rk_kernel::rigor::confirm_step_monotonicity_rule`, and it reads the raw activity TOML through
+`toml_subset`, so `catalog::Step` is not widened (ADR-0148). When `s8d`'s R2 lands, it moves onto R2's parsed-`inputs`
+carrier. Rows: `review::ac303_multi_hop_confirm_is_seen`, `review::ac303_twin_broken_chain_is_lost`,
+`review::ac303_read_binding_is_strict` and `review::ac303_back_edge_counts_and_is_reported`, over
+`crates/rk-kernel/tests/fixtures/ac303/`. The F37 regression row and its evidence above are unchanged.)*
 
 ### 9.5 Quarantine, override, and the events
 

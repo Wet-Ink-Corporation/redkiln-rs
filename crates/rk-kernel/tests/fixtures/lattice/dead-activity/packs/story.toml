@@ -1,0 +1,16 @@
+# Red fixture (AC-102): orphan-maker and late-patch are reachable from no pack at any rigor.
+[pack]
+id = "story"
+applies = "kind == story"
+
+[policy]
+stages = { triage = "mandatory", specification = "optional", implement = "mandatory", verify = "recommended", release = "forbidden" }
+
+[stage.specification]
+baseline = ["Spec"]
+
+[stage.implement]
+baseline = ["Patch"]
+
+[stage.verify]
+baseline = ["TestResult"]

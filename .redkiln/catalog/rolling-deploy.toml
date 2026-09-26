@@ -3,7 +3,7 @@
 #   `rigor < recommended` keeps ReleaseRecord satisfiable at optional where canary (min recommended) is ineligible (F34 B19)
 [activity]
 id           = "rolling-deploy"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "release"
 provides     = ["ReleaseRecord"]
 requires     = ["BuildArtifact", "ReviewVerdict", "RolloutPlan?"]
@@ -37,7 +37,6 @@ inputs  = { deploy = "${deploy.outputs}", checklist = "checklist:smoke" }
 outputs = "value:SmokeResult"
 timeout_secs = 600
 retry   = { max = 1 }
-memo    = false
 
 [[step]]
 id      = "healthy"

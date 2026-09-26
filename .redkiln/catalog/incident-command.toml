@@ -1,7 +1,7 @@
 # reach: (incident, operate, optional) — require row "kind == incident" → IncidentLog (baseline for the incident pack's operate stage)
 [activity]
 id           = "incident-command"
-version      = 1
+version      = 2   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "operate"
 provides     = ["IncidentLog"]
 requires     = ["IncidentRecord", "MitigationRecord?"]
@@ -36,7 +36,6 @@ inputs  = { window_secs = 600 }
 outputs = "value:TelemetryReport"
 timeout_secs = 900
 retry   = { max = 1 }
-memo    = false
 
 [[step]]
 id      = "end"

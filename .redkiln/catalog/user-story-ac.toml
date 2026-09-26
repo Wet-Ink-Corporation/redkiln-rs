@@ -1,6 +1,6 @@
 [activity]
 id           = "user-story-ac"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "specification"
 provides     = ["Spec"]
 requires     = ["IntakeRecord", "ProblemStatement?"]   # P6 run1 fix: discovery is forbidden for stories, so ProblemStatement cannot be produced there — the intake is the story's problem
@@ -49,7 +49,7 @@ retry   = { max = 1 }
 id      = "policy"
 kind    = "check"
 inputs  = { findings = "${adversary.outputs?}", check = "${self-check.outputs}" }
-expr    = "check.failed == 0 and findings.none(evidence in ['Reproduced'])"
+expr    = "check.failed == 0"
 on_false = { to = "draft", max = 2 }
 
 [[step]]

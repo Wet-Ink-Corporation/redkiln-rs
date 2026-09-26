@@ -1,0 +1,47 @@
+# AC-527, must-FAIL fixture (s8b §8b.4, 2026-09-25): THE NAMED FORM ALONE.
+#
+# ADR-0080 decision 2's forbids bullet names `findings.none(evidence in [...])` with any member list.
+# No blocking-class witness falsifies this one — a `Reproduced` or `MutationSurvived` finding is not
+# `NarrowedPin`, so `none` stays true — so only the parse-tree match on the named form refuses it.
+
+[activity]
+id           = "ac527-named-form-any-list"
+version      = 1
+stage        = "build"
+provides     = ["ReviewNote"]
+requires     = ["Diff"]
+tags         = ["kind:bug"]
+method_rank  = 20
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "author"
+inputs  = { diff = "artifact:Diff" }
+outputs = "value:ReviewDraft"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}" }
+expr     = "findings.none(evidence in ['NarrowedPin'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ReviewNote = "${draft.outputs.note}" }
+evidence  = ["${adversary?}"]

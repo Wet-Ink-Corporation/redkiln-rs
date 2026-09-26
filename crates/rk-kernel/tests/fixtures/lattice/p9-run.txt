@@ -1,0 +1,298 @@
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | P6 lattice run; catalog=102 activities; packs=['bug-expedite', 'bug-standard', 'chore', 'docs', 'incident', 'initiative', 'project', 'security-vuln', 'spike', 'story-ue', 'story', 'tech-debt']; pack digests: bug-expedite=6e6d2c56f589 bug-standard=73b6b48083e2 chore=c4dc1ee467b5 docs=ac5ed1be01de incident=eaedd6937478 initiative=df35c6e554c7 project=d541babb061a security-vuln=fd8005723256 spike=39338eb8e83f story-ue=9dce6a2ffa2d story=8d68616483d5 tech-debt=7cf394155c16
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | lattice v2: kinds=10 rigor=['optional', 'recommended', 'mandatory']+pack-default ordinals=['criticality', 'novelty', 'size', 'blast_radius'] bands=['low', 'med', 'high']^4=81 toolchains=['node', 'unreal', 'node+unreal', 'dotnet'] bool-covering-rows=8 (pairwise over ['auth', 'data_migration', 'external_dep', 'ui', 'market_facing', 'has_repro', 'flag_exists', 'recent_deploy']); keyed kinds=['ChangeSummary', 'Changeset', 'ProfileReport', 'ReproCase', 'TestReport']; roots=['BugReport', 'ImpactAssessment', 'IncidentRecord', 'IntakeRecord', 'SessionNotes']; + unknown sweep (4 rows, pack-default)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == unsatisfiable (stage, ctx) pairs per pack × rigor mode ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-expedite   mandatory     prereg pairs= 20736 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  50.2 max-cost=  71 appetite-overruns=2592 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-expedite   optional      prereg pairs= 20736 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  39.6 max-cost=  64 appetite-overruns=2592 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-expedite   pack-default  prereg pairs= 20736 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  40.9 max-cost=  66 appetite-overruns=2592 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-expedite   recommended   prereg pairs= 20736 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  40.9 max-cost=  66 appetite-overruns=2592 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   mandatory     prereg pairs= 23328 unsat=   216 (  0.9%) contexts= 2592 mean-cost=  66.3 max-cost= 104 appetite-overruns=2592 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   optional      prereg pairs= 23328 unsat=  2160 (  9.3%) contexts= 2592 mean-cost=  48.2 max-cost=  80 appetite-overruns=1512 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   pack-default  prereg pairs= 23328 unsat=   216 (  0.9%) contexts= 2592 mean-cost=  59.3 max-cost=  97 appetite-overruns=2160 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   recommended   prereg pairs= 23328 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  53.0 max-cost=  89 appetite-overruns=2016 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | chore          mandatory     supp   pairs= 15552 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  17.2 max-cost=  27 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | chore          optional      supp   pairs= 15552 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  15.9 max-cost=  25 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | chore          pack-default  supp   pairs= 15552 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  17.2 max-cost=  27 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | chore          recommended   supp   pairs= 15552 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  17.2 max-cost=  27 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | docs           mandatory     supp   pairs= 15552 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  14.8 max-cost=  20 appetite-overruns=2160 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | docs           optional      supp   pairs= 15552 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  11.4 max-cost=  16 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | docs           pack-default  supp   pairs= 15552 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  12.8 max-cost=  18 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | docs           recommended   supp   pairs= 15552 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  12.8 max-cost=  18 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident       mandatory     prereg pairs= 18144 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  54.6 max-cost=  69 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=972
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident       optional      prereg pairs= 18144 unsat=  2592 ( 14.3%) contexts= 2592 mean-cost=  39.2 max-cost=  57 appetite-overruns=648 hard-cycles=0 soft-cycles(optional-edge)=972
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident       pack-default  prereg pairs= 18144 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  49.6 max-cost=  64 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=972
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident       recommended   prereg pairs= 18144 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  46.2 max-cost=  64 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=972
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     mandatory     prereg pairs= 23328 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  48.8 max-cost=  64 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=2592
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     optional      prereg pairs= 23328 unsat= 10152 ( 43.5%) contexts= 2592 mean-cost=  22.8 max-cost=  27 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=2592
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     pack-default  prereg pairs= 23328 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  48.8 max-cost=  64 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=2592
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     recommended   prereg pairs= 23328 unsat=  1728 (  7.4%) contexts= 2592 mean-cost=  43.5 max-cost=  48 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=2592
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        mandatory     prereg pairs= 28512 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  85.4 max-cost= 112 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=2592
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        optional      prereg pairs= 28512 unsat= 10188 ( 35.7%) contexts= 2592 mean-cost=  49.5 max-cost=  77 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=1296
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        pack-default  prereg pairs= 28512 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  83.4 max-cost= 110 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=2592
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        recommended   prereg pairs= 28512 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  79.6 max-cost= 110 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=2592
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | security-vuln  mandatory     supp   pairs= 25920 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  56.5 max-cost=  79 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | security-vuln  optional      supp   pairs= 25920 unsat=   864 (  3.3%) contexts= 2592 mean-cost=  44.8 max-cost=  69 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | security-vuln  pack-default  supp   pairs= 25920 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  56.5 max-cost=  79 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | security-vuln  recommended   supp   pairs= 25920 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  47.1 max-cost=  74 appetite-overruns=1296 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | spike          mandatory     prereg pairs= 18144 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  21.8 max-cost=  24 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | spike          optional      prereg pairs= 18144 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  15.8 max-cost=  18 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | spike          pack-default  prereg pairs= 18144 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  21.8 max-cost=  24 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | spike          recommended   prereg pairs= 18144 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  19.8 max-cost=  22 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          mandatory     prereg pairs= 11664 unsat=     0 (  0.0%) contexts= 1296 mean-cost=  54.8 max-cost=  77 appetite-overruns=332 hard-cycles=0 soft-cycles(optional-edge)=396
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          optional      prereg pairs= 11664 unsat=  3564 ( 30.6%) contexts= 1296 mean-cost=  34.0 max-cost=  50 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=288
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          pack-default  prereg pairs= 11664 unsat=     0 (  0.0%) contexts= 1296 mean-cost=  51.8 max-cost=  74 appetite-overruns=208 hard-cycles=0 soft-cycles(optional-edge)=396
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          recommended   prereg pairs= 11664 unsat=     0 (  0.0%) contexts= 1296 mean-cost=  43.5 max-cost=  65 appetite-overruns=16 hard-cycles=0 soft-cycles(optional-edge)=396
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       mandatory     prereg pairs= 11664 unsat=   216 (  1.9%) contexts= 1296 mean-cost=  67.0 max-cost=  93 appetite-overruns=4 hard-cycles=0 soft-cycles(optional-edge)=396
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       optional      prereg pairs= 11664 unsat=  3564 ( 30.6%) contexts= 1296 mean-cost=  48.2 max-cost=  66 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=288
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       pack-default  prereg pairs= 11664 unsat=   216 (  1.9%) contexts= 1296 mean-cost=  64.0 max-cost=  90 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=396
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       recommended   prereg pairs= 11664 unsat=     0 (  0.0%) contexts= 1296 mean-cost=  57.6 max-cost=  81 appetite-overruns=0 hard-cycles=0 soft-cycles(optional-edge)=396
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt      mandatory     supp   pairs= 23328 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  51.7 max-cost=  77 appetite-overruns=540 hard-cycles=0 soft-cycles(optional-edge)=864
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt      optional      supp   pairs= 23328 unsat=  2592 ( 11.1%) contexts= 2592 mean-cost=  39.5 max-cost=  67 appetite-overruns=108 hard-cycles=0 soft-cycles(optional-edge)=864
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt      pack-default  supp   pairs= 23328 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  46.7 max-cost=  72 appetite-overruns=324 hard-cycles=0 soft-cycles(optional-edge)=864
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt      recommended   supp   pairs= 23328 unsat=     0 (  0.0%) contexts= 2592 mean-cost=  43.3 max-cost=  73 appetite-overruns=324 hard-cycles=0 soft-cycles(optional-edge)=864
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | TOTAL prereg-8 optional      unsat=32220/155520 (20.7%)   all-12 unsat=35676/235872 (15.1%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | TOTAL prereg-8 recommended   unsat=1728/155520 (1.1%)   all-12 unsat=1728/235872 (0.7%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | TOTAL prereg-8 mandatory     unsat=432/155520 (0.3%)   all-12 unsat=432/235872 (0.2%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | TOTAL prereg-8 pack-default  unsat=432/155520 (0.3%)   all-12 unsat=432/235872 (0.2%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == unsatisfiable pairs by rigor mode × toolchain slice (all packs) ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | mandatory     dotnet       unsat=     0/ 58968 (  0.0%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | mandatory     node         unsat=     0/ 58968 (  0.0%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | mandatory     node+unreal  unsat=     0/ 58968 (  0.0%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | mandatory     unreal       unsat=   432/ 58968 (  0.7%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | optional      dotnet       unsat=  8955/ 58968 ( 15.2%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | optional      node         unsat=  8955/ 58968 ( 15.2%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | optional      node+unreal  unsat=  8883/ 58968 ( 15.1%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | optional      unreal       unsat=  8883/ 58968 ( 15.1%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | pack-default  dotnet       unsat=     0/ 58968 (  0.0%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | pack-default  node         unsat=     0/ 58968 (  0.0%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | pack-default  node+unreal  unsat=     0/ 58968 (  0.0%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | pack-default  unreal       unsat=   432/ 58968 (  0.7%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | recommended   dotnet       unsat=   432/ 58968 (  0.7%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | recommended   node         unsat=   432/ 58968 (  0.7%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | recommended   node+unreal  unsat=   432/ 58968 (  0.7%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | recommended   unreal       unsat=   432/ 58968 (  0.7%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == unsatisfiable by (pack, stage, kind): count of contexts, then why (first example) ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     planning      RiskRegister           n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['risk-register:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=initiative cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     review        DesignVerdict          n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['design-review:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=initiative cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     review        PRRReport              n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['production-readiness-review:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=initiative cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     closeout      KBAtoms                n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['knowledge-harvest:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=initiative cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        verify        IntegrationReport      n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['integration-tests:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=project cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        review        DesignVerdict          n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['design-review:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=project cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident       closeout      Postmortem             n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['blameless-postmortem:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=incident cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident       closeout      ProblemRecord          n= 2592 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['problem-record:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=incident cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     design        ThreatModel            n= 2268 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['threat-model:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=initiative cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        design        ThreatModel            n= 2268 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['threat-model:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=project cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     design        DesignEvaluation       n= 1728 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['architecture-tradeoff-analysis:min_rigor=mandatory', 'design-review-lightweight:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=initiative cos=standard criticality=high novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     review        ReviewVerdict          n= 1728 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['adversarial-review:min_rigor=recommended', 'checklist-review:tags', 'code-review:tags', 'formal-inspection:min_rigor=mandatory', 'spike-decision-review:tags'] other_stage=[] e.g. [optional] kind=initiative cos=standard criticality=high novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        specification APIContract            n= 1296 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['api-contract-spec:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=project cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        verify        MigrationTestReport    n= 1296 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['migration-dry-run:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=project cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        release       MigrationTestReport    n= 1296 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of migration-expand-execute' failed=['migration-dry-run:min_rigor=recommended@verify'] other_stage=[] e.g. [optional] kind=project cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   release       MigrationTestReport    n= 1296 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of migration-expand-execute' failed=['migration-dry-run:min_rigor=recommended@verify'] other_stage=[] e.g. [optional] kind=bug cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt      verify        MigrationTestReport    n= 1296 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['migration-dry-run:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=tech-debt cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt      release       MigrationTestReport    n= 1296 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of migration-expand-execute' failed=['migration-dry-run:min_rigor=recommended@verify'] other_stage=[] e.g. [optional] kind=tech-debt cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          design        ThreatModel            n= 1134 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['threat-model:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       design        ThreatModel            n= 1134 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['threat-model:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=unreal auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   closeout      Postmortem             n=  864 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['blameless-postmortem:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=bug cos=standard criticality=high novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | security-vuln  closeout      Postmortem             n=  864 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['blameless-postmortem:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=security-vuln cos=standard criticality=high novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          specification APIContract            n=  648 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['api-contract-spec:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          verify        IntegrationReport      n=  648 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['integration-tests:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          verify        MigrationTestReport    n=  648 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['migration-dry-run:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story          release       MigrationTestReport    n=  648 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of migration-expand-execute' failed=['migration-dry-run:min_rigor=recommended@verify'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=node auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       specification APIContract            n=  648 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['api-contract-spec:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=unreal auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       verify        IntegrationReport      n=  648 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['integration-tests:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=unreal auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       verify        MigrationTestReport    n=  648 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['migration-dry-run:min_rigor=recommended'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=unreal auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       release       MigrationTestReport    n=  648 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of migration-expand-execute' failed=['migration-dry-run:min_rigor=recommended@verify'] other_stage=[] e.g. [optional] kind=story cos=standard criticality=low novelty=low size=low blast_radius=low tc=unreal auth=0 data_migration=1 external_dep=0 ui=1 market_facing=1 has_repro=0 flag_exists=0 recent_deploy=1
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       verify        MutationSummary        n=  432 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['mutation-testing:tags'] other_stage=[] e.g. [mandatory] kind=story cos=standard criticality=high novelty=low size=low blast_radius=low tc=unreal auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   verify        MutationSummary        n=  432 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['mutation-testing:tags'] other_stage=[] e.g. [mandatory] kind=bug cos=standard criticality=high novelty=low size=low blast_radius=low tc=unreal auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        implement     ImplReport             n=  144 forbidden-stage=    0 wrong-stage-producer=    0 why='R' failed=['bdd-outside-in:min_rigor=recommended', 'branch-by-abstraction:applicable_if=size >= high and blast_radius < high', 'dependency-update:tags', 'hotfix:tags', 'implement-ue:tags', 'strangler-fig:min_rigor=recommended', 'tdd-red-green-refactor:tags', 'test-after:tags'] other_stage=[] e.g. [optional] kind=project cos=standard criticality=low novelty=low size=high blast_radius=high tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        review        ImplReport             n=   48 forbidden-stage=    0 wrong-stage-producer=    0 why='requires of adversarial-review' failed=['bdd-outside-in:min_rigor=recommended@implement', 'branch-by-abstraction:applicable_if=size >= high and blast_radius < high@implement', 'dependency-update:tags@implement', 'hotfix:tags@implement', 'implement-ue:tags@implement', 'strangler-fig:min_rigor=recommended@implement', 'tdd-red-green-refactor:tags@implement', 'test-after:tags@implement'] other_stage=[] e.g. [optional] kind=project cos=standard criticality=high novelty=low size=high blast_radius=high tc=node auth=1 data_migration=0 external_dep=1 ui=0 market_facing=0 has_repro=0 flag_exists=1 recent_deploy=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == DAG cycles: hard (through unconditional requires) and soft (through `?` requires) — one example per pack ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | soft incident       hotfix -> build-package -> rolling-deploy -> rollback-mitigation -> hotfix
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | soft initiative     design-doc -> adr-record -> design-doc
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | soft project        design-doc -> data-migration-plan -> design-doc
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | soft story          design-doc -> data-migration-plan -> design-doc
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | soft story-ue       design-doc -> data-migration-plan -> design-doc
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | soft tech-debt      design-doc -> adr-record -> design-doc
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == mixed Node+UE slice: unsatisfiable (stage, kind) counts (METHOD-P §3.4 second kill) ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   optional      closeout      Postmortem             n=216
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bug-standard   optional      release       MigrationTestReport    n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident       optional      closeout      Postmortem             n=648
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident       optional      closeout      ProblemRecord          n=648
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     optional      closeout      KBAtoms                n=648
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     optional      design        DesignEvaluation       n=216
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     optional      design        ThreatModel            n=567
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     optional      planning      RiskRegister           n=648
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     optional      review        DesignVerdict          n=648
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     optional      review        PRRReport              n=648
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     optional      review        ReviewVerdict          n=216
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     recommended   design        DesignEvaluation       n=216
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | initiative     recommended   review        ReviewVerdict          n=216
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        optional      design        ThreatModel            n=567
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        optional      release       MigrationTestReport    n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        optional      review        DesignVerdict          n=648
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        optional      specification APIContract            n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        optional      verify        IntegrationReport      n=648
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | project        optional      verify        MigrationTestReport    n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | security-vuln  optional      closeout      Postmortem             n=216
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       optional      design        ThreatModel            n=567
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       optional      release       MigrationTestReport    n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       optional      specification APIContract            n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       optional      verify        IntegrationReport      n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | story-ue       optional      verify        MigrationTestReport    n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt      optional      release       MigrationTestReport    n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt      optional      verify        MigrationTestReport    n=324
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == mixed Node+UE DIFFERENTIAL: (stage, kind) unsatisfiable at tc=node+unreal but satisfiable at tc=node for the same context ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | mixed contexts=28512; with an extra unsatisfiable (stage,kind) vs pure node=0; with an extra unsatisfiable STAGE vs pure node=0 (the kill-criterion reading)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | none — every unsatisfiable pair in the mixed slice is also unsatisfiable for pure Node
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == binary-only (tc=unreal, change={binary}) contexts lacking an implement-stage producer for the text-realised kinds ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == unknown sweep (one ordinal axis = unknown, others low; pack-default): unsatisfiable pairs and which activities an `unknown` reaches via `>=` ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | unknown sweep: unsat=16/11648 (0.1%); activities selected at `<axis> = unknown` but NOT at `<axis> = low` for the same context — i.e. unknown is routed as high by `>=` (F34 B14):
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   blast_radius  blue-green-deploy            n=256
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   blast_radius  change-authorization         n=96
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   blast_radius  feature-flag-wrap            n=32
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   blast_radius  rate-limit-shed              n=8
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   blast_radius  rollout-plan                 n=256
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   blast_radius  slo-monitoring               n=32
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   adversarial-review           n=32
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   architecture-tradeoff-analysis n=32
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   blameless-postmortem         n=64
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   equivalence-boundary         n=48
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   five-whys                    n=64
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   fix-design                   n=64
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   formal-inspection            n=32
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   mutation-testing             n=48
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   criticality   unit-tests-ue                n=16
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   novelty       adr-record                   n=32
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   novelty       assumption-mapping           n=64
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   novelty       prototype-test               n=64
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   size          appetite-check               n=32
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   size          branch-by-abstraction        n=16
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   size          c4-component                 n=64
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   size          design-doc                   n=64
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   size          equivalence-boundary         n=24
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   size          fishbone-analysis            n=32
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   size          relative-estimation          n=96
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b |   size          unit-tests-ue                n=16
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == rank ties (validation errors) ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | none
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == dead activities (never selected in any pack × context) ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | dead=7/102 (6.9%)  of which deviation-reachable (an admissible higher-rank candidate in some context)=7  never-admissible-or-never-required=0
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | dead, deviation-reachable: bdd-outside-in, bisect, design-sprint, failover, fault-tree-analysis, flag-progressive-rollout, property-based-testing
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | dead, never: 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | under the eight pre-registered packs only: dead=14/102 (13.7%)
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == kinds with no pack ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | none
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | == per-activity selection count (pack×mode combinations) ==
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | adr-record                    19 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | adversarial-review            32 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | api-contract-spec              9 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | appetite-check                12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | architecture-tradeoff-analysis   2 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | assumption-mapping             8 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bdd-outside-in                 0 DEAD
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bdd-scenarios                  4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | bisect                         0 DEAD
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | blameless-postmortem           9 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | blue-green-deploy             27 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | branch-by-abstraction          4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | build-package                 40 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | c4-component                  12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | c4-container                   4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | c4-context                     4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | canary-release                27 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | change-authorization          20 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | change-summary                40 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | change-summary-ue             36 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | checklist-review               8 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | closure-record                44 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | code-review                   17 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | competitor-analysis           12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | confirmation-test             16 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | data-migration-plan           20 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | debt-logging                  20 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | dependency-update              4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | design-doc                    20 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | design-review                  6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | design-review-lightweight      3 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | design-sprint                  0 DEAD
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | differential-debugging        11 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | discovery-report               6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | docs-update                   16 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | equivalence-boundary          28 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | exploitability-analysis        4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | failover                       0 DEAD
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | fault-tree-analysis            0 DEAD
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | feature-flag-kill              4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | feature-flag-wrap              8 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | fishbone-analysis              6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | five-whys                      6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | fix-design                     8 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | fix-spec                      12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | flag-progressive-rollout       0 DEAD
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | formal-inspection              2 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | hotfix                         4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | implement-ue                  32 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | incident-command               4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | instrumented-trace-analysis    5 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | integration-tests              9 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | knowledge-harvest             12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | lightweight-retro              6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | migration-dry-run             15 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | migration-expand-execute      20 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | minimal-repro                 16 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | minimal-repro-ue              16 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | mutation-testing               6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | opportunity-solution-tree      3 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | outcome-definition             6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | problem-framing               12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | problem-record                 3 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | production-readiness-review    6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | property-based-testing         0 DEAD
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | prototype-test                 8 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | rate-limit-shed                4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | relative-estimation           16 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | risk-register                  6 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | rollback                       4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | rollback-mitigation            4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | rolling-deploy                40 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | rolling-restart                4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | rollout-plan                  36 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | root-cause                     9 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | sca-scan                      24 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | schema-migration-script       20 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | security-requirements          4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | security-review                4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | slo-monitoring                16 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | smoke-test                    28 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | spike-decision-review          4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | spike-question-spec            4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | spike-report                   4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | spike-timebox-plan             4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | strangler-fig                  3 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | structured-nl-requirements     4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | structured-retrospective      14 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | t-shirt-sizing                12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tdd-red-green-refactor        16 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | tech-debt-assessment           4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | technical-spike                4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | test-after                     4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | threat-model                  12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | timeline-reconstruction        4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | unit-tests                    15 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | unit-tests-ue                 24 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | use-case-spec                  4 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | user-story-ac                 12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | ux-flow-design                12 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | vertical-slicing               8 
+cat:fdf842cca5b9 fac+art:592fa138d68d pk:cfcaa966656b | walking-skeleton               4 

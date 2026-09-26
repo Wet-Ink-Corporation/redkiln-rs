@@ -1,0 +1,10 @@
+# Red fixture (AC-103): alpha and beta each require the kind only the other provides.
+[pack]
+id = "story"
+applies = "kind == story"
+
+[policy]
+stages = { triage = "mandatory", implement = "mandatory" }
+
+[stage.implement]
+baseline = ["KindX"]

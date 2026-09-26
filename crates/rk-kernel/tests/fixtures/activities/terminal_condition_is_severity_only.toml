@@ -1,0 +1,55 @@
+# AC-527, must-LOAD fixture (s8b §8b.4, 2026-09-25): the rule does not over-reach.
+#
+# (dated 2026-09-25, s8b refuting round 5: the opening claim that this is d2 bullet 1's form is
+# withdrawn; d2 bullet 1 reads "no finding at or above threshold T survives re-execution", and
+# whether this row conforms to it is OPEN, D21-57.) It reads no
+# `evidence`, so no blocking-class witness can falsify it: a witness finding carries `evidence` only,
+# the `severity` lookup falls through to the context and errors, and the predicate is indeterminate —
+# never refused. A witness that also carried `severity: 'blocking'` would refuse it (mutant M4).
+#
+# (dated 2026-09-25, s8b refuting round 2) "This is its form" overstates it. What this fixture pins
+# is that a severity-only predicate reads no `evidence` and is not refused by this rule. Whether a
+# severity-only row without re-execution conforms to d2 bullet 1 ("no finding at or above threshold
+# T survives re-execution") is OPEN (D21-57).
+
+[activity]
+id           = "ac527-severity-only"
+version      = 1
+stage        = "build"
+provides     = ["ReviewNote"]
+requires     = ["Diff"]
+tags         = ["kind:bug"]
+method_rank  = 20
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "author"
+inputs  = { diff = "artifact:Diff" }
+outputs = "value:ReviewDraft"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}" }
+expr     = "findings.none(severity in ['blocking'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ReviewNote = "${draft.outputs.note}" }
+evidence  = ["${adversary?}"]

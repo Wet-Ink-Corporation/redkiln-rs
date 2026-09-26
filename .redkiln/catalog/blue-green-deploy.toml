@@ -2,7 +2,7 @@
 # deploy pattern family: rolling-deploy(10) < blue-green-deploy(20) < canary-release(30) < flag-progressive-rollout(40)
 [activity]
 id           = "blue-green-deploy"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "release"
 provides     = ["ReleaseRecord"]
 requires     = ["BuildArtifact", "ReviewVerdict", "RolloutPlan?"]   # P6 run1 fix: expedite packs forbid planning
@@ -36,7 +36,6 @@ inputs  = { deploy = "${deploy-green.outputs}", checklist = "checklist:smoke" }
 outputs = "value:SmokeResult"
 timeout_secs = 600
 retry   = { max = 1 }
-memo    = false
 
 [[step]]
 id      = "healthy"

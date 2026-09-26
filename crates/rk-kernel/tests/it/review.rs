@@ -18,10 +18,14 @@
 //! | [`ac301_cheap_first_cascade_is_refused`] | **AC-301** (the refusal; the lift is ARMED) | the cascade fixture is refused with the exact reason; every shipped pack passes | — |
 //! | [`ac302_review_tier_takes_no_model_value`] | **AC-302** | `resolve_review_tier`'s signature; the call-graph rule with a scratch violation | — |
 //! | [`ac303_confirm_step_survives_escalation`] | **AC-303** | the F37 row RED on the pre-ceiling fixture (root-cause → bisect loses the reviewer AND the check); the twin discrimination (a lost check alone is AC-303's, not AC-105's); GREEN on the shipped catalog with the ceiling asserted | — |
+//! | [`ac303_multi_hop_confirm_is_seen`], [`ac303_twin_broken_chain_is_lost`], [`ac303_read_binding_is_strict`], [`ac303_back_edge_counts_and_is_reported`] | **AC-303** (D21-57's identification rule) | a check consuming the Findings one step removed is a confirm step (RED first under the name rule); an `artifact:` input breaks the chain; a declared-but-unread binding does not count; a back-edge-only dependence counts and is reported `back-edge` | that a `back-edge` dependence is as strong as a `forward` one |
 //!
-//! Red first, every one, against a skeleton `review` module that carried the ABSENT behaviour
-//! (everything `advisory`; blocks at every weight; unset → `Strict`; an absent `structured_output`
-//! read as zero findings; lints that reported nothing) — the outputs are in the slice's commit.
+//! The Step 7b-ii rows above were red first, every one, against a skeleton `review` module that
+//! carried the ABSENT behaviour (everything `advisory`; blocks at every weight; unset → `Strict`;
+//! an absent `structured_output` read as zero findings; lints that reported nothing) — the outputs
+//! are in the slice's commit. *(dated 2026-09-25, s8b refuting round 1)* Of the four D21-57 rows,
+//! only [`ac303_multi_hop_confirm_is_seen`] was shown red first, under the old name rule, on
+//! 2026-09-25; the other three were authored with the rule and carry no skeleton output.
 
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -43,7 +47,9 @@ use rk_kernel::review::policy::{
     self, Decision, NonBlockReason, ReviewWeight, resolve_review_tier,
 };
 use rk_kernel::review::reexec::{ReExecution, ReExecutionRecord, ReExecutor, Unverifiable};
-use rk_kernel::rigor::{Rigor, confirm_step_monotonicity_rule, rigor_monotonicity_rule};
+use rk_kernel::rigor::{
+    ConfirmSurvey, Dependence, Rigor, confirm_step_monotonicity_rule, rigor_monotonicity_rule,
+};
 use rk_kernel::select::{Catalog, Pack};
 use rk_kernel::toml_subset;
 use rk_types::artifact::findings::{EvidenceLabel, Finding, Findings};
@@ -1081,8 +1087,13 @@ fn ac302_review_tier_takes_no_model_value() {
 
 // ------------------------------------------------------------------ AC-303
 
-const SHIPPED_CATALOG: &str = "spikes/p9/catalog";
-const SHIPPED_FACETS: &str = "spikes/p9/facets.toml";
+/// The shipped catalog and registry. **Re-pointed 2026-09-25 (s8b, D21-42 13a)** from the spike copy,
+/// which differed from `.redkiln/` in ten files at `ca8f387`, before s8b's edits: AC-303 is a
+/// property of the pack the product ships. It pins floors and no p9 figure, so no historical p9
+/// test is split off (s8b §8b.1). *(dated 2026-09-25, refuting round 1)* It now also pins the
+/// `.redkiln/` confirm checks' dependence classes (D21-57), a figure of the shipped pack.
+const SHIPPED_CATALOG: &str = ".redkiln/catalog";
+const SHIPPED_FACETS: &str = ".redkiln/facets.toml";
 const FIXTURE_BISECT: &str = include_str!("../fixtures/catalog/bisect.toml");
 const FIXTURE_ROOT_CAUSE: &str = include_str!("../fixtures/catalog/root-cause.toml");
 const FIXTURE_DIFFERENTIAL: &str = include_str!("../fixtures/catalog/differential-debugging.toml");
@@ -1101,14 +1112,41 @@ fn shipped_registry() -> rk_kernel::registry::Registry {
     rk_kernel::registry::Registry::from_toml(&src).expect("loads")
 }
 
-fn localisation_catalog(bisect: &str, trace: &str) -> Catalog {
-    Catalog::from_sources(&[
+/// The localisation fixture family as `(name, text)` sources — the shape AC-303's rule takes, since
+/// it reads each activity's raw `inputs` graph (D21-57).
+fn localisation_sources<'a>(bisect: &'a str, trace: &'a str) -> [(&'static str, &'a str); 4] {
+    [
         ("bisect.toml", bisect),
         ("root-cause.toml", FIXTURE_ROOT_CAUSE),
         ("differential-debugging.toml", FIXTURE_DIFFERENTIAL),
         ("instrumented-trace-analysis.toml", trace),
-    ])
-    .expect("the fixture catalog loads")
+    ]
+}
+
+fn localisation_catalog(bisect: &str, trace: &str) -> Catalog {
+    Catalog::from_sources(&localisation_sources(bisect, trace)).expect("the fixture catalog loads")
+}
+
+/// Every `*.toml` in a catalog directory as `(file name, text)`, named as `Catalog::from_dir` names
+/// an activity's `source`.
+fn dir_sources(dir: &std::path::Path) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = std::fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("{} is readable: {e}", dir.display()))
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "toml"))
+        .map(|p| {
+            let name = p
+                .file_name()
+                .expect("a file name")
+                .to_string_lossy()
+                .into_owned();
+            let text = std::fs::read_to_string(&p).expect("readable");
+            (name, text)
+        })
+        .collect();
+    out.sort();
+    out
 }
 
 /// **AC-303 — no escalation removes the review-confirm step from the resolved graph.**
@@ -1126,8 +1164,10 @@ fn localisation_catalog(bisect: &str, trace: &str) -> Catalog {
 /// case as *"bisect, an activity with no adversary and no policy step"* — so the block is
 /// structural: the reviewer agent (`kind = agent`, `role = reviewer`, `outputs = value:Findings`)
 /// and the check step that consumes its findings. That is the reading the register's regression
-/// row forces, and it is stated here rather than taken silently; a dated register amendment to
-/// AC-303's wording is OWED (raised in the tracker, not written here).
+/// row forces, and the register now owns it: AC-303's dated amendment of 2026-09-25 (D21-57) defines
+/// the review-confirm step — the check consumes the findings by data dependence, through a chain of
+/// `${<step>.outputs…}` input references from a binding its `expr` reads, not by naming `findings` —
+/// and adds each confirm check's dependence class, `forward` or `back-edge`, to the report.
 ///
 /// **The twin, kept apart.** AC-105 compares evidence variants across the same lattice; a `check`
 /// step mints no evidence, so a lost check is invisible to it. The discrimination row below deletes
@@ -1144,7 +1184,7 @@ fn ac303_confirm_step_survives_escalation() {
 
     // ---- RED: the F37 row on the pre-ceiling fixture -----------------------------------------
     let survey = confirm_step_monotonicity_rule(
-        &localisation_catalog(FIXTURE_BISECT, FIXTURE_TRACE),
+        &localisation_sources(FIXTURE_BISECT, FIXTURE_TRACE),
         &registry,
     )
     .expect("the rule runs");
@@ -1209,7 +1249,11 @@ fn ac303_confirm_step_survives_escalation() {
         std::fs::read_to_string(workspace_root().join(SHIPPED_CATALOG).join("bisect.toml"))
             .expect("bisect");
     let ceilinged = localisation_catalog(&shipped_bisect, &trace_without_check);
-    let ac303 = confirm_step_monotonicity_rule(&ceilinged, &registry).expect("runs");
+    let ac303 = confirm_step_monotonicity_rule(
+        &localisation_sources(&shipped_bisect, &trace_without_check),
+        &registry,
+    )
+    .expect("runs");
     assert!(
         ac303
             .violations
@@ -1229,7 +1273,7 @@ fn ac303_confirm_step_survives_escalation() {
 
     // ---- the repair: the ceiling restores monotonicity on the fixture --------------------------
     let repaired = confirm_step_monotonicity_rule(
-        &localisation_catalog(&shipped_bisect, FIXTURE_TRACE),
+        &localisation_sources(&shipped_bisect, FIXTURE_TRACE),
         &registry,
     )
     .expect("runs");
@@ -1240,17 +1284,64 @@ fn ac303_confirm_step_survives_escalation() {
     );
 
     // ---- GREEN on the shipped catalog, and the ceiling holds -----------------------------------
-    let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
-        .expect("the shipped catalog loads");
+    let shipped = dir_sources(&workspace_root().join(SHIPPED_CATALOG));
+    let shipped: Vec<(&str, &str)> = shipped
+        .iter()
+        .map(|(n, t)| (n.as_str(), t.as_str()))
+        .collect();
     let green = confirm_step_monotonicity_rule(&shipped, &registry).expect("runs");
+    // The count walked comes BEFORE the verdict (s8b §8b.3): a green over zero families is Halt 8's
+    // shape. *(dated 2026-09-25, s8b refuting round 3: the two assertions were in the other order.)*
+    assert!(
+        green.families >= 10 && green.comparisons > 1_000,
+        "the shipped walk is the full lattice: {green:?}"
+    );
     assert!(
         green.violations.is_empty(),
         "the shipped catalog loses a review-confirm step on escalation: {:?}",
         green.violations
     );
+    // Which catalog was read, from its bytes: the floors above hold over the spike copy too, so a
+    // re-point back would leave them green. `.redkiln/`'s threat-model reads `surfaces` on its
+    // `applicable_if` CODE line; the spike copy only quotes that line in a comment.
+    let threat = std::fs::read_to_string(
+        workspace_root()
+            .join(SHIPPED_CATALOG)
+            .join("threat-model.toml"),
+    )
+    .expect("the shipped threat-model.toml is readable");
     assert!(
-        green.families >= 10 && green.comparisons > 1_000,
-        "the shipped walk is the full lattice: {green:?}"
+        threat
+            .lines()
+            .find(|l| l.starts_with("applicable_if"))
+            .is_some_and(|l| l.contains("in surfaces")),
+        "the catalog read is not `.redkiln/catalog`"
+    );
+    // Each confirm check's dependence class (D21-57), so the looseness a back-edge brings is read
+    // off the run rather than inferred. *(dated 2026-09-25, s8b refuting round 1)* The figures are
+    // PINNED as measured over `.redkiln/catalog` from inside this binary (forward=16 back_edge=4):
+    // the sum `forward + back_edge == confirm_checks.len()` held by construction and pinned nothing,
+    // so a family falling back to zero confirm checks stayed green. A catalog edit that moves either
+    // figure is a dated re-pin with its cause.
+    assert_eq!(
+        (green.forward, green.back_edge),
+        (16, 4),
+        "the confirm checks' dependence classes over {SHIPPED_CATALOG} moved: {:?}",
+        green.confirm_checks
+    );
+    for c in &green.confirm_checks {
+        println!(
+            "ac303-class: family={} activity={} step={} dependence={}",
+            c.family,
+            c.activity,
+            c.step,
+            c.dependence.as_str()
+        );
+    }
+    println!(
+        "ac303: catalog={SHIPPED_CATALOG} families={} contexts={} comparisons={} violations=0 \
+         forward={} back_edge={}",
+        green.families, green.contexts_checked, green.comparisons, green.forward, green.back_edge
     );
     let ceiling_lines: Vec<&str> = shipped_bisect
         .lines()
@@ -1265,5 +1356,152 @@ fn ac303_confirm_step_survives_escalation() {
         ceiling_lines[0].contains("\"recommended\""),
         "…and it is P7-CEIL's: {}",
         ceiling_lines[0]
+    );
+}
+
+// ---- AC-303's review-confirm identification, by data dependence (D21-57) ----------------------------
+
+const AC303_LOWER: &str = include_str!("../fixtures/ac303/lower.toml");
+const AC303_MULTI_HOP: &str = include_str!("../fixtures/ac303/upper-multi-hop.toml");
+const AC303_BROKEN_CHAIN: &str = include_str!("../fixtures/ac303/upper-broken-chain.toml");
+const AC303_UNREAD_BINDING: &str = include_str!("../fixtures/ac303/upper-unread-binding.toml");
+const AC303_BACK_EDGE: &str = include_str!("../fixtures/ac303/upper-back-edge.toml");
+
+/// The two-member fixture family: `ac303-lower` (optional, recommended) and the given upper
+/// (mandatory), through the rule under test.
+fn ac303_fixture_survey(upper: &str) -> ConfirmSurvey {
+    let survey = confirm_step_monotonicity_rule(
+        &[("lower.toml", AC303_LOWER), ("upper.toml", upper)],
+        &shipped_registry(),
+    )
+    .expect("runs");
+    assert!(
+        survey.families == 1 && survey.contexts_checked > 0 && survey.comparisons == 3,
+        "the rule walked the fixture lattice (optional -> recommended, both -> mandatory): {survey:?}"
+    );
+    survey
+}
+
+/// The class the survey gave `activity`'s check `step`, if it counted it as a confirm check.
+fn ac303_class(survey: &ConfirmSurvey, activity: &str, step: &str) -> Option<Dependence> {
+    survey
+        .confirm_checks
+        .iter()
+        .find(|c| c.activity == activity && c.step == step)
+        .map(|c| c.dependence)
+}
+
+/// Both rows of an upper that lost the confirm check and kept the reviewer: lost=[verdict].
+fn assert_lost_verdict_only(survey: &ConfirmSurvey, why: &str) {
+    assert_eq!(survey.violations.len(), 2, "{why}: {:?}", survey.violations);
+    for v in &survey.violations {
+        assert_eq!(
+            (
+                v.lower_activity.as_str(),
+                v.upper_activity.as_str(),
+                v.upper
+            ),
+            ("ac303-lower", "ac303-upper", Rigor::Mandatory),
+            "{why}: {v:?}"
+        );
+        assert_eq!(
+            v.lost,
+            ["verdict"],
+            "{why}: the check alone, the reviewer kept: {v:?}"
+        );
+    }
+}
+
+/// **T1 (D21-57): a check that consumes the reviewer's Findings one step removed is seen.** The
+/// upper's `verdict` reads `record`, and `record` binds `findings = ${review.outputs}` — the ADR-0080
+/// d2 shape adversarial-review ships.
+///
+/// RED (observed 2026-09-25) under the name rule (`quality_block::reads_findings` over the `expr`):
+/// two rows, optional and recommended → mandatory, into `ac303-upper`, `lost: ["verdict"]`.
+#[test]
+fn ac303_multi_hop_confirm_is_seen() {
+    assert!(
+        !AC303_MULTI_HOP.contains("findings.")
+            && AC303_MULTI_HOP.contains("findings = \"${review.outputs}\""),
+        "PREMISE: the upper's check names no `findings`; `record` binds it"
+    );
+    let survey = ac303_fixture_survey(AC303_MULTI_HOP);
+    assert!(
+        survey.violations.is_empty(),
+        "a check consuming the findings through `record` is a review-confirm step: {:?}",
+        survey.violations
+    );
+    assert_eq!(
+        ac303_class(&survey, "ac303-upper", "verdict"),
+        Some(Dependence::Forward),
+        "verdict -> record -> review runs along forward edges only"
+    );
+    assert_eq!(
+        ac303_class(&survey, "ac303-lower", "verdict"),
+        Some(Dependence::Forward)
+    );
+    assert_eq!((survey.forward, survey.back_edge), (2, 0), "{survey:?}");
+}
+
+/// **T2 (D21-57), T1's twin: an `artifact:` input breaks the chain.** The same upper with
+/// `record`'s findings read from `artifact:Findings`: the check consumes nothing the reviewer
+/// produced, so escalating to it loses the confirm half — and only it; the reviewer is kept.
+#[test]
+fn ac303_twin_broken_chain_is_lost() {
+    // The twin differs from T1's upper in `record`'s input and nothing else below `[[step]]`.
+    let steps = |src: &str| {
+        src.replace("\r\n", "\n")
+            .split_once("[[step]]")
+            .map(|(_, s)| s.to_owned())
+            .expect("steps")
+    };
+    assert_eq!(
+        steps(AC303_BROKEN_CHAIN).replace("\"artifact:Findings\"", "\"${review.outputs}\""),
+        steps(AC303_MULTI_HOP),
+        "PREMISE: the twin's steps are T1's with one input changed"
+    );
+    assert_ne!(steps(AC303_BROKEN_CHAIN), steps(AC303_MULTI_HOP));
+    let survey = ac303_fixture_survey(AC303_BROKEN_CHAIN);
+    assert_eq!(ac303_class(&survey, "ac303-upper", "verdict"), None);
+    assert_lost_verdict_only(&survey, "an `artifact:` input breaks the chain");
+}
+
+/// **T3 (D21-57): only a binding the `expr` READS counts.** The read binding `record` has its chain
+/// broken; the check still declares `findings = ${review.outputs}` and never reads it. A rule that
+/// counted every declared binding would call this a confirm step (mutant M-A2).
+#[test]
+fn ac303_read_binding_is_strict() {
+    assert!(
+        AC303_UNREAD_BINDING.contains(
+            "inputs  = { record = \"${record.outputs}\", findings = \"${review.outputs}\" }"
+        ) && AC303_UNREAD_BINDING.contains("expr    = \"record.blocking.len() == 0\""),
+        "PREMISE: the check declares `findings` and reads only `record`"
+    );
+    let survey = ac303_fixture_survey(AC303_UNREAD_BINDING);
+    assert_eq!(ac303_class(&survey, "ac303-upper", "verdict"), None);
+    assert_lost_verdict_only(&survey, "a declared-but-unread binding does not count");
+}
+
+/// **T4 (D21-57): dependence reached only through a back-edge counts, and is reported.** The
+/// upper's `policy` reads `report` ← `run` ← `hypothesise`, and `hypothesise` reads
+/// `${review.outputs?}`, declared after it: the previous iteration's findings (D21-47 V5). Green,
+/// and the survey says `back-edge`, never `forward`.
+#[test]
+fn ac303_back_edge_counts_and_is_reported() {
+    let survey = ac303_fixture_survey(AC303_BACK_EDGE);
+    assert!(
+        survey.violations.is_empty(),
+        "a back-edge dependence on the findings is a review-confirm step: {:?}",
+        survey.violations
+    );
+    assert_eq!(
+        ac303_class(&survey, "ac303-upper", "policy"),
+        Some(Dependence::BackEdge)
+    );
+    assert_eq!(
+        (survey.forward, survey.back_edge),
+        (1, 1),
+        "the lower's direct read is forward; the upper's loop is the one back-edge: {:?}",
+        survey.confirm_checks
     );
 }

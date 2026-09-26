@@ -1,0 +1,50 @@
+# AC-303 fixture (D21-57), T1: the UPPER member's confirm check reads `record`, and `record` binds
+# `findings = ${review.outputs}` -- the ADR-0080 d2 shape adversarial-review ships. The check names
+# no `findings`, so a rule keyed on that name loses it; a rule keyed on consumption does not.
+[activity]
+id           = "ac303-upper"
+version      = 1
+stage        = "review"
+provides     = ["ReviewVerdict"]
+requires     = ["ChangeSummary"]
+derived_from = ["ChangeSummary"]
+method_rank  = 20
+family       = "ac303-fixture"
+min_rigor    = "mandatory"
+cost_class   = "M"
+evidence     = ["Findings"]
+budget       = { attempts_total = 3, tokens = 100_000, wall_clock_secs = 600 }
+deviation_ok = []
+keywords     = ["ac303 fixture upper multi hop"]
+rationale    = "AC-303 fixture: the upper member, whose check consumes the findings one step removed."
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { change = "artifact:ChangeSummary" }
+outputs = "value:Findings"
+timeout_secs = 600
+retry   = { max = 1 }
+
+[[step]]
+id      = "record"
+kind    = "tool"
+run     = "toolchain:verdict_record"
+inputs  = { findings = "${review.outputs}" }
+outputs = "value:Verdict"
+timeout_secs = 30
+retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { record = "${record.outputs}" }
+expr    = "record.blocking.len() == 0"
+on_false = "continue"
+
+[[step]]
+id      = "emit"
+kind    = "emit"
+artifacts = { ReviewVerdict = "${record.outputs}" }
+evidence  = ["${review}"]

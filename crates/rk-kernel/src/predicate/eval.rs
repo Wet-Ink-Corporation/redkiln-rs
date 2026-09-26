@@ -400,6 +400,10 @@ impl Eval<'_> {
             // over `null` or an EMPTY list are true; `any` is false. ADR-0032's "vacuously true"
             // is withdrawn for `any`, because `any(s in surfaces, s == "auth")` over an absent
             // `surfaces` must not fire the activity.
+            // *(dated 2026-09-25, s8b refuting round 5)* Since AC-527's 2026-09-25 amendment
+            // (D21-55), AC-527 binds `findings` only to non-empty one-finding witnesses, never to
+            // `null` or an empty list, so this clause is no longer load-bearing for it. It still
+            // governs selection (the `any(s in surfaces, …)` sentence above).
             Value::Null => Vec::new(),
             Value::List(items) => items,
             other => return Err(EvalError::NotAList(format!("{other:?}"))),

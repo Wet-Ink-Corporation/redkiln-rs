@@ -4,6 +4,11 @@
 //! --validate`'s job, green today at `validate errors=0` with `holes=0` in every family — and
 //! SM-035's *Instrument* line names AC-105 by id. The two are *"separate obligations on the same
 //! enumeration and both are errors, not warnings"* (ADR-0081 clause 2).
+//! *(dated 2026-09-25, s8b refuting round 4)* AC-104's instrument of record is no longer
+//! `lattice.py --validate`: since `s8b` it is `rk_kernel::lattice::validate`, run by
+//! `lattice::p6_validate_over_the_shipped_pack` over `.redkiln/` and by
+//! `lattice::p6_validate_parity_over_the_p9_tree` against the Python's golden. `lattice.py` is
+//! frozen at `P9_PIN` as the parity oracle, not edited and not the instrument.
 //!
 //! # Red on the pre-P7-CEIL catalog, green on the shipped one
 //!
@@ -28,6 +33,13 @@
 //! assertion that reads the shipped catalog is alignment-tolerant for exactly that reason
 //! (golden constraint 9 — the guard's scope is "one ceiling declaration", not a spacing).
 //!
+//! *(dated 2026-09-25, s8b refuting round 1)* The two paragraphs above describe the tree before
+//! s8b. The green end is now `.redkiln/catalog` (s8b, D21-42 13a); the p9 reading survives only as
+//! [`rigor_monotonicity_p9_historical_2026_09_13`], at its pin. The fixture's three `localisation`
+//! members are copies of the p9 files at `P9_PIN`, not of the shipped ones: s8b rewrote
+//! `.redkiln/`'s `root-cause`, `differential-debugging` and `instrumented-trace-analysis`, so the
+//! fixture catalog differs from the shipped one in far more than one line.
+//!
 //! **Adding the missing steps to `bisect` is the Phase-2 repair under ADR-0072**, which the design
 //! says three times, and it is not done here.
 
@@ -40,10 +52,17 @@ use rk_kernel::rigor::{Rigor, rigor_monotonicity_rule};
 /// The shipped catalog, relative to the workspace root. This path is on a non-comment line
 /// deliberately: "passes on the catalog as shipped" asserted over a fixture of the implementer's
 /// choosing is not that claim, and a doc comment naming the path satisfies an unanchored grep.
-const SHIPPED_CATALOG: &str = "spikes/p9/catalog";
+///
+/// **Re-pointed 2026-09-25 (s8b, D21-42 13a):** the product ships `.redkiln/`, and until this date
+/// the constant named the spike copy, which differed from it in ten files at `ca8f387`, before
+/// s8b's edits *(dated 2026-09-25, s8b refuting round 2: this said "which differs from it in ten
+/// files"; s8b's catalog edits moved the count)*. The p9 reading is kept,
+/// as a historical measurement read at its pinned commit, by
+/// [`rigor_monotonicity_p9_historical_2026_09_13`] (D21-47 V2).
+const SHIPPED_CATALOG: &str = ".redkiln/catalog";
 /// The shipped facet registry, which supplies every domain the lattice enumerates. **Both ends of
 /// this test read the same registry**: only the catalog differs between red and green.
-const SHIPPED_FACETS: &str = "spikes/p9/facets.toml";
+const SHIPPED_FACETS: &str = ".redkiln/facets.toml";
 
 const FIXTURE_BISECT: &str = include_str!("../fixtures/catalog/bisect.toml");
 const FIXTURE_ROOT_CAUSE: &str = include_str!("../fixtures/catalog/root-cause.toml");
@@ -218,6 +237,28 @@ fn rigor_monotonicity() {
          the catalog this assertion is about",
         shipped.len()
     );
+    // WHICH CATALOG WAS READ, asserted from its bytes and not from the constant's spelling. The green
+    // shape below is (15, 2060, 1729) over `.redkiln/catalog` AND over the p9 copy [measured
+    // 2026-09-25, s8b], so the pinned figures alone cannot tell the two apart: a re-point back to
+    // `spikes/p9/catalog` would leave every other assertion here green (mutant M1). `.redkiln/`'s
+    // `threat-model` reads the `surfaces` set on its `applicable_if` CODE line, which the spike copy
+    // never carried. The spike copy's COMMENTS quote the shipped line, so only the key's own line is
+    // read: a check over the whole file is satisfied by that prose.
+    let threat = std::fs::read_to_string(
+        workspace_root()
+            .join(SHIPPED_CATALOG)
+            .join("threat-model.toml"),
+    )
+    .expect("the shipped threat-model.toml is readable");
+    let applicable = threat
+        .lines()
+        .find(|l| l.starts_with("applicable_if"))
+        .expect("threat-model declares applicable_if on a code line");
+    assert!(
+        applicable.contains("in surfaces"),
+        "the catalog read is not `.redkiln/catalog`: its threat-model's `{applicable}` does not read \
+         the `surfaces` set that only the shipped copy declares"
+    );
     let survey = rigor_monotonicity_rule(&shipped, &registry).expect(
         "the rule runs over the \
          shipped catalog",
@@ -233,7 +274,8 @@ fn rigor_monotonicity() {
         survey.violations
     );
     println!(
-        "rigor_monotonicity: activities={} families={} contexts={} comparisons={} violations=0",
+        "rigor_monotonicity: catalog={SHIPPED_CATALOG} activities={} families={} contexts={} \
+         comparisons={} violations=0",
         shipped.len(),
         survey.families,
         survey.contexts_checked,
@@ -401,5 +443,46 @@ fn rigor_monotonicity() {
             .any(|v| v.lost.contains(&Evidence::Findings)),
         "and what it loses is the guarded step's own mint: {:#?}",
         with_guard.violations
+    );
+}
+
+/// **A historical measurement, named so** (D21-42 13a; D21-47 V2). `(15, 2060, 1729)` is the green
+/// end's shape over the `spikes/p9` catalog and registry as they were measured on 2026-09-13, before
+/// this module's primary test was re-pointed at `.redkiln/`. It reads the p9 tree at its pinned
+/// commit through [`crate::p9_pin::root`], never the working tree, so a story-lane edit to
+/// `spikes/p9` (D21-41 f) cannot move it.
+///
+/// *(dated 2026-09-25, s8b refuting round 2)* What it reads is not the 2026-09-13 tree. It is the
+/// 2026-09-13 figure, re-read over the p9 tree at `P9_PIN` (`ca8f387`), which includes Step 7e's
+/// three p9 catalog edits at `dddcdbd` (2026-09-21: `security-requirements`, `security-review` and
+/// `threat-model`, the `auth` term). Those edits did not move the figure. The name keeps its date
+/// because checkpoints select it.
+#[test]
+fn rigor_monotonicity_p9_historical_2026_09_13() {
+    let p9 = crate::p9_pin::root();
+    let src = std::fs::read_to_string(p9.join("facets.toml"))
+        .expect("the pinned p9 registry is readable");
+    let registry = Registry::from_toml(&src).expect("the pinned p9 registry loads");
+    let catalog = Catalog::from_dir(&p9.join("catalog")).expect("the pinned p9 catalog loads");
+    assert_eq!(
+        catalog.len(),
+        102,
+        "the pinned p9 catalog is 102 activities; {} were read",
+        catalog.len()
+    );
+    let survey = rigor_monotonicity_rule(&catalog, &registry).expect("the rule runs over p9");
+    assert!(
+        survey.contexts_checked > 0 && survey.comparisons > 0,
+        "a survey that walked nothing is not the historical reading: {survey:?}"
+    );
+    assert!(
+        survey.is_monotone(),
+        "the pinned p9 catalog was monotone on 2026-09-13: {:#?}",
+        survey.violations
+    );
+    assert_eq!(
+        (survey.families, survey.contexts_checked, survey.comparisons),
+        (15, 2060, 1729),
+        "the p9 green end as measured on 2026-09-13 — a frozen tree read at its pin cannot move"
     );
 }

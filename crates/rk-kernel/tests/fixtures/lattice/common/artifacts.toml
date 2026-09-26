@@ -1,0 +1,26 @@
+# The lattice fixtures' artifact-kind registry. One human-sourced root so the registry is never
+# empty; every other kind is activity-sourced.
+
+[artifact.IntakeRecord]
+source = "human"
+
+[artifact.Spec]
+source = "activity"
+
+[artifact.Patch]
+source = "activity"
+
+[artifact.TestResult]
+source = "activity"
+
+[artifact.ThreatModel]
+source = "activity"
+
+[artifact.KindX]
+source = "activity"
+
+[artifact.KindY]
+source = "activity"
+
+[artifact.Orphan]
+source = "activity"

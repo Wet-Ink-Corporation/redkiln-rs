@@ -248,10 +248,16 @@ fn quantifier_empty_and_null() {
         // truth over an empty findings set is `true`, so if this value ever stops being `true` the
         // rule silently stops refusing anything. That is why the value is pinned here, in the
         // evaluator's own file, and not restated inside the lint.
+        // *(dated 2026-09-25, s8b refuting round 1)* No longer so: AC-527 was amended to ADR-0080
+        // d2 (D21-55), and its rule's premise is a one-finding witness, not the empty set. This
+        // value no longer drives the rule; it is kept as an evaluator pin.
+        // *(dated 2026-09-25, s8b refuting round 2)* AC-527's tests in `quality_block.rs` now read
+        // eight fixtures under `tests/fixtures/activities/`, not three, and this assertion's message
+        // no longer calls the value AC-527's premise.
         assert_eq!(
             truth("findings.none(evidence == Reproduced)", ctx),
             Tri::True,
-            "`none` over {label} is TRUE — AC-527's whole premise"
+            "`none` over {label} is TRUE (ADR-0103 decision 4; an evaluator pin)"
         );
     }
 

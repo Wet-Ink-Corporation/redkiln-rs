@@ -1,0 +1,55 @@
+# AC-527, must-FAIL fixture (s8b §8b.4, 2026-09-25): THE CONJUNCT CASE. This is the shipped
+# `user-story-ac` row as it stood before s8b, verbatim.
+#
+# `check.failed` is bound by nothing at lint time, so evaluating the whole predicate errors on its
+# first operand. The rule reaches the second conjunct only because it evaluates each conjunct required
+# for truth alone (D21-55), and the named-form match reaches it as a conjunct.
+
+[activity]
+id           = "ac527-one-member-conjunct"
+version      = 1
+stage        = "build"
+provides     = ["ReviewNote"]
+requires     = ["Diff"]
+tags         = ["kind:bug"]
+method_rank  = 20
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?", "SelfCheck"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "author"
+inputs  = { diff = "artifact:Diff" }
+outputs = "value:ReviewDraft"
+
+[[step]]
+id      = "self-check"
+kind    = "agent"
+role    = "author"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:SelfCheck"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}", check = "${self-check.outputs}" }
+expr     = "check.failed == 0 and findings.none(evidence in ['Reproduced'])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ReviewNote = "${draft.outputs.note}" }
+evidence  = ["${adversary?}", "${self-check}"]

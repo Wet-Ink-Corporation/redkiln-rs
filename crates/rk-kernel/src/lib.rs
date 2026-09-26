@@ -81,7 +81,9 @@
 //! enumerates and the journal identity beneath it; and AC-018's two pack-validation clauses, which
 //! are **red against the shipped catalog by design** — nineteen shipped steps across fourteen
 //! activities declare the `memo` key ADR-0097 decision 3 withdrew [measured 2026-09-14] and the
-//! repairs are Step 7e's, not this stage's. **Component 5's tool branch has no source in this
+//! repairs are Step 7e's, not this stage's *(dated 2026-09-25, s8b, D21-43 N26: the repair was
+//! `s8b`'s; `.redkiln/catalog` declares no `memo` key now, and the nineteen live on only in the
+//! frozen p9 control `memo::ac018_frozen_p9_catalog_is_red`)*. **Component 5's tool branch has no source in this
 //! tree and is not invented**; **component 8 is `ActivitySpec.schema`'s whole id** as of
 //! 2026-09-14, and the note saying what `schema_version` formally is stays OWED; AC-043's
 //! `Evicted`
@@ -258,20 +260,26 @@
 //!
 //! **And — the last of Slice 2's debt — [`quality_block`], which is AC-527.** `tests/it/
 //! evaluator.rs`:236 carried the absence note for it (*"the lint that acts on it **IS NOT BUILT**"*)
-//! and that note is retired in place rather than deleted. The rule is on the **FORM**: it evaluates
-//! a `check` step's `expr` over a context in which the findings set is empty — and again over one in
-//! which it is absent, which is the shape F37's `optional` arm measured — across the three live
-//! rigor levels, and refuses it if any cell comes out `true`. That reaches `findings.none(…)`,
-//! `findings.all(…)`, `findings == null` and `findings.len() == 0` with one rule, where a denylist
-//! of ADR-0080's spelling reaches only the first. **It binds `findings` and `rigor` and nothing
-//! else**, and that restraint is measured rather than assumed: binding every read path to `null`
-//! makes `X.all(…)` over an unknown collection vacuously true and refuses `mutation-testing`'s
-//! threshold and `flag-progressive-rollout`'s re-execution outcome — the two shapes ADR-0080
-//! decision 2 *prescribes as the remedy*. **It is red against the shipped catalog by design**: 11 of
-//! the 94 live terminal conditions are refused, 83 have no truth value here, and **none is decided
-//! lawful**. The repairs are Step 7e's and the CLI surface is Step 7d's; neither is claimed, and an
-//! erratum reconciling AC-527's THEN with ADR-0080 decision 2's broader *"satisfiable only by an
-//! empty finding set"* is **OWED**. The module header carries the table.
+//! and that note is retired in place rather than deleted. *(Rewritten 2026-09-25, s8b refuting
+//! round 1: the empty-set rule this paragraph described is retired.)* AC-527 was **amended in the
+//! register on 2026-09-25** to ADR-0080 decision 2 (D21-41 (h); D21-55; `s8b` §8b.4), and the rule
+//! refuses two things on every `check` step's `expr`: **the named form**,
+//! `findings.none(evidence in [...])` in any quoting and with any member list, alone or as a
+//! conjunct required for truth, matched on the parse tree; and **a conjunct required for truth that
+//! reads `findings` and that a single-class blocking witness falsifies** *(dated 2026-09-25, s8b
+//! refuting round 5: D21-55's "that reads `findings`" scope restored)*, each conjunct evaluated
+//! alone over a one-finding `evidence`-only witness per class (`Reproduced`, `MutationSurvived`)
+//! across the live rigor levels. Nothing is refused for being true over an empty findings set, and `findings == null` is
+//! not this rule's (D21-55 carries it to its own item; `s8b` §8b.10 records it open). **It binds
+//! `findings` and `rigor` and nothing else.** Binding every read path to `null` was measured wrong
+//! under the retired empty-set rule (2026-09-14): it made `X.all(…)` over an unknown collection
+//! vacuously true and refused `mutation-testing`'s threshold and `flag-progressive-rollout`'s
+//! re-execution outcome — the two shapes ADR-0080 decision 2 *prescribes as the remedy*. Under the
+//! amended rule the restraint stands by D21-55's ruling, not by that measurement: those rows read no
+//! `findings`, so the rule never reaches them, and refusal 2 fires on `false`, so vacuous truth
+//! refuses nothing. *(dated 2026-09-25, s8b refuting round 3: this said the restraint was
+//! "measured rather than assumed" in the present tense of the amended rule.)* A conjunct that errors is indeterminate,
+//! never refused. The CLI surface stays ARMED. The module header carries the table.
 
 /// **AC-484's dependency-edge reading** — the pure reader that answers *"does `rk-kernel` reach an
 /// `rk-adapter-*` crate, directly or transitively?"* from `cargo metadata` output.
@@ -301,6 +309,10 @@ pub mod facet_stability;
 /// stand outside its own scope; its header records the one marked, counted exemption that follows
 /// from that, and `tests/it/kernel_denylist.rs` asserts the exemption's size.
 pub mod kernel_denylist;
+/// **AC-101 to AC-104's instrument of record** — the P6 context lattice, `spikes/p9/lattice.py` v2
+/// ported clause for clause (D21-42 13b). The Python stays the oracle its parity goldens are
+/// re-derived from; this module reads `.redkiln/` on the axes D21-43 N26 registers.
+pub mod lattice;
 /// **AC-294's third instrument** — the module-boundary architecture lint, for the **`--stay` class**
 /// state the criterion is extended to carry.
 ///

@@ -1,0 +1,8 @@
+[activity]
+id          = "loose-tester"
+version     = 1
+stage       = "specification"
+provides    = ["TestResult"]
+method_rank = 10
+cost_class  = "S"
+max_rigor   = "optional"

@@ -3,7 +3,7 @@
 #   rank 10 always applies (wanted `last_deploy_age < 24h`, which is not a facet — F34 ambiguity B20), so ranks 20–50 are deviation-only
 [activity]
 id           = "rate-limit-shed"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "operate"
 provides     = ["MitigationRecord"]
 requires     = ["IncidentRecord"]
@@ -35,7 +35,6 @@ inputs  = { incident = "artifact:IncidentRecord" }
 outputs = "value:OpsActionReport"
 timeout_secs = "${toolchain.deploy_timeout}"
 retry   = { max = 2 }
-memo    = false
 
 [[step]]
 id      = "observe"
@@ -46,7 +45,6 @@ inputs  = { window_secs = 600, previous = "${observe.outputs?}" }
 outputs = "value:TelemetryReport"
 timeout_secs = 900
 retry   = { max = 1 }
-memo    = false
 repeat  = { until = "${observe.outputs.status} == 'stable'", max = 3 }
 on_exhausted = "escalate"
 escalate = { question = "mitigation.not-restored" }

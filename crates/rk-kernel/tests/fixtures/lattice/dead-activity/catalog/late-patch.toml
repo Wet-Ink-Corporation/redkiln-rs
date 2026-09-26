@@ -1,0 +1,7 @@
+[activity]
+id          = "late-patch"
+version     = 1
+stage       = "release"
+provides    = ["Patch"]
+method_rank = 10
+cost_class  = "S"

@@ -1,0 +1,52 @@
+# The lattice fixtures' facet registry: the facets the five fixtures' predicates and the ordinal and
+# rigor axes need. Shared by the five red fixtures (s8b §8b.2); each fixture's catalog and pack read
+# only these. (dated 2026-09-25, s8b refuting round 2: this said "the axes rk_kernel::lattice binds,
+# and nothing else". The lattice binds all eight covering-array booleans; they are not declared here
+# except `data_migration`, and no fixture predicate reads any of them.)
+
+[facet.kind]
+values = ["initiative", "project", "story", "bug", "incident", "spike", "chore", "tech-debt", "security-vuln", "docs"]
+source = "human"
+
+[facet.cos]
+values = ["expedite", "fixed-date", "standard", "intangible"]
+source = "human"
+
+[facet.rigor]
+ordered = true
+values = ["forbidden", "discouraged", "optional", "recommended", "mandatory"]
+source = "kernel"
+
+[facet.criticality]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"
+
+[facet.novelty]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"
+
+[facet.size]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"
+
+[facet.blast_radius]
+ordered = true
+values = ["low", "med", "high", "unknown"]
+source = "human"
+
+[facet.toolchain]
+values = ["node", "dotnet", "python", "rust", "unreal"]
+source = "human"
+set = true
+
+[facet.change]
+values = ["text", "binary", "generated"]
+source = "human"
+set = true
+
+[facet.data_migration]
+values = [true, false]
+source = "human"

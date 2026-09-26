@@ -1,0 +1,7 @@
+[activity]
+id          = "tester"
+version     = 1
+stage       = "verify"
+provides    = ["TestResult"]
+method_rank = 10
+cost_class  = "S"

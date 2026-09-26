@@ -2,7 +2,7 @@
 # localisation family: root-cause(10) < differential-debugging(20) < bisect(30) < instrumented-trace-analysis(40)
 [activity]
 id           = "instrumented-trace-analysis"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["RootCause"]
 requires     = ["ReproCase"]
@@ -35,7 +35,6 @@ inputs  = { command = "artifact:ReproCase.command", changes = "${instrument.outp
 outputs = "value:TraceAnalysis"
 timeout_secs = 1800
 retry   = { max = 1 }
-memo    = false
 
 [[step]]
 id      = "analyse"
@@ -50,7 +49,7 @@ retry   = { max = 1 }
 id      = "confirm"
 kind    = "tool"
 run     = "toolchain:test"
-inputs  = { selection = "artifact:ReproCase.command" }
+inputs  = { selection = "${analyse.outputs.discriminating_test}" }
 outputs = "value:TestReport"
 timeout_secs = "${toolchain.test_timeout}"
 retry   = { max = 1 }
@@ -67,8 +66,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { findings = "${adversary.outputs}", cause = "${analyse.outputs}" }
-expr    = "cause.confidence == 'high' and findings.none(evidence in ['Reproduced'])"
+inputs  = { cause = "${analyse.outputs}", report = "${confirm.outputs}", findings = "${adversary.outputs}" }
+expr    = "cause.confidence == 'high' and report.failed > 0"
 on_false = { to = "instrument", max = 2 }
 
 [[step]]

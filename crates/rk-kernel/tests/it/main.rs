@@ -115,7 +115,9 @@
 //! `rk_store::memo::StepKeyComponents` — nine, because the register says *"eight cases, one per
 //! component"* plus *"a companion test asserting a hit"* — AC-015's edited atom, AC-016's three
 //! instruments with the discriminating one first, AC-017's two iterations and their control,
-//! AC-018's three fixtures and the shipped catalog's **nineteen** live violations, and AC-019's two
+//! AC-018's three fixtures and the shipped catalog's **nineteen** live violations *(dated
+//! 2026-09-25, s8b, D21-43 N26: the shipped catalog is repaired and asserts zero; the nineteen live
+//! on only in the frozen p9 control `ac018_frozen_p9_catalog_is_red`)*, and AC-019's two
 //! halves. Its header carries the same WHAT-IS-MEASURED table [`breaker`] and [`fsm`] do, and four
 //! of its rows are ARMED: memo-key component 5's **tool branch** has no source in this tree,
 //! AC-019's *"event-schema test"* is over JSON keys because `Event.payload` is untyped and the
@@ -224,16 +226,16 @@
 //! **[`quality_block`], 2026-09-14: AC-527, and the absence note in [`evaluator`] it retires.**
 //! `evaluator.rs`:236 carried *"the lint that acts on it **IS NOT BUILT** —
 //! `ac527_empty_set_terminal_condition` selects zero tests on this crate"*; the filter now selects
-//! one. The three fixtures §7b.12 names are committed under `tests/fixtures/activities/`, and the
-//! **second** is the whole point: `findings.all(…)` over an empty set, which shares no text with
-//! ADR-0080's forbidden predicate — this file asserts that over the fixture's own bytes, with
-//! fixture 1 as the control on the check — and must fail for the same reason. The third must LOAD,
-//! and two patched variants of it are the controls that stop the rule being a denylist of the word
-//! `findings` or a rule keyed on the block's shape. 🛑 **Three things here are not covered**: the
-//! `rk-catalog` CLI surface (Step 7d's), the shipped catalog's **eleven** live violations (Step
-//! 7e's repairs — and **none** of its 94 terminal conditions is decided *lawful*, which the test
-//! asserts as a number), and the reading gap between AC-527's THEN and ADR-0080 decision 2, whose
-//! size is **83** and whose erratum is **OWED**.
+//! one. *(Rewritten 2026-09-25, s8b refuting round 1: the empty-set rule is retired.)* AC-527 was
+//! amended in the register on 2026-09-25 to ADR-0080 decision 2 (D21-41 (h); D21-55; `s8b` §8b.4),
+//! so no erratum is owed. The rule refuses two things on every `check` step: the named form
+//! `findings.none(evidence in [...])`, on the parse tree, alone or as a required conjunct; and a
+//! required conjunct that a one-finding, `evidence`-only witness of one blocking class falsifies,
+//! each conjunct evaluated alone. Nothing is refused for its truth over an empty set. The fixtures
+//! are one per branch under `tests/fixtures/activities/` (seven, plus the fail-closed
+//! `does_not_parse`), and the recast fixture 2, `findings.all(not (evidence in [...]))`, is refused
+//! by the witness **alone**. 🛑 **Not covered here**: the `rk-catalog` CLI surface, which stays
+//! ARMED.
 //!
 //! Its **three positives** are the discrimination and not decoration (§7b.13 says so by name), and
 //! its **fourth** is `spikes/p9/facets.toml` itself: two of the eleven cases are predicates that
@@ -302,11 +304,13 @@ mod guard_context;
 mod kernel_denylist;
 mod keywords;
 mod lane_order;
+mod lattice;
 mod ledger;
 mod memo;
 mod module_boundary;
 mod no_egress;
 mod on_false;
+mod p9_pin;
 mod pack_validation;
 mod post_commit_failure;
 mod probe_differential;
