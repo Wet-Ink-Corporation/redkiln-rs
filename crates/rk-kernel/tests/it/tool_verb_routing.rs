@@ -137,6 +137,9 @@ fn a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port() {
     // `build` and `test` are both in `MAPPED_VERBS`, so without this the refusal below is
     // indistinguishable from ADR-0135's by-name refusal of an UNMAPPED verb, from an unbound port,
     // and from a `run` key this fixture spelled wrong.
+    // *(dated 2026-09-26, s8c refuting round 6.)* `MAPPED_VERBS` is gone: routing is the verb
+    // registry's rows (record V = ADR-0170, proposed), and both verbs are rows of [`PORT_ROWS`]
+    // here; a verb with no row refuses by its bare name. The control's reasoning is unchanged.
     let (control_rt, control_tc) = rt_with_counter("run-verb-control");
     let control = control_rt
         .execute_step(&tool_step("build-it", "build"), &ctx)
@@ -348,6 +351,126 @@ fn a_registry_verb_with_no_inputs_reaches_run_verb() {
         "a failing SmokeResult must fail the step: {e:?}"
     );
     assert_eq!(tc.calls(), 1);
+
+    // *(Added 2026-09-26, s8c refuting round 6: before it, no double handed the kernel an `empty`
+    // SmokeResult, so M51 (`Empty` moved to the `Ok` arm) survived the whole workspace suite, 875
+    // passed.)* An EMPTY smoke result — no rows run — is not a walked step either (§8c.4; AC-332's
+    // "`Empty` is never passing"): `NonZero`, no code, the digest of the report's JSON.
+    let empty = serde_json::json!({ "rows": [], "passed": 0, "failed": 0, "status": "empty" });
+    let digest = rk_types::digest::sha256(
+        serde_json::to_string(
+            &serde_json::from_value::<rk_types::verb_output::SmokeResult>(empty.clone())
+                .expect("the empty value is a decodable SmokeResult"),
+        )
+        .expect("a report serialises")
+        .as_bytes(),
+    );
+    let (rt, tc) = rt_routed(
+        "reaches-run-verb-empty",
+        CountingToolchain::with_verb_output(VerbOutput {
+            kind: "SmokeResult".to_owned(),
+            value: empty,
+        }),
+        ToolRouting::new(registry(SMOKE_ROW, ""), ToolchainValues::default()),
+    );
+    let e = failed(
+        rt.execute_step(&tool_step("smoke", "smoke"), &ctx)
+            .expect("a value"),
+    );
+    assert_eq!(
+        e,
+        StepError::NonZero {
+            code: None,
+            stderr_digest: digest,
+        },
+        "an empty SmokeResult must fail the step as NonZero, no code, the report's digest"
+    );
+    assert_eq!(tc.calls(), 1, "`run_verb` was not reached exactly once");
+}
+
+/// **Every kind in the kernel's closed decode table refuses a value that does not decode, naming
+/// the kind; a kind with no entry refuses naming it as having none** (§8c.4; record V = ADR-0170
+/// decision 2, proposed). Each kind is reached through a test-only `toolchain` row with no inputs,
+/// as `smoke` and `rebuild` are above: the shipped `sca_scan`, `package` and `setup` rows declare
+/// inputs and refuse before the port until `s8d`'s resolver, and `item_create` / `release_tag` take
+/// the `store` / `git` routes, which refuse naming `s8f` / `s8g`. The registry loader checks
+/// `outputs` only on `port` rows, so a `toolchain` row may declare any of these kinds, or none of
+/// them.
+///
+/// *(Added 2026-09-26, s8c refuting round 6: before it, only the `SmokeResult` and `BuildReport`
+/// arms were observed, so M52 (the no-entry arm answers `Ok`) and M53a–e (one typed arm accepts any
+/// value undecoded) each survived the whole workspace suite, 875 passed.)*
+#[test]
+fn every_decode_table_kind_refuses_an_undecodable_value_naming_it() {
+    let ctx = Context::new();
+    let run = |kind: &str, value: serde_json::Value| {
+        let row = format!(
+            "probe = {{ outputs = \"{kind}\", live = false, timeout = \"build_timeout\", \
+             inputs = [], route = \"toolchain\" }}"
+        );
+        let (rt, tc) = rt_routed(
+            "decode-table",
+            CountingToolchain::with_verb_output(VerbOutput {
+                kind: kind.to_owned(),
+                value,
+            }),
+            ToolRouting::new(registry(&row, ""), ToolchainValues::default()),
+        );
+        let v = rt
+            .execute_step(&tool_step("probe", "probe"), &ctx)
+            .expect("a value");
+        assert_eq!(
+            tc.calls(),
+            1,
+            "`{kind}`: `run_verb` was not reached exactly once"
+        );
+        v
+    };
+    let kinds = [
+        (
+            "ScanReport",
+            serde_json::json!({ "critical": 0, "high": 0, "medium": 0, "low": 0, "unrated": 0,
+                                "advisories": [], "tools": [] }),
+        ),
+        (
+            "BuildArtifact",
+            serde_json::json!({ "profile": "release", "binaries": [], "argv": ["cargo"],
+                                "toolchain_version": "t", "sha": "s", "head": "s" }),
+        ),
+        (
+            "SetupResult",
+            serde_json::json!({ "toolchain": "rust", "projects": [] }),
+        ),
+        ("ItemRefs", serde_json::json!({ "ids": [] })),
+        (
+            "ReleaseTag",
+            serde_json::json!({ "tag": "v0", "target": "s", "rollback_target": "none" }),
+        ),
+    ];
+    for (kind, valid) in kinds {
+        // CONTROL: a value that decodes as the row's kind walks, so the refusal below is the
+        // decode's alone.
+        assert_eq!(
+            run(kind, valid),
+            StepVerdict::Continue,
+            "CONTROL: a decodable `{kind}` did not walk"
+        );
+        let e = failed(run(kind, serde_json::json!({})));
+        assert!(
+            matches!(&e, StepError::Transport { kind: TransportKind::Decode, detail }
+                if detail.contains(&format!("`{kind}`")) && detail.contains("does not decode")),
+            "an undecodable `{kind}` must be refused as a decode failure naming the kind: {e:?}"
+        );
+    }
+
+    // A kind the table has no entry for, declared and returned alike, so the kind check passes and
+    // only the table can refuse.
+    let e = failed(run("Nope", serde_json::json!({})));
+    assert!(
+        matches!(&e, StepError::Transport { kind: TransportKind::Decode, detail }
+            if detail.contains("`Nope`") && detail.contains("no entry")),
+        "a kind with no entry must be refused naming it as having none: {e:?}"
+    );
 }
 
 /// **A `toolchain` row whose inputs need the resolver refuses BEFORE the port**, naming the verb

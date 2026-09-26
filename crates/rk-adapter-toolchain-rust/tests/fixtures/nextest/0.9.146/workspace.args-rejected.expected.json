@@ -1,0 +1,6 @@
+{
+  "refusal": "ArgumentsRejected",
+  "version": "0.9.146",
+  "exit_code": 96,
+  "args": "--frobnicate, --show-output"
+}

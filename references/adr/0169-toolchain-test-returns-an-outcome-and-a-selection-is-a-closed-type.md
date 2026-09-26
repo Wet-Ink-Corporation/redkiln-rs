@@ -244,6 +244,13 @@ present, recorded on the report"*, and this record executes that clause. It does
   `--skip <name>` and a bare name filter (`review_pass::selection_of`'s shape) are all accepted with libtest's
   meaning. An argument the installed nextest does not accept refuses by name; it is never dropped. An empty selection
   exits **4** (*"error: no tests to run"*), which the general rule above refuses.
+  *(dated 2026-09-26, `s8c` refuting round 6.)* The by-name refusal is now built. Measured on `0.9.146`: nextest
+  rejects such an argument before running any test, prints *"error: failed to parse test binary arguments `<args>`:
+  arguments are unsupported"* and exits **96**. Exit 96 over that line with no status line is
+  `ParseRefusal::ArgumentsRejected { version, args }`, carrying nextest's backticked text, and maps to
+  `Err(Transport { Decode })` naming it; exit 96 without the line stays under the general rule above. Until this
+  note, exit 96 refused as `UnexpectedExit`, naming only the exit. An argument libtest's `--list` child also rejects
+  stops at that child (`NonZero`) before nextest runs.
 
 **5. The doctest companion.** `cargo nextest run` runs no doctests. On the nextest path the adapter runs a second
 child, `cargo test --workspace --doc --no-fail-fast`, under the same bound. An `Affected` run's `-p` set replaces

@@ -330,6 +330,77 @@ fn a_nonzero_exit_with_no_fail_line_is_unverifiable_never_green() {
     );
 }
 
+/// **A selection argument the installed nextest does not accept is refused NAMING it** (§8c.1's
+/// nextest bullet; record T = ADR-0169 decision 4, proposed: *"An argument the installed nextest
+/// does not accept refuses by name; it is never dropped"*). Measured on `0.9.146` through the
+/// no-dispatch wrapper: nextest prints the pinned line *"error: failed to parse test binary
+/// arguments `<args>`: arguments are unsupported"* and exits 96 before running any test.
+///
+/// *(Added 2026-09-26, s8c refuting round 6: before it, exit 96 refused as `UnexpectedExit`, which
+/// names only the exit, and no test covered the case.)*
+#[test]
+fn an_argument_nextest_rejects_is_refused_naming_it() {
+    let files = json("captures.json");
+    assert!(
+        files["files"]
+            .as_object()
+            .expect("captures.json files")
+            .contains_key("workspace.args-rejected.stderr"),
+        "captures.json records the golden"
+    );
+    let body = read(&golden_dir().join("workspace.args-rejected.stderr"));
+    let want = json("workspace.args-rejected.expected.json");
+    assert_eq!(want["refusal"], "ArgumentsRejected");
+    let exit = exit_of(&want);
+    assert_eq!(exit, 96);
+    let args = want["args"].as_str().expect("args");
+    let r = parse(&body, exit, PIN);
+    assert_eq!(
+        r,
+        Err(ParseRefusal::ArgumentsRejected {
+            version: PIN.to_owned(),
+            args: args.to_owned(),
+        }),
+        "the golden"
+    );
+    let msg = r.expect_err("refused").to_string();
+    assert!(
+        msg.contains("`--frobnicate, --show-output`"),
+        "the refusal names the rejected arguments: {msg}"
+    );
+
+    // One argument, among cargo's build lines on the same stream.
+    let one = "   Compiling a v0.1.0\nerror: failed to parse test binary arguments `--test-threads=1`: \
+               arguments are unsupported\n";
+    assert_eq!(
+        parse(one, 96, PIN),
+        Err(ParseRefusal::ArgumentsRejected {
+            version: PIN.to_owned(),
+            args: "--test-threads=1".to_owned(),
+        })
+    );
+
+    // CONTROLS: exit 96 WITHOUT the pinned line is still `UnexpectedExit`, and the pinned line
+    // under another non-green exit is not read as a rejection.
+    assert_eq!(
+        parse("error: something else\n", 96, PIN),
+        Err(ParseRefusal::UnexpectedExit { exit_code: 96 })
+    );
+    assert_eq!(
+        parse(&body, 101, PIN),
+        Err(ParseRefusal::UnexpectedExit { exit_code: 101 })
+    );
+    // A line that only starts like the pinned one (no closing text) is not a rejection either.
+    assert_eq!(
+        parse(
+            "error: failed to parse test binary arguments `--x`\n",
+            96,
+            PIN
+        ),
+        Err(ParseRefusal::UnexpectedExit { exit_code: 96 })
+    );
+}
+
 #[test]
 fn a_retry_or_timeout_line_is_unverifiable_never_counted() {
     // (a) a retried test: two runs of one test. Counted as records, TRY 1 FAIL + TRY 2 PASS would

@@ -97,6 +97,10 @@ fn agent_step(id: &str) -> Step {
 
 /// A `tool` step naming `verb`. **`publish` is one of ADR-0135's 29 refused verbs** — it is not in
 /// `MAPPED_VERBS`, so `run_tool_step` refuses it by name without reaching any port.
+/// *(dated 2026-09-26, s8c refuting round 6.)* `MAPPED_VERBS` is gone: routing is the verb
+/// registry's rows (record V = ADR-0170, proposed). `publish` has no row, and a verb with no row,
+/// or a runtime with no registry bound, refuses by its bare name before any port; nothing here
+/// moves.
 fn tool_step(id: &str, verb: &str) -> Step {
     Step {
         id: id.to_owned(),

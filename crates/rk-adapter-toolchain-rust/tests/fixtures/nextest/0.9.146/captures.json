@@ -159,6 +159,36 @@
       "cwd": "D:/repos/redkiln-rs",
       "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/project",
       "stream": "stderr"
+    },
+    "workspace.args-rejected.stderr": {
+      "what": "(dated 2026-09-26, s8c build, refuting round 6) refusal golden: the workspace under two selection arguments nextest does not accept after `--` (one accepted, `--exact a_works`, before them). nextest names the rejected ones and exits 96 before running any test. Expected: ParseRefusal::ArgumentsRejected carrying the named arguments, never a tally.",
+      "argv": [
+        "cargo",
+        "nextest",
+        "run",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/workspace/Cargo.toml",
+        "--workspace",
+        "--no-fail-fast",
+        "--retries",
+        "0",
+        "--color",
+        "never",
+        "--status-level",
+        "pass",
+        "--final-status-level",
+        "none",
+        "--",
+        "--exact",
+        "a_works",
+        "--frobnicate",
+        "--show-output"
+      ],
+      "exit_code": 96,
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/r6fix-cap/workspace",
+      "stream": "stderr",
+      "captured_through": "the no-dispatch helper (runbook/tools/nodispatch.sh); `--frobnicate` alone and `--test-threads=1` alone each exit 96 with the same line naming the one argument"
     }
   },
   "not_captured": {

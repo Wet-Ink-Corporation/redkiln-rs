@@ -28,7 +28,11 @@
 //! green and 100 a test failure, each agreeing with the records. *(D21-62 B.)* Exit 104 over a stream
 //! carrying the pinned line `error: creating test list failed` and no status line is
 //! [`ParseRefusal::ListFailed`]; any other exit than 0 or 100 refuses as
-//! [`ParseRefusal::UnexpectedExit`] and is never tallied (an empty selection exits 4).
+//! [`ParseRefusal::UnexpectedExit`] and is never tallied (an empty selection exits 4). *(s8c
+//! refuting round 6.)* Exit 96 over the pinned line *"error: failed to parse test binary arguments
+//! `<args>`: arguments are unsupported"* and no status line is [`ParseRefusal::ArgumentsRejected`],
+//! naming the arguments nextest rejected: a selection argument is refused by name, never dropped
+//! (record T = ADR-0169 decision 4).
 
 use crate::libtest_lines::{ParseRefusal, Tally, digits, numbered, seconds_then};
 
@@ -38,6 +42,13 @@ pub const NEXTEST_PINNED: [&str; 1] = ["0.9.146"];
 
 /// The pinned list-failure line (D21-62 B, measured on `0.9.146`).
 const LIST_FAILED: &str = "error: creating test list failed";
+
+/// The pinned rejected-argument line (s8c refuting round 6, measured on `0.9.146`, exit 96):
+/// `error: failed to parse test binary arguments `<args>`: arguments are unsupported`.
+fn rejected_args(line: &str) -> Option<&str> {
+    line.strip_prefix("error: failed to parse test binary arguments `")?
+        .strip_suffix("`: arguments are unsupported")
+}
 
 /// `^\s+` then the rest; `None` when the line does not start with whitespace.
 fn indented(line: &str) -> Option<&str> {
@@ -191,9 +202,12 @@ pub fn parse(stream: &str, exit_code: i32, version: &str) -> Result<Tally, Parse
     let mut notices: Vec<(usize, &str, &str)> = Vec::new();
     let mut total: Option<(usize, Summary)> = None;
     let mut list_failed = false;
+    let mut rejected: Option<&str> = None;
     for (no, line) in numbered(stream) {
         if line == LIST_FAILED {
             list_failed = true;
+        } else if let Some(args) = rejected_args(line) {
+            rejected = Some(args);
         } else if refused(line) {
             return Err(ParseRefusal::RetryOrKill {
                 line: no,
@@ -225,6 +239,15 @@ pub fn parse(stream: &str, exit_code: i32, version: &str) -> Result<Tally, Parse
         return Err(ParseRefusal::ListFailed {
             version: version.to_owned(),
             exit: exit_code,
+        });
+    }
+    if exit_code == 96
+        && records.is_empty()
+        && let Some(args) = rejected
+    {
+        return Err(ParseRefusal::ArgumentsRejected {
+            version: version.to_owned(),
+            args: args.to_owned(),
         });
     }
     if exit_code != 0 && exit_code != 100 {

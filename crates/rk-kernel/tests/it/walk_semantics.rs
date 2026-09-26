@@ -71,6 +71,9 @@ fn agent_step(id: &str) -> Step {
 /// no selection and parses no report — so it is the step that DOES reach the port. That is the whole
 /// of its job here: it is the instrument, placed after the step under test, and a verb outside the
 /// map would be refused by name before the port and would move no counter.
+/// *(dated 2026-09-26, s8c refuting round 6.)* `MAPPED_VERBS` is gone: routing is the verb
+/// registry's rows (record V = ADR-0170, proposed). `build` reaches the port here as a test-only
+/// `port` row (`with_tool_routing` below), and a verb with no row refuses by its bare name.
 fn build_step(id: &str) -> Step {
     Step {
         id: id.to_owned(),

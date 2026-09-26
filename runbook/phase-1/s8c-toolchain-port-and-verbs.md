@@ -412,6 +412,21 @@ needs no further question. Record T fixes the shape, and this is the proposal:
     The selection arguments are measured the same way: `--exact`, `--ignored`, `--include-ignored`, `--skip` and the
     name filters `review_pass::selection_of` produces. An argument the installed nextest does not accept refuses by
     name. It is never dropped.
+    *(dated 2026-09-26, s8c build, refuting round 6.)* Until this note it refused by exit code only: nextest `0.9.146`
+    rejects such an argument before running any test, printing the pinned line *"error: failed to parse test binary
+    arguments `<args>`: arguments are unsupported"* and exiting **96** (measured through the no-dispatch wrapper:
+    `--frobnicate` and `--test-threads=1` each alone, and `--exact a_works --frobnicate --show-output`, which names
+    `--frobnicate, --show-output`), and the parser read exit 96 as `UnexpectedExit`, naming only the exit. The parser
+    now refuses exit 96 over that line with no status line as `ParseRefusal::ArgumentsRejected { version, args }`,
+    `args` being nextest's backticked text as printed; the adapter maps it to `Transport { Decode }` like every other
+    refusal, so the detail names the arguments. Exit 96 without the line is still `UnexpectedExit`. The golden is
+    `workspace.args-rejected.stderr` (with its `.expected.json`, recorded in `captures.json`); the test is
+    `nextest_lines::an_argument_nextest_rejects_is_refused_naming_it`, and M54 is its mutant. Read from `report.rs`'s
+    order, not measured at the port: the libtest `--list` count child runs before the nextest run child, so an argument
+    libtest also rejects stops there as `NonZero` (its stderr digest) before nextest runs; the named refusal is the one
+    for an argument libtest accepts and nextest does not. So under `Detect` on a box with nextest, a libtest-only
+    argument such as `--test-threads=1` is Unverifiable where the `cargo test` path would run it. That fails closed and
+    is never green; it is stated here, not ruled.
 - **The doctest companion.** `cargo nextest run` runs no doctests, and `cargo test --workspace` runs them as blocks of
   this section's grammar. So on the nextest path the adapter runs a second child, `cargo test --workspace --doc
   --no-fail-fast`, under the same bound. An `Affected` run's `-p` set replaces `--workspace`, and a `Filter`'s
@@ -438,6 +453,9 @@ needs no further question. Record T fixes the shape, and this is the proposal:
   line as `ListFailed`, and any other exit than 0 or 100 as `UnexpectedExit`, never tallied (an empty selection
   exits 4). Nothing falls back to `cargo test`, under `Detect` or `Force`. Record T carries the ruling and the open
   alternatives.
+  *(dated 2026-09-26, s8c build, refuting round 6.)* The set gains `workspace.args-rejected.stderr` (exit 96, expected
+  `ParseRefusal::ArgumentsRejected`; the nextest bullet above), and exit 96 over its pinned line is no longer
+  `UnexpectedExit`.
 
 The Node adapter needs no parser. `report.rs` already reads *"`numPassedTests`, `numFailedTests`,
 `numPendingTests`, `numTotalTests`"* from vitest's JSON reporter file.
@@ -2084,6 +2102,10 @@ Parallel agents share one scratchpad, so the driver's filename carries this stag
 | M48 | (dated 2026-09-26, s8c build, refuting round 4.) `decode_verb_output`'s `BuildReport` arm decodes and drops the verdict | `tool_verb_routing::a_failing_build_report_is_not_a_walked_step` |
 | M49 | (dated 2026-09-26, s8c build, refuting round 4.) the in-tree v3 scorer's metric-set check is disabled, so an unknown component is skipped and the vector scored | `verbs::a_matched_malformed_vector_refuses_the_scan_by_name` |
 | M50 | (dated 2026-09-26, s8c build, refuting round 4.) the re-executor's EMPTY-arm guard is deleted | `review_pass::an_empty_arm_is_no_record_never_a_flip` |
+| M51 | (dated 2026-09-26, s8c build, refuting round 6.) `decode_verb_output`'s `SmokeResult` arm reads `Empty` as passing (`Empty` moved to the `Ok(())` arm beside `Passing`) | `tool_verb_routing::a_registry_verb_with_no_inputs_reaches_run_verb` (its `empty` case) |
+| M52 | (dated 2026-09-26, s8c build, refuting round 6.) a kind with no entry in the closed decode table answers `Ok(())` | `tool_verb_routing::every_decode_table_kind_refuses_an_undecodable_value_naming_it` |
+| M53 | (dated 2026-09-26, s8c build, refuting round 6.) one typed arm accepts any value undecoded, run once per arm: M53a `ScanReport`, M53b `BuildArtifact`, M53c `SetupResult`, M53d `ItemRefs`, M53e `ReleaseTag` | `tool_verb_routing::every_decode_table_kind_refuses_an_undecodable_value_naming_it` |
+| M54 | (dated 2026-09-26, s8c build, refuting round 6.) the nextest parser's exit-96 arm is skipped, so a rejected argument refuses as `UnexpectedExit`, unnamed | `nextest_lines::an_argument_nextest_rejects_is_refused_naming_it` |
 
 *(dated 2026-09-26, s8c build, P3.)* **Parser mutants, run from `scratchpad/s8c/p3_mutants.py`** (anchor asserted once, tmp + `os.replace`,
 restored in `finally` and the sha256 re-checked; the two parser files are new, so the restore writes the recorded bytes
@@ -2464,6 +2486,50 @@ no-dispatch helper; logs under `scratchpad/s8c/r4fix-mut/`).
   test's own `FAILED` line and its executed count asserted. The readings were re-taken after `cargo fmt` and the
   clippy fix (`scratchpad/s8c/r4fix-final-named.log`).
 
+*(dated 2026-09-26, s8c build, refuting round 6.)* **M51–M54, from `scratchpad/s8c/r6fix_mutants.py`** (anchor asserted
+exactly once, tmp + `os.replace`, `git diff --stat` read under the mutant, restored in `finally`, sha256 re-checked:
+`step.rs` `948c9c7e48be…` and `nextest_lines.rs` `714dad5185a7…` restored after every cycle; each through the
+no-dispatch helper; logs under `scratchpad/s8c/r6fix-mut/`).
+- **Before the tests existed**, `whole` mode: M51, M52 and M53a–e each SURVIVED, rc 0, **875 passed / 0 failed / 9
+  ignored over 44 result lines**, no `FAILED` line. That is round 6's finding measured: no double handed the kernel an
+  `empty` smoke result, an undecodable value of any kind but `SmokeResult`, or a kind outside the table.
+- **After**: M51 KILLED by `tool_verb_routing::a_registry_verb_with_no_inputs_reaches_run_verb`; M52 and each of
+  M53a–e KILLED by `tool_verb_routing::every_decode_table_kind_refuses_an_undecodable_value_naming_it`. Each rc 101,
+  `running 1 test`, the test's own `FAILED` line, and the panic *"the step did not fail: Continue"*: under the
+  mutant the value walked. M54 is new code's mutant (the exit-96 arm did not exist before), KILLED by
+  `nextest_lines::an_argument_nextest_rejects_is_refused_naming_it` with *"left: Err(UnexpectedExit { exit_code: 96
+  }) right: Err(ArgumentsRejected { version: "0.9.146", args: "--frobnicate, --show-output" })"*, which was also that
+  test's red before the exit-96 arm was written.
+- **Which kinds are reachable, and how.** Every kind is reached through a TEST-ONLY `toolchain` row with no inputs,
+  exactly as `SmokeResult` (`smoke`) and `BuildReport` (`rebuild`) already were: the registry loader checks `outputs`
+  only on `port` rows, so a `toolchain` row may declare any of the seven, or a kind outside them (`Nope`). On the
+  SHIPPED registry none of these arms runs at `s8c`: `sca_scan`, `package` and `setup` (and `smoke`) declare inputs
+  and refuse before the port until `s8d`'s resolver, and `item_create` / `release_tag` take the `store` / `git`
+  routes, which refuse naming `s8f` / `s8g`. So no arm of the table is left unobserved; whether `s8f`'s and `s8g`'s
+  executors decode through this table is theirs to say.
+
+*(dated 2026-09-26, s8c build, WHOLE pass 9 after refuting round 6.)* **Every table mutant re-run over the tree
+carrying round 6's uncommitted R6FIX edits on `b4b8f5d`.** `wholepass8` was interrupted inside its `p3` driver and
+never completed, so it is not a reading. Every wholepass8 driver was copied to `scratchpad/s8c/wholepass9_*_mutants.py`
+by `wholepass9_mkdrivers.py` (only the string `wholepass8` changed, each copy's hit count asserted), R6FIX's driver was
+copied the same way for M51–M54, and `wholepass9_runall.py` ran them in sequence; results are under
+`scratchpad/s8c/wholepass9-mut/`. **M1–M54 all KILLED**, each at rc 101 with the named test's own `FAILED` line and
+its executed count asserted (M32/M33/M34 as p3's A1/A2/A3, M35 as B1 and M35r, M36 as M36a/b/c, M37 as d63's
+case, M53 as M53a–e). The expected survivors are unchanged: M25 over the golden (unobservable there), M39 over
+its control, M41 over CVE-2025-47273, and M49 over the v3 database sample. The extras were killed again, and
+M38's green control is `ok`. runall's closing snapshot of `crates/` and `.redkiln/` (1,400 files) showed 0
+differences, every modified or new file's sha256 equals its pre-pass value, no mutant temp file remains, and the
+store's sha256 `f7db6eba…` was unchanged. In the same pass, through the no-dispatch wrapper:
+- `cargo fmt --all -- --check` rc 0;
+- `cargo clippy --workspace --all-targets` rc 0 (159 warnings, warn-level only) and `cargo clippy -p rk-ports
+  --all-targets --features conformance` rc 0;
+- all **127** of Checkpoint 8c (5)–(10)'s named tests (6 + 8 + 59 + 13 + 1 + 5 + 25 + 10) exist by their exact
+  module path in their crate's `--test it -- --list` (with each call's features), every `want` equals its list's
+  length, and the block extracted from this file's bytes passes (`CP8C-5-10-PASS`);
+- `cargo test --workspace --no-fail-fast` before the mutant runs: rc 0, **877 passed / 0 failed / 9 ignored over 44
+  result lines** (floor 862). The closing reading, taken after every mutant run, is in the package report.
+This is a diagnostic reading. It is not the formal Checkpoint 8c.
+
 **If a mutant survives, read it before strengthening anything.** A surviving mutant can mean that the property is
 unobservable from the seam the test watches. If so, the guard moves; it is not weakened. Record every result, kills
 and survivors alike, in the checkpoint output.
@@ -2527,8 +2593,14 @@ Each is claimed only for the clause named:
 - **The whole suite is green** above the floor re-derived from Checkpoint 8b's recorded count (~~774 + 78 = 852: the
   final consistency pass's 843, plus D21-48 X15's nine~~ *(dated 2026-09-26, s8c build)* 784 + 78 = 862: Checkpoint 8b's recorded 784 at
   `83d1268`, plus §8c.9's 78), over at least 44 result lines, and fmt and clippy are rc 0.
-- **Checkpoint 8b (the entry gate), Checkpoint 7a and Checkpoint 5 re-run whole and pass.** 7a and 5 are the two
-  checkpoints this stage's own edits make provisional. No run here can reach a real dispatch. Each runs as
+- **Checkpoint 8b (the entry gate), Checkpoint 7a and Checkpoint 5 re-run whole and pass.** ~~7a and 5 are the two
+  checkpoints this stage's own edits make provisional.~~ *(dated 2026-09-26, s8c build, refuting round 6.)* 7a and 5
+  are the two replayed here. This stage's edits also moved three older checkpoints' bash blocks, and none of them is
+  replayed from this block: Checkpoint 8a's guard (6) (its `r_filter` admits `rk_git::(diff|path|head)`, and its
+  exec-route grep gains `crates/rk-git/src/head.rs`), Checkpoint 7b's two facet bans (the `X7B` exclusion, refuting
+  round 4) and Checkpoint 7c's AC-329 `rk_absent` line (`"$AC329_HOME"` and two controls, refuting round 2). 8b runs
+  here with `RK_CP_NESTED=1`, so it skips its own replay of 8a. Their first whole runs are later stages': 8a's at
+  `s8e`, `s8i` and `s8j` (§8c.12), which reach 7b through 8a (11); 7c's at `s8j` (D21-43 N28). No run here can reach a real dispatch. Each runs as
   `nodispatch env RK_CP_NESTED=1 bash …` under the shared wrapper (D21-46; D21-47), and under `RK_CP_NESTED=1` this
   block re-runs none of them.
 - **The whole block runs under D21-47's wrapper**, `runbook/tools/nodispatch.sh`, set at (0b), and so do its own
@@ -2690,7 +2762,9 @@ run_named rk-ports "--features conformance" 8 conformance::port_conformance_fake
 # The two added are beyond §8c.9's 78, so FLOOR (13) is unmoved.
 # (dated 2026-09-26, s8c build, D67; D21-67 ruling 7) the list gains verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band.
 # ~~want 57~~ is struck: 57 + 1 = 58. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
-run_named rk-adapter-toolchain-rust "" 58 report::red_suite_is_ok_with_failed_counts report::a_build_failure_is_err_never_a_red_suite \
+# (dated 2026-09-26, s8c build, refuting round 6) the list gains nextest_lines::an_argument_nextest_rejects_is_refused_naming_it
+# (M54 kills on it). ~~want 58~~ is struck: 58 + 1 = 59. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
+run_named rk-adapter-toolchain-rust "" 59 report::red_suite_is_ok_with_failed_counts report::a_build_failure_is_err_never_a_red_suite \
   report::a_red_test_in_an_early_binary_still_tallies_every_binary report::concurrent_verify_reports_share_no_output_file report::nextest_fallback_recorded_on_report \
   libtest_lines::this_repositorys_whole_suite_stdout_parses_to_its_recorded_tally libtest_lines::a_slow_test_notice_inside_a_block_is_skipped_never_refused \
   report::passed_plus_failed_is_the_executed_count_and_survives_both_decoys report::ac329_report_conforms_no_prose_parse \
@@ -2716,7 +2790,8 @@ run_named rk-adapter-toolchain-rust "" 58 report::red_suite_is_ok_with_failed_co
   verbs::sca_scan_refuses_a_deny_db_path_with_other_than_one_database verbs::sca_scan_refuses_a_database_moved_mid_scan \
   verbs::a_matched_v4_vector_is_scored_and_banded_high verbs::a_matched_malformed_vector_refuses_the_scan_by_name \
   verbs::a_v4_vector_scoring_zero_counts_low_never_unrated verbs::the_in_tree_v3_scorer_agrees_with_cvss_v3_over_the_database_sample \
-  verbs::a_package_binary_outside_the_target_dir_is_refused_by_name verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band
+  verbs::a_package_binary_outside_the_target_dir_is_refused_by_name verbs::a_v4_vector_is_scored_base_only_so_no_other_metric_moves_its_band \
+  nextest_lines::an_argument_nextest_rejects_is_refused_naming_it
 run_named rk-adapter-toolchain-node "" 13 report::red_suite_is_ok_with_failed_counts report::ac329_report_conforms_no_prose_parse \
   report::ac325_recorded_argv_is_os_vector report::concurrent_verify_reports_share_no_output_file report::d34_vitest_invoked_directly_never_pnpm_forwarded \
   report::ac331_killed_verify_is_unverifiable report::ac344_missing_binary_is_not_a_candidate_failure conformance::port_conformance_real_row_node \
@@ -2728,7 +2803,10 @@ run_named rk-git "" 5 worktree_include::carries_only_files_both_ignored_and_matc
   worktree_include::a_symlink_is_skipped_and_named worktree_include::a_path_that_escapes_the_root_is_refused_by_name
 # (dated 2026-09-26, s8c build, refuting round 4) the rk-kernel list gains tool_verb_routing::a_failing_build_report_is_not_a_walked_step
 # (M46-M48 kill on it). ~~want 23~~ is struck: 23 + 1 = 24. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
-run_named rk-kernel "" 24 tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port \
+# (dated 2026-09-26, s8c build, refuting round 6) the list gains tool_verb_routing::every_decode_table_kind_refuses_an_undecodable_value_naming_it
+# (M52, M53a-e kill on it; M51 kills on a_registry_verb_with_no_inputs_reaches_run_verb, already listed).
+# ~~want 24~~ is struck: 24 + 1 = 25. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
+run_named rk-kernel "" 25 tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port \
   verb_registry::the_shipped_rust_value_table_is_exactly_the_declared_key_map tool_verb_routing::a_verb_with_no_row_refuses_by_its_bare_name_before_its_bound_is_resolved \
   tool_verb_routing::a_verb_with_no_registry_row_is_refused_by_its_bare_name tool_verb_routing::a_registry_verb_with_no_inputs_reaches_run_verb \
   tool_verb_routing::a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port tool_verb_routing::a_row_whose_route_has_no_executor_refuses_naming_the_route \
@@ -2740,7 +2818,8 @@ run_named rk-kernel "" 24 tool_verb_routing::a_toolchain_test_step_refuses_by_na
   memo::ac018_live_verb_may_not_memoise verify::ac332_empty_selection_is_never_green kernel_denylist::ac487_kernel_denylist \
   source_registry::the_catalog_source_census_is_fifty_with_fourteen_declared source_registry::an_undeclared_checklist_kb_or_feed_key_is_refused_by_name \
   source_registry::an_unprovided_feed_is_null_when_optional_and_refused_when_mandatory source_registry::a_malformed_entry_is_refused_at_load_naming_it \
-  tool_verb_routing::a_failing_build_report_is_not_a_walked_step
+  tool_verb_routing::a_failing_build_report_is_not_a_walked_step \
+  tool_verb_routing::every_decode_table_kind_refuses_an_undecodable_value_naming_it
 # (dated 2026-09-26, s8c build, refuting round 4) the rk-cli list gains review_pass::an_empty_arm_is_no_record_never_a_flip
 # (M50 kills on it). ~~want 9~~ is struck: 9 + 1 = 10. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
 run_named rk-cli "" 10 review_pass::four_cells_over_two_arms_and_both_fail_is_not_a_flip review_pass::a_candidate_that_cannot_run_is_unverifiable_never_a_flip \
@@ -2885,7 +2964,11 @@ nd_check "(14) fmt and clippy" || exit 1
 # ---- (15) THE ENTRY GATE, AND THE OLDER CHECKPOINTS THIS STAGE'S OWN EDITS MAKE PROVISIONAL, RE-RUN WHOLE from their
 # ---- own files' bytes: 8b (the entry gate), 7a (rk-ports: the seventh method, D21-42 1b) and 5 (rk-types: the new
 # ---- structs). Nothing older is re-run from here. 8b runs with RK_CP_NESTED=1, so it skips its own re-run of 8a, and
-# ---- 7c's whole re-run is s8j's (D21-43 N28). The extractor refuses a needle that selects zero or two blocks, and that
+# ---- 7c's whole re-run is s8j's (D21-43 N28).
+# (dated 2026-09-26, s8c build, refuting round 6) "the older checkpoints this stage's own edits make provisional" is
+# not all of them: this stage also moved Checkpoint 8a's guard (6), Checkpoint 7b's two facet bans and Checkpoint 7c's
+# AC-329 line, and none is replayed here. 8a (and 7b, through 8a (11)) first re-run whole at s8e, s8i and s8j (§8c.12);
+# 7c at s8j (D21-43 N28). The extractor refuses a needle that selects zero or two blocks, and that
 # ---- refusal is proved first. No literal triple backtick appears here: this file's own fence would close on it.
 # ---- D21-46: SKIPPED under RK_CP_NESTED=1 (this block is another checkpoint's entry gate); otherwise every replay runs
 # ---- as `nodispatch env RK_CP_NESTED=1 bash …` under (0b)'s wrapper, and nd_check follows it (D21-47).

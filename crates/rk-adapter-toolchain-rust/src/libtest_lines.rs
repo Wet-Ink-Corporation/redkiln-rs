@@ -88,6 +88,10 @@ pub enum ParseRefusal {
     ListFailed { version: String, exit: i32 },
     #[error("cargo-nextest exited {exit_code}, which is neither a green (0) nor a red (100) run")]
     UnexpectedExit { exit_code: i32 },
+    /// *(s8c refuting round 6.)* nextest refused selection arguments it does not accept (exit 96),
+    /// naming them in its pinned line; `args` is its backticked text, as printed.
+    #[error("cargo-nextest {version} does not accept the selection argument(s) `{args}` (exit 96)")]
+    ArgumentsRejected { version: String, args: String },
     #[error("line {line}: a retry or kill status is never counted: {text}")]
     RetryOrKill { line: usize, text: String },
     #[error("line {line}: `Starting` states {starting} tests and the run records {records}")]
@@ -121,6 +125,7 @@ impl ParseRefusal {
             Self::ExitDisagrees { .. } => "ExitDisagrees",
             Self::ListFailed { .. } => "ListFailed",
             Self::UnexpectedExit { .. } => "UnexpectedExit",
+            Self::ArgumentsRejected { .. } => "ArgumentsRejected",
             Self::RetryOrKill { .. } => "RetryOrKill",
             Self::StartingMismatch { .. } => "StartingMismatch",
             Self::StartingOutOfPlace { .. } => "StartingOutOfPlace",

@@ -8,6 +8,9 @@
 # shipped review activities' `record` step runs `toolchain:verdict_record`, which is not in
 # `MAPPED_VERBS` and exits 19. Either would end the walk BEFORE the review pass had a committed
 # finding set to read, so the fixture would assert the refusal rather than the wiring.
+# (dated 2026-09-26, s8c refuting round 6) `MAPPED_VERBS` is gone: routing is the verb registry's rows
+# (record V = ADR-0170, proposed), and `.redkiln/registry.toml` has no `verdict_record` row, so the step
+# refuses by its bare verb name. The conclusion above is unchanged: the walk would still end first.
 #
 # That bullet was vacuous until this file existed, because ADR-0156 decision clause 3 said no
 # fixture pack was authored while its own Consequences assumed one (ERRATA E-0156-1). ADR-0162
