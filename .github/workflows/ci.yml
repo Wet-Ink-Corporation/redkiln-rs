@@ -57,6 +57,15 @@ jobs:
       - name: clippy
         run: cargo clippy --workspace --all-targets
 
+      # s8c (D21-48 X15): cargo-nextest at THE PIN, the version `cargo nextest --version` read on the build box at stage
+      # open. It sits immediately BEFORE the test step, because the Rust adapter's nextest-path tests run inside that
+      # step's `cargo test --workspace` and spawn `cargo nextest run` against the fixtures. The gate's own command stays
+      # `cargo test --workspace`: the runner the adapter selects is the adapter's. A pin bump moves this line, record T's
+      # evidence and a new golden under crates/rk-adapter-toolchain-rust/tests/fixtures/nextest/<version>/ in one PR.
+      # Checkpoint 8c (2) asserts this step's version and its order.
+      - name: install cargo-nextest
+        run: cargo install cargo-nextest --version 0.9.146 --locked
+
       # The corpus-bound suite is NOT here: it reads redkiln-corpus at CORPUS_PIN, which no hosted
       # runner can fetch. It is a local-only suite behind `--features corpus` on a named runner
       # (decision D-N; PIA-002). A corpus-bound test that is not behind the feature fails HERE,

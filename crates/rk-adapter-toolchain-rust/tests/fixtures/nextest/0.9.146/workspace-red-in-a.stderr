@@ -1,0 +1,31 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+────────────
+ Nextest run ID d64e38e7-b76b-46cb-9be8-99fa33fb09fe with nextest profile: default
+    Starting 4 tests across 4 binaries
+        PASS [   0.007s] (1/4) c::uses_b c_sees_b_through_its_dev_edge
+        FAIL [   0.009s] (2/4) a tests::red_in_a
+  stdout ───
+
+    running 1 test
+    test tests::red_in_a ... FAILED
+
+    failures:
+
+    failures:
+        tests::red_in_a
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'tests::red_in_a' (58800) panicked at a\src\lib.rs:26:9:
+    assertion `left == right` failed: this test is the workspace's red
+      left: 4
+     right: 5
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.017s] (3/4) b tests::quadruple_quadruples
+        PASS [   0.020s] (4/4) a tests::double_doubles
+────────────
+     Summary [   0.020s] 4 tests run: 3 passed, 1 failed, 0 skipped
+error: test run failed

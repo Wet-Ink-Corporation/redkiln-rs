@@ -1,0 +1,1053 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 25 tests
+test contract::ac448_write_without_report_is_refused ... ok
+test contract::ac448_report_lands_in_the_same_commit_and_validates ... ok
+test contract::ac447_exactly_one_commit_on_migration_branch ... ok
+test contract::ac447_second_write_phase_aborts_before_writing ... ok
+test graph::ac466_ac441_migrate_depends_on_no_harness_adapter_or_ports ... ok
+test contract::phase_written_marker_is_printed_before_commit ... ok
+test contract::refuses_dirty_target ... ok
+test lift::adr0075_six_typed_kinds_eight_opaque ... ok
+test lift::diff_prose_carried_opaque_with_loss_marker ... ok
+test lints::ac442_legacy_readers_only_under_legacy_module ... ok
+test lints::ac442_lint_flags_legacy_reader_outside_legacy_module ... ok
+test lints::ac474_no_dual_write_key_flag_or_env ... ok
+test contract::ac522_worktree_recreated_never_reused ... ok
+test lift::free_form_gate_result_carried_opaque_with_loss_marker ... ok
+test lift::typed_gate_result_round_trips_through_canonical ... ok
+test output::ac466_migration_commit_carries_no_store ... ok
+test output::ac450_second_run_is_noop_report_to_stdout_no_commit ... ok
+test output::ac470_migrated_artifacts_round_trip_through_canonical ... ok
+test output::ac475_zero_change_summary_values_in_output ... ok
+test provenance::legacy_mini_provenance_matches_bytes ... ok
+test output::ac449_two_targets_byte_identical_under_tz_and_read_order ... ok
+test report::ac468_schema_rejects_total_only_and_folded_forms ... ok
+test report::report_carries_three_counts_per_kind_and_no_total ... ok
+test output::idempotent_across_kill ... ok
+test output::migrated_artifacts_carry_schema_version_and_no_sig ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.66s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 111 tests
+test binder::a_literal_built_card_that_fails_the_card_lints_never_enters_the_store ... ok
+test binder::a_card_the_builder_refuses_never_enters_the_store ... ok
+test binder::a_card_store_conflict_on_profile_is_refused ... ok
+test card::ac383_card_without_profile_refused ... ok
+test binder::bind_materialises_the_spec_and_the_digest_keyed_store ... ok
+test card::ac493_empty_or_absent_tools_rejected ... ok
+test card::ac269_answer_api_absent_from_cards ... ok
+test card::agent_card_renders_a_name_keyed_object ... ok
+test card::authored_card_carrying_a_tier_is_refused ... ok
+test card::haiku_rejects_effort ... ok
+test command::ac132_builder_lints_one_schema_no_strict_tools ... ok
+test binder::ac212_model_effort_from_bound_card_only ... ok
+test classify::ac229_adapter_maps_every_failure_to_closed_variant ... ok
+test command::ac203_agents_without_agent_refused ... ok
+test command::ac214_permission_mode_explicit ... ok
+test command::ac209_system_prompt_hash_invariant ... ok
+test command::ac511_bare_never_in_argv_lint_with_control ... ok
+test command::argv_cap_refuses_before_spawn ... ok
+test command::permission_prompts_none_on_every_argv ... ok
+test command::structured_output_required ... ok
+test config::ac377_margin_parse_vectors_and_no_default ... ok
+test config::ac422_denylist_is_one_exported_list ... ok
+test config::ac526_ttl_pair_refuses_single_or_mismatch ... ok
+test config::api_key_refuses_construction ... ok
+test config::config_carries_its_values_and_nothing_else ... ok
+test config::debug_never_prints_a_captured_value ... ok
+test classify::ac218_is_error_is_platform_regardless_of_exit ... ok
+test config::harness_binary_that_is_a_batch_file_is_refused ... ok
+test config::permission_prompts_floor_is_recorded_beside_the_pin ... ok
+test config::tested_cli_version_is_the_pin_as_a_config_value ... ok
+test config::version_mismatch_policy_is_explicit_and_carried ... ok
+test config::env_denylist_config_map ... ok
+test dispatch::a_poisoned_accumulator_is_never_recovered ... ok
+test command::golden_argv_per_profile ... ok
+test dispatch::ac210_both_ttl_vars_set_and_recorded ... ok
+test dispatch::ac215_permission_prompts_none_stdin_closed ... ok
+test conformance::port_conformance_real_row_claude ... ok
+test command::ac216_bare_absent_across_matrix ... ok
+test dispatch::ac224_windows_job_object_reaps_orphaned_grandchild ... ok
+test dispatch::ac368_tier2_append_failure_is_warning ... ok
+test dispatch::ac509_child_echoes_env_without_tracker_credential ... ok
+test dispatch::cancel_reaps_process_tree ... ok
+test dispatch::cancelled_token_refuses_before_spawn ... ok
+test dispatch::dispatch_cwd_is_the_spec_worktree_never_process_cwd ... ok
+test dispatch::dispatch_is_callable_from_inside_another_runtime ... ok
+test dispatch::exit_with_stdout_holder_is_decided_by_the_frame ... ok
+test dispatch::ac227_every_harness_event_carries_cli_version ... ok
+test dispatch::harness_is_held_as_arc_dyn_and_dispatches_from_another_thread ... ok
+test dispatch::ac225_cancelled_keyed_on_token_not_exit_code ... ok
+test dispatch::result_without_system_init_never_ok ... ok
+test dispatch::spew_beyond_the_cap_is_capped_with_the_full_digest ... ok
+test env::child_env_is_the_captured_map_plus_the_two_ttls_and_nothing_else ... ok
+test env::child_env_overrides_inherited_ttls_with_the_configured_pair ... ok
+test env::child_env_sets_both_ttls_explicitly ... ok
+test event::a_new_system_subtype_names_itself ... ok
+test event::a_new_top_level_type_is_unknown_but_retained ... ok
+test event::api_retry_parses_its_fields_or_is_none_never_default ... ok
+test event::classifies_the_documented_types ... ok
+test event::malformed_json_is_retained_verbatim_not_dropped ... ok
+test event::usage_parses_from_both_nestings ... ok
+test headroom::ac374_ticks_roundtrip_decimal_digits ... ok
+test headroom::ac375_throttle_input_has_two_windows_only ... ok
+test headroom::ac380_rate_limit_event_sole_source_both_shapes ... ok
+test isolation::ac202_absent_mcp_key_is_the_empty_set ... ok
+test dispatch::stdin_write_failure_never_overturns_the_childs_verdict ... ok
+test isolation::ac202_isolation_from_system_init_not_argv ... ok
+test isolation::ac204_adoption_at_2_1_277_is_read_from_agents_and_model ... ok
+test dispatch::frame_read_before_the_timer_fired_does_not_overturn_the_arm ... ok
+test isolation::ac204_adoption_equal_subset_superset_wrong_agent ... ok
+test dispatch::ac360_one_event_per_termination_path ... ok
+test isolation::ac385_version_on_event_and_mismatch_warning ... ok
+test isolation::ac386_extra_tools_not_isolated_no_retry ... ok
+test reading::ac368_reading_append_failure_is_warning ... ok
+test isolation::ac226_version_mismatch_configured_outcome ... ok
+test reading::rate_limit_reading_absent_writes_no_row ... ok
+test reading::rate_limit_reading_flat_shape_carries_no_windows ... ok
+test reading::rate_limit_reading_is_journalled_on_a_failed_dispatch ... ok
+test reading::rate_limit_reading_once_per_dispatch_carries_the_last ... ok
+test reading::rate_limit_reading_type_absent_is_null ... ok
+test reading::rate_limit_reading_refused_reading_writes_no_row ... ok
+test registry::ac238_claude_registry_entry_dated ... ok
+test registry::ac489_capability_registry_dated ... ok
+test registry::ac492_unknown_capability_token_fails ... ok
+test reading::rate_limit_reading_row_carries_integer_resets_at_per_window ... ok
+test stream::ac200_property_unrecognised_fields_round_trip ... ok
+test reading::rate_limit_reading_item_is_copied_from_spec_inputs_or_null ... ok
+test stream::ac200_unknown_events_retained_verbatim ... ok
+test stream::ac201_future_shaped_event_still_ok ... ok
+test stream::ac206_exit0_success_without_structured_output_is_schema ... ok
+test stream::ac219_headroom_from_rate_limit_event_only ... ok
+test stream::ac232_api_retry_counted_per_event_no_own_retry ... ok
+test stream::ac208_prose_json_never_recovered ... ok
+test stream::ac523_subtype_detection_synthetic_frame ... ok
+test stream::ac267_resume_cost_is_summed_across_turns_and_option ... ok
+test stream::ac523_text_marker_detection_disclosed ... ok
+test stream::rate_limited_from_stream ... ok
+test throttle::ac220_refuse_within_margin_two_ticks ... ok
+test stream::resets_at_from_last_non_allowed_not_last_reading ... ok
+test throttle::ac372_interleaved_not_attributable ... ok
+test throttle::ac372_low_sample_at_n9 ... ok
+test throttle::ac372_reset_crossing_splits_per_window ... ok
+test throttle::ac221_overage_refuses_before_spawn ... ok
+test stream::structured_output_quoting_a_marker_is_not_a_usage_limit ... ok
+test throttle::ac381_headroom_calculator_still_delivers_a_delta ... ok
+test throttle::tick_arithmetic_vectors ... ok
+test ttl::adr0113_ttl_classifier_five_states ... ok
+test ui::every_claude_compile_fail_case_is_registered_and_commits_a_stderr ... ok
+test stream::refused_reading_is_decode_without_a_kill ... ok
+test throttle::ac378_overage_zero_attempts_no_spawn ... ok
+test throttle::ac376_throttle_refuses_without_spawn_and_appends_row ... ok
+test ui::trybuild_pins_the_reason_each_claude_fixture_fails ... ok
+
+test result: ok. 111 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.09s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 11 tests
+test identity::open_refuses_a_repository_with_no_commit ... ok
+test conformance::wal_and_busy_timeout_are_enforced ... ok
+test registry::ac492_unknown_capability_token_fails ... ok
+test conformance::port_conformance_real_row_sqlite ... ok
+test registry::ac489_capability_registry_dated ... ok
+test store::ac364_correction_appends_never_mutates ... ok
+test replay::ac243_gate_open_replay_over_sqlite_store ... ok
+test identity::ac369_identity_mismatch_refuses_open ... ok
+test store::ac368_sqlite_append_error_is_typed_not_panic ... ok
+test store::ac365_missing_store_file_recreated ... ok
+test worktrees::ac370_one_store_per_common_dir ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.83s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 14 tests
+test classify::ac497_classify_binary_paths ... ok
+test registry::ac489_capability_registry_dated ... ok
+test registry::ac492_unknown_capability_token_fails ... ok
+test registry::ac328_affected_selection_unsupported_without_probe ... ok
+test conformance::port_conformance_real_row_node ... ok
+test report::ac325_recorded_argv_is_os_vector ... ok
+test report::ac344_missing_binary_is_not_a_candidate_failure ... ok
+test report::concurrent_verify_reports_share_no_output_file ... ok
+test report::d34_vitest_invoked_directly_never_pnpm_forwarded ... ok
+test report::os_killed_run_is_keyed_by_detail_prefix ... ok
+test report::suite_sha_ignores_vites_transient_config_bundle ... ok
+test report::ac329_report_conforms_no_prose_parse ... ok
+test report::ac331_killed_verify_is_unverifiable ... ok
+test cancel::s_cancel_win_vitest_arm ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 40.92s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 20 tests
+test change_summary::change_summary_refuses_a_range_carrying_an_lfs_pointer_path ... ok
+test change_summary::change_summary_refuses_a_range_carrying_a_binary_path ... ok
+test classify::ac497_classify_binary_paths ... ok
+test classify::classify_is_invariant_to_a_cargo_manifest ... ok
+test classify::classify_source_spawns_nothing ... ok
+test change_summary::change_summary_refuses_an_empty_range ... ok
+test pack::rust_pack_fixture_binds_kinds_per_adr0029 ... ok
+test change_summary::change_summary_text_variant_from_git_diff ... ok
+test registry::ac489_capability_registry_dated ... ok
+test registry::ac492_unknown_capability_token_fails ... ok
+test change_summary::change_summary_refuses_a_binary_blob_the_working_tree_does_not_hold ... ok
+test registry::ac328_affected_selection_unsupported_without_probe ... ok
+test report::ac325_recorded_argv_is_os_vector ... ok
+test conformance::port_conformance_real_row_rust ... ok
+test report::ac344_missing_binary_is_not_a_candidate_failure ... ok
+test report::ac329_report_conforms_no_prose_parse ... ok
+test report::os_killed_run_is_keyed_by_detail_prefix ... ok
+test report::nextest_fallback_recorded_on_report ... ok
+test report::concurrent_verify_reports_share_no_output_file ... ok
+test report::ac331_killed_verify_is_unverifiable ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.50s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 121 tests
+test answer::ac405_gate_answer_has_exactly_one_call_site ... ok
+test answer::ac263_stub_channel_refused_named_outcome ... ok
+test adapter_selection::a_candidate_whose_config_is_refused_does_not_end_the_run_before_detect_chooses ... ok
+test answer::ac406_answer_after_commit_is_void_gate_stays_open ... ok
+test answer::ac410_admitted_attachment_stored_as_human_root ... ok
+test answer::ac407_second_token_refused_one_gate_answered_event ... ok
+test catalog::ac436_catalog_search_finds_by_keyword ... ok
+test config::ac422_config_reads_the_one_denylist ... ok
+test config::ac426_unread_window_runs_required_no_default ... ok
+test config::ac474_config_surface_snapshot_has_no_dual_write_key ... ok
+test config::ac486_init_scaffold_resolves_four_reals ... ok
+test answer::ac410_unadmitted_attachment_refused_zero_events ... ok
+test cost::ac395_cost_dispatches_nothing_under_a_panicking_harness ... ok
+test config::ac486_misconfigured_adapter_refuses_before_spawn_or_store_write ... ok
+test cost::cost_after_a_real_run_renders_low_sample_through_the_binary ... ok
+test cost::cost_output_grammar_is_closed ... ok
+test cost::render_empty_is_nothing_to_attribute_never_low_sample ... ok
+test cost::render_refuses_an_owned_reading_that_is_not_the_six_member_shape ... ok
+test answer::ac248_answer_without_live_token_exits_named_outcome ... ok
+test doctor::ac203_agents_without_agent_doctor_row ... ok
+test doctor::ac220_last_reading_within_margin_doctor_row ... ok
+test doctor::ac290_reproduced_finding_without_reexecution_record_doctor_row ... ok
+test doctor::ac306_live_quarantines_listed_with_ages_doctor_row ... ok
+test doctor::ac310_sink_count_below_finding_count_doctor_row ... ok
+test doctor::ac314_regression_corpus_sha_unresolvable_doctor_row ... ok
+test doctor::ac370_stray_store_under_linked_worktree_is_an_error ... ok
+test doctor::ac383_card_without_cache_profile_doctor_row ... ok
+test doctor::ac377_margin_under_two_ticks_doctor_row ... ok
+RK-D-GATE-OUTPUTS ok
+RK-D-HOOKS ok
+RK-D-STORE-ID ok
+RK-D-STRAY-STORE ok
+RK-D-ROLE-UNRESOLVED ok
+RK-D-ROLE-AMBIGUOUS ok
+RK-D-CARD-TOOLS ok
+RK-D-CARD-TOOLS-ABSENT ok
+RK-D-TIER-LEAK ok
+RK-D-TIMEOUT ok
+RK-D-DANGLING-ROLE ok
+RK-D-DANGLING-SLOT ok
+RK-D-DANGLING-ATTACH ok
+RK-D-DEAD-DEF ok
+RK-D-UNFILLED-SLOT ok
+RK-D-ENV-DENYLIST ok
+RK-D-CLI-VERSION ok
+RK-D-TTL ok
+RK-D-FACET-UNKNOWN ok
+RK-D-FACET-VALUE ok
+RK-D-FACET-NEW ok
+RK-D-FACET-FACT ok
+RK-D-ADAPTER ok
+RK-D-UNREAD ok
+RK-D-AGENTS-WITHOUT-AGENT ok
+RK-D-CACHE-PROFILE ok
+RK-D-MARGIN ok
+RK-D-HEADROOM-MARGIN ok
+RK-D-REBUILT-TIER2 ok
+RK-D-WORKTREE-ORPHAN ok
+RK-D-NETWORK-FS ok
+RK-D-CREDENTIAL-RETAINED ok
+RK-D-REVIEW-REEXEC ok
+RK-D-QUARANTINE-LIVE ok
+RK-D-SINK-COUNT ok
+RK-D-ADVISORY-LEDGER ok
+RK-D-CORPUS-SHA ok
+RK-D-VERIFICATION-POLICY ok
+RK-D-EXECUTED-LEDGER ok
+test doctor::ac402_reconcile_called_on_run_answer_doctor ... ok
+test answer::ac435_answer_refuses_without_explain_sufficiency_and_records_it ... ok
+test doctor::ac409_gate_outputs_binding_rejected ... ok
+test doctor::ac397_rebuilt_store_tier2_emptiness_is_ok_expected ... ok
+test doctor::ac414_doctor_module_names_no_adapter_constructor ... ok
+test doctor::ac412_redkiln_hook_in_git_hooks_is_an_error ... ok
+test doctor::ac413_ac369_ac370_store_identity_rows ... ok
+test doctor::ac416_role_unresolved_and_ambiguous_rejected ... ok
+test doctor::ac417_card_without_structured_output_or_tools_key_rejected ... ok
+test doctor::ac418_tier_leak_on_card_model_and_filler_effort ... ok
+test cost::cost_fixture_corpus_binary_arm ... ok
+test doctor::ac419_missing_or_non_numeric_timeout_rejected ... ok
+test doctor::ac421_dead_definition_and_unfilled_slot_reported ... ok
+test doctor::ac422_ac488_denylisted_env_name_is_a_doctor_error ... ok
+test doctor::ac420_dangling_role_slot_attach_rejected ... ok
+test doctor::ac423_probe_is_one_version_spawn_not_a_dispatch ... ok
+test doctor::ac423_ac526_cli_version_and_ttl_mismatch_rejected ... ok
+test doctor::ac415_every_rule_id_has_a_rejecting_fixture ... ok
+test doctor::ac425_facet_without_registered_fact_rejected ... ok
+test doctor::ac426_rule_fire_leaves_write_set_unchanged ... ok
+test doctor::ac426_ac472_unread_window_49_not_flagged_51_flagged ... ok
+test doctor::ac424_unknown_facet_value_and_new_facet_rejected ... ok
+test doctor::ac427_rebuild_from_git_alone_matches_recorded_next_action ... ok
+test doctor::ac429_rebuild_writes_no_object_ref_or_file ... ok
+test doctor::ac455_verification_none_under_requiring_pack_doctor_row ... ok
+test doctor::ac438_doctor_error_rule_exits_config_error ... ok
+test doctor::ac486_unknown_adapter_is_a_doctor_error ... ok
+test doctor::ac530_advisory_ledger_imbalance_doctor_row ... ok
+test doctor::doctor_rule_table_covers_every_register_named_row ... ok
+test exit::ac438_exit_codes_distinct ... ok
+test exit::ac438_exit_table_snapshot ... ok
+test exit::ac438_poisoned_lock_halt_is_seventy_through_code_for ... ok
+test exit::ac438_step_error_mapping_is_exhaustive ... ok
+test doctor::ac532_executed_ledger_reports_never_executed_activities ... ok
+test exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three ... ok
+test explain::ac430_explain_prints_both_row_families ... ok
+test doctor::adr0105_doctor_rows_network_fs_credential_orphan ... ok
+test explain::ac431_explain_names_card_skills_fillers_tier ... ok
+test explain::ac432_explain_from_record_only_and_errors_without_resolution ... ok
+test explain::ac432_explain_over_replayed_log_is_byte_identical ... ok
+test doctor::ac414_doctor_over_corpus_fires_every_expected_rule_with_zero_dispatches ... ok
+test explain::ac433_explain_names_excluding_clause_never_not_selected ... ok
+test init::ac437_init_scaffold_bytes_pinned ... ok
+test init::ac412_init_installs_zero_hooks ... ok
+test explain::ac434_unknown_facet_rendered_unknown ... ok
+test init::ac531_init_created_names_match_regex ... ok
+test lint::lint_refusals_name_the_facet ... ok
+test lint::lint_wraps_kernel_facet_rules_and_exits_by_table ... ok
+test init::ac531_preexisting_rk_name_reported_not_overwritten ... ok
+test review_pass::a_malformed_payload_refuses_rather_than_reading_as_zero_findings ... ok
+test review_pass::findings_come_from_the_journal_and_absence_is_not_an_empty_set ... ok
+test review_pass::four_cells_over_two_arms_and_both_fail_is_not_a_flip ... ok
+test review_pass::mutate_and_selectionless_repros_produce_no_record ... ok
+test review_pass::selection_is_the_double_dash_tail_or_nothing ... ok
+test reconcile::ac402_status_and_explain_do_not_reconcile ... ok
+test init::ac437_init_twice_identical_tree_and_identity_rows ... ok
+test exit::ac438_table_driven_exit_codes_over_fixtures ... ok
+test root::ac485_adapter_set_resolved_once_and_run_scoped ... ok
+test root::adr0118_acquire_returns_halt_on_poisoned_lock ... ok
+test root::ac404_rate_limited_writes_retry_mark_and_exits ... ok
+test root::adr0083_config_constructed_once_at_root_and_threaded ... ok
+test root::adr0118_poisoned_store_lock_halts_run_exit_70 ... ok
+test root::signal_handler_fires_cancel_token ... ok
+test root::ac413_store_opened_from_other_repo_refused_zero_rows ... ok
+test root::common_dir_discovered_from_inherited_cwd_via_wrapper ... ok
+test root::signal_outside_dispatch_exits_130_writes_nothing_partial ... ok
+test root::signal_during_dispatch_is_cancelled_by_signal_exit_13 ... ok
+test run::ac401_second_run_issues_no_dispatch_for_memoised_step ... ok
+test run::ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting ... ok
+test run::ac264_run_after_applied_answer_resumes_past_gate ... ok
+test run::adr0128_lane_maps_to_pack_fix_bug_standard_story_story ... ok
+test run::adr0128_lane_derived_from_item_or_refused ... ok
+test story_axis::adr0155_a_second_identical_story_mark_is_drift_not_a_transition ... ok
+test story_axis::adr0155_the_emitted_story_value_parses_as_a_qualified_story ... ok
+test story_axis::adr0159_an_empty_project_degrades_to_a_bare_story_and_records_no_transition ... ok
+test run::ac257_expired_gate_resolved_by_fresh_process ... ok
+test support::spawn_bound_is_the_thirty_seconds_the_stage_file_states ... ok
+test surface::ac400_denylist_absent_from_parser_tree ... ok
+test surface::ac400_help_snapshot_every_verb ... ok
+test surface::ac400_resume_refused_as_unknown_argument ... ok
+test surface::ac402_no_skip_reconcile_flag_in_snapshot ... ok
+test surface::ac403_no_blocking_stdin_read_in_rk_cli ... ok
+test surface::ac441_no_migrate_verb_in_tree ... ok
+test surface::adr0128_run_lane_value_enum_closed ... ok
+test surface::adr0129_answer_grammar_positional_option_no_token_flag ... ok
+test surface::doctor_fix_flag_absent_from_snapshot ... ok
+test toolchain::a_tool_step_reaches_the_rust_adapter_and_not_the_fixture ... ok
+test transcription::the_comment_filter_is_doing_real_work_on_run_rs ... ok
+test transcription::the_production_path_transcribes_a_step_list_and_never_supplies_none ... ok
+test run::run_on_init_only_repo_is_a_config_outcome ... ok
+test transcription::the_spec_a_real_run_binds_carries_its_steps ... ok
+test support::spawn_bound_fires_on_a_holding_child_and_kills_it ... ok
+test run::ac438_table_driven_exit_codes_over_fixtures_binary_arm ... ok
+
+test result: ok. 121 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.75s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 5 tests
+test containment::breakaway_attempt_fails_without_breakaway_ok ... ok
+test containment::ac278_no_descendant_survives_exit ... ok
+test containment::orphan_grandchild_reaped_via_job ... ok
+test containment::ac224_job_object_created_before_spawn ... ok
+test containment::run_bounded_kills_tree_at_timeout ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.27s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 73 tests
+test diff::range_diff_marks_an_lfs_pointer_path ... ok
+test diff::range_diff_marks_a_missing_final_newline ... ok
+test gitops::an_exhausted_replay_refuses_rather_than_falling_through_to_git ... ok
+test gitops::gitops_is_a_struct_not_a_port_trait ... ok
+test diff::range_diff_marks_a_binary_blob_at_either_end ... ok
+test gitops::the_journal_keeps_argv_as_a_digest_and_has_no_field_for_the_environment ... ok
+test grammar::a_bare_story_id_is_kept_separate_from_projects ... ok
+test grammar::a_duplicate_story_trailer_is_drift_and_not_a_transition ... ok
+test grammar::a_gate_trailer_carries_the_triple ... ok
+test grammar::a_legacy_gate_value_is_drift_and_never_a_transition ... ok
+test grammar::a_malformed_trailer_is_one_drift_and_zero_transitions ... ok
+test grammar::a_slice_left_rejected_is_reported ... ok
+test grammar::an_unqualified_or_over_long_slice_verdict_is_drift ... ok
+test grammar::only_column_zero_and_exact_case_registers_as_a_trailer ... ok
+test grammar::rk_git_emits_no_legacy_keys ... ok
+test grammar::slice_verdict_latest_wins_and_history_is_retained ... ok
+test grammar::the_drift_kinds_are_all_distinct ... ok
+test grammar::the_verdict_vocabulary_is_closed_and_case_insensitive ... ok
+test grammar::unknown_keys_are_counted_not_drift ... ok
+test paths::a_unc_extended_length_path_is_refused_not_mangled ... ok
+test paths::control_a_plain_unc_path_is_accepted ... ok
+test paths::control_an_ordinary_path_is_accepted_unchanged ... ok
+test paths::git_paths_are_drive_letter_form ... ok
+test gitops::replay_serves_the_journal_and_performs_zero_writes ... ok
+test paths::wrapper_accepts_a_canonicalised_path_end_to_end ... ok
+test diff::range_diff_refuses_an_unresolvable_range ... ok
+test reconciled::reconcile_is_idempotent_and_adds_no_drift_on_a_second_run ... ok
+test reconciled::status_is_not_a_reconcile_entry ... ok
+test reconciled::reconcile_mutates_nothing_in_git ... ok
+test reconciled::the_sanctioned_route_produces_reconciled_state ... ok
+test review_clone::a_review_clone_is_removed_completely ... ok
+test review_clone::control_the_pre_fix_blob_is_readable_from_the_source ... ok
+test reconciled::reconcile_runs_at_every_entry ... ok
+test diff::range_diff_lists_every_changed_path_with_its_change_kind ... ok
+test s_gix_a::control_normalise_keeps_common_dir_and_worktree_dir_different ... ok
+test s_gix_a::control_normalise_keeps_different_paths_different ... ok
+test s_gix_a::control_normalise_refuses_to_unwrap_unc ... ok
+test s_gix_a::control_normalise_resolves_a_traversal_but_not_the_distinction ... ok
+test s_gix_a::control_normalise_strips_the_extended_length_prefix ... ok
+test s_gix_a::s_gix_a_common_dir_from_linked_worktree ... ignored, S-GIX/a: a spike arm against the gix pin; run explicitly with --ignored
+test review_clone::the_f17_recovery_procedure_fails_against_a_review_clone ... ok
+test review_clone::the_prepared_clone_has_one_commit_and_no_other_ref ... ok
+test s_gix_b::s_gix_b_trailer_roundtrip_matches_interpret_trailers ... ignored, S-GIX/b: a spike arm against the gix pin; run explicitly with --ignored
+test s_gix_b::control_oracle_drops_a_duplicate_without_if_exists_add ... ok
+test s_gix_b::control_oracle_changes_every_fixture ... ok
+test s_gix_c::s_gix_c_shallow_clone_by_sha_matches_git ... ignored, S-GIX/c: a spike arm against the gix pin; run explicitly with --ignored
+test trailers::a_message_rewriting_hook_has_no_effect ... ok
+test trailers::a_repeated_identical_trailer_is_appended_not_dropped ... ok
+test review_clone::the_review_clone_is_bare_unless_a_working_tree_is_declared ... ok
+test trailers::the_wrapper_supplies_the_hooks_and_trailer_prelude ... ok
+test s_gix_c::control_different_revisions_have_different_trees ... ok
+test s_gix_c::control_a_full_clone_is_not_shallow ... ok
+test trailers::control_the_fault_injection_hook_really_fires_without_isolation ... ok
+test trailers::trailer_roundtrip_matches_interpret_trailers ... ok
+test tree::there_is_exactly_one_write_tree_call_site ... ok
+test tree::checkpoint_and_working_basis_agree_on_a_clean_tree ... ok
+test version::a_version_without_a_patch_component_still_parses ... ok
+test version::an_unparsable_version_is_not_read_as_zero ... ok
+test version::below_floor_error_names_both_versions ... ok
+test version::control_a_newer_git_is_above_the_floor ... ok
+test version::control_an_older_git_is_below_the_floor ... ok
+test version::the_floor_in_the_code_equals_the_floor_in_the_record ... ok
+test version::the_precondition_passes_on_this_box_and_reports_what_it_found ... ok
+test tree::the_temporary_index_is_not_the_real_one_and_does_not_survive ... ok
+test tree::control_a_tracked_modification_does_change_the_tree ... ok
+test tree::untracked_files_are_excluded_from_the_working_state_tree ... ok
+test worktree::a_write_from_the_run_owned_worktree_succeeds ... ok
+test worktree::the_crate_never_reads_the_current_directory ... ok
+test worktree::a_write_from_a_foreign_worktree_is_refused_naming_both ... ok
+test worktree::an_existing_worktree_path_is_refused_not_reused ... ok
+test worktree::the_owned_worktree_on_the_wrong_branch_is_refused ... ok
+test worktree::control_a_worktree_can_be_created_and_removed ... ok
+test worktree::the_resolution_reads_the_store_row_and_not_the_current_directory ... ok
+
+test result: ok. 70 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 3.23s
+
+
+running 11 tests
+test registry::tests::a_facet_entry_without_a_source_fails_load ... ok
+test select::step5::tests::ac078_cyclic_dag_fails_before_dispatch ... ok
+test registry::tests::source_outside_the_five_is_ac072s_load_failure ... ok
+test rigor::tests::a_catalog_with_no_family_is_an_error_and_not_a_vacuous_pass ... ok
+test select::step5::tests::cost_points_transcribe_i6_and_refuse_a_zero_default ... ok
+test select::tests::required_set_is_constructible_here_and_only_here ... ok
+test toml_subset::tests::a_duplicated_key_is_refused_rather_than_last_one_wins ... ok
+test workflow::fsm::tests::folding_nothing_is_the_initial_state ... ok
+test workflow::fsm::tests::the_initial_state_is_canonical_and_says_it_did_nothing ... ok
+test select::tests::an_unmentioned_stage_has_no_rigor ... ok
+test select::tests::r_is_byte_identical_across_an_unsatisfiable_gate ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 262 tests
+test breaker::breaker_ac033_ac035 ... ok
+test breaker::ac034_breaker_never_trips_globally ... ok
+test budget::appetite_raise_from_an_activity_result_is_refused ... ok
+test budget::attempts_total_counts_a_pass_not_retries ... ok
+test budget::budget_three_counters_never_share ... ok
+test budget::exhaustion_ac024_ac025 ... ok
+test budget::for_each_charges_once_independent_of_n ... ok
+test breaker::breaker_key_is_the_packs_role_family_never_the_activity_family ... ok
+test budget::minimum_declaration_is_not_exhausted_by_its_own_clean_pass ... ok
+test catalog_diagnostic::ac409_gate_step_with_outputs_rejected_at_load ... ok
+test catalog_diagnostic::adr0146_gate_question_may_not_carry_a_colon ... ok
+test advisory::ac525_drift_advisory_once ... ok
+test check_cannot_dispatch::a_check_step_never_reaches_the_toolchain_port ... ok
+test check_cannot_dispatch::a_walk_of_check_steps_moves_the_toolchain_counter_exactly_once_and_that_once_is_the_tool_step ... ok
+test config::adr0083_config_type_declared_in_kernel_and_threaded_into_run_inputs ... ok
+test conformance::conformance_every_step_kind_has_an_executor ... ok
+test conformance::conformance_every_trailer_key_has_a_producer ... ignored, ARMED: Slice-Verdict has 0 producers; Gate and Story are both minted as of s7h.2; discharged by s8e
+test conformance::enum_variants_reads_payload_carrying_and_trailing_variants ... ok
+test catalog_diagnostic::catalog_load_diagnostic_returns_every_load_error_typed ... ok
+test conformance::the_check_arm_has_no_receiver_and_so_cannot_reach_a_port ... ok
+test conformance::the_comment_stripper_ignores_prose ... ok
+test cross_process::ac013_child_commits_two_of_three_then_dies ... ignored, child entrypoint for AC-013's kill-and-resume test; the parent invokes it by name
+test cross_process::ac024_child_writes_the_wall_clock_mark ... ignored, child entrypoint for AC-024's exit-and-mark test; the parent invokes it by name
+test cross_process::ac024_wall_clock_mark_outlives_the_process_that_wrote_it ... ok
+test conformance::conformance_every_port_has_a_call_site ... ok
+test cross_process::ac035_child_opens_a_breaker ... ignored, child entrypoint for AC-035's kill-and-re-enter test; the parent invokes it by name
+test cross_process::ac035_breaker_refusal_survives_a_real_process_death ... ok
+test dag::ac059_optional_only_requires_cycle_loads ... ok
+test dag::an_undeclared_appetite_is_not_an_unbounded_one ... ok
+test dag::appetite_gate_never_trims_r ... ok
+test cross_process::kill_and_resume_n_step ... ok
+test dag::cycle_and_excludes_fail_load ... ok
+test dag::both_step5_outcomes_carry_a_dag ... ok
+test dag::dangling_requires_fails_load ... ok
+test dag::dag_assembled_carries_the_five_named_fields ... ok
+test dag::excluding_activities_never_share_one_dag ... ok
+test dag::dead_activity_is_a_warning_with_counts ... ok
+test degradation::degradation_ac036_ac038 ... ok
+test dag::select_refuses_a_catalog_that_would_not_have_loaded ... ok
+test deviation::ac064_dag_amended_delta_event ... ok
+test deviation::an_abstaining_claimed_predicate_gates_and_writes_nothing ... ok
+test deviation::deviation_id_is_the_content_hash_of_the_request ... ok
+test deviation::accepted_add_and_downgrade_amend_the_graph ... ok
+test deviation::deviation_kind_outside_deviation_ok_is_refused ... ok
+test dispatch_completed::adr0126_dispatch_completed_is_not_a_breaker_mark ... ok
+test dispatch_completed::adr0126_dispatch_completed_is_not_counted_as_a_dispatch ... ok
+test dispatch_completed::adr0126_dispatch_completed_moves_nothing_in_the_fsm ... ok
+test divergence::ac007_replay_divergence_halts ... ok
+test envelope::ac029_n_is_declared_never_defaulted ... ok
+test evaluator::kleene_absorption_is_commutative_per_adr_0121 ... ok
+test deviation::deviation_never_edits_the_required_set ... ok
+test evaluator::predicate_null_arithmetic ... ok
+test evaluator::quantifier_empty_and_null ... ok
+test execute::topological_order_and_antichains ... ok
+test facet_provenance::facet_provenance_fixtures ... ok
+test execute::execution_cannot_change_the_required_set ... ok
+test facet_stability::facet_stability_five_clause ... ok
+test facet_registry::facet_registry_entry_shape ... ok
+test fsm::ac039_gate_record_and_the_void_answer ... ok
+test fsm::gate_answered_after_expiry_is_void_and_the_fold_continues ... ok
+test gate_step::a_gate_step_after_a_dispatch_writes_the_runtime_mark_and_keeps_the_commit ... ok
+test gate_step::a_gate_step_before_any_dispatch_opens_the_gate_and_does_not_refuse ... ok
+test gate_step::a_gate_step_without_a_question_is_refused_by_name ... ok
+test gate_step::a_guarded_off_gate_step_opens_nothing ... ok
+test fsm::ac008_terminal_state_and_the_next_action_grains ... ok
+test gate_step::a_voided_gate_step_re_opens_at_the_next_reach ... ok
+test gate_step::an_answered_gate_step_is_walked_past_and_not_re_opened ... ok
+test gate_step::the_walk_continues_past_a_skipped_step_to_the_gate_behind_it ... ok
+test gates::ac243_no_dispatch_across_open_gate ... ok
+test gates::ac244_gate_record_requires_all_three ... ok
+test gates::ac242_gate_path_blocks_nothing ... ok
+test gates::ac246_token_is_single_use ... ok
+test gates::ac247_answer_against_the_wrong_gate_is_refused ... ok
+test gates::ac249_stale_tree_hash_is_void ... ok
+test gates::ac250_no_reconciliation_path ... ok
+test gates::ac252_void_reopens_fresh_in_all_three_fields ... ok
+test gates::ac253_drift_is_a_tree_hash_comparison ... ok
+test gates::ac260_expiry_policy_lint ... ok
+test gates::ac261_state_is_rederived_at_every_entry ... ok
+test gates::ac270_gate_state_from_the_log_alone ... ok
+test gates::ac272_escalation_is_one_gate_mechanism ... ok
+test gates::ac279_one_prefix_rewrite ... ok
+test gates::ac524_fresh_record_on_rereach ... ok
+test grammar::grammar_bare_identifier_is_a_literal ... ok
+test grammar::grammar_comparisons_do_not_chain ... ok
+test grammar::grammar_field_to_field_needs_a_ref ... ok
+test grammar::grammar_precedence_and_associativity ... ok
+test guard_context::a_check_expr_reading_a_step_output_still_refuses_with_the_full_context ... ok
+test guard_context::a_rigor_guard_refuses_on_an_empty_context_and_decides_on_the_selections_one ... ok
+test conformance::shipped_pack_loads ... ok
+test kernel_denylist::the_denylist_report_counts_what_it_walked ... ok
+test kernel_denylist::the_denylist_scanner_reads_code_and_not_prose ... ok
+test kernel_denylist::ac487_kernel_denylist ... ok
+test keywords::ac436_keywords_unreachable_from_admissibility_evaluator ... ok
+test lane_order::adr0152_resume_takes_one_stage_boundary_and_breaks ... ok
+test lane_order::adr0153_a_pack_declaring_no_lane_order_cannot_advance ... ok
+test lane_order::adr0153_successor_skips_forbidden_and_ends_the_lane ... ok
+test lane_order::adr0153_the_shipped_lane_order_survives_loading_and_the_table_does_not ... ok
+test lane_order::adr0153_the_two_policy_keys_may_not_disagree ... ok
+test lane_order::adr0157_a_second_run_advances_nowhere_and_appends_nothing ... ok
+test lane_order::adr0161_a_stage_the_lane_has_entered_is_not_entered_again ... ok
+test lattice::covering_array_is_pairwise_and_matches_the_python_rows ... ok
+test keywords::ac436_keywords_permutation_leaves_selection_unchanged ... ok
+test adapter_edge::ac484_adapter_edge_fixture ... ok
+test gates::ac245_write_tree_one_algorithm ... ok
+test lattice::family_hole_at_mandatory_fails_totality ... ok
+test lattice::dead_activity_fixture_is_listed ... ok
+test lattice::hard_cycle_fixture_is_an_error ... ok
+test lattice::p6_validate_parity_over_the_p9_tree ... ok
+test lattice::rank_tie_fixture_is_an_error ... ok
+test lattice::shipped_axes_add_rust_and_surfaces_and_the_p6_axes_are_unchanged ... ok
+test lattice::unsatisfiable_fixture_names_its_cell ... ok
+test lattice::zero_packs_is_refused_not_reported ... ok
+test ledger::ac110_executed_ledger_first_and_last ... ok
+test memo::ac015_kb_atom_edit_misses_the_memo ... ok
+test memo::ac018_frozen_p9_catalog_is_red ... ok
+test memo::ac018_live_verb_may_not_memoise ... ok
+test memo::ac019_executed_plus_hits_equals_activations ... ok
+test memo::ac019_memo_hit_is_never_silent ... ok
+test memo::component_eight_is_the_whole_schema_id_and_never_a_parsed_version ... ok
+test memo::memo_activity_key_distinct ... ok
+test memo::memo_key_eight_components ... ok
+test memo::memo_loop_iteration ... ok
+test module_boundary::ac294_run_state_construction_sites_are_module_bounded ... ok
+test no_egress::ac498_no_egress_dispatch_zero ... ok
+test on_false::on_false_closed_set ... ok
+test p9_pin::reads_the_object_store_at_the_named_commit_not_the_working_tree ... ok
+test pack_validation::a_baseline_entry_is_a_route_that_needs_no_capability ... ok
+test pack_validation::a_pack_that_does_not_load_is_a_violation_and_never_a_clean_validation ... ok
+test pack_validation::a_require_row_with_no_artifacts_routes_nothing_and_is_counted ... ok
+test pack_validation::ac495_pack_validation ... ok
+test pack_validation::every_alternative_is_considered_before_a_stage_is_called_unroutable ... ok
+test pack_validation::no_shipped_pack_declares_a_capability_and_every_one_of_them_routes ... ok
+test pack_validation::sca_scan_blocks_on_unrated_or_routes_to_accept_findings ... ok
+test pack_validation::tdd_red_verify_projects_tests_added_per_adr_0035 ... ok
+test pack_validation::the_span_of_a_require_row_is_the_parsers_own_reading ... ok
+test post_commit_failure::a_step_failing_after_a_committed_dispatch_refuses_by_name_and_keeps_the_commit ... ok
+test probe_differential::grammar_agrees_with_the_s_grammar_probe ... ok
+test producer::rank_total_order_and_tie_is_an_error ... ok
+test producer::rigor_stage_scope_and_ceiling ... ok
+test producer::unsatisfiable_is_a_typed_gate ... ok
+test projection::rebuild_differential ... ok
+test projection::stage_action_still_filters_to_tier_one ... ok
+test projection::stage_level_next_action ... ok
+test quality_block::ac527_empty_set_terminal_condition ... ok
+test quality_block::ac527_frozen_p9_catalog_is_red ... ok
+test quality_block::adr0072_d2_edits_are_versioned_and_changelogged ... ok
+test quality_block::adr0072_s8b_repairs_are_versioned_and_changelogged ... ok
+test quality_block::d2_named_form_refuses_any_member_list ... ok
+test quality_block::d2_per_class_witness_refuses_one_member_rows ... ok
+test quality_block::d2_rewritten_rows_are_not_constant_over_their_quantity ... ok
+test quality_block::d2_rewritten_rows_read_a_quantity_the_loop_varies ... ok
+test quality_block::d2_severity_only_predicates_load ... ok
+test question::adr0063_option_with_attaches_refuses_close_without_attachment ... ok
+test question::adr0129_gate_answered_carries_answer_meta_kernel_side ... ok
+test question::adr0129_question_registry_default_question_two_options ... ok
+test recorded_log::ac007_divergence_detection_over_the_committed_log ... ok
+test recorded_log::read_run_refuses_a_log_whose_config_json_is_invalid ... ok
+test recorded_log::read_run_refuses_a_log_whose_specs_json_is_missing ... ok
+test recorded_log::the_recording_sources_are_the_committed_logs_inputs_byte_for_byte ... ok
+test recorded_log::the_replay_still_calls_the_divergence_detection ... ok
+test recorded_log::write_run_and_read_run_round_trip_every_recorded_input ... ok
+test resolver::a_capability_is_readable_only_through_a_complete_row ... ok
+test resolver::ac494_resolver ... ok
+test resolver::ac494_the_shipped_retry_policy_does_not_fire_on_unsupported ... ok
+test resolver::ac494_unsupported_carries_the_token_and_no_other_variant_does ... ok
+test resolver::the_pack_that_cannot_route_and_the_activity_that_cannot_resolve_name_one_token ... ok
+test resume::replay_resume_seeds_fold_from_journal_and_steps_gate_open ... ok
+test retry::ac028_policy_match_has_no_wildcard ... ok
+test retry::disjoint_channels_ac032 ... ok
+test retry::inner_retry_ac026 ... ok
+test retry::jitter_source_is_forced_and_owes_no_record ... ok
+test retry::never_retried_class_ac027 ... ok
+test retry::outer_retry_ac029 ... ok
+test retry::schedule_refuses_to_swallow_an_over_cap_attempt ... ok
+test review::ac282_structured_output_required ... ok
+test review::ac283_no_free_text_reaches_policy ... ok
+test review::ac284_class_decision_table ... ok
+test review::ac285_class_drift_event ... ok
+test review::ac286_child_prints_the_classifier_digest ... ignored, child entry point: run by ac286_classifier_is_deterministic in a fresh process
+test review::ac286_classifier_is_deterministic ... ok
+test review::ac294_block_constructor_is_private_outside_policy ... ok
+test review::ac295_weight_change_adds_only_narrowed_pin ... ok
+test review::ac296_advisory_never_blocks ... ok
+test review::ac298_unset_weight_is_lenient ... ok
+test review::ac299_read_only_spawns_nothing ... ok
+test review::ac300_fix_lane_is_strict ... ok
+test review::ac301_cheap_first_cascade_is_refused ... ok
+test review::ac302_review_tier_takes_no_model_value ... ok
+test review::ac303_back_edge_counts_and_is_reported ... ok
+test review::ac303_confirm_step_survives_escalation ... ok
+test review::ac303_multi_hop_confirm_is_seen ... ok
+test review::ac303_read_binding_is_strict ... ok
+test review::ac303_twin_broken_chain_is_lost ... ok
+test review::ac318_no_json_from_prose_in_the_review_path ... ok
+test review_confirm::ac287_no_record_no_block ... ok
+test review_confirm::ac288_four_cell_truth_table ... ok
+test review_confirm::ac289_equivalent_mutant_does_not_block ... ok
+test review_confirm::ac290_unverifiable_never_blocks ... ok
+test review_confirm::ac304_quarantined_is_absent_but_persisted ... ok
+test review_confirm::ac306_quarantine_expiry_re_raises ... ok
+test review_confirm::ac307_every_block_has_an_event ... ok
+test review_confirm::ac313_replay_k10 ... ok
+test review_confirm::ac314_corpus_sha_is_the_corpus_repos ... ok
+test review_confirm::ac315_review_never_marks_an_ac_verified ... ok
+test review_confirm::ac316_green_suite_does_not_clear_a_block ... ok
+test review_confirm::ac530_sink_leaves_only_by_recorded_disposition ... ok
+test rigor::rigor_monotonicity ... ok
+test rigor::rigor_monotonicity_p9_historical_2026_09_13 ... ok
+test runtime::ac009_vector_is_journaled_once_and_reread ... ok
+test runtime::ac010_malformed_key_is_refused_before_spawn ... ok
+test runtime::ac011_attempt_increases_and_the_triple_is_unique ... ok
+test runtime::ac012_late_duplicate_is_discarded ... ok
+test runtime::ac013_re_entry_reexecutes_nothing ... ok
+test runtime::ac030_rate_limited_writes_a_mark_and_never_sleeps ... ok
+test runtime::ac031_schema_reprompts_exactly_once ... ok
+test runtime::runtime_error_tags_are_stable ... ok
+test runtime::runtime_step_appends_only_what_the_action_names ... ok
+test runtime::the_fsm_dispatch_key_has_no_version_and_the_boundary_refuses_it ... ok
+test second_agent::a_guarded_off_second_agent_step_refuses_nothing ... ok
+test second_agent::a_second_runnable_agent_step_refuses_and_the_commit_survives ... ok
+test selection::baseline_union_fired_require_rows_is_the_required_set ... ok
+test selection::forbidden_is_a_logged_skip_not_an_absence ... ok
+test selection::forbidden_stage_via_conditional_requires ... ok
+test selection::judgement_predicate_fails_load ... ok
+test selection::keyed_kind_expands_per_toolchain ... ok
+test selection::rigor_discouraged_refused ... ok
+test selection::rigor_is_per_stage_and_an_item_override_is_logged ... ok
+test selection::selection_seven_steps_are_pure ... ok
+test selection::selection_source_reads_no_hidden_input ... ok
+test selection::unknown_facet_abstains_and_is_not_unsatisfiable ... ok
+test short_circuit::registered_source_breaks_the_ac066_ac067_tie ... ok
+test short_circuit::short_circuit_eight_case_table ... ok
+test short_circuit::step_three_returns_a_classification_and_reads_no_log ... ok
+test short_circuit::vouched_root_stays_present ... ok
+test tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port ... ok
+test ui::every_kernel_compile_fail_case_is_registered_and_commits_a_stderr ... ok
+test ui::trybuild_pins_the_reason_each_kernel_fixture_fails ... ok
+test verify::ac015_inversion_regression ... ok
+test verify::ac239_gate_eligible_list_is_data ... ok
+test verify::ac322_inert_filter_records_whole_suite ... ok
+test verify::ac324_absent_basis_is_err ... ok
+test verify::ac326_bootstrap_comparator ... ok
+test verify::ac332_empty_selection_is_never_green ... ok
+test verify::ac334_flip_predicate ... ok
+test verify::ac335_green_suite_does_not_promote_a_survivor ... ok
+test verify::ac336_toolchain_version_bump_moves_the_verify_memo_key ... ok
+test verify::ac338_restored_mutation_is_unverifiable ... ok
+test verify::ac340_survivor_finding_blocks_under_default_weight ... ok
+test verify::ac342_review_findings_are_not_a_ledger_input ... ok
+test verify::ac343_model_authored_pass_is_a_schema_violation ... ok
+test verify::ac344_verify_findings_use_the_review_predicate ... ok
+test verify::ac345_quarantine_changes_no_ledger_status ... ok
+test verify::ac346_quarantined_survivor_still_refuses_exit ... ok
+test verify::ac347_verify_dispatches_nothing ... ok
+test verify::ac352_basis_reason_is_exhaustive ... ok
+test verify::ac455_policy_decides_not_the_type ... ok
+test walk_semantics::an_emit_step_ends_the_walk_and_a_later_tool_step_never_runs ... ok
+test walk_semantics::an_empty_transcribed_step_list_is_refused_by_name_and_none_is_not_the_empty_case ... ok
+test lattice::p6_validate_over_the_shipped_pack ... ok
+test lattice::p6_lattice_parity_over_the_p9_tree ... ok
+test lattice::p6_lattice_over_the_shipped_pack ... ok
+
+test result: ok. 257 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 60.20s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 15 tests
+test change_summary::text_variant_serialises_sha_diff_and_manifest ... ok
+test denylist::git_surface_denylist_rejects_git_port ... ok
+test conformance::port_conformance_fake_rows ... ok
+test event_store_port::ac364_event_store_port_has_no_update_or_delete ... ok
+test fake_behaviour::cancel_token_is_the_roots_and_yields_cancelled ... ok
+test fake_behaviour::harness_fake_produces_unsupported ... ok
+test fake_behaviour::toolchain_fake_classifies_binary ... ok
+test fake_behaviour::step_error_is_matched_exhaustively_with_one_event_arm_each ... ok
+test feasibility::ac337_mutation_feasibility_is_declared ... ok
+test ports_struct::five_ports_are_object_safe_and_send_sync ... ok
+test denylist::no_async_in_port_traits ... ok
+test ports_struct::ports_struct_holds_arc_dyn_send_sync ... ok
+test parity::port_fake_parity ... ok
+test ui::trybuild_pins_the_reason_each_port_fixture_fails ... ok
+test change_summary::binary_arm_is_not_constructible_outside_rk_ports ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 54 tests
+test canon_and_memo::array_order_is_preserved ... ok
+test canon_and_memo::components_cannot_absorb_each_others_boundaries ... ok
+test artifacts::ac305_finding_identity_is_stable ... ok
+test canon_and_memo::control_integers_pass_through ... ok
+test canon_and_memo::control_strings_escape_to_lf_and_there_is_no_trailing_newline ... ok
+test canon_and_memo::floats_are_refused_with_a_pointer_to_the_offending_node ... ok
+test canon_and_memo::object_keys_are_sorted_so_authoring_order_does_not_leak ... ok
+test canon_and_memo::input_order_matters_and_kb_atom_order_does_not ... ok
+test canon_and_memo::every_component_participates_in_the_key ... ok
+test canon_and_memo::the_activity_key_is_not_the_step_key ... ok
+test canon_and_memo::the_activity_key_sorts_its_cards ... ok
+test canon_and_memo::the_step_key_has_exactly_eight_components ... ok
+test canon_and_memo::the_idempotency_key_has_three_parts ... ok
+test canon_and_memo::the_key_is_stable ... ok
+test contention::ac181_child_writer ... ignored, child entrypoint for the AC-181 two-process contention test
+test artifacts::ac310_sink_accounting ... ok
+test locator::a_duplicate_genuine_heading_is_an_error_and_never_a_first_match ... ok
+test locator::a_hash_without_a_space_is_not_a_heading ... ok
+test locator::a_same_level_duplicate_inside_a_code_block_is_prose_and_still_resolves ... ok
+test locator::a_shallower_heading_ends_the_slice ... ok
+test locator::a_slice_may_run_to_end_of_file ... ok
+test locator::decoys_are_not_selected ... ok
+test locator::inserting_a_decoy_does_not_change_the_resolved_range ... ok
+test locator::the_return_is_a_byte_range_and_carries_no_content_derived_field ... ok
+test locator::the_occurrence_count_is_exact ... ok
+test locator::the_slice_ends_at_the_next_heading_of_that_level_or_shallower ... ok
+test locator::zero_occurrences_is_an_error_naming_the_count ... ok
+test store::a_branch_key_fails_the_lint ... ok
+test store::a_declared_column_the_sql_does_not_mark_fails_the_lint ... ok
+test store::a_dispatch_record_keeps_digests_and_has_no_environment_field ... ok
+test store::a_memo_field_is_declared_tier_two ... ok
+test store::a_newer_schema_is_refused_too ... ok
+test store::a_reader_also_configures_the_busy_timeout ... ok
+test store::a_unc_path_is_recognised_as_a_network_filesystem ... ok
+test store::a_foreign_root_commit_is_refused_and_the_file_is_unchanged ... ok
+test store::a_write_transaction_commits_and_is_within_the_timeout ... ok
+test store::an_undeclared_repo_key_fails_the_lint ... ok
+test store::control_a_correct_pair_passes ... ok
+test store::control_a_matching_identity_is_accepted ... ok
+test store::credential_shaped_values_are_recognised ... ok
+test store::every_state_field_declares_a_tier ... ok
+test store::an_older_schema_is_refused_and_no_migration_happens ... ok
+test store::retention_record_is_rk_types_dispatch_record ... ok
+test store::stdout_is_verbatim_under_the_cap_and_summarised_over_it ... ok
+test store::the_shipped_migrations_declare_every_repo_key ... ok
+test store::the_store_path_is_under_the_common_dir ... ok
+test store::opening_twice_yields_one_store_file ... ok
+test store::the_writer_opens_in_wal_with_the_busy_timeout ... ok
+test store::there_is_no_delete_against_a_tier_one_table ... ok
+test verify::ac329_total_test_count_source ... ok
+test verify::ac333_ac_evidence_ledger ... ok
+test contention::control_the_child_entrypoint_writes_when_run_directly ... ok
+test contention::two_processes_writing_concurrently_both_land_with_no_lock_errors ... ok
+test tier_ui::a_state_field_without_a_tier_is_a_compile_error ... ok
+
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+
+running 2 tests
+test artifact::findings::tests::real_commands_are_accepted ... ok
+test artifact::findings::tests::prose_is_rejected ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 66 tests
+test companion_kinds::an_unregistered_kind_is_refused ... ok
+test companion_kinds::the_eight_phase_two_kinds_are_refused ... ok
+test companion_kinds::the_six_kinds_are_exactly_these ... ok
+test digest_compute::empty_components_are_distinguished ... ok
+test digest_compute::length_prefixing_separates_the_components ... ok
+test digest_compute::plain_concatenation_would_collide_where_the_framing_does_not ... ok
+test digest_compute::sha256_matches_the_published_vectors ... ok
+test digest_compute::the_digest_is_stable ... ok
+test digest_compute::the_output_is_always_a_valid_digest ... ok
+test companion_kinds::every_registered_kind_is_writable ... ok
+test companion_kinds::companion_kind_has_registered_schema ... ok
+test dispatch_record::a_pre_spawn_record_carries_the_pin_and_absence_as_null ... ok
+test dispatch_record::ac360_dispatch_record_carries_the_usage_fields ... ok
+test dispatch_record::the_constructor_digests_argv_and_env_and_stores_neither ... ok
+test event_kinds::adr0126_dispatch_completed_is_tier_two ... ok
+test event_kinds::all_lists_every_variant_exactly_once ... ok
+test event_kinds::artifact_write_exists_and_is_tier_two ... ok
+test event_kinds::dag_amended_exists_and_is_tier_two ... ok
+test event_kinds::every_wire_name_round_trips ... ok
+test event_kinds::exactly_five_kinds_are_tier_one ... ok
+test dispatch_record::retained_bytes_travel_as_integer_arrays_and_survive_the_round_trip ... ok
+test event_kinds::gate_answer_spent_and_gate_resumed_exist_and_are_tier_two ... ok
+test event_kinds::replay_divergence_is_deliberately_not_an_event_kind ... ok
+test event_kinds::rewrite_is_not_tier_one ... ok
+test event_kinds::slice_sealed_is_a_single_kind ... ok
+test event_kinds::stage_exit_refused_exists_and_is_tier_two ... ok
+test event_kinds::the_dotted_names_are_not_normalised_to_snake_case ... ok
+test event_kinds::the_memo_kinds_are_tier_two ... ok
+test event_kinds::the_review_and_verify_gates_five_kinds_exist_and_are_tier_two ... ok
+test event_kinds::the_trailer_axes_belong_to_the_tier_one_kinds ... ok
+test fixtures::preserve_order_is_in_force ... ok
+test repro_ingest::repro_accepts_a_well_formed_run ... ok
+test digest_compute::there_is_exactly_one_hasher_construction_site ... ok
+test repro_ingest::repro_rejects_missing_required_fields ... ok
+test repro_ingest::repro_rejects_mutate_without_mutation ... ok
+test repro_ingest::repro_rejects_prose_only ... ok
+test review_gate::ac293_review_outcome_carries_the_reviewed_tree_digest ... ok
+test review_gate::ac319_quarantine_without_until_is_unconstructible ... ok
+test review_gate::ac280_decision_fields_are_refused_at_schema_load ... ok
+test schema_caps::seventeen_explicit_unions_is_caught ... ok
+test schema_caps::seventeen_options_is_caught ... ok
+test schema_caps::twenty_five_optionals_is_caught ... ok
+test schema_caps::union_and_optional_caps ... ok
+test schema_no_oneof::a_non_kind_discriminated_oneof_is_still_flagged ... ok
+test schema_no_oneof::nested_union_is_caught ... ok
+test schema_no_oneof::open_object_is_caught ... ok
+test schema_no_oneof::optional_before_required_is_caught ... ok
+test schema_no_oneof::tagged_enum_without_the_transform_renders_oneof ... ok
+test schema_no_oneof::no_oneof_at_any_node ... ok
+test review_gate::ac281_findings_ingest_rejects_an_incomplete_repro ... ok
+test step_error_is_total::ac523_zero_backoff_table ... ok
+test step_error_is_total::spoke_partitions_six_true_five_false ... ok
+test step_error_is_total::step_error_is_total ... ok
+test usage::a_usage_block_with_unknown_members_still_decodes ... ok
+test usage::ac362_absent_and_zero_roundtrip_distinct ... ok
+test usage::ac362_absent_usage_is_none_not_zero ... ok
+test usage::ac362_no_default_on_any_usage_adjacent_type ... ok
+test usage::an_absent_split_is_none_not_zero ... ok
+test usage::the_sdk_naming_is_a_fallback_never_a_sum ... ok
+test usage::ttl_split_reads_the_nested_cache_creation_object ... ok
+test verify_types::basis_reason_is_the_closed_six ... ok
+test verify_types::ledger_row_locator_round_trips ... ok
+test verify_types::verify_report_has_no_default ... ok
+test schema_snapshot::schema_snapshot ... ok
+test schema_snapshot::companion_schema_snapshot ... ok
+test dispatch_record::retained_sink_equals_retained_of ... ok
+
+test result: ok. 66 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test crates\rk-ports\src\lib.rs - (line 97) - compile fail ... ok
+test crates\rk-ports\src\lib.rs - (line 45) - compile fail ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+
+running 1 test
+test crates\rk-store\src\tier.rs - tier (line 17) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+all doctests ran in 1.02s; merged doctests compilation took 0.45s
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

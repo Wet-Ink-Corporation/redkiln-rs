@@ -1,0 +1,20 @@
+# The scan fixture's PROJECT (s8c §8c.4): the lockfile the fixture advisory database under ../db/
+# matches. One registry dependency, `itoa` at exactly 1.0.18: both `cargo audit` and `cargo deny`
+# match advisories against REGISTRY packages only (a path package is never matched; measured
+# 2026-09-26 on cargo-audit 0.22.2 and cargo-deny 0.20.2), so the matched crate cannot be a path
+# package. `cargo audit` reads Cargo.lock alone (`--file`); `cargo deny` runs `cargo metadata` over
+# this manifest, which needs the `itoa` crate in the local registry cache or the network.
+#
+# It is its OWN workspace root (the empty `[workspace]` table), like ../../project/, and sits
+# outside the repository root's `tests/fixtures/*` member glob. Cargo.lock is committed. LF under
+# ADR-0164.
+[package]
+name = "rk-scan-fixture"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+itoa = "=1.0.18"

@@ -1,0 +1,9 @@
+# Package `b`: depends on `a` (a normal edge).
+[package]
+name = "b"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+a = { path = "../a" }

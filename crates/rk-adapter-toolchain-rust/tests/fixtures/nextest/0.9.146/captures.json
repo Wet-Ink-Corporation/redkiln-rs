@@ -1,0 +1,59 @@
+{
+  "captured_on": "2026-09-26",
+  "versions": {
+    "rustc -V": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "cargo -V": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "cargo nextest --version": "cargo-nextest 0.9.146 (8af696ddc 2026-09-21)",
+    "repository HEAD at capture": "e77173098046ce287373e0028ddd01d9f61dc6d9",
+    "working tree at capture": "HEAD plus this stage's uncommitted fixture, ci.yml and runbook edits (no crate source changed)"
+  },
+  "files": {
+    "workspace-red-in-a.stderr": {
+      "what": "the workspace red in package a: nextest's status stream, which is STDERR (stdout is empty)",
+      "argv": [
+        "cargo",
+        "nextest",
+        "run",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/workspace/Cargo.toml",
+        "--workspace",
+        "--no-fail-fast",
+        "--retries",
+        "0",
+        "--color",
+        "never",
+        "--status-level",
+        "pass",
+        "--final-status-level",
+        "none",
+        "--",
+        "--include-ignored"
+      ],
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/workspace",
+      "exit_code": 100,
+      "stream": "stderr"
+    },
+    "workspace-red-in-a.doc.stdout": {
+      "what": "the doctest companion for the same selection (cargo nextest run runs no doctests)",
+      "argv": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/workspace/Cargo.toml",
+        "--workspace",
+        "--doc",
+        "--no-fail-fast",
+        "--",
+        "--include-ignored"
+      ],
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/workspace",
+      "exit_code": 0,
+      "stream": "stdout"
+    }
+  },
+  "not_captured": {
+    "project-green, project-red": "BLOCKED (P1): nextest 0.9.146 cannot list the fixture project; zz_decoy (harness = false) answers --list with non-list lines and nextest exits 104 'creating test list failed'. Awaiting a ruling."
+  }
+}

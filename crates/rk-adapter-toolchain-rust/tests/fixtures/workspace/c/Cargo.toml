@@ -1,0 +1,17 @@
+# Package `c`: DEV-depends on `b`, so it is in `a`'s reverse-dependency closure only when
+# dev-dependencies are followed (s8c §8c.3 rule 4). It carries the `[[bin]]` target `wsbin` that
+# §8c.4's `smoke` and `package` handlers build and run.
+[package]
+name = "c"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "wsbin"
+path = "src/main.rs"
+
+[dependencies]
+
+[dev-dependencies]
+b = { path = "../b" }

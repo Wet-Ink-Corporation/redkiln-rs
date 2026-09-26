@@ -1,0 +1,16 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test red_by_selection ... ignored, reachable only by selection: the red suite (RT-22)
+test slow_by_selection ... ignored, reachable only by selection: AC-331's slow victim
+test passes_and_is_filterable ... ok
+test passes_and_prints_the_decoy ... ok
+
+test result: ok. 2 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+test result: ok. 99 passed; 0 failed
+test phantom ... ok

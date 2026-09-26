@@ -150,8 +150,9 @@ the review's). **New tests: 63 → 69.**
   `ci.yml` preflights, (3) reads the pin in record T, (7)'s `want` goes 39 → 48, and (12) gains the
   doctest-companion floor, each with a synthetic control.
 - *D21-48 (2026-09-24):* **The floor.** Re-derived at stage open from Checkpoint 8b's recorded count:
-  774 + 78 = **852** (§8c.11, (13)). Every later stage's floor moves by nine with it. That is reported to the later
-  files under §8c.12's sibling notes, not edited here.
+  ~~774 + 78 = **852**~~ (§8c.11, (13)). Every later stage's floor moves by nine with it. That is reported to the later
+  files under §8c.12's sibling notes, not edited here. *(dated 2026-09-26, s8c build)* Re-derived at stage open from Checkpoint 8b's
+  RECORDED whole-suite count at `83d1268` (784 passed / 0 failed / 9 ignored over 44 results): 784 + 78 = **862**.
 - *(dated 2026-09-25, `s8b` refuting round 4)* **The 774 is stale.** It took `s8b`'s count as 25 on 740 + `s8a`'s 9.
   `s8a` closed at a recorded 755, and D21-57 added four tests to `s8b` (29 new, floor **784**). This chain, here and in
   (13)'s comment, takes Checkpoint 8b's recorded close figure, not 774; the 852 is not recomputed here and is
@@ -963,15 +964,27 @@ t0=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-test" cargo test --manifest-p
 [ "$rc" -eq 0 ] || { echo "FAIL: the cold --list child rc=$rc"; printf '%s\n' "$out" | tail -20; git worktree remove --force "$mw"; exit 1; }
 t2=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-test" cargo test --manifest-path "$mw/Cargo.toml" --workspace -- --list --ignored 2>&1); rc=$?; t3=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the --list --ignored child rc=$rc"; printf '%s\n' "$out" | tail -20; git worktree remove --force "$mw"; exit 1; }
-t4=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-test" cargo test --manifest-path "$mw/Cargo.toml" --workspace --no-fail-fast 2>&1); rc=$?; t5=$(date +%s)
+# (dated 2026-09-26, s8c build) D21-48's lead: each child is timed on the runner the port selects. cargo-nextest
+# 0.9.146 was installed at stage open (§8c.8 step 0), so the run child is `cargo nextest run` with §8c.1's flags and
+# the doctests run in the `cargo test --doc` companion; both are timed, and the --list children above are unchanged.
+# The struck child timed `cargo test`, which the port no longer runs where nextest is present:
+# ~~t4=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-test" cargo test --manifest-path "$mw/Cargo.toml" --workspace --no-fail-fast 2>&1); rc=$?; t5=$(date +%s)~~
+runner=$(cargo nextest --version 2>&1 | head -1)
+t4=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-test" cargo nextest run --manifest-path "$mw/Cargo.toml" --workspace --no-fail-fast --retries 0 --color never --status-level pass --final-status-level none 2>&1); rc=$?; t5=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the run child is RED (rc=$rc) — a red suite's wall time is not the warrant for a green one"; printf '%s\n' "$out" | tail -20; git worktree remove --force "$mw"; exit 1; }
+t12=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-test" cargo test --manifest-path "$mw/Cargo.toml" --workspace --doc --no-fail-fast 2>&1); rc=$?; t13=$(date +%s)
+[ "$rc" -eq 0 ] || { echo "FAIL: the doctest companion child is RED (rc=$rc)"; printf '%s\n' "$out" | tail -20; git worktree remove --force "$mw"; exit 1; }
 t6=$(date +%s); out=$(CARGO_TARGET_DIR="$mw/target-build" cargo build --manifest-path "$mw/Cargo.toml" --workspace 2>&1); rc=$?; t7=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the cold build rc=$rc"; printf '%s\n' "$out" | tail -20; git worktree remove --force "$mw"; exit 1; }
 t8=$(date +%s); out=$(cargo audit --file "$mw/Cargo.lock" --no-fetch --json 2>&1); rc=$?; t9=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the offline audit scan rc=$rc — no local advisory database, or advisories on this tree; read it"; printf '%s\n' "$out" | tail -10; git worktree remove --force "$mw"; exit 1; }
-t10=$(date +%s); out=$(cargo deny --manifest-path "$mw/Cargo.toml" check --disable-fetch advisories 2>&1); rc=$?; t11=$(date +%s)
+# (dated 2026-09-26, s8c build) cargo-deny 0.20.2 has no `check --disable-fetch` (measured at stage open: its
+# offline switch is the top-level `--offline`). The struck line is the proposal's; the verb runs the line after it.
+# ~~t10=$(date +%s); out=$(cargo deny --manifest-path "$mw/Cargo.toml" check --disable-fetch advisories 2>&1); rc=$?; t11=$(date +%s)~~
+t10=$(date +%s); out=$(cargo deny --offline --manifest-path "$mw/Cargo.toml" check advisories 2>&1); rc=$?; t11=$(date +%s)
 [ "$rc" -eq 0 ] || { echo "FAIL: the offline deny scan rc=$rc — no local advisory database, or advisories on this tree; read it"; printf '%s\n' "$out" | tail -10; git worktree remove --force "$mw"; exit 1; }
-echo "MEASURED pin=$pin path_len=${#mw} setup=$((ts1-ts0)) setup_downloaded=${dl:-none-reported} list_cold=$((t1-t0)) list_ignored=$((t3-t2)) run=$((t5-t4)) build_cold=$((t7-t6)) scan=$((t9-t8+t11-t10)) (audit=$((t9-t8)) deny=$((t11-t10)))"
+# (dated 2026-09-26, s8c build) the line now names the runner and prints the companion child's time (`doc`).
+echo "MEASURED pin=$pin path_len=${#mw} runner='$runner' setup=$((ts1-ts0)) setup_downloaded=${dl:-none-reported} list_cold=$((t1-t0)) list_ignored=$((t3-t2)) run=$((t5-t4)) doc=$((t13-t12)) build_cold=$((t7-t6)) scan=$((t9-t8+t11-t10)) (audit=$((t9-t8)) deny=$((t11-t10)))"
 out=$(git worktree remove --force "$mw" 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the measurement worktree did not remove (rc=$rc) — Halt 6 if a handle holds it"; printf '%s\n' "$out"; exit 1; }
 wt_after=$(git worktree list --porcelain | grep '^worktree ' | sort)
@@ -980,7 +993,9 @@ nd_check "the measurement pass" || exit 1
 ```
 
 ⚠️ The verb runs both `cargo audit` and `cargo deny` (§8c.4), so the scan reading times both, and `scan` is their sum.
-The flags are the proposal's (`--no-fetch`, `--disable-fetch`). If §8c.4's tool measurement changes either command,
+The flags are the proposal's (`--no-fetch`, ~~`--disable-fetch`~~). *(dated 2026-09-26, s8c build)* cargo-deny 0.20.2
+has no `check --disable-fetch`; its offline switch is the top-level `--offline`, and the script above now runs it.
+If §8c.4's tool measurement changes either command,
 take the reading again with the command the verb runs. A warrant timed on a command the verb does not run is a
 warrant for the wrong thing.
 
@@ -1423,8 +1438,9 @@ Each is claimed only for the clause named:
 - **The three records exist and move what §8c.7 says.** Each is located by the id recorded at write time
   (D21-47). ADR-0135's, ADR-0140's, ADR-0162's, ADR-0094's and ADR-0099's frontmatter carry the new
   `superseded_by`.
-- **The whole suite is green** above the floor re-derived from Checkpoint 8b's recorded count (774 + 78 = 852: the
-  final consistency pass's 843, plus D21-48 X15's nine), over at least 44 result lines, and fmt and clippy are rc 0.
+- **The whole suite is green** above the floor re-derived from Checkpoint 8b's recorded count (~~774 + 78 = 852: the
+  final consistency pass's 843, plus D21-48 X15's nine~~ *(dated 2026-09-26, s8c build)* 784 + 78 = 862: Checkpoint 8b's recorded 784 at
+  `83d1268`, plus §8c.9's 78), over at least 44 result lines, and fmt and clippy are rc 0.
 - **Checkpoint 8b (the entry gate), Checkpoint 7a and Checkpoint 5 re-run whole and pass.** 7a and 5 are the two
   checkpoints this stage's own edits make provisional. No run here can reach a real dispatch. Each runs as
   `nodispatch env RK_CP_NESTED=1 bash …` under the shared wrapper (D21-46; D21-47), and under `RK_CP_NESTED=1` this
@@ -1693,8 +1709,10 @@ code=$(printf '%s\n' "$raw" | grep -vE "$cl" | grep .)
 # ---- supersedes the final consistency pass's 774 + 69 = 843, which superseded 770 + 69 = 839 (s8b's count taken as 21). Write the re-derived value
 # ---- here, by a dated edit, before the first run. A floor, not a pin, and never lowered to make a red run green. At
 # ---- least 44 result lines, as at 992d257.
+# ---- (dated 2026-09-26, s8c build) ~~774 + 78 = 852~~ is struck: Checkpoint 8b's RECORDED whole-suite count at 83d1268
+# ---- is 784 passed / 0 failed / 9 ignored over 44 results, so FLOOR = 784 + 78 = 862.
 # ---- This gate runs `cargo test` itself, so the runner the adapter selects (D21-48 X15) does not move it.
-FLOOR=852
+FLOOR=862
 out=$(cargo test --workspace --no-fail-fast 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: cargo test --workspace --no-fail-fast rc=$rc"; printf '%s\n' "$out" | grep -E '^test .*FAILED|^test result:' | tail -30; exit 1; }
 if printf '%s\n' "$out" | grep -qE '^test result: FAILED'; then echo "FAIL: a test binary reported FAILED under rc 0"; exit 1; fi
@@ -1889,7 +1907,8 @@ The draft's third item, `toolchain:backlog`'s producer, is settled by D21-46 R7 
 - *D21-48 (2026-09-24):* **X4's duration records** are owed by the stages that run the fixture proofs and the real
   dispatches. Each records its wall duration by activity class, and record V's rule re-derives `implement_timeout`
   and `repro_timeout` from them (§8c.5).
-- *D21-48 (2026-09-24):* **The floor chain moves by nine.** Checkpoint 8c's expected count is 852, not 843, so every
-  later stage's floor re-derived from it moves by nine.
+- *D21-48 (2026-09-24):* **The floor chain moves by nine.** Checkpoint 8c's expected count is ~~852~~, not 843, so every
+  later stage's floor re-derived from it moves by nine. *(dated 2026-09-26, s8c build)* Re-derived from Checkpoint 8b's recorded 784 at
+  `83d1268`: the expected count is 862.
 
 ---

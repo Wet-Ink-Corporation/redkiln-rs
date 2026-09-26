@@ -1,0 +1,20 @@
+# The Rust toolchain adapter's WORKSPACE FIXTURE (s8c §8c.3, "Fixtures"; D21-42 4c; D21-48 X15).
+#
+# Three packages, `a` <- `b` <- `c`: `b` depends on `a`, and `c` DEV-depends on `b`. So the
+# reverse-dependency closure of a change to `a` is {a, b, c} only when dev-dependencies are followed
+# (§8c.3 rule 4), and a change to `c` touches `c` alone. `c` carries the `[[bin]]` target `wsbin`
+# that §8c.4's `smoke` and `package` handlers build and run.
+#
+# Package `a`'s library carries ONE doctest (the nextest path's doctest companion, §8c.1) and ONE
+# failing test, `tests::red_in_a`, `#[ignore]`d so the unselected suite is green and reachable only by
+# selection (`-- --include-ignored`). `a`'s unit-test binary is the FIRST binary cargo runs, so the red
+# golden proves that every later block is still tallied under `--no-fail-fast`.
+#
+# It is its OWN workspace root, like `../project/`: the `[workspace]` table below stops cargo's upward
+# walk here, and the directory sits outside the repository root's `tests/fixtures/*` member glob. The
+# adapter sets CARGO_TARGET_DIR to a per-test temp dir, so no target/ is written here. Cargo.lock is
+# committed so a run leaves the tree clean. No registry dependency: every edge is a path edge.
+# Everything here is LF under ADR-0164.
+[workspace]
+members = ["a", "b", "c"]
+resolver = "3"

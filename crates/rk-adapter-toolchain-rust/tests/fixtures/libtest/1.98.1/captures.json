@@ -1,0 +1,113 @@
+{
+  "captured_on": "2026-09-26",
+  "versions": {
+    "rustc -V": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "cargo -V": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "cargo nextest --version": "cargo-nextest 0.9.146 (8af696ddc 2026-09-21)",
+    "repository HEAD at capture": "e77173098046ce287373e0028ddd01d9f61dc6d9",
+    "working tree at capture": "HEAD plus this stage's uncommitted fixture, ci.yml and runbook edits (no crate source changed)"
+  },
+  "files": {
+    "project-green.stdout": {
+      "what": "the fixture project green, zz_decoy included (its stdout lines sit outside every block)",
+      "argv": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/project/Cargo.toml",
+        "--workspace",
+        "--no-fail-fast"
+      ],
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/project",
+      "exit_code": 0,
+      "stream": "stdout",
+      "wrapper": "runbook/tools/nodispatch.sh via nd.sh"
+    },
+    "project-red.stdout": {
+      "what": "the fixture project red under red_by_selection",
+      "argv": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/project/Cargo.toml",
+        "--workspace",
+        "--no-fail-fast",
+        "--",
+        "--ignored",
+        "red_by_selection"
+      ],
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/project",
+      "exit_code": 101,
+      "stream": "stdout",
+      "wrapper": "runbook/tools/nodispatch.sh via nd.sh"
+    },
+    "workspace-green.stdout": {
+      "what": "the workspace fixture green: six blocks over several binaries, doctests included",
+      "argv": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/workspace/Cargo.toml",
+        "--workspace",
+        "--no-fail-fast"
+      ],
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/workspace",
+      "exit_code": 0,
+      "stream": "stdout",
+      "wrapper": "runbook/tools/nodispatch.sh via nd.sh"
+    },
+    "workspace-red-in-a.stdout": {
+      "what": "the workspace red in package a's unit-test binary, the FIRST binary; every later block is tallied",
+      "argv": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/workspace/Cargo.toml",
+        "--workspace",
+        "--no-fail-fast",
+        "--",
+        "--include-ignored"
+      ],
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/workspace",
+      "exit_code": 101,
+      "stream": "stdout",
+      "wrapper": "runbook/tools/nodispatch.sh via nd.sh"
+    },
+    "doctest-a.stdout": {
+      "what": "one doctest block (package a)",
+      "argv": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "crates/rk-adapter-toolchain-rust/tests/fixtures/workspace/Cargo.toml",
+        "-p",
+        "a",
+        "--doc",
+        "--no-fail-fast"
+      ],
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": "D:/repos/redkiln-rs/target/s8c-p1-cap/workspace",
+      "exit_code": 0,
+      "stream": "stdout",
+      "wrapper": "runbook/tools/nodispatch.sh via nd.sh"
+    },
+    "this-repository.stdout": {
+      "what": "this repository's own whole-suite stdout at the stage's pin, captured on a green run",
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--no-fail-fast"
+      ],
+      "cwd": "D:/repos/redkiln-rs",
+      "CARGO_TARGET_DIR": null,
+      "exit_code": 0,
+      "stream": "stdout",
+      "wrapper": "runbook/tools/nodispatch.sh via nd.sh"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+# Package `a`: the root of the fixture's dependency chain. Its library holds one doctest and the
+# workspace's one red test (ignored; see ../Cargo.toml).
+[package]
+name = "a"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]

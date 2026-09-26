@@ -1,0 +1,19 @@
+{
+  "nextest": {
+    "starting": 4,
+    "passed": 3,
+    "failed": 1,
+    "exit_code": 100
+  },
+  "doc_companion": {
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "blocks": 2,
+    "exit_code": 0
+  },
+  "total": {
+    "passed": 4,
+    "failed": 1
+  }
+}
