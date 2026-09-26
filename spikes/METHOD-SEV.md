@@ -300,3 +300,20 @@ by both arms, two missed 0/3), so across 10 items it can separate nothing. It de
 **Stage-1 sealed key sha256:** `2a5dea380f2ecda763a19b6954aaf843427e0b6345ccacce1f1dc1d8d67423b5` (`key-stage1.SEALED.json`); the
 blank sheet's normalized sha256 is `06a4450b092a9cd3362b7add6ddcf59e4c8ed712a1cfa9b26e9baf979edd2d0e`. Recorded before any
 label exists; the registered `**Sealed key sha256:** ____` line above is not edited in place (§0).
+
+*Amendment 2 (2026-09-26, operator, confirmed in-session; written after the stage-1 labels existed and before the
+labels commit):* three facts about how stage 1 was labelled, recorded so that the result is read against them.
+1. **The labelling instrument.** The operator labelled through a private web page built only from the blank stage-1
+   sheet (the same masked text, in the sheet's order; it never read the sealed key). The page saved each answer to the
+   page's own store. The 56 answers were then transcribed mechanically into the sheet's `answer:` lines, and no other
+   line was touched, as `sev-f37-labels.md` (sha256 `08393e612d8ebd46c1752ebfa56db548d596b0cbd5361a5e9b0ea9e925a0377b`).
+   The page showed only how many findings were answered, never a count by answer. The operator left no notes.
+2. **The standard (§4).** The operator states that he labelled against **his own, stricter expectation of quality**,
+   not the reviewer card's quoted standard, and that he found the line between `BLOCKING` and `ADVISORY` subjective
+   in many cases and dependent on what later process steps could remediate. So any disagreement between these labels
+   and the evidence class partly measures the standard, not only the judgement, and the record says so.
+3. **A reading left open.** `ADVISORY` is defined as "true, but should not have blocked", so a finding the rater
+   judged false fits neither definition exactly. The question was raised to the operator before he labelled, and no
+   reading was fixed. How false findings were labelled is therefore not pre-registered, and the record discloses it.
+
+Nothing registered above changes: the criteria, the n, the seeds, the continuation rule and the re-label stand.
