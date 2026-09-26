@@ -2244,3 +2244,74 @@ had been opened.
 **Declined.**
 - Shortening the operator's re-label: κ would be weaker, and likely inflated by memory.
 - A richer-context Jev arm, with the item's spec and ACs added: offered, not taken now.
+
+---
+
+## D21-59 · `threat-model` declines the quality block under ADR-0080 decision 4; a richer-context Jev arm is the only road back
+
+**Taken 2026-09-26 by the operator, in the session executing `s8b`, after ADR-0168 (S-SEV, Branch 2) was written and
+before it was accepted.**
+
+**Why.** §8b.5 prescribed D21-43 N18 (A), *"a threshold at 11c's T for `threat-model`"*. ADR-0168 decision 2 settles
+*"no admissible severity threshold on this evidence; bullet 2 governs"*, so (A) has nothing to bind, and §8b.5's STOP
+applies. `threat-model`'s graph (model → review → policy → residual-gate → emit) has no tool step. So none of bullet
+2's quantities exists in it: no re-execution outcome (`review::confirm` gives `Unverifiable::CannotRun` for a repro
+with no `--` selection, ADR-0162 d4), no counted loop-back quantity the predicate grammar binds, and no computed delta.
+Its v1 predicate, `findings.none(evidence in ['Reproduced'])`, is the only row AC-527 (as amended, D21-55) still
+refuses.
+
+**Ruled.**
+- **`threat-model` declines the `adversary → policy` block (ADR-0080 d4: *"Every activity that wants the block writes
+  it"*).** v1 → v2 (ADR-0072): the `policy` step is deleted, and `model`'s `findings = "${review.outputs?}"` input is
+  deleted with it, because ADR-0042 licenses a later-step ref only under an `on_false`/`repeat` targeting the
+  referencing step. `review`, `residual-gate` and `emit` are unchanged. The reviewer's findings stay evidence and
+  reach the human as `residual-gate` attachments. **That gate is not the block's terminal condition** (AC-527
+  amendment: a human gate answer *"is none of d2's quantities"*).
+- **ADR-0080 d1 is read as retaining the construct, not as an obligation on each activity.** Its text is *"Retain the
+  `adversary → policy` block. PC6's encapsulation is not withdrawn"*, and d4 and its Negative (*"coverage becomes an
+  authoring outcome rather than a default"*) license declining the block. No record superseding d1 is owed.
+- **Supersedes D21-43 N18 (A)** for `threat-model`, **and D21-42 11b's *"In scope. threat-model … rewritten"*** for
+  `threat-model`. N18 superseded only 11b's *"re-execution quantities"*.
+- **Re-entry is by record, and by measurement only.** A loop returns to `threat-model` only by a dated catalog bump
+  (ADR-0072) that cites a new, pre-registered measurement:
+  (i) the richer-context Jev arm D21-58 offered (the item's spec and ACs added), run under a METHOD-SEV amendment
+  committed before any answer is opened, showing A3 variable. That would be a new record superseding ADR-0168 in
+  part, per its decision 3. D21-57's open question on severity-only rows with no re-execution would still bind;
+  or (ii) a bullet-2 quantity measured as not constant and as converging within `max` over replayed `threat-model`
+  iterations.
+- **Not a new reading of ADR-0080 d2.** No terminal condition is written, so d2's forbids have no subject in this row.
+
+**Declined.**
+- N18 (D) extended to `threat-model` (a self-check over the reviewer's findings, `check.failed == 0`). The architect's
+  own grade would terminate the block. It would need ADR-0168 d2's enumeration softened. Condition (c) passes through
+  `model` alone, and nothing shows that `SelfCheck.failed` varies. It remains the operator's fallback if the feedback
+  loop is wanted.
+- Bullet 2's delta through a new `findings_delta` verb. Pass 1 is constant-false by construction (ADR-0055: `prior` is
+  null). It ends on stagnation, not resolution. The identity key would decide the outcome. It owes a verb (ADR-0135), a
+  type (s8h) and a new resolver self-reference.
+- Keeping v1 as a named exception. Checkpoint 8b requires `refused=0`.
+
+---
+
+## D21-60 · D59b is owed to `s8d`'s `forward_ref_lint`, not built in `s8b`
+
+**Taken 2026-09-26 by the operator, in the session executing `s8b`.**
+
+**What happened.** D21-59's control mutant D59b restores `threat-model`'s `model` input `findings =
+"${review.outputs?}"` without the loop that licenses it. It survived the whole workspace: 784 passed, 0 failed.
+- ADR-0042's Decision is *"A ref to a later-declared step is legal iff that step or one after it has `on_false`/`repeat`
+  targeting the referencing step"*, and nothing in `crates/` enforces it.
+- The gap predates `s8b`. D59b was a speculative control with no predicted kill, not a guard for a claim `s8b` makes.
+
+**Ruled.**
+- The licence check is **`s8d`'s**, already planned under D21-48 X8 as `forward_ref_lint`. That covers its three
+  tests, the escalate re-entry arm, the removal of the four unlicensed shipped refs, and mutants M31–M34.
+- It is **not** moved into `s8b`. A check on ADR-0042's letter alone would refuse the four shipped refs X8 removes, and
+  would contradict X8's escalate arm.
+- `s8d` gains a dated note: one more must-refuse fixture shaped like D59b (a back-ref to a later step with no
+  `on_false`/`repeat` targeting it), plus D59b as a mutant row its lint must kill.
+- In `s8b` §8b.8, D59b's row reads "owed to `s8d` (D21-60)". It is not a surviving mutant of any `s8b` claim, so it does
+  not block `s8b`.
+
+**Declined:** moving `forward_ref_lint` forward into `s8b`. The operator first ruled "fix it in s8b"; then, shown that
+`s8d` already carries the whole design, chose this.

@@ -341,6 +341,8 @@ criterion (3) operational arm diffs. A first divergence across the kill is **Hal
 
 ### 8d.3 The complete reference resolver (D21-11)
 
+*D21-60 (2026-09-26, from `s8b`):* ADR-0042's later-step-ref licence is enforced nowhere today. `s8b`'s control mutant D59b restored `threat-model`'s `model` input `findings = "${review.outputs?}"` (`threat-model` v2 has no `on_false`/`repeat` targeting `model`, D21-59), and it survived the whole workspace. `forward_ref_lint` therefore gains one more must-refuse fixture of that shape, and one mutant row: *D59b, `.redkiln/catalog/threat-model.toml`, `model`'s back-ref restored, version left at 2*, which must flip `forward_ref_lint::every_shipped_forward_ref_is_licensed_and_the_census_is_printed` (`unlicensed` rises by one). This stage's floor and K_TESTS count do not move for it: the fixture joins an existing test.
+
 *D21-57 (2026-09-25):* AC-303's confirm rule (`rigor::confirm_step_monotonicity_rule`, which reads raw `inputs` through `toml_subset` because `catalog::Step` is not widened) moves onto R2's parsed-`inputs` carrier when R2 lands, and §8d.3's widened licence lint must keep the `${adversary.outputs?}` back-edges that the localisation and spec-form chains depend on.
 
 **One mechanism with one record, or absent** (ADR-0136's forbids: *"The resolver is one mechanism with one record,

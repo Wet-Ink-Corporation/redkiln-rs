@@ -6,7 +6,7 @@ date: 2026-09-08
 legacy_id: none
 source: spikes/F37-DRAFT.md §2–§5, §9 (P7 RESULT); spikes/METHOD-P.md §4; references/2026-09-07-activity-graph-schema.md §9 (post-P7 shorthands)
 supersedes: []
-superseded_by: ["0111"]
+superseded_by: ["0111", "0168"]
 related: ["0026", "0028", "0004", "0046", "0065", "0081"]
 evidence: ["F37", "F23", "F26", "F31", "F27"]
 consumers: []

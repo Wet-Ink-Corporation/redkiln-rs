@@ -1,6 +1,6 @@
 [activity]
 id           = "threat-model"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "design"
 provides     = ["ThreatModel"]
 requires     = ["Spec", "DesignDoc?"]
@@ -20,7 +20,7 @@ rationale    = "OWASP threat modeling; required once a change touches auth, data
 id      = "model"
 kind    = "agent"
 role    = "architect"
-inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?", kb = "kb:security-baseline", findings = "${review.outputs?}" }
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?", kb = "kb:security-baseline" }
 outputs = "value:ThreatModel"
 timeout_secs = 1200
 retry   = { max = 2 }
@@ -33,13 +33,6 @@ inputs  = { model = "${model.outputs}", spec = "artifact:Spec" }
 outputs = "value:Findings"
 timeout_secs = 900
 retry   = { max = 1 }
-
-[[step]]
-id      = "policy"
-kind    = "check"
-inputs  = { findings = "${review.outputs}", model = "${model.outputs}" }
-expr    = "findings.none(evidence in ['Reproduced'])"
-on_false = { to = "model", max = 2 }
 
 [[step]]
 id      = "residual-gate"

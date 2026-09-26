@@ -580,10 +580,11 @@ fn d2_severity_only_predicates_load() {
 
 /// **AC-527 over `.redkiln/catalog`**, after s8b's ADR-0072 edits: every check step walked, and none
 /// refused. The name is kept because Checkpoint 7b selects it. *(dated 2026-09-25, s8b refuting round
-/// 4)* "Every check step" is pinned, not only a non-zero count: the catalog carries **94** `check`
-/// steps with an `expr` [measured 2026-09-25, printed by this test as `checks=94`], the figure the
-/// pre-s8b test pinned; a walker that skipped most of them would otherwise reach `refused == 0` more
-/// easily.
+/// 4)* "Every check step" is pinned, not only a non-zero count: the catalog carries **93** `check`
+/// steps with an `expr` [measured 2026-09-26, printed by this test as `checks=93`]; a walker that
+/// skipped most of them would otherwise reach `refused == 0` more easily. *(dated 2026-09-26, D21-59)*
+/// Was 94, the figure the pre-s8b test pinned [measured 2026-09-25]: `threat-model` declines the block
+/// (ADR-0080 d4), and its `policy` check step is deleted.
 #[test]
 fn ac527_empty_set_terminal_condition() {
     let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
@@ -595,7 +596,7 @@ fn ac527_empty_set_terminal_condition() {
         "the count walked comes first: a rule over zero check steps refuses nothing — {report:?}"
     );
     assert_eq!(
-        report.check_steps_walked, 94,
+        report.check_steps_walked, 93,
         "every check step carrying an `expr` in `.redkiln/catalog` is walked: {report:?}"
     );
     assert_eq!(
@@ -618,7 +619,7 @@ fn ac527_empty_set_terminal_condition() {
 /// **A frozen control, named so** (D21-47 V2). The spike catalog at `P9_PIN` still carries the seven
 /// d2 rows `.redkiln/catalog` carried until s8b, so the amended rule must stay RED over it, counted
 /// one refusal per step (D21-55). *(dated 2026-09-25, s8b refuting round 2)* The refused
-/// `(activity, step)` set is pinned to [`D2_ROWS`], not only its size: a rule that stopped refusing
+/// `(activity, step)` set is pinned to [`P9_D2_ROWS`], not only its size: a rule that stopped refusing
 /// one d2 row and started refusing another p9 check step would keep the count at seven.
 #[test]
 fn ac527_frozen_p9_catalog_is_red() {
@@ -643,7 +644,7 @@ fn ac527_frozen_p9_catalog_is_red() {
         report.refused, P9_REFUSED,
         "the frozen p9 catalog's refusals under the amended rule: {violations:#?}"
     );
-    let d2: BTreeSet<(&str, &str)> = D2_ROWS.into_iter().collect();
+    let d2: BTreeSet<(&str, &str)> = P9_D2_ROWS.into_iter().collect();
     assert_eq!(
         steps, d2,
         "the frozen p9 catalog's refusals are exactly the seven d2 rows: {violations:#?}"
@@ -652,13 +653,28 @@ fn ac527_frozen_p9_catalog_is_red() {
 
 // ---- conditions (b) and (c) over the rewritten rows (s8b §8b.5) -----------------------------------
 
-/// The seven ADR-0080 d2 rows s8b rewrote, by (activity, step).
-const D2_ROWS: [(&str, &str); 7] = [
+/// The seven ADR-0080 d2 rows the frozen p9 catalog carries, by (activity, step). *(dated 2026-09-26,
+/// D21-59)* Was `D2_ROWS`, iterated by conditions (b) and (c) too. `threat-model` declines the block
+/// (ADR-0080 d4), so `.redkiln/catalog` has no `threat-model`/`policy` step; only
+/// [`ac527_frozen_p9_catalog_is_red`] reads this list, because p9 still carries that refused row.
+const P9_D2_ROWS: [(&str, &str); 7] = [
     ("root-cause", "policy"),
     ("adversarial-review", "verdict"),
     ("differential-debugging", "policy"),
     ("instrumented-trace-analysis", "policy"),
     ("threat-model", "policy"),
+    ("user-story-ac", "policy"),
+    ("vertical-slicing", "policy"),
+];
+
+/// The six d2 rows `.redkiln/catalog` carries after s8b, by (activity, step): [`P9_D2_ROWS`] without
+/// `threat-model`, whose `policy` step D21-59 deleted *(dated 2026-09-26)*. Conditions (b) and (c)
+/// iterate this list.
+const SHIPPED_D2_ROWS: [(&str, &str); 6] = [
+    ("root-cause", "policy"),
+    ("adversarial-review", "verdict"),
+    ("differential-debugging", "policy"),
+    ("instrumented-trace-analysis", "policy"),
     ("user-story-ac", "policy"),
     ("vertical-slicing", "policy"),
 ];
@@ -829,7 +845,7 @@ fn d2_rewritten_rows_are_not_constant_over_their_quantity() {
     // `valued` only those whose evaluation yielded a value.
     let mut walked = 0usize;
     let mut valued = 0usize;
-    for (id, step) in D2_ROWS {
+    for (id, step) in SHIPPED_D2_ROWS {
         let t = shipped_toml(id);
         let expr_src = toml_str(toml_step(&t, step), "expr").expect("the row carries an expr");
         let expr = ok_parse(expr_src).expr;
@@ -867,19 +883,20 @@ fn d2_rewritten_rows_are_not_constant_over_their_quantity() {
              15: it carries no information and may not terminate anything"
         );
     }
-    // Six rows read one path (6 combinations each) and `instrumented-trace-analysis` reads two (36):
-    // 72 walked, of which 54 yield a value [measured 2026-09-25, printed by this test as
-    // `d2-constancy: rows=7 walked=72 valued=54`]. `threat-model`'s row waits on §8b.6, so its
-    // rewrite moves `valued` by a dated edit.
+    // Five rows read one path (6 combinations each) and `instrumented-trace-analysis` reads two (36):
+    // 66 walked, of which 52 yield a value [measured 2026-09-26, printed by this test as
+    // `d2-constancy: rows=6 walked=66 valued=52`]. *(dated 2026-09-26, D21-59)* Was six rows of one
+    // path, `rows=7 walked=72 valued=54` [measured 2026-09-25]; `threat-model` declines the block
+    // (ADR-0080 d4), so its row left the shipped set.
     println!(
         "d2-constancy: rows={} walked={walked} valued={valued}",
-        D2_ROWS.len()
+        SHIPPED_D2_ROWS.len()
     );
     assert_eq!(
-        walked, 72,
+        walked, 66,
         "every combination of every row's paths is walked"
     );
-    assert_eq!(valued, 54, "the evaluations that yielded a value");
+    assert_eq!(valued, 52, "the evaluations that yielded a value");
 }
 
 /// The step ids a step's `${<step>.outputs…}` inputs reference. `artifact:` and `toolchain:` inputs
@@ -980,16 +997,18 @@ fn loop_row_check(id: &str, t: &toml_subset::Table, step: &str) -> Result<bool, 
 #[test]
 fn d2_rewritten_rows_read_a_quantity_the_loop_varies() {
     let mut loop_rows = 0usize;
-    for (id, step) in D2_ROWS {
+    for (id, step) in SHIPPED_D2_ROWS {
         match loop_row_check(id, &shipped_toml(id), step) {
             Ok(true) => loop_rows += 1,
             Ok(false) => {}
             Err(e) => panic!("{e}"),
         }
     }
+    // *(dated 2026-09-26, D21-59)* Was 6, "six of the seven": `threat-model`'s row left the shipped
+    // set [measured 2026-09-26: `left: 5` from this assert, before the re-pin].
     assert_eq!(
-        loop_rows, 6,
-        "six of the seven rows loop back; adversarial-review continues"
+        loop_rows, 5,
+        "five of the six rows loop back; adversarial-review continues"
     );
     // The crafted must-fail row: `root-cause`'s policy, reading `limit` only inside a body.
     let path = workspace_root()

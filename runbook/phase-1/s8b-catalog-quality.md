@@ -13,7 +13,8 @@ shell block is POSIX and runs in Git Bash from `D:/repos/redkiln-rs` unless it o
 - §8b.1's four questions are **closed, not asked**. D21-43 N18 closes Q1 and Q2, and N26 closes Q3 and Q4. This file
   cites the rulings and does not re-take them.
 - §8b.5 applies N18 row by row: (C) for `differential-debugging` and `instrumented-trace-analysis`, (D) for
-  `user-story-ac` and `vertical-slicing`, and (A) for `threat-model`, which waits on §8b.6's record. N18 supersedes
+  `user-story-ac` and `vertical-slicing`, and (A) for `threat-model`, which waits on §8b.6's record *(dated 2026-09-26, D21-59)* ADR-0168 settled no T, and
+  `threat-model` declines the block under ADR-0080 d4 instead (§8b.5). N18 supersedes
   D21-42 11b's "re-execution quantities" for those five rows. Condition (c) now follows input chains transitively.
 - §8b.5 also owns three more ADR-0072 catalog edits: AC-018's 19 `memo` rows in 14 activities (N26), tdd
   `red-verify`'s `[*].tests_added` projection (N13), and `sca-scan`'s `unrated` arm (N25). AC-018 joins the
@@ -169,6 +170,18 @@ did not foresee).* One line per edit, measured at stage open over `f81e5b9` unle
   withdrawn. Section (9)'s re-label guard becomes a guard on the stability commit, and the record's
   `**S-SEV re-label commit:**` line becomes `**S-SEV stability commit:**`. Supersedes §8b.6's *"Rater: the operator,
   alone"*.
+- *D21-59 (2026-09-26):* ADR-0168 (S-SEV, Branch 2) settled no admissible severity T, so §8b.5's `threat-model` (A)
+  edit had nothing to bind and the stage stopped. The operator ruled that `threat-model` **declines the quality
+  block** under ADR-0080 d4: v1 → v2, its `policy` step deleted and `model`'s `findings = "${review.outputs?}"`
+  back-ref deleted with it (ADR-0042); the reviewer's findings stay evidence and `residual-gate` attachments, which
+  is not a terminal condition. Supersedes D21-43 N18 (A) and D21-42 11b's *"In scope. threat-model … rewritten"* for
+  `threat-model`; re-entry only by a dated bump citing a pre-registered measurement. `ac527_empty_set_terminal_condition`
+  and `adr0072_d2_edits_are_versioned_and_changelogged`, red on the `threat-model` row until now, are green: the
+  binary prints `ac527: catalog=.redkiln/catalog checks=93 refused=0 indeterminate=39`. Conditions (b) and (c)
+  iterate `SHIPPED_D2_ROWS` (six rows; `P9_D2_ROWS`, seven, is the p9 control's): `d2-constancy: rows=6 walked=66
+  valued=52`, `loop_rows == 5`. No test is added or renamed, so `K_TESTS` stays **34** and the floor **784**.
+  Mutants D59a and D59b join §8b.8.
+- *D21-60 (2026-09-26):* control mutant D59b, `threat-model`'s back-ref restored without a loop, survived the whole workspace, because nothing enforces ADR-0042's later-step-ref licence. The check is owed to `s8d`'s `forward_ref_lint` (D21-48 X8), which gains a D59b-shaped fixture and mutant by a dated note there. It is not built here, and D59b does not block `s8b`.
 - *D21-57 (2026-09-25):* the d2 rewrites turned `review::ac303_confirm_step_survives_escalation` red, because
   `rigor.rs` identified a review block's confirm check by whether its `expr` names `findings`. The review family went
   red, localisation went blind and spec-form went green for the wrong reason. The confirm check is now the one whose
@@ -307,7 +320,8 @@ is also marked in place; no test is added or renamed, so the named selection sta
   `d2_severity_only_predicates_load` pins the case with a swap, `findings.any(evidence in ['Reproduced']) or
   check.failed == 0` (`indeterminate == 1`): RED against the old code (`decided: 1`), green after; its decided-arm
   assertion (M-D1) stays green. The shipped reading does not move (`checks=94 refused=1 indeterminate=39` before and
-  after, the `refused=1` being the `threat-model` row this round does not touch).
+  after, the `refused=1` being the `threat-model` row this round does not touch). *(dated 2026-09-26, D21-59)* The binary now
+  prints `checks=93 refused=0 indeterminate=39`: `threat-model` declines the block and its `policy` step is deleted.
 - *(dated 2026-09-25, refuting round 4)* **Section (6)'s readings no longer depend on libtest's thread count.** Under one test
   thread libtest prints `test <name> ... ` before the test's stdout on the same line, so the `^lattice-shipped:`,
   `^ac018:`, `^rigor_monotonicity:` and `^ac527:` greps failed. Each reading is first cut out with
@@ -362,8 +376,10 @@ is also marked in place; no test is added or renamed, so the named selection sta
   checked like a top-level read, and the test runs a crafted `root-cause` row, `report.failed > 0 and
   report.cases.none(limit.level > 0)` with `limit = "artifact:Threshold"`, which must be refused. The seven shipped
   rows stay green (`threat-model`'s `evidence` is an element field, not an input). Mutant **M-C1** (the body reads
-  dropped) turns it red. Condition (b)'s `walked > 0` is replaced by exact counts: `walked == 72` combinations and
-  `valued == 54` evaluations that yielded a value, printed as `d2-constancy: rows=7 walked=72 valued=54`.
+  dropped) turns it red. Condition (b)'s `walked > 0` is replaced by exact counts: ~~`walked == 72` combinations and
+  `valued == 54` evaluations that yielded a value, printed as `d2-constancy: rows=7 walked=72 valued=54`~~
+  *(dated 2026-09-26, D21-59)* `walked == 66` combinations and `valued == 52` evaluations that yielded a value, printed as
+  `d2-constancy: rows=6 walked=66 valued=52`: the six shipped rows, `threat-model`'s having left the set.
 - *(dated 2026-09-25, refuting round 5)* **Checkpoint 8b.** Section (6) also reads AC-303's `ac303:` line (cut with
   `grep -oE`, `catalog=.redkiln/catalog`, `families>0`, `comparisons>0`, `violations=0`, `forward=16`,
   `back_edge=4`), so §8b.9's "every catalog-quality instrument … prints the path it read" is true of the five
@@ -371,6 +387,7 @@ is also marked in place; no test is added or renamed, so the named selection sta
   its own YAML-comment control. Both were run by hand from the block's bytes: (8) green, and red over a `ci.yml`
   copy without the validate lines; (6) green under `RUST_TEST_THREADS=1` and `=4` with two stated neutralisations,
   the `threat-model` row's `ac527` red (D21-54) and review N7's commit-order check, which needs the stage committed.
+  *(dated 2026-09-26, D21-59)* The first neutralisation is no longer needed: `threat-model` declines the block and `ac527` is green.
 - *(dated 2026-09-25, refuting round 5)* Docs and records: §8b.2 says the only built divergence assertion kind is the
   soft-cycle example; §8b.10 records the unsat report branches parity does not observe; `lattice::load`'s Errors
   names `StageOrder` and `UnregisteredFacet`; AC-527's GIVEN (2), the module and crate summaries regain D21-55's "that
@@ -976,7 +993,7 @@ every other test that needs it reads it from a fixture file. Other predicates ar
 | `adversarial-review` | `verdict` | 3 → 4 | `"findings.none(evidence in ['Reproduced', 'MutationSurvived']) and (rigor < mandatory or findings.none(evidence in ['NarrowedPin']))"` | D21-42 11a verbatim: *"no blocking finding survives re-execution"*, read from `review::confirm`'s outcome. **D21-47 V4 moves `verdict` after `record`**, because `record` produces the outcome `verdict` reads. The step order becomes `clone`, `review`, `override`, `record`, `verdict`, `emit`. `verdict`'s input binds `${record.outputs}` for this activation, and the `expr` is over its block set (`Confirmed::block_set()`). `on_false = "continue"` is unchanged. The reorder rides the same ADR-0072 edit (one bump, and one changelog row naming both), and the lattice re-run below covers it | ledger-specified; order D21-47 V4; binding spelling measured, see below |
 | `differential-debugging` | `policy` | 2 → 3 | the same two-member form | **(C).** `confirm`'s inputs become `{ selection = "${compare.outputs.discriminating_test}" }`, replacing `artifact:ReproCase.command`, which the loop does not vary. `policy` becomes inputs `{ report = "${confirm.outputs}", findings = "${adversary.outputs?}" }`, `expr = "report.failed > 0"`, as `root-cause`'s. `compare` is the loop-back target | D21-43 N18 (C); the field is owed (below) |
 | `instrumented-trace-analysis` | `policy` | 2 → 3 | `"cause.confidence == 'high' and findings.none(evidence in ['Reproduced'])"` | **(C).** `confirm`'s inputs become `{ selection = "${analyse.outputs.discriminating_test}" }`. `policy` keeps its `cause` conjunct and binds `report = "${confirm.outputs}"`, giving `expr = "cause.confidence == 'high' and report.failed > 0"`. The same bump carries `collect`'s `memo` repair (N26) | D21-43 N18 (C); the field is owed (below) |
-| `threat-model` | `policy` | 1 → 2 | `"findings.none(evidence in ['Reproduced'])"` | **(A), after §8b.6.** With T = `blocking`, `expr = "findings.none(severity in ['blocking'])"`. That is bullet 1's severity-only form, which §8b.4's rule loads. *(dated 2026-09-25, refuting round 2: the rule loads it because it reads no `evidence`; that it is bullet 1's form is not settled here. Whether a severity-only row without re-execution conforms to bullet 1 is OPEN, D21-57, and N18 (A) prescribes the threshold.)* The draft's reason for not reading "survives re-execution" here stands: there is no tool step, and `review::confirm` gives `Unverifiable::CannotRun` for a repro with no `--` selection (ADR-0162 d4). **If §8b.6 settles no admissible T, (A) has nothing to bind and the stage STOPS for the operator.** That is a real free residual | D21-43 N18 (A); waits on §8b.6 |
+| `threat-model` | `policy` | 1 → 2 | `"findings.none(evidence in ['Reproduced'])"` | **Declined under ADR-0080 d4 (D21-59).** *(dated 2026-09-26, D21-59)* `policy` deleted, `model`'s back-ref (`findings = "${review.outputs?}"`) deleted (ADR-0042); `review`, `residual-gate` and `emit` unchanged. ADR-0168 settled no admissible T, so (A) had nothing to bind and the STOP the struck text names fired. ~~**(A), after §8b.6.** With T = `blocking`, `expr = "findings.none(severity in ['blocking'])"`. That is bullet 1's severity-only form, which §8b.4's rule loads. *(dated 2026-09-25, refuting round 2: the rule loads it because it reads no `evidence`; that it is bullet 1's form is not settled here. Whether a severity-only row without re-execution conforms to bullet 1 is OPEN, D21-57, and N18 (A) prescribes the threshold.)* The draft's reason for not reading "survives re-execution" here stands: there is no tool step, and `review::confirm` gives `Unverifiable::CannotRun` for a repro with no `--` selection (ADR-0162 d4). **If §8b.6 settles no admissible T, (A) has nothing to bind and the stage STOPS for the operator.** That is a real free residual~~ | D21-59 (~~D21-43 N18 (A); waits on §8b.6~~) |
 | `user-story-ac` | `policy` | 2 → 3 | `"check.failed == 0 and findings.none(evidence in ['Reproduced'])"` | **(D).** `expr = "check.failed == 0"`, inputs unchanged. `check` is `self-check`'s `SelfCheck`, and `self-check` reads `${draft.outputs}`, the loop-back target. It meets (a) only on the reading N18 records | D21-43 N18 (D) |
 | `vertical-slicing` | `policy` | 1 → 2 | `"check.failed == 0 and findings.none(evidence in ['Reproduced'])"` | **(D)**, as `user-story-ac`. `check` is `coverage`'s `SelfCheck`, which reads `${slice.outputs}`, the loop-back target | D21-43 N18 (D) |
 
@@ -1166,6 +1183,7 @@ and committed **before** the sheet is generated. The spike id is **S-SEV**.
     evidence; bullet 2 governs"*. That is a settled T, not a deferral. Because d2 bullet 1 needs a T and this branch
     settles none, **the record supersedes ADR-0080 d2 bullet 1 in part** (a severity threshold, on this evidence). It
     does not supersede nothing. `threat-model`'s (A) then has nothing to bind, and §8b.5's STOP applies.
+    *(dated 2026-09-26, D21-59)* This branch fired (ADR-0168); the operator's ruling on the row is D21-59: it declines the block.
   - **A1 fails:** STOP.
   - **In every branch in which the record is written, it names the source and owner of the `severity` field.** 39
     shipped `expr` rows read that field, and `rk_types::artifact::findings::Finding` has none. The record carries a
@@ -1243,8 +1261,13 @@ ADR-0080's Context and design §1.2's *"P7's policy predicate"* row. It also rec
   - **V4**: `adversarial-review`'s `verdict` follows `record`.
   - **V5**: condition (c)'s *"the loop"* is read as *"something the reviewer varies"*, and `root-cause`'s derivation
     is confirmed under it.
-- one disclosure on N18's ruling, not a new reading: `threat-model`'s (A) form `findings.none(severity in
-  ['blocking'])` drops d2 bullet 1's *"survives re-execution"*, because there is no tool step to re-execute (§8b.5);
+- ~~one disclosure on N18's ruling, not a new reading: `threat-model`'s (A) form `findings.none(severity in
+  ['blocking'])` drops d2 bullet 1's *"survives re-execution"*, because there is no tool step to re-execute (§8b.5);~~
+  *(dated 2026-09-26, D21-59)* moot: the (A) form was never written;
+- *(dated 2026-09-26, D21-59)* **D21-59**, cited and not re-taken: `threat-model` declines the `adversary → policy` block under
+  ADR-0080 d4 (v1 → v2, `policy` and `model`'s back-ref deleted), superseding D21-43 N18 (A) and D21-42 11b's
+  *"In scope. threat-model … rewritten"* for that row; ADR-0080 d1 read as retaining the construct; re-entry by
+  record and measurement only;
 - the Python oracle's non-determinism (`cycles()` over a `set`), the `PYTHONHASHSEED=0` it now runs under, and the
   six named divergences.
 
@@ -1326,8 +1349,23 @@ share one scratchpad. For each mutant, the driver:
 | M-W2 | `src/quality_block.rs` | the rigor loop `for rigor in LIVE_RIGOR_LEVELS {` visits one live level: (a) `[LIVE_RIGOR_LEVELS[0]]`, (b) `[LIVE_RIGOR_LEVELS[2]]` (marked `// M-W2`; the anchor is the code line) *(dated 2026-09-25, refuting round 5)* | `quality_block::d2_per_class_witness_refuses_one_member_rows` (its rigor-axis swaps: (a) at `mandatory`, (b) at `optional`) |
 | M-C1 | `tests/it/quality_block.rs` | `loop_row_check` drops the quantifier-body reads (`read.extend(in_bodies…)` becomes `let _ = &in_bodies;`) *(dated 2026-09-25, refuting round 5)* | `quality_block::d2_rewritten_rows_read_a_quantity_the_loop_varies` (its crafted `limit = "artifact:Threshold"` row) |
 | M-W3 | `src/quality_block.rs` | `blocking_witness` evaluates every conjunct: its `if !reads_findings(c) {` skip becomes `if !reads_findings(c) && false {` (marked `// M-W3`; the anchor is the code line) *(dated 2026-09-25, refuting round 6)* | `quality_block::d2_per_class_witness_refuses_one_member_rows` (its `rigor < mandatory and findings.none(severity in ['blocking'])` swap, (d)) |
+| D59a | `.redkiln/catalog/threat-model.toml` | the v1 `policy` step restored before `residual-gate` (inputs `{ findings = "${review.outputs}", model = "${model.outputs}" }`, v1's expr, `on_false = { to = "model", max = 2 }`), version left at 2 *(dated 2026-09-26, D21-59)* | `quality_block::ac527_empty_set_terminal_condition` (report `check_steps_walked: 94 … refused: 1`) |
+| D59b | `.redkiln/catalog/threat-model.toml` | `model`'s `findings = "${review.outputs?}"` back-ref restored without the `policy` step *(dated 2026-09-26, D21-59)* | ~~**none: SURVIVES**~~ **owed to `s8d`'s `forward_ref_lint` (D21-60, 2026-09-26)**: nothing in `crates/` enforces ADR-0042, and `s8d` (D21-48 X8) carries the check, with a D59b-shaped fixture and mutant added there. Not an `s8b` survivor. |
 
 *(D21-55, 2026-09-25:)* M2 and M3 flip `d2_per_class_witness_refuses_one_member_rows` through the per-class fixture.
+
+*(dated 2026-09-26, D21-59:)* Driver: scratchpad `d59_mutants.py`, each anchor asserted once, the 34-test `K_TESTS`
+selection run `--exact` through the no-dispatch wrapper, restored sha256 asserted equal. Re-run after D21-59 moved
+three pins: **M13** flips `quality_block::ac527_empty_set_terminal_condition` (also
+`d2_rewritten_rows_read_a_quantity_the_loop_varies` and `review::ac303_confirm_step_survives_escalation`); **M14**
+flips `quality_block::adr0072_d2_edits_are_versioned_and_changelogged` alone; **M29** flips it (also
+`review::ac303_confirm_step_survives_escalation`); **D59a** flips `ac527_empty_set_terminal_condition` alone. **D59b
+survives** the selection and the whole workspace (`cargo test --workspace --no-fail-fast` under the mutant: 784
+passed, 0 failed, 9 ignored; scratchpad `d59_d59b_ws.py`). Investigated for unobservability: nothing in `crates/`
+enforces ADR-0042's later-step-ref licence (no loader or lint names it), and an optional `${review.outputs?}` input
+on a step no `on_false` targets resolves absent without refusing. The D21-59 edit is correct without it; the
+survivor is recorded here and, under this section's rule, blocks the stage until the operator rules whether a
+loader check for ADR-0042 is owed (and by which stage) or D59b is accepted as unobservable. No test is added here.
 
 *(dated 2026-09-25, refuting round 1:)* M-A1..M-A3 run a selection that includes their must-flip tests: the four
 D21-57 tests are in section (5)'s `K_TESTS`.
@@ -1335,8 +1373,10 @@ D21-57 tests are in section (5)'s `K_TESTS`.
 *(dated 2026-09-25, refuting round 3:)* M-D1 is the rule's decided arm, which no fixture and no walked catalog
 reached (over `.redkiln/catalog` the test binary prints `refused=0` with every findings-reading row indeterminate, and
 at `P9_PIN` every non-severity findings row is refused). *(dated 2026-09-25, refuting round 5: not the printed reading, then or
-now. The binary prints `ac527: catalog=.redkiln/catalog checks=94 refused=1 indeterminate=39`, the refused row being
-`threat-model`'s, which waits on §8b.6 (D21-54); after (A) binds it the reading is `refused=0`. The refused row reads
+now. The binary prints ~~`ac527: catalog=.redkiln/catalog checks=94 refused=1 indeterminate=39`, the refused row being
+`threat-model`'s, which waits on §8b.6 (D21-54); after (A) binds it the reading is `refused=0`.~~ *(dated 2026-09-26, D21-59)*
+`ac527: catalog=.redkiln/catalog checks=93 refused=0 indeterminate=39`: `threat-model` declines the block, and its
+`policy` step is deleted. The refused row reads
 `findings` and is not indeterminate. The decided arm is unreached either way, so M-D1's rationale stands.)* `d2_severity_only_predicates_load` now swaps
 `findings.any(evidence in ['Reproduced', 'MutationSurvived'])` into fixture 3 and asserts it loads with
 `reads_findings == 1`, `decided == 1`, `refused == 0`: no single-class witness falsifies it, and it yields a value in
@@ -1793,7 +1833,7 @@ printf '%s\n' "$msv" | grep -qE "$seed_re" || { echo "FAIL: METHOD-SEV's pre-reg
 printf '%s\n' "$msv" | grep -qE "$cont_re" || { echo "FAIL: METHOD-SEV's pre-registration states no continuation rule — a stage-1 constancy result would decide nothing (D21-54)"; exit 1; }
 syn=$(printf '%s\n' '# METHOD-SEV' '**Stage-1 seed:** ____' | grep -E "$seed_re")
 test -z "$syn" || { echo "FAIL: control — a METHOD-SEV with no numeric seed satisfies the seed guard; it is vacuous"; exit 1; }
-SSEV_ADR=____   # written by dated edit in the commit that writes the record, as ADR-<nnnn>: its id at write time
+SSEV_ADR=ADR-0168   # written by dated edit 2026-09-26 (s8b, D21-58), in the commit that writes the record: its id at write time
 case "$SSEV_ADR" in ADR-[0-9][0-9][0-9][0-9]) ;; *) echo "FAIL: SSEV_ADR is '$SSEV_ADR' — the record's id was not written here when it was written"; exit 1 ;; esac
 recs=$(find references/adr -maxdepth 1 -name "${SSEV_ADR#ADR-}-*.md"); rc=$?
 [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$recs" | grep -c .)" -eq 1 ] || { echo "FAIL: $SSEV_ADR does not name exactly one file under references/adr/ (rc=$rc): $recs"; exit 1; }
@@ -1965,8 +2005,8 @@ Each stays open here until a stage or ruling takes it; none is decided by `s8b`,
   context binds a boolean to null, and `lattice.py`'s `unknown` sweep ranges over the ordinals only. Source: D21-56,
   *"Raised, not decided"*.
 - **Whether a severity-only row without re-execution conforms to d2 bullet 1** (`findings.none(severity in
-  ['blocking'])` in code-review, checklist-review and, after §8b.5, `threat-model`). Source: D21-57, *"Raised, not
-  ruled (open)"*.
+  ['blocking'])` in code-review, checklist-review ~~and, after §8b.5, `threat-model`~~). Source: D21-57, *"Raised, not
+  ruled (open)"*. *(dated 2026-09-26, D21-59)* `threat-model` declines the block, so it carries no such row.
 - **The eight shipped `x != null and x` predicates**, which can never be true under the product evaluator (ADR-0103
   reading 1): `flag-progressive-rollout`, `data-migration-plan`, `migration-dry-run`, `migration-expand-execute`,
   `schema-migration-script`, `ux-flow-design`, `feature-flag-kill`, and `threat-model`'s middle disjunct. Source: this
