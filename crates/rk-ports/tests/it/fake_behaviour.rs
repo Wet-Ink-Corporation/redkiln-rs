@@ -422,6 +422,73 @@ fn test_outcome_is_passing_only_with_executed_tests_and_no_failures() {
     assert_eq!(wire["passed"], serde_json::json!(1));
 }
 
+/// **`validate_report` refuses an inconsistent outcome, each rule by name** (AC-329 as a port
+/// conformance row, §8c.2; added 2026-09-26, s8c refuting round 2). `TestOutcome`'s members are
+/// `pub`, so a value that `TestOutcome::new` would never build can still be assembled, and
+/// `validate_report` is what re-checks it. The control passes first; then ONE member changes at a
+/// time, and each change is refused with a message naming the rule it breaks: the count
+/// invariant, the derived status, the runner's name and the report's own shape. Every other
+/// caller expects `Ok`, so without this test a `validate_report` that always answers `Ok(())`
+/// survives (mutant M38).
+#[cfg(feature = "conformance")]
+#[test]
+fn validate_report_refuses_an_inconsistent_outcome() {
+    use rk_ports::conformance::validate_report;
+    use rk_ports::toolchain::{Selection, StepBound, TestStatus};
+
+    let selection = Selection::Filter(vec!["a".to_owned(), "b".to_owned(), "c".to_owned()]);
+    let good = FixtureToolchain::from_fixture(vec![])
+        .test(&selection, StepBound::Undeclared)
+        .expect("a green fake suite is Ok");
+    assert_eq!((good.passed, good.failed), (3, 0));
+    assert_eq!(good.status, TestStatus::Passing);
+    // The control: an outcome as the port builds it passes the row.
+    validate_report(&good).expect("the control outcome passes validate_report");
+
+    // (a) The count invariant: passed + failed != selected_test_count. The status is left as
+    // `of(2, 0)` would derive it, so only the count rule is broken.
+    let mut bad = good.clone();
+    bad.passed = 2;
+    assert_eq!(TestStatus::of(bad.passed, bad.failed), bad.status);
+    let e = validate_report(&bad).expect_err("passed + failed != selected_test_count must refuse");
+    assert!(
+        e.contains("is not the report's selected_test_count") && e.contains("(2 + 0)"),
+        "the count refusal names its rule and both numbers: {e}"
+    );
+
+    // (b) The derived status: counts 3 / 0 with a stored `failing`.
+    let mut bad = good.clone();
+    bad.status = TestStatus::Failing;
+    let e = validate_report(&bad).expect_err("a status that disagrees with the counts must refuse");
+    assert!(
+        e.contains("disagrees with the counts") && e.contains("status is derived"),
+        "the status refusal names its rule: {e}"
+    );
+
+    // (c) The runner's name: empty, and blank, are both refused.
+    for name in ["", "   "] {
+        let mut bad = good.clone();
+        bad.runner.name = name.to_owned();
+        let e = validate_report(&bad).expect_err("an empty runner name must refuse");
+        assert!(
+            e.contains("runner has an empty name"),
+            "the runner refusal names its rule for {name:?}: {e}"
+        );
+    }
+
+    // (d) The report's own shape: an empty executed-command record fails `validate_shape`.
+    let mut bad = good.clone();
+    bad.report.argv.clear();
+    let e = validate_report(&bad).expect_err("a report that fails its own shape must refuse");
+    assert!(
+        e.contains("fails its own shape") && e.contains("executed-command record is empty"),
+        "the shape refusal names validate_shape's rule: {e}"
+    );
+
+    // The control is untouched by the clones above.
+    validate_report(&good).expect("the control still passes");
+}
+
 /// **A red build is `Ok` with `status: failing`** (D21-43 N25: *"`build` is widened to an outcome
 /// report as 1a did for `test`"*).
 #[test]

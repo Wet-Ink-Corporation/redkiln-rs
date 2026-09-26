@@ -1249,7 +1249,7 @@ through `with_tool_program` when the map carries one.
 | --- | --- |
 | `test_timeout` (29) | **measured here** (below): the slowest child of a cold `test` call **on the runner the port selects** — after X15's install, `cargo nextest run` with its `--doc` companion, each child timed — n = 3 (*D21-48 (2026-09-24), lead:* a warrant measured on `cargo test` alone would bound a stand-in for what runs) |
 | `build_timeout` (5) | **measured here**: a cold `cargo build --workspace`, n = 3 |
-| `scan_timeout` (4) | **measured here**: the offline scan over the pinned database, n = 3 |
+| `scan_timeout` (4) | **measured here**: the offline scan over the pinned database, n = 3. *(dated 2026-09-26, s8c build, refuting round 2.)* Of the four catalog sites, three are `sca_scan` steps and one is `tech-debt-assessment`'s `toolchain:lint` step, and the registry's `lint` row also names `scan_timeout` as its construction bound. The lint verb runs `cargo clippy --workspace --all-targets`, which no reading timed, so **the value does not warrant the lint sites** (this section's own rule: *"A warrant timed on a command the verb does not run is a warrant for the wrong thing."*). Record V's evidence says so; the lint sites' own key or warrant is handed on, unassigned, in §8c.12 item 5 |
 | `setup_timeout` (no catalog site; the `setup` row's own) | **measured here**: `setup`'s install over `setup_projects` in the fresh worktree, n = 3 |
 | `implement_timeout` (27), `review_timeout` (4), `repro_timeout` (2) | these sit on **agent** steps, and the lanes reach all three [measured over `.redkiln/catalog/` at `fc80687`]. `implement_timeout` is on `tdd-red-green-refactor`'s `red`, `green` and `refactor`, `equivalence-boundary/write` and `docs-update/write`. `repro_timeout` is on `minimal-repro/attempt`, and `review_timeout` on `adversarial-review/review`. **So none of them may be `unmeasured`.** An `unmeasured` key refuses by name, and `s8d`'s walk would stop at the first of them. Each is **cited**: a dispatch-duration record for the key's activity class, with `source` naming it. AC-223 sets the floor: *"at least the recorded slow-condition figure for that class (its recorded maximum, not its median)"*. `review_timeout`'s candidate is AC-223's own evidence line, F31/S-TYPED *"CLEAN review median 1,071 s, slowest 4,561 s"*. **For `implement_timeout` and `repro_timeout` this file found no such record** (it searched `references/2026-09-08-evidence-brief.md` and AC-223's evidence line). *D21-48 (2026-09-24):* the operator took the value, X4: *"**4,800 s each, cited to F31/S-TYPED's slowest agent dispatch (4,561 s) as a borrowed class.** The record says so."* So each carries `secs = 4800`, `measured = [4561]`, a `source` naming F31/S-TYPED and the words *borrowed class*, and a `rule` naming the re-derivation below. This stage takes no free decision |
 | `deploy_timeout` (11), `migration_timeout` (3), `cook_timeout` (5), `ue_test_timeout` (3), `mutation_timeout` (1) | `unmeasured`, each with its reason. No Phase-1 Rust verb deploys, migrates, cooks, runs Unreal automation or mutates |
@@ -1587,7 +1587,9 @@ count, now reads the seven-method count after record V (*corrected in `s8g`'s ow
 *(dated 2026-09-26, s8c build.)* **The ids, recorded at write time (D21-47):** record T = **ADR-0169**, record V =
 **ADR-0170**, record B = **ADR-0171**, all three `proposed`; errata **E-0162-2** and **E-0135-1**. Records T and V
 carry D21-62's provisional rulings (A, B and D in T; C in V). The `superseded_by` back-links on ADR-0094, 0099,
-0135, 0140 and 0162 (frontmatter only), the ADR README (index rows, supersession rows, censuses, next free `0172`)
+0135, 0140 and 0162 (frontmatter only) *(dated 2026-09-26, s8c build, refuting round 2: and on ADR-0137, whose
+Decision sentence *"It does not add or remove a port method; the count stays six."* record V also supersedes in
+part, added at refuting round 1; ADR-0137's `superseded_by` now names `0170`)*, the ADR README (index rows, supersession rows, censuses, next free `0172`)
 and the preamble's census and next-free sentence moved in the same change, with D21-10's dated note, `s7a` §7a.3's
 seven-method note, design §3.3's `Toolchain`-row note, AC-329's register note, `s7c`'s D21-48 X15 notes and (3)'s
 `REC_T`, `REC_V` and `REC_B` lines. **Not written with the records, owed to the code slices that land them:** the
@@ -1699,6 +1701,15 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
     - `source_parse::toolchain_port_declares_exactly_seven_methods` — parses `pub trait Toolchain` from CODE lines
       and asserts exactly seven `fn`, naming each one
   - **Re-proven**: `conformance::port_conformance_fake_rows`, now with `validate_report`.
+  - *(dated 2026-09-26, s8c build, refuting round 2.)* **New**: `fake_behaviour::validate_report_refuses_an_inconsistent_outcome`, gated
+    `#[cfg(feature = "conformance")]` like the function it tests. Every other caller of `validate_report` expects
+    `Ok`, so a `validate_report` that always answers `Ok(())` survived every test (round 2's finding, measured by its
+    mutant). The test starts from a control outcome the fake builds (it passes), then changes one `pub` member at a
+    time, and each change is refused with a message naming its rule: `passed + failed` not the report's
+    `selected_test_count`, a `status` that disagrees with `TestStatus::of`, an empty or blank `runner.name`, and a
+    report that fails `validate_shape` (an empty `argv`). Red first by mutant M38 (below). It is beyond the 78, like
+    the six the D21-62 C and D21-63 notes add, so FLOOR (13) does not move; Checkpoint 8c (6) names it and its
+    `want` reads 8.
 - **`rk-adapter-toolchain-rust`**
   - **New**:
     - `report::red_suite_is_ok_with_failed_counts`
@@ -1934,6 +1945,7 @@ Parallel agents share one scratchpad, so the driver's filename carries this stag
 | M35 | *(dated 2026-09-26, s8c build, P3; D21-62 B)* the nextest parser tallies a zero-status-line exit-104 stream as `Ok(0/0)` | `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` (the list-failed goldens) AND `report::a_nextest_list_failure_is_unverifiable_never_green` (the report package's) |
 | M36 | *(dated 2026-09-26, s8c build, D63; D21-63)* the `cvss-unscorable` branch in `severity_of` becomes `Ok(None)`, so an unscorable vector is counted `unrated` | `verbs::a_matched_v4_vector_refuses_the_scan_by_name` |
 | M37 | *(dated 2026-09-26, s8c build, D63)* `binary_path`'s `package-binary-outside-target` refusal becomes `strip_prefix(target).unwrap_or(exe)` again, recording an absolute path | `verbs::a_package_binary_outside_the_target_dir_is_refused_by_name` |
+| M38 | *(dated 2026-09-26, s8c build, refuting round 2)* `rk_ports::conformance::validate_report` answers `Ok(())` whatever it is handed (an early `return Ok(())`) | `fake_behaviour::validate_report_refuses_an_inconsistent_outcome` |
 
 *(dated 2026-09-26, s8c build, P3.)* **Parser mutants, run from `scratchpad/s8c/p3_mutants.py`** (anchor asserted once, tmp + `os.replace`,
 restored in `finally` and the sha256 re-checked; the two parser files are new, so the restore writes the recorded bytes
@@ -2129,6 +2141,7 @@ line; logs and `p8-mutants.json` under `scratchpad/s8c/p8-runs/`).
 | M35 | KILLED, both halves (P3, P4) | `nextest_lines::the_pinned_nextest_goldens_parse_to_their_recorded_counts` AND `report::a_nextest_list_failure_is_unverifiable_never_green` |
 | M36 | KILLED (D63) | `verbs::a_matched_v4_vector_refuses_the_scan_by_name` (its `expect_err`); also red: `verbs::a_matched_malformed_vector_refuses_the_scan_by_name` and `verbs::sca_scan_counts_an_unrated_advisory_as_unrated_never_zero` (its unit v4 assertion) |
 | M37 | KILLED (D63) | `verbs::a_package_binary_outside_the_target_dir_is_refused_by_name`; `verbs::package_digests_only_the_declared_binaries_of_a_locked_release_build` stayed green (the inside path is unchanged) |
+| M38 | KILLED (R2FIX; re-run in WHOLE pass 5) | `fake_behaviour::validate_report_refuses_an_inconsistent_outcome`; `conformance::port_conformance_fake_rows` stayed `ok` under it (round 2's finding). Per-rule extras M38a–M38d also KILLED |
 
 Beyond the table, every extra mutant the packages ran was killed: P3's R3 (rule 2 strict), P4's MB, MFB and MNX, P5's
 MV, MA7, MG, MR5, MR6, MSD, MSC, MDC, MSW, MPH, MBS, MNB, MND and MNS, and P7's MIN. **One survivor in all, M25 over the
@@ -2190,6 +2203,43 @@ no-dispatch wrapper:
 - Checkpoint 8c (5)–(10), extracted from this file's bytes: all 119 named tests exist by their exact module path in
   their crate's `--test it -- --list`, and the extracted block passes;
 - `cargo test --workspace --no-fail-fast` rc 0: **869 passed / 0 failed / 9 ignored over 44 result lines** (floor 862).
+This is a diagnostic reading. It is not the formal Checkpoint 8c.
+
+*(dated 2026-09-26, s8c build, refuting round 2.)* **M38 and its per-rule extras, from `scratchpad/s8c/r2fix_m38_validate_report.py`
+and `scratchpad/s8c/r2fix_m38_branches.py`** (anchor asserted exactly once, tmp + `os.replace`, `git diff --stat` read,
+restored in `finally`, sha256 `3f66ed49…` re-checked after every mutant; each run by `--exact` through the no-dispatch
+helper, `running 1 test`; logs under `scratchpad/s8c/r2fix-runs/`).
+- **Red first.** The test was written against the unchanged function and run first under M38 (three inserted lines,
+  `if true { return Ok(()); }`): rc 101, `test fake_behaviour::validate_report_refuses_an_inconsistent_outcome ... FAILED`,
+  *"passed + failed != selected_test_count must refuse: ()"*. Under the same mutant
+  `conformance::port_conformance_fake_rows` stayed `ok` (rc 0), which is round 2's measurement reproduced. **Green**
+  on the restored function: rc 0, `test result: ok. 1 passed; 0 failed`.
+- **M38: KILLED** (the red above).
+- **Per-rule extras, each KILLED at rc 101 with the test's own `FAILED` line**, so no rule is proved only by its
+  neighbours: **M38a** (the `validate_shape` refusal dropped to `.ok()`), *"a report that fails its own shape must
+  refuse: ()"*; **M38b** (the count check under `false &&`), *"passed + failed != selected_test_count must refuse:
+  ()"*; **M38c** (the status check under `false &&`), *"a status that disagrees with the counts must refuse: ()"*;
+  **M38d** (the runner check under `false &&`), *"an empty runner name must refuse: ()"*. No survivor.
+
+*(dated 2026-09-26, s8c build, WHOLE pass 5 after refuting round 2.)* **Every table mutant re-run over the tree carrying
+round 2's fix** (uncommitted on `088e35f`: `fake_behaviour.rs`'s new test, `catalog.rs`'s message, the s7c AC-329 amendment).
+The whole4 drivers and the two R2FIX M38 drivers were copied to `scratchpad/s8c/whole5_*_mutants.py` by
+`whole5_mkdrivers.py` (only output directories, labels and tmp suffixes changed, each substitution's hit count asserted)
+and run in sequence by `whole5_runall.py`; results under `scratchpad/s8c/whole5-mut/`. **M1–M38 all KILLED**, each at
+rc 101 with the named test's own `FAILED` line. M25 is killed by the synthetic test and survives the golden (unobservable
+there, as above). `whole5_p4` again stops at M26's moved anchor (anchor count 0) and `whole5_p4b` carries the re-cut
+M26 (13 of 13 killed). The extras were killed again: P3's R3 and A1–A3/B1, P4's MB/MNX/MFB, P5's fourteen, P7's
+RED-R1/W/S/D/A reds, R1-passed/R1-failed, and M38a–M38d; M38's green control is `ok`. P7's MIN still has no driver
+case. A sha256 snapshot of `crates/` and `.redkiln/` (1,397 files) showed 0 differences before and after. In the same
+pass, through the no-dispatch wrapper:
+- `cargo fmt --all -- --check` rc 0;
+- `cargo clippy --workspace --all-targets` rc 0 and `cargo clippy -p rk-ports --all-targets --features conformance`
+  rc 0, both warn-level only (nursery lints; the gate is the exit code, as above);
+- Checkpoint 8c (5)–(10), extracted from this file's bytes: all **120** named tests (6 + 8 + 55 + 13 + 1 + 5 + 23 + 9)
+  exist by their exact module path in their crate's `--test it -- --list` (with each call's features), and the
+  extracted block passes (`CP8C-5-10-PASS`);
+- `cargo test --workspace --no-fail-fast` rc 0: **870 passed / 0 failed / 9 ignored over 44 result lines** (floor 862);
+  the store's sha256 `f7db6eba…` was unchanged across the run.
 This is a diagnostic reading. It is not the formal Checkpoint 8c.
 
 **If a mutant survives, read it before strengthening anything.** A surviving mutant can mean that the property is
@@ -2337,6 +2387,17 @@ has='import re,sys; t=open(sys.argv[1],encoding="utf-8").read(); m=re.search(r"(
 printf '%s\n' '---' 'supersedes: ["0140"]' '---' > "$scratch/ctl-adr.md" || { echo "FAIL: could not write the control"; exit 1; }
 ctl=$(python -c "$has" "$scratch/ctl-adr.md" 0140 0099); rc=$?
 [ "$rc" -eq 0 ] && [ "$ctl" = "0099" ] || { echo "FAIL: SYNTHETIC CONTROL — the supersedes reader reported '$ctl' missing, not 0099 (rc=$rc)"; exit 1; }
+# (dated 2026-09-26, s8c build, refuting round 2) a synthetic control for each of the loop's four greps, which had
+# none: each must MISS on a near-miss planted record (another id in superseded_by, a `##`-level Option heading, the
+# forbids words unbolded, a superseded status) and HIT on its correct twin.
+printf '%s\n' '---' 'superseded_by: ["0169", "01700"]' 'status: superseded' '---' '## Option — near miss' 'What this forbids' > "$scratch/ctl-rec-miss.md" || { echo "FAIL: could not write the control"; exit 1; }
+printf '%s\n' '---' 'superseded_by: ["0169", "0170"]' 'status: proposed' '---' '### Option — hit' '**What this forbids**' > "$scratch/ctl-rec-hit.md" || { echo "FAIL: could not write the control"; exit 1; }
+st_re='^status: (proposed|accepted)$'
+for c in miss hit; do
+  r=""; grep -qE '^superseded_by:.*"0170"' "$scratch/ctl-rec-$c.md" && r="${r}b"; grep -q '^### Option — ' "$scratch/ctl-rec-$c.md" && r="${r}o"
+  grep -qF '**What this forbids**' "$scratch/ctl-rec-$c.md" && r="${r}f"; grep -qE "$st_re" "$scratch/ctl-rec-$c.md" && r="${r}s"
+  [ "$c:$r" = "miss:" ] || [ "$c:$r" = "hit:bofs" ] || { echo "FAIL: SYNTHETIC CONTROL — (3)'s record greps read '$r' over the $c record (miss: none; hit: bofs)"; exit 1; }
+done
 # (dated 2026-09-26, s8c build, refuting round 1) record V's set gains 0137 (its Decision sentence "the count stays
 # six", §8c.7); the V entry read "V:$REC_V:0162 0135" until then.
 for rec in "T:$REC_T:0162 0094" "V:$REC_V:0162 0135 0137" "B:$REC_B:0140 0099"; do
@@ -2384,11 +2445,15 @@ run_named() {
 run_named rk-types "" 6 schema_snapshot::schema_snapshot schema_no_oneof::no_oneof_at_any_node \
   verify_types::basis_reason_is_the_closed_six verify_types::verify_report_has_no_default \
   verb_outputs::every_verb_output_refuses_unknown_fields_and_has_no_default verb_outputs::scan_report_carries_unrated_as_a_required_member
-run_named rk-ports "--features conformance" 7 conformance::port_conformance_fake_rows \
+# (dated 2026-09-26, s8c build, refuting round 2) the rk-ports list gains fake_behaviour::validate_report_refuses_an_inconsistent_outcome,
+# the negative test validate_report lacked (M38 kills on it). ~~want 7~~ is struck: 7 + 1 = 8. It is beyond §8c.9's 78,
+# so FLOOR (13) is unmoved.
+run_named rk-ports "--features conformance" 8 conformance::port_conformance_fake_rows \
   fake_behaviour::toolchain_fake_red_suite_is_ok_with_failed_counts fake_behaviour::test_outcome_is_passing_only_with_executed_tests_and_no_failures \
   fake_behaviour::toolchain_fake_red_build_is_ok_with_status_failing \
   fake_behaviour::toolchain_fake_run_verb_refuses_an_undeclared_verb_by_name fake_behaviour::step_bound_zero_is_refused \
-  source_parse::toolchain_port_declares_exactly_seven_methods
+  source_parse::toolchain_port_declares_exactly_seven_methods \
+  fake_behaviour::validate_report_refuses_an_inconsistent_outcome
 # (dated 2026-09-26, s8c build, CPREP) the Rust list gains the four tests the packages built and flagged as owed here:
 # report::a_nextest_list_failure_is_unverifiable_never_green (P4; D21-62 B D) and the three D21-62 C refusals (P5).
 # ~~want 48~~ is struck: 48 + 4 = 52. Every name in every (5)-(10) list was checked against its crate's
@@ -2521,7 +2586,16 @@ code=$(printf '%s\n' "$raw" | grep -vE "$cl" | grep -vE "$home" | grep .)
 [ -z "$code" ] || { echo "FAIL: libtest's summary line is named on a code line outside the pinned parser (D21-43 N4; AC-329):"; printf '%s\n' "$code"; exit 1; }
 inparser=$(printf '%s\n' "$raw" | grep -vE "$cl" | grep -E "$home")
 [ -n "$inparser" ] || { echo "FAIL: the pinned parser names no summary line on a code line — the counts are not read where N4 says"; exit 1; }
-grep -rqE '"--list"' crates/rk-adapter-toolchain-rust/src --include=*.rs || { echo "FAIL: the Rust adapter no longer names \"--list\" — Checkpoint 7c's RT-26 line would go red"; exit 1; }
+# (dated 2026-09-26, s8c build, refuting round 2) the `"--list"` floor read comment lines too and had no control. It
+# now reads CODE lines through $cl, and both halves are proved first. The struck line is the one it replaces:
+# ~~grep -rqE '"--list"' crates/rk-adapter-toolchain-rust/src --include=*.rs || { echo "FAIL: the Rust adapter no longer names \"--list\" — Checkpoint 7c's RT-26 line would go red"; exit 1; }~~
+printf 'crates/rk-adapter-toolchain-rust/src/report.rs:9:    // "--list",\ncrates/rk-adapter-toolchain-rust/src/report.rs:10:    const LIST: &str = "--list";\n' > "$scratch/ctl-list.txt" || { echo "FAIL: could not write the control"; exit 1; }
+ctl=$(grep -vE "$cl" "$scratch/ctl-list.txt" | grep -F '"--list"')
+[ "$ctl" = 'crates/rk-adapter-toolchain-rust/src/report.rs:10:    const LIST: &str = "--list";' ] || { echo "FAIL: SYNTHETIC CONTROL — the --list filter read '$ctl'"; exit 1; }
+raw=$(grep -rnF '"--list"' crates/rk-adapter-toolchain-rust/src --include=*.rs); rc=$?
+[ "$rc" -le 1 ] || { echo "FAIL: the --list floor could not run (grep rc=$rc)"; exit 1; }
+code=$(printf '%s\n' "$raw" | grep -vE "$cl" | grep .)
+[ -n "$code" ] || { echo "FAIL: the Rust adapter no longer names \"--list\" on a code line — Checkpoint 7c's RT-26 line would go red"; exit 1; }
 # D21-48 X15: the nextest path's doctest companion. `cargo nextest run` runs no doctests, so "--doc" must be named on a
 # CODE line of the Rust adapter, or the doctests drop out of a nextest run. Both halves of the filter are proved first.
 printf 'crates/rk-adapter-toolchain-rust/src/report.rs:9:    // "--doc",\ncrates/rk-adapter-toolchain-rust/src/report.rs:10:    const DOC: &str = "--doc";\n' > "$scratch/ctl-doc.txt" || { echo "FAIL: could not write the control"; exit 1; }
@@ -2745,6 +2819,19 @@ commit.** A pass is evidence about a specific text.
    work commit replaces the four values by dated record edit under decision 10's rule; whether one is taken is the
    operator's.
    *(dated 2026-09-26, s8c build, CPREP.)* Record V's evidence now carries this caveat, and the concurrency, as proposed text.
+5. *(dated 2026-09-26, s8c build, refuting round 2.)* **`scan_timeout` bounds a clippy `lint` site it was not measured
+   on.** `tech-debt-assessment`'s `toolchain:lint` step declares `timeout_secs = "${toolchain.scan_timeout}"`, and the
+   registry's `lint` row names `scan_timeout` as its construction bound; the warrant timed `cargo audit` and `cargo
+   deny` only. The value does not warrant the lint sites (§8c.5's row, record V's evidence). No later stage file names
+   the activity or a lint timeout, so the lint sites' own key (a measured `lint_timeout`, say) or a clippy-timed
+   warrant is reported here and not assigned; the shipped value is unchanged.
+6. *(dated 2026-09-26, s8c build, refuting round 2.)* **CI provisions no pnpm or node.** `ci.yml`'s gates job now
+   installs cargo-audit 0.22.2 and cargo-deny 0.20.2 (`--locked`) before its `test` step, beside cargo-nextest, so
+   the `verbs::sca_scan_*` tests find both tools there. It still has no node or pnpm step, so
+   `verbs::setup_installs_each_declared_node_project_offline` and the Node adapter's suite fail at their preflight on
+   a hosted runner, the gap the Node fixture already had. `s8j` carries the pnpm step (D21-42 14a: its checkpoint
+   asserts a `pnpm install --frozen-lockfile --dir crates/rk-adapter-toolchain-node/tests/fixtures/project` line
+   before `run: cargo test --workspace`); node itself is not provisioned by any step, and this stage adds none.
 
 *D21-48 (2026-09-24):* the revision's handed-on items 1 and 3, record B's breadth and the two agent-step keys, are settled by X13
 and X4. They now sit in the table above.
@@ -2772,6 +2859,20 @@ The draft's third item, `toolchain:backlog`'s producer, is settled by D21-46 R7 
   stage's install both are stale. The test keeps its name over a controlled absent probe, and the presence arm is
   proved by `runner::the_probe_finds_the_installed_nextest_and_names_its_version`. Checkpoint 7c's whole re-run is
   `s8j`'s, and `s8j` reads the line's description against this.
+- *(dated 2026-09-26, s8c build, refuting round 2.)* **`s7c`'s Checkpoint 7c AC-329 `rk_absent` line banned the
+  pinned parser's own summary line.** `libtest_lines.rs`'s `line.strip_prefix("test result: ")?` is the one code line
+  D21-43 N4 orders and Checkpoint 8c (12)'s parser-home floor requires, and 7c's ban fired on it. **Amended in
+  `s7c-adapters.md` by dated note** (the ledger's rule, *"A time-bound guard in an earlier checkpoint is amended by
+  the stage that moves its premise, in the same commit."*): the line now passes `''` and `^crates/rk-adapter-toolchain-rust/src/libtest_lines\.rs:` as rk_absent's
+  fourth and fifth arguments, so that ONE file is admitted and the ban holds everywhere else (`nextest_lines.rs`
+  has no hit and is not admitted), citing D21-43 N4 and ADR-0169 (record T, proposed). A pass control (the parser's
+  line) and a fail control (the identical line in `report.rs`) run the helper itself first, and
+  `ac329_prose_parse_control.rs` still fires. The amended lines, extracted from `s7c`'s bytes with the helpers
+  (`scratchpad/s8c/r2fix_3_cp7c_ac329.py`): PASS on the tree; the struck line FAILS on the tree at
+  `libtest_lines.rs:209`; the amended ban FAILS over a scratch copy with the line planted in `report.rs`; and each
+  control goes red under a widened (`^crates/rk-adapter-toolchain-rust/src/`) and an empty exclusion. The 7c
+  statement census gains a dated note (+8: 216 can stop, 144 cannot, 360). **`s8j` says Checkpoint 7c is re-run
+  *"whole and unamended"*;** it now runs over this amendment, and PROGRESS's 7c row says so.
 - *D21-48 (2026-09-24):* **The verify pass and the lanes call `Toolchain::test`, and on this box it now runs nextest**
   plus the doctest companion. `s8g`'s verify pass and its `verify_completed` row, `s8d`'s `red-check` read and
   `s8j`'s runs select tests through the port, so their argv readings name `nextest`. Their counts do not move,

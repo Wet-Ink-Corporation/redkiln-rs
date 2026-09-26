@@ -57,6 +57,18 @@ jobs:
       - name: clippy
         run: cargo clippy --workspace --all-targets
 
+      # (dated 2026-09-26, s8c build, refuting round 2) moved here from after the P6 lattice step, and pinned. The Rust
+      # adapter's sca_scan tests run inside the test step's `cargo test --workspace` and spawn `cargo audit` and
+      # `cargo deny` (each reads `cargo <tool> --version` first and refuses on a non-zero exit), so both must be
+      # installed before it. The versions are the ones record V (ADR-0170, proposed) measured and the adapter's
+      # output readers are written against (cargo-audit 0.22.2, cargo-deny 0.20.2). The audit and deny gates below
+      # are unchanged. The step reads `cargo install cargo-audit --locked` / `cargo install cargo-deny --locked`
+      # (unpinned, after the test step) until then.
+      - name: install audit tooling
+        run: |
+          cargo install cargo-audit --version 0.22.2 --locked
+          cargo install cargo-deny --version 0.20.2 --locked
+
       # s8c (D21-48 X15): cargo-nextest at THE PIN, the version `cargo nextest --version` read on the build box at stage
       # open. It sits immediately BEFORE the test step, because the Rust adapter's nextest-path tests run inside that
       # step's `cargo test --workspace` and spawn `cargo nextest run` against the fixtures. The gate's own command stays
@@ -112,11 +124,6 @@ jobs:
           test "$rc" -eq 0 || { echo "FAIL: the shipped-pack validate exited $rc"; exit 1; }
           printf '%s\n' "$out" | grep -qxF 'test lattice::p6_validate_over_the_shipped_pack ... ok' \
             || { echo "FAIL: lattice::p6_validate_over_the_shipped_pack did not run and pass -- the filter matched nothing"; exit 1; }
-
-      - name: install audit tooling
-        run: |
-          cargo install cargo-audit --locked
-          cargo install cargo-deny --locked
 
       # Against the committed Cargo.lock, watching the gix-* advisory cluster specifically.
       - name: audit

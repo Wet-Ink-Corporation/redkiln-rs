@@ -990,7 +990,8 @@ fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activ
                         Some(t)
                     } else {
                         out.push(diagnose(shape(format!(
-                            "{id}/{step_id}: `timeout_secs` is neither a non-negative integer nor                              an exact `${{toolchain.<key>}}` substitution (ADR-0171 decision 1)"
+                            "{id}/{step_id}: `timeout_secs` is neither a non-negative integer nor an exact \
+                             `${{toolchain.<key>}}` substitution (ADR-0171 decision 1)"
                         ))));
                         continue;
                     }

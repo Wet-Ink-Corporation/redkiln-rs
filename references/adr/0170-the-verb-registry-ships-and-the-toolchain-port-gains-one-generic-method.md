@@ -442,6 +442,19 @@ Measured 2026-09-26 at stage open (package P1), every tool run through `runbook/
   Windows run-worktree removal fact for `s8d-ii`, handed on in the stage file's §8c.12 note.
   **Shipped**: `.redkiln/registry.toml`'s `[toolchain.rust]` carries these readings, each labelled with its pass and
   child, under `command` warrants at the pin above.
+  *(dated 2026-09-26, s8c build, refuting round 2.)* **`scan_timeout` also bounds a clippy `lint` site.** `scan_timeout` is read at two sites that run no scan. `.redkiln/catalog/tech-debt-assessment.toml`'s step on
+  `run = "toolchain:lint"` declares `timeout_secs = "${toolchain.scan_timeout}"` (one of the four catalog sites the
+  §8c.5 table counts; the other three are `sca_scan` steps), and `.redkiln/registry.toml`'s `lint` row names
+  `timeout = "scan_timeout"` as its construction bound. The Rust adapter's `lint` runs `cargo clippy --workspace
+  --all-targets`. The warrant's readings timed `cargo audit` and `cargo deny` only (1 s, so 60 s under decision 10's
+  rule); no reading timed clippy. **The value does not warrant the lint sites**: under record B's min(step,
+  construction) that step's clippy child is bounded at 60 s by a reading of another command. No later stage file
+  names `tech-debt-assessment` or a lint timeout (measured before this note: a grep of `runbook/` for
+  `tech-debt-assessment` and `toolchain:lint` found neither). Both shipped packs declare the activity
+  (`[activity.tech-debt-assessment]` in `.redkiln/packs/story.toml` and `bug-standard.toml`); whether a Phase-1 lane
+  selects it is not measured here. Giving
+  the lint sites their own key (for example a measured `lint_timeout`) or a warrant taken on clippy is handed on,
+  unassigned, in the stage file's §8c.12 (item 5); it is not decided here, and the shipped value is not changed.
 - *(dated 2026-09-26, s8c build, CPREP.)* **The build's readings, stated here as proposed text.** Each was first
   written in a dated note of `runbook/phase-1/s8c-toolchain-port-and-verbs.md` (§8c.4, §8c.5) by the package that
   built it; this record now carries it, so the flip reads the record and not the stage file.

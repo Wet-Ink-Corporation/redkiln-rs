@@ -2324,6 +2324,14 @@ exit 1; }` line counted among the 149; **2** clippy lines, `cargo clippy … ; r
 by the line below; and **1** end-marker `echo`. 3 + 40 + 42 + 29 + 18 + 6 + 2 + 1 = 141; 352 − 141 = 211.
 **Re-count and re-write every number in this paragraph after any repair to this block** (Halt 7: count it off the
 script, not off this sentence).
+*(dated 2026-09-26, s8c build, refuting round 2.)* The AC-329 amendment below (D21-43 N4; ADR-0169, proposed) adds
+**8** non-comment statements; the struck call becomes a comment and the amended `rk_absent` call takes its place,
+so `rk_absent` stays × 23 at the top level. **5** of the 8 can stop the block, each carrying its own `exit 1`: the
+scratch-tree line, the pass control's `printf`, the pass control's subshell call, the `cp`, and the fail control's
+one-line `if`. **3** cannot: the `AC329_PAT=` and `AC329_HOME=` captures and the `rm -rf` of the scratch tree.
+Counted off the script: 149 + 5 = **154** own-`exit 1` statements and 62 helper calls, so **216** can stop;
+141 + 3 = **144** cannot; **360** in all. The numbers above stand as the 2026-09-17 count, and `s8j`'s whole
+re-run re-counts them off the script.
 
 **No line in this block is `[WILL EXIST]`, and the absence is deliberate.** No `redkiln` or `doctor` line appears —
 every `doctor` half is in §7c.22's ARMED table, routed to 7d, and `./target/debug/redkiln` is `rk-cli`'s (Step 7d).
@@ -2808,7 +2816,25 @@ rk_control 'Regex::new|\bregex::|from_str\([^)]*\.(text|prose|content)\b' ac208_
 # libtest's `--list` (RT-26) / vitest's JSON reporter file; the fixture projects' decoys make a prose parse
 # observable. The summary line, the per-test `... ok` / `... FAILED` lines and the vitest summary are banned; a bare
 # `passed;` is not (it matched any statement ending in a field named `passed`, which the honest adapter reads).
-rk_absent '\.\.\. ok|\.\.\. FAILED|test result:|[0-9]+ passed;|Tests  [0-9]+ passed' 'AC-329: no prose or markdown parse of toolchain output in the toolchain adapters (brief §C.5)' 'crates/rk-adapter-toolchain-node/src crates/rk-adapter-toolchain-rust/src'
+# (dated 2026-09-26, s8c build, refuting round 2; D21-43 N4; ADR-0169 = record T, proposed) s8c's ONE pinned libtest
+# parser, crates/rk-adapter-toolchain-rust/src/libtest_lines.rs, names libtest's summary line on a CODE line
+# (`line.strip_prefix("test result: ")?`), as D21-43 N4 orders ("A strict parser over libtest's
+# `test <name> ... ok|FAILED` and `test result:` lines, pinned by a golden fixture per toolchain version.") and as
+# Checkpoint 8c (12)'s parser-home floor REQUIRES. That one file is
+# admitted through rk_absent's exclusion argument (the fifth; the fourth, the module filter, is empty); the ban holds
+# for every other file of both toolchain adapters. nextest_lines.rs carries no hit of this pattern and is not admitted.
+# Two synthetic controls run the helper itself, in a subshell over a scratch tree, first: the parser's own line
+# PASSES the amended ban, and the identical line in report.rs still FAILS it. The struck line is the one replaced:
+# ~~rk_absent '\.\.\. ok|\.\.\. FAILED|test result:|[0-9]+ passed;|Tests  [0-9]+ passed' 'AC-329: no prose or markdown parse of toolchain output in the toolchain adapters (brief §C.5)' 'crates/rk-adapter-toolchain-node/src crates/rk-adapter-toolchain-rust/src'~~
+AC329_PAT='\.\.\. ok|\.\.\. FAILED|test result:|[0-9]+ passed;|Tests  [0-9]+ passed'
+AC329_HOME='^crates/rk-adapter-toolchain-rust/src/libtest_lines\.rs:'
+ac329_ctl=$(mktemp -d) && mkdir -p "$ac329_ctl/crates/rk-adapter-toolchain-rust/src" "$ac329_ctl/crates/rk-adapter-toolchain-node/src" || { echo "FAIL: could not make the AC-329 exclusion controls' scratch tree"; exit 1; }
+printf '    let rest = line.strip_prefix("test result: ")?;\n' > "$ac329_ctl/crates/rk-adapter-toolchain-rust/src/libtest_lines.rs" || { echo "FAIL: could not write the AC-329 pass control"; exit 1; }
+( cd "$ac329_ctl" && rk_absent "$AC329_PAT" 'AC-329 pass control' 'crates/rk-adapter-toolchain-node/src crates/rk-adapter-toolchain-rust/src' '' "$AC329_HOME" ) >/dev/null || { echo "FAIL: SYNTHETIC CONTROL — the AC-329 exclusion did not admit the pinned parser's own summary-line code line"; exit 1; }
+cp "$ac329_ctl/crates/rk-adapter-toolchain-rust/src/libtest_lines.rs" "$ac329_ctl/crates/rk-adapter-toolchain-rust/src/report.rs" || { echo "FAIL: could not write the AC-329 fail control"; exit 1; }
+if ( cd "$ac329_ctl" && rk_absent "$AC329_PAT" 'AC-329 fail control' 'crates/rk-adapter-toolchain-node/src crates/rk-adapter-toolchain-rust/src' '' "$AC329_HOME" ) >/dev/null; then echo "FAIL: SYNTHETIC CONTROL — the identical summary-line code line in report.rs passed the amended AC-329 ban; the exclusion admits more than the pinned parser"; exit 1; fi
+rm -rf "$ac329_ctl"
+rk_absent "$AC329_PAT" 'AC-329: no prose or markdown parse of toolchain output in the toolchain adapters (brief §C.5)' 'crates/rk-adapter-toolchain-node/src crates/rk-adapter-toolchain-rust/src' '' "$AC329_HOME"
 rk_control '\.\.\. ok|\.\.\. FAILED|test result:|[0-9]+ passed;|Tests  [0-9]+ passed' ac329_prose_parse_control.rs
 
 # ---- the dependency graph (AC-528, AC-484/AC-005, S-FEAT): rk-kernel's normal graph names no async runtime and
