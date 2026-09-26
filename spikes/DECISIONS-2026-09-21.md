@@ -2527,3 +2527,57 @@ section (0), each on one of Checkpoint 8a's ADR-census guards that ADR-0168's wr
 (the next-free number and the census); both were corrected by dated edits (`5a40990`, `83d1268`). Companion
 whole-suite reading at `83d1268`: **784 passed / 0 failed / 9 ignored over 44 results** (the block asserts the
 floor of 784 and ≥ 44 results but prints no count). This is the count the next stage's floor is re-derived from.
+
+---
+
+## D21-62 · `s8c`'s four stage-open blockers: foreign lines are skipped and counted, nextest's list failure is a named refusal, the adapter reads each advisory database's HEAD itself, and tsc's 1 is cannot-run
+
+**TAKEN PROVISIONALLY under the AFK rule of 2026-09-26, pending the operator's confirmation.** The operator is away
+and their standing instruction for a blocker a stage file did not foresee is: measure, read the binding records,
+ground 2–4 options, run an adversarial judge panel, take its recommendation provisionally, prefer the most reversible
+option. Each blocker went to three lensed judges (binding records, reversibility, engineering) and a synthesiser. The
+full panel text, with every judge's recommendation and the dissents, is `spikes/afk-panels/D21-62-s8c.md`. Every
+ruling is carried by a record this stage writes `proposed` (T = ADR-0169, V = ADR-0170), so none moves an accepted
+ADR's Decision; each deviates from `s8c` stage-file text that the file itself delegates to those records.
+
+**Why.** Package P1 met four things at stage open [measured 2026-09-26, raw streams in the session scratchpad and
+summarised in the panel file]:
+- **A.** §8c.1 rule 2 (*"Any other non-empty line in the region refuses."*) refuses this repository's own green
+  whole-suite stdout: 39 `RK-D-<rule> ok` lines leak into the rk-cli `it` binary's record region from
+  `rk_cli::verbs::doctor::run`, which writes through `std::io::stdout()` in-process. With those 39 skipped the tally
+  is 784/0/9 over 44, Checkpoint 8b's reading. §8c.1 says the stage stops.
+- **B.** `cargo nextest run` 0.9.146 exits 104 over the fixture project: *"creating test list failed"*, because
+  `zz_decoy` (s7c's AC-329 decoy, `harness = false`) does not speak `--list`.
+- **C.** Offline, cargo-audit 0.22.2 emits `last-commit: null` and cargo-deny 0.20.2 emits no database member, so
+  §8c.4's *"read from the report's own database member … refuses by name"* would refuse every scan.
+- **D.** tsc 5.9.3 `--noEmit` exits 2 for every diagnostic (config errors included) and 1 for CLI/project errors;
+  §8c.2 maps both 1 and 2 to `Ok(failing)`.
+
+**Taken provisionally.**
+- **A (record T).** In a libtest block's record region, a non-empty line matching neither the record grammar nor the
+  slow notice is a FOREIGN line: skipped, never counted. Rules 3–6 (header count, summary agreement, `--list`, exit
+  agreement) still refuse, and a slow notice naming an unrecorded test still refuses. `Tally` gains `foreign_lines`
+  with the first foreign line as evidence; `this-repository.tally.json` pins 784/0/9/44 and `foreign_lines` 39 (first
+  at 287). The golden stays as captured. The nextest parser stays strict. The rk-cli stdout leak is handed on under
+  §8c.12 as a hygiene item, not fixed here. Dissent: the reversibility judge preferred keeping rule 2 strict and
+  giving `doctor::run` a writer.
+- **B (record T).** The two rc-104 streams become refusal goldens (`ParseRefusal::ListFailed`, mapped to
+  `Transport { Decode }`, never green); the `-E 'not binary(zz_decoy)'` streams are committed as parse-only goldens
+  that carry the build.rs decoy on nextest's status stream; the red-suite nextest test runs over §8c.3's workspace. No
+  runtime fallback, no `.config/nextest.toml`, `zz_decoy` unchanged. Dissent: the engineering judge preferred a narrow
+  Detect-only fallback to `cargo test` on exit 104.
+- **C (record V).** The adapter passes each tool an explicit database path (audit `--db`, deny a generated config's
+  `db-path` with exactly one child) and reads that path's HEAD itself through one shared read-only `rk_git` head read,
+  before and after the tool runs; it refuses by name if the path is not a git checkout, the HEAD moved mid-scan, a
+  non-null report member disagrees, deny's child count is not one, or deny's pinned *"Opening advisory database at"*
+  line is missing or names another path. The record shape (two pins) is unchanged. The same head read serves the
+  package handler, so one Checkpoint 8a guard (6) allowlist amendment covers both.
+- **D (record T).** tsc exit 0 is `Ok(passing)`, 2 is `Ok(failing)` (a broken tsconfig reads as a failing build,
+  stated openly), 1 and any other non-zero status are `Err(NonZero)`; npx or direct launcher only, by citation of
+  DECISIONS-2026-09-09 #34; a no-tsconfig fixture discriminates 1 from 2.
+
+**What depends on it.** Records T and V's text; the `libtest_lines`, `nextest_lines`, report, scan and Node build
+tests and their mutant rows; Checkpoint 8c's named selection; s8g's `sca-scan` (C). Reversal of any one is a
+bounded edit to a proposed record, one code branch and its tests.
+
+**Owed:** the operator's confirmation or reversal of A, B, C and D (AFK review packet, confirm list).
