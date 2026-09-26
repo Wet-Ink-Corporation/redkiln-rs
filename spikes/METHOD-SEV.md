@@ -367,3 +367,37 @@ reported as exploratory and powerless, never as evidence for or against a branch
   calibrated probability, and it is never quoted as one.
 - **Cost and consent.** The operator authorised the spend for this run only (about one US cent at the endpoint's
   measured rate). The findings' text goes to OpenRouter and TypeSafe on the operator's decision.
+
+*Amendment 5 (2026-09-26, operator, D21-58; written and committed before any of Jev's answers is opened):* **Jev
+becomes the rater of record, and this is the analysis, fixed before its data is seen.**
+- **Attestation of blindness.** The runner and every check made on `sev-f37-jev.jsonl` printed only counts, statuses,
+  the served model id and the cost. No choice, probability or confidence had been read by anyone when this amendment
+  was committed.
+- **Primary labels.** Jev's first run (Amendment 4's `sev-f37-jev.jsonl`, 188 answers from
+  `typesafe/jev-1.13-20260917`) is transcribed mechanically into copies of the two blank sheets, as
+  `sev-f37-jev-labels-stage1.md` and `sev-f37-jev-labels-continuation.md`. Transcription writes answer lines only, so
+  `score.py`'s digest check holds.
+- **A1.**
+  - **CANNOT-TELL:** `score.py --first` over both Jev sheets, the rule as registered (≤ 10% of 188).
+  - **Stability:** three more requests per finding, identical to Amendment 4's except for the variant. Two are
+    identical re-asks (`r1`, `r2`). One, `perm`, has the same question and definitions with the `criteria` keys in
+    the order `CANNOT-TELL`, `ADVISORY`, `BLOCKING`. They are recorded in `sev-f37-jev-stability.jsonl`, with a
+    `variant` field.
+  - Cohen's κ, as `score.py`'s `cohen_kappa` computes it, between the first run and each of `r1`, `r2` and `perm`,
+    over the findings answered in both.
+  - **Stability passes if all three κ are ≥ 0.61.** If a κ is undefined (p_e = 1, one answer throughout), stability
+    fails. Identical re-asks of a deterministic model may agree perfectly; the permuted variant is the informative
+    one, and the record says so.
+  - **A1 passes if and only if CANNOT-TELL passes and stability passes.**
+- **A2 and A3:** `score.py --first` over both Jev sheets, unchanged.
+- **The branch:** as §8b.6 lists it, taken from Jev's A1, A2 and A3.
+- **Reported, deciding nothing:**
+  1. A2 and A3 recomputed over the findings whose first-run confidence is at or above its median.
+  2. Amendment 4's comparisons with the operator: agreement, κ and the 3×3 table.
+  3. `score.py --first` over the operator's sheets, reported as the operator's, with his statement that he doubts
+     them.
+  4. Jev's choices against evidence class, which is A2's table itself.
+- **Artefacts.** `sev-f37-jev.jsonl`, `sev-f37-jev-stability.jsonl`, the two Jev sheets and both sealed keys are
+  committed to redkiln-corpus. The commit that adds `results/sev-f37-jev-stability.jsonl` is named in the record on
+  one line, ``**S-SEV stability commit:** `<40 hex>` ``, and replaces the re-label line.
+- **Cost.** About three more US cents at the measured rate, authorised by the operator.

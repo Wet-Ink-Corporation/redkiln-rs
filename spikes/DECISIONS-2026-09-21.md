@@ -2208,3 +2208,39 @@ says consumption.
 **Raised, not ruled (open).** code-review's and checklist-review's `findings.none(severity in ['blocking'])` involves
 no re-execution. ADR-0080 d2 bullet 1 reads *"no finding at or above threshold T survives re-execution"*, not "no
 finding exists". Whether those rows conform to d2 is its own question, and nothing in `s8b` depends on it.
+
+---
+
+## D21-58 · Jev becomes S-SEV's rater of record; a stability test replaces the operator's re-label
+
+**Taken 2026-09-26 by the operator, in the session executing `s8b`, after all 188 first-pass labels existed and before
+any of Jev's answers had been opened.**
+
+**Why.** The operator labelled all 188 findings (corpus `a2f4fab`, `1b3e102`), then said: he found it *"too difficult
+to make an honest determination on the context supplied"*, because he *"would need to read and understand all the
+related code artifacts in the change set, and read the scope and AC for each change"*. He *"doubt[s] the accuracy of
+my labelling answers"*, and he cannot leave the stage idle for the 48-hour re-label gap. Jev's blind pass (Amendment
+4) had already run over all 188: 188 answers, all from `typesafe/jev-1.13-20260917`, at a cost of US$0.0068. No answer
+had been opened.
+
+**Ruled.**
+- **Jev is S-SEV's rater of record.** The operator's labels are kept, committed, and reported beside Jev's, with his
+  own statement that he doubts them.
+- **This supersedes `s8b` §8b.6's *"Rater: the operator, alone"* and D21-54's re-label of 38 findings after ≥48 h.**
+  D21-54's sequential design stands, and the continuation has run, so the n is 188.
+- **A1 is redefined for a model rater:**
+  - CANNOT-TELL ≤ 10% of 188, as a point rule with its Wilson interval, as registered;
+  - **and stability.** Every finding is asked again twice unchanged, and once with the three options in reversed
+    order. Cohen's κ between the first run and each of the three re-asks must be ≥ 0.61 in all three.
+- **A2 and A3 are unchanged, computed on Jev's labels** by the committed `score.py`.
+- **Confidence is a sensitivity analysis, not the verdict.** A2 and A3 are recomputed over the findings whose Jev
+  confidence is at or above its median, and reported.
+- **What the result can claim, stated in the record.**
+  - Jev saw exactly the context the operator saw, so it settles the severity *a context-limited, independent rater*
+    assigns, not the findings' true severity.
+  - There is no ground truth to validate Jev against.
+  - Its confidence is TypeSafe's spread statistic, not a calibrated probability.
+
+**Declined.**
+- Shortening the operator's re-label: κ would be weaker, and likely inflated by memory.
+- A richer-context Jev arm, with the item's spec and ACs added: offered, not taken now.

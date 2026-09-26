@@ -162,6 +162,13 @@ did not foresee).* One line per edit, measured at stage open over `f81e5b9` unle
   `indeterminate=` field.
 - *D21-56 (2026-09-25):* `Axes::shipped()` keeps `lattice.py`'s inert `auth` boolean, guarded in code, with mutant
   **M30**.
+- *D21-58 (2026-09-26):* Jev (`typesafe/jev-1.13-20260917`) is S-SEV's rater of record. The operator found the
+  findings too thin to judge honestly, and doubts his own labels, which stay committed and reported. A1 becomes
+  CANNOT-TELL ≤10% plus stability: κ ≥ 0.61 against two identical re-asks and one with the options' order reversed.
+  A2 and A3 are unchanged on Jev's labels, and confidence feeds a sensitivity analysis. The 48 h re-label is
+  withdrawn. Section (9)'s re-label guard becomes a guard on the stability commit, and the record's
+  `**S-SEV re-label commit:**` line becomes `**S-SEV stability commit:**`. Supersedes §8b.6's *"Rater: the operator,
+  alone"*.
 - *D21-57 (2026-09-25):* the d2 rewrites turned `review::ac303_confirm_step_survives_escalation` red, because
   `rigor.rs` identified a review block's confirm check by whether its `expr` names `findings`. The review family went
   red, localisation went blind and spec-form went green for the wrong reason. The confirm check is now the one whose
@@ -1812,24 +1819,25 @@ printf '%s\n' "$nl" | nl_ok || { echo "FAIL: the record's labelled n ($nl) is ne
 syn=$(printf '%s\n' '**S-SEV labelled:** n = 57 findings over 33 dispatches; rule: stage-1 decided' | nl_of)
 if printf '%s\n' "$syn" | nl_ok; then echo "FAIL: control — a mismatched labelled n passes the D21-54 guard; it is vacuous"; exit 1; fi
 [ "$pre_at" -lt "$lab_at" ] || { echo "FAIL: the labels were committed before the pre-registration ($lab_at <= $pre_at) — a method written after the data is not a pre-registration"; exit 1; }
-# D21-54 (dated edit 2026-09-25, s8b refuting round 3): s8b stays open until the re-label, and kappa is A1's ruled half.
-# The record names the re-label's corpus commit on one line; that commit ADDS METHOD-SEV §8's results/sev-f37-relabel.md,
-# and it is at least 48 h (172800 s) after the stage-1 labels commit. Read at the commit the record names, never HEAD.
-rl_of() { sed -nE 's/^\*\*S-SEV re-label commit:\*\* `([0-9a-f]{40})`.*$/\1/p'; }
-gap_ok() { [ $(( $2 - $1 )) -ge 172800 ]; }   # gap_ok <labels commit time> <re-label commit time>
-rl_sha=$(rl_of < "$recs")
-[ "$(printf '%s\n' "$rl_sha" | grep -c .)" -eq 1 ] || { echo "FAIL: $recs does not name exactly one S-SEV re-label commit (D21-54) — s8b stays open until the re-label"; exit 1; }
-git -C "$CREPO" cat-file -e "$rl_sha:results/sev-f37-relabel.md" || { echo "FAIL: the re-label is not at the corpus commit the record names ($rl_sha)"; exit 1; }
-if git -C "$CREPO" cat-file -e "$rl_sha^:results/sev-f37-relabel.md" 2>/dev/null; then echo "FAIL: the re-label already existed before $rl_sha — the record names a later commit, not the one that added it"; exit 1; fi
-rl_at=$(git -C "$CREPO" show -s --format=%ct "$rl_sha"); rc=$?
-[ "$rc" -eq 0 ] && [ -n "$rl_at" ] || { echo "FAIL: the re-label commit's time could not be read (rc=$rc)"; exit 1; }
-gap_ok "$lab_at" "$rl_at" || { echo "FAIL: the re-label was committed $((rl_at - lab_at)) s after the labels, under 48 h (172800 s) — METHOD-SEV §5's timing (D21-54)"; exit 1; }
-syn=$(printf '%s\n' '# ADR-0000' '**S-SEV labels commit:** `0123456789abcdef0123456789abcdef01234567`' | rl_of)
-if [ "$(printf '%s\n' "$syn" | grep -c .)" -eq 1 ]; then echo "FAIL: control — a record with no re-label line passes the re-label line guard; it is vacuous"; exit 1; fi
-syn=$(printf '%s\n' '**S-SEV re-label commit:** `0123456789abcdef0123456789abcdef01234567`' | rl_of)
-[ "$(printf '%s\n' "$syn" | grep -c .)" -eq 1 ] || { echo "FAIL: control — a well-formed re-label line is not read; the guard can never pass"; exit 1; }
-if gap_ok 1000000 1172799; then echo "FAIL: control — a re-label 172799 s after the labels passes the 48 h guard; it is vacuous"; exit 1; fi
-gap_ok 1000000 1172800 || { echo "FAIL: control — a re-label exactly 48 h after the labels fails the guard; it can never pass at the bound"; exit 1; }
+# D21-58 (dated edit 2026-09-26): Jev is S-SEV's rater of record, and a stability test replaces the operator's re-label
+# (D21-54's 48 h guard is withdrawn with it). The record names the corpus commit that ADDS METHOD-SEV Amendment 5's
+# results/sev-f37-jev-stability.jsonl, which must also carry the primary results/sev-f37-jev.jsonl and postdate the labels.
+st_of() { sed -nE 's/^\*\*S-SEV stability commit:\*\* `([0-9a-f]{40})`.*$/\1/p'; }
+after_ok() { [ "$2" -gt "$1" ]; }   # after_ok <labels commit time> <stability commit time>
+st_sha=$(st_of < "$recs")
+[ "$(printf '%s\n' "$st_sha" | grep -c .)" -eq 1 ] || { echo "FAIL: $recs does not name exactly one S-SEV stability commit (D21-58)"; exit 1; }
+git -C "$CREPO" cat-file -e "$st_sha:results/sev-f37-jev-stability.jsonl" || { echo "FAIL: the stability run is not at the corpus commit the record names ($st_sha)"; exit 1; }
+git -C "$CREPO" cat-file -e "$st_sha:results/sev-f37-jev.jsonl" || { echo "FAIL: Jev's primary run is not at the stability commit ($st_sha)"; exit 1; }
+if git -C "$CREPO" cat-file -e "$st_sha^:results/sev-f37-jev-stability.jsonl" 2>/dev/null; then echo "FAIL: the stability run already existed before $st_sha — the record names a later commit, not the one that added it"; exit 1; fi
+st_at=$(git -C "$CREPO" show -s --format=%ct "$st_sha"); rc=$?
+[ "$rc" -eq 0 ] && [ -n "$st_at" ] || { echo "FAIL: the stability commit's time could not be read (rc=$rc)"; exit 1; }
+after_ok "$lab_at" "$st_at" || { echo "FAIL: the stability commit does not postdate the labels commit (D21-58)"; exit 1; }
+syn=$(printf '%s\n' '# ADR-0000' '**S-SEV labels commit:** `0123456789abcdef0123456789abcdef01234567`' | st_of)
+if [ "$(printf '%s\n' "$syn" | grep -c .)" -eq 1 ]; then echo "FAIL: control — a record with no stability line passes the stability guard; it is vacuous"; exit 1; fi
+syn=$(printf '%s\n' '**S-SEV stability commit:** `0123456789abcdef0123456789abcdef01234567`' | st_of)
+[ "$(printf '%s\n' "$syn" | grep -c .)" -eq 1 ] || { echo "FAIL: control — a well-formed stability line is not read; the guard can never pass"; exit 1; }
+if after_ok 1000000 1000000; then echo "FAIL: control — a stability commit at the labels' own time passes the ordering guard; it is vacuous"; exit 1; fi
+after_ok 1000000 1000001 || { echo "FAIL: control — a later stability commit fails the ordering guard; it can never pass"; exit 1; }
 # Every METHOD-SEV commit AFTER the labels is append-only and adds a dated amendment: a post-data rewrite of a
 # pre-registration is not one.
 git log --format='%H %ct' -- spikes/METHOD-SEV.md > target/cp8b/method-sev-log.txt || { echo "FAIL: METHOD-SEV's history could not be read"; exit 1; }
