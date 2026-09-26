@@ -884,7 +884,7 @@ It is a third guard beside the card condition and the `dispatch_completed` count
 verifies and reuses the enclosing wrapper rather than building a second one.
 
 🛑 **ADR-0164's flip is not this stage's act.** It is `proposed` and flips only on the operator's ledger line. This
-block does not read its status.
+block does not read its status. *(dated 2026-09-26, s8c build: it flipped `accepted` on D21-66, under D21-64 ruling 2.)*
 
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }

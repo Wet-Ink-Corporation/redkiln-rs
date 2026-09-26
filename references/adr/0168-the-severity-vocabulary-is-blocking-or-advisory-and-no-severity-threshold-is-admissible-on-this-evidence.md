@@ -1,7 +1,7 @@
 ---
 id: "0168"
 title: "**The severity vocabulary is `blocking | advisory`, and no severity threshold T is admissible on this evidence: ADR-0080 decision 2 bullet 2 governs.** S-SEV (D21-42 11c) labelled F37's 188 adversary findings with an independent rater of record (D21-58). The vocabulary was usable, but no dispatch of 33 was left without a `blocking` label, so T = `blocking` would be a constant terminal condition. Supersedes ADR-0080 decision 2 bullet 1 in part: its severity threshold, on this evidence. Its confidence arm, bullet 2 and the rest of ADR-0080 stand."
-status: proposed
+status: accepted
 date: 2026-09-26
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 11c (T settled now, on a measurement), D21-43 N18 (F37 as corpus; E3 excluded; (A) for threat-model), D21-54 (sequential sample of whole dispatches), D21-57 (the open question on severity-only rows), D21-58 (Jev the rater of record; stability replaces the re-label); spikes/METHOD-SEV.md with Amendments 1-5; runbook/phase-1/s8b-catalog-quality.md §8b.5 (threat-model's row), §8b.6; runbook/phase-1/s8h-cards-and-run-environment.md §8h.4; redkiln-corpus results/sev-f37-result.txt at 285e011c70cfa0fc92d91089792834846d99bcf7; references/adr/0080 decisions 2 and 3
@@ -220,6 +220,8 @@ text. It does not measure the reviewer's emitted `severity`, the gate's decision
 rates. ADR-0101 clause 5 stands, and S-SUBTLE-CB is unrun.
 
 **7. The record flips only on the operator's dated ledger line** (§8b.6).
+
+**8. This vocabulary is settled on an amended, not pre-registered, measurement** *(added 2026-09-26 under D21-64 ruling 1, before the flip)*. The operator's first pass was constant (188/188 `BLOCKING`), so under METHOD-SEV as registered at `bbf809c` A1's κ half could not pass and the measurement could end only in a NOT SETTLED STOP. D21-58 made Jev the rater of record after both label commits existed, which moved the outcome to this branch; the operator confirmed that the switch stands with that known (D21-64 ruling 1). Clause 1 therefore rests on the amended measurement. Clause 2 does not depend on the switch: A3's constancy (0 of 33 dispatches without a `BLOCKING` label) holds under both raters, so the no-admissible-T conclusion stands on either rater's labels.
 
 **The measured result, as the checkpoint reads it:**
 

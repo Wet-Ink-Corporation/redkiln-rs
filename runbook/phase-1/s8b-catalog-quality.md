@@ -628,7 +628,7 @@ Three things the port must get right, each a measured trap:
    `P9_AT` is a path relative to the repository root on purpose. An absolute Git Bash path such as `/c/Users/…`
    reaches Python unconverted inside the `-c` string, and Python reads it as `D:\c\Users\…` [measured 2026-09-24].
    Every figure in the table above must reappear in `p9-run.txt` after its `| ` separator. The `cat:`/`fac+art:`/`pk:`
-   digest tags may differ from run10's, because ADR-0164 (still `proposed`) renormalised line endings at `ac10470`,
+   digest tags may differ from run10's, because ADR-0164 (still `proposed` *(dated 2026-09-26, s8c build: accepted on D21-66)*) renormalised line endings at `ac10470`,
    and the tags hash raw bytes. Record both sets of tags. A fresh run at `P9_PIN` printed `cat:fdf842cca5b9`, where
    run10 has `cat:2d7f63b432cc`, with the same `fac+art:` and `pk:` [measured 2026-09-24]. If a figure moved, STOP:
    the oracle is not the one the register quotes.
@@ -2038,6 +2038,8 @@ Each stays open here until a stage or ruling takes it; none is decided by `s8b`,
 - *(dated 2026-09-26, refuting round 9)* **The operator's confirmation of D21-58's rater switch** with the round-8
   disclosure known (the operator's registered A1 could not pass; the switch moved the outcome from a NOT SETTLED STOP
   to Branch 2). Owed before ADR-0168 flips. Source: D21-58's **Disclosure**; receiver: the AFK review packet.
+  *(dated 2026-09-26, s8c build)* Discharged: the operator confirmed it by D21-64 ruling 1, and ADR-0168 flipped
+  `accepted` on D21-65 with the limit in its text.
 
 ---
 

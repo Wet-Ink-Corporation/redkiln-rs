@@ -1,7 +1,7 @@
 ---
 id: "0164"
 title: "Every text file is **LF in every checkout**, on every box, whatever `core.autocrlf` says: `.gitattributes` opens with `* text=auto eol=lf`, and every `-text` row below it, ADR-0151's pinned run-record bytes included, still wins for its own paths. Committed content does not move, because every unpinned text blob was already LF in the index."
-status: proposed
+status: accepted
 date: 2026-09-24
 legacy_id: none
 source: .gitattributes (its header rule *"a file whose bytes a test pins is protected from the slice that lands it"*, and the new first row); `git ls-files --eol` over the whole tree, before and after [measured 2026-09-24 at `decc8ae`]; references/adr/0151 (the pinned run-record bytes, and its named residual); spikes/DECISIONS-2026-09-21.md D21-42 decision 14b (the operator's decision this record executes); the memory note *"a local clone is not a byte-faithful export"* (the measured cost of the old state)

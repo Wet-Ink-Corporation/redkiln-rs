@@ -1,4 +1,6 @@
-# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-25 (D21-1 … D21-57), and what they license
+# Decisions taken at Step 8's close, Step 7f's open and close, and Step 7g's open and build — 2026-09-21 … 2026-09-26 (D21-1 … D21-66), and what they license
+
+*(Title corrected 2026-09-26 at `s8c`: it read **"2026-09-21 … 2026-09-25 (D21-1 … D21-57)"** while the file carried **D21-64** — seven entries and one date stale. `D21-58` … `D21-64` were appended without moving it; `D21-65` and `D21-66` are appended with this correction and move it. The stage list at the head of the title is left as written, as the correction below also left it.)*
 
 *(Title corrected 2026-09-25 at `s8b`'s refuting round 6: it read **"2026-09-21 … 2026-09-24 (D21-1 … D21-39)"** while the file carried **D21-57** — eighteen entries and one date stale. `D21-40` … `D21-53` were appended without moving it, and so were `s8b`'s `D21-54` … `D21-56`; `D21-57` is appended with this stage and moves it, per the note below. The stage list at the head of the title still names only the stages through `s7g`; it is left as written, because this correction moves only the range and the date span.)*
 
@@ -2267,7 +2269,8 @@ stage STOPS"*. So when this entry was taken, the registered method could end onl
 change moved the outcome from that STOP to ADR-0168's Branch 2. Amendment 5 was committed before any of Jev's answers was
 opened (Jev's runs were written unread, Amendment 4), but it was **not** blind to the operator's. The reasons given above are the
 operator's; this disclosure does not replace them. **Owed:** the operator's dated confirmation that the switch stands
-with this known (AFK review packet, confirm list).
+with this known (AFK review packet, confirm list). *(dated 2026-09-26, `s8c`: discharged by D21-64 ruling 1;
+ADR-0168 flipped on D21-65.)*
 
 ---
 
@@ -2664,3 +2667,43 @@ grounded options and a recommendation for each.** Every ruling below took the re
     flip-stops for those records. Provisional D-entries taken under the AFK rule still come to the operator.
 
 **Supersedes** the AFK rule 1 (*"Never flip an ADR"*) for the records named in rulings 1, 2, 9 and 10 only.
+
+---
+
+## D21-65 · ADR-0168 flips to `accepted` — the severity vocabulary is `blocking | advisory` and no severity threshold is admissible on this evidence, with the amended-measurement limit in the text that flips
+
+**Confirmed 2026-09-26 by the operator, in the session executing `s8c`, under D21-64 ruling 1.** ADR-0168 flips
+`proposed → accepted`, `date: 2026-09-26` unchanged. It was written `proposed` at `s8b` and revised in place through
+that stage's refuting rounds while it bound nothing.
+
+D21-64 ruling 1 confirmed D21-58 *"with the round-8 disclosure known"*. That disclosure, D21-58's **Disclosure**
+(dated 2026-09-26, `s8b` refuting round 8), reads: *"when this entry was taken, the registered method could end only
+in a NOT SETTLED STOP, and the rater change moved the outcome from that STOP to ADR-0168's Branch 2"*. The ruling
+also required that ADR-0168 state the limit *"with that sentence in the text that flips"*. It does, by dated text
+(`s8c`, D21-64 ruling 1) in three places:
+
+- the first-registered option, where *"the operator's confirmation that the switch stands with this known is owed
+  before this record is accepted"* is struck and discharged;
+- Consequences (Negative): *"The vocabulary is settled on an amended, not a pre-registered, measurement"*, and
+  *"A3 (0 of 33 dispatches without a `BLOCKING` label) holds under both raters, so the no-admissible-T conclusion
+  (clause 2) does not depend on the switch"*;
+- Evidence's stated limits, in the same terms.
+
+Decision clause 7 carries a dated note naming this line. No Decision clause and no forbids bullet moves. The
+supersession of ADR-0080 decision 2 bullet 1, as to severity and on this evidence, is now in force; ADR-0080 stays
+`accepted`, and its `superseded_by` already names `0168`. This discharges D21-58's **Owed** line and `s8b` §8b.10's
+owed item (*"Owed before ADR-0168 flips"*), each by a dated note.
+
+---
+
+## D21-66 · ADR-0164 flips to `accepted` — every text file is LF in every checkout
+
+**Confirmed 2026-09-26 by the operator, in the session executing `s8c`, under D21-64 ruling 2.** ADR-0164 flips
+`proposed → accepted`, `date: 2026-09-24` unchanged. The ruling reads: *"ADR-0164 flips `proposed → accepted` (every
+text file is LF in every checkout). It has governed the tree since `ac10470`."*
+
+The text that flips is the one at `366543a`. It carries D21-50's dated correction (the six recording sources pinned
+`-text` to the golden inputs' own git objects) and the corpus-suite measurement its evidence said the flip should
+wait for (*"This record's flip should wait until its evidence carries this measurement, which it now does"*). A dated
+note beside that sentence names this line. No Decision clause and no forbids bullet moves. ADR-0151 stands and is not
+superseded. The named residual (*"`run_id` is still terminator-sensitive"*) stays owed to a future record.
