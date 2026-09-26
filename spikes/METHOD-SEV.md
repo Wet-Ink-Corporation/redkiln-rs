@@ -324,3 +324,46 @@ Nothing registered above changes: the criteria, the n, the seeds, the continuati
 **Continuation sealed key sha256:** `020e2c15d3d46f9198c383f21cea2feaefe892f3959e3c1f398a39cc678c389f` (`key-continuation.SEALED.json`);
 the blank sheet's normalized sha256 is `54340f7a89504bdb5a619ba05a7ed9417e3c3b5b3468c9468b2862c6e5b2db57`. Recorded before any
 continuation label exists. It is labelled through a second private page built the same way as stage 1's (Amendment 2).
+
+*Amendment 4 (2026-09-26, operator, confirmed in-session; written after all 188 first-pass labels existed and were
+committed (corpus `a2f4fab`, `1b3e102`), and before any model output exists):* **an exploratory second rater, declared
+here in full before it runs.** It is NOT the rater of record. It changes no registered criterion, n, seed, rule or
+branch: A1, A2 and A3 are computed from the operator's labels alone, exactly as registered. Everything below is
+reported as exploratory and powerless, never as evidence for or against a branch.
+
+- **Why.** The operator found the `BLOCKING`/`ADVISORY` line subjective and context-dependent, and labelled against
+  his own stricter standard (Amendment 2). A second rater, blind to his labels, shows whether another rater separates
+  the two classes on the same text.
+- **Instrument.** TypeSafe's Jev, through OpenRouter's decisions endpoint:
+  - request: `POST https://openrouter.ai/api/alpha/decisions` with model `~typesafe/jev-latest`;
+  - the served model id is recorded from every response (the connectivity probe returned `typesafe/jev-1.13-20260917`),
+    and a response from any other model id is recorded, flagged and excluded;
+  - this is a system from a different vendor, not the rig's own model family.
+  One request per finding, no retries on a completed answer, no temperature or sampling setting (the endpoint takes
+  none), and no batching of findings into one request.
+- **Input (blind).**
+  - `state` is the finding's text exactly as the operator saw it on his sheet: the block between its `### <id>`
+    heading and its `answer:` line (claim, rationale, files, repro command, observed, expected when met).
+  - Evidence class, arm, rigor, item, dispatch, correctness and every operator label are withheld, and so is the id.
+- **Question.** One `choice` question.
+  - Its `instructions` are the method's question verbatim, *"should this finding have blocked the item?"*, followed by
+    the reviewer card's standard as §4 quotes it.
+  - Its criteria are §4's definitions verbatim: `BLOCKING` — the reviewer was right to return `changes-requested` on
+    this; `ADVISORY` — true, but should not have blocked; `CANNOT-TELL` — the finding as shown does not let the rater
+    say.
+  - So the second rater judges against the card's standard, while the operator judged against his own (Amendment 2).
+    A disagreement therefore mixes a difference of standard with a difference of judgement, and is reported that way.
+- **Recorded, per finding:** the choice, the three probabilities, the returned `confidence`, the served model id, the
+  request id and the cost. The file is `results/sev-f37-jev.jsonl`, committed to redkiln-corpus with the other S-SEV
+  artefacts.
+- **Reported (exploratory):**
+  1. Agreement with the operator over all 188: the raw proportion, Cohen's κ, and the 3×3 table.
+  2. The same agreement split by Jev's confidence, above and below its median.
+  3. The distribution of Jev's choices.
+  4. Jev's choices tabulated against evidence class, once the keys are opened after the re-label, beside A2's table
+     for the operator.
+
+  The confidence value is TypeSafe's spread statistic, `(3 × top probability − 1) / 2` for three options, not a
+  calibrated probability, and it is never quoted as one.
+- **Cost and consent.** The operator authorised the spend for this run only (about one US cent at the endpoint's
+  measured rate). The findings' text goes to OpenRouter and TypeSafe on the operator's decision.
