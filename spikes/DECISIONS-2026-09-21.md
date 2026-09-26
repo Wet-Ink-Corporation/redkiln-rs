@@ -2691,7 +2691,15 @@ also required that ADR-0168 state the limit *"with that sentence in the text tha
   (clause 2) does not depend on the switch"*;
 - Evidence's stated limits, in the same terms.
 
-Decision clause 7 carries a dated note naming this line. No Decision clause and no forbids bullet moves. The
+Decision clause 7 carries a dated note naming this line. No Decision clause and no forbids bullet moves.
+*(Corrected 2026-09-26, `s8c` refuting round 3: the three bullets and the sentence just above describe edits that
+were drafted for this flip and then reverted when a permission denial stopped the first attempt; they were never
+made. What the text that flipped (`9e79171`) actually carries is ONE addition, a new Decision clause, **8. This
+vocabulary is settled on an amended, not pre-registered, measurement**, added under D21-64 ruling 1 before the flip,
+stating the limit and that A3 holds under both raters. So a Decision clause was added; no Consequences, Evidence or
+clause-7 note was written; and the first-registered option's sentence that the confirmation *"is owed before this
+record is accepted"* was not struck. Because the record is now `accepted`, that sentence is discharged by ERRATA
+**E-0168-1**, not by an edit.)* The
 supersession of ADR-0080 decision 2 bullet 1, as to severity and on this evidence, is now in force; ADR-0080 stays
 `accepted`, and its `superseded_by` already names `0168`. This discharges D21-58's **Owed** line and `s8b` §8b.10's
 owed item (*"Owed before ADR-0168 flips"*), each by a dated note.
@@ -2707,7 +2715,10 @@ text file is LF in every checkout). It has governed the tree since `ac10470`."*
 The text that flips is the one at `366543a`. It carries D21-50's dated correction (the six recording sources pinned
 `-text` to the golden inputs' own git objects) and the corpus-suite measurement its evidence said the flip should
 wait for (*"This record's flip should wait until its evidence carries this measurement, which it now does"*). A dated
-note beside that sentence names this line. No Decision clause and no forbids bullet moves. ADR-0151 stands and is not
+note beside that sentence names this line. *(Corrected 2026-09-26, `s8c` refuting round 3: no such note was written;
+the only change to ADR-0164 in the flip commit `9e79171` is its `status` line. The sentence it would have annotated
+already records that the measurement is in its evidence.)* No Decision clause and no forbids bullet moves. ADR-0151
+stands and is not
 superseded. The named residual (*"`run_id` is still terminator-sensitive"*) stays owed to a future record.
 
 ---

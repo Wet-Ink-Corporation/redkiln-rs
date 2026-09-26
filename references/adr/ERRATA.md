@@ -734,3 +734,12 @@ a Decision sentence, and it rides in ADR-0169's supersession in part of decision
 half moves with ADR-0170, and its patch half stands. The refusal of `kind = mutate` stands on its remaining reason, the
 title's *"no port method applies a patch"*. The exact count is now asserted by
 `source_parse::toolchain_port_declares_exactly_seven_methods` and Checkpoint 8c (4), not by Checkpoint 7a.
+
+## ADR-0168 — the severity vocabulary is `blocking | advisory`, and no severity threshold is admissible on this evidence
+
+**E-0168-1 (2026-09-26, `s8c` refuting round 3, after the flip).** The considered option *"the measurement as first
+registered"* ends: *"the operator's confirmation that the switch stands with this known is owed before this record is
+accepted."* — **What is true:** that confirmation was given before the flip, by D21-64 ruling 1 (the operator,
+2026-09-26, in session), and the flip is D21-65. The sentence is **discharged**, not live. The limit the confirmation
+required is Decision clause 8, added before the flip. **What this does not change:** no Decision sentence, forbids
+bullet or evidence figure moves; D21-65 carries a dated correction of its own description of the flipped text.
