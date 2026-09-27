@@ -3146,3 +3146,18 @@ recommendation for each (option (a) both times).**
    committed `Changeset`. The lane rig gains the git fixture this needs; red-first, with a mutant.
 3. **Both lanes are re-measured after both amendments**, and Checkpoint 8d (6a)'s floors are then set to the measured
    counts by a dated ledger line citing D21-73 and this entry. Any cause still left is named with an owner.
+
+---
+
+## D21-75 · Checkpoint 8d (6a)'s walked floors are set to the measured counts: fix 10, story 8
+
+**Written 2026-09-27 in the session executing `s8d`, as D21-73 and D21-74 ruling 3 direct** (*"Checkpoint 8d (6a)'s
+floors are then set to the measured counts by a dated ledger line citing D21-73 and this entry"*). Not a new ruling.
+
+**Measured** (package F3-D2174, after D21-72/73/74 were built; §8d.9's dated table): `LANE_WALK fix walked=10
+refused=5` and `LANE_WALK story walked=8 refused=6`. No stage's selection refuses on either lane. The floors move from
+the drafted claim of 11 and 9 to **10 and 8**. Each remaining refusal has a named owner by dated receiver note:
+`confirmation-test`'s missing `TestOutcome` fields and the `lint` port's output (`bdd-scenarios`, `docs-update`), the
+unauthored `checklist:smoke` (`smoke-test`) and the missing `deploy` row (`rolling-deploy`) to `s8g`; the `item_create`
+store route (`debt-logging`) and the unprovided `backlog` feed (`closure-record`) to `s8f`. A later stage's flip to
+"walks" raises the reading and needs no edit to (6a).

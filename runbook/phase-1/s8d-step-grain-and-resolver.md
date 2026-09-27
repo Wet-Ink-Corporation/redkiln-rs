@@ -2388,7 +2388,9 @@ walked_of() { printf '%s\n' "$1" | grep -oE "LANE_WALK $2 walked=[0-9]+ refused=
 [ -z "$(walked_of 'LANE_WALK story walked=7 refused=8' fix)" ] || { echo "FAIL: synthetic control — walked_of reads another lane's line"; exit 1; }
 out=$(cargo test -p rk-kernel --test it -- lane_walk::the_fix_lane_walk_table_holds_for_a_rust_text_bug lane_walk::the_story_lane_walk_table_holds_for_a_spike_toml_story --exact --nocapture --test-threads=1 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the walk-table tests, re-run to read their LANE_WALK lines, rc=$rc"; printf '%s\n' "$out" | tail -20; exit 1; }
-for pair in fix:11 story:9; do
+# ---- (dated 2026-09-27, D21-75) The floors are SET to the measured counts under D21-73 and D21-74 ruling 3: fix 10 and
+# ---- story 8 (were ~~fix:11 story:9~~).
+for pair in fix:10 story:8; do
   lane=${pair%%:*}; floor=${pair##*:}
   k=$(printf '%s\n' "$out" | grep -oE "LANE_WALK $lane walked=[0-9]+ refused=[0-9]+" | grep -c .)
   [ "$k" -eq 1 ] || { echo "FAIL: the $lane lane printed $k LANE_WALK lines, not exactly one"; exit 1; }
