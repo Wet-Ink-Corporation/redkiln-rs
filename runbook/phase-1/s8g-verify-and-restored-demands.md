@@ -148,6 +148,8 @@ own records R1–R5 (§8g.8). The last bullet of the list above is superseded by
   every AC carries one. §8g.3 and §8g.11 record both as settled.
 - *Final consistency pass 2026-09-24:* **The walk-table claims after this stage** are stated: **14 of 14** (fix lane)
   and **12 of 12** (story lane), read from the rows as `s8f` and this stage leave them (§8g.1, move 1).
+  *(dated 2026-09-27, `s8d` build, package R1FIX-8d; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-75.)* The story lane's figure no longer follows from the rows: `s8d` §8d.9's F3-D2174 table has it select
+  fourteen, with `docs-update` at `implement`. Move 1 recomputes both figures from the rows at this stage's open.
 
 *D21-48 (2026-09-24)* (the operator's answers to the questions the s8 files left open; `spikes/DECISIONS-2026-09-21.md`'s
 `## D21-48` is the authority):
@@ -285,7 +287,11 @@ line in the earlier stage's file, in that commit:
      consistency pass 2026-09-24):* `s8f`'s close leaves **13 of 15** and **11 of 13**, with `smoke-test` and
      `rolling-deploy` refusing in each lane (`s8f` §8f.7). This stage takes `equivalence-boundary` out of both tables,
      flips `smoke-test` to **walks**, and replaces `rolling-deploy` with `tag-release`, which walks. The claims then
-     read **14 of 14** (fix lane) and **12 of 12** (story lane). Checkpoint 8d's (6a) floors of 11 and 9 hold.
+     read **14 of 14** (fix lane) and **12 of 12** (story lane). Checkpoint 8d's (6a) floors of ~~11 and 9~~ 10 and 8
+     (D21-75) hold. *(dated 2026-09-27, `s8d` build, package R1FIX-8d; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-75.)* On `s8d` §8d.9's F3-D2174 table, `s8f`'s close leaves **12 of 15** and **10 of 14**,
+     not 13 of 15 and 11 of 13. The fix lane's `confirmation-test` and the story lane's `bdd-scenarios` and `docs-update`
+     refuse on D21-73 item 4, which this stage owns, beside `smoke-test` and `rolling-deploy`. The claims after this
+     stage are recomputed from those rows, as this move's own rule says.
 2. **`s8e`'s interim-key list.** `fsm::every_item_scoped_kind_carries_the_interim_item_key` *"iterates
    `EventKind::ALL` against that list, so a kind added later without a decision fails it"*. `verify_completed` is such
    a kind, so this stage's variant turns the test red until the list names it. R1 names the kind item-scoped, with its
@@ -325,10 +331,16 @@ their stage files fit (each by a dated receiver note), and `bisect`'s registry r
   §8g.6 and this stage's R4 **cite** the row and do not write it; `demands::build_artifact_carries_release_digests` and M9
   stand as written. `sca_scan`'s `audit_db`/`deny_db` are bound by `rk-cli` at `<CARGO_HOME>/advisory-db` and
   `/advisory-dbs` (R8 decision 4). §8g.6's `sca-scan` precondition is unchanged.
-- **Move 1's arithmetic starts from `s8d`'s re-measured rows**, not from the claims: `LANE_WALK fix walked=9 refused=6`
+- **Move 1's arithmetic starts from `s8d`'s re-measured rows**, not from the claims: ~~`LANE_WALK fix walked=9 refused=6`
   and `story walked=6 refused=5`, with two causes still unassigned (`tdd-red-green-refactor`'s `"affected"` selection
   inside `Changeset`'s own producer, and the story lane's `implement` selection on `docs-update`'s self-edge). `s8d`
-  §8d.9's F2-D2173 table is the one this stage's dated line moves.
+  §8d.9's F2-D2173 table is the one this stage's dated line moves.~~
+  *(dated 2026-09-27, `s8d` build, package R1FIX-8d; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-75.)* The F2-D2173 table is superseded by `s8d` §8d.9's F3-D2174 table, and that is the one this stage's dated
+  line moves: **`LANE_WALK fix walked=10 refused=5`** and **`LANE_WALK story walked=8 refused=6`**. Both causes were
+  ruled by D21-74 and built at `s8d` (step 5 draws no self-edge; inside `Changeset`'s producer `"affected"` resolves
+  over the run branch's diff). Checkpoint 8d (6a)'s floors are 10 and 8 (D21-75). The remaining refusals and their
+  owners are D21-75's: `confirmation-test`, `bdd-scenarios`, `docs-update`, `smoke-test` and `rolling-deploy` here, and
+  `debt-logging` and `closure-record` at `s8f`.
 
 **The re-runs are bounded**, because nested re-runs cost hours. (12) re-runs the entry gate, 8f, and the provisional
 rows above, each whole, with `RK_CP_NESTED=1` and without `REDKILN_LAUNCH_RECORD` in its environment, under the

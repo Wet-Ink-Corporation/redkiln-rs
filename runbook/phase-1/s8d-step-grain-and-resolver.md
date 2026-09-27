@@ -82,7 +82,7 @@ the authority). The ids are the review's numbering (B = BLOCKER, M = MAJOR, m = 
   `GitOps` route. It states how the clone is journalled and what working tree `confirm` needs (§8d.6).
 - **M8 (non-idempotent tool steps).** R1 supersedes ADR-0150 decision 2 in part. A `side_effecting` registry column
   makes such a step commit and be served on re-entry. Two new tests, M28 and M30.
-- **M9 (the walk-table floor).** The `lane_walk` tests print `LANE_WALK` lines, and (6a) floors them at 11 and 9.
+- **M9 (the walk-table floor).** The `lane_walk` tests print `LANE_WALK` lines, and (6a) floors them at ~~11 and 9~~ **10 and 8** *(dated 2026-09-27, `s8d` build, package R1FIX-8d: D21-75 sets the floors to the measured counts under D21-73 and D21-74 ruling 3)*.
 - **M10 (the timeout test's crate).** The test moves to `rk-cli`'s `transcription::`, beside `bind_nodes`.
 - **m11.** The resolver's home is named: `runtime::reference`, never AC-494's `src/resolver.rs`. The `null_out_refs`
   floor now reads all of `crates/rk-kernel/src` except `rigor.rs`, with a live control.
@@ -219,7 +219,7 @@ ADR-0140 in part.
 
 | # | record | supersedes / discharges |
 | --- | --- | --- |
-| R1 | **Step-grain commits** (3a, 3b): per-step specs on `RecordedSpec`, the commit key, re-entry at the first uncommitted step, the per-step memo key | supersedes in part **ADR-0143** decision 2 (narrowed: a runnable agent step with **no** per-step spec still refuses by name) and decision 4 in full; **ADR-0150** decision 1 in full; and **ADR-0138**, because ADR-0143's own forbids bullet reads *"Forbids widening AC-013's idempotence grain without superseding ADR-0138"* — the record names which ADR-0138 sentence it moves (its grain sentence sits under *"What this record does NOT decide"*, not in `## Decision`) and says so rather than inventing a clause. Discharges **ADR-0143 clause 5** and **ADR-0150 clause 4**. A dated **in-place AC-013 register amendment**, not a reading note (m17). D21-42 3a says it *"Supersedes in part … AC-013's per-activation grain"*, so AC-013's *"no committed step re-executes"* is amended in place to read at step-activation grain. It uses D15-2's form, a dated in-place amendment and not an erratum, and it lands with R1's flip. The commit key is **separate**: *"A separate commit key. ADR-0097's memo key is untouched."* (D21-43 N15). So ADR-0097 is not superseded, and Checkpoint 6 does not re-run. Each per-step spec carries its agent step's `timeout_secs` (N16, §8d.2). That is a per-step bound on the spec the Harness receives, so R1 also supersedes **ADR-0140** in part, for per-step specs only: decision 5's *"A future per-step bound may not be built by overloading it"*, and its forbids bullet *"forbids repurposing it as one"*. **The journal row (M5).** Each agent step's commit is one `activity_committed` row, appended when that step dispatches, as today. The row gains two payload members, `step_id` and `iteration_path`, and `is_committed` folds the commit key from them. No `EventKind` is minted. The activation's **completion** is one more `activity_committed` row, whose `step_id` is the activation's `emit` step, appended when the emit binding commits. A zero-agent activation writes only that row. So R1 also supersedes **ADR-0150's forbids** in part. Bullet 1 is *"Moving `activity_committed` to the end of the walk"*: the emit row is an added row at the walk's end, and no agent-step row moves. Bullet 4 is *"Restating "the walk happens inside an uncommitted activation""*: an activation with no emit row is *incomplete*, and its agent-step rows stand committed. **Side-effecting tool steps (M8).** R1 supersedes **ADR-0150 decision 2** in part. Its residual closes by re-execution only for a tool step whose verb is idempotent. This stage adds a `side_effecting` column to every row of `s8c`'s `.redkiln/registry.toml`, and a row without a value refuses the registry at load. A tool step whose verb is `side_effecting = true` commits under the commit key like an agent step. On re-entry it is served and never re-executed. Marked `true` here: `shallow_clone` and `verdict_record` (R5), `package` (`s8c`'s record V), and `item_create` and `release_tag`, whose rows exist and whose handlers `s8f` and `s8g` build. The rule, the column and the marks are this stage's |
+| R1 | **Step-grain commits** (3a, 3b): per-step specs on `RecordedSpec`, the commit key, re-entry at the first uncommitted step, the per-step memo key | supersedes in part **ADR-0143** decision 2 (narrowed: a runnable agent step with **no** per-step spec still refuses by name) and decision 4 in full; **ADR-0150** decision 1 in full; and **ADR-0138**, because ADR-0143's own forbids bullet reads *"Forbids widening AC-013's idempotence grain without superseding ADR-0138"* — the record names which ADR-0138 sentence it moves (its grain sentence sits under *"What this record does NOT decide"*, not in `## Decision`) and says so rather than inventing a clause. Discharges **ADR-0143 clause 5** and **ADR-0150 clause 4**. A dated **in-place AC-013 register amendment**, not a reading note (m17). D21-42 3a says it *"Supersedes in part … AC-013's per-activation grain"*, so AC-013's *"no committed step re-executes"* is amended in place to read at step-activation grain. It uses D15-2's form, a dated in-place amendment and not an erratum, and it lands with R1's flip. The commit key is **separate**: *"A separate commit key. ADR-0097's memo key is untouched."* (D21-43 N15). So ADR-0097 is not superseded, and Checkpoint 6 does not re-run. Each per-step spec carries its agent step's `timeout_secs` (N16, §8d.2). That is a per-step bound on the spec the Harness receives, so R1 also supersedes **ADR-0140** in part, for per-step specs only: decision 5's *"A future per-step bound may not be built by overloading it"*, and its forbids bullet *"forbids repurposing it as one"*. *(dated 2026-09-27, `s8d` build, package R1FIX-8d; the refuting round's records finding.)* R1 also supersedes **ADR-0140** in part **for agent steps**, at the three sites ADR-0171 superseded *"each for `tool` steps only"*: decision 1's withdrawal of *"while a step's own `timeout_secs` remains the kernel's"*, decision 4's *"The catalog's `timeout_secs` declarations are recorded as UNREAD"*, and the second forbids bullet, *"Forbids any prose, docstring or record asserting that a step's declared `timeout_secs` is applied, enforced or honoured by the kernel or by a toolchain adapter. Nothing reads it."* ADR-0174 clause 10 quotes each. **The journal row (M5).** Each agent step's commit is one `activity_committed` row, appended when that step dispatches, as today. The row gains two payload members, `step_id` and `iteration_path`, and `is_committed` folds the commit key from them. No `EventKind` is minted. The activation's **completion** is one more `activity_committed` row, whose `step_id` is the activation's `emit` step, appended when the emit binding commits. A zero-agent activation writes only that row. So R1 also supersedes **ADR-0150's forbids** in part. Bullet 1 is *"Moving `activity_committed` to the end of the walk"*: the emit row is an added row at the walk's end, and no agent-step row moves. Bullet 4 is *"Restating "the walk happens inside an uncommitted activation""*: an activation with no emit row is *incomplete*, and its agent-step rows stand committed. **Side-effecting tool steps (M8).** R1 supersedes **ADR-0150 decision 2** in part. Its residual closes by re-execution only for a tool step whose verb is idempotent. This stage adds a `side_effecting` column to every row of `s8c`'s `.redkiln/registry.toml`, and a row without a value refuses the registry at load. A tool step whose verb is `side_effecting = true` commits under the commit key like an agent step. On re-entry it is served and never re-executed. Marked `true` here: `shallow_clone` and `verdict_record` (R5), `package` (`s8c`'s record V), and `item_create` and `release_tag`, whose rows exist and whose handlers `s8f` and `s8g` build. The rule, the column and the marks are this stage's |
 | R2 | **The complete reference resolver**: every input-source form, output binding, prior-step names, ADR-0055's previous iteration, `for_each` and `repeat.until`, `check` evaluation, `emit` binding, and the resolver side of test selection | discharges **ADR-0136 clause 4** and **ADR-0142 clause 4**; supersedes **ADR-0148**'s refusal of `toolchain:test` (clause 4: *"This is reversed by a resolver, not by a revert"*) — `s8c` leaves it standing (its routing table: *"`test` \| ADR-0148's sentence, **unchanged** (s8d reverses it)"*) — while ADR-0148's forbids, that no declared selection is passed through as a test name or as an empty selection, stand. Executes these unchanged: ADR-0032 (*"Absent `?` inputs are `null`"*), ADR-0034 (the `??` coalesce), ADR-0035, ADR-0040, ADR-0042's second half (feedback refs, *"`null` on the first pass"*), ADR-0043 (the iteration counter in the step key, which the iteration path carries), ADR-0045, ADR-0055 and ADR-0103. ADR-0136's forbids all stand. **R2 supersedes ADR-0042's Decision in part** (*D21-48 (2026-09-24):* X8). The Decision reads *"A ref to a later-declared step is legal iff that step or one after it has `on_false`/`repeat` targeting the referencing step; it is `null` on the first pass."* X8 widens its licence: *"an escalate gate whose re-entry resumes into the referencing step also licenses the ref. The lint widens to match. Any ref still unlicensed is a lint error, fixed in the catalog in s8d."* The *"`null` on the first pass"* half stands. ADR-0042's first forbids bullet is the Decision's converse: *"Forbids a ref to a later-declared step where no step at or after the target has an `on_false`/`repeat` back-edge pointing at the referencing step"*. So the record names that bullet as moved in the same part, rather than leave a forbids bullet that the lint contradicts. The Decision says *"This goes into §1 "Edge" and lint rule 1"* of the schema. The record names both sites as read with the widening, and the schema text under `references/` is not edited. The widened lint, the census and the catalog fix are §8d.3's. R2 names a schema finding: `repeat.until` over a later-declared step, read as D21-48 X6 took it (§8d.3). R2 routes every resolved `artifact:` input through one call to a named read seam (N12). The only emitter of `artifact.read` is `s8f`'s rk-store seam (D21-47), and at this stage the call reaches a non-emitting stub (§8d.3). R2 fixes the resolver's home as `runtime::reference`, not `src/resolver.rs` (m11). It resolves `kb:`, `checklist:` and `toolchain:<feed>` through `s8c`'s declared tables (N14). It records the value of ADR-0035's `[*].field` over a list-valued field as D21-48 X5 took it, concatenation in element order (§8d.3), and it fixes the one home of `selection_of` (§8d.3) |
 | R3 | **`on_false` as iteration** (4d) | executes ADR-0031, ADR-0044 and ADR-0103 clause 6's closed set, and ADR-0144's `StepFailedAfterCommit`; names ADR-0046's `deviate` form OWED (0 shipped uses — see §8d.4). Refusing it **narrows** D21-42 4d's *"keyword forms follow the schema"*, and D21-48 X7 took the narrowing (*D21-48 (2026-09-24)*): *"Refused by name, naming ADR-0046's route OWED. R3 states the narrowing of D21-42 4d."* R3 states it as taken (m13). R3 states the attempt charge per iteration frame (§8d.3, m14) |
 | R4 | **Failure telemetry and the breaker's call site** (20) | the kernel becomes the writer of the `step_failed` / `step_cancelled` / `step_refused` / `rate_limited` row; design §5's row names the producer as *"the adapter, via the dispatch outcome"*, which takes a dated amendment under this record; `crates/rk-kernel/src/runtime.rs`'s table row *"AC-033's breaker mark \| **none exists**"* is corrected in the same change |
@@ -277,6 +277,17 @@ row from an agent step's; the two members this row names, `step_id` and `iterati
 second reading: a transcribed list with no `emit` step (fixture catalogs only; every shipped activity ends in one) completes where
 its walk ends, on its last step's id. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line.
 
+*(dated 2026-09-27, `s8d` build, package R1FIX-8d; the refuting round's records finding.)* **R1's supersession of ADR-0140 is widened, for agent steps.**
+ADR-0174 decision 9 makes each agent step's per-step spec carry that step's declared `timeout_secs` (`rk-cli`'s
+`agent_step_timeout_secs` reads `step.timeout_secs`), but clause 10 named only decision 5 and the third forbids bullet.
+ADR-0171 superseded decision 1's withdrawal, decision 4 and the first two forbids bullets *"each for `tool` steps only"*,
+and reads *"The withdrawal stands for `agent` steps until `s8d`'s per-step specs carry their bound"*. Clause 10 now also
+supersedes, for agent steps and each quoted, decision 1's withdrawal, decision 4 and the second forbids bullet. The first
+forbids bullet (the *backstop* bullet) is about the toolchain adapters' construction-time `timeout`, which no agent step
+reaches, so it is not R1's. ADR-0140's `superseded_by` already lists `0174` and ADR-0174's `supersedes` lists `0140`, so no
+link moves: the README's supersession census stays at seventy links from fifty-two records, re-counted off disk. The
+README's `0140` → `0174` supersession row and its `0174` index row take dated notes. ADR-0174 stays `proposed`.
+
 *(dated 2026-09-26, `s8d` build, package P5.)* **R3 is ADR-0175**, `references/adr/0175-on-false-as-iteration.md`, written `proposed` in ADR-0164's
 form (`check-adr-options.py` scans 12 records from 0164 and flags 0). It executes ADR-0031, ADR-0044, ADR-0103 clause 6 and
 ADR-0144's `StepFailedAfterCommit`, and supersedes nothing, so no `superseded_by` moves and no supersession row is added. It names
@@ -284,6 +295,9 @@ ADR-0046's `deviate` route OWED and states D21-48 X7's narrowing of D21-42 4d (i
 6) and the attempt charge per frame (m14; decision 7). The README (purpose count 175, the forbids census and its punctuation census,
 next free **`0176`**, the `0175` index row, *"The set is 175 records over `0001`–`0175`"*, and the proposed census naming `0172`–`0175`)
 and `runbook/00-preamble.md` (next free **`0176`** by a dated correction line; the records census at 175) moved in the same change.
+*(dated 2026-09-27, `s8d` build, package R1FIX-8d: the next sentence was written at the end of the P6 paragraph below, and is P5's.)* Checkpoint 8a's record-census
+lines pass standalone over them (`ok: census n=175 last=0175 next=0176`); as a control, HEAD's README and preamble fail the 175
+census and the next-free `0176` line. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line.
 *(dated 2026-09-26, `s8d` build, package P6.)* **R4 is ADR-0176**, `references/adr/0176-the-kernel-writes-the-error-row-and-the-breaker-refuses-from-it.md`,
 written `proposed` in ADR-0164's form (`check-adr-options.py` scans 13 records from 0164 and flags 0). It supersedes nothing, so no
 `superseded_by` moves and no supersession row is added. Its decision 4 states `at` and `family` as **members added to ADR-0095 decision
@@ -297,8 +311,9 @@ required and no `EventKind` is minted. Design §5.4's `step_failed` row took a d
 over `0001`–`0176`"*, and the proposed census naming `0172`–`0176`) and `runbook/00-preamble.md` (next free **`0177`** by a dated
 correction line; the records census at 176) moved in the same change; Checkpoint 8a's census lines, run standalone, read `ok: census
 n=176 last=0176 next=0177`, and FAILED (*"does not name 0177 as the next free number"*) over the README and preamble before the move.
-Checkpoint 8a's record-census lines pass standalone over them (`ok: census n=175 last=0175 next=0176`); as a control, HEAD's README
-and preamble fail the 175 census and the next-free `0176` line. It flips at this stage's close under D21-64 ruling 10, on its own dated
+~~Checkpoint 8a's record-census lines pass standalone over them (`ok: census n=175 last=0175 next=0176`); as a control, HEAD's README
+and preamble fail the 175 census and the next-free `0176` line.~~ *(dated 2026-09-27, `s8d` build, package R1FIX-8d: P5's sentence, moved to the P5 paragraph above.)* It flips at
+this stage's close under D21-64 ruling 10, on its own dated
 ledger line. ADR-0173 (R2) and ADR-0174 (R1) each take a dated P5 evidence line, so their text stays true to what is built.
 
 *(dated 2026-09-26, `s8d` build, package P7.)* **R5 is ADR-0177**, `references/adr/0177-two-review-verb-rows-and-the-question-registry.md`,
@@ -1412,8 +1427,9 @@ The two tests — `lane_walk::the_fix_lane_walk_table_holds_for_a_rust_text_bug`
 activity's verdict **exactly**. If a test measures a different row, **the table is corrected by a dated line; the
 test is not bent to the table.** The selection column below is a reading of `select::step1::admits`, method ranks
 and tags (plus the packet's hand application), not a run. **Each test also prints one line (M9):**
-`LANE_WALK <lane> walked=<n> refused=<m>`. Checkpoint 8d (6a) floors `n` at 11 for the fix lane and 9 for the story
-lane. A later stage that flips a row to **walks** raises `n` and needs no edit there. Lowering a floor needs the
+`LANE_WALK <lane> walked=<n> refused=<m>`. Checkpoint 8d (6a) floors `n` at ~~11 for the fix lane and 9 for the story
+lane~~ **10 for the fix lane and 8 for the story lane** *(dated 2026-09-27, `s8d` build, package R1FIX-8d: D21-75, the measured counts of the F3-D2174 table
+below)*. A later stage that flips a row to **walks** raises `n` and needs no edit there. Lowering a floor needs the
 operator's dated ledger line first.
 
 **The fix lane** — `bug-standard`, item `kind = "bug"`, `cos = "standard"`, `has_repro = true`,
@@ -1586,6 +1602,7 @@ proposed owner is `s8g`. `smoke-test` and `rolling-deploy` are `s8g`'s. `debt-lo
 `docs-update` is the one new name. It is D21-73 item 4's `lint` output, which F2's receiver note in `s8g` §8g.1 names for
 `bdd-scenarios` and `docs-update` alike. Checkpoint 8d (6a)'s floors, 11 and 9, are still NOT met (10 < 11 and 8 < 9), and
 they are not changed here. D21-73 and D21-74 ruling 3 set them to these counts by the orchestrator's dated ledger line.
+*(dated 2026-09-27, `s8d` build, package R1FIX-8d.)* D21-75 has since set them to **10 and 8**, and (6a) passes at those floors.
 
 *(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 1.)* The paragraph below is superseded in this stage: §8d.3a (b)
 removes every shipped `severity` read (six rows rewritten, one step deleted, 32 conjuncts removed), so the three
@@ -1616,7 +1633,9 @@ scripted `{ "items": [] }` is empty only so that `adversarial-review`'s `overrid
 **These tables are Checkpoint 8d's, and two later stages move rows by dated line.** `s8f`'s close flips both
 `closure-record` rows to **walks** once its `backlog` producer lands (D21-46 R7). *(Final consistency pass 2026-09-24:
 the same dated line flips both `debt-logging` rows once `s8f`'s `item_create` handler lands (D21-47, cross #6; `s8f`
-§8f.7, §8f.10), so the claims then read 13 of 15 and 11 of 13.)* `s8g` re-homes `equivalence-boundary`
+§8f.7, §8f.10), so the claims then read ~~13 of 15 and 11 of 13~~.)* *(dated 2026-09-27, `s8d` build, package R1FIX-8d.)* On the F3-D2174 table above (fix 10 of 15,
+story 8 of 14; D21-75), `s8f`'s two flips leave **12 of 15** and **10 of 14**. The story lane selects fourteen, because
+`docs-update` joins its `implement` stage. `s8f`'s references take receiver notes. `s8g` re-homes `equivalence-boundary`
 from `verify` to the `implement` stage (D21-43 N23), with `integration-tests` beside it (D21-46 R5), so the verify
 rows above read as they stand at this stage and the implement rows gain them there. Each move takes a dated line in
 this section and moves the two `lane_walk` tests' expectations in the same commit. *(Final consistency pass
@@ -1746,6 +1765,14 @@ move the counts to 66 new names (53 in `rk-kernel`, 13 in `rk-cli`), **65 net**,
 three, by dated edit at stage open. `evaluator::predicate_null_arithmetic`,
 `quality_block::adr0072_s8b_repairs_are_versioned_and_changelogged` and `quality_block::ac527_empty_set_terminal_condition`
 are amended, not added.
+*(dated 2026-09-27, `s8d` build, package R1FIX-8d; the refuting round's floor finding.)* **The counts after F2-D2173 and F3-D2174.** F2-D2173 added **seven**
+names (six `rk-kernel`, one `rk-cli`; its note below is corrected to say so), and F3-D2174 added four (three `rk-kernel`, one
+of them the in-crate `select::step5::tests::` test, and one `rk-cli`). **New test names are now 77** (62 in `rk-kernel`, 15
+in `rk-cli`), which is **76 net** of the `walk_semantics` removal. Re-counted off disk against `d46b2eb` by `#[test]` and
+`#[tokio::test]` fn under `crates/` (`scratchpad/s8d/R1FIX-8d-testdiff.py`): 80 fn names are added and 3 removed. The 80 are
+the 77, the two renames' new names (`guard_context`, `tool_verb_routing`) and P3's ignored child entrypoint. The 3 are the
+`walk_semantics` removal and the two renames' old names. So 80 − 1 − 3 = **76** execute. Checkpoint 8d (11)'s floor rises by
+the eleven, to 877 + 76 = **953**. Ten of the eleven are named in (4d) and (8), and the eleventh in (4e).
 
 **Mutants** — each authored, run from **Python** in a throwaway export that is checked out and then overlaid with
 the working tree's bytes (a clone under `core.autocrlf=true` is not byte-faithful), each diffed and read, and each
@@ -1977,7 +2004,8 @@ reds are the claim-versus-measurement differences above, and Checkpoint 8d (6a) 
 until the operator rules. It is not lowered here.
 
 *(dated 2026-09-27, `s8d` build, package F2-D2173; D21-73 option (C); R8 = ADR-0179, proposed.)* **D21-73's three selection
-defects and item 5, red then green, and thirteen mutants.** Six new tests (five `rk-kernel`, one `rk-cli`), each run RED for its
+defects and item 5, red then green, and thirteen mutants.** ~~Six new tests (five `rk-kernel`, one `rk-cli`)~~ Seven new tests (six `rk-kernel`, one `rk-cli`) *(dated 2026-09-27, `s8d` build, package R1FIX-8d: corrected to
+the seven it names and its GREEN line counts)*, each run RED for its
 stated reason before its code: `producer::step4_picks_the_lowest_rank_not_the_first_id` at *"AC-046: the LOWEST method_rank wins,
 whatever its id sorts to — left: ("a-dear", 30), right: ("z-cheap", 5)"*; `producer::a_tie_at_the_lowest_rank_is_refused_whatever_the_ids_sort_to`
 at its `expect_err` (*"a tie at the lowest rank must refuse, never resolve"*: step 4 chose `a-dear`); `selection::a_require_row_keyed_on_rigor_reads_the_stages_rigor`
@@ -2207,7 +2235,7 @@ processes are `s8e`'s; rendering and landing are `s8f`'s; the verify record and 
 - **The two verb rows route**, the nine lane questions and N3's `facet.change` load, `answer` validates against
   them, a `null` `change` at triage opens AC-079's gate and its answer binds the facet, and the `change` deriver is
   the only source of `change`.
-- **The walk table holds** — both lanes, exactly, above a walked floor of 11 and 9.
+- **The walk table holds** — both lanes, exactly, above a walked floor of ~~11 and 9~~ **10 and 8** *(dated 2026-09-27, `s8d` build, package R1FIX-8d: D21-75)*.
 - **Nothing regressed**: the executor guards `s7g` built stay green. Checkpoints 8c, 8b, 7g and 7a re-run whole
   (8b because this stage amends its (3); *D21-48 (2026-09-24)*), and 5 re-runs when `crates/rk-types` moved. Each runs as `nodispatch env RK_CP_NESTED=1 bash …` under the shared D21-47
   wrapper (`runbook/tools/nodispatch.sh`: a compiled fake `claude` printing the pin, `REDKILN_LAUNCH_RECORD` unset,
@@ -2280,6 +2308,11 @@ if printf '%s\n' 'test result: ok. 1 passed; 0 failed; 0 ignored' | grep -qE "te
 # names: step grain 14, resolver 25, forward-ref licence 7, D21-67 rulings 6, on_false/telemetry/breaker 13, walk
 # table 2, s7g executor guards 12, composition root 16. No literal edit was owed. R5 kept (9)'s home, and it passes
 # standalone.
+# (dated 2026-09-27, s8d build, package R1FIX-8d) The refuting round found the eleven tests F2-D2173 and F3-D2174
+# added (§8d.10) in no selection here. Ten are `--test it` names: eight in the new (4d), `want` 8, and two added to
+# (8), whose `want` moves from 16 to 18. That makes 105 `--test it` names in all. The eleventh is an in-crate unit
+# test, outside §8d.10's `--test it` rule, and (4e) selects it through `--lib` beside AC-078's case. Each changed
+# selection was run from this file's bytes through the no-dispatch helper.
 if printf '%s\n' 'test result: ok. 12 passed; 0 failed; 0 ignored' | grep -qE "test result: ok\. 2 passed; 0 failed"; then echo "FAIL: synthetic control — the exact-count grep admits 12 for 2"; exit 1; fi
 
 # ---- (3) BULLETS 1-2: STEP GRAIN, RE-ENTRY ACROSS A REAL KILL, AND DEFECT 2.
@@ -2351,6 +2384,41 @@ run_named rk-kernel "D21-67 rulings" \
   quality_block::adr0072_s8b_repairs_are_versioned_and_changelogged \
   quality_block::ac527_empty_set_terminal_condition
 
+# ---- (4d) R8 (ADR-0179) AND ADR-0173 9a: D21-73'S AND D21-74'S RULINGS. (dated 2026-09-27, s8d build, package
+# ---- R1FIX-8d) Added by dated edit after the refuting round found them in no selection: the eight `--test it` names
+# ---- F2-D2173 and F3-D2174 added to rk-kernel (§8d.10). `want` is the number of names (eight). Their two rk-cli
+# ---- names ride (8). The in-crate step-5 test is not in the `it` binary, and (4e) selects it.
+run_named rk-kernel "R8 and 9a" \
+  producer::step4_picks_the_lowest_rank_not_the_first_id \
+  producer::a_tie_at_the_lowest_rank_is_refused_whatever_the_ids_sort_to \
+  selection::a_require_row_keyed_on_rigor_reads_the_stages_rigor \
+  dag::one_activity_providing_two_required_kinds_is_one_node \
+  dag::an_activity_optionally_requiring_a_kind_it_provides_selects_with_no_self_edge \
+  tool_verb_routing::a_row_input_the_step_leaves_undeclared_is_supplied_by_the_routing \
+  verb_registry::the_package_binaries_declaration_supplies_the_package_rows_binaries \
+  test_selection::inside_the_changeset_producer_affected_resolves_over_the_run_branch_diff
+
+# ---- (4e) THE IN-CRATE STEP-5 TESTS (R8 = ADR-0179 decision 2b; D21-74 ruling 1). (dated 2026-09-27, s8d build,
+# ---- package R1FIX-8d) `select::step5::tests::` is a unit module of rk-kernel's lib, not of its `it` binary, so it is
+# ---- outside §8d.10's `--test it` rule and run_named cannot reach it. run_lib_named is run_named over `--lib`, with
+# ---- the same three assertions: rc 0, each name's own `... ok`, and an exact count equal to the names. AC-078's case
+# ---- rides beside the new test because it alone kills MF3c, which the 2-cycle cannot see (§8d.10's F3-D2174 line).
+run_lib_named() {
+  pkg=$1; label=$2; shift 2
+  want=$#
+  [ "$want" -gt 0 ] || { echo "FAIL: selection '$label' names no test"; exit 1; }
+  out=$(cargo test -p "$pkg" --lib -- "$@" --exact 2>&1); rc=$?
+  [ "$rc" -eq 0 ] || { echo "FAIL: selection '$label' rc=$rc"; printf '%s\n' "$out" | tail -25; exit 1; }
+  for t in "$@"; do
+    printf '%s\n' "$out" | grep -qxF "test $t ... ok" || { echo "FAIL: '$label': $t did not report ok — renamed, deleted or not selected"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
+  done
+  printf '%s\n' "$out" | grep -qE "test result: ok\. $want passed; 0 failed" || { echo "FAIL: '$label' did not run exactly $want tests"; printf '%s\n' "$out" | grep -E 'test result:'; exit 1; }
+  echo "ok: $label ($want)"
+}
+run_lib_named rk-kernel "step5 in-crate" \
+  select::step5::tests::the_cycle_refusal_names_a_node_on_the_cycle_not_one_downstream \
+  select::step5::tests::ac078_cyclic_dag_fails_before_dispatch
+
 # ---- (5) BULLETS 5-6: ON_FALSE AS ITERATION, THE ERROR ROW AND THE BREAKER.
 run_named rk-kernel "on_false, telemetry, breaker" \
   on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path \
@@ -2374,7 +2442,9 @@ run_named rk-kernel "walk table" \
   lane_walk::the_story_lane_walk_table_holds_for_a_spike_toml_story
 
 # ---- (6a) THE WALKED FLOOR (M9). Each lane_walk test prints `LANE_WALK <lane> walked=<n> refused=<m>` once. `n` must
-# ---- be at least this stage's claim: 11 (fix) and 9 (story). A later stage's flip to "walks" raises n and needs no
+# ---- be at least this stage's claim: ~~11 (fix) and 9 (story)~~ 10 (fix) and 8 (story) (dated 2026-09-27, s8d build,
+# ---- package R1FIX-8d: D21-75's measured floors, as the loop below reads them). A later stage's flip to "walks"
+# ---- raises n and needs no
 # ---- edit here; LOWERING a floor needs the operator's dated ledger line first. `grep -o` reads the line even where
 # ---- libtest glues it to the `test ... ` prefix.
 # ---- (dated 2026-09-27, s8d build, package F2-D2173) TODO (D21-73): the floors 11 and 9 below are NOT met and are
@@ -2457,6 +2527,9 @@ run_named rk-kernel "s7g executor guards" \
   projection::rebuild_differential
 
 # ---- (8) BULLET 7 AND DEFECT 4: THE COMPOSITION ROOT — binding, questions, verb rows, the deriver, explain.
+# ---- (dated 2026-09-27, s8d build, package R1FIX-8d) Two names added by dated edit, F2-D2173's and F3-D2174's rk-cli
+# ---- tests (§8d.10): the composition root's row-input binding and the change deriver's run-branch reader. `want`
+# ---- moves from 16 to 18 with them.
 run_named rk-cli "composition root" \
   transcription::the_production_path_transcribes_a_step_list_and_never_supplies_none \
   transcription::the_spec_a_real_run_binds_carries_its_steps \
@@ -2473,7 +2546,9 @@ run_named rk-cli "composition root" \
   change_deriver::an_empty_range_abstains_and_never_defaults \
   change_deriver::a_null_change_at_triage_opens_the_unknown_facet_gate_and_its_answer_binds_the_facet \
   explain::explain_prints_one_output_digest_per_committed_step_activation \
-  exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three
+  exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three \
+  adapter_selection::the_composition_root_binds_the_row_inputs_no_step_declares \
+  change_deriver::the_run_branch_reader_reads_the_items_changeset_paths_through_rk_git
 nd_check "(7)-(8) selections" || exit 1
 
 # ---- (9) THE QUESTION REGISTRY'S CONTENT — a floor beneath (8)'s loader test: each of §8d.6's ten ids (nine lane
@@ -2537,8 +2612,15 @@ n=$(printf '%s\n' "$hit" | grep -c 'fn selection_of')
 # ---- is rk-ports' conformance::port_conformance_fake_rows, P6's open blocker, and it is counted in the 877. So
 # ---- passed + failed = 942 = 877 + 65: sixty-five net new tests execute. The tenth ignored test is not one of the
 # ---- sixty-six names. It is P3's child entrypoint, cross_process::ac013_child_commits_two_agent_steps_then_dies,
-# ---- which the parent runs by name. FLOOR is unchanged. It is reached only once P6's blocker is ruled.
-FLOOR=942
+# ---- which the parent runs by name. FLOOR is unchanged. ~~It is reached only once P6's blocker is ruled.~~
+# ---- (dated 2026-09-27, s8d build, package R1FIX-8d) RE-DERIVED. The struck sentence went stale when D21-72 ruled
+# ---- P6's blocker: §8d.11's F1-D2172 note reads the suite at 942 passed / 0 failed / 10 ignored. F2-D2173 then added
+# ---- seven tests and F3-D2174 four (§8d.10), and the floor did not move with them. Re-counted off disk against
+# ---- d46b2eb, by `#[test]`/`#[tokio::test]` fn under crates/: 80 names added, one of them the ignored child
+# ---- entrypoint, and 3 removed (the walk_semantics removal and two renames' old names). Net executing:
+# ---- 80 - 1 - 3 = 76 = 65 + 7 + 4. FLOOR = 877 + 76 = 953, the whole suite recorded at cbd7cc8 (953/0/10 over 44).
+# ---- ~~FLOOR=942~~.
+FLOOR=953
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

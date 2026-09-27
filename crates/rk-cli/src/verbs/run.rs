@@ -2881,7 +2881,18 @@ pub fn agent_step_timeout_secs(
 
 /// Step (8)'s binding pass: one `Binder::bind` per DAG node, each recorded into the input set.
 ///
-/// # 🛑 ONE SPEC PER NODE, NOT PER STEP — THE RUNTIME DISPATCHES WHOLE ACTIVITIES
+/// # 🛑 EVERY NODE IS BOUND, WITH ONE PER-STEP SPEC PER AGENT STEP (R1)
+///
+/// *(dated 2026-09-27, `s8d` build, package R1FIX-8d; R1 = ADR-0174 decisions 1, 2 and 9, proposed.)*
+/// The heading this section carried until R1, ~~ONE SPEC PER NODE, NOT PER STEP — THE RUNTIME
+/// DISPATCHES WHOLE ACTIVITIES~~, is false and is struck. Each agent step of a node is bound to
+/// its OWN spec: that step's role's card, that step's `outputs = "value:<Kind>"` schema and
+/// that step's own bound (`agent_step_timeout_secs`), carried on `RecordedSpec::step_specs`
+/// beside the activation's spec, which is the first agent step's. A node with no agent step is
+/// bound as an explicit absence: no activation spec and an empty per-step map, never a
+/// synthesised card. The paragraph below describes the binder before R1 and is kept as its
+/// history; its *"exactly one binding whatever its steps' kinds are"* and *"the role is
+/// whichever of the activity's steps nominates one"* no longer hold.
 ///
 /// `Runtime::run_activity` takes one `ActivitySpec` for an `(item, activity_id@version)`
 /// activation, so a DAG node gets exactly one binding whatever its steps' kinds are. The role is

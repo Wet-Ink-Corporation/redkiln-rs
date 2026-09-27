@@ -79,7 +79,8 @@ the cross-file items D21-47 assigns here; every fix below was checked against th
   `doctor_journal::unread_counts_every_artifact_row_a_fake_harness_lane_writes`.
   New mutants: M44 and M45.
 - **M3 / cross #6 → §8f.1, §8f.7, §8f.10, §8f.13.** `debt-logging` refuses at `file` at Checkpoint 8d, and its handler
-  is this stage's. Its rows flip to **walks** by the same dated line, so `s8d`'s claims become 13 of 15 and 11 of 13.
+  is this stage's. Its rows flip to **walks** by the same dated line, so `s8d`'s claims become ~~13 of 15 and 11 of 13~~ **12 of 15 and 10 of 14**
+  *(dated 2026-09-27, `s8d` build, package R1FIX-8d; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-75.)* `s8d` §8d.9's F3-D2174 table measures fix 10 of 15 and story 8 of 14 at `s8d`'s close (D21-75), and the story lane selects fourteen because `docs-update` joins its `implement` stage.
   8d is now **provisional**, and (9) re-runs it whole. New test:
   `landing::debt_logging_walks_past_file_through_item_create`.
   New mutant: M46.
@@ -278,8 +279,8 @@ names this stage as the candidate owner of its read (`s8c` §8c.12 item 3). D21-
   stage. `s8d` §8d.9 now records it as refusing (consistency pass 2026-09-24). This stage's close flips the rows back
   to **walks** by dated line (§8f.10). *Amended 2026-09-24 (D21-47, cross #6):* `debt-logging` also stops at
   Checkpoint 8d. It stops at `file` in both lanes, on `item_create`, whose handler is this stage's (§8f.7). The same
-  dated line flips its two rows to **walks**, so `s8d` §8d.9's claims then read **13 of 15** (fix lane) and **11 of
-  13** (story lane). The rows and the two `lane_walk` expectations are Checkpoint 8d's premise, so moving them makes
+  dated line flips its two rows to **walks**, so `s8d` §8d.9's claims then read ~~**13 of 15** (fix lane) and **11 of
+  13** (story lane)~~ **12 of 15** (fix lane) and **10 of 14** (story lane) *(dated 2026-09-27, `s8d` build, package R1FIX-8d; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-75.)* `s8d` §8d.9's F3-D2174 table measures fix 10 of 15 and story 8 of 14 at `s8d`'s close (D21-75), and the story lane selects fourteen because `docs-update` joins its `implement` stage. The rows and the two `lane_walk` expectations are Checkpoint 8d's premise, so moving them makes
   8d **provisional**, and Checkpoint 8f (9) re-runs it whole.
 
 **Order.** (i) The stage-open measurements (§8f.2). (ii) The three records, written `proposed` before any code they
@@ -959,8 +960,10 @@ refusal owned by `s8f`.
 - This stage's close flips the two `closure-record` rows back to **walks** by dated line, and the two `debt-logging`
   rows with them (§8f.7 above). The two `lane_walk` tests' expected verdicts move in the same commit (§8f.10).
 - After this stage **no lane activity stops on a feed**, and neither `closure-record` nor `debt-logging` stops at
-  all. `s8d` §8d.9's claims read **13 of 15** and **11 of 13**, and the two left refusing in each lane are
-  `smoke-test` and `rolling-deploy`, which are `s8g`'s (D21-47, cross #6).
+  all. `s8d` §8d.9's claims read ~~**13 of 15** and **11 of 13**, and the two left refusing in each lane are
+  `smoke-test` and `rolling-deploy`, which are `s8g`'s (D21-47, cross #6)~~ **12 of 15** and **10 of 14** *(dated 2026-09-27, `s8d` build, package R1FIX-8d; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-75.)* `s8d` §8d.9's F3-D2174 table measures fix 10 of 15 and story 8 of 14 at `s8d`'s close (D21-75), and the story lane selects fourteen because `docs-update` joins its `implement` stage.
+  Left refusing, all `s8g`'s: on the fix lane `confirmation-test` (D21-73 item 4), `smoke-test` and `rolling-deploy`; on
+  the story lane `bdd-scenarios` and `docs-update` (the `lint` output, D21-73 item 4), `smoke-test` and `rolling-deploy`.
   `landing::closure_record_walks_past_audit_on_the_backlog_feed` proves it through `verbs::run::run`.
 - `feed::every_shipped_unprovided_feed_is_reached_only_as_optional` pins the list. A later catalog edit that makes
   a mandatory reach of an `unprovided` feed fails it by name.
@@ -1121,7 +1124,7 @@ a note inside them would read as the criterion.
 | AC-372 | *Verified by*'s doctor-rule clause is read as a test of `cost`'s renderer, which `status` shares, with AC-415's red case (D21-43 N12; §8f.8) | ``test of `cost` `` in the entry |
 | design §5.4 | The tier-1 row: a checkpoint at every committed step that changed the tree (N10) and at every boundary when due. The `structured_drift` row: its payload, and that it opens a drift gate. The `artifact.write` and `artifact.read` rows: their producers exist. The `dispatch_completed` row: `activity_id_at_version` (the `item` note is `s8e`'s, under N5). Under D21-46 R7: the `drift_advisory` row gains its second producing case, a vouched root's own change with `upstream = null` (§8f.5), and the `artifact.write` row gains the attach's path carrier as the render record fixes it | read at the adversarial pass |
 | `s8c` | `s8c` §8c.4's `backlog` feed row and `s8c` §8c.12's handed-on item 3 take a dated note: the producer is built at `s8f` (D21-46 R7), and `[feed.*.backlog]` reads `verb = "backlog"` (§8f.7) | read at the adversarial pass |
-| `s8d` | One dated line covers `s8d` §8d.9's two `closure-record` rows, its two `debt-logging` rows (D21-47, cross #6) and the lanes' claimed counts. Both activities **walk** once this stage's `backlog` producer and `item_create` handler land. The claims then read **13 of 15** and **11 of 13**. The two `lane_walk` tests' expected verdicts move in the same commit (§8f.7). Checkpoint 8d's (6a) floors the `LANE_WALK` counts at 11 and 9, and `s8d` §8d.9 reads *"A later stage that flips a row to **walks** raises `n` and needs no edit there"*. So no guard line is amended (re-read 2026-09-24, final consistency pass). The rows are still its premise, so **8d is provisional**, and Checkpoint 8f (9) re-runs it whole (D21-47's time-bound-guard rule) | the two `lane_walk` tests in Checkpoint 8f (5)'s whole suite, and Checkpoint 8d re-run whole in (9) |
+| `s8d` | One dated line covers `s8d` §8d.9's two `closure-record` rows, its two `debt-logging` rows (D21-47, cross #6) and the lanes' claimed counts. Both activities **walk** once this stage's `backlog` producer and `item_create` handler land. The claims then read ~~**13 of 15** and **11 of 13**~~ **12 of 15** and **10 of 14** *(dated 2026-09-27, `s8d` build, package R1FIX-8d; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-75.)* `s8d` §8d.9's F3-D2174 table measures fix 10 of 15 and story 8 of 14 at `s8d`'s close (D21-75), and the story lane selects fourteen because `docs-update` joins its `implement` stage. The two `lane_walk` tests' expected verdicts move in the same commit (§8f.7). Checkpoint 8d's (6a) floors the `LANE_WALK` counts at ~~11 and 9~~ 10 and 8 (D21-75), and `s8d` §8d.9 reads *"A later stage that flips a row to **walks** raises `n` and needs no edit there"*. So no guard line is amended (re-read 2026-09-24, final consistency pass). The rows are still its premise, so **8d is provisional**, and Checkpoint 8f (9) re-runs it whole (D21-47's time-bound-guard rule) | the two `lane_walk` tests in Checkpoint 8f (5)'s whole suite, and Checkpoint 8d re-run whole in (9) |
 | `s7i` | `s7i` (5)'s `GRAMMAR` widens to the breakdown forms. Its "owns no reading" branch also requires zero owned `dispatch_completed` rows, because after §8f.8 an item with dispatches and no reading prints more than one line. `s7i` §7i.2's *"nothing else"* takes a dated note | Checkpoint 7i re-run whole (Checkpoint 8f (9)) |
 | `s7d` | `s7d` §7d.7's *"prints **from the recorded resolution only**"* takes a dated note for the landing block (§8f.4) | read at the adversarial pass |
 
