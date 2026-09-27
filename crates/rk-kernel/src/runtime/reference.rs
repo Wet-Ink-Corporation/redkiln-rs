@@ -356,6 +356,12 @@ pub struct Scope {
     /// escalate gate's answer, read by the step its re-entry resumes into).
     previous_answers: BTreeMap<String, GateAnswer>,
     ran: BTreeSet<String>,
+    /// *(dated 2026-09-27, `s8d` build, package R6FIX-8d; §8d.3's R2FIX-8d row, R2 = ADR-0173
+    /// decision 1.)* Every step that has run in THIS ACTIVATION, in any frame: what a bare
+    /// `${<step>}` evidence pointer reads (*"it resolves only once the step has run in this
+    /// activation"*). [`Scope::open_frame`] never clears it, so an escalate gate answered before
+    /// its re-entry stays evidence when the resumed frame skips it; `ran` stays frame-scoped.
+    ran_ever: BTreeSet<String>,
     element: Option<Json>,
     /// *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177, proposed.)* Each `tool` step's `run`,
     /// by step id, so a route can find the step whose verb it reads (`verdict_record` reads the
@@ -421,6 +427,7 @@ impl Scope {
     /// Bind a step's output in the current frame (and mark it run).
     pub fn bind_output(&mut self, step: &str, value: Json) {
         self.ran.insert(step.to_owned());
+        self.ran_ever.insert(step.to_owned());
         self.outputs.insert(step.to_owned(), value);
     }
 
@@ -434,11 +441,13 @@ impl Scope {
     /// method returns none).
     pub fn mark_ran(&mut self, step: &str) {
         self.ran.insert(step.to_owned());
+        self.ran_ever.insert(step.to_owned());
     }
 
     /// Bind a gate step's answer.
     pub fn bind_answer(&mut self, step: &str, answer: GateAnswer) {
         self.ran.insert(step.to_owned());
+        self.ran_ever.insert(step.to_owned());
         self.answers.insert(step.to_owned(), answer);
     }
 
@@ -474,7 +483,8 @@ impl Scope {
     /// becomes its PREVIOUS-frame binding, and a step that bound nothing in the frame now closing
     /// has no previous value (it is `null` to an optional ref). A self or forward ref therefore
     /// reads the frame that re-entered it (ADR-0055; ADR-0042), never the current one; a step
-    /// before `from` keeps its binding, since the frame does not re-run it.
+    /// before `from` keeps its binding, since the frame does not re-run it. The activation-wide
+    /// `ran_ever` set is NOT cleared (R6FIX-8d): a bare `${<step>}` pointer reads the activation.
     pub fn open_frame(&mut self, from: usize, to: usize) {
         let ids: Vec<String> = self
             .order
@@ -910,7 +920,8 @@ fn resolve_step_ref(
             )
         }
         Member::Whole => {
-            if scope.ran.contains(target) {
+            // R6FIX-8d: the pointer reads the ACTIVATION-wide set, never only the current frame.
+            if scope.ran_ever.contains(target) {
                 Ok(serde_json::json!({ "step": target, "kind": kind_token(kind) }))
             } else {
                 absent(format!(

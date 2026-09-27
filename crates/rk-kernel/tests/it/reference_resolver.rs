@@ -1519,3 +1519,119 @@ fn an_escalate_re_entry_binds_a_later_steps_previous_frame_value_and_is_null_fir
         "the re-entry is a new frame of `attempt`; its fresh repeat runs inside it"
     );
 }
+
+/// **A bare `${<step>}` evidence pointer resolves once the step has run IN THIS ACTIVATION, not
+/// only in the current frame** *(dated 2026-09-27, `s8d` build, package R6FIX-8d; refuting round
+/// 6's spec-conformance major)*. §8d.3's dated R2FIX-8d row and ADR-0173 decision 1: the pointer
+/// *"resolves only once the step has run in this activation"*. Over `minimal-repro`'s shape: the
+/// exhausted `attempt` escalates to `triage-gate`, the gate is answered, the re-entry opens a new
+/// frame from `attempt` to the end, `attempt` reproduces and `triage-gate` is skipped by its own
+/// `when`. The gate WAS answered in this activation, so the completion row's `evidence` carries its
+/// `{step, kind}` pointer (ADR-0036: *"a `gate` step mints `HumanAnswer`"*). CONTROLS: a gate never
+/// reached is `null` (omitted) to `${triage-gate?}` and refuses by name to a mandatory
+/// `${triage-gate}`.
+#[test]
+fn an_answered_escalate_gate_is_evidence_on_the_completion_row_after_its_re_entry() {
+    let steps = |evidence: &[&str]| {
+        let mut emit = step("emit", StepKind::Emit);
+        emit.emit = Some(rk_kernel::catalog::EmitBinding {
+            artifacts: BTreeMap::new(),
+            evidence: evidence.iter().map(|e| (*e).to_owned()).collect(),
+        });
+        vec![
+            repeating(
+                agent("attempt", &[("hint", "${triage-gate.answer?}")]),
+                "${attempt.outputs.status} == 'reproduced'",
+                1,
+                Some("escalate"),
+                Some("repro.cannot-reproduce"),
+            ),
+            gate(
+                "triage-gate",
+                "repro.cannot-reproduce",
+                Some("${attempt.outputs.status} != 'reproduced'"),
+            ),
+            emit,
+        ]
+    };
+    let evidence_of = |rig: &Rig| -> Vec<Json> {
+        let rows = journal(&rig.db);
+        let completion: Vec<_> = rows
+            .iter()
+            .filter(|e| rk_kernel::runtime::activity::is_completion_row(e))
+            .collect();
+        assert_eq!(completion.len(), 1, "PREMISE: one completion row: {rows:?}");
+        completion[0].payload["evidence"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+    };
+    let attempt_ptr = serde_json::json!({ "step": "attempt", "kind": "agent" });
+    let gate_ptr = serde_json::json!({ "step": "triage-gate", "kind": "gate" });
+
+    // THE ESCALATE RE-ENTRY, answered, then a pass that succeeds.
+    for (evidence, label) in [
+        (&["${attempt}", "${triage-gate?}"][..], "optional"),
+        (&["${attempt}", "${triage-gate}"][..], "mandatory"),
+    ] {
+        let rig = Rig::new(
+            vec![
+                serde_json::json!({"status": "no"}),
+                serde_json::json!({"status": "reproduced"}),
+            ],
+            Vec::new(),
+        );
+        let first = rig.walk(&steps(evidence));
+        assert!(
+            first.gate_opened().is_some(),
+            "PREMISE ({label}): the exhausted `attempt` escalates to `triage-gate`: {}",
+            crate::on_false_exec::refusal(&first)
+        );
+        rig.answer(&first, "look-at-the-logs");
+        let second = rig.walk(&steps(evidence));
+        assert!(
+            second.completed() && second.step_error().is_none(),
+            "the answered re-entry reproduces, skips the gate by its `when` and completes \
+             ({label}): {}",
+            crate::on_false_exec::refusal(&second)
+        );
+        assert_eq!(
+            (rig.harness.dispatches(), rig.harness.input(1, "hint")),
+            (2, serde_json::json!("look-at-the-logs")),
+            "PREMISE ({label}): the resumed pass was dispatched with the gate's answer"
+        );
+        assert_eq!(
+            evidence_of(&rig),
+            vec![attempt_ptr.clone(), gate_ptr.clone()],
+            "the gate answered in THIS activation is evidence on the completion row, although the \
+             re-entry's frame skipped it ({label})"
+        );
+    }
+
+    // CONTROL: `attempt` reproduces on its first pass, so `triage-gate` is never reached.
+    let rig = Rig::new(
+        vec![serde_json::json!({"status": "reproduced"})],
+        Vec::new(),
+    );
+    let report = rig.walk(&steps(&["${attempt}", "${triage-gate?}"]));
+    assert!(
+        report.completed() && report.gate_opened().is_none(),
+        "PREMISE: the control completes without reaching the gate: {}",
+        crate::on_false_exec::refusal(&report)
+    );
+    assert_eq!(
+        evidence_of(&rig),
+        vec![attempt_ptr],
+        "a gate never reached is `null` to `${{triage-gate?}}`, and omitted"
+    );
+    let rig = Rig::new(
+        vec![serde_json::json!({"status": "reproduced"})],
+        Vec::new(),
+    );
+    let report = rig.walk(&steps(&["${attempt}", "${triage-gate}"]));
+    let e = crate::on_false_exec::refusal(&report);
+    assert!(
+        !report.completed() && e.contains("triage-gate") && e.contains("has not run"),
+        "a mandatory `${{triage-gate}}` to a gate never reached refuses by name: {e}"
+    );
+}

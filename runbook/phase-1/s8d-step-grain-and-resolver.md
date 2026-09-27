@@ -620,7 +620,7 @@ or it is absent."*). R2's resolver supplies, for every step it reaches:
 
 | form | resolves to | absent / unresolvable |
 | --- | --- | --- |
-| `${<step>.outputs[.path]}`, `${<step>}`, `.len()` | the prior step's bound output in this activation, at the **current** iteration path. *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's bare-`${<step>}` finding, option (b)): this holds for `${<step>.outputs[.path]}` and `.len()`. A **bare** `${<step>}` is an **evidence pointer** `{"step": <id>, "kind": <step kind>}`, not the step's output: every shipped bare ref sits in an `emit`'s `evidence` list, and ADR-0036 quotes design §2's rule that every `Evidence` variant *"names the step that produced it"*, and its Decision fixes the variant by step kind (*"a `tool` step mints `ToolReport` … an `agent` step mints `Findings` or `SelfCheck` … a `gate` step mints `HumanAnswer`"*). The pointer names the step, whose kind fixes the variant. It resolves only once the step has run in this activation; a mandatory one that has not refuses by name, and `${<step>?}` is `null`.* | a mandatory ref to a step that has not run refuses by name (step id + reference); `${…?}` is `null` (ADR-0032's Decision: *"Absent `?` inputs are `null`"*) |
+| `${<step>.outputs[.path]}`, `${<step>}`, `.len()` | the prior step's bound output in this activation, at the **current** iteration path. *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's bare-`${<step>}` finding, option (b)): this holds for `${<step>.outputs[.path]}` and `.len()`. A **bare** `${<step>}` is an **evidence pointer** `{"step": <id>, "kind": <step kind>}`, not the step's output: every shipped bare ref sits in an `emit`'s `evidence` list, and ADR-0036 quotes design §2's rule that every `Evidence` variant *"names the step that produced it"*, and its Decision fixes the variant by step kind (*"a `tool` step mints `ToolReport` … an `agent` step mints `Findings` or `SelfCheck` … a `gate` step mints `HumanAnswer`"*). The pointer names the step, whose kind fixes the variant. It resolves only once the step has run in this activation; a mandatory one that has not refuses by name, and `${<step>?}` is `null`.* *(dated 2026-09-27, `s8d` build, package R6FIX-8d; refuting round 6's spec-conformance major.)* **"Has run in this activation" means in ANY frame of it, not only the current one.** A loop-back, a `repeat` pass or an escalate re-entry opens a new frame (`Scope::open_frame`), and that frame does not un-run a step for the bare pointer: the pointer reads an activation-wide set that no frame clears (`Scope`'s `ran_ever`). `${<step>.outputs[.path]}`, `.len()` and `.answer` keep their frame readings above. So an escalate gate answered before its re-entry, which the resumed frame then skips by its own `when`, is evidence on the completion row, as `minimal-repro`'s `${triage-gate?}` declares; `reference_resolver::an_answered_escalate_gate_is_evidence_on_the_completion_row_after_its_re_entry` pins it, with a gate never reached `null` to `?` and refused to a mandatory ref. | a mandatory ref to a step that has not run refuses by name (step id + reference); `${…?}` is `null` (ADR-0032's Decision: *"Absent `?` inputs are `null`"*) |
 | `${<this-step>.outputs?}` inside a loop | the **previous** iteration's output, `null` on the first pass (ADR-0055) | — |
 | `${<later-step>.outputs?}`, `${<later-gate>.answer?}`: a **feedback ref** (ADR-0042) | the value the later step bound in the **previous** frame of the cycle that re-enters this step. That cycle is a loop-back, a `repeat` pass or an escalate gate's re-entry (schema §3: *"resumes **into the same step** with `${gate.answer}` bound"*; the section was cited as §4 until D21-48's pass). It is `null` on the first pass (ADR-0042: *"it is `null` on the first pass"*) | it never binds the **current** frame's value. All 81 shipped forward refs in `inputs` carry `?` (measured at `fc80687`; 77 after this stage's four removals). A forward ref without `?` refuses by name at load, and so does one that no licence covers, `?` or not (D21-48 X8; *Which forward refs are licensed*, below) |
 | `${a?} ?? ${b}` (ADR-0034) | the left operand's value unless it is `null`, otherwise the right operand's | the right operand resolves like any other ref. There are 3 shipped uses, all in `emit` steps (`appetite-check`, `branch-by-abstraction`, `unit-tests`) |
@@ -666,6 +666,11 @@ charges that frame's pass. Each inner harness retry that the stream records char
 reason: BudgetExhausted }`, which reaches AC-024 and AC-025 unchanged (ADR-0122). ADR-0037 is a load-time lint on the
 declared field and does not move. R3 states this, and
 `on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path` asserts the per-frame charge.
+*(dated 2026-09-27, `s8d` build, package R6FIX-8d; refuting round 6's tests-mutants major.)* So does
+`on_false_exec::a_pass_is_charged_only_by_the_dispatches_made_in_it_across_a_fan_out_and_a_repeat`, over the arms the
+loop-back cannot reach: each `repeat` frame is a pass of its own (`repeat:1` and `repeat:2`, one attempt each), and a
+`for_each` that made no dispatch (copy 0 refused before its dispatch, or every copy served from its commit on
+re-entry) charges nothing (§8d.10's R6FIX-8d note).
 *(dated 2026-09-27, `s8d` build, package R3FIX-8d; refuting round 3's spec-conformance major.)* ~~**Raised, not decided
 here: whether a kernel re-dispatch of the same step charges its pass again.** The build charges once per executed
 step (ADR-0175 decision 7, proposed); this paragraph says *"Every agent or tool dispatch in a frame charges that
@@ -2244,6 +2249,47 @@ made from `scratchpad/s8d/r5fix-8d-mutant-mr4q.py`: anchor asserted once, tmp + 
 `finally`, sha256 re-checked. **Counts unchanged.** The arm is inside an existing test, so no name is added, Checkpoint
 8d (5)'s `want` stays 18, and (11)'s FLOOR stays **960**.
 
+*(dated 2026-09-27, `s8d` build, package R6FIX-8d; refuting round 6's spec-conformance major and tests-mutants major.)*
+**Two new tests, and five mutants killed.** Both tests are in `rk-kernel`.
+- `reference_resolver::an_answered_escalate_gate_is_evidence_on_the_completion_row_after_its_re_entry` walks
+  `minimal-repro`'s shape: `attempt` (`repeat` max 1, `escalate`), `triage-gate` (guarded by `${attempt.outputs.status}
+  != 'reproduced'`) and an `emit` whose `evidence` is `["${attempt}", "${triage-gate?}"]`, and in a second arm the
+  mandatory `${triage-gate}`. The first walk escalates to the gate, which is answered. The second walk re-enters
+  `attempt` under a new frame, dispatches it with the answer bound, reproduces, skips the gate by its `when` and
+  completes. The test asserts that the completion row's `evidence` is the two pointers, the gate's
+  `{"step": "triage-gate", "kind": "gate"}` included. Its CONTROLS: `attempt` reproduces on its first pass, so the gate
+  is never reached. Then `${triage-gate?}` is omitted, and a mandatory `${triage-gate}` refuses by name (*"has not
+  run"*). **RED** on HEAD's resolver, at *"left: [Object {"step": String("attempt"), "kind": String("agent")}] right:
+  [… Object {"step": String("triage-gate"), "kind": String("gate")}]"* (the optional arm). The cause was
+  `Scope::open_frame` clearing the frame-scoped `ran` mark that `Member::Whole` read. The fix is `Scope::ran_ever`, an
+  activation-wide set that `bind_output`, `mark_ran` and `bind_answer` fill and no frame clears; the `Whole` arm reads
+  it. `.outputs`, `.len()` and `.answer` are unchanged (§8d.3's R6FIX-8d row). **GREEN**: `reference_resolver::` and
+  `emit_binding::`, 19 passed.
+- `on_false_exec::a_pass_is_charged_only_by_the_dispatches_made_in_it_across_a_fan_out_and_a_repeat` has three arms,
+  one per mutant round 6 found alive. (a) A `toolchain:test` `for_each` with no selection: copy 0 refuses before its
+  port, and the walk charges nothing. (b) An agent `for_each` whose two copies commit before a gate: the first walk
+  charges `root` 1, and the answered re-entry serves both copies (2 served, no dispatch) and charges nothing. (c) A
+  `repeat` (max 3) that holds on pass 2: `repeat:1` and `repeat:2`, one attempt each. It passes on the unmutated code,
+  so its red is each mutant.
+
+**Mutants**, from `scratchpad/s8d/r6fix-8d-mutants.py`: anchor asserted once, tmp + `os.replace`, the file restored in
+`finally` and sha256 re-checked. Each ran over the whole `rk-kernel --test it`. The "before" runs swapped HEAD's
+`on_false_exec.rs` in (restored the same way).
+- **A**, `fan_out`'s halting arm `if executed {` forced to `if true {`: SURVIVED before (*"345 passed; 0 failed"*).
+  KILLED after at arm (a), *"left: [("root", 1)] right: []"*.
+- **B**, the completion arm's `if executed {` forced to `if true {`: SURVIVED before (*"345 passed; 0 failed"*).
+  KILLED after at arm (b), *"left: [("root", 1)] right: []"*.
+- **C**, the walk loop's charge keyed on `w.loops.base` instead of `path`: SURVIVED before (*"345 passed; 0 failed"*).
+  KILLED after at arm (c), *"left: [("root", 2)] right: [("repeat:1", 1), ("repeat:2", 1)]"*.
+- **MW**, the `Whole` arm reading the frame-scoped `ran` (the pre-fix code): KILLED at the evidence assertion.
+- **MW2**, `bind_answer` not filling `ran_ever`: KILLED at the same assertion.
+
+Zero survivors. (*"345"* counts the new resolver test, already on disk for the "before" runs.)
+
+**Counts.** New test names are **86**: 70 in `rk-kernel` and 16 in `rk-cli`, **85 net**. Checkpoint 8d (4) names the
+resolver test, and its `want` moves from 25 to 26. (5) names the charge test, and its `want` moves from 18 to 19.
+(11)'s floor is 877 + 85 = **962**, by dated edit.
+
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
 **Checkpoints it touches.** Checkpoint 8c names two tests whose premise is the resolver's absence —
@@ -2548,6 +2594,8 @@ run_named rk-kernel "step grain" \
   second_agent::a_guarded_off_second_agent_step_refuses_nothing
 
 # ---- (4) BULLETS 3-4: THE RESOLVER, CHECK, EMIT AND TEST SELECTION.
+# ---- (dated 2026-09-27, s8d build, package R6FIX-8d) One name added by dated edit, the bare evidence pointer across an
+# ---- escalate re-entry (section 8d.10's R6FIX-8d note). `want` moves from 25 to 26 with it.
 run_named rk-kernel "resolver" \
   reference_resolver::every_input_source_form_resolves_or_refuses_by_name \
   reference_resolver::a_prior_step_output_binds_by_step_name_and_field_path \
@@ -2573,7 +2621,8 @@ run_named rk-kernel "resolver" \
   test_selection::an_artifact_command_selection_resolves_through_selection_of \
   test_selection::an_unresolvable_selection_refuses_and_never_runs_the_whole_suite \
   guard_context::a_rigor_guard_refuses_on_an_empty_context_and_decides_on_the_selections_one \
-  guard_context::a_check_expr_reading_a_step_output_resolves_it_and_refuses_only_an_unresolvable_one
+  guard_context::a_check_expr_reading_a_step_output_resolves_it_and_refuses_only_an_unresolvable_one \
+  reference_resolver::an_answered_escalate_gate_is_evidence_on_the_completion_row_after_its_re_entry
 
 # ---- (4b) THE FORWARD-REF LICENCE (D21-48 X8; §8d.3): the widened lint, the census, the four catalog removals under
 # ---- ADR-0072 and the escalate re-entry's binding. Beside them are the pre-existing tests the edit must keep green:
@@ -2640,8 +2689,11 @@ run_lib_named rk-kernel "step5 in-crate" \
 # ---- (dated 2026-09-27, s8d build, package R4FIX-8d) Four names added by dated edit: a tool dispatch that fails at
 # ---- the port, a zero-commit halt, a halting fan-out, and every tool call site (section 8d.10's R4FIX-8d note).
 # ---- `want` moves from 14 to 18 with them.
+# ---- (dated 2026-09-27, s8d build, package R6FIX-8d) One name added by dated edit, the per-pass charge across a fan-out
+# ---- and a `repeat` (mutants A, B and C; section 8d.10's R6FIX-8d note). `want` moves from 18 to 19 with it.
 run_named rk-kernel "on_false, telemetry, breaker" \
   on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path \
+  on_false_exec::a_pass_is_charged_only_by_the_dispatches_made_in_it_across_a_fan_out_and_a_repeat \
   on_false_exec::a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch \
   on_false_exec::a_tool_dispatch_that_fails_at_the_port_charges_its_pass \
   on_false_exec::a_walk_that_halts_before_any_commit_keeps_the_charges_already_made \
@@ -2859,7 +2911,10 @@ n=$(printf '%s\n' "$hit" | grep -c 'fn selection_of')
 # ---- (dated 2026-09-27, s8d build, package R4FIX-8d) RE-DERIVED from the same recorded 877. The package adds four
 # ---- executing rk-kernel tests (section 8d.10's R4FIX-8d note) and removes none. Net executing: 79 + 4 = 83.
 # ---- FLOOR = 877 + 83 = 960. ~~FLOOR=956~~.
-FLOOR=960
+# ---- (dated 2026-09-27, s8d build, package R6FIX-8d) RE-DERIVED from the same recorded 877. The package adds two
+# ---- executing rk-kernel tests (section 8d.10's R6FIX-8d note) and removes none. Net executing: 83 + 2 = 85.
+# ---- FLOOR = 877 + 85 = 962. ~~FLOOR=960~~.
+FLOOR=962
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

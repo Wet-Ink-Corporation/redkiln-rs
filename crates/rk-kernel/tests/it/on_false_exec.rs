@@ -744,6 +744,130 @@ fn a_fan_out_that_halts_part_way_charges_its_pass_for_the_copies_it_dispatched()
     );
 }
 
+/// **m14: a pass is charged only by the dispatches made IN it, across a fan-out and a `repeat`**
+/// *(dated 2026-09-27, `s8d` build, package R6FIX-8d; refuting round 6's tests-mutants major)*.
+/// §8d.3: *"each `repeat` frame is a pass for AC-021's per-pass count. Every agent or tool dispatch
+/// in a frame charges that frame's pass. ... A step served from its commit on re-entry charges
+/// nothing."*; R4FIX-8d: *"a refusal before the call charges nothing."* Three arms, one per mutant
+/// round 6 left alive:
+/// - (a) a `for_each` whose copy 0 refuses BEFORE its dispatch charges nothing (mutant A: the
+///   halting arm's `if executed` forced true);
+/// - (b) a `for_each` fully served from its commits on re-entry charges nothing (mutant B: the
+///   completion arm's `if executed` forced true);
+/// - (c) a `repeat` that holds on pass 2 charges `repeat:1` and `repeat:2` one attempt each
+///   (mutant C: every pass keyed on the loop base, `root` 2).
+#[test]
+fn a_pass_is_charged_only_by_the_dispatches_made_in_it_across_a_fan_out_and_a_repeat() {
+    let none: Vec<(String, u32)> = Vec::new();
+    let acs = || {
+        crate::reference_resolver::emitted_row(
+            "spec-author@1",
+            "Spec",
+            serde_json::json!({"acs": ["AC-1", "AC-2"]}),
+        )
+    };
+
+    // (a) Copy 0 of a `test` fan-out has no selection, so it refuses before the port.
+    let mut t = tool("t", "test", &[]);
+    t.for_each = Some("artifact:Spec.acs".to_owned());
+    let rig = Rig::new(Vec::new(), vec![(1, 0), (1, 0)]);
+    rig.seed(acs());
+    let report = rig.walk(&[t, step("emit", StepKind::Emit)]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("`t`") && !report.completed() && rig.tests.selections().is_empty(),
+        "PREMISE (a): copy 0 refuses by name before its port, and no copy reaches it: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        none,
+        "(a) a fan-out whose copy refused BEFORE its dispatch dispatched nothing and charges \
+         nothing: {e}"
+    );
+
+    // (b) Both copies commit, a gate opens; answered, the re-entry SERVES both copies.
+    let mut red = agent("red", &[("ac", "${item}")]);
+    red.for_each = Some("artifact:Spec.acs".to_owned());
+    let steps = vec![
+        red,
+        gate("approve", "red.approve", None),
+        step("emit", StepKind::Emit),
+    ];
+    let rig = Rig::new(
+        vec![
+            serde_json::json!({"tests_added": ["a"]}),
+            serde_json::json!({"tests_added": ["b"]}),
+        ],
+        Vec::new(),
+    );
+    rig.seed(acs());
+    let first = rig.walk(&steps);
+    assert!(
+        first.gate_opened().is_some() && first.step_error().is_none(),
+        "PREMISE (b): both copies commit and the gate opens: {}",
+        refusal(&first)
+    );
+    assert_eq!(
+        (charged(&first), rig.paths("red")),
+        (
+            vec![("root".to_owned(), 1)],
+            vec!["for_each:0".to_owned(), "for_each:1".to_owned()]
+        ),
+        "PREMISE (b): the first walk dispatched both copies and charged its pass once (AC-022)"
+    );
+    rig.answer(&first, "approve");
+    let second = rig.walk(&steps);
+    assert!(
+        second.completed() && second.step_error().is_none(),
+        "PREMISE (b): the re-entry walks past the answered gate: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), second.served()),
+        (2, 2),
+        "PREMISE (b): the re-entry serves both copies and dispatches neither"
+    );
+    assert_eq!(
+        charged(&second),
+        none,
+        "(b) a fan-out served whole from its commits on re-entry charges nothing"
+    );
+
+    // (c) A `repeat` that holds on its second pass: two passes, one dispatch each.
+    let rig = Rig::new(
+        vec![
+            serde_json::json!({"status": "no"}),
+            serde_json::json!({"status": "done"}),
+        ],
+        Vec::new(),
+    );
+    let report = rig.walk(&[
+        repeating(
+            agent("attempt", &[]),
+            "${attempt.outputs.status} == 'done'",
+            3,
+            Some("fail"),
+            None,
+        ),
+        step("emit", StepKind::Emit),
+    ]);
+    assert!(
+        report.completed() && rig.harness.dispatches() == 2,
+        "PREMISE (c): the repeat holds on pass 2: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        rig.paths("attempt"),
+        vec!["repeat:1".to_owned(), "repeat:2".to_owned()],
+        "PREMISE (c): each pass commits under its own `repeat` frame"
+    );
+    assert_eq!(
+        charged(&report),
+        vec![("repeat:1".to_owned(), 1), ("repeat:2".to_owned(), 1)],
+        "(c) each `repeat` frame is a pass of its own, charged by its own dispatch (AC-021)"
+    );
+}
+
 /// Review routes whose clone answers or refuses, and whose re-executor always refuses: each call is
 /// the route TAKEN, so it charges whether it answers or not.
 struct R4Routes {
