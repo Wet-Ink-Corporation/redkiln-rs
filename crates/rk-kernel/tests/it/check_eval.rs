@@ -2,8 +2,9 @@
 //!
 //! A `check` step's `expr` is evaluated against a `Context` built from its own `inputs` table,
 //! through the one `predicate::evaluate` (ADR-0136 decision 1). `Tri::True` continues; `Tri::False`
-//! goes to the step's `on_false` (§8d.4 routes it; until R3 lands it refuses by name, *"did not
-//! hold"*); `Tri::Null` abstains (ADR-0103, AC-079); an `EvalError` or an unresolvable input refuses
+//! goes to the step's `on_false` (§8d.4 routes it, R3 = ADR-0175); a `check` that declares NO
+//! `on_false`, as every one here does, refuses by name as R3's exhausted case, *"did not hold"*;
+//! `Tri::Null` abstains (ADR-0103, AC-079); an `EvalError` or an unresolvable input refuses
 //! by name and is **never** read as false (§8d.8 defect 3's distinction). ADR-0142 clause 4 is
 //! discharged here: a `check` reading a prior step's output now decides.
 
@@ -69,12 +70,13 @@ fn a_check_binds_its_inputs_table_and_decides_true_false_and_refuses() {
         r.step_error().is_none() && r.completed(),
         "a check reading its bound input must DECIDE true and continue: {r:?}"
     );
-    // FALSE: `on_false`'s arm, which refuses by name until §8d.4 routes it.
+    // FALSE with NO `on_false` (the `check` helper declares none): R3's exhausted case, which
+    // refuses by name (§8d.4; ADR-0175). The routed arms are `on_false_exec`'s.
     let r = walk_over(&rt_with(report.clone()), &steps("report.failed > 0"));
     let e = refusal(&r);
     assert!(
         e.contains("`verified`") && e.contains("did not hold"),
-        "a check that does not hold goes to `on_false`, by name: {e}"
+        "a check that does not hold and declares no `on_false` refuses by name: {e}"
     );
     assert!(
         r.committed(),

@@ -150,7 +150,7 @@ fn the_lanes_nine_gate_questions_and_the_change_question_load_from_redkiln_proce
     // N2: no lane selects `user-story-ac`, so its `spec.ambiguity` is not an entry.
     assert!(
         registry.question("spec.ambiguity").is_none(),
-        "`spec.ambiguity` is declared, and no lane selects the one activity asking it (N2)"
+        "`spec.ambiguity` must NOT be declared under .redkiln/processes/: no lane selects the one activity asking it (N2)"
     );
     // Every other `unknown_facet:*` gate keeps the default question.
     assert_eq!(

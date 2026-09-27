@@ -324,6 +324,26 @@ fn every_input_source_form_resolves_or_refuses_by_name() {
     refused(r("checklist:smoke"), "me", "checklist:smoke");
     assert_eq!(r("toolchain:logs?").unwrap(), Json::Null);
     refused(r("toolchain:backlog"), "me", "toolchain:backlog");
+    // The RESOLVING outcome of `toolchain:<feed>` (R3FIX-8d, refuting round 3's minor): every shipped
+    // `[feed.rust.*]` row is `unprovided`, so the shipped registry cannot reach it. A registry that
+    // declares a feed WITH a producing verb resolves the key to what `env.feed` returns for that verb,
+    // which is the `logfeed` arm of `feed` above, and to nothing else.
+    let feed_registry = VerbRegistry::from_toml(
+        "[verb]\nlogfeed = { outputs = \"SmokeResult\", live = true, timeout = \"deploy_timeout\", \
+         inputs = [], route = \"toolchain\", side_effecting = false }\n\n[feed.t.logs]\nverb = \
+         \"logfeed\"\n\n[toolchain.t]\ndeploy_timeout = { secs = 60, measured = [30], rule = \"r\", pin = \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", source = \"test\" }\n",
+    )
+    .expect("the feed registry loads");
+    let feed_env = Env {
+        registry: Some(&feed_registry),
+        feed_table: Some("t"),
+        ..env
+    };
+    assert_eq!(
+        resolve_text(&feed_env, &scope, "me", "x", "toolchain:logs").unwrap(),
+        serde_json::json!({"lines": 3}),
+        "a declared feed with a producing verb resolves to that verb's value"
+    );
     // ---- literals ----------------------------------------------------------------------------------
     assert_eq!(r("affected").unwrap(), serde_json::json!("affected"));
     assert_eq!(

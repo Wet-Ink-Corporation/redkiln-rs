@@ -2931,7 +2931,7 @@ repair to this block** (Halt 7: count it off the script, not off this sentence).
 `s7c` §7c.21's and is restated so it reproduces:** a *statement that can stop the block* is one carrying its own `exit
 1`, **or a call to one of the three stopping helpers, each of which carries its `exit 1` inside its definition**; a
 call inside a `for` body is one statement however many times the loop runs. **344 non-comment statements, of
-which 189 can stop the block and 155 cannot** *(343 / 188 / 155 until 2026-09-21; the close-time amendment added ONE
+which 189 can stop the block and 155 cannot** *(dated 2026-09-27, s8d build, package R3FIX-8d: **345 / 190 / 155**, re-counted off the block by this paragraph's rule after the ADR-0100 d1 ban took its lockfile-name exclusion and ONE admission line, a statement carrying its own `exit 1`; the ban's old line is kept as a comment, so `rk_absent` stays × 19 and the helper calls 40; the 149 statements with their own `exit 1` are 150, and the admission lines before excluded bans are five; `s8d` §8d.11)* *(343 / 188 / 155 until 2026-09-21; the close-time amendment added ONE
 statement carrying its own `exit 1` — the `rk-fixture-child-cli` name line — and the other two edits were within-line,
 so only this bucket moved).* The 189 are **149** statements carrying their own `exit 1` outside the
 helper definitions (the `uname` `case` guard, the two shell-guard `[ -z "$bad" ] || { …; exit 1; }` lines, the
@@ -3010,7 +3010,7 @@ directories are `test -d`'d first. Three bans are module-path **filtered** (`rk_
 before filtering; four carry a module **exclusion** (the fifth argument) — `std::env::var` excludes `rk-cli`'s `env`
 module, `SystemTime::now|Instant::now|Utc::now` its `clock` module, `.lock()` its `store` module **and the two stdio
 handles** (`io::stdout().lock()` / `io::stderr().lock()` are not Mutexes — golden constraint 9), `template_sig|rendered_sig`
-the migrator's `legacy` module (`legacy.rs` or `legacy/`, layout-neutral) — and each exclusion is preceded by its own
+the migrator's `legacy` module (`legacy.rs` or `legacy/`, layout-neutral) *(dated 2026-09-27, s8d build, package R3FIX-8d: and a fifth — the ADR-0100 d1 `yaml` ban excludes the `"pnpm-lock.yaml"` file-name literal in `rk-cli`'s `change_deriver` module only, a lockfile named, not read; `s8d` §8d.11)* — and each exclusion is preceded by its own
 admission line (`n=$(find
 … | grep -cE …)`), so an exclusion that names no existing module is a FAIL, not a silent pass; the `yaml` and
 `ANTHROPIC_API_KEY` bans are simply scoped to `crates/rk-cli/src`. A grep a comment could satisfy is never the whole
@@ -3276,7 +3276,17 @@ rk_absent '"ANTHROPIC_API_KEY"' 'AC-422 / AC-488: rk-cli carries no second ANTHR
 rk_control '"ANTHROPIC_API_KEY"' ac422_api_key_literal_control.rs
 rk_absent 'dual.write|compat.write' 'AC-474: no dual-write / compat-write route in either binary'
 rk_control 'dual.write|compat.write' ac474_dual_write_control.rs
-rk_absent 'yaml_serde|serde_yaml|\byaml\b' 'ADR-0100 d1: rk-cli touches no YAML — redkiln-migrate/src/legacy is the one reader' 'crates/rk-cli/src'
+# (dated 2026-09-27, s8d build, package R3FIX-8d; s8d §8d.11) A LOCKFILE NAME IS NOT A YAML READ, and the ban takes
+# the fifth-argument exclusion the bans below carry, with its admission line before it. s8d's change deriver
+# (crates/rk-cli/src/change_deriver.rs, R6 = ADR-0178, proposed) ports spikes/p1/derive-facets.py's generated table,
+# which names the lockfile "pnpm-lock.yaml" as a string literal compared to a changed path's file name; it opens
+# no file and parses nothing. `\byaml\b` matched that literal (`.` is a non-word character), so the ban read FAIL on
+# the s8d tree. The exclusion is scoped to that ONE module AND that ONE literal: any other yaml token anywhere in
+# rk-cli/src, that module included, still fires. Residual, named: a YAML read written on the SAME line as that
+# literal in that module would be excluded with it. Was (the line is kept, commented, so its bytes stay readable):
+# ~~rk_absent 'yaml_serde|serde_yaml|\byaml\b' 'ADR-0100 d1: rk-cli touches no YAML — redkiln-migrate/src/legacy is the one reader' 'crates/rk-cli/src'~~
+n=$(find crates/rk-cli/src -name '*.rs' | grep -cE '/([^/]*/)?(change_deriver)(\.rs|/)' | tr -d '[:space:]'); [ "${n:-0}" -ge 1 ] || { echo "FAIL: no change_deriver module under crates/rk-cli/src — the ADR-0100 d1 yaml ban's lockfile-name exclusion names no module (s8d §8d.11)"; exit 1; }
+rk_absent 'yaml_serde|serde_yaml|\byaml\b' 'ADR-0100 d1: rk-cli touches no YAML — redkiln-migrate/src/legacy is the one reader (the change deriver'"'"'s "pnpm-lock.yaml" file-name literal is excluded: it names a lockfile, it reads none)' 'crates/rk-cli/src' '' '^crates/rk-cli/src/([^:]*/)?change_deriver\.rs:[0-9]+:.*"pnpm-lock\.yaml"'
 rk_control 'yaml_serde|serde_yaml|\byaml\b' adr0100_yaml_control.rs
 n=$(find crates/redkiln-migrate/src -name '*.rs' | grep -cE '/([^/]*/)?(legacy)(\.rs|/)' | tr -d '[:space:]'); [ "${n:-0}" -ge 1 ] || { echo "FAIL: no legacy module under crates/redkiln-migrate/src — the one permitted site of template_sig/rendered_sig has no home (§7d.11)"; exit 1; }
 rk_absent 'template_sig|rendered_sig' 'AC-442 / AC-471: the legacy signature literals appear ONLY under redkiln-migrate/src/legacy (read, never written)' "$SRC_SCOPE" '' '^crates/redkiln-migrate/src/legacy(\.rs|/)'

@@ -156,7 +156,7 @@ fn walk(
 #[test]
 fn a_step_output_selection_resolves_and_reaches_the_port_as_named_tests() {
     // `${write.outputs.tests_added}`, the shape of `test-after`'s `${write.outputs.tests_added}`.
-    let (report, tc, rows) = walk(
+    let (report, tc, _) = walk(
         Vec::new(),
         serde_json::json!({"tests_added": ["ac601_fails_before", "ac601_passes_after"]}),
         "${write.outputs.tests_added}",
@@ -173,8 +173,6 @@ fn a_step_output_selection_resolves_and_reaches_the_port_as_named_tests() {
         ])],
         "the resolved list reaches the port as those named tests, and nothing else"
     );
-    // The outcome is BOUND (record T's `TestOutcome`), so a later `check` could read it.
-    let _ = rows;
     // A `${…}` that resolves to a COMMAND is parsed by the one `selection_of`.
     let (report, tc, _) = walk(
         Vec::new(),
