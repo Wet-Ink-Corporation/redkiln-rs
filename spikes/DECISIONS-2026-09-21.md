@@ -3161,3 +3161,31 @@ the drafted claim of 11 and 9 to **10 and 8**. Each remaining refusal has a name
 unauthored `checklist:smoke` (`smoke-test`) and the missing `deploy` row (`rolling-deploy`) to `s8g`; the `item_create`
 store route (`debt-logging`) and the unprovided `backlog` feed (`closure-record`) to `s8f`. A later stage's flip to
 "walks" raises the reading and needs no edit to (6a).
+
+---
+
+## D21-76 · A re-entered walk replays its journaled control decisions and resumes where it stopped; only new work re-executes
+
+**Taken 2026-09-27 by the operator, in the session executing `s8d`, on a brief with four options and a recommendation
+(option (a)).**
+
+**Why.** `s8d` refuting round 7 measured a conflict between two parts of the stage's own specification. §8d.2 (and
+ADR-0174 decision 7) re-walk from the top on re-entry: committed agent steps are served, but `check` steps and
+idempotent `tool` steps re-execute and later refs bind the re-executed values. Schema §3 and §8d.3's escalate re-entry
+say an answered escalation *"resumes **into the same step**"*. In `tdd-red-green-refactor` (both lanes) `green` changes
+the tree before `green-gate` (`tdd.green-exhausted`) opens; on the answer's re-walk `red-verify` re-runs over the
+partly fixed tests, `red-check` (`report.failed > 0 and report.passed == 0`) no longer holds, and the walk loops back
+into `red`. A probe of the same mechanism measured two extra dispatches and a failed activation. Both refuters graded
+it a specification conflict for the operator, not a build defect.
+
+**Ruled — option (a).** The walk **journals its control decisions** — each `check` verdict and each loop-back or
+escalation decision — under the commit key of the frame that took it, and a re-entered walk **replays** them: up to
+the last journaled decision it neither re-executes the deciding `check` nor re-decides a loop; from there, only work
+the prior walk did not reach executes fresh (a crash re-entry therefore still re-verifies whatever it had not yet
+decided). An answered escalate gate thus resumes into its escalating step. Carried by `s8d`, amending ADR-0174
+decision 7 and ADR-0175 (both `proposed`) by dated text; red-first tests include a re-entry past an answered gate with
+a changed `test` answer (no committed-frame step re-dispatched; the walk resumes after the gate) and a tdd-shaped
+escalate re-entry that dispatches `green`, not `red`.
+
+**Declined.** (b) committing idempotent tool outputs a later check reads (a crash re-entry would stop re-verifying the
+tree); (c) owing it to `s8e`; (d) accepting the re-walk as designed.
