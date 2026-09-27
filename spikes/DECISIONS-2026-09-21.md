@@ -3120,3 +3120,29 @@ Items 1–3 are pre-existing `s7b` selection code; the stage file says only the 
   rows are measured, not presumed reached).
 - **Item 4 is owed**: `confirmation-test`'s emit fields and the `lint` output to `s8g`/`s8h` as their stage files fit
   (each by a dated receiver note), and `bisect`'s registry row to the stage that owns its verb.
+
+---
+
+## D21-74 · Step 5 draws no self-edge, and inside `Changeset`'s own producer `selection = "affected"` resolves over the run branch's diff
+
+**Taken 2026-09-27 by the operator, in the session executing `s8d`, on a brief with measured options and a
+recommendation for each (option (a) both times).**
+
+**Why.** After D21-73's fixes the lanes re-measured at fix 9/6 and story 6/5, and two causes no ruling covered appeared:
+1. `docs-update` (rank 5) now wins `Changeset[rust]` and declares `requires = ["Spec", "Changeset?"]`, so step 5 draws
+   `docs-update[rust] -> docs-update[rust]` and the story lane's implement selection refuses as *"the assembled DAG is
+   not acyclic"*, naming `change-summary[rust]`, a node downstream of the loop (the `layers()` path walk starts at the
+   lowest surviving id).
+2. `tdd-red-green-refactor`'s `green-verify`/`refactor-verify` declare `selection = "affected"`, which R2 (ADR-0173)
+   decision 9 resolves to the item's committed `Changeset`; `tdd` produces that `Changeset`, so none is committed
+   while it runs (*"no committed `emit` binding of `Changeset` for the item"*). A real run has the same shape.
+
+**Ruled.**
+1. **R8 (ADR-0179, `proposed`) decision 2 is amended: step 5 draws no edge from a node to itself.** An activity's
+   optional requirement of a kind it provides reads as absent (null, ADR-0032). The AC-078 refusal names a node that
+   lies on the cycle. Red-first, with a mutant.
+2. **R2 (ADR-0173, `proposed`) decision 9 is amended: inside the producer of `Changeset`, `"affected"` resolves over
+   the run branch's diff** (R6's `HEAD..rk-run/<item>` range, read through `rk_git`), and elsewhere as before, from the
+   committed `Changeset`. The lane rig gains the git fixture this needs; red-first, with a mutant.
+3. **Both lanes are re-measured after both amendments**, and Checkpoint 8d (6a)'s floors are then set to the measured
+   counts by a dated ledger line citing D21-73 and this entry. Any cause still left is named with an owner.
