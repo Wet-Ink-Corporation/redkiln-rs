@@ -210,7 +210,10 @@ reached, no commit) would read as AC-013's re-entry, and the walk would serve it
 - [measured 2026-09-26 at `s8d`'s build, through the no-dispatch helper] These tests were each first shown RED on a
   scaffold with the binding and accessors present and no kernel row, fake append kept and no call site, then GREEN:
   - `step_error_row::` (4 tests): one row per failed dispatch for all eleven variants plus the boundary's `Schema`,
-    and two rows for two failed dispatches; `FakeHarness` writes none on any path, and one row through the runtime;
+    and two rows for two failed dispatches; `FakeHarness` writes ~~none on any path~~ no error row *(dated 2026-09-27,
+    `s8d` build, package R2FIX-8d; refuting round 2's records minor: decision 2 as D21-72 re-amended it. Since F1-D2172 the
+    fake appends ADR-0126's `dispatch_completed` on an `Err` termination and on its cancel path, and the F1-D2172
+    evidence bullet below measures that)*, and one row through the runtime;
     one `rate_limited` row, the mark; `family` and `at` on the row, folded by the breaker, and `family` on the
     commit row;
   - `breaker::the_executor_refuses_a_dispatch_whose_family_the_kernels_rows_opened`;

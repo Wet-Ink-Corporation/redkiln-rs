@@ -436,3 +436,112 @@ fn the_composition_root_binds_the_row_inputs_no_step_declares() {
         "only the Rust adapter's handler reads audit_db / deny_db"
     );
 }
+
+/// **`run()` itself binds `sca_scan`'s databases** (R8 = ADR-0179 decision 4, proposed; D21-73
+/// item 5). *(Added 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's tests-mutants
+/// finding.)* The test above calls the two helpers directly, so a `run()` that stopped folding
+/// [`rk_cli::verbs::run::advisory_db_row_inputs`] into its routing passed every `rk-cli` test.
+/// This one drives the real binary.
+///
+/// The fixture is `pack-min`'s base variant, with three changes:
+/// - its one activity is rewritten so that it has no agent step. Its first step is a `tool` step
+///   on `toolchain:sca_scan` with a literal bound;
+/// - a verb registry declares `sca_scan`'s row with its two inputs, `audit_db` and `deny_db`;
+/// - the Rust adapter is the one candidate (`install_review_toolchain`).
+///
+/// Nothing is dispatched, and no child is spawned for the step. The binary prints no step's refusal
+/// text, and the kernel journals no row for a `tool` step's refusal, so the observation channel is
+/// the EXIT CODE. §7d.4's table maps each `StepError` class to one code, and the two outcomes here
+/// fall in different classes:
+/// - **Unsupported (19)** when `run()` bound nothing. The kernel refuses at the input check, before
+///   the port, and names `audit_db` (ADR-0170 decision 3's order).
+/// - **Transport (10)** when `run()` bound the databases. The step reaches the Rust handler with
+///   both inputs. The handler lists `deny_db`, and `<CARGO_HOME>/advisory-dbs` does not exist in
+///   this fixture, so it refuses at `deny-db-path-children`, which the handler raises as
+///   `Transport { Decode }`, before any child.
+///
+/// The CONTROL runs the same fixture with `CARGO_HOME`, `USERPROFILE` and `HOME` removed, which is
+/// the environment in which `advisory_db_row_inputs` binds nothing. It must read 19. Otherwise the
+/// case's 10 could come from something other than the binding.
+#[test]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the verb is exercised AS A PROCESS: the call site in `run()` is what this test pins"
+)]
+fn run_binds_sca_scans_advisory_databases_before_the_step_reaches_the_port() {
+    // One fixture repository, as described above; `strip` removes those variables from the run's
+    // environment. Returns the exit code, and stderr for the failure messages.
+    let run = |strip: bool| -> (Option<i32>, String) {
+        let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+        let root = repo.path();
+        crate::support::install_review_toolchain(root);
+        let rk = root.join(".redkiln");
+        std::fs::write(
+            rk.join("catalog").join("emit-report.toml"),
+            "[activity]\nid           = \"emit-report\"\nversion      = 1\nstage        = \
+             \"implement\"\nprovides     = [\"ImplReport\", \"TestReport\"]\nrequires     = \
+             []\nderived_from = []\ndeviation_ok = []\ntags         = [\"kind:bug\", \
+             \"kind:story\"]\nmethod_rank  = 10\nmin_rigor    = \"optional\"\ncost_class   = \
+             \"S\"\nbudget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 \
+             }\n\n[[step]]\nid           = \"scan\"\nkind         = \"tool\"\nrun          = \
+             \"toolchain:sca_scan\"\ntimeout_secs = 60\n\n[[step]]\nid        = \"emit\"\nkind \
+             = \"emit\"\nartifacts = { ImplReport = \"${scan.outputs}\", TestReport = \
+             \"${scan.outputs}\" }\n",
+        )
+        .expect("the sca_scan activity is written over the fixture's one activity");
+        let pin = "0123456789abcdef0123456789abcdef01234567";
+        std::fs::write(
+            rk.join("registry.toml"),
+            format!(
+                "[verb]\nsca_scan = {{ outputs = \"ScanReport\", live = false, timeout = \
+                 \"scan_timeout\", inputs = [\"audit_db\", \"deny_db\"], route = \"toolchain\", \
+                 side_effecting = false }}\n[toolchain.rust]\nscan_timeout = {{ secs = 60, \
+                 measured = [2], rule = \"r\", pin = \"{pin}\", command = \"c\" }}\n"
+            ),
+        )
+        .expect("the registry is written");
+        let markers = root.join(".rk-markers");
+        std::fs::create_dir_all(&markers).expect("the marker directory is created");
+        let mut cmd = std::process::Command::new(crate::redkiln());
+        cmd.arg("-C")
+            .arg(root)
+            .arg("run")
+            .arg("bug-1")
+            .env("RK_FIXTURE_MODE", "exit:0")
+            .env("RK_FIXTURE_MARKER_DIR", &markers);
+        if strip {
+            cmd.env_remove("CARGO_HOME")
+                .env_remove("USERPROFILE")
+                .env_remove("HOME");
+        } else {
+            // Inside the temp repository, and never created: `advisory-dbs` beneath it is absent.
+            cmd.env("CARGO_HOME", root.join("rk-cargo-home"));
+        }
+        let out = crate::support::output_bounded(&mut cmd);
+        (
+            out.status.code(),
+            String::from_utf8_lossy(&out.stderr).into_owned(),
+        )
+    };
+
+    // ---- THE CONTROL: no databases bound, so the kernel refuses `scan` at the input check. ----
+    let (code, stderr) = run(true);
+    assert_eq!(
+        code,
+        Some(rk_cli::exit::Exit::Unsupported.code()),
+        "CONTROL: with CARGO_HOME, USERPROFILE and HOME removed, `advisory_db_row_inputs` binds \
+         nothing, so `scan` must refuse as Unsupported at the kernel's input check (it names \
+         `audit_db`). stderr:\n{stderr}"
+    );
+
+    // ---- THE CASE: `run()` binds the databases, so `scan` reaches the Rust handler with both. ---
+    let (code, stderr) = run(false);
+    assert_eq!(
+        code,
+        Some(rk_cli::exit::Exit::Transport.code()),
+        "`run()` did not hand `scan` its databases. Exit {code:?}: 19 is the kernel's input \
+         refusal (the fold of `advisory_db_row_inputs` into the routing is gone), and 10 is the \
+         handler's own `deny-db-path-children` refusal, which only a bound `deny_db` reaches. \
+         stderr:\n{stderr}"
+    );
+}

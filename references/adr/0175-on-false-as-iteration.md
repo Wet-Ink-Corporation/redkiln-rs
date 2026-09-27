@@ -63,7 +63,7 @@ route is an amendment of the stage's selection, not an iteration of the activity
 
 ### Option — Keep the by-name refusal for every false `check`
 
-ADR-0173 decision 6's interim state. Rejected by D21-42 4d; it leaves 66 declared loop-backs unexecuted.
+ADR-0173 decision 6's interim state. Rejected by D21-42 4d; it leaves 66 declared loop-backs unexecuted. *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's records minor.)* 66 is the census at `ca8f387`. Re-measured by a `tomllib` census over `.redkiln/catalog/*.toml` (`scratchpad/s8d/r2fix-8d-onfalse.py`, 102 files at each pin): `ca8f387` **66 / 15 / 13 = 94**, `d46b2eb` (this stage's entry) **65 / 15 / 13 = 93**, and HEAD and the working tree **65 / 15 / 12 = 92** (loop-back / `continue` / `fail`). The drop from 13 `fail`s to 12 is D21-67 ruling 1, which deleted `migration-dry-run`'s policy check and its `fail`. The same edit moved `quality_block.rs`'s ac527 census of `check` steps with an `expr` from `checks=93` to `checks=92`. On today's catalog the figures read 65 loop-backs, 15 `continue`s and 12 `fail`s.
 
 ## Decision
 
@@ -121,7 +121,7 @@ and does not move.
 **Positive**
 
 - The 66 shipped loop-backs loop, the 15 `continue`s proceed and the 13 `fail`s refuse by name, each as its catalog
-  declares; a refusal after a commit still reaches the operator with its class.
+  declares; a refusal after a commit still reaches the operator with its class. *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's records minor.)* The three counts are the census at `ca8f387`. Re-measured by a `tomllib` census over `.redkiln/catalog/*.toml` (`scratchpad/s8d/r2fix-8d-onfalse.py`, 102 files at each pin): `ca8f387` **66 / 15 / 13 = 94**, `d46b2eb` (this stage's entry) **65 / 15 / 13 = 93**, and HEAD and the working tree **65 / 15 / 12 = 92** (loop-back / `continue` / `fail`). The drop from 13 `fail`s to 12 is D21-67 ruling 1, which deleted `migration-dry-run`'s policy check and its `fail`. The same edit moved `quality_block.rs`'s ac527 census of `check` steps with an `expr` from `checks=93` to `checks=92`. On today's catalog the figures read 65 loop-backs, 15 `continue`s and 12 `fail`s.
 - A loop-back is a new frame, so re-entry after a crash or a gate replays the same loops over the served commits, and
   no frame's commit is overwritten.
 - The escalate re-entry, which D21-48 X8 made a licence for forward refs, has a frame to bind them in.

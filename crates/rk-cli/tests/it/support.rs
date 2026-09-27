@@ -761,7 +761,7 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
 /// reaches neither; and `[adapters] toolchain_programs`, which `src/config.rs` calls *"the one way
 /// a process-level test reaches the fixture child"*. The stub's own source says what it is rigged
 /// to do.
-fn install_review_toolchain(root: &Path) {
+pub fn install_review_toolchain(root: &Path) {
     // Committed, not merely written: `recreate_run_worktree` and the pass's reference worktree are
     // both `git worktree add` at HEAD, and an untracked file is in neither of them.
     std::fs::write(

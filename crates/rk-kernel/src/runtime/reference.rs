@@ -9,7 +9,8 @@
 //!
 //! | form | resolves to | absent or unresolvable |
 //! | --- | --- | --- |
-//! | `${<step>.outputs[.path]}`, `${<step>}` | the step's bound output in this activation, at the current iteration path | a mandatory ref to a step that has not run refuses by name (step id and reference); `${…?}` is a `null` value (ADR-0032) |
+//! | `${<step>.outputs[.path]}` | the step's bound output in this activation, at the current iteration path | a mandatory ref to a step that has not run refuses by name (step id and reference); `${…?}` is a `null` value (ADR-0032) |
+//! | `${<step>}` (bare) | an **evidence pointer** `{"step": <id>, "kind": <step kind>}`, not the step's output (2026-09-27, `s8d` build, R2FIX-8d: an `emit`'s evidence reference, ADR-0036: every `Evidence` variant *"names the step that produced it"*) | as the row above: the step has not run in this activation |
 //! | `${<this or a later step>.outputs?}` | the value bound in the **previous** frame ([`Scope::bind_previous`]) | `null` on the first pass (ADR-0042, ADR-0055) |
 //! | `${a?} ?? ${b}` | the left operand unless it is `null`, else the right (ADR-0034) | the right operand resolves like any other |
 //! | `${<gate>.answer}`, `${<gate>.attachments.<Kind>}` | the gate's answered option / admitted attachment (ADR-0045) | `.outputs` on a gate refuses by name |

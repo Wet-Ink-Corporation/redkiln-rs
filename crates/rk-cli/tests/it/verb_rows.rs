@@ -97,24 +97,16 @@ fn tool_step(id: &str, verb: &str, inputs: &[(&str, &str)], secs: u64) -> Step {
     }
 }
 
-#[expect(
-    clippy::disallowed_types,
-    reason = "a test building and reading its own fixture repositories; the product's git goes \
-              through rk-git's one GitExec wrapper (ADR-0077)"
-)]
+/// The fixture's git, through `rk-git`'s one process-exec site (`git_exec::run`, *"Used by the startup
+/// probe … and by fixtures"*). *(2026-09-27, `s8d` build, package R2FIX-8d: this was a
+/// process `Command` for `git` of its own, which Checkpoint 6's and CI's wrapper-only bans read; routed
+/// through the wrapper so `s8d` adds no site to either.)*
 fn git(cwd: &Path, args: &[&str]) -> String {
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(cwd)
-        .stdin(std::process::Stdio::null())
-        .output()
-        .expect("git runs");
-    assert!(
-        out.status.success(),
-        "git {args:?} failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+    rk_git::git_exec::run(cwd, args)
+        .unwrap_or_else(|e| panic!("git {args:?} failed: {e:?}"))
+        .stdout_trimmed()
+        .trim()
+        .to_owned()
 }
 
 /// A source repository with three commits, a tag and a second branch, serving any sha — AC-191's

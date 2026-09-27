@@ -186,6 +186,9 @@ decision 9 as amended (ADR-0173, still `proposed`).
   `implement` `require` rows evaluate.
 - `sca-scan` and `build-package` reach the port on both lanes.
 - Re-measured: **`LANE_WALK fix walked=9 refused=6`** and **`LANE_WALK story walked=6 refused=5`** (from 4/6 and 3/5).
+  *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's records minor.)* That is the F2-D2173 reading, taken after decisions 1-4 alone. After decision 2a and R2's decision 9a
+  (D21-74), the lanes read **`LANE_WALK fix walked=10 refused=5`** and **`LANE_WALK story walked=8 refused=6`** (the
+  F3-D2174 evidence bullet below). D21-75 set Checkpoint 8d (6a)'s floors to those counts, 10 and 8.
 - A `dag_assembled` log recorded before this record replays byte-identically.
 
 **Negative**
@@ -246,5 +249,7 @@ decision 9 as amended (ADR-0173, still `proposed`).
   `SHIPPED_DEAD` (56) did not move. The P6 lattice port chooses producers by its own `(rank, id)` sort
   (`crates/rk-kernel/src/lattice.rs`), not through `select::step4`.
 - **What this evidence does not license.** It does not license claiming that either lane walks end to end, or that
-  the floors 11 and 9 are met. It does not license any value for the two databases on a machine whose cargo home
+  the floors ~~11 and 9~~ are met. *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's records minor.)* D21-75 replaced 11 and 9 with the measured 10 and 8. The F3-D2174
+  readings meet them, and that is all they show: a lane that walks 10 of 15, or 8 of 14, activities does not walk
+  end to end. It does not license any value for the two databases on a machine whose cargo home
   holds no advisory database: the adapter refuses that by name.

@@ -1,11 +1,11 @@
 ---
 id: "0174"
-title: "**Step-grain commits** (`s8d`'s record R1): each agent step dispatches under its OWN per-step spec, carried on `RecordedSpec` beside the activation's, and commits under a SEPARATE commit key `(item, activity@version, step_id, iteration path)` as one `activity_committed` row carrying `step_id` and `iteration_path`; an activation completes on one more row, its `emit` step's; re-entry serves every committed step activation and resumes at the first uncommitted one; a `side_effecting` tool step commits and is served like an agent step. `IdempotencyKey` keeps three parts. Supersedes in part `0143` decision 2 (narrowed) and decision 4 (in full), `0150` decision 1 (in full), decision 2 and forbids bullets 1 and 4 (in part), `0138`'s grain sentence, `0140` decision 5 with its forbids bullet (for per-step specs) and, for agent steps, `0140` decision 1's withdrawal, decision 4 and its second forbids bullet; discharges `0143` clause 5 and `0150` clause 4"
+title: "**Step-grain commits** (`s8d`'s record R1): each agent step dispatches under its OWN per-step spec, carried on `RecordedSpec` beside the activation's, and commits under a SEPARATE commit key `(item, activity@version, step_id, iteration path)` as one `activity_committed` row carrying `step_id` and `iteration_path`; an activation completes on one more row, its `emit` step's; re-entry serves every committed step activation and resumes at the first uncommitted one; a `side_effecting` tool step commits and is served like an agent step. `IdempotencyKey` keeps three parts. Supersedes in part `0143` decision 2 (narrowed) and decision 4 (in full), `0150` decision 1 (in full), decision 2 and forbids bullets 1 and 4 (in part), `0138`'s grain sentence, `0140` decision 5 with its forbids bullet (for per-step specs) and, for agent steps, `0140` decision 1's withdrawal, decision 4 and its second forbids bullet; discharges `0143` clause 5 and `0150` clause 4 (widened 2026-09-27, `s8d` build, package R2FIX-8d: and, for per-step specs, `0171`'s sixth forbids bullet at its `ActivitySpec.timeout_secs` half, the rest of `0140` decision 5 and its third forbids bullet, and `0099` decisions 1 and 2 as to *per-activity*)"
 status: proposed
 date: 2026-09-26
 legacy_id: none
-source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R1's row), §8d.2, §8d.8 defects 2 and 4, §8d.10 and §8d.12; spikes/DECISIONS-2026-09-21.md D21-42 3a (*"Step grain in the runtime. Per-step specs are carried on `RecordedSpec` (ADR-0138's warrant), each agent step commits under its own key, and re-entry resumes at the first uncommitted step. Supersedes in part ADR-0143 d2/d4, ADR-0150 d1 and AC-013's per-activation grain; discharges ADR-0143 c5 and ADR-0150 c4."*) and 3b (*"`(item, activity@version, step_id, iteration path)`. The iteration path is the stack of for_each index, repeat count and loop-back count."*), D21-43 N15 (*"A separate commit key. ADR-0097's memo key is untouched."*) and N16 (*"Carried by each per-step spec (3a), resolved through 4a's table and bounded by the activity budget. Owner: s8d."*), D21-47 (the review's M5, the journal row, and M8, side-effecting tool steps), D21-64 ruling 10 (this record's flip condition); references/adr/0138, 0140, 0143, 0150 (the sentences superseded in part, quoted in Decision clause 10); references/adr/0171 clause 7 (*"each for `tool` steps only"*; *"The withdrawal stands for `agent` steps until `s8d`'s per-step specs carry their bound"*), the tool-step half of the ADR-0140 sites clause 10 supersedes for agent steps (dated 2026-09-27, `s8d` build, package R1FIX-8d); crates/rk-kernel/src/workflow/idem.rs (`CommitKey`, `IterationPath`), crates/rk-kernel/src/workflow/fsm.rs (`RunState::is_committed`, `is_step_committed`), crates/rk-kernel/src/runtime/activity.rs (`StepAt`, `commit_walk_row`, `completion_event`), crates/rk-kernel/src/runtime/step.rs (the walk), crates/rk-kernel/src/replay.rs (`RecordedSpec`), crates/rk-kernel/src/workflow/memo.rs (`VerbEntry::side_effecting`, `StepContext::for_agent_step`), crates/rk-cli/src/verbs/run.rs (`bind_nodes`, `agent_step_timeout_secs`) and crates/rk-cli/src/verbs/explain.rs at `s8d`'s build (package P3)
-supersedes: ["0138", "0140", "0143", "0150"]
+source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R1's row), §8d.2, §8d.8 defects 2 and 4, §8d.10 and §8d.12; spikes/DECISIONS-2026-09-21.md D21-42 3a (*"Step grain in the runtime. Per-step specs are carried on `RecordedSpec` (ADR-0138's warrant), each agent step commits under its own key, and re-entry resumes at the first uncommitted step. Supersedes in part ADR-0143 d2/d4, ADR-0150 d1 and AC-013's per-activation grain; discharges ADR-0143 c5 and ADR-0150 c4."*) and 3b (*"`(item, activity@version, step_id, iteration path)`. The iteration path is the stack of for_each index, repeat count and loop-back count."*), D21-43 N15 (*"A separate commit key. ADR-0097's memo key is untouched."*) and N16 (*"Carried by each per-step spec (3a), resolved through 4a's table and bounded by the activity budget. Owner: s8d."*), D21-47 (the review's M5, the journal row, and M8, side-effecting tool steps), D21-64 ruling 10 (this record's flip condition); references/adr/0138, 0140, 0143, 0150 (the sentences superseded in part, quoted in Decision clause 10); references/adr/0171 clause 7 (*"each for `tool` steps only"*; *"The withdrawal stands for `agent` steps until `s8d`'s per-step specs carry their bound"*), the tool-step half of the ADR-0140 sites clause 10 supersedes for agent steps (dated 2026-09-27, `s8d` build, package R1FIX-8d); references/adr/0171's sixth forbids bullet (*"Enforcing an agent step's `timeout_secs` through `ActivitySpec.timeout_secs`, or through this record's `StepBound`."*), references/adr/0140 decision 5 and its third forbids bullet, and references/adr/0099 decisions 1 and 2, the sites clause 10 supersedes in part for per-step specs (dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's records blocker and the audit it asked for); crates/rk-kernel/src/workflow/idem.rs (`CommitKey`, `IterationPath`), crates/rk-kernel/src/workflow/fsm.rs (`RunState::is_committed`, `is_step_committed`), crates/rk-kernel/src/runtime/activity.rs (`StepAt`, `commit_walk_row`, `completion_event`), crates/rk-kernel/src/runtime/step.rs (the walk), crates/rk-kernel/src/replay.rs (`RecordedSpec`), crates/rk-kernel/src/workflow/memo.rs (`VerbEntry::side_effecting`, `StepContext::for_agent_step`), crates/rk-cli/src/verbs/run.rs (`bind_nodes`, `agent_step_timeout_secs`) and crates/rk-cli/src/verbs/explain.rs at `s8d`'s build (package P3)
+supersedes: ["0099", "0138", "0140", "0143", "0150", "0171"]
 superseded_by: []
 related: ["0022", "0087", "0097", "0099", "0128", "0141", "0144", "0145", "0170", "0171", "0173"]
 evidence: []
@@ -129,7 +129,11 @@ because the fold holds no catalog and must tell the completion row from an agent
 carries no `result` and no `schema`: binding the `emit` step's outputs is `0173`'s (decision 7), and the row says only
 that the walk reached it. A zero-agent activation writes only that row. A transcribed step list that has no `emit`
 step (a fixture catalog; every shipped activity ends in one) completes where its walk ends, on its last step's id, so
-the plan cannot re-walk a node with nothing left to do.
+the plan cannot re-walk a node with nothing left to do. *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting
+round 2's records minor.)* Design §5.4's `activity_committed` row took a dated in-place amendment under this record,
+in the way ADR-0176 (R4) amended the `step_failed` row. The row now names `step_id` and `iteration_path` as the commit
+key's members, `completion: true` on the completion row, and "at most once per commit key". The idempotency triple it
+already named is unchanged.
 
 **6. The fold and the plan walk.** `RunState::is_step_committed` folds the commit key off every row carrying
 `step_id`. `RunState::is_committed(item, activity_id@version)` answers **completion**: a pre-R1 row (no `step_id`,
@@ -197,6 +201,42 @@ binding by name. An activation's own spec keeps the per-activity value decision 
   which no agent step reaches, and it is not moved here. ADR-0140 decisions 2 and 3 and its last two forbids bullets
   stand. Both sides already carried the link (`supersedes: ["0140", …]` here, `superseded_by: ["0171", "0174"]` there), so
   no link is added.
+- *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's records blocker.)* **ADR-0171 (accepted), at its
+  sixth forbids bullet, for per-step specs only:** *"Enforcing an agent step's `timeout_secs` through
+  `ActivitySpec.timeout_secs`, or through this record's `StepBound`."* Decision 9 does exactly the first half. Each
+  per-step spec is an `rk_types::activity::ActivitySpec` (`rk-cli`'s `bind_nodes` fills `step_specs: BTreeMap<String,
+  ActivitySpec>`), and its `timeout_secs` is `agent_step_timeout_secs(..)`, the agent step's declared bound, so the
+  Harness enforces that bound through `ActivitySpec.timeout_secs`. The bullet is superseded in part, at *"through
+  `ActivitySpec.timeout_secs`"*, for per-step specs only. Three things stand. An activation's own spec keeps the
+  per-activity value (ADR-0140 decision 5, as the next bullet leaves it). The bullet's second half, *"or through this
+  record's `StepBound`"*, stands: no agent step's bound reaches a `Toolchain` port call. ADR-0171 decision 5's
+  *"`ActivitySpec.timeout_secs` is untouched"* is that record's statement of its own scope (*"The agent steps are not
+  this record's"*), and it stays true of that record: the type is not edited (ADR-0138's forbids), and *"enforcing the
+  185 agent-step declarations is `s8d`'s (N16)"* is what decision 9 does. ADR-0171's other decisions and forbids
+  bullets stand. Links: `0171` joins this record's `supersedes`, and `0174` joins ADR-0171's `superseded_by`.
+- *(dated 2026-09-27, `s8d` build, package R2FIX-8d; the audit of the accepted records this build touches, which the
+  same finding asked for.)* **ADR-0140 decision 5 and its third forbids bullet, the rest of each, for per-step specs
+  only.** The earlier bullet moved only *"A future per-step bound may not be built by overloading it"* and *"and
+  forbids repurposing it as one"*. Two more sites in the same sentences say what decision 9 contradicts for a per-step
+  spec. Decision 5's *"It is the Harness's, per activity"* does not hold, because a per-step spec's value is per step.
+  The third bullet's *"Forbids conflating `ActivitySpec.timeout_secs` with a step timeout"* does not hold either,
+  because a per-step spec's `timeout_secs` is its step's bound. Both are superseded in part, for per-step specs only.
+  For an activation's own spec both stand, and so does *"`ActivitySpec.timeout_secs` is untouched"* as to the type.
+  The link already exists.
+- *(dated 2026-09-27, `s8d` build, package R2FIX-8d; the same audit.)* **ADR-0099 (accepted) decision 1's *"The
+  adapter's declared per-activity timeout (AC-223) is the in-band cancel"* and decision 2's *"the per-activity
+  timeout"*** (one of the token's two owners), in part, as to *per-activity* and for per-step specs only. Under
+  decision 1 the Harness dispatches each agent step under its own spec. The in-band cancel for that dispatch is the
+  spec's bound, `min(step, budget.wall_clock_secs)` (decision 9), which is a step's bound and not an activity's. The
+  rest of both decisions stands: `dispatch` blocks, the kernel never calls cancel, the token has exactly two owners,
+  and the Toolchain half is as ADR-0171 left it. ADR-0099's supersessions by `0115`, `0127`, `0165` and `0171` are
+  unaffected. Links: `0099` joins this record's `supersedes`, and `0174` is appended to ADR-0099's `superseded_by`.
+  **Residual, named and not claimed:** AC-223's lint (*"the declared timeout is at least the recorded slow-condition
+  figure for that class"*) reads a pack-declared timeout per activity class. A per-step bound below that figure is
+  not linted here, and no such lint exists in the tree (`s8d` §8d.1's R2FIX-8d note). **Owed, also named:**
+  `crates/rk-types/src/activity.rs`'s field doc on `timeout_secs` still reads *"The adapter's declared per-activity
+  timeout (AC-223)"*. It is left as written because an edit under `crates/rk-types` would pull Checkpoint 5 into
+  Checkpoint 8d (13) (`s8d` §8d.11). Its dated correction is owed in the change that flips this record.
 
 **11. What is discharged, not superseded.** ADR-0143 clause 5 (*"Per-step specs are OWED"*) by decisions 1–3, and
 ADR-0150 clause 4 (*"The repair is an idempotency key with a STEP component, and no record currently routes it"*) by
@@ -204,7 +244,12 @@ decisions 4–8.
 
 **12. The per-step memo facts.** Each dispatched agent step's `workflow::memo::StepContext` is assembled with **that
 step's** card digest (component 5) and schema id (component 8), never the node's (`StepContext::for_agent_step`). The
-memo is still consulted by nothing on the run path, and this record does not wire it.
+memo is still consulted by nothing on the run path, and this record does not wire it. *(dated 2026-09-27, `s8d` build,
+package R2FIX-8d; refuting round 2's memo minor.)* Component 6 is now filled as well. The digest of each of the step's
+resolved `kb:` inputs comes from R2's `kb:` resolution, `{key, path, content, digest}`, through
+`StepContext::with_kb_atoms`, which both call sites chain. A `checklist:` input and a literal are not atoms. Test:
+`step_grain::an_agent_steps_kb_inputs_reach_its_memo_context_as_their_content_digests`, red before the change at *"left:
+[]"*. Mutants MR2b–MR2e are killed (`s8d` §8d.10).
 
 **13. `explain` prints one `output_digest` per committed step activation** (ADR-0128 decision 4's field), labelled
 with the step and its iteration path; a pre-R1 record prints the one line it always did.

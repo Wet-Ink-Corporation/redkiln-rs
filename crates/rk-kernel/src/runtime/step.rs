@@ -1565,14 +1565,16 @@ impl super::Runtime {
         let held = w.report.holds_a_commit();
         let ok = dispatched.committed() || dispatched.discarded_late();
         // The memo facts of THIS step, from THIS step's own spec (§8d.2).
-        w.report
-            .note_memo(crate::workflow::memo::StepContext::for_agent_step(
+        w.report.note_memo(
+            crate::workflow::memo::StepContext::for_agent_step(
                 activity_id_at_version,
                 e.rigor,
                 &step.id,
                 &own,
                 at.iteration_path.loop_iteration(),
-            ));
+            )
+            .with_kb_atoms(step, &own),
+        );
         w.report.absorb(dispatched);
         if !ok {
             // The dispatch failed, or ended on AC-030's mark. Before any commit the
@@ -1993,13 +1995,16 @@ impl super::Runtime {
             now,
         )?;
         if !report.skipped() {
-            report.note_memo(crate::workflow::memo::StepContext::for_agent_step(
-                act.activity_id_at_version,
-                act.rigor,
-                &step.id,
-                own,
-                iteration.loop_iteration(),
-            ));
+            report.note_memo(
+                crate::workflow::memo::StepContext::for_agent_step(
+                    act.activity_id_at_version,
+                    act.rigor,
+                    &step.id,
+                    own,
+                    iteration.loop_iteration(),
+                )
+                .with_kb_atoms(step, own),
+            );
         }
         Ok(report)
     }

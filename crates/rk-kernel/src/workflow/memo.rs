@@ -240,7 +240,10 @@ impl StepContext {
     /// Component 5 is the step spec's card digest and component 8 its schema id — never the node's
     /// (§8d.2: *"assembled for each agent step with **that step's** card digest (component 5) and
     /// schema id (component 8) — never the node's"*). Component 4 is the spec's inputs in
-    /// declaration order, component 6 is empty until the resolver resolves `kb:` inputs (R2), and
+    /// declaration order, ~~component 6 is empty until the resolver resolves `kb:` inputs (R2),~~
+    /// component 6 is empty here and is filled by [`Self::with_kb_atoms`] *(2026-09-27, `s8d`
+    /// build, package R2FIX-8d: R2 resolves `kb:` with its digest, and both call sites in
+    /// `runtime::step` now chain it)*, and
     /// component 7 is the iteration path's innermost counter (ADR-0097 decision 2, `0` outside a
     /// loop). ADR-0097's tuple is untouched (D21-43 N15).
     #[must_use]
@@ -261,6 +264,32 @@ impl StepContext {
             loop_iteration,
             output_schema: spec.schema.clone(),
         }
+    }
+
+    /// **Component 6: the step's resolved `kb:` atoms, by their content digests** (ADR-0097
+    /// decision 2; R2 = ADR-0173's `kb:` row, proposed). *(Added 2026-09-27, `s8d` build, package
+    /// R2FIX-8d.)*
+    ///
+    /// Each of `step`'s `inputs` whose source form is `kb:<atom>` (with or without `?`) is looked up
+    /// by its name in `spec`'s resolved inputs, and the `digest` member of the resolved value is
+    /// the atom. An optional atom that resolved to `null` contributes nothing. A `checklist:` input,
+    /// a feed and a literal are inputs (component 4) and are never atoms. The order is the step's
+    /// declaration order, and `rk-store` sorts when it digests (the field's own doc).
+    #[must_use]
+    pub fn with_kb_atoms(
+        mut self,
+        step: &crate::catalog::Step,
+        spec: &rk_types::activity::ActivitySpec,
+    ) -> Self {
+        self.kb_atoms = step
+            .inputs
+            .iter()
+            .filter(|(_, source)| source.as_text().is_some_and(|t| t.starts_with("kb:")))
+            .filter_map(|(name, _)| spec.inputs.iter().find(|(n, _)| n == name))
+            .filter_map(|(_, value)| value.get("digest").and_then(serde_json::Value::as_str))
+            .filter_map(|hex| Digest::from_hex(hex).ok())
+            .collect();
+        self
     }
 
     /// Build `rk-store`'s eight-field struct. **Assembly, not derivation.**

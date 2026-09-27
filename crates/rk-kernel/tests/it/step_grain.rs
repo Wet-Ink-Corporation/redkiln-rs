@@ -676,6 +676,122 @@ fn the_memo_key_of_an_agent_step_carries_that_steps_own_card_digest() {
     assert_ne!(k0, k1, "two steps' memo keys differ");
 }
 
+/// **ADR-0097 component 6: an agent step's `kb:` inputs reach its memo context as the resolved
+/// atoms' content digests** (R2 = ADR-0173's `kb:` row; `s8d` §8d.3: *"An atom or checklist resolves
+/// to its content with its content digest (ADR-0097 component 6 for `kb:`)"*). *(Added 2026-09-27,
+/// `s8d` build, package R2FIX-8d; refuting round 2's memo minor.)* A `checklist:` input and a literal
+/// are inputs (component 4) and never atoms, so they are the CONTROL: component 6 holds exactly the
+/// one atom.
+#[test]
+fn an_agent_steps_kb_inputs_reach_its_memo_context_as_their_content_digests() {
+    let state = empty_state();
+    let (q, a) = counters();
+    let db = store(&q, &a);
+    let harness = Arc::new(SpecEchoHarness::scripted(vec![Some(
+        serde_json::json!({ "draft": 1 }),
+    )]));
+    let sources = crate::reference_resolver::root().join(".redkiln");
+    let shipped = VerbRegistry::load_file(&sources.join("registry.toml"))
+        .expect("the shipped registry loads");
+    let rt = Runtime::new(
+        ports(Arc::clone(&harness) as Arc<dyn Harness>, &db),
+        "run-memo-kb",
+        STAGE,
+    )
+    .with_tool_routing(
+        ToolRouting::new(shipped, ToolchainValues::default())
+            .with_sources(Some("rust".to_owned()), Some(sources.clone())),
+    );
+    let node = spec();
+    let specs: BTreeMap<String, ActivitySpec> =
+        BTreeMap::from([("draft".to_owned(), step_spec("aa", "ImplReport/v1"))]);
+    let mut draft = agent("draft", "implementer");
+    for (name, source) in [
+        ("conventions", "kb:spec-conventions"),
+        ("scope", "checklist:fix-scope"),
+        ("note", "a literal, not a source form"),
+    ] {
+        draft.inputs.insert(
+            name.to_owned(),
+            rk_kernel::catalog::InputValue::Text(source.to_owned()),
+        );
+    }
+    let steps = vec![draft, emit()];
+    let report = rt
+        .run_activity_steps(
+            activation(Some(&node), Some(&specs)),
+            Some(&steps),
+            &Context::new(),
+            gate_site(&state),
+            AttemptCap::declared(CAP),
+            at(100),
+        )
+        .expect("resolves");
+    assert!(
+        report.committed(),
+        "PREMISE: the agent step dispatches and commits, its three inputs resolved: {:?}",
+        report.outcome()
+    );
+    let contexts = report.memo_contexts();
+    assert_eq!(contexts.len(), 1, "one dispatched agent step: {contexts:?}");
+    let atom = std::fs::read(sources.join("kb").join("spec-conventions.md"))
+        .expect("the declared atom reads");
+    assert_eq!(
+        contexts[0].kb_atoms,
+        vec![rk_types::digest::sha256(&atom)],
+        "component 6 must hold the `kb:` atom's content digest, and only it: a `checklist:` input \
+         and a literal are not KB atoms"
+    );
+    assert_eq!(
+        contexts[0].resolved_inputs.len(),
+        specs["draft"].inputs.len() + 3,
+        "component 4 still carries the spec's own inputs and all three resolved ones"
+    );
+
+    // ---- `Runtime::run_agent_step`, the entry the loop executor's frames dispatch through: it is
+    // handed a spec whose inputs are already resolved, and its memo context reads the atom off it.
+    let (q2, a2) = counters();
+    let db2 = store(&q2, &a2);
+    let harness2 = Arc::new(SpecEchoHarness::scripted(vec![Some(
+        serde_json::json!({ "draft": 2 }),
+    )]));
+    let rt2 = Runtime::new(
+        ports(Arc::clone(&harness2) as Arc<dyn Harness>, &db2),
+        "run-memo-kb-direct",
+        STAGE,
+    );
+    let digest = rk_types::digest::sha256(&atom);
+    let mut resolved = step_spec("ab", "ImplReport/v1");
+    resolved.inputs.push((
+        "conventions".to_owned(),
+        serde_json::json!({ "key": "kb:spec-conventions", "digest": digest.as_str() }),
+    ));
+    resolved.inputs.push((
+        "scope".to_owned(),
+        serde_json::json!({ "key": "checklist:fix-scope", "digest": digest.as_str() }),
+    ));
+    let direct: BTreeMap<String, ActivitySpec> = BTreeMap::from([("draft".to_owned(), resolved)]);
+    let report = rt2
+        .run_agent_step(
+            activation(Some(&node), Some(&direct)),
+            &steps[0],
+            &IterationPath::root(),
+            AttemptCap::declared(CAP),
+            at(100),
+        )
+        .expect("the step activation resolves");
+    assert!(report.committed(), "PREMISE: {:?}", report.outcome());
+    assert_eq!(
+        report
+            .memo_contexts()
+            .iter()
+            .map(|c| c.kb_atoms.clone())
+            .collect::<Vec<_>>(),
+        vec![vec![digest]],
+        "run_agent_step's memo context must read the `kb:` input's digest, and not the `checklist:` input's, though both carry one"
+    );
+}
+
 /// **An activation with no agent step walks to its emit and completes** (§8d.8 defect 4's kernel
 /// half): bound as an explicit absence of agent specs, with no activation spec at all, and
 /// completed by its one completion row.

@@ -207,7 +207,7 @@
 //! | `gate_answered` | 1 | `token`, `tree_hash`, `verdict` | the answer's `tree_hash` differs from the gate's → **void** (AC-039); else answered |
 //! | `gate_expired` | 1 | `token` | remove from the open set, record the expiry |
 //! | `slice_sealed` | 1 | `verdict` | the run is sealed |
-//! | `activity_committed` | 2 | `item`, `activity_id_at_version`, `attempt` | the activation is committed |
+//! | `activity_committed` | 2 | `item`, `activity_id_at_version`, `attempt`; *(2026-09-27, `s8d` build, R2FIX-8d; R1 = ADR-0174 decision 6, proposed)* and, when present, `step_id` with `iteration_path` (a row carrying `step_id` without a readable `iteration_path` is malformed) and `completion` | ~~the activation is committed~~ a row with `step_id` commits that step activation (`is_step_committed`); the activation is COMPLETE on a completion row or a pre-R1 row (`is_committed`) |
 //! | `dispatch` | 2 | the same three | the activation was dispatched; the attempt high-water mark moves |
 //! | `gate_answer_void` | 2 | `token` | the mirror of the void decision, for a run whose voiding was already recorded |
 //! | `step_refused` | 2 | `class` | a recorded halt (ADR-0095 decision 2's refusal arm) |
