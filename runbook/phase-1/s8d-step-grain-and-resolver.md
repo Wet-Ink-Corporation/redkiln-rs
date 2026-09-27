@@ -689,6 +689,19 @@ pins it (§8d.10's M14-8d note). **Still ARMED, not discharged, as recorded sinc
 attempts (ADR-0122 decision 1's *"one charge per recorded `system/api_retry` event"*) are charged only at
 `budget::charge_observed_inner_attempts`, which the run path does not call, and no runtime budget gate reads the pass
 charges yet. This package does not build either.
+*(dated 2026-09-27, `s8d` build, package R4FIX-8d; refuting round 4's spec-conformance major and tests-mutants minor.)*
+**The sentence held for agent dispatches only; it now holds for tool dispatches and across a halt.** Round 4 measured
+three gaps. First, a `tool` step whose port call erred charged nothing: `w.dispatched = 1` sat in the `StepVerdict::Continue`
+arm only, while the agent arm charged a failed dispatch. Second, a walk that halted before any commit dropped every
+charge, because `Walk::halt` built a fresh `ActivityReport::refused` (or `ActivityReport::gated`) report. Third, a
+`for_each` that halted part-way returned before its `note_charge`. The build now charges a `tool` step once its port,
+verb or route call is MADE, whether the call answered or erred. `run_tool_step` sets `StepRun::dispatched` at each of
+its six call sites (`build`, `lint`, `test`, `change_summary`, `run_verb`, `review_clone`), and `review_confirm` sets
+it, the seventh, where the route is taken, past its input refusals. `one_step` reads the flag before any halt. A refusal before the
+call stays uncharged: the registry lookup, the selection, an unresolved input, a missing `range` or `sha`, an unbound
+or unbuilt route, or no stage `rigor`. `Walk::halt` keeps the walk's charges on its fresh refusal and its fresh gate
+(`ActivityReport::with_charges_of`), and `fan_out` notes its once-per-pass charge (AC-022) before it returns a halt.
+Four `on_false_exec::` tests pin this (§8d.10's R4FIX-8d note). The ARMED items above are unchanged.
 
 **The `[*]` projection over a list-valued field (N13).** At `a6349b6`, `tdd-red-green-refactor`'s `red-verify` reads
 `inputs = { selection = "${red.outputs}" }`. N13's edit to `${red.outputs[*].tests_added}` is `s8b`'s (§8d.1 S2).
@@ -988,6 +1001,10 @@ text can be re-read against them:
   paragraph): a non-`for_each` step charges its pass once per DISPATCH it made, a kernel re-dispatch included
   (`ActivityReport::dispatches` into `Walk::dispatched`, charged through the new `budget::charge_dispatched`, which scales
   `charge_for_each`'s kind rule by the count); a `tool` step is one dispatch. A `for_each` step keeps `charge_for_each` once.
+  *(dated 2026-09-27, `s8d` build, package R4FIX-8d; refuting round 4's spec-conformance major.)* A `tool` step's one dispatch
+  is charged once its port, verb or route call is MADE, answered or erred (`StepRun::dispatched`); a refusal before the call
+  charges nothing. A halt before any commit keeps the charges already noted (`ActivityReport::with_charges_of`), and a
+  `for_each` that halts part-way still charges its pass once (§8d.3's m14 paragraph, R4FIX-8d line).
 - **A loop-back inside a `repeat` body — a reading, flagged.** Measured over `.redkiln/catalog` by a read-only `tomllib`
   pass: exactly one `check` with a `{ to, max }` lies inside a repeat body — `implement-ue`'s `cooked` (`on_false = { to =
   "edit", max = 2 }`), inside `edit`'s body (`edit` … `automation`). The walk reads a loop-back as a re-entry: it opens a new
@@ -2171,6 +2188,50 @@ in `on_false_exec::`). **GREEN** after `Walk::executed: bool` became `Walk::disp
 **Counts.** New test names are **80**: 64 in `rk-kernel` and 16 in `rk-cli`, **79 net**. Checkpoint 8d (5) names the
 test and its `want` moves from 13 to 14; (11)'s floor is 877 + 79 = **956**, by dated edit.
 
+*(dated 2026-09-27, `s8d` build, package R4FIX-8d; refuting round 4's spec-conformance major and tests-mutants minor.)*
+**Four new tests, red then green, and sixteen mutants.** All four are in `rk-kernel`'s `on_false_exec::`.
+- `a_tool_dispatch_that_fails_at_the_port_charges_its_pass` walks `draft` (agent), then `t` (`toolchain:test` over
+  `${draft.outputs.tests}`), then `emit`, in three arms. In the control the port answers: 1 agent dispatch, 1 port call,
+  `root` charged 2. In the second arm the port is reached once and errs (*"SCRIPTED-TESTS BOUND"*): `root` 2. In the third
+  the selection `${draft.outputs.nope}` refuses before the port: 0 port calls, `root` 1. **RED** *"left: [("root", 1)]
+  right: [("root", 2)]"*.
+- `a_walk_that_halts_before_any_commit_keeps_the_charges_already_made` has two arms, neither with a commit. In the first,
+  `t1` (`lint`) dispatches and `t2` (`test` with no selection) refuses before its port. In the second, `t1` dispatches and a
+  gate opens. Each charges `root` 1. **RED** *"left: [] right: [("root", 1)]"*.
+- `a_fan_out_that_halts_part_way_charges_its_pass_for_the_copies_it_dispatched` fans an agent step over two elements. The
+  first copy commits and the second's dispatch is refused at the harness bound. `root` is charged 1. **RED** *"left: []
+  right: [("root", 1)]"*.
+- `every_tool_call_site_charges_its_pass_once_the_call_is_made` was written after the fix, so its red was measured with
+  HEAD's `step.rs` and `activity.rs` swapped in (`scratchpad/s8d/r4fix-8d-headred.py`, restored and sha256-checked). All
+  four tests went red there: *"6 passed; 4 failed"*, this one at *"a reached `change_summary` charges: … left: []
+  right: [("root", 1)]"*. It has one arm per call site, each with a refusal-before-the-call control:
+  - `build`: charged 1.
+  - `change_summary` reached and refused: 1. No `range`: 0.
+  - a `toolchain` verb's `run_verb` refusing: 1.
+  - `review_clone` whose clone refuses: 1. A `sha` resolving to no string: only the agent step before it charges.
+  - `review_confirm` whose re-executor refuses, under a `mandatory` stage rigor: 3 (agent, clone, confirm). With no stage
+    `rigor` it is refused before the route: 2.
+
+GREEN: `on_false_exec::`, 10 passed. **Mutants** were run from `scratchpad/s8d/r4fix-8d-mutants.py` (anchor asserted once,
+tmp + `os.replace`, restored in `finally`, sha256 re-checked), each over the whole `rk-kernel --test it`:
+- **MR4a**, the flag honoured only on `Continue`: KILLED at *"left: [("root", 1)]"*.
+- **MR4b**, every `tool` step charged, pre-port refusals included: KILLED at *"left: [("root", 2)]"*.
+- **MR4c**, `Walk::halt`'s fresh refusal drops charges: KILLED.
+- **MR4d**, its fresh gate drops charges: KILLED.
+- **MR4e**, `fan_out`'s halting arm notes no charge: KILLED.
+- **MR4f**, `with_charges_of` takes nothing: KILLED.
+- **MR4g–MR4m**, the flag unset at each call site (lint, test, build, change_summary, verb, clone, confirm): each KILLED.
+- **MR4n**, **MR4o** and **MR4p**, the flag set before confirm's input refusals, before change_summary's `range`
+  refusal, and before clone's `sha` refusal: each KILLED. MR4p SURVIVED the first draft, whose control omitted `sha` and
+  was refused at (3), before the arm. The control now passes a `sha` that resolves to no string, and MR4p is KILLED at
+  *"left: [("root", 2)]"*.
+
+Before the per-site test existed, MR4i–MR4m SURVIVED (*"343 passed; 0 failed"*). One fixture per function had left five
+call sites unobserved.
+
+**Counts.** New test names are **84**: 68 in `rk-kernel` and 16 in `rk-cli`, **83 net**. Checkpoint 8d (5) names the
+four, and its `want` moves from 14 to 18. (11)'s floor is 877 + 83 = **960**, by dated edit.
+
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
 **Checkpoints it touches.** Checkpoint 8c names two tests whose premise is the resolver's absence —
@@ -2553,9 +2614,16 @@ run_lib_named rk-kernel "step5 in-crate" \
 # ---- (5) BULLETS 5-6: ON_FALSE AS ITERATION, THE ERROR ROW AND THE BREAKER.
 # ---- (dated 2026-09-27, s8d build, package M14-8d) One name added by dated edit, the per-dispatch pass charge
 # ---- (m14 settled by accepted ADR-0122; section 8d.10's M14-8d note). `want` moves from 13 to 14 with it.
+# ---- (dated 2026-09-27, s8d build, package R4FIX-8d) Four names added by dated edit: a tool dispatch that fails at
+# ---- the port, a zero-commit halt, a halting fan-out, and every tool call site (section 8d.10's R4FIX-8d note).
+# ---- `want` moves from 14 to 18 with them.
 run_named rk-kernel "on_false, telemetry, breaker" \
   on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path \
   on_false_exec::a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch \
+  on_false_exec::a_tool_dispatch_that_fails_at_the_port_charges_its_pass \
+  on_false_exec::a_walk_that_halts_before_any_commit_keeps_the_charges_already_made \
+  on_false_exec::a_fan_out_that_halts_part_way_charges_its_pass_for_the_copies_it_dispatched \
+  on_false_exec::every_tool_call_site_charges_its_pass_once_the_call_is_made \
   on_false_exec::loop_back_exhaustion_refuses_as_step_failed_after_commit_and_committed_steps_stand \
   on_false_exec::continue_proceeds_and_fail_refuses \
   on_false_exec::a_false_check_with_no_on_false_refuses_as_step_failed_after_commit \
@@ -2765,7 +2833,10 @@ n=$(printf '%s\n' "$hit" | grep -c 'fn selection_of')
 # ---- (dated 2026-09-27, s8d build, package M14-8d) RE-DERIVED from the same recorded 877. The package adds one
 # ---- executing rk-kernel test (section 8d.10's M14-8d note) and removes none. Net executing: 78 + 1 = 79.
 # ---- FLOOR = 877 + 79 = 956. ~~FLOOR=955~~.
-FLOOR=956
+# ---- (dated 2026-09-27, s8d build, package R4FIX-8d) RE-DERIVED from the same recorded 877. The package adds four
+# ---- executing rk-kernel tests (section 8d.10's R4FIX-8d note) and removes none. Net executing: 79 + 4 = 83.
+# ---- FLOOR = 877 + 83 = 960. ~~FLOOR=956~~.
+FLOOR=960
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

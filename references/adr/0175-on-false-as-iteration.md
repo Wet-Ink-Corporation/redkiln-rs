@@ -4,7 +4,7 @@ title: "**`on_false` as iteration** (`s8d`'s record R3): a `check` that does not
 status: proposed
 date: 2026-09-26
 legacy_id: none
-source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R3's row), §8d.3 (*The attempt charge per frame (m14)*, the escalate re-entry's binding), §8d.4 and §8d.10; spikes/DECISIONS-2026-09-21.md D21-42 4d (*"**`on_false` is honoured as iteration.** A `{to,max}` loop-back runs under a new iteration path, keyword forms follow the schema, and exhaustion or no `on_false` refuses as `StepFailedAfterCommit` (ADR-0144). Committed steps stand."*) and 3b (*"The iteration path is the stack of for_each index, repeat count and loop-back count."*), D21-47 (the review's m13 and m14), D21-48 X7 (*"**Refused by name, naming ADR-0046's route OWED.** R3 states the narrowing of D21-42 4d."*) and X8, D21-64 ruling 10 (this record's flip condition); references/adr/0031, 0044, 0046, 0103 (clause 6), 0122 (decision 1), 0144; references/2026-09-07-activity-graph-schema.md §1 (Loop) and §3 (Escalation); crates/rk-kernel/src/runtime/step.rs (`run_activity_steps`' loop executor, `Runtime::on_false`, `after_step`, `gate_arm`, `fan_out`), crates/rk-kernel/src/runtime/reference.rs (`Scope::open_frame`), crates/rk-kernel/src/runtime/activity.rs (`ActivityReport::pass_charges`), crates/rk-kernel/src/catalog.rs (`Step::on_false`, `Step::on_exhausted`, `repeat_body_end`) and crates/rk-kernel/src/workflow/fsm.rs (`RunState::gates_of`) at `s8d`'s build (package P5)
+source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R3's row), §8d.3 (*The attempt charge per frame (m14)*, the escalate re-entry's binding), §8d.4 and §8d.10; spikes/DECISIONS-2026-09-21.md D21-42 4d (*"**`on_false` is honoured as iteration.** A `{to,max}` loop-back runs under a new iteration path, keyword forms follow the schema, and exhaustion or no `on_false` refuses as `StepFailedAfterCommit` (ADR-0144). Committed steps stand."*) and 3b (*"The iteration path is the stack of for_each index, repeat count and loop-back count."*), D21-47 (the review's m13 and m14), D21-48 X7 (*"**Refused by name, naming ADR-0046's route OWED.** R3 states the narrowing of D21-42 4d."*) and X8, D21-64 ruling 10 (this record's flip condition); references/adr/0031, 0044, 0046, 0103 (clause 6), 0122 (decisions 1, 3 and 4; 3 and 4 cited from 2026-09-27, `s8d` build, package R4FIX-8d), 0144; references/2026-09-07-activity-graph-schema.md §1 (Loop) and §3 (Escalation); crates/rk-kernel/src/runtime/step.rs (`run_activity_steps`' loop executor, `Runtime::on_false`, `after_step`, `gate_arm`, `fan_out`), crates/rk-kernel/src/runtime/reference.rs (`Scope::open_frame`), crates/rk-kernel/src/runtime/activity.rs (`ActivityReport::pass_charges`), crates/rk-kernel/src/catalog.rs (`Step::on_false`, `Step::on_exhausted`, `repeat_body_end`) and crates/rk-kernel/src/workflow/fsm.rs (`RunState::gates_of`) at `s8d`'s build (package P5)
 supersedes: []
 superseded_by: []
 related: ["0031", "0037", "0042", "0044", "0046", "0053", "0055", "0103", "0122", "0144", "0173", "0174"]
@@ -132,6 +132,16 @@ attempts (decision 1's *"one charge per recorded `system/api_retry` event"*) rem
 `budget::charge_observed_inner_attempts`, which the run path does not call: ARMED, not discharged, as recorded since
 `s7b`.
 
+*(dated 2026-09-27, `s8d` build, package R4FIX-8d; amended while `proposed`; refuting round 4's spec-conformance
+major.)* ~~(`ActivityReport::dispatches`; a `tool` step is one)~~: the text claimed the rule held for tool steps, and
+the build did not meet it. A tool step whose port call erred charged nothing. A walk that halted before any commit
+dropped every charge already noted. A `for_each` that halted part-way charged nothing. Now every dispatch counts,
+answered or not. A `tool` step makes its one dispatch when its port, verb or route call is MADE, whether the call
+answered or erred. A refusal before the call makes none and charges nothing: the registry lookup, the selection, an
+unresolved input, a missing `range` or `sha`, an unbound or unbuilt route, or no stage `rigor`. A halt keeps every
+charge the walk noted before it, whether it is a refusal, a gate or a step failure after a commit. A `for_each` that
+halts charges its pass once for the copies it dispatched (AC-022).
+
 ## Consequences
 
 **Positive**
@@ -188,6 +198,21 @@ attempts (decision 1's *"one charge per recorded `system/api_retry` event"*) rem
   flat-1 charge (*"left: [("root", Attempts(Attempts(1)))] right: [("root", Attempts(Attempts(2)))]"*), then
   GREEN; mutants MA (the loop charges `charge_dispatched(step, 1)`) and MB (the agent arm records 1 dispatch) are
   KILLED by it (`s8d` §8d.10's M14-8d note).
+- [measured 2026-09-27 at `s8d`'s build, package R4FIX-8d, through the no-dispatch helper] decision 7 for tool steps
+  and across a halt. Each test below was RED on the pre-fix code:
+  - `on_false_exec::a_tool_dispatch_that_fails_at_the_port_charges_its_pass`: a `test` port reached once and erring
+    charges `root` 2 with the agent step before it, where the pre-fix code read *"left: [("root", 1)]"*. A pre-port
+    selection refusal charges 1.
+  - `a_walk_that_halts_before_any_commit_keeps_the_charges_already_made`: a `lint` dispatch before a pre-port refusal,
+    and before a gate, each keeps `root` 1, where the pre-fix code read *"left: []"*.
+  - `a_fan_out_that_halts_part_way_charges_its_pass_for_the_copies_it_dispatched`: `root` 1, where the pre-fix code read
+    *"left: []"*.
+  - `every_tool_call_site_charges_its_pass_once_the_call_is_made`: one arm per call site, each with its pre-call
+    control. Its red was measured with the pre-fix `step.rs` and `activity.rs` swapped in.
+
+  Sixteen mutants were KILLED (`s8d` §8d.10's R4FIX-8d note). They cover the flag honoured only on success, every tool
+  step charged, each fresh halt dropping charges, `fan_out`'s halting arm, the flag unset at each of the seven call
+  sites, and the flag set before three pre-call refusals.
 - **What this evidence does not license.** The walks are over fixture step lists and fake harnesses; no shipped
   activity's loop is run against a real harness here, and the lane walk table is `s8d` §8d.9's. ADR-0046's route is
   owed and unbuilt. This record flips at `s8d`'s close under D21-64 ruling 10, on its own dated ledger line, only if

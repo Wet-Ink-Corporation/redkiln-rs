@@ -408,6 +408,16 @@ impl ActivityReport {
         self.served > 0 || self.committed()
     }
 
+    /// *(dated 2026-09-27, `s8d` build, package R4FIX-8d; refuting round 4's spec-conformance
+    /// major.)* **m14.** A fresh report (a refusal or a gate before any commit) carrying the pass
+    /// charges `walk` noted: a step dispatched before the halt stays charged (§8d.3; ADR-0175
+    /// decision 7). Nothing else of `walk` is taken, so every other count stays the fresh reading.
+    #[must_use]
+    pub(super) fn with_charges_of(mut self, walk: Self) -> Self {
+        self.charges = walk.charges;
+        self
+    }
+
     /// **R1.** The walk's own refusal, before any step committed.
     #[must_use]
     pub(super) fn refusing(mut self, error: StepError) -> Self {

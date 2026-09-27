@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 use rk_kernel::catalog::{Step, StepKind};
 use rk_kernel::runtime::Runtime;
 use rk_kernel::runtime::activity::{ActivityReport, commit_key_of, is_completion_row};
-use rk_kernel::runtime::step::ToolRouting;
+use rk_kernel::runtime::step::{ReviewRoutes, ToolRouting};
 use rk_kernel::workflow::budget::{Charge, fold};
 use rk_kernel::workflow::memo::ToolchainValues;
 use rk_ports::event_store::EventStore;
@@ -259,10 +259,29 @@ impl Rig {
     /// A runtime over a fresh store, answering agent steps from `script` and `test` from `tests`,
     /// with the test registry's four `port` rows bound.
     pub fn new(script: Vec<Json>, tests: Vec<(u32, u32)>) -> Self {
+        Self::routed(script, tests, "", None)
+    }
+
+    /// [`Rig::new`] with `extra` registry rows after the four `port` rows, and `routes` bound as the
+    /// review routes when given *(dated 2026-09-27, `s8d` build, package R4FIX-8d)*.
+    pub fn routed(
+        script: Vec<Json>,
+        tests: Vec<(u32, u32)>,
+        extra: &str,
+        routes: Option<Arc<dyn ReviewRoutes>>,
+    ) -> Self {
         let (q, a) = counters();
         let db = store(&q, &a);
         let harness = Arc::new(LoopHarness::scripted(script));
         let tests = Arc::new(ScriptedTests::scripted(tests));
+        let routing = ToolRouting::new(
+            crate::tool_verb_routing::registry(extra, ""),
+            ToolchainValues::default(),
+        );
+        let routing = match routes {
+            Some(routes) => routing.with_review_routes(routes),
+            None => routing,
+        };
         let rt = Runtime::new(
             ports_with_toolchain(
                 Arc::clone(&harness) as Arc<dyn Harness>,
@@ -272,10 +291,7 @@ impl Rig {
             "run-loop",
             STAGE,
         )
-        .with_tool_routing(ToolRouting::new(
-            crate::tool_verb_routing::registry("", ""),
-            ToolchainValues::default(),
-        ));
+        .with_tool_routing(routing);
         Self {
             db,
             harness,
@@ -295,6 +311,11 @@ impl Rig {
 
     /// Walk `steps` once, over the journal as it stands (its gates folded).
     pub fn walk(&self, steps: &[Step]) -> ActivityReport {
+        self.walk_in(steps, &rk_kernel::predicate::Context::new())
+    }
+
+    /// [`Rig::walk`] under the selection context `ctx` (a stage `rigor`, say).
+    pub fn walk_in(&self, steps: &[Step], ctx: &rk_kernel::predicate::Context) -> ActivityReport {
         let state = rk_kernel::workflow::fsm::fold(ITEM, STAGE, &journal(&self.db))
             .unwrap_or_else(|_| empty_state());
         let sp = spec();
@@ -302,7 +323,7 @@ impl Rig {
             .run_activity_steps(
                 activation(&sp),
                 Some(steps),
-                &rk_kernel::predicate::Context::new(),
+                ctx,
                 gate_site(&state),
                 rk_kernel::workflow::envelope::AttemptCap::declared(CAP),
                 at(100),
@@ -525,6 +546,359 @@ fn a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch() {
         )],
         "the pass is charged once per DISPATCH its step made (ADR-0122 decision 1), not once per \
          executed step: {charges:?}"
+    );
+}
+
+/// The walk's pass charges, rendered as `(pass, attempts)`.
+fn charged(report: &ActivityReport) -> Vec<(String, u32)> {
+    report
+        .pass_charges()
+        .iter()
+        .map(|(p, c)| {
+            let Charge::Attempts(a) = c else {
+                panic!("a walk charges attempts only: {c:?}")
+            };
+            (p.to_string(), a.get())
+        })
+        .collect()
+}
+
+/// **m14: a `tool` dispatch that REACHES the port and fails charges its pass** *(dated 2026-09-27,
+/// `s8d` build, package R4FIX-8d; refuting round 4's spec-conformance major)*. §8d.3: *"Every agent or
+/// tool dispatch in a frame charges that frame's pass."* A failed agent dispatch was charged and a
+/// failed tool dispatch was not. Three arms over `draft` (agent) → `t` (`toolchain:test`) → `emit`:
+/// the port answers (control, 2), the port is reached and errs (2, not 1), and the selection refuses
+/// BEFORE the port (1: a pre-port refusal made no dispatch and stays uncharged).
+#[test]
+fn a_tool_dispatch_that_fails_at_the_port_charges_its_pass() {
+    let steps = |selection: &str| {
+        vec![
+            agent("draft", &[]),
+            tool("t", "test", &[("selection", selection)]),
+            step("emit", StepKind::Emit),
+        ]
+    };
+    let draft = || vec![serde_json::json!({"tests": ["t1"]})];
+    let root = |n: u32| vec![("root".to_owned(), n)];
+
+    // CONTROL: the port answers, and the walk completes.
+    let rig = Rig::new(draft(), vec![(1, 0)]);
+    let report = rig.walk(&steps("${draft.outputs.tests}"));
+    assert!(
+        report.completed() && report.step_error().is_none(),
+        "PREMISE: the control walk completes: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.tests.selections().len()),
+        (1, 1),
+        "PREMISE: one agent dispatch and one port call"
+    );
+    assert_eq!(
+        charged(&report),
+        root(2),
+        "the agent dispatch and the tool dispatch each charge the pass"
+    );
+
+    // THE PORT IS REACHED AND ERRS: the tool step still made its dispatch.
+    let rig = Rig::new(draft(), Vec::new());
+    let report = rig.walk(&steps("${draft.outputs.tests}"));
+    let e = refusal(&report);
+    assert!(
+        e.contains("SCRIPTED-TESTS BOUND") && !report.completed(),
+        "PREMISE: the port's own error ends the walk: {e}"
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.tests.selections().len()),
+        (1, 1),
+        "PREMISE: the port WAS reached, exactly once"
+    );
+    assert_eq!(
+        charged(&report),
+        root(2),
+        "a tool dispatch that reached the port and failed charges its pass, as a failed agent \
+         dispatch does (§8d.3 m14; ADR-0175 decision 7): {e}"
+    );
+
+    // A PRE-PORT REFUSAL: the selection does not resolve, the port is never reached.
+    let rig = Rig::new(draft(), vec![(1, 0)]);
+    let report = rig.walk(&steps("${draft.outputs.nope}"));
+    let e = refusal(&report);
+    assert!(
+        e.contains("`t`") && !report.completed() && rig.tests.selections().is_empty(),
+        "PREMISE: the selection refuses by name before the port: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        root(1),
+        "a refusal before the port made no dispatch and charges nothing; only `draft` charges: {e}"
+    );
+}
+
+/// **m14: a walk that halts before ANY commit keeps the charges its dispatched steps made**
+/// *(dated 2026-09-27, `s8d` build, package R4FIX-8d)*. `Walk::halt` built a FRESH report for a
+/// refusal or a gate before a commit, discarding every charge already noted. Two arms, each with no
+/// commit (idempotent tool steps commit nothing): `t1` (`toolchain:lint`) dispatches, then `t2`
+/// refuses before its port (a `test` with no selection); and `t1` dispatches, then a gate opens.
+#[test]
+fn a_walk_that_halts_before_any_commit_keeps_the_charges_already_made() {
+    // A refusal before any commit.
+    let rig = Rig::new(Vec::new(), Vec::new());
+    let report = rig.walk(&[
+        tool("t1", "lint", &[]),
+        tool("t2", "test", &[]),
+        step("emit", StepKind::Emit),
+    ]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("`t2`")
+            && !report.committed()
+            && !report.completed()
+            && rig.tests.selections().is_empty(),
+        "PREMISE: `t2` refuses before its port and nothing committed: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        vec![("root".to_owned(), 1)],
+        "`t1`'s dispatch stays charged when the walk refuses before any commit: {e}"
+    );
+
+    // A gate before any commit.
+    let rig = Rig::new(Vec::new(), Vec::new());
+    let report = rig.walk(&[
+        tool("t1", "lint", &[]),
+        gate("approve", "t1.approve", None),
+        step("emit", StepKind::Emit),
+    ]);
+    assert!(
+        report.gate_opened().is_some() && !report.committed() && report.dispatches() == 0,
+        "PREMISE: the gate opens with no commit and no agent dispatch: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        charged(&report),
+        vec![("root".to_owned(), 1)],
+        "`t1`'s dispatch stays charged when the walk gates before any commit"
+    );
+}
+
+/// **m14: a `for_each` that halts part-way charges its pass once for the copies it dispatched**
+/// *(dated 2026-09-27, `s8d` build, package R4FIX-8d)*. `fan_out` returned a copy's halt before its
+/// `note_charge`. `red` fans out over two elements; the first copy commits and the second's dispatch
+/// is refused at the harness's bound.
+#[test]
+fn a_fan_out_that_halts_part_way_charges_its_pass_for_the_copies_it_dispatched() {
+    let mut red = agent("red", &[("ac", "${item}")]);
+    red.for_each = Some("artifact:Spec.acs".to_owned());
+    let rig = Rig::new(vec![serde_json::json!({"tests_added": ["a"]})], Vec::new());
+    rig.seed(crate::reference_resolver::emitted_row(
+        "spec-author@1",
+        "Spec",
+        serde_json::json!({"acs": ["AC-1", "AC-2"]}),
+    ));
+    let report = rig.walk(&[red, step("emit", StepKind::Emit)]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("LOOP-HARNESS BOUND") && report.committed() && !report.completed(),
+        "PREMISE: the first copy commits and the second's dispatch is refused: {e}"
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.paths("red")),
+        (2, vec!["for_each:0".to_owned()]),
+        "PREMISE: both copies dispatched, one committed"
+    );
+    assert_eq!(
+        charged(&report),
+        vec![("root".to_owned(), 1)],
+        "a fan-out that dispatched charges its pass ONCE (AC-022), halted or not: {e}"
+    );
+}
+
+/// Review routes whose clone answers or refuses, and whose re-executor always refuses: each call is
+/// the route TAKEN, so it charges whether it answers or not.
+struct R4Routes {
+    clone_ok: bool,
+}
+
+impl ReviewRoutes for R4Routes {
+    fn clone_at(&self, sha: &str) -> Result<Json, StepError> {
+        if self.clone_ok {
+            Ok(serde_json::json!({ "path": "r4-clone", "sha": sha, "working_tree": "declared" }))
+        } else {
+            Err(StepError::Unsupported {
+                capability: "R4-ROUTES: the clone is refused".to_owned(),
+            })
+        }
+    }
+
+    fn reexecutor(
+        &self,
+        _workspace: &Json,
+    ) -> Result<Box<dyn rk_kernel::review::reexec::ReExecutor + '_>, StepError> {
+        Err(StepError::Unsupported {
+            capability: "R4-ROUTES: no re-executor".to_owned(),
+        })
+    }
+}
+
+/// **m14 over every call a `tool` step can make** *(dated 2026-09-27, `s8d` build, package
+/// R4FIX-8d)*: `build`, `change_summary`, a `toolchain` verb, `shallow_clone`'s `review_clone` route
+/// and `verdict_record`'s `review_confirm` route each charge their pass once the call is MADE,
+/// answered or not; the refusal before each call (no `range`, no `sha`, no stage `rigor`) charges
+/// nothing. `lint` and `test` are pinned above. One fixture per call site, because one per function
+/// left five sites unobserved.
+#[test]
+fn every_tool_call_site_charges_its_pass_once_the_call_is_made() {
+    const ROWS: &str = concat!(
+        "rebuild = { outputs = \"BuildReport\", live = false, timeout = \"build_timeout\", inputs = [], route = \"toolchain\", side_effecting = false }\n",
+        "shallow_clone = { outputs = \"Workspace\", live = false, timeout = \"build_timeout\", inputs = [\"sha\"], route = \"review_clone\", side_effecting = true }\n",
+        "verdict_record = { outputs = \"Verdict\", live = false, timeout = \"build_timeout\", inputs = [\"findings\", \"override\"], route = \"review_confirm\", side_effecting = true }\n",
+    );
+    let emit = || step("emit", StepKind::Emit);
+    let rig = |script: Vec<Json>, clone_ok: bool| {
+        Rig::routed(
+            script,
+            Vec::new(),
+            ROWS,
+            Some(Arc::new(R4Routes { clone_ok }) as Arc<dyn ReviewRoutes>),
+        )
+    };
+    let root = |n: u32| vec![("root".to_owned(), n)];
+    let none: Vec<(String, u32)> = Vec::new();
+
+    // `build`: the port answers `passing`, and the walk completes.
+    let r = rig(Vec::new(), true);
+    let report = r.walk(&[tool("b", "build", &[]), emit()]);
+    assert!(
+        report.completed(),
+        "PREMISE: `build` walks: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        charged(&report),
+        root(1),
+        "`build`'s port call charges its pass"
+    );
+
+    // `change_summary`: the port is reached and refuses (the counting fake's answer).
+    let r = rig(Vec::new(), true);
+    let report = r.walk(&[tool("c", "change_summary", &[("range", "a..b")]), emit()]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("change_summary") && !report.completed(),
+        "PREMISE: the port refuses: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        root(1),
+        "a reached `change_summary` charges: {e}"
+    );
+    let r = rig(Vec::new(), true);
+    let report = r.walk(&[tool("c", "change_summary", &[]), emit()]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("inputs.range"),
+        "PREMISE: refused before the port: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        none,
+        "no `range`, no call, no charge: {e}"
+    );
+
+    // A `toolchain` verb: `run_verb` is reached and refuses by the verb's bare name.
+    let r = rig(Vec::new(), true);
+    let report = r.walk(&[tool("v", "rebuild", &[]), emit()]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("rebuild") && !report.completed(),
+        "PREMISE: the verb call refuses: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        root(1),
+        "a reached `run_verb` charges: {e}"
+    );
+
+    // `review_clone`: the root's clone refuses.
+    let r = rig(Vec::new(), false);
+    let report = r.walk(&[tool("clone", "shallow_clone", &[("sha", "abc")]), emit()]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("R4-ROUTES: the clone is refused"),
+        "PREMISE: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        root(1),
+        "a taken `review_clone` route charges: {e}"
+    );
+    // A `sha` that resolves to no string is refused INSIDE the route's arm, before the clone.
+    let r = rig(vec![serde_json::json!({"not": "a sha"})], false);
+    let report = r.walk(&[
+        agent("a", &[]),
+        tool("clone", "shallow_clone", &[("sha", "${a.outputs}")]),
+        emit(),
+    ]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("did not resolve to a string"),
+        "PREMISE: refused before the route: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        root(1),
+        "no string `sha`, no clone: only `a` charges: {e}"
+    );
+
+    // `review_confirm`: the clone commits a workspace, and the re-executor refuses. The route is
+    // taken only under a stage `rigor`; without one it refuses first and charges nothing.
+    let confirm = || {
+        vec![
+            agent("review", &[]),
+            tool("clone", "shallow_clone", &[("sha", "abc")]),
+            tool(
+                "record",
+                "verdict_record",
+                &[("findings", "${review.outputs}"), ("override", "none")],
+            ),
+            emit(),
+        ]
+    };
+    let facets = {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let src = std::fs::read_to_string(root.join(".redkiln").join("facets.toml"))
+            .expect("the shipped facet registry is readable");
+        rk_kernel::registry::Registry::from_toml(&src).expect("the shipped facet registry loads")
+    };
+    let ctx = rk_kernel::rigor::with_rigor(
+        rk_kernel::predicate::Context::new(),
+        rk_kernel::rigor::Rigor::Mandatory,
+        &facets,
+    );
+    let r = rig(vec![serde_json::json!({"items": []})], true);
+    let report = r.walk_in(&confirm(), &ctx);
+    let e = refusal(&report);
+    assert!(
+        e.contains("R4-ROUTES: no re-executor") && report.committed(),
+        "PREMISE: `review` and `clone` commit, and the re-executor refuses: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        root(3),
+        "`review`, `clone` and a taken `review_confirm` route each charge: {e}"
+    );
+    let r = rig(vec![serde_json::json!({"items": []})], true);
+    let report = r.walk(&confirm());
+    let e = refusal(&report);
+    assert!(
+        e.contains("rigor"),
+        "PREMISE: refused before the route: {e}"
+    );
+    assert_eq!(
+        charged(&report),
+        root(2),
+        "no stage `rigor`, no route taken: only `review` and `clone` charge: {e}"
     );
 }
 

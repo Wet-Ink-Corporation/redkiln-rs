@@ -491,6 +491,7 @@ fn review_confirm(
     review: ReviewSite<'_>,
     routing: &ToolRouting,
     routes: &dyn ReviewRoutes,
+    reached: &mut bool,
 ) -> Result<serde_json::Value, StepError> {
     let refuse = |why: String| StepError::Unsupported {
         capability: format!(
@@ -543,6 +544,9 @@ fn review_confirm(
             ))
         })?
         .to_owned();
+    // m14 (dated 2026-09-27, `s8d` build, package R4FIX-8d): the route is TAKEN here, past every
+    // input refusal above; from this call on the step made its one dispatch (§8d.3).
+    *reached = true;
     let reexecutor = routes.reexecutor(workspace)?;
     let quarantines = BTreeMap::new();
     let confirmed = crate::review::confirm::confirm_with(
@@ -905,6 +909,7 @@ impl super::Runtime {
         env: &super::reference::Env<'_>,
         verdict: bool,
         review: ReviewSite<'_>,
+        reached: &mut bool,
     ) -> Result<ToolOutput, StepError> {
         let run = step.run.as_deref().unwrap_or_default();
         let Some(verb) = crate::workflow::memo::verb_of(run) else {
@@ -1051,6 +1056,7 @@ impl super::Runtime {
             // [`build_verdict`] reads it unless a later `check` does (N25: `build-package`'s
             // `built` reads `report.status == 'passing'`).
             ToolCall::Port(PortMethod::Build) => {
+                *reached = true;
                 let report = toolchain.build(bound)?;
                 if verdict {
                     build_verdict(&report)?;
@@ -1060,7 +1066,10 @@ impl super::Runtime {
                     serde_json::to_value(&report),
                 )
             }
-            ToolCall::Port(PortMethod::Lint) => toolchain.lint(bound).map(|()| None),
+            ToolCall::Port(PortMethod::Lint) => {
+                *reached = true;
+                toolchain.lint(bound).map(|()| None)
+            }
             // R2 decision 9: the resolved selection, bound as the step's output (record T's
             // `TestOutcome`, whose serde form the catalog's `report.failed` / `status` read).
             ToolCall::Port(PortMethod::Test) => {
@@ -1075,6 +1084,7 @@ impl super::Runtime {
                         },
                     ));
                 };
+                *reached = true;
                 let outcome = toolchain.test(&selection, bound)?;
                 typed(
                     PortMethod::Test.output_kind(),
@@ -1096,6 +1106,7 @@ impl super::Runtime {
                         ),
                     });
                 };
+                *reached = true;
                 let summary = toolchain.change_summary(range, bound)?;
                 typed(
                     PortMethod::SummariseChanges.output_kind(),
@@ -1110,6 +1121,7 @@ impl super::Runtime {
                     .iter()
                     .filter_map(|name| inputs.get(name).map(|v| (name.clone(), v.clone())))
                     .collect();
+                *reached = true;
                 let output = toolchain.run_verb(&VerbCall {
                     verb,
                     inputs: &call_inputs,
@@ -1135,6 +1147,7 @@ impl super::Runtime {
                 let routes = routing
                     .review_routes()
                     .ok_or_else(|| unreachable_unbound(verb))?;
+                *reached = true;
                 Ok(Some((entry.outputs.clone(), routes.clone_at(sha)?)))
             }
             // R5 decision 5: `review::confirm`, the kernel's, over the resolved finding set, at the
@@ -1144,7 +1157,7 @@ impl super::Runtime {
                 let routes = routing
                     .review_routes()
                     .ok_or_else(|| unreachable_unbound(verb))?;
-                review_confirm(step, verb, inputs, review, routing, routes)
+                review_confirm(step, verb, inputs, review, routing, routes, reached)
                     .map(|value| Some((entry.outputs.clone(), value)))
             }
         }
@@ -1394,6 +1407,12 @@ impl super::Runtime {
         };
         // **R3: a `check` that does not hold goes to its `on_false`** (D21-42 4d), inside the walk
         // only; a lone `execute_step` keeps its by-name refusal.
+        // m14 (ADR-0122 decision 1; dated 2026-09-27, `s8d` build, package R4FIX-8d): a tool step's
+        // port call is one dispatch, charged whether the call answered or erred — set BEFORE any
+        // halt, so the walk loop notes it on every flow. The kernel has no retry loop over it.
+        if run.dispatched {
+            w.dispatched = 1;
+        }
         if run.held_false {
             return Ok(self.on_false(w, steps, index));
         }
@@ -1405,10 +1424,6 @@ impl super::Runtime {
                 }
                 // R2: a tool step's typed output is bound as `${<step>.outputs}`; a `check` (or a
                 // tool whose port method returns none) is marked run.
-                if step.kind == StepKind::Tool {
-                    // A tool step's port call is one dispatch; the kernel has no retry loop over it.
-                    w.dispatched = 1;
-                }
                 match &run.output {
                     Some((_, value)) => w.scope.bind_output(&step.id, value.clone()),
                     None => w.scope.mark_ran(&step.id),
@@ -1672,6 +1687,14 @@ impl super::Runtime {
                 ),
                 other => {
                     w.scope.set_element(None);
+                    // m14 (dated 2026-09-27, `s8d` build, package R4FIX-8d): the copies already
+                    // dispatched charge the pass once (AC-022) before the halt, never zero.
+                    if executed {
+                        w.report.note_charge(
+                            path.clone(),
+                            crate::workflow::budget::charge_for_each(step, outputs.len() + 1).get(),
+                        );
+                    }
                     return Ok(other);
                 }
             }
@@ -2205,6 +2228,7 @@ impl super::Runtime {
                 output: None,
                 inputs: BTreeMap::new(),
                 held_false: false,
+                dispatched: false,
             };
             // (1) THE GUARD, its `${…}` resolved through the scope (ADR-0136; R2).
             let mut resolve_ref =
@@ -2216,6 +2240,7 @@ impl super::Runtime {
                         output: None,
                         inputs: BTreeMap::new(),
                         held_false: false,
+                        dispatched: false,
                     });
                 }
                 Err(e) => return Ok(refuse(e)),
@@ -2249,6 +2274,9 @@ impl super::Runtime {
             };
             let mut output: ToolOutput = None;
             let mut held_false = false;
+            // m14 (R4FIX-8d): set by the tool arm once its port, verb or route call is MADE, on
+            // success or error; a refusal before the call leaves it `false`.
+            let mut dispatched = false;
             let verdict = match step.kind {
                 // The only place a model runs. The dispatch itself stays in `run_activity`'s retry
                 // loop, unchanged, so AC-013's re-entry and `kill_and_resume_n_step` are
@@ -2260,6 +2288,7 @@ impl super::Runtime {
                     env,
                     site.verdict,
                     ReviewSite { ctx, scope },
+                    &mut dispatched,
                 ) {
                     Ok(value) => {
                         output = value;
@@ -2298,6 +2327,7 @@ impl super::Runtime {
                 output,
                 inputs,
                 held_false,
+                dispatched,
             })
         })
     }
@@ -2321,6 +2351,11 @@ struct StepRun {
     /// *(P5; R3.)* A `check` that evaluated `false`: the walk routes it through its `on_false`;
     /// a lone `execute_step` keeps the by-name refusal its verdict carries.
     held_false: bool,
+    /// *(dated 2026-09-27, `s8d` build, package R4FIX-8d; refuting round 4's spec-conformance
+    /// major.)* A `tool` step whose port, verb or route call was MADE — on success OR error — made
+    /// one dispatch, which charges its pass (§8d.3 m14, ADR-0175 decision 7). A refusal before the
+    /// call (the registry lookup, the selection, an unresolved input, the route) made none.
+    dispatched: bool,
 }
 
 // ---- R3 and R2 decision 5 (`s8d` package P5): the loop executor's state. ------------------------
@@ -2347,7 +2382,11 @@ impl Walk {
             // port's error, a guard it cannot decide): ADR-0144's shape after a commit, and a
             // refusal outright before one.
             Halt::Failed(err) if held => self.report.with_step_failure(err),
-            Halt::Failed(err) | Halt::Fresh(err) => ActivityReport::refused(now, err),
+            // *(dated 2026-09-27, `s8d` build, package R4FIX-8d.)* The fresh refusal keeps the
+            // walk's pass charges: a step dispatched before the halt stays charged (m14).
+            Halt::Failed(err) | Halt::Fresh(err) => {
+                ActivityReport::refused(now, err).with_charges_of(self.report)
+            }
             // The walk's own refusal, keeping every count the walk read.
             Halt::Stop(err) if held => self.report.with_step_failure(err),
             Halt::Stop(err) => self.report.refusing(err),
@@ -2356,7 +2395,7 @@ impl Walk {
                 if self.report.dispatches() > 0 || held {
                     self.report.with_gate(token)
                 } else {
-                    ActivityReport::gated(now, token)
+                    ActivityReport::gated(now, token).with_charges_of(self.report)
                 }
             }
         }
