@@ -45,6 +45,10 @@
 //!   proposed). An optional `requires` kind is never seeded: its absence reads `null` (ADR-0032). The
 //!   seeds are counted and printed; a kind an upstream activity DID emit is read from that emit, never
 //!   seeded over.
+//! - **The run branch** *(dated 2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2)* is a
+//!   real repository built at test time ([`LaneRunBranch`]): a base commit on `main` and one commit
+//!   on `rk-run/LANE-WALK-1` touching the lane's path, read by R6's range through `rk-git` and bound
+//!   as the routing's run-branch reader, which `"affected"` reads inside `Changeset`'s producer.
 //! - **Gates** the walk opens are answered with their question's FIRST option from
 //!   `.redkiln/processes/questions.toml`, through the fold (`gate_answered`), and the walk re-entered.
 //!
@@ -54,9 +58,12 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use rk_git::git_exec::{self, GitExec, GitOp};
+use rk_git::path::WorktreePath;
 use rk_kernel::catalog::{Activity, StepKind};
 use rk_kernel::registry::Registry;
 use rk_kernel::runtime::Runtime;
+use rk_kernel::runtime::reference::RunBranch;
 use rk_kernel::runtime::step::{Activation, GateSite, ReviewRoutes, ToolRouting};
 use rk_kernel::select::{ArtifactRegistry, Catalog, Item, Pack, select};
 use rk_kernel::workflow::envelope::AttemptCap;
@@ -575,11 +582,138 @@ struct Measured {
     gates: Vec<String>,
 }
 
+// ---- the run branch: a real git fixture (D21-74 ruling 2) -----------------------------------------
+//
+// *(dated 2026-09-27, `s8d` build, package F3-D2174; R2 = ADR-0173 decision 9 as amended, proposed.)*
+// Inside `Changeset`'s own producer (`tdd-red-green-refactor`'s `green-verify`/`refactor-verify`),
+// `"affected"` resolves over the item's run branch, `HEAD..rk-run/<item>`. The rig builds that
+// branch in a real repository at test time (a repository cannot be a committed fixture): one base
+// commit on `main`, and one commit on `rk-run/LANE-WALK-1` touching the lane's one path.
+
+/// The item's run branch in a repository built at test time, isolated from this box's git
+/// configuration as `gates.rs`' fixture is.
+struct LaneRunBranch {
+    _dir: tempfile::TempDir,
+    exec: GitExec,
+    repo: WorktreePath,
+}
+
+impl LaneRunBranch {
+    fn with_changeset(path: &str) -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(dir.path().join("empty.gitconfig"), b"").expect("empty gitconfig");
+        std::fs::create_dir_all(dir.path().join("nohooks")).expect("nohooks");
+        let root = dir.path().join("repo");
+        std::fs::create_dir_all(&root).expect("mkdir repo");
+        let env: Vec<(String, String)> = vec![
+            ("GIT_CONFIG_NOSYSTEM".into(), "1".into()),
+            (
+                "GIT_CONFIG_GLOBAL".into(),
+                dir.path().join("empty.gitconfig").display().to_string(),
+            ),
+            ("GIT_AUTHOR_NAME".into(), "rk".into()),
+            ("GIT_COMMITTER_NAME".into(), "rk".into()),
+            ("GIT_AUTHOR_EMAIL".into(), "rk@example.invalid".into()),
+            ("GIT_COMMITTER_EMAIL".into(), "rk@example.invalid".into()),
+            ("GIT_AUTHOR_DATE".into(), "1700000000 +0000".into()),
+            ("GIT_COMMITTER_DATE".into(), "1700000000 +0000".into()),
+        ];
+        let hooks = format!("core.hooksPath={}", dir.path().join("nohooks").display());
+        let git = |args: &[&str]| {
+            let mut all: Vec<String> = [
+                "-c",
+                "core.autocrlf=false",
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                "init.defaultBranch=main",
+                "-c",
+                hooks.as_str(),
+            ]
+            .iter()
+            .map(|s| (*s).to_owned())
+            .collect();
+            all.extend(args.iter().map(|s| (*s).to_owned()));
+            git_exec::run_with_env(&root, &all, env.clone())
+                .unwrap_or_else(|e| panic!("git {args:?} in the lane fixture: {e:?}"));
+        };
+        git(&["init", "--quiet"]);
+        std::fs::write(root.join("README.md"), b"lane walk\n").expect("README.md");
+        git(&["add", "README.md"]);
+        git(&["commit", "--quiet", "-m", "base"]);
+        git(&["checkout", "--quiet", "-b", &format!("rk-run/{ITEM}")]);
+        let file = root.join(path);
+        std::fs::create_dir_all(file.parent().expect("the lane path has a parent"))
+            .expect("mkdir the lane path's parent");
+        std::fs::write(&file, b"// the item's change\n").expect("the lane path");
+        git(&["add", path]);
+        git(&["commit", "--quiet", "-m", "the item's changeset"]);
+        git(&["checkout", "--quiet", "main"]);
+        let tc = rk_git::version::assert_at_startup(&root).expect("git at or above the floor");
+        let exec = GitExec::new(dir.path().join("hooks-empty"), tc).expect("the wrapper");
+        let repo = WorktreePath::new(&root).expect("the fixture path normalises");
+        Self {
+            _dir: dir,
+            exec,
+            repo,
+        }
+    }
+}
+
+impl RunBranch for LaneRunBranch {
+    /// R6's range read, transcribed from `rk-cli`'s `change_deriver::read_range` (this crate cannot
+    /// depend on `rk-cli`; the production reader is proved there, by
+    /// `change_deriver::the_run_branch_reader_reads_the_items_changeset_paths_through_rk_git`).
+    fn changed_paths(&self, item: &str) -> Result<Option<Vec<String>>, String> {
+        let run_ref = format!("refs/heads/rk-run/{item}");
+        if self
+            .exec
+            .run(
+                GitOp::RevParse,
+                &self.repo,
+                ["rev-parse", "--verify", "--quiet", &run_ref],
+            )
+            .is_err()
+        {
+            return Ok(None);
+        }
+        let out = self
+            .exec
+            .run(
+                GitOp::Log,
+                &self.repo,
+                [
+                    "log",
+                    "--numstat",
+                    "--no-renames",
+                    "-z",
+                    "--format=",
+                    &format!("HEAD..{run_ref}"),
+                ],
+            )
+            .map_err(|e| format!("HEAD..{run_ref} could not be read: {e:?}"))?;
+        let text = String::from_utf8_lossy(&out.stdout);
+        let mut paths: Vec<String> = Vec::new();
+        for record in text.split('\0') {
+            let record = record.trim_start_matches(['\n', '\r']);
+            let Some(path) = record.splitn(3, '\t').nth(2) else {
+                continue;
+            };
+            if !path.is_empty() && !paths.iter().any(|p| p == path) {
+                paths.push(path.to_owned());
+            }
+        }
+        Ok((!paths.is_empty()).then_some(paths))
+    }
+}
+
 struct Rig<'a> {
     shipped: &'a Shipped,
     lane: &'a Lane,
     db: Arc<Mutex<dyn EventStore>>,
     seeded: Vec<String>,
+    /// *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2.)* The item's run branch.
+    branch: Arc<LaneRunBranch>,
 }
 
 impl Rig<'_> {
@@ -609,6 +743,10 @@ impl Rig<'_> {
                 "deny_db",
                 Json::from("/lane-cargo-home/advisory-dbs"),
             )
+            // *(dated 2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173
+            // decision 9 as amended, proposed.)* The run-branch reader, as `rk-cli`'s composition
+            // root binds one, over the rig's git fixture.
+            .with_run_branch(Arc::clone(&self.branch) as Arc<dyn RunBranch>)
     }
 
     /// Walk one activity to its end, answering each gate it opens with its first option.
@@ -737,6 +875,7 @@ fn walk_lane(lane: &Lane) {
         lane,
         db: store(&q, &a),
         seeded: Vec::new(),
+        branch: Arc::new(LaneRunBranch::with_changeset(lane.path)),
     };
 
     // ---- triage: N3's `unknown_facet:change` gate, opened by the kernel's own mint and answered
@@ -1007,6 +1146,22 @@ fn walk_lane(lane: &Lane) {
 // - `confirmation-test`, `bdd-scenarios`, `smoke-test`, `rolling-deploy`, `debt-logging` and
 //   `closure-record`: as the P8 note (owed to `s8g`/`s8h`, `s8g`, `s8g`, `s8f`, `s8f`).
 
+// *(dated 2026-09-27, `s8d` build, package F3-D2174; D21-74 rulings 1 and 2; R8 = ADR-0179 decision 2
+// and R2 = ADR-0173 decision 9, each as amended, proposed.)* **RE-MEASURED after both amendments, and
+// the constants below follow §8d.9's dated line.** Step 5 draws no edge from a node to itself, so
+// the story lane's `implement` selection assembles (`docs-update`, `tdd-red-green-refactor`,
+// `change-summary`); and inside `Changeset`'s producer `"affected"` resolves over the run branch's
+// diff, read from the rig's git fixture ([`LaneRunBranch`]), so `tdd-red-green-refactor` walks on both
+// lanes. The two causes the F2-D2173 note named above are closed. What still refuses, and why:
+//
+// - `docs-update` (story `implement`): its `policy` reads `${lint.outputs}`, and the `lint` port
+//   method returns no value (D21-73 item 4, owed to `s8g`/`s8h`), as `bdd-scenarios`' does.
+// - `confirmation-test`, `bdd-scenarios`, `smoke-test`, `rolling-deploy`, `debt-logging` and
+//   `closure-record`: as the P8 note.
+//
+// Upstream activities now emit what later ones require, so the rig seeds less: fix `BugReport`;
+// story `IntakeRecord, Spec`.
+
 /// §8d.9's fix lane, as measured.
 const FIX: Lane = Lane {
     name: "fix",
@@ -1035,10 +1190,9 @@ const FIX: Lane = Lane {
         Row {
             stage: "implement",
             selected: &[
-                (
-                    "tdd-red-green-refactor",
-                    Verdict::Refuses("no committed `emit` binding of `Changeset`"),
-                ),
+                // *(dated 2026-09-27, F3-D2174; D21-74 ruling 2.)* Was `Refuses("no committed
+                // `emit` binding of `Changeset`")`: `affected` now reads the run branch.
+                ("tdd-red-green-refactor", Verdict::Walks),
                 ("change-summary", Verdict::Walks),
             ],
         },
@@ -1112,6 +1266,19 @@ const STORY: Lane = Lane {
             stage: "planning",
             selected: &[("t-shirt-sizing", Verdict::Walks)],
         },
+        // *(dated 2026-09-27, F3-D2174; D21-74 rulings 1 and 2.)* The `implement` SELECTION no
+        // longer refuses (step 5 draws no self-edge), and `tdd` reads `affected` from the run branch.
+        Row {
+            stage: "implement",
+            selected: &[
+                (
+                    "docs-update",
+                    Verdict::Refuses("the step `lint` has not run"),
+                ),
+                ("tdd-red-green-refactor", Verdict::Walks),
+                ("change-summary", Verdict::Walks),
+            ],
+        },
         Row {
             stage: "verify",
             selected: &[
@@ -1149,7 +1316,9 @@ const STORY: Lane = Lane {
             ],
         },
     ],
-    selection_refusals: &[("implement", "the assembled DAG is not acyclic")],
+    // *(dated 2026-09-27, F3-D2174; D21-74 ruling 1.)* Was `&[("implement", "the assembled DAG is
+    // not acyclic")]`.
+    selection_refusals: &[],
 };
 
 #[test]

@@ -4,7 +4,7 @@ title: "**Selection chooses the producer by lowest `method_rank`, builds one DAG
 status: proposed
 date: 2026-09-27
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-73 (*"`s8d` fixes items 1, 2 and 3 under a new record written `proposed` (it flips at `s8d`'s close under D21-64 ruling 10): step 4 chooses by lowest `method_rank` (tie broken as the record states, measured, never by the derived `Ord`); step 5's identity is the activity id (one node per activity, all its provided kinds); step 2 binds the run's `rigor` for `require` rows. Each red-first, with mutants."* and *"`s8d` supplies item 5 (the `sca_scan` `audit_db`/`deny_db` defaults and `package`'s `binaries`) through the resolver or a declared registry value, stated in the same record or R2 as fits."*) and D21-64 ruling 10 (this record's flip condition); runbook/phase-1/s8d-step-grain-and-resolver.md §8d.9 (P8's measured table and the F2-D2173 re-measurement) and §8d.10 (the F2-D2173 tests and mutants); references/2026-09-08-acceptance-criteria.md AC-046, AC-047, AC-049 and AC-078; references/adr/0056 (*"The rank rule is unchanged: among admissible producers of a kind, the lowest `method_rank` wins."*), references/adr/0073 (keyed expansion, one producer per toolchain instance), references/adr/0093 decision 1 (`rigor` is a `kernel` facet) and references/adr/0170 decisions 8 and 9 and its evidence bullet on the handlers' input names; crates/rk-kernel/src/select/step2.rs, step4.rs and step5.rs, crates/rk-kernel/src/runtime/step.rs (`ToolRouting`, `run_tool_step`), crates/rk-kernel/src/workflow/memo.rs (`DECLARATION_INPUTS`, `VerbRegistry::row_inputs_for`), crates/rk-cli/src/verbs/run.rs (`tool_routing`, `advisory_db_row_inputs`) and .redkiln/registry.toml's `package_binaries` row, as built 2026-09-27 over `4e0667a`
+source: spikes/DECISIONS-2026-09-21.md D21-73 (*"`s8d` fixes items 1, 2 and 3 under a new record written `proposed` (it flips at `s8d`'s close under D21-64 ruling 10): step 4 chooses by lowest `method_rank` (tie broken as the record states, measured, never by the derived `Ord`); step 5's identity is the activity id (one node per activity, all its provided kinds); step 2 binds the run's `rigor` for `require` rows. Each red-first, with mutants."* and *"`s8d` supplies item 5 (the `sca_scan` `audit_db`/`deny_db` defaults and `package`'s `binaries`) through the resolver or a declared registry value, stated in the same record or R2 as fits."*) and D21-64 ruling 10 (this record's flip condition); D21-74 ruling 1 (decision 2's dated amendment, 2a and 2b, 2026-09-27); runbook/phase-1/s8d-step-grain-and-resolver.md §8d.9 (P8's measured table and the F2-D2173 re-measurement) and §8d.10 (the F2-D2173 tests and mutants); references/2026-09-08-acceptance-criteria.md AC-046, AC-047, AC-049 and AC-078; references/adr/0056 (*"The rank rule is unchanged: among admissible producers of a kind, the lowest `method_rank` wins."*), references/adr/0073 (keyed expansion, one producer per toolchain instance), references/adr/0093 decision 1 (`rigor` is a `kernel` facet) and references/adr/0170 decisions 8 and 9 and its evidence bullet on the handlers' input names; crates/rk-kernel/src/select/step2.rs, step4.rs and step5.rs, crates/rk-kernel/src/runtime/step.rs (`ToolRouting`, `run_tool_step`), crates/rk-kernel/src/workflow/memo.rs (`DECLARATION_INPUTS`, `VerbRegistry::row_inputs_for`), crates/rk-cli/src/verbs/run.rs (`tool_routing`, `advisory_db_row_inputs`) and .redkiln/registry.toml's `package_binaries` row, as built 2026-09-27 over `4e0667a`
 supersedes: ["0170"]
 superseded_by: []
 related: ["0024", "0032", "0056", "0073", "0089", "0092", "0093", "0132", "0142", "0170", "0173"]
@@ -107,6 +107,30 @@ its `(kind, key)`. `dag_assembled` writes `instances` only for a node carrying m
 could be assembled before this record serialises byte-identically to its recorded form (AC-042's replay compares
 bytes). Measured by `dag::one_activity_providing_two_required_kinds_is_one_node`.
 
+*(Amended 2026-09-27, `s8d` build, package F3-D2174, on `spikes/DECISIONS-2026-09-21.md` D21-74 ruling 1: *"R8
+(ADR-0179, `proposed`) decision 2 is amended: step 5 draws no edge from a node to itself. An activity's optional
+requirement of a kind it provides reads as absent (null, ADR-0032). The AC-078 refusal names a node that lies on the
+cycle."* This record is still `proposed`.)* **2a. Step 5 draws no edge from a node to itself.** An edge is drawn from
+each node carrying a required kind to each OTHER node whose activity requires it; the node of an activity that
+requires a kind it provides gets no edge from itself. So the shipped `docs-update` (`provides = ["Docs",
+"Changeset"]`, `requires = ["Spec", "Changeset?"]`) is ordered before `change-summary`, which requires its
+`Changeset`, and is never read as AC-078's cycle. Its own optional `Changeset?` input reads as absent (`null`,
+ADR-0032): no earlier activation of the item committed a `Changeset` on the shipped lanes, so `artifact:Changeset?`
+resolves `null` there. The rule is stated as the ruling states it, for every self-requirement; AC-059's load lint
+already skips a self-requirement (`select::requires_cycle_lint` inserts an edge only where `*producer != a.id`), so a mandatory one loads
+too, draws no edge here, and is refused by name at its own `artifact:` input when nothing earlier committed the kind.
+Measured by `dag::an_activity_optionally_requiring_a_kind_it_provides_selects_with_no_self_edge`, whose graph keeps
+the edge to the other requiring node.
+**2b. AC-078's refusal names a node on the cycle.** After Kahn's peel the residue holds the cycle and every node
+downstream of it. The path walk now goes backward from the lowest surviving id. It takes the lowest surviving
+predecessor each time, and every survivor has one. It stops at the first repeated node, which lies on a cycle. The
+segment between that node's two visits, reversed into edge order and rotated to start at its lowest id, is the named
+path. Before this amendment the walk went forward from the lowest surviving id and could name a downstream node
+alone, as the story lane's *"not acyclic: change-summary[rust]"* did. Measured by
+`select::step5::tests::the_cycle_refusal_names_a_node_on_the_cycle_not_one_downstream`: a downstream node sorts
+before a real 2-cycle and is not named, and a self-loop is named by its own node. AC-078's own case,
+`ac078_cyclic_dag_fails_before_dispatch`, still reads `a -> b -> c -> a`.
+
 **3. Step 2 binds `rigor`.** A `require` row's `when` is evaluated over the item's context with `rigor` bound as the
 run's rigor at the stage: step 1's, the pack's `policy` value or the item's logged override. It is bound by
 `rigor::with_rigor`, the one place the ordinal is built, **after** the item's facets, so a stale facet named `rigor`
@@ -149,6 +173,9 @@ registry verb. It does not decide D21-73 item 4 (owed to `s8g`/`s8h`). It does n
 after the re-measure (§8d.9's F2-D2173 line). One is `tdd-red-green-refactor`'s `"affected"` selection inside
 `Changeset`'s own producer, which is R2's. The other is `docs-update`'s optional self-requirement, which puts a
 self-edge in step 5's graph. It does not set Checkpoint 8d (6a)'s floors, which D21-73 assigns to a ledger line.
+*(Dated 2026-09-27, `s8d` build, package F3-D2174.)* ~~It does not decide the two causes that remain after the
+re-measure~~: D21-74 ruled both. The self-edge is this record's decision 2a above. The `"affected"` selection is R2's
+decision 9 as amended (ADR-0173, still `proposed`).
 
 ## Consequences
 
@@ -168,7 +195,12 @@ self-edge in step 5's graph. It does not set Checkpoint 8d (6a)'s floors, which 
   replay of such a log now diverges and names the node.
 - The fix exposed two causes no earlier run reached (clause 6). The story lane's `implement` now refuses at selection
   on `docs-update`'s self-edge, where it refused on `rigor` before. The refusal names `change-summary[rust]`, a node
-  downstream of the loop, because `layers`' path walk starts at the lowest surviving id.
+  downstream of the loop, because `layers`' path walk starts at the lowest surviving id. *(Dated 2026-09-27,
+  F3-D2174.)* Closed by decisions 2a and 2b: the story lane's `implement` selection assembles, and a cycle refusal
+  names a node on the cycle.
+- *(Dated 2026-09-27, F3-D2174.)* A self-requirement, optional or mandatory, no longer orders its activity after
+  itself. A mandatory one is refused at its own `artifact:` input when no earlier activation committed the kind, and
+  never at selection.
 - On a mixed item, an activity's un-keyed kinds ride one key's node. That is a stated rule, not a derived one.
 - `package_binaries` is written one stage before the stage that planned it (`s8g`), and `s8g` §8g.6 takes a receiver
   note.
@@ -201,6 +233,15 @@ self-edge in step 5's graph. It does not set Checkpoint 8d (6a)'s floors, which 
 - [measured 2026-09-27] `lane_walk::` re-measured: fix `walked=9 refused=6`, story `walked=6 refused=5`. A probe
   (not built) with step 5 drawing no self-edge read the story lane `walked=7 refused=7` and left the fix lane
   unchanged.
+- *(Dated 2026-09-27, `s8d` build, package F3-D2174, through the no-dispatch helper.)* Decisions 2a and 2b were built
+  red-first. `dag::an_activity_optionally_requiring_a_kind_it_provides_selects_with_no_self_edge` was RED at
+  *"Step5(CyclicDag { path: [\"docs-self[node]\", \"docs-self[node]\"] })"*.
+  `select::step5::tests::the_cycle_refusal_names_a_node_on_the_cycle_not_one_downstream` was RED at *"left: [\"a\"]
+  right: [\"x\", \"y\", \"x\"]"*. Both then went GREEN. Mutants MF3a-MF3d (the self-edge drawn again, the old
+  forward walk, the cycle not reversed, the cycle not rotated) were each restored and sha256-checked, and all were
+  KILLED. After decision 2a alone the story lane read `walked=7 refused=7`, as the probe said. After R2 decision 9's
+  amendment as well, the lanes read **`LANE_WALK fix walked=10 refused=5`** and **`LANE_WALK story walked=8
+  refused=6`** (`s8d` §8d.9's F3-D2174 line).
 - [measured 2026-09-27] `lattice::p6_lattice_over_the_shipped_pack` stayed green, so `SHIPPED_UNSAT` (1 296) and
   `SHIPPED_DEAD` (56) did not move. The P6 lattice port chooses producers by its own `(rank, id)` sort
   (`crates/rk-kernel/src/lattice.rs`), not through `select::step4`.

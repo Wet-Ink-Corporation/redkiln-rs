@@ -332,6 +332,15 @@ off disk, every link reciprocated). The README (purpose count 179, the forbids c
 line; the records census at 179) moved in the same change. Checkpoint 8a's record-census lines, run standalone, read `ok: census n=179
 last=0179 next=0180`. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line.
 
+*(dated 2026-09-27, `s8d` build, package F3-D2174; `spikes/DECISIONS-2026-09-21.md` D21-74 rulings 1 and 2.)* **Two dated
+amendments, and no new record.** D21-74 amends two records this stage wrote, and both stay `proposed`. **R8 (ADR-0179) decision
+2** gains 2a and 2b. Under 2a, step 5 draws no edge from a node to itself, so an activity's optional requirement of a kind it
+provides reads as absent. Under 2b, AC-078's refusal names a node on the cycle. **R2 (ADR-0173) decision 9** gains 9a: inside
+the producer of `Changeset`, `"affected"` resolves over the run branch's diff, R6's `HEAD..rk-run/<item>` range read through
+`rk-git` by the composition root's `change_deriver::RunBranchDiff`. Everywhere else it resolves from the committed `Changeset`,
+as before. Each amendment is a dated paragraph under its decision, with its evidence and forbids lines, and a D21-74 entry in
+its `source`. No id is minted, so the README's and the preamble's censuses do not move (next free stays **`0180`**).
+
 **The five questions the draft raised, each now taken by D21-43** (2026-09-24). The draft stopped on S1 and S2 and
 reported S3–S5. The ledger took all five, so none is a STOP. Each premise below was measured by the draft and is kept.
 Each ruling is quoted.
@@ -851,6 +860,12 @@ and every reading this section did not state, each by name so ADR-0173's text ca
   the port. ADR-0148's refusal is reversed only for a selection that resolves; its forbids stand. **`selection_of`
   moved** into `rk_kernel::runtime::reference`, and `rk_cli::review_pass` re-exports it with `pub use`; Checkpoint 8d
   (10)'s floor reads exactly one definition (run standalone: `CP8D-10 ok`; a planted second definition fails it).
+  *(dated 2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173 decision 9a, proposed.)* **Inside the
+  producer of `Changeset`**, meaning an activation whose `emit` binds it (`Scope::emits`), `"affected"` is the run branch's
+  diff. The routing's `RunBranch` seam reads it (`ToolRouting::with_run_branch`; `rk-cli` binds R6's reader), and no
+  read-seam call is made. It refuses by name when no reader is bound, when the range is empty, or when the range is
+  unreadable. Outside the producer, the committed `Changeset` is read as above. `selection_plan` now takes the activation's
+  `Scope`.
 - **The change-summary range (OWED here, D21-51) is bound.** `change-summary` 1 → 2 and `change-summary-ue` 2 → 3: the
   `summarise` step's `range` is `"baseline..HEAD"`, the two-dot range ten shipped activities already bind (ADR-0165
   decision 4), each with its `.redkiln/CHANGELOG.md` row. `change-summary-ue`'s `cook` and `manifest` steps keep
@@ -1532,6 +1547,46 @@ from a node to itself, the story lane read `walked=7 refused=7` (`change-summary
 `lint` output, item 4; `tdd` refuses as on the fix lane) and the fix lane was unchanged. Checkpoint 8d (6a)'s
 floors are set from these counts by the orchestrator's ledger line under D21-73, not here.
 
+*(dated 2026-09-27, `s8d` build, package F3-D2174; `spikes/DECISIONS-2026-09-21.md` D21-74 rulings 1-3; R8 = ADR-0179
+decision 2 (2a, 2b) and R2 = ADR-0173 decision 9 (9a), each as amended, proposed.)* **BOTH AMENDMENTS BUILT, AND BOTH LANES
+RE-MEASURED. The F2-D2173 table above is superseded by this one, and the two tests assert this one.** Step 5 draws no edge from
+a node to itself, and a cycle refusal names a node on the cycle. Inside `Changeset`'s producer, `"affected"` resolves over the
+run branch's diff. The rig gains the git fixture this needs, `lane_walk::LaneRunBranch`. It builds a real repository at test
+time: a base commit on `main`, and one commit on `rk-run/LANE-WALK-1` touching the lane's path. It reads R6's range through
+`rk-git` and is bound with `ToolRouting::with_run_branch`. The two tests now print **`LANE_WALK fix walked=10 refused=5`** and
+**`LANE_WALK story walked=8 refused=6`**, read 2026-09-27 through the no-dispatch helper with both tests `ok`. After ruling 1
+alone, and before ruling 2, the story lane read `walked=7 refused=7`, which matches F2's probe. Upstream activities now emit
+what later ones require, so the seeds the rig writes shrank: fix `BugReport`; story `IntakeRecord, Spec`.
+
+| lane | stage | selected (measured) | verdict (measured) | cause, measured, and a proposed owner |
+| --- | --- | --- | --- | --- |
+| fix | `analysis` | `minimal-repro`, `root-cause` | both walk | — |
+| fix | `specification` | `fix-spec` | walks | — |
+| fix | `implement` | `tdd-red-green-refactor`, `change-summary` | **both walk** | `tdd`'s `green-verify` reaches the port with the run branch's one path (D21-74 ruling 2) |
+| fix | `verify` | `equivalence-boundary`, `confirmation-test`, `smoke-test`, `sca-scan` | `equivalence-boundary` and `sca-scan` walk; the other two refuse | `confirmation-test`: *"`before`'s output has no field `.selection`"*. Record T's `TestOutcome` has no `.selection`/`.sha` (D21-73 item 4; proposed owner `s8g`, whose §8g.1 receiver note already carries it). `smoke-test`: *"`checklist:smoke` is mandatory and declared `unauthored`"* (`s8g` §8g.6) |
+| fix | `review` | `adversarial-review` | walks | — |
+| fix | `release` | `build-package`, `rolling-deploy` | `build-package` walks; `rolling-deploy` refuses | `capability: "deploy"`: no registry row (`s8g`'s `tag-release`) |
+| fix | `closeout` | `debt-logging`, `lightweight-retro`, `closure-record` | `lightweight-retro` walks; the other two refuse | *"`item_create` takes the `store` route"* and *"`feed.rust.backlog` is mandatory and declared `unprovided`"* (both `s8f`, §8f.7/§8f.10) |
+| story | `specification` | `bdd-scenarios` | refuses | *"the step `gherkin-lint` has not run"*: the `lint` port returns no output (D21-73 item 4; proposed owner `s8g`, with `s8h` §8h.4's pointer) |
+| story | `planning` | `t-shirt-sizing` | walks | — |
+| story | `implement` | `docs-update`, `tdd-red-green-refactor`, `change-summary` | `tdd-red-green-refactor` and `change-summary` walk; `docs-update` refuses | the SELECTION now assembles (D21-74 ruling 1). `docs-update`: *"the step `lint` has not run"*: its `policy` reads `${lint.outputs}`, and the `lint` port returns no output. That is the same cause as `bdd-scenarios` (D21-73 item 4; proposed owner `s8g`). `tdd` is not step 4's `Changeset` producer here (`docs-update` is), but its `emit` binds `Changeset`, so it reads the run branch (ADR-0173 9a) |
+| story | `verify` | `equivalence-boundary`, `smoke-test`, `sca-scan` | `equivalence-boundary` and `sca-scan` walk; `smoke-test` refuses | as the fix lane |
+| story | `review` | `adversarial-review` | walks | — |
+| story | `release` | `build-package`, `rolling-deploy` | as the fix lane | as the fix lane |
+| story | `closeout` | `debt-logging`, `lightweight-retro`, `closure-record` | as the fix lane | as the fix lane |
+
+**Measured: the fix lane walks 10** (`minimal-repro`, `root-cause`, `fix-spec`, `tdd-red-green-refactor`,
+`change-summary`, `equivalence-boundary`, `sca-scan`, `adversarial-review`, `build-package`, `lightweight-retro`) **and
+refuses 5** (`confirmation-test`, `smoke-test`, `rolling-deploy`, `debt-logging`, `closure-record`). **The story lane walks
+8** (`t-shirt-sizing`, `tdd-red-green-refactor`, `change-summary`, `equivalence-boundary`, `sca-scan`,
+`adversarial-review`, `build-package`, `lightweight-retro`) **and refuses 6** (`bdd-scenarios`, `docs-update`,
+`smoke-test`, `rolling-deploy`, `debt-logging`, `closure-record`). No stage's selection refuses on either lane. **Every
+remaining refusal is owned:** `confirmation-test`, `bdd-scenarios` and `docs-update` fall under D21-73 item 4, whose
+proposed owner is `s8g`. `smoke-test` and `rolling-deploy` are `s8g`'s. `debt-logging` and `closure-record` are `s8f`'s.
+`docs-update` is the one new name. It is D21-73 item 4's `lint` output, which F2's receiver note in `s8g` §8g.1 names for
+`bdd-scenarios` and `docs-update` alike. Checkpoint 8d (6a)'s floors, 11 and 9, are still NOT met (10 < 11 and 8 < 9), and
+they are not changed here. D21-73 and D21-74 ruling 3 set them to these counts by the orchestrator's dated ledger line.
+
 *(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 1.)* The paragraph below is superseded in this stage: §8d.3a (b)
 removes every shipped `severity` read (six rows rewritten, one step deleted, 32 conjuncts removed), so the three
 lane rows it names (`fix-spec`, `bdd-scenarios`, `equivalence-boundary`, all class C) walk over any findings list,
@@ -1950,6 +2005,33 @@ adapter) and **MF2m** (`tool_routing` binds no declaration rows) KILLED by the `
 tests are re-measured, not mutated (§8d.9's F2-D2173 line). A PROBE, not a mutant (`scratchpad/s8d/f2-d2173-probe-selfedge.py`,
 restored and sha256-checked): step 5 drawing no self-edge reads the story lane `walked=7 refused=7` and leaves the fix lane unchanged.
 
+*(dated 2026-09-27, `s8d` build, package F3-D2174; D21-74 rulings 1 and 2; R8 = ADR-0179 2a/2b and R2 = ADR-0173 9a, proposed.)*
+**D21-74's two amendments, red then green, and ten mutants.** Four new tests (three `rk-kernel`, one `rk-cli`), each run RED for
+its stated reason before its code. `dag::an_activity_optionally_requiring_a_kind_it_provides_selects_with_no_self_edge` was RED at
+*"Step5(CyclicDag { path: [\"docs-self[node]\", \"docs-self[node]\"] })"*. `select::step5::tests::the_cycle_refusal_names_a_node_on_the_cycle_not_one_downstream`
+(in-crate, beside AC-078's case) was RED at *"left: [\"a\"] right: [\"x\", \"y\", \"x\"]"*.
+`test_selection::inside_the_changeset_producer_affected_resolves_over_the_run_branch_diff` was RED at *"no committed `emit` binding of
+`Changeset` for the item `INC-1` is in the journal"*. The seam (`RunBranch`, `with_run_branch`, `Env::run_branch`, `Scope::emits`)
+existed at that point and `selection_plan` did not read it, so the red is the behaviour and not a compile error. `rk-cli`
+`change_deriver::the_run_branch_reader_reads_the_items_changeset_paths_through_rk_git` was RED at *"the run branch carries a changeset"*,
+because `changed_paths` was a stub answering `None`. **GREEN**: all four. The `dag::`, `producer::`, `selection::`, `test_selection::`,
+`reference_resolver::` and `emit_binding::` modules and `rk-cli`'s `change_deriver::` pass whole. The two `lane_walk::` tests are
+re-measured, not bent (§8d.9's F3-D2174 line). The fix lane's `tdd` row flipped to walks, and the story lane gained its `implement`
+row and lost its selection refusal. **Mutants**, from `scratchpad/s8d/f3_d2174_mutants.py` (anchor asserted once, tmp +
+`os.replace`, restored in `finally`, sha256 re-checked equal after each; the four source files' pre-run sha256 were re-verified
+after the batch). **MF3a** draws the self-edge again: KILLED by the dag test and the story `lane_walk`. **MF3b** restores the old
+forward walk from the lowest survivor: KILLED by the cycle-naming test. **MF3c** does not reverse the cycle into edge order: KILLED
+by `ac078_cyclic_dag_fails_before_dispatch`, whose 3-cycle then reads `a -> c -> b -> a`. The 2-cycle cannot see it, which is why
+AC-078's case is in the selection. **MF3d** does not rotate to the lowest id: KILLED. **MF3e** never takes the producer arm: KILLED
+by the `test_selection` test and the fix `lane_walk`. **MF3f** prefers an earlier committed `Changeset` inside the producer: KILLED
+at case (b). **MF3g** makes `Scope::emits` ignore the kind: KILLED at case (c). **MF3h** runs an empty range as an empty
+`Affected`: KILLED at case (e). **MF3i** has `rk-cli`'s reader hand back the binary-marked paths: KILLED by the `rk-cli` reader
+test. **MF3j** removes `verbs::run::run`'s `with_run_branch` binding: **SURVIVED** all 140 `rk-cli` tests (`cargo test -p rk-cli
+--no-fail-fast`, rc 0). It was investigated and is **unobservable at this stage**. `run()` builds `ClaudeHarness` with no seam, and
+every path to a `toolchain:test` step passes an agent step first, so only a live dispatch reaches the call site, and this build
+made none. The review-routes binding beside it has the same shape. It is owed to `s8e` §8e.11's first `run()` tests by a dated
+receiver note there.
+
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
 **Checkpoints it touches.** Checkpoint 8c names two tests whose premise is the resolver's absence —
@@ -2298,6 +2380,9 @@ run_named rk-kernel "walk table" \
 # ---- (dated 2026-09-27, s8d build, package F2-D2173) TODO (D21-73): the floors 11 and 9 below are NOT met and are
 # ---- NOT changed by this package. D21-73 sets them to the re-measured counts by the orchestrator's dated ledger line.
 # ---- Re-measured after D21-73's fixes (section 8d.9's dated line): fix walked=9 refused=6, story walked=6 refused=5.
+# ---- (dated 2026-09-27, s8d build, package F3-D2174) Re-measured after D21-74's two amendments (section 8d.9's F3-D2174
+# ---- line): fix walked=10 refused=5, story walked=8 refused=6. The floors 11 and 9 are still NOT met and are NOT changed
+# ---- here; D21-73 and D21-74 ruling 3 set them to the measured counts by the orchestrator's dated ledger line.
 walked_of() { printf '%s\n' "$1" | grep -oE "LANE_WALK $2 walked=[0-9]+ refused=[0-9]+" | sed -nE 's/^.* walked=([0-9]+) .*$/\1/p'; }
 [ "$(walked_of 'test lane_walk::x ... LANE_WALK fix walked=7 refused=8' fix)" = 7 ] || { echo "FAIL: synthetic control — walked_of does not read a glued LANE_WALK line"; exit 1; }
 [ -z "$(walked_of 'LANE_WALK story walked=7 refused=8' fix)" ] || { echo "FAIL: synthetic control — walked_of reads another lane's line"; exit 1; }

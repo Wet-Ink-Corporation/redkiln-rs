@@ -415,6 +415,14 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         // `verdict_record`'s re-execution arms, each a toolchain chosen by the same selection loop as
         // the run's — the candidate rooted in the clone, the reference in the checkout.
         let routing = routing.with_review_routes(Arc::new(review_routes(&resolved, env)));
+        // *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173 decision 9
+        // as amended, proposed.)* The run-branch reader `"affected"` reads inside `Changeset`'s own
+        // producer: R6's range, `HEAD..rk-run/<item>`, over the same checkout and through the same
+        // `rk-git` read the `change` deriver took above (`change_deriver::read_range`).
+        let routing = routing.with_run_branch(Arc::new(crate::change_deriver::RunBranchDiff::new(
+            resolved.exec.clone(),
+            resolved.worktree.clone(),
+        )));
 
         let inputs = match bind_nodes(
             &resolved,

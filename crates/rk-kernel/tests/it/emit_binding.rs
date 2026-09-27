@@ -124,6 +124,7 @@ fn emit_binds_every_provided_kind_including_a_composing_table() {
         sources: None,
         seam: &seam,
         feed: &feed,
+        run_branch: None,
     };
     assert_eq!(
         resolve_text(&env, &scope, "reader", "result", "artifact:Result.status").expect("resolves"),

@@ -112,6 +112,47 @@ pub fn classify(paths: &[String], binary: &[String]) -> Vec<String> {
     change.into_iter().map(str::to_owned).collect()
 }
 
+/// **The paths the item's changeset changes, `HEAD..refs/heads/rk-run/<item>`**.
+///
+/// In first-seen order — the same range [`derive`] reads. `Ok(None)` is the empty range, as
+/// [`derive`]'s. *(Added 2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173 decision 9 as
+/// amended, proposed.)*
+///
+/// # Errors
+/// [`DeriveError`] when the run branch exists and its range cannot be read.
+pub fn changed_paths(
+    exec: &GitExec,
+    repo: &WorktreePath,
+    item: &str,
+) -> Result<Option<Vec<String>>, DeriveError> {
+    Ok(read_range(exec, repo, item)?.map(|(paths, _)| paths))
+}
+
+/// **The composition root's run-branch reader.**
+///
+/// D21-74 ruling 2; R2 = ADR-0173 decision 9 as amended, proposed: R6's range read, [`changed_paths`], over the checkout, handed to the kernel
+/// as [`rk_kernel::runtime::reference::RunBranch`]. `"affected"` reads it inside the producer of
+/// `Changeset`. *(Added 2026-09-27, `s8d` build, package F3-D2174.)*
+#[derive(Debug, Clone)]
+pub struct RunBranchDiff {
+    exec: GitExec,
+    repo: WorktreePath,
+}
+
+impl RunBranchDiff {
+    /// The reader over `repo`, through `exec`.
+    #[must_use]
+    pub const fn new(exec: GitExec, repo: WorktreePath) -> Self {
+        Self { exec, repo }
+    }
+}
+
+impl rk_kernel::runtime::reference::RunBranch for RunBranchDiff {
+    fn changed_paths(&self, item: &str) -> Result<Option<Vec<String>>, String> {
+        changed_paths(&self.exec, &self.repo, item).map_err(|e| e.to_string())
+    }
+}
+
 /// **Derive `change` over the item's changeset, `HEAD..refs/heads/rk-run/<item>`.** `Ok(None)` is
 /// the abstention: no run branch, or nothing on it past `HEAD`.
 ///
@@ -122,6 +163,23 @@ pub fn derive(
     repo: &WorktreePath,
     item: &str,
 ) -> Result<Option<Vec<String>>, DeriveError> {
+    Ok(read_range(exec, repo, item)?.map(|(paths, binary)| classify(&paths, &binary)))
+}
+
+/// The item's changeset as R6 reads it: every path, and the paths `--numstat` marks binary.
+type RangeRead = (Vec<String>, Vec<String>);
+
+/// **R6's ONE read of the item's changeset**, `HEAD..refs/heads/rk-run/<item>`.
+///
+/// Its paths in first-seen order, and the paths `--numstat` marks binary. `Ok(None)` is the empty range. Both
+/// [`derive`] and [`changed_paths`] read through it, so the two cannot come to disagree about
+/// which range the item's changeset is. *(Split out of `derive` 2026-09-27, `s8d` build, package
+/// F3-D2174; its body is `derive`'s, unchanged.)*
+fn read_range(
+    exec: &GitExec,
+    repo: &WorktreePath,
+    item: &str,
+) -> Result<Option<RangeRead>, DeriveError> {
     let run_ref = format!("refs/heads/rk-run/{item}");
     // No run branch: the item has no changeset. `--verify --quiet` exits non-zero and writes
     // nothing when the ref is absent, which is the one outcome read as "none".
@@ -176,5 +234,5 @@ pub fn derive(
     if paths.is_empty() {
         return Ok(None);
     }
-    Ok(Some(classify(&paths, &binary)))
+    Ok(Some((paths, binary)))
 }

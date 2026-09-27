@@ -327,3 +327,205 @@ fn an_unresolvable_selection_refuses_and_never_runs_the_whole_suite() {
     }
     assert_eq!(walked, 7, "the case table walked");
 }
+
+// ---- D21-74 ruling 2 (R2 = ADR-0173 decision 9 as amended, proposed; `s8d` build, package
+// F3-D2174) --------------------------------------------------------------------------------------
+//
+// `tdd-red-green-refactor`'s `green-verify` and `refactor-verify` declare `selection = "affected"`,
+// and `tdd` PRODUCES the item's `Changeset`, so none is committed while it runs: the lane walk read
+// *"no committed `emit` binding of `Changeset` for the item `LANE-WALK-1` is in the journal"*.
+// D21-74: *"inside the producer of `Changeset`, `"affected"` resolves over the run branch's diff
+// (R6's `HEAD..rk-run/<item>` range, read through `rk_git`), and elsewhere as before, from the
+// committed `Changeset`."*
+
+/// A run-branch reader that answers one fixed value and records every item it is asked for.
+struct BranchDouble {
+    answer: Result<Option<Vec<String>>, String>,
+    asked: Mutex<Vec<String>>,
+}
+
+impl BranchDouble {
+    fn answering(answer: Result<Option<Vec<String>>, String>) -> Arc<Self> {
+        Arc::new(Self {
+            answer,
+            asked: Mutex::new(Vec::new()),
+        })
+    }
+    fn asked(&self) -> Vec<String> {
+        self.asked.lock().expect("not poisoned").clone()
+    }
+}
+
+impl rk_kernel::runtime::reference::RunBranch for BranchDouble {
+    fn changed_paths(&self, item: &str) -> Result<Option<Vec<String>>, String> {
+        self.asked
+            .lock()
+            .expect("not poisoned")
+            .push(item.to_owned());
+        self.answer.clone()
+    }
+}
+
+/// An `emit` step binding `kind` to `write`'s output: what makes the activation `kind`'s producer.
+fn emit_of(kind: &str) -> rk_kernel::catalog::Step {
+    let mut s = step("emit", StepKind::Emit);
+    s.emit = Some(rk_kernel::catalog::EmitBinding {
+        artifacts: std::iter::once((
+            kind.to_owned(),
+            rk_kernel::catalog::EmitArtifact::Ref("${write.outputs}".to_owned()),
+        ))
+        .collect(),
+        evidence: Vec::new(),
+    });
+    s
+}
+
+/// Walk `[write, run-tests(affected), emit(<emits>)]` over a journal seeded with `seed`, with the
+/// run-branch reader `branch` bound (or none).
+fn walk_affected(
+    seed: Vec<rk_types::event::Event>,
+    emits: &str,
+    branch: Option<Arc<BranchDouble>>,
+) -> (
+    rk_kernel::runtime::activity::ActivityReport,
+    Arc<SelectionToolchain>,
+) {
+    let (q, a) = counters();
+    let db = store(&q, &a);
+    for e in seed {
+        db.lock().expect("not poisoned").append(e).expect("seeded");
+    }
+    let tc = Arc::new(SelectionToolchain::default());
+    let mut routing = ToolRouting::new(
+        crate::tool_verb_routing::registry("", ""),
+        ToolchainValues::default(),
+    );
+    if let Some(b) = branch {
+        routing = routing.with_run_branch(b as Arc<dyn rk_kernel::runtime::reference::RunBranch>);
+    }
+    let rt = Runtime::new(
+        ports_with_toolchain(
+            Arc::new(CountingHarness::scripted(vec![ok_typed(
+                serde_json::json!({"sha": "abc", "files": ["src/on_branch.rs"]}),
+            )])) as Arc<dyn Harness>,
+            &db,
+            Arc::clone(&tc) as Arc<dyn Toolchain>,
+        ),
+        "run-affected",
+        STAGE,
+    )
+    .with_tool_routing(routing);
+    let sp = spec();
+    let steps = vec![
+        step("write", StepKind::Agent),
+        test_step("affected"),
+        emit_of(emits),
+    ];
+    let report = rt
+        .run_activity_steps(
+            activation(&sp),
+            Some(&steps),
+            &rk_kernel::predicate::Context::new(),
+            gate_site(&empty_state()),
+            rk_kernel::workflow::envelope::AttemptCap::declared(CAP),
+            at(100),
+        )
+        .expect("a value");
+    (report, tc)
+}
+
+/// **Inside the producer of `Changeset`, `"affected"` resolves over the run branch's diff** — with
+/// no `Changeset` committed, and ahead of one an earlier activation committed; **outside it, the
+/// committed `Changeset` is read and the branch is never asked.**
+#[test]
+fn inside_the_changeset_producer_affected_resolves_over_the_run_branch_diff() {
+    let affected = |paths: &[&str]| Selection::Affected {
+        changed: paths.iter().map(|p| (*p).to_owned()).collect(),
+        recorded: None,
+    };
+    let committed = || {
+        vec![emitted_row(
+            "an-earlier-producer@1",
+            "Changeset",
+            serde_json::json!({"sha": "old", "files": ["src/committed.rs"]}),
+        )]
+    };
+
+    // ---- (a) the producer, no `Changeset` committed: the branch's paths reach the port -----------
+    let branch = BranchDouble::answering(Ok(Some(vec![
+        "src/on_branch.rs".to_owned(),
+        "tests/it/on_branch.rs".to_owned(),
+    ])));
+    let (report, tc) = walk_affected(Vec::new(), "Changeset", Some(Arc::clone(&branch)));
+    assert!(
+        report.completed() && report.step_error().is_none(),
+        "inside `Changeset`'s producer, `affected` must resolve with no committed Changeset: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        tc.selections(),
+        vec![affected(&["src/on_branch.rs", "tests/it/on_branch.rs"])],
+        "the run branch's paths reach `s8c`'s mapping"
+    );
+    assert_eq!(
+        branch.asked(),
+        vec![crate::runtime::ITEM.to_owned()],
+        "the branch is read once, for this item"
+    );
+
+    // ---- (b) the producer, with an earlier `Changeset` committed: the BRANCH still wins ----------
+    let branch = BranchDouble::answering(Ok(Some(vec!["src/on_branch.rs".to_owned()])));
+    let (report, tc) = walk_affected(committed(), "Changeset", Some(Arc::clone(&branch)));
+    assert!(report.completed(), "{}", refusal(&report));
+    assert_eq!(
+        tc.selections(),
+        vec![affected(&["src/on_branch.rs"])],
+        "inside the producer the committed Changeset is an EARLIER one, never this activation's"
+    );
+
+    // ---- (c) NOT the producer: the committed `Changeset`, and the branch is never asked ---------
+    let branch = BranchDouble::answering(Ok(Some(vec!["src/on_branch.rs".to_owned()])));
+    let (report, tc) = walk_affected(committed(), "ImplReport", Some(Arc::clone(&branch)));
+    assert!(report.completed(), "{}", refusal(&report));
+    assert_eq!(
+        tc.selections(),
+        vec![affected(&["src/committed.rs"])],
+        "outside the producer, `affected` is the committed Changeset, as before"
+    );
+    assert!(
+        branch.asked().is_empty(),
+        "outside the producer the run branch is never read: {:?}",
+        branch.asked()
+    );
+
+    // ---- (d)-(f) the producer's refusals: each by name, and the port never reached ---------------
+    let cases: Vec<(&str, Option<Arc<BranchDouble>>, &str)> = vec![
+        ("no reader bound", None, "no run-branch reader is bound"),
+        (
+            "an empty range",
+            Some(BranchDouble::answering(Ok(None))),
+            "carries no change",
+        ),
+        (
+            "an unreadable range",
+            Some(BranchDouble::answering(Err("rev-list exploded".to_owned()))),
+            "rev-list exploded",
+        ),
+    ];
+    let walked = cases.len();
+    for (name, branch, needle) in cases {
+        let (report, tc) = walk_affected(committed(), "Changeset", branch);
+        assert_eq!(
+            tc.calls.load(Ordering::SeqCst),
+            0,
+            "{name}: the port was reached with {:?}",
+            tc.selections()
+        );
+        let e = refusal(&report);
+        assert!(
+            e.contains("`run-tests`") && e.contains("inputs.selection") && e.contains(needle),
+            "{name}: the refusal must name the step, its selection and `{needle}`: {e}"
+        );
+    }
+    assert_eq!(walked, 3, "the refusal table walked");
+}

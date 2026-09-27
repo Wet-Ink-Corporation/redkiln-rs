@@ -478,6 +478,15 @@ pub fn step5(
                     })
                 })
             {
+                // *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 1; R8 = ADR-0179
+                // decision 2 as amended, proposed.)* **No edge from a node to itself.** An
+                // activity's requirement of a kind it provides is not satisfied by its own
+                // activation: the optional one (the shipped `docs-update`'s `Changeset?`) reads as
+                // absent (`null`, ADR-0032), and a self-edge would make the graph read as AC-078's
+                // cycle.
+                if upstream.id == node.id {
+                    continue;
+                }
                 edges.insert(DagEdge {
                     from: upstream.id.clone(),
                     to: node.id.clone(),
@@ -613,25 +622,57 @@ pub(in crate::select) fn layers(
     if placed == nodes.len() {
         return Ok(result);
     }
-    // The residue is the cycle. Walk it from the lowest surviving id so the path is deterministic
-    // and names the loop rather than the set.
+    // The residue is every node on a cycle AND every node downstream of one, so a walk FORWARD
+    // from an arbitrary survivor can leave the loop and name a node below it (the story lane read
+    // *"not acyclic: change-summary[rust]"* while the loop was `docs-update[rust]`'s).
+    //
+    // *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 1: "The AC-078 refusal names a
+    // node that lies on the cycle".)* **The walk goes BACKWARD.** Every survivor keeps a positive
+    // in-degree, and only a survivor's edge can hold it there (a placed node's edges were
+    // decremented), so every survivor has a surviving predecessor and the backward walk never
+    // stops before a node repeats; the repeated node lies on a cycle, and the segment between its
+    // two visits, reversed, is that cycle in edge order. The walk starts at the lowest surviving id
+    // and takes the lowest surviving predecessor, and the cycle is rotated to start at its own
+    // lowest id, so the named path is a function of the graph.
     let survivors: BTreeSet<&str> = indegree.keys().copied().collect();
-    let start = survivors.iter().next().copied().unwrap_or("");
-    let mut path = vec![start.to_owned()];
-    let mut cursor = start;
-    let mut seen: BTreeSet<&str> = BTreeSet::new();
-    while seen.insert(cursor) {
-        let Some(next) = out
-            .get(cursor)
-            .and_then(|ns| ns.iter().copied().find(|n| survivors.contains(n)))
-        else {
-            break;
-        };
-        path.push(next.to_owned());
-        if next == start {
-            break;
+    let mut preds: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+    for edge in edges {
+        if survivors.contains(edge.from.as_str()) && survivors.contains(edge.to.as_str()) {
+            preds
+                .entry(edge.to.as_str())
+                .or_default()
+                .insert(edge.from.as_str());
         }
-        cursor = next;
+    }
+    let Some(start) = survivors.iter().next().copied() else {
+        return Err(Vec::new());
+    };
+    let mut walk: Vec<&str> = vec![start];
+    let mut cursor = start;
+    let first_repeat = loop {
+        let Some(prev) = preds.get(cursor).and_then(|p| p.iter().next().copied()) else {
+            // Unreachable by the argument above; named rather than looped on.
+            return Err(walk.iter().rev().map(|s| (*s).to_owned()).collect());
+        };
+        if let Some(at) = walk.iter().position(|n| *n == prev) {
+            break at;
+        }
+        walk.push(prev);
+        cursor = prev;
+    };
+    // `walk[first_repeat..]` runs against the edges; the cycle in edge order is its reverse.
+    let mut cycle: Vec<&str> = walk[first_repeat..].iter().rev().copied().collect();
+    if let Some(lowest) = cycle
+        .iter()
+        .enumerate()
+        .min_by_key(|(_, id)| **id)
+        .map(|(i, _)| i)
+    {
+        cycle.rotate_left(lowest);
+    }
+    let mut path: Vec<String> = cycle.iter().map(|s| (*s).to_owned()).collect();
+    if let Some(head) = path.first().cloned() {
+        path.push(head);
     }
     Err(path)
 }
@@ -722,6 +763,47 @@ mod tests {
                 .len(),
             3
         );
+    }
+
+    /// **AC-078's refusal names a node that lies ON the cycle** (D21-74 ruling 1; R8 = ADR-0179
+    /// decision 2 as amended, proposed; `s8d` build, package F3-D2174).
+    ///
+    /// The residue after Kahn's peel is the cycle AND every node downstream of it. The walk started
+    /// at the lowest surviving id, and a downstream node that sorts lowest has no surviving
+    /// successor, so the refusal named it alone (the story lane read *"not acyclic:
+    /// change-summary[rust]"* while the loop was `docs-update[rust]`'s). Here the downstream node
+    /// `a` sorts before the real 2-cycle `x <-> y`, and a self-loop's downstream node sorts before
+    /// the loop.
+    #[test]
+    fn the_cycle_refusal_names_a_node_on_the_cycle_not_one_downstream() {
+        let dag = Dag::hand_assembled(
+            vec![node("a"), node("x"), node("y")],
+            vec![edge("x", "a"), edge("x", "y"), edge("y", "x")],
+        );
+        match dag.validate_acyclic() {
+            Err(Step5Error::CyclicDag { path }) => assert_eq!(
+                path,
+                vec!["x".to_owned(), "y".to_owned(), "x".to_owned()],
+                "the named path is the 2-cycle itself, closed, and names no downstream node"
+            ),
+            other => panic!("expected a named cycle, got {other:?}"),
+        }
+
+        let self_loop = Dag::hand_assembled(
+            vec![node("change-summary"), node("docs-update")],
+            vec![
+                edge("docs-update", "change-summary"),
+                edge("docs-update", "docs-update"),
+            ],
+        );
+        match self_loop.validate_acyclic() {
+            Err(Step5Error::CyclicDag { path }) => assert_eq!(
+                path,
+                vec!["docs-update".to_owned(), "docs-update".to_owned()],
+                "a hand-assembled self-loop is named by its own node, never by the node below it"
+            ),
+            other => panic!("expected a named cycle, got {other:?}"),
+        }
     }
 
     /// The cost mapping is the transcribed one, and an unrecognised class is `None` rather than 0.

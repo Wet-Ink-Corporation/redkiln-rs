@@ -766,3 +766,67 @@ applies = \"kind == story\"
         "a mixed item: one node per key, the un-keyed kind on the byte-first key's node"
     );
 }
+
+// ---- D21-74 ruling 1 (R8 = ADR-0179 decision 2 as amended, proposed; `s8d` build, package
+// F3-D2174) --------------------------------------------------------------------------------------
+//
+// After D21-73's step-4 fix the shipped `docs-update` (rank 5) won `Changeset[rust]` on the story
+// lane, and it declares `requires = ["Spec", "Changeset?"]`. Step 5 drew an edge from its node to
+// ITSELF, and the story lane's `implement` selection refused as AC-078's cycle. D21-74: *"step 5
+// draws no edge from a node to itself. An activity's optional requirement of a kind it provides
+// reads as absent (null, ADR-0032)."*
+
+/// **An activity that optionally requires a kind it provides selects**, and its node draws no edge
+/// to itself — while an edge to ANOTHER node that requires the same kind is still drawn, so the
+/// rule drops self-edges and nothing else (the shipped story lane's `docs-update` →
+/// `change-summary` shape).
+#[test]
+fn an_activity_optionally_requiring_a_kind_it_provides_selects_with_no_self_edge() {
+    let facets = facets();
+    let registry = registry();
+    let docs_self = "[activity]\nid = \"docs-self\"\nversion = 1\nstage = \"implement\"\n\
+         provides = [\"Changeset\", \"DesignDoc\"]\nrequires = [\"Changeset?\"]\n\
+         derived_from = []\ntags = [\"kind:story\"]\nmethod_rank = 5\n\
+         min_rigor = \"optional\"\ncost_class = \"S\"\n[[step]]\nid = \"emit\"\nkind = \"emit\"\n";
+    let summary = "[activity]\nid = \"summary-down\"\nversion = 1\nstage = \"implement\"\n\
+         provides = [\"ChangeSummary\"]\nrequires = [\"Changeset\"]\n\
+         derived_from = []\ntags = [\"kind:story\"]\nmethod_rank = 10\n\
+         min_rigor = \"optional\"\ncost_class = \"S\"\n[[step]]\nid = \"emit\"\nkind = \"emit\"\n";
+    let catalog = Catalog::from_sources(&[
+        ("docs-self.toml", docs_self),
+        ("summary-down.toml", summary),
+    ])
+    .expect("the inline catalog loads: a self-requirement is not a load-time cycle (AC-059)");
+    let pack = Pack::from_toml(
+        "self-req.toml",
+        "[pack]\nid = \"self-req\"\napplies = \"kind == story\"\n[policy]\n\
+         stages = { implement = \"recommended\" }\n[stage.implement]\n\
+         baseline = [\"Changeset\", \"DesignDoc\", \"ChangeSummary\"]\n",
+    )
+    .expect("the inline pack loads");
+    let item = Item::new("STORY-SELF", "story").with_toolchain("node", ["text"]);
+    let out = select(&pack, &catalog, &registry, &facets, "implement", &item).expect(
+        "an optional requirement of a kind the activity itself provides reads as absent: the \
+         selection assembles, and is never AC-078's cycle refusal",
+    );
+    let edges: Vec<(String, String, String)> = out
+        .dag()
+        .edges()
+        .iter()
+        .map(|e| (e.from.clone(), e.to.clone(), e.kind.clone()))
+        .collect();
+    assert_eq!(
+        edges,
+        vec![(
+            "docs-self[node]".to_owned(),
+            "summary-down[node]".to_owned(),
+            "Changeset".to_owned()
+        )],
+        "no edge from a node to itself, and the edge to the other requiring node is still drawn"
+    );
+    assert_eq!(
+        out.plan().expect("orders").order(),
+        vec!["docs-self[node]", "summary-down[node]"],
+        "the producer is ordered before its consumer"
+    );
+}

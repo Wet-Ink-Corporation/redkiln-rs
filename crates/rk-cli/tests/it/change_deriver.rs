@@ -396,3 +396,63 @@ fn a_null_change_at_triage_opens_the_unknown_facet_gate_and_its_answer_binds_the
         "the answer is never written back to the item record"
     );
 }
+
+// ---- D21-74 ruling 2 (R2 = ADR-0173 decision 9 as amended, proposed; `s8d` build, package
+// F3-D2174) --------------------------------------------------------------------------------------
+
+/// **The composition root's run-branch reader reads R6's range through `rk-git`**: the paths
+/// `HEAD..rk-run/<item>` changes, the same range `derive` classifies. No ref, or a ref with nothing
+/// past `HEAD`, is the empty range (`None`), and another item's branch is never read.
+#[test]
+fn the_run_branch_reader_reads_the_items_changeset_paths_through_rk_git() {
+    use rk_kernel::runtime::reference::RunBranch;
+
+    let repo = change_repo();
+    let root = repo.path();
+    let found = repo_of(root);
+    let reader =
+        rk_cli::change_deriver::RunBranchDiff::new(found.exec.clone(), found.worktree.clone());
+
+    assert_eq!(
+        reader.changed_paths("chg-1"),
+        Ok(None),
+        "no rk-run/chg-1 ref: the empty range"
+    );
+    git(root, &["branch", "rk-run/chg-1"]);
+    assert_eq!(
+        reader.changed_paths("chg-1"),
+        Ok(None),
+        "a ref with nothing past HEAD: the empty range"
+    );
+    git(root, &["branch", "--quiet", "-D", "rk-run/chg-1"]);
+
+    changeset_on_run_branch(root, "chg-1");
+    let mut paths = reader
+        .changed_paths("chg-1")
+        .expect("the range reads")
+        .expect("the run branch carries a changeset");
+    paths.sort();
+    assert_eq!(
+        paths,
+        vec![
+            "Cargo.lock".to_owned(),
+            "assets/logo.bin".to_owned(),
+            "src/lib.rs".to_owned()
+        ],
+        "every path the run branch changes, the binary blob and the generated lockfile included"
+    );
+    assert_eq!(
+        derive(&found.exec, &found.worktree, "chg-1").expect("the range reads"),
+        Some(vec![
+            "binary".to_owned(),
+            "generated".to_owned(),
+            "text".to_owned()
+        ]),
+        "CONTROL: the same range `derive` classifies"
+    );
+    assert_eq!(
+        reader.changed_paths("chg-rec"),
+        Ok(None),
+        "another item's run branch is not this item's changeset"
+    );
+}

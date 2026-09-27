@@ -4,7 +4,7 @@ title: "**The complete reference resolver** (`s8d`'s record R2): one mechanism, 
 status: proposed
 date: 2026-09-26
 legacy_id: none
-source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R2's row), §8d.3 (the resolver's table, iteration, the `[*]` projection, *Which forward refs are licensed*, the census, the four removals, `check` evaluation, `emit` binding, `artifact.read`, test selection) and §8d.10; spikes/DECISIONS-2026-09-21.md D21-11 (*"It does **not** license a partial resolver"*), D21-41 (d), D21-42 4a and 4c, D21-43 N12, N13 and N14, D21-47 (the read seam's one emitter), D21-48 X5, X6 and X8, D21-57 (AC-303's rule moves onto this record's carrier), D21-60 (D59b), D21-64 ruling 10 (this record's flip condition); references/adr/0042 (Decision and first forbids bullet), 0136 clause 4 and forbids, 0142 clause 4, 0148 decisions 1, 3 and 4 and forbids; crates/rk-kernel/src/catalog.rs (`Step::inputs`, `forward_ref_lint`), crates/rk-kernel/src/select/lints.rs (`load_lints`) and crates/rk-kernel/src/rigor.rs (`confirm_step_monotonicity_rule`) at `s8d`'s build
+source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R2's row), §8d.3 (the resolver's table, iteration, the `[*]` projection, *Which forward refs are licensed*, the census, the four removals, `check` evaluation, `emit` binding, `artifact.read`, test selection) and §8d.10; spikes/DECISIONS-2026-09-21.md D21-11 (*"It does **not** license a partial resolver"*), D21-41 (d), D21-42 4a and 4c, D21-43 N12, N13 and N14, D21-47 (the read seam's one emitter), D21-48 X5, X6 and X8, D21-57 (AC-303's rule moves onto this record's carrier), D21-60 (D59b), D21-64 ruling 10 (this record's flip condition), D21-74 ruling 2 (decision 9's dated amendment, 9a, 2026-09-27); references/adr/0042 (Decision and first forbids bullet), 0136 clause 4 and forbids, 0142 clause 4, 0148 decisions 1, 3 and 4 and forbids; crates/rk-kernel/src/catalog.rs (`Step::inputs`, `forward_ref_lint`), crates/rk-kernel/src/select/lints.rs (`load_lints`) and crates/rk-kernel/src/rigor.rs (`confirm_step_monotonicity_rule`) at `s8d`'s build
 supersedes: ["0042", "0148"]
 superseded_by: []
 related: ["0032", "0034", "0035", "0040", "0043", "0045", "0055", "0072", "0103", "0136", "0142", "0172"]
@@ -161,6 +161,33 @@ then parsed into a test list by **one** `selection_of`, which moves into `rk-ker
 `rk_cli::review_pass` with `pub use`. An unresolvable selection refuses by name and never reaches the port as an
 empty selection.
 
+*(Amended 2026-09-27, `s8d` build, package F3-D2174, on `spikes/DECISIONS-2026-09-21.md` D21-74 ruling 2: *"R2
+(ADR-0173, `proposed`) decision 9 is amended: inside the producer of `Changeset`, `"affected"` resolves over the run
+branch's diff (R6's `HEAD..rk-run/<item>` range, read through `rk_git`), and elsewhere as before, from the committed
+`Changeset`."* This record is still `proposed`.)* **9a. Inside the producer of `Changeset`, `"affected"` is the run
+branch's diff.**
+- *The producer* is an activation one of whose `emit` steps binds `Changeset` (`Scope::emits`). Every shipped
+  activity's `emit` binds exactly its `provides`
+  (`emit_binding::every_shipped_activity_has_one_last_emit_whose_artifacts_equal_provides`), so this is the
+  activation of an activity that provides `Changeset`. It is not only the one step 4 chose for the kind. On the story
+  lane `docs-update` wins `Changeset`, and `tdd-red-green-refactor` still emits a `Changeset` binding, so it reads the
+  branch too.
+- Inside it, `"affected"` is the paths `HEAD..refs/heads/rk-run/<item>` changes, in first-seen order. A `Changeset`
+  that an earlier activation committed is not read there, because it is not this activation's. Outside it,
+  `"affected"` is the committed `Changeset`'s `files`, unchanged.
+- **The read is the composition root's.** `rk-kernel` opens no files, so the kernel declares a seam,
+  `runtime::reference::RunBranch`, bound with `ToolRouting::with_run_branch` and read through `Env::run_branch`.
+  `rk-cli` binds `change_deriver::RunBranchDiff`, which reads R6's range through `change_deriver::read_range`. That
+  is R6's one read, now shared by the `change` deriver and this selection, through `rk-git`'s `GitOp::RevParse` and
+  `GitOp::Log`. It makes no read-seam call, because no `artifact:` input is resolved.
+- Each of these refuses by name, never reaches the port and is never an empty selection: no reader bound (*"no
+  run-branch reader is bound"*), an empty range (*"carries no change"*), and an unreadable range (the reader's error).
+- Measured by `test_selection::inside_the_changeset_producer_affected_resolves_over_the_run_branch_diff`, `rk-cli`
+  `change_deriver::the_run_branch_reader_reads_the_items_changeset_paths_through_rk_git`, and the two `lane_walk`
+  tests over the rig's git fixture. **The call site in `verbs::run::run` is not observable at `s8d`**: mutant MF3j,
+  which removes it, survived all 140 `rk-cli` tests. It is owed to `s8e` §8e.11's first `run()` tests by a receiver
+  note.
+
 **10. The carrier.** `catalog::Step` carries `inputs` (`Step::inputs`, each value a source string or a scalar
 literal; an array, a table or a float is refused at load), and the three keys the licence reads: `on_false`'s `to`,
 `repeat`'s `until` and `escalate`'s `question`. What may read `inputs` is routed here: the licence lint (decision
@@ -215,6 +242,9 @@ resolver as owed. ADR-0136's forbids all stand.
 - Forbids flattening a fan-out's output anywhere but the `[*]` projection.
 - Forbids a second `artifact.read` emitter, and forbids the kernel function appending the row.
 - Forbids a second selection parser, and forbids an unresolvable selection reaching the port as an empty selection.
+- *(Dated 2026-09-27, F3-D2174; decision 9a.)* Forbids reading `"affected"` inside `Changeset`'s producer from a
+  committed `Changeset`, forbids `rk-kernel` spawning `git` or reading the repository for it, and forbids a second
+  reader of the item's changeset range beside R6's.
 - Forbids binding an absent `${…?}` by rewriting the expression into the literal `null` (ADR-0172 clause 3).
 
 ## Evidence and confidence

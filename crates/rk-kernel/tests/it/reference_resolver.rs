@@ -230,6 +230,7 @@ fn every_input_source_form_resolves_or_refuses_by_name() {
         sources: Some(&sources),
         seam: &seam,
         feed: &feed,
+        run_branch: None,
     };
     let r = |text: &str| resolve_text(&env, &scope, "me", "x", text);
 
@@ -498,6 +499,7 @@ fn a_coalesce_takes_its_left_operand_unless_it_is_null() {
         sources: None,
         seam: &seam,
         feed: &feed,
+        run_branch: None,
     };
     // `appetite-check`'s shipped spelling, verbatim.
     let text = "${resize.outputs?} ?? ${size.outputs}";
@@ -820,6 +822,7 @@ fn every_resolved_artifact_input_calls_the_read_seam_once_and_the_stub_emits_no_
         sources: None,
         seam: &seam,
         feed: &feed,
+        run_branch: None,
     };
     let r = |text: &str| resolve_text(&env, &scope, "draft", "spec", text);
     assert_eq!(
@@ -932,6 +935,7 @@ fn kb_checklist_and_feed_keys_resolve_through_the_declared_tables_and_an_undecla
         sources: Some(&sources),
         seam: &seam,
         feed: &feed,
+        run_branch: None,
     };
     let steps = vec![step("draft", StepKind::Agent)];
     let scope = Scope::new(&steps);

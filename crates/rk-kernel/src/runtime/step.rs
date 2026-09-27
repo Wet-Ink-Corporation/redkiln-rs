@@ -222,6 +222,10 @@ pub struct ToolRouting {
     /// resolver's to supply"*). A `toolchain` row's input the step's own `inputs` leaves undeclared
     /// is taken from here; a declared one is never overridden. Empty: nothing is supplied.
     row_inputs: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
+    /// *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173 decision 9 as
+    /// amended, proposed.)* The item's run-branch changeset reader, which `"affected"` reads inside
+    /// `Changeset`'s own producer. Unbound: such a selection refuses by name.
+    run_branch: RunBranchSlot,
 }
 
 impl ToolRouting {
@@ -236,7 +240,25 @@ impl ToolRouting {
             feed_table: None,
             sources: None,
             row_inputs: BTreeMap::new(),
+            run_branch: RunBranchSlot(None),
         }
+    }
+
+    /// Bind the item's run-branch changeset reader (D21-74 ruling 2; R2 = ADR-0173 decision 9 as
+    /// amended, proposed). The composition root binds R6's reader over its checkout.
+    #[must_use]
+    pub fn with_run_branch(
+        mut self,
+        reader: std::sync::Arc<dyn super::reference::RunBranch>,
+    ) -> Self {
+        self.run_branch = RunBranchSlot(Some(reader));
+        self
+    }
+
+    /// The run-branch reader, when the composition root bound one.
+    #[must_use]
+    pub fn run_branch(&self) -> Option<&dyn super::reference::RunBranch> {
+        self.run_branch.0.as_deref()
     }
 
     /// Bind one row input (R8 = ADR-0179 decision 4, proposed): `verb`'s `input`, supplied when
@@ -366,6 +388,32 @@ impl std::fmt::Debug for ReviewSlot {
 }
 
 impl PartialEq for ReviewSlot {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (None, None) => true,
+            (Some(a), Some(b)) => {
+                std::ptr::addr_eq(std::sync::Arc::as_ptr(a), std::sync::Arc::as_ptr(b))
+            }
+            _ => false,
+        }
+    }
+}
+
+/// The bound [`super::reference::RunBranch`], compared by identity as [`ReviewSlot`] is.
+#[derive(Clone, Default)]
+struct RunBranchSlot(Option<std::sync::Arc<dyn super::reference::RunBranch>>);
+
+impl std::fmt::Debug for RunBranchSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(if self.0.is_some() {
+            "RunBranchSlot(bound)"
+        } else {
+            "RunBranchSlot(unbound)"
+        })
+    }
+}
+
+impl PartialEq for RunBranchSlot {
     fn eq(&self, other: &Self) -> bool {
         match (&self.0, &other.0) {
             (None, None) => true,
@@ -882,7 +930,7 @@ impl super::Runtime {
         let selection = if entry.route == Route::Port(PortMethod::Test) {
             match resolved {
                 Ok(inputs) => Some(port_selection(
-                    super::reference::selection_plan(env, step, inputs)
+                    super::reference::selection_plan(env, review.scope, step, inputs)
                         .map_err(|e| selection_refusal(step, &e))?,
                 )),
                 Err(e) if e.binding == "selection" => return Err(selection_refusal(step, e)),
@@ -2091,6 +2139,7 @@ impl super::Runtime {
             sources: routing.sources(),
             seam: self.read_seam(),
             feed: &feed,
+            run_branch: routing.run_branch(),
         };
         f(&env)
     }

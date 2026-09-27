@@ -360,6 +360,10 @@ pub struct Scope {
     /// by step id, so a route can find the step whose verb it reads (`verdict_record` reads the
     /// `Workspace` the activation's `review_clone` step committed).
     runs: BTreeMap<String, String>,
+    /// *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173 decision 9 as
+    /// amended, proposed.)* Every kind an `emit` step of this activation binds: what the activation
+    /// PRODUCES. `"affected"` reads the run branch's diff inside the producer of `Changeset`.
+    emits: BTreeSet<String>,
 }
 
 impl Scope {
@@ -372,8 +376,21 @@ impl Scope {
                 .iter()
                 .filter_map(|s| s.run.clone().map(|run| (s.id.clone(), run)))
                 .collect(),
+            emits: steps
+                .iter()
+                .filter(|s| s.kind == StepKind::Emit)
+                .filter_map(|s| s.emit.as_ref())
+                .flat_map(|e| e.artifacts.keys().cloned())
+                .collect(),
             ..Self::default()
         }
+    }
+
+    /// *(F3-D2174; D21-74 ruling 2.)* Whether an `emit` step of this activation binds `kind` —
+    /// whether the activation is `kind`'s producer.
+    #[must_use]
+    pub fn emits(&self, kind: &str) -> bool {
+        self.emits.contains(kind)
     }
 
     /// *(P7; R5 = ADR-0177 decision 5.)* The current-frame output of the LAST declared step whose
@@ -550,6 +567,28 @@ pub struct Env<'a> {
     pub seam: &'a dyn ArtifactReadSeam,
     /// Call a feed's producing verb (`s8c`'s registry method names it).
     pub feed: &'a dyn Fn(&str) -> Result<Json, String>,
+    /// *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173 decision 9 as
+    /// amended, proposed.)* The item's run-branch changeset reader, bound by the composition root
+    /// ([`super::step::ToolRouting::with_run_branch`]). `None`: inside `Changeset`'s producer,
+    /// `"affected"` refuses by name.
+    pub run_branch: Option<&'a dyn RunBranch>,
+}
+
+/// **The item's run-branch changeset** (D21-74 ruling 2; R2 = ADR-0173 decision 9 as amended,
+/// proposed; *added 2026-09-27, `s8d` build, package F3-D2174*).
+///
+/// Inside the producer of `Changeset`, no `Changeset` is committed while the producer runs, so
+/// `"affected"` resolves over the paths the item's run branch changes: R6's range,
+/// `HEAD..refs/heads/rk-run/<item>`, read through `rk-git`. `rk-kernel` opens no files and spawns no
+/// `git`, so the read is the composition root's (`rk-cli`'s `change_deriver::RunBranchDiff`, the
+/// same reader R6's `change` deriver uses), handed in through this seam as review routes are.
+pub trait RunBranch: Send + Sync {
+    /// The paths `HEAD..refs/heads/rk-run/<item>` changes, in first-seen order. `Ok(None)` is an
+    /// EMPTY range: no run branch, or nothing on it past `HEAD`.
+    ///
+    /// # Errors
+    /// A range that exists and could not be read, by name.
+    fn changed_paths(&self, item: &str) -> Result<Option<Vec<String>>, String>;
 }
 
 /// **An unresolvable reference, by name.** Never `Tri::Null`, `Tri::False` or a skip.
@@ -1270,7 +1309,8 @@ pub fn selection_of(command: &str) -> Option<Vec<String>> {
 pub enum SelectionPlan {
     /// Named tests, from a `${…}` value or through [`selection_of`].
     Filter(Vec<String>),
-    /// `"affected"`: the item's committed `Changeset` paths (`s8c`'s package-level mapping).
+    /// `"affected"`: the item's committed `Changeset` paths (`s8c`'s package-level mapping) —
+    /// or, inside the producer of `Changeset`, the paths its run branch changes (D21-74 ruling 2).
     Affected(Vec<String>),
     /// A selection the adapter declares or refuses by name (`"e2e"`).
     Named(String),
@@ -1286,6 +1326,7 @@ pub enum SelectionPlan {
 /// [`RefError`] naming the step and its `inputs.selection`.
 pub fn selection_plan(
     env: &Env<'_>,
+    scope: &Scope,
     step: &Step,
     inputs: &BTreeMap<String, Json>,
 ) -> Result<SelectionPlan, RefError> {
@@ -1307,6 +1348,42 @@ pub fn selection_plan(
     match parse_input(raw) {
         Ok(Source::Literal(_)) => {
             return match text {
+                // *(2026-09-27, `s8d` build, package F3-D2174; D21-74 ruling 2; R2 = ADR-0173
+                // decision 9 as amended, proposed.)* **Inside the producer of `Changeset`**, none is
+                // committed while it runs (and one an earlier activation committed is not this
+                // one's), so `"affected"` is the run branch's diff, `HEAD..rk-run/<item>`, read
+                // through the composition root's reader. Elsewhere, as before.
+                "affected" if scope.emits("Changeset") => {
+                    let Some(reader) = env.run_branch else {
+                        return Err(refuse(
+                            "affected",
+                            "this activation produces the item's `Changeset`, so `affected` is \
+                             the run branch's diff (HEAD..rk-run/<item>), and no run-branch reader \
+                             is bound to read it; it is never guessed and never an empty selection"
+                                .to_owned(),
+                        ));
+                    };
+                    match reader.changed_paths(env.item) {
+                        Ok(Some(paths)) if !paths.is_empty() => Ok(SelectionPlan::Affected(paths)),
+                        Ok(_) => Err(refuse(
+                            "affected",
+                            format!(
+                                "this activation produces the item's `Changeset`, and its run \
+                                 branch HEAD..rk-run/{} carries no change, so `affected` has no \
+                                 paths to map and is never run as an empty selection",
+                                env.item
+                            ),
+                        )),
+                        Err(e) => Err(refuse(
+                            "affected",
+                            format!(
+                                "this activation produces the item's `Changeset`, and its run \
+                                 branch HEAD..rk-run/{} could not be read: {e}",
+                                env.item
+                            ),
+                        )),
+                    }
+                }
                 "affected" => {
                     let changeset = read_artifact_input(
                         env,
