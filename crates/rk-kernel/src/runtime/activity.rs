@@ -1150,7 +1150,7 @@ pub fn step_committed_event(
     if let Some(map) = row.payload.as_object_mut() {
         map.insert("step_id".to_owned(), serde_json::json!(at.step_id));
         map.insert("iteration_path".to_owned(), at.iteration_path.to_json());
-        // **R4 (ADR-0176 decision 3).** The success the breaker's reset arm reads: an agent step's
+        // **R4 (ADR-0176 decision 4).** The success the breaker's reset arm reads: an agent step's
         // commit carries its family when one is bound, so K counts CONSECUTIVE failures.
         if let Some(family) = at.family {
             map.insert("family".to_owned(), serde_json::json!(family.as_str()));

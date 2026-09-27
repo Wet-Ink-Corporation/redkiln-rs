@@ -2232,6 +2232,18 @@ call sites unobserved.
 **Counts.** New test names are **84**: 68 in `rk-kernel` and 16 in `rk-cli`, **83 net**. Checkpoint 8d (5) names the
 four, and its `want` moves from 14 to 18. (11)'s floor is 877 + 83 = **960**, by dated edit.
 
+*(dated 2026-09-27, `s8d` build, package R5FIX-8d; refuting round 5's major.)* **MR4q, and a first-copy-fails arm.**
+In `a_fan_out_that_halts_part_way_charges_its_pass_for_the_copies_it_dispatched`, copy 0 commits before copy 1 halts. So
+a `fan_out` that records a copy's dispatch only when the copy proceeds (**MR4q**: `executed |= std::mem::take(&mut
+w.dispatched) > 0 && matches!(flow, Flow::Next);`) still charges `root` 1 there. MR4q SURVIVED the whole `rk-kernel
+--test it` with HEAD's test file: *"344 passed; 0 failed; 6 ignored"*. The test now has a second arm with an empty harness
+script. Copy 0 is refused at the bound after its dispatch. Its premises are *"LOOP-HARNESS BOUND"*, nothing committed,
+1 harness dispatch and no `red` commit path, and it asserts `root` charged 1. Unmutated, the arm passes (1 passed). Under
+MR4q it is KILLED at the charge assertion, *"left: [] right: [("root", 1)]"* (*"343 passed; 1 failed"*). Both runs were
+made from `scratchpad/s8d/r5fix-8d-mutant-mr4q.py`: anchor asserted once, tmp + `os.replace`, both files restored in
+`finally`, sha256 re-checked. **Counts unchanged.** The arm is inside an existing test, so no name is added, Checkpoint
+8d (5)'s `want` stays 18, and (11)'s FLOOR stays **960**.
+
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
 **Checkpoints it touches.** Checkpoint 8c names two tests whose premise is the resolver's absence —
@@ -2360,6 +2372,17 @@ exclusion) reads **14** and **14**. Both guards stay red on the pre-existing sit
 (*"re-run pending 7c/7d Command sites"*). `verb_rows::` passes (2) after the change.
 
 *(dated 2026-09-27, `s8d` build, package R3FIX-8d; refuting round 3's crossfile major.)* **Checkpoint 7d's ADR-0100 d1 ban is amended by dated lines in `s7d-cli-and-migrate.md`, and 7d is provisional.** The ban read `rk_absent 'yaml_serde|serde_yaml|\byaml\b' 'ADR-0100 d1: rk-cli touches no YAML — redkiln-migrate/src/legacy is the one reader' 'crates/rk-cli/src'`. P7's change deriver ports `spikes/p1/derive-facets.py`'s generated table, whose file-name literal `"pnpm-lock.yaml"` (`crates/rk-cli/src/change_deriver.rs`, `is_generated`) the `\byaml\b` arm matches, so the ban read *"FAIL: ADR-0100 d1: rk-cli touches no YAML"* on this tree and passed at `d46b2eb`. Checkpoint 8d does not replay 7d; `s8g`'s replay list, `s8h`'s `for spec` list and `s8j`'s re-runs do, whole, so they would have gone red. The fix is the one 7d's own rules prescribe for a ban that must admit a site (`s7d` §7d.17: a fifth-argument exclusion, *"each exclusion is preceded by its own admission line"*). The exclusion admits that ONE literal in that ONE module, `'^crates/rk-cli/src/([^:]*/)?change_deriver\.rs:[0-9]+:.*"pnpm-lock\.yaml"'`, and its admission line fails the block if no `change_deriver` module exists. The old line is kept, struck, as a comment. `s7d` §7d.17's census, re-counted off the block by its own rule, reads **345 / 190 / 155** (was 344 / 189 / 155), by dated note there. **Executed READ-ONLY from s7d's bytes** (`scratchpad/s8d/r3fix-8d-yamlban.py`, the helpers and the amended lines verbatim): the tree PASSES; three synthetic controls FAIL as they must: a `serde_yaml::from_str` in a new `rk-cli/src` file, a `yaml::` line added to `change_deriver.rs` itself, and the module renamed (the admission line's FAIL). The pre-amendment line from `HEAD`'s bytes FAILS on the tree at `change_deriver.rs:80`, so the exclusion is what makes it pass. **Residual, named in the block:** a YAML read written on the same line as that literal in that module would be excluded with it. PROGRESS row 7d carries *"passed `99e209c`, re-run pending"* until a whole re-run of Checkpoint 7d passes (`s8g`'s replay is the first that runs it). **Every other older checkpoint's source bans were checked against this stage's diff.** A sieve (`scratchpad/s8d/r3fix-8d-sieve.py`) matched every `grep`/`rk_absent` pattern in the fenced blocks of Checkpoints 5, 6, 7a, 7b, 7b-ii, 7c-7i and 8a-8c against the 18,912 lines `git diff d46b2eb -- crates .redkiln` adds. It is a proxy, so each ban whose scope could hold a candidate was then EXECUTED read-only from its stage file's bytes over both the `d46b2eb` tree (`git archive` into scratch) and the working tree (`scratchpad/s8d/r3fix-8d-bandiff.py`, nine segments: 5's and 8a's `ChangeSummary` bans, 8a's `"git"` literal and `rk_git` route bans, 7b's LLM-ordinal, lexical-deriver and leave-the-model bans and its shipped-catalog presence line, 7b-ii's classifier-purity ban, 7c's `rk_absent` bans, 7d's absence bans and 8b's `spikes/p9` sweep). After this amendment no segment prints a line that the base does not; before it, the only new line was 7d's YAML FAIL. Each segment's own control: the same run over a copy of the tree with one planted hit per segment prints a new FAIL in eight of the nine; 7b's shipped-catalog line is a presence assertion, which an addition cannot turn red. Checkpoint 6's production `process::Command` ban and its `Command::new("git")` line read the same hits at `d46b2eb` and now (14 and 13 lines: the three adapters, `rk-containment` and `rk-cli`'s doctor probe for the first, the sites PROGRESS row 6's mark already names for the second); 7a's port-trait and port-impl counts read 5 and 5. No other older ban is tripped by `s8d`.
+
+*(dated 2026-09-27, `s8d` build, package R5FIX-8d; refuting round 5's minor.)* **A stray scratch tree was committed
+and removed.** `7561db4` (R3FIX-8d) committed four refuting-round-3 scratch files by mistake. They sat under a mangled
+absolute path whose root directory is `'C'` + U+F03A: `C\357\200\272/Users/ryanm/AppData/Local/Temp/claude/…/scratchpad/s8d/refute-r3-checkpoint/t8a-ctl/bt7e/`
+(`base.md`, `bin/init`, `new.sh`, `old.sh`; 238 lines). They lengthened the longest tracked path, as `s8d-ii`
+Checkpoint 8d-ii (0b)'s own `awk` reads it over `git ls-tree -r --name-only`, to **168** at `7561db4`. That broke
+(0b)'s MAX_PATH guard, whose bound adds that length to the run-tree prefix, and `s8d-ii` §8d-ii.0 item 2 names 140.
+`9a02f49` removed them (*"Remove refuting-round-3 scratch files committed by mistake in 7561db4"*), and the same
+reading is **140** again at `444e012`
+(`references/adr/0114-the-executed-once-gate-moves-to-extended-to-shipped-promotion-and-the-v0-pack-tags-on-lint-parse-and-a-visible-ledger.md`).
+No test or checkpoint line of `s8d` read those files.
 
 **Nested re-runs cost hours, so Checkpoint 8d re-runs only these.** It re-runs its entry gate (8c), the older checkpoint its
 renames make provisional (7g), and the one its `fakes.rs` edit makes provisional (7a). *D21-48 (2026-09-24):* it

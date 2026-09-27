@@ -685,7 +685,8 @@ fn a_walk_that_halts_before_any_commit_keeps_the_charges_already_made() {
 /// **m14: a `for_each` that halts part-way charges its pass once for the copies it dispatched**
 /// *(dated 2026-09-27, `s8d` build, package R4FIX-8d)*. `fan_out` returned a copy's halt before its
 /// `note_charge`. `red` fans out over two elements; the first copy commits and the second's dispatch
-/// is refused at the harness's bound.
+/// is refused at the harness's bound. A second arm *(dated 2026-09-27, `s8d` build, package
+/// R5FIX-8d)* refuses copy 0 itself, so the only dispatch is the halting copy's own (MR4q).
 #[test]
 fn a_fan_out_that_halts_part_way_charges_its_pass_for_the_copies_it_dispatched() {
     let mut red = agent("red", &[("ac", "${item}")]);
@@ -711,6 +712,35 @@ fn a_fan_out_that_halts_part_way_charges_its_pass_for_the_copies_it_dispatched()
         charged(&report),
         vec![("root".to_owned(), 1)],
         "a fan-out that dispatched charges its pass ONCE (AC-022), halted or not: {e}"
+    );
+
+    // THE FIRST COPY FAILS *(dated 2026-09-27, `s8d` build, package R5FIX-8d; refuting round 5's
+    // major)*: an empty harness script refuses copy 0 at the bound AFTER its dispatch, so nothing
+    // commits. The arm above cannot see a `fan_out` that notes a copy's dispatch only when the copy
+    // proceeds (MR4q): its copy 0 commits first. This one's only dispatch is the halting copy's own.
+    let mut red = agent("red", &[("ac", "${item}")]);
+    red.for_each = Some("artifact:Spec.acs".to_owned());
+    let rig = Rig::new(Vec::new(), Vec::new());
+    rig.seed(crate::reference_resolver::emitted_row(
+        "spec-author@1",
+        "Spec",
+        serde_json::json!({"acs": ["AC-1", "AC-2"]}),
+    ));
+    let report = rig.walk(&[red, step("emit", StepKind::Emit)]);
+    let e = refusal(&report);
+    assert!(
+        e.contains("LOOP-HARNESS BOUND") && !report.committed() && !report.completed(),
+        "PREMISE: copy 0's dispatch is refused at the bound and nothing commits: {e}"
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.paths("red")),
+        (1, Vec::<String>::new()),
+        "PREMISE: copy 0 dispatched once, and no copy committed"
+    );
+    assert_eq!(
+        charged(&report),
+        vec![("root".to_owned(), 1)],
+        "a fan-out whose FIRST copy dispatched and failed charges its pass once (AC-022; m14): {e}"
     );
 }
 
