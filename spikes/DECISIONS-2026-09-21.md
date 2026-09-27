@@ -3189,3 +3189,25 @@ escalate re-entry that dispatches `green`, not `red`.
 
 **Declined.** (b) committing idempotent tool outputs a later check reads (a crash re-entry would stop re-verifying the
 tree); (c) owing it to `s8e`; (d) accepting the re-walk as designed.
+
+---
+
+## D21-77 · A journaled refusal is not replayed; decision rows do not draw on the retry cap; one focused round past s8d's cap
+
+**Taken 2026-09-27 by the operator, in the session executing `s8d`, on refuting round 8's findings (the cap).**
+
+**Why.** Round 8 found, in D21-76's build: (i) a journaled `false` whose route is a refusal (`"fail"`, no `on_false`, or
+an exhausted `{to, max}` loop-back) is replayed on every later run, so a refused activation cannot complete after the
+tree is fixed until its activity version changes (the records said *"a replayed false re-takes the same route"*; both
+refuters graded it a residual, not a spec violation); (ii) decision rows take activation attempt numbers, which
+`retry::decide` compares against the pack's AC-029 `attempts_cap`, so journaled decisions consume a later agent step's
+retries (confirmed major); (iii) a gate `when` that decides `false` is journaled by no test (confirmed major).
+
+**Ruled.**
+1. **Replay only decisions whose route continues the walk** — a `true`, a loop-back, a `repeat` pass, an escalation.
+   A `false` routed to a refusal is **not replayed**: the next run re-verifies it (the deciding `check` re-executes over
+   re-executed tool output). ADR-0174 decision 7 and ADR-0175 (both `proposed`) are amended by dated text; a test pins a
+   refused-then-fixed re-run completing.
+2. **(ii) and (iii) are fixed** red-first with mutants: decision rows draw no attempt from AC-029's cap (the retry cap
+   counts dispatch attempts only), and a gate `when` deciding `false` is journaled and replayed under a killing test.
+3. **One focused refuting round (9) past the cap of 8**, over this fix's diff only, before the formal Checkpoint 8d.
