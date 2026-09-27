@@ -3060,3 +3060,63 @@ no forbids bullet moves. The supersession in part, for `tool` steps (D21-48 X13)
 decision 2's sentence, decision 4 and its first two forbids bullets, and of ADR-0099 decision 2's *"under the same
 timeout"*, is now in force; both stay `accepted`, each `superseded_by` already names `0171`, and ADR-0140 decision 5
 stands. **Checkpoint 8c is re-run after this flip commit.**
+
+---
+
+## D21-72 · With the kernel writing the error row (R4), the test `FakeHarness` appends ADR-0126's `dispatch_completed` on a failed or cancelled dispatch only
+
+**Taken 2026-09-26 by the operator, in the session executing `s8d`, on a brief with three measured options and a
+recommendation.**
+
+**Why.** `s8d`'s R4 (ADR-0176) makes the kernel the writer of the `step_failed`/`step_cancelled` error row, so P6
+removed `FakeHarness`'s own error row (§8d.5: *"the fake writes no error row of its own"*). `rk-ports`'
+`conformance::conform_harness` Err arm asserts that a failed dispatch appended an event (*"a dispatch terminated in
+{err:?} without appending an event (AC-360 …)"*). The real Claude adapter satisfies it with ADR-0126's
+`dispatch_completed`; the fake satisfied it only with the removed row. A whole-workspace run (the `conformance`
+feature on) read 930 passed / 1 failed / 10 ignored, the failure being `conformance::port_conformance_fake_rows`, and
+Checkpoint 7a run whole fails on it too. No accepted record says which row the fake owes.
+
+**Ruled — option (B).** `FakeHarness` appends ADR-0126's `dispatch_completed` row (the serde of its fake record) on
+an `Err` termination and on its cancel path, and on no `Ok` path. AC-360's conformance obligation stands unchanged.
+The tests that asserted the fake appends nothing (three `rk-ports` `fake_behaviour` tests,
+`step_error_row::the_fake_harness_writes_no_error_row_of_its_own` and `rk-cli` `root::ac404`) are re-amended by dated
+note to *"no error row"*. No golden moves. **Declined:** (A) `dispatch_completed` on every termination (mirrors the
+real adapter per D21-42 20, but moves two byte-identical `explain` goldens); (C) weakening `conform_harness` (drops a
+conformance obligation and moves Checkpoint 7a/7c body text). **Stated cost:** the fake's journal differs from the
+real adapter's on the `Ok` path; recorded in R4's evidence.
+
+---
+
+## D21-73 · `s8d` fixes the three selection defects and its own unsupplied `sca_scan`/`package` inputs, then re-measures the walk table, and the (6a) floor is set to the measured count
+
+**Taken 2026-09-27 by the operator, in the session executing `s8d`, on a brief with four measured options and a
+recommendation (option C).**
+
+**Why.** Checkpoint 8d (6a) asserts the shipped pack walks at least 11 fix-lane and 9 story-lane activities under the
+scripted rig of §8d.9. Package P8 measured `LANE_WALK fix walked=4 refused=6` and `LANE_WALK story walked=3
+refused=5`, and traced every refusal:
+1. selection step 4 orders candidates by the derived `Ord`, which puts `activity_id` before `method_rank`, so it picks
+   the alphabetically first producer, contradicting its own doc (*"The producer with the lowest `method_rank`"*) and
+   AC-046/047 (the fix lane gets `bisect`, not `root-cause`);
+2. step 5's node dedup compares the instance, so an activity providing two required kinds yields two nodes with one
+   id, and the fix lane's implement reads as AC-078 with an empty path;
+3. step 2 evaluates `require` rows against a context that binds no `rigor`, refusing the story lane's implement and
+   both lanes' closeout;
+4. `confirmation-test`'s emit reads `TestOutcome` fields that do not exist; the `lint` port returns no output that
+   `bdd-scenarios` reads; `bisect` has no registry row;
+5. the `sca_scan` and `package` rows declare inputs no step supplies, which accepted ADR-0170 assigns to *"the
+   resolver's to supply (s8d)"*.
+Items 1–3 are pre-existing `s7b` selection code; the stage file says only the operator may lower a floor.
+
+**Ruled — option (C).**
+- **`s8d` fixes items 1, 2 and 3** under a new record written `proposed` (it flips at `s8d`'s close under D21-64
+  ruling 10): step 4 chooses by lowest `method_rank` (tie broken as the record states, measured, never by the derived
+  `Ord`); step 5's identity is the activity id (one node per activity, all its provided kinds); step 2 binds the run's
+  `rigor` for `require` rows. Each red-first, with mutants.
+- **`s8d` supplies item 5** (the `sca_scan` `audit_db`/`deny_db` defaults and `package`'s `binaries`) through the
+  resolver or a declared registry value, stated in the same record or R2 as fits.
+- **Both lanes are re-measured**, and Checkpoint 8d (6a)'s floors are **set to the re-measured counts** by a dated
+  ledger line citing this entry (not assumed; `root-cause`, `tdd`, `change-summary`, `docs-update` and the closeout
+  rows are measured, not presumed reached).
+- **Item 4 is owed**: `confirmation-test`'s emit fields and the `lint` output to `s8g`/`s8h` as their stage files fit
+  (each by a dated receiver note), and `bisect`'s registry row to the stage that owns its verb.
