@@ -229,6 +229,10 @@ pub struct ActivityReport {
     /// (AC-022), while each loop-back frame and each `repeat` frame is a pass of its own (AC-021's
     /// per-pass count). Every agent or tool step the walk EXECUTED in a pass charges that pass
     /// through `budget::charge_for_each`; a step SERVED from its commit charges nothing.
+    /// *(dated 2026-09-27, `s8d` build, package M14-8d.)* ~~through `budget::charge_for_each`~~ —
+    /// a non-`for_each` step charges its pass once per DISPATCH it made, a kernel re-dispatch
+    /// included (`budget::charge_dispatched`; accepted ADR-0122 decision 1); a `for_each` step keeps
+    /// `budget::charge_for_each`'s once-whatever-N rule (AC-022).
     charges: Vec<(IterationPath, u32)>,
     /// **R4.** The breaker's refusal, when the executor refused the dispatch before the port.
     breaker: Option<BreakerDecision>,

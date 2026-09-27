@@ -116,6 +116,22 @@ charges the activity's attempt budget, one charge per recorded `system/api_retry
 it"*; its charge site is `budget::charge_observed_inner_attempts`. ADR-0037 is a load-time lint on the declared field
 and does not move.
 
+*(dated 2026-09-27, `s8d` build, package M14-8d; amended while `proposed`, m14 settled by accepted ADR-0122.)* ~~Every
+agent or tool step the walk EXECUTES in a pass charges that pass through `budget::charge_for_each`~~ — the charge is
+**per dispatch**, not per executed step: every dispatch an agent or tool step makes in a pass charges that pass, a
+kernel re-dispatch of the same step inside `run_activity`'s retry loop included. A non-`for_each` step charges
+`budget::charge_dispatched(step, n)`, `charge_for_each`'s kind rule scaled by the `n` dispatches the step made
+(`ActivityReport::dispatches`; a `tool` step is one); a `for_each` step still charges once through `charge_for_each`,
+whatever its element count (AC-022, ADR-0053); a SERVED step, having made no dispatch, charges nothing. The grounds are
+accepted ADR-0122's. Decision 1: *"The runtime attempt counter for the activity is debited by the harness's own
+attempts observed on the stream of a dispatch, as well as by the dispatch itself."* Decision 3: *"AC-021's quantity is
+the declared budget field"* and *"AC-026's quantity is the runtime draw-down"*, so AC-021's per-pass step count does
+not set the runtime charge. Decision 4: *"ADR-0037 was cited as the authority for a runtime rule it never states"*, so
+ADR-0037's *"`budget.attempts_total ≥ number of agent/tool steps on one pass`"* does not either. The harness's own inner
+attempts (decision 1's *"one charge per recorded `system/api_retry` event"*) remain at
+`budget::charge_observed_inner_attempts`, which the run path does not call: ARMED, not discharged, as recorded since
+`s7b`.
+
 ## Consequences
 
 **Positive**
@@ -166,6 +182,12 @@ and does not move.
   M6, M24, M26 and M35 by the resolver's iteration tests (`s8d` §8d.10), each run from a Python driver with every
   mutated file restored and its sha256 verified. `rk-cli`'s `exit::adr0144_post_commit_step_failure_exits_the_class_
   row_not_three` stays green.
+- [measured 2026-09-27 at `s8d`'s build, package M14-8d, through the no-dispatch helper] decision 7's per-dispatch
+  amendment: `on_false_exec::a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch` (an agent step failing
+  `Transport` on its first dispatch and committing on the kernel's re-dispatch charges `root` 2) was RED on the
+  flat-1 charge (*"left: [("root", Attempts(Attempts(1)))] right: [("root", Attempts(Attempts(2)))]"*), then
+  GREEN; mutants MA (the loop charges `charge_dispatched(step, 1)`) and MB (the agent arm records 1 dispatch) are
+  KILLED by it (`s8d` §8d.10's M14-8d note).
 - **What this evidence does not license.** The walks are over fixture step lists and fake harnesses; no shipped
   activity's loop is run against a real harness here, and the lane walk table is `s8d` §8d.9's. ADR-0046's route is
   owed and unbuilt. This record flips at `s8d`'s close under D21-64 ruling 10, on its own dated ledger line, only if

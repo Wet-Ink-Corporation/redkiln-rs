@@ -1263,7 +1263,7 @@ impl super::Runtime {
             // not a second agent step.
             first_agent: None,
             loops: Loops::default(),
-            executed: false,
+            dispatched: 0,
         };
         let env = WalkEnv {
             item,
@@ -1308,10 +1308,14 @@ impl super::Runtime {
                 self.fan_out(&mut w, &env, steps, index, &path, source)?
             } else {
                 let flow = self.one_step(&mut w, &env, steps, index, &path)?;
-                if std::mem::take(&mut w.executed) {
+                // m14, settled by accepted ADR-0122 decision 1 (dated 2026-09-27, `s8d` build,
+                // package M14-8d): the pass is charged by the dispatches the step MADE — a
+                // kernel re-dispatch charges again — never a flat one per executed step.
+                let dispatches = std::mem::take(&mut w.dispatched);
+                if dispatches > 0 {
                     w.report.note_charge(
                         path.clone(),
-                        crate::workflow::budget::charge_for_each(step, 1).get(),
+                        crate::workflow::budget::charge_dispatched(step, dispatches).get(),
                     );
                 }
                 flow
@@ -1351,8 +1355,8 @@ impl super::Runtime {
     }
 
     /// **One step at one iteration path** — the guard, the inputs, and the kind's arm (R1, R2, R3).
-    /// Sets [`Walk::executed`] when the step EXECUTED (neither served nor skipped), which is what
-    /// the pass is charged for.
+    /// Sets [`Walk::dispatched`] to the dispatches the step MADE when it EXECUTED (neither served
+    /// nor skipped), which is what the pass is charged for (m14; ADR-0122 decision 1).
     fn one_step(
         &self,
         w: &mut Walk,
@@ -1402,7 +1406,8 @@ impl super::Runtime {
                 // R2: a tool step's typed output is bound as `${<step>.outputs}`; a `check` (or a
                 // tool whose port method returns none) is marked run.
                 if step.kind == StepKind::Tool {
-                    w.executed = true;
+                    // A tool step's port call is one dispatch; the kernel has no retry loop over it.
+                    w.dispatched = 1;
                 }
                 match &run.output {
                     Some((_, value)) => w.scope.bind_output(&step.id, value.clone()),
@@ -1561,7 +1566,9 @@ impl super::Runtime {
             w.report.note_served();
             return Ok(Flow::Next);
         }
-        w.executed = true;
+        // m14 (ADR-0122 decision 1): every dispatch `run_activity`'s retry loop made, its kernel
+        // re-dispatches included — not a flat one per step.
+        w.dispatched = dispatched.dispatches();
         let held = w.report.holds_a_commit();
         let ok = dispatched.committed() || dispatched.discarded_late();
         // The memo facts of THIS step, from THIS step's own spec (§8d.2).
@@ -1655,7 +1662,7 @@ impl super::Runtime {
             w.scope.unbind(&step.id);
             w.scope.set_element(Some(element));
             let flow = self.one_step(w, e, steps, index, &path.pushed(frame))?;
-            executed |= std::mem::take(&mut w.executed);
+            executed |= std::mem::take(&mut w.dispatched) > 0;
             match flow {
                 Flow::Next => outputs.push(
                     w.scope
@@ -2320,14 +2327,15 @@ struct StepRun {
 
 /// What one walk holds as it runs: the report it accumulates, the activation's scope, the item's
 /// journal (re-read after each commit), the first agent step's id (R1's pre-R1 binding rule), the
-/// loops' state, and whether the step just run EXECUTED (the pass charge's input, m14).
+/// loops' state, and how many dispatches the step just run MADE (the pass charge's input, m14;
+/// `0` for a served, skipped or non-dispatching step — ADR-0122 decision 1).
 struct Walk {
     report: ActivityReport,
     scope: super::reference::Scope,
     journal: Vec<rk_types::event::Event>,
     first_agent: Option<String>,
     loops: Loops,
-    executed: bool,
+    dispatched: u32,
 }
 
 impl Walk {

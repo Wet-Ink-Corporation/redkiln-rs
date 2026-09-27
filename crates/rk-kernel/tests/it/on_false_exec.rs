@@ -50,6 +50,10 @@ type Json = serde_json::Value;
 pub struct LoopHarness {
     script: Mutex<Vec<Json>>,
     seen: Mutex<Vec<Vec<(String, Json)>>>,
+    /// The 1-based dispatch numbers answered with a TRANSIENT `Transport` failure (a class the
+    /// kernel's retry loop re-dispatches) instead of the script's next value, which is kept for the
+    /// following dispatch.
+    transient: Mutex<Vec<usize>>,
 }
 
 impl LoopHarness {
@@ -57,7 +61,13 @@ impl LoopHarness {
         Self {
             script: Mutex::new(script),
             seen: Mutex::new(Vec::new()),
+            transient: Mutex::new(Vec::new()),
         }
+    }
+
+    /// Answer dispatch `n` (1-based) with a transient `Transport` failure, so the kernel retries.
+    pub fn fail_transiently_at(&self, n: usize) {
+        self.transient.lock().expect("sound").push(n);
     }
 
     /// How many times the port was reached.
@@ -89,7 +99,10 @@ impl Harness for LoopHarness {
             seen.push(spec.inputs.clone());
             seen.len()
         };
-        let next = {
+        let transient = self.transient.lock().expect("sound").contains(&n);
+        let next = if transient {
+            None
+        } else {
             let mut script = self.script.lock().expect("sound");
             (!script.is_empty()).then(|| script.remove(0))
         };
@@ -117,6 +130,14 @@ impl Harness for LoopHarness {
             },
             result: next.map_or_else(
                 || {
+                    if transient {
+                        return Err(StepError::Transport {
+                            kind: rk_types::error::TransportKind::Io,
+                            detail: format!(
+                                "LOOP-HARNESS TRANSIENT: dispatch {n} scripted to fail"
+                            ),
+                        });
+                    }
                     Err(StepError::Unsupported {
                         capability: format!(
                             "LOOP-HARNESS BOUND: dispatch {n} is past the script's end, so the \
@@ -464,6 +485,47 @@ fn a_loop_back_re_enters_its_target_under_a_new_iteration_path() {
         second.pass_charges()
     );
     assert!(rig.completed(), "the completion row is journalled");
+}
+
+/// **m14, settled by accepted ADR-0122** *(dated 2026-09-27, `s8d` build, package M14-8d)*: a pass
+/// is charged by the DISPATCHES its steps made, not a flat one per executed step. ADR-0122 decision
+/// 1: *"The runtime attempt counter for the activity is debited by the harness's own attempts
+/// observed on the stream of a dispatch, as well as by the dispatch itself."* The agent step `draft`
+/// fails transiently on its first dispatch (`Transport`, a class the kernel's retry loop
+/// re-dispatches) and commits on its second, so its pass is charged 2 — the flat-1 charge reads 1.
+#[test]
+fn a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch() {
+    let steps = draft_verify(None);
+    let rig = Rig::new(vec![serde_json::json!({"ok": true, "n": 1})], Vec::new());
+    rig.harness.fail_transiently_at(1);
+    let report = rig.walk(&steps);
+    assert!(
+        report.completed() && report.step_error().is_none(),
+        "PREMISE: the kernel retries the transient failure and the walk completes: {}",
+        refusal(&report)
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), report.dispatches()),
+        (2, 2),
+        "PREMISE: the step was dispatched twice — one transient failure, one kernel retry"
+    );
+    assert_eq!(
+        rig.paths("draft"),
+        vec!["root".to_owned()],
+        "PREMISE: one step activation committed, in the root pass"
+    );
+    let charges = report.pass_charges();
+    let rendered: Vec<(String, Charge)> =
+        charges.iter().map(|(p, c)| (p.to_string(), *c)).collect();
+    assert_eq!(
+        rendered,
+        vec![(
+            "root".to_owned(),
+            Charge::Attempts(rk_kernel::workflow::budget::Attempts::new(2))
+        )],
+        "the pass is charged once per DISPATCH its step made (ADR-0122 decision 1), not once per \
+         executed step: {charges:?}"
+    );
 }
 
 /// **Exhaustion refuses as `StepFailedAfterCommit`, and the committed steps STAND** (ADR-0144; M7

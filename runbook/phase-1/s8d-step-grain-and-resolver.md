@@ -666,7 +666,7 @@ charges that frame's pass. Each inner harness retry that the stream records char
 reason: BudgetExhausted }`, which reaches AC-024 and AC-025 unchanged (ADR-0122). ADR-0037 is a load-time lint on the
 declared field and does not move. R3 states this, and
 `on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path` asserts the per-frame charge.
-*(dated 2026-09-27, `s8d` build, package R3FIX-8d; refuting round 3's spec-conformance major.)* **Raised, not decided
+*(dated 2026-09-27, `s8d` build, package R3FIX-8d; refuting round 3's spec-conformance major.)* ~~**Raised, not decided
 here: whether a kernel re-dispatch of the same step charges its pass again.** The build charges once per executed
 step (ADR-0175 decision 7, proposed); this paragraph says *"Every agent or tool dispatch in a frame charges that
 frame's pass"*. The per-step reading was to be grounded on AC-021 (*"THEN it counts the agent/tool steps of a pass,
@@ -674,7 +674,21 @@ not the sum of retried steps across passes"*) and ADR-0037 (*"`budget.attempts_t
 one pass`"*), but accepted ADR-0122 decision 3 reads AC-021's quantity as *"the declared budget field"* and the
 runtime draw-down as AC-026's, and decision 1 debits the runtime counter *"by the harness's own attempts observed on
 the stream of a dispatch, as well as by the dispatch itself"*. So neither citation settles the runtime charge, and
-the choice is the operator's. This paragraph, ADR-0175 decision 7 and the pinning walk test wait on that ruling.
+the choice is the operator's. This paragraph, ADR-0175 decision 7 and the pinning walk test wait on that ruling.~~
+*(dated 2026-09-27, `s8d` build, package M14-8d.)* **Settled by the accepted record, not by a new ruling: a kernel
+re-dispatch of the same step charges its pass again.** Accepted ADR-0122 decides it. Decision 1: *"The runtime
+attempt counter for the activity is debited by the harness's own attempts observed on the stream of a dispatch, as
+well as by the dispatch itself."* Decision 3: *"AC-021's quantity is the declared budget field"* and *"AC-026's
+quantity is the runtime draw-down"*. Decision 4 withdraws ADR-0037 as a runtime authority: *"ADR-0037 was cited as the
+authority for a runtime rule it never states"*. So the sentence *"Every agent or tool dispatch in a frame charges that
+frame's pass"* above stands as written, and ADR-0175 decision 7's per-executed-step reading is amended to it by dated
+text. The build charges a non-`for_each` step's pass once per dispatch `run_activity`'s retry loop made
+(`ActivityReport::dispatches`, through `budget::charge_dispatched`); a `for_each` step still charges once whatever its
+element count (AC-022, ADR-0053). `on_false_exec::a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch`
+pins it (§8d.10's M14-8d note). **Still ARMED, not discharged, as recorded since `s7b`:** the harness's own inner
+attempts (ADR-0122 decision 1's *"one charge per recorded `system/api_retry` event"*) are charged only at
+`budget::charge_observed_inner_attempts`, which the run path does not call, and no runtime budget gate reads the pass
+charges yet. This package does not build either.
 
 **The `[*]` projection over a list-valued field (N13).** At `a6349b6`, `tdd-red-green-refactor`'s `red-verify` reads
 `inputs = { selection = "${red.outputs}" }`. N13's edit to `${red.outputs[*].tests_added}` is `s8b`'s (§8d.1 S2).
@@ -966,10 +980,14 @@ text can be re-read against them:
   step's escalate gate keeps ADR-0146 clause 2's three dispositions unchanged.
 - **The attempt charge per frame (m14).** `ActivityReport::pass_charges` reports one `budget::Charge::Attempts` per pass (an iteration
   path with its `for_each` frames removed). Every agent or tool step the walk EXECUTES charges its pass through `budget::charge_for_each`
-  (its first `src/` caller); a `for_each` step is charged once whatever its element count (AC-022); a SERVED step charges nothing. A
+  (its first `src/` caller); a `for_each` step is charged once whatever its element count (AC-022); a SERVED step charges nothing. ~~A
   reading, flagged: the charge is per executed STEP, so a kernel retry of the same step inside `run_activity`'s loop does not charge the
-  pass again; ADR-0122 decision 1's inner-attempt charge stays at `budget::charge_observed_inner_attempts`, which the run path does not
+  pass again;~~ ADR-0122 decision 1's inner-attempt charge stays at `budget::charge_observed_inner_attempts`, which the run path does not
   call yet, and no runtime budget gate reads the pass charges yet (R3's Negative says both).
+  *(dated 2026-09-27, `s8d` build, package M14-8d.)* The struck reading is replaced by accepted ADR-0122 decision 1 (§8d.3's m14
+  paragraph): a non-`for_each` step charges its pass once per DISPATCH it made, a kernel re-dispatch included
+  (`ActivityReport::dispatches` into `Walk::dispatched`, charged through the new `budget::charge_dispatched`, which scales
+  `charge_for_each`'s kind rule by the count); a `tool` step is one dispatch. A `for_each` step keeps `charge_for_each` once.
 - **A loop-back inside a `repeat` body — a reading, flagged.** Measured over `.redkiln/catalog` by a read-only `tomllib`
   pass: exactly one `check` with a `{ to, max }` lies inside a repeat body — `implement-ue`'s `cooked` (`on_false = { to =
   "edit", max = 2 }`), inside `edit`'s body (`edit` … `automation`). The walk reads a loop-back as a re-entry: it opens a new
@@ -2136,6 +2154,23 @@ Zero survivors.
 
 *(dated 2026-09-27, `s8d` build, package R3FIX-8d; refuting round 3's tests-mutants minors.)* **No new test; one assertion added, and three texts corrected.** (1) `reference_resolver::every_input_source_form_resolves_or_refuses_by_name` defined a `feed` closure whose `logfeed` arm no call reached: every shipped `[feed.rust.*]` row is `unprovided`. The test now also resolves `toolchain:logs` through a registry that declares `[feed.t.logs]` with a producing verb, and asserts the value is the `logfeed` arm's `{"lines": 3}`. The arm's value mutated to `4` SURVIVED on the old test (*"1 passed"*), which is the dead code measured, and is KILLED on the new one (*"left: Object {\"lines\": Number(4)}"*). (2) `test_selection::a_step_output_selection_resolves_and_reaches_the_port_as_named_tests` carried *"The outcome is BOUND (record T's `TestOutcome`), so a later `check` could read it."* above `let _ = rows;`, a claim nothing asserted; both lines are removed and the tuple's third member is `_`. (3) `check_eval`'s module doc and its FALSE-arm comment said a false check refuses *"until §8d.4 routes it"*; §8d.4 is built (R3 = ADR-0175), and the refusal there is the no-`on_false` exhausted case, which the texts now say. `processes`' `spec.ambiguity` message read as if the question WERE declared; it now reads *"must NOT be declared"*. The floor does not move: no test name is added or removed.
 
+*(dated 2026-09-27, `s8d` build, package M14-8d; m14 settled by accepted ADR-0122, §8d.3.)* **One new test, red then
+green, and two mutants.** `rk-kernel` `on_false_exec::a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch`
+walks `draft` (agent), `verify` (a `check` that holds) and `emit`. `LoopHarness` gains `fail_transiently_at(n)`, which
+answers dispatch `n` with `Transport { Io }` (a class the kernel's retry loop re-dispatches) and keeps the script's value
+for the next dispatch. Its premises: the walk completes, the harness and the report each count 2 dispatches, and one
+`draft` activation commits at `root`. It asserts `pass_charges` is exactly `[("root", Attempts(2))]`. **RED** on the
+flat-1 charge: *"left: [("root", Attempts(Attempts(1)))] right: [("root", Attempts(Attempts(2)))]"* (5 passed, 1 failed
+in `on_false_exec::`). **GREEN** after `Walk::executed: bool` became `Walk::dispatched: u32`, set from
+`ActivityReport::dispatches()` in the agent arm and to 1 in the tool arm, and charged through the new
+`budget::charge_dispatched`. Mutants, from `scratchpad/s8d/m14-8d-mutants.py` (anchor asserted once, tmp +
+`os.replace`, restored in `finally`, sha256 re-checked, 1 test run each): **MA** (the loop charges
+`charge_dispatched(step, 1)`) KILLED; **MB** (the agent arm sets `w.dispatched = 1`) KILLED, each at *"left:
+[("root", Attempts(Attempts(1)))]"*. Zero survivors. The existing
+`a_loop_back_re_enters_its_target_under_a_new_iteration_path` stays green unchanged (one dispatch per frame charges 1).
+**Counts.** New test names are **80**: 64 in `rk-kernel` and 16 in `rk-cli`, **79 net**. Checkpoint 8d (5) names the
+test and its `want` moves from 13 to 14; (11)'s floor is 877 + 79 = **956**, by dated edit.
+
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
 **Checkpoints it touches.** Checkpoint 8c names two tests whose premise is the resolver's absence —
@@ -2516,8 +2551,11 @@ run_lib_named rk-kernel "step5 in-crate" \
   select::step5::tests::ac078_cyclic_dag_fails_before_dispatch
 
 # ---- (5) BULLETS 5-6: ON_FALSE AS ITERATION, THE ERROR ROW AND THE BREAKER.
+# ---- (dated 2026-09-27, s8d build, package M14-8d) One name added by dated edit, the per-dispatch pass charge
+# ---- (m14 settled by accepted ADR-0122; section 8d.10's M14-8d note). `want` moves from 13 to 14 with it.
 run_named rk-kernel "on_false, telemetry, breaker" \
   on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path \
+  on_false_exec::a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch \
   on_false_exec::loop_back_exhaustion_refuses_as_step_failed_after_commit_and_committed_steps_stand \
   on_false_exec::continue_proceeds_and_fail_refuses \
   on_false_exec::a_false_check_with_no_on_false_refuses_as_step_failed_after_commit \
@@ -2724,7 +2762,10 @@ n=$(printf '%s\n' "$hit" | grep -c 'fn selection_of')
 # ---- (dated 2026-09-27, s8d build, package R2FIX-8d) RE-DERIVED from the same recorded 877. The package adds two
 # ---- executing tests (section 8d.10's R2FIX-8d note), one in rk-kernel and one in rk-cli, and removes none. Net
 # ---- executing: 76 + 2 = 78. FLOOR = 877 + 78 = 955. ~~FLOOR=953~~.
-FLOOR=955
+# ---- (dated 2026-09-27, s8d build, package M14-8d) RE-DERIVED from the same recorded 877. The package adds one
+# ---- executing rk-kernel test (section 8d.10's M14-8d note) and removes none. Net executing: 78 + 1 = 79.
+# ---- FLOOR = 877 + 79 = 956. ~~FLOOR=955~~.
+FLOOR=956
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

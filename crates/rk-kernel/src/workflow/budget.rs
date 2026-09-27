@@ -493,6 +493,24 @@ pub const fn charge_for_each(step: &Step, _fan_out: usize) -> Attempts {
     }
 }
 
+/// **The runtime attempts charge of one executed step, at the dispatches it actually made** —
+/// the walk's per-pass draw-down (`s8d` §8d.3, m14).
+///
+/// *(dated 2026-09-27, `s8d` build, package M14-8d; ADR-0175 decision 7 as amended, `proposed`.)*
+/// Accepted ADR-0122 decision 1: *"The runtime attempt counter for the activity is debited by the
+/// harness's own attempts observed on the stream of a dispatch, as well as by the dispatch
+/// itself."* So a step the kernel's retry loop dispatched `dispatches` times charges its pass
+/// `dispatches`, and a step served from its commit (0 dispatches) charges nothing. The step KIND
+/// rule is [`charge_for_each`]'s — the one site that says only `agent` and `tool` steps charge —
+/// scaled by the dispatch count. A `for_each` step is NOT charged here: it keeps
+/// [`charge_for_each`]'s once-whatever-N rule (AC-022, ADR-0053). The harness's OWN inner attempts
+/// are [`charge_observed_inner_attempts`]'s, which the run path does not call yet (ARMED, not
+/// discharged, since `s7b`).
+#[must_use]
+pub const fn charge_dispatched(step: &Step, dispatches: u32) -> Attempts {
+    Attempts::new(charge_for_each(step, 1).get().saturating_mul(dispatches))
+}
+
 /// **The runtime attempts charge for one pass** through an activity's graph.
 ///
 /// Every step is charged through [`charge_for_each`], the fan-out step and the plain step alike, so
