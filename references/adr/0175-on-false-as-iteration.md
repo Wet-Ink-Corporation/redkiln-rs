@@ -106,6 +106,26 @@ past it (ADR-0017's terminal path); open, the run is at that gate; absent, the g
 from the escalating frame — a gate's answer or a later **tool** step's output — binds the resumed pass as its previous
 frame (D21-48 X8).
 
+*(dated 2026-09-27, `s8d` build, package D2176-8d; amended while `proposed`; D21-76, option (a).)* **On every re-entry
+the walk REPLAYS the loop decisions it journaled, so an answered escalate gate resumes into its escalating step.**
+Before this amendment the re-entry re-walked from the top and re-decided every `check`, `until` and guard over
+re-executed tool answers. In `tdd-red-green-refactor` (both lanes) `green` changes the tree before `green-gate` opens,
+so on the answer's re-walk `red-verify` re-ran over tests `green` had fixed, `red-check` (`report.failed > 0 and
+report.passed == 0`) no longer held, and the walk looped back into `red` instead of resuming into `green` (refuting
+round 7; D21-76's *Why*). D21-76 rules: *"The walk **journals its control decisions** — each `check` verdict and each
+loop-back or escalation decision — under the commit key of the frame that took it, and a re-entered walk **replays**
+them"*. ADR-0174 decision 7, as amended the same day, states the row and the replay. For this record's routes:
+- A `check`'s `false` is journaled before its `on_false` is taken (decision 2's loop-back, decision 3's refusal or
+  decision 4's `continue`). A replayed `false` re-takes the same route over the loop counts the replay itself rebuilds,
+  so the same frames are re-entered and their commits are served.
+- A `repeat`'s `until` is journaled after each pass, under the repeating step's commit key at that pass's path. A
+  replayed `false` at `max` re-takes the step's `on_exhausted`, so an `escalate` re-raises the same question.
+- A `gate` step's `when` is journaled when it is decided, and a replayed `true` reaches the gate. The escalate
+  re-entry of this decision's first paragraph then reads the same answered reach, re-enters the escalating step under
+  a new loop-back frame, and dispatches it once.
+- Where the prior walk journaled no decision, the walk decides fresh and journals it. So a crash re-entry re-verifies
+  what it had not decided, and re-takes no loop it had not taken.
+
 **7. The attempt charge per frame (m14).** A pass is an iteration path with its `for_each` frames removed. Each
 loop-back frame and each `repeat` frame is a pass of its own for AC-021's per-pass count; a `for_each` counts once,
 whatever its element count (AC-022, ADR-0053). Every agent or tool step the walk EXECUTES in a pass charges that pass
@@ -149,13 +169,25 @@ halts charges its pass once for the copies it dispatched (AC-022).
 - The 66 shipped loop-backs loop, the 15 `continue`s proceed and the 13 `fail`s refuse by name, each as its catalog
   declares; a refusal after a commit still reaches the operator with its class. *(dated 2026-09-27, `s8d` build, package R2FIX-8d; refuting round 2's records minor.)* The three counts are the census at `ca8f387`. Re-measured by a `tomllib` census over `.redkiln/catalog/*.toml` (`scratchpad/s8d/r2fix-8d-onfalse.py`, 102 files at each pin): `ca8f387` **66 / 15 / 13 = 94**, `d46b2eb` (this stage's entry) **65 / 15 / 13 = 93**, and HEAD and the working tree **65 / 15 / 12 = 92** (loop-back / `continue` / `fail`). The drop from 13 `fail`s to 12 is D21-67 ruling 1, which deleted `migration-dry-run`'s policy check and its `fail`. The same edit moved `quality_block.rs`'s ac527 census of `check` steps with an `expr` from `checks=93` to `checks=92`. On today's catalog the figures read 65 loop-backs, 15 `continue`s and 12 `fail`s.
 - A loop-back is a new frame, so re-entry after a crash or a gate replays the same loops over the served commits, and
-  no frame's commit is overwritten.
+  no frame's commit is overwritten. *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76; refuting round 7
+  found the claim unmet: a re-walk past an answered gate re-decided the loops over re-executed tool answers.)* ~~replays
+  the same loops over the served commits~~: re-entry replays the same loops because it replays their journaled
+  decisions (decision 6's dated amendment; ADR-0174 decision 7), not because the re-executed tools answer as they did.
+  An answered escalate gate resumes into its escalating step.
 - The escalate re-entry, which D21-48 X8 made a licence for forward refs, has a frame to bind them in.
 
 **Negative**
 
 - A walk re-entered after a crash re-executes its `check`s and idempotent tool steps (ADR-0174 decision 7's re-entry
-  rule), so it reproduces its earlier loops only if those tools answer as they did.
+  rule), so it reproduces its earlier loops only if those tools answer as they did. *(dated 2026-09-27, `s8d` build,
+  package D2176-8d; D21-76.)* ~~re-executes its `check`s and idempotent tool steps (…), so it reproduces its earlier
+  loops only if those tools answer as they did~~. A walk re-entered after a crash **or after a gate is answered**
+  re-executes its idempotent tool steps and replays every decision it journaled. It reproduces its earlier loops up to
+  its last journaled decision whatever the tools now answer, and past that point it decides fresh. The cost: a later
+  `${…}` binds the re-executed value while the route stays the journaled one. A step's input can therefore carry a
+  tool answer that the replayed decision was not taken over. A `when` on a step that is not a `gate`, and a `for_each`
+  source, are still re-evaluated (ADR-0174 decision 7's *Named, not closed*). Each fresh decision also appends one
+  `activity_committed` row that is not a commit.
 - The re-entry count is per walk: a loop-back and an escalate re-entry share one counter, so a frame's number says in
   what order re-entries happened, not which construct took it.
 - The pass charges are reported and folded, not yet gated: no runtime budget gate reads them on the run path at this
@@ -213,6 +245,14 @@ halts charges its pass once for the copies it dispatched (AC-022).
   Sixteen mutants were KILLED (`s8d` §8d.10's R4FIX-8d note). They cover the flag honoured only on success, every tool
   step charged, each fresh halt dropping charges, `fan_out`'s halting arm, the flag unset at each of the seven call
   sites, and the flag set before three pre-call refusals.
+- [measured 2026-09-27 at `s8d`'s build, package D2176-8d, through the no-dispatch helper] decision 6's dated
+  amendment and the corrected Positive and Negative bullets.
+  `on_false_exec::a_tdd_shaped_escalate_re_entry_dispatches_green_not_red_after_the_answer` shows an answered escalate
+  gate resuming into `green` under `loop_back:1/repeat:1`, where the pre-D21-76 walk looped back into `red`.
+  `a_re_entry_past_an_answered_gate_replays_the_check_verdict_and_re_dispatches_nothing` re-enters past a gate with a
+  changed `test` answer and re-dispatches nothing. `a_crash_re_entry_replays_only_the_decisions_it_journaled_and_re_
+  decides_the_rest` re-decides only what the cut journal never recorded. Each was RED first. The mutants that ignore the
+  `until` and gate `when` replays, or read an absent decision as `true`, are KILLED (`s8d` §8d.10's D2176-8d note).
 - **What this evidence does not license.** The walks are over fixture step lists and fake harnesses; no shipped
   activity's loop is run against a real harness here, and the lane walk table is `s8d` §8d.9's. ADR-0046's route is
   owed and unbuilt. This record flips at `s8d`'s close under D21-64 ruling 10, on its own dated ledger line, only if

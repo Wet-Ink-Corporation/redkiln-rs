@@ -1196,3 +1196,398 @@ fn a_deviate_on_false_refuses_by_name() {
         "`deviate` is never read as a loop-back to a step named `deviate`"
     );
 }
+
+// ================================================================================================
+// D21-76: A RE-ENTERED WALK REPLAYS ITS JOURNALED CONTROL DECISIONS
+// ================================================================================================
+//
+// *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76, option (a); ADR-0174 decision 7 and
+// ADR-0175, both `proposed`, amended by dated text.)* D21-76: *"The walk **journals its control
+// decisions** — each `check` verdict and each loop-back or escalation decision — under the commit
+// key of the frame that took it, and a re-entered walk **replays** them: up to the last journaled
+// decision it neither re-executes the deciding `check` nor re-decides a loop; from there, only work
+// the prior walk did not reach executes fresh (a crash re-entry therefore still re-verifies
+// whatever it had not yet decided). An answered escalate gate thus resumes into its escalating
+// step."* Refuting round 7 measured the defect: a re-walk past an answered gate re-ran `test`
+// against a tree a later step had changed, re-decided `red-check` and looped back into `red`.
+
+/// One per-step spec per agent step id, each marked with its own id as the input `who`, so the
+/// harness's record says WHICH step a dispatch was.
+pub fn per_step_specs(ids: &[&str]) -> std::collections::BTreeMap<String, ActivitySpec> {
+    ids.iter()
+        .map(|id| {
+            let mut sp = spec();
+            sp.inputs.push(("who".to_owned(), serde_json::json!(id)));
+            ((*id).to_owned(), sp)
+        })
+        .collect()
+}
+
+impl Rig {
+    /// [`Rig::walk`] with a per-step spec for each agent step (R1), so a walk may dispatch more
+    /// than one agent step.
+    pub fn walk_specs(
+        &self,
+        steps: &[Step],
+        specs: &std::collections::BTreeMap<String, ActivitySpec>,
+    ) -> ActivityReport {
+        let state = rk_kernel::workflow::fsm::fold(ITEM, STAGE, &journal(&self.db))
+            .unwrap_or_else(|_| empty_state());
+        let sp = spec();
+        self.rt
+            .run_activity_steps(
+                rk_kernel::runtime::step::Activation {
+                    step_specs: Some(specs),
+                    ..activation(&sp)
+                },
+                Some(steps),
+                &rk_kernel::predicate::Context::new(),
+                gate_site(&state),
+                rk_kernel::workflow::envelope::AttemptCap::declared(CAP),
+                at(100),
+            )
+            .expect("a step's own failure is a VALUE (AC-032)")
+    }
+
+    /// Which agent step each dispatch was, in dispatch order (the spec's `who`).
+    pub fn who(&self) -> Vec<String> {
+        (0..self.harness.dispatches())
+            .map(|n| {
+                self.harness
+                    .input(n, "who")
+                    .as_str()
+                    .unwrap_or("?")
+                    .to_owned()
+            })
+            .collect()
+    }
+
+    /// Every journaled control decision, in journal order: `(step id, iteration path, decision)`,
+    /// read off the `decision` member of the rows that carry one.
+    pub fn decisions(&self) -> Vec<(String, String, Json)> {
+        journal(&self.db)
+            .iter()
+            .filter(|e| e.kind == rk_types::event_kind::EventKind::ActivityCommitted)
+            .filter_map(|e| {
+                let decision = e.payload.get("decision")?.clone();
+                let step = e.payload.get("step_id")?.as_str()?.to_owned();
+                let path = rk_kernel::workflow::idem::IterationPath::from_json(
+                    e.payload.get("iteration_path")?,
+                )?
+                .to_string();
+                Some((step, path, decision))
+            })
+            .collect()
+    }
+}
+
+/// `(step, path, {"kind": kind, "holds": holds})`, as [`Rig::decisions`] renders one.
+fn decided(step: &str, path: &str, kind: &str, holds: bool) -> (String, String, Json) {
+    (
+        step.to_owned(),
+        path.to_owned(),
+        serde_json::json!({"kind": kind, "holds": holds}),
+    )
+}
+
+/// The red loop of `tdd-red-green-refactor`: `red` (agent), `red-verify` (`toolchain:test` over
+/// `red`'s tests) and `red-check` (the catalog's own expr and `on_false`).
+fn red_loop() -> Vec<Step> {
+    vec![
+        agent("red", &[("last", "${red-verify.outputs?}")]),
+        tool(
+            "red-verify",
+            "test",
+            &[("selection", "${red.outputs.tests}")],
+        ),
+        check_on_false(
+            "red-check",
+            &[("report", "${red-verify.outputs}")],
+            "report.failed > 0 and report.passed == 0",
+            serde_json::json!({"to": "red", "max": 2}),
+        ),
+    ]
+}
+
+/// **D21-76 test (1): a re-entry past an answered gate, with a CHANGED `test` answer, re-dispatches
+/// no committed-frame step and resumes after the gate.** Refuting round 7's probe, adapted: the
+/// first walk's `red-verify` reports `(0 passed, 1 failed)`, `red-check` holds and the gate opens.
+/// Between the walks a later step fixed the test, so the re-executed `red-verify` reports `(1, 0)`.
+/// Before D21-76 the re-walk re-decided `red-check` over that answer and looped back into `red`
+/// twice (*"R7PROBE dispatches=3 red_paths=[root, loop_back:1, loop_back:2]"*).
+#[test]
+fn a_re_entry_past_an_answered_gate_replays_the_check_verdict_and_re_dispatches_nothing() {
+    let mut steps = red_loop();
+    // The gate is guarded over `red-verify`'s output, as 17 shipped gates are guarded over a tool
+    // step's (a census over `.redkiln/catalog/*.toml`), and a `check` after it reads its answer:
+    // re-evaluated over the changed answer, the guard would skip the gate and leave the answer
+    // unbound. Its `when` is a journaled decision too, and is replayed.
+    steps.push(gate(
+        "approve",
+        "red.approve",
+        Some("${red-verify.outputs.failed} > 0"),
+    ));
+    steps.push(check(
+        "approved",
+        &[("a", "${approve.answer}")],
+        "a == 'approve'",
+    ));
+    steps.push(step("emit", StepKind::Emit));
+    let tests_red = serde_json::json!({"tests": ["t1"]});
+    let rig = Rig::new(
+        vec![tests_red.clone(), tests_red.clone(), tests_red],
+        vec![(0, 1), (1, 0), (1, 0), (1, 0)],
+    );
+    let first = rig.walk(&steps);
+    assert!(
+        first.gate_opened().is_some() && first.step_error().is_none(),
+        "PREMISE: `red-check` holds on (0, 1) and the gate opens: {}",
+        refusal(&first)
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), rig.tests.selections().len()),
+        (1, 1),
+        "PREMISE: one `red` dispatch and one `test` call before the gate"
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![
+            decided("red-check", "root", "check", true),
+            decided("approve", "root", "when", true),
+        ],
+        "the first walk journals `red-check`'s verdict and the gate's `when` under their commit keys"
+    );
+    rig.answer(&first, "approve");
+    let second = rig.walk(&steps);
+    assert_eq!(
+        rig.tests.selections().len(),
+        2,
+        "PREMISE: the re-entry re-executed the idempotent `red-verify` (ADR-0174 decision 7), and \
+         its answer is now (1, 0)"
+    );
+    assert_eq!(
+        (rig.harness.dispatches(), second.served()),
+        (1, 1),
+        "the re-entry serves `red` and re-dispatches no committed-frame step: the journaled verdict \
+         of `red-check` is replayed, not re-decided over the changed answer: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        rig.paths("red"),
+        vec!["root".to_owned()],
+        "no loop-back frame was opened on re-entry"
+    );
+    assert!(
+        second.completed() && second.step_error().is_none(),
+        "the walk resumes after the answered gate and completes: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        rig.decisions(),
+        vec![
+            decided("red-check", "root", "check", true),
+            decided("approve", "root", "when", true),
+            decided("approved", "root", "check", true),
+        ],
+        "a replayed decision is not journaled again; the check the prior walk never reached is \
+         decided fresh"
+    );
+    let state = rk_kernel::workflow::fsm::fold(ITEM, STAGE, &journal(&rig.db)).expect("folds");
+    assert_eq!(
+        state.committed().count(),
+        2,
+        "the fold counts `red`'s commit and the completion, and never the decision's row"
+    );
+}
+
+/// **D21-76 test (2): a tdd-shaped escalate re-entry dispatches `green`, not `red`, after the
+/// answer.** `tdd-red-green-refactor`'s shape: the red loop, then `green` (repeat until
+/// `green-verify` passes, max 2, escalating to `tdd.green-exhausted`), `green-verify`, the guarded
+/// `green-gate`, and the `emit`. `green` changes the tree before the gate opens, so on the answer's
+/// re-entry every re-executed `test` reports `(1, 0)`: re-decided, `red-check` would loop back into
+/// `red`, the last pass's `until` would hold (no escalation), and `green-gate`'s `when` would skip
+/// the gate. Replayed, the walk reaches the answered gate and resumes INTO `green` (schema §3).
+#[test]
+fn a_tdd_shaped_escalate_re_entry_dispatches_green_not_red_after_the_answer() {
+    let mut steps = red_loop();
+    steps.push(repeating(
+        agent(
+            "green",
+            &[
+                ("red", "${red.outputs}"),
+                ("last", "${green-verify.outputs?}"),
+                ("hint", "${green-gate.answer?}"),
+            ],
+        ),
+        "${green-verify.outputs.status} == 'passing'",
+        2,
+        Some("escalate"),
+        Some("tdd.green-exhausted"),
+    ));
+    steps.push(tool(
+        "green-verify",
+        "test",
+        &[("selection", "${red.outputs.tests}")],
+    ));
+    steps.push(gate(
+        "green-gate",
+        "tdd.green-exhausted",
+        Some("${green-verify.outputs.status} != 'passing'"),
+    ));
+    steps.push(step("emit", StepKind::Emit));
+    let specs = per_step_specs(&["red", "green"]);
+    let rig = Rig::new(
+        vec![
+            serde_json::json!({"tests": ["t1"]}),
+            serde_json::json!({"n": 1}),
+            serde_json::json!({"n": 2}),
+            serde_json::json!({"n": 3}),
+            serde_json::json!({"n": 4}),
+        ],
+        vec![
+            (0, 1),
+            (0, 1),
+            (0, 1),
+            (1, 0),
+            (1, 0),
+            (1, 0),
+            (1, 0),
+            (1, 0),
+        ],
+    );
+    let first = rig.walk_specs(&steps, &specs);
+    assert!(
+        first.gate_opened().is_some() && first.step_error().is_none(),
+        "PREMISE: `green` exhausts its two passes and escalates to `green-gate`: {}",
+        refusal(&first)
+    );
+    assert_eq!(
+        rig.who(),
+        vec!["red", "green", "green"],
+        "PREMISE: one `red`, two `green` passes"
+    );
+    rig.answer(&first, "try-the-other-branch");
+    let second = rig.walk_specs(&steps, &specs);
+    assert_eq!(
+        rig.who(),
+        vec!["red", "green", "green", "green"],
+        "the answer resumes INTO `green` (schema §3) and never loops back into `red`: {}",
+        refusal(&second)
+    );
+    assert_eq!(
+        rig.harness.input(3, "hint"),
+        serde_json::json!("try-the-other-branch"),
+        "the resumed `green` carries the gate's answer"
+    );
+    assert_eq!(
+        rig.paths("green"),
+        vec!["repeat:1", "repeat:2", "loop_back:1/repeat:1"],
+        "the escalate re-entry opens a new frame of `green`, and a journaled decision is never read \
+         as a step commit"
+    );
+    assert_eq!(rig.paths("red"), vec!["root".to_owned()]);
+    assert!(
+        second.completed() && second.step_error().is_none(),
+        "the resumed pass passes and the walk completes: {}",
+        refusal(&second)
+    );
+}
+
+/// **D21-76 test (3), the control: a CRASH re-entry replays only the decisions it journaled and
+/// re-decides the rest.** `a` → `ta` → `ca` (loop to `a`) → `b` → `tb` → `cb` (loop to `b`) →
+/// `emit`. A complete first walk decides `ca` true, `cb` false (a loop-back) and `cb` true at
+/// `loop_back:1`. The process is taken to have died after `b`'s `loop_back:1` commit, so the
+/// journal is cut there: `cb`'s `loop_back:1` verdict was never journaled. On re-entry `ta` answers
+/// differently, and `ca` and `cb@root` are replayed; `cb@loop_back:1` is decided FRESH over the
+/// re-executed `tb`, in two arms: false (a new loop-back dispatches `b` once) and true (nothing is
+/// dispatched).
+#[test]
+fn a_crash_re_entry_replays_only_the_decisions_it_journaled_and_re_decides_the_rest() {
+    let steps = vec![
+        agent("a", &[]),
+        tool("ta", "test", &[("selection", "${a.outputs.tests}")]),
+        check_on_false(
+            "ca",
+            &[("report", "${ta.outputs}")],
+            "report.failed == 0",
+            serde_json::json!({"to": "a", "max": 2}),
+        ),
+        agent("b", &[]),
+        tool("tb", "test", &[("selection", "${a.outputs.tests}")]),
+        check_on_false(
+            "cb",
+            &[("report", "${tb.outputs}")],
+            "report.failed == 0",
+            serde_json::json!({"to": "b", "max": 2}),
+        ),
+        step("emit", StepKind::Emit),
+    ];
+    let specs = per_step_specs(&["a", "b"]);
+    let tests = serde_json::json!({"tests": ["t1"]});
+    let full = Rig::new(
+        vec![tests.clone(), tests.clone(), tests.clone()],
+        vec![(1, 0), (0, 1), (1, 0)],
+    );
+    let report = full.walk_specs(&steps, &specs);
+    assert!(
+        report.completed() && full.who() == vec!["a", "b", "b"],
+        "PREMISE: the complete walk loops back into `b` once: {:?} {}",
+        full.who(),
+        refusal(&report)
+    );
+    // The crash: the journal up to and including `b`'s `loop_back:1` commit.
+    let rows = journal(&full.db);
+    let cut = rows
+        .iter()
+        .position(|e| {
+            !is_completion_row(e)
+                && commit_key_of(e).is_some_and(|k| {
+                    k.step_id == "b" && k.iteration_path.to_string() == "loop_back:1"
+                })
+        })
+        .expect("PREMISE: `b` committed at loop_back:1");
+    let prefix = &rows[..=cut];
+
+    for (fresh_tb, want_who, want_b) in [
+        (
+            (0, 1),
+            vec!["b"],
+            vec!["root", "loop_back:1", "loop_back:2"],
+        ),
+        ((1, 0), Vec::new(), vec!["root", "loop_back:1"]),
+    ] {
+        let tail = if fresh_tb == (0, 1) {
+            vec![(0, 1), (0, 1), fresh_tb, (1, 0)]
+        } else {
+            vec![(0, 1), (0, 1), fresh_tb]
+        };
+        let rig = Rig::new(vec![tests.clone()], tail);
+        for row in prefix {
+            rig.seed(row.clone());
+        }
+        let re = rig.walk_specs(&steps, &specs);
+        assert_eq!(
+            rig.who(),
+            want_who,
+            "fresh `tb` {fresh_tb:?}: `ca` and `cb@root` are replayed (the changed `ta` answer does \
+             not loop back into `a`), and `cb@loop_back:1`, never journaled, is decided FRESH: {}",
+            refusal(&re)
+        );
+        assert_eq!(
+            rig.paths("b"),
+            want_b,
+            "fresh `tb` {fresh_tb:?}: `b`'s committed frames"
+        );
+        assert!(
+            re.completed() && re.step_error().is_none(),
+            "fresh `tb` {fresh_tb:?}: the re-entry completes: {}",
+            refusal(&re)
+        );
+        assert!(
+            rig.decisions()
+                .contains(&decided("cb", "loop_back:1", "check", fresh_tb == (1, 0))),
+            "fresh `tb` {fresh_tb:?}: the re-entry journals the verdict it decided: {:?}",
+            rig.decisions()
+        );
+    }
+}

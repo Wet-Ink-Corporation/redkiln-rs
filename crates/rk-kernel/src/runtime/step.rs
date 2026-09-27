@@ -115,7 +115,7 @@ use rk_types::verb_output::{
     SmokeResult, SmokeStatus,
 };
 
-use super::activity::{ActivityReport, StepAt};
+use super::activity::{ActivityReport, Decision, DecisionKind, StepAt};
 use crate::catalog::{InputValue, Step, StepKind, StepTimeout};
 use crate::predicate::{self, Tri};
 use crate::workflow::breaker::JournaledNow;
@@ -1264,8 +1264,18 @@ impl super::Runtime {
         // every step activation it re-runs commits under a key no earlier frame used, and the
         // committed step activations of the earlier frames STAND (D21-42 4d). A `for_each` runs one
         // copy per element, each under its own `for_each` frame. On re-entry after a crash or a
-        // gate, the walk re-runs from the top: committed step activations are SERVED, `check`s and
-        // idempotent tool steps re-execute, and the same loops are taken again.
+        // gate, the walk re-runs from the top: committed step activations are SERVED, ~~`check`s
+        // and~~ idempotent tool steps re-execute, and the same loops are taken again.
+        //
+        // *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76, option (a).)* The same loops
+        // are taken again BECAUSE THEY ARE REPLAYED, not because the re-executed tools answer as
+        // they did. Each control decision — a `check`'s verdict, a `repeat`'s `until` and an
+        // `gate` step's `when` — is journaled under the commit key of the frame that took it
+        // (`Runtime::commit_decision`), and a re-entry replays every one it finds: the deciding
+        // `check` is not re-executed and no loop is re-decided. Where the prior walk journaled no
+        // decision, the walk decides fresh, so a crash re-entry still re-verifies whatever it had
+        // not yet decided. Idempotent tool steps still re-execute, and a later `${…}` binds their
+        // re-executed values (ADR-0174 decision 7); only the decisions over them are replayed.
         let mut w = Walk {
             report: ActivityReport::walk(now),
             scope: super::reference::Scope::new(steps),
@@ -1396,15 +1406,66 @@ impl super::Runtime {
             w.report.note_served();
             return Ok(Flow::Next);
         }
+        // 🛑 **D21-76: A CONTROL DECISION THIS ACTIVATION JOURNALED IS REPLAYED, NEVER RE-DECIDED.**
+        // *(dated 2026-09-27, `s8d` build, package D2176-8d; ADR-0174 decision 7 and ADR-0175, both
+        // `proposed`, amended.)* A `check` whose verdict is journaled under this commit key is not
+        // re-executed: `true` runs on, `false` takes its `on_false` again — over the loop counts
+        // the replay itself rebuilds, so the same route. A `gate` step's `when` is replayed the
+        // same way. Where nothing is journaled the walk decides FRESH and journals what it decided,
+        // so a crash re-entry still re-verifies whatever it had not yet decided.
+        if step.kind == StepKind::Check
+            && let Some(holds) =
+                super::activity::journaled_decision(&w.journal, &key, DecisionKind::Check)
+        {
+            if holds {
+                w.scope.mark_ran(&step.id);
+                return Ok(Flow::Next);
+            }
+            return Ok(self.on_false(w, steps, index));
+        }
+        // A `gate` step's `when` decides whether the walk asks the human — an escalate gate's
+        // decides the escalation — so it is journaled and replayed as a `check` is. 17 shipped
+        // gates guard on an idempotent tool step's output (a census over the catalog).
+        let gate_when = step.kind == StepKind::Gate && step.when.is_some();
+        let replayed_when = if gate_when {
+            super::activity::journaled_decision(&w.journal, &key, DecisionKind::When)
+        } else {
+            None
+        };
+        if replayed_when == Some(false) {
+            return Ok(Flow::Next);
+        }
         let run = {
             let site = StepSite {
                 item,
                 activity: activity_id_at_version,
                 events: &w.journal,
                 verdict: !read_by_a_later_check(steps, index),
+                guard: replayed_when,
             };
             self.run_step(step, e.ctx, &w.scope, &site)?
         };
+        // D21-76: a decision taken FRESH is journaled under this step's commit key.
+        let fresh = match (step.kind, &run.verdict) {
+            (StepKind::Check, _) if run.held_false => Some((DecisionKind::Check, false)),
+            (StepKind::Check, StepVerdict::Continue) => Some((DecisionKind::Check, true)),
+            (StepKind::Gate, StepVerdict::Skipped) if gate_when => {
+                Some((DecisionKind::When, false))
+            }
+            (StepKind::Gate, StepVerdict::Gate) if gate_when && replayed_when.is_none() => {
+                Some((DecisionKind::When, true))
+            }
+            _ => None,
+        };
+        if let Some((kind, holds)) = fresh {
+            self.commit_decision(
+                item,
+                activity_id_at_version,
+                at,
+                Decision { kind, holds },
+                e.now,
+            )?;
+        }
         // **R3: a `check` that does not hold goes to its `on_false`** (D21-42 4d), inside the walk
         // only; a lone `execute_step` keeps its by-name refusal.
         // m14 (ADR-0122 decision 1; dated 2026-09-27, `s8d` build, package R4FIX-8d): a tool step's
@@ -1465,6 +1526,7 @@ impl super::Runtime {
                     activity: activity_id_at_version,
                     events: &w.journal,
                     verdict: true,
+                    guard: None,
                 };
                 let emitted = match self.with_env(&site, |env| {
                     super::reference::bind_emit(env, &w.scope, step)
@@ -1654,6 +1716,7 @@ impl super::Runtime {
             activity: e.activity,
             events: &w.journal,
             verdict: true,
+            guard: None,
         };
         let resolved = self.with_env(&site, |env| {
             super::reference::resolve_text(env, &w.scope, &step.id, "for_each", source)
@@ -1910,12 +1973,48 @@ impl super::Runtime {
             activity: e.activity,
             events: &w.journal,
             verdict: true,
+            guard: None,
         };
-        let holds = self.with_env(&site, |env| {
-            until_holds(repeating, until, e.ctx, &mut |text: &str| {
-                super::reference::resolve_text(env, &w.scope, &repeating.id, "repeat.until", text)
-            })
-        });
+        // D21-76 *(dated 2026-09-27, `s8d` build, package D2176-8d)*: the `until` of THIS pass is a
+        // loop decision — another pass, or exhaustion and its escalation — journaled under the
+        // repeating step's commit key at the pass's path, and REPLAYED on re-entry.
+        let pass_path = w.loops.path_at(r.start);
+        let at = StepAt {
+            step_id: &repeating.id,
+            iteration_path: &pass_path,
+            family: None,
+        };
+        let key = at.commit_key(e.item, e.activity);
+        let holds = if let Some(holds) =
+            super::activity::journaled_decision(&w.journal, &key, DecisionKind::Until)
+        {
+            Ok(if holds { Tri::True } else { Tri::False })
+        } else {
+            let holds = self.with_env(&site, |env| {
+                until_holds(repeating, until, e.ctx, &mut |text: &str| {
+                    super::reference::resolve_text(
+                        env,
+                        &w.scope,
+                        &repeating.id,
+                        "repeat.until",
+                        text,
+                    )
+                })
+            });
+            if let Ok(tri) = &holds {
+                self.commit_decision(
+                    e.item,
+                    e.activity,
+                    at,
+                    Decision {
+                        kind: DecisionKind::Until,
+                        holds: *tri == Tri::True,
+                    },
+                    e.now,
+                )?;
+            }
+            holds
+        };
         let exhausted = |why: String| {
             Err(Halt::Failed(StepError::Unsupported {
                 capability: format!(
@@ -2126,6 +2225,7 @@ impl super::Runtime {
             activity: "",
             events: &[],
             verdict: true,
+            guard: None,
         };
         self.run_step(step, ctx, scope, &site)
             .map(|run| run.verdict)
@@ -2150,6 +2250,7 @@ impl super::Runtime {
             activity: "",
             events: &[],
             verdict: true,
+            guard: None,
         };
         self.run_step(step, ctx, scope, &site)
             .map(|run| (run.verdict, run.output))
@@ -2233,7 +2334,10 @@ impl super::Runtime {
             // (1) THE GUARD, its `${…}` resolved through the scope (ADR-0136; R2).
             let mut resolve_ref =
                 |text: &str| super::reference::resolve_text(env, scope, &step.id, "when", text);
-            match guard_holds(step, ctx, &mut resolve_ref) {
+            let held = site
+                .guard
+                .map_or_else(|| guard_holds(step, ctx, &mut resolve_ref), Ok);
+            match held {
                 Ok(false) => {
                     return Ok(StepRun {
                         verdict: StepVerdict::Skipped,
@@ -2340,6 +2444,10 @@ struct StepSite<'a> {
     activity: &'a str,
     events: &'a [rk_types::event::Event],
     verdict: bool,
+    /// *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76.)* A guard verdict the walk
+    /// REPLAYS from its journal (a `gate` step's `when`): `Some` stands for the guard and it is
+    /// not re-evaluated. `None` everywhere else: the guard is evaluated.
+    guard: Option<bool>,
 }
 
 /// What one step's execution produced: its verdict, a tool step's typed output, and its resolved

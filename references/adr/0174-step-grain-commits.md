@@ -148,6 +148,47 @@ pre-flight and AC-012's late-duplicate discard both ask the commit key. A `check
 step do not commit, so on re-entry they re-execute: ADR-0150 decision 2's residual closes for idempotent verbs by
 re-execution.
 
+*(dated 2026-09-27, `s8d` build, package D2176-8d; amended while `proposed`; D21-76, option (a).)* ~~A `check` step and
+an **idempotent** `tool` step do not commit, so on re-entry they re-execute~~: an idempotent `tool` step still re-executes,
+and a later `${…}` binds its re-executed value, but a `check` whose verdict is journaled is NOT re-executed. Refuting
+round 7 measured the defect in the sentence struck: a re-walk past an answered gate re-ran `test` against a tree a later
+step had changed, re-decided `red-check` and looped back into `red` (*"R7PROBE dispatches=3 red_paths=["root",
+"loop_back:1", "loop_back:2"]"*). D21-76 rules: *"The walk **journals its control decisions** — each `check` verdict and
+each loop-back or escalation decision — under the commit key of the frame that took it, and a re-entered walk
+**replays** them: up to the last journaled decision it neither re-executes the deciding `check` nor re-decides a loop;
+from there, only work the prior walk did not reach executes fresh (a crash re-entry therefore still re-verifies whatever
+it had not yet decided). An answered escalate gate thus resumes into its escalating step."* Built so:
+- **The carrier is one more `activity_committed` row** (`runtime::activity::decision_event`), not a member on a step's
+  commit row and not a new `EventKind`. A member on the next commit row would lose exactly the decision D21-76 was ruled
+  for: in the round-7 shape `red` commits, `red-check` decides, and the gate opens with no later commit for the verdict
+  to ride. A new kind is minted only by record with a design §5 row (ADR-0116's closed-enum rule). Decision 5's
+  completion row is the precedent for a distinguishing member on this row. The row carries `step_id` and
+  `iteration_path` (the commit key of the frame that took the decision), the activation's next `attempt` (decision 4:
+  the triple stays unique), and `decision = {"kind": "check" | "until" | "when", "holds": <bool>}`. It carries no
+  `result`, `schema` or `family`. **It is not a commit.** `commit_key_of` answers `None` for it, and `RunState` folds
+  its attempt and nothing else: it is in neither `is_step_committed` nor `committed()`, and it does not complete the
+  activation. The breaker never reads it (no `family`), and `explain`'s per-step `output_digest` lines skip it (no
+  `result`). It is appended at most once per commit key and kind (`Runtime::commit_decision`), under the same lock as
+  the read that checks it.
+- **The decisions.** (i) A `check`'s verdict: `true` runs on, and `false` takes its `on_false`, so a replayed `false`
+  re-takes the same loop-back, or the same exhaustion, over the loop counts the replay itself rebuilds. (ii) A
+  `repeat`'s `until` after each pass, keyed by the repeating step at that pass's path: another pass, the end of the
+  repeat, or at `max` its `on_exhausted`, whose `escalate` is the escalation decision. (iii) The `when` of a `gate` step,
+  which decides whether the walk asks the human, and for an escalate gate whether it escalates. A
+  `null` or an error is not a decision: it refuses by name, as before, and is evaluated again on a later walk.
+- **The replay.** A decision journaled under the key and kind the walk reaches is replayed: the `check` is not
+  executed, and the `until` and the escalate `when` are not evaluated. Where none is journaled, the walk decides fresh
+  and journals what it decided. Replay is therefore bounded by what the prior walk journaled, and a crash re-entry
+  re-verifies whatever it had not decided. An answered escalate gate resumes into its escalating step (ADR-0175 decision
+  6, as amended).
+- **Named, not closed.** A `when` guard on a step that is not a `gate`, and a `for_each` source, are still evaluated
+  again on re-entry over re-executed values. D21-76 names checks, loop-backs and escalations. A `gate` step's `when` is
+  taken with them because it decides whether the walk asks the human: re-evaluated over a changed tool answer, it
+  skips an answered gate and leaves its answer unbound. Measured by a `tomllib` census over `.redkiln/catalog/*.toml`
+  (`scratchpad/s8d/census_when_D2176-8d.py`): 63 `when` references name a step, and 19 of them read a `tool` step's
+  output. 17 of the 19 sit on `gate` steps, whose `when` is now replayed. 2 sit on `tool` steps and are re-evaluated:
+  `canary-release`'s `deploy-full` reads `rollback`, and `rolling-deploy`'s `rollback` reads `smoke`.
+
 **8. Side-effecting tool steps (D21-47 M8).** Every row of `.redkiln/registry.toml`'s `[verb]` table declares a sixth
 column, `side_effecting`, and a row without a boolean value refuses the registry at load. A `tool` step whose verb is
 `side_effecting = true` commits its typed output under the commit key like an agent step, and on re-entry it is
@@ -287,6 +328,10 @@ form, not an erratum; `s8d` §8d.1 m17). The draft, verbatim:
   the schema gives.
 - The memo key's component 7 cannot tell two nested paths with the same innermost counter apart (decision 4's
   residual).
+- *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76.)* A walk now appends one more `activity_committed` row
+  per control decision it takes fresh. So a count of `activity_committed` rows is not a count of commits: a reader that
+  wants commits skips rows carrying `decision`. `ledger::fold_executed` still counts them, which is a reading this
+  amendment leaves unchanged and names here.
 
 **What this forbids**
 
@@ -302,6 +347,9 @@ form, not an erratum; `s8d` §8d.1 m17). The draft, verbatim:
   commit travels on `step_error`.
 - Forbids a `[verb]` row without a boolean `side_effecting`, and forbids reading an absent one as either value.
 - Forbids folding a step row whose iteration path does not read.
+- *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76.)* Forbids re-executing a `check`, or re-deciding a
+  `repeat`'s `until` or a `gate` step's `when`, whose decision is journaled under the key the walk reaches. Forbids
+  replaying a decision where none was journaled, and forbids reading a decision's row as a commit.
 
 ## Evidence and confidence
 
@@ -317,6 +365,17 @@ form, not an erratum; `s8d` §8d.1 m17). The draft, verbatim:
   verified.
 - [measured, same session] The step-grain record written by `resume` replays with zero divergences and zero dispatches,
   and `explain` renders it byte-identically before and after the replay.
+- [measured 2026-09-27 at `s8d`'s build, package D2176-8d, through the no-dispatch helper] decision 7's dated
+  amendment. Three `on_false_exec::` tests were first shown RED on the pre-D21-76 walk, then GREEN:
+  `a_re_entry_past_an_answered_gate_replays_the_check_verdict_and_re_dispatches_nothing`,
+  `a_tdd_shaped_escalate_re_entry_dispatches_green_not_red_after_the_answer` (red at *"left: ["red", "green", "green",
+  "red"] right: ["red", "green", "green", "green"]"*) and
+  `a_crash_re_entry_replays_only_the_decisions_it_journaled_and_re_decides_the_rest` (red at *"left: ["a", "a"] right:
+  ["b"]"*). Twelve mutants were KILLED and none survived (`s8d` §8d.10's D2176-8d note): the replay ignored per
+  decision kind and in whole, a replay past the last journaled decision, a path-blind lookup, a replayed `false` that
+  runs on, fresh decisions left unjournaled, and a decision's row read as a commit by the fold or by `commit_key_of`.
+  `step_grain::an_activation_with_no_agent_step_walks_to_its_emit_and_completes` counts the decision's row apart from
+  the completion row, by dated note. Both `lane_walk::` readings are unchanged (fix 10, story 8).
 - **What this evidence does not license.** No shipped activity completes against a real harness here; cards, schemas
   and models are `s8h`'s. The memo is consulted by nothing. Iteration frames are pushed only by the loop executors
   `0173` and `s8d`'s R3 build, so the walk's own path is empty at this record's writing; the commit key's

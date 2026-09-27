@@ -545,6 +545,19 @@ repeat a write: a second review clone, a second verdict record, a second item or
 commit key like an agent step and is served on re-entry. R1 states both halves and supersedes ADR-0150 decision 2 in
 part (§8d.1).
 
+*(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76, option (a); ADR-0174 decision 7, `proposed`, amended.)*
+~~A `check` step and an **idempotent** `tool` step do not commit (3a names agent steps), so on re-entry they
+re-execute~~: an idempotent `tool` step still re-executes on re-entry, and a later `${…}` binds its re-executed value,
+but **the walk's control decisions are journaled and replayed**. D21-76: *"The walk **journals its control decisions** —
+each `check` verdict and each loop-back or escalation decision — under the commit key of the frame that took it, and a
+re-entered walk **replays** them: up to the last journaled decision it neither re-executes the deciding `check` nor
+re-decides a loop; from there, only work the prior walk did not reach executes fresh (a crash re-entry therefore still
+re-verifies whatever it had not yet decided)."* The decisions are a `check`'s verdict, a `repeat`'s `until` after each
+pass, and a `gate` step's `when`. Each is one more `activity_committed` row with `step_id`, `iteration_path`, the next
+attempt and a `decision` member. That row is not a commit: `commit_key_of` and the fold skip it, and it has no
+`result`. The carrier and its reasons are ADR-0174 decision 7's dated text, and §8d.10's D2176-8d note carries the
+tests and mutants.
+
 **An activation's completion is its `emit`**, and `fsm::next_action`'s plan walk moves past a node only when the
 emit binding has committed — not when its first agent step has. **The row, named (R1; M5):** each agent step's
 commit is an `activity_committed` row carrying `step_id` and `iteration_path`, appended when **it** dispatches. The
@@ -757,6 +770,14 @@ second half of ADR-0042's Decision stands). An escalate re-entry is a new frame 
 **tool** step's output is bound across it as a gate's answer is.
 `reference_resolver::an_escalate_re_entry_binds_a_later_steps_previous_frame_value_and_is_null_first` pins that
 over `minimal-repro-ue`'s shape.
+
+*(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76; ADR-0175 decision 6, `proposed`, amended.)* **An answered
+escalate gate resumes into its escalating step on every re-entry, because the walk replays the decisions that led to
+it.** Refuting round 7 found that the re-walk re-decided them over re-executed tool answers. In `tdd-red-green-refactor`
+`green` changes the tree before `green-gate` opens, so `red-check` no longer held on the answer's re-walk, and the walk
+looped back into `red`. Now `red-check`'s verdict, each `green` pass's `until`, and `green-gate`'s `when` are replayed
+from the journal (§8d.2's D2176-8d line). The gate arm then reads the answered reach and re-enters `green` under a new
+loop-back frame. `on_false_exec::a_tdd_shaped_escalate_re_entry_dispatches_green_not_red_after_the_answer` pins it.
 
 **The census.** It was measured 2026-09-24 at `fc80687` by a read-only Python pass over `.redkiln/catalog/*.toml`,
 which counted every `${<step>…}` in a step's `inputs` whose step is declared later in the same activity. There are
@@ -2290,6 +2311,59 @@ Zero survivors. (*"345"* counts the new resolver test, already on disk for the "
 resolver test, and its `want` moves from 25 to 26. (5) names the charge test, and its `want` moves from 18 to 19.
 (11)'s floor is 877 + 85 = **962**, by dated edit.
 
+*(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76, option (a); ADR-0174 decision 7 and ADR-0175 decision 6,
+both `proposed`, amended.)* **Three new tests, and twelve mutants killed.** All three are in `rk-kernel`'s
+`on_false_exec::`, and the rig gains `Rig::walk_specs` (one per-step spec per agent step, each marked with its id as the
+input `who`), `Rig::who` and `Rig::decisions`.
+- `a_re_entry_past_an_answered_gate_replays_the_check_verdict_and_re_dispatches_nothing` adapts refuting round 7's
+  probe: `red` → `red-verify` (`toolchain:test`) → `red-check` (the catalog's expr and `on_false = { to = "red", max = 2
+  }`) → a gate guarded on `${red-verify.outputs.failed} > 0` → a `check` reading `${approve.answer}` → `emit`. The first
+  walk's `test` reports (0, 1), and the re-entry's reports (1, 0). **RED** on HEAD, at the first-walk journal
+  assertion, *"left: [] right: [("red-check", "root", Object {"kind": String("check"), "holds": Bool(true)})]"*. The
+  probe had already measured the re-dispatch: *"R7PROBE dispatches=3 red_paths=["root", "loop_back:1",
+  "loop_back:2"]"*. With the gate guard added, it was **RED** again on the escalation-only build of the gate's `when`,
+  at *"left: [("red-check", …)] right: [("red-check", …), ("approve", "root", … "when" … true)]"*. **GREEN**: one
+  dispatch, one served, `red` at `root` only, completed, the three decisions each journaled once, and the fold's
+  `committed()` counting 2 (`red` and the completion).
+- `a_tdd_shaped_escalate_re_entry_dispatches_green_not_red_after_the_answer` walks `tdd-red-green-refactor`'s shape:
+  the red loop, then `green` (`repeat` until `${green-verify.outputs.status} == 'passing'`, max 2, `escalate` to
+  `tdd.green-exhausted`), `green-verify`, the guarded `green-gate`, and the `emit`. Every re-executed `test` on the
+  answer's re-entry reports (1, 0). **RED** on HEAD, at *"left: ["red", "green", "green", "red"] right: ["red", "green",
+  "green", "green"]"*. **GREEN**: the fourth dispatch is `green`, carrying the answer as `hint`. `green`'s frames are
+  exactly `repeat:1`, `repeat:2` and `loop_back:1/repeat:1`, `red` is at `root` only, and the walk completes.
+- `a_crash_re_entry_replays_only_the_decisions_it_journaled_and_re_decides_the_rest` is the control. `a` → `ta` → `ca`
+  (loop to `a`) → `b` → `tb` → `cb` (loop to `b`) → `emit`. A complete walk is cut after `b`'s `loop_back:1` commit, so
+  `cb`'s `loop_back:1` verdict was never journaled, and that prefix is seeded into a fresh store. On re-entry `ta`
+  answers differently. Two arms decide `cb@loop_back:1` fresh: false (one more `b` dispatch, at `loop_back:2`) and true
+  (no dispatch). **RED** on HEAD, at *"left: ["a", "a"] right: ["b"]"* (the changed `ta` answer looped back into `a`).
+  **GREEN** in both arms.
+
+**The build.** `runtime::activity::{DecisionKind, Decision, decision_event, is_decision_row, journaled_decision}` and
+`Runtime::commit_decision`. The walk (`one_step`, `after_step`) replays a journaled `check`, `until` or gate `when`, and
+journals each one it decides fresh. `commit_key_of` answers `None` for a decision's row. `fsm::fold` folds only its
+attempt. The carrier and its reasons are ADR-0174 decision 7's dated text. `step_grain::an_activation_with_no_agent_step_
+walks_to_its_emit_and_completes` was amended by dated note: its `check` now journals one decision row, which the test
+counts apart from the completion row.
+
+**Mutants**, from `scratchpad/s8d/mut_D2176-8d.py`: anchor asserted once, tmp + `os.replace`, the file restored in
+`finally` and sha256 re-checked. Each ran over the three tests, with the count asserted at 3. The driver's labels are
+given here with a `D76-` prefix, so that `MW` is not read as R6FIX's.
+- KILLED, the replay: D76-MD1c (a `check`'s journaled verdict ignored: all 3 tests), D76-MD1u (a `repeat`'s `until`
+  ignored: the tdd test), D76-MD1w (a gate's `when` ignored: tests 1 and 2), D76-MD1 (`journaled_decision` always
+  `None`: all 3) and D76-MD4 (a replayed `false` runs on instead of taking its `on_false`: the crash test).
+- KILLED, replay past the last decision: D76-MD2 (an absent decision read as `true`: all 3) and D76-MD3 (the lookup
+  ignoring the iteration path: tests 2 and 3).
+- KILLED, the journaling: D76-MD7 (no fresh decision journaled: all 3), D76-MD8 (no `until` journaled: the tdd test)
+  and D76-MW (a gate's `when` journaled only while an escalation is pending: test 1).
+- KILLED, the row is not a commit: D76-MF (the fold counting the decision's row as a commit: test 1, at `committed()`)
+  and D76-MK (`commit_key_of` reading a decision's row: the tdd test, at `green`'s exact frames).
+
+Zero survivors. Both `lane_walk::` tests still read `LANE_WALK fix walked=10 refused=5` and `LANE_WALK story walked=8
+refused=6`.
+
+**Counts.** 3 names are added and none removed: **88 net**. Checkpoint 8d (5) names all three, and its `want` moves
+from 19 to 22. (11)'s floor is 877 + 88 = **965**, by dated edit.
+
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
 **Checkpoints it touches.** Checkpoint 8c names two tests whose premise is the resolver's absence —
@@ -2571,6 +2645,9 @@ if printf '%s\n' 'test result: ok. 1 passed; 0 failed; 0 ignored' | grep -qE "te
 # (8), whose `want` moves from 16 to 18. That makes 105 `--test it` names in all. The eleventh is an in-crate unit
 # test, outside §8d.10's `--test it` rule, and (4e) selects it through `--lib` beside AC-078's case. Each changed
 # selection was run from this file's bytes through the no-dispatch helper.
+# (dated 2026-09-27, s8d build, package D2176-8d) The running total above was not moved by R2FIX, M14, R4FIX or R6FIX
+# (refuting round 7's checkpoint minor). Counted from this block's bytes after D2176-8d's three names: 117 `--test it`
+# names, 98 in rk-kernel and 19 in rk-cli, plus (4e)'s 2 `--lib` names. ~~105 `--test it` names in all~~.
 if printf '%s\n' 'test result: ok. 12 passed; 0 failed; 0 ignored' | grep -qE "test result: ok\. 2 passed; 0 failed"; then echo "FAIL: synthetic control — the exact-count grep admits 12 for 2"; exit 1; fi
 
 # ---- (3) BULLETS 1-2: STEP GRAIN, RE-ENTRY ACROSS A REAL KILL, AND DEFECT 2.
@@ -2691,8 +2768,13 @@ run_lib_named rk-kernel "step5 in-crate" \
 # ---- `want` moves from 14 to 18 with them.
 # ---- (dated 2026-09-27, s8d build, package R6FIX-8d) One name added by dated edit, the per-pass charge across a fan-out
 # ---- and a `repeat` (mutants A, B and C; section 8d.10's R6FIX-8d note). `want` moves from 18 to 19 with it.
+# ---- (dated 2026-09-27, s8d build, package D2176-8d) Three names added by dated edit, D21-76's replay of journaled
+# ---- control decisions on re-entry (section 8d.10's D2176-8d note). `want` moves from 19 to 22 with them.
 run_named rk-kernel "on_false, telemetry, breaker" \
   on_false_exec::a_loop_back_re_enters_its_target_under_a_new_iteration_path \
+  on_false_exec::a_re_entry_past_an_answered_gate_replays_the_check_verdict_and_re_dispatches_nothing \
+  on_false_exec::a_tdd_shaped_escalate_re_entry_dispatches_green_not_red_after_the_answer \
+  on_false_exec::a_crash_re_entry_replays_only_the_decisions_it_journaled_and_re_decides_the_rest \
   on_false_exec::a_pass_is_charged_only_by_the_dispatches_made_in_it_across_a_fan_out_and_a_repeat \
   on_false_exec::a_kernel_retried_agent_step_charges_its_pass_once_per_dispatch \
   on_false_exec::a_tool_dispatch_that_fails_at_the_port_charges_its_pass \
@@ -2914,7 +2996,10 @@ n=$(printf '%s\n' "$hit" | grep -c 'fn selection_of')
 # ---- (dated 2026-09-27, s8d build, package R6FIX-8d) RE-DERIVED from the same recorded 877. The package adds two
 # ---- executing rk-kernel tests (section 8d.10's R6FIX-8d note) and removes none. Net executing: 83 + 2 = 85.
 # ---- FLOOR = 877 + 85 = 962. ~~FLOOR=960~~.
-FLOOR=962
+# ---- (dated 2026-09-27, s8d build, package D2176-8d) RE-DERIVED from the same recorded 877. The package adds three
+# ---- executing rk-kernel tests (section 8d.10's D2176-8d note) and removes none. Net executing: 85 + 3 = 88.
+# ---- FLOOR = 877 + 88 = 965. ~~FLOOR=962~~.
+FLOOR=965
 tally() { printf '%s\n' "$1" | awk -v k="$2" '/^test result: /{for(i=1;i<NF;i++) if($(i+1)==k";" || $(i+1)==k) s+=$i} END{print s+0}'; }
 [ "$(tally 'test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out' passed)" -eq 3 ] || { echo "FAIL: synthetic control — tally does not read a passed count"; exit 1; }
 [ "$(tally 'test result: FAILED. 3 passed; 2 failed; 0 ignored' failed)" -eq 2 ] || { echo "FAIL: synthetic control — tally does not read a failed count"; exit 1; }

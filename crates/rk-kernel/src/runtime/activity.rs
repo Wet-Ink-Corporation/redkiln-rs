@@ -760,6 +760,48 @@ impl Runtime {
         self.commit_walk_row_emitting(item, activity_id_at_version, at, None, emitted, now)
     }
 
+    /// **D21-76: journal one CONTROL DECISION of the walk** — a `check` verdict, a `repeat`'s
+    /// `until` verdict (another pass, or exhaustion and escalation) or a `gate` step's `when` —
+    /// under the commit key of the frame that took it, as [`decision_event`]'s row.
+    ///
+    /// *(dated 2026-09-27, `s8d` build, package D2176-8d; ADR-0174 decision 7 and ADR-0175, both
+    /// `proposed`, amended.)* Under one lock acquisition, as [`Self::commit_walk_row`]: a decision
+    /// of the same `kind` already journaled under the same commit key is not appended again (a
+    /// re-entry REPLAYS it and never re-decides it). The row takes the activation's next attempt,
+    /// so `(item, activity_id@version, attempt)` stays unique across the log (AC-011).
+    ///
+    /// # Errors
+    ///
+    /// [`RuntimeError::Key`] for a malformed activation id; [`RuntimeError::Store`] from the port.
+    pub fn commit_decision(
+        &self,
+        item: &str,
+        activity_id_at_version: &str,
+        at: StepAt<'_>,
+        decision: Decision,
+        now: JournaledNow,
+    ) -> Result<(), RuntimeError> {
+        let mut guard = self.store_guard();
+        let events = guard
+            .query(super::journal_query(item))
+            .map_err(|e| RuntimeError::Store {
+                op: "query",
+                detail: format!("{e:?}"),
+            })?;
+        let commit_key = at.commit_key(item, activity_id_at_version);
+        if journaled_decision(&events, &commit_key, decision.kind).is_some() {
+            return Ok(());
+        }
+        let attempt = next_attempt_of(&events, item, activity_id_at_version);
+        let key = checked_key(item, activity_id_at_version, attempt)?;
+        guard
+            .append(decision_event(&key, at, decision, self.run_id(), now))
+            .map_err(|e| RuntimeError::Store {
+                op: "append",
+                detail: format!("{e:?}"),
+            })
+    }
+
     #[expect(
         clippy::significant_drop_tightening,
         reason = "AC-012, at step grain: the journal re-read and the append are ONE critical \
@@ -1190,13 +1232,97 @@ pub fn completion_event(
     )
 }
 
-/// **R1.** The commit key an `activity_committed` row carries, or `None` for a pre-R1 row (no
-/// `step_id`) or one whose path does not read.
-#[must_use]
-pub fn commit_key_of(event: &Event) -> Option<CommitKey> {
-    if event.kind != EventKind::ActivityCommitted {
-        return None;
+/// **D21-76: the kind of a journaled control decision.**
+///
+/// Closed: a `check`'s verdict, a `repeat`'s `until` verdict, and the `when` of a `gate` step
+/// (whether the walk asks the human; for an escalate gate, whether it escalates).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DecisionKind {
+    /// A `check` step's `expr` held (`true`) or did not (`false`, routed through its `on_false`).
+    Check,
+    /// A `repeat`'s `until`, evaluated after a pass's body: `true` ends the repeat; `false` takes
+    /// another pass, or at `max` the step's `on_exhausted`.
+    Until,
+    /// A `gate` step's `when`: `true` reaches the gate, `false` walks past it.
+    When,
+}
+
+impl DecisionKind {
+    /// The token the row carries.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Check => "check",
+            Self::Until => "until",
+            Self::When => "when",
+        }
     }
+}
+
+/// **D21-76: one control decision** — its kind and whether its predicate held.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Decision {
+    /// What decided.
+    pub kind: DecisionKind,
+    /// Whether it held.
+    pub holds: bool,
+}
+
+/// **D21-76: a control decision's row** — one more `activity_committed`.
+///
+/// As R1's completion row is (ADR-0174 decision 5's precedent: no `EventKind` is minted), it is
+/// keyed by the commit key of the frame that took it (`step_id`, `iteration_path`) and carrying a `decision` member,
+/// `{"kind": "check" | "until" | "when", "holds": <bool>}`. It carries no `result`, no `schema` and
+/// no `family`: it is not a step activation's commit, so [`commit_key_of`] answers `None` for it,
+/// the fold does not count it as a commit (`fsm::fold`), and the breaker never reads it.
+#[must_use]
+pub fn decision_event(
+    key: &IdempotencyKey,
+    at: StepAt<'_>,
+    decision: Decision,
+    run_id: &str,
+    now: JournaledNow,
+) -> Event {
+    Event::new(
+        EventKind::ActivityCommitted,
+        serde_json::json!({
+            "activity_id_at_version": key.activity_id_at_version,
+            "at": now.timestamp().unix_seconds(),
+            "attempt": key.attempt,
+            "decision": { "kind": decision.kind.as_str(), "holds": decision.holds },
+            "item": key.item,
+            "iteration_path": at.iteration_path.to_json(),
+            "run_id": run_id,
+            "step_id": at.step_id,
+        }),
+    )
+}
+
+/// **D21-76.** Whether an `activity_committed` row is a control decision's row.
+#[must_use]
+pub fn is_decision_row(event: &Event) -> bool {
+    event.kind == EventKind::ActivityCommitted && event.payload.get("decision").is_some()
+}
+
+/// **D21-76.** The journaled verdict of the `kind` decision taken under `key`, or `None` when the
+/// walk never journaled one there — which is where a re-entry stops replaying and decides fresh.
+#[must_use]
+pub fn journaled_decision(events: &[Event], key: &CommitKey, kind: DecisionKind) -> Option<bool> {
+    events
+        .iter()
+        .filter(|e| is_decision_row(e))
+        .filter(|e| row_key_of(e).as_ref() == Some(key))
+        .find_map(|e| {
+            let d = e.payload.get("decision")?;
+            (d.get("kind")?.as_str()? == kind.as_str())
+                .then(|| d.get("holds")?.as_bool())
+                .flatten()
+        })
+}
+
+/// The commit key a row carries in its `item`, `activity_id_at_version`, `step_id` and
+/// `iteration_path` members — a step commit's, or the key a decision is journaled under.
+fn row_key_of(event: &Event) -> Option<CommitKey> {
     let text = |m: &str| event.payload.get(m).and_then(serde_json::Value::as_str);
     Some(CommitKey {
         item: text("item")?.to_owned(),
@@ -1204,6 +1330,19 @@ pub fn commit_key_of(event: &Event) -> Option<CommitKey> {
         step_id: text("step_id")?.to_owned(),
         iteration_path: IterationPath::from_json(event.payload.get("iteration_path")?)?,
     })
+}
+
+/// **R1.** The commit key an `activity_committed` row carries, or `None` for a pre-R1 row (no
+/// `step_id`) or one whose path does not read.
+///
+/// *(dated 2026-09-27, `s8d` build, package D2176-8d.)* `None` for a control decision's row too
+/// (D21-76): a decision is not a step activation's commit.
+#[must_use]
+pub fn commit_key_of(event: &Event) -> Option<CommitKey> {
+    if event.kind != EventKind::ActivityCommitted || is_decision_row(event) {
+        return None;
+    }
+    row_key_of(event)
 }
 
 /// **R1.** Whether an `activity_committed` row is a completion row.

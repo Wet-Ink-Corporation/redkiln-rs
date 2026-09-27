@@ -829,9 +829,22 @@ fn an_activation_with_no_agent_step_walks_to_its_emit_and_completes() {
     );
     assert_eq!(harness.dispatches(), 0, "nothing reaches the Harness");
     let events = journal(&db);
-    let rows = committed_rows(&events);
+    // *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76.)* The `check` journals its
+    // verdict as a control decision's row (`runtime::activity::decision_event`), which is not a
+    // commit: the committed rows are counted without it, and it is asserted on its own.
+    let (decisions, rows): (Vec<&Event>, Vec<&Event>) = committed_rows(&events)
+        .into_iter()
+        .partition(|e| rk_kernel::runtime::activity::is_decision_row(e));
     assert_eq!(rows.len(), 1, "exactly the completion row: {rows:?}");
     assert!(is_completion_row(rows[0]));
+    assert_eq!(
+        decisions
+            .iter()
+            .map(|e| e.payload["decision"].clone())
+            .collect::<Vec<_>>(),
+        vec![serde_json::json!({"kind": "check", "holds": true})],
+        "and `verify`'s one journaled verdict (D21-76): {decisions:?}"
+    );
     assert_eq!(
         events
             .iter()

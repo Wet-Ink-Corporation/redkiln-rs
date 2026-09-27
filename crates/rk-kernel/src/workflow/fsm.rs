@@ -1557,6 +1557,13 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             state.survey.state_moving += 1;
             let key = activation_key(event, "activity_committed")?;
             state.note_attempt(&key);
+            // *(dated 2026-09-27, `s8d` build, package D2176-8d; D21-76.)* A row carrying a
+            // `decision` is a control decision the walk journaled (a `check`'s verdict, a
+            // `repeat`'s `until`, a `gate` step's `when`), not a commit: it takes its attempt
+            // (so the triple stays unique) and moves nothing else. The walk replays it on re-entry.
+            if event.payload.get("decision").is_some() {
+                return Ok(());
+            }
             // *(R1, `s8d` P3.)* A row with no `step_id` is the activation grain's one commit, and
             // it completed its activation. A row WITH one is a step activation's commit under the
             // commit key; it completes the activation only when it is the completion row.
