@@ -3,7 +3,7 @@
 #   that the mixed item then gets ONE ChangeSummary, not two, which is the PC7 shape question)
 [activity]
 id           = "change-summary"
-version      = 1
+version      = 2
 stage        = "implement"
 provides     = ["ChangeSummary"]
 requires     = ["Changeset"]
@@ -23,7 +23,7 @@ rationale    = "The review stage's join key (adversarial-review requires ChangeS
 id      = "summarise"
 kind    = "tool"
 run     = "toolchain:change_summary"
-inputs  = { range = "artifact:Changeset.sha" }
+inputs  = { range = "baseline..HEAD" }
 outputs = "value:ChangeSummary"
 timeout_secs = 120
 retry   = { max = 1 }

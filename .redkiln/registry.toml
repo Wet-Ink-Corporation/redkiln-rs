@@ -4,7 +4,13 @@
 #
 # [verb]: every row declares the five columns (outputs, live, timeout, inputs, route); `route` is from the closed set
 # port | toolchain | store | git (ADR-0170 decision 1). A verb with no row refuses by its BARE name (ADR-0135 clause 2).
-# s8d's R1 adds a sixth column, `side_effecting`, to every row in its own work commit; these rows land without it.
+# (dated 2026-09-26, s8d build, P7) The closed set is now port | toolchain | store | git | review_clone | review_confirm:
+# R5 = ADR-0177 (proposed) added the last two by record, with the `shallow_clone` and `verdict_record` rows below.
+# ~~s8d's R1 adds a sixth column, `side_effecting`, to every row in its own work commit; these rows land without it.~~
+# (dated 2026-09-26, s8d build, P3) R1's sixth column is here: every row declares `side_effecting`, and a row without a
+# value refuses the registry at load (never read as `false`). `true` marks a verb whose re-execution would repeat a
+# write (package, item_create, release_tag; shallow_clone and verdict_record take `true` with R5's rows): such a
+# `tool` step commits under R1's commit key and is served on re-entry, never re-executed.
 # `outputs` and `timeout` are spikes/p9/registry.toml's own for the verbs that file carries; `setup` (no catalog site)
 # and `release_tag` (s8g's new verb) are not in it: `setup`'s timeout is its own key (§8c.4), and `release_tag`'s is
 # `build_timeout`, the key the spike gives its other record verbs (release_record, verdict_record); that choice and
@@ -14,16 +20,24 @@
 # names their calls carry, are s8f's and s8g's.
 
 [verb]
-test           = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port" }
-build          = { outputs = "BuildReport", live = false, timeout = "build_timeout", inputs = [], route = "port" }
-lint           = { outputs = "LintReport", live = false, timeout = "scan_timeout", inputs = [], route = "port" }
-change_summary = { outputs = "ChangeSummary", live = false, timeout = "build_timeout", inputs = ["range"], route = "port" }
-smoke          = { outputs = "SmokeResult", live = true, timeout = "deploy_timeout", inputs = ["checklist"], route = "toolchain" }
-sca_scan       = { outputs = "ScanReport", live = false, timeout = "scan_timeout", inputs = ["audit_db", "deny_db"], route = "toolchain" }
-package        = { outputs = "BuildArtifact", live = false, timeout = "build_timeout", inputs = ["sha", "binaries"], route = "toolchain" }
-setup          = { outputs = "SetupResult", live = true, timeout = "setup_timeout", inputs = ["projects"], route = "toolchain" }
-item_create    = { outputs = "ItemRefs", live = false, timeout = "build_timeout", inputs = [], route = "store" }
-release_tag    = { outputs = "ReleaseTag", live = false, timeout = "build_timeout", inputs = [], route = "git" }
+test           = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port", side_effecting = false }
+build          = { outputs = "BuildReport", live = false, timeout = "build_timeout", inputs = [], route = "port", side_effecting = false }
+lint           = { outputs = "LintReport", live = false, timeout = "scan_timeout", inputs = [], route = "port", side_effecting = false }
+change_summary = { outputs = "ChangeSummary", live = false, timeout = "build_timeout", inputs = ["range"], route = "port", side_effecting = false }
+smoke          = { outputs = "SmokeResult", live = true, timeout = "deploy_timeout", inputs = ["checklist"], route = "toolchain", side_effecting = false }
+sca_scan       = { outputs = "ScanReport", live = false, timeout = "scan_timeout", inputs = ["audit_db", "deny_db"], route = "toolchain", side_effecting = false }
+package        = { outputs = "BuildArtifact", live = false, timeout = "build_timeout", inputs = ["sha", "binaries"], route = "toolchain", side_effecting = true }
+setup          = { outputs = "SetupResult", live = true, timeout = "setup_timeout", inputs = ["projects"], route = "toolchain", side_effecting = false }
+item_create    = { outputs = "ItemRefs", live = false, timeout = "build_timeout", inputs = [], route = "store", side_effecting = true }
+release_tag    = { outputs = "ReleaseTag", live = false, timeout = "build_timeout", inputs = [], route = "git", side_effecting = true }
+# (dated 2026-09-26, s8d build, P7) R5 = ADR-0177 (proposed) adds these two rows and their two routes to the closed set
+# by record, as ADR-0170 decision 1 provides ("A later record may add a route (`s8d`'s, for `verdict_record`). It does
+# so by record, not by editing the match."). `review_clone` is ADR-0098 decision 2's retained gix write, performed by
+# rk-cli and never through the `git` route's GitOps seam; `review_confirm` is rk_kernel::review::confirm re-executing
+# in that clone. Both are side_effecting: each commits under R1's commit key and is served on re-entry. `outputs` and
+# `timeout` are spikes/p9/registry.toml's own (`Workspace` / `Verdict`, `build_timeout`).
+shallow_clone  = { outputs = "Workspace", live = false, timeout = "build_timeout", inputs = ["sha"], route = "review_clone", side_effecting = true }
+verdict_record = { outputs = "Verdict", live = false, timeout = "build_timeout", inputs = ["findings", "override"], route = "review_confirm", side_effecting = true }
 
 # ---- The source tables (D21-43 N14; ADR-0170 decision 8). Each checklist/atom entry declares exactly one of `path`
 # (relative to this directory) or `unauthored`; each feed exactly one of `verb` or `unprovided`. Only the 14 keys the

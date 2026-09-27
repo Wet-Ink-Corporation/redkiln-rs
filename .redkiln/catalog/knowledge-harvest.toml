@@ -1,7 +1,7 @@
 # reach: (initiative, closeout, recommended) — require row "kind in [initiative, project, spike, incident]" → KBAtoms
 [activity]
 id           = "knowledge-harvest"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "closeout"
 provides     = ["KBAtoms"]
 requires     = ["Retrospective?", "Postmortem?", "ADR?", "SpikeReport?", "DesignDoc?"]
@@ -47,8 +47,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { lint = "${validate.outputs}", findings = "${adversary.outputs?}" }
-expr    = "lint.errors.len() == 0 and findings.none(severity in ['blocking'])"
+inputs  = { lint = "${validate.outputs}" }
+expr    = "lint.errors.len() == 0"
 on_false = { to = "extract", max = 2 }
 
 [[step]]

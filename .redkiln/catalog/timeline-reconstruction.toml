@@ -1,7 +1,7 @@
 # reach: (incident, analysis, optional) — require row "kind == incident" → IncidentTimeline
 [activity]
 id           = "timeline-reconstruction"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["IncidentTimeline"]
 requires     = ["IncidentRecord"]
@@ -48,8 +48,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", timeline = "${reconstruct.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and timeline.detected_at != null and timeline.mitigated_at != null and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", timeline = "${reconstruct.outputs}" }
+expr    = "check.failed == 0 and timeline.detected_at != null and timeline.mitigated_at != null"
 on_false = { to = "reconstruct", max = 2 }
 
 [[step]]

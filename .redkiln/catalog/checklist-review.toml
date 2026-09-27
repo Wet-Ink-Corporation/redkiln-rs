@@ -2,7 +2,7 @@
 # review family: checklist-review(10) < code-review(20) < adversarial-review(30) < formal-inspection(40)
 [activity]
 id           = "checklist-review"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "review"
 provides     = ["ReviewVerdict"]
 requires     = ["ChangeSummary"]
@@ -28,13 +28,6 @@ timeout_secs = 600
 retry   = { max = 1 }
 
 [[step]]
-id      = "verdict"
-kind    = "check"
-inputs  = { findings = "${review.outputs}" }
-expr    = "findings.none(severity in ['blocking'])"
-on_false = "continue"
-
-[[step]]
 id      = "record"
 kind    = "tool"
 run     = "toolchain:verdict_record"
@@ -42,6 +35,13 @@ inputs  = { findings = "${review.outputs}" }
 outputs = "value:Verdict"
 timeout_secs = 30
 retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { record = "${record.outputs}" }
+expr    = "record.blocking.len() == 0"
+on_false = "continue"
 
 [[step]]
 id      = "emit"

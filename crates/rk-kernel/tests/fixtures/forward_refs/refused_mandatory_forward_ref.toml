@@ -1,0 +1,43 @@
+# forward_ref_lint, must-REFUSE (s8d §8d.3's feedback-ref row): a LICENSED forward ref without `?`.
+#
+# The shape is `licensed_by_the_letter.toml`'s — `policy` loops back to `draft` — but `draft` reads
+# `${review.outputs}` with no `?`. A forward ref is `null` on the first pass (ADR-0042), and a
+# mandatory input cannot be `null`, so it is refused by name whatever licence covers it.
+
+[activity]
+id           = "fr-mandatory"
+version      = 1
+stage        = "design"
+provides     = ["ADR"]
+requires     = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "architect"
+inputs  = { findings = "${review.outputs}" }
+outputs = "value:ADR"
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { draft = "${draft.outputs}" }
+expr     = "draft.options.len() >= 2"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ADR = "${draft.outputs}" }
+evidence  = ["${review}"]

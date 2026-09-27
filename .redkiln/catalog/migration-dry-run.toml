@@ -1,7 +1,7 @@
 # reach: (story, verify, recommended) with data_migration — require row → MigrationTestReport
 [activity]
 id           = "migration-dry-run"
-version      = 3   # bumped 2026-09-25 (s8b, ADR-0072; .redkiln/CHANGELOG.md)
+version      = 4   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "verify"
 provides     = ["MigrationTestReport"]
 requires     = ["MigrationScript", "DataMigrationPlan"]
@@ -42,13 +42,6 @@ inputs  = { report = "${run.outputs}", plan = "artifact:DataMigrationPlan" }
 outputs = "value:Findings"
 timeout_secs = 600
 retry   = { max = 1 }
-
-[[step]]
-id      = "policy"
-kind    = "check"
-inputs  = { findings = "${adversary.outputs?}", report = "${run.outputs}" }
-expr    = "findings.none(severity in ['blocking'])"
-on_false = "fail"
 
 [[step]]
 id      = "emit"

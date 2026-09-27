@@ -13,6 +13,7 @@
 //! | dangling `requires` | **AC-053** (load half) | yes, `DanglingRequires { activity_id, kind }` | [`load_lints`] |
 //! | rank tie | **AC-047** | yes — the rule is [`super::step4::rank_lint`], not here | [`load_lints`] |
 //! | dead content | **AC-057** | **no — a warning with a count and a list** | nothing yet: a report, not a refusal |
+//! | forward-ref licence *(dated 2026-09-26, `s8d` build; D21-48 X8)* | **ADR-0042** as R2 (ADR-0173, `proposed`) widens it | yes, `UnlicensedForwardRef { refs }`, each naming activity, step and reference — the rule is [`crate::catalog::forward_ref_lint`], not here | [`load_lints`], first |
 //!
 //! # 🛑 THE "who calls it" COLUMN EXISTS BECAUSE NOTHING DID, AND THE TABLE SAID "yes" ANYWAY
 //!
@@ -343,12 +344,18 @@ pub fn dead_content_report(
 ///
 /// # Errors
 ///
-/// The first [`LoadError`] any of the four rules returns.
+/// The first [`LoadError`] any of the four rules returns. *(dated 2026-09-26, `s8d` build: five
+/// rules; the forward-ref licence runs first.)*
 pub fn load_lints(
     catalog: &Catalog,
     artifacts: &ArtifactRegistry,
     facets: &crate::registry::Registry,
 ) -> Result<(), LoadError> {
+    // *(dated 2026-09-26, `s8d` build, package P2; D21-48 X8; R2 = ADR-0173, written `proposed`)*
+    // The forward-ref licence, catalog-only and so first. It is the catalog module's rule, run
+    // here rather than in the strict parser, for the reason `catalog::forward_ref_lint` states.
+    crate::catalog::forward_ref_lint(catalog)
+        .map_err(|refs| LoadError::UnlicensedForwardRef { refs })?;
     requires_cycle_lint(catalog)?;
     excludes_lint(catalog)?;
     dangling_requires_lint(catalog, artifacts)?;

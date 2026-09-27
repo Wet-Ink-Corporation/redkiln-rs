@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: references/adr/0135 (clause 1's four-verb map, clause 2's by-name refusal — the precedent this reuses); references/adr/0136 (clause 4, the `${…}` resolver recorded as OWED); crates/rk-kernel/src/runtime/step.rs (`run_tool_step`, the call boundary); crates/rk-kernel/src/catalog.rs (the `[[step]]` loader, which reads ten keys and never `inputs`); crates/rk-adapter-toolchain-rust/src/lib.rs (the adapter that reads an empty selection as the whole workspace)
 supersedes: ["0135"]
-superseded_by: []
+superseded_by: ["0173"]
 related: ["0093", "0099", "0134", "0135", "0136", "0137", "0139"]
 evidence: []
 consumers: []

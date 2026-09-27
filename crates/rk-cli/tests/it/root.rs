@@ -796,6 +796,14 @@ fn adr0083_config_constructed_once_at_root_and_threaded() {
 /// count, both payloads, their ORDER, and `read_retry_at_marks` — which filters on the `kind` tag
 /// and cannot miscount the fake's row — are all asserted.
 ///
+/// *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176 decisions 2-3, proposed.)* **ONE producer
+/// now.** R4 removed the fake's own append and made the kernel the writer of the error row, and it
+/// maps `RateLimited` onto AC-030's mark rather than writing a second row (`s8d` §8d.5). So the
+/// journal holds exactly ONE `rate_limited` row, the mark, carrying `kind`, `resets_at` and the
+/// journalled instant `at` — and no `family`, because this binding transcribes no step list. The
+/// count, the payload and the order below were two rows, two payloads and dispatch → failure →
+/// mark until this date.
+///
 /// # The 2 s bound catches a wait that FINISHED, and nothing more
 ///
 /// Stated rather than implied: a verb that slept for the scripted hour would hang this suite for an
@@ -866,7 +874,8 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
         harness.dispatches()
     );
 
-    // (3)(4) TWO rows of the one kind, in order, with their two distinct payloads.
+    // (3)(4) ONE row of the one kind — the kernel's MARK — with its payload. (dated 2026-09-26,
+    // s8d build, P6; R4: this read TWO rows, the fake's bare failure row and the mark.)
     let rows = store
         .lock()
         .expect("the fixture store's lock is sound")
@@ -878,21 +887,23 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
         .collect();
     assert_eq!(
         rate.len(),
-        2,
-        "expected the fake's failure row AND the kernel's retry mark; found {} `rate_limited` \
-         rows: {:?}",
+        1,
+        "R4: a rate-limited dispatch writes ONE `rate_limited` row, the kernel's retry mark, and \
+         never a second; found {} `rate_limited` rows: {:?}",
         rate.len(),
         rate.iter().map(|e| &e.payload).collect::<Vec<_>>()
     );
     assert_eq!(
         rate[0].payload,
-        serde_json::json!({}),
-        "the FIRST `rate_limited` row is the harness's bare failure row"
-    );
-    assert_eq!(
-        rate[1].payload,
-        serde_json::json!({ "kind": "retry_at", "resets_at": RESET }),
-        "the SECOND is the kernel's MARK, and it carries the reset the failure named"
+        serde_json::json!({
+            "kind": "retry_at",
+            "resets_at": RESET,
+            "at": crate::support::FIXED_NOW,
+        }),
+        "the one row is the kernel's MARK: it carries the reset the failure named, and R4's `at`. \
+         It carries no `family`: this binding is `RecordedSpec::supplied`, which transcribes no \
+         step list, so the activation dispatches on the pre-R1 path, where no step's role is in \
+         hand (ADR-0176 decision 4)"
     );
 
     // (5) and as a VALUE, through the reader that filters on the `kind` tag.
@@ -903,8 +914,9 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
         "AC-404 wants ONE retry_at mark carrying the failure's reset; found {marks:?}"
     );
 
-    // (6) THE ORDER, which two counters cannot express: the dispatch, then the failure, then the
-    //     mark. A mark written before the dispatch is not a mark about it.
+    // (6) THE ORDER, which two counters cannot express: the dispatch, then the mark. A mark written
+    //     before the dispatch is not a mark about it. (dated 2026-09-26, s8d build, P6; R4: this
+    //     read dispatch → failure → mark, the fake's row between them.)
     let appends: Vec<rk_types::event_kind::EventKind> = trace
         .steps()
         .into_iter()
@@ -913,16 +925,14 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
             crate::support::Step::Query | crate::support::Step::Reconcile(_) => None,
         })
         .collect();
-    let tail = &appends[appends.len().saturating_sub(3)..];
+    let tail = &appends[appends.len().saturating_sub(2)..];
     assert_eq!(
         tail,
         [
             rk_types::event_kind::EventKind::Dispatch,
             rk_types::event_kind::EventKind::RateLimited,
-            rk_types::event_kind::EventKind::RateLimited,
         ],
-        "the last three appends are not dispatch → failure → mark; the whole sequence was \
-         {appends:?}"
+        "the last two appends are not dispatch → mark; the whole sequence was {appends:?}"
     );
 
     // (7) it EXITED rather than waiting out the scripted hour.

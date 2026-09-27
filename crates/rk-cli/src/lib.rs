@@ -30,6 +30,7 @@
 //! be in that file.
 
 pub mod adapters;
+pub mod change_deriver;
 pub mod cli;
 pub mod clock;
 pub mod config;
@@ -37,6 +38,7 @@ pub mod doctor;
 pub mod env;
 pub mod exit;
 pub mod no_dispatch;
+pub mod processes;
 pub mod repo;
 pub mod review_pass;
 pub mod signal;

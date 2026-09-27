@@ -1,7 +1,7 @@
 # reach: (project, design, optional) — baseline DesignDoc for project/initiative packs
 [activity]
 id           = "design-doc"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "design"
 provides     = ["DesignDoc"]
 requires     = ["Spec", "ArchitectureDescription?", "ThreatModel?", "DataMigrationPlan?", "UXDesign?", "ADR?"]
@@ -48,8 +48,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", draft = "${write.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and draft.interfaces.len() > 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", draft = "${write.outputs}" }
+expr    = "check.failed == 0 and draft.interfaces.len() > 0"
 on_false = { to = "write", max = 2 }
 
 [[step]]

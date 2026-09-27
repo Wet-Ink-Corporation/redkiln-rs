@@ -17,6 +17,16 @@
 //!    `x != null and <ordering on x>` needs its guard to be **false** so the conjunction
 //!    short-circuits and the ordering — a lint error against `null` under ADR-0069 — is never
 //!    evaluated. Under the alternative (`null != null` is `null`) the guard cannot guard.
+//!
+//!    *(dated 2026-09-26, `s8d` build; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 2.)*
+//!    **ADR-0172** (written `proposed`) makes a comparison against the LITERAL `null` a definite
+//!    presence test and supersedes ADR-0103 decision 4 and ADR-0121 decision 3's first bullet in
+//!    part, for `==` and `!=` only. Its `x != null` over an absent `x` is `false`, which is what
+//!    this reading gives, so the reading is subsumed there and stands unchanged for every other
+//!    `!=` (a null field against a non-null value is still `null`, negated). Over a PRESENT `x`,
+//!    `x != null` is now `true`, not `null`, so the narrowing pattern also lets the ordering run on
+//!    a present axis. `compare`'s literal-null arm is where it is built; `in` against `null` is
+//!    not the record's and stays `null`.
 //! 2. **The connectives are Kleene's strong three-valued logic, and both absorbing positions
 //!    absorb.** ✅ **SETTLED BY RECORD — this is no longer a reading.** **ADR-0121** decision 1
 //!    (accepted 2026-09-13) states the two full truth tables and makes `and` and `or` commutative
@@ -363,6 +373,27 @@ impl Eval<'_> {
     ) -> Result<Tri, EvalError> {
         let l = self.value_of(left, scope)?;
         let r = self.value_of(right, scope)?;
+        // *(dated 2026-09-26, `s8d` build; D21-67 ruling 2; ADR-0172, written `proposed`)* A
+        // comparison against the LITERAL `null` is a definite presence test: `x == null` is true
+        // when `x` is absent and false when it is present, `x != null` the reverse. The arm keys on
+        // the operand EXPRESSION being the literal as written, never on a value that happens to be
+        // null, so a null field against a non-null value still falls through to `equality` and
+        // stays `null` (ADR-0103 decision 4, standing). `in` against `null` is not this arm's.
+        let literal_null = |e: &Expr| matches!(e, Expr::Lit(Literal::Null));
+        let presence = if literal_null(right) {
+            Some(&l)
+        } else if literal_null(left) {
+            Some(&r)
+        } else {
+            None
+        };
+        if let Some(other) = presence {
+            match op {
+                CmpOp::Eq => return Ok(Tri::from_bool(other.is_null())),
+                CmpOp::Ne => return Ok(Tri::from_bool(!other.is_null())),
+                _ => {}
+            }
+        }
         match op {
             CmpOp::Eq => equality(&l, &r),
             // `!=` is the negation of `==`; see this module's reading 1.

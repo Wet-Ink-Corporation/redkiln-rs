@@ -18,6 +18,13 @@
 //! variant, and the arm-per-variant form trips `clippy::match_same_arms`, denied individually at
 //! `Cargo.toml`:65. The bridge below goes through `StepError::event()`, which `rk-types` already
 //! owns and which is total over the closed eleven.
+//!
+//! *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176, proposed.)* **That bridge is gone.**
+//! `FakeHarness` wrote the `step_failed` / `step_cancelled` / `rate_limited` / `step_refused` row
+//! itself (`fn event_for`), and `ClaudeHarness` wrote none, so the class reached the journal under
+//! the fake only. D21-42 20: *"The kernel appends `StepError::event()` for every dispatch, so fake
+//! and real harnesses behave alike"*. The kernel's retry loop now writes that row
+//! (`rk_kernel::runtime::activity::error_row`), and this fake appends nothing on any path.
 
 use std::sync::Mutex;
 
@@ -26,8 +33,7 @@ use rk_types::digest::sha256;
 use rk_types::docset::DocSet;
 use rk_types::drift::Drift;
 use rk_types::error::{CancelledBy, StepError, TransportKind};
-use rk_types::event::{ErrorEvent, Event};
-use rk_types::event_kind::EventKind;
+use rk_types::event::Event;
 use rk_types::retention::Retained;
 use rk_types::typed::Typed;
 use rk_types::usage::{CliVersion, Timings};
@@ -171,40 +177,23 @@ fn fake_record() -> DispatchRecord {
     }
 }
 
-/// The one event arm a failed step maps to, bridged from `rk-types`' own total `event()`.
-///
-/// An arm-per-`StepError`-variant form of this bridge is what trips `clippy::match_same_arms`;
-/// routing through `ErrorEvent` keeps the match at four arms with four distinct bodies, and leaves
-/// exhaustiveness over the closed eleven where `rk-types` already enforces it.
-fn event_for(error: &StepError) -> Event {
-    match error.event() {
-        ErrorEvent::StepFailed { class, status } => Event::new(
-            EventKind::StepFailed,
-            serde_json::json!({ "class": class, "status": status }),
-        ),
-        ErrorEvent::StepCancelled => Event::new(EventKind::StepCancelled, serde_json::json!({})),
-        ErrorEvent::RateLimited => Event::new(EventKind::RateLimited, serde_json::json!({})),
-        ErrorEvent::StepRefused { class, capability } => Event::new(
-            EventKind::StepRefused,
-            serde_json::json!({ "class": class, "capability": capability }),
-        ),
-    }
-}
+// *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176 decision 2, proposed.)* `fn event_for`, the
+// fake's own bridge from a failed step to its event arm, is REMOVED with both of its appends. The
+// kernel writes the one error row per failed dispatch; a fake that also wrote one would put a
+// second row beside it (mutant M11).
 
 impl Harness for FakeHarness {
-    fn dispatch(&self, _spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
+    fn dispatch(&self, _spec: &ActivitySpec, _store: &mut dyn EventStore) -> DispatchOutcome {
         let record = fake_record();
 
         // The token is the composition root's, fired by the CLI's signal path or the per-activity
         // timeout. The fake READS it; it never fires it, and neither does the kernel.
         if self.token.is_cancelled() {
-            let error = StepError::Cancelled {
-                by: CancelledBy::Operator,
-            };
-            let _ = store.append(event_for(&error));
             return DispatchOutcome {
                 record,
-                result: Err(error),
+                result: Err(StepError::Cancelled {
+                    by: CancelledBy::Operator,
+                }),
             };
         }
 
@@ -214,9 +203,6 @@ impl Harness for FakeHarness {
                 detail: "script exhausted".to_owned(),
             })
         });
-        if let Err(error) = &result {
-            let _ = store.append(event_for(error));
-        }
 
         DispatchOutcome { record, result }
     }

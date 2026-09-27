@@ -363,9 +363,9 @@ pub fn render(
         // `not recorded` line discloses the gap instead, and the test asserts only the card.
         out.push_str(&format!(
             "  card: {}\n",
-            spec_of.get(node_id).map_or_else(
+            spec_of.get(node_id).and_then(|s| s.spec()).map_or_else(
                 || "not recorded".to_owned(),
-                |s| s.spec().card_digest.as_str().to_owned()
+                |s| s.card_digest.as_str().to_owned()
             )
         ));
         out.push_str("  skills: not recorded\n");
@@ -380,13 +380,31 @@ pub fn render(
         // The alternative is a kernel-recorded member on `activity_committed`, which would move
         // every recorded journal's bytes and re-open 7b. The LABEL SPELLING is load-bearing: s8's
         // exit check greps for `output_digest`.
-        out.push_str(&format!(
-            "  output_digest: {}\n",
-            committed_result(run, activity_id)
-                .as_ref()
-                .and_then(|v| rk_store::canon::canonical_digest(v).ok())
-                .map_or_else(|| "not recorded".to_owned(), |d| d.as_str().to_owned())
-        ));
+        //
+        // *(Amended 2026-09-26, `s8d` build, package P3; record R1, proposed.)* **One line per
+        // committed STEP activation** (§8d.2: *"`explain` prints one `output_digest` per committed
+        // step activation"*). A step-grain record carries one `activity_committed` row per agent (or
+        // side-effecting tool) step, each with `step_id` and `iteration_path`; each prints its own
+        // digest, labelled with the step activation it is the digest of, in journal order. The
+        // completion row carries no `result` and prints nothing. A pre-R1 record, whose rows carry no
+        // `step_id`, prints the one line it always did.
+        let steps = committed_steps(run, activity_id);
+        if steps.is_empty() {
+            out.push_str(&format!(
+                "  output_digest: {}\n",
+                committed_result(run, activity_id)
+                    .as_ref()
+                    .and_then(|v| rk_store::canon::canonical_digest(v).ok())
+                    .map_or_else(|| "not recorded".to_owned(), |d| d.as_str().to_owned())
+            ));
+        }
+        for (step, path, value) in steps {
+            out.push_str(&format!(
+                "  output_digest: {} (step {step} @ {path})\n",
+                rk_store::canon::canonical_digest(&value)
+                    .map_or_else(|_| "not recorded".to_owned(), |d| d.as_str().to_owned())
+            ));
+        }
     }
 
     // ---- AC-433: WHAT IS IN THE RECORDED CATALOG AND NOT IN THE RECORDED DAG. -----------------
@@ -582,6 +600,35 @@ fn row_payload(
         .rev()
         .find(|e| e.kind == kind)
         .map(|e| e.payload.clone())
+}
+
+/// **R1.** Every committed STEP activation of `activity_id`, in journal order: `(step id, iteration
+/// path, result)` off each `activity_committed` row that carries a `step_id` and a `result`. The
+/// completion row carries no `result` and is not one. Empty for a pre-R1 record.
+fn committed_steps(
+    run: &rk_kernel::replay::RecordedRun,
+    activity_id: &str,
+) -> Vec<(String, String, serde_json::Value)> {
+    run.events
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::ActivityCommitted)
+        .filter(|e| {
+            e.payload
+                .get("activity_id_at_version")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|a| a.split('@').next() == Some(activity_id))
+        })
+        .filter_map(|e| {
+            let step = e.payload.get("step_id")?.as_str()?.to_owned();
+            let value = e.payload.get("result")?.clone();
+            let path = e
+                .payload
+                .get("iteration_path")
+                .and_then(rk_kernel::workflow::idem::IterationPath::from_json)
+                .map_or_else(|| "?".to_owned(), |p| p.to_string());
+            Some((step, path, value))
+        })
+        .collect()
 }
 
 /// The recorded `result` of the `activity_committed` row for `activity_id`.

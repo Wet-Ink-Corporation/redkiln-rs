@@ -3,7 +3,7 @@
 #   members provide DIFFERENT kinds; rank is inert for selection (F34 ambiguity B3)
 [activity]
 id           = "problem-framing"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "discovery"
 provides     = ["ProblemStatement"]
 requires     = ["IntakeRecord"]
@@ -50,8 +50,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}" }
+expr    = "check.failed == 0"
 on_false = { to = "frame", max = 2 }
 
 [[step]]

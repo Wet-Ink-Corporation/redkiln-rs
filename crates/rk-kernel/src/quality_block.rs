@@ -22,7 +22,13 @@
 //!    `quality_block::d2_per_class_witness_refuses_one_member_rows`, mutant M-W3*). Each witness is
 //!    a findings list of ONE finding carrying ONE field, `evidence`, in one blocking class —
 //!    `Reproduced` or `MutationSurvived` — evaluated across the live rigor levels. The refusal is
-//!    D21-55's: a predicate is refused if some such conjunct is `false` in some cell. *(dated
+//!    D21-55's: a predicate is refused if some such conjunct is `false` in some cell.
+//!    *(dated 2026-09-26, `s8d` build, package P2; D21-67 ruling 3)* WIDENED to **"not `true` in some
+//!    cell"**, matching the runtime `check` arm (`== Tri::True`): a `null` cell refuses as a `false`
+//!    one does. An error is still not a value and stays indeterminate (D21-55 unchanged there), and
+//!    "a `false` cell outranks an error" below reads "a not-`true` cell" from here on. Pinned by
+//!    `quality_block::a_findings_conjunct_that_is_not_true_in_some_cell_is_refused` (mutant D67-5).
+//!    *(dated
 //!    2026-09-25, s8b refuting round 1)* That is all this measures. It does NOT establish that only
 //!    a reviewer who found nothing can satisfy the predicate: `findings.any(evidence in
 //!    ['Reproduced'])` is refused under the `MutationSurvived` witness, yet it is false over an
@@ -211,10 +217,14 @@ impl fmt::Display for BlockingClass {
 }
 
 /// The cell under which a conjunct came out `false`: which blocking class, at which rigor.
+/// *(dated 2026-09-26, `s8d` build; D21-67 ruling 3: or `null` — any value that is not `true`.)*
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Witness {
     pub class: BlockingClass,
     pub rigor: &'static str,
+    /// The value the conjunct took in that cell: `False`, or since D21-67 ruling 3 `Null` (*"not
+    /// `true` in some cell"*). *(dated 2026-09-26, `s8d` build, package P2.)*
+    pub value: Tri,
     /// The falsified conjunct, rendered with `Debug` over its parse tree (see `render`): a
     /// structural rendering, not the author's spelling. *(dated 2026-09-25, s8b refuting round 1:
     /// it is not rendered from a source span.)*
@@ -231,7 +241,8 @@ pub enum TerminalConditionViolation {
         predicate: String,
     },
     /// Refusal 2: a conjunct required for truth is `false` under a one-finding witness of one
-    /// blocking class, at some live rigor.
+    /// blocking class, at some live rigor. *(dated 2026-09-26, `s8d` build; D21-67 ruling 3)* Is
+    /// NOT `true`: `false` or `null`.
     FalsifiedByBlockingWitness {
         activity: String,
         step: String,
@@ -317,9 +328,10 @@ impl fmt::Display for TerminalConditionViolation {
             } => write!(
                 f,
                 "{activity}/{step}: the terminal condition `{predicate}` has a conjunct, `{}`, that \
-                 is FALSE under a one-finding `{}` witness (rigor `{}`). ADR-0080 decision 2, as \
-                 D21-55 applies it, refuses a terminal condition with such a conjunct",
-                witness.conjunct, witness.class, witness.rigor
+                 is not TRUE ({:?}) under a one-finding `{}` witness (rigor `{}`). ADR-0080 \
+                 decision 2, as D21-55 applies it and D21-67 ruling 3 widens it, refuses a terminal \
+                 condition with such a conjunct",
+                witness.conjunct, witness.value, witness.class, witness.rigor
             ),
             Self::PredicateDoesNotParse {
                 activity,
@@ -466,8 +478,9 @@ pub fn reads_findings(expr: &Expr) -> bool {
 
 /// What one conjunct said across the witness cells.
 enum Cells {
-    /// Some cell was `false`.
-    Falsified(BlockingClass, &'static str),
+    /// Some cell was `false` — *(dated 2026-09-26, `s8d` build; D21-67 ruling 3)* or, since the
+    /// widening, `null`: some cell was not `true`. The value is carried.
+    Falsified(BlockingClass, &'static str, Tri),
     /// Every cell yielded a truth value, and none was `false`.
     Valued,
     /// No cell was `false`, and at least one yielded no truth value. *(dated 2026-09-25, s8b refuting
@@ -499,8 +512,12 @@ fn cells(conjunct: &Expr) -> Cells {
             }
             match evaluate(conjunct, &ctx) {
                 Ok(outcome) => {
-                    if outcome.value == Tri::False {
-                        return Cells::Falsified(class, rigor);
+                    // *(dated 2026-09-26, `s8d` build, package P2; D21-67 ruling 3)* WIDENED from
+                    // `== Tri::False` to any evaluated value that is not `Tri::True`, matching the
+                    // runtime `check` arm. An `Err` is not a value and stays indeterminate (D21-55).
+                    // D67-5: the refusal restored to `== Tri::False`.
+                    if outcome.value != Tri::True {
+                        return Cells::Falsified(class, rigor, outcome.value);
                     }
                 }
                 // M-W1a: an erroring cell does not stop the loop; a later `false` cell refuses.
@@ -532,10 +549,11 @@ pub fn blocking_witness(expr: &Expr) -> Result<Option<Witness>, EvalError> {
             continue;
         }
         match cells(c) {
-            Cells::Falsified(class, rigor) => {
+            Cells::Falsified(class, rigor, value) => {
                 return Ok(Some(Witness {
                     class,
                     rigor,
+                    value,
                     conjunct: render(c),
                 }));
             }

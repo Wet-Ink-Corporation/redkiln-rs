@@ -140,6 +140,71 @@ pub fn reach(state: &RunState, kind: &str, ctx: &FsmContext<'_>) -> Result<GateR
     )
 }
 
+/// **R6 (ADR-0178 decision 4, proposed; `s8d` §8d.7, D21-43 N3): the gate a derived facet's
+/// abstention opens at the lane's first stage.** *(Added 2026-09-26, `s8d` build, package P7.)*
+///
+/// D21-43 N3: *"`null` routes to AC-079's `unknown_facet` gate at triage, and the operator supplies
+/// it."* `change` is first read by a tag at step 4, which opens no gate, and the `require` rows
+/// that read it come after `analysis`; so the composition root asks for this gate at the lane's
+/// first stage, before any stage's selection reads the facet. The kind is the selection's own
+/// spelling, `unknown_facet:<axis>` (`fsm::next_action` clause 2), so `answer` resolves its
+/// question as any abstention gate's.
+///
+/// **Counted once per read facet** (AC-079): the row is minted only when the fold holds no reach of
+/// the kind, or its latest record is VOID (AC-252's re-open, fresh in all three fields). An open,
+/// answered or expired record opens nothing. The row is the runtime's producer shape
+/// ([`crate::runtime::gate_opened_event`]'s five members) with the selection's `reason` and `axis` beside it, so a
+/// reader sees which abstention it is; the fold reads it as the runtime's (it carries `tree_hash`).
+///
+/// # Errors
+///
+/// [`CanonError`] if the token's canonical form cannot be taken.
+pub fn derived_facet_gate(
+    state: &RunState,
+    axis: &str,
+    tree_hash: &str,
+    deadline: rk_types::time::Timestamp,
+) -> Result<Option<Event>, CanonError> {
+    let kind = format!("unknown_facet:{axis}");
+    let reaches = state.reaches(&kind);
+    let reopen = state
+        .latest_gate(&kind)
+        .is_some_and(|latest| state.is_void(latest));
+    if reaches > 0 && !reopen {
+        return Ok(None);
+    }
+    let record = GateRecord::derive_reach(&kind, tree_hash, deadline, reaches.saturating_add(1))?;
+    Ok(Some(Event::new(
+        EventKind::GateOpened,
+        serde_json::json!({
+            "axis": axis,
+            "deadline": record.deadline().unix_seconds(),
+            "kind": record.kind(),
+            "reach": record.reach(),
+            "reason": "unknown_facet",
+            "token": record.token().as_str(),
+            "tree_hash": record.tree_hash(),
+        }),
+    )))
+}
+
+/// **R6 (ADR-0178 decision 5): the value an answered `unknown_facet:<axis>` gate binds.**
+///
+/// The latest gate of the kind, answered and not void: its verdict, which the composition root binds as the
+/// facet's one-element set. Folded from the `gate_answered` row, never written to the item record.
+#[must_use]
+pub fn answered_facet(state: &RunState, axis: &str) -> Option<String> {
+    let kind = format!("unknown_facet:{axis}");
+    let latest = state.latest_gate(&kind)?;
+    if state.is_void(latest) {
+        return None;
+    }
+    state
+        .answered_gates()
+        .find(|answer| answer.token() == latest)
+        .map(|answer| answer.verdict().to_owned())
+}
+
 /// Decide an answer presented **against `gate`** and carrying `presented`, at the item's current
 /// `tree_hash`, and return the rows that record the decision.
 ///

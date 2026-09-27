@@ -1,0 +1,38 @@
+# forward_ref_lint, must-LOAD (s8d §8d.3, D21-48 X8; licence 2, the repeat body, D21-48 X6).
+#
+# `green` repeats until `${green-verify.outputs.status} == 'passing'`, so its repeat body runs
+# from `green` through `green-verify`, the last step `until` references. `green` reads
+# `${green-verify.outputs?}`, a step inside that body: licensed, `null` on the first pass.
+# This is `tdd-red-green-refactor`'s shape.
+
+[activity]
+id           = "fr-repeat-body"
+version      = 1
+stage        = "implement"
+provides     = ["ADR"]
+requires     = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "green"
+kind    = "agent"
+role    = "implementer"
+inputs  = { last = "${green-verify.outputs?}" }
+outputs = "value:ImplReport"
+repeat  = { until = "${green-verify.outputs.status} == 'passing'", max = 3 }
+
+[[step]]
+id      = "green-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ADR = "${green.outputs}" }
+evidence  = ["${green-verify}"]

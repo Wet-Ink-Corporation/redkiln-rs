@@ -1,7 +1,7 @@
 # reach: (project, design, optional) — require row "kind in [initiative, project, tech-debt]" → ADR
 [activity]
 id           = "adr-record"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "design"
 provides     = ["ADR"]
 requires     = ["Spec", "DesignDoc?", "ArchitectureDescription?"]
@@ -21,7 +21,7 @@ rationale    = "adr.github.io: the decision, its context, options and consequenc
 id      = "draft"
 kind    = "agent"
 role    = "architect"
-inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?", arch = "artifact:ArchitectureDescription?", kb = "kb:architecture-conventions", answer = "${accept.answer?}" }
+inputs  = { spec = "artifact:Spec", design = "artifact:DesignDoc?", arch = "artifact:ArchitectureDescription?", kb = "kb:architecture-conventions" }
 outputs = "value:ADR"
 timeout_secs = 600
 retry   = { max = 2 }

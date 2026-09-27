@@ -1,0 +1,55 @@
+# AC-527, must-FAIL fixture (`findings == null`; `s8d` §8d.3a (c); D21-67 ruling 3, *"Refusal 2 widens from "`false`
+# in some cell" to **"not `true` in some cell"**, matching the runtime `check` arm (`== Tri::True`)"*).
+#
+# `findings == null` is satisfied only by a reviewer that returned no findings set at all. Under ADR-0172
+# (a comparison against the literal `null` is a presence test) it is `false` over the one-finding
+# witness, so the pre-ruling `== Tri::False` arm refuses it too: this fixture pins the refusal, and it
+# CANNOT observe mutant D67-5 (which restores `== Tri::False`). The `null`-cell fixture beside it,
+# `terminal_condition_is_findings_null_or.toml`, is the one that does.
+#
+# Cell values under the post-ADR-0172 evaluator, measured 2026-09-26 from inside the test binary before
+# this fixture was written (both single-class witnesses x the three live rigor levels):
+#   Reproduced x {optional, recommended, mandatory}: false, false, false
+#   MutationSurvived x {optional, recommended, mandatory}: false, false, false
+
+[activity]
+id           = "ac527-findings-is-null"
+version      = 1
+stage        = "build"
+provides     = ["ReviewNote"]
+requires     = ["Diff"]
+tags         = ["kind:bug"]
+method_rank  = 20
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "author"
+inputs  = { diff = "artifact:Diff" }
+outputs = "value:ReviewDraft"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}" }
+expr     = "findings == null"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ReviewNote = "${draft.outputs.note}" }
+evidence  = ["${adversary?}"]

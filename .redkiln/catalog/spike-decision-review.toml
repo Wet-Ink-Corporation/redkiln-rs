@@ -1,7 +1,7 @@
 # reach: (spike, review, optional) — require row "kind == spike" → ReviewVerdict (on the experiment vs the charter's kill criteria)
 [activity]
 id           = "spike-decision-review"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "review"
 provides     = ["ReviewVerdict"]
 requires     = ["ExperimentResults", "SpikeCharter"]
@@ -26,13 +26,6 @@ timeout_secs = 900
 retry   = { max = 1 }
 
 [[step]]
-id      = "verdict"
-kind    = "check"
-inputs  = { findings = "${review.outputs}" }
-expr    = "findings.none(severity in ['blocking'])"
-on_false = "continue"
-
-[[step]]
 id      = "override"
 kind    = "gate"
 when    = "rigor >= recommended and ${review.outputs.items}.len() > 0"
@@ -47,6 +40,13 @@ inputs  = { findings = "${review.outputs}", override = "${override.answer?}" }
 outputs = "value:Verdict"
 timeout_secs = 30
 retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { record = "${record.outputs}" }
+expr    = "record.blocking.len() == 0"
+on_false = "continue"
 
 [[step]]
 id      = "emit"

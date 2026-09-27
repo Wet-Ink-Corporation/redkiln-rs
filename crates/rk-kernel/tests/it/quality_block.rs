@@ -11,8 +11,10 @@
 //! | `terminal_condition_is_one_member_conjunct` | FAIL | the conjunct case, the pre-s8b `user-story-ac` row verbatim |
 //! | `terminal_condition_witness_is_per_class` | FAIL | the per-class witness alone: a joint witness does not falsify it (D21-55) |
 //! | `terminal_condition_is_severity_only` | LOAD | that the rule does not over-reach: a severity-only predicate reads no `evidence`, so refusal 1 does not match it and refusal 2 finds it indeterminate *(dated 2026-09-25, s8b refuting round 5: was "neither refusal reaches it"; the test asserts `reads_findings == 1` and `indeterminate == 1`, so refusal 2 reaches it and cannot decide)* *(dated 2026-09-25, s8b refuting round 2: was "bullet 1's form"; whether a severity-only row without re-execution conforms to d2 bullet 1 is OPEN, D21-57)* |
-//! | `terminal_condition_names_a_verify_result` (3) | LOAD | unchanged. *(dated 2026-09-25, s8b refuting round 4)* Its `verify.green_at != null` conjunct is null for any present `green_at`, so the predicate can never be true (the `x != null` class, `s8b` §8b.10): its LOAD proves only that the rule does not refuse it |
+//! | `terminal_condition_names_a_verify_result` (3) | LOAD | unchanged. *(dated 2026-09-25, s8b refuting round 4)* Its `verify.green_at != null` conjunct is null for any present `green_at`, so the predicate can never be true (the `x != null` class, `s8b` §8b.10): its LOAD proves only that the rule does not refuse it. *(dated 2026-09-26, `s8d` build; D21-67 ruling 2; ADR-0172, written `proposed`)* CORRECTED: under ADR-0172 a comparison against the literal `null` is a presence test, so `verify.green_at != null` is `true` for a present `green_at` and the predicate CAN be true; the round-4 sentence is kept as history. No catalog row was edited |
 //! | `terminal_condition_does_not_parse` | REFUSED | fail closed |
+//! | *(dated 2026-09-26, `s8d` build; D21-67 ruling 3)* `terminal_condition_is_findings_null` | FAIL | `findings == null`, `false` in all six cells under ADR-0172: refused by refusal 2 under the widened arm AND the old one, so it cannot observe mutant D67-5 (§8d.3a (c)'s flag, measured) |
+//! | *(dated 2026-09-26, `s8d` build; D21-67 ruling 3)* `terminal_condition_is_findings_null_or` | FAIL | `findings == null or findings.any(evidence in ['Reproduced', null])`: `true` under `Reproduced`, `null` under `MutationSurvived`, never `false` and never an error, so it LOADED under the old `== Tri::False` arm; ruling 3's "not `true` in some cell" refuses it (mutant D67-5) |
 //! | *(no fixture; dated 2026-09-25, s8b refuting round 3)* `findings.any(evidence in ['Reproduced', 'MutationSurvived'])`, swapped into fixture 3 inside `d2_severity_only_predicates_load` | LOAD, `decided == 1` | the rule's decided arm: a findings-reading predicate that yields a value and that no single-class witness falsifies. No fixture above and no walked catalog reached it |
 //! | *(no fixture; dated 2026-09-25, s8b refuting round 4)* `findings.any(evidence in ['Reproduced']) or check.failed == 0`, swapped into fixture 3 inside `d2_severity_only_predicates_load` | LOAD, `indeterminate == 1` | a conjunct valued in some cells and erroring in another is indeterminate, not decided (D21-55) |
 //! | *(no fixture; dated 2026-09-25, s8b refuting round 5)* `not (findings.any(evidence in ['MutationSurvived']) or check.failed == 0)`, swapped into fixture 3 inside `d2_per_class_witness_refuses_one_member_rows` | FAIL, `MutationSurvived` at `optional` | a `false` cell outranks an erroring cell of the same conjunct (D21-55; M-W1a) |
@@ -34,6 +36,11 @@
 //! **Open, carried rather than decided (D21-55):** `findings == null` is not refused by either
 //! refusal — a one-finding witness makes it `null`, not `false` — and it is carried to its own item,
 //! recorded open in `s8b` §8b.10 *(dated 2026-09-25, s8b refuting round 3)*.
+//! *(dated 2026-09-26, `s8d` build, package P2)* CLOSED by D21-67 rulings 2 and 3. Under ADR-0172
+//! (written `proposed`) `findings == null` over the one-finding witness is `false`, not `null`, so it
+//! was already refused; and refusal 2 now refuses any cell that is not `true`, so a `null` cell
+//! refuses too. Both shapes are fixtures above, pinned by
+//! `a_findings_conjunct_that_is_not_true_in_some_cell_is_refused`.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -584,7 +591,11 @@ fn d2_severity_only_predicates_load() {
 /// steps with an `expr` [measured 2026-09-26, printed by this test as `checks=93`]; a walker that
 /// skipped most of them would otherwise reach `refused == 0` more easily. *(dated 2026-09-26, D21-59)*
 /// Was 94, the figure the pre-s8b test pinned [measured 2026-09-25]: `threat-model` declines the block
-/// (ADR-0080 d4), and its `policy` check step is deleted.
+/// (ADR-0080 d4), and its `policy` check step is deleted. *(dated 2026-09-26, `s8d` build, package
+/// P2; D21-67 ruling 1)* Now **92** [measured 2026-09-26 from inside this binary: `checks=92
+/// refused=0 indeterminate=0`, from `checks=93 refused=0 indeterminate=39` before the edit]:
+/// `migration-dry-run`'s `policy` check step is deleted (class B), as §8d.3a (b) predicted, and no
+/// shipped `expr` reads `findings` any more (`reads_findings` 39 → 0), so no step is indeterminate.
 #[test]
 fn ac527_empty_set_terminal_condition() {
     let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
@@ -596,7 +607,7 @@ fn ac527_empty_set_terminal_condition() {
         "the count walked comes first: a rule over zero check steps refuses nothing — {report:?}"
     );
     assert_eq!(
-        report.check_steps_walked, 93,
+        report.check_steps_walked, 92,
         "every check step carrying an `expr` in `.redkiln/catalog` is walked: {report:?}"
     );
     assert_eq!(
@@ -1059,13 +1070,19 @@ fn version_of(id: &str) -> i64 {
         .unwrap_or_else(|| panic!("{id} declares an integer version"))
 }
 
+/// *(dated 2026-09-26, `s8d` build, package P2; D21-47's time-bound rule; `s8d` §8d.3 and §8d.3a
+/// (b))* The version is read as AT LEAST the triple's new value, and the `<id>@<new>` changelog row
+/// naming `from v<old>` is still required. `s8d`'s catalog commit bumps `vertical-slicing` 2 → 3
+/// (D21-48 X8) and `migration-dry-run` 3 → 4 (D21-67 ruling 1, class B), which moved this helper's
+/// exact-version premise for two of its triples. `s8b`'s mutant M14 (`user-story-ac` 3 → 2) still
+/// dies, because 2 is below 3.
 fn assert_versioned(triples: &[(&str, i64, i64)]) {
     let log = changelog();
     for (id, old, new) in triples {
-        assert_eq!(
-            version_of(id),
-            *new,
-            "{id}: a coherence edit bumps version {old} → {new} (ADR-0072)"
+        let at = version_of(id);
+        assert!(
+            at >= *new,
+            "{id}: a coherence edit bumps version {old} → {new} (ADR-0072); it is at {at}"
         );
         let row = log
             .lines()
@@ -1080,7 +1097,9 @@ fn assert_versioned(triples: &[(&str, i64, i64)]) {
 
 /// **ADR-0072 for the seven d2 rows:** *"Edits to shipped activities made for catalog coherence bump
 /// `version` and are listed in the pack changelog."* Also D21-47 V4: `adversarial-review`'s `verdict`
-/// runs after `record`, whose outcome it reads (mutant M29).
+/// runs after `record`, whose outcome it reads (mutant M29). *(dated 2026-09-26, `s8d` build,
+/// package P2)* AMENDED in `s8d`'s catalog commit: `vertical-slicing` is at 3 after D21-48 X8's
+/// removal, so its `(1, 2)` triple is read as at least 2 ([`assert_versioned`]).
 #[test]
 fn adr0072_d2_edits_are_versioned_and_changelogged() {
     assert_versioned(&[
@@ -1103,7 +1122,9 @@ fn adr0072_d2_edits_are_versioned_and_changelogged() {
 
 /// **ADR-0072 for s8b's three further edits** (D21-43 N26, N13, N25): the fourteen `memo` repairs
 /// (`instrumented-trace-analysis`'s bump shared with its N18 edit), `tdd-red-green-refactor` and
-/// `sca-scan`.
+/// `sca-scan`. *(dated 2026-09-26, `s8d` build, package P2)* AMENDED in `s8d`'s catalog commit:
+/// `migration-dry-run` is at 4 after D21-67 ruling 1's class B deletion, so its `(2, 3)` triple is
+/// read as at least 3 ([`assert_versioned`]).
 #[test]
 fn adr0072_s8b_repairs_are_versioned_and_changelogged() {
     assert_versioned(&[
@@ -1124,4 +1145,327 @@ fn adr0072_s8b_repairs_are_versioned_and_changelogged() {
         ("tdd-red-green-refactor", 2, 3),
         ("sca-scan", 1, 2),
     ]);
+}
+
+// ---- D21-67 ruling 1: the 39 severity-only rows, disposed of by class (`s8d` §8d.3a (b)) ---------------
+
+/// The six review-family `verdict` rows (class A): rewritten to `adversarial-review@4`'s form.
+const CLASS_A: [(&str, i64, i64); 6] = [
+    ("checklist-review", 2, 3),
+    ("code-review", 2, 3),
+    ("design-review", 1, 2),
+    ("design-review-lightweight", 2, 3),
+    ("security-review", 1, 2),
+    ("spike-decision-review", 1, 2),
+];
+
+/// Class B: `migration-dry-run`'s `policy` step is deleted.
+const CLASS_B: (&str, i64, i64) = ("migration-dry-run", 3, 4);
+
+/// The 32 looping `policy` conjuncts (class C): the severity conjunct and the `findings` input it
+/// alone read are removed. `structured-nl-requirements` shares its one bump, 2 → 3, with D21-48 X8's
+/// removal (§8d.3a (b), the preferred path: ONE bump and ONE changelog row naming both).
+const CLASS_C: [(&str, i64, i64); 32] = [
+    ("api-contract-spec", 1, 2),
+    ("bdd-scenarios", 3, 4),
+    ("blameless-postmortem", 2, 3),
+    ("c4-component", 2, 3),
+    ("c4-container", 2, 3),
+    ("c4-context", 2, 3),
+    ("data-migration-plan", 2, 3),
+    ("design-doc", 1, 2),
+    ("discovery-report", 1, 2),
+    ("equivalence-boundary", 2, 3),
+    ("exploitability-analysis", 1, 2),
+    ("fault-tree-analysis", 2, 3),
+    ("fishbone-analysis", 2, 3),
+    ("five-whys", 2, 3),
+    ("fix-design", 1, 2),
+    ("fix-spec", 1, 2),
+    ("knowledge-harvest", 1, 2),
+    ("opportunity-solution-tree", 1, 2),
+    ("outcome-definition", 1, 2),
+    ("problem-framing", 1, 2),
+    ("production-readiness-review", 1, 2),
+    ("relative-estimation", 2, 3),
+    ("risk-register", 1, 2),
+    ("schema-migration-script", 3, 4),
+    ("security-requirements", 1, 2),
+    ("spike-report", 1, 2),
+    ("structured-nl-requirements", 2, 3),
+    ("structured-retrospective", 2, 3),
+    ("tech-debt-assessment", 1, 2),
+    ("timeline-reconstruction", 1, 2),
+    ("use-case-spec", 3, 4),
+    ("ux-flow-design", 1, 2),
+];
+
+/// Every path the expression reads, quantifier bodies included.
+fn every_path(e: &Expr, out: &mut BTreeSet<String>) {
+    match e {
+        Expr::Path(p) => {
+            out.insert(p.clone());
+        }
+        Expr::Not(x) | Expr::Group(x) | Expr::Len(x) => every_path(x, out),
+        Expr::Or(l, r) | Expr::And(l, r) => {
+            every_path(l, out);
+            every_path(r, out);
+        }
+        Expr::Cmp { left, right, .. } => {
+            every_path(left, out);
+            every_path(right, out);
+        }
+        Expr::In { left, list } => {
+            every_path(left, out);
+            every_path(list, out);
+        }
+        Expr::Member { literal, set } => {
+            every_path(literal, out);
+            every_path(set, out);
+        }
+        Expr::List(items) => items.iter().for_each(|i| every_path(i, out)),
+        Expr::Quant { source, body, .. } => {
+            every_path(source, out);
+            every_path(body, out);
+        }
+        Expr::Lit(_) | Expr::Ref(_) => {}
+    }
+}
+
+/// `true` when the expression reads a `severity` field anywhere, a quantifier body included.
+fn reads_severity(expr_src: &str) -> bool {
+    let mut paths = BTreeSet::new();
+    every_path(&ok_parse(expr_src).expr, &mut paths);
+    paths
+        .iter()
+        .any(|p| p.split('.').any(|seg| seg == "severity"))
+}
+
+/// **D21-67 ruling 1** (*"a severity-only row without re-execution does not conform to ADR-0080 d2
+/// as ADR-0168 left it. The rows are disposed of by class, and **`s8d` carries the edits** (39
+/// version bumps and 39 `.redkiln/CHANGELOG.md` rows under ADR-0072)"*; `s8d` §8d.3a (b)). No
+/// shipped `expr` reads `severity`; each class A `verdict` follows `record` and reads
+/// `record.blocking.len() == 0`; `migration-dry-run` has no `policy` step; each class C `policy`
+/// keeps its other conjuncts and binds no `findings` it no longer reads; and all 39 are at their
+/// bumped versions with their changelog rows. Each class A row's constancy is measured and printed:
+/// `record.blocking.len() == 0` over the two shapes a blocking set takes (empty, one finding).
+#[test]
+fn the_39_severity_rows_are_disposed_of_by_class_versioned_and_changelogged() {
+    let shipped = Catalog::from_dir(&workspace_root().join(SHIPPED_CATALOG))
+        .expect("the shipped catalog loads");
+    assert_eq!(shipped.len(), 102, "premise: the whole shipped catalog");
+    let mut walked = 0usize;
+    let mut severity: Vec<String> = Vec::new();
+    for a in shipped.activities() {
+        for s in &a.steps {
+            if let Some(expr) = s.expr.as_deref() {
+                walked += 1;
+                if reads_severity(expr) {
+                    severity.push(format!("{}@{:?}/{}: {expr}", a.id, a.version, s.id));
+                }
+            }
+        }
+    }
+    assert!(walked > 0, "the count walked comes first");
+    assert!(
+        severity.is_empty(),
+        "{} shipped `expr`s read `severity` (D21-67 ruling 1 disposes of all 39 by class):\n  {}",
+        severity.len(),
+        severity.join("\n  ")
+    );
+
+    let activity = |id: &str| {
+        shipped
+            .activities()
+            .iter()
+            .find(|a| a.id == id)
+            .unwrap_or_else(|| panic!("{id} is in the shipped catalog"))
+    };
+
+    // ---- class A: `verdict` after `record`, reading the re-execution-aware blocking set ---------
+    let finding = Value::Record(BTreeMap::from([(
+        "evidence".to_owned(),
+        Value::Str("Reproduced".to_owned()),
+    )]));
+    for (id, _, _) in CLASS_A {
+        let a = activity(id);
+        let pos = |sid: &str| a.steps.iter().position(|s| s.id == sid);
+        assert!(
+            matches!((pos("record"), pos("verdict")), (Some(r), Some(v)) if r < v),
+            "{id}: `verdict` must follow `record`, whose outcome it reads (class A)"
+        );
+        let verdict = &a.steps[pos("verdict").expect("a verdict step")];
+        assert_eq!(verdict.kind, StepKind::Check, "{id}: `verdict` is a check");
+        assert_eq!(
+            verdict.expr.as_deref(),
+            Some("record.blocking.len() == 0"),
+            "{id}: `verdict` reads adversarial-review@4's form"
+        );
+        assert_eq!(
+            verdict
+                .inputs
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_text()))
+                .collect::<Vec<_>>(),
+            vec![("record", Some("${record.outputs}"))],
+            "{id}: `verdict` binds `record` to `${{record.outputs}}` and nothing else"
+        );
+        assert_eq!(
+            toml_str(toml_step(&shipped_toml(id), "verdict"), "on_false"),
+            Some("continue"),
+            "{id}: `on_false` is unchanged"
+        );
+        // Constancy (§8d.3a (b): "each rewritten row's constancy is measured").
+        let expr = ok_parse(verdict.expr.as_deref().expect("an expr")).expr;
+        let mut seen = BTreeSet::new();
+        for blocking in [Value::List(Vec::new()), Value::List(vec![finding.clone()])] {
+            // The context is keyed by the full path the expr reads, as condition (b)'s pool binds it.
+            let ctx = Context::new().with("record.blocking", blocking);
+            let o = evaluate(&expr, &ctx).unwrap_or_else(|e| panic!("{id}: evaluates: {e:?}"));
+            seen.insert(format!("{:?}", o.value));
+        }
+        println!("CLASS_A_CONSTANCY {id} values={seen:?}");
+        assert!(
+            seen.contains("True") && seen.contains("False"),
+            "{id}: `record.blocking.len() == 0` is constant over an empty and a one-finding \
+             blocking set ({seen:?}) — report it upward, do not fix it silently"
+        );
+    }
+
+    // ---- class B: `migration-dry-run`'s `policy` step is deleted -------------------------------
+    let b = activity(CLASS_B.0);
+    assert!(
+        b.steps.iter().all(|s| s.id != "policy"),
+        "{}: its `policy` step is deleted (class B)",
+        CLASS_B.0
+    );
+    assert!(
+        b.steps
+            .iter()
+            .any(|s| s.id == "ok" && s.kind == StepKind::Check),
+        "{}: its `ok` step, which carries the re-execution outcome, stays",
+        CLASS_B.0
+    );
+    assert!(
+        toml_step(&shipped_toml(CLASS_B.0), "emit")
+            .get("evidence")
+            .and_then(toml_subset::Value::as_array)
+            .is_some_and(|e| e.iter().any(|v| v.as_str() == Some("${adversary?}"))),
+        "{}: the adversary's findings stay evidence",
+        CLASS_B.0
+    );
+
+    // ---- class C: the `policy` conjunct and the `findings` input it alone read are gone --------
+    for (id, _, _) in CLASS_C {
+        let a = activity(id);
+        let policy = a
+            .steps
+            .iter()
+            .find(|s| s.id == "policy" && s.kind == StepKind::Check)
+            .unwrap_or_else(|| panic!("{id}: its `policy` check stays"));
+        let expr = policy.expr.as_deref().expect("a policy expr");
+        let mut roots_read = BTreeSet::new();
+        roots(&ok_parse(expr).expr, &mut roots_read);
+        assert!(
+            !roots_read.contains("findings") && !policy.inputs.contains_key("findings"),
+            "{id}: `policy` neither reads nor binds `findings`: {expr} / {:?}",
+            policy.inputs
+        );
+        assert!(
+            policy.on_false_to.is_some(),
+            "{id}: the loop-back stays (class C is the looping `policy` conjuncts)"
+        );
+    }
+
+    // ---- every row: version + 1 and one changelog row ---------------------------------------------
+    let log = changelog();
+    let mut rows = 0usize;
+    for (class, list) in [
+        ("A", CLASS_A.as_slice()),
+        ("B", std::slice::from_ref(&CLASS_B)),
+        ("C", CLASS_C.as_slice()),
+    ] {
+        for (id, old, new) in list {
+            assert_eq!(
+                version_of(id),
+                *new,
+                "{id}: D21-67 ruling 1 bumps version {old} → {new} (ADR-0072)"
+            );
+            let row = log
+                .lines()
+                .find(|l| l.starts_with(&format!("| {id}@{new} |")))
+                .unwrap_or_else(|| panic!("no changelog row names {id}@{new} (ADR-0072)"));
+            assert!(
+                row.contains(&format!("from v{old}")) && row.contains("D21-67 ruling 1"),
+                "{id}@{new}'s changelog row names neither the version it replaced nor D21-67 \
+                 ruling 1: {row}"
+            );
+            if class != "A" {
+                assert!(
+                    row.contains("declining the block under ADR-0080 decision 4"),
+                    "{id}@{new}'s changelog row does not record the activity declining the block \
+                     under ADR-0080 decision 4: {row}"
+                );
+            }
+            rows += 1;
+        }
+    }
+    assert_eq!(rows, 39, "the 39 rows, each versioned and changelogged");
+}
+
+// ---- D21-67 ruling 3: refusal 2 widens to "not `true` in some cell" (`s8d` §8d.3a (c)) ---------------
+
+const FINDINGS_IS_NULL: &str =
+    include_str!("../fixtures/activities/terminal_condition_is_findings_null.toml");
+const FINDINGS_IS_NULL_OR: &str =
+    include_str!("../fixtures/activities/terminal_condition_is_findings_null_or.toml");
+
+/// **D21-67 ruling 3** (*"Refusal 2 widens from "`false` in some cell" to **"not `true` in some
+/// cell"**, matching the runtime `check` arm (`== Tri::True`); errors stay indeterminate (D21-55
+/// unchanged there). Two must-refuse fixtures (`findings == null`; `findings == null or …`)"*).
+///
+/// Each fixture's cells were evaluated under the post-ADR-0172 evaluator before it was written, and
+/// the values are in its header. `findings == null` is `false` in all six cells, so it is refused
+/// under the pre-ruling arm too, and it cannot observe mutant D67-5 (§8d.3a (c)'s flag, measured). The
+/// `or` fixture is `true` under `Reproduced` and `null` under `MutationSurvived`: never `false`, never
+/// an error, so the pre-ruling arm counted it decided and loaded it. It is the one D67-5 flips. Errors
+/// stay indeterminate: the severity-only fixture, which errors in every cell, still loads.
+#[test]
+fn a_findings_conjunct_that_is_not_true_in_some_cell_is_refused() {
+    for (name, src) in [
+        ("terminal_condition_is_findings_null.toml", FINDINGS_IS_NULL),
+        (
+            "terminal_condition_is_findings_null_or.toml",
+            FINDINGS_IS_NULL_OR,
+        ),
+    ] {
+        let v = refused_once(name, src);
+        assert_eq!(
+            v.clause(),
+            "falsified_by_blocking_witness",
+            "{name}: refused by refusal 2, the witness, not by the named form: {v}"
+        );
+    }
+    // The `null`-cell fixture is refused under the `MutationSurvived` witness, where it is `null`.
+    let v = refused_once(
+        "terminal_condition_is_findings_null_or.toml",
+        FINDINGS_IS_NULL_OR,
+    );
+    let TerminalConditionViolation::FalsifiedByBlockingWitness { witness, .. } = &v else {
+        panic!("the witness refusal: {v:?}");
+    };
+    assert_eq!(
+        (witness.class, witness.value),
+        (BlockingClass::MutationSurvived, Tri::Null),
+        "the `or` fixture's refusing cell is its `null` one: {v}"
+    );
+    // Errors stay indeterminate (D21-55): a conjunct that errors in every cell still LOADS.
+    let severity = one("terminal_condition_is_severity_only.toml", SEVERITY_ONLY);
+    let report = quality_block_terminal_condition_rule(&severity)
+        .unwrap_or_else(|e| panic!("an erroring conjunct is indeterminate, never refused: {e:?}"));
+    assert_eq!(
+        (report.refused, report.indeterminate),
+        (0, 1),
+        "errors stay indeterminate under ruling 3: {report:?}"
+    );
 }

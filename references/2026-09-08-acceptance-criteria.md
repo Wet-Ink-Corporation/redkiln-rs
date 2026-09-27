@@ -1452,6 +1452,15 @@ booleans** [measured, F39 §4]. ADR-0067's `recent_deploy` already emits `null` 
 `R-recent-deploy-feed-absent` because the `toolchain:deploy_log` feed does not exist at this pin, so the pattern is
 generalised here, not invented. The `axis` field carries the facet name in the boolean case; it is **not** renamed here,
 and whether the payload key should change is a registry-schema question this criterion does not take.
+*(Reading note, dated 2026-09-26 at `s8d`'s build (package P7), under record R6 = ADR-0178, written `proposed`; D21-43
+N3: *"`null` routes to AC-079's `unknown_facet` gate at triage, and the operator supplies it."*)* **For a derived facet
+whose first reader is a tag**, the triage gate opens for it. `change` is read first by step 4's `tags_match`
+(`change:text` on `minimal-repro` and `root-cause`), which opens no gate, and the rows that read it through step 2 are
+read at `implement` or `verify`, after `analysis` has dropped both activities; so when its deriver abstains (an empty
+changeset) the gate this criterion routes to opens at the lane's first stage (`triage` in both shipped packs), as
+`gate_opened { reason: unknown_facet, axis: "change" }`, **counted once per facet**, and the operator's answer binds the
+facet as a one-element set, folded from `gate_answered`. In every other respect it is this criterion's gate. This is a
+reading, not an amendment: no clause of AC-079 moves, and the note stands or falls with R6's flip.
 
 **AC-070** — `redkiln lint` + `rk-select` · evidence: **F36** (`external_dependency` became a constant, **200/200
 false** — an LLM-emitted value that carried no information); **F39** (`auth` precision **0.00**, Wilson 95%
@@ -2275,7 +2284,7 @@ GIVEN an activity whose quality block's terminal condition is `findings.none(evi
 MutationSurvived])`, ~~or any predicate whose truth over an **empty** findings set is `true`~~ — or, on any `check`
 step, (1) the named form `findings.none(evidence in [...])` in any quoting and with any member list, alone or as a
 conjunct required for truth, matched on the parse tree; or (2) a predicate with a conjunct required for truth that
-reads `findings` and that a single-class blocking witness falsifies (one finding carrying only `evidence`, in `Reproduced` or `MutationSurvived`,
+reads `findings` and ~~that a single-class blocking witness falsifies~~ that is not `true` under a single-class blocking witness in some cell *(amended 2026-09-26, `s8d`; D21-67 ruling 3; errors still indeterminate)* (one finding carrying only `evidence`, in `Reproduced` or `MutationSurvived`,
 each conjunct evaluated alone over `findings` and `rigor` and nothing else bound)
 WHEN lint runs
 THEN lint fails naming the activity and the predicate — ~~a quality block terminates on a positive evidence record (a
@@ -2322,6 +2331,23 @@ and one false only at the reserved `discouraged` level loads); and a findings-fr
 `quality_block::d2_severity_only_predicates_load`: the decided arm, and a conjunct valued in some cells and erroring
 in another, which is indeterminate. **The `rk-catalog` CLI surface stays ARMED**: a kernel test over
 `.redkiln/catalog` is not `rk-catalog lint`.)*
+*(amended 2026-09-26, `s8d` build (package P2), under ADR-0092 decision 2 item 2 — a dated in-place amendment, not an
+erratum — executing D21-67 ruling 3: *"Refusal 2 widens from "`false` in some cell" to **"not `true` in some cell"**,
+matching the runtime `check` arm (`== Tri::True`); errors stay indeterminate (D21-55 unchanged there). Two
+must-refuse fixtures (`findings == null`; `findings == null or …`) and one mutant restoring `== Tri::False`; a dated
+AC-527 amendment under ADR-0092 d2 item 2."* GIVEN (2)'s *"that a single-class blocking witness falsifies"* is struck
+and reads *"that is not `true` under a single-class blocking witness in some cell"*: a `null` cell refuses as a
+`false` one does, and an error is still not a value and stays indeterminate (D21-55), so *"a `false` cell outranks an
+erroring cell"* above reads *"a not-`true` cell"*. Two fixtures join, both FAIL by refusal (2):
+`terminal_condition_is_findings_null` (`findings == null`, `false` in every cell under ADR-0172, written `proposed`, so
+the pre-amendment rule refused it too) and `terminal_condition_is_findings_null_or` (`findings == null or
+findings.any(evidence in ['Reproduced', null])`, `true` under `Reproduced` and `null` under `MutationSurvived`, which
+the pre-amendment rule loaded as decided). The test is `rk-kernel`'s
+`quality_block::a_findings_conjunct_that_is_not_true_in_some_cell_is_refused`; mutant D67-5, the refusal restored to
+`== Tri::False`, is killed by its `null`-cell fixture. The THEN, the instrument's other fixtures and every other
+clause are unchanged. Over `.redkiln/catalog` the reading moved for D21-67 ruling 1's catalog edit, not for this
+amendment: `ac527_empty_set_terminal_condition` prints `checks=92 refused=0 indeterminate=0`, because
+`migration-dry-run`'s `policy` check step is deleted and no shipped `expr` reads `findings` any more.)*
 
 ### 4.6 What the selection block does and does not license
 

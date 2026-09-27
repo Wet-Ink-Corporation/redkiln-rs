@@ -1068,3 +1068,158 @@ fn fixture_activity() -> Activity {
 const fn now(secs: i64) -> JournaledNow {
     JournaledNow::from_journal(Timestamp::from_unix_seconds(secs))
 }
+
+// ---- R4: THE EXECUTOR'S CALL SITE (`s8d` §8d.5; ADR-0176, proposed) -----------------------------
+
+/// **AC-033 at the executor, over rows the KERNEL wrote** — R4's call site for
+/// [`BreakerState::from_events`], which had no `src/` caller before it.
+///
+/// The harness is `CountingHarness`, which appends nothing, so every `step_failed` the fold reads
+/// is the kernel's own (D21-42 20). The pack is `role-families.toml`: `K = 2`, expiry `900`,
+/// `reviewer` → `adversarial`, `implementer` → `deliberative`.
+///
+/// 1. Two walks of a `reviewer` step each fail once on `Platform` — `K` consecutive failures of
+///    `adversarial`, journalled by the kernel with `family` and `at`.
+/// 2. The third walk, on ANOTHER item, is **refused before the port**: the harness count does not
+///    move, the report carries the breaker's refusal naming the family, and no error row is
+///    written (a refusal is not a dispatch).
+/// 3. **AC-034 at the executor**: an `implementer` step (`deliberative`) proceeds and dispatches.
+/// 4. **AC-035's expiry at the executor**: at `opened_at + 900` the `reviewer` step dispatches
+///    again.
+/// 5. **From the store, never from memory**: a SECOND `Runtime` over the same store refuses too.
+#[test]
+fn the_executor_refuses_a_dispatch_whose_family_the_kernels_rows_opened() {
+    use crate::step_error_row::{error_rows, role_families_pack, walk_one};
+    use rk_kernel::runtime::{BreakerBinding, Runtime};
+    use rk_ports::harness::Harness;
+    use rk_types::error::StepError;
+    use std::sync::Arc;
+
+    let pack = role_families_pack();
+    let k = pack
+        .require_breaker_threshold()
+        .expect("the fixture declares K");
+    assert_eq!(k.get(), 2, "PREMISE: the fixture's K is 2");
+    let (q, a) = crate::runtime::counters();
+    let db = crate::runtime::store(&q, &a);
+    let platform = || {
+        Err(StepError::Platform {
+            status: 529,
+            retry_after: None,
+        })
+    };
+    let harness = Arc::new(crate::runtime::CountingHarness::scripted(vec![
+        platform(),
+        platform(),
+        crate::runtime::ok_typed(serde_json::json!({ "draft": 1 })),
+        crate::runtime::ok_typed(serde_json::json!({ "review": 1 })),
+    ]));
+    let runtime = |run: &str| {
+        Runtime::new(
+            crate::runtime::ports(Arc::clone(&harness) as Arc<dyn Harness>, &db),
+            run,
+            crate::runtime::STAGE,
+        )
+        .with_breaker(BreakerBinding::of(&pack))
+    };
+    let rt = runtime("run-breaker");
+    let aid = crate::runtime::AID;
+
+    // ---- 1. K consecutive Platform failures, written by the kernel -----------------------------
+    let _ = walk_one(&rt, ("INC-1", aid), ("review", "reviewer"), 1, now(100));
+    let _ = walk_one(&rt, ("INC-1", aid), ("review", "reviewer"), 1, now(100));
+    assert_eq!(
+        harness.dispatches(),
+        2,
+        "PREMISE: both failures reached the port"
+    );
+    let rows = crate::runtime::journal(&db);
+    assert_eq!(
+        error_rows(&rows).len(),
+        2,
+        "PREMISE: the kernel wrote two rows"
+    );
+    let adversarial = FamilyKey::supplied("adversarial");
+    let folded = BreakerState::from_events(&rows, k).expect("the kernel's rows fold");
+    assert!(
+        folded.mark(&adversarial).is_some(),
+        "PREMISE: the kernel's rows open the family's mark"
+    );
+
+    // ---- 2. THE REFUSAL, before the port -------------------------------------------------------
+    let refused = walk_one(&rt, ("INC-3", aid), ("review", "reviewer"), 1, now(110));
+    assert_eq!(
+        harness.dispatches(),
+        2,
+        "AC-033: the next dispatch for the open family must be refused BEFORE the port; the \
+         harness was reached again"
+    );
+    assert_eq!(
+        refused.breaker_refusal(),
+        Some(&BreakerDecision::Refused {
+            family: adversarial,
+            consecutive: 2,
+        }),
+        "the report carries the breaker's refusal"
+    );
+    let why = format!("{:?}", refused.outcome());
+    assert!(
+        why.contains("adversarial") && why.contains("AC-033"),
+        "the refusal names the family and the criterion: {why}"
+    );
+    assert!(!refused.committed(), "a refused dispatch commits nothing");
+    assert_eq!(
+        error_rows(&crate::runtime::journal(&db)).len(),
+        2,
+        "a refusal is not a failed dispatch: no error row is written for it"
+    );
+
+    // ---- 5. FROM THE STORE: a fresh runtime, same store, same refusal ---------------------------
+    let fresh = runtime("run-breaker-fresh");
+    let again = walk_one(&fresh, ("INC-4", aid), ("review", "reviewer"), 1, now(120));
+    assert!(
+        again.breaker_refusal().is_some(),
+        "AC-035: the refusal is read from the store"
+    );
+    assert_eq!(harness.dispatches(), 2, "and the port is still not reached");
+
+    // ---- 3. AC-034: ANOTHER FAMILY PROCEEDS ----------------------------------------------------
+    let other = walk_one(&rt, ("INC-5", aid), ("draft", "implementer"), 1, now(130));
+    assert!(
+        other.breaker_refusal().is_none(),
+        "AC-034: `deliberative` is not refused"
+    );
+    assert_eq!(
+        harness.dispatches(),
+        3,
+        "AC-034: the other family's dispatch reached the port"
+    );
+
+    // ---- 4. THE EXPIRY: at opened_at + 900 the family dispatches again -------------------------
+    let expiry = pack
+        .require_breaker_expiry()
+        .expect("the fixture declares an expiry");
+    let inside = walk_one(
+        &rt,
+        ("INC-6", aid),
+        ("review", "reviewer"),
+        1,
+        now(100 + i64::try_from(expiry.get()).expect("fits") - 1),
+    );
+    assert!(
+        inside.breaker_refusal().is_some(),
+        "one second inside the expiry it still refuses"
+    );
+    let expired = walk_one(
+        &rt,
+        ("INC-6", aid),
+        ("review", "reviewer"),
+        1,
+        now(100 + i64::try_from(expiry.get()).expect("fits")),
+    );
+    assert!(
+        expired.breaker_refusal().is_none(),
+        "at the expiry the mark is found expired"
+    );
+    assert_eq!(harness.dispatches(), 4, "and the dispatch reaches the port");
+}

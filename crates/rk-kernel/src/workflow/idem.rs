@@ -199,3 +199,146 @@ impl PlannedDispatch {
         self.degraded.as_ref()
     }
 }
+
+// ---- R1: the STEP-GRAIN commit key (s8d §8d.2; D21-42 3b; D21-43 N15) ----------------------------
+//
+// *(Added 2026-09-26, `s8d` build, package P3; record R1, proposed.)* **A separate commit key, and
+// `IdempotencyKey` above keeps its three parts.** D21-43 N15: *"A separate commit key. ADR-0097's
+// memo key is untouched."* D21-42 3b: *"`(item, activity@version, step_id, iteration path)`. The
+// iteration path is the stack of for_each index, repeat count and loop-back count."* The attempt
+// number is not part of it: a committed step is not re-dispatched under a higher attempt, exactly
+// as a committed activation was not.
+
+/// One frame of an iteration path — design's three loop forms, and no fourth (D21-42 3b).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Frame {
+    /// A `for_each` element's index.
+    ForEach(u32),
+    /// A `repeat` pass's count.
+    Repeat(u32),
+    /// An `on_false = { to, max }` loop-back's count.
+    LoopBack(u32),
+}
+
+impl Frame {
+    /// The frame's journal token, `"<form>:<n>"`.
+    #[must_use]
+    pub fn token(self) -> String {
+        match self {
+            Self::ForEach(n) => format!("for_each:{n}"),
+            Self::Repeat(n) => format!("repeat:{n}"),
+            Self::LoopBack(n) => format!("loop_back:{n}"),
+        }
+    }
+
+    /// Read one token back. Anything but the three forms and a `u32` is `None`, which the fold
+    /// refuses naming the row — never a frame guessed from a malformed one.
+    #[must_use]
+    pub fn from_token(token: &str) -> Option<Self> {
+        let (form, n) = token.split_once(':')?;
+        let n: u32 = n.parse().ok()?;
+        match form {
+            "for_each" => Some(Self::ForEach(n)),
+            "repeat" => Some(Self::Repeat(n)),
+            "loop_back" => Some(Self::LoopBack(n)),
+            _ => None,
+        }
+    }
+
+    /// The frame's counter.
+    #[must_use]
+    pub const fn counter(self) -> u32 {
+        match self {
+            Self::ForEach(n) | Self::Repeat(n) | Self::LoopBack(n) => n,
+        }
+    }
+}
+
+/// **The iteration path** — a stack of frames, outermost first, and EMPTY outside any loop.
+///
+/// Two iterations of one step never share a path, so they never share a [`CommitKey`] (AC-017's
+/// *"the loop iteration counter is part of the step key"*, carried to the commit).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct IterationPath(Vec<Frame>);
+
+impl IterationPath {
+    /// The empty path: a step outside any loop.
+    #[must_use]
+    pub const fn root() -> Self {
+        Self(Vec::new())
+    }
+
+    /// This path with one more (innermost) frame.
+    #[must_use]
+    pub fn pushed(&self, frame: Frame) -> Self {
+        let mut frames = self.0.clone();
+        frames.push(frame);
+        Self(frames)
+    }
+
+    /// The frames, outermost first.
+    #[must_use]
+    pub fn frames(&self) -> &[Frame] {
+        &self.0
+    }
+
+    /// **ADR-0097 decision 2's component 7**, *"the loop iteration counter (0 outside a loop)"*, fed
+    /// as that record writes it: the INNERMOST frame's counter, and `0` on the empty path.
+    ///
+    /// **Residual, named (§8d.1 S5):** two nested paths sharing an innermost counter share this
+    /// component, so the memo key alone cannot tell them apart. The commit key can.
+    #[must_use]
+    pub fn loop_iteration(&self) -> u32 {
+        self.0.last().map_or(0, |f| f.counter())
+    }
+
+    /// The journal form: an array of frame tokens, outermost first; `[]` on the empty path.
+    #[must_use]
+    pub fn to_json(&self) -> serde_json::Value {
+        serde_json::Value::Array(
+            self.0
+                .iter()
+                .map(|f| serde_json::Value::String(f.token()))
+                .collect(),
+        )
+    }
+
+    /// Read the journal form back, or `None` for anything that is not an array of frame tokens.
+    #[must_use]
+    pub fn from_json(value: &serde_json::Value) -> Option<Self> {
+        value
+            .as_array()?
+            .iter()
+            .map(|v| v.as_str().and_then(Frame::from_token))
+            .collect::<Option<Vec<Frame>>>()
+            .map(Self)
+    }
+}
+
+impl fmt::Display for IterationPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.0.is_empty() {
+            return f.write_str("root");
+        }
+        let tokens: Vec<String> = self.0.iter().map(|fr| fr.token()).collect();
+        f.write_str(&tokens.join("/"))
+    }
+}
+
+/// **R1's commit key: `(item, activity@version, step_id, iteration path)`** (D21-42 3b).
+///
+/// Separate from [`IdempotencyKey`] (D21-43 N15), which keeps its three parts and never a fourth
+/// (ADR-0097's forbids). Each `agent` step activation — and each `side_effecting` `tool` step
+/// activation — commits under its own, as one `activity_committed` row carrying `step_id` and
+/// `iteration_path`; `crate::workflow::fsm::RunState::is_step_committed` folds it back.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CommitKey {
+    /// The item.
+    pub item: String,
+    /// `activity_id@version`.
+    pub activity_id_at_version: String,
+    /// The `[[step]]` id — never the DAG node id.
+    pub step_id: String,
+    /// Where in the activation's loops this step activation sits.
+    pub iteration_path: IterationPath,
+}

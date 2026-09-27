@@ -14,5 +14,5 @@
 # `route`, so the one missing column is still `live` and the refusal is still about `deploy`.
 
 [verb]
-deploy = { outputs = "DeployReport", timeout = "deploy_timeout", inputs = [], route = "toolchain" }
-test   = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port" }
+deploy = { outputs = "DeployReport", timeout = "deploy_timeout", inputs = [], route = "toolchain", side_effecting = false }
+test   = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port", side_effecting = false }

@@ -1,0 +1,7 @@
+{
+  "description": "pack-min's step-grain reviewer card: review the draft and emit structured findings.",
+  "prompt": "Review the draft for the item and emit Findings, as StructuredOutput. Do nothing else.",
+  "tools": ["StructuredOutput"],
+  "cache_profile": "static",
+  "permission_mode": "acceptEdits"
+}

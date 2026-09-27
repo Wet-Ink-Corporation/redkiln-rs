@@ -175,15 +175,31 @@ fn harness_fake_produces_unsupported() {
 
     // A missing capability is a REFUSAL, not a failure: one event arm, and it carries the token
     // (AC-360; `rk-types`' own `event()`). A refusal is a configuration state, never a judgement.
+    //
+    // *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176 decision 2, proposed.)* The arm is
+    // `rk-types`' map, read here directly; the ROW is the kernel's (`rk_kernel::runtime::activity::
+    // error_row`, pinned by `rk-kernel`'s `step_error_row::`). This test asserted that the fake
+    // appended the `step_refused` row itself; after R4 the fake appends NOTHING, and a fake that did
+    // would put a second row beside the kernel's (mutant M11).
+    let error = StepError::Unsupported {
+        capability: capability.to_owned(),
+    };
+    match error.event() {
+        rk_types::event::ErrorEvent::StepRefused {
+            capability: Some(token),
+            ..
+        } => assert_eq!(
+            token, capability,
+            "the refusal arm carries the capability token too"
+        ),
+        other => panic!("Unsupported maps to step_refused carrying the token, got {other:?}"),
+    }
     let events = store
         .query(rk_ports::event_store::Query::ByRun("r".to_owned()))
         .expect("query");
-    assert_eq!(events.len(), 1, "exactly one event arm per terminated step");
-    assert_eq!(events[0].kind, EventKind::StepRefused);
-    assert_eq!(
-        events[0].payload.get("capability").and_then(|v| v.as_str()),
-        Some(capability),
-        "the refusal event carries the capability token too"
+    assert!(
+        events.is_empty(),
+        "the fake appends no error row of its own (R4): {events:?}"
     );
 }
 
@@ -243,13 +259,22 @@ fn cancel_token_is_the_roots_and_yields_cancelled() {
     }
 
     // Exactly ONE event arm, and it is `step_cancelled` (AC-360; `rk-types`' own total `event()`).
+    //
+    // *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176 decision 2, proposed.)* The ROW is the
+    // kernel's now, so the fake's store stays EMPTY on the cancel path too; the arm is read off
+    // `rk-types`' own map.
     let events = store.query(Query::ByRun("r".to_owned())).expect("query");
-    assert_eq!(
-        events.len(),
-        1,
-        "a cancelled dispatch appends exactly one event arm: {events:?}"
+    assert!(
+        events.is_empty(),
+        "the fake appends no error row of its own, on the cancel path either (R4): {events:?}"
     );
-    assert_eq!(events[0].kind, EventKind::StepCancelled);
+    assert_eq!(
+        StepError::Cancelled {
+            by: CancelledBy::Operator
+        }
+        .event(),
+        rk_types::event::ErrorEvent::StepCancelled
+    );
 }
 
 /// F41's `step_error_is_matched_exhaustively_with_one_event_arm_each` (spike `lib.rs`:299),
@@ -289,6 +314,11 @@ fn step_error_is_matched_exhaustively_with_one_event_arm_each() {
         (StepError::Overage { reason: None }, EventKind::StepRefused),
     ];
 
+    // *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176 decision 2, proposed.)* The arm is read
+    // off `rk-types`' own map, and the fake's store stays EMPTY: the one row per failed dispatch is
+    // the KERNEL's (`rk-kernel`'s `step_error_row::` pins it through the dispatch path, AC-360's
+    // "kernel test"). This test read the arm off a row the fake appended until R4 removed the
+    // fake's `event_for` bridge.
     for (error, expected) in families {
         let harness = FakeHarness::scripted(vec![Err(error.clone())]);
         let mut store = VecStore::default();
@@ -301,13 +331,18 @@ fn step_error_is_matched_exhaustively_with_one_event_arm_each() {
             "the scripted responder returns the error it was scripted with"
         );
         let events = store.query(Query::ByRun("r".to_owned())).expect("query");
-        assert_eq!(
-            events.len(),
-            1,
-            "exactly ONE event arm per terminated dispatch (AC-360), for {error:?}: {events:?}"
+        assert!(
+            events.is_empty(),
+            "the fake appends no error row of its own (R4), for {error:?}: {events:?}"
         );
+        let arm = match error.event() {
+            rk_types::event::ErrorEvent::StepFailed { .. } => EventKind::StepFailed,
+            rk_types::event::ErrorEvent::StepCancelled => EventKind::StepCancelled,
+            rk_types::event::ErrorEvent::RateLimited => EventKind::RateLimited,
+            rk_types::event::ErrorEvent::StepRefused { .. } => EventKind::StepRefused,
+        };
         assert_eq!(
-            events[0].kind, expected,
+            arm, expected,
             "{error:?} maps to {expected:?}, never to another family's arm"
         );
     }

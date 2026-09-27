@@ -196,6 +196,13 @@ pub enum LoadError {
     /// **AC-053's load half.** A `requires` naming a kind that is neither in `artifacts.toml` nor
     /// provided by any activity.
     DanglingRequires { activity_id: String, kind: String },
+    /// **The forward-ref licence** (D21-48 X8; R2 = ADR-0173, written `proposed`; `s8d` §8d.3). A
+    /// step reads a later-declared step under none of the three licences, or without `?`. Every
+    /// refused ref is carried, each naming its activity, step and reference
+    /// ([`crate::catalog::forward_ref_lint`]).
+    UnlicensedForwardRef {
+        refs: Vec<crate::catalog::ForwardRef>,
+    },
 }
 
 impl fmt::Display for LoadError {
@@ -227,6 +234,19 @@ impl fmt::Display for LoadError {
                 f,
                 "AsymmetricExcludes {{ a: {a:?}, b: {b:?} }} — `{a}` declares `excludes = [{b}]`                  and `{b}` does not declare `excludes = [{a}]`. `excludes` are SYMMETRIC (catalog                  §2.6); a one-way exclusion means the pair's behaviour depends on which of the two                  the assembler reaches first (AC-060)"
             ),
+            Self::UnlicensedForwardRef { refs } => {
+                write!(
+                    f,
+                    "{} forward ref(s) to a later-declared step are licensed by none of ADR-0042's \
+                     letter, the repeat body (D21-48 X6) and the escalate re-entry (D21-48 X8), or \
+                     carry no `?`; each is a lint error, fixed in the catalog (D21-48 X8):",
+                    refs.len()
+                )?;
+                for r in refs {
+                    write!(f, "\n  {r}")?;
+                }
+                Ok(())
+            }
             Self::DanglingRequires { activity_id, kind } => write!(
                 f,
                 "{activity_id}: `requires` names `{kind}`, which no activity provides and                  `artifacts.toml` does not declare. ADR-0057 makes that registry the kind                  vocabulary, so the edge binds to nothing and this is a load failure (AC-053)"

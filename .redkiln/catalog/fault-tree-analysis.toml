@@ -2,7 +2,7 @@
 # causal family: five-whys(10) < fishbone-analysis(20) < fault-tree-analysis(30)
 [activity]
 id           = "fault-tree-analysis"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["CausalChain", "FaultTree"]
 requires     = ["ArchitectureDescription?", "RootCause?", "IncidentTimeline?"]
@@ -40,8 +40,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { tree = "${build.outputs}", findings = "${adversary.outputs}" }
-expr    = "tree.minimal_cut_sets.len() > 0 and findings.none(severity in ['blocking'])"
+inputs  = { tree = "${build.outputs}" }
+expr    = "tree.minimal_cut_sets.len() > 0"
 on_false = { to = "build", max = 2 }
 
 [[step]]

@@ -42,10 +42,10 @@ use crate::runtime::{
 
 /// ADR-0135's four verbs as the registry's `port` rows, in the spike's own `outputs` spelling.
 pub const PORT_ROWS: &str = r#"[verb]
-build          = { outputs = "BuildReport", live = false, timeout = "build_timeout", inputs = [], route = "port" }
-test           = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port" }
-lint           = { outputs = "LintReport", live = false, timeout = "scan_timeout", inputs = [], route = "port" }
-change_summary = { outputs = "ChangeSummary", live = false, timeout = "build_timeout", inputs = ["range"], route = "port" }
+build          = { outputs = "BuildReport", live = false, timeout = "build_timeout", inputs = [], route = "port", side_effecting = false }
+test           = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port", side_effecting = false }
+lint           = { outputs = "LintReport", live = false, timeout = "scan_timeout", inputs = [], route = "port", side_effecting = false }
+change_summary = { outputs = "ChangeSummary", live = false, timeout = "build_timeout", inputs = ["range"], route = "port", side_effecting = false }
 "#;
 
 /// A test-only registry: [`PORT_ROWS`] plus `extra` rows, and `tables` after them.
@@ -69,6 +69,13 @@ pub fn tool_step(id: &str, verb: &str) -> Step {
         memo_declared: None,
         question: None,
         timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     }
 }
 
@@ -126,8 +133,16 @@ pub fn smoke_value(passed: bool) -> serde_json::Value {
 }
 
 /// A `toolchain` row with no inputs, the positive control's verb.
-const SMOKE_ROW: &str = r#"smoke = { outputs = "SmokeResult", live = true, timeout = "deploy_timeout", inputs = [], route = "toolchain" }"#;
+const SMOKE_ROW: &str = r#"smoke = { outputs = "SmokeResult", live = true, timeout = "deploy_timeout", inputs = [], route = "toolchain", side_effecting = false }"#;
 /// **ADR-0148: `toolchain:test` refuses by name and never reaches the port.**
+///
+/// *(Narrowed 2026-09-26, `s8d` build, package P4; R2 = ADR-0173 decision 9, proposed; `s8d`
+/// §8d.11.)* ADR-0148's refusal is REVERSED by the resolver (its decision 4: *"reversed by a
+/// resolver, not by a revert"*): a `toolchain:test` step whose selection resolves reaches the port
+/// (`test_selection::`). What stays TRUE of this name is ADR-0148's forbids — a selection the
+/// resolver refuses by name never reaches the port as an empty one — so the fixture is narrowed to
+/// that case: `inputs.selection = "${nope.outputs}"`, a reference to a step the activation does not
+/// declare. The name is kept, and Checkpoint 8c's dated amendment names it.
 #[test]
 fn a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port() {
     let ctx = Context::new();
@@ -165,7 +180,18 @@ fn a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port() {
     // ---- THE ASSERTION. ------------------------------------------------------------------------
     let (rt, tc) = rt_with_counter("run-verb-test");
     let verdict = rt
-        .execute_step(&tool_step("run-tests", "test"), &ctx)
+        .execute_step(
+            &{
+                // (narrowed 2026-09-26, s8d build, P4) a selection the resolver refuses by name.
+                let mut s = tool_step("run-tests", "test");
+                s.inputs.insert(
+                    "selection".to_owned(),
+                    rk_kernel::catalog::InputValue::Text("${nope.outputs}".to_owned()),
+                );
+                s
+            },
+            &ctx,
+        )
         .expect("a step's own failure is a VALUE, not an error of the walk (AC-032)");
 
     // (i) THE COUNTER. This is the half that sees the defect: the old code CALLED
@@ -183,6 +209,10 @@ fn a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port() {
     match verdict {
         StepVerdict::Failed(e) => {
             let rendered = format!("{e:?}");
+            assert!(
+                rendered.contains("${nope.outputs}"),
+                "the refusal does not name the reference the resolver could not resolve: {rendered}"
+            );
             assert!(
                 rendered.contains("inputs.selection"),
                 "the refusal does not name the unparsed selection, so it does not tell an \
@@ -202,10 +232,11 @@ fn a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port() {
                  make the map's own boundary unreadable from the journal"
             );
         }
+        // (dated 2026-09-26, s8d build, P4) The resolver landed, and this test was NARROWED rather
+        // than replaced: its selection is one the resolver refuses by name.
         other => panic!(
-            "`toolchain:test` did not refuse ({other:?}). Either a selection resolver landed — in \
-             which case ADR-0148 is discharged and this test should be REPLACED rather than \
-             deleted — or the arm went back to running the empty selection."
+            "`toolchain:test` with an unresolvable selection did not refuse ({other:?}): the arm \
+             ran an empty or unresolved selection, which ADR-0148's forbids refuse."
         ),
     }
 }
@@ -406,7 +437,7 @@ fn every_decode_table_kind_refuses_an_undecodable_value_naming_it() {
     let run = |kind: &str, value: serde_json::Value| {
         let row = format!(
             "probe = {{ outputs = \"{kind}\", live = false, timeout = \"build_timeout\", \
-             inputs = [], route = \"toolchain\" }}"
+             inputs = [], route = \"toolchain\", side_effecting = false }}"
         );
         let (rt, tc) = rt_routed(
             "decode-table",
@@ -473,14 +504,21 @@ fn every_decode_table_kind_refuses_an_undecodable_value_naming_it() {
     );
 }
 
-/// **A `toolchain` row whose inputs need the resolver refuses BEFORE the port**, naming the verb
-/// and its FIRST unresolved input (§8c.4; the resolver is `s8d`'s).
+/// **A `toolchain` row whose input the resolver refuses is refused BEFORE the port**, by name.
+///
+/// *(Renamed 2026-09-26, `s8d` build, package P4; R2 = ADR-0173, proposed; `s8d` §8d.11. This was
+/// `a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port`, whose premise — *"the
+/// input resolver is `s8d`'s, so the step cannot supply it"* — the resolver made false: a row's
+/// declared inputs are now supplied from the step's RESOLVED `inputs`. What stays true, and what
+/// this name now says, is that an input which does not resolve — a reference the resolver refuses,
+/// or a row input the step does not declare — refuses by name and the port is not called.
+/// Checkpoint 8c's dated amendment names the new test.)*
 #[test]
-fn a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port() {
+fn a_registry_verb_whose_input_the_resolver_refuses_is_refused_before_the_port() {
     let ctx = Context::new();
     let rows = format!(
         "{SMOKE_ROW}\nsca_scan = {{ outputs = \"ScanReport\", live = false, timeout = \
-         \"scan_timeout\", inputs = [\"audit_db\", \"deny_db\"], route = \"toolchain\" }}"
+         \"scan_timeout\", inputs = [\"audit_db\", \"deny_db\"], route = \"toolchain\", side_effecting = false }}"
     );
     let routing = || ToolRouting::new(registry(&rows, ""), ToolchainValues::default());
     let out = || {
@@ -500,15 +538,25 @@ fn a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port() {
         "CONTROL: the no-input row did not reach the port"
     );
 
+    let scan = |inputs: &[(&str, &str)]| {
+        let mut s = tool_step("scan", "sca_scan");
+        for (k, v) in inputs {
+            s.inputs.insert(
+                (*k).to_owned(),
+                rk_kernel::catalog::InputValue::Text((*v).to_owned()),
+            );
+        }
+        s
+    };
+
+    // (i) A row input the step does NOT declare: refused naming the verb and that input, and the
+    // FIRST such input, never a later one.
     let (rt, tc) = rt_routed("inputs", out(), routing());
-    let e = failed(
-        rt.execute_step(&tool_step("scan", "sca_scan"), &ctx)
-            .expect("a value"),
-    );
+    let e = failed(rt.execute_step(&scan(&[]), &ctx).expect("a value"));
     let rendered = format!("{e:?}");
     assert!(
         rendered.contains("toolchain:sca_scan") && rendered.contains("`audit_db`"),
-        "the refusal must name the verb and its FIRST unresolved input: {rendered}"
+        "the refusal must name the verb and its FIRST undeclared input: {rendered}"
     );
     assert!(
         !rendered.contains("deny_db"),
@@ -522,8 +570,49 @@ fn a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port() {
     assert_eq!(
         tc.calls(),
         0,
-        "a row whose inputs need the resolver reached the port"
+        "a row whose input the step does not declare reached the port"
     );
+
+    // (ii) A declared input the RESOLVER refuses: by name — the step and the reference.
+    let (rt, tc) = rt_routed("inputs-unresolved", out(), routing());
+    let e = failed(
+        rt.execute_step(
+            &scan(&[("audit_db", "${nope.outputs}"), ("deny_db", "d")]),
+            &ctx,
+        )
+        .expect("a value"),
+    );
+    let rendered = format!("{e:?}");
+    assert!(
+        rendered.contains("`scan`") && rendered.contains("${nope.outputs}"),
+        "the refusal must name the step and the unresolvable reference: {rendered}"
+    );
+    assert_eq!(
+        tc.calls(),
+        0,
+        "an input the resolver refused reached the port"
+    );
+
+    // (iii) CONTROL: both inputs declared and resolvable, and the port IS reached — so the two
+    // zeros above are the refusals', not a row that can never be called.
+    let (rt, tc) = rt_routed(
+        "inputs-resolved",
+        CountingToolchain::with_verb_output(VerbOutput {
+            kind: "ScanReport".to_owned(),
+            value: serde_json::json!({ "critical": 0, "high": 0, "medium": 0, "low": 0,
+                                       "unrated": 0, "advisories": [], "tools": [] }),
+        }),
+        routing(),
+    );
+    let v = rt
+        .execute_step(&scan(&[("audit_db", "a.db"), ("deny_db", "d.toml")]), &ctx)
+        .expect("a value");
+    assert_eq!(
+        v,
+        StepVerdict::Continue,
+        "CONTROL: resolved inputs reach the port: {v:?}"
+    );
+    assert_eq!(tc.calls(), 1, "CONTROL: the port was reached once");
 }
 
 /// **A `store` / `git` row refuses naming the route and the stage that builds it** (§8c.4).
@@ -531,8 +620,8 @@ fn a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port() {
 fn a_row_whose_route_has_no_executor_refuses_naming_the_route() {
     let ctx = Context::new();
     let rows = "item_create = { outputs = \"ItemRefs\", live = false, timeout = \"build_timeout\", \
-                inputs = [], route = \"store\" }\nrelease_tag = { outputs = \"ReleaseTag\", live = \
-                false, timeout = \"build_timeout\", inputs = [], route = \"git\" }";
+                inputs = [], route = \"store\", side_effecting = false }\nrelease_tag = { outputs = \"ReleaseTag\", live = \
+                false, timeout = \"build_timeout\", inputs = [], route = \"git\", side_effecting = false }";
     for (verb, route, stage) in [
         ("item_create", "store", "s8f"),
         ("release_tag", "git", "s8g"),
@@ -656,7 +745,7 @@ fn a_verb_with_no_row_refuses_by_its_bare_name_before_its_bound_is_resolved() {
 }
 
 /// A `toolchain` row whose output kind is `BuildReport`, the verb path's twin of the `build` port row.
-const BUILD_VERB_ROW: &str = r#"rebuild = { outputs = "BuildReport", live = false, timeout = "build_timeout", inputs = [], route = "toolchain" }"#;
+const BUILD_VERB_ROW: &str = r#"rebuild = { outputs = "BuildReport", live = false, timeout = "build_timeout", inputs = [], route = "toolchain", side_effecting = false }"#;
 
 /// The report [`CountingToolchain`] answers for `build`, passing or failing.
 fn build_report(failing: bool) -> rk_types::verb_output::BuildReport {

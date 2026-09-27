@@ -1554,7 +1554,13 @@ np=$(printf '%s\n' $PAIRS | grep -c .)
 for pair in $PAIRS; do
   id=${pair%%:*}; v=${pair##*:}; f=".redkiln/catalog/$id.toml"
   test -f "$f" || { echo "FAIL: $f is absent (Halt 8)"; exit 1; }
-  grep -qE "^version[[:space:]]*=[[:space:]]*${v}([[:space:]]|$)" "$f" || { echo "FAIL: $id is not at version $v — a coherence edit bumps version (ADR-0072)"; exit 1; }
+  # (dated 2026-09-26, s8d build, package P2; D21-47's time-bound rule; s8d §8d.3 and §8d.3a (b)) The version is
+  # read as AT LEAST the pair's value, and the changelog row <id>@<value> is still required. s8d's catalog commit bumps
+  # vertical-slicing 2->3 (D21-48 X8) and migration-dry-run 3->4 (D21-67 ruling 1, class B), which moved this exact
+  # grep's premise; s8d's own rows are asserted by Checkpoint 8d (6c) and its quality_block/forward_ref_lint tests.
+  # The exact form it replaces: grep -qE "^version[[:space:]]*=[[:space:]]*${v}([[:space:]]|$)" "$f".
+  got=$(sed -nE 's/^version[[:space:]]*=[[:space:]]*([0-9]+)([[:space:]].*)?$/\1/p' "$f")
+  [ "$(printf '%s\n' "$got" | grep -c .)" -eq 1 ] && [ "$got" -ge "$v" ] || { echo "FAIL: $id is not at version $v or later (read '$got') — a coherence edit bumps version (ADR-0072)"; exit 1; }
   grep -qF "$id@$v" .redkiln/CHANGELOG.md || { echo "FAIL: no changelog row names $id@$v (ADR-0072)"; exit 1; }
 done
 
@@ -1730,7 +1736,11 @@ printf '%s\n' "$out" | grep -oE 'ac527: .*' | grep -qE '^ac527: catalog=\.redkil
 # (dated 2026-09-25, refuting round 5) AC-303's reading too, so that every re-pointed instrument's printed path is read.
 out=$(nodispatch cargo test -p rk-kernel --test it -- review::ac303_confirm_step_survives_escalation --exact --nocapture 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: AC-303's confirm rule failed over the shipped catalog (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
-printf '%s\n' "$out" | grep -oE 'ac303: .*' | grep -qE '^ac303: catalog=\.redkiln/catalog families=[1-9][0-9]* contexts=[1-9][0-9]* comparisons=[1-9][0-9]* violations=0 forward=16 back_edge=4$' || { echo "FAIL: AC-303 did not report .redkiln/catalog, a non-zero walk, zero violations and forward=16 back_edge=4"; printf '%s\n' "$out" | grep -oE 'ac303: .*'; exit 1; }
+printf '%s\n' "$out" | grep -oE 'ac303: .*' | grep -qE '^ac303: catalog=\.redkiln/catalog families=[1-9][0-9]* contexts=[1-9][0-9]* comparisons=[1-9][0-9]* violations=0 forward=4 back_edge=16$' || { echo "FAIL: AC-303 did not report .redkiln/catalog, a non-zero walk, zero violations and forward=4 back_edge=16"; printf '%s\n' "$out" | grep -oE 'ac303: .*'; exit 1; }
+# (dated 2026-09-26, s8d build, package P2; D21-47's time-bound rule; D21-67 ruling 1) The pin above read
+# `forward=16 back_edge=4` until s8d's catalog commit: class C removed the severity conjunct and its `findings` input
+# from twelve family members' `policy` checks, each of which now consumes the reviewer's Findings only through the
+# loop's back-edge, so twelve confirm checks move from forward to back-edge and none is lost (review.rs's dated re-pin).
 nd_check "sections (1) to (6)" || exit 1
 
 # ---- (7) THE PARITY GOLDENS: present, pinned, RE-DERIVED from the Python oracle at P9_PIN on this run (review B2 —

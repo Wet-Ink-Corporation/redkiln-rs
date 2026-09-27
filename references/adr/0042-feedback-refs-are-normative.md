@@ -6,7 +6,7 @@ date: 2026-09-07
 legacy_id: SCHEMA-12
 source: references/2026-09-07-activity-graph-schema.md §9b amendment 12
 supersedes: []
-superseded_by: []
+superseded_by: ["0173"]
 related: ["0031", "0043"]
 evidence: []
 consumers: []

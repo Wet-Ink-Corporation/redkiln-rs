@@ -14,7 +14,7 @@ use rk_kernel::toml_subset::Value as TomlValue;
 use rk_kernel::workflow::memo::{SourceRefusal, SourceValue, VerbRegistry, VerbRegistryError};
 
 const VERBS: &str = "[verb]\nbuild = { outputs = \"BuildReport\", live = false, timeout = \
-                     \"build_timeout\", inputs = [], route = \"port\" }\n";
+                     \"build_timeout\", inputs = [], route = \"port\", side_effecting = false }\n";
 
 /// A registry over a temp `.redkiln/` holding one checklist and one atom.
 fn loaded(tables: &str) -> (tempfile::TempDir, Result<VerbRegistry, VerbRegistryError>) {

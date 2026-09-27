@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: crates/rk-kernel/src/runtime.rs:22-27 (residual 7 — *"never call `Catalog::from_dir` from inside `workflow` or `select`"*); crates/rk-types/src/activity.rs:3-5 and :46-59 (ADR-0099:61 — `ActivitySpec` carries `StepSpec`'s five fields); crates/rk-kernel/src/replay.rs:640-664 (`RecordedSpec`, and its *"NOT a sixth spec field"* warrant); crates/rk-kernel/src/catalog.rs:351 (`pub steps: Vec<Step>`); crates/rk-cli/src/verbs/run.rs:1380-1383 and :1423 (the binder already reads `activity.steps`); references/adr/0099 decision 5 and decision 61's spec shape; runbook/phase-1/s7g-step-executor.md §7g.1
 supersedes: []
-superseded_by: ["0141"]
+superseded_by: ["0141", "0174"]
 related: ["0083", "0097", "0099", "0105"]
 evidence: []
 consumers: []

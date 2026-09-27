@@ -267,7 +267,9 @@ fn impl_region(text: &str, header: &str) -> String {
 /// indistinguishable from it alone.
 ///
 /// The class survives in exactly one place: the row the harness appended before returning, through
-/// `StepError::event()` → `fakes.rs::event_for`. That map is **bijective over the eleven** —
+/// `StepError::event()` → `fakes.rs::event_for`. *(dated 2026-09-26, s8d build, P6; R4 = ADR-0176, proposed): the row is the
+/// KERNEL's now — `rk_kernel::runtime::activity::error_row`, through the same `StepError::event()`;
+/// `event_for` is removed.* That map is **bijective over the eleven** —
 /// `StepFailed { class }` covers five, `StepRefused { class }` four, plus `StepCancelled` and
 /// `RateLimited` — and both class enums are CLOSED and `Deserialize`, so step (10) matches them
 /// exhaustively and a twelfth class is a compile error rather than a silent `ConfigError`.
@@ -399,6 +401,10 @@ fn ac438_table_driven_exit_codes_over_fixtures() {
         // `ClaudeHarness` appends one `dispatch_completed` carrying `cancelled_by` and no class
         // member, which is why the journal round trip recovered only row `13` and why mechanism B
         // was needed at all. A reader comparing this arm with the binary arm needs that visible.
+        //
+        // (dated 2026-09-26, s8d build, P6; R4 = ADR-0176, proposed): the row this asserts is the KERNEL's now. R4 removed the
+        // fake's `event_for` bridge and made the kernel's retry loop the one writer, so the row is
+        // appended under `ClaudeHarness` too and no longer separates the two harnesses.
         let appended: Vec<rk_types::event_kind::EventKind> = trace
             .steps()
             .into_iter()
@@ -410,9 +416,9 @@ fn ac438_table_driven_exit_codes_over_fixtures() {
         let want_kind = error_row_kind(&variant);
         assert!(
             appended.contains(&want_kind),
-            "{variant:?} appended no {want_kind:?} row. `FakeHarness` journals every `Err` it \
-             returns, and that bridge is what this arm rides; the EXIT itself now comes from the \
-             class `NotCommitted` carries. Rows appended, in order: {appended:?}"
+            "{variant:?} appended no {want_kind:?} row. The kernel journals every failed \
+             dispatch (R4 = ADR-0176), and that row is what this arm rides; the EXIT itself comes \
+             from the class `NotCommitted` carries. Rows appended, in order: {appended:?}"
         );
     }
 }
@@ -479,6 +485,13 @@ fn adr0144_step(
         memo_declared: None,
         question: None,
         timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     }
 }
 

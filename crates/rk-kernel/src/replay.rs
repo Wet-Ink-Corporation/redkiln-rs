@@ -682,7 +682,15 @@ impl RuntimeContext {
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordedSpec {
     activity_id_at_version: String,
-    spec: ActivitySpec,
+    /// The activation's own spec (ADR-0140 decision 5's per-activity bound), and `None` for an
+    /// activation with NO agent step (R1; §8d.8 defect 4): such a binding is an explicit absence
+    /// of agent specs, never a synthesised card (ADR-0143's forbids).
+    spec: Option<ActivitySpec>,
+    /// **R1: the per-step specs, keyed by `[[step]]` id**, carried *"beside"* the activation's —
+    /// ADR-0138 decision 2's warrant (D21-42 3a). Each is one agent step's own card, schema and
+    /// bound (§8d.2). `None` is a binding that carries none; `Some` of an EMPTY map is an activation
+    /// with no agent step.
+    step_specs: Option<std::collections::BTreeMap<String, ActivitySpec>>,
     /// **The activation's transcribed steps (ADR-0138).**
     ///
     /// `None` means *this caller transcribed none* — it is an explicit absence, not a default and
@@ -699,7 +707,8 @@ impl RecordedSpec {
     pub fn supplied(activity_id_at_version: &str, spec: ActivitySpec) -> Self {
         Self {
             activity_id_at_version: activity_id_at_version.to_owned(),
-            spec,
+            spec: Some(spec),
+            step_specs: None,
             steps: None,
         }
     }
@@ -716,7 +725,35 @@ impl RecordedSpec {
     ) -> Self {
         Self {
             activity_id_at_version: activity_id_at_version.to_owned(),
-            spec,
+            spec: Some(spec),
+            step_specs: None,
+            steps: Some(steps),
+        }
+    }
+
+    /// **R1: the same binding, carrying each agent step's OWN spec**, keyed by `[[step]]` id
+    /// (D21-42 3a: *"Per-step specs are carried on `RecordedSpec` (ADR-0138's warrant)"*).
+    #[must_use]
+    pub fn and_step_specs(
+        mut self,
+        step_specs: std::collections::BTreeMap<String, ActivitySpec>,
+    ) -> Self {
+        self.step_specs = Some(step_specs);
+        self
+    }
+
+    /// **R1: a binding for an activation with NO agent step** (§8d.8 defect 4) — its steps
+    /// transcribed, its per-step specs an explicit EMPTY map, and no activation spec at all,
+    /// because a spec needs a card and inventing one is ADR-0143's forbids.
+    #[must_use]
+    pub fn with_steps_and_no_agent_step(
+        activity_id_at_version: &str,
+        steps: Vec<crate::catalog::Step>,
+    ) -> Self {
+        Self {
+            activity_id_at_version: activity_id_at_version.to_owned(),
+            spec: None,
+            step_specs: Some(std::collections::BTreeMap::new()),
             steps: Some(steps),
         }
     }
@@ -727,32 +764,66 @@ impl RecordedSpec {
         self.steps.as_deref()
     }
 
+    /// **R1.** The per-step specs, or `None` when the binding carries none.
+    #[must_use]
+    pub const fn step_specs(&self) -> Option<&std::collections::BTreeMap<String, ActivitySpec>> {
+        self.step_specs.as_ref()
+    }
+
     /// The activation identity — the idempotency key's second part (ADR-0097 decision 2).
     #[must_use]
     pub fn activity_id_at_version(&self) -> &str {
         &self.activity_id_at_version
     }
 
-    /// The spec the `Harness` port is handed.
+    /// The activation's own spec — `None` for an activation with no agent step (R1).
     #[must_use]
-    pub const fn spec(&self) -> &ActivitySpec {
-        &self.spec
+    pub const fn spec(&self) -> Option<&ActivitySpec> {
+        self.spec.as_ref()
     }
 
-    fn to_json(&self) -> serde_json::Value {
-        let mut out = serde_json::json!({
-            "activity_id_at_version": self.activity_id_at_version,
-            "card_digest": self.spec.card_digest.as_str(),
-            "inputs": self
-                .spec
+    /// One spec's five fields as the record writes them.
+    fn spec_json(spec: &ActivitySpec) -> serde_json::Value {
+        serde_json::json!({
+            "card_digest": spec.card_digest.as_str(),
+            "inputs": spec
                 .inputs
                 .iter()
                 .map(|(name, value)| serde_json::json!({ "name": name, "value": value }))
                 .collect::<Vec<_>>(),
-            "schema": self.spec.schema.as_str(),
-            "timeout_secs": self.spec.timeout_secs,
-            "tools": self.spec.tools,
-        });
+            "schema": spec.schema.as_str(),
+            "timeout_secs": spec.timeout_secs,
+            "tools": spec.tools,
+        })
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        // The activation spec's five members stay at the TOP LEVEL, byte-identical to every record
+        // written before R1 (the `run_id` is a digest over these bytes). A binding with no
+        // activation spec writes none of them.
+        let mut out = self
+            .spec
+            .as_ref()
+            .map_or_else(|| serde_json::json!({}), Self::spec_json);
+        if let Some(map) = out.as_object_mut() {
+            map.insert(
+                "activity_id_at_version".to_owned(),
+                serde_json::json!(self.activity_id_at_version),
+            );
+            // R1's per-step specs: an ABSENT member when the binding carries none, so a pre-R1
+            // binding serialises exactly as before.
+            if let Some(step_specs) = self.step_specs.as_ref() {
+                map.insert(
+                    "step_specs".to_owned(),
+                    serde_json::Value::Object(
+                        step_specs
+                            .iter()
+                            .map(|(id, spec)| (id.clone(), Self::spec_json(spec)))
+                            .collect(),
+                    ),
+                );
+            }
+        }
         // 🛑 **AN ABSENT MEMBER, NEVER A `null` ONE — the `run_id` is a digest over these bytes.**
         // Writing `"steps": null` unconditionally moved the recorded run_id of EVERY run ever
         // recorded (measured at `s7g`: `implement-bf1d8cec3b22d288` -> `implement-48ef08f45b9e3417`,
@@ -781,6 +852,61 @@ impl RecordedSpec {
     /// required member would have made every such record malformed. A `steps` that is PRESENT and
     /// malformed is still an error — absence and nonsense are not the same answer.
     fn from_json(node: &str, value: &serde_json::Value) -> Result<Self, ReplayError> {
+        let bad = |detail: String| ReplayError::Malformed {
+            path: "inputs/specs.json".to_owned(),
+            detail: format!("{node}: {detail}"),
+        };
+        let activity_id_at_version = value
+            .get("activity_id_at_version")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| bad("`activity_id_at_version` is absent or not a string".to_owned()))?;
+        let steps = match value.get("steps") {
+            None | Some(serde_json::Value::Null) => None,
+            Some(raw) => Some(
+                serde_json::from_value::<Vec<crate::catalog::Step>>(raw.clone())
+                    .map_err(|e| bad(format!("`steps` is present but does not read back: {e}")))?,
+            ),
+        };
+        let step_specs = match value.get("step_specs") {
+            None => None,
+            Some(raw) => {
+                let map = raw
+                    .as_object()
+                    .ok_or_else(|| bad("`step_specs` is not an object".to_owned()))?;
+                let mut out = std::collections::BTreeMap::new();
+                for (id, spec) in map {
+                    out.insert(id.clone(), Self::spec_from_json(node, spec)?);
+                }
+                Some(out)
+            }
+        };
+        // An activation spec is present exactly when its `card_digest` is. A binding with NONE is
+        // lawful only as R1's explicit absence — per-step specs carried, and empty.
+        let spec = if value.get("card_digest").is_some() {
+            Some(Self::spec_from_json(node, value)?)
+        } else if step_specs
+            .as_ref()
+            .is_some_and(std::collections::BTreeMap::is_empty)
+        {
+            None
+        } else {
+            return Err(bad(
+                "no `card_digest`, and no empty `step_specs` saying the activation has no agent \
+                 step — a missing spec is never read as an absent one"
+                    .to_owned(),
+            ));
+        };
+        Ok(Self {
+            activity_id_at_version,
+            spec,
+            step_specs,
+            steps,
+        })
+    }
+
+    /// One spec's five members, every one required.
+    fn spec_from_json(node: &str, value: &serde_json::Value) -> Result<ActivitySpec, ReplayError> {
         let bad = |detail: String| ReplayError::Malformed {
             path: "inputs/specs.json".to_owned(),
             detail: format!("{node}: {detail}"),
@@ -824,23 +950,12 @@ impl RecordedSpec {
                 Ok((name.to_owned(), value.clone()))
             })
             .collect::<Result<Vec<(String, serde_json::Value)>, ReplayError>>()?;
-        let steps = match value.get("steps") {
-            None | Some(serde_json::Value::Null) => None,
-            Some(raw) => Some(
-                serde_json::from_value::<Vec<crate::catalog::Step>>(raw.clone())
-                    .map_err(|e| bad(format!("`steps` is present but does not read back: {e}")))?,
-            ),
-        };
-        Ok(Self {
-            activity_id_at_version: text("activity_id_at_version")?,
-            steps,
-            spec: ActivitySpec {
-                card_digest,
-                tools,
-                schema: SchemaId::new(text("schema")?),
-                timeout_secs,
-                inputs,
-            },
+        Ok(ActivitySpec {
+            card_digest,
+            tools,
+            schema: SchemaId::new(text("schema")?),
+            timeout_secs,
+            inputs,
         })
     }
 }
@@ -1442,7 +1557,11 @@ fn derive(
                     binding,
                     &eval_ctx,
                     gate,
-                    Envelope { cap, now },
+                    Envelope {
+                        cap,
+                        now,
+                        rigor: selection.rigor(),
+                    },
                 )?
             }
             // Unreachable by construction: the envelope is `Some` exactly when the source is
@@ -1478,6 +1597,8 @@ fn derive(
 struct Envelope {
     cap: AttemptCap,
     now: JournaledNow,
+    /// The selection's effective rigor — each agent step's memo component 2 (R1, §8d.2).
+    rigor: crate::rigor::Rigor,
 }
 
 fn dispatch_through(
@@ -1499,6 +1620,8 @@ fn dispatch_through(
             activity_id_at_version: &key.activity_id_at_version,
             step_id,
             spec: binding.spec(),
+            step_specs: binding.step_specs(),
+            rigor: env.rigor,
         },
         binding.steps(),
         ctx,
@@ -1740,10 +1863,16 @@ pub fn resume_routed(
     supply_spec: &mut dyn FnMut(&str) -> Result<RecordedSpec, ReplayError>,
 ) -> Result<RecordedRun, ReplayError> {
     let run_id = inputs.run_id()?;
-    let rt = Runtime::new(ports, &run_id, &inputs.stage).with_tool_routing(routing);
     let runtime = inputs.runtime()?;
 
     let (pack, catalog, artifacts, facets, item) = inputs.build()?;
+    // **R4 (ADR-0176 decision 4, proposed).** The selected pack is the breaker's binding: before an
+    // agent step dispatches, the executor folds the store's family-scoped rows with this pack's `K`
+    // and refuses a family whose mark is open. Each value is read where it is needed and refused
+    // there by name when the pack declares none.
+    let rt = Runtime::new(ports, &run_id, &inputs.stage)
+        .with_tool_routing(routing)
+        .with_breaker(crate::runtime::BreakerBinding::of(&pack));
     let mut selection: Selection =
         select(&pack, &catalog, &artifacts, &facets, &inputs.stage, &item)?;
 
@@ -1845,7 +1974,11 @@ pub fn resume_routed(
                     &binding,
                     &eval_ctx,
                     gate,
-                    Envelope { cap, now },
+                    Envelope {
+                        cap,
+                        now,
+                        rigor: selection.rigor(),
+                    },
                 )?;
                 journal.extend(produced);
             }

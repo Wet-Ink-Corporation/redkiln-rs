@@ -760,3 +760,171 @@ fn ac432_explain_over_replayed_log_is_byte_identical() {
          run time:\n{side_a}\n---\nreplayed:\n{side_b}"
     );
 }
+
+/// **R1 (`s8d` §8d.2): `explain` prints one `output_digest` per committed STEP activation** — ADR-0128
+/// decision 4's field, which s8's criterion (3) operational arm diffs across a kill.
+///
+/// *(Added 2026-09-26, `s8d` build, package P3; record R1, proposed.)* An in-process run over
+/// `pack-min` whose one node carries a three-step transcription — two agent steps, each with its own
+/// per-step spec, and the `emit` — commits two step rows and one completion row. The node's block
+/// prints exactly two `output_digest` lines, one per committed step activation, each the canonical
+/// digest of THAT step's own recorded `result`; the completion row, which carries no `result`,
+/// prints none. The record is then written, replayed with zero dispatches and re-rendered, and the
+/// two renderings are byte-identical, so the step-grain rows survive the replay path too.
+#[test]
+fn explain_prints_one_output_digest_per_committed_step_activation() {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::Base);
+    let resolved = crate::support::resolved_over_pack_min(repo.path(), "bug-1");
+    let (inputs, _tree_hash) = crate::support::inputs_over_pack_min(&resolved);
+    let blank = |id: &str, kind: rk_kernel::catalog::StepKind| rk_kernel::catalog::Step {
+        id: id.to_owned(),
+        kind,
+        run: None,
+        output_type: None,
+        role: None,
+        when: None,
+        expr: None,
+        for_each: None,
+        retry_max: None,
+        repeat_max: None,
+        memo_declared: None,
+        question: None,
+        timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
+    };
+    let agent = |id: &str| rk_kernel::catalog::Step {
+        role: Some("implementer".to_owned()),
+        output_type: Some("ImplReport".to_owned()),
+        ..blank(id, rk_kernel::catalog::StepKind::Agent)
+    };
+    let steps = vec![
+        agent("draft"),
+        agent("review"),
+        blank("emit", rk_kernel::catalog::StepKind::Emit),
+    ];
+    let step_specs: std::collections::BTreeMap<String, rk_types::activity::ActivitySpec> =
+        ["draft", "review"]
+            .into_iter()
+            .map(|id| (id.to_owned(), crate::support::any_activity_spec()))
+            .collect();
+    let inputs = inputs.with_spec(
+        "emit-report",
+        rk_kernel::replay::RecordedSpec::with_steps(
+            "emit-report@1",
+            crate::support::any_activity_spec(),
+            steps,
+        )
+        .and_step_specs(step_specs),
+    );
+    let values = [
+        serde_json::json!({ "summary": "draft step" }),
+        serde_json::json!({ "summary": "review step" }),
+    ];
+
+    // ---- THE RUN, IN PROCESS: two step commits and the completion. -----------------------------
+    let trace = crate::support::Trace::new();
+    let store = crate::support::counting_store(&trace);
+    let harness = std::sync::Arc::new(crate::support::ScriptedHarness::scripted(
+        values
+            .iter()
+            .map(|v| {
+                Ok(rk_types::typed::Typed::new(
+                    rk_types::typed::SchemaId::new("ImplReport"),
+                    v.clone(),
+                ))
+            })
+            .collect(),
+    ));
+    let ports = crate::support::ports(
+        std::sync::Arc::clone(&harness) as std::sync::Arc<dyn rk_ports::harness::Harness>,
+        &store,
+    );
+    let mut supply = crate::support::no_spec();
+    let recorded = rk_kernel::replay::resume(&inputs, ports, &[], &mut supply)
+        .expect("the recorded run is produced in process");
+    assert_eq!(
+        harness.dispatches(),
+        2,
+        "PREMISE: the run dispatched both agent steps"
+    );
+    let step_rows = recorded
+        .events
+        .iter()
+        .filter(|e| e.kind == rk_types::event_kind::EventKind::ActivityCommitted)
+        .filter(|e| e.payload.get("step_id").is_some())
+        .count();
+    assert_eq!(
+        step_rows, 3,
+        "PREMISE: two step rows and the completion row are in the record"
+    );
+
+    // ---- THE RENDERING: one `output_digest` line per committed step activation. -----------------
+    let text = rk_cli::verbs::explain::render(&recorded).expect("the in-process record renders");
+    let blocks = node_blocks(&text);
+    let block = blocks
+        .get("emit-report")
+        .unwrap_or_else(|| panic!("no `emit-report` node block:\n{text}"));
+    let digests: Vec<&str> = block
+        .lines()
+        .filter_map(|l| l.trim_start().strip_prefix("output_digest: "))
+        .collect();
+    assert_eq!(
+        digests.len(),
+        2,
+        "one `output_digest` line per committed STEP activation (two agent steps), and none for the \
+         completion row:\n{block}"
+    );
+    for (line, (step, value)) in digests
+        .iter()
+        .zip(["draft", "review"].into_iter().zip(&values))
+    {
+        let expected = rk_store::canon::canonical_digest(value).expect("no floats");
+        assert!(
+            line.starts_with(expected.as_str()),
+            "`{step}`'s line must carry the canonical digest of ITS OWN recorded result \
+             ({}): {line}",
+            expected.as_str()
+        );
+        assert!(
+            line.contains(step),
+            "each line names the step activation it is the digest of: {line}"
+        );
+    }
+    assert_ne!(digests[0], digests[1], "the two steps' digests differ");
+
+    // ---- AND THE REPLAYED RECORD RENDERS THE SAME BYTES. -----------------------------------------
+    let runs = crate::common_dir(repo.path()).join("redkiln").join("runs");
+    let dir = rk_kernel::replay::write_run(&runs, &recorded).expect("the run record is written");
+    let replay_harness = crate::support::ScriptedHarness::scripted(Vec::new());
+    let mut replay_store = rk_ports::fakes::VecStore::default();
+    let mut journal = rk_git::gitops::VecJournal::default();
+    let replay_repo =
+        rk_cli::repo::discover(Some(repo.path())).expect("the fixture repository discovers");
+    let mut git =
+        rk_git::gitops::GitOps::new(replay_repo.exec, &mut journal, rk_git::gitops::Mode::Replay);
+    let mut replay_ports = rk_kernel::replay::ReplayPorts {
+        harness: &replay_harness,
+        dispatches: replay_harness.counter(),
+        store: &mut replay_store,
+        git: &mut git,
+    };
+    let report = rk_kernel::replay::replay(&dir, &mut replay_ports).expect("the record replays");
+    assert_eq!(
+        report.divergences, 0,
+        "the step-grain record replays without divergence"
+    );
+    assert_eq!(report.harness_dispatches, 0, "and without a dispatch");
+    let reread = rk_kernel::replay::read_run(&dir).expect("the written record reads back");
+    let side_b = rk_cli::verbs::explain::render(&reread).expect("the replayed record renders");
+    assert_eq!(
+        text.as_bytes(),
+        side_b.as_bytes(),
+        "explain at run time and over the replayed step-grain record differ"
+    );
+}

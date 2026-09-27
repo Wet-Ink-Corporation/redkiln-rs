@@ -7,7 +7,9 @@
 
 use std::collections::BTreeSet;
 
-use rk_kernel::predicate::{Context, EvalError, LintError, Tri, Value, evaluate, lint_predicate};
+use rk_kernel::predicate::{
+    CmpOp, Context, EvalError, Expr, LintError, Literal, Tri, Value, evaluate, lint_predicate,
+};
 
 use crate::support::{BANDS, abstaining_context, eval, ok_parse, truth};
 
@@ -28,10 +30,15 @@ fn predicate_null_arithmetic() {
     // `null == null` is TRUE. It is only reachable through a facet, because an unquoted `null` in
     // OPERAND position is not a field and does not parse — which is itself the literal rule.
     assert_eq!(truth("novelty == null", &absent), Tri::True, "null == null");
-    // `null == v` and `v == null` for non-null v are NULL, not false. This is the clause ADR-0089
+    // `null == v` for a null FIELD and a non-null v is NULL, not false. This is the clause ADR-0089
     // decision 3 was written to protect: an absent fact must not behave like a wrong fact.
     assert_eq!(truth("novelty == high", &absent), Tri::Null, "null == v");
-    assert_eq!(truth("novelty == null", &present), Tri::Null, "v == null");
+    // *(dated 2026-09-26, `s8d` build; D21-67 ruling 2; ADR-0172, written `proposed`)* REWRITTEN,
+    // not deleted. This read `Tri::Null` for "v == null", ADR-0103 decision 4's *"`null == v` and
+    // `v == null` for non-null `v` are `null`"*. ADR-0172 supersedes that sentence in part, for `==`
+    // and `!=` against the LITERAL `null`: a comparison against the literal is a definite presence
+    // test, so a present `v == null` is FALSE.
+    assert_eq!(truth("novelty == null", &present), Tri::False, "v == null");
     // `!=` is the negation of `==` (see rk_kernel::predicate::eval's reading 1).
     assert_eq!(
         truth("novelty != null", &absent),
@@ -39,7 +46,9 @@ fn predicate_null_arithmetic() {
         "null != null"
     );
     assert_eq!(truth("novelty != high", &absent), Tri::Null, "null != v");
-    assert_eq!(truth("novelty != null", &present), Tri::Null, "v != null");
+    // *(dated 2026-09-26, `s8d` build; ADR-0172)* REWRITTEN, not deleted: this read `Tri::Null`
+    // (*"`!=` … against `null` [is] `null`"*). Under ADR-0172 a present `v != null` is TRUE.
+    assert_eq!(truth("novelty != null", &present), Tri::True, "v != null");
     // `in` against `null` is `null`.
     assert_eq!(
         truth("novelty in [low, high]", &absent),
@@ -202,15 +211,149 @@ fn predicate_null_arithmetic() {
          ADR-0103 decision 4's own pattern safe against ADR-0069's error"
     );
 
-    // RAISED, NOT SETTLED, and asserted here so it is visible rather than latent: under the
-    // record's literal clause 4 (`v != null` is `null` for non-null v) the same blessed pattern
-    // abstains when the axis IS present, so a row guarded exactly as ADR-0103 prescribes can
-    // never fire. An erratum against ADR-0103 is OWED and is not written by this crate.
+    // ~~RAISED, NOT SETTLED~~ — *(dated 2026-09-26, `s8d` build; D21-67 ruling 2)* SETTLED by
+    // ADR-0172 (written `proposed`). This block read: *"under the record's literal clause 4 (`v !=
+    // null` is `null` for non-null v) the same blessed pattern abstains when the axis IS present,
+    // so a row guarded exactly as ADR-0103 prescribes can never fire"*, and asserted `Tri::Null`.
+    // ADR-0172 makes `v != null` TRUE for a present `v`, so the guard lets the ordering run on a
+    // present axis, which is what the pattern was written for: `high >= high` is TRUE. The assertion
+    // is REWRITTEN, not deleted, and no erratum against ADR-0103 is owed: the record supersedes.
     assert_eq!(
         truth("novelty != null and novelty >= high", &present),
-        Tri::Null,
-        "the guarded pattern abstains on a PRESENT axis — the residual recorded above"
+        Tri::True,
+        "the guarded pattern decides on a PRESENT axis — ADR-0172 settles the residual"
     );
+}
+
+/// *(dated 2026-09-26, `s8d` build; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 2; ADR-0172,
+/// written `proposed`.)* **A comparison against the literal `null` is a definite presence test**:
+/// `x == null` is true when `x` is absent and false when it is present, and `x != null` the
+/// reverse. A comparison between a null field and a non-null value stays `null` (ADR-0103
+/// decision 4, standing), and so does `in` against `null` (not the ruling's).
+///
+/// The literal is the `null` token as the predicate is written. An unquoted `null` in OPERAND
+/// position does not parse (the literal rule), so the reversed order `null == x` is reachable only
+/// through the AST, which is how it is asserted here: the arm keys on either operand EXPRESSION
+/// being `Expr::Lit(Literal::Null)`.
+#[test]
+fn a_comparison_against_the_literal_null_is_a_presence_test() {
+    let absent = abstaining_context();
+    let present = Context::new()
+        .with("novelty", Value::ordinal(&BANDS, "high").unwrap())
+        .with("has_repro", Value::Bool(true));
+
+    // The ruling's first case, and the red reason: before ADR-0172 this read `Tri::Null`.
+    assert_eq!(
+        truth("novelty == null", &present),
+        Tri::False,
+        "novelty == null over a present novelty reads Null, not False"
+    );
+    assert_eq!(
+        truth("novelty != null", &present),
+        Tri::True,
+        "novelty != null over a present novelty"
+    );
+    assert_eq!(
+        truth("novelty == null", &absent),
+        Tri::True,
+        "novelty == null over an absent novelty"
+    );
+    assert_eq!(
+        truth("novelty != null", &absent),
+        Tri::False,
+        "novelty != null over an absent novelty"
+    );
+    // A present boolean `false` is present, not absent: presence is not truthiness.
+    let present_false = Context::new().with("has_repro", Value::Bool(false));
+    assert_eq!(
+        truth("has_repro == null", &present_false),
+        Tri::False,
+        "has_repro == null over a present false"
+    );
+
+    // Both operand orders. `null == novelty` does not parse, so the reversed comparison is built
+    // from the parsed one with its operands swapped.
+    let reversed = |src: &str| match ok_parse(src).expr {
+        Expr::Cmp { op, left, right } => Expr::Cmp {
+            op,
+            left: right,
+            right: left,
+        },
+        other => panic!("{src:?} is not a comparison: {other:?}"),
+    };
+    let value = |e: &Expr, ctx: &Context| match evaluate(e, ctx) {
+        Ok(o) => o.value,
+        Err(err) => panic!("{e:?} did not evaluate: {err}"),
+    };
+    for (src, ctx, want, why) in [
+        (
+            "novelty == null",
+            &present,
+            Tri::False,
+            "null == v, v present",
+        ),
+        (
+            "novelty != null",
+            &present,
+            Tri::True,
+            "null != v, v present",
+        ),
+        ("novelty == null", &absent, Tri::True, "null == v, v absent"),
+        (
+            "novelty != null",
+            &absent,
+            Tri::False,
+            "null != v, v absent",
+        ),
+    ] {
+        let e = reversed(src);
+        assert!(
+            matches!(&e, Expr::Cmp { left, .. } if matches!(**left, Expr::Lit(Literal::Null))),
+            "the reversed {src:?} must carry the literal on the LEFT"
+        );
+        assert_eq!(value(&e, ctx), want, "{why} (operands reversed)");
+    }
+
+    // `null == null` is true under both readings, and a literal against a literal is the same.
+    let lit_lit = Expr::Cmp {
+        op: CmpOp::Eq,
+        left: Box::new(Expr::Lit(Literal::Null)),
+        right: Box::new(Expr::Lit(Literal::Null)),
+    };
+    assert_eq!(value(&lit_lit, &absent), Tri::True, "null == null");
+
+    // What does NOT move: a null FIELD against a non-null value stays null, in both operators,
+    // and `in` against null stays null.
+    assert_eq!(
+        truth("novelty == high", &absent),
+        Tri::Null,
+        "a null field == a non-null value stays null"
+    );
+    assert_eq!(
+        truth("novelty != high", &absent),
+        Tri::Null,
+        "a null field != a non-null value stays null"
+    );
+    assert_eq!(
+        truth("novelty in [low, high]", &absent),
+        Tri::Null,
+        "`in` against null stands"
+    );
+
+    // The tri-valued boolean (s8b §8b.10's null arm, folded into the ruling): bound to null, true
+    // and false, the guarded conjunction is false, true, false, and never null.
+    for (bound, want) in [
+        (Value::Null, Tri::False),
+        (Value::Bool(true), Tri::True),
+        (Value::Bool(false), Tri::False),
+    ] {
+        let ctx = Context::new().with("data_migration", bound.clone());
+        assert_eq!(
+            truth("data_migration != null and data_migration", &ctx),
+            want,
+            "data_migration != null and data_migration, with data_migration bound to {bound:?}"
+        );
+    }
 }
 
 /// `all` and `none` over `null` or an empty list are **true**; `any` is **false**.

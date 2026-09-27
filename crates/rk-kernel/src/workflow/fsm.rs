@@ -964,6 +964,12 @@ pub struct RunState {
     gates_expired: BTreeSet<Digest>,
     dispatched: BTreeSet<(String, String)>,
     committed: BTreeSet<IdempotencyKey>,
+    /// *(R1, `s8d` P3.)* Every step activation that committed, under its commit key.
+    step_commits: BTreeSet<super::idem::CommitKey>,
+    /// *(R1, `s8d` P3.)* Every activation whose COMPLETION is journalled: a pre-R1 row that carries
+    /// no `step_id` (the activation grain, which completed on its one commit), or R1's completion
+    /// row. `next_action` moves past a node only on this.
+    completed: BTreeSet<(String, String)>,
     attempts: BTreeMap<(String, String), u32>,
     memo_hits: usize,
     amendments: usize,
@@ -989,6 +995,8 @@ impl RunState {
             gates_expired: BTreeSet::new(),
             dispatched: BTreeSet::new(),
             committed: BTreeSet::new(),
+            step_commits: BTreeSet::new(),
+            completed: BTreeSet::new(),
             attempts: BTreeMap::new(),
             memo_hits: 0,
             amendments: 0,
@@ -1031,6 +1039,16 @@ impl RunState {
         self.gates_by_kind
             .get(kind)
             .map_or(0, |v| u32::try_from(v.len()).unwrap_or(u32::MAX))
+    }
+
+    /// Every token minted for this gate step, in reach order (reach 1 first).
+    ///
+    /// *(2026-09-26, `s8d` build, package P5; R2 decision 5.)* An escalate gate is answered once per
+    /// re-entry: the walk's `n`-th escalation through the gate reads the `n`-th reach that was not
+    /// voided (a void reach is re-opened at the next, AC-252), so it needs the reaches in order.
+    #[must_use]
+    pub fn gates_of(&self, kind: &str) -> &[Digest] {
+        self.gates_by_kind.get(kind).map_or(&[], Vec::as_slice)
     }
 
     /// The most recently minted token for this gate step, if any reach has happened.
@@ -1092,13 +1110,33 @@ impl RunState {
         self.committed.iter()
     }
 
-    /// `true` when some attempt of this activation committed. The **attempt** is not part of the
-    /// question: a committed activation is not re-dispatched under a higher attempt number.
+    /// `true` when this activation is **complete**. The **attempt** is not part of the question: a
+    /// committed activation is not re-dispatched under a higher attempt number.
+    ///
+    /// *(Amended 2026-09-26, `s8d` build, package P3; record R1, proposed.)* This read *"`true` when
+    /// some attempt of this activation committed"*, and at the activation grain the two were one
+    /// fact. At step grain they are two: an activation whose first agent step committed and whose
+    /// walk then died is committed in PART and not complete. The answer is now the completion — a
+    /// pre-R1 row with no `step_id` (the activation grain's one commit, which completed it), or
+    /// R1's completion row (`completion: true`, the `emit` step's). `next_action` moves past a node
+    /// only on this, and the step-grain question is [`Self::is_step_committed`].
     #[must_use]
     pub fn is_committed(&self, item: &str, activity_id_at_version: &str) -> bool {
-        self.committed
+        self.completed
             .iter()
-            .any(|k| k.item == item && k.activity_id_at_version == activity_id_at_version)
+            .any(|(i, a)| i == item && a == activity_id_at_version)
+    }
+
+    /// **R1: has this step activation committed?** — the commit key folded, step and iteration path
+    /// included. Re-entry serves a step for which this is `true` and never re-dispatches it.
+    #[must_use]
+    pub fn is_step_committed(&self, key: &super::idem::CommitKey) -> bool {
+        self.step_commits.contains(key)
+    }
+
+    /// Every committed step activation, under its commit key.
+    pub fn step_commits(&self) -> impl Iterator<Item = &super::idem::CommitKey> {
+        self.step_commits.iter()
     }
 
     /// The attempt number the next dispatch of this activation would carry — one above the highest
@@ -1519,6 +1557,45 @@ fn apply(state: &mut RunState, event: &Event) -> Result<(), FsmError> {
             state.survey.state_moving += 1;
             let key = activation_key(event, "activity_committed")?;
             state.note_attempt(&key);
+            // *(R1, `s8d` P3.)* A row with no `step_id` is the activation grain's one commit, and
+            // it completed its activation. A row WITH one is a step activation's commit under the
+            // commit key; it completes the activation only when it is the completion row.
+            match optional_str(event, "step_id") {
+                None => {
+                    state
+                        .completed
+                        .insert((key.item.clone(), key.activity_id_at_version.clone()));
+                }
+                Some(step_id) => {
+                    let iteration_path = event
+                        .payload
+                        .get("iteration_path")
+                        .and_then(super::idem::IterationPath::from_json)
+                        .ok_or_else(|| FsmError::MalformedPayload {
+                            kind: "activity_committed",
+                            detail: "a row carrying `step_id` carries no readable \
+                                     `iteration_path` (an array of frame tokens, `[]` outside a \
+                                     loop); R1's commit key is never folded with a guessed path"
+                                .to_owned(),
+                        })?;
+                    if event
+                        .payload
+                        .get("completion")
+                        .and_then(serde_json::Value::as_bool)
+                        == Some(true)
+                    {
+                        state
+                            .completed
+                            .insert((key.item.clone(), key.activity_id_at_version.clone()));
+                    }
+                    state.step_commits.insert(super::idem::CommitKey {
+                        item: key.item.clone(),
+                        activity_id_at_version: key.activity_id_at_version.clone(),
+                        step_id,
+                        iteration_path,
+                    });
+                }
+            }
             state.committed.insert(key);
         }
         EventKind::Dispatch => {

@@ -1299,6 +1299,11 @@ done
 # line: this loop's `equivalence-boundary@3` becomes `equivalence-boundary@4`, and (7d)'s exact-version check for
 # equivalence-boundary reads 4, not 3. Otherwise s8d's row satisfies this grep before s8g writes anything (a vacuous
 # pass). Measure the version on disk at s8g's open first; the note is owed, not yet applied.
+# (dated 2026-09-26, s8d build, package P2; receiver note, D21-67 ruling 1) s8d's catalog change LANDED the premise:
+# .redkiln/catalog/equivalence-boundary.toml is at version 3 and .redkiln/CHANGELOG.md carries
+# `| equivalence-boundary@3 |` (from v2, D21-67 ruling 1, class C: its `policy` severity conjunct and `findings` input
+# removed). So this stage's N23 edit is 3->4: at s8g's open this loop's `equivalence-boundary@3` reads
+# `equivalence-boundary@4`, and (7d)'s exact-version check reads 4, each by dated line after re-measuring on disk.
 for pair in unit-tests@3 unit-tests-ue@3 equivalence-boundary@3 property-based-testing@3 integration-tests@3 smoke-test@2; do
   grep -qF "$pair" .redkiln/CHANGELOG.md || { echo "FAIL: .redkiln/CHANGELOG.md carries no row naming $pair in s8b's <id>@<new version> form (ADR-0072; D21-43 N23; D21-46 R5, R6)"; exit 1; }
 done

@@ -1,7 +1,7 @@
 # reach: (initiative, discovery, recommended) — require row "kind == initiative" → DiscoveryReport
 [activity]
 id           = "discovery-report"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "discovery"
 provides     = ["DiscoveryReport"]
 requires     = ["ProblemStatement", "OutcomeStatement?", "AssumptionList?", "CompetitorAnalysis?", "PrototypeFindings?", "OpportunityMap?"]
@@ -47,8 +47,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}" }
+expr    = "check.failed == 0"
 on_false = { to = "synthesise", max = 2 }
 
 [[step]]

@@ -1,0 +1,43 @@
+# forward_ref_lint, must-REFUSE (s8d §8d.3; D21-60's D59b shape): an optional later-step ref on a step
+# that no `on_false`/`repeat` targets, as `threat-model` v1's `model` input `findings =
+# "${review.outputs?}"` was once its `policy` step was deleted (D21-59).
+#
+# `model` reads `${review.outputs?}`. Nothing loops back to `model`, `model` declares no `repeat`,
+# and it escalates nowhere. The gate after `review` asks a question `model` does not escalate to.
+
+[activity]
+id           = "fr-d59b"
+version      = 1
+stage        = "design"
+provides     = ["ADR"]
+requires     = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "model"
+kind    = "agent"
+role    = "architect"
+inputs  = { spec = "artifact:Spec", findings = "${review.outputs?}" }
+outputs = "value:ADR"
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { model = "${model.outputs}" }
+outputs = "value:Findings"
+
+[[step]]
+id       = "residual-gate"
+kind     = "gate"
+question = "threat.accept-residual"
+inputs   = { model = "${model.outputs}" }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ADR = "${model.outputs}" }
+evidence  = ["${review}", "${residual-gate?}"]

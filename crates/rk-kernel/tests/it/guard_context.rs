@@ -38,6 +38,7 @@ use rk_kernel::predicate::Context;
 use rk_kernel::registry::Registry;
 use rk_kernel::rigor::Rigor;
 use rk_kernel::runtime::Runtime;
+use rk_kernel::runtime::reference::Scope;
 use rk_kernel::runtime::step::StepVerdict;
 use rk_ports::harness::Harness;
 
@@ -72,6 +73,13 @@ fn rigor_guarded_step() -> Step {
         memo_declared: None,
         question: None,
         timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     }
 }
 
@@ -145,14 +153,22 @@ fn a_rigor_guard_refuses_on_an_empty_context_and_decides_on_the_selections_one()
     );
 }
 
-/// **ADR-0142 clause 4: the context does NOT repair `check`, and that is asserted, not assumed.**
+/// **ADR-0142 clause 4, DISCHARGED: a `check` reading a prior step's output now resolves it, and
+/// refuses only a reference that does not resolve.**
 ///
-/// All **94** `check` exprs in the shipped pack read a prior step's OUTPUT — `report.status` (22),
-/// `check.failed` (21), `findings` (11), `lint.errors` (4) and a tail of singletons. None is a
-/// facet, so no context assembled from the item can supply one. This pins that limit so a later
-/// reader cannot take "guards now evaluate" as covering `check` steps.
+/// *(Renamed 2026-09-26, `s8d` build, package P4; R2 = ADR-0173 decision 6, proposed. This test was
+/// `a_check_expr_reading_a_step_output_still_refuses_with_the_full_context`, and its own panic text
+/// named the condition that retires that name: *"Either step-output resolution landed — in which
+/// case ADR-0142 clause 4 and ADR-0136 clause 4 are discharged and this test should be replaced
+/// rather than deleted"*. It is replaced: the old refusal is kept below as the case it still is —
+/// an `expr` reading a path its `inputs` do not bind.)*
+///
+/// All **94** `check` exprs in the shipped pack read a prior step's OUTPUT (`report.status` 22,
+/// `check.failed` 21, …). The resolver binds the step's own `inputs` table over the selection's
+/// context (`runtime::reference::check_context`), so the same `expr` now DECIDES — true and false —
+/// and only an unresolvable reference refuses, by name, never as false.
 #[test]
-fn a_check_expr_reading_a_step_output_still_refuses_with_the_full_context() {
+fn a_check_expr_reading_a_step_output_resolves_it_and_refuses_only_an_unresolvable_one() {
     let (q, a) = counters();
     let db = store(&q, &a);
     let harness = Arc::new(crate::runtime::CountingHarness::scripted(Vec::new()));
@@ -161,38 +177,79 @@ fn a_check_expr_reading_a_step_output_still_refuses_with_the_full_context() {
         "run-check-limit",
         "implement",
     );
-    let check = Step {
-        id: "verify".to_owned(),
-        kind: StepKind::Check,
-        run: None,
-        output_type: None,
-        role: None,
-        when: None,
-        // The most frequent `expr` shape in the pack, verbatim in form.
-        expr: Some("report.status == 'passing'".to_owned()),
-        for_each: None,
-        retry_max: None,
-        repeat_max: None,
-        memo_declared: None,
-        question: None,
-        timeout_secs: None,
+    // The most frequent `expr` shape in the pack, over its own `inputs` table, verbatim in form.
+    let mut check = crate::reference_resolver::check(
+        "verify",
+        &[("report", "${build.outputs}")],
+        "report.status == 'passing'",
+    );
+    let steps = vec![
+        crate::reference_resolver::step("build", StepKind::Tool),
+        check.clone(),
+    ];
+    let full = rk_kernel::rigor::with_rigor(Context::new(), Rigor::Mandatory, &shipped_registry());
+    let scope_with = |status: &str| {
+        let mut scope = Scope::new(&steps);
+        scope.bind_output("build", serde_json::json!({ "status": status }));
+        scope.enter("verify");
+        scope
     };
 
-    let full = rk_kernel::rigor::with_rigor(Context::new(), Rigor::Mandatory, &shipped_registry());
+    // ---- IT RESOLVES, AND DECIDES: true continues ... ------------------------------------------
+    assert_eq!(
+        rt.execute_step_in(&check, &full, &scope_with("passing"))
+            .expect("the walk completes"),
+        StepVerdict::Continue,
+        "a `check` reading its bound `${{build.outputs}}` must DECIDE true"
+    );
+    // ... and false does not hold — a decision, not a refusal of the reference.
+    match rt
+        .execute_step_in(&check, &full, &scope_with("failing"))
+        .expect("the walk completes")
+    {
+        StepVerdict::Failed(e) => assert!(
+            format!("{e:?}").contains("did not hold"),
+            "a `check` that resolved its input and read `false` must say it did not hold: {e:?}"
+        ),
+        other => panic!("a failing status must not hold: {other:?}"),
+    }
+
+    // ---- ONLY AN UNRESOLVABLE ONE REFUSES, by name (the step id and the reference). --------------
+    let mut unbound = Scope::new(&steps);
+    unbound.enter("verify");
+    match rt
+        .execute_step_in(&check, &full, &unbound)
+        .expect("the walk completes")
+    {
+        StepVerdict::Failed(e) => {
+            let rendered = format!("{e:?}");
+            assert!(
+                rendered.contains("`verify`") && rendered.contains("${build.outputs}"),
+                "the refusal does not name the step and the unresolved reference: {rendered}"
+            );
+            assert!(
+                !rendered.contains("did not hold"),
+                "an unresolvable input is never read as false: {rendered}"
+            );
+        }
+        other => panic!("an unresolvable reference must refuse by name: {other:?}"),
+    }
+
+    // ---- AND THE OLD CASE STILL REFUSES: an `expr` reading a path its `inputs` do not bind. -------
+    check.inputs.clear();
     match rt.execute_step(&check, &full).expect("the walk completes") {
         StepVerdict::Failed(e) => {
             let rendered = format!("{e:?}");
             assert!(
-                rendered.contains("report.status"),
-                "the refusal does not name the unresolved output, so it does not tell an operator \
-                 what is missing: {rendered}"
+                rendered.contains("report.status") && !rendered.contains("did not hold"),
+                "an `expr` reading an unbound path refuses naming it, never as false: {rendered}"
             );
         }
-        other => panic!(
-            "a `check` expr reading a step OUTPUT resolved against a facet context ({other:?}). \
-             Either step-output resolution landed — in which case ADR-0142 clause 4 and ADR-0136 \
-             clause 4 are discharged and this test should be replaced rather than deleted — or the \
-             arm stopped evaluating its `expr` at all."
-        ),
+        other => panic!("an `expr` reading an unbound output must refuse: {other:?}"),
     }
+    assert_eq!(
+        harness.dispatches(),
+        0,
+        "a `check` never reaches the `Harness` port"
+    );
 }

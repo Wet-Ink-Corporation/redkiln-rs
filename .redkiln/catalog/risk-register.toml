@@ -1,7 +1,7 @@
 # reach: (initiative, planning, recommended) — require row "kind in [initiative, project]" → RiskRegister
 [activity]
 id           = "risk-register"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "planning"
 provides     = ["RiskRegister"]
 requires     = ["DesignDoc", "SliceSet?", "ThreatModel?"]
@@ -48,8 +48,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", register = "${enumerate.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and (rigor < mandatory or register.unowned.len() == 0) and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", register = "${enumerate.outputs}" }
+expr    = "check.failed == 0 and (rigor < mandatory or register.unowned.len() == 0)"
 on_false = { to = "enumerate", max = 2 }
 
 [[step]]

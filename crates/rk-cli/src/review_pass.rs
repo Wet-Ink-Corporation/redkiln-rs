@@ -90,22 +90,12 @@ pub fn findings_in(events: &[Event]) -> Result<Findings, PassSkipped> {
 
 /// The selection a `run` repro names: the tokens of `command` after a `--` separator.
 ///
-/// 🛑 **`None` rather than a guess, and `None` rather than an empty selection.** `Repro.command` is
-/// a shell string and `Toolchain::test` takes a selection, and no record maps one to the other; the
-/// narrowest rule that makes AC-288's four cells computable from what a `Repro` actually carries is
-/// the explicit `--` filter. A command without one is refused into `Unverifiable { cannot_run }`,
-/// which AC-287 forbids from blocking — and an empty selection is refused outright, because
-/// `ac332_empty_selection_is_never_green` is the standing finding that an empty suite is not a pass.
-#[must_use]
-pub fn selection_of(command: &str) -> Option<Vec<String>> {
-    let (_, tail) = command.split_once(" -- ")?;
-    let selection: Vec<String> = tail
-        .split_whitespace()
-        .map(str::to_owned)
-        .filter(|t| !t.is_empty())
-        .collect();
-    (!selection.is_empty()).then_some(selection)
-}
+/// *(Moved 2026-09-26, `s8d` build, package P4; R2 = ADR-0173 decision 9, proposed.)* The ONE
+/// selection parser now lives in `rk_kernel::runtime::reference`, beside the resolver's selection
+/// mapping, because `rk-kernel` cannot depend on `rk-cli` and a second parser is forbidden. It is
+/// re-exported here so `rk_cli::review_pass::selection_of` keeps its path and its tests their
+/// import; its rule and its doc (`None` rather than a guess or an empty selection) moved with it.
+pub use rk_kernel::runtime::reference::selection_of;
 
 /// The re-executor: **two arms, two trees, AC-288's four cells** (ADR-0162 decision 4).
 ///
@@ -223,4 +213,117 @@ pub fn confirm(
         },
         reexecutor,
     )
+}
+
+// ------------------------------------------------------------------------------------------------
+// R5 (ADR-0177, proposed): THE REVIEW ROUTES THE COMPOSITION ROOT PERFORMS. *(Added 2026-09-26,
+// `s8d` build, package P7.)*
+// ------------------------------------------------------------------------------------------------
+
+/// A toolchain rooted at a project directory: how the root builds each re-execution arm.
+pub type ToolchainAt =
+    Box<dyn Fn(&std::path::Path) -> Result<std::sync::Arc<dyn Toolchain>, String> + Send + Sync>;
+
+/// **`shallow_clone` and `verdict_record`'s routes, as `rk-cli` performs them** (R5 = ADR-0177
+/// decisions 2-5).
+///
+/// `rk-kernel` opens no files and `rk-git` is a concrete crate, not a port, so the kernel's two
+/// review routes reach the world through this value, bound on the run's `ToolRouting`. The clone is
+/// ADR-0098 decision 2's retained gix write, `rk_git::clone::prepare_review_clone`, with a working
+/// tree checked out (`WorkingTree::Declared`): `review::confirm` re-executes each finding's test in
+/// it. The re-executor is [`ToolchainReExecutor`]'s two arms: the candidate rooted in the clone and
+/// the reference rooted at `reference_root`.
+pub struct ReviewCloneRoutes {
+    /// The clone's source, a `file://` URL naming the repository.
+    pub source_url: String,
+    /// Where clones are written, one directory per reviewed sha: `<clones_dir>/<sha>`.
+    pub clones_dir: std::path::PathBuf,
+    /// The reference arm's project root.
+    pub reference_root: std::path::PathBuf,
+    /// Builds each arm's toolchain.
+    pub toolchain_at: ToolchainAt,
+}
+
+/// The two arms, owned, so the kernel can hold the re-executor for the length of one confirm.
+struct OwnedReExecutor {
+    candidate: std::sync::Arc<dyn Toolchain>,
+    reference: std::sync::Arc<dyn Toolchain>,
+}
+
+impl ReExecutor for OwnedReExecutor {
+    fn run(&self, finding: &Finding, sha: &str) -> Option<ReExecutionRecord> {
+        ToolchainReExecutor {
+            candidate: self.candidate.as_ref(),
+            reference: self.reference.as_ref(),
+        }
+        .run(finding, sha)
+    }
+}
+
+impl rk_kernel::runtime::step::ReviewRoutes for ReviewCloneRoutes {
+    fn clone_at(&self, sha: &str) -> Result<serde_json::Value, rk_types::error::StepError> {
+        let io = |detail: String| rk_types::error::StepError::Transport {
+            kind: rk_types::error::TransportKind::Io,
+            detail,
+        };
+        // A reviewed sha is a full object id. Anything else is refused before it can name a path.
+        if sha.len() != 40 || !sha.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(rk_types::error::StepError::Unsupported {
+                capability: format!(
+                    "`shallow_clone` was handed `{sha}`, which is not a 40-hex commit id; a review \
+                     clone is made at a full sha (R5 = ADR-0177 decision 3)"
+                ),
+            });
+        }
+        let dest = self.clones_dir.join(sha);
+        // A leftover from a killed run is not this run's clone: its commit was never journalled,
+        // or the step would have been served and this call never made (R1).
+        if dest.exists() {
+            std::fs::remove_dir_all(&dest).map_err(|e| {
+                io(format!(
+                    "the stale review clone {} could not be removed: {e}",
+                    dest.display()
+                ))
+            })?;
+        }
+        std::fs::create_dir_all(&self.clones_dir)
+            .map_err(|e| io(format!("{}: {e}", self.clones_dir.display())))?;
+        rk_git::clone::prepare_review_clone(
+            &self.source_url,
+            &dest,
+            sha,
+            rk_git::clone::WorkingTree::Declared,
+        )
+        .map_err(|e| io(format!("the review clone at {sha} failed: {e:?}")))?;
+        Ok(serde_json::json!({
+            "path": dest.display().to_string(),
+            "sha": sha,
+            "working_tree": "declared",
+        }))
+    }
+
+    fn reexecutor(
+        &self,
+        workspace: &serde_json::Value,
+    ) -> Result<Box<dyn ReExecutor + '_>, rk_types::error::StepError> {
+        let refuse = |why: String| rk_types::error::StepError::Unsupported {
+            capability: format!("`verdict_record` cannot re-execute: {why} (R5 = ADR-0177)"),
+        };
+        let path = workspace
+            .get("path")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| refuse("the committed `Workspace` carries no `path`".to_owned()))?;
+        let candidate = (self.toolchain_at)(std::path::Path::new(path))
+            .map_err(|e| refuse(format!("no toolchain at the review clone {path}: {e}")))?;
+        let reference = (self.toolchain_at)(&self.reference_root).map_err(|e| {
+            refuse(format!(
+                "no toolchain at the reference root {}: {e}",
+                self.reference_root.display()
+            ))
+        })?;
+        Ok(Box::new(OwnedReExecutor {
+            candidate,
+            reference,
+        }))
+    }
 }

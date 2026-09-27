@@ -1,7 +1,7 @@
 # reach: (tech-debt, analysis, optional) — require row "kind == tech-debt" → DebtRegisterEntry
 [activity]
 id           = "tech-debt-assessment"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["DebtRegisterEntry"]
 requires     = ["IntakeRecord"]
@@ -47,8 +47,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { assessment = "${assess.outputs}", findings = "${adversary.outputs?}" }
-expr    = "assessment.remediation != null and findings.none(severity in ['blocking'])"
+inputs  = { assessment = "${assess.outputs}" }
+expr    = "assessment.remediation != null"
 on_false = { to = "assess", max = 2 }
 
 [[step]]

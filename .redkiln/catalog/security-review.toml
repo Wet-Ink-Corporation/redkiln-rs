@@ -1,7 +1,7 @@
 # reach: (security-vuln, review, optional); (story, review, recommended) with auth — require row → SecurityReviewVerdict
 [activity]
 id           = "security-review"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "review"
 provides     = ["SecurityReviewVerdict"]
 requires     = ["ChangeSummary", "ThreatModel?", "SecurityRequirements?", "ScanReport?"]
@@ -27,13 +27,6 @@ timeout_secs = "${toolchain.review_timeout}"
 retry   = { max = 1 }
 
 [[step]]
-id      = "verdict"
-kind    = "check"
-inputs  = { findings = "${review.outputs}" }
-expr    = "findings.none(severity in ['blocking'])"
-on_false = "continue"
-
-[[step]]
 id      = "residual"
 kind    = "gate"
 when    = "rigor >= recommended and ${review.outputs.items}.len() > 0"
@@ -48,6 +41,13 @@ inputs  = { findings = "${review.outputs}", accepted = "${residual.answer?}" }
 outputs = "value:Verdict"
 timeout_secs = 30
 retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { record = "${record.outputs}" }
+expr    = "record.blocking.len() == 0"
+on_false = "continue"
 
 [[step]]
 id      = "emit"

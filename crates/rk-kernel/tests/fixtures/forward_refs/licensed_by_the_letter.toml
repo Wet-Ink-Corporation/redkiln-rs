@@ -1,0 +1,43 @@
+# forward_ref_lint, must-LOAD (s8d §8d.3, D21-48 X8; licence 1, ADR-0042's letter).
+#
+# `draft` reads `${review.outputs?}`, a step declared after it. `policy`, declared after `review`,
+# loops back to `draft` (`on_false = { to = "draft" }`), so a later step has an `on_false` targeting
+# the referencing step: ADR-0042's Decision licenses the ref, and it is `null` on the first pass.
+
+[activity]
+id           = "fr-letter"
+version      = 1
+stage        = "design"
+provides     = ["ADR"]
+requires     = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "architect"
+inputs  = { findings = "${review.outputs?}" }
+outputs = "value:ADR"
+
+[[step]]
+id      = "review"
+kind    = "agent"
+role    = "reviewer"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { draft = "${draft.outputs}" }
+expr     = "draft.options.len() >= 2"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ADR = "${draft.outputs}" }
+evidence  = ["${review}"]

@@ -64,6 +64,7 @@
 mod adapter_selection;
 mod answer;
 mod catalog;
+mod change_deriver;
 mod config;
 mod cost;
 mod doctor;
@@ -71,6 +72,7 @@ mod exit;
 mod explain;
 mod init;
 mod lint;
+mod processes;
 mod reconcile;
 mod review_pass;
 mod root;
@@ -80,6 +82,7 @@ mod support;
 mod surface;
 mod toolchain;
 mod transcription;
+mod verb_rows;
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;

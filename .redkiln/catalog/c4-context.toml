@@ -3,7 +3,7 @@
 #   made disjoint by kind so no rank tie exists (F34 ambiguity B1)
 [activity]
 id           = "c4-context"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "design"
 provides     = ["ArchitectureDescription"]
 requires     = ["Spec"]
@@ -51,8 +51,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}" }
+expr    = "check.failed == 0"
 on_false = { to = "draw", max = 2 }
 
 [[step]]

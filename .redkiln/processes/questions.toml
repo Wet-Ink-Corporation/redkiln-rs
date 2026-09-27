@@ -1,0 +1,56 @@
+# .redkiln/processes/questions.toml — the pack's question registry (ADR-0063; ADR-0129 decision 3), loaded by
+# rk_cli::processes into rk_kernel's QuestionRegistry for `run` and `answer` alike. Shipped 2026-09-26 by s8d (§8d.6)
+# under record R5 = ADR-0177, PROPOSED. The loader reads `.redkiln/processes/*.toml` and does not recurse; it is the
+# only loader (D21-43: "The loader and `.redkiln/processes/` are **s8d**'s."), s8j authors the human-root questions
+# into this directory, and s8g loads through it.
+#
+# Schema (R5 decision 7): each `[question."<id>"]` declares `text` and a non-empty `options` list, each option an id
+# or `{ id, attaches = "<Kind>" }`; an optional `binds` lists further gate kinds answered by it. A question binds its
+# own id as a gate kind, because a catalog `gate` step's kind is its `question` (ADR-0145). Any other key is refused.
+#
+# The first nine entries are every `gate` and `escalate` question the two lanes' selected activities declare
+# (s8d §8d.6's table), transcribed with their text and options VERBATIM from spikes/p9/questions.toml. The tenth,
+# `facet.change`, is D21-43 N3's: the question the operator answers the `unknown_facet:change` gate with at triage.
+# Its options are transcribed from facets.toml's `[facet.change] values`, in that order; its text is the one line
+# here not taken from spikes/p9. `spec.ambiguity` is not an entry (N2: no lane selects user-story-ac).
+
+[question."repro.cannot-reproduce"]
+text = "The report could not be reproduced. Close as cannot-reproduce, or supply more information?"
+options = ["supply-info", "close-cannot-reproduce", "proceed-without-repro"]
+
+[question."root-cause.no-hypothesis"]
+text = "No confirmed hypothesis after the loop budget. How should we proceed?"
+options = ["provide-hint", "accept-best", "abandon"]
+
+[question."root-cause.accept"]
+text = "Accept this root cause as established?"
+options = ["accept", "reject-with-note"]
+
+[question."draft.accept"]
+text = "Accept this artifact as the basis for the next stage?"
+options = ["accept", "changes-requested"]
+
+[question."tdd.green-exhausted"]
+text = "Implementation did not reach green within the loop budget."
+options = ["provide-hint", "reduce-scope", "abandon"]
+
+[question."confirmation.not-fixed"]
+text = "The original reproduction still fails after the change. Send back to implement, or reopen the analysis?"
+options = ["send-back", "reopen-analysis"]
+
+[question."scan.accept-findings"]
+text = "The scan reports critical or high findings. Accept them with a recorded exception, or send the change back?"
+options = ["accept-exception", "send-back"]
+
+[question."review.blocking"]
+text = "Blocking findings exist. Override and approve, or send back?"
+options = ["send-back", "override-approve"]
+
+[question."closure.signoff"]
+text = "Every acceptance criterion is covered, the tree is clean and links are reconciled. Close this item?"
+options = ["close", "hold"]
+
+[question."facet.change"]
+text = "No changeset exists yet, so the change deriver abstained. What kind of change is this item?"
+options = ["text", "binary", "generated"]
+binds = ["unknown_facet:change"]

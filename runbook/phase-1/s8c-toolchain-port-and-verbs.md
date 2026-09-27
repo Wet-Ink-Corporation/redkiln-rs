@@ -1988,7 +1988,9 @@ the D21-47 fix round, plus nine added by D21-48 X15 (*D21-48 (2026-09-24)*).
   - **New**:
     - `tool_verb_routing::a_verb_with_no_registry_row_is_refused_by_its_bare_name`
     - `tool_verb_routing::a_registry_verb_with_no_inputs_reaches_run_verb`
-    - `tool_verb_routing::a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port`
+    - ~~`tool_verb_routing::a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port`~~ *(dated 2026-09-26,
+      `s8d` build, package P4: renamed `tool_verb_routing::a_registry_verb_whose_input_the_resolver_refuses_is_refused_before_the_port`
+      when `s8d`'s resolver made its premise false; `s8d` §8d.11 and this file's Checkpoint 8c take the new name)*
     - `tool_verb_routing::a_row_whose_route_has_no_executor_refuses_naming_the_route`
     - `tool_verb_routing::an_output_of_the_wrong_kind_is_refused_naming_both_kinds`
     - `verb_registry::the_shipped_registry_loads_with_route_outputs_and_live_on_every_row`
@@ -2806,10 +2808,19 @@ run_named rk-git "" 5 worktree_include::carries_only_files_both_ignored_and_matc
 # (dated 2026-09-26, s8c build, refuting round 6) the list gains tool_verb_routing::every_decode_table_kind_refuses_an_undecodable_value_naming_it
 # (M52, M53a-e kill on it; M51 kills on a_registry_verb_with_no_inputs_reaches_run_verb, already listed).
 # ~~want 24~~ is struck: 24 + 1 = 25. It is beyond §8c.9's 78, so FLOOR (13) is unmoved.
+# (dated 2026-09-26, s8d build, package P4; R2 = ADR-0173, proposed; s8d §8d.11) Two names this list carries had the
+# resolver's ABSENCE as their premise. tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port
+# KEEPS its name: its fixture is narrowed to a selection the resolver refuses by name (`${nope.outputs}`), which still
+# refuses and never reaches the port (ADR-0148's forbids stand; its refusal is reversed only for a selection that
+# resolves). ~~tool_verb_routing::a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port~~ is RENAMED
+# tool_verb_routing::a_registry_verb_whose_input_the_resolver_refuses_is_refused_before_the_port: a row's declared
+# inputs are now supplied from the step's resolved `inputs`, and what stays true is that an input the resolver refuses,
+# or a row input the step does not declare, refuses by name before the port. `want` (25) does not move: one name
+# replaces one.
 run_named rk-kernel "" 25 tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port \
   verb_registry::the_shipped_rust_value_table_is_exactly_the_declared_key_map tool_verb_routing::a_verb_with_no_row_refuses_by_its_bare_name_before_its_bound_is_resolved \
   tool_verb_routing::a_verb_with_no_registry_row_is_refused_by_its_bare_name tool_verb_routing::a_registry_verb_with_no_inputs_reaches_run_verb \
-  tool_verb_routing::a_registry_verb_whose_inputs_need_the_resolver_refuses_before_the_port tool_verb_routing::a_row_whose_route_has_no_executor_refuses_naming_the_route \
+  tool_verb_routing::a_registry_verb_whose_input_the_resolver_refuses_is_refused_before_the_port tool_verb_routing::a_row_whose_route_has_no_executor_refuses_naming_the_route \
   tool_verb_routing::an_output_of_the_wrong_kind_is_refused_naming_both_kinds verb_registry::the_shipped_registry_loads_with_route_outputs_and_live_on_every_row \
   verb_registry::a_value_without_a_warrant_is_refused verb_registry::every_shipped_toolchain_substitution_resolves_or_refuses_by_name \
   verb_registry::ac018_holds_over_the_shipped_catalog_and_registry \

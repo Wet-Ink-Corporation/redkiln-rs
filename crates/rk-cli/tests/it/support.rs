@@ -16,7 +16,9 @@
 //!    assertion here that counts store rows around a scripted failure must count that row or
 //!    exclude its kind** — `rk-kernel`'s own test tree wrote a separate counting harness for exactly
 //!    this reason and says so: *"a count over a journal the fake also writes measures two things at
-//!    once."*
+//!    once."* *(dated 2026-09-26, s8d build, P6; R4 = ADR-0176, proposed):* **no longer the fake's.** R4 removed `event_for`
+//!    and its appends; the KERNEL writes the one error row per failed dispatch, so the row is still
+//!    in the store after a scripted failure, and the counting rule above still applies to it.
 //! 2. **A fired token overrides the script.** `dispatch` checks `self.token.is_cancelled()`
 //!    **before** consulting the script and, on a fired token, returns
 //!    `StepError::Cancelled { by: CancelledBy::Operator }` — **not** the scripted element and
@@ -529,6 +531,11 @@ pub enum PackVariant {
     /// the adapter's own timer, which the adapter classifies `Cancelled { by: Timeout }`
     /// — §7d.4's row 13, never row 12.
     DispatchOneSecond,
+    /// `pack.step-grain.toml` — `s8d`'s R1 fixture (§8d.2, §8d.8 defect 4). Installs
+    /// `step-grain/catalog/`'s two activities beside `emit-report`: `two-agents` (two agent steps,
+    /// two roles, two output kinds, one literal bound above its budget) and `no-agent-steps` (no
+    /// agent step at all), plus `step-grain/cards/reviewer.json`. *(Added 2026-09-26, `s8d` P3.)*
+    StepGrain,
 }
 
 impl PackVariant {
@@ -539,6 +546,7 @@ impl PackVariant {
             Self::GateOneSecond => "pack.gate-1s.toml",
             Self::DispatchOneSecond => "pack.dispatch-1s.toml",
             Self::Review => "pack.review.toml",
+            Self::StepGrain => "pack.step-grain.toml",
         }
     }
 }
@@ -679,6 +687,29 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
             rk.join("catalog").join(name),
         )
         .expect("the catalog activity installs");
+    }
+    // `s8d` P3: the step-grain variant's two activities and its second card, from their own
+    // subdirectory so no other variant sees them.
+    if variant == PackVariant::StepGrain {
+        for (sub, ext) in [("catalog", "toml"), ("cards", "json")] {
+            let from = src.join("step-grain").join(sub);
+            let mut n = 0_usize;
+            for entry in std::fs::read_dir(&from).expect("the step-grain subdirectory reads") {
+                let path = entry.expect("an entry").path();
+                if path.extension().is_none_or(|e| e != ext) {
+                    continue;
+                }
+                let name = path.file_name().expect("a file name");
+                std::fs::copy(&path, rk.join(sub).join(name))
+                    .expect("the step-grain file installs");
+                n += 1;
+            }
+            assert!(
+                n > 0,
+                "no step-grain {sub} file installed from {}",
+                from.display()
+            );
+        }
     }
 
     // 🛑 THE INSTALL NAME IS THE RECORD'S OWN `id`, NOT THE FIXTURE FILE'S NAME. §7d.5 fixes the

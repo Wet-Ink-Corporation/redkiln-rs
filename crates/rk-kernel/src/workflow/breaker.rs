@@ -236,6 +236,13 @@
 //! for that family is requested"*) has a live dispatch beside it and no wire between them, which
 //! `runtime.rs`:53 already reports for AC-033's mark half.
 //!
+//! *(Corrected 2026-09-26, `s8d` build, package P6; R4 = ADR-0176, `proposed`.)* **The call site exists
+//! now, and this module did not move for it.** `runtime/activity.rs`'s `Runtime::breaker_refusal` calls
+//! [`BreakerState::from_events`] and [`BreakerState::decide`] before every agent step's dispatch attempt
+//! whose family is bound, over the store's journal, and refuses an open family before the port. The
+//! rows it folds are the kernel's own (`activity::error_row`, and an agent step's commit row carrying
+//! `family`). The paragraph above and the one below stand as the record of the state before R4.
+//!
 //! **D-7 did not change that and did not claim to.** Its work is the **key**: a producer for the
 //! family token, its expiry's home, and the ban on the other `family`. The consequence, stated
 //! rather than left for a reader to infer: the role → family resolution is **pinned by

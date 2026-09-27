@@ -1,7 +1,7 @@
 # reach: (project, specification, recommended) with external_dep — require row → APIContract
 [activity]
 id           = "api-contract-spec"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "specification"
 provides     = ["APIContract"]
 requires     = ["Spec", "DesignDoc?"]
@@ -49,8 +49,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { lint = "${contract-lint.outputs}", contract = "${draft.outputs}", findings = "${adversary.outputs?}" }
-expr    = "lint.errors.len() == 0 and contract.uncovered_ac.len() == 0 and findings.none(severity in ['blocking'])"
+inputs  = { lint = "${contract-lint.outputs}", contract = "${draft.outputs}" }
+expr    = "lint.errors.len() == 0 and contract.uncovered_ac.len() == 0"
 on_false = { to = "draft", max = 2 }
 
 [[step]]

@@ -1,0 +1,44 @@
+# forward_ref_lint, must-REFUSE (s8d §8d.3, D21-48 X8): an approval gate's answer read by the drafting
+# step after the only loop. This is `adr-record` v1's shape.
+#
+# `draft` reads `${accept.answer?}`. The only back-edge into `draft` is `complete`'s `on_false`, and
+# `complete` is declared BEFORE `accept`, so no step at or after `accept` targets `draft` (not the
+# letter); `draft` declares no `repeat` (not the repeat body) and escalates nowhere (not the escalate
+# re-entry). No cycle re-enters `draft` after the gate, so the value is `null` on every pass.
+
+[activity]
+id           = "fr-approval-after-loop"
+version      = 1
+stage        = "design"
+provides     = ["ADR"]
+requires     = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "architect"
+inputs  = { spec = "artifact:Spec", answer = "${accept.answer?}" }
+outputs = "value:ADR"
+
+[[step]]
+id       = "complete"
+kind     = "check"
+inputs   = { draft = "${draft.outputs}" }
+expr     = "draft.options.len() >= 2"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id       = "accept"
+kind     = "gate"
+question = "adr.accept"
+inputs   = { adr = "${draft.outputs}" }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ADR = "${draft.outputs}" }
+evidence  = ["${accept?}"]

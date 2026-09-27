@@ -1,0 +1,48 @@
+# forward_ref_lint, must-LOAD (s8d §8d.3, D21-48 X8; licence 3, the escalate re-entry).
+#
+# `attempt` escalates to the question `repro.cannot-reproduce` (`on_exhausted = "escalate"`), and
+# `triage-gate`, declared after `cook`, is a `gate` step asking that question: answering it resumes
+# into `attempt` (schema §3). So both of `attempt`'s later-step refs are licensed: the gate's answer,
+# and `cook`'s output, which lies before that gate. No `on_false` targets `attempt`, and neither ref
+# lies in its repeat body (its `until` reads only `attempt` itself). This is `minimal-repro-ue`'s shape.
+
+[activity]
+id           = "fr-escalate"
+version      = 1
+stage        = "analysis"
+provides     = ["ADR"]
+requires     = []
+tags         = ["kind:bug"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "attempt"
+kind    = "agent"
+role    = "investigator"
+inputs  = { hint = "${triage-gate.answer?}", cook = "${cook.outputs?}" }
+outputs = "value:ReproAttempt"
+repeat  = { until = "${attempt.outputs.status} == 'reproduced'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "repro.cannot-reproduce" }
+
+[[step]]
+id      = "cook"
+kind    = "tool"
+run     = "toolchain:cook"
+inputs  = { command = "${attempt.outputs.command}" }
+outputs = "value:CookReport"
+
+[[step]]
+id       = "triage-gate"
+kind     = "gate"
+question = "repro.cannot-reproduce"
+inputs   = { attempts = "${attempt.outputs}" }
+when     = "${attempt.outputs.status} != 'reproduced'"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ADR = "${attempt.outputs}" }
+evidence  = ["${cook}", "${triage-gate?}"]

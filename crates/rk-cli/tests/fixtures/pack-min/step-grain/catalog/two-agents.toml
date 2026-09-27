@@ -1,0 +1,43 @@
+# pack-min's STEP-GRAIN activity — installed ONLY with `pack.step-grain.toml` (s8d §8d.2, §8d.8 defect 4;
+# record R1, proposed). Authored 2026-09-26 for `s8d`'s package P3; no byte comes from the pinned corpus.
+#
+# TWO agent steps with DIFFERENT roles, cards and output kinds, so the binder's per-step specs are each
+# step's own (§8d.2: "that step's `role` -> its card, that step's `outputs = "value:<Kind>"` -> its
+# schema"). `provides[0]` is `ChangeSummary`, which NEITHER step outputs and for which pack-min ships
+# no schema file: a binder that took the schema from `activity.provides.first()` (M18) reads
+# `schemas/ChangeSummary.json`, finds none, and refuses the run by name.
+#
+# `draft`'s literal `timeout_secs = 5000` EXCEEDS the budget's `wall_clock_secs = 900`, so its per-step
+# spec's bound is 900 (N16: "bounded by the activity budget"); `review`'s 60 is under it and stands.
+[activity]
+id           = "two-agents"
+version      = 1
+stage        = "implement"
+provides     = ["ChangeSummary"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 2, tokens = 1000, wall_clock_secs = 900 }
+
+[[step]]
+id           = "draft"
+kind         = "agent"
+role         = "implementer"
+outputs      = "value:ImplReport"
+timeout_secs = 5000
+
+[[step]]
+id           = "review"
+kind         = "agent"
+role         = "reviewer"
+outputs      = "value:Findings"
+timeout_secs = 60
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ChangeSummary = "${draft.outputs}" }

@@ -2,7 +2,7 @@
 # discovery spine family (rank inert, see problem-framing)
 [activity]
 id           = "opportunity-solution-tree"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "discovery"
 provides     = ["OpportunityMap"]
 requires     = ["OutcomeStatement", "ProblemStatement"]
@@ -49,8 +49,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}", draft = "${map.outputs}" }
-expr    = "check.failed == 0 and draft.opportunities.len() > 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", draft = "${map.outputs}" }
+expr    = "check.failed == 0 and draft.opportunities.len() > 0"
 on_false = { to = "map", max = 2 }
 
 [[step]]

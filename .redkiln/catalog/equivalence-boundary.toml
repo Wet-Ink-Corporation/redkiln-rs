@@ -2,7 +2,7 @@
 # test-design rigor family (see smoke-test)
 [activity]
 id           = "equivalence-boundary"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "verify"
 provides     = ["TestReport", "TestDesign"]
 requires     = ["Changeset", "Spec"]
@@ -66,8 +66,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { design = "${design.outputs}", findings = "${adversary.outputs?}" }
-expr    = "design.uncovered_ac.len() == 0 and findings.none(severity in ['blocking'])"
+inputs  = { design = "${design.outputs}" }
+expr    = "design.uncovered_ac.len() == 0"
 on_false = { to = "design", max = 2 }
 
 [[step]]

@@ -235,7 +235,7 @@ fn the_chosen_adapters_value_table_reaches_the_kernel_without_its_name() {
     // rust: 60 s slowest → 120 s by ADR-0170 decision 10's rule; node: 300 s → 600 s.
     let registry = format!(
         "[verb]\nbuild = {{ outputs = \"BuildReport\", live = false, timeout = \"build_timeout\", \
-         inputs = [], route = \"port\" }}\n\
+         inputs = [], route = \"port\", side_effecting = false }}\n\
          [toolchain.node]\nbuild_timeout = {{ secs = 600, measured = [300], rule = \"r\", pin = \
          \"{pin}\", command = \"tsc\" }}\n\
          [toolchain.rust]\nbuild_timeout = {{ secs = 120, measured = [60], rule = \"r\", pin = \
@@ -310,6 +310,13 @@ fn the_chosen_adapters_value_table_reaches_the_kernel_without_its_name() {
         timeout_secs: Some(rk_kernel::catalog::StepTimeout::Toolchain(
             "build_timeout".to_owned(),
         )),
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     };
     let verdict = rt
         .execute_step(&step, &rk_kernel::predicate::Context::new())

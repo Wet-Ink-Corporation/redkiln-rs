@@ -50,7 +50,7 @@
 //! | AC-024 *"the kernel writes a durable mark"* (wall clock) | `EventKind::GateOpened`, kind `budget_extension` | AC-039's own mechanism half. **The mark's VALUE is on disk at `crate::workflow::budget::wall_clock_expiry_mark`; its WRITER is ARMED and has no call site — see the split table below** |
 //! | AC-012's activation | `EventKind::ActivityCommitted` | design §5 row 10, *"at most once per **step activation**"* (ADR-0097 decision 2) |
 //! | AC-525's advisory | `EventKind::DriftAdvisory` | design §5 row 22 |
-//! | 🛑 AC-033's breaker mark | **none exists** | `RefusalClass` is closed at four and `FailureClass` at five; **ARMED, NOT DISCHARGED** since Slice 4d and unchanged here |
+//! | AC-033's breaker mark *(corrected 2026-09-26, `s8d` build, package P6, under R4 = ADR-0176 decision 6, `proposed`; this row read "🛑 AC-033's breaker mark \| **none exists** \| `RefusalClass` is closed at four and `FailureClass` at five; **ARMED, NOT DISCHARGED** since Slice 4d and unchanged here")* | `EventKind::StepFailed`, the kernel's own row — **no kind is minted** | the K-th consecutive `step_failed { class: platform, family, at }` row the kernel writes for a family (`activity::error_row`) is durable and family-scoped, and `workflow::breaker::BreakerState::from_events` derives the open mark from it; `activity.rs`'s `Runtime::breaker_refusal` folds it before an agent step's dispatch and refuses an open family before the port (AC-033..AC-035). ADR-0120's route is not required |
 //!
 //! # 🛑 *"exits 0"* IS NOT THIS **MODULE'S** TO ASSERT — AMENDED 2026-09-14 (D-8)
 //!
@@ -178,6 +178,7 @@ pub mod activity;
 pub mod advisory;
 pub mod ledger;
 pub mod marks;
+pub mod reference;
 pub mod step;
 
 /// What a poisoned store lock means. **ADR-0118 clause 1**: *"the run stops at the poisoned
@@ -327,6 +328,42 @@ pub struct Runtime {
     /// by its bare verb name (no row); the composition root binds the loaded registry with
     /// [`Self::with_tool_routing`].
     tool_routing: step::ToolRouting,
+    /// *(2026-09-26, `s8d` build, package P4; R2 = ADR-0173 decision 8, proposed.)* The read seam
+    /// every resolved `artifact:` input calls once. [`Self::new`] binds the named, NON-EMITTING stub
+    /// [`reference::UnwiredReadSeam`], the one production value at `s8d`; `s8f` re-points it to its
+    /// rk-store seam with [`Self::with_read_seam`], and that seam is the only emitter of
+    /// `artifact.read` (D21-47).
+    read_seam: std::sync::Arc<dyn reference::ArtifactReadSeam>,
+    /// *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176, proposed.)* The pack's breaker
+    /// envelope and role → family table, read before an agent step dispatches. [`Self::new`] binds
+    /// none — the kernel's machinery suites, which have no pack behind them — and the production
+    /// path binds the selected pack in `replay::resume_routed` with [`Self::with_breaker`].
+    breaker: Option<BreakerBinding>,
+}
+
+/// **R4 (ADR-0176, proposed): the breaker's binding** — the selected pack.
+///
+/// The executor reads `K` ([`crate::select::Pack::require_breaker_threshold`]), the expiry
+/// ([`crate::select::Pack::require_breaker_expiry`]) and an agent step's family
+/// ([`crate::select::Pack::require_family_for_role`], D-7). Each is read at the dispatch that
+/// needs it and refused by name there when the pack declares none; nothing is defaulted.
+#[derive(Debug, Clone)]
+pub struct BreakerBinding {
+    pack: crate::select::Pack,
+}
+
+impl BreakerBinding {
+    /// Bind the selected pack.
+    #[must_use]
+    pub fn of(pack: &crate::select::Pack) -> Self {
+        Self { pack: pack.clone() }
+    }
+
+    /// The pack this binding reads.
+    #[must_use]
+    pub const fn pack(&self) -> &crate::select::Pack {
+        &self.pack
+    }
 }
 
 impl Runtime {
@@ -344,7 +381,37 @@ impl Runtime {
             run_id: run_id.to_owned(),
             stage: stage.to_owned(),
             tool_routing: step::ToolRouting::default(),
+            read_seam: std::sync::Arc::new(reference::UnwiredReadSeam),
+            breaker: None,
         }
+    }
+
+    /// Bind the breaker (R4 = ADR-0176 decision 4). The composition root's run path binds the
+    /// selected pack here; before an agent step dispatches, the executor folds the store's
+    /// family-scoped rows with the pack's `K` and refuses a family whose mark is open.
+    #[must_use]
+    pub fn with_breaker(mut self, binding: BreakerBinding) -> Self {
+        self.breaker = Some(binding);
+        self
+    }
+
+    /// The breaker binding, when one is bound.
+    #[must_use]
+    pub const fn breaker(&self) -> Option<&BreakerBinding> {
+        self.breaker.as_ref()
+    }
+
+    /// Bind the read seam (R2 decision 8). `s8f`'s composition root binds its rk-store seam here.
+    #[must_use]
+    pub fn with_read_seam(mut self, seam: std::sync::Arc<dyn reference::ArtifactReadSeam>) -> Self {
+        self.read_seam = seam;
+        self
+    }
+
+    /// The read seam the resolver's `artifact:` arm calls.
+    #[must_use]
+    pub fn read_seam(&self) -> &dyn reference::ArtifactReadSeam {
+        self.read_seam.as_ref()
     }
 
     /// Bind the verb registry and value table the `tool` arm routes through (s8c §8c.4; record V

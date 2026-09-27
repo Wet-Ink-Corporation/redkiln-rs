@@ -1,7 +1,7 @@
 # reach: (initiative, review, recommended) — require row "kind in [initiative, project]" → PRRReport
 [activity]
 id           = "production-readiness-review"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "review"
 provides     = ["PRRReport"]
 requires     = ["DesignDoc", "RolloutPlan?", "RiskRegister?"]
@@ -46,8 +46,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs}" }
-expr    = "check.failed == 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}" }
+expr    = "check.failed == 0"
 on_false = { to = "audit", max = 2 }
 
 [[step]]

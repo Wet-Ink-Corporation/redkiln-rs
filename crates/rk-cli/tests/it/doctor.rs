@@ -598,7 +598,7 @@ fn rk_d_timeout_resolves_a_toolchain_substitution_through_the_value_table() {
         redkiln.join("registry.toml"),
         format!(
             "[verb]\nbuild = {{ outputs = \"BuildReport\", live = false, timeout = \
-             \"build_timeout\", inputs = [], route = \"port\" }}\n\
+             \"build_timeout\", inputs = [], route = \"port\", side_effecting = false }}\n\
              [toolchain.rust]\nbuild_timeout = {{ secs = 120, measured = [60], rule = \"r\", pin \
              = \"{pin}\", command = \"cargo build\" }}\ndeploy_timeout = {{ unmeasured = \"no \
              Phase-1 Rust verb deploys\" }}\n\

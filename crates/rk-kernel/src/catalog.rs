@@ -22,7 +22,7 @@
 //! `evidence = […]` promises in the shipped catalog list `GreenAt` unconditionally beside a
 //! `toolchain:test` step, which is the same reading.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::Path;
 
@@ -227,8 +227,109 @@ pub struct Step {
     /// stands until `s8d`).
     ///
     /// Skipped from the run record when `None`, so a step that declares none serialises as it did.
+    ///
+    /// *(dated 2026-09-26, `s8d` build, package P2; R2 = ADR-0173, written `proposed`)* `inputs`
+    /// is now parsed, onto [`Step::inputs`]: R2 is the record that routes what may read it
+    /// (ADR-0148's fourth forbids bullet), and it supersedes ADR-0148 decision 3 in part.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout_secs: Option<StepTimeout>,
+    /// **R2's parsed-`inputs` carrier** (ADR-0173, written `proposed`; `s8d` §8d.3; D21-57).
+    /// `inputs = { <binding> = <source>, … }`, each value transcribed and not interpreted: a
+    /// source string (`artifact:…`, `kb:…`, `checklist:…`, `toolchain:…`, `${…}`, or a string
+    /// literal) or a scalar literal.
+    ///
+    /// ADR-0148 decision 3 kept this key off the type (*"`catalog::Step` is not widened to parse
+    /// `inputs`"*) because nothing could read it, and its fourth forbids bullet forbids the widening
+    /// *"without a record routing what may then read it"*. R2 is that record, and it names the
+    /// readers: the forward-ref licence lint ([`forward_ref_lint`], D21-48 X8), AC-303's confirm
+    /// rule (`rigor::confirm_step_monotonicity_rule`, D21-57), and R2's resolver
+    /// (`runtime::reference`). ADR-0148's other forbids stand: nothing here passes a declared
+    /// selection through as a test name or as an empty selection.
+    ///
+    /// The `toml_subset` table is a `BTreeMap`, so bindings come back in key order, not declaration
+    /// order; no reader here needs declaration order. Skipped from the run record when empty, as
+    /// [`Step::timeout_secs`] is when `None`.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub inputs: BTreeMap<String, InputValue>,
+    /// `on_false = { to = "<step>", … }`'s `to`, the loop-back target (ADR-0044; ADR-0103 clause
+    /// 6's `{to, max}` form). `None` for the keyword forms and for a step with no `on_false`. Read
+    /// for the forward-ref lint's first licence (ADR-0042's letter); the executor's reading of the
+    /// whole form is `predicate::classify_on_false`'s.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on_false_to: Option<String>,
+    /// `repeat = { until = "<predicate>", … }`'s `until`, verbatim ([`Step::repeat_max`] carries
+    /// its `max`). Read for the forward-ref lint's second licence, the repeat body, which runs
+    /// through the last step `until` references (D21-48 X6). It is not evaluated here.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repeat_until: Option<String>,
+    /// `escalate = { question = "<id>" }`'s question: the gate kind this step escalates to, directly
+    /// or through `on_exhausted = "escalate"`. Read for the forward-ref lint's third licence, the
+    /// escalate re-entry (D21-48 X8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escalate_question: Option<String>,
+    /// *(dated 2026-09-26, `s8d` build, package P5; R3, written `proposed`.)* The step's whole
+    /// `on_false`, transcribed as declared and NOT interpreted here: the table or the keyword, as a
+    /// JSON value. The executor classifies it through the one classifier,
+    /// `predicate::classify_on_false` (ADR-0103 clause 6's closed set), at the moment a `check`
+    /// does not hold — so a form outside the closed set is refused by name there, never read as
+    /// some other form. [`Step::on_false_to`] stays the lint's reading of the `to` alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on_false: Option<serde_json::Value>,
+    /// *(dated 2026-09-26, `s8d` build, package P5; R2 decision 5.)* `on_exhausted = "<exit>"`, the
+    /// exit a `repeat` takes at `max` (schema §1, *"`escalate | fail | continue`"*), verbatim.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on_exhausted: Option<String>,
+    /// *(dated 2026-09-26, `s8d` build, package P4; R2 = ADR-0173 decision 7, written `proposed`.)*
+    /// An `emit` step's `artifacts` table and `evidence` list, transcribed and not interpreted:
+    /// `runtime::reference::bind_emit` binds them, and that binding is what commits the activation.
+    /// `None` for a step that declares neither. Skipped from the run record when `None`, as
+    /// [`Step::timeout_secs`] is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub emit: Option<EmitBinding>,
+}
+
+/// An `emit` step's declared binding (R2 decision 7).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct EmitBinding {
+    /// `artifacts = { <Kind> = <source> | { <member> = <source>, … } }`, by kind.
+    pub artifacts: BTreeMap<String, EmitArtifact>,
+    /// `evidence = ["${step}", "${step?}", …]`, in declaration order.
+    pub evidence: Vec<String>,
+}
+
+/// One provided kind's binding: a reference, or a composing table (schema §9c.34, as
+/// `confirmation-test`'s `ConfirmationResult`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum EmitArtifact {
+    Ref(String),
+    Compose(BTreeMap<String, InputValue>),
+}
+
+/// One `inputs` value, transcribed (R2's carrier; see [`Step::inputs`]).
+///
+/// The shipped catalog declares strings and integers only [measured 2026-09-26 over every
+/// `[[step]]` in the repository's TOML: 1 122 strings and 13 integers]. A boolean is carried
+/// because it is a scalar literal of the same kind; an array, a table or a float is refused at load
+/// by name, because a dropped value reads as a binding that was never declared.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum InputValue {
+    /// A source form or a string literal, verbatim.
+    Text(String),
+    /// An integer literal.
+    Int(i64),
+    /// A boolean literal.
+    Bool(bool),
+}
+
+impl InputValue {
+    /// The text of a [`InputValue::Text`], `None` for a scalar literal.
+    #[must_use]
+    pub fn as_text(&self) -> Option<&str> {
+        match self {
+            Self::Text(s) => Some(s),
+            Self::Int(_) | Self::Bool(_) => None,
+        }
+    }
 }
 
 /// A step's declared `timeout_secs` (record B decision 1).
@@ -1011,6 +1112,33 @@ fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activ
                     continue;
                 }
             };
+            // **R2's parsed-`inputs` carrier** (ADR-0173, written `proposed`; D21-57). A value
+            // outside the carrier's three scalar kinds, or an `inputs` that is not a table, is
+            // refused by name and never dropped: a dropped binding reads as one never declared.
+            let inputs = match step_inputs(table) {
+                Ok(inputs) => inputs,
+                Err(detail) => {
+                    out.push(diagnose(shape(format!("{id}/{step_id}: {detail}"))));
+                    continue;
+                }
+            };
+            // **R2 decision 7** (ADR-0173, written `proposed`): the `emit` binding, refused by name
+            // rather than dropped when it is not the declared shape.
+            let emit = match emit_binding(table) {
+                Ok(emit) => emit,
+                Err(detail) => {
+                    out.push(diagnose(shape(format!("{id}/{step_id}: {detail}"))));
+                    continue;
+                }
+            };
+            let sub = |key: &str, member: &str| -> Option<String> {
+                table
+                    .get(key)
+                    .and_then(Value::as_table)
+                    .and_then(|t| t.get(member))
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned)
+            };
             steps.push(Step {
                 id: step_id,
                 kind,
@@ -1036,8 +1164,31 @@ fn walk(name: &str, src: &str, out: &mut Vec<CatalogDiagnostic>) -> Option<Activ
                 // goes missing silently everywhere else.
                 question,
                 timeout_secs,
+                inputs,
+                on_false_to: sub("on_false", "to"),
+                repeat_until: sub("repeat", "until"),
+                escalate_question: sub("escalate", "question"),
+                on_false: table.get("on_false").map(toml_to_json),
+                on_exhausted: text(table, "on_exhausted"),
+                emit,
             });
         }
+    }
+    // 🛑 **`s8d` §8d.8 defect 1 (R2 decision 7): A STEP AFTER AN `emit` IS REFUSED AT LOAD, BY
+    // NAME.** design §4.5 makes `emit` terminal, and the walk's arm read
+    // `StepVerdict::Emitted => break`, which dropped every later step in silence. Measured over
+    // `.redkiln/catalog`, `spikes/p9/catalog`, `catalog-b` and every fixture catalog: 0 activities
+    // declare a step after their `emit`, so this refuses nothing that exists; it is the guard that
+    // keeps a later step from being declared and never run.
+    if let Some(e) = steps.iter().position(|s| s.kind == StepKind::Emit)
+        && let Some(after) = steps.get(e + 1)
+    {
+        out.push(diagnose(shape(format!(
+            "{id}/{}: the step follows the `emit` step `{}`. An `emit` is terminal (design §4.5), \
+             so a later step would never run; it is refused by name rather than dropped (R2 = \
+             ADR-0173 decision 7; `s8d` §8d.8 defect 1)",
+            after.id, steps[e].id
+        ))));
     }
     // ADR-0072's `@version`. Absent is `None` and never `1` -- see `Activity::version`. A malformed
     // one abandons the activity rather than loading it as `None`: a version that silently became
@@ -1113,6 +1264,379 @@ fn activity_from(name: &str, src: &str) -> Result<Activity, CatalogError> {
         source: name.to_owned(),
         detail: "the activity could not be built and no defect was recorded".to_owned(),
     })
+}
+
+/// One `[[step]]`'s `inputs` table onto [`Step::inputs`]: absent is empty; a table of strings,
+/// integers and booleans is carried; anything else is an error naming the binding.
+/// A TOML value as JSON, for a key carried verbatim ([`Step::on_false`]). A float that JSON cannot
+/// carry (a NaN or an infinity) becomes `null`, which the one classifier refuses by name.
+fn toml_to_json(value: &Value) -> serde_json::Value {
+    match value {
+        Value::Str(s) => serde_json::Value::String(s.clone()),
+        Value::Int(n) => serde_json::Value::from(*n),
+        Value::Float(f) => {
+            serde_json::Number::from_f64(*f).map_or(serde_json::Value::Null, Into::into)
+        }
+        Value::Bool(b) => serde_json::Value::Bool(*b),
+        Value::Array(items) => serde_json::Value::Array(items.iter().map(toml_to_json).collect()),
+        Value::Table(t) => serde_json::Value::Object(
+            t.iter()
+                .map(|(k, v)| (k.clone(), toml_to_json(v)))
+                .collect(),
+        ),
+    }
+}
+
+fn step_inputs(table: &Table) -> Result<BTreeMap<String, InputValue>, String> {
+    let Some(value) = table.get("inputs") else {
+        return Ok(BTreeMap::new());
+    };
+    let inputs = value
+        .as_table()
+        .ok_or_else(|| "`inputs` is not a table (ADR-0040's step input grammar)".to_owned())?;
+    inputs
+        .iter()
+        .map(|(binding, v)| {
+            let carried = match v {
+                Value::Str(s) => InputValue::Text(s.clone()),
+                Value::Int(n) => InputValue::Int(*n),
+                Value::Bool(b) => InputValue::Bool(*b),
+                other => {
+                    return Err(format!(
+                        "`inputs.{binding}` is {other:?}, which is none of a source string, an \
+                         integer or a boolean — refused rather than dropped, because a dropped \
+                         value reads as a binding never declared"
+                    ));
+                }
+            };
+            Ok((binding.clone(), carried))
+        })
+        .collect()
+}
+
+/// One `[[step]]`'s `artifacts` table and `evidence` list onto [`Step::emit`]: absent both is
+/// `None`; an artifact bound to a string or to a table of scalar sources is carried; anything else
+/// is an error naming the key (R2 decision 7).
+fn emit_binding(table: &Table) -> Result<Option<EmitBinding>, String> {
+    let artifacts = table.get("artifacts");
+    let evidence = table.get("evidence");
+    if artifacts.is_none() && evidence.is_none() {
+        return Ok(None);
+    }
+    let mut out = EmitBinding {
+        artifacts: BTreeMap::new(),
+        evidence: Vec::new(),
+    };
+    if let Some(value) = artifacts {
+        let rows = value
+            .as_table()
+            .ok_or_else(|| "`artifacts` is not a table (R2 decision 7)".to_owned())?;
+        for (kind, v) in rows {
+            let bound = match v {
+                Value::Str(s) => EmitArtifact::Ref(s.clone()),
+                Value::Table(members) => {
+                    let mut composed = BTreeMap::new();
+                    for (member, m) in members {
+                        let carried = match m {
+                            Value::Str(s) => InputValue::Text(s.clone()),
+                            Value::Int(n) => InputValue::Int(*n),
+                            Value::Bool(b) => InputValue::Bool(*b),
+                            other => {
+                                return Err(format!(
+                                    "`artifacts.{kind}.{member}` is {other:?}, which is none of a \
+                                     source string, an integer or a boolean"
+                                ));
+                            }
+                        };
+                        composed.insert(member.clone(), carried);
+                    }
+                    EmitArtifact::Compose(composed)
+                }
+                other => {
+                    return Err(format!(
+                        "`artifacts.{kind}` is {other:?}, which is neither a source string nor a \
+                         composing table"
+                    ));
+                }
+            };
+            out.artifacts.insert(kind.clone(), bound);
+        }
+    }
+    if let Some(value) = evidence {
+        let items = value
+            .as_array()
+            .ok_or_else(|| "`evidence` is not an array (R2 decision 7)".to_owned())?;
+        for item in items {
+            let text = item
+                .as_str()
+                .ok_or_else(|| format!("an `evidence` entry is {item:?}, not a reference"))?;
+            out.evidence.push(text.to_owned());
+        }
+    }
+    Ok(Some(out))
+}
+
+// ---- the forward-ref licence (D21-48 X8; R2 = ADR-0173, written `proposed`) -------------------------
+
+/// Which licence admits a reference to a later-declared step (`s8d` §8d.3, *Which forward refs are
+/// licensed*).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Licence {
+    /// **ADR-0042's letter.** The referenced step, or a step after it, has `on_false = { to = R }`
+    /// for the referencing step R.
+    Letter,
+    /// **The repeat body (D21-48 X6).** R declares `repeat`, and the referenced step lies within
+    /// R's body, which runs through the last step R's `until` references.
+    RepeatBody,
+    /// **The escalate re-entry (D21-48 X8).** R declares `escalate = { question = Q }`, and the
+    /// referenced step, or a step after it, is a `gate` step whose `question` is Q: answering it
+    /// resumes into R (schema §3).
+    EscalateReEntry,
+}
+
+impl Licence {
+    /// The census token.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Letter => "letter",
+            Self::RepeatBody => "repeat",
+            Self::EscalateReEntry => "escalate",
+        }
+    }
+}
+
+/// One `${<step>…}` in a step's `inputs` whose step is declared LATER in the same activity.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ForwardRef {
+    pub activity: String,
+    /// The referencing step (R).
+    pub step: String,
+    /// The `inputs` binding that carries the reference.
+    pub binding: String,
+    /// The reference as written, `${…}` included.
+    pub reference: String,
+    /// The later-declared step it names (L).
+    pub target: String,
+    /// `true` for the `${…?}` spelling.
+    pub optional: bool,
+    /// The first licence that admits it, in the order the enum declares them; `None` when none
+    /// does.
+    pub licence: Option<Licence>,
+}
+
+impl ForwardRef {
+    /// Admitted at load: optional **and** licensed. A forward ref without `?` is refused whatever
+    /// licence it has, because it is `null` on the first pass (ADR-0042) and a mandatory input
+    /// cannot be `null`.
+    #[must_use]
+    pub const fn is_admitted(&self) -> bool {
+        self.optional && self.licence.is_some()
+    }
+}
+
+impl fmt::Display for ForwardRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let why = if self.licence.is_none() {
+            "no licence covers it: no `on_false` targets the referencing step from the named step \
+             or after it (ADR-0042's letter), the named step is outside the step's repeat body \
+             (D21-48 X6), and no later `gate` asks the question the step escalates to (D21-48 X8)"
+        } else {
+            "it is licensed, but it carries no `?`, and a forward ref is `null` on the first pass \
+             (ADR-0042)"
+        };
+        write!(
+            f,
+            "{}/{}: `{} = \"{}\"` reads the later-declared step `{}`, and {why}",
+            self.activity, self.step, self.binding, self.reference, self.target
+        )
+    }
+}
+
+/// Every `${…}` in a string, as `(name, whole reference, optional)`. `name` is the text up to the
+/// first `.`, `?` or `[`, which is a step id when the activity declares one of that id.
+fn step_refs(src: &str) -> Vec<(String, String, bool)> {
+    let mut out = Vec::new();
+    let mut rest = src;
+    while let Some(i) = rest.find("${") {
+        let tail = &rest[i + 2..];
+        let Some(end) = tail.find('}') else {
+            break;
+        };
+        let inner = &tail[..end];
+        let name_end = inner.find(['.', '?', '[']).unwrap_or(inner.len());
+        out.push((
+            inner[..name_end].to_owned(),
+            format!("${{{inner}}}"),
+            inner.ends_with('?'),
+        ));
+        rest = &tail[end + 1..];
+    }
+    out
+}
+
+/// Every forward ref in one activity's `inputs`, each classified by the three licences in order.
+#[must_use]
+pub fn forward_refs(activity: &Activity) -> Vec<ForwardRef> {
+    let steps = &activity.steps;
+    let index: BTreeMap<&str, usize> = steps
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.id.as_str(), i))
+        .collect();
+    let mut out = Vec::new();
+    for (r, step) in steps.iter().enumerate() {
+        for (binding, value) in &step.inputs {
+            let Some(text) = value.as_text() else {
+                continue;
+            };
+            for (name, reference, optional) in step_refs(text) {
+                let Some(&l) = index.get(name.as_str()) else {
+                    continue;
+                };
+                if l <= r {
+                    continue; // a prior step, or a self-reference (ADR-0055): not forward
+                }
+                out.push(ForwardRef {
+                    activity: activity.id.clone(),
+                    step: step.id.clone(),
+                    binding: binding.clone(),
+                    reference,
+                    target: name,
+                    optional,
+                    licence: licence(steps, &index, r, l),
+                });
+            }
+        }
+    }
+    out
+}
+
+/// **The repeat body's last step** (D21-48 X6; R2 decision 4), as an index into `steps`.
+///
+/// *"The repeat body runs from the repeating step through the last step `until` references, in
+/// declaration order"*: that step's index, and `r` itself when `until` reads only the step's own
+/// outputs (or earlier steps), or is absent. ONE definition, read by the forward-ref licence and by
+/// the walk's loop executor alike (`s8d` package P5), so the body the lint licenses is the body the
+/// kernel runs.
+#[must_use]
+pub fn repeat_body_end(steps: &[Step], r: usize) -> usize {
+    let index: BTreeMap<&str, usize> = steps
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.id.as_str(), i))
+        .collect();
+    repeat_body_end_in(steps, &index, r)
+}
+
+fn repeat_body_end_in(steps: &[Step], index: &BTreeMap<&str, usize>, r: usize) -> usize {
+    steps
+        .get(r)
+        .and_then(|s| s.repeat_until.as_deref())
+        .map_or(r, |until| {
+            step_refs(until)
+                .iter()
+                .filter_map(|(name, _, _)| index.get(name.as_str()).copied())
+                .max()
+                .map_or(r, |end| end.max(r))
+        })
+}
+
+/// The first licence admitting a ref from step `r` to the later step `l`.
+fn licence(steps: &[Step], index: &BTreeMap<&str, usize>, r: usize, l: usize) -> Option<Licence> {
+    let referencing = &steps[r];
+    // 1. ADR-0042's letter: `l`, or a step after it, loops back to `r`.
+    if steps[l..]
+        .iter()
+        .any(|s| s.on_false_to.as_deref() == Some(referencing.id.as_str()))
+    {
+        return Some(Licence::Letter);
+    }
+    // 2. The repeat body (X6): `r` repeats, and `l` lies at or before the last step `until` reads.
+    if referencing.repeat_until.is_some() && l <= repeat_body_end_in(steps, index, r) {
+        return Some(Licence::RepeatBody);
+    }
+    // 3. The escalate re-entry (X8): `l`, or a step after it, is a gate asking `r`'s question.
+    if let Some(q) = referencing.escalate_question.as_deref()
+        && steps[l..]
+            .iter()
+            .any(|s| s.kind == StepKind::Gate && s.question.as_deref() == Some(q))
+    {
+        return Some(Licence::EscalateReEntry);
+    }
+    None
+}
+
+/// What the forward-ref lint walked: every forward ref, by licence, and the refused ones.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ForwardRefCensus {
+    pub activities: usize,
+    pub total: usize,
+    pub letter: usize,
+    pub repeat: usize,
+    pub escalate: usize,
+    /// Refused: no licence, or licensed and mandatory.
+    pub unlicensed: usize,
+}
+
+impl fmt::Display for ForwardRefCensus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "FORWARD_REFS total={} letter={} repeat={} escalate={} unlicensed={}",
+            self.total, self.letter, self.repeat, self.escalate, self.unlicensed
+        )
+    }
+}
+
+/// The census over a catalog, and every refused forward ref.
+#[must_use]
+pub fn forward_ref_census(catalog: &Catalog) -> (ForwardRefCensus, Vec<ForwardRef>) {
+    let mut census = ForwardRefCensus {
+        activities: catalog.len(),
+        ..ForwardRefCensus::default()
+    };
+    let mut refused = Vec::new();
+    for activity in catalog.activities() {
+        for fr in forward_refs(activity) {
+            census.total += 1;
+            match (fr.is_admitted(), fr.licence) {
+                (true, Some(Licence::Letter)) => census.letter += 1,
+                (true, Some(Licence::RepeatBody)) => census.repeat += 1,
+                (true, Some(Licence::EscalateReEntry)) => census.escalate += 1,
+                _ => {
+                    census.unlicensed += 1;
+                    refused.push(fr);
+                }
+            }
+        }
+    }
+    (census, refused)
+}
+
+/// **The forward-ref licence lint** (D21-48 X8; R2 = ADR-0173, written `proposed`).
+///
+/// R2 supersedes ADR-0042's Decision and first forbids bullet in part. A ref from step R to a
+/// later-declared step is admitted only when it carries `?` and one of the three [`Licence`]s
+/// covers it; every other ref is refused by name — activity, step and reference.
+///
+/// **Where it runs.** At load, through `select::load_lints` — the refusing load rules every
+/// shipped path into selection runs before step 1 — and not in the strict parser [`walk`]. The
+/// frozen p9 controls load `spikes/p9/catalog` at `P9_PIN` through [`Catalog::from_dir`], and that
+/// catalog carries the four refs this stage removes from `.redkiln/` (`s8d` §8d.3); a refusal in
+/// the parser would make every frozen p9 reading unloadable rather than frozen. The rule is
+/// catalog-only, so it needs neither registry.
+///
+/// # Errors
+///
+/// Every refused forward ref, never only the first.
+pub fn forward_ref_lint(catalog: &Catalog) -> Result<ForwardRefCensus, Vec<ForwardRef>> {
+    let (census, refused) = forward_ref_census(catalog);
+    if refused.is_empty() {
+        Ok(census)
+    } else {
+        Err(refused)
+    }
 }
 
 /// `<key> = { max = N, … }` on one `[[step]]`, or `None`. Used for `retry` (Slice 4a) and for

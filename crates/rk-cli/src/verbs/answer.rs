@@ -44,6 +44,7 @@
 //! **kernel-side**, and no `payload.as_object_mut()` may ever appear in this file — *a row the CLI
 //! could amend is a row the CLI could forge*.
 
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use rk_git::reconciled::Entry;
@@ -187,16 +188,22 @@ pub fn run(cli: &Cli, args: &AnswerArgs, env: &Env, startup: Startup<'_>) -> Res
     };
     let store: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(opened));
 
+    // ---- THE PACK'S QUESTIONS (R5 = ADR-0177 decision 8, proposed; `s8d` §8d.6). *(2026-09-26,
+    // `s8d` build, package P7.)* This passed the built-in default registry, so every gate was
+    // answerable only as `approve` / `changes-requested`. The registry is now the one `run` loads,
+    // from the same worktree the catalog is read from; a file that does not load refuses the answer
+    // by name, before any row is written.
+    let registry = match crate::processes::load(Path::new(resolved.worktree.as_str())) {
+        Ok(registry) => registry,
+        Err(e) => {
+            eprintln!("redkiln: the question registry was refused: {e}");
+            return Ok(Exit::ConfigError);
+        }
+    };
+
     // THE ONE WALL-CLOCK READ of this invocation.
     let now = crate::clock::now().unix_seconds();
-    run_with(
-        Channel::Cli,
-        &QuestionRegistry::default(),
-        &resolved,
-        args,
-        &store,
-        now,
-    )
+    run_with(Channel::Cli, &registry, &resolved, args, &store, now)
 }
 
 /// The inner verb — the in-process twin the AC-410 pair and AC-263 drive.
@@ -205,6 +212,11 @@ pub fn run(cli: &Cli, args: &AnswerArgs, env: &Env, startup: Startup<'_>) -> Res
 /// default question plus `decide`"* and binds the fixture gate's kind to it; that is the only way
 /// a non-default question exists at 7d, because pack-declared questions are Step 7e's. A verb that
 /// built its own registry could not be handed one.
+///
+/// *(dated 2026-09-26, `s8d` build, package P7; R5 = ADR-0177, proposed.)* ~~"pack-declared questions are
+/// Step 7e's"~~: they are loaded now, by `crate::processes::load` from `.redkiln/processes/`, and [`run`]
+/// hands this function THAT registry, never `QuestionRegistry::default()` (M16). The parameter stays, for
+/// the in-process tests that construct their own.
 ///
 /// 🛑 **SKELETON: this refuses without reading, writing or answering anything.** It is replaced in
 /// slices, each by the test that names the slice.

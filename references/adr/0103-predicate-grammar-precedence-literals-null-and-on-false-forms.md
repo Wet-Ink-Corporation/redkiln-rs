@@ -6,7 +6,7 @@ date: 2026-09-11
 legacy_id: none
 source: references/2026-09-10-pre-implementation-audit.md PIA-052, PIA-053 (§4.6), PIA-048 (§4.1), PIA-100 (§5); references/adr/0032, 0033, 0048, 0069; spikes/p9/lint.py on_false_of; the 248 `when` and every `applicable_if` string in spikes/p9 at pin 47faec9f
 supersedes: ["0032", "0033", "0048", "0069"]
-superseded_by: ["0121"]
+superseded_by: ["0121", "0172"]
 related: ["0031", "0034", "0035", "0040", "0044", "0049", "0070", "0089", "0093"]
 evidence: ["PIA-052", "PIA-053", "PIA-048", "PIA-100", "S-GRAMMAR"]
 consumers: []

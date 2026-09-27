@@ -1,7 +1,7 @@
 # reach: (bug, specification, optional) — Spec for bugs; user-story-ac no longer tags bug (batch edit)
 [activity]
 id           = "fix-spec"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "specification"
 provides     = ["Spec"]
 requires     = ["RootCause", "ReproCase?"]
@@ -47,8 +47,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", spec = "${draft.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and spec.acceptance_criteria.len() > 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", spec = "${draft.outputs}" }
+expr    = "check.failed == 0 and spec.acceptance_criteria.len() > 0"
 on_false = { to = "draft", max = 2 }
 
 [[step]]

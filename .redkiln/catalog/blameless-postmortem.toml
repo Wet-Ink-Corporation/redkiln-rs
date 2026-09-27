@@ -3,7 +3,7 @@
 # NOTE: catalog-b/blameless-postmortem.toml is the second author's record and fails v2 by design; this file is the v0 one.
 [activity]
 id           = "blameless-postmortem"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "closeout"
 provides     = ["Postmortem"]
 requires     = ["RootCause", "IncidentTimeline?", "ImpactAssessment?"]   # P6 run1 fix: bugs have no IncidentTimeline producer
@@ -49,8 +49,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", draft = "${draft.outputs}", findings = "${adversary.outputs}" }
-expr    = "check.failed == 0 and draft.unassigned_items.len() == 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", draft = "${draft.outputs}" }
+expr    = "check.failed == 0 and draft.unassigned_items.len() == 0"
 on_false = { to = "draft", max = 2 }
 
 [[step]]

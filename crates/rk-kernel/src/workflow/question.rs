@@ -17,6 +17,12 @@
 //! default one, built in below; a non-default question exists **in-process only**, constructed by a
 //! test. That is why [`QuestionRegistry::with_question`] and [`QuestionRegistry::bind`] are public
 //! and why nothing here reads TOML: 7e's pack loader will call the same two seams.
+//!
+//! *(dated 2026-09-26, `s8d` build, package P7; R5 = ADR-0177, proposed.)* ~~"Pack-declared questions
+//! are Step 7e's"~~: no 7e loader was built (ADR-0156 blocker 2: `.redkiln/processes/` was empty).
+//! The loader is `s8d`'s (D21-43: *"The loader and `.redkiln/processes/` are **s8d**'s."*) and it
+//! is `rk_cli::processes`, which reads `.redkiln/processes/*.toml` and calls the same two seams.
+//! This module still reads no TOML: `rk-kernel` opens no files.
 
 use std::collections::BTreeMap;
 
@@ -82,6 +88,10 @@ impl std::error::Error for OptionError {}
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Question {
     options: BTreeMap<String, Vec<String>>,
+    /// *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177, proposed.)* The question's text, as
+    /// its pack file declares it. `None` for the built-in default and for an in-process question a
+    /// test constructs. Carried for the reader; nothing here decides on it.
+    text: Option<String>,
 }
 
 impl Question {
@@ -97,7 +107,21 @@ impl Question {
                 .into_iter()
                 .map(|o| (o.into(), Vec::new()))
                 .collect(),
+            text: None,
         }
+    }
+
+    /// The question with its declared text (R5 = ADR-0177 decision 7).
+    #[must_use]
+    pub fn with_text<S: Into<String>>(mut self, text: S) -> Self {
+        self.text = Some(text.into());
+        self
+    }
+
+    /// The declared text, when the question has one.
+    #[must_use]
+    pub fn text(&self) -> Option<&str> {
+        self.text.as_deref()
     }
 
     /// Declare that `option` attaches `kinds`.
@@ -180,6 +204,23 @@ impl QuestionRegistry {
     #[must_use]
     pub fn question(&self, id: &str) -> Option<&Question> {
         self.questions.get(id)
+    }
+
+    /// *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177 decision 8, proposed.)* Has a pack
+    /// BOUND this gate kind to a question? A catalog `gate` step's kind is its `question`
+    /// (ADR-0145), and the loader binds every declared question id as its own kind, so a gate step
+    /// whose question the pack never declared is unbound here. The default binding (the absence of
+    /// one) is for the selection's `unknown_facet:*` gates, never for a catalog gate step: `run`
+    /// refuses an unbound catalog gate kind by name.
+    #[must_use]
+    pub fn binds_kind(&self, gate_kind: &str) -> bool {
+        self.bindings.contains_key(gate_kind)
+    }
+
+    /// Every question id the registry declares, the built-in default included, sorted.
+    #[must_use]
+    pub fn question_ids(&self) -> Vec<&str> {
+        self.questions.keys().map(String::as_str).collect()
     }
 
     /// **Is this option admissible for this question, with these attachments?**

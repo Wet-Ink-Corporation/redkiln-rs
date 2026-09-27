@@ -1,0 +1,45 @@
+# forward_ref_lint, must-REFUSE (s8d §8d.3, D21-48 X8): a ref past the end of a repeat body.
+#
+# `green` repeats until `${green-verify.outputs.status} == 'passing'`, so its body ends at
+# `green-verify`. It also reads `${refactor.outputs?}`, and `refactor` is declared AFTER
+# `green-verify`: outside the body (not licence 2). No `on_false` targets `green` (not the letter),
+# and `green` escalates nowhere (not licence 3).
+
+[activity]
+id           = "fr-past-body"
+version      = 1
+stage        = "implement"
+provides     = ["ADR"]
+requires     = []
+tags         = ["kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "green"
+kind    = "agent"
+role    = "implementer"
+inputs  = { last = "${green-verify.outputs?}", later = "${refactor.outputs?}" }
+outputs = "value:ImplReport"
+repeat  = { until = "${green-verify.outputs.status} == 'passing'", max = 3 }
+
+[[step]]
+id      = "green-verify"
+kind    = "tool"
+run     = "toolchain:test"
+inputs  = { selection = "affected" }
+outputs = "value:TestReport"
+
+[[step]]
+id      = "refactor"
+kind    = "agent"
+role    = "implementer"
+inputs  = { impl = "${green.outputs}" }
+outputs = "value:ImplReport"
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ADR = "${refactor.outputs}" }
+evidence  = ["${green-verify}"]

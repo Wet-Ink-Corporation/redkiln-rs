@@ -1,7 +1,7 @@
 # reach: (initiative, discovery, recommended) — require row "kind == initiative" → OutcomeStatement
 [activity]
 id           = "outcome-definition"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "discovery"
 provides     = ["OutcomeStatement"]
 requires     = ["ProblemStatement"]
@@ -39,8 +39,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { findings = "${adversary.outputs?}", draft = "${draft.outputs}" }
-expr    = "draft.metric != null and findings.none(severity in ['blocking'])"
+inputs  = { draft = "${draft.outputs}" }
+expr    = "draft.metric != null"
 on_false = { to = "draft", max = 2 }
 
 [[step]]

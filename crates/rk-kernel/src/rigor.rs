@@ -234,7 +234,9 @@ pub enum RigorError {
     /// The catalog declares no family at all, so the rule would pass vacuously.
     NoFamilies,
     /// AC-303's rule reads each activity's raw TOML for its `inputs` graph (D21-57), and a source
-    /// did not load, did not read, or disagrees with the loaded activity.
+    /// did not load, did not read, or disagrees with the loaded activity. *(dated 2026-09-26, `s8d`
+    /// build, package P2: the graph is now read from R2's parsed-`inputs` carrier, so this is raised
+    /// only when the sources do not load as a catalog.)*
     Source { source: String, detail: String },
 }
 
@@ -1024,19 +1026,15 @@ pub fn output_refs(src: &str) -> BTreeSet<String> {
     out
 }
 
-/// Every string an `inputs` value holds, arrays and tables included.
-fn input_strings<'v>(value: &'v TomlValue, out: &mut Vec<&'v str>) {
-    match value {
-        TomlValue::Str(s) => out.push(s),
-        TomlValue::Array(items) => items.iter().for_each(|v| input_strings(v, out)),
-        TomlValue::Table(t) => t.values().for_each(|v| input_strings(v, out)),
-        TomlValue::Int(_) | TomlValue::Float(_) | TomlValue::Bool(_) => {}
-    }
-}
-
-/// One activity's declared `${<step>.outputs…}` input graph, read from its **raw TOML** through
-/// [`crate::toml_subset`] — `catalog::Step` is not widened to carry `inputs` (ADR-0148's forbids
-/// bullet; `s8c`'s fence until `s8d`, whose R2 carrier this moves onto when it lands; D21-57).
+/// One activity's declared `${<step>.outputs…}` input graph.
+///
+/// *(dated 2026-09-26, `s8d` build, package P2; D21-57; R2 = ADR-0173, written `proposed`)* MOVED
+/// onto R2's parsed-`inputs` carrier, [`Step::inputs`], as D21-57 ruled (*"When `s8d`'s R2 routes
+/// parsed `inputs` onto the kernel, the rule moves onto R2's carrier"*). It was read from each
+/// activity's **raw TOML** through [`crate::toml_subset`], because `catalog::Step` was not widened
+/// to carry `inputs` (ADR-0148's forbids bullet; `s8c`'s fence until `s8d`). The carrier holds
+/// scalars only (strings, integers, booleans; an array or a table is refused at load), so the old
+/// walk into arrays and tables has no subject left.
 struct InputGraph {
     /// Per step, in declaration order: each input binding and the step indexes it names.
     inputs: Vec<Vec<(String, BTreeSet<usize>)>>,
@@ -1047,68 +1045,37 @@ struct InputGraph {
 }
 
 impl InputGraph {
-    fn build(activity: &Activity, src: &str) -> Result<Self, RigorError> {
-        let bad = |detail: String| RigorError::Source {
-            source: activity.source.clone(),
-            detail,
-        };
-        let doc = crate::toml_subset::parse(src).map_err(|e| bad(format!("{e:?}")))?;
-        let steps: Vec<&crate::toml_subset::Table> = doc
-            .get("step")
-            .and_then(TomlValue::as_array)
-            .unwrap_or_default()
-            .iter()
-            .filter_map(TomlValue::as_table)
-            .collect();
-        let ids: Vec<String> = steps
-            .iter()
-            .map(|s| {
-                s.get("id")
-                    .and_then(TomlValue::as_str)
-                    .map(ToOwned::to_owned)
-                    .ok_or_else(|| bad("a [[step]] carries no string `id`".to_owned()))
-            })
-            .collect::<Result<_, _>>()?;
-        if ids.len() != activity.steps.len()
-            || ids.iter().zip(&activity.steps).any(|(id, s)| *id != s.id)
-        {
-            return Err(bad(format!(
-                "the raw [[step]] ids {ids:?} are not the loaded activity {:?}'s",
-                activity.id
-            )));
-        }
-        let index: BTreeMap<String, usize> = ids
+    fn build(activity: &Activity) -> Self {
+        let index: BTreeMap<String, usize> = activity
+            .steps
             .iter()
             .enumerate()
-            .map(|(i, id)| (id.clone(), i))
+            .map(|(i, s)| (s.id.clone(), i))
             .collect();
-        let inputs = steps
+        let inputs = activity
+            .steps
             .iter()
             .map(|s| {
-                s.get("inputs")
-                    .and_then(TomlValue::as_table)
-                    .map(|t| {
-                        t.iter()
-                            .map(|(binding, value)| {
-                                let mut strings = Vec::new();
-                                input_strings(value, &mut strings);
-                                let refs = strings
-                                    .into_iter()
-                                    .flat_map(output_refs)
-                                    .filter_map(|r| index.get(&r).copied())
-                                    .collect();
-                                (binding.clone(), refs)
-                            })
-                            .collect()
+                s.inputs
+                    .iter()
+                    .map(|(binding, value)| {
+                        let refs = value
+                            .as_text()
+                            .map(output_refs)
+                            .unwrap_or_default()
+                            .into_iter()
+                            .filter_map(|r| index.get(&r).copied())
+                            .collect();
+                        (binding.clone(), refs)
                     })
-                    .unwrap_or_default()
+                    .collect()
             })
             .collect();
-        Ok(Self {
+        Self {
             inputs,
             reviewer: activity.steps.iter().map(is_reviewer).collect(),
             index,
-        })
+        }
     }
 
     /// Does a chain of `${<step>.outputs…}` edges from step `from`, entering at `targets`, reach a
@@ -1244,6 +1211,10 @@ impl Prepared<'_> {
 /// ids agree (`draft`, `policy` and `emit` recur across activities). Every caller today, all in
 /// `tests/it/review.rs`, passes distinct names (a directory's file names, or a fixture's
 /// hand-named members); a caller that cannot promise that must dedupe first.
+/// *(dated 2026-09-26, `s8d` build, package P2; D21-57; R2 = ADR-0173, written `proposed`)* The
+/// graph is now read from R2's parsed-`inputs` carrier, [`Step::inputs`], and no raw text is read,
+/// so the two paragraphs above describe the rule before the move: the sources are only loaded as a
+/// catalog. The `(name, text)` signature is kept so that every caller's reading is unchanged.
 ///
 /// # Errors
 ///
@@ -1257,7 +1228,6 @@ pub fn confirm_step_monotonicity_rule(
         source: "<catalog>".to_owned(),
         detail: e.to_string(),
     })?;
-    let text: BTreeMap<&str, &str> = sources.iter().copied().collect();
     let mut families: BTreeMap<String, Vec<&Activity>> = BTreeMap::new();
     for activity in catalog.activities() {
         if let Some(family) = &activity.family {
@@ -1283,13 +1253,7 @@ pub fn confirm_step_monotonicity_rule(
         // not depend on the context (a step the context guards out is dropped by `resolved_steps`).
         let mut checks: BTreeMap<&str, BTreeMap<String, Dependence>> = BTreeMap::new();
         for activity in members {
-            let src = text
-                .get(activity.source.as_str())
-                .ok_or_else(|| RigorError::Source {
-                    source: activity.source.clone(),
-                    detail: "no raw text among the sources".to_owned(),
-                })?;
-            let graph = InputGraph::build(activity, src)?;
+            let graph = InputGraph::build(activity);
             let classes: BTreeMap<String, Dependence> = activity
                 .steps
                 .iter()

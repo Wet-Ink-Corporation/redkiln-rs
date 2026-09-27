@@ -6,7 +6,7 @@ date: 2026-09-22
 legacy_id: none
 source: crates/rk-kernel/src/runtime/step.rs (the module header's AC-013 grain note, corrected here; the `agent` arm's `run_activity` call); crates/rk-kernel/src/runtime/activity.rs (`is_committed`'s pre-flight skip, which has no step component); references/adr/0138 (the activation grain); references/adr/0143 (a committed report is never overwritten); references/adr/0144 (a post-commit step failure refuses by name and the commit STANDS)
 supersedes: []
-superseded_by: []
+superseded_by: ["0174"]
 related: ["0087", "0112", "0135", "0138", "0143", "0144", "0148"]
 evidence: []
 consumers: []

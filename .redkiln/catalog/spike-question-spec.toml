@@ -1,7 +1,7 @@
 # reach: (spike, specification, optional) — baseline SpikeCharter for the spike pack
 [activity]
 id           = "spike-question-spec"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "specification"
 provides     = ["SpikeCharter"]
 requires     = ["ProblemStatement"]
@@ -21,7 +21,7 @@ rationale    = "XP spike / this repo's METHOD files: a spike without a written q
 id      = "draft"
 kind    = "agent"
 role    = "planner"
-inputs  = { problem = "artifact:ProblemStatement", answer = "${accept.answer?}" }
+inputs  = { problem = "artifact:ProblemStatement" }
 outputs = "value:SpikeCharter"
 timeout_secs = 600
 retry   = { max = 2 }

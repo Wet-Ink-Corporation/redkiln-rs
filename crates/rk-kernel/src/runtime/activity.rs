@@ -78,16 +78,46 @@
 
 use rk_store::memo::IdempotencyKey;
 use rk_types::error::StepError;
-use rk_types::event::Event;
+use rk_types::event::{ErrorEvent, Event};
 use rk_types::event_kind::EventKind;
 use rk_types::typed::Typed;
 
 use super::marks::RetryAtMark;
 use super::{Runtime, RuntimeError};
-use crate::workflow::breaker::JournaledNow;
+use crate::workflow::breaker::{BreakerDecision, BreakerState, FamilyKey, JournaledNow};
 use crate::workflow::envelope::AttemptCap;
-use crate::workflow::idem::checked_key;
+use crate::workflow::idem::{CommitKey, IterationPath, checked_key};
 use crate::workflow::retry::{RetryDecision, decide};
+
+/// **R1: where a step activation commits** — its `[[step]]` id and its iteration path.
+///
+/// `s8d` §8d.2; record R1, proposed. With the item and `activity_id@version` it is the commit key
+/// (D21-42 3b). `None` wherever this module takes an `Option<StepAt>` is the ACTIVATION grain,
+/// unchanged: the kernel's machinery suites, which have no catalog activity behind them.
+#[derive(Debug, Clone, Copy)]
+pub struct StepAt<'a> {
+    /// The `[[step]]` id — never the DAG node id.
+    pub step_id: &'a str,
+    /// The frames the step activation sits in; empty outside any loop.
+    pub iteration_path: &'a IterationPath,
+    /// **R4 (ADR-0176, proposed).** The model family the pack binds this step's role to, when a
+    /// breaker is bound (D-7's key). `None` is a runtime with no breaker binding — the kernel's
+    /// machinery suites — and a non-agent step.
+    pub family: Option<&'a FamilyKey>,
+}
+
+impl StepAt<'_> {
+    /// The commit key this step activation commits under.
+    #[must_use]
+    pub fn commit_key(&self, item: &str, activity_id_at_version: &str) -> CommitKey {
+        CommitKey {
+            item: item.to_owned(),
+            activity_id_at_version: activity_id_at_version.to_owned(),
+            step_id: self.step_id.to_owned(),
+            iteration_path: self.iteration_path.clone(),
+        }
+    }
+}
 
 // ---- the values the loop produces ---------------------------------------------------------------
 
@@ -182,6 +212,26 @@ pub struct ActivityReport {
     /// `RunState::awaiting_gate` answers with — a reader that had to go looking for it in the
     /// journal would be re-deriving a value the walk already held.
     gate: Option<rk_types::digest::Digest>,
+    /// **R1.** Step activations this walk SERVED from the journal — committed by an earlier run and
+    /// never re-dispatched (AC-013 at step grain). `0` on every report this module's loop builds.
+    served: u32,
+    /// **R1.** Whether this activation's COMPLETION row is journalled by this walk: the `emit`
+    /// step's commit, the one `fsm::next_action` moves past a node on.
+    completed: bool,
+    /// **R1.** The per-step memo facts (`crate::workflow::memo::StepContext`) of every agent step
+    /// this walk DISPATCHED, each assembled with that step's own card digest and schema id
+    /// (§8d.2). The memo is still consulted by nothing on the run path; this is what it would be
+    /// keyed on.
+    memo_contexts: Vec<crate::workflow::memo::StepContext>,
+    /// *(2026-09-26, `s8d` build, package P5; R3 (m14), written `proposed`.)* **The attempt charge
+    /// per pass**, one entry per pass this walk charged, in the order each pass was first charged.
+    /// A pass is an iteration path with its `for_each` frames removed: a `for_each` counts once
+    /// (AC-022), while each loop-back frame and each `repeat` frame is a pass of its own (AC-021's
+    /// per-pass count). Every agent or tool step the walk EXECUTED in a pass charges that pass
+    /// through `budget::charge_for_each`; a step SERVED from its commit charges nothing.
+    charges: Vec<(IterationPath, u32)>,
+    /// **R4.** The breaker's refusal, when the executor refused the dispatch before the port.
+    breaker: Option<BreakerDecision>,
 }
 
 impl ActivityReport {
@@ -258,7 +308,107 @@ impl ActivityReport {
             now,
             step_error: None,
             gate: None,
+            served: 0,
+            completed: false,
+            memo_contexts: Vec::new(),
+            charges: Vec::new(),
+            breaker: None,
         }
+    }
+
+    /// **R1.** The report a step walk accumulates into: opened, every count `0`.
+    pub(super) const fn walk(now: JournaledNow) -> Self {
+        Self::opened(now)
+    }
+
+    /// **R1.** Fold one step activation's dispatch report into the walk's.
+    ///
+    /// Counts add; the dispatch's own `outcome` and `mark` are the latest; and a COMMIT is never
+    /// overwritten by a later dispatch that did not commit (ADR-0143 decision 1, at step grain):
+    /// `commit` moves only when the absorbed report carries one.
+    pub(super) fn absorb(&mut self, next: Self) {
+        self.attempts.extend(next.attempts);
+        self.dispatches = self.dispatches.saturating_add(next.dispatches);
+        self.decisions.extend(next.decisions);
+        self.outcome = next.outcome;
+        if next.commit.is_some() {
+            self.commit = next.commit;
+        }
+        self.mark = next.mark;
+        if next.breaker.is_some() {
+            self.breaker = next.breaker;
+        }
+        self.appended = self.appended.saturating_add(next.appended);
+        self.schema_failures = self.schema_failures.saturating_add(next.schema_failures);
+    }
+
+    /// **R1.** One step activation served from the journal.
+    pub(super) const fn note_served(&mut self) {
+        self.served = self.served.saturating_add(1);
+    }
+
+    /// **R1.** One agent step's memo facts, recorded as it dispatches.
+    pub(super) fn note_memo(&mut self, context: crate::workflow::memo::StepContext) {
+        self.memo_contexts.push(context);
+    }
+
+    /// **R3 (m14).** Charge `n` attempts to `pass` (an iteration path with no `for_each` frame).
+    pub(super) fn note_charge(&mut self, pass: IterationPath, n: u32) {
+        if let Some((_, spent)) = self.charges.iter_mut().find(|(p, _)| *p == pass) {
+            *spent = spent.saturating_add(n);
+        } else {
+            self.charges.push((pass, n));
+        }
+    }
+
+    /// **R3 (m14).** The attempts this walk charged, one [`crate::workflow::budget::Charge`] per
+    /// pass, keyed by the pass's iteration path; the draw-down `budget::fold` accumulates.
+    #[must_use]
+    pub fn pass_charges(&self) -> Vec<(IterationPath, crate::workflow::budget::Charge)> {
+        self.charges
+            .iter()
+            .map(|(pass, n)| {
+                (
+                    pass.clone(),
+                    crate::workflow::budget::Charge::Attempts(
+                        crate::workflow::budget::Attempts::new(*n),
+                    ),
+                )
+            })
+            .collect()
+    }
+
+    /// **R1.** The completion row is journalled (or was, by a concurrent walk).
+    #[must_use]
+    pub(super) fn with_completion(mut self, outcome: CommitOutcome) -> Self {
+        if outcome.is_committed() {
+            self.appended = self.appended.saturating_add(1);
+        }
+        self.completed = true;
+        self.commit = Some(outcome);
+        self
+    }
+
+    /// **R1.** Record a step's own committed row appended by the walk (a `side_effecting` tool
+    /// step), so `committed()` answers for it.
+    pub(super) fn note_step_commit(&mut self, outcome: CommitOutcome) {
+        if outcome.is_committed() {
+            self.appended = self.appended.saturating_add(1);
+        }
+        self.commit = Some(outcome);
+    }
+
+    /// **R1.** Whether any step of this activation is committed — by this walk or an earlier run.
+    #[must_use]
+    pub(super) fn holds_a_commit(&self) -> bool {
+        self.served > 0 || self.committed()
+    }
+
+    /// **R1.** The walk's own refusal, before any step committed.
+    #[must_use]
+    pub(super) fn refusing(mut self, error: StepError) -> Self {
+        self.outcome = Some(Err(error));
+        self
     }
 
     /// Every attempt number this run dispatched under, in order. **AC-011's first instrument reads
@@ -309,15 +459,28 @@ impl ActivityReport {
 
     /// **AC-013's re-entry path**: the activation was already committed, so nothing was dispatched
     /// and nothing was appended.
+    ///
+    /// *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176 decision 5, proposed.)* And the report
+    /// carries no outcome. A dispatch the breaker refused before the port also reaches no port and
+    /// commits nothing, and it is a refusal, not a re-entry: without this clause the walk's agent arm
+    /// would serve it as a committed step.
     #[must_use]
     pub const fn skipped(&self) -> bool {
-        self.dispatches == 0 && self.commit.is_none()
+        self.dispatches == 0 && self.commit.is_none() && self.outcome.is_none()
     }
 
     /// **AC-030's durable mark**, when the run ended on one.
     #[must_use]
     pub const fn mark(&self) -> Option<&RetryAtMark> {
         self.mark.as_ref()
+    }
+
+    /// **R4 (ADR-0176, proposed; AC-033).** The breaker's refusal of this activation's dispatch:
+    /// `Some` when the executor folded the store's family-scoped rows, found the family's mark open
+    /// and unexpired, and never reached the port.
+    #[must_use]
+    pub const fn breaker_refusal(&self) -> Option<&BreakerDecision> {
+        self.breaker.as_ref()
     }
 
     /// **ADR-0144.** The failure of a step that ran AFTER this activation's dispatch committed.
@@ -353,6 +516,24 @@ impl ActivityReport {
     #[must_use]
     pub const fn appended(&self) -> usize {
         self.appended
+    }
+
+    /// **R1.** How many step activations this walk served from the journal without dispatching.
+    #[must_use]
+    pub const fn served(&self) -> u32 {
+        self.served
+    }
+
+    /// **R1.** Whether this walk journalled the activation's completion row.
+    #[must_use]
+    pub const fn completed(&self) -> bool {
+        self.completed
+    }
+
+    /// **R1.** The per-step memo facts of every agent step this walk dispatched, in walk order.
+    #[must_use]
+    pub fn memo_contexts(&self) -> &[crate::workflow::memo::StepContext] {
+        &self.memo_contexts
     }
 
     /// How many returned values failed the boundary's schema check. **AC-031's `attempts`.**
@@ -396,13 +577,36 @@ impl Runtime {
         attempt: u32,
         spec: &rk_types::activity::ActivitySpec,
     ) -> Result<DispatchAttempt, RuntimeError> {
+        self.dispatch_once_at(item, activity_id_at_version, step_id, attempt, spec, None)
+    }
+
+    /// [`Self::dispatch_once`], at the STEP grain when `at` is `Some` (R1): the pre-flight asks the
+    /// commit key, so a step activation already committed is not dispatched again.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::dispatch_once`].
+    pub fn dispatch_once_at(
+        &self,
+        item: &str,
+        activity_id_at_version: &str,
+        step_id: &str,
+        attempt: u32,
+        spec: &rk_types::activity::ActivitySpec,
+        at: Option<StepAt<'_>>,
+    ) -> Result<DispatchAttempt, RuntimeError> {
         // AC-010, FIRST: the refusal happens before the store is touched and long before the port
         // is reached, which is what makes "before any process is spawned" a dispatch count of 0.
         let key = checked_key(item, activity_id_at_version, attempt)?;
 
         // AC-012's and AC-013's shared pre-flight, read through the FSM's own fold so this module
         // and `next_action`'s step 3 cannot disagree about what "committed" means.
-        if self.state(item)?.is_committed(item, activity_id_at_version) {
+        let state = self.state(item)?;
+        let already = at.map_or_else(
+            || state.is_committed(item, activity_id_at_version),
+            |at| state.is_step_committed(&at.commit_key(item, activity_id_at_version)),
+        );
+        if already {
             return Ok(DispatchAttempt {
                 key,
                 dispatched: false,
@@ -432,13 +636,29 @@ impl Runtime {
     /// # Errors
     ///
     /// [`RuntimeError::Store`] from the port; [`RuntimeError::Fsm`] if the journal does not fold.
+    pub fn commit(
+        &self,
+        key: &IdempotencyKey,
+        typed: &Typed,
+        now: JournaledNow,
+    ) -> Result<CommitOutcome, RuntimeError> {
+        self.commit_at(key, None, typed, now)
+    }
+
+    /// [`Self::commit`], at the STEP grain when `at` is `Some` (R1): the late-duplicate discard
+    /// asks the commit key, and the appended row carries `step_id` and `iteration_path`.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::commit`].
     #[expect(
         clippy::significant_drop_tightening,
         reason = "AC-012: the journal re-read and the append are ONE critical section, and taking                   the lint's advice to narrow the guard is exactly the defect this function                   exists to prevent — two acquisitions leave a window in which both attempts                   observe no commit and both append. `#[expect]` and not `#[allow]` (ADR-0102                   decision 3): if the lint stops firing, the span has narrowed and the build says so"
     )]
-    pub fn commit(
+    pub fn commit_at(
         &self,
         key: &IdempotencyKey,
+        at: Option<StepAt<'_>>,
         typed: &Typed,
         now: JournaledNow,
     ) -> Result<CommitOutcome, RuntimeError> {
@@ -457,8 +677,16 @@ impl Runtime {
                     op: "query",
                     detail: format!("{e:?}"),
                 })?;
-        if let Some(committed) = committed_attempt(&events, &key.item, &key.activity_id_at_version)
-        {
+        let prior = at.map_or_else(
+            || committed_attempt(&events, &key.item, &key.activity_id_at_version),
+            |at| {
+                committed_step_attempt(
+                    &events,
+                    &at.commit_key(&key.item, &key.activity_id_at_version),
+                )
+            },
+        );
+        if let Some(committed) = prior {
             // **AC-012.** The late result is discarded and NOTHING is appended, so *"the committed
             // value is unchanged"* holds by construction rather than by a comparison.
             return Ok(CommitOutcome::DiscardedLate {
@@ -466,13 +694,127 @@ impl Runtime {
                 committed_attempt: committed,
             });
         }
-        guard
-            .append(activity_committed_event(key, typed, self.run_id(), now))
+        let row = at.map_or_else(
+            || activity_committed_event(key, typed, self.run_id(), now),
+            |at| step_committed_event(key, at, typed, self.run_id(), now),
+        );
+        guard.append(row).map_err(|e| RuntimeError::Store {
+            op: "append",
+            detail: format!("{e:?}"),
+        })?;
+        Ok(CommitOutcome::Committed { key: key.clone() })
+    }
+
+    /// **R1: a row the WALK commits, not a dispatch** — a `side_effecting` `tool` step's output
+    /// (`Some((kind, value))`), or the activation's COMPLETION (`None`, the `emit` step's row).
+    ///
+    /// Under one lock acquisition, as [`Self::commit`]: a row already journalled under the same
+    /// commit key (or, for the completion, an activation already complete) is not appended again
+    /// and is answered `DiscardedLate`. The row takes the next attempt number of the activation, so
+    /// `(item, activity_id@version, attempt)` stays unique across the log (AC-011) and
+    /// `IdempotencyKey` keeps three parts (D21-43 N15).
+    ///
+    /// # Errors
+    ///
+    /// [`RuntimeError::Key`] for a malformed activation id; [`RuntimeError::Store`] from the port.
+    pub fn commit_walk_row(
+        &self,
+        item: &str,
+        activity_id_at_version: &str,
+        at: StepAt<'_>,
+        output: Option<(&str, &serde_json::Value)>,
+        now: JournaledNow,
+    ) -> Result<CommitOutcome, RuntimeError> {
+        self.commit_walk_row_emitting(item, activity_id_at_version, at, output, None, now)
+    }
+
+    /// **R2 decision 7: the activation's COMPLETION, carrying its `emit` binding** — each provided
+    /// kind and the evidence refs, as `runtime::reference::bind_emit` resolved them. `None` is an
+    /// `emit` that declares no binding (a fixture's), whose row is [`completion_event`]'s alone.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::commit_walk_row`].
+    pub fn commit_completion(
+        &self,
+        item: &str,
+        activity_id_at_version: &str,
+        at: StepAt<'_>,
+        emitted: Option<&super::reference::Emitted>,
+        now: JournaledNow,
+    ) -> Result<CommitOutcome, RuntimeError> {
+        self.commit_walk_row_emitting(item, activity_id_at_version, at, None, emitted, now)
+    }
+
+    #[expect(
+        clippy::significant_drop_tightening,
+        reason = "AC-012, at step grain: the journal re-read and the append are ONE critical \
+                  section, for the reason `commit`'s own exception gives"
+    )]
+    fn commit_walk_row_emitting(
+        &self,
+        item: &str,
+        activity_id_at_version: &str,
+        at: StepAt<'_>,
+        output: Option<(&str, &serde_json::Value)>,
+        emitted: Option<&super::reference::Emitted>,
+        now: JournaledNow,
+    ) -> Result<CommitOutcome, RuntimeError> {
+        let mut guard = self.store_guard();
+        let events = guard
+            .query(super::journal_query(item))
             .map_err(|e| RuntimeError::Store {
-                op: "append",
+                op: "query",
                 detail: format!("{e:?}"),
             })?;
-        Ok(CommitOutcome::Committed { key: key.clone() })
+        let commit_key = at.commit_key(item, activity_id_at_version);
+        let prior = if output.is_some() {
+            committed_step_attempt(&events, &commit_key)
+        } else {
+            completion_attempt(&events, item, activity_id_at_version)
+        };
+        let attempt = next_attempt_of(&events, item, activity_id_at_version);
+        let key = checked_key(item, activity_id_at_version, attempt)?;
+        if let Some(committed) = prior {
+            return Ok(CommitOutcome::DiscardedLate {
+                key,
+                committed_attempt: committed,
+            });
+        }
+        let row = match output {
+            Some((kind, value)) => step_committed_event(
+                &key,
+                at,
+                &Typed::new(rk_types::typed::SchemaId::new(kind), value.clone()),
+                self.run_id(),
+                now,
+            ),
+            None => {
+                let mut row = completion_event(&key, at, self.run_id(), now);
+                if let (Some(emitted), Some(map)) = (emitted, row.payload.as_object_mut()) {
+                    map.insert(
+                        "artifacts".to_owned(),
+                        serde_json::Value::Object(
+                            emitted
+                                .artifacts
+                                .iter()
+                                .map(|(k, v)| (k.clone(), v.clone()))
+                                .collect(),
+                        ),
+                    );
+                    map.insert(
+                        "evidence".to_owned(),
+                        serde_json::Value::Array(emitted.evidence.clone()),
+                    );
+                }
+                row
+            }
+        };
+        guard.append(row).map_err(|e| RuntimeError::Store {
+            op: "append",
+            detail: format!("{e:?}"),
+        })?;
+        Ok(CommitOutcome::Committed { key })
     }
 
     /// **The retry loop.** One activation, from its next attempt number to its terminal outcome.
@@ -490,11 +832,43 @@ impl Runtime {
         cap: AttemptCap,
         now: JournaledNow,
     ) -> Result<ActivityReport, RuntimeError> {
+        self.run_activity_at(
+            (item, activity_id_at_version, step_id),
+            spec,
+            None,
+            cap,
+            now,
+        )
+    }
+
+    /// **The retry loop at the STEP grain (R1)** when `at` is `Some`: the re-entry question, the
+    /// pre-flight and the late-duplicate discard all ask the commit key, and the committed row
+    /// carries `step_id` and `iteration_path`. `None` is [`Self::run_activity`], unchanged.
+    ///
+    /// `activation` is `(item, activity_id@version, DAG node id)`.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::run_activity`].
+    pub fn run_activity_at(
+        &self,
+        activation: (&str, &str, &str),
+        spec: &rk_types::activity::ActivitySpec,
+        at: Option<StepAt<'_>>,
+        cap: AttemptCap,
+        now: JournaledNow,
+    ) -> Result<ActivityReport, RuntimeError> {
+        let (item, activity_id_at_version, step_id) = activation;
         let mut report = ActivityReport::opened(now);
         let state = self.state(item)?;
         // **AC-013's re-entry path.** A committed activation is not re-executed, and the predicate
-        // is the FSM's own rather than a second one written here.
-        if state.is_committed(item, activity_id_at_version) {
+        // is the FSM's own rather than a second one written here. *(R1: at step grain, a committed
+        // STEP activation is not re-executed; the question is the commit key's.)*
+        let already = at.map_or_else(
+            || state.is_committed(item, activity_id_at_version),
+            |at| state.is_step_committed(&at.commit_key(item, activity_id_at_version)),
+        );
+        if already {
             return Ok(report);
         }
         // **AC-279's row (ADR-0123's `gate_resumed`).** The first dispatch after a gate on this
@@ -517,8 +891,20 @@ impl Runtime {
         let mut attempt = state.next_attempt(item, activity_id_at_version);
 
         loop {
+            // **R4 (ADR-0176 decision 4; AC-033..AC-035).** Before an agent step's dispatch, the
+            // store's family-scoped rows are folded with the pack's `K` and the family's mark is
+            // decided against the journalled instant and the pack's expiry — from the STORE, never
+            // from a value this process held. An open mark refuses the dispatch before the port; a
+            // refusal is not a dispatch, so no error row is written for it.
+            if let Some(family) = at.and_then(|at| at.family)
+                && let Some((error, decision)) = self.breaker_refusal(item, family, now)?
+            {
+                report.outcome = Some(Err(error));
+                report.breaker = decision;
+                return Ok(report);
+            }
             let dispatched =
-                self.dispatch_once(item, activity_id_at_version, step_id, attempt, spec)?;
+                self.dispatch_once_at(item, activity_id_at_version, step_id, attempt, spec, at)?;
             let Some(result) = dispatched.result else {
                 // Another attempt committed between the fold above and the pre-flight inside
                 // `dispatch_once`. Nothing was dispatched and nothing was appended.
@@ -536,7 +922,7 @@ impl Runtime {
                     // structure is recovered from prose — [`boundary_prose_extraction_rule`] is
                     // what says so about this file rather than about this line.
                     if typed.schema == spec.schema {
-                        let commit = self.commit(&key, &typed, now)?;
+                        let commit = self.commit_at(&key, at, &typed, now)?;
                         if commit.is_committed() {
                             report.appended += 1;
                         }
@@ -557,14 +943,26 @@ impl Runtime {
                 Err(error) => error,
             };
 
+            // **R4 (ADR-0176 decisions 1-3; D21-42 20).** THE KERNEL WRITES THE ERROR ROW: exactly
+            // one per failed dispatch, through `StepError::event()`, whatever the harness. A
+            // `RateLimited` failure's row is AC-030's `retry_at` mark below, never a second row.
+            let family = at.and_then(|at| at.family);
+            if !matches!(error.event(), ErrorEvent::RateLimited) {
+                self.append(error_row(&error, family, now))?;
+                report.appended += 1;
+            }
+
             let decision = decide(&error, &key, cap);
             report.decisions.push(decision.clone());
 
             // **AC-030.** The mark, and then the run ends: no backoff (ADR-0095 forbids it on this
-            // class), no sleep, no further dispatch.
+            // class), no sleep, no further dispatch. *(R4: the mark IS the dispatch's one
+            // `rate_limited` row, and carries the members every error row carries.)*
             if let RetryDecision::WaitForReset { resets_at } = decision {
                 let mark = RetryAtMark::carried(resets_at);
-                self.append(mark.to_event())?;
+                let mut row = mark.to_event();
+                stamp(&mut row, family, now);
+                self.append(row)?;
                 report.appended += 1;
                 report.mark = Some(mark);
                 report.outcome = Some(Err(error));
@@ -577,6 +975,101 @@ impl Runtime {
             }
             report.outcome = Some(Err(error));
             return Ok(report);
+        }
+    }
+}
+
+impl Runtime {
+    /// **R4 (ADR-0176 decision 4).** Whether the breaker refuses `family`'s next dispatch.
+    ///
+    /// `Ok(None)` proceeds. `Ok(Some((error, Some(decision))))` is AC-033's refusal: the store's
+    /// family-scoped rows, folded by [`BreakerState::from_events`] with the pack's `K`
+    /// ([`crate::select::Pack::require_breaker_threshold`]), hold an open mark for `family` that
+    /// [`BreakerState::decide`] does not find expired at `now` under the pack's expiry.
+    /// `Ok(Some((error, None)))` refuses by name without a decision: the pack declares no `K` or no
+    /// expiry, or a family-scoped row does not fold. Nothing is defaulted.
+    ///
+    /// The fold reads the store's WHOLE journal: every `EventStore` in this tree ignores the query's
+    /// selector (`rk-adapter-sqlite`'s `query` reads every `t2_event` row), and AC-034's partition is
+    /// the family, not the item.
+    fn breaker_refusal(
+        &self,
+        item: &str,
+        family: &FamilyKey,
+        now: JournaledNow,
+    ) -> Result<Option<(StepError, Option<BreakerDecision>)>, RuntimeError> {
+        let refuse = |why: String| {
+            Some((
+                StepError::Unsupported {
+                    capability: format!(
+                        "the breaker cannot decide the dispatch for family `{family}`: {why} \
+                         (AC-033; R4 = ADR-0176 decision 4)"
+                    ),
+                },
+                None,
+            ))
+        };
+        let Some(binding) = self.breaker() else {
+            return Ok(None);
+        };
+        let k = match binding.pack().require_breaker_threshold() {
+            Ok(k) => k,
+            Err(e) => return Ok(refuse(e.to_string())),
+        };
+        let expiry = match binding.pack().require_breaker_expiry() {
+            Ok(expiry) => expiry,
+            Err(e) => return Ok(refuse(e.to_string())),
+        };
+        let events = self.journal(item)?;
+        let state = match BreakerState::from_events(&events, k) {
+            Ok(state) => state,
+            Err(e) => return Ok(refuse(e.to_string())),
+        };
+        let decision = state.decide(family, now, expiry);
+        if decision.refuses() {
+            return Ok(Some((
+                StepError::Unsupported {
+                    capability: format!("{decision} (R4 = ADR-0176 decision 4)"),
+                },
+                Some(decision),
+            )));
+        }
+        Ok(None)
+    }
+}
+
+/// **R4 (ADR-0176 decisions 1-3): the error row the KERNEL writes** — `StepError::event()`'s arm.
+///
+/// It carries the payload members the harness bridge wrote (`class` and `status` on `step_failed`,
+/// `class` and `capability` on `step_refused`), plus `at` (the journalled instant) and, when the
+/// dispatch's family is bound, `family` — the two members [`BreakerState::from_events`] reads.
+#[must_use]
+pub fn error_row(error: &StepError, family: Option<&FamilyKey>, now: JournaledNow) -> Event {
+    let mut row = match error.event() {
+        ErrorEvent::StepFailed { class, status } => Event::new(
+            EventKind::StepFailed,
+            serde_json::json!({ "class": class, "status": status }),
+        ),
+        ErrorEvent::StepCancelled => Event::new(EventKind::StepCancelled, serde_json::json!({})),
+        ErrorEvent::RateLimited => Event::new(EventKind::RateLimited, serde_json::json!({})),
+        ErrorEvent::StepRefused { class, capability } => Event::new(
+            EventKind::StepRefused,
+            serde_json::json!({ "class": class, "capability": capability }),
+        ),
+    };
+    stamp(&mut row, family, now);
+    row
+}
+
+/// The two members R4 adds to a row the breaker may fold: `at`, and `family` when bound.
+fn stamp(row: &mut Event, family: Option<&FamilyKey>, now: JournaledNow) {
+    if let Some(map) = row.payload.as_object_mut() {
+        map.insert(
+            "at".to_owned(),
+            serde_json::json!(now.timestamp().unix_seconds()),
+        );
+        if let Some(family) = family {
+            map.insert("family".to_owned(), serde_json::json!(family.as_str()));
         }
     }
 }
@@ -627,6 +1120,148 @@ pub fn activity_committed_event(
             "schema": typed.schema.as_str(),
         }),
     )
+}
+
+/// **R1: one step activation's commit row** — [`activity_committed_event`]'s row plus the two
+/// payload members the commit key needs, `step_id` and `iteration_path`. No `EventKind` is minted.
+#[must_use]
+pub fn step_committed_event(
+    key: &IdempotencyKey,
+    at: StepAt<'_>,
+    typed: &Typed,
+    run_id: &str,
+    now: JournaledNow,
+) -> Event {
+    let mut row = activity_committed_event(key, typed, run_id, now);
+    if let Some(map) = row.payload.as_object_mut() {
+        map.insert("step_id".to_owned(), serde_json::json!(at.step_id));
+        map.insert("iteration_path".to_owned(), at.iteration_path.to_json());
+        // **R4 (ADR-0176 decision 3).** The success the breaker's reset arm reads: an agent step's
+        // commit carries its family when one is bound, so K counts CONSECUTIVE failures.
+        if let Some(family) = at.family {
+            map.insert("family".to_owned(), serde_json::json!(family.as_str()));
+        }
+    }
+    row
+}
+
+/// **R1: the activation's COMPLETION row** — one more `activity_committed`.
+///
+/// Its `step_id` is the activation's `emit` step's and it carries `completion: true`.
+/// `fsm::next_action` moves past a node only on it. It carries no `result` and no `schema`: binding
+/// the `emit` step's outputs is the resolver's (R2 decision 7), and this row says only that the
+/// walk reached it. *(2026-09-26, `s8d` build, package P4.)* When the `emit` declares a binding,
+/// [`Runtime::commit_completion`] adds two members to this row, `artifacts` (each provided kind's
+/// bound value) and `evidence` (the evidence refs); `runtime::reference::read_artifact_input` reads
+/// the former.
+#[must_use]
+pub fn completion_event(
+    key: &IdempotencyKey,
+    at: StepAt<'_>,
+    run_id: &str,
+    now: JournaledNow,
+) -> Event {
+    Event::new(
+        EventKind::ActivityCommitted,
+        serde_json::json!({
+            "activity_id_at_version": key.activity_id_at_version,
+            "at": now.timestamp().unix_seconds(),
+            "attempt": key.attempt,
+            "completion": true,
+            "item": key.item,
+            "iteration_path": at.iteration_path.to_json(),
+            "run_id": run_id,
+            "step_id": at.step_id,
+        }),
+    )
+}
+
+/// **R1.** The commit key an `activity_committed` row carries, or `None` for a pre-R1 row (no
+/// `step_id`) or one whose path does not read.
+#[must_use]
+pub fn commit_key_of(event: &Event) -> Option<CommitKey> {
+    if event.kind != EventKind::ActivityCommitted {
+        return None;
+    }
+    let text = |m: &str| event.payload.get(m).and_then(serde_json::Value::as_str);
+    Some(CommitKey {
+        item: text("item")?.to_owned(),
+        activity_id_at_version: text("activity_id_at_version")?.to_owned(),
+        step_id: text("step_id")?.to_owned(),
+        iteration_path: IterationPath::from_json(event.payload.get("iteration_path")?)?,
+    })
+}
+
+/// **R1.** Whether an `activity_committed` row is a completion row.
+#[must_use]
+pub fn is_completion_row(event: &Event) -> bool {
+    event.kind == EventKind::ActivityCommitted
+        && event
+            .payload
+            .get("completion")
+            .and_then(serde_json::Value::as_bool)
+            == Some(true)
+}
+
+/// **R1.** The attempt that committed one STEP activation, and `None` when none has.
+#[must_use]
+pub fn committed_step_attempt(events: &[Event], key: &CommitKey) -> Option<u32> {
+    events
+        .iter()
+        .filter(|e| commit_key_of(e).as_ref() == Some(key))
+        .find_map(|e| e.payload.get("attempt").and_then(serde_json::Value::as_u64))
+        .and_then(|n| u32::try_from(n).ok())
+}
+
+/// **R1.** The committed result of one STEP activation, read back out of the journal.
+#[must_use]
+pub fn committed_step_result<'a>(
+    events: &'a [Event],
+    key: &CommitKey,
+) -> Option<&'a serde_json::Value> {
+    events
+        .iter()
+        .filter(|e| !is_completion_row(e))
+        .find(|e| commit_key_of(e).as_ref() == Some(key))
+        .and_then(|e| e.payload.get("result"))
+}
+
+/// The attempt of an activation's completion — a completion row, or a pre-R1 row (which completed
+/// its activation on its one commit) — and `None` when it is not complete.
+fn completion_attempt(events: &[Event], item: &str, activity_id_at_version: &str) -> Option<u32> {
+    events
+        .iter()
+        .filter(|e| e.kind == EventKind::ActivityCommitted)
+        .filter(|e| {
+            e.payload.get("item").and_then(serde_json::Value::as_str) == Some(item)
+                && e.payload
+                    .get("activity_id_at_version")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(activity_id_at_version)
+        })
+        .find(|e| is_completion_row(e) || e.payload.get("step_id").is_none())
+        .and_then(|e| e.payload.get("attempt"))
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+}
+
+/// One above the highest attempt any `dispatch` or `activity_committed` row of this activation
+/// carries — `crate::workflow::fsm::RunState::next_attempt`'s rule, read off the rows in hand.
+fn next_attempt_of(events: &[Event], item: &str, activity_id_at_version: &str) -> u32 {
+    events
+        .iter()
+        .filter(|e| matches!(e.kind, EventKind::Dispatch | EventKind::ActivityCommitted))
+        .filter(|e| {
+            e.payload.get("item").and_then(serde_json::Value::as_str) == Some(item)
+                && e.payload
+                    .get("activity_id_at_version")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(activity_id_at_version)
+        })
+        .filter_map(|e| e.payload.get("attempt").and_then(serde_json::Value::as_u64))
+        .filter_map(|n| u32::try_from(n).ok())
+        .max()
+        .map_or(1, |a| a.saturating_add(1))
 }
 
 /// **AC-009's re-read.** The committed result for one activation, read back out of the journal.

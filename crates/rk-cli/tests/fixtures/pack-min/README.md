@@ -53,3 +53,10 @@ The three variants — `pack.toml`, `pack.gate-1s.toml`, `pack.two-activities.to
 with one delta each** (the gate deadline; the second activity and its baseline artifact) and are
 regenerated from `pack.toml`, never edited in parallel. They were each two concatenated TOML
 documents until Slice 3 cycle 5, which is what a hand-regeneration that appends produces.
+
+*(dated 2026-09-26, `s8d` build, package P3.)* A further variant, `pack.step-grain.toml`, is regenerated from `pack.toml` the
+same way, with one delta: `s8d` §8d.2 and §8d.8 defect 4 (record R1 = ADR-0174, proposed) need a node with NO agent step
+and a node with two agent steps of different roles and output kinds. Its two activities and its second card live under
+`step-grain/` (`catalog/two-agents.toml`, `catalog/no-agent-steps.toml`, `cards/reviewer.json`) and are installed only by
+`support::PackVariant::StepGrain`, so no other variant sees them. (`pack.review.toml` and `pack.dispatch-1s.toml` were
+already a fourth and fifth before it; "there is no fourth" above is history.)

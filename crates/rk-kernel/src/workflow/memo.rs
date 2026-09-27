@@ -235,6 +235,34 @@ pub struct StepContext {
 }
 
 impl StepContext {
+    /// **R1 (`s8d` §8d.2): one AGENT step's memo facts, from THAT step's own spec.**
+    ///
+    /// Component 5 is the step spec's card digest and component 8 its schema id — never the node's
+    /// (§8d.2: *"assembled for each agent step with **that step's** card digest (component 5) and
+    /// schema id (component 8) — never the node's"*). Component 4 is the spec's inputs in
+    /// declaration order, component 6 is empty until the resolver resolves `kb:` inputs (R2), and
+    /// component 7 is the iteration path's innermost counter (ADR-0097 decision 2, `0` outside a
+    /// loop). ADR-0097's tuple is untouched (D21-43 N15).
+    #[must_use]
+    pub fn for_agent_step(
+        activity_id_at_version: &str,
+        rigor: Rigor,
+        step_id: &str,
+        spec: &rk_types::activity::ActivitySpec,
+        loop_iteration: u32,
+    ) -> Self {
+        Self {
+            activity_id_at_version: activity_id_at_version.to_owned(),
+            rigor,
+            step_id: step_id.to_owned(),
+            resolved_inputs: spec.inputs.iter().map(|(_, v)| v.clone()).collect(),
+            card_or_tool: CardOrTool::Card(spec.card_digest.clone()),
+            kb_atoms: Vec::new(),
+            loop_iteration,
+            output_schema: spec.schema.clone(),
+        }
+    }
+
     /// Build `rk-store`'s eight-field struct. **Assembly, not derivation.**
     ///
     /// # Errors
@@ -781,6 +809,15 @@ pub enum Route {
     Store,
     /// Through the journalled `GitOps` seam. No executor at `s8c`: `s8g` builds it.
     Git,
+    /// *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177, proposed.)* `shallow_clone`'s route:
+    /// ADR-0098 decision 2's retained gix write, `rk_git::clone::prepare_review_clone`, performed by
+    /// the composition root through [`crate::runtime::step::ReviewRoutes`] and never through the
+    /// `git` route's journalled `GitOps` seam (it writes no `git_op` row; R5 decision 3).
+    ReviewClone,
+    /// *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177, proposed.)* `verdict_record`'s route:
+    /// the kernel's `review::confirm` over the finding set, re-executing through the review
+    /// clone's tree (ADR-0162; R5 decision 5).
+    ReviewConfirm,
 }
 
 impl Route {
@@ -792,6 +829,8 @@ impl Route {
             Self::Toolchain => "toolchain",
             Self::Store => "store",
             Self::Git => "git",
+            Self::ReviewClone => "review_clone",
+            Self::ReviewConfirm => "review_confirm",
         }
     }
 }
@@ -852,6 +891,12 @@ pub struct VerbEntry {
     pub inputs: Vec<String>,
     /// The route, from the closed set.
     pub route: Route,
+    /// **R1's sixth column** (`s8d` §8d.1 M8; record R1, proposed). `true` for a verb whose
+    /// re-execution would repeat a write — a second review clone, a second verdict record, a
+    /// second item, a second tag. A `tool` step naming one commits under the commit key like an
+    /// agent step and is SERVED on re-entry, never re-executed; a `false` verb is idempotent and
+    /// re-executes (ADR-0150 decision 2's residual, closed by re-execution).
+    pub side_effecting: bool,
 }
 
 /// A `[checklist.<id>]` or `[kb.<atom>]` entry: exactly one of two forms (record V decision 8).
@@ -1379,11 +1424,35 @@ fn verb_row(name: &str, value: &Value) -> Result<VerbEntry, VerbRegistryError> {
                 .to_owned(),
         )
     })?;
+    // **R1's sixth column (`s8d` §8d.1 M8), REFUSED rather than defaulted**, on `live`'s discipline:
+    // an absent value read as `false` would let a writing verb re-execute on re-entry and repeat its
+    // write (a second clone, record, item or tag), and read as `true` would serve an idempotent
+    // step stale. Either default decides a value the registry owes.
+    let side_effecting = entry
+        .get("side_effecting")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| {
+            shape(
+                "declares no boolean `side_effecting` (R1's sixth column): whether re-executing \
+                 this verb repeats a write is the registry's to declare, and an absent value is \
+                 refused rather than defaulted"
+                    .to_owned(),
+            )
+        })?;
     for key in entry.keys() {
-        if !["outputs", "live", "timeout", "inputs", "route"].contains(&key.as_str()) {
+        if ![
+            "outputs",
+            "live",
+            "timeout",
+            "inputs",
+            "route",
+            "side_effecting",
+        ]
+        .contains(&key.as_str())
+        {
             return Err(shape(format!(
-                "declares `{key}`, which is not one of the five columns (outputs, live, timeout, \
-                 inputs, route; ADR-0170 decision 1)"
+                "declares `{key}`, which is not one of the six columns (outputs, live, timeout, \
+                 inputs, route, side_effecting; ADR-0170 decision 1 and `s8d`'s R1)"
             )));
         }
     }
@@ -1431,10 +1500,15 @@ fn verb_row(name: &str, value: &Value) -> Result<VerbEntry, VerbRegistryError> {
         "toolchain" => Route::Toolchain,
         "store" => Route::Store,
         "git" => Route::Git,
+        // *(2026-09-26, `s8d` build, package P7.)* The two routes R5 (ADR-0177, proposed) adds to
+        // the closed set by record, as ADR-0170 decision 1 provides.
+        "review_clone" => Route::ReviewClone,
+        "review_confirm" => Route::ReviewConfirm,
         other => {
             return Err(shape(format!(
                 "declares `route = {other:?}`, outside the closed set (port, toolchain, store, \
-                 git). A route is added by record, not by a registry row (ADR-0170 decision 1)"
+                 git, review_clone, review_confirm). A route is added by record, not by a registry \
+                 row (ADR-0170 decision 1; ADR-0177 added the last two)"
             )));
         }
     };
@@ -1444,6 +1518,7 @@ fn verb_row(name: &str, value: &Value) -> Result<VerbEntry, VerbRegistryError> {
         timeout,
         inputs,
         route,
+        side_effecting,
     })
 }
 

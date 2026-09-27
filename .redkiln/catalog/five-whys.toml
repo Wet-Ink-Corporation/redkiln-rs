@@ -2,7 +2,7 @@
 # causal family: five-whys(10) < fishbone-analysis(20) < fault-tree-analysis(30); all provide CausalChain
 [activity]
 id           = "five-whys"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "analysis"
 provides     = ["CausalChain"]
 requires     = ["RootCause", "IncidentTimeline?"]
@@ -41,8 +41,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { chain = "${ask.outputs}", findings = "${adversary.outputs?}" }
-expr    = "chain.whys.len() >= 3 and chain.systemic_cause != null and findings.none(severity in ['blocking'])"
+inputs  = { chain = "${ask.outputs}" }
+expr    = "chain.whys.len() >= 3 and chain.systemic_cause != null"
 on_false = { to = "ask", max = 2 }
 
 [[step]]

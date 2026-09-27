@@ -55,6 +55,13 @@ fn agent_step(id: &str, when: Option<&str>) -> Step {
         memo_declared: None,
         question: None,
         timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     }
 }
 
@@ -74,7 +81,11 @@ fn activation<'a>(spec: &'a rk_types::activity::ActivitySpec) -> Activation<'a> 
         item: ITEM,
         activity_id_at_version: AID,
         step_id: STEP,
-        spec,
+        spec: Some(spec),
+        // (dated 2026-09-26, s8d build, P3) R1: no per-step specs, so the first runnable agent
+        // step dispatches under the activation's spec (ADR-0143 decision 2 as R1 narrows it).
+        step_specs: None,
+        rigor: rk_kernel::rigor::Rigor::Optional,
     }
 }
 
@@ -111,10 +122,27 @@ fn a_second_runnable_agent_step_refuses_and_the_commit_survives() {
         )
         .expect("a step's own failure is a VALUE, not an error of the walk (AC-032)");
 
+    // ---- (0) THE REPORT STAYS COMMITTED. (dated 2026-09-26, s8d build, P3; section 8d.8 defect 2) --
+    //
+    // This test checked the refusal STRING for "COMMITTED" and never the report, and the report was
+    // `ActivityReport::refused`'s: `committed() == false` and `skipped() == true` for an activation
+    // whose row is in the journal, so `dispatch_through` answered `NotCommitted` (ADR-0144's named
+    // lie). The repair is ADR-0144's shape, `done.with_step_failure(cause)`: the refusal travels on
+    // `step_error()`, and the report answers what the journal holds.
+    assert!(
+        report.committed() && !report.skipped(),
+        "the first dispatch COMMITTED, so the report must answer committed() == true and \
+         skipped() == false (section 8d.8 defect 2): committed = {}, skipped = {}",
+        report.committed(),
+        report.skipped()
+    );
+
     // ---- (1) THE OUTCOME IS A NAMED REFUSAL, NOT A SILENT NON-COMMIT. --------------------------
+    // (dated 2026-09-26, s8d build, P3) Read off `step_error()`, the channel ADR-0144 gives a
+    // failure after a committed dispatch; `outcome()` is the dispatch's own reading.
     let err = report
-        .outcome()
-        .and_then(|o| o.as_ref().err())
+        .step_error()
+        .or_else(|| report.outcome().and_then(|o| o.as_ref().err()))
         .unwrap_or_else(|| {
             panic!(
                 "the walk carried NO error for a second agent step. Before ADR-0143 this returned \

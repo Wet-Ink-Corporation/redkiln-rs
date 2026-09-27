@@ -1,7 +1,7 @@
 # reach: (spike, closeout, optional) — baseline SpikeReport for the spike pack
 [activity]
 id           = "spike-report"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "closeout"
 provides     = ["SpikeReport", "DecisionRecord"]
 requires     = ["SpikeCharter", "ExperimentResults"]
@@ -47,8 +47,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", report = "${write.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and report.kill_hit != null and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", report = "${write.outputs}" }
+expr    = "check.failed == 0 and report.kill_hit != null"
 on_false = { to = "write", max = 2 }
 
 [[step]]

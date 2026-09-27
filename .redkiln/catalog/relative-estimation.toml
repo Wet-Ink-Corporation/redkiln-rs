@@ -2,7 +2,7 @@
 # sizing family: appetite-check(10) < t-shirt-sizing(20) < relative-estimation(30)
 [activity]
 id           = "relative-estimation"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "planning"
 provides     = ["Estimate"]
 requires     = ["Spec", "SliceSet?"]
@@ -40,8 +40,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { estimate = "${estimate.outputs}", findings = "${challenge.outputs?}" }
-expr    = "estimate.confidence != null and findings.none(severity in ['blocking'])"
+inputs  = { estimate = "${estimate.outputs}" }
+expr    = "estimate.confidence != null"
 on_false = { to = "estimate", max = 2 }
 
 [[step]]

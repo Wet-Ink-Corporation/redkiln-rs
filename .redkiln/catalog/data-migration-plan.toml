@@ -1,7 +1,7 @@
 # reach: (story, design, recommended) with data_migration — require row → DataMigrationPlan
 [activity]
 id           = "data-migration-plan"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "design"
 provides     = ["DataMigrationPlan"]
 requires     = ["Spec", "DesignDoc?"]
@@ -48,8 +48,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { plan = "${plan.outputs}", check = "${self-check.outputs}", findings = "${adversary.outputs?}" }
-expr    = "plan.reversible == true and check.failed == 0 and findings.none(severity in ['blocking'])"
+inputs  = { plan = "${plan.outputs}", check = "${self-check.outputs}" }
+expr    = "plan.reversible == true and check.failed == 0"
 on_false = { to = "plan", max = 2 }
 
 [[step]]

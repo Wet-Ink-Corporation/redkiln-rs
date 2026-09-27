@@ -199,6 +199,10 @@ pub struct Resolved {
     pub toolchain_programs: Option<std::collections::BTreeMap<String, String>>,
     /// ADR-0137 clause 5's construction-time backstop, in seconds.
     pub toolchain_timeout_secs: u64,
+    /// *(2026-09-26, `s8d` build, package P7; R6 = ADR-0178, proposed.)* The facets a wired deriver
+    /// computes (`change`, by `R-change-extension-and-numstat-marker`): the axes whose abstention
+    /// opens the lane's first-stage gate and whose answer the run binds (§8d.7; D21-43 N3).
+    pub derived_facets: Vec<String>,
 }
 
 /// **ADR-0140, superseding ADR-0137 clause 5 in part.** The default for the construction bound on
@@ -327,38 +331,44 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         );
         pack.map_or(1, |p| p.stage_order().len().max(1))
     };
+    // ---- THE PACK'S QUESTIONS (R5 = ADR-0177 decision 8, proposed; `s8d` §8d.6). *(2026-09-26,
+    // `s8d` build, package P7.)* Loaded ONCE, from the worktree the catalog is read from, by the one
+    // loader `answer` uses too. A catalog `gate` step whose question the pack never declares is
+    // refused by name in the binding pass below, before any dispatch or gate row.
+    let questions = match crate::processes::load(Path::new(resolved.worktree.as_str())) {
+        Ok(questions) => questions,
+        Err(e) => {
+            eprintln!("redkiln: the question registry was refused: {e}");
+            return Ok(Exit::ConfigError);
+        }
+    };
     let mut resolved = resolved;
     let mut visited: Vec<String> = Vec::new();
     let mut last_exit;
 
     loop {
         visited.push(resolved.stage.clone());
+        // ---- R6 decision 5 (`s8d` §8d.7; D21-43 N3). An abstaining derived facet whose
+        // `unknown_facet` gate was answered binds the answer, folded from `gate_answered` —
+        // BEFORE the inputs, so every stage's selection and record read the bound value.
+        if let Err(exit) = bind_answered_facets(&mut resolved, &store)? {
+            return Ok(exit);
+        }
         let (inputs, tree_hash) = match prepare_inputs(&resolved, now) {
             Ok(pair) => pair,
             Err(exit) => return Ok(exit),
         };
+        // ---- R6 decision 4: still `null` at the lane's first stage, the gate opens (once), and
+        // the FSM's first rule then awaits it (ADR-0022) before any selection reads the facet.
+        if let Err(exit) = open_derived_facet_gates(&resolved, &store, &tree_hash, now)? {
+            return Ok(exit);
+        }
 
         let claude = match real_harness_config(&resolved, env) {
             Ok(config) => config,
             Err(exit) => return Ok(exit),
         };
         let mut binder = rk_adapter_claude::binder::Binder::new(claude);
-        let inputs = match bind_nodes(&resolved, inputs, &mut binder, &owned) {
-            Ok(inputs) => inputs,
-            Err(exit) => return Ok(exit),
-        };
-
-        // **ONLY THEN** the harness, over the config the bindings filled (§7d.5's own order):
-        // `ClaudeHarness::dispatch` refuses a `card_digest` its validated store does not hold, and
-        // `Binder::new(config).bind(..)` then `into_config()` is the one way that store is filled.
-        let harness =
-            match rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone()) {
-                Ok(harness) => harness,
-                Err(e) => {
-                    eprintln!("redkiln: the harness could not be built: {e}");
-                    return Ok(Exit::ConfigError);
-                }
-            };
 
         // **ADR-0137: the REAL toolchain, over the run-owned worktree.** Until `s7g` this slot held
         // `FixtureToolchain::default()`, whose `Default` is `present: false` — a toolchain reporting
@@ -367,6 +377,11 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         // *(2026-09-26, s8c §8c.5; records V and B, proposed.)* The same selection, keeping the
         // chosen adapter's NAME here: it selects the value table, and the kernel is handed the
         // table without it (AC-487). The registry is read from the worktree the catalog is.
+        //
+        // *(Moved 2026-09-26, `s8d` build, P3; record R1, proposed.)* ABOVE the binding pass, which
+        // now resolves each agent step's `${toolchain.*}` bound through the same value table (D21-43
+        // N16). Neither call reads what the other produces, so only the order of their refusals
+        // moved.
         let chosen = match choose_toolchain(
             &ToolchainCandidates::of(&resolved),
             env,
@@ -387,6 +402,36 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
             }
         };
         let toolchain = chosen.toolchain;
+        // *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177 decision 2, proposed.)* The review
+        // routes: `shallow_clone`'s clone of THIS repository (its common dir, whose object store the
+        // run-owned branch writes into) under `<common-dir>/redkiln/clones/<item>/<sha>`, and
+        // `verdict_record`'s re-execution arms, each a toolchain chosen by the same selection loop as
+        // the run's — the candidate rooted in the clone, the reference in the checkout.
+        let routing = routing.with_review_routes(Arc::new(review_routes(&resolved, env)));
+
+        let inputs = match bind_nodes(
+            &resolved,
+            inputs,
+            &mut binder,
+            &owned,
+            routing.values(),
+            &questions,
+        ) {
+            Ok(inputs) => inputs,
+            Err(exit) => return Ok(exit),
+        };
+
+        // **ONLY THEN** the harness, over the config the bindings filled (§7d.5's own order):
+        // `ClaudeHarness::dispatch` refuses a `card_digest` its validated store does not hold, and
+        // `Binder::new(config).bind(..)` then `into_config()` is the one way that store is filled.
+        let harness =
+            match rk_adapter_claude::ClaudeHarness::new(binder.into_config(), token.clone()) {
+                Ok(harness) => harness,
+                Err(e) => {
+                    eprintln!("redkiln: the harness could not be built: {e}");
+                    return Ok(Exit::ConfigError);
+                }
+            };
 
         let ports = rk_ports::root::Ports {
             // Cloned per iteration: the STORE outlives a stage (one journal per item, across the whole
@@ -826,7 +871,43 @@ pub fn through_step_seven(
             Exit::ConfigError,
         )
     })?;
-    let item = build_item(&record, &registry);
+    // ---- THE `change` DERIVER (R6 = ADR-0178 decisions 1-3, proposed; `s8d` §8d.7). *(2026-09-26,
+    // `s8d` build, package P7.)* `R-change-extension-and-numstat-marker` runs here, over the item's
+    // changeset (`HEAD..rk-run/<item>`), through `rk-git`, when the registry declares a facet it
+    // derives. `None` is the abstention (an empty range); a range that exists and cannot be read is
+    // refused by name.
+    let mut derived: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for facet in registry.facets() {
+        if facet.source != rk_kernel::registry::Source::Derived
+            || facet.deriver.as_deref() != Some(crate::change_deriver::DERIVER)
+        {
+            continue;
+        }
+        match crate::change_deriver::derive(&repo.exec, &repo.worktree, &args.item) {
+            Ok(Some(values)) => {
+                derived.insert(facet.name.clone(), values);
+            }
+            Ok(None) => {}
+            Err(e) => {
+                eprintln!("redkiln: {e}");
+                return Err(refuse_after_reconcile(
+                    &repo.exec,
+                    &repo.worktree,
+                    &kernel_config,
+                    Exit::ConfigError,
+                ));
+            }
+        }
+    }
+    let item = build_item(&record, &registry, &derived).map_err(|refusal| {
+        eprintln!("redkiln: {}: {refusal}", record_path.display());
+        refuse_after_reconcile(
+            &repo.exec,
+            &repo.worktree,
+            &kernel_config,
+            Exit::ConfigError,
+        )
+    })?;
 
     Ok(Resolved {
         exec: repo.exec,
@@ -854,6 +935,14 @@ pub fn through_step_seven(
             .adapters
             .toolchain_timeout_secs
             .unwrap_or(DEFAULT_TOOLCHAIN_TIMEOUT_SECS),
+        derived_facets: registry
+            .facets()
+            .filter(|f| {
+                f.source == rk_kernel::registry::Source::Derived
+                    && f.deriver.as_deref() == Some(crate::change_deriver::DERIVER)
+            })
+            .map(|f| f.name.clone())
+            .collect(),
     })
 }
 
@@ -1097,6 +1186,147 @@ const fn lane_name(lane: Lane) -> &'static str {
     }
 }
 
+/// The item's journal and its fold at the resolved stage, for R6's two passes.
+fn folded_state(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+) -> Result<Result<rk_kernel::workflow::fsm::RunState, Exit>, Halt> {
+    let guard = crate::store::acquire(store, "the run")?;
+    let read = guard.query(rk_kernel::runtime::journal_query(resolved.item.id()));
+    drop(guard);
+    let events = match read {
+        Ok(events) => events,
+        Err(e) => {
+            eprintln!("redkiln: the recorded journal could not be read: {e:?}");
+            return Ok(Err(Exit::ConfigError));
+        }
+    };
+    Ok(
+        rk_kernel::workflow::fsm::fold(resolved.item.id(), &resolved.stage, &events).map_err(|e| {
+            eprintln!("redkiln: the recorded journal did not fold: {e}");
+            Exit::ConfigError
+        }),
+    )
+}
+
+/// **R6 decision 5 (ADR-0178, proposed): an answered `unknown_facet:<axis>` gate binds the axis.**
+/// *(Added 2026-09-26, `s8d` build, package P7.)*
+///
+/// For each wired derived facet still `null` on the item (its deriver abstained), the latest
+/// `unknown_facet:<axis>` gate answered and not void binds the facet as a ONE-ELEMENT set — folded
+/// from the `gate_answered` row, never written to the item record, where a `change` value stays
+/// refused. A facet the deriver DID compute keeps the derived value: the derived facet's source is
+/// its deriver (ADR-0093 decision 1), and a derived value that disagrees with an earlier answer is
+/// REPORTED on stderr, naming both, and binds (R6 decision 6).
+fn bind_answered_facets(
+    resolved: &mut Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+) -> Result<Result<(), Exit>, Halt> {
+    if resolved.derived_facets.is_empty() {
+        return Ok(Ok(()));
+    }
+    let state = match folded_state(resolved, store)? {
+        Ok(state) => state,
+        Err(exit) => return Ok(Err(exit)),
+    };
+    for axis in resolved.derived_facets.clone() {
+        let Some(answer) = rk_kernel::workflow::gate::answered_facet(&state, &axis) else {
+            continue;
+        };
+        match resolved.item.facet(&axis) {
+            Some(rk_kernel::select::FacetValue::Null) => {
+                resolved.item = resolved
+                    .item
+                    .clone()
+                    .with_facet_set(&axis, [answer.clone()]);
+            }
+            Some(rk_kernel::select::FacetValue::Set(derived))
+                if derived.len() != 1 || !derived.contains(&answer) =>
+            {
+                eprintln!(
+                    "redkiln: `{axis}` derived as {:?} over the item's changeset disagrees with the \
+                     triage answer `{answer}`; the derived value binds, because a derived facet's \
+                     source is its deriver (R6 = ADR-0178 decision 6)",
+                    derived.iter().collect::<Vec<_>>()
+                );
+            }
+            _ => {}
+        }
+    }
+    Ok(Ok(()))
+}
+
+/// **R6 decision 4 (ADR-0178, proposed): a wired derived facet still `null` at the lane's first
+/// stage opens AC-079's `unknown_facet` gate, once.** *(Added 2026-09-26, `s8d` build, package P7.)*
+///
+/// D21-43 N3: *"`null` routes to AC-079's `unknown_facet` gate at triage, and the operator supplies
+/// it."* The first stage is the pack's declared `stage_order`'s first (`triage` in both shipped
+/// packs); a pack that declares no order has no first stage and opens nothing here. The row is
+/// decided by the kernel ([`rk_kernel::workflow::gate::derived_facet_gate`]: no reach of the kind,
+/// or a void latest one) and appended here, before `resume` folds the journal, so the FSM's first
+/// rule awaits it.
+fn open_derived_facet_gates(
+    resolved: &Resolved,
+    store: &Arc<Mutex<dyn EventStore>>,
+    tree_hash: &str,
+    now: i64,
+) -> Result<Result<(), Exit>, Halt> {
+    let abstaining: Vec<&String> = resolved
+        .derived_facets
+        .iter()
+        .filter(|axis| {
+            matches!(
+                resolved.item.facet(axis),
+                Some(rk_kernel::select::FacetValue::Null)
+            )
+        })
+        .collect();
+    if abstaining.is_empty() {
+        return Ok(Ok(()));
+    }
+    let Ok(pack) = rk_kernel::select::Pack::from_toml(
+        &format!("{}.toml", resolved.pack_name),
+        &resolved.pack_src,
+    ) else {
+        // The pack is parsed, and refused by name, by the input set a moment earlier.
+        return Ok(Ok(()));
+    };
+    if pack.stage_order().first() != Some(&resolved.stage) {
+        return Ok(Ok(()));
+    }
+    let state = match folded_state(resolved, store)? {
+        Ok(state) => state,
+        Err(exit) => return Ok(Err(exit)),
+    };
+    let deadline = rk_types::time::Timestamp::from_unix_seconds(
+        now.saturating_add(resolved.extras.gate_deadline_secs),
+    );
+    let mut rows = Vec::new();
+    for axis in abstaining {
+        match rk_kernel::workflow::gate::derived_facet_gate(&state, axis, tree_hash, deadline) {
+            Ok(Some(row)) => rows.push(row),
+            Ok(None) => {}
+            Err(e) => {
+                eprintln!("redkiln: the `unknown_facet:{axis}` gate could not be minted: {e}");
+                return Ok(Err(Exit::ConfigError));
+            }
+        }
+    }
+    if rows.is_empty() {
+        return Ok(Ok(()));
+    }
+    let mut guard = crate::store::acquire(store, "the run")?;
+    for row in rows {
+        if let Err(e) = guard.append(row) {
+            drop(guard);
+            eprintln!("redkiln: the `unknown_facet` gate row could not be written: {e:?}");
+            return Ok(Err(Exit::ConfigError));
+        }
+    }
+    drop(guard);
+    Ok(Ok(()))
+}
+
 /// Rebuild the kernel's `Item` from the record.
 ///
 /// **An absent facet is not written at all**, which is what makes it `with_facet_null` inside the
@@ -1119,7 +1349,36 @@ const fn lane_name(lane: Lane) -> &'static str {
 /// So the **abstention gate was unreachable**, and with it every gate case of Slice 3. That is why
 /// the contract sequences `ac403_…` first in this cycle: its fixture is reused by `ac406_…`,
 /// `ac407_…`, `ac264_…` and the AC-410 pair, and none of them could have opened a gate either.
-fn build_item(record: &ItemRecord, registry: &rk_kernel::registry::Registry) -> Item {
+///
+/// *(2026-09-26, `s8d` build, package P7; R6 = ADR-0178 decisions 1 and 2, proposed.)* Two changes.
+/// **A record-supplied value for a `source = "derived"` facet is refused by name** — a derived facet
+/// is *"computed over the changeset by a named `deriver`"* (`facets.toml`), so a `[facets]` entry
+/// for one would be a human value on a facet no human sources (ADR-0093 decision 1's classes, as
+/// R6 reads them). And **`derived` carries each value a wired deriver computed**, bound as a set;
+/// a derived facet with no value there (its deriver abstained, or none is wired) stays
+/// `with_facet_null`, which is the abstention, never `[]` and never a default.
+///
+/// # Errors
+/// A `String` naming the derived facet the record supplied, and its deriver.
+fn build_item(
+    record: &ItemRecord,
+    registry: &rk_kernel::registry::Registry,
+    derived: &BTreeMap<String, Vec<String>>,
+) -> Result<Item, String> {
+    for facet in registry.facets() {
+        if facet.source == rk_kernel::registry::Source::Derived
+            && record.facets.contains_key(&facet.name)
+        {
+            return Err(format!(
+                "the item record supplies `{}`, which `facets.toml` declares `source = \"derived\"` \
+                 (deriver `{}`): a derived facet is computed over the changeset and never read from \
+                 the record, so the value is refused rather than taken as a human one (R6 = \
+                 ADR-0178; ADR-0093 decision 1)",
+                facet.name,
+                facet.deriver.as_deref().unwrap_or("none declared"),
+            ));
+        }
+    }
     let mut item = Item::new(&record.id, record.kind.as_deref().unwrap_or(""));
 
     // Every declared facet the record does not carry, as an abstention. Done first, so a record
@@ -1142,7 +1401,10 @@ fn build_item(record: &ItemRecord, registry: &rk_kernel::registry::Registry) -> 
         if facet.name == "kind" || kernel_supplied || record.facets.contains_key(&facet.name) {
             continue;
         }
-        item = item.with_facet_null(&facet.name);
+        item = match derived.get(&facet.name) {
+            Some(values) => item.with_facet_set(&facet.name, values.iter().cloned()),
+            None => item.with_facet_null(&facet.name),
+        };
     }
 
     for (name, value) in &record.facets {
@@ -1161,7 +1423,7 @@ fn build_item(record: &ItemRecord, registry: &rk_kernel::registry::Registry) -> 
             _ => item,
         };
     }
-    item
+    Ok(item)
 }
 
 // ------------------------------------------------------------------ steps (8)-(10), the inner path
@@ -2378,7 +2640,60 @@ pub fn tool_routing(
     let registry = rk_kernel::workflow::memo::VerbRegistry::load_file(&path)
         .map_err(|e| format!("{}: {e}", path.display()))?;
     let values = toolchain_values(&registry, adapter);
-    Ok(rk_kernel::runtime::step::ToolRouting::new(registry, values))
+    // *(2026-09-26, `s8d` build, package P4; R2 = ADR-0173, proposed.)* The resolver's `kb:` /
+    // `checklist:` / `toolchain:<feed>` arm reads through the same registry: the feed table is the
+    // chosen adapter's toolchain (named by the table key, never the adapter), and a declared path
+    // is relative to `<worktree>/.redkiln/`.
+    let feed_table = adapter.and_then(toolchain_of).map(str::to_owned);
+    Ok(rk_kernel::runtime::step::ToolRouting::new(registry, values)
+        .with_sources(feed_table, Some(worktree.join(".redkiln"))))
+}
+
+/// **R5's review routes, as `run` binds them** (ADR-0177 decision 2, proposed). *(Added 2026-09-26,
+/// `s8d` build, package P7.)*
+///
+/// The clone's source is the repository's common directory as a `file://` URL (the run-owned
+/// branch's commits are in its object store), its destinations `<common-dir>/redkiln/clones/<item>`.
+/// Each re-execution arm is chosen by [`choose_toolchain`], the loop `run` chose its own toolchain
+/// by, rooted in the clone (the candidate) or in the checkout (the reference).
+#[must_use]
+pub fn review_routes(resolved: &Resolved, env: &Env) -> crate::review_pass::ReviewCloneRoutes {
+    let common_dir = resolved.common_dir.clone();
+    let toolchains = resolved.toolchains.clone();
+    let programs = resolved.toolchain_programs.clone();
+    let timeout_secs = resolved.toolchain_timeout_secs;
+    let env = env.clone();
+    let for_candidates = common_dir.clone();
+    crate::review_pass::ReviewCloneRoutes {
+        source_url: format!(
+            "file:///{}",
+            common_dir
+                .display()
+                .to_string()
+                .replace('\\', "/")
+                .trim_start_matches('/')
+        ),
+        clones_dir: common_dir
+            .join("redkiln")
+            .join("clones")
+            .join(resolved.item.id()),
+        reference_root: Path::new(resolved.worktree.as_str()).to_path_buf(),
+        toolchain_at: Box::new(move |root: &Path| {
+            choose_toolchain(
+                &ToolchainCandidates {
+                    toolchains: &toolchains,
+                    timeout_secs,
+                    programs: programs.as_ref(),
+                    common_dir: &for_candidates,
+                },
+                &env,
+                root,
+                &mut |line| eprintln!("redkiln: {line}"),
+            )
+            .map(|chosen| chosen.toolchain)
+            .map_err(|exit| format!("no toolchain adapter could be chosen ({exit:?})"))
+        }),
+    }
 }
 
 /// The chosen adapter's value table (s8c §8c.5), or an unselected one naming why. The reasons name
@@ -2448,6 +2763,58 @@ fn real_harness_config(
     })
 }
 
+/// **R1 / D21-43 N16: one agent step's per-step bound** — *"Carried by each per-step spec (3a),
+/// resolved through 4a's table and bounded by the activity budget."*
+///
+/// The step's own `timeout_secs`: a literal, or a `${toolchain.<key>}` resolved through the value
+/// table (D21-42 4a: *"an unresolved key is refused by name"*). A step that declares none takes the
+/// activation's own per-activity value, `activity_secs` (ADR-0140 decision 5's, declared in the
+/// pack). Every one of the 185 shipped agent steps declares one; the fallback serves fixtures. The
+/// result is `min(step, budget.wall_clock_secs)`: no per-step bound exceeds its activity's budget.
+///
+/// *(Added 2026-09-26, `s8d` build, package P3; record R1, proposed. R1 supersedes ADR-0140
+/// decision 5's "A future per-step bound may not be built by overloading it" in part, for per-step
+/// specs only: an activation's own spec keeps the per-activity value.)*
+///
+/// # Errors
+/// A sentence naming the step and why: an unresolved or `unmeasured` key, a zero bound (RT-5), or
+/// an activity that declares no `budget.wall_clock_secs` to bound it by.
+pub fn agent_step_timeout_secs(
+    step: &rk_kernel::catalog::Step,
+    values: &rk_kernel::workflow::memo::ToolchainValues,
+    activity_secs: u64,
+    budget_secs: Option<u64>,
+) -> Result<u64, String> {
+    let declared = match &step.timeout_secs {
+        None => activity_secs,
+        Some(rk_kernel::catalog::StepTimeout::Literal(secs)) => *secs,
+        Some(rk_kernel::catalog::StepTimeout::Toolchain(key)) => values
+            .resolve(key)
+            .map(std::num::NonZeroU64::get)
+            .map_err(|refusal| {
+                format!(
+                    "the `agent` step `{}`'s timeout_secs `${{toolchain.{key}}}`: {refusal}",
+                    step.id
+                )
+            })?,
+    };
+    if declared == 0 {
+        return Err(format!(
+            "the `agent` step `{}` declares a zero timeout_secs, which no dispatch can run under \
+             (RT-5)",
+            step.id
+        ));
+    }
+    let budget = budget_secs.ok_or_else(|| {
+        format!(
+            "the `agent` step `{}`'s activity declares no `budget.wall_clock_secs`, so its \
+             per-step bound has no ceiling (D21-43 N16: bounded by the activity budget)",
+            step.id
+        )
+    })?;
+    Ok(declared.min(budget))
+}
+
 /// Step (8)'s binding pass: one `Binder::bind` per DAG node, each recorded into the input set.
 ///
 /// # 🛑 ONE SPEC PER NODE, NOT PER STEP — THE RUNTIME DISPATCHES WHOLE ACTIVITIES
@@ -2472,6 +2839,8 @@ fn bind_nodes(
     mut inputs: rk_kernel::replay::RunInputs,
     binder: &mut rk_adapter_claude::binder::Binder,
     owned: &Path,
+    values: &rk_kernel::workflow::memo::ToolchainValues,
+    questions: &rk_kernel::workflow::question::QuestionRegistry,
 ) -> Result<rk_kernel::replay::RunInputs, Exit> {
     let root = Path::new(resolved.worktree.as_str()).to_path_buf();
     let (pack, catalog, artifacts, facets, item) = inputs.build().map_err(|e| {
@@ -2493,39 +2862,48 @@ fn bind_nodes(
         else {
             continue;
         };
-        let Some(role_name) = activity.steps.iter().find_map(|s| s.role.clone()) else {
+        let activation = activity
+            .id_at_version()
+            .unwrap_or_else(|| activity.id.clone());
+
+        // *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177 decision 8, proposed.)* A `gate` step's
+        // kind is its `question` (ADR-0145); one the pack's `.redkiln/processes/` never declares
+        // would be answerable only as the built-in default question, which is not what the activity
+        // asks. Refused by name here, before anything is bound or dispatched.
+        if let Some((step, question)) = crate::processes::undeclared_gate_kind(questions, activity)
+        {
+            eprintln!(
+                "redkiln: the `gate` step `{step}` of `{}` asks the question `{question}`, which no \
+                 file under `.redkiln/processes/` declares; a gate is answered with the question \
+                 its pack declares, never the built-in default (R5 = ADR-0177)",
+                activity.id
+            );
+            return Err(Exit::ConfigError);
+        }
+
+        // 🛑 **R1 (`s8d` §8d.2, §8d.8 defect 4): EVERY NODE IS BOUND, AND ONE SPEC PER AGENT STEP.**
+        // This loop took the role from whichever step first nominated one and `continue`d past a
+        // node with none, so a node with NO agent step was never bound and the run's supplier then
+        // refused it — six of the fix lane's fifteen selected activities. Such a node is now bound
+        // as an EXPLICIT ABSENCE of agent specs (an empty per-step map, no activation spec), never a
+        // synthesised card (ADR-0143's forbids).
+        let agents: Vec<&rk_kernel::catalog::Step> = activity
+            .steps
+            .iter()
+            .filter(|s| s.kind == rk_kernel::catalog::StepKind::Agent)
+            .collect();
+        if agents.is_empty() {
+            inputs = inputs.with_spec(
+                &node.id,
+                rk_kernel::replay::RecordedSpec::with_steps_and_no_agent_step(
+                    &activation,
+                    activity.steps.clone(),
+                ),
+            );
             continue;
-        };
+        }
 
-        let card_path = root
-            .join(".redkiln")
-            .join("cards")
-            .join(format!("{role_name}.json"));
-        let card_text = std::fs::read_to_string(&card_path).map_err(|e| {
-            eprintln!("redkiln: {}: {e}", card_path.display());
-            Exit::ConfigError
-        })?;
-        let card = rk_adapter_claude::card::AuthoredCard::from_file(&role_name, &card_text)
-            .map_err(|e| {
-                eprintln!("redkiln: {}: {e}", card_path.display());
-                Exit::ConfigError
-            })?;
-
-        let kind = activity.provides.first().cloned().unwrap_or_default();
-        let schema_path = root
-            .join(".redkiln")
-            .join("schemas")
-            .join(format!("{kind}.json"));
-        let schema_text = std::fs::read_to_string(&schema_path).map_err(|e| {
-            eprintln!("redkiln: {}: {e}", schema_path.display());
-            Exit::ConfigError
-        })?;
-        let schema_json: serde_json::Value = serde_json::from_str(&schema_text).map_err(|e| {
-            eprintln!("redkiln: {} is not JSON: {e}", schema_path.display());
-            Exit::ConfigError
-        })?;
-
-        let timeout_secs = resolved
+        let activity_secs = resolved
             .extras
             .activity
             .get(&activity.id)
@@ -2538,52 +2916,144 @@ fn bind_nodes(
                 );
                 Exit::ConfigError
             })?;
+        let budget_secs = activity.budget.as_ref().map(|b| b.wall_clock_secs.get());
 
-        // `Role { model, effort }` is THE PACK'S role table, read through `PackExtras`. The card
-        // may not carry a tier (`ConfigError::TierLeak`), so this row is its only source.
-        let declared = resolved.extras.role.get(&role_name).ok_or_else(|| {
-            eprintln!(
-                "redkiln: the pack declares no `[role.{role_name}]` row, so the tier the binder \
-                 injects has no source (AC-212; AC-118)."
-            );
-            Exit::ConfigError
-        })?;
-        let role = rk_adapter_claude::binder::Role {
-            model: declared.model,
-            effort: declared.effort,
-        };
+        // Each agent step's OWN spec: its role's card, its own `outputs = "value:<Kind>"` schema —
+        // never `activity.provides.first()`, which is wrong for every agent step whose output is
+        // not `provides[0]` (`tdd`'s `red` emits `ImplReport`; its `provides[0]` is `Changeset`)
+        // — and its own bound (N16).
+        let mut step_specs: std::collections::BTreeMap<String, rk_types::activity::ActivitySpec> =
+            std::collections::BTreeMap::new();
+        for step in &agents {
+            let Some(role_name) = step.role.clone() else {
+                eprintln!(
+                    "redkiln: the `agent` step `{}` of `{}` nominates no role, so it has no card \
+                     (ADR-0014: an activity nominates a role, never a card)",
+                    step.id, activity.id
+                );
+                return Err(Exit::ConfigError);
+            };
+            let Some(kind) = step.output_type.clone() else {
+                eprintln!(
+                    "redkiln: the `agent` step `{}` of `{}` declares no `outputs = \"value:<Kind>\"`, \
+                     so its dispatch has no schema to validate against",
+                    step.id, activity.id
+                );
+                return Err(Exit::ConfigError);
+            };
+            let timeout_secs = agent_step_timeout_secs(step, values, activity_secs, budget_secs)
+                .map_err(|e| {
+                    eprintln!("redkiln: `{}`: {e}", activity.id);
+                    Exit::ConfigError
+                })?;
+            let spec = bind_one(
+                resolved,
+                binder,
+                owned,
+                &root,
+                &node.id,
+                (&role_name, &kind, timeout_secs),
+            )?;
+            step_specs.insert(step.id.clone(), spec);
+        }
 
-        let spec = binder
-            .bind(rk_adapter_claude::binder::BindRequest {
-                role_name: &role_name,
-                role: &role,
-                card: &card,
-                schema: &rk_adapter_claude::binder::Schema {
-                    id: rk_types::typed::SchemaId::new(&kind),
-                    json: schema_json,
-                },
-                timeout_secs,
-                worktree: owned,
-                inputs: vec![("item".to_owned(), serde_json::json!(resolved.item.id()))],
-            })
-            .map_err(|e| {
-                eprintln!("redkiln: the binder refused `{}`: {e}", node.id);
-                Exit::ConfigError
-            })?;
-
-        let activation = activity
-            .id_at_version()
-            .unwrap_or_else(|| activity.id.clone());
-        // **ADR-0138: the step list is TRANSCRIBED here, by the one place that holds the activity.**
-        // This loop already read `activity.steps` (for the role, just above) and discarded the
-        // rest; the runtime cannot re-derive them — `ActivitySpec` has no step list and
-        // `runtime.rs`'s residual 7 forbids loading the catalog from inside the runtime. The
-        // composition root is the only site with the value in hand, so it is the site that hands
-        // it over. `with_steps`, never `supplied`: the production path always transcribes.
+        // The activation's OWN spec (ADR-0140 decision 5's per-activity bound): the first agent
+        // step's card and schema, at the pack's per-activity `timeout_secs`. The walk dispatches
+        // each agent step under its per-step spec; this one is what the record's `card:` line and a
+        // pre-R1 reader see.
+        let first = agents[0];
+        let node_spec = bind_one(
+            resolved,
+            binder,
+            owned,
+            &root,
+            &node.id,
+            (
+                first.role.as_deref().unwrap_or_default(),
+                first.output_type.as_deref().unwrap_or_default(),
+                activity_secs,
+            ),
+        )?;
+        // **ADR-0138: the step list is TRANSCRIBED here, by the one place that holds the activity**,
+        // and R1's per-step specs beside it (D21-42 3a: *"Per-step specs are carried on
+        // `RecordedSpec` (ADR-0138's warrant)"*). `with_steps`, never `supplied`: the production
+        // path always transcribes.
         inputs = inputs.with_spec(
             &node.id,
-            rk_kernel::replay::RecordedSpec::with_steps(&activation, spec, activity.steps.clone()),
+            rk_kernel::replay::RecordedSpec::with_steps(
+                &activation,
+                node_spec,
+                activity.steps.clone(),
+            )
+            .and_step_specs(step_specs),
         );
     }
     Ok(inputs)
+}
+
+/// **One `Binder::bind`**: a role's card, a kind's schema, a bound — the three things a spec binds
+/// that differ between agent steps (R1). `(role, kind, timeout_secs)`.
+fn bind_one(
+    resolved: &Resolved,
+    binder: &mut rk_adapter_claude::binder::Binder,
+    owned: &Path,
+    root: &Path,
+    node_id: &str,
+    (role_name, kind, timeout_secs): (&str, &str, u64),
+) -> Result<rk_types::activity::ActivitySpec, Exit> {
+    let card_path = root
+        .join(".redkiln")
+        .join("cards")
+        .join(format!("{role_name}.json"));
+    let card_text = std::fs::read_to_string(&card_path).map_err(|e| {
+        eprintln!("redkiln: {}: {e}", card_path.display());
+        Exit::ConfigError
+    })?;
+    let card =
+        rk_adapter_claude::card::AuthoredCard::from_file(role_name, &card_text).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", card_path.display());
+            Exit::ConfigError
+        })?;
+    let schema_path = root
+        .join(".redkiln")
+        .join("schemas")
+        .join(format!("{kind}.json"));
+    let schema_text = std::fs::read_to_string(&schema_path).map_err(|e| {
+        eprintln!("redkiln: {}: {e}", schema_path.display());
+        Exit::ConfigError
+    })?;
+    let schema_json: serde_json::Value = serde_json::from_str(&schema_text).map_err(|e| {
+        eprintln!("redkiln: {} is not JSON: {e}", schema_path.display());
+        Exit::ConfigError
+    })?;
+    // `Role { model, effort }` is THE PACK'S role table, read through `PackExtras`. The card may not
+    // carry a tier (`ConfigError::TierLeak`), so this row is its only source.
+    let declared = resolved.extras.role.get(role_name).ok_or_else(|| {
+        eprintln!(
+            "redkiln: the pack declares no `[role.{role_name}]` row, so the tier the binder \
+             injects has no source (AC-212; AC-118)."
+        );
+        Exit::ConfigError
+    })?;
+    let role = rk_adapter_claude::binder::Role {
+        model: declared.model,
+        effort: declared.effort,
+    };
+    binder
+        .bind(rk_adapter_claude::binder::BindRequest {
+            role_name,
+            role: &role,
+            card: &card,
+            schema: &rk_adapter_claude::binder::Schema {
+                id: rk_types::typed::SchemaId::new(kind),
+                json: schema_json,
+            },
+            timeout_secs,
+            worktree: owned,
+            inputs: vec![("item".to_owned(), serde_json::json!(resolved.item.id()))],
+        })
+        .map_err(|e| {
+            eprintln!("redkiln: the binder refused `{node_id}`: {e}");
+            Exit::ConfigError
+        })
 }

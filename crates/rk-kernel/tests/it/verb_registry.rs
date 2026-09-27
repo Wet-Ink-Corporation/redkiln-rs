@@ -18,7 +18,7 @@ use rk_kernel::workflow::memo::{
 
 const PIN: &str = "0123456789abcdef0123456789abcdef01234567";
 const VERBS: &str = "[verb]\nbuild = { outputs = \"BuildReport\", live = false, timeout = \
-                     \"build_timeout\", inputs = [], route = \"port\" }\n";
+                     \"build_timeout\", inputs = [], route = \"port\", side_effecting = false }\n";
 
 fn load(entry: &str) -> Result<VerbRegistry, VerbRegistryError> {
     VerbRegistry::from_toml(&format!("{VERBS}[toolchain.t]\nk = {entry}\n"))
@@ -181,7 +181,11 @@ fn shipped_catalog() -> Catalog {
 }
 
 /// The rows record V decision 1 lands, as `(verb, route, outputs, live)`.
-const SHIPPED_ROWS: [(&str, &str, &str, bool); 10] = [
+///
+/// *(dated 2026-09-26, `s8d` build, package P7; R5 = ADR-0177, proposed.)* Twelve, not ten: R5 adds
+/// `shallow_clone` (route `review_clone`) and `verdict_record` (route `review_confirm`), each by
+/// record, as ADR-0170 decision 1 provides. The test keeps its name; its premise moved with R5.
+const SHIPPED_ROWS: [(&str, &str, &str, bool); 12] = [
     ("build", "port", "BuildReport", false),
     ("change_summary", "port", "ChangeSummary", false),
     ("item_create", "store", "ItemRefs", false),
@@ -192,6 +196,8 @@ const SHIPPED_ROWS: [(&str, &str, &str, bool); 10] = [
     ("setup", "toolchain", "SetupResult", true),
     ("smoke", "toolchain", "SmokeResult", true),
     ("test", "port", "TestReport", false),
+    ("shallow_clone", "review_clone", "Workspace", false),
+    ("verdict_record", "review_confirm", "Verdict", false),
 ];
 
 #[test]
@@ -200,7 +206,7 @@ fn the_shipped_registry_loads_with_route_outputs_and_live_on_every_row() {
     assert_eq!(
         reg.len(),
         SHIPPED_ROWS.len(),
-        "the shipped `[verb]` table holds exactly record V decision 1's ten rows"
+        "the shipped `[verb]` table holds exactly record V decision 1's ten rows and R5's two"
     );
     for (verb, route, outputs, live) in SHIPPED_ROWS {
         let row = reg
@@ -237,17 +243,13 @@ fn the_shipped_registry_loads_with_route_outputs_and_live_on_every_row() {
         "the `setup` row's timeout is its own key (§8c.4)"
     );
     // The verbs that have NO row here refuse by bare name (ADR-0135 clause 2): none is carried.
-    for verb in [
-        "mutate",
-        "release_record",
-        "shallow_clone",
-        "verdict_record",
-        "deploy",
-    ] {
+    // *(dated 2026-09-26, `s8d` build, package P7: `shallow_clone` and `verdict_record` left this
+    // list, their rows being R5's = ADR-0177, proposed; the other three still have none.)*
+    for verb in ["mutate", "release_record", "deploy"] {
         assert_eq!(
             reg.live(verb),
             None,
-            "`{verb}` must have no row at s8c (record V decision 1)"
+            "`{verb}` must have no row (record V decision 1; R5 rowed only its two)"
         );
     }
     // Both per-toolchain tables are declared.
@@ -537,4 +539,109 @@ fn the_shipped_rust_value_table_is_exactly_the_declared_key_map() {
         "setup_projects is the one tracked pnpm-lock.yaml's project (§8c.4)"
     );
     assert!(setup.source.contains("git ls-files"));
+}
+
+// ------------------------------------------------------------------------------------------------
+// R1's SIXTH COLUMN (`s8d` §8d.1 M8; record R1, proposed). *(Added 2026-09-26, `s8d` build, P3.)*
+// ------------------------------------------------------------------------------------------------
+
+/// The verbs whose re-execution would repeat a write (§8d.1 R1's row): a second review clone, a
+/// second verdict record, a second artifact, a second item or a second tag. `shallow_clone` and
+/// `verdict_record` get their rows from R5; each is required `true` the moment it has one.
+const WRITING_VERBS: [&str; 5] = [
+    "shallow_clone",
+    "verdict_record",
+    "package",
+    "item_create",
+    "release_tag",
+];
+
+/// **Every `[verb]` row DECLARES `side_effecting`, and the writing verbs are marked `true`.** A row
+/// without the value refuses the whole registry at load — never read as `false`, which would let a
+/// writing verb re-execute on re-entry (M30).
+#[test]
+fn every_row_declares_side_effecting_and_the_writing_verbs_are_marked() {
+    // ---- (1) THE SHIPPED FILE, RAW: every row carries the column as written, not by default. ----
+    let text = std::fs::read_to_string(workspace_root().join(".redkiln").join("registry.toml"))
+        .expect("the shipped registry is readable");
+    let doc = rk_kernel::toml_subset::parse(&text).expect("the shipped registry parses");
+    let rows = doc
+        .get("verb")
+        .and_then(TomlValue::as_table)
+        .expect("[verb] is declared");
+    assert!(
+        rows.len() >= SHIPPED_ROWS.len(),
+        "the scan must walk every shipped row, not a subset: {} rows",
+        rows.len()
+    );
+    for (verb, row) in rows {
+        let declared = row
+            .as_table()
+            .and_then(|t| t.get("side_effecting"))
+            .and_then(TomlValue::as_bool);
+        assert!(
+            declared.is_some(),
+            "the shipped `{verb}` row declares no boolean `side_effecting` (R1's sixth column; \
+             `s8d` §8d.1 M8)"
+        );
+    }
+
+    // ---- (2) THE LOADED REGISTRY: the marks are exactly the writing verbs that have rows. ------
+    let reg = shipped();
+    for must in ["package", "item_create", "release_tag"] {
+        assert!(
+            reg.entry(must).is_some(),
+            "PREMISE: `{must}` has a row (s8c's record V), so its mark is checkable"
+        );
+    }
+    let mut marked = 0_usize;
+    for verb in rows.keys() {
+        let entry = reg.entry(verb).expect("every raw row loads");
+        let writing = WRITING_VERBS.contains(&verb.as_str());
+        assert_eq!(
+            entry.side_effecting, writing,
+            "`{verb}`'s `side_effecting` must be {writing}: a writing verb re-executed on re-entry \
+             repeats its write, and an idempotent one marked would be served stale"
+        );
+        marked += usize::from(entry.side_effecting);
+    }
+    assert!(
+        marked >= 3,
+        "at least package, item_create and release_tag are marked"
+    );
+
+    // ---- (3) A ROW WITHOUT THE VALUE REFUSES THE REGISTRY AT LOAD, naming the verb. -------------
+    let control = VerbRegistry::from_toml(
+        "[verb]\nbuild = { outputs = \"BuildReport\", live = false, timeout = \"build_timeout\", \
+         inputs = [], route = \"port\", side_effecting = false }\n",
+    );
+    assert!(
+        control.is_ok(),
+        "CONTROL: a row declaring the column loads: {control:?}"
+    );
+    match VerbRegistry::from_toml(
+        "[verb]\nbuild = { outputs = \"BuildReport\", live = false, timeout = \"build_timeout\", \
+         inputs = [], route = \"port\" }\n",
+    ) {
+        Err(VerbRegistryError::Shape { verb, detail }) => {
+            assert_eq!(verb, "build");
+            assert!(
+                detail.contains("side_effecting"),
+                "the refusal names the missing column: {detail}"
+            );
+        }
+        other => panic!(
+            "a row with no `side_effecting` value must refuse the registry at load, never load as \
+             `false` (M30): {other:?}"
+        ),
+    }
+    // A non-boolean value is not a value.
+    assert!(
+        VerbRegistry::from_toml(
+            "[verb]\nbuild = { outputs = \"BuildReport\", live = false, timeout = \
+             \"build_timeout\", inputs = [], route = \"port\", side_effecting = \"no\" }\n",
+        )
+        .is_err(),
+        "a string `side_effecting` is refused"
+    );
 }

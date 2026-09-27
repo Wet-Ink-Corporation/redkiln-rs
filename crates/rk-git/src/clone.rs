@@ -60,13 +60,34 @@ pub fn prepare_review_clone(
         .with_shallow(shallow);
 
     let mut prep = prep;
-    prep.fetch_only(
-        gix::progress::Discard,
-        &std::sync::atomic::AtomicBool::default(),
-    )
-    .map_err(|e| GitError::Spawn {
-        detail: format!("review clone: fetch failed: {e}"),
-    })?;
+    let interrupt = std::sync::atomic::AtomicBool::default();
+    match working_tree {
+        WorkingTree::NotNeeded => {
+            prep.fetch_only(gix::progress::Discard, &interrupt)
+                .map_err(|e| GitError::Spawn {
+                    detail: format!("review clone: fetch failed: {e}"),
+                })?;
+        }
+        // *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177 decision 4, proposed.)* This arm
+        // called `fetch_only` too, so a clone DECLARED to need a working tree got a non-bare
+        // repository with nothing checked out (read at `fc80687`, `s8d` §8d.6). `review::confirm`
+        // re-executes each finding's test in the tree, so the arm now checks out the fetched
+        // revision's tree, inside ADR-0098 decision 2's one retained gix write: gix's own
+        // `fetch_then_checkout` and `main_worktree`, the same clone, no wrapper operation. The
+        // object set is unchanged, and so is AC-191's one-commit shape.
+        WorkingTree::Declared => {
+            let (mut checkout, _) = prep
+                .fetch_then_checkout(gix::progress::Discard, &interrupt)
+                .map_err(|e| GitError::Spawn {
+                    detail: format!("review clone: fetch failed: {e}"),
+                })?;
+            checkout
+                .main_worktree(gix::progress::Discard, &interrupt)
+                .map_err(|e| GitError::Spawn {
+                    detail: format!("review clone: checkout at {sha} failed: {e}"),
+                })?;
+        }
+    }
 
     Ok(())
 }

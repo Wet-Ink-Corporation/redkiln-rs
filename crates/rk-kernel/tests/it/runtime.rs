@@ -133,6 +133,10 @@ pub const fn gate_site(
 /// adapter journaling as it goes and is correct there — but it would put rows into the journal this
 /// file reads for AC-011's whole-log uniqueness and AC-030's mark, and a count over a journal the
 /// fake also writes measures two things at once.
+///
+/// *(dated 2026-09-26, s8d build, P6; R4 = ADR-0176, proposed):* the paragraph above is history. `FakeHarness` appends
+/// nothing now; the KERNEL writes one error row per failed dispatch, whatever the harness, so a
+/// count over this journal includes those rows under this harness too (`step_error_row::`).
 pub struct CountingHarness {
     script: Mutex<Vec<Result<Typed, StepError>>>,
     dispatches: AtomicU32,

@@ -29,6 +29,14 @@
 # conjunct below is null whatever `green_at` holds and the conjunction is never true: the same
 # never-true class as the eight shipped `x != null and x` rows (`s8b` §8b.10). Its LOAD proves only
 # that the rule does not refuse it, not that it is a terminal condition a block can reach.
+#
+# (dated 2026-09-26, s8d build; spikes/DECISIONS-2026-09-21.md D21-67 ruling 2; ADR-0172, written
+# proposed) CORRECTED: the round-4 paragraph above no longer holds and is kept as history. Under
+# ADR-0172 a comparison against the literal `null` is a definite presence test, so
+# `verify.green_at != null` is TRUE for a present `green_at` (and false for an absent one), and the
+# conjunction is true when `verify.status == 'passing'` and `green_at` is present. The predicate CAN
+# be true: this exemplar is a terminal condition a block can reach. No catalog row was edited for it,
+# and the eight shipped `x != null and x` rows become satisfiable the same way, without an edit.
 
 [activity]
 id           = "ac527-verify-result"

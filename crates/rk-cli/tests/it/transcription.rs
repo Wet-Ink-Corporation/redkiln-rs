@@ -432,3 +432,229 @@ fn the_spec_a_real_run_binds_carries_its_steps() {
         }
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+// R1: PER-STEP SPECS AT THE COMPOSITION ROOT (`s8d` §8d.2, §8d.8 defect 4; record R1, proposed).
+// *(Added 2026-09-26, `s8d` build, package P3.)* Each reads what `bind_nodes` produced for a REAL
+// run of the binary over `pack-min`'s step-grain variant, through its run record's `specs.json`.
+// `gate-1` is the item because a gate run exits 0 and writes the record (the reason
+// `the_spec_a_real_run_binds_carries_its_steps` gives), and binding happens before the gate.
+// ------------------------------------------------------------------------------------------------
+
+/// Run `gate-1` over `pack-min`'s step-grain variant and read back its `specs.json`.
+fn step_grain_specs() -> (
+    tempfile::TempDir,
+    serde_json::Map<String, serde_json::Value>,
+) {
+    let repo = crate::support::pack_min_repo(crate::support::PackVariant::StepGrain);
+    let out = crate::run::spawn_run(repo.path(), "gate-1", None);
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "PREMISE: the gate run over the step-grain variant exits 0 and writes its record. A \
+         binder that cannot bind one of its nodes refuses the run here, by name.\nstderr:\n{stderr}"
+    );
+    let runs = crate::common_dir(repo.path()).join("redkiln").join("runs");
+    let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(&runs)
+        .expect("the runs directory is readable")
+        .flatten()
+        .map(|e| e.path().join("inputs").join("specs.json"))
+        .filter(|p| p.is_file())
+        .collect();
+    files.sort();
+    assert_eq!(files.len(), 1, "exactly one run record: {files:?}");
+    let specs: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&files[0]).expect("specs.json reads"))
+            .expect("specs.json parses");
+    let map = specs.as_object().expect("an object").clone();
+    (repo, map)
+}
+
+/// **§8d.8 defect 4: every selected node is bound, including one with NO agent step** — as an
+/// explicit absence of agent specs (an empty `step_specs` map, no activation spec), never skipped
+/// by a role-gated `continue` and never given a synthesised card.
+#[test]
+fn every_selected_node_is_bound_including_one_with_no_agent_step() {
+    let (_repo, specs) = step_grain_specs();
+    let nodes: std::collections::BTreeSet<&str> = specs.keys().map(String::as_str).collect();
+    assert_eq!(
+        nodes,
+        ["emit-report", "no-agent-steps", "two-agents"]
+            .into_iter()
+            .collect(),
+        "every node the selection assembled is bound — the zero-agent `no-agent-steps` included \
+         (§8d.8 defect 4: a role-gated `continue` left it unbound, and the run's supplier then \
+         refused it)"
+    );
+    let bare = &specs["no-agent-steps"];
+    assert_eq!(
+        bare.get("step_specs"),
+        Some(&serde_json::json!({})),
+        "a zero-agent node's binding says so EXPLICITLY — an empty `step_specs` map: {bare}"
+    );
+    assert!(
+        bare.get("card_digest").is_none(),
+        "and it carries no activation spec at all: a card digest here would be a synthesised card \
+         (ADR-0143's forbids): {bare}"
+    );
+    assert_eq!(
+        bare["steps"].as_array().map(Vec::len),
+        Some(2),
+        "its two steps are transcribed: {bare}"
+    );
+}
+
+/// **N16: an agent step's `timeout_secs` resolves through the toolchain table and never exceeds the
+/// activity budget** — `min(step, budget.wall_clock_secs)`, both arms pinned, at the binder that
+/// computes it (M10: the test lives beside `bind_nodes`).
+#[test]
+fn an_agent_steps_timeout_resolves_through_the_toolchain_table_and_never_exceeds_the_activity_budget()
+ {
+    use rk_kernel::catalog::{Step, StepKind, StepTimeout};
+    use rk_kernel::workflow::memo::VerbRegistry;
+
+    let pin = "0123456789abcdef0123456789abcdef01234567";
+    let registry = VerbRegistry::from_toml(&format!(
+        "[verb]\nbuild = {{ outputs = \"BuildReport\", live = false, timeout = \"build_timeout\", \
+         inputs = [], route = \"port\", side_effecting = false }}\n[toolchain.t]\n\
+         agent_timeout = {{ secs = 180, measured = [61.5, 90, 72], rule = \"twice the slowest, up \
+         to the minute\", pin = \"{pin}\", command = \"c\" }}\n"
+    ))
+    .expect("the test registry loads");
+    let values = registry.values_for("t").expect("the table");
+    let agent = |timeout: Option<StepTimeout>| Step {
+        id: "draft".to_owned(),
+        kind: StepKind::Agent,
+        run: None,
+        output_type: Some("ImplReport".to_owned()),
+        role: Some("implementer".to_owned()),
+        when: None,
+        expr: None,
+        for_each: None,
+        retry_max: None,
+        repeat_max: None,
+        memo_declared: None,
+        question: None,
+        timeout_secs: timeout,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
+    };
+    let bound = |timeout: Option<StepTimeout>, budget: Option<u64>| {
+        rk_cli::verbs::run::agent_step_timeout_secs(&agent(timeout), &values, 900, budget)
+    };
+    let table = || Some(StepTimeout::Toolchain("agent_timeout".to_owned()));
+    // ---- THE TABLE ARM: a `${toolchain.*}` bound resolves through 4a's table ... ---------------
+    assert_eq!(
+        bound(table(), Some(900)),
+        Ok(180),
+        "the table's 180 stands under a 900 budget"
+    );
+    // ... and the budget still bounds it.
+    assert_eq!(
+        bound(table(), Some(100)),
+        Ok(100),
+        "never above the activity budget (N16)"
+    );
+    // ---- THE LITERAL ARM, both sides of the budget. ---------------------------------------------
+    assert_eq!(bound(Some(StepTimeout::Literal(5000)), Some(900)), Ok(900));
+    assert_eq!(bound(Some(StepTimeout::Literal(60)), Some(900)), Ok(60));
+    // ---- UNDECLARED: the activation's own per-activity value (ADR-0140 decision 5), bounded. -----
+    assert_eq!(bound(None, Some(900)), Ok(900));
+    assert_eq!(bound(None, Some(30)), Ok(30));
+    // ---- REFUSALS BY NAME. ----------------------------------------------------------------------
+    let absent = bound(
+        Some(StepTimeout::Toolchain("no_such_key".to_owned())),
+        Some(900),
+    );
+    assert!(
+        absent.as_ref().is_err_and(|e| e.contains("no_such_key")),
+        "an unresolved key is refused by name (D21-42 4a), never defaulted: {absent:?}"
+    );
+    assert!(
+        bound(Some(StepTimeout::Literal(0)), Some(900)).is_err(),
+        "a zero bound is refused (RT-5)"
+    );
+    let unbudgeted = bound(Some(StepTimeout::Literal(60)), None);
+    assert!(
+        unbudgeted
+            .as_ref()
+            .is_err_and(|e| e.contains("wall_clock_secs")),
+        "an activity with no declared budget has no ceiling for the bound, and is refused: \
+         {unbudgeted:?}"
+    );
+
+    // ---- AND AT THE BINDER, over a real run's record. --------------------------------------------
+    let (_repo, specs) = step_grain_specs();
+    let steps = &specs["two-agents"]["step_specs"];
+    assert_eq!(
+        steps["draft"]["timeout_secs"],
+        serde_json::json!(900),
+        "`draft` declares 5000 and its budget is 900: the per-step spec carries 900 (N16): {steps}"
+    );
+    assert_eq!(
+        steps["review"]["timeout_secs"],
+        serde_json::json!(60),
+        "`review` declares 60, under the budget, and it stands: {steps}"
+    );
+}
+
+/// **R1: each agent step carries its OWN card and schema in the run record** — its role's card, its
+/// `outputs = "value:<Kind>"` schema — never the node's first role, and never `provides[0]` (M18).
+#[test]
+fn each_agent_step_carries_its_own_card_and_schema_in_the_run_record() {
+    let (_repo, specs) = step_grain_specs();
+    let two = &specs["two-agents"];
+    let steps = two
+        .get("step_specs")
+        .and_then(serde_json::Value::as_object)
+        .unwrap_or_else(|| {
+            panic!("the two-agent node carries no per-step specs (R1; D21-42 3a): {two}")
+        });
+    assert_eq!(
+        steps.keys().map(String::as_str).collect::<Vec<_>>(),
+        vec!["draft", "review"],
+        "one per-step spec per AGENT step, keyed by step id: {two}"
+    );
+    let card = |id: &str| {
+        steps[id]["card_digest"]
+            .as_str()
+            .expect("a card digest")
+            .to_owned()
+    };
+    let schema = |id: &str| steps[id]["schema"].as_str().expect("a schema").to_owned();
+    assert_ne!(
+        card("draft"),
+        card("review"),
+        "the two steps nominate different roles, so they carry different cards"
+    );
+    assert_eq!(
+        card("draft"),
+        specs["emit-report"]["card_digest"]
+            .as_str()
+            .expect("emit-report's card")
+            .to_owned(),
+        "`draft`'s role is `implementer`, emit-report's one card"
+    );
+    assert_eq!(
+        schema("draft"),
+        "ImplReport",
+        "`draft` outputs value:ImplReport"
+    );
+    assert_eq!(
+        schema("review"),
+        "Findings",
+        "`review` outputs value:Findings"
+    );
+    assert!(
+        steps
+            .values()
+            .all(|s| s["schema"] != serde_json::json!("ChangeSummary")),
+        "no step's schema is the activity's provides[0] (M18): {two}"
+    );
+}

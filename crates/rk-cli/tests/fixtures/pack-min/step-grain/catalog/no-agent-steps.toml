@@ -1,0 +1,31 @@
+# pack-min's ZERO-AGENT activity — installed ONLY with `pack.step-grain.toml` (s8d §8d.8 defect 4; record
+# R1, proposed). Authored 2026-09-26 for `s8d`'s package P3; no byte comes from the pinned corpus.
+#
+# No step nominates a role, so `bind_nodes`' old role-gated `continue` never bound this node and the run's
+# supplier then refused it (§8d.8 defect 4: six of the fix lane's fifteen selected activities have no agent
+# step). R1 binds it as an EXPLICIT ABSENCE of agent specs — an empty `step_specs` map and no activation
+# spec — never a synthesised card (ADR-0143's forbids).
+[activity]
+id           = "no-agent-steps"
+version      = 1
+stage        = "implement"
+provides     = ["TestReport"]
+requires     = []
+derived_from = []
+deviation_ok = []
+tags         = ["kind:bug", "kind:story"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+budget       = { attempts_total = 1, tokens = 1000, wall_clock_secs = 900 }
+
+[[step]]
+id           = "verify"
+kind         = "tool"
+run          = "toolchain:build"
+timeout_secs = 60
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { TestReport = "${verify.outputs}" }

@@ -279,7 +279,18 @@
 //! `findings`, so the rule never reaches them, and refusal 2 fires on `false`, so vacuous truth
 //! refuses nothing. *(dated 2026-09-25, s8b refuting round 3: this said the restraint was
 //! "measured rather than assumed" in the present tense of the amended rule.)* A conjunct that errors is indeterminate,
-//! never refused. The CLI surface stays ARMED. The module header carries the table.
+//! never refused. *(dated 2026-09-26, `s8d` build, package P2; D21-67 ruling 4: this sentence was
+//! unqualified, and the code's reading is confirmed as the precedence.)* A conjunct that errors — in
+//! every cell, or in some cells and is valued in the others — is indeterminate, and the predicate is
+//! refused on no such conjunct. A `false` cell refuses the predicate even when other cells of the
+//! same conjunct, or other conjuncts, error: *"errors"* means errors with no `false` cell anywhere
+//! (D21-67 ruling 4; `s8b`
+//! §8b.4, mutants M-W1a and M-W1b already pin it). *(Same date; D21-67 ruling 3.)* Since refusal 2's
+//! widening, read *"a `false` cell"* as *"a cell that is not `true`"*: a `null` cell refuses as a
+//! `false` one does, and `findings == null` is this rule's after all (both shapes are fixtures), so
+//! the *"`findings == null` is not this rule's"* sentence above and *"refusal 2 fires on `false`"*
+//! are history; vacuous truth still refuses nothing. The CLI surface stays ARMED. The module header
+//! carries the table.
 
 /// **AC-484's dependency-edge reading** — the pure reader that answers *"does `rk-kernel` reach an
 /// `rk-adapter-*` crate, directly or transitively?"* from `cargo metadata` output.

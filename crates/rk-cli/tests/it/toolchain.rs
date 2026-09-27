@@ -50,6 +50,13 @@ fn build_step() -> Step {
         memo_declared: None,
         question: None,
         timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     }
 }
 
@@ -85,7 +92,7 @@ fn runtime_with(toolchain: Arc<dyn Toolchain>) -> Runtime {
     .with_tool_routing(rk_kernel::runtime::step::ToolRouting::new(
         rk_kernel::workflow::memo::VerbRegistry::from_toml(
             "[verb]
-build = { outputs = \"BuildReport\", live = false, timeout = \"build_timeout\",              inputs = [], route = \"port\" }
+build = { outputs = \"BuildReport\", live = false, timeout = \"build_timeout\",              inputs = [], route = \"port\", side_effecting = false }
 ",
         )
         .expect("the test-only build row loads"),

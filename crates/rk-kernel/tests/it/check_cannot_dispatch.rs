@@ -138,6 +138,13 @@ fn check_step(id: &str, expr: Option<&str>, when: Option<&str>, run: Option<&str
         memo_declared: None,
         question: None,
         timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     }
 }
 
@@ -156,6 +163,13 @@ fn agent_step(id: &str) -> Step {
         memo_declared: None,
         question: None,
         timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     }
 }
 
@@ -176,6 +190,13 @@ fn build_step(id: &str) -> Step {
         memo_declared: None,
         question: None,
         timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
     }
 }
 
@@ -184,7 +205,11 @@ const fn activation<'a>(sp: &'a rk_types::activity::ActivitySpec) -> Activation<
         item: ITEM,
         activity_id_at_version: AID,
         step_id: STEP,
-        spec: sp,
+        spec: Some(sp),
+        // (dated 2026-09-26, s8d build, P3) R1: no per-step specs, so the first runnable agent
+        // step dispatches under the activation's spec (ADR-0143 decision 2 as R1 narrows it).
+        step_specs: None,
+        rigor: rk_kernel::rigor::Rigor::Optional,
     }
 }
 

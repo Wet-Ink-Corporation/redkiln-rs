@@ -302,15 +302,36 @@ printf '%s\n' "$out" | grep -qE 'test result: ok\. [1-9][0-9]* passed' || { echo
 #
 # The greps are PER-TEST (`^test ... ... ok$`), not the `test result: ok. N passed` form the guards
 # above use: with no `--test it` that form is satisfied by ANY target reporting ANY pass.
-out=$(cargo test -p rk-kernel --test it -- second_agent:: post_commit_failure:: gate_step:: check_cannot_dispatch:: walk_semantics:: 2>&1); rc=$?
-[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these five modules are every test module that calls run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
+# (dated 2026-09-26, s8d build, package P4; R2 = ADR-0173 decision 7, proposed; s8d §8d.8 defect 1, §8d.11) The
+# name ~~walk_semantics::an_emit_step_ends_the_walk_and_a_later_tool_step_never_runs~~ asserted the silent drop of a
+# step after an `emit` as intended, and s8d REPLACES it (not renames it) with
+# emit_binding::a_step_after_emit_is_refused_by_name_and_never_silently_dropped, which calls run_activity_steps by
+# name, so `emit_binding::` joins this filter. The full re-list of every module that calls run_activity_steps, and
+# this line's failure message with it, is s8d's close's (m15: recounted off disk, never incremented).
+# (dated 2026-09-26, s8d build, package P8; s8d §8d.11, m15) RE-LISTED, recounted OFF DISK with
+# `grep -rln run_activity_steps crates/*/tests`, never incremented. It names fifteen files: rk-cli's
+# transcription.rs, which the (7b) line below covers, and FOURTEEN rk-kernel modules. Those are the five
+# above and s8d's nine: check_eval, cross_process, emit_binding, lane_walk, on_false_exec,
+# reference_resolver, step_error_row, step_grain and test_selection. All fourteen are now this filter.
+# The failure message's ~~"these five modules"~~ now reads "these fourteen rk-kernel modules". The
+# per-test loop names one test per module, so a module that drops out of the filter is visible.
+out=$(cargo test -p rk-kernel --test it -- second_agent:: post_commit_failure:: gate_step:: check_cannot_dispatch:: walk_semantics:: emit_binding:: check_eval:: cross_process:: lane_walk:: on_false_exec:: reference_resolver:: step_error_row:: step_grain:: test_selection:: 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: the step walk is not entered, or refuses wrongly (rc=$rc) -- these fourteen rk-kernel modules are every test module that calls run_activity_steps by name"; printf '%s\n' "$out" | tail -20; exit 1; }
 for t in a_second_runnable_agent_step_refuses_and_the_commit_survives \
          a_step_failing_after_a_committed_dispatch_refuses_by_name_and_keeps_the_commit \
          a_gate_step_after_a_dispatch_writes_the_runtime_mark_and_keeps_the_commit \
          a_walk_of_check_steps_moves_the_toolchain_counter_exactly_once_and_that_once_is_the_tool_step \
-         an_emit_step_ends_the_walk_and_a_later_tool_step_never_runs \
+         a_step_after_emit_is_refused_by_name_and_never_silently_dropped \
          an_empty_transcribed_step_list_is_refused_by_name_and_none_is_not_the_empty_case \
-         a_check_step_never_reaches_the_toolchain_port; do
+         a_check_step_never_reaches_the_toolchain_port \
+         a_check_binds_its_inputs_table_and_decides_true_false_and_refuses \
+         kill_and_resume_n_step \
+         the_fix_lane_walk_table_holds_for_a_rust_text_bug \
+         a_loop_back_re_enters_its_target_under_a_new_iteration_path \
+         a_prior_step_output_binds_by_step_name_and_field_path \
+         the_kernel_appends_exactly_one_error_row_per_failed_dispatch \
+         each_agent_step_dispatches_under_its_own_spec_and_commits_under_its_own_key \
+         a_step_output_selection_resolves_and_reaches_the_port_as_named_tests; do
   printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: $t did not run and pass -- a filter that matches nothing exits 0, and one module dropping out would otherwise be absorbed by the other two"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 done
 out=$(cargo test -p rk-cli --test it -- exit::adr0144_post_commit_step_failure_exits_the_class_row_not_three 2>&1); rc=$?
@@ -330,10 +351,17 @@ printf '%s\n' "$out" | grep -qE '^test .*\badr0144_post_commit_step_failure_exit
 # (the `Ok(false)` arm, which NOTHING in the workspace asserted before this stage -- measured, by a
 # mutant that turned it into `Continue` and left all 216 tests green); and `toolchain:test` refuses
 # rather than running the empty selection (ADR-0148).
+# (dated 2026-09-26, s8d build, package P4; R2 = ADR-0173 decision 6, proposed; s8d §8d.10, §8d.11) ADR-0142 clause 4
+# is DISCHARGED by s8d's resolver, so ~~guard_context::a_check_expr_reading_a_step_output_still_refuses_with_the_full_context~~
+# is RENAMED guard_context::a_check_expr_reading_a_step_output_resolves_it_and_refuses_only_an_unresolvable_one: a
+# `check` now resolves its own `inputs` and DECIDES, and only an unresolvable reference refuses, by name. It still
+# calls execute_step (execute_step_in), never run_activity_steps, so this line's reason for being separate stands.
+# tool_verb_routing::a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port keeps its name, its fixture
+# narrowed to a selection the resolver refuses (ADR-0148's forbids stand).
 out=$(cargo test -p rk-kernel --test it -- guard_context:: tool_verb_routing:: 2>&1); rc=$?
 [ "$rc" -eq 0 ] || { echo "FAIL: the check arm's refusal paths or the verb map's boundary are red (rc=$rc)"; printf '%s\n' "$out" | tail -20; exit 1; }
 for t in a_rigor_guard_refuses_on_an_empty_context_and_decides_on_the_selections_one \
-         a_check_expr_reading_a_step_output_still_refuses_with_the_full_context \
+         a_check_expr_reading_a_step_output_resolves_it_and_refuses_only_an_unresolvable_one \
          a_toolchain_test_step_refuses_by_name_and_does_not_reach_the_port; do
   printf '%s\n' "$out" | grep -qE "^test .*\b${t}\b.* \.\.\. ok$" || { echo "FAIL: $t did not run and pass -- a filter that matches nothing exits 0"; printf '%s\n' "$out" | grep -E '^test ' | tail -20; exit 1; }
 done

@@ -1036,7 +1036,16 @@ fn shipped_pack_loads() {
     );
 
     // ALL FOUR VERDICTS, then the assertion. `load_lints` would stop at the first.
-    let verdicts: [(&str, Result<(), rk_kernel::select::LoadError>); 4] = [
+    // *(dated 2026-09-26, `s8d` build, package P2; D21-48 X8)* FIVE: the forward-ref licence
+    // (`catalog::forward_ref_lint`, R2 = ADR-0173, written `proposed`) joins `load_lints`, first,
+    // and its verdict is read here beside the four.
+    let verdicts: [(&str, Result<(), rk_kernel::select::LoadError>); 5] = [
+        (
+            "forward_ref_lint",
+            rk_kernel::catalog::forward_ref_lint(&catalog)
+                .map(|_| ())
+                .map_err(|refs| rk_kernel::select::LoadError::UnlicensedForwardRef { refs }),
+        ),
         ("requires_cycle_lint", requires_cycle_lint(&catalog)),
         ("excludes_lint", excludes_lint(&catalog)),
         (
@@ -1053,7 +1062,7 @@ fn shipped_pack_loads() {
 
     assert!(
         failures.is_empty(),
-        "the product's own pack at {} fails {} of the four load-time lints:\n  {}",
+        "the product's own pack at {} fails {} of the five load-time lints:\n  {}",
         pack_dir.display(),
         failures.len(),
         failures.join("\n  ")

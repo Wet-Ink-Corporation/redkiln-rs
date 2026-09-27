@@ -1,7 +1,7 @@
 # reach: (story, implement, optional) with 'unreal' in toolchain — Unreal specialisation of change-summary (PC7 ii)
 [activity]
 id           = "change-summary-ue"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3
 stage        = "implement"
 provides     = ["ChangeSummary", "AssetManifest"]
 requires     = ["Changeset"]
@@ -38,7 +38,7 @@ retry   = { max = 1 }
 id      = "summarise"
 kind    = "tool"
 run     = "toolchain:change_summary"
-inputs  = { range = "artifact:Changeset.sha", manifest = "${manifest.outputs}", cook = "${cook.outputs}" }
+inputs  = { range = "baseline..HEAD", manifest = "${manifest.outputs}", cook = "${cook.outputs}" }
 outputs = "value:ChangeSummary"
 timeout_secs = 300
 retry   = { max = 1 }

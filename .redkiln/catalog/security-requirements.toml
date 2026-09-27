@@ -1,7 +1,7 @@
 # reach: (security-vuln, specification, optional); (story, specification, recommended) with auth
 [activity]
 id           = "security-requirements"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "specification"
 provides     = ["SecurityRequirements"]
 requires     = ["Spec", "ThreatModel?"]
@@ -55,8 +55,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", draft = "${derive.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and draft.uncovered_threats.len() == 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", draft = "${derive.outputs}" }
+expr    = "check.failed == 0 and draft.uncovered_threats.len() == 0"
 on_false = { to = "derive", max = 2 }
 
 [[step]]

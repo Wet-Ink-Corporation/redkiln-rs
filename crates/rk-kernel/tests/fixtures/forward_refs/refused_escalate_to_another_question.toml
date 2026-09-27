@@ -1,0 +1,39 @@
+# forward_ref_lint, must-REFUSE (s8d §8d.3, D21-48 X8): an escalating step whose later gate carries
+# ANOTHER question.
+#
+# `attempt` escalates to `repro.cannot-reproduce`, but the only later gate, `approve`, asks
+# `repro.approve`. A gate step with another question licenses nothing: answering it does not resume
+# into `attempt`. No `on_false` targets `attempt`, and `approve` lies outside its repeat body.
+
+[activity]
+id           = "fr-other-question"
+version      = 1
+stage        = "analysis"
+provides     = ["ADR"]
+requires     = []
+tags         = ["kind:bug"]
+method_rank  = 10
+min_rigor    = "optional"
+cost_class   = "S"
+
+[[step]]
+id      = "attempt"
+kind    = "agent"
+role    = "investigator"
+inputs  = { hint = "${approve.answer?}" }
+outputs = "value:ReproAttempt"
+repeat  = { until = "${attempt.outputs.status} == 'reproduced'", max = 3 }
+on_exhausted = "escalate"
+escalate = { question = "repro.cannot-reproduce" }
+
+[[step]]
+id       = "approve"
+kind     = "gate"
+question = "repro.approve"
+inputs   = { attempts = "${attempt.outputs}" }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ADR = "${attempt.outputs}" }
+evidence  = ["${approve?}"]

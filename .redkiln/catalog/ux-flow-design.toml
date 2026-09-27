@@ -1,7 +1,7 @@
 # reach: (story, design, optional) with ui — require row → UXDesign
 [activity]
 id           = "ux-flow-design"
-version      = 1
+version      = 2   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "design"
 provides     = ["UXDesign"]
 requires     = ["Spec"]
@@ -49,8 +49,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", draft = "${design.outputs}", findings = "${adversary.outputs?}" }
-expr    = "check.failed == 0 and draft.states.len() > 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", draft = "${design.outputs}" }
+expr    = "check.failed == 0 and draft.states.len() > 0"
 on_false = { to = "design", max = 2 }
 
 [[step]]

@@ -1,0 +1,56 @@
+# AC-527, must-FAIL fixture (`findings == null or …`; `s8d` §8d.3a (c); D21-67 ruling 3, *"Refusal 2 widens from "`false`
+# in some cell" to **"not `true` in some cell"**, matching the runtime `check` arm (`== Tri::True`)"*).
+#
+# `findings == null` is `false` over the witness (ADR-0172), so the disjunction is its right side. That
+# side compares each finding's `evidence` with a list holding the literal `null`: a null member against a
+# non-null field is `null` (ADR-0103 decision 4, standing), so it is `true` under the `Reproduced`
+# witness and `null` under the `MutationSurvived` one. No cell is `false` and none errors: the pre-ruling
+# arm counted it decided and LOADED it. It is not `true` in some cell, so ruling 3 refuses it. This is
+# the fixture that kills mutant D67-5.
+#
+# Cell values under the post-ADR-0172 evaluator, measured 2026-09-26 from inside the test binary before
+# this fixture was written (both single-class witnesses x the three live rigor levels):
+#   Reproduced x {optional, recommended, mandatory}: true, true, true
+#   MutationSurvived x {optional, recommended, mandatory}: null, null, null
+
+[activity]
+id           = "ac527-findings-is-null-or"
+version      = 1
+stage        = "build"
+provides     = ["ReviewNote"]
+requires     = ["Diff"]
+tags         = ["kind:bug"]
+method_rank  = 20
+family       = "ac527-fixtures"
+min_rigor    = "optional"
+cost_class   = "S"
+evidence     = ["Findings?"]
+
+[[step]]
+id      = "draft"
+kind    = "agent"
+role    = "author"
+inputs  = { diff = "artifact:Diff" }
+outputs = "value:ReviewDraft"
+
+[[step]]
+id      = "adversary"
+kind    = "agent"
+role    = "reviewer"
+when    = "rigor >= recommended"
+inputs  = { draft = "${draft.outputs}" }
+outputs = "value:Findings"
+
+# THE TERMINAL CONDITION.
+[[step]]
+id       = "policy"
+kind     = "check"
+inputs   = { findings = "${adversary.outputs?}" }
+expr     = "findings == null or findings.any(evidence in ['Reproduced', null])"
+on_false = { to = "draft", max = 2 }
+
+[[step]]
+id        = "emit"
+kind      = "emit"
+artifacts = { ReviewNote = "${draft.outputs.note}" }
+evidence  = ["${adversary?}"]

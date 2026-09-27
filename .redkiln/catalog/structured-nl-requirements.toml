@@ -3,7 +3,7 @@
 # spec form family: user-story-ac(10) < structured-nl-requirements(20) < bdd-scenarios(30) < use-case-spec(40)
 [activity]
 id           = "structured-nl-requirements"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "specification"
 provides     = ["Spec", "RequirementsSet"]
 requires     = ["ProblemStatement", "DiscoveryReport?"]
@@ -23,7 +23,7 @@ rationale    = "SWEBOK ch.1 §4.2: initiatives need attributed requirements (pri
 id      = "draft"
 kind    = "agent"
 role    = "spec-author"
-inputs  = { problem = "artifact:ProblemStatement", discovery = "artifact:DiscoveryReport?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}", resolution = "${conflicts.answer?}" }
+inputs  = { problem = "artifact:ProblemStatement", discovery = "artifact:DiscoveryReport?", kb = "kb:spec-conventions", findings = "${adversary.outputs?}" }
 outputs = "value:RequirementsSet"
 timeout_secs = 900
 retry   = { max = 2 }
@@ -50,8 +50,8 @@ retry   = { max = 1 }
 [[step]]
 id      = "policy"
 kind    = "check"
-inputs  = { check = "${self-check.outputs}", findings = "${adversary.outputs?}", draft = "${draft.outputs}" }
-expr    = "check.failed == 0 and draft.uncovered.len() == 0 and findings.none(severity in ['blocking'])"
+inputs  = { check = "${self-check.outputs}", draft = "${draft.outputs}" }
+expr    = "check.failed == 0 and draft.uncovered.len() == 0"
 on_false = { to = "draft", max = 2 }
 
 [[step]]

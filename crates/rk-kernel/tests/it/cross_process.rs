@@ -74,14 +74,11 @@ use std::process::Output;
 
 use rk_kernel::catalog::Catalog;
 use rk_kernel::select::Pack;
-use rk_kernel::workflow::breaker::{
-    BreakerDecision, BreakerExpiry, BreakerState, FamilyKey, JournaledNow,
-};
+use rk_kernel::workflow::breaker::{BreakerDecision, BreakerState, FamilyKey, JournaledNow};
 use rk_kernel::workflow::budget::{
     Attempts, BudgetEnvelope, BudgetExtensionMark, BudgetLedger, Charge, Tokens, WallClockSecs,
     fold, read_budget_extension_marks, wall_clock_expiry_mark,
 };
-use rk_kernel::workflow::envelope::BreakerThreshold;
 use rk_ports::event_store::{EventStore, Query, Snapshot};
 use rk_types::error::{StepError, TransportKind};
 use rk_types::event::Event;
@@ -104,18 +101,19 @@ const CASE_ENV: &str = "RK_D8_CASE";
 /// the pack and refused as a code default, and `require_breaker_threshold` is that refusal.
 const FIXTURE_ENVELOPE: &str = include_str!("../fixtures/packs/runtime-envelope.toml");
 
-/// The family the child trips.
-const OPEN_FAMILY: &str = "family-under-test";
+/// The family the child trips. *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176, proposed.)*
+/// It is the family `role-families.toml` binds the `reviewer` role to (D-7), because the child now
+/// trips it through the KERNEL's dispatch path, which keys on the pack's role → family table; it
+/// was the arbitrary token `family-under-test` while the child wrote the rows by hand.
+const OPEN_FAMILY: &str = "adversarial";
 /// The family the child touches **below** `K` and then resets. AC-034's isolation is not this
 /// file's subject; this exists so *"the parent refuses"* is distinguishable from *"the parent's
-/// fold refuses everything it was handed"*.
-const QUIET_FAMILY: &str = "family-that-never-opened";
-/// The journaled instant the child's last platform failure carries — so the mark's `opened_at` is a
-/// number both processes name rather than a clock either of them read (AC-001).
+/// fold refuses everything it was handed"*. *(P6: `implementer` → `deliberative`; it was the token
+/// `family-that-never-opened`.)*
+const QUIET_FAMILY: &str = "deliberative";
+/// The journaled instant the child's failures carry — so the mark's `opened_at` is a number both
+/// processes name rather than a clock either of them read (AC-001).
 const OPENED_AT: i64 = 1_000;
-/// The declared breaker expiry the parent compares against. Arrives as an argument; this crate
-/// names no number (§7b.10, and `tests/it/breaker.rs`'s obligation 5).
-const EXPIRY_SECS: u64 = 600;
 
 // ---- the harness -------------------------------------------------------------------------------
 
@@ -336,30 +334,19 @@ impl EventStore for FileStore {
     }
 }
 
-// ---- the rows the child writes -----------------------------------------------------------------
+// ---- the kernel the child drives ------------------------------------------------------------------
+//
+// *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176, proposed.)* Until R4 the child appended
+// `step_failed { class: platform, family, at }` and `activity_committed { family }` rows BY HAND,
+// because nothing in the kernel wrote a family-scoped row (`runtime.rs`'s table: *"AC-033's breaker
+// mark | none exists"*). §8d.10: this test *"must now pass over rows the **kernel** wrote"*. So the
+// child drives `Runtime::run_activity_steps` over a harness that appends nothing, the KERNEL writes
+// every row the parent folds, and the parent's own executor refuses from them.
 
-/// A `step_failed { class: platform, family, at }` row — AC-033's GIVEN, one occurrence.
-fn platform_failure(family: &str, at: i64) -> Event {
-    Event::new(
-        EventKind::StepFailed,
-        serde_json::json!({ "class": "platform", "family": family, "at": at }),
-    )
-}
-
-/// An `activity_committed` row — the only success this crate can see (ADR-0022).
-fn committed(family: &str) -> Event {
-    Event::new(
-        EventKind::ActivityCommitted,
-        serde_json::json!({ "family": family }),
-    )
-}
-
-/// The pack's `K`, refused as a code default.
-fn declared_k() -> BreakerThreshold {
-    Pack::from_toml("runtime-envelope.toml", FIXTURE_ENVELOPE)
-        .expect("the runtime-envelope fixture loads")
-        .require_breaker_threshold()
-        .expect("the envelope pack declares `[breaker] consecutive_platform_failures`")
+/// The pack that declares the key and the envelope: `K = 2`, expiry `900`, `reviewer` →
+/// `adversarial`, `implementer` → `deliberative`.
+fn role_families() -> Pack {
+    crate::step_error_row::role_families_pack()
 }
 
 /// A journaled instant. `rk_types::time::Timestamp` has no `now()`, deliberately (AC-001).
@@ -367,61 +354,126 @@ const fn at(secs: i64) -> JournaledNow {
     JournaledNow::from_journal(Timestamp::from_unix_seconds(secs))
 }
 
+/// A `Runtime` over the file at `path`, the breaker bound to the role-families pack, dispatching to
+/// `harness` — which appends nothing, so every row in the file is the kernel's.
+fn kernel_over(
+    path: &Path,
+    harness: &std::sync::Arc<crate::runtime::CountingHarness>,
+) -> rk_kernel::runtime::Runtime {
+    let db: std::sync::Arc<std::sync::Mutex<dyn EventStore>> =
+        std::sync::Arc::new(std::sync::Mutex::new(FileStore::at(path.to_path_buf())));
+    rk_kernel::runtime::Runtime::new(
+        crate::runtime::ports(
+            std::sync::Arc::clone(harness) as std::sync::Arc<dyn rk_ports::harness::Harness>,
+            &db,
+        ),
+        "run-ac035",
+        crate::runtime::STAGE,
+    )
+    .with_breaker(rk_kernel::runtime::BreakerBinding::of(&role_families()))
+}
+
+/// The rows a family-scoped fold reads: every row carrying a `family` member.
+fn family_scoped(events: &[Event]) -> Vec<&Event> {
+    events
+        .iter()
+        .filter(|e| e.payload.get("family").is_some())
+        .collect()
+}
+
 // ---- AC-035 — the kill-and-re-enter test -------------------------------------------------------
 
-/// **The child.** It opens a breaker and then this process ends.
+/// **The child.** It opens a breaker THROUGH THE KERNEL and then this process ends.
 ///
 /// `#[ignore]`d so no ordinary sweep runs it; the parent invokes it by its full path under
 /// `--exact --ignored`.
-/// It asserts the breaker is **open in its own process** before it ends, so the parent's refusal is
-/// a survival rather than a verdict the parent derived from rows that never opened anything.
+/// It asserts the breaker is **open in its own process** before it ends — its own executor refuses
+/// the family — so the parent's refusal is a survival rather than a verdict the parent derived from
+/// rows that never opened anything.
 #[test]
 #[ignore = "child entrypoint for AC-035's kill-and-re-enter test; the parent invokes it by name"]
 fn ac035_child_opens_a_breaker() {
+    use crate::step_error_row::walk_one;
+
     let store = child_store();
     assert_eq!(
         child_case(),
         "open",
         "the parent sets exactly one case here"
     );
-    let k = declared_k();
-    let mut store = FileStore::at(store);
-
-    // `K` consecutive `Platform` failures for one family, the last of them at `OPENED_AT` — which
-    // is the instant the fold records as the mark's `opened_at` (it refreshes on the most recent
-    // failure that completes a run of at least `K`).
-    let k_i64 = i64::from(k.get());
-    for i in 0..k_i64 {
-        store
-            .append(platform_failure(OPEN_FAMILY, OPENED_AT - (k_i64 - 1 - i)))
-            .expect("the child appends");
+    let k = role_families()
+        .require_breaker_threshold()
+        .expect("the role-families pack declares `[breaker] consecutive_platform_failures`");
+    let platform = || {
+        Err(StepError::Platform {
+            status: 529,
+            retry_after: None,
+        })
+    };
+    // `K` platform failures for the reviewer's family, then ONE for the implementer's family
+    // followed by a commit that resets it.
+    let mut script: Vec<Result<rk_types::typed::Typed, StepError>> =
+        (0..k.get()).map(|_| platform()).collect();
+    script.push(platform());
+    script.push(crate::runtime::ok_typed(serde_json::json!({ "draft": 1 })));
+    let harness = std::sync::Arc::new(crate::runtime::CountingHarness::scripted(script));
+    let rt = kernel_over(&store, &harness);
+    let aid = crate::runtime::AID;
+    for _ in 0..k.get() {
+        let r = walk_one(
+            &rt,
+            ("INC-1", aid),
+            ("review", "reviewer"),
+            1,
+            at(OPENED_AT),
+        );
+        assert!(
+            !r.committed(),
+            "the reviewer's dispatch fails on `Platform`"
+        );
     }
-    // The other family: ONE failure — below `K` — and then a commit that resets it. Two rows, so
-    // the parent's count is `K + 2` and a partially written file cannot satisfy it.
-    store
-        .append(platform_failure(QUIET_FAMILY, OPENED_AT))
-        .expect("the child appends");
-    store
-        .append(committed(QUIET_FAMILY))
-        .expect("the child appends");
+    let r = walk_one(
+        &rt,
+        ("INC-2", aid),
+        ("draft", "implementer"),
+        1,
+        at(OPENED_AT),
+    );
+    assert!(!r.committed(), "one implementer failure, below K");
+    let r = walk_one(
+        &rt,
+        ("INC-2", aid),
+        ("draft", "implementer"),
+        1,
+        at(OPENED_AT),
+    );
+    assert!(r.committed(), "then the implementer's step commits");
+    let dispatched = harness.dispatches();
+    assert_eq!(
+        dispatched,
+        k.get() + 2,
+        "every one of those reached the port"
+    );
 
-    // THE CHILD'S OWN VERDICT, before this process ends. Without it, a parent refusal could be
-    // read as the parent's fold disagreeing with the child's rather than as a state surviving.
-    let written = store
-        .query(Query::ByItem("any".to_owned()))
-        .expect("read back");
-    let state = BreakerState::from_events(&written, k).expect("the child's own journal folds");
+    // THE CHILD'S OWN VERDICT, before this process ends: its executor refuses the family, and the
+    // port is not reached again.
+    let refused = walk_one(
+        &rt,
+        ("INC-3", aid),
+        ("review", "reviewer"),
+        1,
+        at(OPENED_AT),
+    );
     assert!(
-        state
-            .decide(
-                &FamilyKey::supplied(OPEN_FAMILY),
-                at(OPENED_AT),
-                BreakerExpiry::declared(EXPIRY_SECS)
-            )
-            .refuses(),
+        refused.breaker_refusal().is_some(),
         "the child must leave the breaker OPEN, or the parent asserts the survival of nothing"
     );
-    println!("child: opened the breaker on {OPEN_FAMILY} and is about to die");
+    assert_eq!(
+        harness.dispatches(),
+        dispatched,
+        "the refusal reached no port"
+    );
+    println!("child: opened the breaker on {OPEN_FAMILY} through the kernel and is about to die");
 }
 
 /// **AC-035 across a real process boundary** — the criterion's own *"kill-and-re-enter test"*.
@@ -435,28 +487,41 @@ fn ac035_child_opens_a_breaker() {
 /// This is the first of those two instruments. The second — and the fold, the counting rule and the
 /// expiry boundary — are `breaker_ac033_ac035`'s, and neither test claims the other's half.
 ///
+/// *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176, proposed.)* **Over rows the KERNEL wrote**
+/// (§8d.10): the child drives the kernel's dispatch path over a harness that appends nothing, and
+/// the parent refuses through its own EXECUTOR as well as through the fold.
+///
 /// # The obligations, in order
 ///
 /// 1. **The premise**: nothing is on disk, and the *parent's own* fold over an empty journal
 ///    **proceeds**. Without this, a refusal below is indistinguishable from a type that always
 ///    refuses.
-/// 2. The child runs **as a separate OS process**, writes, and exits; the parent waits for it and
-///    asserts it ran exactly one test and exited 0.
-/// 3. The parent folds what the dead process left on disk and **refuses** the tripped family.
-/// 4. **The isolation control**: the family the child touched below `K` **proceeds**, so the
-///    refusal is not *"this fold refuses everything it read"*.
+/// 2. The child runs **as a separate OS process**, writes through the kernel, and exits; the parent
+///    waits for it and asserts it ran exactly one test and exited 0.
+/// 3. The parent folds what the dead process left on disk — **only kernel-written rows**, each
+///    family-scoped row carrying `family` and `at` — and **refuses** the tripped family.
+/// 4. **The isolation control**: the family the child touched below `K` and then committed
+///    **proceeds**, so the refusal is not *"this fold refuses everything it read"*.
 /// 5. **The no-store control**: `BreakerState::default()` still proceeds, in the same process, at
 ///    the same instant — so the refusal is demonstrably derived from the bytes the child left.
-/// 6. **The expiry**: *"until the mark is read and found expired"*, asserted on both sides of a
-///    declared boundary, over a mark **this process never opened**.
+/// 6. **The executor**: a fresh `Runtime` in THIS process over the child's file refuses the
+///    tripped family before its port, and dispatches the other.
+/// 7. **The expiry**: *"until the mark is read and found expired"*, asserted on both sides of the
+///    pack's declared boundary, over a mark **this process never opened**.
 #[test]
 fn ac035_breaker_refusal_survives_a_real_process_death() {
+    use crate::step_error_row::walk_one;
     const CHILD: &str = "cross_process::ac035_child_opens_a_breaker";
 
-    let k = declared_k();
+    let pack = role_families();
+    let k = pack
+        .require_breaker_threshold()
+        .expect("the pack declares K");
+    let expiry = pack
+        .require_breaker_expiry()
+        .expect("the pack declares an expiry");
     let open = FamilyKey::supplied(OPEN_FAMILY);
     let quiet = FamilyKey::supplied(QUIET_FAMILY);
-    let expiry = BreakerExpiry::declared(EXPIRY_SECS);
     let store_path = fresh_store("ac035");
 
     // ---- 1. THE PREMISE, in this process, before anything is spawned --------------------------
@@ -489,11 +554,22 @@ fn ac035_breaker_refusal_survives_a_real_process_death() {
     let recovered = store
         .query(Query::ByRun("any".to_owned()))
         .expect("read back");
+    let scoped = family_scoped(&recovered);
     assert_eq!(
-        recovered.len(),
+        scoped.len(),
         usize::try_from(k.get()).expect("K fits") + 2,
-        "the parent must read back exactly what the child wrote: {recovered:?}"
+        "the parent must read back exactly the family-scoped rows the child's KERNEL wrote — K \
+         reviewer failures, one implementer failure and the implementer's commit: {scoped:?}"
     );
+    for row in &scoped {
+        if row.kind == EventKind::StepFailed {
+            assert_eq!(
+                row.payload.get("at"),
+                Some(&serde_json::json!(OPENED_AT)),
+                "every kernel-written failure row carries the journalled instant: {row:?}"
+            );
+        }
+    }
     let state = BreakerState::from_events(&recovered, k).expect("the child's journal folds");
     let decision = state.decide(&open, at(OPENED_AT), expiry);
     assert!(
@@ -513,6 +589,11 @@ fn ac035_breaker_refusal_survives_a_real_process_death() {
         "the family the child touched BELOW K must proceed, or the refusal above is 'this fold \
          refuses every family it read'"
     );
+    assert_eq!(
+        state.consecutive(&quiet),
+        0,
+        "the kernel's commit row carries the family, so the fold reset the quiet family's run"
+    );
 
     // ---- 5. THE NO-STORE CONTROL, in this same process, at this same instant -------------------
     assert_eq!(
@@ -522,8 +603,39 @@ fn ac035_breaker_refusal_survives_a_real_process_death() {
          would pass every assertion above"
     );
 
-    // ---- 6. "UNTIL THE MARK IS READ AND FOUND EXPIRED" -----------------------------------------
-    let expiry_i64 = i64::try_from(EXPIRY_SECS).expect("the declared expiry fits");
+    // ---- 6. THE EXECUTOR, in a process that never saw the failures -----------------------------
+    let harness = std::sync::Arc::new(crate::runtime::CountingHarness::scripted(vec![
+        crate::runtime::ok_typed(serde_json::json!({ "draft": 2 })),
+    ]));
+    let rt = kernel_over(&store_path, &harness);
+    let aid = crate::runtime::AID;
+    let refused = walk_one(
+        &rt,
+        ("INC-9", aid),
+        ("review", "reviewer"),
+        1,
+        at(OPENED_AT + 1),
+    );
+    assert!(
+        refused.breaker_refusal().is_some(),
+        "AC-035: this process's executor refuses the family the dead process opened"
+    );
+    assert_eq!(harness.dispatches(), 0, "and never reaches its port");
+    let other = walk_one(
+        &rt,
+        ("INC-10", aid),
+        ("draft", "implementer"),
+        1,
+        at(OPENED_AT + 1),
+    );
+    assert!(
+        other.breaker_refusal().is_none(),
+        "AC-034: the other family proceeds"
+    );
+    assert_eq!(harness.dispatches(), 1, "and reaches the port");
+
+    // ---- 7. "UNTIL THE MARK IS READ AND FOUND EXPIRED" -----------------------------------------
+    let expiry_i64 = i64::try_from(expiry.get()).expect("the declared expiry fits");
     assert!(
         state
             .decide(&open, at(OPENED_AT + expiry_i64 - 1), expiry)
@@ -804,8 +916,14 @@ fn ac013_child_commits_two_of_three_then_dies() {
     std::process::exit(137);
 }
 
-/// **AC-013 across a real process boundary, at more than one step** — Phase-1 exit criterion (3)'s
-/// asserted half.
+/// **AC-013 across a real process boundary, at more than one ACTIVATION** — the body that was
+/// `kill_and_resume_n_step` until `s8d`, kept so the property it asserted stays asserted.
+///
+/// *(Renamed 2026-09-26, `s8d` build, package P3; §8d.2: "The activation-grain body it replaces is
+/// kept, renamed `cross_process::kill_and_resume_n_activation`, so the property it asserted stays
+/// asserted.")* Its three activations each commit on one pre-R1 row (no `step_id`), which is the
+/// activation grain `RunState::is_committed` still reads as complete. The step-grain proof of
+/// criterion (3) is [`kill_and_resume_n_step`], below.
 ///
 /// > **AC-013** — GIVEN a run whose graph committed N steps and whose process was killed mid-graph /
 /// > WHEN `redkiln run <item>` re-enters (there is no `--resume` flag) / THEN no committed step
@@ -835,7 +953,7 @@ fn ac013_child_commits_two_of_three_then_dies() {
 ///    last instruction rather than by another one. What is common to both, and what the criterion
 ///    turns on, is that no destructor runs and the graph is abandoned mid-flight.
 #[test]
-fn kill_and_resume_n_step() {
+fn kill_and_resume_n_activation() {
     use std::sync::{Arc, Mutex};
 
     use rk_kernel::runtime::Runtime;
@@ -986,8 +1104,364 @@ fn kill_and_resume_n_step() {
     );
 
     println!(
-        "kill_and_resume_n_step: N={} committed_before_kill={committed_before} re_dispatches=1 \
-         digests={pre_kill:?}",
+        "kill_and_resume_n_activation: N={} committed_before_kill={committed_before} \
+         re_dispatches=1 digests={pre_kill:?}",
         N_STEP_GRAPH.len()
+    );
+}
+
+// ---- AC-013 at STEP grain (`s8d` §8d.2; record R1, proposed) ---------------------------------------
+//
+// *(Added 2026-09-26, `s8d` build, package P3.)* §8d.2: *"`cross_process::kill_and_resume_n_step` is
+// rewritten over **one** activation with N >= 3 agent steps: the child commits two steps and dies; a
+// different process re-enters; steps 1–2 are served with byte-identical digests and step 3
+// dispatches once."*
+
+/// The N-step activation: three agent steps, each with its own per-step spec, and the `emit`.
+const STEP_GRAIN_AID: &str = "impl-report@1";
+const STEP_GRAIN_STEPS: [&str; 3] = ["draft", "refine", "finish"];
+
+fn step_grain_steps() -> Vec<rk_kernel::catalog::Step> {
+    let blank = |id: &str, kind: rk_kernel::catalog::StepKind| rk_kernel::catalog::Step {
+        id: id.to_owned(),
+        kind,
+        run: None,
+        output_type: None,
+        role: None,
+        when: None,
+        expr: None,
+        for_each: None,
+        retry_max: None,
+        repeat_max: None,
+        memo_declared: None,
+        question: None,
+        timeout_secs: None,
+        inputs: std::collections::BTreeMap::new(),
+        on_false_to: None,
+        repeat_until: None,
+        escalate_question: None,
+        on_false: None,
+        on_exhausted: None,
+        emit: None,
+    };
+    let mut steps: Vec<rk_kernel::catalog::Step> = STEP_GRAIN_STEPS
+        .iter()
+        .map(|id| rk_kernel::catalog::Step {
+            role: Some("implementer".to_owned()),
+            ..blank(id, rk_kernel::catalog::StepKind::Agent)
+        })
+        .collect();
+    steps.push(blank("emit", rk_kernel::catalog::StepKind::Emit));
+    steps
+}
+
+/// Each agent step's own spec: its own card digest, the schema the fake answers under.
+fn step_grain_specs() -> std::collections::BTreeMap<String, rk_types::activity::ActivitySpec> {
+    STEP_GRAIN_STEPS
+        .iter()
+        .zip(["a1", "b2", "c3"])
+        .map(|(id, hex)| {
+            let mut spec = crate::runtime::spec();
+            spec.card_digest = rk_types::digest::Digest::from_hex(&hex.repeat(32))
+                .expect("64 lowercase hex characters");
+            ((*id).to_owned(), spec)
+        })
+        .collect()
+}
+
+/// A harness that answers its first two dispatches and **kills the process on the third** — the
+/// death lands INSIDE the third step's dispatch, after its `dispatch` row and before any commit,
+/// which is the mid-graph kill a real `taskkill /T /F` leaves behind.
+struct DyingHarness {
+    calls: std::sync::atomic::AtomicU32,
+}
+
+impl rk_ports::harness::Harness for DyingHarness {
+    fn dispatch(
+        &self,
+        spec: &rk_types::activity::ActivitySpec,
+        store: &mut dyn EventStore,
+    ) -> rk_ports::harness::DispatchOutcome {
+        let n = self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+        if n >= 3 {
+            println!("child: committed 2 of 3 steps, about to die mid-activation inside step 3");
+            std::io::stdout()
+                .flush()
+                .expect("the child's stdout flushes");
+            // THE KILL, inside the third step's dispatch.
+            std::process::exit(137);
+        }
+        let inner = crate::runtime::CountingHarness::scripted(vec![crate::runtime::ok_typed(
+            serde_json::json!({ "step": n, "card": spec.card_digest.as_str() }),
+        )]);
+        inner.dispatch(spec, store)
+    }
+}
+
+/// The child: walk the one activation, commit two of its three agent steps, and die in the third.
+#[test]
+#[ignore = "child entrypoint for kill_and_resume_n_step (step grain); the parent invokes it by name"]
+fn ac013_child_commits_two_agent_steps_then_dies() {
+    use std::sync::{Arc, Mutex};
+
+    use rk_kernel::runtime::Runtime;
+    use rk_kernel::runtime::step::Activation;
+    use rk_kernel::workflow::envelope::AttemptCap;
+    use rk_ports::harness::Harness;
+
+    use crate::runtime::{CAP, ITEM, STAGE, STEP, at, empty_state, gate_site, ports};
+
+    let path = child_store();
+    assert_eq!(
+        child_case(),
+        "commit-two-steps",
+        "the parent sets this case and no other"
+    );
+    let db: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(FileStore::at(path)));
+    let harness = Arc::new(DyingHarness {
+        calls: std::sync::atomic::AtomicU32::new(0),
+    });
+    let rt = Runtime::new(
+        ports(Arc::clone(&harness) as Arc<dyn Harness>, &db),
+        "run-pre-kill",
+        STAGE,
+    );
+    let specs = step_grain_specs();
+    let steps = step_grain_steps();
+    let state = empty_state();
+    let _never = rt.run_activity_steps(
+        Activation {
+            item: ITEM,
+            activity_id_at_version: STEP_GRAIN_AID,
+            step_id: STEP,
+            spec: None,
+            step_specs: Some(&specs),
+            rigor: rk_kernel::rigor::Rigor::Recommended,
+        },
+        Some(&steps),
+        &rk_kernel::predicate::Context::new(),
+        gate_site(&state),
+        AttemptCap::declared(CAP),
+        at(100),
+    );
+    panic!("the child must die inside the third step's dispatch and never return from the walk");
+}
+
+/// **AC-013 across a real process boundary, at STEP grain** — Phase-1 exit criterion (3)'s asserted
+/// half, re-proven over ONE activation with N = 3 agent steps (`s8d` §8d.2).
+///
+/// > **AC-013** — GIVEN a run whose graph committed N steps and whose process was killed mid-graph /
+/// > WHEN `redkiln run <item>` re-enters (there is no `--resume` flag) / THEN no committed step
+/// > re-executes and every committed digest is byte-identical to its pre-kill value.
+///
+/// The child commits `draft` and `refine`, writes the `dispatch` row of `finish`, and dies inside
+/// that dispatch. A different OS process re-enters over the same journal: `draft` and `refine` are
+/// SERVED, their digests byte-identical, and `finish` dispatches exactly once; the activation then
+/// completes on its `emit` row. Still ARMED, as the activation-grain body below says: AC-013 is
+/// PROVISIONAL on P8, and the re-entrant is a kernel `Runtime`, not `redkiln run`.
+#[test]
+fn kill_and_resume_n_step() {
+    use std::sync::{Arc, Mutex};
+
+    use rk_kernel::runtime::Runtime;
+    use rk_kernel::runtime::activity::{commit_key_of, committed_step_result, is_completion_row};
+    use rk_kernel::runtime::step::Activation;
+    use rk_kernel::workflow::envelope::AttemptCap;
+    use rk_kernel::workflow::idem::{CommitKey, IterationPath};
+    use rk_ports::harness::Harness;
+
+    use crate::runtime::{
+        CAP, CountingHarness, ITEM, STAGE, STEP, at, empty_state, gate_site, ok_typed, ports,
+    };
+
+    const CHILD: &str = "cross_process::ac013_child_commits_two_agent_steps_then_dies";
+    assert!(
+        STEP_GRAIN_STEPS.len() >= 3,
+        "PREMISE: N >= 3 agent steps in ONE activation, as §8d.2 requires"
+    );
+    let key = |id: &str| CommitKey {
+        item: ITEM.to_owned(),
+        activity_id_at_version: STEP_GRAIN_AID.to_owned(),
+        step_id: id.to_owned(),
+        iteration_path: IterationPath::root(),
+    };
+
+    // ---- 1. the child commits two steps of the one activation and is killed ----------------------
+    let path = fresh_store("ac013-kill-and-resume-step-grain");
+    let child = re_exec(CHILD, &path, "commit-two-steps");
+    assert_ne!(
+        child.status.code(),
+        Some(0),
+        "PREMISE: the child must have DIED mid-activation, not finished. stdout:\n{}",
+        child.stdout
+    );
+    assert!(
+        child.stdout.contains("about to die mid-activation"),
+        "PREMISE: the child reached the kill inside step 3, rather than failing earlier.\n--- \
+         child stdout ---\n{}\n--- child stderr ---\n{}",
+        child.stdout,
+        child.stderr
+    );
+
+    // ---- 2. what survived the kill -----------------------------------------------------------------
+    let db: Arc<Mutex<dyn EventStore>> = Arc::new(Mutex::new(FileStore::at(path)));
+    let read = |db: &Arc<Mutex<dyn EventStore>>| {
+        db.lock()
+            .expect("the store lock is not poisoned")
+            .query(Query::ByItem(ITEM.to_owned()))
+            .expect("the journal the dead process left is readable")
+    };
+    let before = read(&db);
+    let committed_before: Vec<CommitKey> = before
+        .iter()
+        .filter(|e| e.kind == EventKind::ActivityCommitted)
+        .filter_map(commit_key_of)
+        .collect();
+    assert_eq!(
+        committed_before,
+        vec![key("draft"), key("refine")],
+        "PREMISE: TWO step activations of ONE activation committed before the kill, each under its \
+         own commit key — criterion (3)'s `more than one step`, at step grain"
+    );
+    assert!(
+        !before.iter().any(is_completion_row),
+        "PREMISE: the activation did not complete before the kill"
+    );
+    assert_eq!(
+        before
+            .iter()
+            .filter(|e| e.kind == EventKind::Dispatch)
+            .count(),
+        3,
+        "PREMISE: the third step's `dispatch` row landed and its commit did not — the death is \
+         INSIDE its dispatch"
+    );
+    let digest = |events: &[Event], id: &str| {
+        rk_store::canon::canonical_digest(
+            committed_step_result(events, &key(id)).expect("committed"),
+        )
+        .expect("no floats")
+        .as_str()
+        .to_owned()
+    };
+    let pre_kill: Vec<String> = ["draft", "refine"]
+        .iter()
+        .map(|id| digest(&before, id))
+        .collect();
+
+    // ---- 3. a DIFFERENT process re-enters over the same journal ------------------------------------
+    let harness = Arc::new(CountingHarness::scripted(vec![ok_typed(
+        serde_json::json!({ "step": 3 }),
+    )]));
+    let rt = Runtime::new(
+        ports(Arc::clone(&harness) as Arc<dyn Harness>, &db),
+        "run-re-entry",
+        STAGE,
+    );
+    let specs = step_grain_specs();
+    let steps = step_grain_steps();
+    let state = empty_state();
+    let report = rt
+        .run_activity_steps(
+            Activation {
+                item: ITEM,
+                activity_id_at_version: STEP_GRAIN_AID,
+                step_id: STEP,
+                spec: None,
+                step_specs: Some(&specs),
+                rigor: rk_kernel::rigor::Rigor::Recommended,
+            },
+            Some(&steps),
+            &rk_kernel::predicate::Context::new(),
+            gate_site(&state),
+            AttemptCap::declared(CAP),
+            at(200),
+        )
+        .expect("the re-entry resolves");
+    assert_eq!(
+        report.served(),
+        2,
+        "the two committed steps are SERVED from the journal, not re-executed: {report:?}"
+    );
+    assert_eq!(
+        harness.dispatches(),
+        1,
+        "AC-013 at step grain: ZERO re-dispatch of a committed step, and the first uncommitted step \
+         dispatches exactly once, across a real process boundary"
+    );
+    assert!(
+        report.completed(),
+        "the activation then completes on its emit row: {report:?}"
+    );
+
+    // ---- 4. digest equality ------------------------------------------------------------------------
+    let after = read(&db);
+    let post: Vec<String> = ["draft", "refine"]
+        .iter()
+        .map(|id| digest(&after, id))
+        .collect();
+    assert_eq!(
+        post, pre_kill,
+        "AC-013: every committed step's digest is byte-identical to its pre-kill value — the \
+         `output_digest` ADR-0128 decision 4 names, computed the way `explain` computes it"
+    );
+    let rows: Vec<&Event> = after
+        .iter()
+        .filter(|e| e.kind == EventKind::ActivityCommitted)
+        .collect();
+    assert_eq!(
+        rows.iter()
+            .filter_map(|e| commit_key_of(e))
+            .filter(|k| k.step_id != "emit")
+            .collect::<Vec<_>>(),
+        vec![key("draft"), key("refine"), key("finish")],
+        "each step committed exactly once across both processes"
+    );
+    assert_eq!(
+        rows.iter().filter(|e| is_completion_row(e)).count(),
+        1,
+        "and one completion row joined them"
+    );
+
+    // ---- 5. THE CONTROL: the same activation shape on an activation the dead process never touched
+    // dispatches ALL THREE steps, so "the two were served" is not a runtime that serves everything.
+    let control_harness = Arc::new(CountingHarness::scripted(vec![
+        ok_typed(serde_json::json!({ "c": 1 })),
+        ok_typed(serde_json::json!({ "c": 2 })),
+        ok_typed(serde_json::json!({ "c": 3 })),
+    ]));
+    let control_rt = Runtime::new(
+        ports(Arc::clone(&control_harness) as Arc<dyn Harness>, &db),
+        "run-control",
+        STAGE,
+    );
+    let control = control_rt
+        .run_activity_steps(
+            Activation {
+                item: ITEM,
+                activity_id_at_version: "review@1",
+                step_id: "review[node]",
+                spec: None,
+                step_specs: Some(&specs),
+                rigor: rk_kernel::rigor::Rigor::Recommended,
+            },
+            Some(&steps),
+            &rk_kernel::predicate::Context::new(),
+            gate_site(&state),
+            AttemptCap::declared(CAP),
+            at(300),
+        )
+        .expect("the control resolves");
+    assert!(control.completed() && control.served() == 0);
+    assert_eq!(
+        control_harness.dispatches(),
+        3,
+        "CONTROL: an activation the killed process never committed dispatches every step"
+    );
+
+    println!(
+        "kill_and_resume_n_step: N={} committed_before_kill={} re_dispatches=1 digests={pre_kill:?}",
+        STEP_GRAIN_STEPS.len(),
+        committed_before.len()
     );
 }

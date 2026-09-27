@@ -29,7 +29,7 @@
 # `metrics` take `toolchain`, the only other route a verb with no store or git write could take.
 
 [verb]
-deploy  = { outputs = "DeployReport", live = true, timeout = "deploy_timeout", inputs = [], route = "toolchain" }
-metrics = { outputs = "TelemetryReport", live = true, timeout = "deploy_timeout", inputs = [], route = "toolchain" }
-test    = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port" }
-lint    = { outputs = "LintReport", live = false, timeout = "scan_timeout", inputs = [], route = "port" }
+deploy  = { outputs = "DeployReport", live = true, timeout = "deploy_timeout", inputs = [], route = "toolchain", side_effecting = false }
+metrics = { outputs = "TelemetryReport", live = true, timeout = "deploy_timeout", inputs = [], route = "toolchain", side_effecting = false }
+test    = { outputs = "TestReport", live = false, timeout = "test_timeout", inputs = ["selection"], route = "port", side_effecting = false }
+lint    = { outputs = "LintReport", live = false, timeout = "scan_timeout", inputs = [], route = "port", side_effecting = false }

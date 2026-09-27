@@ -3,8 +3,18 @@
 //!
 //! | test | the semantic | the mutant it kills | what killed that mutant before |
 //! | --- | --- | --- | --- |
-//! | [`an_emit_step_ends_the_walk_and_a_later_tool_step_never_runs`] | `emit` is terminal (design §4.5) | `StepVerdict::Emitted => {}` | **nothing in the workspace** |
+//! | ~~`an_emit_step_ends_the_walk_and_a_later_tool_step_never_runs`~~ | ~~`emit` is terminal (design §4.5)~~ | ~~`StepVerdict::Emitted => {}`~~ | ~~**nothing in the workspace**~~ |
 //! | [`an_empty_transcribed_step_list_is_refused_by_name_and_none_is_not_the_empty_case`] | ADR-0138's empty-list forbid | `if false && steps.is_empty()` | **nothing in the workspace** |
+//!
+//! *(dated 2026-09-26, `s8d` build, package P4; R2 = ADR-0173 decision 7, proposed; `s8d` §8d.8 defect
+//! 1 and §8d.10.)* **The first row is struck and its test REMOVED, not renamed: it asserted the silent
+//! drop as intended.** A step after an `emit` is now refused by name — at load by the strict walker,
+//! and by `run_activity_steps` for a list transcribed some other way — and the walk's
+//! `StepVerdict::Emitted` arm appends the completion row that carries the `emit` binding. It is
+//! replaced by `emit_binding::a_step_after_emit_is_refused_by_name_and_never_silently_dropped`, whose
+//! walk half keeps this module's counting-toolchain instrument (a CONTROL walk with the tool step
+//! BEFORE the `emit` moves the counter to 1; the refused walk leaves it at 0). The paragraph below is
+//! kept as the history of why the instrument is a counter. Its three step helpers left with it.
 //!
 //! 🛑 **WHY `emit` TERMINALITY NEEDS A COUNTING TOOLCHAIN AND CANNOT BE READ OFF THE REPORT.**
 //! `StepVerdict::Emitted => break` leaves the loop and falls through to the same
@@ -34,7 +44,7 @@
 
 use std::sync::Arc;
 
-use rk_kernel::catalog::{Step, StepKind};
+use rk_kernel::catalog::Step;
 use rk_kernel::predicate::Context;
 use rk_kernel::runtime::Runtime;
 use rk_kernel::runtime::step::Activation;
@@ -46,82 +56,16 @@ use crate::runtime::{
     gate_site, ok_typed, ports_with_toolchain, spec, store,
 };
 
-/// An `agent` step: the one kind that dispatches.
-fn agent_step(id: &str) -> Step {
-    Step {
-        id: id.to_owned(),
-        kind: StepKind::Agent,
-        run: None,
-        output_type: None,
-        role: Some("implementer".to_owned()),
-        when: None,
-        expr: None,
-        for_each: None,
-        retry_max: None,
-        repeat_max: None,
-        memo_declared: None,
-        question: None,
-        timeout_secs: None,
-    }
-}
-
-/// A `tool` step naming `toolchain:build`.
-///
-/// `build` is in ADR-0135's four-verb `MAPPED_VERBS` map and is the cheapest of the four — it takes
-/// no selection and parses no report — so it is the step that DOES reach the port. That is the whole
-/// of its job here: it is the instrument, placed after the step under test, and a verb outside the
-/// map would be refused by name before the port and would move no counter.
-/// *(dated 2026-09-26, s8c refuting round 6.)* `MAPPED_VERBS` is gone: routing is the verb
-/// registry's rows (record V = ADR-0170, proposed). `build` reaches the port here as a test-only
-/// `port` row (`with_tool_routing` below), and a verb with no row refuses by its bare name.
-fn build_step(id: &str) -> Step {
-    Step {
-        id: id.to_owned(),
-        kind: StepKind::Tool,
-        run: Some("toolchain:build".to_owned()),
-        output_type: None,
-        role: None,
-        when: None,
-        expr: None,
-        for_each: None,
-        retry_max: None,
-        repeat_max: None,
-        memo_declared: None,
-        question: None,
-        timeout_secs: None,
-    }
-}
-
-/// An `emit` step.
-///
-/// Every field but `id` and `kind` is `None`: `catalog::Step` parses neither `artifacts` nor
-/// `evidence`, and an `emit` binds its outputs to `provides`, which this loader does not read
-/// either. So there is nothing else to set, and a fixture that set something would be asserting
-/// about a key the parser drops.
-fn emit_step(id: &str) -> Step {
-    Step {
-        id: id.to_owned(),
-        kind: StepKind::Emit,
-        run: None,
-        output_type: None,
-        role: None,
-        when: None,
-        expr: None,
-        for_each: None,
-        retry_max: None,
-        repeat_max: None,
-        memo_declared: None,
-        question: None,
-        timeout_secs: None,
-    }
-}
-
 const fn activation<'a>(sp: &'a rk_types::activity::ActivitySpec) -> Activation<'a> {
     Activation {
         item: ITEM,
         activity_id_at_version: AID,
         step_id: STEP,
-        spec: sp,
+        spec: Some(sp),
+        // (dated 2026-09-26, s8d build, P3) R1: no per-step specs, so the first runnable agent
+        // step dispatches under the activation's spec (ADR-0143 decision 2 as R1 narrows it).
+        step_specs: None,
+        rigor: rk_kernel::rigor::Rigor::Optional,
     }
 }
 
@@ -154,87 +98,6 @@ fn rt_with_counters(run_id: &str) -> (Runtime, Arc<CountingHarness>, Arc<Countin
         rk_kernel::workflow::memo::ToolchainValues::default(),
     ));
     (rt, harness, tc)
-}
-
-/// **design §4.5: an `emit` is terminal. The walk ends there and a later step does not run.**
-#[test]
-fn an_emit_step_ends_the_walk_and_a_later_tool_step_never_runs() {
-    let state = empty_state();
-    let sp = spec();
-
-    // ---- THE CONTROL FIRST. ---------------------------------------------------------------------
-    //
-    // The SAME trailing `tool` step at the SAME position, with no `emit` in front of it: it runs,
-    // and it moves the counter to 1. Without this, the `0` asserted below is satisfied by a broken
-    // `tool` arm, an unmapped verb, a port that was never bound, and a typo in `run` alike.
-    let (rt, harness, tc) = rt_with_counters("run-emit-control");
-    let control_steps = vec![agent_step("draft"), build_step("verify")];
-    let control = rt
-        .run_activity_steps(
-            activation(&sp),
-            Some(&control_steps),
-            &Context::new(),
-            gate_site(&state),
-            rk_kernel::workflow::envelope::AttemptCap::declared(CAP),
-            at(100),
-        )
-        .expect("a step's own failure is a VALUE, not an error of the walk (AC-032)");
-    assert_eq!(
-        tc.calls(),
-        1,
-        "CONTROL: a `tool` step at the END of a walk did not reach the toolchain port. The `0` \
-         asserted below would then hold for a reason that has nothing to do with `emit` being \
-         terminal: {control:?}"
-    );
-    assert!(
-        control.committed(),
-        "CONTROL: the agent step did not commit, so the walk below is not about a step AFTER a \
-         commit: {control:?}"
-    );
-    assert_eq!(harness.dispatches(), 1, "CONTROL: one dispatch, not more");
-
-    // ---- THE ASSERTION: the same walk with an `emit` inserted before the `tool` step. -----------
-    let (rt2, harness2, tc2) = rt_with_counters("run-emit-terminal");
-    let steps = vec![
-        agent_step("draft"),
-        emit_step("report"),
-        build_step("verify"),
-    ];
-    let report = rt2
-        .run_activity_steps(
-            activation(&sp),
-            Some(&steps),
-            &Context::new(),
-            gate_site(&state),
-            rk_kernel::workflow::envelope::AttemptCap::declared(CAP),
-            at(100),
-        )
-        .expect("a step's own failure is a VALUE, not an error of the walk (AC-032)");
-
-    assert_eq!(
-        tc2.calls(),
-        0,
-        "the `tool` step AFTER the `emit` reached the toolchain port, so the walk did not end at \
-         the `emit`. design §4.5 makes an `emit` terminal and `StepVerdict::Emitted` is handled by \
-         a bare `break`; every field of this report is IDENTICAL whether that `break` is there or \
-         not, so this counter is the only thing that can see it: {report:?}"
-    );
-    assert!(
-        report.committed(),
-        "the `emit` discarded the activation's commit. It is terminal, not a refusal — the walk \
-         ends and the activation's provided kind stands: {report:?}"
-    );
-    assert!(
-        report.step_error().is_none(),
-        "the `emit` reported a step failure. Ending a walk is not failing it: {:?}",
-        report.step_error()
-    );
-    assert_eq!(
-        harness2.dispatches(),
-        1,
-        "the `emit` walk dispatched {} times rather than once",
-        harness2.dispatches()
-    );
 }
 
 /// **ADR-0138's forbid: an activation whose transcribed step list is EMPTY is refused, not walked

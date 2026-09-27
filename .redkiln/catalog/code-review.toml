@@ -3,7 +3,7 @@
 #   `rigor` in applicable_if keeps ReviewVerdict satisfiable at optional where adversarial-review (min recommended) is ineligible (F34 ambiguity B19)
 [activity]
 id           = "code-review"
-version      = 2   # bumped 2026-09-08 (§9c.42)
+version      = 3   # bumped 2026-09-26 (s8d, ADR-0072; .redkiln/CHANGELOG.md)
 stage        = "review"
 provides     = ["ReviewVerdict"]
 requires     = ["ChangeSummary", "Spec?", "TestReport?"]   # P6 run2 fix: incidents forbid specification
@@ -30,13 +30,6 @@ timeout_secs = "${toolchain.review_timeout}"
 retry   = { max = 1 }
 
 [[step]]
-id      = "verdict"
-kind    = "check"
-inputs  = { findings = "${review.outputs}" }
-expr    = "findings.none(severity in ['blocking'])"
-on_false = "continue"
-
-[[step]]
 id      = "override"
 kind    = "gate"
 when    = "rigor >= mandatory and ${review.outputs.items}.len() > 0"
@@ -51,6 +44,13 @@ inputs  = { findings = "${review.outputs}", override = "${override.answer?}" }
 outputs = "value:Verdict"
 timeout_secs = 30
 retry   = { max = 1 }
+
+[[step]]
+id      = "verdict"
+kind    = "check"
+inputs  = { record = "${record.outputs}" }
+expr    = "record.blocking.len() == 0"
+on_false = "continue"
 
 [[step]]
 id      = "emit"

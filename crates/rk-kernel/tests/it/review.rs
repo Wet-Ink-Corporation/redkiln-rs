@@ -1323,9 +1323,20 @@ fn ac303_confirm_step_survives_escalation() {
     // the sum `forward + back_edge == confirm_checks.len()` held by construction and pinned nothing,
     // so a family falling back to zero confirm checks stayed green. A catalog edit that moves either
     // figure is a dated re-pin with its cause.
+    // *(dated 2026-09-26, `s8d` build, package P2; D21-67 ruling 1)* RE-PINNED (16, 4) → (4, 16),
+    // measured from inside this binary after `s8d`'s catalog edit. Cause: class C removed the
+    // severity conjunct, and the `findings` input it alone read, from twelve family members' `policy`
+    // checks (`c4-component`, `c4-container`, `c4-context`, `fault-tree-analysis`,
+    // `fishbone-analysis`, `five-whys`, `structured-retrospective`, `relative-estimation`,
+    // `bdd-scenarios`, `structured-nl-requirements`, `use-case-spec`, `equivalence-boundary`). Each
+    // still consumes the reviewer's Findings, now only through the loop's back-edge (its other
+    // bindings reach the drafting step, which reads `${adversary.outputs?}` or the like), so each
+    // moves from `forward` to `back-edge` and none is lost: the twenty confirm checks and zero
+    // violations stand. The four `forward` are the review family's `verdict` rows, class A's
+    // included, which read the reviewer through `record` (D21-57).
     assert_eq!(
         (green.forward, green.back_edge),
-        (16, 4),
+        (4, 16),
         "the confirm checks' dependence classes over {SHIPPED_CATALOG} moved: {:?}",
         green.confirm_checks
     );
