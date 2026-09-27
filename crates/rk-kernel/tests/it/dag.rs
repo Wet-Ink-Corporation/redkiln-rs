@@ -606,3 +606,163 @@ fn select_refuses_a_catalog_that_would_not_have_loaded() {
     select(&pack, &catalog(), &registry, &facets, "implement", &item)
         .expect("the good fixture catalog must still select");
 }
+
+// ---- D21-73 item 2 (R8 = ADR-0179 decision 2, proposed; `s8d` build, package F2-D2173) -------------
+//
+// Step 5 built one `DagNode` per (instance, producer) pair and deduplicated with the derived
+// equality, which compares the INSTANCE too. So an activity chosen for two required kinds kept two
+// nodes with one id; `layers` keyed its in-degree map by id and counted the id once, and
+// `placed != nodes.len()` read as AC-078's cycle refusal with an EMPTY path. The shipped fix lane's
+// `implement` stage hit it: `tdd-red-green-refactor` provides both `Changeset` and `ImplReport`.
+
+/// Each node's id and the `(kind, key)` of every instance it carries.
+type NodeShape = Vec<(String, Vec<(String, Option<String>)>)>;
+
+/// One activity providing `provides` at `stage`, for an inline fixture catalog.
+fn provider(id: &str, stage: &str, provides: &[&str]) -> String {
+    let kinds: Vec<String> = provides.iter().map(|k| format!("\"{k}\"")).collect();
+    format!(
+        "[activity]\nid = \"{id}\"\nversion = 1\nstage = \"{stage}\"\nprovides = [{}]\n\
+         requires = []\nderived_from = []\ntags = [\"kind:story\"]\nmethod_rank = 10\n\
+         min_rigor = \"optional\"\ncost_class = \"S\"\n[[step]]\nid = \"emit\"\nkind = \"emit\"\n",
+        kinds.join(", ")
+    )
+}
+
+/// **One node per activity, carrying every kind it provides here** — un-keyed and keyed, and one
+/// node per KEY on a mixed item (AC-049's identity stands).
+#[test]
+fn one_activity_providing_two_required_kinds_is_one_node() {
+    let facets = facets();
+    let registry = registry();
+
+    // ---- two UN-KEYED kinds from one activity ----------------------------------------------------
+    let both = provider("design-both", "design", &["DesignDoc", "ProblemStatement"]);
+    let catalog = Catalog::from_sources(&[("design-both.toml", both.as_str())]).expect("loads");
+    let pack = Pack::from_toml(
+        "two-kinds.toml",
+        "[pack]\nid = \"two-kinds\"\napplies = \"kind == story\"\n[policy]\n\
+         stages = { design = \"recommended\" }\n[stage.design]\n\
+         baseline = [\"DesignDoc\", \"ProblemStatement\"]\n",
+    )
+    .expect("the inline pack loads");
+    let item = Item::new("STORY-1", "story");
+    let out = select(&pack, &catalog, &registry, &facets, "design", &item)
+        .expect("one activity chosen for two kinds is a graph of ONE node, not a cycle");
+    let nodes = out.dag().nodes();
+    let ids: Vec<&str> = nodes.iter().map(|n| n.id.as_str()).collect();
+    assert_eq!(ids, vec!["design-both"], "one node per activity");
+    let kinds: Vec<&str> = nodes[0].instances.iter().map(|i| i.kind.as_str()).collect();
+    assert_eq!(
+        kinds,
+        vec!["DesignDoc", "ProblemStatement"],
+        "the one node carries every required kind its activity provides, in byte order"
+    );
+    assert_eq!(out.plan().expect("orders").order(), vec!["design-both"]);
+
+    // ---- two KEYED kinds from one activity, on a MIXED item: one node per key -------------------
+    let keyed = provider("impl-both", "implement", &["Changeset", "ChangeSummary"]);
+    let catalog = Catalog::from_sources(&[("impl-both.toml", keyed.as_str())]).expect("loads");
+    let pack = Pack::from_toml(
+        "two-keyed.toml",
+        "[pack]\nid = \"two-keyed\"\napplies = \"kind == story\"\n[policy]\n\
+         stages = { implement = \"recommended\" }\n[stage.implement]\n\
+         baseline = [\"Changeset\", \"ChangeSummary\"]\n",
+    )
+    .expect("the inline pack loads");
+    let item = Item::new("STORY-2", "story")
+        .with_toolchain("node", ["text"])
+        .with_toolchain("unreal", ["binary"]);
+    let out = select(&pack, &catalog, &registry, &facets, "implement", &item)
+        .expect("a keyed pair from one activity resolves");
+    let rows: NodeShape = out
+        .dag()
+        .nodes()
+        .iter()
+        .map(|n| {
+            (
+                n.id.clone(),
+                n.instances
+                    .iter()
+                    .map(|i| (i.kind.clone(), i.key.clone()))
+                    .collect(),
+            )
+        })
+        .collect();
+    let k = |kind: &str, key: &str| (kind.to_owned(), Some(key.to_owned()));
+    assert_eq!(
+        rows,
+        vec![
+            (
+                "impl-both[node]".to_owned(),
+                vec![k("ChangeSummary", "node"), k("Changeset", "node")]
+            ),
+            (
+                "impl-both[unreal]".to_owned(),
+                vec![k("ChangeSummary", "unreal"), k("Changeset", "unreal")]
+            ),
+        ],
+        "one node per (activity, key), each carrying both kinds for its key (AC-049)"
+    );
+
+    // ---- a KEYED and an UN-KEYED kind from one activity (the shipped `docs-update`'s shape) ------
+    // One toolchain: ONE node, carrying both. A mixed item: one node per key, and the un-keyed kind
+    // rides the byte-first key's node, so the activity is never dispatched a third time for no key.
+    let mixed = provider("docs-both", "implement", &["Changeset", "DesignDoc"]);
+    let catalog = Catalog::from_sources(&[("docs-both.toml", mixed.as_str())]).expect("loads");
+    let pack = Pack::from_toml(
+        "keyed-and-not.toml",
+        "[pack]
+id = \"keyed-and-not\"
+applies = \"kind == story\"
+[policy]
+         stages = { implement = \"recommended\" }
+[stage.implement]
+         baseline = [\"Changeset\", \"DesignDoc\"]
+",
+    )
+    .expect("the inline pack loads");
+    let shape = |item: &Item| -> NodeShape {
+        select(&pack, &catalog, &registry, &facets, "implement", item)
+            .expect("a keyed and an un-keyed kind from one activity resolve")
+            .dag()
+            .nodes()
+            .iter()
+            .map(|n| {
+                (
+                    n.id.clone(),
+                    n.instances
+                        .iter()
+                        .map(|i| (i.kind.clone(), i.key.clone()))
+                        .collect(),
+                )
+            })
+            .collect()
+    };
+    let one = Item::new("STORY-3", "story").with_toolchain("node", ["text"]);
+    assert_eq!(
+        shape(&one),
+        vec![(
+            "docs-both[node]".to_owned(),
+            vec![k("Changeset", "node"), ("DesignDoc".to_owned(), None)]
+        )],
+        "one toolchain: one node for the activity, carrying its keyed and un-keyed kinds"
+    );
+    let two = Item::new("STORY-4", "story")
+        .with_toolchain("node", ["text"])
+        .with_toolchain("unreal", ["binary"]);
+    assert_eq!(
+        shape(&two),
+        vec![
+            (
+                "docs-both[node]".to_owned(),
+                vec![k("Changeset", "node"), ("DesignDoc".to_owned(), None)]
+            ),
+            (
+                "docs-both[unreal]".to_owned(),
+                vec![k("Changeset", "unreal")]
+            ),
+        ],
+        "a mixed item: one node per key, the un-keyed kind on the byte-first key's node"
+    );
+}

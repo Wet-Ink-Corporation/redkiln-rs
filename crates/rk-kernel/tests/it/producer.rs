@@ -308,3 +308,95 @@ fn unsatisfiable_is_a_typed_gate() {
         "it is recorded as an abstention, which is AC-079's route and not AC-054's"
     );
 }
+
+// ---- D21-73 item 1 (R8 = ADR-0179, proposed; `s8d` build, package F2-D2173) -----------------------
+//
+// `rank_total_order_and_tie_is_an_error` could not tell the rank rule from the byte order of the ids:
+// its winner, `verdict-cheap`, sorts before its loser, `verdict-dear`, so a step 4 that took the
+// first id ALPHABETICALLY passed it. That is what shipped: `Candidate` derived `Ord` over
+// `(activity_id, method_rank)` in field order and step 4 called `candidates.sort()`, so the fix lane
+// chose `bisect` (rank 30) for `RootCause` over `root-cause` (rank 10). The two fixtures below put
+// the LOWER rank on the id that sorts LAST, so only the rank rule passes them.
+
+/// One `review` activity providing `ReviewVerdict` at `rank`, for an inline fixture catalog.
+fn ranked(id: &str, rank: i64) -> String {
+    format!(
+        "[activity]\nid = \"{id}\"\nversion = 1\nstage = \"review\"\nprovides = [\"ReviewVerdict\"]\n\
+         requires = []\nderived_from = []\ntags = [\"kind:story\"]\nmethod_rank = {rank}\n\
+         min_rigor = \"optional\"\ncost_class = \"S\"\n[[step]]\nid = \"emit\"\nkind = \"emit\"\n"
+    )
+}
+
+/// **AC-046, over ids whose byte order is the reverse of their ranks.** `a-dear` (rank 30) sorts
+/// first and `z-cheap` (rank 5) last; `m-mid` (rank 20) between. The rank rule picks `z-cheap`, and
+/// the beaten list is in rank order, lowest first.
+#[test]
+fn step4_picks_the_lowest_rank_not_the_first_id() {
+    let reg = registry();
+    let facets = facets();
+    let (a, m, z) = (
+        ranked("a-dear", 30),
+        ranked("m-mid", 20),
+        ranked("z-cheap", 5),
+    );
+    let cat = catalog(&[("a.toml", &a), ("m.toml", &m), ("z.toml", &z)]);
+    let picked = step4(
+        &cat,
+        &reg,
+        &facets,
+        "review",
+        Rigor::Recommended,
+        &Instance::of("ReviewVerdict"),
+        &story(),
+    )
+    .expect("a producer resolves");
+    let chosen = picked.chosen().expect("one producer was chosen");
+    assert_eq!(
+        (chosen.activity_id.as_str(), chosen.method_rank),
+        ("z-cheap", 5),
+        "AC-046: the LOWEST method_rank wins, whatever its id sorts to"
+    );
+    let beaten: Vec<(&str, i64)> = picked
+        .beaten()
+        .iter()
+        .map(|c| (c.activity_id.as_str(), c.method_rank))
+        .collect();
+    assert_eq!(
+        beaten,
+        vec![("m-mid", 20), ("a-dear", 30)],
+        "the beaten candidates are named with their ranks, in rank order"
+    );
+}
+
+/// **AC-047 at runtime, over the same reversed order.** Two producers tie at the LOWEST rank (5)
+/// while a higher-ranked one (`a-dear`, 30) sorts before both. Step 4 refuses with `RankTie` naming
+/// the tied pair, and does not pick `a-dear` for sorting first: there is no tie-break (ADR-0056).
+#[test]
+fn a_tie_at_the_lowest_rank_is_refused_whatever_the_ids_sort_to() {
+    let reg = registry();
+    let facets = facets();
+    let (a, y, z) = (
+        ranked("a-dear", 30),
+        ranked("y-cheap", 5),
+        ranked("z-cheap", 5),
+    );
+    let cat = catalog(&[("a.toml", &a), ("y.toml", &y), ("z.toml", &z)]);
+    let err = step4(
+        &cat,
+        &reg,
+        &facets,
+        "review",
+        Rigor::Recommended,
+        &Instance::of("ReviewVerdict"),
+        &story(),
+    )
+    .expect_err("a tie at the lowest rank must refuse, never resolve");
+    match err {
+        LoadError::RankTie { activities, .. } => assert_eq!(
+            activities,
+            vec!["y-cheap".to_owned(), "z-cheap".to_owned()],
+            "the tied pair at the LOWEST rank is named, in byte order"
+        ),
+        other => panic!("expected RankTie over the rank-5 pair, got {other:?}"),
+    }
+}

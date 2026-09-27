@@ -57,7 +57,11 @@ use super::step4::Unsatisfiable;
 use super::{Pack, SelectedProducer};
 use crate::catalog::Catalog;
 
-/// One node of the assembled DAG: one activity producing one required instance.
+/// One node of the assembled DAG: one activity, for one key.
+///
+/// It carries every required instance the activity was chosen to produce for that key (R8 =
+/// ADR-0179 decision 2, proposed; before 2026-09-27 this read *"one activity producing one required
+/// instance"*).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DagNode {
     /// `activity_id` for an un-keyed instance, `activity_id[key]` for a keyed one. **Node identity
@@ -66,6 +70,10 @@ pub struct DagNode {
     pub id: String,
     pub activity_id: String,
     pub instance: Instance,
+    /// *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 2, proposed.)* Every
+    /// required instance this node's activity was chosen to produce, in byte order of
+    /// `(kind, key)`. [`Self::instance`] is the first of them.
+    pub instances: Vec<Instance>,
     pub cost_class: Option<String>,
     /// `None` when the activity declares no `cost_class`, or declares one outside the four. **Never
     /// `0`**: a zero would make an unrecognised class free and silently fit any appetite.
@@ -74,13 +82,25 @@ pub struct DagNode {
 
 impl DagNode {
     fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
+        let mut out = serde_json::json!({
             "id": self.id,
             "activity_id": self.activity_id,
             "instance": self.instance.to_json(),
             "cost_class": self.cost_class,
             "cost_points": self.cost_points,
-        })
+        });
+        // R8 decision 2: `instances` is written only for a node carrying more than one, so every
+        // graph that could be assembled before the fix (one instance per node) serialises
+        // byte-identically to its recorded `dag_assembled` (AC-042's replay compares bytes).
+        if self.instances.len() > 1
+            && let Some(map) = out.as_object_mut()
+        {
+            map.insert(
+                "instances".to_owned(),
+                self.instances.iter().map(Instance::to_json).collect(),
+            );
+        }
+        out
     }
 }
 
@@ -378,22 +398,57 @@ pub fn step5(
     inputs_digest: &Digest,
 ) -> Result<Step5Outcome, Step5Error> {
     // ---- nodes --------------------------------------------------------------------------------
-    let mut nodes: Vec<DagNode> = producers
-        .iter()
-        .map(|p| {
-            let activity = catalog.activities().iter().find(|a| a.id == p.activity_id);
-            let cost_class = activity.and_then(|a| a.cost_class.clone());
-            DagNode {
-                id: node_id(&p.activity_id, p.instance.key.as_deref()),
-                activity_id: p.activity_id.clone(),
-                instance: p.instance.clone(),
+    //
+    // *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 2, proposed; D21-73.)*
+    // **One node per activity, carrying every required kind it was chosen to produce** — and, as
+    // AC-049 requires, one per KEY on a mixed item. This built one node per (instance, producer) and
+    // `dedup`ed with the derived equality, which compares the instance too, so two nodes kept one id;
+    // `layers` counts an id once, and the graph read as AC-078's cycle refusal with an empty path.
+    //
+    // The rule, per activity: with no keyed instance, one node `a`; with keyed instances, one node
+    // `a[k]` per key, and the activity's UN-KEYED instances are carried by the node of its
+    // byte-first key, so an activity is never dispatched once for a key and again for no key (the
+    // shipped `docs-update` provides `Docs`, un-keyed, and `Changeset`, keyed). On a one-toolchain
+    // item that is exactly one node per activity.
+    let mut per_activity: BTreeMap<&str, Vec<&Instance>> = BTreeMap::new();
+    for p in producers {
+        let seen = per_activity.entry(p.activity_id.as_str()).or_default();
+        if !seen
+            .iter()
+            .any(|i| i.kind == p.instance.kind && i.key == p.instance.key)
+        {
+            seen.push(&p.instance);
+        }
+    }
+    let mut nodes: Vec<DagNode> = Vec::new();
+    for (activity_id, instances) in per_activity {
+        let keys: BTreeSet<&str> = instances.iter().filter_map(|i| i.key.as_deref()).collect();
+        let first_key = keys.iter().next().copied();
+        let activity = catalog.activities().iter().find(|a| a.id == activity_id);
+        let cost_class = activity.and_then(|a| a.cost_class.clone());
+        let slots: Vec<Option<&str>> = if keys.is_empty() {
+            vec![None]
+        } else {
+            keys.iter().copied().map(Some).collect()
+        };
+        for slot in slots {
+            let mut carried: Vec<Instance> = instances
+                .iter()
+                .filter(|i| i.key.as_deref() == slot || (i.key.is_none() && slot == first_key))
+                .map(|i| (*i).clone())
+                .collect();
+            carried.sort();
+            nodes.push(DagNode {
+                id: node_id(activity_id, slot),
+                activity_id: activity_id.to_owned(),
+                instance: carried[0].clone(),
+                instances: carried,
                 cost_points: cost_points(cost_class.as_deref()),
-                cost_class,
-            }
-        })
-        .collect();
+                cost_class: cost_class.clone(),
+            });
+        }
+    }
     nodes.sort();
-    nodes.dedup();
 
     // ---- edges: producer of a required kind -> the activity that requires it -------------------
     //
@@ -411,12 +466,16 @@ pub fn step5(
         for requirement in &activity.requires {
             for upstream in nodes
                 .iter()
-                .filter(|n| n.instance.kind == requirement.kind)
+                // R8 decision 2: a node produces every kind it carries, so the edge is drawn from it
+                // for any of them, never only the first.
                 .filter(|n| {
-                    // Same key, or one of the two ends is un-keyed.
-                    n.instance.key.is_none()
-                        || node.instance.key.is_none()
-                        || n.instance.key == node.instance.key
+                    n.instances.iter().any(|i| {
+                        i.kind == requirement.kind
+                            // Same key, or one of the two ends is un-keyed.
+                            && (i.key.is_none()
+                                || node_key(node).is_none()
+                                || i.key.as_deref() == node_key(node))
+                    })
                 })
             {
                 edges.insert(DagEdge {
@@ -471,10 +530,11 @@ pub fn step5(
         // `Instance`s reported `Changeset[node]` as unreachable while its producer was in the graph
         // [measured: `UnreachableRequirement { kind: "Changeset", key: Some("node") }` against a DAG
         // holding `implement-change[node]`].
-        let produced = dag
-            .nodes
-            .iter()
-            .any(|n| n.instance.kind == instance.kind && n.instance.key == instance.key);
+        let produced = dag.nodes.iter().any(|n| {
+            n.instances
+                .iter()
+                .any(|i| i.kind == instance.kind && i.key == instance.key)
+        });
         let present = classifications.get(instance) == Some(&super::Classification::Present);
         let is_gated = gated.iter().any(|g| g.kind == instance.kind);
         if !produced && !present && !is_gated {
@@ -497,6 +557,12 @@ pub fn step5(
         }
     }
     Ok(Step5Outcome::Assembled(dag))
+}
+
+/// The key a node was built for: that of any keyed instance it carries (they share one, R8
+/// decision 2), or `None` for an un-keyed node.
+fn node_key(node: &DagNode) -> Option<&str> {
+    node.instances.iter().find_map(|i| i.key.as_deref())
 }
 
 /// `activity_id`, or `activity_id[key]` for a keyed instance.
@@ -580,6 +646,7 @@ mod tests {
             id: id.to_owned(),
             activity_id: id.to_owned(),
             instance: Instance::of(id),
+            instances: vec![Instance::of(id)],
             cost_class: Some("S".to_owned()),
             cost_points: Some(1),
         }

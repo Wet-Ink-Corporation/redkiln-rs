@@ -472,6 +472,10 @@ fn the_shipped_rust_value_table_is_exactly_the_declared_key_map() {
     declared.extend(CITED_KEYS);
     declared.extend(UNMEASURED_KEYS);
     declared.insert("setup_projects");
+    // *(dated 2026-09-27, `s8d` build, package F2-D2173; D21-73 item 5; R8 = ADR-0179 decision 4,
+    // proposed.)* `package_binaries`, the second of ADR-0170 decision 9's three declaration rows, is
+    // written at `s8d` (the ruling moves it from `s8g`); the map's declaration set is decision 9's.
+    declared.insert("package_binaries");
     let extra: Vec<&String> = table
         .keys()
         .filter(|k| !declared.contains(k.as_str()))
@@ -643,5 +647,49 @@ fn every_row_declares_side_effecting_and_the_writing_verbs_are_marked() {
         )
         .is_err(),
         "a string `side_effecting` is refused"
+    );
+}
+
+/// **D21-73 item 5, the `package` half (R8 = ADR-0179 decision 4, proposed; `s8d` build, package
+/// F2-D2173).** The shipped `[toolchain.rust]` carries the `package_binaries` declaration row (ADR-0170
+/// decision 9 admits it), and `row_inputs_for` hands it to the `package` row as its `binaries`
+/// input: exactly `redkiln` and `redkiln-migrate` (AC-441: the migrator is *"a separate binary"*),
+/// never a fixture `[[bin]]`. A table without the row supplies nothing, so the step refuses by name
+/// as before (the control).
+#[test]
+fn the_package_binaries_declaration_supplies_the_package_rows_binaries() {
+    let reg = shipped();
+    let supplied = reg.row_inputs_for("rust");
+    assert_eq!(
+        supplied
+            .get("package")
+            .and_then(|m| m.get("binaries"))
+            .cloned(),
+        Some(serde_json::json!(["redkiln", "redkiln-migrate"])),
+        "the shipped `package_binaries` row must supply `package.binaries`: {supplied:?}"
+    );
+    assert_eq!(
+        supplied.keys().collect::<Vec<_>>(),
+        vec!["package"],
+        "a declaration row supplies only the row inputs R8 maps (`setup_projects` is not one)"
+    );
+    let declared = reg
+        .table("rust")
+        .and_then(|t| t.declarations().get("package_binaries"))
+        .expect("the package_binaries declaration row");
+    assert!(
+        declared.source.contains("[[bin]]"),
+        "the row's warrant names where the set was read: {}",
+        declared.source
+    );
+
+    // CONTROL: a table with no `package_binaries` row supplies nothing.
+    let bare = VerbRegistry::from_toml(&format!(
+        "{VERBS}[toolchain.t]\nsetup_projects = {{ value = [\"p\"], source = \"git ls-files\" }}\n"
+    ))
+    .expect("CONTROL: loads");
+    assert!(
+        bare.row_inputs_for("t").is_empty() && bare.row_inputs_for("absent").is_empty(),
+        "CONTROL: no declaration row, no row input"
     );
 }

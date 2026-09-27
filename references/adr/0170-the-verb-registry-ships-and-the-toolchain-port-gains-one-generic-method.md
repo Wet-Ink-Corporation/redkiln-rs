@@ -6,7 +6,7 @@ date: 2026-09-26
 legacy_id: none
 source: spikes/DECISIONS-2026-09-21.md D21-42 decisions 1b, 4a and 6a, D21-43 N14, N25 and the integration call (*"The Rust verb handlers are **s8c**'s record (V); the activities are **s8g**'s (R4)."*), D21-45 W3, D21-48 X4 and D21-62 C (TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-62-s8c.md); *(dated 2026-09-26, s8c refuting round 3)* D21-63 (the `cvss-unscorable` refusal, TAKEN PROVISIONALLY; panel text spikes/afk-panels/D21-63-s8c.md), D21-64 rulings 5, 7, 8 and 9 (D21-62 C confirmed; D21-63 moved to its (3'), the `cvss` crate; the value table re-measured; this record's flip condition) and D21-67 ruling 7 (a CVSS v4.0 vector scored base-only); runbook/phase-1/s8c-toolchain-port-and-verbs.md §8c.4–§8c.6 and §8c.7 (the proposal this record fixes); references/adr/0135, references/adr/0162 and references/adr/0137 (the sentences superseded in part); references/2026-09-08-architecture-design.md §4.5 (*"`registry.toml` (toolchain verbs and feeds; a verb's `live = true` implies `memo = false` on every step using it)"*); crates/rk-kernel/src/workflow/memo.rs (`VerbRegistry`, the one parser this record extends)
 supersedes: ["0135", "0162", "0137"]
-superseded_by: []
+superseded_by: ["0179"]
 related: ["0032", "0040", "0072", "0105", "0137", "0140", "0148", "0165", "0169", "0171"]
 evidence: []
 consumers: []

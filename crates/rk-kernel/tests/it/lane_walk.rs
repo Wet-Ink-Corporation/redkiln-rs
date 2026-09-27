@@ -589,9 +589,26 @@ impl Rig<'_> {
             .verbs
             .values_for("rust")
             .expect("registry.toml declares [toolchain.rust]");
+        // *(dated 2026-09-27, `s8d` build, package F2-D2173; D21-73 item 5; R8 = ADR-0179 decision
+        // 4, proposed.)* The row inputs, bound as `rk-cli`'s composition root binds them: the shipped
+        // `[toolchain.rust]` declaration rows through `row_inputs_for` (`package_binaries` ->
+        // `package.binaries`), and `sca_scan`'s two databases at a cargo home. `rk-cli` computes that
+        // home from the captured environment (`run::advisory_db_row_inputs`, proved in `rk-cli`); the
+        // rig names a fixed one, because the scripted toolchain opens no database.
         ToolRouting::new(self.shipped.verbs.clone(), values)
             .with_sources(Some("rust".to_owned()), Some(self.shipped.redkiln.clone()))
             .with_review_routes(Arc::new(LaneReview))
+            .with_row_inputs(self.shipped.verbs.row_inputs_for("rust"))
+            .with_row_input(
+                "sca_scan",
+                "audit_db",
+                Json::from("/lane-cargo-home/advisory-db"),
+            )
+            .with_row_input(
+                "sca_scan",
+                "deny_db",
+                Json::from("/lane-cargo-home/advisory-dbs"),
+            )
     }
 
     /// Walk one activity to its end, answering each gate it opens with its first option.
@@ -969,6 +986,26 @@ fn walk_lane(lane: &Lane) {
 // `design.uncovered_ac.len() == 0` (`equivalence-boundary`), and bind no `findings`. The scripted
 // `Findings` value is `{ "items": [] }` only so `adversarial-review`'s `override` gate stays guarded
 // off and `verdict_record` has nothing to re-execute.
+//
+// *(dated 2026-09-27, `s8d` build, package F2-D2173; D21-73; R8 = ADR-0179, proposed.)* **RE-MEASURED
+// after D21-73's fixes, and the constants below follow §8d.9's dated line.** Step 4 now chooses by
+// lowest rank (`root-cause`, 10, for `RootCause`; `t-shirt-sizing` for the story's estimate), step 5
+// builds one node per activity (the fix lane's `implement` selects), step 2 binds `rigor` (both
+// lanes' `closeout` and the story's `implement` rows evaluate), and the routing binds the row inputs
+// `rk-cli` binds (`sca-scan` and `build-package` walk). The needles above the P8 note that named
+// those causes are superseded. What still refuses, and why:
+//
+// - `tdd-red-green-refactor` (fix `implement`): `green-verify`'s `inputs.selection = "affected"`
+//   resolves to the item's COMMITTED `Changeset` (R2 = ADR-0173 decision 9), and `tdd` is that
+//   `Changeset`'s producer, so none is committed while it runs. The rig seeds only an activity's
+//   mandatory `requires`, and `tdd` requires `Spec`. Never measured before: both lanes' `implement`
+//   refused at selection.
+// - the story lane's `implement` SELECTION: `docs-update` (rank 5) now wins `Changeset` and declares
+//   `requires = ["Spec", "Changeset?"]`, so step 5 draws an edge from its own node to itself and the
+//   graph is cyclic. The refusal names `change-summary[rust]`, a node downstream of the loop, because
+//   `layers`' path walk starts at the lowest surviving id.
+// - `confirmation-test`, `bdd-scenarios`, `smoke-test`, `rolling-deploy`, `debt-logging` and
+//   `closure-record`: as the P8 note (owed to `s8g`/`s8h`, `s8g`, `s8g`, `s8f`, `s8f`).
 
 /// §8d.9's fix lane, as measured.
 const FIX: Lane = Lane {
@@ -988,12 +1025,22 @@ const FIX: Lane = Lane {
             stage: "analysis",
             selected: &[
                 ("minimal-repro", Verdict::Walks),
-                ("bisect", Verdict::Refuses("capability: \"bisect\"")),
+                ("root-cause", Verdict::Walks),
             ],
         },
         Row {
             stage: "specification",
             selected: &[("fix-spec", Verdict::Walks)],
+        },
+        Row {
+            stage: "implement",
+            selected: &[
+                (
+                    "tdd-red-green-refactor",
+                    Verdict::Refuses("no committed `emit` binding of `Changeset`"),
+                ),
+                ("change-summary", Verdict::Walks),
+            ],
         },
         Row {
             stage: "verify",
@@ -1007,10 +1054,7 @@ const FIX: Lane = Lane {
                     "smoke-test",
                     Verdict::Refuses("`checklist:smoke` is mandatory"),
                 ),
-                (
-                    "sca-scan",
-                    Verdict::Refuses("declares the input `audit_db`"),
-                ),
+                ("sca-scan", Verdict::Walks),
             ],
         },
         Row {
@@ -1020,18 +1064,26 @@ const FIX: Lane = Lane {
         Row {
             stage: "release",
             selected: &[
-                (
-                    "build-package",
-                    Verdict::Refuses("declares the input `binaries`"),
-                ),
+                ("build-package", Verdict::Walks),
                 ("rolling-deploy", Verdict::Refuses("capability: \"deploy\"")),
             ],
         },
+        Row {
+            stage: "closeout",
+            selected: &[
+                (
+                    "debt-logging",
+                    Verdict::Refuses("`item_create` takes the `store` route"),
+                ),
+                ("lightweight-retro", Verdict::Walks),
+                (
+                    "closure-record",
+                    Verdict::Refuses("`feed.rust.backlog` is mandatory"),
+                ),
+            ],
+        },
     ],
-    selection_refusals: &[
-        ("implement", "the assembled DAG is not acyclic"),
-        ("closeout", "unknown field \"rigor\""),
-    ],
+    selection_refusals: &[],
 };
 
 /// §8d.9's story lane, as measured.
@@ -1058,7 +1110,7 @@ const STORY: Lane = Lane {
         },
         Row {
             stage: "planning",
-            selected: &[("relative-estimation", Verdict::Walks)],
+            selected: &[("t-shirt-sizing", Verdict::Walks)],
         },
         Row {
             stage: "verify",
@@ -1068,10 +1120,7 @@ const STORY: Lane = Lane {
                     "smoke-test",
                     Verdict::Refuses("`checklist:smoke` is mandatory"),
                 ),
-                (
-                    "sca-scan",
-                    Verdict::Refuses("declares the input `audit_db`"),
-                ),
+                ("sca-scan", Verdict::Walks),
             ],
         },
         Row {
@@ -1081,18 +1130,26 @@ const STORY: Lane = Lane {
         Row {
             stage: "release",
             selected: &[
-                (
-                    "build-package",
-                    Verdict::Refuses("declares the input `binaries`"),
-                ),
+                ("build-package", Verdict::Walks),
                 ("rolling-deploy", Verdict::Refuses("capability: \"deploy\"")),
             ],
         },
+        Row {
+            stage: "closeout",
+            selected: &[
+                (
+                    "debt-logging",
+                    Verdict::Refuses("`item_create` takes the `store` route"),
+                ),
+                ("lightweight-retro", Verdict::Walks),
+                (
+                    "closure-record",
+                    Verdict::Refuses("`feed.rust.backlog` is mandatory"),
+                ),
+            ],
+        },
     ],
-    selection_refusals: &[
-        ("implement", "unknown field \"rigor\""),
-        ("closeout", "unknown field \"rigor\""),
-    ],
+    selection_refusals: &[("implement", "the assembled DAG is not acyclic")],
 };
 
 #[test]

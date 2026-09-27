@@ -917,6 +917,11 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
     // (6) THE ORDER, which two counters cannot express: the dispatch, then the mark. A mark written
     //     before the dispatch is not a mark about it. (dated 2026-09-26, s8d build, P6; R4: this
     //     read dispatch → failure → mark, the fake's row between them.)
+    //     (dated 2026-09-26, s8d build, package F1-D2172; D21-72 option (B), R4 = ADR-0176,
+    //     proposed.) ~~dispatch → mark~~ is re-amended to **"no error row"** from the fake:
+    //     the harness under this test is `FakeHarness`, which on an `Err` appends exactly ADR-0126's
+    //     `dispatch_completed` inside the port call, so the tail is dispatch →
+    //     `dispatch_completed` → mark, and no `step_*` row stands anywhere in the journal.
     let appends: Vec<rk_types::event_kind::EventKind> = trace
         .steps()
         .into_iter()
@@ -925,14 +930,25 @@ fn ac404_rate_limited_writes_retry_mark_and_exits() {
             crate::support::Step::Query | crate::support::Step::Reconcile(_) => None,
         })
         .collect();
-    let tail = &appends[appends.len().saturating_sub(2)..];
+    let tail = &appends[appends.len().saturating_sub(3)..];
     assert_eq!(
         tail,
         [
             rk_types::event_kind::EventKind::Dispatch,
+            rk_types::event_kind::EventKind::DispatchCompleted,
             rk_types::event_kind::EventKind::RateLimited,
         ],
-        "the last two appends are not dispatch → mark; the whole sequence was {appends:?}"
+        "the last three appends are not dispatch → dispatch_completed → mark; the whole \
+         sequence was {appends:?}"
+    );
+    assert!(
+        !appends.iter().any(|k| matches!(
+            k,
+            rk_types::event_kind::EventKind::StepFailed
+                | rk_types::event_kind::EventKind::StepCancelled
+                | rk_types::event_kind::EventKind::StepRefused
+        )),
+        "no error row besides the kernel's mark (R4; D21-72): {appends:?}"
     );
 
     // (7) it EXITED rather than waiting out the scripted hour.

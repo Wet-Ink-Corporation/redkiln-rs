@@ -25,6 +25,14 @@
 //! the fake only. D21-42 20: *"The kernel appends `StepError::event()` for every dispatch, so fake
 //! and real harnesses behave alike"*. The kernel's retry loop now writes that row
 //! (`rk_kernel::runtime::activity::error_row`), and this fake appends nothing on any path.
+//!
+//! *(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B), R4 = ADR-0176,
+//! proposed.)* ~~appends nothing on any path~~ is re-amended to **no error row**: on an `Err`
+//! termination and on its cancel path the fake appends ADR-0126's `dispatch_completed` (the serde
+//! of its fake record), as the real adapter does, which is what `conformance::conform_harness`'s
+//! error arm (AC-360) reads; on no `Ok` path does it append anything. **Stated cost** (D21-72): on
+//! the `Ok` path the fake's journal differs from `ClaudeHarness`'s, which appends
+//! `dispatch_completed` on every termination.
 
 use std::sync::Mutex;
 
@@ -34,6 +42,7 @@ use rk_types::docset::DocSet;
 use rk_types::drift::Drift;
 use rk_types::error::{CancelledBy, StepError, TransportKind};
 use rk_types::event::Event;
+use rk_types::event_kind::EventKind;
 use rk_types::retention::Retained;
 use rk_types::typed::Typed;
 use rk_types::usage::{CliVersion, Timings};
@@ -182,13 +191,32 @@ fn fake_record() -> DispatchRecord {
 // kernel writes the one error row per failed dispatch; a fake that also wrote one would put a
 // second row beside it (mutant M11).
 
+/// *(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B).)* Append ADR-0126's
+/// `dispatch_completed` for `record` — the record serialised as the payload, the shape
+/// `rk-adapter-claude`'s `record::completed_event` writes. Called on an `Err` termination and on
+/// the cancel path only, never on an `Ok` one.
+///
+/// A refused append does not fail the dispatch: the row is tier 2 and its loss is a warning, never
+/// a `StepError` (AC-368), and the fake keeps no warning counter, so a refusal is dropped here.
+fn append_dispatch_completed(store: &mut dyn EventStore, record: &DispatchRecord) {
+    let payload = serde_json::to_value(record)
+        .expect("a DispatchRecord serialises (every member derives Serialize)");
+    if store
+        .append(Event::new(EventKind::DispatchCompleted, payload))
+        .is_err()
+    {
+        // AC-368: a tier-2 append failure never fails the activity.
+    }
+}
+
 impl Harness for FakeHarness {
-    fn dispatch(&self, _spec: &ActivitySpec, _store: &mut dyn EventStore) -> DispatchOutcome {
+    fn dispatch(&self, _spec: &ActivitySpec, store: &mut dyn EventStore) -> DispatchOutcome {
         let record = fake_record();
 
         // The token is the composition root's, fired by the CLI's signal path or the per-activity
         // timeout. The fake READS it; it never fires it, and neither does the kernel.
         if self.token.is_cancelled() {
+            append_dispatch_completed(store, &record);
             return DispatchOutcome {
                 record,
                 result: Err(StepError::Cancelled {
@@ -203,6 +231,11 @@ impl Harness for FakeHarness {
                 detail: "script exhausted".to_owned(),
             })
         });
+
+        // D21-72 (B): the `Err` path appends `dispatch_completed`; the `Ok` path appends nothing.
+        if result.is_err() {
+            append_dispatch_completed(store, &record);
+        }
 
         DispatchOutcome { record, result }
     }

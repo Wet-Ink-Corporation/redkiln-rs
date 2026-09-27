@@ -194,12 +194,53 @@ fn harness_fake_produces_unsupported() {
         ),
         other => panic!("Unsupported maps to step_refused carrying the token, got {other:?}"),
     }
+    //
+    // *(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B), R4 = ADR-0176, proposed.)*
+    // ~~"the fake appends NOTHING"~~ is re-amended to **"no error row"**: on an `Err` termination
+    // the fake appends exactly ADR-0126's `dispatch_completed` (the serde of its record), as the
+    // real adapter does, and no `step_*` / `rate_limited` row.
     let events = store
         .query(rk_ports::event_store::Query::ByRun("r".to_owned()))
         .expect("query");
+    assert_only_dispatch_completed(&events, &outcome.record, "Unsupported");
+}
+
+/// *(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B).)* A failed or cancelled
+/// fake dispatch leaves **no error row** (R4, ADR-0176: the kernel writes it) and **exactly one**
+/// ADR-0126 `dispatch_completed` row, whose payload is the serde of the record the dispatch
+/// returned.
+fn assert_only_dispatch_completed(
+    events: &[rk_types::event::Event],
+    record: &rk_types::activity::DispatchRecord,
+    what: &str,
+) {
+    let error_rows: Vec<_> = events
+        .iter()
+        .filter(|e| {
+            matches!(
+                e.kind,
+                EventKind::StepFailed
+                    | EventKind::StepCancelled
+                    | EventKind::StepRefused
+                    | EventKind::RateLimited
+            )
+        })
+        .collect();
     assert!(
-        events.is_empty(),
-        "the fake appends no error row of its own (R4): {events:?}"
+        error_rows.is_empty(),
+        "{what}: the fake appends no error row of its own (R4): {error_rows:?}"
+    );
+    assert_eq!(
+        events.len(),
+        1,
+        "{what}: a failed fake dispatch appends exactly ONE row, ADR-0126's `dispatch_completed` \
+         (D21-72 (B)): {events:?}"
+    );
+    assert_eq!(events[0].kind, EventKind::DispatchCompleted, "{what}");
+    assert_eq!(
+        events[0].payload,
+        serde_json::to_value(record).expect("a DispatchRecord serialises"),
+        "{what}: the row's payload is the serde of the record the dispatch returned"
     );
 }
 
@@ -239,7 +280,8 @@ fn cancel_token_is_the_roots_and_yields_cancelled() {
     assert_eq!(
         store.events().len(),
         0,
-        "a successful dispatch appends no error event"
+        "a successful dispatch appends nothing: no error row (R4) and, on the fake, no \
+         `dispatch_completed` either (D21-72 (B): no `Ok` path appends)"
     );
 
     // The ROOT fires it. There is deliberately no way to un-fire it.
@@ -263,11 +305,12 @@ fn cancel_token_is_the_roots_and_yields_cancelled() {
     // *(2026-09-26, `s8d` build, package P6; R4 = ADR-0176 decision 2, proposed.)* The ROW is the
     // kernel's now, so the fake's store stays EMPTY on the cancel path too; the arm is read off
     // `rk-types`' own map.
+    //
+    // *(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B).)* ~~the fake's store
+    // stays EMPTY on the cancel path too~~ — re-amended to **"no error row"**: the cancel path
+    // appends exactly ADR-0126's `dispatch_completed`, and the Ok dispatch above appended nothing.
     let events = store.query(Query::ByRun("r".to_owned())).expect("query");
-    assert!(
-        events.is_empty(),
-        "the fake appends no error row of its own, on the cancel path either (R4): {events:?}"
-    );
+    assert_only_dispatch_completed(&events, &cancelled.record, "the cancel path");
     assert_eq!(
         StepError::Cancelled {
             by: CancelledBy::Operator
@@ -330,11 +373,11 @@ fn step_error_is_matched_exhaustively_with_one_event_arm_each() {
             Err(error.clone()),
             "the scripted responder returns the error it was scripted with"
         );
+        // *(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B).)* ~~the fake's
+        // store stays EMPTY~~ — re-amended to **"no error row"**, and exactly the
+        // `dispatch_completed` row on `Err`.
         let events = store.query(Query::ByRun("r".to_owned())).expect("query");
-        assert!(
-            events.is_empty(),
-            "the fake appends no error row of its own (R4), for {error:?}: {events:?}"
-        );
+        assert_only_dispatch_completed(&events, &outcome.record, &format!("{error:?}"));
         let arm = match error.event() {
             rk_types::event::ErrorEvent::StepFailed { .. } => EventKind::StepFailed,
             rk_types::event::ErrorEvent::StepCancelled => EventKind::StepCancelled,

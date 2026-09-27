@@ -52,6 +52,10 @@ use crate::registry::Registry;
 use crate::rigor::Rigor;
 
 /// One admissible producer.
+///
+/// 🛑 **The derived `Ord` is NOT the rank rule.** It orders by `activity_id` first (field order), so
+/// sorting candidates by it picks the alphabetically first producer. Step 4 sorts by
+/// `(method_rank, activity_id)` explicitly (R8 = ADR-0179 decision 1, proposed; D21-73).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Candidate {
     pub activity_id: String,
@@ -431,7 +435,14 @@ pub fn step4(
         }
     }
 
-    candidates.sort();
+    // *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 1, proposed; D21-73.)*
+    // **By `method_rank`, never by the derived `Ord`.** `Candidate` derives `Ord` over its fields in
+    // declaration order, `(activity_id, method_rank)`, so a bare `sort()` put the first id
+    // ALPHABETICALLY at `candidates[0]` and step 4 chose it (the fix lane's `bisect`, rank 30, over
+    // `root-cause`, rank 10). The id is the second key only so the `beaten` list is deterministic;
+    // it never decides a winner, because an equal lowest rank refuses below as `RankTie`.
+    candidates
+        .sort_by(|a, b| (a.method_rank, &a.activity_id).cmp(&(b.method_rank, &b.activity_id)));
     if candidates.is_empty() {
         // An abstention is NOT unsatisfiability. AC-079: `Unsatisfiable` is reserved for predicates
         // that evaluated to `false`, never raised for a `null` read.

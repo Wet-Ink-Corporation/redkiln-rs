@@ -555,6 +555,17 @@ selection run.** Facets unknown at run time can route either way, so a selection
 different facet reading reaches. Every kind in the universe gets a type, and the binder refuses any kind outside
 `EXPORTED`, so the direction is fail-closed.
 
+*(dated 2026-09-27, `s8d` build, package F2-D2173; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-73 item 4.)* Two of
+`s8d`'s owed items touch this section's types, and `s8g` §8g.1's receiver note owns both. (a) `Toolchain::lint` returns `()`,
+although the shipped `lint` row declares `outputs = "LintReport"`, so `bdd-scenarios`' and `docs-update`'s `policy` steps
+refuse on an unbound `lint` output. If `s8g` gives `lint` a typed output, `LintReport` is a `tool`-step kind and not an
+agent-step `value:` kind, so the rule above does not enumerate it; it joins `EXPORTED` only if a card or a binder reads it
+by name. (b) `confirmation-test`'s `emit` composes `ConfirmationResult` from `${before.outputs.selection}` and `.sha`, which
+record T's `TestOutcome` does not carry. Whatever `s8g` settles, this section's `ConfirmationResult` type must match it. Nothing
+here moves until `s8g` lands. Selection itself changed under `s8d`'s R8 (ADR-0179, `proposed`: lowest rank, one node per
+activity, `rigor` bound). This section's universe is a closure over `requires`, not a selection run, so R8 does not move
+the 24.
+
 | kind | lanes | role(s) | kind | lanes | role(s) |
 | --- | --- | --- | --- | --- | --- |
 | `ADR` | story | architect | `ImplReport` | both | implementer, investigator |

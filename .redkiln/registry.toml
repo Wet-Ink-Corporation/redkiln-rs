@@ -127,6 +127,10 @@ cook_timeout = { unmeasured = "no Phase-1 Rust verb cooks (s8c §8c.5)" }
 ue_test_timeout = { unmeasured = "no Phase-1 Rust verb runs Unreal automation (s8c §8c.5)" }
 mutation_timeout = { unmeasured = "no Phase-1 Rust verb mutates; ADR-0162's refusal of ReproKind::Mutate stands (s8c §8c.5)" }
 setup_projects = { value = ["crates/rk-adapter-toolchain-node/tests/fixtures/project"], source = "git ls-files -- '*pnpm-lock.yaml' at 6f70e47786474cce0466369a6e0f5e282321af1c: one tracked lockfile, crates/rk-adapter-toolchain-node/tests/fixtures/project/pnpm-lock.yaml (s8c §8c.4; ADR-0170 decision 7)" }
+# (dated 2026-09-27, s8d build, package F2-D2173; D21-73 item 5; R8 = ADR-0179 decision 4, proposed.) The package row's
+# `binaries`, supplied to a `package` step that declares none (every shipped one): the release set s8g §8g.6 names,
+# written here because D21-73 rules that s8d supplies it. ADR-0170 decision 9 admits the row; s8g cites it.
+package_binaries = { value = ["redkiln", "redkiln-migrate"], source = "the workspace's release [[bin]] targets: redkiln (crates/rk-cli/Cargo.toml) and redkiln-migrate (crates/redkiln-migrate/Cargo.toml; AC-441, a separate binary); the fixture [[bin]]s rk-fixture-child, rk-fixture-child-cli, rk-fixture-child-claude, rk-fixture-toolchain, rk-argv-wrapper-node and rk-argv-wrapper-rust are not the release (s8g section 8g.6)" }
 
 [toolchain.node]
 test_timeout = { unmeasured = "the self-hosting run is Rust, and a Node value would be a guess (s8c §8c.5); owed with the first Node self-hosting run" }

@@ -225,6 +225,7 @@ ADR-0140 in part.
 | R4 | **Failure telemetry and the breaker's call site** (20) | the kernel becomes the writer of the `step_failed` / `step_cancelled` / `step_refused` / `rate_limited` row; design §5's row names the producer as *"the adapter, via the dispatch outcome"*, which takes a dated amendment under this record; `crates/rk-kernel/src/runtime.rs`'s table row *"AC-033's breaker mark \| **none exists**"* is corrected in the same change |
 | R5 | **Two verb-registry rows and the question registry**: `shallow_clone` → the retained review clone, `verdict_record` → `review::confirm`; `.redkiln/processes/` populated and loaded | `shallow_clone` does **not** take `s8c`'s `git` route, which runs *"through the journalled `GitOps` seam"*: `prepare_review_clone` is a gix write outside `GitOps` (ADR-0098 decision 2). R5 adds a distinct `review_clone` route to the closed set **by record** (M7). `verdict_record` takes a second route added the same way, as `s8c` provides: *"`s8d`'s record may add a route for `verdict_record`. It does so by record, not by editing the match."* R5 states that the clone is journalled as a side-effecting tool step's commit (R1), not as a `git_op` row. It also states that the clone is not an ADR-0105 clause-5 wrapper write, because clause 5 names the review clone and lists its removal (§8d.6); lifts nothing ADR-0156 or ADR-0162 forbid, because both scope their bar — *"under this stage's scope"*, *"under this record's scope"*; executes ADR-0129 decision 3's *"Pack-declared questions … are Step 7e's, loaded into the same type"*, whose loader was never built. The loader and `.redkiln/processes/` belong to this stage alone (D21-43: *"The loader and `.redkiln/processes/` are **s8d**'s."*). `s8j` authors the human-root questions into that directory, and `s8g` loads through this loader |
 | R6 | **The `change` deriver's call site in `build_item`** (ADR-0093 decision 2, AC-520) | carries D21-43 N3's route: a `null` `change` at triage opens AC-079's `unknown_facet` gate, which the operator answers (§8d.7). It takes a dated AC-079 reading note and no supersession. Its scored record already exists — *"`change` (0.72 [0.54, 0.85], 29)"* at pin `47faec9f` (ADR-0093 decision 2) |
+| R8 | *(dated 2026-09-27, `s8d` build, package F2-D2173; D21-73 option (C).)* **Selection by rank, one node per activity, `rigor` bound, and a `toolchain` row's undeclared inputs supplied** (D21-73 items 1, 2, 3 and 5) | supersedes in part **ADR-0170** decision 9, at *"(`s8g` writes this repository's set)"* only; conforms `s7b`'s step 4 to ADR-0056 and AC-046/047 (no rank rule moves), keeps AC-049's per-key identity, and discharges ADR-0170's evidence sentence *"the default locations are the resolver's to supply (`s8d`)"*. **R8 is ADR-0179**, written `proposed` |
 
 *(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 2.)* **An ENTRY PREREQUISITE, before any code of §8d.3's `check`
 evaluation: the null-literal presence record** (R7, written `proposed`; *"a comparison against the literal `null` is
@@ -316,6 +317,20 @@ and `runbook/00-preamble.md` (next free **`0179`** by a dated correction line; t
 Checkpoint 8a's record-census lines, run standalone, read `ok: census n=178 last=0178 next=0179`; as a control, over HEAD's README and
 preamble they FAIL (*"does not name 0179 as the next free number"*). Both flip at this stage's close under D21-64 ruling 10, each on its
 own dated ledger line.
+
+*(dated 2026-09-27, `s8d` build, package F2-D2173; `spikes/DECISIONS-2026-09-21.md` D21-73 option (C).)* **R8 is ADR-0179**,
+`references/adr/0179-selection-chooses-by-rank-one-node-per-activity-binds-rigor-and-row-inputs-are-supplied.md`, written `proposed` in
+ADR-0164's form (`check-adr-options.py` scans 16 records from 0164 and flags 0). It fixes D21-73 items 1-3 (step 4 by `(method_rank,
+activity_id)`, never the derived `Ord`, an equal lowest rank still `RankTie`; step 5 one node per activity, per key on a mixed item, with
+un-keyed kinds on the byte-first key's node; step 2 binds `rigor` as step 1's) and supplies item 5 (row inputs on `ToolRouting`: the new
+`package_binaries` declaration row supplies `package.binaries`, and `rk-cli` supplies `sca_scan`'s `audit_db`/`deny_db` at
+`<CARGO_HOME>/advisory-db` and `/advisory-dbs`). It supersedes **ADR-0170 decision 9 in part**, at *"(`s8g` writes this repository's
+set)"* only. ADR-0170's `superseded_by` is `["0179"]`, and the README's supersession table gains its row (links 70 from 52, re-counted
+off disk, every link reciprocated). The README (purpose count 179, the forbids census 179 and its punctuation census (165), next free
+**`0180`**, the `0179` index row, `0170`'s status cell, *"The set is 179 records over `0001`–`0179`"*, and the proposed census naming
+`0172`–`0179`, measured accepted 167 / superseded 4 / proposed 8) and `runbook/00-preamble.md` (next free **`0180`** by a dated correction
+line; the records census at 179) moved in the same change. Checkpoint 8a's record-census lines, run standalone, read `ok: census n=179
+last=0179 next=0180`. It flips at this stage's close under D21-64 ruling 10, on its own dated ledger line.
 
 **The five questions the draft raised, each now taken by D21-43** (2026-09-24). The draft stopped on S1 and S2 and
 reported S3–S5. The ledger took all five, so none is a STOP. Each premise below was measured by the draft and is kept.
@@ -1189,6 +1204,18 @@ no outcome, or a breaker refusal would read as AC-013's re-entry and be served a
 store under a real harness, and the FSM fold halts on it as it did under the fake; (f) one run carries one `at`, so a mark opened in a
 run is dated from that run's instant. `crates/rk-types` did not move (below).
 
+*(dated 2026-09-26, `s8d` build, package F1-D2172; `spikes/DECISIONS-2026-09-21.md` D21-72, option (B).)* **The fake's
+`dispatch_completed` row.** With the error row the kernel's, `rk-ports`' `conformance::conform_harness` error arm (AC-360: *"a dispatch
+terminated in {err:?} without appending an event"*) had nothing to read under the fake. D21-72 ruled: *"`FakeHarness` appends ADR-0126's
+`dispatch_completed` row (the serde of its fake record) on an `Err` termination and on its cancel path, and on no `Ok` path."* Built in
+`rk-ports/src/fakes.rs` (`append_dispatch_completed`, called on the cancel path and when the scripted result is `Err`; a refused append
+is dropped, never a `StepError`, AC-368). The sentence above, *"the fake writes **no** error row of its own"*, stands: a
+`dispatch_completed` row is not an error row. ~~P6's "`FakeHarness`'s `event_for` and both its appends are removed" read as "the fake
+appends nothing"~~ is re-amended to **"no error row"** in the five tests D21-72 names, by dated note in each, names kept.
+**Stated cost (D21-72):** on the `Ok` path the fake's journal differs from the real adapter's, which appends `dispatch_completed` on
+every termination (D21-42 20's *"fake and real harnesses behave alike"* holds for the error row, not for this tier-2 row on `Ok`);
+recorded in ADR-0176's evidence. Red, green and the mutants are in §8d.10's dated note of the same package.
+
 ### 8d.6 Two verb rows, and the question registry
 
 **The rows.** `adversarial-review` runs `toolchain:shallow_clone` (`clone`) and `toolchain:verdict_record`
@@ -1465,6 +1492,45 @@ rows above are not this stage's owned refusals:
 **Owner: unassigned for each, pending the ruling.** The seeds the rig wrote are printed by each test: fix
 `BugReport, RootCause, Changeset, ImplReport, ChangeSummary, BuildArtifact`; story `IntakeRecord, Spec, Changeset,
 ImplReport, ChangeSummary, BuildArtifact`.
+
+*(dated 2026-09-27, `s8d` build, package F2-D2173; `spikes/DECISIONS-2026-09-21.md` D21-73, option (C); R8 = ADR-0179,
+proposed.)* **RULED, BUILT AND RE-MEASURED; the P8 table above is superseded by this one, and the two tests assert
+this one.** D21-73 ruled that `s8d` fixes items 1-3 (step 4 by lowest `method_rank`; step 5 one node per activity;
+step 2 binds `rigor`) and supplies item 5 (`sca_scan`'s `audit_db`/`deny_db` and `package`'s `binaries`), and owes
+item 4 to `s8g`/`s8h` (receiver notes in `s8g` §8g.1 and §8g.6, and `s8h` §8h.4; `bisect`'s registry row to `s8g`, since no `s8*` stage owns that verb). All four were built red-first under R8 (§8d.10's
+F2-D2173 note). The rig is P8's, plus the row inputs `rk-cli`'s composition root binds: the shipped `[toolchain.rust]`
+`package_binaries` row through `VerbRegistry::row_inputs_for`, and `sca_scan`'s two databases at a fixed cargo home
+(`rk-cli` computes it from the captured environment, `run::advisory_db_row_inputs`). The two tests now print
+**`LANE_WALK fix walked=9 refused=6`** and **`LANE_WALK story walked=6 refused=5`** (read 2026-09-27 through the
+no-dispatch helper, both tests `ok`).
+
+| lane | stage | selected (measured) | verdict (measured) | cause, measured |
+| --- | --- | --- | --- | --- |
+| fix | `analysis` | `minimal-repro`, `root-cause` | both walk | step 4 now picks `root-cause` (rank 10) for `RootCause`, as the first claim said |
+| fix | `specification` | `fix-spec` | walks | — |
+| fix | `implement` | `tdd-red-green-refactor`, `change-summary` | `change-summary` walks; `tdd-red-green-refactor` refuses | `green-verify`'s `inputs.selection = "affected"` resolves to the item's **committed** `Changeset` (R2 = ADR-0173 decision 9), and `tdd` is that `Changeset`'s producer, so none is committed while it runs: *"no committed `emit` binding of `Changeset` for the item `LANE-WALK-1` is in the journal"*. Not measured before (the stage refused at selection). **A remaining cause, R2's, unassigned** (the F2-D2173 report) |
+| fix | `verify` | `equivalence-boundary`, `confirmation-test`, `smoke-test`, `sca-scan` | `equivalence-boundary` and `sca-scan` walk; the other two refuse | `confirmation-test`: record T's `TestOutcome` has no `.selection`/`.sha` (item 4, owed); `smoke-test`: `checklist:smoke` `unauthored` (`s8g`) |
+| fix | `review` | `adversarial-review` | walks | — |
+| fix | `release` | `build-package`, `rolling-deploy` | `build-package` walks; `rolling-deploy` refuses | `deploy` has no row (`s8g`'s `tag-release`) |
+| fix | `closeout` | `debt-logging`, `lightweight-retro`, `closure-record` | `lightweight-retro` walks; the other two refuse | `item_create`'s `store` route and the `unprovided` `toolchain:backlog` feed (both `s8f`) |
+| story | `specification` | `bdd-scenarios` | refuses | the `lint` port returns no output (item 4, owed) |
+| story | `planning` | `t-shirt-sizing` | walks | step 4's lowest rank, as the first claim said |
+| story | `implement` | — | **the SELECTION refuses**: *"the assembled DAG is not acyclic: change-summary[rust]"* | step 4 now gives `Changeset` to `docs-update` (rank 5), which declares `requires = ["Spec", "Changeset?"]`: step 5 draws an edge from its node to itself. The named path is a node downstream of the loop, because `layers`' walk starts at the lowest surviving id. **A remaining cause, unassigned** (the F2-D2173 report) |
+| story | `verify` | `equivalence-boundary`, `smoke-test`, `sca-scan` | `equivalence-boundary` and `sca-scan` walk; `smoke-test` refuses | as the fix lane |
+| story | `review` | `adversarial-review` | walks | — |
+| story | `release` | `build-package`, `rolling-deploy` | as the fix lane | as the fix lane |
+| story | `closeout` | `debt-logging`, `lightweight-retro`, `closure-record` | as the fix lane | as the fix lane |
+
+**Measured: the fix lane walks 9** (`minimal-repro`, `root-cause`, `fix-spec`, `change-summary`,
+`equivalence-boundary`, `sca-scan`, `adversarial-review`, `build-package`, `lightweight-retro`) **and refuses 6**
+(`tdd-red-green-refactor`, `confirmation-test`, `smoke-test`, `rolling-deploy`, `debt-logging`, `closure-record`).
+**The story lane walks 6** (`t-shirt-sizing`, `equivalence-boundary`, `sca-scan`, `adversarial-review`,
+`build-package`, `lightweight-retro`) **and refuses 5** (`bdd-scenarios`, `smoke-test`, `rolling-deploy`,
+`debt-logging`, `closure-record`), with its `implement` selection refused. `lightweight-retro` is selected on both
+lanes' `closeout` (the first claim had it on the fix lane only). A probe, not a build: with step 5 drawing no edge
+from a node to itself, the story lane read `walked=7 refused=7` (`change-summary` walks; `docs-update` refuses on the
+`lint` output, item 4; `tdd` refuses as on the fix lane) and the fix lane was unchanged. Checkpoint 8d (6a)'s
+floors are set from these counts by the orchestrator's ledger line under D21-73, not here.
 
 *(dated 2026-09-26, `s8c` build, D67; `spikes/DECISIONS-2026-09-21.md` D21-67 ruling 1.)* The paragraph below is superseded in this stage: §8d.3a (b)
 removes every shipped `severity` read (six rows rewritten, one step deleted, 32 conjuncts removed), so the three
@@ -1787,7 +1853,8 @@ child (`role-families.toml`: `K = 2`, `reviewer` → `adversarial`), reads back 
 through the parent's own executor as well as its fold. **Amended, names kept** (their premise was the fake's own row):
 `rk-ports`' `fake_behaviour::harness_fake_produces_unsupported` (named by Checkpoint 7a),
 `fake_behaviour::cancel_token_is_the_roots_and_yields_cancelled` and
-`fake_behaviour::step_error_is_matched_exhaustively_with_one_event_arm_each` now assert the fake appends nothing and read the arm off
+`fake_behaviour::step_error_is_matched_exhaustively_with_one_event_arm_each` now assert ~~the fake appends nothing~~ *(re-amended
+2026-09-26, F1-D2172, D21-72: no error row, and exactly `dispatch_completed` on `Err`)* and read the arm off
 `StepError::event()`; `rk-cli`'s `root::ac404_rate_limited_writes_retry_mark_and_exits` reads ONE `rate_limited` row (the mark, with
 `at`, and no `family` because its `RecordedSpec::supplied` binding transcribes no step list) and the order dispatch → mark. Each was
 red on the built code for that reason before its amendment (3 `rk-ports` failures, 1 `rk-cli`). **Mutants**, from
@@ -1795,6 +1862,25 @@ red on the built code for that reason before its amendment (3 `rk-ports` failure
 re-checked and equal): **M10** (the kernel's append deleted) KILLED by both named tests — the first at *"rows = []"*, the breaker test at
 its premise *"the kernel wrote two rows"* (left 0), not at its refusal assertion; **M11** (the fake keeps an append) KILLED by
 `step_error_row::the_fake_harness_writes_no_error_row_of_its_own` at *"FakeHarness appended [Event { kind: StepFailed, … }]"*.
+
+*(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B).)* **The fake's `dispatch_completed` on `Err`, red then green,
+and two mutants.** **RED** before the fake moved: `conformance::port_conformance_fake_rows` (`-p rk-ports --features conformance`) at
+*"a dispatch terminated in Unsupported { capability: \"affected-selection\" } without appending an event (AC-360, register
+:5192-5197): the store held 0 events before and 0 after"*; the five re-amended tests, amended first, each at their new assertion —
+the three `fake_behaviour::` tests at *"a failed fake dispatch appends exactly ONE row, ADR-0126's `dispatch_completed` (D21-72 (B)): []"*
+(left 0, right 1), `step_error_row::the_fake_harness_writes_no_error_row_of_its_own` at *"left: [] right: [DispatchCompleted]"*, and
+`root::ac404_rate_limited_writes_retry_mark_and_exits` at *"the last three appends are not dispatch → dispatch_completed → mark"*
+(left `[GateOpened, Dispatch, RateLimited]`). **GREEN**: `rk-ports --test it` (conformance on) 22 passed / 0 failed;
+`step_error_row::` 4 passed; `root::ac404_…` 1 passed. Each re-amended test asserts **no** `step_failed` / `step_cancelled` /
+`step_refused` / `rate_limited` row from the fake and exactly the one `dispatch_completed` row, its payload the serde of the returned
+record; `ac404`'s order is now dispatch → `dispatch_completed` → mark, with no `step_*` row in the append trace. **Mutants**, from
+`scratchpad/s8d/f1_d2172_mutants.py` and `f1_d2172_mutant_m11.py` (anchor asserted once, tmp + `os.replace`, restored in `finally`,
+sha256 re-checked equal, `95d04660…`): **MD2172a** (the `Err`-path append removed) KILLED by
+`conformance::port_conformance_fake_rows` at the AC-360 line above (1 ran, 1 failed); **MD2172b** (the append on every termination,
+`Ok` included) KILLED by `fake_behaviour::cancel_token_is_the_roots_and_yields_cancelled` at its `Ok`-path assertion (left 1, right 0);
+**M11 re-run** over the re-amended body (the fake also appends a `step_failed`) KILLED by
+`step_error_row::the_fake_harness_writes_no_error_row_of_its_own` at *"FakeHarness appended [Event { kind: StepFailed, payload: Object
+{} }]"*.
 
 *(dated 2026-09-26, `s8d` build, package P7.)* **P7's tests, red then green, and M16, M17 and M22.** A scaffold landed first with the
 signatures only (`rk_cli::processes::load` answering the built-in default, `change_deriver::derive` abstaining on every range and
@@ -1834,6 +1920,35 @@ and `main.rs` sha256-restored): step 4 picks `bisect` for `RootCause` over two l
 `tdd-red-green-refactor` for both `Changeset` and `ImplReport` at `implement`. **No mutant is run for these two tests.** Their
 reds are the claim-versus-measurement differences above, and Checkpoint 8d (6a) is their floor. (6a) FAILS at 4 < 11 and 3 < 9
 until the operator rules. It is not lowered here.
+
+*(dated 2026-09-27, `s8d` build, package F2-D2173; D21-73 option (C); R8 = ADR-0179, proposed.)* **D21-73's three selection
+defects and item 5, red then green, and thirteen mutants.** Six new tests (five `rk-kernel`, one `rk-cli`), each run RED for its
+stated reason before its code: `producer::step4_picks_the_lowest_rank_not_the_first_id` at *"AC-046: the LOWEST method_rank wins,
+whatever its id sorts to — left: ("a-dear", 30), right: ("z-cheap", 5)"*; `producer::a_tie_at_the_lowest_rank_is_refused_whatever_the_ids_sort_to`
+at its `expect_err` (*"a tie at the lowest rank must refuse, never resolve"*: step 4 chose `a-dear`); `selection::a_require_row_keyed_on_rigor_reads_the_stages_rigor`
+at *"rigor-rows.toml: stage.design.require[0]: unknown field \"rigor\""*; `dag::one_activity_providing_two_required_kinds_is_one_node`
+at *"Step5(CyclicDag { path: [\"\"] })"* (AC-078 with an empty path, P8's measured shape; run with the `instances` field present
+and the old per-instance nodes, so the red is the defect and not a compile error); `tool_verb_routing::a_row_input_the_step_leaves_undeclared_is_supplied_by_the_routing`
+at *"… whose registry row declares the input `audit_db`, and the step declares no `inputs.audit_db` …"* (the builder existed, the
+executor did not read it); `verb_registry::the_package_binaries_declaration_supplies_the_package_rows_binaries` at *"left: None"*
+(no `package_binaries` row); `rk-cli` `adapter_selection::the_composition_root_binds_the_row_inputs_no_step_declares` first at
+*"tool_routing must bind the chosen table's package_binaries as package.binaries — left: None"* and, once that half was built, at
+*"CARGO_HOME decides … left: []"* (the stub). The dag test's third block (a keyed and an un-keyed kind from one activity, the shipped
+`docs-update`'s shape) was written after its code, when the lane walk showed `docs-update` split into two nodes; its red is **MF2f**
+below. **GREEN**: all seven `--exact`; `rk-kernel --test it` and `rk-cli --test it` whole (the F2-D2173 report). One amended test:
+`verb_registry::the_shipped_rust_value_table_is_exactly_the_declared_key_map` (named by Checkpoint 8c) keeps its name and admits
+`package_binaries` by dated note (ADR-0170 decision 9's declaration set); **MF2j** proves it still catches an extra key. **Mutants**,
+from `scratchpad/s8d/f2-d2173-mutants.py` (anchor asserted once, tmp + `os.replace`, restored in `finally`, sha256 re-checked equal
+after each), each over its named tests `--exact`: **MF2a** (`candidates.sort()` restored) KILLED by both `producer::` tests; **MF2b**
+(highest rank wins) KILLED by `step4_picks_…` and `rank_total_order_and_tie_is_an_error`; **MF2c** (`rigor` unbound) KILLED at the
+unknown-field line; **MF2d** (the pack's rigor, the item's override ignored) KILLED at the override assertion; **MF2e** (a node
+carries only its first kind) KILLED by the dag test at `select(…).expect`; **MF2f** (un-keyed kinds not folded into the byte-first
+key's node) KILLED by the dag test's third block; **MF2g** (row inputs never filled) and **MF2h** (the routing overrides a declared
+input) KILLED by the routing test at (i) and (ii); **MF2i** (`package_binaries` mapped to `binary`) KILLED; **MF2j** (the key map's
+`package_binaries` admission removed) KILLED by the amended key-map test; **MF2k** (`CARGO_HOME` ignored), **MF2l** (bound for every
+adapter) and **MF2m** (`tool_routing` binds no declaration rows) KILLED by the `rk-cli` test. Zero survivors. The two `lane_walk::`
+tests are re-measured, not mutated (§8d.9's F2-D2173 line). A PROBE, not a mutant (`scratchpad/s8d/f2-d2173-probe-selfedge.py`,
+restored and sha256-checked): step 5 drawing no self-edge reads the story lane `walked=7 refused=7` and leaves the fix lane unchanged.
 
 ### 8d.11 What this stage makes provisional, and what it does not claim
 
@@ -1910,6 +2025,12 @@ module `step_error_row` calls `run_activity_steps` only through `Runtime::run_ac
 names it: fourteen files, P5's thirteen plus `step_error_row.rs`; the close's re-list takes it. **Checkpoint 7d** names
 `ac404_rate_limited_writes_retry_mark_and_exits` (its §7d run list); P6 amended that test's body under R4 and kept its name, so 7d's
 selection still names a passing test; 7d is not in this stage's re-run list, and the whole suite at (11) runs the amended test.
+*(dated 2026-09-26, `s8d` build, package F1-D2172.)* **The blocker above is ruled: D21-72, option (B)**, built as §8d.5's dated
+note of this package states. `rk-ports/src/fakes.rs` changed again, so Checkpoint 7a stays **provisional** until Checkpoint 8d (13)
+re-runs it whole; as a reading, not the formal one, its block extracted from `s7a-ports-and-fakes.md` (lines identical to P6's
+extraction) and run WHOLE through the no-dispatch helper after this package exits **0** with no `FAIL` line. The whole-workspace
+suite after this package reads **942 passed / 0 failed / 10 ignored over 44 results** (was 941 / 1 / 10). `crates/rk-types` did not
+move in this package. No golden moved (D21-72: *"No golden moves."*). No test was renamed, so no checkpoint's selection moved.
 
 *(dated 2026-09-26, `s8d` build, package P7.)* **m15 after P7:** P7's three new modules (`processes`, `verb_rows`,
 `change_deriver`, all in `rk-cli`) call `run_activity_steps` nowhere, so the grep still names fourteen files. **Checkpoint 8c** names
@@ -2174,6 +2295,9 @@ run_named rk-kernel "walk table" \
 # ---- be at least this stage's claim: 11 (fix) and 9 (story). A later stage's flip to "walks" raises n and needs no
 # ---- edit here; LOWERING a floor needs the operator's dated ledger line first. `grep -o` reads the line even where
 # ---- libtest glues it to the `test ... ` prefix.
+# ---- (dated 2026-09-27, s8d build, package F2-D2173) TODO (D21-73): the floors 11 and 9 below are NOT met and are
+# ---- NOT changed by this package. D21-73 sets them to the re-measured counts by the orchestrator's dated ledger line.
+# ---- Re-measured after D21-73's fixes (section 8d.9's dated line): fix walked=9 refused=6, story walked=6 refused=5.
 walked_of() { printf '%s\n' "$1" | grep -oE "LANE_WALK $2 walked=[0-9]+ refused=[0-9]+" | sed -nE 's/^.* walked=([0-9]+) .*$/\1/p'; }
 [ "$(walked_of 'test lane_walk::x ... LANE_WALK fix walked=7 refused=8' fix)" = 7 ] || { echo "FAIL: synthetic control — walked_of does not read a glued LANE_WALK line"; exit 1; }
 [ -z "$(walked_of 'LANE_WALK story walked=7 refused=8' fix)" ] || { echo "FAIL: synthetic control — walked_of reads another lane's line"; exit 1; }

@@ -401,6 +401,13 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
                 return Ok(Exit::ConfigError);
             }
         };
+        // *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 4, proposed.)*
+        // `sca_scan`'s databases at the tools' default locations, which no shipped step declares.
+        let routing = advisory_db_row_inputs(env, chosen.adapter.as_deref())
+            .into_iter()
+            .fold(routing, |r, (verb, input, value)| {
+                r.with_row_input(verb, input, value)
+            });
         let toolchain = chosen.toolchain;
         // *(2026-09-26, `s8d` build, package P7; R5 = ADR-0177 decision 2, proposed.)* The review
         // routes: `shallow_clone`'s clone of THIS repository (its common dir, whose object store the
@@ -2645,8 +2652,57 @@ pub fn tool_routing(
     // chosen adapter's toolchain (named by the table key, never the adapter), and a declared path
     // is relative to `<worktree>/.redkiln/`.
     let feed_table = adapter.and_then(toolchain_of).map(str::to_owned);
+    // *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 4, proposed; D21-73 item
+    // 5.)* The chosen toolchain's declaration rows that supply a registry row's input
+    // (`package_binaries` -> `package.binaries`), bound as row inputs. No table, nothing bound.
+    let row_inputs = feed_table
+        .as_deref()
+        .map(|t| registry.row_inputs_for(t))
+        .unwrap_or_default();
     Ok(rk_kernel::runtime::step::ToolRouting::new(registry, values)
-        .with_sources(feed_table, Some(worktree.join(".redkiln"))))
+        .with_sources(feed_table, Some(worktree.join(".redkiln")))
+        .with_row_inputs(row_inputs))
+}
+
+/// **The advisory databases `sca_scan` reads, at the tools' default locations.**
+///
+/// R8 = ADR-0179 decision 4, proposed; D21-73 item 5; ADR-0170: *"the default locations are the
+/// resolver's to supply (`s8d`)"*. *(Added 2026-09-27, `s8d` build, package F2-D2173.)*
+///
+/// The Rust handler reads `audit_db` (the database `cargo audit` is given by `--db`) and `deny_db`
+/// (the directory `cargo deny`'s generated `db-path` names), each an absolute path, because the
+/// adapter reads no environment (AC-217). The defaults are each tool's own: `cargo audit`'s
+/// `<CARGO_HOME>/advisory-db` and `cargo deny`'s `<CARGO_HOME>/advisory-dbs`, with `CARGO_HOME`
+/// read from the captured environment, or `<home>/.cargo` when it is unset (`USERPROFILE` on
+/// Windows, `HOME` elsewhere) — cargo's own rule. Bound only for the Rust adapter. With neither
+/// `CARGO_HOME` nor a home directory, nothing is bound, and the step refuses by name.
+#[must_use]
+pub fn advisory_db_row_inputs(
+    env: &Env,
+    adapter: Option<&str>,
+) -> Vec<(&'static str, &'static str, serde_json::Value)> {
+    if adapter.and_then(toolchain_of) != Some("rust") {
+        return Vec::new();
+    }
+    let vars = env.as_map();
+    let home_key = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    let cargo_home = vars
+        .get("CARGO_HOME")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            vars.get(home_key)
+                .filter(|v| !v.is_empty())
+                .map(|h| Path::new(h).join(".cargo"))
+        });
+    let Some(cargo_home) = cargo_home else {
+        return Vec::new();
+    };
+    let at = |dir: &str| serde_json::Value::String(cargo_home.join(dir).display().to_string());
+    vec![
+        ("sca_scan", "audit_db", at("advisory-db")),
+        ("sca_scan", "deny_db", at("advisory-dbs")),
+    ]
 }
 
 /// **R5's review routes, as `run` binds them** (ADR-0177 decision 2, proposed). *(Added 2026-09-26,

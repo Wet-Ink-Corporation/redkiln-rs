@@ -215,6 +215,13 @@ pub struct ToolRouting {
     /// The directory a declared `kb:` / `checklist:` path is relative to (`.redkiln/`). `None`: a
     /// declared path refuses by name, never resolves to empty content.
     sources: Option<std::path::PathBuf>,
+    /// *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 4, proposed; D21-73
+    /// item 5.)* **Row inputs**: verb → input → value, bound by the composition root — a
+    /// declaration row of the selected toolchain's table (`package_binaries` → `package.binaries`)
+    /// or a tool's default location (`sca_scan`'s `audit_db`/`deny_db`, ADR-0170's *"the
+    /// resolver's to supply"*). A `toolchain` row's input the step's own `inputs` leaves undeclared
+    /// is taken from here; a declared one is never overridden. Empty: nothing is supplied.
+    row_inputs: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
 }
 
 impl ToolRouting {
@@ -228,7 +235,40 @@ impl ToolRouting {
             review: ReviewSlot(None),
             feed_table: None,
             sources: None,
+            row_inputs: BTreeMap::new(),
         }
+    }
+
+    /// Bind one row input (R8 = ADR-0179 decision 4, proposed): `verb`'s `input`, supplied when
+    /// the step leaves it undeclared. A second binding of the same pair replaces the first.
+    #[must_use]
+    pub fn with_row_input(mut self, verb: &str, input: &str, value: serde_json::Value) -> Self {
+        self.row_inputs
+            .entry(verb.to_owned())
+            .or_default()
+            .insert(input.to_owned(), value);
+        self
+    }
+
+    /// Bind every row input in `table` (verb → input → value), as
+    /// [`crate::workflow::memo::VerbRegistry::row_inputs_for`] returns it.
+    #[must_use]
+    pub fn with_row_inputs(
+        mut self,
+        table: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
+    ) -> Self {
+        for (verb, inputs) in table {
+            for (input, value) in inputs {
+                self = self.with_row_input(&verb, &input, value);
+            }
+        }
+        self
+    }
+
+    /// The row input bound for `verb`'s `input`, if any.
+    #[must_use]
+    pub fn row_input(&self, verb: &str, input: &str) -> Option<&serde_json::Value> {
+        self.row_inputs.get(verb).and_then(|m| m.get(input))
     }
 
     /// Bind the review routes (R5 = ADR-0177 decision 2): the composition root's clone and the
@@ -857,6 +897,26 @@ impl super::Runtime {
         let inputs = resolved
             .as_ref()
             .map_err(super::reference::RefError::to_step_error)?;
+        // *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 4, proposed; D21-73
+        // item 5.)* **Row inputs.** A `toolchain` row's declared input that the step's own `inputs`
+        // leaves undeclared is supplied from the routing's row inputs, which the composition root
+        // binds; a declared one is never overridden. Only `toolchain` rows take them: a `port` row's
+        // inputs are the step's own (the selection, the range), and the review routes' are R5's.
+        let supplied: BTreeMap<String, serde_json::Value>;
+        let inputs = if entry.route == Route::Toolchain {
+            let mut filled = inputs.clone();
+            for name in &entry.inputs {
+                if !filled.contains_key(name)
+                    && let Some(value) = routing.row_input(verb, name)
+                {
+                    filled.insert(name.clone(), value.clone());
+                }
+            }
+            supplied = filled;
+            &supplied
+        } else {
+            inputs
+        };
         // ---- (3) THE ROUTE AND INPUT CHECKS. The match is exhaustive with NO wildcard: a route
         // is added by record, and a fifth is `E0004` here (ADR-0170 decision 1). --------------------
         let call = match entry.route {

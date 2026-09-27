@@ -408,7 +408,17 @@ pub(in crate::select) fn step2_amended(
         for kind in &spec.baseline {
             kinds.insert(kind.clone());
         }
-        let ctx = item.context();
+        // *(2026-09-27, `s8d` build, package F2-D2173; R8 = ADR-0179 decision 3, proposed; D21-73.)*
+        // **`rigor` is bound, as the run's rigor at this stage.** `facets.toml` declares it a
+        // `kernel` facet (*"a lookup over policy.<class>.stages"*), so the item never carries it and
+        // `item.context()` alone left every `when` that reads it an unknown field. The value is
+        // step 1's (the pack's, or the item's logged override), bound by `rigor::with_rigor`, the one
+        // place the ordinal is built, and bound AFTER the item's facets so a stale facet of the same
+        // name cannot displace it (the executor's order, ADR-0142).
+        let rigor = super::step1(pack, item)
+            .rigor(stage)
+            .unwrap_or(crate::rigor::Rigor::Optional);
+        let ctx = crate::rigor::with_rigor(item.context(), rigor, facets);
         for row in &spec.require {
             lint_selection_predicate(&row.site, &row.when, facets)
                 .map_err(Step2Error::Judgement)?;

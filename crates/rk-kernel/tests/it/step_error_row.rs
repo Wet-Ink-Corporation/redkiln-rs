@@ -340,10 +340,15 @@ fn the_kernel_appends_exactly_one_error_row_per_failed_dispatch() {
     );
 }
 
-/// **The fake writes no error row of its own** (M11). `FakeHarness::dispatch` over a bare
-/// `VecStore` appends NOTHING for any of the eleven, nor on its cancel path; the row is the
+/// **The fake writes no error row of its own** (M11). ~~`FakeHarness::dispatch` over a bare
+/// `VecStore` appends NOTHING for any of the eleven, nor on its cancel path~~; the row is the
 /// kernel's. Through the runtime, the same fake leaves exactly ONE row per failed dispatch — so a
 /// fake that kept its append would leave two.
+///
+/// *(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B), R4 = ADR-0176,
+/// proposed.)* Re-amended to **"no error row"**: over a bare `VecStore` the fake appends, for each
+/// of the eleven and on its cancel path, no `step_failed` / `step_cancelled` / `step_refused` /
+/// `rate_limited` row and exactly ONE ADR-0126 `dispatch_completed` row (the serde of its record).
 #[test]
 fn the_fake_harness_writes_no_error_row_of_its_own() {
     for error in every_step_error() {
@@ -351,12 +356,7 @@ fn the_fake_harness_writes_no_error_row_of_its_own() {
         let mut bare = VecStore::default();
         let outcome = harness.dispatch(&spec(), &mut bare);
         assert_eq!(outcome.result, Err(error.clone()), "the script is returned");
-        assert!(
-            bare.events().is_empty(),
-            "{error:?}: FakeHarness appended {:?} — the error row is the KERNEL's (R4), and a \
-             harness that writes its own puts a second row beside it",
-            bare.events()
-        );
+        assert_fake_left_only_dispatch_completed(bare.events(), &outcome.record, &error);
     }
     // The cancel path, which returns before the script.
     let token = rk_ports::cancel::CancelToken::new();
@@ -373,10 +373,12 @@ fn the_fake_harness_writes_no_error_row_of_its_own() {
         ),
         "PREMISE: a fired token cancels"
     );
-    assert!(
-        bare.events().is_empty(),
-        "the cancel path appended {:?}; the row is the kernel's",
-        bare.events()
+    assert_fake_left_only_dispatch_completed(
+        bare.events(),
+        &outcome.record,
+        &StepError::Cancelled {
+            by: CancelledBy::Operator,
+        },
     );
 
     // Through the runtime: exactly one row per failed dispatch, under the fake as under any
@@ -405,6 +407,34 @@ fn the_fake_harness_writes_no_error_row_of_its_own() {
                 .collect::<Vec<_>>()
         );
     }
+}
+
+/// *(dated 2026-09-26, `s8d` build, package F1-D2172; D21-72 option (B).)* What a bare
+/// `FakeHarness` dispatch that failed with `error` may leave: no error row (R4 — a fake that wrote
+/// one puts a second row beside the kernel's, M11) and exactly ADR-0126's `dispatch_completed`,
+/// the serde of the record it returned.
+fn assert_fake_left_only_dispatch_completed(
+    events: &[Event],
+    record: &rk_types::activity::DispatchRecord,
+    error: &StepError,
+) {
+    assert!(
+        error_rows(events).is_empty(),
+        "{error:?}: FakeHarness appended {:?} — the error row is the KERNEL's (R4), and a \
+         harness that writes its own puts a second row beside it",
+        error_rows(events)
+    );
+    assert_eq!(
+        events.iter().map(|e| e.kind).collect::<Vec<_>>(),
+        [EventKind::DispatchCompleted],
+        "{error:?}: a failed fake dispatch appends exactly ADR-0126's `dispatch_completed` \
+         (D21-72 (B)): {events:?}"
+    );
+    assert_eq!(
+        events[0].payload,
+        serde_json::to_value(record).expect("a DispatchRecord serialises"),
+        "{error:?}: the `dispatch_completed` payload is the serde of the returned record"
+    );
 }
 
 /// **`RateLimited` is ONE `rate_limited` row — AC-030's mark — never a second.** Before R4 the

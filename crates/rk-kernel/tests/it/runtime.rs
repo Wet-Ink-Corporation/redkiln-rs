@@ -313,9 +313,21 @@ pub struct CountingToolchain {
     /// *(2026-09-26, s8c refuting round 4.)* `build` answers a `failing` report (`errors: 1`) when
     /// set, so a kernel test can watch `build_verdict` read a red build; unset, it is `passing`.
     build_failing: bool,
+    /// *(2026-09-27, `s8d` build, package F2-D2173.)* The `inputs` each `run_verb` call was
+    /// handed, in call order, so a test can see which row inputs the executor supplied.
+    verb_inputs: Mutex<Vec<std::collections::BTreeMap<String, serde_json::Value>>>,
 }
 
 impl CountingToolchain {
+    /// The `inputs` of every `run_verb` call, in call order (R8 = ADR-0179 decision 4).
+    #[must_use]
+    pub fn verb_inputs(&self) -> Vec<std::collections::BTreeMap<String, serde_json::Value>> {
+        self.verb_inputs
+            .lock()
+            .expect("a poisoned lock halts the run; it is never recovered (ADR-0118)")
+            .clone()
+    }
+
     /// How many times **any** method on the `Toolchain` port was reached.
     ///
     /// One counter and not six, deliberately: the property its callers assert is *"the `check` arm
@@ -444,6 +456,10 @@ impl Toolchain for CountingToolchain {
         call: &rk_ports::toolchain::VerbCall<'_>,
     ) -> Result<rk_ports::toolchain::VerbOutput, StepError> {
         self.reached_with(call.bound);
+        self.verb_inputs
+            .lock()
+            .expect("a poisoned lock halts the run; it is never recovered (ADR-0118)")
+            .push(call.inputs.clone());
         self.verb_output
             .clone()
             .ok_or_else(|| StepError::Unsupported {

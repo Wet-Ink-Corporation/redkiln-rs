@@ -846,3 +846,98 @@ fn a_failing_build_report_is_not_a_walked_step() {
         "a failing BuildReport verb output must fail the step as NonZero, no code, the report's digest"
     );
 }
+
+/// **D21-73 item 5 (R8 = ADR-0179 decision 4, proposed; `s8d` build, package F2-D2173).** A
+/// `toolchain` row's input the step leaves undeclared is supplied from the routing's ROW INPUTS —
+/// the values the composition root binds (a declaration row, or a tool's default location) — and
+/// reaches `run_verb`; a step that declares the input keeps its own value; and with no row input
+/// bound the refusal by name stands. ADR-0170 assigns `sca_scan`'s `audit_db`/`deny_db` defaults to
+/// *"the resolver's to supply (`s8d`)"*, and no step in the shipped catalog declares them.
+#[test]
+fn a_row_input_the_step_leaves_undeclared_is_supplied_by_the_routing() {
+    let ctx = Context::new();
+    let row = "sca_scan = { outputs = \"ScanReport\", live = false, timeout = \"scan_timeout\", \
+               inputs = [\"audit_db\", \"deny_db\"], route = \"toolchain\", side_effecting = false }";
+    let report = || {
+        CountingToolchain::with_verb_output(VerbOutput {
+            kind: "ScanReport".to_owned(),
+            value: serde_json::json!({ "critical": 0, "high": 0, "medium": 0, "low": 0,
+                                       "unrated": 0, "advisories": [], "tools": [] }),
+        })
+    };
+    let supplied = || {
+        ToolRouting::new(registry(row, ""), ToolchainValues::default())
+            .with_row_input(
+                "sca_scan",
+                "audit_db",
+                serde_json::json!("/cargo/advisory-db"),
+            )
+            .with_row_input(
+                "sca_scan",
+                "deny_db",
+                serde_json::json!("/cargo/advisory-dbs"),
+            )
+    };
+
+    // (i) Neither input declared by the step: both are supplied from the routing, and the port is
+    // reached with exactly them.
+    let (rt, tc) = rt_routed("row-inputs", report(), supplied());
+    let v = rt
+        .execute_step(&tool_step("scan", "sca_scan"), &ctx)
+        .expect("a value");
+    assert_eq!(
+        v,
+        StepVerdict::Continue,
+        "a row whose inputs the routing supplies must reach the port: {v:?}"
+    );
+    assert_eq!(tc.calls(), 1, "`run_verb` was not reached exactly once");
+    let seen = tc.verb_inputs();
+    assert_eq!(
+        seen.first()
+            .map(|m| (m.get("audit_db").cloned(), m.get("deny_db").cloned())),
+        Some((
+            Some(serde_json::json!("/cargo/advisory-db")),
+            Some(serde_json::json!("/cargo/advisory-dbs"))
+        )),
+        "the port must be handed the routing's row inputs: {seen:?}"
+    );
+
+    // (ii) A step that DECLARES the input keeps its own value; the routing fills only the other.
+    let (rt, tc) = rt_routed("row-inputs-declared", report(), supplied());
+    let mut scan = tool_step("scan", "sca_scan");
+    scan.inputs.insert(
+        "audit_db".to_owned(),
+        rk_kernel::catalog::InputValue::Text("own.db".to_owned()),
+    );
+    rt.execute_step(&scan, &ctx).expect("a value");
+    let seen = tc.verb_inputs();
+    assert_eq!(
+        seen.first()
+            .map(|m| (m.get("audit_db").cloned(), m.get("deny_db").cloned())),
+        Some((
+            Some(serde_json::json!("own.db")),
+            Some(serde_json::json!("/cargo/advisory-dbs"))
+        )),
+        "the step's own declared input wins over the routing's: {seen:?}"
+    );
+
+    // (iii) CONTROL: with no row input bound, the refusal by name stands and the port is untouched.
+    let (rt, tc) = rt_routed(
+        "row-inputs-none",
+        report(),
+        ToolRouting::new(registry(row, ""), ToolchainValues::default()),
+    );
+    let e = failed(
+        rt.execute_step(&tool_step("scan", "sca_scan"), &ctx)
+            .expect("a value"),
+    );
+    assert!(
+        format!("{e:?}").contains("declares the input `audit_db`"),
+        "CONTROL: an unsupplied row input still refuses by name: {e:?}"
+    );
+    assert_eq!(
+        tc.calls(),
+        0,
+        "CONTROL: the unsupplied row reached the port"
+    );
+}

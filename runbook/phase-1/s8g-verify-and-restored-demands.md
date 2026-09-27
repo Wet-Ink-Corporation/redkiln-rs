@@ -300,6 +300,36 @@ line in the earlier stage's file, in that commit:
 each of its ten ids is declared exactly once, and an eleventh id leaves that true. If `s8d`'s loader test pins the
 registry's total at ten, the question this stage adds moves it, and that test takes a dated edit in the same commit.
 
+*(dated 2026-09-27, `s8d` build, package F2-D2173; receiver note, `spikes/DECISIONS-2026-09-21.md` D21-73 item 4 and item 5.)*
+**Four things `s8d` hands this stage, and one fact that moves move 1's arithmetic.** D21-73 owes item 4 *"to `s8g`/`s8h` as
+their stage files fit (each by a dated receiver note), and `bisect`'s registry row to the stage that owns its verb"*.
+- **`confirmation-test`'s emit fields.** Its composing `emit` reads `${before.outputs.selection}` and `${before.outputs.sha}`,
+  and record T's `TestOutcome` (ADR-0169) carries neither member. `s8d`'s resolver refuses it by name (*"`before`'s output
+  has no field `.selection`"*), and the fix lane's `verify` row measures that refusal (`s8d` §8d.9's F2-D2173 line). This
+  stage owns `ConfirmationResult` (§8g.6), so it settles the fields here: a catalog edit under ADR-0072, or a record that
+  widens what the `test` step binds. Either way, the `lane_walk` fix row flips by dated line in the same commit.
+- **The `lint` port's output.** `Toolchain::lint` returns `()`, although the shipped `lint` row declares `outputs =
+  "LintReport"`. So a `lint` step binds nothing, and the two lane activities whose `policy` reads it refuse by name:
+  `bdd-scenarios` (`${gherkin-lint.outputs}`) and `docs-update` (`${lint.outputs}`). This stage widens the port (§8g.2),
+  so the lint output is placed here. If `LintReport` becomes a Rust type, `s8h` §8h.4 exports it by name (its receiver
+  note).
+- **`bisect`'s registry row.** `.redkiln/catalog/bisect.toml`'s `bisect` step runs `toolchain:bisect`, and
+  `.redkiln/registry.toml` has no `bisect` row (`spikes/p9/registry.toml` has one: `outputs = "BisectReport"`,
+  `timeout = "test_timeout"`). No `s8*` stage file owns that verb (measured: `grep -n bisect` over `runbook/phase-1/s8*.md`
+  names it only as a rank or a ceiling), so D21-73's *"the stage that owns its verb"* falls here, as the stage that owns
+  the verify verbs. It moves no lane count: after R8 (ADR-0179) step 4 chooses `root-cause`, rank 10, for the fix lane's
+  `RootCause`, and `bisect` is selected on neither lane.
+- **`package_binaries` is already written** (D21-73 item 5; R8 = ADR-0179 decision 4, `proposed`, superseding ADR-0170
+  decision 9 in part at *"(`s8g` writes this repository's set)"*). `[toolchain.rust]` carries `package_binaries =
+  ["redkiln", "redkiln-migrate"]`, §8g.6's set with its warrant. `rk-cli`'s `tool_routing` binds it as `package.binaries`.
+  §8g.6 and this stage's R4 **cite** the row and do not write it; `demands::build_artifact_carries_release_digests` and M9
+  stand as written. `sca_scan`'s `audit_db`/`deny_db` are bound by `rk-cli` at `<CARGO_HOME>/advisory-db` and
+  `/advisory-dbs` (R8 decision 4). §8g.6's `sca-scan` precondition is unchanged.
+- **Move 1's arithmetic starts from `s8d`'s re-measured rows**, not from the claims: `LANE_WALK fix walked=9 refused=6`
+  and `story walked=6 refused=5`, with two causes still unassigned (`tdd-red-green-refactor`'s `"affected"` selection
+  inside `Changeset`'s own producer, and the story lane's `implement` selection on `docs-update`'s self-edge). `s8d`
+  §8d.9's F2-D2173 table is the one this stage's dated line moves.
+
 **The re-runs are bounded**, because nested re-runs cost hours. (12) re-runs the entry gate, 8f, and the provisional
 rows above, each whole, with `RK_CP_NESTED=1` and without `REDKILN_LAUNCH_RECORD` in its environment, under the
 trap (D21-46), and with a fake `claude` first on `PATH` that prints the pin (D21-47: *"Every checkpoint replay runs
@@ -842,7 +872,9 @@ passing result emits, and a result that does not pass opens the gate and emits n
 - **The handler is record V's.** It runs a locked release build and takes the plain sha256 of each **declared**
   binary.
 - **The declared set is this stage's data.** `package_binaries`, in the Rust row of `s8c`'s per-toolchain table, is
-  `redkiln` and `redkiln-migrate`, with its warrant (AC-441: the migrator is *"a separate binary"*). A release build
+  `redkiln` and `redkiln-migrate`, with its warrant (AC-441: the migrator is *"a separate binary"*). *(dated 2026-09-27, `s8d` build, package
+  F2-D2173: the row is WRITTEN at `s8d` under D21-73 item 5, R8 = ADR-0179, `proposed`, with exactly this set. This stage
+  cites it and does not write it; see §8g.1's receiver note.)* A release build
   also links `rk-fixture-child-cli`, `rk-fixture-toolchain` and `rk-fixture-child-claude`, and none of them is the
   release.
 - **The `built` check is now live.** N25 widens `build` to an outcome report. So the check *"`report.status ==

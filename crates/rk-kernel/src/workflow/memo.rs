@@ -1052,6 +1052,33 @@ pub struct Declaration {
 /// The declaration rows a per-toolchain table admits (§8c.5; Checkpoint 8c (11)'s `D`).
 pub const DECLARATION_ROWS: [&str; 3] = ["setup_projects", "package_binaries", "claims"];
 
+/// **Which declaration row supplies which registry row's input**: `(declaration row, verb, input)`.
+///
+/// R8 = ADR-0179 decision 4, proposed; D21-73 item 5. One entry: `package_binaries` is the
+/// `package` row's `binaries` (`s8c` §8c.5: *"`package_binaries`, the declared shipped set §8c.4's
+/// `package` reads"*). `setup_projects` is not here: `setup` runs at worktree creation, which is
+/// `s8d-ii`'s, and no catalog step names it. `claims` is `s8g`'s column and no row's input.
+pub const DECLARATION_INPUTS: [(&str, &str, &str); 1] =
+    [("package_binaries", "package", "binaries")];
+
+/// A declaration row's TOML value as the JSON a step input carries.
+fn toml_to_json(value: &Value) -> serde_json::Value {
+    match value {
+        Value::Str(s) => serde_json::Value::String(s.clone()),
+        Value::Int(i) => (*i).into(),
+        Value::Float(f) => {
+            serde_json::Number::from_f64(*f).map_or(serde_json::Value::Null, Into::into)
+        }
+        Value::Bool(b) => (*b).into(),
+        Value::Array(items) => items.iter().map(toml_to_json).collect(),
+        Value::Table(t) => serde_json::Value::Object(
+            t.iter()
+                .map(|(k, v)| (k.clone(), toml_to_json(v)))
+                .collect(),
+        ),
+    }
+}
+
 /// One `[toolchain.<name>]` table, as loaded.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ValueTable {
@@ -1344,6 +1371,30 @@ impl VerbRegistry {
     #[must_use]
     pub fn table(&self, toolchain: &str) -> Option<&ValueTable> {
         self.toolchains.get(toolchain)
+    }
+
+    /// **The row inputs a declaration row supplies** (R8 = ADR-0179 decision 4, proposed; D21-73
+    /// item 5), for the toolchain `rk-cli` selected: verb → input → value, from
+    /// [`DECLARATION_INPUTS`] only. A row input the step's own `inputs` leaves undeclared is taken
+    /// from here by the executor; a step that declares it keeps its own. A declaration row that is
+    /// absent supplies nothing, and the step then refuses by name as before.
+    #[must_use]
+    pub fn row_inputs_for(
+        &self,
+        toolchain: &str,
+    ) -> BTreeMap<String, BTreeMap<String, serde_json::Value>> {
+        let mut out: BTreeMap<String, BTreeMap<String, serde_json::Value>> = BTreeMap::new();
+        let Some(table) = self.toolchains.get(toolchain) else {
+            return out;
+        };
+        for (row, verb, input) in DECLARATION_INPUTS {
+            if let Some(declared) = table.declarations.get(row) {
+                out.entry(verb.to_owned())
+                    .or_default()
+                    .insert(input.to_owned(), toml_to_json(&declared.value));
+            }
+        }
+        out
     }
 
     /// **Resolve one source input** (record V decision 8). `toolchain` names the feed table a

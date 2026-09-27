@@ -1053,3 +1053,47 @@ fn selection_source_reads_no_hidden_input() {
         BANNED.len()
     );
 }
+
+/// **D21-73 item 3 (R8 = ADR-0179 decision 3, proposed; `s8d` build, package F2-D2173).** A `require`
+/// row's `when` may read `rigor` — `facets.toml` makes it a `kernel` facet (*"a lookup over
+/// policy.<class>.stages"*, ADR-0093 decision 1) — and step 2 binds it as the run's rigor at this
+/// stage: step 1's, with the item's logged override folded in. Before, step 2 evaluated `when` over
+/// `item.context()`, which binds no `rigor`, and every such row refused as an unknown field (the
+/// shipped story lane's `implement` and both lanes' `closeout`).
+#[test]
+fn a_require_row_keyed_on_rigor_reads_the_stages_rigor() {
+    let registry = registry();
+    let facets = facets();
+    let pack = Pack::from_toml(
+        "rigor-rows.toml",
+        "[pack]\nid = \"rigor-rows\"\napplies = \"kind == story\"\n[policy]\n\
+         stages = { design = \"recommended\" }\n[stage.design]\nbaseline = []\n\
+         [[stage.design.require]]\nwhen = \"rigor >= recommended\"\nartifacts = [\"DesignDoc\"]\n\
+         [[stage.design.require]]\nwhen = \"rigor >= mandatory\"\nartifacts = [\"ProblemStatement\"]\n",
+    )
+    .expect("the inline pack loads");
+
+    // At the pack's own `recommended`, the first row fires and the second does not.
+    let item = Item::new("STORY-1", "story");
+    let out = step2(&pack, &registry, &facets, "design", &item)
+        .unwrap_or_else(|e| panic!("a `when` over `rigor` evaluates at step 2: {e}"));
+    let names: Vec<&str> = out.required().kinds().map(|k| k.kind.as_str()).collect();
+    assert_eq!(
+        names,
+        vec!["DesignDoc"],
+        "rigor = recommended fires only the first row"
+    );
+    assert_eq!(out.rows_fired(), 1);
+
+    // The item's logged override is the run's rigor too: at `mandatory` both rows fire.
+    let raised = Item::new("STORY-1", "story").with_rigor_override("design", Rigor::Mandatory);
+    let out = step2(&pack, &registry, &facets, "design", &raised)
+        .unwrap_or_else(|e| panic!("resolves under the override: {e}"));
+    let names: Vec<&str> = out.required().kinds().map(|k| k.kind.as_str()).collect();
+    assert_eq!(
+        names,
+        vec!["DesignDoc", "ProblemStatement"],
+        "rigor = mandatory (the item's override) fires both rows"
+    );
+    assert_eq!(out.rows_fired(), 2);
+}

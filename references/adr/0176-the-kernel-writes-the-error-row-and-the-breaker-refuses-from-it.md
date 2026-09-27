@@ -4,7 +4,7 @@ title: "**The kernel writes the error row, and the breaker refuses from it** (`s
 status: proposed
 date: 2026-09-26
 legacy_id: none
-source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R4's row), §8d.5, §8d.10 (the `step_error_row::`, `breaker::` and `cross_process::` names; mutants M10 and M11) and §8d.11; spikes/DECISIONS-2026-09-21.md D21-42 20 (*"The kernel appends `StepError::event()` for every dispatch, so fake and real harnesses behave alike, and AC-033's breaker counts those rows across processes."*), D21-64 ruling 10 (this record's flip condition); references/2026-09-08-acceptance-criteria.md AC-033, AC-034, AC-035, AC-360; references/2026-09-08-architecture-design.md §5.4's event table (the `step_failed { class }` row); references/adr/0022, 0095 (decision 2), 0112, 0120, 0126; crates/rk-kernel/src/runtime/activity.rs (`Runtime::run_activity_at`'s retry loop, `error_row`, `Runtime::breaker_refusal`, `step_committed_event`, `ActivityReport::breaker_refusal`), crates/rk-kernel/src/runtime.rs (`BreakerBinding`, `Runtime::with_breaker`), crates/rk-kernel/src/runtime/step.rs (`Runtime::step_family`, the agent arm), crates/rk-kernel/src/replay.rs (`resume_routed`), crates/rk-kernel/src/workflow/breaker.rs (`BreakerState::from_events`, unchanged) and crates/rk-ports/src/fakes.rs (`FakeHarness::dispatch`) at `s8d`'s build (package P6)
+source: runbook/phase-1/s8d-step-grain-and-resolver.md §8d.1 (R4's row), §8d.5, §8d.10 (the `step_error_row::`, `breaker::` and `cross_process::` names; mutants M10 and M11) and §8d.11; spikes/DECISIONS-2026-09-21.md D21-42 20 (*"The kernel appends `StepError::event()` for every dispatch, so fake and real harnesses behave alike, and AC-033's breaker counts those rows across processes."*), D21-64 ruling 10 (this record's flip condition), D21-72 (option (B): the fake's `dispatch_completed` on `Err` and cancel only); references/2026-09-08-acceptance-criteria.md AC-033, AC-034, AC-035, AC-360; references/2026-09-08-architecture-design.md §5.4's event table (the `step_failed { class }` row); references/adr/0022, 0095 (decision 2), 0112, 0120, 0126; crates/rk-kernel/src/runtime/activity.rs (`Runtime::run_activity_at`'s retry loop, `error_row`, `Runtime::breaker_refusal`, `step_committed_event`, `ActivityReport::breaker_refusal`), crates/rk-kernel/src/runtime.rs (`BreakerBinding`, `Runtime::with_breaker`), crates/rk-kernel/src/runtime/step.rs (`Runtime::step_family`, the agent arm), crates/rk-kernel/src/replay.rs (`resume_routed`), crates/rk-kernel/src/workflow/breaker.rs (`BreakerState::from_events`, unchanged) and crates/rk-ports/src/fakes.rs (`FakeHarness::dispatch`) at `s8d`'s build (package P6)
 supersedes: []
 superseded_by: []
 related: ["0017", "0022", "0095", "0112", "0120", "0126", "0144", "0174"]
@@ -94,9 +94,17 @@ is, and a dispatch that commits writes none. A retried activation writes one row
 The payload keeps the members the fake's bridge wrote: `{ class, status }` on `step_failed`, `{ class, capability }`
 on `step_refused`, and nothing else on `step_cancelled`. Decision 3 adds two members.
 
-**2. No harness writes an error row.** `FakeHarness::dispatch` appends nothing on any path: `fn event_for` and both of
+**2. No harness writes an error row.** ~~`FakeHarness::dispatch` appends nothing on any path:~~ `fn event_for` and both of
 its appends are removed. `ClaudeHarness` never wrote one. A harness's journal row is ADR-0126's `dispatch_completed`,
 and this record does not touch it.
+
+*(dated 2026-09-26, `s8d` build, package F1-D2172; `spikes/DECISIONS-2026-09-21.md` D21-72, option (B).)* The struck
+clause is re-amended to **"no error row"**. `FakeHarness::dispatch` appends ADR-0126's `dispatch_completed` — the serde
+of its fake record, the shape `rk-adapter-claude`'s `record::completed_event` writes — on an `Err` termination and on
+its cancel path, and nothing on any `Ok` path. D21-72: *"AC-360's conformance obligation stands unchanged."* That
+obligation is `rk-ports`' `conformance::conform_harness` error arm, which requires a harness to append an event on an
+`Err` termination; with the error row the kernel's, the fake met it with no row at all. A refused append is dropped and
+never becomes a `StepError` (AC-368).
 
 **3. `RateLimited`'s row is AC-030's mark, never a second.** A `RateLimited` failure always takes
 `RetryDecision::WaitForReset`: its class is `WaitUntilReset`, which is neither refused before spawn nor capped
@@ -177,6 +185,11 @@ reached, no commit) would read as AC-013's re-entry, and the walk would serve it
 - **The pre-R1 path is not keyed.** A dispatch without a step list writes its row with no `family` and is not
   refused. `rk-cli`'s in-process tests that bind `RecordedSpec::supplied` run there.
 - `K` and the expiry still carry *"NO RECORD"* in the shipped pack. Their record is `s8h`'s (D21-42 19c).
+- *(dated 2026-09-26, F1-D2172; D21-72's stated cost.)* **The fake's journal differs from the real adapter's on the
+  `Ok` path.** `ClaudeHarness` appends `dispatch_completed` on every termination; `FakeHarness` appends it on `Err` and
+  cancel only. D21-42 20's *"fake and real harnesses behave alike"* holds for the error row this record governs, not for
+  that tier-2 row on a successful dispatch. Option (A), the row on every termination, was declined because it moves two
+  byte-identical `explain` goldens.
 
 **What this forbids**
 
@@ -214,6 +227,20 @@ reached, no commit) would read as AC-013's re-entry, and the walk would serve it
   a Python driver, with each file restored and its sha256 verified.
 - [measured] `git diff --quiet e8e4f68 -- crates/rk-types` → 0: `rk-types` did not move, so Checkpoint 5 does not
   re-run for this record.
+- [measured 2026-09-26, `s8d` build package F1-D2172, through the no-dispatch helper; D21-72 (B)] Before the fake
+  moved, `rk-ports`' `conformance::port_conformance_fake_rows` (conformance feature on) was RED at *"a dispatch
+  terminated in Unsupported { capability: \"affected-selection\" } without appending an event (AC-360, register
+  :5192-5197): the store held 0 events before and 0 after"*, and the whole workspace read 941 passed / 1 failed / 10
+  ignored over 44 results. The five tests D21-72 names (the three `fake_behaviour::` tests,
+  `step_error_row::the_fake_harness_writes_no_error_row_of_its_own` and `rk-cli`'s
+  `root::ac404_rate_limited_writes_retry_mark_and_exits`) were re-amended by dated note to *"no error row"* — no
+  `step_*` / `rate_limited` row from the fake, and exactly the one `dispatch_completed` row on `Err`, its payload the
+  serde of the returned record — and each was shown RED at that assertion before the fake moved. After it moved all
+  six are GREEN and the whole workspace reads 942 passed / 0 failed / 10 ignored over 44 results. Mutant MD2172a (the
+  `Err`-path append removed) is KILLED by `conformance::port_conformance_fake_rows`; MD2172b (the append on every
+  termination) by `fake_behaviour::cancel_token_is_the_roots_and_yields_cancelled` at its `Ok`-path assertion; M11,
+  re-run over the re-amended body, by `step_error_row::the_fake_harness_writes_no_error_row_of_its_own`. Each file was
+  restored and its sha256 verified. Checkpoint 7a's block, run whole through the helper as a reading, exits 0.
 - **What this evidence does not license.** Every dispatch here is a fake harness's. No real `Platform` failure has
   opened a breaker, and `K` and the expiry are sized by no corpus figure (AC-033's own *Note*). This record flips at
   `s8d`'s close under D21-64 ruling 10, on its own dated ledger line, only if the formal Checkpoint 8d passes whole

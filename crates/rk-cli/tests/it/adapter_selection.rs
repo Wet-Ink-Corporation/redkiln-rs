@@ -328,3 +328,111 @@ fn the_chosen_adapters_value_table_reaches_the_kernel_without_its_name() {
         "the kernel did not hand the port the chosen table's value"
     );
 }
+
+/// **D21-73 item 5, `rk-cli`'s half (R8 = ADR-0179 decision 4, proposed; `s8d` build, package
+/// F2-D2173).** The composition root binds the row inputs no shipped step declares:
+/// - `package.binaries` from the chosen toolchain's `package_binaries` declaration row, through
+///   `tool_routing` (a `[toolchain.rust]` table without the row binds nothing);
+/// - `sca_scan.audit_db` and `.deny_db` at the tools' default locations under `CARGO_HOME`, or
+///   `<home>/.cargo` when it is unset, and only for the Rust adapter, whose handler reads them. With
+///   neither `CARGO_HOME` nor a home directory, nothing is bound, so the step refuses by name.
+#[test]
+fn the_composition_root_binds_the_row_inputs_no_step_declares() {
+    // ---- package.binaries, from the declaration row -------------------------------------------
+    let repo = tempfile::tempdir().expect("a temp dir");
+    std::fs::create_dir_all(repo.path().join(".redkiln")).expect("the pack dir is creatable");
+    let pin = "0123456789abcdef0123456789abcdef01234567";
+    std::fs::write(
+        repo.path().join(".redkiln").join("registry.toml"),
+        format!(
+            "[verb]\npackage = {{ outputs = \"BuildArtifact\", live = false, timeout = \
+             \"build_timeout\", inputs = [\"sha\", \"binaries\"], route = \"toolchain\", \
+             side_effecting = true }}\n[toolchain.rust]\nbuild_timeout = {{ secs = 120, measured = \
+             [60], rule = \"r\", pin = \"{pin}\", command = \"c\" }}\npackage_binaries = {{ value = \
+             [\"redkiln\"], source = \"[[bin]]\" }}\n"
+        ),
+    )
+    .expect("the registry is writable");
+    let routing = rk_cli::verbs::run::tool_routing(repo.path(), Some("rk-adapter-toolchain-rust"))
+        .expect("the registry loads");
+    assert_eq!(
+        routing.row_input("package", "binaries"),
+        Some(&serde_json::json!(["redkiln"])),
+        "tool_routing must bind the chosen table's package_binaries as package.binaries"
+    );
+    let node = rk_cli::verbs::run::tool_routing(repo.path(), Some("rk-adapter-toolchain-node"))
+        .expect("the registry loads");
+    assert_eq!(
+        node.row_input("package", "binaries"),
+        None,
+        "CONTROL: a toolchain with no table binds no declaration row"
+    );
+
+    // ---- sca_scan's databases, at the tools' default locations ---------------------------------
+    let env = |pairs: &[(&str, &str)]| {
+        Env::from_map(
+            pairs
+                .iter()
+                .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+                .collect(),
+        )
+    };
+    let rust = Some("rk-adapter-toolchain-rust");
+    let slash = |p: &std::path::Path| p.display().to_string();
+    let home = std::path::Path::new("H:").join("cargo-home");
+    let got = rk_cli::verbs::run::advisory_db_row_inputs(
+        &env(&[
+            ("CARGO_HOME", &slash(&home)),
+            ("USERPROFILE", "U:"),
+            ("HOME", "V:"),
+        ]),
+        rust,
+    );
+    assert_eq!(
+        got,
+        vec![
+            (
+                "sca_scan",
+                "audit_db",
+                serde_json::json!(slash(&home.join("advisory-db")))
+            ),
+            (
+                "sca_scan",
+                "deny_db",
+                serde_json::json!(slash(&home.join("advisory-dbs")))
+            ),
+        ],
+        "CARGO_HOME decides, and each tool's default database directory is under it"
+    );
+    let profile = std::path::Path::new("U:").join(".cargo");
+    let key = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    let got = rk_cli::verbs::run::advisory_db_row_inputs(&env(&[(key, "U:")]), rust);
+    assert_eq!(
+        got,
+        vec![
+            (
+                "sca_scan",
+                "audit_db",
+                serde_json::json!(slash(&profile.join("advisory-db")))
+            ),
+            (
+                "sca_scan",
+                "deny_db",
+                serde_json::json!(slash(&profile.join("advisory-dbs")))
+            ),
+        ],
+        "with CARGO_HOME unset, the home directory's .cargo"
+    );
+    assert!(
+        rk_cli::verbs::run::advisory_db_row_inputs(&env(&[]), rust).is_empty(),
+        "no CARGO_HOME and no home: nothing is bound, and the step refuses by name"
+    );
+    assert!(
+        rk_cli::verbs::run::advisory_db_row_inputs(
+            &env(&[("CARGO_HOME", "H:")]),
+            Some("rk-adapter-toolchain-node")
+        )
+        .is_empty(),
+        "only the Rust adapter's handler reads audit_db / deny_db"
+    );
+}
