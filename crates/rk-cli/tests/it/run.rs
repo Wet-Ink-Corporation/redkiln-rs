@@ -7,7 +7,7 @@
 use std::path::Path;
 
 use crate::support::{PackVariant, pack_min_repo, set_enabled};
-use crate::{common_dir, refs, run_init, temp_repo};
+use crate::{refs, run_init, temp_repo};
 
 /// Spawn `redkiln -C <repo> run <item> [--lane <lane>]` with stdin closed (D-15).
 pub(crate) fn spawn_run(repo: &Path, item: &str, lane: Option<&str>) -> std::process::Output {
@@ -185,7 +185,13 @@ fn run_on_init_only_repo_is_a_config_outcome() {
         refs(root)
     );
     assert!(
-        !common_dir(root).join("redkiln").join("worktrees").is_dir(),
+        // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 1, proposed.)* The root is
+        // `.redkiln/worktrees/` under the main worktree, derived by rk-git's one derivation.
+        !crate::run_tree(root, "bug-1")
+            .path
+            .parent()
+            .expect("the derived tree has a root")
+            .is_dir(),
         "a refused run created the run-owned worktrees directory, so step (8) ran before step (7) \
          refused"
     );
@@ -217,11 +223,7 @@ fn adr0128_lane_derived_from_item_or_refused() {
         let out = spawn_run(root, item, None);
         let stderr = String::from_utf8_lossy(&out.stderr);
         assert!(
-            common_dir(root)
-                .join("redkiln")
-                .join("worktrees")
-                .join(item)
-                .is_dir(),
+            crate::run_tree(root, item).path.is_dir(),
             "`{item}` carries a derivable kind, so the run must get PAST the lane and the pack and \
              reach step (8)'s run-owned worktree. It did not; stderr:\n{stderr}"
         );
@@ -301,11 +303,7 @@ fn adr0128_lane_maps_to_pack_fix_bug_standard_story_story() {
     let bug = spawn_run(root, "bug-1", None);
     let bug_stderr = String::from_utf8_lossy(&bug.stderr);
     assert!(
-        common_dir(root)
-            .join("redkiln")
-            .join("worktrees")
-            .join("bug-1")
-            .is_dir(),
+        crate::run_tree(root, "bug-1").path.is_dir(),
         "removing `story` from the enabled set also stopped the BUG item, so the refusal above is \
          not about the pack THE LANE NAMES. Asserted positively rather than as an absence: an \
          absence here is satisfied by any unrelated failure; stderr:\n{bug_stderr}"
@@ -320,12 +318,16 @@ fn adr0128_lane_maps_to_pack_fix_bug_standard_story_story() {
     // The narrowing chosen is the exact CONTENTS, not merely "`story-1` is absent": a refused run
     // that created `worktrees/<anything-else>` — a wrong-item worktree, a stray under a mis-derived
     // name — would pass the weaker form and is exactly the defect this assertion exists to catch.
-    let mut owned: Vec<String> =
-        std::fs::read_dir(common_dir(root).join("redkiln").join("worktrees"))
-            .expect("step (8) created the worktrees directory for `bug-1` above")
-            .filter_map(Result::ok)
-            .map(|e| e.file_name().to_string_lossy().into_owned())
-            .collect();
+    let mut owned: Vec<String> = std::fs::read_dir(
+        crate::run_tree(root, "bug-1")
+            .path
+            .parent()
+            .expect("the derived tree has a root"),
+    )
+    .expect("step (8) created the worktrees directory for `bug-1` above")
+    .filter_map(Result::ok)
+    .map(|e| e.file_name().to_string_lossy().into_owned())
+    .collect();
     owned.sort();
     assert_eq!(
         owned,
@@ -605,10 +607,7 @@ fn ac403_gate_open_writes_trailer_and_event_and_exits_zero_without_waiting() {
 
     // (4) THE TRAILER, on the RUN-OWNED worktree's HEAD — and it carries the row's own token, so
     //     the commit and the event are about the same gate rather than two coincidences.
-    let owned = common_dir(root)
-        .join("redkiln")
-        .join("worktrees")
-        .join("gate-1");
+    let owned = crate::run_tree(root, "gate-1").path;
     assert!(
         owned.is_dir(),
         "step (8) created no run-owned worktree, so there was nothing to take a tier-1 write \

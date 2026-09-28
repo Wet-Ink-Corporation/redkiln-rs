@@ -235,8 +235,25 @@ pub fn terminate_pid(pid: u32, code: u32) -> Result<(), ContainError> {
 
 /// Test support: is the process with this pid still running — read from the process table, never
 /// from any job, so a survivor of a mutant containment is visible to it.
+///
+/// *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 6, proposed.)* **Now also a
+/// production call:** `rk-cli`'s run-tree lock builds its liveness predicate from this and
+/// [`process_start_time`]. An exit code of 259 reads alive (the documented ambiguity), which keeps
+/// a stale lock held and refuses a run by name: fail-closed. The `#[doc(hidden)]` attribute is left
+/// as `s7c` §7c.10 lists it until the record flips.
 #[doc(hidden)]
 #[must_use]
 pub fn is_alive(pid: u32) -> bool {
     win::is_alive(pid)
+}
+
+/// The start time of the LIVE process `pid` names, or `None` when no live process has that pid.
+///
+/// `GetProcessTimes`' creation time, 100 ns units since 1601. `s8d-ii` §8d-ii.2's run lock records it as T in `redkiln run <item> (pid N start T)`, and
+/// `rk-cli` compares it with [`is_alive`]'s reading so that a reused pid does not read as the
+/// lock's owner (ADR-0180 decision 6, proposed). Not test support: a production read.
+/// *(dated 2026-09-27, s8d-ii build, P3.)*
+#[must_use]
+pub fn process_start_time(pid: u32) -> Option<u64> {
+    win::process_start_time(pid)
 }

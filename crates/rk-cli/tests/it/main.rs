@@ -77,6 +77,7 @@ mod reconcile;
 mod review_pass;
 mod root;
 mod run;
+mod run_worktree;
 mod story_axis;
 mod support;
 mod surface;
@@ -348,4 +349,45 @@ pub fn common_dir(repo: &Path) -> PathBuf {
         .output()
         .expect("git rev-parse runs");
     PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_owned())
+}
+
+/// **The run tree `run` derives for `item` in the repository at `root`** — through `rk-git`'s one
+/// derivation, never a joined literal (`s8d-ii` §8d-ii.1; ADR-0180 decision 1, proposed). `root`
+/// is a fixture repository's main worktree, which is what every builder here returns.
+///
+/// *(dated 2026-09-27, `s8d-ii` build, P6.)*
+///
+/// # Panics
+/// If `item` is not a valid item id: every fixture item is one.
+#[must_use]
+pub fn run_tree(root: &Path, item: &str) -> rk_git::worktree::RunTree {
+    let id = rk_git::worktree::ItemId::parse(item)
+        .unwrap_or_else(|e| panic!("`{item}` is a valid item id: {e:?}"));
+    rk_git::worktree::derive(root, &id)
+}
+
+/// **The fixture repository's ignore row for the run-tree root** (`s8d-ii` §8d-ii.0 item 6,
+/// §8d-ii.1; D21-48 X1; ADR-0180 decision 2, proposed).
+///
+/// Creation refuses by name when `.redkiln/worktrees/<item>` is not git-ignored, so every builder
+/// whose repository a `run` creates a tree in appends the row `init` writes, taken from
+/// `rk_git::worktree::RUN_ROOT_IGNORE_ROW` rather than spelled again, to `<common-dir>/info/exclude`.
+/// `temp_repo` does not call it: `init`'s own tests start from git's template exclude, and a
+/// repository `run` reaches through `init` gets the row from `init`'s block.
+///
+/// *(dated 2026-09-27, `s8d-ii` build, P6.)*
+///
+/// # Panics
+/// If the exclude file cannot be written.
+pub fn ignore_run_root(root: &Path) {
+    let info = common_dir(root).join("info");
+    std::fs::create_dir_all(&info).expect("the info directory is created");
+    let exclude = info.join("exclude");
+    let mut bytes = std::fs::read(&exclude).unwrap_or_default();
+    if !bytes.is_empty() && !bytes.ends_with(b"\n") {
+        bytes.push(b'\n');
+    }
+    bytes.extend_from_slice(rk_git::worktree::RUN_ROOT_IGNORE_ROW.as_bytes());
+    bytes.push(b'\n');
+    std::fs::write(&exclude, bytes).expect("the run-root ignore row writes");
 }

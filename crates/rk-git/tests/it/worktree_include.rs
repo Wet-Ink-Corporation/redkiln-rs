@@ -112,7 +112,17 @@ fn a_file_under_a_run_worktree_is_never_carried() {
     let r = repo(&fx, "runwt", ".env\n", Some(".env\n"));
     write(&r, ".env", "A=1\n");
     // A planted sibling: matched and ignored, but under another run's worktree (D21-44).
-    write(&r, ".redkiln/worktrees/x/.env", "X=1\n");
+    // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 1, proposed.)* The planted tree's
+    // path comes from rk-git's one derivation, never a spelled root (Checkpoint 8d-ii (3)).
+    let planted = rk_git::worktree::derive(
+        &r,
+        &rk_git::worktree::ItemId::parse("x").expect("a valid item id"),
+    )
+    .path
+    .join(".env");
+    std::fs::create_dir_all(planted.parent().expect("the planted file has a parent"))
+        .expect("mkdir");
+    std::fs::write(&planted, "X=1\n").expect("the planted file writes");
     let got = carry_set(&exec_for(&fx), &r).expect("the carry reads");
     assert_eq!(
         got.carried,

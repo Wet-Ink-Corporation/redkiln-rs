@@ -57,4 +57,13 @@ impl Env {
     pub const fn as_map(&self) -> &BTreeMap<String, String> {
         &self.0
     }
+
+    /// **`GIT_LFS_SKIP_SMUDGE`, as captured** (`s8d-ii` §8d-ii.5 read (4); D21-47 V1; ADR-0180
+    /// decision 12, proposed): the value run-tree creation hands `rk_git::worktree::enter`, which
+    /// refuses when it is set to anything but `0`. `rk-git` reads no environment (ADR-0083), so the
+    /// read is here, off the one capture. *(dated 2026-09-27, `s8d-ii` build, P6.)*
+    #[must_use]
+    pub fn lfs_skip_smudge(&self) -> Option<&str> {
+        self.0.get("GIT_LFS_SKIP_SMUDGE").map(String::as_str)
+    }
 }

@@ -744,6 +744,12 @@ pub fn pack_min_repo(variant: PackVariant) -> tempfile::TempDir {
         install_review_toolchain(root);
     }
 
+    // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 2, proposed.)* A `run` over this
+    // repository creates its tree under `.redkiln/worktrees/`, and creation refuses by name when
+    // that root is not git-ignored (D21-48 X1). `init` is not run here, so its block is not
+    // written; the builder appends the same row.
+    crate::ignore_run_root(root);
+
     repo
 }
 

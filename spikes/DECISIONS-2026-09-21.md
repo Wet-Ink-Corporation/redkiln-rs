@@ -3575,3 +3575,40 @@ only, is now in force; ADR-0170 stays `accepted`, and its `superseded_by` alread
 sentence *"the default locations are the resolver's to supply (`s8d`)"* is discharged by its decision 4. D21-73 option
 (C) and D21-74 ruling 1 (decisions 2a and 2b) are the rulings it carries. **Checkpoint 8d is re-run after this flip
 commit.**
+
+---
+
+## D21-87 · ADR-0180 is written `proposed` — the run-owned worktree lives at `.redkiln/worktrees/<item>` under the main worktree, is reused on re-entry and never force-removed, and is guarded
+
+**Written 2026-09-27 in the session executing `s8d-ii`, at its build (package P1-RECORD), under the operator's AFK
+rule.** A record entry, not a ruling and not the stage's close D-entry: it names the one record `s8d-ii`'s records
+table requires, with the id it took at writing, so that Checkpoint 8d-ii locates it by `REC_WT` (D21-47: *"Records are
+located by the id recorded at write time"*). It flips nothing and writes no go-ahead line.
+
+**The record is ADR-0180**, `references/adr/0180-the-run-worktree-lives-in-dot-redkiln-is-reused-and-guarded.md`,
+`status: proposed`, `date: 2026-09-27`, in ADR-0085's `### Option — <name>` form (`check-adr-options.py` scans 17
+records from 0164 and flags 0). It executes D21-44, D21-45 W1, W2, W4 and W3's carry, D21-46's two corrections and R8,
+D21-47 V1 and its clause-5 rule, and D21-48 X1 (*"**Refuse by name.** This answers D21-46's flip-line flag."*), X2 (the
+post-checkout pointer scan) and X14 (the carry at creation). It takes no decision those entries did not take.
+
+**Supersedes in part**, each quoted in the record: ADR-0137 decision 3's path literal,
+*"`<common-dir>/redkiln/worktrees/<item>`"* (its rule, *"**`project_root` is the run-owned worktree**"*, stands);
+ADR-0105 clause 6, *"A worktree is **re-created**, never reused, per run"*, and the *"a reused worktree"* member of its
+forbids bullet, **for the run-owned worktree only** (`redkiln-migrate`'s worktree keeps clause 6, as AC-522 verifies);
+ADR-0105 clause 5's closed list (*"Anything not listed is a successor."*) for the **writes** lock, unlock, the
+`RK_BASE` marker, `reset --hard HEAD` and `clean -fd`, the reads superseding nothing; and ADR-0107 decision 2, *"a second
+`init` on an initialised repository changes nothing and exits 0"*, for the first `init` after the record on a
+repository initialised before it. **Cited and not superseded:** ADR-0018 (it names no worktree path) and ADR-0162
+decision 10 (the pass *"removes its own reference worktree on every path, including every refusal path"*; its contrast
+clause names `recreate_run_worktree`, which the record retires, and the record says so).
+
+**The back-links are not written.** `s8d-ii`'s records table: the `superseded_by` links on ADR-0105, ADR-0107 and
+ADR-0137 *"are **not** written with the record. They move in the flip commit"*. `references/adr/README.md`'s supersession
+count names the three as not yet reciprocated, and its index row, status census, forbids censuses, next free number
+(**`0181`**) and record census (180 over `0001`–`0180`) moved with the record, as did `runbook/00-preamble.md`'s.
+Checkpoint 8d-ii's `REC_WT` line reads `0180` by a dated edit in the same change.
+
+**How it flips.** At `s8d-ii`'s close under D21-64 ruling 10, if the formal Checkpoint 8d-ii passes whole and a refuting
+round is dry, on its own dated ledger line; the flip commit writes the three back-links. Checkpoint 8d-ii (9) asserts
+whichever back-link state the record's status requires, so it passes over either state and needs no D21-49 flip-stop
+of its own. Until then the record binds nothing.

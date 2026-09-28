@@ -187,6 +187,26 @@ The following remain true, and the four assertions of §7f.1 are run rather than
 - **`artifacts.toml` carries six toolchain-keyed kinds** and `spikes/p9/artifacts.toml` is unchanged.
 - **No `method_rank` moved** — the tie is resolved by keying, per ADR-0056.
 
+*(Amended 2026-09-27, `s8d-ii` build, P6: `s8d-ii` §8d-ii.7's three amendments, in the commit that moves the run-tree
+root to `.redkiln/worktrees/<item>` under the main worktree (D21-44; ADR-0180, proposed).)* Under that stage's binary
+the run arm would create a second, full checkout inside this repository that nothing removes (D21-45 W2 never
+force-removes), so:
+1. **The run arm runs in a throwaway clone outside this repository, on a short path.** `c7f=$(mktemp -d)`, converted
+   with `cygpath -m`; `clone="$c7f/c"`, made by `git clone --quiet --no-local`; `init` and then `run
+   rk-fix-doctor-test-count --lane fix` run with the clone as the working directory and the binary named by its
+   absolute path; the run-record reads name `$clone`; and the arm ends with `rm -rf "$c7f"`. The clone's `rk-run/`
+   refs, worktrees and store are its own, so nothing in this repository moves. Its worst-case run-tree path is the
+   `mktemp -d` root plus `/c` (50 characters measured at stage open) + 20 + 24 + 11 + 1 + the longest tracked path,
+   246 of 259 (`s8d-ii` §8d-ii.0 item 2).
+2. **The cleanup line is deleted.** It force-removed the legacy tree D21-44 keeps for `s8j` (*"stays where it is"*),
+   and W2 forbids a forced removal.
+3. **The prune line is deleted.** It ran in this repository, and a prune removes the registration of any tree whose
+   directory is missing, which would be the registration D21-44 keeps for `s8j`.
+
+The checkpoint's assertions about the run (it executes, it gets past catalog load, it opens a run record carrying
+`dag_assembled`) are unchanged; they read the clone's run record. `s8e`'s literal for the discharged `Slice-Verdict`
+lint stays `s8e`'s (§8e.13), and `s8j` §8j.8 amends this arm further, taking the clone as `$clone`.
+
 ```bash
 cd D:/repos/redkiln-rs
 # Run this block as a script or in a subshell — every guard below ends in `exit 1`.
@@ -225,9 +245,21 @@ printf '%s\n' "$armed" | grep -vE 'discharged by s8e'; rc=$?; [ "$rc" -eq 1 ] ||
 test -f ./target/debug/redkiln || cargo build -p rk-cli --bin redkiln >/dev/null 2>&1
 test -f ./target/debug/redkiln || { echo "FAIL: ./target/debug/redkiln is absent and could not be built — every guard below would be asserting over the empty string"; exit 1; }
 ./target/debug/redkiln --version >/dev/null 2>&1 || { echo "FAIL: ./target/debug/redkiln does not execute"; exit 1; }
-runs_before=$(ls .git/redkiln/runs 2>/dev/null | wc -l)
-out=$(./target/debug/redkiln run rk-fix-doctor-test-count --lane fix 2>&1); rc=$?
-[ "$rc" -ne 127 ] || { echo "FAIL: the run did not execute (rc=127)"; exit 1; }
+# [amended 2026-09-27, s8d-ii build, P6; s8d-ii 8d-ii.7 amendment 1; ADR-0180, proposed] THE RUN ARM RUNS IN A
+# THROWAWAY CLONE OUTSIDE THIS REPOSITORY. From s8d-ii on, `run` creates its tree at .redkiln/worktrees/<item> under the
+# main worktree and never force-removes it (D21-45 W2), so a run here would leave a second full checkout registered
+# inside the product repository. The clone's refs, worktrees and store are its own; `rm -rf` takes them all. The
+# directory is short (mktemp -d, drive-letter form) because the run-tree length rule reads the actual item (8d-ii.6).
+rk_bin="$(cygpath -m "$PWD")/target/debug/redkiln"
+c7f=$(mktemp -d) || { echo "FAIL: mktemp -d failed — the run arm has no throwaway directory"; exit 1; }
+c7f=$(cygpath -m "$c7f") || { echo "FAIL: cygpath -m could not convert the throwaway directory"; exit 1; }
+clone="$c7f/c"
+git clone --quiet --no-local . "$clone" || { echo "FAIL: git clone --no-local of this repository into $clone failed"; rm -rf "$c7f"; exit 1; }
+out=$(cd "$clone" && "$rk_bin" init 2>&1); rc=$?
+[ "$rc" -eq 0 ] || { echo "FAIL: init in the clone exited $rc"; printf '%s\n' "$out" | head -5; rm -rf "$c7f"; exit 1; }
+runs_before=$(ls "$clone/.git/redkiln/runs" 2>/dev/null | wc -l)
+out=$(cd "$clone" && "$rk_bin" run rk-fix-doctor-test-count --lane fix 2>&1); rc=$?
+[ "$rc" -ne 127 ] || { echo "FAIL: the run did not execute (rc=127)"; rm -rf "$c7f"; exit 1; }
 printf '%s\n' "$out" | grep -qE 'contains a cycle|RankTie' && { echo "FAIL: the run still refuses at catalog LOAD:"; printf '%s\n' "$out" | head -3; exit 1; }
 # THE POSITIVE HALF. The guard above is a NEGATIVE assertion over a string that is EMPTY in the
 # passing case (a successful run prints 0 bytes on both streams, rc=0), so on its own it is also
@@ -235,18 +267,18 @@ printf '%s\n' "$out" | grep -qE 'contains a cycle|RankTie' && { echo "FAIL: the 
 # measured 2026-09-21. `dag_assembled` is emitted by selection step 5, which is REACHED ONLY AFTER
 # the catalog, the artifact registry and the facet registry have all loaded, so it is the smallest
 # honest witness that this step's externally visible effect actually happened.
-runs_after=$(ls .git/redkiln/runs 2>/dev/null | wc -l)
-[ "$runs_after" -gt "$runs_before" ] || { echo "FAIL: the run opened no run record ($runs_before -> $runs_after) — it did not get as far as selection"; exit 1; }
-newest=$(ls -1dt .git/redkiln/runs/*/ 2>/dev/null | head -1)
-grep -q 'dag_assembled' "${newest}events.jsonl" || { echo "FAIL: $newest carries no dag_assembled — the pack did not load, whatever the refusal text said"; exit 1; }
+runs_after=$(ls "$clone/.git/redkiln/runs" 2>/dev/null | wc -l)
+[ "$runs_after" -gt "$runs_before" ] || { echo "FAIL: the run opened no run record in the clone ($runs_before -> $runs_after) — it did not get as far as selection"; rm -rf "$c7f"; exit 1; }
+newest=$(ls -1dt "$clone"/.git/redkiln/runs/*/ 2>/dev/null | head -1)
+grep -q 'dag_assembled' "${newest}events.jsonl" || { echo "FAIL: $newest carries no dag_assembled — the pack did not load, whatever the refusal text said"; rm -rf "$c7f"; exit 1; }
 printf '%s\n' "$out" | head -3   # → READ: the run gets past load. A later refusal (schemas, cards, roles) is s7g's and is not this checkpoint's subject.
-# AND DISARM THE HAZARD THIS BLOCK JUST ARMED. `run` creates a run-owned worktree that is a FULL
-# SECOND CHECKOUT of the workspace and can sit many commits behind HEAD; left registered, it makes
-# every later repo-root grep double-count against a stale tree (measured: `TrailerKey::` 38 from
-# root against 19 from `crates/`). The checkpoint cleans up after itself rather than leaving that
-# for the next reader.
-git worktree remove --force .git/redkiln/worktrees/rk-fix-doctor-test-count >/dev/null 2>&1 || true
-git worktree prune
+# [amended 2026-09-27, s8d-ii build, P6; s8d-ii 8d-ii.7 amendments 2 and 3; ADR-0180, proposed] THE HAZARD IS
+# DISARMED BY WHERE THE RUN RAN, NOT BY A REMOVAL HERE. The run tree is the clone's, so `rm -rf` of the throwaway
+# directory takes it, its registration and the clone's store with it. The two lines that followed are deleted: the
+# forced removal of the legacy tree at the old common-dir root (D21-44 keeps that tree and its registration for s8j,
+# and W2 forbids a forced removal), and the prune of this repository's registrations (a prune drops the registration
+# of any tree whose directory is missing, which would be the one D21-44 keeps).
+rm -rf "$c7f" || { echo "FAIL: the throwaway clone $c7f could not be removed"; exit 1; }
 echo "CP7F-END-OF-BLOCK reached"
 ```
 

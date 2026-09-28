@@ -147,6 +147,84 @@ fn the_journal_keeps_argv_as_a_digest_and_has_no_field_for_the_environment() {
     } = inv.clone();
 }
 
+/// D21-45 W1: *"`LC_ALL=C` on every parsed git call"*, set at the one process-exec site so no
+/// parse depends on the operator's locale (s8d-ii §8d-ii.2). Observed from INSIDE the child: a
+/// shell alias prints the `LC_ALL` git's child environment carries, through every route to the
+/// exec site — `GitExec::run`, `GitExec::run_with_stdin`, the unlabelled `run`, `run_with_env`
+/// with a caller's own `LC_ALL` (the pin wins), and a live `GitOps::run`.
+/// *(dated 2026-09-27, s8d-ii build, P2.)*
+#[test]
+fn every_git_child_runs_with_lc_all_c() {
+    let fx = crate::support::Fixture::new();
+    let repo = fx.repo_with_one_commit("lc");
+    let cwd = WorktreePath::new(&repo).expect("normalises");
+    let alias = "alias.rklc=!printf 'LC_ALL=[%s]' \"$LC_ALL\"";
+    let args = ["-c", alias, "rklc"];
+    let want = "LC_ALL=[C]";
+    let exec = exec_for(&fx);
+
+    let mut journal = VecJournal::default();
+    let mut ops = GitOps::new(exec_for(&fx), &mut journal, Mode::Live);
+    let seen = [
+        (
+            "GitExec::run",
+            exec.run(GitOp::Log, &cwd, args)
+                .expect("run")
+                .stdout_trimmed(),
+        ),
+        (
+            "GitExec::run_with_stdin",
+            exec.run_with_stdin(GitOp::CheckIgnore, &cwd, args, b"x\n")
+                .expect("run_with_stdin")
+                .stdout_trimmed(),
+        ),
+        (
+            "git_exec::run",
+            rk_git::git_exec::run(&repo, args)
+                .expect("run")
+                .stdout_trimmed(),
+        ),
+        (
+            "git_exec::run_with_env (caller sets LC_ALL=de_DE.UTF-8)",
+            rk_git::git_exec::run_with_env(&repo, args, [("LC_ALL", "de_DE.UTF-8")])
+                .expect("run_with_env")
+                .stdout_trimmed(),
+        ),
+        (
+            "GitOps::run (live)",
+            ops.run(GitOp::Log, &cwd, &args)
+                .expect("gitops")
+                .stdout_trimmed(),
+        ),
+    ];
+
+    let wrong: Vec<String> = seen
+        .iter()
+        .filter(|(_, got)| got != want)
+        .map(|(route, got)| format!("{route}: the child saw `{got}`"))
+        .collect();
+    assert!(
+        wrong.is_empty(),
+        "{} of {} routes ran git without LC_ALL=C (W1):\n{}",
+        wrong.len(),
+        seen.len(),
+        wrong.join("\n")
+    );
+    // CONTROL: the alias reports the variable it is given, so a `C` above is the pin and not the
+    // alias printing a constant.
+    let ctl = rk_git::git_exec::run_with_env(
+        &repo,
+        ["-c", "alias.rkx=!printf 'X=[%s]' \"$RK_S8DII_X\"", "rkx"],
+        [("RK_S8DII_X", "seen")],
+    )
+    .expect("control")
+    .stdout_trimmed();
+    assert_eq!(
+        ctl, "X=[seen]",
+        "CONTROL: the alias does not report the child's environment"
+    );
+}
+
 /// `GitOps` is a struct and git is not a port. Checkpoint 7a counts exactly five port traits in
 /// `rk-ports`; a `GitOps` trait would make it six and put git on the port surface ADR-0003 keeps it
 /// off (AC-483).

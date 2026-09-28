@@ -329,8 +329,11 @@ Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and 
    names in §8d-ii.8 stay as they are.
 8. **The whole-suite floor.** The expected value is **re-derived at stage open from Checkpoint 8d's recorded
    count**, plus this stage's **50** new tests (§8d-ii.8). Computed once, on the final chain: 740 (ADR-0164's
-   evidence, `992d257`) + 9 (8a) + 25 (8b) + 78 (8c) + 62 (8d) = 914 at Checkpoint 8d, so 914 + 50 = **964**. Replace
-   964 in Checkpoint 8d-ii's `FLOOR=` line with Checkpoint 8d's recorded count plus 50, by a dated edit, before the
+   evidence, `992d257`) + 9 (8a) + 25 (8b) + 78 (8c) + 62 (8d) = 914 at Checkpoint 8d, so 914 + 50 = ~~**964**~~ **1021** *(dated 2026-09-27, s8d-ii build, package P1-RECORD:
+   re-derived from Checkpoint 8d's RECORDED count, 971 passed / 0 failed over 44 at `b183eb9` (D21-78); its
+   post-flip re-run after `0b470ee` passed again (rc 0, 0 FAIL), and this stage's open baseline read 971, so 971 + 50 =
+   1021; the 914 chain above was the planned figure)*.
+   Replace ~~964~~ in Checkpoint 8d-ii's `FLOOR=` line with Checkpoint 8d's recorded count plus 50, by a dated edit, before the
    block's first run. It is never lowered to make a red run green. *(It read 32 and 917 before the adversarial-review
    fixes of 2026-09-24, and 885 + 46 = 931 before the final consistency pass of 2026-09-24. *D21-48 (2026-09-24):* it read 46
    and 947 before X2's four tests. *D21-48 (2026-09-24), floor propagation:* it read 901 + 50 = 951 before `s8c`'s
@@ -339,6 +342,70 @@ Each is read-only. A 🛑 line is a STOP: the finding goes to the operator, and 
    because D21-46 had flagged it for the flip line and the ledger carried no answer. D21-48 X1 answers it:
    *"**Refuse by name.** This answers D21-46's flip-line flag."* Re-measure only that the ledger line stands: `spikes/DECISIONS-2026-09-21.md`'s
    D21-48 table carries the X1 row. §8d-ii.1 builds the refusal.
+
+*(dated 2026-09-27, s8d-ii build, package P1-RECORD.)* **The stage-open readings, re-taken at `83cf836` (the tracker
+commit after `s8d`'s flip commit `0b470ee`), read-only, before any code.** Next free ADR `0180` (`ls references/adr` ended at
+`0179`) and next ledger id `D21-87` (the last heading was `## D21-86`) at open.
+1. **Registered.** `git worktree list --porcelain` lists `D:/repos/redkiln-rs/.git/redkiln/worktrees/rk-fix-doctor-test-count`
+   at `73c087a82245b342811208655323ae4f49bf879b` on `refs/heads/rk-run/rk-fix-doctor-test-count`; the ref is `73c087a…`
+   and its `Story:` trailer reads `redkiln-rs/rk-fix-doctor-test-count`. Neither the tree nor the ref was touched. The
+   linked tree `D:/repos/redkiln-rs.swt` (`spike/s-h1b-s-wt`) is still registered.
+2. **140**, the same file (`references/adr/0114-…`). Bounds: 39 + 64 + 11 + 1 + 140 = **255** here; 39 + 24 + 11 + 1 + 140
+   = **215** for `rk-fix-doctor-test-count`; a `mktemp -d` root in `cygpath -m` form plus `/c` measured 50 characters
+   (`C:/Users/ryanm/AppData/Local/Temp/tmp.6KlMDxskDr/c`), so 7f's clone bound is 50 + 20 + 24 + 11 + 1 + 140 = **246**.
+   `git config --get core.longpaths` exits 1. The worktree record's own file name (81 characters with its directory)
+   does not move the longest path.
+3. **Unchanged.** Four `system` rows from `C:/Program Files/Git/etc/gitconfig` (`filter.lfs.clean`, `.smudge`,
+   `.process`, `.required true`); `git check-attr --source=HEAD --stdin filter` over `ls-tree -r --name-only HEAD`
+   selects no driver (0 lines other than `unspecified`/`unset`); `--get-regexp '^includeif\.'` exits 1. V1's condition
+   holds.
+4. **No recursive walk over `.redkiln/`.** The `read_dir` sites that touch `.redkiln/` read one named subdirectory one
+   level deep: `cards` and `specs` (`doctor/rules.rs`), `skills` (`doctor/roles.rs`), `catalog` (`run.rs`'s
+   `catalog_sources`), and, new since `c5d19d7`, `processes` (`rk-cli/src/processes.rs`, *"Not recursive, and `*.toml`
+   only"*). `Catalog::from_dir` and `load_diagnostic_dir` read the directory they are handed; `init`'s
+   `preexisting_rk_names` reads the root's top level. The two recursive walks under `crates/*/src`,
+   `kernel_denylist::read_rust_sources` and `module_boundary`'s use of it, walk `crates/rk-kernel/src`, not `.redkiln/`.
+5. **Holds.** `init.rs`'s module doc reads *"It does exactly two things"* and *"installs no hook (AC-412)"*; the only
+   `# redkiln-hook` on a code line is `doctor/rules.rs`'s `const MARKER: &str = "# redkiln-hook";` (the two other hits
+   are a doc comment and a message string in `tests/it/doctor.rs`).
+6. **The list, re-measured (P6 consumes it).** Fixture repositories a run reaches: AC-438's exit table,
+   `crates/rk-cli/tests/fixtures/exit/{cancelled-timeout, findings-block, gate-open, no-pack, no-record,
+   platform-is-error, resume-flag, schema-invalid-structured-output, schema-no-structured-output,
+   transport-missing-binary}`; `cost`'s run (`cost::cost_after_a_real_run_renders_low_sample_through_the_binary`) runs over
+   `pack_min_repo(PackVariant::Base)`, not a fixture directory. Code builders: `temp_repo` (`tests/it/main.rs`),
+   `pack_min_repo` (`support.rs`), `repo_with_open_gate` (`answer.rs`), `synthetic_trailer_repo` (`doctor.rs`),
+   `repo_seeded_from` and `repo_with_record` (`explain.rs`), the `adr0128_*` tests' own (`run.rs`, `surface.rs`), and,
+   added since `fc80687`, `change_repo` (`change_deriver.rs`), `gate_repo_with_questions` (`processes.rs`) and
+   `source_repo` (`verb_rows.rs`, its own `git init`). The files whose tests invoke `run` (`verbs::run::run_with` or the
+   binary's `run`) are `adapter_selection.rs` (new since `fc80687`), `config.rs`, `cost.rs`, `exit.rs`, `root.rs`,
+   `run.rs` and `surface.rs`; `review_pass.rs`, on the planning list, names `"run"` once and calls neither form, and
+   `answer.rs`, `change_deriver.rs`, `story_axis.rs`, `support.rs` and `transcription.rs` call other `verbs::run`
+   functions (`story_value`, `through_step_seven`, `tool_routing`) without creating a tree. A test that fails
+   with the ignore refusal's name after the move is still a builder this list missed.
+7. **Free and present as planned.** `crates/rk-cli/tests/it/run_worktree.rs` does not exist (new);
+   `crates/rk-git/tests/it/worktree.rs`, `gitops.rs`, `crates/rk-cli/tests/it/init.rs` and
+   `crates/rk-containment/tests/it/containment.rs` exist.
+8. **1021** (971 + 50), written into (4)'s `FLOOR=` line and item 8 above by dated edit.
+9. **Stands.** D21-48's table carries *"| X1 | s8d-ii: creation when `.redkiln/worktrees/` is not git-ignored |
+   **Refuse by name.** This answers D21-46's flip-line flag. |"*.
+
+**Baseline** (SO-11), in a private `git worktree add --detach target/wt-p1rec HEAD` at `83cf836`, after `pnpm install
+--frozen-lockfile --prefer-offline` of the node fixture, through the no-dispatch helper at `CARGO_BUILD_JOBS=4
+RUST_TEST_THREADS=4`: `cargo test --workspace --no-fail-fast` rc 0, **971 passed / 0 failed / 10 ignored over 44 result
+lines**, the count Checkpoint 8d recorded. Removing that tree with `git worktree remove --force` left s8c §8c.12 item 3's shape again: a `node_modules` junction skeleton, 114 links and 0 files, under `target/wt-p1rec`, invisible to `git worktree list`; it was removed with a walk that does not follow junctions.
+
+**A finding for the package that moves the root (not settled here).** (3)'s root floor also reads two lines `s8c`
+added after this file was planned: `crates/rk-git/src/worktree_include.rs`'s
+`pub const RUN_WORKTREES_EXCLUDE: &str = ":(exclude).redkiln/worktrees";` (the `.worktreeinclude` reader's pathspec, D21-44)
+and `crates/rk-git/tests/it/worktree_include.rs`'s planted `.redkiln/worktrees/x/.env`. Neither is exempt under `OWN`
+(`worktree\.rs:` only), so the floor stays red on them after every run-tree derivation moves. Whichever way the root-move
+package meets them (route the pathspec through the one derivation, or widen `OWN` by a dated edit with a control), it
+is that package's to choose and record.
+*(dated 2026-09-27, s8d-ii build, package P6-RKCLI-ROOT-MOVE.)* **Settled by routing the pathspec through the one
+derivation's module**, not by widening `OWN`: `rk_git::worktree::RUN_ROOT_EXCLUDE_PATHSPEC` holds the literal beside
+`derive` (with a `const` assertion tying it to `RUN_ROOT_IGNORE_ROW`), `worktree_include::RUN_WORKTREES_EXCLUDE` names
+it, and the test plants its tree at `derive(&r, "x").path`. The root floor reads 0 lines outside `OWN` (§8d-ii.8's P6
+note).
 
 ### 8d-ii.1 The run worktree moves to `.redkiln/worktrees/<item>` (D21-44)
 
@@ -621,8 +688,11 @@ so they supersede nothing (D21-47's clause-5 rule).
    the resolved configuration: `system`, `global`, `local`, `worktree` and `command` scopes, with every `include`
    followed and every `includeIf` whose condition matches.
 3. **The run tree's own `includeIf`s.** `--get-regexp '^includeif\.'` at every scope, so that an `includeIf` whose
-   condition matches the **run tree** (a `gitdir:` pattern that covers `.redkiln/worktrees/`) but not the user's
-   checkout is read from the file it names and folded into (2).
+   condition matches the **run tree** (~~a `gitdir:` pattern that covers `.redkiln/worktrees/`~~) but not the user's
+   checkout is read from the file it names and folded into (2). *(dated 2026-09-27, s8d-ii build, P4: measured on git
+   2.55.0.windows.3, a `gitdir:` pattern covering `.redkiln/worktrees/` does **not** match a run tree. Git matches
+   `gitdir:` against the tree's gitdir, `<common-dir>/worktrees/<item>`, so `gitdir:**/.git/worktrees/**` and
+   `onbranch:rk-run/**` are the run-tree conditions. The read matches against those, as §8d-ii.8's P4 note records.)*
 4. **`GIT_LFS_SKIP_SMUDGE`**, which `rk-cli` reads through `env.rs`, the one environment read (ADR-0083), and passes
    in.
 
@@ -815,6 +885,16 @@ whole runs: this repository's worktree path set and run-record count are unchang
 **The arm still cannot dispatch here.** 0 shipped cards carry `permission_mode`, and `card::lint_card` refuses a blank
 one at bind. Checkpoint 8d-ii asserts that before it re-runs 7f, and refuses to re-run 7f once a card carries one.
 
+*(dated 2026-09-27, s8d-ii build, package P6-RKCLI-ROOT-MOVE.)* **The three amendments are made**, each dated in
+`s7f` §7f.5 (a prose note above the block, and dated comment lines in it): the arm makes `c7f=$(mktemp -d)` in
+`cygpath -m` form, `clone="$c7f/c"` by `git clone --quiet --no-local . "$clone"`, runs `init` and `run
+rk-fix-doctor-test-count --lane fix` in the clone by the binary's absolute path (`rk_bin`), reads `"$clone/.git/redkiln/runs"`,
+and ends with `rm -rf "$c7f"`; the forced-removal and prune lines are deleted, and no comment keeps the forced-removal
+line's text (s8e's (10d) greps the whole block for it). `PROGRESS.md`'s 7f row reads *"checkpoint passed `bf12a1c`, re-run
+pending"* with a dated note. (7b)'s text guards pass over the amended block (§8d-ii.8's P6 note); 7f was not replayed
+here. One consequence for the replay: this repository's `registry.toml` declares `setup_projects` for
+`[toolchain.rust]`, so the clone's run installs the Node fixture with `pnpm` at creation (finding 20).
+
 ### 8d-ii.8 Named tests, red first, and the mutants
 
 **Every test of a NEW behaviour is written before the code it covers and watched RED for the reason in its row.** A
@@ -943,6 +1023,642 @@ were `s8e`'s S8E-M19 and S8E-M21 to S8E-M24, S8E-M30 to S8E-M33, and the rk-git 
 A mutant that survives is not waved through. It is either an **unobservable property**, which moves to a source lint
 with its reason written down, or a **missing fixture branch**. Both are recorded by the mutant's name.
 
+*(dated 2026-09-27, s8d-ii build, package P2-RKGIT-IDENTITY.)* **§8d-ii.1's derivation, §8d-ii.2's validator and guards,
+§8d-ii.6's read variants and length rule, and the ignore refusal are built in `rk_git::worktree`; ten of the table's
+rows are green, each seen red first.** What exists for the later packages to call: `ItemId::parse` (the validator;
+`ItemIdRefusal` names each rule), `derive(main, &item)` returning `RunTree { item, path, reference, branch }` (the ONE
+derivation: `<main>/.redkiln/worktrees/<item>`, `<item>.review-ref` beside it, `rk-run/<item>`), `main_worktree`
+(the first `worktree list --porcelain` record; `bare` refused by name), `registered_worktrees`,
+`refuse_linked_segments`, `refuse_case_fold_collision`, `refuse_unignored_root`, `path_bound` and `refuse_past_limit`,
+`verify_created` (compares canonical paths only; nothing canonical reaches git), and `prepare_creation(exec, start,
+item, fork)`, which runs the guards in that order and returns the derivation. Every refusal is
+`GitError::WorktreeRefused { refusal: WorktreeRefusal }`, whose `Display` names the path or id and the rule. `GitOp`
+gains three reads, `WorktreeList`, `LsTree` and `Config` (`RevParse` and `CheckIgnore` already existed and carry
+`rev-parse --git-common-dir` and the ignore read); none is a write, and `s8a`'s GitOp pin passes (added since
+`S8A_BASE`: `CheckIgnore Config LsFiles LsTree WorktreeList`, none named for a range read). `git_exec.rs`'s private
+`spawn` sets `cmd.env("LC_ALL", "C")` **after** the caller's `env`, so no caller can undo it. Nothing calls
+`prepare_creation` or `derive` from `rk-cli` yet: `run.rs`'s four derivations and the six test sites move in the
+root-move package, and (3)'s root floor still reads the same 12 lines it read at entry.
+- **RED on the entry-shaped stub** (the API present, the entry behaviour inside it), each for its row's reason:
+  `an_item_id_that_is_not_a_safe_path_and_branch_component_is_refused` *"24 of 24 rows were not refused for their own
+  reason (no validator?)"*; `an_item_id_that_case_folds_onto_a_registered_tree_is_refused` *"fix-1 beside a registered
+  Fix-1: ADMITTED"*; `the_root_is_the_main_worktree_when_run_from_a_linked_worktree` *"read from the linked worktree,
+  the root is `…/rootmain/.git`, not the main worktree"* (the common-dir root); `a_bare_repository_is_refused_by_name`
+  *"the main worktree of a bare repository: ADMITTED"*; `a_symlinked_redkiln_or_worktrees_directory_is_refused` *"a
+  junction at .redkiln: ADMITTED"*; `a_created_worktree_whose_realpath_leaves_the_root_is_refused` *"a tree resolving
+  outside the root: ADMITTED (())"*; `creation_refuses_when_the_worktree_root_is_not_ignored` *"creation under an
+  unignored root: ADMITTED"*; `creation_refuses_a_path_past_the_platform_limit_by_name` *"a 260-character worst case:
+  ADMITTED"*; `gitops::every_git_child_runs_with_lc_all_c` *"5 of 5 routes ran git without LC_ALL=C (W1)"* (the child
+  saw `LC_ALL=[]`). `the_length_rule_reads_the_actual_item_length` was **green** on the stub, as its row requires.
+- **GREEN:** the ten selected module-qualified with `--exact`, *"test result: ok. 10 passed; 0 failed; 0 ignored; 0
+  measured; 78 filtered out"*. The symlink test built a **junction** at each of `.redkiln`, `.redkiln/worktrees` and
+  `.redkiln/worktrees/item-1` (it prints which), and the refusal reads *"is a symlink or junction"*.
+- **Mutants**, from `p2rkgit_mutants.py` (anchor asserted once, tmp + `os.replace`, restored in `finally`, sha256
+  verified), each killed by its named test for its named reason: `S8D-II-M7` (the `LC_ALL` line removed) *"5 of 5
+  routes ran git without LC_ALL=C"*; `S8D-II-M11` (the ignore check skipped) *"creation under an unignored root:
+  ADMITTED"*; `S8D-II-M17` (the root read by `--show-toplevel`) *"read from the linked worktree, the root is
+  `…/rootmain.swt`"*; `S8D-II-M18` (the bound on `ITEM_ID_MAX`) *"a 1-character item was refused on a 64-character
+  bound: … bound: 260"*. Each reading: rc 101, *"0 passed; 1 failed"*.
+- **The package brief said "12 tests"; its own list names ten**, the ten above. The other rows whose subject is W1
+  (`RK_BASE`, the lock, re-entry, `removal_never_follows_a_junction`) are the lifecycle package's (§8d-ii.3).
+- **Design choices a later package may revisit, recorded rather than hidden:** the length rule's lengths are UTF-16
+  code units (what `MAX_PATH` counts) and the longest path is read from `ls-tree -r -z --name-only <fork>`;
+  `core.longpaths` is read with `config --type=bool --get`, exit 1 meaning *not set*; the case-fold rule reads
+  branches with `rev-parse --symbolic-full-name --branches=rk-run/*` and strips a `.review-ref` suffix from registered
+  names; `.lock` and `.review-ref` are case-folded (a Windows loose ref is a file); the linked-segment check reports
+  *"symlink or junction"* on Windows, because `is_symlink` is true for both there. The tests pin `core.excludesFile`
+  and `core.longpaths` locally, because the production reads run in the inherited environment and a box whose
+  system config sets `core.longpaths=true` would otherwise admit the refusal fixture.
+
+*(dated 2026-09-27, s8d-ii build, package P3-RKGIT-LIFECYCLE.)* **§8d-ii.2's marker, lock, re-entry check and
+junction rule, §8d-ii.3's lifecycle and §8d-ii.6's four writes are built in `rk_git::worktree`, and the start-time
+half of the liveness predicate in `rk-containment`; the table's eighteen lifecycle rows and its `rk-containment` row
+are green, each seen red first.** What exists for the later packages to call:
+- `enter(exec, start, item, &LockOwner { pid, start }, &probe)` returns `Entered { tree, fork, created, discarded }`,
+  with `created` one of `Creation::{New, OnExistingBranch, Reused}` and `discarded` every discarded path. `release(…)`
+  unlocks only the run's own lock. `remove_landed(exec, start, item)` returns `Removal::Removed` or
+  `Removal::Kept { path, reason }`; `KeepReason`'s `Dirty` displays Claude Code's *"N changed file(s) would be
+  lost"*. `read_rk_base`, `write_rk_base` and `lock_reason` are public.
+- **The predicate is the `ProcessProbe` trait** (`start_time(pid) -> Option<u64>`, implemented for any `Fn(u32) ->
+  Option<u64>`). A lock is live only when it returns exactly the recorded start. `rk-git`'s manifest is unchanged: it
+  has no edge to `rk-containment`. `rk-cli` has not yet built the predicate from `is_alive` and `process_start_time`;
+  that is the wiring package's.
+- New refusals (each keeps the tree): `NoRkBase`, `RkBaseMismatch`, `ForeignRepository`, `CommitsRunRefLacks`,
+  `DetachedHead`, `OffRunRef`, `LockHeld`, `ForeignLock` and `DiscardIncomplete`.
+- `GitOp` gains the four writes, `WorktreeLock`, `WorktreeUnlock`, `ResetHard` and `Clean`, each with `is_write`
+  true. `s8a`'s GitOp pin passes and its three controls fire. It lists as added since `S8A_BASE`: `CheckIgnore Clean
+  Config LsFiles LsTree ResetHard WorktreeList WorktreeLock WorktreeUnlock`.
+- `rk_containment::process_start_time(pid) -> Option<u64>` is public and not `#[doc(hidden)]`: it is a production
+  read. Its Windows arm reads `GetProcessTimes` through `ffi::win`, and returns nothing unless `GetExitCodeProcess`
+  reads `STILL_ACTIVE`. Its POSIX arm reads `/proc/<pid>/stat` field 22, returns nothing for a zombie, and is ARMED to
+  CI. `is_alive`'s `#[doc(hidden)]` is left as it stands until the `rk-cli` call that makes it production.
+
+**RED, on an entry-shaped stub** (the API present; the entry behaviour inside it: an existing path refused as
+ADR-0105 clause 6 re-created it, no marker, no lock, no discard, removal by a bare `git worktree remove`). Each test
+failed for its row's reason:
+
+| test | the red line |
+| --- | --- |
+| `creation_writes_rk_base_into_the_worktree_gitdir` | *"no RK_BASE in the tree's gitdir `…/base/.git/worktrees/item-1` … — W1's ownership marker is absent"* |
+| `creation_locks_the_worktree_with_the_pid_and_start_reason` | *"the created tree is not locked with the pid and start reason (no lock?)"*, `left: None` |
+| `a_lock_held_by_a_dead_pid_is_released` | *"a dead pid's lock was not released: WorktreeRemoveFailed { … }"* (clause 6's refusal) |
+| `a_lock_whose_pid_now_names_another_process_is_released` | as the dead-pid row |
+| `a_lock_held_by_a_live_pid_refuses_by_name` | *"refused, but not by a WorktreeRefused: WorktreeRemoveFailed"* |
+| `reentry_reuses_the_registered_tree_when_head_equals_the_run_ref_tip` | *"marker: … NotFound"* (no marker, then no reuse) |
+| `reentry_discards_in_flight_changes_and_reports_each_path` | *"reused: WorktreeRemoveFailed"* (re-created per run: no reuse, no discard) |
+| `reentry_keeps_ignored_files` | as the discard row |
+| `a_tree_without_rk_base_is_refused_and_never_removed` | *"refused, but not by a WorktreeRefused"* (no marker check) |
+| `a_tree_with_commits_the_run_ref_lacks_is_refused_and_never_removed` | as the no-`RK_BASE` row |
+| `a_tree_registered_to_another_repository_is_refused` | as the no-`RK_BASE` row |
+| `a_tree_on_a_detached_head_is_refused_at_reentry_and_kept` | as the no-`RK_BASE` row |
+| `an_existing_run_branch_is_never_reset` | *"no reuse path for an existing run branch: NonZeroExit { op: "worktree add", … }"* |
+| `a_dirty_tree_is_kept_with_its_reason` | *"removal decision: WorktreeRemoveFailed"* (git's own refusal; no removal rule) |
+| `an_unlanded_tree_is_kept_with_its_reason` | *"an UNLANDED tree (its tip carries no closed mark) was removed"* |
+| `a_locked_tree_is_not_removed` | *"a LOCKED tree was removed"* |
+| `removal_never_follows_a_junction` | *"a skeleton of the removed tree is left on disk (s8c §8c.12 item 3)"* |
+| `a_clean_landed_marked_unlocked_tree_is_removed` | *"a landed tree was kept: Kept { …, reason: Unmarked }"* |
+| `containment::process_start_time_reads_a_live_child_and_nothing_for_an_exited_one` | *"process_start_time read nothing for the LIVE child … (no start-time read?)"* |
+
+The positive removal row passed on the bare-removal stub, as a positive control must. So it was read red on the
+stub's other entry form, the one where the run tree is never removed (`recreate_run_worktree` recreates and never
+removes). That reading is the one in the table.
+
+**GREEN:** `rk-git` 19 selected module-qualified with `--exact`, the table's 18 plus the re-pointed
+`control_a_worktree_can_be_created_and_removed`: *"test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 86
+filtered out"*. `rk-containment`: *"test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out"*,
+reading *"MEASURED process_start_time: child 33280 -> Some(134350387165104729), again Some(134350387165104729)"*. The
+zero-match control reads rc 0 and *"0 passed"*.
+
+The renamed test keeps its refusal: `worktree::add`'s clause-6 refusal of an existing path still holds for
+`redkiln-migrate`'s worktree (AC-522), and is asserted at the renamed test's end.
+
+**Mutants**, from `p3lifecycle_mutants.py` (anchor asserted once, tmp + `os.replace`, restored in `finally`, sha256
+`58fa5a242694…` verified after each). Each read rc 101, *"0 passed; 1 failed"*, and was killed by its named test for
+its named reason:
+
+| mutant | killed with |
+| --- | --- |
+| `S8D-II-M2` (rk-git half: a registered tree force-removed and re-created) | *"the registered tree was re-created, not reused: OnExistingBranch"* |
+| `S8D-II-M3` (the unmarked tree removed) | *"after the refused re-entry: the tree … was removed from disk (refused trees are never removed)"* |
+| `S8D-II-M4` | *"the discard did not report each path"* |
+| `S8D-II-M8` | *"a dead pid's lock was not released: … LockHeld { …, pid: 111, start: 111000 }"* |
+| `S8D-II-M10` (`clean -fdx`) | *"an ignored carried file did not survive re-entry"* |
+| `S8D-II-M16` (the `closed`-mark condition dropped) | *"an UNLANDED tree (its tip carries no closed mark) was removed"* |
+| `S8D-II-M20` (pid alone) | *"a lock whose pid now names another process was not released: … LockHeld"* |
+
+Two synthetic controls on the junction test, from `p3lifecycle_junction_controls.py`, went red:
+- **J1**, the link followed before it is removed: *"the removal FOLLOWED the junction and deleted the sentinel's
+  contents outside the tree"*.
+- **J2**, no link unlinked before git's removal: *"removal decision: WorktreeRemoveFailed { … }"*, whose stderr bytes
+  read *"git reported the removal done and a residue of the tree is still on disk"*. That is the product's own
+  residue check, which fires before the test's skeleton assertion.
+
+**`s8c` §8c.12 item 3, measured** (a temporary probe test, never committed; the driver restored `main.rs` to sha256
+`eb599193…` and deleted the probe). A fixture repository carried the Node fixture's `package.json` and
+`pnpm-lock.yaml`, with `node_modules/` ignored. A run tree entered through `enter` then had `pnpm install
+--frozen-lockfile --offline` run in it, which gave 114 links, 1084 files and 273 directories under `node_modules`.
+The lane was closed, the lock released, and the status was empty.
+- **git's own unforced `git worktree remove`:** exit 0 and deregistered, but **114 dangling junctions, 0 files and 60
+  directories left on disk**. That is s8c's skeleton, reproduced without `--force`.
+- **`remove_landed`,** which unlinks every untracked link first and never walks through one: `Removed`, nothing on
+  disk, deregistered.
+
+The raw removal leaves dangling junctions, so under the package brief this is reported as a blocker (§8d-ii.9). The
+built behaviour is ADR-0180 decision 9's: *"a link inside the tree is removed, never its target"*.
+
+*An earlier reading in this session is retracted, because it was a proxy.* A PowerShell probe appeared to show git
+following a junction out of the tree and deleting a sentinel's file. Its `Set-Content` wrote a file named `precious`
+into the working directory instead of the sentinel, so the sentinel was empty from the start. The stray file was
+deleted. Git Bash probes with a populated sentinel, and the Rust fixture, show git **not** following the junction,
+only leaving it behind.
+
+**Guards, read-only lines.**
+- **Checkpoint 8d-ii (3):**
+  - the force floor over `worktree.rs` reads 0 code-line hits, and a planted `"--force"` line is kept;
+  - `RK_BASE` is on a code line (`pub const RK_BASE`);
+  - no `"--local"`;
+  - the `LC_ALL` call form is present;
+  - the root floor reads the same 12 lines outside OWN that it read at entry (`run.rs` 4, `rk-cli` tests 6,
+    `worktree_include` 2), and none is added.
+- **Checkpoint 7c's rk-containment lines** (`p3lifecycle_cp7c.sh`) pass:
+  - exactly one `#![allow(unsafe_code)]`, commented, in `ffi.rs`;
+  - no `unsafe` token outside it, with a planted control kept;
+  - no `#[allow(`, no tokio token, and no `rk-*` or tokio row in the manifest;
+  - the five `windows-sys` features unchanged (`GetProcessTimes` and `FILETIME` need none new);
+  - `is_alive` and `terminate_pid` still `#[doc(hidden)]`, and `process_start_time` not hidden.
+
+  **The admission:** `ffi.rs`'s `unsafe` code-line sites go from 23 to 25 (the new function's `GetExitCodeProcess`
+  and `GetProcessTimes` calls). `s7c` §7c.20 item 2's site list (*"spawn, assign, resume, kill, enumerate,
+  `terminate_pid`, `is_alive`"*) gains `process_start_time`. `ffi.rs`'s site table gains its row, and ADR-0180
+  decision 6 now says the call goes through the binding layer ADR-0127 decision 5 names, citing ADR-0127 without
+  superseding it. `s7c`'s text is not edited.
+- **Checkpoint 6:** `Command::new("git")` is on git_exec.rs code lines (3 hits) and on 13 lines outside it, unchanged
+  from HEAD. The workspace `process::Command` grep still fails as it did at entry. The rk-containment files it names
+  hold the same count as at HEAD (`ffi.rs` 2, `posix.rs` 1, `windows.rs` 2), so none of the hits is this package's.
+- **Other checks:** (9)'s record lines pass (`P1REC-(9)-RECORD-LINES-OK`). check-adr-options (17 records, 0
+  flagged), check-refs (0), check-bash-syntax (0) and check-checkpoints (0) all pass.
+
+**Suite:** fmt passes, and clippy on `rk-git` and `rk-containment` (all targets) exits 0, with no unfulfilled
+expectation and no warning on this package's lines. The whole suite through the helper reads rc 0, **999 passed / 0
+failed / 10 ignored over 44 result lines**: 981 plus 18 net new (19 names, one of them the rename). The legacy ref is
+at `73c087a…` with its mark and registration, the worktree path set, the store's sha256 (`e83d295e…`) and the
+absent `.redkiln/worktrees` are all unchanged.
+
+**Design choices a later package or the operator may revisit, recorded rather than hidden:**
+- **Re-entry order.** Re-entry checks `RK_BASE` first, then the repository, then commits the run ref lacks, a
+  detached `HEAD` and another ref. It **takes the lock before the discard**, so a live run's in-flight work is never
+  discarded under its lock (`a_lock_held_by_a_live_pid_refuses_by_name` asserts the file survives).
+- **The fork on an existing branch.** When the branch exists and no tree is registered, the fork `RK_BASE` records is
+  `start`'s `HEAD` at that moment: the old tree's `RK_BASE` went with its gitdir, and no `merge-base` is read. The
+  review reference tree's base (§8d-ii.3) is therefore that `HEAD` for such a tree, the pre-stage behaviour. §8d-ii.3
+  does not settle this, and it is named here for the reference-tree package.
+- **Removal order.** Removal checks: registered (`KeepReason::NotRegistered`, added), marked, unlocked, symbolic on the
+  run ref, clean (the dirty count is status entries), and the `closed` mark (`<project>/<item> closed`, exactly two
+  tokens).
+- **Links before git's removal.** Before git's removal it unlinks every **untracked** symlink or junction with
+  `remove_dir` or `remove_file`, never `remove_dir_all`, and leaves a tracked link to git. If git refuses, or a residue
+  is left, the result is `GitError::WorktreeRemoveFailed` (Halt 6's typed error), never a retry and never a force.
+- **The fork read.** The creation fork is read as `rev-parse --verify HEAD^{commit}` in `start`, and `git worktree
+  add` receives the sha, not `HEAD`, so `RK_BASE` and the branch cannot disagree.
+
+*(dated 2026-09-27, s8d-ii build, package P4-RKGIT-FILTER-SCAN.)* **§8d-ii.5's filter refusal (D21-47 V1) and D21-48
+X2's post-checkout pointer scan are built in `rk_git::worktree`, with §8d-ii.6's `check-attr` read. The table's
+fourteen filter and scan rows are green.** The package brief says "13 tests", but its own list names fourteen: nine
+refusing rows and five controls. With P2's ten and P3's eighteen they make the 42 that (2)'s `sel_tests rk-git 42`
+names.
+
+**What exists for the later packages to call:**
+- `enter(exec, start, item, owner, probe, lfs_skip_smudge)` gains its last parameter. It is the value of
+  `GIT_LFS_SKIP_SMUDGE`, which `rk-cli` reads through `env.rs` and passes in (P6); this crate reads no environment.
+  - Every existing call site passes `None`: P3's twenty test sites, rewritten mechanically.
+  - `Entered` gains `filter_notes`, the admission facts for the **debug** level only. It is empty on re-entry.
+- `check_filters(exec, main, &item, fork, lfs_skip_smudge) -> FilterCheck { selected, notes }` makes the reads and
+  takes the refusal. Each `SelectedDriver` has `driver`, `paths` and `effective`.
+- `scan_for_pointers(tree, &check)` returns `(path, driver)` for each hit.
+- `LFS_POINTER_HEADER` holds `version https://git-lfs.github.com/spec/v1` on a code line.
+- There are three new refusals, and each `Display` names the driver, a selecting path, and the scope and origin:
+  - `FilterDriverNotEffective { driver, path, scopes }`;
+  - `SmudgeSkipped { driver, path, scope, origin }`, where the environment arm reads scope `environment` and origin
+    `GIT_LFS_SKIP_SMUDGE=<v>`;
+  - `PointerFilesAfterCheckout(Box<PointerHits>)`, boxed so that `GitError` stays under clippy's `result_large_err`.
+- `GitOp::CheckAttr` is a read, and s8a's GitOp pin passes. The variants added since `S8A_BASE` now read `CheckAttr
+  CheckIgnore Clean Config LsFiles LsTree ResetHard WorktreeList WorktreeLock WorktreeUnlock`, and none is named for
+  a range read.
+- `GitExec::with_env(key, value)` sets extra environment on every child before `LC_ALL`, so it cannot undo `LC_ALL`.
+  - It is empty in production. The filter tests use it to point `GIT_CONFIG_SYSTEM` and `GIT_CONFIG_GLOBAL` at
+    fixture files and to set `GIT_CONFIG_NOSYSTEM=0`.
+  - `run_labelled` was folded into `run`, and `spawn` stays the one `Command::new("git")` site.
+
+**The order in `create`:**
+1. the fork;
+2. `prepare_creation`;
+3. `check_filters`, which refuses before the add;
+4. `git worktree add`;
+5. `verify_created`;
+6. `RK_BASE`;
+7. the scan;
+8. the lock.
+
+**The reads:**
+1. `ls-tree -r -z --name-only <fork>`, then `check-attr -z --source=<fork> --stdin filter` over those paths, fed on
+   stdin. The values `unspecified`, `unset` and a bare `set` name no driver.
+2. `config -z --show-scope --show-origin --includes --get-regexp '^(filter|includeif)\.'` in the main worktree. This
+   is a single read, so a folded file's values sit in git's order.
+3. Each `includeif.<condition>.path` whose condition matches the run tree is read with `config -z --show-origin
+   --includes --file <f> --get-regexp '^filter\.'`. Its values are folded in at the include's position, carrying the
+   includer's scope and the included file as origin.
+
+**When a driver is effective, and when creation refuses:**
+- A driver is effective when a non-empty `process` value resolves, or else a non-empty `smudge` value. The resolved
+  value is the last one read.
+- The refusals are checked in this order:
+  - (a), for each selected driver;
+  - `GIT_LFS_SKIP_SMUDGE` set to anything but `0`. An empty value reads as unset, as Checkpoint (0c)'s
+    `${GIT_LFS_SKIP_SMUDGE:-0}` does;
+  - a resolved `smudge` carrying a `--skip` token.
+- (b) is taken literally: the environment arm applies to any selected driver, not only to one named `lfs`.
+
+**The scan:**
+- It reads every path that (1) found selecting a driver, in the fresh tree, and skips anything that is not a regular
+  file.
+- It reads at most the header's length plus 2 bytes, and a hit is a first line that equals the header once one CR is
+  dropped.
+- On a hit, `git worktree remove` runs without `--force`. The result is `removed: true` only when git exits 0 and
+  nothing is left on disk. Otherwise the tree is kept, with git's reason.
+- The branch is never touched.
+- If a selected file cannot be read, the scan takes the same unforced removal and then returns
+  `SegmentUnreadable`, so a fresh tree it could not judge is never locked and kept.
+
+**A finding about the spec's own example, measured and settled here (git 2.55.0.windows.3; probe under
+`scratchpad/s8d-ii/p4filter-probe1`).**
+- **The measurement:**
+  - Read (3)'s example, *"a `gitdir:` pattern that covers `.redkiln/worktrees/`"*, does **not** match a run tree. Git
+    matches `gitdir:` against the tree's **gitdir**, `<common-dir>/worktrees/<item>`, not against its checkout path.
+  - Inside `.redkiln/worktrees/item`:
+    - `includeIf "gitdir:**/.redkiln/worktrees/**"` was **not** followed;
+    - `includeIf "gitdir:**/.git/worktrees/**"` was followed;
+    - `includeIf "onbranch:rk-run/**"` was followed.
+  - `rev-parse --git-dir` printed `…/main/.git/worktrees/item`.
+- **What the code does:** it matches `gitdir:` and `gitdir/i:` against that gitdir, trying the canonical form first
+  as git does, and `onbranch:` against `rk-run/<item>`. It follows git's `prepare_include_condition_pattern`:
+  - `./` becomes the including file's directory;
+  - a relative pattern gets `**/`;
+  - a trailing `/` gets `**`.
+
+  The matcher is `wildmatch` with `WM_PATHNAME`.
+- **Conditions left unevaluated:** a `~` pattern (this crate reads no environment, ADR-0083), `hasconfig:`, and
+  anything unknown. Each goes to the debug notes, and X2's scan is the backstop, as the P4-X mutants below show.
+- **Relative origins:** git prints a repository's own files relative to the checkout (`file:.git/config`), so a
+  relative origin is joined to the main worktree and never to the process's current directory (AC-529).
+- **Includes git already follows:** an include that also matches the user's checkout is folded a second time, next
+  to git's own expansion. That leaves the last-wins result unchanged.
+- **A condition that matches only the user's checkout:** its include, which git's `--includes` followed, is not
+  removed. That is recorded, not built.
+
+**RED on an entry-shaped stub** (the API present; `check_filters` read nothing and `scan_for_pointers` scanned
+nothing): nine rows went red, each for its row's reason. The fork test read *"the fork commit selects `nodrv`; the
+working tree selects nothing: ADMITTED"*, and the no-driver, local, global, system, environment and `includeIf` rows
+read *"…: ADMITTED (Entered { … filter_notes: [] })"* in the same form. Two rows need more:
+- **`a_pointer_file_at_a_selected_path_after_checkout_refuses_by_name_and_removes_the_fresh_tree`** went red on the
+  stub at its precondition, *"the read does not see `fx` as selected and effective: FilterCheck { selected: [], notes:
+  [] }"*. Its row's own reason (the read admits, and the tree keeps its pointers) was read under `S8D-II-M22`: *"a
+  pointer file at a selected path after checkout: ADMITTED"*.
+- **`the_pointer_scan_never_removes_a_tree_this_call_did_not_create`** was **green** on the stub. P3's reuse exists,
+  so the stub cannot produce its row's reason (*"re-created by force; no reuse to observe"*). It was read red on the
+  stage-entry form: `ENTRY-FORM`, P3's M2 shape, which force-removes and re-creates. That reading is *"re-entry was
+  refused: WorktreeRefused { refusal: PointerFilesAfterCheckout(PointerHits { … first: "a.bin", scope: "system" …"*,
+  because the re-created tree was scanned and refused. The row was also read red under `S8D-II-M25`.
+
+The five controls were green on the stub, as their rows require. The BrittonGames row first carried an assertion on
+the debug notes, and it went red on the stub for that alone. The assertion moved to the environment row's `0` arm,
+which is red at entry anyway.
+
+**GREEN:** the fourteen, selected module-qualified with `--exact`: *"test result: ok. 14 passed; 0 failed; 0 ignored;
+0 measured; 105 filtered out"*. `includeIf` is exercised by three cases:
+- a `gitdir:` include at `system` scope;
+- an `onbranch:` include at `system` scope;
+- an `onbranch:` include at `local` scope, with a relative path.
+
+For each case the test first proves that the user's checkout reads the working `smudge`, so the include matches the
+run tree only. **(2)'s rk-git selection**, run verbatim from this file with its zero-match control, passes: rc 0, the
+42 ok lines, and *"42 passed; 0 failed; 0 ignored"*.
+
+**Mutants**, from `p4filter_mutants.py` (every anchor asserted once, tmp plus `os.replace`, restored in `finally`, and
+the sha256 `7733e96d149a…` verified after each). Each read rc 101 and *"0 passed; N failed"*, and each named test's
+own stdout section carries the reason:
+
+| mutant | killed by, and the reason read |
+| --- | --- |
+| `S8D-II-M5` (`--local` added to the driver read) | the `system` and `global` skip rows: *"not the skipped-smudge refusal at system scope: FilterDriverNotEffective { driver: "fx" …"*; the BrittonGames control: *"creation was REFUSED … FilterDriverNotEffective { driver: "lfs" …"* |
+| `S8D-II-M12` (refuse any selected driver) | the BrittonGames control, as M5's |
+| `S8D-II-M13` (refuse any declared driver) | the declared-but-unselected control and the BrittonGames control: *"creation was REFUSED … driver: "mutant""* |
+| `S8D-II-M14` (the empty case refused) | the empty control: *"no filter anywhere: creation was REFUSED"* |
+| `S8D-II-M15` (`check-attr` without `--source`) | the fork row: *"the working tree selects nothing: ADMITTED"* |
+| `S8D-II-M21` (`GIT_LFS_SKIP_SMUDGE` ignored) | the environment row: *"GIT_LFS_SKIP_SMUDGE=1: ADMITTED"* |
+| `S8D-II-M22` (scan skipped) | the pointer row: *"a pointer file at a selected path after checkout: ADMITTED"* |
+| `S8D-II-M23` (scan walks every file) | the unselected-header control: *"PointerFilesAfterCheckout(PointerHits { … first: "docs/lfs-spec.txt""* |
+| `S8D-II-M24` (scan reads the fork blob) | the smudged control: *"a committed pointer the driver smudges: creation was REFUSED … PointerFilesAfterCheckout"* |
+| `S8D-II-M25` (scan and rollback at re-entry) | the never-removes row: *"re-entry was refused: … PointerFilesAfterCheckout"* |
+| `S8D-II-M26` (no removal on refusal) | the pointer row's absence assertion: *"the fresh tree `…item-1` is still on disk after the refusal"* |
+| `P4-X-FOLD` (a matched run-tree include never folded) | the `includeIf` row: *"`gitdir:**/.git/worktrees/**`: not the skipped-smudge refusal: PointerFilesAfterCheckout"*. The scan caught what the read missed |
+| `P4-X-GITDIR` (the gitdir condition matched against the common dir) | as `P4-X-FOLD` |
+| `P4-X-ORIGIN` (a relative origin resolved against the process's current directory) | the `includeIf` row's `local` case: *"`onbranch:rk-run/**`: not the skipped-smudge refusal: PointerFilesAfterCheckout(PointerHits { tree: "…inclocal…"* |
+
+**Guards (read-only lines):**
+- **Checkpoint 8d-ii (3)'s R8/V1 and X2 floors**, extracted verbatim, pass (`--show-scope` and `--source` on code
+  lines, no `"--local"`, the header on a code line). Each has a synthetic control that fires against a planted copy:
+  `--show-scope` removed, `--source` renamed, `"--local"` added, and the header commented out.
+- **The rest of (3):**
+  - the force floor over `worktree.rs` reads 0;
+  - the `LC_ALL` call form is still on a code line, after `.envs(env)`;
+  - the root floor reads the same 12 lines outside the worktree module as at entry (`run.rs` 4, `rk-cli` tests 6,
+    `worktree_include` 2), and none is added.
+- **Checkpoint 6's `git_exec.rs` lines** hold: `Command::new("git")`, `hooksPath` and `ifexists` are each at least 1.
+- **s8a's GitOp pin** passes, and its three controls fire.
+
+**Suite:** fmt passes, and clippy on `rk-git` (all targets) exits 0. None of this package's lines is among its
+warnings: the remaining `worktree.rs` hits are P2's and P3's nursery doc-paragraph lines, and the two test-file
+redundant clones at lines 128 and 129 predate this stage. The whole suite through the helper reads rc 0, **1013 passed
+/ 0 failed / 10 ignored over 44 result lines**, which is 999 plus the 14. At the end:
+- `rk-run/rk-fix-doctor-test-count` is at `73c087a82245…`, with its `Story:` trailer and its registration;
+- the worktree path set is unchanged: the main checkout, the legacy tree and the operator's `redkiln-rs.swt`, which
+  dates from 2026-09-06;
+- the store's sha256 is unchanged (`e83d295e…`, backed up to `target/store-backups/p4filter-before-suite.sqlite3`);
+- `.redkiln/worktrees` is still absent.
+
+**Left for later packages, recorded rather than hidden:**
+- `rk-cli` does not yet call `enter`, so nothing in production reads `GIT_LFS_SKIP_SMUDGE`. The `env.rs` read and the
+  debug-level printing of `filter_notes` are P6's.
+- Checkpoint (0c) and (0d) run against this repository, and a checkpoint package runs them.
+
+*(dated 2026-09-27, s8d-ii build, package P5-INIT-EXCLUDE.)* **§8d-ii.5's `info/exclude` write (D21-45 W4) is built
+in `init`, and the two `init` rows are green.**
+
+**What was built:**
+- **`rk_git::worktree::RUN_ROOT_IGNORE_ROW`** is `/.redkiln/worktrees/`, declared beside `derive`. A `const`
+  assertion ties its length to the path bound's 20. It lives in the worktree module because (3)'s root floor
+  (`"[^"]*redkiln[^"]*worktrees[^"]*"`) flags that literal on any code line outside that module, in `src/` and
+  `tests/` alike. So `init` and the tests take the row from there, and P6's shared builders can do the same.
+- **`init`** (`crates/rk-cli/src/verbs/init.rs`) gains `EXCLUDE_BEGIN` (`# redkiln-runtime`, on a code line),
+  `EXCLUDE_END` and `exclude_block()`. After the scaffold and before the store, it appends the block to
+  `repo.common_dir/info/exclude`, creating `info/` and the file when git's template did not.
+  - It writes only when no line of the file equals the marker, with a trailing CR dropped. A line that merely starts
+    with the marker is the operator's.
+  - The write is an append. It is preceded by one `\n` only when the operator's last line is unterminated.
+  - `.gitignore` is never written.
+  - A write error prints and exits `ConfigError`.
+- **The module doc** reads *"It does exactly ~~two~~ three things"*, by a dated edit. *"installs no hook (AC-412)"* is
+  intact, and a paragraph says why `CreatedNames` does not change. The test file's module doc takes the same edit.
+- **The AC-531 reading note** is in its own block in the register and names ADR-0180. The checkpoint's `acnote.py`,
+  run verbatim over AC-531 alone, reads `NOTES-OK`. Its controls both read `MISSING`: HEAD's register, and AC-438,
+  the next block.
+
+**RED, then GREEN:**
+- **RED**, with the row constant present and `init` unchanged:
+  - `init_writes_the_redkiln_runtime_exclude_block_once` read *"init writes no exclude block, or not exactly one
+    append of it after the template's bytes"*, and its `left` was git's template alone.
+  - `init_leaves_the_operators_exclude_lines_untouched` read *"init writes no exclude block after the operator's
+    lines"*, and its `left` was the operator's bytes alone.
+  - Totals: *"0 passed; 2 failed"*.
+- **GREEN:** the `init::` module read *"7 passed; 0 failed; 0 ignored"*. That is the two new rows plus AC-437's two,
+  AC-531's two and AC-412's one.
+
+**How the tests are built:**
+- **The first row** starts from the pre-stage initialised shape. `init` runs, then `info/exclude` is put back to its
+  template bytes, so `config.toml` and the store exist and there is no block. It then asserts:
+  - the byte-exact single append;
+  - that `git check-ignore` reports the run tree ignored, at a path derived through `derive`. A control asserts it is
+    not ignored before the block exists;
+  - that no `.gitignore` exists;
+  - byte identity across a second `init`;
+  - and, with `info/` removed, that the file is created holding exactly the block, and stays so across another `init`.
+- **The second row** starts from an operator's file with CRLF lines, no trailing newline, and a
+  `# redkiln-runtime-notes: …` look-alike line.
+
+**Mutants**, from `p5initexclude_mutants.py`. Every anchor was asserted once, each write went through tmp plus
+`os.replace`, each file was restored in `finally`, and the sha256 `3503382edde9…` was verified after each. Each read
+rc 101 and *"0 passed; 1 failed"*:
+
+| mutant | killed by, and the reason read |
+| --- | --- |
+| `S8D-II-M6` (append on every run) | `init_writes_the_redkiln_runtime_exclude_block_once`: *"a second init changed info/exclude; it appends only when the marker is absent"* |
+| `P5-X-PREFIX` (marker matched as a prefix) | `init_leaves_the_operators_exclude_lines_untouched`: the look-alike line suppressed the block (`left` is the operator's bytes alone) |
+| `P5-X-GLUE` (no separator before the block) | the same row: `left` ends `/scratch/# redkiln-runtime` |
+| `P5-X-REWRITE` (truncate instead of append) | the same row: `left` is the block alone |
+
+**Guards (read-only lines):**
+- **Checkpoint 8d-ii (3):**
+  - the `# redkiln-runtime` code-line floor on `init.rs` passes. Its two synthetic controls fire: HEAD's `init.rs`,
+    and a copy with the marker only in comments.
+  - The root floor reads the same 12 lines as at entry; neither `init` file is among them.
+- **Checkpoint 7d:**
+  - its absence bans (lines `rk_absent` … `set_var|remove_var`, with the helpers verbatim) read 37 `PASS` and rc 0;
+  - its `DENYLIST` and `INIT_UNREAD_WINDOW_RUNS` lines pass;
+  - no `Command::new` is in `init.rs`.
+- No older checkpoint's command line reads `init.rs`, `tests/it/init.rs` or the new constant.
+- **Other checks:** `check-refs` passes, `fmt` passes, and clippy on `rk-cli` and `rk-git` (all targets) exits 0 with
+  no warning on this package's lines.
+
+**Suite:** the whole suite through the helper reads rc 0, **1015 passed / 0 failed / 10 ignored over 44 result
+lines**, which is 1013 plus the 2. At the end:
+- `rk-run/rk-fix-doctor-test-count` is at `73c087a82245…`, with its `Story:` trailer and its registration;
+- the worktree path set is unchanged;
+- the store's sha256 is `e83d295e…`, unchanged, and backed up to
+  `target/store-backups/p5initexclude-before-suite.sqlite3`;
+- `.redkiln/worktrees` is absent.
+
+**Left for later packages:**
+- P6 writes the row into every fixture and builder a `run` reaches. It should take the row from
+  `RUN_ROOT_IGNORE_ROW`, or from `init`, never as a literal.
+- This repository's own `info/exclude` is not written here: no `redkiln init` ran against it (AFK rule). Its tracked
+  `.gitignore` row is W4's other half.
+
+*(dated 2026-09-27, s8d-ii build, package P6-RKCLI-ROOT-MOVE.)* **§8d-ii.1's root move, §8d-ii.3's `rk-cli` half, §8d-ii.2's
+liveness predicate, §8d-ii.4's carry and §8d-ii.7's amendments are built; the table's six `run_worktree` rows are green,
+five seen red first and the pin green at entry by design, and the two witnesses stay green.**
+
+**What `run` does now (`crates/rk-cli/src/verbs/run.rs`):**
+- **Step (8) enters the tree; it no longer re-creates it.** `recreate_run_worktree` is deleted. `enter_run_worktree` calls
+  `rk_git::worktree::enter` with this process as the lock owner (`run_lock_owner`: `std::process::id()` and
+  `rk_containment::process_start_time` of it, refused by name if the OS reports none), the injected predicate
+  `process_probe` (`is_alive`, then `process_start_time`, so `is_alive` is a production call, ADR-0180 decision 6),
+  and `GIT_LFS_SKIP_SMUDGE` read through a new `Env::lfs_skip_smudge` in `env.rs` (the one environment read, ADR-0083).
+  A refusal prints its `WorktreeRefusal` by name and exits `3`.
+- **The discard reaches stderr, one line per path, until `s8e`:** *"redkiln: re-entry discarded `<path>` in <tree>
+  (not landed at a committed step)"*.
+- **The lock is released on every path the lane ends by.** The lane loop moved whole from `run` into `run_lane`, and
+  `run` calls `release_run_worktree` after it, whatever it returned; a failed carry releases too.
+- **The one derivation.** `run_tree_of` (`main_worktree`, `ItemId::parse`, `derive`) is what `story_trailer`,
+  `terminal_read` and `reference_worktree` read; `run.rs` names no `worktrees` directory on any code line.
+- **The review reference tree** (§8d-ii.3; ADR-0162 decision 10 cited): created at the fork the run tree's `RK_BASE`
+  records (`worktree add --detach <path> <fork>`), with its own `RK_BASE` (`fork`, `item`) written after the add. A
+  leftover at `<item>.review-ref` is force-removed only when it is registered and carries `RK_BASE` for this item;
+  otherwise the pass refuses by name, exit `3`, and the leftover is kept. A run tree without `RK_BASE` refuses the pass
+  rather than read a base off `HEAD`. The forced removal and its `remove_dir_all` fallback stay inside
+  `remove_reference_worktree`, whose doc and `reference_worktree`'s doc are rewritten by dated edit, the old
+  merge-base argument struck.
+- **The carry, at creation only** (`carry_at_creation`, skipped for `Creation::Reused`): `s8c`'s `carry_set` over the
+  main worktree, each carried file copied to the same relative path (skipped entries named on stderr), then `s8c`'s
+  `setup` verb through `run_verb` on the toolchain `choose_toolchain` selects in the fresh tree, with the
+  `setup_projects` declaration row of that toolchain's table and the `setup` row's timeout key resolved as the bound.
+  No `registry.toml`, no detected adapter, no `setup_projects` row or an empty one: nothing is installed. Any refusal
+  (the carry's, a copy, the registry, the row, the bound, or `setup`'s own) prints by name, releases the lock and exits
+  `3` before any dispatch.
+
+**The root floor's two `s8c` lines (§8d-ii.0's dated finding), settled by routing, not by widening `OWN`:**
+`rk_git::worktree::RUN_ROOT_EXCLUDE_PATHSPEC` (`:(exclude).redkiln/worktrees`) is declared beside `derive`, with a
+`const` assertion that it names the same root as `RUN_ROOT_IGNORE_ROW`, and `worktree_include::RUN_WORKTREES_EXCLUDE`
+now names it (value unchanged). The `worktree_include` test plants its tree at `derive(&r, "x").path`. `OWN` is not
+edited.
+
+**The six test sites and the builders.** `tests/it/run.rs`'s five and `answer.rs`'s `owned_worktree` now read
+`crate::run_tree` (`tests/it/main.rs`), which calls `derive`. `crate::ignore_run_root` appends
+`RUN_ROOT_IGNORE_ROW` to `<common-dir>/info/exclude`, and `pack_min_repo` calls it, so every repository item 6's list
+shows a `run` creating a tree in carries the row: `pack_min_repo` itself and, through it, `repo_with_open_gate`,
+the `adr0128_*` tests, AC-438's `base`, `dispatch-1s` and `review` cases and `cost`'s run. AC-438's `none` case
+(`temp_repo` plus `run_init`) gets the row from `init`'s block. **`temp_repo` does not take it, a deviation from
+§8d-ii.0 item 6's "the two shared helpers":** `init::init_writes_the_redkiln_runtime_exclude_block_once` starts from
+git's template exclude and asserts the run tree is *not* ignored before the block exists, and a row in `temp_repo`
+would make that control false. No `temp_repo` repository reaches creation without `init` (measured: the whole suite
+below, and no test failed with the ignore refusal's name). The other code builders (`synthetic_trailer_repo`,
+`repo_seeded_from`, `repo_with_record`, `change_repo`, `gate_repo_with_questions`, `source_repo`) reach no creation.
+
+**RED, then GREEN** (each selected module-qualified with `--exact`):
+- `the_run_worktree_is_created_under_dot_redkiln_worktrees`, on the entry tree: *"no run tree at the derived path
+  `…/.redkiln/worktrees/bug-1` (the old common-dir root `…/.git/redkiln/worktrees` HOLDS it: the tree was created
+  under the common dir)"*. It also asserts the registration on `rk-run/bug-1`, the released lock, `RK_BASE` (fork =
+  `HEAD`, item), the ignore, and on a second run the reuse and one stderr line per discarded path.
+- `no_redkiln_reader_sees_a_planted_run_worktree`: **green at entry**, as its row requires (*"1 passed"* beside the row
+  above). It compares `doctor::run_to`'s rendered findings (with a determinism control: two reads before planting
+  must agree), `prepare_inputs`' `(RunInputs, tree hash)` and `through_step_seven`'s item, stage and pack, with and
+  without `.redkiln/worktrees/planted/.redkiln/{catalog,cards,specs,items}`. The planted card sets `model` and has
+  no `tools`, so a reader that saw it would report it.
+- The two reference rows were read red on the root-moved tree with the reference tree still in its entry form (at
+  `HEAD`, a leftover force-removed):
+  `the_review_reference_tree_is_created_at_the_rk_base_fork_sha_after_head_moves` *"after HEAD moved to a4de23b…, the
+  review reference tree was created at a4de23b… — not at the run tree's fork b50c862… that RK_BASE records (ADR-0180
+  decision 10): it was created at HEAD"*; `a_leftover_reference_tree_without_rk_base_is_refused_and_kept` *"a leftover
+  reference tree WITHOUT RK_BASE was removed (exit Some(4)); redkiln removes only a tree it made"*. The observation
+  point is the rigged stub toolchain: its reference arm appends the tree's `HEAD` and `RK_BASE` to
+  `<common-dir>/rk-fixture-reference-heads` (`record_reference`, reading files only), because decision 10 removes the
+  tree before any test could read it. The leftover row carries its own control: the same leftover once marked is
+  force-removed and the pass exits `4`.
+- The two carry rows, on the tree without the carry: `creation_carries_worktreeinclude_files_and_runs_setup` *"the
+  ignored, matched .env was not carried into the fresh run tree"* (`left: None`); `a_failed_setup_refuses_by_name`
+  *"the failed install was not refused naming `setup` and the project (exit Some(10)); stderr: redkiln: the dispatch of
+  `emit-report` (emit-report@1) did not commit."*. The fixture (`carry_repo`) is the review variant (a committed
+  `Cargo.toml`, the rigged `cargo`), a committed `.gitignore` and `.worktreeinclude`, an ignored `.env`, a committed
+  `web/` and a `registry.toml` declaring `setup_projects = ["web"]`. The success row copies the Node fixture's
+  `package.json` and `pnpm-lock.yaml` and runs the real `pnpm install --frozen-lockfile --prefer-offline` (Checkpoint
+  8d-ii (0)'s warm-store precondition), asserting `web/node_modules/.modules.yaml` in the tree, none in the checkout,
+  and no re-carry on re-entry; the failure row is `s8c`'s own failing shape (a dependency and no lockfile).
+- **GREEN:** the six, *"test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 143 filtered out"*. **(2)'s
+  selections, extracted verbatim with its zero-match control** (`sel_tests rk-git 42`, `rk-containment 1`, `rk-cli
+  10`): rc 0, so the six, `init`'s two and the two witnesses (`run::ac438_…_binary_arm`, `cost::cost_after_a_real_run_…`)
+  each report `... ok` and the count is exactly 10.
+
+**Mutants**, from `p6rkcliroot_mutants.py` (anchor asserted once, tmp plus `os.replace`, restored in `finally`, sha256
+verified after each: `worktree.rs` `56c9063e…`, `rules.rs` `2226a890…`, `run.rs` `e5ba1712…`). Each read rc 101 and
+*"0 passed; 1 failed"*:
+
+| mutant | killed by, and the reason read |
+| --- | --- |
+| `S8D-II-M1` (`run_tree_root` under `<main>/.git/redkiln/worktrees`, the common dir) | `the_run_worktree_is_created_under_dot_redkiln_worktrees`: *"the old common-dir root `…/.git/redkiln/worktrees` exists after a run; nothing may be created there"* |
+| `S8D-II-M9` (`doctor`'s card reader walks `.redkiln/` recursively for `cards/*.json`) | `no_redkiln_reader_sees_a_planted_run_worktree`: *"doctor's findings changed once a run tree was planted"*; the diff is `RK-D-CARD-TOOLS-ABSENT`, `RK-D-TIER-LEAK` and `RK-D-CACHE-PROFILE` each reading `cards/planted.json` |
+| `S8D-II-M19` (the reference tree added at `HEAD`) | the reference row: *"… was created at 9c84f4c… — not at the run tree's fork 85dae09… … it was created at HEAD"* |
+
+**Guards (read-only lines):**
+- **Checkpoint 8d-ii (3), extracted verbatim, passes whole** with its in-block controls: the root floor over
+  `crates/*/src` and `crates/*/tests` reads no line outside `OWN` (12 at entry, 0 now), `recreate_run_worktree` is on
+  no code line, `run.rs`'s `"--force"` and `remove_dir_all` lie inside `remove_reference_worktree`, and the LC_ALL,
+  `RK_BASE`, `--show-scope`, `--source`, pointer-header and `# redkiln-runtime` floors hold.
+- **(7b)'s text guards, extracted verbatim, over 7f's block as (7)'s extractor takes it:** rc 0, and `bash -n` parses
+  the block. Controls: over HEAD's 7f they fail (*"no code line in 7f clones this repository"*); over an amended copy
+  with a `git worktree prune` code line, and one reading `.git/redkiln/runs` without `$clone`, each names its line.
+  `s8e`'s (10d) text guards (the code-line `git clone` and no `worktree remove --force .git/redkiln/worktrees/` anywhere
+  in the block) pass too. 7f itself was **not** replayed (AFK rule: no redkiln binary against this repository).
+- **(9), extracted verbatim, passes whole** (`REC_WT=0180`, private scratch): the AC-518, AC-522, AC-529 and AC-531
+  notes, design §5's `reconcile_started` row and §6's `The write set, enumerated` row, `s7d`, and the fixture doc.
+  Controls: `acnote.py` over HEAD's register reads *"MISSING: AC-518, AC-522, AC-529"*; HEAD's design rows, `s7d` and
+  stub each carry 0 of their needles.
+- Checkpoint 7d's absence bans (P5's extraction) read 37 `PASS`, rc 0. No older checkpoint's code line reads the
+  functions this package touched in `run.rs`. check-refs, check-bash-syntax (121 blocks), check-checkpoints and
+  check-adr-options each flag 0.
+- fmt passes; clippy on `rk-cli`, `rk-git` and `rk-containment` (all targets) exits 0, and none of the remaining
+  warnings is on this package's lines.
+
+**Suite:** the whole suite through the helper reads rc 0, **1021 passed / 0 failed / 10 ignored over 44 result lines**,
+which is 1015 plus the six, and meets (4)'s `FLOOR=1021` exactly. At the end `rk-run/rk-fix-doctor-test-count` is at
+`73c087a82245…` with its `Story:` trailer and registration, the worktree path set is unchanged, the store's sha256 is
+`e83d295e…` (backed up to `target/store-backups/p6rkcliroot-before-suite.sqlite3`), and `.redkiln/worktrees` does not
+exist in this repository.
+
+**Design choices a later package or the operator may revisit, recorded rather than hidden:** the carry copies from the
+main worktree (the root the tree hangs under), not from the checkout `run` started in; `setup` re-runs
+`choose_toolchain` in the fresh tree, so its deferral lines can print twice per first run; `Entered::filter_notes` is
+printed nowhere, because `rk-cli` has no debug level (§8d-ii.5's "debug level only" holds vacuously); `is_alive`
+keeps its `#[doc(hidden)]` as `s7c` §7c.10 lists it, with a dated doc note in `windows.rs` and `posix.rs` that it is
+now a production call.
+
+*(dated 2026-09-27, s8d-ii build, package P7-GUARD-SWEEP.)* **The mutant ledger is complete. All twenty-six mutants were
+re-applied to the FINAL tree and each is killed by its named test for its named reason.** The packages killed each
+mutant on the tree of their day, and later packages changed `worktree.rs`, `run.rs` and `git_exec.rs` after them, so
+those kills were claims about earlier files. The consolidated driver `p7guard_mutants.py` re-applied every mutant to the
+private worktree `target/wt-p7`, an overlay of the working tree on `83cf836` whose 32 changed or untracked files were
+compared byte for byte with the main checkout before and after. The drivers' rules held: each anchor asserted once,
+tmp plus `os.replace`, restored in `finally`, sha256 verified (`worktree.rs` `a7e2018e3e12…`, `git_exec.rs`
+`c9bcd2f29463…`, `init.rs` `6b63b2e670f5…`, `rules.rs` `2226a890a605…`, `run.rs` `7e9b086b16a6…`), and writes were
+refused outside `target/wt-p7`. A kill counts only when all of these hold:
+- the rc is non-zero;
+- the count line reads *"0 passed; N failed"* for the N named tests;
+- each named test reports `FAILED`;
+- each test's own stdout section carries the reason.
+
+Every mutant read rc 101 and *"KILLED 26 of 26"*. **No mutant survived, so no survivor needed an unobservability or
+later-stage disposition.** `s8e` keeps the `lane_e2e` half of S8E-M20, as the table above says.
+
+| mutant | killed by (module-qualified, `--exact`) | the reason read on the final tree |
+| --- | --- | --- |
+| `S8D-II-M1` | `run_worktree::the_run_worktree_is_created_under_dot_redkiln_worktrees` | *"the old common-dir root … exists after a run; nothing may be created there"* |
+| `S8D-II-M2` | `worktree::reentry_reuses_the_registered_tree_when_head_equals_the_run_ref_tip` | *"the registered tree was re-created, not reused: OnExistingBranch"* |
+| `S8D-II-M3` | `worktree::a_tree_without_rk_base_is_refused_and_never_removed` | *"… was removed from disk (refused trees are never removed)"* |
+| `S8D-II-M4` | `worktree::reentry_discards_in_flight_changes_and_reports_each_path` | *"the discard did not report each path"* |
+| `S8D-II-M5` | the `system` and `global` skip rows and the BrittonGames control (3 of 3) | *"not the skipped-smudge refusal at system scope: FilterDriverNotEffective …"*, the same at global scope, and *"creation was REFUSED … driver: "lfs""* |
+| `S8D-II-M6` | `init::init_writes_the_redkiln_runtime_exclude_block_once` | *"a second init changed info/exclude; it appends only when the marker is absent"* |
+| `S8D-II-M7` | `gitops::every_git_child_runs_with_lc_all_c` | *"5 of 5 routes ran git without LC_ALL=C (W1)"* |
+| `S8D-II-M8` | `worktree::a_lock_held_by_a_dead_pid_is_released` | *"a dead pid's lock was not released: … LockHeld { …, pid: 111, start: 111000 }"* |
+| `S8D-II-M9` | `run_worktree::no_redkiln_reader_sees_a_planted_run_worktree` | *"doctor's findings changed once a run tree was planted under the run-tree root"* |
+| `S8D-II-M10` | `worktree::reentry_keeps_ignored_files` | *"an ignored carried file did not survive re-entry"* |
+| `S8D-II-M11` | `worktree::creation_refuses_when_the_worktree_root_is_not_ignored` | *"creation under an unignored root: ADMITTED"* |
+| `S8D-II-M12` | `worktree::a_selected_filter_with_a_driver_effective_at_system_scope_creates_silently` | *"creation was REFUSED and must not be: … FilterDriverNotEffective { driver: "lfs" …"* |
+| `S8D-II-M13` | the declared-but-unselected control and the BrittonGames control (2 of 2) | *"creation was REFUSED … driver: "mutant""*, in each |
+| `S8D-II-M14` | `worktree::a_repo_with_no_filter_or_include_if_creates` | *"no filter anywhere: creation was REFUSED"* |
+| `S8D-II-M15` | `worktree::the_filter_attribute_is_read_from_the_fork_commit` | *"the fork commit selects `nodrv`; the working tree selects nothing: ADMITTED"* |
+| `S8D-II-M16` | `worktree::an_unlanded_tree_is_kept_with_its_reason` | *"an UNLANDED tree (its tip carries no closed mark) was removed"* |
+| `S8D-II-M17` | `worktree::the_root_is_the_main_worktree_when_run_from_a_linked_worktree` | *"read from the linked worktree, the root is `…/rootmain.swt`, not the main worktree"* |
+| `S8D-II-M18` | `worktree::the_length_rule_reads_the_actual_item_length` | *"a 1-character item was refused on a 64-character bound: … bound: 260, limit: 259"* |
+| `S8D-II-M19` | `run_worktree::the_review_reference_tree_is_created_at_the_rk_base_fork_sha_after_head_moves` | *"the review reference tree was created at dec9cbb… — not at the run tree's fork 98d0f5e…"* |
+| `S8D-II-M20` | `worktree::a_lock_whose_pid_now_names_another_process_is_released` | *"a lock whose pid now names another process was not released: … LockHeld"* |
+| `S8D-II-M21` | `worktree::git_lfs_skip_smudge_in_the_environment_refuses_by_name` | *"GIT_LFS_SKIP_SMUDGE=1: ADMITTED"* |
+| `S8D-II-M22` | `worktree::a_pointer_file_at_a_selected_path_after_checkout_refuses_by_name_and_removes_the_fresh_tree` | *"a pointer file at a selected path after checkout: ADMITTED"* |
+| `S8D-II-M23` | `worktree::a_pointer_header_at_a_path_no_filter_selects_does_not_refuse` | *"a pointer header at an unselected path: creation was REFUSED … PointerFilesAfterCheckout"* |
+| `S8D-II-M24` | `worktree::a_committed_pointer_that_the_driver_smudges_creates_silently` | *"a committed pointer the driver smudges: creation was REFUSED … PointerFilesAfterCheckout"* |
+| `S8D-II-M25` | `worktree::the_pointer_scan_never_removes_a_tree_this_call_did_not_create` | *"re-entry was refused: WorktreeRefused { refusal: PointerFilesAfterCheckout …"* |
+| `S8D-II-M26` | the pointer row, by its absence assertion | *"the fresh tree `…\item-1` is still on disk after the refusal"* |
+
+`S8D-II-M2` is re-applied in its final-tree form: `create` takes P4's `lfs_skip_smudge` argument, which P3's form
+predates. The packages' extra mutants (`P4-X-*`, `P5-X-*`, `ENTRY-FORM`, J1 and J2) sit outside the table's
+twenty-six and were not re-run.
+
+**The count, re-measured off the suite logs.**
+- The whole suite in the private tree reads **1021 passed / 0 failed / 10 ignored over 44 result lines**, which is
+  Checkpoint 8d's recorded 971 (D21-78) plus 50, and so meets `FLOOR=1021`.
+- By name, the log carries 1011 distinct test names against 961 in P1's stage-entry baseline: **51 new and 1 gone**.
+  The gone name is `worktree::an_existing_worktree_path_is_refused_not_reused`, the rename. The 51 new are the table's
+  53 less its 2 witnesses; the rename counts as one of them, so **50 are new in the pass count**.
+- (2)'s three selections, run verbatim, read `rk-git` 42, `rk-containment` 1 and `rk-cli` 10, with every `... ok` line
+  present and the zero-match control reading 0 passed.
+
 ### 8d-ii.9 What this file found
 
 Findings carried from `s8e`'s revision (its former findings 10–13 and 15–17), with their disposition now, then this
@@ -1016,6 +1732,66 @@ The adversarial review of 2026-09-24 (D21-47) found the following:
     `runbook/tools/nodispatch.sh`, compiles its fake from `runbook/tools/fake-claude.rs` to `claude.exe` and removes
     every other `PATH` directory holding a `claude`, `claude.exe` or `claude.cmd`. A native spawn therefore finds only
     the fake, which logs the call and exits 97. Checkpoint 8d-ii sources it.
+17. *(dated 2026-09-27, s8d-ii build, P3.)* **git's own unforced `worktree remove` leaves a `setup`-installed
+    `node_modules`' junctions on disk** (`s8c` §8c.12 item 3, measured here without `--force`). It exits 0 and
+    deregisters the tree, and leaves 114 dangling junctions, 0 files and 60 directories (git 2.55.0.windows.3). The
+    lifecycle's removal unlinks every untracked link first, never walking through one, and then leaves nothing
+    (§8d-ii.8's P3 note). That is ADR-0180 decision 9's *"a link inside the tree is removed, never its target"*.
+    Under the package brief, a raw removal that leaves dangling junctions is a blocker the stage file did not settle,
+    so it goes to the orchestrator for a ruling, with the built behaviour as the most reversible option. *Open.*
+18. *(dated 2026-09-27, s8d-ii build, P6.)* **A tree whose `setup` failed is not set up again on re-entry.** The run
+    refuses by name and releases the lock, and the fresh tree stays registered (no rule removes a tree that is not
+    landed, and X2's rollback is the scan's alone). The next run re-enters it as `Creation::Reused`, and §8d-ii.4's
+    *"A reused tree is not re-carried"* then skips both the carry and `setup`, so it runs over a tree with half its
+    dependencies. The stage file does not settle it; the options, most reversible first, are to record the
+    completed carry in the tree's gitdir (beside `RK_BASE`) and re-run an incomplete one at re-entry, or to roll the
+    fresh tree back unforced on a carry failure as X2 does. *Open; reported, not chosen.*
+19. *(dated 2026-09-27, s8d-ii build, P6.)* **Checkpoint 7d's absence check on the old root is now vacuous.** `s7d`'s
+    block asserts `test ! -d "$TMP1/.git/redkiln/worktrees"` after a refused run; the root is no longer there, so the
+    line cannot fail. It still passes, and nothing older is re-run here; `s7d` is not edited beyond its two dated
+    table notes.
+20. *(dated 2026-09-27, s8d-ii build, P6.)* **Checkpoint 7f's replay installs the Node fixture in its clone.** The
+    shipped `[toolchain.rust]` declares `setup_projects`, so the clone's run tree runs `pnpm install --frozen-lockfile
+    --prefer-offline` at creation (a warm store: Checkpoint 8d-ii (0)), and `rm -rf "$c7f"` removes the resulting
+    `node_modules` junctions. The replay has not been run (AFK rule); its wall time and the junction removal under
+    `rm -rf` are unmeasured.
+21. *(dated 2026-09-27, s8d-ii build, P6.)* **`temp_repo` does not take the ignore row** (§8d-ii.8's P6 note): `init`'s
+    own row asserts that the root is not ignored before its block exists. Every repository a `run` creates a tree in
+    carries the row through `pack_min_repo` or `init`.
+
+*(dated 2026-09-27, s8d-ii build, package P7-GUARD-SWEEP: dispositions the build settles, and two findings of the guard
+sweep.)*
+- **Finding 7, re-measured on the built tree:** the worst case is **255 of 259** here for a 64-character item and
+  **246** in Checkpoint 7f's `mktemp -d` clone for `rk-fix-doctor-test-count`. The longest tracked path is 140, and
+  `core.longpaths` is unset (rc 1). Both readings come from (0b), run verbatim. The rule `path_bound` builds reads the
+  actual item (`S8D-II-M18`, killed above).
+- **Findings 17 and 18 stay open.** No build fact settles either: 17 waits on the orchestrator's ruling, and 18 is
+  reported and not chosen. Findings 19 and 20 are unchanged: 7d and 7f were not replayed here.
+22. *(dated 2026-09-27, s8d-ii build, P7.)* **Two older lines were already red, and this stage adds three hits to
+    them.** The lines are Checkpoint 6's workspace-wide `Command::new("git")` line and `ci.yml`'s "git shells out
+    through one wrapper only" step.
+    - **At `83cf836`**, both are RED on test-helper hits in `redkiln-migrate` and `rk-cli` tests (`main.rs`,
+      `answer.rs`, `root.rs`, `support.rs`). PROGRESS row 6 carries *"re-run pending 7c/7d Command sites"*, and the
+      `s6` line is *"RAISED for narrowing"*.
+    - **This stage adds three helpers of the same shape,** each under `#[expect(clippy::disallowed_types)]`:
+      `init.rs`'s `git_ignores`, and `run_worktree.rs`'s `git_out` and `git_rc`.
+    - **Measured.** A differential over HEAD's tree and the working tree puts the untracked `run_worktree.rs` into a
+      private copy of the index as intent-to-add. The pre-existing hits are identical, and the only new lines are those
+      three.
+    - **What is unchanged.** Checkpoint 7d's `src/`-scoped `Command::new("git")` ban and 7c's ban both pass, and so
+      does Checkpoint 6's production `process::Command` line: HEAD's 14 hits, none added. No line's pass or fail state
+      moves.
+    - **Not amended here.** `s6` is closed and `ci.yml` is not this stage's. Folding the three into one shared test
+      helper would still add one site. The narrowing belongs to whoever discharges row 6's mark.
+23. *(dated 2026-09-27, s8d-ii build, P7.)* **A presence assertion is broken by a removal, which an added-line sieve
+    cannot see.** The sweep therefore also checked removals:
+    - every identifier that left its file;
+    - every test name P1's baseline log carries and this log does not.
+
+    Neither is named by any older checkpoint's bash line. The one gone test name,
+    `an_existing_worktree_path_is_refused_not_reused`, and `recreate_run_worktree` appear only in the prose of
+    `s7d`'s tables and `s8a`, never in a block. Of the older blocks' tokens, 765 resolve to entry test names, and none
+    is missing now.
 
 ### 8d-ii.10 Acceptance set
 
@@ -1081,6 +1857,116 @@ and adds the dated notes. AC-518's instrument is a lane run (`s8e`'s `lane_e2e`)
 
 A block that passed on `c5d19d7` would be asserting nothing.
 
+*(dated 2026-09-27, s8d-ii build, package P1-RECORD.)* **The BEFORE readings, taken on the entry tree `83cf836`** in the
+private tree `target/wt-p1rec` (read-only lines copied from the block, plus (2)'s selections through the no-dispatch
+helper), each RED as listed: (2) every selection tried (`rk-git` two names, `rk-cli` two, `rk-containment` one) ran
+**0 tests** (*"test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 78 filtered out"* for `rk-git`), which
+`sel_tests` refuses; (3)'s root floor, 12 outside derivations (`run.rs` 4, `rk-cli` tests 6, and `s8c`'s two
+`worktree_include` lines, §8d-ii.0's dated finding), and *"rk-git's worktree module names no worktrees directory"*;
+`recreate_run_worktree` on 2 code lines; the force floor, 2 hits outside `remove_reference_worktree`; the `LC_ALL`,
+`RK_BASE`, `--show-scope`, `--source`, LFS pointer-header and `# redkiln-runtime` floors, each absent; (7b), no `git
+clone … --no-local`, no `mktemp -d`, 7f's cleanup and prune lines present, and 3 runs reads naming no clone; and
+`REC_WT` read `____`, so the block refused before (9). Two (3) lines were GREEN at entry, as their form requires:
+`rk-git`'s worktree module forces nothing, and nothing narrows a config read to `--local`. After this package,
+`REC_WT` is `0180`.
+
+*(dated 2026-09-27, s8d-ii build, package P7-GUARD-SWEEP.)* **Pre-checkpoint diagnostic on the built tree (not the
+formal reading).** The block's lines were run as follows; every reading passed.
+- **(0) to (0d), (3), (6), (8) and (9) in the main checkout.** These were extracted verbatim (`p7guard_mkdiag.py`),
+  with `scratch` re-pointed to the package scratch and (1), (2), (4), (5) and (7) cut. The run read rc 0 and
+  *"CP8D-II-END-OF-BLOCK reached"*:
+  - the legacy ref at `73c087a…` with its stage-less mark;
+  - `dispatch_completed` 0 in the store and 0 in the journals;
+  - the warm `--offline` pnpm install;
+  - the ignore row, with its control;
+  - worst case 255 here and 246 in 7f's clone;
+  - 0 filters selected at HEAD;
+  - 0 pointer files, with both scan controls firing;
+  - every (3) floor and in-block control;
+  - `REC_WT=0180` and (9) whole.
+- **(1), (2) and (5) in the private worktree `target/wt-p7`.** They were extracted verbatim (`p7guard_mkcargo.py`) and
+  run under the shared wrapper. The run read rc 0 and reached its end marker, with `nd_check` clean:
+  - the build;
+  - the zero-match control;
+  - `sel_tests rk-git 42`, `rk-containment 1` and `rk-cli 10`;
+  - fmt `--check`;
+  - clippy `--workspace --all-targets`.
+- **(4) in the private worktree:** `cargo test --workspace --no-fail-fast` read rc 0 and **1021 passed / 0 failed / 10
+  ignored over 44 result lines**, against `FLOOR=1021`.
+- **(3)'s floors over the private worktree, with a planted violation for each** (`p7guard_floor_controls.py`). The
+  tree passed, and each plant failed the block with its own message:
+  - a `run.rs` derivation;
+  - a `recreate_run_worktree` function;
+  - a `"--force"` in `run.rs` outside `remove_reference_worktree`;
+  - a `"--force"` in `worktree.rs`;
+  - `LC_ALL` set to `X`;
+  - a `"--local"`;
+  - the `# redkiln-runtime` marker renamed.
+- **Not run:** (7a) and (7b), the replays of 8d and 7f. They run a `redkiln` binary against this repository or its
+  clone, so they are left to the formal checkpoint. (7b)'s text guards were run by P6.
+
+**D21-49, the flip-stop assertions.** None of this block's lines requires `status: accepted`. (9) reads the status and
+branches on it: while the record is proposed, no back-link may exist; once it is accepted, all three must. The replays
+(8d and 7f) assert no record status either, as a grep of their blocks for `status` and `accepted` shows. So the block
+passes before the flip and again after it.
+
+**Older checkpoints' guard lines, run READ-ONLY; no line's result moved.**
+- **Sieve.** Every `grep`, `rk_absent` and `rk_control` pattern in the blocks of Checkpoints 5, 6, 7a–7i and 8a–8d
+  (786 patterns) was matched against the 6,234 lines this stage adds under `crates/` and `.redkiln/`. The untracked
+  `run_worktree.rs` was counted whole. 48 candidates came back, and each was read in context (`p7guard_sieve.py`).
+- **Differential.** Each ban whose scope could hold a candidate was run verbatim from its stage file's bytes over
+  HEAD's tree (by `git archive`) and over the working tree (`p7guard_bandiff.py`, adapted from `s8d`'s). Every segment
+  printed **0 new lines**:
+
+  | segment | base FAIL | now FAIL | now PASS |
+  | --- | --- | --- | --- |
+  | 5's `ChangeSummary` ban | 0 | 0 | — |
+  | 8a's `ChangeSummary` ban | 0 | 0 | — |
+  | 8a's `"git"` literal and `rk_git` route | 0 | 0 | — |
+  | 7b's ordinal, lexical and leave-the-model bans | 0 | 0 | — |
+  | 7b's shipped-catalog line | 0 | 0 | — |
+  | 7b-ii's classifier purity | 0 | 0 | — |
+  | 7c's `rk_absent` bans | 0 | 0 | 40 |
+  | 7c's `unsafe` and manifest lines | 0 | 0 | 5 |
+  | 7d's absence bans | 0 | 0 | 37 |
+  | 8b's `spikes/p9` sweep | 0 | 0 | — |
+
+  **Controls:** a copy of the tree with one planted hit per segment prints a new FAIL in nine of the ten segments. The
+  exception is 7b's shipped-catalog line, a presence assertion that no addition can turn red. The ten segments'
+  plants were a second `unsafe` module in `rk-containment` for 7c's `unsafe` lines, and s8d's seven plants for the
+  rest.
+- **Checkpoint 6's three `crates` lines,** HEAD against now, with the untracked file included. The production
+  `process::Command` line has the same 14 hits. `env::current_dir` in `src/` has 0. The positives are
+  `Command::new("git")`=3, hooksPath=3, ifexists=7 and gix=1. The workspace-wide git line adds three test-helper hits
+  to a line already red: finding 22.
+- **Run verbatim from their own bytes in the main checkout** (`p7guard_seg.py`, which refuses any cargo, `redkiln` or
+  git-mutating line). Each passed:
+  - 8a's `GitOp` pin and exec-route segment (lines 1311–1370), with its controls;
+  - 8d's `harness_binary` fixture guard (lines 3185–3192), with its control;
+  - 7d's static presence floors (lines 3151–3194): `DENYLIST`, the literal list, `INIT_UNREAD_WINDOW_RUNS` and the
+    report schema.
+- **`ci.yml`'s read-only grep steps,** run with a private index copy that carries the untracked files, over HEAD and
+  over the built tree (`p7guard_ci.py`). The outputs match except for finding 22's three lines:
+  - AC-362, AC-442, AC-529 and the port inventory pass;
+  - corpus residency and the image-tag step are red at HEAD and red, identically, now.
+- **Removals and renames** (finding 23): none is named by an older block.
+- **Selections.** `s8c`'s five `worktree_include::` selections exist once each and pass in the suite log.
+- **Tools.** `check-refs`, `check-bash-syntax` (121 blocks), `check-checkpoints` and `check-adr-options` (17 records)
+  each flag 0.
+
+**The real repository after the sweep** matched its SO-1 readings on every point:
+- the worktree path set;
+- `.redkiln/worktrees` still absent;
+- `rk-run/rk-fix-doctor-test-count` at `73c087a82245…`, with its `Story:` mark and registration;
+- the run-record count at 31;
+- `dispatch_completed` at 0 and 0;
+- the store's sha256 at `e83d295e…`, backed up first to `target/store-backups/p7guardsweep-start.sqlite3`.
+
+Only the private worktrees were added and removed: `target/wt-p7`, and `target/wt-p7h` at HEAD for the `ci.yml`
+baseline. `git worktree remove --force target/wt-p7` left the pnpm junction skeleton that `s8c` §8c.12 item 3
+describes: 114 links, 0 files and 65 directories. A walk that unlinks each link and never follows one removed it
+(`p7guard_rmresidue.py`).
+
 ```bash
 cd D:/repos/redkiln-rs || { echo "FAIL: repo root not found"; exit 1; }
 # Run this block as a SCRIPT (save it and `bash` it). Every guard ends in `exit 1`, and the helper functions below
@@ -1098,7 +1984,10 @@ LINE_ONLY='^[0-9]+:[[:space:]]*(//|/\*|\*( |/|$))'
 # THE RECORD ID, a LITERAL (D21-47: records are located by the id recorded at write time, never by a title phrase or a
 # supersession count). The commit that writes the worktree record writes its four-digit id into the line below by a
 # dated edit. Re-runners supply nothing; while the placeholder remains, the block refuses.
-REC_WT=____
+# (dated 2026-09-27, s8d-ii build, package P1-RECORD) The worktree record took 0180 at writing: ADR-0180,
+# references/adr/0180-the-run-worktree-lives-in-dot-redkiln-is-reused-and-guarded.md, status proposed, named by
+# ledger entry D21-87. This line read REC_WT=____ until then.
+REC_WT=0180
 case "$REC_WT" in
   [0-9][0-9][0-9][0-9]) ;;
   *) echo "FAIL: REC_WT is '$REC_WT', not a four-digit record id — write the id the worktree record took into this block by a dated edit"; exit 1 ;;
@@ -1386,9 +2275,11 @@ code=$(printf '%s\n' "$raw" | grep -vE "$LINE_ONLY" | grep .)
 [ -n "$code" ] || { echo "FAIL: init.rs carries no # redkiln-runtime marker on a code line — W4's exclude block is absent"; exit 1; }
 
 # ---- (4) THE WHOLE SUITE, no fail-fast, with a floor. Expected value, re-derived at stage open from Checkpoint 8d's
-# ---- recorded count plus 50 (section 8d-ii.0 item 8): 914 + 50 = 964 on the final chain (D21-48 X2, 2026-09-24:
+# ---- recorded count plus 50 (section 8d-ii.0 item 8): ~~914 + 50 = 964~~ 971 + 50 = 1021 (dated 2026-09-27, s8d-ii
+# ---- build, package P1-RECORD: Checkpoint 8d's recorded count is 971, D21-78; the stage-open baseline read 971)
+# ---- on the final chain (D21-48 X2, 2026-09-24:
 # ---- 46 -> 50; D21-48 floor propagation, 2026-09-24: was 901 + 50 = 951, before s8c 78 and s8d 62). Replace it by a dated edit before the first run.
-FLOOR=964
+FLOOR=1021
 tally() { printf '%s\n' "$1" | awk '/^test result:/ { p += $4; f += $6; i += $8; n += 1 } END { print p+0, f+0, i+0, n+0 }'; }
 # CONTROL: a run of zero tests tallies below the floor, and a failed count is read.
 read -r cp cf ci cn <<< "$(tally 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out')"

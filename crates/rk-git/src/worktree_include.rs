@@ -36,7 +36,12 @@ use crate::path::WorktreePath;
 pub const INCLUDE_FILE: &str = ".worktreeinclude";
 
 /// The pathspec that keeps every run worktree under the root out of the listing (D21-44).
-pub const RUN_WORKTREES_EXCLUDE: &str = ":(exclude).redkiln/worktrees";
+///
+/// *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 1, proposed.)* It names
+/// `crate::worktree::RUN_ROOT_EXCLUDE_PATHSPEC`, declared beside the one derivation, so the
+/// run-tree root is spelled in one module (Checkpoint 8d-ii (3)'s root floor); the value is
+/// unchanged, `:(exclude).redkiln/worktrees`.
+pub const RUN_WORKTREES_EXCLUDE: &str = crate::worktree::RUN_ROOT_EXCLUDE_PATHSPEC;
 
 /// What a candidate path is on disk, read with `symlink_metadata` (never followed).
 #[derive(Debug, Clone, PartialEq, Eq)]

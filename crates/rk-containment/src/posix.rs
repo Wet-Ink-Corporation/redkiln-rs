@@ -152,8 +152,30 @@ pub fn terminate_pid(pid: u32, code: u32) -> Result<(), ContainError> {
 }
 
 /// Test support: `kill(pid, 0)` — alive (or a zombie not yet reaped).
+///
+/// *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 6, proposed.)* **Now also a
+/// production call:** `rk-cli`'s run-tree lock builds its liveness predicate from this and
+/// [`process_start_time`], which reads nothing for a zombie. The `#[doc(hidden)]` attribute is left
+/// as `s7c` §7c.10 lists it until the record flips. ARMED to CI with the rest of this arm.
 #[doc(hidden)]
 #[must_use]
 pub fn is_alive(pid: u32) -> bool {
     sys::is_alive(pid)
+}
+
+/// The start time of the LIVE process `pid` names: `/proc/<pid>/stat`'s field 22 (`starttime`,
+/// clock ticks since boot), or `None` when there is no such process or it is a zombie (state
+/// `Z`, exited and not yet reaped). Read after the last `)`, because field 2 (`comm`) may hold
+/// spaces and parentheses. **ARMED to CI with the rest of this arm**: written, not run here
+/// (`s8d-ii` §8d-ii.2; ADR-0180 decision 6, proposed). *(dated 2026-09-27, s8d-ii build, P3.)*
+#[must_use]
+pub fn process_start_time(pid: u32) -> Option<u64> {
+    let text = fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+    let (_, after_comm) = text.rsplit_once(')')?;
+    let fields: Vec<&str> = after_comm.split_whitespace().collect();
+    // After `comm`, fields[0] is field 3 (state), so field 22 is fields[19].
+    if fields.first().is_none_or(|state| *state == "Z") {
+        return None;
+    }
+    fields.get(19)?.parse().ok()
 }

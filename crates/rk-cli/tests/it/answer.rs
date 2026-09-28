@@ -397,11 +397,11 @@ fn ac248_answer_without_live_token_exits_named_outcome() {
 }
 
 /// The run-owned worktree a `run` created for `item`, and the branch it sits on.
+///
+/// *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 1, proposed.)* Through rk-git's one
+/// derivation: `.redkiln/worktrees/<item>` under the main worktree.
 fn owned_worktree(root: &std::path::Path, item: &str) -> std::path::PathBuf {
-    crate::common_dir(root)
-        .join("redkiln")
-        .join("worktrees")
-        .join(item)
+    crate::run_tree(root, item).path
 }
 
 /// Open the abstention gate on `gate-1` and return the fixture repository.

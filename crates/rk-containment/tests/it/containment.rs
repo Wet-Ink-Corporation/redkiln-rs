@@ -502,3 +502,61 @@ fn run_bounded_kills_tree_at_timeout() {
         .close()
         .expect("arm B's fixture tree deletes after the kill");
 }
+
+/// `s8d-ii` §8d-ii.2 (D21-45 W1; ADR-0180 decision 6, proposed): **the start-time half of the run
+/// lock's liveness predicate.** A live child's start time reads, is stable across reads, and is
+/// not before this test process's own; once the child has exited and been reaped, it reads
+/// nothing. `rk-cli` composes it with [`is_alive`] so that a lock is live only when its pid is
+/// alive AND that pid's start time equals the one the lock records (pid reuse). The POSIX arm
+/// (`/proc/<pid>/stat`'s field 22) is ARMED to CI with the rest of that arm.
+/// *(dated 2026-09-27, s8d-ii build, P3.)*
+#[test]
+fn process_start_time_reads_a_live_child_and_nothing_for_an_exited_one() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let mut reaper = Reaper::new();
+    let Contained { mut child, group } =
+        spawn_into_job(fixture("hold", dir.path())).expect("spawn_into_job");
+    let pid = child.id();
+    reaper.track(pid);
+    wait_for_marker(dir.path(), "hold", UP_POLLS).expect("the hold fixture came up");
+    assert!(is_alive(pid), "precondition: the child is alive");
+
+    let first = rk_containment::process_start_time(pid);
+    let second = rk_containment::process_start_time(pid);
+    println!("MEASURED process_start_time: child {pid} -> {first:?}, again {second:?}");
+    let t = first.unwrap_or_else(|| {
+        panic!("process_start_time read nothing for the LIVE child {pid} (no start-time read?)")
+    });
+    assert_eq!(
+        second,
+        Some(t),
+        "the start time of one live process moved between two reads"
+    );
+    let me = rk_containment::process_start_time(std::process::id())
+        .expect("this test process's own start time reads");
+    assert!(
+        me <= t,
+        "this process ({me}) reads as starting after the child it spawned ({t})"
+    );
+
+    group.kill().expect("kill through the group");
+    child.wait().expect("reap the child");
+    drop(child);
+    drop(group);
+    assert!(wait_dead(pid, DEAD_POLLS), "the child did not die");
+    let after = rk_containment::process_start_time(pid);
+    match after {
+        None => {}
+        // The OS handed the pid to a new process between the reap and the read: that is pid
+        // reuse, which is exactly what the start-time comparison exists to tell apart.
+        Some(x) if x != t && is_alive(pid) => {
+            println!("pid {pid} was reused (start {x}) before the read; not the exited child");
+        }
+        Some(x) => panic!(
+            "process_start_time read Some({x}) for the exited, reaped child {pid} (its own start \
+             was {t})"
+        ),
+    }
+    dir.close()
+        .expect("the fixture tree deletes after the kill");
+}

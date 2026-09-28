@@ -14,7 +14,9 @@
 //!
 //! # 🛑 STEP (7)'s REFUSAL PRECEDES STEP (8), AND THE EVIDENCE IS AN ABSENCE OF TWO THINGS
 //!
-//! No `rk-run/*` ref and no `<common-dir>/redkiln/worktrees/` directory. Both are step (8)'s acts, so
+//! No `rk-run/*` ref and no ~~`<common-dir>/redkiln/worktrees/`~~ `.redkiln/worktrees/` directory
+//! under the main worktree *(dated 2026-09-27, `s8d-ii` build, P6: the run-tree root moved, D21-44;
+//! ADR-0180 decision 1, proposed)*. Both are step (8)'s acts, so
 //! their absence after a step-(7) refusal is what says the order held. The harness marker count is
 //! **not** that evidence and is reported as a floor: an empty pack set yields no DAG, so no
 //! implementation whatever could have written one.
@@ -269,15 +271,55 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
     let token = CancelToken::new();
 
     // ---- (8) the run-owned worktree, the bindings, and ONLY THEN the real harness. -------------
-    let owned = match recreate_run_worktree(
-        &resolved.exec,
-        &resolved.worktree,
-        &resolved.common_dir,
-        resolved.item.id(),
-    ) {
-        Ok(path) => path,
+    //
+    // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decisions 1, 6 and 9, proposed.)* The tree
+    // is ENTERED, not re-created: `rk_git::worktree::enter` creates it at
+    // `.redkiln/worktrees/<item>` under the main worktree, or re-enters and reuses it, or refuses
+    // and keeps it, and takes the run's lock. The lock is released when the lane below ends, on
+    // every path it ends by (`release_run_worktree`).
+    let owner = match run_lock_owner() {
+        Ok(owner) => owner,
         Err(exit) => return Ok(exit),
     };
+    let entered = match enter_run_worktree(&resolved, env, &owner) {
+        Ok(entered) => entered,
+        Err(exit) => return Ok(exit),
+    };
+    let release_exec = resolved.exec.clone();
+    let release_start = PathBuf::from(resolved.worktree.as_str());
+    let release_item = resolved.item.id().to_owned();
+    // W3's carry, at creation only (§8d-ii.4): a reused tree kept its ignored files.
+    if entered.created != rk_git::worktree::Creation::Reused
+        && let Err(exit) = carry_at_creation(&resolved, env, &entered)
+    {
+        release_run_worktree(&release_exec, &release_start, &release_item, &owner);
+        return Ok(exit);
+    }
+    let lane = run_lane(resolved, env, &store, &token, &entered);
+    release_run_worktree(&release_exec, &release_start, &release_item, &owner);
+    lane
+}
+
+/// **The lane, over the entered run tree** — `run`'s body from step (6)'s row on, split out so the
+/// run's lock is released on every path the lane ends by (ADR-0180 decision 6, proposed: the lock
+/// *"is taken at every run start and released at the run's end"*). *(dated 2026-09-27, `s8d-ii`
+/// build, P6.)*
+///
+/// # Errors
+/// [`Halt::PoisonedLock`] from the store acquisition, as `run`'s.
+#[expect(
+    clippy::too_many_lines,
+    reason = "the lane loop moved here whole from `run` (s8d-ii P6) so the lock is released on \
+              every path; splitting it further would move no decision"
+)]
+fn run_lane(
+    resolved: Resolved,
+    env: &Env,
+    store: &Arc<Mutex<dyn EventStore>>,
+    token: &CancelToken,
+    entered: &rk_git::worktree::Entered,
+) -> Result<Exit, Halt> {
+    let owned = entered.tree.path.clone();
 
     // ---- (6)'s ROW, NOW THAT (8) HAS RE-CREATED THE WORKTREE — all four members.
     //
@@ -292,7 +334,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
     };
     match reconcile_started_event(&resolved.config, Some(&ownership)) {
         Ok(event) => {
-            let mut guard = crate::store::acquire(&store, "the run")?;
+            let mut guard = crate::store::acquire(store, "the run")?;
             let appended = guard.append(event);
             drop(guard);
             if let Err(e) = appended {
@@ -351,7 +393,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         // ---- R6 decision 5 (`s8d` §8d.7; D21-43 N3). An abstaining derived facet whose
         // `unknown_facet` gate was answered binds the answer, folded from `gate_answered` —
         // BEFORE the inputs, so every stage's selection and record read the bound value.
-        if let Err(exit) = bind_answered_facets(&mut resolved, &store)? {
+        if let Err(exit) = bind_answered_facets(&mut resolved, store)? {
             return Ok(exit);
         }
         let (inputs, tree_hash) = match prepare_inputs(&resolved, now) {
@@ -360,7 +402,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         };
         // ---- R6 decision 4: still `null` at the lane's first stage, the gate opens (once), and
         // the FSM's first rule then awaits it (ADR-0022) before any selection reads the facet.
-        if let Err(exit) = open_derived_facet_gates(&resolved, &store, &tree_hash, now)? {
+        if let Err(exit) = open_derived_facet_gates(&resolved, store, &tree_hash, now)? {
             return Ok(exit);
         }
 
@@ -451,7 +493,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
         let ports = rk_ports::root::Ports {
             // Cloned per iteration: the STORE outlives a stage (one journal per item, across the whole
             // lane), while every other port here is rebuilt for the stage's own bindings (ADR-0152).
-            store: Arc::clone(&store),
+            store: Arc::clone(store),
             harness: Arc::new(harness),
             // The two with no Phase-1 real (ADR-0094 decision 2; design:265-266 — GitHub and mdBook
             // are Phase 3, which is ADR-0134's warrant for the port lint's expected-uncalled set).
@@ -484,7 +526,7 @@ pub fn run(cli: &Cli, args: &RunArgs, env: &Env, startup: Startup<'_>) -> Result
             routing,
             env,
             &mut supply_spec,
-            &token,
+            token,
             &mut advanced,
         )?;
 
@@ -1874,13 +1916,12 @@ fn story_trailer(resolved: &Resolved) -> Result<(), Exit> {
         return Ok(());
     }
 
+    // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 1, proposed.)* Through the one
+    // derivation, never a joined literal.
+    let tree = run_tree_of(resolved)?;
     let ownership = rk_git::worktree::RunOwnership {
-        worktree: resolved
-            .common_dir
-            .join("redkiln")
-            .join("worktrees")
-            .join(item),
-        branch: format!("rk-run/{item}"),
+        worktree: tree.path,
+        branch: tree.branch,
     };
     let owned =
         rk_git::worktree::authorise_tier1_write(&resolved.exec, &ownership.worktree, &ownership)
@@ -1959,14 +2000,16 @@ fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun)
     // RUN-OWNED worktree and its branch, and **never** against `cwd`. `OwnedWorktree`'s path is a
     // private field with only an accessor — the type IS the mechanism: *was this write checked?*
     // is answered by which function produced the value the commit is given.
-    let owned_path = resolved
-        .common_dir
-        .join("redkiln")
-        .join("worktrees")
-        .join(item_id);
+    // *(dated 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 1, proposed.)* Through the one
+    // derivation, never a joined literal.
+    let tree = match run_tree_of(resolved) {
+        Ok(tree) => tree,
+        Err(exit) => return exit,
+    };
+    let owned_path = tree.path.clone();
     let ownership = rk_git::worktree::RunOwnership {
-        worktree: owned_path.clone(),
-        branch: format!("rk-run/{item_id}"),
+        worktree: tree.path,
+        branch: tree.branch,
     };
     let owned =
         match rk_git::worktree::authorise_tier1_write(&resolved.exec, &owned_path, &ownership) {
@@ -2006,27 +2049,89 @@ fn terminal_read(resolved: &Resolved, recorded: &rk_kernel::replay::RecordedRun)
 
 /// The reference worktree for the review pass: a **detached** tree at the merge base.
 ///
-/// 🛑 **THE MERGE BASE NEEDS NO COMPUTATION, AND THAT IS LOAD-BEARING.** `GitOp` is ADR-0105
+/// ~~🛑 **THE MERGE BASE NEEDS NO COMPUTATION, AND THAT IS LOAD-BEARING.** `GitOp` is ADR-0105
 /// clause 5's CLOSED set and carries no `merge-base`; widening it for this would be a decision
-/// rather than an implementation. It does not have to be. [`recreate_run_worktree`] creates
+/// rather than an implementation. It does not have to be. `recreate_run_worktree` creates
 /// `rk-run/<item>` **at `HEAD`**, so the base of `HEAD` and that branch IS `HEAD` — which is what
 /// Checkpoint 7h's own `git merge-base HEAD "rk-run/$FIX_ITEM"` returns while the run branch is
 /// ahead of it. AC-518 keeps the checkout from moving during a run, so the reading is stable for
-/// the pass's lifetime.
-fn reference_worktree(
-    exec: &GitExec,
-    repo: &WorktreePath,
-    common_dir: &Path,
-    item: &str,
-) -> Result<PathBuf, Exit> {
-    let path = common_dir
-        .join("redkiln")
-        .join("worktrees")
-        .join(format!("{item}.review-ref"));
+/// the pass's lifetime.~~
+///
+/// *(Rewritten 2026-09-27, `s8d-ii` build, P6; ADR-0180 decision 10, proposed; ADR-0162 decision
+/// 10 cited, not superseded.)* 🛑 **THE MERGE BASE STILL NEEDS NO COMPUTATION, BUT IT IS NO LONGER
+/// `HEAD`.** `GitOp` still carries no `merge-base` (ADR-0105 clause 5's list; ADR-0180 adds none).
+/// The argument above rested on `recreate_run_worktree` creating `rk-run/<item>` at `HEAD` on every
+/// run, and that function is retired: under reuse (D21-45 W2) the run branch forked at an earlier
+/// `HEAD`, and the operator's checkout may have moved since, so `HEAD` is not the base. The base is
+/// the fork sha the run tree's `RK_BASE` recorded at creation, read without a `merge-base`, and the
+/// reference tree is created there.
+///
+/// **A leftover is removed only if redkiln made it.** The reference tree gets its own `RK_BASE`
+/// (the fork and the item) at creation. A leftover at `<item>.review-ref` from a killed run that is
+/// registered and carries that marker is scratch, and it is force-removed as before, inside
+/// [`remove_reference_worktree`]. Anything else there, a tree without the marker or a directory git
+/// does not list, is refused by name and kept: redkiln removes only a tree it made.
+fn reference_worktree(resolved: &Resolved) -> Result<PathBuf, Exit> {
+    let exec = &resolved.exec;
+    let repo = &resolved.worktree;
+    let item = resolved.item.id();
+    let tree = run_tree_of(resolved)?;
+    let path = tree.reference.clone();
 
-    // A leftover from a killed run is removed rather than reused: its contents are not this run's,
-    // and a reference arm read off someone else's tree is a measurement of nothing.
-    remove_reference_worktree(exec, repo, &path);
+    // The base: the fork the run tree's RK_BASE records (ADR-0180 decisions 5 and 10).
+    let fork = match rk_git::worktree::read_rk_base(exec, &tree.path) {
+        Ok(Some(base)) if base.item == item => base.fork,
+        Ok(_) => {
+            eprintln!(
+                "redkiln: the run tree {} carries no RK_BASE for `{item}`, so the review pass has \
+                 no recorded fork to create its reference tree at; refused rather than read a base \
+                 off HEAD (ADR-0180 decision 10)",
+                tree.path.display()
+            );
+            return Err(Exit::ConfigError);
+        }
+        Err(e) => {
+            eprintln!(
+                "redkiln: the run tree's RK_BASE could not be read: {}",
+                git_refusal_text(&e)
+            );
+            return Err(Exit::ConfigError);
+        }
+    };
+
+    // A leftover from a killed run: removed as scratch only when redkiln made it.
+    if std::fs::symlink_metadata(&path).is_ok() {
+        let fold = |p: &Path| {
+            p.display()
+                .to_string()
+                .replace('\\', "/")
+                .trim_end_matches('/')
+                .to_lowercase()
+        };
+        let registered = rk_git::worktree::registered_worktrees(exec, Path::new(repo.as_str()))
+            .map(|all| all.iter().any(|p| fold(p) == fold(&path)))
+            .unwrap_or(false);
+        let marked = registered
+            && matches!(
+                rk_git::worktree::read_rk_base(exec, &path),
+                Ok(Some(base)) if base.item == item
+            );
+        if !marked {
+            eprintln!(
+                "redkiln: a leftover review reference tree at {} carries no RK_BASE redkiln wrote \
+                 for `{item}`{}; redkiln removes only a tree it made, so it is kept and the review \
+                 pass is refused (ADR-0180 decision 10)",
+                path.display(),
+                if registered {
+                    ""
+                } else {
+                    " and is not a registered worktree"
+                }
+            );
+            return Err(Exit::ConfigError);
+        }
+        remove_reference_worktree(exec, repo, &path);
+    }
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| {
             eprintln!("redkiln: {}: {e}", parent.display());
@@ -2041,7 +2146,7 @@ fn reference_worktree(
             std::ffi::OsStr::new("add"),
             std::ffi::OsStr::new("--detach"),
             path.as_os_str(),
-            std::ffi::OsStr::new("HEAD"),
+            std::ffi::OsStr::new(&fork),
         ],
     )
     .map_err(|e| {
@@ -2056,6 +2161,22 @@ fn reference_worktree(
         eprintln!("redkiln: the review reference worktree could not be created: {e:?}");
         Exit::ConfigError
     })?;
+    // Its own marker, so a leftover of it is known to be redkiln's (ADR-0180 decision 10).
+    if let Err(e) = rk_git::worktree::write_rk_base(
+        exec,
+        &path,
+        &rk_git::worktree::RkBase {
+            fork,
+            item: item.to_owned(),
+        },
+    ) {
+        remove_reference_worktree(exec, repo, &path);
+        eprintln!(
+            "redkiln: the review reference worktree's RK_BASE could not be written: {}",
+            git_refusal_text(&e)
+        );
+        return Err(Exit::ConfigError);
+    }
     Ok(path)
 }
 
@@ -2066,8 +2187,12 @@ fn reference_worktree(
 /// difference — the path-set form ADR-0156 clause 5(d) required because *"counts cannot tell a
 /// leaked registration from a replaced one"*. A pass that left this registration behind would turn
 /// guard (9) RED and trade one failing guard for another. This is deliberately **unlike** the
-/// run-owned worktree, which is recreated and never removed: that one is the run's output and is
-/// read after the run; this one is scratch and nothing outside the pass may depend on it.
+/// run-owned worktree, which is ~~recreated and never removed~~ reused and never force-removed
+/// *(dated 2026-09-27, `s8d-ii` build, P6; D21-45 W2; ADR-0180 decisions 9 and 10, proposed)*:
+/// that one is the run's output and is read after the run; this one is scratch and nothing outside
+/// the pass may depend on it. It is the only forced removal left in this file (Checkpoint 8d-ii
+/// (3)), and its `remove_dir_all` fallback does not follow a junction. A leftover of it is removed
+/// only when it carries the `RK_BASE` [`reference_worktree`] writes.
 ///
 /// A failure is ignored: a leaked scratch tree is an operator problem, never a verdict.
 fn remove_reference_worktree(exec: &GitExec, repo: &WorktreePath, path: &Path) {
@@ -2130,12 +2255,7 @@ fn review_pass(
     // parameter a model-produced value could arrive through.
     let weight = rk_kernel::review::policy::resolve_review_tier(pack.rigor(&resolved.stage));
 
-    let reference = match reference_worktree(
-        &resolved.exec,
-        &resolved.worktree,
-        &resolved.common_dir,
-        resolved.item.id(),
-    ) {
+    let reference = match reference_worktree(resolved) {
         Ok(path) => path,
         Err(exit) => return Ok(Some(exit)),
     };
@@ -2225,64 +2345,285 @@ fn review_pass(
     verdict
 }
 
-/// The run-owned worktree: `<common-dir>/redkiln/worktrees/<item>` on `rk-run/<item>`.
+// *(dated 2026-09-27, `s8d-ii` build, P6; D21-45 W2; ADR-0180 decision 9, proposed.)*
+// `recreate_run_worktree` is retired: its *"**Re-created, never reused**"* (ADR-0105 clause 6) is
+// superseded in part for the run-owned tree, and its `worktree remove --force` + `remove_dir_all`
+// at every run start are gone with it. The tree is entered through `rk_git::worktree::enter`
+// below: created at `.redkiln/worktrees/<item>` under the main worktree, re-entered and reused, or
+// refused and kept. Nothing in this file forces a removal of it.
+
+/// A refusal from `rk-git`, rendered by name: a [`rk_git::worktree::WorktreeRefusal`]'s own
+/// `Display` (it names the path or id and the rule), and any other error as itself.
+fn git_refusal_text(e: &rk_git::error::GitError) -> String {
+    match e {
+        rk_git::error::GitError::WorktreeRefused { refusal } => refusal.to_string(),
+        other => format!("{other:?}"),
+    }
+}
+
+/// **The run tree this run's item derives to** — through `rk-git`'s one derivation (§8d-ii.1;
+/// ADR-0180 decision 1, proposed): the main worktree's directory, read from `git worktree list
+/// --porcelain` whichever checkout `run` started in, and the validated item id. `story_trailer`,
+/// `terminal_read` and the review pass read their paths from here, never from a joined literal.
 ///
-/// **Re-created, never reused** (ADR-0105 clause 6; H-5 / RT-47). The teardown is the RAW
-/// `["worktree", "remove", "--force", path]` rather than `rk_git::worktree::remove`, because that
-/// wrapper passes no `--force` and git refuses a tree a killed run left files in [measured
-/// 2026-09-18, rc=128]. §7d.5 licenses the raw form for exactly this, and for nothing else.
-fn recreate_run_worktree(
+/// # Errors
+/// [`Exit::ConfigError`], naming the refusal (a bare repository, an unsafe item id).
+fn run_tree_of(resolved: &Resolved) -> Result<rk_git::worktree::RunTree, Exit> {
+    let refused = |e: rk_git::error::GitError| {
+        eprintln!(
+            "redkiln: the run-owned worktree for `{}` cannot be derived: {}",
+            resolved.item.id(),
+            git_refusal_text(&e)
+        );
+        Exit::ConfigError
+    };
+    let main =
+        rk_git::worktree::main_worktree(&resolved.exec, Path::new(resolved.worktree.as_str()))
+            .map_err(refused)?;
+    let id = rk_git::worktree::ItemId::parse(resolved.item.id()).map_err(refused)?;
+    Ok(rk_git::worktree::derive(&main, &id))
+}
+
+/// **This process as a lock owner: its pid and its start time as the OS reports it** (W1; ADR-0180
+/// decision 6, proposed), the `N` and `T` of `redkiln run <item> (pid N start T)`.
+///
+/// # Errors
+/// [`Exit::ConfigError`] when the OS reports no start time for this very process: a lock whose
+/// owner cannot be told from a reused pid is not taken (fail closed).
+fn run_lock_owner() -> Result<rk_git::worktree::LockOwner, Exit> {
+    let pid = std::process::id();
+    rk_containment::process_start_time(pid)
+        .map(|start| rk_git::worktree::LockOwner { pid, start })
+        .ok_or_else(|| {
+            eprintln!(
+                "redkiln: the OS reports no start time for this process (pid {pid}), so the run \
+                 tree's lock could not name its owner; the run is refused rather than take a lock \
+                 a reused pid could be mistaken for (ADR-0180 decision 6)"
+            );
+            Exit::ConfigError
+        })
+}
+
+/// **The liveness predicate `rk-git` is handed** (§8d-ii.2; ADR-0180 decision 6, proposed): the
+/// start time of the live process `pid` names, built from `rk_containment::is_alive` and
+/// `rk_containment::process_start_time`, so `rk-git` gains no edge to `rk-containment`.
+///
+/// `is_alive` is a production call from here on. Its documented Windows ambiguity (an exit code of
+/// 259 reads alive) keeps a stale lock held and refuses the run by name; it can never release a
+/// live one. That is fail-closed, and pid reuse is what the start-time comparison answers.
+fn process_probe(pid: u32) -> Option<u64> {
+    if rk_containment::is_alive(pid) {
+        rk_containment::process_start_time(pid)
+    } else {
+        None
+    }
+}
+
+/// **Step (8)'s run tree: entered, not re-created** (§8d-ii.1 to §8d-ii.5; D21-44; D21-45 W1-W4;
+/// D21-47 V1; D21-48 X1 and X2; ADR-0180, proposed).
+///
+/// `rk_git::worktree::enter` creates the tree at `.redkiln/worktrees/<item>` under the main
+/// worktree (the guards, the filter read with `GIT_LFS_SKIP_SMUDGE` from [`Env`], the add,
+/// `RK_BASE`, the post-checkout scan, the lock), or re-enters and reuses it after an explicit
+/// discard, or refuses and keeps it. Every refusal is by name and exits `3`.
+///
+/// **The discard reaches the operator on stderr, one line per path, until `s8e`** mints
+/// `worktree_assigned { …, discarded }` (§8d-ii.3; W2's *"journalled"* is met there).
+///
+/// The filter read's admission facts (`Entered::filter_notes`) are for the **debug** level only
+/// (§8d-ii.5), and `rk-cli` has no debug level, so they are printed nowhere.
+///
+/// # Errors
+/// [`Exit::ConfigError`], naming the refusal.
+fn enter_run_worktree(
+    resolved: &Resolved,
+    env: &Env,
+    owner: &rk_git::worktree::LockOwner,
+) -> Result<rk_git::worktree::Entered, Exit> {
+    let entered = rk_git::worktree::enter(
+        &resolved.exec,
+        Path::new(resolved.worktree.as_str()),
+        resolved.item.id(),
+        owner,
+        &process_probe,
+        env.lfs_skip_smudge(),
+    )
+    .map_err(|e| {
+        eprintln!(
+            "redkiln: the run-owned worktree for `{}` was refused: {}",
+            resolved.item.id(),
+            git_refusal_text(&e)
+        );
+        Exit::ConfigError
+    })?;
+    for path in &entered.discarded {
+        eprintln!(
+            "redkiln: re-entry discarded `{path}` in {} (not landed at a committed step)",
+            entered.tree.path.display()
+        );
+    }
+    Ok(entered)
+}
+
+/// **W3's carry, at creation only** (§8d-ii.4; D21-45 W3; D21-48 X14: *"s8c builds the reader, and
+/// s8d-ii calls it at creation"*; ADR-0180 decision 11, proposed). *(dated 2026-09-27, `s8d-ii`
+/// build, P6.)*
+///
+/// Called after `rk_git::worktree::enter` created the tree (the add, the realpath check, `RK_BASE`,
+/// D21-48 X2's scan and the lock are behind it), and never for a reused tree, whose ignored files
+/// survived the discard. In order:
+/// 1. **`s8c`'s `.worktreeinclude` reader** (`rk_git::worktree_include::carry_set`) over the main
+///    worktree: ignored ∩ matched, symlinks and junctions skipped and named, escapes refused. Each
+///    carried file is copied to the same relative path in the tree. Nothing is linked.
+/// 2. **`s8c`'s per-toolchain `setup` verb**, through `run_verb`, on the toolchain the run's own
+///    selection loop chooses in the tree, with the `setup_projects` declaration row of that
+///    toolchain's `[toolchain.<name>]` table and the `setup` row's timeout key as its bound. No
+///    `registry.toml`, no detected adapter, or no `setup_projects` row: nothing is installed,
+///    because nothing was declared.
+///
+/// # Errors
+/// [`Exit::ConfigError`], naming the refusal: the carry's (`s8c`'s `CarryRefusal`), a copy that
+/// fails, the registry's, a `setup` row or bound that cannot be read, or `setup`'s own by-name
+/// refusal. The caller releases the lock and the run stops.
+fn carry_at_creation(
+    resolved: &Resolved,
+    env: &Env,
+    entered: &rk_git::worktree::Entered,
+) -> Result<(), Exit> {
+    let tree = &entered.tree.path;
+    let main =
+        rk_git::worktree::main_worktree(&resolved.exec, Path::new(resolved.worktree.as_str()))
+            .map_err(|e| {
+                eprintln!(
+                    "redkiln: the carry could not read the main worktree: {}",
+                    git_refusal_text(&e)
+                );
+                Exit::ConfigError
+            })?;
+
+    // ---- (1) the .worktreeinclude carry.
+    let carry = rk_git::worktree_include::carry_set(&resolved.exec, &main).map_err(|e| {
+        let why = match &e {
+            rk_git::error::GitError::CarryRefused { refusal } => refusal.to_string(),
+            other => format!("{other:?}"),
+        };
+        eprintln!(
+            "redkiln: the .worktreeinclude carry into {} was refused: {why}",
+            tree.display()
+        );
+        Exit::ConfigError
+    })?;
+    for rel in &carry.carried {
+        let from = main.join(rel);
+        let to = tree.join(rel);
+        let copied = to
+            .parent()
+            .map_or(Ok(()), std::fs::create_dir_all)
+            .and_then(|()| std::fs::copy(&from, &to).map(|_| ()));
+        if let Err(e) = copied {
+            eprintln!(
+                "redkiln: the .worktreeinclude carry could not copy `{rel}` into {}: {e}",
+                tree.display()
+            );
+            return Err(Exit::ConfigError);
+        }
+    }
+    for skipped in &carry.skipped {
+        eprintln!(
+            "redkiln: .worktreeinclude: `{}` is not carried ({})",
+            skipped.path,
+            skipped.reason.name()
+        );
+    }
+
+    // ---- (2) the setup verb.
+    let registry_file = registry_path(Path::new(resolved.worktree.as_str()));
+    if !registry_file.is_file() {
+        return Ok(());
+    }
+    let registry =
+        rk_kernel::workflow::memo::VerbRegistry::load_file(&registry_file).map_err(|e| {
+            eprintln!("redkiln: {}: {e}", registry_file.display());
+            Exit::ConfigError
+        })?;
+    let chosen = choose_toolchain(&ToolchainCandidates::of(resolved), env, tree, &mut |line| {
+        eprintln!("redkiln: {line}");
+    })?;
+    let Some(toolchain) = chosen.adapter.as_deref().and_then(toolchain_of) else {
+        return Ok(());
+    };
+    let Some(declared) = registry
+        .table(toolchain)
+        .and_then(|t| t.declarations().get("setup_projects"))
+    else {
+        return Ok(());
+    };
+    let refuse = |why: String| {
+        eprintln!(
+            "redkiln: setup at run-tree creation was refused for {}: {why}",
+            tree.display()
+        );
+        Exit::ConfigError
+    };
+    let projects: Vec<serde_json::Value> = declared
+        .value
+        .as_array()
+        .ok_or_else(|| {
+            refuse(format!(
+                "`toolchain.{toolchain}.setup_projects` is not an array"
+            ))
+        })?
+        .iter()
+        .map(|v| {
+            v.as_str()
+                .map(|s| serde_json::Value::String(s.to_owned()))
+                .ok_or_else(|| {
+                    refuse(format!(
+                        "`toolchain.{toolchain}.setup_projects` holds a value that is not a path"
+                    ))
+                })
+        })
+        .collect::<Result<_, _>>()?;
+    if projects.is_empty() {
+        return Ok(());
+    }
+    let entry = registry
+        .entry("setup")
+        .ok_or_else(|| refuse("`registry.toml` declares no `setup` row".to_owned()))?;
+    let bound = registry
+        .values_for(toolchain)
+        .ok_or_else(|| refuse(format!("no `[toolchain.{toolchain}]` value table")))?
+        .resolve(&entry.timeout)
+        .map(rk_ports::toolchain::StepBound::Secs)
+        .map_err(|r| refuse(r.to_string()))?;
+    let inputs = BTreeMap::from([("projects".to_owned(), serde_json::Value::Array(projects))]);
+    chosen
+        .toolchain
+        .run_verb(&rk_ports::toolchain::VerbCall {
+            verb: "setup",
+            inputs: &inputs,
+            bound,
+        })
+        .map_err(|e| refuse(format!("{e:?}")))?;
+    Ok(())
+}
+
+/// **Release the run's own lock at the run's end** (W1; ADR-0180 decision 6, proposed). A lock
+/// someone else holds is left as it is (`rk_git::worktree::release` unlocks only this run's). A
+/// failure is reported and does not change the run's exit: a lock left behind names a dead pid,
+/// which the next run releases.
+fn release_run_worktree(
     exec: &GitExec,
-    repo: &WorktreePath,
-    common_dir: &Path,
+    start: &Path,
     item: &str,
-) -> Result<PathBuf, Exit> {
-    let path = common_dir.join("redkiln").join("worktrees").join(item);
-    let branch = format!("rk-run/{item}");
-
-    // The teardown's failure is ignored ON PURPOSE: the ordinary case is that there is nothing to
-    // remove, and git's refusal to remove an absent tree is not this run's problem.
-    let _ = exec.run(
-        rk_git::git_exec::GitOp::WorktreeRemove,
-        repo,
-        [
-            std::ffi::OsStr::new("worktree"),
-            std::ffi::OsStr::new("remove"),
-            std::ffi::OsStr::new("--force"),
-            path.as_os_str(),
-        ],
-    );
-    let _ = std::fs::remove_dir_all(&path);
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| {
-            eprintln!("redkiln: {}: {e}", parent.display());
-            Exit::ConfigError
-        })?;
+    owner: &rk_git::worktree::LockOwner,
+) {
+    if let Err(e) = rk_git::worktree::release(exec, start, item, owner) {
+        eprintln!(
+            "redkiln: the run-owned worktree's lock for `{item}` could not be released: {}",
+            git_refusal_text(&e)
+        );
     }
-
-    // `worktree add -b <branch> <path> HEAD` on a FIRST run; `rk_git::worktree::add` when the
-    // branch already exists from an earlier one.
-    if exec
-        .run(
-            rk_git::git_exec::GitOp::WorktreeAdd,
-            repo,
-            [
-                std::ffi::OsStr::new("worktree"),
-                std::ffi::OsStr::new("add"),
-                std::ffi::OsStr::new("-b"),
-                std::ffi::OsStr::new(&branch),
-                path.as_os_str(),
-                std::ffi::OsStr::new("HEAD"),
-            ],
-        )
-        .is_err()
-    {
-        rk_git::worktree::add(exec, repo, &path, &branch).map_err(|e| {
-            eprintln!("redkiln: the run-owned worktree could not be created: {e:?}");
-            Exit::ConfigError
-        })?;
-    }
-    Ok(path)
 }
 
 /// **ADR-0139, narrowing ADR-0137 clause 8: the `Toolchain` a run gets when NONE detected.**

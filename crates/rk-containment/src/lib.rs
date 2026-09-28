@@ -46,6 +46,15 @@
 //! instrument of AC-224's negative control, and the record's forbids says in terms that it is
 //! not a violation.
 //!
+//! *(dated 2026-09-27, s8d-ii build, P3.)* **One production read joins them: [`process_start_time`]**,
+//! the start time of a live process by pid (`GetProcessTimes` on Windows, `/proc/<pid>/stat` field
+//! 22 on POSIX, ARMED to CI with the rest of that arm). It is the start-time half of `s8d-ii`'s
+//! run-lock liveness predicate, which `rk-cli` composes with [`is_alive`] and injects into
+//! `rk-git` (ADR-0180 decision 6, proposed), so `rk-git` gains no edge to this crate. It spawns
+//! nothing and creates no containment; its Windows arm is one more `ffi` site. ADR-0180 makes
+//! `is_alive` a production call too; its `#[doc(hidden)]` attribute is left as it stands until the
+//! `rk-cli` wiring that makes the call.
+//!
 //! **Lint posture.** Every override in this crate is `#[expect(clippy::…, reason = "…")]` per site
 //! (ADR-0102 decision 3) — the `std::process::Command` sites, since `clippy.toml`'s
 //! `disallowed-types` bans the type workspace-wide: `ffi.rs`'s spawn (one per arm), the platform
@@ -81,13 +90,13 @@ pub use error::ContainError;
 pub use ffi::CANCEL_EXIT_CODE;
 
 #[cfg(windows)]
-pub use windows::{Group, spawn_into_job};
+pub use windows::{Group, process_start_time, spawn_into_job};
 #[cfg(windows)]
 #[doc(hidden)]
 pub use windows::{SpawnObservation, is_alive, spawn_into_job_with, terminate_pid};
 
 #[cfg(unix)]
-pub use posix::{Group, spawn_into_job};
+pub use posix::{Group, process_start_time, spawn_into_job};
 #[cfg(unix)]
 #[doc(hidden)]
 pub use posix::{is_alive, terminate_pid};

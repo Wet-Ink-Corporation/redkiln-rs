@@ -28,6 +28,7 @@
 //! | drop | `CloseHandle` | the last handle closes and `KILL_ON_JOB_CLOSE` sweeps whatever a kill did not reach |
 //! | `terminate_pid` | `OpenProcess(PROCESS_TERMINATE)` + `TerminateProcess` | test support, `#[doc(hidden)]`: AC-225's external kill with the SAME code, from outside the adapter |
 //! | `is_alive` | `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` + `GetExitCodeProcess == STILL_ACTIVE` | test support, `#[doc(hidden)]`: the **job-independent** liveness probe the orphan tests read, so a mutant with no job cannot hide a survivor from it |
+//! | `process_start_time` | `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` + `GetExitCodeProcess == STILL_ACTIVE` + `GetProcessTimes` | the start-time half of `s8d-ii`'s run-lock liveness predicate (ADR-0180 decision 6, proposed): a lock is live only when its pid is alive AND that pid's start time equals the recorded one. A production read, spawns nothing *(dated 2026-09-27, s8d-ii build, P3)* |
 //!
 //! The POSIX arm's sites: spawn (`std`'s `CommandExt::process_group(0)`), kill (`killpg(pgid,
 //! SIGKILL)`), the emptiness probe (`kill(-pgid, 0)`), `terminate_pid` (`kill(pid, SIGKILL)`) and
@@ -78,8 +79,8 @@ pub mod win {
     use std::os::windows::process::CommandExt;
 
     use windows_sys::Win32::Foundation::{
-        CloseHandle, ERROR_INVALID_PARAMETER, ERROR_MORE_DATA, ERROR_NO_MORE_FILES, HANDLE,
-        INVALID_HANDLE_VALUE, STILL_ACTIVE, WAIT_FAILED, WAIT_OBJECT_0,
+        CloseHandle, ERROR_INVALID_PARAMETER, ERROR_MORE_DATA, ERROR_NO_MORE_FILES, FILETIME,
+        HANDLE, INVALID_HANDLE_VALUE, STILL_ACTIVE, WAIT_FAILED, WAIT_OBJECT_0,
     };
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, TH32CS_SNAPTHREAD, THREADENTRY32, Thread32First, Thread32Next,
@@ -92,9 +93,9 @@ pub mod win {
         TerminateJobObject,
     };
     use windows_sys::Win32::System::Threading::{
-        CREATE_SUSPENDED, GetExitCodeProcess, IO_COUNTERS, OpenProcess, OpenThread,
-        PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE, ResumeThread,
-        THREAD_SUSPEND_RESUME, TerminateProcess, WaitForSingleObject,
+        CREATE_SUSPENDED, GetExitCodeProcess, GetProcessTimes, IO_COUNTERS, OpenProcess,
+        OpenThread, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
+        ResumeThread, THREAD_SUSPEND_RESUME, TerminateProcess, WaitForSingleObject,
     };
 
     /// An owned Job Object handle. Closing it is the `KILL_ON_JOB_CLOSE` sweep, so the
@@ -562,6 +563,42 @@ pub mod win {
         // SAFETY: a live process handle with query access and a valid out-pointer.
         let ok = unsafe { GetExitCodeProcess(h.0, &raw mut code) };
         ok != 0 && code == STILL_ACTIVE.unsigned_abs()
+    }
+
+    /// **`process_start_time`** (`s8d-ii` §8d-ii.2; ADR-0180 decision 6, proposed): the creation
+    /// time `GetProcessTimes` reports for a LIVE process, in 100 ns units since 1601 (the
+    /// `FILETIME` read as one `u64`). `None` when the pid cannot be opened or its process has
+    /// exited: an exited process whose handle someone still holds reads nothing, as it does for
+    /// [`is_alive`], and so does `STILL_ACTIVE`'s documented ambiguity (an exit code of 259 reads
+    /// live, and its start time is returned, which keeps a stale lock held: fail-closed). The
+    /// start time is what tells a reused pid from the process that took a lock.
+    /// *(dated 2026-09-27, s8d-ii build, P3.)*
+    pub fn process_start_time(pid: u32) -> Option<u64> {
+        let h = open_process(PROCESS_QUERY_LIMITED_INFORMATION, pid)?;
+        let mut code: u32 = 0;
+        // SAFETY: a live process handle with query access and a valid out-pointer.
+        let ok = unsafe { GetExitCodeProcess(h.0, &raw mut code) };
+        if ok == 0 || code != STILL_ACTIVE.unsigned_abs() {
+            return None;
+        }
+        let zero = || FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        };
+        let (mut created, mut exited, mut kernel, mut user) = (zero(), zero(), zero(), zero());
+        // SAFETY: a live process handle with PROCESS_QUERY_LIMITED_INFORMATION (which
+        // GetProcessTimes accepts) and four valid out-pointers to FILETIMEs this frame owns.
+        let ok = unsafe {
+            GetProcessTimes(
+                h.0,
+                &raw mut created,
+                &raw mut exited,
+                &raw mut kernel,
+                &raw mut user,
+            )
+        };
+        (ok != 0)
+            .then(|| (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime))
     }
 }
 

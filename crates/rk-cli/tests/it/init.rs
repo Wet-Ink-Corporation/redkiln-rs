@@ -1,9 +1,11 @@
 //! **`init` — non-interactive, eager, idempotent** (AC-437 as amended by D-14, AC-531, AC-412;
 //! ADR-0107 decision 2; `s7d` §7d.9).
 //!
-//! `redkiln init` does exactly two things: writes `.redkiln/config.toml` **if and only if the file
-//! is absent**, and opens the store, which creates it in the common dir and stamps its identity rows
-//! on first open. It installs no hook and creates no git ref.
+//! `redkiln init` does exactly ~~two~~ three things: writes `.redkiln/config.toml` **if and only if
+//! the file is absent**, ~~and~~ opens the store, which creates it in the common dir and stamps its
+//! identity rows on first open, *and appends the `# redkiln-runtime` block to
+//! `<commondir>/info/exclude` when its marker is absent* *(dated 2026-09-27, `s8d-ii` build,
+//! package P5: D21-45 W4, ADR-0180, proposed)*. It installs no hook and creates no git ref.
 //!
 //! **Every test here mints its own temp repository** (D18-9): `tempfile::tempdir()`, `git init`, one
 //! commit — the commit because `SqliteStore::open` needs a root commit for its identity row. **The
@@ -336,6 +338,219 @@ fn ac412_init_installs_zero_hooks() {
     assert!(
         after.iter().all(|e| e.ends_with(".sample")),
         "a non-sample hook is present after init: {after:?}"
+    );
+}
+
+/// The block `init` appends to `<commondir>/info/exclude`, as `s8d-ii` §8d-ii.5 prints it (D21-45
+/// W4; ADR-0180, proposed). Its middle row is taken from `rk_git::worktree`, the root's one home
+/// (D21-44), so this file never spells the run-tree root itself.
+fn expected_block() -> Vec<u8> {
+    format!(
+        "# redkiln-runtime\n{}\n# end redkiln-runtime\n",
+        rk_git::worktree::RUN_ROOT_IGNORE_ROW
+    )
+    .into_bytes()
+}
+
+/// A path inside a run tree, relative to the main worktree, derived through `rk_git::worktree`'s
+/// one derivation — so the ignore assertions below judge the row against the real root, not a
+/// second spelling of it.
+fn run_tree_probe(root: &Path) -> String {
+    let item = rk_git::worktree::ItemId::parse("exclude-probe").expect("a valid item id");
+    let tree = rk_git::worktree::derive(root, &item).path;
+    tree.strip_prefix(root)
+        .expect("the run tree lies under the main worktree")
+        .join("probe.txt")
+        .to_string_lossy()
+        .replace('\\', "/")
+}
+
+/// Does git in `root` report `rel` as ignored? `check-ignore -q` exits 0 for ignored and 1 for not;
+/// anything else is a broken probe, never a "not ignored".
+#[expect(
+    clippy::disallowed_types,
+    reason = "reading the fixture repository's own ignore rules; see `crate::git`"
+)]
+fn git_ignores(root: &Path, rel: &str) -> bool {
+    let out = std::process::Command::new("git")
+        .args(["check-ignore", "-q", "--no-index", rel])
+        .current_dir(root)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .expect("git check-ignore runs");
+    match out.status.code() {
+        Some(0) => true,
+        Some(1) => false,
+        other => panic!(
+            "git check-ignore exited {other:?}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        ),
+    }
+}
+
+/// Lines of `bytes` equal to the marker, a trailing CR dropped — the count the idempotence pins.
+fn marker_lines(bytes: &[u8]) -> usize {
+    bytes
+        .split(|b| *b == b'\n')
+        .filter(|l| l.strip_suffix(b"\r").unwrap_or(l) == b"# redkiln-runtime")
+        .count()
+}
+
+/// D21-45 W4 / ADR-0180 (proposed): `init` appends the `# redkiln-runtime` block to
+/// `<commondir>/info/exclude` once, and a later `init` leaves the file byte-identical (ADR-0107
+/// decision 2 for this file once the block exists; `s8d-ii` §8d-ii.5).
+///
+/// It starts from the **pre-stage initialised shape** — `init` has run, `.redkiln/config.toml` and
+/// the store exist, and `info/exclude` holds no block — because that is the one case in which a
+/// post-stage `init` changes something, and the record supersedes decision 2 in part for exactly
+/// it. Red by an `init` that writes no exclude, by one that appends on every run (S8D-II-M6: the
+/// second `init` must leave the bytes identical), by a block whose row does not ignore the derived
+/// run tree, and by an `init` that does not create the file when git's template did not.
+#[test]
+fn init_writes_the_redkiln_runtime_exclude_block_once() {
+    let repo = temp_repo();
+    let root = repo.path();
+    let info = common_dir(root).join("info");
+    let exclude = info.join("exclude");
+    let probe = run_tree_probe(root);
+
+    // The pre-stage initialised shape: an `init` has run, and the exclude file is what it was
+    // before that `init` — whatever git's template left, with no block.
+    let template = std::fs::read(&exclude).ok();
+    assert_eq!(run_init(root).status.code(), Some(0), "the seeding init");
+    match &template {
+        Some(bytes) => std::fs::write(&exclude, bytes).expect("the template exclude restores"),
+        None => {
+            let _ = std::fs::remove_file(&exclude);
+        }
+    }
+    assert!(
+        root.join(".redkiln").join("config.toml").is_file(),
+        "the pre-stage shape has .redkiln/config.toml"
+    );
+    let before = template.unwrap_or_default();
+    assert_eq!(
+        marker_lines(&before),
+        0,
+        "the pre-stage exclude already carries the block"
+    );
+    // CONTROL: before the block, nothing ignores the run tree — so the ignore assertion below can
+    // only pass because of the row `init` writes.
+    assert!(
+        !git_ignores(root, &probe),
+        "the run tree `{probe}` is ignored before init wrote any block; the ignore assertion below \
+         would read nothing"
+    );
+
+    let first = run_init(root);
+    assert_eq!(
+        first.status.code(),
+        Some(0),
+        "the first post-stage init exited {:?}; stderr:\n{}",
+        first.status.code(),
+        String::from_utf8_lossy(&first.stderr)
+    );
+    let after_first = std::fs::read(&exclude).unwrap_or_default();
+    let mut expected = before;
+    if !expected.is_empty() && !expected.ends_with(b"\n") {
+        expected.push(b'\n');
+    }
+    expected.extend_from_slice(&expected_block());
+    assert_eq!(
+        String::from_utf8_lossy(&after_first),
+        String::from_utf8_lossy(&expected),
+        "init writes no exclude block, or not exactly one append of it after the template's bytes \
+         (D21-45 W4; s8d-ii section 8d-ii.5)"
+    );
+    assert!(
+        git_ignores(root, &probe),
+        "the block init wrote does not make git ignore the derived run tree `{probe}`"
+    );
+    assert!(
+        !root.join(".gitignore").exists(),
+        "init wrote a .gitignore; the block goes to info/exclude only (D21-45: never to .gitignore)"
+    );
+
+    // S8D-II-M6: a second `init` finds the marker and leaves the file byte-identical.
+    assert_eq!(run_init(root).status.code(), Some(0), "the second init");
+    assert_eq!(
+        std::fs::read(&exclude).expect("the exclude file is readable"),
+        after_first,
+        "a second init changed info/exclude; it appends only when the marker is absent \
+         (ADR-0107 decision 2, for this file once the block exists)"
+    );
+    assert_eq!(marker_lines(&after_first), 1, "exactly one block");
+
+    // The file is created when git's template did not leave one, and `info/` with it.
+    std::fs::remove_dir_all(&info).expect("the info directory is removable");
+    assert_eq!(run_init(root).status.code(), Some(0), "init with no info/");
+    assert_eq!(
+        std::fs::read(&exclude).ok(),
+        Some(expected_block()),
+        "init writes no exclude when info/exclude is absent; it creates the file with the block"
+    );
+    assert_eq!(run_init(root).status.code(), Some(0), "init again");
+    assert_eq!(
+        std::fs::read(&exclude).ok(),
+        Some(expected_block()),
+        "a second init changed the exclude file it created"
+    );
+}
+
+/// D21-45 W4 / ADR-0180 (proposed): lines the operator wrote in `info/exclude` are never touched,
+/// the block is appended after them, and `.gitignore` is never written (`s8d-ii` §8d-ii.5).
+///
+/// The operator's file has CRLF lines, no trailing newline, and a line that merely **starts
+/// with** the marker text. Red by an `init` that writes no exclude, by one that rewrites or reorders
+/// the operator's bytes, by one that glues the marker onto the operator's unterminated last line,
+/// and by a marker match on a prefix (the look-alike line would then suppress the block).
+#[test]
+fn init_leaves_the_operators_exclude_lines_untouched() {
+    let repo = temp_repo();
+    let root = repo.path();
+    let info = common_dir(root).join("info");
+    std::fs::create_dir_all(&info).expect("the info directory exists");
+    let exclude = info.join("exclude");
+    let operator: &[u8] = b"# the operator's own rules\r\n*.log\r\n\
+                            # redkiln-runtime-notes: the operator's, not init's\r\n/scratch/";
+    std::fs::write(&exclude, operator).expect("the operator's exclude writes");
+
+    let out = run_init(root);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "init exited {:?}; stderr:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let after = std::fs::read(&exclude).expect("the exclude file is readable");
+    let mut expected = operator.to_vec();
+    expected.push(b'\n');
+    expected.extend_from_slice(&expected_block());
+    assert_eq!(
+        String::from_utf8_lossy(&after),
+        String::from_utf8_lossy(&expected),
+        "init writes no exclude block after the operator's lines, or it touched them: the \
+         operator's bytes stand as written and the block follows on a line of its own"
+    );
+    assert!(
+        after.starts_with(operator),
+        "the operator's bytes are not a prefix of the file"
+    );
+    assert!(
+        git_ignores(root, &run_tree_probe(root)),
+        "the block after the operator's lines does not ignore the derived run tree"
+    );
+    assert!(
+        !root.join(".gitignore").exists(),
+        "init wrote a .gitignore (D21-45: never to .gitignore)"
+    );
+
+    assert_eq!(run_init(root).status.code(), Some(0), "the second init");
+    assert_eq!(
+        std::fs::read(&exclude).expect("the exclude file is readable"),
+        after,
+        "a second init changed the operator's exclude file"
     );
 }
 

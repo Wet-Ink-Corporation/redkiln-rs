@@ -58,6 +58,15 @@ pub enum GitError {
     CarryRefused {
         refusal: crate::worktree_include::CarryRefusal,
     },
+
+    /// Run-tree creation refused by name before (or, for the realpath check, just after) `git
+    /// worktree add`: an unsafe item id, a case-fold collision, a bare repository, a symlinked or
+    /// junctioned segment, a created tree whose canonical path leaves the root, a root git does
+    /// not report as ignored, or a worst-case path past the platform limit (s8d-ii §8d-ii.1,
+    /// §8d-ii.2 and §8d-ii.6; D21-45 W1; D21-48 X1). *(dated 2026-09-27, s8d-ii build, P2.)*
+    WorktreeRefused {
+        refusal: crate::worktree::WorktreeRefusal,
+    },
 }
 
 impl GitError {
@@ -71,7 +80,8 @@ impl GitError {
             | Self::VersionUnparsable { .. }
             | Self::ExtendedLengthPath { .. }
             | Self::ForeignWorktree { .. }
-            | Self::CarryRefused { .. } => true,
+            | Self::CarryRefused { .. }
+            | Self::WorktreeRefused { .. } => true,
             Self::Spawn { .. } | Self::NonZeroExit { .. } | Self::WorktreeRemoveFailed { .. } => {
                 false
             }

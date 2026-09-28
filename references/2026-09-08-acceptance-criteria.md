@@ -3374,6 +3374,12 @@ tier-1 write for the run from inside it, and asserts the typed refusal, an uncha
 store rows; a positive control from the run-owned worktree that succeeds; an assertion that the resolution reads the
 store's worktree row and not `std::env::current_dir`. *(PIA-029 named the missing criterion for ADR-0018's forbids clause;
 ADR-0105 clause 8 is the rule it verifies.)*
+*(Reading note, dated 2026-09-27 at `s8d-ii`'s build (package P6), under ADR-0180, written `proposed`.)* **The
+run-owned worktree moved; this criterion did not.** It now lives at `.redkiln/worktrees/<item>` under the main
+worktree (D21-44; ADR-0180 decision 1), derived in one place, `rk_git::worktree::derive`. The THEN carries no path, and
+D21-44 says why it holds wherever the path is: *"Ownership stays with the store row, so AC-529 stays real wherever the
+path is."* That row is the `reconcile_started` row's ownership pair today, and `s8e` §8e.4's `worktree_assigned` from
+`s8e` on. This is a reading, not an amendment, and it stands or falls with ADR-0180's flip.
 
 ### 6.5 Rebuild from a clean clone
 
@@ -6971,6 +6977,20 @@ meets), so the SQLite store `init` now creates eagerly at `<git-common-dir>/redk
 of the same date; `rk_adapter_sqlite::SqliteStore::open`'s fixed location) is outside the lint and is **not** renamed to
 satisfy it. The tree-diff instrument enumerates the working tree, `refs/` and `.git/hooks`; the manifest of created
 names lists the store path separately, unlinted.)*
+*(Reading note, dated 2026-09-27 at `s8d-ii`'s build (package P5), under ADR-0180, written `proposed`; D21-45 W4:
+*"**`redkiln init` writes an idempotent `# redkiln-runtime` block to `<commondir>/info/exclude`**"*.)* **`init` now
+writes one more file, and it is not a created name this criterion lints.** `init` appends the three-line block
+(`# redkiln-runtime`, the run-tree root's ignore row, `# end redkiln-runtime`) to `<git-common-dir>/info/exclude`,
+creating `info/` and the file when git's template did not, and only when no line of the file equals the marker, so a
+second `init` leaves it byte-identical. The operator's lines are never rewritten and `.gitignore` is never written.
+The lint does not see this write, and that is by this criterion's own 2026-09-18 amendment: the regex is scoped to
+*"the working tree, git refs and hooks"*, and *"the git common dir is not user-visible namespace"*. `info/exclude`
+lies in the common dir and outside `hooks`, and its name is git's, not one `init` chooses. So `CreatedNames` does not
+change (its lintable manifest stays empty), and the tree-diff instrument (the working tree, `refs/` and `.git/hooks`)
+reads the same: `ac531_init_created_names_match_regex` still sees `.redkiln/` alone in the porcelain listing, and
+`ac412_init_installs_zero_hooks` still sees the hooks directory unchanged. Pinned by
+`init::init_writes_the_redkiln_runtime_exclude_block_once` and `init::init_leaves_the_operators_exclude_lines_untouched`.
+This is a reading, not an amendment: no clause of AC-531 moves, and the note stands or falls with ADR-0180's flip.
 
 ---
 
@@ -7228,6 +7248,13 @@ step (AC-476).
 kill-between-write-and-commit test asserting the original branch's `HEAD` and tree are unchanged and the migration
 worktree is left in a state the next run refuses to reuse (re-created, never reused — ADR-0105 clause 6); a positive
 run asserting the commit is on the migration branch only. *(PIA-002 named the missing run-contract criterion.)*
+*(Reading note, dated 2026-09-27 at `s8d-ii`'s build (package P6), under ADR-0180, written `proposed`.)* **The
+instrument is unchanged, and so is the clause it cites.** ADR-0180 supersedes ADR-0105 clause 6's *"A worktree is
+**re-created**, never reused, per run"* in part, **for the run-owned worktree only**: `run` reuses its own tree on
+re-entry (D21-45 W2). `redkiln-migrate`'s worktree keeps clause 6 whole, so *"re-created, never reused — ADR-0105
+clause 6"* above still governs it, and `rk_git::worktree::add` still refuses an existing path for it
+(`worktree::a_tree_without_rk_base_is_refused_and_never_removed` asserts that refusal at its end). This is a reading,
+not an amendment, and it stands or falls with ADR-0180's flip.
 
 **AC-451** — `redkiln-migrate` · evidence: S-MIG (1,312 files / 6,877 (artifact, section) records; 18 files unmapped)
 · decisions: ADR-0002, ADR-0006
@@ -8093,6 +8120,17 @@ resolver. Note: the earlier draft's "index mtime unchanged" is struck as an unso
 ordinary read operations, so the mtime moves without any orchestrator write and the assertion would be flaky in the false-positive direction.
 Note on evidence: F19's 7% is `[measured]`; the inference that a low drift rate makes an unexpected working-tree write *expensive to detect*
 is `[inferred]`, and the earlier draft tagged it `[measured]`.
+*(Reading note, dated 2026-09-27 at `s8d-ii`'s build (package P6), under ADR-0180, written `proposed`; D21-44:
+*"Run-owned worktrees move to **`.redkiln/worktrees/<item>`**, git-ignored."*)* **The run-owned worktree now sits
+inside the checkout's own directory, and it is a separate checkout.** Its path is `.redkiln/worktrees/<item>` under the
+main worktree (ADR-0180 decision 1), no longer `<common-dir>/redkiln/worktrees/<item>`. The THEN, *"refused unless its
+target is a run-owned worktree or the store under the resolved common dir"*, is unchanged: the run tree keeps its own
+index and `HEAD`. The instrument's `git status --porcelain` holds with the tree inside the checkout through the ignore
+rows: this repository's tracked `.gitignore` row, the `# redkiln-runtime` block `init` writes to
+`<common-dir>/info/exclude` (AC-531's note), and the row every fixture repository a run reaches carries. Creation
+refuses by name when the root is not ignored (D21-48 X1; ADR-0180 decision 2). The instrument's run is `s8e`'s
+`lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it`. This is a reading, not an
+amendment, and it stands or falls with ADR-0180's flip.
 
 **AC-519** — release pipeline · **partly CONDITIONAL** · evidence: shipmates L3.8 (a CLI e2e job added at 0.1.5 after **five blind releases**; every escape since — #384, #386 — was an upgrade-path escape found by the owner upgrading, not by a test; "the upgrade path is simultaneously the least-tested and most-broken surface in this class of product" [documented]) · decisions: proposal §4.9 for the namespacing and generated-artifact-count assertions only; the receipt and rename-table assertions are conditional per standing caveat 2 · ADR-0013 for fixture pinning
 GIVEN a release candidate

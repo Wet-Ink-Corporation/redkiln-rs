@@ -1,10 +1,19 @@
 //! **`init` — non-interactive, eager, idempotent** (AC-437 as amended by **D-14**, AC-531, AC-412;
 //! ADR-0107 decision 2; `s7d` §7d.9).
 //!
-//! It does exactly two things: writes `.redkiln/config.toml` **if and only if the file is absent**,
-//! and opens the store, which creates it under the common directory and stamps its identity rows on
-//! first open. It prompts nothing, reads no stdin (D-15), installs no hook (AC-412) and creates no
-//! git ref.
+//! It does exactly ~~two~~ three things: writes `.redkiln/config.toml` **if and only if the file is
+//! absent**, ~~and~~ opens the store, which creates it under the common directory and stamps its
+//! identity rows on first open, *and appends the `# redkiln-runtime` block to
+//! `<commondir>/info/exclude` **if and only if its marker line is absent*** *(dated 2026-09-27,
+//! `s8d-ii` build, package P5: D21-45 W4, ADR-0180, proposed)*. It prompts nothing, reads no stdin
+//! (D-15), installs no hook (AC-412) and creates no git ref.
+//!
+//! **The exclude block is `init`'s first write to a file git itself reads** (`s8d-ii` §8d-ii.5).
+//! It is not its first write under the common dir — the store is there already — but `info/exclude`
+//! changes what `git status` reports, so its idempotence is new, not inherited: a second `init`
+//! finds the marker and writes nothing. Lines the operator wrote are never rewritten, and
+//! `.gitignore` is never written (D21-45: *"never to `.gitignore`"*). `info/exclude` sits in the
+//! common dir, outside `hooks`, so AC-531's lint surfaces and [`CreatedNames`] do not change.
 //!
 //! **Eager, and that was a decision** (D-14; the rejected alternative was lazy creation with an
 //! empty `[adapters]`). The four reals are compiled in, so there is nothing to discover and nothing
@@ -18,6 +27,7 @@
 //! nothing.
 
 use std::fmt::Write as _;
+use std::io::Write as _;
 use std::path::Path;
 
 use crate::exit::{Exit, Halt};
@@ -84,6 +94,60 @@ impl CreatedNames {
     pub fn all_admissible(&self) -> bool {
         self.lintable.iter().all(|n| name_is_admissible(n))
     }
+}
+
+/// The marker line that opens `init`'s block in `<commondir>/info/exclude` (D21-45 W4).
+///
+/// The block is written when no line of the file equals it, a trailing CR dropped; a line that
+/// merely starts with it is the operator's.
+pub const EXCLUDE_BEGIN: &str = "# redkiln-runtime";
+
+/// The line that closes the block.
+pub const EXCLUDE_END: &str = "# end redkiln-runtime";
+
+/// The block's bytes: the marker, the run-tree root's ignore row from `rk_git::worktree` (the
+/// root's one home, D21-44), and the closing line. LF only, one trailing newline.
+#[must_use]
+pub fn exclude_block() -> String {
+    format!(
+        "{EXCLUDE_BEGIN}\n{}\n{EXCLUDE_END}\n",
+        rk_git::worktree::RUN_ROOT_IGNORE_ROW
+    )
+}
+
+/// Does any line of `bytes` equal the marker?
+fn has_exclude_marker(bytes: &[u8]) -> bool {
+    bytes
+        .split(|b| *b == b'\n')
+        .any(|line| line.strip_suffix(b"\r").unwrap_or(line) == EXCLUDE_BEGIN.as_bytes())
+}
+
+/// Append the block to `<common>/info/exclude` unless the marker is there, creating `info/` and the
+/// file when git's template did not. The existing bytes are never rewritten: the write is an
+/// append, preceded by one `\n` only when the operator's last line is unterminated, so the marker
+/// is never glued onto it.
+fn append_exclude_block(common: &Path) -> std::io::Result<()> {
+    let info = common.join("info");
+    let path = info.join("exclude");
+    let existing = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(e) => return Err(e),
+    };
+    if has_exclude_marker(&existing) {
+        return Ok(());
+    }
+    std::fs::create_dir_all(&info)?;
+    let mut add = Vec::new();
+    if !existing.is_empty() && !existing.ends_with(b"\n") {
+        add.push(b'\n');
+    }
+    add.extend_from_slice(exclude_block().as_bytes());
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?
+        .write_all(&add)
 }
 
 /// The scaffold's bytes, rendered from the one literal above.
@@ -157,6 +221,12 @@ pub fn run(cwd_arg: Option<&Path>) -> Result<Exit, Halt> {
             eprintln!("redkiln: could not write `.redkiln/config.toml`: {e}");
             return Ok(Exit::ConfigError);
         }
+    }
+
+    // The `# redkiln-runtime` block, appended only when its marker is absent (D21-45 W4).
+    if let Err(e) = append_exclude_block(&repo.common_dir) {
+        eprintln!("redkiln: could not write the `{EXCLUDE_BEGIN}` block to `info/exclude`: {e}");
+        return Ok(Exit::ConfigError);
     }
 
     // The store, eagerly. On a second run this re-reads the identity rows rather than re-stamping

@@ -44,8 +44,21 @@ pub enum GitOp {
     Integrate,
     /// Removal of a disposable review clone.
     CloneRemove,
+    // --- s8d-ii's writes: ADR-0180 supersedes clause 5 IN PART for exactly these (D21-47: *"A git
+    // WRITE not on its closed list is a supersession in part"*), on the run-owned tree only.
+    // *(dated 2026-09-27, s8d-ii build, P3.)*
+    /// `worktree lock --reason "redkiln run <item> (pid N start T)" <path>` (s8d-ii §8d-ii.2, W1).
+    WorktreeLock,
+    /// `worktree unlock <path>`: a stale lock (dead or reused pid), or the run's own at its end.
+    WorktreeUnlock,
+    /// `reset --hard HEAD`, the discard's first half at re-entry (s8d-ii §8d-ii.3, W2; N10).
+    ResetHard,
+    /// `clean -fd`, WITHOUT `-x`, the discard's second half: ignored files survive re-entry.
+    Clean,
 
     // --- reads ---
+    /// Includes `rev-parse --git-common-dir` (s8d-ii §8d-ii.6's re-entry read) and
+    /// `rev-parse --symbolic-full-name --branches=rk-run/*` (the case-fold rule's branch read).
     RevParse,
     Status,
     Log,
@@ -54,8 +67,24 @@ pub enum GitOp {
     /// untouched. *(Added 2026-09-26, s8c build, P6.)*
     LsFiles,
     /// `check-ignore -z --stdin --no-index` — the reader's second read, over the first's list.
-    /// Exit 1 means *none ignored*, not failure. *(Added 2026-09-26, s8c build, P6.)*
+    /// Exit 1 means *none ignored*, not failure. *(Added 2026-09-26, s8c build, P6.)* Also
+    /// `check-ignore -q .redkiln/worktrees/<item>` in the main worktree, the run-tree root's
+    /// ignore refusal (s8d-ii §8d-ii.1, D21-48 X1). *(dated 2026-09-27, s8d-ii build, P2.)*
     CheckIgnore,
+    /// `worktree list --porcelain` — the main worktree (its first record) and every registered
+    /// tree (s8d-ii §8d-ii.1 and §8d-ii.2). A read: ADR-0105 clause 5's write set is untouched
+    /// (D21-47: *"A READ is not a supersession"*). *(dated 2026-09-27, s8d-ii build, P2.)*
+    WorktreeList,
+    /// `ls-tree -r -z --name-only <fork>` — the longest path tracked at the fork commit, for the
+    /// worst-case path bound (s8d-ii §8d-ii.6). A read. *(dated 2026-09-27, s8d-ii build, P2.)*
+    LsTree,
+    /// `config --type=bool --get core.longpaths`, and the effective-config reads §8d-ii.5 takes.
+    /// A read; exit 1 means *not set*. *(dated 2026-09-27, s8d-ii build, P2.)*
+    Config,
+    /// `check-attr -z --source=<fork> --stdin filter` over `ls-tree`'s paths — the paths that
+    /// select a filter driver AT THE FORK COMMIT (s8d-ii §8d-ii.5 read (1), D21-47 V1: *"Attributes
+    /// are read from the fork commit."*). A read. *(dated 2026-09-27, s8d-ii build, P4.)*
+    CheckAttr,
 }
 
 impl GitOp {
@@ -71,11 +100,19 @@ impl GitOp {
             Self::PatchId => "patch-id",
             Self::Integrate => "integrate",
             Self::CloneRemove => "clone-remove",
+            Self::WorktreeLock => "worktree lock",
+            Self::WorktreeUnlock => "worktree unlock",
+            Self::ResetHard => "reset --hard",
+            Self::Clean => "clean",
             Self::RevParse => "rev-parse",
             Self::Status => "status",
             Self::Log => "log",
             Self::LsFiles => "ls-files",
             Self::CheckIgnore => "check-ignore",
+            Self::WorktreeList => "worktree list",
+            Self::LsTree => "ls-tree",
+            Self::Config => "config",
+            Self::CheckAttr => "check-attr",
         }
     }
 
@@ -92,8 +129,20 @@ impl GitOp {
             | Self::WriteTree
             | Self::PatchId
             | Self::Integrate
-            | Self::CloneRemove => true,
-            Self::RevParse | Self::Status | Self::Log | Self::LsFiles | Self::CheckIgnore => false,
+            | Self::CloneRemove
+            | Self::WorktreeLock
+            | Self::WorktreeUnlock
+            | Self::ResetHard
+            | Self::Clean => true,
+            Self::RevParse
+            | Self::Status
+            | Self::Log
+            | Self::LsFiles
+            | Self::CheckIgnore
+            | Self::WorktreeList
+            | Self::LsTree
+            | Self::Config
+            | Self::CheckAttr => false,
         }
     }
 
@@ -130,6 +179,11 @@ impl GitOutput {
 pub struct GitExec {
     hooks_empty: PathBuf,
     toolchain: GitToolchain,
+    /// Extra environment for every child, set before `LC_ALL` (which no entry here can undo).
+    /// Empty in production: the children inherit the process environment. *(dated 2026-09-27,
+    /// s8d-ii build, P4: the filter tests point `GIT_CONFIG_SYSTEM` and `GIT_CONFIG_GLOBAL` at
+    /// fixture files through it, so no test reads this box's own configuration, s8d-ii §8d-ii.8.)*
+    child_env: Vec<(OsString, OsString)>,
 }
 
 impl GitExec {
@@ -145,7 +199,15 @@ impl GitExec {
         Ok(Self {
             hooks_empty,
             toolchain,
+            child_env: Vec::new(),
         })
+    }
+
+    /// The same wrapper with `key=value` set on every child it spawns, before `LC_ALL`.
+    #[must_use]
+    pub fn with_env(mut self, key: impl Into<OsString>, value: impl Into<OsString>) -> Self {
+        self.child_env.push((key.into(), value.into()));
+        self
     }
 
     #[must_use]
@@ -195,7 +257,10 @@ impl GitExec {
             all.push("--if-exists=add".into());
         }
         all.extend(args.into_iter().map(|a| a.as_ref().to_os_string()));
-        run_labelled(op, Path::new(cwd.as_str()), all)
+        relabel(
+            op,
+            spawn(Path::new(cwd.as_str()), all, self.child_env.clone(), None),
+        )
     }
 
     /// Run `op` in `cwd` with `stdin` written to the child's standard input — the form
@@ -224,7 +289,7 @@ impl GitExec {
             spawn(
                 Path::new(cwd.as_str()),
                 all,
-                std::iter::empty::<(&OsStr, &OsStr)>(),
+                self.child_env.clone(),
                 Some(stdin),
             ),
         )
@@ -242,17 +307,6 @@ where
     S: AsRef<OsStr>,
 {
     run_with_env(cwd, args, std::iter::empty::<(&OsStr, &OsStr)>())
-}
-
-fn run_labelled<I, S>(op: GitOp, cwd: &Path, args: I) -> Result<GitOutput, GitError>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-{
-    relabel(
-        op,
-        run_with_env(cwd, args, std::iter::empty::<(&OsStr, &OsStr)>()),
-    )
 }
 
 fn relabel(op: GitOp, r: Result<GitOutput, GitError>) -> Result<GitOutput, GitError> {
@@ -318,6 +372,10 @@ where
 {
     let mut cmd = std::process::Command::new("git");
     cmd.args(args).envs(env).current_dir(cwd);
+    // D21-45 W1: `LC_ALL=C` on every git child, so no parse depends on the operator's locale
+    // (s8d-ii §8d-ii.2). Set AFTER the caller's `env`, so no caller can undo it either.
+    // *(dated 2026-09-27, s8d-ii build, P2.)*
+    cmd.env("LC_ALL", "C");
     let spawn_err = |e: std::io::Error| GitError::Spawn {
         detail: e.to_string(),
     };

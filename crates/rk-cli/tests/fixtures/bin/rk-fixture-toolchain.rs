@@ -11,8 +11,12 @@
 //! 🛑 **THIS FIXTURE IS RIGGED, AND SAYING SO IS THE POINT.** It decides by its WORKING DIRECTORY:
 //! `rk_adapter_toolchain_rust::run::build_command` spawns every child with
 //! `.current_dir(config.project_root())`, so the candidate arm runs in the run-owned worktree
-//! (`…/worktrees/<item>`) and the reference arm in the ephemeral one (`…/worktrees/<item>.review-ref`,
-//! ADR-0162 decision 10). Failing unless the directory is the reference tree is a stand-in for
+//! (~~`…/worktrees/<item>`~~ `.redkiln/worktrees/<item>` under the main worktree) and the reference
+//! arm in the ephemeral one (~~`…/worktrees/<item>.review-ref`~~ `.redkiln/worktrees/<item>.review-ref`
+//! beside it, ADR-0162 decision 10). *(dated 2026-09-27, `s8d-ii` build, P6: the run tree moved
+//! from `<common-dir>/redkiln/worktrees/<item>` to `.redkiln/worktrees/<item>` under the main
+//! worktree, D21-44 and ADR-0180 decision 1, proposed; this stub decides by the `.review-ref`
+//! suffix, so its verdicts do not move.)* Failing unless the directory is the reference tree is a stand-in for
 //! *"the change under review breaks the suite"* — the ONE data condition that makes
 //! `four_cell(true, false)` reachable. It is not evidence that any real change breaks any real
 //! suite, and no test may read it as such.
@@ -88,6 +92,7 @@ fn main() {
     // ONE WHOLE §8c.1 BLOCK per arm (the module doc): header, record, the empty line that closes
     // the record region, and the full-grammar summary.
     if is_reference(&cwd) {
+        record_reference(&cwd);
         println!("\nrunning 1 test\ntest rk_fixture::the_reviewed_case ... ok\n");
         println!(
             "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n"
@@ -117,4 +122,50 @@ fn is_reference(cwd: &Path) -> bool {
     cwd.file_name()
         .and_then(|n| n.to_str())
         .is_some_and(|n| n.ends_with(REFERENCE_SUFFIX))
+}
+
+/// The file, in the repository's common dir, where the reference arm records what it ran over.
+const REFERENCE_LOG: &str = "rk-fixture-reference-heads";
+
+/// **Record the reference tree's `HEAD` and its `RK_BASE` marker** (`s8d-ii` §8d-ii.3; ADR-0180
+/// decision 10, proposed), one line per reference arm: `<HEAD> <RK_BASE fork or -> <RK_BASE item
+/// or ->`, appended to `<common-dir>/rk-fixture-reference-heads`.
+///
+/// The pass removes its reference tree on every path (ADR-0162 decision 10), so nothing of it is
+/// left for a test to read afterwards. This is the observation point
+/// `run_worktree::the_review_reference_tree_is_created_at_the_rk_base_fork_sha_after_head_moves`
+/// reads. It reads files only: `<cwd>/.git` names the tree's gitdir, whose `HEAD` is the detached
+/// sha and whose parent's parent is the common dir. A tree it cannot read records nothing, and the
+/// test then fails on a missing line rather than on a guess. *(dated 2026-09-27, `s8d-ii` build,
+/// P6.)*
+fn record_reference(cwd: &Path) {
+    let Some(gitdir) = std::fs::read_to_string(cwd.join(".git"))
+        .ok()
+        .and_then(|t| {
+            t.trim()
+                .strip_prefix("gitdir:")
+                .map(|g| g.trim().to_owned())
+        })
+        .map(std::path::PathBuf::from)
+    else {
+        return;
+    };
+    let Ok(head) = std::fs::read_to_string(gitdir.join("HEAD")) else {
+        return;
+    };
+    let marker = std::fs::read_to_string(gitdir.join("RK_BASE")).unwrap_or_default();
+    let field = |key: &str| {
+        marker
+            .lines()
+            .find_map(|l| l.trim_end().strip_prefix(key).map(str::to_owned))
+            .unwrap_or_else(|| "-".to_owned())
+    };
+    let line = format!("{} {} {}\n", head.trim(), field("fork "), field("item "));
+    let Some(common) = gitdir.parent().and_then(Path::parent) else {
+        return;
+    };
+    let log = common.join(REFERENCE_LOG);
+    let mut bytes = std::fs::read(&log).unwrap_or_default();
+    bytes.extend_from_slice(line.as_bytes());
+    let _ = std::fs::write(&log, bytes);
 }
