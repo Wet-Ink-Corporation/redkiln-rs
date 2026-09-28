@@ -382,16 +382,15 @@ pub fn run_with(
     // Without the filter `ac248_...`'s expired arm is GREEN for the wrong reason while the verb is
     // unbuilt (both branches exit 3) and RED the moment the answer path lands -- which is how it
     // was found.
-    let live: Option<&rk_kernel::workflow::fsm::GateRecord> = state
-        .open_gates()
-        .filter(|record| !state.is_expired(record.token()))
-        .last();
+    let live: Option<&rk_kernel::workflow::fsm::GateRecord> = presented_gate(&state);
 
     // 🛑 AN ANSWERED GATE IS ALSO STILL IN `open_gates()`, AND THAT IS WHY IT IS STILL PRESENTED.
     //
     // The same 2026-09-17 fold decision that keeps an EXPIRED record in `gates_open` keeps an
     // ANSWERED one there too. So `live` above is "opened, and not expired" -- deliberately NOT
-    // "unanswered". AC-407 requires the spent token to be PRESENTED: §7d.6, *"its spent token IS
+    // "unanswered". *(dated 2026-09-28, `s8e` build, package R1FIX-8e: `live` is now the AWAITED
+    // gate when one exists, and "opened, and not expired" only when none is -- see
+    // `presented_gate`; the spent presentation below is that fallback, unchanged.)* AC-407 requires the spent token to be PRESENTED: §7d.6, *"its spent token IS
     // presented, `gate::answer` returns `RefusedSpent`, one `gate_answer_spent` row"*. A CLI that
     // noticed the gate was answered and refused on its own would write no row at all, and that is
     // the implementation the row count in `ac407_...` rules out.
@@ -445,6 +444,33 @@ pub fn run_with(
         &state,
         &mut boundary,
     )
+}
+
+/// **The gate record `answer` presents to `gate::answer`**, read off the fold as the expiry pass
+/// left it (see the two 🛑 notes at its call site).
+///
+/// *(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's spec-conformance major;
+/// `s8e` §8e.9's build note, defect (a).)* ~~`open_gates().filter(not expired).last()`~~ — the
+/// LAST token in TOKEN (digest) order. An answered or voided record never leaves `gates_open`, so
+/// once a spent token sits beside a fresh one that read presented whichever digest sorted higher,
+/// and when that was the spent one `gate::answer` refused it `RefusedSpent` and the lane stalled
+/// (ADR-0157's stall). **The AWAITED gate is presented when one exists** —
+/// [`RunState::awaiting_gate`](rk_kernel::workflow::fsm::RunState::awaiting_gate), the reader
+/// `terminal_read` already uses — and "opened, and not expired" is the fallback only when nothing
+/// is awaited, which is AC-407's spent presentation (its one `gate_answer_spent` row).
+#[must_use]
+pub fn presented_gate(
+    state: &rk_kernel::workflow::fsm::RunState,
+) -> Option<&rk_kernel::workflow::fsm::GateRecord> {
+    state
+        .awaiting_gate()
+        .and_then(|token| state.gate_record(token))
+        .or_else(|| {
+            state
+                .open_gates()
+                .filter(|record| !state.is_expired(record.token()))
+                .last()
+        })
 }
 
 /// The tier-1 boundary an answer commits through: the run-owned worktree the store records, as

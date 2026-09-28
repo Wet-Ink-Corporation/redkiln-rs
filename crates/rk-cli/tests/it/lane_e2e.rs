@@ -188,6 +188,74 @@ pub(crate) fn lane_repo() -> tempfile::TempDir {
     support::pack_min_repo(PackVariant::Lane)
 }
 
+/// **The fixture lane walked to its end THROUGH A VOID** (`s8e` §8e.9's *"gate (every state)"*).
+/// *(Added 2026-09-28, `s8e` build, package R1FIX-8e.)*
+///
+/// Invocation 1 opens `lane-1`'s gate (G1). A tracked file in the run-owned tree is then changed
+/// (uncommitted), so the tree `answer` hashes has moved: the answer is VOID (AC-406; exit 0; its
+/// `Gate: … answered` and `Gate: … voided` marks). The file is restored, so the run tree's working
+/// state equals the one the next gate binds to again (the tree mismatch `s8f` owns, §8e.9's defect
+/// (b), is thereby not reached). Invocation 2 opens the fresh gate AC-252 makes the kernel's next
+/// act (G2); `answer` must present G2 — the AWAITED gate — and not the spent G1, which it did
+/// about half the time before package R1FIX-8e (§8e.9's defect (a)); the answer applies, and
+/// invocation 3 walks the lane to its `closed` mark. Every step's exit is asserted, so a lane
+/// that stalls at `RefusedSpent` fails here by name.
+pub(crate) fn walk_the_lane_through_a_void(root: &Path) {
+    let run = |script| {
+        ran(
+            rk_cli::verbs::run::run(
+                &cli(root, GATE_ITEM),
+                &args(GATE_ITEM),
+                &support::clean_env(),
+                seam(&ScriptedFactory::new(script)),
+            ),
+            GATE_ITEM,
+        )
+    };
+    assert_eq!(run(Vec::new()), Exit::Success, "PREMISE: gate G1 opens");
+
+    let tree = crate::run_tree(root, GATE_ITEM).path;
+    let tracked = git_read(&tree, &["ls-files"])
+        .and_then(|out| out.lines().next().map(str::to_owned))
+        .expect("PREMISE: the run tree tracks a file");
+    let file = tree.join(&tracked);
+    let original = std::fs::read(&file).expect("the tracked file reads");
+    let mut moved = original.clone();
+    moved.extend_from_slice(b"moved before the answer\n");
+    std::fs::write(&file, &moved).expect("the run tree moves");
+    assert_eq!(
+        answer_item(root, GATE_ITEM, "approve"),
+        Exit::Success,
+        "a void answer is an outcome, exit 0 (AC-406)"
+    );
+    std::fs::write(&file, &original).expect("the run tree is restored");
+    assert_eq!(
+        support::store_rows(root)
+            .iter()
+            .filter(|e| e.kind == EventKind::GateAnswerVoid)
+            .count(),
+        1,
+        "PREMISE: the answer over the moved tree was VOID"
+    );
+
+    assert_eq!(
+        run(Vec::new()),
+        Exit::Success,
+        "PREMISE: the fresh gate G2 opens after the void (AC-252)"
+    );
+    assert_eq!(
+        answer_item(root, GATE_ITEM, "approve"),
+        Exit::Success,
+        "`answer` must present the AWAITED gate G2 and apply it, not the spent G1 \
+         (`RefusedSpent`, exit 3 — ADR-0157's stall)"
+    );
+    assert_eq!(
+        run(through()),
+        Exit::Success,
+        "PREMISE: the lane walks to its end past the void"
+    );
+}
+
 // ------------------------------------------------------------------------------- git, read
 
 /// `git <args>` in `cwd`; `Some(stdout)` on success, `None` when git refuses (an absent ref).
@@ -1302,7 +1370,15 @@ fn a_second_invocation_reuses_the_run_worktree() {
         tree.display()
     );
 
-    let planted_dir = tree.join(".redkiln").join("worktrees");
+    // *(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's checkpoint blocker.)* The
+    // planted directory is the run tree's OWN run-tree root, taken through `rk-git`'s one derivation
+    // (`s8d-ii` §8d-ii.1; Checkpoint 8d-ii guard (3)) as the parent of a path derived under the run
+    // tree — never a joined literal.
+    let planted_dir = crate::run_tree(&tree, BASE_GATE_ITEM)
+        .path
+        .parent()
+        .expect("a derived run tree has a parent: the run-tree root")
+        .to_path_buf();
     std::fs::create_dir_all(&planted_dir).expect("the planted directory is created");
     let planted = planted_dir.join("rk-e2e-planted.txt");
     std::fs::write(&planted, b"planted after invocation 1\n").expect("the planted file writes");
@@ -1597,6 +1673,9 @@ pub(crate) fn ac163(root: &Path, store_common_dir: &Path, item: &str) -> Result<
 /// two rows share a commit, and every tier-1 trailer commit anchors a row. The adversarial arm plants
 /// a `t1_stage_transition` row whose anchor names no commit, and the instrument must fail on it —
 /// the register's *"which fails on a store row with no matching commit"*. Red under S8E-M43.
+/// *(dated 2026-09-28, `s8e` build, package R1FIX-8e: measured red, on the expiry arm, under both
+/// sitings — S8E-M43a, `run`'s expiry rows through `run::gate_rows_through`'s store-only arm, which
+/// ONLY this test kills, and S8E-M43b, the kernel boundary's store-only expiry.)*
 ///
 /// *(dated 2026-09-28, `s8e` build, package S8E-P7.)* **A second arm, for the gate EXPIRY.** The
 /// fixture lane opens and answers its gate and never lets one expire, so S8E-M43 (an expiry's row
@@ -1605,6 +1684,11 @@ pub(crate) fn ac163(root: &Path, store_common_dir: &Path, item: &str) -> Result<
 /// gate opens in process, the deadline passes (polled, never a fixed sleep), and a second `run`'s
 /// expiry pass commits `Gate: … expired fail` and anchors its row. The same instrument must hold
 /// over that repository, with the `expired` row present.
+///
+/// *(dated 2026-09-28, `s8e` build, package R1FIX-8e.)* **The lane now carries `voided`.** It
+/// walks through [`walk_the_lane_through_a_void`], so the first arm reads two openings, two
+/// answers and a void (`Gate: … voided`, anchored to its own commit) besides the boundaries and
+/// the seal: every gate state is instrumented, `expired` in the second arm.
 #[test]
 #[expect(
     clippy::disallowed_methods,
@@ -1614,32 +1698,10 @@ pub(crate) fn ac163(root: &Path, store_common_dir: &Path, item: &str) -> Result<
 fn every_tier_one_row_has_exactly_one_trailer_commit() {
     let repo = lane_repo();
     let root = repo.path();
-    assert_eq!(
-        ran(
-            rk_cli::verbs::run::run(
-                &cli(root, GATE_ITEM),
-                &args(GATE_ITEM),
-                &support::clean_env(),
-                seam(&ScriptedFactory::new(Vec::new()))
-            ),
-            GATE_ITEM
-        ),
-        Exit::Success
-    );
-    assert_eq!(answer_item(root, GATE_ITEM, "approve"), Exit::Success);
-    assert_eq!(
-        ran(
-            rk_cli::verbs::run::run(
-                &cli(root, GATE_ITEM),
-                &args(GATE_ITEM),
-                &support::clean_env(),
-                seam(&ScriptedFactory::new(through()))
-            ),
-            GATE_ITEM
-        ),
-        Exit::Success,
-        "the lane walks to its end"
-    );
+    // *(dated 2026-09-28, `s8e` build, package R1FIX-8e.)* ~~open, answer, walk~~: the lane now
+    // walks THROUGH A VOID (G1 opened, answered and voided; G2 opened and answered), so the
+    // instrument covers the `voided` transition as well.
+    walk_the_lane_through_a_void(root);
 
     let common = crate::common_dir(root);
     // *(dated 2026-09-28, `s8e` build, package S8E-P7: the id is read as TEXT; `sql_rows` decodes
@@ -1651,11 +1713,17 @@ fn every_tier_one_row_has_exactly_one_trailer_commit() {
     };
     assert!(
         count("SELECT CAST(id AS TEXT) FROM t1_stage_transition") >= 2
-            && count("SELECT CAST(id AS TEXT) FROM t1_gate_transition WHERE state = 'opened'") == 1
+            && count("SELECT CAST(id AS TEXT) FROM t1_gate_transition WHERE state = 'opened'") == 2
             && count("SELECT CAST(id AS TEXT) FROM t1_gate_transition WHERE state = 'answered'")
-                == 1
+                == 2
+            && count("SELECT CAST(id AS TEXT) FROM t1_gate_transition WHERE state = 'voided'") == 1
             && count("SELECT CAST(id AS TEXT) FROM t1_slice_seal") == 1,
-        "PREMISE: the lane must write every tier-1 kind (boundaries, an opening, an answer, a seal)"
+        "PREMISE: the lane must write every tier-1 kind (boundaries, two openings, two answers, a \
+         void, a seal): {:?}",
+        sql_rows(
+            &common,
+            "SELECT state, token FROM t1_gate_transition ORDER BY id"
+        )
     );
     ac163(root, &common, GATE_ITEM).unwrap_or_else(|e| panic!("AC-163: {e}"));
 
@@ -2166,5 +2234,89 @@ fn a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice(
         factory.dispatches(),
         1,
         "the control lane did not dispatch its one `implement` activity"
+    );
+}
+
+/// **The entry check skips a `forbidden` CURRENT stage** (`s8e` §8e.8's S8E-D2194-ENTRY note: *"a
+/// `forbidden` current stage is skipped too"*; D21-95 item 1: *"skipping forbidden stages"*).
+/// *(Added 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's tests-mutants minor: the
+/// guard had no fixture branch and no mutant.)*
+///
+/// `Pack::successor` already skips a `forbidden` successor, so the guard in
+/// `findings_stage_reached` is observable only when the item SITS at a forbidden stage that carries
+/// a `Findings`-first activity. Two arms over the fixture lane, each in its own repository, each
+/// with `lane-2`'s `slice` dropped, `review-min` re-declared to provide `ImplReport` (so no later
+/// stage reaches `Findings`), and one extra catalog activity, `review-here`, a copy of
+/// `review-min` providing `Findings` at the item's current stage:
+/// - **CONTROL** — `lane-2` and `review-here` at `triage` (`optional`): the binary refuses at entry
+///   by name (*"declares no `slice`"*), so the extra activity is read and the arm can go red;
+/// - **CASE** — both at `discovery` (`forbidden`): the entry check skips the stage, so no entry
+///   refusal is named, whatever the lane then does with an item at a forbidden stage.
+///
+/// Red under S8E-M56 (the guard dropped: the CASE is refused at entry).
+#[test]
+fn the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity() {
+    let arm = |stage: &str| {
+        let repo = lane_repo();
+        let root = repo.path();
+        drop_slice(root, THROUGH_ITEM);
+        let items = root.join(".redkiln").join("items");
+        let record_path = items.join(format!("{THROUGH_ITEM}.toml"));
+        let record = std::fs::read_to_string(&record_path).expect("the item record reads");
+        assert_eq!(
+            record.matches("stage = \"triage\"").count(),
+            1,
+            "PREMISE: `{THROUGH_ITEM}` sits at `triage`"
+        );
+        std::fs::write(
+            &record_path,
+            record.replace("stage = \"triage\"", &format!("stage = \"{stage}\"")),
+        )
+        .expect("the item record rewrites");
+        let catalog = root.join(".redkiln").join("catalog");
+        let review_min =
+            std::fs::read_to_string(catalog.join("review-min.toml")).expect("review-min reads");
+        let provides = "provides     = [\"Findings\"]";
+        let stage_line = "stage        = \"review\"";
+        assert!(
+            review_min.matches(provides).count() == 1
+                && review_min.matches(stage_line).count() == 1,
+            "PREMISE: review-min declares `Findings` at `review`"
+        );
+        std::fs::write(
+            catalog.join("review-here.toml"),
+            review_min
+                .replace(
+                    "id           = \"review-min\"",
+                    "id           = \"review-here\"",
+                )
+                .replace(stage_line, &format!("stage        = \"{stage}\"")),
+        )
+        .expect("the extra activity installs");
+        std::fs::write(
+            catalog.join("review-min.toml"),
+            review_min.replace(provides, "provides     = [\"ImplReport\"]"),
+        )
+        .expect("review-min is re-declared");
+        let out = spawn_run_replaying(root, THROUGH_ITEM);
+        (
+            out.status.code(),
+            String::from_utf8_lossy(&out.stderr).into_owned(),
+        )
+    };
+    let refusal = format!("`{THROUGH_ITEM}` declares no `slice`");
+
+    let (code, err) = arm("triage");
+    assert!(
+        code == Some(3) && err.contains(&refusal) && err.contains("before any dispatch"),
+        "CONTROL: a `Findings` activity at the item's current, non-forbidden stage must be \
+         refused at entry by name (exit {code:?}):\n{err}"
+    );
+
+    let (code, err) = arm("discovery");
+    assert!(
+        !err.contains(&refusal),
+        "a `forbidden` current stage's `Findings` activity was read by the entry check, which \
+         must skip it (exit {code:?}):\n{err}"
     );
 }

@@ -2927,7 +2927,26 @@ fn tier_one_projection(root: &std::path::Path) -> BTreeSet<String> {
 /// `run`'s gate binds the user checkout's tree (`prepare_inputs` hashes `resolved.worktree`) while
 /// `answer` hashes the run-owned tree, so a moved run tree voids every later answer too.
 /// `rebuild_recovers_every_gate_state_from_the_widened_gate_value` rebuilds every state, `expired`
-/// and `voided` included, from the widened value. RED at entry: the rebuild wrote `t2_event` rows only, so the
+/// and `voided` included, from the widened value.
+///
+/// *(dated 2026-09-28, `s8e` build, package R1FIX-8e.)* Defect (a) is repaired: `answer` presents
+/// the AWAITED gate (`rk_cli::verbs::answer::presented_gate`, killed by
+/// `answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher`), and
+/// `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit` now walks the lane through a void
+/// ([`crate::lane_e2e::walk_the_lane_through_a_void`]). **This lane still carries no `voided`,
+/// because walking it through that void MEASURED a third defect (c)**, reported and NOT repaired
+/// here: the void answer's live `answered` row records the ANSWER's (moved) tree hash, the
+/// `gate_answered` payload's `tree_hash`, while its `Gate: … answered` mark carries the gate's BOUND
+/// tree (ADR-0184 decision 1: *"the same on every mark for the token"*), so the rebuilt row's
+/// `tree_hash` differs and this differential fails (*"only recorded: …|answered|70566bf3…"*,
+/// *"only rebuilt: …|answered|e9ead599…"*). Which tree an `answered` transition row carries is
+/// a record's choice (ADR-0181 decision 11, ADR-0184), put to the operator. `expired` stays out
+/// of this lane as well: `pack.lane.toml` declares `gate_deadline_secs = 900` and one
+/// `[[gate_expiry]]` row whose action is `fail` for the lane's one gate class, so an in-lane
+/// expiry needs a variant whose deadline races every answer in the lane against a 1 s clock, and a
+/// `fail` expiry does not walk on to the `closed` mark this lane ends with; the expiry arm of
+/// `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit` and the synthetic rebuild above
+/// carry it. RED at entry: the rebuild wrote `t2_event` rows only, so the
 /// rebuilt projection was empty. Red under S8E-M4 (doctor half: `append_tier1`'s and the rebuild's
 /// `t1_*` insert dropped) and S8E-M15 (the rebuild writes `t2_event` only).
 #[test]

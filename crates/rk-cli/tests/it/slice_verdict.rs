@@ -22,6 +22,13 @@
 //!   now met at the lane's entry, before any dispatch, through the validator the mint shares; the
 //!   mint's refusal stays as the backstop and is pinned in process by
 //!   `the_mint_refuses_an_undeclared_slice_as_the_backstop`.
+//!   *(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's tests-mutants finding.)*
+//!   ~~so a mint that defaulted an absent slice to the item id (S8E-M8) is red here~~ — since the
+//!   entry refusal, no binary run here reaches the mint with an undeclared slice, so a default
+//!   sited in `seal_act` alone (S8E-M8a) is GREEN on the binary tests and red only on
+//!   `the_mint_refuses_an_undeclared_slice_as_the_backstop`; a default sited in the shared
+//!   `validate_slice` (S8E-M8b) is red on `an_absent_slice_is_refused_by_name` too, because the
+//!   entry then names the item-id rule (§8e.12's S8E-M8 rows, measured).
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -222,6 +229,13 @@ fn changes_requested_is_sealed_on_the_findings_block_path() {
 /// mint calls: `review-1` sits at `review`, whose `review-min` provides `Findings`. The assertions
 /// hold unchanged (exit `3`, the absence named, nothing committed). The mint's own refusal is pinned
 /// in process by `the_mint_refuses_an_undeclared_slice_as_the_backstop`.
+///
+/// *(dated 2026-09-28, `s8e` build, package R1FIX-8e.)* ~~a mint that defaulted it to the item id
+/// would name the item-id rule instead (S8E-M8)~~ — the refusal met here is the ENTRY's, so what
+/// reddens this test is a default in the shared `tier_one::validate_slice` (S8E-M8b: the entry
+/// names the item-id rule), not one in `seal_act` alone (S8E-M8a, killed by
+/// `the_mint_refuses_an_undeclared_slice_as_the_backstop`), and not the entry check dropped
+/// (S8E-M53: the mint's backstop still refuses by the same name).
 #[test]
 fn an_absent_slice_is_refused_by_name() {
     let repo = support::pack_min_repo(PackVariant::Review);
@@ -257,7 +271,9 @@ fn an_absent_slice_is_refused_by_name() {
 /// undeclared slice any more. This pin calls the mint itself, `tier_one::seal_act`, for every value
 /// ADR-0160 names, and asserts each refusal is the one the shared validator gives the entry check
 /// (`tier_one::validate_slice`), so the two sitings cannot disagree. Green at entry by design; red
-/// under S8E-M55 (the validator's call dropped from `seal_act`).
+/// under S8E-M55 (the validator's call dropped from `seal_act`) and, *(dated 2026-09-28, `s8e`
+/// build, package R1FIX-8e)*, under S8E-M8a (an absent slice defaulted to the item id in
+/// `seal_act` alone), which no binary test here can reach.
 #[test]
 fn the_mint_refuses_an_undeclared_slice_as_the_backstop() {
     use rk_kernel::runtime::tier_one::{SliceRefusal, TierOneError, seal_act, validate_slice};

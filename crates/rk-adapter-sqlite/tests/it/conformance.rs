@@ -10,6 +10,12 @@
 //! is stated once in `rk_ports::conformance`'s module doc; the register amendment it owes is
 //! s7c §7c.22's.
 //!
+//! *(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's tests-mutants minor.)*
+//! ~~the arm takes … `snapshot` and `rebuild`, D17-9 — and asserts `Err(StepError::Unsupported …)`~~
+//! is no longer what runs: since `s8e` §8e.9 (package S8E-P7) both registry rows carry
+//! `Probe::Recorded`, so `unsupported_tokens()` returns neither, the unsupported arm is empty, and
+//! the body's snapshot-then-rebuild ROUND TRIP runs over the real store (after the tier-1 arm).
+//!
 //! The real row adds what the fake cannot carry: ADR-0105 clause 7's `journal_mode = wal` and
 //! `busy_timeout = 5000` on the writer connection (`wal_and_busy_timeout_are_enforced`).
 
@@ -37,6 +43,9 @@ fn port_conformance_real_row_sqlite() {
     // The tokens come from the registry the adapter answers from (D17-9), never a literal here:
     // what the row declares is what the arm asserts, and `ac489_capability_registry_dated` is
     // where the declaration itself is pinned to exactly `snapshot` and `rebuild`.
+    // *(dated 2026-09-28, `s8e` build, package R1FIX-8e.)* ~~pinned to exactly `snapshot` and
+    // `rebuild`~~: `ac489_…` now pins both rows to a recorded probe (S8E-P7), so `arm` is empty
+    // and the body runs the snapshot/rebuild round trip.
     let unsupported = registry::unsupported_tokens().expect("the shipped registry loads");
     let arm: Vec<&str> = unsupported.iter().map(String::as_str).collect();
 

@@ -207,6 +207,15 @@
 //! belong in the run that is actually executed. **Neither name here contains `golden_log_replay`
 //! or `ac161_ac164_delete_db_replay`**, so the zero-selection line is unaffected.
 //!
+//! *(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's checkpoint minor.)*
+//! ~~[`replay`] is `#![cfg(feature = "corpus")]` **whole**~~ — package S8E-P3 replaced that
+//! module-wide gate with one `#[cfg(feature = "corpus")]` on each item, and ONE item is ungated:
+//! `replay::golden_log_canonical_digests_are_unchanged_by_the_interim_item_key`, which runs in
+//! the unfeatured suite (Checkpoint 8e (2)). Its name contains neither `golden_log_replay` nor
+//! `ac161_ac164_delete_db_replay`, so Checkpoint 7b's zero-selection line still selects nothing
+//! unfeatured; every other control in [`replay`] is still invisible to it, which is the reason
+//! above for this module.
+//!
 //! That rule is also why `ac029_n_is_declared_never_defaulted` is in [`envelope`] and **stays
 //! there** now that [`retry`] exists. Design §4 files it beside `outer_retry_ac029`; it asserts the
 //! pack-validation half — that `N` is declared and never defaulted — which is `src/workflow/

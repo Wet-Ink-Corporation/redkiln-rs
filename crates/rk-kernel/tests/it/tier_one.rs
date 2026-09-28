@@ -421,8 +421,18 @@ fn an_act_with_neither_trailer_nor_content_is_refused() {
 // ------------------------------------------------------------------ N6: every gate transition
 
 /// **The answer is committed before its row** (N6 fixes `answer`'s append-then-commit). Red at
-/// entry because `answer` appends first. Red under S8E-M26 (its `rk-cli` half is
-/// `answer::a_failed_answer_commit_leaves_zero_rows`).
+/// entry because `answer` appends first. ~~Red under S8E-M26 (its `rk-cli` half is
+/// `answer::a_failed_answer_commit_leaves_zero_rows`).~~
+///
+/// *(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's tests-mutants finding.)*
+/// **What reddens this test is the KERNEL boundary's order**, never `rk-cli`'s: it builds
+/// `Act::gate(gate_answered_event(..), rec)` and calls `Boundary::live(..).act(..)` itself, so it
+/// never reaches `answer.rs` or `run::gate_rows_through`. Measured: **S8E-M26b** (the boundary
+/// appends the act's `gate_answered` row before its commit) is red here (*"a row was appended while
+/// HEAD was not yet the act's commit"*); **S8E-M26a** (`answer` appends `gate_answered` before its
+/// commit, in `rk-cli`) leaves this test GREEN and is killed by
+/// `answer::a_failed_answer_commit_leaves_zero_rows` alone. S8E-M3 (every row before the commit)
+/// reddens it too.
 #[test]
 fn a_gate_answer_is_committed_before_its_row() {
     let fx = fixture();
@@ -442,7 +452,15 @@ fn a_gate_answer_is_committed_before_its_row() {
     assert_failed_commit_leaves_nothing(&fx, act(&rec));
 }
 
-/// **The expiry is committed before its row** (N6: today it is store-only). Red under S8E-M43.
+/// **The expiry is committed before its row** (N6: today it is store-only). ~~Red under S8E-M43.~~
+///
+/// *(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's tests-mutants finding.)*
+/// **What reddens this test is the KERNEL boundary** (it calls `Boundary::live(..).act(..)` over
+/// `Act::gate(gate_expired_event(..), rec)` itself). Measured: **S8E-M43b** (the boundary appends
+/// an expiry's row with no commit and reports `NoGitWrite`) is red here (*"a live act reported
+/// NoGitWrite"*); **S8E-M43a** (`run`'s expiry rows handed to `run::gate_rows_through`'s
+/// store-only arm, in `rk-cli`) leaves this test GREEN and is killed by
+/// `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit`'s expiry arm alone.
 #[test]
 fn a_gate_expiry_is_committed_before_its_row() {
     let fx = fixture();

@@ -386,6 +386,42 @@ fn ac248_answer_without_live_token_exits_named_outcome() {
         "the expiry was not OBSERVED AND RESOLVED AT THAT READ — no `gate_expired` row was \
          appended by the answer. Added rows: {added:?}"
     );
+    // *(dated 2026-09-28, `s8e` build, package R1FIX-8e.)* The expiry `answer` observed is a tier-1
+    // act (`s8e` §8e.3, N6): its `gate_expired` row is anchored to its own `Gate: … expired` commit
+    // on the run ref, never appended store-only. Mutant S8E-M43c (`answer`'s expiry rows through
+    // `run::gate_rows_through`'s store-only arm) SURVIVED every named test before this assertion.
+    let anchors: Vec<Option<String>> = {
+        let reader =
+            rk_store::conn::Reader::open(&crate::common_dir(eroot)).expect("the store opens");
+        let conn = reader.conn();
+        let mut stmt = conn
+            .prepare("SELECT CAST(anchor_sha AS TEXT) FROM t2_event WHERE kind = 'gate_expired'")
+            .expect("the anchor read prepares");
+        stmt.query_map([], |r| r.get::<_, Option<String>>(0))
+            .expect("the anchor read runs")
+            .map(|r| r.expect("an anchor row decodes"))
+            .collect()
+    };
+    let gate_marks = rk_git::git_exec::run(
+        eroot,
+        [
+            "log",
+            "--format=%H %(trailers:key=Gate,valueonly,separator=%x20)",
+            "refs/heads/rk-run/gate-1",
+        ],
+    )
+    .expect("the run ref reads")
+    .stdout_trimmed();
+    let anchor = anchors.first().cloned().flatten().unwrap_or_default();
+    assert!(
+        anchors.len() == 1
+            && !anchor.is_empty()
+            && gate_marks
+                .lines()
+                .any(|l| l.starts_with(&anchor) && l.contains(" expired ")),
+        "the expiry the answer observed is not anchored to a `Gate: … expired` commit on \
+         rk-run/gate-1 (N6): anchors {anchors:?}; the ref reads:\n{gate_marks}"
+    );
     // ZERO ANSWER ROWS. The `gate_expired` row IS written; what must not be is an answer.
     assert!(
         !added.contains(&rk_types::event_kind::EventKind::GateAnswered)
@@ -1179,7 +1215,9 @@ fn ac410_admitted_attachment_stored_as_human_root() {
 /// own `index.lock` in the run-owned tree's git directory (`commit` takes it, `--allow-empty`
 /// included). The verb refuses with exit 3; the store gains only the invocation's
 /// `reconcile_started` (AC-172's baseline); the run branch does not move. Red at entry because
-/// `answer` appends first. Red under S8E-M26.
+/// `answer` appends first. Red under S8E-M26. *(dated 2026-09-28, `s8e` build, package R1FIX-8e:
+/// measured red under both sitings — S8E-M26a, `rk-cli`'s `answer` appending first, which ONLY
+/// this test kills, and S8E-M26b, the kernel boundary appending the `gate_answered` row first.)*
 #[test]
 fn a_failed_answer_commit_leaves_zero_rows() {
     let repo = repo_with_open_gate();
@@ -1229,5 +1267,112 @@ fn a_failed_answer_commit_leaves_zero_rows() {
         added,
         vec![rk_types::event_kind::EventKind::ReconcileStarted],
         "the failed commit left rows beyond the invocation's baseline: {added:?}. stderr:\n{stderr}"
+    );
+}
+
+/// Two gate records of one gate step, the first answered (or voided) and the second freshly
+/// opened, with the SPENT one's token sorting ABOVE the open one's in token order — the order
+/// `RunState::open_gates()` iterates. Found deterministically by walking `reach` (a member of the
+/// token's digest, AC-524) until the pair sorts that way.
+fn spent_token_sorting_above_an_open_one() -> (
+    rk_kernel::workflow::fsm::GateRecord,
+    rk_kernel::workflow::fsm::GateRecord,
+) {
+    const TREE: &str = "0123456789abcdef0123456789abcdef01234567";
+    let at = |reach: u32| {
+        rk_kernel::workflow::fsm::GateRecord::derive_reach(
+            "unknown_facet:has_repro",
+            TREE,
+            rk_types::time::Timestamp::from_unix_seconds(4_102_444_800),
+            reach,
+        )
+        .expect("derive")
+    };
+    let first = at(1);
+    (2..=64)
+        .map(at)
+        .find(|second| first.token() > second.token())
+        .map(|second| (first.clone(), second))
+        .expect("within 63 reaches one token sorts below the first reach's")
+}
+
+/// **`answer` presents the AWAITED gate, not the last token in token order** *(dated 2026-09-28,
+/// `s8e` build, package R1FIX-8e; refuting round 1's spec-conformance major; ADR-0157's stall).*
+///
+/// Neither an answered nor a voided record ever leaves `gates_open`, so once a journal holds a
+/// spent token beside a fresh one, `open_gates().filter(..).last()` returns whichever DIGEST sorts
+/// higher. When that is the spent one, `gate::answer` refuses it `RefusedSpent` and the lane stalls
+/// at `answer` for ever. The awaited gate (`RunState::awaiting_gate`, `terminal_read`'s reader) is
+/// presented when one exists; AC-407's spent presentation is the fallback only when none is awaited.
+/// Three arms over a folded journal: an answered G1 above an open G2, a voided G1 above an open G2
+/// (both must present G2), and G1 answered alone (must still present G1, the spent token AC-407
+/// requires). Red under `.last()` on the first two arms; the mutant restoring it is killed here.
+#[test]
+fn answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher() {
+    use rk_kernel::workflow::gate::{gate_answer_void_event, gate_answered_event};
+    let (spent, open) = spent_token_sorting_above_an_open_one();
+    assert!(
+        spent.token() > open.token(),
+        "PREMISE: the spent token must sort above the open one, or `.last()` picks the open one \
+         by luck and this test is vacuous"
+    );
+    let opened = rk_kernel::runtime::gate_opened_event;
+    let fold = |events: &[rk_types::event::Event]| {
+        rk_kernel::workflow::fsm::fold("gate-1", "implement", events).expect("the journal folds")
+    };
+
+    // ---- ARM 1: answered G1, then a fresh G2.
+    let answered = vec![
+        opened(&spent),
+        gate_answered_event(spent.token(), spent.tree_hash(), "approve"),
+        opened(&open),
+    ];
+    let state = fold(&answered);
+    assert_eq!(
+        state.awaiting_gate(),
+        Some(open.token()),
+        "PREMISE: the fold awaits the fresh gate"
+    );
+    assert_eq!(
+        rk_cli::verbs::answer::presented_gate(&state)
+            .map(rk_kernel::workflow::fsm::GateRecord::token),
+        Some(open.token()),
+        "answer presents the ANSWERED token {} over the awaited {} — the lane stalls at \
+         `RefusedSpent` (ADR-0157's stall)",
+        spent.token().as_str(),
+        open.token().as_str()
+    );
+
+    // ---- ARM 2: voided G1 (the kernel writes `gate_answered` and `gate_answer_void` together),
+    // then the fresh G2 AC-252 makes the kernel's next act.
+    let voided = vec![
+        opened(&spent),
+        gate_answered_event(spent.token(), spent.tree_hash(), "approve"),
+        gate_answer_void_event(spent.token(), spent.tree_hash(), "moved"),
+        opened(&open),
+    ];
+    let state = fold(&voided);
+    assert_eq!(
+        rk_cli::verbs::answer::presented_gate(&state)
+            .map(rk_kernel::workflow::fsm::GateRecord::token),
+        Some(open.token()),
+        "answer presents the VOIDED token {} over the awaited {}",
+        spent.token().as_str(),
+        open.token().as_str()
+    );
+
+    // ---- ARM 3 (AC-407's fallback): G1 answered and nothing awaited — the spent token is still
+    // presented, so the kernel writes its one `gate_answer_spent` row.
+    let alone = vec![
+        opened(&spent),
+        gate_answered_event(spent.token(), spent.tree_hash(), "approve"),
+    ];
+    let state = fold(&alone);
+    assert_eq!(state.awaiting_gate(), None, "PREMISE: nothing is awaited");
+    assert_eq!(
+        rk_cli::verbs::answer::presented_gate(&state)
+            .map(rk_kernel::workflow::fsm::GateRecord::token),
+        Some(spent.token()),
+        "with no gate awaited, AC-407 requires the spent token to be PRESENTED"
     );
 }

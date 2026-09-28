@@ -1132,13 +1132,41 @@ choices it took named:**
   boundaries, an opening and an answer, the review's seal and the `closed` mark; the planted unreachable row falls
   outside the projection. It does NOT carry `voided` or `expired` (`rebuild_recovers_every_gate_state_from_the_widened_gate_value`
   rebuilds every state from synthetic marks), because driving a void inside the lane measured two defects, reported for
-  the operator and NOT repaired here: (a) `answer` presents `open_gates().filter(..).last()` — the LAST token in token
+  the operator and ~~NOT repaired here~~ *((a) is repaired by package R1FIX-8e, below; (b) is `s8f`'s)*: (a) `answer` presents `open_gates().filter(..).last()` — the LAST token in token
   order — so after a void and a fresh gate it presents the spent token about half the time (*"has already been
   answered"*); (b) `run`'s gate binds the user checkout's tree (`prepare_inputs` hashes `resolved.worktree`) while
   `answer` hashes the run-owned tree, so once the run tree moves every later answer is void too.
 - **`projection::rebuild_differential`'s header gains its dated line**, naming
   `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows` as the half that measures the route; the kernel test
   is unchanged and pins green.
+
+*(dated 2026-09-28, s8e build, package R1FIX-8e)* **Defect (a) is repaired here, under ADR-0157's stall** (refuting round 1's spec-conformance major: no stage or
+ledger entry owned it, and it stalls any lane with a second gate — an ANSWERED gate followed by a later stage's gate, not
+only a void, because neither record ever leaves `gates_open`). `answer` now presents the AWAITED gate
+(`RunState::awaiting_gate`, the reader `terminal_read` already uses) and falls back to *"opened, and not expired"* only
+when nothing is awaited, which is AC-407's spent presentation: `rk_cli::verbs::answer::presented_gate`. Red first:
+`answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher` folds an answered G1 and a voided G1, each
+above an open G2 in token order (found deterministically by walking `reach`), and was red under `.last()` (*"answer
+presents the ANSWERED token 3d264e16… over the awaited 019d34cc…"*); its third arm keeps AC-407's fallback. S8E-M57
+(`.last()` restored) is killed by it.
+- **`lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit` now carries `voided`.** Its lane walks THROUGH A VOID
+  (`lane_e2e::walk_the_lane_through_a_void`: G1 opened; a tracked file of the run tree changed, uncommitted, so the
+  answer is void, AC-406; the file restored; G2 opened, answered and applied; the lane walked to `closed`), so AC-163's
+  instrument reads two openings, two answers and a void. Defect (b) is not reached, because the run tree is restored
+  before G2 binds.
+- **`doctor::ac184_…`'s lane still carries no `voided`, because walking it through the same void MEASURED a third
+  defect (c), reported and NOT repaired here:** the void answer's live `answered` row records the ANSWER's tree hash
+  (`gate_answered`'s payload `tree_hash`, the moved tree), while its `Gate: … answered` mark carries the gate's BOUND
+  tree (ADR-0184 decision 1: *"the gate's bound tree (ADR-0105 clause 4), the same on every mark for the token"*), so the
+  rebuilt row's `tree_hash` differs and the differential fails (*"only recorded: …|answered|70566bf3…"*, *"only rebuilt:
+  …|answered|e9ead599…"*). ADR-0181 decision 11 says the rebuilt row is *"the row the live act anchored to that commit"*;
+  over a void it is not. Which tree an `answered` transition row carries is a record's choice (ADR-0181, ADR-0184), and
+  it is put to the operator as this package's blocker; the ac184 lane is unchanged until then.
+- **`expired` is not reachable inside the ac184 lane, recorded rather than built.** `pack.lane.toml` declares
+  `gate_deadline_secs = 900` and one `[[gate_expiry]]` row, `action = "fail"`, for its one gate class, so an in-lane
+  expiry needs a variant whose deadline races every answer in the lane against a 1 s clock, and a `fail` expiry does not
+  walk on to the `closed` mark the differential ends with. `every_tier_one_row_…`'s expiry arm (`pack.gate-1s.toml`) and
+  `doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value` carry `expired`.
 
 ### 8e.10 The interim `item` key, outside the canonical digest, and `query` honours `ByItem` (D21-43 N5; D21-46 R3)
 
@@ -1409,6 +1437,7 @@ Each test is selected in Checkpoint 8e by its module-qualified name with `--exac
 | `rk-cli` | `slice_verdict::a_slice_equal_to_the_item_id_is_refused` | no key |
 | `rk-cli` | `lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch` *(dated 2026-09-28, s8e build, package S8E-D2194-ENTRY; D21-94, D21-95)* | the lane dispatches `implement` and `review` and only the mint refuses (*"the lane dispatched 2 time(s) … left: 2, right: 0"*) |
 | `rk-cli` | `lane_e2e::a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice` *(dated 2026-09-28, s8e build, package S8E-D2194-ENTRY; D21-95)* | green — the control: a lane with no `Findings` stage and no `slice` dispatches and exits 0 |
+| `rk-cli` | `lane_e2e::the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity` *(dated 2026-09-28, s8e build, package R1FIX-8e)* | green — a pin on the guard `findings_stage_reached` already carries (round 1: no fixture branch reached it); red under S8E-M56 (*"a `forbidden` current stage's `Findings` activity was read by the entry check"*) |
 | `rk-cli` | `slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop` *(dated 2026-09-28, s8e build, package S8E-D2194-ENTRY; D21-94)* | no shared validator (`validate_slice` does not resolve); a pin on the mint thereafter, red under S8E-M55 |
 | `rk-cli` | `worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed` | no row kind |
 | `rk-cli` | `worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds` | no row kind |
@@ -1416,6 +1445,7 @@ Each test is selected in Checkpoint 8e by its module-qualified name with `--exac
 | `rk-cli` | `worktree_assigned::a_reentry_records_reused_and_its_discard_list` | no row kind |
 | `rk-cli` | `worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row` | `answer` reads `reconcile_started` |
 | `rk-cli` | `answer::a_failed_answer_commit_leaves_zero_rows` | `answer` appends first |
+| `rk-cli` | `answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher` *(dated 2026-09-28, s8e build, package R1FIX-8e)* | `answer` presents the LAST token in token order (*"answer presents the ANSWERED token 3d264e16… over the awaited 019d34cc…"*); red under S8E-M57 |
 | `rk-cli` | `doctor::ac184_rebuild_differential_over_anchored_tier_one_rows` | no `t1_*` rows |
 | `rk-cli` | `doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value` | gates unresolvable |
 | `rk-cli` | `doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record` | green today — the legacy rule's pin |
@@ -1440,6 +1470,8 @@ run-worktree names, one of them a rename, moved to `s8d-ii` (`s8d-ii` §8d-ii.8)
 
 *(dated 2026-09-28, s8e build, package S8E-D2194-ENTRY)* **89 names** (~~86~~): `rk-cli` **35** (~~32~~), with D21-94's entry refusal as D21-95 rules it: `lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch`, its control `lane_e2e::a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice`, and the mint's pin `slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop` (ADR-0186 as amended, proposed). So **82** are new (~~79~~), the suite gains **82** (~~79~~), and the floor is 1034 + 82 = **1116**.
 
+*(dated 2026-09-28, s8e build, package R1FIX-8e)* **91 names** (~~89~~): `rk-cli` **37** (~~35~~), with refuting round 1's two: `answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher` (the answer's gate selection, §8e.9's R1FIX-8e note) and `lane_e2e::the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity` (the entry check's `forbidden` guard). So **84** are new (~~82~~), the suite gains **84** (~~82~~), and the floor is 1034 + 84 = **1118**. **Also re-pointed, none deleted:** `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit` (the lane walks through a void), `answer::ac248_answer_without_live_token_exits_named_outcome` (its expired arm asserts the expiry's `gate_expired` row is anchored to a `Gate: … expired` commit; S8E-M43c), and `lane_e2e::a_second_invocation_reuses_the_run_worktree` (its planted directory is taken through `rk-git`'s one derivation, not a joined literal — round 1's blocker).
+
 The existing `story_axis::adr0155_…` tests and `doctor::ac427_…`'s synthetic repository are **re-pointed** in the
 record's commit, and none is deleted. `story_value` gains the stage, and the old single-mark assertions become the
 legacy-mark fixture. The six test sites that derived the old root were re-pointed by `s8d-ii` (`s8d-ii` §8d-ii.1).
@@ -1459,7 +1491,9 @@ named reason**, printed and read, not merely "the suite went red". Names carry a
 | S8E-M5 | the heal disabled | `tier_one::a_commit_without_a_row_is_healed_at_entry` |
 | S8E-M6 | the heal ignores reachability | `tier_one::a_heal_writes_no_row_for_an_unreachable_anchor` |
 | S8E-M7 | no seal on the `FindingsBlock` path | `slice_verdict::changes_requested_is_sealed_on_the_findings_block_path` |
-| S8E-M8 | an absent slice defaults to the item id | `slice_verdict::an_absent_slice_is_refused_by_name` |
+| S8E-M8 | an absent slice defaults to the item id | ~~`slice_verdict::an_absent_slice_is_refused_by_name`~~ *(dated 2026-09-28, s8e build, package R1FIX-8e)* split by siting and measured, the two rows below (round 1: since the entry refusal, a mint-sited default survives this test) |
+| S8E-M8a *(dated 2026-09-28, s8e build, package R1FIX-8e)* | the default in `seal_act` alone (the mint siting): `validate_slice(declared.or(Some(item)), …)` | `slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop` (*"the mint refused None for the wrong reason … left: ItemId, right: Absent"*); measured GREEN: `slice_verdict::an_absent_slice_is_refused_by_name`, `lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch` (the entry refuses first) |
+| S8E-M8b *(dated 2026-09-28, s8e build, package R1FIX-8e)* | the default in the shared `validate_slice` (entry and mint): an absent slice refused as `ItemId` | `slice_verdict::an_absent_slice_is_refused_by_name` (*"the refusal names the ABSENCE … not another rule"*: the entry names the item-id rule), `slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop`, `lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch` |
 | S8E-M9 | ownership resolved by path convention | `worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention` |
 | S8E-M10 | `terminal_read`'s old filter (latest tokened `gate_opened`) restored | `lane_e2e::terminal_read_reports_only_an_awaited_gate` |
 | S8E-M11 | `unwrap_or_else(std::sync::PoisonError::into_inner)` restored | `store::writer_poison_is_a_halt_and_never_recovered`, `root::adr0118_a_poisoned_writer_mutex_halts_exit_70` |
@@ -1472,7 +1506,8 @@ named reason**, printed and read, not merely "the suite went red". Names carry a
 | S8E-M18 | the rebuild drops the item-record fallback for a stage-less mark | `doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record` |
 | S8E-M20 | the run path re-creates the tree on re-entry (the `rk-git` half is `s8d-ii`'s `S8D-II-M2`) | `lane_e2e::a_second_invocation_reuses_the_run_worktree` |
 | S8E-M25 | `query` ignores `ByItem` again | `store::query_by_item_returns_only_that_items_rows`, `lane_e2e::two_items_in_one_store_do_not_fold_together` |
-| S8E-M26 | `answer` appends `gate_answered` before its commit | `answer::a_failed_answer_commit_leaves_zero_rows`, `tier_one::a_gate_answer_is_committed_before_its_row` |
+| S8E-M26 | `answer` appends `gate_answered` before its commit | `answer::a_failed_answer_commit_leaves_zero_rows`, ~~`tier_one::a_gate_answer_is_committed_before_its_row`~~ *(dated 2026-09-28, s8e build, package R1FIX-8e)* the kernel test is struck from this `rk-cli` change: it never reaches `answer.rs` and was measured GREEN under it (S8E-M26a, P5's name). `answer::a_failed_answer_commit_leaves_zero_rows` alone kills it (*"the failed commit left rows beyond the invocation's baseline: [ReconcileStarted, GateAnswered]"*) |
+| S8E-M26b *(dated 2026-09-28, s8e build, package R1FIX-8e)* | the KERNEL boundary appends an act's `gate_answered` row before its commit (P5's kernel variant) | `tier_one::a_gate_answer_is_committed_before_its_row` (*"a row was appended while HEAD was not yet the act's commit"*), `answer::a_failed_answer_commit_leaves_zero_rows` |
 | S8E-M27 | the answer's `Gate:` mark written with state `opened` | `lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered` |
 | S8E-M28 | no `closed` mark at the lane's end | `lane_e2e::the_lane_end_mints_a_terminal_closed_mark` |
 | S8E-M29 | the live `GitOps` journal writes no `git_op` row | `tier_one::the_boundary_journals_a_git_op_row_per_invocation`, `tier_one::replay_serves_the_boundary_from_its_git_op_rows` |
@@ -1485,7 +1520,9 @@ named reason**, printed and read, not merely "the suite went red". Names carry a
 | S8E-M40 | the version-1 open stamps the identity row before it refuses | `store::a_checked_in_version_one_store_is_refused_and_its_bytes_are_unchanged` |
 | S8E-M41 | `worktree_assigned` written with `reused: false` and an empty `discarded` on re-entry | `worktree_assigned::a_reentry_records_reused_and_its_discard_list` |
 | S8E-M42 | `answer` falls back to the convention path when no `worktree_assigned` row exists | `worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row` |
-| S8E-M43 | a gate expiry's row appended with no commit (the store-only path restored) | `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit`, `tier_one::a_gate_expiry_is_committed_before_its_row` |
+| S8E-M43 | a gate expiry's row appended with no commit (the store-only path restored) | `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit`, ~~`tier_one::a_gate_expiry_is_committed_before_its_row`~~ *(dated 2026-09-28, s8e build, package R1FIX-8e)* the kernel test is struck from the `rk-cli` change: sited as S8E-M43a (`run`'s expiry rows through `run::gate_rows_through`'s store-only arm) it was measured GREEN; the lane test's expiry arm alone kills it (its anchor reads `""`) |
+| S8E-M43b *(dated 2026-09-28, s8e build, package R1FIX-8e)* | the KERNEL boundary appends an expiry's row with no commit and reports `NoGitWrite` (P5's kernel variant) | `tier_one::a_gate_expiry_is_committed_before_its_row` (*"a live act reported NoGitWrite"*), `lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit` |
+| S8E-M43c *(dated 2026-09-28, s8e build, package R1FIX-8e)* | `answer`'s expiry rows through `run::gate_rows_through`'s store-only arm | `answer::ac248_answer_without_live_token_exits_named_outcome` (its expired arm, re-pointed here: *"not anchored to a `Gate: … expired` commit … anchors [None]"*). SURVIVED every named test before the re-point (a missing fixture branch) |
 | S8E-M44 | `answer.rs` calls `commit_with_trailers` directly again | `tier_one::every_run_commit_resolves_through_the_worktree_resolver` |
 | S8E-M45 | the `review_pass` seal deleted while `doctor/rebuild.rs` names `TrailerKey::SliceVerdict` | `conformance::conformance_every_trailer_key_has_a_producer` |
 | S8E-M46 | an `rk-cli` code line calls `EventStore::append_tier1(…)` in path form | `tier_one::the_tier_one_writer_is_called_only_from_the_boundary` |
@@ -1500,6 +1537,8 @@ named reason**, printed and read, not merely "the suite went red". Names carry a
 | S8E-M53 *(dated 2026-09-28, s8e build, package S8E-D2194-ENTRY; D21-94)* | the entry check dropped (`findings_stage_reached(..)` filtered to `None`) | `lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch` (*"dispatched 2 time(s)"*); `slice_verdict::an_absent_slice_is_refused_by_name` stays green under it, on the mint's backstop |
 | S8E-M54 *(dated 2026-09-28, s8e build, package S8E-D2194-ENTRY; D21-95)* | the walk reads the current stage only (`at = None` in place of `pack.successor(stage)`) | `lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch` (*"dispatched 2 time(s)"*: `triage` has no `Findings` activity) |
 | S8E-M55 *(dated 2026-09-28, s8e build, package S8E-D2194-ENTRY; D21-94)* | the validator's call dropped from `seal_act` (the declared value minted as it stands) | `slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop` (*"the mint accepted None: its backstop is gone"*) |
+| S8E-M56 *(dated 2026-09-28, s8e build, package R1FIX-8e)* | the entry check's `forbidden` guard dropped in `findings_stage_reached` | `lane_e2e::the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity` (*"a `forbidden` current stage's `Findings` activity was read by the entry check … exit Some(3)"*) |
+| S8E-M57 *(dated 2026-09-28, s8e build, package R1FIX-8e)* | `answer`'s presented gate restored to `open_gates().filter(not expired).last()` | `answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher` (*"answer presents the ANSWERED token … over the awaited …"*); `answer::ac407_…` stays green (the fallback) |
 | S8E-M49 | `run()`'s `routing.with_review_routes(..)` binding removed (`s8d` R2FIX-8d's review-routes mutant; *(dated 2026-09-28, s8e build, package S8E-P2)*) | `lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step` |
 
 A mutant that survives is not waved through. It is either an **unobservable property**, which moves to a source lint
@@ -1666,6 +1705,44 @@ the superseded lines are REPLACED, not struck**, with a dated comment saying wha
 still carry the ARMED string, which Checkpoint 8e (10h) asserts absent from 8a's extracted block, and (7c) asserts the
 old 7h FAIL message absent. The amended lines were exercised read-only over `nd.sh` output (each passes; the old armed
 output shape fails each, a control). `PROGRESS.md` §1's 7h, 8a and 7f rows read `re-run pending`.
+
+*(dated 2026-09-28, s8e build, package R1FIX-8e)* **Refuting round 1** (five finders, two refuters per blocker or major; the raw findings in the session
+scratchpad, `s8e-r1.json`):
+
+18. **A new `lane_e2e` line tripped Checkpoint 8d-ii guard (3)**, the one-derivation root floor, so Checkpoint 8e (10a)
+    would fail (blocker, both refuters): `a_second_invocation_reuses_the_run_worktree` planted its directory at
+    `tree.join(".redkiln").join("worktrees")`. *Fixed:* the directory is the parent of `crate::run_tree(&tree, …)`,
+    `rk-git`'s one derivation over the run tree the test holds, so 8d-ii's file is not amended. Guard (3)'s lines,
+    extracted from 8d-ii's own bytes and run READ-ONLY, pass on the tree and fail on HEAD's tree naming exactly that
+    line (the control). **Every other READ-ONLY guard Checkpoint 8e (10) replays was swept** (8d-ii, 7a, 7h, 7f, 8a, `s8` (2) and (3), 7i, each
+    block extracted by 8e's own needle and run in two throwaway clones, this package's tree and HEAD, with cargo, `nd`
+    and the `redkiln` binary stubbed and every `exit` turned into a marker so each block ran to its end): the one
+    difference from HEAD is 8d-ii guard (3), cleared; 7h guard (5) reads the package's own uncommitted edits, which
+    the commit clears; every other marker is identical at HEAD and traced to a stubbed cargo or binary run, or to the
+    sweep's own rewrite (8a's s7e-line guard, read directly: 1 line; 8d-ii (0b)'s path length, 255 here and 271 only
+    under the clone's longer root).
+19. **An untracked `.kb/` failed Checkpoint 7h guard (5)** (blocker; environmental, the operator's decision-intake
+    files). *Handled outside the tree* by the orchestrator (a local `.git/info/exclude` row); nothing here changes.
+20. **`answer` presented the last token in token order, not the awaited gate** (major, both refuters; unowned). *Fixed*
+    red first under ADR-0157's stall (§8e.9's R1FIX-8e note; S8E-M57 killed), and the AC-163 lane now walks through a
+    void. Walking the ac184 lane through it measured **defect (c)**, the void answer's `answered` row's tree, which
+    is put to the operator.
+21. **S8E-M8 at the mint survived its named test** (filed major; both refuters minor). *Re-pointed* and split by
+    siting, both measured (§8e.12: M8a, M8b); `slice_verdict.rs`'s module and test docs and ADR-0186's rejected
+    option corrected by dated edits.
+22. **S8E-M26 and S8E-M43 named kernel tests that cannot observe their `rk-cli` change** (major; one refuter
+    refuted, citing P5's kernel variants). *Both readings hold, and the rows now say so:* the kernel killers are
+    struck from the `rk-cli` changes (M26a, M43a measured GREEN on them) and named for the kernel variants (M26b,
+    M43b measured red), and the two kernel tests' docs name what reddens them. Running `answer`'s expiry siting
+    (S8E-M43c) found a survivor; `ac248_…`'s expired arm now asserts the expiry's anchor and kills it.
+23. *Minors, each fixed:* (a) the entry check's `forbidden` guard had no fixture branch: a pin and S8E-M56;
+    (b) ADR-0185 decision 9 still said the heal skips a `Slice-Verdict:` mark: a dated note; (c) design §5's
+    `stage_empty` row claimed an anchor the advance path does not give: a dated clause naming the residual;
+    (d) ADR-0186's title, `source:` and README row put the refusal at the mint only: dated amendments naming the
+    entry, D21-94 and D21-95; (e) ADR-0186's two option headings both read taken: the first's *(taken)* struck,
+    `check-adr-options.py` still flags 0; (f) ADR-0181 decision 3's `gate_answer_void` bullet said design §5
+    *"still lists"* tier 2: a dated note; (g) `rk-kernel`'s `tests/it/main.rs` said `replay` is gated whole: a
+    dated note; (h) `rk-adapter-sqlite`'s conformance docs described the pre-P7 unsupported arm: dated re-points.
 
 ### 8e.14 Acceptance set
 
@@ -1880,7 +1957,9 @@ sel rk-kernel 28 on_false_exec::a_null_until_or_gate_when_whose_route_continues_
 # owed-in lane_e2e tests are named (MF3j; the review-routes binding).
 # (dated 2026-09-28, s8e build, package S8E-D2194-ENTRY) sel rk-cli 35, was 32 (struck: sel rk-cli 32): D21-94's
 # entry refusal (as D21-95 rules it), its control, and the mint's backstop pin are named (ADR-0186 amended, proposed).
-sel rk-cli 35 lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch lane_e2e::a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit worktree_assigned::a_reentry_records_reused_and_its_discard_list worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order lane_e2e::an_empty_stage_records_stage_empty_with_its_reason lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted lane_e2e::terminal_read_reports_only_an_awaited_gate lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child lane_e2e::the_lane_end_mints_a_terminal_closed_mark lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered lane_e2e::two_items_in_one_store_do_not_fold_together lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it lane_e2e::a_second_invocation_reuses_the_run_worktree slice_verdict::approved_is_sealed_on_the_advance_path slice_verdict::changes_requested_is_sealed_on_the_findings_block_path slice_verdict::an_absent_slice_is_refused_by_name slice_verdict::a_slice_equal_to_the_item_id_is_refused worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention answer::a_failed_answer_commit_leaves_zero_rows doctor::ac184_rebuild_differential_over_anchored_tier_one_rows doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two root::adr0118_a_poisoned_writer_mutex_halts_exit_70 lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step
+# (dated 2026-09-28, s8e build, package R1FIX-8e) sel rk-cli 37, was 35 (struck: sel rk-cli 35): refuting round 1's
+# answer-selection test and the entry check's forbidden-stage pin are named.
+sel rk-cli 37 answer::answer_presents_the_awaited_gate_over_a_spent_token_that_sorts_higher lane_e2e::the_entry_check_skips_a_forbidden_current_stage_with_a_findings_activity lane_e2e::an_undeclared_slice_is_refused_at_entry_before_any_dispatch lane_e2e::a_lane_that_reaches_no_findings_stage_is_not_refused_for_an_undeclared_slice slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop lane_e2e::a_closed_lane_removes_its_clean_landed_tree_and_keeps_a_dirty_one lane_e2e::every_tier_one_row_has_exactly_one_trailer_commit worktree_assigned::a_reentry_records_reused_and_its_discard_list worktree_assigned::answer_refuses_fail_closed_without_an_assignment_row lane_e2e::run_opens_a_gate_answer_applies_and_a_rerun_mints_no_second_gate_trailer lane_e2e::run_exits_at_a_gate_answer_and_a_second_invocation_continues_the_lane lane_e2e::every_non_forbidden_stage_is_entered_and_trailered_in_declared_order lane_e2e::an_empty_stage_records_stage_empty_with_its_reason lane_e2e::the_stage_seeds_from_git_when_the_store_is_deleted lane_e2e::terminal_read_reports_only_an_awaited_gate lane_e2e::the_binary_crosses_a_process_boundary_over_the_fixture_child lane_e2e::the_lane_end_mints_a_terminal_closed_mark lane_e2e::a_closed_item_reruns_as_done_and_mints_nothing lane_e2e::an_answered_gate_survives_a_deleted_store_as_answered lane_e2e::two_items_in_one_store_do_not_fold_together lane_e2e::the_user_checkout_is_unchanged_across_a_lane_with_the_worktree_inside_it lane_e2e::a_second_invocation_reuses_the_run_worktree slice_verdict::approved_is_sealed_on_the_advance_path slice_verdict::changes_requested_is_sealed_on_the_findings_block_path slice_verdict::an_absent_slice_is_refused_by_name slice_verdict::a_slice_equal_to_the_item_id_is_refused worktree_assigned::a_tier1_write_from_a_foreign_worktree_is_refused_typed worktree_assigned::the_positive_control_from_the_run_owned_worktree_succeeds worktree_assigned::ownership_is_read_from_the_store_not_from_cwd_or_convention answer::a_failed_answer_commit_leaves_zero_rows doctor::ac184_rebuild_differential_over_anchored_tier_one_rows doctor::rebuild_recovers_every_gate_state_from_the_widened_gate_value doctor::the_legacy_stage_less_mark_rebuilds_from_the_item_record doctor::a_version_one_store_is_refused_by_name_and_rebuild_re_derives_it_at_version_two root::adr0118_a_poisoned_writer_mutex_halts_exit_70 lane_e2e::run_binds_the_run_branch_reader_for_affected_inside_the_changeset_producer lane_e2e::run_binds_the_review_routes_for_a_shallow_clone_step
 nd_check "named selections" || exit 1
 
 # ---- (3) THE ARMED LINT IS DISCHARGED — its ignore reason is gone, not reworded (ADR-0160's bullet; D21-41 e).
@@ -2015,7 +2094,9 @@ hits=$(grep -nF 'a real `redkiln run` over the review fixture' runbook/phase-1/s
 # ---- reads sel rk-kernel 28.
 # ---- (dated 2026-09-28, s8e build, package S8E-D2194-ENTRY) D21-94's entry refusal adds three rk-cli tests, so
 # ---- 1034 + 82 = 1116 (struck: FLOOR=1113), and (2) reads sel rk-cli 35.
-FLOOR=1116
+# ---- (dated 2026-09-28, s8e build, package R1FIX-8e) refuting round 1 adds two rk-cli tests, so 1034 + 84 = 1118
+# ---- (struck: FLOOR=1116), and (2) reads sel rk-cli 37.
+FLOOR=1118
 tally() { printf '%s\n' "$1" | awk '/^test result:/ { p += $4; f += $6; i += $8; n += 1 } END { print p+0, f+0, i+0, n+0 }'; }
 # CONTROL: a run of zero tests tallies below the floor.
 read -r cp cf ci cn <<< "$(tally 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out')"

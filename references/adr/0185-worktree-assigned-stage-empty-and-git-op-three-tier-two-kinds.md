@@ -136,6 +136,12 @@ source of ownership, and it is decision 2's.
   ~~them~~ it, until ~~`s8e` §8e.6 and~~ §8e.8 ~~fix those rows~~ fixes its row; and a healed `opened` row carries no run
   (D21-48 X11). *(dated 2026-09-28, `s8e` build, package S8E-P6: §8e.6 fixed the `closed` act's row, ADR-0183
   decision 10, and the heal re-derives it.)*
+  *(dated 2026-09-28, `s8e` build, package R1FIX-8e, recording package S8E-P7's change; refuting round 1's
+  spec-conformance minor.)* ~~It skips … a `Slice-Verdict:` mark, naming it, until §8e.8 fixes its row~~: since
+  S8E-P7 the heal skips no `Slice-Verdict:` mark. It re-derives the mark's `slice_sealed` row from the mark's own
+  tokens, `{project, slice, verdict}`, with **no `stage`**, because the trailer carries none; the fold scopes a
+  stage-less seal to the stage it folds in (ADR-0186's stated residual; D21-93). The heal still skips, by name,
+  only a legacy stage-less `Story:` mark, which records no stage.
 - *(dated 2026-09-28, `s8e` build, package S8E-P6.)* **`stage_empty` on a stage entered by an ADVANCE is not a
   row of the entry's act.** The advance's act (the previous stage's `AdvanceStage`) is taken before the next
   stage's plan is selected, so the kernel cannot know then that the plan is empty. The row is appended beside it

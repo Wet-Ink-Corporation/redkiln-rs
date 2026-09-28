@@ -122,6 +122,10 @@ insert fails, neither row exists. The mapping is by kind and it is closed:
 - **`gate_answer_void` is mapped although design §5 still lists it as tier 2.** D21-43 N6 makes every gate transition,
   the void included, a git-first tier-1 event. Moving its tier and producer is the `Gate:` record's; the mapping here
   is what that move writes through.
+  *(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's records minor.)* ~~although design §5 still
+  lists it as tier 2~~ — no longer: package S8E-P4 amended design §5's `gate_answer_void` row to tier 1 (a `Gate: …
+  voided` trailer), producer the kernel at entry, by **ADR-0184** (proposed). This bullet was true when S8E-P3 wrote
+  it; the mapping is unchanged.
 - **A tier-1 row never invents a member.** A `NOT NULL` member the event does not carry (the `item` of a boundary,
   a gate's `token`, a seal's `project`, `slice` or `verdict`) refuses the write as a transport fault naming the
   member, and the transaction rolls back to zero rows. A nullable member the payload does not carry (`t1_gate_transition`'s

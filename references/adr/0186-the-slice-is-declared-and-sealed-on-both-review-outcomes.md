@@ -1,10 +1,10 @@
 ---
 id: "0186"
-title: "**The slice is declared on the item record, and `Slice-Verdict:` is sealed on both review outcomes** (`s8e`'s record; D21-41 e, first half; D21-93): `ItemRecord` gains an optional `slice`; the kernel's `tier_one::seal_act` refuses at the mint, by name, a `<slice>` that is undeclared, the item id, the project, a stage of the pack's `stage_order`, or carries whitespace (the run id cannot be declared); the review pass seals `approved` when nothing blocks and `changes-requested` before `Exit::FindingsBlock` returns, both through the kernel's tier-1 boundary; ADR-0160 decision 6's *\"at the review stage's boundary\"* is read as *\"at the review stage's exit outcome\"*; the seal's row names the stage it was made in and `terminal()` reads `Sealed` only while the fold is in that stage (D21-93); the ARMED trailer lint is un-ignored and re-pointed, and Checkpoints 7h (6)/(7), 8a (7) and 7f's literal are amended in the same commit. Supersedes nothing"
+title: "**The slice is declared on the item record, and `Slice-Verdict:` is sealed on both review outcomes** (`s8e`'s record; D21-41 e, first half; D21-93; D21-94; D21-95): `ItemRecord` gains an optional `slice`; ~~the kernel's `tier_one::seal_act` refuses at the mint, by name,~~ *(amended 2026-09-28, `s8e` build, packages S8E-D2194-ENTRY and R1FIX-8e; D21-94, D21-95)* the lane refuses at its ENTRY, before any dispatch and by name, through the kernel's `tier_one::validate_slice`, when a stage it will reach has a catalog activity whose `provides` first is `Findings`, and `tier_one::seal_act` keeps the same refusal at the mint as the backstop, for a `<slice>` that is undeclared, the item id, the project, a stage of the pack's `stage_order`, or carries whitespace (the run id cannot be declared); the review pass seals `approved` when nothing blocks and `changes-requested` before `Exit::FindingsBlock` returns, both through the kernel's tier-1 boundary; ADR-0160 decision 6's *\"at the review stage's boundary\"* is read as *\"at the review stage's exit outcome\"*; the seal's row names the stage it was made in and `terminal()` reads `Sealed` only while the fold is in that stage (D21-93); the ARMED trailer lint is un-ignored and re-pointed, and Checkpoints 7h (6)/(7), 8a (7) and 7f's literal are amended in the same commit. Supersedes nothing"
 status: proposed
 date: 2026-09-28
 legacy_id: none
-source: spikes/DECISIONS-2026-09-21.md D21-41 (row e — *"Slice-Verdict gets a producer: the slice is declared on the item record, one per fix-lane item, and it is refused by name when it equals the item id; a `slice_sealed` producer seals on both review outcomes."*) and D21-93 (*"The fold records the stage a seal was made in, and `terminal()` returns `Sealed` only until a later `stage_transition`"*); runbook/phase-1/s8e-tier-one-and-the-lane.md (the records table's fourth row, §8e.0 item 8, §8e.8, §8e.12, §8e.13); references/adr/0159, 0160, 0161, 0162; crates/rk-cli/src/verbs/run.rs, crates/rk-kernel/src/runtime/tier_one.rs, crates/rk-kernel/src/workflow/fsm.rs, crates/rk-git/src/trailer/grammar.rs and crates/rk-kernel/tests/it/conformance.rs, as built 2026-09-28 on `d80609b`
+source: spikes/DECISIONS-2026-09-21.md D21-41 (row e — *"Slice-Verdict gets a producer: the slice is declared on the item record, one per fix-lane item, and it is refused by name when it equals the item id; a `slice_sealed` producer seals on both review outcomes."*) and D21-93 (*"The fold records the stage a seal was made in, and `terminal()` returns `Sealed` only until a later `stage_transition`"*), D21-94 (*"The refusal moves to the lane's entry, before any dispatch"*) and D21-95 (item 1, the entry check read from declared `provides`; item 2, the stated gap); runbook/phase-1/s8e-tier-one-and-the-lane.md (the records table's fourth row, §8e.0 item 8, §8e.8, §8e.12, §8e.13); references/adr/0159, 0160, 0161, 0162; crates/rk-cli/src/verbs/run.rs, crates/rk-kernel/src/runtime/tier_one.rs, crates/rk-kernel/src/workflow/fsm.rs, crates/rk-git/src/trailer/grammar.rs and crates/rk-kernel/tests/it/conformance.rs, as built 2026-09-28 on `d80609b`
 supersedes: []
 superseded_by: []
 related: ["0101", "0109", "0159", "0160", "0161", "0162", "0181", "0183"]
@@ -49,11 +49,16 @@ Three facts of the tree shape how.
 
 ## Considered options
 
-### Option — seal at the review stage's exit outcome, refuse at the mint (taken)
+### Option — seal at the review stage's exit outcome, refuse at the mint ~~(taken)~~ (the seal's siting chosen; the refusal's siting moved to entry, the next option but one)
 
 `review_pass`, which ADR-0162 wired without a stage literal, is the one place both verdicts exist: `blocked.is_empty()`
 and `Exit::FindingsBlock`. The seal is minted there, through the kernel's boundary, and every refusal is taken before any
 git call. Chosen: it seals both verdicts, which D21-41 e requires, and moves no sentence of ADR-0160 (decision 3 below).
+
+*(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's records minors)* **Only the seal's siting of this option stands as taken.** Its refusal siting is superseded in part
+by D21-94: the refusal is taken at the lane's entry (the option *"refuse an undeclared slice at entry"*, the one
+heading that reads taken) and the mint keeps it only as the backstop. The heading's *(taken)* is struck so the
+two headings cannot both read taken.
 
 ### Option — seal at the review stage's boundary (the advance)
 
@@ -61,7 +66,7 @@ ADR-0160 decision 6's literal words. Rejected: a `changes-requested` review take
 only `approved` could ever be sealed, and F12's 20.3% of slices passing through a rejected state — the reason the axis
 exists — would be invisible.
 
-### Option — refuse an undeclared slice at entry, before the lane runs
+### Option — refuse an undeclared slice at entry, before the lane runs (taken, D21-94; the mint kept as the backstop)
 
 It would stop a fix lane without a slice before it dispatches anything. ~~Rejected for now: ADR-0159 decision 2 sites
 the `<project>` refusal at the mint for the stated reason that a run minting no trailer must not be refused, and the
@@ -88,8 +93,14 @@ is a certain failure, and it must not be paid for. The mint keeps its refusal as
 
 ### Option — derive the slice from the item id when none is declared
 
-Rejected by ADR-0160's first bullet in terms, and by D21-41 e. Mutant S8E-M8 builds exactly this and
-`slice_verdict::an_absent_slice_is_refused_by_name` is red on it.
+Rejected by ADR-0160's first bullet in terms, and by D21-41 e. ~~Mutant S8E-M8 builds exactly this and
+`slice_verdict::an_absent_slice_is_refused_by_name` is red on it.~~
+
+*(dated 2026-09-28, `s8e` build, package R1FIX-8e; refuting round 1's records minors)* Since the entry refusal, the binary tests meet the entry check first, so the default is two mutants
+by siting (`s8e` §8e.12, measured): **S8E-M8a**, the default in `seal_act` alone, leaves
+`slice_verdict::an_absent_slice_is_refused_by_name` GREEN and is red on
+`slice_verdict::the_mint_refuses_an_undeclared_slice_as_the_backstop`; **S8E-M8b**, the default in the shared
+`validate_slice`, is red on both, because the entry then names the item-id rule.
 
 ## Decision
 
